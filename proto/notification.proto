@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package notification;
+
+option go_package = "shared/proto/notification;notification";
+
+service NotificationService {
+  rpc SendEmail(EmailRequest) returns (EmailResponse);
+}
+
+message EmailRequest {
+  repeated string to = 1;
+  string subject = 2;
+  string body = 3;
+  bool is_body_html = 4;
+  optional string send_as = 5;
+  string account_id = 6;
+  optional string sent_by_id = 7;
+}
+
+message EmailResponse {
+  bool success = 1;
+}

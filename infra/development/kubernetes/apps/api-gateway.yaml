@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: api-gateway
+spec:
+    replicas: 1
+    selector:
+        matchLabels:
+            app: api-gateway
+    template:
+        metadata:
+            labels:
+                app: api-gateway
+        spec:
+            containers:
+                - name: api-gateway
+                  image: augno-api/api-gateway
+                  ports:
+                      - containerPort: 8081
+                  resources:
+                      requests:
+                          memory: "128Mi"
+                          cpu: "125m"
+                      limits:
+                          memory: "128Mi"
+                          cpu: "125m"
+                  env:
+                      - name: PLATFORM
+                        valueFrom:
+                            configMapKeyRef:
+                                key: PLATFORM
+                                name: app-config
+                      - name: OTEL_SERVICE_NAME
+                        value: api-gateway
+                      - name: OTEL_ENVIRONMENT
+                        valueFrom:
+                            configMapKeyRef:
+                                key: PLATFORM
+                                name: app-config
+                      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+                        value: http://otel-collector:4318
+                      - name: OTEL_EXPORTER_OTLP_PROTOCOL
+                        value: http
+                      - name: OTEL_EXPORTER_OTLP_INSECURE
+                        value: "true"
+                      - name: PORT
+                        valueFrom:
+                            configMapKeyRef:
+                                key: PORT
+                                name: app-config
+                      - name: AUTH_SERVICE_URL
+                        valueFrom:
+                            configMapKeyRef:
+                                key: AUTH_SERVICE_URL
+                                name: app-config
+                      - name: RABBITMQ_URI
+                        valueFrom:
+                            secretKeyRef:
+                                name: rabbitmq-credentials
+                                key: uri
+                      - name: DB_URL
+                        valueFrom:
+                            secretKeyRef:
+                                name: database-credentials
+                                key: uri
+            affinity:
+                podAffinity:
+                    preferredDuringSchedulingIgnoredDuringExecution:
+                        - weight: 100
+                          podAffinityTerm:
+                              labelSelector:
+                                  matchExpressions:
+                                      - key: app
+                                        operator: In
+                                        values:
+                                            - auth-service
+                              topologyKey: kubernetes.io/hostname
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+    name: api-gateway
+spec:
+    type: LoadBalancer
+    ports:
+        - port: 8081
+          targetPort: 8081
+    selector:
+        app: api-gateway

@@ -1,0 +1,95 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+    name: otel-collector-config
+data:
+    collector.yaml: |
+        receivers:
+            otlp:
+                protocols:
+                    grpc:
+                    http:
+        processors:
+            batch:
+                timeout: 1s
+        exporters:
+            logging:
+                loglevel: info
+            otlphttp/jaeger:
+                endpoint: http://jaeger:4318
+                tls:
+                    insecure: true
+        extensions:
+            health_check:
+                endpoint: 0.0.0.0:13133
+        service:
+            extensions: [health_check]
+            pipelines:
+                traces:
+                    receivers: [otlp]
+                    processors: [batch]
+                    exporters: [otlphttp/jaeger, logging]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: otel-collector
+spec:
+    replicas: 1
+    selector:
+        matchLabels:
+            app: otel-collector
+    template:
+        metadata:
+            labels:
+                app: otel-collector
+        spec:
+            containers:
+                - name: otel-collector
+                  image: otel/opentelemetry-collector:0.103.0
+                  args:
+                      - "--config=/etc/otelcol/collector.yaml"
+                  ports:
+                      - containerPort: 4317
+                        name: otlp-grpc
+                      - containerPort: 4318
+                        name: otlp-http
+                      - containerPort: 13133
+                        name: health
+                  volumeMounts:
+                      - name: otel-config
+                        mountPath: /etc/otelcol
+                  livenessProbe:
+                      httpGet:
+                          path: /
+                          port: health
+                      initialDelaySeconds: 10
+                      periodSeconds: 15
+                  readinessProbe:
+                      httpGet:
+                          path: /
+                          port: health
+                      initialDelaySeconds: 10
+                      periodSeconds: 15
+            volumes:
+                - name: otel-config
+                  configMap:
+                      name: otel-collector-config
+                      items:
+                          - key: collector.yaml
+                            path: collector.yaml
+---
+apiVersion: v1
+kind: Service
+metadata:
+    name: otel-collector
+spec:
+    selector:
+        app: otel-collector
+    ports:
+        - name: otlp-grpc
+          port: 4317
+          targetPort: 4317
+        - name: otlp-http
+          port: 4318
+          targetPort: 4318

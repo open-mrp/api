@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: notification-service
+spec:
+    replicas: 1
+    selector:
+        matchLabels:
+            app: notification-service
+    template:
+        metadata:
+            labels:
+                app: notification-service
+        spec:
+            containers:
+                - name: notification-service
+                  image: augno-api/notification-service
+                  ports:
+                      - containerPort: 9092
+                  resources:
+                      requests:
+                          memory: "64Mi"
+                          cpu: "100m"
+                      limits:
+                          memory: "128Mi"
+                          cpu: "200m"
+                  env:
+                      - name: OTEL_SERVICE_NAME
+                        value: notification-service
+                      - name: OTEL_ENVIRONMENT
+                        valueFrom:
+                            configMapKeyRef:
+                                key: PLATFORM
+                                name: app-config
+                      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+                        value: http://otel-collector:4318
+                      - name: OTEL_EXPORTER_OTLP_PROTOCOL
+                        value: http
+                      - name: OTEL_EXPORTER_OTLP_INSECURE
+                        value: "true"
+                      - name: DB_URL
+                        valueFrom:
+                            secretKeyRef:
+                                name: database-credentials
+                                key: uri
+                      - name: RABBITMQ_URI
+                        valueFrom:
+                            secretKeyRef:
+                                name: rabbitmq-credentials
+                                key: uri
+                      - name: AWS_REGION
+                        valueFrom:
+                            secretKeyRef:
+                                name: aws-credentials
+                                key: region
+                      - name: AWS_ACCESS_KEY_ID
+                        valueFrom:
+                            secretKeyRef:
+                                name: aws-credentials
+                                key: access-key-id
+                      - name: AWS_SECRET_ACCESS_KEY
+                        valueFrom:
+                            secretKeyRef:
+                                name: aws-credentials
+                                key: secret-access-key
+                      - name: PLATFORM
+                        valueFrom:
+                            configMapKeyRef:
+                                key: PLATFORM
+                                name: app-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+    name: notification-service
+spec:
+    selector:
+        app: notification-service
+    ports:
+        - port: 9092
+          name: grpc
+          targetPort: 9092
+    type: ClusterIP

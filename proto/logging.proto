@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package logging;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "shared/proto/logging;logging";
+
+message RequestLogEvent {
+  string id = 1;
+  string method = 2;
+  string host = 3;
+  string path = 4;
+  string normalized_route = 5;
+  string query_json = 6;
+  int32 status_code = 7;
+  int64 latency_us = 8;
+  string account_id = 9;
+  bytes client_ip = 10;
+  string client_ip_string = 11;
+  string user_agent = 12;
+  string referrer = 13;
+  string error_code = 14;
+  string error_message = 15;
+  google.protobuf.Timestamp occurred_at = 16;
+  string idempotency_key_id = 17;
+  string actor_id = 18;
+  string actor_type = 19;
+  string internal_error_message = 20;
+  string stack_trace = 21;
+  string identity_type = 22;
+}

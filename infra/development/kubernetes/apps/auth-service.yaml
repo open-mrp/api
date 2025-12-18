@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: auth-service
+spec:
+    replicas: 1
+    selector:
+        matchLabels:
+            app: auth-service
+    template:
+        metadata:
+            labels:
+                app: auth-service
+        spec:
+            containers:
+                - name: auth-service
+                  image: augno-api/auth-service
+                  ports:
+                      - containerPort: 9092
+                  resources:
+                      requests:
+                          memory: "64Mi"
+                          cpu: "100m"
+                      limits:
+                          memory: "128Mi"
+                          cpu: "200m"
+                  env:
+                      - name: OTEL_SERVICE_NAME
+                        value: auth-service
+                      - name: OTEL_ENVIRONMENT
+                        valueFrom:
+                            configMapKeyRef:
+                                key: PLATFORM
+                                name: app-config
+                      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+                        value: http://otel-collector:4318
+                      - name: OTEL_EXPORTER_OTLP_PROTOCOL
+                        value: http
+                      - name: OTEL_EXPORTER_OTLP_INSECURE
+                        value: "true"
+                      - name: DB_URL
+                        valueFrom:
+                            secretKeyRef:
+                                name: database-credentials
+                                key: uri
+                      - name: FRONTEND_URL
+                        valueFrom:
+                            configMapKeyRef:
+                                key: FRONTEND_URL
+                                name: app-config
+                      - name: RABBITMQ_URI
+                        valueFrom:
+                            secretKeyRef:
+                                name: rabbitmq-credentials
+                                key: uri
+                      - name: JWT_SECRET
+                        valueFrom:
+                            secretKeyRef:
+                                name: jwt-secret
+                                key: secret
+                      - name: PEPPER
+                        valueFrom:
+                            secretKeyRef:
+                                name: pepper-secret
+                                key: pepper
+                      - name: PLATFORM
+                        valueFrom:
+                            configMapKeyRef:
+                                key: PLATFORM
+                                name: app-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+    name: auth-service
+spec:
+    selector:
+        app: auth-service
+    ports:
+        - port: 9092
+          name: grpc
+          targetPort: 9092
+    type: ClusterIP

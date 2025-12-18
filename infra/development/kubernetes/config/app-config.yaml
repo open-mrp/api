@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+    name: app-config
+data:
+    PLATFORM: "development"
+    PORT: "8081"
+    FRONTEND_URL: "http://localhost:4200"
+    AUTH_SERVICE_URL: "auth-service:9092"
+    NOTIFICATION_SERVICE_URL: "notification-service:9092"
+    LOGGING_SERVICE_URL: "logging-service:9092"

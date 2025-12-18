@@ -1,0 +1,128 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+    name: rabbitmq
+spec:
+    serviceName: "rabbitmq"
+    replicas: 1
+    selector:
+        matchLabels:
+            app: rabbitmq
+    template:
+        metadata:
+            labels:
+                app: rabbitmq
+        spec:
+            containers:
+                - name: rabbitmq
+                  image: rabbitmq:4-management
+                  ports:
+                      - containerPort: 5672 # AMQP
+                      - containerPort: 15672 # Management UI
+                  readinessProbe:
+                      exec:
+                          command:
+                              [
+                                  "rabbitmq-diagnostics",
+                                  "-q",
+                                  "check_port_connectivity",
+                              ]
+                      initialDelaySeconds: 20
+                      periodSeconds: 10
+                      timeoutSeconds: 5
+                      failureThreshold: 3
+                  livenessProbe:
+                      exec:
+                          command: ["rabbitmq-diagnostics", "-q", "ping"]
+                      initialDelaySeconds: 60
+                      periodSeconds: 30
+                      timeoutSeconds: 5
+                      failureThreshold: 5
+                  resources:
+                      requests:
+                          memory: "1Gi"
+                          cpu: "500m"
+                      limits:
+                          memory: "2Gi"
+                          cpu: "1"
+                  env:
+                      - name: RABBITMQ_DEFAULT_USER
+                        valueFrom:
+                            secretKeyRef:
+                                name: rabbitmq-credentials
+                                key: username
+                      - name: RABBITMQ_DEFAULT_PASS
+                        valueFrom:
+                            secretKeyRef:
+                                name: rabbitmq-credentials
+                                key: password
+                      - name: RABBITMQ_MNESIA_BASE
+                        value: /var/lib/rabbitmq/mnesia
+                      - name: RABBITMQ_CONFIG_FILE
+                        value: /etc/rabbitmq/rabbitmq.conf
+                  volumeMounts:
+                      - name: rabbitmq-data
+                        mountPath: /var/lib/rabbitmq
+                      - name: rabbitmq-config
+                        mountPath: /etc/rabbitmq
+            volumes:
+                - name: rabbitmq-config
+                  configMap:
+                      name: rabbitmq-config
+    volumeClaimTemplates:
+        - metadata:
+              name: rabbitmq-data
+          spec:
+              accessModes: ["ReadWriteOnce"]
+              resources:
+                  requests:
+                      storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+    name: rabbitmq
+spec:
+    selector:
+        app: rabbitmq
+    ports:
+        - name: amqp
+          port: 5672
+          targetPort: 5672
+        - name: management
+          port: 15672
+          targetPort: 15672
+    type: ClusterIP
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+    name: rabbitmq-config
+data:
+    rabbitmq.conf: |
+        # Disable guest remote access and use configured default user/pass
+        loopback_users.guest = false
+        default_user = ${RABBITMQ_DEFAULT_USER}
+        default_pass = ${RABBITMQ_DEFAULT_PASS}
+
+        # Listeners
+        listeners.tcp.default = 5672
+        management.tcp.port = 15672
+
+        # Memory and disk safety limits (tune for your container limits)
+        vm_memory_high_watermark.relative = 0.4
+        disk_free_limit.relative = 1.5
+
+        # Optional: log to stdout
+        log.console = true
+        log.console.level = info
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+    name: rabbitmq-pdb
+spec:
+    minAvailable: 1
+    selector:
+        matchLabels:
+            app: rabbitmq

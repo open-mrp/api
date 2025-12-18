@@ -18,6 +18,7 @@ const (
 	// #nosec G101 - This is an error code constants, not a hardcoded credential
 	ErrorCodeInvalidCredentials ErrorCode = "invalid_credentials"
 	ErrorCodeInsufficientPerms  ErrorCode = "insufficient_permissions"
+	ErrorCodeHTTPDisabled       ErrorCode = "http_disabled"
 
 	// Validation errors
 	ErrorCodeValidationFailed ErrorCode = "validation_failed"

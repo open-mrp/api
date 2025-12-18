@@ -25,6 +25,12 @@ type AuthMiddlewareConfig struct {
 func AuthMiddleware(config AuthMiddlewareConfig) func(http.HandlerFunc) http.HandlerFunc {
 	return func(next http.HandlerFunc) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
+			// Skip authentication for health check endpoint to allow ALB health checks to pass.
+			if r.URL.Path == "/healthz" {
+				next.ServeHTTP(w, r)
+				return
+			}
+
 			tracer := otel.Tracer("api-gateway/internal/middleware")
 			spanName := fmt.Sprintf("HTTP %s %s", r.Method, r.URL.Path)
 			ctx, span := tracer.Start(r.Context(), spanName)

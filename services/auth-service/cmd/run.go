@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
 
 	grpcserver "google.golang.org/grpc"
@@ -26,7 +27,7 @@ func Run(
 	ctx context.Context,
 	getenv func(string) string,
 ) error {
-	ctx, cancel := signal.NotifyContext(ctx, os.Interrupt)
+	ctx, cancel := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
 	cfg, err := loadConfig(getenv)

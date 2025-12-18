@@ -291,7 +291,11 @@ func (s *priorityRootSampler) Description() string {
 }
 
 func isPriorityRootSpan(name string) bool {
-	return strings.HasPrefix(name, "HTTP ")
+	if !strings.HasPrefix(name, "HTTP ") {
+		return false
+	}
+
+	return !strings.Contains(name, " /healthz")
 }
 
 func isTruthy(val string) bool {

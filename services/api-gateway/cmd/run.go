@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
 
 	grpcclient "github.com/augno/api/services/api-gateway/grpc-client"
@@ -32,7 +33,7 @@ func Run(
 	stdin io.Reader,
 	stdout, stderr io.Writer,
 ) error {
-	ctx, stop := signal.NotifyContext(ctx, os.Interrupt)
+	ctx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
 	cfg, err := loadConfig(getenv)
@@ -92,7 +93,7 @@ func Run(
 
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Port),
-		Handler:      tracing.WrapGatewayHandler(mux),
+		Handler:      mux,
 		IdleTimeout:  httpIdleTimeout,
 		ReadTimeout:  httpReadTimeout,
 		WriteTimeout: httpWriteTimeout,
@@ -108,7 +109,7 @@ func Run(
 	select {
 	case <-ctx.Done():
 		logger.Info("shutdown signal received", "addr", server.Addr)
-		shutdownCtx, cancel := context.WithTimeout(ctx, httpShutdownTimeout)
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), httpShutdownTimeout)
 		defer cancel()
 		if err := server.Shutdown(shutdownCtx); err != nil {
 			logger.Error("error shutting down http server", "err", err)

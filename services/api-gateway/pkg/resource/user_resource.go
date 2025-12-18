@@ -15,8 +15,8 @@ const SampleUserPassword = "super-secret-password"
 const SampleNewUserPassword = "new-super-secret-password"
 
 var SampleUser = &User{
-	Object:        "user",
 	ID:            SampleUserID,
+	Object:        "user",
 	Username:      ptrutil.String(SampleUserUsername),
 	Email:         ptrutil.String(SampleUserEmail),
 	Name:          ptrutil.String(SampleUserName),
@@ -27,10 +27,10 @@ var SampleUser = &User{
 
 // A user in the Augno system
 type User struct {
-	// The object type, always "user"
-	Object string `json:"object" validate:"required"`
 	// The ID of the user
 	ID string `json:"id" validate:"required"`
+	// The object type, always "user"
+	Object string `json:"object" validate:"required"`
 	// The email of the user
 	Email *string `json:"email"`
 	// The name of the user

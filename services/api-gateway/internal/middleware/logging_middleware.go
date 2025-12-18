@@ -97,6 +97,10 @@ func LoggingMiddleware(logger *log.Logger, next http.HandlerFunc, saver *asyncRe
 		lrw := newLoggingResponseWriter(w)
 
 		defer func() {
+			if r.URL.Path == "/healthz" {
+				return
+			}
+
 			latency := int64(time.Since(start).Microseconds())
 			requestLog.StatusCode = lrw.statusCode
 			requestLog.Latency = latency

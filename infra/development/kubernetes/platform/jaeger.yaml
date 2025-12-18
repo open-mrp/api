@@ -14,7 +14,10 @@ spec:
         spec:
             containers:
                 - name: jaeger
-                  image: jaegertracing/all-in-one:1.60
+                  image: jaegertracing/all-in-one:1.64.0
+                  env:
+                    - name: QUERY_UI_CONFIG
+                      value: /etc/jaeger/jaeger-ui.json
                   ports:
                       - containerPort: 16686
                         name: ui
@@ -34,6 +37,24 @@ spec:
                           port: 16686
                       initialDelaySeconds: 30
                       periodSeconds: 30
+                  volumeMounts:
+                    - name: jaeger-ui-config
+                      mountPath: /etc/jaeger/jaeger-ui.json
+                      subPath: jaeger-ui.json
+            volumes:
+                - name: jaeger-ui-config
+                  configMap:
+                    name: jaeger-ui-config
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jaeger-ui-config
+data:
+  jaeger-ui.json: |
+    {
+      "theme": "light"
+    }
 ---
 apiVersion: v1
 kind: Service

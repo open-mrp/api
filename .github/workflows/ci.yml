@@ -1,31 +1,29 @@
 name: CI
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+    pull_request:
+        branches: [main]
 
 jobs:
-  check:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+    check:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-          cache: true
+            - name: Set up Go
+              uses: actions/setup-go@v5
+              with:
+                  go-version-file: go.mod
+                  cache: true
 
-      - name: Install Tools
-        run: make install-tools
+            - name: Install Tools
+              run: make install-tools
 
-      - name: Run Gosec
-        run: make gosec
+            - name: Run Gosec
+              run: make gosec
 
-      - name: Run Static Check
-        run: make static-check
+            - name: Run Static Check
+              run: make static-check
 
-      - name: Run Tests
-        run: make test
+            - name: Run Tests
+              run: make test

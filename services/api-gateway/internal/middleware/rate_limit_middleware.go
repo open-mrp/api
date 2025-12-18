@@ -163,6 +163,12 @@ func RateLimitMiddleware() func(http.HandlerFunc) http.HandlerFunc {
 
 	return func(next http.HandlerFunc) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
+			// Skip rate limiting for health check endpoint.
+			if r.URL.Path == "/healthz" {
+				next.ServeHTTP(w, r)
+				return
+			}
+
 			clientIP := header.GetClientIP(r)
 
 			allowed, retryAfterSeconds, remaining := rateLimiter.IsAllowed(clientIP.String())

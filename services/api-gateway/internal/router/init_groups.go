@@ -28,6 +28,7 @@ func (r *router) InitEndpointGroups(config MainRouterConfig) {
 	}
 
 	// Middlewares
+	r.AddMiddleware(middleware.TracingMiddleware())
 	r.AddMiddleware(middleware.PlatformMiddleware(config.PlatformMode))
 	r.AddMiddleware(loggingMiddleware)
 	r.AddMiddleware(middleware.CORSMiddleware())
@@ -59,6 +60,7 @@ func (r *router) InitAuthEndpointGroups(config AuthRouterConfig) {
 	}
 
 	// Middlewares
+	r.AddMiddleware(middleware.TracingMiddleware())
 	r.AddMiddleware(middleware.PlatformMiddleware(config.PlatformMode))
 	r.AddMiddleware(loggingMiddleware)
 	r.AddMiddleware(middleware.CORSMiddleware())

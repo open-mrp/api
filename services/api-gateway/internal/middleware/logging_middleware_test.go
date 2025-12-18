@@ -1,10 +1,16 @@
 package middleware
 
 import (
+	"context"
+	"io"
+	"log"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"testing"
+	"time"
 
+	"github.com/augno/api/services/api-gateway/internal/domain"
 	"github.com/augno/api/services/api-gateway/internal/header"
 )
 
@@ -202,4 +208,91 @@ func TestFetchClientIPEdgeCases(t *testing.T) {
 			t.Errorf("expected first IP 203.0.113.1, got %s", result.String())
 		}
 	})
+}
+
+func TestLoggingMiddleware_SkipHealthz(t *testing.T) {
+	// Create a mock saver that records if Save was called
+	var saved bool
+	mockS := &mockSaver{
+		saveFunc: func(ctx context.Context, rl *domain.RequestLog) error {
+			saved = true
+			return nil
+		},
+	}
+
+	// Create an async saver with the mock saver
+	asyncSaver := NewAsyncRequestLogSaver(1, mockS)
+
+	// Create a dummy logger
+	logger := log.New(io.Discard, "", 0)
+
+	// Create the middleware
+	handler := LoggingMiddleware(logger, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}, asyncSaver, nil)
+
+	t.Run("skip /healthz GET", func(t *testing.T) {
+		saved = false
+		// Create a request to /healthz
+		req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
+		w := httptest.NewRecorder()
+
+		// Serve the request
+		handler.ServeHTTP(w, req)
+
+		// Wait a bit for the async saver to process (though it shouldn't be called)
+		time.Sleep(20 * time.Millisecond)
+
+		if saved {
+			t.Error("Expected /healthz GET request NOT to be saved, but it was")
+		}
+	})
+
+	t.Run("skip /healthz POST", func(t *testing.T) {
+		saved = false
+		// Create a request to /healthz
+		req := httptest.NewRequest(http.MethodPost, "/healthz", nil)
+		w := httptest.NewRecorder()
+
+		// Serve the request
+		handler.ServeHTTP(w, req)
+
+		// Wait a bit for the async saver to process (though it shouldn't be called)
+		time.Sleep(20 * time.Millisecond)
+
+		if saved {
+			t.Error("Expected /healthz POST request NOT to be saved, but it was")
+		}
+	})
+
+	t.Run("log other paths", func(t *testing.T) {
+		saved = false
+		// Create a request to /other
+		req := httptest.NewRequest(http.MethodGet, "/other", nil)
+		w := httptest.NewRecorder()
+
+		// Serve the request
+		handler.ServeHTTP(w, req)
+
+		// Wait for the async saver to process
+		deadline := time.Now().Add(100 * time.Millisecond)
+		for time.Now().Before(deadline) {
+			if saved {
+				break
+			}
+			time.Sleep(5 * time.Millisecond)
+		}
+
+		if !saved {
+			t.Error("Expected /other request to be saved, but it wasn't")
+		}
+	})
+}
+
+type mockSaver struct {
+	saveFunc func(ctx context.Context, rl *domain.RequestLog) error
+}
+
+func (m *mockSaver) Save(ctx context.Context, rl *domain.RequestLog) error {
+	return m.saveFunc(ctx, rl)
 }

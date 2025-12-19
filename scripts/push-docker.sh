@@ -5,6 +5,9 @@
 
 set -e
 
+# Protection: Ensure run in CI
+./scripts/check-ci.sh
+
 # Colors for output
 GREEN='\033[0;32m'
 NC='\033[0m'
@@ -23,14 +26,26 @@ if [ "$AWS_ACCOUNT_ID" == "unknown" ]; then
 fi
 
 ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
-SERVICES="api-gateway auth-service logging-service notification-service"
+IMAGE_TAG=${IMAGE_TAG:-latest}
+SERVICE_ARG=$1
+
+if [ -n "$SERVICE_ARG" ]; then
+    SERVICES="$SERVICE_ARG"
+else
+    SERVICES="api-gateway auth-service logging-service notification-service"
+fi
 
 print_status "Logging into Amazon ECR..."
 aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$ECR_REGISTRY"
 
 for service in $SERVICES; do
-    print_status "Pushing $service..."
-    docker push "$ECR_REGISTRY/augno/$service:latest"
+    print_status "Pushing $service with tag $IMAGE_TAG..."
+    docker push "$ECR_REGISTRY/augno/$service:$IMAGE_TAG"
+    
+    if [ "$IMAGE_TAG" != "latest" ]; then
+        print_status "Pushing $service with tag latest..."
+        docker push "$ECR_REGISTRY/augno/$service:latest"
+    fi
 done
 
 print_status "All images pushed successfully!"

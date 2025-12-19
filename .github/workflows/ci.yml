@@ -5,8 +5,11 @@ on:
         branches: [main]
 
 jobs:
-    check:
+    lint:
+        name: Lint
         runs-on: ubuntu-latest
+        env:
+            CGO_ENABLED: 0
         steps:
             - uses: actions/checkout@v4
 
@@ -16,14 +19,39 @@ jobs:
                   go-version-file: go.mod
                   cache: true
 
-            - name: Install Tools
-              run: make install-tools
+            - name: Cache CI Tools
+              uses: actions/cache@v4
+              id: cache-ci-tools
+              with:
+                  path: |
+                      ~/go/bin/gosec
+                      ~/go/bin/staticcheck
+                  key: ${{ runner.os }}-ci-tools-${{ hashFiles('scripts/install-ci-tools.sh') }}
+                  restore-keys: |
+                      ${{ runner.os }}-ci-tools-
+
+            - name: Install CI Tools
+              run: make install-ci-tools
 
             - name: Run Gosec
               run: make gosec
 
             - name: Run Static Check
               run: make static-check
+
+    test:
+        name: Test
+        runs-on: ubuntu-latest
+        env:
+            CGO_ENABLED: 0
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Set up Go
+              uses: actions/setup-go@v5
+              with:
+                  go-version-file: go.mod
+                  cache: true
 
             - name: Run Tests
               run: make test

@@ -5,6 +5,9 @@
 
 set -e
 
+# Protection: Ensure run in CI
+./scripts/check-ci.sh
+
 # Colors for output
 GREEN='\033[0;32m'
 NC='\033[0m'
@@ -22,11 +25,26 @@ if [ "$AWS_ACCOUNT_ID" == "unknown" ]; then
 fi
 
 ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
-SERVICES="api-gateway auth-service logging-service notification-service"
+IMAGE_TAG=${IMAGE_TAG:-latest}
+SERVICE_ARG=$1
+
+if [ -n "$SERVICE_ARG" ]; then
+    SERVICES="$SERVICE_ARG"
+else
+    SERVICES="api-gateway auth-service logging-service notification-service"
+fi
 
 for service in $SERVICES; do
-    print_status "Building $service..."
-    docker build --platform linux/amd64 -t "$ECR_REGISTRY/augno/$service:latest" -f "infra/production/docker/$service.Dockerfile" .
+    print_status "Building $service with tag $IMAGE_TAG..."
+    docker build --platform linux/amd64 \
+        --build-arg SERVICE_NAME="$service" \
+        -t "$ECR_REGISTRY/augno/$service:$IMAGE_TAG" \
+        -f "infra/production/docker/Dockerfile" .
+    
+    if [ "$IMAGE_TAG" != "latest" ]; then
+        print_status "Tagging $service as latest..."
+        docker tag "$ECR_REGISTRY/augno/$service:$IMAGE_TAG" "$ECR_REGISTRY/augno/$service:latest"
+    fi
 done
 
 print_status "All images built successfully!"

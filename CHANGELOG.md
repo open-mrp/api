@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.4](https://github.com/Augno/api/compare/v0.1.3...v0.1.4) (2025-12-19)
+
+
+### Bug Fixes
+
+* combine release process with cd ([#39](https://github.com/Augno/api/issues/39)) ([38e0e1f](https://github.com/Augno/api/commit/38e0e1f42e12c761efaaa09cee60d5a051f13e39))
+
 ## [0.1.3](https://github.com/Augno/api/compare/v0.1.2...v0.1.3) (2025-12-19)
 
 

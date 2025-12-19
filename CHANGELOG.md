@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/Augno/api/compare/v0.1.1...v0.1.2) (2025-12-19)
+
+
+### Bug Fixes
+
+* issue preventing cd trigger on release ([#35](https://github.com/Augno/api/issues/35)) ([608845d](https://github.com/Augno/api/commit/608845dea4d404af4e433992c866b2d5bc28f57f))
+
 ## [0.1.1](https://github.com/Augno/api/compare/v0.1.0...v0.1.1) (2025-12-19)
 
 

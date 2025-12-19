@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/Augno/api/compare/v0.1.2...v0.1.3) (2025-12-19)
+
+
+### Bug Fixes
+
+* trigger cd on new tag creation ([#37](https://github.com/Augno/api/issues/37)) ([bf88b38](https://github.com/Augno/api/commit/bf88b38c89189806ef034d6fc36cdafc5f71b8b4))
+
 ## [0.1.2](https://github.com/Augno/api/compare/v0.1.1...v0.1.2) (2025-12-19)
 
 

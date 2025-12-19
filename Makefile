@@ -1,4 +1,4 @@
-.PHONY: help dev gen-sqlc gen-proto migrate-up migrate-down migrate-status migrate-reset db-dump test test-verbose install-tools docs mocks seed gosec static-check check-format docker-build-prod docker-push-prod deploy-prod jaeger-tracing
+.PHONY: help dev gen-sqlc gen-proto migrate-up migrate-down migrate-status migrate-reset db-dump test test-verbose install-tools docs mocks seed gosec static-check check-format docker-build-prod docker-push-prod deploy-prod jaeger-tracing connect-minikube connect-eks
 
 # Include .env file if it exists (optional for CI)
 -include .env
@@ -29,6 +29,21 @@ docker-push-prod: ## Push Docker images to ECR
 
 deploy-prod: ## Deploy application to EKS
 	@./scripts/deploy.sh
+
+reset-prod:
+	kubectl rollout restart deployment api-gateway auth-service logging-service notification-service
+
+manual-deploy-prod:
+	$(MAKE) docker-build-prod
+	$(MAKE) docker-push-prod
+	$(MAKE) deploy-prod
+	$(MAKE) reset-prod
+	
+connect-minikube: ## Switch kubectl context to minikube
+	@kubectl config use-context minikube
+
+connect-eks: ## Switch kubectl context to EKS production cluster
+	@aws eks update-kubeconfig --region us-east-2 --name augno-prod
 
 dev: ## Run the API in development mode
 	tilt up

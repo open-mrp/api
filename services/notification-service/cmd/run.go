@@ -57,7 +57,12 @@ func Run(
 	}
 	slog.Info("RabbitMQ connection established and warmed up.")
 
-	queries := sqlc.New(db)
+	queries, err := sqlc.Prepare(ctx, db)
+	if err != nil {
+		return fmt.Errorf("failed to prepare queries: %w", err)
+	}
+	defer queries.Close()
+
 	notificationSvc, apiErr := service.NewDefaultNotificationSvc(queries, cfg.AWSRegion)
 	if apiErr != nil {
 		return fmt.Errorf("failed to initialize notification service: %w", apiErr)

@@ -393,7 +393,7 @@ func (r *RabbitMQ) declareAndBindQueue(queueName string, messageTypes []string, 
 		args,      // arguments with DLX config
 	)
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("failed to declare queue %s: %v", queueName, err)
 	}
 
 	for _, msg := range messageTypes {

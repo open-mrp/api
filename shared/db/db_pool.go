@@ -1,11 +1,17 @@
 package db
 
 import (
+	"context"
 	"database/sql"
+	"database/sql/driver"
 	"strings"
 	"time"
 
+	"github.com/XSAM/otelsql"
 	_ "github.com/go-sql-driver/mysql"
+	"go.opentelemetry.io/otel"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func NewDbPool(dbURL string) (*sql.DB, error) {
@@ -19,7 +25,10 @@ func NewDbPool(dbURL string) (*sql.DB, error) {
 			params = append(params, "loc=UTC")
 		}
 		if !strings.Contains(dbURL, "time_zone=") {
-			params = append(params, "time_zone=%27%2B00%3A00%27")
+			params = append(params, "time_zone=UTC")
+		}
+		if !strings.Contains(dbURL, "interpolateParams=") {
+			params = append(params, "interpolateParams=false")
 		}
 
 		if len(params) > 0 {
@@ -32,12 +41,24 @@ func NewDbPool(dbURL string) (*sql.DB, error) {
 		}
 	}
 
-	db, err := sql.Open("mysql", dbURL)
+	db, err := otelsql.Open("mysql", dbURL,
+		otelsql.WithTracerProvider(otel.GetTracerProvider()),
+		otelsql.WithAttributes(semconv.DBSystemMySQL),
+		otelsql.WithSpanOptions(otelsql.SpanOptions{
+			Ping:           true,
+			DisableErrSkip: true,
+			SpanFilter:     SpanFilter,
+		}),
+		otelsql.WithSpanNameFormatter(func(ctx context.Context, method otelsql.Method, query string) string {
+			return string(method)
+		}),
+	)
 	if err != nil {
 		return nil, err
 	}
 
-	db.SetConnMaxLifetime(time.Minute * 3)
+	db.SetConnMaxLifetime(time.Minute * 30)
+	db.SetConnMaxIdleTime(time.Minute * 10)
 	db.SetMaxOpenConns(50)
 	db.SetMaxIdleConns(50)
 
@@ -46,4 +67,8 @@ func NewDbPool(dbURL string) (*sql.DB, error) {
 	}
 
 	return db, nil
+}
+
+func SpanFilter(ctx context.Context, method otelsql.Method, _ string, _ []driver.NamedValue) bool {
+	return trace.SpanFromContext(ctx).SpanContext().IsValid() && method != otelsql.MethodConnResetSession
 }

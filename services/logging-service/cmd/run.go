@@ -57,7 +57,12 @@ func Run(
 	}
 	slog.Info("RabbitMQ connection established and warmed up.")
 
-	queries := sqlc.New(dbpool)
+	queries, err := sqlc.Prepare(ctx, dbpool)
+	if err != nil {
+		return fmt.Errorf("failed to prepare queries: %w", err)
+	}
+	defer queries.Close()
+
 	loggingSvc := service.NewLoggingSvc(service.LoggingSvcConfig{
 		Repos: service.NewRepoFactory(queries),
 	})

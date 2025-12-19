@@ -5,6 +5,7 @@ go 1.24.4
 replace github.com/augno/api => ./
 
 require (
+	github.com/XSAM/otelsql v0.41.0
 	github.com/aws/aws-sdk-go-v2 v1.41.0
 	github.com/go-playground/validator/v10 v10.28.0
 	github.com/go-sql-driver/mysql v1.9.3

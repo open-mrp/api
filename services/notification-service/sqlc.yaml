@@ -7,4 +7,5 @@ sql:
       go:
         out: "internal/infrastructure/sqlc"
         package: "sqlc"
+        emit_prepared_queries: true
 

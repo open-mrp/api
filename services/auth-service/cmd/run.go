@@ -64,7 +64,12 @@ func Run(
 	}
 	slog.Info("RabbitMQ connection established and warmed up.")
 
-	queries := sqlc.New(db)
+	queries, err := sqlc.Prepare(ctx, db)
+	if err != nil {
+		return fmt.Errorf("failed to prepare queries: %w", err)
+	}
+	defer queries.Close()
+
 	txManager := service.NewTransactionManager(db, queries)
 	authConfig := service.DefaultAuthSvcConfig(queries, cfg.JWTSecret, cfg.Pepper, cfg.FrontendURL, rabbitmq, cfg.TemplatesDir)
 	authConfig.TxManager = txManager

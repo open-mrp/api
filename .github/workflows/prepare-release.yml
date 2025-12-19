@@ -13,11 +13,145 @@ permissions:
 jobs:
     release-please:
         runs-on: ubuntu-latest
+        outputs:
+            release_created: ${{ steps.release.outputs.release_created }}
+            tag_name: ${{ steps.release.outputs.tag_name }}
         steps:
             - uses: actions/checkout@v4
 
             - uses: googleapis/release-please-action@v4
+              id: release
               with:
                   token: ${{ secrets.GITHUB_TOKEN }}
                   config-file: release-please-config.json
                   manifest-file: .release-please-manifest.json
+
+    changes:
+        name: Check for Changes
+        needs: release-please
+        if: needs.release-please.outputs.release_created == 'true'
+        runs-on: ubuntu-latest
+        outputs:
+            terraform: ${{ steps.filter.outputs.terraform }}
+        steps:
+            - name: Checkout Code
+              uses: actions/checkout@v4
+
+            - name: Check for Changes
+              id: filter
+              uses: dorny/paths-filter@v3
+              with:
+                  filters: |
+                      terraform:
+                          - 'infra/production/terraform/**'
+
+    terraform:
+        name: Terraform Apply
+        needs: [release-please, changes]
+        if: needs.release-please.outputs.release_created == 'true' && needs.changes.outputs.terraform == 'true'
+        runs-on: ubuntu-latest
+        permissions:
+            id-token: write
+            contents: read
+        defaults:
+            run:
+                working-directory: infra/production/terraform
+        steps:
+            - name: Checkout Code
+              uses: actions/checkout@v4
+
+            - name: Configure AWS Credentials
+              uses: aws-actions/configure-aws-credentials@v3
+              with:
+                  role-to-assume: arn:aws:iam::AWS_ACCOUNT_ID:role/github-action-role
+                  aws-region: us-east-2
+
+            - name: Setup Terraform
+              uses: hashicorp/setup-terraform@v3
+
+            - name: Cache Terraform Providers
+              uses: actions/cache@v4
+              with:
+                  path: |
+                      .terraform/providers
+                      .terraform.lock.hcl
+                  key: ${{ runner.os }}-terraform-${{ hashFiles('**/*.tf') }}-${{ hashFiles('**/.terraform.lock.hcl') }}
+                  restore-keys: |
+                      ${{ runner.os }}-terraform-
+
+            - name: Terraform Init
+              run: terraform init
+
+            - name: Terraform Apply
+              run: terraform apply -auto-approve -input=false
+
+    build-push:
+        name: Build and Push
+        needs: release-please
+        if: needs.release-please.outputs.release_created == 'true'
+        runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                service: [api-gateway, auth-service, logging-service, notification-service]
+        permissions:
+            id-token: write
+            contents: read
+        steps:
+            - name: Checkout Code
+              uses: actions/checkout@v4
+
+            - name: Configure AWS Credentials
+              uses: aws-actions/configure-aws-credentials@v3
+              with:
+                  role-to-assume: arn:aws:iam::AWS_ACCOUNT_ID:role/github-action-role
+                  aws-region: us-east-2
+
+            - name: Login to Amazon ECR
+              id: login-ecr
+              uses: aws-actions/amazon-ecr-login@v2
+
+            - name: Set up Docker Buildx
+              uses: docker/setup-buildx-action@v3
+
+            - name: Build and Push Docker Image
+              uses: docker/build-push-action@v5
+              with:
+                  context: .
+                  file: infra/production/docker/Dockerfile
+                  push: true
+                  platforms: linux/amd64
+                  build-args: |
+                      SERVICE_NAME=${{ matrix.service }}
+                  tags: |
+                      ${{ steps.login-ecr.outputs.registry }}/augno/${{ matrix.service }}:${{ needs.release-please.outputs.tag_name || github.sha }}
+                      ${{ steps.login-ecr.outputs.registry }}/augno/${{ matrix.service }}:latest
+                  cache-from: type=gha
+                  cache-to: type=gha,mode=max
+
+    deploy:
+        name: Deploy to EKS
+        needs: [release-please, terraform, build-push]
+        if: |
+            needs.release-please.outputs.release_created == 'true' &&
+            (needs.terraform.result == 'success' || needs.terraform.result == 'skipped') &&
+            needs.build-push.result == 'success'
+        runs-on: ubuntu-latest
+        permissions:
+            id-token: write
+            contents: read
+        steps:
+            - name: Checkout Code
+              uses: actions/checkout@v4
+
+            - name: Configure AWS Credentials
+              uses: aws-actions/configure-aws-credentials@v3
+              with:
+                  role-to-assume: arn:aws:iam::AWS_ACCOUNT_ID:role/github-action-role
+                  aws-region: us-east-2
+
+            - name: Deploy to EKS
+              run: make deploy-prod
+              env:
+                  AWS_REGION: "us-east-2"
+                  CLUSTER_NAME: "augno-prod"
+                  IMAGE_TAG: ${{ needs.release-please.outputs.tag_name || github.sha }}

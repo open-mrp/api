@@ -1,12 +1,32 @@
 name: CD
 
 on:
-    release:
-        types: [created]
+    push:
+        tags:
+            - 'v*'
 
 jobs:
+    changes:
+        name: Check for Changes
+        runs-on: ubuntu-latest
+        outputs:
+            terraform: ${{ steps.filter.outputs.terraform }}
+        steps:
+            - name: Checkout Code
+              uses: actions/checkout@v4
+
+            - name: Check for Changes
+              id: filter
+              uses: dorny/paths-filter@v3
+              with:
+                  filters: |
+                      terraform:
+                          - 'infra/production/terraform/**'
+
     terraform:
         name: Terraform Apply
+        needs: changes
+        if: needs.changes.outputs.terraform == 'true'
         runs-on: ubuntu-latest
         permissions:
             id-token: write
@@ -45,7 +65,6 @@ jobs:
 
     build-push:
         name: Build and Push
-        needs: terraform
         runs-on: ubuntu-latest
         strategy:
             matrix:
@@ -88,6 +107,10 @@ jobs:
     deploy:
         name: Deploy to EKS
         needs: [terraform, build-push]
+        if: |
+            always() &&
+            (needs.terraform.result == 'success' || needs.terraform.result == 'skipped') &&
+            needs.build-push.result == 'success'
         runs-on: ubuntu-latest
         permissions:
             id-token: write

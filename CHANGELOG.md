@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.5](https://github.com/Augno/api/compare/v0.1.4...v0.1.5) (2025-12-19)
+
+
+### Bug Fixes
+
+* deploy logic gates ([#41](https://github.com/Augno/api/issues/41)) ([32733b9](https://github.com/Augno/api/commit/32733b940615c06724ce96fa13c0460e7076a76b))
+
 ## [0.1.4](https://github.com/Augno/api/compare/v0.1.3...v0.1.4) (2025-12-19)
 
 

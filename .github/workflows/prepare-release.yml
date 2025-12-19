@@ -48,7 +48,7 @@ jobs:
     terraform:
         name: Terraform Apply
         needs: [release-please, changes]
-        if: needs.release-please.outputs.release_created == 'true' && needs.changes.outputs.terraform == 'true'
+        if: needs.release-please.outputs.release_created == 'true'
         runs-on: ubuntu-latest
         permissions:
             id-token: write
@@ -60,16 +60,23 @@ jobs:
             - name: Checkout Code
               uses: actions/checkout@v4
 
+            - name: Skip Terraform (no changes)
+              if: needs.changes.outputs.terraform != 'true'
+              run: echo "No Terraform changes detected; skipping apply."
+
             - name: Configure AWS Credentials
+              if: needs.changes.outputs.terraform == 'true'
               uses: aws-actions/configure-aws-credentials@v3
               with:
                   role-to-assume: arn:aws:iam::AWS_ACCOUNT_ID:role/github-action-role
                   aws-region: us-east-2
 
             - name: Setup Terraform
+              if: needs.changes.outputs.terraform == 'true'
               uses: hashicorp/setup-terraform@v3
 
             - name: Cache Terraform Providers
+              if: needs.changes.outputs.terraform == 'true'
               uses: actions/cache@v4
               with:
                   path: |
@@ -80,9 +87,11 @@ jobs:
                       ${{ runner.os }}-terraform-
 
             - name: Terraform Init
+              if: needs.changes.outputs.terraform == 'true'
               run: terraform init
 
             - name: Terraform Apply
+              if: needs.changes.outputs.terraform == 'true'
               run: terraform apply -auto-approve -input=false
 
     build-push:
@@ -133,7 +142,7 @@ jobs:
         needs: [release-please, terraform, build-push]
         if: |
             needs.release-please.outputs.release_created == 'true' &&
-            (needs.terraform.result == 'success' || needs.terraform.result == 'skipped') &&
+            needs.terraform.result == 'success' &&
             needs.build-push.result == 'success'
         runs-on: ubuntu-latest
         permissions:

@@ -17,7 +17,11 @@ func CORSMiddleware() func(http.HandlerFunc) http.HandlerFunc {
 			}
 
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Augno-Account-ID, Idempotency-Key, Accept, Origin, Augno-Version")
+			w.Header().Set("Access-Control-Allow-Headers",
+				"Content-Type, Authorization, X-Requested-With, Augno-Account-ID, Idempotency-Key, Accept, Origin, Augno-Version, "+
+					"X-Stainless-Arch, X-Stainless-Lang, X-Stainless-OS, X-Stainless-Package-Version, X-Stainless-Read-Timeout, "+
+					"X-Stainless-Retry-Count, X-Stainless-Runtime, X-Stainless-Runtime-Version, X-Stainless-Timeout",
+			)
 			w.Header().Set("Access-Control-Expose-Headers", "RateLimit-Limit, RateLimit-Remaining, RateLimit-Reset, Request-Id, Augno-Version")
 			w.Header().Set("Access-Control-Max-Age", "86400") // 24 hours
 

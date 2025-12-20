@@ -1,0 +1,16 @@
+
+
+██╗   ██╗ █████╗  ██████╗██╗   ██╗██╗   ██╗███╗   ███╗
+██║   ██║██╔══██╗██╔════╝██║   ██║██║   ██║████╗ ████║
+██║   ██║███████║██║     ██║   ██║██║   ██║██╔████╔██║
+╚██╗ ██╔╝██╔══██║██║     ██║   ██║██║   ██║██║╚██╔╝██║
+ ╚████╔╝ ██║  ██║╚██████╗╚██████╔╝╚██████╔╝██║ ╚═╝ ██║
+  ╚═══╝  ╚═╝  ╚═╝ ╚═════╝ ╚═════╝  ╚═════╝ ╚═╝     ╚═╝
+
+
+version: latest | compiled: Fri, 19 Dec 2025 23:00:09 EST
+🔗 https://quobix.com/vacuum | https://github.com/daveshanley/vacuum
+
+
+  ERROR   please supply 'recommended', 'owasp' or 'all' and a file path to output the ruleset
+

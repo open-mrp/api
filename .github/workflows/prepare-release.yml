@@ -169,7 +169,7 @@ jobs:
 
             - name: Generate OpenAPI Specs
               run: |
-                  make install-ci-tools
+                  make install-cd-tools
                   make gen-openapi-specs
 
             - name: Upload Public Spec to S3

@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Install CI Tools Script
-# This script installs only the minimum necessary tools for CI to run fast.
+# Install CD Tools Script
+# This script installs only the minimum necessary tools for CD to run fast.
 
 set -e
 
@@ -27,10 +27,9 @@ install_tool() {
     fi
 }
 
-print_status "Installing minimum CI tools..."
+print_status "Installing minimum CD tools..."
 
-# Only install what's actually used in ci.yml
-install_tool "gosec" "github.com/securego/gosec/v2/cmd/gosec@latest"
-install_tool "staticcheck" "honnef.co/go/tools/cmd/staticcheck@latest"
+# Only install what's actually used in prepare-release.yml
+install_tool "vacuum" "github.com/daveshanley/vacuum@latest"
 
-print_status "CI tools installed successfully!"
+print_status "CD tools installed successfully!"

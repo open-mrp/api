@@ -3,6 +3,7 @@ package middleware
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -44,6 +45,24 @@ func TestCORSMiddleware(t *testing.T) {
 		}
 		if rr.Header().Get("Access-Control-Allow-Origin") != "http://localhost:4200" {
 			t.Errorf("expected Access-Control-Allow-Origin to be http://localhost:4200, got %v", rr.Header().Get("Access-Control-Allow-Origin"))
+		}
+
+		allowHeaders := rr.Header().Get("Access-Control-Allow-Headers")
+		expectedHeaders := []string{
+			"X-Stainless-OS",
+			"X-Stainless-Lang",
+			"X-Stainless-Package-Version",
+			"X-Stainless-Arch",
+			"X-Stainless-Read-Timeout",
+			"X-Stainless-Retry-Count",
+			"X-Stainless-Runtime",
+			"X-Stainless-Runtime-Version",
+			"X-Stainless-Timeout",
+		}
+		for _, header := range expectedHeaders {
+			if !strings.Contains(allowHeaders, header) {
+				t.Errorf("expected Access-Control-Allow-Headers to contain %s, got %v", header, allowHeaders)
+			}
 		}
 	})
 

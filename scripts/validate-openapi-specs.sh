@@ -27,7 +27,7 @@ validate_spec() {
 
     if command -v vacuum >/dev/null 2>&1; then
         print_status "Validating $spec_path..."
-        vacuum lint -d -n warn "$spec_path"
+        vacuum lint -d -n error "$spec_path"
     else
         echo -e "${YELLOW}[ERROR]${NC} Vacuum not available"
         exit 1

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.7](https://github.com/Augno/api/compare/v0.1.6...v0.1.7) (2025-12-20)
+
+
+### Bug Fixes
+
+* cd ([#45](https://github.com/Augno/api/issues/45)) ([903b3d0](https://github.com/Augno/api/commit/903b3d0d1dc57336a9b8fc42a2b001fbf3db0029))
+
 ## [0.1.6](https://github.com/Augno/api/compare/v0.1.5...v0.1.6) (2025-12-20)
 
 

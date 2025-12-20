@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.8](https://github.com/Augno/api/compare/v0.1.7...v0.1.8) (2025-12-20)
+
+
+### Bug Fixes
+
+* cors ([#47](https://github.com/Augno/api/issues/47)) ([2bde99b](https://github.com/Augno/api/commit/2bde99bfc4ad1e2e169f5afde4fb6897125a772f))
+
 ## [0.1.7](https://github.com/Augno/api/compare/v0.1.6...v0.1.7) (2025-12-20)
 
 

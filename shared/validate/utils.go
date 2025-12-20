@@ -38,7 +38,12 @@ func parseValidationErrors(err error, structValue any) *contracts.APIError {
 		fieldErrors = append(fieldErrors, formatFieldError(fieldErr, structValue))
 	}
 
-	return contracts.NewValidationError(fmt.Sprintf("Validation failed for the following fields: %s", strings.Join(fieldErrors, " ")))
+	var firstField string
+	if len(validationErrors) > 0 {
+		firstField = getFieldName(validationErrors[0], structValue)
+	}
+
+	return contracts.NewValidationErrorWithParam(fmt.Sprintf("Validation failed for the following fields: %s", strings.Join(fieldErrors, " ")), firstField)
 }
 
 func createFieldValidationError(fieldErr validator.FieldError, structValue any) *contracts.APIError {

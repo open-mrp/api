@@ -25,7 +25,7 @@ func NewDbPool(dbURL string) (*sql.DB, error) {
 			params = append(params, "loc=UTC")
 		}
 		if !strings.Contains(dbURL, "time_zone=") {
-			params = append(params, "time_zone=UTC")
+			params = append(params, "time_zone='%2B00:00'")
 		}
 		if !strings.Contains(dbURL, "interpolateParams=") {
 			params = append(params, "interpolateParams=false")

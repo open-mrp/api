@@ -101,7 +101,13 @@ jobs:
         runs-on: ubuntu-latest
         strategy:
             matrix:
-                service: [api-gateway, auth-service, logging-service, notification-service]
+                service:
+                    [
+                        api-gateway,
+                        auth-service,
+                        logging-service,
+                        notification-service,
+                    ]
         permissions:
             id-token: write
             contents: read
@@ -159,8 +165,55 @@ jobs:
                   aws-region: us-east-2
 
             - name: Deploy to EKS
-              run: make deploy-prod
+              run: ./scripts/deploy.sh
               env:
                   AWS_REGION: "us-east-2"
                   CLUSTER_NAME: "augno-prod"
                   IMAGE_TAG: ${{ needs.release-please.outputs.tag_name || github.sha }}
+
+    publish-openapi-specs:
+        name: Publish OpenAPI Specs
+        needs: [release-please, deploy]
+        if: needs.release-please.outputs.release_created == 'true' && needs.deploy.result == 'success'
+        runs-on: ubuntu-latest
+        permissions:
+            id-token: write
+            contents: read
+        steps:
+            - name: Checkout Code
+              uses: actions/checkout@v4
+
+            - name: Setup Go
+              uses: actions/setup-go@v5
+              with:
+                  go-version: "1.24"
+                  cache: true
+
+            - name: Configure AWS Credentials
+              uses: aws-actions/configure-aws-credentials@v3
+              with:
+                  role-to-assume: arn:aws:iam::AWS_ACCOUNT_ID:role/github-action-role
+                  aws-region: us-east-2
+
+            - name: Generate OpenAPI Specs
+              run: |
+                  make install-ci-tools
+                  make gen-openapi-specs
+
+            - name: Upload Public Spec to S3
+              run: |
+                  aws s3 cp specs/public_openapi_spec.json s3://augno-public-openapi-specs/openapi.json
+                  aws s3 cp specs/public_openapi_spec.json s3://augno-public-openapi-specs/${{ needs.release-please.outputs.tag_name }}.json
+
+            - name: Upload Private Spec to S3
+              run: |
+                  aws s3 cp specs/internal_openapi_spec.json s3://augno-private-openapi-specs/openapi.json
+                  aws s3 cp specs/internal_openapi_spec.json s3://augno-private-openapi-specs/${{ needs.release-please.outputs.tag_name }}.json
+
+            - name: Upload to Stainless
+              uses: stainless-api/upload-openapi-spec-action@v1
+              with:
+                  openapi-file: specs/public_openapi_spec.json
+                  org: augno
+                  project: augno
+                  stainless-api-key: ${{ secrets.STAINLESS_API_KEY }}

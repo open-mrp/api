@@ -18,10 +18,10 @@ import (
 
 // The request to login a user
 type LoginRequest struct {
-	// The username or email of the user
-	Identifier string `json:"identifier" validate:"required"`
-	// The password of the user
-	Password string `json:"password" validate:"required"`
+	// The username or email for authentication
+	Identifier string `json:"identifier" validate:"required" example:"jdoe"`
+	// The password for authentication
+	Password string `json:"password" validate:"required" example:"super-secret-password"`
 }
 
 func (lr *LoginRequest) Validate() error {

@@ -26,6 +26,7 @@ jobs:
                   path: |
                       ~/go/bin/gosec
                       ~/go/bin/staticcheck
+                      ~/go/bin/vacuum
                   key: ${{ runner.os }}-ci-tools-${{ hashFiles('scripts/install-ci-tools.sh') }}
                   restore-keys: |
                       ${{ runner.os }}-ci-tools-
@@ -38,6 +39,9 @@ jobs:
 
             - name: Run Static Check
               run: make static-check
+
+            - name: Run Doc Generation Check
+              run: make gen-openapi-specs
 
     test:
         name: Test

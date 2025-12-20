@@ -20,10 +20,10 @@ import (
 
 // The request to update a user's password
 type UpdatePasswordRequest struct {
-	// The old password of the user
-	OldPassword string `json:"old_password" validate:"required"`
-	// The new password of the user
-	NewPassword string `json:"new_password" validate:"required"`
+	// The user's current password
+	OldPassword string `json:"old_password" validate:"required" example:"super-secret-password"`
+	// The new password to be set
+	NewPassword string `json:"new_password" validate:"required" example:"new-super-secret-password"`
 }
 
 func (lr *UpdatePasswordRequest) Validate() error {

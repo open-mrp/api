@@ -6,6 +6,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MODULE="github.com/augno/api"
 DEFAULT_SERVICES=("auth-service" "api-gateway" "notification-service" "logging-service")
 COMPONENTS=("factories" "mediators" "publishers" "repositories" "services" "utils")
+declare -a services=()
 
 to_snake_case() {
   local input="${1}"
@@ -39,6 +40,16 @@ component_package() {
     utils) echo "utilsmock" ;;
     *) return 1 ;;
   esac
+}
+
+add_service() {
+  local service="${1}"
+  for existing in "${services[@]:-}"; do
+    if [[ "${existing}" == "${service}" ]]; then
+      return
+    fi
+  done
+  services+=("${service}")
 }
 
 generate_for_component() {
@@ -92,41 +103,51 @@ main() {
     exit 1
   fi
 
-  local services=()
-  
-  if [[ "$#" -eq 0 || "${1}" == "all" ]]; then
-    services=("${DEFAULT_SERVICES[@]}")
+  services=()
+
+  if [[ "$#" -eq 0 ]]; then
+    for service in "${DEFAULT_SERVICES[@]}"; do
+      add_service "${service}"
+    done
   else
     for arg in "$@"; do
-      # Remove leading dash if present (e.g., -auth -> auth)
       local clean_arg="${arg#-}"
-      
-      # Handle shorthand names
+
       case "${clean_arg}" in
-        auth) services+=("auth-service") ;;
-        api) services+=("api-gateway") ;;
-        notification) services+=("notification-service") ;;
-        logging) services+=("logging-service") ;;
+        all)
+          for service in "${DEFAULT_SERVICES[@]}"; do
+            add_service "${service}"
+          done
+          ;;
+        auth) add_service "auth-service" ;;
+        api) add_service "api-gateway" ;;
+        notification) add_service "notification-service" ;;
+        logging) add_service "logging-service" ;;
         *)
-          # Check if the argument is one of the default services
-          local found=false
+          local matched_default=false
           for s in "${DEFAULT_SERVICES[@]}"; do
             if [[ "${s}" == "${clean_arg}" ]]; then
-              services+=("${s}")
-              found=true
+              add_service "${s}"
+              matched_default=true
               break
             fi
           done
-          if [[ "${found}" == "false" ]]; then
-             # If not found in defaults, check if directory exists anyway
-             if [[ -d "${ROOT_DIR}/services/${clean_arg}" ]]; then
-               services+=("${clean_arg}")
-             else
-               echo "Warning: Unknown service '${arg}'. Skipping." >&2
-             fi
+
+          if [[ "${matched_default}" == "false" ]]; then
+            if [[ -d "${ROOT_DIR}/services/${clean_arg}" ]]; then
+              add_service "${clean_arg}"
+            else
+              echo "Warning: Unknown service '${arg}'. Skipping." >&2
+            fi
           fi
           ;;
       esac
+    done
+  fi
+
+  if [[ "${#services[@]}" -eq 0 ]]; then
+    for service in "${DEFAULT_SERVICES[@]}"; do
+      add_service "${service}"
     done
   fi
 

@@ -76,4 +76,3 @@ func (h *LoggerHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 func (h *LoggerHandler) WithGroup(name string) slog.Handler {
 	return &LoggerHandler{handler: h.handler.WithGroup(name)}
 }
-

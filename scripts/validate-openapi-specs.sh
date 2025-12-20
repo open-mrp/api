@@ -27,11 +27,12 @@ validate_spec() {
 
     if command -v vacuum >/dev/null 2>&1; then
         print_status "Validating $spec_path..."
-        vacuum lint -d "$spec_path" || print_warning "Vacuum lint failed for $spec_path - continuing..."
+        vacuum lint -d -n warn "$spec_path"
     else
-        print_warning "Vacuum not available - skipping lint for $spec_path"
+        echo -e "${YELLOW}[ERROR]${NC} Vacuum not available"
+        exit 1
     fi
 }
 
-validate_spec "./specs/api_internal_spec.json"
-validate_spec "./spec/api_public_spec.json"
+validate_spec "./specs/internal_openapi_spec.json"
+validate_spec "./specs/public_openapi_spec.json"

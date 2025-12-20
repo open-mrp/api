@@ -43,9 +43,16 @@ func ValidateAndMarshalToMap(example any) map[string]any {
 		}
 
 		fieldValue := val.Field(i)
-		if fieldValue.CanInterface() {
-			result[jsonName] = fieldValue.Interface()
+		if !fieldValue.CanInterface() {
+			continue
 		}
+
+		// Skip nil pointers to avoid "null" in OpenAPI examples which vacuum dislikes for non-nullable types
+		if fieldValue.Kind() == reflect.Ptr && fieldValue.IsNil() {
+			continue
+		}
+
+		result[jsonName] = fieldValue.Interface()
 	}
 
 	return result

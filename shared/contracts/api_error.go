@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+
+	"github.com/augno/api/shared/ptrutil"
 )
 
 type ErrorCode string
@@ -200,23 +202,25 @@ func NewClientClosedRequestError(publicMessage string) *APIError {
 	return NewAPIError(ErrorCodeClientClosedRequest, ErrorTypeAPI, publicMessage, "Client closed request.")
 }
 
-func (e *APIError) ToResponseMap() map[string]any {
-	errorMap := map[string]any{
-		"code":    e.Code,
-		"type":    e.Type,
-		"message": e.PublicMessage,
-	}
+// ResponseError defines the structure of the error field in the JSON response
+// to ensure key ordering is conserved.
+type ResponseError struct {
+	Code    ErrorCode `json:"code"`
+	Type    ErrorType `json:"type"`
+	Message string    `json:"message"`
+	Param   *string   `json:"param"`
+	DocURL  *string   `json:"doc_url"`
+}
 
-	if e.Param != "" {
-		errorMap["param"] = e.Param
-	}
-
-	if e.DocURL != "" {
-		errorMap["doc_url"] = e.DocURL
-	}
-
+func (e *APIError) ToResponseMap() any {
 	return map[string]any{
-		"error": errorMap,
+		"error": ResponseError{
+			Code:    e.Code,
+			Type:    e.Type,
+			Message: e.PublicMessage,
+			Param:   ptrutil.String(e.Param),
+			DocURL:  ptrutil.String(e.DocURL),
+		},
 	}
 }
 

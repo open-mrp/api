@@ -43,16 +43,26 @@ func NewRouter() *router {
 		}
 
 		for _, route := range router.routes {
-			if route.Method != req.Method {
-				continue
-			}
+			pathMatches := false
+			var params map[string]string
 
 			if route.PathPattern != nil {
-				params := extractPathParams(route.PathPattern, route.PathParams, req.URL.Path)
-				if params != nil {
-					ctx := context.WithValue(req.Context(), apicontext.PathParamsKey, params)
-					ctx = apicontext.WithRoutePattern(ctx, route.Path)
-					req = req.WithContext(ctx)
+				params = extractPathParams(route.PathPattern, route.PathParams, req.URL.Path)
+				pathMatches = params != nil
+			} else {
+				pathMatches = route.Path == req.URL.Path
+			}
+
+			if pathMatches {
+				if route.Method == req.Method || req.Method == http.MethodOptions {
+					if params != nil {
+						ctx := context.WithValue(req.Context(), apicontext.PathParamsKey, params)
+						ctx = apicontext.WithRoutePattern(ctx, route.Path)
+						req = req.WithContext(ctx)
+					} else {
+						ctx := apicontext.WithRoutePattern(req.Context(), route.Path)
+						req = req.WithContext(ctx)
+					}
 
 					finalHandler := route.Handler
 					for i := len(router.middlewares) - 1; i >= 0; i-- {
@@ -61,15 +71,6 @@ func NewRouter() *router {
 					finalHandler(w, req)
 					return
 				}
-			} else if route.Path == req.URL.Path {
-				finalHandler := route.Handler
-				ctx := apicontext.WithRoutePattern(req.Context(), route.Path)
-				req = req.WithContext(ctx)
-				for i := len(router.middlewares) - 1; i >= 0; i-- {
-					finalHandler = router.middlewares[i](finalHandler)
-				}
-				finalHandler(w, req)
-				return
 			}
 		}
 
@@ -105,8 +106,17 @@ func (r *router) handle(method, path string, handler http.HandlerFunc) {
 				req = req.WithContext(ctx)
 
 				methodHandlers := r.handlers[path]
-				if methodHandler, exists := methodHandlers[req.Method]; exists {
-					finalHandler := methodHandler
+				handler, exists := methodHandlers[req.Method]
+				if !exists && req.Method == http.MethodOptions {
+					for _, h := range methodHandlers {
+						handler = h
+						exists = true
+						break
+					}
+				}
+
+				if exists {
+					finalHandler := handler
 					for i := len(r.middlewares) - 1; i >= 0; i-- {
 						finalHandler = r.middlewares[i](finalHandler)
 					}

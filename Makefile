@@ -1,4 +1,4 @@
-.PHONY: help dev gen-sqlc gen-proto migrate-up migrate-down migrate-status migrate-reset db-dump test test-verbose install-tools docs mocks seed gosec static-check check-format docker-build-prod docker-push-prod deploy-prod jaeger-tracing connect-minikube connect-eks check-ci
+.PHONY: help dev gen-sqlc gen-proto db-dump test test-verbose install-tools docs mocks gosec static-check check-format jaeger-tracing connect-minikube connect-eks
 
 # Include .env file if it exists (optional for CI)
 -include .env
@@ -20,42 +20,6 @@ ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
 help: ## Show this help message
 	@echo "Available targets:"
 	@grep -E '^[a-zA-Z_-]+:.*## .*$$' Makefile | sort | awk 'BEGIN {FS = ":.*## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
-
-check-ci:
-	@./scripts/check-ci.sh
-
-docker-build-prod: check-ci ## Build Docker images for production. Usage: make docker-build-prod [service]
-	@./scripts/build-docker.sh $(ARGS)
-
-docker-push-prod: check-ci ## Push Docker images to ECR. Usage: make docker-push-prod [service]
-	@./scripts/push-docker.sh $(ARGS)
-
-deploy-prod: check-ci ## Deploy application to EKS
-	@./scripts/deploy.sh
-
-tf-init: ## Initialize Terraform
-	terraform -chdir=infra/production/terraform init
-
-tf-fmt: ## Check Terraform formatting
-	terraform -chdir=infra/production/terraform fmt -check
-
-tf-validate: ## Validate Terraform configuration
-	terraform -chdir=infra/production/terraform validate
-
-tf-plan: ## Generate Terraform execution plan
-	terraform -chdir=infra/production/terraform plan -out=tfplan
-
-tf-apply: check-ci ## Apply Terraform changes
-	terraform -chdir=infra/production/terraform apply -auto-approve tfplan
-
-reset-prod: check-ci
-	kubectl rollout restart deployment api-gateway auth-service logging-service notification-service
-
-manual-deploy-prod: check-ci
-	$(MAKE) docker-build-prod
-	$(MAKE) docker-push-prod
-	$(MAKE) deploy-prod
-	$(MAKE) reset-prod
 	
 connect-minikube: ## Switch kubectl context to minikube
 	@kubectl config use-context minikube
@@ -66,9 +30,9 @@ connect-eks: ## Switch kubectl context to EKS production cluster
 dev: ## Run the API in development mode
 	tilt up
 
-docs: ## Generate OpenAPI documentation
-	go run ./cmd/apidocs --name api
-	@./scripts/validate-docs.sh
+gen-openapi-specs: ## Generate OpenAPI specifications
+	go run ./services/api-gateway/cmd/apidocs --name api
+	@./scripts/validate-openapi-specs.sh
 
 gen-sqlc: ## Generate code from SQL queries using sqlc. Usage: make gen-sqlc [services]
 	@$(SQLC_SCRIPT) $(ARGS)
@@ -80,23 +44,8 @@ gen-proto: ## Generate Go protobuf bindings
 		--go-grpc_out=$(GO_OUT) \
 		$(PROTO_SRC)
 
-migrate-up: ## Run database migrations up
-	@./scripts/migrate.sh up
-
-migrate-down: ## Rollback database migrations
-	@./scripts/migrate.sh down
-
-migrate-status: ## Show migration status
-	@./scripts/migrate.sh status
-
-migrate-reset: ## Reset database
-	@./scripts/migrate.sh reset
-
 db-dump: ## Dump the database
 	@./scripts/dump-dev-db.sh
-
-seed: ## Seed the database with development data
-	@./scripts/seed-db.sh
 
 test: ## Run tests
 	@echo "Running tests..."
@@ -114,7 +63,6 @@ install-ci-tools: ## Install minimum tools for CI
 
 mocks: ## Generate mocks. Usage: make mocks [services]
 	@$(MOCK_SCRIPT) $(ARGS)
-	@if [ -z "$(ARGS)" ] || echo "$(ARGS)" | grep -q "integration"; then ./scripts/generate-integration-mocks.sh; fi
 
 gosec: ## Run gosec
 	@echo "Running gosec..."

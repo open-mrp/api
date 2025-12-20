@@ -18,12 +18,12 @@ import (
 
 // The request to register a new user
 type RegisterRequest struct {
-	// The email of the user
-	Email string `json:"email" validate:"required"`
-	// The password of the user
-	Password string `json:"password" validate:"required"`
-	// The name of the user
-	Name string `json:"name" validate:"required"`
+	// The email address for the new user
+	Email string `json:"email" validate:"required" example:"jdoe@augno.com"`
+	// The password for the new user
+	Password string `json:"password" validate:"required" example:"super-secret-password"`
+	// The full name of the new user
+	Name string `json:"name" validate:"required" example:"John Doe"`
 }
 
 func (rr *RegisterRequest) Validate() error {

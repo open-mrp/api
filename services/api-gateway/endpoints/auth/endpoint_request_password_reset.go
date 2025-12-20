@@ -18,7 +18,7 @@ import (
 
 // The request to request a password reset
 type RequestPasswordResetRequest struct {
-	// The username or email of the user
+	// The username or email of the account to reset
 	Identifier string `json:"identifier" validate:"required"`
 	// The account slug (optional)
 	AccountSlug *string `json:"account_slug,omitempty"`

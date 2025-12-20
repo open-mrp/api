@@ -81,7 +81,10 @@ func ConvertToHTTPHandler[TReq, TResp any](be apiendpoint.BoundEndpoint[TReq, TR
 
 		if shouldDecodeBody(r) {
 			if err := decodeJSONInto(any(req), r, !be.Spec.Extras.AllowUnknownJSONFields); err != nil {
-				apiErr := contracts.NewValidationError(err.Error())
+				apiErr, ok := err.(*contracts.APIError)
+				if !ok {
+					apiErr = contracts.NewValidationError(err.Error())
+				}
 				tracing.RecordControllerError(span, apiErr)
 				if span.IsRecording() {
 					span.SetAttributes(attribute.String(attrErrorType, "json_decode"))
@@ -146,11 +149,22 @@ func decodeJSONInto(dst any, r *http.Request, disallowUnknown bool) error {
 	if err := dec.Decode(dst); err != nil {
 		if field, ok := extractUnknownJSONFieldName(err); ok {
 			candidates := collectJSONFieldNames(dst)
+			msg := fmt.Sprintf("Invalid JSON in request body: unknown field '%s'.", field)
 			if suggestion, dist := fuzzy.FindClosestByLevenshtein(field, candidates); suggestion != "" && dist <= 3 {
-				return fmt.Errorf("Invalid JSON in request body: unknown field '%s'. Did you mean '%s'?", field, suggestion)
+				msg = fmt.Sprintf("Invalid JSON in request body: unknown field '%s'. Did you mean '%s'?", field, suggestion)
 			}
-			return fmt.Errorf("Invalid JSON in request body: unknown field '%s'.", field)
+			return contracts.NewValidationErrorWithParam(msg, field)
 		}
+
+		if uterr, ok := err.(*json.UnmarshalTypeError); ok {
+			msg := fmt.Sprintf("Invalid type for field '%s': expected %s, got %s", uterr.Field, uterr.Type.String(), uterr.Value)
+			return contracts.NewValidationErrorWithParam(msg, uterr.Field)
+		}
+
+		if serr, ok := err.(*json.SyntaxError); ok {
+			return contracts.NewValidationError(fmt.Sprintf("Invalid JSON in request body at offset %d: %v", serr.Offset, serr.Error()))
+		}
+
 		return err
 	}
 	if dec.More() {
@@ -279,7 +293,7 @@ func bindFromHeaders(r *http.Request, dst any) error {
 					}
 				}
 				// No cookie fallback or cookie also failed, return the auth header error
-				return err
+				return err.WithParam(h)
 			}
 
 			// If scheme is specified, verify it matches
@@ -293,7 +307,7 @@ func bindFromHeaders(r *http.Request, dst any) error {
 							return setFromString(f.value, cookie.Value, f.tag)
 						}
 					}
-					return fmt.Errorf("invalid %s header scheme: expected %s, got %s", h, expectedScheme, actualScheme)
+					return contracts.NewValidationErrorWithParam(fmt.Sprintf("Invalid %s header scheme: expected %s, got %s", h, expectedScheme, actualScheme), h)
 				}
 			}
 			return setFromString(f.value, authResult.TokenString, f.tag)
@@ -320,11 +334,18 @@ func bindFromHeaders(r *http.Request, dst any) error {
 		if scheme := f.tag.Get("scheme"); scheme != "" && fromHeader {
 			prefix := scheme + " "
 			if !strings.HasPrefix(val, prefix) {
-				return fmt.Errorf("invalid %s header scheme", h)
+				return contracts.NewValidationErrorWithParam(fmt.Sprintf("Invalid %s header scheme", h), h)
 			}
 			val = strings.TrimPrefix(val, prefix)
 		}
-		return setFromString(f.value, val, f.tag)
+		if err := setFromString(f.value, val, f.tag); err != nil {
+			param := h
+			if param == "" {
+				param = cookieName
+			}
+			return contracts.NewValidationErrorWithParam(fmt.Sprintf("Invalid value for %s: %v", param, err), param)
+		}
+		return nil
 	})
 }
 
@@ -343,7 +364,10 @@ func bindFromPath(r *http.Request, dst any) error {
 				return nil
 			}
 		}
-		return setFromString(f.value, val, f.tag)
+		if err := setFromString(f.value, val, f.tag); err != nil {
+			return contracts.NewValidationErrorWithParam(fmt.Sprintf("Invalid value for path parameter '%s': %v", key, err), key)
+		}
+		return nil
 	})
 }
 
@@ -370,7 +394,10 @@ func bindFromQuery(u *url.URL, dst any) error {
 			f.value.Set(reflect.ValueOf(values))
 			return nil
 		}
-		return setFromString(f.value, val, f.tag)
+		if err := setFromString(f.value, val, f.tag); err != nil {
+			return contracts.NewValidationErrorWithParam(fmt.Sprintf("Invalid value for query parameter '%s': %v", key, err), key)
+		}
+		return nil
 	})
 }
 

@@ -31,8 +31,10 @@ func WrapGatewayHandler(handler http.Handler, opts ...otelhttp.Option) http.Hand
 		otelhttp.WithPublicEndpointFn(func(*http.Request) bool { return true }),
 		otelhttp.WithServerName("api-gateway"),
 		otelhttp.WithFilter(func(r *http.Request) bool {
-			path := r.URL.Path
-			return path != "/healthz"
+			if r.Method == http.MethodOptions {
+				return false
+			}
+			return r.URL.Path != "/healthz"
 		}),
 	}, opts...)
 

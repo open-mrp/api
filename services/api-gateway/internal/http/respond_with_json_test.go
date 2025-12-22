@@ -51,9 +51,10 @@ func TestRespondWithJSON_WithRequestLog(t *testing.T) {
 	payload := map[string]any{
 		"message": "success",
 	}
+	ua := "Mozilla/5.0"
 	rl := &domain.RequestLog{
 		ID:        "test-request-id-123",
-		UserAgent: "Mozilla/5.0",
+		UserAgent: &ua,
 	}
 	ctx := context.WithValue(context.Background(), apicontext.RequestLogKey, rl)
 	w := httptest.NewRecorder()
@@ -87,9 +88,10 @@ func TestRespondWithJSON_WithCurlUserAgent_PrettyPrint(t *testing.T) {
 		"message": "success",
 		"data":    "test",
 	}
+	ua := "curl/7.68.0"
 	rl := &domain.RequestLog{
 		ID:        "test-request-id",
-		UserAgent: "curl/7.68.0",
+		UserAgent: &ua,
 	}
 	ctx := context.WithValue(context.Background(), apicontext.RequestLogKey, rl)
 	w := httptest.NewRecorder()
@@ -126,9 +128,10 @@ func TestRespondWithJSON_WithNonCurlUserAgent_CompactJSON(t *testing.T) {
 		"message": "success",
 		"data":    "test",
 	}
+	ua := "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
 	rl := &domain.RequestLog{
 		ID:        "test-request-id",
-		UserAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+		UserAgent: &ua,
 	}
 	ctx := context.WithValue(context.Background(), apicontext.RequestLogKey, rl)
 	w := httptest.NewRecorder()

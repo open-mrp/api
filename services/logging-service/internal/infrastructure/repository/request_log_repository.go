@@ -26,8 +26,8 @@ func (r *requestLogRepoImpl) Create(ctx context.Context, rl *domain.RequestLog) 
 	defer span.End()
 
 	var queryJSON json.RawMessage
-	if rl.QueryJSON != "" {
-		queryJSON = json.RawMessage(rl.QueryJSON)
+	if rl.QueryJSON != nil && *rl.QueryJSON != "" {
+		queryJSON = json.RawMessage(*rl.QueryJSON)
 	}
 
 	statusCode := rl.StatusCode
@@ -44,20 +44,22 @@ func (r *requestLogRepoImpl) Create(ctx context.Context, rl *domain.RequestLog) 
 		QueryJson:            queryJSON,
 		StatusCode:           statusCode,
 		LatencyUs:            rl.LatencyUs,
-		AccountID:            db.NullString(rl.AccountID),
+		AccountID:            db.NullStringPtr(rl.AccountID),
+		TargetAccountID:      db.NullStringPtr(rl.TargetAccountID),
 		ClientIp:             db.NullString(string(rl.ClientIP)),
-		ClientIpString:       db.NullString(rl.ClientIPString),
-		UserAgent:            db.NullString(rl.UserAgent),
-		Referrer:             db.NullString(rl.Referrer),
-		ErrorCode:            db.NullString(rl.ErrorCode),
-		ErrorMessage:         db.NullString(rl.ErrorMessage),
+		ClientIpString:       db.NullStringPtr(rl.ClientIPString),
+		UserAgent:            db.NullStringPtr(rl.UserAgent),
+		Referrer:             db.NullStringPtr(rl.Referrer),
+		ErrorCode:            db.NullStringPtr(rl.ErrorCode),
+		ErrorMessage:         db.NullStringPtr(rl.ErrorMessage),
 		OccurredAt:           rl.OccurredAt,
-		IdempotencyKeyID:     db.NullString(rl.IdempotencyKeyID),
-		ActorID:              db.NullString(rl.ActorID),
-		ActorType:            db.NullString(rl.ActorType),
-		InternalErrorMessage: db.NullString(rl.InternalErrorMessage),
-		StackTrace:           db.NullString(rl.StackTrace),
-		IdentityType:         db.NullString(rl.IdentityType),
+		CreatedAt:            rl.CreatedAt,
+		IdempotencyKeyID:     db.NullStringPtr(rl.IdempotencyKeyID),
+		ActorID:              db.NullStringPtr(rl.ActorID),
+		ActorType:            db.NullStringPtr(rl.ActorType),
+		InternalErrorMessage: db.NullStringPtr(rl.InternalErrorMessage),
+		StackTrace:           db.NullStringPtr(rl.StackTrace),
+		IdentityType:         db.NullStringPtr(rl.IdentityType),
 	})
 	if err != nil {
 		return tracing.Trace(span, contracts.NewInternalError(err, "Failed to create request log."))

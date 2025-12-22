@@ -2312,6 +2312,7 @@ CREATE TABLE `request_log` (
   `idempotency_key_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `stack_trace` longtext COLLATE utf8mb4_unicode_ci,
   `internal_error_message` text COLLATE utf8mb4_unicode_ci,
+  `target_account_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `request_log_status_code_idx` (`status_code`),
   KEY `request_log_error_code_idx` (`error_code`),
@@ -3163,7 +3164,7 @@ CREATE TABLE `user` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-12-11 12:04:33
+-- Dump completed on 2025-12-22 10:03:06
 
 -- +goose Down
 

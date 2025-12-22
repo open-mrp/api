@@ -47,7 +47,7 @@ func (c *RequestLogConsumer) handleMessage(ctx context.Context, msg amqp091.Deli
 		return err
 	}
 
-	var event loggingpb.RequestLogEvent
+	var event loggingpb.RequestLog
 	if err := c.messageCodec.Unmarshal(amqpMsg.Data, &event); err != nil {
 		log.Printf("Failed to unmarshal request log payload: %v", err)
 		return err
@@ -60,28 +60,35 @@ func (c *RequestLogConsumer) handleMessage(ctx context.Context, msg amqp091.Deli
 	return nil
 }
 
-func mapEventToDomain(event *loggingpb.RequestLogEvent) *domain.RequestLog {
+func mapEventToDomain(event *loggingpb.RequestLog) *domain.RequestLog {
 	occurredAt := time.Now().UTC()
 	if ts := event.GetOccurredAt(); ts != nil {
 		occurredAt = ts.AsTime()
 	}
 
+	createdAt := time.Now().UTC()
+	if ts := event.GetCreatedAt(); ts != nil {
+		createdAt = ts.AsTime()
+	}
+
 	return &domain.RequestLog{
-		ID:                   event.Id,
-		Method:               event.Method,
-		Host:                 event.Host,
-		Path:                 event.Path,
-		NormalizedRoute:      event.NormalizedRoute,
+		ID:                   event.GetId(),
+		Method:               event.GetMethod(),
+		Host:                 event.GetHost(),
+		Path:                 event.GetPath(),
+		NormalizedRoute:      event.GetNormalizedRoute(),
 		QueryJSON:            event.QueryJson,
-		StatusCode:           event.StatusCode,
-		LatencyUs:            event.LatencyUs,
+		StatusCode:           event.GetStatusCode(),
+		LatencyUs:            event.GetLatencyUs(),
 		AccountID:            event.AccountId,
+		TargetAccountID:      event.TargetAccountId,
 		ClientIP:             event.ClientIp,
 		ClientIPString:       event.ClientIpString,
 		UserAgent:            event.UserAgent,
 		Referrer:             event.Referrer,
 		ErrorCode:            event.ErrorCode,
 		ErrorMessage:         event.ErrorMessage,
+		CreatedAt:            createdAt,
 		OccurredAt:           occurredAt,
 		IdempotencyKeyID:     event.IdempotencyKeyId,
 		ActorID:              event.ActorId,

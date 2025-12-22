@@ -70,8 +70,8 @@ func AuthMiddleware(config AuthMiddlewareConfig) func(http.HandlerFunc) http.Han
 
 			apiErr := contracts.ConvertGRPCError(ctx, err, "auth-service")
 			if apiErr != nil {
-				if rl, ok := apicontext.GetRequestLogFromContext(r.Context()); ok && rl != nil && rl.ErrorMessage == "" {
-					rl.ErrorMessage = apiErr.PublicMessage
+				if rl, ok := apicontext.GetRequestLogFromContext(r.Context()); ok && rl != nil && (rl.ErrorMessage == nil || *rl.ErrorMessage == "") {
+					rl.ErrorMessage = &apiErr.PublicMessage
 				}
 				httptransport.RespondWithAPIError(r.Context(), w, apiErr)
 				tracing.RecordControllerError(span, apiErr)
@@ -82,13 +82,15 @@ func AuthMiddleware(config AuthMiddlewareConfig) func(http.HandlerFunc) http.Han
 
 			if rl, ok := apicontext.GetRequestLogFromContext(r.Context()); ok && rl != nil {
 				if identity.Actor != nil {
-					rl.ActorType = normalizeActorType(identity.Actor.Type)
-					rl.ActorID = identity.Actor.Id
+					actorType := normalizeActorType(identity.Actor.Type)
+					rl.ActorType = &actorType
+					rl.ActorID = &identity.Actor.Id
 				}
 				if identity.TargetAccountId != nil {
-					rl.AccountID = *identity.TargetAccountId
+					rl.AccountID = identity.TargetAccountId
 				}
-				rl.IdentityType = normalizeIdentityType(identity.Type)
+				identityType := normalizeIdentityType(identity.Type)
+				rl.IdentityType = &identityType
 			}
 
 			identityType := types.IdentityFromProto(identity)

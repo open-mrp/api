@@ -50,7 +50,7 @@ func (p *requestLogPublisher) Create(ctx context.Context, rl *domain.RequestLog)
 	ctx, span := requestLogPublisherTracer.Start(ctx, "publisher.request_log.publish")
 	defer span.End()
 
-	event := &loggingpb.RequestLogEvent{
+	event := &loggingpb.RequestLog{
 		Id:                   rl.ID,
 		Method:               rl.Method,
 		Host:                 rl.Host,
@@ -58,7 +58,7 @@ func (p *requestLogPublisher) Create(ctx context.Context, rl *domain.RequestLog)
 		NormalizedRoute:      rl.NormalizedRoute,
 		QueryJson:            rl.QueryJSON,
 		StatusCode:           int32(rl.StatusCode), // #nosec G115
-		LatencyUs:            rl.Latency,
+		LatencyUs:            rl.LatencyUs,
 		AccountId:            rl.AccountID,
 		ClientIp:             rl.ClientIP,
 		ClientIpString:       rl.ClientIPString,
@@ -67,12 +67,14 @@ func (p *requestLogPublisher) Create(ctx context.Context, rl *domain.RequestLog)
 		ErrorCode:            rl.ErrorCode,
 		ErrorMessage:         rl.ErrorMessage,
 		OccurredAt:           timestamppb.New(rl.OccurredAt),
-		IdempotencyKeyId:     rl.IdempotencyKey,
+		IdempotencyKeyId:     rl.IdempotencyKeyID,
+		TargetAccountId:      rl.TargetAccountID,
 		ActorId:              rl.ActorID,
 		ActorType:            rl.ActorType,
 		InternalErrorMessage: rl.InternalErrorMessage,
 		StackTrace:           rl.StackTrace,
 		IdentityType:         rl.IdentityType,
+		CreatedAt:            timestamppb.Now(),
 	}
 
 	payload, err := p.marshaler.Marshal(event)
@@ -80,8 +82,13 @@ func (p *requestLogPublisher) Create(ctx context.Context, rl *domain.RequestLog)
 		return tracing.Trace(span, contracts.NewInternalError(err, "Failed to marshal request log event."))
 	}
 
+	userID := ""
+	if rl.AccountID != nil {
+		userID = *rl.AccountID
+	}
+
 	msg := contracts.AmqpMessage{
-		UserID: rl.AccountID,
+		UserID: userID,
 		Data:   payload,
 	}
 

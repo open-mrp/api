@@ -74,20 +74,20 @@ func TestRespondWithAPIError_WithRequestLog_NonInternalError(t *testing.T) {
 		t.Fatalf("expected status code %d, got %d", http.StatusBadRequest, w.Code)
 	}
 
-	if rl.ErrorCode != string(contracts.ErrorCodeValidationFailed) {
-		t.Fatalf("expected ErrorCode %q, got %q", contracts.ErrorCodeValidationFailed, rl.ErrorCode)
+	if rl.ErrorCode == nil || *rl.ErrorCode != string(contracts.ErrorCodeValidationFailed) {
+		t.Fatalf("expected ErrorCode %q, got %v", contracts.ErrorCodeValidationFailed, rl.ErrorCode)
 	}
 
-	if rl.ErrorMessage != "Invalid input" {
-		t.Fatalf("expected ErrorMessage %q, got %q", "Invalid input", rl.ErrorMessage)
+	if rl.ErrorMessage == nil || *rl.ErrorMessage != "Invalid input" {
+		t.Fatalf("expected ErrorMessage %q, got %v", "Invalid input", rl.ErrorMessage)
 	}
 
-	if rl.InternalErrorMessage != "" {
-		t.Fatalf("expected InternalErrorMessage to be empty for non-internal error, got %q", rl.InternalErrorMessage)
+	if rl.InternalErrorMessage != nil && *rl.InternalErrorMessage != "" {
+		t.Fatalf("expected InternalErrorMessage to be empty for non-internal error, got %v", rl.InternalErrorMessage)
 	}
 
-	if rl.StackTrace != "" {
-		t.Fatalf("expected StackTrace to be empty for non-internal error, got %q", rl.StackTrace)
+	if rl.StackTrace != nil && *rl.StackTrace != "" {
+		t.Fatalf("expected StackTrace to be empty for non-internal error, got %v", rl.StackTrace)
 	}
 
 	var response map[string]any
@@ -119,23 +119,23 @@ func TestRespondWithAPIError_WithRequestLog_InternalError(t *testing.T) {
 		t.Fatalf("expected status code %d, got %d", http.StatusInternalServerError, w.Code)
 	}
 
-	if rl.ErrorCode != string(contracts.ErrorCodeInternalError) {
-		t.Fatalf("expected ErrorCode %q, got %q", contracts.ErrorCodeInternalError, rl.ErrorCode)
+	if rl.ErrorCode == nil || *rl.ErrorCode != string(contracts.ErrorCodeInternalError) {
+		t.Fatalf("expected ErrorCode %q, got %v", contracts.ErrorCodeInternalError, rl.ErrorCode)
 	}
 
-	if rl.ErrorMessage != "Something went wrong." {
-		t.Fatalf("expected ErrorMessage %q, got %q", "Something went wrong.", rl.ErrorMessage)
+	if rl.ErrorMessage == nil || *rl.ErrorMessage != "Something went wrong." {
+		t.Fatalf("expected ErrorMessage %q, got %v", "Something went wrong.", rl.ErrorMessage)
 	}
 
-	if rl.InternalErrorMessage != "Database connection failed" {
-		t.Fatalf("expected InternalErrorMessage %q, got %q", "Database connection failed", rl.InternalErrorMessage)
+	if rl.InternalErrorMessage == nil || *rl.InternalErrorMessage != "Database connection failed" {
+		t.Fatalf("expected InternalErrorMessage %q, got %v", "Database connection failed", rl.InternalErrorMessage)
 	}
 
-	if rl.StackTrace == "" {
+	if rl.StackTrace == nil || *rl.StackTrace == "" {
 		t.Fatal("expected StackTrace to be set for internal error")
 	}
 
-	if !strings.Contains(rl.StackTrace, "RespondWithAPIError") {
+	if !strings.Contains(*rl.StackTrace, "RespondWithAPIError") {
 		t.Fatal("expected StackTrace to contain function name")
 	}
 

@@ -6,27 +6,29 @@ import "google/protobuf/timestamp.proto";
 
 option go_package = "shared/proto/logging;logging";
 
-message RequestLogEvent {
+message RequestLog {
   string id = 1;
   string method = 2;
   string host = 3;
   string path = 4;
   string normalized_route = 5;
-  string query_json = 6;
+  optional string query_json = 6;
   int32 status_code = 7;
-  int64 latency_us = 8;
-  string account_id = 9;
-  bytes client_ip = 10;
-  string client_ip_string = 11;
-  string user_agent = 12;
-  string referrer = 13;
-  string error_code = 14;
-  string error_message = 15;
-  google.protobuf.Timestamp occurred_at = 16;
-  string idempotency_key_id = 17;
-  string actor_id = 18;
-  string actor_type = 19;
-  string internal_error_message = 20;
-  string stack_trace = 21;
-  string identity_type = 22;
+  int64 latency_us = 8; 
+  optional string account_id = 9;
+  optional string target_account_id = 10;
+  optional bytes client_ip = 11;
+  optional string client_ip_string = 12;
+  optional string user_agent = 13;
+  optional string referrer = 14;
+  optional string error_code = 15;
+  optional string error_message = 16;
+  google.protobuf.Timestamp occurred_at = 17;
+  optional string idempotency_key_id = 18;
+  optional string actor_id = 19;
+  optional string actor_type = 20;
+  optional string internal_error_message = 21;
+  optional string stack_trace = 22;
+  optional string identity_type = 23;
+  google.protobuf.Timestamp created_at = 24;
 }

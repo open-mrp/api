@@ -185,7 +185,6 @@ jobs:
             - name: Upload to Stainless
               uses: stainless-api/upload-openapi-spec-action@v1
               with:
-                  openapi-file: specs/public_openapi_spec.json
-                  org: augno
-                  project: augno
-                  stainless-api-key: ${{ secrets.STAINLESS_API_KEY }}
+                  input_path: specs/public_openapi_spec.json
+                  project_name: augno
+                  stainless_api_key: ${{ secrets.STAINLESS_API_KEY }}

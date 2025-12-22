@@ -75,16 +75,16 @@ func TestAuthMiddlewareSetsActorAndIdentityTypes(t *testing.T) {
 
 	handler(rec, req)
 
-	if rl.ActorType != "customer" {
-		t.Fatalf("expected actor_type customer, got %q", rl.ActorType)
+	if rl.ActorType == nil || *rl.ActorType != "customer" {
+		t.Fatalf("expected actor_type customer, got %v", rl.ActorType)
 	}
-	if rl.IdentityType != "api_key" {
-		t.Fatalf("expected identity_type api_key, got %q", rl.IdentityType)
+	if rl.IdentityType == nil || *rl.IdentityType != "api_key" {
+		t.Fatalf("expected identity_type api_key, got %v", rl.IdentityType)
 	}
-	if rl.ActorID != "actor-1" {
-		t.Fatalf("expected actor_id actor-1, got %q", rl.ActorID)
+	if rl.ActorID == nil || *rl.ActorID != "actor-1" {
+		t.Fatalf("expected actor_id actor-1, got %v", rl.ActorID)
 	}
-	if rl.AccountID != targetAccount {
-		t.Fatalf("expected account_id %s, got %q", targetAccount, rl.AccountID)
+	if rl.AccountID == nil || *rl.AccountID != targetAccount {
+		t.Fatalf("expected account_id %s, got %v", targetAccount, rl.AccountID)
 	}
 }

@@ -13,6 +13,7 @@ import (
 
 	"github.com/rabbitmq/amqp091-go"
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -28,7 +29,7 @@ func (s *stubLoggingSvc) SaveRequestLog(ctx context.Context, rl *domain.RequestL
 
 func TestRequestLogConsumer_Success(t *testing.T) {
 	now := time.Now().UTC()
-	event := &loggingpb.RequestLogEvent{
+	event := &loggingpb.RequestLog{
 		Id:                   "req_1",
 		Method:               "GET",
 		Host:                 "example.com",
@@ -36,20 +37,21 @@ func TestRequestLogConsumer_Success(t *testing.T) {
 		NormalizedRoute:      "/healthz",
 		StatusCode:           200,
 		LatencyUs:            100,
-		AccountId:            "acct_1",
+		AccountId:            proto.String("acct_1"),
 		ClientIp:             []byte{127, 0, 0, 1},
-		ClientIpString:       "127.0.0.1",
-		UserAgent:            "tester",
-		Referrer:             "ref",
-		ErrorCode:            "",
-		ErrorMessage:         "",
+		ClientIpString:       proto.String("127.0.0.1"),
+		UserAgent:            proto.String("tester"),
+		Referrer:             proto.String("ref"),
+		ErrorCode:            proto.String(""),
+		ErrorMessage:         proto.String(""),
 		OccurredAt:           timestamppb.New(now),
-		IdempotencyKeyId:     "idem",
-		ActorId:              "actor",
-		ActorType:            "user",
-		InternalErrorMessage: "",
-		StackTrace:           "",
-		IdentityType:         "user",
+		IdempotencyKeyId:     proto.String("idem"),
+		ActorId:              proto.String("actor"),
+		ActorType:            proto.String("user"),
+		InternalErrorMessage: proto.String(""),
+		StackTrace:           proto.String(""),
+		IdentityType:         proto.String("user"),
+		CreatedAt:            timestamppb.New(now),
 	}
 
 	payload, err := protojson.Marshal(event)
@@ -106,7 +108,7 @@ func TestRequestLogConsumer_ServiceError(t *testing.T) {
 	svc := &stubLoggingSvc{err: contracts.NewInternalError(errors.New("boom"), "fail")}
 	consumer := NewRequestLogConsumer(nil, svc)
 
-	payload, _ := protojson.Marshal(&loggingpb.RequestLogEvent{
+	payload, _ := protojson.Marshal(&loggingpb.RequestLog{
 		Id:         "req_err",
 		OccurredAt: timestamppb.Now(),
 	})

@@ -41,29 +41,31 @@ func TestRequestLogPublisher_PublishSuccess(t *testing.T) {
 	now := time.Now().UTC()
 	p := NewRequestLogPublisherWithDeps(stubPub, protojson.MarshalOptions{})
 
+	strPtr := func(s string) *string { return &s }
+
 	reqLog := &domain.RequestLog{
 		ID:                   "req_123",
 		Method:               "GET",
 		Host:                 "example.com",
 		Path:                 "/healthz",
 		NormalizedRoute:      "/healthz",
-		QueryJSON:            `{"q":"1"}`,
+		QueryJSON:            strPtr(`{"q":"1"}`),
 		StatusCode:           200,
-		Latency:              1234,
-		AccountID:            "acct_1",
+		LatencyUs:            1234,
+		AccountID:            strPtr("acct_1"),
 		ClientIP:             []byte{127, 0, 0, 1},
-		ClientIPString:       "127.0.0.1",
-		UserAgent:            "tester",
-		Referrer:             "ref",
-		ErrorCode:            "",
-		ErrorMessage:         "",
+		ClientIPString:       strPtr("127.0.0.1"),
+		UserAgent:            strPtr("tester"),
+		Referrer:             strPtr("ref"),
+		ErrorCode:            strPtr(""),
+		ErrorMessage:         strPtr(""),
 		OccurredAt:           now,
-		IdempotencyKey:       "idem",
-		ActorID:              "actor",
-		ActorType:            "user",
-		InternalErrorMessage: "",
-		StackTrace:           "",
-		IdentityType:         "user",
+		IdempotencyKeyID:     strPtr("idem"),
+		ActorID:              strPtr("actor"),
+		ActorType:            strPtr("user"),
+		InternalErrorMessage: strPtr(""),
+		StackTrace:           strPtr(""),
+		IdentityType:         strPtr("user"),
 	}
 
 	if err := p.Create(context.Background(), reqLog); err != nil {
@@ -74,7 +76,7 @@ func TestRequestLogPublisher_PublishSuccess(t *testing.T) {
 		t.Fatalf("unexpected routing key: %s", stubPub.routingKey)
 	}
 
-	var event loggingpb.RequestLogEvent
+	var event loggingpb.RequestLog
 	if err := protojson.Unmarshal(stubPub.message.Data, &event); err != nil {
 		t.Fatalf("failed to unmarshal event: %v", err)
 	}
@@ -83,8 +85,8 @@ func TestRequestLogPublisher_PublishSuccess(t *testing.T) {
 		t.Fatalf("event fields did not match request log")
 	}
 
-	if event.LatencyUs != reqLog.Latency {
-		t.Fatalf("expected latency %d, got %d", reqLog.Latency, event.LatencyUs)
+	if event.LatencyUs != reqLog.LatencyUs {
+		t.Fatalf("expected latency %d, got %d", reqLog.LatencyUs, event.LatencyUs)
 	}
 
 	if ts := event.GetOccurredAt().AsTime().UTC(); !ts.Equal(now) {
@@ -110,7 +112,7 @@ func TestRequestLogPublisher_MarshalError(t *testing.T) {
 func TestRequestLogPublisher_PublishError(t *testing.T) {
 	stubPub := &stubPublisher{err: errors.New("publish fail")}
 	now := time.Now().UTC()
-	marshaled, _ := protojson.Marshal(&loggingpb.RequestLogEvent{
+	marshaled, _ := protojson.Marshal(&loggingpb.RequestLog{
 		OccurredAt: timestamppb.New(now),
 	})
 	p := NewRequestLogPublisherWithDeps(stubPub, stubMarshaler{payload: marshaled})

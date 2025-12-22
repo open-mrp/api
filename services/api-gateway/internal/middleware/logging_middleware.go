@@ -74,19 +74,20 @@ func LoggingMiddleware(logger *log.Logger, next http.HandlerFunc, saver *asyncRe
 		}
 
 		requestLog := &domain.RequestLog{
-			ID:              requestID,
-			Method:          r.Method,
-			Host:            r.Host,
-			Path:            r.URL.Path,
-			NormalizedRoute: normalizedRoute,
-			UserAgent:       userAgent,
-			IdempotencyKey:  idempotencyKey,
-			ClientIP:        clientIP,
-			ClientIPString: func() string {
+			ID:               requestID,
+			Method:           r.Method,
+			Host:             r.Host,
+			Path:             r.URL.Path,
+			NormalizedRoute:  normalizedRoute,
+			UserAgent:        &userAgent,
+			IdempotencyKeyID: &idempotencyKey,
+			ClientIP:         clientIP,
+			ClientIPString: func() *string {
 				if len(clientIP) == 0 {
-					return ""
+					return nil
 				}
-				return clientIP.String()
+				s := clientIP.String()
+				return &s
 			}(),
 			OccurredAt: start,
 		}
@@ -103,7 +104,7 @@ func LoggingMiddleware(logger *log.Logger, next http.HandlerFunc, saver *asyncRe
 
 			latency := int64(time.Since(start).Microseconds())
 			requestLog.StatusCode = lrw.statusCode
-			requestLog.Latency = latency
+			requestLog.LatencyUs = latency
 
 			if saver != nil {
 				if err := saver.Save(ctx, requestLog); err != nil {

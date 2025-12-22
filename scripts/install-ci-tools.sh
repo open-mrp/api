@@ -19,12 +19,8 @@ export PATH=$PATH:$(go env GOPATH)/bin
 install_tool() {
     local name=$1
     local package=$2
-    if ! command -v "$name" >/dev/null 2>&1; then
-        print_status "Installing $name..."
-        go install "$package"
-    else
-        print_status "$name is already installed."
-    fi
+    print_status "Installing/updating $name..."
+    go install "$package"
 }
 
 print_status "Installing minimum CI tools..."

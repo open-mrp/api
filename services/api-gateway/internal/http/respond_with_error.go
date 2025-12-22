@@ -15,13 +15,15 @@ func RespondWithAPIError(ctx context.Context, w http.ResponseWriter, apiErr *con
 	}
 
 	if rl, ok := apicontext.GetRequestLogFromContext(ctx); ok && rl != nil {
-		rl.ErrorCode = string(apiErr.Code)
-		rl.ErrorMessage = apiErr.PublicMessage
+		errorCode := string(apiErr.Code)
+		rl.ErrorCode = &errorCode
+		rl.ErrorMessage = &apiErr.PublicMessage
 		if apiErr.Code == contracts.ErrorCodeInternalError {
-			rl.InternalErrorMessage = apiErr.InternalMessage
+			rl.InternalErrorMessage = &apiErr.InternalMessage
 			stackTrace := make([]byte, 32768)
 			length := runtime.Stack(stackTrace, false)
-			rl.StackTrace = string(stackTrace[:length])
+			st := string(stackTrace[:length])
+			rl.StackTrace = &st
 		}
 	}
 

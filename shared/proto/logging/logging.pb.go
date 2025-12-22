@@ -22,48 +22,50 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type RequestLogEvent struct {
+type RequestLog struct {
 	state                protoimpl.MessageState `protogen:"open.v1"`
 	Id                   string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Method               string                 `protobuf:"bytes,2,opt,name=method,proto3" json:"method,omitempty"`
 	Host                 string                 `protobuf:"bytes,3,opt,name=host,proto3" json:"host,omitempty"`
 	Path                 string                 `protobuf:"bytes,4,opt,name=path,proto3" json:"path,omitempty"`
 	NormalizedRoute      string                 `protobuf:"bytes,5,opt,name=normalized_route,json=normalizedRoute,proto3" json:"normalized_route,omitempty"`
-	QueryJson            string                 `protobuf:"bytes,6,opt,name=query_json,json=queryJson,proto3" json:"query_json,omitempty"`
+	QueryJson            *string                `protobuf:"bytes,6,opt,name=query_json,json=queryJson,proto3,oneof" json:"query_json,omitempty"`
 	StatusCode           int32                  `protobuf:"varint,7,opt,name=status_code,json=statusCode,proto3" json:"status_code,omitempty"`
 	LatencyUs            int64                  `protobuf:"varint,8,opt,name=latency_us,json=latencyUs,proto3" json:"latency_us,omitempty"`
-	AccountId            string                 `protobuf:"bytes,9,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"`
-	ClientIp             []byte                 `protobuf:"bytes,10,opt,name=client_ip,json=clientIp,proto3" json:"client_ip,omitempty"`
-	ClientIpString       string                 `protobuf:"bytes,11,opt,name=client_ip_string,json=clientIpString,proto3" json:"client_ip_string,omitempty"`
-	UserAgent            string                 `protobuf:"bytes,12,opt,name=user_agent,json=userAgent,proto3" json:"user_agent,omitempty"`
-	Referrer             string                 `protobuf:"bytes,13,opt,name=referrer,proto3" json:"referrer,omitempty"`
-	ErrorCode            string                 `protobuf:"bytes,14,opt,name=error_code,json=errorCode,proto3" json:"error_code,omitempty"`
-	ErrorMessage         string                 `protobuf:"bytes,15,opt,name=error_message,json=errorMessage,proto3" json:"error_message,omitempty"`
-	OccurredAt           *timestamppb.Timestamp `protobuf:"bytes,16,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
-	IdempotencyKeyId     string                 `protobuf:"bytes,17,opt,name=idempotency_key_id,json=idempotencyKeyId,proto3" json:"idempotency_key_id,omitempty"`
-	ActorId              string                 `protobuf:"bytes,18,opt,name=actor_id,json=actorId,proto3" json:"actor_id,omitempty"`
-	ActorType            string                 `protobuf:"bytes,19,opt,name=actor_type,json=actorType,proto3" json:"actor_type,omitempty"`
-	InternalErrorMessage string                 `protobuf:"bytes,20,opt,name=internal_error_message,json=internalErrorMessage,proto3" json:"internal_error_message,omitempty"`
-	StackTrace           string                 `protobuf:"bytes,21,opt,name=stack_trace,json=stackTrace,proto3" json:"stack_trace,omitempty"`
-	IdentityType         string                 `protobuf:"bytes,22,opt,name=identity_type,json=identityType,proto3" json:"identity_type,omitempty"`
+	AccountId            *string                `protobuf:"bytes,9,opt,name=account_id,json=accountId,proto3,oneof" json:"account_id,omitempty"`
+	TargetAccountId      *string                `protobuf:"bytes,10,opt,name=target_account_id,json=targetAccountId,proto3,oneof" json:"target_account_id,omitempty"`
+	ClientIp             []byte                 `protobuf:"bytes,11,opt,name=client_ip,json=clientIp,proto3,oneof" json:"client_ip,omitempty"`
+	ClientIpString       *string                `protobuf:"bytes,12,opt,name=client_ip_string,json=clientIpString,proto3,oneof" json:"client_ip_string,omitempty"`
+	UserAgent            *string                `protobuf:"bytes,13,opt,name=user_agent,json=userAgent,proto3,oneof" json:"user_agent,omitempty"`
+	Referrer             *string                `protobuf:"bytes,14,opt,name=referrer,proto3,oneof" json:"referrer,omitempty"`
+	ErrorCode            *string                `protobuf:"bytes,15,opt,name=error_code,json=errorCode,proto3,oneof" json:"error_code,omitempty"`
+	ErrorMessage         *string                `protobuf:"bytes,16,opt,name=error_message,json=errorMessage,proto3,oneof" json:"error_message,omitempty"`
+	OccurredAt           *timestamppb.Timestamp `protobuf:"bytes,17,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
+	IdempotencyKeyId     *string                `protobuf:"bytes,18,opt,name=idempotency_key_id,json=idempotencyKeyId,proto3,oneof" json:"idempotency_key_id,omitempty"`
+	ActorId              *string                `protobuf:"bytes,19,opt,name=actor_id,json=actorId,proto3,oneof" json:"actor_id,omitempty"`
+	ActorType            *string                `protobuf:"bytes,20,opt,name=actor_type,json=actorType,proto3,oneof" json:"actor_type,omitempty"`
+	InternalErrorMessage *string                `protobuf:"bytes,21,opt,name=internal_error_message,json=internalErrorMessage,proto3,oneof" json:"internal_error_message,omitempty"`
+	StackTrace           *string                `protobuf:"bytes,22,opt,name=stack_trace,json=stackTrace,proto3,oneof" json:"stack_trace,omitempty"`
+	IdentityType         *string                `protobuf:"bytes,23,opt,name=identity_type,json=identityType,proto3,oneof" json:"identity_type,omitempty"`
+	CreatedAt            *timestamppb.Timestamp `protobuf:"bytes,24,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
 
-func (x *RequestLogEvent) Reset() {
-	*x = RequestLogEvent{}
+func (x *RequestLog) Reset() {
+	*x = RequestLog{}
 	mi := &file_logging_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *RequestLogEvent) String() string {
+func (x *RequestLog) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*RequestLogEvent) ProtoMessage() {}
+func (*RequestLog) ProtoMessage() {}
 
-func (x *RequestLogEvent) ProtoReflect() protoreflect.Message {
+func (x *RequestLog) ProtoReflect() protoreflect.Message {
 	mi := &file_logging_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -75,203 +77,238 @@ func (x *RequestLogEvent) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use RequestLogEvent.ProtoReflect.Descriptor instead.
-func (*RequestLogEvent) Descriptor() ([]byte, []int) {
+// Deprecated: Use RequestLog.ProtoReflect.Descriptor instead.
+func (*RequestLog) Descriptor() ([]byte, []int) {
 	return file_logging_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *RequestLogEvent) GetId() string {
+func (x *RequestLog) GetId() string {
 	if x != nil {
 		return x.Id
 	}
 	return ""
 }
 
-func (x *RequestLogEvent) GetMethod() string {
+func (x *RequestLog) GetMethod() string {
 	if x != nil {
 		return x.Method
 	}
 	return ""
 }
 
-func (x *RequestLogEvent) GetHost() string {
+func (x *RequestLog) GetHost() string {
 	if x != nil {
 		return x.Host
 	}
 	return ""
 }
 
-func (x *RequestLogEvent) GetPath() string {
+func (x *RequestLog) GetPath() string {
 	if x != nil {
 		return x.Path
 	}
 	return ""
 }
 
-func (x *RequestLogEvent) GetNormalizedRoute() string {
+func (x *RequestLog) GetNormalizedRoute() string {
 	if x != nil {
 		return x.NormalizedRoute
 	}
 	return ""
 }
 
-func (x *RequestLogEvent) GetQueryJson() string {
-	if x != nil {
-		return x.QueryJson
+func (x *RequestLog) GetQueryJson() string {
+	if x != nil && x.QueryJson != nil {
+		return *x.QueryJson
 	}
 	return ""
 }
 
-func (x *RequestLogEvent) GetStatusCode() int32 {
+func (x *RequestLog) GetStatusCode() int32 {
 	if x != nil {
 		return x.StatusCode
 	}
 	return 0
 }
 
-func (x *RequestLogEvent) GetLatencyUs() int64 {
+func (x *RequestLog) GetLatencyUs() int64 {
 	if x != nil {
 		return x.LatencyUs
 	}
 	return 0
 }
 
-func (x *RequestLogEvent) GetAccountId() string {
-	if x != nil {
-		return x.AccountId
+func (x *RequestLog) GetAccountId() string {
+	if x != nil && x.AccountId != nil {
+		return *x.AccountId
 	}
 	return ""
 }
 
-func (x *RequestLogEvent) GetClientIp() []byte {
+func (x *RequestLog) GetTargetAccountId() string {
+	if x != nil && x.TargetAccountId != nil {
+		return *x.TargetAccountId
+	}
+	return ""
+}
+
+func (x *RequestLog) GetClientIp() []byte {
 	if x != nil {
 		return x.ClientIp
 	}
 	return nil
 }
 
-func (x *RequestLogEvent) GetClientIpString() string {
-	if x != nil {
-		return x.ClientIpString
+func (x *RequestLog) GetClientIpString() string {
+	if x != nil && x.ClientIpString != nil {
+		return *x.ClientIpString
 	}
 	return ""
 }
 
-func (x *RequestLogEvent) GetUserAgent() string {
-	if x != nil {
-		return x.UserAgent
+func (x *RequestLog) GetUserAgent() string {
+	if x != nil && x.UserAgent != nil {
+		return *x.UserAgent
 	}
 	return ""
 }
 
-func (x *RequestLogEvent) GetReferrer() string {
-	if x != nil {
-		return x.Referrer
+func (x *RequestLog) GetReferrer() string {
+	if x != nil && x.Referrer != nil {
+		return *x.Referrer
 	}
 	return ""
 }
 
-func (x *RequestLogEvent) GetErrorCode() string {
-	if x != nil {
-		return x.ErrorCode
+func (x *RequestLog) GetErrorCode() string {
+	if x != nil && x.ErrorCode != nil {
+		return *x.ErrorCode
 	}
 	return ""
 }
 
-func (x *RequestLogEvent) GetErrorMessage() string {
-	if x != nil {
-		return x.ErrorMessage
+func (x *RequestLog) GetErrorMessage() string {
+	if x != nil && x.ErrorMessage != nil {
+		return *x.ErrorMessage
 	}
 	return ""
 }
 
-func (x *RequestLogEvent) GetOccurredAt() *timestamppb.Timestamp {
+func (x *RequestLog) GetOccurredAt() *timestamppb.Timestamp {
 	if x != nil {
 		return x.OccurredAt
 	}
 	return nil
 }
 
-func (x *RequestLogEvent) GetIdempotencyKeyId() string {
-	if x != nil {
-		return x.IdempotencyKeyId
+func (x *RequestLog) GetIdempotencyKeyId() string {
+	if x != nil && x.IdempotencyKeyId != nil {
+		return *x.IdempotencyKeyId
 	}
 	return ""
 }
 
-func (x *RequestLogEvent) GetActorId() string {
-	if x != nil {
-		return x.ActorId
+func (x *RequestLog) GetActorId() string {
+	if x != nil && x.ActorId != nil {
+		return *x.ActorId
 	}
 	return ""
 }
 
-func (x *RequestLogEvent) GetActorType() string {
-	if x != nil {
-		return x.ActorType
+func (x *RequestLog) GetActorType() string {
+	if x != nil && x.ActorType != nil {
+		return *x.ActorType
 	}
 	return ""
 }
 
-func (x *RequestLogEvent) GetInternalErrorMessage() string {
-	if x != nil {
-		return x.InternalErrorMessage
+func (x *RequestLog) GetInternalErrorMessage() string {
+	if x != nil && x.InternalErrorMessage != nil {
+		return *x.InternalErrorMessage
 	}
 	return ""
 }
 
-func (x *RequestLogEvent) GetStackTrace() string {
-	if x != nil {
-		return x.StackTrace
+func (x *RequestLog) GetStackTrace() string {
+	if x != nil && x.StackTrace != nil {
+		return *x.StackTrace
 	}
 	return ""
 }
 
-func (x *RequestLogEvent) GetIdentityType() string {
-	if x != nil {
-		return x.IdentityType
+func (x *RequestLog) GetIdentityType() string {
+	if x != nil && x.IdentityType != nil {
+		return *x.IdentityType
 	}
 	return ""
+}
+
+func (x *RequestLog) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
 }
 
 var File_logging_proto protoreflect.FileDescriptor
 
 const file_logging_proto_rawDesc = "" +
 	"\n" +
-	"\rlogging.proto\x12\alogging\x1a\x1fgoogle/protobuf/timestamp.proto\"\xf1\x05\n" +
-	"\x0fRequestLogEvent\x12\x0e\n" +
+	"\rlogging.proto\x12\alogging\x1a\x1fgoogle/protobuf/timestamp.proto\"\xa2\t\n" +
+	"\n" +
+	"RequestLog\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06method\x18\x02 \x01(\tR\x06method\x12\x12\n" +
 	"\x04host\x18\x03 \x01(\tR\x04host\x12\x12\n" +
 	"\x04path\x18\x04 \x01(\tR\x04path\x12)\n" +
-	"\x10normalized_route\x18\x05 \x01(\tR\x0fnormalizedRoute\x12\x1d\n" +
+	"\x10normalized_route\x18\x05 \x01(\tR\x0fnormalizedRoute\x12\"\n" +
 	"\n" +
-	"query_json\x18\x06 \x01(\tR\tqueryJson\x12\x1f\n" +
+	"query_json\x18\x06 \x01(\tH\x00R\tqueryJson\x88\x01\x01\x12\x1f\n" +
 	"\vstatus_code\x18\a \x01(\x05R\n" +
 	"statusCode\x12\x1d\n" +
 	"\n" +
-	"latency_us\x18\b \x01(\x03R\tlatencyUs\x12\x1d\n" +
+	"latency_us\x18\b \x01(\x03R\tlatencyUs\x12\"\n" +
 	"\n" +
-	"account_id\x18\t \x01(\tR\taccountId\x12\x1b\n" +
-	"\tclient_ip\x18\n" +
-	" \x01(\fR\bclientIp\x12(\n" +
-	"\x10client_ip_string\x18\v \x01(\tR\x0eclientIpString\x12\x1d\n" +
+	"account_id\x18\t \x01(\tH\x01R\taccountId\x88\x01\x01\x12/\n" +
+	"\x11target_account_id\x18\n" +
+	" \x01(\tH\x02R\x0ftargetAccountId\x88\x01\x01\x12 \n" +
+	"\tclient_ip\x18\v \x01(\fH\x03R\bclientIp\x88\x01\x01\x12-\n" +
+	"\x10client_ip_string\x18\f \x01(\tH\x04R\x0eclientIpString\x88\x01\x01\x12\"\n" +
 	"\n" +
-	"user_agent\x18\f \x01(\tR\tuserAgent\x12\x1a\n" +
-	"\breferrer\x18\r \x01(\tR\breferrer\x12\x1d\n" +
+	"user_agent\x18\r \x01(\tH\x05R\tuserAgent\x88\x01\x01\x12\x1f\n" +
+	"\breferrer\x18\x0e \x01(\tH\x06R\breferrer\x88\x01\x01\x12\"\n" +
 	"\n" +
-	"error_code\x18\x0e \x01(\tR\terrorCode\x12#\n" +
-	"\rerror_message\x18\x0f \x01(\tR\ferrorMessage\x12;\n" +
-	"\voccurred_at\x18\x10 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"occurredAt\x12,\n" +
-	"\x12idempotency_key_id\x18\x11 \x01(\tR\x10idempotencyKeyId\x12\x19\n" +
-	"\bactor_id\x18\x12 \x01(\tR\aactorId\x12\x1d\n" +
+	"error_code\x18\x0f \x01(\tH\aR\terrorCode\x88\x01\x01\x12(\n" +
+	"\rerror_message\x18\x10 \x01(\tH\bR\ferrorMessage\x88\x01\x01\x12;\n" +
+	"\voccurred_at\x18\x11 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"occurredAt\x121\n" +
+	"\x12idempotency_key_id\x18\x12 \x01(\tH\tR\x10idempotencyKeyId\x88\x01\x01\x12\x1e\n" +
+	"\bactor_id\x18\x13 \x01(\tH\n" +
+	"R\aactorId\x88\x01\x01\x12\"\n" +
 	"\n" +
-	"actor_type\x18\x13 \x01(\tR\tactorType\x124\n" +
-	"\x16internal_error_message\x18\x14 \x01(\tR\x14internalErrorMessage\x12\x1f\n" +
-	"\vstack_trace\x18\x15 \x01(\tR\n" +
-	"stackTrace\x12#\n" +
-	"\ridentity_type\x18\x16 \x01(\tR\fidentityTypeB\x1eZ\x1cshared/proto/logging;loggingb\x06proto3"
+	"actor_type\x18\x14 \x01(\tH\vR\tactorType\x88\x01\x01\x129\n" +
+	"\x16internal_error_message\x18\x15 \x01(\tH\fR\x14internalErrorMessage\x88\x01\x01\x12$\n" +
+	"\vstack_trace\x18\x16 \x01(\tH\rR\n" +
+	"stackTrace\x88\x01\x01\x12(\n" +
+	"\ridentity_type\x18\x17 \x01(\tH\x0eR\fidentityType\x88\x01\x01\x129\n" +
+	"\n" +
+	"created_at\x18\x18 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAtB\r\n" +
+	"\v_query_jsonB\r\n" +
+	"\v_account_idB\x14\n" +
+	"\x12_target_account_idB\f\n" +
+	"\n" +
+	"_client_ipB\x13\n" +
+	"\x11_client_ip_stringB\r\n" +
+	"\v_user_agentB\v\n" +
+	"\t_referrerB\r\n" +
+	"\v_error_codeB\x10\n" +
+	"\x0e_error_messageB\x15\n" +
+	"\x13_idempotency_key_idB\v\n" +
+	"\t_actor_idB\r\n" +
+	"\v_actor_typeB\x19\n" +
+	"\x17_internal_error_messageB\x0e\n" +
+	"\f_stack_traceB\x10\n" +
+	"\x0e_identity_typeB\x1eZ\x1cshared/proto/logging;loggingb\x06proto3"
 
 var (
 	file_logging_proto_rawDescOnce sync.Once
@@ -287,16 +324,17 @@ func file_logging_proto_rawDescGZIP() []byte {
 
 var file_logging_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
 var file_logging_proto_goTypes = []any{
-	(*RequestLogEvent)(nil),       // 0: logging.RequestLogEvent
+	(*RequestLog)(nil),            // 0: logging.RequestLog
 	(*timestamppb.Timestamp)(nil), // 1: google.protobuf.Timestamp
 }
 var file_logging_proto_depIdxs = []int32{
-	1, // 0: logging.RequestLogEvent.occurred_at:type_name -> google.protobuf.Timestamp
-	1, // [1:1] is the sub-list for method output_type
-	1, // [1:1] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	1, // 0: logging.RequestLog.occurred_at:type_name -> google.protobuf.Timestamp
+	1, // 1: logging.RequestLog.created_at:type_name -> google.protobuf.Timestamp
+	2, // [2:2] is the sub-list for method output_type
+	2, // [2:2] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_logging_proto_init() }
@@ -304,6 +342,7 @@ func file_logging_proto_init() {
 	if File_logging_proto != nil {
 		return
 	}
+	file_logging_proto_msgTypes[0].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

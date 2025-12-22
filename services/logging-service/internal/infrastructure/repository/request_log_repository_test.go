@@ -46,9 +46,12 @@ func TestCreate_UsesProvidedValues(t *testing.T) {
 	ctx := context.Background()
 	now := time.Now()
 	queryJSON := `{"ok":true}`
+	targetAcctID := "target-1"
 
 	recorder := &recordingDB{}
 	repo := NewRequestLogRepo(sqlc.New(recorder))
+
+	strPtr := func(s string) *string { return &s }
 
 	rl := &domain.RequestLog{
 		ID:                   "req-1",
@@ -56,23 +59,25 @@ func TestCreate_UsesProvidedValues(t *testing.T) {
 		Host:                 "example.com",
 		Path:                 "/v1/test",
 		NormalizedRoute:      "/v1/test",
-		QueryJSON:            queryJSON,
+		QueryJSON:            strPtr(queryJSON),
 		StatusCode:           201,
 		LatencyUs:            12345,
-		AccountID:            "acct-1",
+		AccountID:            strPtr("acct-1"),
+		TargetAccountID:      strPtr(targetAcctID),
 		ClientIP:             []byte("10.0.0.1"),
-		ClientIPString:       "10.0.0.1",
-		UserAgent:            "agent",
-		Referrer:             "ref",
-		ErrorCode:            "E123",
-		ErrorMessage:         "bad",
+		ClientIPString:       strPtr("10.0.0.1"),
+		UserAgent:            strPtr("agent"),
+		Referrer:             strPtr("ref"),
+		ErrorCode:            strPtr("E123"),
+		ErrorMessage:         strPtr("bad"),
 		OccurredAt:           now,
-		IdempotencyKeyID:     "idem-1",
-		ActorID:              "actor-1",
-		ActorType:            "user",
-		InternalErrorMessage: "internal",
-		StackTrace:           "trace",
-		IdentityType:         "user",
+		CreatedAt:            now,
+		IdempotencyKeyID:     strPtr("idem-1"),
+		ActorID:              strPtr("actor-1"),
+		ActorType:            strPtr("user"),
+		InternalErrorMessage: strPtr("internal"),
+		StackTrace:           strPtr("trace"),
+		IdentityType:         strPtr("user"),
 	}
 
 	apiErr := repo.Create(ctx, rl)
@@ -89,20 +94,22 @@ func TestCreate_UsesProvidedValues(t *testing.T) {
 		json.RawMessage(queryJSON),
 		rl.StatusCode,
 		rl.LatencyUs,
-		db.NullString(rl.AccountID),
+		db.NullStringPtr(rl.AccountID),
+		db.NullStringPtr(rl.TargetAccountID),
 		db.NullString(string(rl.ClientIP)),
-		db.NullString(rl.ClientIPString),
-		db.NullString(rl.UserAgent),
-		db.NullString(rl.Referrer),
-		db.NullString(rl.ErrorCode),
-		db.NullString(rl.ErrorMessage),
+		db.NullStringPtr(rl.ClientIPString),
+		db.NullStringPtr(rl.UserAgent),
+		db.NullStringPtr(rl.Referrer),
+		db.NullStringPtr(rl.ErrorCode),
+		db.NullStringPtr(rl.ErrorMessage),
 		rl.OccurredAt,
-		db.NullString(rl.IdempotencyKeyID),
-		db.NullString(rl.ActorID),
-		db.NullString(rl.ActorType),
-		db.NullString(rl.InternalErrorMessage),
-		db.NullString(rl.StackTrace),
-		db.NullString(rl.IdentityType),
+		rl.CreatedAt,
+		db.NullStringPtr(rl.IdempotencyKeyID),
+		db.NullStringPtr(rl.ActorID),
+		db.NullStringPtr(rl.ActorType),
+		db.NullStringPtr(rl.InternalErrorMessage),
+		db.NullStringPtr(rl.StackTrace),
+		db.NullStringPtr(rl.IdentityType),
 	}
 
 	require.Equal(t, expectedArgs, recorder.lastArgs)
@@ -122,7 +129,7 @@ func TestCreate_FallsBackTo500WhenOutOfRange(t *testing.T) {
 	apiErr := repo.Create(ctx, rl)
 	require.Nil(t, apiErr)
 
-	require.Len(t, recorder.lastArgs, 22)
+	require.Len(t, recorder.lastArgs, 24)
 	require.Equal(t, int32(500), recorder.lastArgs[6])
 }
 

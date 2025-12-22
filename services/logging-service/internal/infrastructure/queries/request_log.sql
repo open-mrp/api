@@ -9,6 +9,7 @@ INSERT INTO request_log (
         status_code,
         latency_us,
         account_id,
+        target_account_id,
         client_ip,
         client_ip_string,
         user_agent,
@@ -16,6 +17,7 @@ INSERT INTO request_log (
         error_code,
         error_message,
         occurred_at,
+        created_at,
         idempotency_key_id,
         actor_id,
         actor_type,
@@ -24,6 +26,8 @@ INSERT INTO request_log (
         identity_type
     )
 VALUES (
+        ?,
+        ?,
         ?,
         ?,
         ?,

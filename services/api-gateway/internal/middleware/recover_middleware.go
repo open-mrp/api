@@ -15,8 +15,9 @@ func RecoverMiddleware() func(http.HandlerFunc) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
 			defer func() {
 				if rec := recover(); rec != nil {
-					if rl, ok := apicontext.GetRequestLogFromContext(r.Context()); ok && rl != nil && rl.ErrorMessage == "" {
-						rl.ErrorMessage = "An unexpected error occurred during the request"
+					if rl, ok := apicontext.GetRequestLogFromContext(r.Context()); ok && rl != nil && (rl.ErrorMessage == nil || *rl.ErrorMessage == "") {
+						msg := "An unexpected error occurred during the request"
+						rl.ErrorMessage = &msg
 					}
 					httptransport.RespondWithAPIError(r.Context(), w, contracts.NewInternalError(fmt.Errorf("%v", rec), fmt.Sprintf("A panic occurred during the request: %v", rec)))
 				}

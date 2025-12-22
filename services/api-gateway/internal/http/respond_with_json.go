@@ -19,7 +19,7 @@ func RespondWithJSON(ctx context.Context, w http.ResponseWriter, code int, paylo
 	var dat []byte
 	var err error
 
-	if ok && strings.HasPrefix(rl.UserAgent, "curl/") {
+	if ok && rl.UserAgent != nil && strings.HasPrefix(*rl.UserAgent, "curl/") {
 		dat, err = json.MarshalIndent(payload, "", "  ")
 	} else {
 		dat, err = json.Marshal(payload)

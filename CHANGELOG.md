@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.12](https://github.com/Augno/api/compare/v0.1.11...v0.1.12) (2025-12-22)
+
+
+### Bug Fixes
+
+* remove options from telemetry ([#55](https://github.com/Augno/api/issues/55)) ([dad7369](https://github.com/Augno/api/commit/dad73691731098e764a6d19a59dc5f7fb6378a47))
+
 ## [0.1.11](https://github.com/Augno/api/compare/v0.1.10...v0.1.11) (2025-12-22)
 
 

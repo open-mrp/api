@@ -78,7 +78,7 @@ func (e *RegisterEndpoint) Materialize() apiendpoint.APIEndpointer {
 		Request:           &RegisterRequest{},
 		Response:          &apiresource.User{},
 		SuccessStatusCode: http.StatusOK,
-		IsPublic:          true,
+		IsPublic:          false,
 		Handler: func(ctrl any) apiendpoint.HandlerFunc[
 			*RegisterRequest, *apiresource.User,
 		] {

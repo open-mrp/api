@@ -52,7 +52,7 @@ func (e *RevokeRefreshTokenEndpoint) Materialize() apiendpoint.APIEndpointer {
 		Request:           &RevokeRefreshTokenRequest{},
 		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusOK,
-		IsPublic:          true,
+		IsPublic:          false,
 		Handler: func(ctrl any) apiendpoint.HandlerFunc[
 			*RevokeRefreshTokenRequest, *apiresource.EmptyResource,
 		] {

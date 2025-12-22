@@ -77,7 +77,7 @@ func (e *ResetPasswordEndpoint) Materialize() apiendpoint.APIEndpointer {
 		Request:           &ResetPasswordRequest{},
 		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusOK,
-		IsPublic:          true,
+		IsPublic:          false,
 		Handler: func(ctrl any) apiendpoint.HandlerFunc[
 			*ResetPasswordRequest, *apiresource.EmptyResource,
 		] {

@@ -70,6 +70,7 @@ type Schema struct {
 	Description           string            `json:"description,omitempty"`
 	Example               any               `json:"example,omitempty"`
 	Format                string            `json:"format,omitempty"`
+	Nullable              bool              `json:"nullable,omitempty"`
 	Required              []string          `json:"required,omitempty"`
 	Enum                  []any             `json:"enum,omitempty"`
 	OneOf                 []Schema          `json:"oneOf,omitempty"`

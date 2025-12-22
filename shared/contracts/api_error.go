@@ -202,19 +202,50 @@ func NewClientClosedRequestError(publicMessage string) *APIError {
 	return NewAPIError(ErrorCodeClientClosedRequest, ErrorTypeAPI, publicMessage, "Client closed request.")
 }
 
-// ResponseError defines the structure of the error field in the JSON response
-// to ensure key ordering is conserved.
+// The error details of an API error.
 type ResponseError struct {
-	Code    ErrorCode `json:"code"`
-	Type    ErrorType `json:"type"`
-	Message string    `json:"message"`
-	Param   *string   `json:"param"`
-	DocURL  *string   `json:"doc_url"`
+	// A machine-readable code for the error.
+	Code ErrorCode `json:"code" enum:"expired_token,api_key_expired,api_key_revoked,invalid_credentials,insufficient_permissions,http_disabled,validation_failed,missing_field,invalid_format,method_not_allowed,resource_not_found,resource_exists,resource_conflict,rate_limit_exceeded,parameter_missing,parameter_invalid,parameter_unknown,parameters_exclusive,internal_error,service_unavailable,external_service_error,timeout,connection_error,request_timeout,client_closed_request"`
+	// The type of error.
+	Type ErrorType `json:"type" enum:"api_error,idempotency_error,invalid_request_error"`
+	// A human-readable message providing more details about the error.
+	Message string `json:"message"`
+	// The parameter that caused the error, if applicable.
+	Param *string `json:"param"`
+	// A URL to documentation about the error.
+	DocURL *string `json:"doc_url"`
+}
+
+func (r ResponseError) SchemaExample() any {
+	return ResponseError{
+		Code:    ErrorCodeValidationFailed,
+		Type:    ErrorTypeInvalidRequest,
+		Message: "The request was invalid.",
+		Param:   ptrutil.String("email"),
+		DocURL:  ptrutil.String("https://docs.augno.com/errors/validation_failed"),
+	}
+}
+
+// The top-level error response returned by the API.
+type APIErrorResponse struct {
+	Error ResponseError `json:"error"`
+}
+
+func (r APIErrorResponse) SchemaExample() any {
+	return APIErrorResponse{
+		Error: ResponseError{
+			Code:    ErrorCodeValidationFailed,
+			Type:    ErrorTypeInvalidRequest,
+			Message: "The request was invalid.",
+			Param:   ptrutil.String("email"),
+			DocURL:  ptrutil.String("https://docs.augno.com/errors/validation_failed"),
+		},
+	}
 }
 
 func (e *APIError) ToResponseMap() any {
-	return map[string]any{
-		"error": ResponseError{
+	return APIErrorResponse{
+		Error: ResponseError{
 			Code:    e.Code,
 			Type:    e.Type,
 			Message: e.PublicMessage,

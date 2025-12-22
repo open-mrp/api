@@ -78,7 +78,7 @@ func (e *UpdatePasswordEndpoint) Materialize() apiendpoint.APIEndpointer {
 		Request:           &UpdatePasswordRequest{},
 		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusOK,
-		IsPublic:          true,
+		IsPublic:          false,
 		Handler: func(ctrl any) apiendpoint.HandlerFunc[
 			*UpdatePasswordRequest, *apiresource.EmptyResource,
 		] {

@@ -5,6 +5,9 @@
 
 set -e
 
+# Ensure go bin is in PATH
+export PATH=$PATH:$(go env GOPATH)/bin
+
 # Colors for output
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'

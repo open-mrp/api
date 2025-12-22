@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	"github.com/augno/api/shared/contracts"
 )
 
 func generate(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOnly bool, transforms []Transform, version string) {
@@ -34,6 +35,7 @@ func generate(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOn
 	}
 
 	tagNames := make(map[string]bool)
+	apiErrorResponseRegistered := false
 
 	for _, group := range groups {
 		groupHasEndpoints := false
@@ -96,9 +98,9 @@ func generate(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOn
 
 						// Handle Parameters
 						if header := f.Tag.Get("header"); header != "" {
-							desc := "Header parameter: " + header
+							desc := fmt.Sprintf("Header parameter: %s for %s", header, title)
 							if header == "Authorization" {
-								desc = "The authentication token (Bearer or Basic scheme)"
+								desc = fmt.Sprintf("The authentication token (Bearer or Basic scheme) for %s", title)
 							}
 							operation.Parameters = append(operation.Parameters, Parameter{
 								Name:        header,
@@ -112,15 +114,15 @@ func generate(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOn
 							operation.Parameters = append(operation.Parameters, Parameter{
 								Name:        query,
 								In:          "query",
-								Description: "Query parameter: " + query,
+								Description: fmt.Sprintf("Query parameter: %s for %s", query, title),
 								Required:    strings.Contains(f.Tag.Get("validate"), "required"),
 								Schema:      generateSchema(f.Type, &spec.Components, docReader),
 							})
 						}
 						if cookie := f.Tag.Get("cookie"); cookie != "" {
-							desc := "Cookie parameter: " + cookie
+							desc := fmt.Sprintf("Cookie parameter: %s for %s", cookie, title)
 							if cookie == "__Secure-augno.refresh-token" {
-								desc = "The Secure refresh token cookie"
+								desc = fmt.Sprintf("The Secure refresh token cookie for %s", title)
 							}
 							operation.Parameters = append(operation.Parameters, Parameter{
 								Name:        cookie,
@@ -134,7 +136,7 @@ func generate(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOn
 							operation.Parameters = append(operation.Parameters, Parameter{
 								Name:        pathParam,
 								In:          "path",
-								Description: "Path parameter: " + pathParam,
+								Description: fmt.Sprintf("Path parameter: %s for %s", pathParam, title),
 								Required:    true,
 								Schema:      generateSchema(f.Type, &spec.Components, docReader),
 							})
@@ -205,6 +207,36 @@ func generate(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOn
 							Example: map[string]any{},
 						},
 					},
+				}
+			}
+
+			// Add default error responses
+			errorStatusCodes := []int{
+				http.StatusBadRequest,
+				http.StatusUnauthorized,
+				http.StatusForbidden,
+				http.StatusNotFound,
+				http.StatusConflict,
+				http.StatusTooManyRequests,
+				http.StatusInternalServerError,
+			}
+			for _, code := range errorStatusCodes {
+				codeStr := fmt.Sprintf("%d", code)
+				if _, ok := operation.Responses[codeStr]; !ok {
+					if !apiErrorResponseRegistered {
+						apiErrorType := reflect.TypeFor[contracts.APIErrorResponse]()
+						spec.Components.Schemas["APIErrorResponse"] = generateSchema(apiErrorType, &spec.Components, docReader)
+						apiErrorResponseRegistered = true
+					}
+					operation.Responses[codeStr] = Response{
+						Description: fmt.Sprintf("%s response for %s", http.StatusText(code), title),
+						Content: map[string]MediaConfig{
+							"application/json": {
+								Schema:  Schema{Ref: "#/components/schemas/APIErrorResponse"},
+								Example: spec.Components.Schemas["APIErrorResponse"].Example,
+							},
+						},
+					}
 				}
 			}
 
@@ -285,8 +317,8 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 	}
 
 	var example any
-	if origT.Implements(reflect.TypeFor[apiendpoint.DocumentedType]()) {
-		v := reflect.New(t).Interface().(apiendpoint.DocumentedType)
+	if origT.Implements(reflect.TypeFor[contracts.DocumentedType]()) {
+		v := reflect.New(t).Interface().(contracts.DocumentedType)
 		func() {
 			defer func() { recover() }()
 			example = v.SchemaExample()
@@ -314,20 +346,22 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 		}
 		parts := strings.Split(jsonTag, ",")
 		name := parts[0]
-		isRequired := false
+
+		hasRequiredInJSON := false
+		hasOmitempty := false
 		for _, part := range parts[1:] {
 			if part == "required" {
-				isRequired = true
-				break
+				hasRequiredInJSON = true
+			}
+			if part == "omitempty" {
+				hasOmitempty = true
 			}
 		}
 
-		if !isRequired {
-			validateTag := f.Tag.Get("validate")
-			if strings.Contains(validateTag, "required") {
-				isRequired = true
-			}
-		}
+		validateTag := f.Tag.Get("validate")
+		hasRequiredInValidate := strings.Contains(validateTag, "required")
+
+		isRequired := hasRequiredInJSON || hasRequiredInValidate || !hasOmitempty
 
 		if isRequired {
 			schema.Required = append(schema.Required, name)
@@ -336,6 +370,7 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 		fieldSchema := Schema{
 			Description: typeDoc.Fields[f.Name],
 			Example:     f.Tag.Get("example"),
+			Nullable:    f.Type.Kind() == reflect.Pointer,
 		}
 
 		if enumTag := f.Tag.Get("enum"); enumTag != "" {

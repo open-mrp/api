@@ -61,6 +61,9 @@ install-tools: ## Install required development tools
 install-ci-tools: ## Install minimum tools for CI
 	@./scripts/install-ci-tools.sh
 
+install-cd-tools: ## Install minimum tools for CD
+	@./scripts/install-cd-tools.sh
+
 mocks: ## Generate mocks. Usage: make mocks [services]
 	@$(MOCK_SCRIPT) $(ARGS)
 

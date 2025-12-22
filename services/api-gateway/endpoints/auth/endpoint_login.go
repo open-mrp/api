@@ -81,7 +81,7 @@ func (e *LoginEndpoint) Materialize() apiendpoint.APIEndpointer {
 		Request:           &LoginRequest{},
 		Response:          &apiresource.User{},
 		SuccessStatusCode: http.StatusOK,
-		IsPublic:          true,
+		IsPublic:          false,
 		Handler: func(ctrl any) apiendpoint.HandlerFunc[
 			*LoginRequest, *apiresource.User,
 		] {

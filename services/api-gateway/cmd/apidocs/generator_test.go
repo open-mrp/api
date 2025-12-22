@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/json"
+	"net/http"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -12,6 +14,19 @@ import (
 type NestedStruct struct {
 	// NestedField doc
 	NestedField string `json:"nested_field"`
+}
+
+type DocumentedStruct struct {
+	Value string `json:"value"`
+}
+
+func (d DocumentedStruct) SchemaExample() any {
+	return DocumentedStruct{Value: "example"}
+}
+
+type PointersStruct struct {
+	Name   *string       `json:"name"`
+	Nested *NestedStruct `json:"nested"`
 }
 
 type TestSchemaStruct struct {
@@ -127,6 +142,134 @@ func TestGenerateSchema(t *testing.T) {
 
 	if _, ok := components.Schemas["NestedStruct"]; !ok {
 		t.Error("expected 'NestedStruct' to be in components schemas")
+	}
+
+	// Test pointers
+	ptrType := reflect.TypeOf(PointersStruct{})
+	ptrSchema := generateSchema(ptrType, components, reader)
+	if !ptrSchema.Properties["name"].Nullable {
+		t.Error("expected pointer field 'name' to be nullable")
+	}
+	if ptrSchema.Properties["nested"].Ref == "" {
+		t.Error("expected pointer to struct 'nested' to have a ref")
+	}
+
+	// Test DocumentedType
+	docType := reflect.TypeOf(DocumentedStruct{})
+	docSchema := generateSchema(docType, components, reader)
+	if docSchema.Example == nil {
+		t.Error("expected DocumentedStruct to have an example")
+	}
+	example := docSchema.Example.(DocumentedStruct)
+	if example.Value != "example" {
+		t.Errorf("expected example value 'example', got '%s'", example.Value)
+	}
+}
+
+type TestRequest struct {
+	ID string `json:"id" path:"id"`
+}
+
+type TestResponse struct {
+	Message string `json:"message"`
+}
+
+type MockEndpoint struct {
+	apiendpoint.APIEndpoint[TestRequest, TestResponse]
+}
+
+func (e *MockEndpoint) Materialize() apiendpoint.APIEndpointer {
+	return e
+}
+
+func (e *MockEndpoint) GetHandler() http.HandlerFunc {
+	return nil
+}
+
+func TestGenerate_FullAssembly(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "apidocs-assembly-test")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	outputPath := filepath.Join(tempDir, "internal_spec.json")
+
+	groups := []apiendpoint.APIEndpointGroup{
+		{
+			Title: "Test Group",
+			Endpoints: []apiendpoint.APIEndpointer{
+				&MockEndpoint{
+					APIEndpoint: apiendpoint.APIEndpoint[TestRequest, TestResponse]{
+						Title:    "Public Endpoint",
+						Method:   "GET",
+						Route:    "/public",
+						IsPublic: true,
+					},
+				},
+				&MockEndpoint{
+					APIEndpoint: apiendpoint.APIEndpoint[TestRequest, TestResponse]{
+						Title:    "Private Endpoint",
+						Method:   "POST",
+						Route:    "/private",
+						IsPublic: false,
+					},
+				},
+			},
+		},
+	}
+
+	// Generate internal spec (should include both)
+	generate(groups, outputPath, false, nil, "1.0.0")
+
+	data, err := os.ReadFile(outputPath)
+	if err != nil {
+		t.Fatalf("failed to read generated spec: %v", err)
+	}
+
+	var spec map[string]any
+	if err := json.Unmarshal(data, &spec); err != nil {
+		t.Fatalf("failed to unmarshal spec: %v", err)
+	}
+
+	paths := spec["paths"].(map[string]any)
+	if len(paths) != 2 {
+		t.Errorf("expected 2 paths, got %d", len(paths))
+	}
+
+	// Verify error responses are attached
+	publicPath := paths["/public"].(map[string]any)
+	getOp := publicPath["get"].(map[string]any)
+	responses := getOp["responses"].(map[string]any)
+
+	errorCodes := []string{"400", "401", "403", "404", "409", "429", "500"}
+	for _, code := range errorCodes {
+		if _, ok := responses[code]; !ok {
+			t.Errorf("expected error response %s to be attached to public endpoint", code)
+		}
+	}
+
+	// Verify APIErrorResponse schema is present
+	components := spec["components"].(map[string]any)
+	schemas := components["schemas"].(map[string]any)
+	if _, ok := schemas["APIErrorResponse"]; !ok {
+		t.Error("expected APIErrorResponse schema to be present in components")
+	}
+
+	// Generate public spec (should only include public)
+	publicOutputPath := filepath.Join(tempDir, "public_spec.json")
+	generate(groups, publicOutputPath, true, nil, "1.0.0")
+
+	publicData, _ := os.ReadFile(publicOutputPath)
+	var publicSpec map[string]any
+	json.Unmarshal(publicData, &publicSpec)
+
+	publicPaths := publicSpec["paths"].(map[string]any)
+	if len(publicPaths) != 1 {
+		t.Errorf("expected 1 path in public spec, got %d", len(publicPaths))
+	}
+	if _, ok := publicPaths["/public"]; !ok {
+		t.Error("expected '/public' path to be present in public spec")
 	}
 }
 

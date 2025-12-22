@@ -32,5 +32,6 @@ print_status "Installing minimum CI tools..."
 # Only install what's actually used in ci.yml
 install_tool "gosec" "github.com/securego/gosec/v2/cmd/gosec@latest"
 install_tool "staticcheck" "honnef.co/go/tools/cmd/staticcheck@latest"
+install_tool "vacuum" "github.com/daveshanley/vacuum@latest"
 
 print_status "CI tools installed successfully!"

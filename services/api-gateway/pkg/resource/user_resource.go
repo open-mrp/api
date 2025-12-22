@@ -11,6 +11,7 @@ const SampleUserID = "us_01gf7a8200e9pvbd6bgyq395ae"
 const SampleUserUsername = "jdoe"
 const SampleUserEmail = "jdoe@augno.com"
 const SampleUserName = "John Doe"
+const SampleUserImageUrl = "https://example.com/avatar.jpg"
 const SampleUserPassword = "super-secret-password"
 const SampleNewUserPassword = "new-super-secret-password"
 
@@ -20,6 +21,7 @@ var SampleUser = &User{
 	Username:      ptrutil.String(SampleUserUsername),
 	Email:         ptrutil.String(SampleUserEmail),
 	Name:          ptrutil.String(SampleUserName),
+	ImageUrl:      ptrutil.String(SampleUserImageUrl),
 	EmailVerified: ptrutil.TimestampToTimePtr(sampleExpiresAtTimestamp),
 	CreatedAt:     ptrutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:     ptrutil.TimestampToTime(sampleUpdatedAtTimestamp),

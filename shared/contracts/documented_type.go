@@ -1,4 +1,4 @@
-package apiendpoint
+package contracts
 
 /*
 An interface that types must implement to specify their documentation type.

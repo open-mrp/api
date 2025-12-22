@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.10](https://github.com/Augno/api/compare/v0.1.9...v0.1.10) (2025-12-22)
+
+
+### Bug Fixes
+
+* add target account ID to request logs ([#51](https://github.com/Augno/api/issues/51)) ([23e125e](https://github.com/Augno/api/commit/23e125e77743c55d9503d2987cb237998db76f20))
+
 ## [0.1.9](https://github.com/Augno/api/compare/v0.1.8...v0.1.9) (2025-12-22)
 
 

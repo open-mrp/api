@@ -9,6 +9,7 @@ import (
 	grpcclient "github.com/augno/api/services/api-gateway/grpc-client"
 	apicontext "github.com/augno/api/services/api-gateway/internal/context"
 	"github.com/augno/api/services/api-gateway/internal/domain"
+	"github.com/augno/api/shared/constants"
 	pb "github.com/augno/api/shared/proto/auth"
 
 	"google.golang.org/grpc"
@@ -87,4 +88,80 @@ func TestAuthMiddlewareSetsActorAndIdentityTypes(t *testing.T) {
 	if rl.AccountID == nil || *rl.AccountID != targetAccount {
 		t.Fatalf("expected account_id %s, got %v", targetAccount, rl.AccountID)
 	}
+}
+
+func TestAuthMiddlewareProductionPolicy(t *testing.T) {
+	config := AuthMiddlewareConfig{
+		AuthClient: &grpcclient.AuthServiceClient{Client: &stubAuthClient{}},
+	}
+
+	t.Run("reject access token in header in production", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/test", nil)
+		req.Header.Set("Authorization", "Bearer not-an-api-key")
+		ctx := apicontext.WithPlatform(req.Context(), constants.PlatformModeProduction)
+		req = req.WithContext(ctx)
+
+		rec := httptest.NewRecorder()
+		handler := AuthMiddleware(config)(func(w http.ResponseWriter, r *http.Request) {})
+		handler(rec, req)
+
+		if rec.Code != http.StatusUnauthorized {
+			t.Errorf("expected status 401, got %d", rec.Code)
+		}
+	})
+
+	t.Run("allow api key in header in production", func(t *testing.T) {
+		targetAccount := "acct-1"
+		stubClient := &stubAuthClient{
+			identity: &pb.Identity{Type: pb.IdentityType_IDENTITY_TYPE_API_KEY, TargetAccountId: &targetAccount},
+		}
+		config.AuthClient.Client = stubClient
+
+		req := httptest.NewRequest(http.MethodGet, "/test", nil)
+		req.Header.Set("Authorization", "Bearer aug_sk_test_123")
+		ctx := apicontext.WithPlatform(req.Context(), constants.PlatformModeProduction)
+		req = req.WithContext(ctx)
+
+		rec := httptest.NewRecorder()
+		handler := AuthMiddleware(config)(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		})
+		handler(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Errorf("expected status 200, got %d", rec.Code)
+		}
+	})
+
+	t.Run("reject api key in cookie in production", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/test", nil)
+		req.AddCookie(&http.Cookie{Name: "__Secure-augno.access-token", Value: "aug_sk_test_123"})
+		ctx := apicontext.WithPlatform(req.Context(), constants.PlatformModeProduction)
+		req = req.WithContext(ctx)
+
+		rec := httptest.NewRecorder()
+		handler := AuthMiddleware(config)(func(w http.ResponseWriter, r *http.Request) {})
+		handler(rec, req)
+
+		if rec.Code != http.StatusUnauthorized {
+			t.Errorf("expected status 401, got %d", rec.Code)
+		}
+	})
+
+	t.Run("reject ambiguous authentication (both header and cookie)", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/test", nil)
+		req.Header.Set("Authorization", "Bearer aug_sk_test_123")
+		req.AddCookie(&http.Cookie{Name: "__Secure-augno.access-token", Value: "token-123"})
+		// Mode doesn't matter for this policy
+		ctx := apicontext.WithPlatform(req.Context(), constants.PlatformModeDevelopment)
+		req = req.WithContext(ctx)
+
+		rec := httptest.NewRecorder()
+		handler := AuthMiddleware(config)(func(w http.ResponseWriter, r *http.Request) {})
+		handler(rec, req)
+
+		if rec.Code != http.StatusUnauthorized {
+			t.Errorf("expected status 401, got %d", rec.Code)
+		}
+	})
 }

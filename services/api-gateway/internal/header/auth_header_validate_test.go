@@ -9,7 +9,7 @@ import (
 	"github.com/augno/api/shared/contracts"
 )
 
-func TestValidateAuthHeader(t *testing.T) {
+func TestValidateAndExtractAuthHeader(t *testing.T) {
 	tests := []struct {
 		name           string
 		authHeader     string
@@ -179,7 +179,7 @@ func TestValidateAuthHeader(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := ValidateAuthHeader(tt.authHeader)
+			result, err := ValidateAndExtractAuthHeader(tt.authHeader)
 
 			if tt.hasError {
 				if err == nil {
@@ -207,7 +207,7 @@ func TestValidateAuthHeader(t *testing.T) {
 	}
 }
 
-func TestValidateAuthHeader_ErrorMessages(t *testing.T) {
+func TestValidateAndExtractAuthHeader_ErrorMessages(t *testing.T) {
 	tests := []struct {
 		name                string
 		authHeader          string
@@ -268,7 +268,7 @@ func TestValidateAuthHeader_ErrorMessages(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := ValidateAuthHeader(tt.authHeader)
+			_, err := ValidateAndExtractAuthHeader(tt.authHeader)
 
 			if err == nil {
 				t.Errorf("expected error for auth header: %s", tt.authHeader)
@@ -506,7 +506,7 @@ func TestValidateTokenString(t *testing.T) {
 	}
 }
 
-func TestValidateAuthHeaderNotEmpty(t *testing.T) {
+func TestValidateAndExtractAuthHeaderNotEmpty(t *testing.T) {
 	tests := []struct {
 		name       string
 		authHeader string
@@ -649,7 +649,7 @@ func TestAuthHeaderResult(t *testing.T) {
 	}
 }
 
-func TestValidateAuthHeader_EdgeCases(t *testing.T) {
+func TestValidateAndExtractAuthHeader_EdgeCases(t *testing.T) {
 	tests := []struct {
 		name       string
 		authHeader string
@@ -689,7 +689,7 @@ func TestValidateAuthHeader_EdgeCases(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := ValidateAuthHeader(tt.authHeader)
+			_, err := ValidateAndExtractAuthHeader(tt.authHeader)
 
 			if tt.hasError {
 				if err == nil {
@@ -704,7 +704,7 @@ func TestValidateAuthHeader_EdgeCases(t *testing.T) {
 	}
 }
 
-func TestValidateAuthHeader_ErrorConstants(t *testing.T) {
+func TestValidateAndExtractAuthHeader_ErrorConstants(t *testing.T) {
 	// Test that error constants are properly defined
 	if ErrHeaderPrefix == "" {
 		t.Error("expected ErrHeaderPrefix to be defined")

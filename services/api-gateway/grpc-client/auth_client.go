@@ -32,9 +32,9 @@ func NewAuthServiceClient(
 func NewAuthServiceClientWithURL(authServiceURL string) (*AuthServiceClient, error) {
 	// Configure keepalive to maintain connections and detect dead connections quickly
 	keepaliveParams := keepalive.ClientParameters{
-		Time:                10 * time.Second, // Send keepalive pings every 10 seconds
-		Timeout:             3 * time.Second,  // Wait 3 seconds for ping ack before considering connection dead
-		PermitWithoutStream: true,             // Send pings even when there are no active streams
+		Time:                60 * time.Second, // Send keepalive pings every 60 seconds
+		Timeout:             5 * time.Second,  // Wait 5 seconds for ping ack before considering connection dead
+		PermitWithoutStream: false,            // Only send pings when there are active streams
 	}
 
 	dialOptions := append(

@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"strings"
 
+	authsvctypes "github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/contracts"
 	"github.com/augno/api/shared/sanitize"
 )
@@ -20,7 +21,7 @@ type AuthHeaderResult struct {
 	Scheme      AuthScheme
 }
 
-func ValidateAuthHeader(authHeader string) (*AuthHeaderResult, *contracts.APIError) {
+func ValidateAndExtractAuthHeader(authHeader string) (*AuthHeaderResult, *contracts.APIError) {
 	if authHeader == "" {
 		return nil, contracts.NewAuthenticationError(ErrHeaderPrefix + " Authorization header is required.")
 	}
@@ -51,6 +52,10 @@ func ValidateAuthHeader(authHeader string) (*AuthHeaderResult, *contracts.APIErr
 		TokenString: tokenString,
 		Scheme:      scheme,
 	}, nil
+}
+
+func IsAPIKey(token string) bool {
+	return strings.HasPrefix(token, string(authsvctypes.APIKeyPrefixSecretKey))
 }
 
 func cleanTokenForResponse(tokenString string) string {

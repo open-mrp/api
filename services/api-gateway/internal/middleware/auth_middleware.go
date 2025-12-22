@@ -38,29 +38,48 @@ func AuthMiddleware(config AuthMiddlewareConfig) func(http.HandlerFunc) http.Han
 			authHeader := r.Header.Get("Authorization")
 			augnoAccountIDHeader := r.Header.Get("Augno-Account-ID")
 
+			platform, _ := apicontext.GetPlatformFromContext(r.Context())
+			isProduction := platform.IsProduction()
+
+			cookieToken, _ := cookie.GetAccessTokenFromRequest(r)
+
+			if authHeader != "" && cookieToken != "" {
+				apiErr := contracts.NewAuthenticationError("Ambiguous authentication: both Authorization header and cookies are present. Please provide only one.")
+				httptransport.RespondWithAPIError(r.Context(), w, apiErr)
+				tracing.RecordControllerError(span, apiErr)
+				span.End()
+				return
+			}
+
 			var authToken string
 
 			if authHeader != "" {
-				authResult, apiErr := header.ValidateAuthHeader(authHeader)
+				authResult, apiErr := header.ValidateAndExtractAuthHeader(authHeader)
 				if apiErr != nil {
 					httptransport.RespondWithAPIError(r.Context(), w, apiErr)
 					tracing.RecordControllerError(span, apiErr)
 					span.End()
 					return
 				}
-				authToken = authResult.TokenString
-			} else {
-				tokenValue, apiErr := cookie.GetAccessTokenFromRequest(r)
-				if apiErr == nil && tokenValue != "" {
-					authResult, apiErr := header.ValidateAuthHeader(fmt.Sprintf("Bearer %s", tokenValue))
-					if apiErr != nil {
-						httptransport.RespondWithAPIError(r.Context(), w, apiErr)
-						tracing.RecordControllerError(span, apiErr)
-						span.End()
-						return
-					}
-					authToken = authResult.TokenString
+
+				if isProduction && !header.IsAPIKey(authResult.TokenString) {
+					apiErr := contracts.NewAuthenticationError("Access tokens are not allowed in the Authorization header. Please use cookies instead.")
+					httptransport.RespondWithAPIError(r.Context(), w, apiErr)
+					tracing.RecordControllerError(span, apiErr)
+					span.End()
+					return
 				}
+
+				authToken = authResult.TokenString
+			} else if cookieToken != "" {
+				if isProduction && header.IsAPIKey(cookieToken) {
+					apiErr := contracts.NewAuthenticationError("API keys are not allowed in cookies. Please use the Authorization header instead.")
+					httptransport.RespondWithAPIError(r.Context(), w, apiErr)
+					tracing.RecordControllerError(span, apiErr)
+					span.End()
+					return
+				}
+				authToken = cookieToken
 			}
 
 			identity, err := config.AuthClient.Client.ValidateCredential(ctx, &pb.Credential{

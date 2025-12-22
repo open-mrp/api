@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/augno/api/services/auth-service/internal/domain"
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/contracts"
 	sanitize "github.com/augno/api/shared/sanitize"
@@ -87,7 +88,7 @@ func (aku *apiKeyUtilsImpl) Parse(ctx context.Context, key string) (*domain.Pars
 	}
 
 	// The first two parts of the key should be the secret key prefix
-	if !strings.HasPrefix(parts[0]+"_"+parts[1]+"_", string(domain.APIKeyPrefixSecretKey)) {
+	if !strings.HasPrefix(parts[0]+"_"+parts[1]+"_", string(types.APIKeyPrefixSecretKey)) {
 		return nil, aku.invalidAPIKeyError(span, key)
 	}
 
@@ -154,7 +155,7 @@ func (aku *apiKeyUtilsImpl) VerifySecretHMAC(ctx context.Context, secret string,
 //
 // Ex: aug_sk_prod_aG****UCZu
 func (aku *apiKeyUtilsImpl) SanitizeForDisplay(apiKey string) string {
-	return sanitize.SanitizeString(apiKey, len(domain.APIKeyPrefixSecretKey)+len(constants.AccountModeProduction)+3, 4)
+	return sanitize.SanitizeString(apiKey, len(types.APIKeyPrefixSecretKey)+len(constants.AccountModeProduction)+3, 4)
 }
 
 func (aku *apiKeyUtilsImpl) lengthForKeyStrength(strength KeyStrength) int {
@@ -176,6 +177,6 @@ func hmacSHA256(key, data []byte) ([]byte, error) {
 }
 
 func (aku *apiKeyUtilsImpl) invalidAPIKeyError(span trace.Span, key string) *contracts.APIError {
-	message := fmt.Sprintf("%s: %s. Valid API keys start with '%s'.", ErrAPIKeyInvalid, aku.SanitizeForDisplay(key), string(domain.APIKeyPrefixSecretKey))
+	message := fmt.Sprintf("%s: %s. Valid API keys start with '%s'.", ErrAPIKeyInvalid, aku.SanitizeForDisplay(key), string(types.APIKeyPrefixSecretKey))
 	return tracing.Trace(span, contracts.NewAuthenticationError(message))
 }

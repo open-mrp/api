@@ -98,7 +98,7 @@ func LoggingMiddleware(logger *log.Logger, next http.HandlerFunc, saver *asyncRe
 		lrw := newLoggingResponseWriter(w)
 
 		defer func() {
-			if r.URL.Path == "/healthz" {
+			if r.URL.Path == "/healthz" || r.Method == http.MethodOptions {
 				return
 			}
 

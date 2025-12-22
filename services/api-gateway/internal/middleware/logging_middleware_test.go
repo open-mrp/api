@@ -265,6 +265,23 @@ func TestLoggingMiddleware_SkipHealthz(t *testing.T) {
 		}
 	})
 
+	t.Run("skip OPTIONS requests", func(t *testing.T) {
+		saved = false
+		// Create an OPTIONS request
+		req := httptest.NewRequest(http.MethodOptions, "/any-path", nil)
+		w := httptest.NewRecorder()
+
+		// Serve the request
+		handler.ServeHTTP(w, req)
+
+		// Wait a bit for the async saver to process (though it shouldn't be called)
+		time.Sleep(20 * time.Millisecond)
+
+		if saved {
+			t.Error("Expected OPTIONS request NOT to be saved, but it was")
+		}
+	})
+
 	t.Run("log other paths", func(t *testing.T) {
 		saved = false
 		// Create a request to /other

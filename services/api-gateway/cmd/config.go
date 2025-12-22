@@ -21,6 +21,8 @@ func loadConfig(getenv func(string) string) (*config, error) {
 		return nil, fmt.Errorf("required environment variable PLATFORM is not set")
 	}
 
+	fmt.Println("platform", platform)
+
 	platformMode := constants.PlatformMode(platform)
 	if !platformMode.IsValid() {
 		return nil, fmt.Errorf("PLATFORM must be a valid platform mode, got: %s", platform)

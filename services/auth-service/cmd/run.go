@@ -13,6 +13,7 @@ import (
 	grpcserver "google.golang.org/grpc"
 	"google.golang.org/grpc/health"
 	"google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/keepalive"
 
 	"github.com/augno/api/services/auth-service/internal/infrastructure/grpc"
 	"github.com/augno/api/services/auth-service/internal/infrastructure/sqlc"
@@ -83,8 +84,24 @@ func Run(
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	_ = logger
 
+	// Configure keepalive to manage idle connections and prevent "too_many_pings" errors
+	kaServerParams := keepalive.ServerParameters{
+		MaxConnectionIdle:     15 * time.Minute, // If a client is idle for 15 minutes, send a GOAWAY
+		MaxConnectionAge:      30 * time.Minute, // If any connection is older than 30 minutes, send a GOAWAY
+		MaxConnectionAgeGrace: 5 * time.Second,  // Allow 5 seconds for pending RPCs to complete before closing
+		Time:                  30 * time.Second, // Ping the client every 30 seconds if it's idle
+		Timeout:               5 * time.Second,  // Wait 5 seconds for ping ack before considering connection dead
+	}
+
+	kaPolicy := keepalive.EnforcementPolicy{
+		MinTime:             10 * time.Second, // Minimum time between client pings
+		PermitWithoutStream: true,             // Allow pings even if there are no active streams
+	}
+
 	serverOpts := append(
 		tracing.WithTracingInterceptors(),
+		grpcserver.KeepaliveParams(kaServerParams),
+		grpcserver.KeepaliveEnforcementPolicy(kaPolicy),
 		grpcserver.ChainUnaryInterceptor(
 			tracing.UnarySpanRenamer(),
 			contracts.RecoveryUnaryInterceptor(),

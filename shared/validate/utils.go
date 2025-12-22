@@ -54,67 +54,69 @@ func createFieldValidationError(fieldErr validator.FieldError, structValue any) 
 }
 
 func formatFieldError(fieldErr validator.FieldError, structValue any) string {
-	fieldName := getFieldName(fieldErr, structValue)
+	metadata := getFieldMetadata(fieldErr, structValue)
+	fieldName := metadata.name
+	source := formatSource(metadata.source)
 
 	switch fieldErr.Tag() {
 	case "required":
-		return fmt.Sprintf("Field '%s' is required.", fieldName)
+		return fmt.Sprintf("%s '%s' is required.", source, fieldName)
 	case "min":
-		return formatMinMaxError(fieldName, fieldErr, "at least")
+		return formatMinMaxError(fieldName, source, fieldErr, "at least")
 	case "max":
-		return formatMinMaxError(fieldName, fieldErr, "at most")
+		return formatMinMaxError(fieldName, source, fieldErr, "at most")
 	case "email":
-		return fmt.Sprintf("Field '%s' must be a valid email address.", fieldName)
+		return fmt.Sprintf("%s '%s' must be a valid email address.", source, fieldName)
 	case "len":
-		return fmt.Sprintf("Field '%s' must be exactly %s characters long.", fieldName, fieldErr.Param())
+		return fmt.Sprintf("%s '%s' must be exactly %s characters long.", source, fieldName, fieldErr.Param())
 	case "gte":
-		return formatGteLteError(fieldName, fieldErr, "greater than or equal to")
+		return formatGteLteError(fieldName, source, fieldErr, "greater than or equal to")
 	case "lte":
-		return formatGteLteError(fieldName, fieldErr, "less than or equal to")
+		return formatGteLteError(fieldName, source, fieldErr, "less than or equal to")
 	case "gt":
-		return fmt.Sprintf("Field '%s' must be greater than %s.", fieldName, fieldErr.Param())
+		return fmt.Sprintf("%s '%s' must be greater than %s.", source, fieldName, fieldErr.Param())
 	case "lt":
-		return fmt.Sprintf("Field '%s' must be less than %s.", fieldName, fieldErr.Param())
+		return fmt.Sprintf("%s '%s' must be less than %s.", source, fieldName, fieldErr.Param())
 	case "oneof":
-		return fmt.Sprintf("Field '%s' must be one of: %s.", fieldName, fieldErr.Param())
+		return fmt.Sprintf("%s '%s' must be one of: %s.", source, fieldName, fieldErr.Param())
 	case "omitempty":
 		// This shouldn't happen as omitempty means "skip validation if empty"
-		return fmt.Sprintf("Field '%s' validation failed.", fieldName)
+		return fmt.Sprintf("%s '%s' validation failed.", source, fieldName)
 	default:
-		return fmt.Sprintf("Field '%s' is invalid (%s).", fieldName, fieldErr.Tag())
+		return fmt.Sprintf("%s '%s' is invalid (%s).", source, fieldName, fieldErr.Tag())
 	}
 }
 
-func formatMinMaxError(fieldName string, fieldErr validator.FieldError, comparison string) string {
+func formatMinMaxError(fieldName, source string, fieldErr validator.FieldError, comparison string) string {
 	param := fieldErr.Param()
 	fieldType := fieldErr.Type()
 
 	if fieldType.Kind() == reflect.Slice || fieldType.Kind() == reflect.Array {
 		itemWord := getItemWord(param)
-		return fmt.Sprintf("Field '%s' must have %s %s %s.", fieldName, comparison, param, itemWord)
+		return fmt.Sprintf("%s '%s' must have %s %s %s.", source, fieldName, comparison, param, itemWord)
 	}
 
 	if fieldType.Kind() == reflect.String {
-		return fmt.Sprintf("Field '%s' must be %s %s characters long.", fieldName, comparison, param)
+		return fmt.Sprintf("%s '%s' must be %s %s characters long.", source, fieldName, comparison, param)
 	}
 
-	return fmt.Sprintf("Field '%s' must be %s %s.", fieldName, comparison, param)
+	return fmt.Sprintf("%s '%s' must be %s %s.", source, fieldName, comparison, param)
 }
 
-func formatGteLteError(fieldName string, fieldErr validator.FieldError, comparison string) string {
+func formatGteLteError(fieldName, source string, fieldErr validator.FieldError, comparison string) string {
 	param := fieldErr.Param()
 	fieldType := fieldErr.Type()
 
 	if fieldType.Kind() == reflect.Slice || fieldType.Kind() == reflect.Array {
 		itemWord := getItemWord(param)
-		return fmt.Sprintf("Field '%s' must have %s %s %s.", fieldName, comparison, param, itemWord)
+		return fmt.Sprintf("%s '%s' must have %s %s %s.", source, fieldName, comparison, param, itemWord)
 	}
 
 	if fieldType.Kind() == reflect.String {
-		return fmt.Sprintf("Field '%s' must be %s %s characters long.", fieldName, comparison, param)
+		return fmt.Sprintf("%s '%s' must be %s %s characters long.", source, fieldName, comparison, param)
 	}
 
-	return fmt.Sprintf("Field '%s' must be %s %s.", fieldName, comparison, param)
+	return fmt.Sprintf("%s '%s' must be %s %s.", source, fieldName, comparison, param)
 }
 
 func getItemWord(param string) string {
@@ -126,19 +128,17 @@ func getItemWord(param string) string {
 	return "items"
 }
 
-func getFieldName(fieldErr validator.FieldError, structValue any) string {
-	fieldName := fieldErr.Field()
-
-	if structValue != nil {
-		if tagName := getFieldTagFromReflection(fieldName, structValue); tagName != "" {
-			return tagName
-		}
-	}
-
-	return fieldName
+type fieldMetadata struct {
+	name   string
+	source string
 }
 
-func getFieldTagFromReflection(fieldName string, structValue any) string {
+func getFieldMetadata(fieldErr validator.FieldError, structValue any) fieldMetadata {
+	fieldName := fieldErr.Field()
+	if structValue == nil {
+		return fieldMetadata{name: fieldName, source: "field"}
+	}
+
 	rv := reflect.ValueOf(structValue)
 	if rv.Kind() == reflect.Ptr {
 		rv = rv.Elem()
@@ -152,25 +152,46 @@ func getFieldTagFromReflection(fieldName string, structValue any) string {
 			if jsonTag := field.Tag.Get("json"); jsonTag != "" {
 				jsonName := strings.Split(jsonTag, ",")[0]
 				if jsonName != "" && jsonName != "-" {
-					return jsonName
+					return fieldMetadata{name: jsonName, source: "field"}
 				}
 			}
 
-			tagPriority := []string{"form", "query", "path", "header"}
+			tagPriority := []string{"form", "query", "path", "header", "cookie"}
 			for _, tagName := range tagPriority {
 				if tagValue := field.Tag.Get(tagName); tagValue != "" {
-					tagName := strings.Split(tagValue, ",")[0]
-					if tagName != "" && tagName != "-" {
-						return tagName
+					tagNameValue := strings.Split(tagValue, ",")[0]
+					if tagNameValue != "" && tagNameValue != "-" {
+						return fieldMetadata{name: tagNameValue, source: tagName}
 					}
 				}
 			}
 
-			return fieldName
+			return fieldMetadata{name: fieldName, source: "field"}
 		}
 	}
 
-	return fieldName
+	return fieldMetadata{name: fieldName, source: "field"}
+}
+
+func formatSource(source string) string {
+	switch source {
+	case "header":
+		return "Header"
+	case "query":
+		return "Query parameter"
+	case "path":
+		return "Path parameter"
+	case "form":
+		return "Form field"
+	case "cookie":
+		return "Cookie"
+	default:
+		return "Field"
+	}
+}
+
+func getFieldName(fieldErr validator.FieldError, structValue any) string {
+	return getFieldMetadata(fieldErr, structValue).name
 }
 
 func GetValidator() *validator.Validate {

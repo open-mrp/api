@@ -175,7 +175,7 @@ func (s *userMedImpl) ValidateCredential(ctx context.Context, authToken string, 
 	}
 
 	// If the auth token has the API key prefix, validate it as such
-	if strings.HasPrefix(authToken, string(domain.APIKeyPrefixSecretKey)) {
+	if strings.HasPrefix(authToken, string(types.APIKeyPrefixSecretKey)) {
 		return s.validateAPIKeyCredential(ctx, span, authToken, targetAccountID, deps)
 	}
 

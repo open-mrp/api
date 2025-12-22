@@ -284,7 +284,7 @@ func bindFromHeaders(r *http.Request, dst any) error {
 		if h == "Authorization" && fromHeader {
 			scheme := f.tag.Get("scheme")
 			// If scheme is not specified, allow both Bearer and Basic
-			authResult, err := header.ValidateAuthHeader(val)
+			authResult, err := header.ValidateAndExtractAuthHeader(val)
 			if err != nil {
 				// If validation fails and cookie fallback is available, try cookie
 				if cookieName != "" {
@@ -340,10 +340,15 @@ func bindFromHeaders(r *http.Request, dst any) error {
 		}
 		if err := setFromString(f.value, val, f.tag); err != nil {
 			param := h
+			source := "header"
 			if param == "" {
 				param = cookieName
+				source = "cookie"
 			}
-			return contracts.NewValidationErrorWithParam(fmt.Sprintf("Invalid value for %s: %v", param, err), param)
+			if param == "" {
+				return contracts.NewValidationErrorWithParam(fmt.Sprintf("Invalid value: %v", err), "")
+			}
+			return contracts.NewValidationErrorWithParam(fmt.Sprintf("Invalid value for %s '%s': %v", source, param, err), param)
 		}
 		return nil
 	})

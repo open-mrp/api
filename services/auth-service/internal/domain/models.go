@@ -68,12 +68,6 @@ type RolePermission struct {
 	PermissionCode string
 }
 
-type APIKeyPrefix string
-
-const (
-	APIKeyPrefixSecretKey APIKeyPrefix = "aug_sk_"
-)
-
 type ParsedAPIKey struct {
 	AccountMode constants.AccountMode
 	ID          string
@@ -82,5 +76,5 @@ type ParsedAPIKey struct {
 }
 
 func (p *ParsedAPIKey) String() string {
-	return string(APIKeyPrefixSecretKey) + string(p.AccountMode) + "_" + p.ID + "_" + p.Secret + p.Checksum
+	return string(types.APIKeyPrefixSecretKey) + string(p.AccountMode) + "_" + p.ID + "_" + p.Secret + p.Checksum
 }

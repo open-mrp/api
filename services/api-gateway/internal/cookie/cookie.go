@@ -3,6 +3,7 @@ package cookie
 import (
 	"context"
 	"net/http"
+	"strings"
 	"time"
 
 	apicontext "github.com/augno/api/services/api-gateway/internal/context"
@@ -15,6 +16,11 @@ const (
 	accessTokenCookieName = "__Secure-augno.access-token"
 	// #nosec G101 - These are cookie names, not hardcoded credentials
 	refreshTokenCookieName = "__Secure-augno.refresh-token"
+
+	// Paths
+	authRoutePrefix = "/v1/auth"
+	// #nosec G101 - This is a route path, not a hardcoded credential
+	updatePasswordRoute = "/v1/auth/passwords"
 )
 
 type cookieOptions struct {
@@ -24,7 +30,7 @@ type cookieOptions struct {
 	Domain   string
 }
 
-func getCookieOptions(isProduction bool) cookieOptions {
+func getCookieOptions(isProduction bool, path string) cookieOptions {
 	var sameSite http.SameSite
 	if isProduction {
 		sameSite = http.SameSiteLaxMode
@@ -35,11 +41,11 @@ func getCookieOptions(isProduction bool) cookieOptions {
 	opts := cookieOptions{
 		Secure:   true,
 		SameSite: sameSite,
-		Path:     "/",
+		Path:     path,
 	}
 
 	if isProduction {
-		opts.Domain = "api.augno.com"
+		opts.Domain = "augno.com"
 	}
 
 	return opts
@@ -125,9 +131,9 @@ func SetAuthCookiesFromContext(ctx context.Context, accessToken, refreshToken st
 		panic("platform not found in context")
 	}
 	isProduction := platform == constants.PlatformModeProduction
-	cookieOpts := getCookieOptions(isProduction)
-	setAccessTokenCookie(w, accessToken, cookieOpts)
-	setRefreshTokenCookie(w, refreshToken, cookieOpts)
+
+	setAccessTokenCookie(w, accessToken, getCookieOptions(isProduction, "/"))
+	setRefreshTokenCookie(w, refreshToken, getCookieOptions(isProduction, authRoutePrefix))
 }
 
 func SetAccessTokenCookieFromContext(ctx context.Context, accessToken string) {
@@ -140,8 +146,7 @@ func SetAccessTokenCookieFromContext(ctx context.Context, accessToken string) {
 		panic("platform not found in context")
 	}
 	isProduction := platform == constants.PlatformModeProduction
-	cookieOpts := getCookieOptions(isProduction)
-	setAccessTokenCookie(w, accessToken, cookieOpts)
+	setAccessTokenCookie(w, accessToken, getCookieOptions(isProduction, "/"))
 }
 
 func ClearRefreshTokenCookieFromContext(ctx context.Context) {
@@ -154,8 +159,7 @@ func ClearRefreshTokenCookieFromContext(ctx context.Context) {
 		panic("platform not found in context")
 	}
 	isProduction := platform == constants.PlatformModeProduction
-	cookieOpts := getCookieOptions(isProduction)
-	clearRefreshTokenCookie(w, cookieOpts)
+	clearRefreshTokenCookie(w, getCookieOptions(isProduction, authRoutePrefix))
 }
 
 func ClearAccessTokenCookieFromContext(ctx context.Context) {
@@ -168,8 +172,7 @@ func ClearAccessTokenCookieFromContext(ctx context.Context) {
 		panic("platform not found in context")
 	}
 	isProduction := platform == constants.PlatformModeProduction
-	cookieOpts := getCookieOptions(isProduction)
-	clearAccessTokenCookie(w, cookieOpts)
+	clearAccessTokenCookie(w, getCookieOptions(isProduction, "/"))
 }
 
 func GetAccessTokenFromRequest(r *http.Request) (string, *contracts.APIError) {
@@ -177,6 +180,12 @@ func GetAccessTokenFromRequest(r *http.Request) (string, *contracts.APIError) {
 	if err != nil || cookie == nil || cookie.Value == "" {
 		return "", contracts.NewResourceNotFoundError("Access token cookie not found")
 	}
+
+	// Access tokens are restricted to non-auth routes, except for update password.
+	if strings.HasPrefix(r.URL.Path, authRoutePrefix) && r.URL.Path != updatePasswordRoute {
+		return "", contracts.NewResourceNotFoundError("Access token cookie not allowed for this route")
+	}
+
 	return cookie.Value, nil
 }
 
@@ -185,5 +194,11 @@ func GetRefreshTokenFromRequest(r *http.Request) (string, *contracts.APIError) {
 	if err != nil || cookie == nil || cookie.Value == "" {
 		return "", contracts.NewResourceNotFoundError("Refresh token cookie not found")
 	}
+
+	// Refresh tokens are restricted to auth routes.
+	if !strings.HasPrefix(r.URL.Path, authRoutePrefix) {
+		return "", contracts.NewResourceNotFoundError("Refresh token cookie not allowed for this route")
+	}
+
 	return cookie.Value, nil
 }

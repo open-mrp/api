@@ -15,8 +15,8 @@ import (
 
 // Represents a request to refresh an access token
 type RefreshTokenRequest struct {
-	// The refresh token (can be provided via Authorization header with Bearer or Basic scheme, or via refresh token cookie)
-	RefreshToken string `header:"Authorization" cookie:"__Secure-augno.refresh-token" validate:"required"`
+	// The refresh token (can be provided via refresh token cookie)
+	RefreshToken string `cookie:"__Secure-augno.refresh-token" validate:"required"`
 }
 
 var sampleRefreshTokenRequest = &RefreshTokenRequest{

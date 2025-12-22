@@ -83,7 +83,7 @@ check-format: ## Check formatting
 		exit 1; \
 	fi
 
-jaeger-tracing: ## Open Jaeger UI via port-forward
+open-tracing: ## Open Jaeger UI via port-forward
 	@echo "Opening Jaeger UI at http://localhost:16686"
 	kubectl port-forward svc/jaeger 16686:16686
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.11](https://github.com/Augno/api/compare/v0.1.10...v0.1.11) (2025-12-22)
+
+
+### Bug Fixes
+
+* cookies misconfiguration ([#53](https://github.com/Augno/api/issues/53)) ([bb66380](https://github.com/Augno/api/commit/bb6638072666f2681445c2fb62292f6b24c0d329))
+
 ## [0.1.10](https://github.com/Augno/api/compare/v0.1.9...v0.1.10) (2025-12-22)
 
 

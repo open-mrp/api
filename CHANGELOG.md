@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.9](https://github.com/Augno/api/compare/v0.1.8...v0.1.9) (2025-12-22)
+
+
+### Bug Fixes
+
+* openapi spec cd ([#49](https://github.com/Augno/api/issues/49)) ([40114c4](https://github.com/Augno/api/commit/40114c48c065a6fd04d2e2342588115808c1f6c9))
+
 ## [0.1.8](https://github.com/Augno/api/compare/v0.1.7...v0.1.8) (2025-12-20)
 
 

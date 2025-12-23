@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.13](https://github.com/Augno/api/compare/v0.1.12...v0.1.13) (2025-12-23)
+
+
+### Bug Fixes
+
+* add metrics server to eks ([#59](https://github.com/Augno/api/issues/59)) ([ece326a](https://github.com/Augno/api/commit/ece326a2ecced55619fbe55be214d0aec395b0eb))
+* throw errors if assumptions fail in spec generation ([#57](https://github.com/Augno/api/issues/57)) ([eb75a6e](https://github.com/Augno/api/commit/eb75a6ee5c3d5870aeda09ee70181bdfc7b9ff59))
+
 ## [0.1.12](https://github.com/Augno/api/compare/v0.1.11...v0.1.12) (2025-12-22)
 
 

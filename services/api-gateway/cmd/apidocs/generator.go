@@ -64,8 +64,7 @@ func generate(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOn
 			route := strings.TrimSpace(specField.FieldByName("Route").String())
 
 			if method == "" || route == "" {
-				log.Printf("Warning: skipping endpoint with empty method or route: %s", title)
-				continue
+				panic(fmt.Errorf("Error: encountered endpoint with empty method or route: %s", title))
 			}
 
 			if groupPathMap[route] == nil {

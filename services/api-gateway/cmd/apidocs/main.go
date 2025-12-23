@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"flag"
+	"fmt"
 	"log"
 	"os"
 
@@ -21,7 +22,7 @@ func main() {
 
 	log.Printf("Generating OpenAPI spec for %s...", *name)
 
-	version := "1.0.0"
+	version := ""
 	if *manifestPath != "" {
 		if b, err := os.ReadFile(*manifestPath); err == nil {
 			var manifest map[string]string
@@ -32,6 +33,10 @@ func main() {
 				}
 			}
 		}
+	}
+
+	if version == "" {
+		panic(fmt.Errorf("Error: no version found in manifest"))
 	}
 
 	var transforms []Transform

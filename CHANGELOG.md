@@ -1,7 +1,5 @@
 # Changelog
 
----
-
 ## [1.0.forge-preview.1]() (2026-02-11)
 
 ### Features

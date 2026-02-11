@@ -1,10 +1,9 @@
-name: Prepare Release
+name: Release
 
 on:
   push:
-    tags:
-      - "v[0-9]+.[0-9]+.[a-z]*" # Stable: v1.2.forge
-      - "v[0-9]+.[0-9]+.[a-z]*-preview.[0-9]+" # Preview: v1.2.forge-preview.1
+    branches:
+      - main
 
 permissions:
   contents: write
@@ -12,60 +11,24 @@ permissions:
   pull-requests: write
 
 jobs:
-  validate:
-    name: Validate Version
+  release-please:
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.parse.outputs.version }}
-      tag: ${{ steps.parse.outputs.tag }}
-      is_preview: ${{ steps.parse.outputs.is_preview }}
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - uses: googleapis/release-please-action@v4
+        id: release
         with:
-          go-version-file: go.mod
-          cache: true
-
-      - name: Parse and Validate Version
-        id: parse
-        run: |
-          source ./scripts/version.sh
-
-          TAG="${GITHUB_REF#refs/tags/}"
-          VERSION=$(tag_to_version "$TAG")
-
-          echo "Tag: $TAG"
-          echo "Version: $VERSION"
-
-          if ! validate_version "$VERSION"; then
-              echo "Error: Invalid version format: $VERSION"
-              exit 1
-          fi
-
-          # Check Go source version matches tag
-          SOURCE_VERSION=$(get_current_version)
-          if [[ "$VERSION" != "$SOURCE_VERSION" ]]; then
-              echo "Error: Tag version ($VERSION) does not match source version ($SOURCE_VERSION)"
-              exit 1
-          fi
-
-          if is_preview "$VERSION"; then
-              echo "Release type: preview"
-              echo "is_preview=true" >> "$GITHUB_OUTPUT"
-          else
-              echo "Release type: stable"
-              echo "is_preview=false" >> "$GITHUB_OUTPUT"
-          fi
-
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
 
   terraform:
     name: Terraform Apply
-    needs: validate
-    if: needs.validate.outputs.is_preview == 'false'
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -104,7 +67,8 @@ jobs:
 
   build-push:
     name: Build and Push
-    needs: validate
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -130,23 +94,6 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Compute Docker Tags
-        id: tags
-        run: |
-          REGISTRY="${{ steps.login-ecr.outputs.registry }}"
-          SERVICE="${{ matrix.service }}"
-          TAG="${{ needs.validate.outputs.tag }}"
-          IS_PREVIEW="${{ needs.validate.outputs.is_preview }}"
-
-          TAGS="${REGISTRY}/augno/${SERVICE}:${TAG}"
-
-          # Only add :latest for stable releases
-          if [[ "$IS_PREVIEW" == "false" ]]; then
-              TAGS="${TAGS},${REGISTRY}/augno/${SERVICE}:latest"
-          fi
-
-          echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
-
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v5
         with:
@@ -156,15 +103,17 @@ jobs:
           platforms: linux/amd64
           build-args: |
             SERVICE_NAME=${{ matrix.service }}
-          tags: ${{ steps.tags.outputs.tags }}
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/augno/${{ matrix.service }}:${{ needs.release-please.outputs.tag_name }}
+            ${{ steps.login-ecr.outputs.registry }}/augno/${{ matrix.service }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
   deploy:
     name: Deploy to EKS
-    needs: [validate, terraform, build-push]
+    needs: [release-please, terraform, build-push]
     if: |
-      needs.validate.outputs.is_preview == 'false' &&
+      needs.release-please.outputs.release_created == 'true' &&
       needs.terraform.result == 'success' &&
       needs.build-push.result == 'success'
     runs-on: ubuntu-latest
@@ -186,12 +135,12 @@ jobs:
         env:
           AWS_REGION: "us-east-2"
           CLUSTER_NAME: "augno-prod"
-          IMAGE_TAG: ${{ needs.validate.outputs.tag }}
+          IMAGE_TAG: ${{ needs.release-please.outputs.tag_name }}
 
   publish-openapi-specs:
     name: Publish OpenAPI Specs
-    needs: [validate, deploy]
-    if: needs.validate.outputs.is_preview == 'false' && needs.deploy.result == 'success'
+    needs: [release-please, deploy]
+    if: needs.release-please.outputs.release_created == 'true' && needs.deploy.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -212,6 +161,12 @@ jobs:
           role-to-assume: arn:aws:iam::AWS_ACCOUNT_ID:role/github-action-role
           aws-region: us-east-2
 
+      - name: Read API Version
+        id: api-version
+        run: |
+          API_VERSION=$(go run ./cmd/print-version)
+          echo "api_version=$API_VERSION" >> "$GITHUB_OUTPUT"
+
       - name: Generate OpenAPI Specs
         run: |
           make install-cd-tools
@@ -220,12 +175,12 @@ jobs:
       - name: Upload Public Spec to S3
         run: |
           aws s3 cp specs/public_openapi_spec.json s3://augno-public-openapi-specs/openapi.json
-          aws s3 cp specs/public_openapi_spec.json s3://augno-public-openapi-specs/${{ needs.validate.outputs.tag }}.json
+          aws s3 cp specs/public_openapi_spec.json s3://augno-public-openapi-specs/${{ steps.api-version.outputs.api_version }}.json
 
       - name: Upload Private Spec to S3
         run: |
           aws s3 cp specs/internal_openapi_spec.json s3://augno-private-openapi-specs/openapi.json
-          aws s3 cp specs/internal_openapi_spec.json s3://augno-private-openapi-specs/${{ needs.validate.outputs.tag }}.json
+          aws s3 cp specs/internal_openapi_spec.json s3://augno-private-openapi-specs/${{ steps.api-version.outputs.api_version }}.json
 
       - name: Upload to Stainless
         uses: stainless-api/upload-openapi-spec-action@v1
@@ -233,33 +188,3 @@ jobs:
           input_path: specs/public_openapi_spec.json
           project_name: augno
           stainless_api_key: ${{ secrets.STAINLESS_API_KEY }}
-
-  create-github-release:
-    name: Create GitHub Release
-    needs: [validate, build-push]
-    if: always() && needs.build-push.result == 'success'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Generate Changelog
-        id: changelog
-        run: |
-          CHANGELOG=$(./scripts/generate-changelog.sh)
-          # Use GitHub's delimiter syntax for multiline output
-          echo "changelog<<EOF" >> "$GITHUB_OUTPUT"
-          echo "$CHANGELOG" >> "$GITHUB_OUTPUT"
-          echo "EOF" >> "$GITHUB_OUTPUT"
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ needs.validate.outputs.tag }}
-          name: ${{ needs.validate.outputs.version }}
-          body: ${{ steps.changelog.outputs.changelog }}
-          prerelease: ${{ needs.validate.outputs.is_preview == 'true' }}
-          generate_release_notes: false

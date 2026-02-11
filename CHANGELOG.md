@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.3](https://github.com/Augno/api/compare/v0.2.2...v0.2.3) (2026-02-11)
+
+
+### Bug Fixes
+
+* remove unused config ([#70](https://github.com/Augno/api/issues/70)) ([d61202b](https://github.com/Augno/api/commit/d61202bf1b8028d20e0a154bdb693413a5e56c48))
+
 ## [0.2.2](https://github.com/Augno/api/compare/v0.2.1...v0.2.2) (2026-02-11)
 
 

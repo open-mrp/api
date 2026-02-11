@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.2.0](https://github.com/Augno/api/compare/v0.1.13...v0.2.0) (2026-02-11)
+
+
+### Features
+
+* idempotent endpoints ([#60](https://github.com/Augno/api/issues/60)) ([4d7eedc](https://github.com/Augno/api/commit/4d7eedc53820aa60bee42e22f46edfcc59dd713f))
+
+
+### Bug Fixes
+
+* CD tagging of releases ([#64](https://github.com/Augno/api/issues/64)) ([55a78c5](https://github.com/Augno/api/commit/55a78c52d680d5f0b2c9b294ba0bd55afab6e647))
+
 ## [1.0.forge-preview.1]() (2026-02-11)
 
 ### Features

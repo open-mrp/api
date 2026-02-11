@@ -15,7 +15,7 @@ import (
 	time "time"
 
 	domain "github.com/augno/api/services/auth-service/internal/domain"
-	contracts "github.com/augno/api/shared/contracts"
+	apierror "github.com/augno/api/shared/errors"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -44,11 +44,11 @@ func (m *MockJWTUtils) EXPECT() *MockJWTUtilsMockRecorder {
 }
 
 // Decode mocks base method.
-func (m *MockJWTUtils) Decode(ctx context.Context, tokenString string, expectedType domain.JWTType) (*domain.JWTClaims, *contracts.APIError) {
+func (m *MockJWTUtils) Decode(ctx context.Context, tokenString string, expectedType domain.JWTType) (*domain.JWTClaims, *apierror.APIError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Decode", ctx, tokenString, expectedType)
 	ret0, _ := ret[0].(*domain.JWTClaims)
-	ret1, _ := ret[1].(*contracts.APIError)
+	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
@@ -59,11 +59,11 @@ func (mr *MockJWTUtilsMockRecorder) Decode(ctx, tokenString, expectedType any) *
 }
 
 // Encode mocks base method.
-func (m *MockJWTUtils) Encode(ctx context.Context, userID string, expiresIn time.Duration, tokenType domain.JWTType) (string, *contracts.APIError) {
+func (m *MockJWTUtils) Encode(ctx context.Context, userID string, expiresIn time.Duration, tokenType domain.JWTType) (string, *apierror.APIError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Encode", ctx, userID, expiresIn, tokenType)
 	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(*contracts.APIError)
+	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 

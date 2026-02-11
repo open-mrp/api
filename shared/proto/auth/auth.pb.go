@@ -4,6 +4,12 @@
 // 	protoc        v6.33.1
 // source: auth.proto
 
+// Package auth defines the gRPC contract for the auth-service. It handles user
+// authentication (login, registration, credential validation), token lifecycle
+// (refresh, revoke), and password management (reset, update). The api-gateway
+// calls these RPCs on every authenticated request (ValidateCredential) and for
+// all auth-related HTTP endpoints.
+
 package auth
 
 import (
@@ -23,12 +29,20 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// IdentityType classifies how the caller authenticated.
 type IdentityType int32
 
 const (
-	IdentityType_IDENTITY_TYPE_UNSPECIFIED     IdentityType = 0
-	IdentityType_IDENTITY_TYPE_USER            IdentityType = 1
-	IdentityType_IDENTITY_TYPE_API_KEY         IdentityType = 2
+	IdentityType_IDENTITY_TYPE_UNSPECIFIED IdentityType = 0
+	// IDENTITY_TYPE_USER indicates authentication via a JWT access token
+	// issued to a human user.
+	IdentityType_IDENTITY_TYPE_USER IdentityType = 1
+	// IDENTITY_TYPE_API_KEY indicates authentication via a programmatic
+	// API key (prefixed with the key secret).
+	IdentityType_IDENTITY_TYPE_API_KEY IdentityType = 2
+	// IDENTITY_TYPE_UNAUTHENTICATED indicates no valid credential was
+	// provided. Used for public endpoints that still propagate identity
+	// metadata.
 	IdentityType_IDENTITY_TYPE_UNAUTHENTICATED IdentityType = 3
 )
 
@@ -75,14 +89,26 @@ func (IdentityType) EnumDescriptor() ([]byte, []int) {
 	return file_auth_proto_rawDescGZIP(), []int{0}
 }
 
+// IdentityActorType classifies the actor's relationship to the target
+// account. This determines what data the actor can see and what
+// operations they can perform.
 type IdentityActorType int32
 
 const (
 	IdentityActorType_IDENTITY_ACTOR_TYPE_UNSPECIFIED IdentityActorType = 0
-	IdentityActorType_IDENTITY_ACTOR_TYPE_INTERNAL    IdentityActorType = 1
-	IdentityActorType_IDENTITY_ACTOR_TYPE_CUSTOMER    IdentityActorType = 2
-	IdentityActorType_IDENTITY_ACTOR_TYPE_SUPPLIER    IdentityActorType = 3
-	IdentityActorType_IDENTITY_ACTOR_TYPE_UNASSIGNED  IdentityActorType = 4
+	// IDENTITY_ACTOR_TYPE_INTERNAL means the actor is a direct member of
+	// the target account (e.g. an employee of the business).
+	IdentityActorType_IDENTITY_ACTOR_TYPE_INTERNAL IdentityActorType = 1
+	// IDENTITY_ACTOR_TYPE_CUSTOMER means the actor belongs to a customer
+	// account that has a business relationship with the target account.
+	IdentityActorType_IDENTITY_ACTOR_TYPE_CUSTOMER IdentityActorType = 2
+	// IDENTITY_ACTOR_TYPE_SUPPLIER means the actor belongs to a supplier
+	// account that has a business relationship with the target account.
+	IdentityActorType_IDENTITY_ACTOR_TYPE_SUPPLIER IdentityActorType = 3
+	// IDENTITY_ACTOR_TYPE_UNASSIGNED means the actor is authenticated but
+	// not yet associated with any account (e.g. a newly registered user
+	// who hasn't completed onboarding).
+	IdentityActorType_IDENTITY_ACTOR_TYPE_UNASSIGNED IdentityActorType = 4
 )
 
 // Enum value maps for IdentityActorType.
@@ -130,12 +156,17 @@ func (IdentityActorType) EnumDescriptor() ([]byte, []int) {
 	return file_auth_proto_rawDescGZIP(), []int{1}
 }
 
+// AccountMode distinguishes between production and sandbox data partitions.
+// Sandbox accounts mirror production behavior but use isolated data, allowing
+// developers to test integrations without affecting real records.
 type AccountMode int32
 
 const (
 	AccountMode_ACCOUNT_MODE_UNSPECIFIED AccountMode = 0
-	AccountMode_ACCOUNT_MODE_PRODUCTION  AccountMode = 1
-	AccountMode_ACCOUNT_MODE_SANDBOX     AccountMode = 2
+	// ACCOUNT_MODE_PRODUCTION is the live data partition.
+	AccountMode_ACCOUNT_MODE_PRODUCTION AccountMode = 1
+	// ACCOUNT_MODE_SANDBOX is the isolated test data partition.
+	AccountMode_ACCOUNT_MODE_SANDBOX AccountMode = 2
 )
 
 // Enum value maps for AccountMode.
@@ -179,10 +210,14 @@ func (AccountMode) EnumDescriptor() ([]byte, []int) {
 	return file_auth_proto_rawDescGZIP(), []int{2}
 }
 
+// LoginRequest carries the credentials for user authentication.
 type LoginRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Identifier    string                 `protobuf:"bytes,1,opt,name=identifier,proto3" json:"identifier,omitempty"`
-	Password      string                 `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Identifier is the user's email address, username, or user ID. The
+	// auth-service resolves the user by trying each format in order.
+	Identifier string `protobuf:"bytes,1,opt,name=identifier,proto3" json:"identifier,omitempty"`
+	// Password is the plaintext password to verify against the stored bcrypt hash.
+	Password      string `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -231,11 +266,19 @@ func (x *LoginRequest) GetPassword() string {
 	return ""
 }
 
+// LoginResponse is returned by Login, Register, and ResetPassword. It contains
+// everything the client needs to establish an authenticated session.
 type LoginResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	AccessToken   string                 `protobuf:"bytes,1,opt,name=access_token,json=accessToken,proto3" json:"access_token,omitempty"`
-	RefreshToken  string                 `protobuf:"bytes,2,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
-	User          *User                  `protobuf:"bytes,3,opt,name=user,proto3" json:"user,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// AccessToken is a short-lived JWT (typically 1 hour) used to
+	// authenticate subsequent API requests via the Authorization header.
+	AccessToken string `protobuf:"bytes,1,opt,name=access_token,json=accessToken,proto3" json:"access_token,omitempty"`
+	// RefreshToken is a long-lived opaque token (typically 30 days) stored
+	// in the database. The client exchanges it for a new access token when
+	// the current one expires.
+	RefreshToken string `protobuf:"bytes,2,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
+	// User is the authenticated user's profile data.
+	User          *User `protobuf:"bytes,3,opt,name=user,proto3" json:"user,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -291,15 +334,27 @@ func (x *LoginResponse) GetUser() *User {
 	return nil
 }
 
+// User represents a user profile as returned to API clients. Optional fields
+// are absent when the user hasn't set them (e.g. username, profile image).
 type User struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Email         *string                `protobuf:"bytes,2,opt,name=email,proto3,oneof" json:"email,omitempty"`
-	Name          *string                `protobuf:"bytes,3,opt,name=name,proto3,oneof" json:"name,omitempty"`
-	Username      *string                `protobuf:"bytes,4,opt,name=username,proto3,oneof" json:"username,omitempty"`
-	ImageUrl      *string                `protobuf:"bytes,5,opt,name=image_url,json=imageUrl,proto3,oneof" json:"image_url,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// ID is the prefixed unique identifier (e.g. "us_1wjfmmbwg8l7").
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Email is the user's email address. Optional because some auth flows
+	// (e.g. future OAuth) may not provide one.
+	Email *string `protobuf:"bytes,2,opt,name=email,proto3,oneof" json:"email,omitempty"`
+	// Name is the user's display name.
+	Name *string `protobuf:"bytes,3,opt,name=name,proto3,oneof" json:"name,omitempty"`
+	// Username is the user's unique handle.
+	Username *string `protobuf:"bytes,4,opt,name=username,proto3,oneof" json:"username,omitempty"`
+	// ImageURL is the absolute URL to the user's profile avatar.
+	ImageUrl *string `protobuf:"bytes,5,opt,name=image_url,json=imageUrl,proto3,oneof" json:"image_url,omitempty"`
+	// EmailVerified is the timestamp when the user confirmed their email.
+	// Absent (null) if the email has not been verified yet.
 	EmailVerified *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=email_verified,json=emailVerified,proto3,oneof" json:"email_verified,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	// CreatedAt is when the user record was created.
+	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	// UpdatedAt is when the user record was last modified.
 	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -391,10 +446,20 @@ func (x *User) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+// Credential is sent by the api-gateway to ValidateCredential on every
+// authenticated request. It wraps the raw bearer token and the optional
+// target account context.
 type Credential struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	Token           string                 `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
-	TargetAccountId string                 `protobuf:"bytes,2,opt,name=target_account_id,json=targetAccountId,proto3" json:"target_account_id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Token is the bearer token from the Authorization header. It may be a
+	// JWT access token (for user sessions) or an API key (for programmatic
+	// access). The auth-service determines the type by inspecting the token
+	// format.
+	Token string `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
+	// TargetAccountID is the account the caller wants to operate on, taken
+	// from the Account-ID header. When absent, the auth-service resolves
+	// the user's default account.
+	TargetAccountId *string `protobuf:"bytes,2,opt,name=target_account_id,json=targetAccountId,proto3,oneof" json:"target_account_id,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -437,20 +502,32 @@ func (x *Credential) GetToken() string {
 }
 
 func (x *Credential) GetTargetAccountId() string {
-	if x != nil {
-		return x.TargetAccountId
+	if x != nil && x.TargetAccountId != nil {
+		return *x.TargetAccountId
 	}
 	return ""
 }
 
+// Identity is the resolved authentication context returned by
+// ValidateCredential. The api-gateway serializes it into gRPC metadata
+// so downstream services know who is making the request, what account
+// they're targeting, and what permissions they have.
 type Identity struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	Type            IdentityType           `protobuf:"varint,1,opt,name=type,proto3,enum=auth.IdentityType" json:"type,omitempty"`
-	TargetAccountId *string                `protobuf:"bytes,2,opt,name=target_account_id,json=targetAccountId,proto3,oneof" json:"target_account_id,omitempty"`
-	Actor           *IdentityActor         `protobuf:"bytes,3,opt,name=actor,proto3" json:"actor,omitempty"`
-	AccountMode     AccountMode            `protobuf:"varint,4,opt,name=account_mode,json=accountMode,proto3,enum=auth.AccountMode" json:"account_mode,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Type indicates whether the caller authenticated as a user, API key,
+	// or is unauthenticated (public endpoint).
+	Type IdentityType `protobuf:"varint,1,opt,name=type,proto3,enum=auth.IdentityType" json:"type,omitempty"`
+	// TargetAccountID is the resolved account the request operates on.
+	// Absent for unauthenticated requests.
+	TargetAccountId *string `protobuf:"bytes,2,opt,name=target_account_id,json=targetAccountId,proto3,oneof" json:"target_account_id,omitempty"`
+	// Actor contains the authenticated entity's details (ID, role,
+	// permissions).
+	Actor *IdentityActor `protobuf:"bytes,3,opt,name=actor,proto3" json:"actor,omitempty"`
+	// AccountMode indicates whether the target account is in production or
+	// sandbox mode, controlling which data partition the request accesses.
+	AccountMode   AccountMode `protobuf:"varint,4,opt,name=account_mode,json=accountMode,proto3,enum=auth.AccountMode" json:"account_mode,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Identity) Reset() {
@@ -511,15 +588,32 @@ func (x *Identity) GetAccountMode() AccountMode {
 	return AccountMode_ACCOUNT_MODE_UNSPECIFIED
 }
 
+// IdentityActor describes the authenticated entity (user or API key) and
+// its authorization context within the target account.
 type IdentityActor struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Type          IdentityActorType      `protobuf:"varint,1,opt,name=type,proto3,enum=auth.IdentityActorType" json:"type,omitempty"`
-	Id            string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
-	Name          *string                `protobuf:"bytes,3,opt,name=name,proto3,oneof" json:"name,omitempty"`
-	AccountId     *string                `protobuf:"bytes,4,opt,name=account_id,json=accountId,proto3,oneof" json:"account_id,omitempty"`
-	RoleId        *string                `protobuf:"bytes,5,opt,name=role_id,json=roleId,proto3,oneof" json:"role_id,omitempty"`
-	RoleTypeCode  *string                `protobuf:"bytes,6,opt,name=role_type_code,json=roleTypeCode,proto3,oneof" json:"role_type_code,omitempty"`
-	Permissions   map[string]bool        `protobuf:"bytes,7,rep,name=permissions,proto3" json:"permissions,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Type classifies the actor's relationship to the target account
+	// (internal member, customer, supplier, or unassigned).
+	Type IdentityActorType `protobuf:"varint,1,opt,name=type,proto3,enum=auth.IdentityActorType" json:"type,omitempty"`
+	// ID is the actor's unique identifier — a user ID (e.g. "us_1wjfmmbwg8l7")
+	// for user identities or an API key ID (e.g. "apke_xyz789") for API
+	// key identities.
+	Id string `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
+	// Name is the actor's display name, used in audit logs and UI.
+	Name *string `protobuf:"bytes,3,opt,name=name,proto3,oneof" json:"name,omitempty"`
+	// AccountID is the account the actor belongs to (their "home" account),
+	// which may differ from the target account in cross-account scenarios.
+	AccountId *string `protobuf:"bytes,4,opt,name=account_id,json=accountId,proto3,oneof" json:"account_id,omitempty"`
+	// RoleID is the actor's role within the target account (e.g.
+	// "role_owner", "role_member").
+	RoleId *string `protobuf:"bytes,5,opt,name=role_id,json=roleId,proto3,oneof" json:"role_id,omitempty"`
+	// RoleTypeCode is the role's type code (e.g. "owner", "admin",
+	// "member") used for coarse-grained authorization checks.
+	RoleTypeCode *string `protobuf:"bytes,6,opt,name=role_type_code,json=roleTypeCode,proto3,oneof" json:"role_type_code,omitempty"`
+	// Permissions is the actor's resolved permission set for the target
+	// account. Keys are permission codes (e.g. "invoices.create"), values
+	// are always true (the map only contains granted permissions).
+	Permissions   map[string]bool `protobuf:"bytes,7,rep,name=permissions,proto3" json:"permissions,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -603,11 +697,16 @@ func (x *IdentityActor) GetPermissions() map[string]bool {
 	return nil
 }
 
+// RegisterRequest carries the data needed to create a new user account.
 type RegisterRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Email         string                 `protobuf:"bytes,1,opt,name=email,proto3" json:"email,omitempty"`
-	Password      string                 `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
-	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Email is the user's email address, used for login and notifications.
+	Email string `protobuf:"bytes,1,opt,name=email,proto3" json:"email,omitempty"`
+	// Password is the plaintext password (8-72 chars, must contain a digit
+	// and special character). It is bcrypt-hashed before storage.
+	Password string `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
+	// Name is the user's display name.
+	Name          string `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -663,9 +762,14 @@ func (x *RegisterRequest) GetName() string {
 	return ""
 }
 
+// RefreshTokenRequest carries the refresh token to exchange for a new
+// access token.
 type RefreshTokenRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	RefreshToken  string                 `protobuf:"bytes,1,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// RefreshToken is the opaque refresh token previously issued by Login
+	// or Register. It is validated against the database and must not be
+	// expired or revoked.
+	RefreshToken  string `protobuf:"bytes,1,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -707,9 +811,11 @@ func (x *RefreshTokenRequest) GetRefreshToken() string {
 	return ""
 }
 
+// RefreshTokenResponse contains the newly minted access token.
 type RefreshTokenResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	AccessToken   string                 `protobuf:"bytes,1,opt,name=access_token,json=accessToken,proto3" json:"access_token,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// AccessToken is a fresh short-lived JWT.
+	AccessToken   string `protobuf:"bytes,1,opt,name=access_token,json=accessToken,proto3" json:"access_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -751,10 +857,15 @@ func (x *RefreshTokenResponse) GetAccessToken() string {
 	return ""
 }
 
+// RequestPasswordResetRequest initiates the password reset flow.
 type RequestPasswordResetRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Identifier    string                 `protobuf:"bytes,1,opt,name=identifier,proto3" json:"identifier,omitempty"`
-	AccountSlug   *string                `protobuf:"bytes,2,opt,name=account_slug,json=accountSlug,proto3,oneof" json:"account_slug,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Identifier is the user's email, username, or ID. The service looks
+	// up the user and sends a reset email if found.
+	Identifier string `protobuf:"bytes,1,opt,name=identifier,proto3" json:"identifier,omitempty"`
+	// AccountSlug optionally scopes the reset email's branding and links
+	// to a specific account context (e.g. custom login page URL).
+	AccountSlug   *string `protobuf:"bytes,2,opt,name=account_slug,json=accountSlug,proto3,oneof" json:"account_slug,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -803,10 +914,14 @@ func (x *RequestPasswordResetRequest) GetAccountSlug() string {
 	return ""
 }
 
+// ResetPasswordRequest completes the password reset flow.
 type ResetPasswordRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Token         string                 `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
-	Password      string                 `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Token is the single-use reset token from the email link. It is
+	// validated for expiry and prior use before the password is changed.
+	Token string `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
+	// Password is the new plaintext password to set.
+	Password      string `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -855,9 +970,12 @@ func (x *ResetPasswordRequest) GetPassword() string {
 	return ""
 }
 
+// RevokeRefreshTokenRequest invalidates a specific refresh token.
 type RevokeRefreshTokenRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	RefreshToken  string                 `protobuf:"bytes,1,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// RefreshToken is the token to revoke. After revocation it can no
+	// longer be used to mint access tokens.
+	RefreshToken  string `protobuf:"bytes,1,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -899,10 +1017,14 @@ func (x *RevokeRefreshTokenRequest) GetRefreshToken() string {
 	return ""
 }
 
+// UpdatePasswordRequest changes the authenticated user's password.
 type UpdatePasswordRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	OldPassword   string                 `protobuf:"bytes,1,opt,name=old_password,json=oldPassword,proto3" json:"old_password,omitempty"`
-	NewPassword   string                 `protobuf:"bytes,2,opt,name=new_password,json=newPassword,proto3" json:"new_password,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// OldPassword is the user's current plaintext password, verified
+	// before the change is applied.
+	OldPassword string `protobuf:"bytes,1,opt,name=old_password,json=oldPassword,proto3" json:"old_password,omitempty"`
+	// NewPassword is the new plaintext password to set.
+	NewPassword   string `protobuf:"bytes,2,opt,name=new_password,json=newPassword,proto3" json:"new_password,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -983,11 +1105,12 @@ const file_auth_proto_rawDesc = "" +
 	"\t_usernameB\f\n" +
 	"\n" +
 	"_image_urlB\x11\n" +
-	"\x0f_email_verified\"N\n" +
+	"\x0f_email_verified\"i\n" +
 	"\n" +
 	"Credential\x12\x14\n" +
-	"\x05token\x18\x01 \x01(\tR\x05token\x12*\n" +
-	"\x11target_account_id\x18\x02 \x01(\tR\x0ftargetAccountId\"\xda\x01\n" +
+	"\x05token\x18\x01 \x01(\tR\x05token\x12/\n" +
+	"\x11target_account_id\x18\x02 \x01(\tH\x00R\x0ftargetAccountId\x88\x01\x01B\x14\n" +
+	"\x12_target_account_id\"\xda\x01\n" +
 	"\bIdentity\x12&\n" +
 	"\x04type\x18\x01 \x01(\x0e2\x12.auth.IdentityTypeR\x04type\x12/\n" +
 	"\x11target_account_id\x18\x02 \x01(\tH\x00R\x0ftargetAccountId\x88\x01\x01\x12)\n" +
@@ -1132,6 +1255,7 @@ func file_auth_proto_init() {
 		return
 	}
 	file_auth_proto_msgTypes[2].OneofWrappers = []any{}
+	file_auth_proto_msgTypes[3].OneofWrappers = []any{}
 	file_auth_proto_msgTypes[4].OneofWrappers = []any{}
 	file_auth_proto_msgTypes[5].OneofWrappers = []any{}
 	file_auth_proto_msgTypes[9].OneofWrappers = []any{}

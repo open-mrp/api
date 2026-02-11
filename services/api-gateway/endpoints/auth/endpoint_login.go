@@ -2,43 +2,20 @@ package authep
 
 import (
 	"context"
-	"fmt"
 	"net/http"
-	"strings"
-	"sync"
 
-	httptransport "github.com/augno/api/services/api-gateway/internal/http"
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/contracts"
-	"github.com/augno/api/shared/validate"
+	apierror "github.com/augno/api/shared/errors"
 )
 
 // The request to login a user
 type LoginRequest struct {
 	// The username or email for authentication
-	Identifier string `json:"identifier" validate:"required" example:"jdoe"`
-	// The password for authentication
-	Password string `json:"password" validate:"required" example:"super-secret-password"`
-}
-
-func (lr *LoginRequest) Validate() error {
-	v := validate.New()
-
-	validate.ValidateUsernameOrEmail(v, lr.Identifier)
-	validate.ValidatePasswordPlaintext(v, lr.Password)
-
-	if !v.Valid() {
-		var errorMessages []string
-		for field, message := range v.Errors {
-			errorMessages = append(errorMessages, fmt.Sprintf("%s: %s", field, message))
-		}
-		return contracts.NewValidationError(strings.Join(errorMessages, "; "))
-	}
-
-	return nil
+	Identifier string `json:"identifier" validate:"required,identifier"`
+	// The password of the user
+	Password string `json:"password" validate:"required,password"` // #nosec G117 - Struct field, not a hardcoded credential
 }
 
 var sampleLoginRequest = &LoginRequest{
@@ -57,22 +34,12 @@ type CurrentAccount struct {
 }
 
 const loginEndpointDescription = `This endpoint is utilized to login a user. Once completed, the user object is 
-returned. An access and refresh token are set in cookies. Learn more about authentication and authorization in our 
-[documentation](https://docs.augno.com/guides/authentication).
-`
+returned, and an access and refresh token are set in cookies.`
 
-type LoginEndpoint struct {
-	apiendpoint.APIEndpoint[*LoginRequest, *apiresource.User]
+type LoginEndpoint struct{}
 
-	group    *apiendpoint.APIEndpointGroup
-	service  AuthCtrl
-	platform constants.PlatformMode
-	bindOnce sync.Once
-	handler  http.HandlerFunc
-}
-
-func (e *LoginEndpoint) Materialize() apiendpoint.APIEndpointer {
-	e.APIEndpoint = apiendpoint.APIEndpoint[*LoginRequest, *apiresource.User]{
+func (e *LoginEndpoint) Materialize() *apiendpoint.APIEndpoint[*LoginRequest, *apiresource.User] {
+	return &apiendpoint.APIEndpoint[*LoginRequest, *apiresource.User]{
 		Title:             "Login User",
 		Description:       loginEndpointDescription,
 		Method:            http.MethodPost,
@@ -81,34 +48,12 @@ func (e *LoginEndpoint) Materialize() apiendpoint.APIEndpointer {
 		Request:           &LoginRequest{},
 		Response:          &apiresource.User{},
 		SuccessStatusCode: http.StatusOK,
-		IsPublic:          false,
-		Handler: func(ctrl any) apiendpoint.HandlerFunc[
-			*LoginRequest, *apiresource.User,
-		] {
-			return apiendpoint.HandlerFunc[
-				*LoginRequest, *apiresource.User,
-			](func(ctx context.Context, req *LoginRequest) (*apiresource.User, *contracts.APIError) {
-				return ctrl.(AuthCtrl).Login(ctx, req)
-			})
+		Public:            false,
+		ServiceHandler: func(svc any) func(ctx context.Context, req *LoginRequest) (*apiresource.User, *apierror.APIError) {
+			return svc.(AuthSvc).Login
 		},
 		Extras: apiendpoint.APIEndpointExtras{
 			AllowUnknownJSONFields: false,
 		},
 	}
-	return e
-}
-
-func (e *LoginEndpoint) GetHandler() http.HandlerFunc {
-	e.bindOnce.Do(func() {
-		be := apiendpoint.Bind(e.APIEndpoint, e.service)
-		e.handler = httptransport.ConvertToHTTPHandler(be)
-	})
-	return e.handler
-}
-
-func (e *LoginEndpoint) WithGroup(g *apiendpoint.APIEndpointGroup, service AuthCtrl, platform constants.PlatformMode) *LoginEndpoint {
-	e.group = g
-	e.service = service
-	e.platform = platform
-	return e
 }

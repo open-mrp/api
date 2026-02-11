@@ -1,17 +1,17 @@
 package middleware
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 
 	grpcclient "github.com/augno/api/services/api-gateway/grpc-client"
-	apicontext "github.com/augno/api/services/api-gateway/internal/context"
 	"github.com/augno/api/services/api-gateway/internal/cookie"
 	"github.com/augno/api/services/api-gateway/internal/header"
 	httptransport "github.com/augno/api/services/api-gateway/internal/http"
 	"github.com/augno/api/services/auth-service/pkg/types"
+	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/contracts"
+	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/auth"
 	"github.com/augno/api/shared/tracing"
 
@@ -35,16 +35,16 @@ func AuthMiddleware(config AuthMiddlewareConfig) func(http.HandlerFunc) http.Han
 			spanName := fmt.Sprintf("HTTP %s %s", r.Method, r.URL.Path)
 			ctx, span := tracer.Start(r.Context(), spanName)
 
-			authHeader := r.Header.Get("Authorization")
-			augnoAccountIDHeader := r.Header.Get("Augno-Account-ID")
+			authHeader := r.Header.Get(header.AuthorizationHeader)
+			augnoAccountIDHeader := r.Header.Get(header.TargetAccountIDHeader)
 
-			platform, _ := apicontext.GetPlatformFromContext(r.Context())
+			platform, _ := appctx.GetPlatformFromContext(r.Context())
 			isProduction := platform.IsProduction()
 
 			cookieToken, _ := cookie.GetAccessTokenFromRequest(r)
 
 			if authHeader != "" && cookieToken != "" {
-				apiErr := contracts.NewAuthenticationError("Ambiguous authentication: both Authorization header and cookies are present. Please provide only one.")
+				apiErr := apierror.NewAuthenticationError("Ambiguous authentication: both Authorization header and cookies are present. Please provide only one.")
 				httptransport.RespondWithAPIError(r.Context(), w, apiErr)
 				tracing.RecordControllerError(span, apiErr)
 				span.End()
@@ -63,7 +63,7 @@ func AuthMiddleware(config AuthMiddlewareConfig) func(http.HandlerFunc) http.Han
 				}
 
 				if isProduction && !header.IsAPIKey(authResult.TokenString) {
-					apiErr := contracts.NewAuthenticationError("Access tokens are not allowed in the Authorization header. Please use cookies instead.")
+					apiErr := apierror.NewAuthenticationError("Access tokens are not allowed in the Authorization header. Please use cookies instead.")
 					httptransport.RespondWithAPIError(r.Context(), w, apiErr)
 					tracing.RecordControllerError(span, apiErr)
 					span.End()
@@ -73,7 +73,7 @@ func AuthMiddleware(config AuthMiddlewareConfig) func(http.HandlerFunc) http.Han
 				authToken = authResult.TokenString
 			} else if cookieToken != "" {
 				if isProduction && header.IsAPIKey(cookieToken) {
-					apiErr := contracts.NewAuthenticationError("API keys are not allowed in cookies. Please use the Authorization header instead.")
+					apiErr := apierror.NewAuthenticationError("API keys are not allowed in cookies. Please use the Authorization header instead.")
 					httptransport.RespondWithAPIError(r.Context(), w, apiErr)
 					tracing.RecordControllerError(span, apiErr)
 					span.End()
@@ -82,14 +82,19 @@ func AuthMiddleware(config AuthMiddlewareConfig) func(http.HandlerFunc) http.Han
 				authToken = cookieToken
 			}
 
+			var targetAccountID *string
+			if augnoAccountIDHeader != "" {
+				targetAccountID = &augnoAccountIDHeader
+			}
+
 			identity, err := config.AuthClient.Client.ValidateCredential(ctx, &pb.Credential{
 				Token:           authToken,
-				TargetAccountId: augnoAccountIDHeader,
+				TargetAccountId: targetAccountID,
 			})
 
 			apiErr := contracts.ConvertGRPCError(ctx, err, "auth-service")
 			if apiErr != nil {
-				if rl, ok := apicontext.GetRequestLogFromContext(r.Context()); ok && rl != nil && (rl.ErrorMessage == nil || *rl.ErrorMessage == "") {
+				if rl, ok := appctx.GetRequestLog(r.Context()); ok && rl != nil && (rl.ErrorMessage == nil || *rl.ErrorMessage == "") {
 					rl.ErrorMessage = &apiErr.PublicMessage
 				}
 				httptransport.RespondWithAPIError(r.Context(), w, apiErr)
@@ -99,7 +104,7 @@ func AuthMiddleware(config AuthMiddlewareConfig) func(http.HandlerFunc) http.Han
 			}
 			span.End()
 
-			if rl, ok := apicontext.GetRequestLogFromContext(r.Context()); ok && rl != nil {
+			if rl, ok := appctx.GetRequestLog(r.Context()); ok && rl != nil {
 				if identity.Actor != nil {
 					actorType := normalizeActorType(identity.Actor.Type)
 					rl.ActorType = &actorType
@@ -113,7 +118,7 @@ func AuthMiddleware(config AuthMiddlewareConfig) func(http.HandlerFunc) http.Han
 			}
 
 			identityType := types.IdentityFromProto(identity)
-			ctx = context.WithValue(r.Context(), apicontext.AuthIdentityKey, identityType)
+			ctx = appctx.WithIdentity(r.Context(), identityType)
 			r = r.WithContext(ctx)
 
 			next.ServeHTTP(w, r)

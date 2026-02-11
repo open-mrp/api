@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: core-service
+spec:
+    replicas: 1
+    selector:
+        matchLabels:
+            app: core-service
+    template:
+        metadata:
+            labels:
+                app: core-service
+        spec:
+            containers:
+                - name: core-service
+                  image: augno-api/core-service
+                  ports:
+                      - containerPort: 9092
+                  resources:
+                      requests:
+                          memory: "64Mi"
+                          cpu: "100m"
+                      limits:
+                          memory: "128Mi"
+                          cpu: "200m"
+                  env:
+                      - name: OTEL_ENVIRONMENT
+                        valueFrom:
+                            configMapKeyRef:
+                                key: PLATFORM
+                                name: app-config
+                      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+                        value: http://otel-collector:4318
+                      - name: OTEL_EXPORTER_OTLP_PROTOCOL
+                        value: http
+                      - name: OTEL_EXPORTER_OTLP_INSECURE
+                        value: "true"
+                      - name: DB_URL
+                        valueFrom:
+                            secretKeyRef:
+                                name: database-credentials
+                                key: uri
+                      - name: PLATFORM
+                        valueFrom:
+                            configMapKeyRef:
+                                key: PLATFORM
+                                name: app-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+    name: core-service
+spec:
+    selector:
+        app: core-service
+    ports:
+        - port: 9092
+          name: grpc
+          targetPort: 9092
+    type: ClusterIP

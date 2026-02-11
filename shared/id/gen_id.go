@@ -3,12 +3,12 @@ package id
 import (
 	"fmt"
 
-	"github.com/augno/api/shared/contracts"
+	apierror "github.com/augno/api/shared/errors"
 )
 
-// GenID generates a new ID with the given prefix and length.
+// GenID generates a new type-specific ID with the given prefix and length.
 // If length is nil, it will default to 12.
-func GenID(prefix IDPrefix, length *IDLength) (string, *contracts.APIError) {
+func GenID(prefix IDPrefix, length *IDLength) (string, *apierror.APIError) {
 	var useLength IDLength
 	if length == nil {
 		useLength = IDLength12

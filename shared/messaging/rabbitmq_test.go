@@ -16,7 +16,7 @@ func TestPublishWithReconnectRetriesClosedChannel(t *testing.T) {
 	reconnectCalls := 0
 	publishCalls := 0
 
-	rmq := &RabbitMQ{}
+	rmq := &rabbitMQ{}
 	rmq.reconnectFunc = func(ctx context.Context) error {
 		reconnectCalls++
 		// mark channel/connection as open so subsequent ensureChannel checks pass
@@ -44,7 +44,7 @@ func TestPublishWithReconnectPropagatesNonRecoverableError(t *testing.T) {
 	reconnectCalls := 0
 	publishCalls := 0
 
-	rmq := &RabbitMQ{}
+	rmq := &rabbitMQ{}
 	rmq.reconnectFunc = func(ctx context.Context) error {
 		reconnectCalls++
 		rmq.conn = &amqp.Connection{}
@@ -68,7 +68,7 @@ func TestPublishWithReconnectReturnsReconnectError(t *testing.T) {
 	publishCalls := 0
 	expectedReconnectErr := errors.New("reconnect failed")
 
-	rmq := &RabbitMQ{}
+	rmq := &rabbitMQ{}
 	rmq.reconnectFunc = func(ctx context.Context) error {
 		reconnectCalls++
 		// first reconnect (ensureChannel) succeeds, second fails

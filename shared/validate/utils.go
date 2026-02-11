@@ -1,3 +1,21 @@
+// Package validate provides request-level input validation for the platform. It
+// wraps the go-playground/validator library with custom validation tags and
+// human-readable error formatting that maps directly to the API's error response
+// contract ([apierror.APIError] with a Param field).
+//
+// Three custom validator tags are registered at init time:
+//
+//   - "password":     8–72 characters, at least one digit and one special character.
+//   - "identifier":   accepts either a valid email address or a username (3–50
+//     alphanumeric/underscore characters).
+//   - "custom_email": stricter email validation than the built-in "email" tag,
+//     enforcing RFC length limits, TLD format, and no consecutive dots.
+//
+// All custom tags treat empty strings as valid — combine with "required" when the
+// field must be present.
+//
+// The package also provides a lightweight [Validator] helper for imperative checks
+// that can't be expressed with struct tags (e.g. cross-field constraints).
 package validate
 
 import (
@@ -8,13 +26,143 @@ import (
 	"strconv"
 	"strings"
 
-	contracts "github.com/augno/api/shared/contracts"
+	apierror "github.com/augno/api/shared/errors"
 	"github.com/go-playground/validator/v10"
 )
 
+var (
+	// hasNumber matches any string containing at least one ASCII digit.
+	hasNumber = regexp.MustCompile(`[0-9]`)
+
+	// hasSpecialChar matches any string containing at least one of the special
+	// characters required by the "password" validation tag. Note: tilde (~) and
+	// backtick (`) are intentionally excluded.
+	hasSpecialChar = regexp.MustCompile(`[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]`)
+
+	// emailRX is the primary regex used by isValidEmail to validate the overall
+	// email format. It is applied after the structural checks (length limits,
+	// no consecutive dots, TLD format) have passed. The pattern follows RFC 5321
+	// local-part rules and requires at least a two-character alphabetic TLD.
+	emailRX = regexp.MustCompile(`^[a-zA-Z0-9.!#$%&'*+/=?^_` + "`" + `{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$`)
+)
+
+// validate is the package-level validator instance with custom tags registered.
 var validate = validator.New()
 
-func Validate(v any) *contracts.APIError {
+func init() {
+	_ = validate.RegisterValidation("password", validatePassword)
+	_ = validate.RegisterValidation("identifier", validateUsernameOrEmail)
+	_ = validate.RegisterValidation("custom_email", validateCustomEmail)
+}
+
+// validatePassword implements the "password" struct tag. A valid password is 8–72
+// bytes long and contains at least one ASCII digit and one special character (from
+// the hasSpecialChar set). Empty strings pass (combine with "required" to enforce
+// presence). The 72-byte upper bound matches bcrypt's maximum input length.
+func validatePassword(fl validator.FieldLevel) bool {
+	password := fl.Field().String()
+	if password == "" {
+		return true
+	}
+	if len(password) < 8 || len(password) > 72 {
+		return false
+	}
+	if !hasNumber.MatchString(password) || !hasSpecialChar.MatchString(password) {
+		return false
+	}
+	return true
+}
+
+// usernameRegex matches strings containing only ASCII alphanumeric characters and
+// underscores. Used by validateUsernameOrEmail for the username branch.
+var usernameRegex = regexp.MustCompile(`^[a-zA-Z0-9_]+$`)
+
+// validateUsernameOrEmail implements the "identifier" struct tag. If the value
+// contains an "@" it is validated as an email via isValidEmail. Otherwise it is
+// treated as a username: 3–50 runes, alphanumeric and underscores only. Empty
+// strings pass (combine with "required" to enforce presence).
+func validateUsernameOrEmail(fl validator.FieldLevel) bool {
+	value := fl.Field().String()
+	if value == "" {
+		return true
+	}
+
+	if strings.Contains(value, "@") {
+		return isValidEmail(value)
+	}
+
+	usernameLen := len([]rune(value))
+	if usernameLen < 3 || usernameLen > 50 {
+		return false
+	}
+	return usernameRegex.MatchString(value)
+}
+
+// isValidEmail performs multi-step email validation that is stricter than the
+// built-in "email" tag:
+//
+//  1. Total length <= 254 characters (RFC 5321 path limit).
+//  2. Exactly one "@" separating local-part and domain.
+//  3. Local-part: 1–64 characters, no consecutive dots, no leading/trailing dots.
+//  4. Domain: <= 253 characters, TLD >= 2 characters and alphabetic only (no
+//     numeric TLDs like ".c0m").
+//  5. Final regex check against emailRX for character-level validity.
+func isValidEmail(email string) bool {
+	if len([]rune(email)) > 254 {
+		return false
+	}
+
+	parts := strings.Split(email, "@")
+	if len(parts) != 2 {
+		return false
+	}
+
+	localPart := parts[0]
+	domain := parts[1]
+
+	if len([]rune(localPart)) == 0 || len([]rune(localPart)) > 64 {
+		return false
+	}
+	if len([]rune(domain)) > 253 {
+		return false
+	}
+	if strings.Contains(localPart, "..") || strings.HasPrefix(localPart, ".") || strings.HasSuffix(localPart, ".") {
+		return false
+	}
+
+	domainParts := strings.Split(domain, ".")
+	if len(domainParts) >= 2 {
+		tld := domainParts[len(domainParts)-1]
+		if len(tld) < 2 {
+			return false
+		}
+		tldRegex := regexp.MustCompile(`^[a-zA-Z]+$`)
+		if !tldRegex.MatchString(tld) {
+			return false
+		}
+	}
+
+	return emailRX.MatchString(email)
+}
+
+// validateCustomEmail implements the "custom_email" struct tag. It delegates to
+// isValidEmail for the actual checks. Empty strings pass (combine with "required"
+// to enforce presence). Use this instead of the built-in "email" tag when you need
+// the stricter TLD and length enforcement.
+func validateCustomEmail(fl validator.FieldLevel) bool {
+	email := fl.Field().String()
+	if email == "" {
+		return true
+	}
+	return isValidEmail(email)
+}
+
+// Validate runs all struct-tag validations on v and returns a user-facing
+// [apierror.APIError] on failure (nil on success). When a single field fails, the
+// error's Param is set to that field's JSON/form/query name so the client can
+// highlight the offending input. When multiple fields fail, the error message lists
+// all violations and Param is set to the first failing field.
+func Validate(v any) *apierror.APIError {
 	err := validate.Struct(v)
 	if err != nil {
 		return parseValidationErrors(err, v)
@@ -22,10 +170,15 @@ func Validate(v any) *contracts.APIError {
 	return nil
 }
 
-func parseValidationErrors(err error, structValue any) *contracts.APIError {
+// parseValidationErrors converts a validator error into a user-facing APIError. If
+// the error isn't a validator.ValidationErrors (shouldn't happen in practice), it
+// falls back to a generic validation error. For a single-field failure it returns a
+// targeted error with Param set. For multi-field failures it joins all messages into
+// one error string with Param set to the first field.
+func parseValidationErrors(err error, structValue any) *apierror.APIError {
 	validationErrors, ok := err.(validator.ValidationErrors)
 	if !ok {
-		return contracts.NewValidationError(err.Error())
+		return apierror.NewValidationError(err.Error())
 	}
 
 	if len(validationErrors) == 1 {
@@ -43,16 +196,50 @@ func parseValidationErrors(err error, structValue any) *contracts.APIError {
 		firstField = getFieldName(validationErrors[0], structValue)
 	}
 
-	return contracts.NewValidationErrorWithParam(fmt.Sprintf("Validation failed for the following fields: %s", strings.Join(fieldErrors, " ")), firstField)
+	return apierror.NewValidationErrorWithParam(fmt.Sprintf("Validation failed for the following fields: %s", strings.Join(fieldErrors, " ")), firstField)
 }
 
-func createFieldValidationError(fieldErr validator.FieldError, structValue any) *contracts.APIError {
-	fieldName := getFieldName(fieldErr, structValue)
+// createFieldValidationError builds an APIError for a single-field validation
+// failure, resolving the field name from struct tags and formatting a human-readable
+// message. It selects a specific error code based on the validation tag and the
+// field's source (JSON body vs query/path parameter).
+func createFieldValidationError(fieldErr validator.FieldError, structValue any) *apierror.APIError {
+	metadata := getFieldMetadata(fieldErr, structValue)
 	message := formatFieldError(fieldErr, structValue)
 
-	return contracts.NewValidationErrorWithParam(message, fieldName)
+	return newFieldError(fieldErr.Tag(), metadata, message)
 }
 
+// newFieldError selects the appropriate error constructor based on the validation tag
+// and whether the field comes from the request body ("field") or a parameter source
+// ("query", "path", "header", etc.).
+func newFieldError(tag string, metadata fieldMetadata, message string) *apierror.APIError {
+	isBodyField := metadata.source == "field"
+
+	switch tag {
+	case "required":
+		if isBodyField {
+			return apierror.NewMissingFieldError(message, metadata.name)
+		}
+		return apierror.NewParameterMissingError(message, metadata.name)
+	case "email", "custom_email", "password", "identifier", "len":
+		if isBodyField {
+			return apierror.NewInvalidFormatError(message, metadata.name)
+		}
+		return apierror.NewParameterInvalidError(message, metadata.name)
+	default:
+		if isBodyField {
+			return apierror.NewInvalidFormatError(message, metadata.name)
+		}
+		return apierror.NewParameterInvalidError(message, metadata.name)
+	}
+}
+
+// formatFieldError produces a human-readable error message for a single field
+// validation failure. It resolves the field's public name and source (JSON body,
+// query parameter, path parameter, header, cookie) from struct tags, then formats a
+// message appropriate to the validation tag. Supported tags have dedicated templates;
+// unrecognized tags fall back to a generic "'<field>' is invalid (<tag>)" message.
 func formatFieldError(fieldErr validator.FieldError, structValue any) string {
 	metadata := getFieldMetadata(fieldErr, structValue)
 	fieldName := metadata.name
@@ -80,13 +267,22 @@ func formatFieldError(fieldErr validator.FieldError, structValue any) string {
 	case "oneof":
 		return fmt.Sprintf("%s '%s' must be one of: %s.", source, fieldName, fieldErr.Param())
 	case "omitempty":
-		// This shouldn't happen as omitempty means "skip validation if empty"
 		return fmt.Sprintf("%s '%s' validation failed.", source, fieldName)
+	case "password":
+		return fmt.Sprintf("%s '%s' must be 8-72 characters and contain at least one number and one special character.", source, fieldName)
+	case "identifier":
+		return fmt.Sprintf("%s '%s' must be a valid email address or username (3-50 characters, alphanumeric and underscores only).", source, fieldName)
+	case "custom_email":
+		return fmt.Sprintf("%s '%s' must be a valid email address.", source, fieldName)
 	default:
 		return fmt.Sprintf("%s '%s' is invalid (%s).", source, fieldName, fieldErr.Tag())
 	}
 }
 
+// formatMinMaxError formats "min" and "max" tag failures with type-aware phrasing.
+// Slices produce "must have at least/at most N item(s)", strings produce "must be
+// at least/at most N characters long", and other types produce a plain numeric
+// comparison.
 func formatMinMaxError(fieldName, source string, fieldErr validator.FieldError, comparison string) string {
 	param := fieldErr.Param()
 	fieldType := fieldErr.Type()
@@ -103,6 +299,8 @@ func formatMinMaxError(fieldName, source string, fieldErr validator.FieldError, 
 	return fmt.Sprintf("%s '%s' must be %s %s.", source, fieldName, comparison, param)
 }
 
+// formatGteLteError formats "gte" and "lte" tag failures with the same type-aware
+// phrasing as formatMinMaxError, using "greater/less than or equal to" wording.
 func formatGteLteError(fieldName, source string, fieldErr validator.FieldError, comparison string) string {
 	param := fieldErr.Param()
 	fieldType := fieldErr.Type()
@@ -119,6 +317,8 @@ func formatGteLteError(fieldName, source string, fieldErr validator.FieldError, 
 	return fmt.Sprintf("%s '%s' must be %s %s.", source, fieldName, comparison, param)
 }
 
+// getItemWord returns "item" when param is "1" and "items" otherwise, for
+// grammatically correct slice/array constraint messages.
 func getItemWord(param string) string {
 	if value, err := strconv.ParseFloat(param, 64); err == nil {
 		if value == 1.0 {
@@ -128,11 +328,22 @@ func getItemWord(param string) string {
 	return "items"
 }
 
+// fieldMetadata holds the resolved public name and source location of a struct field
+// for error message formatting.
 type fieldMetadata struct {
-	name   string
+	// name is the user-facing field name resolved from struct tags (e.g. "email",
+	// "page_size"). Defaults to the Go field name if no tag is found.
+	name string
+	// source identifies where the field came from: "field" (JSON body), "query",
+	// "path", "header", "form", or "cookie". Used to produce context-aware error
+	// prefixes like "Query parameter 'page_size' is required."
 	source string
 }
 
+// getFieldMetadata resolves a struct field's public name and source from its struct
+// tags. It checks tags in priority order: json first (since most requests are JSON
+// bodies), then form, query, path, header, cookie. The first non-empty, non-"-" tag
+// value wins. If no tag is found, the Go field name is returned with source "field".
 func getFieldMetadata(fieldErr validator.FieldError, structValue any) fieldMetadata {
 	fieldName := fieldErr.Field()
 	if structValue == nil {
@@ -173,6 +384,9 @@ func getFieldMetadata(fieldErr validator.FieldError, structValue any) fieldMetad
 	return fieldMetadata{name: fieldName, source: "field"}
 }
 
+// formatSource converts an internal source identifier ("query", "path", etc.) into
+// the human-readable prefix used in error messages (e.g. "Query parameter",
+// "Path parameter"). The default "field" source maps to "Field".
 func formatSource(source string) string {
 	switch source {
 	case "header":
@@ -190,46 +404,75 @@ func formatSource(source string) string {
 	}
 }
 
+// getFieldName is a convenience wrapper that returns only the resolved name from
+// getFieldMetadata, discarding the source. Used when only the Param value is needed.
 func getFieldName(fieldErr validator.FieldError, structValue any) string {
 	return getFieldMetadata(fieldErr, structValue).name
 }
 
+// GetValidator returns the package-level validator instance with all custom tags
+// registered. Use this when you need to register additional custom tags or access
+// the validator directly (e.g. for testing).
 func GetValidator() *validator.Validate {
 	return validate
 }
 
+// Validator is a lightweight imperative validation helper for checks that cannot be
+// expressed with struct tags (e.g. cross-field constraints, conditional logic). It
+// collects named errors via AddError or Check and reports validity via Valid.
+//
+//	v := validate.New()
+//	v.Check(req.EndDate.After(req.StartDate), "end_date", "must be after start_date")
+//	if !v.Valid() { ... }
 type Validator struct {
+	// Errors maps field names to their first error message. Only the first error
+	// per field is stored to keep messages concise.
 	Errors map[string]string
 }
 
+// New creates an empty Validator ready to accumulate errors.
 func New() *Validator {
 	return &Validator{Errors: make(map[string]string)}
 }
 
+// Valid returns true if no errors have been recorded.
 func (v *Validator) Valid() bool {
 	return len(v.Errors) == 0
 }
 
+// AddError records an error for key. If key already has an error, the call is a
+// no-op — only the first error per field is kept.
 func (v *Validator) AddError(key, message string) {
 	if _, exists := v.Errors[key]; !exists {
 		v.Errors[key] = message
 	}
 }
 
+// Check records an error for key when ok is false. It is syntactic sugar for a
+// conditional AddError call.
 func (v *Validator) Check(ok bool, key, message string) {
 	if !ok {
 		v.AddError(key, message)
 	}
 }
 
+// PermittedValue returns true if value is contained in permittedValues. It is a
+// generic helper intended for use with Validator.Check:
+//
+//	v.Check(validate.PermittedValue(req.Status, "active", "inactive"), "status", "must be active or inactive")
 func PermittedValue[T comparable](value T, permittedValues ...T) bool {
 	return slices.Contains(permittedValues, value)
 }
 
+// Matches returns true if value matches the given regular expression. Intended for
+// use with Validator.Check for pattern-based constraints.
 func Matches(value string, rx *regexp.Regexp) bool {
 	return rx.MatchString(value)
 }
 
+// Unique returns true if all elements in values are distinct. Uses a map internally,
+// so it runs in O(n) time. Intended for use with Validator.Check to enforce
+// no-duplicates constraints on slice fields.
 func Unique[T comparable](values []T) bool {
 	uniqueValues := make(map[T]bool)
 

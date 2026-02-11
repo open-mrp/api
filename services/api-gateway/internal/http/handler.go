@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"math"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -12,115 +14,64 @@ import (
 	"strings"
 	"time"
 
-	apicontext "github.com/augno/api/services/api-gateway/internal/context"
 	"github.com/augno/api/services/api-gateway/internal/header"
-	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
-	"github.com/augno/api/shared/contracts"
+	"github.com/augno/api/services/auth-service/pkg/types"
+	"github.com/augno/api/shared/appctx"
+	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/fuzzy"
-	"github.com/augno/api/shared/tracing"
-	"github.com/augno/api/shared/validate"
-
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/trace"
 )
 
 var PathExtractor func(*http.Request) func(string) string = defaultPathExtractor
 
 const (
-	attrHTTPStatusCode = "http.status_code"
-	attrErrorType      = "error.type"
+	AttrHTTPStatusCode = "http.status_code"
+	AttrErrorType      = "error.type"
 )
 
-func ConvertToHTTPHandler[TReq, TResp any](be apiendpoint.BoundEndpoint[TReq, TResp]) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
-
-		span := trace.SpanFromContext(ctx)
-
-		ctx = apicontext.WithResponseWriter(ctx, w)
-
-		var req TReq
-		req = allocIfPtr(req)
-
-		if err := bindFromHeaders(r, any(req)); err != nil {
-			apiErr, ok := err.(*contracts.APIError)
-			if !ok {
-				apiErr = contracts.NewValidationError(err.Error())
-			}
-			tracing.RecordControllerError(span, apiErr)
-			if span.IsRecording() {
-				span.SetAttributes(attribute.String(attrErrorType, "header_binding"))
-			}
-			RespondWithAPIError(ctx, w, apiErr)
-			return
-		}
-		if err := bindFromPath(r, any(req)); err != nil {
-			apiErr, ok := err.(*contracts.APIError)
-			if !ok {
-				apiErr = contracts.NewValidationError(err.Error())
-			}
-			tracing.RecordControllerError(span, apiErr)
-			if span.IsRecording() {
-				span.SetAttributes(attribute.String(attrErrorType, "path_binding"))
-			}
-			RespondWithAPIError(ctx, w, apiErr)
-			return
-		}
-		if err := bindFromQuery(r.URL, any(req)); err != nil {
-			apiErr, ok := err.(*contracts.APIError)
-			if !ok {
-				apiErr = contracts.NewValidationError(err.Error())
-			}
-			tracing.RecordControllerError(span, apiErr)
-			if span.IsRecording() {
-				span.SetAttributes(attribute.String(attrErrorType, "query_binding"))
-			}
-			RespondWithAPIError(ctx, w, apiErr)
-			return
-		}
-
-		if shouldDecodeBody(r) {
-			if err := decodeJSONInto(any(req), r, !be.Spec.Extras.AllowUnknownJSONFields); err != nil {
-				apiErr, ok := err.(*contracts.APIError)
-				if !ok {
-					apiErr = contracts.NewValidationError(err.Error())
-				}
-				tracing.RecordControllerError(span, apiErr)
-				if span.IsRecording() {
-					span.SetAttributes(attribute.String(attrErrorType, "json_decode"))
-				}
-				RespondWithAPIError(ctx, w, apiErr)
-				return
-			}
-		}
-
-		if apiErr := validate.Validate(any(req)); apiErr != nil {
-			tracing.RecordControllerError(span, apiErr)
-			if span.IsRecording() {
-				span.SetAttributes(attribute.String(attrErrorType, "validation"))
-			}
-			RespondWithAPIError(ctx, w, apiErr)
-			return
-		}
-
-		resp, err := be.Handler(ctx, req)
-		if err != nil {
-			tracing.RecordControllerError(span, err)
-			if span.IsRecording() {
-				span.SetAttributes(attribute.String(attrErrorType, "handler"))
-			}
-			RespondWithAPIError(ctx, w, err)
-			return
-		}
-
-		if span.IsRecording() {
-			span.SetAttributes(attribute.Int(attrHTTPStatusCode, be.Spec.SuccessStatusCode))
-		}
-		RespondWithJSON(ctx, w, be.Spec.SuccessStatusCode, resp)
-	}
+// SetHeader sets a response header.
+func SetHeader(w http.ResponseWriter, key, value string) {
+	w.Header().Set(key, value)
 }
 
-func shouldDecodeBody(r *http.Request) bool {
+func GetIdentity(ctx context.Context) (*types.Identity, *apierror.APIError) {
+	if identity, ok := appctx.GetIdentityFromContext(ctx); ok {
+		return identity, nil
+	}
+	return nil, apierror.NewAuthenticationError("Identity not found in context")
+}
+
+// ApplyPagination parses query params, and returns the parameters.
+func ApplyPagination(r *http.Request) (*appctx.PaginationParams, *apierror.APIError) {
+	params := appctx.PaginationParams{
+		Limit: 10, // Default limit
+	}
+
+	// Parse search query
+	if q := r.URL.Query().Get("q"); q != "" {
+		params.Query = &q
+	}
+
+	// Parse cursor
+	if cursor := r.URL.Query().Get("cursor"); cursor != "" {
+		params.Cursor = &cursor
+	}
+
+	// Parse limit
+	if limit := r.URL.Query().Get("limit"); limit != "" {
+		limitInt, err := strconv.Atoi(limit)
+		if err != nil {
+			return nil, apierror.NewParameterInvalidError(fmt.Sprintf("Invalid limit provided: '%s'. Must be a positive integer.", limit), "limit")
+		}
+		if limitInt <= 0 || limitInt > math.MaxInt32 {
+			return nil, apierror.NewParameterInvalidError(fmt.Sprintf("Limit '%s' must be a positive integer.", limit), "limit")
+		}
+		params.Limit = int32(limitInt) // #nosec G109 - bounds checked above
+	}
+
+	return &params, nil
+}
+
+func ShouldDecodeBody(r *http.Request) bool {
 	if r.ContentLength == 0 && !hasChunked(r) {
 		return false
 	}
@@ -141,7 +92,7 @@ func hasChunked(r *http.Request) bool {
 	return false
 }
 
-func decodeJSONInto(dst any, r *http.Request, disallowUnknown bool) error {
+func DecodeJSONInto(dst any, r *http.Request, disallowUnknown bool) error {
 	dec := json.NewDecoder(r.Body)
 	if disallowUnknown {
 		dec.DisallowUnknownFields()
@@ -153,16 +104,16 @@ func decodeJSONInto(dst any, r *http.Request, disallowUnknown bool) error {
 			if suggestion, dist := fuzzy.FindClosestByLevenshtein(field, candidates); suggestion != "" && dist <= 3 {
 				msg = fmt.Sprintf("Invalid JSON in request body: unknown field '%s'. Did you mean '%s'?", field, suggestion)
 			}
-			return contracts.NewValidationErrorWithParam(msg, field)
+			return apierror.NewParameterUnknownError(msg, field)
 		}
 
 		if uterr, ok := err.(*json.UnmarshalTypeError); ok {
 			msg := fmt.Sprintf("Invalid type for field '%s': expected %s, got %s", uterr.Field, uterr.Type.String(), uterr.Value)
-			return contracts.NewValidationErrorWithParam(msg, uterr.Field)
+			return apierror.NewInvalidFormatError(msg, uterr.Field)
 		}
 
 		if serr, ok := err.(*json.SyntaxError); ok {
-			return contracts.NewValidationError(fmt.Sprintf("Invalid JSON in request body at offset %d: %v", serr.Offset, serr.Error()))
+			return apierror.NewValidationError(fmt.Sprintf("Invalid JSON in request body at offset %d: %v", serr.Offset, serr.Error()))
 		}
 
 		return err
@@ -266,7 +217,7 @@ func collectJSONFieldNames(dst any) []string {
 	return names
 }
 
-func bindFromHeaders(r *http.Request, dst any) error {
+func BindFromHeaders(r *http.Request, dst any) error {
 	return walkStruct(dst, func(f fieldInfo) error {
 		h := f.tag.Get("header")
 		cookieName := f.tag.Get("cookie")
@@ -307,7 +258,7 @@ func bindFromHeaders(r *http.Request, dst any) error {
 							return setFromString(f.value, cookie.Value, f.tag)
 						}
 					}
-					return contracts.NewValidationErrorWithParam(fmt.Sprintf("Invalid %s header scheme: expected %s, got %s", h, expectedScheme, actualScheme), h)
+					return apierror.NewParameterInvalidError(fmt.Sprintf("Invalid %s header scheme: expected %s, got %s", h, expectedScheme, actualScheme), h)
 				}
 			}
 			return setFromString(f.value, authResult.TokenString, f.tag)
@@ -334,7 +285,7 @@ func bindFromHeaders(r *http.Request, dst any) error {
 		if scheme := f.tag.Get("scheme"); scheme != "" && fromHeader {
 			prefix := scheme + " "
 			if !strings.HasPrefix(val, prefix) {
-				return contracts.NewValidationErrorWithParam(fmt.Sprintf("Invalid %s header scheme", h), h)
+				return apierror.NewParameterInvalidError(fmt.Sprintf("Invalid %s header scheme", h), h)
 			}
 			val = strings.TrimPrefix(val, prefix)
 		}
@@ -346,15 +297,15 @@ func bindFromHeaders(r *http.Request, dst any) error {
 				source = "cookie"
 			}
 			if param == "" {
-				return contracts.NewValidationErrorWithParam(fmt.Sprintf("Invalid value: %v", err), "")
+				return apierror.NewParameterInvalidError(fmt.Sprintf("Invalid value: %v", err), "")
 			}
-			return contracts.NewValidationErrorWithParam(fmt.Sprintf("Invalid value for %s '%s': %v", source, param, err), param)
+			return apierror.NewParameterInvalidError(fmt.Sprintf("Invalid value for %s '%s': %v", source, param, err), param)
 		}
 		return nil
 	})
 }
 
-func bindFromPath(r *http.Request, dst any) error {
+func BindFromPath(r *http.Request, dst any) error {
 	get := PathExtractor(r)
 	return walkStruct(dst, func(f fieldInfo) error {
 		key := f.tag.Get("path")
@@ -370,13 +321,64 @@ func bindFromPath(r *http.Request, dst any) error {
 			}
 		}
 		if err := setFromString(f.value, val, f.tag); err != nil {
-			return contracts.NewValidationErrorWithParam(fmt.Sprintf("Invalid value for path parameter '%s': %v", key, err), key)
+			return apierror.NewParameterInvalidError(fmt.Sprintf("Invalid value for path parameter '%s': %v", key, err), key)
 		}
 		return nil
 	})
 }
 
-func bindFromQuery(u *url.URL, dst any) error {
+const maxRawBodySize = 1 << 20 // 1MB limit for raw body
+
+func BindRawBody(r *http.Request, dst any) error {
+	rv := reflect.ValueOf(dst)
+	if rv.Kind() != reflect.Ptr || rv.IsNil() {
+		return errors.New("destination must be a non-nil pointer")
+	}
+	rv = rv.Elem()
+	rt := rv.Type()
+	if rt.Kind() != reflect.Struct {
+		return errors.New("destination must point to a struct")
+	}
+
+	var bodyRead bool
+	var bodyData []byte
+
+	for i := 0; i < rt.NumField(); i++ {
+		sf := rt.Field(i)
+		if sf.PkgPath != "" {
+			continue
+		}
+
+		tag := sf.Tag.Get("rawbody")
+		if tag == "" {
+			continue
+		}
+
+		fv := rv.Field(i)
+		if !fv.CanSet() {
+			continue
+		}
+
+		if fv.Type() != reflect.TypeOf([]byte(nil)) {
+			return fmt.Errorf("rawbody tag can only be used on []byte fields, got %s", fv.Type().String())
+		}
+
+		if !bodyRead {
+			var err error
+			bodyData, err = io.ReadAll(io.LimitReader(r.Body, maxRawBodySize))
+			if err != nil {
+				return fmt.Errorf("failed to read request body: %w", err)
+			}
+			bodyRead = true
+		}
+
+		fv.SetBytes(bodyData)
+	}
+
+	return nil
+}
+
+func BindFromQuery(u *url.URL, dst any) error {
 	q := u.Query()
 	return walkStruct(dst, func(f fieldInfo) error {
 		key := f.tag.Get("query")
@@ -400,7 +402,7 @@ func bindFromQuery(u *url.URL, dst any) error {
 			return nil
 		}
 		if err := setFromString(f.value, val, f.tag); err != nil {
-			return contracts.NewValidationErrorWithParam(fmt.Sprintf("Invalid value for query parameter '%s': %v", key, err), key)
+			return apierror.NewParameterInvalidError(fmt.Sprintf("Invalid value for query parameter '%s': %v", key, err), key)
 		}
 		return nil
 	})
@@ -524,7 +526,7 @@ func setFromString(v reflect.Value, s string, tag reflect.StructTag) error {
 	return nil
 }
 
-func allocIfPtr[T any](x T) T {
+func AllocIfPtr[T any](x T) T {
 	rv := reflect.ValueOf(&x).Elem()
 	if rv.Kind() == reflect.Ptr && rv.IsNil() {
 		rv.Set(reflect.New(rv.Type().Elem()))
@@ -553,10 +555,98 @@ func reflectHTTPRouterParam(r *http.Request) func(string) string {
 }
 
 func tryContextPathMap(ctx context.Context) map[string]string {
-	if v := ctx.Value(apicontext.PathParamsKey); v != nil {
-		if m, ok := v.(map[string]string); ok {
-			return m
+	if m, ok := appctx.GetPathParams(ctx); ok {
+		return m
+	}
+	return nil
+}
+
+func ValidateEnumFields(dst any) *apierror.APIError {
+	rv := reflect.ValueOf(dst)
+	if rv.Kind() == reflect.Ptr {
+		rv = rv.Elem()
+	}
+	if rv.Kind() != reflect.Struct {
+		return nil
+	}
+
+	rt := rv.Type()
+	for i := 0; i < rt.NumField(); i++ {
+		sf := rt.Field(i)
+		if sf.PkgPath != "" {
+			continue
+		}
+
+		fv := rv.Field(i)
+		ft := sf.Type
+		if ft.Kind() == reflect.Ptr {
+			if fv.IsNil() {
+				continue
+			}
+			fv = fv.Elem()
+			ft = ft.Elem()
+		}
+
+		if ft.Kind() == reflect.Struct {
+			if apiErr := ValidateEnumFields(fv.Addr().Interface()); apiErr != nil {
+				return apiErr
+			}
+			continue
+		}
+
+		if ft.Kind() != reflect.String || ft.Name() == "" || ft.Name() == "string" {
+			continue
+		}
+
+		ptrType := reflect.PointerTo(ft)
+		method, ok := ptrType.MethodByName("EnumValues")
+		if !ok {
+			continue
+		}
+
+		if method.Type.NumIn() != 1 || method.Type.NumOut() != 1 {
+			continue
+		}
+
+		outType := method.Type.Out(0)
+		if outType.Kind() != reflect.Slice || outType.Elem().Kind() != reflect.String {
+			continue
+		}
+
+		results := method.Func.Call([]reflect.Value{fv.Addr()})
+		if len(results) != 1 {
+			continue
+		}
+
+		validValues := results[0]
+		currentValue := fv.String()
+
+		isValid := false
+		var allowedValues []string
+		for j := 0; j < validValues.Len(); j++ {
+			val := validValues.Index(j).String()
+			allowedValues = append(allowedValues, val)
+			if val == currentValue {
+				isValid = true
+				break
+			}
+		}
+
+		if !isValid {
+			jsonTag := sf.Tag.Get("json")
+			fieldName := sf.Name
+			if jsonTag != "" && jsonTag != "-" {
+				parts := strings.Split(jsonTag, ",")
+				if parts[0] != "" {
+					fieldName = parts[0]
+				}
+			}
+			return apierror.NewParameterInvalidError(
+				fmt.Sprintf("Field '%s' must be one of: %s", fieldName, strings.Join(allowedValues, ", ")),
+				fieldName,
+			)
 		}
 	}
+
 	return nil
 }

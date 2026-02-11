@@ -3,7 +3,6 @@ package types
 import (
 	"github.com/augno/api/shared/constants"
 	pb "github.com/augno/api/shared/proto/auth"
-	"github.com/augno/api/shared/ptrutil"
 )
 
 type IdentityActor struct {
@@ -23,41 +22,56 @@ type Identity struct {
 	AccountMode     constants.AccountMode
 }
 
-func (i *Identity) IsUser() bool {
-	return i.Type == IdentityTypeUser
+func (i *Identity) IsAuthenticated() bool {
+	return i != nil && i.Type != IdentityTypeUnauthenticated
 }
 
-func (i *Identity) IsInternalUser() bool {
-	return i.Type == IdentityTypeUser && i.Actor != nil && i.Actor.Type == IdentityActorTypeInternal
+func (i *Identity) IsAdmin() bool {
+	return i != nil && i.Type == IdentityTypeUser && i.Actor != nil && i.Actor.RoleTypeCode != nil && *i.Actor.RoleTypeCode == string(constants.RoleTypeCodeAdmin)
 }
 
-func (i *Identity) IsSupplierUser() bool {
-	return i.Type == IdentityTypeUser && i.Actor != nil && i.Actor.Type == IdentityActorTypeSupplier
+func (i *Identity) IsScanner() bool {
+	return i != nil && i.Type == IdentityTypeUser && i.Actor != nil && i.Actor.RoleTypeCode != nil && *i.Actor.RoleTypeCode == string(constants.RoleTypeCodeScanner)
 }
 
-func (i *Identity) IsCustomerUser() bool {
-	return i.Type == IdentityTypeUser && i.Actor != nil && i.Actor.Type == IdentityActorTypeCustomer
-}
-
-func (i *Identity) IsUnassignedUser() bool {
-	return i.Type == IdentityTypeUser && i.Actor != nil && i.Actor.Type == IdentityActorTypeUnassigned
+func (i *Identity) IsSalesRep() bool {
+	return i != nil && i.Type == IdentityTypeUser && i.Actor != nil && i.Actor.RoleTypeCode != nil && *i.Actor.RoleTypeCode == string(constants.RoleTypeCodeSalesRep)
 }
 
 func (i *Identity) IsAPIKey() bool {
-	return i.Type == IdentityTypeAPIKey
+	return i != nil && i.Type == IdentityTypeAPIKey
 }
 
-func GetUnauthenticatedIdentity(targetAccountID string) *Identity {
-	targetPtr := (*string)(nil)
-	if targetAccountID != "" {
-		targetPtr = ptrutil.String(targetAccountID)
-	}
+func (i *Identity) IsUser() bool {
+	return i != nil && i.Type == IdentityTypeUser
+}
 
+func (i *Identity) IsInternalUser() bool {
+	return i != nil && i.Type == IdentityTypeUser && i.Actor != nil && i.Actor.Type == IdentityActorTypeInternal
+}
+
+func (i *Identity) IsSupplierUser() bool {
+	return i != nil && i.Type == IdentityTypeUser && i.Actor != nil && i.Actor.Type == IdentityActorTypeSupplier
+}
+
+func (i *Identity) IsCustomerUser() bool {
+	return i != nil && i.Type == IdentityTypeUser && i.Actor != nil && i.Actor.Type == IdentityActorTypeCustomer
+}
+
+func (i *Identity) IsUnassignedUser() bool {
+	return i != nil && i.Type == IdentityTypeUser && i.Actor != nil && i.Actor.Type == IdentityActorTypeUnassigned
+}
+
+func GetUnauthenticatedIdentity(targetAccountID *string) *Identity {
+	return GetUnauthenticatedIdentityWithMode(targetAccountID, constants.AccountModeProduction)
+}
+
+func GetUnauthenticatedIdentityWithMode(targetAccountID *string, accountMode constants.AccountMode) *Identity {
 	return &Identity{
 		Type:            IdentityTypeUnauthenticated,
 		Actor:           nil,
-		AccountMode:     constants.AccountModeProduction, // TODO: This should be dynamic
-		TargetAccountID: targetPtr,
+		AccountMode:     accountMode,
+		TargetAccountID: targetAccountID,
 	}
 }
 

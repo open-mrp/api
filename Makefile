@@ -1,4 +1,4 @@
-.PHONY: help dev gen-sqlc gen-proto db-dump test test-verbose install-tools docs mocks gosec static-check check-format jaeger-tracing connect-minikube connect-eks
+.PHONY: help dev gen-sqlc gen-proto db-dump test test-verbose install-tools docs mocks gosec static-check check-format jaeger-tracing connect-minikube connect-eks version
 
 # Include .env file if it exists (optional for CI)
 -include .env
@@ -75,6 +75,17 @@ static-check: ## Run staticcheck
 	@echo "Running static check..."
 	@staticcheck ./...
 
+fmt: ## Format Go source code
+	@echo "Formatting Go source code..."
+	@go fmt ./...
+	@if command -v goimports >/dev/null; then \
+		echo "Organizing imports with goimports..."; \
+		goimports -w .; \
+	fi
+
+stripe-webhook: ## Run the Stripe webhook listener
+	@stripe listen --forward-to localhost:8081/v1/billing/webhook
+
 check-format: ## Check formatting
 	@echo "Checking formatting..."
 	@if [ -n "$$(gofmt -l .)" ]; then \
@@ -86,6 +97,10 @@ check-format: ## Check formatting
 open-tracing: ## Open Jaeger UI via port-forward
 	@echo "Opening Jaeger UI at http://localhost:16686"
 	kubectl port-forward svc/jaeger 16686:16686
+
+# Version management
+version: ## Show current version
+	@go run ./cmd/print-version
 
 # This catch-all target prevents make from complaining about unknown targets
 %:

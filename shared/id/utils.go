@@ -1,16 +1,16 @@
 package id
 
 import (
-	"github.com/augno/api/shared/contracts"
+	apierror "github.com/augno/api/shared/errors"
 
 	nanoid "github.com/matoous/go-nanoid/v2"
 )
 
 // IDLength is the length of the ID. The longer the ID, the less likely there will
 // be a collision.
-// - IDLength12: 308M IDs
-// - IDLength19: 86T IDs
-// - IDLength22: 18,660T IDs
+//   - IDLength12 - 308M IDs
+//   - IDLength19 - 86T IDs
+//   - IDLength22 - 18,660T IDs
 type IDLength int
 
 const (
@@ -23,10 +23,11 @@ const (
 	charset = "0123456789abcdefghijklmnopqrstuvwxyz"
 )
 
-func genNanoID(length IDLength) (string, *contracts.APIError) {
+// genNanoID generates a new nano ID with the given length.
+func genNanoID(length IDLength) (string, *apierror.APIError) {
 	id, err := nanoid.Generate(charset, int(length))
 	if err != nil {
-		return "", contracts.NewInternalError(err, "Failed to generate nano ID.")
+		return "", apierror.NewInternalError(err, "Failed to generate nano ID.")
 	}
 	return id, nil
 }

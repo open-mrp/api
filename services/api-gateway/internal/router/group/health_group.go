@@ -20,10 +20,9 @@ func (*HealthEndpointGroup) Materialize(config HealthEndpointGroupConfig) *Healt
 		ResourceType: &apiresource.Healthcheck{},
 	}
 
-	healthController := healthep.NewHealthCtrl()
-	he := (&healthep.HealthEndpoint{}).Materialize().(*healthep.HealthEndpoint)
-	he = he.WithGroup(inner, healthController)
-	inner.Endpoints = []apiendpoint.APIEndpointer{he}
+	healthController := healthep.NewHealthSvc()
+	healthEndpoint := (&healthep.HealthEndpoint{}).Materialize().WithService(inner, healthController)
+	inner.Endpoints = []apiendpoint.APIEndpointer{healthEndpoint}
 
 	return &HealthEndpointGroup{inner}
 }

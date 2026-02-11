@@ -12,9 +12,11 @@ package mediatormock
 import (
 	context "context"
 	reflect "reflect"
+	time "time"
 
 	domain "github.com/augno/api/services/auth-service/internal/domain"
-	contracts "github.com/augno/api/shared/contracts"
+	constants "github.com/augno/api/shared/constants"
+	apierror "github.com/augno/api/shared/errors"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -42,12 +44,28 @@ func (m *MockAPIKeyMed) EXPECT() *MockAPIKeyMedMockRecorder {
 	return m.recorder
 }
 
+// Create mocks base method.
+func (m *MockAPIKeyMed) Create(ctx context.Context, accountMode constants.AccountMode, ownerAccountID, roleID, name string, expiresAt *time.Time) (string, *domain.APIKey, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Create", ctx, accountMode, ownerAccountID, roleID, name, expiresAt)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(*domain.APIKey)
+	ret2, _ := ret[2].(*apierror.APIError)
+	return ret0, ret1, ret2
+}
+
+// Create indicates an expected call of Create.
+func (mr *MockAPIKeyMedMockRecorder) Create(ctx, accountMode, ownerAccountID, roleID, name, expiresAt any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockAPIKeyMed)(nil).Create), ctx, accountMode, ownerAccountID, roleID, name, expiresAt)
+}
+
 // FindAndValidate mocks base method.
-func (m *MockAPIKeyMed) FindAndValidate(ctx context.Context, apiKey string) (*domain.APIKey, *contracts.APIError) {
+func (m *MockAPIKeyMed) FindAndValidate(ctx context.Context, apiKey string) (*domain.APIKey, *apierror.APIError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "FindAndValidate", ctx, apiKey)
 	ret0, _ := ret[0].(*domain.APIKey)
-	ret1, _ := ret[1].(*contracts.APIError)
+	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
@@ -57,11 +75,57 @@ func (mr *MockAPIKeyMedMockRecorder) FindAndValidate(ctx, apiKey any) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindAndValidate", reflect.TypeOf((*MockAPIKeyMed)(nil).FindAndValidate), ctx, apiKey)
 }
 
+// GetKeyAccountAccess mocks base method.
+func (m *MockAPIKeyMed) GetKeyAccountAccess(ctx context.Context, accountMode constants.AccountMode, apiKeyID int64, targetAccountID string) (*domain.APIKeyAccountAccess, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetKeyAccountAccess", ctx, accountMode, apiKeyID, targetAccountID)
+	ret0, _ := ret[0].(*domain.APIKeyAccountAccess)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetKeyAccountAccess indicates an expected call of GetKeyAccountAccess.
+func (mr *MockAPIKeyMedMockRecorder) GetKeyAccountAccess(ctx, accountMode, apiKeyID, targetAccountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetKeyAccountAccess", reflect.TypeOf((*MockAPIKeyMed)(nil).GetKeyAccountAccess), ctx, accountMode, apiKeyID, targetAccountID)
+}
+
+// List mocks base method.
+func (m *MockAPIKeyMed) List(ctx context.Context, accountMode constants.AccountMode, ownerAccountID string, cursor *string, limit int32, query *string) ([]*domain.APIKey, int64, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List", ctx, accountMode, ownerAccountID, cursor, limit, query)
+	ret0, _ := ret[0].([]*domain.APIKey)
+	ret1, _ := ret[1].(int64)
+	ret2, _ := ret[2].(*apierror.APIError)
+	return ret0, ret1, ret2
+}
+
+// List indicates an expected call of List.
+func (mr *MockAPIKeyMedMockRecorder) List(ctx, accountMode, ownerAccountID, cursor, limit, query any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockAPIKeyMed)(nil).List), ctx, accountMode, ownerAccountID, cursor, limit, query)
+}
+
+// ParseKey mocks base method.
+func (m *MockAPIKeyMed) ParseKey(ctx context.Context, apiKey string) (*domain.ParsedAPIKey, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ParseKey", ctx, apiKey)
+	ret0, _ := ret[0].(*domain.ParsedAPIKey)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ParseKey indicates an expected call of ParseKey.
+func (mr *MockAPIKeyMedMockRecorder) ParseKey(ctx, apiKey any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParseKey", reflect.TypeOf((*MockAPIKeyMed)(nil).ParseKey), ctx, apiKey)
+}
+
 // TouchIfNotRecent mocks base method.
-func (m *MockAPIKeyMed) TouchIfNotRecent(ctx context.Context, apiKeyModel *domain.APIKey) *contracts.APIError {
+func (m *MockAPIKeyMed) TouchIfNotRecent(ctx context.Context, apiKeyModel *domain.APIKey) *apierror.APIError {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "TouchIfNotRecent", ctx, apiKeyModel)
-	ret0, _ := ret[0].(*contracts.APIError)
+	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 

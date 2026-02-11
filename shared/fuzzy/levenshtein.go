@@ -39,17 +39,9 @@ func LevenshteinDistance(a, b string) int {
 
 			// Take min of deletion, insertion, substitution
 			if deletion < insertion {
-				if deletion < substitution {
-					curr[i] = deletion
-				} else {
-					curr[i] = substitution
-				}
+				curr[i] = min(deletion, substitution)
 			} else {
-				if insertion < substitution {
-					curr[i] = insertion
-				} else {
-					curr[i] = substitution
-				}
+				curr[i] = min(insertion, substitution)
 			}
 		}
 		prev, curr = curr, prev

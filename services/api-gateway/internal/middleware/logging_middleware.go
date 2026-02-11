@@ -1,17 +1,20 @@
 package middleware
 
 import (
-	"context"
 	"log"
 	"net/http"
 	"regexp"
 	"time"
 
-	apicontext "github.com/augno/api/services/api-gateway/internal/context"
-	"github.com/augno/api/services/api-gateway/internal/domain"
 	"github.com/augno/api/services/api-gateway/internal/header"
+	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/id"
+	"github.com/augno/api/shared/tracing"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
+
+var loggingMiddlewareTracer = tracing.GetTracer("api-gateway.logging_middleware")
 
 type RouteMatcher interface {
 	GetRoutes() []any
@@ -52,7 +55,7 @@ func findRouteTemplate(router any, method, path string) string {
 	return ""
 }
 
-func LoggingMiddleware(logger *log.Logger, next http.HandlerFunc, saver *asyncRequestLogSaver, router any) http.HandlerFunc {
+func LoggingMiddleware(logger *log.Logger, next http.HandlerFunc, saver saver, router any) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now().UTC()
 
@@ -63,7 +66,6 @@ func LoggingMiddleware(logger *log.Logger, next http.HandlerFunc, saver *asyncRe
 		}
 
 		userAgent := r.UserAgent()
-		idempotencyKey := r.Header.Get("Idempotency-Key")
 		clientIP := header.GetClientIP(r)
 
 		normalizedRoute := r.URL.Path
@@ -73,15 +75,20 @@ func LoggingMiddleware(logger *log.Logger, next http.HandlerFunc, saver *asyncRe
 			}
 		}
 
-		requestLog := &domain.RequestLog{
-			ID:               requestID,
-			Method:           r.Method,
-			Host:             r.Host,
-			Path:             r.URL.Path,
-			NormalizedRoute:  normalizedRoute,
-			UserAgent:        &userAgent,
-			IdempotencyKeyID: &idempotencyKey,
-			ClientIP:         clientIP,
+		// Capture API version from header for logging
+		var apiVersion *string
+		if versionStr := r.Header.Get(header.VersionHeader); versionStr != "" {
+			apiVersion = &versionStr
+		}
+
+		requestLog := &appctx.RequestLog{
+			ID:              requestID,
+			Method:          r.Method,
+			Host:            r.Host,
+			Path:            r.URL.Path,
+			NormalizedRoute: normalizedRoute,
+			UserAgent:       &userAgent,
+			ClientIP:        clientIP,
 			ClientIPString: func() *string {
 				if len(clientIP) == 0 {
 					return nil
@@ -90,9 +97,17 @@ func LoggingMiddleware(logger *log.Logger, next http.HandlerFunc, saver *asyncRe
 				return &s
 			}(),
 			OccurredAt: start,
+			APIVersion: apiVersion,
 		}
 
-		ctx := context.WithValue(r.Context(), apicontext.RequestLogKey, requestLog)
+		span := trace.SpanFromContext(r.Context())
+		if span.SpanContext().IsValid() {
+			span.SetAttributes(attribute.String("request.id", requestID))
+			traceID := span.SpanContext().TraceID().String()
+			requestLog.TraceID = &traceID
+		}
+
+		ctx := appctx.WithRequestLog(r.Context(), requestLog)
 		r = r.WithContext(ctx)
 
 		lrw := newLoggingResponseWriter(w)
@@ -107,9 +122,11 @@ func LoggingMiddleware(logger *log.Logger, next http.HandlerFunc, saver *asyncRe
 			requestLog.LatencyUs = latency
 
 			if saver != nil {
+				_, span := loggingMiddlewareTracer.Start(ctx, "middleware.logging.save_request_log")
 				if err := saver.Save(ctx, requestLog); err != nil {
 					logger.Printf("Error saving request log: %v", err)
 				}
+				span.End()
 			}
 
 			milliseconds := latency / 1000

@@ -14,7 +14,7 @@ import (
 	reflect "reflect"
 
 	domain "github.com/augno/api/services/auth-service/internal/domain"
-	contracts "github.com/augno/api/shared/contracts"
+	apierror "github.com/augno/api/shared/errors"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -43,11 +43,11 @@ func (m *MockRefreshTokenMed) EXPECT() *MockRefreshTokenMedMockRecorder {
 }
 
 // Create mocks base method.
-func (m *MockRefreshTokenMed) Create(ctx context.Context, userID string, expiresInDays *int) (*domain.RefreshToken, *contracts.APIError) {
+func (m *MockRefreshTokenMed) Create(ctx context.Context, userID string, expiresInDays *int) (*domain.RefreshToken, *apierror.APIError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Create", ctx, userID, expiresInDays)
 	ret0, _ := ret[0].(*domain.RefreshToken)
-	ret1, _ := ret[1].(*contracts.APIError)
+	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
@@ -58,10 +58,10 @@ func (mr *MockRefreshTokenMedMockRecorder) Create(ctx, userID, expiresInDays any
 }
 
 // Revoke mocks base method.
-func (m *MockRefreshTokenMed) Revoke(ctx context.Context, refreshToken string) *contracts.APIError {
+func (m *MockRefreshTokenMed) Revoke(ctx context.Context, refreshToken string) *apierror.APIError {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Revoke", ctx, refreshToken)
-	ret0, _ := ret[0].(*contracts.APIError)
+	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 
@@ -72,10 +72,10 @@ func (mr *MockRefreshTokenMedMockRecorder) Revoke(ctx, refreshToken any) *gomock
 }
 
 // RevokeAll mocks base method.
-func (m *MockRefreshTokenMed) RevokeAll(ctx context.Context, userID string) *contracts.APIError {
+func (m *MockRefreshTokenMed) RevokeAll(ctx context.Context, userID string) *apierror.APIError {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RevokeAll", ctx, userID)
-	ret0, _ := ret[0].(*contracts.APIError)
+	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 
@@ -86,11 +86,11 @@ func (mr *MockRefreshTokenMedMockRecorder) RevokeAll(ctx, userID any) *gomock.Ca
 }
 
 // Validate mocks base method.
-func (m *MockRefreshTokenMed) Validate(ctx context.Context, refreshToken string) (string, *contracts.APIError) {
+func (m *MockRefreshTokenMed) Validate(ctx context.Context, refreshToken string) (string, *apierror.APIError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Validate", ctx, refreshToken)
 	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(*contracts.APIError)
+	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 

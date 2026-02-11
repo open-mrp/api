@@ -2,16 +2,20 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
+	"github.com/augno/api/services/notification-service/internal/domain"
+	"github.com/augno/api/services/notification-service/internal/email"
 	"github.com/augno/api/services/notification-service/internal/event"
+	notificationgrpc "github.com/augno/api/services/notification-service/internal/infrastructure/grpc"
+	"github.com/augno/api/services/notification-service/internal/infrastructure/repository"
 	"github.com/augno/api/services/notification-service/internal/infrastructure/sqlc"
 	"github.com/augno/api/services/notification-service/internal/service"
+	"github.com/augno/api/shared/contracts"
 	"github.com/augno/api/shared/db"
 	"github.com/augno/api/shared/messaging"
 	"github.com/augno/api/shared/tracing"
@@ -20,61 +24,73 @@ import (
 func Run(
 	ctx context.Context,
 	getenv func(string) string,
+	stdin io.Reader,
+	stdout, stderr io.Writer,
 ) error {
 	ctx, cancel := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
-	cfg, err := loadConfig(getenv)
-	if err != nil {
+	cfg := new(config).withDefaults(getenv)
+	if err := cfg.validate(); err != nil {
 		return err
 	}
 
-	tracerShutdown, err := tracing.InitProvider("notification-service")
-	if err != nil {
-		return fmt.Errorf("failed to initialize tracer: %w", err)
-	}
-	defer func() {
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		if err := tracerShutdown(shutdownCtx); err != nil {
-			slog.Error("failed to shutdown tracer", "error", err)
-		}
-	}()
+	logger := slog.New(slog.NewTextHandler(stdout, nil))
 
-	db, err := db.NewDbPool(cfg.DBURL)
+	tracerShutdown, err := tracing.InitProvider(ctx, domain.ServiceName, getenv)
 	if err != nil {
-		return fmt.Errorf("failed to connect to database: %w", err)
+		return err
+	}
+	defer tracing.DeferShutdown(tracerShutdown)()
+
+	workerTracer, err := tracing.NewWorkerTracerProvider(ctx, domain.ServiceName, getenv)
+	if err != nil {
+		return err
+	}
+	defer workerTracer.DeferClose()()
+
+	db, err := db.NewDbPool(&db.Config{DBURI: cfg.DBURL})
+	if err != nil {
+		return err
 	}
 	defer db.Close()
 
-	rabbitmq, err := messaging.NewRabbitMQ(cfg.RabbitMQURI)
+	rabbitmq, err := messaging.NewRabbitMQ(ctx, &messaging.RabbitMQConfig{URI: cfg.RabbitMQURI})
 	if err != nil {
-		return fmt.Errorf("failed to connect to RabbitMQ: %w", err)
+		return err
 	}
 	defer rabbitmq.Close()
-	if !rabbitmq.IsReady() {
-		return fmt.Errorf("RabbitMQ connection is not ready")
-	}
-	slog.Info("RabbitMQ connection established and warmed up.")
 
 	queries, err := sqlc.Prepare(ctx, db)
 	if err != nil {
-		return fmt.Errorf("failed to prepare queries: %w", err)
+		return err
 	}
 	defer queries.Close()
 
-	notificationSvc, apiErr := service.NewDefaultNotificationSvc(queries, cfg.AWSRegion)
+	templateRenderer, apiErr := email.NewTemplateRenderer()
 	if apiErr != nil {
-		return fmt.Errorf("failed to initialize notification service: %w", apiErr)
+		return apiErr
 	}
 
-	notificationConsumer := event.NewNotificationConsumer(rabbitmq, notificationSvc)
-	if err := notificationConsumer.Listen(); err != nil {
-		return fmt.Errorf("failed to start notification consumer: %w", err)
+	notificationSvc, apiErr := service.NewDefaultNotificationSvc(queries, cfg.AWSRegion, templateRenderer)
+	if apiErr != nil {
+		return apiErr
 	}
 
-	// Wait for shutdown signal
-	<-ctx.Done()
-	slog.Info("Shutting down notification service...")
-	return nil
+	inboxRepo := repository.NewInboxRepo(queries)
+	consumerTracer := workerTracer.Tracer(domain.ServiceName + ".consumer")
+	notificationConsumer := event.NewNotificationConsumer(rabbitmq, notificationSvc, inboxRepo, templateRenderer, consumerTracer)
+	if err := notificationConsumer.Listen(ctx); err != nil {
+		return err
+	}
+
+	server, err := contracts.NewGRPCServer(domain.ServiceName, nil, nil)
+	if err != nil {
+		return err
+	}
+	notificationgrpc.NewGRPCHandler(server.Server(), notificationSvc)
+
+	logger.Info("Notification service started", "port", cfg.Port)
+
+	return server.Serve(ctx, cfg.Port)
 }

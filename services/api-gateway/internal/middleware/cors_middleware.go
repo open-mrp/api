@@ -2,6 +2,9 @@ package middleware
 
 import (
 	"net/http"
+	"strings"
+
+	"github.com/augno/api/shared/appctx"
 )
 
 func CORSMiddleware() func(http.HandlerFunc) http.HandlerFunc {
@@ -16,7 +19,9 @@ func CORSMiddleware() func(http.HandlerFunc) http.HandlerFunc {
 				w.Header().Set("Access-Control-Allow-Origin", "*")
 			}
 
-			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS")
+			if methods, ok := appctx.GetAllowedMethods(r.Context()); ok {
+				w.Header().Set("Access-Control-Allow-Methods", strings.Join(methods, ", "))
+			}
 			w.Header().Set("Access-Control-Allow-Headers",
 				"Content-Type, Authorization, X-Requested-With, Augno-Account-ID, Idempotency-Key, Accept, Origin, Augno-Version, "+
 					"X-Stainless-Arch, X-Stainless-Lang, X-Stainless-OS, X-Stainless-Package-Version, X-Stainless-Read-Timeout, "+

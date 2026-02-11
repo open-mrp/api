@@ -8,4 +8,8 @@ sql:
         out: "internal/infrastructure/sqlc"
         package: "sqlc"
         emit_prepared_queries: true
-
+        overrides:
+          - column: "message_outbox.headers"
+            go_type:
+              import: "github.com/augno/api/shared/db"
+              type: "NullableRawMessage"

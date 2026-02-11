@@ -1,61 +1,68 @@
 name: CI
 
 on:
-    pull_request:
-        branches: [main]
+  pull_request:
+    branches: [main]
 
 jobs:
-    lint:
-        name: Lint
-        runs-on: ubuntu-latest
-        env:
-            CGO_ENABLED: 0
-        steps:
-            - uses: actions/checkout@v4
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    env:
+      CGO_ENABLED: 0
+    steps:
+      - uses: actions/checkout@v4
 
-            - name: Set up Go
-              uses: actions/setup-go@v5
-              with:
-                  go-version-file: go.mod
-                  cache: true
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
 
-            - name: Cache CI Tools
-              uses: actions/cache@v4
-              id: cache-ci-tools
-              with:
-                  path: |
-                      ~/go/bin/gosec
-                      ~/go/bin/staticcheck
-                      ~/go/bin/vacuum
-                  key: ${{ runner.os }}-ci-tools-${{ hashFiles('scripts/install-ci-tools.sh') }}
-                  restore-keys: |
-                      ${{ runner.os }}-ci-tools-
+      - name: Cache CI Tools
+        uses: actions/cache@v4
+        id: cache-ci-tools
+        with:
+          path: |
+            ~/go/bin/gosec
+            ~/go/bin/staticcheck
+            ~/go/bin/vacuum
+          key: ${{ runner.os }}-ci-tools-${{ hashFiles('scripts/install-ci-tools.sh') }}
+          restore-keys: |
+            ${{ runner.os }}-ci-tools-
 
-            - name: Install CI Tools
-              run: make install-ci-tools
+      - name: Install CI Tools
+        run: make install-ci-tools
 
-            - name: Run Gosec
-              run: make gosec
+      - name: Validate version
+        run: |
+          source ./scripts/version.sh
+          validate_version "$(go run ./cmd/print-version)" || exit 1
 
-            - name: Run Static Check
-              run: make static-check
+      - name: Run Gosec
+        run: make gosec
 
-            - name: Run Doc Generation Check
-              run: make gen-openapi-specs
+      - name: Run Static Check
+        run: make static-check
 
-    test:
-        name: Test
-        runs-on: ubuntu-latest
-        env:
-            CGO_ENABLED: 0
-        steps:
-            - uses: actions/checkout@v4
+      - name: Run Doc Generation Check
+        run: make gen-openapi-specs
 
-            - name: Set up Go
-              uses: actions/setup-go@v5
-              with:
-                  go-version-file: go.mod
-                  cache: true
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    env:
+      GOTOOLCHAIN: local
+    steps:
+      - uses: actions/checkout@v4
 
-            - name: Run Tests
-              run: make test
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Display Go version
+        run: go version
+
+      - name: Run Tests
+        run: make test

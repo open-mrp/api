@@ -1,8 +1,6 @@
 package middleware
 
 import (
-	"crypto/rand"
-	"encoding/binary"
 	"fmt"
 	"net/http"
 	"sync"
@@ -10,7 +8,8 @@ import (
 
 	"github.com/augno/api/services/api-gateway/internal/header"
 	httptransport "github.com/augno/api/services/api-gateway/internal/http"
-	"github.com/augno/api/shared/contracts"
+	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/retry"
 )
 
 // A rate limiter with exponential backoff and jitter
@@ -25,14 +24,8 @@ type RateLimiter struct {
 	limit int
 	// Window of time to track requests
 	window time.Duration
-	// Base delay for exponential backoff
-	baseDelay time.Duration
-	// Maximum delay for exponential backoff
-	maxDelay time.Duration
-	// Multiplier for exponential backoff
-	multiplier float64
-	// Percentage of jitter to add (0.0 to 1.0)
-	jitterPercent float64
+	// Backoff configuration for retry-after calculation
+	backoffCfg retry.Config
 }
 
 func NewRateLimiter(limit int, window time.Duration) *RateLimiter {
@@ -42,10 +35,12 @@ func NewRateLimiter(limit int, window time.Duration) *RateLimiter {
 		lastViolation: make(map[string]time.Time),
 		limit:         limit,
 		window:        window,
-		baseDelay:     1 * time.Second,
-		maxDelay:      15 * time.Minute,
-		multiplier:    1.5,
-		jitterPercent: 0.1,
+		backoffCfg: retry.Config{
+			InitialWait:    1 * time.Second,
+			MaxWait:        15 * time.Minute,
+			Multiplier:     1.5,
+			JitterFraction: 0.1,
+		},
 	}
 }
 
@@ -115,38 +110,7 @@ func (rl *RateLimiter) GetResetAfterSeconds(key string) int {
 }
 
 func (rl *RateLimiter) calculateBackoffDelay(violationCount int) time.Duration {
-	if violationCount <= 0 {
-		return rl.baseDelay
-	}
-
-	delay := float64(rl.baseDelay) * rl.multiplier
-	for i := 1; i < violationCount; i++ {
-		delay *= rl.multiplier
-	}
-
-	if delay > float64(rl.maxDelay) {
-		delay = float64(rl.maxDelay)
-	}
-
-	if rl.jitterPercent > 0 {
-		jitterRange := delay * rl.jitterPercent
-		var buf [8]byte
-		if _, err := rand.Read(buf[:]); err != nil {
-			jitter := 0.0
-			delay += jitter
-		} else {
-			randomUint64 := binary.BigEndian.Uint64(buf[:])
-			randomFloat := float64(randomUint64) / float64(^uint64(0))
-			jitter := (randomFloat - 0.5) * 2 * jitterRange
-			delay += jitter
-		}
-
-		if delay < float64(rl.baseDelay) {
-			delay = float64(rl.baseDelay)
-		}
-	}
-
-	return time.Duration(delay)
+	return retry.CalculateDelay(&rl.backoffCfg, violationCount)
 }
 
 var globalRateLimiter *RateLimiter
@@ -173,15 +137,15 @@ func RateLimitMiddleware() func(http.HandlerFunc) http.HandlerFunc {
 
 			allowed, retryAfterSeconds, remaining := rateLimiter.IsAllowed(clientIP.String())
 
-			w.Header().Set("RateLimit-Limit", fmt.Sprintf("%d", rateLimiter.limit))
-			w.Header().Set("RateLimit-Remaining", fmt.Sprintf("%d", remaining))
-			w.Header().Set("RateLimit-Reset", fmt.Sprintf("%d", rateLimiter.GetResetAfterSeconds(clientIP.String())))
+			w.Header().Set(header.RateLimitLimitHeader, fmt.Sprintf("%d", rateLimiter.limit))
+			w.Header().Set(header.RateLimitRemainingHeader, fmt.Sprintf("%d", remaining))
+			w.Header().Set(header.RateLimitResetHeader, fmt.Sprintf("%d", rateLimiter.GetResetAfterSeconds(clientIP.String())))
 
 			if !allowed {
-				w.Header().Set("Content-Type", "application/json")
-				w.Header().Set("Retry-After", fmt.Sprintf("%d", retryAfterSeconds))
+				w.Header().Set(header.ContentTypeHeader, "application/json")
+				w.Header().Set(header.RetryAfterHeader, fmt.Sprintf("%d", retryAfterSeconds))
 				w.WriteHeader(http.StatusTooManyRequests)
-				httptransport.RespondWithAPIError(r.Context(), w, contracts.NewRateLimitExceededError("Too many requests. Please try again later."))
+				httptransport.RespondWithAPIError(r.Context(), w, apierror.NewRateLimitExceededError("Too many requests. Please try again later."))
 				return
 			}
 

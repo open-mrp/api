@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	apicontext "github.com/augno/api/services/api-gateway/internal/context"
+	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/contracts"
+	apierror "github.com/augno/api/shared/errors"
 )
 
 const (
@@ -19,8 +19,6 @@ const (
 
 	// Paths
 	authRoutePrefix = "/v1/auth"
-	// #nosec G101 - This is a route path, not a hardcoded credential
-	updatePasswordRoute = "/v1/auth/passwords"
 )
 
 type cookieOptions struct {
@@ -52,81 +50,23 @@ func getCookieOptions(isProduction bool, path string) cookieOptions {
 }
 
 func setAccessTokenCookie(w http.ResponseWriter, token string, opts cookieOptions) {
-	maxAge := 60 * 60 // 1 hour in seconds
-	expires := time.Now().Add(time.Duration(maxAge) * time.Second)
-
-	cookie := &http.Cookie{
-		Name:     accessTokenCookieName,
-		Value:    token,
-		Path:     opts.Path,
-		Domain:   opts.Domain,
-		MaxAge:   maxAge,
-		Expires:  expires,
-		Secure:   opts.Secure,
-		HttpOnly: true,
-		SameSite: opts.SameSite,
-	}
-
-	http.SetCookie(w, cookie)
+	http.SetCookie(w, makeAccessTokenCookie(token, opts))
 }
 
 func setRefreshTokenCookie(w http.ResponseWriter, token string, opts cookieOptions) {
-	maxAge := 30 * 24 * 60 * 60 // 30 days in seconds
-	expires := time.Now().Add(time.Duration(maxAge) * time.Second)
-
-	cookie := &http.Cookie{
-		Name:     refreshTokenCookieName,
-		Value:    token,
-		Path:     opts.Path,
-		Domain:   opts.Domain,
-		MaxAge:   maxAge,
-		Expires:  expires,
-		Secure:   opts.Secure,
-		HttpOnly: true,
-		SameSite: opts.SameSite,
-	}
-
-	http.SetCookie(w, cookie)
+	http.SetCookie(w, makeRefreshTokenCookie(token, opts))
 }
 
 func clearAccessTokenCookie(w http.ResponseWriter, opts cookieOptions) {
-	cookie := &http.Cookie{
-		Name:     accessTokenCookieName,
-		Value:    "",
-		Path:     opts.Path,
-		Domain:   opts.Domain,
-		MaxAge:   -1,
-		Expires:  time.Unix(0, 0),
-		Secure:   opts.Secure,
-		HttpOnly: true,
-		SameSite: opts.SameSite,
-	}
-
-	http.SetCookie(w, cookie)
+	http.SetCookie(w, makeClearAccessTokenCookie(opts))
 }
 
 func clearRefreshTokenCookie(w http.ResponseWriter, opts cookieOptions) {
-	cookie := &http.Cookie{
-		Name:     refreshTokenCookieName,
-		Value:    "",
-		Path:     opts.Path,
-		Domain:   opts.Domain,
-		MaxAge:   -1,
-		Expires:  time.Unix(0, 0),
-		Secure:   opts.Secure,
-		HttpOnly: true,
-		SameSite: opts.SameSite,
-	}
-
-	http.SetCookie(w, cookie)
+	http.SetCookie(w, makeClearRefreshTokenCookie(opts))
 }
 
-func SetAuthCookiesFromContext(ctx context.Context, accessToken, refreshToken string) {
-	w, ok := apicontext.GetResponseWriterFromContext(ctx)
-	if !ok {
-		panic("response writer not found in context")
-	}
-	platform, okp := apicontext.GetPlatformFromContext(ctx)
+func SetAuthCookies(ctx context.Context, w http.ResponseWriter, accessToken, refreshToken string) {
+	platform, okp := appctx.GetPlatformFromContext(ctx)
 	if !okp {
 		panic("platform not found in context")
 	}
@@ -136,12 +76,8 @@ func SetAuthCookiesFromContext(ctx context.Context, accessToken, refreshToken st
 	setRefreshTokenCookie(w, refreshToken, getCookieOptions(isProduction, authRoutePrefix))
 }
 
-func SetAccessTokenCookieFromContext(ctx context.Context, accessToken string) {
-	w, ok := apicontext.GetResponseWriterFromContext(ctx)
-	if !ok {
-		panic("response writer not found in context")
-	}
-	platform, okp := apicontext.GetPlatformFromContext(ctx)
+func SetAccessTokenCookie(ctx context.Context, w http.ResponseWriter, accessToken string) {
+	platform, okp := appctx.GetPlatformFromContext(ctx)
 	if !okp {
 		panic("platform not found in context")
 	}
@@ -149,12 +85,8 @@ func SetAccessTokenCookieFromContext(ctx context.Context, accessToken string) {
 	setAccessTokenCookie(w, accessToken, getCookieOptions(isProduction, "/"))
 }
 
-func ClearRefreshTokenCookieFromContext(ctx context.Context) {
-	w, ok := apicontext.GetResponseWriterFromContext(ctx)
-	if !ok {
-		panic("response writer not found in context")
-	}
-	platform, okp := apicontext.GetPlatformFromContext(ctx)
+func ClearRefreshTokenCookie(ctx context.Context, w http.ResponseWriter) {
+	platform, okp := appctx.GetPlatformFromContext(ctx)
 	if !okp {
 		panic("platform not found in context")
 	}
@@ -162,12 +94,8 @@ func ClearRefreshTokenCookieFromContext(ctx context.Context) {
 	clearRefreshTokenCookie(w, getCookieOptions(isProduction, authRoutePrefix))
 }
 
-func ClearAccessTokenCookieFromContext(ctx context.Context) {
-	w, ok := apicontext.GetResponseWriterFromContext(ctx)
-	if !ok {
-		panic("response writer not found in context")
-	}
-	platform, okp := apicontext.GetPlatformFromContext(ctx)
+func ClearAccessTokenCookie(ctx context.Context, w http.ResponseWriter) {
+	platform, okp := appctx.GetPlatformFromContext(ctx)
 	if !okp {
 		panic("platform not found in context")
 	}
@@ -175,30 +103,122 @@ func ClearAccessTokenCookieFromContext(ctx context.Context) {
 	clearAccessTokenCookie(w, getCookieOptions(isProduction, "/"))
 }
 
-func GetAccessTokenFromRequest(r *http.Request) (string, *contracts.APIError) {
+func GetAccessTokenFromRequest(r *http.Request) (string, *apierror.APIError) {
 	cookie, err := r.Cookie(accessTokenCookieName)
 	if err != nil || cookie == nil || cookie.Value == "" {
-		return "", contracts.NewResourceNotFoundError("Access token cookie not found")
-	}
-
-	// Access tokens are restricted to non-auth routes, except for update password.
-	if strings.HasPrefix(r.URL.Path, authRoutePrefix) && r.URL.Path != updatePasswordRoute {
-		return "", contracts.NewResourceNotFoundError("Access token cookie not allowed for this route")
+		return "", apierror.NewResourceNotFoundError("Access token cookie not found")
 	}
 
 	return cookie.Value, nil
 }
 
-func GetRefreshTokenFromRequest(r *http.Request) (string, *contracts.APIError) {
+func GetRefreshTokenFromRequest(r *http.Request) (string, *apierror.APIError) {
 	cookie, err := r.Cookie(refreshTokenCookieName)
 	if err != nil || cookie == nil || cookie.Value == "" {
-		return "", contracts.NewResourceNotFoundError("Refresh token cookie not found")
+		return "", apierror.NewResourceNotFoundError("Refresh token cookie not found")
 	}
 
 	// Refresh tokens are restricted to auth routes.
 	if !strings.HasPrefix(r.URL.Path, authRoutePrefix) {
-		return "", contracts.NewResourceNotFoundError("Refresh token cookie not allowed for this route")
+		return "", apierror.NewResourceNotFoundError("Refresh token cookie not allowed for this route")
 	}
 
 	return cookie.Value, nil
+}
+
+func MakeAuthCookies(ctx context.Context, accessToken, refreshToken string) []*http.Cookie {
+	platform, okp := appctx.GetPlatformFromContext(ctx)
+	if !okp {
+		panic("platform not found in context")
+	}
+	isProduction := platform == constants.PlatformModeProduction
+
+	return []*http.Cookie{
+		makeAccessTokenCookie(accessToken, getCookieOptions(isProduction, "/")),
+		makeRefreshTokenCookie(refreshToken, getCookieOptions(isProduction, authRoutePrefix)),
+	}
+}
+
+func MakeAccessTokenCookie(ctx context.Context, accessToken string) *http.Cookie {
+	platform, okp := appctx.GetPlatformFromContext(ctx)
+	if !okp {
+		panic("platform not found in context")
+	}
+	isProduction := platform == constants.PlatformModeProduction
+	return makeAccessTokenCookie(accessToken, getCookieOptions(isProduction, "/"))
+}
+
+func MakeClearAuthCookies(ctx context.Context) []*http.Cookie {
+	platform, okp := appctx.GetPlatformFromContext(ctx)
+	if !okp {
+		panic("platform not found in context")
+	}
+	isProduction := platform == constants.PlatformModeProduction
+
+	return []*http.Cookie{
+		makeClearAccessTokenCookie(getCookieOptions(isProduction, "/")),
+		makeClearRefreshTokenCookie(getCookieOptions(isProduction, authRoutePrefix)),
+	}
+}
+
+func makeAccessTokenCookie(token string, opts cookieOptions) *http.Cookie {
+	maxAge := 60 * 60
+	expires := time.Now().UTC().Add(time.Duration(maxAge) * time.Second)
+
+	return &http.Cookie{
+		Name:     accessTokenCookieName,
+		Value:    token,
+		Path:     opts.Path,
+		Domain:   opts.Domain,
+		MaxAge:   maxAge,
+		Expires:  expires,
+		Secure:   opts.Secure,
+		HttpOnly: true,
+		SameSite: opts.SameSite,
+	}
+}
+
+func makeRefreshTokenCookie(token string, opts cookieOptions) *http.Cookie {
+	maxAge := 30 * 24 * 60 * 60
+	expires := time.Now().UTC().Add(time.Duration(maxAge) * time.Second)
+
+	return &http.Cookie{
+		Name:     refreshTokenCookieName,
+		Value:    token,
+		Path:     opts.Path,
+		Domain:   opts.Domain,
+		MaxAge:   maxAge,
+		Expires:  expires,
+		Secure:   opts.Secure,
+		HttpOnly: true,
+		SameSite: opts.SameSite,
+	}
+}
+
+func makeClearAccessTokenCookie(opts cookieOptions) *http.Cookie {
+	return &http.Cookie{
+		Name:     accessTokenCookieName,
+		Value:    "",
+		Path:     opts.Path,
+		Domain:   opts.Domain,
+		MaxAge:   -1,
+		Expires:  time.Unix(0, 0),
+		Secure:   opts.Secure,
+		HttpOnly: true,
+		SameSite: opts.SameSite,
+	}
+}
+
+func makeClearRefreshTokenCookie(opts cookieOptions) *http.Cookie {
+	return &http.Cookie{
+		Name:     refreshTokenCookieName,
+		Value:    "",
+		Path:     opts.Path,
+		Domain:   opts.Domain,
+		MaxAge:   -1,
+		Expires:  time.Unix(0, 0),
+		Secure:   opts.Secure,
+		HttpOnly: true,
+		SameSite: opts.SameSite,
+	}
 }

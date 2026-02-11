@@ -2,45 +2,22 @@ package authep
 
 import (
 	"context"
-	"fmt"
 	"net/http"
-	"strings"
-	"sync"
 
 	grpcclient "github.com/augno/api/services/api-gateway/grpc-client"
-	httptransport "github.com/augno/api/services/api-gateway/internal/http"
 	"github.com/augno/api/services/api-gateway/internal/middleware"
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/contracts"
-	"github.com/augno/api/shared/validate"
+	apierror "github.com/augno/api/shared/errors"
 )
 
 // The request to update a user's password
 type UpdatePasswordRequest struct {
 	// The user's current password
-	OldPassword string `json:"old_password" validate:"required" example:"super-secret-password"`
+	OldPassword string `json:"old_password" validate:"required,password"`
 	// The new password to be set
-	NewPassword string `json:"new_password" validate:"required" example:"new-super-secret-password"`
-}
-
-func (lr *UpdatePasswordRequest) Validate() error {
-	v := validate.New()
-
-	validate.ValidatePasswordPlaintext(v, lr.OldPassword)
-	validate.ValidatePasswordPlaintext(v, lr.NewPassword)
-
-	if !v.Valid() {
-		var errorMessages []string
-		for field, message := range v.Errors {
-			errorMessages = append(errorMessages, fmt.Sprintf("%s: %s", field, message))
-		}
-		return contracts.NewValidationError(strings.Join(errorMessages, "; "))
-	}
-
-	return nil
+	NewPassword string `json:"new_password" validate:"required,password"`
 }
 
 var sampleUpdatePasswordRequest = &UpdatePasswordRequest{
@@ -52,72 +29,38 @@ func (*UpdatePasswordRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdatePasswordRequest)
 }
 
-const updatePasswordEndpointDescription = `This endpoint is utilized to update a user's password. 
-Once completed, the user object is returned. Learn more about authentication and authorization in 
-our [documentation](https://docs.augno.com/guides/authentication).
-`
+const updatePasswordEndpointDescription = `This endpoint is utilized to create a new password for a user. Once completed, new cookies 
+are set in cookies.`
 
-type UpdatePasswordEndpoint struct {
-	apiendpoint.APIEndpoint[*UpdatePasswordRequest, *apiresource.EmptyResource]
+type UpdatePasswordEndpoint struct{}
 
-	group          *apiendpoint.APIEndpointGroup
-	service        AuthCtrl
-	platform       constants.PlatformMode
-	authMiddleware func(http.HandlerFunc) http.HandlerFunc
-	bindOnce       sync.Once
-	handler        http.HandlerFunc
-}
-
-func (e *UpdatePasswordEndpoint) Materialize() apiendpoint.APIEndpointer {
-	e.APIEndpoint = apiendpoint.APIEndpoint[*UpdatePasswordRequest, *apiresource.EmptyResource]{
-		Title:             "Update Password",
+func (e *UpdatePasswordEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdatePasswordRequest, *apiresource.EmptyResource] {
+	return &apiendpoint.APIEndpoint[*UpdatePasswordRequest, *apiresource.EmptyResource]{
+		Title:             "Create New Password",
 		Description:       updatePasswordEndpointDescription,
-		Method:            http.MethodPut,
+		Method:            http.MethodPost,
 		Route:             "/v1/auth/passwords",
 		ContentType:       "application/json",
 		Request:           &UpdatePasswordRequest{},
 		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusOK,
-		IsPublic:          false,
-		Handler: func(ctrl any) apiendpoint.HandlerFunc[
-			*UpdatePasswordRequest, *apiresource.EmptyResource,
-		] {
-			return apiendpoint.HandlerFunc[
-				*UpdatePasswordRequest, *apiresource.EmptyResource,
-			](func(ctx context.Context, req *UpdatePasswordRequest) (*apiresource.EmptyResource, *contracts.APIError) {
-				return ctrl.(AuthCtrl).UpdatePassword(ctx, req)
-			})
+		Public:            false,
+		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdatePasswordRequest) (*apiresource.EmptyResource, *apierror.APIError) {
+			return svc.(AuthSvc).UpdatePassword
 		},
 		Extras: apiendpoint.APIEndpointExtras{
 			AllowUnknownJSONFields: false,
 		},
 	}
-	return e
 }
 
-func (e *UpdatePasswordEndpoint) GetHandler() http.HandlerFunc {
-	e.bindOnce.Do(func() {
-		be := apiendpoint.Bind(e.APIEndpoint, e.service)
-		e.handler = httptransport.ConvertToHTTPHandler(be)
-		if e.authMiddleware != nil {
-			e.handler = e.authMiddleware(e.handler)
-		}
-	})
-	return e.handler
-}
-
-func (e *UpdatePasswordEndpoint) WithGroup(g *apiendpoint.APIEndpointGroup, service AuthCtrl, platform constants.PlatformMode, authClient *grpcclient.AuthServiceClient) *UpdatePasswordEndpoint {
-	e.group = g
-	e.service = service
-	e.platform = platform
-
-	// Configure AuthMiddleware for this endpoint
+func (e *UpdatePasswordEndpoint) MaterializeWithMiddleware(authClient *grpcclient.AuthServiceClient) *apiendpoint.APIEndpoint[*UpdatePasswordRequest, *apiresource.EmptyResource] {
+	ep := e.Materialize()
 	if authClient != nil {
 		authMiddlewareConfig := middleware.AuthMiddlewareConfig{
 			AuthClient: authClient,
 		}
-		e.authMiddleware = middleware.AuthMiddleware(authMiddlewareConfig)
+		ep.WithMiddleware(middleware.AuthMiddleware(authMiddlewareConfig))
 	}
-
-	return e
+	return ep
 }

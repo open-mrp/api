@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/contracts"
+	apierror "github.com/augno/api/shared/errors"
 
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -23,18 +23,14 @@ type JWTClaims struct {
 }
 
 type JWTUtils interface {
-	Encode(ctx context.Context, userID string, expiresIn time.Duration, tokenType JWTType) (string, *contracts.APIError)
-	Decode(ctx context.Context, tokenString string, expectedType JWTType) (*JWTClaims, *contracts.APIError)
-}
-
-type OpaqueTokenUtils interface {
-	Gen(ctx context.Context) (string, *contracts.APIError)
+	Encode(ctx context.Context, userID string, expiresIn time.Duration, tokenType JWTType) (string, *apierror.APIError)
+	Decode(ctx context.Context, tokenString string, expectedType JWTType) (*JWTClaims, *apierror.APIError)
 }
 
 type APIKeyUtils interface {
-	Gen(ctx context.Context, appMode constants.AccountMode) (*ParsedAPIKey, *contracts.APIError)
-	Parse(ctx context.Context, key string) (*ParsedAPIKey, *contracts.APIError)
-	GenSecretHMAC(ctx context.Context, secret string) ([]byte, *contracts.APIError)
-	VerifySecretHMAC(ctx context.Context, secret string, expectedHMAC []byte) (bool, *contracts.APIError)
+	Gen(ctx context.Context, appMode constants.AccountMode) (*ParsedAPIKey, *apierror.APIError)
+	Parse(ctx context.Context, key string) (*ParsedAPIKey, *apierror.APIError)
+	GenSecretHMAC(ctx context.Context, secret string) ([]byte, *apierror.APIError)
+	VerifySecretHMAC(ctx context.Context, secret string, expectedHMAC []byte) (bool, *apierror.APIError)
 	SanitizeForDisplay(apiKey string) string
 }

@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/augno/api/services/api-gateway/internal/testutil"
-	"github.com/augno/api/shared/contracts"
+	apierror "github.com/augno/api/shared/errors"
 )
 
 func TestValidateAndExtractAuthHeader(t *testing.T) {
@@ -14,7 +14,7 @@ func TestValidateAndExtractAuthHeader(t *testing.T) {
 		name           string
 		authHeader     string
 		expectedResult *AuthHeaderResult
-		expectedError  *contracts.APIError
+		expectedError  *apierror.APIError
 		hasError       bool
 	}{
 		// Valid Basic auth headers
@@ -211,57 +211,57 @@ func TestValidateAndExtractAuthHeader_ErrorMessages(t *testing.T) {
 	tests := []struct {
 		name                string
 		authHeader          string
-		expectedErrorCode   contracts.ErrorCode
-		expectedErrorType   contracts.ErrorType
+		expectedErrorCode   apierror.ErrorCode
+		expectedErrorType   apierror.ErrorType
 		expectedMessagePart string
 	}{
 		{
 			name:                "empty auth header error",
 			authHeader:          "",
-			expectedErrorCode:   contracts.ErrorCodeInvalidCredentials,
-			expectedErrorType:   contracts.ErrorTypeInvalidRequest,
+			expectedErrorCode:   apierror.ErrorCodeInvalidCredentials,
+			expectedErrorType:   apierror.ErrorTypeInvalidRequest,
 			expectedMessagePart: "Authorization header is required",
 		},
 		{
 			name:                "bearer without token error",
 			authHeader:          "Bearer",
-			expectedErrorCode:   contracts.ErrorCodeInvalidCredentials,
-			expectedErrorType:   contracts.ErrorTypeInvalidRequest,
+			expectedErrorCode:   apierror.ErrorCodeInvalidCredentials,
+			expectedErrorType:   apierror.ErrorTypeInvalidRequest,
 			expectedMessagePart: "You provided 'Bearer' but no token",
 		},
 		{
 			name:                "basic without token error",
 			authHeader:          "Basic",
-			expectedErrorCode:   contracts.ErrorCodeInvalidCredentials,
-			expectedErrorType:   contracts.ErrorTypeInvalidRequest,
+			expectedErrorCode:   apierror.ErrorCodeInvalidCredentials,
+			expectedErrorType:   apierror.ErrorTypeInvalidRequest,
 			expectedMessagePart: "You provided 'Basic' but no token",
 		},
 		{
 			name:                "invalid auth scheme error",
 			authHeader:          "Digest token123",
-			expectedErrorCode:   contracts.ErrorCodeInvalidCredentials,
-			expectedErrorType:   contracts.ErrorTypeInvalidRequest,
+			expectedErrorCode:   apierror.ErrorCodeInvalidCredentials,
+			expectedErrorType:   apierror.ErrorTypeInvalidRequest,
 			expectedMessagePart: "Expected 'Basic <token>:' or 'Bearer <token>'",
 		},
 		{
 			name:                "bearer with undefined token error",
 			authHeader:          "Bearer undefined",
-			expectedErrorCode:   contracts.ErrorCodeInvalidCredentials,
-			expectedErrorType:   contracts.ErrorTypeInvalidRequest,
+			expectedErrorCode:   apierror.ErrorCodeInvalidCredentials,
+			expectedErrorType:   apierror.ErrorTypeInvalidRequest,
 			expectedMessagePart: "If you are sending the request with JavaScript",
 		},
 		{
 			name:                "bearer with null token error",
 			authHeader:          "Bearer null",
-			expectedErrorCode:   contracts.ErrorCodeInvalidCredentials,
-			expectedErrorType:   contracts.ErrorTypeInvalidRequest,
+			expectedErrorCode:   apierror.ErrorCodeInvalidCredentials,
+			expectedErrorType:   apierror.ErrorTypeInvalidRequest,
 			expectedMessagePart: "If you are sending the request with Java",
 		},
 		{
 			name:                "bearer with None token error",
 			authHeader:          "Bearer None",
-			expectedErrorCode:   contracts.ErrorCodeInvalidCredentials,
-			expectedErrorType:   contracts.ErrorTypeInvalidRequest,
+			expectedErrorCode:   apierror.ErrorCodeInvalidCredentials,
+			expectedErrorType:   apierror.ErrorTypeInvalidRequest,
 			expectedMessagePart: "If you are sending the request with Python",
 		},
 	}

@@ -65,23 +65,54 @@ docker_build_with_restart(
   only=[
     './build/auth-service',
     './shared',
-    './services/auth-service/templates',
   ],
   live_update=[
     sync('./build', '/app/build'),
     sync('./shared', '/app/shared'),
-    sync('./services/auth-service/templates', '/app/services/auth-service/templates'),
   ],
 )
 
 k8s_yaml('./infra/development/kubernetes/apps/auth-service.yaml')
 k8s_resource(
   'auth-service',
-  port_forwards='9092:9093',
-  resource_deps=['auth-service-compile', 'rabbitmq'],
+  port_forwards='9092:9092',
+  resource_deps=['auth-service-compile', 'rabbitmq', 'core-service'],
   labels='services',
 )
 ### End of Auth Service ###
+
+### Core Service ###
+
+core_service_compile_cmd = 'CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/core-service ./services/core-service/cmd'
+
+local_resource(
+  'core-service-compile',
+  core_service_compile_cmd,
+  deps=['./services/core-service', './shared'], labels="compiles")
+
+docker_build_with_restart(
+  'augno-api/core-service',
+  '.',
+  entrypoint=['/app/build/core-service'],
+  dockerfile='./infra/development/docker/core-service.Dockerfile',
+  only=[
+    './build/core-service',
+    './shared',
+  ],
+  live_update=[
+    sync('./build', '/app/build'),
+    sync('./shared', '/app/shared'),
+  ],
+)
+
+k8s_yaml('./infra/development/kubernetes/apps/core-service.yaml')
+k8s_resource(
+  'core-service',
+  port_forwards='9094:9092',
+  resource_deps=['core-service-compile'],
+  labels='services',
+)
+### End of Core Service ###
 
 ### Notification Service ###
 
@@ -118,20 +149,20 @@ k8s_resource(
 
 ### Logging Service ###
 
-logging_service_compile_cmd = 'CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/logging-service ./services/logging-service/cmd'
+platform_service_compile_cmd = 'CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/platform-service ./services/platform-service/cmd'
 
 local_resource(
-  'logging-service-compile',
-  logging_service_compile_cmd,
-  deps=['./services/logging-service', './shared'], labels="compiles")
+  'platform-service-compile',
+  platform_service_compile_cmd,
+  deps=['./services/platform-service', './shared'], labels="compiles")
 
 docker_build_with_restart(
-  'augno-api/logging-service',
+  'augno-api/platform-service',
   '.',
-  entrypoint=['/app/build/logging-service'],
-  dockerfile='./infra/development/docker/logging-service.Dockerfile',
+  entrypoint=['/app/build/platform-service'],
+  dockerfile='./infra/development/docker/platform-service.Dockerfile',
   only=[
-    './build/logging-service',
+    './build/platform-service',
     './shared',
   ],
   live_update=[
@@ -140,10 +171,43 @@ docker_build_with_restart(
   ],
 )
 
-k8s_yaml('./infra/development/kubernetes/apps/logging-service.yaml')
+k8s_yaml('./infra/development/kubernetes/apps/platform-service.yaml')
 k8s_resource(
-  'logging-service',
-  resource_deps=['logging-service-compile', 'rabbitmq'],
+  'platform-service',
+  resource_deps=['platform-service-compile', 'rabbitmq'],
   labels='services',
 )
 ### End of Logging Service ###
+
+### Payment Service ###
+
+# payment_service_compile_cmd = 'CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/billing-service ./services/billing-service/cmd'
+
+# local_resource(
+#   'billing-service-compile',
+#   payment_service_compile_cmd,
+#   deps=['./services/billing-service', './shared'], labels="compiles")
+
+# docker_build_with_restart(
+#   'augno-api/billing-service',
+#   '.',
+#   entrypoint=['/app/build/billing-service'],
+#   dockerfile='./infra/development/docker/billing-service.Dockerfile',
+#   only=[
+#     './build/billing-service',
+#     './shared',
+#   ],
+#   live_update=[
+#     sync('./build', '/app/build'),
+#     sync('./shared', '/app/shared'),
+#   ],
+# )
+
+# k8s_yaml('./infra/development/kubernetes/apps/billing-service.yaml')
+# k8s_resource(
+#   'billing-service',
+#   port_forwards='9095:9092',
+#   resource_deps=['billing-service-compile'],
+#   labels='services',
+# )
+### End of Payment Service ###

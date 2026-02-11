@@ -6,12 +6,12 @@ import (
 
 	"github.com/augno/api/services/auth-service/internal/domain"
 	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/contracts"
+	apierror "github.com/augno/api/shared/errors"
 )
 
-func TestDefaultAPIKeyConfig(t *testing.T) {
+func TestAPIKeyConfigWithDefaults(t *testing.T) {
 	pepper := []byte("test-pepper")
-	apiKeyConfig := DefaultAPIKeyConfig(pepper)
+	apiKeyConfig := (&APIKeyConfig{Pepper: pepper}).WithDefaults()
 
 	if apiKeyConfig.SecretKeyStrength != KeyStrengthHigh {
 		t.Errorf("Expected SecretKeyStrength to be %s, got %s", KeyStrengthHigh, apiKeyConfig.SecretKeyStrength)
@@ -27,7 +27,7 @@ func TestDefaultAPIKeyConfig(t *testing.T) {
 }
 
 func TestNewAPIKeyUtils(t *testing.T) {
-	apiKeyConfig := APIKeyConfig{
+	apiKeyConfig := &APIKeyConfig{
 		SecretKeyStrength: KeyStrengthMedium,
 		IDKeyStrength:     KeyStrengthLow,
 		Pepper:            []byte("test-pepper"),
@@ -43,7 +43,7 @@ func TestNewAPIKeyUtils(t *testing.T) {
 }
 
 func TestAPIKeyUtils_Generate(t *testing.T) {
-	apiKeyConfig := DefaultAPIKeyConfig([]byte("test-pepper"))
+	apiKeyConfig := &APIKeyConfig{Pepper: []byte("test-pepper")}
 	utils := NewAPIKeyUtils(apiKeyConfig)
 
 	tests := []struct {
@@ -100,7 +100,7 @@ func TestAPIKeyUtils_Generate(t *testing.T) {
 }
 
 func TestAPIKeyUtils_Generate_Uniqueness(t *testing.T) {
-	apiKeyConfig := DefaultAPIKeyConfig([]byte("test-pepper"))
+	apiKeyConfig := &APIKeyConfig{Pepper: []byte("test-pepper")}
 	utils := NewAPIKeyUtils(apiKeyConfig)
 
 	// Generate multiple keys and ensure they're unique
@@ -120,7 +120,7 @@ func TestAPIKeyUtils_Generate_Uniqueness(t *testing.T) {
 }
 
 func TestAPIKeyUtils_Parse_ValidKeys(t *testing.T) {
-	apiKeyConfig := DefaultAPIKeyConfig([]byte("test-pepper"))
+	apiKeyConfig := &APIKeyConfig{Pepper: []byte("test-pepper")}
 	utils := NewAPIKeyUtils(apiKeyConfig)
 
 	// Generate a valid key first
@@ -156,7 +156,7 @@ func TestAPIKeyUtils_Parse_ValidKeys(t *testing.T) {
 }
 
 func TestAPIKeyUtils_Parse_InvalidKeys(t *testing.T) {
-	apiKeyConfig := DefaultAPIKeyConfig([]byte("test-pepper"))
+	apiKeyConfig := &APIKeyConfig{Pepper: []byte("test-pepper")}
 	utils := NewAPIKeyUtils(apiKeyConfig)
 
 	tests := []struct {
@@ -214,7 +214,7 @@ func TestAPIKeyUtils_Parse_InvalidKeys(t *testing.T) {
 			}
 
 			if tt.expectError && err != nil {
-				if err.Type != contracts.ErrorTypeInvalidRequest {
+				if err.Type != apierror.ErrorTypeInvalidRequest {
 					t.Errorf("Parse() expected invalid request error, got: %s", err.Type)
 				}
 			}
@@ -224,7 +224,7 @@ func TestAPIKeyUtils_Parse_InvalidKeys(t *testing.T) {
 
 func TestAPIKeyUtils_GenerateSecretHMAC(t *testing.T) {
 	pepper := []byte("test-pepper-123")
-	apiKeyConfig := APIKeyConfig{Pepper: pepper}
+	apiKeyConfig := &APIKeyConfig{Pepper: pepper}
 	utils := NewAPIKeyUtils(apiKeyConfig)
 
 	secret := "test-secret"
@@ -257,7 +257,7 @@ func TestAPIKeyUtils_GenerateSecretHMAC(t *testing.T) {
 
 func TestAPIKeyUtils_VerifySecretHMAC(t *testing.T) {
 	pepper := []byte("test-pepper-123")
-	apiKeyConfig := APIKeyConfig{Pepper: pepper}
+	apiKeyConfig := &APIKeyConfig{Pepper: pepper}
 	utils := NewAPIKeyUtils(apiKeyConfig)
 
 	secret := "test-secret"
@@ -306,7 +306,7 @@ func TestAPIKeyUtils_LengthForKeyStrength(t *testing.T) {
 	// and checking their lengths
 
 	// Test low strength
-	lowConfig := APIKeyConfig{
+	lowConfig := &APIKeyConfig{
 		SecretKeyStrength: KeyStrengthLow,
 		IDKeyStrength:     KeyStrengthLow,
 		Pepper:            []byte("test-pepper"),
@@ -326,7 +326,7 @@ func TestAPIKeyUtils_LengthForKeyStrength(t *testing.T) {
 	}
 
 	// Test medium strength
-	mediumConfig := APIKeyConfig{
+	mediumConfig := &APIKeyConfig{
 		SecretKeyStrength: KeyStrengthMedium,
 		IDKeyStrength:     KeyStrengthMedium,
 		Pepper:            []byte("test-pepper"),
@@ -346,7 +346,7 @@ func TestAPIKeyUtils_LengthForKeyStrength(t *testing.T) {
 	}
 
 	// Test high strength
-	highConfig := APIKeyConfig{
+	highConfig := &APIKeyConfig{
 		SecretKeyStrength: KeyStrengthHigh,
 		IDKeyStrength:     KeyStrengthHigh,
 		Pepper:            []byte("test-pepper"),
@@ -384,7 +384,7 @@ func TestParsedAPIKey_String(t *testing.T) {
 
 func TestAPIKeyUtils_Integration(t *testing.T) {
 	// Test the full flow: generate -> string -> parse -> verify
-	apiKeyConfig := DefaultAPIKeyConfig([]byte("test-pepper"))
+	apiKeyConfig := &APIKeyConfig{Pepper: []byte("test-pepper")}
 	utils := NewAPIKeyUtils(apiKeyConfig)
 
 	// Generate a key

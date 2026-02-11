@@ -8,11 +8,12 @@ import (
 
 	"github.com/augno/api/services/auth-service/internal/apikey"
 	"github.com/augno/api/services/auth-service/internal/domain"
+	clientmock "github.com/augno/api/services/auth-service/internal/domain/mock/client"
 	factorymock "github.com/augno/api/services/auth-service/internal/domain/mock/factory"
 	repositorymock "github.com/augno/api/services/auth-service/internal/domain/mock/repository"
 	"github.com/augno/api/services/auth-service/internal/testutil"
 	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/contracts"
+	apierror "github.com/augno/api/shared/errors"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
@@ -39,16 +40,18 @@ type APIKeyMedTestSuite struct {
 
 // SetupSuite runs once before all tests in the suite
 func (suite *APIKeyMedTestSuite) SetupSuite() {
-	apiKeyConfig := apikey.DefaultAPIKeyConfig([]byte(testutil.Pepper))
-	suite.apiKeyUtils = apikey.NewAPIKeyUtils(apiKeyConfig)
+	suite.apiKeyUtils = apikey.NewAPIKeyUtils(&apikey.APIKeyConfig{Pepper: []byte(testutil.Pepper)})
 	suite.ctrl = gomock.NewController(suite.T())
 	suite.apiKeyRepo = repositorymock.NewMockAPIKeyRepo(suite.ctrl)
 	suite.repoFactory = factorymock.NewMockRepoFactory(suite.ctrl)
 	suite.repoFactory.EXPECT().NewAPIKeyRepo().Return(suite.apiKeyRepo).AnyTimes()
 
+	coreClientMock := clientmock.NewMockAuthCoreClient(suite.ctrl)
+
 	apiKeyMedConfig := APIKeyMedConfig{
 		Repos:       suite.repoFactory,
 		APIKeyUtils: suite.apiKeyUtils,
+		CoreClient:  coreClientMock,
 	}
 	suite.apiKeyMed = NewAPIKeyMed(apiKeyMedConfig)
 
@@ -127,7 +130,7 @@ func (suite *APIKeyMedTestSuite) TestFind_ValidSandboxAPIKey() {
 
 	suite.Nil(err)
 	suite.NotNil(apiKey)
-	suite.Equal(testutil.EntityIDAPIKeyValidSandboxMode, apiKey.ID)
+	suite.Equal(testutil.EntityIDAPIKeyValidSandboxMode, apiKey.KeyID)
 	suite.Equal(testutil.EntityIDAccount, apiKey.OwnerAccountID)
 	suite.Equal(testutil.EntityIDRole, apiKey.RoleID)
 }
@@ -143,7 +146,7 @@ func (suite *APIKeyMedTestSuite) TestFind_ValidProdAPIKey() {
 
 	suite.Nil(err)
 	suite.NotNil(apiKey)
-	suite.Equal(testutil.EntityIDAPIKeyValidProdMode, apiKey.ID)
+	suite.Equal(testutil.EntityIDAPIKeyValidProdMode, apiKey.KeyID)
 	suite.Equal(testutil.EntityIDAccount, apiKey.OwnerAccountID)
 	suite.Equal(testutil.EntityIDRole, apiKey.RoleID)
 }
@@ -159,7 +162,7 @@ func (suite *APIKeyMedTestSuite) TestFind_NeverExpires() {
 
 	suite.Nil(err)
 	suite.NotNil(apiKey)
-	suite.Equal(testutil.EntityIDAPIKeyNeverExpires, apiKey.ID)
+	suite.Equal(testutil.EntityIDAPIKeyNeverExpires, apiKey.KeyID)
 	suite.Nil(apiKey.ExpiresAt)
 }
 
@@ -173,7 +176,7 @@ func (suite *APIKeyMedTestSuite) TestFind_ExpiredAPIKey() {
 	apiKey, err := suite.apiKeyMed.FindAndValidate(ctx, testutil.ApiKeyExpired)
 
 	suite.NotNil(err)
-	suite.Equal(contracts.ErrorCodeExpiredAPIKey, err.Code)
+	suite.Equal(apierror.ErrorCodeExpiredAPIKey, err.Code)
 	suite.Nil(apiKey)
 }
 
@@ -187,7 +190,9 @@ func (suite *APIKeyMedTestSuite) TestFind_BadSecret() {
 	wrongSecretHash, err := suite.apiKeyUtils.GenSecretHMAC(context.Background(), "wrong-secret")
 	suite.Nil(err)
 	badSecretModel := &domain.APIKey{
-		ID:             validKey.ID,
+		ID:             1,
+		TypeID:         "apikey_sandbox",
+		KeyID:          validKey.ID,
 		Name:           "Bad Secret Key",
 		OwnerAccountID: testutil.EntityIDAccount,
 		RoleID:         testutil.EntityIDRole,
@@ -204,7 +209,7 @@ func (suite *APIKeyMedTestSuite) TestFind_BadSecret() {
 	apiKey, err := suite.apiKeyMed.FindAndValidate(ctx, keyString)
 
 	suite.NotNil(err)
-	suite.Equal(contracts.ErrorCodeInvalidCredentials, err.Code)
+	suite.Equal(apierror.ErrorCodeInvalidCredentials, err.Code)
 	suite.Nil(apiKey)
 }
 
@@ -212,13 +217,13 @@ func (suite *APIKeyMedTestSuite) TestFind_InvalidAPIKey() {
 	ctx := context.Background()
 	suite.apiKeyRepo.EXPECT().
 		Find(gomock.Any(), testutil.EntityIDAPIKeyInvalid).
-		Return(nil, nil).
+		Return(nil, apierror.NewResourceNotFoundError("API key not found")).
 		Times(1)
 
 	apiKey, err := suite.apiKeyMed.FindAndValidate(ctx, testutil.ApiKeyInvalid)
 
 	suite.NotNil(err)
-	suite.Equal(contracts.ErrorCodeInvalidCredentials, err.Code)
+	suite.Equal(apierror.ErrorCodeInvalidCredentials, err.Code)
 	suite.Nil(apiKey)
 }
 
@@ -226,13 +231,13 @@ func (suite *APIKeyMedTestSuite) TestFind_RepoError() {
 	ctx := context.Background()
 	suite.apiKeyRepo.EXPECT().
 		Find(gomock.Any(), testutil.EntityIDAPIKeyValidSandboxMode).
-		Return(nil, contracts.NewInternalError(fmt.Errorf("database error"), "Database connection failed")).
+		Return(nil, apierror.NewInternalError(fmt.Errorf("database error"), "Database connection failed")).
 		Times(1)
 
 	apiKey, err := suite.apiKeyMed.FindAndValidate(ctx, testutil.APIKeyValidSandboxMode)
 
 	suite.NotNil(err)
-	suite.Equal(contracts.ErrorCodeInternalError, err.Code)
+	suite.Equal(apierror.ErrorCodeInternalError, err.Code)
 	suite.Nil(apiKey)
 }
 
@@ -241,7 +246,7 @@ func (suite *APIKeyMedTestSuite) TestFind_InvalidFormat() {
 	apiKey, err := suite.apiKeyMed.FindAndValidate(ctx, "not-an-api-key")
 
 	suite.NotNil(err)
-	suite.Equal(contracts.ErrorCodeInvalidCredentials, err.Code)
+	suite.Equal(apierror.ErrorCodeInvalidFormat, err.Code)
 	suite.Nil(apiKey)
 }
 
@@ -250,7 +255,7 @@ func (suite *APIKeyMedTestSuite) TestFind_EmptyString() {
 	apiKey, err := suite.apiKeyMed.FindAndValidate(ctx, "")
 
 	suite.NotNil(err)
-	suite.Equal(contracts.ErrorCodeInvalidCredentials, err.Code)
+	suite.Equal(apierror.ErrorCodeInvalidFormat, err.Code)
 	suite.Nil(apiKey)
 }
 
@@ -259,7 +264,7 @@ func (suite *APIKeyMedTestSuite) TestFind_TooShort() {
 	apiKey, err := suite.apiKeyMed.FindAndValidate(ctx, testutil.ApiKeyTooShort)
 
 	suite.NotNil(err)
-	suite.Equal(contracts.ErrorCodeInvalidCredentials, err.Code)
+	suite.Equal(apierror.ErrorCodeInvalidFormat, err.Code)
 	suite.Nil(apiKey)
 }
 
@@ -268,7 +273,7 @@ func (suite *APIKeyMedTestSuite) TestFind_TooLong() {
 	apiKey, err := suite.apiKeyMed.FindAndValidate(ctx, testutil.ApiKeyTooLong)
 
 	suite.NotNil(err)
-	suite.Equal(contracts.ErrorCodeInvalidCredentials, err.Code)
+	suite.Equal(apierror.ErrorCodeInvalidFormat, err.Code)
 	suite.Nil(apiKey)
 }
 
@@ -277,7 +282,7 @@ func (suite *APIKeyMedTestSuite) TestFind_InvalidPrefix() {
 	apiKey, err := suite.apiKeyMed.FindAndValidate(ctx, testutil.ApiKeyInvalidPrefix)
 
 	suite.NotNil(err)
-	suite.Equal(contracts.ErrorCodeInvalidCredentials, err.Code)
+	suite.Equal(apierror.ErrorCodeInvalidFormat, err.Code)
 	suite.Nil(apiKey)
 }
 
@@ -286,7 +291,7 @@ func (suite *APIKeyMedTestSuite) TestFind_InvalidChecksum() {
 	apiKey, err := suite.apiKeyMed.FindAndValidate(ctx, testutil.ApiKeyInvalidChecksum)
 
 	suite.NotNil(err)
-	suite.Equal(contracts.ErrorCodeInvalidCredentials, err.Code)
+	suite.Equal(apierror.ErrorCodeInvalidFormat, err.Code)
 	suite.Nil(apiKey)
 }
 
@@ -298,7 +303,7 @@ func (suite *APIKeyMedTestSuite) TestFind_VerifySecretError() {
 	apiKeyRepo := repositorymock.NewMockAPIKeyRepo(ctrl)
 	repoFactory := factorymock.NewMockRepoFactory(ctrl)
 	repoFactory.EXPECT().NewAPIKeyRepo().Return(apiKeyRepo).AnyTimes()
-	apiKeyUtils := apikey.NewAPIKeyUtils(apikey.DefaultAPIKeyConfig([]byte("different-pepper")))
+	apiKeyUtils := apikey.NewAPIKeyUtils(&apikey.APIKeyConfig{Pepper: []byte("different-pepper")})
 
 	apiKeyMedConfig := APIKeyMedConfig{
 		Repos:       repoFactory,
@@ -322,19 +327,19 @@ func (suite *APIKeyMedTestSuite) TestFind_VerifySecretError() {
 	apiKey, err := apiKeyMed.FindAndValidate(ctx, testutil.APIKeyValidSandboxMode)
 
 	suite.NotNil(err)
-	suite.Equal(contracts.ErrorCodeInvalidCredentials, err.Code)
+	suite.Equal(apierror.ErrorCodeInvalidCredentials, err.Code)
 	suite.Nil(apiKey)
 }
 
 func (suite *APIKeyMedTestSuite) TestTouchIfNotRecent_LastUsedAtIsNil() {
 	ctx := context.Background()
 	apiKey := &domain.APIKey{
-		ID:         "api-key-id",
+		ID:         1,
 		LastUsedAt: nil,
 	}
 
 	suite.apiKeyRepo.EXPECT().
-		Touch(gomock.Any(), "api-key-id").
+		Touch(gomock.Any(), int64(1)).
 		Return(nil).
 		Times(1)
 
@@ -346,12 +351,12 @@ func (suite *APIKeyMedTestSuite) TestTouchIfNotRecent_LastUsedAtOlderThan24Hours
 	ctx := context.Background()
 	lastUsedAt := time.Now().UTC().Add(-25 * time.Hour)
 	apiKey := &domain.APIKey{
-		ID:         "api-key-id",
+		ID:         1,
 		LastUsedAt: &lastUsedAt,
 	}
 
 	suite.apiKeyRepo.EXPECT().
-		Touch(gomock.Any(), "api-key-id").
+		Touch(gomock.Any(), int64(1)).
 		Return(nil).
 		Times(1)
 
@@ -363,12 +368,12 @@ func (suite *APIKeyMedTestSuite) TestTouchIfNotRecent_LastUsedAtLessThan24HoursA
 	ctx := context.Background()
 	lastUsedAt := time.Now().UTC().Add(-2 * time.Hour)
 	apiKey := &domain.APIKey{
-		ID:         "api-key-id",
+		ID:         1,
 		LastUsedAt: &lastUsedAt,
 	}
 
 	suite.apiKeyRepo.EXPECT().
-		Touch(gomock.Any(), "api-key-id").
+		Touch(gomock.Any(), int64(1)).
 		Times(0)
 
 	err := suite.apiKeyMed.TouchIfNotRecent(ctx, apiKey)
@@ -379,17 +384,59 @@ func (suite *APIKeyMedTestSuite) TestTouchIfNotRecent_TouchReturnsError() {
 	ctx := context.Background()
 	lastUsedAt := time.Now().UTC().Add(-25 * time.Hour)
 	apiKey := &domain.APIKey{
-		ID:         "api-key-id-error",
+		ID:         1,
 		LastUsedAt: &lastUsedAt,
 	}
 
-	expectedErr := contracts.NewInternalError(nil, "Failed to touch API key.")
+	expectedErr := apierror.NewInternalError(nil, "Failed to touch API key.")
 	suite.apiKeyRepo.EXPECT().
-		Touch(gomock.Any(), "api-key-id-error").
+		Touch(gomock.Any(), int64(1)).
 		Return(expectedErr).
 		Times(1)
 
 	err := suite.apiKeyMed.TouchIfNotRecent(ctx, apiKey)
 	suite.NotNil(err)
 	suite.Equal(expectedErr, err)
+}
+
+func (suite *APIKeyMedTestSuite) TestCreate_Success() {
+	ctx := context.Background()
+	accountMode := constants.AccountModeProduction
+	ownerAccountID := "ac_123456789012"
+	roleID := "rl_123456789012"
+	name := "Test API Key"
+	expiresAt := time.Now().UTC().Add(30 * 24 * time.Hour)
+
+	suite.apiKeyRepo.EXPECT().
+		Create(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(ctx context.Context, apiKey *domain.APIKey) (int64, *apierror.APIError) {
+			suite.Equal(name, apiKey.Name)
+			suite.Equal(ownerAccountID, apiKey.OwnerAccountID)
+			suite.Equal(roleID, apiKey.RoleID)
+			suite.Equal(&expiresAt, apiKey.ExpiresAt)
+			suite.NotEmpty(apiKey.TypeID)
+			suite.NotEmpty(apiKey.KeyID)
+			suite.NotEmpty(apiKey.SecretHash)
+			suite.Equal(4, len(apiKey.LastFour))
+			return 123, nil
+		}).
+		Times(1)
+
+	apiKeyString, apiKeyModel, err := suite.apiKeyMed.Create(ctx, accountMode, ownerAccountID, roleID, name, &expiresAt)
+
+	suite.Nil(err)
+	suite.NotEmpty(apiKeyString)
+	suite.NotNil(apiKeyModel)
+	suite.Equal(int64(123), apiKeyModel.ID)
+
+	// Verify the generated key can be parsed
+	parsedKey, err := suite.apiKeyUtils.Parse(ctx, apiKeyString)
+	suite.Nil(err)
+	suite.Equal(accountMode, parsedKey.AccountMode)
+	suite.Equal(apiKeyModel.KeyID, parsedKey.ID)
+
+	// Verify the secret hash matches
+	valid, err := suite.apiKeyUtils.VerifySecretHMAC(ctx, parsedKey.Secret, apiKeyModel.SecretHash)
+	suite.Nil(err)
+	suite.True(valid)
 }

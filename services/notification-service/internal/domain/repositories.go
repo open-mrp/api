@@ -2,11 +2,20 @@ package domain
 
 import (
 	"context"
+	"encoding/json"
 
-	"github.com/augno/api/shared/contracts"
+	apierror "github.com/augno/api/shared/errors"
 )
 
 type EmailLogRepo interface {
-	Create(ctx context.Context, emailLog *EmailLog) *contracts.APIError
-	FindBySesMessageID(ctx context.Context, sesMessageID string) (*EmailLog, *contracts.APIError)
+	Create(ctx context.Context, emailLog *EmailLog) *apierror.APIError
+	FindBySesMessageID(ctx context.Context, sesMessageID string) (*EmailLog, *apierror.APIError)
+}
+
+type IdempotencyKeyRepo interface {
+	GetByScopeHash(ctx context.Context, scopeHash string) (*IdempotencyKey, *apierror.APIError)
+	Create(ctx context.Context, key *IdempotencyKey) (*IdempotencyKey, *apierror.APIError)
+	AdvanceRecoveryPoint(ctx context.Context, typeID string, recoveryPoint RecoveryPoint) *apierror.APIError
+	GetRecoveryPoint(ctx context.Context, typeID string) (string, *apierror.APIError)
+	SetResponse(ctx context.Context, typeID string, code int, body json.RawMessage, recoveryPoint RecoveryPoint) *apierror.APIError
 }

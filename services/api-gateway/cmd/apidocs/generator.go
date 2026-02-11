@@ -12,6 +12,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	"github.com/augno/api/shared/contracts"
+	apierror "github.com/augno/api/shared/errors"
 )
 
 func generate(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOnly bool, transforms []Transform, version string) {
@@ -49,10 +50,10 @@ func generate(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOn
 
 			specField := val.FieldByName("APIEndpoint")
 			if !specField.IsValid() {
-				continue
+				specField = val
 			}
 
-			isPublic := specField.FieldByName("IsPublic").Bool()
+			isPublic := specField.FieldByName("Public").Bool()
 			if publicOnly && !isPublic {
 				continue
 			}
@@ -149,7 +150,7 @@ func generate(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOn
 					}
 				}
 
-				schemaName := getTypeName(reqType)
+				schemaName := getCleanTypeName(reqType)
 				if hasJSONFields && schemaName != "" && schemaName != "EmptyResource" {
 					// GET and DELETE requests should not have a request body
 					if method != "DELETE" && method != "GET" {
@@ -179,10 +180,10 @@ func generate(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOn
 			// Handle Response
 			respVal := specField.FieldByName("Response")
 			respType := respVal.Type()
-			schemaName := getTypeName(respType)
+			schemaName := getCleanTypeName(respType)
 			if schemaName != "" && schemaName != "EmptyResource" {
 				if _, ok := spec.Components.Schemas[schemaName]; !ok {
-					spec.Components.Schemas[schemaName] = generateSchema(respType, &spec.Components, docReader)
+					spec.Components.Schemas[schemaName] = generateSchema(respType, &spec.Components, docReader, route)
 				}
 				operation.Responses[successStatusCodeStr] = Response{
 					Description: "Successful response for " + title,
@@ -223,7 +224,7 @@ func generate(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOn
 				codeStr := fmt.Sprintf("%d", code)
 				if _, ok := operation.Responses[codeStr]; !ok {
 					if !apiErrorResponseRegistered {
-						apiErrorType := reflect.TypeFor[contracts.APIErrorResponse]()
+						apiErrorType := reflect.TypeFor[apierror.APIErrorResponse]()
 						spec.Components.Schemas["APIErrorResponse"] = generateSchema(apiErrorType, &spec.Components, docReader)
 						apiErrorResponseRegistered = true
 					}
@@ -288,17 +289,46 @@ func generate(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOn
 	log.Printf("OpenAPI spec generated in %s\n", outputPath)
 }
 
-func getTypeName(t reflect.Type) string {
+func getCleanTypeName(t reflect.Type) string {
 	if t.Kind() == reflect.Pointer {
 		t = t.Elem()
 	}
 	if t.Kind() != reflect.Struct {
 		return ""
 	}
-	return t.Name()
+
+	name := t.Name()
+	if name == "" {
+		return ""
+	}
+
+	// Handle generic types like List[T]
+	// Replace [ with _ and remove ]
+	name = strings.ReplaceAll(name, "[", "_")
+	name = strings.ReplaceAll(name, "]", "")
+
+	// Handle package paths if they are included in Name() for some reason
+	// (they seem to be for generic instantiations)
+	if strings.Contains(name, "/") || strings.Contains(name, ".") {
+		segments := strings.Split(name, "_")
+		for i, seg := range segments {
+			if strings.Contains(seg, "/") {
+				parts := strings.Split(seg, "/")
+				seg = parts[len(parts)-1]
+			}
+			if strings.Contains(seg, ".") {
+				parts := strings.Split(seg, ".")
+				seg = parts[len(parts)-1]
+			}
+			segments[i] = seg
+		}
+		name = strings.Join(segments, "_")
+	}
+
+	return name
 }
 
-func generateSchema(t reflect.Type, components *Components, docReader *DocReader) Schema {
+func generateSchema(t reflect.Type, components *Components, docReader *DocReader, route ...string) Schema {
 	origT := t
 	if t.Kind() == reflect.Pointer {
 		t = t.Elem()
@@ -306,7 +336,11 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 
 	switch t.Kind() {
 	case reflect.String:
-		return Schema{Type: "string"}
+		schema := Schema{Type: "string"}
+		if enumValues := getEnumValuesForStringType(t); len(enumValues) > 0 {
+			schema.Enum = enumValues
+		}
+		return schema
 	case reflect.Int, reflect.Int32, reflect.Int64:
 		return Schema{Type: "integer"}
 	case reflect.Float32, reflect.Float64:
@@ -315,8 +349,71 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 		return Schema{Type: "boolean"}
 	}
 
+	routeStr := ""
+	if len(route) > 0 {
+		routeStr = route[0]
+	}
+
 	var example any
-	if origT.Implements(reflect.TypeFor[contracts.DocumentedType]()) {
+	typeName := getCleanTypeName(origT)
+
+	// Special handling for List types: use the route for the URL field in the example
+	if strings.HasPrefix(typeName, "List_") && routeStr != "" {
+		// Extract the item type from List[T] by finding the "data" field
+		var itemExample any
+		if t.Kind() == reflect.Struct {
+			for i := 0; i < t.NumField(); i++ {
+				f := t.Field(i)
+				jsonTag := f.Tag.Get("json")
+				if jsonTag == "data" || strings.HasPrefix(jsonTag, "data,") {
+					// Found the data field, get its element type
+					elemType := f.Type
+					if elemType.Kind() == reflect.Slice {
+						elemType = elemType.Elem()
+						if elemType.Kind() == reflect.Pointer {
+							elemType = elemType.Elem()
+						}
+						// First try to get example from already-generated schema
+						itemTypeName := getCleanTypeName(elemType)
+						if itemTypeName != "" {
+							if existingSchema, ok := components.Schemas[itemTypeName]; ok && existingSchema.Example != nil {
+								itemExample = existingSchema.Example
+							}
+						}
+						// If not found, try to get it from DocumentedType
+						if itemExample == nil && elemType.Implements(reflect.TypeFor[contracts.DocumentedType]()) {
+							v := reflect.New(elemType).Interface().(contracts.DocumentedType)
+							func() {
+								defer func() { recover() }()
+								itemExample = v.SchemaExample()
+							}()
+						}
+					}
+					break
+				}
+			}
+		}
+		// Create a List example with the route as the URL
+		dataArray := []any{}
+		if itemExample != nil {
+			// Convert to map if it's not already
+			if itemMap, ok := itemExample.(map[string]any); ok {
+				dataArray = []any{itemMap}
+			} else {
+				dataArray = []any{itemExample}
+			}
+		}
+
+		nextPageURL := routeStr + "?after=" + "sample_id"
+		prevPageURL := routeStr + "?before=" + "sample_id"
+
+		example = map[string]any{
+			"object":            "list",
+			"previous_page_url": prevPageURL,
+			"next_page_url":     nextPageURL,
+			"data":              dataArray,
+		}
+	} else if reflect.PointerTo(t).Implements(reflect.TypeFor[contracts.DocumentedType]()) {
 		v := reflect.New(t).Interface().(contracts.DocumentedType)
 		func() {
 			defer func() { recover() }()
@@ -325,11 +422,17 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 	}
 
 	typeDoc := docReader.GetTypeDoc(t)
+	description := typeDoc.Doc
+
+	if strings.HasPrefix(typeName, "List_") {
+		itemTypeName := strings.TrimPrefix(typeName, "List_")
+		description = fmt.Sprintf("A paginated list of %s resources", itemTypeName)
+	}
 
 	schema := Schema{
 		Type:        "object",
 		Properties:  make(map[string]Schema),
-		Description: typeDoc.Doc,
+		Description: description,
 		Example:     example,
 	}
 
@@ -340,6 +443,25 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 	for i := 0; i < t.NumField(); i++ {
 		f := t.Field(i)
 		jsonTag := f.Tag.Get("json")
+
+		if f.Anonymous && jsonTag == "" {
+			embeddedType := f.Type
+			if embeddedType.Kind() == reflect.Pointer {
+				embeddedType = embeddedType.Elem()
+			}
+			if embeddedType.Kind() == reflect.Struct {
+				embeddedName := getCleanTypeName(embeddedType)
+				if embeddedName != "" && embeddedName != "EmptyResource" {
+					if _, ok := components.Schemas[embeddedName]; !ok {
+						components.Schemas[embeddedName] = Schema{}
+						components.Schemas[embeddedName] = generateSchema(embeddedType, components, docReader)
+					}
+					schema.AllOf = append(schema.AllOf, Schema{Ref: "#/components/schemas/" + embeddedName})
+				}
+			}
+			continue
+		}
+
 		if jsonTag == "-" || jsonTag == "" {
 			continue
 		}
@@ -360,7 +482,8 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 		validateTag := f.Tag.Get("validate")
 		hasRequiredInValidate := strings.Contains(validateTag, "required")
 
-		isRequired := hasRequiredInJSON || hasRequiredInValidate || !hasOmitempty
+		isPointer := f.Type.Kind() == reflect.Pointer
+		isRequired := hasRequiredInJSON || hasRequiredInValidate || !(isPointer && hasOmitempty)
 
 		if isRequired {
 			schema.Required = append(schema.Required, name)
@@ -368,8 +491,24 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 
 		fieldSchema := Schema{
 			Description: typeDoc.Fields[f.Name],
-			Example:     f.Tag.Get("example"),
 			Nullable:    f.Type.Kind() == reflect.Pointer,
+		}
+
+		// Add Stainless pagination annotations and unique descriptions for List types
+		if strings.HasPrefix(typeName, "List_") {
+			itemTypeName := strings.TrimPrefix(typeName, "List_")
+			switch name {
+			case "data":
+				fieldSchema.XStainlessPaginationProperty = map[string]string{"purpose": "items"}
+				fieldSchema.Description = fmt.Sprintf("Array of %s resources in this page", itemTypeName)
+			case "next_page_url":
+				fieldSchema.XStainlessPaginationProperty = map[string]string{"purpose": "cursor_url_field"}
+				fieldSchema.Description = fmt.Sprintf("URL to fetch the next page of %s resources", itemTypeName)
+			case "previous_page_url":
+				fieldSchema.Description = fmt.Sprintf("URL to fetch the previous page of %s resources", itemTypeName)
+			case "object":
+				fieldSchema.Description = fmt.Sprintf("Object type for %s list", itemTypeName)
+			}
 		}
 
 		if enumTag := f.Tag.Get("enum"); enumTag != "" {
@@ -379,8 +518,12 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 			}
 		}
 
-		if fieldSchema.Example == "" {
-			fieldSchema.Example = nil
+		for _, part := range strings.Split(validateTag, ",") {
+			if strings.HasPrefix(part, "enum=") {
+				enumValue := strings.TrimPrefix(part, "enum=")
+				fieldSchema.Enum = []any{enumValue}
+				break
+			}
 		}
 
 		if f.Tag.Get("readOnly") == "true" {
@@ -399,6 +542,11 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 		switch fieldType.Kind() {
 		case reflect.String:
 			fieldSchema.Type = "string"
+			if len(fieldSchema.Enum) == 0 {
+				if enumValues := getEnumValuesForStringType(fieldType); len(enumValues) > 0 {
+					fieldSchema.Enum = enumValues
+				}
+			}
 		case reflect.Int, reflect.Int32, reflect.Int64:
 			fieldSchema.Type = "integer"
 		case reflect.Float32, reflect.Float64:
@@ -409,13 +557,15 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 			if fieldType.PkgPath() == "time" && fieldType.Name() == "Time" {
 				fieldSchema.Type = "string"
 				fieldSchema.Format = "date-time"
-			} else if fieldType.Name() != "" {
-				schemaName := fieldType.Name()
+			} else if name := getCleanTypeName(fieldType); name != "" {
+				schemaName := name
 				if _, ok := components.Schemas[schemaName]; !ok {
 					components.Schemas[schemaName] = Schema{}
 					components.Schemas[schemaName] = generateSchema(fieldType, components, docReader)
 				}
-				fieldSchema.Ref = "#/components/schemas/" + schemaName
+				// In OpenAPI 3.0.x, $ref cannot have sibling properties.
+				// Always use allOf to wrap the reference so description can be a sibling of allOf.
+				fieldSchema.AllOf = []Schema{{Ref: "#/components/schemas/" + schemaName}}
 			} else {
 				fieldSchema = generateSchema(fieldType, components, docReader)
 			}
@@ -426,8 +576,8 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 				elemType = elemType.Elem()
 			}
 
-			if elemType.Kind() == reflect.Struct && elemType.Name() != "" {
-				schemaName := elemType.Name()
+			if elemType.Kind() == reflect.Struct && getCleanTypeName(elemType) != "" {
+				schemaName := getCleanTypeName(elemType)
 				if _, ok := components.Schemas[schemaName]; !ok {
 					components.Schemas[schemaName] = Schema{}
 					components.Schemas[schemaName] = generateSchema(elemType, components, docReader)
@@ -450,9 +600,49 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 		schema.Properties[name] = fieldSchema
 	}
 
-	if len(schema.Properties) == 0 && schema.AdditionalProperties == nil {
+	if len(schema.Properties) == 0 && schema.AdditionalProperties == nil && len(schema.AllOf) == 0 {
 		schema.XStainlessEmptyObject = true
 	}
 
 	return schema
+}
+
+func getEnumValuesForStringType(t reflect.Type) []any {
+	if t.Kind() != reflect.String || t.Name() == "" || t.Name() == "string" {
+		return nil
+	}
+
+	pkgPath := t.PkgPath()
+	if pkgPath == "" {
+		return nil
+	}
+
+	ptrType := reflect.PointerTo(t)
+	method, ok := ptrType.MethodByName("EnumValues")
+	if !ok {
+		return nil
+	}
+
+	if method.Type.NumIn() != 1 || method.Type.NumOut() != 1 {
+		return nil
+	}
+
+	outType := method.Type.Out(0)
+	if outType.Kind() != reflect.Slice || outType.Elem().Kind() != reflect.String {
+		return nil
+	}
+
+	zeroVal := reflect.New(t)
+	results := method.Func.Call([]reflect.Value{zeroVal})
+	if len(results) != 1 {
+		return nil
+	}
+
+	slice := results[0]
+	enumValues := make([]any, slice.Len())
+	for i := 0; i < slice.Len(); i++ {
+		enumValues[i] = slice.Index(i).String()
+	}
+
+	return enumValues
 }

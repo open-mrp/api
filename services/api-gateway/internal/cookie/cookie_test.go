@@ -21,16 +21,16 @@ func TestGetAccessTokenFromRequest(t *testing.T) {
 			wantToken: "test-token",
 		},
 		{
-			name:      "Allowed on update password route",
-			path:      updatePasswordRoute,
+			name:      "Allowed on auth route",
+			path:      authRoutePrefix + "/login",
 			cookieVal: "test-token",
 			wantToken: "test-token",
 		},
 		{
-			name:       "Blocked on auth route",
-			path:       authRoutePrefix + "/login",
-			cookieVal:  "test-token",
-			wantErrMsg: "Access token cookie not allowed for this route",
+			name:      "Allowed on update password route",
+			path:      "/v1/auth/passwords",
+			cookieVal: "test-token",
+			wantToken: "test-token",
 		},
 		{
 			name:       "No cookie",

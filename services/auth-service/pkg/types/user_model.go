@@ -13,11 +13,24 @@ type User struct {
 	Email          *string
 	Name           *string
 	Username       *string
-	HashedPassword *string
+	HashedPassword *string `json:"-"`
 	EmailVerified  *time.Time
 	ImageUrl       *string
+	StatusCode     string
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
+}
+
+type UserStatus string
+
+const (
+	UserStatusActive   UserStatus = "active"
+	UserStatusDisabled UserStatus = "disabled"
+	UserStatusDeleted  UserStatus = "deleted"
+)
+
+func (s UserStatus) String() string {
+	return string(s)
 }
 
 func (u *User) ToProto() *pb.User {

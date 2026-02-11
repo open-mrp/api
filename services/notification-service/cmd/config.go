@@ -1,42 +1,70 @@
 package main
 
-import "fmt"
+import (
+	"cmp"
+	"fmt"
+	"strconv"
 
+	"github.com/augno/api/shared/contracts"
+	"github.com/augno/api/shared/env"
+)
+
+var (
+	defaultPort        = contracts.GRPCPort
+	defaultRabbitMQURI = "amqp://guest:guest@rabbitmq:5672/" // #nosec G101 - Default dev URI, not a production credential
+)
+
+const (
+	envPort        = "PORT"
+	envDBURL       = "DB_URL"
+	envAWSRegion   = "AWS_REGION"
+	envRabbitMQURI = "RABBITMQ_URI"
+)
+
+// config represents the configuration for the notification service.
 type config struct {
-	DBURL       string
-	AWSRegion   string
+	// Port (optional; default: 9092) specifies the port on which the gRPC server will listen.
+	Port int
+
+	// DBURL (required) is the database connection URI.
+	DBURL string
+
+	// AWSRegion (required) is the AWS region for SES email delivery.
+	AWSRegion string
+
+	// RabbitMQURI (optional; default: "amqp://guest:guest@rabbitmq:5672/") is the RabbitMQ connection URI.
 	RabbitMQURI string
 }
 
-func loadConfig(getenv func(string) string) (config, error) {
-	dbURL := getenv("DB_URL")
-	if dbURL == "" {
-		return config{}, fmt.Errorf("required environment variable DB_URL is not set")
+// withDefaults sets the default values for the configuration.
+func (c *config) withDefaults(getenv func(string) string) *config {
+	if c == nil {
+		c = &config{}
 	}
 
-	awsRegion := getenv("AWS_REGION")
-	if awsRegion == "" {
-		return config{}, fmt.Errorf("required environment variable AWS_REGION is not set")
+	port := defaultPort
+	if p, err := strconv.Atoi(env.GetEnv(envPort, getenv)); err == nil {
+		port = p
 	}
 
-	awsAccessKeyID := getenv("AWS_ACCESS_KEY_ID")
-	if awsAccessKeyID == "" {
-		return config{}, fmt.Errorf("required environment variable AWS_ACCESS_KEY_ID is not set")
+	return &config{
+		Port:        port,
+		DBURL:       env.GetEnv(envDBURL, getenv),
+		AWSRegion:   env.GetEnv(envAWSRegion, getenv),
+		RabbitMQURI: cmp.Or(env.GetEnv(envRabbitMQURI, getenv), defaultRabbitMQURI),
 	}
+}
 
-	awsSecretAccessKey := getenv("AWS_SECRET_ACCESS_KEY")
-	if awsSecretAccessKey == "" {
-		return config{}, fmt.Errorf("required environment variable AWS_SECRET_ACCESS_KEY is not set")
+// validate validates the configuration.
+func (c *config) validate() error {
+	if c == nil {
+		return fmt.Errorf("config is nil")
 	}
-
-	rabbitMQURI := getenv("RABBITMQ_URI")
-	if rabbitMQURI == "" {
-		return config{}, fmt.Errorf("required environment variable RABBITMQ_URI is not set")
+	if c.DBURL == "" {
+		return fmt.Errorf("the provided database URI is empty")
 	}
-
-	return config{
-		DBURL:       dbURL,
-		AWSRegion:   awsRegion,
-		RabbitMQURI: rabbitMQURI,
-	}, nil
+	if c.AWSRegion == "" {
+		return fmt.Errorf("the provided AWS region is empty")
+	}
+	return nil
 }

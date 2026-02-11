@@ -4,8 +4,8 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MODULE="github.com/augno/api"
-DEFAULT_SERVICES=("auth-service" "api-gateway" "notification-service" "logging-service")
-COMPONENTS=("factories" "mediators" "publishers" "repositories" "services" "utils")
+DEFAULT_SERVICES=("auth-service" "api-gateway" "notification-service" "platform-service" "core-service")
+COMPONENTS=("factories" "mediators" "publishers" "repositories" "services" "utils" "clients")
 declare -a services=()
 
 to_snake_case() {
@@ -26,6 +26,7 @@ component_dir() {
     repositories) echo "repository" ;;
     services) echo "service" ;;
     utils) echo "utils" ;;
+    clients) echo "client" ;;
     *) return 1 ;;
   esac
 }
@@ -38,6 +39,7 @@ component_package() {
     repositories) echo "repositorymock" ;;
     services) echo "servicemock" ;;
     utils) echo "utilsmock" ;;
+    clients) echo "clientmock" ;;
     *) return 1 ;;
   esac
 }
@@ -122,7 +124,7 @@ main() {
         auth) add_service "auth-service" ;;
         api) add_service "api-gateway" ;;
         notification) add_service "notification-service" ;;
-        logging) add_service "logging-service" ;;
+        logging) add_service "platform-service" ;;
         *)
           local matched_default=false
           for s in "${DEFAULT_SERVICES[@]}"; do

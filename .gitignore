@@ -37,7 +37,7 @@ bin/
 test/logs/
 
 # cursor
-.cursor/
+# .cursor/
 
 # all .DS_STORE files
 *.DS_STORE
@@ -67,3 +67,6 @@ _override.tf.json
 .terraformrc
 terraform.rc
 crash.log
+
+# cache
+.cache/

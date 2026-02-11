@@ -16,7 +16,13 @@ func TestGenerateRawEmail(t *testing.T) {
 		sender := "noreply@example.com"
 		isHtml := true
 
-		rawEmail, err := generateRawEmail(subject, body, recipients, nil, "", sender, isHtml, nil)
+		rawEmail, err := generateRawEmail(rawEmailInput{
+			Subject:     subject,
+			Body:        body,
+			Recipients:  recipients,
+			SenderEmail: sender,
+			IsHtml:      isHtml,
+		})
 		assert.NoError(t, err)
 
 		emailStr := string(rawEmail)
@@ -39,7 +45,13 @@ func TestGenerateRawEmail(t *testing.T) {
 		sender := "noreply@example.com"
 		isHtml := false
 
-		rawEmail, err := generateRawEmail(subject, body, recipients, nil, "", sender, isHtml, nil)
+		rawEmail, err := generateRawEmail(rawEmailInput{
+			Subject:     subject,
+			Body:        body,
+			Recipients:  recipients,
+			SenderEmail: sender,
+			IsHtml:      isHtml,
+		})
 		assert.NoError(t, err)
 
 		emailStr := string(rawEmail)
@@ -56,7 +68,14 @@ func TestGenerateRawEmail(t *testing.T) {
 		sender := "noreply@example.com"
 		replyTo := "support@example.com"
 
-		rawEmail, err := generateRawEmail(subject, body, recipients, nil, "", sender, false, &replyTo)
+		rawEmail, err := generateRawEmail(rawEmailInput{
+			Subject:     subject,
+			Body:        body,
+			Recipients:  recipients,
+			SenderEmail: sender,
+			IsHtml:      false,
+			ReplyTo:     &replyTo,
+		})
 		assert.NoError(t, err)
 
 		emailStr := string(rawEmail)
@@ -71,7 +90,15 @@ func TestGenerateRawEmail(t *testing.T) {
 		attachment := []byte("test attachment content")
 		filename := "test.txt"
 
-		rawEmail, err := generateRawEmail(subject, body, recipients, attachment, filename, sender, false, nil)
+		rawEmail, err := generateRawEmail(rawEmailInput{
+			Subject:     subject,
+			Body:        body,
+			Recipients:  recipients,
+			Attachment:  attachment,
+			Filename:    &filename,
+			SenderEmail: sender,
+			IsHtml:      false,
+		})
 		assert.NoError(t, err)
 
 		emailStr := string(rawEmail)
@@ -92,7 +119,13 @@ func TestGenerateRawEmail(t *testing.T) {
 		expectedSplit := splitString(encodedBody, 76)
 
 		recipients := []string{"test@example.com"}
-		rawEmail, err := generateRawEmail("Subject", longBody, recipients, nil, "", "sender", false, nil)
+		rawEmail, err := generateRawEmail(rawEmailInput{
+			Subject:     "Subject",
+			Body:        longBody,
+			Recipients:  recipients,
+			SenderEmail: "sender",
+			IsHtml:      false,
+		})
 		assert.NoError(t, err)
 
 		emailStr := string(rawEmail)

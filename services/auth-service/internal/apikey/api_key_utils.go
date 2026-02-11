@@ -1,6 +1,7 @@
 package apikey
 
 import (
+	"cmp"
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
@@ -10,7 +11,7 @@ import (
 	"github.com/augno/api/services/auth-service/internal/domain"
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/contracts"
+	apierror "github.com/augno/api/shared/errors"
 	sanitize "github.com/augno/api/shared/sanitize"
 	"github.com/augno/api/shared/tracing"
 
@@ -19,47 +20,68 @@ import (
 
 var apiKeyUtilsTracer = tracing.GetTracer("auth-service.api_key_utils")
 
+// APIKeyConfig holds the configuration for API key generation and validation.
 type APIKeyConfig struct {
+	// SecretKeyStrength (optional; default: KeyStrengthHigh) is the target entropy for generated secret keys.
 	SecretKeyStrength KeyStrength
-	IDKeyStrength     KeyStrength
-	Pepper            []byte
+
+	// IDKeyStrength (optional; default: KeyStrengthLow) is the target entropy for generated ID keys.
+	IDKeyStrength KeyStrength
+
+	// Pepper (required) is the additional secret mixed into API key hashes.
+	Pepper []byte
 }
 
-func DefaultAPIKeyConfig(pepper []byte) APIKeyConfig {
-	return APIKeyConfig{
-		SecretKeyStrength: KeyStrengthHigh,
-		IDKeyStrength:     KeyStrengthLow,
-		Pepper:            pepper,
+// WithDefaults returns a new APIKeyConfig with zero-value fields replaced by production defaults.
+func (c *APIKeyConfig) WithDefaults() *APIKeyConfig {
+	if c == nil {
+		c = &APIKeyConfig{}
 	}
+
+	return &APIKeyConfig{
+		SecretKeyStrength: cmp.Or(c.SecretKeyStrength, KeyStrengthHigh),
+		IDKeyStrength:     cmp.Or(c.IDKeyStrength, KeyStrengthLow),
+		Pepper:            c.Pepper,
+	}
+}
+
+// validate checks that all required APIKeyConfig fields are set.
+func (c *APIKeyConfig) validate() error {
+	if c.Pepper == nil {
+		return fmt.Errorf("apikey: pepper is required")
+	}
+	return nil
 }
 
 type apiKeyUtilsImpl struct {
 	config APIKeyConfig
 }
 
-func NewAPIKeyUtils(config APIKeyConfig) domain.APIKeyUtils {
-	if config.Pepper == nil {
-		panic("Pepper is not set in the config.")
+// NewAPIKeyUtils creates a new API key utility with the given configuration.
+func NewAPIKeyUtils(config *APIKeyConfig) domain.APIKeyUtils {
+	config = config.WithDefaults()
+	if err := config.validate(); err != nil {
+		panic(err)
 	}
 
-	return &apiKeyUtilsImpl{config: config}
+	return &apiKeyUtilsImpl{config: *config}
 }
 
 // Gen generates a new API key for the given account mode.
-func (aku *apiKeyUtilsImpl) Gen(ctx context.Context, appMode constants.AccountMode) (*domain.ParsedAPIKey, *contracts.APIError) {
+func (aku *apiKeyUtilsImpl) Gen(ctx context.Context, appMode constants.AccountMode) (*domain.ParsedAPIKey, *apierror.APIError) {
 	_, span := apiKeyUtilsTracer.Start(ctx, "utils.api_key.generate")
 	defer span.End()
 
 	// Generate a random secret key of the given strength
 	secret, err := genRandString(aku.lengthForKeyStrength(aku.config.SecretKeyStrength))
 	if err != nil {
-		return nil, tracing.Trace(span, contracts.NewInternalError(err, "Failed to generate API Key."))
+		return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to generate API Key."))
 	}
 
 	// Generate a random id key of the given strength
 	id, err := genRandString(aku.lengthForKeyStrength(aku.config.IDKeyStrength))
 	if err != nil {
-		return nil, tracing.Trace(span, contracts.NewInternalError(err, "Failed to generate API Key."))
+		return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to generate API Key."))
 	}
 
 	// Generate a checksum for the key using the id and secret
@@ -76,7 +98,7 @@ func (aku *apiKeyUtilsImpl) Gen(ctx context.Context, appMode constants.AccountMo
 }
 
 // Parse parses a given API key string into its components.
-func (aku *apiKeyUtilsImpl) Parse(ctx context.Context, key string) (*domain.ParsedAPIKey, *contracts.APIError) {
+func (aku *apiKeyUtilsImpl) Parse(ctx context.Context, key string) (*domain.ParsedAPIKey, *apierror.APIError) {
 	_, span := apiKeyUtilsTracer.Start(ctx, "utils.api_key.parse")
 	defer span.End()
 
@@ -126,26 +148,26 @@ func (aku *apiKeyUtilsImpl) Parse(ctx context.Context, key string) (*domain.Pars
 }
 
 // GenSecretHMAC generates a HMAC for a given secret.
-func (aku *apiKeyUtilsImpl) GenSecretHMAC(ctx context.Context, secret string) ([]byte, *contracts.APIError) {
+func (aku *apiKeyUtilsImpl) GenSecretHMAC(ctx context.Context, secret string) ([]byte, *apierror.APIError) {
 	_, span := apiKeyUtilsTracer.Start(ctx, "utils.api_key.generate_secret_hmac")
 	defer span.End()
 
 	storedHMAC, err := hmacSHA256(aku.config.Pepper, []byte(secret))
 	if err != nil {
-		return nil, tracing.Trace(span, contracts.NewInternalError(err, "Failed to generate HMAC."))
+		return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to generate HMAC."))
 	}
 
 	return storedHMAC, nil
 }
 
 // VerifySecretHMAC verifies a given secret against a expected HMAC.
-func (aku *apiKeyUtilsImpl) VerifySecretHMAC(ctx context.Context, secret string, expectedHMAC []byte) (bool, *contracts.APIError) {
+func (aku *apiKeyUtilsImpl) VerifySecretHMAC(ctx context.Context, secret string, expectedHMAC []byte) (bool, *apierror.APIError) {
 	_, span := apiKeyUtilsTracer.Start(ctx, "utils.api_key.verify_secret_hmac")
 	defer span.End()
 
 	computedHMAC, err := hmacSHA256(aku.config.Pepper, []byte(secret))
 	if err != nil {
-		return false, tracing.Trace(span, contracts.NewInternalError(err, "Failed to generate HMAC for verification."))
+		return false, tracing.Trace(span, apierror.NewInternalError(err, "Failed to generate HMAC for verification."))
 	}
 
 	return hmac.Equal(computedHMAC, expectedHMAC), nil
@@ -176,7 +198,11 @@ func hmacSHA256(key, data []byte) ([]byte, error) {
 	return h.Sum(nil), nil
 }
 
-func (aku *apiKeyUtilsImpl) invalidAPIKeyError(span trace.Span, key string) *contracts.APIError {
+func (aku *apiKeyUtilsImpl) invalidAPIKeyError(span trace.Span, key string) *apierror.APIError {
 	message := fmt.Sprintf("%s: %s. Valid API keys start with '%s'.", ErrAPIKeyInvalid, aku.SanitizeForDisplay(key), string(types.APIKeyPrefixSecretKey))
-	return tracing.Trace(span, contracts.NewAuthenticationError(message))
+	return tracing.Trace(span, apierror.NewInvalidFormatError(message, "api_key"))
+}
+
+func RedactAPIKeyValue(apiKeyModel *domain.APIKey, appMode constants.AccountMode) string {
+	return string(types.APIKeyPrefixSecretKey) + string(appMode) + "_" + "****" + apiKeyModel.LastFour
 }

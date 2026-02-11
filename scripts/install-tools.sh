@@ -32,5 +32,6 @@ install_tool "protoc-gen-go-grpc" "google.golang.org/grpc/cmd/protoc-gen-go-grpc
 install_tool "goreleaser" "github.com/goreleaser/goreleaser/v2@latest"
 install_tool "gosec" "github.com/securego/gosec/v2/cmd/gosec@latest"
 install_tool "staticcheck" "honnef.co/go/tools/cmd/staticcheck@latest"
+install_tool "goimports" "golang.org/x/tools/cmd/goimports@latest"
 
 print_status "All tools installed successfully!"

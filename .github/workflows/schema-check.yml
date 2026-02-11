@@ -1,0 +1,151 @@
+name: Schema Check
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "shared/db/migrations/**"
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  schema-diff:
+    name: Schema Diff
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install PlanetScale CLI
+        run: |
+          curl -fsSL https://github.com/planetscale/cli/releases/latest/download/pscale_linux_amd64.tar.gz | tar xz
+          sudo mv pscale /usr/local/bin/
+
+      - name: Get Production Schema
+        id: prod-schema
+        env:
+          PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PLANETSCALE_SERVICE_TOKEN_ID }}
+          PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PLANETSCALE_SERVICE_TOKEN }}
+        run: |
+          pscale database dump ${{ secrets.PLANETSCALE_DATABASE }} main \
+              --org ${{ secrets.PLANETSCALE_ORG }} \
+              --output ./prod-schema \
+              --schema-only
+
+          # Combine all schema files into one
+          cat ./prod-schema/*.sql > prod-schema.sql 2>/dev/null || echo "" > prod-schema.sql
+
+      - name: Compare Schemas
+        id: diff
+        run: |
+          # Combine local migration files
+          cat shared/db/migrations/*.sql > local-schema.sql
+
+          # Generate diff
+          DIFF=$(diff -u prod-schema.sql local-schema.sql || true)
+
+          if [ -z "$DIFF" ]; then
+              echo "has_changes=false" >> $GITHUB_OUTPUT
+              echo "No schema changes detected"
+          else
+              echo "has_changes=true" >> $GITHUB_OUTPUT
+              # Escape for GitHub Actions multiline output
+              EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+              echo "diff<<$EOF" >> $GITHUB_OUTPUT
+              echo "$DIFF" >> $GITHUB_OUTPUT
+              echo "$EOF" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Comment on PR (Changes Detected)
+        if: steps.diff.outputs.has_changes == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const diff = `${{ steps.diff.outputs.diff }}`;
+            const body = `## 🗄️ Schema Changes Detected
+
+            This PR modifies the database schema. Please ensure you have created a **PlanetScale deploy request** before merging.
+
+            <details>
+            <summary>View Schema Diff</summary>
+
+            \`\`\`diff
+            ${diff}
+            \`\`\`
+
+            </details>
+
+            ### Required Steps
+
+            1. Create a PlanetScale development branch from \`main\`
+            2. Apply your schema changes to the development branch
+            3. Open a [deploy request](https://app.planetscale.com/${{ secrets.PLANETSCALE_ORG }}/${{ secrets.PLANETSCALE_DATABASE }}/deploy-requests) targeting \`main\`
+            4. Get the deploy request reviewed and approved
+            5. Deploy the schema changes **before** merging this PR
+
+            See [MIGRATIONS.md](../blob/main/MIGRATIONS.md) for detailed instructions.`;
+
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number
+            });
+
+            const botComment = comments.find(c =>
+                c.user.type === 'Bot' && c.body.includes('Schema Changes Detected')
+            );
+
+            if (botComment) {
+                await github.rest.issues.updateComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    comment_id: botComment.id,
+                    body
+                });
+            } else {
+                await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: context.issue.number,
+                    body
+                });
+            }
+
+      - name: Comment on PR (No Changes)
+        if: steps.diff.outputs.has_changes == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = `## ✅ Schema In Sync
+
+            The local schema matches the PlanetScale production schema. No deploy request needed for schema changes.`;
+
+            const { data: comments } = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number
+            });
+
+            const botComment = comments.find(c =>
+                c.user.type === 'Bot' &&
+                (c.body.includes('Schema Changes Detected') || c.body.includes('Schema In Sync'))
+            );
+
+            if (botComment) {
+                await github.rest.issues.updateComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    comment_id: botComment.id,
+                    body
+                });
+            } else {
+                await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: context.issue.number,
+                    body
+                });
+            }

@@ -4,6 +4,12 @@
 // - protoc             v6.33.1
 // source: notification.proto
 
+// Package notification defines the gRPC contract for the notification-service.
+// It provides synchronous email sending (bypassing the outbox pattern) for cases
+// where the caller needs immediate confirmation of dispatch. For asynchronous
+// email, services write to the outbox table and the notification-service consumes
+// from the notification_cmd_send_email RabbitMQ queue instead.
+
 package notification
 
 import (
@@ -19,14 +25,24 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	NotificationService_SendEmail_FullMethodName = "/notification.NotificationService/SendEmail"
+	NotificationService_SendEmail_FullMethodName             = "/notification.NotificationService/SendEmail"
+	NotificationService_SendEnterpriseRequest_FullMethodName = "/notification.NotificationService/SendEnterpriseRequest"
 )
 
 // NotificationServiceClient is the client API for NotificationService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type NotificationServiceClient interface {
+	// SendEmail dispatches an email synchronously via SES. The caller blocks
+	// until the email is accepted by SES (not until delivery). Returns success
+	// if SES accepted the message for delivery. Used for transactional emails
+	// that need immediate send confirmation (e.g. password reset emails that
+	// are sent inline during the request).
 	SendEmail(ctx context.Context, in *EmailRequest, opts ...grpc.CallOption) (*EmailResponse, error)
+	// SendEnterpriseRequest sends a pre-formatted enterprise plan inquiry email
+	// to the sales team. The notification-service fills in the email template
+	// using the provided account and requester details.
+	SendEnterpriseRequest(ctx context.Context, in *EnterpriseRequestEmailRequest, opts ...grpc.CallOption) (*EmailResponse, error)
 }
 
 type notificationServiceClient struct {
@@ -47,11 +63,30 @@ func (c *notificationServiceClient) SendEmail(ctx context.Context, in *EmailRequ
 	return out, nil
 }
 
+func (c *notificationServiceClient) SendEnterpriseRequest(ctx context.Context, in *EnterpriseRequestEmailRequest, opts ...grpc.CallOption) (*EmailResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(EmailResponse)
+	err := c.cc.Invoke(ctx, NotificationService_SendEnterpriseRequest_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // NotificationServiceServer is the server API for NotificationService service.
 // All implementations must embed UnimplementedNotificationServiceServer
 // for forward compatibility.
 type NotificationServiceServer interface {
+	// SendEmail dispatches an email synchronously via SES. The caller blocks
+	// until the email is accepted by SES (not until delivery). Returns success
+	// if SES accepted the message for delivery. Used for transactional emails
+	// that need immediate send confirmation (e.g. password reset emails that
+	// are sent inline during the request).
 	SendEmail(context.Context, *EmailRequest) (*EmailResponse, error)
+	// SendEnterpriseRequest sends a pre-formatted enterprise plan inquiry email
+	// to the sales team. The notification-service fills in the email template
+	// using the provided account and requester details.
+	SendEnterpriseRequest(context.Context, *EnterpriseRequestEmailRequest) (*EmailResponse, error)
 	mustEmbedUnimplementedNotificationServiceServer()
 }
 
@@ -64,6 +99,9 @@ type UnimplementedNotificationServiceServer struct{}
 
 func (UnimplementedNotificationServiceServer) SendEmail(context.Context, *EmailRequest) (*EmailResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SendEmail not implemented")
+}
+func (UnimplementedNotificationServiceServer) SendEnterpriseRequest(context.Context, *EnterpriseRequestEmailRequest) (*EmailResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SendEnterpriseRequest not implemented")
 }
 func (UnimplementedNotificationServiceServer) mustEmbedUnimplementedNotificationServiceServer() {}
 func (UnimplementedNotificationServiceServer) testEmbeddedByValue()                             {}
@@ -104,6 +142,24 @@ func _NotificationService_SendEmail_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _NotificationService_SendEnterpriseRequest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EnterpriseRequestEmailRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NotificationServiceServer).SendEnterpriseRequest(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: NotificationService_SendEnterpriseRequest_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NotificationServiceServer).SendEnterpriseRequest(ctx, req.(*EnterpriseRequestEmailRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // NotificationService_ServiceDesc is the grpc.ServiceDesc for NotificationService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -114,6 +170,10 @@ var NotificationService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SendEmail",
 			Handler:    _NotificationService_SendEmail_Handler,
+		},
+		{
+			MethodName: "SendEnterpriseRequest",
+			Handler:    _NotificationService_SendEnterpriseRequest_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

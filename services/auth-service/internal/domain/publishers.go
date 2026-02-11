@@ -3,9 +3,10 @@ package domain
 import (
 	"context"
 
-	"github.com/augno/api/shared/contracts"
+	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/messaging"
 )
 
 type NotificationPublisher interface {
-	PublishSendEmail(ctx context.Context, to []string, subject, body string, isBodyHTML bool, sendAs *string, accountID string, sentByID *string) *contracts.APIError
+	PublishSendEmail(ctx context.Context, data messaging.EmailSendData) *apierror.APIError
 }

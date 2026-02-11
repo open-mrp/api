@@ -1,0 +1,278 @@
+syntax = "proto3";
+
+// Package platform defines the gRPC contracts for the platform-service, which
+// provides cross-cutting infrastructure capabilities: idempotency key management
+// (with recovery points for multi-step atomic operations) and request logging.
+// The api-gateway calls these RPCs on every mutating request (idempotency) and
+// after every request (logging).
+package platform;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "shared/proto/platform;platform";
+
+// IdempotencyService manages the lifecycle of idempotency keys. The api-gateway
+// calls ProcessIdempotencyKey at the start of every mutating request to determine
+// whether to process, replay, or reject. Backend services call
+// SetIdempotencyKeyResponse to cache the result, and AdvanceRecoveryPoint /
+// GetRecoveryPoint for multi-step atomic workflows.
+service IdempotencyService {
+  // ProcessIdempotencyKey is the entry point for idempotent request handling.
+  // It checks whether the key has been seen before and returns a result that
+  // tells the caller what to do:
+  //   - NEW:           first time seeing this key — process the request.
+  //   - REPLAY:        key was processed before — return the cached response.
+  //   - IN_PROGRESS:   another request with this key is still being processed.
+  //   - HASH_MISMATCH: the key was used with different request parameters.
+  rpc ProcessIdempotencyKey(ProcessIdempotencyKeyRequest) returns (ProcessIdempotencyKeyResponse);
+
+  // SetIdempotencyKeyResponse stores the HTTP response (status code, body,
+  // headers) for a completed idempotent request so that future replays can
+  // return the cached result without re-executing the operation.
+  rpc SetIdempotencyKeyResponse(SetIdempotencyKeyResponseRequest) returns (SetIdempotencyKeyResponseResponse);
+
+  // ReleaseIdempotencyKey clears the lock on an idempotency key without
+  // storing a response or altering recovery point state. Used when a handler
+  // returns a transient error (429, 5xx) so that client retries are not
+  // blocked by a stale IN_PROGRESS lock.
+  rpc ReleaseIdempotencyKey(ReleaseIdempotencyKeyRequest) returns (ReleaseIdempotencyKeyResponse);
+
+  // AdvanceRecoveryPoint moves a multi-step idempotent operation to its next
+  // phase. Each recovery point is a named checkpoint (e.g. "auth:started",
+  // "auth:finished") that allows the operation to resume from the last
+  // completed step on retry.
+  rpc AdvanceRecoveryPoint(AdvanceRecoveryPointRequest) returns (AdvanceRecoveryPointResponse);
+
+  // GetRecoveryPoint reads the current recovery point and any associated
+  // step data for a multi-step operation. Used on retry to determine where
+  // to resume.
+  rpc GetRecoveryPoint(GetRecoveryPointRequest) returns (GetRecoveryPointResponse);
+}
+
+// LoggingService persists structured request logs for auditing and analytics.
+service LoggingService {
+  // CreateRequestLog inserts a request log record. Called by the api-gateway
+  // after every HTTP request completes (both success and failure). The log
+  // includes timing, identity, error details, and trace correlation.
+  rpc CreateRequestLog(CreateRequestLogRequest) returns (CreateRequestLogResponse);
+}
+
+// ProcessIdempotencyKeyResult indicates the outcome of an idempotency key
+// lookup. The api-gateway uses this to decide whether to forward the request
+// to the backend, return a cached response, or reject with a 409.
+enum ProcessIdempotencyKeyResult {
+  PROCESS_RESULT_UNSPECIFIED = 0;
+  // PROCESS_RESULT_NEW means this key has not been seen before. The caller
+  // should process the request normally and call SetIdempotencyKeyResponse
+  // when done.
+  PROCESS_RESULT_NEW = 1;
+  // PROCESS_RESULT_REPLAY means this key was already processed successfully.
+  // The caller should return the cached response from the response fields.
+  PROCESS_RESULT_REPLAY = 2;
+  // PROCESS_RESULT_IN_PROGRESS means another request with this key is
+  // currently being processed. The caller should return HTTP 409 and ask
+  // the client to retry later.
+  PROCESS_RESULT_IN_PROGRESS = 3;
+  // PROCESS_RESULT_HASH_MISMATCH means the key was used before but with
+  // different request parameters. The caller should return HTTP 409 since
+  // the same idempotency key cannot be reused for different operations.
+  PROCESS_RESULT_HASH_MISMATCH = 4;
+}
+
+// ProcessIdempotencyKeyRequest carries all the data needed to look up or
+// create an idempotency key record.
+message ProcessIdempotencyKeyRequest {
+  // ActorID is the authenticated caller's ID (user or API key). Absent
+  // for unauthenticated requests.
+  optional string actor_id = 1;
+  // IdentityType is the caller's identity type (e.g. "user", "api_key").
+  string identity_type = 2;
+  // RequestID is the unique ID for this request, used for tracing.
+  string request_id = 3;
+  // RequestMethod is the HTTP method (e.g. "POST", "PUT").
+  string request_method = 4;
+  // NormalizedRoute is the route pattern with path params replaced
+  // (e.g. "/api/v1/invoices/{id}").
+  string normalized_route = 5;
+  // IdempotencyKey is the client-provided idempotency key from the
+  // Idempotency-Key header.
+  string idempotency_key = 6;
+  // RequestParams is the JSON-serialized request parameters (path params,
+  // query params) used for the request body hash.
+  bytes request_params = 7;
+  // ScopeHash is SHA-256(actor_id + target_account_id + method + route +
+  // idempotency_key). It scopes the key so the same key string used by
+  // different actors or routes is treated as distinct.
+  string scope_hash = 8;
+  // RequestBodyHash is SHA-256(canonicalized request body). Used to detect
+  // hash mismatches when the same key is sent with different parameters.
+  string request_body_hash = 9;
+  // TargetAccountID is the account context, if present.
+  optional string target_account_id = 10;
+}
+
+// ProcessIdempotencyKeyResponse contains the lookup result and, for REPLAY
+// results, the cached response data.
+message ProcessIdempotencyKeyResponse {
+  // Result indicates what the caller should do (see ProcessIdempotencyKeyResult).
+  ProcessIdempotencyKeyResult result = 1;
+  // IdempotencyKeyID is the database record ID, needed by subsequent calls
+  // to SetIdempotencyKeyResponse and AdvanceRecoveryPoint.
+  string idempotency_key_id = 2;
+  // ResponseCode is the cached HTTP status code. Present only for REPLAY.
+  optional int32 response_code = 3;
+  // ResponseBody is the cached JSON response body. Present only for REPLAY.
+  optional bytes response_body = 4;
+  // RecoveryPoint is the current recovery point for multi-step operations.
+  // Present for REPLAY and NEW (where it's the initial "started" point).
+  optional string recovery_point = 5;
+  // ResponseHeaders are cached response headers (JSON-encoded map). Present
+  // only for REPLAY.
+  optional bytes response_headers = 6;
+}
+
+// SetIdempotencyKeyResponseRequest stores the final response for a
+// completed idempotent request.
+message SetIdempotencyKeyResponseRequest {
+  // IdempotencyKeyID is the record ID from ProcessIdempotencyKeyResponse.
+  string idempotency_key_id = 1;
+  // ResponseCode is the HTTP status code to cache (e.g. 200, 201, 400).
+  int32 response_code = 2;
+  // ResponseBody is the JSON response body to cache.
+  bytes response_body = 3;
+  // ResponseHeaders are response headers to cache (JSON-encoded map).
+  // Optional — most responses don't need header caching.
+  optional bytes response_headers = 4;
+  // TtlSeconds overrides the default expiry for this key. When absent,
+  // the platform-service uses its configured default (typically 24 hours).
+  optional int32 ttl_seconds = 5;
+}
+
+// SetIdempotencyKeyResponseResponse confirms the response was cached.
+message SetIdempotencyKeyResponseResponse {
+  bool success = 1;
+}
+
+// ReleaseIdempotencyKeyRequest identifies the key whose lock should be
+// cleared.
+message ReleaseIdempotencyKeyRequest {
+  // IdempotencyKeyID is the record ID from ProcessIdempotencyKeyResponse.
+  string idempotency_key_id = 1;
+}
+
+// ReleaseIdempotencyKeyResponse confirms the lock was released.
+message ReleaseIdempotencyKeyResponse {
+  bool success = 1;
+}
+
+// AdvanceRecoveryPointRequest moves a multi-step operation to its next
+// checkpoint.
+message AdvanceRecoveryPointRequest {
+  // IdempotencyKeyID is the record ID from ProcessIdempotencyKeyResponse.
+  string idempotency_key_id = 1;
+  // RecoveryPoint is the name of the checkpoint to advance to (e.g.
+  // "auth:finished").
+  string recovery_point = 2;
+  // StepData is optional JSON-serialized intermediate data produced by
+  // the current step, available to subsequent steps on retry.
+  optional bytes step_data = 3;
+}
+
+// AdvanceRecoveryPointResponse confirms the recovery point was updated.
+message AdvanceRecoveryPointResponse {
+  bool success = 1;
+}
+
+// GetRecoveryPointRequest retrieves the current checkpoint for a
+// multi-step operation.
+message GetRecoveryPointRequest {
+  // IdempotencyKeyID is the record ID from ProcessIdempotencyKeyResponse.
+  string idempotency_key_id = 1;
+}
+
+// GetRecoveryPointResponse contains the current checkpoint and any
+// intermediate data.
+message GetRecoveryPointResponse {
+  // RecoveryPoint is the name of the last completed checkpoint.
+  string recovery_point = 1;
+  // StepData is the JSON-serialized intermediate data from the last
+  // AdvanceRecoveryPoint call. Absent if no step data was stored.
+  optional bytes step_data = 2;
+}
+
+// RequestLog represents a single HTTP request/response cycle as recorded
+// by the api-gateway. It captures everything needed for auditing, debugging,
+// and analytics: timing, identity, errors, and trace correlation.
+message RequestLog {
+  // ID is the prefixed unique identifier (e.g. "rlog_abc123").
+  string id = 1;
+  // Method is the HTTP method (e.g. "GET", "POST").
+  string method = 2;
+  // Host is the request's Host header value.
+  string host = 3;
+  // Path is the raw URL path (e.g. "/api/v1/invoices/inv_123").
+  string path = 4;
+  // NormalizedRoute is the route pattern with path params replaced
+  // (e.g. "/api/v1/invoices/{id}"), used for grouping in analytics.
+  string normalized_route = 5;
+  // QueryJson is the JSON-serialized query parameters. Absent when the
+  // request has no query string.
+  optional string query_json = 6;
+  // StatusCode is the HTTP response status code.
+  int32 status_code = 7;
+  // LatencyUs is the total request duration in microseconds, from
+  // request receipt to response write.
+  int64 latency_us = 8;
+  // AccountID is the actor's home account ID, if authenticated.
+  optional string account_id = 9;
+  // TargetAccountID is the account the request operated on, if scoped.
+  optional string target_account_id = 10;
+  // ClientIp is the caller's IP address in binary form (4 or 16 bytes).
+  optional bytes client_ip = 11;
+  // ClientIpString is the caller's IP address as a human-readable string.
+  optional string client_ip_string = 12;
+  // UserAgent is the User-Agent header value.
+  optional string user_agent = 13;
+  // Referrer is the Referer header value.
+  optional string referrer = 14;
+  // ErrorCode is the APIError code (e.g. "validation_failed"), if the
+  // request failed.
+  optional string error_code = 15;
+  // ErrorMessage is the public error message returned to the client.
+  optional string error_message = 16;
+  // OccurredAt is the timestamp when the request was received.
+  google.protobuf.Timestamp occurred_at = 17;
+  // IdempotencyKeyID is the idempotency key record ID, if the request
+  // included an Idempotency-Key header.
+  optional string idempotency_key_id = 18;
+  // ActorID is the authenticated caller's ID (user or API key).
+  optional string actor_id = 19;
+  // ActorType is the actor's relationship type to the target account
+  // (e.g. "internal", "customer").
+  optional string actor_type = 20;
+  // InternalErrorMessage is the detailed error message for internal
+  // server errors, not exposed to the client.
+  optional string internal_error_message = 21;
+  // StackTrace is the goroutine stack trace captured for 5xx errors.
+  optional string stack_trace = 22;
+  // IdentityType is the authentication method used (e.g. "user",
+  // "api_key", "unauthenticated").
+  optional string identity_type = 23;
+  // CreatedAt is when the log record was inserted.
+  google.protobuf.Timestamp created_at = 24;
+  // ApiVersion is the API version from the request (e.g. "v1").
+  optional string api_version = 25;
+  // TraceId is the OpenTelemetry trace ID for correlating logs with traces.
+  optional string trace_id = 26;
+}
+
+// CreateRequestLogRequest wraps the log record for insertion.
+message CreateRequestLogRequest {
+  // RequestLog is the structured log record to persist.
+  RequestLog request_log = 1;
+}
+
+// CreateRequestLogResponse confirms the log was persisted.
+message CreateRequestLogResponse {
+  bool success = 1;
+}

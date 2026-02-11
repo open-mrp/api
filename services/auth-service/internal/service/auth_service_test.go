@@ -14,7 +14,7 @@ import (
 	"github.com/augno/api/services/auth-service/internal/token"
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/contracts"
+	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/ptrutil"
 
 	"github.com/stretchr/testify/suite"
@@ -29,62 +29,52 @@ func (f staticMediatorFactory) Build(domain.RepoFactory) domain.Mediators {
 	return f.mediators
 }
 
-// stubTxManager executes the callback without a real transaction.
 type stubTxManager struct {
 	repoFactory domain.RepoFactory
 }
 
-func (m stubTxManager) WithTx(ctx context.Context, fn func(ctx context.Context, f domain.RepoFactory) *contracts.APIError) *contracts.APIError {
+func (m stubTxManager) WithTx(ctx context.Context, fn func(ctx context.Context, f domain.RepoFactory) *apierror.APIError) *apierror.APIError {
 	return fn(ctx, m.repoFactory)
 }
 
-// MiddlewareSvcTestSuite provides a test suite for MiddlewareSvc tests
-type MiddlewareSvcTestSuite struct {
+type AuthSvcTestSuite struct {
 	suite.Suite
 	authSvc               domain.AuthSvc
 	repoFactory           *factorymock.MockRepoFactory
 	userRepo              *repositorymock.MockUserRepo
 	apiKeyRepo            *repositorymock.MockAPIKeyRepo
-	accountRelationRepo   *repositorymock.MockAccountRelationRepo
-	accountUserRepo       *repositorymock.MockAccountUserRepo
-	rolePermissionRepo    *repositorymock.MockRolePermissionRepo
 	refreshTokenRepo      *repositorymock.MockRefreshTokenRepo
+	idempotencyKeyRepo    *repositorymock.MockIdempotencyKeyRepo
 	userMed               *mediatormock.MockUserMed
 	apiKeyMed             *mediatormock.MockAPIKeyMed
-	accountUserMed        *mediatormock.MockAccountUserMed
 	passwordMed           *mediatormock.MockPasswordMed
 	refreshTokenMed       *mediatormock.MockRefreshTokenMed
+	idempotencyMed        *mediatormock.MockIdempotencyMed
 	jwtUtils              domain.JWTUtils
 	ctrl                  *gomock.Controller
 	notificationPublisher *publishermock.MockNotificationPublisher
 }
 
-// SetupSuite runs once before all tests in the suite
-func (suite *MiddlewareSvcTestSuite) SetupSuite() {
-	jwtConfig := token.DefaultJWTConfig(testutil.JWTSecret)
-	suite.jwtUtils = token.NewJWTUtils(jwtConfig)
+func (suite *AuthSvcTestSuite) SetupSuite() {
+	suite.jwtUtils = token.NewJWTUtils(&token.JWTConfig{Secret: testutil.JWTSecret})
 
 	suite.ctrl = gomock.NewController(suite.T())
 	suite.userRepo = repositorymock.NewMockUserRepo(suite.ctrl)
-	suite.accountRelationRepo = repositorymock.NewMockAccountRelationRepo(suite.ctrl)
-	suite.accountUserRepo = repositorymock.NewMockAccountUserRepo(suite.ctrl)
-	suite.rolePermissionRepo = repositorymock.NewMockRolePermissionRepo(suite.ctrl)
 	suite.refreshTokenRepo = repositorymock.NewMockRefreshTokenRepo(suite.ctrl)
 	suite.apiKeyRepo = repositorymock.NewMockAPIKeyRepo(suite.ctrl)
+	suite.idempotencyKeyRepo = repositorymock.NewMockIdempotencyKeyRepo(suite.ctrl)
 
 	suite.userMed = mediatormock.NewMockUserMed(suite.ctrl)
 	suite.apiKeyMed = mediatormock.NewMockAPIKeyMed(suite.ctrl)
-	suite.accountUserMed = mediatormock.NewMockAccountUserMed(suite.ctrl)
 	suite.passwordMed = mediatormock.NewMockPasswordMed(suite.ctrl)
 	suite.refreshTokenMed = mediatormock.NewMockRefreshTokenMed(suite.ctrl)
+	suite.idempotencyMed = mediatormock.NewMockIdempotencyMed(suite.ctrl)
 
 	suite.repoFactory = factorymock.NewMockRepoFactory(suite.ctrl)
 	suite.repoFactory.EXPECT().NewUserRepo().Return(suite.userRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewRefreshTokenRepo().Return(suite.refreshTokenRepo).AnyTimes()
-	suite.repoFactory.EXPECT().NewAccountUserRepo().Return(suite.accountUserRepo).AnyTimes()
-	suite.repoFactory.EXPECT().NewAccountRelationRepo().Return(suite.accountRelationRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewAPIKeyRepo().Return(suite.apiKeyRepo).AnyTimes()
-	suite.repoFactory.EXPECT().NewRolePermissionRepo().Return(suite.rolePermissionRepo).AnyTimes()
+	suite.repoFactory.EXPECT().NewIdempotencyKeyRepo().Return(suite.idempotencyKeyRepo).AnyTimes()
 
 	suite.notificationPublisher = publishermock.NewMockNotificationPublisher(suite.ctrl)
 
@@ -96,35 +86,33 @@ func (suite *MiddlewareSvcTestSuite) SetupSuite() {
 		MediatorFactory: staticMediatorFactory{mediators: domain.Mediators{
 			User:         suite.userMed,
 			APIKey:       suite.apiKeyMed,
-			AccountUser:  suite.accountUserMed,
 			Password:     suite.passwordMed,
 			RefreshToken: suite.refreshTokenMed,
+			Idempotency:  suite.idempotencyMed,
 		}},
 		NotificationPublisher: suite.notificationPublisher,
 	}
 	suite.authSvc = NewAuthSvc(authSvcConfig)
 }
 
-// TearDownSuite runs once after all tests in the suite
-func (suite *MiddlewareSvcTestSuite) TearDownSuite() {
+func (suite *AuthSvcTestSuite) TearDownSuite() {
 	suite.ctrl.Finish()
 }
 
-// TestMiddlewareSvcTestSuite runs the test suite
-func TestMiddlewareSvcTestSuite(t *testing.T) {
-	suite.Run(t, new(MiddlewareSvcTestSuite))
+func TestAuthSvcTestSuite(t *testing.T) {
+	suite.Run(t, new(AuthSvcTestSuite))
 }
 
-func (suite *MiddlewareSvcTestSuite) TestAuthenticateRequest_NoAuthHeader() {
+func (suite *AuthSvcTestSuite) TestValidateCredential_NoAuthHeader() {
 	ctx := context.Background()
 
-	expectedIdentity := types.GetUnauthenticatedIdentity("")
+	expectedIdentity := types.GetUnauthenticatedIdentity(nil)
 	suite.userMed.EXPECT().
-		ValidateCredential(gomock.Any(), "", "").
+		ValidateCredential(gomock.Any(), "", (*string)(nil)).
 		Return(expectedIdentity, nil).
 		Times(1)
 
-	identity, err := suite.authSvc.ValidateCredential(ctx, "", "")
+	identity, err := suite.authSvc.ValidateCredential(ctx, "", nil)
 
 	suite.Nil(err)
 	suite.NotNil(identity)
@@ -134,44 +122,7 @@ func (suite *MiddlewareSvcTestSuite) TestAuthenticateRequest_NoAuthHeader() {
 	suite.Equal(constants.AccountModeProduction, identity.AccountMode)
 }
 
-func (suite *MiddlewareSvcTestSuite) TestAuthenticateRequest_APIKey_Unassigned() {
-	ctx := context.Background()
-
-	identityResponse := &types.Identity{
-		Type:            types.IdentityTypeAPIKey,
-		TargetAccountID: nil,
-		Actor: &types.IdentityActor{
-			Type:         types.IdentityActorTypeUnassigned,
-			ID:           testutil.EntityIDAPIKeyValidProdMode,
-			Name:         ptrutil.String("Test API Key"),
-			AccountID:    ptrutil.String(testutil.EntityIDAccount),
-			RoleID:       nil,
-			RoleTypeCode: nil,
-			Permissions:  map[string]bool{},
-		},
-		AccountMode: constants.AccountModeProduction,
-	}
-
-	suite.userMed.EXPECT().
-		ValidateCredential(gomock.Any(), testutil.APIKeyValidProdMode, "").
-		Return(identityResponse, nil).
-		Times(1)
-
-	identity, err := suite.authSvc.ValidateCredential(ctx, testutil.APIKeyValidProdMode, "")
-	suite.Nil(err)
-	suite.NotNil(identity)
-	suite.Equal(types.IdentityTypeAPIKey, identity.Type)
-	suite.Nil(identity.TargetAccountID)
-	suite.NotNil(identity.Actor)
-	suite.Equal(types.IdentityActorTypeUnassigned, identity.Actor.Type)
-	suite.Equal(testutil.EntityIDAPIKeyValidProdMode, identity.Actor.ID)
-	suite.NotNil(identity.Actor.AccountID)
-	suite.Equal(testutil.EntityIDAccount, *identity.Actor.AccountID)
-	suite.Nil(identity.Actor.RoleID)
-	suite.Equal(map[string]bool{}, identity.Actor.Permissions)
-}
-
-func (suite *MiddlewareSvcTestSuite) TestAuthenticateRequest_APIKey_Internal() {
+func (suite *AuthSvcTestSuite) TestValidateCredential_APIKey_DefaultsToOwnerAccount() {
 	ctx := context.Background()
 
 	permissions := map[string]bool{
@@ -179,27 +130,28 @@ func (suite *MiddlewareSvcTestSuite) TestAuthenticateRequest_APIKey_Internal() {
 		"orders:write": true,
 	}
 
+	// When no target account is specified, the API key defaults to its owner account
 	identityResponse := &types.Identity{
 		Type:            types.IdentityTypeAPIKey,
-		TargetAccountID: ptrutil.String(testutil.EntityIDAccount),
+		TargetAccountID: ptrutil.Ptr(testutil.EntityIDAccount),
 		Actor: &types.IdentityActor{
 			Type:         types.IdentityActorTypeInternal,
 			ID:           testutil.EntityIDAPIKeyValidProdMode,
-			Name:         ptrutil.String("Test API Key"),
-			AccountID:    ptrutil.String(testutil.EntityIDAccount),
-			RoleID:       ptrutil.String(testutil.EntityIDRole),
-			RoleTypeCode: ptrutil.String("admin"),
+			Name:         ptrutil.Ptr("Test API Key"),
+			AccountID:    ptrutil.Ptr(testutil.EntityIDAccount),
+			RoleID:       ptrutil.Ptr(testutil.EntityIDRole),
+			RoleTypeCode: ptrutil.Ptr("admin"),
 			Permissions:  permissions,
 		},
 		AccountMode: constants.AccountModeProduction,
 	}
 
 	suite.userMed.EXPECT().
-		ValidateCredential(gomock.Any(), testutil.APIKeyValidProdMode, testutil.EntityIDAccount).
+		ValidateCredential(gomock.Any(), testutil.APIKeyValidProdMode, (*string)(nil)).
 		Return(identityResponse, nil).
 		Times(1)
 
-	identity, err := suite.authSvc.ValidateCredential(ctx, testutil.APIKeyValidProdMode, testutil.EntityIDAccount)
+	identity, err := suite.authSvc.ValidateCredential(ctx, testutil.APIKeyValidProdMode, nil)
 	suite.Nil(err)
 	suite.NotNil(identity)
 	suite.Equal(types.IdentityTypeAPIKey, identity.Type)
@@ -215,17 +167,61 @@ func (suite *MiddlewareSvcTestSuite) TestAuthenticateRequest_APIKey_Internal() {
 	suite.Equal(permissions, identity.Actor.Permissions)
 }
 
-func (suite *MiddlewareSvcTestSuite) TestAuthenticateRequest_APIKey_Customer() {
+func (suite *AuthSvcTestSuite) TestValidateCredential_APIKey_Internal() {
+	ctx := context.Background()
+
+	permissions := map[string]bool{
+		"orders:read":  true,
+		"orders:write": true,
+	}
+
+	identityResponse := &types.Identity{
+		Type:            types.IdentityTypeAPIKey,
+		TargetAccountID: ptrutil.Ptr(testutil.EntityIDAccount),
+		Actor: &types.IdentityActor{
+			Type:         types.IdentityActorTypeInternal,
+			ID:           testutil.EntityIDAPIKeyValidProdMode,
+			Name:         ptrutil.Ptr("Test API Key"),
+			AccountID:    ptrutil.Ptr(testutil.EntityIDAccount),
+			RoleID:       ptrutil.Ptr(testutil.EntityIDRole),
+			RoleTypeCode: ptrutil.Ptr("admin"),
+			Permissions:  permissions,
+		},
+		AccountMode: constants.AccountModeProduction,
+	}
+
+	suite.userMed.EXPECT().
+		ValidateCredential(gomock.Any(), testutil.APIKeyValidProdMode, ptrutil.Ptr(testutil.EntityIDAccount)).
+		Return(identityResponse, nil).
+		Times(1)
+
+	identity, err := suite.authSvc.ValidateCredential(ctx, testutil.APIKeyValidProdMode, ptrutil.Ptr(testutil.EntityIDAccount))
+	suite.Nil(err)
+	suite.NotNil(identity)
+	suite.Equal(types.IdentityTypeAPIKey, identity.Type)
+	suite.NotNil(identity.TargetAccountID)
+	suite.Equal(testutil.EntityIDAccount, *identity.TargetAccountID)
+	suite.NotNil(identity.Actor)
+	suite.Equal(types.IdentityActorTypeInternal, identity.Actor.Type)
+	suite.Equal(testutil.EntityIDAPIKeyValidProdMode, identity.Actor.ID)
+	suite.NotNil(identity.Actor.AccountID)
+	suite.Equal(testutil.EntityIDAccount, *identity.Actor.AccountID)
+	suite.NotNil(identity.Actor.RoleID)
+	suite.Equal(testutil.EntityIDRole, *identity.Actor.RoleID)
+	suite.Equal(permissions, identity.Actor.Permissions)
+}
+
+func (suite *AuthSvcTestSuite) TestValidateCredential_APIKey_Customer() {
 	ctx := context.Background()
 
 	identityResponse := &types.Identity{
 		Type:            types.IdentityTypeAPIKey,
-		TargetAccountID: ptrutil.String(testutil.EntityIDAccount),
+		TargetAccountID: ptrutil.Ptr(testutil.EntityIDAccount),
 		Actor: &types.IdentityActor{
 			Type:         types.IdentityActorTypeCustomer,
 			ID:           testutil.EntityIDAPIKeyValidProdMode,
-			Name:         ptrutil.String("Test API Key"),
-			AccountID:    ptrutil.String("acc_customer123"),
+			Name:         ptrutil.Ptr("Test API Key"),
+			AccountID:    ptrutil.Ptr("acc_customer123"),
 			RoleID:       nil,
 			RoleTypeCode: nil,
 			Permissions:  map[string]bool{},
@@ -234,11 +230,11 @@ func (suite *MiddlewareSvcTestSuite) TestAuthenticateRequest_APIKey_Customer() {
 	}
 
 	suite.userMed.EXPECT().
-		ValidateCredential(gomock.Any(), testutil.APIKeyValidProdMode, testutil.EntityIDAccount).
+		ValidateCredential(gomock.Any(), testutil.APIKeyValidProdMode, ptrutil.Ptr(testutil.EntityIDAccount)).
 		Return(identityResponse, nil).
 		Times(1)
 
-	identity, err := suite.authSvc.ValidateCredential(ctx, testutil.APIKeyValidProdMode, testutil.EntityIDAccount)
+	identity, err := suite.authSvc.ValidateCredential(ctx, testutil.APIKeyValidProdMode, ptrutil.Ptr(testutil.EntityIDAccount))
 	suite.Nil(err)
 	suite.NotNil(identity)
 	suite.Equal(types.IdentityTypeAPIKey, identity.Type)
@@ -253,7 +249,7 @@ func (suite *MiddlewareSvcTestSuite) TestAuthenticateRequest_APIKey_Customer() {
 	suite.Equal(map[string]bool{}, identity.Actor.Permissions)
 }
 
-func (suite *MiddlewareSvcTestSuite) TestAuthenticateRequest_JWT_Unassigned() {
+func (suite *AuthSvcTestSuite) TestValidateCredential_JWT_Unassigned() {
 	ctx := context.Background()
 
 	userID := testutil.EntityIDUser
@@ -266,7 +262,7 @@ func (suite *MiddlewareSvcTestSuite) TestAuthenticateRequest_JWT_Unassigned() {
 		Actor: &types.IdentityActor{
 			Type:         types.IdentityActorTypeUnassigned,
 			ID:           userID,
-			Name:         ptrutil.String("Test User"),
+			Name:         ptrutil.Ptr("Test User"),
 			AccountID:    nil,
 			RoleID:       nil,
 			RoleTypeCode: nil,
@@ -276,11 +272,11 @@ func (suite *MiddlewareSvcTestSuite) TestAuthenticateRequest_JWT_Unassigned() {
 	}
 
 	suite.userMed.EXPECT().
-		ValidateCredential(gomock.Any(), token, "").
+		ValidateCredential(gomock.Any(), token, (*string)(nil)).
 		Return(identityResponse, nil).
 		Times(1)
 
-	identity, err := suite.authSvc.ValidateCredential(ctx, token, "")
+	identity, err := suite.authSvc.ValidateCredential(ctx, token, nil)
 	suite.Nil(err)
 	suite.NotNil(identity)
 	suite.Equal(types.IdentityTypeUser, identity.Type)
@@ -293,7 +289,7 @@ func (suite *MiddlewareSvcTestSuite) TestAuthenticateRequest_JWT_Unassigned() {
 	suite.Equal(map[string]bool{}, identity.Actor.Permissions)
 }
 
-func (suite *MiddlewareSvcTestSuite) TestAuthenticateRequest_JWT_Internal() {
+func (suite *AuthSvcTestSuite) TestValidateCredential_JWT_Internal() {
 	ctx := context.Background()
 
 	userID := testutil.EntityIDUser
@@ -307,25 +303,25 @@ func (suite *MiddlewareSvcTestSuite) TestAuthenticateRequest_JWT_Internal() {
 
 	identityResponse := &types.Identity{
 		Type:            types.IdentityTypeUser,
-		TargetAccountID: ptrutil.String(testutil.EntityIDAccount),
+		TargetAccountID: ptrutil.Ptr(testutil.EntityIDAccount),
 		Actor: &types.IdentityActor{
 			Type:         types.IdentityActorTypeInternal,
 			ID:           userID,
-			Name:         ptrutil.String("Test User"),
-			AccountID:    ptrutil.String(testutil.EntityIDAccount),
-			RoleID:       ptrutil.String(testutil.EntityIDRole),
-			RoleTypeCode: ptrutil.String("admin"),
+			Name:         ptrutil.Ptr("Test User"),
+			AccountID:    ptrutil.Ptr(testutil.EntityIDAccount),
+			RoleID:       ptrutil.Ptr(testutil.EntityIDRole),
+			RoleTypeCode: ptrutil.Ptr("admin"),
 			Permissions:  permissions,
 		},
 		AccountMode: constants.AccountModeProduction,
 	}
 
 	suite.userMed.EXPECT().
-		ValidateCredential(gomock.Any(), token, testutil.EntityIDAccount).
+		ValidateCredential(gomock.Any(), token, ptrutil.Ptr(testutil.EntityIDAccount)).
 		Return(identityResponse, nil).
 		Times(1)
 
-	identity, err := suite.authSvc.ValidateCredential(ctx, token, testutil.EntityIDAccount)
+	identity, err := suite.authSvc.ValidateCredential(ctx, token, ptrutil.Ptr(testutil.EntityIDAccount))
 	suite.Nil(err)
 	suite.NotNil(identity)
 	suite.Equal(types.IdentityTypeUser, identity.Type)
@@ -341,7 +337,7 @@ func (suite *MiddlewareSvcTestSuite) TestAuthenticateRequest_JWT_Internal() {
 	suite.Equal(permissions, identity.Actor.Permissions)
 }
 
-func (suite *MiddlewareSvcTestSuite) TestAuthenticateRequest_JWT_Customer() {
+func (suite *AuthSvcTestSuite) TestValidateCredential_JWT_Customer() {
 	ctx := context.Background()
 
 	userID := testutil.EntityIDUser
@@ -350,12 +346,12 @@ func (suite *MiddlewareSvcTestSuite) TestAuthenticateRequest_JWT_Customer() {
 
 	identityResponse := &types.Identity{
 		Type:            types.IdentityTypeUser,
-		TargetAccountID: ptrutil.String(testutil.EntityIDAccount),
+		TargetAccountID: ptrutil.Ptr(testutil.EntityIDAccount),
 		Actor: &types.IdentityActor{
 			Type:         types.IdentityActorTypeCustomer,
 			ID:           userID,
-			Name:         ptrutil.String("Test User"),
-			AccountID:    ptrutil.String("acc_customer123"),
+			Name:         ptrutil.Ptr("Test User"),
+			AccountID:    ptrutil.Ptr("acc_customer123"),
 			RoleID:       nil,
 			RoleTypeCode: nil,
 			Permissions:  map[string]bool{},
@@ -364,11 +360,11 @@ func (suite *MiddlewareSvcTestSuite) TestAuthenticateRequest_JWT_Customer() {
 	}
 
 	suite.userMed.EXPECT().
-		ValidateCredential(gomock.Any(), token, testutil.EntityIDAccount).
+		ValidateCredential(gomock.Any(), token, ptrutil.Ptr(testutil.EntityIDAccount)).
 		Return(identityResponse, nil).
 		Times(1)
 
-	identity, err := suite.authSvc.ValidateCredential(ctx, token, testutil.EntityIDAccount)
+	identity, err := suite.authSvc.ValidateCredential(ctx, token, ptrutil.Ptr(testutil.EntityIDAccount))
 	suite.Nil(err)
 	suite.NotNil(identity)
 	suite.Equal(types.IdentityTypeUser, identity.Type)
@@ -383,64 +379,64 @@ func (suite *MiddlewareSvcTestSuite) TestAuthenticateRequest_JWT_Customer() {
 	suite.Equal(map[string]bool{}, identity.Actor.Permissions)
 }
 
-func (suite *MiddlewareSvcTestSuite) TestAuthenticateRequest_JWT_Expired() {
+func (suite *AuthSvcTestSuite) TestValidateCredential_JWT_Expired() {
 	userID := testutil.EntityIDUser
 	token, err := suite.jwtUtils.Encode(context.Background(), userID, -time.Hour, domain.JWTTypeAccess) // Expired token
 	suite.Nil(err)
 
 	ctx := context.Background()
 	suite.userMed.EXPECT().
-		ValidateCredential(gomock.Any(), token, testutil.EntityIDAccount).
-		Return(nil, contracts.NewAuthenticationError("Access token has expired.")).
+		ValidateCredential(gomock.Any(), token, ptrutil.Ptr(testutil.EntityIDAccount)).
+		Return(nil, apierror.NewAuthenticationError("Access token has expired.")).
 		Times(1)
 
-	identity, err := suite.authSvc.ValidateCredential(ctx, token, testutil.EntityIDAccount)
+	identity, err := suite.authSvc.ValidateCredential(ctx, token, ptrutil.Ptr(testutil.EntityIDAccount))
 	suite.NotNil(err)
-	suite.Equal(contracts.ErrorCodeInvalidCredentials, err.Code)
+	suite.Equal(apierror.ErrorCodeInvalidCredentials, err.Code)
 	suite.Nil(identity)
 }
 
-func (suite *MiddlewareSvcTestSuite) TestAuthenticateRequest_JWT_Invalid() {
+func (suite *AuthSvcTestSuite) TestValidateCredential_JWT_Invalid() {
 	invalidToken := "invalid.jwt.token"
 	ctx := context.Background()
 	suite.userMed.EXPECT().
-		ValidateCredential(gomock.Any(), invalidToken, testutil.EntityIDAccount).
-		Return(nil, contracts.NewAuthenticationError("Invalid token")).
+		ValidateCredential(gomock.Any(), invalidToken, ptrutil.Ptr(testutil.EntityIDAccount)).
+		Return(nil, apierror.NewAuthenticationError("Invalid token")).
 		Times(1)
 
-	identity, err := suite.authSvc.ValidateCredential(ctx, invalidToken, testutil.EntityIDAccount)
+	identity, err := suite.authSvc.ValidateCredential(ctx, invalidToken, ptrutil.Ptr(testutil.EntityIDAccount))
 	suite.NotNil(err)
-	suite.Equal(contracts.ErrorCodeInvalidCredentials, err.Code)
+	suite.Equal(apierror.ErrorCodeInvalidCredentials, err.Code)
 	suite.Nil(identity)
 }
 
-func (suite *MiddlewareSvcTestSuite) TestAuthenticateRequest_JWT_UserNotFound() {
+func (suite *AuthSvcTestSuite) TestValidateCredential_JWT_UserNotFound() {
 	userID := "usr_notfound123"
 	token, err := suite.jwtUtils.Encode(context.Background(), userID, time.Hour, domain.JWTTypeAccess)
 	suite.Nil(err)
 
 	ctx := context.Background()
 	suite.userMed.EXPECT().
-		ValidateCredential(gomock.Any(), token, testutil.EntityIDAccount).
-		Return(nil, contracts.NewAuthenticationError("Invalid token")).
+		ValidateCredential(gomock.Any(), token, ptrutil.Ptr(testutil.EntityIDAccount)).
+		Return(nil, apierror.NewAuthenticationError("Invalid token")).
 		Times(1)
 
-	identity, err := suite.authSvc.ValidateCredential(ctx, token, testutil.EntityIDAccount)
+	identity, err := suite.authSvc.ValidateCredential(ctx, token, ptrutil.Ptr(testutil.EntityIDAccount))
 	suite.NotNil(err)
-	suite.Equal(contracts.ErrorCodeInvalidCredentials, err.Code)
+	suite.Equal(apierror.ErrorCodeInvalidCredentials, err.Code)
 	suite.Nil(identity)
 }
 
-func (suite *MiddlewareSvcTestSuite) TestAuthenticateRequest_APIKey_Invalid() {
+func (suite *AuthSvcTestSuite) TestValidateCredential_APIKey_Invalid() {
 	ctx := context.Background()
 
 	suite.userMed.EXPECT().
-		ValidateCredential(gomock.Any(), testutil.APIKeyValidProdMode, testutil.EntityIDAccount).
-		Return(nil, contracts.NewAuthenticationError("Invalid API key")).
+		ValidateCredential(gomock.Any(), testutil.APIKeyValidProdMode, ptrutil.Ptr(testutil.EntityIDAccount)).
+		Return(nil, apierror.NewAuthenticationError("Invalid API key")).
 		Times(1)
 
-	identity, err := suite.authSvc.ValidateCredential(ctx, testutil.APIKeyValidProdMode, testutil.EntityIDAccount)
+	identity, err := suite.authSvc.ValidateCredential(ctx, testutil.APIKeyValidProdMode, ptrutil.Ptr(testutil.EntityIDAccount))
 	suite.NotNil(err)
-	suite.Equal(contracts.ErrorCodeInvalidCredentials, err.Code)
+	suite.Equal(apierror.ErrorCodeInvalidCredentials, err.Code)
 	suite.Nil(identity)
 }

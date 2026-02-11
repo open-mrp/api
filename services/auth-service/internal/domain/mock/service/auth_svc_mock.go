@@ -13,9 +13,8 @@ import (
 	context "context"
 	reflect "reflect"
 
-	domain "github.com/augno/api/services/auth-service/internal/domain"
 	types "github.com/augno/api/services/auth-service/pkg/types"
-	contracts "github.com/augno/api/shared/contracts"
+	apierror "github.com/augno/api/shared/errors"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -43,114 +42,12 @@ func (m *MockAuthSvc) EXPECT() *MockAuthSvcMockRecorder {
 	return m.recorder
 }
 
-// Login mocks base method.
-func (m *MockAuthSvc) Login(ctx context.Context, identifier, password string) (*domain.LoginResult, *contracts.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Login", ctx, identifier, password)
-	ret0, _ := ret[0].(*domain.LoginResult)
-	ret1, _ := ret[1].(*contracts.APIError)
-	return ret0, ret1
-}
-
-// Login indicates an expected call of Login.
-func (mr *MockAuthSvcMockRecorder) Login(ctx, identifier, password any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Login", reflect.TypeOf((*MockAuthSvc)(nil).Login), ctx, identifier, password)
-}
-
-// RefreshToken mocks base method.
-func (m *MockAuthSvc) RefreshToken(ctx context.Context, refreshToken string) (*domain.RefreshTokenResult, *contracts.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RefreshToken", ctx, refreshToken)
-	ret0, _ := ret[0].(*domain.RefreshTokenResult)
-	ret1, _ := ret[1].(*contracts.APIError)
-	return ret0, ret1
-}
-
-// RefreshToken indicates an expected call of RefreshToken.
-func (mr *MockAuthSvcMockRecorder) RefreshToken(ctx, refreshToken any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RefreshToken", reflect.TypeOf((*MockAuthSvc)(nil).RefreshToken), ctx, refreshToken)
-}
-
-// Register mocks base method.
-func (m *MockAuthSvc) Register(ctx context.Context, name, email, password string) (*domain.LoginResult, *contracts.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Register", ctx, name, email, password)
-	ret0, _ := ret[0].(*domain.LoginResult)
-	ret1, _ := ret[1].(*contracts.APIError)
-	return ret0, ret1
-}
-
-// Register indicates an expected call of Register.
-func (mr *MockAuthSvcMockRecorder) Register(ctx, name, email, password any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Register", reflect.TypeOf((*MockAuthSvc)(nil).Register), ctx, name, email, password)
-}
-
-// RequestPasswordReset mocks base method.
-func (m *MockAuthSvc) RequestPasswordReset(ctx context.Context, identifier string, accountSlug *string) *contracts.APIError {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RequestPasswordReset", ctx, identifier, accountSlug)
-	ret0, _ := ret[0].(*contracts.APIError)
-	return ret0
-}
-
-// RequestPasswordReset indicates an expected call of RequestPasswordReset.
-func (mr *MockAuthSvcMockRecorder) RequestPasswordReset(ctx, identifier, accountSlug any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequestPasswordReset", reflect.TypeOf((*MockAuthSvc)(nil).RequestPasswordReset), ctx, identifier, accountSlug)
-}
-
-// ResetPassword mocks base method.
-func (m *MockAuthSvc) ResetPassword(ctx context.Context, token, newPassword string) (*domain.LoginResult, *contracts.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ResetPassword", ctx, token, newPassword)
-	ret0, _ := ret[0].(*domain.LoginResult)
-	ret1, _ := ret[1].(*contracts.APIError)
-	return ret0, ret1
-}
-
-// ResetPassword indicates an expected call of ResetPassword.
-func (mr *MockAuthSvcMockRecorder) ResetPassword(ctx, token, newPassword any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResetPassword", reflect.TypeOf((*MockAuthSvc)(nil).ResetPassword), ctx, token, newPassword)
-}
-
-// RevokeRefreshToken mocks base method.
-func (m *MockAuthSvc) RevokeRefreshToken(ctx context.Context, refreshToken string) *contracts.APIError {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RevokeRefreshToken", ctx, refreshToken)
-	ret0, _ := ret[0].(*contracts.APIError)
-	return ret0
-}
-
-// RevokeRefreshToken indicates an expected call of RevokeRefreshToken.
-func (mr *MockAuthSvcMockRecorder) RevokeRefreshToken(ctx, refreshToken any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RevokeRefreshToken", reflect.TypeOf((*MockAuthSvc)(nil).RevokeRefreshToken), ctx, refreshToken)
-}
-
-// UpdatePassword mocks base method.
-func (m *MockAuthSvc) UpdatePassword(ctx context.Context, userID, oldPassword, newPassword string) *contracts.APIError {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdatePassword", ctx, userID, oldPassword, newPassword)
-	ret0, _ := ret[0].(*contracts.APIError)
-	return ret0
-}
-
-// UpdatePassword indicates an expected call of UpdatePassword.
-func (mr *MockAuthSvcMockRecorder) UpdatePassword(ctx, userID, oldPassword, newPassword any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdatePassword", reflect.TypeOf((*MockAuthSvc)(nil).UpdatePassword), ctx, userID, oldPassword, newPassword)
-}
-
 // ValidateCredential mocks base method.
-func (m *MockAuthSvc) ValidateCredential(ctx context.Context, authToken, targetAccountID string) (*types.Identity, *contracts.APIError) {
+func (m *MockAuthSvc) ValidateCredential(ctx context.Context, authToken string, targetAccountID *string) (*types.Identity, *apierror.APIError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ValidateCredential", ctx, authToken, targetAccountID)
 	ret0, _ := ret[0].(*types.Identity)
-	ret1, _ := ret[1].(*contracts.APIError)
+	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 

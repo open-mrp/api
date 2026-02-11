@@ -10,31 +10,17 @@ import (
 	mediatormock "github.com/augno/api/services/auth-service/internal/domain/mock/mediator"
 	publishermock "github.com/augno/api/services/auth-service/internal/domain/mock/publisher"
 	repositorymock "github.com/augno/api/services/auth-service/internal/domain/mock/repository"
-	emailpkg "github.com/augno/api/services/auth-service/internal/email"
 	"github.com/augno/api/services/auth-service/internal/password"
 	"github.com/augno/api/services/auth-service/internal/testutil"
 	"github.com/augno/api/services/auth-service/internal/token"
 	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/shared/contracts"
+	"github.com/augno/api/shared/constants"
+	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/messaging"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
 )
-
-// stubTemplateRenderer is a no-op implementation of TemplateRenderer for testing
-type stubTemplateRenderer struct{}
-
-func (s *stubTemplateRenderer) RenderWelcomeEmail(ctx context.Context, data emailpkg.WelcomeEmailData) (string, *contracts.APIError) {
-	return "<html>Welcome</html>", nil
-}
-
-func (s *stubTemplateRenderer) RenderPasswordResetEmail(ctx context.Context, data emailpkg.PasswordResetEmailData) (string, *contracts.APIError) {
-	return "<html>Password Reset</html>", nil
-}
-
-func (s *stubTemplateRenderer) RenderPasswordUpdatedEmail(ctx context.Context, data emailpkg.PasswordUpdatedEmailData) (string, *contracts.APIError) {
-	return "<html>Password Updated</html>", nil
-}
 
 // PasswordMedTestSuite provides a test suite for PasswordMed tests
 type PasswordMedTestSuite struct {
@@ -44,9 +30,7 @@ type PasswordMedTestSuite struct {
 	repoFactory           *factorymock.MockRepoFactory
 	refreshTokenMed       *mediatormock.MockRefreshTokenMed
 	notificationPublisher *publishermock.MockNotificationPublisher
-	templateRenderer      emailpkg.TemplateRenderer
 	jwtUtils              domain.JWTUtils
-	opaqueTokenUtils      domain.OpaqueTokenUtils
 	ctrl                  *gomock.Controller
 }
 
@@ -58,19 +42,14 @@ func (suite *PasswordMedTestSuite) SetupSuite() {
 	suite.repoFactory.EXPECT().NewUserRepo().Return(suite.userRepo).AnyTimes()
 	suite.refreshTokenMed = mediatormock.NewMockRefreshTokenMed(suite.ctrl)
 	suite.notificationPublisher = publishermock.NewMockNotificationPublisher(suite.ctrl)
-	suite.templateRenderer = &stubTemplateRenderer{}
 
-	jwtConfig := token.DefaultJWTConfig(testutil.JWTSecret)
-	suite.jwtUtils = token.NewJWTUtils(jwtConfig)
-	suite.opaqueTokenUtils = token.NewOpaqueTokenUtils(token.DefaultOpaqueTokenConfig())
+	suite.jwtUtils = token.NewJWTUtils(&token.JWTConfig{Secret: testutil.JWTSecret})
 
 	passwordMedConfig := PasswordMedConfig{
 		Repos:                 suite.repoFactory,
 		RefreshTokenMed:       suite.refreshTokenMed,
 		JWTUtils:              suite.jwtUtils,
-		OpaqueTokenUtils:      suite.opaqueTokenUtils,
 		NotificationPublisher: suite.notificationPublisher,
-		TemplateRenderer:      suite.templateRenderer,
 		FrontendURL:           "https://test.example.com",
 	}
 	suite.passwordMed = NewPasswordMed(passwordMedConfig)
@@ -114,14 +93,14 @@ func (suite *PasswordMedTestSuite) TestUpdatePassword_UpdatePasswordError() {
 
 	suite.userRepo.EXPECT().
 		UpdatePassword(gomock.Any(), userID, gomock.Any()).
-		Return(contracts.NewInternalError(nil, "Database error")).
+		Return(apierror.NewInternalError(nil, "Database error")).
 		Times(1)
 
 	newPassword := "newPassword456"
 	apiErr := suite.passwordMed.Update(ctx, user, newPassword)
 
 	suite.NotNil(apiErr)
-	suite.Equal(contracts.ErrorCodeInternalError, apiErr.Code)
+	suite.Equal(apierror.ErrorCodeInternalError, apiErr.Code)
 }
 
 func (suite *PasswordMedTestSuite) TestUpdatePassword_RevokeAllError() {
@@ -136,14 +115,14 @@ func (suite *PasswordMedTestSuite) TestUpdatePassword_RevokeAllError() {
 
 	suite.refreshTokenMed.EXPECT().
 		RevokeAll(gomock.Any(), userID).
-		Return(contracts.NewInternalError(nil, "Failed to revoke tokens")).
+		Return(apierror.NewInternalError(nil, "Failed to revoke tokens")).
 		Times(1)
 
 	newPassword := "newPassword456"
 	apiErr := suite.passwordMed.Update(ctx, user, newPassword)
 
 	suite.NotNil(apiErr)
-	suite.Equal(contracts.ErrorCodeInternalError, apiErr.Code)
+	suite.Equal(apierror.ErrorCodeInternalError, apiErr.Code)
 }
 
 func (suite *PasswordMedTestSuite) TestUpdatePassword_WithEmailNotification_Success() {
@@ -174,14 +153,18 @@ func (suite *PasswordMedTestSuite) TestUpdatePassword_WithEmailNotification_Succ
 	suite.notificationPublisher.EXPECT().
 		PublishSendEmail(
 			gomock.Any(),
-			[]string{notifyEmail},
-			"Password Updated",
-			"<html>Password Updated</html>",
-			true,
-			nil,
-			userID,
-			nil,
+			gomock.Any(),
 		).
+		DoAndReturn(func(ctx context.Context, data messaging.EmailSendData) *apierror.APIError {
+			suite.Equal([]string{notifyEmail}, data.To)
+			suite.Equal("Password Updated", data.Subject)
+			suite.Equal(constants.EmailTemplatePasswordUpdated, data.TemplateID)
+			suite.Equal(userName, data.Params["UserName"])
+			suite.Nil(data.SendAs)
+			suite.Nil(data.AccountID)
+			suite.Equal(&userID, data.SentByID)
+			return nil
+		}).
 		Times(1)
 
 	newPassword := "newPassword456"
@@ -217,81 +200,24 @@ func (suite *PasswordMedTestSuite) TestUpdatePassword_WithEmailNotification_User
 	suite.notificationPublisher.EXPECT().
 		PublishSendEmail(
 			gomock.Any(),
-			[]string{notifyEmail},
-			"Password Updated",
-			"<html>Password Updated</html>",
-			true,
-			nil,
-			userID,
-			nil,
+			gomock.Any(),
 		).
+		DoAndReturn(func(ctx context.Context, data messaging.EmailSendData) *apierror.APIError {
+			suite.Equal([]string{notifyEmail}, data.To)
+			suite.Equal("Password Updated", data.Subject)
+			suite.Equal(constants.EmailTemplatePasswordUpdated, data.TemplateID)
+			suite.Equal("", data.Params["UserName"])
+			suite.Nil(data.SendAs)
+			suite.Nil(data.AccountID)
+			suite.Equal(&userID, data.SentByID)
+			return nil
+		}).
 		Times(1)
 
 	newPassword := "newPassword456"
 	apiErr := suite.passwordMed.Update(ctx, user, newPassword)
 
 	suite.Nil(apiErr)
-}
-
-func (suite *PasswordMedTestSuite) TestUpdatePassword_WithEmailNotification_TemplateRendererError() {
-	ctx := context.Background()
-	userID := testutil.EntityIDUser
-	notifyEmail := "user@example.com"
-	userName := "John Doe"
-
-	user := &types.User{
-		ID:             userID,
-		Email:          stringPtr(notifyEmail),
-		Name:           stringPtr(userName),
-		HashedPassword: stringPtr("hashed"),
-		CreatedAt:      time.Now(),
-		UpdatedAt:      time.Now(),
-	}
-
-	// Create a failing template renderer
-	failingTemplateRenderer := &failingTemplateRenderer{}
-
-	passwordMedConfig := PasswordMedConfig{
-		Repos:                 suite.repoFactory,
-		RefreshTokenMed:       suite.refreshTokenMed,
-		JWTUtils:              suite.jwtUtils,
-		OpaqueTokenUtils:      suite.opaqueTokenUtils,
-		NotificationPublisher: suite.notificationPublisher,
-		TemplateRenderer:      failingTemplateRenderer,
-		FrontendURL:           "https://test.example.com",
-	}
-	passwordMed := NewPasswordMed(passwordMedConfig)
-
-	suite.userRepo.EXPECT().
-		UpdatePassword(gomock.Any(), userID, gomock.Any()).
-		Return(nil).
-		Times(1)
-
-	suite.refreshTokenMed.EXPECT().
-		RevokeAll(gomock.Any(), userID).
-		Return(nil).
-		Times(1)
-
-	newPassword := "newPassword456"
-	apiErr := passwordMed.Update(ctx, user, newPassword)
-
-	suite.NotNil(apiErr)
-	suite.Equal(contracts.ErrorCodeInternalError, apiErr.Code)
-}
-
-// failingTemplateRenderer is a template renderer that always fails
-type failingTemplateRenderer struct{}
-
-func (f *failingTemplateRenderer) RenderWelcomeEmail(ctx context.Context, data emailpkg.WelcomeEmailData) (string, *contracts.APIError) {
-	return "", contracts.NewInternalError(nil, "Template renderer error")
-}
-
-func (f *failingTemplateRenderer) RenderPasswordResetEmail(ctx context.Context, data emailpkg.PasswordResetEmailData) (string, *contracts.APIError) {
-	return "", contracts.NewInternalError(nil, "Template renderer error")
-}
-
-func (f *failingTemplateRenderer) RenderPasswordUpdatedEmail(ctx context.Context, data emailpkg.PasswordUpdatedEmailData) (string, *contracts.APIError) {
-	return "", contracts.NewInternalError(nil, "Template renderer error")
 }
 
 func (suite *PasswordMedTestSuite) TestValidatePasswordResetToken_Success() {
@@ -333,7 +259,7 @@ func (suite *PasswordMedTestSuite) TestValidatePasswordResetToken_RejectsAccessT
 
 	suite.Nil(result)
 	suite.NotNil(apiErr)
-	suite.Equal(contracts.ErrorTypeInvalidRequest, apiErr.Type)
+	suite.Equal(apierror.ErrorTypeInvalidRequest, apiErr.Type)
 	suite.Equal(token.ErrInvalidJWT, apiErr.PublicMessage)
 }
 
@@ -346,14 +272,14 @@ func (suite *PasswordMedTestSuite) TestValidatePasswordResetToken_UserNotFound()
 
 	suite.userRepo.EXPECT().
 		Find(gomock.Any(), userID).
-		Return(nil, contracts.NewResourceNotFoundError("User not found")).
+		Return(nil, apierror.NewResourceNotFoundError("User not found")).
 		Times(1)
 
 	result, apiErr := suite.passwordMed.ValidatePasswordResetToken(ctx, resetToken)
 
 	suite.Nil(result)
 	suite.NotNil(apiErr)
-	suite.Equal(contracts.ErrorCodeResourceNotFound, apiErr.Code)
+	suite.Equal(apierror.ErrorCodeInvalidCredentials, apiErr.Code)
 }
 
 // Helper function

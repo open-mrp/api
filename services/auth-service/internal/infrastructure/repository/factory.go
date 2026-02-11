@@ -3,6 +3,7 @@ package repository
 import (
 	"github.com/augno/api/services/auth-service/internal/domain"
 	"github.com/augno/api/services/auth-service/internal/infrastructure/sqlc"
+	"github.com/augno/api/shared/messaging"
 )
 
 type repoFactoryImpl struct {
@@ -23,18 +24,14 @@ func (r *repoFactoryImpl) NewRefreshTokenRepo() domain.RefreshTokenRepo {
 	return NewRefreshTokenRepo(r.queries)
 }
 
-func (r *repoFactoryImpl) NewAccountUserRepo() domain.AccountUserRepo {
-	return NewAccountUserRepo(r.queries)
-}
-
-func (r *repoFactoryImpl) NewAccountRelationRepo() domain.AccountRelationRepo {
-	return NewAccountRelationRepo(r.queries)
-}
-
 func (r *repoFactoryImpl) NewAPIKeyRepo() domain.APIKeyRepo {
 	return NewAPIKeyRepo(r.queries)
 }
 
-func (r *repoFactoryImpl) NewRolePermissionRepo() domain.RolePermissionRepo {
-	return NewRolePermissionRepo(r.queries)
+func (r *repoFactoryImpl) NewIdempotencyKeyRepo() domain.IdempotencyKeyRepo {
+	return NewIdempotencyKeyRepo(r.queries)
+}
+
+func (r *repoFactoryImpl) NewOutboxRepo() messaging.OutboxRepo {
+	return NewOutboxRepo(r.queries)
 }

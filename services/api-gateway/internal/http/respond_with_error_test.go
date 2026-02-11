@@ -8,9 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	apicontext "github.com/augno/api/services/api-gateway/internal/context"
-	"github.com/augno/api/services/api-gateway/internal/domain"
-	"github.com/augno/api/shared/contracts"
+	"github.com/augno/api/shared/appctx"
+	apierror "github.com/augno/api/shared/errors"
 )
 
 func TestRespondWithAPIError_NilErrorPanics(t *testing.T) {
@@ -31,7 +30,7 @@ func TestRespondWithAPIError_NilErrorPanics(t *testing.T) {
 }
 
 func TestRespondWithAPIError_WithoutRequestLog(t *testing.T) {
-	apiErr := contracts.NewValidationError("Invalid input")
+	apiErr := apierror.NewValidationError("Invalid input")
 	ctx := context.Background()
 	w := httptest.NewRecorder()
 
@@ -51,8 +50,8 @@ func TestRespondWithAPIError_WithoutRequestLog(t *testing.T) {
 		t.Fatal("expected response to have 'error' key with map value")
 	}
 
-	if errorMap["code"] != string(contracts.ErrorCodeValidationFailed) {
-		t.Fatalf("expected error code %q, got %q", contracts.ErrorCodeValidationFailed, errorMap["code"])
+	if errorMap["code"] != string(apierror.ErrorCodeValidationFailed) {
+		t.Fatalf("expected error code %q, got %q", apierror.ErrorCodeValidationFailed, errorMap["code"])
 	}
 
 	if errorMap["message"] != "Invalid input" {
@@ -61,11 +60,11 @@ func TestRespondWithAPIError_WithoutRequestLog(t *testing.T) {
 }
 
 func TestRespondWithAPIError_WithRequestLog_NonInternalError(t *testing.T) {
-	apiErr := contracts.NewValidationError("Invalid input")
-	rl := &domain.RequestLog{
+	apiErr := apierror.NewValidationError("Invalid input")
+	rl := &appctx.RequestLog{
 		ID: "test-request-id",
 	}
-	ctx := context.WithValue(context.Background(), apicontext.RequestLogKey, rl)
+	ctx := appctx.WithRequestLog(context.Background(), rl)
 	w := httptest.NewRecorder()
 
 	RespondWithAPIError(ctx, w, apiErr)
@@ -74,8 +73,8 @@ func TestRespondWithAPIError_WithRequestLog_NonInternalError(t *testing.T) {
 		t.Fatalf("expected status code %d, got %d", http.StatusBadRequest, w.Code)
 	}
 
-	if rl.ErrorCode == nil || *rl.ErrorCode != string(contracts.ErrorCodeValidationFailed) {
-		t.Fatalf("expected ErrorCode %q, got %v", contracts.ErrorCodeValidationFailed, rl.ErrorCode)
+	if rl.ErrorCode == nil || *rl.ErrorCode != string(apierror.ErrorCodeValidationFailed) {
+		t.Fatalf("expected ErrorCode %q, got %v", apierror.ErrorCodeValidationFailed, rl.ErrorCode)
 	}
 
 	if rl.ErrorMessage == nil || *rl.ErrorMessage != "Invalid input" {
@@ -100,17 +99,17 @@ func TestRespondWithAPIError_WithRequestLog_NonInternalError(t *testing.T) {
 		t.Fatal("expected response to have 'error' key with map value")
 	}
 
-	if errorMap["code"] != string(contracts.ErrorCodeValidationFailed) {
-		t.Fatalf("expected error code %q, got %q", contracts.ErrorCodeValidationFailed, errorMap["code"])
+	if errorMap["code"] != string(apierror.ErrorCodeValidationFailed) {
+		t.Fatalf("expected error code %q, got %q", apierror.ErrorCodeValidationFailed, errorMap["code"])
 	}
 }
 
 func TestRespondWithAPIError_WithRequestLog_InternalError(t *testing.T) {
-	internalErr := contracts.NewInternalError(nil, "Database connection failed")
-	rl := &domain.RequestLog{
+	internalErr := apierror.NewInvariantViolationError("Database connection failed.")
+	rl := &appctx.RequestLog{
 		ID: "test-request-id",
 	}
-	ctx := context.WithValue(context.Background(), apicontext.RequestLogKey, rl)
+	ctx := appctx.WithRequestLog(context.Background(), rl)
 	w := httptest.NewRecorder()
 
 	RespondWithAPIError(ctx, w, internalErr)
@@ -119,16 +118,16 @@ func TestRespondWithAPIError_WithRequestLog_InternalError(t *testing.T) {
 		t.Fatalf("expected status code %d, got %d", http.StatusInternalServerError, w.Code)
 	}
 
-	if rl.ErrorCode == nil || *rl.ErrorCode != string(contracts.ErrorCodeInternalError) {
-		t.Fatalf("expected ErrorCode %q, got %v", contracts.ErrorCodeInternalError, rl.ErrorCode)
+	if rl.ErrorCode == nil || *rl.ErrorCode != string(apierror.ErrorCodeInternalError) {
+		t.Fatalf("expected ErrorCode %q, got %v", apierror.ErrorCodeInternalError, rl.ErrorCode)
 	}
 
 	if rl.ErrorMessage == nil || *rl.ErrorMessage != "Something went wrong." {
 		t.Fatalf("expected ErrorMessage %q, got %v", "Something went wrong.", rl.ErrorMessage)
 	}
 
-	if rl.InternalErrorMessage == nil || *rl.InternalErrorMessage != "Database connection failed" {
-		t.Fatalf("expected InternalErrorMessage %q, got %v", "Database connection failed", rl.InternalErrorMessage)
+	if rl.InternalErrorMessage == nil || *rl.InternalErrorMessage != "Database connection failed." {
+		t.Fatalf("expected InternalErrorMessage %q, got %v", "Database connection failed.", rl.InternalErrorMessage)
 	}
 
 	if rl.StackTrace == nil || *rl.StackTrace == "" {
@@ -149,45 +148,45 @@ func TestRespondWithAPIError_WithRequestLog_InternalError(t *testing.T) {
 		t.Fatal("expected response to have 'error' key with map value")
 	}
 
-	if errorMap["code"] != string(contracts.ErrorCodeInternalError) {
-		t.Fatalf("expected error code %q, got %q", contracts.ErrorCodeInternalError, errorMap["code"])
+	if errorMap["code"] != string(apierror.ErrorCodeInternalError) {
+		t.Fatalf("expected error code %q, got %q", apierror.ErrorCodeInternalError, errorMap["code"])
 	}
 }
 
 func TestRespondWithAPIError_DifferentErrorCodes(t *testing.T) {
 	testCases := []struct {
 		name           string
-		apiErr         *contracts.APIError
+		apiErr         *apierror.APIError
 		expectedStatus int
 	}{
 		{
 			name:           "Unauthorized",
-			apiErr:         contracts.NewAuthenticationError("Invalid credentials"),
+			apiErr:         apierror.NewAuthenticationError("Invalid credentials"),
 			expectedStatus: http.StatusUnauthorized,
 		},
 		{
 			name:           "Forbidden",
-			apiErr:         contracts.NewAuthorizationError("Insufficient permissions"),
+			apiErr:         apierror.NewAuthorizationError("Insufficient permissions"),
 			expectedStatus: http.StatusForbidden,
 		},
 		{
 			name:           "NotFound",
-			apiErr:         contracts.NewResourceNotFoundError("Resource not found"),
+			apiErr:         apierror.NewResourceNotFoundError("Resource not found"),
 			expectedStatus: http.StatusNotFound,
 		},
 		{
 			name:           "Conflict",
-			apiErr:         contracts.NewResourceConflictError("Resource conflict"),
+			apiErr:         apierror.NewResourceConflictError("Resource conflict"),
 			expectedStatus: http.StatusConflict,
 		},
 		{
 			name:           "TooManyRequests",
-			apiErr:         contracts.NewRateLimitExceededError("Rate limit exceeded"),
+			apiErr:         apierror.NewRateLimitExceededError("Rate limit exceeded"),
 			expectedStatus: http.StatusTooManyRequests,
 		},
 		{
 			name:           "MethodNotAllowed",
-			apiErr:         contracts.NewMethodNotAllowedError("Method not allowed"),
+			apiErr:         apierror.NewMethodNotAllowedError("Method not allowed"),
 			expectedStatus: http.StatusMethodNotAllowed,
 		},
 	}

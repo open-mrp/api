@@ -6,9 +6,8 @@ import (
 
 	"github.com/augno/api/services/auth-service/internal/domain"
 	"github.com/augno/api/services/auth-service/internal/infrastructure/sqlc"
-	"github.com/augno/api/shared/contracts"
 	"github.com/augno/api/shared/db"
-	"github.com/augno/api/shared/ptrutil"
+	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/tracing"
 )
 
@@ -22,15 +21,15 @@ func NewRefreshTokenRepo(db *sqlc.Queries) domain.RefreshTokenRepo {
 	return &refreshTokenRepoImpl{db: db}
 }
 
-func (r *refreshTokenRepoImpl) Find(ctx context.Context, token string) (*domain.RefreshToken, *contracts.APIError) {
+func (r *refreshTokenRepoImpl) Find(ctx context.Context, token string) (*domain.RefreshToken, *apierror.APIError) {
 	ctx, span := refreshTokenRepoTracer.Start(ctx, "repository.refresh_token.find")
 	defer span.End()
 
 	refreshTokenModel, err := r.db.FindRefreshToken(ctx, token)
 
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apiErr.Code == contracts.ErrorCodeResourceNotFound {
-			return nil, nil
+		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+			return nil, apiErr
 		}
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -39,11 +38,11 @@ func (r *refreshTokenRepoImpl) Find(ctx context.Context, token string) (*domain.
 		Token:     token,
 		UserID:    refreshTokenModel.UserID,
 		ExpiresAt: refreshTokenModel.ExpiresAt,
-		RevokedAt: ptrutil.NullTimeToPtr(refreshTokenModel.RevokedAt),
+		RevokedAt: db.TimeFromNullTime(refreshTokenModel.RevokedAt),
 	}, nil
 }
 
-func (r *refreshTokenRepoImpl) Create(ctx context.Context, userID string, token string, expiresInDays int) (*domain.RefreshToken, *contracts.APIError) {
+func (r *refreshTokenRepoImpl) Create(ctx context.Context, userID string, token string, expiresInDays int) (*domain.RefreshToken, *apierror.APIError) {
 	ctx, span := refreshTokenRepoTracer.Start(ctx, "repository.refresh_token.create")
 	defer span.End()
 
@@ -66,7 +65,7 @@ func (r *refreshTokenRepoImpl) Create(ctx context.Context, userID string, token 
 	}, nil
 }
 
-func (r *refreshTokenRepoImpl) Revoke(ctx context.Context, token string) *contracts.APIError {
+func (r *refreshTokenRepoImpl) Revoke(ctx context.Context, token string) *apierror.APIError {
 	ctx, span := refreshTokenRepoTracer.Start(ctx, "repository.refresh_token.revoke")
 	defer span.End()
 
@@ -79,7 +78,7 @@ func (r *refreshTokenRepoImpl) Revoke(ctx context.Context, token string) *contra
 	return nil
 }
 
-func (r *refreshTokenRepoImpl) RevokeAll(ctx context.Context, userID string) *contracts.APIError {
+func (r *refreshTokenRepoImpl) RevokeAll(ctx context.Context, userID string) *apierror.APIError {
 	ctx, span := refreshTokenRepoTracer.Start(ctx, "repository.refresh_token.revokeAll")
 	defer span.End()
 

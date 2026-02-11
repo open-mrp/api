@@ -14,7 +14,7 @@ import (
 	reflect "reflect"
 
 	types "github.com/augno/api/services/auth-service/pkg/types"
-	contracts "github.com/augno/api/shared/contracts"
+	apierror "github.com/augno/api/shared/errors"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -43,10 +43,10 @@ func (m *MockPasswordMed) EXPECT() *MockPasswordMedMockRecorder {
 }
 
 // RequestReset mocks base method.
-func (m *MockPasswordMed) RequestReset(ctx context.Context, identifier string, accountSlug *string) *contracts.APIError {
+func (m *MockPasswordMed) RequestReset(ctx context.Context, identifier string, accountSlug *string) *apierror.APIError {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RequestReset", ctx, identifier, accountSlug)
-	ret0, _ := ret[0].(*contracts.APIError)
+	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 
@@ -57,10 +57,10 @@ func (mr *MockPasswordMedMockRecorder) RequestReset(ctx, identifier, accountSlug
 }
 
 // Update mocks base method.
-func (m *MockPasswordMed) Update(ctx context.Context, user *types.User, newPassword string) *contracts.APIError {
+func (m *MockPasswordMed) Update(ctx context.Context, user *types.User, newPassword string) *apierror.APIError {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Update", ctx, user, newPassword)
-	ret0, _ := ret[0].(*contracts.APIError)
+	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 
@@ -71,11 +71,11 @@ func (mr *MockPasswordMedMockRecorder) Update(ctx, user, newPassword any) *gomoc
 }
 
 // Validate mocks base method.
-func (m *MockPasswordMed) Validate(ctx context.Context, identifier, password string) (*types.User, *contracts.APIError) {
+func (m *MockPasswordMed) Validate(ctx context.Context, identifier, password string) (*types.User, *apierror.APIError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Validate", ctx, identifier, password)
 	ret0, _ := ret[0].(*types.User)
-	ret1, _ := ret[1].(*contracts.APIError)
+	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
@@ -86,11 +86,11 @@ func (mr *MockPasswordMedMockRecorder) Validate(ctx, identifier, password any) *
 }
 
 // ValidatePasswordResetToken mocks base method.
-func (m *MockPasswordMed) ValidatePasswordResetToken(ctx context.Context, token string) (*types.User, *contracts.APIError) {
+func (m *MockPasswordMed) ValidatePasswordResetToken(ctx context.Context, token string) (*types.User, *apierror.APIError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ValidatePasswordResetToken", ctx, token)
 	ret0, _ := ret[0].(*types.User)
-	ret1, _ := ret[1].(*contracts.APIError)
+	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 

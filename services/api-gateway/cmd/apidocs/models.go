@@ -55,6 +55,12 @@ type RequestBody struct {
 type Response struct {
 	Description string                 `json:"description"`
 	Content     map[string]MediaConfig `json:"content,omitempty"`
+	Headers     map[string]Header      `json:"headers,omitempty"`
+}
+
+type Header struct {
+	Description string `json:"description,omitempty"`
+	Schema      Schema `json:"schema"`
 }
 
 type MediaConfig struct {
@@ -63,23 +69,24 @@ type MediaConfig struct {
 }
 
 type Schema struct {
-	Ref                   string            `json:"$ref,omitempty"`
-	Type                  string            `json:"type,omitempty"`
-	Items                 *Schema           `json:"items,omitempty"`
-	Properties            map[string]Schema `json:"properties,omitempty"`
-	Description           string            `json:"description,omitempty"`
-	Example               any               `json:"example,omitempty"`
-	Format                string            `json:"format,omitempty"`
-	Nullable              bool              `json:"nullable,omitempty"`
-	Required              []string          `json:"required,omitempty"`
-	Enum                  []any             `json:"enum,omitempty"`
-	OneOf                 []Schema          `json:"oneOf,omitempty"`
-	AnyOf                 []Schema          `json:"anyOf,omitempty"`
-	AllOf                 []Schema          `json:"allOf,omitempty"`
-	ReadOnly              bool              `json:"readOnly,omitempty"`
-	Default               any               `json:"default,omitempty"`
-	AdditionalProperties  *Schema           `json:"additionalProperties,omitempty"`
-	XStainlessEmptyObject bool              `json:"x-stainless-empty-object,omitempty"`
+	Ref                          string            `json:"$ref,omitempty"`
+	Type                         string            `json:"type,omitempty"`
+	Items                        *Schema           `json:"items,omitempty"`
+	Properties                   map[string]Schema `json:"properties,omitempty"`
+	Description                  string            `json:"description,omitempty"`
+	Example                      any               `json:"example,omitempty"`
+	Format                       string            `json:"format,omitempty"`
+	Nullable                     bool              `json:"nullable,omitempty"`
+	Required                     []string          `json:"required,omitempty"`
+	Enum                         []any             `json:"enum,omitempty"`
+	OneOf                        []Schema          `json:"oneOf,omitempty"`
+	AnyOf                        []Schema          `json:"anyOf,omitempty"`
+	AllOf                        []Schema          `json:"allOf,omitempty"`
+	ReadOnly                     bool              `json:"readOnly,omitempty"`
+	Default                      any               `json:"default,omitempty"`
+	AdditionalProperties         *Schema           `json:"additionalProperties,omitempty"`
+	XStainlessEmptyObject        bool              `json:"x-stainless-empty-object,omitempty"`
+	XStainlessPaginationProperty map[string]string `json:"x-stainless-pagination-property,omitempty"`
 }
 
 type Components struct {

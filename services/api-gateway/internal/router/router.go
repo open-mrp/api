@@ -1,13 +1,14 @@
 package router
 
 import (
-	"context"
 	"fmt"
 	"net/http"
+	"slices"
 
-	apicontext "github.com/augno/api/services/api-gateway/internal/context"
+	"github.com/augno/api/shared/appctx"
+
 	httptransport "github.com/augno/api/services/api-gateway/internal/http"
-	"github.com/augno/api/shared/contracts"
+	apierror "github.com/augno/api/shared/errors"
 )
 
 type router struct {
@@ -28,21 +29,38 @@ func NewRouter() *router {
 	router.ServeMux.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
 		if req.URL.Path == "/" {
 			if rootHandlers, exists := router.handlers["/"]; exists {
-				if methodHandler, methodExists := rootHandlers[req.Method]; methodExists {
-					finalHandler := methodHandler
+				handler, methodExists := rootHandlers[req.Method]
+				if !methodExists && req.Method == http.MethodOptions {
+					for _, h := range rootHandlers {
+						handler = h
+						methodExists = true
+						break
+					}
+				}
+
+				if methodExists {
+					ctx := appctx.WithRoutePattern(req.Context(), "/")
+					ctx = appctx.WithAllowedMethods(ctx, collectMethods(rootHandlers))
+					req = req.WithContext(ctx)
+
+					finalHandler := handler
 					for i := len(router.middlewares) - 1; i >= 0; i-- {
 						finalHandler = router.middlewares[i](finalHandler)
 					}
 					finalHandler(w, req)
 					return
 				} else {
-					httptransport.RespondWithAPIError(req.Context(), w, contracts.NewMethodNotAllowedError(fmt.Sprintf("Method %s not allowed for path %s.", req.Method, req.URL.Path)))
+					httptransport.RespondWithAPIError(req.Context(), w, apierror.NewMethodNotAllowedError(fmt.Sprintf("Method %s not allowed for path %s.", req.Method, req.URL.Path)))
 					return
 				}
 			}
 		}
 
-		for _, route := range router.routes {
+		var matchedRoute *Route
+		var matchedParams map[string]string
+		var allowedMethods []string
+
+		for i, route := range router.routes {
 			pathMatches := false
 			var params map[string]string
 
@@ -54,27 +72,38 @@ func NewRouter() *router {
 			}
 
 			if pathMatches {
-				if route.Method == req.Method || req.Method == http.MethodOptions {
-					if params != nil {
-						ctx := context.WithValue(req.Context(), apicontext.PathParamsKey, params)
-						ctx = apicontext.WithRoutePattern(ctx, route.Path)
-						req = req.WithContext(ctx)
-					} else {
-						ctx := apicontext.WithRoutePattern(req.Context(), route.Path)
-						req = req.WithContext(ctx)
-					}
-
-					finalHandler := route.Handler
-					for i := len(router.middlewares) - 1; i >= 0; i-- {
-						finalHandler = router.middlewares[i](finalHandler)
-					}
-					finalHandler(w, req)
-					return
+				allowedMethods = append(allowedMethods, route.Method)
+				if route.Method == req.Method {
+					matchedRoute = &router.routes[i]
+					matchedParams = params
+				} else if req.Method == http.MethodOptions && matchedRoute == nil {
+					matchedRoute = &router.routes[i]
+					matchedParams = params
 				}
 			}
 		}
 
-		httptransport.RespondWithAPIError(req.Context(), w, contracts.NewResourceNotFoundError(fmt.Sprintf("The requested endpoint %s %s was not found.", req.Method, req.URL.Path)))
+		if matchedRoute != nil {
+			slices.Sort(allowedMethods)
+
+			ctx := req.Context()
+			if matchedParams != nil {
+				ctx = appctx.WithPathParams(ctx, matchedParams)
+			}
+			ctx = appctx.WithRoutePattern(ctx, matchedRoute.Path)
+			ctx = appctx.WithAllowedMethods(ctx, allowedMethods)
+			req = req.WithContext(ctx)
+
+			finalHandler := matchedRoute.Handler
+			for i := len(router.middlewares) - 1; i >= 0; i-- {
+				finalHandler = router.middlewares[i](finalHandler)
+			}
+			finalHandler(w, req)
+		} else if len(allowedMethods) > 0 {
+			httptransport.RespondWithAPIError(req.Context(), w, apierror.NewMethodNotAllowedError(fmt.Sprintf("Method %s not allowed for path %s.", req.Method, req.URL.Path)))
+		} else {
+			httptransport.RespondWithAPIError(req.Context(), w, apierror.NewResourceNotFoundError(fmt.Sprintf("The requested endpoint %s %s was not found.", req.Method, req.URL.Path)))
+		}
 	})
 
 	return router
@@ -102,10 +131,8 @@ func (r *router) handle(method, path string, handler http.HandlerFunc) {
 			r.handlers[path] = make(map[string]http.HandlerFunc)
 
 			r.ServeMux.HandleFunc(path, func(w http.ResponseWriter, req *http.Request) {
-				ctx := apicontext.WithRoutePattern(req.Context(), path)
-				req = req.WithContext(ctx)
-
 				methodHandlers := r.handlers[path]
+
 				handler, exists := methodHandlers[req.Method]
 				if !exists && req.Method == http.MethodOptions {
 					for _, h := range methodHandlers {
@@ -116,13 +143,17 @@ func (r *router) handle(method, path string, handler http.HandlerFunc) {
 				}
 
 				if exists {
+					ctx := appctx.WithRoutePattern(req.Context(), path)
+					ctx = appctx.WithAllowedMethods(ctx, collectMethods(methodHandlers))
+					req = req.WithContext(ctx)
+
 					finalHandler := handler
 					for i := len(r.middlewares) - 1; i >= 0; i-- {
 						finalHandler = r.middlewares[i](finalHandler)
 					}
 					finalHandler(w, req)
 				} else {
-					httptransport.RespondWithAPIError(req.Context(), w, contracts.NewMethodNotAllowedError(fmt.Sprintf("Method %s not allowed for path %s.", req.Method, req.URL.Path)))
+					httptransport.RespondWithAPIError(req.Context(), w, apierror.NewMethodNotAllowedError(fmt.Sprintf("Method %s not allowed for path %s.", req.Method, req.URL.Path)))
 				}
 			})
 		}
@@ -174,4 +205,13 @@ func (r *router) GetRoutes() []any {
 		}
 	}
 	return routes
+}
+
+func collectMethods(handlers map[string]http.HandlerFunc) []string {
+	methods := make([]string, 0, len(handlers))
+	for m := range handlers {
+		methods = append(methods, m)
+	}
+	slices.Sort(methods)
+	return methods
 }

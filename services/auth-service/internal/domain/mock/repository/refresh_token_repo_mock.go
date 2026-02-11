@@ -14,7 +14,7 @@ import (
 	reflect "reflect"
 
 	domain "github.com/augno/api/services/auth-service/internal/domain"
-	contracts "github.com/augno/api/shared/contracts"
+	apierror "github.com/augno/api/shared/errors"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -43,11 +43,11 @@ func (m *MockRefreshTokenRepo) EXPECT() *MockRefreshTokenRepoMockRecorder {
 }
 
 // Create mocks base method.
-func (m *MockRefreshTokenRepo) Create(ctx context.Context, userID, token string, expiresInDays int) (*domain.RefreshToken, *contracts.APIError) {
+func (m *MockRefreshTokenRepo) Create(ctx context.Context, userID, token string, expiresInDays int) (*domain.RefreshToken, *apierror.APIError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Create", ctx, userID, token, expiresInDays)
 	ret0, _ := ret[0].(*domain.RefreshToken)
-	ret1, _ := ret[1].(*contracts.APIError)
+	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
@@ -58,11 +58,11 @@ func (mr *MockRefreshTokenRepoMockRecorder) Create(ctx, userID, token, expiresIn
 }
 
 // Find mocks base method.
-func (m *MockRefreshTokenRepo) Find(ctx context.Context, token string) (*domain.RefreshToken, *contracts.APIError) {
+func (m *MockRefreshTokenRepo) Find(ctx context.Context, token string) (*domain.RefreshToken, *apierror.APIError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Find", ctx, token)
 	ret0, _ := ret[0].(*domain.RefreshToken)
-	ret1, _ := ret[1].(*contracts.APIError)
+	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
@@ -73,10 +73,10 @@ func (mr *MockRefreshTokenRepoMockRecorder) Find(ctx, token any) *gomock.Call {
 }
 
 // Revoke mocks base method.
-func (m *MockRefreshTokenRepo) Revoke(ctx context.Context, token string) *contracts.APIError {
+func (m *MockRefreshTokenRepo) Revoke(ctx context.Context, token string) *apierror.APIError {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Revoke", ctx, token)
-	ret0, _ := ret[0].(*contracts.APIError)
+	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 
@@ -87,10 +87,10 @@ func (mr *MockRefreshTokenRepoMockRecorder) Revoke(ctx, token any) *gomock.Call 
 }
 
 // RevokeAll mocks base method.
-func (m *MockRefreshTokenRepo) RevokeAll(ctx context.Context, userID string) *contracts.APIError {
+func (m *MockRefreshTokenRepo) RevokeAll(ctx context.Context, userID string) *apierror.APIError {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RevokeAll", ctx, userID)
-	ret0, _ := ret[0].(*contracts.APIError)
+	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 

@@ -1,9 +1,10 @@
 -- name: FindUserByIdentifier :one
-SELECT * FROM user WHERE username = ? OR email = ? OR id = ?;
+SELECT * FROM user WHERE (username = ? OR email = ? OR id = ?) AND (status_code = 'active' OR status_code IS NULL);
 
 -- name: FindLastUsedAccountID :one
 SELECT account_id FROM account_user 
 WHERE user_id = ? 
+    AND (status_code = 'active' OR status_code IS NULL)
 ORDER BY last_used_at DESC 
 LIMIT 1;
 
@@ -11,5 +12,5 @@ LIMIT 1;
 UPDATE user SET hashed_password = ? WHERE id = ?;
 
 -- name: CreateUser :exec
-INSERT INTO user (id, email, name, hashed_password, created_at, updated_at)
-VALUES (?, ?, ?, ?, NOW(3), NOW(3));
+INSERT INTO user (id, email, name, hashed_password, status_code, created_at, updated_at)
+VALUES (?, ?, ?, ?, 'active', NOW(3), NOW(3));

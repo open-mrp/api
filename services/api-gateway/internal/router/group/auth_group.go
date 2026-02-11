@@ -4,7 +4,6 @@ import (
 	authep "github.com/augno/api/services/api-gateway/endpoints/auth"
 	grpcclient "github.com/augno/api/services/api-gateway/grpc-client"
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
-	"github.com/augno/api/shared/constants"
 )
 
 type AuthEndpointGroup struct {
@@ -12,8 +11,7 @@ type AuthEndpointGroup struct {
 }
 
 type AuthEndpointGroupConfig struct {
-	PlatformMode constants.PlatformMode
-	AuthClient   *grpcclient.AuthServiceClient
+	AuthClient *grpcclient.AuthServiceClient
 }
 
 func (*AuthEndpointGroup) Materialize(config AuthEndpointGroupConfig) *AuthEndpointGroup {
@@ -21,7 +19,7 @@ func (*AuthEndpointGroup) Materialize(config AuthEndpointGroupConfig) *AuthEndpo
 		return nil
 	}
 
-	authController := authep.NewAuthCtrl(authep.AuthCtrlConfig{
+	authController := authep.NewAuthSvc(authep.AuthSvcConfig{
 		AuthClient: config.AuthClient.Client,
 	})
 
@@ -30,26 +28,13 @@ func (*AuthEndpointGroup) Materialize(config AuthEndpointGroupConfig) *AuthEndpo
 		Description: "Handles user authentication and token lifecycle operations, including login, registration, password management, and token refresh.",
 	}
 
-	loginEndpoint := (&authep.LoginEndpoint{}).Materialize().(*authep.LoginEndpoint)
-	loginEndpoint = loginEndpoint.WithGroup(inner, authController, config.PlatformMode)
-
-	registerEndpoint := (&authep.RegisterEndpoint{}).Materialize().(*authep.RegisterEndpoint)
-	registerEndpoint = registerEndpoint.WithGroup(inner, authController, config.PlatformMode)
-
-	refreshTokenEndpoint := (&authep.RefreshTokenEndpoint{}).Materialize().(*authep.RefreshTokenEndpoint)
-	refreshTokenEndpoint = refreshTokenEndpoint.WithGroup(inner, authController, config.PlatformMode)
-
-	requestPasswordResetEndpoint := (&authep.RequestPasswordResetEndpoint{}).Materialize().(*authep.RequestPasswordResetEndpoint)
-	requestPasswordResetEndpoint = requestPasswordResetEndpoint.WithGroup(inner, authController, config.PlatformMode)
-
-	resetPasswordEndpoint := (&authep.ResetPasswordEndpoint{}).Materialize().(*authep.ResetPasswordEndpoint)
-	resetPasswordEndpoint = resetPasswordEndpoint.WithGroup(inner, authController, config.PlatformMode)
-
-	revokeRefreshTokenEndpoint := (&authep.RevokeRefreshTokenEndpoint{}).Materialize().(*authep.RevokeRefreshTokenEndpoint)
-	revokeRefreshTokenEndpoint = revokeRefreshTokenEndpoint.WithGroup(inner, authController, config.PlatformMode)
-
-	updatePasswordEndpoint := (&authep.UpdatePasswordEndpoint{}).Materialize().(*authep.UpdatePasswordEndpoint)
-	updatePasswordEndpoint = updatePasswordEndpoint.WithGroup(inner, authController, config.PlatformMode, config.AuthClient)
+	loginEndpoint := (&authep.LoginEndpoint{}).Materialize().WithService(inner, authController)
+	registerEndpoint := (&authep.RegisterEndpoint{}).Materialize().WithService(inner, authController)
+	refreshTokenEndpoint := (&authep.RefreshTokenEndpoint{}).Materialize().WithService(inner, authController)
+	requestPasswordResetEndpoint := (&authep.RequestPasswordResetEndpoint{}).Materialize().WithService(inner, authController)
+	resetPasswordEndpoint := (&authep.ResetPasswordEndpoint{}).Materialize().WithService(inner, authController)
+	revokeRefreshTokenEndpoint := (&authep.RevokeRefreshTokenEndpoint{}).Materialize().WithService(inner, authController)
+	updatePasswordEndpoint := (&authep.UpdatePasswordEndpoint{}).MaterializeWithMiddleware(config.AuthClient).WithService(inner, authController)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		loginEndpoint,

@@ -14,7 +14,8 @@ import (
 	reflect "reflect"
 
 	domain "github.com/augno/api/services/auth-service/internal/domain"
-	contracts "github.com/augno/api/shared/contracts"
+	constants "github.com/augno/api/shared/constants"
+	apierror "github.com/augno/api/shared/errors"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -42,12 +43,27 @@ func (m *MockAPIKeyRepo) EXPECT() *MockAPIKeyRepoMockRecorder {
 	return m.recorder
 }
 
+// Create mocks base method.
+func (m *MockAPIKeyRepo) Create(ctx context.Context, apiKey *domain.APIKey) (int64, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Create", ctx, apiKey)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Create indicates an expected call of Create.
+func (mr *MockAPIKeyRepoMockRecorder) Create(ctx, apiKey any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockAPIKeyRepo)(nil).Create), ctx, apiKey)
+}
+
 // Find mocks base method.
-func (m *MockAPIKeyRepo) Find(ctx context.Context, apiKeyID string) (*domain.APIKey, *contracts.APIError) {
+func (m *MockAPIKeyRepo) Find(ctx context.Context, apiKeyID string) (*domain.APIKey, *apierror.APIError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Find", ctx, apiKeyID)
 	ret0, _ := ret[0].(*domain.APIKey)
-	ret1, _ := ret[1].(*contracts.APIError)
+	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
@@ -57,11 +73,42 @@ func (mr *MockAPIKeyRepoMockRecorder) Find(ctx, apiKeyID any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Find", reflect.TypeOf((*MockAPIKeyRepo)(nil).Find), ctx, apiKeyID)
 }
 
+// FindByDatabaseID mocks base method.
+func (m *MockAPIKeyRepo) FindByDatabaseID(ctx context.Context, id int64) (*domain.APIKey, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FindByDatabaseID", ctx, id)
+	ret0, _ := ret[0].(*domain.APIKey)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// FindByDatabaseID indicates an expected call of FindByDatabaseID.
+func (mr *MockAPIKeyRepoMockRecorder) FindByDatabaseID(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindByDatabaseID", reflect.TypeOf((*MockAPIKeyRepo)(nil).FindByDatabaseID), ctx, id)
+}
+
+// List mocks base method.
+func (m *MockAPIKeyRepo) List(ctx context.Context, accountMode constants.AccountMode, ownerAccountID string, cursor *string, limit int32, query *string) ([]*domain.APIKey, int64, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List", ctx, accountMode, ownerAccountID, cursor, limit, query)
+	ret0, _ := ret[0].([]*domain.APIKey)
+	ret1, _ := ret[1].(int64)
+	ret2, _ := ret[2].(*apierror.APIError)
+	return ret0, ret1, ret2
+}
+
+// List indicates an expected call of List.
+func (mr *MockAPIKeyRepoMockRecorder) List(ctx, accountMode, ownerAccountID, cursor, limit, query any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockAPIKeyRepo)(nil).List), ctx, accountMode, ownerAccountID, cursor, limit, query)
+}
+
 // Touch mocks base method.
-func (m *MockAPIKeyRepo) Touch(ctx context.Context, apiKeyID string) *contracts.APIError {
+func (m *MockAPIKeyRepo) Touch(ctx context.Context, apiKeyID int64) *apierror.APIError {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Touch", ctx, apiKeyID)
-	ret0, _ := ret[0].(*contracts.APIError)
+	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 

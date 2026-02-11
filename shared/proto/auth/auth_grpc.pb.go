@@ -4,6 +4,12 @@
 // - protoc             v6.33.1
 // source: auth.proto
 
+// Package auth defines the gRPC contract for the auth-service. It handles user
+// authentication (login, registration, credential validation), token lifecycle
+// (refresh, revoke), and password management (reset, update). The api-gateway
+// calls these RPCs on every authenticated request (ValidateCredential) and for
+// all auth-related HTTP endpoints.
+
 package auth
 
 import (
@@ -34,13 +40,32 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type AuthServiceClient interface {
+	// ValidateCredential verifies a bearer token (JWT or API key) and returns
+	// the resolved Identity. Called by the api-gateway on every authenticated
+	// request to build the identity context propagated to downstream services.
 	ValidateCredential(ctx context.Context, in *Credential, opts ...grpc.CallOption) (*Identity, error)
+	// Login authenticates a user by identifier + password and returns a token
+	// pair (access + refresh) along with the user profile.
 	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
+	// Register creates a new user account and returns a token pair so the user
+	// is immediately logged in after registration.
 	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*LoginResponse, error)
+	// RefreshToken exchanges a valid refresh token for a new short-lived access
+	// token. The refresh token itself is not rotated.
 	RefreshToken(ctx context.Context, in *RefreshTokenRequest, opts ...grpc.CallOption) (*RefreshTokenResponse, error)
+	// RequestPasswordReset initiates the password reset flow by sending a
+	// reset email to the user. Returns Empty regardless of whether the
+	// identifier exists (to prevent user enumeration).
 	RequestPasswordReset(ctx context.Context, in *RequestPasswordResetRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// ResetPassword completes the password reset flow using the token from the
+	// reset email. Sets the new password and returns a token pair so the user
+	// is logged in immediately.
 	ResetPassword(ctx context.Context, in *ResetPasswordRequest, opts ...grpc.CallOption) (*LoginResponse, error)
+	// RevokeRefreshToken invalidates a refresh token so it can no longer be
+	// used to mint access tokens. Used on logout.
 	RevokeRefreshToken(ctx context.Context, in *RevokeRefreshTokenRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// UpdatePassword changes the authenticated user's password. Requires the
+	// old password for verification before accepting the new one.
 	UpdatePassword(ctx context.Context, in *UpdatePasswordRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
@@ -136,13 +161,32 @@ func (c *authServiceClient) UpdatePassword(ctx context.Context, in *UpdatePasswo
 // All implementations must embed UnimplementedAuthServiceServer
 // for forward compatibility.
 type AuthServiceServer interface {
+	// ValidateCredential verifies a bearer token (JWT or API key) and returns
+	// the resolved Identity. Called by the api-gateway on every authenticated
+	// request to build the identity context propagated to downstream services.
 	ValidateCredential(context.Context, *Credential) (*Identity, error)
+	// Login authenticates a user by identifier + password and returns a token
+	// pair (access + refresh) along with the user profile.
 	Login(context.Context, *LoginRequest) (*LoginResponse, error)
+	// Register creates a new user account and returns a token pair so the user
+	// is immediately logged in after registration.
 	Register(context.Context, *RegisterRequest) (*LoginResponse, error)
+	// RefreshToken exchanges a valid refresh token for a new short-lived access
+	// token. The refresh token itself is not rotated.
 	RefreshToken(context.Context, *RefreshTokenRequest) (*RefreshTokenResponse, error)
+	// RequestPasswordReset initiates the password reset flow by sending a
+	// reset email to the user. Returns Empty regardless of whether the
+	// identifier exists (to prevent user enumeration).
 	RequestPasswordReset(context.Context, *RequestPasswordResetRequest) (*emptypb.Empty, error)
+	// ResetPassword completes the password reset flow using the token from the
+	// reset email. Sets the new password and returns a token pair so the user
+	// is logged in immediately.
 	ResetPassword(context.Context, *ResetPasswordRequest) (*LoginResponse, error)
+	// RevokeRefreshToken invalidates a refresh token so it can no longer be
+	// used to mint access tokens. Used on logout.
 	RevokeRefreshToken(context.Context, *RevokeRefreshTokenRequest) (*emptypb.Empty, error)
+	// UpdatePassword changes the authenticated user's password. Requires the
+	// old password for verification before accepting the new one.
 	UpdatePassword(context.Context, *UpdatePasswordRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedAuthServiceServer()
 }

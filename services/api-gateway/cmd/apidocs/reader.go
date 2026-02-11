@@ -36,6 +36,11 @@ func (r *DocReader) GetTypeDoc(t reflect.Type) TypeDoc {
 		return TypeDoc{}
 	}
 
+	// Handle generic types by using the base name for documentation lookup
+	if idx := strings.Index(typeName, "["); idx != -1 {
+		typeName = typeName[:idx]
+	}
+
 	if pkgDocs, ok := r.docs[pkgPath]; ok {
 		if typeDoc, ok := pkgDocs[typeName]; ok {
 			return typeDoc

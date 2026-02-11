@@ -4,23 +4,10 @@ import (
 	"context"
 	"encoding/hex"
 	"testing"
-
-	"github.com/augno/api/services/auth-service/internal/domain"
 )
 
-func TestNewOpaqueTokenUtils_ImplementsInterface(t *testing.T) {
-	utils := NewOpaqueTokenUtils(DefaultOpaqueTokenConfig())
-	if utils == nil {
-		t.Fatal("expected non-nil opaque token utils")
-	}
-
-	var _ domain.OpaqueTokenUtils = utils
-}
-
 func TestOpaqueTokenUtils_GenSuccess(t *testing.T) {
-	utils := NewOpaqueTokenUtils(DefaultOpaqueTokenConfig())
-
-	token, err := utils.Gen(context.Background())
+	token, err := GenOpaqueToken(context.Background())
 	if err != nil {
 		t.Fatalf("Gen() unexpected error: %v", err)
 	}
@@ -41,13 +28,11 @@ func TestOpaqueTokenUtils_GenSuccess(t *testing.T) {
 }
 
 func TestOpaqueTokenUtils_GenProducesUniqueTokens(t *testing.T) {
-	utils := NewOpaqueTokenUtils(DefaultOpaqueTokenConfig())
-
-	token1, err := utils.Gen(context.Background())
+	token1, err := GenOpaqueToken(context.Background())
 	if err != nil {
 		t.Fatalf("Gen() first call unexpected error: %v", err)
 	}
-	token2, err := utils.Gen(context.Background())
+	token2, err := GenOpaqueToken(context.Background())
 	if err != nil {
 		t.Fatalf("Gen() second call unexpected error: %v", err)
 	}

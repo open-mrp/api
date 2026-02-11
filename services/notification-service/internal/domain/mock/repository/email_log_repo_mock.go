@@ -14,7 +14,7 @@ import (
 	reflect "reflect"
 
 	domain "github.com/augno/api/services/notification-service/internal/domain"
-	contracts "github.com/augno/api/shared/contracts"
+	apierror "github.com/augno/api/shared/errors"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -43,10 +43,10 @@ func (m *MockEmailLogRepo) EXPECT() *MockEmailLogRepoMockRecorder {
 }
 
 // Create mocks base method.
-func (m *MockEmailLogRepo) Create(ctx context.Context, emailLog *domain.EmailLog) *contracts.APIError {
+func (m *MockEmailLogRepo) Create(ctx context.Context, emailLog *domain.EmailLog) *apierror.APIError {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Create", ctx, emailLog)
-	ret0, _ := ret[0].(*contracts.APIError)
+	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 
@@ -57,11 +57,11 @@ func (mr *MockEmailLogRepoMockRecorder) Create(ctx, emailLog any) *gomock.Call {
 }
 
 // FindBySesMessageID mocks base method.
-func (m *MockEmailLogRepo) FindBySesMessageID(ctx context.Context, sesMessageID string) (*domain.EmailLog, *contracts.APIError) {
+func (m *MockEmailLogRepo) FindBySesMessageID(ctx context.Context, sesMessageID string) (*domain.EmailLog, *apierror.APIError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "FindBySesMessageID", ctx, sesMessageID)
 	ret0, _ := ret[0].(*domain.EmailLog)
-	ret1, _ := ret[1].(*contracts.APIError)
+	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 

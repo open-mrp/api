@@ -4,10 +4,12 @@ import (
 	"time"
 
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
 	pb "github.com/augno/api/shared/proto/auth"
 	"github.com/augno/api/shared/ptrutil"
 )
 
+// UserPresenter presents a user resource from a proto user.
 func UserPresenter(user *pb.User) apiresource.User {
 	if user == nil {
 		return apiresource.User{}
@@ -15,7 +17,7 @@ func UserPresenter(user *pb.User) apiresource.User {
 
 	var emailVerified *time.Time
 	if user.EmailVerified != nil {
-		emailVerified = ptrutil.Time(user.EmailVerified.AsTime())
+		emailVerified = ptrutil.Ptr(user.EmailVerified.AsTime())
 	}
 
 	createdAt := time.Time{}
@@ -30,7 +32,7 @@ func UserPresenter(user *pb.User) apiresource.User {
 
 	return apiresource.User{
 		ID:            user.Id,
-		Object:        "user",
+		Object:        constants.ObjectTypeUser,
 		Email:         user.Email,
 		Name:          user.Name,
 		Username:      user.Username,

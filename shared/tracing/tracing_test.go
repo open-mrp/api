@@ -5,7 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/augno/api/shared/contracts"
+	"github.com/augno/api/shared/appctx"
+	apierror "github.com/augno/api/shared/errors"
 
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
@@ -19,10 +20,10 @@ func TestRecordControllerErrorAPIErrorAddsApiErrorEvent(t *testing.T) {
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
 	tracer := tp.Tracer("test")
 
-	_, span := tracer.Start(context.Background(), "controller-span")
-	apiErr := &contracts.APIError{
-		Code:          contracts.ErrorCodeInvalidCredentials,
-		Type:          contracts.ErrorTypeInvalidRequest,
+	_, span := tracer.Start(context.Background(), "service-span")
+	apiErr := &apierror.APIError{
+		Code:          apierror.ErrorCodeInvalidCredentials,
+		Type:          apierror.ErrorTypeInvalidRequest,
 		PublicMessage: "This refresh token has been revoked.",
 	}
 
@@ -98,4 +99,36 @@ func attrsToMap(attrs []attribute.KeyValue) map[string]string {
 		result[string(attr.Key)] = attr.Value.AsString()
 	}
 	return result
+}
+
+func TestWithNoTraceDisablesTracing(t *testing.T) {
+	ctx := context.Background()
+	require.True(t, appctx.ShouldTrace(ctx), "default context should allow tracing")
+
+	noTraceCtx := appctx.WithNoTrace(ctx)
+	require.False(t, appctx.ShouldTrace(noTraceCtx), "WithNoTrace context should not allow tracing")
+}
+
+func TestStartSpanReturnsNoopWhenNoTrace(t *testing.T) {
+	spanRecorder := tracetest.NewSpanRecorder()
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
+	tracer := tp.Tracer("test")
+
+	// With tracing enabled, span should be recorded
+	ctx := context.Background()
+	_, span := StartSpan(ctx, tracer, "traced-span")
+	span.End()
+
+	spans := spanRecorder.Ended()
+	require.Len(t, spans, 1, "should record span when tracing is enabled")
+	require.Equal(t, "traced-span", spans[0].Name())
+
+	// With tracing disabled, span should not be recorded
+	noTraceCtx := appctx.WithNoTrace(ctx)
+	_, noopSpan := StartSpan(noTraceCtx, tracer, "untraced-span")
+	noopSpan.End()
+
+	// Should still only have 1 span (the first one)
+	spans = spanRecorder.Ended()
+	require.Len(t, spans, 1, "should not record span when tracing is disabled")
 }

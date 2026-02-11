@@ -25,8 +25,6 @@ spec:
                           memory: "128Mi"
                           cpu: "200m"
                   env:
-                      - name: OTEL_SERVICE_NAME
-                        value: auth-service
                       - name: OTEL_ENVIRONMENT
                         valueFrom:
                             configMapKeyRef:
@@ -67,6 +65,11 @@ spec:
                         valueFrom:
                             configMapKeyRef:
                                 key: PLATFORM
+                                name: app-config
+                      - name: CORE_SERVICE_URL
+                        valueFrom:
+                            configMapKeyRef:
+                                key: CORE_SERVICE_URL
                                 name: app-config
 ---
 apiVersion: v1

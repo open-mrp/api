@@ -1,0 +1,134 @@
+# yaml-language-server: $schema=https://app.stainless.com/config.schema.json
+
+# The main edition for the config, see the [docs] for more information.
+#
+# [docs]: https://www.stainless.com/docs/reference/editions
+edition: 2025-10-10
+
+organization:
+    # Name of your organization or company, used to determine the name of the client
+    # and headings.
+    name: augno-client
+    # Link to your API documentation.
+    docs: "https://www.docs.augno.com"
+    # Contact email for bug reports, questions, and support requests.
+    contact: "support@augno.com"
+    # Security email address for reporting vulnerabilities.
+    security_contact: "security@augno.com"
+    # Name of the GitHub organization that the production SDKs live in.
+    github_org: "Augno"
+
+# `targets` define the output targets and their customization options, such as
+# whether to emit the Node SDK and what its package name should be.
+targets:
+    typescript:
+        # The edition for this target, see the [docs] for more information.
+        #
+        # [docs]: https://www.stainless.com/docs/reference/editions
+        edition: typescript.2025-10-10
+        package_name: augno
+        production_repo: Augno/typescript-sdk
+        publish:
+            npm: false
+
+# `environments` are a map of the name of the environment (e.g. "sandbox",
+# "production") to the corresponding url to use.
+environments:
+    production: https://api.augno.com
+    development: http://localhost:8081
+
+# `resources` define the structure and organization for your API, such as how
+# methods and models are grouped together and accessed. See the [configuration
+# guide] for more information.
+#
+# [configuration guide]: https://www.stainless.com/docs/guides/configure#resources
+resources:
+    sandboxes:
+        methods:
+            list:
+                endpoint: get /v1/sandboxes
+                paginated: true
+            create: post /v1/sandboxes
+            delete: delete /v1/sandboxes/{sandbox_id}
+            retrieve: get /v1/sandboxes/{sandbox_id}
+
+# `pagination` defines how pagination works in your API. This configuration uses
+# cursor-based pagination with URL-based navigation. The field mappings are
+# automatically inferred from x-stainless-pagination-property annotations in
+# the OpenAPI spec (data field has purpose: "items", next_page_url field has
+# purpose: "cursor_url_field").
+pagination:
+    type: cursor_url
+    response:
+        schema_name_pattern: "List_*"
+
+# `query_settings` define how query parameters are serialized.
+query_settings:
+    nested_format: brackets # Use brackets for nested objects: a[b]=c
+    array_format: comma # Use comma-separated values for arrays: in=foo,bar
+
+settings:
+    # All generated integration tests that hit the prism mock http server are marked
+    # as skipped. Removing this setting or setting it to false enables tests, but
+    # doing so may result in test failures due to bugs in the test server.
+    #
+    # [prism mock http server]: https://stoplight.io/open-source/prism
+    disable_mock_tests: true
+    license: Apache-2.0
+
+# `client_settings` define settings for the API client, such as extra constructor
+# arguments (used for authentication), retry behavior, idempotency, etc.
+client_settings:
+    opts:
+        api_key:
+            type: string
+            read_env: AUGNO_API_KEY
+            nullable: true
+            auth:
+                security_scheme: bearerAuth
+    # Idempotency configuration prevents duplicate requests during retries
+    idempotency:
+        header: "Idempotency-Key"
+    # Default timeout for all requests (60 seconds)
+    default_timeout: PT60S
+    # Default retry configuration
+    default_retries:
+        max_retries: 2
+        initial_delay_seconds: 0.5
+        max_delay_seconds: 8
+
+security_schemes:
+    bearerAuth:
+        type: http
+        scheme: bearer
+
+security:
+    - bearerAuth: []
+
+# `readme` is used to configure the code snippets that will be rendered in the
+# README.md of various SDKs. In particular, you can change the `headline`
+# snippet's endpoint and the arguments to call it with.
+readme:
+    example_requests:
+        default:
+            type: request
+            endpoint: get /v1/sandboxes
+            params: {}
+            response_property: data
+        headline:
+            type: request
+            endpoint: post /v1/sandboxes
+            params:
+                name: "Integration Testing"
+            response_property: id
+        pagination:
+            type: request
+            endpoint: get /v1/sandboxes
+            params:
+                limit: 10
+            response_property: data
+        errors:
+            type: request
+            endpoint: get /v1/sandboxes/{sandbox_id}
+            params:
+                sandbox_id: "sbac_nonexistent"

@@ -8,7 +8,7 @@ import (
 
 func main() {
 	ctx := context.Background()
-	if err := Run(ctx, os.Getenv); err != nil {
+	if err := Run(ctx, os.Getenv, os.Stdin, os.Stdout, os.Stderr); err != nil {
 		fmt.Fprintf(os.Stderr, "%s\n", err)
 		os.Exit(1)
 	}

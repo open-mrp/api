@@ -1,5 +1,10 @@
 syntax = "proto3";
 
+// Package auth defines the gRPC contract for the auth-service. It handles user
+// authentication (login, registration, credential validation), token lifecycle
+// (refresh, revoke), and password management (reset, update). The api-gateway
+// calls these RPCs on every authenticated request (ValidateCredential) and for
+// all auth-related HTTP endpoints.
 package auth;
 
 import "google/protobuf/timestamp.proto";
@@ -8,111 +13,252 @@ import "google/protobuf/empty.proto";
 option go_package = "shared/proto/auth;auth";
 
 service AuthService {
+  // ValidateCredential verifies a bearer token (JWT or API key) and returns
+  // the resolved Identity. Called by the api-gateway on every authenticated
+  // request to build the identity context propagated to downstream services.
   rpc ValidateCredential(Credential) returns (Identity);
+
+  // Login authenticates a user by identifier + password and returns a token
+  // pair (access + refresh) along with the user profile.
   rpc Login(LoginRequest) returns (LoginResponse);
+
+  // Register creates a new user account and returns a token pair so the user
+  // is immediately logged in after registration.
   rpc Register(RegisterRequest) returns (LoginResponse);
+
+  // RefreshToken exchanges a valid refresh token for a new short-lived access
+  // token. The refresh token itself is not rotated.
   rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse);
+
+  // RequestPasswordReset initiates the password reset flow by sending a
+  // reset email to the user. Returns Empty regardless of whether the
+  // identifier exists (to prevent user enumeration).
   rpc RequestPasswordReset(RequestPasswordResetRequest) returns (google.protobuf.Empty);
+
+  // ResetPassword completes the password reset flow using the token from the
+  // reset email. Sets the new password and returns a token pair so the user
+  // is logged in immediately.
   rpc ResetPassword(ResetPasswordRequest) returns (LoginResponse);
+
+  // RevokeRefreshToken invalidates a refresh token so it can no longer be
+  // used to mint access tokens. Used on logout.
   rpc RevokeRefreshToken(RevokeRefreshTokenRequest) returns (google.protobuf.Empty);
+
+  // UpdatePassword changes the authenticated user's password. Requires the
+  // old password for verification before accepting the new one.
   rpc UpdatePassword(UpdatePasswordRequest) returns (google.protobuf.Empty);
 }
 
+// LoginRequest carries the credentials for user authentication.
 message LoginRequest {
+  // Identifier is the user's email address, username, or user ID. The
+  // auth-service resolves the user by trying each format in order.
   string identifier = 1;
+  // Password is the plaintext password to verify against the stored bcrypt hash.
   string password = 2;
 }
 
+// LoginResponse is returned by Login, Register, and ResetPassword. It contains
+// everything the client needs to establish an authenticated session.
 message LoginResponse {
+  // AccessToken is a short-lived JWT (typically 1 hour) used to
+  // authenticate subsequent API requests via the Authorization header.
   string access_token = 1;
+  // RefreshToken is a long-lived opaque token (typically 30 days) stored
+  // in the database. The client exchanges it for a new access token when
+  // the current one expires.
   string refresh_token = 2;
+  // User is the authenticated user's profile data.
   User user = 3;
 }
 
+// User represents a user profile as returned to API clients. Optional fields
+// are absent when the user hasn't set them (e.g. username, profile image).
 message User {
+  // ID is the prefixed unique identifier (e.g. "us_1wjfmmbwg8l7").
   string id = 1;
+  // Email is the user's email address. Optional because some auth flows
+  // (e.g. future OAuth) may not provide one.
   optional string email = 2;
+  // Name is the user's display name.
   optional string name = 3;
+  // Username is the user's unique handle.
   optional string username = 4;
+  // ImageURL is the absolute URL to the user's profile avatar.
   optional string image_url = 5;
+  // EmailVerified is the timestamp when the user confirmed their email.
+  // Absent (null) if the email has not been verified yet.
   optional google.protobuf.Timestamp email_verified = 6;
+  // CreatedAt is when the user record was created.
   google.protobuf.Timestamp created_at = 7;
+  // UpdatedAt is when the user record was last modified.
   google.protobuf.Timestamp updated_at = 8;
 }
 
+// Credential is sent by the api-gateway to ValidateCredential on every
+// authenticated request. It wraps the raw bearer token and the optional
+// target account context.
 message Credential {
+  // Token is the bearer token from the Authorization header. It may be a
+  // JWT access token (for user sessions) or an API key (for programmatic
+  // access). The auth-service determines the type by inspecting the token
+  // format.
   string token = 1;
-  string target_account_id = 2;
+  // TargetAccountID is the account the caller wants to operate on, taken
+  // from the Account-ID header. When absent, the auth-service resolves
+  // the user's default account.
+  optional string target_account_id = 2;
 }
 
+// Identity is the resolved authentication context returned by
+// ValidateCredential. The api-gateway serializes it into gRPC metadata
+// so downstream services know who is making the request, what account
+// they're targeting, and what permissions they have.
 message Identity {
+  // Type indicates whether the caller authenticated as a user, API key,
+  // or is unauthenticated (public endpoint).
   IdentityType type = 1;
+  // TargetAccountID is the resolved account the request operates on.
+  // Absent for unauthenticated requests.
   optional string target_account_id = 2;
+  // Actor contains the authenticated entity's details (ID, role,
+  // permissions).
   IdentityActor actor = 3;
+  // AccountMode indicates whether the target account is in production or
+  // sandbox mode, controlling which data partition the request accesses.
   AccountMode account_mode = 4;
 }
 
+// IdentityActor describes the authenticated entity (user or API key) and
+// its authorization context within the target account.
 message IdentityActor {
+  // Type classifies the actor's relationship to the target account
+  // (internal member, customer, supplier, or unassigned).
   IdentityActorType type = 1;
+  // ID is the actor's unique identifier — a user ID (e.g. "us_1wjfmmbwg8l7")
+  // for user identities or an API key ID (e.g. "apke_xyz789") for API
+  // key identities.
   string id = 2;
+  // Name is the actor's display name, used in audit logs and UI.
   optional string name = 3;
+  // AccountID is the account the actor belongs to (their "home" account),
+  // which may differ from the target account in cross-account scenarios.
   optional string account_id = 4;
+  // RoleID is the actor's role within the target account (e.g.
+  // "role_owner", "role_member").
   optional string role_id = 5;
+  // RoleTypeCode is the role's type code (e.g. "owner", "admin",
+  // "member") used for coarse-grained authorization checks.
   optional string role_type_code = 6;
+  // Permissions is the actor's resolved permission set for the target
+  // account. Keys are permission codes (e.g. "invoices.create"), values
+  // are always true (the map only contains granted permissions).
   map<string, bool> permissions = 7;
 }
 
+// IdentityType classifies how the caller authenticated.
 enum IdentityType {
   IDENTITY_TYPE_UNSPECIFIED = 0;
+  // IDENTITY_TYPE_USER indicates authentication via a JWT access token
+  // issued to a human user.
   IDENTITY_TYPE_USER = 1;
+  // IDENTITY_TYPE_API_KEY indicates authentication via a programmatic
+  // API key (prefixed with the key secret).
   IDENTITY_TYPE_API_KEY = 2;
+  // IDENTITY_TYPE_UNAUTHENTICATED indicates no valid credential was
+  // provided. Used for public endpoints that still propagate identity
+  // metadata.
   IDENTITY_TYPE_UNAUTHENTICATED = 3;
 }
 
+// IdentityActorType classifies the actor's relationship to the target
+// account. This determines what data the actor can see and what
+// operations they can perform.
 enum IdentityActorType {
   IDENTITY_ACTOR_TYPE_UNSPECIFIED = 0;
+  // IDENTITY_ACTOR_TYPE_INTERNAL means the actor is a direct member of
+  // the target account (e.g. an employee of the business).
   IDENTITY_ACTOR_TYPE_INTERNAL = 1;
+  // IDENTITY_ACTOR_TYPE_CUSTOMER means the actor belongs to a customer
+  // account that has a business relationship with the target account.
   IDENTITY_ACTOR_TYPE_CUSTOMER = 2;
+  // IDENTITY_ACTOR_TYPE_SUPPLIER means the actor belongs to a supplier
+  // account that has a business relationship with the target account.
   IDENTITY_ACTOR_TYPE_SUPPLIER = 3;
+  // IDENTITY_ACTOR_TYPE_UNASSIGNED means the actor is authenticated but
+  // not yet associated with any account (e.g. a newly registered user
+  // who hasn't completed onboarding).
   IDENTITY_ACTOR_TYPE_UNASSIGNED = 4;
 }
 
+// AccountMode distinguishes between production and sandbox data partitions.
+// Sandbox accounts mirror production behavior but use isolated data, allowing
+// developers to test integrations without affecting real records.
 enum AccountMode {
   ACCOUNT_MODE_UNSPECIFIED = 0;
+  // ACCOUNT_MODE_PRODUCTION is the live data partition.
   ACCOUNT_MODE_PRODUCTION = 1;
+  // ACCOUNT_MODE_SANDBOX is the isolated test data partition.
   ACCOUNT_MODE_SANDBOX = 2;
 }
 
+// RegisterRequest carries the data needed to create a new user account.
 message RegisterRequest {
+  // Email is the user's email address, used for login and notifications.
   string email = 1;
+  // Password is the plaintext password (8-72 chars, must contain a digit
+  // and special character). It is bcrypt-hashed before storage.
   string password = 2;
+  // Name is the user's display name.
   string name = 3;
 }
 
+// RefreshTokenRequest carries the refresh token to exchange for a new
+// access token.
 message RefreshTokenRequest {
+  // RefreshToken is the opaque refresh token previously issued by Login
+  // or Register. It is validated against the database and must not be
+  // expired or revoked.
   string refresh_token = 1;
 }
 
+// RefreshTokenResponse contains the newly minted access token.
 message RefreshTokenResponse {
+  // AccessToken is a fresh short-lived JWT.
   string access_token = 1;
 }
 
+// RequestPasswordResetRequest initiates the password reset flow.
 message RequestPasswordResetRequest {
+  // Identifier is the user's email, username, or ID. The service looks
+  // up the user and sends a reset email if found.
   string identifier = 1;
+  // AccountSlug optionally scopes the reset email's branding and links
+  // to a specific account context (e.g. custom login page URL).
   optional string account_slug = 2;
 }
 
+// ResetPasswordRequest completes the password reset flow.
 message ResetPasswordRequest {
+  // Token is the single-use reset token from the email link. It is
+  // validated for expiry and prior use before the password is changed.
   string token = 1;
+  // Password is the new plaintext password to set.
   string password = 2;
 }
 
+// RevokeRefreshTokenRequest invalidates a specific refresh token.
 message RevokeRefreshTokenRequest {
+  // RefreshToken is the token to revoke. After revocation it can no
+  // longer be used to mint access tokens.
   string refresh_token = 1;
 }
 
+// UpdatePasswordRequest changes the authenticated user's password.
 message UpdatePasswordRequest {
+  // OldPassword is the user's current plaintext password, verified
+  // before the change is applied.
   string old_password = 1;
+  // NewPassword is the new plaintext password to set.
   string new_password = 2;
 }
-

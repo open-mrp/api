@@ -10,7 +10,7 @@ import (
 	repositorymock "github.com/augno/api/services/auth-service/internal/domain/mock/repository"
 	"github.com/augno/api/services/auth-service/internal/testutil"
 	"github.com/augno/api/services/auth-service/internal/token"
-	"github.com/augno/api/shared/contracts"
+	apierror "github.com/augno/api/shared/errors"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
@@ -28,18 +28,15 @@ type RefreshTokenMedTestSuite struct {
 
 // SetupSuite runs once before all tests in the suite
 func (suite *RefreshTokenMedTestSuite) SetupSuite() {
-	jwtConfig := token.DefaultJWTConfig(testutil.JWTSecret)
-	suite.jwtUtils = token.NewJWTUtils(jwtConfig)
+	suite.jwtUtils = token.NewJWTUtils(&token.JWTConfig{Secret: testutil.JWTSecret})
 	suite.ctrl = gomock.NewController(suite.T())
 	suite.refreshTokenRepo = repositorymock.NewMockRefreshTokenRepo(suite.ctrl)
 	suite.repoFactory = factorymock.NewMockRepoFactory(suite.ctrl)
 	suite.repoFactory.EXPECT().NewRefreshTokenRepo().Return(suite.refreshTokenRepo).AnyTimes()
 
-	opaqueTokenUtils := token.NewOpaqueTokenUtils(token.DefaultOpaqueTokenConfig())
 	refreshTokenMedConfig := RefreshTokenMedConfig{
-		Repos:            suite.repoFactory,
-		JWTUtils:         suite.jwtUtils,
-		OpaqueTokenUtils: opaqueTokenUtils,
+		Repos:    suite.repoFactory,
+		JWTUtils: suite.jwtUtils,
 	}
 	suite.refreshTokenMed = NewRefreshTokenMed(refreshTokenMedConfig)
 }
@@ -79,14 +76,14 @@ func (suite *RefreshTokenMedTestSuite) TestValidateRefreshToken_InvalidToken() {
 	// Mock the refresh token repository to return an error
 	suite.refreshTokenRepo.EXPECT().
 		Find(gomock.Any(), "invalid-refresh-token").
-		Return(nil, contracts.NewAuthenticationError("Invalid refresh token")).
+		Return(nil, apierror.NewAuthenticationError("Invalid refresh token")).
 		Times(1)
 
 	// Test with invalid refresh token
 	ctx := context.Background()
 	userID, err := suite.refreshTokenMed.Validate(ctx, "invalid-refresh-token")
 	suite.NotNil(err)
-	suite.Equal(contracts.ErrorCodeInvalidCredentials, err.Code)
+	suite.Equal(apierror.ErrorCodeInvalidCredentials, err.Code)
 	suite.Equal("", userID)
 }
 
@@ -123,7 +120,7 @@ func (suite *RefreshTokenMedTestSuite) TestCreateRefreshToken_EmptyUserID() {
 	// Mock the repo to return an error for empty userID
 	suite.refreshTokenRepo.EXPECT().
 		Create(gomock.Any(), "", gomock.Any(), 30).
-		Return(nil, contracts.NewValidationError("User ID cannot be empty")).
+		Return(nil, apierror.NewValidationError("User ID cannot be empty")).
 		Times(1)
 
 	refreshToken, err := suite.refreshTokenMed.Create(ctx, "", &expiresInDays)

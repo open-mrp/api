@@ -14,7 +14,7 @@ import (
 	reflect "reflect"
 
 	types "github.com/augno/api/services/auth-service/pkg/types"
-	contracts "github.com/augno/api/shared/contracts"
+	apierror "github.com/augno/api/shared/errors"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -43,11 +43,11 @@ func (m *MockUserRepo) EXPECT() *MockUserRepoMockRecorder {
 }
 
 // Create mocks base method.
-func (m *MockUserRepo) Create(ctx context.Context, userID, email, name, hashedPassword string) (*types.User, *contracts.APIError) {
+func (m *MockUserRepo) Create(ctx context.Context, userID, email, name, hashedPassword string) (*types.User, *apierror.APIError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Create", ctx, userID, email, name, hashedPassword)
 	ret0, _ := ret[0].(*types.User)
-	ret1, _ := ret[1].(*contracts.APIError)
+	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
@@ -58,11 +58,11 @@ func (mr *MockUserRepoMockRecorder) Create(ctx, userID, email, name, hashedPassw
 }
 
 // Find mocks base method.
-func (m *MockUserRepo) Find(ctx context.Context, identifier string) (*types.User, *contracts.APIError) {
+func (m *MockUserRepo) Find(ctx context.Context, identifier string) (*types.User, *apierror.APIError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Find", ctx, identifier)
 	ret0, _ := ret[0].(*types.User)
-	ret1, _ := ret[1].(*contracts.APIError)
+	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
@@ -73,10 +73,10 @@ func (mr *MockUserRepoMockRecorder) Find(ctx, identifier any) *gomock.Call {
 }
 
 // UpdatePassword mocks base method.
-func (m *MockUserRepo) UpdatePassword(ctx context.Context, userID, hashedPassword string) *contracts.APIError {
+func (m *MockUserRepo) UpdatePassword(ctx context.Context, userID, hashedPassword string) *apierror.APIError {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdatePassword", ctx, userID, hashedPassword)
-	ret0, _ := ret[0].(*contracts.APIError)
+	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 

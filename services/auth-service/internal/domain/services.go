@@ -4,26 +4,41 @@ import (
 	"context"
 
 	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/shared/contracts"
+	apierror "github.com/augno/api/shared/errors"
 )
 
 type LoginResult struct {
 	User         *types.User
-	RefreshToken string
-	AccessToken  string
+	RefreshToken string // #nosec G117 - Struct field, not a hardcoded credential
+	AccessToken  string // #nosec G117 - Struct field, not a hardcoded credential
 }
 
 type RefreshTokenResult struct {
-	AccessToken string
+	AccessToken string // #nosec G117 - Struct field, not a hardcoded credential
+}
+
+type RegisterInput struct {
+	Name     string
+	Email    string
+	Password string // #nosec G117 - Struct field, not a hardcoded credential
 }
 
 type AuthSvc interface {
-	Login(ctx context.Context, identifier, password string) (*LoginResult, *contracts.APIError)
-	Register(ctx context.Context, name, email, password string) (*LoginResult, *contracts.APIError)
-	ValidateCredential(ctx context.Context, authToken string, targetAccountID string) (*types.Identity, *contracts.APIError)
-	RefreshToken(ctx context.Context, refreshToken string) (*RefreshTokenResult, *contracts.APIError)
-	RequestPasswordReset(ctx context.Context, identifier string, accountSlug *string) *contracts.APIError
-	ResetPassword(ctx context.Context, token, newPassword string) (*LoginResult, *contracts.APIError)
-	RevokeRefreshToken(ctx context.Context, refreshToken string) *contracts.APIError
-	UpdatePassword(ctx context.Context, userID string, oldPassword, newPassword string) *contracts.APIError
+	ValidateCredential(ctx context.Context, authToken string, targetAccountID *string) (*types.Identity, *apierror.APIError)
+}
+
+type TokenSvc interface {
+	RefreshToken(ctx context.Context, refreshToken string) (*RefreshTokenResult, *apierror.APIError)
+	RevokeRefreshToken(ctx context.Context, refreshToken string) *apierror.APIError
+}
+
+type UserSvc interface {
+	Login(ctx context.Context, identifier, password string) (*LoginResult, *apierror.APIError)
+	Register(ctx context.Context, input RegisterInput) (*LoginResult, *apierror.APIError)
+}
+
+type PasswordSvc interface {
+	UpdatePassword(ctx context.Context, userID string, oldPassword, newPassword string) *apierror.APIError
+	ResetPassword(ctx context.Context, token, newPassword string) (*LoginResult, *apierror.APIError)
+	RequestPasswordReset(ctx context.Context, identifier string, accountSlug *string) *apierror.APIError
 }

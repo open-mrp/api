@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	"github.com/augno/api/shared/constants"
 )
 
 type NestedStruct struct {
@@ -48,22 +49,31 @@ type TestSchemaStruct struct {
 	Count int `json:"count" default:"0"`
 }
 
-func TestGetTypeName(t *testing.T) {
+func TestGetCleanTypeName(t *testing.T) {
+	type GenericStruct[T any] struct {
+		Data T
+	}
+
 	tests := []struct {
+		name     string
 		input    any
 		expected string
 	}{
-		{TestSchemaStruct{}, "TestSchemaStruct"},
-		{&TestSchemaStruct{}, "TestSchemaStruct"},
-		{1, ""},
-		{"string", ""},
+		{"Normal struct", TestSchemaStruct{}, "TestSchemaStruct"},
+		{"Pointer to struct", &TestSchemaStruct{}, "TestSchemaStruct"},
+		{"Int (not struct)", 1, ""},
+		{"String (not struct)", "string", ""},
+		{"Generic struct", GenericStruct[string]{}, "GenericStruct_string"},
+		{"Generic struct with pointer", GenericStruct[*TestSchemaStruct]{}, "GenericStruct_TestSchemaStruct"},
 	}
 
 	for _, tt := range tests {
-		result := getTypeName(reflect.TypeOf(tt.input))
-		if result != tt.expected {
-			t.Errorf("getTypeName(%T) = %s; want %s", tt.input, result, tt.expected)
-		}
+		t.Run(tt.name, func(t *testing.T) {
+			result := getCleanTypeName(reflect.TypeOf(tt.input))
+			if result != tt.expected {
+				t.Errorf("getCleanTypeName(%T) = %s; want %s", tt.input, result, tt.expected)
+			}
+		})
 	}
 }
 
@@ -135,9 +145,9 @@ func TestGenerateSchema(t *testing.T) {
 		t.Error("expected property 'nested' to exist")
 	}
 
-	// Nested struct should have a ref if it has a name
-	if schema.Properties["nested"].Ref == "" {
-		t.Error("expected nested struct to have a ref")
+	// Nested struct should have an AllOf with ref (we always use AllOf now to avoid $ref sibling issues)
+	if len(schema.Properties["nested"].AllOf) == 0 || schema.Properties["nested"].AllOf[0].Ref == "" {
+		t.Error("expected nested struct to have an AllOf with ref")
 	}
 
 	if _, ok := components.Schemas["NestedStruct"]; !ok {
@@ -150,8 +160,15 @@ func TestGenerateSchema(t *testing.T) {
 	if !ptrSchema.Properties["name"].Nullable {
 		t.Error("expected pointer field 'name' to be nullable")
 	}
-	if ptrSchema.Properties["nested"].Ref == "" {
-		t.Error("expected pointer to struct 'nested' to have a ref")
+	// Nullable struct references should use AllOf to avoid $ref sibling property violation in OpenAPI 3.0.x
+	if !ptrSchema.Properties["nested"].Nullable {
+		t.Error("expected pointer to struct 'nested' to be nullable")
+	}
+	if len(ptrSchema.Properties["nested"].AllOf) == 0 {
+		t.Error("expected pointer to struct 'nested' to use AllOf for nullable reference")
+	}
+	if ptrSchema.Properties["nested"].AllOf[0].Ref != "#/components/schemas/NestedStruct" {
+		t.Errorf("expected AllOf[0].Ref to be '#/components/schemas/NestedStruct', got '%s'", ptrSchema.Properties["nested"].AllOf[0].Ref)
 	}
 
 	// Test DocumentedType
@@ -201,18 +218,18 @@ func TestGenerate_FullAssembly(t *testing.T) {
 			Endpoints: []apiendpoint.APIEndpointer{
 				&MockEndpoint{
 					APIEndpoint: apiendpoint.APIEndpoint[TestRequest, TestResponse]{
-						Title:    "Public Endpoint",
-						Method:   "GET",
-						Route:    "/public",
-						IsPublic: true,
+						Title:  "Public Endpoint",
+						Method: "GET",
+						Route:  "/public",
+						Public: true,
 					},
 				},
 				&MockEndpoint{
 					APIEndpoint: apiendpoint.APIEndpoint[TestRequest, TestResponse]{
-						Title:    "Private Endpoint",
-						Method:   "POST",
-						Route:    "/private",
-						IsPublic: false,
+						Title:  "Private Endpoint",
+						Method: "POST",
+						Route:  "/private",
+						Public: false,
 					},
 				},
 			},
@@ -294,5 +311,118 @@ func TestGenerateCreatesDirectory(t *testing.T) {
 
 	if _, err := os.Stat(outputDir); os.IsNotExist(err) {
 		t.Errorf("expected directory %s to be created, but it was not", outputDir)
+	}
+}
+
+func TestGetEnumValuesForStringType(t *testing.T) {
+	tests := []struct {
+		name           string
+		inputType      reflect.Type
+		expectedValues []string
+		expectNil      bool
+	}{
+		{
+			name:           "AccountMode returns enum values",
+			inputType:      reflect.TypeOf(constants.AccountMode("")),
+			expectedValues: []string{"prod", "test"},
+			expectNil:      false,
+		},
+		{
+			name:      "plain string returns nil",
+			inputType: reflect.TypeOf(""),
+			expectNil: true,
+		},
+		{
+			name:      "int returns nil",
+			inputType: reflect.TypeOf(0),
+			expectNil: true,
+		},
+		{
+			name:      "struct returns nil",
+			inputType: reflect.TypeOf(TestSchemaStruct{}),
+			expectNil: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := getEnumValuesForStringType(tt.inputType)
+
+			if tt.expectNil {
+				if result != nil {
+					t.Errorf("expected nil, got %v", result)
+				}
+				return
+			}
+
+			if result == nil {
+				t.Error("expected non-nil result, got nil")
+				return
+			}
+
+			if len(result) != len(tt.expectedValues) {
+				t.Errorf("expected %d values, got %d", len(tt.expectedValues), len(result))
+				return
+			}
+
+			for i, expected := range tt.expectedValues {
+				actual, ok := result[i].(string)
+				if !ok {
+					t.Errorf("expected string at index %d, got %T", i, result[i])
+					continue
+				}
+				if actual != expected {
+					t.Errorf("expected value %q at index %d, got %q", expected, i, actual)
+				}
+			}
+		})
+	}
+}
+
+type StructWithAccountMode struct {
+	Mode constants.AccountMode `json:"mode"`
+}
+
+func TestGenerateSchema_EnumTypeField(t *testing.T) {
+	reader := NewDocReader()
+	components := &Components{Schemas: make(map[string]Schema)}
+	testType := reflect.TypeOf(StructWithAccountMode{})
+
+	schema := generateSchema(testType, components, reader)
+
+	if schema.Type != "object" {
+		t.Errorf("expected schema type 'object', got '%s'", schema.Type)
+	}
+
+	modeSchema, ok := schema.Properties["mode"]
+	if !ok {
+		t.Fatal("expected property 'mode' to exist")
+	}
+
+	if modeSchema.Type != "string" {
+		t.Errorf("expected 'mode' type 'string', got '%s'", modeSchema.Type)
+	}
+
+	if len(modeSchema.Enum) != 2 {
+		t.Errorf("expected 2 enum values for 'mode', got %d", len(modeSchema.Enum))
+	}
+
+	expectedEnums := map[string]bool{"prod": false, "test": false}
+	for _, e := range modeSchema.Enum {
+		s, ok := e.(string)
+		if !ok {
+			t.Errorf("expected enum value to be string, got %T", e)
+			continue
+		}
+		if _, exists := expectedEnums[s]; !exists {
+			t.Errorf("unexpected enum value %q", s)
+		}
+		expectedEnums[s] = true
+	}
+
+	for val, found := range expectedEnums {
+		if !found {
+			t.Errorf("expected enum value %q not found", val)
+		}
 	}
 }

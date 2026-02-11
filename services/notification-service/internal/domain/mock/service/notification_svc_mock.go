@@ -13,7 +13,8 @@ import (
 	context "context"
 	reflect "reflect"
 
-	contracts "github.com/augno/api/shared/contracts"
+	domain "github.com/augno/api/services/notification-service/internal/domain"
+	apierror "github.com/augno/api/shared/errors"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -42,30 +43,44 @@ func (m *MockNotificationSvc) EXPECT() *MockNotificationSvcMockRecorder {
 }
 
 // LogEmail mocks base method.
-func (m *MockNotificationSvc) LogEmail(ctx context.Context, sesMessageID, accountID string, sentByID *string, subject string, filename *string) *contracts.APIError {
+func (m *MockNotificationSvc) LogEmail(ctx context.Context, data domain.EmailLogData) *apierror.APIError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "LogEmail", ctx, sesMessageID, accountID, sentByID, subject, filename)
-	ret0, _ := ret[0].(*contracts.APIError)
+	ret := m.ctrl.Call(m, "LogEmail", ctx, data)
+	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 
 // LogEmail indicates an expected call of LogEmail.
-func (mr *MockNotificationSvcMockRecorder) LogEmail(ctx, sesMessageID, accountID, sentByID, subject, filename any) *gomock.Call {
+func (mr *MockNotificationSvcMockRecorder) LogEmail(ctx, data any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LogEmail", reflect.TypeOf((*MockNotificationSvc)(nil).LogEmail), ctx, sesMessageID, accountID, sentByID, subject, filename)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LogEmail", reflect.TypeOf((*MockNotificationSvc)(nil).LogEmail), ctx, data)
 }
 
 // SendEmail mocks base method.
-func (m *MockNotificationSvc) SendEmail(ctx context.Context, to []string, subject, body string, isBodyHtml bool, sendAs *string, accountID string, sentByID *string) (*string, *contracts.APIError) {
+func (m *MockNotificationSvc) SendEmail(ctx context.Context, data domain.EmailSendData) (*string, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SendEmail", ctx, to, subject, body, isBodyHtml, sendAs, accountID, sentByID)
+	ret := m.ctrl.Call(m, "SendEmail", ctx, data)
 	ret0, _ := ret[0].(*string)
-	ret1, _ := ret[1].(*contracts.APIError)
+	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // SendEmail indicates an expected call of SendEmail.
-func (mr *MockNotificationSvcMockRecorder) SendEmail(ctx, to, subject, body, isBodyHtml, sendAs, accountID, sentByID any) *gomock.Call {
+func (mr *MockNotificationSvcMockRecorder) SendEmail(ctx, data any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendEmail", reflect.TypeOf((*MockNotificationSvc)(nil).SendEmail), ctx, to, subject, body, isBodyHtml, sendAs, accountID, sentByID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendEmail", reflect.TypeOf((*MockNotificationSvc)(nil).SendEmail), ctx, data)
+}
+
+// SendEnterpriseRequest mocks base method.
+func (m *MockNotificationSvc) SendEnterpriseRequest(ctx context.Context, req *domain.EnterpriseRequestData) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SendEnterpriseRequest", ctx, req)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// SendEnterpriseRequest indicates an expected call of SendEnterpriseRequest.
+func (mr *MockNotificationSvcMockRecorder) SendEnterpriseRequest(ctx, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendEnterpriseRequest", reflect.TypeOf((*MockNotificationSvc)(nil).SendEnterpriseRequest), ctx, req)
 }

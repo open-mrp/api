@@ -4,6 +4,12 @@
 // 	protoc        v6.33.1
 // source: notification.proto
 
+// Package notification defines the gRPC contract for the notification-service.
+// It provides synchronous email sending (bypassing the outbox pattern) for cases
+// where the caller needs immediate confirmation of dispatch. For asynchronous
+// email, services write to the outbox table and the notification-service consumes
+// from the notification_cmd_send_email RabbitMQ queue instead.
+
 package notification
 
 import (
@@ -21,15 +27,27 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// EmailRequest carries the data needed to send an email via SES.
 type EmailRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	To            []string               `protobuf:"bytes,1,rep,name=to,proto3" json:"to,omitempty"`
-	Subject       string                 `protobuf:"bytes,2,opt,name=subject,proto3" json:"subject,omitempty"`
-	Body          string                 `protobuf:"bytes,3,opt,name=body,proto3" json:"body,omitempty"`
-	IsBodyHtml    bool                   `protobuf:"varint,4,opt,name=is_body_html,json=isBodyHtml,proto3" json:"is_body_html,omitempty"`
-	SendAs        *string                `protobuf:"bytes,5,opt,name=send_as,json=sendAs,proto3,oneof" json:"send_as,omitempty"`
-	AccountId     string                 `protobuf:"bytes,6,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"`
-	SentById      *string                `protobuf:"bytes,7,opt,name=sent_by_id,json=sentById,proto3,oneof" json:"sent_by_id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// To is the list of recipient email addresses.
+	To []string `protobuf:"bytes,1,rep,name=to,proto3" json:"to,omitempty"`
+	// Subject is the email subject line.
+	Subject string `protobuf:"bytes,2,opt,name=subject,proto3" json:"subject,omitempty"`
+	// Body is the email body content, either plain text or HTML depending
+	// on the is_body_html flag.
+	Body string `protobuf:"bytes,3,opt,name=body,proto3" json:"body,omitempty"`
+	// IsBodyHtml indicates whether body contains HTML markup. When true,
+	// the email is sent with Content-Type text/html; when false, text/plain.
+	IsBodyHtml bool `protobuf:"varint,4,opt,name=is_body_html,json=isBodyHtml,proto3" json:"is_body_html,omitempty"`
+	// SendAs overrides the default sender address (e.g. "support@augno.com").
+	// When absent, the notification-service uses its configured default.
+	SendAs *string `protobuf:"bytes,5,opt,name=send_as,json=sendAs,proto3,oneof" json:"send_as,omitempty"`
+	// AccountID is the account context for audit logging. Absent for
+	// system-generated emails (e.g. welcome emails before account creation).
+	AccountId *string `protobuf:"bytes,6,opt,name=account_id,json=accountId,proto3,oneof" json:"account_id,omitempty"`
+	// SentByID is the user who triggered the email, for audit logging.
+	SentById      *string `protobuf:"bytes,7,opt,name=sent_by_id,json=sentById,proto3,oneof" json:"sent_by_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -100,8 +118,8 @@ func (x *EmailRequest) GetSendAs() string {
 }
 
 func (x *EmailRequest) GetAccountId() string {
-	if x != nil {
-		return x.AccountId
+	if x != nil && x.AccountId != nil {
+		return *x.AccountId
 	}
 	return ""
 }
@@ -113,9 +131,13 @@ func (x *EmailRequest) GetSentById() string {
 	return ""
 }
 
+// EmailResponse confirms whether SES accepted the email.
 type EmailResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Success is true when SES accepted the message for delivery. Note that
+	// this does not guarantee delivery — bounces and complaints arrive
+	// asynchronously via the notify_email_status queue.
+	Success       bool `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -157,29 +179,123 @@ func (x *EmailResponse) GetSuccess() bool {
 	return false
 }
 
+// EnterpriseRequestEmailRequest carries the data for an enterprise plan
+// inquiry email sent to the sales team.
+type EnterpriseRequestEmailRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// AccountID is the requesting account's prefixed ID.
+	AccountId string `protobuf:"bytes,1,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"`
+	// AccountName is the requesting account's display name, shown in the
+	// email body so sales can identify the lead.
+	AccountName string `protobuf:"bytes,2,opt,name=account_name,json=accountName,proto3" json:"account_name,omitempty"`
+	// CurrentPlanName is the account's current subscription plan (e.g.
+	// "Pro", "Starter"), providing context for the upgrade request.
+	CurrentPlanName string `protobuf:"bytes,3,opt,name=current_plan_name,json=currentPlanName,proto3" json:"current_plan_name,omitempty"`
+	// RequesterName is the name of the person making the inquiry.
+	RequesterName string `protobuf:"bytes,4,opt,name=requester_name,json=requesterName,proto3" json:"requester_name,omitempty"`
+	// RequesterEmail is the email address to reply to.
+	RequesterEmail string `protobuf:"bytes,5,opt,name=requester_email,json=requesterEmail,proto3" json:"requester_email,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *EnterpriseRequestEmailRequest) Reset() {
+	*x = EnterpriseRequestEmailRequest{}
+	mi := &file_notification_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EnterpriseRequestEmailRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EnterpriseRequestEmailRequest) ProtoMessage() {}
+
+func (x *EnterpriseRequestEmailRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_notification_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EnterpriseRequestEmailRequest.ProtoReflect.Descriptor instead.
+func (*EnterpriseRequestEmailRequest) Descriptor() ([]byte, []int) {
+	return file_notification_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *EnterpriseRequestEmailRequest) GetAccountId() string {
+	if x != nil {
+		return x.AccountId
+	}
+	return ""
+}
+
+func (x *EnterpriseRequestEmailRequest) GetAccountName() string {
+	if x != nil {
+		return x.AccountName
+	}
+	return ""
+}
+
+func (x *EnterpriseRequestEmailRequest) GetCurrentPlanName() string {
+	if x != nil {
+		return x.CurrentPlanName
+	}
+	return ""
+}
+
+func (x *EnterpriseRequestEmailRequest) GetRequesterName() string {
+	if x != nil {
+		return x.RequesterName
+	}
+	return ""
+}
+
+func (x *EnterpriseRequestEmailRequest) GetRequesterEmail() string {
+	if x != nil {
+		return x.RequesterEmail
+	}
+	return ""
+}
+
 var File_notification_proto protoreflect.FileDescriptor
 
 const file_notification_proto_rawDesc = "" +
 	"\n" +
-	"\x12notification.proto\x12\fnotification\"\xe9\x01\n" +
+	"\x12notification.proto\x12\fnotification\"\xfd\x01\n" +
 	"\fEmailRequest\x12\x0e\n" +
 	"\x02to\x18\x01 \x03(\tR\x02to\x12\x18\n" +
 	"\asubject\x18\x02 \x01(\tR\asubject\x12\x12\n" +
 	"\x04body\x18\x03 \x01(\tR\x04body\x12 \n" +
 	"\fis_body_html\x18\x04 \x01(\bR\n" +
 	"isBodyHtml\x12\x1c\n" +
-	"\asend_as\x18\x05 \x01(\tH\x00R\x06sendAs\x88\x01\x01\x12\x1d\n" +
+	"\asend_as\x18\x05 \x01(\tH\x00R\x06sendAs\x88\x01\x01\x12\"\n" +
 	"\n" +
-	"account_id\x18\x06 \x01(\tR\taccountId\x12!\n" +
+	"account_id\x18\x06 \x01(\tH\x01R\taccountId\x88\x01\x01\x12!\n" +
 	"\n" +
-	"sent_by_id\x18\a \x01(\tH\x01R\bsentById\x88\x01\x01B\n" +
+	"sent_by_id\x18\a \x01(\tH\x02R\bsentById\x88\x01\x01B\n" +
 	"\n" +
 	"\b_send_asB\r\n" +
+	"\v_account_idB\r\n" +
 	"\v_sent_by_id\")\n" +
 	"\rEmailResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess2[\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\"\xdd\x01\n" +
+	"\x1dEnterpriseRequestEmailRequest\x12\x1d\n" +
+	"\n" +
+	"account_id\x18\x01 \x01(\tR\taccountId\x12!\n" +
+	"\faccount_name\x18\x02 \x01(\tR\vaccountName\x12*\n" +
+	"\x11current_plan_name\x18\x03 \x01(\tR\x0fcurrentPlanName\x12%\n" +
+	"\x0erequester_name\x18\x04 \x01(\tR\rrequesterName\x12'\n" +
+	"\x0frequester_email\x18\x05 \x01(\tR\x0erequesterEmail2\xbe\x01\n" +
 	"\x13NotificationService\x12D\n" +
-	"\tSendEmail\x12\x1a.notification.EmailRequest\x1a\x1b.notification.EmailResponseB(Z&shared/proto/notification;notificationb\x06proto3"
+	"\tSendEmail\x12\x1a.notification.EmailRequest\x1a\x1b.notification.EmailResponse\x12a\n" +
+	"\x15SendEnterpriseRequest\x12+.notification.EnterpriseRequestEmailRequest\x1a\x1b.notification.EmailResponseB(Z&shared/proto/notification;notificationb\x06proto3"
 
 var (
 	file_notification_proto_rawDescOnce sync.Once
@@ -193,16 +309,19 @@ func file_notification_proto_rawDescGZIP() []byte {
 	return file_notification_proto_rawDescData
 }
 
-var file_notification_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_notification_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_notification_proto_goTypes = []any{
-	(*EmailRequest)(nil),  // 0: notification.EmailRequest
-	(*EmailResponse)(nil), // 1: notification.EmailResponse
+	(*EmailRequest)(nil),                  // 0: notification.EmailRequest
+	(*EmailResponse)(nil),                 // 1: notification.EmailResponse
+	(*EnterpriseRequestEmailRequest)(nil), // 2: notification.EnterpriseRequestEmailRequest
 }
 var file_notification_proto_depIdxs = []int32{
 	0, // 0: notification.NotificationService.SendEmail:input_type -> notification.EmailRequest
-	1, // 1: notification.NotificationService.SendEmail:output_type -> notification.EmailResponse
-	1, // [1:2] is the sub-list for method output_type
-	0, // [0:1] is the sub-list for method input_type
+	2, // 1: notification.NotificationService.SendEnterpriseRequest:input_type -> notification.EnterpriseRequestEmailRequest
+	1, // 2: notification.NotificationService.SendEmail:output_type -> notification.EmailResponse
+	1, // 3: notification.NotificationService.SendEnterpriseRequest:output_type -> notification.EmailResponse
+	2, // [2:4] is the sub-list for method output_type
+	0, // [0:2] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
@@ -220,7 +339,7 @@ func file_notification_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_notification_proto_rawDesc), len(file_notification_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

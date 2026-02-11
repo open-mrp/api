@@ -42,8 +42,6 @@ spec:
                             configMapKeyRef:
                                 key: PLATFORM
                                 name: app-config
-                      - name: OTEL_SERVICE_NAME
-                        value: api-gateway
                       - name: OTEL_ENVIRONMENT
                         valueFrom:
                             configMapKeyRef:
@@ -64,6 +62,26 @@ spec:
                         valueFrom:
                             configMapKeyRef:
                                 key: AUTH_SERVICE_URL
+                                name: app-config
+                      - name: CORE_SERVICE_URL
+                        valueFrom:
+                            configMapKeyRef:
+                                key: CORE_SERVICE_URL
+                                name: app-config
+                      - name: PLATFORM_SERVICE_URL
+                        valueFrom:
+                            configMapKeyRef:
+                                key: PLATFORM_SERVICE_URL
+                                name: app-config
+                      - name: BILLING_SERVICE_URL
+                        valueFrom:
+                            configMapKeyRef:
+                                key: BILLING_SERVICE_URL
+                                name: app-config
+                      - name: NOTIFICATION_SERVICE_URL
+                        valueFrom:
+                            configMapKeyRef:
+                                key: NOTIFICATION_SERVICE_URL
                                 name: app-config
                       - name: RABBITMQ_URI
                         valueFrom:

@@ -13,7 +13,8 @@ import (
 	context "context"
 	reflect "reflect"
 
-	contracts "github.com/augno/api/shared/contracts"
+	apierror "github.com/augno/api/shared/errors"
+	messaging "github.com/augno/api/shared/messaging"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -42,15 +43,15 @@ func (m *MockNotificationPublisher) EXPECT() *MockNotificationPublisherMockRecor
 }
 
 // PublishSendEmail mocks base method.
-func (m *MockNotificationPublisher) PublishSendEmail(ctx context.Context, to []string, subject, body string, isBodyHTML bool, sendAs *string, accountID string, sentByID *string) *contracts.APIError {
+func (m *MockNotificationPublisher) PublishSendEmail(ctx context.Context, data messaging.EmailSendData) *apierror.APIError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PublishSendEmail", ctx, to, subject, body, isBodyHTML, sendAs, accountID, sentByID)
-	ret0, _ := ret[0].(*contracts.APIError)
+	ret := m.ctrl.Call(m, "PublishSendEmail", ctx, data)
+	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 
 // PublishSendEmail indicates an expected call of PublishSendEmail.
-func (mr *MockNotificationPublisherMockRecorder) PublishSendEmail(ctx, to, subject, body, isBodyHTML, sendAs, accountID, sentByID any) *gomock.Call {
+func (mr *MockNotificationPublisherMockRecorder) PublishSendEmail(ctx, data any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishSendEmail", reflect.TypeOf((*MockNotificationPublisher)(nil).PublishSendEmail), ctx, to, subject, body, isBodyHTML, sendAs, accountID, sentByID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishSendEmail", reflect.TypeOf((*MockNotificationPublisher)(nil).PublishSendEmail), ctx, data)
 }

@@ -5,7 +5,7 @@ import (
 	"hash/crc32"
 	"math/big"
 
-	"github.com/augno/api/shared/contracts"
+	apierror "github.com/augno/api/shared/errors"
 )
 
 const keyCharset = "abcdefghijklmnopqrstuvwxyz" +
@@ -18,7 +18,7 @@ func genRandString(length int) (string, error) {
 	for i := range result {
 		n, err := rand.Int(rand.Reader, big.NewInt(int64(len(keyCharset))))
 		if err != nil {
-			return "", contracts.NewInternalError(err, "Problem generating API key.")
+			return "", apierror.NewInternalError(err, "Problem generating API key.")
 		}
 		result[i] = keyCharset[n.Int64()]
 	}

@@ -6,13 +6,15 @@ import (
 	"time"
 
 	"github.com/augno/api/services/auth-service/internal/domain"
-	emailpkg "github.com/augno/api/services/auth-service/internal/email"
+	"github.com/augno/api/services/auth-service/internal/event"
 	"github.com/augno/api/services/auth-service/internal/infrastructure/repository"
 	"github.com/augno/api/services/auth-service/internal/infrastructure/sqlc"
 	pwdutil "github.com/augno/api/services/auth-service/internal/password"
 	"github.com/augno/api/services/auth-service/internal/token"
 	"github.com/augno/api/services/auth-service/pkg/types"
-	"github.com/augno/api/shared/contracts"
+	"github.com/augno/api/shared/constants"
+	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/messaging"
 	tracing "github.com/augno/api/shared/tracing"
 )
 
@@ -22,9 +24,7 @@ type passwordMedImpl struct {
 	repos                 domain.RepoFactory
 	refreshTokenMed       domain.RefreshTokenMed
 	jwtUtils              domain.JWTUtils
-	opaqueTokenUtils      domain.OpaqueTokenUtils
 	notificationPublisher domain.NotificationPublisher
-	templateRenderer      emailpkg.TemplateRenderer
 	frontendURL           string
 }
 
@@ -32,17 +32,11 @@ type PasswordMedConfig struct {
 	Repos                 domain.RepoFactory
 	RefreshTokenMed       domain.RefreshTokenMed
 	JWTUtils              domain.JWTUtils
-	OpaqueTokenUtils      domain.OpaqueTokenUtils
 	NotificationPublisher domain.NotificationPublisher
-	TemplateRenderer      emailpkg.TemplateRenderer
 	FrontendURL           string
 }
 
 func NewPasswordMed(config PasswordMedConfig) domain.PasswordMed {
-	if config.TemplateRenderer == nil {
-		panic("TemplateRenderer is not set in the config.")
-	}
-
 	if config.NotificationPublisher == nil {
 		panic("NotificationPublisher is not set in the config.")
 	}
@@ -55,56 +49,63 @@ func NewPasswordMed(config PasswordMedConfig) domain.PasswordMed {
 		repos:                 config.Repos,
 		refreshTokenMed:       config.RefreshTokenMed,
 		jwtUtils:              config.JWTUtils,
-		opaqueTokenUtils:      config.OpaqueTokenUtils,
 		notificationPublisher: config.NotificationPublisher,
-		templateRenderer:      config.TemplateRenderer,
 		frontendURL:           config.FrontendURL,
 	}
 }
 
-func DefaultPasswordMedConfig(queries *sqlc.Queries, jwtSecret string, pepper []byte, frontendURL string, notificationPublisher domain.NotificationPublisher, templateRenderer emailpkg.TemplateRenderer) PasswordMedConfig {
+func DefaultPasswordMedConfig(queries *sqlc.Queries, jwtSecret string, pepper []byte, frontendURL string, notificationPublisher domain.NotificationPublisher) PasswordMedConfig {
 	factory := repository.NewRepoFactory(queries)
+	if notificationPublisher == nil {
+		panic("NotificationPublisher is not set in the config.")
+	}
+
+	if frontendURL == "" {
+		panic("FrontendURL is not set in the config.")
+	}
+
 	return PasswordMedConfig{
 		Repos:                 factory,
 		RefreshTokenMed:       NewRefreshTokenMed(DefaultRefreshTokenMedConfig(queries, jwtSecret)),
-		JWTUtils:              token.NewJWTUtils(token.DefaultJWTConfig(jwtSecret)),
-		OpaqueTokenUtils:      token.NewOpaqueTokenUtils(token.DefaultOpaqueTokenConfig()),
+		JWTUtils:              token.NewJWTUtils(&token.JWTConfig{Secret: jwtSecret}),
 		NotificationPublisher: notificationPublisher,
-		TemplateRenderer:      templateRenderer,
 		FrontendURL:           frontendURL,
 	}
 }
 
-func NewDefaultPasswordMed(queries *sqlc.Queries, jwtSecret string, pepper []byte, frontendURL string, notificationPublisher domain.NotificationPublisher, templateRenderer emailpkg.TemplateRenderer) domain.PasswordMed {
-	return NewPasswordMed(DefaultPasswordMedConfig(queries, jwtSecret, pepper, frontendURL, notificationPublisher, templateRenderer))
+func NewDefaultPasswordMed(queries *sqlc.Queries, jwtSecret string, pepper []byte, frontendURL string, notificationPublisher domain.NotificationPublisher) domain.PasswordMed {
+	return NewPasswordMed(DefaultPasswordMedConfig(queries, jwtSecret, pepper, frontendURL, notificationPublisher))
 }
 
 // Validate is a method that validates a user's password and returns the user if it is valid.
-func (s *passwordMedImpl) Validate(ctx context.Context, identifier, password string) (*types.User, *contracts.APIError) {
+func (s *passwordMedImpl) Validate(ctx context.Context, identifier, password string) (*types.User, *apierror.APIError) {
 	ctx, span := passwordMedTracer.Start(ctx, "mediator.password.validate")
 	defer span.End()
 
 	userRepo := s.repos.NewUserRepo()
 	user, err := userRepo.Find(ctx, identifier)
 
-	if err != nil || user == nil {
-		return nil, tracing.Trace(span, contracts.NewAuthenticationError(pwdutil.ErrInvalidCredentials))
+	if err != nil {
+		if apierror.IsNotFound(err) {
+			return nil, tracing.Trace(span, apierror.NewAuthenticationError(pwdutil.ErrInvalidCredentials))
+		}
+		return nil, tracing.Trace(span, err)
 	}
 
 	match, err := pwdutil.CompareHashAndPassword(ctx, password, *user.HashedPassword)
 	if err != nil {
-		return nil, tracing.Trace(span, contracts.NewInternalError(err, "password verification failed"))
+		return nil, tracing.Trace(span, apierror.NewInternalError(err, "password verification failed"))
 	}
 
 	if !match {
-		return nil, tracing.Trace(span, contracts.NewAuthenticationError(pwdutil.ErrInvalidCredentials))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError(pwdutil.ErrInvalidCredentials))
 	}
 
 	return user, nil
 }
 
 // Update updates a user's password.
-func (s *passwordMedImpl) Update(ctx context.Context, user *types.User, newPassword string) *contracts.APIError {
+func (s *passwordMedImpl) Update(ctx context.Context, user *types.User, newPassword string) *apierror.APIError {
 	ctx, span := passwordMedTracer.Start(ctx, "mediator.password.update")
 	defer span.End()
 
@@ -126,27 +127,25 @@ func (s *passwordMedImpl) Update(ctx context.Context, user *types.User, newPassw
 	}
 
 	// Notify the user that their password was changed
-	if user.Email != nil && s.notificationPublisher != nil {
+	if user.Email != nil {
 		var userName string
 		if user.Name != nil {
 			userName = *user.Name
 		}
-		body, err := s.templateRenderer.RenderPasswordUpdatedEmail(ctx, emailpkg.PasswordUpdatedEmailData{
-			UserName: userName,
-		})
-		if err != nil {
-			return tracing.Trace(span, err)
-		}
 
+		// Pass repos via context for the outbox publisher
+		publishCtx := event.WithRepos(ctx, s.repos)
 		s.notificationPublisher.PublishSendEmail(
-			ctx,
-			[]string{*user.Email},
-			"Password Updated",
-			body,
-			true,
-			nil,
-			user.ID,
-			nil,
+			publishCtx,
+			messaging.EmailSendData{
+				To:         []string{*user.Email},
+				Subject:    "Password Updated",
+				TemplateID: constants.EmailTemplatePasswordUpdated,
+				Params: map[string]any{
+					"UserName": userName,
+				},
+				SentByID: &user.ID,
+			},
 		)
 	}
 
@@ -154,7 +153,7 @@ func (s *passwordMedImpl) Update(ctx context.Context, user *types.User, newPassw
 }
 
 // ValidatePasswordResetToken validates a password reset token and returns the user if it is valid.
-func (s *passwordMedImpl) ValidatePasswordResetToken(ctx context.Context, token string) (*types.User, *contracts.APIError) {
+func (s *passwordMedImpl) ValidatePasswordResetToken(ctx context.Context, token string) (*types.User, *apierror.APIError) {
 	ctx, span := passwordMedTracer.Start(ctx, "mediator.password.validate_password_reset_token")
 	defer span.End()
 
@@ -167,11 +166,10 @@ func (s *passwordMedImpl) ValidatePasswordResetToken(ctx context.Context, token 
 	user, err := userRepo.Find(ctx, claims.Subject)
 
 	if err != nil {
+		if apierror.IsNotFound(err) {
+			return nil, tracing.Trace(span, apierror.NewAuthenticationError(pwdutil.ErrInvalidCredentials))
+		}
 		return nil, err
-	}
-
-	if user == nil {
-		return nil, tracing.Trace(span, contracts.NewAuthenticationError(pwdutil.ErrInvalidCredentials))
 	}
 
 	return user, nil
@@ -180,7 +178,7 @@ func (s *passwordMedImpl) ValidatePasswordResetToken(ctx context.Context, token 
 // RequestReset handles the business logic for a request to reset a password.
 // We only want to return an explicit error for internal service errors so we do not leak information about which identifiers
 // are registered.
-func (s *passwordMedImpl) RequestReset(ctx context.Context, identifier string, accountSlug *string) *contracts.APIError {
+func (s *passwordMedImpl) RequestReset(ctx context.Context, identifier string, accountSlug *string) *apierror.APIError {
 	ctx, span := passwordMedTracer.Start(ctx, "mediator.password.request_reset")
 	defer span.End()
 
@@ -188,19 +186,22 @@ func (s *passwordMedImpl) RequestReset(ctx context.Context, identifier string, a
 	user, err := userRepo.Find(ctx, identifier)
 
 	if err != nil {
-		if contracts.Is5XXErrorCode(err.Code) {
+		if apierror.IsNotFound(err) {
+			return nil
+		}
+		if apierror.Is5XXErrorCode(err.Code) {
 			return err
 		}
 		return nil
 	}
 
-	if user == nil || user.Email == nil {
+	if user.Email == nil {
 		return nil
 	}
 
 	resetToken, err := s.jwtUtils.Encode(ctx, user.ID, 15*time.Minute, domain.JWTTypePasswordReset)
 	if err != nil {
-		return tracing.Trace(span, contracts.NewInternalError(err, "Failed to generate password reset token."))
+		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to generate password reset token."))
 	}
 
 	var resetLink string
@@ -210,26 +211,21 @@ func (s *passwordMedImpl) RequestReset(ctx context.Context, identifier string, a
 		resetLink = fmt.Sprintf("%s/auth/password-reset?t=%s", s.frontendURL, resetToken)
 	}
 
-	body, err := s.templateRenderer.RenderPasswordResetEmail(ctx, emailpkg.PasswordResetEmailData{
-		ResetLink:         resetLink,
-		ExpirationMinutes: 15,
-	})
-	if err != nil {
-		return tracing.Trace(span, err)
-	}
-
-	if s.notificationPublisher != nil {
-		s.notificationPublisher.PublishSendEmail(
-			ctx,
-			[]string{*user.Email},
-			"Password Reset Request",
-			body,
-			true,
-			nil,
-			user.ID,
-			nil,
-		)
-	}
+	// Pass repos via context for the outbox publisher
+	publishCtx := event.WithRepos(ctx, s.repos)
+	s.notificationPublisher.PublishSendEmail(
+		publishCtx,
+		messaging.EmailSendData{
+			To:         []string{*user.Email},
+			Subject:    "Password Reset Request",
+			TemplateID: constants.EmailTemplatePasswordReset,
+			Params: map[string]any{
+				"ResetLink":         resetLink,
+				"ExpirationMinutes": 15,
+			},
+			SentByID: &user.ID,
+		},
+	)
 
 	return nil
 }

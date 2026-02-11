@@ -5,49 +5,78 @@ import (
 	"encoding/json"
 
 	"github.com/augno/api/services/auth-service/internal/domain"
+	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/contracts"
+	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/messaging"
 	"github.com/augno/api/shared/tracing"
 )
 
 var notificationPublisherTracer = tracing.GetTracer("auth-service.notification_publisher")
 
-type notificationPublisherImpl struct {
-	rabbitmq *messaging.RabbitMQ
+// reposContextKey is the context key for passing the repo factory.
+type reposContextKey struct{}
+
+// WithRepos adds a RepoFactory to the context so the outbox publisher can access it.
+func WithRepos(ctx context.Context, repos domain.RepoFactory) context.Context {
+	return context.WithValue(ctx, reposContextKey{}, repos)
 }
 
-func NewNotificationPublisher(rabbitmq *messaging.RabbitMQ) domain.NotificationPublisher {
-	return &notificationPublisherImpl{
-		rabbitmq: rabbitmq,
-	}
+// GetReposFromContext retrieves the RepoFactory from the context.
+func GetReposFromContext(ctx context.Context) (domain.RepoFactory, bool) {
+	repos, ok := ctx.Value(reposContextKey{}).(domain.RepoFactory)
+	return repos, ok
 }
 
-func (p *notificationPublisherImpl) PublishSendEmail(ctx context.Context, to []string, subject, body string, isBodyHTML bool, sendAs *string, accountID string, sentByID *string) *contracts.APIError {
-	ctx, span := notificationPublisherTracer.Start(ctx, "event.notification_publisher.publish_send_email")
+// outboxNotificationPublisher writes messages to the outbox table instead of
+// publishing directly to RabbitMQ.
+type outboxNotificationPublisher struct{}
+
+// NewOutboxNotificationPublisher creates a notification publisher that writes
+// to the outbox table for reliable message delivery.
+func NewOutboxNotificationPublisher() domain.NotificationPublisher {
+	return &outboxNotificationPublisher{}
+}
+
+func (p *outboxNotificationPublisher) PublishSendEmail(ctx context.Context, data messaging.EmailSendData) *apierror.APIError {
+	ctx, span := notificationPublisherTracer.Start(ctx, "event.outbox_notification_publisher.publish_send_email")
 	defer span.End()
 
-	payload := messaging.EmailSendData{
-		To:         to,
-		Subject:    subject,
-		Body:       body,
-		IsBodyHTML: isBodyHTML,
-		SendAs:     sendAs,
-		AccountID:  accountID,
-		SentByID:   sentByID,
+	repos, ok := GetReposFromContext(ctx)
+	if !ok {
+		return tracing.Trace(span, apierror.NewInternalError(nil, "RepoFactory not found in context for outbox publisher."))
 	}
 
-	emailJSON, err := json.Marshal(payload)
+	emailJSON, err := json.Marshal(data)
 	if err != nil {
-		return tracing.Trace(span, contracts.NewInternalError(err, "Failed to marshal email send data."))
+		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to marshal email send data."))
 	}
 
-	err = p.rabbitmq.PublishMessage(ctx, contracts.NotificationCmdSendEmail, contracts.AmqpMessage{
-		UserID: accountID,
-		Data:   emailJSON,
-	})
+	msg := contracts.AmqpMessage{
+		Data: emailJSON,
+	}
+
+	if identity, ok := appctx.GetIdentityFromContext(ctx); ok {
+		msg.Identity = identity
+	}
+
+	outboxInput := messaging.OutboxMessageInput{
+		ServiceName: "auth-service",
+		MessageType: string(contracts.NotificationCmdSendEmail),
+		Destination: messaging.ApplicationExchange,
+		RoutingKey:  string(contracts.NotificationCmdSendEmail),
+		Payload:     msg,
+	}
+
+	if requestID, ok := appctx.GetRequestID(ctx); ok {
+		outboxInput.RequestID = requestID
+	}
+
+	outboxRepo := repos.NewOutboxRepo()
+	_, err = outboxRepo.Create(ctx, outboxInput)
 
 	if err != nil {
-		return tracing.Trace(span, contracts.NewInternalError(err, "Failed to publish email send data."))
+		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to create outbox message."))
 	}
 
 	return nil

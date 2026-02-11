@@ -1,270 +1,407 @@
 package id
 
+import "strings"
+
+// IDPrefix is a 2-letter prefix for a type-specific ID. This will be used to
+// compose the prefix for the ID. Since each word has a unique 2 letter vocabulary,
+// we can ensure the type ID provides a machine-readable and human-readable identifier.
 type IDPrefix string
 
-// IDPrefixs contains all the type ID prefix values used in the system.
+// Vocabulary contains all 2-letter word codes used to compose ID prefixes.
+// Each code represents a semantic word/concept.
+const (
+	// Base entities
+	VocAccount      = "ac"
+	VocAddress      = "ad"
+	VocAction       = "ax"
+	VocAPI          = "ap"
+	VocAttribute    = "at"
+	VocAdjustment   = "aj"
+	VocAllocation   = "al"
+	VocAssignment   = "as"
+	VocBatch        = "bt"
+	VocBilling      = "bl"
+	VocBranding     = "br"
+	VocCache        = "ca"
+	VocChange       = "ch"
+	VocColor        = "cl"
+	VocCommission   = "cm"
+	VocConsumption  = "cp"
+	VocCarrier      = "cr"
+	VocCase         = "cs"
+	VocContact      = "ct"
+	VocCustomer     = "cu"
+	VocConversion   = "ce"
+	VocCategory     = "cg"
+	VocDC           = "dc"
+	VocDimension    = "dm"
+	VocDiscount     = "ds"
+	VocDefinition   = "df"
+	VocDepartment   = "dp"
+	VocEDI          = "ed"
+	VocEmail        = "em"
+	VocEnterprise   = "en"
+	VocError        = "er"
+	VocEvent        = "ev"
+	VocFormula      = "fm"
+	VocFreight      = "fr"
+	VocFlow         = "fw"
+	VocGeolocation  = "gl"
+	VocGroup        = "gp"
+	VocIdempotency  = "ip"
+	VocIntegration  = "ig"
+	VocImage        = "im"
+	VocInventory    = "in"
+	VocInquiry      = "ir"
+	VocIntent       = "ie"
+	VocItem         = "it"
+	VocInvoice      = "iv"
+	VocInbox        = "ix"
+	VocKey          = "ke"
+	VocLabel        = "lb"
+	VocLocation     = "lc"
+	VocLog          = "lg"
+	VocLine         = "ln"
+	VocMachine      = "mc"
+	VocMethod       = "md"
+	VocMessage      = "mg"
+	VocMaterial     = "ml"
+	VocNotification = "nf"
+	VocOrganization = "og"
+	VocOnboarding   = "ob"
+	VocOption       = "op"
+	VocOrder        = "or"
+	VocOutbox       = "ox"
+	VocProduct      = "pd"
+	VocPreference   = "pf"
+	VocPriority     = "pi"
+	VocPick         = "pk"
+	VocPortal       = "po"
+	VocPlan         = "pl"
+	VocPermission   = "pm"
+	VocProduction   = "pn"
+	VocProperty     = "pp"
+	VocPrice        = "pr"
+	VocProcess      = "ps"
+	VocPart         = "pt"
+	VocPayment      = "py"
+	VocQuantity     = "qu"
+	VocRecipient    = "rp"
+	VocRelation     = "re"
+	VocRegistration = "rg"
+	VocRole         = "rl"
+	VocRun          = "rn"
+	VocRequest      = "rq"
+	VocRate         = "rt"
+	VocSandbox      = "sb"
+	VocSession      = "se"
+	VocShipment     = "sh"
+	VocSettlement   = "sl"
+	VocScanning     = "sg"
+	VocService      = "si"
+	VocStripe       = "sr"
+	VocStep         = "st"
+	VocStation      = "sc"
+	VocStatus       = "ss"
+	VocSupplier     = "su"
+	VocSeverity     = "sv"
+	VocSystem       = "sy"
+	VocSize         = "sz"
+	VocTerritory    = "te"
+	VocTarget       = "ta"
+	VocToken        = "tk"
+	VocTerm         = "tm"
+	VocTransform    = "tf"
+	VocTier         = "tr"
+	VocTransaction  = "tx"
+	VocType         = "tp"
+	VocUnit         = "un"
+	VocUser         = "us"
+	VocVisibility   = "vi"
+	VocVerification = "ve"
+)
+
+// composePrefix concatenates vocabulary words to form a prefix.
+// This ensures consistency and makes prefix construction explicit.
+func composePrefix(words ...string) IDPrefix {
+	return IDPrefix(strings.Join(words, ""))
+}
+
+// IDPrefixes contains all the type ID prefix values used in the system.
 // This serves as a centralized reference for all type ID prefix values.
 // These constants can be used when creating new type ID structs or for validation.
-const (
+var (
 	// Account-related prefix values
-	AccountIDPrefix                               IDPrefix = "ac"
-	AccountAddressIDPrefix                        IDPrefix = "acad"
-	AccountBillingIDPrefix                        IDPrefix = "acbl"
-	AccountBrandingIDPrefix                       IDPrefix = "acbr"
-	AccountPortalIDPrefix                         IDPrefix = "acpl"
-	AccountIntegrationIDPrefix                    IDPrefix = "acig"
-	AccountGroupIDPrefix                          IDPrefix = "acgp"
-	AccountGroupTypeIDPrefix                      IDPrefix = "acgpty"
-	AccountTypeIDPrefix                           IDPrefix = "acty"
-	AccountRelationIDPrefix                       IDPrefix = "acre"
-	AccountStatusIDPrefix                         IDPrefix = "acst"
-	AccountPriceIDPrefix                          IDPrefix = "acpr"
-	AccountPriceItemCategoryIDPrefix              IDPrefix = "acpritcy"
-	AccountGroupQuantityDiscountIDPrefix          IDPrefix = "acgpqtds"
-	AccountPriceAttributeIDPrefix                 IDPrefix = "acprat"
-	AccountRelationProductLineIDPrefix            IDPrefix = "acrepdln"
-	AccountRelationPriceGroupIDPrefix             IDPrefix = "acreprgp"
-	AccountRelationNotificationPreferenceIDPrefix IDPrefix = "acrentpf"
-	AccountRelationNotificationTypeIDPrefix       IDPrefix = "acrentty"
-	AccountGroupProductLineIDPrefix               IDPrefix = "acgppdln"
-	AccountPreferenceIDPrefix                     IDPrefix = "acpf"
-	AccountUserIDPrefix                           IDPrefix = "acus"
+	AccountIDPrefix                               = composePrefix(VocAccount)
+	AccountAddressIDPrefix                        = composePrefix(VocAccount, VocAddress)
+	AccountBillingIDPrefix                        = composePrefix(VocAccount, VocBilling)
+	AccountBrandingIDPrefix                       = composePrefix(VocAccount, VocBranding)
+	AccountPortalIDPrefix                         = composePrefix(VocAccount, VocPortal)
+	AccountIntegrationIDPrefix                    = composePrefix(VocAccount, VocIntegration)
+	AccountGroupIDPrefix                          = composePrefix(VocAccount, VocGroup)
+	AccountGroupTypeIDPrefix                      = composePrefix(VocAccount, VocGroup, VocType)
+	AccountTypeIDPrefix                           = composePrefix(VocAccount, VocType)
+	AccountRelationIDPrefix                       = composePrefix(VocAccount, VocRelation)
+	AccountStatusIDPrefix                         = composePrefix(VocAccount, VocStatus)
+	AccountPriceIDPrefix                          = composePrefix(VocAccount, VocPrice)
+	AccountPriceItemCategoryIDPrefix              = composePrefix(VocAccount, VocPrice, VocItem, VocCategory)
+	AccountGroupQuantityDiscountIDPrefix          = composePrefix(VocAccount, VocGroup, VocQuantity, VocDiscount)
+	AccountPriceAttributeIDPrefix                 = composePrefix(VocAccount, VocPrice, VocAttribute)
+	AccountRelationProductLineIDPrefix            = composePrefix(VocAccount, VocRelation, VocProduct, VocLine)
+	AccountRelationPriceGroupIDPrefix             = composePrefix(VocAccount, VocRelation, VocPrice, VocGroup)
+	AccountRelationNotificationPreferenceIDPrefix = composePrefix(VocAccount, VocRelation, VocNotification, VocPreference)
+	AccountRelationNotificationTypeIDPrefix       = composePrefix(VocAccount, VocRelation, VocNotification, VocType)
+	AccountGroupProductLineIDPrefix               = composePrefix(VocAccount, VocGroup, VocProduct, VocLine)
+	AccountPreferenceIDPrefix                     = composePrefix(VocAccount, VocPreference)
+	AccountUserIDPrefix                           = composePrefix(VocAccount, VocUser)
 
 	// Action-related prefix values
-	ActionTypeIDPrefix IDPrefix = "anty"
+	ActionTypeIDPrefix = composePrefix(VocAction, VocType)
 
 	// Address-related prefix values
-	AddressIDPrefix IDPrefix = "ad"
+	AddressIDPrefix = composePrefix(VocAddress)
 
 	// API-related prefix values
-	APILocationIDPrefix IDPrefix = "aplc"
-	APIKeyIDPrefix      IDPrefix = "apky"
+	APILocationIDPrefix = composePrefix(VocAPI, VocLocation)
+	APIKeyIDPrefix      = composePrefix(VocAPI, VocKey)
 
 	// Attribute-related prefix values
-	AttributeIDPrefix IDPrefix = "at"
+	AttributeIDPrefix = composePrefix(VocAttribute)
 
 	// Batch-related prefix values
-	BatchIDPrefix IDPrefix = "bt"
+	BatchIDPrefix = composePrefix(VocBatch)
 
 	// Carrier-related prefix values
-	CarrierIDPrefix       IDPrefix = "cr"
-	CarrierOptionIDPrefix IDPrefix = "crop"
+	CarrierIDPrefix       = composePrefix(VocCarrier)
+	CarrierOptionIDPrefix = composePrefix(VocCarrier, VocOption)
 
 	// Color-related prefix values
-	ColorIDPrefix IDPrefix = "cl"
+	ColorIDPrefix = composePrefix(VocColor)
 
 	// Commission-related prefix values
-	CommissionStatusIDPrefix IDPrefix = "cmst"
+	CommissionStatusIDPrefix = composePrefix(VocCommission, VocStatus)
 
 	// Consumption-related prefix values
-	ConsumptionIDPrefix IDPrefix = "cn"
+	ConsumptionIDPrefix = composePrefix(VocConsumption)
 
 	// Contact-related prefix values
-	ContactIDPrefix     IDPrefix = "ct"
-	ContactTypeIDPrefix IDPrefix = "ctty"
+	ContactIDPrefix     = composePrefix(VocContact)
+	ContactTypeIDPrefix = composePrefix(VocContact, VocType)
 
 	// Customer-related prefix values
-	CustomerIDPrefix             IDPrefix = "cu"
-	CustomerGroupIDPrefix        IDPrefix = "cugp"
-	CustomerGroupTypeIDPrefix    IDPrefix = "cugpty"
-	CustomerGroupProductIDPrefix IDPrefix = "cugppd"
-	CustomerProductIDPrefix      IDPrefix = "cupd"
-	CustomerStatusIDPrefix       IDPrefix = "cust"
-	CustomerAddressesIDPrefix    IDPrefix = "cuad"
-	CustomerEmailIDPrefix        IDPrefix = "cuem"
-	CustomerPriceIDPrefix        IDPrefix = "cupr"
-	CustomerPriceGroupsIDPrefix  IDPrefix = "cuprgp"
+	// !Depreciated
+	// CustomerIDPrefix             = composePrefix(VocCustomer)
+	// CustomerGroupIDPrefix        = composePrefix(VocCustomer, VocGroup)
+	// CustomerGroupTypeIDPrefix    = composePrefix(VocCustomer, VocGroup, VocType)
+	// CustomerGroupProductIDPrefix = composePrefix(VocCustomer, VocGroup, VocProduct)
+	// CustomerProductIDPrefix      = composePrefix(VocCustomer, VocProduct)
+	// CustomerStatusIDPrefix       = composePrefix(VocCustomer, VocStatus)
+	// CustomerAddressesIDPrefix    = composePrefix(VocCustomer, VocAddress)
+	// CustomerEmailIDPrefix        = composePrefix(VocCustomer, VocEmail)
+	// CustomerPriceIDPrefix        = composePrefix(VocCustomer, VocPrice)
+	// CustomerPriceGroupsIDPrefix  = composePrefix(VocCustomer, VocPrice, VocGroup)
 
 	// Department-related prefix values
-	DepartmentIDPrefix IDPrefix = "dt"
+	DepartmentIDPrefix = composePrefix(VocDepartment)
 
 	// Discount-related prefix values
-	DiscountTypeIDPrefix         IDPrefix = "dsty"
-	OrderDiscountIDPrefix        IDPrefix = "ords"
-	QuantityDiscountIDPrefix     IDPrefix = "qtds"
-	QuantityDiscountTierIDPrefix IDPrefix = "qtdstr"
+	DiscountTypeIDPrefix         = composePrefix(VocDiscount, VocStatus, VocType)
+	OrderDiscountIDPrefix        = composePrefix(VocOrder, VocDiscount)
+	QuantityDiscountIDPrefix     = composePrefix(VocQuantity, VocDiscount)
+	QuantityDiscountTierIDPrefix = composePrefix(VocQuantity, VocDiscount, VocTier)
 
 	// Error-related prefix values
-	ErrorSeverityIDPrefix IDPrefix = "ersv"
-	ErrorLogIDPrefix      IDPrefix = "erlg"
+	ErrorSeverityIDPrefix = composePrefix(VocError, VocSeverity)
+	ErrorLogIDPrefix      = composePrefix(VocError, VocLog)
 
 	// Freight-related prefix values
-	FreightStatusIDPrefix IDPrefix = "frst"
+	FreightStatusIDPrefix = composePrefix(VocFreight, VocStatus)
 
 	// Geolocation-related prefix values
-	GeolocationIDPrefix IDPrefix = "gl"
+	GeolocationIDPrefix = composePrefix(VocGeolocation)
 
 	// Integration-related prefix values
-	IntegrationIDPrefix IDPrefix = "ig"
+	IntegrationIDPrefix = composePrefix(VocIntegration)
 
 	// Invoice-related prefix values
-	InvoiceIDPrefix          IDPrefix = "iv"
-	InvoiceLineIDPrefix      IDPrefix = "ivln"
-	InvoiceLineCacheIDPrefix IDPrefix = "ivlnca"
+	InvoiceIDPrefix     = composePrefix(VocInvoice)
+	InvoiceLineIDPrefix = composePrefix(VocInvoice, VocLine)
 
 	// Item-related prefix values
-	ItemIDPrefix             IDPrefix = "it"
-	ItemCategoryIDPrefix     IDPrefix = "itcy"
-	ItemCategoryTypeIDPrefix IDPrefix = "itcyty"
-	ItemTypeIDPrefix         IDPrefix = "itty"
+	ItemIDPrefix             = composePrefix(VocItem)
+	ItemCategoryIDPrefix     = composePrefix(VocItem, VocCategory)
+	ItemCategoryTypeIDPrefix = composePrefix(VocItem, VocCategory, VocType)
+	ItemTypeIDPrefix         = composePrefix(VocItem, VocType)
 
 	// Label-related prefix values
-	LabelSizeIDPrefix IDPrefix = "llsz"
-	LabelTypeIDPrefix IDPrefix = "lbty"
+	LabelSizeIDPrefix = composePrefix(VocLabel, VocSize)
+	LabelTypeIDPrefix = composePrefix(VocLabel, VocType)
 
 	// Machine-related prefix values
-	MachineIDPrefix IDPrefix = "mc"
+	MachineIDPrefix = composePrefix(VocMachine)
 
 	// Material-related prefix values
-	MaterialIDPrefix         IDPrefix = "mt"
-	SupplierMaterialIDPrefix IDPrefix = "sumt"
+	MaterialIDPrefix         = composePrefix(VocMaterial)
+	SupplierMaterialIDPrefix = composePrefix(VocSupplier, VocMaterial)
 
 	// Organization-related prefix values
-	OrganizationIDPrefix IDPrefix = "og"
+	OrganizationIDPrefix = composePrefix(VocOrganization)
 
 	// Part-related prefix values
-	PartIDPrefix IDPrefix = "pt"
+	PartIDPrefix = composePrefix(VocPart)
 
 	// Payment-related prefix values
-	PaymentTermIDPrefix        IDPrefix = "pytm"
-	OrderPaymentIntentIDPrefix IDPrefix = "sopi"
+	PaymentTermIDPrefix        = composePrefix(VocPayment, VocTerm)
+	OrderPaymentIntentIDPrefix = composePrefix(VocOrder, VocPayment, VocIntent)
 
 	// Permission-related prefix values
-	PermissionIDPrefix      IDPrefix = "pm"
-	PermissionGroupIDPrefix IDPrefix = "pmgp"
+	PermissionIDPrefix      = composePrefix(VocPermission)
+	PermissionGroupIDPrefix = composePrefix(VocPermission, VocGroup)
 
 	// Pick-related prefix values
-	PickIDPrefix           IDPrefix = "pk"
-	PickLineIDPrefix       IDPrefix = "pkln"
-	PickAssignmentIDPrefix IDPrefix = "pkas"
+	PickIDPrefix           = composePrefix(VocPick)
+	PickLineIDPrefix       = composePrefix(VocPick, VocLine)
+	PickAssignmentIDPrefix = composePrefix(VocPick, VocAssignment)
 
 	// Preference-related prefix values
-	PreferenceDefinitionIDPrefix IDPrefix = "pf"
+	PreferenceDefinitionIDPrefix = composePrefix(VocPreference, VocDefinition)
 
 	// Priority-related prefix values
-	PriorityIDPrefix IDPrefix = "pi"
+	PriorityIDPrefix = composePrefix(VocPriority)
 
 	// Product-related prefix values
-	ProductIDPrefix           IDPrefix = "pd"
-	ProductLineIDPrefix       IDPrefix = "pdln"
-	ProductLineTargetIDPrefix IDPrefix = "pdlntg"
-	ProductTypeIDPrefix       IDPrefix = "pdty"
-	ProductImageIDPrefix      IDPrefix = "pdim"
+	ProductIDPrefix           = composePrefix(VocProduct)
+	ProductLineIDPrefix       = composePrefix(VocProduct, VocLine)
+	ProductLineTargetIDPrefix = composePrefix(VocProduct, VocLine, VocTarget)
+	ProductTypeIDPrefix       = composePrefix(VocProduct, VocType)
+	ProductImageIDPrefix      = composePrefix(VocProduct, VocImage)
 
 	// Production-related prefix values
-	ProductionIDPrefix                    IDPrefix = "pn"
-	ProductionFormulaIDPrefix             IDPrefix = "pnfm"
-	ProductionFormulaItemIDPrefix         IDPrefix = "pnfmit"
-	ProductionProcessIDPrefix             IDPrefix = "pnps"
-	ProductionProcessItemCategoryIDPrefix IDPrefix = "pnpsitcy"
-	ProductionRunIDPrefix                 IDPrefix = "pnrn"
-	ProductionStepIDPrefix                IDPrefix = "pnsp"
-	ProductionStepTransformIDPrefix       IDPrefix = "pnsptn"
+	ProductionIDPrefix                    = composePrefix(VocProduction)
+	ProductionFormulaIDPrefix             = composePrefix(VocProduction, VocFormula)
+	ProductionFormulaItemIDPrefix         = composePrefix(VocProduction, VocFormula, VocItem)
+	ProductionProcessIDPrefix             = composePrefix(VocProduction, VocProcess)
+	ProductionProcessItemCategoryIDPrefix = composePrefix(VocProduction, VocProcess, VocItem, VocCategory)
+	ProductionRunIDPrefix                 = composePrefix(VocProduction, VocRun)
+	ProductionStepIDPrefix                = composePrefix(VocProduction, VocStep)
+	ProductionStepTransformIDPrefix       = composePrefix(VocProduction, VocStep, VocTransform)
 
 	// Property-related prefix values
-	PropertyIDPrefix        IDPrefix = "pp"
-	SysPropertyIDPrefix     IDPrefix = "sypp"
-	SysPropertyTypeIDPrefix IDPrefix = "syppty"
+	PropertyIDPrefix        = composePrefix(VocProperty)
+	SysPropertyIDPrefix     = composePrefix(VocSystem, VocProperty)
+	SysPropertyTypeIDPrefix = composePrefix(VocSystem, VocProperty, VocType)
 
 	// Quantity-related prefix values
-	QuantityIDPrefix IDPrefix = "qt"
+	QuantityIDPrefix = composePrefix(VocQuantity)
 
 	// Rate-related prefix values
-	RateIDPrefix IDPrefix = "rt"
+	RateIDPrefix = composePrefix(VocRate)
 
 	// Role-related prefix values
-	RoleIDPrefix           IDPrefix = "rl"
-	RolePermissionIDPrefix IDPrefix = "rlpm"
-	RoleTypeIDPrefix       IDPrefix = "rlty"
+	RoleIDPrefix           = composePrefix(VocRole)
+	RolePermissionIDPrefix = composePrefix(VocRole, VocPermission)
+	RoleTypeIDPrefix       = composePrefix(VocRole, VocType)
 
-	// Sales Order-related prefix values
-	SalesOrderIDPrefix          IDPrefix = "so"
-	SalesOrderLineIDPrefix      IDPrefix = "soln"
-	SalesOrderLineCacheIDPrefix IDPrefix = "solnca"
-	SalesOrderStatusIDPrefix    IDPrefix = "sost"
-	SalesOrderTypeIDPrefix      IDPrefix = "soty"
+	// Order-related prefix values
+	OrderIDPrefix       = composePrefix(VocOrder)
+	OrderLineIDPrefix   = composePrefix(VocOrder, VocLine)
+	OrderStatusIDPrefix = composePrefix(VocOrder, VocStatus)
+	OrderTypeIDPrefix   = composePrefix(VocOrder, VocType)
 
 	// Territory-related prefix values
-	TerritoryIDPrefix IDPrefix = "te"
+	TerritoryIDPrefix = composePrefix(VocTerritory)
 
 	// Target-related prefix values
-	TargetIDPrefix IDPrefix = "tg"
+	TargetIDPrefix = composePrefix(VocTarget)
+
+	// Sandbox-related prefix values
+	SandboxAccountIDPrefix = composePrefix(VocSandbox, VocAccount)
 
 	// Scanning Station-related prefix values
-	ScanningStationIDPrefix     IDPrefix = "sn"
-	ScanningStationTypeIDPrefix IDPrefix = "snty"
+	ScanningStationIDPrefix     = composePrefix(VocScanning, VocStation)
+	ScanningStationTypeIDPrefix = composePrefix(VocScanning, VocStation, VocType)
 
 	// Session-related prefix values
-	SessionIDPrefix IDPrefix = "sess"
+	SessionIDPrefix = IDPrefix(VocSession)
 
 	// Shipment-related prefix values
-	ShipmentIDPrefix       IDPrefix = "sh"
-	ShipmentLineIDPrefix   IDPrefix = "shln"
-	ShipmentStatusIDPrefix IDPrefix = "shst"
-	ShippingCaseIDPrefix   IDPrefix = "shcs"
-	ShippingTermIDPrefix   IDPrefix = "shtm"
+	ShipmentIDPrefix       = composePrefix(VocShipment)
+	ShipmentLineIDPrefix   = composePrefix(VocShipment, VocLine)
+	ShipmentStatusIDPrefix = composePrefix(VocShipment, VocStatus)
+	ShippingCaseIDPrefix   = composePrefix(VocShipment, VocCase)
+	ShippingTermIDPrefix   = composePrefix(VocShipment, VocTerm)
 
 	// Unit-related prefix values
-	UnitIDPrefix            IDPrefix = "un"
-	UnitDimensionIDPrefix   IDPrefix = "undm"
-	UnitGroupIDPrefix       IDPrefix = "ungp"
-	UnitGroupsUnitsIDPrefix IDPrefix = "ungpun"
-	UnitConversionIDPrefix  IDPrefix = "uncv"
+	UnitIDPrefix            = composePrefix(VocUnit)
+	UnitDimensionIDPrefix   = composePrefix(VocUnit, VocDimension)
+	UnitGroupIDPrefix       = composePrefix(VocUnit, VocGroup)
+	UnitGroupsUnitsIDPrefix = composePrefix(VocUnit, VocGroup, VocUnit)
+	UnitConversionIDPrefix  = composePrefix(VocUnit, VocConversion)
 
 	// User-related prefix values
-	UserIDPrefix        IDPrefix = "us"
-	UserAccountIDPrefix IDPrefix = "usac"
-	UserStatusIDPrefix  IDPrefix = "usst"
-	UserTypeIDPrefix    IDPrefix = "usty"
+	UserIDPrefix        = composePrefix(VocUser)
+	UserAccountIDPrefix = composePrefix(VocUser, VocAccount)
+	UserStatusIDPrefix  = composePrefix(VocUser, VocStatus)
+	UserTypeIDPrefix    = composePrefix(VocUser, VocType)
 
 	// Verification-related prefix values
-	VerificationTokenIDPrefix IDPrefix = "vntk"
+	VerificationTokenIDPrefix = composePrefix(VocVerification, VocToken)
 
 	// Visibility-related prefix values
-	VisibilityTypeIDPrefix IDPrefix = "vsty"
-
-	// Supplier-related prefix values
-	SupplierIDPrefix IDPrefix = "su"
+	VisibilityTypeIDPrefix = composePrefix(VocVisibility, VocType)
 
 	// Adjustment-related prefix values
-	AdjustmentTypeIDPrefix IDPrefix = "ajty"
+	AdjustmentTypeIDPrefix = composePrefix(VocAdjustment, VocType)
 
 	// Change Log-related prefix values
-	ChangeLogIDPrefix IDPrefix = "chlg"
+	ChangeLogIDPrefix = composePrefix(VocChange, VocLog)
 
 	// DC Location-related prefix values
-	DCLocationIDPrefix IDPrefix = "dclc"
+	DCLocationIDPrefix = composePrefix(VocDC, VocLocation)
 
 	// Email-related prefix values
-	EmailLogIDPrefix       IDPrefix = "emlg"
-	EmailRecipientIDPrefix IDPrefix = "emrc"
-	OrderEmailIDPrefix     IDPrefix = "orem"
+	EmailLogIDPrefix       = composePrefix(VocEmail, VocLog)
+	EmailRecipientIDPrefix = composePrefix(VocEmail, VocRecipient)
+	OrderEmailIDPrefix     = composePrefix(VocOrder, VocEmail)
 
 	// Inventory-related prefix values
-	InventoryChangeLogIDPrefix IDPrefix = "inchlg"
-	InventoryLogIDPrefix       IDPrefix = "inlg"
+	InventoryChangeLogIDPrefix = composePrefix(VocInventory, VocChange, VocLog)
+	InventoryLogIDPrefix       = composePrefix(VocInventory, VocLog)
 
 	// Registration-related prefix values
-	RegistrationFlowIDPrefix IDPrefix = "rgfw"
+	RegistrationFlowIDPrefix = composePrefix(VocRegistration, VocFlow)
 
 	// Onboarding-related prefix values
-	OnboardingStatusIDPrefix IDPrefix = "onst"
+	OnboardingStatusIDPrefix = composePrefix(VocOnboarding, VocStatus)
 
 	// Settlement-related prefix values
-	SettlementIDPrefix IDPrefix = "sl"
+	SettlementIDPrefix = composePrefix(VocSettlement)
 
 	// Stripe-related prefix values
-	StripeEventLogIDPrefix IDPrefix = "spevlg"
+	StripeEventLogIDPrefix = composePrefix(VocStripe, VocEvent, VocLog)
 
 	// Transaction-related prefix values
-	TransactionIDPrefix           IDPrefix = "tx"
-	TransactionAllocationIDPrefix IDPrefix = "txal"
-	TransactionMethodIDPrefix     IDPrefix = "txmd"
-	TransactionTypeIDPrefix       IDPrefix = "txty"
+	TransactionIDPrefix           = composePrefix(VocTransaction)
+	TransactionAllocationIDPrefix = composePrefix(VocTransaction, VocAllocation)
+	TransactionMethodIDPrefix     = composePrefix(VocTransaction, VocMethod)
+	TransactionTypeIDPrefix       = composePrefix(VocTransaction, VocType)
 
 	// EDI-related prefix values
-	EDIRunIDPrefix IDPrefix = "edirn"
+	EDIRunIDPrefix = composePrefix(VocEDI, VocRun)
 
 	// Request-related prefix values
-	RequestIDPrefix IDPrefix = "rq"
+	RequestIDPrefix = composePrefix(VocRequest)
+
+	// Plan Change-related prefix values
+	PlanChangeIDPrefix = composePrefix(VocPlan, VocChange)
+
+	// Enterprise Inquiry-related prefix values
+	EnterpriseInquiryIDPrefix = composePrefix(VocEnterprise, VocInquiry)
+
+	// Idempotency-related prefix values
+	IdempotencyKeyIDPrefix        = composePrefix(VocIdempotency, VocKey)
+	ServiceIdempotencyKeyIDPrefix = composePrefix(VocService, VocIdempotency, VocKey)
+
+	// Messaging-related prefix values
+	MessageIDPrefix = composePrefix(VocMessage)
 )

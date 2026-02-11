@@ -3,18 +3,16 @@ package mediator
 import (
 	"github.com/augno/api/services/auth-service/internal/apikey"
 	"github.com/augno/api/services/auth-service/internal/domain"
-	"github.com/augno/api/services/auth-service/internal/email"
 	"github.com/augno/api/services/auth-service/internal/token"
-	"github.com/augno/api/shared/contracts"
 )
 
 // FactoryConfig declares the dependencies needed to build mediators.
 type MediatorFactoryConfig struct {
-	JWTSecret             string
+	JWTSecret             string // #nosec G117 - Struct field, not a hardcoded credential
 	APIKeyPepper          []byte
 	NotificationPublisher domain.NotificationPublisher
 	FrontendURL           string
-	TemplatesDir          string
+	CoreClient            domain.AuthCoreClient
 }
 
 type mediatorFactoryImpl struct {
@@ -22,68 +20,54 @@ type mediatorFactoryImpl struct {
 	apiKeyPepper          []byte
 	notificationPublisher domain.NotificationPublisher
 	frontendURL           string
-	templateRenderer      email.TemplateRenderer
+	coreClient            domain.AuthCoreClient
 }
 
 // NewMediatorFactory creates a mediator factory that mirrors the repository factory
 // style: inject shared dependencies once, then build mediators bound to a
 // specific repository factory (e.g., per transaction).
-func NewMediatorFactory(config MediatorFactoryConfig) (domain.MediatorFactory, *contracts.APIError) {
-	var templateRenderer email.TemplateRenderer
-	if config.TemplatesDir != "" {
-		tr, err := email.NewTemplateRendererFromDir(config.TemplatesDir)
-		if err != nil {
-			return nil, err
-		}
-		templateRenderer = tr
-	}
-
+func NewMediatorFactory(config MediatorFactoryConfig) domain.MediatorFactory {
 	return &mediatorFactoryImpl{
 		jwtSecret:             config.JWTSecret,
 		apiKeyPepper:          config.APIKeyPepper,
 		notificationPublisher: config.NotificationPublisher,
 		frontendURL:           config.FrontendURL,
-		templateRenderer:      templateRenderer,
-	}, nil
+		coreClient:            config.CoreClient,
+	}
 }
 
 func (f *mediatorFactoryImpl) Build(repoFactory domain.RepoFactory) domain.Mediators {
 	refreshTokenMed := NewRefreshTokenMed(RefreshTokenMedConfig{
-		Repos:            repoFactory,
-		JWTUtils:         token.NewJWTUtils(token.DefaultJWTConfig(f.jwtSecret)),
-		OpaqueTokenUtils: token.NewOpaqueTokenUtils(token.DefaultOpaqueTokenConfig()),
+		Repos:    repoFactory,
+		JWTUtils: token.NewJWTUtils(&token.JWTConfig{Secret: f.jwtSecret}),
 	})
 
 	apiKeyMed := NewAPIKeyMed(APIKeyMedConfig{
 		Repos:       repoFactory,
-		APIKeyUtils: apikey.NewAPIKeyUtils(apikey.DefaultAPIKeyConfig(f.apiKeyPepper)),
+		APIKeyUtils: apikey.NewAPIKeyUtils(&apikey.APIKeyConfig{Pepper: f.apiKeyPepper}),
+		CoreClient:  f.coreClient,
 	})
 
-	accountUserMed := NewAccountUserMed(AccountUserMedConfig{
-		Repos: repoFactory,
+	userMed := NewUserMed(UserMedConfig{
+		Repos:                 repoFactory,
+		JWTSecret:             f.jwtSecret,
+		RefreshTokenMed:       refreshTokenMed,
+		APIKeyMed:             apiKeyMed,
+		CoreClient:            f.coreClient,
+		NotificationPublisher: f.notificationPublisher,
 	})
 
 	return domain.Mediators{
-		User: NewUserMed(UserMedConfig{
-			Repos:                 repoFactory,
-			JWTSecret:             f.jwtSecret,
-			RefreshTokenMed:       refreshTokenMed,
-			APIKeyMed:             apiKeyMed,
-			AccountUserMed:        accountUserMed,
-			NotificationPublisher: f.notificationPublisher,
-			TemplateRenderer:      f.templateRenderer,
-		}),
-		APIKey:      apiKeyMed,
-		AccountUser: accountUserMed,
+		User:   userMed,
+		APIKey: apiKeyMed,
 		Password: NewPasswordMed(PasswordMedConfig{
 			Repos:                 repoFactory,
 			RefreshTokenMed:       refreshTokenMed,
-			JWTUtils:              token.NewJWTUtils(token.DefaultJWTConfig(f.jwtSecret)),
-			OpaqueTokenUtils:      token.NewOpaqueTokenUtils(token.DefaultOpaqueTokenConfig()),
+			JWTUtils:              token.NewJWTUtils(&token.JWTConfig{Secret: f.jwtSecret}),
 			NotificationPublisher: f.notificationPublisher,
-			TemplateRenderer:      f.templateRenderer,
 			FrontendURL:           f.frontendURL,
 		}),
 		RefreshToken: refreshTokenMed,
+		Idempotency:  NewIdempotencyMed(IdempotencyMedConfig{Repos: repoFactory}),
 	}
 }

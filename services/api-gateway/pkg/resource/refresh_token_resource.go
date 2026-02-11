@@ -4,7 +4,7 @@ import (
 	"time"
 
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
-	"github.com/augno/api/shared/ptrutil"
+	"github.com/augno/api/shared/timeutil"
 )
 
 // The refresh token
@@ -20,7 +20,7 @@ const SampleRefreshTokenToken = "d7842e40d46df9033f68a761ddd866bb1eafefbff887806
 
 var SampleRefreshToken = &RefreshToken{
 	Token:     SampleRefreshTokenToken,
-	ExpiresAt: ptrutil.TimestampToTime(sampleExpiresAtTimestamp),
+	ExpiresAt: timeutil.TimestampToTime(sampleExpiresAtTimestamp),
 }
 
 func (*RefreshToken) SchemaExample() any {

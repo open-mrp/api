@@ -7,8 +7,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	apicontext "github.com/augno/api/services/api-gateway/internal/context"
-	"github.com/augno/api/services/api-gateway/internal/domain"
+	"github.com/augno/api/services/api-gateway/internal/header"
+	"github.com/augno/api/shared/appctx"
 )
 
 func TestRespondWithJSON_WithoutRequestLog(t *testing.T) {
@@ -52,11 +52,11 @@ func TestRespondWithJSON_WithRequestLog(t *testing.T) {
 		"message": "success",
 	}
 	ua := "Mozilla/5.0"
-	rl := &domain.RequestLog{
+	rl := &appctx.RequestLog{
 		ID:        "test-request-id-123",
 		UserAgent: &ua,
 	}
-	ctx := context.WithValue(context.Background(), apicontext.RequestLogKey, rl)
+	ctx := appctx.WithRequestLog(context.Background(), rl)
 	w := httptest.NewRecorder()
 
 	RespondWithJSON(ctx, w, http.StatusOK, payload)
@@ -89,11 +89,11 @@ func TestRespondWithJSON_WithCurlUserAgent_PrettyPrint(t *testing.T) {
 		"data":    "test",
 	}
 	ua := "curl/7.68.0"
-	rl := &domain.RequestLog{
+	rl := &appctx.RequestLog{
 		ID:        "test-request-id",
 		UserAgent: &ua,
 	}
-	ctx := context.WithValue(context.Background(), apicontext.RequestLogKey, rl)
+	ctx := appctx.WithRequestLog(context.Background(), rl)
 	w := httptest.NewRecorder()
 
 	RespondWithJSON(ctx, w, http.StatusOK, payload)
@@ -129,11 +129,11 @@ func TestRespondWithJSON_WithNonCurlUserAgent_CompactJSON(t *testing.T) {
 		"data":    "test",
 	}
 	ua := "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
-	rl := &domain.RequestLog{
+	rl := &appctx.RequestLog{
 		ID:        "test-request-id",
 		UserAgent: &ua,
 	}
-	ctx := context.WithValue(context.Background(), apicontext.RequestLogKey, rl)
+	ctx := appctx.WithRequestLog(context.Background(), rl)
 	w := httptest.NewRecorder()
 
 	RespondWithJSON(ctx, w, http.StatusOK, payload)
@@ -377,7 +377,6 @@ func (e *writeError) Error() string {
 	return e.msg
 }
 
-// Helper function to check if a string contains newlines (excluding trailing)
 func containsNewlines(s string) bool {
 	for i := 0; i < len(s)-1; i++ {
 		if s[i] == '\n' {
@@ -385,4 +384,44 @@ func containsNewlines(s string) bool {
 		}
 	}
 	return false
+}
+
+func TestRespondWithJSON_WithOptions(t *testing.T) {
+	payload := map[string]any{"message": "success"}
+	ctx := context.Background()
+	w := httptest.NewRecorder()
+
+	RespondWithJSON(ctx, w, http.StatusOK, payload, WithHeader(header.IdempotentReplayedHeader, "true"))
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status code %d, got %d", http.StatusOK, w.Code)
+	}
+	if w.Header().Get(header.IdempotentReplayedHeader) != "true" {
+		t.Fatalf("expected %s true, got %q", header.IdempotentReplayedHeader, w.Header().Get(header.IdempotentReplayedHeader))
+	}
+	if w.Header().Get(header.ContentTypeHeader) != "application/json" {
+		t.Fatalf("expected Content-Type application/json, got %q", w.Header().Get(header.ContentTypeHeader))
+	}
+}
+
+func TestRespondWithJSONBytes(t *testing.T) {
+	body := []byte(`{"replayed":true}`)
+	rl := &appctx.RequestLog{ID: "req-123"}
+	ctx := appctx.WithRequestLog(context.Background(), rl)
+	w := httptest.NewRecorder()
+
+	RespondWithJSONBytes(ctx, w, http.StatusOK, body, WithHeader(header.IdempotentReplayedHeader, "true"))
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status code %d, got %d", http.StatusOK, w.Code)
+	}
+	if w.Header().Get(header.RequestIDHeader) != "req-123" {
+		t.Fatalf("expected Request-ID req-123, got %q", w.Header().Get(header.RequestIDHeader))
+	}
+	if w.Header().Get(header.IdempotentReplayedHeader) != "true" {
+		t.Fatalf("expected Idempotent-Replayed true, got %q", w.Header().Get(header.IdempotentReplayedHeader))
+	}
+	if w.Body.String() != string(body) {
+		t.Fatalf("expected body %s, got %s", body, w.Body.String())
+	}
 }

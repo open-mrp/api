@@ -1,6 +1,17 @@
 # Changelog
 
-## [0.1.13](https://github.com/Augno/api/compare/v0.1.12...v0.1.13) (2025-12-23)
+---
+
+## [1.0.forge] - Migration Release
+
+This release migrates from SemVer (`v0.1.x`) to the new codename-based versioning scheme.
+All functionality from `v0.1.13` is included.
+
+---
+
+## Legacy Releases (SemVer)
+
+### [0.1.13](https://github.com/Augno/api/compare/v0.1.12...v0.1.13) (2025-12-23)
 
 
 ### Bug Fixes
@@ -94,8 +105,5 @@
 * improve ci/cd perf ([#34](https://github.com/Augno/api/issues/34)) ([19c6a02](https://github.com/Augno/api/commit/19c6a020ebc1af57f8d9f9e6406aa87613e83c79))
 * unique rabbitmq credentials enforced ([#33](https://github.com/Augno/api/issues/33)) ([5b75f44](https://github.com/Augno/api/commit/5b75f447b23e18ba9291aa275f41060ec66652fa))
 
-## Changelog
-
-All notable changes to this project will be documented in this file by
-release-please. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
-and adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+All notable changes to this project will be documented in this file.
+The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).

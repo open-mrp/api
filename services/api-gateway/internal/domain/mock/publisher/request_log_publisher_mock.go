@@ -13,8 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	domain "github.com/augno/api/services/api-gateway/internal/domain"
-	contracts "github.com/augno/api/shared/contracts"
+	appctx "github.com/augno/api/shared/appctx"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -43,10 +42,10 @@ func (m *MockRequestLogPublisher) EXPECT() *MockRequestLogPublisherMockRecorder 
 }
 
 // Create mocks base method.
-func (m *MockRequestLogPublisher) Create(ctx context.Context, rl *domain.RequestLog) *contracts.APIError {
+func (m *MockRequestLogPublisher) Create(ctx context.Context, rl *appctx.RequestLog) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Create", ctx, rl)
-	ret0, _ := ret[0].(*contracts.APIError)
+	ret0, _ := ret[0].(error)
 	return ret0
 }
 

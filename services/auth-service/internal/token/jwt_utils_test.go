@@ -6,12 +6,12 @@ import (
 	"time"
 
 	"github.com/augno/api/services/auth-service/internal/domain"
-	"github.com/augno/api/shared/contracts"
+	apierror "github.com/augno/api/shared/errors"
 )
 
-func TestDefaultJWTConfig(t *testing.T) {
+func TestJWTConfigWithDefaults(t *testing.T) {
 	secret := "test-secret-123"
-	config := DefaultJWTConfig(secret)
+	config := (&JWTConfig{Secret: secret}).WithDefaults()
 
 	if config.Secret != secret {
 		t.Errorf("Expected Secret to be %s, got %s", secret, config.Secret)
@@ -20,10 +20,16 @@ func TestDefaultJWTConfig(t *testing.T) {
 	if config.Issuer != "https://augno.com" {
 		t.Errorf("Expected Issuer to be 'https://augno.com', got %s", config.Issuer)
 	}
+
+	// Test with zero-value JWTConfig
+	configZero := new(JWTConfig).WithDefaults()
+	if configZero.Issuer != "https://augno.com" {
+		t.Errorf("Expected default Issuer to be 'https://augno.com', got %s", configZero.Issuer)
+	}
 }
 
 func TestNewJWTUtils(t *testing.T) {
-	config := JWTConfig{
+	config := &JWTConfig{
 		Secret: "test-secret",
 		Issuer: "https://test.com",
 	}
@@ -38,7 +44,7 @@ func TestNewJWTUtils(t *testing.T) {
 }
 
 func TestJWTUtils_Encode_Success(t *testing.T) {
-	config := JWTConfig{
+	config := &JWTConfig{
 		Secret: "test-secret-key-123",
 		Issuer: "https://test.com",
 	}
@@ -90,7 +96,7 @@ func TestJWTUtils_Encode_Success(t *testing.T) {
 }
 
 func TestJWTUtils_Encode_EmptyUserID(t *testing.T) {
-	config := JWTConfig{
+	config := &JWTConfig{
 		Secret: "test-secret-key-123",
 		Issuer: "https://test.com",
 	}
@@ -102,8 +108,8 @@ func TestJWTUtils_Encode_EmptyUserID(t *testing.T) {
 		return
 	}
 
-	if err.Type != contracts.ErrorTypeAPI {
-		t.Errorf("Expected error type to be %s, got %s", contracts.ErrorTypeAPI, err.Type)
+	if err.Type != apierror.ErrorTypeAPI {
+		t.Errorf("Expected error type to be %s, got %s", apierror.ErrorTypeAPI, err.Type)
 	}
 
 	if err.PublicMessage != "Something went wrong." {
@@ -112,7 +118,7 @@ func TestJWTUtils_Encode_EmptyUserID(t *testing.T) {
 }
 
 func TestJWTUtils_Encode_EmptyTokenType(t *testing.T) {
-	config := JWTConfig{
+	config := &JWTConfig{
 		Secret: "test-secret-key-123",
 		Issuer: "https://test.com",
 	}
@@ -124,8 +130,8 @@ func TestJWTUtils_Encode_EmptyTokenType(t *testing.T) {
 		return
 	}
 
-	if err.Type != contracts.ErrorTypeAPI {
-		t.Errorf("Expected error type to be %s, got %s", contracts.ErrorTypeAPI, err.Type)
+	if err.Type != apierror.ErrorTypeAPI {
+		t.Errorf("Expected error type to be %s, got %s", apierror.ErrorTypeAPI, err.Type)
 	}
 
 	if err.PublicMessage != "Something went wrong." {
@@ -134,7 +140,7 @@ func TestJWTUtils_Encode_EmptyTokenType(t *testing.T) {
 }
 
 func TestJWTUtils_Encode_EmptySecret(t *testing.T) {
-	config := JWTConfig{
+	config := &JWTConfig{
 		Secret: "",
 		Issuer: "https://test.com",
 	}
@@ -154,7 +160,7 @@ func TestJWTUtils_Encode_EmptySecret(t *testing.T) {
 }
 
 func TestJWTUtils_Encode_DifferentExpirationTimes(t *testing.T) {
-	config := JWTConfig{
+	config := &JWTConfig{
 		Secret: "test-secret-key-123",
 		Issuer: "https://test.com",
 	}
@@ -198,7 +204,7 @@ func TestJWTUtils_Encode_DifferentExpirationTimes(t *testing.T) {
 }
 
 func TestJWTUtils_Decode_Success(t *testing.T) {
-	config := JWTConfig{
+	config := &JWTConfig{
 		Secret: "test-secret-key-123",
 		Issuer: "https://test.com",
 	}
@@ -235,7 +241,7 @@ func TestJWTUtils_Decode_Success(t *testing.T) {
 }
 
 func TestJWTUtils_Decode_EmptySecret(t *testing.T) {
-	config := JWTConfig{
+	config := &JWTConfig{
 		Secret: "",
 		Issuer: "https://test.com",
 	}
@@ -255,7 +261,7 @@ func TestJWTUtils_Decode_EmptySecret(t *testing.T) {
 }
 
 func TestJWTUtils_Decode_InvalidToken(t *testing.T) {
-	config := JWTConfig{
+	config := &JWTConfig{
 		Secret: "test-secret-key-123",
 		Issuer: "https://test.com",
 	}
@@ -287,8 +293,8 @@ func TestJWTUtils_Decode_InvalidToken(t *testing.T) {
 				return
 			}
 
-			if err.Type != contracts.ErrorTypeInvalidRequest {
-				t.Errorf("Expected error type to be %s, got %s", contracts.ErrorTypeInvalidRequest, err.Type)
+			if err.Type != apierror.ErrorTypeInvalidRequest {
+				t.Errorf("Expected error type to be %s, got %s", apierror.ErrorTypeInvalidRequest, err.Type)
 			}
 
 			if err.PublicMessage != ErrInvalidJWT {
@@ -299,7 +305,7 @@ func TestJWTUtils_Decode_InvalidToken(t *testing.T) {
 }
 
 func TestJWTUtils_Decode_WrongTokenType(t *testing.T) {
-	config := JWTConfig{
+	config := &JWTConfig{
 		Secret: "test-secret-key-123",
 		Issuer: "https://test.com",
 	}
@@ -315,8 +321,8 @@ func TestJWTUtils_Decode_WrongTokenType(t *testing.T) {
 		t.Fatal("Decode() expected error for mismatched token type but got none")
 	}
 
-	if decodeErr.Type != contracts.ErrorTypeInvalidRequest {
-		t.Errorf("Expected error type to be %s, got %s", contracts.ErrorTypeInvalidRequest, decodeErr.Type)
+	if decodeErr.Type != apierror.ErrorTypeInvalidRequest {
+		t.Errorf("Expected error type to be %s, got %s", apierror.ErrorTypeInvalidRequest, decodeErr.Type)
 	}
 
 	if decodeErr.PublicMessage != ErrInvalidJWT {
@@ -325,14 +331,14 @@ func TestJWTUtils_Decode_WrongTokenType(t *testing.T) {
 }
 
 func TestJWTUtils_Decode_TokenWithWrongIssuer(t *testing.T) {
-	config := JWTConfig{
+	config := &JWTConfig{
 		Secret: "test-secret-key-123",
 		Issuer: "https://test.com",
 	}
 	utils := NewJWTUtils(config)
 
 	// Create a token with a different issuer
-	wrongConfig := JWTConfig{
+	wrongConfig := &JWTConfig{
 		Secret: "test-secret-key-123",
 		Issuer: "https://wrong-issuer.com",
 	}
@@ -350,8 +356,8 @@ func TestJWTUtils_Decode_TokenWithWrongIssuer(t *testing.T) {
 		return
 	}
 
-	if err.Type != contracts.ErrorTypeInvalidRequest {
-		t.Errorf("Expected error type to be %s, got %s", contracts.ErrorTypeInvalidRequest, err.Type)
+	if err.Type != apierror.ErrorTypeInvalidRequest {
+		t.Errorf("Expected error type to be %s, got %s", apierror.ErrorTypeInvalidRequest, err.Type)
 	}
 
 	if err.PublicMessage != ErrInvalidJWT {
@@ -360,7 +366,7 @@ func TestJWTUtils_Decode_TokenWithWrongIssuer(t *testing.T) {
 }
 
 func TestJWTUtils_Decode_ExpiredToken(t *testing.T) {
-	config := JWTConfig{
+	config := &JWTConfig{
 		Secret: "test-secret-key-123",
 		Issuer: "https://test.com",
 	}
@@ -392,13 +398,13 @@ func TestJWTUtils_Decode_ExpiredToken(t *testing.T) {
 }
 
 func TestJWTUtils_Decode_TokenWithWrongSigningMethod(t *testing.T) {
-	config := JWTConfig{
+	config := &JWTConfig{
 		Secret: "test-secret-key-123",
 		Issuer: "https://test.com",
 	}
 	utils := NewJWTUtils(config)
 
-	wrongConfig := JWTConfig{
+	wrongConfig := &JWTConfig{
 		Secret: "test-secret-key-456",
 		Issuer: "https://test.com",
 	}
@@ -415,8 +421,8 @@ func TestJWTUtils_Decode_TokenWithWrongSigningMethod(t *testing.T) {
 		return
 	}
 
-	if err.Type != contracts.ErrorTypeInvalidRequest {
-		t.Errorf("Expected error type to be %s, got %s", contracts.ErrorTypeInvalidRequest, err.Type)
+	if err.Type != apierror.ErrorTypeInvalidRequest {
+		t.Errorf("Expected error type to be %s, got %s", apierror.ErrorTypeInvalidRequest, err.Type)
 	}
 
 	if err.PublicMessage != ErrInvalidJWT {
@@ -426,7 +432,7 @@ func TestJWTUtils_Decode_TokenWithWrongSigningMethod(t *testing.T) {
 
 func TestJWTUtils_Integration(t *testing.T) {
 	// Test the complete flow: encode -> decode -> verify
-	config := JWTConfig{
+	config := &JWTConfig{
 		Secret: "integration-test-secret-456",
 		Issuer: "https://integration-test.com",
 	}
@@ -484,7 +490,7 @@ func TestJWTUtils_Integration(t *testing.T) {
 }
 
 func TestJWTUtils_TokenGeneration(t *testing.T) {
-	config := JWTConfig{
+	config := &JWTConfig{
 		Secret: "generation-test-secret-789",
 		Issuer: "https://generation-test.com",
 	}

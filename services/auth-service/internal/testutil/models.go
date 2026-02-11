@@ -13,7 +13,9 @@ var (
 
 func GetValidTestAPIKeyModel(secretHash []byte) *domain.APIKey {
 	return &domain.APIKey{
-		ID:             EntityIDAPIKeyValidSandboxMode,
+		ID:             1,
+		TypeID:         "apikey_sandbox",
+		KeyID:          EntityIDAPIKeyValidSandboxMode,
 		LastFour:       "1234",
 		OwnerAccountID: EntityIDAccount,
 		RoleID:         EntityIDRole,
@@ -24,7 +26,9 @@ func GetValidTestAPIKeyModel(secretHash []byte) *domain.APIKey {
 
 func GetValidProdAPIKeyModel(secretHash []byte) *domain.APIKey {
 	return &domain.APIKey{
-		ID:             EntityIDAPIKeyValidProdMode,
+		ID:             2,
+		TypeID:         "apikey_prod",
+		KeyID:          EntityIDAPIKeyValidProdMode,
 		LastFour:       "1234",
 		OwnerAccountID: EntityIDAccount,
 		RoleID:         EntityIDRole,
@@ -35,7 +39,9 @@ func GetValidProdAPIKeyModel(secretHash []byte) *domain.APIKey {
 
 func GetExpiredAPIKeyModel(secretHash []byte) *domain.APIKey {
 	return &domain.APIKey{
-		ID:             EntityIDAPIKeyExpired,
+		ID:             3,
+		TypeID:         "apikey_prod",
+		KeyID:          EntityIDAPIKeyExpired,
 		LastFour:       "1234",
 		OwnerAccountID: EntityIDAccount,
 		RoleID:         EntityIDRole,
@@ -46,7 +52,9 @@ func GetExpiredAPIKeyModel(secretHash []byte) *domain.APIKey {
 
 func GetBadSecretAPIKeyModel(secretHash []byte) *domain.APIKey {
 	return &domain.APIKey{
-		ID:             EntityIDAPIKeyBadSecret,
+		ID:             4,
+		TypeID:         "apikey_prod",
+		KeyID:          EntityIDAPIKeyBadSecret,
 		LastFour:       "1234",
 		OwnerAccountID: EntityIDAccount,
 		RoleID:         EntityIDRole,
@@ -57,7 +65,9 @@ func GetBadSecretAPIKeyModel(secretHash []byte) *domain.APIKey {
 
 func GetNeverExpiresAPIKeyModel(secretHash []byte) *domain.APIKey {
 	return &domain.APIKey{
-		ID:             EntityIDAPIKeyNeverExpires,
+		ID:             5,
+		TypeID:         "apikey_prod",
+		KeyID:          EntityIDAPIKeyNeverExpires,
 		LastFour:       "4HAj",
 		OwnerAccountID: EntityIDAccount,
 		RoleID:         EntityIDRole,

@@ -4,12 +4,17 @@ import (
 	"fmt"
 	"net/http"
 
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"github.com/augno/api/shared/appctx"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/propagation"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
+// Legacy and semantic-convention attribute keys attached to every HTTP span. Both
+// the older "http.method" style and the newer semconv keys are set so spans are
+// searchable in trace backends regardless of which attribute version they query on.
 const (
 	attrHTTPMethod     = "http.method"
 	attrHTTPRoute      = "http.route"
@@ -20,57 +25,82 @@ const (
 	attrUserAgent      = "user_agent.original"
 )
 
-// WrapGatewayHandler instruments the gateway HTTP handler.
-// Root span is created by otelhttp; we enrich it with route, path, and status.
-func WrapGatewayHandler(handler http.Handler, opts ...otelhttp.Option) http.Handler {
-	options := append([]otelhttp.Option{
-		otelhttp.WithTracerProvider(otel.GetTracerProvider()),
-		otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
-			return fmt.Sprintf("HTTP %s %s", r.Method, routeOrPath(r))
-		}),
-		otelhttp.WithPublicEndpointFn(func(*http.Request) bool { return true }),
-		otelhttp.WithServerName("api-gateway"),
-		otelhttp.WithFilter(func(r *http.Request) bool {
-			if r.Method == http.MethodOptions {
-				return false
-			}
-			return r.URL.Path != "/healthz"
-		}),
-	}, opts...)
+// httpTracerName is the instrumentation scope name used for HTTP spans. It follows
+// the OpenTelemetry convention of naming the tracer after the instrumentation library.
+const httpTracerName = "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
-	instrumented := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		rw := &statusRecorder{ResponseWriter: w, statusCode: http.StatusOK}
+// WrapGatewayHandler returns an http.Handler that wraps handler with OpenTelemetry
+// tracing. For each inbound request it:
+//
+//  1. Skips /healthz and OPTIONS requests (no span created).
+//  2. Extracts incoming trace context from HTTP headers (W3C TraceContext + Baggage).
+//  3. Starts a server span named "HTTP <METHOD> <route>" (e.g. "HTTP GET /api/v1/users").
+//  4. Calls the inner handler with the traced context.
+//  5. Records response status, route, host, query string, and user-agent as span
+//     attributes using both legacy and semantic-convention keys.
+//  6. Ends the span immediately after the response is written — not after downstream
+//     middleware completes — so span duration accurately reflects response latency.
+func WrapGatewayHandler(handler http.Handler) http.Handler {
+	propagator := otel.GetTextMapPropagator()
 
-		handler.ServeHTTP(rw, r)
-
-		span := trace.SpanFromContext(r.Context())
-		if !span.IsRecording() {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		tracer := otel.Tracer(httpTracerName)
+		// Skip tracing for health checks and OPTIONS requests
+		if r.URL.Path == "/healthz" || r.Method == http.MethodOptions {
+			handler.ServeHTTP(w, r)
 			return
 		}
 
+		// Extract trace context from incoming headers
+		ctx := propagator.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
+
+		// Start span with server kind
+		spanName := fmt.Sprintf("HTTP %s %s", r.Method, routeOrPath(r))
+		ctx, span := tracer.Start(ctx, spanName,
+			trace.WithSpanKind(trace.SpanKindServer),
+		)
+
+		// Update request with traced context
+		r = r.WithContext(ctx)
+
+		// Record response status
+		rw := &statusRecorder{ResponseWriter: w, statusCode: http.StatusOK}
+
+		// Call the actual handler
+		handler.ServeHTTP(rw, r)
+
+		// Set attributes and end span immediately after response is written
 		route := routeOrPath(r)
-		attrs := []attribute.KeyValue{
+		span.SetAttributes(
+			semconv.HTTPRequestMethodKey.String(r.Method),
+			semconv.HTTPResponseStatusCode(rw.statusCode),
+			semconv.URLPath(r.URL.Path),
+			semconv.URLScheme("http"),
 			attribute.String(attrHTTPMethod, r.Method),
 			attribute.String(attrHTTPRoute, route),
 			attribute.String(attrHTTPPath, r.URL.Path),
 			attribute.Int(attrHTTPStatusCode, rw.statusCode),
-		}
+		)
 		if host := r.Host; host != "" {
-			attrs = append(attrs, attribute.String(attrServerAddress, host))
+			span.SetAttributes(semconv.ServerAddress(host))
+			span.SetAttributes(attribute.String(attrServerAddress, host))
 		}
 		if rawQuery := r.URL.RawQuery; rawQuery != "" {
-			attrs = append(attrs, attribute.String(attrHTTPQuery, rawQuery))
+			span.SetAttributes(attribute.String(attrHTTPQuery, rawQuery))
 		}
 		if ua := r.UserAgent(); ua != "" {
-			attrs = append(attrs, attribute.String(attrUserAgent, ua))
+			span.SetAttributes(semconv.UserAgentOriginal(ua))
+			span.SetAttributes(attribute.String(attrUserAgent, ua))
 		}
 
-		span.SetAttributes(attrs...)
+		span.End()
 	})
-
-	return otelhttp.NewHandler(instrumented, "", options...)
 }
 
+// routeOrPath returns the matched route pattern for the request if available (set
+// by the router via context), otherwise falls back to the raw URL path. Using the
+// route pattern (e.g. "/api/v1/users/{id}") instead of the raw path prevents
+// high-cardinality span names from path parameters.
 func routeOrPath(r *http.Request) string {
 	if routePattern := getRoutePattern(r); routePattern != "" {
 		return routePattern
@@ -78,29 +108,32 @@ func routeOrPath(r *http.Request) string {
 	return r.URL.Path
 }
 
-// getRoutePattern extracts the route pattern from request context if available
+// getRoutePattern extracts the route pattern stored in the request context by the
+// api-gateway router under the "route_pattern" key. Returns an empty string if no
+// pattern was set (e.g. for unmatched routes or non-gateway handlers).
 func getRoutePattern(r *http.Request) string {
-	// Try to get route pattern from context (set by router)
-	// The api-gateway uses "route_pattern" as the context key
-	if v := r.Context().Value("route_pattern"); v != nil {
-		if pattern, ok := v.(string); ok {
-			return pattern
-		}
+	if pattern, ok := appctx.GetRoutePattern(r.Context()); ok {
+		return pattern
 	}
 	return ""
 }
 
-// statusRecorder records the HTTP status code for tracing
+// statusRecorder wraps an http.ResponseWriter to capture the HTTP status code
+// written by the handler. The captured code is used to set the
+// http.response.status_code span attribute after the handler returns.
 type statusRecorder struct {
 	http.ResponseWriter
 	statusCode int
 }
 
+// WriteHeader captures the status code and delegates to the wrapped ResponseWriter.
 func (sr *statusRecorder) WriteHeader(code int) {
 	sr.statusCode = code
 	sr.ResponseWriter.WriteHeader(code)
 }
 
+// Write delegates to the wrapped ResponseWriter. If WriteHeader was never called
+// (implicit 200), it records http.StatusOK so the span attribute is always set.
 func (sr *statusRecorder) Write(b []byte) (int, error) {
 	if sr.statusCode == 0 {
 		sr.statusCode = http.StatusOK

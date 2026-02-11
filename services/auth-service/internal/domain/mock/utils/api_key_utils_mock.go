@@ -15,7 +15,7 @@ import (
 
 	domain "github.com/augno/api/services/auth-service/internal/domain"
 	constants "github.com/augno/api/shared/constants"
-	contracts "github.com/augno/api/shared/contracts"
+	apierror "github.com/augno/api/shared/errors"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -44,11 +44,11 @@ func (m *MockAPIKeyUtils) EXPECT() *MockAPIKeyUtilsMockRecorder {
 }
 
 // Gen mocks base method.
-func (m *MockAPIKeyUtils) Gen(ctx context.Context, appMode constants.AccountMode) (*domain.ParsedAPIKey, *contracts.APIError) {
+func (m *MockAPIKeyUtils) Gen(ctx context.Context, appMode constants.AccountMode) (*domain.ParsedAPIKey, *apierror.APIError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Gen", ctx, appMode)
 	ret0, _ := ret[0].(*domain.ParsedAPIKey)
-	ret1, _ := ret[1].(*contracts.APIError)
+	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
@@ -59,11 +59,11 @@ func (mr *MockAPIKeyUtilsMockRecorder) Gen(ctx, appMode any) *gomock.Call {
 }
 
 // GenSecretHMAC mocks base method.
-func (m *MockAPIKeyUtils) GenSecretHMAC(ctx context.Context, secret string) ([]byte, *contracts.APIError) {
+func (m *MockAPIKeyUtils) GenSecretHMAC(ctx context.Context, secret string) ([]byte, *apierror.APIError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GenSecretHMAC", ctx, secret)
 	ret0, _ := ret[0].([]byte)
-	ret1, _ := ret[1].(*contracts.APIError)
+	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
@@ -74,11 +74,11 @@ func (mr *MockAPIKeyUtilsMockRecorder) GenSecretHMAC(ctx, secret any) *gomock.Ca
 }
 
 // Parse mocks base method.
-func (m *MockAPIKeyUtils) Parse(ctx context.Context, key string) (*domain.ParsedAPIKey, *contracts.APIError) {
+func (m *MockAPIKeyUtils) Parse(ctx context.Context, key string) (*domain.ParsedAPIKey, *apierror.APIError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Parse", ctx, key)
 	ret0, _ := ret[0].(*domain.ParsedAPIKey)
-	ret1, _ := ret[1].(*contracts.APIError)
+	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
@@ -103,11 +103,11 @@ func (mr *MockAPIKeyUtilsMockRecorder) SanitizeForDisplay(apiKey any) *gomock.Ca
 }
 
 // VerifySecretHMAC mocks base method.
-func (m *MockAPIKeyUtils) VerifySecretHMAC(ctx context.Context, secret string, expectedHMAC []byte) (bool, *contracts.APIError) {
+func (m *MockAPIKeyUtils) VerifySecretHMAC(ctx context.Context, secret string, expectedHMAC []byte) (bool, *apierror.APIError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "VerifySecretHMAC", ctx, secret, expectedHMAC)
 	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(*contracts.APIError)
+	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 

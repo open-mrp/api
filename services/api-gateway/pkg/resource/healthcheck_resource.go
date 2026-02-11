@@ -7,7 +7,7 @@ import (
 // Healthcheck contains information on the health of the application.
 type Healthcheck struct {
 	// Current operational status of the API service
-	Status string `json:"status" validate:"required" example:"healthy"`
+	Status string `json:"status" validate:"required"`
 }
 
 var exampleHealthcheck = &Healthcheck{

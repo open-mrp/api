@@ -6,6 +6,10 @@ import (
 	"strings"
 )
 
+// GetClientIP returns the client IP address from the request.
+// If the request is forwarded, the first IP address in the X-Forwarded-For header is returned.
+// If the request is not forwarded, the remote address is returned.
+// If the remote address is not a valid IP address, the host is returned.
 func GetClientIP(r *http.Request) net.IP {
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
@@ -24,5 +28,6 @@ func GetClientIP(r *http.Request) net.IP {
 			clientIP = forwardedIP
 		}
 	}
+
 	return clientIP
 }

@@ -1,12 +1,14 @@
 package token
 
 import (
+	"cmp"
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/augno/api/services/auth-service/internal/domain"
-	"github.com/augno/api/shared/contracts"
+	apierror "github.com/augno/api/shared/errors"
 	sanitize "github.com/augno/api/shared/sanitize"
 	"github.com/augno/api/shared/tracing"
 
@@ -19,41 +21,62 @@ var (
 
 var jwtUtilsTracer = tracing.GetTracer("auth-service.jwt_utils")
 
+const defaultJWTIssuer = "https://augno.com"
+
+// JWTConfig holds the configuration for JWT token encoding and decoding.
 type JWTConfig struct {
-	Secret string
+	// Secret (required) is the secret used to sign and verify JWT tokens.
+	Secret string // #nosec G117 - Struct field, not a hardcoded credential
+
+	// Issuer (optional; default: "https://augno.com") is the issuer claim set on generated tokens.
 	Issuer string
 }
 
-func DefaultJWTConfig(secret string) JWTConfig {
-	return JWTConfig{
-		Secret: secret,
-		Issuer: "https://augno.com",
+// WithDefaults returns a new JWTConfig with zero-value fields replaced by production defaults.
+func (c *JWTConfig) WithDefaults() *JWTConfig {
+	if c == nil {
+		c = &JWTConfig{}
 	}
+
+	return &JWTConfig{
+		Secret: c.Secret,
+		Issuer: cmp.Or(c.Issuer, defaultJWTIssuer),
+	}
+}
+
+// validate checks that all required JWTConfig fields are set.
+func (c *JWTConfig) validate() error {
+	if c.Secret == "" {
+		return fmt.Errorf("jwt: secret is required")
+	}
+	return nil
 }
 
 type jwtUtilsImpl struct {
 	config JWTConfig
 }
 
-func NewJWTUtils(config JWTConfig) domain.JWTUtils {
-	if config.Secret == "" {
-		panic("JWT secret is not set in the config.")
+// NewJWTUtils creates a new JWT utility with the given configuration.
+func NewJWTUtils(config *JWTConfig) domain.JWTUtils {
+	config = config.WithDefaults()
+	if err := config.validate(); err != nil {
+		panic(err)
 	}
 
-	return &jwtUtilsImpl{config: config}
+	return &jwtUtilsImpl{config: *config}
 }
 
 // Encode encodes a new access token (a JWT) for the given user ID, expires in, and token type.
-func (atu *jwtUtilsImpl) Encode(ctx context.Context, userID string, expiresIn time.Duration, tokenType domain.JWTType) (string, *contracts.APIError) {
+func (atu *jwtUtilsImpl) Encode(ctx context.Context, userID string, expiresIn time.Duration, tokenType domain.JWTType) (string, *apierror.APIError) {
 	_, span := jwtUtilsTracer.Start(ctx, "utils.jwt.encode")
 	defer span.End()
 
 	// Validate inputs
 	if userID == "" {
-		return "", tracing.Trace(span, contracts.NewInternalError(ErrJWT, "Attempted to encode token with no user ID."))
+		return "", tracing.Trace(span, apierror.NewInternalError(ErrJWT, "Attempted to encode token with no user ID."))
 	}
 	if tokenType == "" {
-		return "", tracing.Trace(span, contracts.NewInternalError(ErrJWT, "Attempted to encode token with no token type."))
+		return "", tracing.Trace(span, apierror.NewInternalError(ErrJWT, "Attempted to encode token with no token type."))
 	}
 
 	// Create the claims
@@ -74,49 +97,49 @@ func (atu *jwtUtilsImpl) Encode(ctx context.Context, userID string, expiresIn ti
 
 	signedToken, err := token.SignedString(signingKey)
 	if err != nil {
-		return "", tracing.Trace(span, contracts.NewInternalError(err, "Failed to sign JWT token."))
+		return "", tracing.Trace(span, apierror.NewInternalError(err, "Failed to sign JWT token."))
 	}
 
 	return signedToken, nil
 }
 
 // Decode decodes a given access token string into claims
-func (atu *jwtUtilsImpl) Decode(ctx context.Context, tokenString string, expectedType domain.JWTType) (*domain.JWTClaims, *contracts.APIError) {
+func (atu *jwtUtilsImpl) Decode(ctx context.Context, tokenString string, expectedType domain.JWTType) (*domain.JWTClaims, *apierror.APIError) {
 	_, span := jwtUtilsTracer.Start(ctx, "utils.jwt.decode")
 	defer span.End()
 
 	// Validate inputs
 	if expectedType == "" {
-		return nil, tracing.Trace(span, contracts.NewAuthenticationError(ErrInvalidJWT))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError(ErrInvalidJWT))
 	}
 	if tokenString == "" {
-		return nil, tracing.Trace(span, contracts.NewAuthenticationError(ErrInvalidJWT))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError(ErrInvalidJWT))
 	}
 
 	// Parse the token
 	token, err := jwt.ParseWithClaims(tokenString, &domain.JWTClaims{}, func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, tracing.Trace(span, contracts.NewAuthenticationError(ErrInvalidJWT))
+			return nil, tracing.Trace(span, apierror.NewAuthenticationError(ErrInvalidJWT))
 		}
 		return []byte(atu.config.Secret), nil
 	}, jwt.WithIssuer(atu.config.Issuer))
 
 	if err != nil {
-		return nil, tracing.Trace(span, contracts.NewAuthenticationError(ErrInvalidJWT))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError(ErrInvalidJWT))
 	}
 
 	// Validate the token
 	claims, ok := token.Claims.(*domain.JWTClaims)
 	if !ok {
-		return nil, tracing.Trace(span, contracts.NewAuthenticationError(ErrInvalidJWT))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError(ErrInvalidJWT))
 	}
 
 	if !token.Valid {
-		return nil, tracing.Trace(span, contracts.NewAuthenticationError(ErrInvalidJWT))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError(ErrInvalidJWT))
 	}
 
 	if claims.TokenType != expectedType {
-		return nil, tracing.Trace(span, contracts.NewAuthenticationError(ErrInvalidJWT))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError(ErrInvalidJWT))
 	}
 
 	return claims, nil

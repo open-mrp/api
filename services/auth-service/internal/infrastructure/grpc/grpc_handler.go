@@ -4,25 +4,29 @@ import (
 	"context"
 
 	"github.com/augno/api/services/auth-service/internal/domain"
+	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/contracts"
 	pb "github.com/augno/api/shared/proto/auth"
 
-	grpcidentity "github.com/augno/api/services/auth-service/pkg/grpc"
-
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 type gRPCHandler struct {
 	pb.UnimplementedAuthServiceServer
 
-	authSvc domain.AuthSvc
+	authSvc     domain.AuthSvc
+	userSvc     domain.UserSvc
+	tokenSvc    domain.TokenSvc
+	passwordSvc domain.PasswordSvc
 }
 
-func NewGRPCHandler(server *grpc.Server, authSvc domain.AuthSvc) *gRPCHandler {
+func NewGRPCHandler(server *grpc.Server, authSvc domain.AuthSvc, userSvc domain.UserSvc, tokenSvc domain.TokenSvc, passwordSvc domain.PasswordSvc) *gRPCHandler {
 	handler := &gRPCHandler{
-		authSvc: authSvc,
+		authSvc:     authSvc,
+		userSvc:     userSvc,
+		tokenSvc:    tokenSvc,
+		passwordSvc: passwordSvc,
 	}
 
 	pb.RegisterAuthServiceServer(server, handler)
@@ -34,7 +38,10 @@ func (h *gRPCHandler) Login(ctx context.Context, req *pb.LoginRequest) (*pb.Logi
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	result, apiErr := h.authSvc.Login(ctx, req.Identifier, req.Password)
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	result, apiErr := h.userSvc.Login(ctx, req.Identifier, req.Password)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
@@ -64,7 +71,14 @@ func (h *gRPCHandler) Register(ctx context.Context, req *pb.RegisterRequest) (*p
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	result, apiErr := h.authSvc.Register(ctx, req.Email, req.Password, req.Name)
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	result, apiErr := h.userSvc.Register(ctx, domain.RegisterInput{
+		Name:     req.Name,
+		Email:    req.Email,
+		Password: req.Password,
+	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
@@ -81,7 +95,7 @@ func (h *gRPCHandler) RefreshToken(ctx context.Context, req *pb.RefreshTokenRequ
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	result, apiErr := h.authSvc.RefreshToken(ctx, req.RefreshToken)
+	result, apiErr := h.tokenSvc.RefreshToken(ctx, req.RefreshToken)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
@@ -96,7 +110,10 @@ func (h *gRPCHandler) RequestPasswordReset(ctx context.Context, req *pb.RequestP
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	apiErr := h.authSvc.RequestPasswordReset(ctx, req.Identifier, req.AccountSlug)
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	apiErr := h.passwordSvc.RequestPasswordReset(ctx, req.Identifier, req.AccountSlug)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
@@ -109,7 +126,10 @@ func (h *gRPCHandler) ResetPassword(ctx context.Context, req *pb.ResetPasswordRe
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	result, apiErr := h.authSvc.ResetPassword(ctx, req.Token, req.Password)
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	result, apiErr := h.passwordSvc.ResetPassword(ctx, req.Token, req.Password)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
@@ -126,7 +146,10 @@ func (h *gRPCHandler) RevokeRefreshToken(ctx context.Context, req *pb.RevokeRefr
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	apiErr := h.authSvc.RevokeRefreshToken(ctx, req.RefreshToken)
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	apiErr := h.tokenSvc.RevokeRefreshToken(ctx, req.RefreshToken)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
@@ -139,17 +162,15 @@ func (h *gRPCHandler) UpdatePassword(ctx context.Context, req *pb.UpdatePassword
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	md, ok := metadata.FromIncomingContext(ctx)
+	identity, ok := appctx.GetIdentityFromContext(ctx)
 	if !ok {
 		return nil, contracts.NewMissingIdentityMetadataError()
 	}
 
-	identity, apiErr := grpcidentity.GetIdentityFromMetadata(md)
-	if apiErr != nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
-	}
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
 
-	apiErr = h.authSvc.UpdatePassword(ctx, identity.Actor.ID, req.OldPassword, req.NewPassword)
+	apiErr := h.passwordSvc.UpdatePassword(ctx, identity.Actor.ID, req.OldPassword, req.NewPassword)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}

@@ -13,8 +13,9 @@ import (
 	context "context"
 	reflect "reflect"
 
+	domain "github.com/augno/api/services/auth-service/internal/domain"
 	types "github.com/augno/api/services/auth-service/pkg/types"
-	contracts "github.com/augno/api/shared/contracts"
+	apierror "github.com/augno/api/shared/errors"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -43,11 +44,11 @@ func (m *MockUserMed) EXPECT() *MockUserMedMockRecorder {
 }
 
 // GenAuthAccessToken mocks base method.
-func (m *MockUserMed) GenAuthAccessToken(ctx context.Context, userID string) (string, *contracts.APIError) {
+func (m *MockUserMed) GenAuthAccessToken(ctx context.Context, userID string) (string, *apierror.APIError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GenAuthAccessToken", ctx, userID)
 	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(*contracts.APIError)
+	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
@@ -58,11 +59,11 @@ func (mr *MockUserMedMockRecorder) GenAuthAccessToken(ctx, userID any) *gomock.C
 }
 
 // GenPasswordResetAccessToken mocks base method.
-func (m *MockUserMed) GenPasswordResetAccessToken(ctx context.Context, userID string) (string, *contracts.APIError) {
+func (m *MockUserMed) GenPasswordResetAccessToken(ctx context.Context, userID string) (string, *apierror.APIError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GenPasswordResetAccessToken", ctx, userID)
 	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(*contracts.APIError)
+	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
@@ -73,26 +74,26 @@ func (mr *MockUserMedMockRecorder) GenPasswordResetAccessToken(ctx, userID any) 
 }
 
 // Register mocks base method.
-func (m *MockUserMed) Register(ctx context.Context, name, email, hashedPassword string) (*types.User, *contracts.APIError) {
+func (m *MockUserMed) Register(ctx context.Context, input domain.RegisterUserInput) (*types.User, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Register", ctx, name, email, hashedPassword)
+	ret := m.ctrl.Call(m, "Register", ctx, input)
 	ret0, _ := ret[0].(*types.User)
-	ret1, _ := ret[1].(*contracts.APIError)
+	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // Register indicates an expected call of Register.
-func (mr *MockUserMedMockRecorder) Register(ctx, name, email, hashedPassword any) *gomock.Call {
+func (mr *MockUserMedMockRecorder) Register(ctx, input any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Register", reflect.TypeOf((*MockUserMed)(nil).Register), ctx, name, email, hashedPassword)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Register", reflect.TypeOf((*MockUserMed)(nil).Register), ctx, input)
 }
 
 // ValidateCredential mocks base method.
-func (m *MockUserMed) ValidateCredential(ctx context.Context, authToken, targetAccountID string) (*types.Identity, *contracts.APIError) {
+func (m *MockUserMed) ValidateCredential(ctx context.Context, authToken string, targetAccountID *string) (*types.Identity, *apierror.APIError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ValidateCredential", ctx, authToken, targetAccountID)
 	ret0, _ := ret[0].(*types.Identity)
-	ret1, _ := ret[1].(*contracts.APIError)
+	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 

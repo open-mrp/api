@@ -3,12 +3,30 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-DEFAULT_SERVICES=("auth-service" "notification-service" "logging-service")
+DEFAULT_SERVICES=("core-service" "auth-service" "notification-service" "platform-service" "billing-service" "api-gateway")
 
 usage() {
-  echo "Usage: $0 [service1] [service2] ..."
+  echo "Usage: $0 [target1] [target2] ..."
   echo "Available services: ${DEFAULT_SERVICES[*]}"
   exit 1
+}
+
+generate_sqlc() {
+  local dir="$1"
+  local name="$2"
+  
+  if [[ ! -d "${dir}" ]]; then
+    echo "Skipping ${name}: directory not found at ${dir}" >&2
+    return
+  fi
+  
+  if [[ ! -f "${dir}/sqlc.yaml" ]]; then
+    echo "Skipping ${name}: sqlc.yaml not found in ${dir}" >&2
+    return
+  fi
+
+  echo "Generating sqlc code for ${name}..."
+  (cd "${dir}" && sqlc generate)
 }
 
 main() {
@@ -17,32 +35,32 @@ main() {
     exit 1
   fi
 
-  local services=()
-  
+  local targets=()
+
   if [[ "$#" -eq 0 || "${1}" == "all" ]]; then
-    services=("${DEFAULT_SERVICES[@]}")
+    targets=("${DEFAULT_SERVICES[@]}")
   else
     for arg in "$@"; do
-      # Remove leading dash if present (e.g., -auth -> auth)
       local clean_arg="${arg#-}"
-      
-      # Handle shorthand names
+
       case "${clean_arg}" in
-        auth) services+=("auth-service") ;;
-        notification) services+=("notification-service") ;;
-        logging) services+=("logging-service") ;;
+        core) targets+=("core-service") ;;
+        auth) targets+=("auth-service") ;;
+        notification) targets+=("notification-service") ;;
+        logging) targets+=("platform-service") ;;
+        payment) targets+=("billing-service") ;;
+        api) targets+=("api-gateway") ;;
         *)
-          # Check if the argument is one of the default services
           local found=false
           for s in "${DEFAULT_SERVICES[@]}"; do
             if [[ "${s}" == "${clean_arg}" ]]; then
-              services+=("${s}")
+              targets+=("${s}")
               found=true
               break
             fi
           done
           if [[ "${found}" == "false" ]]; then
-            echo "Unknown service: ${arg}"
+            echo "Unknown target: ${arg}"
             usage
           fi
           ;;
@@ -50,20 +68,8 @@ main() {
     done
   fi
 
-  for service in "${services[@]}"; do
-    local service_dir="${ROOT_DIR}/services/${service}"
-    if [[ ! -d "${service_dir}" ]]; then
-      echo "Skipping ${service}: directory not found at ${service_dir}" >&2
-      continue
-    fi
-    
-    if [[ ! -f "${service_dir}/sqlc.yaml" ]]; then
-      echo "Skipping ${service}: sqlc.yaml not found in ${service_dir}" >&2
-      continue
-    fi
-
-    echo "Generating sqlc code for ${service}..."
-    (cd "${service_dir}" && sqlc generate)
+  for service in "${targets[@]}"; do
+    generate_sqlc "${ROOT_DIR}/services/${service}" "${service}"
   done
 }
 

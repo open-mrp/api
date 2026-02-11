@@ -13,7 +13,8 @@ import (
 	context "context"
 	reflect "reflect"
 
-	contracts "github.com/augno/api/shared/contracts"
+	domain "github.com/augno/api/services/notification-service/internal/domain"
+	apierror "github.com/augno/api/shared/errors"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -42,16 +43,16 @@ func (m *MockEmailSender) EXPECT() *MockEmailSenderMockRecorder {
 }
 
 // Send mocks base method.
-func (m *MockEmailSender) Send(ctx context.Context, to []string, subject, body string, isBodyHtml bool, sendAs *string) (*string, *contracts.APIError) {
+func (m *MockEmailSender) Send(ctx context.Context, data domain.EmailData) (*string, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Send", ctx, to, subject, body, isBodyHtml, sendAs)
+	ret := m.ctrl.Call(m, "Send", ctx, data)
 	ret0, _ := ret[0].(*string)
-	ret1, _ := ret[1].(*contracts.APIError)
+	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // Send indicates an expected call of Send.
-func (mr *MockEmailSenderMockRecorder) Send(ctx, to, subject, body, isBodyHtml, sendAs any) *gomock.Call {
+func (mr *MockEmailSenderMockRecorder) Send(ctx, data any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Send", reflect.TypeOf((*MockEmailSender)(nil).Send), ctx, to, subject, body, isBodyHtml, sendAs)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Send", reflect.TypeOf((*MockEmailSender)(nil).Send), ctx, data)
 }

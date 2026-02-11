@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/augno/api/shared/contracts"
+	apierror "github.com/augno/api/shared/errors"
 
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/codes"
@@ -18,9 +18,9 @@ func TestTraceAddsAPIErrorEventWithoutException(t *testing.T) {
 	tracer := tracerProvider.Tracer("test")
 
 	_, span := tracer.Start(context.Background(), "test-span")
-	apiErr := &contracts.APIError{
-		Code:            contracts.ErrorCodeInvalidCredentials,
-		Type:            contracts.ErrorTypeInvalidRequest,
+	apiErr := &apierror.APIError{
+		Code:            apierror.ErrorCodeInvalidCredentials,
+		Type:            apierror.ErrorTypeInvalidRequest,
 		PublicMessage:   "Invalid credentials.",
 		InternalMessage: "invalid login attempt",
 	}

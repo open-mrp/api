@@ -18,13 +18,15 @@ func (r *router) InitEndpointGroups(config MainRouterConfig) {
 
 	// Setup middleware
 	middlewareLogger := log.New(config.LogWriter, config.LogPrefix, config.LogFlags)
-	saver := middleware.NewRequestLogSaver(config.RequestLogPublisher)
-	asyncSaver := middleware.NewAsyncRequestLogSaver(1000, saver)
+	requestLogSaver := middleware.NewRequestLogSaver(config.RequestLogPublisher)
 	loggingMiddleware := func(next http.HandlerFunc) http.HandlerFunc {
-		return middleware.LoggingMiddleware(middlewareLogger, next, asyncSaver, r)
+		return middleware.LoggingMiddleware(middlewareLogger, next, requestLogSaver, r)
 	}
 	authMiddlewareConfig := middleware.AuthMiddlewareConfig{
 		AuthClient: config.AuthClient,
+	}
+	idempotencyMiddlewareConfig := middleware.IdempotencyMiddlewareConfig{
+		PlatformClient: config.PlatformClient,
 	}
 
 	// Middlewares
@@ -34,8 +36,11 @@ func (r *router) InitEndpointGroups(config MainRouterConfig) {
 	r.AddMiddleware(middleware.CORSMiddleware())
 	r.AddMiddleware(middleware.RateLimitMiddleware())
 	r.AddMiddleware(middleware.AuthMiddleware(authMiddlewareConfig))
+	r.AddMiddleware(middleware.VersionMiddleware())
+	r.AddMiddleware(middleware.IdempotencyMiddleware(idempotencyMiddlewareConfig))
 	r.AddMiddleware(middleware.RecoverMiddleware())
 
+	// Healthz
 	healthGroup := (&httpgroup.HealthEndpointGroup{}).Materialize(httpgroup.HealthEndpointGroupConfig{})
 	if healthGroup != nil {
 		registry.RegisterGroup(healthGroup.APIEndpointGroup)
@@ -53,10 +58,12 @@ func (r *router) InitAuthEndpointGroups(config AuthRouterConfig) {
 	}
 
 	middlewareLogger := log.New(config.LogWriter, config.LogPrefix, config.LogFlags)
-	saver := middleware.NewRequestLogSaver(config.RequestLogPublisher)
-	asyncSaver := middleware.NewAsyncRequestLogSaver(1000, saver)
+	requestLogSaver := middleware.NewRequestLogSaver(config.RequestLogPublisher)
 	loggingMiddleware := func(next http.HandlerFunc) http.HandlerFunc {
-		return middleware.LoggingMiddleware(middlewareLogger, next, asyncSaver, r)
+		return middleware.LoggingMiddleware(middlewareLogger, next, requestLogSaver, r)
+	}
+	idempotencyMiddlewareConfig := middleware.IdempotencyMiddlewareConfig{
+		PlatformClient: config.PlatformClient,
 	}
 
 	// Middlewares
@@ -66,11 +73,13 @@ func (r *router) InitAuthEndpointGroups(config AuthRouterConfig) {
 	r.AddMiddleware(middleware.CORSMiddleware())
 	r.AddMiddleware(middleware.RateLimitMiddleware())
 	r.AddMiddleware(middleware.AuthSecurityMiddleware())
+	r.AddMiddleware(middleware.VersionMiddleware())
+	r.AddMiddleware(middleware.IdempotencyMiddleware(idempotencyMiddlewareConfig))
 	r.AddMiddleware(middleware.RecoverMiddleware())
 
+	// Auth
 	authGroup := (&httpgroup.AuthEndpointGroup{}).Materialize(httpgroup.AuthEndpointGroupConfig{
-		PlatformMode: config.PlatformMode,
-		AuthClient:   config.AuthClient,
+		AuthClient: config.AuthClient,
 	})
 	if authGroup != nil {
 		registry.RegisterGroup(authGroup.APIEndpointGroup)

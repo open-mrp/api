@@ -3,20 +3,17 @@ package authep
 import (
 	"context"
 	"net/http"
-	"sync"
 
-	httptransport "github.com/augno/api/services/api-gateway/internal/http"
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/contracts"
+	apierror "github.com/augno/api/shared/errors"
 )
 
 // Represents a request to refresh an access token
 type RefreshTokenRequest struct {
-	// The refresh token (can be provided via refresh token cookie)
-	RefreshToken string `cookie:"__Secure-augno.refresh-token" validate:"required"`
+	// The refresh token cookie
+	RefreshToken string `cookie:"__Secure-augno.refresh-token" validate:"required"` // #nosec G117 - Struct field, not a hardcoded credential
 }
 
 var sampleRefreshTokenRequest = &RefreshTokenRequest{
@@ -27,59 +24,27 @@ func (*RefreshTokenRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleRefreshTokenRequest)
 }
 
-type RefreshTokenEndpoint struct {
-	apiendpoint.APIEndpoint[*RefreshTokenRequest, *apiresource.EmptyResource]
-
-	group    *apiendpoint.APIEndpointGroup
-	service  AuthCtrl
-	platform constants.PlatformMode
-	bindOnce sync.Once
-	handler  http.HandlerFunc
-}
+type RefreshTokenEndpoint struct{}
 
 const refreshTokenEndpointDescription = `This endpoint is utilized to refresh an access token using a refresh token.
-Once completed, a new access token is set in a cookie. Learn more about authentication and authorization in our 
-[documentation](https://docs.augno.com/guides/authentication).
-`
+Once completed, a new access token is set in a cookie.`
 
-func (e *RefreshTokenEndpoint) Materialize() apiendpoint.APIEndpointer {
-	e.APIEndpoint = apiendpoint.APIEndpoint[*RefreshTokenRequest, *apiresource.EmptyResource]{
+func (e *RefreshTokenEndpoint) Materialize() *apiendpoint.APIEndpoint[*RefreshTokenRequest, *apiresource.EmptyResource] {
+	return &apiendpoint.APIEndpoint[*RefreshTokenRequest, *apiresource.EmptyResource]{
 		Title:             "Refresh Token",
 		Description:       refreshTokenEndpointDescription,
-		Method:            http.MethodPost,
+		Method:            http.MethodPut,
 		Route:             "/v1/auth/access-tokens",
 		ContentType:       "application/json",
 		Request:           &RefreshTokenRequest{},
 		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusOK,
-		IsPublic:          false,
-		Handler: func(ctrl any) apiendpoint.HandlerFunc[
-			*RefreshTokenRequest, *apiresource.EmptyResource,
-		] {
-			return apiendpoint.HandlerFunc[
-				*RefreshTokenRequest, *apiresource.EmptyResource,
-			](func(ctx context.Context, req *RefreshTokenRequest) (*apiresource.EmptyResource, *contracts.APIError) {
-				return ctrl.(AuthCtrl).RefreshToken(ctx, req)
-			})
+		Public:            false,
+		ServiceHandler: func(svc any) func(ctx context.Context, req *RefreshTokenRequest) (*apiresource.EmptyResource, *apierror.APIError) {
+			return svc.(AuthSvc).RefreshToken
 		},
 		Extras: apiendpoint.APIEndpointExtras{
 			AllowUnknownJSONFields: false,
 		},
 	}
-	return e
-}
-
-func (e *RefreshTokenEndpoint) GetHandler() http.HandlerFunc {
-	e.bindOnce.Do(func() {
-		be := apiendpoint.Bind(e.APIEndpoint, e.service)
-		e.handler = httptransport.ConvertToHTTPHandler(be)
-	})
-	return e.handler
-}
-
-func (e *RefreshTokenEndpoint) WithGroup(g *apiendpoint.APIEndpointGroup, service AuthCtrl, platform constants.PlatformMode) *RefreshTokenEndpoint {
-	e.group = g
-	e.service = service
-	e.platform = platform
-	return e
 }

@@ -1,67 +1,97 @@
 package main
 
 import (
+	"cmp"
 	"fmt"
 	"strconv"
+
+	"github.com/augno/api/shared/contracts"
+	"github.com/augno/api/shared/env"
 )
 
+var (
+	defaultPort           = contracts.GRPCPort
+	defaultRabbitMQURI    = "amqp://guest:guest@rabbitmq:5672/" // #nosec G101 - Default dev URI, not a production credential
+	defaultCoreServiceURL = fmt.Sprintf("core-service:%d", contracts.GRPCPort)
+)
+
+const (
+	envPort               = "PORT"
+	envDBURL              = "DB_URL"
+	envFrontendURL        = "FRONTEND_URL"
+	envJWTSecret          = "JWT_SECRET"
+	envPepper             = "PEPPER"
+	envRabbitMQURI        = "RABBITMQ_URI"
+	envCoreServiceURL     = "CORE_SERVICE_URL"
+	envPlatformServiceURL = "PLATFORM_SERVICE_URL"
+)
+
+// config represents the configuration for the auth service.
 type config struct {
-	DBURL        string
-	FrontendURL  string
-	JWTSecret    string
-	Pepper       []byte
-	Port         int
-	RabbitMQURI  string
-	TemplatesDir string
+	// Port (optional; default: 9092) specifies the port on which the gRPC server will listen.
+	Port int
+
+	// DBURL (required) is the database connection URI.
+	DBURL string
+
+	// FrontendURL (required) is the base URL of the frontend application.
+	FrontendURL string
+
+	// JWTSecret (required) is the secret used to sign JWT tokens.
+	JWTSecret string // #nosec G117 - Struct field, not a hardcoded credential
+
+	// Pepper (required) is the additional secret mixed into password hashes.
+	Pepper []byte
+
+	// RabbitMQURI (optional; default: "amqp://guest:guest@rabbitmq:5672/") is the RabbitMQ connection URI.
+	RabbitMQURI string
+
+	// CoreServiceURL (optional; default: "core-service:9092") is the core service address for gRPC.
+	CoreServiceURL string
+
+	// PlatformServiceURL (required) is the platform service address for gRPC.
+	PlatformServiceURL string
 }
 
-func loadConfig(getenv func(string) string) (config, error) {
-	dbURL := getenv("DB_URL")
-	if dbURL == "" {
-		return config{}, fmt.Errorf("required environment variable DB_URL is not set")
+// withDefaults sets the default values for the configuration.
+func (c *config) withDefaults(getenv func(string) string) *config {
+	if c == nil {
+		c = &config{}
 	}
 
-	frontendURL := getenv("FRONTEND_URL")
-	if frontendURL == "" {
-		return config{}, fmt.Errorf("required environment variable FRONTEND_URL is not set")
+	port := defaultPort
+	if p, err := strconv.Atoi(env.GetEnv(envPort, getenv)); err == nil {
+		port = p
 	}
 
-	jwtSecret := getenv("JWT_SECRET")
-	if jwtSecret == "" {
-		return config{}, fmt.Errorf("required environment variable JWT_SECRET is not set")
+	return &config{
+		Port:               port,
+		DBURL:              env.GetEnv(envDBURL, getenv),
+		FrontendURL:        env.GetEnv(envFrontendURL, getenv),
+		JWTSecret:          env.GetEnv(envJWTSecret, getenv),
+		Pepper:             []byte(env.GetEnv(envPepper, getenv)),
+		RabbitMQURI:        cmp.Or(env.GetEnv(envRabbitMQURI, getenv), defaultRabbitMQURI),
+		CoreServiceURL:     cmp.Or(env.GetEnv(envCoreServiceURL, getenv), defaultCoreServiceURL),
+		PlatformServiceURL: env.GetEnv(envPlatformServiceURL, getenv),
 	}
+}
 
-	pepper := getenv("PEPPER")
-	if pepper == "" {
-		return config{}, fmt.Errorf("required environment variable PEPPER is not set")
+// validate validates the configuration.
+func (c *config) validate() error {
+	if c == nil {
+		return fmt.Errorf("config is nil")
 	}
-
-	port := 9092
-	if portEnv := getenv("PORT"); portEnv != "" {
-		var err error
-		port, err = strconv.Atoi(portEnv)
-		if err != nil {
-			return config{}, fmt.Errorf("PORT must be a valid integer, got: %s", portEnv)
-		}
+	if c.DBURL == "" {
+		return fmt.Errorf("the provided database URI is empty")
 	}
-
-	rabbitMQURI := getenv("RABBITMQ_URI")
-	if rabbitMQURI == "" {
-		return config{}, fmt.Errorf("required environment variable RABBITMQ_URI is not set")
+	if c.FrontendURL == "" {
+		return fmt.Errorf("the provided frontend URL is empty")
 	}
-
-	templatesDir := getenv("TEMPLATES_DIR")
-	if templatesDir == "" {
-		templatesDir = "services/auth-service/templates"
+	if c.JWTSecret == "" {
+		return fmt.Errorf("the provided JWT secret is empty")
 	}
-
-	return config{
-		DBURL:        dbURL,
-		JWTSecret:    jwtSecret,
-		Pepper:       []byte(pepper),
-		Port:         port,
-		RabbitMQURI:  rabbitMQURI,
-		FrontendURL:  frontendURL,
-		TemplatesDir: templatesDir,
-	}, nil
+	if len(c.Pepper) == 0 {
+		return fmt.Errorf("the provided pepper is empty")
+	}
+	return nil
 }

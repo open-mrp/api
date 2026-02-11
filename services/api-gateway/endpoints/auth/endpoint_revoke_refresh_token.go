@@ -3,20 +3,17 @@ package authep
 import (
 	"context"
 	"net/http"
-	"sync"
 
-	httptransport "github.com/augno/api/services/api-gateway/internal/http"
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
-	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/contracts"
+	apierror "github.com/augno/api/shared/errors"
 )
 
 // Request to revoke a refresh token
 type RevokeRefreshTokenRequest struct {
-	// The refresh token (can be provided via refresh token cookie)
-	RefreshToken string `cookie:"__Secure-augno.refresh-token" validate:"required"`
+	// The refresh token cookie
+	RefreshToken string `cookie:"__Secure-augno.refresh-token" validate:"required"` // #nosec G117 - Struct field, not a hardcoded credential
 }
 
 var sampleRevokeRefreshTokenRequest = &RevokeRefreshTokenRequest{
@@ -27,23 +24,13 @@ func (*RevokeRefreshTokenRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleRevokeRefreshTokenRequest)
 }
 
-type RevokeRefreshTokenEndpoint struct {
-	apiendpoint.APIEndpoint[*RevokeRefreshTokenRequest, *apiresource.EmptyResource]
-
-	group    *apiendpoint.APIEndpointGroup
-	service  AuthCtrl
-	platform constants.PlatformMode
-	bindOnce sync.Once
-	handler  http.HandlerFunc
-}
+type RevokeRefreshTokenEndpoint struct{}
 
 const revokeRefreshTokenEndpointDescription = `This endpoint is utilized to revoke a refresh token.
-Once completed, the refresh token is revoked and is no longer valid for refreshing an access token. Learn more about authentication and authorization in our 
-[documentation](https://docs.augno.com/guides/authentication).
-`
+Once completed, the refresh token is revoked and is no longer valid for refreshing an access token.`
 
-func (e *RevokeRefreshTokenEndpoint) Materialize() apiendpoint.APIEndpointer {
-	e.APIEndpoint = apiendpoint.APIEndpoint[*RevokeRefreshTokenRequest, *apiresource.EmptyResource]{
+func (e *RevokeRefreshTokenEndpoint) Materialize() *apiendpoint.APIEndpoint[*RevokeRefreshTokenRequest, *apiresource.EmptyResource] {
+	return &apiendpoint.APIEndpoint[*RevokeRefreshTokenRequest, *apiresource.EmptyResource]{
 		Title:             "Revoke Refresh Token",
 		Description:       revokeRefreshTokenEndpointDescription,
 		Method:            http.MethodDelete,
@@ -52,34 +39,12 @@ func (e *RevokeRefreshTokenEndpoint) Materialize() apiendpoint.APIEndpointer {
 		Request:           &RevokeRefreshTokenRequest{},
 		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusOK,
-		IsPublic:          false,
-		Handler: func(ctrl any) apiendpoint.HandlerFunc[
-			*RevokeRefreshTokenRequest, *apiresource.EmptyResource,
-		] {
-			return apiendpoint.HandlerFunc[
-				*RevokeRefreshTokenRequest, *apiresource.EmptyResource,
-			](func(ctx context.Context, req *RevokeRefreshTokenRequest) (*apiresource.EmptyResource, *contracts.APIError) {
-				return ctrl.(AuthCtrl).RevokeRefreshToken(ctx, req)
-			})
+		Public:            false,
+		ServiceHandler: func(svc any) func(ctx context.Context, req *RevokeRefreshTokenRequest) (*apiresource.EmptyResource, *apierror.APIError) {
+			return svc.(AuthSvc).RevokeRefreshToken
 		},
 		Extras: apiendpoint.APIEndpointExtras{
 			AllowUnknownJSONFields: false,
 		},
 	}
-	return e
-}
-
-func (e *RevokeRefreshTokenEndpoint) GetHandler() http.HandlerFunc {
-	e.bindOnce.Do(func() {
-		be := apiendpoint.Bind(e.APIEndpoint, e.service)
-		e.handler = httptransport.ConvertToHTTPHandler(be)
-	})
-	return e.handler
-}
-
-func (e *RevokeRefreshTokenEndpoint) WithGroup(g *apiendpoint.APIEndpointGroup, service AuthCtrl, platform constants.PlatformMode) *RevokeRefreshTokenEndpoint {
-	e.group = g
-	e.service = service
-	e.platform = platform
-	return e
 }

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/Augno/api/compare/v0.2.1...v0.2.2) (2026-02-11)
+
+
+### Bug Fixes
+
+* remove terraform force delete ([#68](https://github.com/Augno/api/issues/68)) ([ca88e90](https://github.com/Augno/api/commit/ca88e908b7de86752e6b3a561dc8d2c69269aca8))
+
 ## [0.2.1](https://github.com/Augno/api/compare/v0.2.0...v0.2.1) (2026-02-11)
 
 

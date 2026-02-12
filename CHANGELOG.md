@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.4](https://github.com/Augno/api/compare/v0.2.3...v0.2.4) (2026-02-12)
+
+
+### Bug Fixes
+
+* tagging ([#72](https://github.com/Augno/api/issues/72)) ([b4c2349](https://github.com/Augno/api/commit/b4c2349554eb2893e0cc6bb1b5f5f8f81f825e59))
+
 ## [0.2.3](https://github.com/Augno/api/compare/v0.2.2...v0.2.3) (2026-02-11)
 
 

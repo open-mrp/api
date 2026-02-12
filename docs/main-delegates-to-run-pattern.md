@@ -52,7 +52,8 @@ func Run(
 
 ## Why we do this
 
-Separating `Run(...)` from `main()` enables end-to-end tests for each service. It also provides several additional benefits:
+<!-- TODO: we are not doing this in integration tests -->
+Separating `Run(...)` from `main()` enables integration tests for each service. It also provides several additional benefits:
 
 ### 1) Dependency injection without frameworks
 Passing `getenv`, `stdin`, `stdout`, `stderr` (and potentially other deps) makes dependencies explicit and swappable in tests:

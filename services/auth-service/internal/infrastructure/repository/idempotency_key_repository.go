@@ -89,16 +89,20 @@ func (r *idempotencyKeyRepoImpl) AdvanceRecoveryPoint(ctx context.Context, typeI
 	return nil
 }
 
-func (r *idempotencyKeyRepoImpl) GetRecoveryPoint(ctx context.Context, typeID string) (string, *apierror.APIError) {
+func (r *idempotencyKeyRepoImpl) GetRecoveryPoint(ctx context.Context, typeID string) (domain.RecoveryPoint, *apierror.APIError) {
 	ctx, span := idempotencyRepoTracer.Start(ctx, "repository.idempotency_key.get_recovery_point")
 	defer span.End()
 
-	recoveryPoint, err := r.queries.GetIdempotencyRecoveryPoint(ctx, typeID)
+	rawRecoveryPoint, err := r.queries.GetIdempotencyRecoveryPoint(ctx, typeID)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return "", tracing.Trace(span, apiErr)
 	}
 
-	return recoveryPoint, nil
+	recoveryPoint := domain.RecoveryPoint(rawRecoveryPoint)
+	if ok := domain.RecoveryPoint.IsValid(recoveryPoint); ok {
+		return recoveryPoint, nil
+	}
+	return "", tracing.Trace(span, apierror.NewInvariantViolationError("recovery point is not valid"))
 }
 
 func (r *idempotencyKeyRepoImpl) SetResponse(ctx context.Context, typeID string, code int, body json.RawMessage, recoveryPoint domain.RecoveryPoint) *apierror.APIError {

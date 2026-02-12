@@ -33,7 +33,7 @@ type CurrentAccount struct {
 	ID string `json:"id" validate:"required"`
 }
 
-const loginEndpointDescription = `This endpoint is utilized to login a user. Once completed, the user object is 
+const loginEndpointDescription string = `This endpoint is used to login a user. Once completed, the user object is 
 returned, and an access and refresh token are set in cookies.`
 
 type LoginEndpoint struct{}

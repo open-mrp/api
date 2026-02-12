@@ -20,7 +20,7 @@ k8s_resource('rabbitmq', port_forwards=['5672', '15672'], labels='tooling')
 ### End RabbitMQ ###
 ### API Gateway ###
 
-gateway_compile_cmd = 'CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/api-gateway ./services/api-gateway/cmd'
+gateway_compile_cmd = 'CGO_ENABLED=0 GOOS=linux GOARCH=$(go env GOARCH) go build -o build/api-gateway ./services/api-gateway/cmd'
 
 local_resource(
   'api-gateway-compile',
@@ -50,7 +50,7 @@ k8s_resource('api-gateway', port_forwards=8081,
 
 ### Auth Service ###
 
-auth_service_compile_cmd = 'CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/auth-service ./services/auth-service/cmd'
+auth_service_compile_cmd = 'CGO_ENABLED=0 GOOS=linux GOARCH=$(go env GOARCH) go build -o build/auth-service ./services/auth-service/cmd'
 
 local_resource(
   'auth-service-compile',
@@ -83,7 +83,7 @@ k8s_resource(
 
 ### Core Service ###
 
-core_service_compile_cmd = 'CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/core-service ./services/core-service/cmd'
+core_service_compile_cmd = 'CGO_ENABLED=0 GOOS=linux GOARCH=$(go env GOARCH) go build -o build/core-service ./services/core-service/cmd'
 
 local_resource(
   'core-service-compile',
@@ -116,7 +116,7 @@ k8s_resource(
 
 ### Notification Service ###
 
-notification_service_compile_cmd = 'CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/notification-service ./services/notification-service/cmd'
+notification_service_compile_cmd = 'CGO_ENABLED=0 GOOS=linux GOARCH=$(go env GOARCH) go build -o build/notification-service ./services/notification-service/cmd'
 
 local_resource(
   'notification-service-compile',
@@ -149,7 +149,7 @@ k8s_resource(
 
 ### Logging Service ###
 
-platform_service_compile_cmd = 'CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/platform-service ./services/platform-service/cmd'
+platform_service_compile_cmd = 'CGO_ENABLED=0 GOOS=linux GOARCH=$(go env GOARCH) go build -o build/platform-service ./services/platform-service/cmd'
 
 local_resource(
   'platform-service-compile',
@@ -181,7 +181,7 @@ k8s_resource(
 
 ### Payment Service ###
 
-# payment_service_compile_cmd = 'CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/billing-service ./services/billing-service/cmd'
+# payment_service_compile_cmd = 'CGO_ENABLED=0 GOOS=linux GOARCH=$(go env GOARCH) go build -o build/billing-service ./services/billing-service/cmd'
 
 # local_resource(
 #   'billing-service-compile',

@@ -26,7 +26,7 @@ func (*RefreshTokenRequest) SchemaExample() any {
 
 type RefreshTokenEndpoint struct{}
 
-const refreshTokenEndpointDescription = `This endpoint is utilized to refresh an access token using a refresh token.
+const refreshTokenEndpointDescription string = `This endpoint is used to refresh an access token using a refresh token.
 Once completed, a new access token is set in a cookie.`
 
 func (e *RefreshTokenEndpoint) Materialize() *apiendpoint.APIEndpoint[*RefreshTokenRequest, *apiresource.EmptyResource] {

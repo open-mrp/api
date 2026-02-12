@@ -31,7 +31,7 @@ type CachedResponse struct {
 	Body json.RawMessage
 }
 
-// A representation of an idempotency key that may be utilized by any other
+// A representation of an idempotency key that may be used by any other
 // service to track the status of an idempotent request.
 type IdempotencyKey struct {
 	ID             string

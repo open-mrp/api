@@ -72,10 +72,14 @@ func TestValidateCredential_APIKeyOwnedAccount(t *testing.T) {
 		Secret:      "secret",
 		Checksum:    "abc",
 	}
+	touchDone := make(chan struct{}, 1)
 
 	apiKeyMed.EXPECT().FindAndValidate(gomock.Any(), "aug_sk_token").Return(apiKey, nil)
 	apiKeyMed.EXPECT().ParseKey(gomock.Any(), "aug_sk_token").Return(parsedKey, nil)
-	apiKeyMed.EXPECT().TouchIfNotRecent(gomock.Any(), apiKey).Return(nil)
+	apiKeyMed.EXPECT().TouchIfNotRecent(gomock.Any(), apiKey).DoAndReturn(func(context.Context, *domain.APIKey) *apierror.APIError {
+		touchDone <- struct{}{}
+		return nil
+	})
 	apiKeyMed.EXPECT().GetKeyAccountAccess(gomock.Any(), constants.AccountModeProduction, apiKey.ID, "acct-1").Return(&domain.APIKeyAccountAccess{
 		APIKeyID:    apiKey.TypeID,
 		AccountID:   "acct-1",
@@ -93,6 +97,11 @@ func TestValidateCredential_APIKeyOwnedAccount(t *testing.T) {
 	identity, err := med.ValidateCredential(context.Background(), "aug_sk_token", ptrString("acct-1"))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+	select {
+	case <-touchDone:
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("expected TouchIfNotRecent to be called")
 	}
 
 	if identity.Type != types.IdentityTypeAPIKey {
@@ -136,9 +145,14 @@ func TestValidateCredential_APIKeyRelationMissing(t *testing.T) {
 		Secret:      "secret",
 		Checksum:    "abc",
 	}
+	touchDone := make(chan struct{}, 1)
 
 	apiKeyMed.EXPECT().FindAndValidate(gomock.Any(), "aug_sk_missing").Return(apiKey, nil)
 	apiKeyMed.EXPECT().ParseKey(gomock.Any(), "aug_sk_missing").Return(parsedKey, nil)
+	apiKeyMed.EXPECT().TouchIfNotRecent(gomock.Any(), apiKey).DoAndReturn(func(context.Context, *domain.APIKey) *apierror.APIError {
+		touchDone <- struct{}{}
+		return nil
+	})
 	coreClient.EXPECT().GetAccountRelationByAPIKeyID(gomock.Any(), "acct-target", apiKey.ID).
 		Return(nil, nil)
 
@@ -150,6 +164,11 @@ func TestValidateCredential_APIKeyRelationMissing(t *testing.T) {
 	}
 
 	identity, err := med.ValidateCredential(context.Background(), "aug_sk_missing", ptrString("acct-target"))
+	select {
+	case <-touchDone:
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("expected TouchIfNotRecent to be called")
+	}
 	if err == nil {
 		t.Fatal("expected error for missing relation, got nil")
 	}

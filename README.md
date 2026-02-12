@@ -18,11 +18,13 @@ Augno is a Go-based microservices platform using an API Gateway and domain-focus
 -   Docker & Tilt
 -   [sqlc](https://sqlc.dev/)
 -   [mockgen](https://github.com/uber-go/mock)
+-   [minikube](https://minikube.sigs.k8s.io/)
 
 ### Setup
 
 ```bash
 make install-tools  # Install dev dependencies
+minikube start      # Start a local Kubernetes cluster
 make dev            # Spin up the environment with Tilt
 ```
 
@@ -70,3 +72,6 @@ We use [Conventional Commits](https://www.conventionalcommits.org/) to maintain 
 2.  **Merge:** After review and approval, merge your PR.
 3.  **Release PR:** `release-please` will automatically create or update a "Release PR" that aggregates all pending changes and updates the changelog.
 4.  **Production Release:** When ready to deploy, merge the "Release PR" into `main`. This triggers the final release process and deployment to production.
+
+### 4. Notes
+- minikube might need refreshed, try `minikube delete` and `minikube start`

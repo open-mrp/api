@@ -20,7 +20,7 @@ func RespondWithAPIError(ctx context.Context, w http.ResponseWriter, apiErr *api
 		rl.ErrorMessage = &apiErr.PublicMessage
 		if apiErr.Code == apierror.ErrorCodeInternalError {
 			rl.InternalErrorMessage = &apiErr.InternalMessage
-			stackTrace := make([]byte, 32768)
+			stackTrace := make([]byte, 32768) // 32KB
 			length := runtime.Stack(stackTrace, false)
 			st := string(stackTrace[:length])
 			rl.StackTrace = &st

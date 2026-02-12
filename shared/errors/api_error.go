@@ -33,14 +33,11 @@ const (
 	// ErrorCodeExpiredToken indicates a JWT access or refresh token has expired.
 	ErrorCodeExpiredToken ErrorCode = "expired_token"
 	// ErrorCodeExpiredAPIKey indicates an API key has passed its expiration date.
-	// #nosec G101 - This is an error code constant, not a hardcoded credential
-	ErrorCodeExpiredAPIKey ErrorCode = "api_key_expired"
+	ErrorCodeExpiredAPIKey ErrorCode = "api_key_expired" // #nosec G101 - This is an error code constant, not a hardcoded credential
 	// ErrorCodeRevokedAPIKey indicates an API key was explicitly revoked by the owner or Augno.
-	// #nosec G101 - This is an error code constant, not a hardcoded credential
-	ErrorCodeRevokedAPIKey ErrorCode = "api_key_revoked"
+	ErrorCodeRevokedAPIKey ErrorCode = "api_key_revoked" // #nosec G101 - This is an error code constant, not a hardcoded credential
 	// ErrorCodeInvalidCredentials indicates the provided credentials are wrong.
-	// #nosec G101 - This is an error code constant, not a hardcoded credential
-	ErrorCodeInvalidCredentials ErrorCode = "invalid_credentials"
+	ErrorCodeInvalidCredentials ErrorCode = "invalid_credentials" // #nosec G101 - This is an error code constant, not a hardcoded credential
 	// ErrorCodeInsufficientPerms indicates the caller is authenticated but lacks the required role or permission.
 	ErrorCodeInsufficientPerms ErrorCode = "insufficient_permissions"
 

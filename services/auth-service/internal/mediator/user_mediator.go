@@ -56,7 +56,7 @@ func NewUserMed(config UserMedConfig) domain.UserMed {
 	}
 }
 
-// GenAuthAccessToken mints an access token that can be utilized to authenticate requests to the API.
+// GenAuthAccessToken mints an access token that can be used to authenticate requests to the API.
 func (s *userMedImpl) GenAuthAccessToken(ctx context.Context, userID string) (string, *apierror.APIError) {
 	ctx, span := userMedTracer.Start(ctx, "mediator.user.gen_auth_access_token")
 	defer span.End()
@@ -64,7 +64,7 @@ func (s *userMedImpl) GenAuthAccessToken(ctx context.Context, userID string) (st
 	return s.jwtUtils.Encode(ctx, userID, time.Hour, domain.JWTTypeAccess)
 }
 
-// GenPasswordResetAccessToken mints an access token that can be utilized to reset the password for the given user ID.
+// GenPasswordResetAccessToken mints an access token that can be used to reset the password for the given user ID.
 func (s *userMedImpl) GenPasswordResetAccessToken(ctx context.Context, userID string) (string, *apierror.APIError) {
 	ctx, span := userMedTracer.Start(ctx, "mediator.user.gen_password_reset_access_token")
 	defer span.End()
@@ -159,6 +159,11 @@ func (s *userMedImpl) validateAPIKeyCredential(ctx context.Context, span trace.S
 		return nil, err
 	}
 
+	// Touch the API key to mark it as used
+	go func() {
+		_ = s.apiKeyMed.TouchIfNotRecent(context.Background(), apiKeyModel)
+	}()
+
 	// Parse the API key to get the account mode (embedded in the key)
 	parsedKey, err := s.apiKeyMed.ParseKey(ctx, authToken)
 	if err != nil {
@@ -176,12 +181,6 @@ func (s *userMedImpl) validateAPIKeyCredential(ctx context.Context, span trace.S
 
 	// The request targets the account that owns the API key
 	if apiKeyModel.OwnerAccountID == finalTargetAccountID {
-		// Touch the API key to mark it as used
-		err := s.apiKeyMed.TouchIfNotRecent(ctx, apiKeyModel)
-		if err != nil {
-			return nil, err
-		}
-
 		// Fetch the user account access (which includes permissions) from account service
 		// For API keys, we use a special lookup that gets role permissions
 		access, err := s.apiKeyMed.GetKeyAccountAccess(ctx, accountMode, apiKeyModel.ID, finalTargetAccountID)

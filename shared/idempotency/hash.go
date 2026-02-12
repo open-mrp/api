@@ -30,7 +30,7 @@ const separator = "\x1f"
 // The returned hash is stored in the idempotency_keys table as scope_hash and
 // compared on subsequent requests to detect key reuse across different scopes.
 func ComputeHTTPScopeHash(actorID, targetAccountID *string, method, normalizedRoute, idempotencyKey string) string {
-	emptyString := ""
+	emptyString := "" // allows us to affect the hash input without overwriting the original pointer for actorID and targetAccountID
 	if actorID == nil {
 		actorID = &emptyString
 	}
@@ -51,11 +51,14 @@ func ComputeHTTPScopeHash(actorID, targetAccountID *string, method, normalizedRo
 //
 //	SHA256(actorID + \x1f + service + \x1f + handler + \x1f + idempotencyKey)
 //
+// Nil pointer field actorID is coerced to empty string,
+// meaning nil and "" produce the same hash.
+//
 // Note that the field count differs from ComputeHTTPScopeHash (4 vs 5), so even
 // identical field values will produce different hashes, preventing cross-layer
 // collisions.
 func ComputeServiceScopeHash(actorID *string, service, handler, idempotencyKey string) string {
-	emptyString := ""
+	emptyString := "" // allows us to affect the hash input without overwriting the original pointer for actorID
 	if actorID == nil {
 		actorID = &emptyString
 	}

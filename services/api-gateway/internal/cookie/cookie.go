@@ -162,7 +162,7 @@ func MakeClearAuthCookies(ctx context.Context) []*http.Cookie {
 }
 
 func makeAccessTokenCookie(token string, opts cookieOptions) *http.Cookie {
-	maxAge := 60 * 60
+	maxAge := 60 * 60 // 1 hour in seconds
 	expires := time.Now().UTC().Add(time.Duration(maxAge) * time.Second)
 
 	return &http.Cookie{
@@ -179,7 +179,7 @@ func makeAccessTokenCookie(token string, opts cookieOptions) *http.Cookie {
 }
 
 func makeRefreshTokenCookie(token string, opts cookieOptions) *http.Cookie {
-	maxAge := 30 * 24 * 60 * 60
+	maxAge := 30 * 24 * 60 * 60 // 30 days in seconds
 	expires := time.Now().UTC().Add(time.Duration(maxAge) * time.Second)
 
 	return &http.Cookie{

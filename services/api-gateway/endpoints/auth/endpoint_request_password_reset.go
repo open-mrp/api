@@ -14,7 +14,7 @@ import (
 type RequestPasswordResetRequest struct {
 	// The username or email of the account to reset
 	Identifier string `json:"identifier" validate:"required,identifier"`
-	// The account slug (optional)
+	// The account slug (optional, Used to return user back to origonal login portal (instead of plain augno login) after password reset)
 	AccountSlug *string `json:"account_slug,omitempty"`
 }
 
@@ -26,7 +26,7 @@ func (*RequestPasswordResetRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleRequestPasswordResetRequest)
 }
 
-const requestPasswordResetEndpointDescription = `This endpoint is utilized to request a password reset for a user. An email will be sent to the user 
+const requestPasswordResetEndpointDescription string = `This endpoint is used to request a password reset for a user. An email will be sent to the user 
 with a link to reset their password.`
 
 type RequestPasswordResetEndpoint struct{}

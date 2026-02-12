@@ -30,7 +30,7 @@ func (*RegisterRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleRegisterRequest)
 }
 
-const registerEndpointDescription = `This endpoint is utilized to register a new user on the customer portal. Once completed, the user object is 
+const registerEndpointDescription string = `This endpoint is used to register a new user on the customer portal. Once completed, the user object is 
 returned, and an access and refresh token are set in cookies.`
 
 type RegisterEndpoint struct{}

@@ -231,7 +231,8 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 
 	resp, err := e.boundServiceHandler(ctx, req)
 
-	// If the client disconnected during processing, report a 499 regardless of
+	// If the client disconnected during processing, report a 499
+	// ("the client closed the connection before the server could respond") regardless of
 	// what error (if any) the handler returned. There's no point sending a
 	// response body — the client is gone — but we still write the status so the
 	// logging middleware records the correct code.

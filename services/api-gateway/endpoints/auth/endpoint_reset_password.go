@@ -12,7 +12,7 @@ import (
 
 // The request to reset a user's password
 type ResetPasswordRequest struct {
-	// The password reset token
+	// The password reset token (from request_password_reset endpoint)
 	Token string `json:"token" validate:"required"`
 	// The new password of the user
 	Password string `json:"password" validate:"required,password"` // #nosec G117 - Struct field, not a hardcoded credential
@@ -27,8 +27,8 @@ func (*ResetPasswordRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleResetPasswordRequest)
 }
 
-const resetPasswordEndpointDescription = `This endpoint is utilized to reset a user's password using a password reset token.
-Once completed, new access and refresh tokens are set in cookies.`
+const resetPasswordEndpointDescription string = `This endpoint is used to reset a user's password using a password reset token.
+Once completed, new access and refresh tokens are set in cookies, and previous tokens are revoked.`
 
 type ResetPasswordEndpoint struct{}
 

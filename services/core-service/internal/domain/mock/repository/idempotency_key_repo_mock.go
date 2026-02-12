@@ -88,10 +88,10 @@ func (mr *MockIdempotencyKeyRepoMockRecorder) GetByScopeHash(ctx, scopeHash any)
 }
 
 // GetRecoveryPoint mocks base method.
-func (m *MockIdempotencyKeyRepo) GetRecoveryPoint(ctx context.Context, typeID string) (string, *apierror.APIError) {
+func (m *MockIdempotencyKeyRepo) GetRecoveryPoint(ctx context.Context, typeID string) (domain.RecoveryPoint, *apierror.APIError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetRecoveryPoint", ctx, typeID)
-	ret0, _ := ret[0].(string)
+	ret0, _ := ret[0].(domain.RecoveryPoint)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }

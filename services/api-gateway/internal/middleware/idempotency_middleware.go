@@ -10,9 +10,9 @@ import (
 
 	grpcclient "github.com/augno/api/services/api-gateway/grpc-client"
 	"github.com/augno/api/services/api-gateway/internal/header"
-	"github.com/augno/api/shared/appctx"
 	httptransport "github.com/augno/api/services/api-gateway/internal/http"
 	"github.com/augno/api/services/auth-service/pkg/types"
+	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/contracts"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/idempotency"

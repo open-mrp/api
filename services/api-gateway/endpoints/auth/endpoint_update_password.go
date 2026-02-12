@@ -29,8 +29,8 @@ func (*UpdatePasswordRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdatePasswordRequest)
 }
 
-const updatePasswordEndpointDescription = `This endpoint is utilized to create a new password for a user. Once completed, new cookies 
-are set in cookies.`
+const updatePasswordEndpointDescription string = `This endpoint is used to create a new password for a user. Once completed, new access and refresh tokens 
+are set in cookies, and previous tokens are revoked.`
 
 type UpdatePasswordEndpoint struct{}
 

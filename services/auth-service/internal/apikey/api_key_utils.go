@@ -99,31 +99,41 @@ func (aku *apiKeyUtilsImpl) Gen(ctx context.Context, appMode constants.AccountMo
 
 // Parse parses a given API key string into its components.
 func (aku *apiKeyUtilsImpl) Parse(ctx context.Context, key string) (*domain.ParsedAPIKey, *apierror.APIError) {
+	const (
+		augnoPrefixIdx = 0 // the indext of the `augno` prefix
+		sKPrefixIdx    = 1 // the indext of the `sk` prefix
+		modeIdx        = 2 // index of the account mode in the key
+		idIdx          = 3 // index of the id in the key
+		scsIdx         = 4 // index of the secret and checksum in the key
+		numKeyParts    = 5 // number of parts in the key
+		checksumLen    = 6 // checksum length should be atleast 7 characters
+	)
+
 	_, span := apiKeyUtilsTracer.Start(ctx, "utils.api_key.parse")
 	defer span.End()
 
-	parts := strings.SplitN(key, "_", 5)
+	parts := strings.SplitN(key, "_", numKeyParts)
 
 	// We expect there to be parts to the key
-	if len(parts) != 5 {
+	if len(parts) != numKeyParts {
 		return nil, aku.invalidAPIKeyError(span, key)
 	}
 
 	// The first two parts of the key should be the secret key prefix
-	if !strings.HasPrefix(parts[0]+"_"+parts[1]+"_", string(types.APIKeyPrefixSecretKey)) {
+	if !strings.HasPrefix(parts[augnoPrefixIdx]+"_"+parts[sKPrefixIdx]+"_", string(types.APIKeyPrefixSecretKey)) {
 		return nil, aku.invalidAPIKeyError(span, key)
 	}
 
 	// The last part of the key should be at least 7 characters
-	secretPlusChk := parts[4]
-	if len(secretPlusChk) < 6 {
+	secretPlusChk := parts[scsIdx]
+	if len(secretPlusChk) < checksumLen {
 		return nil, aku.invalidAPIKeyError(span, key)
 	}
 
 	// Break down the key into the key elements
-	id := parts[3]
-	secret := secretPlusChk[:len(secretPlusChk)-6]
-	chk := secretPlusChk[len(secretPlusChk)-6:]
+	id := parts[idIdx]
+	secret := secretPlusChk[:len(secretPlusChk)-checksumLen]
+	chk := secretPlusChk[len(secretPlusChk)-checksumLen:]
 
 	// If the checksum doesn't match, we know we didn't mint this key and we can fail fast
 	expected := genKeyChecksum(id, secret)
@@ -132,7 +142,7 @@ func (aku *apiKeyUtilsImpl) Parse(ctx context.Context, key string) (*domain.Pars
 	}
 
 	// The middle part of the key should be the account mode
-	appMode := parts[2]
+	appMode := parts[modeIdx]
 	if !constants.AccountMode(appMode).IsValid() {
 		return nil, aku.invalidAPIKeyError(span, key)
 	}
@@ -189,7 +199,7 @@ func (aku *apiKeyUtilsImpl) lengthForKeyStrength(strength KeyStrength) int {
 	case KeyStrengthHigh:
 		return 44
 	}
-	return 44
+	return 44 // as default keystrength is high
 }
 
 func hmacSHA256(key, data []byte) ([]byte, error) {

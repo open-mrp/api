@@ -59,12 +59,14 @@ func init() {
 // bytes long and contains at least one ASCII digit and one special character (from
 // the hasSpecialChar set). Empty strings pass (combine with "required" to enforce
 // presence). The 72-byte upper bound matches bcrypt's maximum input length.
+const PasswordMaxLength int = 72
+
 func validatePassword(fl validator.FieldLevel) bool {
 	password := fl.Field().String()
 	if password == "" {
 		return true
 	}
-	if len(password) < 8 || len(password) > 72 {
+	if len(password) < 8 || len(password) > PasswordMaxLength {
 		return false
 	}
 	if !hasNumber.MatchString(password) || !hasSpecialChar.MatchString(password) {

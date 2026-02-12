@@ -18,3 +18,12 @@ func (r RecoveryPoint) IsFinished() bool {
 func (r RecoveryPoint) IsStarted() bool {
 	return r == RecoveryPointStarted
 }
+
+func (r RecoveryPoint) IsValid() bool {
+	switch r {
+	case RecoveryPointStarted, RecoveryPointFinished:
+		return true
+	default:
+		return false
+	}
+}

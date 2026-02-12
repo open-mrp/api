@@ -17,7 +17,7 @@ func RecoveryUnaryInterceptor() grpc.UnaryServerInterceptor {
 		defer func() {
 			if rec := recover(); rec != nil {
 				// Capture stack trace
-				stackTrace := make([]byte, 32768)
+				stackTrace := make([]byte, 32768) // 32KB
 				length := runtime.Stack(stackTrace, false)
 				stackStr := string(stackTrace[:length])
 

@@ -128,11 +128,6 @@ func (s *passwordMedImpl) Update(ctx context.Context, user *types.User, newPassw
 
 	// Notify the user that their password was changed
 	if user.Email != nil {
-		var userName string
-		if user.Name != nil {
-			userName = *user.Name
-		}
-
 		// Pass repos via context for the outbox publisher
 		publishCtx := event.WithRepos(ctx, s.repos)
 		s.notificationPublisher.PublishSendEmail(
@@ -141,10 +136,7 @@ func (s *passwordMedImpl) Update(ctx context.Context, user *types.User, newPassw
 				To:         []string{*user.Email},
 				Subject:    "Password Updated",
 				TemplateID: constants.EmailTemplatePasswordUpdated,
-				Params: map[string]any{
-					"UserName": userName,
-				},
-				SentByID: &user.ID,
+				SentByID:   &user.ID,
 			},
 		)
 	}

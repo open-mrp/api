@@ -6,6 +6,7 @@ import (
 
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/tracing"
+	"github.com/augno/api/shared/validate"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -16,6 +17,10 @@ var passwordTracer = tracing.GetTracer("auth-service.password")
 func CompareHashAndPassword(ctx context.Context, plaintextPassword, hash string) (bool, *apierror.APIError) {
 	_, span := passwordTracer.Start(ctx, "password.compare_hash_and_password")
 	defer span.End()
+
+	if len(plaintextPassword) > validate.PasswordMaxLength {
+		return false, tracing.Trace(span, apierror.NewInvariantViolationError("password length is too long when comparing hash and password"))
+	}
 
 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(plaintextPassword))
 	if err != nil {

@@ -73,7 +73,7 @@ jobs:
     strategy:
       matrix:
         service:
-          [api-gateway, auth-service, platform-service, notification-service]
+          [api-gateway, auth-service, core-service, platform-service, notification-service]
     permissions:
       id-token: write
       contents: read

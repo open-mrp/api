@@ -2,7 +2,7 @@
 ARG SERVICE_NAME
 
 # --- Build Stage ---
-FROM golang:1.24 AS builder
+FROM golang:1.26 AS builder
 ARG SERVICE_NAME
 WORKDIR /app
 

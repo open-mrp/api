@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.0](https://github.com/Augno/api/compare/v0.2.4...v0.3.0) (2026-02-13)
+
+
+### Features
+
+* api key endpoints ([#76](https://github.com/Augno/api/issues/76)) ([87bb039](https://github.com/Augno/api/commit/87bb039b22cc4d74982681aa2cde8a266d612e50))
+
+
+### Bug Fixes
+
+* logic fix for api key parse, proper error handling ([#74](https://github.com/Augno/api/issues/74)) ([99c704b](https://github.com/Augno/api/commit/99c704b0421e6f860987ea310f8c2fb7b9dddf75))
+
 ## [0.2.4](https://github.com/Augno/api/compare/v0.2.3...v0.2.4) (2026-02-12)
 
 

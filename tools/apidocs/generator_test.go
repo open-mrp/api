@@ -254,19 +254,19 @@ func TestGenerate_FullAssembly(t *testing.T) {
 		t.Errorf("expected 2 paths, got %d", len(paths))
 	}
 
-	// Verify error responses are attached
+	// Verify error responses are NOT attached to individual endpoints
 	publicPath := paths["/public"].(map[string]any)
 	getOp := publicPath["get"].(map[string]any)
 	responses := getOp["responses"].(map[string]any)
 
 	errorCodes := []string{"400", "401", "403", "404", "409", "429", "500"}
 	for _, code := range errorCodes {
-		if _, ok := responses[code]; !ok {
-			t.Errorf("expected error response %s to be attached to public endpoint", code)
+		if _, ok := responses[code]; ok {
+			t.Errorf("expected error response %s to NOT be attached to endpoint (errors defined once in components)", code)
 		}
 	}
 
-	// Verify APIErrorResponse schema is present
+	// Verify APIErrorResponse schema is still present in components for documentation
 	components := spec["components"].(map[string]any)
 	schemas := components["schemas"].(map[string]any)
 	if _, ok := schemas["APIErrorResponse"]; !ok {

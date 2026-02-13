@@ -47,6 +47,30 @@ service AuthService {
   // UpdatePassword changes the authenticated user's password. Requires the
   // old password for verification before accepting the new one.
   rpc UpdatePassword(UpdatePasswordRequest) returns (google.protobuf.Empty);
+
+  // CreateAPIKey creates a new API key for the target account. Only internal
+  // admin users may call this RPC. Returns the full secret (shown once) and
+  // the API key metadata.
+  rpc CreateAPIKey(CreateAPIKeyRequest) returns (CreateAPIKeyResponse);
+
+  // RotateAPIKey revokes an existing API key and creates a new replacement
+  // key with the same name, role, and owner. The new key inherits the old
+  // key's expiration unless an explicit expires_at override is provided.
+  // Returns the new secret (shown once) and the new API key metadata.
+  rpc RotateAPIKey(RotateAPIKeyRequest) returns (RotateAPIKeyResponse);
+
+  // RevokeAPIKey permanently revokes an API key so it can no longer be used
+  // to authenticate requests. Unlike RotateAPIKey, no replacement is created.
+  rpc RevokeAPIKey(RevokeAPIKeyRequest) returns (google.protobuf.Empty);
+
+  // ListAPIKeys returns a paginated list of API keys for the target account.
+  // Supports cursor-based pagination and optional search filtering.
+  rpc ListAPIKeys(ListAPIKeysRequest) returns (ListAPIKeysResponse);
+
+  // GetOrCreateDocAPIKey returns a sandbox API key for embedding in API
+  // documentation. Reuses an existing valid key or creates/rotates one as
+  // needed. Only callable by internal admin users.
+  rpc GetOrCreateDocAPIKey(GetOrCreateDocAPIKeyRequest) returns (GetOrCreateDocAPIKeyResponse);
 }
 
 // LoginRequest carries the credentials for user authentication.
@@ -261,4 +285,110 @@ message UpdatePasswordRequest {
   string old_password = 1;
   // NewPassword is the new plaintext password to set.
   string new_password = 2;
+}
+
+// CreateAPIKeyRequest carries the data needed to create a new API key.
+message CreateAPIKeyRequest {
+  // RoleID is the role to assign to the API key.
+  string role_id = 1;
+  // Name is a human-readable label for the API key.
+  string name = 2;
+  // ExpiresAt is an optional expiration timestamp for the API key.
+  optional google.protobuf.Timestamp expires_at = 3;
+}
+
+// CreateAPIKeyResponse is returned after successfully creating an API key.
+message CreateAPIKeyResponse {
+  // APIKeySecret is the full secret value, shown only at creation time.
+  string api_key_secret = 1;
+  // APIKey is the API key metadata.
+  APIKeyInfo api_key = 2;
+}
+
+// RotateAPIKeyRequest carries the ID of the API key to rotate and an optional
+// expiration override. If expires_at is not set, the new key inherits the old
+// key's expiration.
+message RotateAPIKeyRequest {
+  // APIKeyID is the prefixed unique identifier of the key to rotate.
+  string api_key_id = 1;
+  // ExpiresAt is an optional expiration timestamp override for the new API key.
+  optional google.protobuf.Timestamp expires_at = 2;
+}
+
+// RotateAPIKeyResponse is returned after successfully rotating an API key.
+message RotateAPIKeyResponse {
+  // APIKeySecret is the full secret value of the new key, shown only once.
+  string api_key_secret = 1;
+  // APIKey is the new API key's metadata.
+  APIKeyInfo api_key = 2;
+}
+
+// RevokeAPIKeyRequest carries the ID of the API key to revoke.
+message RevokeAPIKeyRequest {
+  // APIKeyID is the prefixed unique identifier of the key to revoke.
+  string api_key_id = 1;
+}
+
+// ListAPIKeysRequest carries pagination and search parameters for listing
+// API keys.
+message ListAPIKeysRequest {
+  // Cursor is the opaque pagination cursor from a previous response's
+  // next_cursor field. Omit for the first page.
+  optional string cursor = 1;
+  // Limit is the maximum number of API keys to return per page.
+  int32 limit = 2;
+  // Query is an optional search string to filter API keys by name.
+  optional string query = 3;
+  // Statuses filters API keys by status. Valid values: "active", "expired",
+  // "revoked". When empty, all statuses are included.
+  repeated string statuses = 4;
+}
+
+// ListAPIKeysResponse contains a page of API key metadata plus pagination
+// indicators.
+message ListAPIKeysResponse {
+  // APIKeys is the list of API key metadata for this page.
+  repeated APIKeyInfo api_keys = 1;
+  // HasMore indicates whether additional pages exist after this one.
+  bool has_more = 2;
+  // NextCursor is the opaque cursor to pass in the next request's cursor
+  // field. Absent when has_more is false.
+  optional string next_cursor = 3;
+}
+
+// APIKeyInfo represents API key metadata as returned to API clients.
+message APIKeyInfo {
+  // ID is the prefixed unique identifier (e.g. "ak_01gf7a8200eaj8fke1xvw4h50x").
+  string id = 1;
+  // Name is the human-readable label for the API key.
+  string name = 2;
+  // RedactedValue is the redacted API key value for display purposes.
+  string redacted_value = 3;
+  // RoleID is the role assigned to this API key.
+  string role_id = 4;
+  // RoleName is the display name of the assigned role.
+  string role_name = 5;
+  // CreatedAt is when the API key was created.
+  google.protobuf.Timestamp created_at = 6;
+  // UpdatedAt is when the API key was last modified.
+  google.protobuf.Timestamp updated_at = 7;
+  // LastUsedAt is when the API key was last used to authenticate a request.
+  optional google.protobuf.Timestamp last_used_at = 8;
+  // ExpiresAt is when the API key expires.
+  optional google.protobuf.Timestamp expires_at = 9;
+  // RevokedAt is when the API key was revoked.
+  optional google.protobuf.Timestamp revoked_at = 10;
+}
+
+// GetOrCreateDocAPIKeyRequest is empty because the caller's identity is
+// extracted from gRPC metadata.
+message GetOrCreateDocAPIKeyRequest {}
+
+// GetOrCreateDocAPIKeyResponse contains the full API key secret (decrypted
+// from storage) and the API key metadata.
+message GetOrCreateDocAPIKeyResponse {
+  // APIKeySecret is the full secret value for the documentation key.
+  string api_key_secret = 1;
+  // APIKey is the API key metadata.
+  APIKeyInfo api_key = 2;
 }

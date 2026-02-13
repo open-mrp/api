@@ -404,6 +404,21 @@ func TestRespondWithJSON_WithOptions(t *testing.T) {
 	}
 }
 
+func TestRespondWithJSON_WithLocation(t *testing.T) {
+	payload := map[string]any{"id": "ak_123"}
+	ctx := context.Background()
+	w := httptest.NewRecorder()
+
+	RespondWithJSON(ctx, w, http.StatusCreated, payload, WithLocation("/v1/auth/api-keys/ak_123"))
+
+	if w.Code != http.StatusCreated {
+		t.Fatalf("expected status code %d, got %d", http.StatusCreated, w.Code)
+	}
+	if w.Header().Get(header.LocationHeader) != "/v1/auth/api-keys/ak_123" {
+		t.Fatalf("expected Location %q, got %q", "/v1/auth/api-keys/ak_123", w.Header().Get(header.LocationHeader))
+	}
+}
+
 func TestRespondWithJSONBytes(t *testing.T) {
 	body := []byte(`{"replayed":true}`)
 	rl := &appctx.RequestLog{ID: "req-123"}

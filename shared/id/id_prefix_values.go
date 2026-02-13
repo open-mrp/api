@@ -38,6 +38,7 @@ const (
 	VocDiscount     = "ds"
 	VocDefinition   = "df"
 	VocDepartment   = "dp"
+	VocDocument     = "do"
 	VocEDI          = "ed"
 	VocEmail        = "em"
 	VocEnterprise   = "en"
@@ -164,6 +165,7 @@ var (
 	// API-related prefix values
 	APILocationIDPrefix = composePrefix(VocAPI, VocLocation)
 	APIKeyIDPrefix      = composePrefix(VocAPI, VocKey)
+	DocAPIKeyIDPrefix   = composePrefix(VocDocument, VocAPI, VocKey)
 
 	// Attribute-related prefix values
 	AttributeIDPrefix = composePrefix(VocAttribute)

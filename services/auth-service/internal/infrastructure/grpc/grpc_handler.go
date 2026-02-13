@@ -2,9 +2,11 @@ package grpc
 
 import (
 	"context"
+	"time"
 
 	"github.com/augno/api/services/auth-service/internal/domain"
 	"github.com/augno/api/shared/appctx"
+	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/contracts"
 	pb "github.com/augno/api/shared/proto/auth"
 
@@ -15,18 +17,22 @@ import (
 type gRPCHandler struct {
 	pb.UnimplementedAuthServiceServer
 
-	authSvc     domain.AuthSvc
-	userSvc     domain.UserSvc
-	tokenSvc    domain.TokenSvc
-	passwordSvc domain.PasswordSvc
+	authSvc      domain.AuthSvc
+	userSvc      domain.UserSvc
+	tokenSvc     domain.TokenSvc
+	passwordSvc  domain.PasswordSvc
+	apiKeySvc    domain.APIKeySvc
+	docAPIKeySvc domain.DocAPIKeySvc
 }
 
-func NewGRPCHandler(server *grpc.Server, authSvc domain.AuthSvc, userSvc domain.UserSvc, tokenSvc domain.TokenSvc, passwordSvc domain.PasswordSvc) *gRPCHandler {
+func NewGRPCHandler(server *grpc.Server, authSvc domain.AuthSvc, userSvc domain.UserSvc, tokenSvc domain.TokenSvc, passwordSvc domain.PasswordSvc, apiKeySvc domain.APIKeySvc, docAPIKeySvc domain.DocAPIKeySvc) *gRPCHandler {
 	handler := &gRPCHandler{
-		authSvc:     authSvc,
-		userSvc:     userSvc,
-		tokenSvc:    tokenSvc,
-		passwordSvc: passwordSvc,
+		authSvc:      authSvc,
+		userSvc:      userSvc,
+		tokenSvc:     tokenSvc,
+		passwordSvc:  passwordSvc,
+		apiKeySvc:    apiKeySvc,
+		docAPIKeySvc: docAPIKeySvc,
 	}
 
 	pb.RegisterAuthServiceServer(server, handler)
@@ -176,4 +182,128 @@ func (h *gRPCHandler) UpdatePassword(ctx context.Context, req *pb.UpdatePassword
 	}
 
 	return &emptypb.Empty{}, nil
+}
+
+func (h *gRPCHandler) CreateAPIKey(ctx context.Context, req *pb.CreateAPIKeyRequest) (*pb.CreateAPIKeyResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	var expiresAt *time.Time
+	if req.ExpiresAt != nil {
+		t := req.ExpiresAt.AsTime()
+		if !t.IsZero() {
+			expiresAt = &t
+		}
+	}
+
+	result, apiErr := h.apiKeySvc.CreateAPIKey(ctx, domain.CreateAPIKeyInput{
+		RoleID:    req.RoleId,
+		Name:      req.Name,
+		ExpiresAt: expiresAt,
+	})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.CreateAPIKeyResponse{
+		ApiKeySecret: result.APIKeySecret,
+		ApiKey:       result.APIKey.ToProto(),
+	}, nil
+}
+
+func (h *gRPCHandler) ListAPIKeys(ctx context.Context, req *pb.ListAPIKeysRequest) (*pb.ListAPIKeysResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	statuses := make([]constants.APIKeyStatus, len(req.Statuses))
+	for i, s := range req.Statuses {
+		statuses[i] = constants.APIKeyStatus(s)
+	}
+
+	result, apiErr := h.apiKeySvc.ListAPIKeys(ctx, req.Cursor, req.Limit, req.Query, statuses)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	pbKeys := make([]*pb.APIKeyInfo, len(result.APIKeys))
+	for i, key := range result.APIKeys {
+		pbKeys[i] = key.ToProto()
+	}
+
+	return &pb.ListAPIKeysResponse{
+		ApiKeys:    pbKeys,
+		HasMore:    result.HasMore,
+		NextCursor: result.NextCursor,
+	}, nil
+}
+
+func (h *gRPCHandler) RevokeAPIKey(ctx context.Context, req *pb.RevokeAPIKeyRequest) (*emptypb.Empty, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	apiErr := h.apiKeySvc.RevokeAPIKey(ctx, domain.RevokeAPIKeyInput{
+		APIKeyID: req.ApiKeyId,
+	})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func (h *gRPCHandler) RotateAPIKey(ctx context.Context, req *pb.RotateAPIKeyRequest) (*pb.RotateAPIKeyResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	input := domain.RotateAPIKeyInput{
+		APIKeyID: req.ApiKeyId,
+	}
+	if req.ExpiresAt != nil {
+		t := req.ExpiresAt.AsTime()
+		if !t.IsZero() {
+			input.ExpiresAt = &t
+		}
+	}
+
+	result, apiErr := h.apiKeySvc.RotateAPIKey(ctx, input)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.RotateAPIKeyResponse{
+		ApiKeySecret: result.APIKeySecret,
+		ApiKey:       result.APIKey.ToProto(),
+	}, nil
+}
+
+func (h *gRPCHandler) GetOrCreateDocAPIKey(ctx context.Context, req *pb.GetOrCreateDocAPIKeyRequest) (*pb.GetOrCreateDocAPIKeyResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	result, apiErr := h.docAPIKeySvc.GetOrCreateDocAPIKey(ctx)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.GetOrCreateDocAPIKeyResponse{
+		ApiKeySecret: result.APIKeySecret,
+		ApiKey:       result.APIKey.ToProto(),
+	}, nil
 }

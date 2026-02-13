@@ -22,7 +22,29 @@ type AuthMiddlewareConfig struct {
 	AuthClient *grpcclient.AuthServiceClient
 }
 
-func AuthMiddleware(config AuthMiddlewareConfig) func(http.HandlerFunc) http.HandlerFunc {
+// WithDefaults returns a new AuthMiddlewareConfig with zero-value fields replaced by defaults.
+func (c *AuthMiddlewareConfig) WithDefaults() *AuthMiddlewareConfig {
+	if c == nil {
+		c = &AuthMiddlewareConfig{}
+	}
+	return &AuthMiddlewareConfig{
+		AuthClient: c.AuthClient,
+	}
+}
+
+func (c *AuthMiddlewareConfig) validate() error {
+	if c.AuthClient == nil {
+		return fmt.Errorf("auth middleware: auth client is required")
+	}
+	return nil
+}
+
+func AuthMiddleware(config *AuthMiddlewareConfig) func(http.HandlerFunc) http.HandlerFunc {
+	config = config.WithDefaults()
+	if err := config.validate(); err != nil {
+		panic(err)
+	}
+
 	return func(next http.HandlerFunc) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
 			// Skip authentication for health check endpoint to allow ALB health checks to pass.

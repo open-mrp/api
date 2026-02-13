@@ -485,16 +485,19 @@ func (r APIErrorResponse) SchemaExample() any {
 // ToResponseMap converts the APIError into an APIErrorResponse suitable for JSON
 // serialization in HTTP responses. Only public fields are included.
 func (e *APIError) ToResponseMap() any {
-	return APIErrorResponse{
-		Error: ResponseError{
-			Code:        e.Code,
-			Type:        e.Type,
-			Message:     e.PublicMessage,
-			Param:       ptrutil.Ptr(e.Param),
-			DocURL:      ptrutil.Ptr(e.DocURL),
-			IsTransient: e.IsTransient,
-		},
+	resp := ResponseError{
+		Code:        e.Code,
+		Type:        e.Type,
+		Message:     e.PublicMessage,
+		IsTransient: e.IsTransient,
 	}
+	if e.Param != "" {
+		resp.Param = ptrutil.Ptr(e.Param)
+	}
+	if e.DocURL != "" {
+		resp.DocURL = ptrutil.Ptr(e.DocURL)
+	}
+	return APIErrorResponse{Error: resp}
 }
 
 // GetHTTPStatusCode maps an ErrorCode to the appropriate HTTP status code.

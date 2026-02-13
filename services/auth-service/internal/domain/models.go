@@ -6,6 +6,8 @@ import (
 
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
+	pb "github.com/augno/api/shared/proto/auth"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type APIKey struct {
@@ -27,24 +29,44 @@ type APIKey struct {
 	RevokedAt      *time.Time
 }
 
-// func (m *APIKey) ToProto() *pb.APIKey {
-// 	if m == nil {
-// 		return nil
-// 	}
+func (m *APIKey) ToProto() *pb.APIKeyInfo {
+	if m == nil {
+		return nil
+	}
 
-// 	return &pb.APIKey{
-// 		Id:            m.TypeID,
-// 		Name:          m.Name,
-// 		RedactedValue: m.RedactedValue,
-// 		RoleId:        m.RoleID,
-// 		RoleName:      m.RoleName,
-// 		CreatedAt:     timestamppb.New(m.CreatedAt),
-// 		UpdatedAt:     timestamppb.New(m.UpdatedAt),
-// 		LastUsedAt:    ptrutil.TimePtrToProto(m.LastUsedAt),
-// 		ExpiresAt:     ptrutil.TimePtrToProto(m.ExpiresAt),
-// 		RevokedAt:     ptrutil.TimePtrToProto(m.RevokedAt),
-// 	}
-// }
+	info := &pb.APIKeyInfo{
+		Id:            m.TypeID,
+		Name:          m.Name,
+		RedactedValue: m.RedactedValue,
+		RoleId:        m.RoleID,
+		RoleName:      m.RoleName,
+		CreatedAt:     timestamppb.New(m.CreatedAt),
+		UpdatedAt:     timestamppb.New(m.UpdatedAt),
+	}
+
+	if m.LastUsedAt != nil {
+		info.LastUsedAt = timestamppb.New(*m.LastUsedAt)
+	}
+	if m.ExpiresAt != nil {
+		info.ExpiresAt = timestamppb.New(*m.ExpiresAt)
+	}
+	if m.RevokedAt != nil {
+		info.RevokedAt = timestamppb.New(*m.RevokedAt)
+	}
+
+	return info
+}
+
+type DocAPIKey struct {
+	ID              int64
+	TypeID          string
+	APIKeyID        string
+	EncryptedSecret string
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	APIKeyExpiresAt *time.Time
+	APIKeyRevokedAt *time.Time
+}
 
 type AuthAccountRelation struct {
 	ID                      string

@@ -29,7 +29,37 @@ type APIKeyMedConfig struct {
 	CoreClient  domain.AuthCoreClient
 }
 
-func NewAPIKeyMed(config APIKeyMedConfig) domain.APIKeyMed {
+// WithDefaults returns a new APIKeyMedConfig with zero-value fields replaced by defaults.
+func (c *APIKeyMedConfig) WithDefaults() *APIKeyMedConfig {
+	if c == nil {
+		c = &APIKeyMedConfig{}
+	}
+	return &APIKeyMedConfig{
+		Repos:       c.Repos,
+		APIKeyUtils: c.APIKeyUtils,
+		CoreClient:  c.CoreClient,
+	}
+}
+
+func (c *APIKeyMedConfig) validate() error {
+	if c.Repos == nil {
+		return fmt.Errorf("api key mediator: repos is required")
+	}
+	if c.APIKeyUtils == nil {
+		return fmt.Errorf("api key mediator: api key utils is required")
+	}
+	if c.CoreClient == nil {
+		return fmt.Errorf("api key mediator: core client is required")
+	}
+	return nil
+}
+
+func NewAPIKeyMed(config *APIKeyMedConfig) domain.APIKeyMed {
+	config = config.WithDefaults()
+	if err := config.validate(); err != nil {
+		panic(err)
+	}
+
 	return &apiKeyMedImpl{
 		repos:       config.Repos,
 		apiKeyUtils: config.APIKeyUtils,
@@ -37,8 +67,8 @@ func NewAPIKeyMed(config APIKeyMedConfig) domain.APIKeyMed {
 	}
 }
 
-func DefaultAPIKeyMedConfig(queries *sqlc.Queries, pepper []byte) APIKeyMedConfig {
-	return APIKeyMedConfig{
+func DefaultAPIKeyMedConfig(queries *sqlc.Queries, pepper []byte) *APIKeyMedConfig {
+	return &APIKeyMedConfig{
 		Repos:       repository.NewRepoFactory(queries),
 		APIKeyUtils: apikey.NewAPIKeyUtils(&apikey.APIKeyConfig{Pepper: pepper}),
 	}
@@ -146,12 +176,13 @@ func (s *apiKeyMedImpl) Create(ctx context.Context, accountMode constants.Accoun
 	}
 
 	// Create the API key model
+	fullKey := parsedKey.String()
 	apiKeyModel := &domain.APIKey{
 		TypeID:         typeID,
 		KeyID:          parsedKey.ID,
 		Name:           name,
 		SecretHash:     secretHash,
-		LastFour:       parsedKey.Secret[len(parsedKey.Secret)-4:],
+		LastFour:       fullKey[len(fullKey)-4:],
 		OwnerAccountID: ownerAccountID,
 		RoleID:         roleID,
 		ExpiresAt:      expiresAt,
@@ -171,12 +202,48 @@ func (s *apiKeyMedImpl) Create(ctx context.Context, accountMode constants.Accoun
 	return parsedKey.String(), apiKeyModel, nil
 }
 
-func (s *apiKeyMedImpl) List(ctx context.Context, accountMode constants.AccountMode, ownerAccountID string, cursor *string, limit int32, query *string) ([]*domain.APIKey, int64, *apierror.APIError) {
+func (s *apiKeyMedImpl) Revoke(ctx context.Context, apiKeyTypeID string) *apierror.APIError {
+	ctx, span := apiKeyMedTracer.Start(ctx, "mediator.api_key.revoke")
+	defer span.End()
+
+	apiKeyRepo := s.repos.NewAPIKeyRepo()
+
+	if _, apiErr := apiKeyRepo.FindByTypeID(ctx, apiKeyTypeID); apiErr != nil {
+		return apiErr
+	}
+
+	return apiKeyRepo.Revoke(ctx, apiKeyTypeID)
+}
+
+func (s *apiKeyMedImpl) Rotate(ctx context.Context, accountMode constants.AccountMode, apiKeyTypeID string, expiresAt *time.Time) (string, *domain.APIKey, *apierror.APIError) {
+	ctx, span := apiKeyMedTracer.Start(ctx, "mediator.api_key.rotate")
+	defer span.End()
+
+	apiKeyRepo := s.repos.NewAPIKeyRepo()
+
+	oldKey, apiErr := apiKeyRepo.FindByTypeID(ctx, apiKeyTypeID)
+	if apiErr != nil {
+		return "", nil, apiErr
+	}
+
+	if apiErr := apiKeyRepo.Delete(ctx, apiKeyTypeID); apiErr != nil {
+		return "", nil, apiErr
+	}
+
+	effectiveExpiresAt := oldKey.ExpiresAt
+	if expiresAt != nil {
+		effectiveExpiresAt = expiresAt
+	}
+
+	return s.Create(ctx, accountMode, oldKey.OwnerAccountID, oldKey.RoleID, oldKey.Name, effectiveExpiresAt)
+}
+
+func (s *apiKeyMedImpl) List(ctx context.Context, accountMode constants.AccountMode, ownerAccountID string, cursor *string, limit int32, query *string, statuses []constants.APIKeyStatus) ([]*domain.APIKey, int64, *apierror.APIError) {
 	ctx, span := apiKeyMedTracer.Start(ctx, "mediator.api_key.list")
 	defer span.End()
 
 	apiKeyRepo := s.repos.NewAPIKeyRepo()
-	return apiKeyRepo.List(ctx, accountMode, ownerAccountID, cursor, limit, query)
+	return apiKeyRepo.List(ctx, accountMode, ownerAccountID, cursor, limit, query, statuses)
 }
 
 func (s *apiKeyMedImpl) GetKeyAccountAccess(ctx context.Context, accountMode constants.AccountMode, apiKeyID int64, targetAccountID string) (*domain.APIKeyAccountAccess, *apierror.APIError) {

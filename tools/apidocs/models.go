@@ -44,6 +44,7 @@ type Parameter struct {
 	Description string `json:"description,omitempty"`
 	Required    bool   `json:"required,omitempty"`
 	Schema      Schema `json:"schema"`
+	Example     any    `json:"example,omitempty"`
 }
 
 type RequestBody struct {
@@ -87,6 +88,10 @@ type Schema struct {
 	AdditionalProperties         *Schema           `json:"additionalProperties,omitempty"`
 	XStainlessEmptyObject        bool              `json:"x-stainless-empty-object,omitempty"`
 	XStainlessPaginationProperty map[string]string `json:"x-stainless-pagination-property,omitempty"`
+
+	// PropertyOrder tracks struct field insertion order for JSON output.
+	// Not serialized; used during post-processing to reorder properties.
+	PropertyOrder []string `json:"-"`
 }
 
 type Components struct {

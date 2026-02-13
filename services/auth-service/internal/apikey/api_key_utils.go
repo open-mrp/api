@@ -3,14 +3,13 @@ package apikey
 import (
 	"cmp"
 	"context"
-	"crypto/hmac"
-	"crypto/sha256"
 	"fmt"
 	"strings"
 
 	"github.com/augno/api/services/auth-service/internal/domain"
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
+	"github.com/augno/api/shared/crypto"
 	apierror "github.com/augno/api/shared/errors"
 	sanitize "github.com/augno/api/shared/sanitize"
 	"github.com/augno/api/shared/tracing"
@@ -162,12 +161,7 @@ func (aku *apiKeyUtilsImpl) GenSecretHMAC(ctx context.Context, secret string) ([
 	_, span := apiKeyUtilsTracer.Start(ctx, "utils.api_key.generate_secret_hmac")
 	defer span.End()
 
-	storedHMAC, err := hmacSHA256(aku.config.Pepper, []byte(secret))
-	if err != nil {
-		return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to generate HMAC."))
-	}
-
-	return storedHMAC, nil
+	return crypto.HMACSHA256(aku.config.Pepper, []byte(secret)), nil
 }
 
 // VerifySecretHMAC verifies a given secret against a expected HMAC.
@@ -175,12 +169,7 @@ func (aku *apiKeyUtilsImpl) VerifySecretHMAC(ctx context.Context, secret string,
 	_, span := apiKeyUtilsTracer.Start(ctx, "utils.api_key.verify_secret_hmac")
 	defer span.End()
 
-	computedHMAC, err := hmacSHA256(aku.config.Pepper, []byte(secret))
-	if err != nil {
-		return false, tracing.Trace(span, apierror.NewInternalError(err, "Failed to generate HMAC for verification."))
-	}
-
-	return hmac.Equal(computedHMAC, expectedHMAC), nil
+	return crypto.VerifyHMACSHA256(aku.config.Pepper, []byte(secret), expectedHMAC), nil
 }
 
 // SanitizeForDisplay sanitizes a given API key for display.
@@ -202,17 +191,15 @@ func (aku *apiKeyUtilsImpl) lengthForKeyStrength(strength KeyStrength) int {
 	return 44 // as default keystrength is high
 }
 
-func hmacSHA256(key, data []byte) ([]byte, error) {
-	h := hmac.New(sha256.New, key)
-	h.Write(data)
-	return h.Sum(nil), nil
-}
-
 func (aku *apiKeyUtilsImpl) invalidAPIKeyError(span trace.Span, key string) *apierror.APIError {
 	message := fmt.Sprintf("%s: %s. Valid API keys start with '%s'.", ErrAPIKeyInvalid, aku.SanitizeForDisplay(key), string(types.APIKeyPrefixSecretKey))
 	return tracing.Trace(span, apierror.NewInvalidFormatError(message, "api_key"))
 }
 
+// RedactAPIKeyValue redacts a given API key value for display.
+//
+//  1. Redacts the API key value for display.
+//  2. Returns the redacted API key value.
 func RedactAPIKeyValue(apiKeyModel *domain.APIKey, appMode constants.AccountMode) string {
 	return string(types.APIKeyPrefixSecretKey) + string(appMode) + "_" + "****" + apiKeyModel.LastFour
 }

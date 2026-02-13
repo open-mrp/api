@@ -2,6 +2,7 @@ package mediator
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -37,13 +38,47 @@ type UserMedConfig struct {
 	NotificationPublisher domain.NotificationPublisher
 }
 
-func NewUserMed(config UserMedConfig) domain.UserMed {
-	if config.JWTSecret == "" {
-		panic("JWTSecret is not set in the config.")
+// WithDefaults returns a new UserMedConfig with zero-value fields replaced by defaults.
+func (c *UserMedConfig) WithDefaults() *UserMedConfig {
+	if c == nil {
+		c = &UserMedConfig{}
 	}
+	return &UserMedConfig{
+		Repos:                 c.Repos,
+		JWTSecret:             c.JWTSecret,
+		RefreshTokenMed:       c.RefreshTokenMed,
+		APIKeyMed:             c.APIKeyMed,
+		CoreClient:            c.CoreClient,
+		NotificationPublisher: c.NotificationPublisher,
+	}
+}
 
-	if config.NotificationPublisher == nil {
-		panic("NotificationPublisher is not set in the config.")
+func (c *UserMedConfig) validate() error {
+	if c.Repos == nil {
+		return fmt.Errorf("user mediator: repos is required")
+	}
+	if c.JWTSecret == "" {
+		return fmt.Errorf("user mediator: jwt secret is required")
+	}
+	if c.RefreshTokenMed == nil {
+		return fmt.Errorf("user mediator: refresh token mediator is required")
+	}
+	if c.APIKeyMed == nil {
+		return fmt.Errorf("user mediator: api key mediator is required")
+	}
+	if c.CoreClient == nil {
+		return fmt.Errorf("user mediator: core client is required")
+	}
+	if c.NotificationPublisher == nil {
+		return fmt.Errorf("user mediator: notification publisher is required")
+	}
+	return nil
+}
+
+func NewUserMed(config *UserMedConfig) domain.UserMed {
+	config = config.WithDefaults()
+	if err := config.validate(); err != nil {
+		panic(err)
 	}
 
 	return &userMedImpl{

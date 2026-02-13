@@ -36,13 +36,43 @@ type PasswordMedConfig struct {
 	FrontendURL           string
 }
 
-func NewPasswordMed(config PasswordMedConfig) domain.PasswordMed {
-	if config.NotificationPublisher == nil {
-		panic("NotificationPublisher is not set in the config.")
+// WithDefaults returns a new PasswordMedConfig with zero-value fields replaced by defaults.
+func (c *PasswordMedConfig) WithDefaults() *PasswordMedConfig {
+	if c == nil {
+		c = &PasswordMedConfig{}
 	}
+	return &PasswordMedConfig{
+		Repos:                 c.Repos,
+		RefreshTokenMed:       c.RefreshTokenMed,
+		JWTUtils:              c.JWTUtils,
+		NotificationPublisher: c.NotificationPublisher,
+		FrontendURL:           c.FrontendURL,
+	}
+}
 
-	if config.FrontendURL == "" {
-		panic("FrontendURL is not set in the config.")
+func (c *PasswordMedConfig) validate() error {
+	if c.Repos == nil {
+		return fmt.Errorf("password mediator: repos is required")
+	}
+	if c.RefreshTokenMed == nil {
+		return fmt.Errorf("password mediator: refresh token mediator is required")
+	}
+	if c.JWTUtils == nil {
+		return fmt.Errorf("password mediator: jwt utils is required")
+	}
+	if c.NotificationPublisher == nil {
+		return fmt.Errorf("password mediator: notification publisher is required")
+	}
+	if c.FrontendURL == "" {
+		return fmt.Errorf("password mediator: frontend url is required")
+	}
+	return nil
+}
+
+func NewPasswordMed(config *PasswordMedConfig) domain.PasswordMed {
+	config = config.WithDefaults()
+	if err := config.validate(); err != nil {
+		panic(err)
 	}
 
 	return &passwordMedImpl{
@@ -54,17 +84,9 @@ func NewPasswordMed(config PasswordMedConfig) domain.PasswordMed {
 	}
 }
 
-func DefaultPasswordMedConfig(queries *sqlc.Queries, jwtSecret string, pepper []byte, frontendURL string, notificationPublisher domain.NotificationPublisher) PasswordMedConfig {
+func DefaultPasswordMedConfig(queries *sqlc.Queries, jwtSecret string, pepper []byte, frontendURL string, notificationPublisher domain.NotificationPublisher) *PasswordMedConfig {
 	factory := repository.NewRepoFactory(queries)
-	if notificationPublisher == nil {
-		panic("NotificationPublisher is not set in the config.")
-	}
-
-	if frontendURL == "" {
-		panic("FrontendURL is not set in the config.")
-	}
-
-	return PasswordMedConfig{
+	return &PasswordMedConfig{
 		Repos:                 factory,
 		RefreshTokenMed:       NewRefreshTokenMed(DefaultRefreshTokenMedConfig(queries, jwtSecret)),
 		JWTUtils:              token.NewJWTUtils(&token.JWTConfig{Secret: jwtSecret}),
@@ -90,6 +112,10 @@ func (s *passwordMedImpl) Validate(ctx context.Context, identifier, password str
 			return nil, tracing.Trace(span, apierror.NewAuthenticationError(pwdutil.ErrInvalidCredentials))
 		}
 		return nil, tracing.Trace(span, err)
+	}
+
+	if user.HashedPassword == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError(fmt.Sprintf("user %s has no hashed password", user.ID)))
 	}
 
 	match, err := pwdutil.CompareHashAndPassword(ctx, password, *user.HashedPassword)

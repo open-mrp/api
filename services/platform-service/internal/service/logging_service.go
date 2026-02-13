@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/augno/api/services/platform-service/internal/domain"
 	apierror "github.com/augno/api/shared/errors"
@@ -18,7 +19,29 @@ type LoggingSvcConfig struct {
 	Repos domain.RepoFactory
 }
 
-func NewLoggingSvc(config LoggingSvcConfig) domain.LoggingSvc {
+// WithDefaults returns a new LoggingSvcConfig with zero-value fields replaced by defaults.
+func (c *LoggingSvcConfig) WithDefaults() *LoggingSvcConfig {
+	if c == nil {
+		c = &LoggingSvcConfig{}
+	}
+	return &LoggingSvcConfig{
+		Repos: c.Repos,
+	}
+}
+
+func (c *LoggingSvcConfig) validate() error {
+	if c.Repos == nil {
+		return fmt.Errorf("logging service: repos is required")
+	}
+	return nil
+}
+
+func NewLoggingSvc(config *LoggingSvcConfig) domain.LoggingSvc {
+	config = config.WithDefaults()
+	if err := config.validate(); err != nil {
+		panic(err)
+	}
+
 	return &loggingSvcImpl{
 		requestLogRepo: config.Repos.NewRequestLogRepo(),
 	}

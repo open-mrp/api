@@ -13,4 +13,5 @@ const (
 	RateLimitLimitHeader     = "RateLimit-Limit"
 	RateLimitRemainingHeader = "RateLimit-Remaining"
 	RateLimitResetHeader     = "RateLimit-Reset"
+	LocationHeader           = "Location"
 )

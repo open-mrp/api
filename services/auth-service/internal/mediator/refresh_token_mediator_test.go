@@ -34,7 +34,7 @@ func (suite *RefreshTokenMedTestSuite) SetupSuite() {
 	suite.repoFactory = factorymock.NewMockRepoFactory(suite.ctrl)
 	suite.repoFactory.EXPECT().NewRefreshTokenRepo().Return(suite.refreshTokenRepo).AnyTimes()
 
-	refreshTokenMedConfig := RefreshTokenMedConfig{
+	refreshTokenMedConfig := &RefreshTokenMedConfig{
 		Repos:    suite.repoFactory,
 		JWTUtils: suite.jwtUtils,
 	}

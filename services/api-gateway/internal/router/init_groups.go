@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/augno/api/services/api-gateway/internal/middleware"
-	httpgroup "github.com/augno/api/services/api-gateway/internal/router/group"
+	httpgroup "github.com/augno/api/services/api-gateway/pkg/group"
 )
 
 func (r *router) InitEndpointGroups(config MainRouterConfig) {
@@ -22,10 +22,10 @@ func (r *router) InitEndpointGroups(config MainRouterConfig) {
 	loggingMiddleware := func(next http.HandlerFunc) http.HandlerFunc {
 		return middleware.LoggingMiddleware(middlewareLogger, next, requestLogSaver, r)
 	}
-	authMiddlewareConfig := middleware.AuthMiddlewareConfig{
+	authMiddlewareConfig := &middleware.AuthMiddlewareConfig{
 		AuthClient: config.AuthClient,
 	}
-	idempotencyMiddlewareConfig := middleware.IdempotencyMiddlewareConfig{
+	idempotencyMiddlewareConfig := &middleware.IdempotencyMiddlewareConfig{
 		PlatformClient: config.PlatformClient,
 	}
 
@@ -62,7 +62,7 @@ func (r *router) InitAuthEndpointGroups(config AuthRouterConfig) {
 	loggingMiddleware := func(next http.HandlerFunc) http.HandlerFunc {
 		return middleware.LoggingMiddleware(middlewareLogger, next, requestLogSaver, r)
 	}
-	idempotencyMiddlewareConfig := middleware.IdempotencyMiddlewareConfig{
+	idempotencyMiddlewareConfig := &middleware.IdempotencyMiddlewareConfig{
 		PlatformClient: config.PlatformClient,
 	}
 
@@ -78,11 +78,19 @@ func (r *router) InitAuthEndpointGroups(config AuthRouterConfig) {
 	r.AddMiddleware(middleware.RecoverMiddleware())
 
 	// Auth
-	authGroup := (&httpgroup.AuthEndpointGroup{}).Materialize(httpgroup.AuthEndpointGroupConfig{
+	authGroup := (&httpgroup.AuthEndpointGroup{}).Materialize(&httpgroup.AuthEndpointGroupConfig{
 		AuthClient: config.AuthClient,
 	})
 	if authGroup != nil {
 		registry.RegisterGroup(authGroup.APIEndpointGroup)
+	}
+
+	// API Keys
+	apiKeysGroup := (&httpgroup.APIKeysEndpointGroup{}).Materialize(&httpgroup.APIKeysEndpointGroupConfig{
+		AuthClient: config.AuthClient,
+	})
+	if apiKeysGroup != nil {
+		registry.RegisterGroup(apiKeysGroup.APIEndpointGroup)
 	}
 
 	registry.RegisterEndpoints(r)

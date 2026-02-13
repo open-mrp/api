@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/augno/api/shared/contracts"
+	"github.com/augno/api/shared/crypto"
 	"github.com/augno/api/shared/env"
 )
 
@@ -16,14 +17,15 @@ var (
 )
 
 const (
-	envPort               = "PORT"
-	envDBURL              = "DB_URL"
-	envFrontendURL        = "FRONTEND_URL"
-	envJWTSecret          = "JWT_SECRET"
-	envPepper             = "PEPPER"
-	envRabbitMQURI        = "RABBITMQ_URI"
-	envCoreServiceURL     = "CORE_SERVICE_URL"
-	envPlatformServiceURL = "PLATFORM_SERVICE_URL"
+	envPort                   = "PORT"
+	envDBURL                  = "DB_URL"
+	envFrontendURL            = "FRONTEND_URL"
+	envJWTSecret              = "JWT_SECRET"
+	envPepper                 = "PEPPER"
+	envRabbitMQURI            = "RABBITMQ_URI"
+	envCoreServiceURL         = "CORE_SERVICE_URL"
+	envPlatformServiceURL     = "PLATFORM_SERVICE_URL"
+	envDocAPIKeyEncryptionKey = "DOC_API_KEY_ENCRYPTION_KEY" // #nosec G101 - Env var name, not a credential
 )
 
 // config represents the configuration for the auth service.
@@ -51,6 +53,9 @@ type config struct {
 
 	// PlatformServiceURL (required) is the platform service address for gRPC.
 	PlatformServiceURL string
+
+	// DocAPIKeyEncryptionKey (optional) is the 32-byte AES-256 key used to encrypt doc API key secrets.
+	DocAPIKeyEncryptionKey []byte
 }
 
 // withDefaults sets the default values for the configuration.
@@ -64,15 +69,21 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 		port = p
 	}
 
+	key, err := crypto.DecodeHexKey(env.GetEnv(envDocAPIKeyEncryptionKey, getenv))
+	if err != nil {
+		panic(err)
+	}
+
 	return &config{
-		Port:               port,
-		DBURL:              env.GetEnv(envDBURL, getenv),
-		FrontendURL:        env.GetEnv(envFrontendURL, getenv),
-		JWTSecret:          env.GetEnv(envJWTSecret, getenv),
-		Pepper:             []byte(env.GetEnv(envPepper, getenv)),
-		RabbitMQURI:        cmp.Or(env.GetEnv(envRabbitMQURI, getenv), defaultRabbitMQURI),
-		CoreServiceURL:     cmp.Or(env.GetEnv(envCoreServiceURL, getenv), defaultCoreServiceURL),
-		PlatformServiceURL: env.GetEnv(envPlatformServiceURL, getenv),
+		Port:                   port,
+		DBURL:                  env.GetEnv(envDBURL, getenv),
+		FrontendURL:            env.GetEnv(envFrontendURL, getenv),
+		JWTSecret:              env.GetEnv(envJWTSecret, getenv),
+		Pepper:                 []byte(env.GetEnv(envPepper, getenv)),
+		RabbitMQURI:            cmp.Or(env.GetEnv(envRabbitMQURI, getenv), defaultRabbitMQURI),
+		CoreServiceURL:         cmp.Or(env.GetEnv(envCoreServiceURL, getenv), defaultCoreServiceURL),
+		PlatformServiceURL:     env.GetEnv(envPlatformServiceURL, getenv),
+		DocAPIKeyEncryptionKey: key,
 	}
 }
 

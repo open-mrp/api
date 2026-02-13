@@ -20,6 +20,11 @@ type AccountUserRepo interface {
 	FindAffiliationsByUserID(ctx context.Context, userID string) ([]AccountAffiliation, *apierror.APIError)
 	FindLastUsedAccountID(ctx context.Context, userID string) (string, *apierror.APIError)
 	UpdateLastUsedAt(ctx context.Context, accountUserID string, lastUsedAt time.Time) *apierror.APIError
+	GetAdminRoleID(ctx context.Context) (string, *apierror.APIError)
+}
+
+type SandboxAccountRepo interface {
+	FindFirstByOwnerAccountID(ctx context.Context, ownerAccountID string) (string, *apierror.APIError)
 }
 
 type AccountRelationRepo interface {

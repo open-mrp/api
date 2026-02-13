@@ -37,7 +37,7 @@ func (suite *NotificationServiceTestSuite) SetupTest() {
 	suite.emailSender = servicemock.NewMockEmailSender(suite.ctrl)
 	suite.templateRenderer = &stubTemplateRenderer{}
 
-	suite.notificationSvc = NewNotificationSvc(NotificationSvcConfig{
+	suite.notificationSvc = NewNotificationSvc(&NotificationSvcConfig{
 		EmailLogRepo:     suite.emailLogRepo,
 		EmailSender:      suite.emailSender,
 		TemplateRenderer: suite.templateRenderer,

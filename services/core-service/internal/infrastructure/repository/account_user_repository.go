@@ -103,3 +103,15 @@ func (r *accountUserRepoImpl) UpdateLastUsedAt(ctx context.Context, accountUserI
 
 	return nil
 }
+
+func (r *accountUserRepoImpl) GetAdminRoleID(ctx context.Context) (string, *apierror.APIError) {
+	ctx, span := accountUserRepoTracer.Start(ctx, "repository.account_user.get_admin_role_id")
+	defer span.End()
+
+	roleID, err := r.queries.GetAdminRoleID(ctx)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return "", tracing.Trace(span, apiErr)
+	}
+
+	return roleID, nil
+}

@@ -42,4 +42,10 @@ type AuthCoreClient interface {
 
 	// GetRolePermissions returns the permissions for a role
 	GetRolePermissions(ctx context.Context, roleID string) (map[string]bool, *apierror.APIError)
+
+	// GetSandboxAccountByOwner returns the sandbox account ID for a given owner account
+	GetSandboxAccountByOwner(ctx context.Context, ownerAccountID string) (string, *apierror.APIError)
+
+	// GetAdminRole returns the admin role ID
+	GetAdminRole(ctx context.Context) (string, *apierror.APIError)
 }

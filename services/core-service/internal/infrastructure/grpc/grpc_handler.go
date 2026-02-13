@@ -188,3 +188,29 @@ func (h *gRPCHandler) ListUserAccountAffiliations(ctx context.Context, req *pb.L
 		LastUsedAccountId: lastUsedAccountID,
 	}, nil
 }
+
+func (h *gRPCHandler) GetSandboxAccountByOwner(ctx context.Context, req *pb.GetSandboxAccountByOwnerRequest) (*pb.GetSandboxAccountByOwnerResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	sandboxAccountID, apiErr := h.accountSvc.GetSandboxAccountByOwner(ctx, req.OwnerAccountId)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.GetSandboxAccountByOwnerResponse{
+		SandboxAccountId: sandboxAccountID,
+	}, nil
+}
+
+func (h *gRPCHandler) GetAdminRole(ctx context.Context, req *emptypb.Empty) (*pb.GetAdminRoleResponse, error) {
+	roleID, apiErr := h.accountSvc.GetAdminRole(ctx)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.GetAdminRoleResponse{
+		RoleId: roleID,
+	}, nil
+}

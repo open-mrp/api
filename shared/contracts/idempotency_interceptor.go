@@ -203,7 +203,7 @@ func (c *LocalIdempotencyChecker) StoreResponse(ctx context.Context, key string,
 type PlatformIdempotencyChecker struct {
 	processFunc     func(ctx context.Context, key string, requestParams []byte) (*ProcessIdempotencyResult, error)
 	setResponseFunc func(ctx context.Context, keyID string, statusCode int, body []byte) error
-	currentKeyID string
+	currentKeyID    string
 }
 
 // ProcessIdempotencyResult is the response from the platform service's idempotency check.

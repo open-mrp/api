@@ -2,9 +2,11 @@ package authep
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/augno/api/services/api-gateway/internal/cookie"
+	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/appctx"
@@ -16,7 +18,6 @@ import (
 )
 
 const (
-	AuthServiceName        = "Authentication service"
 	MissingAuthApiKeyError = "This client is not authorized."
 )
 
@@ -40,14 +41,36 @@ type authSvcImpl struct {
 
 var authSvcTracer = tracing.GetTracer("api-gateway.endpoints.auth.service")
 
-func NewAuthSvc(config AuthSvcConfig) AuthSvc {
+// WithDefaults returns a new AuthSvcConfig with zero-value fields replaced by defaults.
+func (c *AuthSvcConfig) WithDefaults() *AuthSvcConfig {
+	if c == nil {
+		c = &AuthSvcConfig{}
+	}
+	return &AuthSvcConfig{
+		AuthClient: c.AuthClient,
+	}
+}
+
+func (c *AuthSvcConfig) validate() error {
+	if c.AuthClient == nil {
+		return fmt.Errorf("auth endpoint service: auth client is required")
+	}
+	return nil
+}
+
+func NewAuthSvc(config *AuthSvcConfig) AuthSvc {
+	config = config.WithDefaults()
+	if err := config.validate(); err != nil {
+		panic(err)
+	}
+
 	return &authSvcImpl{
 		authClient: config.AuthClient,
 	}
 }
 
 func (m *authSvcImpl) Login(ctx context.Context, req *LoginRequest) (*apiresource.User, *apierror.APIError) {
-	resp, apiErr := grpcutil.CallRPC(ctx, authSvcTracer, "service.auth.login", AuthServiceName,
+	resp, apiErr := grpcutil.CallRPC(ctx, authSvcTracer, "service.auth.login", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.LoginResponse, error) {
 			return m.authClient.Login(ctx, &pb.LoginRequest{
 				Identifier: req.Identifier,
@@ -66,7 +89,7 @@ func (m *authSvcImpl) Login(ctx context.Context, req *LoginRequest) (*apiresourc
 }
 
 func (m *authSvcImpl) Register(ctx context.Context, req *RegisterRequest) (*apiresource.User, *apierror.APIError) {
-	resp, apiErr := grpcutil.CallRPC(ctx, authSvcTracer, "service.auth.register", AuthServiceName,
+	resp, apiErr := grpcutil.CallRPC(ctx, authSvcTracer, "service.auth.register", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.LoginResponse, error) {
 			return m.authClient.Register(ctx, &pb.RegisterRequest{
 				Email:    req.Email,
@@ -86,7 +109,7 @@ func (m *authSvcImpl) Register(ctx context.Context, req *RegisterRequest) (*apir
 }
 
 func (m *authSvcImpl) RefreshToken(ctx context.Context, req *RefreshTokenRequest) (*apiresource.EmptyResource, *apierror.APIError) {
-	resp, apiErr := grpcutil.CallRPC(ctx, authSvcTracer, "service.auth.refresh_token", AuthServiceName,
+	resp, apiErr := grpcutil.CallRPC(ctx, authSvcTracer, "service.auth.refresh_token", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.RefreshTokenResponse, error) {
 			return m.authClient.RefreshToken(ctx, &pb.RefreshTokenRequest{
 				RefreshToken: req.RefreshToken,
@@ -103,7 +126,7 @@ func (m *authSvcImpl) RefreshToken(ctx context.Context, req *RefreshTokenRequest
 }
 
 func (m *authSvcImpl) RequestPasswordReset(ctx context.Context, req *RequestPasswordResetRequest) (*apiresource.EmptyResource, *apierror.APIError) {
-	_, apiErr := grpcutil.CallRPC(ctx, authSvcTracer, "service.auth.request_password_reset", AuthServiceName,
+	_, apiErr := grpcutil.CallRPC(ctx, authSvcTracer, "service.auth.request_password_reset", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 			return m.authClient.RequestPasswordReset(ctx, &pb.RequestPasswordResetRequest{
 				Identifier:  req.Identifier,
@@ -119,7 +142,7 @@ func (m *authSvcImpl) RequestPasswordReset(ctx context.Context, req *RequestPass
 }
 
 func (m *authSvcImpl) ResetPassword(ctx context.Context, req *ResetPasswordRequest) (*apiresource.EmptyResource, *apierror.APIError) {
-	resp, apiErr := grpcutil.CallRPC(ctx, authSvcTracer, "service.auth.reset_password", AuthServiceName,
+	resp, apiErr := grpcutil.CallRPC(ctx, authSvcTracer, "service.auth.reset_password", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.LoginResponse, error) {
 			return m.authClient.ResetPassword(ctx, &pb.ResetPasswordRequest{
 				Token:    req.Token,
@@ -137,7 +160,7 @@ func (m *authSvcImpl) ResetPassword(ctx context.Context, req *ResetPasswordReque
 }
 
 func (m *authSvcImpl) RevokeRefreshToken(ctx context.Context, req *RevokeRefreshTokenRequest) (*apiresource.EmptyResource, *apierror.APIError) {
-	_, apiErr := grpcutil.CallRPC(ctx, authSvcTracer, "service.auth.revoke_refresh_token", AuthServiceName,
+	_, apiErr := grpcutil.CallRPC(ctx, authSvcTracer, "service.auth.revoke_refresh_token", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 			return m.authClient.RevokeRefreshToken(ctx, &pb.RevokeRefreshTokenRequest{
 				RefreshToken: req.RefreshToken,
@@ -154,7 +177,7 @@ func (m *authSvcImpl) RevokeRefreshToken(ctx context.Context, req *RevokeRefresh
 }
 
 func (m *authSvcImpl) UpdatePassword(ctx context.Context, req *UpdatePasswordRequest) (*apiresource.EmptyResource, *apierror.APIError) {
-	_, apiErr := grpcutil.CallRPC(ctx, authSvcTracer, "service.auth.update_password", AuthServiceName,
+	_, apiErr := grpcutil.CallRPC(ctx, authSvcTracer, "service.auth.update_password", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 			return m.authClient.UpdatePassword(ctx, &pb.UpdatePasswordRequest{
 				OldPassword: req.OldPassword,

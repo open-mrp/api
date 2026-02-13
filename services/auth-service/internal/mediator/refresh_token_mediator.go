@@ -2,6 +2,7 @@ package mediator
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/augno/api/services/auth-service/internal/domain"
@@ -24,15 +25,41 @@ type RefreshTokenMedConfig struct {
 	JWTUtils domain.JWTUtils
 }
 
-func NewRefreshTokenMed(config RefreshTokenMedConfig) domain.RefreshTokenMed {
+// WithDefaults returns a new RefreshTokenMedConfig with zero-value fields replaced by defaults.
+func (c *RefreshTokenMedConfig) WithDefaults() *RefreshTokenMedConfig {
+	if c == nil {
+		c = &RefreshTokenMedConfig{}
+	}
+	return &RefreshTokenMedConfig{
+		Repos:    c.Repos,
+		JWTUtils: c.JWTUtils,
+	}
+}
+
+func (c *RefreshTokenMedConfig) validate() error {
+	if c.Repos == nil {
+		return fmt.Errorf("refresh token mediator: repos is required")
+	}
+	if c.JWTUtils == nil {
+		return fmt.Errorf("refresh token mediator: jwt utils is required")
+	}
+	return nil
+}
+
+func NewRefreshTokenMed(config *RefreshTokenMedConfig) domain.RefreshTokenMed {
+	config = config.WithDefaults()
+	if err := config.validate(); err != nil {
+		panic(err)
+	}
+
 	return &refreshTokenMedImpl{
 		repos:    config.Repos,
 		jwtUtils: config.JWTUtils,
 	}
 }
 
-func DefaultRefreshTokenMedConfig(queries *sqlc.Queries, jwtSecret string) RefreshTokenMedConfig {
-	return RefreshTokenMedConfig{
+func DefaultRefreshTokenMedConfig(queries *sqlc.Queries, jwtSecret string) *RefreshTokenMedConfig {
+	return &RefreshTokenMedConfig{
 		Repos:    repository.NewRepoFactory(queries),
 		JWTUtils: token.NewJWTUtils(&token.JWTConfig{Secret: jwtSecret}),
 	}

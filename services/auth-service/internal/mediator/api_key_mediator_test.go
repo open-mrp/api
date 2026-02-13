@@ -48,7 +48,7 @@ func (suite *APIKeyMedTestSuite) SetupSuite() {
 
 	coreClientMock := clientmock.NewMockAuthCoreClient(suite.ctrl)
 
-	apiKeyMedConfig := APIKeyMedConfig{
+	apiKeyMedConfig := &APIKeyMedConfig{
 		Repos:       suite.repoFactory,
 		APIKeyUtils: suite.apiKeyUtils,
 		CoreClient:  coreClientMock,
@@ -305,9 +305,12 @@ func (suite *APIKeyMedTestSuite) TestFind_VerifySecretError() {
 	repoFactory.EXPECT().NewAPIKeyRepo().Return(apiKeyRepo).AnyTimes()
 	apiKeyUtils := apikey.NewAPIKeyUtils(&apikey.APIKeyConfig{Pepper: []byte("different-pepper")})
 
-	apiKeyMedConfig := APIKeyMedConfig{
+	coreClient := clientmock.NewMockAuthCoreClient(ctrl)
+
+	apiKeyMedConfig := &APIKeyMedConfig{
 		Repos:       repoFactory,
 		APIKeyUtils: apiKeyUtils,
+		CoreClient:  coreClient,
 	}
 	apiKeyMed := NewAPIKeyMed(apiKeyMedConfig)
 
@@ -439,4 +442,104 @@ func (suite *APIKeyMedTestSuite) TestCreate_Success() {
 	valid, err := suite.apiKeyUtils.VerifySecretHMAC(ctx, parsedKey.Secret, apiKeyModel.SecretHash)
 	suite.Nil(err)
 	suite.True(valid)
+}
+
+func (suite *APIKeyMedTestSuite) TestCreate_LastFourMatchesFullKeyString() {
+	ctx := context.Background()
+	ownerAccountID := "ac_123456789012"
+	roleID := "rl_123456789012"
+	expiresAt := time.Now().UTC().Add(30 * 24 * time.Hour)
+
+	suite.apiKeyRepo.EXPECT().
+		Create(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(ctx context.Context, apiKey *domain.APIKey) (int64, *apierror.APIError) {
+			return 1, nil
+		}).
+		Times(1)
+
+	apiKeyString, apiKeyModel, err := suite.apiKeyMed.Create(ctx, constants.AccountModeSandbox, ownerAccountID, roleID, "Test Key", &expiresAt)
+
+	suite.Nil(err)
+	suite.NotNil(apiKeyModel)
+
+	// LastFour must match the actual last 4 characters of the full key string
+	expectedLastFour := apiKeyString[len(apiKeyString)-4:]
+	suite.Equal(expectedLastFour, apiKeyModel.LastFour)
+}
+
+func (suite *APIKeyMedTestSuite) TestCreate_RedactedValueMatchesLastFour() {
+	ctx := context.Background()
+	ownerAccountID := "ac_123456789012"
+	roleID := "rl_123456789012"
+	expiresAt := time.Now().UTC().Add(30 * 24 * time.Hour)
+
+	tests := []struct {
+		name        string
+		accountMode constants.AccountMode
+	}{
+		{"sandbox", constants.AccountModeSandbox},
+		{"production", constants.AccountModeProduction},
+	}
+
+	for _, tt := range tests {
+		suite.Run(tt.name, func() {
+			suite.apiKeyRepo.EXPECT().
+				Create(gomock.Any(), gomock.Any()).
+				DoAndReturn(func(ctx context.Context, apiKey *domain.APIKey) (int64, *apierror.APIError) {
+					return 1, nil
+				}).
+				Times(1)
+
+			apiKeyString, apiKeyModel, err := suite.apiKeyMed.Create(ctx, tt.accountMode, ownerAccountID, roleID, "Test Key", &expiresAt)
+
+			suite.Nil(err)
+			suite.NotNil(apiKeyModel)
+
+			// RedactedValue should end with the same last 4 characters as the full key
+			expectedLastFour := apiKeyString[len(apiKeyString)-4:]
+			suite.True(
+				len(apiKeyModel.RedactedValue) > 4,
+				"RedactedValue should not be empty",
+			)
+			suite.Equal(
+				expectedLastFour,
+				apiKeyModel.RedactedValue[len(apiKeyModel.RedactedValue)-4:],
+				"RedactedValue should end with the actual last 4 characters of the full key",
+			)
+
+			// RedactedValue should contain the correct mode prefix
+			expectedPrefix := "aug_sk_" + string(tt.accountMode) + "_****"
+			suite.Equal(expectedPrefix, apiKeyModel.RedactedValue[:len(expectedPrefix)])
+		})
+	}
+}
+
+func (suite *APIKeyMedTestSuite) TestCreate_LastFourConsistentAcrossModes() {
+	ctx := context.Background()
+	ownerAccountID := "ac_123456789012"
+	roleID := "rl_123456789012"
+	expiresAt := time.Now().UTC().Add(30 * 24 * time.Hour)
+
+	for _, mode := range []constants.AccountMode{constants.AccountModeSandbox, constants.AccountModeProduction} {
+		suite.apiKeyRepo.EXPECT().
+			Create(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(ctx context.Context, apiKey *domain.APIKey) (int64, *apierror.APIError) {
+				return 1, nil
+			}).
+			Times(1)
+
+		apiKeyString, apiKeyModel, err := suite.apiKeyMed.Create(ctx, mode, ownerAccountID, roleID, "Test Key", &expiresAt)
+		suite.Nil(err)
+
+		// Verify all three representations are consistent:
+		// 1. LastFour matches end of full key string
+		suite.Equal(apiKeyString[len(apiKeyString)-4:], apiKeyModel.LastFour)
+
+		// 2. RedactedValue ends with LastFour
+		suite.Equal(apiKeyModel.LastFour, apiKeyModel.RedactedValue[len(apiKeyModel.RedactedValue)-4:])
+
+		// 3. RedactedValue format is correct: aug_sk_{mode}_****{lastFour}
+		expectedRedacted := apikey.RedactAPIKeyValue(apiKeyModel, mode)
+		suite.Equal(expectedRedacted, apiKeyModel.RedactedValue)
+	}
 }

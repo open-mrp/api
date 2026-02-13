@@ -1,12 +1,10 @@
 package authep
 
 import (
-	"time"
-
+	"github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	pb "github.com/augno/api/shared/proto/auth"
-	"github.com/augno/api/shared/ptrutil"
 )
 
 // UserPresenter presents a user resource from a proto user.
@@ -15,30 +13,15 @@ func UserPresenter(user *pb.User) apiresource.User {
 		return apiresource.User{}
 	}
 
-	var emailVerified *time.Time
-	if user.EmailVerified != nil {
-		emailVerified = ptrutil.Ptr(user.EmailVerified.AsTime())
-	}
-
-	createdAt := time.Time{}
-	if user.CreatedAt != nil {
-		createdAt = user.CreatedAt.AsTime()
-	}
-
-	updatedAt := time.Time{}
-	if user.UpdatedAt != nil {
-		updatedAt = user.UpdatedAt.AsTime()
-	}
-
 	return apiresource.User{
 		ID:            user.Id,
 		Object:        constants.ObjectTypeUser,
 		Email:         user.Email,
 		Name:          user.Name,
 		Username:      user.Username,
-		EmailVerified: emailVerified,
+		EmailVerified: grpc.TimestampToTimePtr(user.EmailVerified),
 		ImageUrl:      user.ImageUrl,
-		CreatedAt:     createdAt,
-		UpdatedAt:     updatedAt,
+		CreatedAt:     grpc.TimestampToTime(user.CreatedAt),
+		UpdatedAt:     grpc.TimestampToTime(user.UpdatedAt),
 	}
 }

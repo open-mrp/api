@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -36,7 +37,6 @@ func generate(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOn
 	}
 
 	tagNames := make(map[string]bool)
-	apiErrorResponseRegistered := false
 
 	for _, group := range groups {
 		groupHasEndpoints := false
@@ -111,12 +111,14 @@ func generate(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOn
 							})
 						}
 						if query := f.Tag.Get("query"); query != "" {
+							paramSchema := generateSchema(f.Type, &spec.Components, docReader)
 							operation.Parameters = append(operation.Parameters, Parameter{
 								Name:        query,
 								In:          "query",
 								Description: fmt.Sprintf("Query parameter: %s for %s", query, title),
 								Required:    strings.Contains(f.Tag.Get("validate"), "required"),
-								Schema:      generateSchema(f.Type, &spec.Components, docReader),
+								Schema:      paramSchema,
+								Example:     parameterExample(paramSchema),
 							})
 						}
 						if cookie := f.Tag.Get("cookie"); cookie != "" {
@@ -209,37 +211,6 @@ func generate(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOn
 					},
 				}
 			}
-
-			// Add default error responses
-			errorStatusCodes := []int{
-				http.StatusBadRequest,
-				http.StatusUnauthorized,
-				http.StatusForbidden,
-				http.StatusNotFound,
-				http.StatusConflict,
-				http.StatusTooManyRequests,
-				http.StatusInternalServerError,
-			}
-			for _, code := range errorStatusCodes {
-				codeStr := fmt.Sprintf("%d", code)
-				if _, ok := operation.Responses[codeStr]; !ok {
-					if !apiErrorResponseRegistered {
-						apiErrorType := reflect.TypeFor[apierror.APIErrorResponse]()
-						spec.Components.Schemas["APIErrorResponse"] = generateSchema(apiErrorType, &spec.Components, docReader)
-						apiErrorResponseRegistered = true
-					}
-					operation.Responses[codeStr] = Response{
-						Description: fmt.Sprintf("%s response for %s", http.StatusText(code), title),
-						Content: map[string]MediaConfig{
-							"application/json": {
-								Schema:  Schema{Ref: "#/components/schemas/APIErrorResponse"},
-								Example: spec.Components.Schemas["APIErrorResponse"].Example,
-							},
-						},
-					}
-				}
-			}
-
 			groupPathMap[route][strings.ToLower(method)] = operation
 		}
 
@@ -259,6 +230,15 @@ func generate(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOn
 		}
 	}
 
+	// Register error response schema for documentation
+	apiErrorType := reflect.TypeFor[apierror.APIErrorResponse]()
+	if _, ok := spec.Components.Schemas["APIErrorResponse"]; !ok {
+		spec.Components.Schemas["APIErrorResponse"] = generateSchema(apiErrorType, &spec.Components, docReader)
+	}
+
+	// Collect property orders before marshaling (PropertyOrder is json:"-")
+	propertyOrders := collectPropertyOrders(spec.Components.Schemas)
+
 	// Marshal to generic map for transforms
 	b, err := json.Marshal(spec)
 	if err != nil {
@@ -272,10 +252,19 @@ func generate(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOn
 	// Apply transforms
 	data = applyTransforms(data, transforms)
 
-	output, err := json.MarshalIndent(data, "", "  ")
+	// Reorder schema properties to match struct field declaration order
+	applyPropertyOrders(data, propertyOrders)
+
+	// Use json.Marshal + json.Indent so orderedJSONMap.MarshalJSON is properly indented
+	compact, err := json.Marshal(data)
 	if err != nil {
 		log.Fatalf("Error marshaling spec: %v", err)
 	}
+	var indented bytes.Buffer
+	if err := json.Indent(&indented, compact, "", "  "); err != nil {
+		log.Fatalf("Error indenting spec: %v", err)
+	}
+	output := indented.Bytes()
 
 	if err := os.MkdirAll(filepath.Dir(outputPath), 0750); err != nil {
 		log.Fatalf("Error creating directory for spec: %v", err)
@@ -347,6 +336,13 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 		return Schema{Type: "number"}
 	case reflect.Bool:
 		return Schema{Type: "boolean"}
+	case reflect.Slice:
+		elemType := t.Elem()
+		if elemType.Kind() == reflect.Pointer {
+			elemType = elemType.Elem()
+		}
+		itemSchema := generateSchema(elemType, components, docReader)
+		return Schema{Type: "array", Items: &itemSchema}
 	}
 
 	routeStr := ""
@@ -381,7 +377,7 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 							}
 						}
 						// If not found, try to get it from DocumentedType
-						if itemExample == nil && elemType.Implements(reflect.TypeFor[contracts.DocumentedType]()) {
+						if itemExample == nil && reflect.PointerTo(elemType).Implements(reflect.TypeFor[contracts.DocumentedType]()) {
 							v := reflect.New(elemType).Interface().(contracts.DocumentedType)
 							func() {
 								defer func() { recover() }()
@@ -404,14 +400,11 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 			}
 		}
 
-		nextPageURL := routeStr + "?after=" + "sample_id"
-		prevPageURL := routeStr + "?before=" + "sample_id"
-
 		example = map[string]any{
-			"object":            "list",
-			"previous_page_url": prevPageURL,
-			"next_page_url":     nextPageURL,
-			"data":              dataArray,
+			"object":      "list",
+			"has_more":    true,
+			"next_cursor": "sample_cursor_id",
+			"data":        dataArray,
 		}
 	} else if reflect.PointerTo(t).Implements(reflect.TypeFor[contracts.DocumentedType]()) {
 		v := reflect.New(t).Interface().(contracts.DocumentedType)
@@ -501,11 +494,11 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 			case "data":
 				fieldSchema.XStainlessPaginationProperty = map[string]string{"purpose": "items"}
 				fieldSchema.Description = fmt.Sprintf("Array of %s resources in this page", itemTypeName)
-			case "next_page_url":
-				fieldSchema.XStainlessPaginationProperty = map[string]string{"purpose": "cursor_url_field"}
-				fieldSchema.Description = fmt.Sprintf("URL to fetch the next page of %s resources", itemTypeName)
-			case "previous_page_url":
-				fieldSchema.Description = fmt.Sprintf("URL to fetch the previous page of %s resources", itemTypeName)
+			case "has_more":
+				fieldSchema.Description = "Whether there are more results available after this page"
+			case "next_cursor":
+				fieldSchema.XStainlessPaginationProperty = map[string]string{"purpose": "cursor"}
+				fieldSchema.Description = "Cursor for fetching the next page, null if on last page"
 			case "object":
 				fieldSchema.Description = fmt.Sprintf("Object type for %s list", itemTypeName)
 			}
@@ -566,6 +559,9 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 				// In OpenAPI 3.0.x, $ref cannot have sibling properties.
 				// Always use allOf to wrap the reference so description can be a sibling of allOf.
 				fieldSchema.AllOf = []Schema{{Ref: "#/components/schemas/" + schemaName}}
+				if ex := components.Schemas[schemaName].Example; ex != nil {
+					fieldSchema.Example = ex
+				}
 			} else {
 				fieldSchema = generateSchema(fieldType, components, docReader)
 			}
@@ -598,6 +594,7 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 		}
 
 		schema.Properties[name] = fieldSchema
+		schema.PropertyOrder = append(schema.PropertyOrder, name)
 	}
 
 	if len(schema.Properties) == 0 && schema.AdditionalProperties == nil && len(schema.AllOf) == 0 {
@@ -645,4 +642,66 @@ func getEnumValuesForStringType(t reflect.Type) []any {
 	}
 
 	return enumValues
+}
+
+func parameterExample(s Schema) any {
+	if s.Type == "array" && s.Items != nil {
+		if len(s.Items.Enum) > 0 {
+			return []any{s.Items.Enum[0]}
+		}
+		return []any{}
+	}
+	if len(s.Enum) > 0 {
+		return s.Enum[0]
+	}
+	switch s.Type {
+	case "string":
+		return "example"
+	case "integer":
+		return 100
+	case "boolean":
+		return true
+	}
+	return nil
+}
+
+// collectPropertyOrders extracts the tracked property insertion order from
+// each component schema before marshaling (PropertyOrder has json:"-").
+func collectPropertyOrders(schemas map[string]Schema) map[string][]string {
+	orders := make(map[string][]string)
+	for name, schema := range schemas {
+		if len(schema.PropertyOrder) > 0 {
+			orders[name] = schema.PropertyOrder
+		}
+	}
+	return orders
+}
+
+// applyPropertyOrders walks the generic spec tree and replaces each schema's
+// properties map with an orderedJSONMap so the final JSON output preserves
+// struct field declaration order.
+func applyPropertyOrders(data any, orders map[string][]string) {
+	root, ok := data.(map[string]any)
+	if !ok {
+		return
+	}
+	components, ok := root["components"].(map[string]any)
+	if !ok {
+		return
+	}
+	schemas, ok := components["schemas"].(map[string]any)
+	if !ok {
+		return
+	}
+	for name, order := range orders {
+		schemaRaw, ok := schemas[name].(map[string]any)
+		if !ok {
+			continue
+		}
+		props, ok := schemaRaw["properties"].(map[string]any)
+		if !ok {
+			continue
+		}
+		schemaRaw["properties"] = orderedJSONMap{order: order, values: props}
+	}
 }

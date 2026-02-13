@@ -12,9 +12,12 @@ import (
 type APIKeyRepo interface {
 	Find(ctx context.Context, apiKeyID string) (*APIKey, *apierror.APIError)
 	FindByDatabaseID(ctx context.Context, id int64) (*APIKey, *apierror.APIError)
+	FindByTypeID(ctx context.Context, typeID string) (*APIKey, *apierror.APIError)
 	Touch(ctx context.Context, apiKeyID int64) *apierror.APIError
 	Create(ctx context.Context, apiKey *APIKey) (int64, *apierror.APIError)
-	List(ctx context.Context, accountMode constants.AccountMode, ownerAccountID string, cursor *string, limit int32, query *string) ([]*APIKey, int64, *apierror.APIError)
+	Revoke(ctx context.Context, typeID string) *apierror.APIError
+	Delete(ctx context.Context, typeID string) *apierror.APIError
+	List(ctx context.Context, accountMode constants.AccountMode, ownerAccountID string, cursor *string, limit int32, query *string, statuses []constants.APIKeyStatus) ([]*APIKey, int64, *apierror.APIError)
 }
 
 type RefreshTokenRepo interface {
@@ -28,6 +31,16 @@ type UserRepo interface {
 	Find(ctx context.Context, identifier string) (*types.User, *apierror.APIError)
 	Create(ctx context.Context, userID, email, name, hashedPassword string) (*types.User, *apierror.APIError)
 	UpdatePassword(ctx context.Context, userID string, hashedPassword string) *apierror.APIError
+}
+
+type DocAPIKeyRepo interface {
+	FindBySandboxAccountID(ctx context.Context, sandboxAccountID string) (*DocAPIKey, *apierror.APIError)
+	FindByAPIKeyID(ctx context.Context, apiKeyID string) (*DocAPIKey, *apierror.APIError)
+	Create(ctx context.Context, docAPIKey *DocAPIKey) (int64, *apierror.APIError)
+	Update(ctx context.Context, docAPIKey *DocAPIKey) *apierror.APIError
+	Delete(ctx context.Context, id int64) *apierror.APIError
+	DeleteByAPIKeyID(ctx context.Context, apiKeyID string) *apierror.APIError
+	DeleteAllBySandboxAccountID(ctx context.Context, sandboxAccountID string) *apierror.APIError
 }
 
 type IdempotencyKeyRepo interface {

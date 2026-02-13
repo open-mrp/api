@@ -7,16 +7,21 @@ import (
 	"os"
 
 	grpcclient "github.com/augno/api/services/api-gateway/grpc-client"
-	httpgroup "github.com/augno/api/services/api-gateway/internal/router/group"
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	httpgroup "github.com/augno/api/services/api-gateway/pkg/group"
 	authpb "github.com/augno/api/shared/proto/auth"
 	"github.com/augno/api/shared/version"
 )
 
 func main() {
 	name := flag.String("name", "api", "Name of the API")
-	transformsPath := flag.String("transforms", "services/api-gateway/cmd/apidocs/transforms.json", "Path to transforms JSON file")
+	rootDir := flag.String("root", "..", "Project root directory (paths are relative to this)")
+	transformsPath := flag.String("transforms", "tools/apidocs/transforms.json", "Path to transforms JSON file")
 	flag.Parse()
+
+	if err := os.Chdir(*rootDir); err != nil {
+		log.Fatalf("Error changing to root directory %s: %v", *rootDir, err)
+	}
 
 	ver := version.Latest.Version
 	log.Printf("Generating OpenAPI spec for %s (version %s)...", *name, ver)
@@ -44,7 +49,10 @@ func main() {
 
 	groups := []apiendpoint.APIEndpointGroup{
 		*(&httpgroup.HealthEndpointGroup{}).Materialize(httpgroup.HealthEndpointGroupConfig{}).APIEndpointGroup,
-		*(&httpgroup.AuthEndpointGroup{}).Materialize(httpgroup.AuthEndpointGroupConfig{
+		*(&httpgroup.AuthEndpointGroup{}).Materialize(&httpgroup.AuthEndpointGroupConfig{
+			AuthClient: authClient,
+		}).APIEndpointGroup,
+		*(&httpgroup.APIKeysEndpointGroup{}).Materialize(&httpgroup.APIKeysEndpointGroupConfig{
 			AuthClient: authClient,
 		}).APIEndpointGroup,
 	}

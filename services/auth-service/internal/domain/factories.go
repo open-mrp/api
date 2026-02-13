@@ -8,6 +8,7 @@ type RepoFactory interface {
 	NewUserRepo() UserRepo
 	NewRefreshTokenRepo() RefreshTokenRepo
 	NewAPIKeyRepo() APIKeyRepo
+	NewDocAPIKeyRepo() DocAPIKeyRepo
 	NewIdempotencyKeyRepo() IdempotencyKeyRepo
 	NewOutboxRepo() messaging.OutboxRepo
 }

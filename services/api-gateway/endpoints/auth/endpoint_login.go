@@ -27,12 +27,6 @@ func (*LoginRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleLoginRequest)
 }
 
-// The current account in use
-type CurrentAccount struct {
-	// The ID of the current account
-	ID string `json:"id" validate:"required"`
-}
-
 const loginEndpointDescription string = `This endpoint is used to login a user. Once completed, the user object is 
 returned, and an access and refresh token are set in cookies.`
 

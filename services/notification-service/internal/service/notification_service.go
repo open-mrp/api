@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/augno/api/services/notification-service/internal/domain"
 	"github.com/augno/api/services/notification-service/internal/email"
@@ -29,7 +30,37 @@ type NotificationSvcConfig struct {
 	TemplateRenderer email.TemplateRenderer
 }
 
-func NewNotificationSvc(config NotificationSvcConfig) domain.NotificationSvc {
+// WithDefaults returns a new NotificationSvcConfig with zero-value fields replaced by defaults.
+func (c *NotificationSvcConfig) WithDefaults() *NotificationSvcConfig {
+	if c == nil {
+		c = &NotificationSvcConfig{}
+	}
+	return &NotificationSvcConfig{
+		EmailLogRepo:     c.EmailLogRepo,
+		EmailSender:      c.EmailSender,
+		TemplateRenderer: c.TemplateRenderer,
+	}
+}
+
+func (c *NotificationSvcConfig) validate() error {
+	if c.EmailLogRepo == nil {
+		return fmt.Errorf("notification service: email log repo is required")
+	}
+	if c.EmailSender == nil {
+		return fmt.Errorf("notification service: email sender is required")
+	}
+	if c.TemplateRenderer == nil {
+		return fmt.Errorf("notification service: template renderer is required")
+	}
+	return nil
+}
+
+func NewNotificationSvc(config *NotificationSvcConfig) domain.NotificationSvc {
+	config = config.WithDefaults()
+	if err := config.validate(); err != nil {
+		panic(err)
+	}
+
 	return &notificationSvcImpl{
 		emailLogRepo:     config.EmailLogRepo,
 		emailSender:      config.EmailSender,
@@ -37,13 +68,13 @@ func NewNotificationSvc(config NotificationSvcConfig) domain.NotificationSvc {
 	}
 }
 
-func DefaultNotificationSvcConfig(queries *sqlc.Queries, awsRegion string, templateRenderer email.TemplateRenderer) (NotificationSvcConfig, *apierror.APIError) {
+func DefaultNotificationSvcConfig(queries *sqlc.Queries, awsRegion string, templateRenderer email.TemplateRenderer) (*NotificationSvcConfig, *apierror.APIError) {
 	emailSender, apiErr := aws.NewSESEmailSender(context.Background(), constants.PlatformModeProduction, awsRegion)
 	if apiErr != nil {
-		return NotificationSvcConfig{}, apiErr
+		return nil, apiErr
 	}
 
-	return NotificationSvcConfig{
+	return &NotificationSvcConfig{
 		EmailLogRepo:     repository.NewEmailLogRepo(queries),
 		EmailSender:      emailSender,
 		TemplateRenderer: templateRenderer,
@@ -111,7 +142,6 @@ func (s *notificationSvcImpl) LogEmail(ctx context.Context, data domain.EmailLog
 	return s.emailLogRepo.Create(ctx, emailLog)
 }
 
-// SendEnterpriseRequest sends an enterprise upgrade request email to sales
 func (s *notificationSvcImpl) SendEnterpriseRequest(ctx context.Context, req *domain.EnterpriseRequestData) *apierror.APIError {
 	ctx, span := notificationSvcTracer.Start(ctx, "service.notification.send_enterprise_request")
 	defer span.End()

@@ -104,7 +104,7 @@ func (r *apiKeyRepoImpl) Create(ctx context.Context, apiKey *domain.APIKey) (int
 	return id, nil
 }
 
-func (r *apiKeyRepoImpl) List(ctx context.Context, accountMode constants.AccountMode, ownerAccountID string, cursor *string, limit int32, query *string) ([]*domain.APIKey, int64, *apierror.APIError) {
+func (r *apiKeyRepoImpl) List(ctx context.Context, accountMode constants.AccountMode, ownerAccountID string, cursor *string, limit int32, query *string, statuses []constants.APIKeyStatus) ([]*domain.APIKey, int64, *apierror.APIError) {
 	ctx, span := apiKeyRepoTracer.Start(ctx, "repository.api_key.list")
 	defer span.End()
 
@@ -118,10 +118,27 @@ func (r *apiKeyRepoImpl) List(ctx context.Context, accountMode constants.Account
 		cursorVal = *cursor
 	}
 
+	includeActive := false
+	includeExpired := false
+	includeRevoked := false
+	for _, s := range statuses {
+		switch s {
+		case constants.APIKeyStatusActive:
+			includeActive = true
+		case constants.APIKeyStatusExpired:
+			includeExpired = true
+		case constants.APIKeyStatusRevoked:
+			includeRevoked = true
+		}
+	}
+
 	rows, err := r.db.ListAPIKeys(ctx, sqlc.ListAPIKeysParams{
 		OwnerAccountID: ownerAccountID,
 		Cursor:         cursorVal,
 		Query:          searchQuery,
+		IncludeActive:  includeActive,
+		IncludeExpired: includeExpired,
+		IncludeRevoked: includeRevoked,
 		Limit:          limit,
 	})
 
@@ -132,6 +149,9 @@ func (r *apiKeyRepoImpl) List(ctx context.Context, accountMode constants.Account
 	total, err := r.db.CountAPIKeys(ctx, sqlc.CountAPIKeysParams{
 		OwnerAccountID: ownerAccountID,
 		Query:          searchQuery,
+		IncludeActive:  includeActive,
+		IncludeExpired: includeExpired,
+		IncludeRevoked: includeRevoked,
 	})
 
 	if apiErr := db.MapSQLError(err); apiErr != nil {
@@ -171,6 +191,74 @@ func (r *apiKeyRepoImpl) List(ctx context.Context, accountMode constants.Account
 	}
 
 	return apiKeys, total, nil
+}
+
+func (r *apiKeyRepoImpl) FindByTypeID(ctx context.Context, typeID string) (*domain.APIKey, *apierror.APIError) {
+	ctx, span := apiKeyRepoTracer.Start(ctx, "repository.api_key.find_by_type_id")
+	defer span.End()
+
+	apiKeyRow, err := r.db.FindAPIKeyWithRoleByTypeID(ctx, typeID)
+
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+			return nil, apiErr
+		}
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	roleTypeCode := ""
+	if apiKeyRow.RoleTypeCode.Valid {
+		roleTypeCode = apiKeyRow.RoleTypeCode.String
+	}
+
+	roleName := ""
+	if apiKeyRow.RoleName.Valid {
+		roleName = apiKeyRow.RoleName.String
+	}
+
+	return &domain.APIKey{
+		ID:             apiKeyRow.ID,
+		TypeID:         apiKeyRow.TypeID,
+		KeyID:          apiKeyRow.KeyID,
+		Name:           apiKeyRow.Name.String,
+		LastFour:       apiKeyRow.LastFour,
+		SecretHash:     apiKeyRow.SecretHash,
+		OwnerAccountID: apiKeyRow.OwnerAccountID,
+		RoleID:         apiKeyRow.RoleID,
+		RoleName:       roleName,
+		RoleTypeCode:   roleTypeCode,
+		CreatedAt:      apiKeyRow.CreatedAt,
+		UpdatedAt:      apiKeyRow.UpdatedAt,
+		LastUsedAt:     db.TimeFromNullTime(apiKeyRow.LastUsedAt),
+		ExpiresAt:      db.TimeFromNullTime(apiKeyRow.ExpiresAt),
+		RevokedAt:      db.TimeFromNullTime(apiKeyRow.RevokedAt),
+	}, nil
+}
+
+func (r *apiKeyRepoImpl) Revoke(ctx context.Context, typeID string) *apierror.APIError {
+	ctx, span := apiKeyRepoTracer.Start(ctx, "repository.api_key.revoke")
+	defer span.End()
+
+	err := r.db.RevokeAPIKeyByTypeID(ctx, typeID)
+
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	return nil
+}
+
+func (r *apiKeyRepoImpl) Delete(ctx context.Context, typeID string) *apierror.APIError {
+	ctx, span := apiKeyRepoTracer.Start(ctx, "repository.api_key.delete")
+	defer span.End()
+
+	err := r.db.DeleteAPIKeyByTypeID(ctx, typeID)
+
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	return nil
 }
 
 func (r *apiKeyRepoImpl) FindByDatabaseID(ctx context.Context, id int64) (*domain.APIKey, *apierror.APIError) {

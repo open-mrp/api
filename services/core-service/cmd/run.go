@@ -51,7 +51,7 @@ func Run(
 	}
 	defer queries.Close()
 
-	accountSvc := service.NewAccountSvc(queries)
+	accountSvc := service.NewAccountSvc(&service.AccountSvcConfig{Queries: queries})
 
 	server, err := contracts.NewGRPCServer(domain.ServiceName, nil, nil)
 	if err != nil {

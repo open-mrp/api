@@ -16,6 +16,9 @@ SQLC_SCRIPT := ./scripts/generate-sqlc.sh
 # Extract arguments after the target (e.g., make mocks auth)
 ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
 
+# Reads a pinned tool version from tools/tool-versions
+tool-version = $(shell grep '$(1) ' tools/tool-versions | awk '{print $$2}')
+
 # Default target
 help: ## Show this help message
 	@echo "Available targets:"
@@ -31,7 +34,7 @@ dev: ## Run the API in development mode
 	tilt up
 
 gen-openapi-specs: ## Generate OpenAPI specifications
-	go run ./services/api-gateway/cmd/apidocs --name api
+	@cd tools && go run ./apidocs --name api
 	@./scripts/validate-openapi-specs.sh
 
 gen-sqlc: ## Generate code from SQL queries using sqlc. Usage: make gen-sqlc [services]
@@ -56,13 +59,25 @@ test-verbose: ## Run tests with verbose output
 	@time go test -v ./...
 
 install-tools: ## Install required development tools
-	@./scripts/install-tools.sh
+	@go install github.com/sqlc-dev/sqlc/cmd/sqlc@$(call tool-version,github.com/sqlc-dev/sqlc)
+	@go install github.com/pressly/goose/v3/cmd/goose@$(call tool-version,github.com/pressly/goose/v3)
+	@go install gotest.tools/gotestsum@$(call tool-version,gotest.tools/gotestsum)
+	@go install go.uber.org/mock/mockgen@$(call tool-version,go.uber.org/mock)
+	@go install github.com/daveshanley/vacuum@$(call tool-version,github.com/daveshanley/vacuum)
+	@go install google.golang.org/protobuf/cmd/protoc-gen-go@$(call tool-version,google.golang.org/protobuf)
+	@go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@$(call tool-version,google.golang.org/grpc/cmd/protoc-gen-go-grpc)
+	@go install github.com/goreleaser/goreleaser/v2@$(call tool-version,github.com/goreleaser/goreleaser/v2)
+	@go install github.com/securego/gosec/v2/cmd/gosec@$(call tool-version,github.com/securego/gosec/v2)
+	@go install honnef.co/go/tools/cmd/staticcheck@$(call tool-version,honnef.co/go/tools)
+	@go install golang.org/x/tools/cmd/goimports@$(call tool-version,golang.org/x/tools)
 
 install-ci-tools: ## Install minimum tools for CI
-	@./scripts/install-ci-tools.sh
+	@go install github.com/securego/gosec/v2/cmd/gosec@$(call tool-version,github.com/securego/gosec/v2)
+	@go install honnef.co/go/tools/cmd/staticcheck@$(call tool-version,honnef.co/go/tools)
+	@go install github.com/daveshanley/vacuum@$(call tool-version,github.com/daveshanley/vacuum)
 
 install-cd-tools: ## Install minimum tools for CD
-	@./scripts/install-cd-tools.sh
+	@go install github.com/daveshanley/vacuum@$(call tool-version,github.com/daveshanley/vacuum)
 
 mocks: ## Generate mocks. Usage: make mocks [services]
 	@$(MOCK_SCRIPT) $(ARGS)

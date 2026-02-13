@@ -42,7 +42,7 @@ func (suite *TokenSvcTestSuite) SetupSuite() {
 	suite.idempotencyMed = mediatormock.NewMockIdempotencyMed(suite.ctrl)
 	suite.notificationPublisher = publishermock.NewMockNotificationPublisher(suite.ctrl)
 
-	tokenSvcConfig := TokenSvcConfig{
+	tokenSvcConfig := &TokenSvcConfig{
 		Repos: suite.repoFactory,
 		TxManager: stubTxManager{
 			repoFactory: suite.repoFactory,

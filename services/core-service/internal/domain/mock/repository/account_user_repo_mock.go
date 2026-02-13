@@ -88,6 +88,21 @@ func (mr *MockAccountUserRepoMockRecorder) FindLastUsedAccountID(ctx, userID any
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindLastUsedAccountID", reflect.TypeOf((*MockAccountUserRepo)(nil).FindLastUsedAccountID), ctx, userID)
 }
 
+// GetAdminRoleID mocks base method.
+func (m *MockAccountUserRepo) GetAdminRoleID(ctx context.Context) (string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAdminRoleID", ctx)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetAdminRoleID indicates an expected call of GetAdminRoleID.
+func (mr *MockAccountUserRepoMockRecorder) GetAdminRoleID(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAdminRoleID", reflect.TypeOf((*MockAccountUserRepo)(nil).GetAdminRoleID), ctx)
+}
+
 // UpdateLastUsedAt mocks base method.
 func (m *MockAccountUserRepo) UpdateLastUsedAt(ctx context.Context, accountUserID string, lastUsedAt time.Time) *apierror.APIError {
 	m.ctrl.T.Helper()

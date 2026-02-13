@@ -48,6 +48,8 @@ type APIEndpoint[TReq, TResp any] struct {
 	// ObjectType identifies the API resource type this endpoint operates on.
 	// Used for version transformations. Only endpoints with an ObjectType get transformations applied.
 	ObjectType constants.ObjectType `json:"-" yaml:"-"`
+	// LocationFunc returns the Location header value for 201 Created responses.
+	LocationFunc func(TResp) string `json:"-" yaml:"-"`
 
 	group               *APIEndpointGroup
 	service             any
@@ -106,17 +108,6 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 	}
 
 	span := trace.SpanFromContext(ctx)
-	paginationParams, err := httptransport.ApplyPagination(r)
-	if err != nil {
-		tracing.RecordControllerError(span, err)
-		if span.IsRecording() {
-			span.SetAttributes(attribute.String(httptransport.AttrErrorType, "pagination_parsing"))
-		}
-		httptransport.RespondWithAPIError(ctx, w, err)
-		return
-	}
-
-	ctx = appctx.WithPagination(ctx, paginationParams)
 
 	if idempotencyKey := r.Header.Get(header.IdempotencyKeyHeader); idempotencyKey != "" {
 		ctx = appctx.WithIdempotencyKey(ctx, idempotencyKey)
@@ -266,7 +257,12 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 	if span.IsRecording() {
 		span.SetAttributes(attribute.Int(httptransport.AttrHTTPStatusCode, e.SuccessStatusCode))
 	}
-	httptransport.RespondWithJSON(ctx, w, e.SuccessStatusCode, resp)
+
+	var respondOpts []httptransport.RespondOption
+	if e.SuccessStatusCode == http.StatusCreated && e.LocationFunc != nil {
+		respondOpts = append(respondOpts, httptransport.WithLocation(e.LocationFunc(resp)))
+	}
+	httptransport.RespondWithJSON(ctx, w, e.SuccessStatusCode, resp, respondOpts...)
 }
 
 // transformRequestBody reads the request body, applies version transformations to upgrade

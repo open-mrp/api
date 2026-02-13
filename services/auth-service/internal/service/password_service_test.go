@@ -42,7 +42,7 @@ func (suite *PasswordSvcTestSuite) SetupSuite() {
 	suite.idempotencyMed = mediatormock.NewMockIdempotencyMed(suite.ctrl)
 	suite.notificationPublisher = publishermock.NewMockNotificationPublisher(suite.ctrl)
 
-	passwordSvcConfig := PasswordSvcConfig{
+	passwordSvcConfig := &PasswordSvcConfig{
 		Repos: suite.repoFactory,
 		TxManager: stubTxManager{
 			repoFactory: suite.repoFactory,

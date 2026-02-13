@@ -190,6 +190,36 @@ func (c *AuthCoreClient) GetRolePermissions(ctx context.Context, roleID string) 
 	return resp.Permissions, nil
 }
 
+func (c *AuthCoreClient) GetSandboxAccountByOwner(ctx context.Context, ownerAccountID string) (string, *apierror.APIError) {
+	ctx = prepareCtx(ctx)
+
+	resp, apiErr := rpc.CallRPC(ctx, coreClientTracer, "core_client.get_sandbox_account_by_owner", coreServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetSandboxAccountByOwnerResponse, error) {
+			return c.client.GetSandboxAccountByOwner(ctx, &pb.GetSandboxAccountByOwnerRequest{
+				OwnerAccountId: ownerAccountID,
+			}, opts...)
+		})
+	if apiErr != nil {
+		return "", apiErr
+	}
+
+	return resp.SandboxAccountId, nil
+}
+
+func (c *AuthCoreClient) GetAdminRole(ctx context.Context) (string, *apierror.APIError) {
+	ctx = prepareCtx(ctx)
+
+	resp, apiErr := rpc.CallRPC(ctx, coreClientTracer, "core_client.get_admin_role", coreServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetAdminRoleResponse, error) {
+			return c.client.GetAdminRole(ctx, &emptypb.Empty{}, opts...)
+		})
+	if apiErr != nil {
+		return "", apiErr
+	}
+
+	return resp.RoleId, nil
+}
+
 func convertAccountModeFromProto(m pb.AccountMode) constants.AccountMode {
 	switch m {
 	case pb.AccountMode_ACCOUNT_MODE_PRODUCTION:

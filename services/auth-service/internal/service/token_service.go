@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/augno/api/services/auth-service/internal/domain"
 	"github.com/augno/api/services/auth-service/internal/event"
@@ -29,7 +30,38 @@ type TokenSvcConfig struct {
 	TxManager             TransactionManager
 }
 
-func NewTokenSvc(config TokenSvcConfig) domain.TokenSvc {
+// WithDefaults returns a new TokenSvcConfig with zero-value fields replaced by defaults.
+func (c *TokenSvcConfig) WithDefaults() *TokenSvcConfig {
+	if c == nil {
+		c = &TokenSvcConfig{}
+	}
+	return &TokenSvcConfig{
+		Repos:                 c.Repos,
+		MediatorFactory:       c.MediatorFactory,
+		NotificationPublisher: c.NotificationPublisher,
+		TxManager:             c.TxManager,
+	}
+}
+
+func (c *TokenSvcConfig) validate() error {
+	if c.Repos == nil {
+		return fmt.Errorf("token service: repos is required")
+	}
+	if c.MediatorFactory == nil {
+		return fmt.Errorf("token service: mediator factory is required")
+	}
+	if c.NotificationPublisher == nil {
+		return fmt.Errorf("token service: notification publisher is required")
+	}
+	return nil
+}
+
+func NewTokenSvc(config *TokenSvcConfig) domain.TokenSvc {
+	config = config.WithDefaults()
+	if err := config.validate(); err != nil {
+		panic(err)
+	}
+
 	return &tokenSvcImpl{
 		repos:                 config.Repos,
 		mediatorFactory:       config.MediatorFactory,
@@ -38,11 +70,11 @@ func NewTokenSvc(config TokenSvcConfig) domain.TokenSvc {
 	}
 }
 
-func DefaultTokenSvcConfig(queries *sqlc.Queries, jwtSecret string, pepper []byte, frontendURL string, coreClient domain.AuthCoreClient) TokenSvcConfig {
+func DefaultTokenSvcConfig(queries *sqlc.Queries, jwtSecret string, pepper []byte, frontendURL string, coreClient domain.AuthCoreClient) *TokenSvcConfig {
 	repoFactory := repository.NewRepoFactory(queries)
 	notificationPublisher := event.NewOutboxNotificationPublisher()
 
-	mediatorFactory := mediator.NewMediatorFactory(mediator.MediatorFactoryConfig{
+	mediatorFactory := mediator.NewMediatorFactory(&mediator.MediatorFactoryConfig{
 		JWTSecret:             jwtSecret,
 		APIKeyPepper:          pepper,
 		NotificationPublisher: notificationPublisher,
@@ -50,7 +82,7 @@ func DefaultTokenSvcConfig(queries *sqlc.Queries, jwtSecret string, pepper []byt
 		CoreClient:            coreClient,
 	})
 
-	return TokenSvcConfig{
+	return &TokenSvcConfig{
 		Repos:                 repoFactory,
 		MediatorFactory:       mediatorFactory,
 		NotificationPublisher: notificationPublisher,

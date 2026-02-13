@@ -41,3 +41,10 @@ WHERE sandbox_account.owner_account_id = ?;
 -- name: DeleteSandboxAccountByID :exec
 DELETE FROM sandbox_account WHERE id = ?;
 
+-- name: FindFirstSandboxAccountByOwnerAccountID :one
+SELECT sandbox_account.account_id
+FROM sandbox_account
+WHERE sandbox_account.owner_account_id = ?
+ORDER BY sandbox_account.id ASC
+LIMIT 1;
+

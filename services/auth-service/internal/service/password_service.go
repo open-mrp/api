@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/augno/api/services/auth-service/internal/domain"
 	"github.com/augno/api/services/auth-service/internal/event"
@@ -29,7 +30,38 @@ type PasswordSvcConfig struct {
 	TxManager             TransactionManager
 }
 
-func NewPasswordSvc(config PasswordSvcConfig) domain.PasswordSvc {
+// WithDefaults returns a new PasswordSvcConfig with zero-value fields replaced by defaults.
+func (c *PasswordSvcConfig) WithDefaults() *PasswordSvcConfig {
+	if c == nil {
+		c = &PasswordSvcConfig{}
+	}
+	return &PasswordSvcConfig{
+		Repos:                 c.Repos,
+		MediatorFactory:       c.MediatorFactory,
+		NotificationPublisher: c.NotificationPublisher,
+		TxManager:             c.TxManager,
+	}
+}
+
+func (c *PasswordSvcConfig) validate() error {
+	if c.Repos == nil {
+		return fmt.Errorf("password service: repos is required")
+	}
+	if c.MediatorFactory == nil {
+		return fmt.Errorf("password service: mediator factory is required")
+	}
+	if c.NotificationPublisher == nil {
+		return fmt.Errorf("password service: notification publisher is required")
+	}
+	return nil
+}
+
+func NewPasswordSvc(config *PasswordSvcConfig) domain.PasswordSvc {
+	config = config.WithDefaults()
+	if err := config.validate(); err != nil {
+		panic(err)
+	}
+
 	return &passwordSvcImpl{
 		repos:                 config.Repos,
 		mediatorFactory:       config.MediatorFactory,
@@ -38,11 +70,11 @@ func NewPasswordSvc(config PasswordSvcConfig) domain.PasswordSvc {
 	}
 }
 
-func DefaultPasswordSvcConfig(queries *sqlc.Queries, jwtSecret string, pepper []byte, frontendURL string, coreClient domain.AuthCoreClient) PasswordSvcConfig {
+func DefaultPasswordSvcConfig(queries *sqlc.Queries, jwtSecret string, pepper []byte, frontendURL string, coreClient domain.AuthCoreClient) *PasswordSvcConfig {
 	repoFactory := repository.NewRepoFactory(queries)
 	notificationPublisher := event.NewOutboxNotificationPublisher()
 
-	mediatorFactory := mediator.NewMediatorFactory(mediator.MediatorFactoryConfig{
+	mediatorFactory := mediator.NewMediatorFactory(&mediator.MediatorFactoryConfig{
 		JWTSecret:             jwtSecret,
 		APIKeyPepper:          pepper,
 		NotificationPublisher: notificationPublisher,
@@ -50,7 +82,7 @@ func DefaultPasswordSvcConfig(queries *sqlc.Queries, jwtSecret string, pepper []
 		CoreClient:            coreClient,
 	})
 
-	return PasswordSvcConfig{
+	return &PasswordSvcConfig{
 		Repos:                 repoFactory,
 		MediatorFactory:       mediatorFactory,
 		NotificationPublisher: notificationPublisher,

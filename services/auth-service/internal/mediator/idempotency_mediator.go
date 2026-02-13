@@ -3,6 +3,7 @@ package mediator
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/augno/api/services/auth-service/internal/domain"
 	"github.com/augno/api/services/auth-service/pkg/types"
@@ -23,7 +24,29 @@ type IdempotencyMedConfig struct {
 	Repos domain.RepoFactory
 }
 
-func NewIdempotencyMed(config IdempotencyMedConfig) domain.IdempotencyMed {
+// WithDefaults returns a new IdempotencyMedConfig with zero-value fields replaced by defaults.
+func (c *IdempotencyMedConfig) WithDefaults() *IdempotencyMedConfig {
+	if c == nil {
+		c = &IdempotencyMedConfig{}
+	}
+	return &IdempotencyMedConfig{
+		Repos: c.Repos,
+	}
+}
+
+func (c *IdempotencyMedConfig) validate() error {
+	if c.Repos == nil {
+		return fmt.Errorf("idempotency mediator: repos is required")
+	}
+	return nil
+}
+
+func NewIdempotencyMed(config *IdempotencyMedConfig) domain.IdempotencyMed {
+	config = config.WithDefaults()
+	if err := config.validate(); err != nil {
+		panic(err)
+	}
+
 	return &idempotencyMedImpl{
 		repos: config.Repos,
 	}

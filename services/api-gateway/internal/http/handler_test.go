@@ -291,55 +291,6 @@ func TestBindFromHeaders(t *testing.T) {
 	})
 }
 
-func TestApplyPagination(t *testing.T) {
-	t.Run("Parses valid pagination params", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/test?limit=20&cursor=abc123&q=search", nil)
-		params, err := ApplyPagination(req)
-		if err != nil {
-			t.Errorf("expected no error, got %v", err)
-		}
-		if params.Limit != 20 {
-			t.Errorf("expected limit 20, got %d", params.Limit)
-		}
-		if params.Cursor == nil || *params.Cursor != "abc123" {
-			t.Errorf("expected cursor 'abc123', got %v", params.Cursor)
-		}
-		if params.Query == nil || *params.Query != "search" {
-			t.Errorf("expected query 'search', got %v", params.Query)
-		}
-	})
-
-	t.Run("Uses defaults when params missing", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/test", nil)
-		params, err := ApplyPagination(req)
-		if err != nil {
-			t.Errorf("expected no error, got %v", err)
-		}
-		if params.Limit != 10 {
-			t.Errorf("expected default limit 10, got %d", params.Limit)
-		}
-		if params.Cursor != nil {
-			t.Errorf("expected nil cursor, got %v", params.Cursor)
-		}
-	})
-
-	t.Run("Returns error for invalid limit", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/test?limit=invalid", nil)
-		_, err := ApplyPagination(req)
-		if err == nil {
-			t.Error("expected error for invalid limit")
-		}
-	})
-
-	t.Run("Returns error for negative limit", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/test?limit=-1", nil)
-		_, err := ApplyPagination(req)
-		if err == nil {
-			t.Error("expected error for negative limit")
-		}
-	})
-}
-
 func TestRespondWithJSON(t *testing.T) {
 	t.Run("Writes JSON response", func(t *testing.T) {
 		w := httptest.NewRecorder()

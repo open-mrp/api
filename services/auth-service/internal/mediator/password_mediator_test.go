@@ -45,7 +45,7 @@ func (suite *PasswordMedTestSuite) SetupSuite() {
 
 	suite.jwtUtils = token.NewJWTUtils(&token.JWTConfig{Secret: testutil.JWTSecret})
 
-	passwordMedConfig := PasswordMedConfig{
+	passwordMedConfig := &PasswordMedConfig{
 		Repos:                 suite.repoFactory,
 		RefreshTokenMed:       suite.refreshTokenMed,
 		JWTUtils:              suite.jwtUtils,

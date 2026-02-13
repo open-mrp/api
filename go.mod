@@ -1,6 +1,6 @@
 module github.com/augno/api
 
-go 1.24.4
+go 1.26.0
 
 replace github.com/augno/api => ./
 
@@ -12,7 +12,6 @@ require (
 	github.com/go-sql-driver/mysql v1.9.3
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/matoous/go-nanoid/v2 v2.1.0
-	github.com/ohler55/ojg v1.28.0
 	github.com/stretchr/testify v1.11.1
 	go.opentelemetry.io/otel v1.40.0
 	go.opentelemetry.io/otel/sdk v1.40.0
@@ -67,6 +66,6 @@ require (
 	golang.org/x/net v0.50.0 // indirect
 	golang.org/x/sys v0.41.0 // indirect
 	golang.org/x/text v0.34.0 // indirect
-	google.golang.org/grpc v1.78.0
+	google.golang.org/grpc v1.79.1
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

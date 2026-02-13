@@ -44,6 +44,15 @@ service CoreService {
   // including their role in each. Used by the account switcher in the UI
   // and to resolve the user's default account on login.
   rpc ListUserAccountAffiliations(ListUserAccountAffiliationsRequest) returns (ListUserAccountAffiliationsResponse);
+
+  // GetSandboxAccountByOwner returns the sandbox account ID for a given
+  // owner (production) account. Used by the doc API key flow to resolve
+  // the sandbox where documentation keys are scoped.
+  rpc GetSandboxAccountByOwner(GetSandboxAccountByOwnerRequest) returns (GetSandboxAccountByOwnerResponse);
+
+  // GetAdminRole returns the admin role ID.
+  // Used by the doc API key flow to assign the admin role to generated keys.
+  rpc GetAdminRole(google.protobuf.Empty) returns (GetAdminRoleResponse);
 }
 
 // GetAccountContextRequest identifies the account to look up.
@@ -241,4 +250,23 @@ message CompleteRegistrationResponse {
   string account_id = 1;
   // SandboxID is the new sandbox account's prefixed ID.
   string sandbox_id = 2;
+}
+
+// GetSandboxAccountByOwnerRequest identifies the production account whose
+// sandbox should be looked up.
+message GetSandboxAccountByOwnerRequest {
+  // OwnerAccountID is the production account's prefixed ID.
+  string owner_account_id = 1;
+}
+
+// GetSandboxAccountByOwnerResponse contains the sandbox account ID.
+message GetSandboxAccountByOwnerResponse {
+  // SandboxAccountID is the sandbox account's prefixed ID.
+  string sandbox_account_id = 1;
+}
+
+// GetAdminRoleResponse contains the admin role ID.
+message GetAdminRoleResponse {
+  // RoleID is the admin role's prefixed ID.
+  string role_id = 1;
 }

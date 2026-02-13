@@ -49,9 +49,9 @@ INSERT INTO account_user (
     updated_at
 ) VALUES (?, ?, ?, ?, 'active', NOW(), NOW());
 
--- name: GetOwnerRoleIDByAccountID :one
+-- name: GetAdminRoleID :one
 SELECT r.id
 FROM role r
-WHERE r.account_id = ? AND r.name = 'Admin'
+WHERE r.role_type_code = 'admin' AND r.account_id IS NULL
 LIMIT 1;
 

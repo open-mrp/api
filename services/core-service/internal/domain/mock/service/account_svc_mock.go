@@ -87,6 +87,21 @@ func (mr *MockAccountSvcMockRecorder) GetAccountRelationByUserID(ctx, ownerAccou
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAccountRelationByUserID", reflect.TypeOf((*MockAccountSvc)(nil).GetAccountRelationByUserID), ctx, ownerAccountID, userID)
 }
 
+// GetAdminRole mocks base method.
+func (m *MockAccountSvc) GetAdminRole(ctx context.Context) (string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAdminRole", ctx)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetAdminRole indicates an expected call of GetAdminRole.
+func (mr *MockAccountSvcMockRecorder) GetAdminRole(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAdminRole", reflect.TypeOf((*MockAccountSvc)(nil).GetAdminRole), ctx)
+}
+
 // GetRolePermissions mocks base method.
 func (m *MockAccountSvc) GetRolePermissions(ctx context.Context, roleID string) (map[string]bool, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -100,6 +115,21 @@ func (m *MockAccountSvc) GetRolePermissions(ctx context.Context, roleID string) 
 func (mr *MockAccountSvcMockRecorder) GetRolePermissions(ctx, roleID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRolePermissions", reflect.TypeOf((*MockAccountSvc)(nil).GetRolePermissions), ctx, roleID)
+}
+
+// GetSandboxAccountByOwner mocks base method.
+func (m *MockAccountSvc) GetSandboxAccountByOwner(ctx context.Context, ownerAccountID string) (string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSandboxAccountByOwner", ctx, ownerAccountID)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetSandboxAccountByOwner indicates an expected call of GetSandboxAccountByOwner.
+func (mr *MockAccountSvcMockRecorder) GetSandboxAccountByOwner(ctx, ownerAccountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSandboxAccountByOwner", reflect.TypeOf((*MockAccountSvc)(nil).GetSandboxAccountByOwner), ctx, ownerAccountID)
 }
 
 // GetUserAccountAccess mocks base method.

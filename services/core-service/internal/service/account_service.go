@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/augno/api/services/core-service/internal/domain"
@@ -18,18 +19,45 @@ type accountSvcImpl struct {
 	accountUserRepo     domain.AccountUserRepo
 	accountRelationRepo domain.AccountRelationRepo
 	rolePermissionRepo  domain.RolePermissionRepo
+	sandboxAccountRepo  domain.SandboxAccountRepo
 }
 
-func NewAccountSvc(queries *sqlc.Queries) domain.AccountSvc {
-	return &accountSvcImpl{
-		accountRepo:         repository.NewAccountRepo(queries),
-		accountUserRepo:     repository.NewAccountUserRepo(queries),
-		accountRelationRepo: repository.NewAccountRelationRepo(queries),
-		rolePermissionRepo:  repository.NewRolePermissionRepo(queries),
+type AccountSvcConfig struct {
+	Queries *sqlc.Queries
+}
+
+// WithDefaults returns a new AccountSvcConfig with zero-value fields replaced by defaults.
+func (c *AccountSvcConfig) WithDefaults() *AccountSvcConfig {
+	if c == nil {
+		c = &AccountSvcConfig{}
+	}
+	return &AccountSvcConfig{
+		Queries: c.Queries,
 	}
 }
 
-// GetAccountContext returns the context of an account including whether it's a sandbox
+func (c *AccountSvcConfig) validate() error {
+	if c.Queries == nil {
+		return fmt.Errorf("account service: queries is required")
+	}
+	return nil
+}
+
+func NewAccountSvc(config *AccountSvcConfig) domain.AccountSvc {
+	config = config.WithDefaults()
+	if err := config.validate(); err != nil {
+		panic(err)
+	}
+
+	return &accountSvcImpl{
+		accountRepo:         repository.NewAccountRepo(config.Queries),
+		accountUserRepo:     repository.NewAccountUserRepo(config.Queries),
+		accountRelationRepo: repository.NewAccountRelationRepo(config.Queries),
+		rolePermissionRepo:  repository.NewRolePermissionRepo(config.Queries),
+		sandboxAccountRepo:  repository.NewSandboxAccountRepo(config.Queries),
+	}
+}
+
 func (s *accountSvcImpl) GetAccountContext(ctx context.Context, accountID string) (*domain.AccountContext, *apierror.APIError) {
 	ctx, span := accountSvcTracer.Start(ctx, "service.account.get_account_context")
 	defer span.End()
@@ -37,7 +65,6 @@ func (s *accountSvcImpl) GetAccountContext(ctx context.Context, accountID string
 	return s.accountRepo.GetAccountContext(ctx, accountID)
 }
 
-// GetUserAccountAccess returns the user's access to an account including their role and permissions
 func (s *accountSvcImpl) GetUserAccountAccess(ctx context.Context, userID, accountID string) (*domain.AccountUserAccess, *apierror.APIError) {
 	ctx, span := accountSvcTracer.Start(ctx, "service.account.get_user_account_access")
 	defer span.End()
@@ -82,7 +109,6 @@ func (s *accountSvcImpl) GetRolePermissions(ctx context.Context, roleID string) 
 	return s.rolePermissionRepo.FindByRoleID(ctx, roleID)
 }
 
-// GetAccountRelationByUserID returns the relationship between accounts based on user
 func (s *accountSvcImpl) GetAccountRelationByUserID(ctx context.Context, ownerAccountID, userID string) (*domain.AccountRelation, *apierror.APIError) {
 	ctx, span := accountSvcTracer.Start(ctx, "service.account.get_account_relation_by_user_id")
 	defer span.End()
@@ -90,7 +116,6 @@ func (s *accountSvcImpl) GetAccountRelationByUserID(ctx context.Context, ownerAc
 	return s.accountRelationRepo.FindByOwnerAccountAndUserID(ctx, ownerAccountID, userID)
 }
 
-// GetAccountRelationByAPIKeyID returns the relationship between accounts based on API key
 func (s *accountSvcImpl) GetAccountRelationByAPIKeyID(ctx context.Context, ownerAccountID string, apiKeyID int64) (*domain.AccountRelation, *apierror.APIError) {
 	ctx, span := accountSvcTracer.Start(ctx, "service.account.get_account_relation_by_api_key_id")
 	defer span.End()
@@ -98,7 +123,6 @@ func (s *accountSvcImpl) GetAccountRelationByAPIKeyID(ctx context.Context, owner
 	return s.accountRelationRepo.FindByOwnerAccountAndAPIKeyID(ctx, ownerAccountID, apiKeyID)
 }
 
-// MarkAccountUserUsed marks an account user as recently used
 func (s *accountSvcImpl) MarkAccountUserUsed(ctx context.Context, accountUserID string) *apierror.APIError {
 	ctx, span := accountSvcTracer.Start(ctx, "service.account.mark_account_user_used")
 	defer span.End()
@@ -106,7 +130,6 @@ func (s *accountSvcImpl) MarkAccountUserUsed(ctx context.Context, accountUserID 
 	return s.accountUserRepo.UpdateLastUsedAt(ctx, accountUserID, time.Now().UTC())
 }
 
-// ListUserAccountAffiliations returns the accounts a user is affiliated with
 func (s *accountSvcImpl) ListUserAccountAffiliations(ctx context.Context, userID string) ([]domain.AccountAffiliation, *string, *apierror.APIError) {
 	ctx, span := accountSvcTracer.Start(ctx, "service.account.list_user_account_affiliations")
 	defer span.End()
@@ -127,4 +150,18 @@ func (s *accountSvcImpl) ListUserAccountAffiliations(ctx context.Context, userID
 	}
 
 	return affiliations, lastUsedPtr, nil
+}
+
+func (s *accountSvcImpl) GetSandboxAccountByOwner(ctx context.Context, ownerAccountID string) (string, *apierror.APIError) {
+	ctx, span := accountSvcTracer.Start(ctx, "service.account.get_sandbox_account_by_owner")
+	defer span.End()
+
+	return s.sandboxAccountRepo.FindFirstByOwnerAccountID(ctx, ownerAccountID)
+}
+
+func (s *accountSvcImpl) GetAdminRole(ctx context.Context) (string, *apierror.APIError) {
+	ctx, span := accountSvcTracer.Start(ctx, "service.account.get_admin_role")
+	defer span.End()
+
+	return s.accountUserRepo.GetAdminRoleID(ctx)
 }

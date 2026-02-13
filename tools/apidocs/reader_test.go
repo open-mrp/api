@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/augno/api/services/api-gateway/cmd/apidocs/testdata"
+	"github.com/augno/api/tools/apidocs/testdata"
 )
 
 func TestDocReader_GetTypeDoc(t *testing.T) {

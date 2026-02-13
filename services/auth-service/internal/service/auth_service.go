@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/augno/api/services/auth-service/internal/domain"
 	"github.com/augno/api/services/auth-service/internal/event"
@@ -29,7 +30,38 @@ type AuthSvcConfig struct {
 	TxManager             TransactionManager
 }
 
-func NewAuthSvc(config AuthSvcConfig) domain.AuthSvc {
+// WithDefaults returns a new AuthSvcConfig with zero-value fields replaced by defaults.
+func (c *AuthSvcConfig) WithDefaults() *AuthSvcConfig {
+	if c == nil {
+		c = &AuthSvcConfig{}
+	}
+	return &AuthSvcConfig{
+		Repos:                 c.Repos,
+		MediatorFactory:       c.MediatorFactory,
+		NotificationPublisher: c.NotificationPublisher,
+		TxManager:             c.TxManager,
+	}
+}
+
+func (c *AuthSvcConfig) validate() error {
+	if c.Repos == nil {
+		return fmt.Errorf("auth service: repos is required")
+	}
+	if c.MediatorFactory == nil {
+		return fmt.Errorf("auth service: mediator factory is required")
+	}
+	if c.NotificationPublisher == nil {
+		return fmt.Errorf("auth service: notification publisher is required")
+	}
+	return nil
+}
+
+func NewAuthSvc(config *AuthSvcConfig) domain.AuthSvc {
+	config = config.WithDefaults()
+	if err := config.validate(); err != nil {
+		panic(err)
+	}
+
 	return &authSvcImpl{
 		repos:                 config.Repos,
 		mediatorFactory:       config.MediatorFactory,
@@ -38,11 +70,11 @@ func NewAuthSvc(config AuthSvcConfig) domain.AuthSvc {
 	}
 }
 
-func DefaultAuthSvcConfig(queries *sqlc.Queries, jwtSecret string, pepper []byte, frontendURL string, coreClient domain.AuthCoreClient) AuthSvcConfig {
+func DefaultAuthSvcConfig(queries *sqlc.Queries, jwtSecret string, pepper []byte, frontendURL string, coreClient domain.AuthCoreClient) *AuthSvcConfig {
 	repoFactory := repository.NewRepoFactory(queries)
 	notificationPublisher := event.NewOutboxNotificationPublisher()
 
-	mediatorFactory := mediator.NewMediatorFactory(mediator.MediatorFactoryConfig{
+	mediatorFactory := mediator.NewMediatorFactory(&mediator.MediatorFactoryConfig{
 		JWTSecret:             jwtSecret,
 		APIKeyPepper:          pepper,
 		NotificationPublisher: notificationPublisher,
@@ -50,7 +82,7 @@ func DefaultAuthSvcConfig(queries *sqlc.Queries, jwtSecret string, pepper []byte
 		CoreClient:            coreClient,
 	})
 
-	return AuthSvcConfig{
+	return &AuthSvcConfig{
 		Repos:                 repoFactory,
 		MediatorFactory:       mediatorFactory,
 		NotificationPublisher: notificationPublisher,

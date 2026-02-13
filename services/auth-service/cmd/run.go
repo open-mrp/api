@@ -97,11 +97,19 @@ func Run(
 	passwordConfig.TxManager = txManager
 	passwordSvc := service.NewPasswordSvc(passwordConfig)
 
+	apiKeyConfig := service.DefaultAPIKeySvcConfig(queries, cfg.JWTSecret, cfg.Pepper, cfg.FrontendURL, coreClient, cfg.DocAPIKeyEncryptionKey)
+	apiKeyConfig.TxManager = txManager
+	apiKeySvc := service.NewAPIKeySvc(apiKeyConfig)
+
+	docAPIKeyConfig := service.DefaultDocAPIKeySvcConfig(queries, cfg.JWTSecret, cfg.Pepper, cfg.FrontendURL, coreClient, cfg.DocAPIKeyEncryptionKey)
+	docAPIKeyConfig.TxManager = txManager
+	docAPIKeySvc := service.NewDocAPIKeySvc(docAPIKeyConfig)
+
 	server, err := contracts.NewGRPCServer(domain.ServiceName, nil, nil)
 	if err != nil {
 		return err
 	}
-	grpc.NewGRPCHandler(server.Server(), authSvc, userSvc, tokenSvc, passwordSvc)
+	grpc.NewGRPCHandler(server.Server(), authSvc, userSvc, tokenSvc, passwordSvc, apiKeySvc, docAPIKeySvc)
 
 	logger.Info("Auth service started", "port", cfg.Port)
 

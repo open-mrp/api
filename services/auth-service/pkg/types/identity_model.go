@@ -27,15 +27,15 @@ func (i *Identity) IsAuthenticated() bool {
 }
 
 func (i *Identity) IsAdmin() bool {
-	return i != nil && i.Type == IdentityTypeUser && i.Actor != nil && i.Actor.RoleTypeCode != nil && *i.Actor.RoleTypeCode == string(constants.RoleTypeCodeAdmin)
+	return i.IsAuthenticated() && i.Actor != nil && i.Actor.RoleTypeCode != nil && *i.Actor.RoleTypeCode == string(constants.RoleTypeCodeAdmin)
 }
 
 func (i *Identity) IsScanner() bool {
-	return i != nil && i.Type == IdentityTypeUser && i.Actor != nil && i.Actor.RoleTypeCode != nil && *i.Actor.RoleTypeCode == string(constants.RoleTypeCodeScanner)
+	return i.IsAuthenticated() && i.Actor != nil && i.Actor.RoleTypeCode != nil && *i.Actor.RoleTypeCode == string(constants.RoleTypeCodeScanner)
 }
 
 func (i *Identity) IsSalesRep() bool {
-	return i != nil && i.Type == IdentityTypeUser && i.Actor != nil && i.Actor.RoleTypeCode != nil && *i.Actor.RoleTypeCode == string(constants.RoleTypeCodeSalesRep)
+	return i.IsAuthenticated() && i.Actor != nil && i.Actor.RoleTypeCode != nil && *i.Actor.RoleTypeCode == string(constants.RoleTypeCodeSalesRep)
 }
 
 func (i *Identity) IsAPIKey() bool {
@@ -47,19 +47,19 @@ func (i *Identity) IsUser() bool {
 }
 
 func (i *Identity) IsInternalUser() bool {
-	return i != nil && i.Type == IdentityTypeUser && i.Actor != nil && i.Actor.Type == IdentityActorTypeInternal
+	return i.IsAuthenticated() && i.Actor != nil && i.Actor.Type == IdentityActorTypeInternal
 }
 
 func (i *Identity) IsSupplierUser() bool {
-	return i != nil && i.Type == IdentityTypeUser && i.Actor != nil && i.Actor.Type == IdentityActorTypeSupplier
+	return i.IsAuthenticated() && i.Actor != nil && i.Actor.Type == IdentityActorTypeSupplier
 }
 
 func (i *Identity) IsCustomerUser() bool {
-	return i != nil && i.Type == IdentityTypeUser && i.Actor != nil && i.Actor.Type == IdentityActorTypeCustomer
+	return i.IsAuthenticated() && i.Actor != nil && i.Actor.Type == IdentityActorTypeCustomer
 }
 
 func (i *Identity) IsUnassignedUser() bool {
-	return i != nil && i.Type == IdentityTypeUser && i.Actor != nil && i.Actor.Type == IdentityActorTypeUnassigned
+	return i.IsAuthenticated() && i.Actor != nil && i.Actor.Type == IdentityActorTypeUnassigned
 }
 
 func GetUnauthenticatedIdentity(targetAccountID *string) *Identity {

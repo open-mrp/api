@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -38,37 +37,6 @@ func GetIdentity(ctx context.Context) (*types.Identity, *apierror.APIError) {
 		return identity, nil
 	}
 	return nil, apierror.NewAuthenticationError("Identity not found in context")
-}
-
-// ApplyPagination parses query params, and returns the parameters.
-func ApplyPagination(r *http.Request) (*appctx.PaginationParams, *apierror.APIError) {
-	params := appctx.PaginationParams{
-		Limit: 10, // Default limit
-	}
-
-	// Parse search query
-	if q := r.URL.Query().Get("q"); q != "" {
-		params.Query = &q
-	}
-
-	// Parse cursor
-	if cursor := r.URL.Query().Get("cursor"); cursor != "" {
-		params.Cursor = &cursor
-	}
-
-	// Parse limit
-	if limit := r.URL.Query().Get("limit"); limit != "" {
-		limitInt, err := strconv.Atoi(limit)
-		if err != nil {
-			return nil, apierror.NewParameterInvalidError(fmt.Sprintf("Invalid limit provided: '%s'. Must be a positive integer.", limit), "limit")
-		}
-		if limitInt <= 0 || limitInt > math.MaxInt32 {
-			return nil, apierror.NewParameterInvalidError(fmt.Sprintf("Limit '%s' must be a positive integer.", limit), "limit")
-		}
-		params.Limit = int32(limitInt) // #nosec G109 - bounds checked above
-	}
-
-	return &params, nil
 }
 
 func ShouldDecodeBody(r *http.Request) bool {
@@ -221,6 +189,11 @@ func BindFromHeaders(r *http.Request, dst any) error {
 	return walkStruct(dst, func(f fieldInfo) error {
 		h := f.tag.Get("header")
 		cookieName := f.tag.Get("cookie")
+
+		// Skip fields that have no header or cookie tag
+		if h == "" && cookieName == "" {
+			return nil
+		}
 
 		// Try header first
 		var val string
@@ -398,7 +371,12 @@ func BindFromQuery(u *url.URL, dst any) error {
 			if len(values) == 0 && val != "" {
 				values = strings.Split(val, ",")
 			}
-			f.value.Set(reflect.ValueOf(values))
+			elemType := f.value.Type().Elem()
+			slice := reflect.MakeSlice(f.value.Type(), len(values), len(values))
+			for i, v := range values {
+				slice.Index(i).Set(reflect.ValueOf(v).Convert(elemType))
+			}
+			f.value.Set(slice)
 			return nil
 		}
 		if err := setFromString(f.value, val, f.tag); err != nil {
@@ -516,7 +494,13 @@ func setFromString(v reflect.Value, s string, tag reflect.StructTag) error {
 		return fmt.Errorf("unsupported string->struct conversion for %s", v.Type().String())
 	case reflect.Slice:
 		if v.Type().Elem().Kind() == reflect.String {
-			v.Set(reflect.ValueOf(strings.Split(s, ",")))
+			parts := strings.Split(s, ",")
+			elemType := v.Type().Elem()
+			slice := reflect.MakeSlice(v.Type(), len(parts), len(parts))
+			for i, p := range parts {
+				slice.Index(i).Set(reflect.ValueOf(p).Convert(elemType))
+			}
+			v.Set(slice)
 			return nil
 		}
 		return fmt.Errorf("unsupported slice element type: %s", v.Type().Elem().String())

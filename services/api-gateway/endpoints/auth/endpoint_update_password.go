@@ -4,8 +4,6 @@ import (
 	"context"
 	"net/http"
 
-	grpcclient "github.com/augno/api/services/api-gateway/grpc-client"
-	"github.com/augno/api/services/api-gateway/internal/middleware"
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
@@ -52,15 +50,4 @@ func (e *UpdatePasswordEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateP
 			AllowUnknownJSONFields: false,
 		},
 	}
-}
-
-func (e *UpdatePasswordEndpoint) MaterializeWithMiddleware(authClient *grpcclient.AuthServiceClient) *apiendpoint.APIEndpoint[*UpdatePasswordRequest, *apiresource.EmptyResource] {
-	ep := e.Materialize()
-	if authClient != nil {
-		authMiddlewareConfig := middleware.AuthMiddlewareConfig{
-			AuthClient: authClient,
-		}
-		ep.WithMiddleware(middleware.AuthMiddleware(authMiddlewareConfig))
-	}
-	return ep
 }

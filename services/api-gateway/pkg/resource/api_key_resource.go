@@ -8,9 +8,9 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleAPIKeyID = "ak_01gf7a8200eaj8fke1xvw4h50x"           // #nosec G101 - sample data for API docs
-const SampleAPIKeyName = "Production API Key"                     // #nosec G101 - sample data for API docs
-const SampleAPIKeyRedactedValue = "aug_sk_prod_...kuIb"           // #nosec G101 - sample data for API docs
+const SampleAPIKeyID = "ak_01gf7a8200eaj8fke1xvw4h50x"  // #nosec G101 - sample data for API docs
+const SampleAPIKeyName = "Production API Key"           // #nosec G101 - sample data for API docs
+const SampleAPIKeyRedactedValue = "aug_sk_prod_...kuIb" // #nosec G101 - sample data for API docs
 
 // #nosec G101 - This is sample data for API documentation, not a real credential
 const SampleAPIKeyValue = "aug_sk_prod_RhxFDvTdDnb0bgtcoA5P79_60EmH4h9j9ZldsuU9XyngXlpu8NqdIlGTQw8OM8cGeCadykuIb"

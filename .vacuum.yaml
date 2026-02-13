@@ -1,0 +1,3 @@
+extends: [[vacuum:oas, recommended]]
+rules:
+  camel-case-properties: hint

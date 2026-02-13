@@ -1,8 +1,8 @@
 -- +goose Up
 
--- MySQL dump 10.13  Distrib 9.5.0, for macos26.0 (arm64)
+-- MySQL dump 10.13  Distrib 9.5.0, for macos26.1 (arm64)
 --
--- Host: localhost    Database: augno
+-- Host: localhost    Database: augno_db
 -- ------------------------------------------------------
 -- Server version	9.5.0
 
@@ -1098,6 +1098,26 @@ CREATE TABLE `department` (
   KEY `department_account_id_idx` (`account_id`),
   KEY `department_location_id_idx` (`location_id`),
   FULLTEXT KEY `department_name_idx` (`name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `doc_api_key`
+--
+
+DROP TABLE IF EXISTS `doc_api_key`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `doc_api_key` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `type_id` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `api_key_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `encrypted_secret` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `doc_api_key_type_id_key` (`type_id`),
+  UNIQUE KEY `doc_api_key_api_key_id_key` (`api_key_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -3392,7 +3412,7 @@ CREATE TABLE `user` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-02-05 12:50:36
+-- Dump completed on 2026-02-13  5:32:50
 
 -- +goose Down
 
@@ -3489,6 +3509,7 @@ DROP TABLE IF EXISTS `error_log`;
 DROP TABLE IF EXISTS `email_recipient`;
 DROP TABLE IF EXISTS `email_log`;
 DROP TABLE IF EXISTS `edi_run`;
+DROP TABLE IF EXISTS `doc_api_key`;
 DROP TABLE IF EXISTS `department`;
 DROP TABLE IF EXISTS `delivery_status`;
 DROP TABLE IF EXISTS `delivery_line`;

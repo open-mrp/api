@@ -4,8 +4,8 @@ import (
 	"net/http"
 
 	"github.com/augno/api/services/api-gateway/internal/header"
-	"github.com/augno/api/shared/appctx"
 	httptransport "github.com/augno/api/services/api-gateway/internal/http"
+	"github.com/augno/api/shared/appctx"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/version"
 )

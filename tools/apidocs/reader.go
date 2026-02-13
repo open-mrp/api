@@ -66,12 +66,15 @@ func (r *DocReader) loadPackage(pkgPath string) {
 	// or already relative to the current working directory.
 	dir := localDir
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		// If not found, try to find it relative to project root by looking for go.mod
+		// Walk up to find a go.mod whose directory contains our target package.
 		current, _ := os.Getwd()
 		for {
 			if _, err := os.Stat(filepath.Join(current, "go.mod")); err == nil {
-				dir = filepath.Join(current, localDir)
-				break
+				candidate := filepath.Join(current, localDir)
+				if _, err := os.Stat(candidate); err == nil {
+					dir = candidate
+					break
+				}
 			}
 			parent := filepath.Dir(current)
 			if parent == current {

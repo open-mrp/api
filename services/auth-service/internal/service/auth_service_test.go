@@ -78,7 +78,7 @@ func (suite *AuthSvcTestSuite) SetupSuite() {
 
 	suite.notificationPublisher = publishermock.NewMockNotificationPublisher(suite.ctrl)
 
-	authSvcConfig := AuthSvcConfig{
+	authSvcConfig := &AuthSvcConfig{
 		Repos: suite.repoFactory,
 		TxManager: stubTxManager{
 			repoFactory: suite.repoFactory,

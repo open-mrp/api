@@ -18,6 +18,10 @@ func WithHeader(key, value string) RespondOption {
 	return func(h http.Header) { h.Set(key, value) }
 }
 
+func WithLocation(path string) RespondOption {
+	return func(h http.Header) { h.Set("Location", path) }
+}
+
 func applyRespondOptions(w http.ResponseWriter, ctx context.Context, code int, opts []RespondOption) {
 	w.Header().Set(header.ContentTypeHeader, "application/json")
 	if v, ok := appctx.GetAPIVersionFromContext(ctx); ok {

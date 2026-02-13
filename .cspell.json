@@ -4,6 +4,7 @@
     "words": [
         "acad",
         "accountpb",
+        "AESGCM",
         "amqp",
         "apicontext",
         "apidoc",
@@ -44,6 +45,7 @@
         "dedupe",
         "difflib",
         "docgen",
+        "docstrings",
         "eclient",
         "emailpkg",
         "emptypb",
@@ -175,6 +177,7 @@
         "traceidratio",
         "traceparent",
         "Tracestate",
+        "Unmarshal",
         "unmarshalled",
         "unmarshalling",
         "unmarshals",

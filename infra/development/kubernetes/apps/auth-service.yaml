@@ -71,6 +71,11 @@ spec:
                             configMapKeyRef:
                                 key: CORE_SERVICE_URL
                                 name: app-config
+                      - name: DOC_API_KEY_ENCRYPTION_KEY
+                        valueFrom:
+                            secretKeyRef:
+                                name: doc-api-key-encryption-key
+                                key: key
 ---
 apiVersion: v1
 kind: Service

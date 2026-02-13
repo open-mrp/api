@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 )
 
+// ValidateAndMarshalToMap validates the example and marshals it to a map.
 func ValidateAndMarshalToMap(example any) map[string]any {
 	b, err := json.Marshal(example)
 	if err != nil {

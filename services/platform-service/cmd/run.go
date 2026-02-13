@@ -66,7 +66,7 @@ func Run(
 	}
 	defer queries.Close()
 
-	loggingSvc := service.NewLoggingSvc(service.LoggingSvcConfig{
+	loggingSvc := service.NewLoggingSvc(&service.LoggingSvcConfig{
 		Repos: repository.NewRepoFactory(queries),
 	})
 

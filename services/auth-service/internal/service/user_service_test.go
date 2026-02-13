@@ -49,7 +49,7 @@ func (suite *UserSvcTestSuite) SetupSuite() {
 	suite.idempotencyMed = mediatormock.NewMockIdempotencyMed(suite.ctrl)
 	suite.notificationPublisher = publishermock.NewMockNotificationPublisher(suite.ctrl)
 
-	userSvcConfig := UserSvcConfig{
+	userSvcConfig := &UserSvcConfig{
 		Repos: suite.repoFactory,
 		TxManager: stubTxManager{
 			repoFactory: suite.repoFactory,
@@ -77,7 +77,7 @@ func TestUserSvcTestSuite(t *testing.T) {
 func (suite *UserSvcTestSuite) TestLogin_Success() {
 	responseMeta := &appctx.IdempotencyResponseMetadata{}
 	ctx := appctx.WithIdempotencyKey(context.Background(), "test-idempotency-key")
-	ctx = appctx.WithIdempotencyResponseMetadata(ctx,responseMeta)
+	ctx = appctx.WithIdempotencyResponseMetadata(ctx, responseMeta)
 	identifier := "user@example.com"
 	password := "password"
 	user := &types.User{ID: testutil.EntityIDUser}
@@ -152,7 +152,7 @@ func (suite *UserSvcTestSuite) TestLogin_ValidateFails() {
 
 func (suite *UserSvcTestSuite) TestRegister_Success() {
 	ctx := appctx.WithIdempotencyKey(context.Background(), "test-idempotency-key")
-	ctx = appctx.WithIdempotencyResponseMetadata(ctx,&appctx.IdempotencyResponseMetadata{})
+	ctx = appctx.WithIdempotencyResponseMetadata(ctx, &appctx.IdempotencyResponseMetadata{})
 	input := domain.RegisterInput{
 		Name:     "Test User",
 		Email:    "user@example.com",
@@ -246,7 +246,7 @@ func TestLogin_Success_RefreshTokenAndResponseInSameTx(t *testing.T) {
 
 	txManager := &trackingTxManager{repoFactory: repoFactory}
 
-	userSvcConfig := UserSvcConfig{
+	userSvcConfig := &UserSvcConfig{
 		Repos:     repoFactory,
 		TxManager: txManager,
 		MediatorFactory: staticMediatorFactory{mediators: domain.Mediators{
@@ -255,11 +255,12 @@ func TestLogin_Success_RefreshTokenAndResponseInSameTx(t *testing.T) {
 			RefreshToken: refreshTokenMed,
 			Idempotency:  idempotencyMed,
 		}},
+		NotificationPublisher: publishermock.NewMockNotificationPublisher(ctrl),
 	}
 	userSvc := NewUserSvc(userSvcConfig)
 
 	ctx := appctx.WithIdempotencyKey(context.Background(), "test-key")
-	ctx = appctx.WithIdempotencyResponseMetadata(ctx,&appctx.IdempotencyResponseMetadata{})
+	ctx = appctx.WithIdempotencyResponseMetadata(ctx, &appctx.IdempotencyResponseMetadata{})
 
 	user := &types.User{ID: testutil.EntityIDUser}
 	idempotencyKey := &domain.IdempotencyKey{
@@ -301,7 +302,7 @@ func TestLogin_Success_ResponseFailsCausesRollback(t *testing.T) {
 
 	txManager := &trackingTxManager{repoFactory: repoFactory}
 
-	userSvcConfig := UserSvcConfig{
+	userSvcConfig := &UserSvcConfig{
 		Repos:     repoFactory,
 		TxManager: txManager,
 		MediatorFactory: staticMediatorFactory{mediators: domain.Mediators{
@@ -310,11 +311,12 @@ func TestLogin_Success_ResponseFailsCausesRollback(t *testing.T) {
 			RefreshToken: refreshTokenMed,
 			Idempotency:  idempotencyMed,
 		}},
+		NotificationPublisher: publishermock.NewMockNotificationPublisher(ctrl),
 	}
 	userSvc := NewUserSvc(userSvcConfig)
 
 	ctx := appctx.WithIdempotencyKey(context.Background(), "test-key")
-	ctx = appctx.WithIdempotencyResponseMetadata(ctx,&appctx.IdempotencyResponseMetadata{})
+	ctx = appctx.WithIdempotencyResponseMetadata(ctx, &appctx.IdempotencyResponseMetadata{})
 
 	user := &types.User{ID: testutil.EntityIDUser}
 	idempotencyKey := &domain.IdempotencyKey{
@@ -358,7 +360,7 @@ func TestLogin_RefreshTokenFails_NonTransientErrorCached(t *testing.T) {
 
 	txManager := &trackingTxManager{repoFactory: repoFactory}
 
-	userSvcConfig := UserSvcConfig{
+	userSvcConfig := &UserSvcConfig{
 		Repos:     repoFactory,
 		TxManager: txManager,
 		MediatorFactory: staticMediatorFactory{mediators: domain.Mediators{
@@ -367,11 +369,12 @@ func TestLogin_RefreshTokenFails_NonTransientErrorCached(t *testing.T) {
 			RefreshToken: refreshTokenMed,
 			Idempotency:  idempotencyMed,
 		}},
+		NotificationPublisher: publishermock.NewMockNotificationPublisher(ctrl),
 	}
 	userSvc := NewUserSvc(userSvcConfig)
 
 	ctx := appctx.WithIdempotencyKey(context.Background(), "test-key")
-	ctx = appctx.WithIdempotencyResponseMetadata(ctx,&appctx.IdempotencyResponseMetadata{})
+	ctx = appctx.WithIdempotencyResponseMetadata(ctx, &appctx.IdempotencyResponseMetadata{})
 
 	user := &types.User{ID: testutil.EntityIDUser}
 	idempotencyKey := &domain.IdempotencyKey{
@@ -415,7 +418,7 @@ func TestLogin_RefreshTokenFails_TransientErrorNotCached(t *testing.T) {
 
 	txManager := &trackingTxManager{repoFactory: repoFactory}
 
-	userSvcConfig := UserSvcConfig{
+	userSvcConfig := &UserSvcConfig{
 		Repos:     repoFactory,
 		TxManager: txManager,
 		MediatorFactory: staticMediatorFactory{mediators: domain.Mediators{
@@ -424,11 +427,12 @@ func TestLogin_RefreshTokenFails_TransientErrorNotCached(t *testing.T) {
 			RefreshToken: refreshTokenMed,
 			Idempotency:  idempotencyMed,
 		}},
+		NotificationPublisher: publishermock.NewMockNotificationPublisher(ctrl),
 	}
 	userSvc := NewUserSvc(userSvcConfig)
 
 	ctx := appctx.WithIdempotencyKey(context.Background(), "test-key")
-	ctx = appctx.WithIdempotencyResponseMetadata(ctx,&appctx.IdempotencyResponseMetadata{})
+	ctx = appctx.WithIdempotencyResponseMetadata(ctx, &appctx.IdempotencyResponseMetadata{})
 
 	user := &types.User{ID: testutil.EntityIDUser}
 	idempotencyKey := &domain.IdempotencyKey{

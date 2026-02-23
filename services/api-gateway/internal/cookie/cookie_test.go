@@ -173,7 +173,7 @@ func TestCookieDomains(t *testing.T) {
 		{
 			name:         "Production mode domain",
 			isProduction: true,
-			wantDomain:   "augno.com",
+			wantDomain:   ".augno.com",
 		},
 		{
 			name:         "Non-production mode domain",

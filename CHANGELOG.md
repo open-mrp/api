@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.2](https://github.com/Augno/api/compare/v0.3.1...v0.3.2) (2026-02-23)
+
+
+### Bug Fixes
+
+* subdomain allowed on cookies ([#79](https://github.com/Augno/api/issues/79)) ([5474bfd](https://github.com/Augno/api/commit/5474bfda4d219329c8147f6305299f26787d567b))
+
 ## [0.3.1](https://github.com/Augno/api/compare/v0.3.0...v0.3.1) (2026-02-13)
 
 

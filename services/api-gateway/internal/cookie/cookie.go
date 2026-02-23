@@ -42,8 +42,9 @@ func getCookieOptions(isProduction bool, path string) cookieOptions {
 		Path:     path,
 	}
 
+	// Use a wildcard domain for production to support subdomains
 	if isProduction {
-		opts.Domain = "augno.com"
+		opts.Domain = ".augno.com"
 	}
 
 	return opts

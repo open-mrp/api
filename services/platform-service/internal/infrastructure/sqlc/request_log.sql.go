@@ -264,7 +264,7 @@ SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route, rl.query_json,
        rl.status_code, rl.latency_us, rl.api_version, rl.actor_id,
        rl.actor_type, rl.identity_type, rl.client_ip_string, rl.user_agent,
        rl.referrer, rl.error_code, rl.error_message, rl.occurred_at, rl.created_at,
-       rl.idempotency_key_id, rl.request_body_json, rl.response_body_json,
+       rl.idempotency_key_id,
        u.email AS user_email, u.name AS user_name,
        ak.type_id AS api_key_type_id, ak.redacted_value AS api_key_redacted_value,
        ak.name AS api_key_name,
@@ -343,8 +343,6 @@ type ListRequestLogsBackwardRow struct {
 	OccurredAt          time.Time
 	CreatedAt           time.Time
 	IdempotencyKeyID    sql.NullString
-	RequestBodyJson     db.NullableRawMessage
-	ResponseBodyJson    db.NullableRawMessage
 	UserEmail           sql.NullString
 	UserName            sql.NullString
 	ApiKeyTypeID        sql.NullString
@@ -422,8 +420,6 @@ func (q *Queries) ListRequestLogsBackward(ctx context.Context, arg ListRequestLo
 			&i.OccurredAt,
 			&i.CreatedAt,
 			&i.IdempotencyKeyID,
-			&i.RequestBodyJson,
-			&i.ResponseBodyJson,
 			&i.UserEmail,
 			&i.UserName,
 			&i.ApiKeyTypeID,
@@ -457,7 +453,7 @@ SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route, rl.query_json,
        rl.status_code, rl.latency_us, rl.api_version, rl.actor_id,
        rl.actor_type, rl.identity_type, rl.client_ip_string, rl.user_agent,
        rl.referrer, rl.error_code, rl.error_message, rl.occurred_at, rl.created_at,
-       rl.idempotency_key_id, rl.request_body_json, rl.response_body_json,
+       rl.idempotency_key_id,
        u.email AS user_email, u.name AS user_name,
        ak.type_id AS api_key_type_id, ak.redacted_value AS api_key_redacted_value,
        ak.name AS api_key_name,
@@ -537,8 +533,6 @@ type ListRequestLogsForwardRow struct {
 	OccurredAt          time.Time
 	CreatedAt           time.Time
 	IdempotencyKeyID    sql.NullString
-	RequestBodyJson     db.NullableRawMessage
-	ResponseBodyJson    db.NullableRawMessage
 	UserEmail           sql.NullString
 	UserName            sql.NullString
 	ApiKeyTypeID        sql.NullString
@@ -617,8 +611,6 @@ func (q *Queries) ListRequestLogsForward(ctx context.Context, arg ListRequestLog
 			&i.OccurredAt,
 			&i.CreatedAt,
 			&i.IdempotencyKeyID,
-			&i.RequestBodyJson,
-			&i.ResponseBodyJson,
 			&i.UserEmail,
 			&i.UserName,
 			&i.ApiKeyTypeID,

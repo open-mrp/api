@@ -45,14 +45,14 @@ Supports cursor-based pagination and various filters.`
 
 type ListRequestLogsEndpoint struct{}
 
-func (e *ListRequestLogsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListRequestLogsRequest, *apiresource.List[apiresource.RequestLog]] {
-	return &apiendpoint.APIEndpoint[*ListRequestLogsRequest, *apiresource.List[apiresource.RequestLog]]{
+func (e *ListRequestLogsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListRequestLogsRequest, *apiresource.List[apiresource.RequestLogListItem]] {
+	return &apiendpoint.APIEndpoint[*ListRequestLogsRequest, *apiresource.List[apiresource.RequestLogListItem]]{
 		Title:             "List Request Logs",
 		Description:       listRequestLogsEndpointDescription,
 		Method:            http.MethodGet,
 		Route:             "/v1/core/request-logs",
 		Request:           &ListRequestLogsRequest{},
-		Response:          &apiresource.List[apiresource.RequestLog]{},
+		Response:          &apiresource.List[apiresource.RequestLogListItem]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -60,7 +60,7 @@ func (e *ListRequestLogsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListRe
 			SkipRequestLogging:     true,
 			AllowUnknownJSONFields: false,
 		},
-		ServiceHandler: func(svc any) func(ctx context.Context, req *ListRequestLogsRequest) (*apiresource.List[apiresource.RequestLog], *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *ListRequestLogsRequest) (*apiresource.List[apiresource.RequestLogListItem], *apierror.APIError) {
 			return svc.(RequestLogSvc).ListRequestLogs
 		},
 	}

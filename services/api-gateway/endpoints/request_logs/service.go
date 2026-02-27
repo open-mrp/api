@@ -16,7 +16,7 @@ import (
 )
 
 type RequestLogSvc interface {
-	ListRequestLogs(ctx context.Context, req *ListRequestLogsRequest) (*apiresource.List[apiresource.RequestLog], *apierror.APIError)
+	ListRequestLogs(ctx context.Context, req *ListRequestLogsRequest) (*apiresource.List[apiresource.RequestLogListItem], *apierror.APIError)
 	GetRequestLog(ctx context.Context, req *GetRequestLogRequest) (*apiresource.RequestLog, *apierror.APIError)
 }
 
@@ -58,7 +58,7 @@ func requireInternalAdmin(ctx context.Context) *apierror.APIError {
 	return nil
 }
 
-func (m *requestLogSvcImpl) ListRequestLogs(ctx context.Context, req *ListRequestLogsRequest) (*apiresource.List[apiresource.RequestLog], *apierror.APIError) {
+func (m *requestLogSvcImpl) ListRequestLogs(ctx context.Context, req *ListRequestLogsRequest) (*apiresource.List[apiresource.RequestLogListItem], *apierror.APIError) {
 	if apiErr := requireInternalAdmin(ctx); apiErr != nil {
 		return nil, apiErr
 	}

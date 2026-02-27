@@ -111,6 +111,20 @@ func (mr *MockRepoFactoryMockRecorder) NewRefreshTokenRepo() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewRefreshTokenRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewRefreshTokenRepo))
 }
 
+// NewRegistrationQueueRepo mocks base method.
+func (m *MockRepoFactory) NewRegistrationQueueRepo() domain.RegistrationQueueRepo {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewRegistrationQueueRepo")
+	ret0, _ := ret[0].(domain.RegistrationQueueRepo)
+	return ret0
+}
+
+// NewRegistrationQueueRepo indicates an expected call of NewRegistrationQueueRepo.
+func (mr *MockRepoFactoryMockRecorder) NewRegistrationQueueRepo() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewRegistrationQueueRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewRegistrationQueueRepo))
+}
+
 // NewRegistrationSessionRepo mocks base method.
 func (m *MockRepoFactory) NewRegistrationSessionRepo() domain.RegistrationSessionRepo {
 	m.ctrl.T.Helper()

@@ -22,6 +22,8 @@ const (
 	EmailTemplateNewRegistrationAlert EmailTemplate = "new_registration_alert"
 	// EmailTemplatePlanChangeAlert indicates that the email template is for a plan change alert.
 	EmailTemplatePlanChangeAlert EmailTemplate = "plan_change_alert"
+	// EmailTemplateRegistrationLimitAlert indicates that the email template is for a registration limit reached alert.
+	EmailTemplateRegistrationLimitAlert EmailTemplate = "registration_limit_alert"
 )
 
 func (t EmailTemplate) IsValid() bool {
@@ -34,12 +36,13 @@ func (t EmailTemplate) IsValid() bool {
 		EmailTemplateEnterpriseRequest,
 		EmailTemplateInternalErrorAlert,
 		EmailTemplateNewRegistrationAlert,
-		EmailTemplatePlanChangeAlert:
+		EmailTemplatePlanChangeAlert,
+		EmailTemplateRegistrationLimitAlert:
 		return true
 	}
 	return false
 }
 
 func (t EmailTemplate) EnumValues() []string {
-	return []string{string(EmailTemplateWelcome), string(EmailTemplatePasswordReset), string(EmailTemplatePasswordUpdated), string(EmailTemplateRegistrationVerify), string(EmailTemplateRegistrationVerifyExisting), string(EmailTemplateEnterpriseRequest), string(EmailTemplateInternalErrorAlert), string(EmailTemplateNewRegistrationAlert), string(EmailTemplatePlanChangeAlert)}
+	return []string{string(EmailTemplateWelcome), string(EmailTemplatePasswordReset), string(EmailTemplatePasswordUpdated), string(EmailTemplateRegistrationVerify), string(EmailTemplateRegistrationVerifyExisting), string(EmailTemplateEnterpriseRequest), string(EmailTemplateInternalErrorAlert), string(EmailTemplateNewRegistrationAlert), string(EmailTemplatePlanChangeAlert), string(EmailTemplateRegistrationLimitAlert)}
 }

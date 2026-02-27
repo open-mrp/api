@@ -36,6 +36,10 @@ func (r *repoFactoryImpl) NewRegistrationSessionRepo() domain.RegistrationSessio
 	return NewRegistrationSessionRepo(r.queries)
 }
 
+func (r *repoFactoryImpl) NewRegistrationQueueRepo() domain.RegistrationQueueRepo {
+	return NewRegistrationQueueRepo(r.queries)
+}
+
 func (r *repoFactoryImpl) NewIdempotencyKeyRepo() domain.IdempotencyKeyRepo {
 	return NewIdempotencyKeyRepo(r.queries)
 }

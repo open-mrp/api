@@ -51,6 +51,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.createRefreshTokenStmt, err = db.PrepareContext(ctx, createRefreshToken); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateRefreshToken: %w", err)
 	}
+	if q.createRegistrationQueueEntryStmt, err = db.PrepareContext(ctx, createRegistrationQueueEntry); err != nil {
+		return nil, fmt.Errorf("error preparing query CreateRegistrationQueueEntry: %w", err)
+	}
 	if q.createRegistrationSessionStmt, err = db.PrepareContext(ctx, createRegistrationSession); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateRegistrationSession: %w", err)
 	}
@@ -231,6 +234,11 @@ func (q *Queries) Close() error {
 	if q.createRefreshTokenStmt != nil {
 		if cerr := q.createRefreshTokenStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing createRefreshTokenStmt: %w", cerr)
+		}
+	}
+	if q.createRegistrationQueueEntryStmt != nil {
+		if cerr := q.createRegistrationQueueEntryStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing createRegistrationQueueEntryStmt: %w", cerr)
 		}
 	}
 	if q.createRegistrationSessionStmt != nil {
@@ -501,6 +509,7 @@ type Queries struct {
 	createIdempotencyKeyStmt                      *sql.Stmt
 	createOutboxMessageStmt                       *sql.Stmt
 	createRefreshTokenStmt                        *sql.Stmt
+	createRegistrationQueueEntryStmt              *sql.Stmt
 	createRegistrationSessionStmt                 *sql.Stmt
 	createUserStmt                                *sql.Stmt
 	deleteDocAPIKeyByAPIKeyIDStmt                 *sql.Stmt
@@ -560,6 +569,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		createIdempotencyKeyStmt:                      q.createIdempotencyKeyStmt,
 		createOutboxMessageStmt:                       q.createOutboxMessageStmt,
 		createRefreshTokenStmt:                        q.createRefreshTokenStmt,
+		createRegistrationQueueEntryStmt:              q.createRegistrationQueueEntryStmt,
 		createRegistrationSessionStmt:                 q.createRegistrationSessionStmt,
 		createUserStmt:                                q.createUserStmt,
 		deleteDocAPIKeyByAPIKeyIDStmt:                 q.deleteDocAPIKeyByAPIKeyIDStmt,

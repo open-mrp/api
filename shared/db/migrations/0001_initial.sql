@@ -1,10 +1,10 @@
 -- +goose Up
 
--- MySQL dump 10.13  Distrib 9.5.0, for macos26.0 (arm64)
+-- MySQL dump 10.13  Distrib 9.6.0, for macos26.2 (arm64)
 --
--- Host: localhost    Database: augno
+-- Host: localhost    Database: augno_local
 -- ------------------------------------------------------
--- Server version	9.5.0
+-- Server version	9.6.0
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -414,7 +414,7 @@ CREATE TABLE `account_plan` (
   KEY `account_plan_plan_type_code_idx` (`plan_type_code`),
   KEY `account_plan_plan_type_code_effective_at_idx` (`plan_type_code`,`effective_at`),
   FULLTEXT KEY `account_plan_name_idx` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -433,7 +433,7 @@ CREATE TABLE `account_plan_feature` (
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (`id`),
   UNIQUE KEY `account_plan_feature_account_plan_id_key_key` (`account_plan_id`,`key`)
-) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -452,7 +452,7 @@ CREATE TABLE `account_plan_limit` (
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (`id`),
   UNIQUE KEY `account_plan_limit_account_plan_id_key_key` (`account_plan_id`,`key`)
-) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=21 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1056,6 +1056,7 @@ CREATE TABLE `delivery_line` (
   `unit_cost_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
   `storage_location_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `accepted_at` datetime(3) DEFAULT NULL,
+  `rejected_at` datetime(3) DEFAULT NULL,
   `lot_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -1559,8 +1560,6 @@ CREATE TABLE `item` (
   `id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
   `sku` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `description` text COLLATE utf8mb4_unicode_ci,
-  `manufacturer` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `manufacturer_part_number` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `notes` text COLLATE utf8mb4_unicode_ci,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -1576,7 +1575,6 @@ CREATE TABLE `item` (
   UNIQUE KEY `item_unit_value_id_key` (`unit_value_id`),
   UNIQUE KEY `item_burn_rate_id_key` (`burn_rate_id`),
   UNIQUE KEY `item_unit_cost_id_key` (`unit_cost_id`),
-  UNIQUE KEY `item_manufacturer_manufacturer_part_number_key` (`manufacturer`,`manufacturer_part_number`),
   KEY `item_unit_value_id_idx` (`unit_value_id`),
   KEY `item_unit_cost_id_idx` (`unit_cost_id`),
   KEY `item_burn_rate_id_idx` (`burn_rate_id`),
@@ -1585,10 +1583,7 @@ CREATE TABLE `item` (
   KEY `item_item_type_code_idx` (`item_type_code`),
   FULLTEXT KEY `item_sku_idx` (`sku`),
   FULLTEXT KEY `item_description_idx` (`description`),
-  FULLTEXT KEY `item_sku_description_idx` (`sku`,`description`),
-  FULLTEXT KEY `item_manufacturer_manufacturer_part_number_idx` (`manufacturer`,`manufacturer_part_number`),
-  FULLTEXT KEY `item_manufacturer_part_number_idx` (`manufacturer_part_number`),
-  FULLTEXT KEY `item_sku_description_manufacturer_manufacturer_part_number_idx` (`sku`,`description`,`manufacturer`,`manufacturer_part_number`)
+  FULLTEXT KEY `item_sku_description_idx` (`sku`,`description`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -1811,7 +1806,7 @@ CREATE TABLE `message_inbox` (
   KEY `message_inbox_processed_at_idx` (`processed_at`),
   KEY `message_inbox_request_id_idx` (`request_id`),
   KEY `message_inbox_parent_message_id_idx` (`parent_message_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=60 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1849,7 +1844,7 @@ CREATE TABLE `message_outbox` (
   KEY `message_outbox_lock_expires_at_idx` (`lock_expires_at`),
   KEY `message_outbox_request_id_idx` (`request_id`),
   KEY `message_outbox_parent_message_id_idx` (`parent_message_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=60 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2440,6 +2435,29 @@ CREATE TABLE `registration_flow` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `registration_queue`
+--
+
+DROP TABLE IF EXISTS `registration_queue`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `registration_queue` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `email` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `plan_code` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `registration_session_id` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `contacted` tinyint(1) NOT NULL DEFAULT '0',
+  `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (`id`),
+  KEY `registration_queue_email_idx` (`email`),
+  KEY `registration_queue_plan_code_idx` (`plan_code`),
+  KEY `registration_queue_contacted_idx` (`contacted`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `registration_session`
 --
 
@@ -2490,6 +2508,8 @@ CREATE TABLE `request_log` (
   `path` varchar(512) COLLATE utf8mb4_unicode_ci NOT NULL,
   `normalized_route` varchar(512) COLLATE utf8mb4_unicode_ci NOT NULL,
   `query_json` json DEFAULT NULL,
+  `request_body_json` json DEFAULT NULL,
+  `response_body_json` json DEFAULT NULL,
   `status_code` int NOT NULL,
   `latency_us` bigint NOT NULL,
   `target_account_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
@@ -2511,8 +2531,6 @@ CREATE TABLE `request_log` (
   `stack_trace` longtext COLLATE utf8mb4_unicode_ci,
   `internal_error_message` text COLLATE utf8mb4_unicode_ci,
   `trace_id` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `request_body_json` json DEFAULT NULL,
-  `response_body_json` json DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `request_log_status_code_idx` (`status_code`),
   KEY `request_log_error_code_idx` (`error_code`),
@@ -3426,7 +3444,7 @@ CREATE TABLE `user` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-02-25 11:29:30
+-- Dump completed on 2026-02-27 16:46:53
 
 -- +goose Down
 
@@ -3468,6 +3486,7 @@ DROP TABLE IF EXISTS `role_permission`;
 DROP TABLE IF EXISTS `role`;
 DROP TABLE IF EXISTS `request_log`;
 DROP TABLE IF EXISTS `registration_session`;
+DROP TABLE IF EXISTS `registration_queue`;
 DROP TABLE IF EXISTS `registration_flow`;
 DROP TABLE IF EXISTS `refresh_token`;
 DROP TABLE IF EXISTS `receiving_order_line`;

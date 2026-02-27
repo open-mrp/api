@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 
 	"github.com/augno/api/services/auth-service/internal/domain"
 	"github.com/augno/api/services/auth-service/internal/event"
@@ -15,6 +16,7 @@ import (
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/idempotency"
+	"github.com/augno/api/shared/messaging"
 	"github.com/augno/api/shared/tracing"
 )
 
@@ -462,6 +464,9 @@ func (s *registrationSessionSvcImpl) CompleteRegistration(ctx context.Context, s
 			// 5. Call core-service (point of no return)
 			accountResult, coreErr := s.coreClient.CompleteRegistration(ctx, coreInput)
 			if coreErr != nil {
+				if coreErr.Code == apierror.ErrorCodeRegistrationClosed {
+					s.handleRegistrationLimitHit(ctx, session)
+				}
 				return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, coreErr)
 			}
 
@@ -589,6 +594,39 @@ func derefOrEmpty(s *string) string {
 		return ""
 	}
 	return *s
+}
+
+func (s *registrationSessionSvcImpl) handleRegistrationLimitHit(ctx context.Context, session *domain.RegistrationSession) {
+	limits := constants.GetRegistrationLimits(constants.PlanCode(session.PlanCode))
+
+	// Best-effort: insert into registration_queue
+	if queueErr := s.repos.NewRegistrationQueueRepo().Create(ctx, session.Email, session.SessionData.AccountName, session.PlanCode, session.TypeID); queueErr != nil {
+		slog.ErrorContext(ctx, "failed to insert registration queue entry",
+			"error", queueErr.PublicMessage,
+			"email", session.Email,
+			"plan_code", session.PlanCode,
+		)
+	}
+
+	// Best-effort: send admin alert email
+	publishCtx := event.WithRepos(ctx, s.repos)
+	if emailErr := s.notificationPublisher.PublishSendEmail(publishCtx, messaging.EmailSendData{
+		To:         []string{"dev@augno.com"},
+		Subject:    fmt.Sprintf("[Registration Limit] %s plan at capacity", session.PlanCode),
+		TemplateID: constants.EmailTemplateRegistrationLimitAlert,
+		Params: map[string]any{
+			"Email":       session.Email,
+			"PlanCode":    session.PlanCode,
+			"AccountName": session.SessionData.AccountName,
+			"PublicLimit": limits.PublicLimit,
+		},
+	}); emailErr != nil {
+		slog.ErrorContext(ctx, "failed to publish registration limit alert email",
+			"error", emailErr.PublicMessage,
+			"email", session.Email,
+			"plan_code", session.PlanCode,
+		)
+	}
 }
 
 func (s *registrationSessionSvcImpl) CreateCheckout(ctx context.Context, input domain.CreateRegistrationCheckoutInput) (*domain.CreateRegistrationCheckoutOutput, *apierror.APIError) {

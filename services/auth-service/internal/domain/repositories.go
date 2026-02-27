@@ -109,6 +109,10 @@ type RegistrationSessionRepo interface {
 	Complete(ctx context.Context, id int64, accountID *string) *apierror.APIError
 }
 
+type RegistrationQueueRepo interface {
+	Create(ctx context.Context, email, name, planCode, registrationSessionID string) *apierror.APIError
+}
+
 type IdempotencyKeyRepo interface {
 	GetByScopeHash(ctx context.Context, scopeHash string) (*IdempotencyKey, *apierror.APIError)
 	Create(ctx context.Context, key *IdempotencyKey) (*IdempotencyKey, *apierror.APIError)

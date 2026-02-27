@@ -422,6 +422,7 @@ type DeliveryLine struct {
 	UnitCostID           string
 	StorageLocationID    sql.NullString
 	AcceptedAt           sql.NullTime
+	RejectedAt           sql.NullTime
 	LotID                sql.NullString
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
@@ -658,22 +659,20 @@ type InvoiceLine struct {
 }
 
 type Item struct {
-	ID                     string
-	Sku                    string
-	Description            sql.NullString
-	Manufacturer           sql.NullString
-	ManufacturerPartNumber sql.NullString
-	Notes                  sql.NullString
-	CreatedAt              time.Time
-	UpdatedAt              time.Time
-	DeletedAt              sql.NullTime
-	UnitValueID            string
-	BurnRateID             string
-	AccountID              string
-	ItemTypeCode           string
-	UnitCostID             string
-	ItemCategoryID         string
-	IsDirty                bool
+	ID             string
+	Sku            string
+	Description    sql.NullString
+	Notes          sql.NullString
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	DeletedAt      sql.NullTime
+	UnitValueID    string
+	BurnRateID     string
+	AccountID      string
+	ItemTypeCode   string
+	UnitCostID     string
+	ItemCategoryID string
+	IsDirty        bool
 }
 
 type ItemAttribute struct {
@@ -1104,6 +1103,17 @@ type RegistrationFlowsShippingTerm struct {
 	B string
 }
 
+type RegistrationQueue struct {
+	ID                    int64
+	Email                 string
+	Name                  string
+	PlanCode              string
+	RegistrationSessionID string
+	Contacted             bool
+	CreatedAt             time.Time
+	UpdatedAt             time.Time
+}
+
 type RegistrationSession struct {
 	ID                      int64
 	TypeID                  string
@@ -1132,9 +1142,12 @@ type RequestLog struct {
 	Path                 string
 	NormalizedRoute      string
 	QueryJson            json.RawMessage
+	RequestBodyJson      json.RawMessage
+	ResponseBodyJson     json.RawMessage
 	StatusCode           int32
 	LatencyUs            int64
 	TargetAccountID      sql.NullString
+	PublicEndpoint       bool
 	ApiVersion           sql.NullString
 	AccountID            sql.NullString
 	ActorID              sql.NullString

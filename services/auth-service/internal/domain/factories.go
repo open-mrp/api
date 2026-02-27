@@ -10,6 +10,7 @@ type RepoFactory interface {
 	NewAPIKeyRepo() APIKeyRepo
 	NewDocAPIKeyRepo() DocAPIKeyRepo
 	NewRegistrationSessionRepo() RegistrationSessionRepo
+	NewRegistrationQueueRepo() RegistrationQueueRepo
 	NewIdempotencyKeyRepo() IdempotencyKeyRepo
 	NewOutboxRepo() messaging.OutboxRepo
 }

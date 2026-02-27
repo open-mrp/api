@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.3](https://github.com/Augno/api/compare/v0.4.2...v0.4.3) (2026-02-27)
+
+
+### Bug Fixes
+
+* add admin email notification on registration and plan changes ([#88](https://github.com/Augno/api/issues/88)) ([d4a73eb](https://github.com/Augno/api/commit/d4a73ebcbe3b5194881c299932ae387afcf324e1))
+
 ## [0.4.2](https://github.com/Augno/api/compare/v0.4.1...v0.4.2) (2026-02-27)
 
 

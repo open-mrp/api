@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.4.0](https://github.com/Augno/api/compare/v0.3.2...v0.4.0) (2026-02-27)
+
+
+### Features
+
+* api keys, sandboxes, units, request logs ([#83](https://github.com/Augno/api/issues/83)) ([740aefb](https://github.com/Augno/api/commit/740aefb306b6087123eee9ebd224e276e54f0053))
+
+
+### Bug Fixes
+
+* tests ([#81](https://github.com/Augno/api/issues/81)) ([8337e0a](https://github.com/Augno/api/commit/8337e0a1292c94038d610e7e53aaa448f06a7750))
+
 ## [0.3.2](https://github.com/Augno/api/compare/v0.3.1...v0.3.2) (2026-02-23)
 
 

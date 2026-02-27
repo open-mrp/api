@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/Augno/api/compare/v0.4.0...v0.4.1) (2026-02-27)
+
+
+### Bug Fixes
+
+* request log query memory issues ([#84](https://github.com/Augno/api/issues/84)) ([41c2ea9](https://github.com/Augno/api/commit/41c2ea912dc6e01fd30b6d5f634084441eda0a5c))
+
 ## [0.4.0](https://github.com/Augno/api/compare/v0.3.2...v0.4.0) (2026-02-27)
 
 

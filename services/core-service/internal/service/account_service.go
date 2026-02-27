@@ -27,6 +27,7 @@ type accountSvcImpl struct {
 	rolePermissionRepo  domain.RolePermissionRepo
 	mediatorFactory     domain.MediatorFactory
 	txManager           TransactionManager
+	outboxRepo          messaging.OutboxRepo
 }
 
 type AccountSvcConfig struct {
@@ -60,6 +61,7 @@ func NewAccountSvc(config *AccountSvcConfig) domain.AccountSvc {
 		rolePermissionRepo:  config.RepoFactory.NewRolePermissionRepo(),
 		mediatorFactory:     config.MediatorFactory,
 		txManager:           config.TxManager,
+		outboxRepo:          config.RepoFactory.NewOutboxRepo(),
 	}
 }
 
@@ -181,6 +183,9 @@ func (s *accountSvcImpl) UpdateAccountSubscription(ctx context.Context, accountI
 	ctx, span := accountSvcTracer.Start(ctx, "service.account.update_account_subscription")
 	defer span.End()
 
+	// Fetch old plan code before updating so we can detect changes.
+	oldPlanCode, _ := s.accountRepo.GetPlanCode(ctx, accountID)
+
 	planTypeID, apiErr := s.accountRepo.GetPlanTypeIDByCode(ctx, planCode)
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
@@ -190,10 +195,46 @@ func (s *accountSvcImpl) UpdateAccountSubscription(ctx context.Context, accountI
 		return tracing.Trace(span, apiErr)
 	}
 
+	// Send admin notification if the plan changed.
+	if oldPlanCode != "" && string(oldPlanCode) != planCode {
+		s.publishPlanChangeAlert(ctx, accountID, string(oldPlanCode), planCode)
+	}
+
 	// Adjust active users based on the new plan's seat limit.
 	s.adjustAccountSeats(ctx, accountID, planCode)
 
 	return nil
+}
+
+// publishPlanChangeAlert sends a best-effort admin email when an account's plan changes.
+func (s *accountSvcImpl) publishPlanChangeAlert(ctx context.Context, accountID, oldPlan, newPlan string) {
+	emailData := messaging.EmailSendData{
+		To:         []string{"dev@augno.com"},
+		Subject:    fmt.Sprintf("[Plan Change] %s → %s", oldPlan, newPlan),
+		TemplateID: constants.EmailTemplatePlanChangeAlert,
+		Params: map[string]any{
+			"AccountID":    accountID,
+			"PreviousPlan": oldPlan,
+			"NewPlan":      newPlan,
+		},
+	}
+
+	emailJSON, err := json.Marshal(emailData)
+	if err != nil {
+		slog.WarnContext(ctx, "Failed to marshal plan change alert email data", "error", err, "account_id", accountID)
+		return
+	}
+
+	emailMsg := contracts.AmqpMessage{Data: emailJSON}
+	if _, err := s.outboxRepo.Create(ctx, messaging.OutboxMessageInput{
+		ServiceName: domain.ServiceName,
+		MessageType: string(contracts.NotificationCmdSendEmail),
+		Destination: messaging.ApplicationExchange,
+		RoutingKey:  string(contracts.NotificationCmdSendEmail),
+		Payload:     emailMsg,
+	}); err != nil {
+		slog.WarnContext(ctx, "Failed to create plan change alert outbox message", "error", err, "account_id", accountID)
+	}
 }
 
 // adjustAccountSeats reconciles active users with the new plan's seat limit.
@@ -412,6 +453,35 @@ func (s *accountSvcImpl) CompleteRegistration(ctx context.Context, input domain.
 			Payload:     seedMsg,
 		}); err != nil {
 			return apierror.NewInternalError(err, "Failed to create seed outbox message.")
+		}
+
+		// 7. Enqueue admin notification for the new registration
+		emailData := messaging.EmailSendData{
+			To:         []string{"dev@augno.com"},
+			Subject:    fmt.Sprintf("[New Registration] %s", input.AccountData.AccountName),
+			TemplateID: constants.EmailTemplateNewRegistrationAlert,
+			Params: map[string]any{
+				"AccountName": input.AccountData.AccountName,
+				"AccountID":   accountID,
+				"PlanCode":    input.PlanCode,
+				"UserID":      input.UserID,
+			},
+		}
+
+		emailJSON, err := json.Marshal(emailData)
+		if err != nil {
+			return apierror.NewInternalError(err, "Failed to marshal registration alert email data.")
+		}
+
+		emailMsg := contracts.AmqpMessage{Data: emailJSON}
+		if _, err := f.NewOutboxRepo().Create(txCtx, messaging.OutboxMessageInput{
+			ServiceName: domain.ServiceName,
+			MessageType: string(contracts.NotificationCmdSendEmail),
+			Destination: messaging.ApplicationExchange,
+			RoutingKey:  string(contracts.NotificationCmdSendEmail),
+			Payload:     emailMsg,
+		}); err != nil {
+			return apierror.NewInternalError(err, "Failed to create registration alert outbox message.")
 		}
 
 		return nil

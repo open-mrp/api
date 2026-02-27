@@ -18,6 +18,10 @@ const (
 	EmailTemplateEnterpriseRequest EmailTemplate = "enterprise_request"
 	// EmailTemplateInternalErrorAlert indicates that the email template is for a 5xx internal error alert.
 	EmailTemplateInternalErrorAlert EmailTemplate = "internal_error_alert"
+	// EmailTemplateNewRegistrationAlert indicates that the email template is for a new account registration alert.
+	EmailTemplateNewRegistrationAlert EmailTemplate = "new_registration_alert"
+	// EmailTemplatePlanChangeAlert indicates that the email template is for a plan change alert.
+	EmailTemplatePlanChangeAlert EmailTemplate = "plan_change_alert"
 )
 
 func (t EmailTemplate) IsValid() bool {
@@ -28,12 +32,14 @@ func (t EmailTemplate) IsValid() bool {
 		EmailTemplateRegistrationVerify,
 		EmailTemplateRegistrationVerifyExisting,
 		EmailTemplateEnterpriseRequest,
-		EmailTemplateInternalErrorAlert:
+		EmailTemplateInternalErrorAlert,
+		EmailTemplateNewRegistrationAlert,
+		EmailTemplatePlanChangeAlert:
 		return true
 	}
 	return false
 }
 
 func (t EmailTemplate) EnumValues() []string {
-	return []string{string(EmailTemplateWelcome), string(EmailTemplatePasswordReset), string(EmailTemplatePasswordUpdated), string(EmailTemplateRegistrationVerify), string(EmailTemplateRegistrationVerifyExisting), string(EmailTemplateEnterpriseRequest), string(EmailTemplateInternalErrorAlert)}
+	return []string{string(EmailTemplateWelcome), string(EmailTemplatePasswordReset), string(EmailTemplatePasswordUpdated), string(EmailTemplateRegistrationVerify), string(EmailTemplateRegistrationVerifyExisting), string(EmailTemplateEnterpriseRequest), string(EmailTemplateInternalErrorAlert), string(EmailTemplateNewRegistrationAlert), string(EmailTemplatePlanChangeAlert)}
 }

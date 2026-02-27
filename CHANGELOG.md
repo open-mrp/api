@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.4](https://github.com/Augno/api/compare/v0.4.3...v0.4.4) (2026-02-27)
+
+
+### Bug Fixes
+
+* add alerts to registration limits getting hit ([#90](https://github.com/Augno/api/issues/90)) ([699f13b](https://github.com/Augno/api/commit/699f13b85cddd97027d5e9304b7fb684b6d6c27c))
+
 ## [0.4.3](https://github.com/Augno/api/compare/v0.4.2...v0.4.3) (2026-02-27)
 
 

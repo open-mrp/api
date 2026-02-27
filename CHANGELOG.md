@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.2](https://github.com/Augno/api/compare/v0.4.1...v0.4.2) (2026-02-27)
+
+
+### Bug Fixes
+
+* seeded account and sandbox data ([#86](https://github.com/Augno/api/issues/86)) ([b27a9cf](https://github.com/Augno/api/commit/b27a9cffe9324f6d6279c5b872b72d1b6d6864df))
+
 ## [0.4.1](https://github.com/Augno/api/compare/v0.4.0...v0.4.1) (2026-02-27)
 
 

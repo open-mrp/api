@@ -42,6 +42,20 @@ func (m *MockRegistrationRepo) EXPECT() *MockRegistrationRepoMockRecorder {
 	return m.recorder
 }
 
+// CreateAccountBranding mocks base method.
+func (m *MockRegistrationRepo) CreateAccountBranding(ctx context.Context, accountID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateAccountBranding", ctx, accountID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// CreateAccountBranding indicates an expected call of CreateAccountBranding.
+func (mr *MockRegistrationRepoMockRecorder) CreateAccountBranding(ctx, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAccountBranding", reflect.TypeOf((*MockRegistrationRepo)(nil).CreateAccountBranding), ctx, accountID)
+}
+
 // CreateAccountForRegistration mocks base method.
 func (m *MockRegistrationRepo) CreateAccountForRegistration(ctx context.Context, params domain.CreateAccountParams) *apierror.APIError {
 	m.ctrl.T.Helper()
@@ -96,4 +110,18 @@ func (m *MockRegistrationRepo) CreateBusinessAddress(ctx context.Context, accoun
 func (mr *MockRegistrationRepoMockRecorder) CreateBusinessAddress(ctx, accountID, accountName, address any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateBusinessAddress", reflect.TypeOf((*MockRegistrationRepo)(nil).CreateBusinessAddress), ctx, accountID, accountName, address)
+}
+
+// CreateSystemProducts mocks base method.
+func (m *MockRegistrationRepo) CreateSystemProducts(ctx context.Context, accountID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateSystemProducts", ctx, accountID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// CreateSystemProducts indicates an expected call of CreateSystemProducts.
+func (mr *MockRegistrationRepoMockRecorder) CreateSystemProducts(ctx, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSystemProducts", reflect.TypeOf((*MockRegistrationRepo)(nil).CreateSystemProducts), ctx, accountID)
 }

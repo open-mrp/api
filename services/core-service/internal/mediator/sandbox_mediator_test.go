@@ -105,6 +105,16 @@ func (suite *SandboxMedTestSuite) TestCreate_Success() {
 		Return(nil).
 		Times(1)
 
+	suite.registrationRepo.EXPECT().
+		CreateSystemProducts(gomock.Any(), gomock.Any()).
+		Return(nil).
+		Times(1)
+
+	suite.registrationRepo.EXPECT().
+		CreateAccountBranding(gomock.Any(), gomock.Any()).
+		Return(nil).
+		Times(1)
+
 	suite.sandboxAccountRepo.EXPECT().
 		Create(gomock.Any(), gomock.Any(), ownerAccountID, gomock.Any()).
 		Return(nil).
@@ -168,6 +178,16 @@ func (suite *SandboxMedTestSuite) TestCreate_CopiesOwnerPlanCode() {
 
 	suite.registrationRepo.EXPECT().
 		CreateAccountPortal(gomock.Any(), gomock.Any()).
+		Return(nil).
+		Times(1)
+
+	suite.registrationRepo.EXPECT().
+		CreateSystemProducts(gomock.Any(), gomock.Any()).
+		Return(nil).
+		Times(1)
+
+	suite.registrationRepo.EXPECT().
+		CreateAccountBranding(gomock.Any(), gomock.Any()).
 		Return(nil).
 		Times(1)
 
@@ -384,6 +404,16 @@ func (suite *SandboxMedTestSuite) TestCreate_UnlimitedSandboxes() {
 
 	suite.registrationRepo.EXPECT().
 		CreateAccountPortal(gomock.Any(), gomock.Any()).
+		Return(nil).
+		Times(1)
+
+	suite.registrationRepo.EXPECT().
+		CreateSystemProducts(gomock.Any(), gomock.Any()).
+		Return(nil).
+		Times(1)
+
+	suite.registrationRepo.EXPECT().
+		CreateAccountBranding(gomock.Any(), gomock.Any()).
 		Return(nil).
 		Times(1)
 

@@ -41,6 +41,20 @@ func (m *MockRepoFactory) EXPECT() *MockRepoFactoryMockRecorder {
 	return m.recorder
 }
 
+// NewAccountRelationRepo mocks base method.
+func (m *MockRepoFactory) NewAccountRelationRepo() domain.AccountRelationRepo {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewAccountRelationRepo")
+	ret0, _ := ret[0].(domain.AccountRelationRepo)
+	return ret0
+}
+
+// NewAccountRelationRepo indicates an expected call of NewAccountRelationRepo.
+func (mr *MockRepoFactoryMockRecorder) NewAccountRelationRepo() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewAccountRelationRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewAccountRelationRepo))
+}
+
 // NewAccountRepo mocks base method.
 func (m *MockRepoFactory) NewAccountRepo() domain.AccountRepo {
 	m.ctrl.T.Helper()
@@ -67,34 +81,6 @@ func (m *MockRepoFactory) NewAccountUserRepo() domain.AccountUserRepo {
 func (mr *MockRepoFactoryMockRecorder) NewAccountUserRepo() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewAccountUserRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewAccountUserRepo))
-}
-
-// NewAccountRelationRepo mocks base method.
-func (m *MockRepoFactory) NewAccountRelationRepo() domain.AccountRelationRepo {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "NewAccountRelationRepo")
-	ret0, _ := ret[0].(domain.AccountRelationRepo)
-	return ret0
-}
-
-// NewAccountRelationRepo indicates an expected call of NewAccountRelationRepo.
-func (mr *MockRepoFactoryMockRecorder) NewAccountRelationRepo() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewAccountRelationRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewAccountRelationRepo))
-}
-
-// NewRolePermissionRepo mocks base method.
-func (m *MockRepoFactory) NewRolePermissionRepo() domain.RolePermissionRepo {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "NewRolePermissionRepo")
-	ret0, _ := ret[0].(domain.RolePermissionRepo)
-	return ret0
-}
-
-// NewRolePermissionRepo indicates an expected call of NewRolePermissionRepo.
-func (mr *MockRepoFactoryMockRecorder) NewRolePermissionRepo() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewRolePermissionRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewRolePermissionRepo))
 }
 
 // NewIdempotencyKeyRepo mocks base method.
@@ -139,18 +125,18 @@ func (mr *MockRepoFactoryMockRecorder) NewRegistrationRepo() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewRegistrationRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewRegistrationRepo))
 }
 
-// NewUnitRepo mocks base method.
-func (m *MockRepoFactory) NewUnitRepo() domain.UnitRepo {
+// NewRolePermissionRepo mocks base method.
+func (m *MockRepoFactory) NewRolePermissionRepo() domain.RolePermissionRepo {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "NewUnitRepo")
-	ret0, _ := ret[0].(domain.UnitRepo)
+	ret := m.ctrl.Call(m, "NewRolePermissionRepo")
+	ret0, _ := ret[0].(domain.RolePermissionRepo)
 	return ret0
 }
 
-// NewUnitRepo indicates an expected call of NewUnitRepo.
-func (mr *MockRepoFactoryMockRecorder) NewUnitRepo() *gomock.Call {
+// NewRolePermissionRepo indicates an expected call of NewRolePermissionRepo.
+func (mr *MockRepoFactoryMockRecorder) NewRolePermissionRepo() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewUnitRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewUnitRepo))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewRolePermissionRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewRolePermissionRepo))
 }
 
 // NewSandboxAccountRepo mocks base method.
@@ -165,4 +151,18 @@ func (m *MockRepoFactory) NewSandboxAccountRepo() domain.SandboxAccountRepo {
 func (mr *MockRepoFactoryMockRecorder) NewSandboxAccountRepo() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewSandboxAccountRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewSandboxAccountRepo))
+}
+
+// NewUnitRepo mocks base method.
+func (m *MockRepoFactory) NewUnitRepo() domain.UnitRepo {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewUnitRepo")
+	ret0, _ := ret[0].(domain.UnitRepo)
+	return ret0
+}
+
+// NewUnitRepo indicates an expected call of NewUnitRepo.
+func (mr *MockRepoFactoryMockRecorder) NewUnitRepo() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewUnitRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewUnitRepo))
 }

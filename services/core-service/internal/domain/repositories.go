@@ -74,6 +74,15 @@ type RegistrationRepo interface {
 	// CreateAccountPortal creates a portal record with a slug derived from
 	// the account ID.
 	CreateAccountPortal(ctx context.Context, accountID string) *apierror.APIError
+
+	// CreateSystemProducts creates the shipping and credit system products
+	// required by every account. This includes units, unit groups, item
+	// categories, product lines, rates, items, and product records.
+	CreateSystemProducts(ctx context.Context, accountID string) *apierror.APIError
+
+	// CreateAccountBranding creates a default (empty) branding record for
+	// the account so portal and notification templates can reference it.
+	CreateAccountBranding(ctx context.Context, accountID string) *apierror.APIError
 }
 
 type UnitRepo interface {

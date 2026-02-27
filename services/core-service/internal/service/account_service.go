@@ -378,6 +378,16 @@ func (s *accountSvcImpl) CompleteRegistration(ctx context.Context, input domain.
 			return apiErr
 		}
 
+		// 4b. Create system products (shipping + credit) for the production account
+		if apiErr := txRegRepo.CreateSystemProducts(txCtx, accountID); apiErr != nil {
+			return apiErr
+		}
+
+		// 4c. Create account branding for the production account
+		if apiErr := txRegRepo.CreateAccountBranding(txCtx, accountID); apiErr != nil {
+			return apiErr
+		}
+
 		// 5. Create sandbox account (reuses same mediator logic as the create-sandbox endpoint)
 		sandboxName := input.AccountData.AccountName + " Sandbox"
 		meds := s.mediatorFactory.Build(f)

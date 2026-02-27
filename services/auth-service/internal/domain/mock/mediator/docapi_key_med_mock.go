@@ -43,18 +43,18 @@ func (m *MockDocAPIKeyMed) EXPECT() *MockDocAPIKeyMedMockRecorder {
 }
 
 // Resolve mocks base method.
-func (m *MockDocAPIKeyMed) Resolve(ctx context.Context, ownerAccountID string) (*domain.GetOrCreateDocAPIKeyResult, *apierror.APIError) {
+func (m *MockDocAPIKeyMed) Resolve(ctx context.Context, sandboxAccountID string) (*domain.GetOrCreateDocAPIKeyResult, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Resolve", ctx, ownerAccountID)
+	ret := m.ctrl.Call(m, "Resolve", ctx, sandboxAccountID)
 	ret0, _ := ret[0].(*domain.GetOrCreateDocAPIKeyResult)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // Resolve indicates an expected call of Resolve.
-func (mr *MockDocAPIKeyMedMockRecorder) Resolve(ctx, ownerAccountID any) *gomock.Call {
+func (mr *MockDocAPIKeyMedMockRecorder) Resolve(ctx, sandboxAccountID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Resolve", reflect.TypeOf((*MockDocAPIKeyMed)(nil).Resolve), ctx, ownerAccountID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Resolve", reflect.TypeOf((*MockDocAPIKeyMed)(nil).Resolve), ctx, sandboxAccountID)
 }
 
 // SyncRotatedAPIKey mocks base method.

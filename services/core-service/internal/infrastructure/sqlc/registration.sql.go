@@ -31,6 +31,25 @@ func (q *Queries) CreateAccountAddress(ctx context.Context, arg CreateAccountAdd
 	return err
 }
 
+const createAccountBranding = `-- name: CreateAccountBranding :exec
+INSERT INTO account_branding (
+    id,
+    owner_account_id,
+    created_at,
+    updated_at
+) VALUES (?, ?, NOW(3), NOW(3))
+`
+
+type CreateAccountBrandingParams struct {
+	ID             string
+	OwnerAccountID string
+}
+
+func (q *Queries) CreateAccountBranding(ctx context.Context, arg CreateAccountBrandingParams) error {
+	_, err := q.exec(ctx, q.createAccountBrandingStmt, createAccountBranding, arg.ID, arg.OwnerAccountID)
+	return err
+}
+
 const createAccountPortal = `-- name: CreateAccountPortal :exec
 INSERT INTO account_portal (
     id,

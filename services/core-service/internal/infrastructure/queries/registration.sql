@@ -69,3 +69,11 @@ INSERT INTO account_portal (
     created_at,
     updated_at
 ) VALUES (?, ?, ?, NOW(3), NOW(3));
+
+-- name: CreateAccountBranding :exec
+INSERT INTO account_branding (
+    id,
+    owner_account_id,
+    created_at,
+    updated_at
+) VALUES (?, ?, NOW(3), NOW(3));

@@ -182,3 +182,277 @@ func (r *registrationRepoImpl) CreateAccountPortal(ctx context.Context, accountI
 
 	return nil
 }
+
+func (r *registrationRepoImpl) CreateAccountBranding(ctx context.Context, accountID string) *apierror.APIError {
+	ctx, span := registrationRepoTracer.Start(ctx, "repository.registration.create_account_branding")
+	defer span.End()
+
+	brandingID, genErr := id.GenID(id.AccountBrandingIDPrefix, nil)
+	if genErr != nil {
+		return tracing.Trace(span, genErr)
+	}
+
+	err := r.queries.CreateAccountBranding(ctx, sqlc.CreateAccountBrandingParams{
+		ID:             brandingID,
+		OwnerAccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	return nil
+}
+
+func (r *registrationRepoImpl) CreateSystemProducts(ctx context.Context, accountID string) *apierror.APIError {
+	ctx, span := registrationRepoTracer.Start(ctx, "repository.registration.create_system_products")
+	defer span.End()
+
+	acctID := sql.NullString{String: accountID, Valid: true}
+
+	// 1. Units: Each, Dollar, Day
+	eachID, genErr := id.GenID(id.UnitIDPrefix, nil)
+	if genErr != nil {
+		return tracing.Trace(span, genErr)
+	}
+	err := r.queries.CreateUnit(ctx, sqlc.CreateUnitParams{
+		ID: eachID, Name: "Each", Abbreviation: "ea", AccountID: acctID,
+		UnitDimensionCode: string(constants.UnitTypeQuantity), RatioNumerator: "1", RatioDenominator: "1", IsBaseUnit: true,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	dollarID, genErr := id.GenID(id.UnitIDPrefix, nil)
+	if genErr != nil {
+		return tracing.Trace(span, genErr)
+	}
+	err = r.queries.CreateUnit(ctx, sqlc.CreateUnitParams{
+		ID: dollarID, Name: "Dollar", Abbreviation: "$", AccountID: acctID,
+		UnitDimensionCode: string(constants.UnitTypeCurrency), RatioNumerator: "1", RatioDenominator: "1", IsBaseUnit: true,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	dayID, genErr := id.GenID(id.UnitIDPrefix, nil)
+	if genErr != nil {
+		return tracing.Trace(span, genErr)
+	}
+	err = r.queries.CreateUnit(ctx, sqlc.CreateUnitParams{
+		ID: dayID, Name: "Day", Abbreviation: "d", AccountID: acctID,
+		UnitDimensionCode: string(constants.UnitTypeTime), RatioNumerator: "24", RatioDenominator: "1", IsBaseUnit: false,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	// 2. Unit group: Each Units
+	eachGroupID, genErr := id.GenID(id.UnitGroupIDPrefix, nil)
+	if genErr != nil {
+		return tracing.Trace(span, genErr)
+	}
+	err = r.queries.CreateUnitGroup(ctx, sqlc.CreateUnitGroupParams{
+		ID: eachGroupID, Name: "Each Units", BaseUnitID: eachID, AccountID: acctID,
+		UnitTypeCode: string(constants.UnitTypeQuantity),
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	// 3. Unit group unit: Each -> Each Units
+	eguID, genErr := id.GenID(id.UnitGroupsUnitsIDPrefix, nil)
+	if genErr != nil {
+		return tracing.Trace(span, genErr)
+	}
+	err = r.queries.CreateUnitGroupUnit(ctx, sqlc.CreateUnitGroupUnitParams{
+		ID: eguID, UnitGroupID: eachGroupID, UnitID: eachID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	// 4. Item categories: Shipping, Credit
+	shipCatID, genErr := id.GenID(id.ItemCategoryIDPrefix, nil)
+	if genErr != nil {
+		return tracing.Trace(span, genErr)
+	}
+	err = r.queries.CreateItemCategory(ctx, sqlc.CreateItemCategoryParams{
+		ID: shipCatID, Name: "Shipping", AccountID: acctID,
+		ItemCategoryTypeCode: "product_category", UnitGroupID: eachGroupID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	creditCatID, genErr := id.GenID(id.ItemCategoryIDPrefix, nil)
+	if genErr != nil {
+		return tracing.Trace(span, genErr)
+	}
+	err = r.queries.CreateItemCategory(ctx, sqlc.CreateItemCategoryParams{
+		ID: creditCatID, Name: "Credit", AccountID: acctID,
+		ItemCategoryTypeCode: "product_category", UnitGroupID: eachGroupID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	// 5. Product lines: Shipping, Credit
+	shipLineID, genErr := id.GenID(id.ProductLineIDPrefix, nil)
+	if genErr != nil {
+		return tracing.Trace(span, genErr)
+	}
+	err = r.queries.CreateProductLine(ctx, sqlc.CreateProductLineParams{
+		ID: shipLineID, Name: "Shipping",
+		Description: sql.NullString{String: "Freight charges", Valid: true},
+		AccountID:   acctID, UnitGroupID: eachGroupID,
+		IsCommissionExempt: true, IsFreightExempt: true,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	creditLineID, genErr := id.GenID(id.ProductLineIDPrefix, nil)
+	if genErr != nil {
+		return tracing.Trace(span, genErr)
+	}
+	err = r.queries.CreateProductLine(ctx, sqlc.CreateProductLineParams{
+		ID: creditLineID, Name: "Credit",
+		Description: sql.NullString{String: "Credit adjustments", Valid: true},
+		AccountID:   acctID, UnitGroupID: eachGroupID,
+		IsCommissionExempt: true, IsFreightExempt: true,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	// 6. Rates: 6 total (unit_value, unit_cost, burn_rate for each product)
+	shipUnitValueID, genErr := id.GenID(id.RateIDPrefix, nil)
+	if genErr != nil {
+		return tracing.Trace(span, genErr)
+	}
+	err = r.queries.CreateRate(ctx, sqlc.CreateRateParams{
+		ID: shipUnitValueID, Value: "0", NumeratorUnitID: dollarID, DenominatorUnitID: eachID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	shipUnitCostID, genErr := id.GenID(id.RateIDPrefix, nil)
+	if genErr != nil {
+		return tracing.Trace(span, genErr)
+	}
+	err = r.queries.CreateRate(ctx, sqlc.CreateRateParams{
+		ID: shipUnitCostID, Value: "0", NumeratorUnitID: dollarID, DenominatorUnitID: eachID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	shipBurnRateID, genErr := id.GenID(id.RateIDPrefix, nil)
+	if genErr != nil {
+		return tracing.Trace(span, genErr)
+	}
+	err = r.queries.CreateRate(ctx, sqlc.CreateRateParams{
+		ID: shipBurnRateID, Value: "0", NumeratorUnitID: eachID, DenominatorUnitID: dayID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	creditUnitValueID, genErr := id.GenID(id.RateIDPrefix, nil)
+	if genErr != nil {
+		return tracing.Trace(span, genErr)
+	}
+	err = r.queries.CreateRate(ctx, sqlc.CreateRateParams{
+		ID: creditUnitValueID, Value: "0", NumeratorUnitID: dollarID, DenominatorUnitID: eachID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	creditUnitCostID, genErr := id.GenID(id.RateIDPrefix, nil)
+	if genErr != nil {
+		return tracing.Trace(span, genErr)
+	}
+	err = r.queries.CreateRate(ctx, sqlc.CreateRateParams{
+		ID: creditUnitCostID, Value: "0", NumeratorUnitID: dollarID, DenominatorUnitID: eachID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	creditBurnRateID, genErr := id.GenID(id.RateIDPrefix, nil)
+	if genErr != nil {
+		return tracing.Trace(span, genErr)
+	}
+	err = r.queries.CreateRate(ctx, sqlc.CreateRateParams{
+		ID: creditBurnRateID, Value: "0", NumeratorUnitID: eachID, DenominatorUnitID: dayID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	// 7. Items: Shipping, Credit
+	shipItemID, genErr := id.GenID(id.ItemIDPrefix, nil)
+	if genErr != nil {
+		return tracing.Trace(span, genErr)
+	}
+	err = r.queries.CreateItem(ctx, sqlc.CreateItemParams{
+		ID: shipItemID, Sku: "Shipping",
+		Description:    sql.NullString{String: "Freight charges", Valid: true},
+		UnitValueID:    shipUnitValueID,
+		BurnRateID:     shipBurnRateID,
+		AccountID:      accountID,
+		ItemTypeCode:   "product",
+		UnitCostID:     shipUnitCostID,
+		ItemCategoryID: shipCatID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	creditItemID, genErr := id.GenID(id.ItemIDPrefix, nil)
+	if genErr != nil {
+		return tracing.Trace(span, genErr)
+	}
+	err = r.queries.CreateItem(ctx, sqlc.CreateItemParams{
+		ID: creditItemID, Sku: "Credit",
+		Description:    sql.NullString{String: "Credit adjustments", Valid: true},
+		UnitValueID:    creditUnitValueID,
+		BurnRateID:     creditBurnRateID,
+		AccountID:      accountID,
+		ItemTypeCode:   "product",
+		UnitCostID:     creditUnitCostID,
+		ItemCategoryID: creditCatID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	// 8. Products: shipping, credit
+	shipProductID, genErr := id.GenID(id.ProductIDPrefix, nil)
+	if genErr != nil {
+		return tracing.Trace(span, genErr)
+	}
+	err = r.queries.CreateProduct(ctx, sqlc.CreateProductParams{
+		ID: shipProductID, ItemID: shipItemID, ProductTypeCode: "shipping",
+		ProductLineID: sql.NullString{String: shipLineID, Valid: true},
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	creditProductID, genErr := id.GenID(id.ProductIDPrefix, nil)
+	if genErr != nil {
+		return tracing.Trace(span, genErr)
+	}
+	err = r.queries.CreateProduct(ctx, sqlc.CreateProductParams{
+		ID: creditProductID, ItemID: creditItemID, ProductTypeCode: "credit",
+		ProductLineID: sql.NullString{String: creditLineID, Valid: true},
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	return nil
+}

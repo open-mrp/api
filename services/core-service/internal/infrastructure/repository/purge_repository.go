@@ -103,9 +103,28 @@ func (r *PurgeRepo) VerifyAccountIsSandboxOrDeleted(ctx context.Context, account
 	return nil
 }
 
+// prePurgeJoinDeletes removes rows from tables that lack an account_id column
+// but reference account-scoped parent rows. These must run before the main
+// purgeTargets loop deletes the parent rows (item, unit_group, etc.).
+var prePurgeJoinDeletes = []string{
+	"DELETE p FROM product p JOIN item i ON p.item_id = i.id WHERE i.account_id = ?",
+	"DELETE r FROM rate r JOIN item i ON r.id = i.unit_value_id WHERE i.account_id = ?",
+	"DELETE r FROM rate r JOIN item i ON r.id = i.unit_cost_id WHERE i.account_id = ?",
+	"DELETE r FROM rate r JOIN item i ON r.id = i.burn_rate_id WHERE i.account_id = ?",
+	"DELETE ugu FROM unit_group_unit ugu JOIN unit_group ug ON ugu.unit_group_id = ug.id WHERE ug.account_id = ?",
+}
+
 func (r *PurgeRepo) PurgeAccountData(ctx context.Context, accountID string) error {
 	ctx, span := purgeRepoTracer.Start(ctx, "repository.purge.purge_account_data")
 	defer span.End()
+
+	for _, query := range prePurgeJoinDeletes {
+		if err := r.execInTx(ctx, query, accountID); err != nil {
+			log.Printf("[purge] WARNING: Failed pre-purge join delete for account %s: %v", accountID, err)
+			span.RecordError(err)
+			return err
+		}
+	}
 
 	for _, target := range purgeTargets {
 		if err := r.deleteFromTable(ctx, target.Table, target.Column, accountID); err != nil {
@@ -120,18 +139,22 @@ func (r *PurgeRepo) PurgeAccountData(ctx context.Context, accountID string) erro
 
 func (r *PurgeRepo) deleteFromTable(ctx context.Context, table, column, accountID string) error {
 	query := fmt.Sprintf("DELETE FROM `%s` WHERE `%s` = ?", table, column) // #nosec G201 - table/column names from hardcoded list
+	return r.execInTx(ctx, query, accountID)
+}
+
+func (r *PurgeRepo) execInTx(ctx context.Context, query, accountID string) error {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
-		return fmt.Errorf("begin tx for %s: %w", table, err)
+		return fmt.Errorf("begin tx: %w", err)
 	}
-	defer tx.Rollback()
+	defer tx.Rollback() // #nosec G104 - rollback on already-committed tx is a no-op
 
 	if _, err := tx.ExecContext(ctx, query, accountID); err != nil {
-		return fmt.Errorf("delete from %s: %w", table, err)
+		return fmt.Errorf("exec: %w", err)
 	}
 
 	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("commit for %s: %w", table, err)
+		return fmt.Errorf("commit: %w", err)
 	}
 
 	return nil

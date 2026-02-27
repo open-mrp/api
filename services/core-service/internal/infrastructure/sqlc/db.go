@@ -51,6 +51,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.createAccountAddressStmt, err = db.PrepareContext(ctx, createAccountAddress); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateAccountAddress: %w", err)
 	}
+	if q.createAccountBrandingStmt, err = db.PrepareContext(ctx, createAccountBranding); err != nil {
+		return nil, fmt.Errorf("error preparing query CreateAccountBranding: %w", err)
+	}
 	if q.createAccountForRegistrationStmt, err = db.PrepareContext(ctx, createAccountForRegistration); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateAccountForRegistration: %w", err)
 	}
@@ -69,8 +72,23 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.createIdempotencyKeyStmt, err = db.PrepareContext(ctx, createIdempotencyKey); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateIdempotencyKey: %w", err)
 	}
+	if q.createItemStmt, err = db.PrepareContext(ctx, createItem); err != nil {
+		return nil, fmt.Errorf("error preparing query CreateItem: %w", err)
+	}
+	if q.createItemCategoryStmt, err = db.PrepareContext(ctx, createItemCategory); err != nil {
+		return nil, fmt.Errorf("error preparing query CreateItemCategory: %w", err)
+	}
 	if q.createOutboxMessageStmt, err = db.PrepareContext(ctx, createOutboxMessage); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateOutboxMessage: %w", err)
+	}
+	if q.createProductStmt, err = db.PrepareContext(ctx, createProduct); err != nil {
+		return nil, fmt.Errorf("error preparing query CreateProduct: %w", err)
+	}
+	if q.createProductLineStmt, err = db.PrepareContext(ctx, createProductLine); err != nil {
+		return nil, fmt.Errorf("error preparing query CreateProductLine: %w", err)
+	}
+	if q.createRateStmt, err = db.PrepareContext(ctx, createRate); err != nil {
+		return nil, fmt.Errorf("error preparing query CreateRate: %w", err)
 	}
 	if q.createRoleStmt, err = db.PrepareContext(ctx, createRole); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateRole: %w", err)
@@ -80,6 +98,15 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.createSandboxAccountStmt, err = db.PrepareContext(ctx, createSandboxAccount); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateSandboxAccount: %w", err)
+	}
+	if q.createUnitStmt, err = db.PrepareContext(ctx, createUnit); err != nil {
+		return nil, fmt.Errorf("error preparing query CreateUnit: %w", err)
+	}
+	if q.createUnitGroupStmt, err = db.PrepareContext(ctx, createUnitGroup); err != nil {
+		return nil, fmt.Errorf("error preparing query CreateUnitGroup: %w", err)
+	}
+	if q.createUnitGroupUnitStmt, err = db.PrepareContext(ctx, createUnitGroupUnit); err != nil {
+		return nil, fmt.Errorf("error preparing query CreateUnitGroupUnit: %w", err)
 	}
 	if q.deactivateAccountUsersExceptStmt, err = db.PrepareContext(ctx, deactivateAccountUsersExcept); err != nil {
 		return nil, fmt.Errorf("error preparing query DeactivateAccountUsersExcept: %w", err)
@@ -272,6 +299,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing createAccountAddressStmt: %w", cerr)
 		}
 	}
+	if q.createAccountBrandingStmt != nil {
+		if cerr := q.createAccountBrandingStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing createAccountBrandingStmt: %w", cerr)
+		}
+	}
 	if q.createAccountForRegistrationStmt != nil {
 		if cerr := q.createAccountForRegistrationStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing createAccountForRegistrationStmt: %w", cerr)
@@ -302,9 +334,34 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing createIdempotencyKeyStmt: %w", cerr)
 		}
 	}
+	if q.createItemStmt != nil {
+		if cerr := q.createItemStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing createItemStmt: %w", cerr)
+		}
+	}
+	if q.createItemCategoryStmt != nil {
+		if cerr := q.createItemCategoryStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing createItemCategoryStmt: %w", cerr)
+		}
+	}
 	if q.createOutboxMessageStmt != nil {
 		if cerr := q.createOutboxMessageStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing createOutboxMessageStmt: %w", cerr)
+		}
+	}
+	if q.createProductStmt != nil {
+		if cerr := q.createProductStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing createProductStmt: %w", cerr)
+		}
+	}
+	if q.createProductLineStmt != nil {
+		if cerr := q.createProductLineStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing createProductLineStmt: %w", cerr)
+		}
+	}
+	if q.createRateStmt != nil {
+		if cerr := q.createRateStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing createRateStmt: %w", cerr)
 		}
 	}
 	if q.createRoleStmt != nil {
@@ -320,6 +377,21 @@ func (q *Queries) Close() error {
 	if q.createSandboxAccountStmt != nil {
 		if cerr := q.createSandboxAccountStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing createSandboxAccountStmt: %w", cerr)
+		}
+	}
+	if q.createUnitStmt != nil {
+		if cerr := q.createUnitStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing createUnitStmt: %w", cerr)
+		}
+	}
+	if q.createUnitGroupStmt != nil {
+		if cerr := q.createUnitGroupStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing createUnitGroupStmt: %w", cerr)
+		}
+	}
+	if q.createUnitGroupUnitStmt != nil {
+		if cerr := q.createUnitGroupUnitStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing createUnitGroupUnitStmt: %w", cerr)
 		}
 	}
 	if q.deactivateAccountUsersExceptStmt != nil {
@@ -605,16 +677,25 @@ type Queries struct {
 	countSandboxAccountsStmt                           *sql.Stmt
 	createAccountStmt                                  *sql.Stmt
 	createAccountAddressStmt                           *sql.Stmt
+	createAccountBrandingStmt                          *sql.Stmt
 	createAccountForRegistrationStmt                   *sql.Stmt
 	createAccountPortalStmt                            *sql.Stmt
 	createAccountUserForRegistrationStmt               *sql.Stmt
 	createAddressStmt                                  *sql.Stmt
 	createGeolocationStmt                              *sql.Stmt
 	createIdempotencyKeyStmt                           *sql.Stmt
+	createItemStmt                                     *sql.Stmt
+	createItemCategoryStmt                             *sql.Stmt
 	createOutboxMessageStmt                            *sql.Stmt
+	createProductStmt                                  *sql.Stmt
+	createProductLineStmt                              *sql.Stmt
+	createRateStmt                                     *sql.Stmt
 	createRoleStmt                                     *sql.Stmt
 	createRolePermissionStmt                           *sql.Stmt
 	createSandboxAccountStmt                           *sql.Stmt
+	createUnitStmt                                     *sql.Stmt
+	createUnitGroupStmt                                *sql.Stmt
+	createUnitGroupUnitStmt                            *sql.Stmt
 	deactivateAccountUsersExceptStmt                   *sql.Stmt
 	deleteAccountByIDStmt                              *sql.Stmt
 	deleteAccountByIDIfSandboxStmt                     *sql.Stmt
@@ -677,16 +758,25 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		countSandboxAccountsStmt:                           q.countSandboxAccountsStmt,
 		createAccountStmt:                                  q.createAccountStmt,
 		createAccountAddressStmt:                           q.createAccountAddressStmt,
+		createAccountBrandingStmt:                          q.createAccountBrandingStmt,
 		createAccountForRegistrationStmt:                   q.createAccountForRegistrationStmt,
 		createAccountPortalStmt:                            q.createAccountPortalStmt,
 		createAccountUserForRegistrationStmt:               q.createAccountUserForRegistrationStmt,
 		createAddressStmt:                                  q.createAddressStmt,
 		createGeolocationStmt:                              q.createGeolocationStmt,
 		createIdempotencyKeyStmt:                           q.createIdempotencyKeyStmt,
+		createItemStmt:                                     q.createItemStmt,
+		createItemCategoryStmt:                             q.createItemCategoryStmt,
 		createOutboxMessageStmt:                            q.createOutboxMessageStmt,
+		createProductStmt:                                  q.createProductStmt,
+		createProductLineStmt:                              q.createProductLineStmt,
+		createRateStmt:                                     q.createRateStmt,
 		createRoleStmt:                                     q.createRoleStmt,
 		createRolePermissionStmt:                           q.createRolePermissionStmt,
 		createSandboxAccountStmt:                           q.createSandboxAccountStmt,
+		createUnitStmt:                                     q.createUnitStmt,
+		createUnitGroupStmt:                                q.createUnitGroupStmt,
+		createUnitGroupUnitStmt:                            q.createUnitGroupUnitStmt,
 		deactivateAccountUsersExceptStmt:                   q.deactivateAccountUsersExceptStmt,
 		deleteAccountByIDStmt:                              q.deleteAccountByIDStmt,
 		deleteAccountByIDIfSandboxStmt:                     q.deleteAccountByIDIfSandboxStmt,

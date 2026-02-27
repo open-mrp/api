@@ -112,6 +112,14 @@ func (m *sandboxMedImpl) Create(ctx context.Context, ownerAccountID, userID, nam
 		return nil, tracing.Trace(span, portalErr)
 	}
 
+	if sysErr := regRepo.CreateSystemProducts(ctx, accountID); sysErr != nil {
+		return nil, tracing.Trace(span, sysErr)
+	}
+
+	if brandErr := regRepo.CreateAccountBranding(ctx, accountID); brandErr != nil {
+		return nil, tracing.Trace(span, brandErr)
+	}
+
 	if createErr := m.repos.NewSandboxAccountRepo().Create(ctx, sandboxTypeID, ownerAccountID, accountID); createErr != nil {
 		return nil, tracing.Trace(span, createErr)
 	}

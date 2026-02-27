@@ -108,8 +108,8 @@
 --   it_seed000000017  FG-ANK-L-BLK   Ankle Sock Large Black
 --   it_seed000000018  FG-ANK-L-NAV   Ankle Sock Large Navy
 --   -- Products (System) it_seed000000019..020
---   it_seed000000019  SYS-SHIP        Shipping
---   it_seed000000020  SYS-CREDIT      Credit
+--   it_seed000000019  Shipping        Shipping
+--   it_seed000000020  Credit      Credit
 --   -- Materials it_seed000000021..032
 --   it_seed000000021  RM-YRN-COT70   Cotton Yarn 70D
 --   it_seed000000022  RM-YRN-COT40   Cotton Yarn 40D
@@ -291,12 +291,12 @@
 
 SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 
-SET @un1 = CONCAT('un_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SELECT @un1 := id FROM unit WHERE name = 'Each' AND account_id = '@account_id';
 SET @un2 = CONCAT('un_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @un3 = CONCAT('un_', LEFT(REPLACE(UUID(), '-', ''), 12));
-SET @un4 = CONCAT('un_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SELECT @un4 := id FROM unit WHERE name = 'Dollar' AND account_id = '@account_id';
 SET @un5 = CONCAT('un_', LEFT(REPLACE(UUID(), '-', ''), 12));
-SET @un6 = CONCAT('un_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SELECT @un6 := id FROM unit WHERE name = 'Day' AND account_id = '@account_id';
 SET @un7 = CONCAT('un_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @un8 = CONCAT('un_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @un9 = CONCAT('un_', LEFT(REPLACE(UUID(), '-', ''), 12));
@@ -305,7 +305,7 @@ SET @ungp1 = CONCAT('ungp_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @ungp2 = CONCAT('ungp_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @ungp3 = CONCAT('ungp_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @ungp4 = CONCAT('ungp_', LEFT(REPLACE(UUID(), '-', ''), 12));
-SET @ungp5 = CONCAT('ungp_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SELECT @ungp5 := id FROM unit_group WHERE name = 'Each Units' AND account_id = '@account_id';
 SET @ungp6 = CONCAT('ungp_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @ungp7 = CONCAT('ungp_', LEFT(REPLACE(UUID(), '-', ''), 12));
 
@@ -316,7 +316,6 @@ SET @ungpun4 = CONCAT('ungpun_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @ungpun5 = CONCAT('ungpun_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @ungpun6 = CONCAT('ungpun_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @ungpun7 = CONCAT('ungpun_', LEFT(REPLACE(UUID(), '-', ''), 12));
-SET @ungpun8 = CONCAT('ungpun_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @ungpun9 = CONCAT('ungpun_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @ungpun10 = CONCAT('ungpun_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @ungpun11 = CONCAT('ungpun_', LEFT(REPLACE(UUID(), '-', ''), 12));
@@ -351,14 +350,14 @@ SET @itmcat3 = CONCAT('itcg_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @itmcat4 = CONCAT('itcg_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @itmcat5 = CONCAT('itcg_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @itmcat6 = CONCAT('itcg_', LEFT(REPLACE(UUID(), '-', ''), 12));
-SET @itmcat7 = CONCAT('itcg_', LEFT(REPLACE(UUID(), '-', ''), 12));
-SET @itmcat8 = CONCAT('itcg_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SELECT @itmcat7 := id FROM item_category WHERE name = 'Shipping' AND account_id = '@account_id';
+SELECT @itmcat8 := id FROM item_category WHERE name = 'Credit' AND account_id = '@account_id';
 
 SET @pdln1 = CONCAT('pdln_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @pdln2 = CONCAT('pdln_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @pdln3 = CONCAT('pdln_', LEFT(REPLACE(UUID(), '-', ''), 12));
-SET @pdln4 = CONCAT('pdln_', LEFT(REPLACE(UUID(), '-', ''), 12));
-SET @pdln5 = CONCAT('pdln_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SELECT @pdln4 := id FROM product_line WHERE name = 'Shipping' AND account_id = '@account_id';
+SELECT @pdln5 := id FROM product_line WHERE name = 'Credit' AND account_id = '@account_id';
 
 SET @rt1 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @rt2 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
@@ -414,12 +413,7 @@ SET @rt51 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @rt52 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @rt53 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @rt54 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
-SET @rt55 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
-SET @rt56 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
-SET @rt57 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
-SET @rt58 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
-SET @rt59 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
-SET @rt60 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
+-- rt55-rt60 and it19/it20/pd19/pd20 are looked up below (system products created at account creation)
 SET @rt61 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @rt62 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @rt63 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
@@ -786,8 +780,10 @@ SET @it15 = CONCAT('it_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @it16 = CONCAT('it_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @it17 = CONCAT('it_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @it18 = CONCAT('it_', LEFT(REPLACE(UUID(), '-', ''), 12));
-SET @it19 = CONCAT('it_', LEFT(REPLACE(UUID(), '-', ''), 12));
-SET @it20 = CONCAT('it_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SELECT @it19 := id FROM item WHERE sku = 'Shipping' AND account_id = '@account_id';
+SELECT @it20 := id FROM item WHERE sku = 'Credit' AND account_id = '@account_id';
+SELECT @rt55 := unit_value_id, @rt56 := unit_cost_id, @rt57 := burn_rate_id FROM item WHERE id = @it19;
+SELECT @rt58 := unit_value_id, @rt59 := unit_cost_id, @rt60 := burn_rate_id FROM item WHERE id = @it20;
 SET @it21 = CONCAT('it_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @it22 = CONCAT('it_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @it23 = CONCAT('it_', LEFT(REPLACE(UUID(), '-', ''), 12));
@@ -834,8 +830,8 @@ SET @pd15 = CONCAT('pd_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @pd16 = CONCAT('pd_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @pd17 = CONCAT('pd_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @pd18 = CONCAT('pd_', LEFT(REPLACE(UUID(), '-', ''), 12));
-SET @pd19 = CONCAT('pd_', LEFT(REPLACE(UUID(), '-', ''), 12));
-SET @pd20 = CONCAT('pd_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SELECT @pd19 := p.id FROM product p JOIN item i ON p.item_id = i.id WHERE i.sku = 'Shipping' AND i.account_id = '@account_id';
+SELECT @pd20 := p.id FROM product p JOIN item i ON p.item_id = i.id WHERE i.sku = 'Credit' AND i.account_id = '@account_id';
 
 SET @mat1 = CONCAT('ml_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @mat2 = CONCAT('ml_', LEFT(REPLACE(UUID(), '-', ''), 12));
@@ -1389,12 +1385,9 @@ SET @qty260 = CONCAT('qu_', LEFT(REPLACE(UUID(), '-', ''), 12));
 -- ============================================================================
 
 INSERT INTO `unit` (`id`, `name`, `abbreviation`, `account_id`, `unit_dimension_code`, `ratio_numerator`, `ratio_denominator`, `offset_numerator`, `offset_denominator`, `is_base_unit`) VALUES
-  (@un1, 'Each',   'ea',  '@account_id', 'quantity', 1, 1, 0, 1, true),
   (@un2, 'Pair',   'pr',  '@account_id', 'quantity', 2, 1, 0, 1, false),
   (@un3, 'Dozen',  'dz',  '@account_id', 'quantity', 12, 1, 0, 1, false),
-  (@un4, 'Dollar', '$',   '@account_id', 'currency', 1, 1, 0, 1, true),
   (@un5, 'Hour',   'hr',  '@account_id', 'time', 1, 1, 0, 1, true),
-  (@un6, 'Day',    'd',   '@account_id', 'time', 24, 1, 0, 1, false),
   (@un7, 'Minute', 'min', '@account_id', 'time', 1, 60, 0, 1, false),
   (@un8, 'Pound',  'lb',  '@account_id', 'mass', 453592, 1000, 0, 1, false),
   (@un9, 'Gram',   'g',   '@account_id', 'mass', 1, 1, 0, 1, true);
@@ -1409,7 +1402,6 @@ INSERT INTO `unit_group` (`id`, `name`, `notes`, `base_unit_id`, `account_id`, `
   (@ungp2, 'Sellable Socks', NULL, @un2, '@account_id', 'quantity'),
   (@ungp3, 'Yarn Units',     NULL, @un8, '@account_id', 'mass'),
   (@ungp4, 'Chemical Units',  NULL, @un9, '@account_id', 'mass'),
-  (@ungp5, 'Each Units',     NULL, @un1, '@account_id', 'quantity'),
   (@ungp6, 'Time Units',     NULL, @un5, '@account_id', 'time'),
   (@ungp7, 'Currency Units',  NULL, @un4, '@account_id', 'currency');
 
@@ -1430,8 +1422,6 @@ INSERT INTO `unit_group_unit` (`id`, `unit_group_id`, `unit_id`, `discount_perce
   -- Chemical Units: Gram, Pound
   (@ungpun6, @ungp4, @un9, 0, true),
   (@ungpun7, @ungp4, @un8, 0, true),
-  -- Each Units: Each
-  (@ungpun8, @ungp5, @un1, 0, true),
   -- Time Units: Hour, Day, Minute
   (@ungpun9, @ungp6, @un5, 0, true),
   (@ungpun10, @ungp6, @un6, 0, true),
@@ -1490,9 +1480,7 @@ INSERT INTO `item_category` (`id`, `name`, `notes`, `account_id`, `item_category
   (@itmcat3, 'Yarn',       NULL, '@account_id', 'material_category', @ungp3),
   (@itmcat4, 'Dyes',       NULL, '@account_id', 'material_category', @ungp4),
   (@itmcat5, 'Chemicals',  NULL, '@account_id', 'material_category', @ungp4),
-  (@itmcat6, 'Packaging',  NULL, '@account_id', 'material_category', @ungp5),
-  (@itmcat7, 'Shipping',   NULL, '@account_id', 'product_category',  @ungp5),
-  (@itmcat8, 'Credit',     NULL, '@account_id', 'product_category',  @ungp5);
+  (@itmcat6, 'Packaging',  NULL, '@account_id', 'material_category', @ungp5);
 
 
 -- ============================================================================
@@ -1523,9 +1511,7 @@ INSERT INTO `_item_categories_properties` (`A`, `B`) VALUES
 INSERT INTO `product_line` (`id`, `name`, `description`, `notes`, `account_id`, `unit_group_id`, `is_commission_exempt`, `is_freight_exempt`) VALUES
   (@pdln1, 'Crew Collection',  'Classic crew-length socks',  NULL, '@account_id', @ungp2, false, false),
   (@pdln2, 'Ankle Collection', 'Low-cut ankle socks',        NULL, '@account_id', @ungp2, false, false),
-  (@pdln3, 'Athletic',         'Performance athletic socks',  NULL, '@account_id', @ungp2, false, false),
-  (@pdln4, 'Shipping',         'Freight charges',             NULL, '@account_id', @ungp5, true,  true),
-  (@pdln5, 'Credit',           'Credit adjustments',          NULL, '@account_id', @ungp5, true,  true);
+  (@pdln3, 'Athletic',         'Performance athletic socks',  NULL, '@account_id', @ungp2, false, false);
 
 
 -- ============================================================================
@@ -1614,16 +1600,6 @@ INSERT INTO `rate` (`id`, `value`, `numerator_unit_id`, `denominator_unit_id`) V
   (@rt52, 30,   @un4, @un2),
   (@rt53, 6.5,  @un4, @un2),
   (@rt54, 1.5,  @un2, @un6),
-
-  -- System products: SYS-SHIP, SYS-CREDIT  (value=0, cost=0, burn=0)
-  -- SYS-SHIP (it_seed000000019)
-  (@rt55, 0, @un4, @un1),
-  (@rt56, 0, @un4, @un1),
-  (@rt57, 0, @un1, @un6),
-  -- SYS-CREDIT (it_seed000000020)
-  (@rt58, 0, @un4, @un1),
-  (@rt59, 0, @un4, @un1),
-  (@rt60, 0, @un1, @un6),
 
   -- ── Material Rates ───────────────────────────────────────────────────────
   -- RM-YRN-COT70 (it_seed000000021): value=0, cost=$6/lb, burn=10lb/d
@@ -1813,10 +1789,6 @@ INSERT INTO `item` (`id`, `sku`, `description`, `notes`, `unit_value_id`, `burn_
   (@it17, 'FG-ANK-L-BLK', 'Ankle Sock Large Black',  NULL, @rt49, @rt51, '@account_id', 'product', @rt50, @itmcat2, false),
   (@it18, 'FG-ANK-L-NAV', 'Ankle Sock Large Navy',   NULL, @rt52, @rt54, '@account_id', 'product', @rt53, @itmcat2, false),
 
-  -- ── System Products ──────────────────────────────────────────────────────
-  (@it19, 'SYS-SHIP',   'Shipping',  NULL, @rt55, @rt57, '@account_id', 'product', @rt56, @itmcat7, false),
-  (@it20, 'SYS-CREDIT', 'Credit',    NULL, @rt58, @rt60, '@account_id', 'product', @rt59, @itmcat8, false),
-
   -- ── Materials ────────────────────────────────────────────────────────────
   (@it21, 'RM-YRN-COT70', 'Cotton Yarn 70 Denier',      NULL, @rt61, @rt63, '@account_id', 'material', @rt62, @itmcat3, false),
   (@it22, 'RM-YRN-COT40', 'Cotton Yarn 40 Denier',      NULL, @rt64, @rt66, '@account_id', 'material', @rt65, @itmcat3, false),
@@ -1926,10 +1898,7 @@ INSERT INTO `product` (`id`, `item_id`, `product_type_code`, `product_line_id`) 
   (@pd15, @it15, 'sale', @pdln2),
   (@pd16, @it16, 'sale', @pdln2),
   (@pd17, @it17, 'sale', @pdln2),
-  (@pd18, @it18, 'sale', @pdln2),
-  -- System
-  (@pd19, @it19, 'shipping', @pdln4),
-  (@pd20, @it20, 'credit',   @pdln5);
+  (@pd18, @it18, 'sale', @pdln2);
 
 
 -- ============================================================================
@@ -2547,8 +2516,8 @@ INSERT INTO `quantity` (`id`, `value`, `unit_id`) VALUES
   (@qty133, 0, @un2),  -- it_seed000000016
   (@qty134, 0, @un2),  -- it_seed000000017
   (@qty135, 0, @un2),  -- it_seed000000018
-  (@qty136, 0, @un1),  -- it_seed000000019 SYS-SHIP
-  (@qty137, 0, @un1),  -- it_seed000000020 SYS-CREDIT
+  (@qty136, 0, @un1),  -- it_seed000000019 Shipping
+  (@qty137, 0, @un1),  -- it_seed000000020 Credit
   (@qty138, 0, @un8),  -- it_seed000000021 RM-YRN-COT70
   (@qty139, 0, @un8),  -- it_seed000000022 RM-YRN-COT40
   (@qty140, 0, @un8),  -- it_seed000000023 RM-YRN-NYL40
@@ -2825,9 +2794,9 @@ UPDATE `account` SET default_billing_address_id = @caddr3, default_shipping_addr
 UPDATE `account` SET default_billing_address_id = @caddr5, default_shipping_address_id = @caddr6 WHERE id = @cust3;
 
 INSERT INTO `account_relation` (`id`, `owner_account_id`, `counterparty_account_id`, `account_relation_role_code`, `external_number`, `priority_code`, `account_group_id`, `payment_term_id`, `shipping_term_id`, `default_carrier_id`, `default_carrier_option_id`, `default_billing_address_id`, `default_shipping_address_id`, `account_status_code`, `commission_status_code`, `freight_status_code`) VALUES
-  (@acrel1, '@account_id', @cust1, 'customer', 'CUST-001', 'normal', @acgrp1, NULL, 'prepaid', 'delivery', NULL, @caddr1, @caddr2, 'normal', 'applied', 'billed'),
-  (@acrel2, '@account_id', @cust2, 'customer', 'CUST-002', 'normal', @acgrp1, NULL, 'prepaid', 'delivery', NULL, @caddr3, @caddr4, 'normal', 'applied', 'billed'),
-  (@acrel3, '@account_id', @cust3, 'customer', 'CUST-003', 'normal', @acgrp1, NULL, 'prepaid', 'delivery', NULL, @caddr5, @caddr6, 'normal', 'applied', 'billed');
+  (@acrel1, '@account_id', @cust1, 'customer', 'CUST-001', 'normal', @acgrp1, 'net_30', 'prepaid', 'delivery', NULL, @caddr1, @caddr2, 'normal', 'applied', 'billed'),
+  (@acrel2, '@account_id', @cust2, 'customer', 'CUST-002', 'normal', @acgrp1, 'net_30', 'prepaid', 'delivery', NULL, @caddr3, @caddr4, 'normal', 'applied', 'billed'),
+  (@acrel3, '@account_id', @cust3, 'customer', 'CUST-003', 'normal', @acgrp1, 'net_60', 'prepaid', 'delivery', NULL, @caddr5, @caddr6, 'normal', 'applied', 'billed');
 
 
 -- ============================================================================
@@ -2915,43 +2884,43 @@ INSERT INTO `quantity` (`id`, `value`, `unit_id`) VALUES
 
 INSERT INTO `sales_order` (`id`, `number`, `sales_order_status_code`, `sales_order_type_code`, `priority_code`, `buyer_account_id`, `seller_account_id`, `owner_account_id`, `billing_address_id`, `shipping_address_id`, `carrier_id`, `carrier_option_id`, `payment_term_id`, `shipping_term_id`, `issued_at`, `completed_at`) VALUES
   -- EST-001: estimate for Customer 1
-  (@so1, 'EST-001', 'estimate',  'sales_order', 'normal', @cust1, '@account_id', '@account_id', @caddr1, @caddr2, 'delivery', NULL, NULL, 'prepaid', NULL, NULL),
+  (@so1, 'EST-001', 'estimate',  'sales_order', 'normal', @cust1, '@account_id', '@account_id', @caddr1, @caddr2, 'delivery', NULL, 'net_30', 'prepaid', NULL, NULL),
   -- ORD-001: issued for Customer 1
-  (@so2, 'ORD-001', 'issued',    'sales_order', 'normal', @cust1, '@account_id', '@account_id', @caddr1, @caddr2, 'delivery', NULL, NULL, 'prepaid', NOW() - INTERVAL 10 DAY, NULL),
+  (@so2, 'ORD-001', 'issued',    'sales_order', 'normal', @cust1, '@account_id', '@account_id', @caddr1, @caddr2, 'delivery', NULL, 'net_30', 'prepaid', NOW() - INTERVAL 10 DAY, NULL),
   -- ORD-002: issued for Customer 2
-  (@so3, 'ORD-002', 'issued',    'sales_order', 'normal', @cust2, '@account_id', '@account_id', @caddr3, @caddr4, 'delivery', NULL, NULL, 'prepaid', NOW() - INTERVAL 8 DAY, NULL),
+  (@so3, 'ORD-002', 'issued',    'sales_order', 'normal', @cust2, '@account_id', '@account_id', @caddr3, @caddr4, 'delivery', NULL, 'net_30', 'prepaid', NOW() - INTERVAL 8 DAY, NULL),
   -- ORD-003: issued for Customer 2 (packed shipment)
-  (@so4, 'ORD-003', 'issued',    'sales_order', 'high',   @cust2, '@account_id', '@account_id', @caddr3, @caddr4, 'delivery', NULL, NULL, 'prepaid', NOW() - INTERVAL 6 DAY, NULL),
+  (@so4, 'ORD-003', 'issued',    'sales_order', 'high',   @cust2, '@account_id', '@account_id', @caddr3, @caddr4, 'delivery', NULL, 'net_30', 'prepaid', NOW() - INTERVAL 6 DAY, NULL),
   -- ORD-004: fulfilled for Customer 1
-  (@so5, 'ORD-004', 'fulfilled', 'sales_order', 'normal', @cust1, '@account_id', '@account_id', @caddr1, @caddr2, 'delivery', NULL, NULL, 'prepaid', NOW() - INTERVAL 14 DAY, NOW() - INTERVAL 2 DAY),
+  (@so5, 'ORD-004', 'fulfilled', 'sales_order', 'normal', @cust1, '@account_id', '@account_id', @caddr1, @caddr2, 'delivery', NULL, 'net_30', 'prepaid', NOW() - INTERVAL 14 DAY, NOW() - INTERVAL 2 DAY),
   -- ORD-005: fulfilled for Customer 3
-  (@so6, 'ORD-005', 'fulfilled', 'sales_order', 'normal', @cust3, '@account_id', '@account_id', @caddr5, @caddr6, 'delivery', NULL, NULL, 'prepaid', NOW() - INTERVAL 12 DAY, NOW() - INTERVAL 1 DAY);
+  (@so6, 'ORD-005', 'fulfilled', 'sales_order', 'normal', @cust3, '@account_id', '@account_id', @caddr5, @caddr6, 'delivery', NULL, 'net_60', 'prepaid', NOW() - INTERVAL 12 DAY, NOW() - INTERVAL 1 DAY);
 
 INSERT INTO `sales_order_line` (`id`, `product_sku`, `product_description`, `line_item_number`, `product_id`, `item_id`, `sales_order_id`, `quantity_id`, `unit_price_id`, `unit_cost_id`) VALUES
   -- EST-001 lines
   (@sol1,  'FG-CRW-S-WHT', 'Crew Sock Small White',    1, @pd1,  @it1,  @so1, @qty215, @rt196, @rt214),
   (@sol2,  'FG-ANK-M-BLK', 'Ankle Sock Medium Black',  2, @pd14, @it14, @so1, @qty216, @rt197, @rt215),
-  (@sol3,  'SYS-SHIP',     'Shipping',                  3, @pd19, @it19, @so1, @qty217, @rt198, NULL),
+  (@sol3,  'Shipping',     'Shipping',                  3, @pd19, @it19, @so1, @qty217, @rt198, NULL),
   -- ORD-001 lines
   (@sol4,  'FG-CRW-L-NAV', 'Crew Sock Large Navy',     1, @pd9,  @it9,  @so2, @qty218, @rt199, @rt216),
   (@sol5,  'FG-ANK-S-WHT', 'Ankle Sock Small White',   2, @pd10, @it10, @so2, @qty219, @rt200, @rt217),
-  (@sol6,  'SYS-SHIP',     'Shipping',                  3, @pd19, @it19, @so2, @qty220, @rt201, NULL),
+  (@sol6,  'Shipping',     'Shipping',                  3, @pd19, @it19, @so2, @qty220, @rt201, NULL),
   -- ORD-002 lines
   (@sol7,  'FG-CRW-M-WHT', 'Crew Sock Medium White',   1, @pd4,  @it4,  @so3, @qty221, @rt202, @rt218),
   (@sol8,  'FG-CRW-L-BLK', 'Crew Sock Large Black',    2, @pd8,  @it8,  @so3, @qty222, @rt203, @rt219),
-  (@sol9,  'SYS-SHIP',     'Shipping',                  3, @pd19, @it19, @so3, @qty223, @rt204, NULL),
+  (@sol9,  'Shipping',     'Shipping',                  3, @pd19, @it19, @so3, @qty223, @rt204, NULL),
   -- ORD-003 lines
   (@sol10, 'FG-ANK-L-NAV', 'Ankle Sock Large Navy',    1, @pd18, @it18, @so4, @qty224, @rt205, @rt220),
   (@sol11, 'FG-CRW-S-BLK', 'Crew Sock Small Black',    2, @pd2,  @it2,  @so4, @qty225, @rt206, @rt221),
-  (@sol12, 'SYS-SHIP',     'Shipping',                  3, @pd19, @it19, @so4, @qty226, @rt207, NULL),
+  (@sol12, 'Shipping',     'Shipping',                  3, @pd19, @it19, @so4, @qty226, @rt207, NULL),
   -- ORD-004 lines
   (@sol13, 'FG-ANK-M-NAV', 'Ankle Sock Medium Navy',   1, @pd15, @it15, @so5, @qty227, @rt208, @rt222),
   (@sol14, 'FG-CRW-M-BLK', 'Crew Sock Medium Black',   2, @pd5,  @it5,  @so5, @qty228, @rt209, @rt223),
-  (@sol15, 'SYS-SHIP',     'Shipping',                  3, @pd19, @it19, @so5, @qty229, @rt210, NULL),
+  (@sol15, 'Shipping',     'Shipping',                  3, @pd19, @it19, @so5, @qty229, @rt210, NULL),
   -- ORD-005 lines
   (@sol16, 'FG-CRW-L-WHT', 'Crew Sock Large White',    1, @pd7,  @it7,  @so6, @qty230, @rt211, @rt224),
   (@sol17, 'FG-ANK-L-BLK', 'Ankle Sock Large Black',   2, @pd17, @it17, @so6, @qty231, @rt212, @rt225),
-  (@sol18, 'SYS-SHIP',     'Shipping',                  3, @pd19, @it19, @so6, @qty232, @rt213, NULL);
+  (@sol18, 'Shipping',     'Shipping',                  3, @pd19, @it19, @so6, @qty232, @rt213, NULL);
 
 
 -- ============================================================================

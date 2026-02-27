@@ -5,7 +5,6 @@ import (
 
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/ptrutil"
 	"github.com/augno/api/shared/timeutil"
 )
 
@@ -14,40 +13,40 @@ const SampleUserUsername = "jdoe"
 const SampleUserEmail = "jdoe@augno.com"
 const SampleUserName = "John Doe"
 const SampleUserImageUrl = "https://example.com/avatar.jpg"
-const SampleUserPassword = "super-secret-password"
-const SampleNewUserPassword = "new-super-secret-password"
+const SampleUserPassword = "QgS7Z8Hhj3&1"     // #nosec G101 -- sample data for API docs
+const SampleNewUserPassword = "50iR2X0r@bvIH" // #nosec G101 -- sample data for API docs
 
 var SampleUser = &User{
 	ID:            SampleUserID,
 	Object:        constants.ObjectTypeUser,
-	Username:      ptrutil.Ptr(SampleUserUsername),
-	Email:         ptrutil.Ptr(SampleUserEmail),
-	Name:          ptrutil.Ptr(SampleUserName),
-	ImageUrl:      ptrutil.Ptr(SampleUserImageUrl),
+	Username:      new(SampleUserUsername),
+	Email:         new(SampleUserEmail),
+	Name:          new(SampleUserName),
+	ImageUrl:      new(SampleUserImageUrl),
 	EmailVerified: timeutil.TimestampToTimePtr(sampleExpiresAtTimestamp),
 	CreatedAt:     timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:     timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
-// A user in the Augno system
+// A user in the Augno system.
 type User struct {
-	// The unique identifier for this user
+	// The unique identifier for this user.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier
+	// The resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=user"`
-	// The user's email address
+	// The user's email address.
 	Email *string `json:"email"`
-	// The user's display name
+	// The user's display name.
 	Name *string `json:"name"`
-	// The user's unique username
+	// The user's unique username.
 	Username *string `json:"username"`
-	// When the user's email was verified, null if unverified
+	// When the user's email was verified, null if unverified.
 	EmailVerified *time.Time `json:"email_verified"`
-	// URL to the user's profile image
+	// URL to the user's profile image.
 	ImageUrl *string `json:"image_url"`
-	// When this user was created
+	// When this user was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// When this user was last updated
+	// When this user was last updated.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 

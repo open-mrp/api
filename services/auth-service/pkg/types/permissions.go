@@ -63,6 +63,7 @@ const (
 	PermissionDomainUnitGroups                    PermissionDomain = "unit_groups"
 	PermissionDomainRequestLogs                   PermissionDomain = "request_logs"
 	PermissionDomainAPIKeys                       PermissionDomain = "api_keys"
+	PermissionDomainSandbox                       PermissionDomain = "sandbox"
 )
 
 type Action string

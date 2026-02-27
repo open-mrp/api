@@ -32,6 +32,10 @@ func (r *repoFactoryImpl) NewDocAPIKeyRepo() domain.DocAPIKeyRepo {
 	return NewDocAPIKeyRepo(r.queries)
 }
 
+func (r *repoFactoryImpl) NewRegistrationSessionRepo() domain.RegistrationSessionRepo {
+	return NewRegistrationSessionRepo(r.queries)
+}
+
 func (r *repoFactoryImpl) NewIdempotencyKeyRepo() domain.IdempotencyKeyRepo {
 	return NewIdempotencyKeyRepo(r.queries)
 }

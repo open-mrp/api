@@ -53,6 +53,49 @@ service CoreService {
   // GetAdminRole returns the admin role ID.
   // Used by the doc API key flow to assign the admin role to generated keys.
   rpc GetAdminRole(google.protobuf.Empty) returns (GetAdminRoleResponse);
+
+  // ListSandboxAccounts returns a paginated list of sandbox accounts
+  // owned by a production account. Used by the GET /v1/sandboxes endpoint.
+  rpc ListSandboxAccounts(ListSandboxAccountsRequest) returns (ListSandboxAccountsResponse);
+
+  // CreateSandbox creates a new sandbox account for the caller's production
+  // account. Enforces a per-account sandbox limit. Used by the
+  // POST /v1/core/sandboxes endpoint.
+  rpc CreateSandbox(CreateSandboxRequest) returns (CreateSandboxResponse);
+
+  // GetSandbox returns a single sandbox account by its type ID.
+  // Used by the GET /v1/core/sandboxes/{id} endpoint.
+  rpc GetSandbox(GetSandboxRequest) returns (GetSandboxResponse);
+
+  // DeleteSandbox deletes a sandbox account and its underlying account record.
+  // Rejects deletion if only one sandbox remains. Account-scoped data is purged
+  // asynchronously via RabbitMQ. Used by the DELETE /v1/core/sandboxes/{id} endpoint.
+  rpc DeleteSandbox(DeleteSandboxRequest) returns (google.protobuf.Empty);
+
+  // UpdateAccountSubscription updates the subscription-related fields on an
+  // account (plan, status, Stripe subscription ID, period end). Called by
+  // billing-service when processing Stripe webhook events.
+  rpc UpdateAccountSubscription(UpdateAccountSubscriptionRequest) returns (google.protobuf.Empty);
+
+  // ClearAccountStripeCustomer removes all Stripe-related fields from an
+  // account. Called when a Stripe customer.deleted event is received.
+  rpc ClearAccountStripeCustomer(ClearAccountStripeCustomerRequest) returns (google.protobuf.Empty);
+
+  // GetAccountByStripeCustomerID resolves an account from a Stripe customer ID.
+  // Used by billing-service to map Stripe events to internal accounts.
+  rpc GetAccountByStripeCustomerID(GetAccountByStripeCustomerIDRequest) returns (GetAccountByStripeCustomerIDResponse);
+
+  // CompleteRegistration creates the production account, sandbox account, roles,
+  // permissions, and account-user records for a newly registered user. Called by
+  // auth-service after payment is confirmed.
+  rpc CompleteRegistration(CompleteRegistrationRequest) returns (CompleteRegistrationResponse);
+
+  // ListUnits returns a paginated list of units visible to the caller's
+  // account, including both account-specific and global (system) units.
+  // Supports filtering by dimension type, unit group membership, and
+  // search by name/abbreviation. Used by the GET /v1/core/units endpoint.
+  rpc ListUnits(ListUnitsRequest) returns (ListUnitsResponse);
+
 }
 
 // GetAccountContextRequest identifies the account to look up.
@@ -70,6 +113,9 @@ message GetAccountContextResponse {
   optional string owner_account_id = 2;
   // AccountMode is the resolved mode (production or sandbox).
   AccountMode account_mode = 3;
+  // SubscriptionStatus is the Stripe subscription status for the account
+  // (or its owner, if this is a sandbox). Absent for free-tier accounts.
+  optional string subscription_status = 4;
 }
 
 // AccountMode distinguishes between production and sandbox data partitions.
@@ -270,3 +316,168 @@ message GetAdminRoleResponse {
   // RoleID is the admin role's prefixed ID.
   string role_id = 1;
 }
+
+// ListSandboxAccountsRequest carries pagination parameters for listing
+// sandbox accounts owned by the caller's production account.
+message ListSandboxAccountsRequest {
+  // Cursor for fetching the next page, from a previous response's
+  // next_cursor field. Absent on the first request.
+  optional string cursor = 1;
+  // Maximum number of results to return per page.
+  int32 limit = 2;
+}
+
+// PageInfo contains cursor-based pagination metadata.
+message PageInfo {
+  optional string next_cursor = 1;
+  optional string prev_cursor = 2;
+  bool has_next_page = 3;
+  bool has_prev_page = 4;
+}
+
+// ListSandboxAccountsResponse contains a page of sandbox accounts
+// with pagination metadata.
+message ListSandboxAccountsResponse {
+  // The sandbox accounts in this page.
+  repeated SandboxInfo sandboxes = 1;
+  // Pagination metadata.
+  PageInfo page_info = 4;
+}
+
+// SandboxMode controls whether a new sandbox is created empty or
+// pre-populated with tutorial seed data.
+enum SandboxMode {
+  SANDBOX_MODE_UNSPECIFIED = 0; // defaults to blank
+  SANDBOX_MODE_BLANK = 1;
+  SANDBOX_MODE_SEEDED = 2;
+}
+
+// CreateSandboxRequest carries the data needed to create a new sandbox account.
+message CreateSandboxRequest {
+  // The display name for the new sandbox.
+  string name = 1;
+  // Controls whether the sandbox is blank or seeded with tutorial data.
+  SandboxMode mode = 2;
+}
+
+// CreateSandboxResponse returns the newly created sandbox's metadata.
+message CreateSandboxResponse {
+  // The created sandbox account info.
+  SandboxInfo sandbox = 1;
+}
+
+// GetSandboxRequest identifies the sandbox to retrieve by its type ID.
+message GetSandboxRequest {
+  // The sandbox's prefixed type ID (e.g. "sbac_abc123").
+  string id = 1;
+}
+
+// GetSandboxResponse contains the requested sandbox's metadata.
+message GetSandboxResponse {
+  // The sandbox account info.
+  SandboxInfo sandbox = 1;
+}
+
+// DeleteSandboxRequest identifies the sandbox to delete by its type ID.
+message DeleteSandboxRequest {
+  // The sandbox's prefixed type ID (e.g. "sbac_abc123").
+  string id = 1;
+}
+
+// SandboxInfo represents a sandbox account's metadata.
+message SandboxInfo {
+  // The sandbox's prefixed type ID (e.g. "sbac_abc123").
+  string id = 1;
+  // The sandbox's display name (inherited from the account).
+  string name = 2;
+  // The underlying account ID for this sandbox.
+  string account_id = 3;
+  // When the sandbox was created.
+  google.protobuf.Timestamp created_at = 4;
+  // When the sandbox was last updated.
+  google.protobuf.Timestamp updated_at = 5;
+}
+
+// UpdateAccountSubscriptionRequest carries the fields to update on an
+// account's subscription. Optional fields are cleared when absent.
+message UpdateAccountSubscriptionRequest {
+  string account_id = 1;
+  optional string subscription_status = 2;
+  string plan_code = 3;
+  optional string stripe_subscription_id = 4;
+  optional google.protobuf.Timestamp current_period_end = 5;
+  // Optional Stripe customer ID to persist when upgrading a free account.
+  optional string stripe_customer_id = 6;
+}
+
+// ClearAccountStripeCustomerRequest identifies the account whose Stripe
+// customer data should be removed.
+message ClearAccountStripeCustomerRequest {
+  string account_id = 1;
+}
+
+// GetAccountByStripeCustomerIDRequest identifies a Stripe customer.
+message GetAccountByStripeCustomerIDRequest {
+  string stripe_customer_id = 1;
+}
+
+// GetAccountByStripeCustomerIDResponse returns the matched account.
+message GetAccountByStripeCustomerIDResponse {
+  string account_id = 1;
+  string plan_code = 2;
+}
+
+// ListUnitsRequest carries pagination and filter parameters for listing
+// units visible to the caller's account.
+message ListUnitsRequest {
+  // Cursor for fetching the next page, from a previous response's
+  // next_cursor field. Absent on the first request.
+  optional string cursor = 1;
+  // Maximum number of results to return per page.
+  int32 limit = 2;
+  // Optional search query to filter units by name or abbreviation.
+  optional string query = 3;
+  // Optional filter by unit dimension code (e.g. "mass", "quantity").
+  optional string type = 4;
+  // Optional filter by unit group membership. Only units belonging to
+  // at least one of these groups are returned.
+  repeated string unit_group_ids = 5;
+}
+
+// ListUnitsResponse contains a page of units with pagination metadata.
+message ListUnitsResponse {
+  // The units in this page.
+  repeated UnitInfo units = 1;
+  // Pagination metadata.
+  PageInfo page_info = 2;
+}
+
+// UnitInfo represents a unit of measurement.
+message UnitInfo {
+  // The unit's unique identifier.
+  string id = 1;
+  // The display name (e.g. "Gram", "Kilogram").
+  string name = 2;
+  // The short abbreviation (e.g. "g", "kg").
+  string abbreviation = 3;
+  // The unit dimension code (e.g. "mass", "quantity").
+  string type = 4;
+  // Conversion ratio numerator relative to the base unit, as a decimal string.
+  string ratio_numerator = 5;
+  // Conversion ratio denominator relative to the base unit, as a decimal string.
+  string ratio_denominator = 6;
+  // Conversion offset numerator, as a decimal string.
+  string offset_numerator = 7;
+  // Conversion offset denominator, as a decimal string.
+  string offset_denominator = 8;
+  // Whether this unit is the base unit for its dimension.
+  bool is_base_unit = 9;
+  // Whether this unit belongs to the requesting account (true) or is a
+  // system/global unit (false).
+  bool is_internal = 10;
+  // When the unit was created.
+  google.protobuf.Timestamp created_at = 11;
+  // When the unit was last updated.
+  google.protobuf.Timestamp updated_at = 12;
+}
+

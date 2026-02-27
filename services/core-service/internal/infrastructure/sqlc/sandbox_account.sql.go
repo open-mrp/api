@@ -30,7 +30,7 @@ INSERT INTO sandbox_account (
     account_id,
     created_at,
     updated_at
-) VALUES (?, ?, ?, NOW(), NOW())
+) VALUES (?, ?, ?, NOW(3), NOW(3))
 `
 
 type CreateSandboxAccountParams struct {
@@ -49,6 +49,15 @@ DELETE FROM sandbox_account WHERE id = ?
 
 func (q *Queries) DeleteSandboxAccountByID(ctx context.Context, id int64) error {
 	_, err := q.exec(ctx, q.deleteSandboxAccountByIDStmt, deleteSandboxAccountByID, id)
+	return err
+}
+
+const deleteSandboxAccountByTypeID = `-- name: DeleteSandboxAccountByTypeID :exec
+DELETE FROM sandbox_account WHERE type_id = ?
+`
+
+func (q *Queries) DeleteSandboxAccountByTypeID(ctx context.Context, typeID string) error {
+	_, err := q.exec(ctx, q.deleteSandboxAccountByTypeIDStmt, deleteSandboxAccountByTypeID, typeID)
 	return err
 }
 
@@ -135,25 +144,29 @@ func (q *Queries) FindSandboxAccountByTypeID(ctx context.Context, typeID string)
 	return i, err
 }
 
-const listSandboxAccounts = `-- name: ListSandboxAccounts :many
+const listSandboxAccountsBackward = `-- name: ListSandboxAccountsBackward :many
 SELECT
     sandbox_account.id, sandbox_account.type_id, sandbox_account.created_at, sandbox_account.updated_at, sandbox_account.owner_account_id, sandbox_account.account_id,
     account.name
 FROM sandbox_account
 JOIN account ON sandbox_account.account_id = account.id
 WHERE sandbox_account.owner_account_id = ?
-AND (sandbox_account.id > (SELECT sub.id FROM sandbox_account sub WHERE sub.type_id = ?) OR ? = '')
-ORDER BY sandbox_account.id ASC
+AND (
+    sandbox_account.created_at > ?
+    OR (sandbox_account.created_at = ? AND sandbox_account.id > ?)
+)
+ORDER BY sandbox_account.created_at ASC, sandbox_account.id ASC
 LIMIT ?
 `
 
-type ListSandboxAccountsParams struct {
-	OwnerAccountID string
-	Cursor         string
-	Limit          int32
+type ListSandboxAccountsBackwardParams struct {
+	OwnerAccountID  string
+	CursorCreatedAt time.Time
+	CursorID        int64
+	Limit           int32
 }
 
-type ListSandboxAccountsRow struct {
+type ListSandboxAccountsBackwardRow struct {
 	ID             int64
 	TypeID         string
 	CreatedAt      time.Time
@@ -163,20 +176,92 @@ type ListSandboxAccountsRow struct {
 	Name           string
 }
 
-func (q *Queries) ListSandboxAccounts(ctx context.Context, arg ListSandboxAccountsParams) ([]ListSandboxAccountsRow, error) {
-	rows, err := q.query(ctx, q.listSandboxAccountsStmt, listSandboxAccounts,
+func (q *Queries) ListSandboxAccountsBackward(ctx context.Context, arg ListSandboxAccountsBackwardParams) ([]ListSandboxAccountsBackwardRow, error) {
+	rows, err := q.query(ctx, q.listSandboxAccountsBackwardStmt, listSandboxAccountsBackward,
 		arg.OwnerAccountID,
-		arg.Cursor,
-		arg.Cursor,
+		arg.CursorCreatedAt,
+		arg.CursorCreatedAt,
+		arg.CursorID,
 		arg.Limit,
 	)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListSandboxAccountsRow
+	var items []ListSandboxAccountsBackwardRow
 	for rows.Next() {
-		var i ListSandboxAccountsRow
+		var i ListSandboxAccountsBackwardRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.TypeID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.OwnerAccountID,
+			&i.AccountID,
+			&i.Name,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listSandboxAccountsForward = `-- name: ListSandboxAccountsForward :many
+SELECT
+    sandbox_account.id, sandbox_account.type_id, sandbox_account.created_at, sandbox_account.updated_at, sandbox_account.owner_account_id, sandbox_account.account_id,
+    account.name
+FROM sandbox_account
+JOIN account ON sandbox_account.account_id = account.id
+WHERE sandbox_account.owner_account_id = ?
+AND (
+    ? IS NULL
+    OR sandbox_account.created_at < ?
+    OR (sandbox_account.created_at = ? AND sandbox_account.id < ?)
+)
+ORDER BY sandbox_account.created_at DESC, sandbox_account.id DESC
+LIMIT ?
+`
+
+type ListSandboxAccountsForwardParams struct {
+	OwnerAccountID  string
+	CursorCreatedAt sql.NullTime
+	CursorID        sql.NullInt64
+	Limit           int32
+}
+
+type ListSandboxAccountsForwardRow struct {
+	ID             int64
+	TypeID         string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	OwnerAccountID string
+	AccountID      string
+	Name           string
+}
+
+func (q *Queries) ListSandboxAccountsForward(ctx context.Context, arg ListSandboxAccountsForwardParams) ([]ListSandboxAccountsForwardRow, error) {
+	rows, err := q.query(ctx, q.listSandboxAccountsForwardStmt, listSandboxAccountsForward,
+		arg.OwnerAccountID,
+		arg.CursorCreatedAt,
+		arg.CursorCreatedAt,
+		arg.CursorCreatedAt,
+		arg.CursorID,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListSandboxAccountsForwardRow
+	for rows.Next() {
+		var i ListSandboxAccountsForwardRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.TypeID,

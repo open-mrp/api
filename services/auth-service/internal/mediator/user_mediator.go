@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/augno/api/services/auth-service/internal/domain"
+	"github.com/augno/api/services/auth-service/internal/event"
 	"github.com/augno/api/services/auth-service/internal/token"
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
@@ -22,7 +23,7 @@ var userMedTracer = tracing.GetTracer("auth-service.user_mediator")
 
 type userMedImpl struct {
 	repos                 domain.RepoFactory
-	jwtUtils              domain.JWTUtils
+	jwtSecret             string
 	refreshTokenMed       domain.RefreshTokenMed
 	apiKeyMed             domain.APIKeyMed
 	coreClient            domain.AuthCoreClient
@@ -36,21 +37,6 @@ type UserMedConfig struct {
 	APIKeyMed             domain.APIKeyMed
 	CoreClient            domain.AuthCoreClient
 	NotificationPublisher domain.NotificationPublisher
-}
-
-// WithDefaults returns a new UserMedConfig with zero-value fields replaced by defaults.
-func (c *UserMedConfig) WithDefaults() *UserMedConfig {
-	if c == nil {
-		c = &UserMedConfig{}
-	}
-	return &UserMedConfig{
-		Repos:                 c.Repos,
-		JWTSecret:             c.JWTSecret,
-		RefreshTokenMed:       c.RefreshTokenMed,
-		APIKeyMed:             c.APIKeyMed,
-		CoreClient:            c.CoreClient,
-		NotificationPublisher: c.NotificationPublisher,
-	}
 }
 
 func (c *UserMedConfig) validate() error {
@@ -76,14 +62,13 @@ func (c *UserMedConfig) validate() error {
 }
 
 func NewUserMed(config *UserMedConfig) domain.UserMed {
-	config = config.WithDefaults()
 	if err := config.validate(); err != nil {
 		panic(err)
 	}
 
 	return &userMedImpl{
 		repos:                 config.Repos,
-		jwtUtils:              token.NewJWTUtils(&token.JWTConfig{Secret: config.JWTSecret}),
+		jwtSecret:             config.JWTSecret,
 		refreshTokenMed:       config.RefreshTokenMed,
 		apiKeyMed:             config.APIKeyMed,
 		coreClient:            config.CoreClient,
@@ -96,7 +81,7 @@ func (s *userMedImpl) GenAuthAccessToken(ctx context.Context, userID string) (st
 	ctx, span := userMedTracer.Start(ctx, "mediator.user.gen_auth_access_token")
 	defer span.End()
 
-	return s.jwtUtils.Encode(ctx, userID, time.Hour, domain.JWTTypeAccess)
+	return token.EncodeJWT(ctx, s.jwtSecret, userID, time.Hour, token.JWTTypeAccess)
 }
 
 // GenPasswordResetAccessToken mints an access token that can be used to reset the password for the given user ID.
@@ -104,7 +89,7 @@ func (s *userMedImpl) GenPasswordResetAccessToken(ctx context.Context, userID st
 	ctx, span := userMedTracer.Start(ctx, "mediator.user.gen_password_reset_access_token")
 	defer span.End()
 
-	return s.jwtUtils.Encode(ctx, userID, 15*time.Minute, domain.JWTTypePasswordReset)
+	return token.EncodeJWT(ctx, s.jwtSecret, userID, 15*time.Minute, token.JWTTypePasswordReset)
 }
 
 func (s *userMedImpl) Register(ctx context.Context, input domain.RegisterUserInput) (*types.User, *apierror.APIError) {
@@ -114,9 +99,11 @@ func (s *userMedImpl) Register(ctx context.Context, input domain.RegisterUserInp
 	userRepo := s.repos.NewUserRepo()
 
 	existingUser, err := userRepo.Find(ctx, input.Email)
-	if err != nil && !apierror.IsNotFound(err) {
+	if err != nil && !apierror.IsNotFound(err) { // These will be 500 errors
 		return nil, err
 	}
+
+	// If the user already exists, return a 400 error to not reveal that an email is taken
 	if existingUser != nil {
 		return nil, tracing.Trace(span, apierror.NewValidationError("Unable to process registration."))
 	}
@@ -132,8 +119,9 @@ func (s *userMedImpl) Register(ctx context.Context, input domain.RegisterUserInp
 	}
 
 	if user.Email != nil && user.Name != nil {
+		publishCtx := event.WithRepos(ctx, s.repos)
 		s.notificationPublisher.PublishSendEmail(
-			ctx,
+			publishCtx,
 			messaging.EmailSendData{
 				To:         []string{*user.Email},
 				Subject:    "Welcome!",
@@ -163,12 +151,12 @@ func (s *userMedImpl) ValidateCredential(ctx context.Context, authToken string, 
 			accountCtx, err := s.coreClient.GetAccountContext(ctx, *targetAccountID)
 			if err != nil {
 				if err.Code == apierror.ErrorCodeResourceNotFound {
-					return nil, tracing.Trace(span, apierror.NewAuthorizationError(ErrNoAccountAccess))
+					return nil, tracing.Trace(span, apierror.NewAuthorizationError(errNoAccountAccess(*targetAccountID)))
 				}
 				return nil, err
 			}
 			if accountCtx == nil {
-				return nil, tracing.Trace(span, apierror.NewAuthorizationError(ErrNoAccountAccess))
+				return nil, tracing.Trace(span, apierror.NewAuthorizationError(errNoAccountAccess(*targetAccountID)))
 			}
 
 			accountMode = accountCtx.AccountMode
@@ -214,14 +202,27 @@ func (s *userMedImpl) validateAPIKeyCredential(ctx context.Context, span trace.S
 		finalTargetAccountID = *targetAccountID
 	}
 
+	// Fetch account context for subscription status
+	accountCtx, err := s.coreClient.GetAccountContext(ctx, finalTargetAccountID)
+	if err != nil {
+		if err.Code == apierror.ErrorCodeResourceNotFound {
+			return nil, tracing.Trace(span, apierror.NewAuthorizationError(errNoAccountAccess(finalTargetAccountID)))
+		}
+		return nil, err
+	}
+
 	// The request targets the account that owns the API key
 	if apiKeyModel.OwnerAccountID == finalTargetAccountID {
 		// Fetch the user account access (which includes permissions) from account service
 		// For API keys, we use a special lookup that gets role permissions
-		access, err := s.apiKeyMed.GetKeyAccountAccess(ctx, accountMode, apiKeyModel.ID, finalTargetAccountID)
+		access, err := s.apiKeyMed.GetKeyAccountAccess(ctx, domain.APIKeyGetAccountAccessInput{
+			AccountMode:     accountMode,
+			APIKeyID:        apiKeyModel.ID,
+			TargetAccountID: finalTargetAccountID,
+		})
 		if err != nil {
 			if err.Code == apierror.ErrorCodeResourceNotFound {
-				return nil, tracing.Trace(span, apierror.NewAuthorizationError(ErrNoAccountAccess))
+				return nil, tracing.Trace(span, apierror.NewAuthorizationError(errNoAccountAccess(finalTargetAccountID)))
 			}
 			return nil, err
 		}
@@ -232,21 +233,18 @@ func (s *userMedImpl) validateAPIKeyCredential(ctx context.Context, span trace.S
 			permissions = access.Permissions
 		}
 
-		return buildOwnedAPIKeyIdentity(apiKeyModel, finalTargetAccountID, permissions, accountMode), nil
+		return buildOwnedAPIKeyIdentity(apiKeyModel, finalTargetAccountID, permissions, accountMode, accountCtx.SubscriptionStatus), nil
 	}
 
 	// The request targets a different account, so we need to find the account relation
-	accountRelation, err := s.coreClient.GetAccountRelationByAPIKeyID(ctx, finalTargetAccountID, apiKeyModel.ID)
+	accountRelation, hasRelation, err := s.coreClient.GetAccountRelationByAPIKeyID(ctx, finalTargetAccountID, apiKeyModel.ID)
 	if err != nil {
-		if err.Code == apierror.ErrorCodeResourceNotFound {
-			return nil, tracing.Trace(span, apierror.NewAuthorizationError(ErrNoAccountAccess))
-		}
 		return nil, err
 	}
 
 	// These accounts have no relationship, request should fail
-	if accountRelation == nil {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError(token.ErrInvalidJWT))
+	if !hasRelation {
+		return nil, tracing.Trace(span, apierror.NewAuthorizationError(errNoAccountAccess(finalTargetAccountID)))
 	}
 
 	// Determine the actor type based on the account relation role code
@@ -260,7 +258,7 @@ func (s *userMedImpl) validateAPIKeyCredential(ctx context.Context, span trace.S
 		return nil, tracing.Trace(span, apierror.NewInternalError(nil, "Failed to find account relation."))
 	}
 
-	return buildRelatedAPIKeyIdentity(apiKeyModel, accountRelation, actorType, finalTargetAccountID, accountMode), nil
+	return buildRelatedAPIKeyIdentity(apiKeyModel, accountRelation, actorType, finalTargetAccountID, accountMode, accountCtx.SubscriptionStatus), nil
 }
 
 func (s *userMedImpl) validateUserCredential(ctx context.Context, span trace.Span, authToken string, targetAccountID *string) (*types.Identity, *apierror.APIError) {
@@ -281,35 +279,29 @@ func (s *userMedImpl) validateUserCredential(ctx context.Context, span trace.Spa
 	accountCtx, err := s.coreClient.GetAccountContext(ctx, finalTargetAccountID)
 	if err != nil {
 		if err.Code == apierror.ErrorCodeResourceNotFound {
-			return nil, tracing.Trace(span, apierror.NewAuthorizationError(ErrNoAccountAccess))
+			return nil, tracing.Trace(span, apierror.NewAuthorizationError(errNoAccountAccess(finalTargetAccountID)))
 		}
 		return nil, err
 	}
 	accountMode := accountCtx.AccountMode
 
 	// Get the user's access to this account from account-service
-	access, err := s.coreClient.GetUserAccountAccess(ctx, userModel.ID, finalTargetAccountID)
+	access, hasAccess, err := s.coreClient.GetUserAccountAccess(ctx, userModel.ID, finalTargetAccountID)
 	if err != nil {
-		if err.Code == apierror.ErrorCodeResourceNotFound {
-			return nil, tracing.Trace(span, apierror.NewAuthorizationError(ErrNoAccountAccess))
-		}
 		return nil, err
 	}
 
 	// This user isn't associated with the target account, but they may have a relationship with it
-	if access == nil {
+	if !hasAccess {
 		// Find the account relation by the owner account and user
-		accountRelation, err := s.coreClient.GetAccountRelationByUserID(ctx, finalTargetAccountID, userModel.ID)
+		accountRelation, hasRelation, err := s.coreClient.GetAccountRelationByUserID(ctx, finalTargetAccountID, userModel.ID)
 		if err != nil {
-			if err.Code == apierror.ErrorCodeResourceNotFound {
-				return nil, tracing.Trace(span, apierror.NewAuthorizationError(ErrNoAccountAccess))
-			}
 			return nil, err
 		}
 
 		// These accounts have no relationship, request should fail
-		if accountRelation == nil {
-			return nil, tracing.Trace(span, apierror.NewAuthenticationError(token.ErrInvalidJWT))
+		if !hasRelation {
+			return nil, tracing.Trace(span, apierror.NewAuthorizationError(errNoAccountAccess(finalTargetAccountID)))
 		}
 
 		// Determine the actor type based on the account relation role code
@@ -320,10 +312,10 @@ func (s *userMedImpl) validateUserCredential(ctx context.Context, span trace.Spa
 		case types.IdentityActorTypeSupplier:
 			actorType = types.IdentityActorTypeSupplier
 		default:
-			return nil, tracing.Trace(span, apierror.NewAuthenticationError(token.ErrInvalidJWT))
+			return nil, tracing.Trace(span, apierror.NewAuthorizationError(errNoAccountAccess(finalTargetAccountID)))
 		}
 
-		return buildRelatedUserIdentity(userModel, accountRelation, actorType, finalTargetAccountID, accountMode), nil
+		return buildRelatedUserIdentity(userModel, accountRelation, actorType, finalTargetAccountID, accountMode, accountCtx.SubscriptionStatus), nil
 	}
 
 	// The user is associated with the target account, mark as used if not recent
@@ -332,7 +324,7 @@ func (s *userMedImpl) validateUserCredential(ctx context.Context, span trace.Spa
 		_ = s.coreClient.MarkAccountUserUsed(context.Background(), access.AccountUserID)
 	}()
 
-	return buildAccountUserIdentity(userModel, access, finalTargetAccountID, accountMode), nil
+	return buildAccountUserIdentity(userModel, access, finalTargetAccountID, accountMode, accountCtx.SubscriptionStatus), nil
 }
 
 func (s *userMedImpl) findUserByToken(ctx context.Context, accessToken string) (*types.User, *apierror.APIError) {
@@ -340,14 +332,9 @@ func (s *userMedImpl) findUserByToken(ctx context.Context, accessToken string) (
 	defer span.End()
 
 	// Decode the access token into claims
-	authToken, err := s.jwtUtils.Decode(ctx, accessToken, domain.JWTTypeAccess)
+	authToken, err := token.DecodeJWT(ctx, s.jwtSecret, accessToken, token.JWTTypeAccess)
 	if err != nil {
 		return nil, err
-	}
-
-	// Validate the token is not expired
-	if authToken.ExpiresAt.Before(time.Now().UTC()) {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError(ErrAccessTokenExpired))
 	}
 
 	// Get the user

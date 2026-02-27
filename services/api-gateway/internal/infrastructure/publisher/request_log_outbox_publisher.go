@@ -2,10 +2,13 @@ package publisher
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"log/slog"
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	"github.com/augno/api/shared/appctx"
+	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/contracts"
 	"github.com/augno/api/shared/messaging"
 	pb "github.com/augno/api/shared/proto/platform"
@@ -17,12 +20,14 @@ import (
 var requestLogPublisherTracer = tracing.GetTracer("api-gateway.request_log_publisher")
 
 type requestLogOutboxPublisher struct {
-	outboxRepo messaging.OutboxRepo
+	outboxRepo  messaging.OutboxRepo
+	frontendURL string
 }
 
-func NewRequestLogOutboxPublisher(outboxRepo messaging.OutboxRepo) domain.RequestLogPublisher {
+func NewRequestLogOutboxPublisher(outboxRepo messaging.OutboxRepo, frontendURL string) domain.RequestLogPublisher {
 	return &requestLogOutboxPublisher{
-		outboxRepo: outboxRepo,
+		outboxRepo:  outboxRepo,
+		frontendURL: frontendURL,
 	}
 }
 
@@ -57,6 +62,9 @@ func (p *requestLogOutboxPublisher) Create(ctx context.Context, rl *appctx.Reque
 		CreatedAt:            timestamppb.Now(),
 		ApiVersion:           rl.APIVersion,
 		TraceId:              rl.TraceID,
+		PublicEndpoint:       rl.PublicEndpoint,
+		BodyJson:             rl.BodyJSON,
+		ResponseJson:         rl.ResponseJSON,
 	}
 
 	_, marshalSpan := requestLogPublisherTracer.Start(ctx, "publisher.request_log.marshal")
@@ -67,15 +75,20 @@ func (p *requestLogOutboxPublisher) Create(ctx context.Context, rl *appctx.Reque
 		return err
 	}
 
+	msg := contracts.AmqpMessage{
+		RequestID: rl.ID,
+		Data:      data,
+	}
+	if identity, ok := appctx.GetIdentityFromContext(ctx); ok {
+		msg.Identity = identity
+	}
+
 	input := messaging.OutboxMessageInput{
 		ServiceName: "api-gateway",
 		MessageType: string(contracts.LoggingEventRequestLogged),
 		Destination: messaging.ApplicationExchange,
 		RoutingKey:  string(contracts.LoggingEventRequestLogged),
-		Payload: contracts.AmqpMessage{
-			RequestID: rl.ID,
-			Data:      data,
-		},
+		Payload:     msg,
 	}
 
 	// Save to outbox asynchronously - don't block the HTTP response
@@ -84,7 +97,78 @@ func (p *requestLogOutboxPublisher) Create(ctx context.Context, rl *appctx.Reque
 		if _, err := p.outboxRepo.Create(context.Background(), input); err != nil {
 			slog.Error("Failed to save request log to outbox", "error", err, "request_id", rl.ID)
 		}
+
+		// Send an email alert for 5xx errors
+		if rl.StatusCode >= 500 {
+			p.publishErrorAlert(rl)
+		}
 	}()
 
 	return nil
+}
+
+func (p *requestLogOutboxPublisher) publishErrorAlert(rl *appctx.RequestLog) {
+	params := map[string]any{
+		"RequestID":       rl.ID,
+		"Method":          rl.Method,
+		"Path":            rl.Path,
+		"NormalizedRoute": rl.NormalizedRoute,
+		"StatusCode":      rl.StatusCode,
+		"LatencyUs":       rl.LatencyUs,
+		"OccurredAt":      rl.OccurredAt.Format("2006-01-02 15:04:05 UTC"),
+	}
+
+	setOptionalParam(params, "ErrorCode", rl.ErrorCode)
+	setOptionalParam(params, "ErrorMessage", rl.ErrorMessage)
+	setOptionalParam(params, "InternalErrorMessage", rl.InternalErrorMessage)
+	setOptionalParam(params, "StackTrace", rl.StackTrace)
+	setOptionalParam(params, "RequestBody", rl.BodyJSON)
+	setOptionalParam(params, "ResponseBody", rl.ResponseJSON)
+	setOptionalParam(params, "ActorID", rl.ActorID)
+	setOptionalParam(params, "AccountID", rl.AccountID)
+	setOptionalParam(params, "TargetAccountID", rl.TargetAccountID)
+	setOptionalParam(params, "ClientIP", rl.ClientIPString)
+	setOptionalParam(params, "UserAgent", rl.UserAgent)
+	setOptionalParam(params, "TraceID", rl.TraceID)
+	setOptionalParam(params, "APIVersion", rl.APIVersion)
+
+	if p.frontendURL != "" {
+		params["RequestLogURL"] = p.frontendURL + "/dashboard/request-logs/" + rl.ID
+	}
+
+	emailData := messaging.EmailSendData{
+		To:         []string{"dev@augno.com"},
+		Subject:    fmt.Sprintf("[%d Alert] %s %s", rl.StatusCode, rl.Method, rl.Path),
+		TemplateID: constants.EmailTemplateInternalErrorAlert,
+		Params:     params,
+	}
+
+	emailJSON, err := json.Marshal(emailData)
+	if err != nil {
+		slog.Error("Failed to marshal error alert email data", "error", err, "request_id", rl.ID)
+		return
+	}
+
+	emailMsg := contracts.AmqpMessage{
+		RequestID: rl.ID,
+		Data:      emailJSON,
+	}
+
+	emailInput := messaging.OutboxMessageInput{
+		ServiceName: "api-gateway",
+		MessageType: string(contracts.NotificationCmdSendEmail),
+		Destination: messaging.ApplicationExchange,
+		RoutingKey:  string(contracts.NotificationCmdSendEmail),
+		Payload:     emailMsg,
+	}
+
+	if _, err := p.outboxRepo.Create(context.Background(), emailInput); err != nil {
+		slog.Error("Failed to save error alert email to outbox", "error", err, "request_id", rl.ID)
+	}
+}
+
+func setOptionalParam(params map[string]any, key string, val *string) {
+	if val != nil {
+		params[key] = *val
+	}
 }

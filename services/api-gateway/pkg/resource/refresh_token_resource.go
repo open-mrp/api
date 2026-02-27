@@ -7,11 +7,11 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-// The refresh token
+// RefreshToken represents a token used to obtain new access tokens.
 type RefreshToken struct {
-	// The refresh token
+	// The opaque refresh token value.
 	Token string `json:"token" validate:"required"`
-	// The refresh token expires at
+	// When this refresh token expires.
 	ExpiresAt time.Time `json:"expires_at" validate:"required"`
 }
 

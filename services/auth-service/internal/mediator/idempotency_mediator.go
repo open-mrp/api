@@ -24,16 +24,6 @@ type IdempotencyMedConfig struct {
 	Repos domain.RepoFactory
 }
 
-// WithDefaults returns a new IdempotencyMedConfig with zero-value fields replaced by defaults.
-func (c *IdempotencyMedConfig) WithDefaults() *IdempotencyMedConfig {
-	if c == nil {
-		c = &IdempotencyMedConfig{}
-	}
-	return &IdempotencyMedConfig{
-		Repos: c.Repos,
-	}
-}
-
 func (c *IdempotencyMedConfig) validate() error {
 	if c.Repos == nil {
 		return fmt.Errorf("idempotency mediator: repos is required")
@@ -42,7 +32,6 @@ func (c *IdempotencyMedConfig) validate() error {
 }
 
 func NewIdempotencyMed(config *IdempotencyMedConfig) domain.IdempotencyMed {
-	config = config.WithDefaults()
 	if err := config.validate(); err != nil {
 		panic(err)
 	}

@@ -12,6 +12,7 @@ package servicemock
 import (
 	context "context"
 	reflect "reflect"
+	time "time"
 
 	domain "github.com/augno/api/services/core-service/internal/domain"
 	apierror "github.com/augno/api/shared/errors"
@@ -40,6 +41,51 @@ func NewMockAccountSvc(ctrl *gomock.Controller) *MockAccountSvc {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockAccountSvc) EXPECT() *MockAccountSvcMockRecorder {
 	return m.recorder
+}
+
+// ClearAccountStripeCustomer mocks base method.
+func (m *MockAccountSvc) ClearAccountStripeCustomer(ctx context.Context, accountID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ClearAccountStripeCustomer", ctx, accountID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// ClearAccountStripeCustomer indicates an expected call of ClearAccountStripeCustomer.
+func (mr *MockAccountSvcMockRecorder) ClearAccountStripeCustomer(ctx, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClearAccountStripeCustomer", reflect.TypeOf((*MockAccountSvc)(nil).ClearAccountStripeCustomer), ctx, accountID)
+}
+
+// CompleteRegistration mocks base method.
+func (m *MockAccountSvc) CompleteRegistration(ctx context.Context, input domain.CompleteRegistrationInput) (*domain.CompleteRegistrationOutput, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CompleteRegistration", ctx, input)
+	ret0, _ := ret[0].(*domain.CompleteRegistrationOutput)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CompleteRegistration indicates an expected call of CompleteRegistration.
+func (mr *MockAccountSvcMockRecorder) CompleteRegistration(ctx, input any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CompleteRegistration", reflect.TypeOf((*MockAccountSvc)(nil).CompleteRegistration), ctx, input)
+}
+
+// GetAccountByStripeCustomerID mocks base method.
+func (m *MockAccountSvc) GetAccountByStripeCustomerID(ctx context.Context, stripeCustomerID string) (string, string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAccountByStripeCustomerID", ctx, stripeCustomerID)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(string)
+	ret2, _ := ret[2].(*apierror.APIError)
+	return ret0, ret1, ret2
+}
+
+// GetAccountByStripeCustomerID indicates an expected call of GetAccountByStripeCustomerID.
+func (mr *MockAccountSvcMockRecorder) GetAccountByStripeCustomerID(ctx, stripeCustomerID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAccountByStripeCustomerID", reflect.TypeOf((*MockAccountSvc)(nil).GetAccountByStripeCustomerID), ctx, stripeCustomerID)
 }
 
 // GetAccountContext mocks base method.
@@ -117,28 +163,14 @@ func (mr *MockAccountSvcMockRecorder) GetRolePermissions(ctx, roleID any) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRolePermissions", reflect.TypeOf((*MockAccountSvc)(nil).GetRolePermissions), ctx, roleID)
 }
 
-// GetSandboxAccountByOwner mocks base method.
-func (m *MockAccountSvc) GetSandboxAccountByOwner(ctx context.Context, ownerAccountID string) (string, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSandboxAccountByOwner", ctx, ownerAccountID)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// GetSandboxAccountByOwner indicates an expected call of GetSandboxAccountByOwner.
-func (mr *MockAccountSvcMockRecorder) GetSandboxAccountByOwner(ctx, ownerAccountID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSandboxAccountByOwner", reflect.TypeOf((*MockAccountSvc)(nil).GetSandboxAccountByOwner), ctx, ownerAccountID)
-}
-
 // GetUserAccountAccess mocks base method.
-func (m *MockAccountSvc) GetUserAccountAccess(ctx context.Context, userID, accountID string) (*domain.AccountUserAccess, *apierror.APIError) {
+func (m *MockAccountSvc) GetUserAccountAccess(ctx context.Context, userID, accountID string) (*domain.AccountUserAccess, bool, *apierror.APIError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetUserAccountAccess", ctx, userID, accountID)
 	ret0, _ := ret[0].(*domain.AccountUserAccess)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
+	ret1, _ := ret[1].(bool)
+	ret2, _ := ret[2].(*apierror.APIError)
+	return ret0, ret1, ret2
 }
 
 // GetUserAccountAccess indicates an expected call of GetUserAccountAccess.
@@ -175,4 +207,18 @@ func (m *MockAccountSvc) MarkAccountUserUsed(ctx context.Context, accountUserID 
 func (mr *MockAccountSvcMockRecorder) MarkAccountUserUsed(ctx, accountUserID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkAccountUserUsed", reflect.TypeOf((*MockAccountSvc)(nil).MarkAccountUserUsed), ctx, accountUserID)
+}
+
+// UpdateAccountSubscription mocks base method.
+func (m *MockAccountSvc) UpdateAccountSubscription(ctx context.Context, accountID string, status *string, planCode string, stripeSubID *string, periodEnd *time.Time, stripeCustomerID *string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateAccountSubscription", ctx, accountID, status, planCode, stripeSubID, periodEnd, stripeCustomerID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// UpdateAccountSubscription indicates an expected call of UpdateAccountSubscription.
+func (mr *MockAccountSvcMockRecorder) UpdateAccountSubscription(ctx, accountID, status, planCode, stripeSubID, periodEnd, stripeCustomerID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAccountSubscription", reflect.TypeOf((*MockAccountSvc)(nil).UpdateAccountSubscription), ctx, accountID, status, planCode, stripeSubID, periodEnd, stripeCustomerID)
 }

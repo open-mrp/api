@@ -5,26 +5,32 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/contracts"
 	"github.com/augno/api/shared/env"
 )
 
 var (
-	defaultPort        = contracts.GRPCPort
-	defaultRabbitMQURI = "amqp://guest:guest@rabbitmq:5672/" // #nosec G101 - Default dev URI, not a production credential
+	defaultPort         = contracts.GRPCPort
+	defaultPlatformMode = constants.PlatformModeProduction
+	defaultRabbitMQURI  = "amqp://guest:guest@rabbitmq:5672/" // #nosec G101 - Default dev URI, not a production credential
 )
 
 const (
-	envPort        = "PORT"
-	envDBURL       = "DB_URL"
-	envAWSRegion   = "AWS_REGION"
-	envRabbitMQURI = "RABBITMQ_URI"
+	envPort         = "PORT"
+	envPlatformMode = "PLATFORM"
+	envDBURL        = "DB_URL"
+	envAWSRegion    = "AWS_REGION"
+	envRabbitMQURI  = "RABBITMQ_URI"
 )
 
 // config represents the configuration for the notification service.
 type config struct {
 	// Port (optional; default: 9092) specifies the port on which the gRPC server will listen.
 	Port int
+
+	// PlatformMode (optional; default: "production") determines the platform mode.
+	PlatformMode constants.PlatformMode
 
 	// DBURL (required) is the database connection URI.
 	DBURL string
@@ -42,16 +48,23 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 		c = &config{}
 	}
 
+	platform := env.GetEnv(envPlatformMode, getenv)
+	platformMode := defaultPlatformMode
+	if platform != "" {
+		platformMode = constants.PlatformMode(platform)
+	}
+
 	port := defaultPort
 	if p, err := strconv.Atoi(env.GetEnv(envPort, getenv)); err == nil {
 		port = p
 	}
 
 	return &config{
-		Port:        port,
-		DBURL:       env.GetEnv(envDBURL, getenv),
-		AWSRegion:   env.GetEnv(envAWSRegion, getenv),
-		RabbitMQURI: cmp.Or(env.GetEnv(envRabbitMQURI, getenv), defaultRabbitMQURI),
+		Port:         port,
+		PlatformMode: platformMode,
+		DBURL:        env.GetEnv(envDBURL, getenv),
+		AWSRegion:    env.GetEnv(envAWSRegion, getenv),
+		RabbitMQURI:  cmp.Or(env.GetEnv(envRabbitMQURI, getenv), defaultRabbitMQURI),
 	}
 }
 

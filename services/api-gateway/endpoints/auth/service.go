@@ -41,16 +41,6 @@ type authSvcImpl struct {
 
 var authSvcTracer = tracing.GetTracer("api-gateway.endpoints.auth.service")
 
-// WithDefaults returns a new AuthSvcConfig with zero-value fields replaced by defaults.
-func (c *AuthSvcConfig) WithDefaults() *AuthSvcConfig {
-	if c == nil {
-		c = &AuthSvcConfig{}
-	}
-	return &AuthSvcConfig{
-		AuthClient: c.AuthClient,
-	}
-}
-
 func (c *AuthSvcConfig) validate() error {
 	if c.AuthClient == nil {
 		return fmt.Errorf("auth endpoint service: auth client is required")
@@ -59,7 +49,6 @@ func (c *AuthSvcConfig) validate() error {
 }
 
 func NewAuthSvc(config *AuthSvcConfig) AuthSvc {
-	config = config.WithDefaults()
 	if err := config.validate(); err != nil {
 		panic(err)
 	}

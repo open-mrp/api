@@ -21,6 +21,18 @@ sql:
             go_type:
               import: "github.com/augno/api/shared/db"
               type: "NullableRawMessage"
+          - column: "request_log.query_json"
+            go_type:
+              import: "github.com/augno/api/shared/db"
+              type: "NullableRawMessage"
+          - column: "request_log.request_body_json"
+            go_type:
+              import: "github.com/augno/api/shared/db"
+              type: "NullableRawMessage"
+          - column: "request_log.response_body_json"
+            go_type:
+              import: "github.com/augno/api/shared/db"
+              type: "NullableRawMessage"
           - column: "message_outbox.headers"
             go_type:
               import: "github.com/augno/api/shared/db"

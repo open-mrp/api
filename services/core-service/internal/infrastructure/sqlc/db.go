@@ -24,8 +24,23 @@ func New(db DBTX) *Queries {
 func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	q := Queries{db: db}
 	var err error
+	if q.acquireOutboxMessagesStmt, err = db.PrepareContext(ctx, acquireOutboxMessages); err != nil {
+		return nil, fmt.Errorf("error preparing query AcquireOutboxMessages: %w", err)
+	}
 	if q.advanceIdempotencyRecoveryPointStmt, err = db.PrepareContext(ctx, advanceIdempotencyRecoveryPoint); err != nil {
 		return nil, fmt.Errorf("error preparing query AdvanceIdempotencyRecoveryPoint: %w", err)
+	}
+	if q.cleanupExpiredOutboxLocksStmt, err = db.PrepareContext(ctx, cleanupExpiredOutboxLocks); err != nil {
+		return nil, fmt.Errorf("error preparing query CleanupExpiredOutboxLocks: %w", err)
+	}
+	if q.clearAccountStripeCustomerStmt, err = db.PrepareContext(ctx, clearAccountStripeCustomer); err != nil {
+		return nil, fmt.Errorf("error preparing query ClearAccountStripeCustomer: %w", err)
+	}
+	if q.countActiveAccountUsersStmt, err = db.PrepareContext(ctx, countActiveAccountUsers); err != nil {
+		return nil, fmt.Errorf("error preparing query CountActiveAccountUsers: %w", err)
+	}
+	if q.countNonSandboxAccountsByPlanCodeStmt, err = db.PrepareContext(ctx, countNonSandboxAccountsByPlanCode); err != nil {
+		return nil, fmt.Errorf("error preparing query CountNonSandboxAccountsByPlanCode: %w", err)
 	}
 	if q.countSandboxAccountsStmt, err = db.PrepareContext(ctx, countSandboxAccounts); err != nil {
 		return nil, fmt.Errorf("error preparing query CountSandboxAccounts: %w", err)
@@ -54,6 +69,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.createIdempotencyKeyStmt, err = db.PrepareContext(ctx, createIdempotencyKey); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateIdempotencyKey: %w", err)
 	}
+	if q.createOutboxMessageStmt, err = db.PrepareContext(ctx, createOutboxMessage); err != nil {
+		return nil, fmt.Errorf("error preparing query CreateOutboxMessage: %w", err)
+	}
 	if q.createRoleStmt, err = db.PrepareContext(ctx, createRole); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateRole: %w", err)
 	}
@@ -63,14 +81,26 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.createSandboxAccountStmt, err = db.PrepareContext(ctx, createSandboxAccount); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateSandboxAccount: %w", err)
 	}
+	if q.deactivateAccountUsersExceptStmt, err = db.PrepareContext(ctx, deactivateAccountUsersExcept); err != nil {
+		return nil, fmt.Errorf("error preparing query DeactivateAccountUsersExcept: %w", err)
+	}
 	if q.deleteAccountByIDStmt, err = db.PrepareContext(ctx, deleteAccountByID); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteAccountByID: %w", err)
+	}
+	if q.deleteAccountByIDIfSandboxStmt, err = db.PrepareContext(ctx, deleteAccountByIDIfSandbox); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteAccountByIDIfSandbox: %w", err)
 	}
 	if q.deleteExpiredIdempotencyKeysStmt, err = db.PrepareContext(ctx, deleteExpiredIdempotencyKeys); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteExpiredIdempotencyKeys: %w", err)
 	}
 	if q.deleteSandboxAccountByIDStmt, err = db.PrepareContext(ctx, deleteSandboxAccountByID); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteSandboxAccountByID: %w", err)
+	}
+	if q.deleteSandboxAccountByTypeIDStmt, err = db.PrepareContext(ctx, deleteSandboxAccountByTypeID); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteSandboxAccountByTypeID: %w", err)
+	}
+	if q.ensureAccountUserActiveStmt, err = db.PrepareContext(ctx, ensureAccountUserActive); err != nil {
+		return nil, fmt.Errorf("error preparing query EnsureAccountUserActive: %w", err)
 	}
 	if q.findAccountAffiliationsByUserIDStmt, err = db.PrepareContext(ctx, findAccountAffiliationsByUserID); err != nil {
 		return nil, fmt.Errorf("error preparing query FindAccountAffiliationsByUserID: %w", err)
@@ -83,6 +113,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.findAccountUserWithRoleByAccountIDAndUserIDStmt, err = db.PrepareContext(ctx, findAccountUserWithRoleByAccountIDAndUserID); err != nil {
 		return nil, fmt.Errorf("error preparing query FindAccountUserWithRoleByAccountIDAndUserID: %w", err)
+	}
+	if q.findAdminUserIDByAccountIDStmt, err = db.PrepareContext(ctx, findAdminUserIDByAccountID); err != nil {
+		return nil, fmt.Errorf("error preparing query FindAdminUserIDByAccountID: %w", err)
 	}
 	if q.findFirstSandboxAccountByOwnerAccountIDStmt, err = db.PrepareContext(ctx, findFirstSandboxAccountByOwnerAccountID); err != nil {
 		return nil, fmt.Errorf("error preparing query FindFirstSandboxAccountByOwnerAccountID: %w", err)
@@ -126,8 +159,50 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getIdempotencyRecoveryPointStmt, err = db.PrepareContext(ctx, getIdempotencyRecoveryPoint); err != nil {
 		return nil, fmt.Errorf("error preparing query GetIdempotencyRecoveryPoint: %w", err)
 	}
-	if q.listSandboxAccountsStmt, err = db.PrepareContext(ctx, listSandboxAccounts); err != nil {
-		return nil, fmt.Errorf("error preparing query ListSandboxAccounts: %w", err)
+	if q.getInboxRecordByMessageAndHandlerStmt, err = db.PrepareContext(ctx, getInboxRecordByMessageAndHandler); err != nil {
+		return nil, fmt.Errorf("error preparing query GetInboxRecordByMessageAndHandler: %w", err)
+	}
+	if q.getLockedOutboxMessagesStmt, err = db.PrepareContext(ctx, getLockedOutboxMessages); err != nil {
+		return nil, fmt.Errorf("error preparing query GetLockedOutboxMessages: %w", err)
+	}
+	if q.getSandboxLimitByAccountIDStmt, err = db.PrepareContext(ctx, getSandboxLimitByAccountID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetSandboxLimitByAccountID: %w", err)
+	}
+	if q.getSeatLimitByPlanCodeStmt, err = db.PrepareContext(ctx, getSeatLimitByPlanCode); err != nil {
+		return nil, fmt.Errorf("error preparing query GetSeatLimitByPlanCode: %w", err)
+	}
+	if q.listSandboxAccountsBackwardStmt, err = db.PrepareContext(ctx, listSandboxAccountsBackward); err != nil {
+		return nil, fmt.Errorf("error preparing query ListSandboxAccountsBackward: %w", err)
+	}
+	if q.listSandboxAccountsForwardStmt, err = db.PrepareContext(ctx, listSandboxAccountsForward); err != nil {
+		return nil, fmt.Errorf("error preparing query ListSandboxAccountsForward: %w", err)
+	}
+	if q.listUnitsBackwardStmt, err = db.PrepareContext(ctx, listUnitsBackward); err != nil {
+		return nil, fmt.Errorf("error preparing query ListUnitsBackward: %w", err)
+	}
+	if q.listUnitsForwardStmt, err = db.PrepareContext(ctx, listUnitsForward); err != nil {
+		return nil, fmt.Errorf("error preparing query ListUnitsForward: %w", err)
+	}
+	if q.markInboxRecordFailedStmt, err = db.PrepareContext(ctx, markInboxRecordFailed); err != nil {
+		return nil, fmt.Errorf("error preparing query MarkInboxRecordFailed: %w", err)
+	}
+	if q.markInboxRecordProcessedStmt, err = db.PrepareContext(ctx, markInboxRecordProcessed); err != nil {
+		return nil, fmt.Errorf("error preparing query MarkInboxRecordProcessed: %w", err)
+	}
+	if q.markOutboxMessageFailedStmt, err = db.PrepareContext(ctx, markOutboxMessageFailed); err != nil {
+		return nil, fmt.Errorf("error preparing query MarkOutboxMessageFailed: %w", err)
+	}
+	if q.markOutboxMessagePublishedStmt, err = db.PrepareContext(ctx, markOutboxMessagePublished); err != nil {
+		return nil, fmt.Errorf("error preparing query MarkOutboxMessagePublished: %w", err)
+	}
+	if q.purgeProcessedInboxMessagesStmt, err = db.PrepareContext(ctx, purgeProcessedInboxMessages); err != nil {
+		return nil, fmt.Errorf("error preparing query PurgeProcessedInboxMessages: %w", err)
+	}
+	if q.purgePublishedOutboxMessagesStmt, err = db.PrepareContext(ctx, purgePublishedOutboxMessages); err != nil {
+		return nil, fmt.Errorf("error preparing query PurgePublishedOutboxMessages: %w", err)
+	}
+	if q.reactivateAccountUsersStmt, err = db.PrepareContext(ctx, reactivateAccountUsers); err != nil {
+		return nil, fmt.Errorf("error preparing query ReactivateAccountUsers: %w", err)
 	}
 	if q.setAccountDefaultBillingAddressStmt, err = db.PrepareContext(ctx, setAccountDefaultBillingAddress); err != nil {
 		return nil, fmt.Errorf("error preparing query SetAccountDefaultBillingAddress: %w", err)
@@ -138,6 +213,12 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.setIdempotencyResponseStmt, err = db.PrepareContext(ctx, setIdempotencyResponse); err != nil {
 		return nil, fmt.Errorf("error preparing query SetIdempotencyResponse: %w", err)
 	}
+	if q.tryInsertInboxRecordStmt, err = db.PrepareContext(ctx, tryInsertInboxRecord); err != nil {
+		return nil, fmt.Errorf("error preparing query TryInsertInboxRecord: %w", err)
+	}
+	if q.updateAccountSubscriptionStmt, err = db.PrepareContext(ctx, updateAccountSubscription); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateAccountSubscription: %w", err)
+	}
 	if q.updateAccountUserLastUsedAtStmt, err = db.PrepareContext(ctx, updateAccountUserLastUsedAt); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateAccountUserLastUsedAt: %w", err)
 	}
@@ -146,9 +227,34 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 
 func (q *Queries) Close() error {
 	var err error
+	if q.acquireOutboxMessagesStmt != nil {
+		if cerr := q.acquireOutboxMessagesStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing acquireOutboxMessagesStmt: %w", cerr)
+		}
+	}
 	if q.advanceIdempotencyRecoveryPointStmt != nil {
 		if cerr := q.advanceIdempotencyRecoveryPointStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing advanceIdempotencyRecoveryPointStmt: %w", cerr)
+		}
+	}
+	if q.cleanupExpiredOutboxLocksStmt != nil {
+		if cerr := q.cleanupExpiredOutboxLocksStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing cleanupExpiredOutboxLocksStmt: %w", cerr)
+		}
+	}
+	if q.clearAccountStripeCustomerStmt != nil {
+		if cerr := q.clearAccountStripeCustomerStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing clearAccountStripeCustomerStmt: %w", cerr)
+		}
+	}
+	if q.countActiveAccountUsersStmt != nil {
+		if cerr := q.countActiveAccountUsersStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing countActiveAccountUsersStmt: %w", cerr)
+		}
+	}
+	if q.countNonSandboxAccountsByPlanCodeStmt != nil {
+		if cerr := q.countNonSandboxAccountsByPlanCodeStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing countNonSandboxAccountsByPlanCodeStmt: %w", cerr)
 		}
 	}
 	if q.countSandboxAccountsStmt != nil {
@@ -196,6 +302,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing createIdempotencyKeyStmt: %w", cerr)
 		}
 	}
+	if q.createOutboxMessageStmt != nil {
+		if cerr := q.createOutboxMessageStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing createOutboxMessageStmt: %w", cerr)
+		}
+	}
 	if q.createRoleStmt != nil {
 		if cerr := q.createRoleStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing createRoleStmt: %w", cerr)
@@ -211,9 +322,19 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing createSandboxAccountStmt: %w", cerr)
 		}
 	}
+	if q.deactivateAccountUsersExceptStmt != nil {
+		if cerr := q.deactivateAccountUsersExceptStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deactivateAccountUsersExceptStmt: %w", cerr)
+		}
+	}
 	if q.deleteAccountByIDStmt != nil {
 		if cerr := q.deleteAccountByIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing deleteAccountByIDStmt: %w", cerr)
+		}
+	}
+	if q.deleteAccountByIDIfSandboxStmt != nil {
+		if cerr := q.deleteAccountByIDIfSandboxStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteAccountByIDIfSandboxStmt: %w", cerr)
 		}
 	}
 	if q.deleteExpiredIdempotencyKeysStmt != nil {
@@ -224,6 +345,16 @@ func (q *Queries) Close() error {
 	if q.deleteSandboxAccountByIDStmt != nil {
 		if cerr := q.deleteSandboxAccountByIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing deleteSandboxAccountByIDStmt: %w", cerr)
+		}
+	}
+	if q.deleteSandboxAccountByTypeIDStmt != nil {
+		if cerr := q.deleteSandboxAccountByTypeIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteSandboxAccountByTypeIDStmt: %w", cerr)
+		}
+	}
+	if q.ensureAccountUserActiveStmt != nil {
+		if cerr := q.ensureAccountUserActiveStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing ensureAccountUserActiveStmt: %w", cerr)
 		}
 	}
 	if q.findAccountAffiliationsByUserIDStmt != nil {
@@ -244,6 +375,11 @@ func (q *Queries) Close() error {
 	if q.findAccountUserWithRoleByAccountIDAndUserIDStmt != nil {
 		if cerr := q.findAccountUserWithRoleByAccountIDAndUserIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing findAccountUserWithRoleByAccountIDAndUserIDStmt: %w", cerr)
+		}
+	}
+	if q.findAdminUserIDByAccountIDStmt != nil {
+		if cerr := q.findAdminUserIDByAccountIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing findAdminUserIDByAccountIDStmt: %w", cerr)
 		}
 	}
 	if q.findFirstSandboxAccountByOwnerAccountIDStmt != nil {
@@ -316,9 +452,79 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getIdempotencyRecoveryPointStmt: %w", cerr)
 		}
 	}
-	if q.listSandboxAccountsStmt != nil {
-		if cerr := q.listSandboxAccountsStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing listSandboxAccountsStmt: %w", cerr)
+	if q.getInboxRecordByMessageAndHandlerStmt != nil {
+		if cerr := q.getInboxRecordByMessageAndHandlerStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getInboxRecordByMessageAndHandlerStmt: %w", cerr)
+		}
+	}
+	if q.getLockedOutboxMessagesStmt != nil {
+		if cerr := q.getLockedOutboxMessagesStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getLockedOutboxMessagesStmt: %w", cerr)
+		}
+	}
+	if q.getSandboxLimitByAccountIDStmt != nil {
+		if cerr := q.getSandboxLimitByAccountIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getSandboxLimitByAccountIDStmt: %w", cerr)
+		}
+	}
+	if q.getSeatLimitByPlanCodeStmt != nil {
+		if cerr := q.getSeatLimitByPlanCodeStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getSeatLimitByPlanCodeStmt: %w", cerr)
+		}
+	}
+	if q.listSandboxAccountsBackwardStmt != nil {
+		if cerr := q.listSandboxAccountsBackwardStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing listSandboxAccountsBackwardStmt: %w", cerr)
+		}
+	}
+	if q.listSandboxAccountsForwardStmt != nil {
+		if cerr := q.listSandboxAccountsForwardStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing listSandboxAccountsForwardStmt: %w", cerr)
+		}
+	}
+	if q.listUnitsBackwardStmt != nil {
+		if cerr := q.listUnitsBackwardStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing listUnitsBackwardStmt: %w", cerr)
+		}
+	}
+	if q.listUnitsForwardStmt != nil {
+		if cerr := q.listUnitsForwardStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing listUnitsForwardStmt: %w", cerr)
+		}
+	}
+	if q.markInboxRecordFailedStmt != nil {
+		if cerr := q.markInboxRecordFailedStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing markInboxRecordFailedStmt: %w", cerr)
+		}
+	}
+	if q.markInboxRecordProcessedStmt != nil {
+		if cerr := q.markInboxRecordProcessedStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing markInboxRecordProcessedStmt: %w", cerr)
+		}
+	}
+	if q.markOutboxMessageFailedStmt != nil {
+		if cerr := q.markOutboxMessageFailedStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing markOutboxMessageFailedStmt: %w", cerr)
+		}
+	}
+	if q.markOutboxMessagePublishedStmt != nil {
+		if cerr := q.markOutboxMessagePublishedStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing markOutboxMessagePublishedStmt: %w", cerr)
+		}
+	}
+	if q.purgeProcessedInboxMessagesStmt != nil {
+		if cerr := q.purgeProcessedInboxMessagesStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing purgeProcessedInboxMessagesStmt: %w", cerr)
+		}
+	}
+	if q.purgePublishedOutboxMessagesStmt != nil {
+		if cerr := q.purgePublishedOutboxMessagesStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing purgePublishedOutboxMessagesStmt: %w", cerr)
+		}
+	}
+	if q.reactivateAccountUsersStmt != nil {
+		if cerr := q.reactivateAccountUsersStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing reactivateAccountUsersStmt: %w", cerr)
 		}
 	}
 	if q.setAccountDefaultBillingAddressStmt != nil {
@@ -334,6 +540,16 @@ func (q *Queries) Close() error {
 	if q.setIdempotencyResponseStmt != nil {
 		if cerr := q.setIdempotencyResponseStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing setIdempotencyResponseStmt: %w", cerr)
+		}
+	}
+	if q.tryInsertInboxRecordStmt != nil {
+		if cerr := q.tryInsertInboxRecordStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing tryInsertInboxRecordStmt: %w", cerr)
+		}
+	}
+	if q.updateAccountSubscriptionStmt != nil {
+		if cerr := q.updateAccountSubscriptionStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateAccountSubscriptionStmt: %w", cerr)
 		}
 	}
 	if q.updateAccountUserLastUsedAtStmt != nil {
@@ -380,7 +596,12 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 type Queries struct {
 	db                                                 DBTX
 	tx                                                 *sql.Tx
+	acquireOutboxMessagesStmt                          *sql.Stmt
 	advanceIdempotencyRecoveryPointStmt                *sql.Stmt
+	cleanupExpiredOutboxLocksStmt                      *sql.Stmt
+	clearAccountStripeCustomerStmt                     *sql.Stmt
+	countActiveAccountUsersStmt                        *sql.Stmt
+	countNonSandboxAccountsByPlanCodeStmt              *sql.Stmt
 	countSandboxAccountsStmt                           *sql.Stmt
 	createAccountStmt                                  *sql.Stmt
 	createAccountAddressStmt                           *sql.Stmt
@@ -390,16 +611,22 @@ type Queries struct {
 	createAddressStmt                                  *sql.Stmt
 	createGeolocationStmt                              *sql.Stmt
 	createIdempotencyKeyStmt                           *sql.Stmt
+	createOutboxMessageStmt                            *sql.Stmt
 	createRoleStmt                                     *sql.Stmt
 	createRolePermissionStmt                           *sql.Stmt
 	createSandboxAccountStmt                           *sql.Stmt
+	deactivateAccountUsersExceptStmt                   *sql.Stmt
 	deleteAccountByIDStmt                              *sql.Stmt
+	deleteAccountByIDIfSandboxStmt                     *sql.Stmt
 	deleteExpiredIdempotencyKeysStmt                   *sql.Stmt
 	deleteSandboxAccountByIDStmt                       *sql.Stmt
+	deleteSandboxAccountByTypeIDStmt                   *sql.Stmt
+	ensureAccountUserActiveStmt                        *sql.Stmt
 	findAccountAffiliationsByUserIDStmt                *sql.Stmt
 	findAccountRelationByOwnerAccountIDAndAPIKeyIDStmt *sql.Stmt
 	findAccountRelationByOwnerAccountIDAndUserIDStmt   *sql.Stmt
 	findAccountUserWithRoleByAccountIDAndUserIDStmt    *sql.Stmt
+	findAdminUserIDByAccountIDStmt                     *sql.Stmt
 	findFirstSandboxAccountByOwnerAccountIDStmt        *sql.Stmt
 	findLastUsedAccountIDStmt                          *sql.Stmt
 	findRolePermissionStringsStmt                      *sql.Stmt
@@ -414,37 +641,64 @@ type Queries struct {
 	getIdempotencyKeyByScopeHashStmt                   *sql.Stmt
 	getIdempotencyKeyByTypeIDStmt                      *sql.Stmt
 	getIdempotencyRecoveryPointStmt                    *sql.Stmt
-	listSandboxAccountsStmt                            *sql.Stmt
+	getInboxRecordByMessageAndHandlerStmt              *sql.Stmt
+	getLockedOutboxMessagesStmt                        *sql.Stmt
+	getSandboxLimitByAccountIDStmt                     *sql.Stmt
+	getSeatLimitByPlanCodeStmt                         *sql.Stmt
+	listSandboxAccountsBackwardStmt                    *sql.Stmt
+	listSandboxAccountsForwardStmt                     *sql.Stmt
+	listUnitsBackwardStmt                              *sql.Stmt
+	listUnitsForwardStmt                               *sql.Stmt
+	markInboxRecordFailedStmt                          *sql.Stmt
+	markInboxRecordProcessedStmt                       *sql.Stmt
+	markOutboxMessageFailedStmt                        *sql.Stmt
+	markOutboxMessagePublishedStmt                     *sql.Stmt
+	purgeProcessedInboxMessagesStmt                    *sql.Stmt
+	purgePublishedOutboxMessagesStmt                   *sql.Stmt
+	reactivateAccountUsersStmt                         *sql.Stmt
 	setAccountDefaultBillingAddressStmt                *sql.Stmt
 	setAccountDefaultShippingAddressStmt               *sql.Stmt
 	setIdempotencyResponseStmt                         *sql.Stmt
+	tryInsertInboxRecordStmt                           *sql.Stmt
+	updateAccountSubscriptionStmt                      *sql.Stmt
 	updateAccountUserLastUsedAtStmt                    *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:                                   tx,
-		tx:                                   tx,
-		advanceIdempotencyRecoveryPointStmt:  q.advanceIdempotencyRecoveryPointStmt,
-		countSandboxAccountsStmt:             q.countSandboxAccountsStmt,
-		createAccountStmt:                    q.createAccountStmt,
-		createAccountAddressStmt:             q.createAccountAddressStmt,
-		createAccountForRegistrationStmt:     q.createAccountForRegistrationStmt,
-		createAccountPortalStmt:              q.createAccountPortalStmt,
-		createAccountUserForRegistrationStmt: q.createAccountUserForRegistrationStmt,
-		createAddressStmt:                    q.createAddressStmt,
-		createGeolocationStmt:                q.createGeolocationStmt,
-		createIdempotencyKeyStmt:             q.createIdempotencyKeyStmt,
-		createRoleStmt:                       q.createRoleStmt,
-		createRolePermissionStmt:             q.createRolePermissionStmt,
-		createSandboxAccountStmt:             q.createSandboxAccountStmt,
-		deleteAccountByIDStmt:                q.deleteAccountByIDStmt,
-		deleteExpiredIdempotencyKeysStmt:     q.deleteExpiredIdempotencyKeysStmt,
-		deleteSandboxAccountByIDStmt:         q.deleteSandboxAccountByIDStmt,
-		findAccountAffiliationsByUserIDStmt:  q.findAccountAffiliationsByUserIDStmt,
+		db:                                                 tx,
+		tx:                                                 tx,
+		acquireOutboxMessagesStmt:                          q.acquireOutboxMessagesStmt,
+		advanceIdempotencyRecoveryPointStmt:                q.advanceIdempotencyRecoveryPointStmt,
+		cleanupExpiredOutboxLocksStmt:                      q.cleanupExpiredOutboxLocksStmt,
+		clearAccountStripeCustomerStmt:                     q.clearAccountStripeCustomerStmt,
+		countActiveAccountUsersStmt:                        q.countActiveAccountUsersStmt,
+		countNonSandboxAccountsByPlanCodeStmt:              q.countNonSandboxAccountsByPlanCodeStmt,
+		countSandboxAccountsStmt:                           q.countSandboxAccountsStmt,
+		createAccountStmt:                                  q.createAccountStmt,
+		createAccountAddressStmt:                           q.createAccountAddressStmt,
+		createAccountForRegistrationStmt:                   q.createAccountForRegistrationStmt,
+		createAccountPortalStmt:                            q.createAccountPortalStmt,
+		createAccountUserForRegistrationStmt:               q.createAccountUserForRegistrationStmt,
+		createAddressStmt:                                  q.createAddressStmt,
+		createGeolocationStmt:                              q.createGeolocationStmt,
+		createIdempotencyKeyStmt:                           q.createIdempotencyKeyStmt,
+		createOutboxMessageStmt:                            q.createOutboxMessageStmt,
+		createRoleStmt:                                     q.createRoleStmt,
+		createRolePermissionStmt:                           q.createRolePermissionStmt,
+		createSandboxAccountStmt:                           q.createSandboxAccountStmt,
+		deactivateAccountUsersExceptStmt:                   q.deactivateAccountUsersExceptStmt,
+		deleteAccountByIDStmt:                              q.deleteAccountByIDStmt,
+		deleteAccountByIDIfSandboxStmt:                     q.deleteAccountByIDIfSandboxStmt,
+		deleteExpiredIdempotencyKeysStmt:                   q.deleteExpiredIdempotencyKeysStmt,
+		deleteSandboxAccountByIDStmt:                       q.deleteSandboxAccountByIDStmt,
+		deleteSandboxAccountByTypeIDStmt:                   q.deleteSandboxAccountByTypeIDStmt,
+		ensureAccountUserActiveStmt:                        q.ensureAccountUserActiveStmt,
+		findAccountAffiliationsByUserIDStmt:                q.findAccountAffiliationsByUserIDStmt,
 		findAccountRelationByOwnerAccountIDAndAPIKeyIDStmt: q.findAccountRelationByOwnerAccountIDAndAPIKeyIDStmt,
 		findAccountRelationByOwnerAccountIDAndUserIDStmt:   q.findAccountRelationByOwnerAccountIDAndUserIDStmt,
 		findAccountUserWithRoleByAccountIDAndUserIDStmt:    q.findAccountUserWithRoleByAccountIDAndUserIDStmt,
+		findAdminUserIDByAccountIDStmt:                     q.findAdminUserIDByAccountIDStmt,
 		findFirstSandboxAccountByOwnerAccountIDStmt:        q.findFirstSandboxAccountByOwnerAccountIDStmt,
 		findLastUsedAccountIDStmt:                          q.findLastUsedAccountIDStmt,
 		findRolePermissionStringsStmt:                      q.findRolePermissionStringsStmt,
@@ -459,10 +713,26 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getIdempotencyKeyByScopeHashStmt:                   q.getIdempotencyKeyByScopeHashStmt,
 		getIdempotencyKeyByTypeIDStmt:                      q.getIdempotencyKeyByTypeIDStmt,
 		getIdempotencyRecoveryPointStmt:                    q.getIdempotencyRecoveryPointStmt,
-		listSandboxAccountsStmt:                            q.listSandboxAccountsStmt,
+		getInboxRecordByMessageAndHandlerStmt:              q.getInboxRecordByMessageAndHandlerStmt,
+		getLockedOutboxMessagesStmt:                        q.getLockedOutboxMessagesStmt,
+		getSandboxLimitByAccountIDStmt:                     q.getSandboxLimitByAccountIDStmt,
+		getSeatLimitByPlanCodeStmt:                         q.getSeatLimitByPlanCodeStmt,
+		listSandboxAccountsBackwardStmt:                    q.listSandboxAccountsBackwardStmt,
+		listSandboxAccountsForwardStmt:                     q.listSandboxAccountsForwardStmt,
+		listUnitsBackwardStmt:                              q.listUnitsBackwardStmt,
+		listUnitsForwardStmt:                               q.listUnitsForwardStmt,
+		markInboxRecordFailedStmt:                          q.markInboxRecordFailedStmt,
+		markInboxRecordProcessedStmt:                       q.markInboxRecordProcessedStmt,
+		markOutboxMessageFailedStmt:                        q.markOutboxMessageFailedStmt,
+		markOutboxMessagePublishedStmt:                     q.markOutboxMessagePublishedStmt,
+		purgeProcessedInboxMessagesStmt:                    q.purgeProcessedInboxMessagesStmt,
+		purgePublishedOutboxMessagesStmt:                   q.purgePublishedOutboxMessagesStmt,
+		reactivateAccountUsersStmt:                         q.reactivateAccountUsersStmt,
 		setAccountDefaultBillingAddressStmt:                q.setAccountDefaultBillingAddressStmt,
 		setAccountDefaultShippingAddressStmt:               q.setAccountDefaultShippingAddressStmt,
 		setIdempotencyResponseStmt:                         q.setIdempotencyResponseStmt,
+		tryInsertInboxRecordStmt:                           q.tryInsertInboxRecordStmt,
+		updateAccountSubscriptionStmt:                      q.updateAccountSubscriptionStmt,
 		updateAccountUserLastUsedAtStmt:                    q.updateAccountUserLastUsedAtStmt,
 	}
 }

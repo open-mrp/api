@@ -5,18 +5,18 @@ import (
 	"testing"
 	"time"
 
+	"github.com/augno/api/services/auth-service/internal/apikey"
 	"github.com/augno/api/services/auth-service/internal/domain"
 	clientmock "github.com/augno/api/services/auth-service/internal/domain/mock/client"
 	factorymock "github.com/augno/api/services/auth-service/internal/domain/mock/factory"
 	mediatormock "github.com/augno/api/services/auth-service/internal/domain/mock/mediator"
 	repositorymock "github.com/augno/api/services/auth-service/internal/domain/mock/repository"
-	utilsmock "github.com/augno/api/services/auth-service/internal/domain/mock/utils"
+	"github.com/augno/api/services/auth-service/internal/testutil"
 	"github.com/augno/api/services/auth-service/internal/token"
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 
-	"github.com/golang-jwt/jwt/v5"
 	"go.uber.org/mock/gomock"
 )
 
@@ -56,7 +56,7 @@ func TestValidateCredential_APIKeyOwnedAccount(t *testing.T) {
 	apiKeyMed := mediatormock.NewMockAPIKeyMed(ctrl)
 	coreClient := clientmock.NewMockAuthCoreClient(ctrl)
 
-	apiKey := &domain.APIKey{
+	apiKey := &apikey.APIKey{
 		ID:             1,
 		TypeID:         "apikey_sandbox",
 		KeyID:          "api-1",
@@ -66,7 +66,7 @@ func TestValidateCredential_APIKeyOwnedAccount(t *testing.T) {
 		RoleTypeCode:   "admin",
 	}
 
-	parsedKey := &domain.ParsedAPIKey{
+	parsedKey := &apikey.ParsedAPIKey{
 		AccountMode: constants.AccountModeProduction,
 		ID:          "api-1",
 		Secret:      "secret",
@@ -76,11 +76,17 @@ func TestValidateCredential_APIKeyOwnedAccount(t *testing.T) {
 
 	apiKeyMed.EXPECT().FindAndValidate(gomock.Any(), "aug_sk_token").Return(apiKey, nil)
 	apiKeyMed.EXPECT().ParseKey(gomock.Any(), "aug_sk_token").Return(parsedKey, nil)
-	apiKeyMed.EXPECT().TouchIfNotRecent(gomock.Any(), apiKey).DoAndReturn(func(context.Context, *domain.APIKey) *apierror.APIError {
+	apiKeyMed.EXPECT().TouchIfNotRecent(gomock.Any(), apiKey).DoAndReturn(func(context.Context, *apikey.APIKey) *apierror.APIError {
 		touchDone <- struct{}{}
 		return nil
 	})
-	apiKeyMed.EXPECT().GetKeyAccountAccess(gomock.Any(), constants.AccountModeProduction, apiKey.ID, "acct-1").Return(&domain.APIKeyAccountAccess{
+	coreClient.EXPECT().GetAccountContext(gomock.Any(), "acct-1").Return(&domain.AccountContext{
+		AccountID:   "acct-1",
+		AccountMode: constants.AccountModeProduction,
+	}, nil)
+	apiKeyMed.EXPECT().GetKeyAccountAccess(gomock.Any(), domain.APIKeyGetAccountAccessInput{
+		AccountMode: constants.AccountModeProduction, APIKeyID: apiKey.ID, TargetAccountID: "acct-1",
+	}).Return(&domain.APIKeyAccountAccess{
 		APIKeyID:    apiKey.TypeID,
 		AccountID:   "acct-1",
 		RoleID:      &apiKey.RoleID,
@@ -91,7 +97,7 @@ func TestValidateCredential_APIKeyOwnedAccount(t *testing.T) {
 		repos:      repoFactory,
 		apiKeyMed:  apiKeyMed,
 		coreClient: coreClient,
-		jwtUtils:   utilsmock.NewMockJWTUtils(ctrl),
+		jwtSecret:  testutil.JWTSecret,
 	}
 
 	identity, err := med.ValidateCredential(context.Background(), "aug_sk_token", ptrString("acct-1"))
@@ -129,7 +135,7 @@ func TestValidateCredential_APIKeyRelationMissing(t *testing.T) {
 	apiKeyMed := mediatormock.NewMockAPIKeyMed(ctrl)
 	coreClient := clientmock.NewMockAuthCoreClient(ctrl)
 
-	apiKey := &domain.APIKey{
+	apiKey := &apikey.APIKey{
 		ID:             2,
 		TypeID:         "apikey_sandbox",
 		KeyID:          "api-2",
@@ -139,7 +145,7 @@ func TestValidateCredential_APIKeyRelationMissing(t *testing.T) {
 		RoleTypeCode:   "partner",
 	}
 
-	parsedKey := &domain.ParsedAPIKey{
+	parsedKey := &apikey.ParsedAPIKey{
 		AccountMode: constants.AccountModeProduction,
 		ID:          "api-2",
 		Secret:      "secret",
@@ -149,18 +155,22 @@ func TestValidateCredential_APIKeyRelationMissing(t *testing.T) {
 
 	apiKeyMed.EXPECT().FindAndValidate(gomock.Any(), "aug_sk_missing").Return(apiKey, nil)
 	apiKeyMed.EXPECT().ParseKey(gomock.Any(), "aug_sk_missing").Return(parsedKey, nil)
-	apiKeyMed.EXPECT().TouchIfNotRecent(gomock.Any(), apiKey).DoAndReturn(func(context.Context, *domain.APIKey) *apierror.APIError {
+	apiKeyMed.EXPECT().TouchIfNotRecent(gomock.Any(), apiKey).DoAndReturn(func(context.Context, *apikey.APIKey) *apierror.APIError {
 		touchDone <- struct{}{}
 		return nil
 	})
+	coreClient.EXPECT().GetAccountContext(gomock.Any(), "acct-target").Return(&domain.AccountContext{
+		AccountID:   "acct-target",
+		AccountMode: constants.AccountModeProduction,
+	}, nil)
 	coreClient.EXPECT().GetAccountRelationByAPIKeyID(gomock.Any(), "acct-target", apiKey.ID).
-		Return(nil, nil)
+		Return(nil, false, nil)
 
 	med := &userMedImpl{
 		repos:      repoFactory,
 		apiKeyMed:  apiKeyMed,
 		coreClient: coreClient,
-		jwtUtils:   utilsmock.NewMockJWTUtils(ctrl),
+		jwtSecret:  testutil.JWTSecret,
 	}
 
 	identity, err := med.ValidateCredential(context.Background(), "aug_sk_missing", ptrString("acct-target"))
@@ -175,8 +185,8 @@ func TestValidateCredential_APIKeyRelationMissing(t *testing.T) {
 	if identity != nil {
 		t.Fatalf("expected nil identity on error, got %+v", identity)
 	}
-	if err.PublicMessage != token.ErrInvalidJWT {
-		t.Fatalf("expected invalid JWT error, got %s", err.PublicMessage)
+	if err.PublicMessage != errNoAccountAccess("acct-target") {
+		t.Fatalf("expected no account access error, got %s", err.PublicMessage)
 	}
 }
 
@@ -191,22 +201,18 @@ func TestValidateCredential_UserAccountUserPath(t *testing.T) {
 
 	apiKeyMed := mediatormock.NewMockAPIKeyMed(ctrl)
 	coreClient := clientmock.NewMockAuthCoreClient(ctrl)
-	accessTokenUtils := utilsmock.NewMockJWTUtils(ctrl)
 
 	userID := "user-1"
 	targetAccountID := "acct-22"
 	name := "Jane"
 	userModel := &types.User{ID: userID, Name: &name}
 
-	claims := &domain.JWTClaims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			Subject:   userID,
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
-		},
-		TokenType: domain.JWTTypeAccess,
+	// Create a real JWT token
+	validToken, encErr := token.EncodeJWT(context.Background(), testutil.JWTSecret, userID, time.Hour, token.JWTTypeAccess)
+	if encErr != nil {
+		t.Fatalf("failed to encode test token: %v", encErr)
 	}
 
-	accessTokenUtils.EXPECT().Decode(gomock.Any(), "valid-token", domain.JWTTypeAccess).Return(claims, nil)
 	userRepo.EXPECT().Find(gomock.Any(), userID).Return(userModel, nil)
 	coreClient.EXPECT().GetAccountContext(gomock.Any(), targetAccountID).Return(&domain.AccountContext{
 		AccountID:   targetAccountID,
@@ -218,17 +224,17 @@ func TestValidateCredential_UserAccountUserPath(t *testing.T) {
 		RoleID:        ptrString("role-99"),
 		RoleTypeCode:  ptrString("manager"),
 		Permissions:   map[string]bool{"perm:edit": true},
-	}, nil)
+	}, true, nil)
 	coreClient.EXPECT().MarkAccountUserUsed(gomock.Any(), "acu-1").Return(nil).AnyTimes()
 
 	med := &userMedImpl{
 		repos:      repoFactory,
 		apiKeyMed:  apiKeyMed,
 		coreClient: coreClient,
-		jwtUtils:   accessTokenUtils,
+		jwtSecret:  testutil.JWTSecret,
 	}
 
-	identity, err := med.ValidateCredential(context.Background(), "valid-token", &targetAccountID)
+	identity, err := med.ValidateCredential(context.Background(), validToken, &targetAccountID)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -257,34 +263,29 @@ func TestValidateCredential_UserExpiredToken(t *testing.T) {
 	repoFactory := factorymock.NewMockRepoFactory(ctrl)
 	apiKeyMed := mediatormock.NewMockAPIKeyMed(ctrl)
 	coreClient := clientmock.NewMockAuthCoreClient(ctrl)
-	accessTokenUtils := utilsmock.NewMockJWTUtils(ctrl)
 
-	expiredClaims := &domain.JWTClaims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			Subject:   "user-expired",
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(-1 * time.Hour)),
-		},
-		TokenType: domain.JWTTypeAccess,
+	// Create a real expired JWT token
+	expiredToken, encErr := token.EncodeJWT(context.Background(), testutil.JWTSecret, "user-expired", -time.Hour, token.JWTTypeAccess)
+	if encErr != nil {
+		t.Fatalf("failed to encode test token: %v", encErr)
 	}
-
-	accessTokenUtils.EXPECT().Decode(gomock.Any(), "expired-token", domain.JWTTypeAccess).Return(expiredClaims, nil)
 
 	med := &userMedImpl{
 		repos:      repoFactory,
 		apiKeyMed:  apiKeyMed,
 		coreClient: coreClient,
-		jwtUtils:   accessTokenUtils,
+		jwtSecret:  testutil.JWTSecret,
 	}
 
-	identity, err := med.ValidateCredential(context.Background(), "expired-token", ptrString("acct-1"))
+	identity, err := med.ValidateCredential(context.Background(), expiredToken, ptrString("acct-1"))
 	if err == nil {
 		t.Fatal("expected error for expired token, got nil")
 	}
 	if identity != nil {
 		t.Fatalf("expected nil identity on error, got %+v", identity)
 	}
-	if err.PublicMessage != ErrAccessTokenExpired {
-		t.Fatalf("expected expired token message, got %s", err.PublicMessage)
+	if err.PublicMessage != token.ErrInvalidJWT {
+		t.Fatalf("expected invalid JWT message, got %s", err.PublicMessage)
 	}
 	if err.Code != apierror.ErrorCodeInvalidCredentials {
 		t.Fatalf("expected invalid credentials code, got %s", err.Code)
@@ -317,7 +318,7 @@ func TestValidateCredential_EmptyToken_AccountNotFound(t *testing.T) {
 	if err.Code != apierror.ErrorCodeInsufficientPerms {
 		t.Fatalf("expected insufficient_permissions error code, got %s", err.Code)
 	}
-	if err.PublicMessage != ErrNoAccountAccess {
+	if err.PublicMessage != errNoAccountAccess("acct-nonexistent") {
 		t.Fatalf("expected access denied message, got %s", err.PublicMessage)
 	}
 }
@@ -332,21 +333,17 @@ func TestValidateCredential_UserToken_AccountNotFound(t *testing.T) {
 
 	apiKeyMed := mediatormock.NewMockAPIKeyMed(ctrl)
 	coreClient := clientmock.NewMockAuthCoreClient(ctrl)
-	accessTokenUtils := utilsmock.NewMockJWTUtils(ctrl)
 
 	userID := "user-1"
 	name := "Jane"
 	userModel := &types.User{ID: userID, Name: &name}
 
-	claims := &domain.JWTClaims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			Subject:   userID,
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
-		},
-		TokenType: domain.JWTTypeAccess,
+	// Create a real JWT token
+	validToken, encErr := token.EncodeJWT(context.Background(), testutil.JWTSecret, userID, time.Hour, token.JWTTypeAccess)
+	if encErr != nil {
+		t.Fatalf("failed to encode test token: %v", encErr)
 	}
 
-	accessTokenUtils.EXPECT().Decode(gomock.Any(), "valid-token", domain.JWTTypeAccess).Return(claims, nil)
 	userRepo.EXPECT().Find(gomock.Any(), userID).Return(userModel, nil)
 	coreClient.EXPECT().GetAccountContext(gomock.Any(), "acct-nonexistent").
 		Return(nil, apierror.NewResourceNotFoundError("Account not found"))
@@ -355,10 +352,10 @@ func TestValidateCredential_UserToken_AccountNotFound(t *testing.T) {
 		repos:      repoFactory,
 		apiKeyMed:  apiKeyMed,
 		coreClient: coreClient,
-		jwtUtils:   accessTokenUtils,
+		jwtSecret:  testutil.JWTSecret,
 	}
 
-	identity, err := med.ValidateCredential(context.Background(), "valid-token", ptrString("acct-nonexistent"))
+	identity, err := med.ValidateCredential(context.Background(), validToken, ptrString("acct-nonexistent"))
 	if err == nil {
 		t.Fatal("expected error for nonexistent account, got nil")
 	}
@@ -368,7 +365,7 @@ func TestValidateCredential_UserToken_AccountNotFound(t *testing.T) {
 	if err.Code != apierror.ErrorCodeInsufficientPerms {
 		t.Fatalf("expected insufficient_permissions error code, got %s", err.Code)
 	}
-	if err.PublicMessage != ErrNoAccountAccess {
+	if err.PublicMessage != errNoAccountAccess("acct-nonexistent") {
 		t.Fatalf("expected access denied message, got %s", err.PublicMessage)
 	}
 }
@@ -383,38 +380,36 @@ func TestValidateCredential_UserToken_UserAccountAccessNotFound(t *testing.T) {
 
 	apiKeyMed := mediatormock.NewMockAPIKeyMed(ctrl)
 	coreClient := clientmock.NewMockAuthCoreClient(ctrl)
-	accessTokenUtils := utilsmock.NewMockJWTUtils(ctrl)
 
 	userID := "user-1"
 	targetAccountID := "acct-no-access"
 	name := "Jane"
 	userModel := &types.User{ID: userID, Name: &name}
 
-	claims := &domain.JWTClaims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			Subject:   userID,
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
-		},
-		TokenType: domain.JWTTypeAccess,
+	// Create a real JWT token
+	validToken, encErr := token.EncodeJWT(context.Background(), testutil.JWTSecret, userID, time.Hour, token.JWTTypeAccess)
+	if encErr != nil {
+		t.Fatalf("failed to encode test token: %v", encErr)
 	}
 
-	accessTokenUtils.EXPECT().Decode(gomock.Any(), "valid-token", domain.JWTTypeAccess).Return(claims, nil)
 	userRepo.EXPECT().Find(gomock.Any(), userID).Return(userModel, nil)
 	coreClient.EXPECT().GetAccountContext(gomock.Any(), targetAccountID).Return(&domain.AccountContext{
 		AccountID:   targetAccountID,
 		AccountMode: constants.AccountModeProduction,
 	}, nil)
 	coreClient.EXPECT().GetUserAccountAccess(gomock.Any(), userID, targetAccountID).
-		Return(nil, apierror.NewResourceNotFoundError("Resource not found."))
+		Return(nil, false, nil)
+	coreClient.EXPECT().GetAccountRelationByUserID(gomock.Any(), targetAccountID, userID).
+		Return(nil, false, nil)
 
 	med := &userMedImpl{
 		repos:      repoFactory,
 		apiKeyMed:  apiKeyMed,
 		coreClient: coreClient,
-		jwtUtils:   accessTokenUtils,
+		jwtSecret:  testutil.JWTSecret,
 	}
 
-	identity, err := med.ValidateCredential(context.Background(), "valid-token", &targetAccountID)
+	identity, err := med.ValidateCredential(context.Background(), validToken, &targetAccountID)
 	if err == nil {
 		t.Fatal("expected error for no account access, got nil")
 	}
@@ -424,8 +419,8 @@ func TestValidateCredential_UserToken_UserAccountAccessNotFound(t *testing.T) {
 	if err.Code != apierror.ErrorCodeInsufficientPerms {
 		t.Fatalf("expected insufficient_permissions error code, got %s", err.Code)
 	}
-	if err.PublicMessage != ErrNoAccountAccess {
-		t.Fatalf("expected access denied message, got %s", err.PublicMessage)
+	if err.PublicMessage != errNoAccountAccess("acct-no-access") {
+		t.Fatalf("expected no account access message, got %s", err.PublicMessage)
 	}
 }
 

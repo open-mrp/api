@@ -12,9 +12,9 @@ import (
 
 // The request to update a user's password
 type UpdatePasswordRequest struct {
-	// The user's current password
+	// The user's current password.
 	OldPassword string `json:"old_password" validate:"required,password"`
-	// The new password to be set
+	// The new password to be set.
 	NewPassword string `json:"new_password" validate:"required,password"`
 }
 
@@ -48,6 +48,7 @@ func (e *UpdatePasswordEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateP
 		},
 		Extras: apiendpoint.APIEndpointExtras{
 			AllowUnknownJSONFields: false,
+			ShieldRequestBody:      true,
 		},
 	}
 }

@@ -10,6 +10,9 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	httpgroup "github.com/augno/api/services/api-gateway/pkg/group"
 	authpb "github.com/augno/api/shared/proto/auth"
+	billingpb "github.com/augno/api/shared/proto/billing"
+	pbgrpc "github.com/augno/api/shared/proto/core"
+	platformpb "github.com/augno/api/shared/proto/platform"
 	"github.com/augno/api/shared/version"
 )
 
@@ -47,6 +50,20 @@ func main() {
 		Client: struct{ authpb.AuthServiceClient }{},
 	}
 
+	coreClient := &grpcclient.CoreServiceClient{
+		Client: struct{ pbgrpc.CoreServiceClient }{},
+	}
+
+	billingClient := &grpcclient.BillingServiceClient{
+		Client: struct{ billingpb.BillingServiceClient }{},
+	}
+
+	platformClient := &grpcclient.PlatformServiceClient{
+		LoggingClient: struct {
+			platformpb.LoggingServiceClient
+		}{},
+	}
+
 	groups := []apiendpoint.APIEndpointGroup{
 		*(&httpgroup.HealthEndpointGroup{}).Materialize(httpgroup.HealthEndpointGroupConfig{}).APIEndpointGroup,
 		*(&httpgroup.AuthEndpointGroup{}).Materialize(&httpgroup.AuthEndpointGroupConfig{
@@ -54,6 +71,21 @@ func main() {
 		}).APIEndpointGroup,
 		*(&httpgroup.APIKeysEndpointGroup{}).Materialize(&httpgroup.APIKeysEndpointGroupConfig{
 			AuthClient: authClient,
+		}).APIEndpointGroup,
+		*(&httpgroup.SandboxesEndpointGroup{}).Materialize(&httpgroup.SandboxesEndpointGroupConfig{
+			CoreClient: coreClient,
+		}).APIEndpointGroup,
+		*(&httpgroup.BillingEndpointGroup{}).Materialize(&httpgroup.BillingEndpointGroupConfig{
+			BillingClient: billingClient,
+		}).APIEndpointGroup,
+		*(&httpgroup.RegistrationSessionsEndpointGroup{}).Materialize(&httpgroup.RegistrationSessionsEndpointGroupConfig{
+			AuthClient: authClient,
+		}).APIEndpointGroup,
+		*(&httpgroup.RequestLogsEndpointGroup{}).Materialize(&httpgroup.RequestLogsEndpointGroupConfig{
+			PlatformClient: platformClient,
+		}).APIEndpointGroup,
+		*(&httpgroup.UnitsEndpointGroup{}).Materialize(&httpgroup.UnitsEndpointGroupConfig{
+			CoreClient: coreClient,
 		}).APIEndpointGroup,
 	}
 

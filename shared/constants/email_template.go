@@ -16,6 +16,8 @@ const (
 	EmailTemplateRegistrationVerifyExisting EmailTemplate = "registration_verify_existing"
 	// EmailTemplateEnterpriseRequest indicates that the email template is for a enterprise request email.
 	EmailTemplateEnterpriseRequest EmailTemplate = "enterprise_request"
+	// EmailTemplateInternalErrorAlert indicates that the email template is for a 5xx internal error alert.
+	EmailTemplateInternalErrorAlert EmailTemplate = "internal_error_alert"
 )
 
 func (t EmailTemplate) IsValid() bool {
@@ -25,12 +27,13 @@ func (t EmailTemplate) IsValid() bool {
 		EmailTemplatePasswordUpdated,
 		EmailTemplateRegistrationVerify,
 		EmailTemplateRegistrationVerifyExisting,
-		EmailTemplateEnterpriseRequest:
+		EmailTemplateEnterpriseRequest,
+		EmailTemplateInternalErrorAlert:
 		return true
 	}
 	return false
 }
 
 func (t EmailTemplate) EnumValues() []string {
-	return []string{string(EmailTemplateWelcome), string(EmailTemplatePasswordReset), string(EmailTemplatePasswordUpdated), string(EmailTemplateRegistrationVerify), string(EmailTemplateRegistrationVerifyExisting), string(EmailTemplateEnterpriseRequest)}
+	return []string{string(EmailTemplateWelcome), string(EmailTemplatePasswordReset), string(EmailTemplatePasswordUpdated), string(EmailTemplateRegistrationVerify), string(EmailTemplateRegistrationVerifyExisting), string(EmailTemplateEnterpriseRequest), string(EmailTemplateInternalErrorAlert)}
 }

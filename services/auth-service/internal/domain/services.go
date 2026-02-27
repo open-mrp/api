@@ -4,9 +4,12 @@ import (
 	"context"
 	"time"
 
+	"github.com/augno/api/services/auth-service/internal/apikey"
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/pagination"
+	"github.com/augno/api/shared/ptrutil"
 )
 
 type LoginResult struct {
@@ -26,74 +29,226 @@ type RegisterInput struct {
 }
 
 type AuthSvc interface {
-	// ValidateCredential validates a credentials provided by a request and returns an identity.
+	// ValidateCredential validates an auth token and returns the resulting identity.
 	//
-	//  1. Validates the credentials.
-	//  2. Returns the identity.
+	// Behavior:
+	//   - If authToken is empty, returns an unauthenticated identity.
+	//   - If authToken is an API key credential, validates it as an API key.
+	//   - Otherwise, validates it as a user credential.
 	ValidateCredential(ctx context.Context, authToken string, targetAccountID *string) (*types.Identity, *apierror.APIError)
 }
 
 type TokenSvc interface {
 	// RefreshToken exchanges a valid refresh token for a new short-lived access token.
-	//
-	//  1. Validates the refresh token.
-	//  2. Generates a new access token.
-	//  3. Returns the access token.
 	RefreshToken(ctx context.Context, refreshToken string) (*RefreshTokenResult, *apierror.APIError)
 
 	// RevokeRefreshToken invalidates a refresh token so it can no longer be used to mint access tokens.
-	//
-	//  1. Revokes the refresh token.
-	//  2. Caches the success response.
 	RevokeRefreshToken(ctx context.Context, refreshToken string) *apierror.APIError
 }
 
 type UserSvc interface {
-	// Login authenticates a user by identifier + password and returns a token pair (access + refresh) along with the user profile.
-	//
-	//  1. Validates the credentials.
-	//  2. Generates a new access token.
-	//  3. Generates a new refresh token.
-	//  4. Returns the login result.
+	// Login authenticates a user and returns a token pair (access + refresh) plus the user profile.
 	Login(ctx context.Context, identifier, password string) (*LoginResult, *apierror.APIError)
 
-	// Register creates a new user account and returns a token pair so the user is immediately logged in after registration.
-	//
-	//  1. Hashes the password.
-	//  2. Calls the user mediator to register the user.
-	//  3. Calls the refresh token mediator to create a new refresh token.
-	//  4. Calls the user mediator to generate an access token.
-	//  5. Caches the success response.
-	//  6. Returns the login result.
+	// Register creates a new user and returns a token pair so the user is immediately logged in.
 	Register(ctx context.Context, input RegisterInput) (*LoginResult, *apierror.APIError)
 }
 
 type PasswordSvc interface {
 	// UpdatePassword updates a user's password.
 	//
-	//  1. Hashes the new password.
-	//  2. Calls the user mediator to update the user's password.
-	//  3. Calls the refresh token mediator to revoke all refresh tokens for the user.
-	//  4. Caches the success response.
-	//  5. Returns the login result.
+	// Side effects:
+	//   - Revokes existing refresh tokens for the user.
 	UpdatePassword(ctx context.Context, userID string, oldPassword, newPassword string) *apierror.APIError
 
-	// ResetPassword completes the password reset flow using the token from the reset email.
+	// ResetPassword completes the password reset flow and returns a token pair plus the user profile.
 	//
-	//  1. Validates the token.
-	//  2. Hashes the new password.
-	//  3. Calls the user mediator to update the user's password.
-	//  4. Calls the refresh token mediator to create a new refresh token.
-	//  5. Calls the user mediator to generate an access token.
-	//  6. Caches the success response.
-	//  7. Returns the login result.
+	// Side effects:
+	//   - Revokes existing refresh tokens for the user.
 	ResetPassword(ctx context.Context, token, newPassword string) (*LoginResult, *apierror.APIError)
 
-	// RequestPasswordReset requests a password reset for a given identifier.
-	//
-	//  1. Calls the password mediator to request a password reset.
-	//  2. Caches the success response.
+	// RequestPasswordReset initiates a password reset flow for the identifier.
 	RequestPasswordReset(ctx context.Context, identifier string, accountSlug *string) *apierror.APIError
+}
+
+type CreateRegistrationSessionInput struct {
+	Email    string
+	PlanCode string
+}
+
+type CreateRegistrationSessionResult struct {
+	SessionID string
+}
+
+type CreateUserForRegistrationInput struct {
+	SessionID string
+	Name      string
+	Password  string // #nosec G117 - Struct field, not a hardcoded credential
+}
+
+type CreateUserForRegistrationOutput struct {
+	UserID       string
+	AccessToken  string // #nosec G117 - Struct field, not a hardcoded credential
+	RefreshToken string // #nosec G117 - Struct field, not a hardcoded credential
+}
+
+type UpdateRegistrationSessionData struct {
+	UserName                 *string
+	AccountName              *string
+	BillingAddressLine1      *string
+	BillingAddressLine2      *string
+	BillingAddressCity       *string
+	BillingAddressState      *string
+	BillingAddressPostalCode *string
+	BillingAddressCountry    *string
+}
+
+// MergeInto applies non-nil fields from the update into the target, leaving
+// fields that were not provided in the PATCH request unchanged.
+func (u *UpdateRegistrationSessionData) MergeInto(target *RegistrationSessionData) {
+	ptrutil.ApplyIfSet(&target.UserName, u.UserName)
+	ptrutil.ApplyIfSet(&target.AccountName, u.AccountName)
+	ptrutil.ApplyIfSet(&target.BillingAddressLine1, u.BillingAddressLine1)
+	ptrutil.ApplyIfSet(&target.BillingAddressLine2, u.BillingAddressLine2)
+	ptrutil.ApplyIfSet(&target.BillingAddressCity, u.BillingAddressCity)
+	ptrutil.ApplyIfSet(&target.BillingAddressState, u.BillingAddressState)
+	ptrutil.ApplyIfSet(&target.BillingAddressPostalCode, u.BillingAddressPostalCode)
+	ptrutil.ApplyIfSet(&target.BillingAddressCountry, u.BillingAddressCountry)
+}
+
+type UpdateRegistrationSessionInput struct {
+	SessionID   string
+	Step        *constants.RegistrationStep
+	SessionData *UpdateRegistrationSessionData
+}
+
+type ConfirmPaymentInput struct {
+	SessionID         string
+	CheckoutSessionID string
+}
+
+type ConfirmPaymentOutput struct {
+	Status           string
+	SubscriptionID   string
+	StripeCustomerID string
+}
+
+type CreateRegistrationCheckoutInput struct {
+	SessionID string
+}
+
+type CreateRegistrationCheckoutOutput struct {
+	ClientSecret     string // #nosec G117 - Stripe checkout client secret (ephemeral, not a stored credential)
+	CheckoutID       string
+	StripeCustomerID string
+	PublishableKey   string
+}
+
+type ListRegistrationSessionsInput struct {
+	Cursor *string
+	Limit  int32
+}
+
+type ListRegistrationSessionsResult struct {
+	Sessions []*RegistrationSession
+	PageInfo pagination.PageInfo
+}
+
+type RegistrationSessionSvc interface {
+	// CreateSession creates a new registration session or returns an existing
+	// active (uncompleted) session for the given email.
+	//
+	// Side effects:
+	//   - Sends a verification email to the user.
+	CreateSession(ctx context.Context, input CreateRegistrationSessionInput) (*CreateRegistrationSessionResult, *apierror.APIError)
+
+	// ResendVerificationEmail regenerates the verification token for an
+	// existing registration session and resends the verification email.
+	//
+	// Side effects:
+	//   - Rotates the verification token.
+	//   - Sends a new verification email to the user.
+	ResendVerificationEmail(ctx context.Context, sessionID string) *apierror.APIError
+
+	// VerifyToken verifies the email token from the registration verification
+	// link. Marks the session's email as verified and advances the step to
+	// user_details. Idempotent: repeated calls return the same session.
+	VerifyToken(ctx context.Context, token string) (*RegistrationSession, *apierror.APIError)
+
+	// GetSession returns the current state of a registration session by its
+	// type ID. Returns a not-found error if the session does not exist.
+	GetSession(ctx context.Context, sessionID string) (*RegistrationSession, *apierror.APIError)
+
+	// CreateUserForSession creates or resolves a user for a registration session
+	// and returns the user ID with auth tokens.
+	//
+	// Side effects:
+	//   - Creates a new user if one does not already exist for the session email.
+	//   - Associates the user with the registration session.
+	//   - Advances the session step to account_details.
+	CreateUserForSession(ctx context.Context, input CreateUserForRegistrationInput) (*CreateUserForRegistrationOutput, *apierror.APIError)
+
+	// UpdateSession updates an in-progress registration session's step, form
+	// data, and/or Stripe-related fields. Returns the updated session.
+	//
+	// Authorization:
+	//   - Requires a user identity in context.
+	UpdateSession(ctx context.Context, input UpdateRegistrationSessionInput) (*RegistrationSession, *apierror.APIError)
+
+	// ListSessions returns a paginated list of open (uncompleted) registration
+	// sessions for the authenticated user.
+	//
+	// Authorization:
+	//   - Requires a user identity in context.
+	ListSessions(ctx context.Context, input ListRegistrationSessionsInput) (*ListRegistrationSessionsResult, *apierror.APIError)
+
+	// CreateCheckout creates a Stripe checkout session for a registration session.
+	// Uses recovery points for crash safety across Stripe API calls.
+	//
+	// Authorization:
+	//   - Requires a user identity in context.
+	CreateCheckout(ctx context.Context, input CreateRegistrationCheckoutInput) (*CreateRegistrationCheckoutOutput, *apierror.APIError)
+
+	// CompleteRegistration finalizes a registration session by calling
+	// core-service to create the production account, sandbox, roles, and
+	// permissions, then marks the session as completed.
+	//
+	// Authorization:
+	//   - Requires a user identity in context matching the session's user.
+	CompleteRegistration(ctx context.Context, sessionID string) (*CompleteRegistrationOutput, *apierror.APIError)
+
+	// ConfirmPayment verifies a Stripe checkout session's payment status via the
+	// billing service. If the checkout is complete, marks the registration
+	// session's payment as done and records the subscription ID.
+	ConfirmPayment(ctx context.Context, input ConfirmPaymentInput) (*ConfirmPaymentOutput, *apierror.APIError)
+}
+
+// CompleteRegistrationOutput holds the IDs of the newly created accounts.
+type CompleteRegistrationOutput struct {
+	AccountID string
+	SandboxID string
+}
+
+// CompleteAccountRegistrationInput carries the data sent to core-service
+// to create the account and sandbox.
+type CompleteAccountRegistrationInput struct {
+	UserID               string
+	PlanCode             string
+	StripeCustomerID     string
+	StripeSubscriptionID string
+	AccountName          string
+	BusinessAddress      *RegistrationAddress
+}
+
+// RegistrationAddress is a structured postal address collected during
+// registration.
+type RegistrationAddress struct {
+	Line1      string
+	Line2      string
+	City       string
+	State      string
+	PostalCode string
+	Country    string
 }
 
 type CreateAPIKeyInput struct {
@@ -104,7 +259,7 @@ type CreateAPIKeyInput struct {
 
 type CreateAPIKeyResult struct {
 	APIKeySecret string
-	APIKey       *APIKey
+	APIKey       *apikey.APIKey
 }
 
 type RotateAPIKeyInput struct {
@@ -117,66 +272,66 @@ type RevokeAPIKeyInput struct {
 }
 
 type ListAPIKeysResult struct {
-	APIKeys    []*APIKey
-	HasMore    bool
-	NextCursor *string
+	APIKeys  []*apikey.APIKey
+	PageInfo pagination.PageInfo
 }
 
 type GetOrCreateDocAPIKeyResult struct {
 	APIKeySecret string
-	APIKey       *APIKey
+	APIKey       *apikey.APIKey
 }
 
 type DocAPIKeySvc interface {
-	// GetOrCreateDocAPIKey returns a sandbox API key for documentation.
-	// Reuses an existing valid key, rotates an expired one, or creates a new one.
+	// GetOrCreateDocAPIKey returns a documentation API key for the caller's target account.
 	//
-	//  1. Get identity from context.
-	//  2. Check if the identity is an internal actor, a user type, and an admin.
-	//  3. Check if the identity has a target account ID.
-	//  4. Resolve the sandbox account ID for the target account.
-	//  5. Check for an existing doc API key for the sandbox account.
-	//  6. If the key is expired, rotate it.
-	//  7. If the key is valid, decrypt and return it.
-	//  8. If no key exists, create a new one.
-	//  9. Store the doc API key in the database.
-	//  10. Return the doc API key secret and model.
+	// Authorization:
+	//   - Requires an internal identity with a target account in context.
+	//
+	// Behavior:
+	//   - Reuses an existing valid key.
+	//   - Rotates and replaces an expired key.
+	//
+	// Side effects:
+	//   - May rotate (revoke and replace) an existing doc API key.
 	GetOrCreateDocAPIKey(ctx context.Context) (*GetOrCreateDocAPIKeyResult, *apierror.APIError)
 }
 
 type APIKeySvc interface {
-	// CreateAPIKey creates a new API key for the given account mode.
+	// GetAPIKey returns a single API key's metadata by its type ID.
 	//
-	//  1. Get identity from context.
-	//  2. Check if the identity is an internal actor and an admin.
-	//  3. Check if the identity has a target account ID.
-	//  4. Create an API key for the given account mode.
-	//  5. Return the API key secret and model.
+	// Authorization:
+	//   - Requires an internal admin identity with a target account in context.
+	//   - The key must belong to the caller's target account.
+	GetAPIKey(ctx context.Context, apiKeyID string) (*apikey.APIKey, *apierror.APIError)
+
+	// CreateAPIKey creates a new API key for the caller's target account.
+	//
+	// Authorization:
+	//   - Requires an internal admin identity with a target account in context.
 	CreateAPIKey(ctx context.Context, input CreateAPIKeyInput) (*CreateAPIKeyResult, *apierror.APIError)
 
-	// RotateAPIKey rotates a given API key.
+	// RotateAPIKey rotates (revokes and replaces) an API key.
 	//
-	//  1. Get identity from context.
-	//  2. Check if the identity is an internal actor and an admin.
-	//  3. Check if the identity has a target account ID.
-	//  4. Rotate the API key.
-	//  5. Return the API key secret and model.
+	// Authorization:
+	//   - Requires an internal admin identity with a target account in context.
+	//
+	// Side effects:
+	//   - Revokes the prior API key.
 	RotateAPIKey(ctx context.Context, input RotateAPIKeyInput) (*CreateAPIKeyResult, *apierror.APIError)
 
 	// RevokeAPIKey revokes an API key without creating a replacement.
 	//
-	//  1. Get identity from context.
-	//  2. Check if the identity is an internal actor and an admin.
-	//  3. Check if the identity has a target account ID.
-	//  4. Revoke the API key.
+	// Authorization:
+	//   - Requires an internal admin identity with a target account in context.
 	RevokeAPIKey(ctx context.Context, input RevokeAPIKeyInput) *apierror.APIError
 
-	// ListAPIKeys lists API keys for the target account.
+	// ListAPIKeys returns a paginated list of API keys for the caller's target account.
 	//
-	//  1. Get identity from context.
-	//  2. Check if the identity is an internal actor and an admin.
-	//  3. Check if the identity has a target account ID.
-	//  4. List API keys for the account.
-	//  5. Return the list result with pagination info.
+	// Authorization:
+	//   - Requires an internal admin identity with a target account in context.
+	//
+	// Pagination:
+	//   - If cursor is non-nil, results begin after the provided cursor.
+	//   - limit controls the maximum number of results returned.
 	ListAPIKeys(ctx context.Context, cursor *string, limit int32, query *string, statuses []constants.APIKeyStatus) (*ListAPIKeysResult, *apierror.APIError)
 }

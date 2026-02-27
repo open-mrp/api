@@ -3,20 +3,15 @@ package domain
 import (
 	"context"
 	"encoding/json"
-	"errors"
 
 	apierror "github.com/augno/api/shared/errors"
 )
 
 type RequestLogRepo interface {
 	Create(ctx context.Context, requestLog *RequestLog) *apierror.APIError
+	FindByID(ctx context.Context, id, targetAccountID string) (*RequestLogRead, *apierror.APIError)
+	List(ctx context.Context, targetAccountID string, filter *ListRequestLogsFilter) (*ListRequestLogsResult, *apierror.APIError)
 }
-
-var (
-	ErrKeyNotFound  = errors.New("idempotency key not found")
-	ErrKeyLocked    = errors.New("idempotency key is locked by another request")
-	ErrHashMismatch = errors.New("idempotency key was used with different request parameters")
-)
 
 type UpsertAndLockResult struct {
 	Key     *IdempotencyKey
@@ -45,9 +40,9 @@ type GetRecoveryPointResult struct {
 }
 
 type IdempotencyKeyRepo interface {
-	UpsertAndLock(ctx context.Context, key *IdempotencyKey) (*UpsertAndLockResult, error)
-	SetResponse(ctx context.Context, params SetResponseParams) error
-	ReleaseLock(ctx context.Context, id string) error
-	AdvanceRecoveryPoint(ctx context.Context, params AdvanceRecoveryPointParams) error
-	GetRecoveryPoint(ctx context.Context, id string) (*GetRecoveryPointResult, error)
+	UpsertAndLock(ctx context.Context, key *IdempotencyKey) (*UpsertAndLockResult, *apierror.APIError)
+	SetResponse(ctx context.Context, params SetResponseParams) *apierror.APIError
+	ReleaseLock(ctx context.Context, id string) *apierror.APIError
+	AdvanceRecoveryPoint(ctx context.Context, params AdvanceRecoveryPointParams) *apierror.APIError
+	GetRecoveryPoint(ctx context.Context, id string) (*GetRecoveryPointResult, *apierror.APIError)
 }

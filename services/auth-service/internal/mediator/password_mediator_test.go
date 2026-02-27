@@ -30,7 +30,6 @@ type PasswordMedTestSuite struct {
 	repoFactory           *factorymock.MockRepoFactory
 	refreshTokenMed       *mediatormock.MockRefreshTokenMed
 	notificationPublisher *publishermock.MockNotificationPublisher
-	jwtUtils              domain.JWTUtils
 	ctrl                  *gomock.Controller
 }
 
@@ -43,12 +42,10 @@ func (suite *PasswordMedTestSuite) SetupSuite() {
 	suite.refreshTokenMed = mediatormock.NewMockRefreshTokenMed(suite.ctrl)
 	suite.notificationPublisher = publishermock.NewMockNotificationPublisher(suite.ctrl)
 
-	suite.jwtUtils = token.NewJWTUtils(&token.JWTConfig{Secret: testutil.JWTSecret})
-
 	passwordMedConfig := &PasswordMedConfig{
 		Repos:                 suite.repoFactory,
 		RefreshTokenMed:       suite.refreshTokenMed,
-		JWTUtils:              suite.jwtUtils,
+		JWTSecret:             testutil.JWTSecret,
 		NotificationPublisher: suite.notificationPublisher,
 		FrontendURL:           "https://test.example.com",
 	}
@@ -237,7 +234,7 @@ func (suite *PasswordMedTestSuite) TestValidatePasswordResetToken_Success() {
 		Return(user, nil).
 		Times(1)
 
-	resetToken, err := suite.jwtUtils.Encode(ctx, userID, 15*time.Minute, domain.JWTTypePasswordReset)
+	resetToken, err := token.EncodeJWT(ctx, testutil.JWTSecret, userID, 15*time.Minute, token.JWTTypePasswordReset)
 	suite.Require().Nil(err)
 
 	result, apiErr := suite.passwordMed.ValidatePasswordResetToken(ctx, resetToken)
@@ -250,7 +247,7 @@ func (suite *PasswordMedTestSuite) TestValidatePasswordResetToken_RejectsAccessT
 	ctx := context.Background()
 	userID := testutil.EntityIDUser
 
-	accessToken, err := suite.jwtUtils.Encode(ctx, userID, time.Hour, domain.JWTTypeAccess)
+	accessToken, err := token.EncodeJWT(ctx, testutil.JWTSecret, userID, time.Hour, token.JWTTypeAccess)
 	suite.Require().Nil(err)
 
 	result, apiErr := suite.passwordMed.ValidatePasswordResetToken(ctx, accessToken)
@@ -265,7 +262,7 @@ func (suite *PasswordMedTestSuite) TestValidatePasswordResetToken_UserNotFound()
 	ctx := context.Background()
 	userID := testutil.EntityIDUser
 
-	resetToken, err := suite.jwtUtils.Encode(ctx, userID, 15*time.Minute, domain.JWTTypePasswordReset)
+	resetToken, err := token.EncodeJWT(ctx, testutil.JWTSecret, userID, 15*time.Minute, token.JWTTypePasswordReset)
 	suite.Require().Nil(err)
 
 	suite.userRepo.EXPECT().

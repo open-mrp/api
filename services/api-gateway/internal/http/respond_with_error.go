@@ -9,12 +9,21 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
+var frontendURL string
+
+// SetFrontendURL configures the frontend base URL used to build request log links
+// in error responses. When empty, the request_log_url field will be null.
+func SetFrontendURL(url string) {
+	frontendURL = url
+}
+
 func RespondWithAPIError(ctx context.Context, w http.ResponseWriter, apiErr *apierror.APIError, opts ...RespondOption) {
 	if apiErr == nil {
 		panic("RespondWithAPIError: apiErr received is nil.")
 	}
 
-	if rl, ok := appctx.GetRequestLog(ctx); ok && rl != nil {
+	rl, hasRL := appctx.GetRequestLog(ctx)
+	if hasRL && rl != nil {
 		errorCode := string(apiErr.Code)
 		rl.ErrorCode = &errorCode
 		rl.ErrorMessage = &apiErr.PublicMessage
@@ -28,5 +37,15 @@ func RespondWithAPIError(ctx context.Context, w http.ResponseWriter, apiErr *api
 	}
 
 	statusCode := apierror.GetHTTPStatusCode(apiErr.Code)
-	RespondWithJSON(ctx, w, statusCode, apiErr.ToResponseMap(), opts...)
+	resp := apiErr.ToResponseMap()
+
+	if frontendURL != "" && hasRL && rl != nil {
+		if errResp, ok := resp.(apierror.APIErrorResponse); ok {
+			url := frontendURL + "/dashboard/request-logs/" + rl.ID
+			errResp.Error.RequestLogURL = &url
+			resp = errResp
+		}
+	}
+
+	RespondWithJSON(ctx, w, statusCode, resp, opts...)
 }

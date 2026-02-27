@@ -13,7 +13,7 @@ import (
 // ListAPIKeysRequest embeds PaginationRequest and adds a status filter.
 type ListAPIKeysRequest struct {
 	apiresource.PaginationRequest
-	// Filter API keys by status. Valid values: active, expired, revoked.
+	// Filter API keys by status.
 	Status []constants.APIKeyStatus `query:"status" default:"active,expired,revoked"`
 }
 
@@ -32,8 +32,12 @@ func (e *ListAPIKeysEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAPIKey
 		Response:          &apiresource.List[apiresource.APIKey]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
+		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListAPIKeysRequest) (*apiresource.List[apiresource.APIKey], *apierror.APIError) {
 			return svc.(APIKeySvc).ListAPIKeys
+		},
+		Extras: apiendpoint.APIEndpointExtras{
+			AllowUnknownJSONFields: false,
 		},
 	}
 }

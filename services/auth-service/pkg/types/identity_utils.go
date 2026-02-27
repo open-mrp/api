@@ -3,6 +3,7 @@ package types
 import (
 	"fmt"
 
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -57,6 +58,18 @@ func CheckIsAdmin(identity *Identity) *apierror.APIError {
 
 	if !identity.IsAdmin() {
 		return apierror.NewAuthorizationError("You must be an administrator to access this resource.")
+	}
+
+	return nil
+}
+
+func CheckNotSandboxMode(identity *Identity) *apierror.APIError {
+	if err := CheckIsAuthenticated(identity); err != nil {
+		return err
+	}
+
+	if identity.AccountMode == constants.AccountModeSandbox {
+		return apierror.NewAuthorizationError("Sandbox management is not available in sandbox mode.")
 	}
 
 	return nil

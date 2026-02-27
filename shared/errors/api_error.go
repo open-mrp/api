@@ -17,10 +17,22 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
-	"github.com/augno/api/shared/ptrutil"
 	"github.com/augno/api/shared/version"
 )
+
+// QuotaInfo provides machine-readable details about a plan-imposed resource limit.
+// Included in limit_exceeded errors so clients can display upgrade prompts, usage bars,
+// or implement programmatic retry/backoff logic.
+type QuotaInfo struct {
+	// Limit is the maximum number of resources allowed by the current plan.
+	Limit int32 `json:"limit"`
+	// Used is the number of resources currently consumed.
+	Used int32 `json:"used"`
+	// ResetAt is the time when the quota resets, if applicable. Nil for static (non-metered) limits.
+	ResetAt *time.Time `json:"reset_at"`
+}
 
 // ErrorCode is a machine-readable identifier for a specific error condition.
 // These codes are returned in API responses and used by clients to programmatically
@@ -40,6 +52,9 @@ const (
 	ErrorCodeInvalidCredentials ErrorCode = "invalid_credentials" // #nosec G101 - This is an error code constant, not a hardcoded credential
 	// ErrorCodeInsufficientPerms indicates the caller is authenticated but lacks the required role or permission.
 	ErrorCodeInsufficientPerms ErrorCode = "insufficient_permissions"
+	// ErrorCodePaymentRequired indicates the account's subscription is in a non-active state
+	// (past_due, canceled, unpaid) and must be resolved before the account can continue using the platform.
+	ErrorCodePaymentRequired ErrorCode = "payment_required"
 
 	// --- Validation errors (400) ---
 
@@ -69,6 +84,16 @@ const (
 	// ErrorCodeIdempotencyInProgress indicates a request with the same idempotency key is
 	// currently being processed. The client should retry after a short delay.
 	ErrorCodeIdempotencyInProgress ErrorCode = "idempotency_in_progress"
+
+	// --- Limit errors (403) ---
+
+	// ErrorCodeLimitExceeded indicates the account has reached a plan-imposed resource limit
+	// (e.g. maximum sandbox accounts). The caller must upgrade their plan to increase the limit.
+	ErrorCodeLimitExceeded ErrorCode = "limit_exceeded"
+	// ErrorCodeRegistrationClosed indicates that public registration for the
+	// requested plan code has reached its capacity. Distinct from limit_exceeded,
+	// which applies to per-account resource quotas (e.g. sandbox count).
+	ErrorCodeRegistrationClosed ErrorCode = "registration_closed"
 
 	// --- Rate limiting (429) ---
 
@@ -182,6 +207,9 @@ type APIError struct {
 	// IsTransient indicates whether the client should retry the request.
 	// Automatically set by NewAPIError based on the error code and type.
 	IsTransient bool `json:"is_transient"`
+	// Quota provides machine-readable details about a plan-imposed resource limit.
+	// Only populated for limit_exceeded errors. Included in API responses when non-nil.
+	Quota *QuotaInfo `json:"quota,omitempty"`
 	// InternalMessage is a developer-facing message for logs and traces. Never sent to clients.
 	InternalMessage string `json:"-"`
 	// Internal is the underlying error, if any. Never sent to clients. Accessible via Unwrap().
@@ -220,6 +248,14 @@ func (e *APIError) WithInternal(err error) *APIError {
 	return e
 }
 
+// WithQuota attaches quota details to the error and returns the same pointer for chaining.
+// Intended for limit_exceeded errors so clients receive the plan limit, current usage,
+// and optional reset time in the response envelope.
+func (e *APIError) WithQuota(limit, used int32, resetAt *time.Time) *APIError {
+	e.Quota = &QuotaInfo{Limit: limit, Used: used, ResetAt: resetAt}
+	return e
+}
+
 // APIErrorOption is a functional option applied during NewAPIError construction.
 // Use the package-level WithParam, WithDocURL, and WithInternal functions to create options.
 type APIErrorOption func(*APIError)
@@ -242,6 +278,13 @@ func WithDocURL(url string) APIErrorOption {
 func WithInternal(err error) APIErrorOption {
 	return func(e *APIError) {
 		e.Internal = err
+	}
+}
+
+// WithQuota returns an option that attaches quota details during NewAPIError construction.
+func WithQuota(limit, used int32, resetAt *time.Time) APIErrorOption {
+	return func(e *APIError) {
+		e.Quota = &QuotaInfo{Limit: limit, Used: used, ResetAt: resetAt}
 	}
 }
 
@@ -287,100 +330,126 @@ func NewAPIError(code ErrorCode, errorType ErrorType, publicMessage string, inte
 
 // NewValidationError creates a 400 Bad Request error for general input validation failures.
 func NewValidationError(publicMessage string) *APIError {
-	return NewAPIError(ErrorCodeValidationFailed, ErrorTypeInvalidRequest, publicMessage, "")
+	return NewAPIError(ErrorCodeValidationFailed, ErrorTypeInvalidRequest, publicMessage, "", WithDocURL(docURLValidationFailed))
 }
 
 // NewValidationErrorWithParam creates a 400 Bad Request error tied to a specific request parameter.
 func NewValidationErrorWithParam(publicMessage string, param string) *APIError {
-	return NewAPIError(ErrorCodeValidationFailed, ErrorTypeInvalidRequest, publicMessage, "", WithParam(param))
+	return NewAPIError(ErrorCodeValidationFailed, ErrorTypeInvalidRequest, publicMessage, "", WithParam(param), WithDocURL(docURLValidationFailed))
 }
 
 // NewMissingFieldError creates a 400 error when a required field is not provided in the request body.
 func NewMissingFieldError(publicMessage string, param string) *APIError {
-	return NewAPIError(ErrorCodeMissingField, ErrorTypeInvalidRequest, publicMessage, "", WithParam(param))
+	return NewAPIError(ErrorCodeMissingField, ErrorTypeInvalidRequest, publicMessage, "", WithParam(param), WithDocURL(docURLMissingField))
 }
 
 // NewInvalidFormatError creates a 400 error when a field value does not match the expected format.
 func NewInvalidFormatError(publicMessage string, param string) *APIError {
-	return NewAPIError(ErrorCodeInvalidFormat, ErrorTypeInvalidRequest, publicMessage, "", WithParam(param))
+	return NewAPIError(ErrorCodeInvalidFormat, ErrorTypeInvalidRequest, publicMessage, "", WithParam(param), WithDocURL(docURLInvalidFormat))
 }
 
 // NewParameterMissingError creates a 400 error when a required query or path parameter is not provided.
 func NewParameterMissingError(publicMessage string, param string) *APIError {
-	return NewAPIError(ErrorCodeParameterMissing, ErrorTypeInvalidRequest, publicMessage, "", WithParam(param))
+	return NewAPIError(ErrorCodeParameterMissing, ErrorTypeInvalidRequest, publicMessage, "", WithParam(param), WithDocURL(docURLParameterMissing))
 }
 
 // NewParameterInvalidError creates a 400 error when a query or path parameter value is not valid.
 func NewParameterInvalidError(publicMessage string, param string) *APIError {
-	return NewAPIError(ErrorCodeParameterInvalid, ErrorTypeInvalidRequest, publicMessage, "", WithParam(param))
+	return NewAPIError(ErrorCodeParameterInvalid, ErrorTypeInvalidRequest, publicMessage, "", WithParam(param), WithDocURL(docURLParameterInvalid))
 }
 
 // NewParameterUnknownError creates a 400 error when an unrecognized parameter is sent in the request.
 func NewParameterUnknownError(publicMessage string, param string) *APIError {
-	return NewAPIError(ErrorCodeParameterUnknown, ErrorTypeInvalidRequest, publicMessage, "", WithParam(param))
+	return NewAPIError(ErrorCodeParameterUnknown, ErrorTypeInvalidRequest, publicMessage, "", WithParam(param), WithDocURL(docURLParameterUnknown))
 }
 
 // NewParametersExclusiveError creates a 400 error when mutually exclusive parameters are both provided.
 func NewParametersExclusiveError(publicMessage string, param string) *APIError {
-	return NewAPIError(ErrorCodeParametersExclusive, ErrorTypeInvalidRequest, publicMessage, "", WithParam(param))
+	return NewAPIError(ErrorCodeParametersExclusive, ErrorTypeInvalidRequest, publicMessage, "", WithParam(param), WithDocURL(docURLParametersExclusive))
 }
 
 // NewAuthenticationError creates a 401 Unauthorized error for invalid credentials.
 func NewAuthenticationError(publicMessage string) *APIError {
-	return NewAPIError(ErrorCodeInvalidCredentials, ErrorTypeInvalidRequest, publicMessage, "")
+	return NewAPIError(ErrorCodeInvalidCredentials, ErrorTypeInvalidRequest, publicMessage, "", WithDocURL(docURLInvalidCredentials))
 }
 
 // NewExpiredAPIKeyError creates a 401 error when an API key has passed its expiration date.
 func NewExpiredAPIKeyError(publicMessage string) *APIError {
-	return NewAPIError(ErrorCodeExpiredAPIKey, ErrorTypeInvalidRequest, publicMessage, "")
+	return NewAPIError(ErrorCodeExpiredAPIKey, ErrorTypeInvalidRequest, publicMessage, "", WithDocURL(docURLExpiredAPIKey))
 }
 
 // NewRevokedAPIKeyError creates a 401 error when an API key has been explicitly revoked.
 func NewRevokedAPIKeyError(publicMessage string) *APIError {
-	return NewAPIError(ErrorCodeRevokedAPIKey, ErrorTypeInvalidRequest, publicMessage, "")
+	return NewAPIError(ErrorCodeRevokedAPIKey, ErrorTypeInvalidRequest, publicMessage, "", WithDocURL(docURLRevokedAPIKey))
 }
 
 // NewAuthorizationError creates a 403 Forbidden error when the caller lacks required permissions.
 func NewAuthorizationError(publicMessage string) *APIError {
-	return NewAPIError(ErrorCodeInsufficientPerms, ErrorTypeInvalidRequest, publicMessage, "")
+	return NewAPIError(ErrorCodeInsufficientPerms, ErrorTypeInvalidRequest, publicMessage, "", WithDocURL(docURLInsufficientPerms))
+}
+
+// NewPaymentRequiredError creates a 402 Payment Required error when the account's subscription
+// is in a non-active state and must be resolved before continuing.
+func NewPaymentRequiredError(publicMessage string) *APIError {
+	return NewAPIError(ErrorCodePaymentRequired, ErrorTypeInvalidRequest, publicMessage, "", WithDocURL(docURLPaymentRequired))
+}
+
+// NewLimitExceededError creates a 403 Forbidden error when an account has reached
+// a plan-imposed resource limit (e.g. maximum sandbox accounts).
+func NewLimitExceededError(publicMessage string) *APIError {
+	return NewAPIError(ErrorCodeLimitExceeded, ErrorTypeInvalidRequest, publicMessage, "", WithDocURL(docURLLimitExceeded))
+}
+
+// NewRegistrationClosedError creates a 403 Forbidden error when public
+// registration for a plan code has reached its capacity.
+func NewRegistrationClosedError(publicMessage string) *APIError {
+	return NewAPIError(ErrorCodeRegistrationClosed, ErrorTypeInvalidRequest, publicMessage, "", WithDocURL(docURLRegistrationClosed))
 }
 
 // NewResourceNotFoundError creates a 404 Not Found error for missing resources.
 func NewResourceNotFoundError(publicMessage string) *APIError {
-	return NewAPIError(ErrorCodeResourceNotFound, ErrorTypeInvalidRequest, publicMessage, "")
+	return NewAPIError(ErrorCodeResourceNotFound, ErrorTypeInvalidRequest, publicMessage, "", WithDocURL(docURLResourceNotFound))
 }
 
 // NewResourceConflictError creates a 409 Conflict error for state conflicts (e.g. concurrent updates).
 func NewResourceConflictError(publicMessage string) *APIError {
-	return NewAPIError(ErrorCodeResourceConflict, ErrorTypeInvalidRequest, publicMessage, "")
+	return NewAPIError(ErrorCodeResourceConflict, ErrorTypeInvalidRequest, publicMessage, "", WithDocURL(docURLResourceConflict))
+}
+
+// NewResourceExistsError creates a 409 Conflict error for duplicate resource creation
+// (e.g. unique constraint violation). Uses ErrorCodeResourceExists rather than
+// ErrorCodeResourceConflict because the semantics are "this resource already exists"
+// rather than a generic state conflict.
+func NewResourceExistsError(publicMessage string) *APIError {
+	return NewAPIError(ErrorCodeResourceExists, ErrorTypeInvalidRequest, publicMessage, "", WithDocURL(docURLResourceConflict))
 }
 
 // NewResourceGoneError creates a 410 Gone error for permanently deleted resources.
 func NewResourceGoneError(publicMessage string) *APIError {
-	return NewAPIError(ErrorCodeResourceGone, ErrorTypeAPI, publicMessage, "")
+	return NewAPIError(ErrorCodeResourceGone, ErrorTypeAPI, publicMessage, "", WithDocURL(docURLResourceGone))
 }
 
 // NewIdempotencyInProgressError creates a 409 Conflict error when a request with the
 // same idempotency key is already being processed concurrently.
 func NewIdempotencyInProgressError(idempotencyKey string) *APIError {
-	return NewAPIError(ErrorCodeIdempotencyInProgress, ErrorTypeIdempotency, fmt.Sprintf("Request for the idempotency key '%s' is already being processed.", idempotencyKey), "")
+	return NewAPIError(ErrorCodeIdempotencyInProgress, ErrorTypeIdempotency, fmt.Sprintf("Request for the idempotency key '%s' is already being processed.", idempotencyKey), "", WithDocURL(docURLIdempotencyInProgress))
 }
 
 // NewIdempotencyHashMismatchError creates a validation error when an idempotency key
 // is reused with different request parameters than the original request.
 func NewIdempotencyHashMismatchError(idempotencyKey string) *APIError {
-	return NewAPIError(ErrorCodeValidationFailed, ErrorTypeIdempotency, fmt.Sprintf("Idempotency key '%s' was used with different request parameters; use a new key.", idempotencyKey), "")
+	return NewAPIError(ErrorCodeValidationFailed, ErrorTypeIdempotency, fmt.Sprintf("Idempotency key '%s' was used with different request parameters; use a new key.", idempotencyKey), "", WithDocURL(docURLValidationFailed))
 }
 
 // NewConflictErrorWithParam creates a 409 Conflict error tied to a specific parameter
 // (e.g. a duplicate email address).
 func NewConflictErrorWithParam(publicMessage string, param string) *APIError {
-	return NewAPIError(ErrorCodeResourceConflict, ErrorTypeInvalidRequest, publicMessage, "", WithParam(param))
+	return NewAPIError(ErrorCodeResourceConflict, ErrorTypeInvalidRequest, publicMessage, "", WithParam(param), WithDocURL(docURLResourceConflict))
 }
 
 // NewRateLimitExceededError creates a 429 Too Many Requests error. Marked as transient.
 func NewRateLimitExceededError(publicMessage string) *APIError {
-	return NewAPIError(ErrorCodeRateLimitExceeded, ErrorTypeInvalidRequest, publicMessage, "")
+	return NewAPIError(ErrorCodeRateLimitExceeded, ErrorTypeInvalidRequest, publicMessage, "", WithDocURL(docURLRateLimit))
 }
 
 // NewInternalError creates a 500 Internal Server Error with a generic public message
@@ -388,7 +457,7 @@ func NewRateLimitExceededError(publicMessage string) *APIError {
 // If the underlying error is itself an APIError, their internal messages are chained.
 func NewInternalError(internal error, internalMessage string) *APIError {
 	combinedMessage := nestInternalMessage(internal, internalMessage)
-	return NewAPIError(ErrorCodeInternalError, ErrorTypeAPI, "Something went wrong.", combinedMessage, WithInternal(internal))
+	return NewAPIError(ErrorCodeInternalError, ErrorTypeAPI, "Something went wrong.", combinedMessage, WithInternal(internal), WithDocURL(docURLInternalError))
 }
 
 // NewInvariantViolationError creates a 500 error for conditions that should never occur
@@ -396,39 +465,39 @@ func NewInternalError(internal error, internalMessage string) *APIError {
 // message is generic; the internal message captures what invariant was violated.
 func NewInvariantViolationError(internalMessage string) *APIError {
 	internal := errors.New("")
-	return NewAPIError(ErrorCodeInternalError, ErrorTypeAPI, "Something went wrong.", internalMessage, WithInternal(internal))
+	return NewAPIError(ErrorCodeInternalError, ErrorTypeAPI, "Something went wrong.", internalMessage, WithInternal(internal), WithDocURL(docURLInternalError))
 }
 
 // NewMethodNotAllowedError creates a 405 Method Not Allowed error.
 func NewMethodNotAllowedError(publicMessage string) *APIError {
-	return NewAPIError(ErrorCodeMethodNotAllowed, ErrorTypeInvalidRequest, publicMessage, "")
+	return NewAPIError(ErrorCodeMethodNotAllowed, ErrorTypeInvalidRequest, publicMessage, "", WithDocURL(docURLMethodNotAllowed))
 }
 
 // NewRequestTimeoutError creates a 408 Request Timeout error. Marked as transient.
 func NewRequestTimeoutError(internalMessage string) *APIError {
-	return NewAPIError(ErrorCodeRequestTimeout, ErrorTypeAPI, "Request timed out.", internalMessage)
+	return NewAPIError(ErrorCodeRequestTimeout, ErrorTypeAPI, "Request timed out.", internalMessage, WithDocURL(docURLRequestTimeout))
 }
 
 // NewClientClosedRequestError creates a 499 error (nginx convention) when the client
 // disconnects before the server finishes processing.
 func NewClientClosedRequestError(publicMessage string) *APIError {
-	return NewAPIError(ErrorCodeClientClosedRequest, ErrorTypeAPI, publicMessage, "Client closed request.")
+	return NewAPIError(ErrorCodeClientClosedRequest, ErrorTypeAPI, publicMessage, "Client closed request.", WithDocURL(docURLClientClosedRequest))
 }
 
 // NewAPIVersionRequiredError creates a 400 error when the Augno-Version header is missing.
 func NewAPIVersionRequiredError() *APIError {
-	return NewAPIError(ErrorCodeAPIVersionRequired, ErrorTypeInvalidRequest, fmt.Sprintf("The Augno-Version header is required. Please include a valid API version. The latest version is %s.", version.Latest.String()), "")
+	return NewAPIError(ErrorCodeAPIVersionRequired, ErrorTypeInvalidRequest, fmt.Sprintf("The Augno-Version header is required. Please include a valid API version. The latest version is %s.", version.Latest.String()), "", WithDocURL(docURLAPIVersionRequired))
 }
 
 // NewAPIVersionInvalidError creates a 400 error when the requested API version is not recognized.
 func NewAPIVersionInvalidError(version string, supported []string) *APIError {
-	return NewAPIError(ErrorCodeAPIVersionInvalid, ErrorTypeInvalidRequest, fmt.Sprintf("Invalid API version '%s'. Supported versions: %v", version, supported), "")
+	return NewAPIError(ErrorCodeAPIVersionInvalid, ErrorTypeInvalidRequest, fmt.Sprintf("Invalid API version '%s'. Supported versions: %v", version, supported), "", WithDocURL(docURLAPIVersionInvalid))
 }
 
 // NewAPIVersionTooOldError creates a 400 error when the requested API version is below
 // the minimum version required by the endpoint.
 func NewAPIVersionTooOldError(requested, minimum string) *APIError {
-	return NewAPIError(ErrorCodeAPIVersionTooOld, ErrorTypeInvalidRequest, fmt.Sprintf("This endpoint requires API version %s or newer. You requested %s.", minimum, requested), "")
+	return NewAPIError(ErrorCodeAPIVersionTooOld, ErrorTypeInvalidRequest, fmt.Sprintf("This endpoint requires API version %s or newer. You requested %s.", minimum, requested), "", WithDocURL(docURLAPIVersionTooOld))
 }
 
 // ResponseError is the JSON-serializable error body returned to API clients. It contains
@@ -447,17 +516,23 @@ type ResponseError struct {
 	DocURL *string `json:"doc_url"`
 	// Whether this error is transient and the request can be retried.
 	IsTransient bool `json:"is_transient"`
+	// Quota provides plan limit details when the error is limit_exceeded. Nil otherwise.
+	Quota *QuotaInfo `json:"quota"`
+	// RequestLogURL is a link to the dashboard page for this request's log entry.
+	// Nil when no request log is available.
+	RequestLogURL *string `json:"request_log_url"`
 }
 
 // SchemaExample returns a representative instance for OpenAPI documentation generation.
 func (r ResponseError) SchemaExample() any {
 	return ResponseError{
-		Code:        ErrorCodeValidationFailed,
-		Type:        ErrorTypeInvalidRequest,
-		Message:     "The request was invalid.",
-		Param:       ptrutil.Ptr("email"),
-		DocURL:      ptrutil.Ptr("https://docs.augno.com/errors/validation_failed"),
-		IsTransient: false,
+		Code:          ErrorCodeValidationFailed,
+		Type:          ErrorTypeInvalidRequest,
+		Message:       "The request was invalid.",
+		Param:         new("email"),
+		DocURL:        new(docURLValidationFailed),
+		IsTransient:   false,
+		RequestLogURL: new("https://augno.com/dashboard/request-logs/rq_fbv1ygmybo3eauykr74"),
 	}
 }
 
@@ -475,8 +550,8 @@ func (r APIErrorResponse) SchemaExample() any {
 			Code:        ErrorCodeValidationFailed,
 			Type:        ErrorTypeInvalidRequest,
 			Message:     "The request was invalid.",
-			Param:       ptrutil.Ptr("email"),
-			DocURL:      ptrutil.Ptr("https://docs.augno.com/errors/validation_failed"),
+			Param:       new("email"),
+			DocURL:      new(docURLValidationFailed),
 			IsTransient: false,
 		},
 	}
@@ -492,10 +567,13 @@ func (e *APIError) ToResponseMap() any {
 		IsTransient: e.IsTransient,
 	}
 	if e.Param != "" {
-		resp.Param = ptrutil.Ptr(e.Param)
+		resp.Param = new(e.Param)
 	}
 	if e.DocURL != "" {
-		resp.DocURL = ptrutil.Ptr(e.DocURL)
+		resp.DocURL = new(e.DocURL)
+	}
+	if e.Quota != nil {
+		resp.Quota = e.Quota
 	}
 	return APIErrorResponse{Error: resp}
 }
@@ -505,10 +583,14 @@ func (e *APIError) ToResponseMap() any {
 func GetHTTPStatusCode(code ErrorCode) int {
 	switch code {
 	case ErrorCodeExpiredToken,
+		ErrorCodeExpiredAPIKey,
+		ErrorCodeRevokedAPIKey,
 		ErrorCodeInvalidCredentials:
 		return http.StatusUnauthorized
-	case ErrorCodeInsufficientPerms:
+	case ErrorCodeInsufficientPerms, ErrorCodeLimitExceeded, ErrorCodeRegistrationClosed:
 		return http.StatusForbidden
+	case ErrorCodePaymentRequired:
+		return http.StatusPaymentRequired
 	case ErrorCodeValidationFailed, ErrorCodeMissingField, ErrorCodeInvalidFormat,
 		ErrorCodeParameterMissing, ErrorCodeParameterInvalid, ErrorCodeParameterUnknown,
 		ErrorCodeParametersExclusive, ErrorCodeAPIVersionRequired, ErrorCodeAPIVersionInvalid,
@@ -555,14 +637,15 @@ func IsNotFound(err *APIError) bool {
 // them across gRPC service boundaries. Unlike the public ResponseError, this includes
 // internal diagnostic fields so they survive the hop between services.
 type apiErrorSerializable struct {
-	Code            ErrorCode `json:"code"`
-	Type            ErrorType `json:"type"`
-	PublicMessage   string    `json:"message"`
-	Param           string    `json:"param,omitempty"`
-	DocURL          string    `json:"doc_url,omitempty"`
-	IsTransient     bool      `json:"is_transient"`
-	InternalMessage string    `json:"internal_message,omitempty"`
-	InternalError   string    `json:"internal_error,omitempty"`
+	Code            ErrorCode  `json:"code"`
+	Type            ErrorType  `json:"type"`
+	PublicMessage   string     `json:"message"`
+	Param           string     `json:"param,omitempty"`
+	DocURL          string     `json:"doc_url,omitempty"`
+	IsTransient     bool       `json:"is_transient"`
+	Quota           *QuotaInfo `json:"quota,omitempty"`
+	InternalMessage string     `json:"internal_message,omitempty"`
+	InternalError   string     `json:"internal_error,omitempty"`
 }
 
 // ToJSON serializes the full APIError (including internal fields) to JSON for
@@ -579,6 +662,7 @@ func (e *APIError) ToJSON() ([]byte, error) {
 		Param:           e.Param,
 		DocURL:          e.DocURL,
 		IsTransient:     e.IsTransient,
+		Quota:           e.Quota,
 		InternalMessage: e.InternalMessage,
 	}
 
@@ -604,6 +688,7 @@ func APIErrorFromJSON(jsonData []byte) (*APIError, error) {
 		Param:           serializable.Param,
 		DocURL:          serializable.DocURL,
 		IsTransient:     serializable.IsTransient,
+		Quota:           serializable.Quota,
 		InternalMessage: serializable.InternalMessage,
 	}
 

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/augno/api/shared/constants"
+	"github.com/augno/api/shared/pagination"
 )
 
 type AccountType string
@@ -24,25 +25,17 @@ type SandboxAccount struct {
 	UpdatedAt      time.Time
 }
 
-// func (s *SandboxAccount) ToProto() *pb.Sandbox {
-// 	if s == nil {
-// 		return nil
-// 	}
-
-// 	return &pb.Sandbox{
-// 		Id:        s.TypeID,
-// 		Name:      s.Name,
-// 		AccountId: s.AccountID,
-// 		CreatedAt: timestamppb.New(s.CreatedAt),
-// 		UpdatedAt: timestamppb.New(s.UpdatedAt),
-// 	}
-// }
+type ListSandboxAccountsResult struct {
+	Sandboxes []*SandboxAccount
+	PageInfo  pagination.PageInfo
+}
 
 type AccountContext struct {
-	AccountID      string
-	IsSandbox      bool
-	OwnerAccountID *string
-	AccountMode    constants.AccountMode
+	AccountID          string
+	IsSandbox          bool
+	OwnerAccountID     *string
+	AccountMode        constants.AccountMode
+	SubscriptionStatus *string
 }
 
 type AccountUser struct {

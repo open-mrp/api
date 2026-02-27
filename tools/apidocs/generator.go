@@ -27,7 +27,7 @@ func generate(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOn
 		},
 		Servers: []Server{
 			{URL: "https://api.augno.com", Description: "Production server"},
-			{URL: "http://localhost:8080", Description: "Local development server"},
+			{URL: "http://localhost:8081", Description: "Local development server"},
 		},
 		Paths: make(map[string]map[string]Operation),
 		Components: Components{
@@ -58,6 +58,8 @@ func generate(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOn
 				continue
 			}
 
+			isPreview := specField.FieldByName("Preview").Bool()
+
 			groupHasEndpoints = true
 			title := specField.FieldByName("Title").String()
 			description := specField.FieldByName("Description").String()
@@ -80,6 +82,7 @@ func generate(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOn
 				Tags:        []string{group.Title},
 				Responses:   make(map[string]Response),
 				Parameters:  []Parameter{},
+				XPreview:    isPreview,
 			}
 
 			// Handle Parameters and Request Body
@@ -112,10 +115,14 @@ func generate(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOn
 						}
 						if query := f.Tag.Get("query"); query != "" {
 							paramSchema := generateSchema(f.Type, &spec.Components, docReader)
+							desc := getFieldDoc(reqType, f, docReader)
+							if desc == "" {
+								desc = fmt.Sprintf("Query parameter: %s for %s", query, title)
+							}
 							operation.Parameters = append(operation.Parameters, Parameter{
 								Name:        query,
 								In:          "query",
-								Description: fmt.Sprintf("Query parameter: %s for %s", query, title),
+								Description: desc,
 								Required:    strings.Contains(f.Tag.Get("validate"), "required"),
 								Schema:      paramSchema,
 								Example:     parameterExample(paramSchema),
@@ -135,10 +142,14 @@ func generate(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOn
 							})
 						}
 						if pathParam := f.Tag.Get("path"); pathParam != "" {
+							desc := getFieldDoc(reqType, f, docReader)
+							if desc == "" {
+								desc = fmt.Sprintf("Path parameter: %s for %s", pathParam, title)
+							}
 							operation.Parameters = append(operation.Parameters, Parameter{
 								Name:        pathParam,
 								In:          "path",
-								Description: fmt.Sprintf("Path parameter: %s for %s", pathParam, title),
+								Description: desc,
 								Required:    true,
 								Schema:      generateSchema(f.Type, &spec.Components, docReader),
 							})
@@ -211,6 +222,16 @@ func generate(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOn
 					},
 				}
 			}
+			// Add default error response referencing APIErrorResponse
+			operation.Responses["4XX"] = Response{
+				Description: "Error response",
+				Content: map[string]MediaConfig{
+					"application/json": {
+						Schema: Schema{Ref: "#/components/schemas/APIErrorResponse"},
+					},
+				},
+			}
+
 			groupPathMap[route][strings.ToLower(method)] = operation
 		}
 
@@ -252,8 +273,9 @@ func generate(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOn
 	// Apply transforms
 	data = applyTransforms(data, transforms)
 
-	// Reorder schema properties to match struct field declaration order
+	// Reorder schema properties and examples to match struct field declaration order
 	applyPropertyOrders(data, propertyOrders)
+	applyExampleOrders(data, propertyOrders)
 
 	// Use json.Marshal + json.Indent so orderedJSONMap.MarshalJSON is properly indented
 	compact, err := json.Marshal(data)
@@ -321,6 +343,11 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 	origT := t
 	if t.Kind() == reflect.Pointer {
 		t = t.Elem()
+	}
+
+	// Handle time.Time as a string with date-time format
+	if t.Kind() == reflect.Struct && t.PkgPath() == "time" && t.Name() == "Time" {
+		return Schema{Type: "string", Format: "date-time"}
 	}
 
 	switch t.Kind() {
@@ -391,20 +418,28 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 		}
 		// Create a List example with the route as the URL
 		dataArray := []any{}
+		var nextCursor *string
 		if itemExample != nil {
 			// Convert to map if it's not already
 			if itemMap, ok := itemExample.(map[string]any); ok {
 				dataArray = []any{itemMap}
+				if id, ok := itemMap["id"].(string); ok {
+					nextCursor = &id
+				}
 			} else {
 				dataArray = []any{itemExample}
 			}
 		}
 
 		example = map[string]any{
-			"object":      "list",
-			"has_more":    true,
-			"next_cursor": "sample_cursor_id",
-			"data":        dataArray,
+			"object": "list",
+			"page_info": map[string]any{
+				"next_cursor":   nextCursor,
+				"prev_cursor":   nil,
+				"has_next_page": true,
+				"has_prev_page": false,
+			},
+			"data": dataArray,
 		}
 	} else if reflect.PointerTo(t).Implements(reflect.TypeFor[contracts.DocumentedType]()) {
 		v := reflect.New(t).Interface().(contracts.DocumentedType)
@@ -494,11 +529,8 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 			case "data":
 				fieldSchema.XStainlessPaginationProperty = map[string]string{"purpose": "items"}
 				fieldSchema.Description = fmt.Sprintf("Array of %s resources in this page", itemTypeName)
-			case "has_more":
-				fieldSchema.Description = "Whether there are more results available after this page"
-			case "next_cursor":
-				fieldSchema.XStainlessPaginationProperty = map[string]string{"purpose": "cursor"}
-				fieldSchema.Description = "Cursor for fetching the next page, null if on last page"
+			case "page_info":
+				fieldSchema.Description = fmt.Sprintf("Pagination metadata for %s list", itemTypeName)
 			case "object":
 				fieldSchema.Description = fmt.Sprintf("Object type for %s list", itemTypeName)
 			}
@@ -525,6 +557,10 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 
 		if defaultVal := f.Tag.Get("default"); defaultVal != "" {
 			fieldSchema.Default = defaultVal
+		}
+
+		if formatVal := f.Tag.Get("format"); formatVal != "" {
+			fieldSchema.Format = formatVal
 		}
 
 		fieldType := f.Type
@@ -591,6 +627,11 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 			}
 			elemSchema := generateSchema(elemType, components, docReader)
 			fieldSchema.AdditionalProperties = &elemSchema
+		}
+
+		// In OpenAPI 3.0.x, a nullable enum must include null in the values list.
+		if fieldSchema.Nullable && len(fieldSchema.Enum) > 0 {
+			fieldSchema.Enum = append(fieldSchema.Enum, nil)
 		}
 
 		schema.Properties[name] = fieldSchema
@@ -704,4 +745,201 @@ func applyPropertyOrders(data any, orders map[string][]string) {
 		}
 		schemaRaw["properties"] = orderedJSONMap{order: order, values: props}
 	}
+}
+
+// applyExampleOrders walks the generic spec tree and wraps example maps with
+// orderedJSONMap so examples match struct field declaration order.
+func applyExampleOrders(data any, orders map[string][]string) {
+	root, ok := data.(map[string]any)
+	if !ok {
+		return
+	}
+	components, _ := root["components"].(map[string]any)
+	schemas, _ := components["schemas"].(map[string]any)
+	if schemas == nil {
+		return
+	}
+
+	// Order examples in component schemas
+	for name := range orders {
+		schemaRaw, ok := schemas[name].(map[string]any)
+		if !ok {
+			continue
+		}
+		if example, ok := schemaRaw["example"].(map[string]any); ok {
+			schemaRaw["example"] = orderExampleForSchema(example, name, schemas, orders)
+		}
+	}
+
+	// Order field-level examples in schema properties
+	for name := range orders {
+		schemaRaw, ok := schemas[name].(map[string]any)
+		if !ok {
+			continue
+		}
+		var props map[string]any
+		switch p := schemaRaw["properties"].(type) {
+		case orderedJSONMap:
+			props = p.values
+		case map[string]any:
+			props = p
+		}
+		for _, propRaw := range props {
+			propMap, ok := propRaw.(map[string]any)
+			if !ok {
+				continue
+			}
+			if ex, ok := propMap["example"].(map[string]any); ok {
+				if refName := resolveRefName(propMap); refName != "" && orders[refName] != nil {
+					propMap["example"] = orderExampleForSchema(ex, refName, schemas, orders)
+				}
+			}
+		}
+	}
+
+	// Order examples in paths (request bodies and responses)
+	paths, _ := root["paths"].(map[string]any)
+	for _, methods := range paths {
+		methodMap, _ := methods.(map[string]any)
+		for _, op := range methodMap {
+			opMap, _ := op.(map[string]any)
+			if rb, ok := opMap["requestBody"].(map[string]any); ok {
+				orderMediaExamples(rb["content"], schemas, orders)
+			}
+			if responses, ok := opMap["responses"].(map[string]any); ok {
+				for _, resp := range responses {
+					if respMap, ok := resp.(map[string]any); ok {
+						orderMediaExamples(respMap["content"], schemas, orders)
+					}
+				}
+			}
+		}
+	}
+}
+
+// orderMediaExamples finds examples in media type content and wraps them
+// with orderedJSONMap based on the referenced schema's property order.
+func orderMediaExamples(content any, schemas map[string]any, orders map[string][]string) {
+	contentMap, ok := content.(map[string]any)
+	if !ok {
+		return
+	}
+	for _, media := range contentMap {
+		mediaMap, ok := media.(map[string]any)
+		if !ok {
+			continue
+		}
+		example, ok := mediaMap["example"].(map[string]any)
+		if !ok {
+			continue
+		}
+		schemaName := resolveRefName(mediaMap["schema"])
+		if schemaName == "" || orders[schemaName] == nil {
+			continue
+		}
+		mediaMap["example"] = orderExampleForSchema(example, schemaName, schemas, orders)
+	}
+}
+
+// orderExampleForSchema recursively wraps example maps with orderedJSONMap
+// to match the struct field order defined in the schema.
+func orderExampleForSchema(example any, schemaName string, allSchemas map[string]any, orders map[string][]string) any {
+	m, ok := example.(map[string]any)
+	if !ok {
+		if arr, ok := example.([]any); ok {
+			for i, item := range arr {
+				arr[i] = orderExampleForSchema(item, schemaName, allSchemas, orders)
+			}
+		}
+		return example
+	}
+
+	order := orders[schemaName]
+	if len(order) == 0 {
+		return example
+	}
+
+	schema, _ := allSchemas[schemaName].(map[string]any)
+	if schema == nil {
+		return example
+	}
+
+	// Get properties map (may already be orderedJSONMap from applyPropertyOrders)
+	var props map[string]any
+	switch p := schema["properties"].(type) {
+	case orderedJSONMap:
+		props = p.values
+	case map[string]any:
+		props = p
+	}
+
+	// Recursively order nested objects and arrays
+	for key, val := range m {
+		propSchema, _ := props[key].(map[string]any)
+		if propSchema == nil {
+			continue
+		}
+		switch v := val.(type) {
+		case map[string]any:
+			if refName := resolveRefName(propSchema); refName != "" {
+				m[key] = orderExampleForSchema(v, refName, allSchemas, orders)
+			}
+		case []any:
+			items, _ := propSchema["items"].(map[string]any)
+			if items != nil {
+				if itemRef := resolveRefName(items); itemRef != "" {
+					for i, item := range v {
+						v[i] = orderExampleForSchema(item, itemRef, allSchemas, orders)
+					}
+				}
+			}
+		}
+	}
+
+	return orderedJSONMap{order: order, values: m}
+}
+
+// resolveRefName extracts the schema name from a $ref or allOf containing a $ref.
+func resolveRefName(schema any) string {
+	schemaMap, ok := schema.(map[string]any)
+	if !ok {
+		return ""
+	}
+	if ref, ok := schemaMap["$ref"].(string); ok {
+		return refLastSegment(ref)
+	}
+	if allOf, ok := schemaMap["allOf"].([]any); ok {
+		for _, item := range allOf {
+			if itemMap, ok := item.(map[string]any); ok {
+				if ref, ok := itemMap["$ref"].(string); ok {
+					return refLastSegment(ref)
+				}
+			}
+		}
+	}
+	return ""
+}
+
+// refLastSegment returns the last path segment of a $ref string.
+func refLastSegment(ref string) string {
+	if i := strings.LastIndex(ref, "/"); i >= 0 {
+		return ref[i+1:]
+	}
+	return ref
+}
+
+// getFieldDoc returns the doc comment for a struct field, handling promoted fields from embedded structs.
+func getFieldDoc(structType reflect.Type, field reflect.StructField, docReader *DocReader) string {
+	declaringType := structType
+	if len(field.Index) > 1 {
+		for _, idx := range field.Index[:len(field.Index)-1] {
+			ft := declaringType.Field(idx).Type
+			if ft.Kind() == reflect.Pointer {
+				ft = ft.Elem()
+			}
+			declaringType = ft
+		}
+	}
+	typeDoc := docReader.GetTypeDoc(declaringType)
+	return typeDoc.Fields[field.Name]
 }

@@ -40,7 +40,7 @@ func MapSQLError(err error) *apierror.APIError {
 	if errors.As(err, &mysqlErr) {
 		switch mysqlErr.Number {
 		case 1062: // duplicate entry
-			return apierror.NewResourceConflictError("Resource already exists.")
+			return apierror.NewResourceExistsError("Resource already exists.")
 		case 1205, 1213: // lock wait timeout / deadlock
 			return apierror.NewInternalError(err, "Database request timed out.")
 		case 1040, 2002, 2006: // too many connections / conn refused / server gone

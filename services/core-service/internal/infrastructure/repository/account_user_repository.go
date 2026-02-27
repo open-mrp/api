@@ -115,3 +115,75 @@ func (r *accountUserRepoImpl) GetAdminRoleID(ctx context.Context) (string, *apie
 
 	return roleID, nil
 }
+
+func (r *accountUserRepoImpl) DeactivateExcept(ctx context.Context, accountID, keepUserID string, limit int32) (int64, *apierror.APIError) {
+	ctx, span := accountUserRepoTracer.Start(ctx, "repository.account_user.deactivate_except")
+	defer span.End()
+
+	result, err := r.queries.DeactivateAccountUsersExcept(ctx, sqlc.DeactivateAccountUsersExceptParams{
+		AccountID: accountID,
+		UserID:    keepUserID,
+		Limit:     limit,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return 0, tracing.Trace(span, apiErr)
+	}
+
+	rows, _ := result.RowsAffected()
+	return rows, nil
+}
+
+func (r *accountUserRepoImpl) EnsureActive(ctx context.Context, accountID, userID string) *apierror.APIError {
+	ctx, span := accountUserRepoTracer.Start(ctx, "repository.account_user.ensure_active")
+	defer span.End()
+
+	_, err := r.queries.EnsureAccountUserActive(ctx, sqlc.EnsureAccountUserActiveParams{
+		AccountID: accountID,
+		UserID:    userID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	return nil
+}
+
+func (r *accountUserRepoImpl) CountActive(ctx context.Context, accountID string) (int64, *apierror.APIError) {
+	ctx, span := accountUserRepoTracer.Start(ctx, "repository.account_user.count_active")
+	defer span.End()
+
+	count, err := r.queries.CountActiveAccountUsers(ctx, accountID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return 0, tracing.Trace(span, apiErr)
+	}
+
+	return count, nil
+}
+
+func (r *accountUserRepoImpl) ReactivateUsers(ctx context.Context, accountID string, limit int32) (int64, *apierror.APIError) {
+	ctx, span := accountUserRepoTracer.Start(ctx, "repository.account_user.reactivate_users")
+	defer span.End()
+
+	result, err := r.queries.ReactivateAccountUsers(ctx, sqlc.ReactivateAccountUsersParams{
+		AccountID: accountID,
+		Limit:     limit,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return 0, tracing.Trace(span, apiErr)
+	}
+
+	rows, _ := result.RowsAffected()
+	return rows, nil
+}
+
+func (r *accountUserRepoImpl) FindAdminUserIDByAccountID(ctx context.Context, accountID string) (string, *apierror.APIError) {
+	ctx, span := accountUserRepoTracer.Start(ctx, "repository.account_user.find_admin_user_id_by_account_id")
+	defer span.End()
+
+	userID, err := r.queries.FindAdminUserIDByAccountID(ctx, accountID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return "", tracing.Trace(span, apiErr)
+	}
+
+	return userID, nil
+}

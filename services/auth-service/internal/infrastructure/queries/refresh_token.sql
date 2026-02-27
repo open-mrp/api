@@ -4,10 +4,10 @@ WHERE token = ?;
 
 -- name: CreateRefreshToken :exec
 INSERT INTO refresh_token (user_id, token, expires_at, created_at, updated_at)
-VALUES (?, ?, ?, NOW(), NOW());
+VALUES (?, ?, ?, NOW(3), NOW(3));
 
 -- name: RevokeRefreshToken :exec
-UPDATE refresh_token SET revoked_at = NOW(), updated_at = NOW() WHERE token = ?;
+UPDATE refresh_token SET revoked_at = NOW(3), updated_at = NOW(3) WHERE token = ?;
 
 -- name: RevokeAllRefreshTokensByUserID :exec
-UPDATE refresh_token SET revoked_at = NOW(), updated_at = NOW() WHERE user_id = ?;
+UPDATE refresh_token SET revoked_at = NOW(3), updated_at = NOW(3) WHERE user_id = ?;

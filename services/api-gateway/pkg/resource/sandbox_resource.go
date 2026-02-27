@@ -8,9 +8,9 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleSandboxID = "sbac_abc123xyz789"
+const SampleSandboxID = "sbac_01jm4r6700f8nwq3v5hx2d9ktp"
 const SampleSandboxName = "Integration Testing"
-const SampleSandboxAccountID = "ac_xyz789abc123"
+const SampleSandboxAccountID = "ac_01jm4r6700g2bz7y4c6e8f1jrm"
 
 var SampleSandbox = &Sandbox{
 	ID:        SampleSandboxID,
@@ -21,20 +21,20 @@ var SampleSandbox = &Sandbox{
 	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
-// Sandbox represents an isolated testing environment for an account
+// Sandbox represents an isolated testing environment for an account.
 type Sandbox struct {
-	// The unique identifier for the sandbox
-	ID string `json:"id"`
-	// The object type, always "sandbox"
-	Object constants.ObjectType `json:"object" validate:"enum=sandbox"`
-	// The display name of the sandbox
-	Name string `json:"name"`
-	// The ID of the account this sandbox belongs to
-	AccountID string `json:"account_id"`
-	// The timestamp when the sandbox was created
-	CreatedAt time.Time `json:"created_at"`
-	// The timestamp when the sandbox was last updated
-	UpdatedAt time.Time `json:"updated_at"`
+	// The unique identifier for the sandbox.
+	ID string `json:"id" validate:"required"`
+	// The object type.
+	Object constants.ObjectType `json:"object" validate:"required,enum=sandbox"`
+	// The display name of the sandbox.
+	Name string `json:"name" validate:"required"`
+	// The ID of the account this sandbox belongs to.
+	AccountID string `json:"account_id" validate:"required"`
+	// When this sandbox was created.
+	CreatedAt time.Time `json:"created_at" validate:"required"`
+	// When this sandbox was last updated.
+	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
 func (*Sandbox) SchemaExample() any {

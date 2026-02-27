@@ -11,9 +11,10 @@ import (
 )
 
 var (
-	defaultPort           = contracts.GRPCPort
-	defaultRabbitMQURI    = "amqp://guest:guest@rabbitmq:5672/" // #nosec G101 - Default dev URI, not a production credential
-	defaultCoreServiceURL = fmt.Sprintf("core-service:%d", contracts.GRPCPort)
+	defaultPort              = contracts.GRPCPort
+	defaultRabbitMQURI       = "amqp://guest:guest@rabbitmq:5672/" // #nosec G101 - Default dev URI, not a production credential
+	defaultCoreServiceURL    = fmt.Sprintf("core-service:%d", contracts.GRPCPort)
+	defaultBillingServiceURL = fmt.Sprintf("billing-service:%d", contracts.GRPCPort)
 )
 
 const (
@@ -26,6 +27,8 @@ const (
 	envCoreServiceURL         = "CORE_SERVICE_URL"
 	envPlatformServiceURL     = "PLATFORM_SERVICE_URL"
 	envDocAPIKeyEncryptionKey = "DOC_API_KEY_ENCRYPTION_KEY" // #nosec G101 - Env var name, not a credential
+	envBillingServiceURL      = "BILLING_SERVICE_URL"
+	envCursorHMACKey          = "CURSOR_HMAC_KEY" // #nosec G101 - Env var name, not a credential
 )
 
 // config represents the configuration for the auth service.
@@ -56,6 +59,12 @@ type config struct {
 
 	// DocAPIKeyEncryptionKey (optional) is the 32-byte AES-256 key used to encrypt doc API key secrets.
 	DocAPIKeyEncryptionKey []byte
+
+	// BillingServiceURL (optional; default: "billing-service:9092") is the billing service address for gRPC.
+	BillingServiceURL string
+
+	// CursorHMACKey (required) is the key used to HMAC-sign pagination cursors.
+	CursorHMACKey []byte
 }
 
 // withDefaults sets the default values for the configuration.
@@ -69,7 +78,7 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 		port = p
 	}
 
-	key, err := crypto.DecodeHexKey(env.GetEnv(envDocAPIKeyEncryptionKey, getenv))
+	key, err := crypto.DecodeHexKey256(env.GetEnv(envDocAPIKeyEncryptionKey, getenv))
 	if err != nil {
 		panic(err)
 	}
@@ -84,6 +93,8 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 		CoreServiceURL:         cmp.Or(env.GetEnv(envCoreServiceURL, getenv), defaultCoreServiceURL),
 		PlatformServiceURL:     env.GetEnv(envPlatformServiceURL, getenv),
 		DocAPIKeyEncryptionKey: key,
+		BillingServiceURL:      cmp.Or(env.GetEnv(envBillingServiceURL, getenv), defaultBillingServiceURL),
+		CursorHMACKey:          []byte(env.GetEnv(envCursorHMACKey, getenv)),
 	}
 }
 
@@ -103,6 +114,9 @@ func (c *config) validate() error {
 	}
 	if len(c.Pepper) == 0 {
 		return fmt.Errorf("the provided pepper is empty")
+	}
+	if len(c.CursorHMACKey) == 0 {
+		return fmt.Errorf("CURSOR_HMAC_KEY is required")
 	}
 	return nil
 }

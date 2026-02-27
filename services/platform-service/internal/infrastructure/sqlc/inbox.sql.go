@@ -68,6 +68,21 @@ func (q *Queries) MarkInboxRecordProcessed(ctx context.Context, id int64) error 
 	return err
 }
 
+const purgeProcessedInboxMessages = `-- name: PurgeProcessedInboxMessages :execresult
+DELETE FROM message_inbox
+WHERE status = 'processed' AND processed_at < DATE_SUB(NOW(3), INTERVAL ? HOUR)
+LIMIT ?
+`
+
+type PurgeProcessedInboxMessagesParams struct {
+	DATESUB interface{}
+	Limit   int32
+}
+
+func (q *Queries) PurgeProcessedInboxMessages(ctx context.Context, arg PurgeProcessedInboxMessagesParams) (sql.Result, error) {
+	return q.exec(ctx, q.purgeProcessedInboxMessagesStmt, purgeProcessedInboxMessages, arg.DATESUB, arg.Limit)
+}
+
 const tryInsertInboxRecord = `-- name: TryInsertInboxRecord :execresult
 INSERT INTO message_inbox (message_id, service_name, handler, message_type, request_id, parent_message_id)
 VALUES (?, ?, ?, ?, ?, ?)

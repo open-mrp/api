@@ -10,8 +10,9 @@ import (
 const platformServiceName = "platform-service"
 
 type PlatformServiceClient struct {
-	Client   pb.IdempotencyServiceClient
-	grpcConn *contracts.GRPCClientConn
+	Client        pb.IdempotencyServiceClient
+	LoggingClient pb.LoggingServiceClient
+	grpcConn      *contracts.GRPCClientConn
 }
 
 func NewPlatformServiceClient(getenv func(string) string) (*PlatformServiceClient, error) {
@@ -25,8 +26,9 @@ func NewPlatformServiceClientWithURL(url string) (*PlatformServiceClient, error)
 	}
 
 	return &PlatformServiceClient{
-		Client:   pb.NewIdempotencyServiceClient(grpcConn.Conn()),
-		grpcConn: grpcConn,
+		Client:        pb.NewIdempotencyServiceClient(grpcConn.Conn()),
+		LoggingClient: pb.NewLoggingServiceClient(grpcConn.Conn()),
+		grpcConn:      grpcConn,
 	}, nil
 }
 

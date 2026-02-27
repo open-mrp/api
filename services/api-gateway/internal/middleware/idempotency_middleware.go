@@ -129,22 +129,11 @@ type IdempotencyMiddlewareConfig struct {
 	PlatformClient *grpcclient.PlatformServiceClient
 }
 
-// WithDefaults returns a new IdempotencyMiddlewareConfig with zero-value fields replaced by defaults.
-func (c *IdempotencyMiddlewareConfig) WithDefaults() *IdempotencyMiddlewareConfig {
-	if c == nil {
-		c = &IdempotencyMiddlewareConfig{}
-	}
-	return &IdempotencyMiddlewareConfig{
-		PlatformClient: c.PlatformClient,
-	}
-}
-
 func (c *IdempotencyMiddlewareConfig) validate() error {
 	return nil
 }
 
 func IdempotencyMiddleware(config *IdempotencyMiddlewareConfig) func(http.HandlerFunc) http.HandlerFunc {
-	config = config.WithDefaults()
 	if err := config.validate(); err != nil {
 		panic(err)
 	}

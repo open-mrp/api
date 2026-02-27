@@ -43,6 +43,65 @@ func (m *MockAccountUserRepo) EXPECT() *MockAccountUserRepoMockRecorder {
 	return m.recorder
 }
 
+// CountActive mocks base method.
+func (m *MockAccountUserRepo) CountActive(ctx context.Context, accountID string) (int64, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CountActive", ctx, accountID)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CountActive indicates an expected call of CountActive.
+func (mr *MockAccountUserRepoMockRecorder) CountActive(ctx, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountActive", reflect.TypeOf((*MockAccountUserRepo)(nil).CountActive), ctx, accountID)
+}
+
+// DeactivateExcept mocks base method.
+func (m *MockAccountUserRepo) DeactivateExcept(ctx context.Context, accountID, keepUserID string, limit int32) (int64, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeactivateExcept", ctx, accountID, keepUserID, limit)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// DeactivateExcept indicates an expected call of DeactivateExcept.
+func (mr *MockAccountUserRepoMockRecorder) DeactivateExcept(ctx, accountID, keepUserID, limit any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeactivateExcept", reflect.TypeOf((*MockAccountUserRepo)(nil).DeactivateExcept), ctx, accountID, keepUserID, limit)
+}
+
+// EnsureActive mocks base method.
+func (m *MockAccountUserRepo) EnsureActive(ctx context.Context, accountID, userID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnsureActive", ctx, accountID, userID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// EnsureActive indicates an expected call of EnsureActive.
+func (mr *MockAccountUserRepoMockRecorder) EnsureActive(ctx, accountID, userID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureActive", reflect.TypeOf((*MockAccountUserRepo)(nil).EnsureActive), ctx, accountID, userID)
+}
+
+// FindAdminUserIDByAccountID mocks base method.
+func (m *MockAccountUserRepo) FindAdminUserIDByAccountID(ctx context.Context, accountID string) (string, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FindAdminUserIDByAccountID", ctx, accountID)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// FindAdminUserIDByAccountID indicates an expected call of FindAdminUserIDByAccountID.
+func (mr *MockAccountUserRepoMockRecorder) FindAdminUserIDByAccountID(ctx, accountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindAdminUserIDByAccountID", reflect.TypeOf((*MockAccountUserRepo)(nil).FindAdminUserIDByAccountID), ctx, accountID)
+}
+
 // FindAffiliationsByUserID mocks base method.
 func (m *MockAccountUserRepo) FindAffiliationsByUserID(ctx context.Context, userID string) ([]domain.AccountAffiliation, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -101,6 +160,21 @@ func (m *MockAccountUserRepo) GetAdminRoleID(ctx context.Context) (string, *apie
 func (mr *MockAccountUserRepoMockRecorder) GetAdminRoleID(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAdminRoleID", reflect.TypeOf((*MockAccountUserRepo)(nil).GetAdminRoleID), ctx)
+}
+
+// ReactivateUsers mocks base method.
+func (m *MockAccountUserRepo) ReactivateUsers(ctx context.Context, accountID string, limit int32) (int64, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReactivateUsers", ctx, accountID, limit)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ReactivateUsers indicates an expected call of ReactivateUsers.
+func (mr *MockAccountUserRepoMockRecorder) ReactivateUsers(ctx, accountID, limit any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReactivateUsers", reflect.TypeOf((*MockAccountUserRepo)(nil).ReactivateUsers), ctx, accountID, limit)
 }
 
 // UpdateLastUsedAt mocks base method.

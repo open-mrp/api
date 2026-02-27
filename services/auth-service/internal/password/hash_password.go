@@ -9,10 +9,11 @@ import (
 	"github.com/augno/api/shared/validate"
 )
 
+const (
+	hashPasswordCost = 12
+)
+
 // HashPassword hashes a plaintext password using bcrypt.
-//
-//  1. Hashes the plaintext password using bcrypt.
-//  2. Returns the hashed password.
 func HashPassword(ctx context.Context, plaintextPassword string) (string, *apierror.APIError) {
 	_, span := passwordTracer.Start(ctx, "password.hash_password")
 	defer span.End()
@@ -21,7 +22,7 @@ func HashPassword(ctx context.Context, plaintextPassword string) (string, *apier
 		return "", tracing.Trace(span, apierror.NewInvariantViolationError("password length is too long"))
 	}
 
-	hash, err := crypto.HashBcrypt(plaintextPassword, 12)
+	hash, err := crypto.HashBcrypt(plaintextPassword, hashPasswordCost)
 	if err != nil {
 		return "", tracing.Trace(span, apierror.NewInternalError(err, "Failed to hash password."))
 	}

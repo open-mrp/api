@@ -7,10 +7,8 @@ import (
 
 	"github.com/augno/api/services/auth-service/internal/domain"
 	"github.com/augno/api/services/auth-service/internal/event"
-	"github.com/augno/api/services/auth-service/internal/infrastructure/repository"
-	"github.com/augno/api/services/auth-service/internal/infrastructure/sqlc"
 	pwdutil "github.com/augno/api/services/auth-service/internal/password"
-	"github.com/augno/api/services/auth-service/internal/token"
+	tokenutil "github.com/augno/api/services/auth-service/internal/token"
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
@@ -23,7 +21,7 @@ var passwordMedTracer = tracing.GetTracer("auth-service.password_mediator")
 type passwordMedImpl struct {
 	repos                 domain.RepoFactory
 	refreshTokenMed       domain.RefreshTokenMed
-	jwtUtils              domain.JWTUtils
+	jwtSecret             string
 	notificationPublisher domain.NotificationPublisher
 	frontendURL           string
 }
@@ -31,23 +29,9 @@ type passwordMedImpl struct {
 type PasswordMedConfig struct {
 	Repos                 domain.RepoFactory
 	RefreshTokenMed       domain.RefreshTokenMed
-	JWTUtils              domain.JWTUtils
+	JWTSecret             string // #nosec G117 - Struct field, not a hardcoded credential
 	NotificationPublisher domain.NotificationPublisher
 	FrontendURL           string
-}
-
-// WithDefaults returns a new PasswordMedConfig with zero-value fields replaced by defaults.
-func (c *PasswordMedConfig) WithDefaults() *PasswordMedConfig {
-	if c == nil {
-		c = &PasswordMedConfig{}
-	}
-	return &PasswordMedConfig{
-		Repos:                 c.Repos,
-		RefreshTokenMed:       c.RefreshTokenMed,
-		JWTUtils:              c.JWTUtils,
-		NotificationPublisher: c.NotificationPublisher,
-		FrontendURL:           c.FrontendURL,
-	}
 }
 
 func (c *PasswordMedConfig) validate() error {
@@ -57,8 +41,8 @@ func (c *PasswordMedConfig) validate() error {
 	if c.RefreshTokenMed == nil {
 		return fmt.Errorf("password mediator: refresh token mediator is required")
 	}
-	if c.JWTUtils == nil {
-		return fmt.Errorf("password mediator: jwt utils is required")
+	if c.JWTSecret == "" {
+		return fmt.Errorf("password mediator: jwt secret is required")
 	}
 	if c.NotificationPublisher == nil {
 		return fmt.Errorf("password mediator: notification publisher is required")
@@ -70,7 +54,6 @@ func (c *PasswordMedConfig) validate() error {
 }
 
 func NewPasswordMed(config *PasswordMedConfig) domain.PasswordMed {
-	config = config.WithDefaults()
 	if err := config.validate(); err != nil {
 		panic(err)
 	}
@@ -78,25 +61,10 @@ func NewPasswordMed(config *PasswordMedConfig) domain.PasswordMed {
 	return &passwordMedImpl{
 		repos:                 config.Repos,
 		refreshTokenMed:       config.RefreshTokenMed,
-		jwtUtils:              config.JWTUtils,
+		jwtSecret:             config.JWTSecret,
 		notificationPublisher: config.NotificationPublisher,
 		frontendURL:           config.FrontendURL,
 	}
-}
-
-func DefaultPasswordMedConfig(queries *sqlc.Queries, jwtSecret string, pepper []byte, frontendURL string, notificationPublisher domain.NotificationPublisher) *PasswordMedConfig {
-	factory := repository.NewRepoFactory(queries)
-	return &PasswordMedConfig{
-		Repos:                 factory,
-		RefreshTokenMed:       NewRefreshTokenMed(DefaultRefreshTokenMedConfig(queries, jwtSecret)),
-		JWTUtils:              token.NewJWTUtils(&token.JWTConfig{Secret: jwtSecret}),
-		NotificationPublisher: notificationPublisher,
-		FrontendURL:           frontendURL,
-	}
-}
-
-func NewDefaultPasswordMed(queries *sqlc.Queries, jwtSecret string, pepper []byte, frontendURL string, notificationPublisher domain.NotificationPublisher) domain.PasswordMed {
-	return NewPasswordMed(DefaultPasswordMedConfig(queries, jwtSecret, pepper, frontendURL, notificationPublisher))
 }
 
 // Validate is a method that validates a user's password and returns the user if it is valid.
@@ -118,7 +86,7 @@ func (s *passwordMedImpl) Validate(ctx context.Context, identifier, password str
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError(fmt.Sprintf("user %s has no hashed password", user.ID)))
 	}
 
-	match, err := pwdutil.CompareHashAndPassword(ctx, password, *user.HashedPassword)
+	match, err := pwdutil.CompareHashAndPassword(ctx, *user.HashedPassword, password)
 	if err != nil {
 		return nil, tracing.Trace(span, apierror.NewInternalError(err, "password verification failed"))
 	}
@@ -175,7 +143,7 @@ func (s *passwordMedImpl) ValidatePasswordResetToken(ctx context.Context, token 
 	ctx, span := passwordMedTracer.Start(ctx, "mediator.password.validate_password_reset_token")
 	defer span.End()
 
-	claims, err := s.jwtUtils.Decode(ctx, token, domain.JWTTypePasswordReset)
+	claims, err := tokenutil.DecodeJWT(ctx, s.jwtSecret, token, tokenutil.JWTTypePasswordReset)
 	if err != nil {
 		return nil, err
 	}
@@ -217,16 +185,16 @@ func (s *passwordMedImpl) RequestReset(ctx context.Context, identifier string, a
 		return nil
 	}
 
-	resetToken, err := s.jwtUtils.Encode(ctx, user.ID, 15*time.Minute, domain.JWTTypePasswordReset)
+	resetToken, err := tokenutil.EncodeJWT(ctx, s.jwtSecret, user.ID, 15*time.Minute, tokenutil.JWTTypePasswordReset)
 	if err != nil {
 		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to generate password reset token."))
 	}
 
 	var resetLink string
 	if accountSlug != nil && *accountSlug != "" {
-		resetLink = fmt.Sprintf("%s/%s/auth/password-reset?t=%s", s.frontendURL, *accountSlug, resetToken)
+		resetLink = fmt.Sprintf("%s/%s%s?t=%s", s.frontendURL, *accountSlug, constants.DashboardPathResetPassword, resetToken)
 	} else {
-		resetLink = fmt.Sprintf("%s/auth/password-reset?t=%s", s.frontendURL, resetToken)
+		resetLink = fmt.Sprintf("%s%s?t=%s", s.frontendURL, constants.DashboardPathResetPassword, resetToken)
 	}
 
 	// Pass repos via context for the outbox publisher

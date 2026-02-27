@@ -17,6 +17,7 @@ import (
 	"github.com/augno/api/shared/contracts"
 	"github.com/augno/api/shared/db"
 	"github.com/augno/api/shared/messaging"
+	"github.com/augno/api/shared/pagination"
 	"github.com/augno/api/shared/tracing"
 )
 
@@ -33,6 +34,8 @@ func Run(
 	if err := cfg.validate(); err != nil {
 		return err
 	}
+
+	pagination.Init(cfg.CursorHMACKey)
 
 	logger := slog.New(slog.NewTextHandler(stdout, nil))
 
@@ -71,6 +74,16 @@ func Run(
 	})
 
 	inboxRepo := repository.NewInboxRepo(queries)
+	inboxPurgerRepo := repository.NewInboxPurgerRepo(queries)
+	inboxPurger, err := messaging.NewInboxPurger(&messaging.InboxPurgerConfig{}, inboxPurgerRepo)
+	if err != nil {
+		return err
+	}
+	if err := inboxPurger.Start(ctx); err != nil {
+		return err
+	}
+	defer inboxPurger.Stop()
+
 	consumerTracer := workerTracer.Tracer(domain.ServiceName + ".request_log_consumer")
 	consumer := event.NewRequestLogConsumer(rabbitmq, loggingSvc, inboxRepo, consumerTracer)
 	if err := consumer.Listen(ctx); err != nil {

@@ -76,6 +76,21 @@ spec:
                             secretKeyRef:
                                 name: doc-api-key-encryption-key
                                 key: key
+                      - name: PLATFORM_SERVICE_URL
+                        valueFrom:
+                            configMapKeyRef:
+                                key: PLATFORM_SERVICE_URL
+                                name: app-config
+                      - name: BILLING_SERVICE_URL
+                        valueFrom:
+                            configMapKeyRef:
+                                key: BILLING_SERVICE_URL
+                                name: app-config
+                      - name: CURSOR_HMAC_KEY
+                        valueFrom:
+                            secretKeyRef:
+                                name: cursor-hmac-key
+                                key: key
 ---
 apiVersion: v1
 kind: Service

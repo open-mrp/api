@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"log"
+	"log/slog"
 
 	"github.com/augno/api/shared/contracts"
 	"github.com/augno/api/shared/tracing"
@@ -82,7 +82,7 @@ func (c *InboxConsumer) Wrap(handler string, fn MessageHandler) MessageHandler {
 
 		// If no message ID, we can't deduplicate - just process
 		if messageID == "" {
-			log.Printf("[inbox] WARNING: No message ID found for handler %s, processing without deduplication", handler)
+			slog.Warn("No message ID found, processing without deduplication", "handler", handler)
 			return fn(ctx, msg)
 		}
 
@@ -104,7 +104,7 @@ func (c *InboxConsumer) Wrap(handler string, fn MessageHandler) MessageHandler {
 				return c.handleDuplicate(ctx, messageID, handler)
 			}
 			// Some other error - let the handler proceed but log the issue
-			log.Printf("[inbox] WARNING: Failed to insert inbox record for %s/%s: %v", handler, messageID, err)
+			slog.Warn("Failed to insert inbox record", "handler", handler, "message_id", messageID, "error", err)
 			return fn(ctx, msg)
 		}
 
@@ -112,14 +112,14 @@ func (c *InboxConsumer) Wrap(handler string, fn MessageHandler) MessageHandler {
 		if err := fn(ctx, msg); err != nil {
 			// Handler failed - record the error
 			if markErr := c.repo.MarkFailed(ctx, recordID, err.Error()); markErr != nil {
-				log.Printf("[inbox] WARNING: Failed to mark inbox record as failed for %s/%s: %v", handler, messageID, markErr)
+				slog.Warn("Failed to mark inbox record as failed", "handler", handler, "message_id", messageID, "error", markErr)
 			}
 			return err
 		}
 
 		// Handler succeeded - mark as processed
 		if err := c.repo.MarkProcessed(ctx, recordID); err != nil {
-			log.Printf("[inbox] WARNING: Failed to mark inbox record as processed for %s/%s: %v", handler, messageID, err)
+			slog.Warn("Failed to mark inbox record as processed", "handler", handler, "message_id", messageID, "error", err)
 		}
 
 		return nil
@@ -139,27 +139,27 @@ func (c *InboxConsumer) handleDuplicate(ctx context.Context, messageID, handler 
 	record, err := c.repo.GetByMessageAndHandler(ctx, messageID, handler)
 	if err != nil {
 		// Can't determine state - log and skip (ACK to prevent infinite redelivery)
-		log.Printf("[inbox] WARNING: Duplicate detected but couldn't fetch record for %s/%s: %v", handler, messageID, err)
+		slog.Warn("Duplicate detected but couldn't fetch record", "handler", handler, "message_id", messageID, "error", err)
 		return nil
 	}
 
 	switch {
 	case record.Status == InboxStatusProcessed:
 		// Already successfully processed - skip silently
-		log.Printf("[inbox] Skipping already-processed message: %s/%s", handler, messageID)
+		slog.Info("Skipping already-processed message", "handler", handler, "message_id", messageID)
 		return nil
 
 	case record.LastError != nil:
 		// Previously failed - log warning and retry
-		log.Printf("[inbox] WARNING: Retrying previously-failed message %s/%s (attempt %d, last error: %s)",
-			handler, messageID, record.Attempts+1, *record.LastError)
+		slog.Warn("Retrying previously-failed message",
+			"handler", handler, "message_id", messageID, "attempt", record.Attempts+1, "last_error", *record.LastError)
 		// Return an error to trigger retry behavior
 		return errors.New("inbox: retry after previous failure")
 
 	default:
 		// Status is 'received' but no error - likely a crash recovery scenario
-		log.Printf("[inbox] WARNING: Crash recovery detected for %s/%s (status=received, attempts=%d)",
-			handler, messageID, record.Attempts)
+		slog.Warn("Crash recovery detected",
+			"handler", handler, "message_id", messageID, "status", "received", "attempts", record.Attempts)
 		// Return an error to trigger retry behavior
 		return errors.New("inbox: crash recovery retry")
 	}

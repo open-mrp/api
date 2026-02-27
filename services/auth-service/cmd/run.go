@@ -16,6 +16,7 @@ import (
 	"github.com/augno/api/shared/contracts"
 	"github.com/augno/api/shared/db"
 	"github.com/augno/api/shared/messaging"
+	"github.com/augno/api/shared/pagination"
 	"github.com/augno/api/shared/tracing"
 )
 
@@ -32,6 +33,8 @@ func Run(
 	if err := cfg.validate(); err != nil {
 		return err
 	}
+
+	pagination.Init(cfg.CursorHMACKey)
 
 	logger := slog.New(slog.NewTextHandler(stdout, nil))
 
@@ -80,36 +83,56 @@ func Run(
 		return apiErr
 	}
 
+	// Billing service client (optional — only if billing service is configured)
+	var billingClient domain.AuthBillingClient
+	if cfg.BillingServiceURL != "" {
+		bc, billingErr := grpc.NewAuthBillingClient(cfg.BillingServiceURL)
+		if billingErr != nil {
+			return billingErr
+		}
+		defer bc.Close()
+		billingClient = bc
+
+		logger.Info("Waiting for Billing Service to be ready...")
+		if billingErr := billingClient.WaitForReady(ctx); billingErr != nil {
+			return billingErr
+		}
+	}
+
 	txManager := service.NewTransactionManager(db, queries)
-	authConfig := service.DefaultAuthSvcConfig(queries, cfg.JWTSecret, cfg.Pepper, cfg.FrontendURL, coreClient)
+	authConfig := new(service.AuthSvcConfig).WithDefaults(queries, cfg.JWTSecret, cfg.Pepper, cfg.FrontendURL, coreClient)
 	authConfig.TxManager = txManager
 	authSvc := service.NewAuthSvc(authConfig)
 
-	userConfig := service.DefaultUserSvcConfig(queries, cfg.JWTSecret, cfg.Pepper, cfg.FrontendURL, coreClient)
+	userConfig := new(service.UserSvcConfig).WithDefaults(queries, cfg.JWTSecret, cfg.Pepper, cfg.FrontendURL, coreClient)
 	userConfig.TxManager = txManager
 	userSvc := service.NewUserSvc(userConfig)
 
-	tokenConfig := service.DefaultTokenSvcConfig(queries, cfg.JWTSecret, cfg.Pepper, cfg.FrontendURL, coreClient)
+	tokenConfig := new(service.TokenSvcConfig).WithDefaults(queries, cfg.JWTSecret, cfg.Pepper, cfg.FrontendURL, coreClient)
 	tokenConfig.TxManager = txManager
 	tokenSvc := service.NewTokenSvc(tokenConfig)
 
-	passwordConfig := service.DefaultPasswordSvcConfig(queries, cfg.JWTSecret, cfg.Pepper, cfg.FrontendURL, coreClient)
+	passwordConfig := new(service.PasswordSvcConfig).WithDefaults(queries, cfg.JWTSecret, cfg.Pepper, cfg.FrontendURL, coreClient)
 	passwordConfig.TxManager = txManager
 	passwordSvc := service.NewPasswordSvc(passwordConfig)
 
-	apiKeyConfig := service.DefaultAPIKeySvcConfig(queries, cfg.JWTSecret, cfg.Pepper, cfg.FrontendURL, coreClient, cfg.DocAPIKeyEncryptionKey)
+	apiKeyConfig := new(service.APIKeySvcConfig).WithDefaults(queries, cfg.JWTSecret, cfg.Pepper, cfg.FrontendURL, coreClient, cfg.DocAPIKeyEncryptionKey)
 	apiKeyConfig.TxManager = txManager
 	apiKeySvc := service.NewAPIKeySvc(apiKeyConfig)
 
-	docAPIKeyConfig := service.DefaultDocAPIKeySvcConfig(queries, cfg.JWTSecret, cfg.Pepper, cfg.FrontendURL, coreClient, cfg.DocAPIKeyEncryptionKey)
+	docAPIKeyConfig := new(service.DocAPIKeySvcConfig).WithDefaults(queries, cfg.JWTSecret, cfg.Pepper, cfg.FrontendURL, coreClient, cfg.DocAPIKeyEncryptionKey)
 	docAPIKeyConfig.TxManager = txManager
 	docAPIKeySvc := service.NewDocAPIKeySvc(docAPIKeyConfig)
+
+	registrationSessionConfig := new(service.RegistrationSessionSvcConfig).WithDefaults(queries, cfg.JWTSecret, cfg.Pepper, cfg.FrontendURL, coreClient, billingClient)
+	registrationSessionConfig.TxManager = txManager
+	registrationSessionSvc := service.NewRegistrationSessionSvc(registrationSessionConfig)
 
 	server, err := contracts.NewGRPCServer(domain.ServiceName, nil, nil)
 	if err != nil {
 		return err
 	}
-	grpc.NewGRPCHandler(server.Server(), authSvc, userSvc, tokenSvc, passwordSvc, apiKeySvc, docAPIKeySvc)
+	grpc.NewGRPCHandler(server.Server(), authSvc, userSvc, tokenSvc, passwordSvc, apiKeySvc, docAPIKeySvc, registrationSessionSvc)
 
 	logger.Info("Auth service started", "port", cfg.Port)
 

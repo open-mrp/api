@@ -7,23 +7,18 @@ import (
 )
 
 type NotificationSvc interface {
-	// SendEmail sends an email to the given recipients.
+	// SendEmail sends an email to the specified recipients.
 	//
-	//  1. Calls the email sender to send the email.
-	//  2. Returns the SES message ID.
+	// Returns the provider message ID if the email is successfully accepted for delivery.
 	SendEmail(ctx context.Context, data EmailSendData) (*string, *apierror.APIError)
 
-	// LogEmail logs an email to the database.
+	// LogEmail records an email in persistent storage.
 	//
-	//  1. Checks if the email has already been logged.
-	//  2. If the email has not been logged, creates a new email log.
+	// Behavior:
+	//   - If the email has already been logged, the operation is a no-op.
 	LogEmail(ctx context.Context, data EmailLogData) *apierror.APIError
 
-	// SendEnterpriseRequest sends an enterprise upgrade request email to sales
-	//
-	//  1. Renders the email template.
-	//  2. Sends the email to the sales team.
-	//  3. Returns an error if the email sender returns an error.
+	// SendEnterpriseRequest sends an enterprise upgrade request email to the sales team.
 	SendEnterpriseRequest(ctx context.Context, req *EnterpriseRequestData) *apierror.APIError
 }
 

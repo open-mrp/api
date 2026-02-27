@@ -9,6 +9,7 @@ import (
 	"github.com/augno/api/services/platform-service/internal/domain"
 	"github.com/augno/api/services/platform-service/internal/infrastructure/sqlc"
 	"github.com/augno/api/shared/db"
+	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/tracing"
 )
 
@@ -23,12 +24,13 @@ func NewIdempotencyKeyRepo(db *sql.DB, shared *sqlc.Queries) domain.IdempotencyK
 	return &idempotencyKeyRepoImpl{db: db, shared: shared}
 }
 
-func (r *idempotencyKeyRepoImpl) SetResponse(ctx context.Context, params domain.SetResponseParams) error {
+func (r *idempotencyKeyRepoImpl) SetResponse(ctx context.Context, params domain.SetResponseParams) *apierror.APIError {
 	ctx, span := idempotencyKeyRepoTracer.Start(ctx, "repository.idempotency_key.set_response")
 	defer span.End()
 
+	var err error
 	if params.TTLSeconds != nil && *params.TTLSeconds > 0 {
-		return r.shared.SetIdempotencyKeyResponseWithTTL(ctx, sqlc.SetIdempotencyKeyResponseWithTTLParams{
+		err = r.shared.SetIdempotencyKeyResponseWithTTL(ctx, sqlc.SetIdempotencyKeyResponseWithTTLParams{
 			TypeID:          params.ID,
 			ResponseCode:    sql.NullInt32{Int32: int32(params.StatusCode), Valid: true}, // #nosec G115 - HTTP status code
 			ResponseBody:    db.NullableRawMessage(params.Body),
@@ -36,24 +38,29 @@ func (r *idempotencyKeyRepoImpl) SetResponse(ctx context.Context, params domain.
 			DATEADD:         *params.TTLSeconds,
 			RecoveryPoint:   params.RecoveryPoint,
 		})
+	} else {
+		err = r.shared.SetIdempotencyKeyResponse(ctx, sqlc.SetIdempotencyKeyResponseParams{
+			TypeID:          params.ID,
+			ResponseCode:    sql.NullInt32{Int32: int32(params.StatusCode), Valid: true}, // #nosec G115 - HTTP status code
+			ResponseBody:    db.NullableRawMessage(params.Body),
+			ResponseHeaders: db.NullableRawMessage(params.Headers),
+			RecoveryPoint:   params.RecoveryPoint,
+		})
 	}
-
-	return r.shared.SetIdempotencyKeyResponse(ctx, sqlc.SetIdempotencyKeyResponseParams{
-		TypeID:          params.ID,
-		ResponseCode:    sql.NullInt32{Int32: int32(params.StatusCode), Valid: true}, // #nosec G115 - HTTP status code
-		ResponseBody:    db.NullableRawMessage(params.Body),
-		ResponseHeaders: db.NullableRawMessage(params.Headers),
-		RecoveryPoint:   params.RecoveryPoint,
-	})
+	if err != nil {
+		span.RecordError(err)
+		return db.MapSQLError(err)
+	}
+	return nil
 }
 
-func (r *idempotencyKeyRepoImpl) UpsertAndLock(ctx context.Context, key *domain.IdempotencyKey) (*domain.UpsertAndLockResult, error) {
+func (r *idempotencyKeyRepoImpl) UpsertAndLock(ctx context.Context, key *domain.IdempotencyKey) (*domain.UpsertAndLockResult, *apierror.APIError) {
 	ctx, span := idempotencyKeyRepoTracer.Start(ctx, "repository.idempotency_key.upsert_and_lock")
 	defer span.End()
 
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
-		return nil, err
+		return nil, apierror.NewInternalError(err, "Failed to begin transaction.")
 	}
 	defer tx.Rollback()
 
@@ -61,7 +68,7 @@ func (r *idempotencyKeyRepoImpl) UpsertAndLock(ctx context.Context, key *domain.
 
 	existing, err := txQueries.GetIdempotencyKeyByScopeHashForUpdate(ctx, key.ScopeHash)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return nil, err
+		return nil, db.MapSQLError(err)
 	}
 
 	if errors.Is(err, sql.ErrNoRows) {
@@ -79,11 +86,11 @@ func (r *idempotencyKeyRepoImpl) UpsertAndLock(ctx context.Context, key *domain.
 			RecoveryPoint:   key.RecoveryPoint,
 		})
 		if createErr != nil {
-			return nil, createErr
+			return nil, db.MapSQLError(createErr)
 		}
 
 		if commitErr := tx.Commit(); commitErr != nil {
-			return nil, commitErr
+			return nil, apierror.NewInternalError(commitErr, "Failed to commit transaction.")
 		}
 
 		key.InternalID = internalID
@@ -97,12 +104,12 @@ func (r *idempotencyKeyRepoImpl) UpsertAndLock(ctx context.Context, key *domain.
 	existingKey := idempotencyKeyToDomain(&existing)
 
 	if existingKey.RequestBodyHash != key.RequestBodyHash {
-		return nil, domain.ErrHashMismatch
+		return nil, apierror.NewIdempotencyHashMismatchError(key.IdempotencyKey)
 	}
 
 	if existingKey.HasResponse() {
 		if commitErr := tx.Commit(); commitErr != nil {
-			return nil, commitErr
+			return nil, apierror.NewInternalError(commitErr, "Failed to commit transaction.")
 		}
 		return &domain.UpsertAndLockResult{
 			Key:     existingKey,
@@ -113,7 +120,7 @@ func (r *idempotencyKeyRepoImpl) UpsertAndLock(ctx context.Context, key *domain.
 
 	if existingKey.IsLocked() {
 		if commitErr := tx.Commit(); commitErr != nil {
-			return nil, commitErr
+			return nil, apierror.NewInternalError(commitErr, "Failed to commit transaction.")
 		}
 		return &domain.UpsertAndLockResult{
 			Key:     existingKey,
@@ -127,11 +134,11 @@ func (r *idempotencyKeyRepoImpl) UpsertAndLock(ctx context.Context, key *domain.
 		LockOwner: db.NullStringPtr(key.ActorID),
 	})
 	if lockErr != nil {
-		return nil, lockErr
+		return nil, db.MapSQLError(lockErr)
 	}
 
 	if commitErr := tx.Commit(); commitErr != nil {
-		return nil, commitErr
+		return nil, apierror.NewInternalError(commitErr, "Failed to commit transaction.")
 	}
 
 	return &domain.UpsertAndLockResult{
@@ -141,34 +148,40 @@ func (r *idempotencyKeyRepoImpl) UpsertAndLock(ctx context.Context, key *domain.
 	}, nil
 }
 
-func (r *idempotencyKeyRepoImpl) ReleaseLock(ctx context.Context, id string) error {
+func (r *idempotencyKeyRepoImpl) ReleaseLock(ctx context.Context, id string) *apierror.APIError {
 	ctx, span := idempotencyKeyRepoTracer.Start(ctx, "repository.idempotency_key.release_lock")
 	defer span.End()
 
-	return r.shared.ReleaseIdempotencyKeyLock(ctx, id)
+	if err := r.shared.ReleaseIdempotencyKeyLock(ctx, id); err != nil {
+		span.RecordError(err)
+		return db.MapSQLError(err)
+	}
+	return nil
 }
 
-func (r *idempotencyKeyRepoImpl) AdvanceRecoveryPoint(ctx context.Context, params domain.AdvanceRecoveryPointParams) error {
+func (r *idempotencyKeyRepoImpl) AdvanceRecoveryPoint(ctx context.Context, params domain.AdvanceRecoveryPointParams) *apierror.APIError {
 	ctx, span := idempotencyKeyRepoTracer.Start(ctx, "repository.idempotency_key.advance_recovery_point")
 	defer span.End()
 
-	return r.shared.AdvanceRecoveryPoint(ctx, sqlc.AdvanceRecoveryPointParams{
+	if err := r.shared.AdvanceRecoveryPoint(ctx, sqlc.AdvanceRecoveryPointParams{
 		RecoveryPoint: params.RecoveryPoint,
 		RequestParams: db.NullableRawMessage(params.StepData),
 		TypeID:        params.ID,
-	})
+	}); err != nil {
+		span.RecordError(err)
+		return db.MapSQLError(err)
+	}
+	return nil
 }
 
-func (r *idempotencyKeyRepoImpl) GetRecoveryPoint(ctx context.Context, id string) (*domain.GetRecoveryPointResult, error) {
+func (r *idempotencyKeyRepoImpl) GetRecoveryPoint(ctx context.Context, id string) (*domain.GetRecoveryPointResult, *apierror.APIError) {
 	ctx, span := idempotencyKeyRepoTracer.Start(ctx, "repository.idempotency_key.get_recovery_point")
 	defer span.End()
 
 	row, err := r.shared.GetRecoveryPoint(ctx, id)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, domain.ErrKeyNotFound
-		}
-		return nil, err
+		span.RecordError(err)
+		return nil, db.MapSQLError(err)
 	}
 
 	return &domain.GetRecoveryPointResult{

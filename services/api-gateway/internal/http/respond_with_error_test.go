@@ -153,6 +153,91 @@ func TestRespondWithAPIError_WithRequestLog_InternalError(t *testing.T) {
 	}
 }
 
+func TestRespondWithAPIError_RequestLogURL_WithFrontendURL(t *testing.T) {
+	old := frontendURL
+	frontendURL = "https://app.augno.com"
+	defer func() { frontendURL = old }()
+
+	apiErr := apierror.NewValidationError("Invalid input")
+	rl := &appctx.RequestLog{ID: "req_abc123"}
+	ctx := appctx.WithRequestLog(context.Background(), rl)
+	w := httptest.NewRecorder()
+
+	RespondWithAPIError(ctx, w, apiErr)
+
+	var response map[string]any
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("failed to unmarshal response: %v", err)
+	}
+
+	errorMap, ok := response["error"].(map[string]any)
+	if !ok {
+		t.Fatal("expected response to have 'error' key with map value")
+	}
+
+	url, ok := errorMap["request_log_url"].(string)
+	if !ok {
+		t.Fatal("expected request_log_url to be a string")
+	}
+	expected := "https://app.augno.com/dashboard/request-logs/req_abc123"
+	if url != expected {
+		t.Fatalf("expected request_log_url %q, got %q", expected, url)
+	}
+}
+
+func TestRespondWithAPIError_RequestLogURL_WithoutFrontendURL(t *testing.T) {
+	old := frontendURL
+	frontendURL = ""
+	defer func() { frontendURL = old }()
+
+	apiErr := apierror.NewValidationError("Invalid input")
+	rl := &appctx.RequestLog{ID: "req_abc123"}
+	ctx := appctx.WithRequestLog(context.Background(), rl)
+	w := httptest.NewRecorder()
+
+	RespondWithAPIError(ctx, w, apiErr)
+
+	var response map[string]any
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("failed to unmarshal response: %v", err)
+	}
+
+	errorMap, ok := response["error"].(map[string]any)
+	if !ok {
+		t.Fatal("expected response to have 'error' key with map value")
+	}
+
+	if errorMap["request_log_url"] != nil {
+		t.Fatalf("expected request_log_url to be null, got %v", errorMap["request_log_url"])
+	}
+}
+
+func TestRespondWithAPIError_RequestLogURL_NoRequestLog(t *testing.T) {
+	old := frontendURL
+	frontendURL = "https://app.augno.com"
+	defer func() { frontendURL = old }()
+
+	apiErr := apierror.NewValidationError("Invalid input")
+	ctx := context.Background()
+	w := httptest.NewRecorder()
+
+	RespondWithAPIError(ctx, w, apiErr)
+
+	var response map[string]any
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("failed to unmarshal response: %v", err)
+	}
+
+	errorMap, ok := response["error"].(map[string]any)
+	if !ok {
+		t.Fatal("expected response to have 'error' key with map value")
+	}
+
+	if errorMap["request_log_url"] != nil {
+		t.Fatalf("expected request_log_url to be null, got %v", errorMap["request_log_url"])
+	}
+}
+
 func TestRespondWithAPIError_DifferentErrorCodes(t *testing.T) {
 	testCases := []struct {
 		name           string

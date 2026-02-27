@@ -41,11 +41,21 @@ spec:
                             secretKeyRef:
                                 name: database-credentials
                                 key: uri
+                      - name: RABBITMQ_URI
+                        valueFrom:
+                            secretKeyRef:
+                                name: rabbitmq-credentials
+                                key: uri
                       - name: PLATFORM
                         valueFrom:
                             configMapKeyRef:
                                 key: PLATFORM
                                 name: app-config
+                      - name: CURSOR_HMAC_KEY
+                        valueFrom:
+                            secretKeyRef:
+                                name: cursor-hmac-key
+                                key: key
 ---
 apiVersion: v1
 kind: Service

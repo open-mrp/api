@@ -22,16 +22,6 @@ type AuthMiddlewareConfig struct {
 	AuthClient *grpcclient.AuthServiceClient
 }
 
-// WithDefaults returns a new AuthMiddlewareConfig with zero-value fields replaced by defaults.
-func (c *AuthMiddlewareConfig) WithDefaults() *AuthMiddlewareConfig {
-	if c == nil {
-		c = &AuthMiddlewareConfig{}
-	}
-	return &AuthMiddlewareConfig{
-		AuthClient: c.AuthClient,
-	}
-}
-
 func (c *AuthMiddlewareConfig) validate() error {
 	if c.AuthClient == nil {
 		return fmt.Errorf("auth middleware: auth client is required")
@@ -40,7 +30,6 @@ func (c *AuthMiddlewareConfig) validate() error {
 }
 
 func AuthMiddleware(config *AuthMiddlewareConfig) func(http.HandlerFunc) http.HandlerFunc {
-	config = config.WithDefaults()
 	if err := config.validate(); err != nil {
 		panic(err)
 	}
@@ -131,9 +120,10 @@ func AuthMiddleware(config *AuthMiddlewareConfig) func(http.HandlerFunc) http.Ha
 					actorType := normalizeActorType(identity.Actor.Type)
 					rl.ActorType = &actorType
 					rl.ActorID = &identity.Actor.Id
+					rl.AccountID = identity.Actor.AccountId
 				}
 				if identity.TargetAccountId != nil {
-					rl.AccountID = identity.TargetAccountId
+					rl.TargetAccountID = identity.TargetAccountId
 				}
 				identityType := normalizeIdentityType(identity.Type)
 				rl.IdentityType = &identityType

@@ -9,4 +9,5 @@ data:
     AUTH_SERVICE_URL: "auth-service:9092"
     CORE_SERVICE_URL: "core-service:9092"
     NOTIFICATION_SERVICE_URL: "notification-service:9092"
+    BILLING_SERVICE_URL: "billing-service:9092"
     PLATFORM_SERVICE_URL: "platform-service:9092"

@@ -58,7 +58,7 @@ func TestCompareHashAndPassword(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			passwordMatches, err := CompareHashAndPassword(context.Background(), tt.password, tt.hash)
+			passwordMatches, err := CompareHashAndPassword(context.Background(), tt.hash, tt.password)
 
 			// Check if we got an error when we expected one
 			if tt.wantErr && err == nil {

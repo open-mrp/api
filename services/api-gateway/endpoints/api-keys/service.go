@@ -16,6 +16,7 @@ import (
 )
 
 type APIKeySvc interface {
+	GetAPIKey(ctx context.Context, req *GetAPIKeyRequest) (*apiresource.APIKey, *apierror.APIError)
 	CreateAPIKey(ctx context.Context, req *CreateAPIKeyRequest) (*apiresource.CreatedAPIKey, *apierror.APIError)
 	RotateAPIKey(ctx context.Context, req *RotateAPIKeyRequest) (*apiresource.CreatedAPIKey, *apierror.APIError)
 	RevokeAPIKey(ctx context.Context, req *RevokeAPIKeyRequest) (*apiresource.EmptyResource, *apierror.APIError)
@@ -33,16 +34,6 @@ type apiKeySvcImpl struct {
 
 var apiKeySvcTracer = tracing.GetTracer("api-gateway.endpoints.api_keys.service")
 
-// WithDefaults returns a new APIKeySvcConfig with zero-value fields replaced by defaults.
-func (c *APIKeySvcConfig) WithDefaults() *APIKeySvcConfig {
-	if c == nil {
-		c = &APIKeySvcConfig{}
-	}
-	return &APIKeySvcConfig{
-		AuthClient: c.AuthClient,
-	}
-}
-
 func (c *APIKeySvcConfig) validate() error {
 	if c.AuthClient == nil {
 		return fmt.Errorf("api key endpoint service: auth client is required")
@@ -51,7 +42,6 @@ func (c *APIKeySvcConfig) validate() error {
 }
 
 func NewAPIKeySvc(config *APIKeySvcConfig) APIKeySvc {
-	config = config.WithDefaults()
 	if err := config.validate(); err != nil {
 		panic(err)
 	}
@@ -59,6 +49,22 @@ func NewAPIKeySvc(config *APIKeySvcConfig) APIKeySvc {
 	return &apiKeySvcImpl{
 		authClient: config.AuthClient,
 	}
+}
+
+func (m *apiKeySvcImpl) GetAPIKey(ctx context.Context, req *GetAPIKeyRequest) (*apiresource.APIKey, *apierror.APIError) {
+	resp, apiErr := grpcutil.CallRPC(ctx, apiKeySvcTracer, "service.api_keys.get", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetAPIKeyResponse, error) {
+			return m.authClient.GetAPIKey(ctx, &pb.GetAPIKeyRequest{
+				ApiKeyId: req.APIKeyID,
+			}, opts...)
+		})
+
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	presented := APIKeyPresenter(resp.ApiKey)
+	return &presented, nil
 }
 
 func (m *apiKeySvcImpl) CreateAPIKey(ctx context.Context, req *CreateAPIKeyRequest) (*apiresource.CreatedAPIKey, *apierror.APIError) {

@@ -12,10 +12,10 @@ import (
 
 // The request to login a user
 type LoginRequest struct {
-	// The username or email for authentication
+	// The username or email for authentication.
 	Identifier string `json:"identifier" validate:"required,identifier"`
-	// The password of the user
-	Password string `json:"password" validate:"required,password"` // #nosec G117 - Struct field, not a hardcoded credential
+	// The password of the user.
+	Password string `json:"password" validate:"required,max=72"` // #nosec G117 - Struct field, not a hardcoded credential
 }
 
 var sampleLoginRequest = &LoginRequest{
@@ -48,6 +48,7 @@ func (e *LoginEndpoint) Materialize() *apiendpoint.APIEndpoint[*LoginRequest, *a
 		},
 		Extras: apiendpoint.APIEndpointExtras{
 			AllowUnknownJSONFields: false,
+			ShieldRequestBody:      true,
 		},
 	}
 }

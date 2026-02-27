@@ -3,7 +3,6 @@ package apiresource
 import (
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/ptrutil"
 )
 
 const SamplePlanTypeIDFree = "pt_free_01gf7a8200eaj8fke1xvw4h50x"
@@ -11,18 +10,18 @@ const SamplePlanTypeIDStarter = "pt_starter_01gf7a8200eaj8fke1xvw4h50x"
 const SamplePlanTypeIDPro = "pt_pro_01gf7a8200eaj8fke1xvw4h50x"
 
 var SamplePlanLimitSandboxes = &PlanLimit{
-	Key:   "sandboxes",
-	Value: ptrutil.Ptr(1),
+	Key:   "sandboxes_maximum",
+	Value: new(1),
 }
 
 var SamplePlanLimitSeats = &PlanLimit{
-	Key:   "seats",
-	Value: ptrutil.Ptr(5),
+	Key:   "seats_maximum",
+	Value: new(5),
 }
 
-var SamplePlanLimitUnlimited = &PlanLimit{
-	Key:   "invoices",
-	Value: ptrutil.Ptr(10000),
+var SamplePlanLimitInvoices = &PlanLimit{
+	Key:   "invoices_maximum",
+	Value: new(10000),
 }
 
 var SamplePricingPlanFree = &PricingPlan{
@@ -35,11 +34,12 @@ var SamplePricingPlanFree = &PricingPlan{
 		v := 0.0
 		return &v
 	}(),
-	SeatMinimum: ptrutil.Ptr(1),
+	SeatMinimum: new(1),
 	Limits: []PlanLimit{
-		{Key: "sandboxes", Value: ptrutil.Ptr(1)},
-		{Key: "seats", Value: ptrutil.Ptr(1)},
-		{Key: "invoices", Value: ptrutil.Ptr(100)},
+		{Key: "sandboxes_maximum", Value: new(1)},
+		{Key: "seats_maximum", Value: new(1)},
+		{Key: "invoices_maximum", Value: new(100)},
+		{Key: "batches_maximum", Value: new(10000)},
 	},
 	DisplayFeatures: []string{
 		"1 sandbox environment",
@@ -65,11 +65,12 @@ var SamplePricingPlanStarter = &PricingPlan{
 		v := 19.0
 		return &v
 	}(),
-	SeatMinimum: ptrutil.Ptr(1),
+	SeatMinimum: new(1),
 	Limits: []PlanLimit{
-		{Key: "sandboxes", Value: ptrutil.Ptr(3)},
-		{Key: "seats", Value: ptrutil.Ptr(5)},
-		{Key: "invoices", Value: ptrutil.Ptr(10000)},
+		{Key: "sandboxes_maximum", Value: new(3)},
+		{Key: "seats_maximum", Value: new(5)},
+		{Key: "invoices_maximum", Value: new(10000)},
+		{Key: "batches_maximum", Value: new(10000)},
 	},
 	DisplayFeatures: []string{
 		"3 sandbox environments",
@@ -96,11 +97,12 @@ var SamplePricingPlanPro = &PricingPlan{
 		v := 147.0
 		return &v
 	}(),
-	SeatMinimum: ptrutil.Ptr(3),
+	SeatMinimum: new(3),
 	Limits: []PlanLimit{
-		{Key: "sandboxes", Value: ptrutil.Ptr(999)},
-		{Key: "seats", Value: ptrutil.Ptr(999)},
-		{Key: "invoices", Value: ptrutil.Ptr(999)},
+		{Key: "sandboxes_maximum", Value: new(999)},
+		{Key: "seats_maximum", Value: new(999)},
+		{Key: "invoices_maximum", Value: new(999)},
+		{Key: "batches_maximum", Value: new(10000)},
 	},
 	DisplayFeatures: []string{
 		"Unlimited sandbox environments",
@@ -118,19 +120,11 @@ var SamplePricingPlanPro = &PricingPlan{
 	}(),
 }
 
-var SampleGetPricingPlansResponse = &GetPricingPlansResponse{
-	Plans: []PricingPlan{
-		*SamplePricingPlanFree,
-		*SamplePricingPlanStarter,
-		*SamplePricingPlanPro,
-	},
-}
-
-// PlanLimit represents a resource limit for a pricing plan
+// PlanLimit represents a resource limit for a pricing plan.
 type PlanLimit struct {
-	// The resource key this limit applies to (e.g., "sandboxes", "seats", "invoices")
+	// The resource key this limit applies to (e.g., "sandboxes", "seats", "invoices").
 	Key string `json:"key" validate:"required"`
-	// The maximum allowed value, null means unlimited
+	// The maximum allowed value, null means unlimited.
 	Value *int `json:"value"`
 }
 
@@ -138,46 +132,36 @@ func (*PlanLimit) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SamplePlanLimitSandboxes)
 }
 
-// PricingPlan represents a pricing plan available for purchase
+// PricingPlan represents a pricing plan available for purchase.
 type PricingPlan struct {
-	// The unique ID of the plan
+	// The unique ID of the plan.
 	ID string `json:"id" validate:"required"`
-	// The object type, always "pricing_plan"
+	// The object type.
 	Object constants.ObjectType `json:"object" validate:"required,enum=pricing_plan"`
-	// The display name of the plan
+	// The display name of the plan.
 	Name string `json:"name" validate:"required"`
-	// The plan type code (e.g., "free", "starter", "professional")
+	// The plan type code (e.g., "free", "starter", "professional").
 	PlanTypeCode constants.PublicPlanCode `json:"plan_type_code" validate:"required"`
-	// The price per seat per month in dollars
+	// The price per seat per month in dollars.
 	PricePerSeat float64 `json:"price_per_seat"`
-	// The flat monthly price in dollars (if applicable)
+	// The flat monthly price in dollars, if applicable.
 	PricePerMonth *float64 `json:"price_per_month,omitempty"`
-	// The minimum number of seats required for this plan
+	// The minimum number of seats required for this plan.
 	SeatMinimum *int `json:"seat_minimum,omitempty"`
-	// The resource limits for this plan
+	// The resource limits for this plan.
 	Limits []PlanLimit `json:"limits" validate:"required"`
-	// The features to display on the pricing page
+	// The features to display on the pricing page.
 	DisplayFeatures []string `json:"display_features" validate:"required"`
-	// The display order for sorting plans on the pricing page
+	// The display order for sorting plans on the pricing page.
 	DisplayOrder int `json:"display_order"`
-	// Whether this plan should be visually highlighted
+	// Whether this plan should be visually highlighted.
 	IsHighlighted bool `json:"is_highlighted"`
-	// The call-to-action button text for this plan
+	// The call-to-action button text for this plan.
 	ButtonText string `json:"button_text" validate:"required"`
-	// The name of the previous plan tier that this plan includes
+	// The name of the previous plan tier that this plan includes.
 	IncludesPreviousPlan *string `json:"includes_previous_plan,omitempty"`
 }
 
 func (*PricingPlan) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SamplePricingPlanStarter)
-}
-
-// GetPricingPlansResponse represents the response containing all available pricing plans
-type GetPricingPlansResponse struct {
-	// The list of available pricing plans
-	Plans []PricingPlan `json:"plans" validate:"required"`
-}
-
-func (*GetPricingPlansResponse) SchemaExample() any {
-	return apiexample.ValidateAndMarshalToMap(SampleGetPricingPlansResponse)
 }

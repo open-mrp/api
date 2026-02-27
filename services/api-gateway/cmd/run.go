@@ -12,6 +12,7 @@ import (
 	"time"
 
 	grpcclient "github.com/augno/api/services/api-gateway/grpc-client"
+	httptransport "github.com/augno/api/services/api-gateway/internal/http"
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	"github.com/augno/api/services/api-gateway/internal/infrastructure/publisher"
 	"github.com/augno/api/services/api-gateway/internal/infrastructure/repository"
@@ -47,6 +48,9 @@ func Run(
 	if err := cfg.validate(); err != nil {
 		return err
 	}
+
+	// Configure the frontend URL for request log links in error responses.
+	httptransport.SetFrontendURL(cfg.FrontendURL)
 
 	// Initialize the tracing provider.
 	tracerShutdown, err := tracing.InitProvider(ctx, domain.ServiceName, getenv)
@@ -116,6 +120,18 @@ func Run(
 		return err
 	}
 
+	// Billing Service
+	billingClient, err := grpcclient.NewBillingServiceClientWithURL(cfg.BillingServiceURI)
+	if err != nil {
+		return err
+	}
+	defer billingClient.Close()
+
+	logger.Info("Waiting for Billing Service to be ready...")
+	if err := billingClient.WaitForReady(ctx); err != nil {
+		return err
+	}
+
 	// Platform Service
 	platformClient, err := grpcclient.NewPlatformServiceClientWithURL(cfg.PlatformServiceURI)
 	if err != nil {
@@ -129,18 +145,23 @@ func Run(
 	}
 
 	// Initialize the request log publisher.
-	reqLogPublisher := publisher.NewRequestLogOutboxPublisher(repository.NewOutboxRepo(queries))
+	reqLogPublisher := publisher.NewRequestLogOutboxPublisher(repository.NewOutboxRepo(queries), cfg.FrontendURL)
 
 	// Initialize the main router.
-	mainBaseCfg := router.BuildBaseConfig(cfg.PlatformMode, "main ", authClient, coreClient, platformClient, reqLogPublisher, stdout)
+	mainBaseCfg := router.BuildBaseConfig(cfg.PlatformMode, "main ", authClient, coreClient, billingClient, platformClient, reqLogPublisher, stdout)
 	mainRouter := router.NewMainRouter(mainBaseCfg)
 
 	// Initialize the auth router.
-	authBaseCfg := router.BuildBaseConfig(cfg.PlatformMode, "auth ", authClient, coreClient, platformClient, reqLogPublisher, stdout)
+	authBaseCfg := router.BuildBaseConfig(cfg.PlatformMode, "auth ", authClient, coreClient, billingClient, platformClient, reqLogPublisher, stdout)
 	authRouter := router.NewAuthRouter(authBaseCfg)
+
+	// Initialize the webhook router (no auth, minimal middleware).
+	webhookBaseCfg := router.BuildBaseConfig(cfg.PlatformMode, "webhook ", authClient, coreClient, billingClient, platformClient, reqLogPublisher, stdout)
+	webhookRouter := router.NewWebhookRouter(webhookBaseCfg)
 
 	// Initialize the HTTP server.
 	mux := http.NewServeMux()
+	mux.Handle("/v1/webhooks/", webhookRouter)
 	mux.Handle("/v1/auth/", authRouter)
 	mux.Handle("/", mainRouter)
 

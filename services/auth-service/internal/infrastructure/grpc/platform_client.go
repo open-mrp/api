@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/augno/api/shared/contracts"
 	pb "github.com/augno/api/shared/proto/platform"
@@ -16,7 +17,7 @@ type PlatformServiceClient struct {
 
 func NewPlatformServiceClient(url string) (*PlatformServiceClient, error) {
 	if url == "" {
-		return nil, nil
+		return nil, fmt.Errorf("platform service URL is required")
 	}
 
 	grpcConn, err := contracts.NewGRPCClientConn(contracts.GRPCConnTarget{URL: url, Name: platformServiceName}, nil)

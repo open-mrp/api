@@ -24,7 +24,9 @@ func (r *rolePermissionRepoImpl) FindByRoleID(ctx context.Context, roleID string
 	ctx, span := rolePermissionRepoTracer.Start(ctx, "repository.role_permission.find_by_role_id")
 	defer span.End()
 
-	permissions, err := r.queries.FindRolePermissionStrings(ctx, roleID)
+	permissions, err := r.queries.FindRolePermissionStrings(ctx, sqlc.FindRolePermissionStringsParams{
+		RoleID: roleID,
+	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
 			return map[string]bool{}, nil
@@ -34,9 +36,7 @@ func (r *rolePermissionRepoImpl) FindByRoleID(ctx context.Context, roleID string
 
 	permissionMap := make(map[string]bool)
 	for _, p := range permissions {
-		if str, ok := p.(string); ok {
-			permissionMap[str] = true
-		}
+		permissionMap[p] = true
 	}
 
 	return permissionMap, nil

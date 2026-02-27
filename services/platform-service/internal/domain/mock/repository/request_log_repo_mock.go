@@ -55,3 +55,33 @@ func (mr *MockRequestLogRepoMockRecorder) Create(ctx, requestLog any) *gomock.Ca
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockRequestLogRepo)(nil).Create), ctx, requestLog)
 }
+
+// FindByID mocks base method.
+func (m *MockRequestLogRepo) FindByID(ctx context.Context, id, targetAccountID string) (*domain.RequestLogRead, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FindByID", ctx, id, targetAccountID)
+	ret0, _ := ret[0].(*domain.RequestLogRead)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// FindByID indicates an expected call of FindByID.
+func (mr *MockRequestLogRepoMockRecorder) FindByID(ctx, id, targetAccountID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindByID", reflect.TypeOf((*MockRequestLogRepo)(nil).FindByID), ctx, id, targetAccountID)
+}
+
+// List mocks base method.
+func (m *MockRequestLogRepo) List(ctx context.Context, targetAccountID string, filter *domain.ListRequestLogsFilter) (*domain.ListRequestLogsResult, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List", ctx, targetAccountID, filter)
+	ret0, _ := ret[0].(*domain.ListRequestLogsResult)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List.
+func (mr *MockRequestLogRepoMockRecorder) List(ctx, targetAccountID, filter any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockRequestLogRepo)(nil).List), ctx, targetAccountID, filter)
+}

@@ -127,3 +127,108 @@ func TestLoggingMiddleware_RequestLogInContext(t *testing.T) {
 		t.Errorf("Expected APIVersion '1.0.forge' in context, got '%s'", *capturedRL.APIVersion)
 	}
 }
+
+// stubRouteMatcher implements RouteMatcher for testing public endpoint detection.
+type stubRouteMatcher struct {
+	routes []any
+}
+
+func (s *stubRouteMatcher) GetRoutes() []any { return s.routes }
+
+func TestLoggingMiddleware_PublicEndpoint_WithPublicRoute(t *testing.T) {
+	logger := log.New(io.Discard, "", 0)
+	saver := &stubSaver{}
+
+	router := &stubRouteMatcher{
+		routes: []any{
+			map[string]any{"Method": "GET", "Path": "/v1/invoices", "PathPattern": nil, "Public": true},
+		},
+	}
+
+	handler := LoggingMiddleware(logger, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}, saver, router)
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/invoices", nil)
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+
+	if saver.savedRL == nil {
+		t.Fatal("Expected request log to be saved")
+	}
+	if !saver.savedRL.PublicEndpoint {
+		t.Error("Expected PublicEndpoint to be true for a public route")
+	}
+}
+
+func TestLoggingMiddleware_PublicEndpoint_WithPrivateRoute(t *testing.T) {
+	logger := log.New(io.Discard, "", 0)
+	saver := &stubSaver{}
+
+	router := &stubRouteMatcher{
+		routes: []any{
+			map[string]any{"Method": "POST", "Path": "/v1/auth/login", "PathPattern": nil, "Public": false},
+		},
+	}
+
+	handler := LoggingMiddleware(logger, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}, saver, router)
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/login", nil)
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+
+	if saver.savedRL == nil {
+		t.Fatal("Expected request log to be saved")
+	}
+	if saver.savedRL.PublicEndpoint {
+		t.Error("Expected PublicEndpoint to be false for a private route")
+	}
+}
+
+func TestLoggingMiddleware_PublicEndpoint_ExcludedRoute(t *testing.T) {
+	logger := log.New(io.Discard, "", 0)
+	saver := &stubSaver{}
+
+	router := &stubRouteMatcher{
+		routes: []any{
+			map[string]any{"Method": "GET", "Path": "/v1/me", "PathPattern": nil, "Public": true},
+		},
+	}
+
+	handler := LoggingMiddleware(logger, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}, saver, router)
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/me", nil)
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+
+	if saver.savedRL == nil {
+		t.Fatal("Expected request log to be saved")
+	}
+	if saver.savedRL.PublicEndpoint {
+		t.Error("Expected PublicEndpoint to be false for excluded route /v1/me")
+	}
+}
+
+func TestLoggingMiddleware_PublicEndpoint_NoRouter(t *testing.T) {
+	logger := log.New(io.Discard, "", 0)
+	saver := &stubSaver{}
+
+	handler := LoggingMiddleware(logger, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}, saver, nil)
+
+	req := httptest.NewRequest(http.MethodGet, "/unknown", nil)
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+
+	if saver.savedRL == nil {
+		t.Fatal("Expected request log to be saved")
+	}
+	if !saver.savedRL.PublicEndpoint {
+		t.Error("Expected PublicEndpoint to default to true when no router is provided")
+	}
+}

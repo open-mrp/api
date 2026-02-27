@@ -14,6 +14,7 @@ import (
 	reflect "reflect"
 
 	domain "github.com/augno/api/services/platform-service/internal/domain"
+	apierror "github.com/augno/api/shared/errors"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -42,10 +43,10 @@ func (m *MockIdempotencyKeyRepo) EXPECT() *MockIdempotencyKeyRepoMockRecorder {
 }
 
 // AdvanceRecoveryPoint mocks base method.
-func (m *MockIdempotencyKeyRepo) AdvanceRecoveryPoint(ctx context.Context, params domain.AdvanceRecoveryPointParams) error {
+func (m *MockIdempotencyKeyRepo) AdvanceRecoveryPoint(ctx context.Context, params domain.AdvanceRecoveryPointParams) *apierror.APIError {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AdvanceRecoveryPoint", ctx, params)
-	ret0, _ := ret[0].(error)
+	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 
@@ -56,11 +57,11 @@ func (mr *MockIdempotencyKeyRepoMockRecorder) AdvanceRecoveryPoint(ctx, params a
 }
 
 // GetRecoveryPoint mocks base method.
-func (m *MockIdempotencyKeyRepo) GetRecoveryPoint(ctx context.Context, id string) (*domain.GetRecoveryPointResult, error) {
+func (m *MockIdempotencyKeyRepo) GetRecoveryPoint(ctx context.Context, id string) (*domain.GetRecoveryPointResult, *apierror.APIError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetRecoveryPoint", ctx, id)
 	ret0, _ := ret[0].(*domain.GetRecoveryPointResult)
-	ret1, _ := ret[1].(error)
+	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
@@ -71,10 +72,10 @@ func (mr *MockIdempotencyKeyRepoMockRecorder) GetRecoveryPoint(ctx, id any) *gom
 }
 
 // ReleaseLock mocks base method.
-func (m *MockIdempotencyKeyRepo) ReleaseLock(ctx context.Context, id string) error {
+func (m *MockIdempotencyKeyRepo) ReleaseLock(ctx context.Context, id string) *apierror.APIError {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ReleaseLock", ctx, id)
-	ret0, _ := ret[0].(error)
+	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 
@@ -85,10 +86,10 @@ func (mr *MockIdempotencyKeyRepoMockRecorder) ReleaseLock(ctx, id any) *gomock.C
 }
 
 // SetResponse mocks base method.
-func (m *MockIdempotencyKeyRepo) SetResponse(ctx context.Context, params domain.SetResponseParams) error {
+func (m *MockIdempotencyKeyRepo) SetResponse(ctx context.Context, params domain.SetResponseParams) *apierror.APIError {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SetResponse", ctx, params)
-	ret0, _ := ret[0].(error)
+	ret0, _ := ret[0].(*apierror.APIError)
 	return ret0
 }
 
@@ -99,11 +100,11 @@ func (mr *MockIdempotencyKeyRepoMockRecorder) SetResponse(ctx, params any) *gomo
 }
 
 // UpsertAndLock mocks base method.
-func (m *MockIdempotencyKeyRepo) UpsertAndLock(ctx context.Context, key *domain.IdempotencyKey) (*domain.UpsertAndLockResult, error) {
+func (m *MockIdempotencyKeyRepo) UpsertAndLock(ctx context.Context, key *domain.IdempotencyKey) (*domain.UpsertAndLockResult, *apierror.APIError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpsertAndLock", ctx, key)
 	ret0, _ := ret[0].(*domain.UpsertAndLockResult)
-	ret1, _ := ret[1].(error)
+	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 

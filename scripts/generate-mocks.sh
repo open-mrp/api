@@ -4,7 +4,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MODULE="github.com/augno/api"
-DEFAULT_SERVICES=("auth-service" "api-gateway" "notification-service" "platform-service" "core-service")
+DEFAULT_SERVICES=("auth-service" "api-gateway" "notification-service" "platform-service" "core-service" "billing-service")
 COMPONENTS=("factories" "mediators" "publishers" "repositories" "services" "utils" "clients")
 declare -a services=()
 

@@ -67,10 +67,72 @@ service AuthService {
   // Supports cursor-based pagination and optional search filtering.
   rpc ListAPIKeys(ListAPIKeysRequest) returns (ListAPIKeysResponse);
 
+  // GetAPIKey returns a single API key's metadata by its ID. Only callable
+  // by internal admin users on the key's owning account.
+  rpc GetAPIKey(GetAPIKeyRequest) returns (GetAPIKeyResponse);
+
   // GetOrCreateDocAPIKey returns a sandbox API key for embedding in API
   // documentation. Reuses an existing valid key or creates/rotates one as
   // needed. Only callable by internal admin users.
   rpc GetOrCreateDocAPIKey(GetOrCreateDocAPIKeyRequest) returns (GetOrCreateDocAPIKeyResponse);
+
+  // CreateRegistrationSession creates a new registration session for the
+  // given email and plan code, or returns an existing active session if one
+  // already exists (idempotent). Sends a verification email on creation.
+  rpc CreateRegistrationSession(CreateRegistrationSessionRequest) returns (CreateRegistrationSessionResponse);
+
+  // ResendVerificationEmail regenerates the verification token for an
+  // existing registration session and resends the verification email.
+  rpc ResendVerificationEmail(ResendVerificationEmailRequest) returns (google.protobuf.Empty);
+
+  // VerifyRegistrationToken verifies the email token sent during registration.
+  // Marks the session's email as verified and advances the step to user_details.
+  // Idempotent: repeated calls with the same token return the same session.
+  rpc VerifyRegistrationToken(VerifyRegistrationTokenRequest) returns (VerifyRegistrationTokenResponse);
+
+  // GetRegistrationSession returns the current state of a registration session.
+  rpc GetRegistrationSession(GetRegistrationSessionRequest) returns (GetRegistrationSessionResponse);
+
+  // CreateUserForRegistration creates or resolves a user for the given
+  // registration session. Returns the user ID and auth tokens.
+  rpc CreateUserForRegistration(CreateUserForRegistrationRequest) returns (CreateUserForRegistrationResponse);
+
+  // UpdateRegistrationSession updates an in-progress registration session's
+  // step, form data, or Stripe-related fields. Returns the updated session.
+  rpc UpdateRegistrationSession(UpdateRegistrationSessionRequest) returns (UpdateRegistrationSessionResponse);
+
+  // ListRegistrationSessions returns a paginated list of open (uncompleted)
+  // registration sessions for the authenticated user.
+  rpc ListRegistrationSessions(ListRegistrationSessionsRequest) returns (ListRegistrationSessionsResponse);
+
+  // CreateRegistrationCheckout creates a Stripe checkout session for a
+  // registration session. Creates the Stripe customer, product, price, and
+  // checkout session using recovery points for crash safety.
+  rpc CreateRegistrationCheckout(CreateRegistrationCheckoutRequest) returns (CreateRegistrationCheckoutResponse);
+
+  // CompleteRegistration finalizes a registration session by creating the
+  // production account, sandbox account, roles, permissions, and account-user
+  // records in the core-service, then marks the session as completed.
+  rpc CompleteRegistration(CompleteRegistrationRequest) returns (CompleteRegistrationResponse);
+
+  // ConfirmRegistrationPayment verifies a Stripe checkout session's payment
+  // status and, if complete, marks the registration session's payment as done
+  // and records the subscription ID.
+  rpc ConfirmRegistrationPayment(ConfirmRegistrationPaymentRequest) returns (ConfirmRegistrationPaymentResponse);
+}
+
+// CompleteRegistrationRequest carries the session ID to finalize.
+message CompleteRegistrationRequest {
+  // SessionId is the prefixed unique identifier of the registration session.
+  string session_id = 1;
+}
+
+// CompleteRegistrationResponse returns the IDs of the newly created accounts.
+message CompleteRegistrationResponse {
+  // AccountId is the new production account's prefixed ID.
+  string account_id = 1;
+  // SandboxId is the new sandbox account's prefixed ID.
+  string sandbox_id = 2;
 }
 
 // LoginRequest carries the credentials for user authentication.
@@ -151,6 +213,9 @@ message Identity {
   // AccountMode indicates whether the target account is in production or
   // sandbox mode, controlling which data partition the request accesses.
   AccountMode account_mode = 4;
+  // SubscriptionStatus is the Stripe subscription status for the target
+  // account. Absent for free-tier or unauthenticated requests.
+  optional string subscription_status = 5;
 }
 
 // IdentityActor describes the authenticated entity (user or API key) and
@@ -344,16 +409,33 @@ message ListAPIKeysRequest {
   repeated string statuses = 4;
 }
 
+// PageInfo contains cursor-based pagination metadata.
+message PageInfo {
+  optional string next_cursor = 1;
+  optional string prev_cursor = 2;
+  bool has_next_page = 3;
+  bool has_prev_page = 4;
+}
+
 // ListAPIKeysResponse contains a page of API key metadata plus pagination
 // indicators.
 message ListAPIKeysResponse {
   // APIKeys is the list of API key metadata for this page.
   repeated APIKeyInfo api_keys = 1;
-  // HasMore indicates whether additional pages exist after this one.
-  bool has_more = 2;
-  // NextCursor is the opaque cursor to pass in the next request's cursor
-  // field. Absent when has_more is false.
-  optional string next_cursor = 3;
+  // Pagination metadata.
+  PageInfo page_info = 4;
+}
+
+// GetAPIKeyRequest carries the ID of the API key to retrieve.
+message GetAPIKeyRequest {
+  // APIKeyID is the prefixed unique identifier of the key to retrieve.
+  string api_key_id = 1;
+}
+
+// GetAPIKeyResponse contains the API key metadata.
+message GetAPIKeyResponse {
+  // APIKey is the API key metadata.
+  APIKeyInfo api_key = 1;
 }
 
 // APIKeyInfo represents API key metadata as returned to API clients.
@@ -391,4 +473,198 @@ message GetOrCreateDocAPIKeyResponse {
   string api_key_secret = 1;
   // APIKey is the API key metadata.
   APIKeyInfo api_key = 2;
+}
+
+// CreateRegistrationSessionRequest carries the data needed to start a new
+// registration session.
+message CreateRegistrationSessionRequest {
+  // Email is the email address for the registration session.
+  string email = 1;
+  // PlanCode is the pricing plan code selected during registration
+  // (e.g. "starter", "professional").
+  string plan_code = 2;
+}
+
+// CreateRegistrationSessionResponse is returned after creating (or
+// retrieving an existing) registration session.
+message CreateRegistrationSessionResponse {
+  // SessionId is the prefixed unique identifier of the registration session
+  // (e.g. "rgfl_01gf7a8200eaj8fke1xvw4h50x").
+  string session_id = 1;
+}
+
+// ResendVerificationEmailRequest carries the session ID for which to
+// resend the verification email.
+message ResendVerificationEmailRequest {
+  // SessionId is the prefixed unique identifier of the registration session.
+  string session_id = 1;
+}
+
+// RegistrationSessionData holds mutable form data collected across registration steps.
+message RegistrationSessionData {
+  optional string user_name = 1;
+  optional string account_name = 2;
+  optional string billing_address_line1 = 3;
+  optional string billing_address_line2 = 4;
+  optional string billing_address_city = 5;
+  optional string billing_address_state = 6;
+  optional string billing_address_postal_code = 7;
+  optional string billing_address_country = 8;
+}
+
+// RegistrationSessionInfo is the full registration session state returned by
+// verify-token and future step endpoints.
+message RegistrationSessionInfo {
+  string id = 1;
+  string email = 2;
+  string plan_code = 3;
+  string step = 4;
+  bool is_email_verified = 5;
+  optional bool is_existing_user = 6;
+  optional string user_id = 7;
+  optional string account_id = 8;
+  optional string stripe_customer_id = 9;
+  optional string stripe_checkout_session_id = 10;
+  optional string stripe_subscription_id = 11;
+  bool payment_completed = 12;
+  RegistrationSessionData session_data = 13;
+  optional google.protobuf.Timestamp completed_at = 14;
+  google.protobuf.Timestamp created_at = 15;
+  google.protobuf.Timestamp updated_at = 16;
+}
+
+// VerifyRegistrationTokenRequest carries the verification token from the
+// email link.
+message VerifyRegistrationTokenRequest {
+  // Token is the verification token sent to the user's email.
+  string token = 1;
+}
+
+// VerifyRegistrationTokenResponse contains the updated registration session
+// after email verification.
+message VerifyRegistrationTokenResponse {
+  // Session is the full registration session state after verification.
+  RegistrationSessionInfo session = 1;
+}
+
+// GetRegistrationSessionRequest carries the session ID to look up.
+message GetRegistrationSessionRequest {
+  // SessionId is the prefixed unique identifier of the registration session.
+  string session_id = 1;
+}
+
+// GetRegistrationSessionResponse contains the registration session state.
+message GetRegistrationSessionResponse {
+  // Session is the full registration session state.
+  RegistrationSessionInfo session = 1;
+}
+
+// CreateUserForRegistrationRequest carries the data needed to create a user
+// for a registration session.
+message CreateUserForRegistrationRequest {
+  // SessionId is the prefixed unique identifier of the registration session.
+  string session_id = 1;
+  // Name is the display name for the new user.
+  string name = 2;
+  // Password is the plaintext password for the new user account.
+  string password = 3;
+}
+
+// CreateUserForRegistrationResponse contains the created user's ID and
+// auth tokens for immediate login.
+message CreateUserForRegistrationResponse {
+  // UserID is the prefixed unique identifier of the created or existing user.
+  string user_id = 1;
+  // AccessToken is a short-lived JWT for authenticating subsequent requests.
+  string access_token = 2;
+  // RefreshToken is a long-lived token for obtaining new access tokens.
+  string refresh_token = 3;
+}
+
+// UpdateRegistrationSessionRequest carries the fields to update on an
+// in-progress registration session. All fields except session_id are optional;
+// only provided fields are applied.
+message UpdateRegistrationSessionRequest {
+  // SessionId is the prefixed unique identifier of the registration session.
+  string session_id = 1;
+  // Step optionally advances the session to a new registration step.
+  optional string step = 2;
+  // SessionData optionally updates the mutable form data (user name, account
+  // name, billing address).
+  optional RegistrationSessionData session_data = 3;
+  // StripeCustomerID optionally sets the Stripe customer ID on the session.
+  optional string stripe_customer_id = 4;
+  // PaymentCompleted optionally marks whether payment has been completed.
+  optional bool payment_completed = 5;
+  // StripeSubscriptionID optionally sets the Stripe subscription ID on the session.
+  optional string stripe_subscription_id = 6;
+}
+
+// UpdateRegistrationSessionResponse contains the updated registration session.
+message UpdateRegistrationSessionResponse {
+  // Session is the full registration session state after the update.
+  RegistrationSessionInfo session = 1;
+}
+
+// ListRegistrationSessionsRequest carries pagination parameters for listing
+// open registration sessions.
+message ListRegistrationSessionsRequest {
+  // Cursor is the opaque pagination cursor from a previous response's
+  // next_cursor field. Omit for the first page.
+  optional string cursor = 1;
+  // Limit is the maximum number of sessions to return per page.
+  int32 limit = 2;
+}
+
+// ListRegistrationSessionsResponse contains a page of registration sessions
+// plus pagination indicators.
+message ListRegistrationSessionsResponse {
+  // Sessions is the list of open registration sessions for this page.
+  repeated RegistrationSessionInfo sessions = 1;
+  // Pagination metadata.
+  PageInfo page_info = 4;
+}
+
+// CreateRegistrationCheckoutRequest carries the session ID for which to
+// create a Stripe checkout session.
+message CreateRegistrationCheckoutRequest {
+  // SessionId is the prefixed unique identifier of the registration session.
+  string session_id = 1;
+}
+
+// CreateRegistrationCheckoutResponse contains the Stripe checkout session
+// details needed by the frontend to render the embedded checkout form.
+message CreateRegistrationCheckoutResponse {
+  // ClientSecret is the Stripe checkout session's client secret for the
+  // embedded checkout UI.
+  string client_secret = 1;
+  // CheckoutID is the Stripe checkout session ID.
+  string checkout_id = 2;
+  // StripeCustomerID is the Stripe customer ID created for this registration.
+  string stripe_customer_id = 3;
+  // PublishableKey is the Stripe publishable key for the frontend.
+  string publishable_key = 4;
+  // Field 5 was checkout_url (removed — embedded mode does not return a URL).
+  reserved 5;
+  reserved "checkout_url";
+}
+
+// ConfirmRegistrationPaymentRequest carries the session and checkout session
+// IDs to verify payment completion.
+message ConfirmRegistrationPaymentRequest {
+  // SessionId is the prefixed unique identifier of the registration session.
+  string session_id = 1;
+  // CheckoutSessionId is the Stripe checkout session ID to verify.
+  string checkout_session_id = 2;
+}
+
+// ConfirmRegistrationPaymentResponse contains the checkout session status and,
+// when complete, the subscription and customer IDs.
+message ConfirmRegistrationPaymentResponse {
+  // Status is the Stripe checkout session status (e.g. "complete", "open").
+  string status = 1;
+  // SubscriptionId is the Stripe subscription ID, present when payment is complete.
+  optional string subscription_id = 2;
+  // StripeCustomerId is the Stripe customer ID associated with the checkout.
+  optional string stripe_customer_id = 3;
 }

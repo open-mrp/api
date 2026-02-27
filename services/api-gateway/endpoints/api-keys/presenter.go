@@ -64,7 +64,7 @@ func APIKeyDocPresenter(resp *pb.GetOrCreateDocAPIKeyResponse) apiresource.Creat
 
 func APIKeyListPresenter(resp *pb.ListAPIKeysResponse) *apiresource.List[apiresource.APIKey] {
 	if resp == nil {
-		return apiresource.NewList[apiresource.APIKey](nil, false, nil)
+		return apiresource.NewList[apiresource.APIKey](nil, apiresource.PageInfo{})
 	}
 
 	keys := make([]apiresource.APIKey, len(resp.ApiKeys))
@@ -72,5 +72,17 @@ func APIKeyListPresenter(resp *pb.ListAPIKeysResponse) *apiresource.List[apireso
 		keys[i] = APIKeyPresenter(pbKey)
 	}
 
-	return apiresource.NewList(keys, resp.HasMore, resp.NextCursor)
+	return apiresource.NewList(keys, mapProtoPageInfo(resp.PageInfo))
+}
+
+func mapProtoPageInfo(pi *pb.PageInfo) apiresource.PageInfo {
+	if pi == nil {
+		return apiresource.PageInfo{}
+	}
+	return apiresource.PageInfo{
+		NextCursor:  pi.NextCursor,
+		PrevCursor:  pi.PrevCursor,
+		HasNextPage: pi.HasNextPage,
+		HasPrevPage: pi.HasPrevPage,
+	}
 }

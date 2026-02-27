@@ -10,28 +10,38 @@ import (
 )
 
 const findRolePermissionStrings = `-- name: FindRolePermissionStrings :many
-SELECT 
-    CASE 
-        WHEN ` + "`" + `create` + "`" + ` = 1 THEN CONCAT(permission_code, ':create')
-        WHEN ` + "`" + `read` + "`" + ` = 1 THEN CONCAT(permission_code, ':read')
-        WHEN ` + "`" + `update` + "`" + ` = 1 THEN CONCAT(permission_code, ':update')
-        WHEN ` + "`" + `delete` + "`" + ` = 1 THEN CONCAT(permission_code, ':delete')
-    END as permission_string
-FROM role_permission 
-WHERE role_permission.role_id = ? 
-    AND (` + "`" + `create` + "`" + ` = 1 OR ` + "`" + `read` + "`" + ` = 1 OR ` + "`" + `update` + "`" + ` = 1 OR ` + "`" + `delete` + "`" + ` = 1)
-ORDER BY permission_string
+SELECT CONCAT(role_permission.permission_code, ':create') as permission_string
+FROM role_permission WHERE role_permission.role_id = ? AND role_permission.` + "`" + `create` + "`" + ` = 1
+UNION ALL
+SELECT CONCAT(role_permission.permission_code, ':read')
+FROM role_permission WHERE role_permission.role_id = ? AND role_permission.` + "`" + `read` + "`" + ` = 1
+UNION ALL
+SELECT CONCAT(role_permission.permission_code, ':update')
+FROM role_permission WHERE role_permission.role_id = ? AND role_permission.` + "`" + `update` + "`" + ` = 1
+UNION ALL
+SELECT CONCAT(role_permission.permission_code, ':delete')
+FROM role_permission WHERE role_permission.role_id = ? AND role_permission.` + "`" + `delete` + "`" + ` = 1
+ORDER BY 1
 `
 
-func (q *Queries) FindRolePermissionStrings(ctx context.Context, roleID string) ([]interface{}, error) {
-	rows, err := q.query(ctx, q.findRolePermissionStringsStmt, findRolePermissionStrings, roleID)
+type FindRolePermissionStringsParams struct {
+	RoleID string
+}
+
+func (q *Queries) FindRolePermissionStrings(ctx context.Context, arg FindRolePermissionStringsParams) ([]string, error) {
+	rows, err := q.query(ctx, q.findRolePermissionStringsStmt, findRolePermissionStrings,
+		arg.RoleID,
+		arg.RoleID,
+		arg.RoleID,
+		arg.RoleID,
+	)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []interface{}
+	var items []string
 	for rows.Next() {
-		var permission_string interface{}
+		var permission_string string
 		if err := rows.Scan(&permission_string); err != nil {
 			return nil, err
 		}

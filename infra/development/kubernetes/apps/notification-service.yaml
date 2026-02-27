@@ -66,7 +66,7 @@ spec:
                             configMapKeyRef:
                                 key: PLATFORM
                                 name: app-config
-                      - name: GRPC_PORT
+                      - name: PORT
                         value: "9092"
 ---
 apiVersion: v1

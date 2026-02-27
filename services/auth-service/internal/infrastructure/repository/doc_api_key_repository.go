@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 
+	"github.com/augno/api/services/auth-service/internal/apikey"
 	"github.com/augno/api/services/auth-service/internal/domain"
 	"github.com/augno/api/services/auth-service/internal/infrastructure/sqlc"
 	"github.com/augno/api/shared/db"
@@ -20,19 +21,16 @@ func NewDocAPIKeyRepo(queries *sqlc.Queries) domain.DocAPIKeyRepo {
 	return &docAPIKeyRepoImpl{queries: queries}
 }
 
-func (r *docAPIKeyRepoImpl) FindBySandboxAccountID(ctx context.Context, sandboxAccountID string) (*domain.DocAPIKey, *apierror.APIError) {
+func (r *docAPIKeyRepoImpl) FindBySandboxAccountID(ctx context.Context, sandboxAccountID string) (*apikey.DocAPIKey, *apierror.APIError) {
 	ctx, span := docAPIKeyRepoTracer.Start(ctx, "repository.doc_api_key.find_by_sandbox_account_id")
 	defer span.End()
 
 	row, err := r.queries.FindDocAPIKeyBySandboxAccountID(ctx, sandboxAccountID)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
-			return nil, nil
-		}
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return &domain.DocAPIKey{
+	return &apikey.DocAPIKey{
 		ID:              row.ID,
 		TypeID:          row.TypeID,
 		APIKeyID:        row.ApiKeyID,
@@ -44,19 +42,16 @@ func (r *docAPIKeyRepoImpl) FindBySandboxAccountID(ctx context.Context, sandboxA
 	}, nil
 }
 
-func (r *docAPIKeyRepoImpl) FindByAPIKeyID(ctx context.Context, apiKeyID string) (*domain.DocAPIKey, *apierror.APIError) {
+func (r *docAPIKeyRepoImpl) FindByAPIKeyID(ctx context.Context, apiKeyID string) (*apikey.DocAPIKey, *apierror.APIError) {
 	ctx, span := docAPIKeyRepoTracer.Start(ctx, "repository.doc_api_key.find_by_api_key_id")
 	defer span.End()
 
 	row, err := r.queries.FindDocAPIKeyByAPIKeyID(ctx, apiKeyID)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
-			return nil, nil
-		}
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return &domain.DocAPIKey{
+	return &apikey.DocAPIKey{
 		ID:              row.ID,
 		TypeID:          row.TypeID,
 		APIKeyID:        row.ApiKeyID,
@@ -66,7 +61,7 @@ func (r *docAPIKeyRepoImpl) FindByAPIKeyID(ctx context.Context, apiKeyID string)
 	}, nil
 }
 
-func (r *docAPIKeyRepoImpl) Create(ctx context.Context, docAPIKey *domain.DocAPIKey) (int64, *apierror.APIError) {
+func (r *docAPIKeyRepoImpl) Create(ctx context.Context, docAPIKey *apikey.DocAPIKey) (int64, *apierror.APIError) {
 	ctx, span := docAPIKeyRepoTracer.Start(ctx, "repository.doc_api_key.create")
 	defer span.End()
 
@@ -88,7 +83,7 @@ func (r *docAPIKeyRepoImpl) Create(ctx context.Context, docAPIKey *domain.DocAPI
 	return id, nil
 }
 
-func (r *docAPIKeyRepoImpl) Update(ctx context.Context, docAPIKey *domain.DocAPIKey) *apierror.APIError {
+func (r *docAPIKeyRepoImpl) Update(ctx context.Context, docAPIKey *apikey.DocAPIKey) *apierror.APIError {
 	ctx, span := docAPIKeyRepoTracer.Start(ctx, "repository.doc_api_key.update")
 	defer span.End()
 
@@ -122,18 +117,6 @@ func (r *docAPIKeyRepoImpl) DeleteByAPIKeyID(ctx context.Context, apiKeyID strin
 	defer span.End()
 
 	err := r.queries.DeleteDocAPIKeyByAPIKeyID(ctx, apiKeyID)
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
-
-	return nil
-}
-
-func (r *docAPIKeyRepoImpl) DeleteAllBySandboxAccountID(ctx context.Context, sandboxAccountID string) *apierror.APIError {
-	ctx, span := docAPIKeyRepoTracer.Start(ctx, "repository.doc_api_key.delete_all_by_sandbox_account_id")
-	defer span.End()
-
-	err := r.queries.DeleteDocAPIKeysBySandboxAccountID(ctx, sandboxAccountID)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}

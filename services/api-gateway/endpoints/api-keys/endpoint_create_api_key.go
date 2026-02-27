@@ -13,17 +13,17 @@ import (
 
 // The request to create an API key
 type CreateAPIKeyRequest struct {
-	// The role ID for the API key
+	// The role ID for the API key.
 	RoleID string `json:"role_id" validate:"required"`
-	// The name for the API key
+	// The name for the API key.
 	Name string `json:"name" validate:"required"`
-	// Optional expiration time for the API key
+	// Optional expiration time for the API key.
 	ExpiresAt *time.Time `json:"expires_at,omitempty"`
 }
 
 var sampleCreateAPIKeyRequest = &CreateAPIKeyRequest{
-	RoleID: "rl_dkeig3ngi35g",
-	Name:   "Production API Key",
+	RoleID: apiresource.SampleRoleID,
+	Name:   apiresource.SampleAPIKeyName,
 }
 
 func (*CreateAPIKeyRequest) SchemaExample() any {
@@ -46,6 +46,7 @@ func (e *CreateAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAPI
 		Response:          &apiresource.CreatedAPIKey{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
+		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateAPIKeyRequest) (*apiresource.CreatedAPIKey, *apierror.APIError) {
 			return svc.(APIKeySvc).CreateAPIKey
 		},
@@ -54,6 +55,7 @@ func (e *CreateAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAPI
 		},
 		Extras: apiendpoint.APIEndpointExtras{
 			AllowUnknownJSONFields: false,
+			ShieldResponseBody:     true,
 		},
 	}
 }

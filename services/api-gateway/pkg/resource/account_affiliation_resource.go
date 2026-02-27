@@ -2,21 +2,21 @@ package apiresource
 
 import apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 
-// A minimal role for an account affiliation
+// AccountAffiliationRole represents a minimal role reference within an account affiliation.
 type AccountAffiliationRole struct {
-	// The ID of the role
+	// The unique identifier for the role.
 	ID string `json:"id" validate:"required"`
-	// The name of the role
+	// The display name of the role.
 	Name string `json:"name" validate:"required"`
 }
 
-// An affiliated account with the user
+// AccountAffiliation represents an account the user is a member of.
 type AccountAffiliation struct {
-	// The ID of the account affiliation
+	// The unique identifier of the affiliated account.
 	ID string `json:"id" validate:"required"`
-	// The name of the account affiliation
+	// The display name of the affiliated account.
 	Name string `json:"name" validate:"required"`
-	// The role of the account affiliation
+	// The user's role within this account.
 	Role AccountAffiliationRole `json:"role" validate:"required"`
 }
 

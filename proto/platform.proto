@@ -55,6 +55,15 @@ service LoggingService {
   // after every HTTP request completes (both success and failure). The log
   // includes timing, identity, error details, and trace correlation.
   rpc CreateRequestLog(CreateRequestLogRequest) returns (CreateRequestLogResponse);
+
+  // ListRequestLogs returns a paginated, filterable list of request logs
+  // scoped to the caller's target account. Used by the
+  // GET /v1/platform/request-logs endpoint.
+  rpc ListRequestLogs(ListRequestLogsRequest) returns (ListRequestLogsResponse);
+
+  // GetRequestLog returns a single request log by ID, scoped to the caller's
+  // target account. Used by the GET /v1/platform/request-logs/{id} endpoint.
+  rpc GetRequestLog(GetRequestLogRequest) returns (GetRequestLogResponse);
 }
 
 // ProcessIdempotencyKeyResult indicates the outcome of an idempotency key
@@ -264,6 +273,15 @@ message RequestLog {
   optional string api_version = 25;
   // TraceId is the OpenTelemetry trace ID for correlating logs with traces.
   optional string trace_id = 26;
+  // PublicEndpoint indicates whether this request hit a public API endpoint.
+  // Non-public endpoints (internal, automation) are filtered from default listings.
+  bool public_endpoint = 27;
+  // BodyJson is the JSON-serialized request body. Absent for shielded
+  // endpoints (auth/password) and requests with no body.
+  optional string body_json = 28;
+  // ResponseJson is the JSON-serialized response body. Absent for shielded
+  // endpoints (e.g. API key creation) and responses exceeding 256 KB.
+  optional string response_json = 29;
 }
 
 // CreateRequestLogRequest wraps the log record for insertion.
@@ -275,4 +293,124 @@ message CreateRequestLogRequest {
 // CreateRequestLogResponse confirms the log was persisted.
 message CreateRequestLogResponse {
   bool success = 1;
+}
+
+// PageInfo contains cursor-based pagination metadata.
+message PageInfo {
+  optional string next_cursor = 1;
+  optional string prev_cursor = 2;
+  bool has_next_page = 3;
+  bool has_prev_page = 4;
+}
+
+// ListRequestLogsRequest carries filter and pagination parameters for
+// listing request logs scoped to the caller's target account.
+message ListRequestLogsRequest {
+  // Filter: start of date range for occurred_at.
+  optional google.protobuf.Timestamp start_date = 1;
+  // Filter: end of date range for occurred_at.
+  optional google.protobuf.Timestamp end_date = 2;
+  // Filter: HTTP method (GET, POST, etc.).
+  optional string method = 3;
+  // Filter: HTTP status code.
+  optional int32 status_code = 4;
+  // Filter: API error code.
+  optional string error_code = 5;
+  // Filter: actor's home account ID.
+  optional string account_id = 6;
+  // Filter: actor ID (user or API key).
+  optional string actor_id = 7;
+  // Filter: actor type ("user" or "api_key").
+  optional string actor_type = 8;
+  // Filter: actor name (partial or exact match).
+  optional string actor_name = 9;
+  reserved 10, 11;
+  // When true, string filters use exact match instead of partial (LIKE).
+  optional bool exact_match = 12;
+  // Cursor for fetching the next page, from a previous response's
+  // next_cursor field. Absent on the first request.
+  optional string cursor = 13;
+  // Maximum number of results to return per page.
+  int32 limit = 14;
+  // Search query: matches against ID (exact), path (partial), or error message (partial).
+  optional string query = 15;
+}
+
+// ListRequestLogsResponse contains a page of request logs with cursor-based
+// pagination metadata.
+message ListRequestLogsResponse {
+  // The request logs in this page.
+  repeated RequestLogInfo request_logs = 1;
+  // Pagination metadata.
+  PageInfo page_info = 2;
+}
+
+// GetRequestLogRequest identifies the request log to retrieve by its ID.
+message GetRequestLogRequest {
+  // The request log's ID.
+  string id = 1;
+}
+
+// GetRequestLogResponse contains the requested request log.
+message GetRequestLogResponse {
+  // The request log.
+  RequestLogInfo request_log = 1;
+}
+
+// RequestLogInfo represents a single request log entry with enriched
+// actor and idempotency key information.
+message RequestLogInfo {
+  string id = 1;
+  string method = 2;
+  string path = 3;
+  // Host is the request's Host header value.
+  string host = 23;
+  string normalized_route = 4;
+  optional string query_json = 5;
+  int32 status_code = 6;
+  int64 latency_us = 7;
+  optional string api_version = 8;
+  optional string identity_type = 9;
+  optional string client_ip = 10;
+  optional string user_agent = 11;
+  optional string referrer = 12;
+  optional string error_code = 13;
+  optional string error_message = 14;
+  google.protobuf.Timestamp occurred_at = 15;
+  google.protobuf.Timestamp created_at = 16;
+  // Account ID resolved from target_account_id.
+  optional string account_id = 20;
+  // Account name resolved from target_account_id.
+  optional string account_name = 17;
+  // Actor details (user or API key), varies by identity_type.
+  optional RequestLogActor actor = 18;
+  // User-provided idempotency key value.
+  optional string idempotency_key = 19;
+  // BodyJson is the JSON-serialized request body. Absent for shielded
+  // endpoints and requests with no body.
+  optional string body_json = 21;
+  // ResponseJson is the JSON-serialized response body. Absent for shielded
+  // endpoints and responses exceeding 256 KB.
+  optional string response_json = 22;
+}
+
+// RequestLogActor contains the resolved actor details for a request log.
+// Fields are populated based on whether the actor is a user or API key.
+message RequestLogActor {
+  // Actor ID (user ID or API key type_id).
+  string id = 1;
+  // Object type of the actor ("user" or "api_key").
+  string object_type = 7;
+  // Actor's display name (user name or API key name).
+  optional string name = 2;
+  // Actor's email (users only).
+  optional string email = 3;
+  // Redacted API key value (API keys only).
+  optional string redacted_value = 4;
+  // Role ID assigned to the actor.
+  optional string role_id = 8;
+  // Role name assigned to the actor.
+  optional string role_name = 5;
+  // Role type code (e.g. "admin", "member").
+  optional string role_type_code = 6;
 }

@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"strings"
 	"sync"
 	"time"
@@ -180,13 +180,13 @@ func (r *rabbitMQ) ConsumeMessages(ctx context.Context, queueName string, handle
 		for {
 			select {
 			case <-ctx.Done():
-				log.Printf("Context cancelled, stopping consumer for queue %s", queueName)
+				slog.Info("Context cancelled, stopping consumer", "queue", queueName)
 				return
 			default:
 			}
 
 			if err := r.ensureChannel(ctx); err != nil {
-				log.Printf("Failed to ensure channel for queue %s: %v. Retrying in %s...", queueName, err, r.reconnectDelay)
+				slog.Error("Failed to ensure channel, retrying", "queue", queueName, "error", err, "retry_delay", r.reconnectDelay)
 				select {
 				case <-ctx.Done():
 					return
@@ -201,7 +201,7 @@ func (r *rabbitMQ) ConsumeMessages(ctx context.Context, queueName string, handle
 				false,           // global
 			)
 			if err != nil {
-				log.Printf("Failed to set QoS for queue %s: %v. Retrying in %s...", queueName, err, r.reconnectDelay)
+				slog.Error("Failed to set QoS, retrying", "queue", queueName, "error", err, "retry_delay", r.reconnectDelay)
 				select {
 				case <-ctx.Done():
 					return
@@ -220,7 +220,7 @@ func (r *rabbitMQ) ConsumeMessages(ctx context.Context, queueName string, handle
 				nil,       // args
 			)
 			if err != nil {
-				log.Printf("Failed to start consume for queue %s: %v. Retrying in %s...", queueName, err, r.reconnectDelay)
+				slog.Error("Failed to start consume, retrying", "queue", queueName, "error", err, "retry_delay", r.reconnectDelay)
 				select {
 				case <-ctx.Done():
 					return
@@ -229,12 +229,12 @@ func (r *rabbitMQ) ConsumeMessages(ctx context.Context, queueName string, handle
 				continue
 			}
 
-			log.Printf("Started consuming from queue: %s", queueName)
+			slog.Info("Started consuming", "queue", queueName)
 
 			for msg := range msgs {
 				select {
 				case <-ctx.Done():
-					log.Printf("Context cancelled, stopping consumer for queue %s", queueName)
+					slog.Info("Context cancelled, stopping consumer", "queue", queueName)
 					return
 				default:
 				}
@@ -266,16 +266,16 @@ func (r *rabbitMQ) ConsumeMessages(ctx context.Context, queueName string, handle
 
 					// Only Ack if the handler succeeds
 					if ackErr := msg.Ack(false); ackErr != nil {
-						log.Printf("ERROR: Failed to Ack message: %v. Message body: %s", ackErr, msg.Body)
+						slog.Error("Failed to Ack message", "error", ackErr, "body", string(msg.Body))
 					}
 
 					return nil
 				}); err != nil {
-					log.Printf("Error processing message: %v", err)
+					slog.Error("Error processing message", "error", err)
 				}
 			}
 
-			log.Printf("Consumption loop ended for queue %s. Reconnecting...", queueName)
+			slog.Info("Consumption loop ended, reconnecting", "queue", queueName)
 			select {
 			case <-ctx.Done():
 				return
@@ -569,6 +569,33 @@ func (r *rabbitMQ) setupExchangesAndQueues() error {
 	if err := r.declareAndBindQueue(
 		LoggingEventRequestLogQueue,
 		[]string{string(contracts.LoggingEventRequestLogged)},
+		ApplicationExchange,
+	); err != nil {
+		return err
+	}
+
+	// Core purge account data command queue (handled by core-service)
+	if err := r.declareAndBindQueue(
+		CoreCmdPurgeAccountDataQueue,
+		[]string{string(contracts.CoreCmdPurgeAccountData)},
+		ApplicationExchange,
+	); err != nil {
+		return err
+	}
+
+	// Core seed sandbox command queue (handled by core-service)
+	if err := r.declareAndBindQueue(
+		CoreCmdSeedSandboxQueue,
+		[]string{string(contracts.CoreCmdSeedSandbox)},
+		ApplicationExchange,
+	); err != nil {
+		return err
+	}
+
+	// Billing stripe webhook event queue (handled by billing-service)
+	if err := r.declareAndBindQueue(
+		BillingEventStripeWebhookQueue,
+		[]string{string(contracts.BillingEventStripeWebhook)},
 		ApplicationExchange,
 	); err != nil {
 		return err

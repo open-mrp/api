@@ -32,6 +32,32 @@ func (m RegistrationStep) IsValid() bool {
 	}
 }
 
+// Ordinal returns the numeric ordering of a registration step.
+// Higher values indicate later steps in the flow.
+func (m RegistrationStep) Ordinal() int {
+	switch m {
+	case RegistrationStepVerification:
+		return 0
+	case RegistrationStepUserDetails:
+		return 1
+	case RegistrationStepAccountDetails:
+		return 2
+	case RegistrationStepReview:
+		return 3
+	case RegistrationStepPayment:
+		return 4
+	case RegistrationStepCompleted:
+		return 5
+	default:
+		return -1
+	}
+}
+
+// IsAfter returns true if this step comes after the other step in the flow.
+func (m RegistrationStep) IsAfter(other RegistrationStep) bool {
+	return m.Ordinal() > other.Ordinal()
+}
+
 func (m RegistrationStep) EnumValues() []string {
 	return []string{string(RegistrationStepVerification), string(RegistrationStepUserDetails), string(RegistrationStepAccountDetails), string(RegistrationStepReview), string(RegistrationStepPayment), string(RegistrationStepCompleted)}
 }

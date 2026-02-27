@@ -102,3 +102,11 @@ type InboxRepo interface {
 	// retried on re-delivery.
 	MarkFailed(ctx context.Context, id int64, errMsg string) error
 }
+
+// InboxPurgerRepo defines the persistence interface used by the InboxPurger to
+// delete processed inbox records that have exceeded the retention period.
+type InboxPurgerRepo interface {
+	// PurgeProcessed deletes processed inbox records older than retentionHours,
+	// up to limit rows per call. Returns the number of rows deleted.
+	PurgeProcessed(ctx context.Context, retentionHours int, limit int32) (int64, error)
+}

@@ -31,7 +31,7 @@ func TestValidatePasswordTag(t *testing.T) {
 		},
 		{
 			name:     "valid password with maximum length",
-			password: strings.Repeat("A", 70) + "1!",
+			password: strings.Repeat("A", 69) + "a1!",
 			hasError: false,
 		},
 		{
@@ -41,12 +41,22 @@ func TestValidatePasswordTag(t *testing.T) {
 		},
 		{
 			name:     "password too long",
-			password: strings.Repeat("A", 70) + "123!",
+			password: strings.Repeat("A", 69) + "a123!",
+			hasError: true,
+		},
+		{
+			name:     "password without lowercase",
+			password: "PASSWORD123!",
+			hasError: true,
+		},
+		{
+			name:     "password without uppercase",
+			password: "password123!",
 			hasError: true,
 		},
 		{
 			name:     "password without numbers",
-			password: "Password!",
+			password: "Password!@#",
 			hasError: true,
 		},
 		{
@@ -66,7 +76,7 @@ func TestValidatePasswordTag(t *testing.T) {
 		},
 		{
 			name:     "password exactly 72 characters with all requirements",
-			password: strings.Repeat("A", 69) + "1!@",
+			password: strings.Repeat("A", 68) + "a1!@",
 			hasError: false,
 		},
 		{
@@ -76,17 +86,17 @@ func TestValidatePasswordTag(t *testing.T) {
 		},
 		{
 			name:     "password 73 characters (too long)",
-			password: strings.Repeat("A", 70) + "1!@#",
+			password: strings.Repeat("A", 69) + "a1!@",
 			hasError: true,
 		},
 		{
 			name:     "password with tilde (not in special char regex)",
-			password: "Pass123~",
+			password: "Password123~",
 			hasError: true,
 		},
 		{
 			name:     "password with backtick (not in special char regex)",
-			password: "Pass123`",
+			password: "Password123`",
 			hasError: true,
 		},
 	}
@@ -453,7 +463,7 @@ func TestValidatePasswordErrorMessage(t *testing.T) {
 		t.Fatal("expected validation to fail")
 	}
 
-	expectedMessage := "must be 8-72 characters and contain at least one number and one special character"
+	expectedMessage := "must be 8-72 characters and contain at least one lowercase letter, one uppercase letter, one number, and one special character"
 	if !strings.Contains(err.PublicMessage, expectedMessage) {
 		t.Errorf("expected error message to contain '%s', but got: %s", expectedMessage, err.PublicMessage)
 	}

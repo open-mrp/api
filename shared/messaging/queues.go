@@ -29,6 +29,22 @@ const (
 	// LoggingEventRequestLogQueue carries request-log events for centralized logging.
 	LoggingEventRequestLogQueue = "logging_event_request_log"
 
+	// CoreCmdPurgeAccountDataQueue carries purge-account-data commands to the
+	// core-service. Messages on this queue trigger deletion of all account-scoped
+	// data across ~50 tables for a deleted sandbox account.
+	CoreCmdPurgeAccountDataQueue = "core_cmd_purge_account_data"
+
+	// CoreCmdSeedSandboxQueue carries seed-sandbox commands to the core-service.
+	// Messages on this queue trigger population of a sandbox account with
+	// tutorial seed data.
+	CoreCmdSeedSandboxQueue = "core_cmd_seed_sandbox"
+
+	// BillingEventStripeWebhookQueue carries verified Stripe webhook events for
+	// asynchronous processing by the billing-service. The raw event payload and
+	// metadata are enqueued immediately on receipt so the webhook endpoint can
+	// return as fast as possible.
+	BillingEventStripeWebhookQueue = "billing_event_stripe_webhook"
+
 	// DeadLetterQueue is the catch-all queue for messages that could not be processed
 	// after exhausting retries. It is bound to the dead-letter exchange ("dlx") so
 	// rejected or expired messages from any queue land here for manual inspection.

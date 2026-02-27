@@ -9,7 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
+// RevokeAPIKeyRequest is the request to revoke an API key.
 type RevokeAPIKeyRequest struct {
+	// The ID of the API key to revoke.
 	APIKeyID string `path:"id"`
 }
 
@@ -29,6 +31,7 @@ func (e *RevokeAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*RevokeAPI
 		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
+		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RevokeAPIKeyRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(APIKeySvc).RevokeAPIKey
 		},

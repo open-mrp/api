@@ -14,6 +14,7 @@ var (
 	defaultPort               = 8081
 	defaultAuthServiceURI     = fmt.Sprintf("auth-service:%d", contracts.GRPCPort)
 	defaultCoreServiceURI     = fmt.Sprintf("core-service:%d", contracts.GRPCPort)
+	defaultBillingServiceURI  = fmt.Sprintf("billing-service:%d", contracts.GRPCPort)
 	defaultPlatformServiceURI = fmt.Sprintf("platform-service:%d", contracts.GRPCPort)
 	defaultRabbitMQURI        = "amqp://guest:guest@rabbitmq:5672/" // #nosec G101 - Default dev URI, not a production credential
 	defaultPlatformMode       = constants.PlatformModeProduction
@@ -24,9 +25,11 @@ const (
 	envPort               = "PORT"
 	envAuthServiceURL     = "AUTH_SERVICE_URL"
 	envCoreServiceURL     = "CORE_SERVICE_URL"
+	envBillingServiceURL  = "BILLING_SERVICE_URL"
 	envPlatformServiceURL = "PLATFORM_SERVICE_URL"
 	envDBURL              = "DB_URL"
 	envRabbitMQURI        = "RABBITMQ_URI"
+	envFrontendURL        = "FRONTEND_URL"
 )
 
 // config represents the configuration for the API gateway.
@@ -43,6 +46,9 @@ type config struct {
 	// CoreServiceURI (optional; default: "core-service:9092") is the core service address for gRPC.
 	CoreServiceURI string
 
+	// BillingServiceURI (optional; default: "billing-service:9092") is the billing service address for gRPC.
+	BillingServiceURI string
+
 	// PlatformServiceURI (optional; default: "platform-service:9092") is the platform service address for gRPC.
 	PlatformServiceURI string
 
@@ -51,6 +57,10 @@ type config struct {
 
 	// RabbitMQURI (optional; default: "amqp://guest:guest@rabbitmq:5672/") is the RabbitMQ connection URI.
 	RabbitMQURI string
+
+	// FrontendURL (optional) is the base URL of the frontend application, used to build
+	// request log links in error responses. When empty, request_log_url will be null.
+	FrontendURL string
 }
 
 // withDefaults sets the default values for the configuration.
@@ -75,9 +85,11 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 		Port:               port,
 		AuthServiceURI:     cmp.Or(env.GetEnv(envAuthServiceURL, getenv), defaultAuthServiceURI),
 		CoreServiceURI:     cmp.Or(env.GetEnv(envCoreServiceURL, getenv), defaultCoreServiceURI),
+		BillingServiceURI:  cmp.Or(env.GetEnv(envBillingServiceURL, getenv), defaultBillingServiceURI),
 		PlatformServiceURI: cmp.Or(env.GetEnv(envPlatformServiceURL, getenv), defaultPlatformServiceURI),
 		DBURI:              env.GetEnv(envDBURL, getenv),
 		RabbitMQURI:        cmp.Or(env.GetEnv(envRabbitMQURI, getenv), defaultRabbitMQURI),
+		FrontendURL:        env.GetEnv(envFrontendURL, getenv),
 	}
 }
 

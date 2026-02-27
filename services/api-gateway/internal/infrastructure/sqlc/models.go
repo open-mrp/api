@@ -287,7 +287,7 @@ type ApiKey struct {
 	KeyID          string
 	Name           sql.NullString
 	SecretHash     []byte
-	LastFour       string
+	RedactedValue  string
 	OwnerAccountID string
 	RoleID         string
 	CreatedAt      time.Time

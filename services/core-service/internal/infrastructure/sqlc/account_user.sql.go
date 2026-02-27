@@ -11,6 +11,20 @@ import (
 	"time"
 )
 
+const countActiveAccountUsers = `-- name: CountActiveAccountUsers :one
+SELECT COUNT(*) AS cnt
+FROM account_user
+WHERE account_id = ?
+    AND (status_code = 'active' OR status_code IS NULL)
+`
+
+func (q *Queries) CountActiveAccountUsers(ctx context.Context, accountID string) (int64, error) {
+	row := q.queryRow(ctx, q.countActiveAccountUsersStmt, countActiveAccountUsers, accountID)
+	var cnt int64
+	err := row.Scan(&cnt)
+	return cnt, err
+}
+
 const createAccountUserForRegistration = `-- name: CreateAccountUserForRegistration :exec
 INSERT INTO account_user (
     id,
@@ -20,7 +34,7 @@ INSERT INTO account_user (
     status_code,
     created_at,
     updated_at
-) VALUES (?, ?, ?, ?, 'active', NOW(), NOW())
+) VALUES (?, ?, ?, ?, 'active', NOW(3), NOW(3))
 `
 
 type CreateAccountUserForRegistrationParams struct {
@@ -38,6 +52,40 @@ func (q *Queries) CreateAccountUserForRegistration(ctx context.Context, arg Crea
 		arg.RoleID,
 	)
 	return err
+}
+
+const deactivateAccountUsersExcept = `-- name: DeactivateAccountUsersExcept :execresult
+UPDATE account_user
+SET status_code = 'disabled', updated_at = NOW(3)
+WHERE account_id = ? AND user_id != ?
+    AND (status_code = 'active' OR status_code IS NULL)
+ORDER BY last_used_at ASC
+LIMIT ?
+`
+
+type DeactivateAccountUsersExceptParams struct {
+	AccountID string
+	UserID    string
+	Limit     int32
+}
+
+func (q *Queries) DeactivateAccountUsersExcept(ctx context.Context, arg DeactivateAccountUsersExceptParams) (sql.Result, error) {
+	return q.exec(ctx, q.deactivateAccountUsersExceptStmt, deactivateAccountUsersExcept, arg.AccountID, arg.UserID, arg.Limit)
+}
+
+const ensureAccountUserActive = `-- name: EnsureAccountUserActive :execresult
+UPDATE account_user
+SET status_code = 'active', updated_at = NOW(3)
+WHERE account_id = ? AND user_id = ? AND status_code = 'disabled'
+`
+
+type EnsureAccountUserActiveParams struct {
+	AccountID string
+	UserID    string
+}
+
+func (q *Queries) EnsureAccountUserActive(ctx context.Context, arg EnsureAccountUserActiveParams) (sql.Result, error) {
+	return q.exec(ctx, q.ensureAccountUserActiveStmt, ensureAccountUserActive, arg.AccountID, arg.UserID)
 }
 
 const findAccountAffiliationsByUserID = `-- name: FindAccountAffiliationsByUserID :many
@@ -142,6 +190,22 @@ func (q *Queries) FindAccountUserWithRoleByAccountIDAndUserID(ctx context.Contex
 	return i, err
 }
 
+const findAdminUserIDByAccountID = `-- name: FindAdminUserIDByAccountID :one
+SELECT au.user_id
+FROM account_user au
+JOIN role r ON au.role_id = r.id
+WHERE au.account_id = ? AND r.role_type_code = 'admin'
+    AND (au.status_code = 'active' OR au.status_code IS NULL)
+LIMIT 1
+`
+
+func (q *Queries) FindAdminUserIDByAccountID(ctx context.Context, accountID string) (string, error) {
+	row := q.queryRow(ctx, q.findAdminUserIDByAccountIDStmt, findAdminUserIDByAccountID, accountID)
+	var user_id string
+	err := row.Scan(&user_id)
+	return user_id, err
+}
+
 const findLastUsedAccountID = `-- name: FindLastUsedAccountID :one
 SELECT account_user.account_id
 FROM account_user 
@@ -170,6 +234,23 @@ func (q *Queries) GetAdminRoleID(ctx context.Context) (string, error) {
 	var id string
 	err := row.Scan(&id)
 	return id, err
+}
+
+const reactivateAccountUsers = `-- name: ReactivateAccountUsers :execresult
+UPDATE account_user
+SET status_code = 'active', updated_at = NOW(3)
+WHERE account_id = ? AND status_code = 'disabled'
+ORDER BY updated_at DESC
+LIMIT ?
+`
+
+type ReactivateAccountUsersParams struct {
+	AccountID string
+	Limit     int32
+}
+
+func (q *Queries) ReactivateAccountUsers(ctx context.Context, arg ReactivateAccountUsersParams) (sql.Result, error) {
+	return q.exec(ctx, q.reactivateAccountUsersStmt, reactivateAccountUsers, arg.AccountID, arg.Limit)
 }
 
 const updateAccountUserLastUsedAt = `-- name: UpdateAccountUserLastUsedAt :exec

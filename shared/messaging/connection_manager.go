@@ -2,7 +2,7 @@ package messaging
 
 import (
 	"errors"
-	"log"
+	"log/slog"
 	"net/http"
 	"sync"
 
@@ -41,23 +41,37 @@ type connWrapper struct {
 // horizontally, each replica only knows about its own connections. A shared backing
 // store (e.g. Redis pub/sub) would be needed to fan out messages across replicas.
 type ConnectionManager struct {
-	connections map[string]*connWrapper
-	mutex       sync.RWMutex
-}
-
-// upgrader is the gorilla/websocket upgrader used by Upgrade. CheckOrigin currently
-// allows all origins; production deployments should restrict this to trusted domains.
-var upgrader = websocket.Upgrader{
-	CheckOrigin: func(r *http.Request) bool {
-		return true
-	},
+	connections    map[string]*connWrapper
+	mutex          sync.RWMutex
+	allowedOrigins []string
 }
 
 // NewConnectionManager creates a ConnectionManager with an empty connection map.
-func NewConnectionManager() *ConnectionManager {
+// allowedOrigins restricts which origins may connect via WebSocket. If empty,
+// all origins are permitted (backward compatible).
+func NewConnectionManager(allowedOrigins []string) *ConnectionManager {
 	return &ConnectionManager{
-		connections: make(map[string]*connWrapper),
+		connections:    make(map[string]*connWrapper),
+		allowedOrigins: allowedOrigins,
 	}
+}
+
+// checkOrigin validates the request origin against the allowed origins list.
+// If no origins are configured, all origins are accepted for backward compatibility.
+func (cm *ConnectionManager) checkOrigin(r *http.Request) bool {
+	if len(cm.allowedOrigins) == 0 {
+		return true
+	}
+	origin := r.Header.Get("Origin")
+	if origin == "" {
+		return true
+	}
+	for _, allowed := range cm.allowedOrigins {
+		if origin == allowed {
+			return true
+		}
+	}
+	return false
 }
 
 // Upgrade negotiates the WebSocket handshake on an incoming HTTP request and
@@ -65,6 +79,9 @@ func NewConnectionManager() *ConnectionManager {
 // connection to the manager via Add and for reading from the connection in a
 // loop to detect client disconnects.
 func (cm *ConnectionManager) Upgrade(w http.ResponseWriter, r *http.Request) (*websocket.Conn, error) {
+	upgrader := websocket.Upgrader{
+		CheckOrigin: cm.checkOrigin,
+	}
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		return nil, err
@@ -83,7 +100,7 @@ func (cm *ConnectionManager) Add(id string, conn *websocket.Conn) {
 		mutex: sync.Mutex{},
 	}
 
-	log.Printf("Added connection for user %s", id)
+	slog.Info("Added connection", "user_id", id)
 }
 
 // Remove deletes the WebSocket connection for the given user ID. It does NOT close

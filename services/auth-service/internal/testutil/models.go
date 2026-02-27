@@ -3,7 +3,7 @@ package testutil
 import (
 	"time"
 
-	"github.com/augno/api/services/auth-service/internal/domain"
+	"github.com/augno/api/services/auth-service/internal/apikey"
 )
 
 var (
@@ -11,12 +11,12 @@ var (
 	apiKeyExpiresAtExpired = time.Now().UTC().Add(-time.Hour * 24 * 30)
 )
 
-func GetValidTestAPIKeyModel(secretHash []byte) *domain.APIKey {
-	return &domain.APIKey{
+func GetValidTestAPIKeyModel(secretHash []byte) *apikey.APIKey {
+	return &apikey.APIKey{
 		ID:             1,
 		TypeID:         "apikey_sandbox",
 		KeyID:          EntityIDAPIKeyValidSandboxMode,
-		LastFour:       "1234",
+		RedactedValue:  "aug_sk_test_****1234",
 		OwnerAccountID: EntityIDAccount,
 		RoleID:         EntityIDRole,
 		ExpiresAt:      &apiKeyExpiresAt,
@@ -24,12 +24,12 @@ func GetValidTestAPIKeyModel(secretHash []byte) *domain.APIKey {
 	}
 }
 
-func GetValidProdAPIKeyModel(secretHash []byte) *domain.APIKey {
-	return &domain.APIKey{
+func GetValidProdAPIKeyModel(secretHash []byte) *apikey.APIKey {
+	return &apikey.APIKey{
 		ID:             2,
 		TypeID:         "apikey_prod",
 		KeyID:          EntityIDAPIKeyValidProdMode,
-		LastFour:       "1234",
+		RedactedValue:  "aug_sk_prod_****1234",
 		OwnerAccountID: EntityIDAccount,
 		RoleID:         EntityIDRole,
 		ExpiresAt:      &apiKeyExpiresAt,
@@ -37,12 +37,12 @@ func GetValidProdAPIKeyModel(secretHash []byte) *domain.APIKey {
 	}
 }
 
-func GetExpiredAPIKeyModel(secretHash []byte) *domain.APIKey {
-	return &domain.APIKey{
+func GetExpiredAPIKeyModel(secretHash []byte) *apikey.APIKey {
+	return &apikey.APIKey{
 		ID:             3,
 		TypeID:         "apikey_prod",
 		KeyID:          EntityIDAPIKeyExpired,
-		LastFour:       "1234",
+		RedactedValue:  "aug_sk_prod_****1234",
 		OwnerAccountID: EntityIDAccount,
 		RoleID:         EntityIDRole,
 		ExpiresAt:      &apiKeyExpiresAtExpired,
@@ -50,12 +50,12 @@ func GetExpiredAPIKeyModel(secretHash []byte) *domain.APIKey {
 	}
 }
 
-func GetBadSecretAPIKeyModel(secretHash []byte) *domain.APIKey {
-	return &domain.APIKey{
+func GetBadSecretAPIKeyModel(secretHash []byte) *apikey.APIKey {
+	return &apikey.APIKey{
 		ID:             4,
 		TypeID:         "apikey_prod",
 		KeyID:          EntityIDAPIKeyBadSecret,
-		LastFour:       "1234",
+		RedactedValue:  "aug_sk_prod_****1234",
 		OwnerAccountID: EntityIDAccount,
 		RoleID:         EntityIDRole,
 		ExpiresAt:      &apiKeyExpiresAt,
@@ -63,12 +63,12 @@ func GetBadSecretAPIKeyModel(secretHash []byte) *domain.APIKey {
 	}
 }
 
-func GetNeverExpiresAPIKeyModel(secretHash []byte) *domain.APIKey {
-	return &domain.APIKey{
+func GetNeverExpiresAPIKeyModel(secretHash []byte) *apikey.APIKey {
+	return &apikey.APIKey{
 		ID:             5,
 		TypeID:         "apikey_prod",
 		KeyID:          EntityIDAPIKeyNeverExpires,
-		LastFour:       "4HAj",
+		RedactedValue:  "aug_sk_prod_****4HAj",
 		OwnerAccountID: EntityIDAccount,
 		RoleID:         EntityIDRole,
 		ExpiresAt:      nil,
@@ -77,10 +77,10 @@ func GetNeverExpiresAPIKeyModel(secretHash []byte) *domain.APIKey {
 }
 
 type APIKeySvcTestModels struct {
-	ValidTestModel *domain.APIKey
-	ValidProdModel *domain.APIKey
-	ExpiredModel   *domain.APIKey
-	BadSecretModel *domain.APIKey
+	ValidTestModel *apikey.APIKey
+	ValidProdModel *apikey.APIKey
+	ExpiredModel   *apikey.APIKey
+	BadSecretModel *apikey.APIKey
 }
 
 func NewAPIKeySvcTestModels(apiKeyUtils interface{}) *APIKeySvcTestModels {

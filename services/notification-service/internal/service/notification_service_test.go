@@ -2,12 +2,15 @@ package service
 
 import (
 	"context"
+	"strings"
 	"testing"
 
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/services/notification-service/internal/domain"
 	repositorymock "github.com/augno/api/services/notification-service/internal/domain/mock/repository"
 	servicemock "github.com/augno/api/services/notification-service/internal/domain/mock/service"
 	"github.com/augno/api/services/notification-service/internal/email"
+	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 
@@ -98,6 +101,85 @@ func (suite *NotificationServiceTestSuite) TestSendEnterpriseRequest_EmailFailur
 	err := suite.notificationSvc.SendEnterpriseRequest(ctx, req)
 	suite.NotNil(err)
 	suite.Equal("internal_error", string(err.Code))
+}
+
+func (suite *NotificationServiceTestSuite) TestSendEmail_SandboxAccount_SkipsSendAndLogsWithHasSentFalse() {
+	ctx := appctx.WithIdentity(context.Background(), &types.Identity{
+		AccountMode: constants.AccountModeSandbox,
+	})
+
+	accountID := "acct_sandbox_123"
+	data := domain.EmailSendData{
+		To:        []string{"user@example.com"},
+		Subject:   "Welcome",
+		Body:      "<html>Hello</html>",
+		AccountID: &accountID,
+	}
+
+	// Expect a log entry to be created with HasSent=false
+	suite.emailLogRepo.EXPECT().
+		Create(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(ctx context.Context, log *domain.EmailLog) *apierror.APIError {
+			suite.False(log.HasSent)
+			suite.Equal(accountID, log.AccountID)
+			suite.Equal("Welcome", *log.Subject)
+			suite.True(strings.HasPrefix(*log.SesMessageID, "sandbox_"))
+			return nil
+		}).
+		Times(1)
+
+	// emailSender.Send should NOT be called
+	suite.emailSender.EXPECT().Send(gomock.Any(), gomock.Any()).Times(0)
+
+	messageID, apiErr := suite.notificationSvc.SendEmail(ctx, data)
+	suite.Nil(apiErr)
+	suite.NotNil(messageID)
+	suite.True(strings.HasPrefix(*messageID, "sandbox_"))
+}
+
+func (suite *NotificationServiceTestSuite) TestSendEmail_ProductionAccount_SendsNormally() {
+	ctx := appctx.WithIdentity(context.Background(), &types.Identity{
+		AccountMode: constants.AccountModeProduction,
+	})
+
+	expectedID := "ses_msg_123"
+	data := domain.EmailSendData{
+		To:      []string{"user@example.com"},
+		Subject: "Welcome",
+		Body:    "<html>Hello</html>",
+	}
+
+	suite.emailSender.EXPECT().
+		Send(gomock.Any(), gomock.Any()).
+		Return(&expectedID, nil).
+		Times(1)
+
+	// emailLogRepo.Create should NOT be called (logging happens via event flow)
+	suite.emailLogRepo.EXPECT().Create(gomock.Any(), gomock.Any()).Times(0)
+
+	messageID, apiErr := suite.notificationSvc.SendEmail(ctx, data)
+	suite.Nil(apiErr)
+	suite.Equal(&expectedID, messageID)
+}
+
+func (suite *NotificationServiceTestSuite) TestSendEnterpriseRequest_SandboxAccount_SkipsSend() {
+	ctx := appctx.WithIdentity(context.Background(), &types.Identity{
+		AccountMode: constants.AccountModeSandbox,
+	})
+
+	req := &domain.EnterpriseRequestData{
+		AccountID:       "acc_123",
+		AccountName:     "Test Account",
+		CurrentPlanName: "Professional",
+		RequesterName:   "John Doe",
+		RequesterEmail:  "john@example.com",
+	}
+
+	// Neither email sender nor template renderer should be called
+	suite.emailSender.EXPECT().Send(gomock.Any(), gomock.Any()).Times(0)
+
+	err := suite.notificationSvc.SendEnterpriseRequest(ctx, req)
+	suite.Nil(err)
 }
 
 func TestNotificationServiceTestSuite(t *testing.T) {

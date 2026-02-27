@@ -27,6 +27,7 @@ func (e *HealthEndpoint) Materialize() *apiendpoint.APIEndpoint[*apiresource.Emp
 		},
 		Extras: apiendpoint.APIEndpointExtras{
 			AllowUnknownJSONFields: false,
+			SkipRequestLogging:     true,
 		},
 	}
 }

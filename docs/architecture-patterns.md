@@ -208,9 +208,9 @@ func (f *mediatorFactoryImpl) Build(repoFactory domain.RepoFactory) domain.Media
     })
 
     apiKeyMed := NewAPIKeyMed(APIKeyMedConfig{
-        Repos:       repoFactory,
-        APIKeyUtils: apikey.NewAPIKeyUtils(&apikey.APIKeyConfig{Pepper: f.apiKeyPepper}),
-        CoreClient:  f.coreClient,
+        Repos:      repoFactory,
+        Pepper:     f.apiKeyPepper,
+        CoreClient: f.coreClient,
     })
 
     // UserMed depends on RefreshTokenMed and APIKeyMed
@@ -247,7 +247,7 @@ Every mediator method should have:
 //  3. Verify the secret against the secret hash in the database.
 //  4. Make sure the key has not been revoked or expired.
 //  5. Returns the API key.
-func (s *apiKeyMedImpl) FindAndValidate(ctx context.Context, apiKey string) (*domain.APIKey, *apierror.APIError) {
+func (s *apiKeyMedImpl) FindAndValidate(ctx context.Context, apiKey string) (*apikey.APIKey, *apierror.APIError) {
 ```
 
 The same docstring should appear on both the domain interface and the implementation.

@@ -18,16 +18,6 @@ type APIKeysEndpointGroupConfig struct {
 	AuthClient *grpcclient.AuthServiceClient
 }
 
-// WithDefaults returns a new APIKeysEndpointGroupConfig with zero-value fields replaced by defaults.
-func (c *APIKeysEndpointGroupConfig) WithDefaults() *APIKeysEndpointGroupConfig {
-	if c == nil {
-		c = &APIKeysEndpointGroupConfig{}
-	}
-	return &APIKeysEndpointGroupConfig{
-		AuthClient: c.AuthClient,
-	}
-}
-
 func (c *APIKeysEndpointGroupConfig) validate() error {
 	if c.AuthClient == nil {
 		return fmt.Errorf("api keys endpoint group: auth client is required")
@@ -36,7 +26,6 @@ func (c *APIKeysEndpointGroupConfig) validate() error {
 }
 
 func (*APIKeysEndpointGroup) Materialize(config *APIKeysEndpointGroupConfig) *APIKeysEndpointGroup {
-	config = config.WithDefaults()
 	if err := config.validate(); err != nil {
 		panic(err)
 	}
@@ -55,6 +44,7 @@ func (*APIKeysEndpointGroup) Materialize(config *APIKeysEndpointGroupConfig) *AP
 		ResourceType: &apiresource.APIKey{},
 	}
 
+	getAPIKeyEndpoint := (&apikeyep.GetAPIKeyEndpoint{}).Materialize().WithMiddleware(authMw).WithService(inner, apiKeySvc)
 	listAPIKeysEndpoint := (&apikeyep.ListAPIKeysEndpoint{}).Materialize().WithMiddleware(authMw).WithService(inner, apiKeySvc)
 	createAPIKeyEndpoint := (&apikeyep.CreateAPIKeyEndpoint{}).Materialize().WithMiddleware(authMw).WithService(inner, apiKeySvc)
 	rotateAPIKeyEndpoint := (&apikeyep.RotateAPIKeyEndpoint{}).Materialize().WithMiddleware(authMw).WithService(inner, apiKeySvc)
@@ -62,6 +52,7 @@ func (*APIKeysEndpointGroup) Materialize(config *APIKeysEndpointGroupConfig) *AP
 	getDocAPIKeyEndpoint := (&apikeyep.GetDocAPIKeyEndpoint{}).Materialize().WithMiddleware(authMw).WithService(inner, apiKeySvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
+		getAPIKeyEndpoint,
 		listAPIKeysEndpoint,
 		createAPIKeyEndpoint,
 		rotateAPIKeyEndpoint,

@@ -9,7 +9,6 @@ import (
 	factorymock "github.com/augno/api/services/auth-service/internal/domain/mock/factory"
 	repositorymock "github.com/augno/api/services/auth-service/internal/domain/mock/repository"
 	"github.com/augno/api/services/auth-service/internal/testutil"
-	"github.com/augno/api/services/auth-service/internal/token"
 	apierror "github.com/augno/api/shared/errors"
 
 	"github.com/stretchr/testify/suite"
@@ -20,7 +19,6 @@ import (
 type RefreshTokenMedTestSuite struct {
 	suite.Suite
 	refreshTokenMed  domain.RefreshTokenMed
-	jwtUtils         domain.JWTUtils
 	refreshTokenRepo *repositorymock.MockRefreshTokenRepo
 	repoFactory      *factorymock.MockRepoFactory
 	ctrl             *gomock.Controller
@@ -28,15 +26,13 @@ type RefreshTokenMedTestSuite struct {
 
 // SetupSuite runs once before all tests in the suite
 func (suite *RefreshTokenMedTestSuite) SetupSuite() {
-	suite.jwtUtils = token.NewJWTUtils(&token.JWTConfig{Secret: testutil.JWTSecret})
 	suite.ctrl = gomock.NewController(suite.T())
 	suite.refreshTokenRepo = repositorymock.NewMockRefreshTokenRepo(suite.ctrl)
 	suite.repoFactory = factorymock.NewMockRepoFactory(suite.ctrl)
 	suite.repoFactory.EXPECT().NewRefreshTokenRepo().Return(suite.refreshTokenRepo).AnyTimes()
 
 	refreshTokenMedConfig := &RefreshTokenMedConfig{
-		Repos:    suite.repoFactory,
-		JWTUtils: suite.jwtUtils,
+		Repos: suite.repoFactory,
 	}
 	suite.refreshTokenMed = NewRefreshTokenMed(refreshTokenMedConfig)
 }

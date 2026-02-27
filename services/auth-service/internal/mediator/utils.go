@@ -1,12 +1,13 @@
 package mediator
 
 import (
+	"github.com/augno/api/services/auth-service/internal/apikey"
 	"github.com/augno/api/services/auth-service/internal/domain"
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 )
 
-func buildOwnedAPIKeyIdentity(apiKeyModel *domain.APIKey, targetAccountID string, permissions map[string]bool, accountMode constants.AccountMode) *types.Identity {
+func buildOwnedAPIKeyIdentity(apiKeyModel *apikey.APIKey, targetAccountID string, permissions map[string]bool, accountMode constants.AccountMode, subscriptionStatus *string) *types.Identity {
 	roleTypeCode := apiKeyModel.RoleTypeCode
 
 	return &types.Identity{
@@ -21,11 +22,12 @@ func buildOwnedAPIKeyIdentity(apiKeyModel *domain.APIKey, targetAccountID string
 			RoleTypeCode: &roleTypeCode,
 			Permissions:  permissions,
 		},
-		AccountMode: accountMode,
+		AccountMode:        accountMode,
+		SubscriptionStatus: subscriptionStatus,
 	}
 }
 
-func buildRelatedAPIKeyIdentity(apiKeyModel *domain.APIKey, accountRelation *domain.AuthAccountRelation, actorType types.IdentityActorType, targetAccountID string, accountMode constants.AccountMode) *types.Identity {
+func buildRelatedAPIKeyIdentity(apiKeyModel *apikey.APIKey, accountRelation *domain.AuthAccountRelation, actorType types.IdentityActorType, targetAccountID string, accountMode constants.AccountMode, subscriptionStatus *string) *types.Identity {
 	return &types.Identity{
 		Type:            types.IdentityTypeAPIKey,
 		TargetAccountID: &targetAccountID,
@@ -38,7 +40,8 @@ func buildRelatedAPIKeyIdentity(apiKeyModel *domain.APIKey, accountRelation *dom
 			RoleTypeCode: nil,
 			Permissions:  map[string]bool{},
 		},
-		AccountMode: accountMode,
+		AccountMode:        accountMode,
+		SubscriptionStatus: subscriptionStatus,
 	}
 }
 
@@ -59,7 +62,7 @@ func buildUnassignedUserIdentity(userModel *types.User) *types.Identity {
 	}
 }
 
-func buildRelatedUserIdentity(userModel *types.User, accountRelation *domain.AuthAccountRelation, actorType types.IdentityActorType, targetAccountID string, accountMode constants.AccountMode) *types.Identity {
+func buildRelatedUserIdentity(userModel *types.User, accountRelation *domain.AuthAccountRelation, actorType types.IdentityActorType, targetAccountID string, accountMode constants.AccountMode, subscriptionStatus *string) *types.Identity {
 	return &types.Identity{
 		Type:            types.IdentityTypeUser,
 		TargetAccountID: &targetAccountID,
@@ -72,11 +75,12 @@ func buildRelatedUserIdentity(userModel *types.User, accountRelation *domain.Aut
 			RoleTypeCode: nil,
 			Permissions:  map[string]bool{},
 		},
-		AccountMode: accountMode,
+		AccountMode:        accountMode,
+		SubscriptionStatus: subscriptionStatus,
 	}
 }
 
-func buildAccountUserIdentity(userModel *types.User, access *domain.AccountUserAccess, targetAccountID string, accountMode constants.AccountMode) *types.Identity {
+func buildAccountUserIdentity(userModel *types.User, access *domain.AccountUserAccess, targetAccountID string, accountMode constants.AccountMode, subscriptionStatus *string) *types.Identity {
 	return &types.Identity{
 		Type:            types.IdentityTypeUser,
 		TargetAccountID: &targetAccountID,
@@ -89,6 +93,7 @@ func buildAccountUserIdentity(userModel *types.User, access *domain.AccountUserA
 			RoleTypeCode: access.RoleTypeCode,
 			Permissions:  access.Permissions,
 		},
-		AccountMode: accountMode,
+		AccountMode:        accountMode,
+		SubscriptionStatus: subscriptionStatus,
 	}
 }

@@ -12,13 +12,13 @@ import (
 
 const acquireOutboxMessages = `-- name: AcquireOutboxMessages :exec
 UPDATE message_outbox
-SET locked_at = NOW(),
+SET locked_at = NOW(3),
     lock_owner = ?,
-    lock_expires_at = DATE_ADD(NOW(), INTERVAL ? SECOND),
-    updated_at = NOW()
+    lock_expires_at = DATE_ADD(NOW(3), INTERVAL ? SECOND),
+    updated_at = NOW(3)
 WHERE status = 'pending'
-  AND next_run_at <= NOW()
-  AND (locked_at IS NULL OR lock_expires_at < NOW())
+  AND next_run_at <= NOW(3)
+  AND (locked_at IS NULL OR lock_expires_at < NOW(3))
   AND attempts < max_attempts
 ORDER BY next_run_at ASC
 LIMIT ?
@@ -37,26 +37,18 @@ func (q *Queries) AcquireOutboxMessages(ctx context.Context, arg AcquireOutboxMe
 
 const cleanupExpiredOutboxLocks = `-- name: CleanupExpiredOutboxLocks :execresult
 UPDATE message_outbox
-SET locked_at = NULL, lock_owner = NULL, lock_expires_at = NULL, updated_at = NOW()
-WHERE lock_expires_at < NOW()
+SET locked_at = NULL, lock_owner = NULL, lock_expires_at = NULL, updated_at = NOW(3)
+WHERE lock_expires_at < NOW(3)
+LIMIT ?
 `
 
-func (q *Queries) CleanupExpiredOutboxLocks(ctx context.Context) (sql.Result, error) {
-	return q.exec(ctx, q.cleanupExpiredOutboxLocksStmt, cleanupExpiredOutboxLocks)
-}
-
-const deleteOutboxMessage = `-- name: DeleteOutboxMessage :exec
-DELETE FROM message_outbox WHERE id = ?
-`
-
-func (q *Queries) DeleteOutboxMessage(ctx context.Context, id int64) error {
-	_, err := q.exec(ctx, q.deleteOutboxMessageStmt, deleteOutboxMessage, id)
-	return err
+func (q *Queries) CleanupExpiredOutboxLocks(ctx context.Context, limit int32) (sql.Result, error) {
+	return q.exec(ctx, q.cleanupExpiredOutboxLocksStmt, cleanupExpiredOutboxLocks, limit)
 }
 
 const getLockedOutboxMessages = `-- name: GetLockedOutboxMessages :many
 SELECT id, message_id, service_name, message_type, destination, routing_key, headers, payload, status, attempts, max_attempts, next_run_at, locked_at, lock_owner, lock_expires_at, last_error, published_at, request_id, parent_message_id, created_at, updated_at FROM message_outbox
-WHERE lock_owner = ? AND lock_expires_at > NOW()
+WHERE lock_owner = ? AND lock_expires_at > NOW(3)
 ORDER BY next_run_at ASC
 `
 
@@ -112,18 +104,47 @@ SET attempts = attempts + 1,
     locked_at = NULL,
     lock_owner = NULL,
     lock_expires_at = NULL,
-    next_run_at = DATE_ADD(NOW(), INTERVAL POW(2, attempts) SECOND),
+    next_run_at = DATE_ADD(NOW(3), INTERVAL ? SECOND),
     status = CASE WHEN attempts + 1 >= max_attempts THEN 'failed' ELSE 'pending' END,
-    updated_at = NOW()
+    updated_at = NOW(3)
 WHERE id = ?
 `
 
 type MarkOutboxMessageFailedParams struct {
 	LastError sql.NullString
+	DATEADD   interface{}
 	ID        int64
 }
 
 func (q *Queries) MarkOutboxMessageFailed(ctx context.Context, arg MarkOutboxMessageFailedParams) error {
-	_, err := q.exec(ctx, q.markOutboxMessageFailedStmt, markOutboxMessageFailed, arg.LastError, arg.ID)
+	_, err := q.exec(ctx, q.markOutboxMessageFailedStmt, markOutboxMessageFailed, arg.LastError, arg.DATEADD, arg.ID)
 	return err
+}
+
+const markOutboxMessagePublished = `-- name: MarkOutboxMessagePublished :exec
+UPDATE message_outbox
+SET status = 'published', published_at = NOW(3),
+    locked_at = NULL, lock_owner = NULL, lock_expires_at = NULL,
+    updated_at = NOW(3)
+WHERE id = ?
+`
+
+func (q *Queries) MarkOutboxMessagePublished(ctx context.Context, id int64) error {
+	_, err := q.exec(ctx, q.markOutboxMessagePublishedStmt, markOutboxMessagePublished, id)
+	return err
+}
+
+const purgePublishedOutboxMessages = `-- name: PurgePublishedOutboxMessages :execresult
+DELETE FROM message_outbox
+WHERE status = 'published' AND published_at < DATE_SUB(NOW(3), INTERVAL ? HOUR)
+LIMIT ?
+`
+
+type PurgePublishedOutboxMessagesParams struct {
+	DATESUB interface{}
+	Limit   int32
+}
+
+func (q *Queries) PurgePublishedOutboxMessages(ctx context.Context, arg PurgePublishedOutboxMessagesParams) (sql.Result, error) {
+	return q.exec(ctx, q.purgePublishedOutboxMessagesStmt, purgePublishedOutboxMessages, arg.DATESUB, arg.Limit)
 }

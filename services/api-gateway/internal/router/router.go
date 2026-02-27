@@ -113,6 +113,11 @@ func (r *router) AddMiddleware(middleware func(http.HandlerFunc) http.HandlerFun
 	r.middlewares = append(r.middlewares, middleware)
 }
 
+func (r *router) HandleEndpoint(method, path string, handler http.HandlerFunc, isPublic bool) {
+	r.handle(method, path, handler)
+	r.routes[len(r.routes)-1].IsPublic = isPublic
+}
+
 func (r *router) handle(method, path string, handler http.HandlerFunc) {
 	pattern, paramNames := compilePathPattern(path)
 
@@ -202,6 +207,7 @@ func (r *router) GetRoutes() []any {
 			"Method":      route.Method,
 			"Path":        route.Path,
 			"PathPattern": route.PathPattern,
+			"Public":      route.IsPublic,
 		}
 	}
 	return routes

@@ -12,8 +12,9 @@ import (
 
 // The request to rotate an API key, optionally overriding the expiration
 type RotateAPIKeyRequest struct {
+	// The unique identifier for the API key to rotate.
 	APIKeyID string `path:"id"`
-	// Optional expiration time override for the new API key
+	// Optional expiration time override for the new API key.
 	ExpiresAt *time.Time `json:"expires_at,omitempty"`
 }
 
@@ -40,6 +41,7 @@ func (e *RotateAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*RotateAPI
 		Response:          &apiresource.CreatedAPIKey{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
+		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RotateAPIKeyRequest) (*apiresource.CreatedAPIKey, *apierror.APIError) {
 			return svc.(APIKeySvc).RotateAPIKey
 		},
@@ -48,6 +50,7 @@ func (e *RotateAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*RotateAPI
 		},
 		Extras: apiendpoint.APIEndpointExtras{
 			AllowUnknownJSONFields: false,
+			ShieldResponseBody:     true,
 		},
 	}
 }

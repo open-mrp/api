@@ -72,12 +72,23 @@ func Run(
 		return apiErr
 	}
 
-	notificationSvc, apiErr := service.NewDefaultNotificationSvc(queries, cfg.AWSRegion, templateRenderer)
+	notificationConfig, apiErr := new(service.NotificationSvcConfig).WithDefaults(queries, cfg.PlatformMode, cfg.AWSRegion, templateRenderer)
 	if apiErr != nil {
 		return apiErr
 	}
+	notificationSvc := service.NewNotificationSvc(notificationConfig)
 
 	inboxRepo := repository.NewInboxRepo(queries)
+	inboxPurgerRepo := repository.NewInboxPurgerRepo(queries)
+	inboxPurger, err := messaging.NewInboxPurger(&messaging.InboxPurgerConfig{}, inboxPurgerRepo)
+	if err != nil {
+		return err
+	}
+	if err := inboxPurger.Start(ctx); err != nil {
+		return err
+	}
+	defer inboxPurger.Stop()
+
 	consumerTracer := workerTracer.Tracer(domain.ServiceName + ".consumer")
 	notificationConsumer := event.NewNotificationConsumer(rabbitmq, notificationSvc, inboxRepo, templateRenderer, consumerTracer)
 	if err := notificationConsumer.Listen(ctx); err != nil {

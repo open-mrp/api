@@ -36,9 +36,6 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.completeRegistrationSessionStmt, err = db.PrepareContext(ctx, completeRegistrationSession); err != nil {
 		return nil, fmt.Errorf("error preparing query CompleteRegistrationSession: %w", err)
 	}
-	if q.countAPIKeysStmt, err = db.PrepareContext(ctx, countAPIKeys); err != nil {
-		return nil, fmt.Errorf("error preparing query CountAPIKeys: %w", err)
-	}
 	if q.createAPIKeyStmt, err = db.PrepareContext(ctx, createAPIKey); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateAPIKey: %w", err)
 	}
@@ -60,26 +57,14 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.createUserStmt, err = db.PrepareContext(ctx, createUser); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateUser: %w", err)
 	}
-	if q.deleteAPIKeyByIDStmt, err = db.PrepareContext(ctx, deleteAPIKeyByID); err != nil {
-		return nil, fmt.Errorf("error preparing query DeleteAPIKeyByID: %w", err)
-	}
-	if q.deleteAPIKeyByTypeIDStmt, err = db.PrepareContext(ctx, deleteAPIKeyByTypeID); err != nil {
-		return nil, fmt.Errorf("error preparing query DeleteAPIKeyByTypeID: %w", err)
-	}
 	if q.deleteDocAPIKeyByAPIKeyIDStmt, err = db.PrepareContext(ctx, deleteDocAPIKeyByAPIKeyID); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteDocAPIKeyByAPIKeyID: %w", err)
 	}
 	if q.deleteDocAPIKeyByIDStmt, err = db.PrepareContext(ctx, deleteDocAPIKeyByID); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteDocAPIKeyByID: %w", err)
 	}
-	if q.deleteDocAPIKeysBySandboxAccountIDStmt, err = db.PrepareContext(ctx, deleteDocAPIKeysBySandboxAccountID); err != nil {
-		return nil, fmt.Errorf("error preparing query DeleteDocAPIKeysBySandboxAccountID: %w", err)
-	}
 	if q.deleteExpiredIdempotencyKeysStmt, err = db.PrepareContext(ctx, deleteExpiredIdempotencyKeys); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteExpiredIdempotencyKeys: %w", err)
-	}
-	if q.deleteOutboxMessageStmt, err = db.PrepareContext(ctx, deleteOutboxMessage); err != nil {
-		return nil, fmt.Errorf("error preparing query DeleteOutboxMessage: %w", err)
 	}
 	if q.deleteRegistrationSessionStmt, err = db.PrepareContext(ctx, deleteRegistrationSession); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteRegistrationSession: %w", err)
@@ -135,11 +120,26 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getRegistrationSessionByTypeIDStmt, err = db.PrepareContext(ctx, getRegistrationSessionByTypeID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetRegistrationSessionByTypeID: %w", err)
 	}
-	if q.listAPIKeysStmt, err = db.PrepareContext(ctx, listAPIKeys); err != nil {
-		return nil, fmt.Errorf("error preparing query ListAPIKeys: %w", err)
+	if q.listAPIKeysBackwardStmt, err = db.PrepareContext(ctx, listAPIKeysBackward); err != nil {
+		return nil, fmt.Errorf("error preparing query ListAPIKeysBackward: %w", err)
+	}
+	if q.listAPIKeysForwardStmt, err = db.PrepareContext(ctx, listAPIKeysForward); err != nil {
+		return nil, fmt.Errorf("error preparing query ListAPIKeysForward: %w", err)
+	}
+	if q.listRegistrationSessionsByUserIDBackwardStmt, err = db.PrepareContext(ctx, listRegistrationSessionsByUserIDBackward); err != nil {
+		return nil, fmt.Errorf("error preparing query ListRegistrationSessionsByUserIDBackward: %w", err)
+	}
+	if q.listRegistrationSessionsByUserIDForwardStmt, err = db.PrepareContext(ctx, listRegistrationSessionsByUserIDForward); err != nil {
+		return nil, fmt.Errorf("error preparing query ListRegistrationSessionsByUserIDForward: %w", err)
 	}
 	if q.markOutboxMessageFailedStmt, err = db.PrepareContext(ctx, markOutboxMessageFailed); err != nil {
 		return nil, fmt.Errorf("error preparing query MarkOutboxMessageFailed: %w", err)
+	}
+	if q.markOutboxMessagePublishedStmt, err = db.PrepareContext(ctx, markOutboxMessagePublished); err != nil {
+		return nil, fmt.Errorf("error preparing query MarkOutboxMessagePublished: %w", err)
+	}
+	if q.purgePublishedOutboxMessagesStmt, err = db.PrepareContext(ctx, purgePublishedOutboxMessages); err != nil {
+		return nil, fmt.Errorf("error preparing query PurgePublishedOutboxMessages: %w", err)
 	}
 	if q.revokeAPIKeyByTypeIDStmt, err = db.PrepareContext(ctx, revokeAPIKeyByTypeID); err != nil {
 		return nil, fmt.Errorf("error preparing query RevokeAPIKeyByTypeID: %w", err)
@@ -164,6 +164,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.updateRegistrationSessionPaymentCompletedStmt, err = db.PrepareContext(ctx, updateRegistrationSessionPaymentCompleted); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateRegistrationSessionPaymentCompleted: %w", err)
+	}
+	if q.updateRegistrationSessionPlanCodeStmt, err = db.PrepareContext(ctx, updateRegistrationSessionPlanCode); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateRegistrationSessionPlanCode: %w", err)
 	}
 	if q.updateRegistrationSessionStepStmt, err = db.PrepareContext(ctx, updateRegistrationSessionStep); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateRegistrationSessionStep: %w", err)
@@ -205,11 +208,6 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing completeRegistrationSessionStmt: %w", cerr)
 		}
 	}
-	if q.countAPIKeysStmt != nil {
-		if cerr := q.countAPIKeysStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing countAPIKeysStmt: %w", cerr)
-		}
-	}
 	if q.createAPIKeyStmt != nil {
 		if cerr := q.createAPIKeyStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing createAPIKeyStmt: %w", cerr)
@@ -245,16 +243,6 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing createUserStmt: %w", cerr)
 		}
 	}
-	if q.deleteAPIKeyByIDStmt != nil {
-		if cerr := q.deleteAPIKeyByIDStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing deleteAPIKeyByIDStmt: %w", cerr)
-		}
-	}
-	if q.deleteAPIKeyByTypeIDStmt != nil {
-		if cerr := q.deleteAPIKeyByTypeIDStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing deleteAPIKeyByTypeIDStmt: %w", cerr)
-		}
-	}
 	if q.deleteDocAPIKeyByAPIKeyIDStmt != nil {
 		if cerr := q.deleteDocAPIKeyByAPIKeyIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing deleteDocAPIKeyByAPIKeyIDStmt: %w", cerr)
@@ -265,19 +253,9 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing deleteDocAPIKeyByIDStmt: %w", cerr)
 		}
 	}
-	if q.deleteDocAPIKeysBySandboxAccountIDStmt != nil {
-		if cerr := q.deleteDocAPIKeysBySandboxAccountIDStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing deleteDocAPIKeysBySandboxAccountIDStmt: %w", cerr)
-		}
-	}
 	if q.deleteExpiredIdempotencyKeysStmt != nil {
 		if cerr := q.deleteExpiredIdempotencyKeysStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing deleteExpiredIdempotencyKeysStmt: %w", cerr)
-		}
-	}
-	if q.deleteOutboxMessageStmt != nil {
-		if cerr := q.deleteOutboxMessageStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing deleteOutboxMessageStmt: %w", cerr)
 		}
 	}
 	if q.deleteRegistrationSessionStmt != nil {
@@ -370,14 +348,39 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getRegistrationSessionByTypeIDStmt: %w", cerr)
 		}
 	}
-	if q.listAPIKeysStmt != nil {
-		if cerr := q.listAPIKeysStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing listAPIKeysStmt: %w", cerr)
+	if q.listAPIKeysBackwardStmt != nil {
+		if cerr := q.listAPIKeysBackwardStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing listAPIKeysBackwardStmt: %w", cerr)
+		}
+	}
+	if q.listAPIKeysForwardStmt != nil {
+		if cerr := q.listAPIKeysForwardStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing listAPIKeysForwardStmt: %w", cerr)
+		}
+	}
+	if q.listRegistrationSessionsByUserIDBackwardStmt != nil {
+		if cerr := q.listRegistrationSessionsByUserIDBackwardStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing listRegistrationSessionsByUserIDBackwardStmt: %w", cerr)
+		}
+	}
+	if q.listRegistrationSessionsByUserIDForwardStmt != nil {
+		if cerr := q.listRegistrationSessionsByUserIDForwardStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing listRegistrationSessionsByUserIDForwardStmt: %w", cerr)
 		}
 	}
 	if q.markOutboxMessageFailedStmt != nil {
 		if cerr := q.markOutboxMessageFailedStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing markOutboxMessageFailedStmt: %w", cerr)
+		}
+	}
+	if q.markOutboxMessagePublishedStmt != nil {
+		if cerr := q.markOutboxMessagePublishedStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing markOutboxMessagePublishedStmt: %w", cerr)
+		}
+	}
+	if q.purgePublishedOutboxMessagesStmt != nil {
+		if cerr := q.purgePublishedOutboxMessagesStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing purgePublishedOutboxMessagesStmt: %w", cerr)
 		}
 	}
 	if q.revokeAPIKeyByTypeIDStmt != nil {
@@ -418,6 +421,11 @@ func (q *Queries) Close() error {
 	if q.updateRegistrationSessionPaymentCompletedStmt != nil {
 		if cerr := q.updateRegistrationSessionPaymentCompletedStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing updateRegistrationSessionPaymentCompletedStmt: %w", cerr)
+		}
+	}
+	if q.updateRegistrationSessionPlanCodeStmt != nil {
+		if cerr := q.updateRegistrationSessionPlanCodeStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateRegistrationSessionPlanCodeStmt: %w", cerr)
 		}
 	}
 	if q.updateRegistrationSessionStepStmt != nil {
@@ -488,7 +496,6 @@ type Queries struct {
 	advanceIdempotencyRecoveryPointStmt           *sql.Stmt
 	cleanupExpiredOutboxLocksStmt                 *sql.Stmt
 	completeRegistrationSessionStmt               *sql.Stmt
-	countAPIKeysStmt                              *sql.Stmt
 	createAPIKeyStmt                              *sql.Stmt
 	createDocAPIKeyStmt                           *sql.Stmt
 	createIdempotencyKeyStmt                      *sql.Stmt
@@ -496,13 +503,9 @@ type Queries struct {
 	createRefreshTokenStmt                        *sql.Stmt
 	createRegistrationSessionStmt                 *sql.Stmt
 	createUserStmt                                *sql.Stmt
-	deleteAPIKeyByIDStmt                          *sql.Stmt
-	deleteAPIKeyByTypeIDStmt                      *sql.Stmt
 	deleteDocAPIKeyByAPIKeyIDStmt                 *sql.Stmt
 	deleteDocAPIKeyByIDStmt                       *sql.Stmt
-	deleteDocAPIKeysBySandboxAccountIDStmt        *sql.Stmt
 	deleteExpiredIdempotencyKeysStmt              *sql.Stmt
-	deleteOutboxMessageStmt                       *sql.Stmt
 	deleteRegistrationSessionStmt                 *sql.Stmt
 	findAPIKeyByIDStmt                            *sql.Stmt
 	findAPIKeyWithRoleByDatabaseIDStmt            *sql.Stmt
@@ -521,8 +524,13 @@ type Queries struct {
 	getRegistrationSessionByIDStmt                *sql.Stmt
 	getRegistrationSessionByTokenStmt             *sql.Stmt
 	getRegistrationSessionByTypeIDStmt            *sql.Stmt
-	listAPIKeysStmt                               *sql.Stmt
+	listAPIKeysBackwardStmt                       *sql.Stmt
+	listAPIKeysForwardStmt                        *sql.Stmt
+	listRegistrationSessionsByUserIDBackwardStmt  *sql.Stmt
+	listRegistrationSessionsByUserIDForwardStmt   *sql.Stmt
 	markOutboxMessageFailedStmt                   *sql.Stmt
+	markOutboxMessagePublishedStmt                *sql.Stmt
+	purgePublishedOutboxMessagesStmt              *sql.Stmt
 	revokeAPIKeyByTypeIDStmt                      *sql.Stmt
 	revokeAllRefreshTokensByUserIDStmt            *sql.Stmt
 	revokeRefreshTokenStmt                        *sql.Stmt
@@ -531,6 +539,7 @@ type Queries struct {
 	updateDocAPIKeyStmt                           *sql.Stmt
 	updateRegistrationSessionEmailVerifiedStmt    *sql.Stmt
 	updateRegistrationSessionPaymentCompletedStmt *sql.Stmt
+	updateRegistrationSessionPlanCodeStmt         *sql.Stmt
 	updateRegistrationSessionStepStmt             *sql.Stmt
 	updateRegistrationSessionStripeCustomerStmt   *sql.Stmt
 	updateRegistrationSessionTokenStmt            *sql.Stmt
@@ -546,7 +555,6 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		advanceIdempotencyRecoveryPointStmt:           q.advanceIdempotencyRecoveryPointStmt,
 		cleanupExpiredOutboxLocksStmt:                 q.cleanupExpiredOutboxLocksStmt,
 		completeRegistrationSessionStmt:               q.completeRegistrationSessionStmt,
-		countAPIKeysStmt:                              q.countAPIKeysStmt,
 		createAPIKeyStmt:                              q.createAPIKeyStmt,
 		createDocAPIKeyStmt:                           q.createDocAPIKeyStmt,
 		createIdempotencyKeyStmt:                      q.createIdempotencyKeyStmt,
@@ -554,13 +562,9 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		createRefreshTokenStmt:                        q.createRefreshTokenStmt,
 		createRegistrationSessionStmt:                 q.createRegistrationSessionStmt,
 		createUserStmt:                                q.createUserStmt,
-		deleteAPIKeyByIDStmt:                          q.deleteAPIKeyByIDStmt,
-		deleteAPIKeyByTypeIDStmt:                      q.deleteAPIKeyByTypeIDStmt,
 		deleteDocAPIKeyByAPIKeyIDStmt:                 q.deleteDocAPIKeyByAPIKeyIDStmt,
 		deleteDocAPIKeyByIDStmt:                       q.deleteDocAPIKeyByIDStmt,
-		deleteDocAPIKeysBySandboxAccountIDStmt:        q.deleteDocAPIKeysBySandboxAccountIDStmt,
 		deleteExpiredIdempotencyKeysStmt:              q.deleteExpiredIdempotencyKeysStmt,
-		deleteOutboxMessageStmt:                       q.deleteOutboxMessageStmt,
 		deleteRegistrationSessionStmt:                 q.deleteRegistrationSessionStmt,
 		findAPIKeyByIDStmt:                            q.findAPIKeyByIDStmt,
 		findAPIKeyWithRoleByDatabaseIDStmt:            q.findAPIKeyWithRoleByDatabaseIDStmt,
@@ -579,8 +583,13 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getRegistrationSessionByIDStmt:                q.getRegistrationSessionByIDStmt,
 		getRegistrationSessionByTokenStmt:             q.getRegistrationSessionByTokenStmt,
 		getRegistrationSessionByTypeIDStmt:            q.getRegistrationSessionByTypeIDStmt,
-		listAPIKeysStmt:                               q.listAPIKeysStmt,
+		listAPIKeysBackwardStmt:                       q.listAPIKeysBackwardStmt,
+		listAPIKeysForwardStmt:                        q.listAPIKeysForwardStmt,
+		listRegistrationSessionsByUserIDBackwardStmt:  q.listRegistrationSessionsByUserIDBackwardStmt,
+		listRegistrationSessionsByUserIDForwardStmt:   q.listRegistrationSessionsByUserIDForwardStmt,
 		markOutboxMessageFailedStmt:                   q.markOutboxMessageFailedStmt,
+		markOutboxMessagePublishedStmt:                q.markOutboxMessagePublishedStmt,
+		purgePublishedOutboxMessagesStmt:              q.purgePublishedOutboxMessagesStmt,
 		revokeAPIKeyByTypeIDStmt:                      q.revokeAPIKeyByTypeIDStmt,
 		revokeAllRefreshTokensByUserIDStmt:            q.revokeAllRefreshTokensByUserIDStmt,
 		revokeRefreshTokenStmt:                        q.revokeRefreshTokenStmt,
@@ -589,6 +598,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		updateDocAPIKeyStmt:                           q.updateDocAPIKeyStmt,
 		updateRegistrationSessionEmailVerifiedStmt:    q.updateRegistrationSessionEmailVerifiedStmt,
 		updateRegistrationSessionPaymentCompletedStmt: q.updateRegistrationSessionPaymentCompletedStmt,
+		updateRegistrationSessionPlanCodeStmt:         q.updateRegistrationSessionPlanCodeStmt,
 		updateRegistrationSessionStepStmt:             q.updateRegistrationSessionStepStmt,
 		updateRegistrationSessionStripeCustomerStmt:   q.updateRegistrationSessionStripeCustomerStmt,
 		updateRegistrationSessionTokenStmt:            q.updateRegistrationSessionTokenStmt,

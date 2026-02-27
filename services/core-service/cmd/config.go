@@ -1,6 +1,7 @@
 package main
 
 import (
+	"cmp"
 	"fmt"
 	"strconv"
 
@@ -9,12 +10,15 @@ import (
 )
 
 var (
-	defaultPort = contracts.GRPCPort
+	defaultPort        = contracts.GRPCPort
+	defaultRabbitMQURI = "amqp://guest:guest@rabbitmq:5672/" // #nosec G101 - Default dev URI, not a production credential
 )
 
 const (
-	envPort  = "PORT"
-	envDBURL = "DB_URL"
+	envPort          = "PORT"
+	envDBURL         = "DB_URL"
+	envRabbitMQURI   = "RABBITMQ_URI"
+	envCursorHMACKey = "CURSOR_HMAC_KEY" // #nosec G101 - Env var name, not a credential
 )
 
 // config represents the configuration for the core service.
@@ -24,6 +28,12 @@ type config struct {
 
 	// DBURL (required) is the database connection URI.
 	DBURL string
+
+	// RabbitMQURI (optional; default: "amqp://guest:guest@rabbitmq:5672/") is the RabbitMQ connection URI.
+	RabbitMQURI string
+
+	// CursorHMACKey (required) is the key used to HMAC-sign pagination cursors.
+	CursorHMACKey []byte
 }
 
 // withDefaults sets the default values for the configuration.
@@ -38,8 +48,10 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 	}
 
 	return &config{
-		Port:  port,
-		DBURL: env.GetEnv(envDBURL, getenv),
+		Port:          port,
+		DBURL:         env.GetEnv(envDBURL, getenv),
+		RabbitMQURI:   cmp.Or(env.GetEnv(envRabbitMQURI, getenv), defaultRabbitMQURI),
+		CursorHMACKey: []byte(env.GetEnv(envCursorHMACKey, getenv)),
 	}
 }
 
@@ -50,6 +62,9 @@ func (c *config) validate() error {
 	}
 	if c.DBURL == "" {
 		return fmt.Errorf("the provided database URI is empty")
+	}
+	if len(c.CursorHMACKey) == 0 {
+		return fmt.Errorf("CURSOR_HMAC_KEY is required")
 	}
 	return nil
 }

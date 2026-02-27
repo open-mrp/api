@@ -16,10 +16,11 @@ type IdentityActor struct {
 }
 
 type Identity struct {
-	Type            IdentityType
-	TargetAccountID *string
-	Actor           *IdentityActor
-	AccountMode     constants.AccountMode
+	Type               IdentityType
+	TargetAccountID    *string
+	Actor              *IdentityActor
+	AccountMode        constants.AccountMode
+	SubscriptionStatus *string
 }
 
 func (i *Identity) IsAuthenticated() bool {
@@ -94,10 +95,11 @@ func (i *Identity) ToProto() *pb.Identity {
 	}
 
 	return &pb.Identity{
-		Type:            convertIdentityTypeToProto(i.Type),
-		TargetAccountId: i.TargetAccountID,
-		Actor:           actor,
-		AccountMode:     convertAccountModeToProto(i.AccountMode),
+		Type:               convertIdentityTypeToProto(i.Type),
+		TargetAccountId:    i.TargetAccountID,
+		Actor:              actor,
+		AccountMode:        convertAccountModeToProto(i.AccountMode),
+		SubscriptionStatus: i.SubscriptionStatus,
 	}
 }
 
@@ -159,10 +161,11 @@ func IdentityFromProto(pbIdentity *pb.Identity) *Identity {
 	}
 
 	return &Identity{
-		Type:            convertIdentityTypeFromProto(pbIdentity.Type),
-		TargetAccountID: pbIdentity.TargetAccountId,
-		Actor:           actor,
-		AccountMode:     convertAccountModeFromProto(pbIdentity.AccountMode),
+		Type:               convertIdentityTypeFromProto(pbIdentity.Type),
+		TargetAccountID:    pbIdentity.TargetAccountId,
+		Actor:              actor,
+		AccountMode:        convertAccountModeFromProto(pbIdentity.AccountMode),
+		SubscriptionStatus: pbIdentity.SubscriptionStatus,
 	}
 }
 

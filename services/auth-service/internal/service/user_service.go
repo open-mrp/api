@@ -31,19 +31,6 @@ type UserSvcConfig struct {
 	TxManager             TransactionManager
 }
 
-// WithDefaults returns a new UserSvcConfig with zero-value fields replaced by defaults.
-func (c *UserSvcConfig) WithDefaults() *UserSvcConfig {
-	if c == nil {
-		c = &UserSvcConfig{}
-	}
-	return &UserSvcConfig{
-		Repos:                 c.Repos,
-		MediatorFactory:       c.MediatorFactory,
-		NotificationPublisher: c.NotificationPublisher,
-		TxManager:             c.TxManager,
-	}
-}
-
 func (c *UserSvcConfig) validate() error {
 	if c.Repos == nil {
 		return fmt.Errorf("user service: repos is required")
@@ -58,7 +45,6 @@ func (c *UserSvcConfig) validate() error {
 }
 
 func NewUserSvc(config *UserSvcConfig) domain.UserSvc {
-	config = config.WithDefaults()
 	if err := config.validate(); err != nil {
 		panic(err)
 	}
@@ -71,7 +57,11 @@ func NewUserSvc(config *UserSvcConfig) domain.UserSvc {
 	}
 }
 
-func DefaultUserSvcConfig(queries *sqlc.Queries, jwtSecret string, pepper []byte, frontendURL string, coreClient domain.AuthCoreClient) *UserSvcConfig {
+func (c *UserSvcConfig) WithDefaults(queries *sqlc.Queries, jwtSecret string, pepper []byte, frontendURL string, coreClient domain.AuthCoreClient) *UserSvcConfig {
+	if c == nil {
+		c = &UserSvcConfig{}
+	}
+
 	repoFactory := repository.NewRepoFactory(queries)
 	notificationPublisher := event.NewOutboxNotificationPublisher()
 
@@ -88,10 +78,6 @@ func DefaultUserSvcConfig(queries *sqlc.Queries, jwtSecret string, pepper []byte
 		MediatorFactory:       mediatorFactory,
 		NotificationPublisher: notificationPublisher,
 	}
-}
-
-func NewDefaultUserSvc(queries *sqlc.Queries, jwtSecret string, pepper []byte, frontendURL string, coreClient domain.AuthCoreClient) domain.UserSvc {
-	return NewUserSvc(DefaultUserSvcConfig(queries, jwtSecret, pepper, frontendURL, coreClient))
 }
 
 func (s *userSvcImpl) mediators() domain.Mediators {

@@ -30,19 +30,6 @@ type PasswordSvcConfig struct {
 	TxManager             TransactionManager
 }
 
-// WithDefaults returns a new PasswordSvcConfig with zero-value fields replaced by defaults.
-func (c *PasswordSvcConfig) WithDefaults() *PasswordSvcConfig {
-	if c == nil {
-		c = &PasswordSvcConfig{}
-	}
-	return &PasswordSvcConfig{
-		Repos:                 c.Repos,
-		MediatorFactory:       c.MediatorFactory,
-		NotificationPublisher: c.NotificationPublisher,
-		TxManager:             c.TxManager,
-	}
-}
-
 func (c *PasswordSvcConfig) validate() error {
 	if c.Repos == nil {
 		return fmt.Errorf("password service: repos is required")
@@ -57,7 +44,6 @@ func (c *PasswordSvcConfig) validate() error {
 }
 
 func NewPasswordSvc(config *PasswordSvcConfig) domain.PasswordSvc {
-	config = config.WithDefaults()
 	if err := config.validate(); err != nil {
 		panic(err)
 	}
@@ -70,7 +56,11 @@ func NewPasswordSvc(config *PasswordSvcConfig) domain.PasswordSvc {
 	}
 }
 
-func DefaultPasswordSvcConfig(queries *sqlc.Queries, jwtSecret string, pepper []byte, frontendURL string, coreClient domain.AuthCoreClient) *PasswordSvcConfig {
+func (c *PasswordSvcConfig) WithDefaults(queries *sqlc.Queries, jwtSecret string, pepper []byte, frontendURL string, coreClient domain.AuthCoreClient) *PasswordSvcConfig {
+	if c == nil {
+		c = &PasswordSvcConfig{}
+	}
+
 	repoFactory := repository.NewRepoFactory(queries)
 	notificationPublisher := event.NewOutboxNotificationPublisher()
 
@@ -87,10 +77,6 @@ func DefaultPasswordSvcConfig(queries *sqlc.Queries, jwtSecret string, pepper []
 		MediatorFactory:       mediatorFactory,
 		NotificationPublisher: notificationPublisher,
 	}
-}
-
-func NewDefaultPasswordSvc(queries *sqlc.Queries, jwtSecret string, pepper []byte, frontendURL string, coreClient domain.AuthCoreClient) domain.PasswordSvc {
-	return NewPasswordSvc(DefaultPasswordSvcConfig(queries, jwtSecret, pepper, frontendURL, coreClient))
 }
 
 func (s *passwordSvcImpl) mediators() domain.Mediators {

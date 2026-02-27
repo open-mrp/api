@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/augno/api/services/auth-service/internal/apikey"
 	"github.com/augno/api/services/auth-service/internal/domain"
 	"github.com/augno/api/services/auth-service/internal/event"
 	"github.com/augno/api/services/auth-service/internal/infrastructure/repository"
@@ -12,7 +13,6 @@ import (
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
-	"github.com/augno/api/shared/crypto"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/idempotency"
 	"github.com/augno/api/shared/tracing"
@@ -24,27 +24,12 @@ type apiKeySvcImpl struct {
 	repos           domain.RepoFactory
 	mediatorFactory domain.MediatorFactory
 	txManager       TransactionManager
-	encryptionKey   []byte
 }
 
 type APIKeySvcConfig struct {
 	Repos           domain.RepoFactory
 	MediatorFactory domain.MediatorFactory
 	TxManager       TransactionManager
-	EncryptionKey   []byte
-}
-
-// WithDefaults returns a new APIKeySvcConfig with zero-value fields replaced by defaults.
-func (c *APIKeySvcConfig) WithDefaults() *APIKeySvcConfig {
-	if c == nil {
-		c = &APIKeySvcConfig{}
-	}
-	return &APIKeySvcConfig{
-		Repos:           c.Repos,
-		MediatorFactory: c.MediatorFactory,
-		TxManager:       c.TxManager,
-		EncryptionKey:   c.EncryptionKey,
-	}
 }
 
 func (c *APIKeySvcConfig) validate() error {
@@ -58,7 +43,6 @@ func (c *APIKeySvcConfig) validate() error {
 }
 
 func NewAPIKeySvc(config *APIKeySvcConfig) domain.APIKeySvc {
-	config = config.WithDefaults()
 	if err := config.validate(); err != nil {
 		panic(err)
 	}
@@ -67,26 +51,29 @@ func NewAPIKeySvc(config *APIKeySvcConfig) domain.APIKeySvc {
 		repos:           config.Repos,
 		mediatorFactory: config.MediatorFactory,
 		txManager:       config.TxManager,
-		encryptionKey:   config.EncryptionKey,
 	}
 }
 
-func DefaultAPIKeySvcConfig(queries *sqlc.Queries, jwtSecret string, pepper []byte, frontendURL string, coreClient domain.AuthCoreClient, encryptionKey []byte) *APIKeySvcConfig {
+func (c *APIKeySvcConfig) WithDefaults(queries *sqlc.Queries, jwtSecret string, pepper []byte, frontendURL string, coreClient domain.AuthCoreClient, encryptionKey []byte) *APIKeySvcConfig {
+	if c == nil {
+		c = &APIKeySvcConfig{}
+	}
+
 	repoFactory := repository.NewRepoFactory(queries)
 	notificationPublisher := event.NewOutboxNotificationPublisher()
 
 	mediatorFactory := mediator.NewMediatorFactory(&mediator.MediatorFactoryConfig{
-		JWTSecret:             jwtSecret,
-		APIKeyPepper:          pepper,
-		NotificationPublisher: notificationPublisher,
-		FrontendURL:           frontendURL,
-		CoreClient:            coreClient,
+		JWTSecret:              jwtSecret,
+		APIKeyPepper:           pepper,
+		NotificationPublisher:  notificationPublisher,
+		FrontendURL:            frontendURL,
+		CoreClient:             coreClient,
+		DocAPIKeyEncryptionKey: encryptionKey,
 	})
 
 	return &APIKeySvcConfig{
 		Repos:           repoFactory,
 		MediatorFactory: mediatorFactory,
-		EncryptionKey:   encryptionKey,
 	}
 }
 
@@ -104,10 +91,36 @@ func (s *apiKeySvcImpl) withTx(ctx context.Context, fn func(context.Context, *ap
 			repos:           f,
 			mediatorFactory: s.mediatorFactory,
 			txManager:       s.txManager,
-			encryptionKey:   s.encryptionKey,
 		}
 		return fn(txCtx, txSvc)
 	})
+}
+
+func (s *apiKeySvcImpl) GetAPIKey(ctx context.Context, apiKeyID string) (*apikey.APIKey, *apierror.APIError) {
+	ctx, span := apiKeySvcTracer.Start(ctx, "service.api_key.get")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+
+	if apiErr := checkApiKeyAccess(identity); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	ownerAccountID := *identity.TargetAccountID
+
+	key, apiErr := s.repos.NewAPIKeyRepo().FindByTypeID(ctx, apiKeyID)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	if key.OwnerAccountID != ownerAccountID {
+		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("API key not found."))
+	}
+
+	return key, nil
 }
 
 func (s *apiKeySvcImpl) CreateAPIKey(ctx context.Context, input domain.CreateAPIKeyInput) (*domain.CreateAPIKeyResult, *apierror.APIError) {
@@ -119,16 +132,8 @@ func (s *apiKeySvcImpl) CreateAPIKey(ctx context.Context, input domain.CreateAPI
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
-	if apiErr := types.CheckIsInternalActor(identity); apiErr != nil {
+	if apiErr := checkApiKeyAccess(identity); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
-	}
-
-	if apiErr := types.CheckIsAdmin(identity); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	if identity.TargetAccountID == nil {
-		return nil, tracing.Trace(span, apierror.NewValidationError("Target account ID is required to create an API key."))
 	}
 
 	ownerAccountID := *identity.TargetAccountID
@@ -156,7 +161,14 @@ func (s *apiKeySvcImpl) CreateAPIKey(ctx context.Context, input domain.CreateAPI
 		apiErr = s.withTx(ctx, func(txCtx context.Context, svc *apiKeySvcImpl) *apierror.APIError {
 			txMeds := svc.mediators()
 
-			secret, apiKey, createErr := txMeds.APIKey.Create(txCtx, identity.AccountMode, ownerAccountID, input.RoleID, input.Name, input.ExpiresAt)
+			secret, apiKey, createErr := txMeds.APIKey.Create(txCtx, domain.APIKeyCreateInput{
+				AccountMode:    identity.AccountMode,
+				OwnerAccountID: ownerAccountID,
+				RoleID:         input.RoleID,
+				Name:           input.Name,
+				ExpiresAt:      input.ExpiresAt,
+			})
+
 			if createErr != nil {
 				return createErr
 			}
@@ -189,39 +201,27 @@ func (s *apiKeySvcImpl) ListAPIKeys(ctx context.Context, cursor *string, limit i
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
-	if apiErr := types.CheckIsInternalActor(identity); apiErr != nil {
+	if apiErr := checkApiKeyAccess(identity); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
-	}
-
-	if apiErr := types.CheckIsAdmin(identity); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	if identity.TargetAccountID == nil {
-		return nil, tracing.Trace(span, apierror.NewValidationError("Target account ID is required to list API keys."))
 	}
 
 	ownerAccountID := *identity.TargetAccountID
 
 	meds := s.mediators()
 
-	apiKeys, _, apiErr := meds.APIKey.List(ctx, identity.AccountMode, ownerAccountID, cursor, limit, query, statuses)
+	result, apiErr := meds.APIKey.List(ctx, domain.APIKeyListInput{
+		OwnerAccountID: ownerAccountID,
+		Cursor:         cursor,
+		Limit:          limit,
+		Query:          query,
+		Statuses:       statuses,
+	})
+
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	hasMore := len(apiKeys) == int(limit)
-	var nextCursor *string
-	if hasMore && len(apiKeys) > 0 {
-		last := apiKeys[len(apiKeys)-1].TypeID
-		nextCursor = &last
-	}
-
-	return &domain.ListAPIKeysResult{
-		APIKeys:    apiKeys,
-		HasMore:    hasMore,
-		NextCursor: nextCursor,
-	}, nil
+	return result, nil
 }
 
 func (s *apiKeySvcImpl) RevokeAPIKey(ctx context.Context, input domain.RevokeAPIKeyInput) *apierror.APIError {
@@ -233,16 +233,8 @@ func (s *apiKeySvcImpl) RevokeAPIKey(ctx context.Context, input domain.RevokeAPI
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
-	if apiErr := types.CheckIsInternalActor(identity); apiErr != nil {
+	if apiErr := checkApiKeyAccess(identity); apiErr != nil {
 		return tracing.Trace(span, apiErr)
-	}
-
-	if apiErr := types.CheckIsAdmin(identity); apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
-
-	if identity.TargetAccountID == nil {
-		return tracing.Trace(span, apierror.NewValidationError("Target account ID is required to revoke an API key."))
 	}
 
 	meds := s.mediators()
@@ -251,6 +243,7 @@ func (s *apiKeySvcImpl) RevokeAPIKey(ctx context.Context, input domain.RevokeAPI
 		ActorID:      identity.Actor.ID,
 		IdentityType: identity.Type,
 	})
+
 	if apiErr != nil {
 		return apiErr
 	}
@@ -267,12 +260,10 @@ func (s *apiKeySvcImpl) RevokeAPIKey(ctx context.Context, input domain.RevokeAPI
 		apiErr = s.withTx(ctx, func(txCtx context.Context, svc *apiKeySvcImpl) *apierror.APIError {
 			txMeds := svc.mediators()
 
+			// Revoke the API key. The doc API key row is intentionally kept so that
+			// Resolve() sees the revocation and refuses to auto-regenerate.
 			if revokeErr := txMeds.APIKey.Revoke(txCtx, input.APIKeyID); revokeErr != nil {
 				return revokeErr
-			}
-
-			if deleteErr := svc.repos.NewDocAPIKeyRepo().DeleteByAPIKeyID(txCtx, input.APIKeyID); deleteErr != nil {
-				return deleteErr
 			}
 
 			return txMeds.Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, struct{}{})
@@ -298,16 +289,8 @@ func (s *apiKeySvcImpl) RotateAPIKey(ctx context.Context, input domain.RotateAPI
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
-	if apiErr := types.CheckIsInternalActor(identity); apiErr != nil {
+	if apiErr := checkApiKeyAccess(identity); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
-	}
-
-	if apiErr := types.CheckIsAdmin(identity); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	if identity.TargetAccountID == nil {
-		return nil, tracing.Trace(span, apierror.NewValidationError("Target account ID is required to rotate an API key."))
 	}
 
 	meds := s.mediators()
@@ -332,28 +315,24 @@ func (s *apiKeySvcImpl) RotateAPIKey(ctx context.Context, input domain.RotateAPI
 		var result *domain.CreateAPIKeyResult
 		apiErr = s.withTx(ctx, func(txCtx context.Context, svc *apiKeySvcImpl) *apierror.APIError {
 			txMeds := svc.mediators()
-			docAPIKeyRepo := svc.repos.NewDocAPIKeyRepo()
 
-			existingDocKey, findErr := docAPIKeyRepo.FindByAPIKeyID(txCtx, input.APIKeyID)
-			if findErr != nil {
-				return findErr
-			}
-
-			secret, apiKey, rotateErr := txMeds.APIKey.Rotate(txCtx, identity.AccountMode, input.APIKeyID, input.ExpiresAt)
+			// Rotate the API key
+			secret, apiKey, rotateErr := txMeds.APIKey.Rotate(txCtx, domain.APIKeyRotateInput{
+				AccountMode:  identity.AccountMode,
+				APIKeyTypeID: input.APIKeyID,
+				ExpiresAt:    input.ExpiresAt,
+			})
 			if rotateErr != nil {
 				return rotateErr
 			}
 
-			if existingDocKey != nil {
-				encrypted, encErr := crypto.EncryptAESGCM([]byte(secret), svc.encryptionKey)
-				if encErr != nil {
-					return apierror.NewInternalError(encErr, "failed to encrypt doc API key secret")
-				}
-				existingDocKey.APIKeyID = apiKey.TypeID
-				existingDocKey.EncryptedSecret = encrypted
-				if updateErr := docAPIKeyRepo.Update(txCtx, existingDocKey); updateErr != nil {
-					return updateErr
-				}
+			// Sync the doc API key if one exists for this API key
+			if syncErr := txMeds.DocAPIKey.SyncRotatedAPIKey(txCtx, domain.DocAPIKeySyncInput{
+				OldAPIKeyID: input.APIKeyID,
+				NewSecret:   secret,
+				NewAPIKey:   apiKey,
+			}); syncErr != nil {
+				return syncErr
 			}
 
 			result = &domain.CreateAPIKeyResult{
@@ -373,4 +352,24 @@ func (s *apiKeySvcImpl) RotateAPIKey(ctx context.Context, input domain.RotateAPI
 	default:
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Unexpected recovery point: "+idempotencyKey.RecoveryPoint.String()))
 	}
+}
+
+// checkApiKeyAccess makes sure the identity has permissions to preform CRUD operations on API keys
+func checkApiKeyAccess(identity *types.Identity) *apierror.APIError {
+	// We want to make sure we are only targeting an internal account
+	if apiErr := types.CheckIsInternalActor(identity); apiErr != nil {
+		return apiErr
+	}
+
+	// For now, we only allow admin roles to make changes to API keys or fetch them
+	if apiErr := types.CheckIsAdmin(identity); apiErr != nil {
+		return apiErr
+	}
+
+	// If we don't have a target account ID, this request should fail
+	if identity.TargetAccountID == nil {
+		return apierror.NewValidationError("Target account ID is required to perform this action.")
+	}
+
+	return nil
 }

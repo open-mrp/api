@@ -10,6 +10,36 @@ import (
 	"database/sql"
 )
 
+const clearAccountStripeCustomer = `-- name: ClearAccountStripeCustomer :exec
+UPDATE account SET
+    internal_stripe_customer_id = NULL,
+    internal_stripe_subscription_id = NULL,
+    subscription_status = NULL,
+    subscription_current_period_end = NULL,
+    updated_at = NOW(3)
+WHERE id = ?
+`
+
+func (q *Queries) ClearAccountStripeCustomer(ctx context.Context, id string) error {
+	_, err := q.exec(ctx, q.clearAccountStripeCustomerStmt, clearAccountStripeCustomer, id)
+	return err
+}
+
+const countNonSandboxAccountsByPlanCode = `-- name: CountNonSandboxAccountsByPlanCode :one
+SELECT COUNT(*) AS cnt
+FROM account a
+LEFT JOIN sandbox_account sa ON a.id = sa.account_id
+WHERE a.plan_code = ?
+  AND sa.id IS NULL
+`
+
+func (q *Queries) CountNonSandboxAccountsByPlanCode(ctx context.Context, planCode string) (int64, error) {
+	row := q.queryRow(ctx, q.countNonSandboxAccountsByPlanCodeStmt, countNonSandboxAccountsByPlanCode, planCode)
+	var cnt int64
+	err := row.Scan(&cnt)
+	return cnt, err
+}
+
 const createAccount = `-- name: CreateAccount :exec
 INSERT INTO account (
     id,
@@ -19,7 +49,7 @@ INSERT INTO account (
     plan_code,
     created_at,
     updated_at
-) VALUES (?, ?, ?, 'active', ?, NOW(), NOW())
+) VALUES (?, ?, ?, 'active', ?, NOW(3), NOW(3))
 `
 
 type CreateAccountParams struct {
@@ -52,7 +82,7 @@ INSERT INTO account (
     subscription_status,
     created_at,
     updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(3), NOW(3))
 `
 
 type CreateAccountForRegistrationParams struct {
@@ -91,6 +121,14 @@ func (q *Queries) DeleteAccountByID(ctx context.Context, id string) error {
 	return err
 }
 
+const deleteAccountByIDIfSandbox = `-- name: DeleteAccountByIDIfSandbox :execresult
+DELETE FROM account WHERE id = ? AND account_type_code = 'sandbox'
+`
+
+func (q *Queries) DeleteAccountByIDIfSandbox(ctx context.Context, id string) (sql.Result, error) {
+	return q.exec(ctx, q.deleteAccountByIDIfSandboxStmt, deleteAccountByIDIfSandbox, id)
+}
+
 const getAccountByStripeCustomerID = `-- name: GetAccountByStripeCustomerID :one
 SELECT id, name, plan_code FROM account WHERE internal_stripe_customer_id = ?
 `
@@ -109,25 +147,36 @@ func (q *Queries) GetAccountByStripeCustomerID(ctx context.Context, internalStri
 }
 
 const getAccountContext = `-- name: GetAccountContext :one
-SELECT 
-    account.id,
-    account.account_type_code,
-    sandbox_account.owner_account_id
-FROM account
-LEFT JOIN sandbox_account ON account.id = sandbox_account.account_id
-WHERE account.id = ?
+SELECT
+    a.id,
+    a.account_type_code,
+    sa.owner_account_id,
+    CASE
+        WHEN sa.owner_account_id IS NOT NULL THEN owner.subscription_status
+        ELSE a.subscription_status
+    END AS subscription_status
+FROM account a
+LEFT JOIN sandbox_account sa ON a.id = sa.account_id
+LEFT JOIN account owner ON sa.owner_account_id = owner.id
+WHERE a.id = ?
 `
 
 type GetAccountContextRow struct {
-	ID              string
-	AccountTypeCode string
-	OwnerAccountID  sql.NullString
+	ID                 string
+	AccountTypeCode    string
+	OwnerAccountID     sql.NullString
+	SubscriptionStatus interface{}
 }
 
 func (q *Queries) GetAccountContext(ctx context.Context, id string) (GetAccountContextRow, error) {
 	row := q.queryRow(ctx, q.getAccountContextStmt, getAccountContext, id)
 	var i GetAccountContextRow
-	err := row.Scan(&i.ID, &i.AccountTypeCode, &i.OwnerAccountID)
+	err := row.Scan(
+		&i.ID,
+		&i.AccountTypeCode,
+		&i.OwnerAccountID,
+		&i.SubscriptionStatus,
+	)
 	return i, err
 }
 
@@ -145,8 +194,8 @@ func (q *Queries) GetAccountPlanCode(ctx context.Context, id string) (string, er
 const getAccountPlanTypeIDByCode = `-- name: GetAccountPlanTypeIDByCode :one
 SELECT type_id FROM account_plan 
 WHERE plan_type_code = ? 
-AND effective_at <= NOW() 
-AND (expires_at IS NULL OR expires_at > NOW())
+AND effective_at <= NOW(3) 
+AND (expires_at IS NULL OR expires_at > NOW(3))
 ORDER BY effective_at DESC, version DESC
 LIMIT 1
 `
@@ -156,4 +205,78 @@ func (q *Queries) GetAccountPlanTypeIDByCode(ctx context.Context, planTypeCode s
 	var type_id string
 	err := row.Scan(&type_id)
 	return type_id, err
+}
+
+const getSandboxLimitByAccountID = `-- name: GetSandboxLimitByAccountID :one
+SELECT apl.value
+FROM account a
+JOIN account_plan ap ON ap.plan_type_code = a.plan_code
+    AND ap.effective_at <= NOW(3)
+    AND (ap.expires_at IS NULL OR ap.expires_at > NOW(3))
+JOIN account_plan_limit apl ON apl.account_plan_id = ap.type_id
+    AND apl.key = 'sandboxes_maximum'
+WHERE a.id = ?
+ORDER BY ap.effective_at DESC, ap.version DESC
+LIMIT 1
+`
+
+func (q *Queries) GetSandboxLimitByAccountID(ctx context.Context, id string) (sql.NullInt32, error) {
+	row := q.queryRow(ctx, q.getSandboxLimitByAccountIDStmt, getSandboxLimitByAccountID, id)
+	var value sql.NullInt32
+	err := row.Scan(&value)
+	return value, err
+}
+
+const getSeatLimitByPlanCode = `-- name: GetSeatLimitByPlanCode :one
+SELECT apl.value
+FROM account_plan ap
+JOIN account_plan_limit apl ON apl.account_plan_id = ap.type_id
+    AND apl.key = 'seats_maximum'
+WHERE ap.plan_type_code = ?
+    AND ap.effective_at <= NOW(3)
+    AND (ap.expires_at IS NULL OR ap.expires_at > NOW(3))
+ORDER BY ap.effective_at DESC, ap.version DESC
+LIMIT 1
+`
+
+func (q *Queries) GetSeatLimitByPlanCode(ctx context.Context, planTypeCode string) (sql.NullInt32, error) {
+	row := q.queryRow(ctx, q.getSeatLimitByPlanCodeStmt, getSeatLimitByPlanCode, planTypeCode)
+	var value sql.NullInt32
+	err := row.Scan(&value)
+	return value, err
+}
+
+const updateAccountSubscription = `-- name: UpdateAccountSubscription :exec
+UPDATE account SET
+    subscription_status = ?,
+    plan_code = ?,
+    account_plan_id = ?,
+    internal_stripe_subscription_id = ?,
+    subscription_current_period_end = ?,
+    internal_stripe_customer_id = COALESCE(?, internal_stripe_customer_id),
+    updated_at = NOW(3)
+WHERE id = ?
+`
+
+type UpdateAccountSubscriptionParams struct {
+	SubscriptionStatus           sql.NullString
+	PlanCode                     string
+	AccountPlanID                sql.NullString
+	InternalStripeSubscriptionID sql.NullString
+	SubscriptionCurrentPeriodEnd sql.NullTime
+	InternalStripeCustomerID     sql.NullString
+	ID                           string
+}
+
+func (q *Queries) UpdateAccountSubscription(ctx context.Context, arg UpdateAccountSubscriptionParams) error {
+	_, err := q.exec(ctx, q.updateAccountSubscriptionStmt, updateAccountSubscription,
+		arg.SubscriptionStatus,
+		arg.PlanCode,
+		arg.AccountPlanID,
+		arg.InternalStripeSubscriptionID,
+		arg.SubscriptionCurrentPeriodEnd,
+		arg.InternalStripeCustomerID,
+		arg.ID,
+	)
+	return err
 }

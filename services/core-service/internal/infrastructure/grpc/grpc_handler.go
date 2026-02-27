@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"time"
 
 	"github.com/augno/api/services/core-service/internal/domain"
 	"github.com/augno/api/shared/constants"
@@ -18,11 +19,15 @@ type gRPCHandler struct {
 	pb.UnimplementedCoreServiceServer
 
 	accountSvc domain.AccountSvc
+	sandboxSvc domain.SandboxSvc
+	unitSvc    domain.UnitSvc
 }
 
-func NewGRPCHandler(server *grpc.Server, accountSvc domain.AccountSvc) *gRPCHandler {
+func NewGRPCHandler(server *grpc.Server, accountSvc domain.AccountSvc, sandboxSvc domain.SandboxSvc, unitSvc domain.UnitSvc) *gRPCHandler {
 	handler := &gRPCHandler{
 		accountSvc: accountSvc,
+		sandboxSvc: sandboxSvc,
+		unitSvc:    unitSvc,
 	}
 
 	pb.RegisterCoreServiceServer(server, handler)
@@ -50,9 +55,10 @@ func (h *gRPCHandler) GetAccountContext(ctx context.Context, req *pb.GetAccountC
 	}
 
 	return &pb.GetAccountContextResponse{
-		IsSandbox:      accountContext.IsSandbox,
-		OwnerAccountId: accountContext.OwnerAccountID,
-		AccountMode:    accountMode,
+		IsSandbox:          accountContext.IsSandbox,
+		OwnerAccountId:     accountContext.OwnerAccountID,
+		AccountMode:        accountMode,
+		SubscriptionStatus: accountContext.SubscriptionStatus,
 	}, nil
 }
 
@@ -61,15 +67,14 @@ func (h *gRPCHandler) GetUserAccountAccess(ctx context.Context, req *pb.GetUserA
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	access, apiErr := h.accountSvc.GetUserAccountAccess(ctx, req.UserId, req.AccountId)
+	access, hasAccess, apiErr := h.accountSvc.GetUserAccountAccess(ctx, req.UserId, req.AccountId)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
-	if access == nil {
+	if !hasAccess {
 		return &pb.GetUserAccountAccessResponse{
 			HasAccess: false,
-			Access:    nil,
 		}, nil
 	}
 
@@ -194,13 +199,45 @@ func (h *gRPCHandler) GetSandboxAccountByOwner(ctx context.Context, req *pb.GetS
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	sandboxAccountID, apiErr := h.accountSvc.GetSandboxAccountByOwner(ctx, req.OwnerAccountId)
+	sandboxAccountID, apiErr := h.sandboxSvc.GetSandboxAccountByOwner(ctx, req.OwnerAccountId)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
 	return &pb.GetSandboxAccountByOwnerResponse{
 		SandboxAccountId: sandboxAccountID,
+	}, nil
+}
+
+func (h *gRPCHandler) ListSandboxAccounts(ctx context.Context, req *pb.ListSandboxAccountsRequest) (*pb.ListSandboxAccountsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	result, apiErr := h.sandboxSvc.ListSandboxAccounts(ctx, req.Cursor, req.Limit)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	pbSandboxes := make([]*pb.SandboxInfo, len(result.Sandboxes))
+	for i, s := range result.Sandboxes {
+		pbSandboxes[i] = &pb.SandboxInfo{
+			Id:        s.TypeID,
+			Name:      s.Name,
+			AccountId: s.AccountID,
+			CreatedAt: timestamppb.New(s.CreatedAt),
+			UpdatedAt: timestamppb.New(s.UpdatedAt),
+		}
+	}
+
+	return &pb.ListSandboxAccountsResponse{
+		Sandboxes: pbSandboxes,
+		PageInfo: &pb.PageInfo{
+			NextCursor:  result.PageInfo.NextCursor,
+			PrevCursor:  result.PageInfo.PrevCursor,
+			HasNextPage: result.PageInfo.HasNextPage,
+			HasPrevPage: result.PageInfo.HasPrevPage,
+		},
 	}, nil
 }
 
@@ -213,4 +250,222 @@ func (h *gRPCHandler) GetAdminRole(ctx context.Context, req *emptypb.Empty) (*pb
 	return &pb.GetAdminRoleResponse{
 		RoleId: roleID,
 	}, nil
+}
+
+func (h *gRPCHandler) GetSandbox(ctx context.Context, req *pb.GetSandboxRequest) (*pb.GetSandboxResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	sandbox, apiErr := h.sandboxSvc.GetSandbox(ctx, req.Id)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.GetSandboxResponse{
+		Sandbox: &pb.SandboxInfo{
+			Id:        sandbox.TypeID,
+			Name:      sandbox.Name,
+			AccountId: sandbox.AccountID,
+			CreatedAt: timestamppb.New(sandbox.CreatedAt),
+			UpdatedAt: timestamppb.New(sandbox.UpdatedAt),
+		},
+	}, nil
+}
+
+func (h *gRPCHandler) DeleteSandbox(ctx context.Context, req *pb.DeleteSandboxRequest) (*emptypb.Empty, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	apiErr := h.sandboxSvc.DeleteSandbox(ctx, req.Id)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func (h *gRPCHandler) CreateSandbox(ctx context.Context, req *pb.CreateSandboxRequest) (*pb.CreateSandboxResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	var mode constants.SandboxMode
+	switch req.Mode {
+	case pb.SandboxMode_SANDBOX_MODE_SEEDED:
+		mode = constants.SandboxModeSeeded
+	default:
+		mode = constants.SandboxModeBlank
+	}
+
+	sandbox, apiErr := h.sandboxSvc.CreateSandbox(ctx, req.Name, mode)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.CreateSandboxResponse{
+		Sandbox: &pb.SandboxInfo{
+			Id:        sandbox.TypeID,
+			Name:      sandbox.Name,
+			AccountId: sandbox.AccountID,
+			CreatedAt: timestamppb.New(sandbox.CreatedAt),
+			UpdatedAt: timestamppb.New(sandbox.UpdatedAt),
+		},
+	}, nil
+}
+
+func (h *gRPCHandler) UpdateAccountSubscription(ctx context.Context, req *pb.UpdateAccountSubscriptionRequest) (*emptypb.Empty, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	var periodEnd *time.Time
+	if req.CurrentPeriodEnd != nil {
+		t := req.CurrentPeriodEnd.AsTime()
+		periodEnd = &t
+	}
+
+	apiErr := h.accountSvc.UpdateAccountSubscription(ctx, req.AccountId, req.SubscriptionStatus, req.PlanCode, req.StripeSubscriptionId, periodEnd, req.StripeCustomerId)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func (h *gRPCHandler) ClearAccountStripeCustomer(ctx context.Context, req *pb.ClearAccountStripeCustomerRequest) (*emptypb.Empty, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	apiErr := h.accountSvc.ClearAccountStripeCustomer(ctx, req.AccountId)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func (h *gRPCHandler) GetAccountByStripeCustomerID(ctx context.Context, req *pb.GetAccountByStripeCustomerIDRequest) (*pb.GetAccountByStripeCustomerIDResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	accountID, planCode, apiErr := h.accountSvc.GetAccountByStripeCustomerID(ctx, req.StripeCustomerId)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.GetAccountByStripeCustomerIDResponse{
+		AccountId: accountID,
+		PlanCode:  planCode,
+	}, nil
+}
+
+func (h *gRPCHandler) CompleteRegistration(ctx context.Context, req *pb.CompleteRegistrationRequest) (*pb.CompleteRegistrationResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	input := domain.CompleteRegistrationInput{
+		UserID:           req.UserId,
+		PlanCode:         req.PlanCode,
+		StripeCustomerID: req.StripeCustomerId,
+	}
+
+	if req.StripeSubscriptionId != nil {
+		input.StripeSubscriptionID = *req.StripeSubscriptionId
+	}
+
+	if req.AccountData != nil {
+		input.AccountData = domain.RegistrationAccountData{
+			AccountName: req.AccountData.AccountName,
+		}
+
+		if req.AccountData.BusinessAddress != nil {
+			addr := req.AccountData.BusinessAddress
+			input.BusinessAddress = &domain.RegistrationAddress{
+				Line1:      derefStr(addr.Line1),
+				Line2:      derefStr(addr.Line2),
+				City:       derefStr(addr.City),
+				State:      derefStr(addr.State),
+				PostalCode: derefStr(addr.PostalCode),
+				Country:    derefStr(addr.Country),
+			}
+		}
+	}
+
+	result, apiErr := h.accountSvc.CompleteRegistration(ctx, input)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.CompleteRegistrationResponse{
+		AccountId: result.AccountID,
+		SandboxId: result.SandboxID,
+	}, nil
+}
+
+func (h *gRPCHandler) ListUnits(ctx context.Context, req *pb.ListUnitsRequest) (*pb.ListUnitsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	params := domain.ListUnitsParams{
+		Cursor:       req.Cursor,
+		Limit:        req.Limit,
+		Query:        req.Query,
+		Type:         req.Type,
+		UnitGroupIDs: req.UnitGroupIds,
+	}
+
+	result, apiErr := h.unitSvc.ListUnits(ctx, params)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	pbUnits := make([]*pb.UnitInfo, len(result.Units))
+	for i, u := range result.Units {
+		pbUnits[i] = &pb.UnitInfo{
+			Id:               u.ID,
+			Name:             u.Name,
+			Abbreviation:     u.Abbreviation,
+			Type:             u.UnitDimensionCode,
+			RatioNumerator:   u.RatioNumerator,
+			RatioDenominator: u.RatioDenominator,
+			OffsetNumerator:  u.OffsetNumerator,
+			OffsetDenominator: u.OffsetDenominator,
+			IsBaseUnit:       u.IsBaseUnit,
+			IsInternal:       u.AccountID != nil,
+			CreatedAt:        timestamppb.New(u.CreatedAt),
+			UpdatedAt:        timestamppb.New(u.UpdatedAt),
+		}
+	}
+
+	return &pb.ListUnitsResponse{
+		Units: pbUnits,
+		PageInfo: &pb.PageInfo{
+			NextCursor:  result.PageInfo.NextCursor,
+			PrevCursor:  result.PageInfo.PrevCursor,
+			HasNextPage: result.PageInfo.HasNextPage,
+			HasPrevPage: result.PageInfo.HasPrevPage,
+		},
+	}, nil
+}
+
+func derefStr(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
 }

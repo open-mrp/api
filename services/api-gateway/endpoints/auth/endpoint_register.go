@@ -12,11 +12,11 @@ import (
 
 // The request to register a new user
 type RegisterRequest struct {
-	// The email address for the new user
+	// The email address for the new user.
 	Email string `json:"email" validate:"required,custom_email"`
-	// The password for the new user
+	// The password for the new user.
 	Password string `json:"password" validate:"required,password"` // #nosec G117 - Struct field, not a hardcoded credential
-	// The full name of the new user
+	// The full name of the new user.
 	Name string `json:"name" validate:"required"`
 }
 
@@ -51,6 +51,7 @@ func (e *RegisterEndpoint) Materialize() *apiendpoint.APIEndpoint[*RegisterReque
 		},
 		Extras: apiendpoint.APIEndpointExtras{
 			AllowUnknownJSONFields: false,
+			ShieldRequestBody:      true,
 		},
 	}
 }

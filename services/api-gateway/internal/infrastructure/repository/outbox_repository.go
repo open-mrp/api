@@ -55,8 +55,8 @@ func (r *outboxRepoImpl) Create(ctx context.Context, input messaging.OutboxMessa
 		Headers:         nil,
 		Payload:         payloadJSON,
 		MaxAttempts:     int32(maxAttempts), // #nosec G115 - small config value
-		RequestID:       db.NullString(input.RequestID),
-		ParentMessageID: db.NullString(input.ParentMessageID),
+		RequestID:       db.NullString(input.Payload.RequestID),
+		ParentMessageID: db.NullString(input.Payload.ParentMessageID),
 	})
 
 	if err != nil {
@@ -150,7 +150,7 @@ func (r *outboxEnqueuerRepoImpl) MarkPublished(ctx context.Context, id int64) er
 	ctx, span := tracing.StartSpan(ctx, outboxRepoTracer, "repository.outbox.mark_published")
 	defer span.End()
 
-	err := r.queries.DeleteOutboxMessage(ctx, id)
+	err := r.queries.MarkOutboxMessagePublished(ctx, id)
 	if err != nil {
 		span.RecordError(err)
 		return err
@@ -159,13 +159,14 @@ func (r *outboxEnqueuerRepoImpl) MarkPublished(ctx context.Context, id int64) er
 	return nil
 }
 
-func (r *outboxEnqueuerRepoImpl) MarkFailed(ctx context.Context, id int64, errorMsg string) error {
+func (r *outboxEnqueuerRepoImpl) MarkFailed(ctx context.Context, id int64, errorMsg string, retryDelaySecs int) error {
 	ctx, span := tracing.StartSpan(ctx, outboxRepoTracer, "repository.outbox.mark_failed")
 	defer span.End()
 
 	err := r.queries.MarkOutboxMessageFailed(ctx, sqlc.MarkOutboxMessageFailedParams{
 		ID:        id,
 		LastError: db.NullString(errorMsg),
+		DATEADD:   retryDelaySecs,
 	})
 	if err != nil {
 		span.RecordError(err)
@@ -175,11 +176,33 @@ func (r *outboxEnqueuerRepoImpl) MarkFailed(ctx context.Context, id int64, error
 	return nil
 }
 
-func (r *outboxEnqueuerRepoImpl) CleanupExpiredLocks(ctx context.Context) (int64, error) {
+func (r *outboxEnqueuerRepoImpl) CleanupExpiredLocks(ctx context.Context, limit int32) (int64, error) {
 	ctx, span := tracing.StartSpan(ctx, outboxRepoTracer, "repository.outbox.cleanup_expired_locks")
 	defer span.End()
 
-	result, err := r.queries.CleanupExpiredOutboxLocks(ctx)
+	result, err := r.queries.CleanupExpiredOutboxLocks(ctx, limit)
+	if err != nil {
+		span.RecordError(err)
+		return 0, err
+	}
+
+	count, err := result.RowsAffected()
+	if err != nil {
+		span.RecordError(err)
+		return 0, err
+	}
+
+	return count, nil
+}
+
+func (r *outboxEnqueuerRepoImpl) PurgePublished(ctx context.Context, retentionHours int, limit int32) (int64, error) {
+	ctx, span := tracing.StartSpan(ctx, outboxRepoTracer, "repository.outbox.purge_published")
+	defer span.End()
+
+	result, err := r.queries.PurgePublishedOutboxMessages(ctx, sqlc.PurgePublishedOutboxMessagesParams{
+		DATESUB: retentionHours,
+		Limit:   limit,
+	})
 	if err != nil {
 		span.RecordError(err)
 		return 0, err

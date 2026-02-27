@@ -36,6 +36,7 @@ type Operation struct {
 	Responses   map[string]Response   `json:"responses"`
 	Parameters  []Parameter           `json:"parameters,omitempty"`
 	Security    []map[string][]string `json:"security,omitempty"`
+	XPreview    bool                  `json:"x-preview,omitempty"`
 }
 
 type Parameter struct {

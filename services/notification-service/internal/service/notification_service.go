@@ -9,10 +9,10 @@ import (
 	"github.com/augno/api/services/notification-service/internal/infrastructure/aws"
 	"github.com/augno/api/services/notification-service/internal/infrastructure/repository"
 	"github.com/augno/api/services/notification-service/internal/infrastructure/sqlc"
+	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/id"
-	"github.com/augno/api/shared/ptrutil"
 	"github.com/augno/api/shared/tracing"
 )
 
@@ -30,18 +30,6 @@ type NotificationSvcConfig struct {
 	TemplateRenderer email.TemplateRenderer
 }
 
-// WithDefaults returns a new NotificationSvcConfig with zero-value fields replaced by defaults.
-func (c *NotificationSvcConfig) WithDefaults() *NotificationSvcConfig {
-	if c == nil {
-		c = &NotificationSvcConfig{}
-	}
-	return &NotificationSvcConfig{
-		EmailLogRepo:     c.EmailLogRepo,
-		EmailSender:      c.EmailSender,
-		TemplateRenderer: c.TemplateRenderer,
-	}
-}
-
 func (c *NotificationSvcConfig) validate() error {
 	if c.EmailLogRepo == nil {
 		return fmt.Errorf("notification service: email log repo is required")
@@ -56,7 +44,6 @@ func (c *NotificationSvcConfig) validate() error {
 }
 
 func NewNotificationSvc(config *NotificationSvcConfig) domain.NotificationSvc {
-	config = config.WithDefaults()
 	if err := config.validate(); err != nil {
 		panic(err)
 	}
@@ -68,8 +55,12 @@ func NewNotificationSvc(config *NotificationSvcConfig) domain.NotificationSvc {
 	}
 }
 
-func DefaultNotificationSvcConfig(queries *sqlc.Queries, awsRegion string, templateRenderer email.TemplateRenderer) (*NotificationSvcConfig, *apierror.APIError) {
-	emailSender, apiErr := aws.NewSESEmailSender(context.Background(), constants.PlatformModeProduction, awsRegion)
+func (c *NotificationSvcConfig) WithDefaults(queries *sqlc.Queries, platformMode constants.PlatformMode, awsRegion string, templateRenderer email.TemplateRenderer) (*NotificationSvcConfig, *apierror.APIError) {
+	if c == nil {
+		c = &NotificationSvcConfig{}
+	}
+
+	emailSender, apiErr := aws.NewSESEmailSender(context.Background(), platformMode, awsRegion)
 	if apiErr != nil {
 		return nil, apiErr
 	}
@@ -81,17 +72,13 @@ func DefaultNotificationSvcConfig(queries *sqlc.Queries, awsRegion string, templ
 	}, nil
 }
 
-func NewDefaultNotificationSvc(queries *sqlc.Queries, awsRegion string, templateRenderer email.TemplateRenderer) (domain.NotificationSvc, *apierror.APIError) {
-	config, apiErr := DefaultNotificationSvcConfig(queries, awsRegion, templateRenderer)
-	if apiErr != nil {
-		return nil, apiErr
-	}
-	return NewNotificationSvc(config), nil
-}
-
 func (s *notificationSvcImpl) SendEmail(ctx context.Context, data domain.EmailSendData) (*string, *apierror.APIError) {
 	ctx, span := notificationSvcTracer.Start(ctx, "service.notification.send_email")
 	defer span.End()
+
+	if s.isSandboxRequest(ctx) {
+		return s.logSuppressedEmail(ctx, data)
+	}
 
 	sesMessageID, apiErr := s.emailSender.Send(ctx, domain.EmailData{
 		To:      data.To,
@@ -134,9 +121,9 @@ func (s *notificationSvcImpl) LogEmail(ctx context.Context, data domain.EmailLog
 		HasSent:      true,
 		AccountID:    accountID,
 		SentByID:     data.SentByID,
-		Subject:      ptrutil.Ptr(data.Subject),
+		Subject:      new(data.Subject),
 		Filename:     data.Filename,
-		SesMessageID: ptrutil.Ptr(data.SesMessageID),
+		SesMessageID: new(data.SesMessageID),
 	}
 
 	return s.emailLogRepo.Create(ctx, emailLog)
@@ -145,6 +132,10 @@ func (s *notificationSvcImpl) LogEmail(ctx context.Context, data domain.EmailLog
 func (s *notificationSvcImpl) SendEnterpriseRequest(ctx context.Context, req *domain.EnterpriseRequestData) *apierror.APIError {
 	ctx, span := notificationSvcTracer.Start(ctx, "service.notification.send_enterprise_request")
 	defer span.End()
+
+	if s.isSandboxRequest(ctx) {
+		return nil
+	}
 
 	subject := "Enterprise Upgrade Request: " + req.AccountName
 
@@ -172,4 +163,44 @@ func (s *notificationSvcImpl) SendEnterpriseRequest(ctx context.Context, req *do
 	}
 
 	return nil
+}
+
+func (s *notificationSvcImpl) isSandboxRequest(ctx context.Context) bool {
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	return ok && identity.AccountMode == constants.AccountModeSandbox
+}
+
+// logSuppressedEmail creates an email log entry for a sandbox-suppressed email
+// without actually sending it. The log records HasSent=false so it is clear
+// the email was never delivered.
+func (s *notificationSvcImpl) logSuppressedEmail(ctx context.Context, data domain.EmailSendData) (*string, *apierror.APIError) {
+	ctx, span := notificationSvcTracer.Start(ctx, "service.notification.sandbox_email_suppressed")
+	defer span.End()
+
+	logID, apiErr := id.GenID(id.EmailLogIDPrefix, nil)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	placeholderID := "sandbox_" + logID
+
+	accountID := ""
+	if data.AccountID != nil {
+		accountID = *data.AccountID
+	}
+
+	emailLog := &domain.EmailLog{
+		ID:           logID,
+		HasSent:      false,
+		AccountID:    accountID,
+		SentByID:     data.SentByID,
+		Subject:      &data.Subject,
+		SesMessageID: &placeholderID,
+	}
+
+	if apiErr := s.emailLogRepo.Create(ctx, emailLog); apiErr != nil {
+		return nil, apiErr
+	}
+
+	return &placeholderID, nil
 }

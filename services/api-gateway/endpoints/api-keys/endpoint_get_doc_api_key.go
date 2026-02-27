@@ -27,5 +27,9 @@ func (e *GetDocAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*apiresour
 				return svc.(APIKeySvc).GetOrCreateDocAPIKey(ctx)
 			}
 		},
+		Extras: apiendpoint.APIEndpointExtras{
+			AllowUnknownJSONFields: false,
+			ShieldResponseBody:     true,
+		},
 	}
 }

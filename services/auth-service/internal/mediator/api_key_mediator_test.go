@@ -3,6 +3,7 @@ package mediator
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	repositorymock "github.com/augno/api/services/auth-service/internal/domain/mock/repository"
 	"github.com/augno/api/services/auth-service/internal/testutil"
 	"github.com/augno/api/shared/constants"
+	"github.com/augno/api/shared/crypto"
 	apierror "github.com/augno/api/shared/errors"
 
 	"github.com/stretchr/testify/suite"
@@ -21,18 +23,17 @@ import (
 
 var (
 	// Test models for API key service tests
-	apiKeyValidTestModel    *domain.APIKey
-	apiKeyValidProdModel    *domain.APIKey
-	apiKeyExpiredModel      *domain.APIKey
-	apiKeyBadSecretModel    *domain.APIKey
-	apiKeyNeverExpiresModel *domain.APIKey
+	apiKeyValidTestModel    *apikey.APIKey
+	apiKeyValidProdModel    *apikey.APIKey
+	apiKeyExpiredModel      *apikey.APIKey
+	apiKeyBadSecretModel    *apikey.APIKey
+	apiKeyNeverExpiresModel *apikey.APIKey
 )
 
 // APIKeyMedTestSuite provides a test suite for APIKeyMed tests
 type APIKeyMedTestSuite struct {
 	suite.Suite
 	apiKeyMed   domain.APIKeyMed
-	apiKeyUtils domain.APIKeyUtils
 	apiKeyRepo  *repositorymock.MockAPIKeyRepo
 	repoFactory *factorymock.MockRepoFactory
 	ctrl        *gomock.Controller
@@ -40,7 +41,6 @@ type APIKeyMedTestSuite struct {
 
 // SetupSuite runs once before all tests in the suite
 func (suite *APIKeyMedTestSuite) SetupSuite() {
-	suite.apiKeyUtils = apikey.NewAPIKeyUtils(&apikey.APIKeyConfig{Pepper: []byte(testutil.Pepper)})
 	suite.ctrl = gomock.NewController(suite.T())
 	suite.apiKeyRepo = repositorymock.NewMockAPIKeyRepo(suite.ctrl)
 	suite.repoFactory = factorymock.NewMockRepoFactory(suite.ctrl)
@@ -49,62 +49,49 @@ func (suite *APIKeyMedTestSuite) SetupSuite() {
 	coreClientMock := clientmock.NewMockAuthCoreClient(suite.ctrl)
 
 	apiKeyMedConfig := &APIKeyMedConfig{
-		Repos:       suite.repoFactory,
-		APIKeyUtils: suite.apiKeyUtils,
-		CoreClient:  coreClientMock,
+		Repos:      suite.repoFactory,
+		Pepper:     []byte(testutil.Pepper),
+		CoreClient: coreClientMock,
 	}
 	suite.apiKeyMed = NewAPIKeyMed(apiKeyMedConfig)
 
+	pepper := []byte(testutil.Pepper)
+
 	// Parse API keys to extract secrets and generate hashes
-	parsedTestKey, err := suite.apiKeyUtils.Parse(context.Background(), testutil.APIKeyValidSandboxMode)
+	parsedTestKey, err := apikey.ParseAPIKey(testutil.APIKeyValidSandboxMode)
 	if err != nil {
 		suite.T().Fatalf("Failed to parse test API key: %v", err)
 	}
-	secretHash, err := suite.apiKeyUtils.GenSecretHMAC(context.Background(), parsedTestKey.Secret)
-	if err != nil {
-		suite.T().Fatalf("Failed to generate secret HMAC: %v", err)
-	}
+	secretHash := parsedTestKey.GenSecretHMAC(pepper)
 	apiKeyValidTestModel = testutil.GetValidTestAPIKeyModel(secretHash)
 	apiKeyValidTestModel.Name = "Test API Key"
 
-	parsedProdKey, err := suite.apiKeyUtils.Parse(context.Background(), testutil.APIKeyValidProdMode)
+	parsedProdKey, err := apikey.ParseAPIKey(testutil.APIKeyValidProdMode)
 	if err != nil {
 		suite.T().Fatalf("Failed to parse prod API key: %v", err)
 	}
-	secretHash, err = suite.apiKeyUtils.GenSecretHMAC(context.Background(), parsedProdKey.Secret)
-	if err != nil {
-		suite.T().Fatalf("Failed to generate secret HMAC: %v", err)
-	}
+	secretHash = parsedProdKey.GenSecretHMAC(pepper)
 	apiKeyValidProdModel = testutil.GetValidProdAPIKeyModel(secretHash)
 	apiKeyValidProdModel.Name = "Prod API Key"
 
-	parsedExpiredKey, err := suite.apiKeyUtils.Parse(context.Background(), testutil.ApiKeyExpired)
+	parsedExpiredKey, err := apikey.ParseAPIKey(testutil.ApiKeyExpired)
 	if err != nil {
 		suite.T().Fatalf("Failed to parse expired API key: %v", err)
 	}
-	secretHash, err = suite.apiKeyUtils.GenSecretHMAC(context.Background(), parsedExpiredKey.Secret)
-	if err != nil {
-		suite.T().Fatalf("Failed to generate secret HMAC: %v", err)
-	}
+	secretHash = parsedExpiredKey.GenSecretHMAC(pepper)
 	apiKeyExpiredModel = testutil.GetExpiredAPIKeyModel(secretHash)
 	apiKeyExpiredModel.Name = "Expired API Key"
 
 	// Use a different secret hash to simulate bad secret (don't parse the actual key)
-	secretHash, err = suite.apiKeyUtils.GenSecretHMAC(context.Background(), "wrong-secret")
-	if err != nil {
-		suite.T().Fatalf("Failed to generate secret HMAC: %v", err)
-	}
+	secretHash = crypto.HMACSHA256(pepper, []byte("wrong-secret"))
 	apiKeyBadSecretModel = testutil.GetBadSecretAPIKeyModel(secretHash)
 	apiKeyBadSecretModel.Name = "Bad Secret API Key"
 
-	parsedNeverExpiresKey, err := suite.apiKeyUtils.Parse(context.Background(), testutil.ApiKeyNeverExpires)
+	parsedNeverExpiresKey, err := apikey.ParseAPIKey(testutil.ApiKeyNeverExpires)
 	if err != nil {
 		suite.T().Fatalf("Failed to parse never expires API key: %v", err)
 	}
-	secretHash, err = suite.apiKeyUtils.GenSecretHMAC(context.Background(), parsedNeverExpiresKey.Secret)
-	if err != nil {
-		suite.T().Fatalf("Failed to generate secret HMAC: %v", err)
-	}
+	secretHash = parsedNeverExpiresKey.GenSecretHMAC(pepper)
 	apiKeyNeverExpiresModel = testutil.GetNeverExpiresAPIKeyModel(secretHash)
 	apiKeyNeverExpiresModel.Name = "Never Expires API Key"
 }
@@ -182,14 +169,13 @@ func (suite *APIKeyMedTestSuite) TestFind_ExpiredAPIKey() {
 
 func (suite *APIKeyMedTestSuite) TestFind_BadSecret() {
 	// Generate a valid API key for this test
-	validKey, err := suite.apiKeyUtils.Gen(context.Background(), constants.AccountModeProduction)
+	validKey, err := apikey.GenParsedAPIKey(constants.AccountModeProduction, nil)
 	suite.Nil(err)
 	keyString := validKey.String()
 
 	// Create a model with a wrong secret hash (simulating bad secret in DB)
-	wrongSecretHash, err := suite.apiKeyUtils.GenSecretHMAC(context.Background(), "wrong-secret")
-	suite.Nil(err)
-	badSecretModel := &domain.APIKey{
+	wrongSecretHash := crypto.HMACSHA256([]byte(testutil.Pepper), []byte("wrong-secret"))
+	badSecretModel := &apikey.APIKey{
 		ID:             1,
 		TypeID:         "apikey_sandbox",
 		KeyID:          validKey.ID,
@@ -303,20 +289,18 @@ func (suite *APIKeyMedTestSuite) TestFind_VerifySecretError() {
 	apiKeyRepo := repositorymock.NewMockAPIKeyRepo(ctrl)
 	repoFactory := factorymock.NewMockRepoFactory(ctrl)
 	repoFactory.EXPECT().NewAPIKeyRepo().Return(apiKeyRepo).AnyTimes()
-	apiKeyUtils := apikey.NewAPIKeyUtils(&apikey.APIKeyConfig{Pepper: []byte("different-pepper")})
 
 	coreClient := clientmock.NewMockAuthCoreClient(ctrl)
 
 	apiKeyMedConfig := &APIKeyMedConfig{
-		Repos:       repoFactory,
-		APIKeyUtils: apiKeyUtils,
-		CoreClient:  coreClient,
+		Repos:      repoFactory,
+		Pepper:     []byte("different-pepper"),
+		CoreClient: coreClient,
 	}
 	apiKeyMed := NewAPIKeyMed(apiKeyMedConfig)
 
 	// Generate secret hash with different pepper
-	secretHash, err := apiKeyUtils.GenSecretHMAC(context.Background(), "eR0LAkxYmlLllMxoTIwMcLls1Nvn1oIk1Z8pSrOhztciaRPPjK")
-	suite.Nil(err)
+	secretHash := crypto.HMACSHA256([]byte("different-pepper"), []byte("eR0LAkxYmlLllMxoTIwMcLls1Nvn1oIk1Z8pSrOhztciaRPPjK"))
 	apiKeyModel := testutil.GetValidTestAPIKeyModel(secretHash)
 	apiKeyModel.Name = "Test API Key"
 
@@ -336,7 +320,7 @@ func (suite *APIKeyMedTestSuite) TestFind_VerifySecretError() {
 
 func (suite *APIKeyMedTestSuite) TestTouchIfNotRecent_LastUsedAtIsNil() {
 	ctx := context.Background()
-	apiKey := &domain.APIKey{
+	apiKey := &apikey.APIKey{
 		ID:         1,
 		LastUsedAt: nil,
 	}
@@ -353,7 +337,7 @@ func (suite *APIKeyMedTestSuite) TestTouchIfNotRecent_LastUsedAtIsNil() {
 func (suite *APIKeyMedTestSuite) TestTouchIfNotRecent_LastUsedAtOlderThan24Hours() {
 	ctx := context.Background()
 	lastUsedAt := time.Now().UTC().Add(-25 * time.Hour)
-	apiKey := &domain.APIKey{
+	apiKey := &apikey.APIKey{
 		ID:         1,
 		LastUsedAt: &lastUsedAt,
 	}
@@ -370,7 +354,7 @@ func (suite *APIKeyMedTestSuite) TestTouchIfNotRecent_LastUsedAtOlderThan24Hours
 func (suite *APIKeyMedTestSuite) TestTouchIfNotRecent_LastUsedAtLessThan24HoursAgo() {
 	ctx := context.Background()
 	lastUsedAt := time.Now().UTC().Add(-2 * time.Hour)
-	apiKey := &domain.APIKey{
+	apiKey := &apikey.APIKey{
 		ID:         1,
 		LastUsedAt: &lastUsedAt,
 	}
@@ -386,7 +370,7 @@ func (suite *APIKeyMedTestSuite) TestTouchIfNotRecent_LastUsedAtLessThan24HoursA
 func (suite *APIKeyMedTestSuite) TestTouchIfNotRecent_TouchReturnsError() {
 	ctx := context.Background()
 	lastUsedAt := time.Now().UTC().Add(-25 * time.Hour)
-	apiKey := &domain.APIKey{
+	apiKey := &apikey.APIKey{
 		ID:         1,
 		LastUsedAt: &lastUsedAt,
 	}
@@ -412,7 +396,7 @@ func (suite *APIKeyMedTestSuite) TestCreate_Success() {
 
 	suite.apiKeyRepo.EXPECT().
 		Create(gomock.Any(), gomock.Any()).
-		DoAndReturn(func(ctx context.Context, apiKey *domain.APIKey) (int64, *apierror.APIError) {
+		DoAndReturn(func(ctx context.Context, apiKey *apikey.APIKey) (int64, *apierror.APIError) {
 			suite.Equal(name, apiKey.Name)
 			suite.Equal(ownerAccountID, apiKey.OwnerAccountID)
 			suite.Equal(roleID, apiKey.RoleID)
@@ -420,12 +404,18 @@ func (suite *APIKeyMedTestSuite) TestCreate_Success() {
 			suite.NotEmpty(apiKey.TypeID)
 			suite.NotEmpty(apiKey.KeyID)
 			suite.NotEmpty(apiKey.SecretHash)
-			suite.Equal(4, len(apiKey.LastFour))
+			suite.NotEmpty(apiKey.RedactedValue)
 			return 123, nil
 		}).
 		Times(1)
 
-	apiKeyString, apiKeyModel, err := suite.apiKeyMed.Create(ctx, accountMode, ownerAccountID, roleID, name, &expiresAt)
+	apiKeyString, apiKeyModel, err := suite.apiKeyMed.Create(ctx, domain.APIKeyCreateInput{
+		AccountMode:    accountMode,
+		OwnerAccountID: ownerAccountID,
+		RoleID:         roleID,
+		Name:           name,
+		ExpiresAt:      &expiresAt,
+	})
 
 	suite.Nil(err)
 	suite.NotEmpty(apiKeyString)
@@ -433,18 +423,16 @@ func (suite *APIKeyMedTestSuite) TestCreate_Success() {
 	suite.Equal(int64(123), apiKeyModel.ID)
 
 	// Verify the generated key can be parsed
-	parsedKey, err := suite.apiKeyUtils.Parse(ctx, apiKeyString)
-	suite.Nil(err)
+	parsedKey, parseErr := apikey.ParseAPIKey(apiKeyString)
+	suite.Nil(parseErr)
 	suite.Equal(accountMode, parsedKey.AccountMode)
 	suite.Equal(apiKeyModel.KeyID, parsedKey.ID)
 
 	// Verify the secret hash matches
-	valid, err := suite.apiKeyUtils.VerifySecretHMAC(ctx, parsedKey.Secret, apiKeyModel.SecretHash)
-	suite.Nil(err)
-	suite.True(valid)
+	suite.True(parsedKey.VerifySecretHMAC([]byte(testutil.Pepper), apiKeyModel.SecretHash))
 }
 
-func (suite *APIKeyMedTestSuite) TestCreate_LastFourMatchesFullKeyString() {
+func (suite *APIKeyMedTestSuite) TestCreate_RedactedValueEndsWithLastFourOfFullKey() {
 	ctx := context.Background()
 	ownerAccountID := "ac_123456789012"
 	roleID := "rl_123456789012"
@@ -452,19 +440,25 @@ func (suite *APIKeyMedTestSuite) TestCreate_LastFourMatchesFullKeyString() {
 
 	suite.apiKeyRepo.EXPECT().
 		Create(gomock.Any(), gomock.Any()).
-		DoAndReturn(func(ctx context.Context, apiKey *domain.APIKey) (int64, *apierror.APIError) {
+		DoAndReturn(func(ctx context.Context, apiKey *apikey.APIKey) (int64, *apierror.APIError) {
 			return 1, nil
 		}).
 		Times(1)
 
-	apiKeyString, apiKeyModel, err := suite.apiKeyMed.Create(ctx, constants.AccountModeSandbox, ownerAccountID, roleID, "Test Key", &expiresAt)
+	apiKeyString, apiKeyModel, err := suite.apiKeyMed.Create(ctx, domain.APIKeyCreateInput{
+		AccountMode:    constants.AccountModeSandbox,
+		OwnerAccountID: ownerAccountID,
+		RoleID:         roleID,
+		Name:           "Test Key",
+		ExpiresAt:      &expiresAt,
+	})
 
 	suite.Nil(err)
 	suite.NotNil(apiKeyModel)
 
-	// LastFour must match the actual last 4 characters of the full key string
+	// RedactedValue must end with the actual last 4 characters of the full key string
 	expectedLastFour := apiKeyString[len(apiKeyString)-4:]
-	suite.Equal(expectedLastFour, apiKeyModel.LastFour)
+	suite.Equal(expectedLastFour, apiKeyModel.RedactedValue[len(apiKeyModel.RedactedValue)-4:])
 }
 
 func (suite *APIKeyMedTestSuite) TestCreate_RedactedValueMatchesLastFour() {
@@ -485,12 +479,18 @@ func (suite *APIKeyMedTestSuite) TestCreate_RedactedValueMatchesLastFour() {
 		suite.Run(tt.name, func() {
 			suite.apiKeyRepo.EXPECT().
 				Create(gomock.Any(), gomock.Any()).
-				DoAndReturn(func(ctx context.Context, apiKey *domain.APIKey) (int64, *apierror.APIError) {
+				DoAndReturn(func(ctx context.Context, apiKey *apikey.APIKey) (int64, *apierror.APIError) {
 					return 1, nil
 				}).
 				Times(1)
 
-			apiKeyString, apiKeyModel, err := suite.apiKeyMed.Create(ctx, tt.accountMode, ownerAccountID, roleID, "Test Key", &expiresAt)
+			apiKeyString, apiKeyModel, err := suite.apiKeyMed.Create(ctx, domain.APIKeyCreateInput{
+				AccountMode:    tt.accountMode,
+				OwnerAccountID: ownerAccountID,
+				RoleID:         roleID,
+				Name:           "Test Key",
+				ExpiresAt:      &expiresAt,
+			})
 
 			suite.Nil(err)
 			suite.NotNil(apiKeyModel)
@@ -514,7 +514,145 @@ func (suite *APIKeyMedTestSuite) TestCreate_RedactedValueMatchesLastFour() {
 	}
 }
 
-func (suite *APIKeyMedTestSuite) TestCreate_LastFourConsistentAcrossModes() {
+func (suite *APIKeyMedTestSuite) TestRotate_HasRedactedValue() {
+	ctx := context.Background()
+	ownerAccountID := "ac_123456789012"
+	roleID := "rl_123456789012"
+	expiresAt := time.Now().UTC().Add(30 * 24 * time.Hour)
+	apiKeyTypeID := "apikey_old123"
+
+	// The old key that Rotate will find
+	oldKey := &apikey.APIKey{
+		ID:             10,
+		TypeID:         apiKeyTypeID,
+		Name:           "Rotate Me",
+		RedactedValue:  "aug_sk_test_****old1",
+		OwnerAccountID: ownerAccountID,
+		RoleID:         roleID,
+		ExpiresAt:      &expiresAt,
+	}
+
+	suite.apiKeyRepo.EXPECT().
+		FindByTypeID(gomock.Any(), apiKeyTypeID).
+		Return(oldKey, nil).
+		Times(1)
+
+	suite.apiKeyRepo.EXPECT().
+		Revoke(gomock.Any(), apiKeyTypeID).
+		Return(nil).
+		Times(1)
+
+	suite.apiKeyRepo.EXPECT().
+		Create(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(ctx context.Context, ak *apikey.APIKey) (int64, *apierror.APIError) {
+			return 1, nil
+		}).
+		Times(1)
+
+	_, rotatedModel, err := suite.apiKeyMed.Rotate(ctx, domain.APIKeyRotateInput{
+		AccountMode:  constants.AccountModeSandbox,
+		APIKeyTypeID: apiKeyTypeID,
+	})
+
+	suite.Nil(err)
+	suite.Require().NotNil(rotatedModel)
+	suite.NotEmpty(rotatedModel.RedactedValue, "rotated key must have a RedactedValue")
+	suite.True(
+		len(rotatedModel.RedactedValue) > 4,
+		"RedactedValue should not be empty",
+	)
+	suite.True(
+		strings.Contains(rotatedModel.RedactedValue, "****"),
+		"RedactedValue should contain redaction mask",
+	)
+}
+
+func (suite *APIKeyMedTestSuite) TestRotate_RevokesOldKey() {
+	ctx := context.Background()
+	apiKeyTypeID := "apikey_torevoke"
+	expiresAt := time.Now().UTC().Add(30 * 24 * time.Hour)
+
+	oldKey := &apikey.APIKey{
+		ID:             10,
+		TypeID:         apiKeyTypeID,
+		Name:           "Old Key",
+		OwnerAccountID: "ac_123456789012",
+		RoleID:         "rl_123456789012",
+		ExpiresAt:      &expiresAt,
+	}
+
+	suite.apiKeyRepo.EXPECT().
+		FindByTypeID(gomock.Any(), apiKeyTypeID).
+		Return(oldKey, nil).
+		Times(1)
+
+	suite.apiKeyRepo.EXPECT().
+		Revoke(gomock.Any(), apiKeyTypeID).
+		Return(nil).
+		Times(1)
+
+	suite.apiKeyRepo.EXPECT().
+		Create(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(ctx context.Context, ak *apikey.APIKey) (int64, *apierror.APIError) {
+			suite.Equal(oldKey.OwnerAccountID, ak.OwnerAccountID)
+			suite.Equal(oldKey.RoleID, ak.RoleID)
+			suite.Equal(oldKey.Name, ak.Name)
+			return 11, nil
+		}).
+		Times(1)
+
+	fullKey, newKey, err := suite.apiKeyMed.Rotate(ctx, domain.APIKeyRotateInput{
+		AccountMode:  constants.AccountModeSandbox,
+		APIKeyTypeID: apiKeyTypeID,
+	})
+
+	suite.Nil(err)
+	suite.NotEmpty(fullKey)
+	suite.Require().NotNil(newKey)
+	suite.NotEqual(apiKeyTypeID, newKey.TypeID, "rotated key should have a new TypeID")
+}
+
+func (suite *APIKeyMedTestSuite) TestList_HasRedactedValue() {
+	ctx := context.Background()
+	ownerAccountID := "ac_123456789012"
+
+	suite.apiKeyRepo.EXPECT().
+		List(gomock.Any(), gomock.Any()).
+		Return(&domain.APIKeyListRepoResult{
+			APIKeys: []*apikey.APIKey{
+				{
+					TypeID:        "apikey_1",
+					Name:          "Key 1",
+					RedactedValue: "aug_sk_test_****aaaa",
+				},
+				{
+					TypeID:        "apikey_2",
+					Name:          "Key 2",
+					RedactedValue: "aug_sk_test_****bbbb",
+				},
+			},
+		}, nil).
+		Times(1)
+
+	result, err := suite.apiKeyMed.List(ctx, domain.APIKeyListInput{
+		OwnerAccountID: ownerAccountID,
+		Limit:          10,
+	})
+
+	suite.Nil(err)
+	suite.Require().NotNil(result)
+	suite.Require().Len(result.APIKeys, 2)
+
+	for _, ak := range result.APIKeys {
+		suite.NotEmpty(ak.RedactedValue, "listed key %s must have a RedactedValue", ak.TypeID)
+		suite.True(
+			strings.Contains(ak.RedactedValue, "****"),
+			"RedactedValue should contain redaction mask for key %s", ak.TypeID,
+		)
+	}
+}
+
+func (suite *APIKeyMedTestSuite) TestCreate_RedactedValueConsistentAcrossModes() {
 	ctx := context.Background()
 	ownerAccountID := "ac_123456789012"
 	roleID := "rl_123456789012"
@@ -523,23 +661,27 @@ func (suite *APIKeyMedTestSuite) TestCreate_LastFourConsistentAcrossModes() {
 	for _, mode := range []constants.AccountMode{constants.AccountModeSandbox, constants.AccountModeProduction} {
 		suite.apiKeyRepo.EXPECT().
 			Create(gomock.Any(), gomock.Any()).
-			DoAndReturn(func(ctx context.Context, apiKey *domain.APIKey) (int64, *apierror.APIError) {
+			DoAndReturn(func(ctx context.Context, apiKey *apikey.APIKey) (int64, *apierror.APIError) {
 				return 1, nil
 			}).
 			Times(1)
 
-		apiKeyString, apiKeyModel, err := suite.apiKeyMed.Create(ctx, mode, ownerAccountID, roleID, "Test Key", &expiresAt)
+		apiKeyString, apiKeyModel, err := suite.apiKeyMed.Create(ctx, domain.APIKeyCreateInput{
+			AccountMode:    mode,
+			OwnerAccountID: ownerAccountID,
+			RoleID:         roleID,
+			Name:           "Test Key",
+			ExpiresAt:      &expiresAt,
+		})
 		suite.Nil(err)
 
-		// Verify all three representations are consistent:
-		// 1. LastFour matches end of full key string
-		suite.Equal(apiKeyString[len(apiKeyString)-4:], apiKeyModel.LastFour)
+		lastFour := apiKeyString[len(apiKeyString)-4:]
 
-		// 2. RedactedValue ends with LastFour
-		suite.Equal(apiKeyModel.LastFour, apiKeyModel.RedactedValue[len(apiKeyModel.RedactedValue)-4:])
+		// 1. RedactedValue ends with the last 4 chars of the full key
+		suite.Equal(lastFour, apiKeyModel.RedactedValue[len(apiKeyModel.RedactedValue)-4:])
 
-		// 3. RedactedValue format is correct: aug_sk_{mode}_****{lastFour}
-		expectedRedacted := apikey.RedactAPIKeyValue(apiKeyModel, mode)
+		// 2. RedactedValue format is correct: aug_sk_{mode}_****{lastFour}
+		expectedRedacted := "aug_sk_" + string(mode) + "_****" + lastFour
 		suite.Equal(expectedRedacted, apiKeyModel.RedactedValue)
 	}
 }

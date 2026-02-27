@@ -49,6 +49,11 @@ spec:
                             configMapKeyRef:
                                 key: PLATFORM
                                 name: app-config
+                      - name: CURSOR_HMAC_KEY
+                        valueFrom:
+                            secretKeyRef:
+                                name: cursor-hmac-key
+                                key: key
 ---
 apiVersion: v1
 kind: Service

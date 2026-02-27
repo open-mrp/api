@@ -45,8 +45,8 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.deleteExpiredServiceIdempotencyKeysStmt, err = db.PrepareContext(ctx, deleteExpiredServiceIdempotencyKeys); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteExpiredServiceIdempotencyKeys: %w", err)
 	}
-	if q.deleteOutboxMessageStmt, err = db.PrepareContext(ctx, deleteOutboxMessage); err != nil {
-		return nil, fmt.Errorf("error preparing query DeleteOutboxMessage: %w", err)
+	if q.findRequestLogByIDStmt, err = db.PrepareContext(ctx, findRequestLogByID); err != nil {
+		return nil, fmt.Errorf("error preparing query FindRequestLogByID: %w", err)
 	}
 	if q.getIdempotencyKeyByScopeHashForUpdateStmt, err = db.PrepareContext(ctx, getIdempotencyKeyByScopeHashForUpdate); err != nil {
 		return nil, fmt.Errorf("error preparing query GetIdempotencyKeyByScopeHashForUpdate: %w", err)
@@ -60,6 +60,12 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getRecoveryPointStmt, err = db.PrepareContext(ctx, getRecoveryPoint); err != nil {
 		return nil, fmt.Errorf("error preparing query GetRecoveryPoint: %w", err)
 	}
+	if q.listRequestLogsBackwardStmt, err = db.PrepareContext(ctx, listRequestLogsBackward); err != nil {
+		return nil, fmt.Errorf("error preparing query ListRequestLogsBackward: %w", err)
+	}
+	if q.listRequestLogsForwardStmt, err = db.PrepareContext(ctx, listRequestLogsForward); err != nil {
+		return nil, fmt.Errorf("error preparing query ListRequestLogsForward: %w", err)
+	}
 	if q.lockIdempotencyKeyStmt, err = db.PrepareContext(ctx, lockIdempotencyKey); err != nil {
 		return nil, fmt.Errorf("error preparing query LockIdempotencyKey: %w", err)
 	}
@@ -71,6 +77,15 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.markOutboxMessageFailedStmt, err = db.PrepareContext(ctx, markOutboxMessageFailed); err != nil {
 		return nil, fmt.Errorf("error preparing query MarkOutboxMessageFailed: %w", err)
+	}
+	if q.markOutboxMessagePublishedStmt, err = db.PrepareContext(ctx, markOutboxMessagePublished); err != nil {
+		return nil, fmt.Errorf("error preparing query MarkOutboxMessagePublished: %w", err)
+	}
+	if q.purgeProcessedInboxMessagesStmt, err = db.PrepareContext(ctx, purgeProcessedInboxMessages); err != nil {
+		return nil, fmt.Errorf("error preparing query PurgeProcessedInboxMessages: %w", err)
+	}
+	if q.purgePublishedOutboxMessagesStmt, err = db.PrepareContext(ctx, purgePublishedOutboxMessages); err != nil {
+		return nil, fmt.Errorf("error preparing query PurgePublishedOutboxMessages: %w", err)
 	}
 	if q.releaseIdempotencyKeyLockStmt, err = db.PrepareContext(ctx, releaseIdempotencyKeyLock); err != nil {
 		return nil, fmt.Errorf("error preparing query ReleaseIdempotencyKeyLock: %w", err)
@@ -124,9 +139,9 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing deleteExpiredServiceIdempotencyKeysStmt: %w", cerr)
 		}
 	}
-	if q.deleteOutboxMessageStmt != nil {
-		if cerr := q.deleteOutboxMessageStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing deleteOutboxMessageStmt: %w", cerr)
+	if q.findRequestLogByIDStmt != nil {
+		if cerr := q.findRequestLogByIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing findRequestLogByIDStmt: %w", cerr)
 		}
 	}
 	if q.getIdempotencyKeyByScopeHashForUpdateStmt != nil {
@@ -149,6 +164,16 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getRecoveryPointStmt: %w", cerr)
 		}
 	}
+	if q.listRequestLogsBackwardStmt != nil {
+		if cerr := q.listRequestLogsBackwardStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing listRequestLogsBackwardStmt: %w", cerr)
+		}
+	}
+	if q.listRequestLogsForwardStmt != nil {
+		if cerr := q.listRequestLogsForwardStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing listRequestLogsForwardStmt: %w", cerr)
+		}
+	}
 	if q.lockIdempotencyKeyStmt != nil {
 		if cerr := q.lockIdempotencyKeyStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing lockIdempotencyKeyStmt: %w", cerr)
@@ -167,6 +192,21 @@ func (q *Queries) Close() error {
 	if q.markOutboxMessageFailedStmt != nil {
 		if cerr := q.markOutboxMessageFailedStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing markOutboxMessageFailedStmt: %w", cerr)
+		}
+	}
+	if q.markOutboxMessagePublishedStmt != nil {
+		if cerr := q.markOutboxMessagePublishedStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing markOutboxMessagePublishedStmt: %w", cerr)
+		}
+	}
+	if q.purgeProcessedInboxMessagesStmt != nil {
+		if cerr := q.purgeProcessedInboxMessagesStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing purgeProcessedInboxMessagesStmt: %w", cerr)
+		}
+	}
+	if q.purgePublishedOutboxMessagesStmt != nil {
+		if cerr := q.purgePublishedOutboxMessagesStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing purgePublishedOutboxMessagesStmt: %w", cerr)
 		}
 	}
 	if q.releaseIdempotencyKeyLockStmt != nil {
@@ -235,15 +275,20 @@ type Queries struct {
 	createRequestLogStmt                      *sql.Stmt
 	deleteExpiredIdempotencyKeysStmt          *sql.Stmt
 	deleteExpiredServiceIdempotencyKeysStmt   *sql.Stmt
-	deleteOutboxMessageStmt                   *sql.Stmt
+	findRequestLogByIDStmt                    *sql.Stmt
 	getIdempotencyKeyByScopeHashForUpdateStmt *sql.Stmt
 	getInboxRecordByMessageAndHandlerStmt     *sql.Stmt
 	getLockedOutboxMessagesStmt               *sql.Stmt
 	getRecoveryPointStmt                      *sql.Stmt
+	listRequestLogsBackwardStmt               *sql.Stmt
+	listRequestLogsForwardStmt                *sql.Stmt
 	lockIdempotencyKeyStmt                    *sql.Stmt
 	markInboxRecordFailedStmt                 *sql.Stmt
 	markInboxRecordProcessedStmt              *sql.Stmt
 	markOutboxMessageFailedStmt               *sql.Stmt
+	markOutboxMessagePublishedStmt            *sql.Stmt
+	purgeProcessedInboxMessagesStmt           *sql.Stmt
+	purgePublishedOutboxMessagesStmt          *sql.Stmt
 	releaseIdempotencyKeyLockStmt             *sql.Stmt
 	setIdempotencyKeyResponseStmt             *sql.Stmt
 	setIdempotencyKeyResponseWithTTLStmt      *sql.Stmt
@@ -261,15 +306,20 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		createRequestLogStmt:                    q.createRequestLogStmt,
 		deleteExpiredIdempotencyKeysStmt:        q.deleteExpiredIdempotencyKeysStmt,
 		deleteExpiredServiceIdempotencyKeysStmt: q.deleteExpiredServiceIdempotencyKeysStmt,
-		deleteOutboxMessageStmt:                 q.deleteOutboxMessageStmt,
+		findRequestLogByIDStmt:                  q.findRequestLogByIDStmt,
 		getIdempotencyKeyByScopeHashForUpdateStmt: q.getIdempotencyKeyByScopeHashForUpdateStmt,
 		getInboxRecordByMessageAndHandlerStmt:     q.getInboxRecordByMessageAndHandlerStmt,
 		getLockedOutboxMessagesStmt:               q.getLockedOutboxMessagesStmt,
 		getRecoveryPointStmt:                      q.getRecoveryPointStmt,
+		listRequestLogsBackwardStmt:               q.listRequestLogsBackwardStmt,
+		listRequestLogsForwardStmt:                q.listRequestLogsForwardStmt,
 		lockIdempotencyKeyStmt:                    q.lockIdempotencyKeyStmt,
 		markInboxRecordFailedStmt:                 q.markInboxRecordFailedStmt,
 		markInboxRecordProcessedStmt:              q.markInboxRecordProcessedStmt,
 		markOutboxMessageFailedStmt:               q.markOutboxMessageFailedStmt,
+		markOutboxMessagePublishedStmt:            q.markOutboxMessagePublishedStmt,
+		purgeProcessedInboxMessagesStmt:           q.purgeProcessedInboxMessagesStmt,
+		purgePublishedOutboxMessagesStmt:          q.purgePublishedOutboxMessagesStmt,
 		releaseIdempotencyKeyLockStmt:             q.releaseIdempotencyKeyLockStmt,
 		setIdempotencyKeyResponseStmt:             q.setIdempotencyKeyResponseStmt,
 		setIdempotencyKeyResponseWithTTLStmt:      q.setIdempotencyKeyResponseWithTTLStmt,

@@ -1,8 +1,8 @@
 -- +goose Up
 
--- MySQL dump 10.13  Distrib 9.5.0, for macos26.1 (arm64)
+-- MySQL dump 10.13  Distrib 9.5.0, for macos26.0 (arm64)
 --
--- Host: localhost    Database: augno_db
+-- Host: localhost    Database: augno
 -- ------------------------------------------------------
 -- Server version	9.5.0
 
@@ -568,6 +568,8 @@ CREATE TABLE `account_relation` (
   `account_group_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `priority_code` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `shipping_term_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `carrier_billing_type` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `carrier_billing_account` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `account_relation_owner_account_id_counterparty_account_id_ac_key` (`owner_account_id`,`counterparty_account_id`,`account_relation_role_code`),
   KEY `account_relation_parent_account_relation_id_idx` (`parent_account_relation_id`),
@@ -787,7 +789,7 @@ CREATE TABLE `api_key` (
   `key_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `secret_hash` binary(32) NOT NULL,
-  `last_four` varchar(4) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `redacted_value` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
   `owner_account_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
   `role_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -864,6 +866,7 @@ CREATE TABLE `batch` (
   KEY `batch_scanning_station_id_idx` (`scanning_station_id`),
   KEY `batch_production_step_id_idx` (`production_step_id`),
   KEY `batch_account_id_idx` (`account_id`),
+  KEY `batch_account_id_scanned_at_idx` (`account_id`,`scanned_at`),
   KEY `batch_created_at_idx` (`created_at`),
   KEY `batch_production_run_id_idx` (`production_run_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -878,11 +881,15 @@ DROP TABLE IF EXISTS `carrier`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `carrier` (
   `id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `code` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `description` text COLLATE utf8mb4_unicode_ci,
   `name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `shippo_carrier_account_id` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `account_number` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `account_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `deleted_at` datetime(3) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `carrier_account_id_idx` (`account_id`),
   FULLTEXT KEY `carrier_name_idx` (`name`),
@@ -902,6 +909,7 @@ CREATE TABLE `carrier_option` (
   `id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
   `code` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `service_level_token` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `carrier_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
   `account_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -1281,7 +1289,7 @@ CREATE TABLE `idempotency_key` (
   KEY `idempotency_key_idempotency_key_idx` (`idempotency_key`),
   KEY `idempotency_key_lock_expires_at_idx` (`lock_expires_at`),
   KEY `idempotency_key_expires_at_idx` (`expires_at`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1803,7 +1811,7 @@ CREATE TABLE `message_inbox` (
   KEY `message_inbox_processed_at_idx` (`processed_at`),
   KEY `message_inbox_request_id_idx` (`request_id`),
   KEY `message_inbox_parent_message_id_idx` (`parent_message_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=60 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1841,7 +1849,7 @@ CREATE TABLE `message_outbox` (
   KEY `message_outbox_lock_expires_at_idx` (`lock_expires_at`),
   KEY `message_outbox_request_id_idx` (`request_id`),
   KEY `message_outbox_parent_message_id_idx` (`parent_message_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=60 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2485,6 +2493,7 @@ CREATE TABLE `request_log` (
   `status_code` int NOT NULL,
   `latency_us` bigint NOT NULL,
   `target_account_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `public_endpoint` tinyint(1) NOT NULL DEFAULT '1',
   `api_version` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `account_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `actor_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
@@ -2502,6 +2511,8 @@ CREATE TABLE `request_log` (
   `stack_trace` longtext COLLATE utf8mb4_unicode_ci,
   `internal_error_message` text COLLATE utf8mb4_unicode_ci,
   `trace_id` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `request_body_json` json DEFAULT NULL,
+  `response_body_json` json DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `request_log_status_code_idx` (`status_code`),
   KEY `request_log_error_code_idx` (`error_code`),
@@ -2594,6 +2605,8 @@ CREATE TABLE `sales_order` (
   `is_acknowledgment_sent` tinyint(1) NOT NULL DEFAULT '0',
   `carrier_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `carrier_option_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `carrier_billing_type` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `carrier_billing_account` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `priority_code` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `sales_rep_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `shipping_term_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
@@ -2812,7 +2825,7 @@ CREATE TABLE `service_idempotency_key` (
   KEY `service_idempotency_key_idempotency_key_idx` (`idempotency_key`),
   KEY `service_idempotency_key_lock_expires_at_idx` (`lock_expires_at`),
   KEY `service_idempotency_key_expires_at_idx` (`expires_at`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2938,6 +2951,7 @@ CREATE TABLE `shipping_case` (
   `number` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `sscc` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `tracking_number` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `shippo_transaction_id` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `shipping_label_url` varchar(2083) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `shipped_at` datetime(3) DEFAULT NULL,
   `freight_amount_id` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -3412,7 +3426,7 @@ CREATE TABLE `user` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-02-13  5:32:50
+-- Dump completed on 2026-02-25 11:29:30
 
 -- +goose Down
 

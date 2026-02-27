@@ -19,6 +19,32 @@ func NewInboxRepo(queries *sqlc.Queries) messaging.InboxRepo {
 	return &inboxRepoImpl{queries: queries}
 }
 
+func NewInboxPurgerRepo(queries *sqlc.Queries) messaging.InboxPurgerRepo {
+	return &inboxRepoImpl{queries: queries}
+}
+
+func (r *inboxRepoImpl) PurgeProcessed(ctx context.Context, retentionHours int, limit int32) (int64, error) {
+	ctx, span := inboxRepoTracer.Start(ctx, "repository.inbox.purge_processed")
+	defer span.End()
+
+	result, err := r.queries.PurgeProcessedInboxMessages(ctx, sqlc.PurgeProcessedInboxMessagesParams{
+		DATESUB: retentionHours,
+		Limit:   limit,
+	})
+	if err != nil {
+		span.RecordError(err)
+		return 0, err
+	}
+
+	count, err := result.RowsAffected()
+	if err != nil {
+		span.RecordError(err)
+		return 0, err
+	}
+
+	return count, nil
+}
+
 func (r *inboxRepoImpl) TryInsert(ctx context.Context, input messaging.InboxRecordInput) (int64, error) {
 	ctx, span := inboxRepoTracer.Start(ctx, "repository.inbox.try_insert")
 	defer span.End()

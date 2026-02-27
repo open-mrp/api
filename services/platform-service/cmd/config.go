@@ -15,9 +15,10 @@ var (
 )
 
 const (
-	envPort        = "PORT"
-	envDBURL       = "DB_URL"
-	envRabbitMQURI = "RABBITMQ_URI"
+	envPort           = "PORT"
+	envDBURL          = "DB_URL"
+	envRabbitMQURI    = "RABBITMQ_URI"
+	envCursorHMACKey  = "CURSOR_HMAC_KEY"
 )
 
 // config represents the configuration for the platform service.
@@ -30,6 +31,9 @@ type config struct {
 
 	// RabbitMQURI (optional; default: "amqp://guest:guest@rabbitmq:5672/") is the RabbitMQ connection URI.
 	RabbitMQURI string
+
+	// CursorHMACKey is the HMAC key used to sign and verify pagination cursors.
+	CursorHMACKey []byte
 }
 
 // withDefaults sets the default values for the configuration.
@@ -44,9 +48,10 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 	}
 
 	return &config{
-		Port:        port,
-		DBURL:       env.GetEnv(envDBURL, getenv),
-		RabbitMQURI: cmp.Or(env.GetEnv(envRabbitMQURI, getenv), defaultRabbitMQURI),
+		Port:          port,
+		DBURL:         env.GetEnv(envDBURL, getenv),
+		RabbitMQURI:   cmp.Or(env.GetEnv(envRabbitMQURI, getenv), defaultRabbitMQURI),
+		CursorHMACKey: []byte(env.GetEnv(envCursorHMACKey, getenv)),
 	}
 }
 

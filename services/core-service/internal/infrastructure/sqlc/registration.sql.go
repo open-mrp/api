@@ -17,7 +17,7 @@ INSERT INTO account_address (
     address_id,
     created_at,
     updated_at
-) VALUES (?, ?, ?, NOW(), NOW())
+) VALUES (?, ?, ?, NOW(3), NOW(3))
 `
 
 type CreateAccountAddressParams struct {
@@ -38,7 +38,7 @@ INSERT INTO account_portal (
     slug,
     created_at,
     updated_at
-) VALUES (?, ?, ?, NOW(), NOW())
+) VALUES (?, ?, ?, NOW(3), NOW(3))
 `
 
 type CreateAccountPortalParams struct {
@@ -59,7 +59,7 @@ INSERT INTO address (
     geolocation_id,
     created_at,
     updated_at
-) VALUES (?, ?, ?, NOW(), NOW())
+) VALUES (?, ?, ?, NOW(3), NOW(3))
 `
 
 type CreateAddressParams struct {
@@ -84,7 +84,7 @@ INSERT INTO geolocation (
     country,
     created_at,
     updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(3), NOW(3))
 `
 
 type CreateGeolocationParams struct {
@@ -118,7 +118,7 @@ INSERT INTO role (
     account_id,
     created_at,
     updated_at
-) VALUES (?, ?, ?, ?, NOW(), NOW())
+) VALUES (?, ?, ?, ?, NOW(3), NOW(3))
 `
 
 type CreateRoleParams struct {
@@ -149,7 +149,7 @@ INSERT INTO role_permission (
     ` + "`" + `delete` + "`" + `,
     created_at,
     updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(3), NOW(3))
 `
 
 type CreateRolePermissionParams struct {
@@ -203,7 +203,7 @@ func (q *Queries) GetAllPermissions(ctx context.Context) ([]string, error) {
 }
 
 const setAccountDefaultBillingAddress = `-- name: SetAccountDefaultBillingAddress :exec
-UPDATE account SET default_billing_address_id = ?, updated_at = NOW() WHERE id = ?
+UPDATE account SET default_billing_address_id = ?, updated_at = NOW(3) WHERE id = ?
 `
 
 type SetAccountDefaultBillingAddressParams struct {
@@ -217,7 +217,7 @@ func (q *Queries) SetAccountDefaultBillingAddress(ctx context.Context, arg SetAc
 }
 
 const setAccountDefaultShippingAddress = `-- name: SetAccountDefaultShippingAddress :exec
-UPDATE account SET default_shipping_address_id = ?, updated_at = NOW() WHERE id = ?
+UPDATE account SET default_shipping_address_id = ?, updated_at = NOW(3) WHERE id = ?
 `
 
 type SetAccountDefaultShippingAddressParams struct {

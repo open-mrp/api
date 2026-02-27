@@ -34,6 +34,11 @@ type RequestLog struct {
 	StackTrace           *string   `json:"stack_trace,omitempty"`
 	APIVersion           *string   `json:"api_version,omitempty"`
 	TraceID              *string   `json:"trace_id,omitempty"`
+	PublicEndpoint       bool      `json:"public_endpoint"`
+	BodyJSON             *string   `json:"body_json,omitempty"`
+	ResponseJSON         *string   `json:"response_json,omitempty"`
+	SkipSave             bool      `json:"-"`
+	ShieldResponseBody   bool      `json:"-"`
 }
 
 // WithRequestLog returns a child context carrying the request log.

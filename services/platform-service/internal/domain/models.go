@@ -3,6 +3,9 @@ package domain
 import (
 	"encoding/json"
 	"time"
+
+	"github.com/augno/api/shared/constants"
+	"github.com/augno/api/shared/pagination"
 )
 
 type RequestLog struct {
@@ -32,6 +35,9 @@ type RequestLog struct {
 	IdentityType         *string
 	APIVersion           *string
 	TraceID              *string
+	PublicEndpoint       bool
+	BodyJSON             *string
+	ResponseJSON         *string
 }
 
 type IdempotencyKey struct {
@@ -59,6 +65,67 @@ type IdempotencyKey struct {
 	ExpiresAt       *time.Time
 	RecoveryPoint   string
 	StepData        json.RawMessage
+}
+
+// RequestLogRead is the enriched read model for request logs, including
+// resolved actor details, account name, and idempotency key value.
+type RequestLogRead struct {
+	ID              string
+	Method          string
+	Host            string
+	Path            string
+	NormalizedRoute string
+	QueryJSON       *string
+	StatusCode      int32
+	LatencyUs       int64
+	APIVersion      *string
+	IdentityType    *string
+	ClientIP        *string
+	UserAgent       *string
+	Referrer        *string
+	ErrorCode       *string
+	ErrorMessage    *string
+	OccurredAt      time.Time
+	CreatedAt       time.Time
+	AccountID      *string
+	AccountName    *string
+	Actor          *RequestLogActor
+	IdempotencyKey *string
+	BodyJSON       *string
+	ResponseJSON   *string
+}
+
+type RequestLogActor struct {
+	ID            string
+	ObjectType    constants.ObjectType
+	Name          *string
+	Email         *string
+	RedactedValue *string
+	RoleID        *string
+	RoleName      *string
+	RoleTypeCode  *string
+}
+
+type ListRequestLogsFilter struct {
+	Query          *string
+	StartDate      *time.Time
+	EndDate        *time.Time
+	Method         *string
+	StatusCode     *int32
+	ErrorCode      *string
+	AccountID      *string
+	ActorID        *string
+	ActorType      *string
+	ActorName      *string
+	ExactMatch     bool
+	PublicEndpoint *bool
+	Cursor         *string
+	Limit          int32
+}
+
+type ListRequestLogsResult struct {
+	RequestLogs []*RequestLogRead
+	PageInfo    pagination.PageInfo
 }
 
 func (k *IdempotencyKey) IsFinished() bool {

@@ -12,9 +12,9 @@ import (
 
 // The request to request a password reset
 type RequestPasswordResetRequest struct {
-	// The username or email of the account to reset
+	// The username or email of the account to reset.
 	Identifier string `json:"identifier" validate:"required,identifier"`
-	// The account slug (optional, Used to return user back to origonal login portal (instead of plain augno login) after password reset)
+	// The account slug, used to redirect the user back to the original account login portal after password reset.
 	AccountSlug *string `json:"account_slug,omitempty"`
 }
 

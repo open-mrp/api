@@ -102,7 +102,7 @@ const (
 	VocService      = "si"
 	VocStripe       = "sr"
 	VocStep         = "st"
-	VocStation      = "sc"
+	VocStation      = "sn"
 	VocStatus       = "ss"
 	VocSupplier     = "su"
 	VocSeverity     = "sv"

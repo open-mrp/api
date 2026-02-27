@@ -17,16 +17,6 @@ type AuthEndpointGroupConfig struct {
 	AuthClient *grpcclient.AuthServiceClient
 }
 
-// WithDefaults returns a new AuthEndpointGroupConfig with zero-value fields replaced by defaults.
-func (c *AuthEndpointGroupConfig) WithDefaults() *AuthEndpointGroupConfig {
-	if c == nil {
-		c = &AuthEndpointGroupConfig{}
-	}
-	return &AuthEndpointGroupConfig{
-		AuthClient: c.AuthClient,
-	}
-}
-
 func (c *AuthEndpointGroupConfig) validate() error {
 	if c.AuthClient == nil {
 		return fmt.Errorf("auth endpoint group: auth client is required")
@@ -35,7 +25,6 @@ func (c *AuthEndpointGroupConfig) validate() error {
 }
 
 func (*AuthEndpointGroup) Materialize(config *AuthEndpointGroupConfig) *AuthEndpointGroup {
-	config = config.WithDefaults()
 	if err := config.validate(); err != nil {
 		panic(err)
 	}

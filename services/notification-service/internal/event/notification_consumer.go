@@ -65,6 +65,9 @@ func (c *NotificationConsumer) handleCommandMessage(ctx context.Context, msg amq
 	if amqpMsg.Identity != nil {
 		ctx = appctx.WithIdentity(ctx, amqpMsg.Identity)
 	}
+	if amqpMsg.RequestID != "" {
+		ctx = appctx.WithRequestID(ctx, amqpMsg.RequestID)
+	}
 
 	var payload messaging.EmailSendData
 	if err := json.Unmarshal(amqpMsg.Data, &payload); err != nil {
@@ -99,6 +102,9 @@ func (c *NotificationConsumer) handleEventMessage(ctx context.Context, msg amqp0
 
 	if amqpMsg.Identity != nil {
 		ctx = appctx.WithIdentity(ctx, amqpMsg.Identity)
+	}
+	if amqpMsg.RequestID != "" {
+		ctx = appctx.WithRequestID(ctx, amqpMsg.RequestID)
 	}
 
 	if msg.RoutingKey == string(contracts.NotificationEventEmailSent) {
@@ -194,6 +200,9 @@ func (c *NotificationConsumer) publishEmailLogEvent(ctx context.Context, sesMess
 	if identity, ok := appctx.GetIdentityFromContext(ctx); ok {
 		msg.Identity = identity
 	}
+	if requestID, ok := appctx.GetRequestID(ctx); ok {
+		msg.RequestID = requestID
+	}
 
 	return c.rabbitmq.PublishMessage(ctx, messaging.ApplicationExchange, string(contracts.NotificationEventEmailSent), msg)
 }
@@ -251,6 +260,9 @@ func (c *NotificationConsumer) publishEmailStatus(ctx context.Context, userID *s
 
 	if identity, ok := appctx.GetIdentityFromContext(ctx); ok {
 		msg.Identity = identity
+	}
+	if requestID, ok := appctx.GetRequestID(ctx); ok {
+		msg.RequestID = requestID
 	}
 
 	return c.rabbitmq.PublishMessage(ctx, messaging.ApplicationExchange, routingKey, msg)

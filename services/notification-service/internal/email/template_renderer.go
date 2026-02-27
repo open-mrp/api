@@ -39,6 +39,7 @@ func NewTemplateRenderer() (TemplateRenderer, *apierror.APIError) {
 		constants.EmailTemplateRegistrationVerify:         "templates/registration_verify.html",
 		constants.EmailTemplateRegistrationVerifyExisting: "templates/registration_verify_existing.html",
 		constants.EmailTemplateEnterpriseRequest:          "templates/enterprise_request.html",
+		constants.EmailTemplateInternalErrorAlert:         "templates/internal_error_alert.html",
 	}
 
 	for templateID, filename := range templateFiles {

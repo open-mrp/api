@@ -84,7 +84,7 @@ mocks: ## Generate mocks. Usage: make mocks [services]
 
 gosec: ## Run gosec
 	@echo "Running gosec..."
-	@gosec -exclude-generated -exclude-dir=sqlc,proto ./...
+	@gosec -exclude-generated -exclude-dir=sqlc -exclude-dir=proto -exclude-dir=tools ./...
 
 static-check: ## Run staticcheck
 	@echo "Running static check..."
@@ -99,7 +99,7 @@ fmt: ## Format Go source code
 	fi
 
 stripe-webhook: ## Run the Stripe webhook listener
-	@stripe listen --forward-to localhost:8081/v1/billing/webhook
+	@stripe listen --forward-to localhost:8081/v1/webhooks/stripe
 
 check-format: ## Check formatting
 	@echo "Checking formatting..."

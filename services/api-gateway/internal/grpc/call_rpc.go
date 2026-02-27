@@ -98,5 +98,5 @@ func resolveIdempotencyKey(ctx context.Context) string {
 	if rl, ok := appctx.GetRequestLog(ctx); ok && rl != nil && rl.ID != "" {
 		return rl.ID
 	}
-	panic("no idempotency key found in context")
+	return ""
 }

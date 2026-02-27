@@ -11,10 +11,10 @@ LIMIT 1;
 
 -- name: CreateDocAPIKey :execresult
 INSERT INTO doc_api_key (type_id, api_key_id, encrypted_secret, created_at, updated_at)
-VALUES (?, ?, ?, NOW(), NOW());
+VALUES (?, ?, ?, NOW(3), NOW(3));
 
 -- name: UpdateDocAPIKey :exec
-UPDATE doc_api_key SET api_key_id = ?, encrypted_secret = ?, updated_at = NOW() WHERE id = ?;
+UPDATE doc_api_key SET api_key_id = ?, encrypted_secret = ?, updated_at = NOW(3) WHERE id = ?;
 
 -- name: DeleteDocAPIKeyByID :exec
 DELETE FROM doc_api_key WHERE id = ?;
@@ -25,8 +25,3 @@ FROM doc_api_key WHERE api_key_id = ? LIMIT 1;
 
 -- name: DeleteDocAPIKeyByAPIKeyID :exec
 DELETE FROM doc_api_key WHERE api_key_id = ?;
-
--- name: DeleteDocAPIKeysBySandboxAccountID :exec
-DELETE dak FROM doc_api_key dak
-INNER JOIN api_key ak ON dak.api_key_id = ak.type_id
-WHERE ak.owner_account_id = ?;

@@ -3,11 +3,8 @@ package mediator
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/augno/api/services/auth-service/internal/domain"
-	"github.com/augno/api/services/auth-service/internal/infrastructure/repository"
-	"github.com/augno/api/services/auth-service/internal/infrastructure/sqlc"
 	"github.com/augno/api/services/auth-service/internal/token"
 	apierror "github.com/augno/api/shared/errors"
 	tracing "github.com/augno/api/shared/tracing"
@@ -16,57 +13,28 @@ import (
 var refreshTokenMedTracer = tracing.GetTracer("auth-service.refresh_token_mediator")
 
 type refreshTokenMedImpl struct {
-	repos    domain.RepoFactory
-	jwtUtils domain.JWTUtils
+	repos domain.RepoFactory
 }
 
 type RefreshTokenMedConfig struct {
-	Repos    domain.RepoFactory
-	JWTUtils domain.JWTUtils
-}
-
-// WithDefaults returns a new RefreshTokenMedConfig with zero-value fields replaced by defaults.
-func (c *RefreshTokenMedConfig) WithDefaults() *RefreshTokenMedConfig {
-	if c == nil {
-		c = &RefreshTokenMedConfig{}
-	}
-	return &RefreshTokenMedConfig{
-		Repos:    c.Repos,
-		JWTUtils: c.JWTUtils,
-	}
+	Repos domain.RepoFactory
 }
 
 func (c *RefreshTokenMedConfig) validate() error {
 	if c.Repos == nil {
 		return fmt.Errorf("refresh token mediator: repos is required")
 	}
-	if c.JWTUtils == nil {
-		return fmt.Errorf("refresh token mediator: jwt utils is required")
-	}
 	return nil
 }
 
 func NewRefreshTokenMed(config *RefreshTokenMedConfig) domain.RefreshTokenMed {
-	config = config.WithDefaults()
 	if err := config.validate(); err != nil {
 		panic(err)
 	}
 
 	return &refreshTokenMedImpl{
-		repos:    config.Repos,
-		jwtUtils: config.JWTUtils,
+		repos: config.Repos,
 	}
-}
-
-func DefaultRefreshTokenMedConfig(queries *sqlc.Queries, jwtSecret string) *RefreshTokenMedConfig {
-	return &RefreshTokenMedConfig{
-		Repos:    repository.NewRepoFactory(queries),
-		JWTUtils: token.NewJWTUtils(&token.JWTConfig{Secret: jwtSecret}),
-	}
-}
-
-func NewDefaultRefreshTokenMed(queries *sqlc.Queries, jwtSecret string) domain.RefreshTokenMed {
-	return NewRefreshTokenMed(DefaultRefreshTokenMedConfig(queries, jwtSecret))
 }
 
 // Validate validates a refresh token and returns the user ID if it is valid.
@@ -83,11 +51,11 @@ func (s *refreshTokenMedImpl) Validate(ctx context.Context, refreshToken string)
 		return "", tracing.Trace(span, err)
 	}
 
-	if refreshTokenModel.RevokedAt != nil && refreshTokenModel.RevokedAt.Before(time.Now().UTC()) {
+	if refreshTokenModel.IsRevoked() {
 		return "", tracing.Trace(span, apierror.NewAuthenticationError(ErrRefreshTokenRevoked))
 	}
 
-	if refreshTokenModel.ExpiresAt.Before(time.Now().UTC()) {
+	if refreshTokenModel.IsExpired() {
 		return "", tracing.Trace(span, apierror.NewAuthenticationError(ErrExpiredRefreshToken))
 	}
 
@@ -136,11 +104,11 @@ func (s *refreshTokenMedImpl) Revoke(ctx context.Context, refreshToken string) *
 		return tracing.Trace(span, err)
 	}
 
-	if refreshTokenModel.RevokedAt != nil && refreshTokenModel.RevokedAt.Before(time.Now().UTC()) {
+	if refreshTokenModel.IsRevoked() {
 		return tracing.Trace(span, apierror.NewAuthenticationError(ErrRefreshTokenRevoked))
 	}
 
-	if refreshTokenModel.ExpiresAt.Before(time.Now().UTC()) {
+	if refreshTokenModel.IsExpired() {
 		return tracing.Trace(span, apierror.NewAuthenticationError(ErrExpiredRefreshToken))
 	}
 

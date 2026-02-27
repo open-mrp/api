@@ -15,7 +15,6 @@ import (
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
-	"github.com/augno/api/shared/ptrutil"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
@@ -50,14 +49,11 @@ type AuthSvcTestSuite struct {
 	passwordMed           *mediatormock.MockPasswordMed
 	refreshTokenMed       *mediatormock.MockRefreshTokenMed
 	idempotencyMed        *mediatormock.MockIdempotencyMed
-	jwtUtils              domain.JWTUtils
 	ctrl                  *gomock.Controller
 	notificationPublisher *publishermock.MockNotificationPublisher
 }
 
 func (suite *AuthSvcTestSuite) SetupSuite() {
-	suite.jwtUtils = token.NewJWTUtils(&token.JWTConfig{Secret: testutil.JWTSecret})
-
 	suite.ctrl = gomock.NewController(suite.T())
 	suite.userRepo = repositorymock.NewMockUserRepo(suite.ctrl)
 	suite.refreshTokenRepo = repositorymock.NewMockRefreshTokenRepo(suite.ctrl)
@@ -133,14 +129,14 @@ func (suite *AuthSvcTestSuite) TestValidateCredential_APIKey_DefaultsToOwnerAcco
 	// When no target account is specified, the API key defaults to its owner account
 	identityResponse := &types.Identity{
 		Type:            types.IdentityTypeAPIKey,
-		TargetAccountID: ptrutil.Ptr(testutil.EntityIDAccount),
+		TargetAccountID: new(testutil.EntityIDAccount),
 		Actor: &types.IdentityActor{
 			Type:         types.IdentityActorTypeInternal,
 			ID:           testutil.EntityIDAPIKeyValidProdMode,
-			Name:         ptrutil.Ptr("Test API Key"),
-			AccountID:    ptrutil.Ptr(testutil.EntityIDAccount),
-			RoleID:       ptrutil.Ptr(testutil.EntityIDRole),
-			RoleTypeCode: ptrutil.Ptr("admin"),
+			Name:         new("Test API Key"),
+			AccountID:    new(testutil.EntityIDAccount),
+			RoleID:       new(testutil.EntityIDRole),
+			RoleTypeCode: new("admin"),
 			Permissions:  permissions,
 		},
 		AccountMode: constants.AccountModeProduction,
@@ -177,25 +173,25 @@ func (suite *AuthSvcTestSuite) TestValidateCredential_APIKey_Internal() {
 
 	identityResponse := &types.Identity{
 		Type:            types.IdentityTypeAPIKey,
-		TargetAccountID: ptrutil.Ptr(testutil.EntityIDAccount),
+		TargetAccountID: new(testutil.EntityIDAccount),
 		Actor: &types.IdentityActor{
 			Type:         types.IdentityActorTypeInternal,
 			ID:           testutil.EntityIDAPIKeyValidProdMode,
-			Name:         ptrutil.Ptr("Test API Key"),
-			AccountID:    ptrutil.Ptr(testutil.EntityIDAccount),
-			RoleID:       ptrutil.Ptr(testutil.EntityIDRole),
-			RoleTypeCode: ptrutil.Ptr("admin"),
+			Name:         new("Test API Key"),
+			AccountID:    new(testutil.EntityIDAccount),
+			RoleID:       new(testutil.EntityIDRole),
+			RoleTypeCode: new("admin"),
 			Permissions:  permissions,
 		},
 		AccountMode: constants.AccountModeProduction,
 	}
 
 	suite.userMed.EXPECT().
-		ValidateCredential(gomock.Any(), testutil.APIKeyValidProdMode, ptrutil.Ptr(testutil.EntityIDAccount)).
+		ValidateCredential(gomock.Any(), testutil.APIKeyValidProdMode, new(testutil.EntityIDAccount)).
 		Return(identityResponse, nil).
 		Times(1)
 
-	identity, err := suite.authSvc.ValidateCredential(ctx, testutil.APIKeyValidProdMode, ptrutil.Ptr(testutil.EntityIDAccount))
+	identity, err := suite.authSvc.ValidateCredential(ctx, testutil.APIKeyValidProdMode, new(testutil.EntityIDAccount))
 	suite.Nil(err)
 	suite.NotNil(identity)
 	suite.Equal(types.IdentityTypeAPIKey, identity.Type)
@@ -216,12 +212,12 @@ func (suite *AuthSvcTestSuite) TestValidateCredential_APIKey_Customer() {
 
 	identityResponse := &types.Identity{
 		Type:            types.IdentityTypeAPIKey,
-		TargetAccountID: ptrutil.Ptr(testutil.EntityIDAccount),
+		TargetAccountID: new(testutil.EntityIDAccount),
 		Actor: &types.IdentityActor{
 			Type:         types.IdentityActorTypeCustomer,
 			ID:           testutil.EntityIDAPIKeyValidProdMode,
-			Name:         ptrutil.Ptr("Test API Key"),
-			AccountID:    ptrutil.Ptr("acc_customer123"),
+			Name:         new("Test API Key"),
+			AccountID:    new("acc_customer123"),
 			RoleID:       nil,
 			RoleTypeCode: nil,
 			Permissions:  map[string]bool{},
@@ -230,11 +226,11 @@ func (suite *AuthSvcTestSuite) TestValidateCredential_APIKey_Customer() {
 	}
 
 	suite.userMed.EXPECT().
-		ValidateCredential(gomock.Any(), testutil.APIKeyValidProdMode, ptrutil.Ptr(testutil.EntityIDAccount)).
+		ValidateCredential(gomock.Any(), testutil.APIKeyValidProdMode, new(testutil.EntityIDAccount)).
 		Return(identityResponse, nil).
 		Times(1)
 
-	identity, err := suite.authSvc.ValidateCredential(ctx, testutil.APIKeyValidProdMode, ptrutil.Ptr(testutil.EntityIDAccount))
+	identity, err := suite.authSvc.ValidateCredential(ctx, testutil.APIKeyValidProdMode, new(testutil.EntityIDAccount))
 	suite.Nil(err)
 	suite.NotNil(identity)
 	suite.Equal(types.IdentityTypeAPIKey, identity.Type)
@@ -253,7 +249,7 @@ func (suite *AuthSvcTestSuite) TestValidateCredential_JWT_Unassigned() {
 	ctx := context.Background()
 
 	userID := testutil.EntityIDUser
-	token, err := suite.jwtUtils.Encode(context.Background(), userID, time.Hour, domain.JWTTypeAccess)
+	token, err := token.EncodeJWT(context.Background(), testutil.JWTSecret, userID, time.Hour, token.JWTTypeAccess)
 	suite.Nil(err)
 
 	identityResponse := &types.Identity{
@@ -262,7 +258,7 @@ func (suite *AuthSvcTestSuite) TestValidateCredential_JWT_Unassigned() {
 		Actor: &types.IdentityActor{
 			Type:         types.IdentityActorTypeUnassigned,
 			ID:           userID,
-			Name:         ptrutil.Ptr("Test User"),
+			Name:         new("Test User"),
 			AccountID:    nil,
 			RoleID:       nil,
 			RoleTypeCode: nil,
@@ -293,7 +289,7 @@ func (suite *AuthSvcTestSuite) TestValidateCredential_JWT_Internal() {
 	ctx := context.Background()
 
 	userID := testutil.EntityIDUser
-	token, err := suite.jwtUtils.Encode(context.Background(), userID, time.Hour, domain.JWTTypeAccess)
+	token, err := token.EncodeJWT(context.Background(), testutil.JWTSecret, userID, time.Hour, token.JWTTypeAccess)
 	suite.Nil(err)
 
 	permissions := map[string]bool{
@@ -303,25 +299,25 @@ func (suite *AuthSvcTestSuite) TestValidateCredential_JWT_Internal() {
 
 	identityResponse := &types.Identity{
 		Type:            types.IdentityTypeUser,
-		TargetAccountID: ptrutil.Ptr(testutil.EntityIDAccount),
+		TargetAccountID: new(testutil.EntityIDAccount),
 		Actor: &types.IdentityActor{
 			Type:         types.IdentityActorTypeInternal,
 			ID:           userID,
-			Name:         ptrutil.Ptr("Test User"),
-			AccountID:    ptrutil.Ptr(testutil.EntityIDAccount),
-			RoleID:       ptrutil.Ptr(testutil.EntityIDRole),
-			RoleTypeCode: ptrutil.Ptr("admin"),
+			Name:         new("Test User"),
+			AccountID:    new(testutil.EntityIDAccount),
+			RoleID:       new(testutil.EntityIDRole),
+			RoleTypeCode: new("admin"),
 			Permissions:  permissions,
 		},
 		AccountMode: constants.AccountModeProduction,
 	}
 
 	suite.userMed.EXPECT().
-		ValidateCredential(gomock.Any(), token, ptrutil.Ptr(testutil.EntityIDAccount)).
+		ValidateCredential(gomock.Any(), token, new(testutil.EntityIDAccount)).
 		Return(identityResponse, nil).
 		Times(1)
 
-	identity, err := suite.authSvc.ValidateCredential(ctx, token, ptrutil.Ptr(testutil.EntityIDAccount))
+	identity, err := suite.authSvc.ValidateCredential(ctx, token, new(testutil.EntityIDAccount))
 	suite.Nil(err)
 	suite.NotNil(identity)
 	suite.Equal(types.IdentityTypeUser, identity.Type)
@@ -341,17 +337,17 @@ func (suite *AuthSvcTestSuite) TestValidateCredential_JWT_Customer() {
 	ctx := context.Background()
 
 	userID := testutil.EntityIDUser
-	token, err := suite.jwtUtils.Encode(context.Background(), userID, time.Hour, domain.JWTTypeAccess)
+	token, err := token.EncodeJWT(context.Background(), testutil.JWTSecret, userID, time.Hour, token.JWTTypeAccess)
 	suite.Nil(err)
 
 	identityResponse := &types.Identity{
 		Type:            types.IdentityTypeUser,
-		TargetAccountID: ptrutil.Ptr(testutil.EntityIDAccount),
+		TargetAccountID: new(testutil.EntityIDAccount),
 		Actor: &types.IdentityActor{
 			Type:         types.IdentityActorTypeCustomer,
 			ID:           userID,
-			Name:         ptrutil.Ptr("Test User"),
-			AccountID:    ptrutil.Ptr("acc_customer123"),
+			Name:         new("Test User"),
+			AccountID:    new("acc_customer123"),
 			RoleID:       nil,
 			RoleTypeCode: nil,
 			Permissions:  map[string]bool{},
@@ -360,11 +356,11 @@ func (suite *AuthSvcTestSuite) TestValidateCredential_JWT_Customer() {
 	}
 
 	suite.userMed.EXPECT().
-		ValidateCredential(gomock.Any(), token, ptrutil.Ptr(testutil.EntityIDAccount)).
+		ValidateCredential(gomock.Any(), token, new(testutil.EntityIDAccount)).
 		Return(identityResponse, nil).
 		Times(1)
 
-	identity, err := suite.authSvc.ValidateCredential(ctx, token, ptrutil.Ptr(testutil.EntityIDAccount))
+	identity, err := suite.authSvc.ValidateCredential(ctx, token, new(testutil.EntityIDAccount))
 	suite.Nil(err)
 	suite.NotNil(identity)
 	suite.Equal(types.IdentityTypeUser, identity.Type)
@@ -381,16 +377,16 @@ func (suite *AuthSvcTestSuite) TestValidateCredential_JWT_Customer() {
 
 func (suite *AuthSvcTestSuite) TestValidateCredential_JWT_Expired() {
 	userID := testutil.EntityIDUser
-	token, err := suite.jwtUtils.Encode(context.Background(), userID, -time.Hour, domain.JWTTypeAccess) // Expired token
+	token, err := token.EncodeJWT(context.Background(), testutil.JWTSecret, userID, -time.Hour, token.JWTTypeAccess) // Expired token
 	suite.Nil(err)
 
 	ctx := context.Background()
 	suite.userMed.EXPECT().
-		ValidateCredential(gomock.Any(), token, ptrutil.Ptr(testutil.EntityIDAccount)).
+		ValidateCredential(gomock.Any(), token, new(testutil.EntityIDAccount)).
 		Return(nil, apierror.NewAuthenticationError("Access token has expired.")).
 		Times(1)
 
-	identity, err := suite.authSvc.ValidateCredential(ctx, token, ptrutil.Ptr(testutil.EntityIDAccount))
+	identity, err := suite.authSvc.ValidateCredential(ctx, token, new(testutil.EntityIDAccount))
 	suite.NotNil(err)
 	suite.Equal(apierror.ErrorCodeInvalidCredentials, err.Code)
 	suite.Nil(identity)
@@ -400,11 +396,11 @@ func (suite *AuthSvcTestSuite) TestValidateCredential_JWT_Invalid() {
 	invalidToken := "invalid.jwt.token"
 	ctx := context.Background()
 	suite.userMed.EXPECT().
-		ValidateCredential(gomock.Any(), invalidToken, ptrutil.Ptr(testutil.EntityIDAccount)).
+		ValidateCredential(gomock.Any(), invalidToken, new(testutil.EntityIDAccount)).
 		Return(nil, apierror.NewAuthenticationError("Invalid token")).
 		Times(1)
 
-	identity, err := suite.authSvc.ValidateCredential(ctx, invalidToken, ptrutil.Ptr(testutil.EntityIDAccount))
+	identity, err := suite.authSvc.ValidateCredential(ctx, invalidToken, new(testutil.EntityIDAccount))
 	suite.NotNil(err)
 	suite.Equal(apierror.ErrorCodeInvalidCredentials, err.Code)
 	suite.Nil(identity)
@@ -412,16 +408,16 @@ func (suite *AuthSvcTestSuite) TestValidateCredential_JWT_Invalid() {
 
 func (suite *AuthSvcTestSuite) TestValidateCredential_JWT_UserNotFound() {
 	userID := "usr_notfound123"
-	token, err := suite.jwtUtils.Encode(context.Background(), userID, time.Hour, domain.JWTTypeAccess)
+	token, err := token.EncodeJWT(context.Background(), testutil.JWTSecret, userID, time.Hour, token.JWTTypeAccess)
 	suite.Nil(err)
 
 	ctx := context.Background()
 	suite.userMed.EXPECT().
-		ValidateCredential(gomock.Any(), token, ptrutil.Ptr(testutil.EntityIDAccount)).
+		ValidateCredential(gomock.Any(), token, new(testutil.EntityIDAccount)).
 		Return(nil, apierror.NewAuthenticationError("Invalid token")).
 		Times(1)
 
-	identity, err := suite.authSvc.ValidateCredential(ctx, token, ptrutil.Ptr(testutil.EntityIDAccount))
+	identity, err := suite.authSvc.ValidateCredential(ctx, token, new(testutil.EntityIDAccount))
 	suite.NotNil(err)
 	suite.Equal(apierror.ErrorCodeInvalidCredentials, err.Code)
 	suite.Nil(identity)
@@ -431,11 +427,11 @@ func (suite *AuthSvcTestSuite) TestValidateCredential_APIKey_Invalid() {
 	ctx := context.Background()
 
 	suite.userMed.EXPECT().
-		ValidateCredential(gomock.Any(), testutil.APIKeyValidProdMode, ptrutil.Ptr(testutil.EntityIDAccount)).
+		ValidateCredential(gomock.Any(), testutil.APIKeyValidProdMode, new(testutil.EntityIDAccount)).
 		Return(nil, apierror.NewAuthenticationError("Invalid API key")).
 		Times(1)
 
-	identity, err := suite.authSvc.ValidateCredential(ctx, testutil.APIKeyValidProdMode, ptrutil.Ptr(testutil.EntityIDAccount))
+	identity, err := suite.authSvc.ValidateCredential(ctx, testutil.APIKeyValidProdMode, new(testutil.EntityIDAccount))
 	suite.NotNil(err)
 	suite.Equal(apierror.ErrorCodeInvalidCredentials, err.Code)
 	suite.Nil(identity)

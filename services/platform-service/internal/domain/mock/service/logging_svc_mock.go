@@ -42,6 +42,36 @@ func (m *MockLoggingSvc) EXPECT() *MockLoggingSvcMockRecorder {
 	return m.recorder
 }
 
+// GetRequestLog mocks base method.
+func (m *MockLoggingSvc) GetRequestLog(ctx context.Context, id string) (*domain.RequestLogRead, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRequestLog", ctx, id)
+	ret0, _ := ret[0].(*domain.RequestLogRead)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetRequestLog indicates an expected call of GetRequestLog.
+func (mr *MockLoggingSvcMockRecorder) GetRequestLog(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRequestLog", reflect.TypeOf((*MockLoggingSvc)(nil).GetRequestLog), ctx, id)
+}
+
+// ListRequestLogs mocks base method.
+func (m *MockLoggingSvc) ListRequestLogs(ctx context.Context, filter *domain.ListRequestLogsFilter) (*domain.ListRequestLogsResult, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListRequestLogs", ctx, filter)
+	ret0, _ := ret[0].(*domain.ListRequestLogsResult)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListRequestLogs indicates an expected call of ListRequestLogs.
+func (mr *MockLoggingSvcMockRecorder) ListRequestLogs(ctx, filter any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListRequestLogs", reflect.TypeOf((*MockLoggingSvc)(nil).ListRequestLogs), ctx, filter)
+}
+
 // SaveRequestLog mocks base method.
 func (m *MockLoggingSvc) SaveRequestLog(ctx context.Context, rl *domain.RequestLog) *apierror.APIError {
 	m.ctrl.T.Helper()

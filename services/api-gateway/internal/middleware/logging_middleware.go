@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"regexp"
@@ -16,14 +17,29 @@ import (
 
 var loggingMiddlewareTracer = tracing.GetTracer("api-gateway.logging_middleware")
 
+// excludedRoutes are normalized route patterns that should be marked as non-public
+// regardless of the endpoint's Public flag. These are automation or internal-only
+// routes that should not appear in the customer-facing request log listing.
+var excludedRoutes = map[string]struct{}{
+	"/v1/me":                                       {},
+	"/v1/me/tenancy":                                {},
+	"/v1/core/request-logs":                         {},
+	"/v1/auth/api-keys/actions/fetch-doc-api-key":   {},
+}
+
 type RouteMatcher interface {
 	GetRoutes() []any
 }
 
-func findRouteTemplate(router any, method, path string) string {
+type routeMatch struct {
+	template string
+	isPublic bool
+}
+
+func findRouteTemplate(router any, method, path string) routeMatch {
 	routeMatcher, ok := router.(RouteMatcher)
 	if !ok {
-		return ""
+		return routeMatch{}
 	}
 
 	routes := routeMatcher.GetRoutes()
@@ -43,16 +59,20 @@ func findRouteTemplate(router any, method, path string) string {
 			continue
 		}
 
+		matched := false
 		if routePath == path {
-			return routePath
+			matched = true
+		} else if pattern, ok := routeMap["PathPattern"].(*regexp.Regexp); ok && pattern != nil && pattern.MatchString(path) {
+			matched = true
 		}
 
-		if pattern, ok := routeMap["PathPattern"].(*regexp.Regexp); ok && pattern != nil && pattern.MatchString(path) {
-			return routePath
+		if matched {
+			isPublic, _ := routeMap["Public"].(bool)
+			return routeMatch{template: routePath, isPublic: isPublic}
 		}
 	}
 
-	return ""
+	return routeMatch{}
 }
 
 func LoggingMiddleware(logger *log.Logger, next http.HandlerFunc, saver saver, router any) http.HandlerFunc {
@@ -69,10 +89,15 @@ func LoggingMiddleware(logger *log.Logger, next http.HandlerFunc, saver saver, r
 		clientIP := header.GetClientIP(r)
 
 		normalizedRoute := r.URL.Path
+		publicEndpoint := true
 		if router != nil {
-			if routeTemplate := findRouteTemplate(router, r.Method, r.URL.Path); routeTemplate != "" {
-				normalizedRoute = routeTemplate
+			if match := findRouteTemplate(router, r.Method, r.URL.Path); match.template != "" {
+				normalizedRoute = match.template
+				publicEndpoint = match.isPublic
 			}
+		}
+		if _, excluded := excludedRoutes[normalizedRoute]; excluded {
+			publicEndpoint = false
 		}
 
 		// Capture API version from header for logging
@@ -80,6 +105,8 @@ func LoggingMiddleware(logger *log.Logger, next http.HandlerFunc, saver saver, r
 		if versionStr := r.Header.Get(header.VersionHeader); versionStr != "" {
 			apiVersion = &versionStr
 		}
+
+		referrer := r.Referer()
 
 		requestLog := &appctx.RequestLog{
 			ID:              requestID,
@@ -96,8 +123,10 @@ func LoggingMiddleware(logger *log.Logger, next http.HandlerFunc, saver saver, r
 				s := clientIP.String()
 				return &s
 			}(),
-			OccurredAt: start,
-			APIVersion: apiVersion,
+			Referrer:       &referrer,
+			OccurredAt:     start,
+			APIVersion:     apiVersion,
+			PublicEndpoint: publicEndpoint,
 		}
 
 		span := trace.SpanFromContext(r.Context())
@@ -121,7 +150,17 @@ func LoggingMiddleware(logger *log.Logger, next http.HandlerFunc, saver saver, r
 			requestLog.StatusCode = lrw.statusCode
 			requestLog.LatencyUs = latency
 
-			if saver != nil {
+			if !requestLog.ShieldResponseBody && len(lrw.body) > 0 {
+				if lrw.bodyFull {
+					s := string(lrw.body)
+					requestLog.ResponseJSON = &s
+				} else {
+					s := fmt.Sprintf(`{"_truncated":true,"_original_size_exceeded":%d}`, maxResponseLogSize)
+					requestLog.ResponseJSON = &s
+				}
+			}
+
+			if saver != nil && !requestLog.SkipSave {
 				_, span := loggingMiddlewareTracer.Start(ctx, "middleware.logging.save_request_log")
 				if err := saver.Save(ctx, requestLog); err != nil {
 					logger.Printf("Error saving request log: %v", err)
@@ -147,14 +186,18 @@ func LoggingMiddleware(logger *log.Logger, next http.HandlerFunc, saver saver, r
 	}
 }
 
+const maxResponseLogSize = 256 << 10 // 256 KB
+
 type loggingResponseWriter struct {
 	http.ResponseWriter
 	statusCode int
 	written    bool
+	body       []byte
+	bodyFull   bool // true when the full response fit within maxResponseLogSize
 }
 
 func newLoggingResponseWriter(w http.ResponseWriter) *loggingResponseWriter {
-	return &loggingResponseWriter{w, http.StatusOK, false}
+	return &loggingResponseWriter{ResponseWriter: w, statusCode: http.StatusOK}
 }
 
 func (lrw *loggingResponseWriter) WriteHeader(code int) {
@@ -168,6 +211,18 @@ func (lrw *loggingResponseWriter) WriteHeader(code int) {
 func (lrw *loggingResponseWriter) Write(data []byte) (int, error) {
 	if !lrw.written {
 		lrw.WriteHeader(http.StatusOK)
+	}
+	if len(lrw.body) < maxResponseLogSize {
+		remaining := maxResponseLogSize - len(lrw.body)
+		if len(data) <= remaining {
+			lrw.body = append(lrw.body, data...)
+			lrw.bodyFull = true
+		} else {
+			lrw.body = append(lrw.body, data[:remaining]...)
+			lrw.bodyFull = false
+		}
+	} else {
+		lrw.bodyFull = false
 	}
 	return lrw.ResponseWriter.Write(data)
 }

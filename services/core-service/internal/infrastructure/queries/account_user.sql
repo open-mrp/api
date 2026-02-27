@@ -47,11 +47,45 @@ INSERT INTO account_user (
     status_code,
     created_at,
     updated_at
-) VALUES (?, ?, ?, ?, 'active', NOW(), NOW());
+) VALUES (?, ?, ?, ?, 'active', NOW(3), NOW(3));
 
 -- name: GetAdminRoleID :one
 SELECT r.id
 FROM role r
 WHERE r.role_type_code = 'admin' AND r.account_id IS NULL
+LIMIT 1;
+
+-- name: DeactivateAccountUsersExcept :execresult
+UPDATE account_user
+SET status_code = 'disabled', updated_at = NOW(3)
+WHERE account_id = ? AND user_id != ?
+    AND (status_code = 'active' OR status_code IS NULL)
+ORDER BY last_used_at ASC
+LIMIT ?;
+
+-- name: CountActiveAccountUsers :one
+SELECT COUNT(*) AS cnt
+FROM account_user
+WHERE account_id = ?
+    AND (status_code = 'active' OR status_code IS NULL);
+
+-- name: ReactivateAccountUsers :execresult
+UPDATE account_user
+SET status_code = 'active', updated_at = NOW(3)
+WHERE account_id = ? AND status_code = 'disabled'
+ORDER BY updated_at DESC
+LIMIT ?;
+
+-- name: EnsureAccountUserActive :execresult
+UPDATE account_user
+SET status_code = 'active', updated_at = NOW(3)
+WHERE account_id = ? AND user_id = ? AND status_code = 'disabled';
+
+-- name: FindAdminUserIDByAccountID :one
+SELECT au.user_id
+FROM account_user au
+JOIN role r ON au.role_id = r.id
+WHERE au.account_id = ? AND r.role_type_code = 'admin'
+    AND (au.status_code = 'active' OR au.status_code IS NULL)
 LIMIT 1;
 

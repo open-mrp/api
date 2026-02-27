@@ -2,6 +2,8 @@ package repository
 
 import (
 	"context"
+	gosql "database/sql"
+	"time"
 
 	"github.com/augno/api/services/auth-service/internal/apikey"
 	"github.com/augno/api/services/auth-service/internal/domain"
@@ -9,6 +11,7 @@ import (
 	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/db"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/pagination"
 	"github.com/augno/api/shared/tracing"
 )
 
@@ -22,7 +25,7 @@ func NewAPIKeyRepo(db *sqlc.Queries) domain.APIKeyRepo {
 	return &apiKeyRepoImpl{db: db}
 }
 
-func (r *apiKeyRepoImpl) Find(ctx context.Context, apiKeyID string) (*domain.APIKey, *apierror.APIError) {
+func (r *apiKeyRepoImpl) Find(ctx context.Context, apiKeyID string) (*apikey.APIKey, *apierror.APIError) {
 	ctx, span := apiKeyRepoTracer.Start(ctx, "repository.api_key.find")
 	defer span.End()
 
@@ -45,13 +48,13 @@ func (r *apiKeyRepoImpl) Find(ctx context.Context, apiKeyID string) (*domain.API
 		roleName = apiKeyRow.RoleName.String
 	}
 
-	return &domain.APIKey{
+	return &apikey.APIKey{
 		ID:             apiKeyRow.ID,
 		TypeID:         apiKeyRow.TypeID,
 		KeyID:          apiKeyRow.KeyID,
 		Name:           apiKeyRow.Name.String,
-		LastFour:       apiKeyRow.LastFour,
 		SecretHash:     apiKeyRow.SecretHash,
+		RedactedValue:  apiKeyRow.RedactedValue,
 		OwnerAccountID: apiKeyRow.OwnerAccountID,
 		RoleID:         apiKeyRow.RoleID,
 		RoleName:       roleName,
@@ -77,7 +80,7 @@ func (r *apiKeyRepoImpl) Touch(ctx context.Context, apiKeyID int64) *apierror.AP
 	return nil
 }
 
-func (r *apiKeyRepoImpl) Create(ctx context.Context, apiKey *domain.APIKey) (int64, *apierror.APIError) {
+func (r *apiKeyRepoImpl) Create(ctx context.Context, apiKey *apikey.APIKey) (int64, *apierror.APIError) {
 	ctx, span := apiKeyRepoTracer.Start(ctx, "repository.api_key.create")
 	defer span.End()
 
@@ -86,7 +89,7 @@ func (r *apiKeyRepoImpl) Create(ctx context.Context, apiKey *domain.APIKey) (int
 		KeyID:          apiKey.KeyID,
 		Name:           db.NullString(apiKey.Name),
 		SecretHash:     apiKey.SecretHash,
-		LastFour:       apiKey.LastFour,
+		RedactedValue:  apiKey.RedactedValue,
 		OwnerAccountID: apiKey.OwnerAccountID,
 		RoleID:         apiKey.RoleID,
 		ExpiresAt:      db.NullTimePtr(apiKey.ExpiresAt),
@@ -104,24 +107,19 @@ func (r *apiKeyRepoImpl) Create(ctx context.Context, apiKey *domain.APIKey) (int
 	return id, nil
 }
 
-func (r *apiKeyRepoImpl) List(ctx context.Context, accountMode constants.AccountMode, ownerAccountID string, cursor *string, limit int32, query *string, statuses []constants.APIKeyStatus) ([]*domain.APIKey, int64, *apierror.APIError) {
+func (r *apiKeyRepoImpl) List(ctx context.Context, input domain.APIKeyListRepoInput) (*domain.APIKeyListRepoResult, *apierror.APIError) {
 	ctx, span := apiKeyRepoTracer.Start(ctx, "repository.api_key.list")
 	defer span.End()
 
 	searchQuery := ""
-	if query != nil {
-		searchQuery = *query
-	}
-
-	cursorVal := ""
-	if cursor != nil {
-		cursorVal = *cursor
+	if input.Query != nil {
+		searchQuery = *input.Query
 	}
 
 	includeActive := false
 	includeExpired := false
 	includeRevoked := false
-	for _, s := range statuses {
+	for _, s := range input.Statuses {
 		switch s {
 		case constants.APIKeyStatusActive:
 			includeActive = true
@@ -132,68 +130,119 @@ func (r *apiKeyRepoImpl) List(ctx context.Context, accountMode constants.Account
 		}
 	}
 
-	rows, err := r.db.ListAPIKeys(ctx, sqlc.ListAPIKeysParams{
-		OwnerAccountID: ownerAccountID,
-		Cursor:         cursorVal,
+	var cursorDir *pagination.Direction
+
+	if input.Cursor != nil {
+		cur, err := pagination.DecodeCursor(*input.Cursor)
+		if err != nil {
+			return nil, apierror.NewValidationError("Invalid pagination cursor.")
+		}
+		cursorDir = &cur.Direction
+
+		if cur.Direction == pagination.DirectionBackward {
+			rows, err := r.db.ListAPIKeysBackward(ctx, sqlc.ListAPIKeysBackwardParams{
+				OwnerAccountID:  input.OwnerAccountID,
+				Query:           searchQuery,
+				IncludeActive:   includeActive,
+				IncludeExpired:  includeExpired,
+				IncludeRevoked:  includeRevoked,
+				CursorCreatedAt: cur.CreatedAt,
+				CursorID:        cur.ID,
+				Limit:           input.Limit + 1,
+			})
+			if apiErr := db.MapSQLError(err); apiErr != nil {
+				return nil, tracing.Trace(span, apiErr)
+			}
+			apiKeys := mapBackwardAPIKeyRows(rows)
+			result, pageInfo := pagination.BuildPage(apiKeys, input.Limit, cursorDir, apiKeyCreatedAt, apiKeyID)
+			return &domain.APIKeyListRepoResult{APIKeys: result, PageInfo: pageInfo}, nil
+		}
+
+		// Forward
+		rows, err := r.db.ListAPIKeysForward(ctx, sqlc.ListAPIKeysForwardParams{
+			OwnerAccountID:  input.OwnerAccountID,
+			Query:           searchQuery,
+			IncludeActive:   includeActive,
+			IncludeExpired:  includeExpired,
+			IncludeRevoked:  includeRevoked,
+			CursorCreatedAt: gosql.NullTime{Time: cur.CreatedAt, Valid: true},
+			CursorID:        gosql.NullInt64{Int64: cur.ID, Valid: true},
+			Limit:           input.Limit + 1,
+		})
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		apiKeys := mapForwardAPIKeyRows(rows)
+		result, pageInfo := pagination.BuildPage(apiKeys, input.Limit, cursorDir, apiKeyCreatedAt, apiKeyID)
+		return &domain.APIKeyListRepoResult{APIKeys: result, PageInfo: pageInfo}, nil
+	}
+
+	// No cursor — first page
+	rows, err := r.db.ListAPIKeysForward(ctx, sqlc.ListAPIKeysForwardParams{
+		OwnerAccountID: input.OwnerAccountID,
 		Query:          searchQuery,
 		IncludeActive:  includeActive,
 		IncludeExpired: includeExpired,
 		IncludeRevoked: includeRevoked,
-		Limit:          limit,
+		Limit:          input.Limit + 1,
 	})
-
 	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, 0, tracing.Trace(span, apiErr)
+		return nil, tracing.Trace(span, apiErr)
 	}
 
-	total, err := r.db.CountAPIKeys(ctx, sqlc.CountAPIKeysParams{
-		OwnerAccountID: ownerAccountID,
-		Query:          searchQuery,
-		IncludeActive:  includeActive,
-		IncludeExpired: includeExpired,
-		IncludeRevoked: includeRevoked,
-	})
-
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, 0, tracing.Trace(span, apiErr)
-	}
-
-	apiKeys := make([]*domain.APIKey, len(rows))
-	for i, row := range rows {
-		roleName := ""
-		if row.RoleName.Valid {
-			roleName = row.RoleName.String
-		}
-		roleTypeCode := ""
-		if row.RoleTypeCode.Valid {
-			roleTypeCode = row.RoleTypeCode.String
-		}
-
-		apiKeys[i] = &domain.APIKey{
-			ID:             row.ID,
-			TypeID:         row.TypeID,
-			KeyID:          row.KeyID,
-			Name:           row.Name.String,
-			LastFour:       row.LastFour,
-			SecretHash:     row.SecretHash,
-			OwnerAccountID: row.OwnerAccountID,
-			RoleID:         row.RoleID,
-			RoleName:       roleName,
-			RoleTypeCode:   roleTypeCode,
-			CreatedAt:      row.CreatedAt,
-			UpdatedAt:      row.UpdatedAt,
-			LastUsedAt:     db.TimeFromNullTime(row.LastUsedAt),
-			ExpiresAt:      db.TimeFromNullTime(row.ExpiresAt),
-			RevokedAt:      db.TimeFromNullTime(row.RevokedAt),
-		}
-
-		apiKeys[i].RedactedValue = apikey.RedactAPIKeyValue(apiKeys[i], accountMode)
-	}
-
-	return apiKeys, total, nil
+	apiKeys := mapForwardAPIKeyRows(rows)
+	result, pageInfo := pagination.BuildPage(apiKeys, input.Limit, cursorDir, apiKeyCreatedAt, apiKeyID)
+	return &domain.APIKeyListRepoResult{APIKeys: result, PageInfo: pageInfo}, nil
 }
 
-func (r *apiKeyRepoImpl) FindByTypeID(ctx context.Context, typeID string) (*domain.APIKey, *apierror.APIError) {
+func apiKeyCreatedAt(k *apikey.APIKey) time.Time { return k.CreatedAt }
+func apiKeyID(k *apikey.APIKey) int64            { return k.ID }
+
+func mapSingleAPIKeyRow(id int64, typeID, keyID string, name gosql.NullString, secretHash []byte, redactedValue, ownerAccountID, roleID string, roleName, roleTypeCode gosql.NullString, createdAt, updatedAt time.Time, lastUsedAt, expiresAt, revokedAt gosql.NullTime) *apikey.APIKey {
+	rn := ""
+	if roleName.Valid {
+		rn = roleName.String
+	}
+	rtc := ""
+	if roleTypeCode.Valid {
+		rtc = roleTypeCode.String
+	}
+	return &apikey.APIKey{
+		ID:             id,
+		TypeID:         typeID,
+		KeyID:          keyID,
+		Name:           name.String,
+		SecretHash:     secretHash,
+		RedactedValue:  redactedValue,
+		OwnerAccountID: ownerAccountID,
+		RoleID:         roleID,
+		RoleName:       rn,
+		RoleTypeCode:   rtc,
+		CreatedAt:      createdAt,
+		UpdatedAt:      updatedAt,
+		LastUsedAt:     db.TimeFromNullTime(lastUsedAt),
+		ExpiresAt:      db.TimeFromNullTime(expiresAt),
+		RevokedAt:      db.TimeFromNullTime(revokedAt),
+	}
+}
+
+func mapForwardAPIKeyRows(rows []sqlc.ListAPIKeysForwardRow) []*apikey.APIKey {
+	keys := make([]*apikey.APIKey, len(rows))
+	for i, r := range rows {
+		keys[i] = mapSingleAPIKeyRow(r.ID, r.TypeID, r.KeyID, r.Name, r.SecretHash, r.RedactedValue, r.OwnerAccountID, r.RoleID, r.RoleName, r.RoleTypeCode, r.CreatedAt, r.UpdatedAt, r.LastUsedAt, r.ExpiresAt, r.RevokedAt)
+	}
+	return keys
+}
+
+func mapBackwardAPIKeyRows(rows []sqlc.ListAPIKeysBackwardRow) []*apikey.APIKey {
+	keys := make([]*apikey.APIKey, len(rows))
+	for i, r := range rows {
+		keys[i] = mapSingleAPIKeyRow(r.ID, r.TypeID, r.KeyID, r.Name, r.SecretHash, r.RedactedValue, r.OwnerAccountID, r.RoleID, r.RoleName, r.RoleTypeCode, r.CreatedAt, r.UpdatedAt, r.LastUsedAt, r.ExpiresAt, r.RevokedAt)
+	}
+	return keys
+}
+
+func (r *apiKeyRepoImpl) FindByTypeID(ctx context.Context, typeID string) (*apikey.APIKey, *apierror.APIError) {
 	ctx, span := apiKeyRepoTracer.Start(ctx, "repository.api_key.find_by_type_id")
 	defer span.End()
 
@@ -216,13 +265,13 @@ func (r *apiKeyRepoImpl) FindByTypeID(ctx context.Context, typeID string) (*doma
 		roleName = apiKeyRow.RoleName.String
 	}
 
-	return &domain.APIKey{
+	return &apikey.APIKey{
 		ID:             apiKeyRow.ID,
 		TypeID:         apiKeyRow.TypeID,
 		KeyID:          apiKeyRow.KeyID,
 		Name:           apiKeyRow.Name.String,
-		LastFour:       apiKeyRow.LastFour,
 		SecretHash:     apiKeyRow.SecretHash,
+		RedactedValue:  apiKeyRow.RedactedValue,
 		OwnerAccountID: apiKeyRow.OwnerAccountID,
 		RoleID:         apiKeyRow.RoleID,
 		RoleName:       roleName,
@@ -248,20 +297,7 @@ func (r *apiKeyRepoImpl) Revoke(ctx context.Context, typeID string) *apierror.AP
 	return nil
 }
 
-func (r *apiKeyRepoImpl) Delete(ctx context.Context, typeID string) *apierror.APIError {
-	ctx, span := apiKeyRepoTracer.Start(ctx, "repository.api_key.delete")
-	defer span.End()
-
-	err := r.db.DeleteAPIKeyByTypeID(ctx, typeID)
-
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
-
-	return nil
-}
-
-func (r *apiKeyRepoImpl) FindByDatabaseID(ctx context.Context, id int64) (*domain.APIKey, *apierror.APIError) {
+func (r *apiKeyRepoImpl) FindByDatabaseID(ctx context.Context, id int64) (*apikey.APIKey, *apierror.APIError) {
 	ctx, span := apiKeyRepoTracer.Start(ctx, "repository.api_key.find_by_database_id")
 	defer span.End()
 
@@ -284,13 +320,13 @@ func (r *apiKeyRepoImpl) FindByDatabaseID(ctx context.Context, id int64) (*domai
 		roleName = apiKeyRow.RoleName.String
 	}
 
-	return &domain.APIKey{
+	return &apikey.APIKey{
 		ID:             apiKeyRow.ID,
 		TypeID:         apiKeyRow.TypeID,
 		KeyID:          apiKeyRow.KeyID,
 		Name:           apiKeyRow.Name.String,
-		LastFour:       apiKeyRow.LastFour,
 		SecretHash:     apiKeyRow.SecretHash,
+		RedactedValue:  apiKeyRow.RedactedValue,
 		OwnerAccountID: apiKeyRow.OwnerAccountID,
 		RoleID:         apiKeyRow.RoleID,
 		RoleName:       roleName,

@@ -16,3 +16,8 @@ WHERE id = ?;
 UPDATE message_inbox
 SET attempts = attempts + 1, last_error = ?
 WHERE id = ?;
+
+-- name: PurgeProcessedInboxMessages :execresult
+DELETE FROM message_inbox
+WHERE status = 'processed' AND processed_at < DATE_SUB(NOW(3), INTERVAL ? HOUR)
+LIMIT ?;

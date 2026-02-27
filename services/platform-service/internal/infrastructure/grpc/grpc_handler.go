@@ -2,7 +2,6 @@ package grpc
 
 import (
 	"context"
-	"errors"
 
 	"github.com/augno/api/services/platform-service/internal/domain"
 	"github.com/augno/api/services/platform-service/pkg/idempotency"
@@ -60,19 +59,18 @@ func (h *gRPCHandler) ProcessIdempotencyKey(ctx context.Context, req *pb.Process
 		RecoveryPoint:   idempotency.RecoveryPointStarted.String(),
 	}
 
-	result, upsertErr := h.idempotencyRepo.UpsertAndLock(ctx, key)
-	if upsertErr != nil {
-		if errors.Is(upsertErr, domain.ErrHashMismatch) {
+	result, apiErr := h.idempotencyRepo.UpsertAndLock(ctx, key)
+	if apiErr != nil {
+		if apiErr.Code == apierror.ErrorCodeValidationFailed && apiErr.Type == apierror.ErrorTypeIdempotency {
 			return &pb.ProcessIdempotencyKeyResponse{
 				Result: pb.ProcessIdempotencyKeyResult_PROCESS_RESULT_HASH_MISMATCH,
 			}, nil
 		}
-		if errors.Is(upsertErr, domain.ErrKeyLocked) {
+		if apiErr.Code == apierror.ErrorCodeIdempotencyInProgress {
 			return &pb.ProcessIdempotencyKeyResponse{
 				Result: pb.ProcessIdempotencyKeyResult_PROCESS_RESULT_IN_PROGRESS,
 			}, nil
 		}
-		apiErr := apierror.NewInternalError(upsertErr, "Failed to process idempotency key.")
 		tracing.Trace(span, apiErr)
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
@@ -128,14 +126,8 @@ func (h *gRPCHandler) SetIdempotencyKeyResponse(ctx context.Context, req *pb.Set
 		TTLSeconds:    req.TtlSeconds,
 		RecoveryPoint: idempotency.RecoveryPointFinished.String(),
 	}
-	err := h.idempotencyRepo.SetResponse(ctx, params)
-	if err != nil {
-		if errors.Is(err, domain.ErrKeyNotFound) {
-			apiErr := apierror.NewResourceNotFoundError("Idempotency key not found.")
-			tracing.Trace(span, apiErr)
-			return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
-		}
-		apiErr := apierror.NewInternalError(err, "Failed to set idempotency key response.")
+	apiErr := h.idempotencyRepo.SetResponse(ctx, params)
+	if apiErr != nil {
 		tracing.Trace(span, apiErr)
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
@@ -153,9 +145,8 @@ func (h *gRPCHandler) ReleaseIdempotencyKey(ctx context.Context, req *pb.Release
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	err := h.idempotencyRepo.ReleaseLock(ctx, req.IdempotencyKeyId)
-	if err != nil {
-		apiErr := apierror.NewInternalError(err, "Failed to release idempotency key lock.")
+	apiErr := h.idempotencyRepo.ReleaseLock(ctx, req.IdempotencyKeyId)
+	if apiErr != nil {
 		tracing.Trace(span, apiErr)
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
@@ -173,18 +164,12 @@ func (h *gRPCHandler) AdvanceRecoveryPoint(ctx context.Context, req *pb.AdvanceR
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	err := h.idempotencyRepo.AdvanceRecoveryPoint(ctx, domain.AdvanceRecoveryPointParams{
+	apiErr := h.idempotencyRepo.AdvanceRecoveryPoint(ctx, domain.AdvanceRecoveryPointParams{
 		ID:            req.IdempotencyKeyId,
 		RecoveryPoint: req.RecoveryPoint,
 		StepData:      req.StepData,
 	})
-	if err != nil {
-		if errors.Is(err, domain.ErrKeyNotFound) {
-			apiErr := apierror.NewResourceNotFoundError("Idempotency key not found.")
-			tracing.Trace(span, apiErr)
-			return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
-		}
-		apiErr := apierror.NewInternalError(err, "Failed to advance recovery point.")
+	if apiErr != nil {
 		tracing.Trace(span, apiErr)
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
@@ -202,14 +187,8 @@ func (h *gRPCHandler) GetRecoveryPoint(ctx context.Context, req *pb.GetRecoveryP
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	result, err := h.idempotencyRepo.GetRecoveryPoint(ctx, req.IdempotencyKeyId)
-	if err != nil {
-		if errors.Is(err, domain.ErrKeyNotFound) {
-			apiErr := apierror.NewResourceNotFoundError("Idempotency key not found.")
-			tracing.Trace(span, apiErr)
-			return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
-		}
-		apiErr := apierror.NewInternalError(err, "Failed to get recovery point.")
+	result, apiErr := h.idempotencyRepo.GetRecoveryPoint(ctx, req.IdempotencyKeyId)
+	if apiErr != nil {
 		tracing.Trace(span, apiErr)
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}

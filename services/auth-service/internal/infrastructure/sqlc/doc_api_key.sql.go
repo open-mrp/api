@@ -13,7 +13,7 @@ import (
 
 const createDocAPIKey = `-- name: CreateDocAPIKey :execresult
 INSERT INTO doc_api_key (type_id, api_key_id, encrypted_secret, created_at, updated_at)
-VALUES (?, ?, ?, NOW(), NOW())
+VALUES (?, ?, ?, NOW(3), NOW(3))
 `
 
 type CreateDocAPIKeyParams struct {
@@ -41,17 +41,6 @@ DELETE FROM doc_api_key WHERE id = ?
 
 func (q *Queries) DeleteDocAPIKeyByID(ctx context.Context, id int64) error {
 	_, err := q.exec(ctx, q.deleteDocAPIKeyByIDStmt, deleteDocAPIKeyByID, id)
-	return err
-}
-
-const deleteDocAPIKeysBySandboxAccountID = `-- name: DeleteDocAPIKeysBySandboxAccountID :exec
-DELETE dak FROM doc_api_key dak
-INNER JOIN api_key ak ON dak.api_key_id = ak.type_id
-WHERE ak.owner_account_id = ?
-`
-
-func (q *Queries) DeleteDocAPIKeysBySandboxAccountID(ctx context.Context, ownerAccountID string) error {
-	_, err := q.exec(ctx, q.deleteDocAPIKeysBySandboxAccountIDStmt, deleteDocAPIKeysBySandboxAccountID, ownerAccountID)
 	return err
 }
 
@@ -114,7 +103,7 @@ func (q *Queries) FindDocAPIKeyBySandboxAccountID(ctx context.Context, ownerAcco
 }
 
 const updateDocAPIKey = `-- name: UpdateDocAPIKey :exec
-UPDATE doc_api_key SET api_key_id = ?, encrypted_secret = ?, updated_at = NOW() WHERE id = ?
+UPDATE doc_api_key SET api_key_id = ?, encrypted_secret = ?, updated_at = NOW(3) WHERE id = ?
 `
 
 type UpdateDocAPIKeyParams struct {

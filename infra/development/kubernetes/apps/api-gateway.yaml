@@ -68,6 +68,11 @@ spec:
                             configMapKeyRef:
                                 key: CORE_SERVICE_URL
                                 name: app-config
+                      - name: BILLING_SERVICE_URL
+                        valueFrom:
+                            configMapKeyRef:
+                                key: BILLING_SERVICE_URL
+                                name: app-config
                       - name: PLATFORM_SERVICE_URL
                         valueFrom:
                             configMapKeyRef:
@@ -83,6 +88,11 @@ spec:
                             secretKeyRef:
                                 name: rabbitmq-credentials
                                 key: uri
+                      - name: FRONTEND_URL
+                        valueFrom:
+                            configMapKeyRef:
+                                key: FRONTEND_URL
+                                name: app-config
                       - name: DB_URL
                         valueFrom:
                             secretKeyRef:

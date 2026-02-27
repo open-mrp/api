@@ -57,6 +57,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.markInboxRecordProcessedStmt, err = db.PrepareContext(ctx, markInboxRecordProcessed); err != nil {
 		return nil, fmt.Errorf("error preparing query MarkInboxRecordProcessed: %w", err)
 	}
+	if q.purgeProcessedInboxMessagesStmt, err = db.PrepareContext(ctx, purgeProcessedInboxMessages); err != nil {
+		return nil, fmt.Errorf("error preparing query PurgeProcessedInboxMessages: %w", err)
+	}
 	if q.setIdempotencyResponseStmt, err = db.PrepareContext(ctx, setIdempotencyResponse); err != nil {
 		return nil, fmt.Errorf("error preparing query SetIdempotencyResponse: %w", err)
 	}
@@ -123,6 +126,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing markInboxRecordProcessedStmt: %w", cerr)
 		}
 	}
+	if q.purgeProcessedInboxMessagesStmt != nil {
+		if cerr := q.purgeProcessedInboxMessagesStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing purgeProcessedInboxMessagesStmt: %w", cerr)
+		}
+	}
 	if q.setIdempotencyResponseStmt != nil {
 		if cerr := q.setIdempotencyResponseStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing setIdempotencyResponseStmt: %w", cerr)
@@ -183,6 +191,7 @@ type Queries struct {
 	getInboxRecordByMessageAndHandlerStmt *sql.Stmt
 	markInboxRecordFailedStmt             *sql.Stmt
 	markInboxRecordProcessedStmt          *sql.Stmt
+	purgeProcessedInboxMessagesStmt       *sql.Stmt
 	setIdempotencyResponseStmt            *sql.Stmt
 	tryInsertInboxRecordStmt              *sql.Stmt
 }
@@ -202,6 +211,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getInboxRecordByMessageAndHandlerStmt: q.getInboxRecordByMessageAndHandlerStmt,
 		markInboxRecordFailedStmt:             q.markInboxRecordFailedStmt,
 		markInboxRecordProcessedStmt:          q.markInboxRecordProcessedStmt,
+		purgeProcessedInboxMessagesStmt:       q.purgeProcessedInboxMessagesStmt,
 		setIdempotencyResponseStmt:            q.setIdempotencyResponseStmt,
 		tryInsertInboxRecordStmt:              q.tryInsertInboxRecordStmt,
 	}

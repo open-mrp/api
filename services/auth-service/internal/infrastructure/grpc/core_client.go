@@ -64,13 +64,14 @@ func (c *AuthCoreClient) GetAccountContext(ctx context.Context, accountID string
 	}
 
 	return &domain.AccountContext{
-		AccountID:      accountID,
-		OwnerAccountID: resp.OwnerAccountId,
-		AccountMode:    convertAccountModeFromProto(resp.AccountMode),
+		AccountID:          accountID,
+		OwnerAccountID:     resp.OwnerAccountId,
+		AccountMode:        convertAccountModeFromProto(resp.AccountMode),
+		SubscriptionStatus: resp.SubscriptionStatus,
 	}, nil
 }
 
-func (c *AuthCoreClient) GetUserAccountAccess(ctx context.Context, userID, accountID string) (*domain.AccountUserAccess, *apierror.APIError) {
+func (c *AuthCoreClient) GetUserAccountAccess(ctx context.Context, userID, accountID string) (*domain.AccountUserAccess, bool, *apierror.APIError) {
 	ctx = prepareCtx(ctx)
 
 	resp, apiErr := rpc.CallRPC(ctx, coreClientTracer, "core_client.get_user_account_access", coreServiceName,
@@ -81,11 +82,11 @@ func (c *AuthCoreClient) GetUserAccountAccess(ctx context.Context, userID, accou
 			}, opts...)
 		})
 	if apiErr != nil {
-		return nil, apiErr
+		return nil, false, apiErr
 	}
 
 	if !resp.HasAccess || resp.Access == nil {
-		return nil, nil
+		return nil, false, nil
 	}
 
 	return &domain.AccountUserAccess{
@@ -94,10 +95,10 @@ func (c *AuthCoreClient) GetUserAccountAccess(ctx context.Context, userID, accou
 		RoleID:        resp.Access.RoleId,
 		RoleTypeCode:  resp.Access.RoleTypeCode,
 		Permissions:   resp.Access.Permissions,
-	}, nil
+	}, true, nil
 }
 
-func (c *AuthCoreClient) GetAccountRelationByUserID(ctx context.Context, ownerAccountID, userID string) (*domain.AuthAccountRelation, *apierror.APIError) {
+func (c *AuthCoreClient) GetAccountRelationByUserID(ctx context.Context, ownerAccountID, userID string) (*domain.AuthAccountRelation, bool, *apierror.APIError) {
 	ctx = prepareCtx(ctx)
 
 	resp, apiErr := rpc.CallRPC(ctx, coreClientTracer, "core_client.get_account_relation_by_user_id", coreServiceName,
@@ -108,26 +109,26 @@ func (c *AuthCoreClient) GetAccountRelationByUserID(ctx context.Context, ownerAc
 			}, opts...)
 		})
 	if apiErr != nil {
-		return nil, apiErr
+		return nil, false, apiErr
 	}
 
 	if !resp.HasRelation || resp.Relation == nil {
-		return nil, nil
+		return nil, false, nil
 	}
 
 	roleCode, ok := types.ParseIdentityActorType(resp.Relation.RoleCode)
 	if !ok {
-		return nil, apierror.NewInternalError(nil, "invalid account relation role code")
+		return nil, false, apierror.NewInternalError(nil, "invalid account relation role code")
 	}
 
 	return &domain.AuthAccountRelation{
 		ID:                      resp.Relation.Id,
 		CounterpartyAccountID:   resp.Relation.CounterpartyAccountId,
 		AccountRelationRoleCode: roleCode,
-	}, nil
+	}, true, nil
 }
 
-func (c *AuthCoreClient) GetAccountRelationByAPIKeyID(ctx context.Context, ownerAccountID string, apiKeyID int64) (*domain.AuthAccountRelation, *apierror.APIError) {
+func (c *AuthCoreClient) GetAccountRelationByAPIKeyID(ctx context.Context, ownerAccountID string, apiKeyID int64) (*domain.AuthAccountRelation, bool, *apierror.APIError) {
 	ctx = prepareCtx(ctx)
 
 	resp, apiErr := rpc.CallRPC(ctx, coreClientTracer, "core_client.get_account_relation_by_api_key_id", coreServiceName,
@@ -138,23 +139,23 @@ func (c *AuthCoreClient) GetAccountRelationByAPIKeyID(ctx context.Context, owner
 			}, opts...)
 		})
 	if apiErr != nil {
-		return nil, apiErr
+		return nil, false, apiErr
 	}
 
 	if !resp.HasRelation || resp.Relation == nil {
-		return nil, nil
+		return nil, false, nil
 	}
 
 	roleCode, ok := types.ParseIdentityActorType(resp.Relation.RoleCode)
 	if !ok {
-		return nil, apierror.NewInternalError(nil, "invalid account relation role code")
+		return nil, false, apierror.NewInternalError(nil, "invalid account relation role code")
 	}
 
 	return &domain.AuthAccountRelation{
 		ID:                      resp.Relation.Id,
 		CounterpartyAccountID:   resp.Relation.CounterpartyAccountId,
 		AccountRelationRoleCode: roleCode,
-	}, nil
+	}, true, nil
 }
 
 func (c *AuthCoreClient) MarkAccountUserUsed(ctx context.Context, accountUserID string) *apierror.APIError {
@@ -218,6 +219,47 @@ func (c *AuthCoreClient) GetAdminRole(ctx context.Context) (string, *apierror.AP
 	}
 
 	return resp.RoleId, nil
+}
+
+func (c *AuthCoreClient) CompleteRegistration(ctx context.Context, input domain.CompleteAccountRegistrationInput) (*domain.CompleteRegistrationOutput, *apierror.APIError) {
+	ctx = prepareCtx(ctx)
+
+	pbReq := &pb.CompleteRegistrationRequest{
+		UserId:           input.UserID,
+		PlanCode:         input.PlanCode,
+		StripeCustomerId: input.StripeCustomerID,
+		AccountData: &pb.RegistrationAccountData{
+			AccountName: input.AccountName,
+		},
+	}
+
+	if input.StripeSubscriptionID != "" {
+		pbReq.StripeSubscriptionId = &input.StripeSubscriptionID
+	}
+
+	if input.BusinessAddress != nil {
+		pbReq.AccountData.BusinessAddress = &pb.RegistrationAddress{
+			Line1:      &input.BusinessAddress.Line1,
+			Line2:      &input.BusinessAddress.Line2,
+			City:       &input.BusinessAddress.City,
+			State:      &input.BusinessAddress.State,
+			PostalCode: &input.BusinessAddress.PostalCode,
+			Country:    &input.BusinessAddress.Country,
+		}
+	}
+
+	resp, apiErr := rpc.CallRPC(ctx, coreClientTracer, "core_client.complete_registration", coreServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.CompleteRegistrationResponse, error) {
+			return c.client.CompleteRegistration(ctx, pbReq, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return &domain.CompleteRegistrationOutput{
+		AccountID: resp.AccountId,
+		SandboxID: resp.SandboxId,
+	}, nil
 }
 
 func convertAccountModeFromProto(m pb.AccountMode) constants.AccountMode {

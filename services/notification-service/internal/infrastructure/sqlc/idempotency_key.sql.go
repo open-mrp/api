@@ -13,7 +13,7 @@ import (
 
 const advanceIdempotencyRecoveryPoint = `-- name: AdvanceIdempotencyRecoveryPoint :exec
 UPDATE service_idempotency_key
-SET recovery_point = ?, last_run_at = NOW(), updated_at = NOW()
+SET recovery_point = ?, last_run_at = NOW(3), updated_at = NOW(3)
 WHERE type_id = ?
 `
 
@@ -31,7 +31,7 @@ const createIdempotencyKey = `-- name: CreateIdempotencyKey :execlastid
 INSERT INTO service_idempotency_key (
     type_id, service_name, handler, idempotency_key, actor_id, identity_type,
     scope_hash, recovery_point, last_run_at, expires_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), DATE_ADD(NOW(), INTERVAL 30 DAY))
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(3), DATE_ADD(NOW(3), INTERVAL 30 DAY))
 `
 
 type CreateIdempotencyKeyParams struct {
@@ -64,7 +64,7 @@ func (q *Queries) CreateIdempotencyKey(ctx context.Context, arg CreateIdempotenc
 
 const deleteExpiredIdempotencyKeys = `-- name: DeleteExpiredIdempotencyKeys :execresult
 DELETE FROM service_idempotency_key
-WHERE expires_at < NOW()
+WHERE expires_at < NOW(3)
 LIMIT ?
 `
 
@@ -164,7 +164,7 @@ func (q *Queries) GetIdempotencyRecoveryPoint(ctx context.Context, typeID string
 const setIdempotencyResponse = `-- name: SetIdempotencyResponse :exec
 UPDATE service_idempotency_key
 SET response_code = ?, response_body = ?, recovery_point = ?,
-    locked_at = NULL, last_run_at = NOW(), updated_at = NOW()
+    locked_at = NULL, last_run_at = NOW(3), updated_at = NOW(3)
 WHERE type_id = ?
 `
 

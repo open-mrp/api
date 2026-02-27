@@ -44,6 +44,9 @@ func NewRateLimiter(limit int, window time.Duration) *RateLimiter {
 	}
 }
 
+// IsAllowed checks if the request is allowed based on the rate limit.
+// It returns a boolean indicating if the request is allowed, the
+// number of seconds until the rate limit resets, and the number of remaining requests.
 func (rl *RateLimiter) IsAllowed(key string) (bool, int, int) {
 	rl.mutex.Lock()
 	defer rl.mutex.Unlock()
@@ -77,6 +80,7 @@ func (rl *RateLimiter) IsAllowed(key string) (bool, int, int) {
 	return false, retryAfterSeconds, 0
 }
 
+// GetResetAfterSeconds returns the number of seconds until the rate limit resets for a given key.
 func (rl *RateLimiter) GetResetAfterSeconds(key string) int {
 	rl.mutex.RLock()
 	defer rl.mutex.RUnlock()
@@ -123,8 +127,14 @@ func getGlobalRateLimiter() *RateLimiter {
 }
 
 func RateLimitMiddleware() func(http.HandlerFunc) http.HandlerFunc {
-	rateLimiter := getGlobalRateLimiter()
+	return rateLimitMiddleware(getGlobalRateLimiter())
+}
 
+func RateLimitMiddlewareWithConfig(limit int, window time.Duration) func(http.HandlerFunc) http.HandlerFunc {
+	return rateLimitMiddleware(NewRateLimiter(limit, window))
+}
+
+func rateLimitMiddleware(rateLimiter *RateLimiter) func(http.HandlerFunc) http.HandlerFunc {
 	return func(next http.HandlerFunc) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
 			// Skip rate limiting for health check endpoint.

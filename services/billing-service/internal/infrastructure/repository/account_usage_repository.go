@@ -1,0 +1,208 @@
+package repository
+
+import (
+	"context"
+	"database/sql"
+
+	"github.com/augno/api/services/billing-service/internal/domain"
+	"github.com/augno/api/services/billing-service/internal/infrastructure/sqlc"
+	"github.com/augno/api/shared/db"
+	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/tracing"
+)
+
+var accountUsageRepoTracer = tracing.GetTracer("billing-service.account_usage_repository")
+
+type accountUsageRepoImpl struct {
+	queries *sqlc.Queries
+}
+
+func NewAccountUsageRepo(queries *sqlc.Queries) domain.AccountUsageRepo {
+	return &accountUsageRepoImpl{queries: queries}
+}
+
+func (r *accountUsageRepoImpl) GetLimitsByAccountID(ctx context.Context, accountID string) ([]domain.PlanLimit, *apierror.APIError) {
+	ctx, span := tracing.StartSpan(ctx, accountUsageRepoTracer, "repository.account_usage.get_limits_by_account_id")
+	defer span.End()
+
+	rows, err := r.queries.GetLimitsByAccountID(ctx, accountID)
+	if err != nil {
+		span.RecordError(err)
+		return nil, db.MapSQLError(err)
+	}
+
+	limits := make([]domain.PlanLimit, len(rows))
+	for i, row := range rows {
+		var value *int
+		if row.Value.Valid {
+			v := int(row.Value.Int32)
+			value = &v
+		}
+		limits[i] = domain.PlanLimit{
+			Key:   row.Key,
+			Value: value,
+		}
+	}
+
+	return limits, nil
+}
+
+func (r *accountUsageRepoImpl) CountUsersByAccountID(ctx context.Context, accountID string) (int, *apierror.APIError) {
+	ctx, span := tracing.StartSpan(ctx, accountUsageRepoTracer, "repository.account_usage.count_users_by_account_id")
+	defer span.End()
+
+	cnt, err := r.queries.CountUsersByAccountID(ctx, accountID)
+	if err != nil {
+		span.RecordError(err)
+		return 0, db.MapSQLError(err)
+	}
+	return int(cnt), nil
+}
+
+func (r *accountUsageRepoImpl) CountSandboxesByAccountID(ctx context.Context, accountID string) (int, *apierror.APIError) {
+	ctx, span := tracing.StartSpan(ctx, accountUsageRepoTracer, "repository.account_usage.count_sandboxes_by_account_id")
+	defer span.End()
+
+	cnt, err := r.queries.CountSandboxesByAccountID(ctx, accountID)
+	if err != nil {
+		span.RecordError(err)
+		return 0, db.MapSQLError(err)
+	}
+	return int(cnt), nil
+}
+
+func (r *accountUsageRepoImpl) CountInvoicesByAccountID(ctx context.Context, accountID string) (int, *apierror.APIError) {
+	ctx, span := tracing.StartSpan(ctx, accountUsageRepoTracer, "repository.account_usage.count_invoices_by_account_id")
+	defer span.End()
+
+	cnt, err := r.queries.CountInvoicesByAccountID(ctx, accountID)
+	if err != nil {
+		span.RecordError(err)
+		return 0, db.MapSQLError(err)
+	}
+	return int(cnt), nil
+}
+
+func (r *accountUsageRepoImpl) CountBatchesByAccountID(ctx context.Context, accountID string) (int, *apierror.APIError) {
+	ctx, span := tracing.StartSpan(ctx, accountUsageRepoTracer, "repository.account_usage.count_batches_by_account_id")
+	defer span.End()
+
+	cnt, err := r.queries.CountBatchesByAccountID(ctx, accountID)
+	if err != nil {
+		span.RecordError(err)
+		return 0, db.MapSQLError(err)
+	}
+	return int(cnt), nil
+}
+
+func (r *accountUsageRepoImpl) GetAccountSubscriptionInfo(ctx context.Context, accountID string) (*domain.AccountSubscriptionInfo, *apierror.APIError) {
+	ctx, span := tracing.StartSpan(ctx, accountUsageRepoTracer, "repository.account_usage.get_account_subscription_info")
+	defer span.End()
+
+	row, err := r.queries.GetAccountSubscriptionInfo(ctx, accountID)
+	if err != nil {
+		span.RecordError(err)
+		return nil, db.MapSQLError(err)
+	}
+
+	info := &domain.AccountSubscriptionInfo{}
+	if row.SubscriptionStatus.Valid {
+		info.SubscriptionStatus = &row.SubscriptionStatus.String
+	}
+	if row.SubscriptionCurrentPeriodEnd.Valid {
+		t := row.SubscriptionCurrentPeriodEnd.Time.UTC()
+		info.SubscriptionCurrentPeriodEnd = &t
+	}
+	if row.InternalStripeSubscriptionID.Valid {
+		info.StripeSubscriptionID = &row.InternalStripeSubscriptionID.String
+	}
+
+	return info, nil
+}
+
+func (r *accountUsageRepoImpl) GetStripeCustomerIDByAccountID(ctx context.Context, accountID string) (*string, *apierror.APIError) {
+	ctx, span := tracing.StartSpan(ctx, accountUsageRepoTracer, "repository.account_usage.get_stripe_customer_id_by_account_id")
+	defer span.End()
+
+	row, err := r.queries.GetStripeCustomerIDByAccountID(ctx, accountID)
+	if err != nil {
+		span.RecordError(err)
+		return nil, db.MapSQLError(err)
+	}
+
+	if row.Valid {
+		return &row.String, nil
+	}
+	return nil, nil
+}
+
+func (r *accountUsageRepoImpl) GetAccountNameAndPlanCode(ctx context.Context, accountID string) (string, string, *apierror.APIError) {
+	ctx, span := tracing.StartSpan(ctx, accountUsageRepoTracer, "repository.account_usage.get_account_name_and_plan_code")
+	defer span.End()
+
+	row, err := r.queries.GetAccountNameAndPlanCode(ctx, accountID)
+	if err != nil {
+		span.RecordError(err)
+		return "", "", db.MapSQLError(err)
+	}
+
+	return row.Name, row.PlanCode, nil
+}
+
+func (r *accountUsageRepoImpl) GetUserEmailByID(ctx context.Context, userID string) (string, *string, *apierror.APIError) {
+	ctx, span := tracing.StartSpan(ctx, accountUsageRepoTracer, "repository.account_usage.get_user_email_by_id")
+	defer span.End()
+
+	row, err := r.queries.GetUserEmailByID(ctx, userID)
+	if err != nil {
+		span.RecordError(err)
+		return "", nil, db.MapSQLError(err)
+	}
+
+	var email string
+	if row.Email.Valid {
+		email = row.Email.String
+	}
+
+	var displayName *string
+	if row.DisplayName.Valid {
+		displayName = &row.DisplayName.String
+	}
+
+	return email, displayName, nil
+}
+
+func (r *accountUsageRepoImpl) GetAdminEmailByAccountID(ctx context.Context, accountID string) (string, *apierror.APIError) {
+	ctx, span := tracing.StartSpan(ctx, accountUsageRepoTracer, "repository.account_usage.get_admin_email_by_account_id")
+	defer span.End()
+
+	row, err := r.queries.GetAdminEmailByAccountID(ctx, accountID)
+	if err != nil {
+		span.RecordError(err)
+		return "", db.MapSQLError(err)
+	}
+
+	if row.Valid {
+		return row.String, nil
+	}
+	return "", nil
+}
+
+func (r *accountUsageRepoImpl) UpdateStripeCustomerIDByAccountID(ctx context.Context, stripeCustomerID, accountID string) *apierror.APIError {
+	ctx, span := tracing.StartSpan(ctx, accountUsageRepoTracer, "repository.account_usage.update_stripe_customer_id_by_account_id")
+	defer span.End()
+
+	err := r.queries.UpdateStripeCustomerIDByAccountID(ctx, sqlc.UpdateStripeCustomerIDByAccountIDParams{
+		InternalStripeCustomerID: sql.NullString{String: stripeCustomerID, Valid: true},
+		ID:                       accountID,
+	})
+	if err != nil {
+		span.RecordError(err)
+		return db.MapSQLError(err)
+	}
+
+	return nil
+}
+
+// Ensure compile-time interface compliance.
+var _ domain.AccountUsageRepo = (*accountUsageRepoImpl)(nil)

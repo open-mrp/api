@@ -12,9 +12,9 @@ import (
 
 // The request to reset a user's password
 type ResetPasswordRequest struct {
-	// The password reset token (from request_password_reset endpoint)
+	// The password reset token (from request_password_reset endpoint).
 	Token string `json:"token" validate:"required"`
-	// The new password of the user
+	// The new password of the user.
 	Password string `json:"password" validate:"required,password"` // #nosec G117 - Struct field, not a hardcoded credential
 }
 
@@ -48,6 +48,7 @@ func (e *ResetPasswordEndpoint) Materialize() *apiendpoint.APIEndpoint[*ResetPas
 		},
 		Extras: apiendpoint.APIEndpointExtras{
 			AllowUnknownJSONFields: false,
+			ShieldRequestBody:      true,
 		},
 	}
 }

@@ -1,5 +1,13 @@
 -- name: FindUserByIdentifier :one
-SELECT * FROM user WHERE (username = ? OR email = ? OR id = ?) AND (status_code = 'active' OR status_code IS NULL);
+SELECT `user`.id, `user`.email, `user`.name, `user`.username, `user`.hashed_password, `user`.email_verified, `user`.image_url, `user`.status_code, `user`.created_at, `user`.updated_at
+FROM `user` WHERE `user`.id = sqlc.arg('id') AND (`user`.status_code = 'active' OR `user`.status_code IS NULL)
+UNION ALL
+SELECT `user`.id, `user`.email, `user`.name, `user`.username, `user`.hashed_password, `user`.email_verified, `user`.image_url, `user`.status_code, `user`.created_at, `user`.updated_at
+FROM `user` WHERE `user`.email = sqlc.arg('email') AND (`user`.status_code = 'active' OR `user`.status_code IS NULL)
+UNION ALL
+SELECT `user`.id, `user`.email, `user`.name, `user`.username, `user`.hashed_password, `user`.email_verified, `user`.image_url, `user`.status_code, `user`.created_at, `user`.updated_at
+FROM `user` WHERE `user`.username = sqlc.arg('username') AND (`user`.status_code = 'active' OR `user`.status_code IS NULL)
+LIMIT 1;
 
 -- name: FindLastUsedAccountID :one
 SELECT account_id FROM account_user 

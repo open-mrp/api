@@ -43,8 +43,24 @@ const (
 	// NotificationEventEmailFailed is an event that indicates that an email has failed to send.
 	NotificationEventEmailFailed AmqpRoutingKey = "notification.event.email_failed"
 
+	// Core
+
+	// CoreCmdPurgeAccountData is a command to purge all account-scoped data for
+	// a deleted sandbox account.
+	CoreCmdPurgeAccountData AmqpRoutingKey = "core.cmd.purge_account_data"
+
+	// CoreCmdSeedSandbox is a command to populate a sandbox account with
+	// tutorial seed data.
+	CoreCmdSeedSandbox AmqpRoutingKey = "core.cmd.seed_sandbox"
+
 	// Logging
 
 	// LoggingEventRequestLogged is an event that indicates that a request has been logged.
 	LoggingEventRequestLogged AmqpRoutingKey = "logging.event.request_logged"
+
+	// Billing
+
+	// BillingEventStripeWebhook is an event carrying a verified Stripe webhook
+	// payload for asynchronous processing.
+	BillingEventStripeWebhook AmqpRoutingKey = "billing.event.stripe_webhook"
 )

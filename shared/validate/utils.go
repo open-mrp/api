@@ -5,7 +5,8 @@
 //
 // Three custom validator tags are registered at init time:
 //
-//   - "password":     8–72 characters, at least one digit and one special character.
+//   - "password":     8–72 characters, at least one lowercase letter, one uppercase
+//     letter, one digit, and one special character.
 //   - "identifier":   accepts either a valid email address or a username (3–50
 //     alphanumeric/underscore characters).
 //   - "custom_email": stricter email validation than the built-in "email" tag,
@@ -31,6 +32,12 @@ import (
 )
 
 var (
+	// hasLowercase matches any string containing at least one ASCII lowercase letter.
+	hasLowercase = regexp.MustCompile(`[a-z]`)
+
+	// hasUppercase matches any string containing at least one ASCII uppercase letter.
+	hasUppercase = regexp.MustCompile(`[A-Z]`)
+
 	// hasNumber matches any string containing at least one ASCII digit.
 	hasNumber = regexp.MustCompile(`[0-9]`)
 
@@ -56,9 +63,10 @@ func init() {
 }
 
 // validatePassword implements the "password" struct tag. A valid password is 8–72
-// bytes long and contains at least one ASCII digit and one special character (from
-// the hasSpecialChar set). Empty strings pass (combine with "required" to enforce
-// presence). The 72-byte upper bound matches bcrypt's maximum input length.
+// bytes long and contains at least one lowercase letter, one uppercase letter, one
+// ASCII digit, and one special character (from the hasSpecialChar set). Empty strings
+// pass (combine with "required" to enforce presence). The 72-byte upper bound matches
+// bcrypt's maximum input length.
 const PasswordMaxLength int = 72
 
 func validatePassword(fl validator.FieldLevel) bool {
@@ -67,6 +75,9 @@ func validatePassword(fl validator.FieldLevel) bool {
 		return true
 	}
 	if len(password) < 8 || len(password) > PasswordMaxLength {
+		return false
+	}
+	if !hasLowercase.MatchString(password) || !hasUppercase.MatchString(password) {
 		return false
 	}
 	if !hasNumber.MatchString(password) || !hasSpecialChar.MatchString(password) {
@@ -271,7 +282,7 @@ func formatFieldError(fieldErr validator.FieldError, structValue any) string {
 	case "omitempty":
 		return fmt.Sprintf("%s '%s' validation failed.", source, fieldName)
 	case "password":
-		return fmt.Sprintf("%s '%s' must be 8-72 characters and contain at least one number and one special character.", source, fieldName)
+		return fmt.Sprintf("%s '%s' must be 8-72 characters and contain at least one lowercase letter, one uppercase letter, one number, and one special character.", source, fieldName)
 	case "identifier":
 		return fmt.Sprintf("%s '%s' must be a valid email address or username (3-50 characters, alphanumeric and underscores only).", source, fieldName)
 	case "custom_email":

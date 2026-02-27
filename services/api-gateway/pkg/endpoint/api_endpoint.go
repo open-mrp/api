@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"sync"
@@ -24,6 +25,9 @@ import (
 type APIEndpointExtras struct {
 	AllowUnknownJSONFields bool `json:"allow_unknown_json_fields" yaml:"allow_unknown_json_fields"`
 	SkipRequestBodyParsing bool `json:"skip_request_body_parsing" yaml:"skip_request_body_parsing"`
+	ShieldRequestBody      bool `json:"shield_request_body" yaml:"shield_request_body"`
+	ShieldResponseBody     bool `json:"shield_response_body" yaml:"shield_response_body"`
+	SkipRequestLogging     bool `json:"skip_request_logging" yaml:"skip_request_logging"`
 }
 
 type ServiceHandler[TReq, TResp any] func(ctx context.Context, req TReq) (TResp, *apierror.APIError)
@@ -42,6 +46,7 @@ type APIEndpoint[TReq, TResp any] struct {
 	Response          TResp                                                                         `json:"-" yaml:"-"`
 	SuccessStatusCode int                                                                           `json:"success_status_code" yaml:"success_status_code"`
 	Public            bool                                                                          `json:"-" yaml:"-"`
+	Preview           bool                                                                          `json:"-" yaml:"-"`
 	ServiceHandler    func(svc any) func(ctx context.Context, req TReq) (TResp, *apierror.APIError) `json:"-" yaml:"-"`
 	Extras            APIEndpointExtras                                                             `json:"-" yaml:"-"`
 	MinVersion        *version.APIVersion                                                           `json:"-" yaml:"-"`
@@ -69,6 +74,10 @@ func (e *APIEndpoint[TReq, TResp]) GetMethod() string {
 
 func (e *APIEndpoint[TReq, TResp]) GetRoute() string {
 	return e.Route
+}
+
+func (e *APIEndpoint[TReq, TResp]) IsPublic() bool {
+	return e.Public
 }
 
 func (e *APIEndpoint[TReq, TResp]) WithService(g *APIEndpointGroup, svc any) *APIEndpoint[TReq, TResp] {
@@ -104,6 +113,15 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 				httptransport.RespondWithAPIError(ctx, w, apiErr)
 				return
 			}
+		}
+	}
+
+	if rl, ok := appctx.GetRequestLog(ctx); ok {
+		if e.Extras.SkipRequestLogging {
+			rl.SkipSave = true
+		}
+		if e.Extras.ShieldResponseBody {
+			rl.ShieldResponseBody = true
 		}
 	}
 
@@ -151,6 +169,25 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 		}
 		httptransport.RespondWithAPIError(ctx, w, apiErr)
 		return
+	}
+
+	// Capture request body for logging (if not shielded)
+	if !e.Extras.ShieldRequestBody && !e.Extras.SkipRequestBodyParsing && httptransport.ShouldDecodeBody(r) {
+		if rl, ok := appctx.GetRequestLog(ctx); ok {
+			bodyBytes, err := io.ReadAll(r.Body)
+			_ = r.Body.Close()
+			if err == nil && len(bodyBytes) > 0 {
+				const maxBodyLogSize = 256 << 10 // 256 KB
+				if len(bodyBytes) > maxBodyLogSize {
+					s := fmt.Sprintf(`{"_truncated":true,"_original_size":%d}`, len(bodyBytes))
+					rl.BodyJSON = &s
+				} else {
+					s := string(bodyBytes)
+					rl.BodyJSON = &s
+				}
+			}
+			r.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+		}
 	}
 
 	if e.Extras.SkipRequestBodyParsing {
@@ -312,5 +349,6 @@ type APIEndpointer interface {
 	Materialize() APIEndpointer
 	GetMethod() string
 	GetRoute() string
+	IsPublic() bool
 	GetHandler() http.HandlerFunc
 }

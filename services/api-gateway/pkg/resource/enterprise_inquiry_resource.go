@@ -5,14 +5,19 @@ import (
 
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	"github.com/augno/api/shared/constants"
+	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleEnterpriseInquiryID = "eniq_01gf7a8200eaj8fke1xvw4h50x"
+const SampleEnterpriseInquiryID = "enir_01gf7a8200eaj8fke1xvw4h50x"
 
+// EnterpriseInquiry represents a request for an enterprise plan upgrade.
 type EnterpriseInquiry struct {
-	ID        string               `json:"id" validate:"required"`
-	Object    constants.ObjectType `json:"object" validate:"required,enum=enterprise_inquiry"`
-	CreatedAt time.Time            `json:"created_at" validate:"required"`
+	// The unique identifier for this enterprise inquiry.
+	ID string `json:"id" validate:"required"`
+	// The object type.
+	Object constants.ObjectType `json:"object" validate:"required,enum=enterprise_inquiry"`
+	// When this inquiry was submitted.
+	CreatedAt time.Time `json:"created_at" validate:"required"`
 }
 
 func (*EnterpriseInquiry) SchemaExample() any {
@@ -22,5 +27,5 @@ func (*EnterpriseInquiry) SchemaExample() any {
 var SampleEnterpriseInquiry = &EnterpriseInquiry{
 	ID:        SampleEnterpriseInquiryID,
 	Object:    constants.ObjectTypeEnterpriseInquiry,
-	CreatedAt: time.Now(),
+	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 }

@@ -33,14 +33,17 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.createOutboxMessageStmt, err = db.PrepareContext(ctx, createOutboxMessage); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateOutboxMessage: %w", err)
 	}
-	if q.deleteOutboxMessageStmt, err = db.PrepareContext(ctx, deleteOutboxMessage); err != nil {
-		return nil, fmt.Errorf("error preparing query DeleteOutboxMessage: %w", err)
-	}
 	if q.getLockedOutboxMessagesStmt, err = db.PrepareContext(ctx, getLockedOutboxMessages); err != nil {
 		return nil, fmt.Errorf("error preparing query GetLockedOutboxMessages: %w", err)
 	}
 	if q.markOutboxMessageFailedStmt, err = db.PrepareContext(ctx, markOutboxMessageFailed); err != nil {
 		return nil, fmt.Errorf("error preparing query MarkOutboxMessageFailed: %w", err)
+	}
+	if q.markOutboxMessagePublishedStmt, err = db.PrepareContext(ctx, markOutboxMessagePublished); err != nil {
+		return nil, fmt.Errorf("error preparing query MarkOutboxMessagePublished: %w", err)
+	}
+	if q.purgePublishedOutboxMessagesStmt, err = db.PrepareContext(ctx, purgePublishedOutboxMessages); err != nil {
+		return nil, fmt.Errorf("error preparing query PurgePublishedOutboxMessages: %w", err)
 	}
 	return &q, nil
 }
@@ -62,11 +65,6 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing createOutboxMessageStmt: %w", cerr)
 		}
 	}
-	if q.deleteOutboxMessageStmt != nil {
-		if cerr := q.deleteOutboxMessageStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing deleteOutboxMessageStmt: %w", cerr)
-		}
-	}
 	if q.getLockedOutboxMessagesStmt != nil {
 		if cerr := q.getLockedOutboxMessagesStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getLockedOutboxMessagesStmt: %w", cerr)
@@ -75,6 +73,16 @@ func (q *Queries) Close() error {
 	if q.markOutboxMessageFailedStmt != nil {
 		if cerr := q.markOutboxMessageFailedStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing markOutboxMessageFailedStmt: %w", cerr)
+		}
+	}
+	if q.markOutboxMessagePublishedStmt != nil {
+		if cerr := q.markOutboxMessagePublishedStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing markOutboxMessagePublishedStmt: %w", cerr)
+		}
+	}
+	if q.purgePublishedOutboxMessagesStmt != nil {
+		if cerr := q.purgePublishedOutboxMessagesStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing purgePublishedOutboxMessagesStmt: %w", cerr)
 		}
 	}
 	return err
@@ -114,25 +122,27 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 }
 
 type Queries struct {
-	db                            DBTX
-	tx                            *sql.Tx
-	acquireOutboxMessagesStmt     *sql.Stmt
-	cleanupExpiredOutboxLocksStmt *sql.Stmt
-	createOutboxMessageStmt       *sql.Stmt
-	deleteOutboxMessageStmt       *sql.Stmt
-	getLockedOutboxMessagesStmt   *sql.Stmt
-	markOutboxMessageFailedStmt   *sql.Stmt
+	db                               DBTX
+	tx                               *sql.Tx
+	acquireOutboxMessagesStmt        *sql.Stmt
+	cleanupExpiredOutboxLocksStmt    *sql.Stmt
+	createOutboxMessageStmt          *sql.Stmt
+	getLockedOutboxMessagesStmt      *sql.Stmt
+	markOutboxMessageFailedStmt      *sql.Stmt
+	markOutboxMessagePublishedStmt   *sql.Stmt
+	purgePublishedOutboxMessagesStmt *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:                            tx,
-		tx:                            tx,
-		acquireOutboxMessagesStmt:     q.acquireOutboxMessagesStmt,
-		cleanupExpiredOutboxLocksStmt: q.cleanupExpiredOutboxLocksStmt,
-		createOutboxMessageStmt:       q.createOutboxMessageStmt,
-		deleteOutboxMessageStmt:       q.deleteOutboxMessageStmt,
-		getLockedOutboxMessagesStmt:   q.getLockedOutboxMessagesStmt,
-		markOutboxMessageFailedStmt:   q.markOutboxMessageFailedStmt,
+		db:                               tx,
+		tx:                               tx,
+		acquireOutboxMessagesStmt:        q.acquireOutboxMessagesStmt,
+		cleanupExpiredOutboxLocksStmt:    q.cleanupExpiredOutboxLocksStmt,
+		createOutboxMessageStmt:          q.createOutboxMessageStmt,
+		getLockedOutboxMessagesStmt:      q.getLockedOutboxMessagesStmt,
+		markOutboxMessageFailedStmt:      q.markOutboxMessageFailedStmt,
+		markOutboxMessagePublishedStmt:   q.markOutboxMessagePublishedStmt,
+		purgePublishedOutboxMessagesStmt: q.purgePublishedOutboxMessagesStmt,
 	}
 }

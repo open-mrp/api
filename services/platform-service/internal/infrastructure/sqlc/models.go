@@ -199,6 +199,8 @@ type AccountRelation struct {
 	AccountGroupID           sql.NullString
 	PriorityCode             string
 	ShippingTermID           sql.NullString
+	CarrierBillingType       sql.NullString
+	CarrierBillingAccount    sql.NullString
 }
 
 type AccountRelationNotificationPreference struct {
@@ -287,7 +289,7 @@ type ApiKey struct {
 	KeyID          string
 	Name           sql.NullString
 	SecretHash     []byte
-	LastFour       string
+	RedactedValue  string
 	OwnerAccountID string
 	RoleID         string
 	CreatedAt      time.Time
@@ -337,22 +339,27 @@ type BatchesMachine struct {
 }
 
 type Carrier struct {
-	ID          string
-	Description sql.NullString
-	Name        string
-	AccountID   sql.NullString
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	ID                     string
+	Code                   sql.NullString
+	Description            sql.NullString
+	Name                   string
+	ShippoCarrierAccountID sql.NullString
+	AccountNumber          sql.NullString
+	AccountID              sql.NullString
+	CreatedAt              time.Time
+	UpdatedAt              time.Time
+	DeletedAt              sql.NullTime
 }
 
 type CarrierOption struct {
-	ID        string
-	Code      string
-	Name      string
-	CarrierID string
-	AccountID sql.NullString
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID                string
+	Code              string
+	Name              string
+	ServiceLevelToken sql.NullString
+	CarrierID         string
+	AccountID         sql.NullString
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
 }
 
 type ChangeLog struct {
@@ -1126,10 +1133,11 @@ type RequestLog struct {
 	Host                 string
 	Path                 string
 	NormalizedRoute      string
-	QueryJson            json.RawMessage
+	QueryJson            db.NullableRawMessage
 	StatusCode           int32
 	LatencyUs            int64
 	TargetAccountID      sql.NullString
+	PublicEndpoint       bool
 	ApiVersion           sql.NullString
 	AccountID            sql.NullString
 	ActorID              sql.NullString
@@ -1147,6 +1155,8 @@ type RequestLog struct {
 	StackTrace           sql.NullString
 	InternalErrorMessage sql.NullString
 	TraceID              sql.NullString
+	RequestBodyJson      db.NullableRawMessage
+	ResponseBodyJson     db.NullableRawMessage
 }
 
 type Role struct {
@@ -1179,33 +1189,35 @@ type RoleType struct {
 }
 
 type SalesOrder struct {
-	ID                   string
-	BillingAddressID     string
-	ShippingAddressID    string
-	CustomerPoNumber     sql.NullString
-	Note                 sql.NullString
-	Number               string
-	IsAcknowledgmentSent bool
-	CarrierID            sql.NullString
-	CarrierOptionID      sql.NullString
-	PriorityCode         string
-	SalesRepID           sql.NullString
-	ShippingTermID       sql.NullString
-	SalesOrderStatusCode string
-	SalesOrderTypeCode   string
-	PaymentTermID        sql.NullString
-	ProductionRunID      sql.NullString
-	OrderDiscountID      sql.NullString
-	BuyerAccountID       string
-	SellerAccountID      string
-	OwnerAccountID       string
-	CompletedAt          sql.NullTime
-	ExpiredAt            sql.NullTime
-	FirstShipAt          sql.NullTime
-	IssuedAt             sql.NullTime
-	PromisedAt           sql.NullTime
-	CreatedAt            time.Time
-	UpdatedAt            time.Time
+	ID                    string
+	BillingAddressID      string
+	ShippingAddressID     string
+	CustomerPoNumber      sql.NullString
+	Note                  sql.NullString
+	Number                string
+	IsAcknowledgmentSent  bool
+	CarrierID             sql.NullString
+	CarrierOptionID       sql.NullString
+	CarrierBillingType    sql.NullString
+	CarrierBillingAccount sql.NullString
+	PriorityCode          string
+	SalesRepID            sql.NullString
+	ShippingTermID        sql.NullString
+	SalesOrderStatusCode  string
+	SalesOrderTypeCode    string
+	PaymentTermID         sql.NullString
+	ProductionRunID       sql.NullString
+	OrderDiscountID       sql.NullString
+	BuyerAccountID        string
+	SellerAccountID       string
+	OwnerAccountID        string
+	CompletedAt           sql.NullTime
+	ExpiredAt             sql.NullTime
+	FirstShipAt           sql.NullTime
+	IssuedAt              sql.NullTime
+	PromisedAt            sql.NullTime
+	CreatedAt             time.Time
+	UpdatedAt             time.Time
 }
 
 type SalesOrderLine struct {
@@ -1340,19 +1352,20 @@ type ShipmentStatus struct {
 }
 
 type ShippingCase struct {
-	ID               string
-	Number           string
-	Sscc             sql.NullString
-	TrackingNumber   sql.NullString
-	ShippingLabelUrl sql.NullString
-	ShippedAt        sql.NullTime
-	FreightAmountID  string
-	FreightWeightID  string
-	ShipmentID       string
-	CarrierID        string
-	AccountID        string
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
+	ID                  string
+	Number              string
+	Sscc                sql.NullString
+	TrackingNumber      sql.NullString
+	ShippoTransactionID sql.NullString
+	ShippingLabelUrl    sql.NullString
+	ShippedAt           sql.NullTime
+	FreightAmountID     string
+	FreightWeightID     string
+	ShipmentID          string
+	CarrierID           string
+	AccountID           string
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
 }
 
 type ShippingTerm struct {

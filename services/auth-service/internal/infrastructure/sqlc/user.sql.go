@@ -48,17 +48,25 @@ func (q *Queries) FindLastUsedAccountID(ctx context.Context, userID string) (str
 }
 
 const findUserByIdentifier = `-- name: FindUserByIdentifier :one
-SELECT id, email, name, username, hashed_password, email_verified, image_url, status_code, created_at, updated_at FROM user WHERE (username = ? OR email = ? OR id = ?) AND (status_code = 'active' OR status_code IS NULL)
+SELECT ` + "`" + `user` + "`" + `.id, ` + "`" + `user` + "`" + `.email, ` + "`" + `user` + "`" + `.name, ` + "`" + `user` + "`" + `.username, ` + "`" + `user` + "`" + `.hashed_password, ` + "`" + `user` + "`" + `.email_verified, ` + "`" + `user` + "`" + `.image_url, ` + "`" + `user` + "`" + `.status_code, ` + "`" + `user` + "`" + `.created_at, ` + "`" + `user` + "`" + `.updated_at
+FROM ` + "`" + `user` + "`" + ` WHERE ` + "`" + `user` + "`" + `.id = ? AND (` + "`" + `user` + "`" + `.status_code = 'active' OR ` + "`" + `user` + "`" + `.status_code IS NULL)
+UNION ALL
+SELECT ` + "`" + `user` + "`" + `.id, ` + "`" + `user` + "`" + `.email, ` + "`" + `user` + "`" + `.name, ` + "`" + `user` + "`" + `.username, ` + "`" + `user` + "`" + `.hashed_password, ` + "`" + `user` + "`" + `.email_verified, ` + "`" + `user` + "`" + `.image_url, ` + "`" + `user` + "`" + `.status_code, ` + "`" + `user` + "`" + `.created_at, ` + "`" + `user` + "`" + `.updated_at
+FROM ` + "`" + `user` + "`" + ` WHERE ` + "`" + `user` + "`" + `.email = ? AND (` + "`" + `user` + "`" + `.status_code = 'active' OR ` + "`" + `user` + "`" + `.status_code IS NULL)
+UNION ALL
+SELECT ` + "`" + `user` + "`" + `.id, ` + "`" + `user` + "`" + `.email, ` + "`" + `user` + "`" + `.name, ` + "`" + `user` + "`" + `.username, ` + "`" + `user` + "`" + `.hashed_password, ` + "`" + `user` + "`" + `.email_verified, ` + "`" + `user` + "`" + `.image_url, ` + "`" + `user` + "`" + `.status_code, ` + "`" + `user` + "`" + `.created_at, ` + "`" + `user` + "`" + `.updated_at
+FROM ` + "`" + `user` + "`" + ` WHERE ` + "`" + `user` + "`" + `.username = ? AND (` + "`" + `user` + "`" + `.status_code = 'active' OR ` + "`" + `user` + "`" + `.status_code IS NULL)
+LIMIT 1
 `
 
 type FindUserByIdentifierParams struct {
-	Username sql.NullString
-	Email    sql.NullString
 	ID       string
+	Email    sql.NullString
+	Username sql.NullString
 }
 
 func (q *Queries) FindUserByIdentifier(ctx context.Context, arg FindUserByIdentifierParams) (User, error) {
-	row := q.queryRow(ctx, q.findUserByIdentifierStmt, findUserByIdentifier, arg.Username, arg.Email, arg.ID)
+	row := q.queryRow(ctx, q.findUserByIdentifierStmt, findUserByIdentifier, arg.ID, arg.Email, arg.Username)
 	var i User
 	err := row.Scan(
 		&i.ID,

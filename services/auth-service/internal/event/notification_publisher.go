@@ -59,6 +59,9 @@ func (p *outboxNotificationPublisher) PublishSendEmail(ctx context.Context, data
 	if identity, ok := appctx.GetIdentityFromContext(ctx); ok {
 		msg.Identity = identity
 	}
+	if requestID, ok := appctx.GetRequestID(ctx); ok {
+		msg.RequestID = requestID
+	}
 
 	outboxInput := messaging.OutboxMessageInput{
 		ServiceName: "auth-service",
@@ -66,10 +69,6 @@ func (p *outboxNotificationPublisher) PublishSendEmail(ctx context.Context, data
 		Destination: messaging.ApplicationExchange,
 		RoutingKey:  string(contracts.NotificationCmdSendEmail),
 		Payload:     msg,
-	}
-
-	if requestID, ok := appctx.GetRequestID(ctx); ok {
-		outboxInput.RequestID = requestID
 	}
 
 	outboxRepo := repos.NewOutboxRepo()

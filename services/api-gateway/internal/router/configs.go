@@ -11,13 +11,13 @@ import (
 )
 
 type BaseConfig struct {
-	PlatformMode constants.PlatformMode
-	LogPrefix    string
-	LogFlags     int
-	LogWriter    io.Writer
-	AuthClient   *grpcclient.AuthServiceClient
-	CoreClient   *grpcclient.CoreServiceClient
-	// PaymentClient       *grpcclient.PaymentServiceClient
+	PlatformMode        constants.PlatformMode
+	LogPrefix           string
+	LogFlags            int
+	LogWriter           io.Writer
+	AuthClient          *grpcclient.AuthServiceClient
+	CoreClient          *grpcclient.CoreServiceClient
+	BillingClient       *grpcclient.BillingServiceClient
 	PlatformClient      *grpcclient.PlatformServiceClient
 	RequestLogPublisher domain.RequestLogPublisher
 }
@@ -48,6 +48,7 @@ func (c *BaseConfig) WithDefaults() *BaseConfig {
 		LogWriter:           c.LogWriter,
 		AuthClient:          c.AuthClient,
 		CoreClient:          c.CoreClient,
+		BillingClient:       c.BillingClient,
 		PlatformClient:      c.PlatformClient,
 		RequestLogPublisher: c.RequestLogPublisher,
 	}
@@ -88,24 +89,39 @@ func NewAuthRouter(baseCfg *BaseConfig) *router {
 	return r
 }
 
+type WebhookRouterConfig struct {
+	BaseConfig
+}
+
+func NewWebhookRouter(baseCfg *BaseConfig) *router {
+	baseCfg = baseCfg.WithDefaults()
+	if err := baseCfg.validate(); err != nil {
+		panic(err)
+	}
+
+	r := NewRouter()
+	r.InitWebhookEndpointGroups(WebhookRouterConfig{BaseConfig: *baseCfg})
+	return r
+}
+
 func BuildBaseConfig(
 	platformMode constants.PlatformMode,
 	logPrefix string,
 	authClient *grpcclient.AuthServiceClient,
 	coreClient *grpcclient.CoreServiceClient,
-	// paymentClient *grpcclient.PaymentServiceClient,
+	billingClient *grpcclient.BillingServiceClient,
 	platformClient *grpcclient.PlatformServiceClient,
 	reqLogPublisher domain.RequestLogPublisher,
 	logWriter io.Writer,
 ) *BaseConfig {
 	return &BaseConfig{
-		PlatformMode: platformMode,
-		LogPrefix:    logPrefix,
-		LogFlags:     log.LstdFlags,
-		LogWriter:    logWriter,
-		AuthClient:   authClient,
-		CoreClient:   coreClient,
-		// PaymentClient:       paymentClient,
+		PlatformMode:        platformMode,
+		LogPrefix:           logPrefix,
+		LogFlags:            log.LstdFlags,
+		LogWriter:           logWriter,
+		AuthClient:          authClient,
+		CoreClient:          coreClient,
+		BillingClient:       billingClient,
 		PlatformClient:      platformClient,
 		RequestLogPublisher: reqLogPublisher,
 	}

@@ -11,52 +11,19 @@ import (
 	"time"
 )
 
-const countAPIKeys = `-- name: CountAPIKeys :one
-SELECT COUNT(*) FROM api_key
-WHERE api_key.owner_account_id = ?
-AND (api_key.name LIKE CONCAT('%', ?, '%') OR ? = '')
-AND (
-    (? = true AND api_key.revoked_at IS NULL AND (api_key.expires_at IS NULL OR api_key.expires_at > NOW()))
-    OR (? = true AND api_key.expires_at IS NOT NULL AND api_key.expires_at <= NOW() AND api_key.revoked_at IS NULL)
-    OR (? = true AND api_key.revoked_at IS NOT NULL)
-)
-`
-
-type CountAPIKeysParams struct {
-	OwnerAccountID string
-	Query          interface{}
-	IncludeActive  interface{}
-	IncludeExpired interface{}
-	IncludeRevoked interface{}
-}
-
-func (q *Queries) CountAPIKeys(ctx context.Context, arg CountAPIKeysParams) (int64, error) {
-	row := q.queryRow(ctx, q.countAPIKeysStmt, countAPIKeys,
-		arg.OwnerAccountID,
-		arg.Query,
-		arg.Query,
-		arg.IncludeActive,
-		arg.IncludeExpired,
-		arg.IncludeRevoked,
-	)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
 const createAPIKey = `-- name: CreateAPIKey :execresult
 INSERT INTO api_key (
     type_id,
     key_id,
     name,
     secret_hash,
-    last_four,
+    redacted_value,
     owner_account_id,
     role_id,
     created_at,
     updated_at,
     expires_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), ?)
+) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(3), NOW(3), ?)
 `
 
 type CreateAPIKeyParams struct {
@@ -64,7 +31,7 @@ type CreateAPIKeyParams struct {
 	KeyID          string
 	Name           sql.NullString
 	SecretHash     []byte
-	LastFour       string
+	RedactedValue  string
 	OwnerAccountID string
 	RoleID         string
 	ExpiresAt      sql.NullTime
@@ -76,33 +43,15 @@ func (q *Queries) CreateAPIKey(ctx context.Context, arg CreateAPIKeyParams) (sql
 		arg.KeyID,
 		arg.Name,
 		arg.SecretHash,
-		arg.LastFour,
+		arg.RedactedValue,
 		arg.OwnerAccountID,
 		arg.RoleID,
 		arg.ExpiresAt,
 	)
 }
 
-const deleteAPIKeyByID = `-- name: DeleteAPIKeyByID :exec
-DELETE FROM api_key WHERE id = ?
-`
-
-func (q *Queries) DeleteAPIKeyByID(ctx context.Context, id int64) error {
-	_, err := q.exec(ctx, q.deleteAPIKeyByIDStmt, deleteAPIKeyByID, id)
-	return err
-}
-
-const deleteAPIKeyByTypeID = `-- name: DeleteAPIKeyByTypeID :exec
-DELETE FROM api_key WHERE type_id = ?
-`
-
-func (q *Queries) DeleteAPIKeyByTypeID(ctx context.Context, typeID string) error {
-	_, err := q.exec(ctx, q.deleteAPIKeyByTypeIDStmt, deleteAPIKeyByTypeID, typeID)
-	return err
-}
-
 const findAPIKeyByID = `-- name: FindAPIKeyByID :one
-SELECT id, type_id, key_id, name, secret_hash, last_four, owner_account_id, role_id, created_at, updated_at, last_used_at, expires_at, revoked_at FROM api_key WHERE key_id = ? OR type_id = ?
+SELECT id, type_id, key_id, name, secret_hash, redacted_value, owner_account_id, role_id, created_at, updated_at, last_used_at, expires_at, revoked_at FROM api_key WHERE key_id = ? OR type_id = ?
 `
 
 type FindAPIKeyByIDParams struct {
@@ -119,7 +68,7 @@ func (q *Queries) FindAPIKeyByID(ctx context.Context, arg FindAPIKeyByIDParams) 
 		&i.KeyID,
 		&i.Name,
 		&i.SecretHash,
-		&i.LastFour,
+		&i.RedactedValue,
 		&i.OwnerAccountID,
 		&i.RoleID,
 		&i.CreatedAt,
@@ -132,13 +81,13 @@ func (q *Queries) FindAPIKeyByID(ctx context.Context, arg FindAPIKeyByIDParams) 
 }
 
 const findAPIKeyWithRoleByDatabaseID = `-- name: FindAPIKeyWithRoleByDatabaseID :one
-SELECT 
+SELECT
     api_key.id,
     api_key.type_id,
     api_key.key_id,
     api_key.name,
     api_key.secret_hash,
-    api_key.last_four,
+    api_key.redacted_value,
     api_key.owner_account_id,
     api_key.role_id,
     api_key.created_at,
@@ -159,7 +108,7 @@ type FindAPIKeyWithRoleByDatabaseIDRow struct {
 	KeyID          string
 	Name           sql.NullString
 	SecretHash     []byte
-	LastFour       string
+	RedactedValue  string
 	OwnerAccountID string
 	RoleID         string
 	CreatedAt      time.Time
@@ -180,7 +129,7 @@ func (q *Queries) FindAPIKeyWithRoleByDatabaseID(ctx context.Context, id int64) 
 		&i.KeyID,
 		&i.Name,
 		&i.SecretHash,
-		&i.LastFour,
+		&i.RedactedValue,
 		&i.OwnerAccountID,
 		&i.RoleID,
 		&i.CreatedAt,
@@ -195,13 +144,13 @@ func (q *Queries) FindAPIKeyWithRoleByDatabaseID(ctx context.Context, id int64) 
 }
 
 const findAPIKeyWithRoleByKeyID = `-- name: FindAPIKeyWithRoleByKeyID :one
-SELECT 
+SELECT
     api_key.id,
     api_key.type_id,
     api_key.key_id,
     api_key.name,
     api_key.secret_hash,
-    api_key.last_four,
+    api_key.redacted_value,
     api_key.owner_account_id,
     api_key.role_id,
     api_key.created_at,
@@ -222,7 +171,7 @@ type FindAPIKeyWithRoleByKeyIDRow struct {
 	KeyID          string
 	Name           sql.NullString
 	SecretHash     []byte
-	LastFour       string
+	RedactedValue  string
 	OwnerAccountID string
 	RoleID         string
 	CreatedAt      time.Time
@@ -243,7 +192,7 @@ func (q *Queries) FindAPIKeyWithRoleByKeyID(ctx context.Context, keyID string) (
 		&i.KeyID,
 		&i.Name,
 		&i.SecretHash,
-		&i.LastFour,
+		&i.RedactedValue,
 		&i.OwnerAccountID,
 		&i.RoleID,
 		&i.CreatedAt,
@@ -264,7 +213,7 @@ SELECT
     api_key.key_id,
     api_key.name,
     api_key.secret_hash,
-    api_key.last_four,
+    api_key.redacted_value,
     api_key.owner_account_id,
     api_key.role_id,
     api_key.created_at,
@@ -285,7 +234,7 @@ type FindAPIKeyWithRoleByTypeIDRow struct {
 	KeyID          string
 	Name           sql.NullString
 	SecretHash     []byte
-	LastFour       string
+	RedactedValue  string
 	OwnerAccountID string
 	RoleID         string
 	CreatedAt      time.Time
@@ -306,7 +255,7 @@ func (q *Queries) FindAPIKeyWithRoleByTypeID(ctx context.Context, typeID string)
 		&i.KeyID,
 		&i.Name,
 		&i.SecretHash,
-		&i.LastFour,
+		&i.RedactedValue,
 		&i.OwnerAccountID,
 		&i.RoleID,
 		&i.CreatedAt,
@@ -320,42 +269,46 @@ func (q *Queries) FindAPIKeyWithRoleByTypeID(ctx context.Context, typeID string)
 	return i, err
 }
 
-const listAPIKeys = `-- name: ListAPIKeys :many
+const listAPIKeysBackward = `-- name: ListAPIKeysBackward :many
 SELECT
-    api_key.id, api_key.type_id, api_key.key_id, api_key.name, api_key.secret_hash, api_key.last_four, api_key.owner_account_id, api_key.role_id, api_key.created_at, api_key.updated_at, api_key.last_used_at, api_key.expires_at, api_key.revoked_at,
+    api_key.id, api_key.type_id, api_key.key_id, api_key.name, api_key.secret_hash, api_key.redacted_value, api_key.owner_account_id, api_key.role_id, api_key.created_at, api_key.updated_at, api_key.last_used_at, api_key.expires_at, api_key.revoked_at,
     role.name AS role_name,
     role.role_type_code
 FROM api_key
 LEFT JOIN role ON api_key.role_id = role.id
 WHERE api_key.owner_account_id = ?
-AND (api_key.id > (SELECT sub.id FROM api_key sub WHERE sub.type_id = ?) OR ? = '')
 AND (api_key.name LIKE CONCAT('%', ?, '%') OR ? = '')
 AND (
-    (? = true AND api_key.revoked_at IS NULL AND (api_key.expires_at IS NULL OR api_key.expires_at > NOW()))
-    OR (? = true AND api_key.expires_at IS NOT NULL AND api_key.expires_at <= NOW() AND api_key.revoked_at IS NULL)
-    OR (? = true AND api_key.revoked_at IS NOT NULL)
+    (? = true AND api_key.revoked_at IS NULL AND (api_key.expires_at IS NULL OR api_key.expires_at > NOW(3)))
+    OR (? = true AND api_key.expires_at IS NOT NULL AND api_key.expires_at <= NOW(3) AND api_key.revoked_at IS NULL AND api_key.expires_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
+    OR (? = true AND api_key.revoked_at IS NOT NULL AND api_key.revoked_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
 )
-ORDER BY api_key.id ASC
+AND (
+    api_key.created_at > ?
+    OR (api_key.created_at = ? AND api_key.id > ?)
+)
+ORDER BY api_key.created_at ASC, api_key.id ASC
 LIMIT ?
 `
 
-type ListAPIKeysParams struct {
-	OwnerAccountID string
-	Cursor         string
-	Query          interface{}
-	IncludeActive  interface{}
-	IncludeExpired interface{}
-	IncludeRevoked interface{}
-	Limit          int32
+type ListAPIKeysBackwardParams struct {
+	OwnerAccountID  string
+	Query           interface{}
+	IncludeActive   interface{}
+	IncludeExpired  interface{}
+	IncludeRevoked  interface{}
+	CursorCreatedAt time.Time
+	CursorID        int64
+	Limit           int32
 }
 
-type ListAPIKeysRow struct {
+type ListAPIKeysBackwardRow struct {
 	ID             int64
 	TypeID         string
 	KeyID          string
 	Name           sql.NullString
 	SecretHash     []byte
-	LastFour       string
+	RedactedValue  string
 	OwnerAccountID string
 	RoleID         string
 	CreatedAt      time.Time
@@ -367,32 +320,136 @@ type ListAPIKeysRow struct {
 	RoleTypeCode   sql.NullString
 }
 
-func (q *Queries) ListAPIKeys(ctx context.Context, arg ListAPIKeysParams) ([]ListAPIKeysRow, error) {
-	rows, err := q.query(ctx, q.listAPIKeysStmt, listAPIKeys,
+func (q *Queries) ListAPIKeysBackward(ctx context.Context, arg ListAPIKeysBackwardParams) ([]ListAPIKeysBackwardRow, error) {
+	rows, err := q.query(ctx, q.listAPIKeysBackwardStmt, listAPIKeysBackward,
 		arg.OwnerAccountID,
-		arg.Cursor,
-		arg.Cursor,
 		arg.Query,
 		arg.Query,
 		arg.IncludeActive,
 		arg.IncludeExpired,
 		arg.IncludeRevoked,
+		arg.CursorCreatedAt,
+		arg.CursorCreatedAt,
+		arg.CursorID,
 		arg.Limit,
 	)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListAPIKeysRow
+	var items []ListAPIKeysBackwardRow
 	for rows.Next() {
-		var i ListAPIKeysRow
+		var i ListAPIKeysBackwardRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.TypeID,
 			&i.KeyID,
 			&i.Name,
 			&i.SecretHash,
-			&i.LastFour,
+			&i.RedactedValue,
+			&i.OwnerAccountID,
+			&i.RoleID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.LastUsedAt,
+			&i.ExpiresAt,
+			&i.RevokedAt,
+			&i.RoleName,
+			&i.RoleTypeCode,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAPIKeysForward = `-- name: ListAPIKeysForward :many
+SELECT
+    api_key.id, api_key.type_id, api_key.key_id, api_key.name, api_key.secret_hash, api_key.redacted_value, api_key.owner_account_id, api_key.role_id, api_key.created_at, api_key.updated_at, api_key.last_used_at, api_key.expires_at, api_key.revoked_at,
+    role.name AS role_name,
+    role.role_type_code
+FROM api_key
+LEFT JOIN role ON api_key.role_id = role.id
+WHERE api_key.owner_account_id = ?
+AND (api_key.name LIKE CONCAT('%', ?, '%') OR ? = '')
+AND (
+    (? = true AND api_key.revoked_at IS NULL AND (api_key.expires_at IS NULL OR api_key.expires_at > NOW(3)))
+    OR (? = true AND api_key.expires_at IS NOT NULL AND api_key.expires_at <= NOW(3) AND api_key.revoked_at IS NULL AND api_key.expires_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
+    OR (? = true AND api_key.revoked_at IS NOT NULL AND api_key.revoked_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
+)
+AND (
+    ? IS NULL
+    OR api_key.created_at < ?
+    OR (api_key.created_at = ? AND api_key.id < ?)
+)
+ORDER BY api_key.created_at DESC, api_key.id DESC
+LIMIT ?
+`
+
+type ListAPIKeysForwardParams struct {
+	OwnerAccountID  string
+	Query           interface{}
+	IncludeActive   interface{}
+	IncludeExpired  interface{}
+	IncludeRevoked  interface{}
+	CursorCreatedAt sql.NullTime
+	CursorID        sql.NullInt64
+	Limit           int32
+}
+
+type ListAPIKeysForwardRow struct {
+	ID             int64
+	TypeID         string
+	KeyID          string
+	Name           sql.NullString
+	SecretHash     []byte
+	RedactedValue  string
+	OwnerAccountID string
+	RoleID         string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	LastUsedAt     sql.NullTime
+	ExpiresAt      sql.NullTime
+	RevokedAt      sql.NullTime
+	RoleName       sql.NullString
+	RoleTypeCode   sql.NullString
+}
+
+func (q *Queries) ListAPIKeysForward(ctx context.Context, arg ListAPIKeysForwardParams) ([]ListAPIKeysForwardRow, error) {
+	rows, err := q.query(ctx, q.listAPIKeysForwardStmt, listAPIKeysForward,
+		arg.OwnerAccountID,
+		arg.Query,
+		arg.Query,
+		arg.IncludeActive,
+		arg.IncludeExpired,
+		arg.IncludeRevoked,
+		arg.CursorCreatedAt,
+		arg.CursorCreatedAt,
+		arg.CursorCreatedAt,
+		arg.CursorID,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListAPIKeysForwardRow
+	for rows.Next() {
+		var i ListAPIKeysForwardRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.TypeID,
+			&i.KeyID,
+			&i.Name,
+			&i.SecretHash,
+			&i.RedactedValue,
 			&i.OwnerAccountID,
 			&i.RoleID,
 			&i.CreatedAt,
@@ -417,7 +474,7 @@ func (q *Queries) ListAPIKeys(ctx context.Context, arg ListAPIKeysParams) ([]Lis
 }
 
 const revokeAPIKeyByTypeID = `-- name: RevokeAPIKeyByTypeID :exec
-UPDATE api_key SET revoked_at = NOW(), updated_at = NOW() WHERE type_id = ?
+UPDATE api_key SET revoked_at = NOW(3), updated_at = NOW(3) WHERE type_id = ?
 `
 
 func (q *Queries) RevokeAPIKeyByTypeID(ctx context.Context, typeID string) error {
@@ -426,7 +483,7 @@ func (q *Queries) RevokeAPIKeyByTypeID(ctx context.Context, typeID string) error
 }
 
 const touchAPIKeyByID = `-- name: TouchAPIKeyByID :exec
-UPDATE api_key SET last_used_at = NOW(), updated_at = NOW() WHERE id = ?
+UPDATE api_key SET last_used_at = NOW(3), updated_at = NOW(3) WHERE id = ?
 `
 
 func (q *Queries) TouchAPIKeyByID(ctx context.Context, id int64) error {

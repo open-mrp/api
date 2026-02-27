@@ -43,11 +43,6 @@ type OutboxMessageInput struct {
 	Payload contracts.AmqpMessage
 	// MaxAttempts caps how many times the enqueuer will retry publishing before giving up.
 	MaxAttempts int
-	// RequestID ties this message back to the originating HTTP/gRPC request for tracing.
-	RequestID string
-	// ParentMessageID links this message to the message that triggered it, forming a
-	// causal chain (e.g. an email-sent event triggered by a send-email command).
-	ParentMessageID string
 }
 
 // OutboxMessage represents a row in the outbox table as read by the Enqueuer. It
@@ -96,16 +91,21 @@ type OutboxEnqueuerRepo interface {
 	// lockDurationSeconds. Returns the locked messages for publishing.
 	AcquireAndLock(ctx context.Context, lockOwner string, limit int, lockDurationSeconds int) ([]*OutboxMessage, error)
 
-	// MarkPublished removes a successfully published message from the outbox table.
+	// MarkPublished updates the message status to 'published' with a timestamp,
+	// preserving the record for audit and debugging purposes.
 	MarkPublished(ctx context.Context, id int64) error
 
 	// MarkFailed increments the message's attempt count, records the error message,
-	// and schedules the next retry using exponential backoff. If MaxAttempts is
+	// and schedules the next retry after retryDelaySecs seconds. If MaxAttempts is
 	// exceeded the message remains in "failed" status for manual investigation.
-	MarkFailed(ctx context.Context, id int64, errorMsg string) error
+	MarkFailed(ctx context.Context, id int64, errorMsg string, retryDelaySecs int) error
 
 	// CleanupExpiredLocks releases locks held by enqueuer instances that have
 	// crashed or stalled (lock_expires_at < now), making those messages eligible
 	// for re-acquisition by any healthy enqueuer.
-	CleanupExpiredLocks(ctx context.Context) (int64, error)
+	CleanupExpiredLocks(ctx context.Context, limit int32) (int64, error)
+
+	// PurgePublished deletes published outbox messages older than retentionHours,
+	// up to limit rows per call. Returns the number of rows deleted.
+	PurgePublished(ctx context.Context, retentionHours int, limit int32) (int64, error)
 }

@@ -11,4 +11,5 @@ type Route struct {
 	Handler     http.HandlerFunc
 	PathPattern *regexp.Regexp
 	PathParams  []string
+	IsPublic    bool
 }

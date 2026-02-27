@@ -179,35 +179,35 @@ k8s_resource(
 )
 ### End of Logging Service ###
 
-### Payment Service ###
+### Billing Service ###
 
-# payment_service_compile_cmd = 'CGO_ENABLED=0 GOOS=linux GOARCH=$(go env GOARCH) go build -o build/billing-service ./services/billing-service/cmd'
+billing_service_compile_cmd = 'CGO_ENABLED=0 GOOS=linux GOARCH=$(go env GOARCH) go build -o build/billing-service ./services/billing-service/cmd'
 
-# local_resource(
-#   'billing-service-compile',
-#   payment_service_compile_cmd,
-#   deps=['./services/billing-service', './shared'], labels="compiles")
+local_resource(
+  'billing-service-compile',
+  billing_service_compile_cmd,
+  deps=['./services/billing-service', './shared'], labels="compiles")
 
-# docker_build_with_restart(
-#   'augno-api/billing-service',
-#   '.',
-#   entrypoint=['/app/build/billing-service'],
-#   dockerfile='./infra/development/docker/billing-service.Dockerfile',
-#   only=[
-#     './build/billing-service',
-#     './shared',
-#   ],
-#   live_update=[
-#     sync('./build', '/app/build'),
-#     sync('./shared', '/app/shared'),
-#   ],
-# )
+docker_build_with_restart(
+  'augno-api/billing-service',
+  '.',
+  entrypoint=['/app/build/billing-service'],
+  dockerfile='./infra/development/docker/billing-service.Dockerfile',
+  only=[
+    './build/billing-service',
+    './shared',
+  ],
+  live_update=[
+    sync('./build', '/app/build'),
+    sync('./shared', '/app/shared'),
+  ],
+)
 
-# k8s_yaml('./infra/development/kubernetes/apps/billing-service.yaml')
-# k8s_resource(
-#   'billing-service',
-#   port_forwards='9095:9092',
-#   resource_deps=['billing-service-compile'],
-#   labels='services',
-# )
-### End of Payment Service ###
+k8s_yaml('./infra/development/kubernetes/apps/billing-service.yaml')
+k8s_resource(
+  'billing-service',
+  port_forwards='9095:9092',
+  resource_deps=['billing-service-compile', 'rabbitmq'],
+  labels='services',
+)
+### End of Billing Service ###

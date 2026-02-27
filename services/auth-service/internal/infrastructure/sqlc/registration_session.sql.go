@@ -9,11 +9,12 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"time"
 )
 
 const completeRegistrationSession = `-- name: CompleteRegistrationSession :exec
 UPDATE registration_session
-SET completed_at = NOW(), account_id = ?, updated_at = NOW()
+SET completed_at = NOW(3), account_id = ?, updated_at = NOW(3)
 WHERE id = ?
 `
 
@@ -31,7 +32,7 @@ const createRegistrationSession = `-- name: CreateRegistrationSession :execresul
 INSERT INTO registration_session (
     type_id, email, plan_code, step, verification_token, is_email_verified,
     is_existing_user, session_data, created_at, updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(3), NOW(3))
 `
 
 type CreateRegistrationSessionParams struct {
@@ -214,9 +215,153 @@ func (q *Queries) GetRegistrationSessionByTypeID(ctx context.Context, typeID str
 	return i, err
 }
 
+const listRegistrationSessionsByUserIDBackward = `-- name: ListRegistrationSessionsByUserIDBackward :many
+SELECT id, type_id, email, plan_code, step, verification_token, is_email_verified,
+       is_existing_user, user_id, account_id, stripe_customer_id,
+       stripe_checkout_session_id, stripe_subscription_id, payment_completed, session_data,
+       completed_at, created_at, updated_at
+FROM registration_session
+WHERE registration_session.user_id = ?
+  AND registration_session.completed_at IS NULL
+  AND (
+    registration_session.created_at > ?
+    OR (registration_session.created_at = ? AND registration_session.id > ?)
+  )
+ORDER BY registration_session.created_at ASC, registration_session.id ASC
+LIMIT ?
+`
+
+type ListRegistrationSessionsByUserIDBackwardParams struct {
+	UserID          sql.NullString
+	CursorCreatedAt time.Time
+	CursorID        int64
+	Limit           int32
+}
+
+func (q *Queries) ListRegistrationSessionsByUserIDBackward(ctx context.Context, arg ListRegistrationSessionsByUserIDBackwardParams) ([]RegistrationSession, error) {
+	rows, err := q.query(ctx, q.listRegistrationSessionsByUserIDBackwardStmt, listRegistrationSessionsByUserIDBackward,
+		arg.UserID,
+		arg.CursorCreatedAt,
+		arg.CursorCreatedAt,
+		arg.CursorID,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []RegistrationSession
+	for rows.Next() {
+		var i RegistrationSession
+		if err := rows.Scan(
+			&i.ID,
+			&i.TypeID,
+			&i.Email,
+			&i.PlanCode,
+			&i.Step,
+			&i.VerificationToken,
+			&i.IsEmailVerified,
+			&i.IsExistingUser,
+			&i.UserID,
+			&i.AccountID,
+			&i.StripeCustomerID,
+			&i.StripeCheckoutSessionID,
+			&i.StripeSubscriptionID,
+			&i.PaymentCompleted,
+			&i.SessionData,
+			&i.CompletedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listRegistrationSessionsByUserIDForward = `-- name: ListRegistrationSessionsByUserIDForward :many
+SELECT id, type_id, email, plan_code, step, verification_token, is_email_verified,
+       is_existing_user, user_id, account_id, stripe_customer_id,
+       stripe_checkout_session_id, stripe_subscription_id, payment_completed, session_data,
+       completed_at, created_at, updated_at
+FROM registration_session
+WHERE registration_session.user_id = ?
+  AND registration_session.completed_at IS NULL
+  AND (
+    ? IS NULL
+    OR registration_session.created_at < ?
+    OR (registration_session.created_at = ? AND registration_session.id < ?)
+  )
+ORDER BY registration_session.created_at DESC, registration_session.id DESC
+LIMIT ?
+`
+
+type ListRegistrationSessionsByUserIDForwardParams struct {
+	UserID          sql.NullString
+	CursorCreatedAt sql.NullTime
+	CursorID        sql.NullInt64
+	Limit           int32
+}
+
+func (q *Queries) ListRegistrationSessionsByUserIDForward(ctx context.Context, arg ListRegistrationSessionsByUserIDForwardParams) ([]RegistrationSession, error) {
+	rows, err := q.query(ctx, q.listRegistrationSessionsByUserIDForwardStmt, listRegistrationSessionsByUserIDForward,
+		arg.UserID,
+		arg.CursorCreatedAt,
+		arg.CursorCreatedAt,
+		arg.CursorCreatedAt,
+		arg.CursorID,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []RegistrationSession
+	for rows.Next() {
+		var i RegistrationSession
+		if err := rows.Scan(
+			&i.ID,
+			&i.TypeID,
+			&i.Email,
+			&i.PlanCode,
+			&i.Step,
+			&i.VerificationToken,
+			&i.IsEmailVerified,
+			&i.IsExistingUser,
+			&i.UserID,
+			&i.AccountID,
+			&i.StripeCustomerID,
+			&i.StripeCheckoutSessionID,
+			&i.StripeSubscriptionID,
+			&i.PaymentCompleted,
+			&i.SessionData,
+			&i.CompletedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateRegistrationSessionEmailVerified = `-- name: UpdateRegistrationSessionEmailVerified :exec
 UPDATE registration_session
-SET is_email_verified = ?, is_existing_user = ?, updated_at = NOW()
+SET is_email_verified = ?, is_existing_user = ?, updated_at = NOW(3)
 WHERE id = ?
 `
 
@@ -233,7 +378,7 @@ func (q *Queries) UpdateRegistrationSessionEmailVerified(ctx context.Context, ar
 
 const updateRegistrationSessionPaymentCompleted = `-- name: UpdateRegistrationSessionPaymentCompleted :exec
 UPDATE registration_session
-SET payment_completed = ?, stripe_subscription_id = ?, updated_at = NOW()
+SET payment_completed = ?, stripe_subscription_id = ?, updated_at = NOW(3)
 WHERE id = ?
 `
 
@@ -248,9 +393,25 @@ func (q *Queries) UpdateRegistrationSessionPaymentCompleted(ctx context.Context,
 	return err
 }
 
+const updateRegistrationSessionPlanCode = `-- name: UpdateRegistrationSessionPlanCode :exec
+UPDATE registration_session
+SET plan_code = ?, updated_at = NOW(3)
+WHERE id = ?
+`
+
+type UpdateRegistrationSessionPlanCodeParams struct {
+	PlanCode string
+	ID       int64
+}
+
+func (q *Queries) UpdateRegistrationSessionPlanCode(ctx context.Context, arg UpdateRegistrationSessionPlanCodeParams) error {
+	_, err := q.exec(ctx, q.updateRegistrationSessionPlanCodeStmt, updateRegistrationSessionPlanCode, arg.PlanCode, arg.ID)
+	return err
+}
+
 const updateRegistrationSessionStep = `-- name: UpdateRegistrationSessionStep :exec
 UPDATE registration_session
-SET step = ?, session_data = ?, updated_at = NOW()
+SET step = ?, session_data = ?, updated_at = NOW(3)
 WHERE id = ?
 `
 
@@ -267,7 +428,7 @@ func (q *Queries) UpdateRegistrationSessionStep(ctx context.Context, arg UpdateR
 
 const updateRegistrationSessionStripeCustomer = `-- name: UpdateRegistrationSessionStripeCustomer :exec
 UPDATE registration_session
-SET stripe_customer_id = ?, stripe_checkout_session_id = ?, updated_at = NOW()
+SET stripe_customer_id = ?, stripe_checkout_session_id = ?, updated_at = NOW(3)
 WHERE id = ?
 `
 
@@ -284,7 +445,7 @@ func (q *Queries) UpdateRegistrationSessionStripeCustomer(ctx context.Context, a
 
 const updateRegistrationSessionToken = `-- name: UpdateRegistrationSessionToken :exec
 UPDATE registration_session
-SET verification_token = ?, updated_at = NOW()
+SET verification_token = ?, updated_at = NOW(3)
 WHERE id = ?
 `
 
@@ -300,7 +461,7 @@ func (q *Queries) UpdateRegistrationSessionToken(ctx context.Context, arg Update
 
 const updateRegistrationSessionUser = `-- name: UpdateRegistrationSessionUser :exec
 UPDATE registration_session
-SET user_id = ?, session_data = ?, updated_at = NOW()
+SET user_id = ?, session_data = ?, updated_at = NOW(3)
 WHERE id = ?
 `
 

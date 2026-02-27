@@ -195,7 +195,7 @@ func ConvertAPIErrorToGRPC(apiErr *apierror.APIError) error {
 		grpcCode = grpccodes.Aborted
 
 	// Business logic errors
-	case apierror.ErrorCodeRateLimitExceeded:
+	case apierror.ErrorCodeRateLimitExceeded, apierror.ErrorCodeLimitExceeded:
 		grpcCode = grpccodes.ResourceExhausted
 
 	// Server errors

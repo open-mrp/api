@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/augno/api/shared/appctx"
+	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/messaging"
 	pb "github.com/augno/api/shared/proto/platform"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -44,7 +45,7 @@ func (r *capturingOutboxRepo) waitForCreate(t *testing.T) *messaging.OutboxMessa
 
 func TestPublisher_MapsAccountID(t *testing.T) {
 	repo := newCapturingOutboxRepo()
-	pub := NewRequestLogOutboxPublisher(repo, "")
+	pub := NewRequestLogOutboxPublisher(repo, "", constants.PlatformModeProduction)
 
 	accountID := "acct_home123"
 	targetAccountID := "acct_target456"
@@ -100,7 +101,7 @@ func TestPublisher_MapsAccountID(t *testing.T) {
 
 func TestPublisher_NilAccountID(t *testing.T) {
 	repo := newCapturingOutboxRepo()
-	pub := NewRequestLogOutboxPublisher(repo, "")
+	pub := NewRequestLogOutboxPublisher(repo, "", constants.PlatformModeProduction)
 
 	rl := &appctx.RequestLog{
 		ID:              "rlog_test456",
@@ -134,7 +135,7 @@ func TestPublisher_NilAccountID(t *testing.T) {
 
 func TestPublisher_MapsAllFields(t *testing.T) {
 	repo := newCapturingOutboxRepo()
-	pub := NewRequestLogOutboxPublisher(repo, "")
+	pub := NewRequestLogOutboxPublisher(repo, "", constants.PlatformModeProduction)
 
 	accountID := "acct_home"
 	targetAccountID := "acct_target"

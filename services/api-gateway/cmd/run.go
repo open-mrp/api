@@ -145,7 +145,7 @@ func Run(
 	}
 
 	// Initialize the request log publisher.
-	reqLogPublisher := publisher.NewRequestLogOutboxPublisher(repository.NewOutboxRepo(queries), cfg.FrontendURL)
+	reqLogPublisher := publisher.NewRequestLogOutboxPublisher(repository.NewOutboxRepo(queries), cfg.FrontendURL, cfg.PlatformMode)
 
 	// Initialize the main router.
 	mainBaseCfg := router.BuildBaseConfig(cfg.PlatformMode, "main ", authClient, coreClient, billingClient, platformClient, reqLogPublisher, stdout)

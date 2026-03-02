@@ -20,14 +20,16 @@ import (
 var requestLogPublisherTracer = tracing.GetTracer("api-gateway.request_log_publisher")
 
 type requestLogOutboxPublisher struct {
-	outboxRepo  messaging.OutboxRepo
-	frontendURL string
+	outboxRepo   messaging.OutboxRepo
+	frontendURL  string
+	platformMode constants.PlatformMode
 }
 
-func NewRequestLogOutboxPublisher(outboxRepo messaging.OutboxRepo, frontendURL string) domain.RequestLogPublisher {
+func NewRequestLogOutboxPublisher(outboxRepo messaging.OutboxRepo, frontendURL string, platformMode constants.PlatformMode) domain.RequestLogPublisher {
 	return &requestLogOutboxPublisher{
-		outboxRepo:  outboxRepo,
-		frontendURL: frontendURL,
+		outboxRepo:   outboxRepo,
+		frontendURL:  frontendURL,
+		platformMode: platformMode,
 	}
 }
 
@@ -98,8 +100,8 @@ func (p *requestLogOutboxPublisher) Create(ctx context.Context, rl *appctx.Reque
 			slog.Error("Failed to save request log to outbox", "error", err, "request_id", rl.ID)
 		}
 
-		// Send an email alert for 5xx errors
-		if rl.StatusCode >= 500 {
+		// Send an email alert for 5xx errors (skip in development mode)
+		if rl.StatusCode >= 500 && p.platformMode != constants.PlatformModeDevelopment {
 			p.publishErrorAlert(rl)
 		}
 	}()

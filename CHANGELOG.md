@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.5](https://github.com/Augno/api/compare/v0.4.4...v0.4.5) (2026-03-02)
+
+
+### Bug Fixes
+
+* registration process bug ([#92](https://github.com/Augno/api/issues/92)) ([73e32a4](https://github.com/Augno/api/commit/73e32a45de4629840babeaa9fc7fa34d00bccb72))
+
 ## [0.4.4](https://github.com/Augno/api/compare/v0.4.3...v0.4.4) (2026-02-27)
 
 

@@ -87,12 +87,12 @@ type RequestLogRead struct {
 	ErrorMessage    *string
 	OccurredAt      time.Time
 	CreatedAt       time.Time
-	AccountID      *string
-	AccountName    *string
-	Actor          *RequestLogActor
-	IdempotencyKey *string
-	BodyJSON       *string
-	ResponseJSON   *string
+	AccountID       *string
+	AccountName     *string
+	Actor           *RequestLogActor
+	IdempotencyKey  *string
+	BodyJSON        *string
+	ResponseJSON    *string
 }
 
 type RequestLogActor struct {

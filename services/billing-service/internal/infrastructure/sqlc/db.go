@@ -33,8 +33,14 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.countBatchesByAccountIDStmt, err = db.PrepareContext(ctx, countBatchesByAccountID); err != nil {
 		return nil, fmt.Errorf("error preparing query CountBatchesByAccountID: %w", err)
 	}
+	if q.countBatchesByAccountIDInPeriodStmt, err = db.PrepareContext(ctx, countBatchesByAccountIDInPeriod); err != nil {
+		return nil, fmt.Errorf("error preparing query CountBatchesByAccountIDInPeriod: %w", err)
+	}
 	if q.countInvoicesByAccountIDStmt, err = db.PrepareContext(ctx, countInvoicesByAccountID); err != nil {
 		return nil, fmt.Errorf("error preparing query CountInvoicesByAccountID: %w", err)
+	}
+	if q.countInvoicesByAccountIDInPeriodStmt, err = db.PrepareContext(ctx, countInvoicesByAccountIDInPeriod); err != nil {
+		return nil, fmt.Errorf("error preparing query CountInvoicesByAccountIDInPeriod: %w", err)
 	}
 	if q.countSandboxesByAccountIDStmt, err = db.PrepareContext(ctx, countSandboxesByAccountID); err != nil {
 		return nil, fmt.Errorf("error preparing query CountSandboxesByAccountID: %w", err)
@@ -134,9 +140,19 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing countBatchesByAccountIDStmt: %w", cerr)
 		}
 	}
+	if q.countBatchesByAccountIDInPeriodStmt != nil {
+		if cerr := q.countBatchesByAccountIDInPeriodStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing countBatchesByAccountIDInPeriodStmt: %w", cerr)
+		}
+	}
 	if q.countInvoicesByAccountIDStmt != nil {
 		if cerr := q.countInvoicesByAccountIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing countInvoicesByAccountIDStmt: %w", cerr)
+		}
+	}
+	if q.countInvoicesByAccountIDInPeriodStmt != nil {
+		if cerr := q.countInvoicesByAccountIDInPeriodStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing countInvoicesByAccountIDInPeriodStmt: %w", cerr)
 		}
 	}
 	if q.countSandboxesByAccountIDStmt != nil {
@@ -311,7 +327,9 @@ type Queries struct {
 	acquireOutboxMessagesStmt             *sql.Stmt
 	cleanupExpiredOutboxLocksStmt         *sql.Stmt
 	countBatchesByAccountIDStmt           *sql.Stmt
+	countBatchesByAccountIDInPeriodStmt   *sql.Stmt
 	countInvoicesByAccountIDStmt          *sql.Stmt
+	countInvoicesByAccountIDInPeriodStmt  *sql.Stmt
 	countSandboxesByAccountIDStmt         *sql.Stmt
 	countUsersByAccountIDStmt             *sql.Stmt
 	createOutboxMessageStmt               *sql.Stmt
@@ -347,7 +365,9 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		acquireOutboxMessagesStmt:             q.acquireOutboxMessagesStmt,
 		cleanupExpiredOutboxLocksStmt:         q.cleanupExpiredOutboxLocksStmt,
 		countBatchesByAccountIDStmt:           q.countBatchesByAccountIDStmt,
+		countBatchesByAccountIDInPeriodStmt:   q.countBatchesByAccountIDInPeriodStmt,
 		countInvoicesByAccountIDStmt:          q.countInvoicesByAccountIDStmt,
+		countInvoicesByAccountIDInPeriodStmt:  q.countInvoicesByAccountIDInPeriodStmt,
 		countSandboxesByAccountIDStmt:         q.countSandboxesByAccountIDStmt,
 		countUsersByAccountIDStmt:             q.countUsersByAccountIDStmt,
 		createOutboxMessageStmt:               q.createOutboxMessageStmt,

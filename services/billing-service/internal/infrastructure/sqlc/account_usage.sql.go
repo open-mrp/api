@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"time"
 )
 
 const countBatchesByAccountID = `-- name: CountBatchesByAccountID :one
@@ -21,12 +22,44 @@ func (q *Queries) CountBatchesByAccountID(ctx context.Context, accountID string)
 	return cnt, err
 }
 
+const countBatchesByAccountIDInPeriod = `-- name: CountBatchesByAccountIDInPeriod :one
+SELECT COUNT(*) AS cnt FROM batch WHERE account_id = ? AND created_at >= ?
+`
+
+type CountBatchesByAccountIDInPeriodParams struct {
+	AccountID string
+	CreatedAt time.Time
+}
+
+func (q *Queries) CountBatchesByAccountIDInPeriod(ctx context.Context, arg CountBatchesByAccountIDInPeriodParams) (int64, error) {
+	row := q.queryRow(ctx, q.countBatchesByAccountIDInPeriodStmt, countBatchesByAccountIDInPeriod, arg.AccountID, arg.CreatedAt)
+	var cnt int64
+	err := row.Scan(&cnt)
+	return cnt, err
+}
+
 const countInvoicesByAccountID = `-- name: CountInvoicesByAccountID :one
 SELECT COUNT(*) AS cnt FROM invoice WHERE account_id = ?
 `
 
 func (q *Queries) CountInvoicesByAccountID(ctx context.Context, accountID string) (int64, error) {
 	row := q.queryRow(ctx, q.countInvoicesByAccountIDStmt, countInvoicesByAccountID, accountID)
+	var cnt int64
+	err := row.Scan(&cnt)
+	return cnt, err
+}
+
+const countInvoicesByAccountIDInPeriod = `-- name: CountInvoicesByAccountIDInPeriod :one
+SELECT COUNT(*) AS cnt FROM invoice WHERE account_id = ? AND created_at >= ?
+`
+
+type CountInvoicesByAccountIDInPeriodParams struct {
+	AccountID string
+	CreatedAt time.Time
+}
+
+func (q *Queries) CountInvoicesByAccountIDInPeriod(ctx context.Context, arg CountInvoicesByAccountIDInPeriodParams) (int64, error) {
+	row := q.queryRow(ctx, q.countInvoicesByAccountIDInPeriodStmt, countInvoicesByAccountIDInPeriod, arg.AccountID, arg.CreatedAt)
 	var cnt int64
 	err := row.Scan(&cnt)
 	return cnt, err

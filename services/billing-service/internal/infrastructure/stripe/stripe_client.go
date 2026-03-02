@@ -66,11 +66,15 @@ func (c *stripeClientImpl) CreateSubscription(ctx context.Context, customerID, p
 	}
 
 	var planCode string
+	var currentPeriodStart time.Time
 	var currentPeriodEnd time.Time
 	if len(sub.Items.Data) > 0 {
 		item := sub.Items.Data[0]
 		if item.Price != nil && item.Price.Product != nil {
 			planCode = item.Price.Product.Metadata["plan_code"]
+		}
+		if item.CurrentPeriodStart > 0 {
+			currentPeriodStart = time.Unix(item.CurrentPeriodStart, 0)
 		}
 		if item.CurrentPeriodEnd > 0 {
 			currentPeriodEnd = time.Unix(item.CurrentPeriodEnd, 0)
@@ -78,12 +82,13 @@ func (c *stripeClientImpl) CreateSubscription(ctx context.Context, customerID, p
 	}
 
 	result := &domain.StripeSubscription{
-		ID:                sub.ID,
-		CustomerID:        sub.Customer.ID,
-		Status:            string(sub.Status),
-		PlanCode:          planCode,
-		CurrentPeriodEnd:  currentPeriodEnd,
-		CancelAtPeriodEnd: sub.CancelAtPeriodEnd,
+		ID:                 sub.ID,
+		CustomerID:         sub.Customer.ID,
+		Status:             string(sub.Status),
+		PlanCode:           planCode,
+		CurrentPeriodStart: currentPeriodStart,
+		CurrentPeriodEnd:   currentPeriodEnd,
+		CancelAtPeriodEnd:  sub.CancelAtPeriodEnd,
 	}
 
 	if sub.TrialEnd > 0 {
@@ -112,11 +117,15 @@ func (c *stripeClientImpl) GetSubscription(ctx context.Context, subscriptionID s
 	}
 
 	var planCode string
+	var currentPeriodStart time.Time
 	var currentPeriodEnd time.Time
 	if len(sub.Items.Data) > 0 {
 		item := sub.Items.Data[0]
 		if item.Price != nil && item.Price.Product != nil {
 			planCode = item.Price.Product.Metadata["plan_code"]
+		}
+		if item.CurrentPeriodStart > 0 {
+			currentPeriodStart = time.Unix(item.CurrentPeriodStart, 0)
 		}
 		if item.CurrentPeriodEnd > 0 {
 			currentPeriodEnd = time.Unix(item.CurrentPeriodEnd, 0)
@@ -124,12 +133,13 @@ func (c *stripeClientImpl) GetSubscription(ctx context.Context, subscriptionID s
 	}
 
 	result := &domain.StripeSubscription{
-		ID:                sub.ID,
-		CustomerID:        sub.Customer.ID,
-		Status:            string(sub.Status),
-		PlanCode:          planCode,
-		CurrentPeriodEnd:  currentPeriodEnd,
-		CancelAtPeriodEnd: sub.CancelAtPeriodEnd,
+		ID:                 sub.ID,
+		CustomerID:         sub.Customer.ID,
+		Status:             string(sub.Status),
+		PlanCode:           planCode,
+		CurrentPeriodStart: currentPeriodStart,
+		CurrentPeriodEnd:   currentPeriodEnd,
+		CancelAtPeriodEnd:  sub.CancelAtPeriodEnd,
 	}
 
 	if sub.TrialEnd > 0 {

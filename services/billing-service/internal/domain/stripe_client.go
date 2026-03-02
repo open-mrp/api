@@ -72,12 +72,13 @@ type StripeBillingPortalSession struct {
 }
 
 type StripeSubscription struct {
-	ID                string
-	CustomerID        string
-	Status            string
-	PlanCode          string
-	CurrentPeriodEnd  time.Time
-	TrialEnd          *time.Time
-	CancelAtPeriodEnd bool
-	CancelAt          *time.Time
+	ID                 string
+	CustomerID         string
+	Status             string
+	PlanCode           string
+	CurrentPeriodStart time.Time
+	CurrentPeriodEnd   time.Time
+	TrialEnd           *time.Time
+	CancelAtPeriodEnd  bool
+	CancelAt           *time.Time
 }

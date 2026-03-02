@@ -15,10 +15,10 @@ var (
 )
 
 const (
-	envPort           = "PORT"
-	envDBURL          = "DB_URL"
-	envRabbitMQURI    = "RABBITMQ_URI"
-	envCursorHMACKey  = "CURSOR_HMAC_KEY"
+	envPort          = "PORT"
+	envDBURL         = "DB_URL"
+	envRabbitMQURI   = "RABBITMQ_URI"
+	envCursorHMACKey = "CURSOR_HMAC_KEY"
 )
 
 // config represents the configuration for the platform service.

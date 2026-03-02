@@ -139,34 +139,27 @@ func (s *billingSvcImpl) GetAccountUsage(ctx context.Context, accountID string) 
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	invoiceCount, apiErr := repo.CountInvoicesByAccountID(ctx, accountID)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	batchCount, apiErr := repo.CountBatchesByAccountID(ctx, accountID)
+	// Fetch subscription info to determine the billing period start for
+	// per-period usage counts (invoices & batches).
+	subInfo, apiErr := repo.GetAccountSubscriptionInfo(ctx, accountID)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
 	usage := &domain.AccountUsage{
 		Seats:     domain.UsageItem{Current: userCount, Limit: limitMap["seats_maximum"]},
-		Invoices:  domain.UsageItem{Current: invoiceCount, Limit: limitMap["invoices_maximum"]},
-		Batches:   domain.UsageItem{Current: batchCount, Limit: limitMap["batches_maximum"]},
 		Sandboxes: domain.UsageItem{Current: sandboxCount, Limit: limitMap["sandboxes_maximum"]},
 	}
 
-	subInfo, apiErr := repo.GetAccountSubscriptionInfo(ctx, accountID)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
+	var periodStart time.Time
 	if subInfo.StripeSubscriptionID != nil {
 		stripeSub, err := s.stripeClient.GetSubscription(ctx, *subInfo.StripeSubscriptionID)
 		if err != nil {
 			span.RecordError(err)
 			return nil, apierror.NewInternalError(err, "failed to retrieve Stripe subscription")
 		}
+
+		periodStart = stripeSub.CurrentPeriodStart
 
 		usage.Subscription = &domain.SubscriptionInfoResult{
 			Status:            stripeSub.Status,
@@ -180,7 +173,31 @@ func (s *billingSvcImpl) GetAccountUsage(ctx context.Context, accountID string) 
 			Status:           *subInfo.SubscriptionStatus,
 			CurrentPeriodEnd: subInfo.SubscriptionCurrentPeriodEnd,
 		}
+		// Enterprise / DB-only subscription: estimate period start from period end.
+		if subInfo.SubscriptionCurrentPeriodEnd != nil {
+			periodStart = subInfo.SubscriptionCurrentPeriodEnd.AddDate(0, -1, 0)
+		} else {
+			now := time.Now().UTC()
+			periodStart = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+		}
+	} else {
+		// Free plan with no subscription: use start of the current calendar month.
+		now := time.Now().UTC()
+		periodStart = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
 	}
+
+	invoiceCount, apiErr := repo.CountInvoicesByAccountID(ctx, accountID, periodStart)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	batchCount, apiErr := repo.CountBatchesByAccountID(ctx, accountID, periodStart)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	usage.Invoices = domain.UsageItem{Current: invoiceCount, Limit: limitMap["invoices_maximum"]}
+	usage.Batches = domain.UsageItem{Current: batchCount, Limit: limitMap["batches_maximum"]}
 
 	return usage, nil
 }

@@ -15,16 +15,16 @@ var (
 )
 
 const (
-	envPort                 = "PORT"
-	envDBURL                = "DB_URL"
-	envRabbitMQURI          = "RABBITMQ_URI"
-	envStripeWebhookSecret  = "STRIPE_WEBHOOK_SECRET" // #nosec G101 - Env var name, not a credential
-	envStripeAPIKey         = "STRIPE_SECRET_KEY"
-	envCoreServiceURL           = "CORE_SERVICE_URL"
-	envNotificationServiceURL   = "NOTIFICATION_SERVICE_URL"
-	envCursorHMACKey            = "CURSOR_HMAC_KEY"        // #nosec G101 - Env var name, not a credential
-	envStripePublishableKey     = "STRIPE_PUBLISHABLE_KEY" // #nosec G101 - Env var name, not a credential
-	envFrontendURL              = "FRONTEND_URL"
+	envPort                   = "PORT"
+	envDBURL                  = "DB_URL"
+	envRabbitMQURI            = "RABBITMQ_URI"
+	envStripeWebhookSecret    = "STRIPE_WEBHOOK_SECRET" // #nosec G101 - Env var name, not a credential
+	envStripeAPIKey           = "STRIPE_SECRET_KEY"
+	envCoreServiceURL         = "CORE_SERVICE_URL"
+	envNotificationServiceURL = "NOTIFICATION_SERVICE_URL"
+	envCursorHMACKey          = "CURSOR_HMAC_KEY"        // #nosec G101 - Env var name, not a credential
+	envStripePublishableKey   = "STRIPE_PUBLISHABLE_KEY" // #nosec G101 - Env var name, not a credential
+	envFrontendURL            = "FRONTEND_URL"
 )
 
 type config struct {
@@ -51,16 +51,16 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 	}
 
 	return &config{
-		Port:                 port,
-		DBURL:                env.GetEnv(envDBURL, getenv),
-		RabbitMQURI:          cmp.Or(env.GetEnv(envRabbitMQURI, getenv), defaultRabbitMQURI),
-		StripeWebhookSecret:  env.GetEnv(envStripeWebhookSecret, getenv),
-		StripeAPIKey:         env.GetEnv(envStripeAPIKey, getenv),
-		StripePublishableKey: env.GetEnv(envStripePublishableKey, getenv),
+		Port:                   port,
+		DBURL:                  env.GetEnv(envDBURL, getenv),
+		RabbitMQURI:            cmp.Or(env.GetEnv(envRabbitMQURI, getenv), defaultRabbitMQURI),
+		StripeWebhookSecret:    env.GetEnv(envStripeWebhookSecret, getenv),
+		StripeAPIKey:           env.GetEnv(envStripeAPIKey, getenv),
+		StripePublishableKey:   env.GetEnv(envStripePublishableKey, getenv),
 		CoreServiceURL:         env.GetEnv(envCoreServiceURL, getenv),
 		NotificationServiceURL: env.GetEnv(envNotificationServiceURL, getenv),
 		CursorHMACKey:          []byte(env.GetEnv(envCursorHMACKey, getenv)),
-		FrontendURL:          env.GetEnv(envFrontendURL, getenv),
+		FrontendURL:            env.GetEnv(envFrontendURL, getenv),
 	}
 }
 

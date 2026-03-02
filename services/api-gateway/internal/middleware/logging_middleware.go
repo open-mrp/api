@@ -21,10 +21,10 @@ var loggingMiddlewareTracer = tracing.GetTracer("api-gateway.logging_middleware"
 // regardless of the endpoint's Public flag. These are automation or internal-only
 // routes that should not appear in the customer-facing request log listing.
 var excludedRoutes = map[string]struct{}{
-	"/v1/me":                                       {},
-	"/v1/me/tenancy":                                {},
-	"/v1/core/request-logs":                         {},
-	"/v1/auth/api-keys/actions/fetch-doc-api-key":   {},
+	"/v1/me":                {},
+	"/v1/me/tenancy":        {},
+	"/v1/core/request-logs": {},
+	"/v1/auth/api-keys/actions/fetch-doc-api-key": {},
 }
 
 type RouteMatcher interface {

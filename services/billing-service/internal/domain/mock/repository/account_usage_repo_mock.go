@@ -12,6 +12,7 @@ package repositorymock
 import (
 	context "context"
 	reflect "reflect"
+	time "time"
 
 	domain "github.com/augno/api/services/billing-service/internal/domain"
 	apierror "github.com/augno/api/shared/errors"
@@ -43,33 +44,33 @@ func (m *MockAccountUsageRepo) EXPECT() *MockAccountUsageRepoMockRecorder {
 }
 
 // CountBatchesByAccountID mocks base method.
-func (m *MockAccountUsageRepo) CountBatchesByAccountID(ctx context.Context, accountID string) (int, *apierror.APIError) {
+func (m *MockAccountUsageRepo) CountBatchesByAccountID(ctx context.Context, accountID string, periodStart time.Time) (int, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CountBatchesByAccountID", ctx, accountID)
+	ret := m.ctrl.Call(m, "CountBatchesByAccountID", ctx, accountID, periodStart)
 	ret0, _ := ret[0].(int)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // CountBatchesByAccountID indicates an expected call of CountBatchesByAccountID.
-func (mr *MockAccountUsageRepoMockRecorder) CountBatchesByAccountID(ctx, accountID any) *gomock.Call {
+func (mr *MockAccountUsageRepoMockRecorder) CountBatchesByAccountID(ctx, accountID, periodStart any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountBatchesByAccountID", reflect.TypeOf((*MockAccountUsageRepo)(nil).CountBatchesByAccountID), ctx, accountID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountBatchesByAccountID", reflect.TypeOf((*MockAccountUsageRepo)(nil).CountBatchesByAccountID), ctx, accountID, periodStart)
 }
 
 // CountInvoicesByAccountID mocks base method.
-func (m *MockAccountUsageRepo) CountInvoicesByAccountID(ctx context.Context, accountID string) (int, *apierror.APIError) {
+func (m *MockAccountUsageRepo) CountInvoicesByAccountID(ctx context.Context, accountID string, periodStart time.Time) (int, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CountInvoicesByAccountID", ctx, accountID)
+	ret := m.ctrl.Call(m, "CountInvoicesByAccountID", ctx, accountID, periodStart)
 	ret0, _ := ret[0].(int)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // CountInvoicesByAccountID indicates an expected call of CountInvoicesByAccountID.
-func (mr *MockAccountUsageRepoMockRecorder) CountInvoicesByAccountID(ctx, accountID any) *gomock.Call {
+func (mr *MockAccountUsageRepoMockRecorder) CountInvoicesByAccountID(ctx, accountID, periodStart any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountInvoicesByAccountID", reflect.TypeOf((*MockAccountUsageRepo)(nil).CountInvoicesByAccountID), ctx, accountID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountInvoicesByAccountID", reflect.TypeOf((*MockAccountUsageRepo)(nil).CountInvoicesByAccountID), ctx, accountID, periodStart)
 }
 
 // CountSandboxesByAccountID mocks base method.

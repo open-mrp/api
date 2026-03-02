@@ -15,8 +15,14 @@ SELECT COUNT(*) AS cnt FROM sandbox_account WHERE owner_account_id = ?;
 -- name: CountInvoicesByAccountID :one
 SELECT COUNT(*) AS cnt FROM invoice WHERE account_id = ?;
 
+-- name: CountInvoicesByAccountIDInPeriod :one
+SELECT COUNT(*) AS cnt FROM invoice WHERE account_id = ? AND created_at >= ?;
+
 -- name: CountBatchesByAccountID :one
 SELECT COUNT(*) AS cnt FROM batch WHERE account_id = ?;
+
+-- name: CountBatchesByAccountIDInPeriod :one
+SELECT COUNT(*) AS cnt FROM batch WHERE account_id = ? AND created_at >= ?;
 
 -- name: GetAccountSubscriptionInfo :one
 SELECT subscription_status, subscription_current_period_end, internal_stripe_subscription_id

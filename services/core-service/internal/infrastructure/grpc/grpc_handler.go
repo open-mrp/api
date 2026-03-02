@@ -437,18 +437,18 @@ func (h *gRPCHandler) ListUnits(ctx context.Context, req *pb.ListUnitsRequest) (
 	pbUnits := make([]*pb.UnitInfo, len(result.Units))
 	for i, u := range result.Units {
 		pbUnits[i] = &pb.UnitInfo{
-			Id:               u.ID,
-			Name:             u.Name,
-			Abbreviation:     u.Abbreviation,
-			Type:             u.UnitDimensionCode,
-			RatioNumerator:   u.RatioNumerator,
-			RatioDenominator: u.RatioDenominator,
-			OffsetNumerator:  u.OffsetNumerator,
+			Id:                u.ID,
+			Name:              u.Name,
+			Abbreviation:      u.Abbreviation,
+			Type:              u.UnitDimensionCode,
+			RatioNumerator:    u.RatioNumerator,
+			RatioDenominator:  u.RatioDenominator,
+			OffsetNumerator:   u.OffsetNumerator,
 			OffsetDenominator: u.OffsetDenominator,
-			IsBaseUnit:       u.IsBaseUnit,
-			IsInternal:       u.AccountID != nil,
-			CreatedAt:        timestamppb.New(u.CreatedAt),
-			UpdatedAt:        timestamppb.New(u.UpdatedAt),
+			IsBaseUnit:        u.IsBaseUnit,
+			IsInternal:        u.AccountID != nil,
+			CreatedAt:         timestamppb.New(u.CreatedAt),
+			UpdatedAt:         timestamppb.New(u.UpdatedAt),
 		}
 	}
 

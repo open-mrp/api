@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/augno/api/services/billing-service/internal/domain"
 	"github.com/augno/api/services/billing-service/internal/infrastructure/sqlc"
@@ -71,11 +72,14 @@ func (r *accountUsageRepoImpl) CountSandboxesByAccountID(ctx context.Context, ac
 	return int(cnt), nil
 }
 
-func (r *accountUsageRepoImpl) CountInvoicesByAccountID(ctx context.Context, accountID string) (int, *apierror.APIError) {
+func (r *accountUsageRepoImpl) CountInvoicesByAccountID(ctx context.Context, accountID string, periodStart time.Time) (int, *apierror.APIError) {
 	ctx, span := tracing.StartSpan(ctx, accountUsageRepoTracer, "repository.account_usage.count_invoices_by_account_id")
 	defer span.End()
 
-	cnt, err := r.queries.CountInvoicesByAccountID(ctx, accountID)
+	cnt, err := r.queries.CountInvoicesByAccountIDInPeriod(ctx, sqlc.CountInvoicesByAccountIDInPeriodParams{
+		AccountID: accountID,
+		CreatedAt: periodStart,
+	})
 	if err != nil {
 		span.RecordError(err)
 		return 0, db.MapSQLError(err)
@@ -83,11 +87,14 @@ func (r *accountUsageRepoImpl) CountInvoicesByAccountID(ctx context.Context, acc
 	return int(cnt), nil
 }
 
-func (r *accountUsageRepoImpl) CountBatchesByAccountID(ctx context.Context, accountID string) (int, *apierror.APIError) {
+func (r *accountUsageRepoImpl) CountBatchesByAccountID(ctx context.Context, accountID string, periodStart time.Time) (int, *apierror.APIError) {
 	ctx, span := tracing.StartSpan(ctx, accountUsageRepoTracer, "repository.account_usage.count_batches_by_account_id")
 	defer span.End()
 
-	cnt, err := r.queries.CountBatchesByAccountID(ctx, accountID)
+	cnt, err := r.queries.CountBatchesByAccountIDInPeriod(ctx, sqlc.CountBatchesByAccountIDInPeriodParams{
+		AccountID: accountID,
+		CreatedAt: periodStart,
+	})
 	if err != nil {
 		span.RecordError(err)
 		return 0, db.MapSQLError(err)

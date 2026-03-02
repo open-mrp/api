@@ -31,6 +31,7 @@ FROM account a
 LEFT JOIN sandbox_account sa ON a.id = sa.account_id
 WHERE a.plan_code = ?
   AND sa.id IS NULL
+  AND a.onboarding_status_code = 'active'
 `
 
 func (q *Queries) CountNonSandboxAccountsByPlanCode(ctx context.Context, planCode string) (int64, error) {

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.7](https://github.com/Augno/api/compare/v0.4.6...v0.4.7) (2026-03-02)
+
+
+### Bug Fixes
+
+* registration limits not accounting for period of plan ([#96](https://github.com/Augno/api/issues/96)) ([ff80a6a](https://github.com/Augno/api/commit/ff80a6a201fb26192973c8b62ffbdac898b3312e))
+
 ## [0.4.6](https://github.com/Augno/api/compare/v0.4.5...v0.4.6) (2026-03-02)
 
 

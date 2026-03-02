@@ -102,7 +102,7 @@ func (m *registrationMedImpl) CreateSession(ctx context.Context, input domain.Cr
 					return nil, tracing.Trace(span, updateErr)
 				}
 			}
-			m.sendVerificationEmail(ctx, input.Email, existingSession.VerificationToken, isExistingUser)
+			m.sendVerificationEmail(ctx, input.Email, existingSession.VerificationToken, false)
 			return &domain.CreateRegistrationSessionResult{
 				SessionID: existingSession.TypeID,
 			}, nil
@@ -148,7 +148,6 @@ func (m *registrationMedImpl) ResendVerificationEmail(ctx context.Context, sessi
 	defer span.End()
 
 	regSessionRepo := m.repos.NewRegistrationSessionRepo()
-	userRepo := m.repos.NewUserRepo()
 
 	session, err := regSessionRepo.GetByTypeID(ctx, sessionID)
 	if err != nil {
@@ -173,8 +172,7 @@ func (m *registrationMedImpl) ResendVerificationEmail(ctx context.Context, sessi
 		return tracing.Trace(span, updateErr)
 	}
 
-	existingUser, _ := userRepo.Find(ctx, session.Email)
-	m.sendVerificationEmail(ctx, session.Email, newToken, existingUser != nil)
+	m.sendVerificationEmail(ctx, session.Email, newToken, false)
 
 	return nil
 }

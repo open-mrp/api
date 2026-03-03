@@ -182,12 +182,12 @@ jobs:
           aws s3 cp specs/internal_openapi_spec.json s3://augno-private-openapi-specs/openapi.json
           aws s3 cp specs/internal_openapi_spec.json s3://augno-private-openapi-specs/${{ steps.api-version.outputs.api_version }}.json
 
-      - name: Upload to Stainless
-        uses: stainless-api/upload-openapi-spec-action@v1
-        with:
-          input_path: specs/public_openapi_spec.json
-          project_name: augno
-          stainless_api_key: ${{ secrets.STAINLESS_API_KEY }}
+      # - name: Upload to Stainless
+      #   uses: stainless-api/upload-openapi-spec-action@v1
+      #   with:
+      #     input_path: specs/public_openapi_spec.json
+      #     project_name: augno
+      #     stainless_api_key: ${{ secrets.STAINLESS_API_KEY }}
 
   notify-consumers:
     name: Notify Consumer Repos

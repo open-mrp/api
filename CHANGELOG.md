@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.5.0](https://github.com/Augno/api/compare/v0.4.7...v0.5.0) (2026-03-03)
+
+
+### Features
+
+* adding new unit endpoints for CRUD operations ([#100](https://github.com/Augno/api/issues/100)) ([dae52fb](https://github.com/Augno/api/commit/dae52fb1fae3d348721b16c732d7c2b7aeeeb76c))
+
+
+### Bug Fixes
+
+* no emails on dev 500s ([#98](https://github.com/Augno/api/issues/98)) ([6ab719e](https://github.com/Augno/api/commit/6ab719ee975af2ad95b148e3691f4039e6439935))
+
 ## [0.4.7](https://github.com/Augno/api/compare/v0.4.6...v0.4.7) (2026-03-02)
 
 

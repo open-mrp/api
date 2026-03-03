@@ -211,3 +211,11 @@ jobs:
           repository: Augno/public-docs
           event-type: api-release
           client-payload: '{"api_version": "${{ needs.release-please.outputs.tag_name }}"}'
+
+      - name: Dispatch to openapi-spec
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.CROSS_REPO_PAT }}
+          repository: Augno/openapi-spec
+          event-type: api-release
+          client-payload: '{"api_version": "${{ needs.release-please.outputs.tag_name }}"}'

@@ -194,6 +194,7 @@ jobs:
     needs: [release-please, publish-openapi-specs]
     if: needs.release-please.outputs.release_created == 'true'
     runs-on: ubuntu-latest
+    environment: production
     steps:
       - name: Dispatch to internal-sdk
         uses: peter-evans/repository-dispatch@v3

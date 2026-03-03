@@ -141,8 +141,9 @@ func (s *apiKeySvcImpl) CreateAPIKey(ctx context.Context, input domain.CreateAPI
 	meds := s.mediators()
 
 	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, &domain.RequestIdentity{
-		ActorID:      identity.Actor.ID,
-		IdentityType: identity.Type,
+		ActorID:         identity.Actor.ID,
+		IdentityType:    identity.Type,
+		TargetAccountID: identity.TargetAccountID,
 	})
 	if apiErr != nil {
 		return nil, apiErr
@@ -240,8 +241,9 @@ func (s *apiKeySvcImpl) RevokeAPIKey(ctx context.Context, input domain.RevokeAPI
 	meds := s.mediators()
 
 	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, &domain.RequestIdentity{
-		ActorID:      identity.Actor.ID,
-		IdentityType: identity.Type,
+		ActorID:         identity.Actor.ID,
+		IdentityType:    identity.Type,
+		TargetAccountID: identity.TargetAccountID,
 	})
 
 	if apiErr != nil {
@@ -296,8 +298,9 @@ func (s *apiKeySvcImpl) RotateAPIKey(ctx context.Context, input domain.RotateAPI
 	meds := s.mediators()
 
 	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, &domain.RequestIdentity{
-		ActorID:      identity.Actor.ID,
-		IdentityType: identity.Type,
+		ActorID:         identity.Actor.ID,
+		IdentityType:    identity.Type,
+		TargetAccountID: identity.TargetAccountID,
 	})
 	if apiErr != nil {
 		return nil, apiErr
@@ -368,7 +371,7 @@ func checkApiKeyAccess(identity *types.Identity) *apierror.APIError {
 
 	// If we don't have a target account ID, this request should fail
 	if identity.TargetAccountID == nil {
-		return apierror.NewValidationError("Target account ID is required to perform this action.")
+		return apierror.NewAuthenticationError("The Augno-Account-ID header is required.")
 	}
 
 	return nil

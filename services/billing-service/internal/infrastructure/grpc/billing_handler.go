@@ -242,7 +242,7 @@ func (h *billingHandler) GetAccountUsage(ctx context.Context, req *pb.GetAccount
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 	if identity.TargetAccountID == nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Target account ID is required."))
+		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
 	}
 
 	result, apiErr := h.billingSvc.GetAccountUsage(ctx, *identity.TargetAccountID)
@@ -299,6 +299,9 @@ func (h *billingHandler) CreateBillingPortalSession(ctx context.Context, req *pb
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
 	identity, ok := appctx.GetIdentityFromContext(ctx)
 	if !ok || identity == nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Identity not found in context."))
@@ -307,7 +310,7 @@ func (h *billingHandler) CreateBillingPortalSession(ctx context.Context, req *pb
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthorizationError("You are not authorized to perform this action."))
 	}
 	if identity.TargetAccountID == nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Target account ID is required."))
+		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
 	}
 
 	url, apiErr := h.billingSvc.CreateBillingPortalSession(ctx, *identity.TargetAccountID)
@@ -323,6 +326,9 @@ func (h *billingHandler) RequestEnterpriseUpgrade(ctx context.Context, req *pb.R
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
 	identity, ok := appctx.GetIdentityFromContext(ctx)
 	if !ok || identity == nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Identity not found in context."))
@@ -331,7 +337,7 @@ func (h *billingHandler) RequestEnterpriseUpgrade(ctx context.Context, req *pb.R
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthorizationError("You are not authorized to perform this action."))
 	}
 	if identity.TargetAccountID == nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Target account ID is required."))
+		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
 	}
 
 	var actorID string
@@ -360,6 +366,9 @@ func (h *billingHandler) EnsureBillingCustomer(ctx context.Context, req *pb.Ensu
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
 	identity, ok := appctx.GetIdentityFromContext(ctx)
 	if !ok || identity == nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Identity not found in context."))
@@ -368,7 +377,7 @@ func (h *billingHandler) EnsureBillingCustomer(ctx context.Context, req *pb.Ensu
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthorizationError("You are not authorized to perform this action."))
 	}
 	if identity.TargetAccountID == nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Target account ID is required."))
+		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
 	}
 
 	result, apiErr := h.billingSvc.EnsureBillingCustomer(ctx, *identity.TargetAccountID)
@@ -387,6 +396,9 @@ func (h *billingHandler) SwitchPlan(ctx context.Context, req *pb.SwitchPlanReque
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
 	identity, ok := appctx.GetIdentityFromContext(ctx)
 	if !ok || identity == nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Identity not found in context."))
@@ -395,7 +407,7 @@ func (h *billingHandler) SwitchPlan(ctx context.Context, req *pb.SwitchPlanReque
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthorizationError("You are not authorized to perform this action."))
 	}
 	if identity.TargetAccountID == nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Target account ID is required."))
+		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
 	}
 
 	result, apiErr := h.billingSvc.SwitchPlan(ctx, *identity.TargetAccountID, req.PlanId)
@@ -415,6 +427,9 @@ func (h *billingHandler) ConfirmPlanSwitch(ctx context.Context, req *pb.ConfirmP
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
 	identity, ok := appctx.GetIdentityFromContext(ctx)
 	if !ok || identity == nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Identity not found in context."))
@@ -423,7 +438,7 @@ func (h *billingHandler) ConfirmPlanSwitch(ctx context.Context, req *pb.ConfirmP
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthorizationError("You are not authorized to perform this action."))
 	}
 	if identity.TargetAccountID == nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Target account ID is required."))
+		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
 	}
 
 	result, apiErr := h.billingSvc.ConfirmPlanSwitch(ctx, *identity.TargetAccountID, req.CheckoutSessionId, req.PlanId)
@@ -449,7 +464,7 @@ func (h *billingHandler) GetProrationPreview(ctx context.Context, req *pb.GetPro
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthorizationError("You are not authorized to perform this action."))
 	}
 	if identity.TargetAccountID == nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Target account ID is required."))
+		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
 	}
 
 	result, apiErr := h.billingSvc.GetProrationPreview(ctx, *identity.TargetAccountID, req.PlanId)

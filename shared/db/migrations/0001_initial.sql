@@ -3331,6 +3331,8 @@ CREATE TABLE `unit` (
   `offset_denominator` decimal(65,30) NOT NULL DEFAULT '1.000000000000000000000000000000',
   `is_base_unit` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
+  UNIQUE KEY `unit_account_id_name_key` (`account_id`, `name`),
+  UNIQUE KEY `unit_account_id_abbreviation_key` (`account_id`, `abbreviation`),
   KEY `unit_account_id_idx` (`account_id`),
   KEY `unit_unit_dimension_code_idx` (`unit_dimension_code`),
   FULLTEXT KEY `unit_name_idx` (`name`),

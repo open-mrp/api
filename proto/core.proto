@@ -96,6 +96,25 @@ service CoreService {
   // search by name/abbreviation. Used by the GET /v1/core/units endpoint.
   rpc ListUnits(ListUnitsRequest) returns (ListUnitsResponse);
 
+  // GetUnit returns a single unit by ID. The unit must belong to the
+  // caller's account or be a system (global) unit.
+  // Used by the GET /v1/core/units/{id} endpoint.
+  rpc GetUnit(GetUnitRequest) returns (GetUnitResponse);
+
+  // CreateUnit creates a new account-owned unit.
+  // Used by the POST /v1/core/units endpoint.
+  rpc CreateUnit(CreateUnitRequest) returns (CreateUnitResponse);
+
+  // UpdateUnit partially updates an account-owned unit.
+  // System units cannot be updated.
+  // Used by the PATCH /v1/core/units/{id} endpoint.
+  rpc UpdateUnit(UpdateUnitRequest) returns (UpdateUnitResponse);
+
+  // DeleteUnit deletes an account-owned unit and cascades to
+  // unit_group_unit associations. System units cannot be deleted.
+  // Used by the DELETE /v1/core/units/{id} endpoint.
+  rpc DeleteUnit(DeleteUnitRequest) returns (google.protobuf.Empty);
+
 }
 
 // GetAccountContextRequest identifies the account to look up.
@@ -479,5 +498,74 @@ message UnitInfo {
   google.protobuf.Timestamp created_at = 11;
   // When the unit was last updated.
   google.protobuf.Timestamp updated_at = 12;
+}
+
+// GetUnitRequest identifies the unit to retrieve.
+message GetUnitRequest {
+  // The unit's unique identifier.
+  string id = 1;
+}
+
+// GetUnitResponse contains the requested unit.
+message GetUnitResponse {
+  // The unit.
+  UnitInfo unit = 1;
+}
+
+// CreateUnitRequest carries the data needed to create a new unit.
+message CreateUnitRequest {
+  // The display name (e.g. "Gram").
+  string name = 1;
+  // The short abbreviation (e.g. "g").
+  string abbreviation = 2;
+  // The unit dimension code (e.g. "mass", "quantity").
+  string type = 3;
+  // Conversion ratio numerator relative to the base unit, as a decimal string.
+  string ratio_numerator = 4;
+  // Conversion ratio denominator relative to the base unit, as a decimal string.
+  string ratio_denominator = 5;
+  // Conversion offset numerator, as a decimal string.
+  string offset_numerator = 6;
+  // Conversion offset denominator, as a decimal string.
+  string offset_denominator = 7;
+  // Whether this unit is the base unit for its dimension.
+  bool is_base_unit = 8;
+}
+
+// CreateUnitResponse contains the newly created unit.
+message CreateUnitResponse {
+  // The created unit.
+  UnitInfo unit = 1;
+}
+
+// UpdateUnitRequest carries the fields to partially update on a unit.
+// Only provided fields are updated; absent fields retain their current values.
+message UpdateUnitRequest {
+  // The unit's unique identifier.
+  string id = 1;
+  // The display name.
+  optional string name = 2;
+  // The short abbreviation.
+  optional string abbreviation = 3;
+  // Conversion ratio numerator, as a decimal string.
+  optional string ratio_numerator = 4;
+  // Conversion ratio denominator, as a decimal string.
+  optional string ratio_denominator = 5;
+  // Conversion offset numerator, as a decimal string.
+  optional string offset_numerator = 6;
+  // Conversion offset denominator, as a decimal string.
+  optional string offset_denominator = 7;
+}
+
+// UpdateUnitResponse contains the updated unit.
+message UpdateUnitResponse {
+  // The updated unit.
+  UnitInfo unit = 1;
+}
+
+// DeleteUnitRequest identifies the unit to delete.
+message DeleteUnitRequest {
+  // The unit's unique identifier.
+  string id = 1;
 }
 

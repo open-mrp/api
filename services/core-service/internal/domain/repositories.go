@@ -87,6 +87,12 @@ type RegistrationRepo interface {
 
 type UnitRepo interface {
 	List(ctx context.Context, params ListUnitsParams) (*ListUnitsResult, *apierror.APIError)
+	Get(ctx context.Context, params GetUnitParams) (*Unit, *apierror.APIError)
+	Create(ctx context.Context, id string, params CreateUnitParams) (*Unit, *apierror.APIError)
+	Update(ctx context.Context, params UpdateUnitParams) (*Unit, *apierror.APIError)
+	Delete(ctx context.Context, params DeleteUnitParams) *apierror.APIError
+	ExistsByName(ctx context.Context, accountID, name string, excludeID *string) (bool, *apierror.APIError)
+	ExistsByAbbreviation(ctx context.Context, accountID, abbreviation string, excludeID *string) (bool, *apierror.APIError)
 }
 
 type IdempotencyKeyRepo interface {

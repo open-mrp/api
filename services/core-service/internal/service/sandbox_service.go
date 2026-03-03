@@ -100,7 +100,7 @@ func (s *sandboxSvcImpl) ListSandboxAccounts(ctx context.Context, cursor *string
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if identity.TargetAccountID == nil {
-		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Target account ID is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
 	}
 
 	return s.repos.NewSandboxAccountRepo().List(ctx, *identity.TargetAccountID, cursor, limit)
@@ -125,7 +125,7 @@ func (s *sandboxSvcImpl) CreateSandbox(ctx context.Context, name string, mode co
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if identity.TargetAccountID == nil {
-		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Target account ID is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
 	}
 
 	ownerAccountID := *identity.TargetAccountID
@@ -133,8 +133,9 @@ func (s *sandboxSvcImpl) CreateSandbox(ctx context.Context, name string, mode co
 	meds := s.mediators()
 
 	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, &domain.RequestIdentity{
-		ActorID:      identity.Actor.ID,
-		IdentityType: identity.Type,
+		ActorID:         identity.Actor.ID,
+		IdentityType:    identity.Type,
+		TargetAccountID: identity.TargetAccountID,
 	})
 	if apiErr != nil {
 		return nil, apiErr
@@ -218,7 +219,7 @@ func (s *sandboxSvcImpl) GetSandbox(ctx context.Context, sandboxTypeID string) (
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if identity.TargetAccountID == nil {
-		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Target account ID is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
 	}
 
 	sandbox, apiErr := s.repos.NewSandboxAccountRepo().FindByTypeID(ctx, sandboxTypeID)
@@ -252,7 +253,7 @@ func (s *sandboxSvcImpl) DeleteSandbox(ctx context.Context, sandboxTypeID string
 		return tracing.Trace(span, apiErr)
 	}
 	if identity.TargetAccountID == nil {
-		return tracing.Trace(span, apierror.NewInvariantViolationError("Target account ID is required."))
+		return tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
 	}
 
 	ownerAccountID := *identity.TargetAccountID

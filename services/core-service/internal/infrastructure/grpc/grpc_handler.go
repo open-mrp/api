@@ -416,6 +416,23 @@ func (h *gRPCHandler) CompleteRegistration(ctx context.Context, req *pb.Complete
 	}, nil
 }
 
+func unitToProto(u *domain.Unit) *pb.UnitInfo {
+	return &pb.UnitInfo{
+		Id:                u.ID,
+		Name:              u.Name,
+		Abbreviation:      u.Abbreviation,
+		Type:              u.UnitDimensionCode,
+		RatioNumerator:    u.RatioNumerator,
+		RatioDenominator:  u.RatioDenominator,
+		OffsetNumerator:   u.OffsetNumerator,
+		OffsetDenominator: u.OffsetDenominator,
+		IsBaseUnit:        u.IsBaseUnit,
+		IsInternal:        u.AccountID != nil,
+		CreatedAt:         timestamppb.New(u.CreatedAt),
+		UpdatedAt:         timestamppb.New(u.UpdatedAt),
+	}
+}
+
 func (h *gRPCHandler) ListUnits(ctx context.Context, req *pb.ListUnitsRequest) (*pb.ListUnitsResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()
@@ -436,20 +453,7 @@ func (h *gRPCHandler) ListUnits(ctx context.Context, req *pb.ListUnitsRequest) (
 
 	pbUnits := make([]*pb.UnitInfo, len(result.Units))
 	for i, u := range result.Units {
-		pbUnits[i] = &pb.UnitInfo{
-			Id:                u.ID,
-			Name:              u.Name,
-			Abbreviation:      u.Abbreviation,
-			Type:              u.UnitDimensionCode,
-			RatioNumerator:    u.RatioNumerator,
-			RatioDenominator:  u.RatioDenominator,
-			OffsetNumerator:   u.OffsetNumerator,
-			OffsetDenominator: u.OffsetDenominator,
-			IsBaseUnit:        u.IsBaseUnit,
-			IsInternal:        u.AccountID != nil,
-			CreatedAt:         timestamppb.New(u.CreatedAt),
-			UpdatedAt:         timestamppb.New(u.UpdatedAt),
-		}
+		pbUnits[i] = unitToProto(u)
 	}
 
 	return &pb.ListUnitsResponse{
@@ -461,6 +465,94 @@ func (h *gRPCHandler) ListUnits(ctx context.Context, req *pb.ListUnitsRequest) (
 			HasPrevPage: result.PageInfo.HasPrevPage,
 		},
 	}, nil
+}
+
+func (h *gRPCHandler) GetUnit(ctx context.Context, req *pb.GetUnitRequest) (*pb.GetUnitResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	unit, apiErr := h.unitSvc.GetUnit(ctx, req.Id)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.GetUnitResponse{
+		Unit: unitToProto(unit),
+	}, nil
+}
+
+func (h *gRPCHandler) CreateUnit(ctx context.Context, req *pb.CreateUnitRequest) (*pb.CreateUnitResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	params := domain.CreateUnitParams{
+		Name:              req.Name,
+		Abbreviation:      req.Abbreviation,
+		UnitDimensionCode: req.Type,
+		RatioNumerator:    req.RatioNumerator,
+		RatioDenominator:  req.RatioDenominator,
+		OffsetNumerator:   req.OffsetNumerator,
+		OffsetDenominator: req.OffsetDenominator,
+		IsBaseUnit:        req.IsBaseUnit,
+	}
+
+	unit, apiErr := h.unitSvc.CreateUnit(ctx, params)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.CreateUnitResponse{
+		Unit: unitToProto(unit),
+	}, nil
+}
+
+func (h *gRPCHandler) UpdateUnit(ctx context.Context, req *pb.UpdateUnitRequest) (*pb.UpdateUnitResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	params := domain.UpdateUnitParams{
+		UnitID:            req.Id,
+		Name:              req.Name,
+		Abbreviation:      req.Abbreviation,
+		RatioNumerator:    req.RatioNumerator,
+		RatioDenominator:  req.RatioDenominator,
+		OffsetNumerator:   req.OffsetNumerator,
+		OffsetDenominator: req.OffsetDenominator,
+	}
+
+	unit, apiErr := h.unitSvc.UpdateUnit(ctx, params)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.UpdateUnitResponse{
+		Unit: unitToProto(unit),
+	}, nil
+}
+
+func (h *gRPCHandler) DeleteUnit(ctx context.Context, req *pb.DeleteUnitRequest) (*emptypb.Empty, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	apiErr := h.unitSvc.DeleteUnit(ctx, req.Id)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &emptypb.Empty{}, nil
 }
 
 func derefStr(s *string) string {

@@ -1,6 +1,10 @@
 package apiresource
 
-import apiexample "github.com/augno/api/services/api-gateway/pkg/example"
+import (
+	"github.com/augno/api/shared/constants"
+
+	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
+)
 
 // AccountAffiliationRole represents a minimal role reference within an account affiliation.
 type AccountAffiliationRole struct {
@@ -14,6 +18,8 @@ type AccountAffiliationRole struct {
 type AccountAffiliation struct {
 	// The unique identifier of the affiliated account.
 	ID string `json:"id" validate:"required"`
+	// String representing the object's type.
+	Object constants.ObjectType `json:"object" validate:"required,enum=account_affiliation"`
 	// The display name of the affiliated account.
 	Name string `json:"name" validate:"required"`
 	// The user's role within this account.
@@ -21,8 +27,9 @@ type AccountAffiliation struct {
 }
 
 var SampleAccountAffiliation = &AccountAffiliation{
-	ID:   SampleAccountID,
-	Name: SampleAccountName,
+	ID:     SampleAccountID,
+	Object: constants.ObjectTypeAccountAffiliation,
+	Name:   SampleAccountName,
 	Role: AccountAffiliationRole{
 		ID:   SampleRoleID,
 		Name: SampleRoleName,

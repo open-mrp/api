@@ -61,7 +61,7 @@ func (s *loggingSvcImpl) GetRequestLog(ctx context.Context, id string) (*domain.
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if identity.TargetAccountID == nil {
-		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Target account ID is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
 	}
 
 	return s.requestLogRepo.FindByID(ctx, id, *identity.TargetAccountID)
@@ -83,7 +83,7 @@ func (s *loggingSvcImpl) ListRequestLogs(ctx context.Context, filter *domain.Lis
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if identity.TargetAccountID == nil {
-		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Target account ID is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
 	}
 
 	if filter.PublicEndpoint == nil {

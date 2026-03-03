@@ -43,6 +43,21 @@ type UnitSvc interface {
 	// ListUnits returns a paginated list of units visible to the caller's
 	// account. Includes both account-specific and global (system) units.
 	ListUnits(ctx context.Context, params ListUnitsParams) (*ListUnitsResult, *apierror.APIError)
+
+	// GetUnit returns a single unit by ID. The unit must belong to the
+	// caller's account or be a system (global) unit.
+	GetUnit(ctx context.Context, unitID string) (*Unit, *apierror.APIError)
+
+	// CreateUnit creates a new account-owned unit.
+	CreateUnit(ctx context.Context, params CreateUnitParams) (*Unit, *apierror.APIError)
+
+	// UpdateUnit partially updates an account-owned unit. System units
+	// cannot be updated.
+	UpdateUnit(ctx context.Context, params UpdateUnitParams) (*Unit, *apierror.APIError)
+
+	// DeleteUnit deletes an account-owned unit and cascades to
+	// unit_group_unit associations. System units cannot be deleted.
+	DeleteUnit(ctx context.Context, unitID string) *apierror.APIError
 }
 
 type AccountSvc interface {

@@ -33,9 +33,13 @@ func (r *emailLogRepoImpl) Create(ctx context.Context, emailLog *domain.EmailLog
 		Filename:     db.NullStringPtr(emailLog.Filename),
 		SesMessageID: db.NullStringPtr(emailLog.SesMessageID),
 	})
-
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return tracing.Trace(span, apiErr)
+	if err != nil {
+		if db.IsDuplicateEntry(err) {
+			return nil // idempotent — log already exists
+		}
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return tracing.Trace(span, apiErr)
+		}
 	}
 
 	return nil

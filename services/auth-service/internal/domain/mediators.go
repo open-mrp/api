@@ -217,8 +217,9 @@ type RegistrationMed interface {
 }
 
 type RequestIdentity struct {
-	ActorID      string
-	IdentityType types.IdentityType
+	ActorID         string
+	IdentityType    types.IdentityType
+	TargetAccountID *string
 }
 
 type IdempotencyMed interface {

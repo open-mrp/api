@@ -12,6 +12,196 @@ import (
 	"time"
 )
 
+const countUnitsByAbbreviation = `-- name: CountUnitsByAbbreviation :one
+SELECT COUNT(*) FROM unit
+WHERE abbreviation = ? AND (account_id = ? OR account_id IS NULL)
+AND (? IS NULL OR id != ?)
+`
+
+type CountUnitsByAbbreviationParams struct {
+	Abbreviation string
+	AccountID    sql.NullString
+	ExcludeID    sql.NullString
+}
+
+func (q *Queries) CountUnitsByAbbreviation(ctx context.Context, arg CountUnitsByAbbreviationParams) (int64, error) {
+	row := q.queryRow(ctx, q.countUnitsByAbbreviationStmt, countUnitsByAbbreviation,
+		arg.Abbreviation,
+		arg.AccountID,
+		arg.ExcludeID,
+		arg.ExcludeID,
+	)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countUnitsByName = `-- name: CountUnitsByName :one
+SELECT COUNT(*) FROM unit
+WHERE name = ? AND (account_id = ? OR account_id IS NULL)
+AND (? IS NULL OR id != ?)
+`
+
+type CountUnitsByNameParams struct {
+	Name      string
+	AccountID sql.NullString
+	ExcludeID sql.NullString
+}
+
+func (q *Queries) CountUnitsByName(ctx context.Context, arg CountUnitsByNameParams) (int64, error) {
+	row := q.queryRow(ctx, q.countUnitsByNameStmt, countUnitsByName,
+		arg.Name,
+		arg.AccountID,
+		arg.ExcludeID,
+		arg.ExcludeID,
+	)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const deleteUnit = `-- name: DeleteUnit :execresult
+DELETE FROM unit
+WHERE id = ?
+AND account_id = ?
+`
+
+type DeleteUnitParams struct {
+	ID        string
+	AccountID sql.NullString
+}
+
+func (q *Queries) DeleteUnit(ctx context.Context, arg DeleteUnitParams) (sql.Result, error) {
+	return q.exec(ctx, q.deleteUnitStmt, deleteUnit, arg.ID, arg.AccountID)
+}
+
+const deleteUnitGroupUnitsByUnitID = `-- name: DeleteUnitGroupUnitsByUnitID :exec
+DELETE FROM unit_group_unit WHERE unit_id = ?
+`
+
+func (q *Queries) DeleteUnitGroupUnitsByUnitID(ctx context.Context, unitID string) error {
+	_, err := q.exec(ctx, q.deleteUnitGroupUnitsByUnitIDStmt, deleteUnitGroupUnitsByUnitID, unitID)
+	return err
+}
+
+const getUnit = `-- name: GetUnit :one
+SELECT
+    unit.id,
+    unit.name,
+    unit.abbreviation,
+    unit.unit_dimension_code,
+    unit.ratio_numerator,
+    unit.ratio_denominator,
+    unit.offset_numerator,
+    unit.offset_denominator,
+    unit.is_base_unit,
+    unit.account_id,
+    unit.created_at,
+    unit.updated_at
+FROM unit
+WHERE unit.id = ?
+AND (unit.account_id = ? OR unit.account_id IS NULL)
+`
+
+type GetUnitParams struct {
+	ID        string
+	AccountID sql.NullString
+}
+
+type GetUnitRow struct {
+	ID                string
+	Name              string
+	Abbreviation      string
+	UnitDimensionCode string
+	RatioNumerator    string
+	RatioDenominator  string
+	OffsetNumerator   string
+	OffsetDenominator string
+	IsBaseUnit        bool
+	AccountID         sql.NullString
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+}
+
+func (q *Queries) GetUnit(ctx context.Context, arg GetUnitParams) (GetUnitRow, error) {
+	row := q.queryRow(ctx, q.getUnitStmt, getUnit, arg.ID, arg.AccountID)
+	var i GetUnitRow
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Abbreviation,
+		&i.UnitDimensionCode,
+		&i.RatioNumerator,
+		&i.RatioDenominator,
+		&i.OffsetNumerator,
+		&i.OffsetDenominator,
+		&i.IsBaseUnit,
+		&i.AccountID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const insertUnit = `-- name: InsertUnit :exec
+INSERT INTO unit (
+    id,
+    name,
+    abbreviation,
+    unit_dimension_code,
+    ratio_numerator,
+    ratio_denominator,
+    offset_numerator,
+    offset_denominator,
+    is_base_unit,
+    account_id,
+    created_at,
+    updated_at
+) VALUES (
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
+    NOW(3),
+    NOW(3)
+)
+`
+
+type InsertUnitParams struct {
+	ID                string
+	Name              string
+	Abbreviation      string
+	UnitDimensionCode string
+	RatioNumerator    string
+	RatioDenominator  string
+	OffsetNumerator   string
+	OffsetDenominator string
+	IsBaseUnit        bool
+	AccountID         sql.NullString
+}
+
+func (q *Queries) InsertUnit(ctx context.Context, arg InsertUnitParams) error {
+	_, err := q.exec(ctx, q.insertUnitStmt, insertUnit,
+		arg.ID,
+		arg.Name,
+		arg.Abbreviation,
+		arg.UnitDimensionCode,
+		arg.RatioNumerator,
+		arg.RatioDenominator,
+		arg.OffsetNumerator,
+		arg.OffsetDenominator,
+		arg.IsBaseUnit,
+		arg.AccountID,
+	)
+	return err
+}
+
 const listUnitsBackward = `-- name: ListUnitsBackward :many
 SELECT
     unit.id,
@@ -262,4 +452,41 @@ func (q *Queries) ListUnitsForward(ctx context.Context, arg ListUnitsForwardPara
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateUnit = `-- name: UpdateUnit :execresult
+UPDATE unit SET
+    name = COALESCE(?, name),
+    abbreviation = COALESCE(?, abbreviation),
+    ratio_numerator = COALESCE(?, ratio_numerator),
+    ratio_denominator = COALESCE(?, ratio_denominator),
+    offset_numerator = COALESCE(?, offset_numerator),
+    offset_denominator = COALESCE(?, offset_denominator),
+    updated_at = NOW(3)
+WHERE id = ?
+AND account_id = ?
+`
+
+type UpdateUnitParams struct {
+	Name              sql.NullString
+	Abbreviation      sql.NullString
+	RatioNumerator    sql.NullString
+	RatioDenominator  sql.NullString
+	OffsetNumerator   sql.NullString
+	OffsetDenominator sql.NullString
+	ID                string
+	AccountID         sql.NullString
+}
+
+func (q *Queries) UpdateUnit(ctx context.Context, arg UpdateUnitParams) (sql.Result, error) {
+	return q.exec(ctx, q.updateUnitStmt, updateUnit,
+		arg.Name,
+		arg.Abbreviation,
+		arg.RatioNumerator,
+		arg.RatioDenominator,
+		arg.OffsetNumerator,
+		arg.OffsetDenominator,
+		arg.ID,
+		arg.AccountID,
+	)
 }

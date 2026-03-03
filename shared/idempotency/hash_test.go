@@ -188,8 +188,9 @@ func TestComputeHTTPScopeHash_NilActorVsNilTargetAccount(t *testing.T) {
 
 func TestComputeServiceScopeHash_SameInputsSameHash(t *testing.T) {
 	actorID := "user_123"
-	hash1 := ComputeServiceScopeHash(&actorID, "order-service", "CreateOrder", "key-1")
-	hash2 := ComputeServiceScopeHash(&actorID, "order-service", "CreateOrder", "key-1")
+	accountID := "acct_456"
+	hash1 := ComputeServiceScopeHash(&actorID, &accountID, "order-service", "CreateOrder", "key-1")
+	hash2 := ComputeServiceScopeHash(&actorID, &accountID, "order-service", "CreateOrder", "key-1")
 	if hash1 != hash2 {
 		t.Errorf("expected same hash, got %s and %s", hash1, hash2)
 	}
@@ -197,8 +198,9 @@ func TestComputeServiceScopeHash_SameInputsSameHash(t *testing.T) {
 
 func TestComputeServiceScopeHash_DifferentService(t *testing.T) {
 	actorID := "user_123"
-	hash1 := ComputeServiceScopeHash(&actorID, "order-service", "Create", "key-1")
-	hash2 := ComputeServiceScopeHash(&actorID, "auth-service", "Create", "key-1")
+	accountID := "acct_456"
+	hash1 := ComputeServiceScopeHash(&actorID, &accountID, "order-service", "Create", "key-1")
+	hash2 := ComputeServiceScopeHash(&actorID, &accountID, "auth-service", "Create", "key-1")
 	if hash1 == hash2 {
 		t.Errorf("expected different hashes for different services, got same: %s", hash1)
 	}
@@ -206,8 +208,9 @@ func TestComputeServiceScopeHash_DifferentService(t *testing.T) {
 
 func TestComputeServiceScopeHash_DifferentHandler(t *testing.T) {
 	actorID := "user_123"
-	hash1 := ComputeServiceScopeHash(&actorID, "order-service", "Create", "key-1")
-	hash2 := ComputeServiceScopeHash(&actorID, "order-service", "Delete", "key-1")
+	accountID := "acct_456"
+	hash1 := ComputeServiceScopeHash(&actorID, &accountID, "order-service", "Create", "key-1")
+	hash2 := ComputeServiceScopeHash(&actorID, &accountID, "order-service", "Delete", "key-1")
 	if hash1 == hash2 {
 		t.Errorf("expected different hashes for different handlers, got same: %s", hash1)
 	}
@@ -215,16 +218,28 @@ func TestComputeServiceScopeHash_DifferentHandler(t *testing.T) {
 
 func TestComputeServiceScopeHash_DifferentKey(t *testing.T) {
 	actorID := "user_123"
-	hash1 := ComputeServiceScopeHash(&actorID, "order-service", "Create", "key-1")
-	hash2 := ComputeServiceScopeHash(&actorID, "order-service", "Create", "key-2")
+	accountID := "acct_456"
+	hash1 := ComputeServiceScopeHash(&actorID, &accountID, "order-service", "Create", "key-1")
+	hash2 := ComputeServiceScopeHash(&actorID, &accountID, "order-service", "Create", "key-2")
 	if hash1 == hash2 {
 		t.Errorf("expected different hashes for different keys, got same: %s", hash1)
 	}
 }
 
+func TestComputeServiceScopeHash_DifferentAccount(t *testing.T) {
+	actorID := "user_123"
+	accountA := "acct_A"
+	accountB := "acct_B"
+	hash1 := ComputeServiceScopeHash(&actorID, &accountA, "order-service", "Create", "key-1")
+	hash2 := ComputeServiceScopeHash(&actorID, &accountB, "order-service", "Create", "key-1")
+	if hash1 == hash2 {
+		t.Errorf("expected different hashes for different target accounts, got same: %s", hash1)
+	}
+}
+
 func TestComputeServiceScopeHash_NilActorID(t *testing.T) {
-	hash1 := ComputeServiceScopeHash(nil, "svc", "handler", "key")
-	hash2 := ComputeServiceScopeHash(nil, "svc", "handler", "key")
+	hash1 := ComputeServiceScopeHash(nil, nil, "svc", "handler", "key")
+	hash2 := ComputeServiceScopeHash(nil, nil, "svc", "handler", "key")
 	if hash1 != hash2 {
 		t.Errorf("expected same hash for nil actorID, got %s and %s", hash1, hash2)
 	}
@@ -232,19 +247,20 @@ func TestComputeServiceScopeHash_NilActorID(t *testing.T) {
 
 func TestComputeServiceScopeHash_NilVsEmptyActorID(t *testing.T) {
 	empty := ""
-	hashNil := ComputeServiceScopeHash(nil, "svc", "handler", "key")
-	hashEmpty := ComputeServiceScopeHash(&empty, "svc", "handler", "key")
+	hashNil := ComputeServiceScopeHash(nil, nil, "svc", "handler", "key")
+	hashEmpty := ComputeServiceScopeHash(&empty, nil, "svc", "handler", "key")
 	if hashNil != hashEmpty {
 		t.Errorf("expected same hash for nil and empty actorID, got %s and %s", hashNil, hashEmpty)
 	}
 }
 
-func TestComputeServiceScopeHash_DiffersFromHTTPScopeHash(t *testing.T) {
+func TestComputeServiceScopeHash_NilVsEmptyTargetAccountID(t *testing.T) {
 	actorID := "user_123"
-	httpHash := ComputeHTTPScopeHash(&actorID, nil, "svc", "handler", "key")
-	svcHash := ComputeServiceScopeHash(&actorID, "svc", "handler", "key")
-	if httpHash == svcHash {
-		t.Errorf("HTTP and service scope hashes should differ (different field counts), got same: %s", httpHash)
+	empty := ""
+	hashNil := ComputeServiceScopeHash(&actorID, nil, "svc", "handler", "key")
+	hashEmpty := ComputeServiceScopeHash(&actorID, &empty, "svc", "handler", "key")
+	if hashNil != hashEmpty {
+		t.Errorf("expected same hash for nil and empty targetAccountID, got %s and %s", hashNil, hashEmpty)
 	}
 }
 

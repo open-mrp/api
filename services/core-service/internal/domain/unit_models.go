@@ -34,3 +34,36 @@ type ListUnitsResult struct {
 	Units    []*Unit
 	PageInfo pagination.PageInfo
 }
+
+type GetUnitParams struct {
+	AccountID string
+	UnitID    string
+}
+
+type CreateUnitParams struct {
+	AccountID         string
+	Name              string
+	Abbreviation      string
+	UnitDimensionCode string
+	RatioNumerator    string
+	RatioDenominator  string
+	OffsetNumerator   string
+	OffsetDenominator string
+	IsBaseUnit        bool
+}
+
+type UpdateUnitParams struct {
+	AccountID         string
+	UnitID            string
+	Name              *string
+	Abbreviation      *string
+	RatioNumerator    *string
+	RatioDenominator  *string
+	OffsetNumerator   *string
+	OffsetDenominator *string
+}
+
+type DeleteUnitParams struct {
+	AccountID string
+	UnitID    string
+}

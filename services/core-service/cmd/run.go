@@ -85,7 +85,9 @@ func Run(
 		TxManager:       txManager,
 	})
 	unitSvc := service.NewUnitSvc(&service.UnitSvcConfig{
-		Repos: repoFactory,
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
 	})
 
 	inboxRepo := repository.NewInboxRepo(queries)

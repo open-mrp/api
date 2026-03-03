@@ -188,3 +188,25 @@ jobs:
           input_path: specs/public_openapi_spec.json
           project_name: augno
           stainless_api_key: ${{ secrets.STAINLESS_API_KEY }}
+
+  notify-consumers:
+    name: Notify Consumer Repos
+    needs: [release-please, publish-openapi-specs]
+    if: needs.release-please.outputs.release_created == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch to internal-sdk
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.CROSS_REPO_PAT }}
+          repository: Augno/internal-sdk
+          event-type: api-release
+          client-payload: '{"api_version": "${{ needs.release-please.outputs.tag_name }}"}'
+
+      - name: Dispatch to public-docs
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.CROSS_REPO_PAT }}
+          repository: Augno/public-docs
+          event-type: api-release
+          client-payload: '{"api_version": "${{ needs.release-please.outputs.tag_name }}"}'

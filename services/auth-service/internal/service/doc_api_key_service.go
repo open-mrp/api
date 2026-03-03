@@ -109,7 +109,7 @@ func (s *docAPIKeySvcImpl) GetOrCreateDocAPIKey(ctx context.Context) (*domain.Ge
 		return nil, tracing.Trace(span, apiErr)
 	}
 	if identity.TargetAccountID == nil {
-		return nil, tracing.Trace(span, apierror.NewValidationError("Target account ID is required."))
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
 	}
 	if identity.AccountMode != constants.AccountModeSandbox {
 		return nil, tracing.Trace(span, apierror.NewValidationError("A sandbox account ID is required. Production account IDs are not accepted."))
@@ -118,8 +118,9 @@ func (s *docAPIKeySvcImpl) GetOrCreateDocAPIKey(ctx context.Context) (*domain.Ge
 	meds := s.mediators()
 
 	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, &domain.RequestIdentity{
-		ActorID:      identity.Actor.ID,
-		IdentityType: identity.Type,
+		ActorID:         identity.Actor.ID,
+		IdentityType:    identity.Type,
+		TargetAccountID: identity.TargetAccountID,
 	})
 	if apiErr != nil {
 		return nil, apiErr

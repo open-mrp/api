@@ -49,20 +49,20 @@ func ComputeHTTPScopeHash(actorID, targetAccountID *string, method, normalizedRo
 //
 // Fields are concatenated with a unit-separator delimiter and hashed:
 //
-//	SHA256(actorID + \x1f + service + \x1f + handler + \x1f + idempotencyKey)
+//	SHA256(actorID + \x1f + targetAccountID + \x1f + service + \x1f + handler + \x1f + idempotencyKey)
 //
-// Nil pointer field actorID is coerced to empty string,
-// meaning nil and "" produce the same hash.
-//
-// Note that the field count differs from ComputeHTTPScopeHash (4 vs 5), so even
-// identical field values will produce different hashes, preventing cross-layer
-// collisions.
-func ComputeServiceScopeHash(actorID *string, service, handler, idempotencyKey string) string {
-	emptyString := "" // allows us to affect the hash input without overwriting the original pointer for actorID
+// Nil pointer fields (actorID, targetAccountID) are coerced to empty strings,
+// meaning nil and "" produce the same hash. This is intentional — unauthenticated
+// requests have no actor ID, and some endpoints have no target account.
+func ComputeServiceScopeHash(actorID, targetAccountID *string, service, handler, idempotencyKey string) string {
+	emptyString := "" // allows us to affect the hash input without overwriting the original pointer for actorID and targetAccountID
 	if actorID == nil {
 		actorID = &emptyString
 	}
-	input := *actorID + separator + service + separator + handler + separator + idempotencyKey
+	if targetAccountID == nil {
+		targetAccountID = &emptyString
+	}
+	input := *actorID + separator + *targetAccountID + separator + service + separator + handler + separator + idempotencyKey
 	hash := sha256.Sum256([]byte(input))
 	return hex.EncodeToString(hash[:])
 }

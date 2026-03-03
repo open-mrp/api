@@ -261,8 +261,9 @@ func (s *registrationSessionSvcImpl) UpdateSession(ctx context.Context, input do
 	}
 
 	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, &domain.RequestIdentity{
-		ActorID:      identity.Actor.ID,
-		IdentityType: identity.Type,
+		ActorID:         identity.Actor.ID,
+		IdentityType:    identity.Type,
+		TargetAccountID: identity.TargetAccountID,
 	})
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -367,8 +368,9 @@ func (s *registrationSessionSvcImpl) CompleteRegistration(ctx context.Context, s
 	}
 
 	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, &domain.RequestIdentity{
-		ActorID:      identity.Actor.ID,
-		IdentityType: identity.Type,
+		ActorID:         identity.Actor.ID,
+		IdentityType:    identity.Type,
+		TargetAccountID: identity.TargetAccountID,
 	})
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -645,8 +647,9 @@ func (s *registrationSessionSvcImpl) CreateCheckout(ctx context.Context, input d
 	}
 
 	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, &domain.RequestIdentity{
-		ActorID:      identity.Actor.ID,
-		IdentityType: identity.Type,
+		ActorID:         identity.Actor.ID,
+		IdentityType:    identity.Type,
+		TargetAccountID: identity.TargetAccountID,
 	})
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)

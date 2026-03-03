@@ -45,6 +45,12 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.countSandboxAccountsStmt, err = db.PrepareContext(ctx, countSandboxAccounts); err != nil {
 		return nil, fmt.Errorf("error preparing query CountSandboxAccounts: %w", err)
 	}
+	if q.countUnitsByAbbreviationStmt, err = db.PrepareContext(ctx, countUnitsByAbbreviation); err != nil {
+		return nil, fmt.Errorf("error preparing query CountUnitsByAbbreviation: %w", err)
+	}
+	if q.countUnitsByNameStmt, err = db.PrepareContext(ctx, countUnitsByName); err != nil {
+		return nil, fmt.Errorf("error preparing query CountUnitsByName: %w", err)
+	}
 	if q.createAccountStmt, err = db.PrepareContext(ctx, createAccount); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateAccount: %w", err)
 	}
@@ -126,6 +132,12 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.deleteSandboxAccountByTypeIDStmt, err = db.PrepareContext(ctx, deleteSandboxAccountByTypeID); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteSandboxAccountByTypeID: %w", err)
 	}
+	if q.deleteUnitStmt, err = db.PrepareContext(ctx, deleteUnit); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteUnit: %w", err)
+	}
+	if q.deleteUnitGroupUnitsByUnitIDStmt, err = db.PrepareContext(ctx, deleteUnitGroupUnitsByUnitID); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteUnitGroupUnitsByUnitID: %w", err)
+	}
 	if q.ensureAccountUserActiveStmt, err = db.PrepareContext(ctx, ensureAccountUserActive); err != nil {
 		return nil, fmt.Errorf("error preparing query EnsureAccountUserActive: %w", err)
 	}
@@ -198,6 +210,12 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getSeatLimitByPlanCodeStmt, err = db.PrepareContext(ctx, getSeatLimitByPlanCode); err != nil {
 		return nil, fmt.Errorf("error preparing query GetSeatLimitByPlanCode: %w", err)
 	}
+	if q.getUnitStmt, err = db.PrepareContext(ctx, getUnit); err != nil {
+		return nil, fmt.Errorf("error preparing query GetUnit: %w", err)
+	}
+	if q.insertUnitStmt, err = db.PrepareContext(ctx, insertUnit); err != nil {
+		return nil, fmt.Errorf("error preparing query InsertUnit: %w", err)
+	}
 	if q.listSandboxAccountsBackwardStmt, err = db.PrepareContext(ctx, listSandboxAccountsBackward); err != nil {
 		return nil, fmt.Errorf("error preparing query ListSandboxAccountsBackward: %w", err)
 	}
@@ -249,6 +267,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.updateAccountUserLastUsedAtStmt, err = db.PrepareContext(ctx, updateAccountUserLastUsedAt); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateAccountUserLastUsedAt: %w", err)
 	}
+	if q.updateUnitStmt, err = db.PrepareContext(ctx, updateUnit); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateUnit: %w", err)
+	}
 	return &q, nil
 }
 
@@ -287,6 +308,16 @@ func (q *Queries) Close() error {
 	if q.countSandboxAccountsStmt != nil {
 		if cerr := q.countSandboxAccountsStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing countSandboxAccountsStmt: %w", cerr)
+		}
+	}
+	if q.countUnitsByAbbreviationStmt != nil {
+		if cerr := q.countUnitsByAbbreviationStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing countUnitsByAbbreviationStmt: %w", cerr)
+		}
+	}
+	if q.countUnitsByNameStmt != nil {
+		if cerr := q.countUnitsByNameStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing countUnitsByNameStmt: %w", cerr)
 		}
 	}
 	if q.createAccountStmt != nil {
@@ -424,6 +455,16 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing deleteSandboxAccountByTypeIDStmt: %w", cerr)
 		}
 	}
+	if q.deleteUnitStmt != nil {
+		if cerr := q.deleteUnitStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteUnitStmt: %w", cerr)
+		}
+	}
+	if q.deleteUnitGroupUnitsByUnitIDStmt != nil {
+		if cerr := q.deleteUnitGroupUnitsByUnitIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteUnitGroupUnitsByUnitIDStmt: %w", cerr)
+		}
+	}
 	if q.ensureAccountUserActiveStmt != nil {
 		if cerr := q.ensureAccountUserActiveStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing ensureAccountUserActiveStmt: %w", cerr)
@@ -544,6 +585,16 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getSeatLimitByPlanCodeStmt: %w", cerr)
 		}
 	}
+	if q.getUnitStmt != nil {
+		if cerr := q.getUnitStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getUnitStmt: %w", cerr)
+		}
+	}
+	if q.insertUnitStmt != nil {
+		if cerr := q.insertUnitStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing insertUnitStmt: %w", cerr)
+		}
+	}
 	if q.listSandboxAccountsBackwardStmt != nil {
 		if cerr := q.listSandboxAccountsBackwardStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing listSandboxAccountsBackwardStmt: %w", cerr)
@@ -629,6 +680,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing updateAccountUserLastUsedAtStmt: %w", cerr)
 		}
 	}
+	if q.updateUnitStmt != nil {
+		if cerr := q.updateUnitStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateUnitStmt: %w", cerr)
+		}
+	}
 	return err
 }
 
@@ -675,6 +731,8 @@ type Queries struct {
 	countActiveAccountUsersStmt                        *sql.Stmt
 	countNonSandboxAccountsByPlanCodeStmt              *sql.Stmt
 	countSandboxAccountsStmt                           *sql.Stmt
+	countUnitsByAbbreviationStmt                       *sql.Stmt
+	countUnitsByNameStmt                               *sql.Stmt
 	createAccountStmt                                  *sql.Stmt
 	createAccountAddressStmt                           *sql.Stmt
 	createAccountBrandingStmt                          *sql.Stmt
@@ -702,6 +760,8 @@ type Queries struct {
 	deleteExpiredIdempotencyKeysStmt                   *sql.Stmt
 	deleteSandboxAccountByIDStmt                       *sql.Stmt
 	deleteSandboxAccountByTypeIDStmt                   *sql.Stmt
+	deleteUnitStmt                                     *sql.Stmt
+	deleteUnitGroupUnitsByUnitIDStmt                   *sql.Stmt
 	ensureAccountUserActiveStmt                        *sql.Stmt
 	findAccountAffiliationsByUserIDStmt                *sql.Stmt
 	findAccountRelationByOwnerAccountIDAndAPIKeyIDStmt *sql.Stmt
@@ -726,6 +786,8 @@ type Queries struct {
 	getLockedOutboxMessagesStmt                        *sql.Stmt
 	getSandboxLimitByAccountIDStmt                     *sql.Stmt
 	getSeatLimitByPlanCodeStmt                         *sql.Stmt
+	getUnitStmt                                        *sql.Stmt
+	insertUnitStmt                                     *sql.Stmt
 	listSandboxAccountsBackwardStmt                    *sql.Stmt
 	listSandboxAccountsForwardStmt                     *sql.Stmt
 	listUnitsBackwardStmt                              *sql.Stmt
@@ -743,6 +805,7 @@ type Queries struct {
 	tryInsertInboxRecordStmt                           *sql.Stmt
 	updateAccountSubscriptionStmt                      *sql.Stmt
 	updateAccountUserLastUsedAtStmt                    *sql.Stmt
+	updateUnitStmt                                     *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
@@ -756,6 +819,8 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		countActiveAccountUsersStmt:                        q.countActiveAccountUsersStmt,
 		countNonSandboxAccountsByPlanCodeStmt:              q.countNonSandboxAccountsByPlanCodeStmt,
 		countSandboxAccountsStmt:                           q.countSandboxAccountsStmt,
+		countUnitsByAbbreviationStmt:                       q.countUnitsByAbbreviationStmt,
+		countUnitsByNameStmt:                               q.countUnitsByNameStmt,
 		createAccountStmt:                                  q.createAccountStmt,
 		createAccountAddressStmt:                           q.createAccountAddressStmt,
 		createAccountBrandingStmt:                          q.createAccountBrandingStmt,
@@ -783,6 +848,8 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		deleteExpiredIdempotencyKeysStmt:                   q.deleteExpiredIdempotencyKeysStmt,
 		deleteSandboxAccountByIDStmt:                       q.deleteSandboxAccountByIDStmt,
 		deleteSandboxAccountByTypeIDStmt:                   q.deleteSandboxAccountByTypeIDStmt,
+		deleteUnitStmt:                                     q.deleteUnitStmt,
+		deleteUnitGroupUnitsByUnitIDStmt:                   q.deleteUnitGroupUnitsByUnitIDStmt,
 		ensureAccountUserActiveStmt:                        q.ensureAccountUserActiveStmt,
 		findAccountAffiliationsByUserIDStmt:                q.findAccountAffiliationsByUserIDStmt,
 		findAccountRelationByOwnerAccountIDAndAPIKeyIDStmt: q.findAccountRelationByOwnerAccountIDAndAPIKeyIDStmt,
@@ -807,6 +874,8 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getLockedOutboxMessagesStmt:                        q.getLockedOutboxMessagesStmt,
 		getSandboxLimitByAccountIDStmt:                     q.getSandboxLimitByAccountIDStmt,
 		getSeatLimitByPlanCodeStmt:                         q.getSeatLimitByPlanCodeStmt,
+		getUnitStmt:                                        q.getUnitStmt,
+		insertUnitStmt:                                     q.insertUnitStmt,
 		listSandboxAccountsBackwardStmt:                    q.listSandboxAccountsBackwardStmt,
 		listSandboxAccountsForwardStmt:                     q.listSandboxAccountsForwardStmt,
 		listUnitsBackwardStmt:                              q.listUnitsBackwardStmt,
@@ -824,5 +893,6 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		tryInsertInboxRecordStmt:                           q.tryInsertInboxRecordStmt,
 		updateAccountSubscriptionStmt:                      q.updateAccountSubscriptionStmt,
 		updateAccountUserLastUsedAtStmt:                    q.updateAccountUserLastUsedAtStmt,
+		updateUnitStmt:                                     q.updateUnitStmt,
 	}
 }

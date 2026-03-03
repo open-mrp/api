@@ -8,8 +8,9 @@ import (
 )
 
 type RequestIdentity struct {
-	ActorID      string
-	IdentityType types.IdentityType
+	ActorID         string
+	IdentityType    types.IdentityType
+	TargetAccountID *string
 }
 type IdempotencyMed interface {
 	// UpsertIdempotencyKey returns the existing idempotency key for the request scope,

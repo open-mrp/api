@@ -61,13 +61,15 @@ func (m *idempotencyMedImpl) UpsertIdempotencyKey(ctx context.Context, identity 
 	}
 
 	var actorID *string = nil
+	var targetAccountID *string = nil
 	var identityType = string(types.IdentityTypeUnauthenticated)
 	if identity != nil {
 		actorID = &identity.ActorID
 		identityType = string(identity.IdentityType)
+		targetAccountID = identity.TargetAccountID
 	}
 
-	scopeHash := idempotency.ComputeServiceScopeHash(actorID, domain.ServiceName, handler, idempotencyKey)
+	scopeHash := idempotency.ComputeServiceScopeHash(actorID, targetAccountID, domain.ServiceName, handler, idempotencyKey)
 
 	repo := m.repos.NewIdempotencyKeyRepo()
 	existingKey, apiErr := repo.GetByScopeHash(ctx, scopeHash)

@@ -30,11 +30,13 @@ const (
 	ObjectTypeRole ObjectType = "role"
 	// ObjectTypeUnit indicates that the object is a unit.
 	ObjectTypeUnit ObjectType = "unit"
+	// ObjectTypeAccountAffiliation indicates that the object is an account affiliation.
+	ObjectTypeAccountAffiliation ObjectType = "account_affiliation"
 )
 
 func (m ObjectType) IsValid() bool {
 	switch m {
-	case ObjectTypeAccount, ObjectTypeUser, ObjectTypeAddress, ObjectTypeAPIKey, ObjectTypeList, ObjectTypeSandbox, ObjectTypeRegistrationSession, ObjectTypePricingPlan, ObjectTypePlanChange, ObjectTypeEnterpriseInquiry, ObjectTypeRequestLog, ObjectTypeUnit:
+	case ObjectTypeAccount, ObjectTypeUser, ObjectTypeAddress, ObjectTypeAPIKey, ObjectTypeList, ObjectTypeSandbox, ObjectTypeRegistrationSession, ObjectTypePricingPlan, ObjectTypePlanChange, ObjectTypeEnterpriseInquiry, ObjectTypeRequestLog, ObjectTypeUnit, ObjectTypeAccountAffiliation:
 		return true
 	default:
 		return false
@@ -42,5 +44,5 @@ func (m ObjectType) IsValid() bool {
 }
 
 func (m ObjectType) EnumValues() []string {
-	return []string{string(ObjectTypeAccount), string(ObjectTypeUser), string(ObjectTypeAddress), string(ObjectTypeAPIKey), string(ObjectTypeList), string(ObjectTypeSandbox), string(ObjectTypeRegistrationSession), string(ObjectTypePricingPlan), string(ObjectTypePlanChange), string(ObjectTypeEnterpriseInquiry), string(ObjectTypeRequestLog), string(ObjectTypeUnit)}
+	return []string{string(ObjectTypeAccount), string(ObjectTypeUser), string(ObjectTypeAddress), string(ObjectTypeAPIKey), string(ObjectTypeList), string(ObjectTypeSandbox), string(ObjectTypeRegistrationSession), string(ObjectTypePricingPlan), string(ObjectTypePlanChange), string(ObjectTypeEnterpriseInquiry), string(ObjectTypeRequestLog), string(ObjectTypeUnit), string(ObjectTypeAccountAffiliation)}
 }

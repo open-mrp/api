@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1](https://github.com/Augno/api/compare/v0.5.0...v0.5.1) (2026-03-03)
+
+
+### Bug Fixes
+
+* remove stainless push for now ([#101](https://github.com/Augno/api/issues/101)) ([f19b6b9](https://github.com/Augno/api/commit/f19b6b973bcd64b6e12a79aeb807be944b53e8df))
+
 ## [0.5.0](https://github.com/Augno/api/compare/v0.4.7...v0.5.0) (2026-03-03)
 
 

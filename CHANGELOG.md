@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.2](https://github.com/Augno/api/compare/v0.5.1...v0.5.2) (2026-03-03)
+
+
+### Bug Fixes
+
+* adding env scope to release workflow ([#103](https://github.com/Augno/api/issues/103)) ([90e5168](https://github.com/Augno/api/commit/90e5168338bfc061da03f46833af5735bab7760c))
+
 ## [0.5.1](https://github.com/Augno/api/compare/v0.5.0...v0.5.1) (2026-03-03)
 
 

@@ -16,7 +16,6 @@ func SandboxPresenter(s *pb.SandboxInfo) apiresource.Sandbox {
 		ID:        s.Id,
 		Object:    constants.ObjectTypeSandbox,
 		Name:      s.Name,
-		AccountID: s.AccountId,
 		CreatedAt: grpcutil.TimestampToTime(s.CreatedAt),
 		UpdatedAt: grpcutil.TimestampToTime(s.UpdatedAt),
 	}

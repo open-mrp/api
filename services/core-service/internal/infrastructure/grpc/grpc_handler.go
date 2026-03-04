@@ -304,7 +304,6 @@ func sandboxToProto(s *domain.SandboxAccount) *pb.SandboxInfo {
 	info := &pb.SandboxInfo{
 		Id:        s.TypeID,
 		Name:      s.Name,
-		AccountId: s.AccountID,
 		CreatedAt: timestamppb.New(s.CreatedAt),
 		UpdatedAt: timestamppb.New(s.UpdatedAt),
 	}

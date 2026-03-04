@@ -10,13 +10,10 @@ import (
 
 const SampleSandboxID = "sbac_01jm4r6700f8nwq3v5hx2d9ktp"
 const SampleSandboxName = "Integration Testing"
-const SampleSandboxAccountID = "ac_01jm4r6700g2bz7y4c6e8f1jrm"
-
 var SampleSandbox = &Sandbox{
-	ID:        SampleSandboxID,
-	Object:    constants.ObjectTypeSandbox,
-	Name:      SampleSandboxName,
-	AccountID: SampleSandboxAccountID,
+	ID:     SampleSandboxID,
+	Object: constants.ObjectTypeSandbox,
+	Name:   SampleSandboxName,
 	OwnerAccount: &LightAccount{
 		ID:     SampleAccountID,
 		Object: constants.ObjectTypeAccount,
@@ -34,8 +31,6 @@ type Sandbox struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=sandbox"`
 	// The display name of the sandbox.
 	Name string `json:"name" validate:"required"`
-	// The ID of the account this sandbox belongs to.
-	AccountID string `json:"account_id" validate:"required"`
 	// The owner account of this sandbox. Expandable.
 	OwnerAccount *LightAccount `json:"owner_account" expandable:"true"`
 	// When this sandbox was created.

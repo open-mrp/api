@@ -415,8 +415,6 @@ message SandboxInfo {
   string id = 1;
   // The sandbox's display name (inherited from the account).
   string name = 2;
-  // The underlying account ID for this sandbox.
-  string account_id = 3;
   // When the sandbox was created.
   google.protobuf.Timestamp created_at = 4;
   // When the sandbox was last updated.

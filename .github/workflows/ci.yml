@@ -48,6 +48,9 @@ jobs:
       - name: Run Doc Generation Check
         run: make gen-openapi-specs
 
+      - name: Validate OpenAPI Specs
+        run: make validate-openapi-specs
+
   test:
     name: Test
     runs-on: ubuntu-latest

@@ -1,4 +1,4 @@
-.PHONY: help dev gen-sqlc gen-proto db-dump test test-verbose install-tools docs mocks gosec static-check check-format jaeger-tracing connect-minikube connect-eks version
+.PHONY: help dev gen-sqlc gen-proto db-dump test test-verbose install-tools docs mocks gosec static-check check-format jaeger-tracing connect-minikube connect-eks version validate-openapi-specs
 
 # Include .env file if it exists (optional for CI)
 -include .env
@@ -35,6 +35,8 @@ dev: ## Run the API in development mode
 
 gen-openapi-specs: ## Generate OpenAPI specifications
 	@cd tools && go run ./apidocs --name api
+
+validate-openapi-specs: ## Validate OpenAPI specifications with vacuum
 	@./scripts/validate-openapi-specs.sh
 
 gen-sqlc: ## Generate code from SQL queries using sqlc. Usage: make gen-sqlc [services]
@@ -74,9 +76,6 @@ install-tools: ## Install required development tools
 install-ci-tools: ## Install minimum tools for CI
 	@go install github.com/securego/gosec/v2/cmd/gosec@$(call tool-version,github.com/securego/gosec/v2)
 	@go install honnef.co/go/tools/cmd/staticcheck@$(call tool-version,honnef.co/go/tools)
-	@go install github.com/daveshanley/vacuum@$(call tool-version,github.com/daveshanley/vacuum)
-
-install-cd-tools: ## Install minimum tools for CD
 	@go install github.com/daveshanley/vacuum@$(call tool-version,github.com/daveshanley/vacuum)
 
 mocks: ## Generate mocks. Usage: make mocks [services]

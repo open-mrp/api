@@ -168,9 +168,7 @@ jobs:
           echo "api_version=$API_VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Generate OpenAPI Specs
-        run: |
-          make install-cd-tools
-          make gen-openapi-specs
+        run: make gen-openapi-specs
 
       - name: Upload Public Spec to S3
         run: |

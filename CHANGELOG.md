@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.1](https://github.com/Augno/api/compare/v0.6.0...v0.6.1) (2026-03-04)
+
+
+### Bug Fixes
+
+* remove account_id from sandbox envelope ([#109](https://github.com/Augno/api/issues/109)) ([dab2a66](https://github.com/Augno/api/commit/dab2a66436ba30fa1c8f2f97573d203e120d63d1))
+
 ## [0.6.0](https://github.com/Augno/api/compare/v0.5.2...v0.6.0) (2026-03-04)
 
 

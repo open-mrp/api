@@ -7,6 +7,7 @@ import (
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/appctx"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
@@ -50,8 +51,9 @@ func NewSandboxSvc(config *SandboxSvcConfig) SandboxSvc {
 
 func (m *sandboxSvcImpl) ListSandboxes(ctx context.Context, req *apiresource.PaginationRequest) (*apiresource.List[apiresource.Sandbox], *apierror.APIError) {
 	pbReq := &pb.ListSandboxAccountsRequest{
-		Cursor: req.Cursor,
-		Limit:  req.Limit,
+		Cursor:   req.Cursor,
+		Limit:    req.Limit,
+		Includes: appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, sandboxSvcTracer, "service.sandboxes.list", domain.ServiceName,
@@ -76,8 +78,9 @@ func (m *sandboxSvcImpl) CreateSandbox(ctx context.Context, req *CreateSandboxRe
 	}
 
 	pbReq := &pb.CreateSandboxRequest{
-		Name: req.Name,
-		Mode: mode,
+		Name:     req.Name,
+		Mode:     mode,
+		Includes: appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, sandboxSvcTracer, "service.sandboxes.create", domain.ServiceName,
@@ -95,7 +98,8 @@ func (m *sandboxSvcImpl) CreateSandbox(ctx context.Context, req *CreateSandboxRe
 
 func (m *sandboxSvcImpl) GetSandbox(ctx context.Context, req *GetSandboxRequest) (*apiresource.Sandbox, *apierror.APIError) {
 	pbReq := &pb.GetSandboxRequest{
-		Id: req.SandboxID,
+		Id:       req.SandboxID,
+		Includes: appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, sandboxSvcTracer, "service.sandboxes.get", domain.ServiceName,

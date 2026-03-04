@@ -7,6 +7,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -47,6 +48,11 @@ func (e *RotateAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*RotateAPI
 		},
 		LocationFunc: func(resp *apiresource.CreatedAPIKey) string {
 			return "/v1/auth/api-keys/" + resp.APIKeyInfo.ID
+		},
+		IncludeConfig: &apiendpoint.IncludeConfig{
+			Fields: []apiendpoint.IncludeField{
+				{Key: "role", ObjectType: constants.ObjectTypeRole, JSONPaths: []string{"api_key_info.role"}},
+			},
 		},
 		Extras: apiendpoint.APIEndpointExtras{
 			AllowUnknownJSONFields: false,

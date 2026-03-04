@@ -51,10 +51,18 @@ func (m *APIKey) ToProto() *pb.APIKeyInfo {
 		Id:            m.TypeID,
 		Name:          m.Name,
 		RedactedValue: m.RedactedValue,
-		RoleId:        m.RoleID,
-		RoleName:      m.RoleName,
 		CreatedAt:     timestamppb.New(m.CreatedAt),
 		UpdatedAt:     timestamppb.New(m.UpdatedAt),
+	}
+
+	if m.RoleID != "" {
+		info.RoleId = &m.RoleID
+	}
+	if m.RoleName != "" {
+		info.RoleName = &m.RoleName
+	}
+	if m.RoleTypeCode != "" {
+		info.RoleTypeCode = &m.RoleTypeCode
 	}
 
 	if m.LastUsedAt != nil {

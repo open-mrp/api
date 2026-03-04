@@ -45,7 +45,7 @@ func (s *loggingSvcImpl) SaveRequestLog(ctx context.Context, rl *domain.RequestL
 	return s.requestLogRepo.Create(ctx, rl)
 }
 
-func (s *loggingSvcImpl) GetRequestLog(ctx context.Context, id string) (*domain.RequestLogRead, *apierror.APIError) {
+func (s *loggingSvcImpl) GetRequestLog(ctx context.Context, id string, includes []string) (*domain.RequestLogRead, *apierror.APIError) {
 	ctx, span := loggingSvcTracer.Start(ctx, "service.logging.get_request_log")
 	defer span.End()
 
@@ -64,10 +64,10 @@ func (s *loggingSvcImpl) GetRequestLog(ctx context.Context, id string) (*domain.
 		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
 	}
 
-	return s.requestLogRepo.FindByID(ctx, id, *identity.TargetAccountID)
+	return s.requestLogRepo.FindByID(ctx, id, *identity.TargetAccountID, includes)
 }
 
-func (s *loggingSvcImpl) ListRequestLogs(ctx context.Context, filter *domain.ListRequestLogsFilter) (*domain.ListRequestLogsResult, *apierror.APIError) {
+func (s *loggingSvcImpl) ListRequestLogs(ctx context.Context, filter *domain.ListRequestLogsFilter, includes []string) (*domain.ListRequestLogsResult, *apierror.APIError) {
 	ctx, span := loggingSvcTracer.Start(ctx, "service.logging.list_request_logs")
 	defer span.End()
 
@@ -91,5 +91,5 @@ func (s *loggingSvcImpl) ListRequestLogs(ctx context.Context, filter *domain.Lis
 		filter.PublicEndpoint = &t
 	}
 
-	return s.requestLogRepo.List(ctx, *identity.TargetAccountID, filter)
+	return s.requestLogRepo.List(ctx, *identity.TargetAccountID, filter, includes)
 }

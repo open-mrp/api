@@ -137,14 +137,18 @@ func (s *apiKeyMedImpl) Create(ctx context.Context, input domain.APIKeyCreateInp
 	}
 
 	apiKeyRepo := s.repos.NewAPIKeyRepo()
-	id, apiErr := apiKeyRepo.Create(ctx, apiKeyModel)
+	_, apiErr = apiKeyRepo.Create(ctx, apiKeyModel)
 	if apiErr != nil {
 		return "", nil, apiErr
 	}
 
-	apiKeyModel.ID = id
+	// Re-fetch to populate role name and type code from the JOIN.
+	created, apiErr := apiKeyRepo.FindByTypeID(ctx, apiKeyModel.TypeID, nil)
+	if apiErr != nil {
+		return "", nil, apiErr
+	}
 
-	return fullKey, apiKeyModel, nil
+	return fullKey, created, nil
 }
 
 func (s *apiKeyMedImpl) Revoke(ctx context.Context, apiKeyTypeID string) *apierror.APIError {
@@ -153,7 +157,7 @@ func (s *apiKeyMedImpl) Revoke(ctx context.Context, apiKeyTypeID string) *apierr
 
 	apiKeyRepo := s.repos.NewAPIKeyRepo()
 
-	if _, apiErr := apiKeyRepo.FindByTypeID(ctx, apiKeyTypeID); apiErr != nil {
+	if _, apiErr := apiKeyRepo.FindByTypeID(ctx, apiKeyTypeID, nil); apiErr != nil {
 		return apiErr
 	}
 
@@ -166,7 +170,7 @@ func (s *apiKeyMedImpl) Rotate(ctx context.Context, input domain.APIKeyRotateInp
 
 	apiKeyRepo := s.repos.NewAPIKeyRepo()
 
-	oldKey, apiErr := apiKeyRepo.FindByTypeID(ctx, input.APIKeyTypeID)
+	oldKey, apiErr := apiKeyRepo.FindByTypeID(ctx, input.APIKeyTypeID, nil)
 	if apiErr != nil {
 		return "", nil, apiErr
 	}
@@ -209,7 +213,7 @@ func (s *apiKeyMedImpl) GetKeyAccountAccess(ctx context.Context, input domain.AP
 	defer span.End()
 
 	apiKeyRepo := s.repos.NewAPIKeyRepo()
-	apiKeyModel, err := apiKeyRepo.FindByDatabaseID(ctx, input.APIKeyID)
+	apiKeyModel, err := apiKeyRepo.FindByDatabaseID(ctx, input.APIKeyID, nil)
 	if err != nil {
 		return nil, err
 	}

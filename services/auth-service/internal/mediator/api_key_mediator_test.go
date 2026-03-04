@@ -394,6 +394,7 @@ func (suite *APIKeyMedTestSuite) TestCreate_Success() {
 	name := "Test API Key"
 	expiresAt := time.Now().UTC().Add(30 * 24 * time.Hour)
 
+	var createdKey *apikey.APIKey
 	suite.apiKeyRepo.EXPECT().
 		Create(gomock.Any(), gomock.Any()).
 		DoAndReturn(func(ctx context.Context, apiKey *apikey.APIKey) (int64, *apierror.APIError) {
@@ -405,7 +406,18 @@ func (suite *APIKeyMedTestSuite) TestCreate_Success() {
 			suite.NotEmpty(apiKey.KeyID)
 			suite.NotEmpty(apiKey.SecretHash)
 			suite.NotEmpty(apiKey.RedactedValue)
+			apiKey.ID = 123
+			createdKey = apiKey
 			return 123, nil
+		}).
+		Times(1)
+
+	suite.apiKeyRepo.EXPECT().
+		FindByTypeID(gomock.Any(), gomock.Any(), gomock.Nil()).
+		DoAndReturn(func(ctx context.Context, typeID string, includes []string) (*apikey.APIKey, *apierror.APIError) {
+			createdKey.RoleName = "Admin"
+			createdKey.RoleTypeCode = "admin"
+			return createdKey, nil
 		}).
 		Times(1)
 
@@ -438,10 +450,20 @@ func (suite *APIKeyMedTestSuite) TestCreate_RedactedValueEndsWithLastFourOfFullK
 	roleID := "rl_123456789012"
 	expiresAt := time.Now().UTC().Add(30 * 24 * time.Hour)
 
+	var createdKey *apikey.APIKey
 	suite.apiKeyRepo.EXPECT().
 		Create(gomock.Any(), gomock.Any()).
 		DoAndReturn(func(ctx context.Context, apiKey *apikey.APIKey) (int64, *apierror.APIError) {
+			apiKey.ID = 1
+			createdKey = apiKey
 			return 1, nil
+		}).
+		Times(1)
+
+	suite.apiKeyRepo.EXPECT().
+		FindByTypeID(gomock.Any(), gomock.Any(), gomock.Nil()).
+		DoAndReturn(func(ctx context.Context, typeID string, includes []string) (*apikey.APIKey, *apierror.APIError) {
+			return createdKey, nil
 		}).
 		Times(1)
 
@@ -477,10 +499,20 @@ func (suite *APIKeyMedTestSuite) TestCreate_RedactedValueMatchesLastFour() {
 
 	for _, tt := range tests {
 		suite.Run(tt.name, func() {
+			var createdKey *apikey.APIKey
 			suite.apiKeyRepo.EXPECT().
 				Create(gomock.Any(), gomock.Any()).
 				DoAndReturn(func(ctx context.Context, apiKey *apikey.APIKey) (int64, *apierror.APIError) {
+					apiKey.ID = 1
+					createdKey = apiKey
 					return 1, nil
+				}).
+				Times(1)
+
+			suite.apiKeyRepo.EXPECT().
+				FindByTypeID(gomock.Any(), gomock.Any(), gomock.Nil()).
+				DoAndReturn(func(ctx context.Context, typeID string, includes []string) (*apikey.APIKey, *apierror.APIError) {
+					return createdKey, nil
 				}).
 				Times(1)
 
@@ -533,7 +565,7 @@ func (suite *APIKeyMedTestSuite) TestRotate_HasRedactedValue() {
 	}
 
 	suite.apiKeyRepo.EXPECT().
-		FindByTypeID(gomock.Any(), apiKeyTypeID).
+		FindByTypeID(gomock.Any(), apiKeyTypeID, gomock.Nil()).
 		Return(oldKey, nil).
 		Times(1)
 
@@ -542,10 +574,20 @@ func (suite *APIKeyMedTestSuite) TestRotate_HasRedactedValue() {
 		Return(nil).
 		Times(1)
 
+	var createdKey *apikey.APIKey
 	suite.apiKeyRepo.EXPECT().
 		Create(gomock.Any(), gomock.Any()).
 		DoAndReturn(func(ctx context.Context, ak *apikey.APIKey) (int64, *apierror.APIError) {
+			ak.ID = 1
+			createdKey = ak
 			return 1, nil
+		}).
+		Times(1)
+
+	suite.apiKeyRepo.EXPECT().
+		FindByTypeID(gomock.Any(), gomock.Any(), gomock.Nil()).
+		DoAndReturn(func(ctx context.Context, typeID string, includes []string) (*apikey.APIKey, *apierror.APIError) {
+			return createdKey, nil
 		}).
 		Times(1)
 
@@ -582,7 +624,7 @@ func (suite *APIKeyMedTestSuite) TestRotate_RevokesOldKey() {
 	}
 
 	suite.apiKeyRepo.EXPECT().
-		FindByTypeID(gomock.Any(), apiKeyTypeID).
+		FindByTypeID(gomock.Any(), apiKeyTypeID, gomock.Nil()).
 		Return(oldKey, nil).
 		Times(1)
 
@@ -591,13 +633,23 @@ func (suite *APIKeyMedTestSuite) TestRotate_RevokesOldKey() {
 		Return(nil).
 		Times(1)
 
+	var createdKey *apikey.APIKey
 	suite.apiKeyRepo.EXPECT().
 		Create(gomock.Any(), gomock.Any()).
 		DoAndReturn(func(ctx context.Context, ak *apikey.APIKey) (int64, *apierror.APIError) {
 			suite.Equal(oldKey.OwnerAccountID, ak.OwnerAccountID)
 			suite.Equal(oldKey.RoleID, ak.RoleID)
 			suite.Equal(oldKey.Name, ak.Name)
+			ak.ID = 11
+			createdKey = ak
 			return 11, nil
+		}).
+		Times(1)
+
+	suite.apiKeyRepo.EXPECT().
+		FindByTypeID(gomock.Any(), gomock.Any(), gomock.Nil()).
+		DoAndReturn(func(ctx context.Context, typeID string, includes []string) (*apikey.APIKey, *apierror.APIError) {
+			return createdKey, nil
 		}).
 		Times(1)
 
@@ -659,10 +711,20 @@ func (suite *APIKeyMedTestSuite) TestCreate_RedactedValueConsistentAcrossModes()
 	expiresAt := time.Now().UTC().Add(30 * 24 * time.Hour)
 
 	for _, mode := range []constants.AccountMode{constants.AccountModeSandbox, constants.AccountModeProduction} {
+		var createdKey *apikey.APIKey
 		suite.apiKeyRepo.EXPECT().
 			Create(gomock.Any(), gomock.Any()).
 			DoAndReturn(func(ctx context.Context, apiKey *apikey.APIKey) (int64, *apierror.APIError) {
+				apiKey.ID = 1
+				createdKey = apiKey
 				return 1, nil
+			}).
+			Times(1)
+
+		suite.apiKeyRepo.EXPECT().
+			FindByTypeID(gomock.Any(), gomock.Any(), gomock.Nil()).
+			DoAndReturn(func(ctx context.Context, typeID string, includes []string) (*apikey.APIKey, *apierror.APIError) {
+				return createdKey, nil
 			}).
 			Times(1)
 

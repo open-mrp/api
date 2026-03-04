@@ -115,7 +115,7 @@ func (h *loggingHandler) ListRequestLogs(ctx context.Context, req *pb.ListReques
 		filter.ExactMatch = *req.ExactMatch
 	}
 
-	result, apiErr := h.loggingSvc.ListRequestLogs(ctx, filter)
+	result, apiErr := h.loggingSvc.ListRequestLogs(ctx, filter, req.Includes)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
@@ -141,7 +141,7 @@ func (h *loggingHandler) GetRequestLog(ctx context.Context, req *pb.GetRequestLo
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	rl, apiErr := h.loggingSvc.GetRequestLog(ctx, req.Id)
+	rl, apiErr := h.loggingSvc.GetRequestLog(ctx, req.Id, req.Includes)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}

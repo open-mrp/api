@@ -36,6 +36,11 @@ func (e *ListAPIKeysEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAPIKey
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListAPIKeysRequest) (*apiresource.List[apiresource.APIKey], *apierror.APIError) {
 			return svc.(APIKeySvc).ListAPIKeys
 		},
+		IncludeConfig: &apiendpoint.IncludeConfig{
+			Fields: []apiendpoint.IncludeField{
+				{Key: "role", ObjectType: constants.ObjectTypeRole, JSONPaths: []string{"role"}},
+			},
+		},
 		Extras: apiendpoint.APIEndpointExtras{
 			AllowUnknownJSONFields: false,
 		},

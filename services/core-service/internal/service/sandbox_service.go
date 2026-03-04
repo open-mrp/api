@@ -81,7 +81,7 @@ func (s *sandboxSvcImpl) GetSandboxAccountByOwner(ctx context.Context, ownerAcco
 	return s.repos.NewSandboxAccountRepo().FindFirstByOwnerAccountID(ctx, ownerAccountID)
 }
 
-func (s *sandboxSvcImpl) ListSandboxAccounts(ctx context.Context, cursor *string, limit int32) (*domain.ListSandboxAccountsResult, *apierror.APIError) {
+func (s *sandboxSvcImpl) ListSandboxAccounts(ctx context.Context, cursor *string, limit int32, includes []string) (*domain.ListSandboxAccountsResult, *apierror.APIError) {
 	ctx, span := sandboxSvcTracer.Start(ctx, "service.sandbox.list_sandbox_accounts")
 	defer span.End()
 
@@ -103,7 +103,7 @@ func (s *sandboxSvcImpl) ListSandboxAccounts(ctx context.Context, cursor *string
 		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
 	}
 
-	return s.repos.NewSandboxAccountRepo().List(ctx, *identity.TargetAccountID, cursor, limit)
+	return s.repos.NewSandboxAccountRepo().List(ctx, *identity.TargetAccountID, cursor, limit, includes)
 }
 
 func (s *sandboxSvcImpl) CreateSandbox(ctx context.Context, name string, mode constants.SandboxMode) (*domain.SandboxAccount, *apierror.APIError) {
@@ -200,7 +200,7 @@ func (s *sandboxSvcImpl) CreateSandbox(ctx context.Context, name string, mode co
 	}
 }
 
-func (s *sandboxSvcImpl) GetSandbox(ctx context.Context, sandboxTypeID string) (*domain.SandboxAccount, *apierror.APIError) {
+func (s *sandboxSvcImpl) GetSandbox(ctx context.Context, sandboxTypeID string, includes []string) (*domain.SandboxAccount, *apierror.APIError) {
 	ctx, span := sandboxSvcTracer.Start(ctx, "service.sandbox.get")
 	defer span.End()
 
@@ -222,7 +222,7 @@ func (s *sandboxSvcImpl) GetSandbox(ctx context.Context, sandboxTypeID string) (
 		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
 	}
 
-	sandbox, apiErr := s.repos.NewSandboxAccountRepo().FindByTypeID(ctx, sandboxTypeID)
+	sandbox, apiErr := s.repos.NewSandboxAccountRepo().FindByTypeID(ctx, sandboxTypeID, includes)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}

@@ -96,7 +96,7 @@ func (s *apiKeySvcImpl) withTx(ctx context.Context, fn func(context.Context, *ap
 	})
 }
 
-func (s *apiKeySvcImpl) GetAPIKey(ctx context.Context, apiKeyID string) (*apikey.APIKey, *apierror.APIError) {
+func (s *apiKeySvcImpl) GetAPIKey(ctx context.Context, apiKeyID string, includes []string) (*apikey.APIKey, *apierror.APIError) {
 	ctx, span := apiKeySvcTracer.Start(ctx, "service.api_key.get")
 	defer span.End()
 
@@ -111,7 +111,7 @@ func (s *apiKeySvcImpl) GetAPIKey(ctx context.Context, apiKeyID string) (*apikey
 
 	ownerAccountID := *identity.TargetAccountID
 
-	key, apiErr := s.repos.NewAPIKeyRepo().FindByTypeID(ctx, apiKeyID)
+	key, apiErr := s.repos.NewAPIKeyRepo().FindByTypeID(ctx, apiKeyID, includes)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -193,7 +193,7 @@ func (s *apiKeySvcImpl) CreateAPIKey(ctx context.Context, input domain.CreateAPI
 	}
 }
 
-func (s *apiKeySvcImpl) ListAPIKeys(ctx context.Context, cursor *string, limit int32, query *string, statuses []constants.APIKeyStatus) (*domain.ListAPIKeysResult, *apierror.APIError) {
+func (s *apiKeySvcImpl) ListAPIKeys(ctx context.Context, cursor *string, limit int32, query *string, statuses []constants.APIKeyStatus, includes []string) (*domain.ListAPIKeysResult, *apierror.APIError) {
 	ctx, span := apiKeySvcTracer.Start(ctx, "service.api_key.list")
 	defer span.End()
 
@@ -216,6 +216,7 @@ func (s *apiKeySvcImpl) ListAPIKeys(ctx context.Context, cursor *string, limit i
 		Limit:          limit,
 		Query:          query,
 		Statuses:       statuses,
+		Includes:       includes,
 	})
 
 	if apiErr != nil {

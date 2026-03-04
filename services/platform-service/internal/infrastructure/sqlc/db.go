@@ -45,6 +45,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.deleteExpiredServiceIdempotencyKeysStmt, err = db.PrepareContext(ctx, deleteExpiredServiceIdempotencyKeys); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteExpiredServiceIdempotencyKeys: %w", err)
 	}
+	if q.findRequestLogBaseByIDStmt, err = db.PrepareContext(ctx, findRequestLogBaseByID); err != nil {
+		return nil, fmt.Errorf("error preparing query FindRequestLogBaseByID: %w", err)
+	}
 	if q.findRequestLogByIDStmt, err = db.PrepareContext(ctx, findRequestLogByID); err != nil {
 		return nil, fmt.Errorf("error preparing query FindRequestLogByID: %w", err)
 	}
@@ -62,6 +65,12 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.listRequestLogsBackwardStmt, err = db.PrepareContext(ctx, listRequestLogsBackward); err != nil {
 		return nil, fmt.Errorf("error preparing query ListRequestLogsBackward: %w", err)
+	}
+	if q.listRequestLogsBaseBackwardStmt, err = db.PrepareContext(ctx, listRequestLogsBaseBackward); err != nil {
+		return nil, fmt.Errorf("error preparing query ListRequestLogsBaseBackward: %w", err)
+	}
+	if q.listRequestLogsBaseForwardStmt, err = db.PrepareContext(ctx, listRequestLogsBaseForward); err != nil {
+		return nil, fmt.Errorf("error preparing query ListRequestLogsBaseForward: %w", err)
 	}
 	if q.listRequestLogsForwardStmt, err = db.PrepareContext(ctx, listRequestLogsForward); err != nil {
 		return nil, fmt.Errorf("error preparing query ListRequestLogsForward: %w", err)
@@ -139,6 +148,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing deleteExpiredServiceIdempotencyKeysStmt: %w", cerr)
 		}
 	}
+	if q.findRequestLogBaseByIDStmt != nil {
+		if cerr := q.findRequestLogBaseByIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing findRequestLogBaseByIDStmt: %w", cerr)
+		}
+	}
 	if q.findRequestLogByIDStmt != nil {
 		if cerr := q.findRequestLogByIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing findRequestLogByIDStmt: %w", cerr)
@@ -167,6 +181,16 @@ func (q *Queries) Close() error {
 	if q.listRequestLogsBackwardStmt != nil {
 		if cerr := q.listRequestLogsBackwardStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing listRequestLogsBackwardStmt: %w", cerr)
+		}
+	}
+	if q.listRequestLogsBaseBackwardStmt != nil {
+		if cerr := q.listRequestLogsBaseBackwardStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing listRequestLogsBaseBackwardStmt: %w", cerr)
+		}
+	}
+	if q.listRequestLogsBaseForwardStmt != nil {
+		if cerr := q.listRequestLogsBaseForwardStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing listRequestLogsBaseForwardStmt: %w", cerr)
 		}
 	}
 	if q.listRequestLogsForwardStmt != nil {
@@ -275,12 +299,15 @@ type Queries struct {
 	createRequestLogStmt                      *sql.Stmt
 	deleteExpiredIdempotencyKeysStmt          *sql.Stmt
 	deleteExpiredServiceIdempotencyKeysStmt   *sql.Stmt
+	findRequestLogBaseByIDStmt                *sql.Stmt
 	findRequestLogByIDStmt                    *sql.Stmt
 	getIdempotencyKeyByScopeHashForUpdateStmt *sql.Stmt
 	getInboxRecordByMessageAndHandlerStmt     *sql.Stmt
 	getLockedOutboxMessagesStmt               *sql.Stmt
 	getRecoveryPointStmt                      *sql.Stmt
 	listRequestLogsBackwardStmt               *sql.Stmt
+	listRequestLogsBaseBackwardStmt           *sql.Stmt
+	listRequestLogsBaseForwardStmt            *sql.Stmt
 	listRequestLogsForwardStmt                *sql.Stmt
 	lockIdempotencyKeyStmt                    *sql.Stmt
 	markInboxRecordFailedStmt                 *sql.Stmt
@@ -297,21 +324,24 @@ type Queries struct {
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:                                      tx,
-		tx:                                      tx,
-		acquireOutboxMessagesStmt:               q.acquireOutboxMessagesStmt,
-		advanceRecoveryPointStmt:                q.advanceRecoveryPointStmt,
-		cleanupExpiredOutboxLocksStmt:           q.cleanupExpiredOutboxLocksStmt,
-		createIdempotencyKeyWithScopeStmt:       q.createIdempotencyKeyWithScopeStmt,
-		createRequestLogStmt:                    q.createRequestLogStmt,
-		deleteExpiredIdempotencyKeysStmt:        q.deleteExpiredIdempotencyKeysStmt,
-		deleteExpiredServiceIdempotencyKeysStmt: q.deleteExpiredServiceIdempotencyKeysStmt,
-		findRequestLogByIDStmt:                  q.findRequestLogByIDStmt,
+		db:                                        tx,
+		tx:                                        tx,
+		acquireOutboxMessagesStmt:                 q.acquireOutboxMessagesStmt,
+		advanceRecoveryPointStmt:                  q.advanceRecoveryPointStmt,
+		cleanupExpiredOutboxLocksStmt:             q.cleanupExpiredOutboxLocksStmt,
+		createIdempotencyKeyWithScopeStmt:         q.createIdempotencyKeyWithScopeStmt,
+		createRequestLogStmt:                      q.createRequestLogStmt,
+		deleteExpiredIdempotencyKeysStmt:          q.deleteExpiredIdempotencyKeysStmt,
+		deleteExpiredServiceIdempotencyKeysStmt:   q.deleteExpiredServiceIdempotencyKeysStmt,
+		findRequestLogBaseByIDStmt:                q.findRequestLogBaseByIDStmt,
+		findRequestLogByIDStmt:                    q.findRequestLogByIDStmt,
 		getIdempotencyKeyByScopeHashForUpdateStmt: q.getIdempotencyKeyByScopeHashForUpdateStmt,
 		getInboxRecordByMessageAndHandlerStmt:     q.getInboxRecordByMessageAndHandlerStmt,
 		getLockedOutboxMessagesStmt:               q.getLockedOutboxMessagesStmt,
 		getRecoveryPointStmt:                      q.getRecoveryPointStmt,
 		listRequestLogsBackwardStmt:               q.listRequestLogsBackwardStmt,
+		listRequestLogsBaseBackwardStmt:           q.listRequestLogsBaseBackwardStmt,
+		listRequestLogsBaseForwardStmt:            q.listRequestLogsBaseForwardStmt,
 		listRequestLogsForwardStmt:                q.listRequestLogsForwardStmt,
 		lockIdempotencyKeyStmt:                    q.lockIdempotencyKeyStmt,
 		markInboxRecordFailedStmt:                 q.markInboxRecordFailedStmt,

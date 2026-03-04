@@ -227,7 +227,7 @@ func (h *gRPCHandler) ListAPIKeys(ctx context.Context, req *pb.ListAPIKeysReques
 		statuses[i] = constants.APIKeyStatus(s)
 	}
 
-	result, apiErr := h.apiKeySvc.ListAPIKeys(ctx, req.Cursor, req.Limit, req.Query, statuses)
+	result, apiErr := h.apiKeySvc.ListAPIKeys(ctx, req.Cursor, req.Limit, req.Query, statuses, req.Includes)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
@@ -253,7 +253,7 @@ func (h *gRPCHandler) GetAPIKey(ctx context.Context, req *pb.GetAPIKeyRequest) (
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	result, apiErr := h.apiKeySvc.GetAPIKey(ctx, req.ApiKeyId)
+	result, apiErr := h.apiKeySvc.GetAPIKey(ctx, req.ApiKeyId, req.Includes)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}

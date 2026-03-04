@@ -50,48 +50,8 @@ var SampleSwitchPlanResponse = &SwitchPlanResponse{
 	CheckoutURL:     new(SampleCheckoutURL),
 }
 
-var SampleSwitchPlanResponseRequiresPayment = &SwitchPlanResponse{
-	Success:         true,
-	RequiresPayment: true,
-	CheckoutURL:     new(SampleCheckoutURL),
-}
-
 var SampleConfirmPlanSwitchResponse = &ConfirmPlanSwitchResponse{
 	Success: true,
-}
-
-var SampleRequestEnterpriseResponse = &RequestEnterpriseResponse{
-	Success: true,
-}
-
-var SampleProrationLineItem = &ProrationLineItem{
-	Description: "Unused time on Starter plan",
-	Amount:      -1500,
-	IsProration: true,
-}
-
-var SampleProrationPreview = &ProrationPreview{
-	CreditAmount:                1500,
-	ChargeAmount:                4900,
-	NetAmount:                   3400,
-	FormattedNetAmount:          "$34.00",
-	IsCredit:                    false,
-	TotalInvoiceAmount:          3400,
-	FormattedTotalInvoiceAmount: "$34.00",
-	MonthlyBillAmount:           4900,
-	FormattedMonthlyBillAmount:  "$49.00",
-	LineItems: []ProrationLineItem{
-		*SampleProrationLineItem,
-		{
-			Description: "Professional plan",
-			Amount:      4900,
-			IsProration: false,
-		},
-	},
-}
-
-var SampleProrationPreviewResponse = &ProrationPreviewResponse{
-	Preview: SampleProrationPreview,
 }
 
 var SampleEnsureBillingCustomerResponse = &EnsureBillingCustomerResponse{
@@ -183,68 +143,6 @@ type ConfirmPlanSwitchResponse struct {
 
 func (*ConfirmPlanSwitchResponse) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleConfirmPlanSwitchResponse)
-}
-
-// RequestEnterpriseResponse represents the result of requesting an enterprise upgrade.
-type RequestEnterpriseResponse struct {
-	// Whether the enterprise upgrade request was submitted successfully.
-	Success bool `json:"success"`
-}
-
-func (*RequestEnterpriseResponse) SchemaExample() any {
-	return apiexample.ValidateAndMarshalToMap(SampleRequestEnterpriseResponse)
-}
-
-// ProrationLineItem represents a line item in a proration calculation.
-type ProrationLineItem struct {
-	// The description of the line item.
-	Description string `json:"description" validate:"required"`
-	// The amount in cents (negative for credits).
-	Amount int64 `json:"amount"`
-	// Whether this line item is a proration adjustment.
-	IsProration bool `json:"is_proration"`
-}
-
-func (*ProrationLineItem) SchemaExample() any {
-	return apiexample.ValidateAndMarshalToMap(SampleProrationLineItem)
-}
-
-// ProrationPreview contains the details of a proration calculation for a plan switch.
-type ProrationPreview struct {
-	// The credit amount in cents from unused time on the current plan.
-	CreditAmount int64 `json:"credit_amount"`
-	// The charge amount in cents for the new plan.
-	ChargeAmount int64 `json:"charge_amount"`
-	// The net amount in cents (charge minus credit).
-	NetAmount int64 `json:"net_amount"`
-	// The formatted net amount for display.
-	FormattedNetAmount string `json:"formatted_net_amount" validate:"required"`
-	// Whether the net amount is a credit (refund).
-	IsCredit bool `json:"is_credit"`
-	// The total invoice amount in cents.
-	TotalInvoiceAmount int64 `json:"total_invoice_amount"`
-	// The formatted total invoice amount for display.
-	FormattedTotalInvoiceAmount string `json:"formatted_total_invoice_amount" validate:"required"`
-	// The new monthly bill amount in cents.
-	MonthlyBillAmount int64 `json:"monthly_bill_amount"`
-	// The formatted monthly bill amount for display.
-	FormattedMonthlyBillAmount string `json:"formatted_monthly_bill_amount" validate:"required"`
-	// The individual line items in the proration calculation.
-	LineItems []ProrationLineItem `json:"line_items" validate:"required"`
-}
-
-func (*ProrationPreview) SchemaExample() any {
-	return apiexample.ValidateAndMarshalToMap(SampleProrationPreview)
-}
-
-// ProrationPreviewResponse represents the response containing a proration preview.
-type ProrationPreviewResponse struct {
-	// The proration preview details.
-	Preview *ProrationPreview `json:"preview"`
-}
-
-func (*ProrationPreviewResponse) SchemaExample() any {
-	return apiexample.ValidateAndMarshalToMap(SampleProrationPreviewResponse)
 }
 
 // EnsureBillingCustomerResponse represents the result of ensuring a billing customer exists.

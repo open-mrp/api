@@ -138,7 +138,7 @@ func (m *docAPIKeyMedImpl) returnExistingKey(ctx context.Context, existing *apik
 		return nil, tracing.Trace(span, apierror.NewInternalError(err, "failed to decrypt doc API key secret"))
 	}
 
-	apiKey, apiErr := m.repos.NewAPIKeyRepo().FindByTypeID(ctx, existing.APIKeyID)
+	apiKey, apiErr := m.repos.NewAPIKeyRepo().FindByTypeID(ctx, existing.APIKeyID, nil)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}

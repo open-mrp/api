@@ -16,13 +16,14 @@ const (
 )
 
 type SandboxAccount struct {
-	ID             int64
-	TypeID         string
-	OwnerAccountID string
-	AccountID      string
-	Name           string
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	ID               int64
+	TypeID           string
+	OwnerAccountID   string
+	AccountID        string
+	Name             string
+	OwnerAccountName *string
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
 }
 
 type ListSandboxAccountsResult struct {

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"sync"
 
 	"github.com/augno/api/services/api-gateway/internal/header"
@@ -55,6 +56,9 @@ type APIEndpoint[TReq, TResp any] struct {
 	ObjectType constants.ObjectType `json:"-" yaml:"-"`
 	// LocationFunc returns the Location header value for 201 Created responses.
 	LocationFunc func(TResp) string `json:"-" yaml:"-"`
+	// IncludeConfig declares which sub-objects can be expanded via the include
+	// query parameter. When nil, no include support is provided (zero overhead).
+	IncludeConfig *IncludeConfig `json:"-" yaml:"-"`
 
 	group               *APIEndpointGroup
 	service             any
@@ -171,6 +175,17 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	// Parse and validate include parameters
+	requestedIncludes, apiErr := e.parseIncludeParams(r)
+	if apiErr != nil {
+		tracing.RecordControllerError(span, apiErr)
+		if span.IsRecording() {
+			span.SetAttributes(attribute.String(httptransport.AttrErrorType, "include_validation"))
+		}
+		httptransport.RespondWithAPIError(ctx, w, apiErr)
+		return
+	}
+
 	// Capture request body for logging (if not shielded)
 	if !e.Extras.ShieldRequestBody && !e.Extras.SkipRequestBodyParsing && httptransport.ShouldDecodeBody(r) {
 		if rl, ok := appctx.GetRequestLog(ctx); ok {
@@ -255,6 +270,10 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	if requestedIncludes != nil {
+		ctx = appctx.WithRequestedIncludes(ctx, requestedIncludes)
+	}
+
 	ctx, responseMeta := appctx.WithHTTPResponseMetadata(ctx)
 
 	resp, err := e.boundServiceHandler(ctx, req)
@@ -298,6 +317,12 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 	var respondOpts []httptransport.RespondOption
 	if e.SuccessStatusCode == http.StatusCreated && e.LocationFunc != nil {
 		respondOpts = append(respondOpts, httptransport.WithLocation(e.LocationFunc(resp)))
+	}
+
+	// Apply include transform: collapse unexpanded sub-objects to {id, object}.
+	if e.IncludeConfig != nil {
+		e.respondWithIncludeTransform(ctx, w, resp, requestedIncludes, respondOpts...)
+		return
 	}
 	httptransport.RespondWithJSON(ctx, w, e.SuccessStatusCode, resp, respondOpts...)
 }
@@ -343,6 +368,84 @@ func (e *APIEndpoint[TReq, TResp]) transformRequestBody(r *http.Request, from, t
 	r.ContentLength = int64(len(transformedBody))
 
 	return r, nil
+}
+
+// parseIncludeParams extracts and validates the include query parameter from the
+// request. It supports both array-style (?include[]=role) and comma-separated
+// (?include=role,account) formats. Returns a set of requested include keys and
+// an error if any values are invalid or include is used on an endpoint without
+// IncludeConfig.
+func (e *APIEndpoint[TReq, TResp]) parseIncludeParams(r *http.Request) (map[string]bool, *apierror.APIError) {
+	q := r.URL.Query()
+	var raw []string
+	if vals, ok := q["include[]"]; ok {
+		raw = append(raw, vals...)
+	}
+	if vals, ok := q["include"]; ok {
+		for _, v := range vals {
+			for _, part := range strings.Split(v, ",") {
+				if s := strings.TrimSpace(part); s != "" {
+					raw = append(raw, s)
+				}
+			}
+		}
+	}
+
+	if len(raw) == 0 {
+		return nil, nil
+	}
+
+	if e.IncludeConfig == nil {
+		return nil, apierror.NewParameterInvalidError(
+			"This endpoint does not support the include parameter.",
+			"include[]",
+		)
+	}
+
+	allowed := make(map[string]bool, len(e.IncludeConfig.Fields))
+	for _, f := range e.IncludeConfig.Fields {
+		allowed[f.Key] = true
+	}
+
+	requested := make(map[string]bool, len(raw))
+	for _, v := range raw {
+		if !allowed[v] {
+			return nil, apierror.NewParameterInvalidError(
+				fmt.Sprintf("Invalid include value '%s'. Allowed values: %s",
+					v, strings.Join(e.IncludeConfig.AllowedKeys(), ", ")),
+				"include[]",
+			)
+		}
+		requested[v] = true
+	}
+
+	return requested, nil
+}
+
+// respondWithIncludeTransform marshals the response to a generic map, applies
+// the include collapse transform, and writes the result as JSON.
+func (e *APIEndpoint[TReq, TResp]) respondWithIncludeTransform(ctx context.Context, w http.ResponseWriter, resp TResp, requested map[string]bool, opts ...httptransport.RespondOption) {
+	raw, err := json.Marshal(resp)
+	if err != nil {
+		httptransport.RespondWithJSON(ctx, w, e.SuccessStatusCode, resp, opts...)
+		return
+	}
+
+	var data map[string]any
+	if err := json.Unmarshal(raw, &data); err != nil {
+		httptransport.RespondWithJSON(ctx, w, e.SuccessStatusCode, resp, opts...)
+		return
+	}
+
+	transformed := CollapseUnexpanded(data, e.IncludeConfig, requested)
+
+	transformedBytes, err := json.Marshal(transformed)
+	if err != nil {
+		httptransport.RespondWithJSON(ctx, w, e.SuccessStatusCode, resp, opts...)
+		return
+	}
+
+	httptransport.RespondWithJSONBytes(ctx, w, e.SuccessStatusCode, transformedBytes, opts...)
 }
 
 type APIEndpointer interface {

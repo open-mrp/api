@@ -12,7 +12,7 @@ func SandboxPresenter(s *pb.SandboxInfo) apiresource.Sandbox {
 		return apiresource.Sandbox{}
 	}
 
-	return apiresource.Sandbox{
+	result := apiresource.Sandbox{
 		ID:        s.Id,
 		Object:    constants.ObjectTypeSandbox,
 		Name:      s.Name,
@@ -20,6 +20,16 @@ func SandboxPresenter(s *pb.SandboxInfo) apiresource.Sandbox {
 		CreatedAt: grpcutil.TimestampToTime(s.CreatedAt),
 		UpdatedAt: grpcutil.TimestampToTime(s.UpdatedAt),
 	}
+
+	if s.OwnerAccountId != nil && s.OwnerAccountName != nil {
+		result.OwnerAccount = &apiresource.LightAccount{
+			ID:     *s.OwnerAccountId,
+			Object: constants.ObjectTypeAccount,
+			Name:   *s.OwnerAccountName,
+		}
+	}
+
+	return result
 }
 
 func SandboxListPresenter(resp *pb.ListSandboxAccountsResponse) *apiresource.List[apiresource.Sandbox] {

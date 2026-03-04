@@ -93,7 +93,7 @@ func (s *DocAPIKeyMedTestSuite) TestResolve_ReturnExistingKey_HasRedactedValue()
 		Return(existingDocKey, nil)
 
 	s.apiKeyRepo.EXPECT().
-		FindByTypeID(gomock.Any(), apiKeyTypeID).
+		FindByTypeID(gomock.Any(), apiKeyTypeID, gomock.Nil()).
 		Return(returnedAPIKey, nil)
 
 	result, apiErr := s.med.Resolve(ctx, sandboxAccountID)

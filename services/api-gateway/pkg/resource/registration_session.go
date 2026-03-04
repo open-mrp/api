@@ -163,7 +163,7 @@ var SampleCompleteRegistrationResponse = &CompleteRegistrationResponse{
 type CreateSessionResponse struct {
 	// The unique identifier of the created registration session.
 	ID string `json:"id" validate:"required"`
-	// The object type.
+	// The resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=registration_session"`
 }
 
@@ -175,7 +175,7 @@ func (*CreateSessionResponse) SchemaExample() any {
 type CompleteRegistrationResponse struct {
 	// The ID of the created account.
 	ID string `json:"id" validate:"required"`
-	// The object type.
+	// The resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=account"`
 }
 
@@ -192,7 +192,7 @@ var SampleCreateUserResponse = &CreateUserResponse{
 type CreateUserResponse struct {
 	// The ID of the created user.
 	ID string `json:"id" validate:"required"`
-	// The object type.
+	// The resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=user"`
 }
 

@@ -344,6 +344,8 @@ message ListSandboxAccountsRequest {
   optional string cursor = 1;
   // Maximum number of results to return per page.
   int32 limit = 2;
+  // Includes specifies which related objects to expand (e.g. "owner_account").
+  repeated string includes = 3;
 }
 
 // PageInfo contains cursor-based pagination metadata.
@@ -377,6 +379,8 @@ message CreateSandboxRequest {
   string name = 1;
   // Controls whether the sandbox is blank or seeded with tutorial data.
   SandboxMode mode = 2;
+  // Includes specifies which related objects to expand (e.g. "owner_account").
+  repeated string includes = 3;
 }
 
 // CreateSandboxResponse returns the newly created sandbox's metadata.
@@ -389,6 +393,8 @@ message CreateSandboxResponse {
 message GetSandboxRequest {
   // The sandbox's prefixed type ID (e.g. "sbac_abc123").
   string id = 1;
+  // Includes specifies which related objects to expand (e.g. "owner_account").
+  repeated string includes = 2;
 }
 
 // GetSandboxResponse contains the requested sandbox's metadata.
@@ -415,6 +421,10 @@ message SandboxInfo {
   google.protobuf.Timestamp created_at = 4;
   // When the sandbox was last updated.
   google.protobuf.Timestamp updated_at = 5;
+  // The owner (production) account ID. Present when owner_account include is requested.
+  optional string owner_account_id = 6;
+  // The owner (production) account name. Present when owner_account include is requested.
+  optional string owner_account_name = 7;
 }
 
 // UpdateAccountSubscriptionRequest carries the fields to update on an

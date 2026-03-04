@@ -68,6 +68,7 @@ type APIKeyListInput struct {
 	Limit          int32
 	Query          *string
 	Statuses       []constants.APIKeyStatus
+	Includes       []string
 }
 
 type APIKeyGetAccountAccessInput struct {
@@ -153,9 +154,6 @@ type RegisterUserInput struct {
 type UserMed interface {
 	// GenAuthAccessToken mints an access token for authenticating API requests.
 	GenAuthAccessToken(ctx context.Context, userID string) (string, *apierror.APIError)
-
-	// GenPasswordResetAccessToken mints an access token for password reset.
-	GenPasswordResetAccessToken(ctx context.Context, userID string) (string, *apierror.APIError)
 
 	// Register registers a new user.
 	//

@@ -17,6 +17,7 @@ type APIKeyListRepoInput struct {
 	Limit          int32
 	Query          *string
 	Statuses       []constants.APIKeyStatus
+	Includes       []string
 }
 
 type APIKeyListRepoResult struct {
@@ -26,8 +27,8 @@ type APIKeyListRepoResult struct {
 
 type APIKeyRepo interface {
 	Find(ctx context.Context, apiKeyID string) (*apikey.APIKey, *apierror.APIError)
-	FindByDatabaseID(ctx context.Context, id int64) (*apikey.APIKey, *apierror.APIError)
-	FindByTypeID(ctx context.Context, typeID string) (*apikey.APIKey, *apierror.APIError)
+	FindByDatabaseID(ctx context.Context, id int64, includes []string) (*apikey.APIKey, *apierror.APIError)
+	FindByTypeID(ctx context.Context, typeID string, includes []string) (*apikey.APIKey, *apierror.APIError)
 	Touch(ctx context.Context, apiKeyID int64) *apierror.APIError
 	Create(ctx context.Context, apiKey *apikey.APIKey) (int64, *apierror.APIError)
 	Revoke(ctx context.Context, typeID string) *apierror.APIError
@@ -53,7 +54,6 @@ type DocAPIKeyRepo interface {
 	Create(ctx context.Context, docAPIKey *apikey.DocAPIKey) (int64, *apierror.APIError)
 	Update(ctx context.Context, docAPIKey *apikey.DocAPIKey) *apierror.APIError
 	Delete(ctx context.Context, id int64) *apierror.APIError
-	DeleteByAPIKeyID(ctx context.Context, apiKeyID string) *apierror.APIError
 }
 
 type RegistrationSessionRepo interface {

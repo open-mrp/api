@@ -112,14 +112,3 @@ func (r *docAPIKeyRepoImpl) Delete(ctx context.Context, id int64) *apierror.APIE
 	return nil
 }
 
-func (r *docAPIKeyRepoImpl) DeleteByAPIKeyID(ctx context.Context, apiKeyID string) *apierror.APIError {
-	ctx, span := docAPIKeyRepoTracer.Start(ctx, "repository.doc_api_key.delete_by_api_key_id")
-	defer span.End()
-
-	err := r.queries.DeleteDocAPIKeyByAPIKeyID(ctx, apiKeyID)
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
-
-	return nil
-}

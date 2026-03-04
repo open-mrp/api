@@ -87,21 +87,6 @@ func (mr *MockAccountUserRepoMockRecorder) EnsureActive(ctx, accountID, userID a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureActive", reflect.TypeOf((*MockAccountUserRepo)(nil).EnsureActive), ctx, accountID, userID)
 }
 
-// FindAdminUserIDByAccountID mocks base method.
-func (m *MockAccountUserRepo) FindAdminUserIDByAccountID(ctx context.Context, accountID string) (string, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "FindAdminUserIDByAccountID", ctx, accountID)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// FindAdminUserIDByAccountID indicates an expected call of FindAdminUserIDByAccountID.
-func (mr *MockAccountUserRepoMockRecorder) FindAdminUserIDByAccountID(ctx, accountID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindAdminUserIDByAccountID", reflect.TypeOf((*MockAccountUserRepo)(nil).FindAdminUserIDByAccountID), ctx, accountID)
-}
-
 // FindAffiliationsByUserID mocks base method.
 func (m *MockAccountUserRepo) FindAffiliationsByUserID(ctx context.Context, userID string) ([]domain.AccountAffiliation, *apierror.APIError) {
 	m.ctrl.T.Helper()

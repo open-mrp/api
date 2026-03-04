@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -25,6 +26,11 @@ func (e *ListSandboxesEndpoint) Materialize() *apiendpoint.APIEndpoint[*apiresou
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
+		IncludeConfig: &apiendpoint.IncludeConfig{
+			Fields: []apiendpoint.IncludeField{
+				{Key: "owner_account", ObjectType: constants.ObjectTypeAccount, JSONPaths: []string{"owner_account"}},
+			},
+		},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *apiresource.PaginationRequest) (*apiresource.List[apiresource.Sandbox], *apierror.APIError) {
 			return svc.(SandboxSvc).ListSandboxes
 		},

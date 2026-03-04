@@ -14,7 +14,7 @@ const SampleEnterpriseInquiryID = "enir_01gf7a8200eaj8fke1xvw4h50x"
 type EnterpriseInquiry struct {
 	// The unique identifier for this enterprise inquiry.
 	ID string `json:"id" validate:"required"`
-	// The object type.
+	// The resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=enterprise_inquiry"`
 	// When this inquiry was submitted.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

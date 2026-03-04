@@ -9,8 +9,8 @@ import (
 
 type RequestLogRepo interface {
 	Create(ctx context.Context, requestLog *RequestLog) *apierror.APIError
-	FindByID(ctx context.Context, id, targetAccountID string) (*RequestLogRead, *apierror.APIError)
-	List(ctx context.Context, targetAccountID string, filter *ListRequestLogsFilter) (*ListRequestLogsResult, *apierror.APIError)
+	FindByID(ctx context.Context, id, targetAccountID string, includes []string) (*RequestLogRead, *apierror.APIError)
+	List(ctx context.Context, targetAccountID string, filter *ListRequestLogsFilter, includes []string) (*ListRequestLogsResult, *apierror.APIError)
 }
 
 type UpsertAndLockResult struct {

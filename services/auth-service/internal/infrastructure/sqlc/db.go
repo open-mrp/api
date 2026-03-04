@@ -72,6 +72,12 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.deleteRegistrationSessionStmt, err = db.PrepareContext(ctx, deleteRegistrationSession); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteRegistrationSession: %w", err)
 	}
+	if q.findAPIKeyBaseByDatabaseIDStmt, err = db.PrepareContext(ctx, findAPIKeyBaseByDatabaseID); err != nil {
+		return nil, fmt.Errorf("error preparing query FindAPIKeyBaseByDatabaseID: %w", err)
+	}
+	if q.findAPIKeyBaseByTypeIDStmt, err = db.PrepareContext(ctx, findAPIKeyBaseByTypeID); err != nil {
+		return nil, fmt.Errorf("error preparing query FindAPIKeyBaseByTypeID: %w", err)
+	}
 	if q.findAPIKeyByIDStmt, err = db.PrepareContext(ctx, findAPIKeyByID); err != nil {
 		return nil, fmt.Errorf("error preparing query FindAPIKeyByID: %w", err)
 	}
@@ -125,6 +131,12 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.listAPIKeysBackwardStmt, err = db.PrepareContext(ctx, listAPIKeysBackward); err != nil {
 		return nil, fmt.Errorf("error preparing query ListAPIKeysBackward: %w", err)
+	}
+	if q.listAPIKeysBaseBackwardStmt, err = db.PrepareContext(ctx, listAPIKeysBaseBackward); err != nil {
+		return nil, fmt.Errorf("error preparing query ListAPIKeysBaseBackward: %w", err)
+	}
+	if q.listAPIKeysBaseForwardStmt, err = db.PrepareContext(ctx, listAPIKeysBaseForward); err != nil {
+		return nil, fmt.Errorf("error preparing query ListAPIKeysBaseForward: %w", err)
 	}
 	if q.listAPIKeysForwardStmt, err = db.PrepareContext(ctx, listAPIKeysForward); err != nil {
 		return nil, fmt.Errorf("error preparing query ListAPIKeysForward: %w", err)
@@ -271,6 +283,16 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing deleteRegistrationSessionStmt: %w", cerr)
 		}
 	}
+	if q.findAPIKeyBaseByDatabaseIDStmt != nil {
+		if cerr := q.findAPIKeyBaseByDatabaseIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing findAPIKeyBaseByDatabaseIDStmt: %w", cerr)
+		}
+	}
+	if q.findAPIKeyBaseByTypeIDStmt != nil {
+		if cerr := q.findAPIKeyBaseByTypeIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing findAPIKeyBaseByTypeIDStmt: %w", cerr)
+		}
+	}
 	if q.findAPIKeyByIDStmt != nil {
 		if cerr := q.findAPIKeyByIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing findAPIKeyByIDStmt: %w", cerr)
@@ -359,6 +381,16 @@ func (q *Queries) Close() error {
 	if q.listAPIKeysBackwardStmt != nil {
 		if cerr := q.listAPIKeysBackwardStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing listAPIKeysBackwardStmt: %w", cerr)
+		}
+	}
+	if q.listAPIKeysBaseBackwardStmt != nil {
+		if cerr := q.listAPIKeysBaseBackwardStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing listAPIKeysBaseBackwardStmt: %w", cerr)
+		}
+	}
+	if q.listAPIKeysBaseForwardStmt != nil {
+		if cerr := q.listAPIKeysBaseForwardStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing listAPIKeysBaseForwardStmt: %w", cerr)
 		}
 	}
 	if q.listAPIKeysForwardStmt != nil {
@@ -516,6 +548,8 @@ type Queries struct {
 	deleteDocAPIKeyByIDStmt                       *sql.Stmt
 	deleteExpiredIdempotencyKeysStmt              *sql.Stmt
 	deleteRegistrationSessionStmt                 *sql.Stmt
+	findAPIKeyBaseByDatabaseIDStmt                *sql.Stmt
+	findAPIKeyBaseByTypeIDStmt                    *sql.Stmt
 	findAPIKeyByIDStmt                            *sql.Stmt
 	findAPIKeyWithRoleByDatabaseIDStmt            *sql.Stmt
 	findAPIKeyWithRoleByKeyIDStmt                 *sql.Stmt
@@ -534,6 +568,8 @@ type Queries struct {
 	getRegistrationSessionByTokenStmt             *sql.Stmt
 	getRegistrationSessionByTypeIDStmt            *sql.Stmt
 	listAPIKeysBackwardStmt                       *sql.Stmt
+	listAPIKeysBaseBackwardStmt                   *sql.Stmt
+	listAPIKeysBaseForwardStmt                    *sql.Stmt
 	listAPIKeysForwardStmt                        *sql.Stmt
 	listRegistrationSessionsByUserIDBackwardStmt  *sql.Stmt
 	listRegistrationSessionsByUserIDForwardStmt   *sql.Stmt
@@ -576,6 +612,8 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		deleteDocAPIKeyByIDStmt:                       q.deleteDocAPIKeyByIDStmt,
 		deleteExpiredIdempotencyKeysStmt:              q.deleteExpiredIdempotencyKeysStmt,
 		deleteRegistrationSessionStmt:                 q.deleteRegistrationSessionStmt,
+		findAPIKeyBaseByDatabaseIDStmt:                q.findAPIKeyBaseByDatabaseIDStmt,
+		findAPIKeyBaseByTypeIDStmt:                    q.findAPIKeyBaseByTypeIDStmt,
 		findAPIKeyByIDStmt:                            q.findAPIKeyByIDStmt,
 		findAPIKeyWithRoleByDatabaseIDStmt:            q.findAPIKeyWithRoleByDatabaseIDStmt,
 		findAPIKeyWithRoleByKeyIDStmt:                 q.findAPIKeyWithRoleByKeyIDStmt,
@@ -594,6 +632,8 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getRegistrationSessionByTokenStmt:             q.getRegistrationSessionByTokenStmt,
 		getRegistrationSessionByTypeIDStmt:            q.getRegistrationSessionByTypeIDStmt,
 		listAPIKeysBackwardStmt:                       q.listAPIKeysBackwardStmt,
+		listAPIKeysBaseBackwardStmt:                   q.listAPIKeysBaseBackwardStmt,
+		listAPIKeysBaseForwardStmt:                    q.listAPIKeysBaseForwardStmt,
 		listAPIKeysForwardStmt:                        q.listAPIKeysForwardStmt,
 		listRegistrationSessionsByUserIDBackwardStmt:  q.listRegistrationSessionsByUserIDBackwardStmt,
 		listRegistrationSessionsByUserIDForwardStmt:   q.listRegistrationSessionsByUserIDForwardStmt,

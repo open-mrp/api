@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -33,6 +34,11 @@ func (e *GetSandboxEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetSandboxR
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetSandboxRequest) (*apiresource.Sandbox, *apierror.APIError) {
 			return svc.(SandboxSvc).GetSandbox
+		},
+		IncludeConfig: &apiendpoint.IncludeConfig{
+			Fields: []apiendpoint.IncludeField{
+				{Key: "owner_account", ObjectType: constants.ObjectTypeAccount, JSONPaths: []string{"owner_account"}},
+			},
 		},
 		Extras: apiendpoint.APIEndpointExtras{
 			AllowUnknownJSONFields: false,

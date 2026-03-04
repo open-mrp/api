@@ -214,20 +214,14 @@ func (h *gRPCHandler) ListSandboxAccounts(ctx context.Context, req *pb.ListSandb
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	result, apiErr := h.sandboxSvc.ListSandboxAccounts(ctx, req.Cursor, req.Limit)
+	result, apiErr := h.sandboxSvc.ListSandboxAccounts(ctx, req.Cursor, req.Limit, req.Includes)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
 	pbSandboxes := make([]*pb.SandboxInfo, len(result.Sandboxes))
 	for i, s := range result.Sandboxes {
-		pbSandboxes[i] = &pb.SandboxInfo{
-			Id:        s.TypeID,
-			Name:      s.Name,
-			AccountId: s.AccountID,
-			CreatedAt: timestamppb.New(s.CreatedAt),
-			UpdatedAt: timestamppb.New(s.UpdatedAt),
-		}
+		pbSandboxes[i] = sandboxToProto(s)
 	}
 
 	return &pb.ListSandboxAccountsResponse{
@@ -257,19 +251,13 @@ func (h *gRPCHandler) GetSandbox(ctx context.Context, req *pb.GetSandboxRequest)
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	sandbox, apiErr := h.sandboxSvc.GetSandbox(ctx, req.Id)
+	sandbox, apiErr := h.sandboxSvc.GetSandbox(ctx, req.Id, req.Includes)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
 	return &pb.GetSandboxResponse{
-		Sandbox: &pb.SandboxInfo{
-			Id:        sandbox.TypeID,
-			Name:      sandbox.Name,
-			AccountId: sandbox.AccountID,
-			CreatedAt: timestamppb.New(sandbox.CreatedAt),
-			UpdatedAt: timestamppb.New(sandbox.UpdatedAt),
-		},
+		Sandbox: sandboxToProto(sandbox),
 	}, nil
 }
 
@@ -308,14 +296,24 @@ func (h *gRPCHandler) CreateSandbox(ctx context.Context, req *pb.CreateSandboxRe
 	}
 
 	return &pb.CreateSandboxResponse{
-		Sandbox: &pb.SandboxInfo{
-			Id:        sandbox.TypeID,
-			Name:      sandbox.Name,
-			AccountId: sandbox.AccountID,
-			CreatedAt: timestamppb.New(sandbox.CreatedAt),
-			UpdatedAt: timestamppb.New(sandbox.UpdatedAt),
-		},
+		Sandbox: sandboxToProto(sandbox),
 	}, nil
+}
+
+func sandboxToProto(s *domain.SandboxAccount) *pb.SandboxInfo {
+	info := &pb.SandboxInfo{
+		Id:        s.TypeID,
+		Name:      s.Name,
+		AccountId: s.AccountID,
+		CreatedAt: timestamppb.New(s.CreatedAt),
+		UpdatedAt: timestamppb.New(s.UpdatedAt),
+	}
+	if s.OwnerAccountName != nil {
+		ownID := s.OwnerAccountID
+		info.OwnerAccountId = &ownID
+		info.OwnerAccountName = s.OwnerAccountName
+	}
+	return info
 }
 
 func (h *gRPCHandler) UpdateAccountSubscription(ctx context.Context, req *pb.UpdateAccountSubscriptionRequest) (*emptypb.Empty, error) {

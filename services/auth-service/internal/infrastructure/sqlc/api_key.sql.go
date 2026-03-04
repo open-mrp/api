@@ -50,6 +50,56 @@ func (q *Queries) CreateAPIKey(ctx context.Context, arg CreateAPIKeyParams) (sql
 	)
 }
 
+const findAPIKeyBaseByDatabaseID = `-- name: FindAPIKeyBaseByDatabaseID :one
+SELECT api_key.id, api_key.type_id, api_key.key_id, api_key.name, api_key.secret_hash, api_key.redacted_value, api_key.owner_account_id, api_key.role_id, api_key.created_at, api_key.updated_at, api_key.last_used_at, api_key.expires_at, api_key.revoked_at FROM api_key WHERE api_key.id = ?
+`
+
+func (q *Queries) FindAPIKeyBaseByDatabaseID(ctx context.Context, id int64) (ApiKey, error) {
+	row := q.queryRow(ctx, q.findAPIKeyBaseByDatabaseIDStmt, findAPIKeyBaseByDatabaseID, id)
+	var i ApiKey
+	err := row.Scan(
+		&i.ID,
+		&i.TypeID,
+		&i.KeyID,
+		&i.Name,
+		&i.SecretHash,
+		&i.RedactedValue,
+		&i.OwnerAccountID,
+		&i.RoleID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.LastUsedAt,
+		&i.ExpiresAt,
+		&i.RevokedAt,
+	)
+	return i, err
+}
+
+const findAPIKeyBaseByTypeID = `-- name: FindAPIKeyBaseByTypeID :one
+SELECT api_key.id, api_key.type_id, api_key.key_id, api_key.name, api_key.secret_hash, api_key.redacted_value, api_key.owner_account_id, api_key.role_id, api_key.created_at, api_key.updated_at, api_key.last_used_at, api_key.expires_at, api_key.revoked_at FROM api_key WHERE api_key.type_id = ?
+`
+
+func (q *Queries) FindAPIKeyBaseByTypeID(ctx context.Context, typeID string) (ApiKey, error) {
+	row := q.queryRow(ctx, q.findAPIKeyBaseByTypeIDStmt, findAPIKeyBaseByTypeID, typeID)
+	var i ApiKey
+	err := row.Scan(
+		&i.ID,
+		&i.TypeID,
+		&i.KeyID,
+		&i.Name,
+		&i.SecretHash,
+		&i.RedactedValue,
+		&i.OwnerAccountID,
+		&i.RoleID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.LastUsedAt,
+		&i.ExpiresAt,
+		&i.RevokedAt,
+	)
+	return i, err
+}
+
 const findAPIKeyByID = `-- name: FindAPIKeyByID :one
 SELECT id, type_id, key_id, name, secret_hash, redacted_value, owner_account_id, role_id, created_at, updated_at, last_used_at, expires_at, revoked_at FROM api_key WHERE key_id = ? OR type_id = ?
 `
@@ -356,6 +406,162 @@ func (q *Queries) ListAPIKeysBackward(ctx context.Context, arg ListAPIKeysBackwa
 			&i.RevokedAt,
 			&i.RoleName,
 			&i.RoleTypeCode,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAPIKeysBaseBackward = `-- name: ListAPIKeysBaseBackward :many
+SELECT api_key.id, api_key.type_id, api_key.key_id, api_key.name, api_key.secret_hash, api_key.redacted_value, api_key.owner_account_id, api_key.role_id, api_key.created_at, api_key.updated_at, api_key.last_used_at, api_key.expires_at, api_key.revoked_at
+FROM api_key
+WHERE api_key.owner_account_id = ?
+AND (api_key.name LIKE CONCAT('%', ?, '%') OR ? = '')
+AND (
+    (? = true AND api_key.revoked_at IS NULL AND (api_key.expires_at IS NULL OR api_key.expires_at > NOW(3)))
+    OR (? = true AND api_key.expires_at IS NOT NULL AND api_key.expires_at <= NOW(3) AND api_key.revoked_at IS NULL AND api_key.expires_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
+    OR (? = true AND api_key.revoked_at IS NOT NULL AND api_key.revoked_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
+)
+AND (
+    api_key.created_at > ?
+    OR (api_key.created_at = ? AND api_key.id > ?)
+)
+ORDER BY api_key.created_at ASC, api_key.id ASC
+LIMIT ?
+`
+
+type ListAPIKeysBaseBackwardParams struct {
+	OwnerAccountID  string
+	Query           interface{}
+	IncludeActive   interface{}
+	IncludeExpired  interface{}
+	IncludeRevoked  interface{}
+	CursorCreatedAt time.Time
+	CursorID        int64
+	Limit           int32
+}
+
+func (q *Queries) ListAPIKeysBaseBackward(ctx context.Context, arg ListAPIKeysBaseBackwardParams) ([]ApiKey, error) {
+	rows, err := q.query(ctx, q.listAPIKeysBaseBackwardStmt, listAPIKeysBaseBackward,
+		arg.OwnerAccountID,
+		arg.Query,
+		arg.Query,
+		arg.IncludeActive,
+		arg.IncludeExpired,
+		arg.IncludeRevoked,
+		arg.CursorCreatedAt,
+		arg.CursorCreatedAt,
+		arg.CursorID,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ApiKey
+	for rows.Next() {
+		var i ApiKey
+		if err := rows.Scan(
+			&i.ID,
+			&i.TypeID,
+			&i.KeyID,
+			&i.Name,
+			&i.SecretHash,
+			&i.RedactedValue,
+			&i.OwnerAccountID,
+			&i.RoleID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.LastUsedAt,
+			&i.ExpiresAt,
+			&i.RevokedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAPIKeysBaseForward = `-- name: ListAPIKeysBaseForward :many
+SELECT api_key.id, api_key.type_id, api_key.key_id, api_key.name, api_key.secret_hash, api_key.redacted_value, api_key.owner_account_id, api_key.role_id, api_key.created_at, api_key.updated_at, api_key.last_used_at, api_key.expires_at, api_key.revoked_at
+FROM api_key
+WHERE api_key.owner_account_id = ?
+AND (api_key.name LIKE CONCAT('%', ?, '%') OR ? = '')
+AND (
+    (? = true AND api_key.revoked_at IS NULL AND (api_key.expires_at IS NULL OR api_key.expires_at > NOW(3)))
+    OR (? = true AND api_key.expires_at IS NOT NULL AND api_key.expires_at <= NOW(3) AND api_key.revoked_at IS NULL AND api_key.expires_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
+    OR (? = true AND api_key.revoked_at IS NOT NULL AND api_key.revoked_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
+)
+AND (
+    ? IS NULL
+    OR api_key.created_at < ?
+    OR (api_key.created_at = ? AND api_key.id < ?)
+)
+ORDER BY api_key.created_at DESC, api_key.id DESC
+LIMIT ?
+`
+
+type ListAPIKeysBaseForwardParams struct {
+	OwnerAccountID  string
+	Query           interface{}
+	IncludeActive   interface{}
+	IncludeExpired  interface{}
+	IncludeRevoked  interface{}
+	CursorCreatedAt sql.NullTime
+	CursorID        sql.NullInt64
+	Limit           int32
+}
+
+func (q *Queries) ListAPIKeysBaseForward(ctx context.Context, arg ListAPIKeysBaseForwardParams) ([]ApiKey, error) {
+	rows, err := q.query(ctx, q.listAPIKeysBaseForwardStmt, listAPIKeysBaseForward,
+		arg.OwnerAccountID,
+		arg.Query,
+		arg.Query,
+		arg.IncludeActive,
+		arg.IncludeExpired,
+		arg.IncludeRevoked,
+		arg.CursorCreatedAt,
+		arg.CursorCreatedAt,
+		arg.CursorCreatedAt,
+		arg.CursorID,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ApiKey
+	for rows.Next() {
+		var i ApiKey
+		if err := rows.Scan(
+			&i.ID,
+			&i.TypeID,
+			&i.KeyID,
+			&i.Name,
+			&i.SecretHash,
+			&i.RedactedValue,
+			&i.OwnerAccountID,
+			&i.RoleID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.LastUsedAt,
+			&i.ExpiresAt,
+			&i.RevokedAt,
 		); err != nil {
 			return nil, err
 		}

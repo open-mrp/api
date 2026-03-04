@@ -84,14 +84,6 @@ func (s *userMedImpl) GenAuthAccessToken(ctx context.Context, userID string) (st
 	return token.EncodeJWT(ctx, s.jwtSecret, userID, time.Hour, token.JWTTypeAccess)
 }
 
-// GenPasswordResetAccessToken mints an access token that can be used to reset the password for the given user ID.
-func (s *userMedImpl) GenPasswordResetAccessToken(ctx context.Context, userID string) (string, *apierror.APIError) {
-	ctx, span := userMedTracer.Start(ctx, "mediator.user.gen_password_reset_access_token")
-	defer span.End()
-
-	return token.EncodeJWT(ctx, s.jwtSecret, userID, 15*time.Minute, token.JWTTypePasswordReset)
-}
-
 func (s *userMedImpl) Register(ctx context.Context, input domain.RegisterUserInput) (*types.User, *apierror.APIError) {
 	ctx, span := userMedTracer.Start(ctx, "domain.auth.register")
 	defer span.End()

@@ -24,9 +24,11 @@ var SampleAPIKey = &APIKey{
 	Object:        constants.ObjectTypeAPIKey,
 	Name:          SampleAPIKeyName,
 	RedactedValue: SampleProdAPIKeyRedactedValue,
-	Role: LightRole{
-		ID:   SampleRoleID,
-		Name: SampleRoleName,
+	Role: &LightRole{
+		ID:           SampleRoleID,
+		Object:       constants.ObjectTypeRole,
+		Name:         SampleRoleName,
+		RoleTypeCode: constants.RoleTypeCodeAdmin,
 	},
 	CreatedAt:  timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:  timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
@@ -44,14 +46,14 @@ var SampleCreatedAPIKey = &CreatedAPIKey{
 type APIKey struct {
 	// The unique identifier for the API key.
 	ID string `json:"id" validate:"required"`
-	// The object type.
+	// The resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=api_key"`
 	// The human-readable name for the API key.
 	Name string `json:"name" validate:"required"`
 	// The redacted value of the API key for display purposes.
 	RedactedValue string `json:"redacted_value" validate:"required"`
-	// The role associated with this API key.
-	Role LightRole `json:"role" validate:"required"`
+	// The role associated with this API key. Expandable.
+	Role *LightRole `json:"role" expandable:"true"`
 	// The timestamp when the API key was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// The timestamp when the API key was last updated.

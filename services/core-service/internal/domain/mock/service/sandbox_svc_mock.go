@@ -73,18 +73,18 @@ func (mr *MockSandboxSvcMockRecorder) DeleteSandbox(ctx, sandboxTypeID any) *gom
 }
 
 // GetSandbox mocks base method.
-func (m *MockSandboxSvc) GetSandbox(ctx context.Context, sandboxTypeID string) (*domain.SandboxAccount, *apierror.APIError) {
+func (m *MockSandboxSvc) GetSandbox(ctx context.Context, sandboxTypeID string, includes []string) (*domain.SandboxAccount, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSandbox", ctx, sandboxTypeID)
+	ret := m.ctrl.Call(m, "GetSandbox", ctx, sandboxTypeID, includes)
 	ret0, _ := ret[0].(*domain.SandboxAccount)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // GetSandbox indicates an expected call of GetSandbox.
-func (mr *MockSandboxSvcMockRecorder) GetSandbox(ctx, sandboxTypeID any) *gomock.Call {
+func (mr *MockSandboxSvcMockRecorder) GetSandbox(ctx, sandboxTypeID, includes any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSandbox", reflect.TypeOf((*MockSandboxSvc)(nil).GetSandbox), ctx, sandboxTypeID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSandbox", reflect.TypeOf((*MockSandboxSvc)(nil).GetSandbox), ctx, sandboxTypeID, includes)
 }
 
 // GetSandboxAccountByOwner mocks base method.
@@ -103,16 +103,16 @@ func (mr *MockSandboxSvcMockRecorder) GetSandboxAccountByOwner(ctx, ownerAccount
 }
 
 // ListSandboxAccounts mocks base method.
-func (m *MockSandboxSvc) ListSandboxAccounts(ctx context.Context, cursor *string, limit int32) (*domain.ListSandboxAccountsResult, *apierror.APIError) {
+func (m *MockSandboxSvc) ListSandboxAccounts(ctx context.Context, cursor *string, limit int32, includes []string) (*domain.ListSandboxAccountsResult, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListSandboxAccounts", ctx, cursor, limit)
+	ret := m.ctrl.Call(m, "ListSandboxAccounts", ctx, cursor, limit, includes)
 	ret0, _ := ret[0].(*domain.ListSandboxAccountsResult)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // ListSandboxAccounts indicates an expected call of ListSandboxAccounts.
-func (mr *MockSandboxSvcMockRecorder) ListSandboxAccounts(ctx, cursor, limit any) *gomock.Call {
+func (mr *MockSandboxSvcMockRecorder) ListSandboxAccounts(ctx, cursor, limit, includes any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSandboxAccounts", reflect.TypeOf((*MockSandboxSvc)(nil).ListSandboxAccounts), ctx, cursor, limit)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSandboxAccounts", reflect.TypeOf((*MockSandboxSvc)(nil).ListSandboxAccounts), ctx, cursor, limit, includes)
 }

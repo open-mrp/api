@@ -120,6 +120,18 @@ func (suite *SandboxMedTestSuite) TestCreate_Success() {
 		Return(nil).
 		Times(1)
 
+	suite.sandboxAccountRepo.EXPECT().
+		FindByTypeID(gomock.Any(), gomock.Any(), gomock.Nil()).
+		DoAndReturn(func(ctx context.Context, typeID string, includes []string) (*domain.SandboxAccount, *apierror.APIError) {
+			return &domain.SandboxAccount{
+				ID:             1,
+				TypeID:         typeID,
+				OwnerAccountID: ownerAccountID,
+				Name:           "My Sandbox",
+			}, nil
+		}).
+		Times(1)
+
 	result, err := suite.sandboxMed.Create(ctx, ownerAccountID, userID, "My Sandbox")
 
 	suite.Nil(err)
@@ -194,6 +206,18 @@ func (suite *SandboxMedTestSuite) TestCreate_CopiesOwnerPlanCode() {
 	suite.sandboxAccountRepo.EXPECT().
 		Create(gomock.Any(), gomock.Any(), ownerAccountID, gomock.Any()).
 		Return(nil).
+		Times(1)
+
+	suite.sandboxAccountRepo.EXPECT().
+		FindByTypeID(gomock.Any(), gomock.Any(), gomock.Nil()).
+		DoAndReturn(func(ctx context.Context, typeID string, includes []string) (*domain.SandboxAccount, *apierror.APIError) {
+			return &domain.SandboxAccount{
+				ID:             1,
+				TypeID:         typeID,
+				OwnerAccountID: ownerAccountID,
+				Name:           "Pro Sandbox",
+			}, nil
+		}).
 		Times(1)
 
 	result, err := suite.sandboxMed.Create(ctx, ownerAccountID, userID, "Pro Sandbox")
@@ -422,6 +446,18 @@ func (suite *SandboxMedTestSuite) TestCreate_UnlimitedSandboxes() {
 		Return(nil).
 		Times(1)
 
+	suite.sandboxAccountRepo.EXPECT().
+		FindByTypeID(gomock.Any(), gomock.Any(), gomock.Nil()).
+		DoAndReturn(func(ctx context.Context, typeID string, includes []string) (*domain.SandboxAccount, *apierror.APIError) {
+			return &domain.SandboxAccount{
+				ID:             1,
+				TypeID:         typeID,
+				OwnerAccountID: ownerAccountID,
+				Name:           "Unlimited Sandbox",
+			}, nil
+		}).
+		Times(1)
+
 	result, err := suite.sandboxMed.Create(ctx, ownerAccountID, userID, "Unlimited Sandbox")
 
 	suite.Nil(err)
@@ -474,7 +510,7 @@ func (suite *SandboxMedTestSuite) TestDelete_Success() {
 	accountID := "ac_sandbox_acct"
 
 	suite.sandboxAccountRepo.EXPECT().
-		FindByTypeID(gomock.Any(), sandboxTypeID).
+		FindByTypeID(gomock.Any(), sandboxTypeID, gomock.Nil()).
 		Return(&domain.SandboxAccount{
 			ID:             1,
 			TypeID:         sandboxTypeID,
@@ -514,7 +550,7 @@ func (suite *SandboxMedTestSuite) TestDelete_LastSandboxCanBeDeleted() {
 	accountID := "ac_sandbox_acct"
 
 	suite.sandboxAccountRepo.EXPECT().
-		FindByTypeID(gomock.Any(), sandboxTypeID).
+		FindByTypeID(gomock.Any(), sandboxTypeID, gomock.Nil()).
 		Return(&domain.SandboxAccount{
 			ID:             1,
 			TypeID:         sandboxTypeID,
@@ -553,7 +589,7 @@ func (suite *SandboxMedTestSuite) TestDelete_SandboxNotFound() {
 	sandboxTypeID := "sbac_nonexistent"
 
 	suite.sandboxAccountRepo.EXPECT().
-		FindByTypeID(gomock.Any(), sandboxTypeID).
+		FindByTypeID(gomock.Any(), sandboxTypeID, gomock.Nil()).
 		Return(nil, apierror.NewResourceNotFoundError("Sandbox not found.")).
 		Times(1)
 
@@ -569,7 +605,7 @@ func (suite *SandboxMedTestSuite) TestDelete_OwnerMismatch() {
 	sandboxTypeID := "sbac_sandbox1"
 
 	suite.sandboxAccountRepo.EXPECT().
-		FindByTypeID(gomock.Any(), sandboxTypeID).
+		FindByTypeID(gomock.Any(), sandboxTypeID, gomock.Nil()).
 		Return(&domain.SandboxAccount{
 			ID:             1,
 			TypeID:         sandboxTypeID,
@@ -594,7 +630,7 @@ func (suite *SandboxMedTestSuite) TestSafety_Delete_RejectsNonSandboxAccount() {
 	accountID := "ac_sandbox_acct"
 
 	suite.sandboxAccountRepo.EXPECT().
-		FindByTypeID(gomock.Any(), sandboxTypeID).
+		FindByTypeID(gomock.Any(), sandboxTypeID, gomock.Nil()).
 		Return(&domain.SandboxAccount{
 			ID:             1,
 			TypeID:         sandboxTypeID,
@@ -625,7 +661,7 @@ func (suite *SandboxMedTestSuite) TestDelete_GetAccountContextError() {
 	accountID := "ac_sandbox_acct"
 
 	suite.sandboxAccountRepo.EXPECT().
-		FindByTypeID(gomock.Any(), sandboxTypeID).
+		FindByTypeID(gomock.Any(), sandboxTypeID, gomock.Nil()).
 		Return(&domain.SandboxAccount{
 			ID:             1,
 			TypeID:         sandboxTypeID,

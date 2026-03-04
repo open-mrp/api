@@ -16,7 +16,7 @@ type PageInfo struct {
 
 // List represents a paginated list of resources.
 type List[T any] struct {
-	// The object type.
+	// The resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=list"`
 	// Pagination metadata.
 	PageInfo PageInfo `json:"page_info"`

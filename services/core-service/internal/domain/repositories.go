@@ -31,15 +31,14 @@ type AccountUserRepo interface {
 	GetAdminRoleID(ctx context.Context) (string, *apierror.APIError)
 	DeactivateExcept(ctx context.Context, accountID, keepUserID string, limit int32) (int64, *apierror.APIError)
 	EnsureActive(ctx context.Context, accountID, userID string) *apierror.APIError
-	FindAdminUserIDByAccountID(ctx context.Context, accountID string) (string, *apierror.APIError)
 	CountActive(ctx context.Context, accountID string) (int64, *apierror.APIError)
 	ReactivateUsers(ctx context.Context, accountID string, limit int32) (int64, *apierror.APIError)
 }
 
 type SandboxAccountRepo interface {
 	FindFirstByOwnerAccountID(ctx context.Context, ownerAccountID string) (string, *apierror.APIError)
-	FindByTypeID(ctx context.Context, typeID string) (*SandboxAccount, *apierror.APIError)
-	List(ctx context.Context, ownerAccountID string, cursor *string, limit int32) (*ListSandboxAccountsResult, *apierror.APIError)
+	FindByTypeID(ctx context.Context, typeID string, includes []string) (*SandboxAccount, *apierror.APIError)
+	List(ctx context.Context, ownerAccountID string, cursor *string, limit int32, includes []string) (*ListSandboxAccountsResult, *apierror.APIError)
 	Create(ctx context.Context, typeID, ownerAccountID, accountID string) *apierror.APIError
 	CountByOwnerAccountID(ctx context.Context, ownerAccountID string) (int64, *apierror.APIError)
 	DeleteByID(ctx context.Context, id int64) *apierror.APIError

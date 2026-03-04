@@ -360,6 +360,8 @@ message CreateAPIKeyRequest {
   string name = 2;
   // ExpiresAt is an optional expiration timestamp for the API key.
   optional google.protobuf.Timestamp expires_at = 3;
+  // Includes specifies which related objects to expand (e.g. "role").
+  repeated string includes = 4;
 }
 
 // CreateAPIKeyResponse is returned after successfully creating an API key.
@@ -378,6 +380,8 @@ message RotateAPIKeyRequest {
   string api_key_id = 1;
   // ExpiresAt is an optional expiration timestamp override for the new API key.
   optional google.protobuf.Timestamp expires_at = 2;
+  // Includes specifies which related objects to expand (e.g. "role").
+  repeated string includes = 3;
 }
 
 // RotateAPIKeyResponse is returned after successfully rotating an API key.
@@ -407,6 +411,8 @@ message ListAPIKeysRequest {
   // Statuses filters API keys by status. Valid values: "active", "expired",
   // "revoked". When empty, all statuses are included.
   repeated string statuses = 4;
+  // Includes specifies which related objects to expand (e.g. "role").
+  repeated string includes = 5;
 }
 
 // PageInfo contains cursor-based pagination metadata.
@@ -430,6 +436,8 @@ message ListAPIKeysResponse {
 message GetAPIKeyRequest {
   // APIKeyID is the prefixed unique identifier of the key to retrieve.
   string api_key_id = 1;
+  // Includes specifies which related objects to expand (e.g. "role").
+  repeated string includes = 2;
 }
 
 // GetAPIKeyResponse contains the API key metadata.
@@ -447,9 +455,9 @@ message APIKeyInfo {
   // RedactedValue is the redacted API key value for display purposes.
   string redacted_value = 3;
   // RoleID is the role assigned to this API key.
-  string role_id = 4;
+  optional string role_id = 4;
   // RoleName is the display name of the assigned role.
-  string role_name = 5;
+  optional string role_name = 5;
   // CreatedAt is when the API key was created.
   google.protobuf.Timestamp created_at = 6;
   // UpdatedAt is when the API key was last modified.
@@ -460,11 +468,16 @@ message APIKeyInfo {
   optional google.protobuf.Timestamp expires_at = 9;
   // RevokedAt is when the API key was revoked.
   optional google.protobuf.Timestamp revoked_at = 10;
+  // RoleTypeCode is the type code of the assigned role.
+  optional string role_type_code = 11;
 }
 
 // GetOrCreateDocAPIKeyRequest is empty because the caller's identity is
 // extracted from gRPC metadata.
-message GetOrCreateDocAPIKeyRequest {}
+message GetOrCreateDocAPIKeyRequest {
+  // Includes specifies which related objects to expand (e.g. "role").
+  repeated string includes = 1;
+}
 
 // GetOrCreateDocAPIKeyResponse contains the full API key secret (decrypted
 // from storage) and the API key metadata.

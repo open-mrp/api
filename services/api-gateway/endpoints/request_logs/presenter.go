@@ -38,29 +38,28 @@ func RequestLogPresenter(rl *pb.RequestLogInfo) apiresource.RequestLog {
 
 	if rl.AccountId != nil && rl.AccountName != nil {
 		result.Account = &apiresource.LightAccount{
-			ID:         *rl.AccountId,
-			ObjectType: constants.ObjectTypeAccount,
-			Name:       *rl.AccountName,
+			ID:     *rl.AccountId,
+			Object: constants.ObjectTypeAccount,
+			Name:   *rl.AccountName,
 		}
 	}
 
 	if rl.Actor != nil {
 		actor := &apiresource.RequestLogActor{
 			ID:            rl.Actor.Id,
-			ObjectType:    constants.ObjectType(rl.Actor.ObjectType),
+			Object:        constants.ObjectType(rl.Actor.ObjectType),
 			Name:          rl.Actor.Name,
 			Email:         rl.Actor.Email,
 			RedactedValue: rl.Actor.RedactedValue,
 		}
 		if rl.Actor.RoleId != nil && rl.Actor.RoleName != nil {
 			role := &apiresource.LightRole{
-				ID:         *rl.Actor.RoleId,
-				ObjectType: constants.ObjectTypeRole,
-				Name:       *rl.Actor.RoleName,
+				ID:     *rl.Actor.RoleId,
+				Object: constants.ObjectTypeRole,
+				Name:   *rl.Actor.RoleName,
 			}
 			if rl.Actor.RoleTypeCode != nil {
-				rtc := constants.RoleTypeCode(*rl.Actor.RoleTypeCode)
-				role.RoleTypeCode = &rtc
+				role.RoleTypeCode = constants.RoleTypeCode(*rl.Actor.RoleTypeCode)
 			}
 			actor.Role = role
 		}
@@ -99,29 +98,28 @@ func RequestLogListItemPresenter(rl *pb.RequestLogInfo) apiresource.RequestLogLi
 
 	if rl.AccountId != nil && rl.AccountName != nil {
 		result.Account = &apiresource.LightAccount{
-			ID:         *rl.AccountId,
-			ObjectType: constants.ObjectTypeAccount,
-			Name:       *rl.AccountName,
+			ID:     *rl.AccountId,
+			Object: constants.ObjectTypeAccount,
+			Name:   *rl.AccountName,
 		}
 	}
 
 	if rl.Actor != nil {
 		actor := &apiresource.RequestLogActor{
 			ID:            rl.Actor.Id,
-			ObjectType:    constants.ObjectType(rl.Actor.ObjectType),
+			Object:        constants.ObjectType(rl.Actor.ObjectType),
 			Name:          rl.Actor.Name,
 			Email:         rl.Actor.Email,
 			RedactedValue: rl.Actor.RedactedValue,
 		}
 		if rl.Actor.RoleId != nil && rl.Actor.RoleName != nil {
 			role := &apiresource.LightRole{
-				ID:         *rl.Actor.RoleId,
-				ObjectType: constants.ObjectTypeRole,
-				Name:       *rl.Actor.RoleName,
+				ID:     *rl.Actor.RoleId,
+				Object: constants.ObjectTypeRole,
+				Name:   *rl.Actor.RoleName,
 			}
 			if rl.Actor.RoleTypeCode != nil {
-				rtc := constants.RoleTypeCode(*rl.Actor.RoleTypeCode)
-				role.RoleTypeCode = &rtc
+				role.RoleTypeCode = constants.RoleTypeCode(*rl.Actor.RoleTypeCode)
 			}
 			actor.Role = role
 		}

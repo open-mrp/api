@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"math"
-	"time"
 
 	"github.com/augno/api/services/core-service/internal/domain"
 	apierror "github.com/augno/api/shared/errors"
@@ -120,26 +119,25 @@ func (m *sandboxMedImpl) Create(ctx context.Context, ownerAccountID, userID, nam
 		return nil, tracing.Trace(span, brandErr)
 	}
 
-	if createErr := m.repos.NewSandboxAccountRepo().Create(ctx, sandboxTypeID, ownerAccountID, accountID); createErr != nil {
+	sandboxRepo := m.repos.NewSandboxAccountRepo()
+	if createErr := sandboxRepo.Create(ctx, sandboxTypeID, ownerAccountID, accountID); createErr != nil {
 		return nil, tracing.Trace(span, createErr)
 	}
 
-	now := time.Now().UTC()
-	return &domain.SandboxAccount{
-		TypeID:         sandboxTypeID,
-		OwnerAccountID: ownerAccountID,
-		AccountID:      accountID,
-		Name:           name,
-		CreatedAt:      now,
-		UpdatedAt:      now,
-	}, nil
+	// Re-fetch to populate owner account name from the JOIN.
+	created, fetchErr := sandboxRepo.FindByTypeID(ctx, sandboxTypeID, nil)
+	if fetchErr != nil {
+		return nil, tracing.Trace(span, fetchErr)
+	}
+
+	return created, nil
 }
 
 func (m *sandboxMedImpl) Delete(ctx context.Context, ownerAccountID, sandboxTypeID string) (string, *apierror.APIError) {
 	ctx, span := sandboxMedTracer.Start(ctx, "mediator.sandbox.delete")
 	defer span.End()
 
-	sandbox, findErr := m.repos.NewSandboxAccountRepo().FindByTypeID(ctx, sandboxTypeID)
+	sandbox, findErr := m.repos.NewSandboxAccountRepo().FindByTypeID(ctx, sandboxTypeID, nil)
 	if findErr != nil {
 		return "", tracing.Trace(span, findErr)
 	}

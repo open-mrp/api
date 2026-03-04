@@ -12,21 +12,31 @@ func APIKeyPresenter(key *pb.APIKeyInfo) apiresource.APIKey {
 		return apiresource.APIKey{}
 	}
 
-	return apiresource.APIKey{
+	res := apiresource.APIKey{
 		ID:            key.Id,
 		Object:        constants.ObjectTypeAPIKey,
 		Name:          key.Name,
 		RedactedValue: key.RedactedValue,
-		Role: apiresource.LightRole{
-			ID:   key.RoleId,
-			Name: key.RoleName,
-		},
-		CreatedAt:  grpc.TimestampToTime(key.CreatedAt),
-		UpdatedAt:  grpc.TimestampToTime(key.UpdatedAt),
-		LastUsedAt: grpc.TimestampToTimePtr(key.LastUsedAt),
-		ExpiresAt:  grpc.TimestampToTimePtr(key.ExpiresAt),
-		RevokedAt:  grpc.TimestampToTimePtr(key.RevokedAt),
+		CreatedAt:     grpc.TimestampToTime(key.CreatedAt),
+		UpdatedAt:     grpc.TimestampToTime(key.UpdatedAt),
+		LastUsedAt:    grpc.TimestampToTimePtr(key.LastUsedAt),
+		ExpiresAt:     grpc.TimestampToTimePtr(key.ExpiresAt),
+		RevokedAt:     grpc.TimestampToTimePtr(key.RevokedAt),
 	}
+
+	if key.RoleId != nil && key.RoleName != nil {
+		role := &apiresource.LightRole{
+			ID:     *key.RoleId,
+			Object: constants.ObjectTypeRole,
+			Name:   *key.RoleName,
+		}
+		if key.RoleTypeCode != nil {
+			role.RoleTypeCode = constants.RoleTypeCode(*key.RoleTypeCode)
+		}
+		res.Role = role
+	}
+
+	return res
 }
 
 func APIKeyCreatedPresenter(resp *pb.CreateAPIKeyResponse) apiresource.CreatedAPIKey {

@@ -145,6 +145,83 @@ func (q *Queries) CreateRequestLog(ctx context.Context, arg CreateRequestLogPara
 	return err
 }
 
+const findRequestLogBaseByID = `-- name: FindRequestLogBaseByID :one
+SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route, rl.query_json,
+       rl.status_code, rl.latency_us, rl.api_version, rl.actor_id,
+       rl.actor_type, rl.identity_type, rl.client_ip_string, rl.user_agent,
+       rl.referrer, rl.error_code, rl.error_message, rl.occurred_at, rl.created_at,
+       rl.idempotency_key_id, rl.request_body_json, rl.response_body_json,
+       rl.target_account_id,
+       ik.idempotency_key
+FROM request_log rl
+LEFT JOIN idempotency_key ik ON rl.idempotency_key_id = ik.type_id
+WHERE rl.id = ? AND rl.target_account_id = ?
+`
+
+type FindRequestLogBaseByIDParams struct {
+	ID              string
+	TargetAccountID sql.NullString
+}
+
+type FindRequestLogBaseByIDRow struct {
+	ID               string
+	Method           string
+	Host             string
+	Path             string
+	NormalizedRoute  string
+	QueryJson        db.NullableRawMessage
+	StatusCode       int32
+	LatencyUs        int64
+	ApiVersion       sql.NullString
+	ActorID          sql.NullString
+	ActorType        sql.NullString
+	IdentityType     sql.NullString
+	ClientIpString   sql.NullString
+	UserAgent        sql.NullString
+	Referrer         sql.NullString
+	ErrorCode        sql.NullString
+	ErrorMessage     sql.NullString
+	OccurredAt       time.Time
+	CreatedAt        time.Time
+	IdempotencyKeyID sql.NullString
+	RequestBodyJson  db.NullableRawMessage
+	ResponseBodyJson db.NullableRawMessage
+	TargetAccountID  sql.NullString
+	IdempotencyKey   sql.NullString
+}
+
+func (q *Queries) FindRequestLogBaseByID(ctx context.Context, arg FindRequestLogBaseByIDParams) (FindRequestLogBaseByIDRow, error) {
+	row := q.queryRow(ctx, q.findRequestLogBaseByIDStmt, findRequestLogBaseByID, arg.ID, arg.TargetAccountID)
+	var i FindRequestLogBaseByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.Method,
+		&i.Host,
+		&i.Path,
+		&i.NormalizedRoute,
+		&i.QueryJson,
+		&i.StatusCode,
+		&i.LatencyUs,
+		&i.ApiVersion,
+		&i.ActorID,
+		&i.ActorType,
+		&i.IdentityType,
+		&i.ClientIpString,
+		&i.UserAgent,
+		&i.Referrer,
+		&i.ErrorCode,
+		&i.ErrorMessage,
+		&i.OccurredAt,
+		&i.CreatedAt,
+		&i.IdempotencyKeyID,
+		&i.RequestBodyJson,
+		&i.ResponseBodyJson,
+		&i.TargetAccountID,
+		&i.IdempotencyKey,
+	)
+	return i, err
+}
+
 const findRequestLogByID = `-- name: FindRequestLogByID :one
 SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route, rl.query_json,
        rl.status_code, rl.latency_us, rl.api_version, rl.actor_id,
@@ -161,7 +238,7 @@ SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route, rl.query_json,
        ik.idempotency_key
 FROM request_log rl
 LEFT JOIN ` + "`" + `user` + "`" + ` u ON rl.actor_id = u.id AND rl.identity_type = 'user'
-LEFT JOIN api_key ak ON rl.actor_id = ak.key_id AND rl.identity_type = 'api_key'
+LEFT JOIN api_key ak ON rl.actor_id = ak.type_id AND rl.identity_type = 'api_key'
 LEFT JOIN account_user au ON au.user_id = rl.actor_id
   AND au.account_id = rl.target_account_id AND rl.identity_type = 'user'
 LEFT JOIN role r_user ON au.role_id = r_user.id
@@ -275,7 +352,7 @@ SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route, rl.query_json,
        ik.idempotency_key
 FROM request_log rl
 LEFT JOIN ` + "`" + `user` + "`" + ` u ON rl.actor_id = u.id AND rl.identity_type = 'user'
-LEFT JOIN api_key ak ON rl.actor_id = ak.key_id AND rl.identity_type = 'api_key'
+LEFT JOIN api_key ak ON rl.actor_id = ak.type_id AND rl.identity_type = 'api_key'
 LEFT JOIN account_user au ON au.user_id = rl.actor_id
   AND au.account_id = rl.target_account_id AND rl.identity_type = 'user'
 LEFT JOIN role r_user ON au.role_id = r_user.id
@@ -448,6 +525,302 @@ func (q *Queries) ListRequestLogsBackward(ctx context.Context, arg ListRequestLo
 	return items, nil
 }
 
+const listRequestLogsBaseBackward = `-- name: ListRequestLogsBaseBackward :many
+SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route, rl.query_json,
+       rl.status_code, rl.latency_us, rl.api_version, rl.actor_id,
+       rl.actor_type, rl.identity_type, rl.client_ip_string, rl.user_agent,
+       rl.referrer, rl.error_code, rl.error_message, rl.occurred_at, rl.created_at,
+       rl.idempotency_key_id,
+       rl.target_account_id,
+       ik.idempotency_key
+FROM request_log rl
+LEFT JOIN idempotency_key ik ON rl.idempotency_key_id = ik.type_id
+WHERE rl.target_account_id = ?
+AND (? = '' OR rl.id = ? OR rl.path LIKE ? OR rl.error_message LIKE ?)
+AND (? IS NULL OR rl.occurred_at >= ?)
+AND (? IS NULL OR rl.occurred_at <= ?)
+AND (? = '' OR rl.method LIKE ?)
+AND (? IS NULL OR rl.status_code = ?)
+AND (? = '' OR rl.error_code LIKE ?)
+AND (? = '' OR rl.account_id = ?)
+AND (? = '' OR rl.actor_id = ?)
+AND (? = '' OR rl.identity_type = ?)
+AND (? IS NULL OR rl.public_endpoint = ?)
+AND (
+    rl.occurred_at > ?
+    OR (rl.occurred_at = ? AND rl.id > ?)
+)
+ORDER BY rl.occurred_at ASC, rl.id ASC
+LIMIT ?
+`
+
+type ListRequestLogsBaseBackwardParams struct {
+	TargetAccountID     sql.NullString
+	QueryFilter         string
+	QueryPathFilter     string
+	QueryErrorMsgFilter sql.NullString
+	StartDate           sql.NullTime
+	EndDate             sql.NullTime
+	MethodFilter        string
+	StatusCode          sql.NullInt32
+	ErrorCodeFilter     sql.NullString
+	AccountIDFilter     sql.NullString
+	ActorIDFilter       sql.NullString
+	ActorTypeFilter     sql.NullString
+	PublicEndpoint      sql.NullBool
+	CursorOccurredAt    time.Time
+	CursorID            string
+	Limit               int32
+}
+
+type ListRequestLogsBaseBackwardRow struct {
+	ID               string
+	Method           string
+	Host             string
+	Path             string
+	NormalizedRoute  string
+	QueryJson        db.NullableRawMessage
+	StatusCode       int32
+	LatencyUs        int64
+	ApiVersion       sql.NullString
+	ActorID          sql.NullString
+	ActorType        sql.NullString
+	IdentityType     sql.NullString
+	ClientIpString   sql.NullString
+	UserAgent        sql.NullString
+	Referrer         sql.NullString
+	ErrorCode        sql.NullString
+	ErrorMessage     sql.NullString
+	OccurredAt       time.Time
+	CreatedAt        time.Time
+	IdempotencyKeyID sql.NullString
+	TargetAccountID  sql.NullString
+	IdempotencyKey   sql.NullString
+}
+
+func (q *Queries) ListRequestLogsBaseBackward(ctx context.Context, arg ListRequestLogsBaseBackwardParams) ([]ListRequestLogsBaseBackwardRow, error) {
+	rows, err := q.query(ctx, q.listRequestLogsBaseBackwardStmt, listRequestLogsBaseBackward,
+		arg.TargetAccountID,
+		arg.QueryFilter,
+		arg.QueryFilter,
+		arg.QueryPathFilter,
+		arg.QueryErrorMsgFilter,
+		arg.StartDate,
+		arg.StartDate,
+		arg.EndDate,
+		arg.EndDate,
+		arg.MethodFilter,
+		arg.MethodFilter,
+		arg.StatusCode,
+		arg.StatusCode,
+		arg.ErrorCodeFilter,
+		arg.ErrorCodeFilter,
+		arg.AccountIDFilter,
+		arg.AccountIDFilter,
+		arg.ActorIDFilter,
+		arg.ActorIDFilter,
+		arg.ActorTypeFilter,
+		arg.ActorTypeFilter,
+		arg.PublicEndpoint,
+		arg.PublicEndpoint,
+		arg.CursorOccurredAt,
+		arg.CursorOccurredAt,
+		arg.CursorID,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListRequestLogsBaseBackwardRow
+	for rows.Next() {
+		var i ListRequestLogsBaseBackwardRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Method,
+			&i.Host,
+			&i.Path,
+			&i.NormalizedRoute,
+			&i.QueryJson,
+			&i.StatusCode,
+			&i.LatencyUs,
+			&i.ApiVersion,
+			&i.ActorID,
+			&i.ActorType,
+			&i.IdentityType,
+			&i.ClientIpString,
+			&i.UserAgent,
+			&i.Referrer,
+			&i.ErrorCode,
+			&i.ErrorMessage,
+			&i.OccurredAt,
+			&i.CreatedAt,
+			&i.IdempotencyKeyID,
+			&i.TargetAccountID,
+			&i.IdempotencyKey,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listRequestLogsBaseForward = `-- name: ListRequestLogsBaseForward :many
+SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route, rl.query_json,
+       rl.status_code, rl.latency_us, rl.api_version, rl.actor_id,
+       rl.actor_type, rl.identity_type, rl.client_ip_string, rl.user_agent,
+       rl.referrer, rl.error_code, rl.error_message, rl.occurred_at, rl.created_at,
+       rl.idempotency_key_id,
+       rl.target_account_id,
+       ik.idempotency_key
+FROM request_log rl
+LEFT JOIN idempotency_key ik ON rl.idempotency_key_id = ik.type_id
+WHERE rl.target_account_id = ?
+AND (? = '' OR rl.id = ? OR rl.path LIKE ? OR rl.error_message LIKE ?)
+AND (? IS NULL OR rl.occurred_at >= ?)
+AND (? IS NULL OR rl.occurred_at <= ?)
+AND (? = '' OR rl.method LIKE ?)
+AND (? IS NULL OR rl.status_code = ?)
+AND (? = '' OR rl.error_code LIKE ?)
+AND (? = '' OR rl.account_id = ?)
+AND (? = '' OR rl.actor_id = ?)
+AND (? = '' OR rl.identity_type = ?)
+AND (? IS NULL OR rl.public_endpoint = ?)
+AND (
+    ? IS NULL
+    OR rl.occurred_at < ?
+    OR (rl.occurred_at = ? AND rl.id < ?)
+)
+ORDER BY rl.occurred_at DESC, rl.id DESC
+LIMIT ?
+`
+
+type ListRequestLogsBaseForwardParams struct {
+	TargetAccountID     sql.NullString
+	QueryFilter         string
+	QueryPathFilter     string
+	QueryErrorMsgFilter sql.NullString
+	StartDate           sql.NullTime
+	EndDate             sql.NullTime
+	MethodFilter        string
+	StatusCode          sql.NullInt32
+	ErrorCodeFilter     sql.NullString
+	AccountIDFilter     sql.NullString
+	ActorIDFilter       sql.NullString
+	ActorTypeFilter     sql.NullString
+	PublicEndpoint      sql.NullBool
+	CursorOccurredAt    sql.NullTime
+	CursorID            sql.NullString
+	Limit               int32
+}
+
+type ListRequestLogsBaseForwardRow struct {
+	ID               string
+	Method           string
+	Host             string
+	Path             string
+	NormalizedRoute  string
+	QueryJson        db.NullableRawMessage
+	StatusCode       int32
+	LatencyUs        int64
+	ApiVersion       sql.NullString
+	ActorID          sql.NullString
+	ActorType        sql.NullString
+	IdentityType     sql.NullString
+	ClientIpString   sql.NullString
+	UserAgent        sql.NullString
+	Referrer         sql.NullString
+	ErrorCode        sql.NullString
+	ErrorMessage     sql.NullString
+	OccurredAt       time.Time
+	CreatedAt        time.Time
+	IdempotencyKeyID sql.NullString
+	TargetAccountID  sql.NullString
+	IdempotencyKey   sql.NullString
+}
+
+func (q *Queries) ListRequestLogsBaseForward(ctx context.Context, arg ListRequestLogsBaseForwardParams) ([]ListRequestLogsBaseForwardRow, error) {
+	rows, err := q.query(ctx, q.listRequestLogsBaseForwardStmt, listRequestLogsBaseForward,
+		arg.TargetAccountID,
+		arg.QueryFilter,
+		arg.QueryFilter,
+		arg.QueryPathFilter,
+		arg.QueryErrorMsgFilter,
+		arg.StartDate,
+		arg.StartDate,
+		arg.EndDate,
+		arg.EndDate,
+		arg.MethodFilter,
+		arg.MethodFilter,
+		arg.StatusCode,
+		arg.StatusCode,
+		arg.ErrorCodeFilter,
+		arg.ErrorCodeFilter,
+		arg.AccountIDFilter,
+		arg.AccountIDFilter,
+		arg.ActorIDFilter,
+		arg.ActorIDFilter,
+		arg.ActorTypeFilter,
+		arg.ActorTypeFilter,
+		arg.PublicEndpoint,
+		arg.PublicEndpoint,
+		arg.CursorOccurredAt,
+		arg.CursorOccurredAt,
+		arg.CursorOccurredAt,
+		arg.CursorID,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListRequestLogsBaseForwardRow
+	for rows.Next() {
+		var i ListRequestLogsBaseForwardRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Method,
+			&i.Host,
+			&i.Path,
+			&i.NormalizedRoute,
+			&i.QueryJson,
+			&i.StatusCode,
+			&i.LatencyUs,
+			&i.ApiVersion,
+			&i.ActorID,
+			&i.ActorType,
+			&i.IdentityType,
+			&i.ClientIpString,
+			&i.UserAgent,
+			&i.Referrer,
+			&i.ErrorCode,
+			&i.ErrorMessage,
+			&i.OccurredAt,
+			&i.CreatedAt,
+			&i.IdempotencyKeyID,
+			&i.TargetAccountID,
+			&i.IdempotencyKey,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listRequestLogsForward = `-- name: ListRequestLogsForward :many
 SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route, rl.query_json,
        rl.status_code, rl.latency_us, rl.api_version, rl.actor_id,
@@ -464,7 +837,7 @@ SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route, rl.query_json,
        ik.idempotency_key
 FROM request_log rl
 LEFT JOIN ` + "`" + `user` + "`" + ` u ON rl.actor_id = u.id AND rl.identity_type = 'user'
-LEFT JOIN api_key ak ON rl.actor_id = ak.key_id AND rl.identity_type = 'api_key'
+LEFT JOIN api_key ak ON rl.actor_id = ak.type_id AND rl.identity_type = 'api_key'
 LEFT JOIN account_user au ON au.user_id = rl.actor_id
   AND au.account_id = rl.target_account_id AND rl.identity_type = 'user'
 LEFT JOIN role r_user ON au.role_id = r_user.id

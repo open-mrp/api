@@ -10,6 +10,8 @@ import (
 type AccountAffiliationRole struct {
 	// The unique identifier for the role.
 	ID string `json:"id" validate:"required"`
+	// The resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=role"`
 	// The display name of the role.
 	Name string `json:"name" validate:"required"`
 }
@@ -31,8 +33,9 @@ var SampleAccountAffiliation = &AccountAffiliation{
 	Object: constants.ObjectTypeAccountAffiliation,
 	Name:   SampleAccountName,
 	Role: AccountAffiliationRole{
-		ID:   SampleRoleID,
-		Name: SampleRoleName,
+		ID:     SampleRoleID,
+		Object: constants.ObjectTypeRole,
+		Name:   SampleRoleName,
 	},
 }
 

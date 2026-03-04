@@ -32,7 +32,7 @@ var SampleUnit = &Unit{
 type Unit struct {
 	// The unique identifier for the unit.
 	ID string `json:"id" validate:"required"`
-	// The object type.
+	// The resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=unit"`
 	// The display name of the unit (e.g. "Gram", "Kilogram").
 	Name string `json:"name" validate:"required"`

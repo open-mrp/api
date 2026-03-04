@@ -81,11 +81,3 @@ UPDATE account_user
 SET status_code = 'active', updated_at = NOW(3)
 WHERE account_id = ? AND user_id = ? AND status_code = 'disabled';
 
--- name: FindAdminUserIDByAccountID :one
-SELECT au.user_id
-FROM account_user au
-JOIN role r ON au.role_id = r.id
-WHERE au.account_id = ? AND r.role_type_code = 'admin'
-    AND (au.status_code = 'active' OR au.status_code IS NULL)
-LIMIT 1;
-

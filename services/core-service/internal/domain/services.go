@@ -26,12 +26,12 @@ type SandboxSvc interface {
 	// Pagination:
 	//   - If cursor is non-nil, results begin after the provided cursor.
 	//   - limit controls the maximum number of results returned.
-	ListSandboxAccounts(ctx context.Context, cursor *string, limit int32) (*ListSandboxAccountsResult, *apierror.APIError)
+	ListSandboxAccounts(ctx context.Context, cursor *string, limit int32, includes []string) (*ListSandboxAccountsResult, *apierror.APIError)
 
 	// GetSandbox returns a single sandbox account by its type ID. The caller must
 	// have read permission on the sandbox domain and the sandbox must belong to the
 	// caller's target account.
-	GetSandbox(ctx context.Context, sandboxTypeID string) (*SandboxAccount, *apierror.APIError)
+	GetSandbox(ctx context.Context, sandboxTypeID string, includes []string) (*SandboxAccount, *apierror.APIError)
 
 	// DeleteSandbox deletes a sandbox account and its underlying account record.
 	// At least one sandbox must remain per production account. Account-scoped data

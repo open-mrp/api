@@ -302,7 +302,7 @@ type APIKeySvc interface {
 	// Authorization:
 	//   - Requires an internal admin identity with a target account in context.
 	//   - The key must belong to the caller's target account.
-	GetAPIKey(ctx context.Context, apiKeyID string) (*apikey.APIKey, *apierror.APIError)
+	GetAPIKey(ctx context.Context, apiKeyID string, includes []string) (*apikey.APIKey, *apierror.APIError)
 
 	// CreateAPIKey creates a new API key for the caller's target account.
 	//
@@ -333,5 +333,5 @@ type APIKeySvc interface {
 	// Pagination:
 	//   - If cursor is non-nil, results begin after the provided cursor.
 	//   - limit controls the maximum number of results returned.
-	ListAPIKeys(ctx context.Context, cursor *string, limit int32, query *string, statuses []constants.APIKeyStatus) (*ListAPIKeysResult, *apierror.APIError)
+	ListAPIKeys(ctx context.Context, cursor *string, limit int32, query *string, statuses []constants.APIKeyStatus, includes []string) (*ListAPIKeysResult, *apierror.APIError)
 }

@@ -136,7 +136,7 @@ func (*PlanLimit) SchemaExample() any {
 type PricingPlan struct {
 	// The unique ID of the plan.
 	ID string `json:"id" validate:"required"`
-	// The object type.
+	// The resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=pricing_plan"`
 	// The display name of the plan.
 	Name string `json:"name" validate:"required"`

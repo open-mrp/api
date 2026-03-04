@@ -64,6 +64,47 @@ FROM api_key
 LEFT JOIN role ON api_key.role_id = role.id
 WHERE api_key.type_id = ?;
 
+-- name: FindAPIKeyBaseByTypeID :one
+SELECT api_key.* FROM api_key WHERE api_key.type_id = ?;
+
+-- name: FindAPIKeyBaseByDatabaseID :one
+SELECT api_key.* FROM api_key WHERE api_key.id = ?;
+
+-- name: ListAPIKeysBaseForward :many
+SELECT api_key.*
+FROM api_key
+WHERE api_key.owner_account_id = sqlc.arg('owner_account_id')
+AND (api_key.name LIKE CONCAT('%', sqlc.arg('query'), '%') OR sqlc.arg('query') = '')
+AND (
+    (sqlc.arg('include_active') = true AND api_key.revoked_at IS NULL AND (api_key.expires_at IS NULL OR api_key.expires_at > NOW(3)))
+    OR (sqlc.arg('include_expired') = true AND api_key.expires_at IS NOT NULL AND api_key.expires_at <= NOW(3) AND api_key.revoked_at IS NULL AND api_key.expires_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
+    OR (sqlc.arg('include_revoked') = true AND api_key.revoked_at IS NOT NULL AND api_key.revoked_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
+)
+AND (
+    sqlc.narg('cursor_created_at') IS NULL
+    OR api_key.created_at < sqlc.narg('cursor_created_at')
+    OR (api_key.created_at = sqlc.narg('cursor_created_at') AND api_key.id < sqlc.narg('cursor_id'))
+)
+ORDER BY api_key.created_at DESC, api_key.id DESC
+LIMIT ?;
+
+-- name: ListAPIKeysBaseBackward :many
+SELECT api_key.*
+FROM api_key
+WHERE api_key.owner_account_id = sqlc.arg('owner_account_id')
+AND (api_key.name LIKE CONCAT('%', sqlc.arg('query'), '%') OR sqlc.arg('query') = '')
+AND (
+    (sqlc.arg('include_active') = true AND api_key.revoked_at IS NULL AND (api_key.expires_at IS NULL OR api_key.expires_at > NOW(3)))
+    OR (sqlc.arg('include_expired') = true AND api_key.expires_at IS NOT NULL AND api_key.expires_at <= NOW(3) AND api_key.revoked_at IS NULL AND api_key.expires_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
+    OR (sqlc.arg('include_revoked') = true AND api_key.revoked_at IS NOT NULL AND api_key.revoked_at >= DATE_SUB(NOW(3), INTERVAL 30 DAY))
+)
+AND (
+    api_key.created_at > sqlc.arg('cursor_created_at')
+    OR (api_key.created_at = sqlc.arg('cursor_created_at') AND api_key.id > sqlc.arg('cursor_id'))
+)
+ORDER BY api_key.created_at ASC, api_key.id ASC
+LIMIT ?;
+
 -- name: RevokeAPIKeyByTypeID :exec
 UPDATE api_key SET revoked_at = NOW(3), updated_at = NOW(3) WHERE type_id = ?;
 

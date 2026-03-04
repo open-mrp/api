@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -33,6 +34,13 @@ func (e *GetRequestLogEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetReque
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetRequestLogRequest) (*apiresource.RequestLog, *apierror.APIError) {
 			return svc.(RequestLogSvc).GetRequestLog
+		},
+		IncludeConfig: &apiendpoint.IncludeConfig{
+			Fields: []apiendpoint.IncludeField{
+				{Key: "account", ObjectType: constants.ObjectTypeAccount, JSONPaths: []string{"account"}},
+				{Key: "actor", ObjectType: constants.ObjectTypeUser, JSONPaths: []string{"actor"}},
+				{Key: "actor.role", ObjectType: constants.ObjectTypeRole, JSONPaths: []string{"actor.role"}},
+			},
 		},
 		Extras: apiendpoint.APIEndpointExtras{
 			AllowUnknownJSONFields: false,

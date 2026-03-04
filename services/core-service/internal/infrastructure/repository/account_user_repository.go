@@ -176,14 +176,3 @@ func (r *accountUserRepoImpl) ReactivateUsers(ctx context.Context, accountID str
 	return rows, nil
 }
 
-func (r *accountUserRepoImpl) FindAdminUserIDByAccountID(ctx context.Context, accountID string) (string, *apierror.APIError) {
-	ctx, span := accountUserRepoTracer.Start(ctx, "repository.account_user.find_admin_user_id_by_account_id")
-	defer span.End()
-
-	userID, err := r.queries.FindAdminUserIDByAccountID(ctx, accountID)
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return "", tracing.Trace(span, apiErr)
-	}
-
-	return userID, nil
-}

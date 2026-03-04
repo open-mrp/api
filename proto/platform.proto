@@ -334,6 +334,8 @@ message ListRequestLogsRequest {
   int32 limit = 14;
   // Search query: matches against ID (exact), path (partial), or error message (partial).
   optional string query = 15;
+  // Includes specifies which related objects to expand (e.g. "actor").
+  repeated string includes = 16;
 }
 
 // ListRequestLogsResponse contains a page of request logs with cursor-based
@@ -349,6 +351,8 @@ message ListRequestLogsResponse {
 message GetRequestLogRequest {
   // The request log's ID.
   string id = 1;
+  // Includes specifies which related objects to expand (e.g. "actor").
+  repeated string includes = 2;
 }
 
 // GetRequestLogResponse contains the requested request log.

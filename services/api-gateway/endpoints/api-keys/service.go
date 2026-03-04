@@ -7,6 +7,7 @@ import (
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/appctx"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/auth"
 	"github.com/augno/api/shared/tracing"
@@ -56,6 +57,7 @@ func (m *apiKeySvcImpl) GetAPIKey(ctx context.Context, req *GetAPIKeyRequest) (*
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetAPIKeyResponse, error) {
 			return m.authClient.GetAPIKey(ctx, &pb.GetAPIKeyRequest{
 				ApiKeyId: req.APIKeyID,
+				Includes: appctx.GetRequestedIncludeKeys(ctx),
 			}, opts...)
 		})
 
@@ -69,8 +71,9 @@ func (m *apiKeySvcImpl) GetAPIKey(ctx context.Context, req *GetAPIKeyRequest) (*
 
 func (m *apiKeySvcImpl) CreateAPIKey(ctx context.Context, req *CreateAPIKeyRequest) (*apiresource.CreatedAPIKey, *apierror.APIError) {
 	pbReq := &pb.CreateAPIKeyRequest{
-		RoleId: req.RoleID,
-		Name:   req.Name,
+		RoleId:   req.RoleID,
+		Name:     req.Name,
+		Includes: appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	if req.ExpiresAt != nil {
@@ -93,6 +96,7 @@ func (m *apiKeySvcImpl) CreateAPIKey(ctx context.Context, req *CreateAPIKeyReque
 func (m *apiKeySvcImpl) RotateAPIKey(ctx context.Context, req *RotateAPIKeyRequest) (*apiresource.CreatedAPIKey, *apierror.APIError) {
 	pbReq := &pb.RotateAPIKeyRequest{
 		ApiKeyId: req.APIKeyID,
+		Includes: appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	if req.ExpiresAt != nil {
@@ -138,6 +142,7 @@ func (m *apiKeySvcImpl) ListAPIKeys(ctx context.Context, req *ListAPIKeysRequest
 		Limit:    req.Limit,
 		Query:    req.Query,
 		Statuses: statuses,
+		Includes: appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, apiKeySvcTracer, "service.api_keys.list", domain.ServiceName,
@@ -155,7 +160,9 @@ func (m *apiKeySvcImpl) ListAPIKeys(ctx context.Context, req *ListAPIKeysRequest
 func (m *apiKeySvcImpl) GetOrCreateDocAPIKey(ctx context.Context) (*apiresource.CreatedAPIKey, *apierror.APIError) {
 	resp, apiErr := grpcutil.CallRPC(ctx, apiKeySvcTracer, "service.api_keys.get_or_create_doc", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetOrCreateDocAPIKeyResponse, error) {
-			return m.authClient.GetOrCreateDocAPIKey(ctx, &pb.GetOrCreateDocAPIKeyRequest{}, opts...)
+			return m.authClient.GetOrCreateDocAPIKey(ctx, &pb.GetOrCreateDocAPIKeyRequest{
+				Includes: appctx.GetRequestedIncludeKeys(ctx),
+			}, opts...)
 		})
 
 	if apiErr != nil {

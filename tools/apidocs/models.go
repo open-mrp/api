@@ -89,6 +89,7 @@ type Schema struct {
 	AdditionalProperties         *Schema           `json:"additionalProperties,omitempty"`
 	XStainlessEmptyObject        bool              `json:"x-stainless-empty-object,omitempty"`
 	XStainlessPaginationProperty map[string]string `json:"x-stainless-pagination-property,omitempty"`
+	XExpandable                  bool              `json:"x-expandable,omitempty"`
 
 	// PropertyOrder tracks struct field insertion order for JSON output.
 	// Not serialized; used during post-processing to reorder properties.

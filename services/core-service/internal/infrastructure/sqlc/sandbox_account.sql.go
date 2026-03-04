@@ -144,6 +144,44 @@ func (q *Queries) FindSandboxAccountByTypeID(ctx context.Context, typeID string)
 	return i, err
 }
 
+const findSandboxAccountWithOwnerByTypeID = `-- name: FindSandboxAccountWithOwnerByTypeID :one
+SELECT
+    sandbox_account.id, sandbox_account.type_id, sandbox_account.created_at, sandbox_account.updated_at, sandbox_account.owner_account_id, sandbox_account.account_id,
+    account.name,
+    owner_account.name AS owner_account_name
+FROM sandbox_account
+JOIN account ON sandbox_account.account_id = account.id
+LEFT JOIN account owner_account ON sandbox_account.owner_account_id = owner_account.id
+WHERE sandbox_account.type_id = ?
+`
+
+type FindSandboxAccountWithOwnerByTypeIDRow struct {
+	ID               int64
+	TypeID           string
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	OwnerAccountID   string
+	AccountID        string
+	Name             string
+	OwnerAccountName string
+}
+
+func (q *Queries) FindSandboxAccountWithOwnerByTypeID(ctx context.Context, typeID string) (FindSandboxAccountWithOwnerByTypeIDRow, error) {
+	row := q.queryRow(ctx, q.findSandboxAccountWithOwnerByTypeIDStmt, findSandboxAccountWithOwnerByTypeID, typeID)
+	var i FindSandboxAccountWithOwnerByTypeIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.TypeID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.OwnerAccountID,
+		&i.AccountID,
+		&i.Name,
+		&i.OwnerAccountName,
+	)
+	return i, err
+}
+
 const listSandboxAccountsBackward = `-- name: ListSandboxAccountsBackward :many
 SELECT
     sandbox_account.id, sandbox_account.type_id, sandbox_account.created_at, sandbox_account.updated_at, sandbox_account.owner_account_id, sandbox_account.account_id,
@@ -270,6 +308,154 @@ func (q *Queries) ListSandboxAccountsForward(ctx context.Context, arg ListSandbo
 			&i.OwnerAccountID,
 			&i.AccountID,
 			&i.Name,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listSandboxAccountsWithOwnerBackward = `-- name: ListSandboxAccountsWithOwnerBackward :many
+SELECT
+    sandbox_account.id, sandbox_account.type_id, sandbox_account.created_at, sandbox_account.updated_at, sandbox_account.owner_account_id, sandbox_account.account_id,
+    account.name,
+    owner_account.name AS owner_account_name
+FROM sandbox_account
+JOIN account ON sandbox_account.account_id = account.id
+LEFT JOIN account owner_account ON sandbox_account.owner_account_id = owner_account.id
+WHERE sandbox_account.owner_account_id = ?
+AND (
+    sandbox_account.created_at > ?
+    OR (sandbox_account.created_at = ? AND sandbox_account.id > ?)
+)
+ORDER BY sandbox_account.created_at ASC, sandbox_account.id ASC
+LIMIT ?
+`
+
+type ListSandboxAccountsWithOwnerBackwardParams struct {
+	OwnerAccountID  string
+	CursorCreatedAt time.Time
+	CursorID        int64
+	Limit           int32
+}
+
+type ListSandboxAccountsWithOwnerBackwardRow struct {
+	ID               int64
+	TypeID           string
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	OwnerAccountID   string
+	AccountID        string
+	Name             string
+	OwnerAccountName string
+}
+
+func (q *Queries) ListSandboxAccountsWithOwnerBackward(ctx context.Context, arg ListSandboxAccountsWithOwnerBackwardParams) ([]ListSandboxAccountsWithOwnerBackwardRow, error) {
+	rows, err := q.query(ctx, q.listSandboxAccountsWithOwnerBackwardStmt, listSandboxAccountsWithOwnerBackward,
+		arg.OwnerAccountID,
+		arg.CursorCreatedAt,
+		arg.CursorCreatedAt,
+		arg.CursorID,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListSandboxAccountsWithOwnerBackwardRow
+	for rows.Next() {
+		var i ListSandboxAccountsWithOwnerBackwardRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.TypeID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.OwnerAccountID,
+			&i.AccountID,
+			&i.Name,
+			&i.OwnerAccountName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listSandboxAccountsWithOwnerForward = `-- name: ListSandboxAccountsWithOwnerForward :many
+SELECT
+    sandbox_account.id, sandbox_account.type_id, sandbox_account.created_at, sandbox_account.updated_at, sandbox_account.owner_account_id, sandbox_account.account_id,
+    account.name,
+    owner_account.name AS owner_account_name
+FROM sandbox_account
+JOIN account ON sandbox_account.account_id = account.id
+LEFT JOIN account owner_account ON sandbox_account.owner_account_id = owner_account.id
+WHERE sandbox_account.owner_account_id = ?
+AND (
+    ? IS NULL
+    OR sandbox_account.created_at < ?
+    OR (sandbox_account.created_at = ? AND sandbox_account.id < ?)
+)
+ORDER BY sandbox_account.created_at DESC, sandbox_account.id DESC
+LIMIT ?
+`
+
+type ListSandboxAccountsWithOwnerForwardParams struct {
+	OwnerAccountID  string
+	CursorCreatedAt sql.NullTime
+	CursorID        sql.NullInt64
+	Limit           int32
+}
+
+type ListSandboxAccountsWithOwnerForwardRow struct {
+	ID               int64
+	TypeID           string
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	OwnerAccountID   string
+	AccountID        string
+	Name             string
+	OwnerAccountName string
+}
+
+func (q *Queries) ListSandboxAccountsWithOwnerForward(ctx context.Context, arg ListSandboxAccountsWithOwnerForwardParams) ([]ListSandboxAccountsWithOwnerForwardRow, error) {
+	rows, err := q.query(ctx, q.listSandboxAccountsWithOwnerForwardStmt, listSandboxAccountsWithOwnerForward,
+		arg.OwnerAccountID,
+		arg.CursorCreatedAt,
+		arg.CursorCreatedAt,
+		arg.CursorCreatedAt,
+		arg.CursorID,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListSandboxAccountsWithOwnerForwardRow
+	for rows.Next() {
+		var i ListSandboxAccountsWithOwnerForwardRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.TypeID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.OwnerAccountID,
+			&i.AccountID,
+			&i.Name,
+			&i.OwnerAccountName,
 		); err != nil {
 			return nil, err
 		}

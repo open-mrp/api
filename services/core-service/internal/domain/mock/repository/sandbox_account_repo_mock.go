@@ -86,18 +86,18 @@ func (mr *MockSandboxAccountRepoMockRecorder) DeleteByID(ctx, id any) *gomock.Ca
 }
 
 // FindByTypeID mocks base method.
-func (m *MockSandboxAccountRepo) FindByTypeID(ctx context.Context, typeID string) (*domain.SandboxAccount, *apierror.APIError) {
+func (m *MockSandboxAccountRepo) FindByTypeID(ctx context.Context, typeID string, includes []string) (*domain.SandboxAccount, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "FindByTypeID", ctx, typeID)
+	ret := m.ctrl.Call(m, "FindByTypeID", ctx, typeID, includes)
 	ret0, _ := ret[0].(*domain.SandboxAccount)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // FindByTypeID indicates an expected call of FindByTypeID.
-func (mr *MockSandboxAccountRepoMockRecorder) FindByTypeID(ctx, typeID any) *gomock.Call {
+func (mr *MockSandboxAccountRepoMockRecorder) FindByTypeID(ctx, typeID, includes any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindByTypeID", reflect.TypeOf((*MockSandboxAccountRepo)(nil).FindByTypeID), ctx, typeID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindByTypeID", reflect.TypeOf((*MockSandboxAccountRepo)(nil).FindByTypeID), ctx, typeID, includes)
 }
 
 // FindFirstByOwnerAccountID mocks base method.
@@ -116,16 +116,16 @@ func (mr *MockSandboxAccountRepoMockRecorder) FindFirstByOwnerAccountID(ctx, own
 }
 
 // List mocks base method.
-func (m *MockSandboxAccountRepo) List(ctx context.Context, ownerAccountID string, cursor *string, limit int32) (*domain.ListSandboxAccountsResult, *apierror.APIError) {
+func (m *MockSandboxAccountRepo) List(ctx context.Context, ownerAccountID string, cursor *string, limit int32, includes []string) (*domain.ListSandboxAccountsResult, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", ctx, ownerAccountID, cursor, limit)
+	ret := m.ctrl.Call(m, "List", ctx, ownerAccountID, cursor, limit, includes)
 	ret0, _ := ret[0].(*domain.ListSandboxAccountsResult)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // List indicates an expected call of List.
-func (mr *MockSandboxAccountRepoMockRecorder) List(ctx, ownerAccountID, cursor, limit any) *gomock.Call {
+func (mr *MockSandboxAccountRepoMockRecorder) List(ctx, ownerAccountID, cursor, limit, includes any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockSandboxAccountRepo)(nil).List), ctx, ownerAccountID, cursor, limit)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockSandboxAccountRepo)(nil).List), ctx, ownerAccountID, cursor, limit, includes)
 }

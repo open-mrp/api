@@ -19,11 +19,11 @@ const SampleRequestLogUserAgent = "Mozilla/5.0"
 const SampleRequestLogResponseBody = `{"object":"list","data":[...]}`
 
 var SampleRequestLogActor = &RequestLogActor{
-	ID:         SampleUserID,
-	ObjectType: constants.ObjectTypeUser,
-	Name:       new(SampleUserName),
-	Email:      new(SampleUserEmail),
-	Role:       SampleLightRole,
+	ID:     SampleUserID,
+	Object: constants.ObjectTypeUser,
+	Name:   new(SampleUserName),
+	Email:  new(SampleUserEmail),
+	Role:   SampleLightRole,
 }
 
 var SampleRequestLog = &RequestLog{
@@ -72,22 +72,22 @@ type RequestLogActor struct {
 	// The actor's ID (user ID or API key type_id).
 	ID string `json:"id" validate:"required"`
 	// The resource type identifier.
-	ObjectType constants.ObjectType `json:"object_type" validate:"required,enum=user,api_key"`
+	Object constants.ObjectType `json:"object" validate:"required,enum=user,api_key"`
 	// The actor's display name.
 	Name *string `json:"name"`
 	// The actor's email (users only).
 	Email *string `json:"email"`
 	// The redacted API key value (API keys only).
 	RedactedValue *string `json:"redacted_value"`
-	// The role assigned to the actor.
-	Role *LightRole `json:"role"`
+	// The role assigned to the actor. Expandable.
+	Role *LightRole `json:"role" expandable:"true"`
 }
 
 // RequestLog represents a single API request log entry.
 type RequestLog struct {
 	// The unique identifier for the request log.
 	ID string `json:"id" validate:"required"`
-	// The object type.
+	// The resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=request_log"`
 	// The HTTP method.
 	Method string `json:"method" validate:"required"`
@@ -121,10 +121,10 @@ type RequestLog struct {
 	OccurredAt time.Time `json:"occurred_at" validate:"required"`
 	// When the log entry was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The account targeted by the request.
-	Account *LightAccount `json:"account"`
-	// Actor details (user or API key).
-	Actor *RequestLogActor `json:"actor"`
+	// The account targeted by the request. Expandable.
+	Account *LightAccount `json:"account" expandable:"true"`
+	// Actor details (user or API key). Expandable.
+	Actor *RequestLogActor `json:"actor" expandable:"true"`
 	// The user-provided idempotency key value.
 	IdempotencyKey *string `json:"idempotency_key"`
 	// The JSON request body.
@@ -143,7 +143,7 @@ func (*RequestLog) SchemaExample() any {
 type RequestLogListItem struct {
 	// The unique identifier for the request log.
 	ID string `json:"id" validate:"required"`
-	// The object type.
+	// The resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=request_log"`
 	// The HTTP method.
 	Method string `json:"method" validate:"required"`
@@ -177,10 +177,10 @@ type RequestLogListItem struct {
 	OccurredAt time.Time `json:"occurred_at" validate:"required"`
 	// When the log entry was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The account targeted by the request.
-	Account *LightAccount `json:"account"`
-	// Actor details (user or API key).
-	Actor *RequestLogActor `json:"actor"`
+	// The account targeted by the request. Expandable.
+	Account *LightAccount `json:"account" expandable:"true"`
+	// Actor details (user or API key). Expandable.
+	Actor *RequestLogActor `json:"actor" expandable:"true"`
 	// The user-provided idempotency key value.
 	IdempotencyKey *string `json:"idempotency_key"`
 }

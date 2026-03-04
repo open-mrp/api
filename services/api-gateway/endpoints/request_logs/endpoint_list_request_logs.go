@@ -7,6 +7,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -56,6 +57,13 @@ func (e *ListRequestLogsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListRe
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
+		IncludeConfig: &apiendpoint.IncludeConfig{
+			Fields: []apiendpoint.IncludeField{
+				{Key: "account", ObjectType: constants.ObjectTypeAccount, JSONPaths: []string{"account"}},
+				{Key: "actor", ObjectType: constants.ObjectTypeUser, JSONPaths: []string{"actor"}},
+				{Key: "actor.role", ObjectType: constants.ObjectTypeRole, JSONPaths: []string{"actor.role"}},
+			},
+		},
 		Extras: apiendpoint.APIEndpointExtras{
 			SkipRequestLogging:     true,
 			AllowUnknownJSONFields: false,

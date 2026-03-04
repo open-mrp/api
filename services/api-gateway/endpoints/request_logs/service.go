@@ -8,6 +8,7 @@ import (
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	httptransport "github.com/augno/api/services/api-gateway/internal/http"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/appctx"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/platform"
 	"github.com/augno/api/shared/tracing"
@@ -74,6 +75,7 @@ func (m *requestLogSvcImpl) ListRequestLogs(ctx context.Context, req *ListReques
 		ExactMatch: req.ExactMatch,
 		Cursor:     req.Cursor,
 		Limit:      req.Limit,
+		Includes:   appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	if req.StartDate != nil && !req.StartDate.IsZero() {
@@ -104,7 +106,8 @@ func (m *requestLogSvcImpl) GetRequestLog(ctx context.Context, req *GetRequestLo
 	}
 
 	pbReq := &pb.GetRequestLogRequest{
-		Id: req.ID,
+		Id:       req.ID,
+		Includes: appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, requestLogSvcTracer, "service.request_logs.get", domain.ServiceName,

@@ -163,6 +163,28 @@ func generate(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOn
 					}
 				}
 
+				// Add include[] parameter if endpoint has IncludeConfig
+				includeConfigField := specField.FieldByName("IncludeConfig")
+				if includeConfigField.IsValid() && !includeConfigField.IsNil() {
+					includeConfig := includeConfigField.Interface().(*apiendpoint.IncludeConfig)
+					allowedKeys := includeConfig.AllowedKeys()
+					enumValues := make([]any, len(allowedKeys))
+					for i, k := range allowedKeys {
+						enumValues[i] = k
+					}
+					operation.Parameters = append(operation.Parameters, Parameter{
+						Name:        "include[]",
+						In:          "query",
+						Description: "Sub-objects to expand in the response. When omitted, sub-objects are returned as `null`.",
+						Required:    false,
+						Schema: Schema{
+							Type:  "array",
+							Items: &Schema{Type: "string", Enum: enumValues},
+						},
+						Example: []any{allowedKeys[0]},
+					})
+				}
+
 				schemaName := getCleanTypeName(reqType)
 				if hasJSONFields && schemaName != "" && schemaName != "EmptyResource" {
 					// GET and DELETE requests should not have a request body
@@ -549,6 +571,10 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 				fieldSchema.Enum = []any{enumValue}
 				break
 			}
+		}
+
+		if f.Tag.Get("expandable") == "true" {
+			fieldSchema.XExpandable = true
 		}
 
 		if f.Tag.Get("readOnly") == "true" {

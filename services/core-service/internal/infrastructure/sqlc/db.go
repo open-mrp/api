@@ -153,9 +153,6 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.findAccountUserWithRoleByAccountIDAndUserIDStmt, err = db.PrepareContext(ctx, findAccountUserWithRoleByAccountIDAndUserID); err != nil {
 		return nil, fmt.Errorf("error preparing query FindAccountUserWithRoleByAccountIDAndUserID: %w", err)
 	}
-	if q.findAdminUserIDByAccountIDStmt, err = db.PrepareContext(ctx, findAdminUserIDByAccountID); err != nil {
-		return nil, fmt.Errorf("error preparing query FindAdminUserIDByAccountID: %w", err)
-	}
 	if q.findFirstSandboxAccountByOwnerAccountIDStmt, err = db.PrepareContext(ctx, findFirstSandboxAccountByOwnerAccountID); err != nil {
 		return nil, fmt.Errorf("error preparing query FindFirstSandboxAccountByOwnerAccountID: %w", err)
 	}
@@ -170,6 +167,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.findSandboxAccountByTypeIDStmt, err = db.PrepareContext(ctx, findSandboxAccountByTypeID); err != nil {
 		return nil, fmt.Errorf("error preparing query FindSandboxAccountByTypeID: %w", err)
+	}
+	if q.findSandboxAccountWithOwnerByTypeIDStmt, err = db.PrepareContext(ctx, findSandboxAccountWithOwnerByTypeID); err != nil {
+		return nil, fmt.Errorf("error preparing query FindSandboxAccountWithOwnerByTypeID: %w", err)
 	}
 	if q.getAccountByStripeCustomerIDStmt, err = db.PrepareContext(ctx, getAccountByStripeCustomerID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetAccountByStripeCustomerID: %w", err)
@@ -221,6 +221,12 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.listSandboxAccountsForwardStmt, err = db.PrepareContext(ctx, listSandboxAccountsForward); err != nil {
 		return nil, fmt.Errorf("error preparing query ListSandboxAccountsForward: %w", err)
+	}
+	if q.listSandboxAccountsWithOwnerBackwardStmt, err = db.PrepareContext(ctx, listSandboxAccountsWithOwnerBackward); err != nil {
+		return nil, fmt.Errorf("error preparing query ListSandboxAccountsWithOwnerBackward: %w", err)
+	}
+	if q.listSandboxAccountsWithOwnerForwardStmt, err = db.PrepareContext(ctx, listSandboxAccountsWithOwnerForward); err != nil {
+		return nil, fmt.Errorf("error preparing query ListSandboxAccountsWithOwnerForward: %w", err)
 	}
 	if q.listUnitsBackwardStmt, err = db.PrepareContext(ctx, listUnitsBackward); err != nil {
 		return nil, fmt.Errorf("error preparing query ListUnitsBackward: %w", err)
@@ -490,11 +496,6 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing findAccountUserWithRoleByAccountIDAndUserIDStmt: %w", cerr)
 		}
 	}
-	if q.findAdminUserIDByAccountIDStmt != nil {
-		if cerr := q.findAdminUserIDByAccountIDStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing findAdminUserIDByAccountIDStmt: %w", cerr)
-		}
-	}
 	if q.findFirstSandboxAccountByOwnerAccountIDStmt != nil {
 		if cerr := q.findFirstSandboxAccountByOwnerAccountIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing findFirstSandboxAccountByOwnerAccountIDStmt: %w", cerr)
@@ -518,6 +519,11 @@ func (q *Queries) Close() error {
 	if q.findSandboxAccountByTypeIDStmt != nil {
 		if cerr := q.findSandboxAccountByTypeIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing findSandboxAccountByTypeIDStmt: %w", cerr)
+		}
+	}
+	if q.findSandboxAccountWithOwnerByTypeIDStmt != nil {
+		if cerr := q.findSandboxAccountWithOwnerByTypeIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing findSandboxAccountWithOwnerByTypeIDStmt: %w", cerr)
 		}
 	}
 	if q.getAccountByStripeCustomerIDStmt != nil {
@@ -603,6 +609,16 @@ func (q *Queries) Close() error {
 	if q.listSandboxAccountsForwardStmt != nil {
 		if cerr := q.listSandboxAccountsForwardStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing listSandboxAccountsForwardStmt: %w", cerr)
+		}
+	}
+	if q.listSandboxAccountsWithOwnerBackwardStmt != nil {
+		if cerr := q.listSandboxAccountsWithOwnerBackwardStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing listSandboxAccountsWithOwnerBackwardStmt: %w", cerr)
+		}
+	}
+	if q.listSandboxAccountsWithOwnerForwardStmt != nil {
+		if cerr := q.listSandboxAccountsWithOwnerForwardStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing listSandboxAccountsWithOwnerForwardStmt: %w", cerr)
 		}
 	}
 	if q.listUnitsBackwardStmt != nil {
@@ -767,12 +783,12 @@ type Queries struct {
 	findAccountRelationByOwnerAccountIDAndAPIKeyIDStmt *sql.Stmt
 	findAccountRelationByOwnerAccountIDAndUserIDStmt   *sql.Stmt
 	findAccountUserWithRoleByAccountIDAndUserIDStmt    *sql.Stmt
-	findAdminUserIDByAccountIDStmt                     *sql.Stmt
 	findFirstSandboxAccountByOwnerAccountIDStmt        *sql.Stmt
 	findLastUsedAccountIDStmt                          *sql.Stmt
 	findRolePermissionStringsStmt                      *sql.Stmt
 	findSandboxAccountByAccountIDStmt                  *sql.Stmt
 	findSandboxAccountByTypeIDStmt                     *sql.Stmt
+	findSandboxAccountWithOwnerByTypeIDStmt            *sql.Stmt
 	getAccountByStripeCustomerIDStmt                   *sql.Stmt
 	getAccountContextStmt                              *sql.Stmt
 	getAccountPlanCodeStmt                             *sql.Stmt
@@ -790,6 +806,8 @@ type Queries struct {
 	insertUnitStmt                                     *sql.Stmt
 	listSandboxAccountsBackwardStmt                    *sql.Stmt
 	listSandboxAccountsForwardStmt                     *sql.Stmt
+	listSandboxAccountsWithOwnerBackwardStmt           *sql.Stmt
+	listSandboxAccountsWithOwnerForwardStmt            *sql.Stmt
 	listUnitsBackwardStmt                              *sql.Stmt
 	listUnitsForwardStmt                               *sql.Stmt
 	markInboxRecordFailedStmt                          *sql.Stmt
@@ -855,12 +873,12 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		findAccountRelationByOwnerAccountIDAndAPIKeyIDStmt: q.findAccountRelationByOwnerAccountIDAndAPIKeyIDStmt,
 		findAccountRelationByOwnerAccountIDAndUserIDStmt:   q.findAccountRelationByOwnerAccountIDAndUserIDStmt,
 		findAccountUserWithRoleByAccountIDAndUserIDStmt:    q.findAccountUserWithRoleByAccountIDAndUserIDStmt,
-		findAdminUserIDByAccountIDStmt:                     q.findAdminUserIDByAccountIDStmt,
 		findFirstSandboxAccountByOwnerAccountIDStmt:        q.findFirstSandboxAccountByOwnerAccountIDStmt,
 		findLastUsedAccountIDStmt:                          q.findLastUsedAccountIDStmt,
 		findRolePermissionStringsStmt:                      q.findRolePermissionStringsStmt,
 		findSandboxAccountByAccountIDStmt:                  q.findSandboxAccountByAccountIDStmt,
 		findSandboxAccountByTypeIDStmt:                     q.findSandboxAccountByTypeIDStmt,
+		findSandboxAccountWithOwnerByTypeIDStmt:            q.findSandboxAccountWithOwnerByTypeIDStmt,
 		getAccountByStripeCustomerIDStmt:                   q.getAccountByStripeCustomerIDStmt,
 		getAccountContextStmt:                              q.getAccountContextStmt,
 		getAccountPlanCodeStmt:                             q.getAccountPlanCodeStmt,
@@ -878,6 +896,8 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		insertUnitStmt:                                     q.insertUnitStmt,
 		listSandboxAccountsBackwardStmt:                    q.listSandboxAccountsBackwardStmt,
 		listSandboxAccountsForwardStmt:                     q.listSandboxAccountsForwardStmt,
+		listSandboxAccountsWithOwnerBackwardStmt:           q.listSandboxAccountsWithOwnerBackwardStmt,
+		listSandboxAccountsWithOwnerForwardStmt:            q.listSandboxAccountsWithOwnerForwardStmt,
 		listUnitsBackwardStmt:                              q.listUnitsBackwardStmt,
 		listUnitsForwardStmt:                               q.listUnitsForwardStmt,
 		markInboxRecordFailedStmt:                          q.markInboxRecordFailedStmt,

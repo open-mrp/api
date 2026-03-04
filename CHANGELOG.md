@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.6.0](https://github.com/Augno/api/compare/v0.5.2...v0.6.0) (2026-03-04)
+
+
+### Features
+
+* include values ([#107](https://github.com/Augno/api/issues/107)) ([7428518](https://github.com/Augno/api/commit/7428518682165a40111c459f4b3f717bb00ad60c))
+
+
+### Bug Fixes
+
+* adding openapi spec gen to release process ([#105](https://github.com/Augno/api/issues/105)) ([c6c599a](https://github.com/Augno/api/commit/c6c599a2883b6ef1cd316b551b79332594f9f0c1))
+
 ## [0.5.2](https://github.com/Augno/api/compare/v0.5.1...v0.5.2) (2026-03-03)
 
 

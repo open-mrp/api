@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.2](https://github.com/Augno/api/compare/v0.6.1...v0.6.2) (2026-03-31)
+
+
+### Bug Fixes
+
+* correct password reset URL path in email link ([#111](https://github.com/Augno/api/issues/111)) ([5b30f7a](https://github.com/Augno/api/commit/5b30f7a0fc8c6319ca6334b67849b366b303f0a1))
+
 ## [0.6.1](https://github.com/Augno/api/compare/v0.6.0...v0.6.1) (2026-03-04)
 
 

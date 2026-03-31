@@ -8,7 +8,7 @@ const (
 	// their registration token.
 	DashboardPathRegisterVerify DashboardPath = "/auth/register/verify"
 	// DashboardPathResetPassword is the path where we should send a user to reset their password.
-	DashboardPathResetPassword DashboardPath = "/auth/reset-password" // #nosec G101 - URL path, not a credential
+	DashboardPathResetPassword DashboardPath = "/auth/password-reset" // #nosec G101 - URL path, not a credential
 	// DashboardPathLogin is the path where we should send a user to login.
 	DashboardPathLogin DashboardPath = "/auth/login"
 	// DashboardPathRegisterCheckoutReturn is the path Stripe redirects to after checkout.

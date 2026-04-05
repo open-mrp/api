@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.12](https://github.com/Augno/api/compare/v0.8.11...v0.8.12) (2026-04-05)
+
+
+### Bug Fixes
+
+* deploy issues resolved - removing admin ([#138](https://github.com/Augno/api/issues/138)) ([223bee8](https://github.com/Augno/api/commit/223bee8cf9422ae362bcdeb492350c9e9bbe5786))
+
 ## [0.8.11](https://github.com/Augno/api/compare/v0.8.10...v0.8.11) (2026-04-05)
 
 

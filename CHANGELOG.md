@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.2](https://github.com/Augno/api/compare/v0.8.1...v0.8.2) (2026-04-05)
+
+
+### Bug Fixes
+
+* region for ses resources ([#118](https://github.com/Augno/api/issues/118)) ([b10f579](https://github.com/Augno/api/commit/b10f579d7000381c716cc5a116d76f8fcb5f1f32))
+
 ## [0.8.1](https://github.com/Augno/api/compare/v0.8.0...v0.8.1) (2026-04-05)
 
 

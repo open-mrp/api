@@ -85,9 +85,6 @@ func (s *unitGroupSvcImpl) ListUnitGroups(ctx context.Context, params domain.Lis
 	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if apiErr := identity.CheckHasPermission(types.PermissionDomainUnitGroups, types.ActionRead); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
 
 	params.AccountID = identity.Target.AccountID
 
@@ -106,15 +103,15 @@ func (s *unitGroupSvcImpl) GetUnitGroup(ctx context.Context, unitGroupID string)
 	if apiErr := identity.CheckIsAssignedActor(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if apiErr := checkUnitGroupReadPermission(identity); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
 
 	if !identity.IsTargetAccountSet() {
 		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
 	}
 
 	if identity.IsExternalTarget() {
+		if apiErr := checkUnitGroupReadPermission(identity); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
 		meds := s.mediators()
 		if apiErr := meds.ReadAccess.CheckReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
@@ -637,15 +634,15 @@ func (s *unitGroupSvcImpl) ListUnitGroupUnits(ctx context.Context, unitGroupID s
 	if apiErr := identity.CheckIsAssignedActor(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if apiErr := checkUnitGroupReadPermission(identity); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
 
 	if !identity.IsTargetAccountSet() {
 		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
 	}
 
 	if identity.IsExternalTarget() {
+		if apiErr := checkUnitGroupReadPermission(identity); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
 		meds := s.mediators()
 		if apiErr := meds.ReadAccess.CheckReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
@@ -676,15 +673,15 @@ func (s *unitGroupSvcImpl) GetUnitGroupUnit(ctx context.Context, params domain.G
 	if apiErr := identity.CheckIsAssignedActor(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if apiErr := checkUnitGroupReadPermission(identity); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
 
 	if !identity.IsTargetAccountSet() {
 		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
 	}
 
 	if identity.IsExternalTarget() {
+		if apiErr := checkUnitGroupReadPermission(identity); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
 		meds := s.mediators()
 		if apiErr := meds.ReadAccess.CheckReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)

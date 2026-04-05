@@ -157,7 +157,6 @@ install-ci-tools: ## Install minimum tools for CI
 	@go install github.com/pressly/goose/v3/cmd/goose@$(call tool-version,github.com/pressly/goose/v3)
 	@go install github.com/securego/gosec/v2/cmd/gosec@$(call tool-version,github.com/securego/gosec/v2)
 	@go install honnef.co/go/tools/cmd/staticcheck@$(call tool-version,honnef.co/go/tools)
-	@go install github.com/daveshanley/vacuum@$(call tool-version,github.com/daveshanley/vacuum)
 
 mocks: ## Generate mocks. Usage: make mocks [services]
 	@$(MOCK_SCRIPT) $(ARGS)

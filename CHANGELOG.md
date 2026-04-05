@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.3](https://github.com/Augno/api/compare/v0.9.2...v0.9.3) (2026-04-05)
+
+
+### Bug Fixes
+
+* enhance access checks in unit group service methods ([#146](https://github.com/Augno/api/issues/146)) ([e713af7](https://github.com/Augno/api/commit/e713af7304a6aa15783683d7bd2ffe561561431f))
+
 ## [0.9.2](https://github.com/Augno/api/compare/v0.9.1...v0.9.2) (2026-04-05)
 
 

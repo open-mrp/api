@@ -82,11 +82,20 @@ func (s *productLineSvcImpl) ListProductLines(ctx context.Context, params domain
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
-	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+	if apiErr := identity.CheckIsAssignedActor(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if apiErr := identity.CheckHasPermission(types.PermissionDomainProductLines, types.ActionRead); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+
+	if !identity.IsTargetAccountSet() {
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+	}
+
+	if identity.IsInternalActor() {
+		if apiErr := identity.CheckHasPermission(types.PermissionDomainProductLines, types.ActionRead); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+	} else if !identity.IsCustomerUser() && !identity.IsSupplierUser() {
+		return nil, tracing.Trace(span, apierror.NewAuthorizationError("You do not have access to this resource."))
 	}
 
 	params.AccountID = identity.Target.AccountID
@@ -103,11 +112,20 @@ func (s *productLineSvcImpl) GetProductLine(ctx context.Context, productLineID s
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
-	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+	if apiErr := identity.CheckIsAssignedActor(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if apiErr := identity.CheckHasPermission(types.PermissionDomainProductLines, types.ActionRead); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+
+	if !identity.IsTargetAccountSet() {
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+	}
+
+	if identity.IsInternalActor() {
+		if apiErr := identity.CheckHasPermission(types.PermissionDomainProductLines, types.ActionRead); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+	} else if !identity.IsCustomerUser() && !identity.IsSupplierUser() {
+		return nil, tracing.Trace(span, apierror.NewAuthorizationError("You do not have access to this resource."))
 	}
 
 	repo := s.repos.NewProductLineRepo()

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.0](https://github.com/Augno/api/compare/v0.8.12...v0.9.0) (2026-04-05)
+
+
+### Features
+
+* add is_publicly_visible field to account plans and update queries ([#140](https://github.com/Augno/api/issues/140)) ([47d7d66](https://github.com/Augno/api/commit/47d7d66131ce559daa4583747769da10f17c79ad))
+
 ## [0.8.12](https://github.com/Augno/api/compare/v0.8.11...v0.8.12) (2026-04-05)
 
 

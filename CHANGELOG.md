@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.4](https://github.com/Augno/api/compare/v0.9.3...v0.9.4) (2026-04-05)
+
+
+### Bug Fixes
+
+* more permission tweaks for product lines and unit groups ([#148](https://github.com/Augno/api/issues/148)) ([e36268a](https://github.com/Augno/api/commit/e36268a92bae79ea2dd6706ffe4cec44c739b9a7))
+
 ## [0.9.3](https://github.com/Augno/api/compare/v0.9.2...v0.9.3) (2026-04-05)
 
 

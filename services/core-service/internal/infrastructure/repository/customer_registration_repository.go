@@ -8,9 +8,9 @@ import (
 	"github.com/augno/api/services/core-service/internal/domain"
 	"github.com/augno/api/services/core-service/internal/infrastructure/sqlc"
 	"github.com/augno/api/shared/db"
-	"github.com/augno/api/shared/safeconv"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/id"
+	"github.com/augno/api/shared/safeconv"
 	"github.com/augno/api/shared/tracing"
 )
 

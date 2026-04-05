@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/augno/api/services/agent-service/internal/domain"
-	"github.com/augno/api/shared/safeconv"
 	agentdb "github.com/augno/api/services/agent-service/internal/infrastructure/db"
 	"github.com/augno/api/services/agent-service/internal/infrastructure/sqlc"
 	"github.com/augno/api/services/agent-service/internal/llm"
@@ -21,6 +20,7 @@ import (
 	"github.com/augno/api/shared/id"
 	"github.com/augno/api/shared/messaging"
 	"github.com/augno/api/shared/retry"
+	"github.com/augno/api/shared/safeconv"
 	"github.com/augno/api/shared/tracing"
 )
 

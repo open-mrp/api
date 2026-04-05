@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/augno/api/services/agent-service/internal/domain"
-	"github.com/augno/api/shared/safeconv"
 	agentdb "github.com/augno/api/services/agent-service/internal/infrastructure/db"
 	"github.com/augno/api/services/agent-service/internal/infrastructure/sqlc"
 	"github.com/augno/api/shared/appctx"
@@ -15,6 +14,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/messaging"
 	pb "github.com/augno/api/shared/proto/agent"
+	"github.com/augno/api/shared/safeconv"
 	"github.com/augno/api/shared/tracing"
 	"github.com/jackc/pgx/v5/pgtype"
 

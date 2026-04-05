@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 
 	"github.com/augno/api/services/agent-service/internal/domain"
-	"github.com/augno/api/shared/safeconv"
 	agentdb "github.com/augno/api/services/agent-service/internal/infrastructure/db"
 	"github.com/augno/api/services/agent-service/internal/infrastructure/sqlc"
 	"github.com/augno/api/shared/db"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/safeconv"
 	"github.com/augno/api/shared/tracing"
 )
 

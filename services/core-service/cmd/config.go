@@ -21,8 +21,8 @@ const (
 	envDBURL                      = "DB_URL"
 	envRabbitMQURI                = "RABBITMQ_URI"
 	envPlatformMode               = "PLATFORM"
-	envCursorHMACKey              = "CURSOR_HMAC_KEY" // #nosec G101 - Env var name, not a credential
-	envGoogleMapsAPIKey           = "GOOGLE_MAPS_API_KEY" // #nosec G101 -- env var name, not a credential
+	envCursorHMACKey              = "CURSOR_HMAC_KEY"               // #nosec G101 - Env var name, not a credential
+	envGoogleMapsAPIKey           = "GOOGLE_MAPS_API_KEY"           // #nosec G101 -- env var name, not a credential
 	envIntegrationEncryptionKey   = "INTEGRATION_ENCRYPTION_KEY"    // #nosec G101 - Env var name, not a credential
 	envIntegrationEncryptionKeyID = "INTEGRATION_ENCRYPTION_KEY_ID" // #nosec G101 - Env var name, not a credential
 	envAWSRegion                  = "AWS_REGION"

@@ -24,7 +24,7 @@ type CreateAccountIntegrationRequest struct {
 var sampleCreateAccountIntegrationRequest = &CreateAccountIntegrationRequest{
 	Name:            "My Stripe Integration",
 	IntegrationCode: constants.IntegrationCodeStripe,
-	Credentials: `{"privateKey":"sk_test_...","publishableKey":"pk_test_...","webhookSecret":"whsec_..."}`, // #nosec G101 -- sample request data
+	Credentials:     `{"privateKey":"sk_test_...","publishableKey":"pk_test_...","webhookSecret":"whsec_..."}`, // #nosec G101 -- sample request data
 }
 
 func (*CreateAccountIntegrationRequest) SchemaExample() any {

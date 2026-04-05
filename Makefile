@@ -170,13 +170,15 @@ static-check: ## Run staticcheck
 	@echo "Running static check..."
 	@staticcheck ./...
 
-fmt: ## Format Go source code
+fmt: ## Format Go source code and Terraform
 	@echo "Formatting Go source code..."
 	@go fmt ./...
 	@if command -v goimports >/dev/null; then \
 		echo "Organizing imports with goimports..."; \
 		goimports -w .; \
 	fi
+	@echo "Formatting Terraform..."
+	@terraform -chdir=infra/production/terraform fmt
 
 stripe-webhook: ## Run the Stripe webhook listener
 	@stripe listen --forward-to localhost:8081/v1/webhooks/stripe

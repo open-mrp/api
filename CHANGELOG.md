@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/Augno/api/compare/v0.6.2...v0.7.0) (2026-04-05)
+
+
+### Features
+
+* agents ([#113](https://github.com/Augno/api/issues/113)) ([4d3d90c](https://github.com/Augno/api/commit/4d3d90cebbbf11241283249a29a02ec1dbce983a))
+
 ## [0.6.2](https://github.com/Augno/api/compare/v0.6.1...v0.6.2) (2026-03-31)
 
 

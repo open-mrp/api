@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.6](https://github.com/Augno/api/compare/v0.8.5...v0.8.6) (2026-04-05)
+
+
+### Bug Fixes
+
+* ses terraform issue ([#126](https://github.com/Augno/api/issues/126)) ([97a0233](https://github.com/Augno/api/commit/97a0233ebac07ace0d59174857f1c4ef31c86750))
+
 ## [0.8.5](https://github.com/Augno/api/compare/v0.8.4...v0.8.5) (2026-04-05)
 
 

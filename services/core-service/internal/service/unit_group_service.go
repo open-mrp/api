@@ -119,17 +119,23 @@ func (s *unitGroupSvcImpl) GetUnitGroup(ctx context.Context, unitGroupID string)
 		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
 	}
 
-	if identity.IsExternalTarget() {
+	result, apiErr := s.repos.NewUnitGroupRepo().Get(ctx, domain.GetUnitGroupParams{
+		AccountID:   identity.Target.AccountID,
+		UnitGroupID: unitGroupID,
+	})
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	// Only check external access for account-owned unit groups; system defaults are readable by anyone.
+	if result.AccountID != nil && identity.IsExternalTarget() {
 		meds := s.mediators()
 		if apiErr := meds.ReadAccess.CheckReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
 	}
 
-	return s.repos.NewUnitGroupRepo().Get(ctx, domain.GetUnitGroupParams{
-		AccountID:   identity.Target.AccountID,
-		UnitGroupID: unitGroupID,
-	})
+	return result, nil
 }
 
 func (s *unitGroupSvcImpl) CreateUnitGroup(ctx context.Context, params domain.CreateUnitGroupParams) (*domain.UnitGroupFull, *apierror.APIError) {
@@ -647,20 +653,21 @@ func (s *unitGroupSvcImpl) ListUnitGroupUnits(ctx context.Context, unitGroupID s
 		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
 	}
 
-	if identity.IsExternalTarget() {
-		meds := s.mediators()
-		if apiErr := meds.ReadAccess.CheckReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-	}
-
 	// Verify unit group exists
-	_, apiErr := s.repos.NewUnitGroupRepo().Get(ctx, domain.GetUnitGroupParams{
+	ug, apiErr := s.repos.NewUnitGroupRepo().Get(ctx, domain.GetUnitGroupParams{
 		AccountID:   identity.Target.AccountID,
 		UnitGroupID: unitGroupID,
 	})
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
+	}
+
+	// Only check external access for account-owned unit groups; system defaults are readable by anyone.
+	if ug.AccountID != nil && identity.IsExternalTarget() {
+		meds := s.mediators()
+		if apiErr := meds.ReadAccess.CheckReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
 	}
 
 	return s.repos.NewUnitGroupRepo().ListUnits(ctx, unitGroupID)
@@ -683,22 +690,23 @@ func (s *unitGroupSvcImpl) GetUnitGroupUnit(ctx context.Context, params domain.G
 		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
 	}
 
-	if identity.IsExternalTarget() {
-		meds := s.mediators()
-		if apiErr := meds.ReadAccess.CheckReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-	}
-
 	params.AccountID = identity.Target.AccountID
 
 	// Verify unit group exists
-	_, apiErr := s.repos.NewUnitGroupRepo().Get(ctx, domain.GetUnitGroupParams{
+	ug, apiErr := s.repos.NewUnitGroupRepo().Get(ctx, domain.GetUnitGroupParams{
 		AccountID:   params.AccountID,
 		UnitGroupID: params.UnitGroupID,
 	})
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
+	}
+
+	// Only check external access for account-owned unit groups; system defaults are readable by anyone.
+	if ug.AccountID != nil && identity.IsExternalTarget() {
+		meds := s.mediators()
+		if apiErr := meds.ReadAccess.CheckReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
 	}
 
 	return s.repos.NewUnitGroupRepo().GetUnit(ctx, params)

@@ -42,6 +42,11 @@ INSERT IGNORE INTO user (id, name, username, email, hashed_password, email_verif
 INSERT IGNORE INTO account_user (id, user_id, account_id, created_at, updated_at) VALUES
     ('acus_01seedcustuser00000', 'us_01seedcustuser000000', 'ac_01k09wm2fgevdsc344gpbcj30f', NOW(), NOW());
 
+-- Customer API key (owned by customer account, used for customer portal e2e tests)
+-- HMAC computed as: createHmac('sha256', 'pepper').update(secret).digest()
+INSERT IGNORE INTO api_key (type_id, key_id, name, secret_hash, redacted_value, owner_account_id, role_id, created_at, updated_at) VALUES
+    ('apky_e2ecustportal00000000000', 'CustPortalE2eTestKey1', 'Customer Portal E2E Key', UNHEX('17bffdd0720a21592fa03357fbada34b24223fa456c7946827c93c5a7ca3d5c5'), 'aug_sk_prod_****S0Og', 'ac_01k09wm2fgevdsc344gpbcj30f', 'rl_mtg88e6u6fbu', NOW(), NOW());
+
 -- Registration flow
 INSERT IGNORE INTO registration_flow (id, name, account_id, created_at, updated_at) VALUES
     ('mock-registration-flow', 'Mock Registration Flow', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());

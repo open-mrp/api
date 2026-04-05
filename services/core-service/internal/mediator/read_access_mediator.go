@@ -44,9 +44,20 @@ func (m *readAccessMedImpl) CheckReadAccess(ctx context.Context, actorAccountID,
 		return nil
 	}
 
-	hasRelation, apiErr := m.repos.NewAccountRelationRepo().HasRelation(ctx, actorAccountID, targetAccountID)
+	repo := m.repos.NewAccountRelationRepo()
+
+	// Check both directions: actor as owner (merchant→customer) or actor as
+	// counterparty (customer→merchant).
+	hasRelation, apiErr := repo.HasRelation(ctx, actorAccountID, targetAccountID)
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
+	}
+
+	if !hasRelation {
+		hasRelation, apiErr = repo.HasRelation(ctx, targetAccountID, actorAccountID)
+		if apiErr != nil {
+			return tracing.Trace(span, apiErr)
+		}
 	}
 
 	if !hasRelation {

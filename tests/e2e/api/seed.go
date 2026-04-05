@@ -16,6 +16,9 @@ const (
 	SeedCustomerGroupName  = "DME"
 	SeedAccountRelationID  = "acre_01seedcustomer00000"
 	SeedRegistrationFlowID = "mock-registration-flow"
+
+	// Customer portal API key (owned by customer account, targets vendor account)
+	SeedCustomerAPIKey = "aug_sk_prod_CustPortalE2eTestKey1_CustomerPortalE2eTestSecretValueForAuthTestingPurpose12345efS0Og"
 	SeedAddressID          = "ad_01k09wnac0e1ar211e0sy0ba4g"
 
 	// Catalog

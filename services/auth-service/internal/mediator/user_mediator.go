@@ -182,30 +182,53 @@ func (s *userMedImpl) ValidateCredential(ctx context.Context, authToken string, 
 		return s.validateAPIKeyCredential(ctx, span, authToken, targetAccountID)
 	}
 
-	// Otherwise, validate it as a user credential
-	// When actorAccountID is provided for user identities, resolve identity
-	// against the actor account instead of the target account. In that case
-	// the user must have an account-user relation (member) for that account;
-	// customer/supplier relations are not sufficient. After validation, the
-	// identity's Target is restored to the original target so that
-	// downstream services query the correct account.
-	effectiveTargetAccountID := targetAccountID
-	requireAccountUser := actorAccountID != nil
+	// Otherwise, validate it as a user credential.
+	// User requests always include Augno-Actor-Account to identify the
+	// user's own account. When it matches the target the user is internal;
+	// when it differs the user is accessing cross-account (customer/supplier).
 	if actorAccountID != nil {
-		effectiveTargetAccountID = actorAccountID
-	}
-	identity, apiErr := s.validateUserCredential(ctx, span, authToken, effectiveTargetAccountID, requireAccountUser)
-	if apiErr != nil {
-		return nil, apiErr
-	}
-	if actorAccountID != nil && targetAccountID != nil {
-		if identity.Target != nil {
-			identity.Target.AccountID = *targetAccountID
-		} else {
-			identity.Target = &types.IdentityTarget{AccountID: *targetAccountID}
+		// Validate the user is a member of their actor account.
+		identity, apiErr := s.validateUserCredential(ctx, span, authToken, actorAccountID, true)
+		if apiErr != nil {
+			return nil, apiErr
 		}
+
+		// Same account — internal user, target is already correct.
+		if targetAccountID == nil || *actorAccountID == *targetAccountID {
+			return identity, nil
+		}
+
+		// Cross-account — look up the relation to determine customer/supplier.
+		accountRelation, hasRelation, apiErr := s.coreClient.GetAccountRelationByUserID(ctx, *targetAccountID, identity.Actor.ID)
+		if apiErr != nil {
+			return nil, apiErr
+		}
+		if !hasRelation {
+			return nil, tracing.Trace(span, apierror.NewAuthorizationError(errNoAccountAccess(*targetAccountID)))
+		}
+
+		var actorType types.IdentityRelationType
+		switch accountRelation.AccountRelationRoleCode {
+		case types.IdentityRelationTypeCustomer:
+			actorType = types.IdentityRelationTypeCustomer
+		case types.IdentityRelationTypeSupplier:
+			actorType = types.IdentityRelationTypeSupplier
+		default:
+			return nil, tracing.Trace(span, apierror.NewAuthorizationError(errNoAccountAccess(*targetAccountID)))
+		}
+
+		identity.Actor.RelationType = actorType
+		identity.Actor.RoleID = nil
+		identity.Actor.RoleTypeCode = nil
+		identity.Actor.Permissions = map[string]bool{}
+		identity.Target.AccountID = *targetAccountID
+		identity.Target.RelationType = &accountRelation.AccountRelationRoleCode
+
+		return identity, nil
 	}
-	return identity, nil
+
+	// No actor account — validate directly against the target.
+	return s.validateUserCredential(ctx, span, authToken, targetAccountID, false)
 }
 
 func (s *userMedImpl) validateAPIKeyCredential(ctx context.Context, span trace.Span, authToken string, targetAccountID *string) (*types.Identity, *apierror.APIError) {

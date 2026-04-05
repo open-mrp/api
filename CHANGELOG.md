@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.2](https://github.com/Augno/api/compare/v0.9.1...v0.9.2) (2026-04-05)
+
+
+### Bug Fixes
+
+* update unit group service to enhance identity checks ([#144](https://github.com/Augno/api/issues/144)) ([5ab6eba](https://github.com/Augno/api/commit/5ab6eba81849e0da5190a9c349834962ea33ec9b))
+
 ## [0.9.1](https://github.com/Augno/api/compare/v0.9.0...v0.9.1) (2026-04-05)
 
 

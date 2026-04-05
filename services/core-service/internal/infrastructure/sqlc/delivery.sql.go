@@ -47,7 +47,7 @@ type GetDeliveryRow struct {
 }
 
 func (q *Queries) GetDelivery(ctx context.Context, arg GetDeliveryParams) (GetDeliveryRow, error) {
-	row := q.queryRow(ctx, q.getDeliveryStmt, getDelivery, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getDelivery, arg.ID, arg.AccountID)
 	var i GetDeliveryRow
 	err := row.Scan(
 		&i.ID,
@@ -182,7 +182,7 @@ func (q *Queries) ListDeliveriesBackward(ctx context.Context, arg ListDeliveries
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorID)
 	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -336,7 +336,7 @@ func (q *Queries) ListDeliveriesForward(ctx context.Context, arg ListDeliveriesF
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorID)
 	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -428,7 +428,7 @@ type ListDeliveryLinesRow struct {
 }
 
 func (q *Queries) ListDeliveryLines(ctx context.Context, deliveryID string) ([]ListDeliveryLinesRow, error) {
-	rows, err := q.query(ctx, q.listDeliveryLinesStmt, listDeliveryLines, deliveryID)
+	rows, err := q.db.QueryContext(ctx, listDeliveryLines, deliveryID)
 	if err != nil {
 		return nil, err
 	}

@@ -23,7 +23,7 @@ type CountItemCategoryInAccountParams struct {
 }
 
 func (q *Queries) CountItemCategoryInAccount(ctx context.Context, arg CountItemCategoryInAccountParams) (int64, error) {
-	row := q.queryRow(ctx, q.countItemCategoryInAccountStmt, countItemCategoryInAccount, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, countItemCategoryInAccount, arg.ID, arg.AccountID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -46,7 +46,7 @@ type CountPropertiesInCategoryByNameParams struct {
 }
 
 func (q *Queries) CountPropertiesInCategoryByName(ctx context.Context, arg CountPropertiesInCategoryByNameParams) (int64, error) {
-	row := q.queryRow(ctx, q.countPropertiesInCategoryByNameStmt, countPropertiesInCategoryByName,
+	row := q.db.QueryRowContext(ctx, countPropertiesInCategoryByName,
 		arg.ItemCategoryID,
 		arg.Name,
 		arg.AccountID,
@@ -70,7 +70,7 @@ type CountPropertyInAccountParams struct {
 }
 
 func (q *Queries) CountPropertyInAccount(ctx context.Context, arg CountPropertyInAccountParams) (int64, error) {
-	row := q.queryRow(ctx, q.countPropertyInAccountStmt, countPropertyInAccount, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, countPropertyInAccount, arg.ID, arg.AccountID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -88,7 +88,7 @@ type CountUnitGroupVisibleToAccountParams struct {
 }
 
 func (q *Queries) CountUnitGroupVisibleToAccount(ctx context.Context, arg CountUnitGroupVisibleToAccountParams) (int64, error) {
-	row := q.queryRow(ctx, q.countUnitGroupVisibleToAccountStmt, countUnitGroupVisibleToAccount, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, countUnitGroupVisibleToAccount, arg.ID, arg.AccountID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -106,7 +106,7 @@ type DeleteItemCategoryParams struct {
 }
 
 func (q *Queries) DeleteItemCategory(ctx context.Context, arg DeleteItemCategoryParams) (sql.Result, error) {
-	return q.exec(ctx, q.deleteItemCategoryStmt, deleteItemCategory, arg.ID, arg.AccountID)
+	return q.db.ExecContext(ctx, deleteItemCategory, arg.ID, arg.AccountID)
 }
 
 const deleteItemCategoryProperty = `-- name: DeleteItemCategoryProperty :exec
@@ -120,7 +120,7 @@ type DeleteItemCategoryPropertyParams struct {
 }
 
 func (q *Queries) DeleteItemCategoryProperty(ctx context.Context, arg DeleteItemCategoryPropertyParams) error {
-	_, err := q.exec(ctx, q.deleteItemCategoryPropertyStmt, deleteItemCategoryProperty, arg.ItemCategoryID, arg.PropertyID)
+	_, err := q.db.ExecContext(ctx, deleteItemCategoryProperty, arg.ItemCategoryID, arg.PropertyID)
 	return err
 }
 
@@ -156,7 +156,7 @@ type GetItemCategoryRow struct {
 }
 
 func (q *Queries) GetItemCategory(ctx context.Context, arg GetItemCategoryParams) (GetItemCategoryRow, error) {
-	row := q.queryRow(ctx, q.getItemCategoryStmt, getItemCategory, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getItemCategory, arg.ID, arg.AccountID)
 	var i GetItemCategoryRow
 	err := row.Scan(
 		&i.ID,
@@ -189,7 +189,7 @@ type GetUnitGroupForCategoryRow struct {
 }
 
 func (q *Queries) GetUnitGroupForCategory(ctx context.Context, id string) (GetUnitGroupForCategoryRow, error) {
-	row := q.queryRow(ctx, q.getUnitGroupForCategoryStmt, getUnitGroupForCategory, id)
+	row := q.db.QueryRowContext(ctx, getUnitGroupForCategory, id)
 	var i GetUnitGroupForCategoryRow
 	err := row.Scan(
 		&i.ID,
@@ -229,7 +229,7 @@ type InsertItemCategoryParams struct {
 }
 
 func (q *Queries) InsertItemCategory(ctx context.Context, arg InsertItemCategoryParams) error {
-	_, err := q.exec(ctx, q.insertItemCategoryStmt, insertItemCategory,
+	_, err := q.db.ExecContext(ctx, insertItemCategory,
 		arg.ID,
 		arg.Name,
 		arg.ItemCategoryTypeCode,
@@ -250,7 +250,7 @@ type InsertItemCategoryPropertyParams struct {
 }
 
 func (q *Queries) InsertItemCategoryProperty(ctx context.Context, arg InsertItemCategoryPropertyParams) error {
-	_, err := q.exec(ctx, q.insertItemCategoryPropertyStmt, insertItemCategoryProperty, arg.ItemCategoryID, arg.PropertyID)
+	_, err := q.db.ExecContext(ctx, insertItemCategoryProperty, arg.ItemCategoryID, arg.PropertyID)
 	return err
 }
 
@@ -300,7 +300,7 @@ type ListItemCategoriesBackwardRow struct {
 }
 
 func (q *Queries) ListItemCategoriesBackward(ctx context.Context, arg ListItemCategoriesBackwardParams) ([]ListItemCategoriesBackwardRow, error) {
-	rows, err := q.query(ctx, q.listItemCategoriesBackwardStmt, listItemCategoriesBackward,
+	rows, err := q.db.QueryContext(ctx, listItemCategoriesBackward,
 		arg.AccountID,
 		arg.ItemCategoryTypeCode,
 		arg.ItemCategoryTypeCode,
@@ -388,7 +388,7 @@ type ListItemCategoriesForwardRow struct {
 }
 
 func (q *Queries) ListItemCategoriesForward(ctx context.Context, arg ListItemCategoriesForwardParams) ([]ListItemCategoriesForwardRow, error) {
-	rows, err := q.query(ctx, q.listItemCategoriesForwardStmt, listItemCategoriesForward,
+	rows, err := q.db.QueryContext(ctx, listItemCategoriesForward,
 		arg.AccountID,
 		arg.ItemCategoryTypeCode,
 		arg.ItemCategoryTypeCode,
@@ -445,7 +445,7 @@ type ListItemCategoryPropertiesRow struct {
 }
 
 func (q *Queries) ListItemCategoryProperties(ctx context.Context, itemCategoryID string) ([]ListItemCategoryPropertiesRow, error) {
-	rows, err := q.query(ctx, q.listItemCategoryPropertiesStmt, listItemCategoryProperties, itemCategoryID)
+	rows, err := q.db.QueryContext(ctx, listItemCategoryProperties, itemCategoryID)
 	if err != nil {
 		return nil, err
 	}
@@ -484,7 +484,7 @@ type UpdateItemCategoryParams struct {
 }
 
 func (q *Queries) UpdateItemCategory(ctx context.Context, arg UpdateItemCategoryParams) (sql.Result, error) {
-	return q.exec(ctx, q.updateItemCategoryStmt, updateItemCategory,
+	return q.db.ExecContext(ctx, updateItemCategory,
 		arg.Name,
 		arg.Notes,
 		arg.ID,
@@ -507,5 +507,5 @@ type UpdateItemCategoryUnitGroupParams struct {
 }
 
 func (q *Queries) UpdateItemCategoryUnitGroup(ctx context.Context, arg UpdateItemCategoryUnitGroupParams) (sql.Result, error) {
-	return q.exec(ctx, q.updateItemCategoryUnitGroupStmt, updateItemCategoryUnitGroup, arg.UnitGroupID, arg.ID, arg.AccountID)
+	return q.db.ExecContext(ctx, updateItemCategoryUnitGroup, arg.UnitGroupID, arg.ID, arg.AccountID)
 }

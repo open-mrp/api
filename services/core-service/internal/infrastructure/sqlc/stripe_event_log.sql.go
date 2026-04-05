@@ -22,7 +22,7 @@ type InsertStripeEventLogParams struct {
 }
 
 func (q *Queries) InsertStripeEventLog(ctx context.Context, arg InsertStripeEventLogParams) error {
-	_, err := q.exec(ctx, q.insertStripeEventLogStmt, insertStripeEventLog,
+	_, err := q.db.ExecContext(ctx, insertStripeEventLog,
 		arg.ID,
 		arg.EventID,
 		arg.ObjectID,
@@ -43,7 +43,7 @@ type StripeEventLogExistsParams struct {
 }
 
 func (q *Queries) StripeEventLogExists(ctx context.Context, arg StripeEventLogExistsParams) (bool, error) {
-	row := q.queryRow(ctx, q.stripeEventLogExistsStmt, stripeEventLogExists, arg.EventID, arg.ObjectID)
+	row := q.db.QueryRowContext(ctx, stripeEventLogExists, arg.EventID, arg.ObjectID)
 	var event_exists bool
 	err := row.Scan(&event_exists)
 	return event_exists, err

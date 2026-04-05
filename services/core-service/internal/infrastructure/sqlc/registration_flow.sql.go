@@ -21,7 +21,7 @@ type ClearAccountGroupRegistrationFlowIDParams struct {
 }
 
 func (q *Queries) ClearAccountGroupRegistrationFlowID(ctx context.Context, arg ClearAccountGroupRegistrationFlowIDParams) error {
-	_, err := q.exec(ctx, q.clearAccountGroupRegistrationFlowIDStmt, clearAccountGroupRegistrationFlowID, arg.RegistrationFlowID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, clearAccountGroupRegistrationFlowID, arg.RegistrationFlowID, arg.AccountID)
 	return err
 }
 
@@ -30,7 +30,7 @@ DELETE FROM ` + "`" + `_payment_terms_registration_flows` + "`" + ` WHERE B = ?
 `
 
 func (q *Queries) DeletePaymentTermOptionsByFlowID(ctx context.Context, registrationFlowID string) error {
-	_, err := q.exec(ctx, q.deletePaymentTermOptionsByFlowIDStmt, deletePaymentTermOptionsByFlowID, registrationFlowID)
+	_, err := q.db.ExecContext(ctx, deletePaymentTermOptionsByFlowID, registrationFlowID)
 	return err
 }
 
@@ -46,7 +46,7 @@ type DeleteRegistrationFlowParams struct {
 }
 
 func (q *Queries) DeleteRegistrationFlow(ctx context.Context, arg DeleteRegistrationFlowParams) (sql.Result, error) {
-	return q.exec(ctx, q.deleteRegistrationFlowStmt, deleteRegistrationFlow, arg.ID, arg.AccountID)
+	return q.db.ExecContext(ctx, deleteRegistrationFlow, arg.ID, arg.AccountID)
 }
 
 const deleteShippingTermOptionsByFlowID = `-- name: DeleteShippingTermOptionsByFlowID :exec
@@ -54,7 +54,7 @@ DELETE FROM ` + "`" + `_registration_flows_shipping_terms` + "`" + ` WHERE A = ?
 `
 
 func (q *Queries) DeleteShippingTermOptionsByFlowID(ctx context.Context, registrationFlowID string) error {
-	_, err := q.exec(ctx, q.deleteShippingTermOptionsByFlowIDStmt, deleteShippingTermOptionsByFlowID, registrationFlowID)
+	_, err := q.db.ExecContext(ctx, deleteShippingTermOptionsByFlowID, registrationFlowID)
 	return err
 }
 
@@ -76,7 +76,7 @@ type GetRegistrationFlowParams struct {
 }
 
 func (q *Queries) GetRegistrationFlow(ctx context.Context, arg GetRegistrationFlowParams) (RegistrationFlow, error) {
-	row := q.queryRow(ctx, q.getRegistrationFlowStmt, getRegistrationFlow, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getRegistrationFlow, arg.ID, arg.AccountID)
 	var i RegistrationFlow
 	err := row.Scan(
 		&i.ID,
@@ -98,7 +98,7 @@ type InsertPaymentTermOptionParams struct {
 }
 
 func (q *Queries) InsertPaymentTermOption(ctx context.Context, arg InsertPaymentTermOptionParams) error {
-	_, err := q.exec(ctx, q.insertPaymentTermOptionStmt, insertPaymentTermOption, arg.PaymentTermID, arg.RegistrationFlowID)
+	_, err := q.db.ExecContext(ctx, insertPaymentTermOption, arg.PaymentTermID, arg.RegistrationFlowID)
 	return err
 }
 
@@ -125,7 +125,7 @@ type InsertRegistrationFlowParams struct {
 }
 
 func (q *Queries) InsertRegistrationFlow(ctx context.Context, arg InsertRegistrationFlowParams) error {
-	_, err := q.exec(ctx, q.insertRegistrationFlowStmt, insertRegistrationFlow, arg.ID, arg.Name, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, insertRegistrationFlow, arg.ID, arg.Name, arg.AccountID)
 	return err
 }
 
@@ -139,7 +139,7 @@ type InsertShippingTermOptionParams struct {
 }
 
 func (q *Queries) InsertShippingTermOption(ctx context.Context, arg InsertShippingTermOptionParams) error {
-	_, err := q.exec(ctx, q.insertShippingTermOptionStmt, insertShippingTermOption, arg.RegistrationFlowID, arg.ShippingTermID)
+	_, err := q.db.ExecContext(ctx, insertShippingTermOption, arg.RegistrationFlowID, arg.ShippingTermID)
 	return err
 }
 
@@ -157,7 +157,7 @@ type ListAccountGroupOptionsByFlowIDRow struct {
 }
 
 func (q *Queries) ListAccountGroupOptionsByFlowID(ctx context.Context, registrationFlowID sql.NullString) ([]ListAccountGroupOptionsByFlowIDRow, error) {
-	rows, err := q.query(ctx, q.listAccountGroupOptionsByFlowIDStmt, listAccountGroupOptionsByFlowID, registrationFlowID)
+	rows, err := q.db.QueryContext(ctx, listAccountGroupOptionsByFlowID, registrationFlowID)
 	if err != nil {
 		return nil, err
 	}
@@ -194,7 +194,7 @@ type ListPaymentTermOptionsByFlowIDRow struct {
 }
 
 func (q *Queries) ListPaymentTermOptionsByFlowID(ctx context.Context, registrationFlowID string) ([]ListPaymentTermOptionsByFlowIDRow, error) {
-	rows, err := q.query(ctx, q.listPaymentTermOptionsByFlowIDStmt, listPaymentTermOptionsByFlowID, registrationFlowID)
+	rows, err := q.db.QueryContext(ctx, listPaymentTermOptionsByFlowID, registrationFlowID)
 	if err != nil {
 		return nil, err
 	}
@@ -246,7 +246,7 @@ type ListRegistrationFlowsBackwardParams struct {
 }
 
 func (q *Queries) ListRegistrationFlowsBackward(ctx context.Context, arg ListRegistrationFlowsBackwardParams) ([]RegistrationFlow, error) {
-	rows, err := q.query(ctx, q.listRegistrationFlowsBackwardStmt, listRegistrationFlowsBackward,
+	rows, err := q.db.QueryContext(ctx, listRegistrationFlowsBackward,
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
@@ -294,7 +294,7 @@ WHERE rf.account_id = ?
 `
 
 func (q *Queries) ListRegistrationFlowsByAccountID(ctx context.Context, accountID string) ([]RegistrationFlow, error) {
-	rows, err := q.query(ctx, q.listRegistrationFlowsByAccountIDStmt, listRegistrationFlowsByAccountID, accountID)
+	rows, err := q.db.QueryContext(ctx, listRegistrationFlowsByAccountID, accountID)
 	if err != nil {
 		return nil, err
 	}
@@ -353,7 +353,7 @@ type ListRegistrationFlowsForwardParams struct {
 }
 
 func (q *Queries) ListRegistrationFlowsForward(ctx context.Context, arg ListRegistrationFlowsForwardParams) ([]RegistrationFlow, error) {
-	rows, err := q.query(ctx, q.listRegistrationFlowsForwardStmt, listRegistrationFlowsForward,
+	rows, err := q.db.QueryContext(ctx, listRegistrationFlowsForward,
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
@@ -405,7 +405,7 @@ type ListShippingTermOptionsByFlowIDRow struct {
 }
 
 func (q *Queries) ListShippingTermOptionsByFlowID(ctx context.Context, registrationFlowID string) ([]ListShippingTermOptionsByFlowIDRow, error) {
-	rows, err := q.query(ctx, q.listShippingTermOptionsByFlowIDStmt, listShippingTermOptionsByFlowID, registrationFlowID)
+	rows, err := q.db.QueryContext(ctx, listShippingTermOptionsByFlowID, registrationFlowID)
 	if err != nil {
 		return nil, err
 	}
@@ -438,7 +438,7 @@ type SetAccountGroupRegistrationFlowIDParams struct {
 }
 
 func (q *Queries) SetAccountGroupRegistrationFlowID(ctx context.Context, arg SetAccountGroupRegistrationFlowIDParams) error {
-	_, err := q.exec(ctx, q.setAccountGroupRegistrationFlowIDStmt, setAccountGroupRegistrationFlowID, arg.RegistrationFlowID, arg.AccountGroupID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, setAccountGroupRegistrationFlowID, arg.RegistrationFlowID, arg.AccountGroupID, arg.AccountID)
 	return err
 }
 
@@ -457,5 +457,5 @@ type UpdateRegistrationFlowParams struct {
 }
 
 func (q *Queries) UpdateRegistrationFlow(ctx context.Context, arg UpdateRegistrationFlowParams) (sql.Result, error) {
-	return q.exec(ctx, q.updateRegistrationFlowStmt, updateRegistrationFlow, arg.Name, arg.ID, arg.AccountID)
+	return q.db.ExecContext(ctx, updateRegistrationFlow, arg.Name, arg.ID, arg.AccountID)
 }

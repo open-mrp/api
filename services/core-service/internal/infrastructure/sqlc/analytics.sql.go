@@ -44,7 +44,7 @@ type GetDeliveryEntriesRow struct {
 }
 
 func (q *Queries) GetDeliveryEntries(ctx context.Context, arg GetDeliveryEntriesParams) ([]GetDeliveryEntriesRow, error) {
-	rows, err := q.query(ctx, q.getDeliveryEntriesStmt, getDeliveryEntries, arg.OwnerAccountID, arg.StartDate, arg.EndDate)
+	rows, err := q.db.QueryContext(ctx, getDeliveryEntries, arg.OwnerAccountID, arg.StartDate, arg.EndDate)
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +123,7 @@ type GetDemandForecastMonthlyDemandRow struct {
 }
 
 func (q *Queries) GetDemandForecastMonthlyDemand(ctx context.Context, arg GetDemandForecastMonthlyDemandParams) ([]GetDemandForecastMonthlyDemandRow, error) {
-	rows, err := q.query(ctx, q.getDemandForecastMonthlyDemandStmt, getDemandForecastMonthlyDemand, arg.OwnerAccountID, arg.StartDate, arg.EndDate)
+	rows, err := q.db.QueryContext(ctx, getDemandForecastMonthlyDemand, arg.OwnerAccountID, arg.StartDate, arg.EndDate)
 	if err != nil {
 		return nil, err
 	}
@@ -192,7 +192,7 @@ type GetDemandForecastMonthlyRevenueRow struct {
 }
 
 func (q *Queries) GetDemandForecastMonthlyRevenue(ctx context.Context, arg GetDemandForecastMonthlyRevenueParams) ([]GetDemandForecastMonthlyRevenueRow, error) {
-	rows, err := q.query(ctx, q.getDemandForecastMonthlyRevenueStmt, getDemandForecastMonthlyRevenue, arg.OwnerAccountID, arg.StartDate, arg.EndDate)
+	rows, err := q.db.QueryContext(ctx, getDemandForecastMonthlyRevenue, arg.OwnerAccountID, arg.StartDate, arg.EndDate)
 	if err != nil {
 		return nil, err
 	}
@@ -304,7 +304,7 @@ type GetInventoryReceiptEntriesRow struct {
 }
 
 func (q *Queries) GetInventoryReceiptEntries(ctx context.Context, arg GetInventoryReceiptEntriesParams) ([]GetInventoryReceiptEntriesRow, error) {
-	rows, err := q.query(ctx, q.getInventoryReceiptEntriesStmt, getInventoryReceiptEntries, arg.RequestingAccountID, arg.RequestingAccountID)
+	rows, err := q.db.QueryContext(ctx, getInventoryReceiptEntries, arg.RequestingAccountID, arg.RequestingAccountID)
 	if err != nil {
 		return nil, err
 	}
@@ -399,7 +399,7 @@ type GetManufacturingBatchBatchMetricsRow struct {
 // Combined batch-table query for production, quality, and labor efficiency.
 // Uses scanned_at for date filtering to match legacy dashboard behavior.
 func (q *Queries) GetManufacturingBatchBatchMetrics(ctx context.Context, arg GetManufacturingBatchBatchMetricsParams) (GetManufacturingBatchBatchMetricsRow, error) {
-	row := q.queryRow(ctx, q.getManufacturingBatchBatchMetricsStmt, getManufacturingBatchBatchMetrics,
+	row := q.db.QueryRowContext(ctx, getManufacturingBatchBatchMetrics,
 		arg.OwnerAccountID,
 		arg.StartDate,
 		arg.EndDate,
@@ -512,7 +512,7 @@ type GetManufacturingBatchInvoiceMetricsRow struct {
 // Combined invoice-table query for costs per unit and margin.
 // Uses unit conversion logic to normalize quantities, costs, and prices.
 func (q *Queries) GetManufacturingBatchInvoiceMetrics(ctx context.Context, arg GetManufacturingBatchInvoiceMetricsParams) (GetManufacturingBatchInvoiceMetricsRow, error) {
-	row := q.queryRow(ctx, q.getManufacturingBatchInvoiceMetricsStmt, getManufacturingBatchInvoiceMetrics, arg.OwnerAccountID, arg.StartDate, arg.EndDate)
+	row := q.db.QueryRowContext(ctx, getManufacturingBatchInvoiceMetrics, arg.OwnerAccountID, arg.StartDate, arg.EndDate)
 	var i GetManufacturingBatchInvoiceMetricsRow
 	err := row.Scan(
 		&i.TotalCost,
@@ -568,7 +568,7 @@ type GetManufacturingCostsPerUnitRow struct {
 }
 
 func (q *Queries) GetManufacturingCostsPerUnit(ctx context.Context, arg GetManufacturingCostsPerUnitParams) (GetManufacturingCostsPerUnitRow, error) {
-	row := q.queryRow(ctx, q.getManufacturingCostsPerUnitStmt, getManufacturingCostsPerUnit, arg.OwnerAccountID, arg.StartDate, arg.EndDate)
+	row := q.db.QueryRowContext(ctx, getManufacturingCostsPerUnit, arg.OwnerAccountID, arg.StartDate, arg.EndDate)
 	var i GetManufacturingCostsPerUnitRow
 	err := row.Scan(&i.TotalCost, &i.TotalQuantity)
 	return i, err
@@ -615,7 +615,7 @@ type GetManufacturingLaborEfficiencyRow struct {
 }
 
 func (q *Queries) GetManufacturingLaborEfficiency(ctx context.Context, arg GetManufacturingLaborEfficiencyParams) (GetManufacturingLaborEfficiencyRow, error) {
-	row := q.queryRow(ctx, q.getManufacturingLaborEfficiencyStmt, getManufacturingLaborEfficiency,
+	row := q.db.QueryRowContext(ctx, getManufacturingLaborEfficiency,
 		arg.OwnerAccountID,
 		arg.StartDate,
 		arg.EndDate,
@@ -699,7 +699,7 @@ type GetManufacturingMarginRow struct {
 }
 
 func (q *Queries) GetManufacturingMargin(ctx context.Context, arg GetManufacturingMarginParams) (GetManufacturingMarginRow, error) {
-	row := q.queryRow(ctx, q.getManufacturingMarginStmt, getManufacturingMargin, arg.OwnerAccountID, arg.StartDate, arg.EndDate)
+	row := q.db.QueryRowContext(ctx, getManufacturingMargin, arg.OwnerAccountID, arg.StartDate, arg.EndDate)
 	var i GetManufacturingMarginRow
 	err := row.Scan(&i.TotalProfit, &i.TotalInvoiced)
 	return i, err
@@ -721,7 +721,7 @@ type GetManufacturingProductionParams struct {
 }
 
 func (q *Queries) GetManufacturingProduction(ctx context.Context, arg GetManufacturingProductionParams) (interface{}, error) {
-	row := q.queryRow(ctx, q.getManufacturingProductionStmt, getManufacturingProduction, arg.OwnerAccountID, arg.StartDate, arg.EndDate)
+	row := q.db.QueryRowContext(ctx, getManufacturingProduction, arg.OwnerAccountID, arg.StartDate, arg.EndDate)
 	var total_production interface{}
 	err := row.Scan(&total_production)
 	return total_production, err
@@ -756,7 +756,7 @@ type GetManufacturingQualityParams struct {
 }
 
 func (q *Queries) GetManufacturingQuality(ctx context.Context, arg GetManufacturingQualityParams) (interface{}, error) {
-	row := q.queryRow(ctx, q.getManufacturingQualityStmt, getManufacturingQuality, arg.OwnerAccountID, arg.StartDate, arg.EndDate)
+	row := q.db.QueryRowContext(ctx, getManufacturingQuality, arg.OwnerAccountID, arg.StartDate, arg.EndDate)
 	var quality interface{}
 	err := row.Scan(&quality)
 	return quality, err
@@ -806,7 +806,7 @@ func (q *Queries) GetMaterialOnHandByItem(ctx context.Context, arg GetMaterialOn
 	} else {
 		query = strings.Replace(query, "/*SLICE:item_ids*/?", "NULL", 1)
 	}
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -871,7 +871,7 @@ func (q *Queries) GetMaterialOpenByItem(ctx context.Context, arg GetMaterialOpen
 	} else {
 		query = strings.Replace(query, "/*SLICE:item_ids*/?", "NULL", 1)
 	}
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -936,7 +936,7 @@ func (q *Queries) GetMaterialReservedByItem(ctx context.Context, arg GetMaterial
 	} else {
 		query = strings.Replace(query, "/*SLICE:item_ids*/?", "NULL", 1)
 	}
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -993,7 +993,7 @@ func (q *Queries) GetMaterialSupplierInfo(ctx context.Context, arg GetMaterialSu
 	} else {
 		query = strings.Replace(query, "/*SLICE:supplier_ids*/?", "NULL", 1)
 	}
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -1048,7 +1048,7 @@ func (q *Queries) GetMaterialUnitGroupUnits(ctx context.Context, unitGroupIds []
 	} else {
 		query = strings.Replace(query, "/*SLICE:unit_group_ids*/?", "NULL", 1)
 	}
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -1123,7 +1123,7 @@ type GetMaterialsWithDetailsRow struct {
 }
 
 func (q *Queries) GetMaterialsWithDetails(ctx context.Context, ownerAccountID string) ([]GetMaterialsWithDetailsRow, error) {
-	rows, err := q.query(ctx, q.getMaterialsWithDetailsStmt, getMaterialsWithDetails, ownerAccountID)
+	rows, err := q.db.QueryContext(ctx, getMaterialsWithDetails, ownerAccountID)
 	if err != nil {
 		return nil, err
 	}
@@ -1226,7 +1226,7 @@ func (q *Queries) GetNewCustomerEntries(ctx context.Context, arg GetNewCustomerE
 	} else {
 		query = strings.Replace(query, "/*SLICE:sales_rep_ids*/?", "NULL", 1)
 	}
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -1285,7 +1285,7 @@ type GetOeeDepartmentDataRow struct {
 }
 
 func (q *Queries) GetOeeDepartmentData(ctx context.Context, arg GetOeeDepartmentDataParams) ([]GetOeeDepartmentDataRow, error) {
-	rows, err := q.query(ctx, q.getOeeDepartmentDataStmt, getOeeDepartmentData, arg.OwnerAccountID, arg.StartDate, arg.EndDate)
+	rows, err := q.db.QueryContext(ctx, getOeeDepartmentData, arg.OwnerAccountID, arg.StartDate, arg.EndDate)
 	if err != nil {
 		return nil, err
 	}
@@ -1345,7 +1345,7 @@ type GetOeeEstimatedRuntimeRow struct {
 }
 
 func (q *Queries) GetOeeEstimatedRuntime(ctx context.Context, arg GetOeeEstimatedRuntimeParams) ([]GetOeeEstimatedRuntimeRow, error) {
-	rows, err := q.query(ctx, q.getOeeEstimatedRuntimeStmt, getOeeEstimatedRuntime, arg.OwnerAccountID, arg.StartDate, arg.EndDate)
+	rows, err := q.db.QueryContext(ctx, getOeeEstimatedRuntime, arg.OwnerAccountID, arg.StartDate, arg.EndDate)
 	if err != nil {
 		return nil, err
 	}
@@ -1772,7 +1772,7 @@ func (q *Queries) GetOrderEntries(ctx context.Context, arg GetOrderEntriesParams
 	} else {
 		query = strings.Replace(query, "/*SLICE:product_line_ids*/?", "NULL", 1)
 	}
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -1877,7 +1877,7 @@ type GetOrderQuantityByProductLineRow struct {
 }
 
 func (q *Queries) GetOrderQuantityByProductLine(ctx context.Context, arg GetOrderQuantityByProductLineParams) (GetOrderQuantityByProductLineRow, error) {
-	row := q.queryRow(ctx, q.getOrderQuantityByProductLineStmt, getOrderQuantityByProductLine,
+	row := q.db.QueryRowContext(ctx, getOrderQuantityByProductLine,
 		arg.TargetProductLineID,
 		arg.TargetProductLineID_2,
 		arg.OwnerAccountID,
@@ -1921,7 +1921,7 @@ func (q *Queries) GetProductLineInfo(ctx context.Context, arg GetProductLineInfo
 		query = strings.Replace(query, "/*SLICE:product_line_ids*/?", "NULL", 1)
 	}
 	queryParams = append(queryParams, arg.OwnerAccountID)
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -1976,7 +1976,7 @@ type GetProductionCostEntriesRow struct {
 }
 
 func (q *Queries) GetProductionCostEntries(ctx context.Context, ownerAccountID string) ([]GetProductionCostEntriesRow, error) {
-	rows, err := q.query(ctx, q.getProductionCostEntriesStmt, getProductionCostEntries, ownerAccountID)
+	rows, err := q.db.QueryContext(ctx, getProductionCostEntries, ownerAccountID)
 	if err != nil {
 		return nil, err
 	}
@@ -2205,7 +2205,7 @@ func (q *Queries) GetQuarterlyOrderTotals(ctx context.Context, arg GetQuarterlyO
 	} else {
 		query = strings.Replace(query, "/*SLICE:customer_group_ids*/?", "NULL", 1)
 	}
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -2251,7 +2251,7 @@ type GetSaleProductItemIDsRow struct {
 }
 
 func (q *Queries) GetSaleProductItemIDs(ctx context.Context, ownerAccountID string) ([]GetSaleProductItemIDsRow, error) {
-	rows, err := q.query(ctx, q.getSaleProductItemIDsStmt, getSaleProductItemIDs, ownerAccountID)
+	rows, err := q.db.QueryContext(ctx, getSaleProductItemIDs, ownerAccountID)
 	if err != nil {
 		return nil, err
 	}
@@ -2640,7 +2640,7 @@ func (q *Queries) GetSalesEntries(ctx context.Context, arg GetSalesEntriesParams
 	} else {
 		query = strings.Replace(query, "/*SLICE:customer_ids*/?", "NULL", 1)
 	}
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}

@@ -38,7 +38,7 @@ type CreateAPIKeyParams struct {
 }
 
 func (q *Queries) CreateAPIKey(ctx context.Context, arg CreateAPIKeyParams) (sql.Result, error) {
-	return q.exec(ctx, q.createAPIKeyStmt, createAPIKey,
+	return q.db.ExecContext(ctx, createAPIKey,
 		arg.TypeID,
 		arg.KeyID,
 		arg.Name,
@@ -55,7 +55,7 @@ SELECT api_key.id, api_key.type_id, api_key.key_id, api_key.name, api_key.secret
 `
 
 func (q *Queries) FindAPIKeyBaseByDatabaseID(ctx context.Context, id int64) (ApiKey, error) {
-	row := q.queryRow(ctx, q.findAPIKeyBaseByDatabaseIDStmt, findAPIKeyBaseByDatabaseID, id)
+	row := q.db.QueryRowContext(ctx, findAPIKeyBaseByDatabaseID, id)
 	var i ApiKey
 	err := row.Scan(
 		&i.ID,
@@ -80,7 +80,7 @@ SELECT api_key.id, api_key.type_id, api_key.key_id, api_key.name, api_key.secret
 `
 
 func (q *Queries) FindAPIKeyBaseByTypeID(ctx context.Context, typeID string) (ApiKey, error) {
-	row := q.queryRow(ctx, q.findAPIKeyBaseByTypeIDStmt, findAPIKeyBaseByTypeID, typeID)
+	row := q.db.QueryRowContext(ctx, findAPIKeyBaseByTypeID, typeID)
 	var i ApiKey
 	err := row.Scan(
 		&i.ID,
@@ -110,7 +110,7 @@ type FindAPIKeyByIDParams struct {
 }
 
 func (q *Queries) FindAPIKeyByID(ctx context.Context, arg FindAPIKeyByIDParams) (ApiKey, error) {
-	row := q.queryRow(ctx, q.findAPIKeyByIDStmt, findAPIKeyByID, arg.KeyID, arg.TypeID)
+	row := q.db.QueryRowContext(ctx, findAPIKeyByID, arg.KeyID, arg.TypeID)
 	var i ApiKey
 	err := row.Scan(
 		&i.ID,
@@ -171,7 +171,7 @@ type FindAPIKeyWithRoleByDatabaseIDRow struct {
 }
 
 func (q *Queries) FindAPIKeyWithRoleByDatabaseID(ctx context.Context, id int64) (FindAPIKeyWithRoleByDatabaseIDRow, error) {
-	row := q.queryRow(ctx, q.findAPIKeyWithRoleByDatabaseIDStmt, findAPIKeyWithRoleByDatabaseID, id)
+	row := q.db.QueryRowContext(ctx, findAPIKeyWithRoleByDatabaseID, id)
 	var i FindAPIKeyWithRoleByDatabaseIDRow
 	err := row.Scan(
 		&i.ID,
@@ -234,7 +234,7 @@ type FindAPIKeyWithRoleByKeyIDRow struct {
 }
 
 func (q *Queries) FindAPIKeyWithRoleByKeyID(ctx context.Context, keyID string) (FindAPIKeyWithRoleByKeyIDRow, error) {
-	row := q.queryRow(ctx, q.findAPIKeyWithRoleByKeyIDStmt, findAPIKeyWithRoleByKeyID, keyID)
+	row := q.db.QueryRowContext(ctx, findAPIKeyWithRoleByKeyID, keyID)
 	var i FindAPIKeyWithRoleByKeyIDRow
 	err := row.Scan(
 		&i.ID,
@@ -297,7 +297,7 @@ type FindAPIKeyWithRoleByTypeIDRow struct {
 }
 
 func (q *Queries) FindAPIKeyWithRoleByTypeID(ctx context.Context, typeID string) (FindAPIKeyWithRoleByTypeIDRow, error) {
-	row := q.queryRow(ctx, q.findAPIKeyWithRoleByTypeIDStmt, findAPIKeyWithRoleByTypeID, typeID)
+	row := q.db.QueryRowContext(ctx, findAPIKeyWithRoleByTypeID, typeID)
 	var i FindAPIKeyWithRoleByTypeIDRow
 	err := row.Scan(
 		&i.ID,
@@ -371,7 +371,7 @@ type ListAPIKeysBackwardRow struct {
 }
 
 func (q *Queries) ListAPIKeysBackward(ctx context.Context, arg ListAPIKeysBackwardParams) ([]ListAPIKeysBackwardRow, error) {
-	rows, err := q.query(ctx, q.listAPIKeysBackwardStmt, listAPIKeysBackward,
+	rows, err := q.db.QueryContext(ctx, listAPIKeysBackward,
 		arg.OwnerAccountID,
 		arg.Query,
 		arg.Query,
@@ -450,7 +450,7 @@ type ListAPIKeysBaseBackwardParams struct {
 }
 
 func (q *Queries) ListAPIKeysBaseBackward(ctx context.Context, arg ListAPIKeysBaseBackwardParams) ([]ApiKey, error) {
-	rows, err := q.query(ctx, q.listAPIKeysBaseBackwardStmt, listAPIKeysBaseBackward,
+	rows, err := q.db.QueryContext(ctx, listAPIKeysBaseBackward,
 		arg.OwnerAccountID,
 		arg.Query,
 		arg.Query,
@@ -528,7 +528,7 @@ type ListAPIKeysBaseForwardParams struct {
 }
 
 func (q *Queries) ListAPIKeysBaseForward(ctx context.Context, arg ListAPIKeysBaseForwardParams) ([]ApiKey, error) {
-	rows, err := q.query(ctx, q.listAPIKeysBaseForwardStmt, listAPIKeysBaseForward,
+	rows, err := q.db.QueryContext(ctx, listAPIKeysBaseForward,
 		arg.OwnerAccountID,
 		arg.Query,
 		arg.Query,
@@ -629,7 +629,7 @@ type ListAPIKeysForwardRow struct {
 }
 
 func (q *Queries) ListAPIKeysForward(ctx context.Context, arg ListAPIKeysForwardParams) ([]ListAPIKeysForwardRow, error) {
-	rows, err := q.query(ctx, q.listAPIKeysForwardStmt, listAPIKeysForward,
+	rows, err := q.db.QueryContext(ctx, listAPIKeysForward,
 		arg.OwnerAccountID,
 		arg.Query,
 		arg.Query,
@@ -684,7 +684,7 @@ UPDATE api_key SET revoked_at = NOW(3), updated_at = NOW(3) WHERE type_id = ?
 `
 
 func (q *Queries) RevokeAPIKeyByTypeID(ctx context.Context, typeID string) error {
-	_, err := q.exec(ctx, q.revokeAPIKeyByTypeIDStmt, revokeAPIKeyByTypeID, typeID)
+	_, err := q.db.ExecContext(ctx, revokeAPIKeyByTypeID, typeID)
 	return err
 }
 
@@ -693,6 +693,6 @@ UPDATE api_key SET last_used_at = NOW(3), updated_at = NOW(3) WHERE id = ?
 `
 
 func (q *Queries) TouchAPIKeyByID(ctx context.Context, id int64) error {
-	_, err := q.exec(ctx, q.touchAPIKeyByIDStmt, touchAPIKeyByID, id)
+	_, err := q.db.ExecContext(ctx, touchAPIKeyByID, id)
 	return err
 }

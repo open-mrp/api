@@ -26,7 +26,7 @@ type CountProductionRunsByNumberParams struct {
 }
 
 func (q *Queries) CountProductionRunsByNumber(ctx context.Context, arg CountProductionRunsByNumberParams) (int64, error) {
-	row := q.queryRow(ctx, q.countProductionRunsByNumberStmt, countProductionRunsByNumber,
+	row := q.db.QueryRowContext(ctx, countProductionRunsByNumber,
 		arg.AccountID,
 		arg.Number,
 		arg.ExcludeID,
@@ -47,7 +47,7 @@ type DeleteBatchesByProductionRunIDParams struct {
 }
 
 func (q *Queries) DeleteBatchesByProductionRunID(ctx context.Context, arg DeleteBatchesByProductionRunIDParams) error {
-	_, err := q.exec(ctx, q.deleteBatchesByProductionRunIDStmt, deleteBatchesByProductionRunID, arg.ProductionRunID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, deleteBatchesByProductionRunID, arg.ProductionRunID, arg.AccountID)
 	return err
 }
 
@@ -61,7 +61,7 @@ type DeleteProductionRunByIDParams struct {
 }
 
 func (q *Queries) DeleteProductionRunByID(ctx context.Context, arg DeleteProductionRunByIDParams) error {
-	_, err := q.exec(ctx, q.deleteProductionRunByIDStmt, deleteProductionRunByID, arg.ID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, deleteProductionRunByID, arg.ID, arg.AccountID)
 	return err
 }
 
@@ -78,7 +78,7 @@ type DeleteReservedInventoryIssuesByOrderIDParams struct {
 }
 
 func (q *Queries) DeleteReservedInventoryIssuesByOrderID(ctx context.Context, arg DeleteReservedInventoryIssuesByOrderIDParams) error {
-	_, err := q.exec(ctx, q.deleteReservedInventoryIssuesByOrderIDStmt, deleteReservedInventoryIssuesByOrderID, arg.OrderID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, deleteReservedInventoryIssuesByOrderID, arg.OrderID, arg.AccountID)
 	return err
 }
 
@@ -94,7 +94,7 @@ type FindSalesOrderIDsByProductionRunIDParams struct {
 }
 
 func (q *Queries) FindSalesOrderIDsByProductionRunID(ctx context.Context, arg FindSalesOrderIDsByProductionRunIDParams) ([]string, error) {
-	rows, err := q.query(ctx, q.findSalesOrderIDsByProductionRunIDStmt, findSalesOrderIDsByProductionRunID, arg.ProductionRunID, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, findSalesOrderIDsByProductionRunID, arg.ProductionRunID, arg.AccountID)
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +129,7 @@ type GetBatchClosedAtParams struct {
 }
 
 func (q *Queries) GetBatchClosedAt(ctx context.Context, arg GetBatchClosedAtParams) (sql.NullTime, error) {
-	row := q.queryRow(ctx, q.getBatchClosedAtStmt, getBatchClosedAt, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getBatchClosedAt, arg.ID, arg.AccountID)
 	var closed_at sql.NullTime
 	err := row.Scan(&closed_at)
 	return closed_at, err
@@ -153,7 +153,7 @@ type GetBatchIDsByProductionRunRow struct {
 }
 
 func (q *Queries) GetBatchIDsByProductionRun(ctx context.Context, arg GetBatchIDsByProductionRunParams) ([]GetBatchIDsByProductionRunRow, error) {
-	rows, err := q.query(ctx, q.getBatchIDsByProductionRunStmt, getBatchIDsByProductionRun, arg.ProductionRunID, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, getBatchIDsByProductionRun, arg.ProductionRunID, arg.AccountID)
 	if err != nil {
 		return nil, err
 	}
@@ -181,7 +181,7 @@ FROM production_run WHERE account_id = ?
 `
 
 func (q *Queries) GetNextProductionRunNumberFull(ctx context.Context, accountID string) (int32, error) {
-	row := q.queryRow(ctx, q.getNextProductionRunNumberFullStmt, getNextProductionRunNumberFull, accountID)
+	row := q.db.QueryRowContext(ctx, getNextProductionRunNumberFull, accountID)
 	var next_number int32
 	err := row.Scan(&next_number)
 	return next_number, err
@@ -227,7 +227,7 @@ type GetProductionRunRow struct {
 }
 
 func (q *Queries) GetProductionRun(ctx context.Context, arg GetProductionRunParams) (GetProductionRunRow, error) {
-	row := q.queryRow(ctx, q.getProductionRunStmt, getProductionRun, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getProductionRun, arg.ID, arg.AccountID)
 	var i GetProductionRunRow
 	err := row.Scan(
 		&i.ID,
@@ -257,7 +257,7 @@ type InsertProductionRunParams struct {
 }
 
 func (q *Queries) InsertProductionRun(ctx context.Context, arg InsertProductionRunParams) error {
-	_, err := q.exec(ctx, q.insertProductionRunStmt, insertProductionRun,
+	_, err := q.db.ExecContext(ctx, insertProductionRun,
 		arg.ID,
 		arg.ResponsibleUserID,
 		arg.Number,
@@ -278,7 +278,7 @@ type IsProductionRunCompletedParams struct {
 }
 
 func (q *Queries) IsProductionRunCompleted(ctx context.Context, arg IsProductionRunCompletedParams) (int32, error) {
-	row := q.queryRow(ctx, q.isProductionRunCompletedStmt, isProductionRunCompleted, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, isProductionRunCompleted, arg.ID, arg.AccountID)
 	var is_completed int32
 	err := row.Scan(&is_completed)
 	return is_completed, err
@@ -419,7 +419,7 @@ func (q *Queries) ListProductionRunsBackward(ctx context.Context, arg ListProduc
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorID)
 	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -586,7 +586,7 @@ func (q *Queries) ListProductionRunsForward(ctx context.Context, arg ListProduct
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorID)
 	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -630,7 +630,7 @@ type SetBatchProductionRunIDParams struct {
 }
 
 func (q *Queries) SetBatchProductionRunID(ctx context.Context, arg SetBatchProductionRunIDParams) error {
-	_, err := q.exec(ctx, q.setBatchProductionRunIDStmt, setBatchProductionRunID, arg.ProductionRunID, arg.ID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, setBatchProductionRunID, arg.ProductionRunID, arg.ID, arg.AccountID)
 	return err
 }
 
@@ -646,7 +646,7 @@ type UnlinkSalesOrdersFromProductionRunParams struct {
 }
 
 func (q *Queries) UnlinkSalesOrdersFromProductionRun(ctx context.Context, arg UnlinkSalesOrdersFromProductionRunParams) error {
-	_, err := q.exec(ctx, q.unlinkSalesOrdersFromProductionRunStmt, unlinkSalesOrdersFromProductionRun, arg.ProductionRunID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, unlinkSalesOrdersFromProductionRun, arg.ProductionRunID, arg.AccountID)
 	return err
 }
 
@@ -662,7 +662,7 @@ type UpdateProductionRunNumberParams struct {
 }
 
 func (q *Queries) UpdateProductionRunNumber(ctx context.Context, arg UpdateProductionRunNumberParams) error {
-	_, err := q.exec(ctx, q.updateProductionRunNumberStmt, updateProductionRunNumber, arg.Number, arg.ID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, updateProductionRunNumber, arg.Number, arg.ID, arg.AccountID)
 	return err
 }
 
@@ -678,6 +678,6 @@ type UpdateProductionRunResponsibleUserParams struct {
 }
 
 func (q *Queries) UpdateProductionRunResponsibleUser(ctx context.Context, arg UpdateProductionRunResponsibleUserParams) error {
-	_, err := q.exec(ctx, q.updateProductionRunResponsibleUserStmt, updateProductionRunResponsibleUser, arg.ResponsibleUserID, arg.ID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, updateProductionRunResponsibleUser, arg.ResponsibleUserID, arg.ID, arg.AccountID)
 	return err
 }

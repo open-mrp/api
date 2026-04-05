@@ -24,7 +24,7 @@ type CountUnitGroupsByNameParams struct {
 }
 
 func (q *Queries) CountUnitGroupsByName(ctx context.Context, arg CountUnitGroupsByNameParams) (int64, error) {
-	row := q.queryRow(ctx, q.countUnitGroupsByNameStmt, countUnitGroupsByName,
+	row := q.db.QueryRowContext(ctx, countUnitGroupsByName,
 		arg.Name,
 		arg.AccountID,
 		arg.ExcludeID,
@@ -41,7 +41,7 @@ WHERE unit_group_id = ?
 `
 
 func (q *Queries) DeleteAllUnitGroupUnits(ctx context.Context, unitGroupID string) error {
-	_, err := q.exec(ctx, q.deleteAllUnitGroupUnitsStmt, deleteAllUnitGroupUnits, unitGroupID)
+	_, err := q.db.ExecContext(ctx, deleteAllUnitGroupUnits, unitGroupID)
 	return err
 }
 
@@ -57,7 +57,7 @@ type DeleteUnitGroupParams struct {
 }
 
 func (q *Queries) DeleteUnitGroup(ctx context.Context, arg DeleteUnitGroupParams) (sql.Result, error) {
-	return q.exec(ctx, q.deleteUnitGroupStmt, deleteUnitGroup, arg.ID, arg.AccountID)
+	return q.db.ExecContext(ctx, deleteUnitGroup, arg.ID, arg.AccountID)
 }
 
 const deleteUnitGroupUnitByID = `-- name: DeleteUnitGroupUnitByID :execresult
@@ -72,7 +72,7 @@ type DeleteUnitGroupUnitByIDParams struct {
 }
 
 func (q *Queries) DeleteUnitGroupUnitByID(ctx context.Context, arg DeleteUnitGroupUnitByIDParams) (sql.Result, error) {
-	return q.exec(ctx, q.deleteUnitGroupUnitByIDStmt, deleteUnitGroupUnitByID, arg.ID, arg.UnitGroupID)
+	return q.db.ExecContext(ctx, deleteUnitGroupUnitByID, arg.ID, arg.UnitGroupID)
 }
 
 const getUnitGroup = `-- name: GetUnitGroup :one
@@ -130,7 +130,7 @@ type GetUnitGroupRow struct {
 }
 
 func (q *Queries) GetUnitGroup(ctx context.Context, arg GetUnitGroupParams) (GetUnitGroupRow, error) {
-	row := q.queryRow(ctx, q.getUnitGroupStmt, getUnitGroup, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getUnitGroup, arg.ID, arg.AccountID)
 	var i GetUnitGroupRow
 	err := row.Scan(
 		&i.ID,
@@ -211,7 +211,7 @@ type GetUnitGroupUnitRow struct {
 }
 
 func (q *Queries) GetUnitGroupUnit(ctx context.Context, arg GetUnitGroupUnitParams) (GetUnitGroupUnitRow, error) {
-	row := q.queryRow(ctx, q.getUnitGroupUnitStmt, getUnitGroupUnit, arg.ID, arg.UnitGroupID)
+	row := q.db.QueryRowContext(ctx, getUnitGroupUnit, arg.ID, arg.UnitGroupID)
 	var i GetUnitGroupUnitRow
 	err := row.Scan(
 		&i.ID,
@@ -269,7 +269,7 @@ type InsertUnitGroupParams struct {
 }
 
 func (q *Queries) InsertUnitGroup(ctx context.Context, arg InsertUnitGroupParams) error {
-	_, err := q.exec(ctx, q.insertUnitGroupStmt, insertUnitGroup,
+	_, err := q.db.ExecContext(ctx, insertUnitGroup,
 		arg.ID,
 		arg.Name,
 		arg.Notes,
@@ -329,7 +329,7 @@ type ListUnitGroupUnitsRow struct {
 }
 
 func (q *Queries) ListUnitGroupUnits(ctx context.Context, unitGroupID string) ([]ListUnitGroupUnitsRow, error) {
-	rows, err := q.query(ctx, q.listUnitGroupUnitsStmt, listUnitGroupUnits, unitGroupID)
+	rows, err := q.db.QueryContext(ctx, listUnitGroupUnits, unitGroupID)
 	if err != nil {
 		return nil, err
 	}
@@ -440,7 +440,7 @@ type ListUnitGroupsBackwardRow struct {
 }
 
 func (q *Queries) ListUnitGroupsBackward(ctx context.Context, arg ListUnitGroupsBackwardParams) ([]ListUnitGroupsBackwardRow, error) {
-	rows, err := q.query(ctx, q.listUnitGroupsBackwardStmt, listUnitGroupsBackward,
+	rows, err := q.db.QueryContext(ctx, listUnitGroupsBackward,
 		arg.AccountID,
 		arg.UnitTypeCode,
 		arg.UnitTypeCode,
@@ -562,7 +562,7 @@ type ListUnitGroupsForwardRow struct {
 }
 
 func (q *Queries) ListUnitGroupsForward(ctx context.Context, arg ListUnitGroupsForwardParams) ([]ListUnitGroupsForwardRow, error) {
-	rows, err := q.query(ctx, q.listUnitGroupsForwardStmt, listUnitGroupsForward,
+	rows, err := q.db.QueryContext(ctx, listUnitGroupsForward,
 		arg.AccountID,
 		arg.UnitTypeCode,
 		arg.UnitTypeCode,
@@ -635,7 +635,7 @@ type UpdateUnitGroupParams struct {
 }
 
 func (q *Queries) UpdateUnitGroup(ctx context.Context, arg UpdateUnitGroupParams) (sql.Result, error) {
-	return q.exec(ctx, q.updateUnitGroupStmt, updateUnitGroup,
+	return q.db.ExecContext(ctx, updateUnitGroup,
 		arg.Name,
 		arg.UpdateNotes,
 		arg.Notes,
@@ -681,7 +681,7 @@ type UpsertUnitGroupUnitParams struct {
 }
 
 func (q *Queries) UpsertUnitGroupUnit(ctx context.Context, arg UpsertUnitGroupUnitParams) error {
-	_, err := q.exec(ctx, q.upsertUnitGroupUnitStmt, upsertUnitGroupUnit,
+	_, err := q.db.ExecContext(ctx, upsertUnitGroupUnit,
 		arg.ID,
 		arg.UnitGroupID,
 		arg.UnitID,

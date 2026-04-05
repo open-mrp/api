@@ -26,7 +26,7 @@ type ConnectProductionStepsByNameParams struct {
 }
 
 func (q *Queries) ConnectProductionStepsByName(ctx context.Context, arg ConnectProductionStepsByNameParams) (sql.Result, error) {
-	return q.exec(ctx, q.connectProductionStepsByNameStmt, connectProductionStepsByName, arg.ScanningStationID, arg.AccountID, arg.Name)
+	return q.db.ExecContext(ctx, connectProductionStepsByName, arg.ScanningStationID, arg.AccountID, arg.Name)
 }
 
 const countScanningStationsByName = `-- name: CountScanningStationsByName :one
@@ -42,7 +42,7 @@ type CountScanningStationsByNameParams struct {
 }
 
 func (q *Queries) CountScanningStationsByName(ctx context.Context, arg CountScanningStationsByNameParams) (int64, error) {
-	row := q.queryRow(ctx, q.countScanningStationsByNameStmt, countScanningStationsByName,
+	row := q.db.QueryRowContext(ctx, countScanningStationsByName,
 		arg.Name,
 		arg.AccountID,
 		arg.ExcludeID,
@@ -65,7 +65,7 @@ type DeleteScanningStationParams struct {
 }
 
 func (q *Queries) DeleteScanningStation(ctx context.Context, arg DeleteScanningStationParams) (sql.Result, error) {
-	return q.exec(ctx, q.deleteScanningStationStmt, deleteScanningStation, arg.ID, arg.AccountID)
+	return q.db.ExecContext(ctx, deleteScanningStation, arg.ID, arg.AccountID)
 }
 
 const findScanningStationIDByName = `-- name: FindScanningStationIDByName :one
@@ -80,7 +80,7 @@ type FindScanningStationIDByNameParams struct {
 }
 
 func (q *Queries) FindScanningStationIDByName(ctx context.Context, arg FindScanningStationIDByNameParams) (string, error) {
-	row := q.queryRow(ctx, q.findScanningStationIDByNameStmt, findScanningStationIDByName, arg.Name, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, findScanningStationIDByName, arg.Name, arg.AccountID)
 	var id string
 	err := row.Scan(&id)
 	return id, err
@@ -127,7 +127,7 @@ type GetScanningStationRow struct {
 }
 
 func (q *Queries) GetScanningStation(ctx context.Context, arg GetScanningStationParams) (GetScanningStationRow, error) {
-	row := q.queryRow(ctx, q.getScanningStationStmt, getScanningStation, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getScanningStation, arg.ID, arg.AccountID)
 	var i GetScanningStationRow
 	err := row.Scan(
 		&i.ID,
@@ -157,7 +157,7 @@ type GetScanningStationTypeParams struct {
 }
 
 func (q *Queries) GetScanningStationType(ctx context.Context, arg GetScanningStationTypeParams) (string, error) {
-	row := q.queryRow(ctx, q.getScanningStationTypeStmt, getScanningStationType, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getScanningStationType, arg.ID, arg.AccountID)
 	var scanning_station_type_code string
 	err := row.Scan(&scanning_station_type_code)
 	return scanning_station_type_code, err
@@ -198,7 +198,7 @@ type InsertScanningStationParams struct {
 }
 
 func (q *Queries) InsertScanningStation(ctx context.Context, arg InsertScanningStationParams) error {
-	_, err := q.exec(ctx, q.insertScanningStationStmt, insertScanningStation,
+	_, err := q.db.ExecContext(ctx, insertScanningStation,
 		arg.ID,
 		arg.Name,
 		arg.Notes,
@@ -221,7 +221,7 @@ type IsScanningStationInAccountParams struct {
 }
 
 func (q *Queries) IsScanningStationInAccount(ctx context.Context, arg IsScanningStationInAccountParams) (int64, error) {
-	row := q.queryRow(ctx, q.isScanningStationInAccountStmt, isScanningStationInAccount, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, isScanningStationInAccount, arg.ID, arg.AccountID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -246,7 +246,7 @@ type ListProductionStepsByScanningStationIDRow struct {
 }
 
 func (q *Queries) ListProductionStepsByScanningStationID(ctx context.Context, arg ListProductionStepsByScanningStationIDParams) ([]ListProductionStepsByScanningStationIDRow, error) {
-	rows, err := q.query(ctx, q.listProductionStepsByScanningStationIDStmt, listProductionStepsByScanningStationID, arg.ScanningStationID, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, listProductionStepsByScanningStationID, arg.ScanningStationID, arg.AccountID)
 	if err != nil {
 		return nil, err
 	}
@@ -322,7 +322,7 @@ type ListScanningStationsBackwardRow struct {
 }
 
 func (q *Queries) ListScanningStationsBackward(ctx context.Context, arg ListScanningStationsBackwardParams) ([]ListScanningStationsBackwardRow, error) {
-	rows, err := q.query(ctx, q.listScanningStationsBackwardStmt, listScanningStationsBackward,
+	rows, err := q.db.QueryContext(ctx, listScanningStationsBackward,
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
@@ -421,7 +421,7 @@ type ListScanningStationsForwardRow struct {
 }
 
 func (q *Queries) ListScanningStationsForward(ctx context.Context, arg ListScanningStationsForwardParams) ([]ListScanningStationsForwardRow, error) {
-	rows, err := q.query(ctx, q.listScanningStationsForwardStmt, listScanningStationsForward,
+	rows, err := q.db.QueryContext(ctx, listScanningStationsForward,
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
@@ -489,7 +489,7 @@ type UpdateScanningStationParams struct {
 }
 
 func (q *Queries) UpdateScanningStation(ctx context.Context, arg UpdateScanningStationParams) (sql.Result, error) {
-	return q.exec(ctx, q.updateScanningStationStmt, updateScanningStation,
+	return q.db.ExecContext(ctx, updateScanningStation,
 		arg.Name,
 		arg.Notes,
 		arg.LabelSizeCode,

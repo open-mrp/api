@@ -24,7 +24,7 @@ type CheckDuplicateCustomerNumberParams struct {
 }
 
 func (q *Queries) CheckDuplicateCustomerNumber(ctx context.Context, arg CheckDuplicateCustomerNumberParams) (int64, error) {
-	row := q.queryRow(ctx, q.checkDuplicateCustomerNumberStmt, checkDuplicateCustomerNumber, arg.Value, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, checkDuplicateCustomerNumber, arg.Value, arg.AccountID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -42,7 +42,7 @@ type CheckDuplicateProductionRunNumberParams struct {
 }
 
 func (q *Queries) CheckDuplicateProductionRunNumber(ctx context.Context, arg CheckDuplicateProductionRunNumberParams) (int64, error) {
-	row := q.queryRow(ctx, q.checkDuplicateProductionRunNumberStmt, checkDuplicateProductionRunNumber, arg.Value, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, checkDuplicateProductionRunNumber, arg.Value, arg.AccountID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -62,7 +62,7 @@ type CheckDuplicatePurchaseOrderNumberParams struct {
 }
 
 func (q *Queries) CheckDuplicatePurchaseOrderNumber(ctx context.Context, arg CheckDuplicatePurchaseOrderNumberParams) (int64, error) {
-	row := q.queryRow(ctx, q.checkDuplicatePurchaseOrderNumberStmt, checkDuplicatePurchaseOrderNumber, arg.Value, arg.AccountID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, checkDuplicatePurchaseOrderNumber, arg.Value, arg.AccountID, arg.AccountID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -82,7 +82,7 @@ type CheckDuplicateSalesOrderNumberParams struct {
 }
 
 func (q *Queries) CheckDuplicateSalesOrderNumber(ctx context.Context, arg CheckDuplicateSalesOrderNumberParams) (int64, error) {
-	row := q.queryRow(ctx, q.checkDuplicateSalesOrderNumberStmt, checkDuplicateSalesOrderNumber, arg.Value, arg.AccountID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, checkDuplicateSalesOrderNumber, arg.Value, arg.AccountID, arg.AccountID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -100,7 +100,7 @@ type CheckDuplicateSettlementNumberParams struct {
 }
 
 func (q *Queries) CheckDuplicateSettlementNumber(ctx context.Context, arg CheckDuplicateSettlementNumberParams) (int64, error) {
-	row := q.queryRow(ctx, q.checkDuplicateSettlementNumberStmt, checkDuplicateSettlementNumber, arg.Value, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, checkDuplicateSettlementNumber, arg.Value, arg.AccountID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -119,7 +119,7 @@ type CheckDuplicateSupplierNumberParams struct {
 }
 
 func (q *Queries) CheckDuplicateSupplierNumber(ctx context.Context, arg CheckDuplicateSupplierNumberParams) (int64, error) {
-	row := q.queryRow(ctx, q.checkDuplicateSupplierNumberStmt, checkDuplicateSupplierNumber, arg.Value, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, checkDuplicateSupplierNumber, arg.Value, arg.AccountID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -137,7 +137,7 @@ type CheckDuplicateTransactionNumberParams struct {
 }
 
 func (q *Queries) CheckDuplicateTransactionNumber(ctx context.Context, arg CheckDuplicateTransactionNumberParams) (int64, error) {
-	row := q.queryRow(ctx, q.checkDuplicateTransactionNumberStmt, checkDuplicateTransactionNumber, arg.Value, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, checkDuplicateTransactionNumber, arg.Value, arg.AccountID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -176,7 +176,7 @@ type GetSysPropertyRow struct {
 }
 
 func (q *Queries) GetSysProperty(ctx context.Context, arg GetSysPropertyParams) (GetSysPropertyRow, error) {
-	row := q.queryRow(ctx, q.getSysPropertyStmt, getSysProperty, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getSysProperty, arg.ID, arg.AccountID)
 	var i GetSysPropertyRow
 	err := row.Scan(
 		&i.ID,
@@ -224,7 +224,7 @@ type GetSysPropertyByTypeCodeRow struct {
 }
 
 func (q *Queries) GetSysPropertyByTypeCode(ctx context.Context, arg GetSysPropertyByTypeCodeParams) (GetSysPropertyByTypeCodeRow, error) {
-	row := q.queryRow(ctx, q.getSysPropertyByTypeCodeStmt, getSysPropertyByTypeCode, arg.TypeCode, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getSysPropertyByTypeCode, arg.TypeCode, arg.AccountID)
 	var i GetSysPropertyByTypeCodeRow
 	err := row.Scan(
 		&i.ID,
@@ -253,7 +253,7 @@ type IncrementSysPropertyValueParams struct {
 }
 
 func (q *Queries) IncrementSysPropertyValue(ctx context.Context, arg IncrementSysPropertyValueParams) (sql.Result, error) {
-	return q.exec(ctx, q.incrementSysPropertyValueStmt, incrementSysPropertyValue, arg.ID, arg.AccountID)
+	return q.db.ExecContext(ctx, incrementSysPropertyValue, arg.ID, arg.AccountID)
 }
 
 const insertSysProperty = `-- name: InsertSysProperty :exec
@@ -282,7 +282,7 @@ type InsertSysPropertyParams struct {
 }
 
 func (q *Queries) InsertSysProperty(ctx context.Context, arg InsertSysPropertyParams) error {
-	_, err := q.exec(ctx, q.insertSysPropertyStmt, insertSysProperty,
+	_, err := q.db.ExecContext(ctx, insertSysProperty,
 		arg.ID,
 		arg.TypeCode,
 		arg.Value,
@@ -336,7 +336,7 @@ type ListSysPropertiesBackwardRow struct {
 }
 
 func (q *Queries) ListSysPropertiesBackward(ctx context.Context, arg ListSysPropertiesBackwardParams) ([]ListSysPropertiesBackwardRow, error) {
-	rows, err := q.query(ctx, q.listSysPropertiesBackwardStmt, listSysPropertiesBackward,
+	rows, err := q.db.QueryContext(ctx, listSysPropertiesBackward,
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
@@ -421,7 +421,7 @@ type ListSysPropertiesForwardRow struct {
 }
 
 func (q *Queries) ListSysPropertiesForward(ctx context.Context, arg ListSysPropertiesForwardParams) ([]ListSysPropertiesForwardRow, error) {
-	rows, err := q.query(ctx, q.listSysPropertiesForwardStmt, listSysPropertiesForward,
+	rows, err := q.db.QueryContext(ctx, listSysPropertiesForward,
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
@@ -476,5 +476,5 @@ type UpdateSysPropertyValueParams struct {
 }
 
 func (q *Queries) UpdateSysPropertyValue(ctx context.Context, arg UpdateSysPropertyValueParams) (sql.Result, error) {
-	return q.exec(ctx, q.updateSysPropertyValueStmt, updateSysPropertyValue, arg.Value, arg.ID, arg.AccountID)
+	return q.db.ExecContext(ctx, updateSysPropertyValue, arg.Value, arg.ID, arg.AccountID)
 }

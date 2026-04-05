@@ -41,7 +41,7 @@ type GetPlanByCodeRow struct {
 }
 
 func (q *Queries) GetPlanByCode(ctx context.Context, planTypeCode string) (GetPlanByCodeRow, error) {
-	row := q.queryRow(ctx, q.getPlanByCodeStmt, getPlanByCode, planTypeCode)
+	row := q.db.QueryRowContext(ctx, getPlanByCode, planTypeCode)
 	var i GetPlanByCodeRow
 	err := row.Scan(
 		&i.ID,
@@ -91,7 +91,7 @@ type GetPlanByTypeIDRow struct {
 }
 
 func (q *Queries) GetPlanByTypeID(ctx context.Context, typeID string) (GetPlanByTypeIDRow, error) {
-	row := q.queryRow(ctx, q.getPlanByTypeIDStmt, getPlanByTypeID, typeID)
+	row := q.db.QueryRowContext(ctx, getPlanByTypeID, typeID)
 	var i GetPlanByTypeIDRow
 	err := row.Scan(
 		&i.ID,
@@ -125,7 +125,7 @@ type GetPlanLimitsByTypeIDRow struct {
 }
 
 func (q *Queries) GetPlanLimitsByTypeID(ctx context.Context, accountPlanID string) ([]GetPlanLimitsByTypeIDRow, error) {
-	rows, err := q.query(ctx, q.getPlanLimitsByTypeIDStmt, getPlanLimitsByTypeID, accountPlanID)
+	rows, err := q.db.QueryContext(ctx, getPlanLimitsByTypeID, accountPlanID)
 	if err != nil {
 		return nil, err
 	}
@@ -192,7 +192,7 @@ type ListPricingPlansBackwardRow struct {
 }
 
 func (q *Queries) ListPricingPlansBackward(ctx context.Context, arg ListPricingPlansBackwardParams) ([]ListPricingPlansBackwardRow, error) {
-	rows, err := q.query(ctx, q.listPricingPlansBackwardStmt, listPricingPlansBackward,
+	rows, err := q.db.QueryContext(ctx, listPricingPlansBackward,
 		arg.CursorCreatedAt,
 		arg.CursorCreatedAt,
 		arg.CursorID,
@@ -282,7 +282,7 @@ type ListPricingPlansForwardRow struct {
 }
 
 func (q *Queries) ListPricingPlansForward(ctx context.Context, arg ListPricingPlansForwardParams) ([]ListPricingPlansForwardRow, error) {
-	rows, err := q.query(ctx, q.listPricingPlansForwardStmt, listPricingPlansForward,
+	rows, err := q.db.QueryContext(ctx, listPricingPlansForward,
 		arg.CursorCreatedAt,
 		arg.CursorCreatedAt,
 		arg.CursorCreatedAt,

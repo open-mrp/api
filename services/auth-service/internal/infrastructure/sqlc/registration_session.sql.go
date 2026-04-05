@@ -24,7 +24,7 @@ type CompleteRegistrationSessionParams struct {
 }
 
 func (q *Queries) CompleteRegistrationSession(ctx context.Context, arg CompleteRegistrationSessionParams) error {
-	_, err := q.exec(ctx, q.completeRegistrationSessionStmt, completeRegistrationSession, arg.AccountID, arg.ID)
+	_, err := q.db.ExecContext(ctx, completeRegistrationSession, arg.AccountID, arg.ID)
 	return err
 }
 
@@ -47,7 +47,7 @@ type CreateRegistrationSessionParams struct {
 }
 
 func (q *Queries) CreateRegistrationSession(ctx context.Context, arg CreateRegistrationSessionParams) (sql.Result, error) {
-	return q.exec(ctx, q.createRegistrationSessionStmt, createRegistrationSession,
+	return q.db.ExecContext(ctx, createRegistrationSession,
 		arg.TypeID,
 		arg.Email,
 		arg.PlanCode,
@@ -65,7 +65,7 @@ WHERE id = ?
 `
 
 func (q *Queries) DeleteRegistrationSession(ctx context.Context, id int64) error {
-	_, err := q.exec(ctx, q.deleteRegistrationSessionStmt, deleteRegistrationSession, id)
+	_, err := q.db.ExecContext(ctx, deleteRegistrationSession, id)
 	return err
 }
 
@@ -82,7 +82,7 @@ LIMIT 1
 `
 
 func (q *Queries) GetRegistrationSessionByEmail(ctx context.Context, email string) (RegistrationSession, error) {
-	row := q.queryRow(ctx, q.getRegistrationSessionByEmailStmt, getRegistrationSessionByEmail, email)
+	row := q.db.QueryRowContext(ctx, getRegistrationSessionByEmail, email)
 	var i RegistrationSession
 	err := row.Scan(
 		&i.ID,
@@ -118,7 +118,7 @@ LIMIT 1
 `
 
 func (q *Queries) GetRegistrationSessionByID(ctx context.Context, id int64) (RegistrationSession, error) {
-	row := q.queryRow(ctx, q.getRegistrationSessionByIDStmt, getRegistrationSessionByID, id)
+	row := q.db.QueryRowContext(ctx, getRegistrationSessionByID, id)
 	var i RegistrationSession
 	err := row.Scan(
 		&i.ID,
@@ -154,7 +154,7 @@ LIMIT 1
 `
 
 func (q *Queries) GetRegistrationSessionByToken(ctx context.Context, verificationToken string) (RegistrationSession, error) {
-	row := q.queryRow(ctx, q.getRegistrationSessionByTokenStmt, getRegistrationSessionByToken, verificationToken)
+	row := q.db.QueryRowContext(ctx, getRegistrationSessionByToken, verificationToken)
 	var i RegistrationSession
 	err := row.Scan(
 		&i.ID,
@@ -190,7 +190,7 @@ LIMIT 1
 `
 
 func (q *Queries) GetRegistrationSessionByTypeID(ctx context.Context, typeID string) (RegistrationSession, error) {
-	row := q.queryRow(ctx, q.getRegistrationSessionByTypeIDStmt, getRegistrationSessionByTypeID, typeID)
+	row := q.db.QueryRowContext(ctx, getRegistrationSessionByTypeID, typeID)
 	var i RegistrationSession
 	err := row.Scan(
 		&i.ID,
@@ -239,7 +239,7 @@ type ListRegistrationSessionsByUserIDBackwardParams struct {
 }
 
 func (q *Queries) ListRegistrationSessionsByUserIDBackward(ctx context.Context, arg ListRegistrationSessionsByUserIDBackwardParams) ([]RegistrationSession, error) {
-	rows, err := q.query(ctx, q.listRegistrationSessionsByUserIDBackwardStmt, listRegistrationSessionsByUserIDBackward,
+	rows, err := q.db.QueryContext(ctx, listRegistrationSessionsByUserIDBackward,
 		arg.UserID,
 		arg.CursorCreatedAt,
 		arg.CursorCreatedAt,
@@ -311,7 +311,7 @@ type ListRegistrationSessionsByUserIDForwardParams struct {
 }
 
 func (q *Queries) ListRegistrationSessionsByUserIDForward(ctx context.Context, arg ListRegistrationSessionsByUserIDForwardParams) ([]RegistrationSession, error) {
-	rows, err := q.query(ctx, q.listRegistrationSessionsByUserIDForwardStmt, listRegistrationSessionsByUserIDForward,
+	rows, err := q.db.QueryContext(ctx, listRegistrationSessionsByUserIDForward,
 		arg.UserID,
 		arg.CursorCreatedAt,
 		arg.CursorCreatedAt,
@@ -371,7 +371,7 @@ type UpdateRegistrationSessionAccountIDParams struct {
 }
 
 func (q *Queries) UpdateRegistrationSessionAccountID(ctx context.Context, arg UpdateRegistrationSessionAccountIDParams) error {
-	_, err := q.exec(ctx, q.updateRegistrationSessionAccountIDStmt, updateRegistrationSessionAccountID, arg.AccountID, arg.ID)
+	_, err := q.db.ExecContext(ctx, updateRegistrationSessionAccountID, arg.AccountID, arg.ID)
 	return err
 }
 
@@ -388,7 +388,7 @@ type UpdateRegistrationSessionEmailVerifiedParams struct {
 }
 
 func (q *Queries) UpdateRegistrationSessionEmailVerified(ctx context.Context, arg UpdateRegistrationSessionEmailVerifiedParams) error {
-	_, err := q.exec(ctx, q.updateRegistrationSessionEmailVerifiedStmt, updateRegistrationSessionEmailVerified, arg.IsEmailVerified, arg.IsExistingUser, arg.ID)
+	_, err := q.db.ExecContext(ctx, updateRegistrationSessionEmailVerified, arg.IsEmailVerified, arg.IsExistingUser, arg.ID)
 	return err
 }
 
@@ -405,7 +405,7 @@ type UpdateRegistrationSessionPaymentCompletedParams struct {
 }
 
 func (q *Queries) UpdateRegistrationSessionPaymentCompleted(ctx context.Context, arg UpdateRegistrationSessionPaymentCompletedParams) error {
-	_, err := q.exec(ctx, q.updateRegistrationSessionPaymentCompletedStmt, updateRegistrationSessionPaymentCompleted, arg.PaymentCompleted, arg.StripeSubscriptionID, arg.ID)
+	_, err := q.db.ExecContext(ctx, updateRegistrationSessionPaymentCompleted, arg.PaymentCompleted, arg.StripeSubscriptionID, arg.ID)
 	return err
 }
 
@@ -421,7 +421,7 @@ type UpdateRegistrationSessionPlanCodeParams struct {
 }
 
 func (q *Queries) UpdateRegistrationSessionPlanCode(ctx context.Context, arg UpdateRegistrationSessionPlanCodeParams) error {
-	_, err := q.exec(ctx, q.updateRegistrationSessionPlanCodeStmt, updateRegistrationSessionPlanCode, arg.PlanCode, arg.ID)
+	_, err := q.db.ExecContext(ctx, updateRegistrationSessionPlanCode, arg.PlanCode, arg.ID)
 	return err
 }
 
@@ -438,7 +438,7 @@ type UpdateRegistrationSessionStepParams struct {
 }
 
 func (q *Queries) UpdateRegistrationSessionStep(ctx context.Context, arg UpdateRegistrationSessionStepParams) error {
-	_, err := q.exec(ctx, q.updateRegistrationSessionStepStmt, updateRegistrationSessionStep, arg.Step, arg.SessionData, arg.ID)
+	_, err := q.db.ExecContext(ctx, updateRegistrationSessionStep, arg.Step, arg.SessionData, arg.ID)
 	return err
 }
 
@@ -455,7 +455,7 @@ type UpdateRegistrationSessionStripeCustomerParams struct {
 }
 
 func (q *Queries) UpdateRegistrationSessionStripeCustomer(ctx context.Context, arg UpdateRegistrationSessionStripeCustomerParams) error {
-	_, err := q.exec(ctx, q.updateRegistrationSessionStripeCustomerStmt, updateRegistrationSessionStripeCustomer, arg.StripeCustomerID, arg.StripeCheckoutSessionID, arg.ID)
+	_, err := q.db.ExecContext(ctx, updateRegistrationSessionStripeCustomer, arg.StripeCustomerID, arg.StripeCheckoutSessionID, arg.ID)
 	return err
 }
 
@@ -471,7 +471,7 @@ type UpdateRegistrationSessionTokenParams struct {
 }
 
 func (q *Queries) UpdateRegistrationSessionToken(ctx context.Context, arg UpdateRegistrationSessionTokenParams) error {
-	_, err := q.exec(ctx, q.updateRegistrationSessionTokenStmt, updateRegistrationSessionToken, arg.VerificationToken, arg.ID)
+	_, err := q.db.ExecContext(ctx, updateRegistrationSessionToken, arg.VerificationToken, arg.ID)
 	return err
 }
 
@@ -488,6 +488,6 @@ type UpdateRegistrationSessionUserParams struct {
 }
 
 func (q *Queries) UpdateRegistrationSessionUser(ctx context.Context, arg UpdateRegistrationSessionUserParams) error {
-	_, err := q.exec(ctx, q.updateRegistrationSessionUserStmt, updateRegistrationSessionUser, arg.UserID, arg.SessionData, arg.ID)
+	_, err := q.db.ExecContext(ctx, updateRegistrationSessionUser, arg.UserID, arg.SessionData, arg.ID)
 	return err
 }

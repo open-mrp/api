@@ -30,7 +30,7 @@ type CalculateRemainingForOrderLineRow struct {
 }
 
 func (q *Queries) CalculateRemainingForOrderLine(ctx context.Context, salesOrderLineID string) (CalculateRemainingForOrderLineRow, error) {
-	row := q.queryRow(ctx, q.calculateRemainingForOrderLineStmt, calculateRemainingForOrderLine, salesOrderLineID)
+	row := q.db.QueryRowContext(ctx, calculateRemainingForOrderLine, salesOrderLineID)
 	var i CalculateRemainingForOrderLineRow
 	err := row.Scan(&i.RemainingValue, &i.UnitID)
 	return i, err
@@ -50,7 +50,7 @@ type ClearPickFinishedAtParams struct {
 }
 
 func (q *Queries) ClearPickFinishedAt(ctx context.Context, arg ClearPickFinishedAtParams) error {
-	_, err := q.exec(ctx, q.clearPickFinishedAtStmt, clearPickFinishedAt, arg.PickID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, clearPickFinishedAt, arg.PickID, arg.AccountID)
 	return err
 }
 
@@ -75,7 +75,7 @@ type CountPickShipmentNumbersParams struct {
 }
 
 func (q *Queries) CountPickShipmentNumbers(ctx context.Context, arg CountPickShipmentNumbersParams) (int64, error) {
-	row := q.queryRow(ctx, q.countPickShipmentNumbersStmt, countPickShipmentNumbers,
+	row := q.db.QueryRowContext(ctx, countPickShipmentNumbers,
 		arg.AccountID,
 		arg.PickID,
 		arg.AccountID,
@@ -213,7 +213,7 @@ func (q *Queries) CountPicks(ctx context.Context, arg CountPicksParams) (int64, 
 	queryParams = append(queryParams, arg.StartDate)
 	queryParams = append(queryParams, arg.EndDate)
 	queryParams = append(queryParams, arg.EndDate)
-	row := q.queryRow(ctx, nil, query, queryParams...)
+	row := q.db.QueryRowContext(ctx, query, queryParams...)
 	var total int64
 	err := row.Scan(&total)
 	return total, err
@@ -225,7 +225,7 @@ WHERE sales_order_id = ?
 `
 
 func (q *Queries) CountShipmentsByOrder(ctx context.Context, salesOrderID string) (int64, error) {
-	row := q.queryRow(ctx, q.countShipmentsByOrderStmt, countShipmentsByOrder, salesOrderID)
+	row := q.db.QueryRowContext(ctx, countShipmentsByOrder, salesOrderID)
 	var total int64
 	err := row.Scan(&total)
 	return total, err
@@ -244,7 +244,7 @@ type CreatePickLineParams struct {
 }
 
 func (q *Queries) CreatePickLine(ctx context.Context, arg CreatePickLineParams) error {
-	_, err := q.exec(ctx, q.createPickLineStmt, createPickLine,
+	_, err := q.db.ExecContext(ctx, createPickLine,
 		arg.ID,
 		arg.PickID,
 		arg.QuantityID,
@@ -265,7 +265,7 @@ type CreateQuantityParams struct {
 }
 
 func (q *Queries) CreateQuantity(ctx context.Context, arg CreateQuantityParams) error {
-	_, err := q.exec(ctx, q.createQuantityStmt, createQuantity, arg.ID, arg.Value, arg.UnitID)
+	_, err := q.db.ExecContext(ctx, createQuantity, arg.ID, arg.Value, arg.UnitID)
 	return err
 }
 
@@ -294,7 +294,7 @@ type CreateShipmentParams struct {
 }
 
 func (q *Queries) CreateShipment(ctx context.Context, arg CreateShipmentParams) error {
-	_, err := q.exec(ctx, q.createShipmentStmt, createShipment,
+	_, err := q.db.ExecContext(ctx, createShipment,
 		arg.ID,
 		arg.Number,
 		arg.SalesOrderID,
@@ -325,7 +325,7 @@ type CreateShipmentLineFromPickParams struct {
 }
 
 func (q *Queries) CreateShipmentLineFromPick(ctx context.Context, arg CreateShipmentLineFromPickParams) error {
-	_, err := q.exec(ctx, q.createShipmentLineFromPickStmt, createShipmentLineFromPick,
+	_, err := q.db.ExecContext(ctx, createShipmentLineFromPick,
 		arg.ID,
 		arg.ShipmentID,
 		arg.SalesOrderLineID,
@@ -357,7 +357,7 @@ type CreateShippingCaseParams struct {
 }
 
 func (q *Queries) CreateShippingCase(ctx context.Context, arg CreateShippingCaseParams) error {
-	_, err := q.exec(ctx, q.createShippingCaseStmt, createShippingCase,
+	_, err := q.db.ExecContext(ctx, createShippingCase,
 		arg.ID,
 		arg.Number,
 		arg.FreightAmountID,
@@ -396,7 +396,7 @@ type DeleteDuplicatePickLinesParams struct {
 }
 
 func (q *Queries) DeleteDuplicatePickLines(ctx context.Context, arg DeleteDuplicatePickLinesParams) error {
-	_, err := q.exec(ctx, q.deleteDuplicatePickLinesStmt, deleteDuplicatePickLines, arg.PickID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, deleteDuplicatePickLines, arg.PickID, arg.AccountID)
 	return err
 }
 
@@ -458,7 +458,7 @@ type FindLinesToPackRow struct {
 }
 
 func (q *Queries) FindLinesToPack(ctx context.Context, pickID string) ([]FindLinesToPackRow, error) {
-	rows, err := q.query(ctx, q.findLinesToPackStmt, findLinesToPack, pickID)
+	rows, err := q.db.QueryContext(ctx, findLinesToPack, pickID)
 	if err != nil {
 		return nil, err
 	}
@@ -516,7 +516,7 @@ type FindPickIDByShipmentOrderParams struct {
 }
 
 func (q *Queries) FindPickIDByShipmentOrder(ctx context.Context, arg FindPickIDByShipmentOrderParams) (string, error) {
-	row := q.queryRow(ctx, q.findPickIDByShipmentOrderStmt, findPickIDByShipmentOrder, arg.AccountID, arg.ShipmentID)
+	row := q.db.QueryRowContext(ctx, findPickIDByShipmentOrder, arg.AccountID, arg.ShipmentID)
 	var id string
 	err := row.Scan(&id)
 	return id, err
@@ -567,7 +567,7 @@ type GetPickRow struct {
 }
 
 func (q *Queries) GetPick(ctx context.Context, arg GetPickParams) (GetPickRow, error) {
-	row := q.queryRow(ctx, q.getPickStmt, getPick, arg.PickID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getPick, arg.PickID, arg.AccountID)
 	var i GetPickRow
 	err := row.Scan(
 		&i.ID,
@@ -601,7 +601,7 @@ type GetPickDepartmentsRow struct {
 }
 
 func (q *Queries) GetPickDepartments(ctx context.Context, pickID string) ([]GetPickDepartmentsRow, error) {
-	rows, err := q.query(ctx, q.getPickDepartmentsStmt, getPickDepartments, pickID)
+	rows, err := q.db.QueryContext(ctx, getPickDepartments, pickID)
 	if err != nil {
 		return nil, err
 	}
@@ -679,7 +679,7 @@ type GetPickLineRow struct {
 }
 
 func (q *Queries) GetPickLine(ctx context.Context, pickLineID string) (GetPickLineRow, error) {
-	row := q.queryRow(ctx, q.getPickLineStmt, getPickLine, pickLineID)
+	row := q.db.QueryRowContext(ctx, getPickLine, pickLineID)
 	var i GetPickLineRow
 	err := row.Scan(
 		&i.ID,
@@ -762,7 +762,7 @@ type GetPickLinesRow struct {
 }
 
 func (q *Queries) GetPickLines(ctx context.Context, pickID string) ([]GetPickLinesRow, error) {
-	rows, err := q.query(ctx, q.getPickLinesStmt, getPickLines, pickID)
+	rows, err := q.db.QueryContext(ctx, getPickLines, pickID)
 	if err != nil {
 		return nil, err
 	}
@@ -829,7 +829,7 @@ type GetPickShipmentNumbersParams struct {
 }
 
 func (q *Queries) GetPickShipmentNumbers(ctx context.Context, arg GetPickShipmentNumbersParams) ([]string, error) {
-	rows, err := q.query(ctx, q.getPickShipmentNumbersStmt, getPickShipmentNumbers,
+	rows, err := q.db.QueryContext(ctx, getPickShipmentNumbers,
 		arg.AccountID,
 		arg.PickID,
 		arg.AccountID,
@@ -888,7 +888,7 @@ type GetSalesOrderForPickRow struct {
 }
 
 func (q *Queries) GetSalesOrderForPick(ctx context.Context, arg GetSalesOrderForPickParams) (GetSalesOrderForPickRow, error) {
-	row := q.queryRow(ctx, q.getSalesOrderForPickStmt, getSalesOrderForPick, arg.PickID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getSalesOrderForPick, arg.PickID, arg.AccountID)
 	var i GetSalesOrderForPickRow
 	err := row.Scan(
 		&i.ID,
@@ -917,7 +917,7 @@ type HasShippedItemsParams struct {
 }
 
 func (q *Queries) HasShippedItems(ctx context.Context, arg HasShippedItemsParams) (bool, error) {
-	row := q.queryRow(ctx, q.hasShippedItemsStmt, hasShippedItems, arg.PickID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, hasShippedItems, arg.PickID, arg.AccountID)
 	var has_shipped bool
 	err := row.Scan(&has_shipped)
 	return has_shipped, err
@@ -932,7 +932,7 @@ SELECT EXISTS(
 `
 
 func (q *Queries) HasUnpackedPickLineForOrderLine(ctx context.Context, salesOrderLineID string) (bool, error) {
-	row := q.queryRow(ctx, q.hasUnpackedPickLineForOrderLineStmt, hasUnpackedPickLineForOrderLine, salesOrderLineID)
+	row := q.db.QueryRowContext(ctx, hasUnpackedPickLineForOrderLine, salesOrderLineID)
 	var has_unpacked bool
 	err := row.Scan(&has_unpacked)
 	return has_unpacked, err
@@ -952,7 +952,7 @@ type IsPickInAccountParams struct {
 }
 
 func (q *Queries) IsPickInAccount(ctx context.Context, arg IsPickInAccountParams) (bool, error) {
-	row := q.queryRow(ctx, q.isPickInAccountStmt, isPickInAccount, arg.PickID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, isPickInAccount, arg.PickID, arg.AccountID)
 	var is_in_account bool
 	err := row.Scan(&is_in_account)
 	return is_in_account, err
@@ -972,7 +972,7 @@ type IsPickLineInPickParams struct {
 }
 
 func (q *Queries) IsPickLineInPick(ctx context.Context, arg IsPickLineInPickParams) (bool, error) {
-	row := q.queryRow(ctx, q.isPickLineInPickStmt, isPickLineInPick, arg.PickLineID, arg.PickID)
+	row := q.db.QueryRowContext(ctx, isPickLineInPick, arg.PickLineID, arg.PickID)
 	var is_in_pick bool
 	err := row.Scan(&is_in_pick)
 	return is_in_pick, err
@@ -1145,7 +1145,7 @@ func (q *Queries) ListPicksBackward(ctx context.Context, arg ListPicksBackwardPa
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorID)
 	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -1349,7 +1349,7 @@ func (q *Queries) ListPicksForward(ctx context.Context, arg ListPicksForwardPara
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorID)
 	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -1399,7 +1399,7 @@ AND NOT EXISTS (
 `
 
 func (q *Queries) MarkPickFinishedIfAllPacked(ctx context.Context, pickID string) error {
-	_, err := q.exec(ctx, q.markPickFinishedIfAllPackedStmt, markPickFinishedIfAllPacked, pickID)
+	_, err := q.db.ExecContext(ctx, markPickFinishedIfAllPacked, pickID)
 	return err
 }
 
@@ -1415,7 +1415,7 @@ AND quantity_id IN (
 `
 
 func (q *Queries) PackPickLines(ctx context.Context, pickID string) error {
-	_, err := q.exec(ctx, q.packPickLinesStmt, packPickLines, pickID)
+	_, err := q.db.ExecContext(ctx, packPickLines, pickID)
 	return err
 }
 
@@ -1439,7 +1439,7 @@ AND pl.packed_at IS NULL
 `
 
 func (q *Queries) PickAllLines(ctx context.Context, pickID string) error {
-	_, err := q.exec(ctx, q.pickAllLinesStmt, pickAllLines, pickID)
+	_, err := q.db.ExecContext(ctx, pickAllLines, pickID)
 	return err
 }
 
@@ -1463,7 +1463,7 @@ AND pl.packed_at IS NULL
 `
 
 func (q *Queries) PickRemainingQuantityForLine(ctx context.Context, pickLineID string) error {
-	_, err := q.exec(ctx, q.pickRemainingQuantityForLineStmt, pickRemainingQuantityForLine, pickLineID)
+	_, err := q.db.ExecContext(ctx, pickRemainingQuantityForLine, pickLineID)
 	return err
 }
 
@@ -1478,7 +1478,7 @@ WHERE sales_order_line_id IN (
 `
 
 func (q *Queries) UnpackPickLinesByShipment(ctx context.Context, shipmentID string) error {
-	_, err := q.exec(ctx, q.unpackPickLinesByShipmentStmt, unpackPickLinesByShipment, shipmentID)
+	_, err := q.db.ExecContext(ctx, unpackPickLinesByShipment, shipmentID)
 	return err
 }
 
@@ -1497,7 +1497,7 @@ type UpdatePickFinishedAtParams struct {
 }
 
 func (q *Queries) UpdatePickFinishedAt(ctx context.Context, arg UpdatePickFinishedAtParams) error {
-	_, err := q.exec(ctx, q.updatePickFinishedAtStmt, updatePickFinishedAt, arg.FinishedAt, arg.PickID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, updatePickFinishedAt, arg.FinishedAt, arg.PickID, arg.AccountID)
 	return err
 }
 
@@ -1517,7 +1517,7 @@ type UpdatePickLineQuantityParams struct {
 }
 
 func (q *Queries) UpdatePickLineQuantity(ctx context.Context, arg UpdatePickLineQuantityParams) error {
-	_, err := q.exec(ctx, q.updatePickLineQuantityStmt, updatePickLineQuantity, arg.Value, arg.PickLineID)
+	_, err := q.db.ExecContext(ctx, updatePickLineQuantity, arg.Value, arg.PickLineID)
 	return err
 }
 
@@ -1536,7 +1536,7 @@ type UpdatePickNumberParams struct {
 }
 
 func (q *Queries) UpdatePickNumber(ctx context.Context, arg UpdatePickNumberParams) error {
-	_, err := q.exec(ctx, q.updatePickNumberStmt, updatePickNumber, arg.Number, arg.PickID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, updatePickNumber, arg.Number, arg.PickID, arg.AccountID)
 	return err
 }
 
@@ -1552,7 +1552,7 @@ WHERE id IN (
 `
 
 func (q *Queries) VoidAllPickLines(ctx context.Context, pickID string) error {
-	_, err := q.exec(ctx, q.voidAllPickLinesStmt, voidAllPickLines, pickID)
+	_, err := q.db.ExecContext(ctx, voidAllPickLines, pickID)
 	return err
 }
 
@@ -1567,6 +1567,6 @@ WHERE id = (
 `
 
 func (q *Queries) VoidPickLine(ctx context.Context, pickLineID string) error {
-	_, err := q.exec(ctx, q.voidPickLineStmt, voidPickLine, pickLineID)
+	_, err := q.db.ExecContext(ctx, voidPickLine, pickLineID)
 	return err
 }

@@ -17,7 +17,7 @@ WHERE shipping_term_id = ?
 `
 
 func (q *Queries) DeleteFreeShippingRulesByShippingTermID(ctx context.Context, shippingTermID string) error {
-	_, err := q.exec(ctx, q.deleteFreeShippingRulesByShippingTermIDStmt, deleteFreeShippingRulesByShippingTermID, shippingTermID)
+	_, err := q.db.ExecContext(ctx, deleteFreeShippingRulesByShippingTermID, shippingTermID)
 	return err
 }
 
@@ -26,7 +26,7 @@ DELETE FROM quantity WHERE id = ?
 `
 
 func (q *Queries) DeleteQuantity(ctx context.Context, id string) error {
-	_, err := q.exec(ctx, q.deleteQuantityStmt, deleteQuantity, id)
+	_, err := q.db.ExecContext(ctx, deleteQuantity, id)
 	return err
 }
 
@@ -42,7 +42,7 @@ type DeleteShippingTermParams struct {
 }
 
 func (q *Queries) DeleteShippingTerm(ctx context.Context, arg DeleteShippingTermParams) (sql.Result, error) {
-	return q.exec(ctx, q.deleteShippingTermStmt, deleteShippingTerm, arg.ID, arg.AccountID)
+	return q.db.ExecContext(ctx, deleteShippingTerm, arg.ID, arg.AccountID)
 }
 
 const getShippingTerm = `-- name: GetShippingTerm :one
@@ -103,7 +103,7 @@ type GetShippingTermRow struct {
 }
 
 func (q *Queries) GetShippingTerm(ctx context.Context, arg GetShippingTermParams) (GetShippingTermRow, error) {
-	row := q.queryRow(ctx, q.getShippingTermStmt, getShippingTerm, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getShippingTerm, arg.ID, arg.AccountID)
 	var i GetShippingTermRow
 	err := row.Scan(
 		&i.ID,
@@ -150,7 +150,7 @@ type InsertFreeShippingRuleParams struct {
 }
 
 func (q *Queries) InsertFreeShippingRule(ctx context.Context, arg InsertFreeShippingRuleParams) error {
-	_, err := q.exec(ctx, q.insertFreeShippingRuleStmt, insertFreeShippingRule, arg.ID, arg.ShippingTermID, arg.CarrierOptionID)
+	_, err := q.db.ExecContext(ctx, insertFreeShippingRule, arg.ID, arg.ShippingTermID, arg.CarrierOptionID)
 	return err
 }
 
@@ -177,7 +177,7 @@ type InsertQuantityParams struct {
 }
 
 func (q *Queries) InsertQuantity(ctx context.Context, arg InsertQuantityParams) error {
-	_, err := q.exec(ctx, q.insertQuantityStmt, insertQuantity, arg.ID, arg.Value, arg.UnitID)
+	_, err := q.db.ExecContext(ctx, insertQuantity, arg.ID, arg.Value, arg.UnitID)
 	return err
 }
 
@@ -216,7 +216,7 @@ type InsertShippingTermParams struct {
 }
 
 func (q *Queries) InsertShippingTerm(ctx context.Context, arg InsertShippingTermParams) error {
-	_, err := q.exec(ctx, q.insertShippingTermStmt, insertShippingTerm,
+	_, err := q.db.ExecContext(ctx, insertShippingTerm,
 		arg.ID,
 		arg.Name,
 		arg.IsFreightExempt,
@@ -240,7 +240,7 @@ type ListFreeShippingRulesByShippingTermIDRow struct {
 }
 
 func (q *Queries) ListFreeShippingRulesByShippingTermID(ctx context.Context, shippingTermID string) ([]ListFreeShippingRulesByShippingTermIDRow, error) {
-	rows, err := q.query(ctx, q.listFreeShippingRulesByShippingTermIDStmt, listFreeShippingRulesByShippingTermID, shippingTermID)
+	rows, err := q.db.QueryContext(ctx, listFreeShippingRulesByShippingTermID, shippingTermID)
 	if err != nil {
 		return nil, err
 	}
@@ -332,7 +332,7 @@ type ListShippingTermsBackwardRow struct {
 }
 
 func (q *Queries) ListShippingTermsBackward(ctx context.Context, arg ListShippingTermsBackwardParams) ([]ListShippingTermsBackwardRow, error) {
-	rows, err := q.query(ctx, q.listShippingTermsBackwardStmt, listShippingTermsBackward,
+	rows, err := q.db.QueryContext(ctx, listShippingTermsBackward,
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
@@ -453,7 +453,7 @@ type ListShippingTermsForwardRow struct {
 }
 
 func (q *Queries) ListShippingTermsForward(ctx context.Context, arg ListShippingTermsForwardParams) ([]ListShippingTermsForwardRow, error) {
-	rows, err := q.query(ctx, q.listShippingTermsForwardStmt, listShippingTermsForward,
+	rows, err := q.db.QueryContext(ctx, listShippingTermsForward,
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
@@ -519,7 +519,7 @@ type UpdateQuantityParams struct {
 }
 
 func (q *Queries) UpdateQuantity(ctx context.Context, arg UpdateQuantityParams) (sql.Result, error) {
-	return q.exec(ctx, q.updateQuantityStmt, updateQuantity, arg.Value, arg.UnitID, arg.ID)
+	return q.db.ExecContext(ctx, updateQuantity, arg.Value, arg.UnitID, arg.ID)
 }
 
 const updateShippingTerm = `-- name: UpdateShippingTerm :execresult
@@ -545,7 +545,7 @@ type UpdateShippingTermParams struct {
 }
 
 func (q *Queries) UpdateShippingTerm(ctx context.Context, arg UpdateShippingTermParams) (sql.Result, error) {
-	return q.exec(ctx, q.updateShippingTermStmt, updateShippingTerm,
+	return q.db.ExecContext(ctx, updateShippingTerm,
 		arg.Name,
 		arg.IsFreightExempt,
 		arg.IsCarrierRate,

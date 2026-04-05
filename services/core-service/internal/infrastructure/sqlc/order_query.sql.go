@@ -24,7 +24,7 @@ type FindOrderIDByProductionRunParams struct {
 }
 
 func (q *Queries) FindOrderIDByProductionRun(ctx context.Context, arg FindOrderIDByProductionRunParams) (string, error) {
-	row := q.queryRow(ctx, q.findOrderIDByProductionRunStmt, findOrderIDByProductionRun, arg.AccountID, arg.ProductionRunID)
+	row := q.db.QueryRowContext(ctx, findOrderIDByProductionRun, arg.AccountID, arg.ProductionRunID)
 	var id string
 	err := row.Scan(&id)
 	return id, err

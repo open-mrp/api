@@ -47,7 +47,7 @@ type GetRateWithUnitsRow struct {
 }
 
 func (q *Queries) GetRateWithUnits(ctx context.Context, id string) (GetRateWithUnitsRow, error) {
-	row := q.queryRow(ctx, q.getRateWithUnitsStmt, getRateWithUnits, id)
+	row := q.db.QueryRowContext(ctx, getRateWithUnits, id)
 	var i GetRateWithUnitsRow
 	err := row.Scan(
 		&i.ID,
@@ -83,7 +83,7 @@ type UpdateRateByIDParams struct {
 }
 
 func (q *Queries) UpdateRateByID(ctx context.Context, arg UpdateRateByIDParams) (sql.Result, error) {
-	return q.exec(ctx, q.updateRateByIDStmt, updateRateByID,
+	return q.db.ExecContext(ctx, updateRateByID,
 		arg.Value,
 		arg.NumeratorUnitID,
 		arg.DenominatorUnitID,

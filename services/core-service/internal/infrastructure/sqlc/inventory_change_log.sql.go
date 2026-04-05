@@ -71,7 +71,7 @@ type GetInventoryChangeLogRow struct {
 }
 
 func (q *Queries) GetInventoryChangeLog(ctx context.Context, arg GetInventoryChangeLogParams) (GetInventoryChangeLogRow, error) {
-	row := q.queryRow(ctx, q.getInventoryChangeLogStmt, getInventoryChangeLog, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getInventoryChangeLog, arg.ID, arg.AccountID)
 	var i GetInventoryChangeLogRow
 	err := row.Scan(
 		&i.ID,
@@ -217,7 +217,7 @@ func (q *Queries) ListAllInventoryChangeLogs(ctx context.Context, arg ListAllInv
 	queryParams = append(queryParams, arg.StartDate)
 	queryParams = append(queryParams, arg.EndDate)
 	queryParams = append(queryParams, arg.EndDate)
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -402,7 +402,7 @@ func (q *Queries) ListInventoryChangeLogsBackward(ctx context.Context, arg ListI
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorID)
 	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -589,7 +589,7 @@ func (q *Queries) ListInventoryChangeLogsForward(ctx context.Context, arg ListIn
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorID)
 	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}

@@ -30,7 +30,7 @@ type CheckOrderDiscountDuplicateUsageParams struct {
 }
 
 func (q *Queries) CheckOrderDiscountDuplicateUsage(ctx context.Context, arg CheckOrderDiscountDuplicateUsageParams) (int64, error) {
-	row := q.queryRow(ctx, q.checkOrderDiscountDuplicateUsageStmt, checkOrderDiscountDuplicateUsage,
+	row := q.db.QueryRowContext(ctx, checkOrderDiscountDuplicateUsage,
 		arg.OrderDiscountID,
 		arg.BuyerAccountID,
 		arg.SellerAccountID,
@@ -58,7 +58,7 @@ type CountOrderDiscountsByCodeParams struct {
 }
 
 func (q *Queries) CountOrderDiscountsByCode(ctx context.Context, arg CountOrderDiscountsByCodeParams) (int64, error) {
-	row := q.queryRow(ctx, q.countOrderDiscountsByCodeStmt, countOrderDiscountsByCode,
+	row := q.db.QueryRowContext(ctx, countOrderDiscountsByCode,
 		arg.AccountID,
 		arg.Code,
 		arg.ExcludeID,
@@ -81,7 +81,7 @@ type DeleteOrderDiscountParams struct {
 }
 
 func (q *Queries) DeleteOrderDiscount(ctx context.Context, arg DeleteOrderDiscountParams) (sql.Result, error) {
-	return q.exec(ctx, q.deleteOrderDiscountStmt, deleteOrderDiscount, arg.ID, arg.AccountID)
+	return q.db.ExecContext(ctx, deleteOrderDiscount, arg.ID, arg.AccountID)
 }
 
 const findOrderDiscountByCode = `-- name: FindOrderDiscountByCode :one
@@ -120,7 +120,7 @@ type FindOrderDiscountByCodeRow struct {
 }
 
 func (q *Queries) FindOrderDiscountByCode(ctx context.Context, arg FindOrderDiscountByCodeParams) (FindOrderDiscountByCodeRow, error) {
-	row := q.queryRow(ctx, q.findOrderDiscountByCodeStmt, findOrderDiscountByCode, arg.Code, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, findOrderDiscountByCode, arg.Code, arg.AccountID)
 	var i FindOrderDiscountByCodeRow
 	err := row.Scan(
 		&i.ID,
@@ -173,7 +173,7 @@ type GetOrderDiscountRow struct {
 }
 
 func (q *Queries) GetOrderDiscount(ctx context.Context, arg GetOrderDiscountParams) (GetOrderDiscountRow, error) {
-	row := q.queryRow(ctx, q.getOrderDiscountStmt, getOrderDiscount, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getOrderDiscount, arg.ID, arg.AccountID)
 	var i GetOrderDiscountRow
 	err := row.Scan(
 		&i.ID,
@@ -206,7 +206,7 @@ type InsertOrderDiscountParams struct {
 }
 
 func (q *Queries) InsertOrderDiscount(ctx context.Context, arg InsertOrderDiscountParams) error {
-	_, err := q.exec(ctx, q.insertOrderDiscountStmt, insertOrderDiscount,
+	_, err := q.db.ExecContext(ctx, insertOrderDiscount,
 		arg.ID,
 		arg.Name,
 		arg.Code,
@@ -267,7 +267,7 @@ type ListOrderDiscountsBackwardRow struct {
 }
 
 func (q *Queries) ListOrderDiscountsBackward(ctx context.Context, arg ListOrderDiscountsBackwardParams) ([]ListOrderDiscountsBackwardRow, error) {
-	rows, err := q.query(ctx, q.listOrderDiscountsBackwardStmt, listOrderDiscountsBackward,
+	rows, err := q.db.QueryContext(ctx, listOrderDiscountsBackward,
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
@@ -359,7 +359,7 @@ type ListOrderDiscountsForwardRow struct {
 }
 
 func (q *Queries) ListOrderDiscountsForward(ctx context.Context, arg ListOrderDiscountsForwardParams) ([]ListOrderDiscountsForwardRow, error) {
-	rows, err := q.query(ctx, q.listOrderDiscountsForwardStmt, listOrderDiscountsForward,
+	rows, err := q.db.QueryContext(ctx, listOrderDiscountsForward,
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
@@ -426,7 +426,7 @@ type UpdateOrderDiscountParams struct {
 }
 
 func (q *Queries) UpdateOrderDiscount(ctx context.Context, arg UpdateOrderDiscountParams) (sql.Result, error) {
-	return q.exec(ctx, q.updateOrderDiscountStmt, updateOrderDiscount,
+	return q.db.ExecContext(ctx, updateOrderDiscount,
 		arg.Name,
 		arg.Code,
 		arg.Percentage,

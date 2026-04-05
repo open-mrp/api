@@ -25,7 +25,7 @@ type CheckCarrierOptionInCarrierParams struct {
 }
 
 func (q *Queries) CheckCarrierOptionInCarrier(ctx context.Context, arg CheckCarrierOptionInCarrierParams) (bool, error) {
-	row := q.queryRow(ctx, q.checkCarrierOptionInCarrierStmt, checkCarrierOptionInCarrier, arg.ID, arg.CarrierID)
+	row := q.db.QueryRowContext(ctx, checkCarrierOptionInCarrier, arg.ID, arg.CarrierID)
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err
@@ -46,7 +46,7 @@ type ClearDefaultServiceLevelsForCarrierParams struct {
 }
 
 func (q *Queries) ClearDefaultServiceLevelsForCarrier(ctx context.Context, arg ClearDefaultServiceLevelsForCarrierParams) error {
-	_, err := q.exec(ctx, q.clearDefaultServiceLevelsForCarrierStmt, clearDefaultServiceLevelsForCarrier, arg.CarrierID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, clearDefaultServiceLevelsForCarrier, arg.CarrierID, arg.AccountID)
 	return err
 }
 
@@ -63,7 +63,7 @@ type CountCarrierOptionsByCodeInCarrierParams struct {
 }
 
 func (q *Queries) CountCarrierOptionsByCodeInCarrier(ctx context.Context, arg CountCarrierOptionsByCodeInCarrierParams) (int64, error) {
-	row := q.queryRow(ctx, q.countCarrierOptionsByCodeInCarrierStmt, countCarrierOptionsByCodeInCarrier,
+	row := q.db.QueryRowContext(ctx, countCarrierOptionsByCodeInCarrier,
 		arg.Code,
 		arg.CarrierID,
 		arg.ExcludeID,
@@ -86,7 +86,7 @@ type DeleteCarrierOptionParams struct {
 }
 
 func (q *Queries) DeleteCarrierOption(ctx context.Context, arg DeleteCarrierOptionParams) (sql.Result, error) {
-	return q.exec(ctx, q.deleteCarrierOptionStmt, deleteCarrierOption, arg.ID, arg.AccountID)
+	return q.db.ExecContext(ctx, deleteCarrierOption, arg.ID, arg.AccountID)
 }
 
 const getCarrierOption = `-- name: GetCarrierOption :one
@@ -125,7 +125,7 @@ type GetCarrierOptionRow struct {
 }
 
 func (q *Queries) GetCarrierOption(ctx context.Context, arg GetCarrierOptionParams) (GetCarrierOptionRow, error) {
-	row := q.queryRow(ctx, q.getCarrierOptionStmt, getCarrierOption, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getCarrierOption, arg.ID, arg.AccountID)
 	var i GetCarrierOptionRow
 	err := row.Scan(
 		&i.ID,
@@ -180,7 +180,7 @@ type InsertCarrierOptionParams struct {
 }
 
 func (q *Queries) InsertCarrierOption(ctx context.Context, arg InsertCarrierOptionParams) error {
-	_, err := q.exec(ctx, q.insertCarrierOptionStmt, insertCarrierOption,
+	_, err := q.db.ExecContext(ctx, insertCarrierOption,
 		arg.ID,
 		arg.Name,
 		arg.Code,
@@ -243,7 +243,7 @@ type ListCarrierOptionsBackwardRow struct {
 }
 
 func (q *Queries) ListCarrierOptionsBackward(ctx context.Context, arg ListCarrierOptionsBackwardParams) ([]ListCarrierOptionsBackwardRow, error) {
-	rows, err := q.query(ctx, q.listCarrierOptionsBackwardStmt, listCarrierOptionsBackward,
+	rows, err := q.db.QueryContext(ctx, listCarrierOptionsBackward,
 		arg.CarrierID,
 		arg.AccountID,
 		arg.SearchQuery,
@@ -321,7 +321,7 @@ type ListCarrierOptionsByCarrierIDRow struct {
 }
 
 func (q *Queries) ListCarrierOptionsByCarrierID(ctx context.Context, arg ListCarrierOptionsByCarrierIDParams) ([]ListCarrierOptionsByCarrierIDRow, error) {
-	rows, err := q.query(ctx, q.listCarrierOptionsByCarrierIDStmt, listCarrierOptionsByCarrierID, arg.CarrierID, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, listCarrierOptionsByCarrierID, arg.CarrierID, arg.AccountID)
 	if err != nil {
 		return nil, err
 	}
@@ -405,7 +405,7 @@ type ListCarrierOptionsForwardRow struct {
 }
 
 func (q *Queries) ListCarrierOptionsForward(ctx context.Context, arg ListCarrierOptionsForwardParams) ([]ListCarrierOptionsForwardRow, error) {
-	rows, err := q.query(ctx, q.listCarrierOptionsForwardStmt, listCarrierOptionsForward,
+	rows, err := q.db.QueryContext(ctx, listCarrierOptionsForward,
 		arg.CarrierID,
 		arg.AccountID,
 		arg.SearchQuery,
@@ -469,7 +469,7 @@ type UpdateCarrierOptionParams struct {
 }
 
 func (q *Queries) UpdateCarrierOption(ctx context.Context, arg UpdateCarrierOptionParams) (sql.Result, error) {
-	return q.exec(ctx, q.updateCarrierOptionStmt, updateCarrierOption,
+	return q.db.ExecContext(ctx, updateCarrierOption,
 		arg.Name,
 		arg.Code,
 		arg.IsPortalEnabled,

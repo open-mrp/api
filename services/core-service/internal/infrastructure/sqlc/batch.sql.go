@@ -30,7 +30,7 @@ type CountBatchesByScanningStationParams struct {
 }
 
 func (q *Queries) CountBatchesByScanningStation(ctx context.Context, arg CountBatchesByScanningStationParams) (int64, error) {
-	row := q.queryRow(ctx, q.countBatchesByScanningStationStmt, countBatchesByScanningStation,
+	row := q.db.QueryRowContext(ctx, countBatchesByScanningStation,
 		arg.AccountID,
 		arg.ScanningStationID,
 		arg.SearchQuery,
@@ -51,7 +51,7 @@ type DeleteBatchParams struct {
 }
 
 func (q *Queries) DeleteBatch(ctx context.Context, arg DeleteBatchParams) error {
-	_, err := q.exec(ctx, q.deleteBatchStmt, deleteBatch, arg.ID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, deleteBatch, arg.ID, arg.AccountID)
 	return err
 }
 
@@ -64,7 +64,7 @@ type DeleteBatchFlowByBatchIDParams struct {
 }
 
 func (q *Queries) DeleteBatchFlowByBatchID(ctx context.Context, arg DeleteBatchFlowByBatchIDParams) error {
-	_, err := q.exec(ctx, q.deleteBatchFlowByBatchIDStmt, deleteBatchFlowByBatchID, arg.BatchID, arg.BatchID)
+	_, err := q.db.ExecContext(ctx, deleteBatchFlowByBatchID, arg.BatchID, arg.BatchID)
 	return err
 }
 
@@ -89,7 +89,7 @@ func (q *Queries) DeleteBatchesByIDs(ctx context.Context, arg DeleteBatchesByIDs
 		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
 	}
 	queryParams = append(queryParams, arg.AccountID)
-	_, err := q.exec(ctx, nil, query, queryParams...)
+	_, err := q.db.ExecContext(ctx, query, queryParams...)
 	return err
 }
 
@@ -98,7 +98,7 @@ DELETE FROM _batches_machines WHERE A = ?
 `
 
 func (q *Queries) DeleteBatchesMachinesByBatchID(ctx context.Context, batchID string) error {
-	_, err := q.exec(ctx, q.deleteBatchesMachinesByBatchIDStmt, deleteBatchesMachinesByBatchID, batchID)
+	_, err := q.db.ExecContext(ctx, deleteBatchesMachinesByBatchID, batchID)
 	return err
 }
 
@@ -113,7 +113,7 @@ type FindBatchProductionRunIDParams struct {
 }
 
 func (q *Queries) FindBatchProductionRunID(ctx context.Context, arg FindBatchProductionRunIDParams) (sql.NullString, error) {
-	row := q.queryRow(ctx, q.findBatchProductionRunIDStmt, findBatchProductionRunID, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, findBatchProductionRunID, arg.ID, arg.AccountID)
 	var production_run_id sql.NullString
 	err := row.Scan(&production_run_id)
 	return production_run_id, err
@@ -210,7 +210,7 @@ type GetBatchRow struct {
 }
 
 func (q *Queries) GetBatch(ctx context.Context, arg GetBatchParams) (GetBatchRow, error) {
-	row := q.queryRow(ctx, q.getBatchStmt, getBatch, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getBatch, arg.ID, arg.AccountID)
 	var i GetBatchRow
 	err := row.Scan(
 		&i.ID,
@@ -340,7 +340,7 @@ type GetBatchBaseRow struct {
 }
 
 func (q *Queries) GetBatchBase(ctx context.Context, arg GetBatchBaseParams) (GetBatchBaseRow, error) {
-	row := q.queryRow(ctx, q.getBatchBaseStmt, getBatchBase, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getBatchBase, arg.ID, arg.AccountID)
 	var i GetBatchBaseRow
 	err := row.Scan(
 		&i.ID,
@@ -384,7 +384,7 @@ SELECT A AS batch_id FROM _batch_flow WHERE B = ?
 `
 
 func (q *Queries) GetBatchFlowIncoming(ctx context.Context, batchID string) ([]string, error) {
-	rows, err := q.query(ctx, q.getBatchFlowIncomingStmt, getBatchFlowIncoming, batchID)
+	rows, err := q.db.QueryContext(ctx, getBatchFlowIncoming, batchID)
 	if err != nil {
 		return nil, err
 	}
@@ -411,7 +411,7 @@ SELECT B AS batch_id FROM _batch_flow WHERE A = ?
 `
 
 func (q *Queries) GetBatchFlowOutgoing(ctx context.Context, batchID string) ([]string, error) {
-	rows, err := q.query(ctx, q.getBatchFlowOutgoingStmt, getBatchFlowOutgoing, batchID)
+	rows, err := q.db.QueryContext(ctx, getBatchFlowOutgoing, batchID)
 	if err != nil {
 		return nil, err
 	}
@@ -452,7 +452,7 @@ type GetBatchFlowTraversalInfoRow struct {
 }
 
 func (q *Queries) GetBatchFlowTraversalInfo(ctx context.Context, arg GetBatchFlowTraversalInfoParams) (GetBatchFlowTraversalInfoRow, error) {
-	row := q.queryRow(ctx, q.getBatchFlowTraversalInfoStmt, getBatchFlowTraversalInfo, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getBatchFlowTraversalInfo, arg.ID, arg.AccountID)
 	var i GetBatchFlowTraversalInfoRow
 	err := row.Scan(
 		&i.ID,
@@ -489,7 +489,7 @@ type GetBatchLotsRow struct {
 }
 
 func (q *Queries) GetBatchLots(ctx context.Context, arg GetBatchLotsParams) ([]GetBatchLotsRow, error) {
-	rows, err := q.query(ctx, q.getBatchLotsStmt, getBatchLots, arg.BatchID, arg.BatchID)
+	rows, err := q.db.QueryContext(ctx, getBatchLots, arg.BatchID, arg.BatchID)
 	if err != nil {
 		return nil, err
 	}
@@ -526,7 +526,7 @@ type GetBatchMachinesRow struct {
 }
 
 func (q *Queries) GetBatchMachines(ctx context.Context, batchID string) ([]GetBatchMachinesRow, error) {
-	rows, err := q.query(ctx, q.getBatchMachinesStmt, getBatchMachines, batchID)
+	rows, err := q.db.QueryContext(ctx, getBatchMachines, batchID)
 	if err != nil {
 		return nil, err
 	}
@@ -575,7 +575,7 @@ type InsertBatchParams struct {
 }
 
 func (q *Queries) InsertBatch(ctx context.Context, arg InsertBatchParams) error {
-	_, err := q.exec(ctx, q.insertBatchStmt, insertBatch,
+	_, err := q.db.ExecContext(ctx, insertBatch,
 		arg.ID,
 		arg.AccountID,
 		arg.ItemID,
@@ -599,7 +599,7 @@ type InsertBatchFlowParams struct {
 }
 
 func (q *Queries) InsertBatchFlow(ctx context.Context, arg InsertBatchFlowParams) error {
-	_, err := q.exec(ctx, q.insertBatchFlowStmt, insertBatchFlow, arg.SourceBatchID, arg.TargetBatchID)
+	_, err := q.db.ExecContext(ctx, insertBatchFlow, arg.SourceBatchID, arg.TargetBatchID)
 	return err
 }
 
@@ -615,7 +615,7 @@ type InsertBatchQuantityParams struct {
 }
 
 func (q *Queries) InsertBatchQuantity(ctx context.Context, arg InsertBatchQuantityParams) error {
-	_, err := q.exec(ctx, q.insertBatchQuantityStmt, insertBatchQuantity, arg.ID, arg.Value, arg.UnitID)
+	_, err := q.db.ExecContext(ctx, insertBatchQuantity, arg.ID, arg.Value, arg.UnitID)
 	return err
 }
 
@@ -629,7 +629,7 @@ type IsBatchInAccountParams struct {
 }
 
 func (q *Queries) IsBatchInAccount(ctx context.Context, arg IsBatchInAccountParams) (int64, error) {
-	row := q.queryRow(ctx, q.isBatchInAccountStmt, isBatchInAccount, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, isBatchInAccount, arg.ID, arg.AccountID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -736,7 +736,7 @@ type ListBatchesByScanningStationBackwardRow struct {
 }
 
 func (q *Queries) ListBatchesByScanningStationBackward(ctx context.Context, arg ListBatchesByScanningStationBackwardParams) ([]ListBatchesByScanningStationBackwardRow, error) {
-	rows, err := q.query(ctx, q.listBatchesByScanningStationBackwardStmt, listBatchesByScanningStationBackward,
+	rows, err := q.db.QueryContext(ctx, listBatchesByScanningStationBackward,
 		arg.AccountID,
 		arg.ScanningStationID,
 		arg.SearchQuery,
@@ -900,7 +900,7 @@ type ListBatchesByScanningStationForwardRow struct {
 }
 
 func (q *Queries) ListBatchesByScanningStationForward(ctx context.Context, arg ListBatchesByScanningStationForwardParams) ([]ListBatchesByScanningStationForwardRow, error) {
-	rows, err := q.query(ctx, q.listBatchesByScanningStationForwardStmt, listBatchesByScanningStationForward,
+	rows, err := q.db.QueryContext(ctx, listBatchesByScanningStationForward,
 		arg.AccountID,
 		arg.ScanningStationID,
 		arg.SearchQuery,
@@ -1024,7 +1024,7 @@ func (q *Queries) ListOpenBatches(ctx context.Context, arg ListOpenBatchesParams
 	} else {
 		query = strings.Replace(query, "/*SLICE:item_ids*/?", "NULL", 1)
 	}
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -1064,7 +1064,7 @@ type UpdateBatchClosedAtParams struct {
 }
 
 func (q *Queries) UpdateBatchClosedAt(ctx context.Context, arg UpdateBatchClosedAtParams) error {
-	_, err := q.exec(ctx, q.updateBatchClosedAtStmt, updateBatchClosedAt, arg.ID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, updateBatchClosedAt, arg.ID, arg.AccountID)
 	return err
 }
 
@@ -1080,7 +1080,7 @@ type UpdateBatchProductionStepIDParams struct {
 }
 
 func (q *Queries) UpdateBatchProductionStepID(ctx context.Context, arg UpdateBatchProductionStepIDParams) error {
-	_, err := q.exec(ctx, q.updateBatchProductionStepIDStmt, updateBatchProductionStepID, arg.ProductionStepID, arg.ID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, updateBatchProductionStepID, arg.ProductionStepID, arg.ID, arg.AccountID)
 	return err
 }
 
@@ -1095,7 +1095,7 @@ type UpdateBatchScannedAtParams struct {
 }
 
 func (q *Queries) UpdateBatchScannedAt(ctx context.Context, arg UpdateBatchScannedAtParams) error {
-	_, err := q.exec(ctx, q.updateBatchScannedAtStmt, updateBatchScannedAt, arg.ID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, updateBatchScannedAt, arg.ID, arg.AccountID)
 	return err
 }
 
@@ -1111,6 +1111,6 @@ type UpdateBatchScanningStationIDParams struct {
 }
 
 func (q *Queries) UpdateBatchScanningStationID(ctx context.Context, arg UpdateBatchScanningStationIDParams) error {
-	_, err := q.exec(ctx, q.updateBatchScanningStationIDStmt, updateBatchScanningStationID, arg.ScanningStationID, arg.ID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, updateBatchScanningStationID, arg.ScanningStationID, arg.ID, arg.AccountID)
 	return err
 }

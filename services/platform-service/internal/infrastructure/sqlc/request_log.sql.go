@@ -111,7 +111,7 @@ type CreateRequestLogParams struct {
 }
 
 func (q *Queries) CreateRequestLog(ctx context.Context, arg CreateRequestLogParams) error {
-	_, err := q.exec(ctx, q.createRequestLogStmt, createRequestLog,
+	_, err := q.db.ExecContext(ctx, createRequestLog,
 		arg.ID,
 		arg.Method,
 		arg.Host,
@@ -152,7 +152,7 @@ LIMIT ?
 `
 
 func (q *Queries) DeleteExpiredRequestLogs(ctx context.Context, limit int32) (sql.Result, error) {
-	return q.exec(ctx, q.deleteExpiredRequestLogsStmt, deleteExpiredRequestLogs, limit)
+	return q.db.ExecContext(ctx, deleteExpiredRequestLogs, limit)
 }
 
 const findRequestLogBaseByID = `-- name: FindRequestLogBaseByID :one
@@ -207,7 +207,7 @@ type FindRequestLogBaseByIDRow struct {
 }
 
 func (q *Queries) FindRequestLogBaseByID(ctx context.Context, arg FindRequestLogBaseByIDParams) (FindRequestLogBaseByIDRow, error) {
-	row := q.queryRow(ctx, q.findRequestLogBaseByIDStmt, findRequestLogBaseByID,
+	row := q.db.QueryRowContext(ctx, findRequestLogBaseByID,
 		arg.IncludeQueryJson,
 		arg.IncludeRequestBodyJson,
 		arg.IncludeResponseBodyJson,
@@ -321,7 +321,7 @@ type FindRequestLogByIDRow struct {
 }
 
 func (q *Queries) FindRequestLogByID(ctx context.Context, arg FindRequestLogByIDParams) (FindRequestLogByIDRow, error) {
-	row := q.queryRow(ctx, q.findRequestLogByIDStmt, findRequestLogByID,
+	row := q.db.QueryRowContext(ctx, findRequestLogByID,
 		arg.IncludeQueryJson,
 		arg.IncludeRequestBodyJson,
 		arg.IncludeResponseBodyJson,
@@ -479,7 +479,7 @@ type ListRequestLogsBackwardRow struct {
 }
 
 func (q *Queries) ListRequestLogsBackward(ctx context.Context, arg ListRequestLogsBackwardParams) ([]ListRequestLogsBackwardRow, error) {
-	rows, err := q.query(ctx, q.listRequestLogsBackwardStmt, listRequestLogsBackward,
+	rows, err := q.db.QueryContext(ctx, listRequestLogsBackward,
 		arg.IncludeQueryJson,
 		arg.IncludeRequestBodyJson,
 		arg.IncludeResponseBodyJson,
@@ -654,7 +654,7 @@ type ListRequestLogsBaseBackwardRow struct {
 }
 
 func (q *Queries) ListRequestLogsBaseBackward(ctx context.Context, arg ListRequestLogsBaseBackwardParams) ([]ListRequestLogsBaseBackwardRow, error) {
-	rows, err := q.query(ctx, q.listRequestLogsBaseBackwardStmt, listRequestLogsBaseBackward,
+	rows, err := q.db.QueryContext(ctx, listRequestLogsBaseBackward,
 		arg.IncludeQueryJson,
 		arg.IncludeRequestBodyJson,
 		arg.IncludeResponseBodyJson,
@@ -815,7 +815,7 @@ type ListRequestLogsBaseForwardRow struct {
 }
 
 func (q *Queries) ListRequestLogsBaseForward(ctx context.Context, arg ListRequestLogsBaseForwardParams) ([]ListRequestLogsBaseForwardRow, error) {
-	rows, err := q.query(ctx, q.listRequestLogsBaseForwardStmt, listRequestLogsBaseForward,
+	rows, err := q.db.QueryContext(ctx, listRequestLogsBaseForward,
 		arg.IncludeQueryJson,
 		arg.IncludeRequestBodyJson,
 		arg.IncludeResponseBodyJson,
@@ -1004,7 +1004,7 @@ type ListRequestLogsForwardRow struct {
 }
 
 func (q *Queries) ListRequestLogsForward(ctx context.Context, arg ListRequestLogsForwardParams) ([]ListRequestLogsForwardRow, error) {
-	rows, err := q.query(ctx, q.listRequestLogsForwardStmt, listRequestLogsForward,
+	rows, err := q.db.QueryContext(ctx, listRequestLogsForward,
 		arg.IncludeQueryJson,
 		arg.IncludeRequestBodyJson,
 		arg.IncludeResponseBodyJson,

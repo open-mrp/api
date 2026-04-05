@@ -28,7 +28,7 @@ type GetAccountStatusParams struct {
 }
 
 func (q *Queries) GetAccountStatus(ctx context.Context, arg GetAccountStatusParams) (AccountStatus, error) {
-	row := q.queryRow(ctx, q.getAccountStatusStmt, getAccountStatus, arg.ID, arg.Code)
+	row := q.db.QueryRowContext(ctx, getAccountStatus, arg.ID, arg.Code)
 	var i AccountStatus
 	err := row.Scan(
 		&i.ID,
@@ -68,7 +68,7 @@ type ListAccountStatusesBackwardParams struct {
 }
 
 func (q *Queries) ListAccountStatusesBackward(ctx context.Context, arg ListAccountStatusesBackwardParams) ([]AccountStatus, error) {
-	rows, err := q.query(ctx, q.listAccountStatusesBackwardStmt, listAccountStatusesBackward,
+	rows, err := q.db.QueryContext(ctx, listAccountStatusesBackward,
 		arg.SearchQuery,
 		arg.SearchQuery,
 		arg.CursorCreatedAt,
@@ -132,7 +132,7 @@ type ListAccountStatusesForwardParams struct {
 }
 
 func (q *Queries) ListAccountStatusesForward(ctx context.Context, arg ListAccountStatusesForwardParams) ([]AccountStatus, error) {
-	rows, err := q.query(ctx, q.listAccountStatusesForwardStmt, listAccountStatusesForward,
+	rows, err := q.db.QueryContext(ctx, listAccountStatusesForward,
 		arg.SearchQuery,
 		arg.SearchQuery,
 		arg.CursorCreatedAt,

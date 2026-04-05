@@ -36,7 +36,7 @@ type FetchPhysicalInventoryForItemParams struct {
 }
 
 func (q *Queries) FetchPhysicalInventoryForItem(ctx context.Context, arg FetchPhysicalInventoryForItemParams) (int32, error) {
-	row := q.queryRow(ctx, q.fetchPhysicalInventoryForItemStmt, fetchPhysicalInventoryForItem,
+	row := q.db.QueryRowContext(ctx, fetchPhysicalInventoryForItem,
 		arg.ItemID,
 		arg.OwnerAccountID,
 		arg.OwnerAccountID,
@@ -73,7 +73,7 @@ func (q *Queries) FindBatchProductionRunIDAncestry(ctx context.Context, batchIds
 	} else {
 		query = strings.Replace(query, "/*SLICE:batch_ids*/?", "NULL", 1)
 	}
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +115,7 @@ type GetBatchSecondsAndWasteRow struct {
 }
 
 func (q *Queries) GetBatchSecondsAndWaste(ctx context.Context, batchID string) (GetBatchSecondsAndWasteRow, error) {
-	row := q.queryRow(ctx, q.getBatchSecondsAndWasteStmt, getBatchSecondsAndWaste, batchID)
+	row := q.db.QueryRowContext(ctx, getBatchSecondsAndWaste, batchID)
 	var i GetBatchSecondsAndWasteRow
 	err := row.Scan(
 		&i.SecondsValue,
@@ -148,7 +148,7 @@ type GetItemUnitCostRow struct {
 }
 
 func (q *Queries) GetItemUnitCost(ctx context.Context, arg GetItemUnitCostParams) (GetItemUnitCostRow, error) {
-	row := q.queryRow(ctx, q.getItemUnitCostStmt, getItemUnitCost, arg.ItemID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getItemUnitCost, arg.ItemID, arg.AccountID)
 	var i GetItemUnitCostRow
 	err := row.Scan(
 		&i.ID,
@@ -183,7 +183,7 @@ type InsertInventoryChangeLogParams struct {
 }
 
 func (q *Queries) InsertInventoryChangeLog(ctx context.Context, arg InsertInventoryChangeLogParams) error {
-	_, err := q.exec(ctx, q.insertInventoryChangeLogStmt, insertInventoryChangeLog,
+	_, err := q.db.ExecContext(ctx, insertInventoryChangeLog,
 		arg.ID,
 		arg.ItemID,
 		arg.QuantityID,
@@ -228,7 +228,7 @@ type InsertInventoryIssueParams struct {
 }
 
 func (q *Queries) InsertInventoryIssue(ctx context.Context, arg InsertInventoryIssueParams) error {
-	_, err := q.exec(ctx, q.insertInventoryIssueStmt, insertInventoryIssue,
+	_, err := q.db.ExecContext(ctx, insertInventoryIssue,
 		arg.ID,
 		arg.AccountID,
 		arg.ItemID,
@@ -253,7 +253,7 @@ type InsertInventoryLogParams struct {
 }
 
 func (q *Queries) InsertInventoryLog(ctx context.Context, arg InsertInventoryLogParams) error {
-	_, err := q.exec(ctx, q.insertInventoryLogStmt, insertInventoryLog,
+	_, err := q.db.ExecContext(ctx, insertInventoryLog,
 		arg.ID,
 		arg.ItemID,
 		arg.QuantityID,
@@ -298,7 +298,7 @@ type InsertInventoryReceiptParams struct {
 }
 
 func (q *Queries) InsertInventoryReceipt(ctx context.Context, arg InsertInventoryReceiptParams) error {
-	_, err := q.exec(ctx, q.insertInventoryReceiptStmt, insertInventoryReceipt,
+	_, err := q.db.ExecContext(ctx, insertInventoryReceipt,
 		arg.ID,
 		arg.OwnerAccountID,
 		arg.HolderAccountID,
@@ -324,7 +324,7 @@ type InsertQuantityForInventoryParams struct {
 }
 
 func (q *Queries) InsertQuantityForInventory(ctx context.Context, arg InsertQuantityForInventoryParams) error {
-	_, err := q.exec(ctx, q.insertQuantityForInventoryStmt, insertQuantityForInventory, arg.ID, arg.Value, arg.UnitID)
+	_, err := q.db.ExecContext(ctx, insertQuantityForInventory, arg.ID, arg.Value, arg.UnitID)
 	return err
 }
 
@@ -341,7 +341,7 @@ type InsertRateForInventoryParams struct {
 }
 
 func (q *Queries) InsertRateForInventory(ctx context.Context, arg InsertRateForInventoryParams) error {
-	_, err := q.exec(ctx, q.insertRateForInventoryStmt, insertRateForInventory,
+	_, err := q.db.ExecContext(ctx, insertRateForInventory,
 		arg.ID,
 		arg.Value,
 		arg.NumeratorUnitID,

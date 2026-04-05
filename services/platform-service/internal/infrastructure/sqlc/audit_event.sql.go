@@ -69,7 +69,7 @@ type CreateAuditEventParams struct {
 }
 
 func (q *Queries) CreateAuditEvent(ctx context.Context, arg CreateAuditEventParams) error {
-	_, err := q.exec(ctx, q.createAuditEventStmt, createAuditEvent,
+	_, err := q.db.ExecContext(ctx, createAuditEvent,
 		arg.TypeID,
 		arg.ActorID,
 		arg.ActorType,
@@ -96,7 +96,7 @@ LIMIT ?
 `
 
 func (q *Queries) DeleteExpiredAuditEvents(ctx context.Context, limit int32) (sql.Result, error) {
-	return q.exec(ctx, q.deleteExpiredAuditEventsStmt, deleteExpiredAuditEvents, limit)
+	return q.db.ExecContext(ctx, deleteExpiredAuditEvents, limit)
 }
 
 const findAuditEventByID = `-- name: FindAuditEventByID :one
@@ -157,7 +157,7 @@ type FindAuditEventByIDRow struct {
 }
 
 func (q *Queries) FindAuditEventByID(ctx context.Context, arg FindAuditEventByIDParams) (FindAuditEventByIDRow, error) {
-	row := q.queryRow(ctx, q.findAuditEventByIDStmt, findAuditEventByID,
+	row := q.db.QueryRowContext(ctx, findAuditEventByID,
 		arg.IncludeChanges,
 		arg.IncludeMetadata,
 		arg.TypeID,
@@ -273,7 +273,7 @@ type ListAuditEventsBackwardRow struct {
 }
 
 func (q *Queries) ListAuditEventsBackward(ctx context.Context, arg ListAuditEventsBackwardParams) ([]ListAuditEventsBackwardRow, error) {
-	rows, err := q.query(ctx, q.listAuditEventsBackwardStmt, listAuditEventsBackward,
+	rows, err := q.db.QueryContext(ctx, listAuditEventsBackward,
 		arg.IncludeChanges,
 		arg.IncludeMetadata,
 		arg.TargetAccountID,
@@ -424,7 +424,7 @@ type ListAuditEventsForwardRow struct {
 }
 
 func (q *Queries) ListAuditEventsForward(ctx context.Context, arg ListAuditEventsForwardParams) ([]ListAuditEventsForwardRow, error) {
-	rows, err := q.query(ctx, q.listAuditEventsForwardStmt, listAuditEventsForward,
+	rows, err := q.db.QueryContext(ctx, listAuditEventsForward,
 		arg.IncludeChanges,
 		arg.IncludeMetadata,
 		arg.TargetAccountID,

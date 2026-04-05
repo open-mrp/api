@@ -29,7 +29,7 @@ type CreateShipmentLineParams struct {
 }
 
 func (q *Queries) CreateShipmentLine(ctx context.Context, arg CreateShipmentLineParams) error {
-	_, err := q.exec(ctx, q.createShipmentLineStmt, createShipmentLine,
+	_, err := q.db.ExecContext(ctx, createShipmentLine,
 		arg.ID,
 		arg.ShipmentID,
 		arg.SalesOrderLineID,
@@ -50,7 +50,7 @@ type CreateShipmentLineQuantityParams struct {
 }
 
 func (q *Queries) CreateShipmentLineQuantity(ctx context.Context, arg CreateShipmentLineQuantityParams) error {
-	_, err := q.exec(ctx, q.createShipmentLineQuantityStmt, createShipmentLineQuantity, arg.ID, arg.Value, arg.UnitID)
+	_, err := q.db.ExecContext(ctx, createShipmentLineQuantity, arg.ID, arg.Value, arg.UnitID)
 	return err
 }
 
@@ -59,7 +59,7 @@ DELETE FROM shipment_line WHERE id = ?
 `
 
 func (q *Queries) DeleteShipmentLine(ctx context.Context, id string) error {
-	_, err := q.exec(ctx, q.deleteShipmentLineStmt, deleteShipmentLine, id)
+	_, err := q.db.ExecContext(ctx, deleteShipmentLine, id)
 	return err
 }
 
@@ -71,7 +71,7 @@ DELETE FROM quantity WHERE id IN (
 `
 
 func (q *Queries) DeleteShipmentLineQuantitiesByShipment(ctx context.Context, shipmentID string) error {
-	_, err := q.exec(ctx, q.deleteShipmentLineQuantitiesByShipmentStmt, deleteShipmentLineQuantitiesByShipment, shipmentID)
+	_, err := q.db.ExecContext(ctx, deleteShipmentLineQuantitiesByShipment, shipmentID)
 	return err
 }
 
@@ -83,7 +83,7 @@ DELETE FROM quantity WHERE quantity.id = (
 `
 
 func (q *Queries) DeleteShipmentLineQuantity(ctx context.Context, shipmentLineID string) error {
-	_, err := q.exec(ctx, q.deleteShipmentLineQuantityStmt, deleteShipmentLineQuantity, shipmentLineID)
+	_, err := q.db.ExecContext(ctx, deleteShipmentLineQuantity, shipmentLineID)
 	return err
 }
 
@@ -92,7 +92,7 @@ DELETE FROM shipment_line WHERE shipment_id = ?
 `
 
 func (q *Queries) DeleteShipmentLinesByShipment(ctx context.Context, shipmentID string) error {
-	_, err := q.exec(ctx, q.deleteShipmentLinesByShipmentStmt, deleteShipmentLinesByShipment, shipmentID)
+	_, err := q.db.ExecContext(ctx, deleteShipmentLinesByShipment, shipmentID)
 	return err
 }
 
@@ -137,7 +137,7 @@ type GetShipmentLineRow struct {
 }
 
 func (q *Queries) GetShipmentLine(ctx context.Context, shipmentLineID string) (GetShipmentLineRow, error) {
-	row := q.queryRow(ctx, q.getShipmentLineStmt, getShipmentLine, shipmentLineID)
+	row := q.db.QueryRowContext(ctx, getShipmentLine, shipmentLineID)
 	var i GetShipmentLineRow
 	err := row.Scan(
 		&i.ID,
@@ -171,7 +171,7 @@ type IsShipmentLineInShipmentParams struct {
 }
 
 func (q *Queries) IsShipmentLineInShipment(ctx context.Context, arg IsShipmentLineInShipmentParams) (bool, error) {
-	row := q.queryRow(ctx, q.isShipmentLineInShipmentStmt, isShipmentLineInShipment, arg.ShipmentLineID, arg.ShipmentID)
+	row := q.db.QueryRowContext(ctx, isShipmentLineInShipment, arg.ShipmentLineID, arg.ShipmentID)
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err
@@ -238,7 +238,7 @@ type ListShipmentLinesBackwardRow struct {
 }
 
 func (q *Queries) ListShipmentLinesBackward(ctx context.Context, arg ListShipmentLinesBackwardParams) ([]ListShipmentLinesBackwardRow, error) {
-	rows, err := q.query(ctx, q.listShipmentLinesBackwardStmt, listShipmentLinesBackward,
+	rows, err := q.db.QueryContext(ctx, listShipmentLinesBackward,
 		arg.ShipmentID,
 		arg.Search,
 		arg.Search,
@@ -326,7 +326,7 @@ type ListShipmentLinesByShipmentRow struct {
 }
 
 func (q *Queries) ListShipmentLinesByShipment(ctx context.Context, shipmentID string) ([]ListShipmentLinesByShipmentRow, error) {
-	rows, err := q.query(ctx, q.listShipmentLinesByShipmentStmt, listShipmentLinesByShipment, shipmentID)
+	rows, err := q.db.QueryContext(ctx, listShipmentLinesByShipment, shipmentID)
 	if err != nil {
 		return nil, err
 	}
@@ -424,7 +424,7 @@ type ListShipmentLinesForwardRow struct {
 }
 
 func (q *Queries) ListShipmentLinesForward(ctx context.Context, arg ListShipmentLinesForwardParams) ([]ListShipmentLinesForwardRow, error) {
-	rows, err := q.query(ctx, q.listShipmentLinesForwardStmt, listShipmentLinesForward,
+	rows, err := q.db.QueryContext(ctx, listShipmentLinesForward,
 		arg.ShipmentID,
 		arg.Search,
 		arg.Search,
@@ -489,5 +489,5 @@ type UpdateShipmentLineParams struct {
 }
 
 func (q *Queries) UpdateShipmentLine(ctx context.Context, arg UpdateShipmentLineParams) (sql.Result, error) {
-	return q.exec(ctx, q.updateShipmentLineStmt, updateShipmentLine, arg.Value, arg.UnitID, arg.ShipmentLineID)
+	return q.db.ExecContext(ctx, updateShipmentLine, arg.Value, arg.UnitID, arg.ShipmentLineID)
 }

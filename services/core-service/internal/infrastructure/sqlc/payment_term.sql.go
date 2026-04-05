@@ -24,7 +24,7 @@ type CountPaymentTermsByNameParams struct {
 }
 
 func (q *Queries) CountPaymentTermsByName(ctx context.Context, arg CountPaymentTermsByNameParams) (int64, error) {
-	row := q.queryRow(ctx, q.countPaymentTermsByNameStmt, countPaymentTermsByName,
+	row := q.db.QueryRowContext(ctx, countPaymentTermsByName,
 		arg.Name,
 		arg.AccountID,
 		arg.ExcludeID,
@@ -47,7 +47,7 @@ type DeletePaymentTermParams struct {
 }
 
 func (q *Queries) DeletePaymentTerm(ctx context.Context, arg DeletePaymentTermParams) (sql.Result, error) {
-	return q.exec(ctx, q.deletePaymentTermStmt, deletePaymentTerm, arg.ID, arg.AccountID)
+	return q.db.ExecContext(ctx, deletePaymentTerm, arg.ID, arg.AccountID)
 }
 
 const getPaymentTerm = `-- name: GetPaymentTerm :one
@@ -69,7 +69,7 @@ type GetPaymentTermParams struct {
 }
 
 func (q *Queries) GetPaymentTerm(ctx context.Context, arg GetPaymentTermParams) (PaymentTerm, error) {
-	row := q.queryRow(ctx, q.getPaymentTermStmt, getPaymentTerm, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getPaymentTerm, arg.ID, arg.AccountID)
 	var i PaymentTerm
 	err := row.Scan(
 		&i.ID,
@@ -105,7 +105,7 @@ type InsertPaymentTermParams struct {
 }
 
 func (q *Queries) InsertPaymentTerm(ctx context.Context, arg InsertPaymentTermParams) error {
-	_, err := q.exec(ctx, q.insertPaymentTermStmt, insertPaymentTerm, arg.ID, arg.Name, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, insertPaymentTerm, arg.ID, arg.Name, arg.AccountID)
 	return err
 }
 
@@ -140,7 +140,7 @@ type ListPaymentTermsBackwardParams struct {
 }
 
 func (q *Queries) ListPaymentTermsBackward(ctx context.Context, arg ListPaymentTermsBackwardParams) ([]PaymentTerm, error) {
-	rows, err := q.query(ctx, q.listPaymentTermsBackwardStmt, listPaymentTermsBackward,
+	rows, err := q.db.QueryContext(ctx, listPaymentTermsBackward,
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
@@ -209,7 +209,7 @@ type ListPaymentTermsForwardParams struct {
 }
 
 func (q *Queries) ListPaymentTermsForward(ctx context.Context, arg ListPaymentTermsForwardParams) ([]PaymentTerm, error) {
-	rows, err := q.query(ctx, q.listPaymentTermsForwardStmt, listPaymentTermsForward,
+	rows, err := q.db.QueryContext(ctx, listPaymentTermsForward,
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
@@ -262,5 +262,5 @@ type UpdatePaymentTermParams struct {
 }
 
 func (q *Queries) UpdatePaymentTerm(ctx context.Context, arg UpdatePaymentTermParams) (sql.Result, error) {
-	return q.exec(ctx, q.updatePaymentTermStmt, updatePaymentTerm, arg.Name, arg.ID, arg.AccountID)
+	return q.db.ExecContext(ctx, updatePaymentTerm, arg.Name, arg.ID, arg.AccountID)
 }

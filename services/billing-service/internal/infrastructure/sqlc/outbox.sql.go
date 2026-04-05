@@ -34,7 +34,7 @@ type AcquireOutboxMessagesParams struct {
 }
 
 func (q *Queries) AcquireOutboxMessages(ctx context.Context, arg AcquireOutboxMessagesParams) error {
-	_, err := q.exec(ctx, q.acquireOutboxMessagesStmt, acquireOutboxMessages, arg.LockOwner, arg.DATEADD, arg.Limit)
+	_, err := q.db.ExecContext(ctx, acquireOutboxMessages, arg.LockOwner, arg.DATEADD, arg.Limit)
 	return err
 }
 
@@ -46,7 +46,7 @@ LIMIT ?
 `
 
 func (q *Queries) CleanupExpiredOutboxLocks(ctx context.Context, limit int32) (sql.Result, error) {
-	return q.exec(ctx, q.cleanupExpiredOutboxLocksStmt, cleanupExpiredOutboxLocks, limit)
+	return q.db.ExecContext(ctx, cleanupExpiredOutboxLocks, limit)
 }
 
 const createOutboxMessage = `-- name: CreateOutboxMessage :execlastid
@@ -70,7 +70,7 @@ type CreateOutboxMessageParams struct {
 }
 
 func (q *Queries) CreateOutboxMessage(ctx context.Context, arg CreateOutboxMessageParams) (int64, error) {
-	result, err := q.exec(ctx, q.createOutboxMessageStmt, createOutboxMessage,
+	result, err := q.db.ExecContext(ctx, createOutboxMessage,
 		arg.MessageID,
 		arg.ServiceName,
 		arg.MessageType,
@@ -95,7 +95,7 @@ ORDER BY next_run_at ASC
 `
 
 func (q *Queries) GetLockedOutboxMessages(ctx context.Context, lockOwner sql.NullString) ([]MessageOutbox, error) {
-	rows, err := q.query(ctx, q.getLockedOutboxMessagesStmt, getLockedOutboxMessages, lockOwner)
+	rows, err := q.db.QueryContext(ctx, getLockedOutboxMessages, lockOwner)
 	if err != nil {
 		return nil, err
 	}
@@ -159,7 +159,7 @@ type MarkOutboxMessageFailedParams struct {
 }
 
 func (q *Queries) MarkOutboxMessageFailed(ctx context.Context, arg MarkOutboxMessageFailedParams) error {
-	_, err := q.exec(ctx, q.markOutboxMessageFailedStmt, markOutboxMessageFailed, arg.LastError, arg.DATEADD, arg.ID)
+	_, err := q.db.ExecContext(ctx, markOutboxMessageFailed, arg.LastError, arg.DATEADD, arg.ID)
 	return err
 }
 
@@ -172,7 +172,7 @@ WHERE id = ?
 `
 
 func (q *Queries) MarkOutboxMessagePublished(ctx context.Context, id int64) error {
-	_, err := q.exec(ctx, q.markOutboxMessagePublishedStmt, markOutboxMessagePublished, id)
+	_, err := q.db.ExecContext(ctx, markOutboxMessagePublished, id)
 	return err
 }
 
@@ -188,5 +188,5 @@ type PurgePublishedOutboxMessagesParams struct {
 }
 
 func (q *Queries) PurgePublishedOutboxMessages(ctx context.Context, arg PurgePublishedOutboxMessagesParams) (sql.Result, error) {
-	return q.exec(ctx, q.purgePublishedOutboxMessagesStmt, purgePublishedOutboxMessages, arg.DATESUB, arg.Limit)
+	return q.db.ExecContext(ctx, purgePublishedOutboxMessages, arg.DATESUB, arg.Limit)
 }

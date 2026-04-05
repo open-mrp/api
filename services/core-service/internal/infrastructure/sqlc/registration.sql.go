@@ -27,7 +27,7 @@ type CreateAccountAddressParams struct {
 }
 
 func (q *Queries) CreateAccountAddress(ctx context.Context, arg CreateAccountAddressParams) error {
-	_, err := q.exec(ctx, q.createAccountAddressStmt, createAccountAddress, arg.ID, arg.AccountID, arg.AddressID)
+	_, err := q.db.ExecContext(ctx, createAccountAddress, arg.ID, arg.AccountID, arg.AddressID)
 	return err
 }
 
@@ -46,7 +46,7 @@ type CreateAccountBrandingParams struct {
 }
 
 func (q *Queries) CreateAccountBranding(ctx context.Context, arg CreateAccountBrandingParams) error {
-	_, err := q.exec(ctx, q.createAccountBrandingStmt, createAccountBranding, arg.ID, arg.OwnerAccountID)
+	_, err := q.db.ExecContext(ctx, createAccountBranding, arg.ID, arg.OwnerAccountID)
 	return err
 }
 
@@ -67,7 +67,7 @@ type CreateAccountPortalParams struct {
 }
 
 func (q *Queries) CreateAccountPortal(ctx context.Context, arg CreateAccountPortalParams) error {
-	_, err := q.exec(ctx, q.createAccountPortalStmt, createAccountPortal, arg.ID, arg.OwnerAccountID, arg.Slug)
+	_, err := q.db.ExecContext(ctx, createAccountPortal, arg.ID, arg.OwnerAccountID, arg.Slug)
 	return err
 }
 
@@ -88,7 +88,7 @@ type CreateAddressParams struct {
 }
 
 func (q *Queries) CreateAddress(ctx context.Context, arg CreateAddressParams) error {
-	_, err := q.exec(ctx, q.createAddressStmt, createAddress, arg.ID, arg.Name, arg.GeolocationID)
+	_, err := q.db.ExecContext(ctx, createAddress, arg.ID, arg.Name, arg.GeolocationID)
 	return err
 }
 
@@ -117,7 +117,7 @@ type CreateGeolocationParams struct {
 }
 
 func (q *Queries) CreateGeolocation(ctx context.Context, arg CreateGeolocationParams) error {
-	_, err := q.exec(ctx, q.createGeolocationStmt, createGeolocation,
+	_, err := q.db.ExecContext(ctx, createGeolocation,
 		arg.ID,
 		arg.StreetLine1,
 		arg.StreetLine2,
@@ -148,7 +148,7 @@ type CreateRoleParams struct {
 }
 
 func (q *Queries) CreateRole(ctx context.Context, arg CreateRoleParams) error {
-	_, err := q.exec(ctx, q.createRoleStmt, createRole,
+	_, err := q.db.ExecContext(ctx, createRole,
 		arg.ID,
 		arg.Name,
 		arg.RoleTypeCode,
@@ -182,7 +182,7 @@ type CreateRolePermissionParams struct {
 }
 
 func (q *Queries) CreateRolePermission(ctx context.Context, arg CreateRolePermissionParams) error {
-	_, err := q.exec(ctx, q.createRolePermissionStmt, createRolePermission,
+	_, err := q.db.ExecContext(ctx, createRolePermission,
 		arg.ID,
 		arg.RoleID,
 		arg.PermissionCode,
@@ -199,7 +199,7 @@ SELECT code FROM permission
 `
 
 func (q *Queries) GetAllPermissions(ctx context.Context) ([]string, error) {
-	rows, err := q.query(ctx, q.getAllPermissionsStmt, getAllPermissions)
+	rows, err := q.db.QueryContext(ctx, getAllPermissions)
 	if err != nil {
 		return nil, err
 	}
@@ -231,7 +231,7 @@ type SetAccountDefaultBillingAddressParams struct {
 }
 
 func (q *Queries) SetAccountDefaultBillingAddress(ctx context.Context, arg SetAccountDefaultBillingAddressParams) error {
-	_, err := q.exec(ctx, q.setAccountDefaultBillingAddressStmt, setAccountDefaultBillingAddress, arg.DefaultBillingAddressID, arg.ID)
+	_, err := q.db.ExecContext(ctx, setAccountDefaultBillingAddress, arg.DefaultBillingAddressID, arg.ID)
 	return err
 }
 
@@ -245,6 +245,6 @@ type SetAccountDefaultShippingAddressParams struct {
 }
 
 func (q *Queries) SetAccountDefaultShippingAddress(ctx context.Context, arg SetAccountDefaultShippingAddressParams) error {
-	_, err := q.exec(ctx, q.setAccountDefaultShippingAddressStmt, setAccountDefaultShippingAddress, arg.DefaultShippingAddressID, arg.ID)
+	_, err := q.db.ExecContext(ctx, setAccountDefaultShippingAddress, arg.DefaultShippingAddressID, arg.ID)
 	return err
 }

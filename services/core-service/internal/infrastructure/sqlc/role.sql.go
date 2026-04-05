@@ -22,7 +22,7 @@ type DeleteRoleByIDParams struct {
 }
 
 func (q *Queries) DeleteRoleByID(ctx context.Context, arg DeleteRoleByIDParams) error {
-	_, err := q.exec(ctx, q.deleteRoleByIDStmt, deleteRoleByID, arg.ID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, deleteRoleByID, arg.ID, arg.AccountID)
 	return err
 }
 
@@ -41,7 +41,7 @@ type ExistsRoleByNameParams struct {
 }
 
 func (q *Queries) ExistsRoleByName(ctx context.Context, arg ExistsRoleByNameParams) (bool, error) {
-	row := q.queryRow(ctx, q.existsRoleByNameStmt, existsRoleByName,
+	row := q.db.QueryRowContext(ctx, existsRoleByName,
 		arg.Name,
 		arg.AccountID,
 		arg.ExcludeID,
@@ -71,7 +71,7 @@ type FindRoleByTypeCodeRow struct {
 }
 
 func (q *Queries) FindRoleByTypeCode(ctx context.Context, arg FindRoleByTypeCodeParams) (FindRoleByTypeCodeRow, error) {
-	row := q.queryRow(ctx, q.findRoleByTypeCodeStmt, findRoleByTypeCode, arg.RoleTypeCode, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, findRoleByTypeCode, arg.RoleTypeCode, arg.AccountID)
 	var i FindRoleByTypeCodeRow
 	err := row.Scan(&i.ID, &i.Name, &i.RoleTypeCode)
 	return i, err
@@ -88,7 +88,7 @@ type GetRoleByIDRow struct {
 }
 
 func (q *Queries) GetRoleByID(ctx context.Context, id string) (GetRoleByIDRow, error) {
-	row := q.queryRow(ctx, q.getRoleByIDStmt, getRoleByID, id)
+	row := q.db.QueryRowContext(ctx, getRoleByID, id)
 	var i GetRoleByIDRow
 	err := row.Scan(&i.ID, &i.Name, &i.RoleTypeCode)
 	return i, err
@@ -106,7 +106,7 @@ type GetRoleByIDAndAccountParams struct {
 }
 
 func (q *Queries) GetRoleByIDAndAccount(ctx context.Context, arg GetRoleByIDAndAccountParams) (Role, error) {
-	row := q.queryRow(ctx, q.getRoleByIDAndAccountStmt, getRoleByIDAndAccount, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getRoleByIDAndAccount, arg.ID, arg.AccountID)
 	var i Role
 	err := row.Scan(
 		&i.ID,
@@ -132,7 +132,7 @@ type InsertRoleParams struct {
 }
 
 func (q *Queries) InsertRole(ctx context.Context, arg InsertRoleParams) error {
-	_, err := q.exec(ctx, q.insertRoleStmt, insertRole,
+	_, err := q.db.ExecContext(ctx, insertRole,
 		arg.ID,
 		arg.Name,
 		arg.RoleTypeCode,
@@ -197,7 +197,7 @@ func (q *Queries) ListRolesBackward(ctx context.Context, arg ListRolesBackwardPa
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorID)
 	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -284,7 +284,7 @@ func (q *Queries) ListRolesForward(ctx context.Context, arg ListRolesForwardPara
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorID)
 	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -326,6 +326,6 @@ type UpdateRoleNameParams struct {
 }
 
 func (q *Queries) UpdateRoleName(ctx context.Context, arg UpdateRoleNameParams) error {
-	_, err := q.exec(ctx, q.updateRoleNameStmt, updateRoleName, arg.Name, arg.ID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, updateRoleName, arg.Name, arg.ID, arg.AccountID)
 	return err
 }

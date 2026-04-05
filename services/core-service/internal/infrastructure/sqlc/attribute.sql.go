@@ -24,7 +24,7 @@ type CountAttributesByPropertyParams struct {
 }
 
 func (q *Queries) CountAttributesByProperty(ctx context.Context, arg CountAttributesByPropertyParams) (int64, error) {
-	row := q.queryRow(ctx, q.countAttributesByPropertyStmt, countAttributesByProperty, arg.PropertyID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, countAttributesByProperty, arg.PropertyID, arg.AccountID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -43,7 +43,7 @@ type CountAttributesByTextInAccountParams struct {
 }
 
 func (q *Queries) CountAttributesByTextInAccount(ctx context.Context, arg CountAttributesByTextInAccountParams) (int64, error) {
-	row := q.queryRow(ctx, q.countAttributesByTextInAccountStmt, countAttributesByTextInAccount,
+	row := q.db.QueryRowContext(ctx, countAttributesByTextInAccount,
 		arg.Text,
 		arg.AccountID,
 		arg.ExcludeID,
@@ -68,7 +68,7 @@ type DeleteAttributeParams struct {
 }
 
 func (q *Queries) DeleteAttribute(ctx context.Context, arg DeleteAttributeParams) (sql.Result, error) {
-	return q.exec(ctx, q.deleteAttributeStmt, deleteAttribute, arg.ID, arg.PropertyID, arg.AccountID)
+	return q.db.ExecContext(ctx, deleteAttribute, arg.ID, arg.PropertyID, arg.AccountID)
 }
 
 const getAttribute = `-- name: GetAttribute :one
@@ -107,7 +107,7 @@ type GetAttributeRow struct {
 }
 
 func (q *Queries) GetAttribute(ctx context.Context, arg GetAttributeParams) (GetAttributeRow, error) {
-	row := q.queryRow(ctx, q.getAttributeStmt, getAttribute, arg.ID, arg.PropertyID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getAttribute, arg.ID, arg.PropertyID, arg.AccountID)
 	var i GetAttributeRow
 	err := row.Scan(
 		&i.ID,
@@ -155,7 +155,7 @@ type InsertAttributeParams struct {
 }
 
 func (q *Queries) InsertAttribute(ctx context.Context, arg InsertAttributeParams) error {
-	_, err := q.exec(ctx, q.insertAttributeStmt, insertAttribute,
+	_, err := q.db.ExecContext(ctx, insertAttribute,
 		arg.ID,
 		arg.Text,
 		arg.PropertyID,
@@ -215,7 +215,7 @@ type ListAttributesBackwardRow struct {
 }
 
 func (q *Queries) ListAttributesBackward(ctx context.Context, arg ListAttributesBackwardParams) ([]ListAttributesBackwardRow, error) {
-	rows, err := q.query(ctx, q.listAttributesBackwardStmt, listAttributesBackward,
+	rows, err := q.db.QueryContext(ctx, listAttributesBackward,
 		arg.PropertyID,
 		arg.AccountID,
 		arg.SearchQuery,
@@ -303,7 +303,7 @@ func (q *Queries) ListAttributesByPropertyIDs(ctx context.Context, arg ListAttri
 		query = strings.Replace(query, "/*SLICE:property_ids*/?", "NULL", 1)
 	}
 	queryParams = append(queryParams, arg.AccountID)
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -384,7 +384,7 @@ type ListAttributesForwardRow struct {
 }
 
 func (q *Queries) ListAttributesForward(ctx context.Context, arg ListAttributesForwardParams) ([]ListAttributesForwardRow, error) {
-	rows, err := q.query(ctx, q.listAttributesForwardStmt, listAttributesForward,
+	rows, err := q.db.QueryContext(ctx, listAttributesForward,
 		arg.PropertyID,
 		arg.AccountID,
 		arg.SearchQuery,
@@ -442,7 +442,7 @@ type ShiftAttributeOrdersDownParams struct {
 }
 
 func (q *Queries) ShiftAttributeOrdersDown(ctx context.Context, arg ShiftAttributeOrdersDownParams) error {
-	_, err := q.exec(ctx, q.shiftAttributeOrdersDownStmt, shiftAttributeOrdersDown, arg.PropertyID, arg.AccountID, arg.AfterOrder)
+	_, err := q.db.ExecContext(ctx, shiftAttributeOrdersDown, arg.PropertyID, arg.AccountID, arg.AfterOrder)
 	return err
 }
 
@@ -464,7 +464,7 @@ type ShiftAttributeOrdersDownBoundedParams struct {
 }
 
 func (q *Queries) ShiftAttributeOrdersDownBounded(ctx context.Context, arg ShiftAttributeOrdersDownBoundedParams) error {
-	_, err := q.exec(ctx, q.shiftAttributeOrdersDownBoundedStmt, shiftAttributeOrdersDownBounded,
+	_, err := q.db.ExecContext(ctx, shiftAttributeOrdersDownBounded,
 		arg.PropertyID,
 		arg.AccountID,
 		arg.AfterOrder,
@@ -489,7 +489,7 @@ type ShiftAttributeOrdersUpParams struct {
 }
 
 func (q *Queries) ShiftAttributeOrdersUp(ctx context.Context, arg ShiftAttributeOrdersUpParams) error {
-	_, err := q.exec(ctx, q.shiftAttributeOrdersUpStmt, shiftAttributeOrdersUp, arg.PropertyID, arg.AccountID, arg.FromOrder)
+	_, err := q.db.ExecContext(ctx, shiftAttributeOrdersUp, arg.PropertyID, arg.AccountID, arg.FromOrder)
 	return err
 }
 
@@ -511,7 +511,7 @@ type ShiftAttributeOrdersUpBoundedParams struct {
 }
 
 func (q *Queries) ShiftAttributeOrdersUpBounded(ctx context.Context, arg ShiftAttributeOrdersUpBoundedParams) error {
-	_, err := q.exec(ctx, q.shiftAttributeOrdersUpBoundedStmt, shiftAttributeOrdersUpBounded,
+	_, err := q.db.ExecContext(ctx, shiftAttributeOrdersUpBounded,
 		arg.PropertyID,
 		arg.AccountID,
 		arg.FromOrder,
@@ -541,7 +541,7 @@ type UpdateAttributeParams struct {
 }
 
 func (q *Queries) UpdateAttribute(ctx context.Context, arg UpdateAttributeParams) (sql.Result, error) {
-	return q.exec(ctx, q.updateAttributeStmt, updateAttribute,
+	return q.db.ExecContext(ctx, updateAttribute,
 		arg.Text,
 		arg.ColorCode,
 		arg.Order,

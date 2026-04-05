@@ -50,7 +50,7 @@ type GetEmailLogRow struct {
 }
 
 func (q *Queries) GetEmailLog(ctx context.Context, arg GetEmailLogParams) (GetEmailLogRow, error) {
-	row := q.queryRow(ctx, q.getEmailLogStmt, getEmailLog, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getEmailLog, arg.ID, arg.AccountID)
 	var i GetEmailLogRow
 	err := row.Scan(
 		&i.ID,
@@ -76,7 +76,7 @@ ORDER BY er.created_at ASC
 `
 
 func (q *Queries) GetEmailRecipientsByEmailLogID(ctx context.Context, emailLogID sql.NullString) ([]string, error) {
-	rows, err := q.query(ctx, q.getEmailRecipientsByEmailLogIDStmt, getEmailRecipientsByEmailLogID, emailLogID)
+	rows, err := q.db.QueryContext(ctx, getEmailRecipientsByEmailLogID, emailLogID)
 	if err != nil {
 		return nil, err
 	}
@@ -154,7 +154,7 @@ type ListEmailLogsBackwardRow struct {
 }
 
 func (q *Queries) ListEmailLogsBackward(ctx context.Context, arg ListEmailLogsBackwardParams) ([]ListEmailLogsBackwardRow, error) {
-	rows, err := q.query(ctx, q.listEmailLogsBackwardStmt, listEmailLogsBackward,
+	rows, err := q.db.QueryContext(ctx, listEmailLogsBackward,
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
@@ -254,7 +254,7 @@ type ListEmailLogsForwardRow struct {
 }
 
 func (q *Queries) ListEmailLogsForward(ctx context.Context, arg ListEmailLogsForwardParams) ([]ListEmailLogsForwardRow, error) {
-	rows, err := q.query(ctx, q.listEmailLogsForwardStmt, listEmailLogsForward,
+	rows, err := q.db.QueryContext(ctx, listEmailLogsForward,
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,

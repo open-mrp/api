@@ -23,7 +23,7 @@ type AddItemAttributeParams struct {
 }
 
 func (q *Queries) AddItemAttribute(ctx context.Context, arg AddItemAttributeParams) error {
-	_, err := q.exec(ctx, q.addItemAttributeStmt, addItemAttribute, arg.AttributeID, arg.ItemID)
+	_, err := q.db.ExecContext(ctx, addItemAttribute, arg.AttributeID, arg.ItemID)
 	return err
 }
 
@@ -43,7 +43,7 @@ type ChangeItemCategoryParams struct {
 }
 
 func (q *Queries) ChangeItemCategory(ctx context.Context, arg ChangeItemCategoryParams) error {
-	_, err := q.exec(ctx, q.changeItemCategoryStmt, changeItemCategory, arg.CategoryID, arg.ID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, changeItemCategory, arg.CategoryID, arg.ID, arg.AccountID)
 	return err
 }
 
@@ -64,7 +64,7 @@ type CheckItemSKUExistsParams struct {
 }
 
 func (q *Queries) CheckItemSKUExists(ctx context.Context, arg CheckItemSKUExistsParams) (bool, error) {
-	row := q.queryRow(ctx, q.checkItemSKUExistsStmt, checkItemSKUExists, arg.Sku, arg.AccountID, arg.ExcludeID)
+	row := q.db.QueryRowContext(ctx, checkItemSKUExists, arg.Sku, arg.AccountID, arg.ExcludeID)
 	var sku_exists bool
 	err := row.Scan(&sku_exists)
 	return sku_exists, err
@@ -85,7 +85,7 @@ type ClearItemDirtyFlagParams struct {
 
 // Clears the dirty flag on an item after cost recalculation.
 func (q *Queries) ClearItemDirtyFlag(ctx context.Context, arg ClearItemDirtyFlagParams) error {
-	_, err := q.exec(ctx, q.clearItemDirtyFlagStmt, clearItemDirtyFlag, arg.ItemID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, clearItemDirtyFlag, arg.ItemID, arg.AccountID)
 	return err
 }
 
@@ -147,7 +147,7 @@ type ExportItemsWithInventoryRow struct {
 }
 
 func (q *Queries) ExportItemsWithInventory(ctx context.Context, arg ExportItemsWithInventoryParams) ([]ExportItemsWithInventoryRow, error) {
-	rows, err := q.query(ctx, q.exportItemsWithInventoryStmt, exportItemsWithInventory, arg.AccountID, arg.AccountID, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, exportItemsWithInventory, arg.AccountID, arg.AccountID, arg.AccountID)
 	if err != nil {
 		return nil, err
 	}
@@ -218,7 +218,7 @@ func (q *Queries) FetchItemsBySKU(ctx context.Context, arg FetchItemsBySKUParams
 	} else {
 		query = strings.Replace(query, "/*SLICE:skus*/?", "NULL", 1)
 	}
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -250,7 +250,7 @@ WHERE ic.id = ?
 `
 
 func (q *Queries) GetCategoryBaseUnitID(ctx context.Context, categoryID string) (string, error) {
-	row := q.queryRow(ctx, q.getCategoryBaseUnitIDStmt, getCategoryBaseUnitID, categoryID)
+	row := q.db.QueryRowContext(ctx, getCategoryBaseUnitID, categoryID)
 	var base_unit_id string
 	err := row.Scan(&base_unit_id)
 	return base_unit_id, err
@@ -279,7 +279,7 @@ type GetCostFlowStepConsumptionsRow struct {
 
 // Fetches consumption data for a production step with item type and unit cost for cost calculation.
 func (q *Queries) GetCostFlowStepConsumptions(ctx context.Context, productionStepID sql.NullString) ([]GetCostFlowStepConsumptionsRow, error) {
-	rows, err := q.query(ctx, q.getCostFlowStepConsumptionsStmt, getCostFlowStepConsumptions, productionStepID)
+	rows, err := q.db.QueryContext(ctx, getCostFlowStepConsumptions, productionStepID)
 	if err != nil {
 		return nil, err
 	}
@@ -397,7 +397,7 @@ type GetItemRow struct {
 }
 
 func (q *Queries) GetItem(ctx context.Context, arg GetItemParams) (GetItemRow, error) {
-	row := q.queryRow(ctx, q.getItemStmt, getItem, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getItem, arg.ID, arg.AccountID)
 	var i GetItemRow
 	err := row.Scan(
 		&i.ID,
@@ -458,7 +458,7 @@ type GetItemAttributesRow struct {
 }
 
 func (q *Queries) GetItemAttributes(ctx context.Context, itemID string) ([]GetItemAttributesRow, error) {
-	rows, err := q.query(ctx, q.getItemAttributesStmt, getItemAttributes, itemID)
+	rows, err := q.db.QueryContext(ctx, getItemAttributes, itemID)
 	if err != nil {
 		return nil, err
 	}
@@ -548,7 +548,7 @@ type GetItemInventoryRow struct {
 }
 
 func (q *Queries) GetItemInventory(ctx context.Context, arg GetItemInventoryParams) (GetItemInventoryRow, error) {
-	row := q.queryRow(ctx, q.getItemInventoryStmt, getItemInventory,
+	row := q.db.QueryRowContext(ctx, getItemInventory,
 		arg.ItemID,
 		arg.AccountID,
 		arg.AccountID,
@@ -591,7 +591,7 @@ type GetItemTrendsRow struct {
 }
 
 func (q *Queries) GetItemTrends(ctx context.Context, arg GetItemTrendsParams) ([]GetItemTrendsRow, error) {
-	rows, err := q.query(ctx, q.getItemTrendsStmt, getItemTrends, arg.ItemID, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, getItemTrends, arg.ItemID, arg.AccountID)
 	if err != nil {
 		return nil, err
 	}
@@ -838,7 +838,7 @@ func (q *Queries) ListItemsBackward(ctx context.Context, arg ListItemsBackwardPa
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorID)
 	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -1123,7 +1123,7 @@ func (q *Queries) ListItemsForward(ctx context.Context, arg ListItemsForwardPara
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorID)
 	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -1197,7 +1197,7 @@ type RemoveItemAttributeParams struct {
 }
 
 func (q *Queries) RemoveItemAttribute(ctx context.Context, arg RemoveItemAttributeParams) (sql.Result, error) {
-	return q.exec(ctx, q.removeItemAttributeStmt, removeItemAttribute, arg.AttributeID, arg.ItemID, arg.AccountID)
+	return q.db.ExecContext(ctx, removeItemAttribute, arg.AttributeID, arg.ItemID, arg.AccountID)
 }
 
 const setItemDescription = `-- name: SetItemDescription :exec
@@ -1216,7 +1216,7 @@ type SetItemDescriptionParams struct {
 }
 
 func (q *Queries) SetItemDescription(ctx context.Context, arg SetItemDescriptionParams) error {
-	_, err := q.exec(ctx, q.setItemDescriptionStmt, setItemDescription, arg.Description, arg.ID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, setItemDescription, arg.Description, arg.ID, arg.AccountID)
 	return err
 }
 
@@ -1236,7 +1236,7 @@ type SetItemNotesParams struct {
 }
 
 func (q *Queries) SetItemNotes(ctx context.Context, arg SetItemNotesParams) error {
-	_, err := q.exec(ctx, q.setItemNotesStmt, setItemNotes, arg.Notes, arg.ID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, setItemNotes, arg.Notes, arg.ID, arg.AccountID)
 	return err
 }
 
@@ -1260,7 +1260,7 @@ type UpdateItemParams struct {
 }
 
 func (q *Queries) UpdateItem(ctx context.Context, arg UpdateItemParams) error {
-	_, err := q.exec(ctx, q.updateItemStmt, updateItem,
+	_, err := q.db.ExecContext(ctx, updateItem,
 		arg.Sku,
 		arg.Description,
 		arg.Notes,
@@ -1287,7 +1287,7 @@ type UpdateItemConsumptionQuantityUnitsParams struct {
 }
 
 func (q *Queries) UpdateItemConsumptionQuantityUnits(ctx context.Context, arg UpdateItemConsumptionQuantityUnitsParams) error {
-	_, err := q.exec(ctx, q.updateItemConsumptionQuantityUnitsStmt, updateItemConsumptionQuantityUnits, arg.NewUnitID, arg.ItemID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, updateItemConsumptionQuantityUnits, arg.NewUnitID, arg.ItemID, arg.AccountID)
 	return err
 }
 
@@ -1308,7 +1308,7 @@ type UpdateItemProductionQuantityUnitsParams struct {
 }
 
 func (q *Queries) UpdateItemProductionQuantityUnits(ctx context.Context, arg UpdateItemProductionQuantityUnitsParams) error {
-	_, err := q.exec(ctx, q.updateItemProductionQuantityUnitsStmt, updateItemProductionQuantityUnits, arg.NewUnitID, arg.ItemID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, updateItemProductionQuantityUnits, arg.NewUnitID, arg.ItemID, arg.AccountID)
 	return err
 }
 
@@ -1328,7 +1328,7 @@ type UpdateItemRateBurnRateParams struct {
 }
 
 func (q *Queries) UpdateItemRateBurnRate(ctx context.Context, arg UpdateItemRateBurnRateParams) error {
-	_, err := q.exec(ctx, q.updateItemRateBurnRateStmt, updateItemRateBurnRate, arg.NewUnitID, arg.ItemID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, updateItemRateBurnRate, arg.NewUnitID, arg.ItemID, arg.AccountID)
 	return err
 }
 
@@ -1348,7 +1348,7 @@ type UpdateItemRateUnitCostParams struct {
 }
 
 func (q *Queries) UpdateItemRateUnitCost(ctx context.Context, arg UpdateItemRateUnitCostParams) error {
-	_, err := q.exec(ctx, q.updateItemRateUnitCostStmt, updateItemRateUnitCost, arg.NewUnitID, arg.ItemID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, updateItemRateUnitCost, arg.NewUnitID, arg.ItemID, arg.AccountID)
 	return err
 }
 
@@ -1368,7 +1368,7 @@ type UpdateItemRateUnitValueParams struct {
 }
 
 func (q *Queries) UpdateItemRateUnitValue(ctx context.Context, arg UpdateItemRateUnitValueParams) error {
-	_, err := q.exec(ctx, q.updateItemRateUnitValueStmt, updateItemRateUnitValue, arg.NewUnitID, arg.ItemID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, updateItemRateUnitValue, arg.NewUnitID, arg.ItemID, arg.AccountID)
 	return err
 }
 
@@ -1393,7 +1393,7 @@ type UpdateItemUnitCostRateParams struct {
 
 // Updates an item's unit cost rate value and denominator unit.
 func (q *Queries) UpdateItemUnitCostRate(ctx context.Context, arg UpdateItemUnitCostRateParams) error {
-	_, err := q.exec(ctx, q.updateItemUnitCostRateStmt, updateItemUnitCostRate,
+	_, err := q.db.ExecContext(ctx, updateItemUnitCostRate,
 		arg.Value,
 		arg.DenominatorUnitID,
 		arg.ItemID,
@@ -1420,6 +1420,6 @@ type UpdateMaterialOrderPointUnitParams struct {
 }
 
 func (q *Queries) UpdateMaterialOrderPointUnit(ctx context.Context, arg UpdateMaterialOrderPointUnitParams) error {
-	_, err := q.exec(ctx, q.updateMaterialOrderPointUnitStmt, updateMaterialOrderPointUnit, arg.NewUnitID, arg.ItemID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, updateMaterialOrderPointUnit, arg.NewUnitID, arg.ItemID, arg.AccountID)
 	return err
 }

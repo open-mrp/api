@@ -7,7 +7,6 @@ package sqlc
 import (
 	"context"
 	"database/sql"
-	"fmt"
 )
 
 type DBTX interface {
@@ -21,128 +20,12 @@ func New(db DBTX) *Queries {
 	return &Queries{db: db}
 }
 
-func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
-	q := Queries{db: db}
-	var err error
-	if q.acquireOutboxMessagesStmt, err = db.PrepareContext(ctx, acquireOutboxMessages); err != nil {
-		return nil, fmt.Errorf("error preparing query AcquireOutboxMessages: %w", err)
-	}
-	if q.cleanupExpiredOutboxLocksStmt, err = db.PrepareContext(ctx, cleanupExpiredOutboxLocks); err != nil {
-		return nil, fmt.Errorf("error preparing query CleanupExpiredOutboxLocks: %w", err)
-	}
-	if q.createOutboxMessageStmt, err = db.PrepareContext(ctx, createOutboxMessage); err != nil {
-		return nil, fmt.Errorf("error preparing query CreateOutboxMessage: %w", err)
-	}
-	if q.getLockedOutboxMessagesStmt, err = db.PrepareContext(ctx, getLockedOutboxMessages); err != nil {
-		return nil, fmt.Errorf("error preparing query GetLockedOutboxMessages: %w", err)
-	}
-	if q.markOutboxMessageFailedStmt, err = db.PrepareContext(ctx, markOutboxMessageFailed); err != nil {
-		return nil, fmt.Errorf("error preparing query MarkOutboxMessageFailed: %w", err)
-	}
-	if q.markOutboxMessagePublishedStmt, err = db.PrepareContext(ctx, markOutboxMessagePublished); err != nil {
-		return nil, fmt.Errorf("error preparing query MarkOutboxMessagePublished: %w", err)
-	}
-	if q.purgePublishedOutboxMessagesStmt, err = db.PrepareContext(ctx, purgePublishedOutboxMessages); err != nil {
-		return nil, fmt.Errorf("error preparing query PurgePublishedOutboxMessages: %w", err)
-	}
-	return &q, nil
-}
-
-func (q *Queries) Close() error {
-	var err error
-	if q.acquireOutboxMessagesStmt != nil {
-		if cerr := q.acquireOutboxMessagesStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing acquireOutboxMessagesStmt: %w", cerr)
-		}
-	}
-	if q.cleanupExpiredOutboxLocksStmt != nil {
-		if cerr := q.cleanupExpiredOutboxLocksStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing cleanupExpiredOutboxLocksStmt: %w", cerr)
-		}
-	}
-	if q.createOutboxMessageStmt != nil {
-		if cerr := q.createOutboxMessageStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing createOutboxMessageStmt: %w", cerr)
-		}
-	}
-	if q.getLockedOutboxMessagesStmt != nil {
-		if cerr := q.getLockedOutboxMessagesStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing getLockedOutboxMessagesStmt: %w", cerr)
-		}
-	}
-	if q.markOutboxMessageFailedStmt != nil {
-		if cerr := q.markOutboxMessageFailedStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing markOutboxMessageFailedStmt: %w", cerr)
-		}
-	}
-	if q.markOutboxMessagePublishedStmt != nil {
-		if cerr := q.markOutboxMessagePublishedStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing markOutboxMessagePublishedStmt: %w", cerr)
-		}
-	}
-	if q.purgePublishedOutboxMessagesStmt != nil {
-		if cerr := q.purgePublishedOutboxMessagesStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing purgePublishedOutboxMessagesStmt: %w", cerr)
-		}
-	}
-	return err
-}
-
-func (q *Queries) exec(ctx context.Context, stmt *sql.Stmt, query string, args ...interface{}) (sql.Result, error) {
-	switch {
-	case stmt != nil && q.tx != nil:
-		return q.tx.StmtContext(ctx, stmt).ExecContext(ctx, args...)
-	case stmt != nil:
-		return stmt.ExecContext(ctx, args...)
-	default:
-		return q.db.ExecContext(ctx, query, args...)
-	}
-}
-
-func (q *Queries) query(ctx context.Context, stmt *sql.Stmt, query string, args ...interface{}) (*sql.Rows, error) {
-	switch {
-	case stmt != nil && q.tx != nil:
-		return q.tx.StmtContext(ctx, stmt).QueryContext(ctx, args...)
-	case stmt != nil:
-		return stmt.QueryContext(ctx, args...)
-	default:
-		return q.db.QueryContext(ctx, query, args...)
-	}
-}
-
-func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, args ...interface{}) *sql.Row {
-	switch {
-	case stmt != nil && q.tx != nil:
-		return q.tx.StmtContext(ctx, stmt).QueryRowContext(ctx, args...)
-	case stmt != nil:
-		return stmt.QueryRowContext(ctx, args...)
-	default:
-		return q.db.QueryRowContext(ctx, query, args...)
-	}
-}
-
 type Queries struct {
-	db                               DBTX
-	tx                               *sql.Tx
-	acquireOutboxMessagesStmt        *sql.Stmt
-	cleanupExpiredOutboxLocksStmt    *sql.Stmt
-	createOutboxMessageStmt          *sql.Stmt
-	getLockedOutboxMessagesStmt      *sql.Stmt
-	markOutboxMessageFailedStmt      *sql.Stmt
-	markOutboxMessagePublishedStmt   *sql.Stmt
-	purgePublishedOutboxMessagesStmt *sql.Stmt
+	db DBTX
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:                               tx,
-		tx:                               tx,
-		acquireOutboxMessagesStmt:        q.acquireOutboxMessagesStmt,
-		cleanupExpiredOutboxLocksStmt:    q.cleanupExpiredOutboxLocksStmt,
-		createOutboxMessageStmt:          q.createOutboxMessageStmt,
-		getLockedOutboxMessagesStmt:      q.getLockedOutboxMessagesStmt,
-		markOutboxMessageFailedStmt:      q.markOutboxMessageFailedStmt,
-		markOutboxMessagePublishedStmt:   q.markOutboxMessagePublishedStmt,
-		purgePublishedOutboxMessagesStmt: q.purgePublishedOutboxMessagesStmt,
+		db: tx,
 	}
 }

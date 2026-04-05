@@ -23,7 +23,7 @@ type CountDeletedRecordsByResourceAndResourceIDParams struct {
 }
 
 func (q *Queries) CountDeletedRecordsByResourceAndResourceID(ctx context.Context, arg CountDeletedRecordsByResourceAndResourceIDParams) (int64, error) {
-	row := q.queryRow(ctx, q.countDeletedRecordsByResourceAndResourceIDStmt, countDeletedRecordsByResourceAndResourceID, arg.ResourceType, arg.ResourceID)
+	row := q.db.QueryRowContext(ctx, countDeletedRecordsByResourceAndResourceID, arg.ResourceType, arg.ResourceID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -48,6 +48,6 @@ type InsertDeletedRecordParams struct {
 }
 
 func (q *Queries) InsertDeletedRecord(ctx context.Context, arg InsertDeletedRecordParams) error {
-	_, err := q.exec(ctx, q.insertDeletedRecordStmt, insertDeletedRecord, arg.ResourceType, arg.ResourceID, arg.Data)
+	_, err := q.db.ExecContext(ctx, insertDeletedRecord, arg.ResourceType, arg.ResourceID, arg.Data)
 	return err
 }

@@ -17,7 +17,7 @@ WHERE email = ?
 `
 
 func (q *Queries) FindUserByEmail(ctx context.Context, email sql.NullString) (User, error) {
-	row := q.queryRow(ctx, q.findUserByEmailStmt, findUserByEmail, email)
+	row := q.db.QueryRowContext(ctx, findUserByEmail, email)
 	var i User
 	err := row.Scan(
 		&i.ID,
@@ -41,7 +41,7 @@ WHERE id = ?
 `
 
 func (q *Queries) FindUserByID(ctx context.Context, id string) (User, error) {
-	row := q.queryRow(ctx, q.findUserByIDStmt, findUserByID, id)
+	row := q.db.QueryRowContext(ctx, findUserByID, id)
 	var i User
 	err := row.Scan(
 		&i.ID,
@@ -65,7 +65,7 @@ WHERE username = ?
 `
 
 func (q *Queries) FindUserByUsername(ctx context.Context, username sql.NullString) (User, error) {
-	row := q.queryRow(ctx, q.findUserByUsernameStmt, findUserByUsername, username)
+	row := q.db.QueryRowContext(ctx, findUserByUsername, username)
 	var i User
 	err := row.Scan(
 		&i.ID,
@@ -89,7 +89,7 @@ WHERE id = ?
 `
 
 func (q *Queries) GetUserHashedPassword(ctx context.Context, id string) (sql.NullString, error) {
-	row := q.queryRow(ctx, q.getUserHashedPasswordStmt, getUserHashedPassword, id)
+	row := q.db.QueryRowContext(ctx, getUserHashedPassword, id)
 	var hashed_password sql.NullString
 	err := row.Scan(&hashed_password)
 	return hashed_password, err
@@ -109,7 +109,7 @@ type InsertUserParams struct {
 }
 
 func (q *Queries) InsertUser(ctx context.Context, arg InsertUserParams) error {
-	_, err := q.exec(ctx, q.insertUserStmt, insertUser,
+	_, err := q.db.ExecContext(ctx, insertUser,
 		arg.ID,
 		arg.Name,
 		arg.Email,
@@ -131,7 +131,7 @@ type UpdateUserImageURLParams struct {
 }
 
 func (q *Queries) UpdateUserImageURL(ctx context.Context, arg UpdateUserImageURLParams) error {
-	_, err := q.exec(ctx, q.updateUserImageURLStmt, updateUserImageURL, arg.ImageUrl, arg.ID)
+	_, err := q.db.ExecContext(ctx, updateUserImageURL, arg.ImageUrl, arg.ID)
 	return err
 }
 
@@ -147,7 +147,7 @@ type UpdateUserPasswordParams struct {
 }
 
 func (q *Queries) UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) error {
-	_, err := q.exec(ctx, q.updateUserPasswordStmt, updateUserPassword, arg.HashedPassword, arg.ID)
+	_, err := q.db.ExecContext(ctx, updateUserPassword, arg.HashedPassword, arg.ID)
 	return err
 }
 
@@ -172,7 +172,7 @@ type UpdateUserProfileParams struct {
 }
 
 func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) error {
-	_, err := q.exec(ctx, q.updateUserProfileStmt, updateUserProfile,
+	_, err := q.db.ExecContext(ctx, updateUserProfile,
 		arg.Name,
 		arg.Email,
 		arg.Username,

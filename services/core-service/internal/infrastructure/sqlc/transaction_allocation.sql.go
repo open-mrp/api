@@ -25,7 +25,7 @@ type DeleteTransactionAllocationParams struct {
 }
 
 func (q *Queries) DeleteTransactionAllocation(ctx context.Context, arg DeleteTransactionAllocationParams) error {
-	_, err := q.exec(ctx, q.deleteTransactionAllocationStmt, deleteTransactionAllocation, arg.ID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, deleteTransactionAllocation, arg.ID, arg.AccountID)
 	return err
 }
 
@@ -36,7 +36,7 @@ WHERE ta.id = ?
 `
 
 func (q *Queries) DeleteTransactionAllocationQuantity(ctx context.Context, allocationID string) error {
-	_, err := q.exec(ctx, q.deleteTransactionAllocationQuantityStmt, deleteTransactionAllocationQuantity, allocationID)
+	_, err := q.db.ExecContext(ctx, deleteTransactionAllocationQuantity, allocationID)
 	return err
 }
 
@@ -69,7 +69,7 @@ func (q *Queries) GetOpenCreditAllocations(ctx context.Context, transactionIds [
 	} else {
 		query = strings.Replace(query, "/*SLICE:transaction_ids*/?", "NULL", 1)
 	}
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +137,7 @@ type GetTransactionAllocationByIDRow struct {
 }
 
 func (q *Queries) GetTransactionAllocationByID(ctx context.Context, arg GetTransactionAllocationByIDParams) (GetTransactionAllocationByIDRow, error) {
-	row := q.queryRow(ctx, q.getTransactionAllocationByIDStmt, getTransactionAllocationByID, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getTransactionAllocationByID, arg.ID, arg.AccountID)
 	var i GetTransactionAllocationByIDRow
 	err := row.Scan(
 		&i.ID,
@@ -229,7 +229,7 @@ type ListAllocationEntriesBackwardRow struct {
 }
 
 func (q *Queries) ListAllocationEntriesBackward(ctx context.Context, arg ListAllocationEntriesBackwardParams) ([]ListAllocationEntriesBackwardRow, error) {
-	rows, err := q.query(ctx, q.listAllocationEntriesBackwardStmt, listAllocationEntriesBackward,
+	rows, err := q.db.QueryContext(ctx, listAllocationEntriesBackward,
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery_2,
@@ -353,7 +353,7 @@ type ListAllocationEntriesForwardRow struct {
 }
 
 func (q *Queries) ListAllocationEntriesForward(ctx context.Context, arg ListAllocationEntriesForwardParams) ([]ListAllocationEntriesForwardRow, error) {
-	rows, err := q.query(ctx, q.listAllocationEntriesForwardStmt, listAllocationEntriesForward,
+	rows, err := q.db.QueryContext(ctx, listAllocationEntriesForward,
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery_2,
@@ -513,7 +513,7 @@ func (q *Queries) ListOpenCredits(ctx context.Context, arg ListOpenCreditsParams
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorID)
 	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -559,6 +559,6 @@ type UpdateAllocationAmountParams struct {
 }
 
 func (q *Queries) UpdateAllocationAmount(ctx context.Context, arg UpdateAllocationAmountParams) error {
-	_, err := q.exec(ctx, q.updateAllocationAmountStmt, updateAllocationAmount, arg.Value, arg.ID)
+	_, err := q.db.ExecContext(ctx, updateAllocationAmount, arg.Value, arg.ID)
 	return err
 }

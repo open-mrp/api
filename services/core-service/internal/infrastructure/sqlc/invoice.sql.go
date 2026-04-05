@@ -24,7 +24,7 @@ type DeleteInvoiceParams struct {
 }
 
 func (q *Queries) DeleteInvoice(ctx context.Context, arg DeleteInvoiceParams) error {
-	_, err := q.exec(ctx, q.deleteInvoiceStmt, deleteInvoice, arg.ID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, deleteInvoice, arg.ID, arg.AccountID)
 	return err
 }
 
@@ -34,7 +34,7 @@ WHERE invoice_id = ?
 `
 
 func (q *Queries) DeleteInvoiceLinesByInvoice(ctx context.Context, invoiceID string) error {
-	_, err := q.exec(ctx, q.deleteInvoiceLinesByInvoiceStmt, deleteInvoiceLinesByInvoice, invoiceID)
+	_, err := q.db.ExecContext(ctx, deleteInvoiceLinesByInvoice, invoiceID)
 	return err
 }
 
@@ -106,7 +106,7 @@ type GetInvoiceRow struct {
 }
 
 func (q *Queries) GetInvoice(ctx context.Context, arg GetInvoiceParams) (GetInvoiceRow, error) {
-	row := q.queryRow(ctx, q.getInvoiceStmt, getInvoice, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getInvoice, arg.ID, arg.AccountID)
 	var i GetInvoiceRow
 	err := row.Scan(
 		&i.ID,
@@ -166,7 +166,7 @@ type GetInvoiceAllocationsRow struct {
 }
 
 func (q *Queries) GetInvoiceAllocations(ctx context.Context, invoiceID string) ([]GetInvoiceAllocationsRow, error) {
-	rows, err := q.query(ctx, q.getInvoiceAllocationsStmt, getInvoiceAllocations, invoiceID)
+	rows, err := q.db.QueryContext(ctx, getInvoiceAllocations, invoiceID)
 	if err != nil {
 		return nil, err
 	}
@@ -209,7 +209,7 @@ AND u.email IS NOT NULL
 `
 
 func (q *Queries) GetInvoiceEmailRecipients(ctx context.Context, invoiceID string) ([]sql.NullString, error) {
-	rows, err := q.query(ctx, q.getInvoiceEmailRecipientsStmt, getInvoiceEmailRecipients, invoiceID)
+	rows, err := q.db.QueryContext(ctx, getInvoiceEmailRecipients, invoiceID)
 	if err != nil {
 		return nil, err
 	}
@@ -275,7 +275,7 @@ type GetInvoiceLinesRow struct {
 }
 
 func (q *Queries) GetInvoiceLines(ctx context.Context, invoiceID string) ([]GetInvoiceLinesRow, error) {
-	rows, err := q.query(ctx, q.getInvoiceLinesStmt, getInvoiceLines, invoiceID)
+	rows, err := q.db.QueryContext(ctx, getInvoiceLines, invoiceID)
 	if err != nil {
 		return nil, err
 	}
@@ -412,7 +412,7 @@ type GetInvoiceSummaryByIDRow struct {
 }
 
 func (q *Queries) GetInvoiceSummaryByID(ctx context.Context, arg GetInvoiceSummaryByIDParams) (GetInvoiceSummaryByIDRow, error) {
-	row := q.queryRow(ctx, q.getInvoiceSummaryByIDStmt, getInvoiceSummaryByID, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getInvoiceSummaryByID, arg.ID, arg.AccountID)
 	var i GetInvoiceSummaryByIDRow
 	err := row.Scan(
 		&i.ID,
@@ -463,7 +463,7 @@ type IsDuplicateInvoiceNumberParams struct {
 }
 
 func (q *Queries) IsDuplicateInvoiceNumber(ctx context.Context, arg IsDuplicateInvoiceNumberParams) (int64, error) {
-	row := q.queryRow(ctx, q.isDuplicateInvoiceNumberStmt, isDuplicateInvoiceNumber, arg.AccountID, arg.Number)
+	row := q.db.QueryRowContext(ctx, isDuplicateInvoiceNumber, arg.AccountID, arg.Number)
 	var cnt int64
 	err := row.Scan(&cnt)
 	return cnt, err
@@ -570,7 +570,7 @@ type ListCustomerInvoicesBackwardRow struct {
 }
 
 func (q *Queries) ListCustomerInvoicesBackward(ctx context.Context, arg ListCustomerInvoicesBackwardParams) ([]ListCustomerInvoicesBackwardRow, error) {
-	rows, err := q.query(ctx, q.listCustomerInvoicesBackwardStmt, listCustomerInvoicesBackward,
+	rows, err := q.db.QueryContext(ctx, listCustomerInvoicesBackward,
 		arg.AccountID,
 		arg.IncludeChildAccounts,
 		arg.CustomerAccountID,
@@ -725,7 +725,7 @@ type ListCustomerInvoicesForwardRow struct {
 }
 
 func (q *Queries) ListCustomerInvoicesForward(ctx context.Context, arg ListCustomerInvoicesForwardParams) ([]ListCustomerInvoicesForwardRow, error) {
-	rows, err := q.query(ctx, q.listCustomerInvoicesForwardStmt, listCustomerInvoicesForward,
+	rows, err := q.db.QueryContext(ctx, listCustomerInvoicesForward,
 		arg.AccountID,
 		arg.IncludeChildAccounts,
 		arg.CustomerAccountID,
@@ -1024,7 +1024,7 @@ func (q *Queries) ListInvoicesBackward(ctx context.Context, arg ListInvoicesBack
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorID)
 	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -1326,7 +1326,7 @@ func (q *Queries) ListInvoicesForward(ctx context.Context, arg ListInvoicesForwa
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorID)
 	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -1394,7 +1394,7 @@ type MarkInvoiceEmailSentParams struct {
 }
 
 func (q *Queries) MarkInvoiceEmailSent(ctx context.Context, arg MarkInvoiceEmailSentParams) error {
-	_, err := q.exec(ctx, q.markInvoiceEmailSentStmt, markInvoiceEmailSent, arg.InvoiceID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, markInvoiceEmailSent, arg.InvoiceID, arg.AccountID)
 	return err
 }
 
@@ -1420,7 +1420,7 @@ type UpdateInvoiceParams struct {
 }
 
 func (q *Queries) UpdateInvoice(ctx context.Context, arg UpdateInvoiceParams) error {
-	_, err := q.exec(ctx, q.updateInvoiceStmt, updateInvoice,
+	_, err := q.db.ExecContext(ctx, updateInvoice,
 		arg.Note,
 		arg.HasBeenSent,
 		arg.IsEdiSent,

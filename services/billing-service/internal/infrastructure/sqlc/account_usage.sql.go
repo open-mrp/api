@@ -16,7 +16,7 @@ SELECT COUNT(*) AS cnt FROM batch WHERE account_id = ?
 `
 
 func (q *Queries) CountBatchesByAccountID(ctx context.Context, accountID string) (int64, error) {
-	row := q.queryRow(ctx, q.countBatchesByAccountIDStmt, countBatchesByAccountID, accountID)
+	row := q.db.QueryRowContext(ctx, countBatchesByAccountID, accountID)
 	var cnt int64
 	err := row.Scan(&cnt)
 	return cnt, err
@@ -32,7 +32,7 @@ type CountBatchesByAccountIDInPeriodParams struct {
 }
 
 func (q *Queries) CountBatchesByAccountIDInPeriod(ctx context.Context, arg CountBatchesByAccountIDInPeriodParams) (int64, error) {
-	row := q.queryRow(ctx, q.countBatchesByAccountIDInPeriodStmt, countBatchesByAccountIDInPeriod, arg.AccountID, arg.CreatedAt)
+	row := q.db.QueryRowContext(ctx, countBatchesByAccountIDInPeriod, arg.AccountID, arg.CreatedAt)
 	var cnt int64
 	err := row.Scan(&cnt)
 	return cnt, err
@@ -43,7 +43,7 @@ SELECT COUNT(*) AS cnt FROM invoice WHERE account_id = ?
 `
 
 func (q *Queries) CountInvoicesByAccountID(ctx context.Context, accountID string) (int64, error) {
-	row := q.queryRow(ctx, q.countInvoicesByAccountIDStmt, countInvoicesByAccountID, accountID)
+	row := q.db.QueryRowContext(ctx, countInvoicesByAccountID, accountID)
 	var cnt int64
 	err := row.Scan(&cnt)
 	return cnt, err
@@ -59,7 +59,7 @@ type CountInvoicesByAccountIDInPeriodParams struct {
 }
 
 func (q *Queries) CountInvoicesByAccountIDInPeriod(ctx context.Context, arg CountInvoicesByAccountIDInPeriodParams) (int64, error) {
-	row := q.queryRow(ctx, q.countInvoicesByAccountIDInPeriodStmt, countInvoicesByAccountIDInPeriod, arg.AccountID, arg.CreatedAt)
+	row := q.db.QueryRowContext(ctx, countInvoicesByAccountIDInPeriod, arg.AccountID, arg.CreatedAt)
 	var cnt int64
 	err := row.Scan(&cnt)
 	return cnt, err
@@ -70,7 +70,7 @@ SELECT COUNT(*) AS cnt FROM sandbox_account WHERE owner_account_id = ?
 `
 
 func (q *Queries) CountSandboxesByAccountID(ctx context.Context, ownerAccountID string) (int64, error) {
-	row := q.queryRow(ctx, q.countSandboxesByAccountIDStmt, countSandboxesByAccountID, ownerAccountID)
+	row := q.db.QueryRowContext(ctx, countSandboxesByAccountID, ownerAccountID)
 	var cnt int64
 	err := row.Scan(&cnt)
 	return cnt, err
@@ -81,7 +81,7 @@ SELECT COUNT(*) AS cnt FROM account_user WHERE account_id = ?
 `
 
 func (q *Queries) CountUsersByAccountID(ctx context.Context, accountID string) (int64, error) {
-	row := q.queryRow(ctx, q.countUsersByAccountIDStmt, countUsersByAccountID, accountID)
+	row := q.db.QueryRowContext(ctx, countUsersByAccountID, accountID)
 	var cnt int64
 	err := row.Scan(&cnt)
 	return cnt, err
@@ -101,7 +101,7 @@ type GetAccountNameAndPlanCodeRow struct {
 }
 
 func (q *Queries) GetAccountNameAndPlanCode(ctx context.Context, id string) (GetAccountNameAndPlanCodeRow, error) {
-	row := q.queryRow(ctx, q.getAccountNameAndPlanCodeStmt, getAccountNameAndPlanCode, id)
+	row := q.db.QueryRowContext(ctx, getAccountNameAndPlanCode, id)
 	var i GetAccountNameAndPlanCodeRow
 	err := row.Scan(&i.Name, &i.PlanCode)
 	return i, err
@@ -134,7 +134,7 @@ type GetAccountSubscriptionInfoRow struct {
 }
 
 func (q *Queries) GetAccountSubscriptionInfo(ctx context.Context, id string) (GetAccountSubscriptionInfoRow, error) {
-	row := q.queryRow(ctx, q.getAccountSubscriptionInfoStmt, getAccountSubscriptionInfo, id)
+	row := q.db.QueryRowContext(ctx, getAccountSubscriptionInfo, id)
 	var i GetAccountSubscriptionInfoRow
 	err := row.Scan(
 		&i.SubscriptionStatus,
@@ -159,7 +159,7 @@ LIMIT 1
 `
 
 func (q *Queries) GetAdminEmailByAccountID(ctx context.Context, accountID string) (sql.NullString, error) {
-	row := q.queryRow(ctx, q.getAdminEmailByAccountIDStmt, getAdminEmailByAccountID, accountID)
+	row := q.db.QueryRowContext(ctx, getAdminEmailByAccountID, accountID)
 	var email sql.NullString
 	err := row.Scan(&email)
 	return email, err
@@ -180,7 +180,7 @@ type GetLimitsByAccountIDRow struct {
 }
 
 func (q *Queries) GetLimitsByAccountID(ctx context.Context, id string) ([]GetLimitsByAccountIDRow, error) {
-	rows, err := q.query(ctx, q.getLimitsByAccountIDStmt, getLimitsByAccountID, id)
+	rows, err := q.db.QueryContext(ctx, getLimitsByAccountID, id)
 	if err != nil {
 		return nil, err
 	}
@@ -210,7 +210,7 @@ WHERE a.id = ?
 `
 
 func (q *Queries) GetStripeCustomerIDByAccountID(ctx context.Context, id string) (sql.NullString, error) {
-	row := q.queryRow(ctx, q.getStripeCustomerIDByAccountIDStmt, getStripeCustomerIDByAccountID, id)
+	row := q.db.QueryRowContext(ctx, getStripeCustomerIDByAccountID, id)
 	var internal_stripe_customer_id sql.NullString
 	err := row.Scan(&internal_stripe_customer_id)
 	return internal_stripe_customer_id, err
@@ -228,7 +228,7 @@ type GetUserEmailByIDRow struct {
 }
 
 func (q *Queries) GetUserEmailByID(ctx context.Context, id string) (GetUserEmailByIDRow, error) {
-	row := q.queryRow(ctx, q.getUserEmailByIDStmt, getUserEmailByID, id)
+	row := q.db.QueryRowContext(ctx, getUserEmailByID, id)
 	var i GetUserEmailByIDRow
 	err := row.Scan(&i.Email, &i.DisplayName)
 	return i, err
@@ -245,6 +245,6 @@ type UpdateStripeCustomerIDByAccountIDParams struct {
 }
 
 func (q *Queries) UpdateStripeCustomerIDByAccountID(ctx context.Context, arg UpdateStripeCustomerIDByAccountIDParams) error {
-	_, err := q.exec(ctx, q.updateStripeCustomerIDByAccountIDStmt, updateStripeCustomerIDByAccountID, arg.InternalStripeCustomerID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, updateStripeCustomerIDByAccountID, arg.InternalStripeCustomerID, arg.AccountID)
 	return err
 }

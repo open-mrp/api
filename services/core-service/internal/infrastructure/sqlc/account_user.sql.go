@@ -39,7 +39,7 @@ type CountAccountUsersFilteredParams struct {
 }
 
 func (q *Queries) CountAccountUsersFiltered(ctx context.Context, arg CountAccountUsersFilteredParams) (int64, error) {
-	row := q.queryRow(ctx, q.countAccountUsersFilteredStmt, countAccountUsersFiltered,
+	row := q.db.QueryRowContext(ctx, countAccountUsersFiltered,
 		arg.AccountID,
 		arg.IncludeRemoved,
 		arg.RoleType,
@@ -64,7 +64,7 @@ WHERE account_id = ?
 `
 
 func (q *Queries) CountActiveAccountUsers(ctx context.Context, accountID string) (int64, error) {
-	row := q.queryRow(ctx, q.countActiveAccountUsersStmt, countActiveAccountUsers, accountID)
+	row := q.db.QueryRowContext(ctx, countActiveAccountUsers, accountID)
 	var cnt int64
 	err := row.Scan(&cnt)
 	return cnt, err
@@ -90,7 +90,7 @@ type CreateAccountUserForRegistrationParams struct {
 }
 
 func (q *Queries) CreateAccountUserForRegistration(ctx context.Context, arg CreateAccountUserForRegistrationParams) error {
-	_, err := q.exec(ctx, q.createAccountUserForRegistrationStmt, createAccountUserForRegistration,
+	_, err := q.db.ExecContext(ctx, createAccountUserForRegistration,
 		arg.ID,
 		arg.AccountID,
 		arg.UserID,
@@ -115,7 +115,7 @@ type DeactivateAccountUsersExceptParams struct {
 }
 
 func (q *Queries) DeactivateAccountUsersExcept(ctx context.Context, arg DeactivateAccountUsersExceptParams) (sql.Result, error) {
-	return q.exec(ctx, q.deactivateAccountUsersExceptStmt, deactivateAccountUsersExcept, arg.AccountID, arg.UserID, arg.Limit)
+	return q.db.ExecContext(ctx, deactivateAccountUsersExcept, arg.AccountID, arg.UserID, arg.Limit)
 }
 
 const ensureAccountUserActive = `-- name: EnsureAccountUserActive :execresult
@@ -130,7 +130,7 @@ type EnsureAccountUserActiveParams struct {
 }
 
 func (q *Queries) EnsureAccountUserActive(ctx context.Context, arg EnsureAccountUserActiveParams) (sql.Result, error) {
-	return q.exec(ctx, q.ensureAccountUserActiveStmt, ensureAccountUserActive, arg.AccountID, arg.UserID)
+	return q.db.ExecContext(ctx, ensureAccountUserActive, arg.AccountID, arg.UserID)
 }
 
 const findAccountAffiliationsByUserID = `-- name: FindAccountAffiliationsByUserID :many
@@ -158,7 +158,7 @@ type FindAccountAffiliationsByUserIDRow struct {
 }
 
 func (q *Queries) FindAccountAffiliationsByUserID(ctx context.Context, userID string) ([]FindAccountAffiliationsByUserIDRow, error) {
-	rows, err := q.query(ctx, q.findAccountAffiliationsByUserIDStmt, findAccountAffiliationsByUserID, userID)
+	rows, err := q.db.QueryContext(ctx, findAccountAffiliationsByUserID, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -222,7 +222,7 @@ type FindAccountUserWithRoleByAccountIDAndUserIDRow struct {
 }
 
 func (q *Queries) FindAccountUserWithRoleByAccountIDAndUserID(ctx context.Context, arg FindAccountUserWithRoleByAccountIDAndUserIDParams) (FindAccountUserWithRoleByAccountIDAndUserIDRow, error) {
-	row := q.queryRow(ctx, q.findAccountUserWithRoleByAccountIDAndUserIDStmt, findAccountUserWithRoleByAccountIDAndUserID, arg.AccountID, arg.UserID)
+	row := q.db.QueryRowContext(ctx, findAccountUserWithRoleByAccountIDAndUserID, arg.AccountID, arg.UserID)
 	var i FindAccountUserWithRoleByAccountIDAndUserIDRow
 	err := row.Scan(
 		&i.ID,
@@ -243,7 +243,7 @@ SELECT account_id FROM account_user WHERE user_id = ? LIMIT 1
 `
 
 func (q *Queries) FindFirstAccountIDByUserID(ctx context.Context, userID string) (string, error) {
-	row := q.queryRow(ctx, q.findFirstAccountIDByUserIDStmt, findFirstAccountIDByUserID, userID)
+	row := q.db.QueryRowContext(ctx, findFirstAccountIDByUserID, userID)
 	var account_id string
 	err := row.Scan(&account_id)
 	return account_id, err
@@ -259,7 +259,7 @@ LIMIT 1
 `
 
 func (q *Queries) FindLastUsedAccountID(ctx context.Context, userID string) (string, error) {
-	row := q.queryRow(ctx, q.findLastUsedAccountIDStmt, findLastUsedAccountID, userID)
+	row := q.db.QueryRowContext(ctx, findLastUsedAccountID, userID)
 	var account_id string
 	err := row.Scan(&account_id)
 	return account_id, err
@@ -304,7 +304,7 @@ type FindTenancyAccountsByUserIDRow struct {
 }
 
 func (q *Queries) FindTenancyAccountsByUserID(ctx context.Context, userID string) ([]FindTenancyAccountsByUserIDRow, error) {
-	rows, err := q.query(ctx, q.findTenancyAccountsByUserIDStmt, findTenancyAccountsByUserID, userID)
+	rows, err := q.db.QueryContext(ctx, findTenancyAccountsByUserID, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -389,7 +389,7 @@ type GetAccountUserDetailRow struct {
 }
 
 func (q *Queries) GetAccountUserDetail(ctx context.Context, arg GetAccountUserDetailParams) (GetAccountUserDetailRow, error) {
-	row := q.queryRow(ctx, q.getAccountUserDetailStmt, getAccountUserDetail, arg.AccountID, arg.UserID)
+	row := q.db.QueryRowContext(ctx, getAccountUserDetail, arg.AccountID, arg.UserID)
 	var i GetAccountUserDetailRow
 	err := row.Scan(
 		&i.ID,
@@ -462,7 +462,7 @@ type GetAccountUserDetailByAccountAndIDRow struct {
 }
 
 func (q *Queries) GetAccountUserDetailByAccountAndID(ctx context.Context, arg GetAccountUserDetailByAccountAndIDParams) (GetAccountUserDetailByAccountAndIDRow, error) {
-	row := q.queryRow(ctx, q.getAccountUserDetailByAccountAndIDStmt, getAccountUserDetailByAccountAndID, arg.AccountID, arg.ID)
+	row := q.db.QueryRowContext(ctx, getAccountUserDetailByAccountAndID, arg.AccountID, arg.ID)
 	var i GetAccountUserDetailByAccountAndIDRow
 	err := row.Scan(
 		&i.ID,
@@ -493,7 +493,7 @@ LIMIT 1
 `
 
 func (q *Queries) GetAdminRoleID(ctx context.Context) (string, error) {
-	row := q.queryRow(ctx, q.getAdminRoleIDStmt, getAdminRoleID)
+	row := q.db.QueryRowContext(ctx, getAdminRoleID)
 	var id string
 	err := row.Scan(&id)
 	return id, err
@@ -514,7 +514,7 @@ type InsertAccountUserParams struct {
 }
 
 func (q *Queries) InsertAccountUser(ctx context.Context, arg InsertAccountUserParams) error {
-	_, err := q.exec(ctx, q.insertAccountUserStmt, insertAccountUser,
+	_, err := q.db.ExecContext(ctx, insertAccountUser,
 		arg.ID,
 		arg.AccountID,
 		arg.UserID,
@@ -597,7 +597,7 @@ type ListAccountUsersBackwardRow struct {
 }
 
 func (q *Queries) ListAccountUsersBackward(ctx context.Context, arg ListAccountUsersBackwardParams) ([]ListAccountUsersBackwardRow, error) {
-	rows, err := q.query(ctx, q.listAccountUsersBackwardStmt, listAccountUsersBackward,
+	rows, err := q.db.QueryContext(ctx, listAccountUsersBackward,
 		arg.AccountID,
 		arg.IncludeRemoved,
 		arg.RoleType,
@@ -724,7 +724,7 @@ type ListAccountUsersForwardRow struct {
 }
 
 func (q *Queries) ListAccountUsersForward(ctx context.Context, arg ListAccountUsersForwardParams) ([]ListAccountUsersForwardRow, error) {
-	rows, err := q.query(ctx, q.listAccountUsersForwardStmt, listAccountUsersForward,
+	rows, err := q.db.QueryContext(ctx, listAccountUsersForward,
 		arg.AccountID,
 		arg.IncludeRemoved,
 		arg.RoleType,
@@ -791,7 +791,7 @@ type MarkUsedByAccountAndUserParams struct {
 }
 
 func (q *Queries) MarkUsedByAccountAndUser(ctx context.Context, arg MarkUsedByAccountAndUserParams) error {
-	_, err := q.exec(ctx, q.markUsedByAccountAndUserStmt, markUsedByAccountAndUser, arg.AccountID, arg.UserID)
+	_, err := q.db.ExecContext(ctx, markUsedByAccountAndUser, arg.AccountID, arg.UserID)
 	return err
 }
 
@@ -809,7 +809,7 @@ type ReactivateAccountUsersParams struct {
 }
 
 func (q *Queries) ReactivateAccountUsers(ctx context.Context, arg ReactivateAccountUsersParams) (sql.Result, error) {
-	return q.exec(ctx, q.reactivateAccountUsersStmt, reactivateAccountUsers, arg.AccountID, arg.Limit)
+	return q.db.ExecContext(ctx, reactivateAccountUsers, arg.AccountID, arg.Limit)
 }
 
 const revokeRefreshTokensByUserID = `-- name: RevokeRefreshTokensByUserID :exec
@@ -819,7 +819,7 @@ WHERE user_id = ? AND revoked_at IS NULL
 `
 
 func (q *Queries) RevokeRefreshTokensByUserID(ctx context.Context, userID string) error {
-	_, err := q.exec(ctx, q.revokeRefreshTokensByUserIDStmt, revokeRefreshTokensByUserID, userID)
+	_, err := q.db.ExecContext(ctx, revokeRefreshTokensByUserID, userID)
 	return err
 }
 
@@ -830,7 +830,7 @@ WHERE id = ?
 `
 
 func (q *Queries) SoftDeleteAccountUser(ctx context.Context, id string) (sql.Result, error) {
-	return q.exec(ctx, q.softDeleteAccountUserStmt, softDeleteAccountUser, id)
+	return q.db.ExecContext(ctx, softDeleteAccountUser, id)
 }
 
 const updateAccountUserLastUsedAt = `-- name: UpdateAccountUserLastUsedAt :exec
@@ -843,7 +843,7 @@ type UpdateAccountUserLastUsedAtParams struct {
 }
 
 func (q *Queries) UpdateAccountUserLastUsedAt(ctx context.Context, arg UpdateAccountUserLastUsedAtParams) error {
-	_, err := q.exec(ctx, q.updateAccountUserLastUsedAtStmt, updateAccountUserLastUsedAt, arg.LastUsedAt, arg.ID)
+	_, err := q.db.ExecContext(ctx, updateAccountUserLastUsedAt, arg.LastUsedAt, arg.ID)
 	return err
 }
 
@@ -862,7 +862,7 @@ type UpdateAccountUserRoleAndDepartmentParams struct {
 }
 
 func (q *Queries) UpdateAccountUserRoleAndDepartment(ctx context.Context, arg UpdateAccountUserRoleAndDepartmentParams) error {
-	_, err := q.exec(ctx, q.updateAccountUserRoleAndDepartmentStmt, updateAccountUserRoleAndDepartment, arg.RoleID, arg.DepartmentID, arg.ID)
+	_, err := q.db.ExecContext(ctx, updateAccountUserRoleAndDepartment, arg.RoleID, arg.DepartmentID, arg.ID)
 	return err
 }
 
@@ -878,6 +878,6 @@ type UpdateAccountUserStatusParams struct {
 }
 
 func (q *Queries) UpdateAccountUserStatus(ctx context.Context, arg UpdateAccountUserStatusParams) error {
-	_, err := q.exec(ctx, q.updateAccountUserStatusStmt, updateAccountUserStatus, arg.StatusCode, arg.ID)
+	_, err := q.db.ExecContext(ctx, updateAccountUserStatus, arg.StatusCode, arg.ID)
 	return err
 }

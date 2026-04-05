@@ -23,7 +23,7 @@ type DeleteDCLocationParams struct {
 }
 
 func (q *Queries) DeleteDCLocation(ctx context.Context, arg DeleteDCLocationParams) (sql.Result, error) {
-	return q.exec(ctx, q.deleteDCLocationStmt, deleteDCLocation, arg.ID, arg.OwnerAccountID)
+	return q.db.ExecContext(ctx, deleteDCLocation, arg.ID, arg.OwnerAccountID)
 }
 
 const getDCLocation = `-- name: GetDCLocation :one
@@ -57,7 +57,7 @@ type GetDCLocationRow struct {
 }
 
 func (q *Queries) GetDCLocation(ctx context.Context, arg GetDCLocationParams) (GetDCLocationRow, error) {
-	row := q.queryRow(ctx, q.getDCLocationStmt, getDCLocation, arg.ID, arg.OwnerAccountID)
+	row := q.db.QueryRowContext(ctx, getDCLocation, arg.ID, arg.OwnerAccountID)
 	var i GetDCLocationRow
 	err := row.Scan(
 		&i.ID,
@@ -99,7 +99,7 @@ type GetEDIRunRow struct {
 }
 
 func (q *Queries) GetEDIRun(ctx context.Context, arg GetEDIRunParams) (GetEDIRunRow, error) {
-	row := q.queryRow(ctx, q.getEDIRunStmt, getEDIRun, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getEDIRun, arg.ID, arg.AccountID)
 	var i GetEDIRunRow
 	err := row.Scan(
 		&i.ID,
@@ -138,7 +138,7 @@ type InsertDCLocationParams struct {
 }
 
 func (q *Queries) InsertDCLocation(ctx context.Context, arg InsertDCLocationParams) error {
-	_, err := q.exec(ctx, q.insertDCLocationStmt, insertDCLocation,
+	_, err := q.db.ExecContext(ctx, insertDCLocation,
 		arg.ID,
 		arg.Location,
 		arg.AccountID,
@@ -191,7 +191,7 @@ type ListDCLocationsBackwardRow struct {
 }
 
 func (q *Queries) ListDCLocationsBackward(ctx context.Context, arg ListDCLocationsBackwardParams) ([]ListDCLocationsBackwardRow, error) {
-	rows, err := q.query(ctx, q.listDCLocationsBackwardStmt, listDCLocationsBackward,
+	rows, err := q.db.QueryContext(ctx, listDCLocationsBackward,
 		arg.OwnerAccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
@@ -275,7 +275,7 @@ type ListDCLocationsForwardRow struct {
 }
 
 func (q *Queries) ListDCLocationsForward(ctx context.Context, arg ListDCLocationsForwardParams) ([]ListDCLocationsForwardRow, error) {
-	rows, err := q.query(ctx, q.listDCLocationsForwardStmt, listDCLocationsForward,
+	rows, err := q.db.QueryContext(ctx, listDCLocationsForward,
 		arg.OwnerAccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
@@ -360,7 +360,7 @@ type ListEDIRunsBackwardRow struct {
 }
 
 func (q *Queries) ListEDIRunsBackward(ctx context.Context, arg ListEDIRunsBackwardParams) ([]ListEDIRunsBackwardRow, error) {
-	rows, err := q.query(ctx, q.listEDIRunsBackwardStmt, listEDIRunsBackward,
+	rows, err := q.db.QueryContext(ctx, listEDIRunsBackward,
 		arg.AccountID,
 		arg.HasSucceeded,
 		arg.HasSucceeded,
@@ -445,7 +445,7 @@ type ListEDIRunsForwardRow struct {
 }
 
 func (q *Queries) ListEDIRunsForward(ctx context.Context, arg ListEDIRunsForwardParams) ([]ListEDIRunsForwardRow, error) {
-	rows, err := q.query(ctx, q.listEDIRunsForwardStmt, listEDIRunsForward,
+	rows, err := q.db.QueryContext(ctx, listEDIRunsForward,
 		arg.AccountID,
 		arg.HasSucceeded,
 		arg.HasSucceeded,
@@ -502,7 +502,7 @@ type UpdateDCLocationParams struct {
 }
 
 func (q *Queries) UpdateDCLocation(ctx context.Context, arg UpdateDCLocationParams) (sql.Result, error) {
-	return q.exec(ctx, q.updateDCLocationStmt, updateDCLocation,
+	return q.db.ExecContext(ctx, updateDCLocation,
 		arg.Location,
 		arg.AccountID,
 		arg.ID,

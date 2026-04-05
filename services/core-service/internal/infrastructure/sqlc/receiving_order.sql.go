@@ -34,7 +34,7 @@ type CalculateQuantityYetToBeReceivedRow struct {
 }
 
 func (q *Queries) CalculateQuantityYetToBeReceived(ctx context.Context, lineID string) (CalculateQuantityYetToBeReceivedRow, error) {
-	row := q.queryRow(ctx, q.calculateQuantityYetToBeReceivedStmt, calculateQuantityYetToBeReceived, lineID)
+	row := q.db.QueryRowContext(ctx, calculateQuantityYetToBeReceived, lineID)
 	var i CalculateQuantityYetToBeReceivedRow
 	err := row.Scan(&i.OrderedValue, &i.ReceivedTotal, &i.UnitID)
 	return i, err
@@ -55,7 +55,7 @@ type CheckAllLinesStockedParams struct {
 }
 
 func (q *Queries) CheckAllLinesStocked(ctx context.Context, arg CheckAllLinesStockedParams) (int64, error) {
-	row := q.queryRow(ctx, q.checkAllLinesStockedStmt, checkAllLinesStocked, arg.ReceivingOrderID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, checkAllLinesStocked, arg.ReceivingOrderID, arg.AccountID)
 	var unstocked_count int64
 	err := row.Scan(&unstocked_count)
 	return unstocked_count, err
@@ -68,7 +68,7 @@ WHERE sales_order_id = ?
 `
 
 func (q *Queries) CountDeliveriesByPurchaseOrder(ctx context.Context, purchaseOrderID string) (int64, error) {
-	row := q.queryRow(ctx, q.countDeliveriesByPurchaseOrderStmt, countDeliveriesByPurchaseOrder, purchaseOrderID)
+	row := q.db.QueryRowContext(ctx, countDeliveriesByPurchaseOrder, purchaseOrderID)
 	var delivery_count int64
 	err := row.Scan(&delivery_count)
 	return delivery_count, err
@@ -87,7 +87,7 @@ type CreateReceivingOrderParams struct {
 }
 
 func (q *Queries) CreateReceivingOrder(ctx context.Context, arg CreateReceivingOrderParams) error {
-	_, err := q.exec(ctx, q.createReceivingOrderStmt, createReceivingOrder,
+	_, err := q.db.ExecContext(ctx, createReceivingOrder,
 		arg.ID,
 		arg.Number,
 		arg.OrderID,
@@ -109,7 +109,7 @@ type CreateReceivingOrderLineParams struct {
 }
 
 func (q *Queries) CreateReceivingOrderLine(ctx context.Context, arg CreateReceivingOrderLineParams) error {
-	_, err := q.exec(ctx, q.createReceivingOrderLineStmt, createReceivingOrderLine,
+	_, err := q.db.ExecContext(ctx, createReceivingOrderLine,
 		arg.ID,
 		arg.ReceivingOrderID,
 		arg.QuantityID,
@@ -141,7 +141,7 @@ type DeleteDuplicateReceivingOrderLinesParams struct {
 }
 
 func (q *Queries) DeleteDuplicateReceivingOrderLines(ctx context.Context, arg DeleteDuplicateReceivingOrderLinesParams) error {
-	_, err := q.exec(ctx, q.deleteDuplicateReceivingOrderLinesStmt, deleteDuplicateReceivingOrderLines, arg.ReceivingOrderID, arg.ReceivingOrderID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, deleteDuplicateReceivingOrderLines, arg.ReceivingOrderID, arg.ReceivingOrderID, arg.AccountID)
 	return err
 }
 
@@ -150,7 +150,7 @@ DELETE FROM receiving_order WHERE order_id = ?
 `
 
 func (q *Queries) DeleteReceivingOrderByOrderID(ctx context.Context, orderID string) error {
-	_, err := q.exec(ctx, q.deleteReceivingOrderByOrderIDStmt, deleteReceivingOrderByOrderID, orderID)
+	_, err := q.db.ExecContext(ctx, deleteReceivingOrderByOrderID, orderID)
 	return err
 }
 
@@ -161,7 +161,7 @@ WHERE ro.order_id = ?
 `
 
 func (q *Queries) DeleteReceivingOrderLinesByOrderID(ctx context.Context, orderID string) error {
-	_, err := q.exec(ctx, q.deleteReceivingOrderLinesByOrderIDStmt, deleteReceivingOrderLinesByOrderID, orderID)
+	_, err := q.db.ExecContext(ctx, deleteReceivingOrderLinesByOrderID, orderID)
 	return err
 }
 
@@ -170,7 +170,7 @@ DELETE FROM receiving_order_line WHERE sales_order_line_id = ?
 `
 
 func (q *Queries) DeleteReceivingOrderLinesByOrderLineID(ctx context.Context, salesOrderLineID string) error {
-	_, err := q.exec(ctx, q.deleteReceivingOrderLinesByOrderLineIDStmt, deleteReceivingOrderLinesByOrderLineID, salesOrderLineID)
+	_, err := q.db.ExecContext(ctx, deleteReceivingOrderLinesByOrderLineID, salesOrderLineID)
 	return err
 }
 
@@ -205,7 +205,7 @@ type FindOpenIssuesForItemRow struct {
 }
 
 func (q *Queries) FindOpenIssuesForItem(ctx context.Context, arg FindOpenIssuesForItemParams) ([]FindOpenIssuesForItemRow, error) {
-	rows, err := q.query(ctx, q.findOpenIssuesForItemStmt, findOpenIssuesForItem, arg.AccountID, arg.ItemID)
+	rows, err := q.db.QueryContext(ctx, findOpenIssuesForItem, arg.AccountID, arg.ItemID)
 	if err != nil {
 		return nil, err
 	}
@@ -263,7 +263,7 @@ type FindUnstockedLineIDsRow struct {
 }
 
 func (q *Queries) FindUnstockedLineIDs(ctx context.Context, arg FindUnstockedLineIDsParams) ([]FindUnstockedLineIDsRow, error) {
-	rows, err := q.query(ctx, q.findUnstockedLineIDsStmt, findUnstockedLineIDs, arg.ReceivingOrderID, arg.AccountID, arg.EnforceNonZero)
+	rows, err := q.db.QueryContext(ctx, findUnstockedLineIDs, arg.ReceivingOrderID, arg.AccountID, arg.EnforceNonZero)
 	if err != nil {
 		return nil, err
 	}
@@ -293,7 +293,7 @@ WHERE ia.inventory_issue_id = ?
 `
 
 func (q *Queries) GetAllocationSumForIssue(ctx context.Context, issueID string) (interface{}, error) {
-	row := q.queryRow(ctx, q.getAllocationSumForIssueStmt, getAllocationSumForIssue, issueID)
+	row := q.db.QueryRowContext(ctx, getAllocationSumForIssue, issueID)
 	var total_allocated interface{}
 	err := row.Scan(&total_allocated)
 	return total_allocated, err
@@ -313,7 +313,7 @@ type GetLotByKeyParams struct {
 }
 
 func (q *Queries) GetLotByKey(ctx context.Context, arg GetLotByKeyParams) (string, error) {
-	row := q.queryRow(ctx, q.getLotByKeyStmt, getLotByKey, arg.AccountID, arg.ItemID, arg.LotNumber)
+	row := q.db.QueryRowContext(ctx, getLotByKey, arg.AccountID, arg.ItemID, arg.LotNumber)
 	var id string
 	err := row.Scan(&id)
 	return id, err
@@ -352,7 +352,7 @@ func (q *Queries) GetOrderedQuantityForLine(ctx context.Context, orderLineIds []
 	} else {
 		query = strings.Replace(query, "/*SLICE:order_line_ids*/?", "NULL", 1)
 	}
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -392,7 +392,7 @@ type GetPurchaseOrderIDForReceivingOrderParams struct {
 }
 
 func (q *Queries) GetPurchaseOrderIDForReceivingOrder(ctx context.Context, arg GetPurchaseOrderIDForReceivingOrderParams) (string, error) {
-	row := q.queryRow(ctx, q.getPurchaseOrderIDForReceivingOrderStmt, getPurchaseOrderIDForReceivingOrder, arg.ReceivingOrderID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getPurchaseOrderIDForReceivingOrder, arg.ReceivingOrderID, arg.AccountID)
 	var purchase_order_id string
 	err := row.Scan(&purchase_order_id)
 	return purchase_order_id, err
@@ -437,7 +437,7 @@ type GetReceivingOrderByIDRow struct {
 }
 
 func (q *Queries) GetReceivingOrderByID(ctx context.Context, arg GetReceivingOrderByIDParams) (GetReceivingOrderByIDRow, error) {
-	row := q.queryRow(ctx, q.getReceivingOrderByIDStmt, getReceivingOrderByID, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getReceivingOrderByID, arg.ID, arg.AccountID)
 	var i GetReceivingOrderByIDRow
 	err := row.Scan(
 		&i.ID,
@@ -461,7 +461,7 @@ WHERE ro.order_id = ?
 `
 
 func (q *Queries) GetReceivingOrderByOrderID(ctx context.Context, orderID string) (string, error) {
-	row := q.queryRow(ctx, q.getReceivingOrderByOrderIDStmt, getReceivingOrderByOrderID, orderID)
+	row := q.db.QueryRowContext(ctx, getReceivingOrderByOrderID, orderID)
 	var id string
 	err := row.Scan(&id)
 	return id, err
@@ -515,7 +515,7 @@ type GetReceivingOrderLineRow struct {
 }
 
 func (q *Queries) GetReceivingOrderLine(ctx context.Context, lineID string) (GetReceivingOrderLineRow, error) {
-	row := q.queryRow(ctx, q.getReceivingOrderLineStmt, getReceivingOrderLine, lineID)
+	row := q.db.QueryRowContext(ctx, getReceivingOrderLine, lineID)
 	var i GetReceivingOrderLineRow
 	err := row.Scan(
 		&i.ID,
@@ -564,7 +564,7 @@ type GetReceivingOrderLineUnitPriceRow struct {
 }
 
 func (q *Queries) GetReceivingOrderLineUnitPrice(ctx context.Context, receivingOrderID string) ([]GetReceivingOrderLineUnitPriceRow, error) {
-	rows, err := q.query(ctx, q.getReceivingOrderLineUnitPriceStmt, getReceivingOrderLineUnitPrice, receivingOrderID)
+	rows, err := q.db.QueryContext(ctx, getReceivingOrderLineUnitPrice, receivingOrderID)
 	if err != nil {
 		return nil, err
 	}
@@ -602,7 +602,7 @@ SELECT EXISTS(
 `
 
 func (q *Queries) HasUnstockedReceivingOrderLineForOrderLine(ctx context.Context, salesOrderLineID string) (bool, error) {
-	row := q.queryRow(ctx, q.hasUnstockedReceivingOrderLineForOrderLineStmt, hasUnstockedReceivingOrderLineForOrderLine, salesOrderLineID)
+	row := q.db.QueryRowContext(ctx, hasUnstockedReceivingOrderLineForOrderLine, salesOrderLineID)
 	var has_unstocked bool
 	err := row.Scan(&has_unstocked)
 	return has_unstocked, err
@@ -624,7 +624,7 @@ type InsertDeliveryParams struct {
 }
 
 func (q *Queries) InsertDelivery(ctx context.Context, arg InsertDeliveryParams) error {
-	_, err := q.exec(ctx, q.insertDeliveryStmt, insertDelivery,
+	_, err := q.db.ExecContext(ctx, insertDelivery,
 		arg.ID,
 		arg.Number,
 		arg.SalesOrderID,
@@ -654,7 +654,7 @@ type InsertDeliveryLineParams struct {
 }
 
 func (q *Queries) InsertDeliveryLine(ctx context.Context, arg InsertDeliveryLineParams) error {
-	_, err := q.exec(ctx, q.insertDeliveryLineStmt, insertDeliveryLine,
+	_, err := q.db.ExecContext(ctx, insertDeliveryLine,
 		arg.ID,
 		arg.DeliveryID,
 		arg.ReceivingOrderLineID,
@@ -703,7 +703,7 @@ type InsertInventoryReceiptForDeliveryParams struct {
 }
 
 func (q *Queries) InsertInventoryReceiptForDelivery(ctx context.Context, arg InsertInventoryReceiptForDeliveryParams) error {
-	_, err := q.exec(ctx, q.insertInventoryReceiptForDeliveryStmt, insertInventoryReceiptForDelivery,
+	_, err := q.db.ExecContext(ctx, insertInventoryReceiptForDelivery,
 		arg.ID,
 		arg.AccountID,
 		arg.AccountID,
@@ -731,7 +731,7 @@ type IsReceivingOrderInAccountParams struct {
 }
 
 func (q *Queries) IsReceivingOrderInAccount(ctx context.Context, arg IsReceivingOrderInAccountParams) (bool, error) {
-	row := q.queryRow(ctx, q.isReceivingOrderInAccountStmt, isReceivingOrderInAccount, arg.ReceivingOrderID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, isReceivingOrderInAccount, arg.ReceivingOrderID, arg.AccountID)
 	var order_exists bool
 	err := row.Scan(&order_exists)
 	return order_exists, err
@@ -751,7 +751,7 @@ type IsReceivingOrderLineInOrderParams struct {
 }
 
 func (q *Queries) IsReceivingOrderLineInOrder(ctx context.Context, arg IsReceivingOrderLineInOrderParams) (bool, error) {
-	row := q.queryRow(ctx, q.isReceivingOrderLineInOrderStmt, isReceivingOrderLineInOrder, arg.LineID, arg.ReceivingOrderID)
+	row := q.db.QueryRowContext(ctx, isReceivingOrderLineInOrder, arg.LineID, arg.ReceivingOrderID)
 	var line_exists bool
 	err := row.Scan(&line_exists)
 	return line_exists, err
@@ -806,7 +806,7 @@ type ListReceivingOrderLinesByOrderIDRow struct {
 }
 
 func (q *Queries) ListReceivingOrderLinesByOrderID(ctx context.Context, receivingOrderID string) ([]ListReceivingOrderLinesByOrderIDRow, error) {
-	rows, err := q.query(ctx, q.listReceivingOrderLinesByOrderIDStmt, listReceivingOrderLinesByOrderID, receivingOrderID)
+	rows, err := q.db.QueryContext(ctx, listReceivingOrderLinesByOrderID, receivingOrderID)
 	if err != nil {
 		return nil, err
 	}
@@ -972,7 +972,7 @@ func (q *Queries) ListReceivingOrdersBackward(ctx context.Context, arg ListRecei
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorID)
 	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -1135,7 +1135,7 @@ func (q *Queries) ListReceivingOrdersForward(ctx context.Context, arg ListReceiv
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorID)
 	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -1185,7 +1185,7 @@ type MarkPurchaseOrderFulfilledParams struct {
 }
 
 func (q *Queries) MarkPurchaseOrderFulfilled(ctx context.Context, arg MarkPurchaseOrderFulfilledParams) error {
-	_, err := q.exec(ctx, q.markPurchaseOrderFulfilledStmt, markPurchaseOrderFulfilled, arg.ID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, markPurchaseOrderFulfilled, arg.ID, arg.AccountID)
 	return err
 }
 
@@ -1197,7 +1197,7 @@ WHERE order_id = ?
 `
 
 func (q *Queries) MarkReceivingOrderComplete(ctx context.Context, orderID string) error {
-	_, err := q.exec(ctx, q.markReceivingOrderCompleteStmt, markReceivingOrderComplete, orderID)
+	_, err := q.db.ExecContext(ctx, markReceivingOrderComplete, orderID)
 	return err
 }
 
@@ -1214,7 +1214,7 @@ type MarkReceivingOrderCompleteByIDParams struct {
 }
 
 func (q *Queries) MarkReceivingOrderCompleteByID(ctx context.Context, arg MarkReceivingOrderCompleteByIDParams) error {
-	_, err := q.exec(ctx, q.markReceivingOrderCompleteByIDStmt, markReceivingOrderCompleteByID, arg.ID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, markReceivingOrderCompleteByID, arg.ID, arg.AccountID)
 	return err
 }
 
@@ -1226,7 +1226,7 @@ WHERE order_id = ?
 `
 
 func (q *Queries) MarkReceivingOrderIncomplete(ctx context.Context, orderID string) error {
-	_, err := q.exec(ctx, q.markReceivingOrderIncompleteStmt, markReceivingOrderIncomplete, orderID)
+	_, err := q.db.ExecContext(ctx, markReceivingOrderIncomplete, orderID)
 	return err
 }
 
@@ -1243,7 +1243,7 @@ type MarkReceivingOrderIncompleteByIDParams struct {
 }
 
 func (q *Queries) MarkReceivingOrderIncompleteByID(ctx context.Context, arg MarkReceivingOrderIncompleteByIDParams) error {
-	_, err := q.exec(ctx, q.markReceivingOrderIncompleteByIDStmt, markReceivingOrderIncompleteByID, arg.ID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, markReceivingOrderIncompleteByID, arg.ID, arg.AccountID)
 	return err
 }
 
@@ -1264,7 +1264,7 @@ func (q *Queries) StockReceivingOrderLines(ctx context.Context, lineIds []string
 	} else {
 		query = strings.Replace(query, "/*SLICE:line_ids*/?", "NULL", 1)
 	}
-	_, err := q.exec(ctx, nil, query, queryParams...)
+	_, err := q.db.ExecContext(ctx, query, queryParams...)
 	return err
 }
 
@@ -1281,7 +1281,7 @@ type UpdateReceivingOrderLineQuantityParams struct {
 }
 
 func (q *Queries) UpdateReceivingOrderLineQuantity(ctx context.Context, arg UpdateReceivingOrderLineQuantityParams) error {
-	_, err := q.exec(ctx, q.updateReceivingOrderLineQuantityStmt, updateReceivingOrderLineQuantity, arg.QuantityValue, arg.LineID)
+	_, err := q.db.ExecContext(ctx, updateReceivingOrderLineQuantity, arg.QuantityValue, arg.LineID)
 	return err
 }
 
@@ -1298,7 +1298,7 @@ type UpsertLotParams struct {
 }
 
 func (q *Queries) UpsertLot(ctx context.Context, arg UpsertLotParams) error {
-	_, err := q.exec(ctx, q.upsertLotStmt, upsertLot,
+	_, err := q.db.ExecContext(ctx, upsertLot,
 		arg.ID,
 		arg.AccountID,
 		arg.ItemID,
@@ -1323,7 +1323,7 @@ type VoidAllReceivingOrderLinesParams struct {
 }
 
 func (q *Queries) VoidAllReceivingOrderLines(ctx context.Context, arg VoidAllReceivingOrderLinesParams) error {
-	_, err := q.exec(ctx, q.voidAllReceivingOrderLinesStmt, voidAllReceivingOrderLines, arg.ReceivingOrderID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, voidAllReceivingOrderLines, arg.ReceivingOrderID, arg.AccountID)
 	return err
 }
 
@@ -1342,6 +1342,6 @@ type VoidReceivingOrderLineParams struct {
 }
 
 func (q *Queries) VoidReceivingOrderLine(ctx context.Context, arg VoidReceivingOrderLineParams) error {
-	_, err := q.exec(ctx, q.voidReceivingOrderLineStmt, voidReceivingOrderLine, arg.LineID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, voidReceivingOrderLine, arg.LineID, arg.AccountID)
 	return err
 }

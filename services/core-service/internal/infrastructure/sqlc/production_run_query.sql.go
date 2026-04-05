@@ -21,7 +21,7 @@ type CloseProductionRunParams struct {
 }
 
 func (q *Queries) CloseProductionRun(ctx context.Context, arg CloseProductionRunParams) error {
-	_, err := q.exec(ctx, q.closeProductionRunStmt, closeProductionRun, arg.ID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, closeProductionRun, arg.ID, arg.AccountID)
 	return err
 }
 
@@ -38,7 +38,7 @@ type CountUnscannedOrUndeletedBatchesByRunParams struct {
 }
 
 func (q *Queries) CountUnscannedOrUndeletedBatchesByRun(ctx context.Context, arg CountUnscannedOrUndeletedBatchesByRunParams) (int64, error) {
-	row := q.queryRow(ctx, q.countUnscannedOrUndeletedBatchesByRunStmt, countUnscannedOrUndeletedBatchesByRun, arg.ProductionRunID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, countUnscannedOrUndeletedBatchesByRun, arg.ProductionRunID, arg.AccountID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -57,7 +57,7 @@ type CreateProductionRunParams struct {
 }
 
 func (q *Queries) CreateProductionRun(ctx context.Context, arg CreateProductionRunParams) error {
-	_, err := q.exec(ctx, q.createProductionRunStmt, createProductionRun,
+	_, err := q.db.ExecContext(ctx, createProductionRun,
 		arg.ID,
 		arg.ResponsibleUserID,
 		arg.Number,
@@ -72,7 +72,7 @@ FROM production_run WHERE account_id = ?
 `
 
 func (q *Queries) GetNextProductionRunNumber(ctx context.Context, accountID string) (int32, error) {
-	row := q.queryRow(ctx, q.getNextProductionRunNumberStmt, getNextProductionRunNumber, accountID)
+	row := q.db.QueryRowContext(ctx, getNextProductionRunNumber, accountID)
 	var next_number int32
 	err := row.Scan(&next_number)
 	return next_number, err
@@ -89,6 +89,6 @@ type StartProductionRunParams struct {
 }
 
 func (q *Queries) StartProductionRun(ctx context.Context, arg StartProductionRunParams) error {
-	_, err := q.exec(ctx, q.startProductionRunStmt, startProductionRun, arg.ID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, startProductionRun, arg.ID, arg.AccountID)
 	return err
 }

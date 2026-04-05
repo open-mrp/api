@@ -23,7 +23,7 @@ type GetAgentTokenBillingByAccountAndPeriodParams struct {
 }
 
 func (q *Queries) GetAgentTokenBillingByAccountAndPeriod(ctx context.Context, arg GetAgentTokenBillingByAccountAndPeriodParams) (AgentTokenBilling, error) {
-	row := q.queryRow(ctx, q.getAgentTokenBillingByAccountAndPeriodStmt, getAgentTokenBillingByAccountAndPeriod, arg.AccountID, arg.PeriodStart)
+	row := q.db.QueryRowContext(ctx, getAgentTokenBillingByAccountAndPeriod, arg.AccountID, arg.PeriodStart)
 	var i AgentTokenBilling
 	err := row.Scan(
 		&i.ID,
@@ -54,7 +54,7 @@ type GetAgentTokenUsageSummaryParams struct {
 }
 
 func (q *Queries) GetAgentTokenUsageSummary(ctx context.Context, arg GetAgentTokenUsageSummaryParams) (int64, error) {
-	row := q.queryRow(ctx, q.getAgentTokenUsageSummaryStmt, getAgentTokenUsageSummary, arg.AccountID, arg.PeriodStart)
+	row := q.db.QueryRowContext(ctx, getAgentTokenUsageSummary, arg.AccountID, arg.PeriodStart)
 	var total_tokens int64
 	err := row.Scan(&total_tokens)
 	return total_tokens, err
@@ -73,7 +73,7 @@ type UpdateTokensReportedToStripeParams struct {
 }
 
 func (q *Queries) UpdateTokensReportedToStripe(ctx context.Context, arg UpdateTokensReportedToStripeParams) error {
-	_, err := q.exec(ctx, q.updateTokensReportedToStripeStmt, updateTokensReportedToStripe, arg.TokensReportedToStripe, arg.StripeMeteredItemID, arg.ID)
+	_, err := q.db.ExecContext(ctx, updateTokensReportedToStripe, arg.TokensReportedToStripe, arg.StripeMeteredItemID, arg.ID)
 	return err
 }
 
@@ -98,7 +98,7 @@ type UpsertAgentTokenBillingParams struct {
 }
 
 func (q *Queries) UpsertAgentTokenBilling(ctx context.Context, arg UpsertAgentTokenBillingParams) error {
-	_, err := q.exec(ctx, q.upsertAgentTokenBillingStmt, upsertAgentTokenBilling,
+	_, err := q.db.ExecContext(ctx, upsertAgentTokenBilling,
 		arg.ID,
 		arg.AccountID,
 		arg.PeriodStart,

@@ -25,7 +25,7 @@ type CheckLocationInAccountParams struct {
 }
 
 func (q *Queries) CheckLocationInAccount(ctx context.Context, arg CheckLocationInAccountParams) (bool, error) {
-	row := q.queryRow(ctx, q.checkLocationInAccountStmt, checkLocationInAccount, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, checkLocationInAccount, arg.ID, arg.AccountID)
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err
@@ -46,7 +46,7 @@ type ConnectLocationChildrenParams struct {
 }
 
 func (q *Queries) ConnectLocationChildren(ctx context.Context, arg ConnectLocationChildrenParams) error {
-	_, err := q.exec(ctx, q.connectLocationChildrenStmt, connectLocationChildren, arg.ParentID, arg.ChildID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, connectLocationChildren, arg.ParentID, arg.ChildID, arg.AccountID)
 	return err
 }
 
@@ -63,7 +63,7 @@ type CountLocationChildrenParams struct {
 }
 
 func (q *Queries) CountLocationChildren(ctx context.Context, arg CountLocationChildrenParams) (int64, error) {
-	row := q.queryRow(ctx, q.countLocationChildrenStmt, countLocationChildren, arg.ParentID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, countLocationChildren, arg.ParentID, arg.AccountID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -81,7 +81,7 @@ type DeleteLocationParams struct {
 }
 
 func (q *Queries) DeleteLocation(ctx context.Context, arg DeleteLocationParams) error {
-	_, err := q.exec(ctx, q.deleteLocationStmt, deleteLocation, arg.ID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, deleteLocation, arg.ID, arg.AccountID)
 	return err
 }
 
@@ -99,7 +99,7 @@ type DisconnectLocationChildrenParams struct {
 }
 
 func (q *Queries) DisconnectLocationChildren(ctx context.Context, arg DisconnectLocationChildrenParams) error {
-	_, err := q.exec(ctx, q.disconnectLocationChildrenStmt, disconnectLocationChildren, arg.ParentID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, disconnectLocationChildren, arg.ParentID, arg.AccountID)
 	return err
 }
 
@@ -136,7 +136,7 @@ type GetLocationRow struct {
 }
 
 func (q *Queries) GetLocation(ctx context.Context, arg GetLocationParams) (GetLocationRow, error) {
-	row := q.queryRow(ctx, q.getLocationStmt, getLocation, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getLocation, arg.ID, arg.AccountID)
 	var i GetLocationRow
 	err := row.Scan(
 		&i.ID,
@@ -168,7 +168,7 @@ type GetLocationTypeParams struct {
 }
 
 func (q *Queries) GetLocationType(ctx context.Context, arg GetLocationTypeParams) (StorageLocationType, error) {
-	row := q.queryRow(ctx, q.getLocationTypeStmt, getLocationType, arg.ID, arg.Code)
+	row := q.db.QueryRowContext(ctx, getLocationType, arg.ID, arg.Code)
 	var i StorageLocationType
 	err := row.Scan(
 		&i.ID,
@@ -209,7 +209,7 @@ type InsertLocationParams struct {
 }
 
 func (q *Queries) InsertLocation(ctx context.Context, arg InsertLocationParams) error {
-	_, err := q.exec(ctx, q.insertLocationStmt, insertLocation,
+	_, err := q.db.ExecContext(ctx, insertLocation,
 		arg.ID,
 		arg.AccountID,
 		arg.Name,
@@ -242,7 +242,7 @@ type ListLocationChildrenRow struct {
 }
 
 func (q *Queries) ListLocationChildren(ctx context.Context, arg ListLocationChildrenParams) ([]ListLocationChildrenRow, error) {
-	rows, err := q.query(ctx, q.listLocationChildrenStmt, listLocationChildren, arg.ParentID, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, listLocationChildren, arg.ParentID, arg.AccountID)
 	if err != nil {
 		return nil, err
 	}
@@ -292,7 +292,7 @@ type ListLocationTypesBackwardParams struct {
 }
 
 func (q *Queries) ListLocationTypesBackward(ctx context.Context, arg ListLocationTypesBackwardParams) ([]StorageLocationType, error) {
-	rows, err := q.query(ctx, q.listLocationTypesBackwardStmt, listLocationTypesBackward,
+	rows, err := q.db.QueryContext(ctx, listLocationTypesBackward,
 		arg.SearchQuery,
 		arg.SearchQuery,
 		arg.CursorCreatedAt,
@@ -356,7 +356,7 @@ type ListLocationTypesForwardParams struct {
 }
 
 func (q *Queries) ListLocationTypesForward(ctx context.Context, arg ListLocationTypesForwardParams) ([]StorageLocationType, error) {
-	rows, err := q.query(ctx, q.listLocationTypesForwardStmt, listLocationTypesForward,
+	rows, err := q.db.QueryContext(ctx, listLocationTypesForward,
 		arg.SearchQuery,
 		arg.SearchQuery,
 		arg.CursorCreatedAt,
@@ -437,7 +437,7 @@ type ListLocationsBackwardRow struct {
 }
 
 func (q *Queries) ListLocationsBackward(ctx context.Context, arg ListLocationsBackwardParams) ([]ListLocationsBackwardRow, error) {
-	rows, err := q.query(ctx, q.listLocationsBackwardStmt, listLocationsBackward,
+	rows, err := q.db.QueryContext(ctx, listLocationsBackward,
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
@@ -522,7 +522,7 @@ type ListLocationsForwardRow struct {
 }
 
 func (q *Queries) ListLocationsForward(ctx context.Context, arg ListLocationsForwardParams) ([]ListLocationsForwardRow, error) {
-	rows, err := q.query(ctx, q.listLocationsForwardStmt, listLocationsForward,
+	rows, err := q.db.QueryContext(ctx, listLocationsForward,
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
@@ -586,7 +586,7 @@ type UpdateLocationParams struct {
 }
 
 func (q *Queries) UpdateLocation(ctx context.Context, arg UpdateLocationParams) (sql.Result, error) {
-	return q.exec(ctx, q.updateLocationStmt, updateLocation,
+	return q.db.ExecContext(ctx, updateLocation,
 		arg.Name,
 		arg.StorageLocationTypeCode,
 		arg.ClearParent,

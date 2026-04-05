@@ -21,7 +21,7 @@ type DeleteAccountPriceParams struct {
 }
 
 func (q *Queries) DeleteAccountPrice(ctx context.Context, arg DeleteAccountPriceParams) error {
-	_, err := q.exec(ctx, q.deleteAccountPriceStmt, deleteAccountPrice, arg.ID, arg.OwnerAccountID)
+	_, err := q.db.ExecContext(ctx, deleteAccountPrice, arg.ID, arg.OwnerAccountID)
 	return err
 }
 
@@ -30,7 +30,7 @@ DELETE FROM account_price_attribute WHERE account_price_id = ?
 `
 
 func (q *Queries) DeleteAccountPriceAttributesByPriceID(ctx context.Context, accountPriceID string) error {
-	_, err := q.exec(ctx, q.deleteAccountPriceAttributesByPriceIDStmt, deleteAccountPriceAttributesByPriceID, accountPriceID)
+	_, err := q.db.ExecContext(ctx, deleteAccountPriceAttributesByPriceID, accountPriceID)
 	return err
 }
 
@@ -39,7 +39,7 @@ DELETE FROM account_price_item_category WHERE account_price_id = ?
 `
 
 func (q *Queries) DeleteAccountPriceCategoriesByPriceID(ctx context.Context, accountPriceID string) error {
-	_, err := q.exec(ctx, q.deleteAccountPriceCategoriesByPriceIDStmt, deleteAccountPriceCategoriesByPriceID, accountPriceID)
+	_, err := q.db.ExecContext(ctx, deleteAccountPriceCategoriesByPriceID, accountPriceID)
 	return err
 }
 
@@ -48,7 +48,7 @@ DELETE FROM rate WHERE id = ?
 `
 
 func (q *Queries) DeleteRate(ctx context.Context, id string) error {
-	_, err := q.exec(ctx, q.deleteRateStmt, deleteRate, id)
+	_, err := q.db.ExecContext(ctx, deleteRate, id)
 	return err
 }
 
@@ -109,7 +109,7 @@ type GetAccountPriceRow struct {
 }
 
 func (q *Queries) GetAccountPrice(ctx context.Context, arg GetAccountPriceParams) (GetAccountPriceRow, error) {
-	row := q.queryRow(ctx, q.getAccountPriceStmt, getAccountPrice, arg.ID, arg.OwnerAccountID)
+	row := q.db.QueryRowContext(ctx, getAccountPrice, arg.ID, arg.OwnerAccountID)
 	var i GetAccountPriceRow
 	err := row.Scan(
 		&i.ID,
@@ -149,7 +149,7 @@ type GetAccountPriceAttributesRow struct {
 }
 
 func (q *Queries) GetAccountPriceAttributes(ctx context.Context, accountPriceID string) ([]GetAccountPriceAttributesRow, error) {
-	rows, err := q.query(ctx, q.getAccountPriceAttributesStmt, getAccountPriceAttributes, accountPriceID)
+	rows, err := q.db.QueryContext(ctx, getAccountPriceAttributes, accountPriceID)
 	if err != nil {
 		return nil, err
 	}
@@ -186,7 +186,7 @@ type GetAccountPriceCategoriesRow struct {
 }
 
 func (q *Queries) GetAccountPriceCategories(ctx context.Context, accountPriceID string) ([]GetAccountPriceCategoriesRow, error) {
-	rows, err := q.query(ctx, q.getAccountPriceCategoriesStmt, getAccountPriceCategories, accountPriceID)
+	rows, err := q.db.QueryContext(ctx, getAccountPriceCategories, accountPriceID)
 	if err != nil {
 		return nil, err
 	}
@@ -218,7 +218,7 @@ type GetRateIDByAccountPriceIDParams struct {
 }
 
 func (q *Queries) GetRateIDByAccountPriceID(ctx context.Context, arg GetRateIDByAccountPriceIDParams) (string, error) {
-	row := q.queryRow(ctx, q.getRateIDByAccountPriceIDStmt, getRateIDByAccountPriceID, arg.ID, arg.OwnerAccountID)
+	row := q.db.QueryRowContext(ctx, getRateIDByAccountPriceID, arg.ID, arg.OwnerAccountID)
 	var unit_value_id string
 	err := row.Scan(&unit_value_id)
 	return unit_value_id, err
@@ -238,7 +238,7 @@ type InsertAccountPriceParams struct {
 }
 
 func (q *Queries) InsertAccountPrice(ctx context.Context, arg InsertAccountPriceParams) error {
-	_, err := q.exec(ctx, q.insertAccountPriceStmt, insertAccountPrice,
+	_, err := q.db.ExecContext(ctx, insertAccountPrice,
 		arg.ID,
 		arg.OwnerAccountID,
 		arg.RecipientAccountID,
@@ -260,7 +260,7 @@ type InsertAccountPriceAttributeParams struct {
 }
 
 func (q *Queries) InsertAccountPriceAttribute(ctx context.Context, arg InsertAccountPriceAttributeParams) error {
-	_, err := q.exec(ctx, q.insertAccountPriceAttributeStmt, insertAccountPriceAttribute, arg.ID, arg.AccountPriceID, arg.AttributeID)
+	_, err := q.db.ExecContext(ctx, insertAccountPriceAttribute, arg.ID, arg.AccountPriceID, arg.AttributeID)
 	return err
 }
 
@@ -276,7 +276,7 @@ type InsertAccountPriceCategoryParams struct {
 }
 
 func (q *Queries) InsertAccountPriceCategory(ctx context.Context, arg InsertAccountPriceCategoryParams) error {
-	_, err := q.exec(ctx, q.insertAccountPriceCategoryStmt, insertAccountPriceCategory, arg.ID, arg.AccountPriceID, arg.ItemCategoryID)
+	_, err := q.db.ExecContext(ctx, insertAccountPriceCategory, arg.ID, arg.AccountPriceID, arg.ItemCategoryID)
 	return err
 }
 
@@ -293,7 +293,7 @@ type InsertRateParams struct {
 }
 
 func (q *Queries) InsertRate(ctx context.Context, arg InsertRateParams) error {
-	_, err := q.exec(ctx, q.insertRateStmt, insertRate,
+	_, err := q.db.ExecContext(ctx, insertRate,
 		arg.ID,
 		arg.Value,
 		arg.NumeratorUnitID,
@@ -382,7 +382,7 @@ type ListAccountPricesBackwardRow struct {
 }
 
 func (q *Queries) ListAccountPricesBackward(ctx context.Context, arg ListAccountPricesBackwardParams) ([]ListAccountPricesBackwardRow, error) {
-	rows, err := q.query(ctx, q.listAccountPricesBackwardStmt, listAccountPricesBackward,
+	rows, err := q.db.QueryContext(ctx, listAccountPricesBackward,
 		arg.OwnerAccountID,
 		arg.RecipientAccountID,
 		arg.RecipientAccountID,
@@ -515,7 +515,7 @@ type ListAccountPricesForwardRow struct {
 }
 
 func (q *Queries) ListAccountPricesForward(ctx context.Context, arg ListAccountPricesForwardParams) ([]ListAccountPricesForwardRow, error) {
-	rows, err := q.query(ctx, q.listAccountPricesForwardStmt, listAccountPricesForward,
+	rows, err := q.db.QueryContext(ctx, listAccountPricesForward,
 		arg.OwnerAccountID,
 		arg.RecipientAccountID,
 		arg.RecipientAccountID,
@@ -585,7 +585,7 @@ type UpdateAccountPriceParams struct {
 }
 
 func (q *Queries) UpdateAccountPrice(ctx context.Context, arg UpdateAccountPriceParams) error {
-	_, err := q.exec(ctx, q.updateAccountPriceStmt, updateAccountPrice,
+	_, err := q.db.ExecContext(ctx, updateAccountPrice,
 		arg.RecipientAccountID,
 		arg.ProductLineID,
 		arg.ID,
@@ -611,7 +611,7 @@ type UpdateRateParams struct {
 }
 
 func (q *Queries) UpdateRate(ctx context.Context, arg UpdateRateParams) error {
-	_, err := q.exec(ctx, q.updateRateStmt, updateRate,
+	_, err := q.db.ExecContext(ctx, updateRate,
 		arg.Value,
 		arg.NumeratorUnitID,
 		arg.DenominatorUnitID,

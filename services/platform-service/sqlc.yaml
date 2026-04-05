@@ -7,7 +7,7 @@ sql:
       go:
         out: "internal/infrastructure/sqlc"
         package: "sqlc"
-        emit_prepared_queries: true
+        emit_prepared_queries: false
         overrides:
           - column: "idempotency_key.request_params"
             go_type:

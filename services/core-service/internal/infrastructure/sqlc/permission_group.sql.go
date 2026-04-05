@@ -41,7 +41,7 @@ type ListPermissionGroupsBackwardParams struct {
 }
 
 func (q *Queries) ListPermissionGroupsBackward(ctx context.Context, arg ListPermissionGroupsBackwardParams) ([]PermissionGroup, error) {
-	rows, err := q.query(ctx, q.listPermissionGroupsBackwardStmt, listPermissionGroupsBackward,
+	rows, err := q.db.QueryContext(ctx, listPermissionGroupsBackward,
 		arg.SearchQuery,
 		arg.SearchQuery,
 		arg.CursorCreatedAt,
@@ -107,7 +107,7 @@ type ListPermissionGroupsForwardParams struct {
 }
 
 func (q *Queries) ListPermissionGroupsForward(ctx context.Context, arg ListPermissionGroupsForwardParams) ([]PermissionGroup, error) {
-	rows, err := q.query(ctx, q.listPermissionGroupsForwardStmt, listPermissionGroupsForward,
+	rows, err := q.db.QueryContext(ctx, listPermissionGroupsForward,
 		arg.SearchQuery,
 		arg.SearchQuery,
 		arg.CursorCreatedAt,
@@ -179,7 +179,7 @@ func (q *Queries) ListPermissionsByGroupCodes(ctx context.Context, permissionGro
 	} else {
 		query = strings.Replace(query, "/*SLICE:permission_group_codes*/?", "NULL", 1)
 	}
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}

@@ -24,7 +24,7 @@ type AddSsccToShippingCaseParams struct {
 }
 
 func (q *Queries) AddSsccToShippingCase(ctx context.Context, arg AddSsccToShippingCaseParams) error {
-	_, err := q.exec(ctx, q.addSsccToShippingCaseStmt, addSsccToShippingCase, arg.Sscc, arg.ID)
+	_, err := q.db.ExecContext(ctx, addSsccToShippingCase, arg.Sscc, arg.ID)
 	return err
 }
 
@@ -42,7 +42,7 @@ type CheckShippingCaseInAccountParams struct {
 }
 
 func (q *Queries) CheckShippingCaseInAccount(ctx context.Context, arg CheckShippingCaseInAccountParams) (bool, error) {
-	row := q.queryRow(ctx, q.checkShippingCaseInAccountStmt, checkShippingCaseInAccount, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, checkShippingCaseInAccount, arg.ID, arg.AccountID)
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err
@@ -60,7 +60,7 @@ type DeleteShippingCaseParams struct {
 }
 
 func (q *Queries) DeleteShippingCase(ctx context.Context, arg DeleteShippingCaseParams) error {
-	_, err := q.exec(ctx, q.deleteShippingCaseStmt, deleteShippingCase, arg.ID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, deleteShippingCase, arg.ID, arg.AccountID)
 	return err
 }
 
@@ -70,7 +70,7 @@ WHERE shipment_id = ?
 `
 
 func (q *Queries) DeleteShippingCasesByShipment(ctx context.Context, shipmentID string) error {
-	_, err := q.exec(ctx, q.deleteShippingCasesByShipmentStmt, deleteShippingCasesByShipment, shipmentID)
+	_, err := q.db.ExecContext(ctx, deleteShippingCasesByShipment, shipmentID)
 	return err
 }
 
@@ -147,7 +147,7 @@ type GetShippingCaseRow struct {
 }
 
 func (q *Queries) GetShippingCase(ctx context.Context, arg GetShippingCaseParams) (GetShippingCaseRow, error) {
-	row := q.queryRow(ctx, q.getShippingCaseStmt, getShippingCase, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getShippingCase, arg.ID, arg.AccountID)
 	var i GetShippingCaseRow
 	err := row.Scan(
 		&i.ID,
@@ -191,7 +191,7 @@ type GetShippingCaseNumberParams struct {
 }
 
 func (q *Queries) GetShippingCaseNumber(ctx context.Context, arg GetShippingCaseNumberParams) (string, error) {
-	row := q.queryRow(ctx, q.getShippingCaseNumberStmt, getShippingCaseNumber, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getShippingCaseNumber, arg.ID, arg.AccountID)
 	var number string
 	err := row.Scan(&number)
 	return number, err
@@ -262,7 +262,7 @@ type ListShippingCasesByShipmentRow struct {
 }
 
 func (q *Queries) ListShippingCasesByShipment(ctx context.Context, shipmentID string) ([]ListShippingCasesByShipmentRow, error) {
-	rows, err := q.query(ctx, q.listShippingCasesByShipmentStmt, listShippingCasesByShipment, shipmentID)
+	rows, err := q.db.QueryContext(ctx, listShippingCasesByShipment, shipmentID)
 	if err != nil {
 		return nil, err
 	}
@@ -318,7 +318,7 @@ WHERE shipment_id = ?
 `
 
 func (q *Queries) MarkShippingCasesShippedByShipment(ctx context.Context, shipmentID string) error {
-	_, err := q.exec(ctx, q.markShippingCasesShippedByShipmentStmt, markShippingCasesShippedByShipment, shipmentID)
+	_, err := q.db.ExecContext(ctx, markShippingCasesShippedByShipment, shipmentID)
 	return err
 }
 
@@ -337,7 +337,7 @@ type UpdateShippingCaseTrackingNumberParams struct {
 }
 
 func (q *Queries) UpdateShippingCaseTrackingNumber(ctx context.Context, arg UpdateShippingCaseTrackingNumberParams) (sql.Result, error) {
-	return q.exec(ctx, q.updateShippingCaseTrackingNumberStmt, updateShippingCaseTrackingNumber, arg.TrackingNumber, arg.ID, arg.AccountID)
+	return q.db.ExecContext(ctx, updateShippingCaseTrackingNumber, arg.TrackingNumber, arg.ID, arg.AccountID)
 }
 
 const updateShippingCaseWithShipmentInfo = `-- name: UpdateShippingCaseWithShipmentInfo :exec
@@ -357,7 +357,7 @@ type UpdateShippingCaseWithShipmentInfoParams struct {
 }
 
 func (q *Queries) UpdateShippingCaseWithShipmentInfo(ctx context.Context, arg UpdateShippingCaseWithShipmentInfoParams) error {
-	_, err := q.exec(ctx, q.updateShippingCaseWithShipmentInfoStmt, updateShippingCaseWithShipmentInfo,
+	_, err := q.db.ExecContext(ctx, updateShippingCaseWithShipmentInfo,
 		arg.TrackingNumber,
 		arg.ShippoTransactionID,
 		arg.ShippingLabelUrl,
@@ -380,6 +380,6 @@ WHERE sc.shipment_id = ?
 `
 
 func (q *Queries) VoidShippingCasesByShipment(ctx context.Context, shipmentID string) error {
-	_, err := q.exec(ctx, q.voidShippingCasesByShipmentStmt, voidShippingCasesByShipment, shipmentID)
+	_, err := q.db.ExecContext(ctx, voidShippingCasesByShipment, shipmentID)
 	return err
 }

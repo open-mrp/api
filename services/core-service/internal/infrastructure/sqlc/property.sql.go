@@ -23,7 +23,7 @@ type CheckPropertyInAccountParams struct {
 }
 
 func (q *Queries) CheckPropertyInAccount(ctx context.Context, arg CheckPropertyInAccountParams) (int64, error) {
-	row := q.queryRow(ctx, q.checkPropertyInAccountStmt, checkPropertyInAccount, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, checkPropertyInAccount, arg.ID, arg.AccountID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -42,7 +42,7 @@ type CountPropertiesByNameParams struct {
 }
 
 func (q *Queries) CountPropertiesByName(ctx context.Context, arg CountPropertiesByNameParams) (int64, error) {
-	row := q.queryRow(ctx, q.countPropertiesByNameStmt, countPropertiesByName,
+	row := q.db.QueryRowContext(ctx, countPropertiesByName,
 		arg.Name,
 		arg.AccountID,
 		arg.ExcludeID,
@@ -65,7 +65,7 @@ type DeletePropertyParams struct {
 }
 
 func (q *Queries) DeleteProperty(ctx context.Context, arg DeletePropertyParams) (sql.Result, error) {
-	return q.exec(ctx, q.deletePropertyStmt, deleteProperty, arg.ID, arg.AccountID)
+	return q.db.ExecContext(ctx, deleteProperty, arg.ID, arg.AccountID)
 }
 
 const deletePropertyAttributes = `-- name: DeletePropertyAttributes :exec
@@ -80,7 +80,7 @@ type DeletePropertyAttributesParams struct {
 }
 
 func (q *Queries) DeletePropertyAttributes(ctx context.Context, arg DeletePropertyAttributesParams) error {
-	_, err := q.exec(ctx, q.deletePropertyAttributesStmt, deletePropertyAttributes, arg.PropertyID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, deletePropertyAttributes, arg.PropertyID, arg.AccountID)
 	return err
 }
 
@@ -112,7 +112,7 @@ type GetPropertyRow struct {
 }
 
 func (q *Queries) GetProperty(ctx context.Context, arg GetPropertyParams) (GetPropertyRow, error) {
-	row := q.queryRow(ctx, q.getPropertyStmt, getProperty, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getProperty, arg.ID, arg.AccountID)
 	var i GetPropertyRow
 	err := row.Scan(
 		&i.ID,
@@ -148,7 +148,7 @@ type InsertPropertyParams struct {
 }
 
 func (q *Queries) InsertProperty(ctx context.Context, arg InsertPropertyParams) error {
-	_, err := q.exec(ctx, q.insertPropertyStmt, insertProperty, arg.ID, arg.Name, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, insertProperty, arg.ID, arg.Name, arg.AccountID)
 	return err
 }
 
@@ -193,7 +193,7 @@ type ListPropertiesBackwardRow struct {
 }
 
 func (q *Queries) ListPropertiesBackward(ctx context.Context, arg ListPropertiesBackwardParams) ([]ListPropertiesBackwardRow, error) {
-	rows, err := q.query(ctx, q.listPropertiesBackwardStmt, listPropertiesBackward,
+	rows, err := q.db.QueryContext(ctx, listPropertiesBackward,
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
@@ -272,7 +272,7 @@ type ListPropertiesForwardRow struct {
 }
 
 func (q *Queries) ListPropertiesForward(ctx context.Context, arg ListPropertiesForwardParams) ([]ListPropertiesForwardRow, error) {
-	rows, err := q.query(ctx, q.listPropertiesForwardStmt, listPropertiesForward,
+	rows, err := q.db.QueryContext(ctx, listPropertiesForward,
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
@@ -325,5 +325,5 @@ type UpdatePropertyParams struct {
 }
 
 func (q *Queries) UpdateProperty(ctx context.Context, arg UpdatePropertyParams) (sql.Result, error) {
-	return q.exec(ctx, q.updatePropertyStmt, updateProperty, arg.Name, arg.ID, arg.AccountID)
+	return q.db.ExecContext(ctx, updateProperty, arg.Name, arg.ID, arg.AccountID)
 }

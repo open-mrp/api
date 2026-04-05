@@ -28,7 +28,7 @@ type GetPriorityParams struct {
 }
 
 func (q *Queries) GetPriority(ctx context.Context, arg GetPriorityParams) (Priority, error) {
-	row := q.queryRow(ctx, q.getPriorityStmt, getPriority, arg.ID, arg.Code)
+	row := q.db.QueryRowContext(ctx, getPriority, arg.ID, arg.Code)
 	var i Priority
 	err := row.Scan(
 		&i.ID,
@@ -68,7 +68,7 @@ type ListPrioritiesBackwardParams struct {
 }
 
 func (q *Queries) ListPrioritiesBackward(ctx context.Context, arg ListPrioritiesBackwardParams) ([]Priority, error) {
-	rows, err := q.query(ctx, q.listPrioritiesBackwardStmt, listPrioritiesBackward,
+	rows, err := q.db.QueryContext(ctx, listPrioritiesBackward,
 		arg.SearchQuery,
 		arg.SearchQuery,
 		arg.CursorCreatedAt,
@@ -132,7 +132,7 @@ type ListPrioritiesForwardParams struct {
 }
 
 func (q *Queries) ListPrioritiesForward(ctx context.Context, arg ListPrioritiesForwardParams) ([]Priority, error) {
-	rows, err := q.query(ctx, q.listPrioritiesForwardStmt, listPrioritiesForward,
+	rows, err := q.db.QueryContext(ctx, listPrioritiesForward,
 		arg.SearchQuery,
 		arg.SearchQuery,
 		arg.CursorCreatedAt,

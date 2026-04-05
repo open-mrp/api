@@ -39,7 +39,7 @@ type ListAdjustmentTypesBackwardParams struct {
 }
 
 func (q *Queries) ListAdjustmentTypesBackward(ctx context.Context, arg ListAdjustmentTypesBackwardParams) ([]AdjustmentType, error) {
-	rows, err := q.query(ctx, q.listAdjustmentTypesBackwardStmt, listAdjustmentTypesBackward,
+	rows, err := q.db.QueryContext(ctx, listAdjustmentTypesBackward,
 		arg.SearchQuery,
 		arg.SearchQuery,
 		arg.CursorCreatedAt,
@@ -103,7 +103,7 @@ type ListAdjustmentTypesForwardParams struct {
 }
 
 func (q *Queries) ListAdjustmentTypesForward(ctx context.Context, arg ListAdjustmentTypesForwardParams) ([]AdjustmentType, error) {
-	rows, err := q.query(ctx, q.listAdjustmentTypesForwardStmt, listAdjustmentTypesForward,
+	rows, err := q.db.QueryContext(ctx, listAdjustmentTypesForward,
 		arg.SearchQuery,
 		arg.SearchQuery,
 		arg.CursorCreatedAt,

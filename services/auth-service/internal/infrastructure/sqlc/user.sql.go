@@ -23,7 +23,7 @@ type CreateUserParams struct {
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
-	_, err := q.exec(ctx, q.createUserStmt, createUser,
+	_, err := q.db.ExecContext(ctx, createUser,
 		arg.ID,
 		arg.Email,
 		arg.Name,
@@ -41,7 +41,7 @@ LIMIT 1
 `
 
 func (q *Queries) FindLastUsedAccountID(ctx context.Context, userID string) (string, error) {
-	row := q.queryRow(ctx, q.findLastUsedAccountIDStmt, findLastUsedAccountID, userID)
+	row := q.db.QueryRowContext(ctx, findLastUsedAccountID, userID)
 	var account_id string
 	err := row.Scan(&account_id)
 	return account_id, err
@@ -66,7 +66,7 @@ type FindUserByIdentifierParams struct {
 }
 
 func (q *Queries) FindUserByIdentifier(ctx context.Context, arg FindUserByIdentifierParams) (User, error) {
-	row := q.queryRow(ctx, q.findUserByIdentifierStmt, findUserByIdentifier, arg.ID, arg.Email, arg.Username)
+	row := q.db.QueryRowContext(ctx, findUserByIdentifier, arg.ID, arg.Email, arg.Username)
 	var i User
 	err := row.Scan(
 		&i.ID,
@@ -93,6 +93,6 @@ type UpdateUserPasswordParams struct {
 }
 
 func (q *Queries) UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) error {
-	_, err := q.exec(ctx, q.updateUserPasswordStmt, updateUserPassword, arg.HashedPassword, arg.ID)
+	_, err := q.db.ExecContext(ctx, updateUserPassword, arg.HashedPassword, arg.ID)
 	return err
 }

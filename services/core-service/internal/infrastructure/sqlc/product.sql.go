@@ -29,7 +29,7 @@ type ChangeProductLineByItemIDParams struct {
 }
 
 func (q *Queries) ChangeProductLineByItemID(ctx context.Context, arg ChangeProductLineByItemIDParams) (sql.Result, error) {
-	return q.exec(ctx, q.changeProductLineByItemIDStmt, changeProductLineByItemID, arg.ProductLineID, arg.ItemID, arg.AccountID)
+	return q.db.ExecContext(ctx, changeProductLineByItemID, arg.ProductLineID, arg.ItemID, arg.AccountID)
 }
 
 const checkProductSKUExists = `-- name: CheckProductSKUExists :one
@@ -48,7 +48,7 @@ type CheckProductSKUExistsParams struct {
 }
 
 func (q *Queries) CheckProductSKUExists(ctx context.Context, arg CheckProductSKUExistsParams) (int64, error) {
-	row := q.queryRow(ctx, q.checkProductSKUExistsStmt, checkProductSKUExists,
+	row := q.db.QueryRowContext(ctx, checkProductSKUExists,
 		arg.AccountID,
 		arg.Sku,
 		arg.ExcludeItemID,
@@ -204,7 +204,7 @@ func (q *Queries) FindProductsBySKUs(ctx context.Context, arg FindProductsBySKUs
 	} else {
 		query = strings.Replace(query, "/*SLICE:skus*/?", "NULL", 1)
 	}
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -416,7 +416,7 @@ type GetProductByItemIDRow struct {
 }
 
 func (q *Queries) GetProductByItemID(ctx context.Context, arg GetProductByItemIDParams) (GetProductByItemIDRow, error) {
-	row := q.queryRow(ctx, q.getProductByItemIDStmt, getProductByItemID, arg.ItemID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getProductByItemID, arg.ItemID, arg.AccountID)
 	var i GetProductByItemIDRow
 	err := row.Scan(
 		&i.ID,
@@ -507,7 +507,7 @@ type InsertProductParams struct {
 }
 
 func (q *Queries) InsertProduct(ctx context.Context, arg InsertProductParams) error {
-	_, err := q.exec(ctx, q.insertProductStmt, insertProduct,
+	_, err := q.db.ExecContext(ctx, insertProduct,
 		arg.ID,
 		arg.ItemID,
 		arg.ProductTypeCode,
@@ -535,7 +535,7 @@ type ListProductsByAccountRow struct {
 }
 
 func (q *Queries) ListProductsByAccount(ctx context.Context, accountID string) ([]ListProductsByAccountRow, error) {
-	rows, err := q.query(ctx, q.listProductsByAccountStmt, listProductsByAccount, accountID)
+	rows, err := q.db.QueryContext(ctx, listProductsByAccount, accountID)
 	if err != nil {
 		return nil, err
 	}
@@ -850,7 +850,7 @@ func (q *Queries) ListProductsFullBackward(ctx context.Context, arg ListProducts
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorID)
 	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -1217,7 +1217,7 @@ func (q *Queries) ListProductsFullForward(ctx context.Context, arg ListProductsF
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorID)
 	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -1340,7 +1340,7 @@ type ProductInsertItemParams struct {
 }
 
 func (q *Queries) ProductInsertItem(ctx context.Context, arg ProductInsertItemParams) error {
-	_, err := q.exec(ctx, q.productInsertItemStmt, productInsertItem,
+	_, err := q.db.ExecContext(ctx, productInsertItem,
 		arg.ID,
 		arg.Sku,
 		arg.Description,
@@ -1380,7 +1380,7 @@ type ProductInsertRateParams struct {
 }
 
 func (q *Queries) ProductInsertRate(ctx context.Context, arg ProductInsertRateParams) error {
-	_, err := q.exec(ctx, q.productInsertRateStmt, productInsertRate,
+	_, err := q.db.ExecContext(ctx, productInsertRate,
 		arg.ID,
 		arg.Value,
 		arg.NumeratorUnitID,
@@ -1411,7 +1411,7 @@ type ProductUpdateItemParams struct {
 }
 
 func (q *Queries) ProductUpdateItem(ctx context.Context, arg ProductUpdateItemParams) (sql.Result, error) {
-	return q.exec(ctx, q.productUpdateItemStmt, productUpdateItem,
+	return q.db.ExecContext(ctx, productUpdateItem,
 		arg.Sku,
 		arg.UpdateDescription,
 		arg.Description,
@@ -1445,7 +1445,7 @@ type SearchProductsBySKURow struct {
 }
 
 func (q *Queries) SearchProductsBySKU(ctx context.Context, arg SearchProductsBySKUParams) ([]SearchProductsBySKURow, error) {
-	rows, err := q.query(ctx, q.searchProductsBySKUStmt, searchProductsBySKU, arg.AccountID, arg.Sku)
+	rows, err := q.db.QueryContext(ctx, searchProductsBySKU, arg.AccountID, arg.Sku)
 	if err != nil {
 		return nil, err
 	}
@@ -1487,7 +1487,7 @@ type SoftDeleteProductByItemIDParams struct {
 }
 
 func (q *Queries) SoftDeleteProductByItemID(ctx context.Context, arg SoftDeleteProductByItemIDParams) (sql.Result, error) {
-	return q.exec(ctx, q.softDeleteProductByItemIDStmt, softDeleteProductByItemID, arg.ID, arg.AccountID)
+	return q.db.ExecContext(ctx, softDeleteProductByItemID, arg.ID, arg.AccountID)
 }
 
 const updateProductFields = `-- name: UpdateProductFields :execresult
@@ -1507,5 +1507,5 @@ type UpdateProductFieldsParams struct {
 }
 
 func (q *Queries) UpdateProductFields(ctx context.Context, arg UpdateProductFieldsParams) (sql.Result, error) {
-	return q.exec(ctx, q.updateProductFieldsStmt, updateProductFields, arg.IsPortalReady, arg.ItemID, arg.AccountID)
+	return q.db.ExecContext(ctx, updateProductFields, arg.IsPortalReady, arg.ItemID, arg.AccountID)
 }

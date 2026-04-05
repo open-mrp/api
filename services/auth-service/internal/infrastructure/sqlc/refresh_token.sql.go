@@ -23,7 +23,7 @@ type CreateRefreshTokenParams struct {
 }
 
 func (q *Queries) CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) error {
-	_, err := q.exec(ctx, q.createRefreshTokenStmt, createRefreshToken, arg.UserID, arg.Token, arg.ExpiresAt)
+	_, err := q.db.ExecContext(ctx, createRefreshToken, arg.UserID, arg.Token, arg.ExpiresAt)
 	return err
 }
 
@@ -39,7 +39,7 @@ type FindRefreshTokenRow struct {
 }
 
 func (q *Queries) FindRefreshToken(ctx context.Context, token string) (FindRefreshTokenRow, error) {
-	row := q.queryRow(ctx, q.findRefreshTokenStmt, findRefreshToken, token)
+	row := q.db.QueryRowContext(ctx, findRefreshToken, token)
 	var i FindRefreshTokenRow
 	err := row.Scan(&i.UserID, &i.ExpiresAt, &i.RevokedAt)
 	return i, err
@@ -50,7 +50,7 @@ UPDATE refresh_token SET revoked_at = NOW(3), updated_at = NOW(3) WHERE user_id 
 `
 
 func (q *Queries) RevokeAllRefreshTokensByUserID(ctx context.Context, userID string) error {
-	_, err := q.exec(ctx, q.revokeAllRefreshTokensByUserIDStmt, revokeAllRefreshTokensByUserID, userID)
+	_, err := q.db.ExecContext(ctx, revokeAllRefreshTokensByUserID, userID)
 	return err
 }
 
@@ -59,6 +59,6 @@ UPDATE refresh_token SET revoked_at = NOW(3), updated_at = NOW(3) WHERE token = 
 `
 
 func (q *Queries) RevokeRefreshToken(ctx context.Context, token string) error {
-	_, err := q.exec(ctx, q.revokeRefreshTokenStmt, revokeRefreshToken, token)
+	_, err := q.db.ExecContext(ctx, revokeRefreshToken, token)
 	return err
 }

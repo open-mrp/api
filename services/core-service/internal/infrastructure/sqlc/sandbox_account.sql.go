@@ -27,7 +27,7 @@ type CountSandboxAccountsParams struct {
 }
 
 func (q *Queries) CountSandboxAccounts(ctx context.Context, arg CountSandboxAccountsParams) (int64, error) {
-	row := q.queryRow(ctx, q.countSandboxAccountsStmt, countSandboxAccounts, arg.OwnerAccountID, arg.SearchQuery, arg.SearchQuery)
+	row := q.db.QueryRowContext(ctx, countSandboxAccounts, arg.OwnerAccountID, arg.SearchQuery, arg.SearchQuery)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -50,7 +50,7 @@ type CreateSandboxAccountParams struct {
 }
 
 func (q *Queries) CreateSandboxAccount(ctx context.Context, arg CreateSandboxAccountParams) (sql.Result, error) {
-	return q.exec(ctx, q.createSandboxAccountStmt, createSandboxAccount, arg.TypeID, arg.OwnerAccountID, arg.AccountID)
+	return q.db.ExecContext(ctx, createSandboxAccount, arg.TypeID, arg.OwnerAccountID, arg.AccountID)
 }
 
 const deleteSandboxAccountByID = `-- name: DeleteSandboxAccountByID :exec
@@ -58,7 +58,7 @@ DELETE FROM sandbox_account WHERE id = ?
 `
 
 func (q *Queries) DeleteSandboxAccountByID(ctx context.Context, id int64) error {
-	_, err := q.exec(ctx, q.deleteSandboxAccountByIDStmt, deleteSandboxAccountByID, id)
+	_, err := q.db.ExecContext(ctx, deleteSandboxAccountByID, id)
 	return err
 }
 
@@ -67,7 +67,7 @@ DELETE FROM sandbox_account WHERE type_id = ?
 `
 
 func (q *Queries) DeleteSandboxAccountByTypeID(ctx context.Context, typeID string) error {
-	_, err := q.exec(ctx, q.deleteSandboxAccountByTypeIDStmt, deleteSandboxAccountByTypeID, typeID)
+	_, err := q.db.ExecContext(ctx, deleteSandboxAccountByTypeID, typeID)
 	return err
 }
 
@@ -80,7 +80,7 @@ LIMIT 1
 `
 
 func (q *Queries) FindFirstSandboxAccountByOwnerAccountID(ctx context.Context, ownerAccountID string) (string, error) {
-	row := q.queryRow(ctx, q.findFirstSandboxAccountByOwnerAccountIDStmt, findFirstSandboxAccountByOwnerAccountID, ownerAccountID)
+	row := q.db.QueryRowContext(ctx, findFirstSandboxAccountByOwnerAccountID, ownerAccountID)
 	var account_id string
 	err := row.Scan(&account_id)
 	return account_id, err
@@ -106,7 +106,7 @@ type FindSandboxAccountByAccountIDRow struct {
 }
 
 func (q *Queries) FindSandboxAccountByAccountID(ctx context.Context, accountID string) (FindSandboxAccountByAccountIDRow, error) {
-	row := q.queryRow(ctx, q.findSandboxAccountByAccountIDStmt, findSandboxAccountByAccountID, accountID)
+	row := q.db.QueryRowContext(ctx, findSandboxAccountByAccountID, accountID)
 	var i FindSandboxAccountByAccountIDRow
 	err := row.Scan(
 		&i.ID,
@@ -140,7 +140,7 @@ type FindSandboxAccountByTypeIDRow struct {
 }
 
 func (q *Queries) FindSandboxAccountByTypeID(ctx context.Context, typeID string) (FindSandboxAccountByTypeIDRow, error) {
-	row := q.queryRow(ctx, q.findSandboxAccountByTypeIDStmt, findSandboxAccountByTypeID, typeID)
+	row := q.db.QueryRowContext(ctx, findSandboxAccountByTypeID, typeID)
 	var i FindSandboxAccountByTypeIDRow
 	err := row.Scan(
 		&i.ID,
@@ -177,7 +177,7 @@ type FindSandboxAccountWithOwnerByTypeIDRow struct {
 }
 
 func (q *Queries) FindSandboxAccountWithOwnerByTypeID(ctx context.Context, typeID string) (FindSandboxAccountWithOwnerByTypeIDRow, error) {
-	row := q.queryRow(ctx, q.findSandboxAccountWithOwnerByTypeIDStmt, findSandboxAccountWithOwnerByTypeID, typeID)
+	row := q.db.QueryRowContext(ctx, findSandboxAccountWithOwnerByTypeID, typeID)
 	var i FindSandboxAccountWithOwnerByTypeIDRow
 	err := row.Scan(
 		&i.ID,
@@ -230,7 +230,7 @@ type ListSandboxAccountsBackwardRow struct {
 }
 
 func (q *Queries) ListSandboxAccountsBackward(ctx context.Context, arg ListSandboxAccountsBackwardParams) ([]ListSandboxAccountsBackwardRow, error) {
-	rows, err := q.query(ctx, q.listSandboxAccountsBackwardStmt, listSandboxAccountsBackward,
+	rows, err := q.db.QueryContext(ctx, listSandboxAccountsBackward,
 		arg.OwnerAccountID,
 		arg.CursorCreatedAt,
 		arg.CursorCreatedAt,
@@ -307,7 +307,7 @@ type ListSandboxAccountsForwardRow struct {
 }
 
 func (q *Queries) ListSandboxAccountsForward(ctx context.Context, arg ListSandboxAccountsForwardParams) ([]ListSandboxAccountsForwardRow, error) {
-	rows, err := q.query(ctx, q.listSandboxAccountsForwardStmt, listSandboxAccountsForward,
+	rows, err := q.db.QueryContext(ctx, listSandboxAccountsForward,
 		arg.OwnerAccountID,
 		arg.CursorCreatedAt,
 		arg.CursorCreatedAt,
@@ -387,7 +387,7 @@ type ListSandboxAccountsWithOwnerBackwardRow struct {
 }
 
 func (q *Queries) ListSandboxAccountsWithOwnerBackward(ctx context.Context, arg ListSandboxAccountsWithOwnerBackwardParams) ([]ListSandboxAccountsWithOwnerBackwardRow, error) {
-	rows, err := q.query(ctx, q.listSandboxAccountsWithOwnerBackwardStmt, listSandboxAccountsWithOwnerBackward,
+	rows, err := q.db.QueryContext(ctx, listSandboxAccountsWithOwnerBackward,
 		arg.OwnerAccountID,
 		arg.CursorCreatedAt,
 		arg.CursorCreatedAt,
@@ -468,7 +468,7 @@ type ListSandboxAccountsWithOwnerForwardRow struct {
 }
 
 func (q *Queries) ListSandboxAccountsWithOwnerForward(ctx context.Context, arg ListSandboxAccountsWithOwnerForwardParams) ([]ListSandboxAccountsWithOwnerForwardRow, error) {
-	rows, err := q.query(ctx, q.listSandboxAccountsWithOwnerForwardStmt, listSandboxAccountsWithOwnerForward,
+	rows, err := q.db.QueryContext(ctx, listSandboxAccountsWithOwnerForward,
 		arg.OwnerAccountID,
 		arg.CursorCreatedAt,
 		arg.CursorCreatedAt,

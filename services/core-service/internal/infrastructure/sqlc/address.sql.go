@@ -25,7 +25,7 @@ type CheckAddressInAccountParams struct {
 }
 
 func (q *Queries) CheckAddressInAccount(ctx context.Context, arg CheckAddressInAccountParams) (bool, error) {
-	row := q.queryRow(ctx, q.checkAddressInAccountStmt, checkAddressInAccount, arg.AccountID, arg.AddressID)
+	row := q.db.QueryRowContext(ctx, checkAddressInAccount, arg.AccountID, arg.AddressID)
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err
@@ -43,7 +43,7 @@ type CheckAddressUsedAsAccountDefaultParams struct {
 }
 
 func (q *Queries) CheckAddressUsedAsAccountDefault(ctx context.Context, arg CheckAddressUsedAsAccountDefaultParams) (string, error) {
-	row := q.queryRow(ctx, q.checkAddressUsedAsAccountDefaultStmt, checkAddressUsedAsAccountDefault, arg.AddressID, arg.AddressID)
+	row := q.db.QueryRowContext(ctx, checkAddressUsedAsAccountDefault, arg.AddressID, arg.AddressID)
 	var name string
 	err := row.Scan(&name)
 	return name, err
@@ -56,7 +56,7 @@ LIMIT 1
 `
 
 func (q *Queries) CheckAddressUsedInInvoice(ctx context.Context, addressID string) (string, error) {
-	row := q.queryRow(ctx, q.checkAddressUsedInInvoiceStmt, checkAddressUsedInInvoice, addressID)
+	row := q.db.QueryRowContext(ctx, checkAddressUsedInInvoice, addressID)
 	var number string
 	err := row.Scan(&number)
 	return number, err
@@ -74,7 +74,7 @@ type CheckAddressUsedInSalesOrderParams struct {
 }
 
 func (q *Queries) CheckAddressUsedInSalesOrder(ctx context.Context, arg CheckAddressUsedInSalesOrderParams) (string, error) {
-	row := q.queryRow(ctx, q.checkAddressUsedInSalesOrderStmt, checkAddressUsedInSalesOrder, arg.AddressID, arg.AddressID)
+	row := q.db.QueryRowContext(ctx, checkAddressUsedInSalesOrder, arg.AddressID, arg.AddressID)
 	var number string
 	err := row.Scan(&number)
 	return number, err
@@ -87,7 +87,7 @@ LIMIT 1
 `
 
 func (q *Queries) CheckAddressUsedInShipment(ctx context.Context, addressID string) (string, error) {
-	row := q.queryRow(ctx, q.checkAddressUsedInShipmentStmt, checkAddressUsedInShipment, addressID)
+	row := q.db.QueryRowContext(ctx, checkAddressUsedInShipment, addressID)
 	var number string
 	err := row.Scan(&number)
 	return number, err
@@ -98,7 +98,7 @@ SELECT COUNT(*) AS count FROM address WHERE geolocation_id = ?
 `
 
 func (q *Queries) CountAddressesByGeolocationID(ctx context.Context, geolocationID string) (int64, error) {
-	row := q.queryRow(ctx, q.countAddressesByGeolocationIDStmt, countAddressesByGeolocationID, geolocationID)
+	row := q.db.QueryRowContext(ctx, countAddressesByGeolocationID, geolocationID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -109,7 +109,7 @@ DELETE FROM account_address WHERE address_id = ?
 `
 
 func (q *Queries) DeleteAccountAddressByAddressID(ctx context.Context, addressID string) error {
-	_, err := q.exec(ctx, q.deleteAccountAddressByAddressIDStmt, deleteAccountAddressByAddressID, addressID)
+	_, err := q.db.ExecContext(ctx, deleteAccountAddressByAddressID, addressID)
 	return err
 }
 
@@ -118,7 +118,7 @@ DELETE FROM address WHERE id = ?
 `
 
 func (q *Queries) DeleteAddress(ctx context.Context, id string) error {
-	_, err := q.exec(ctx, q.deleteAddressStmt, deleteAddress, id)
+	_, err := q.db.ExecContext(ctx, deleteAddress, id)
 	return err
 }
 
@@ -174,7 +174,7 @@ type GetAddressRow struct {
 }
 
 func (q *Queries) GetAddress(ctx context.Context, arg GetAddressParams) (GetAddressRow, error) {
-	row := q.queryRow(ctx, q.getAddressStmt, getAddress, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getAddress, arg.ID, arg.AccountID)
 	var i GetAddressRow
 	err := row.Scan(
 		&i.ID,
@@ -203,7 +203,7 @@ SELECT geolocation_id FROM address WHERE id = ?
 `
 
 func (q *Queries) GetGeolocationIDByAddressID(ctx context.Context, id string) (string, error) {
-	row := q.queryRow(ctx, q.getGeolocationIDByAddressIDStmt, getGeolocationIDByAddressID, id)
+	row := q.db.QueryRowContext(ctx, getGeolocationIDByAddressID, id)
 	var geolocation_id string
 	err := row.Scan(&geolocation_id)
 	return geolocation_id, err
@@ -232,7 +232,7 @@ type InsertAccountAddressParams struct {
 }
 
 func (q *Queries) InsertAccountAddress(ctx context.Context, arg InsertAccountAddressParams) error {
-	_, err := q.exec(ctx, q.insertAccountAddressStmt, insertAccountAddress, arg.ID, arg.AccountID, arg.AddressID)
+	_, err := q.db.ExecContext(ctx, insertAccountAddress, arg.ID, arg.AccountID, arg.AddressID)
 	return err
 }
 
@@ -268,7 +268,7 @@ type InsertAddressParams struct {
 }
 
 func (q *Queries) InsertAddress(ctx context.Context, arg InsertAddressParams) error {
-	_, err := q.exec(ctx, q.insertAddressStmt, insertAddress,
+	_, err := q.db.ExecContext(ctx, insertAddress,
 		arg.ID,
 		arg.Name,
 		arg.Phone,
@@ -317,7 +317,7 @@ type InsertGeolocationParams struct {
 }
 
 func (q *Queries) InsertGeolocation(ctx context.Context, arg InsertGeolocationParams) error {
-	_, err := q.exec(ctx, q.insertGeolocationStmt, insertGeolocation,
+	_, err := q.db.ExecContext(ctx, insertGeolocation,
 		arg.ID,
 		arg.StreetLine1,
 		arg.StreetLine2,
@@ -400,7 +400,7 @@ type ListAddressesBackwardRow struct {
 }
 
 func (q *Queries) ListAddressesBackward(ctx context.Context, arg ListAddressesBackwardParams) ([]ListAddressesBackwardRow, error) {
-	rows, err := q.query(ctx, q.listAddressesBackwardStmt, listAddressesBackward,
+	rows, err := q.db.QueryContext(ctx, listAddressesBackward,
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
@@ -525,7 +525,7 @@ type ListAddressesForwardRow struct {
 }
 
 func (q *Queries) ListAddressesForward(ctx context.Context, arg ListAddressesForwardParams) ([]ListAddressesForwardRow, error) {
-	rows, err := q.query(ctx, q.listAddressesForwardStmt, listAddressesForward,
+	rows, err := q.db.QueryContext(ctx, listAddressesForward,
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
@@ -599,7 +599,7 @@ type UpdateAddressParams struct {
 }
 
 func (q *Queries) UpdateAddress(ctx context.Context, arg UpdateAddressParams) (sql.Result, error) {
-	return q.exec(ctx, q.updateAddressStmt, updateAddress,
+	return q.db.ExecContext(ctx, updateAddress,
 		arg.Name,
 		arg.Phone,
 		arg.Email,
@@ -621,7 +621,7 @@ type UpdateAddressGeolocationIDParams struct {
 }
 
 func (q *Queries) UpdateAddressGeolocationID(ctx context.Context, arg UpdateAddressGeolocationIDParams) (sql.Result, error) {
-	return q.exec(ctx, q.updateAddressGeolocationIDStmt, updateAddressGeolocationID, arg.GeolocationID, arg.ID)
+	return q.db.ExecContext(ctx, updateAddressGeolocationID, arg.GeolocationID, arg.ID)
 }
 
 const updateGeolocation = `-- name: UpdateGeolocation :execresult
@@ -649,7 +649,7 @@ type UpdateGeolocationParams struct {
 }
 
 func (q *Queries) UpdateGeolocation(ctx context.Context, arg UpdateGeolocationParams) (sql.Result, error) {
-	return q.exec(ctx, q.updateGeolocationStmt, updateGeolocation,
+	return q.db.ExecContext(ctx, updateGeolocation,
 		arg.StreetLine1,
 		arg.StreetLine2,
 		arg.Locality,

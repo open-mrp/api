@@ -22,7 +22,7 @@ type CountCounterpartyRelationsExcludingParams struct {
 }
 
 func (q *Queries) CountCounterpartyRelationsExcluding(ctx context.Context, arg CountCounterpartyRelationsExcludingParams) (int64, error) {
-	row := q.queryRow(ctx, q.countCounterpartyRelationsExcludingStmt, countCounterpartyRelationsExcluding, arg.CounterpartyAccountID, arg.OwnerAccountID)
+	row := q.db.QueryRowContext(ctx, countCounterpartyRelationsExcluding, arg.CounterpartyAccountID, arg.OwnerAccountID)
 	var cnt int64
 	err := row.Scan(&cnt)
 	return cnt, err
@@ -40,7 +40,7 @@ type DeleteNotificationPreferenceParams struct {
 }
 
 func (q *Queries) DeleteNotificationPreference(ctx context.Context, arg DeleteNotificationPreferenceParams) error {
-	_, err := q.exec(ctx, q.deleteNotificationPreferenceStmt, deleteNotificationPreference, arg.AccountRelationID, arg.RecipientAccountUserID, arg.NotificationTypeCode)
+	_, err := q.db.ExecContext(ctx, deleteNotificationPreference, arg.AccountRelationID, arg.RecipientAccountUserID, arg.NotificationTypeCode)
 	return err
 }
 
@@ -70,7 +70,7 @@ type FindAccountRelationByCounterpartyAccountIDAndAPIKeyIDRow struct {
 }
 
 func (q *Queries) FindAccountRelationByCounterpartyAccountIDAndAPIKeyID(ctx context.Context, arg FindAccountRelationByCounterpartyAccountIDAndAPIKeyIDParams) (FindAccountRelationByCounterpartyAccountIDAndAPIKeyIDRow, error) {
-	row := q.queryRow(ctx, q.findAccountRelationByCounterpartyAccountIDAndAPIKeyIDStmt, findAccountRelationByCounterpartyAccountIDAndAPIKeyID, arg.CounterpartyAccountID, arg.ID)
+	row := q.db.QueryRowContext(ctx, findAccountRelationByCounterpartyAccountIDAndAPIKeyID, arg.CounterpartyAccountID, arg.ID)
 	var i FindAccountRelationByCounterpartyAccountIDAndAPIKeyIDRow
 	err := row.Scan(
 		&i.ID,
@@ -105,7 +105,7 @@ type FindAccountRelationByOwnerAccountIDAndAPIKeyIDRow struct {
 }
 
 func (q *Queries) FindAccountRelationByOwnerAccountIDAndAPIKeyID(ctx context.Context, arg FindAccountRelationByOwnerAccountIDAndAPIKeyIDParams) (FindAccountRelationByOwnerAccountIDAndAPIKeyIDRow, error) {
-	row := q.queryRow(ctx, q.findAccountRelationByOwnerAccountIDAndAPIKeyIDStmt, findAccountRelationByOwnerAccountIDAndAPIKeyID, arg.OwnerAccountID, arg.ID)
+	row := q.db.QueryRowContext(ctx, findAccountRelationByOwnerAccountIDAndAPIKeyID, arg.OwnerAccountID, arg.ID)
 	var i FindAccountRelationByOwnerAccountIDAndAPIKeyIDRow
 	err := row.Scan(&i.ID, &i.CounterpartyAccountID, &i.AccountRelationRoleCode)
 	return i, err
@@ -135,7 +135,7 @@ type FindAccountRelationByOwnerAccountIDAndUserIDRow struct {
 }
 
 func (q *Queries) FindAccountRelationByOwnerAccountIDAndUserID(ctx context.Context, arg FindAccountRelationByOwnerAccountIDAndUserIDParams) (FindAccountRelationByOwnerAccountIDAndUserIDRow, error) {
-	row := q.queryRow(ctx, q.findAccountRelationByOwnerAccountIDAndUserIDStmt, findAccountRelationByOwnerAccountIDAndUserID, arg.OwnerAccountID, arg.UserID)
+	row := q.db.QueryRowContext(ctx, findAccountRelationByOwnerAccountIDAndUserID, arg.OwnerAccountID, arg.UserID)
 	var i FindAccountRelationByOwnerAccountIDAndUserIDRow
 	err := row.Scan(&i.ID, &i.CounterpartyAccountID, &i.AccountRelationRoleCode)
 	return i, err
@@ -152,7 +152,7 @@ type FindAccountRelationByOwnerAndCounterpartyParams struct {
 }
 
 func (q *Queries) FindAccountRelationByOwnerAndCounterparty(ctx context.Context, arg FindAccountRelationByOwnerAndCounterpartyParams) (string, error) {
-	row := q.queryRow(ctx, q.findAccountRelationByOwnerAndCounterpartyStmt, findAccountRelationByOwnerAndCounterparty, arg.OwnerAccountID, arg.CounterpartyAccountID)
+	row := q.db.QueryRowContext(ctx, findAccountRelationByOwnerAndCounterparty, arg.OwnerAccountID, arg.CounterpartyAccountID)
 	var id string
 	err := row.Scan(&id)
 	return id, err
@@ -181,7 +181,7 @@ type FindCustomerAccountsByVendorAndUserRow struct {
 }
 
 func (q *Queries) FindCustomerAccountsByVendorAndUser(ctx context.Context, arg FindCustomerAccountsByVendorAndUserParams) ([]FindCustomerAccountsByVendorAndUserRow, error) {
-	rows, err := q.query(ctx, q.findCustomerAccountsByVendorAndUserStmt, findCustomerAccountsByVendorAndUser, arg.UserID, arg.OwnerAccountID)
+	rows, err := q.db.QueryContext(ctx, findCustomerAccountsByVendorAndUser, arg.UserID, arg.OwnerAccountID)
 	if err != nil {
 		return nil, err
 	}
@@ -230,7 +230,7 @@ type FindCustomerByEmailRow struct {
 }
 
 func (q *Queries) FindCustomerByEmail(ctx context.Context, arg FindCustomerByEmailParams) (FindCustomerByEmailRow, error) {
-	row := q.queryRow(ctx, q.findCustomerByEmailStmt, findCustomerByEmail, arg.OwnerAccountID, arg.Email)
+	row := q.db.QueryRowContext(ctx, findCustomerByEmail, arg.OwnerAccountID, arg.Email)
 	var i FindCustomerByEmailRow
 	err := row.Scan(
 		&i.RelationID,
@@ -259,7 +259,7 @@ type HasRelationByOwnerAndCounterpartyParams struct {
 }
 
 func (q *Queries) HasRelationByOwnerAndCounterparty(ctx context.Context, arg HasRelationByOwnerAndCounterpartyParams) (bool, error) {
-	row := q.queryRow(ctx, q.hasRelationByOwnerAndCounterpartyStmt, hasRelationByOwnerAndCounterparty, arg.OwnerAccountID, arg.CounterpartyAccountID)
+	row := q.db.QueryRowContext(ctx, hasRelationByOwnerAndCounterparty, arg.OwnerAccountID, arg.CounterpartyAccountID)
 	var has_relation bool
 	err := row.Scan(&has_relation)
 	return has_relation, err
@@ -278,7 +278,7 @@ type InsertAccountRelationNotificationPreferenceParams struct {
 }
 
 func (q *Queries) InsertAccountRelationNotificationPreference(ctx context.Context, arg InsertAccountRelationNotificationPreferenceParams) error {
-	_, err := q.exec(ctx, q.insertAccountRelationNotificationPreferenceStmt, insertAccountRelationNotificationPreference,
+	_, err := q.db.ExecContext(ctx, insertAccountRelationNotificationPreference,
 		arg.ID,
 		arg.AccountRelationID,
 		arg.RecipientAccountUserID,
@@ -304,7 +304,7 @@ type ListNotificationPreferencesRow struct {
 }
 
 func (q *Queries) ListNotificationPreferences(ctx context.Context, arg ListNotificationPreferencesParams) ([]ListNotificationPreferencesRow, error) {
-	rows, err := q.query(ctx, q.listNotificationPreferencesStmt, listNotificationPreferences, arg.AccountRelationID, arg.RecipientAccountUserID)
+	rows, err := q.db.QueryContext(ctx, listNotificationPreferences, arg.AccountRelationID, arg.RecipientAccountUserID)
 	if err != nil {
 		return nil, err
 	}

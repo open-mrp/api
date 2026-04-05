@@ -22,7 +22,7 @@ type GetInboxRecordByMessageAndHandlerParams struct {
 }
 
 func (q *Queries) GetInboxRecordByMessageAndHandler(ctx context.Context, arg GetInboxRecordByMessageAndHandlerParams) (MessageInbox, error) {
-	row := q.queryRow(ctx, q.getInboxRecordByMessageAndHandlerStmt, getInboxRecordByMessageAndHandler, arg.MessageID, arg.Handler)
+	row := q.db.QueryRowContext(ctx, getInboxRecordByMessageAndHandler, arg.MessageID, arg.Handler)
 	var i MessageInbox
 	err := row.Scan(
 		&i.ID,
@@ -53,7 +53,7 @@ type MarkInboxRecordFailedParams struct {
 }
 
 func (q *Queries) MarkInboxRecordFailed(ctx context.Context, arg MarkInboxRecordFailedParams) error {
-	_, err := q.exec(ctx, q.markInboxRecordFailedStmt, markInboxRecordFailed, arg.LastError, arg.ID)
+	_, err := q.db.ExecContext(ctx, markInboxRecordFailed, arg.LastError, arg.ID)
 	return err
 }
 
@@ -64,7 +64,7 @@ WHERE id = ?
 `
 
 func (q *Queries) MarkInboxRecordProcessed(ctx context.Context, id int64) error {
-	_, err := q.exec(ctx, q.markInboxRecordProcessedStmt, markInboxRecordProcessed, id)
+	_, err := q.db.ExecContext(ctx, markInboxRecordProcessed, id)
 	return err
 }
 
@@ -80,7 +80,7 @@ type PurgeProcessedInboxMessagesParams struct {
 }
 
 func (q *Queries) PurgeProcessedInboxMessages(ctx context.Context, arg PurgeProcessedInboxMessagesParams) (sql.Result, error) {
-	return q.exec(ctx, q.purgeProcessedInboxMessagesStmt, purgeProcessedInboxMessages, arg.DATESUB, arg.Limit)
+	return q.db.ExecContext(ctx, purgeProcessedInboxMessages, arg.DATESUB, arg.Limit)
 }
 
 const tryInsertInboxRecord = `-- name: TryInsertInboxRecord :execresult
@@ -98,7 +98,7 @@ type TryInsertInboxRecordParams struct {
 }
 
 func (q *Queries) TryInsertInboxRecord(ctx context.Context, arg TryInsertInboxRecordParams) (sql.Result, error) {
-	return q.exec(ctx, q.tryInsertInboxRecordStmt, tryInsertInboxRecord,
+	return q.db.ExecContext(ctx, tryInsertInboxRecord,
 		arg.MessageID,
 		arg.ServiceName,
 		arg.Handler,

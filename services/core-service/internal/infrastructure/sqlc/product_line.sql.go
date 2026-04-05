@@ -24,7 +24,7 @@ type CountProductLinesByNameParams struct {
 }
 
 func (q *Queries) CountProductLinesByName(ctx context.Context, arg CountProductLinesByNameParams) (int64, error) {
-	row := q.queryRow(ctx, q.countProductLinesByNameStmt, countProductLinesByName,
+	row := q.db.QueryRowContext(ctx, countProductLinesByName,
 		arg.Name,
 		arg.AccountID,
 		arg.ExcludeID,
@@ -47,7 +47,7 @@ type DeleteProductLineParams struct {
 }
 
 func (q *Queries) DeleteProductLine(ctx context.Context, arg DeleteProductLineParams) (sql.Result, error) {
-	return q.exec(ctx, q.deleteProductLineStmt, deleteProductLine, arg.ID, arg.AccountID)
+	return q.db.ExecContext(ctx, deleteProductLine, arg.ID, arg.AccountID)
 }
 
 const getProductLine = `-- name: GetProductLine :one
@@ -86,7 +86,7 @@ type GetProductLineRow struct {
 }
 
 func (q *Queries) GetProductLine(ctx context.Context, arg GetProductLineParams) (GetProductLineRow, error) {
-	row := q.queryRow(ctx, q.getProductLineStmt, getProductLine, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getProductLine, arg.ID, arg.AccountID)
 	var i GetProductLineRow
 	err := row.Scan(
 		&i.ID,
@@ -121,7 +121,7 @@ type GetUnitGroupForProductLineRow struct {
 }
 
 func (q *Queries) GetUnitGroupForProductLine(ctx context.Context, id string) (GetUnitGroupForProductLineRow, error) {
-	row := q.queryRow(ctx, q.getUnitGroupForProductLineStmt, getUnitGroupForProductLine, id)
+	row := q.db.QueryRowContext(ctx, getUnitGroupForProductLine, id)
 	var i GetUnitGroupForProductLineRow
 	err := row.Scan(
 		&i.ID,
@@ -164,7 +164,7 @@ type InsertProductLineParams struct {
 }
 
 func (q *Queries) InsertProductLine(ctx context.Context, arg InsertProductLineParams) error {
-	_, err := q.exec(ctx, q.insertProductLineStmt, insertProductLine,
+	_, err := q.db.ExecContext(ctx, insertProductLine,
 		arg.ID,
 		arg.Name,
 		arg.IsCommissionExempt,
@@ -223,7 +223,7 @@ type ListProductLinesBackwardRow struct {
 }
 
 func (q *Queries) ListProductLinesBackward(ctx context.Context, arg ListProductLinesBackwardParams) ([]ListProductLinesBackwardRow, error) {
-	rows, err := q.query(ctx, q.listProductLinesBackwardStmt, listProductLinesBackward,
+	rows, err := q.db.QueryContext(ctx, listProductLinesBackward,
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
@@ -313,7 +313,7 @@ type ListProductLinesForwardRow struct {
 }
 
 func (q *Queries) ListProductLinesForward(ctx context.Context, arg ListProductLinesForwardParams) ([]ListProductLinesForwardRow, error) {
-	rows, err := q.query(ctx, q.listProductLinesForwardStmt, listProductLinesForward,
+	rows, err := q.db.QueryContext(ctx, listProductLinesForward,
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
@@ -376,7 +376,7 @@ type UpdateProductLineParams struct {
 }
 
 func (q *Queries) UpdateProductLine(ctx context.Context, arg UpdateProductLineParams) (sql.Result, error) {
-	return q.exec(ctx, q.updateProductLineStmt, updateProductLine,
+	return q.db.ExecContext(ctx, updateProductLine,
 		arg.Name,
 		arg.IsCommissionExempt,
 		arg.IsFreightExempt,

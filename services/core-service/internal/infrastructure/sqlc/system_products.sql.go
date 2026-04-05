@@ -31,7 +31,7 @@ type CreateItemParams struct {
 }
 
 func (q *Queries) CreateItem(ctx context.Context, arg CreateItemParams) error {
-	_, err := q.exec(ctx, q.createItemStmt, createItem,
+	_, err := q.db.ExecContext(ctx, createItem,
 		arg.ID,
 		arg.Sku,
 		arg.Description,
@@ -61,7 +61,7 @@ type CreateItemCategoryParams struct {
 }
 
 func (q *Queries) CreateItemCategory(ctx context.Context, arg CreateItemCategoryParams) error {
-	_, err := q.exec(ctx, q.createItemCategoryStmt, createItemCategory,
+	_, err := q.db.ExecContext(ctx, createItemCategory,
 		arg.ID,
 		arg.Name,
 		arg.AccountID,
@@ -86,7 +86,7 @@ type CreateProductParams struct {
 }
 
 func (q *Queries) CreateProduct(ctx context.Context, arg CreateProductParams) error {
-	_, err := q.exec(ctx, q.createProductStmt, createProduct,
+	_, err := q.db.ExecContext(ctx, createProduct,
 		arg.ID,
 		arg.ItemID,
 		arg.ProductTypeCode,
@@ -114,7 +114,7 @@ type CreateProductLineParams struct {
 }
 
 func (q *Queries) CreateProductLine(ctx context.Context, arg CreateProductLineParams) error {
-	_, err := q.exec(ctx, q.createProductLineStmt, createProductLine,
+	_, err := q.db.ExecContext(ctx, createProductLine,
 		arg.ID,
 		arg.Name,
 		arg.Description,
@@ -141,7 +141,7 @@ type CreateRateParams struct {
 }
 
 func (q *Queries) CreateRate(ctx context.Context, arg CreateRateParams) error {
-	_, err := q.exec(ctx, q.createRateStmt, createRate,
+	_, err := q.db.ExecContext(ctx, createRate,
 		arg.ID,
 		arg.Value,
 		arg.NumeratorUnitID,
@@ -170,7 +170,7 @@ type CreateUnitParams struct {
 }
 
 func (q *Queries) CreateUnit(ctx context.Context, arg CreateUnitParams) error {
-	_, err := q.exec(ctx, q.createUnitStmt, createUnit,
+	_, err := q.db.ExecContext(ctx, createUnit,
 		arg.ID,
 		arg.Name,
 		arg.Abbreviation,
@@ -199,7 +199,7 @@ type CreateUnitGroupParams struct {
 }
 
 func (q *Queries) CreateUnitGroup(ctx context.Context, arg CreateUnitGroupParams) error {
-	_, err := q.exec(ctx, q.createUnitGroupStmt, createUnitGroup,
+	_, err := q.db.ExecContext(ctx, createUnitGroup,
 		arg.ID,
 		arg.Name,
 		arg.BaseUnitID,
@@ -223,6 +223,6 @@ type CreateUnitGroupUnitParams struct {
 }
 
 func (q *Queries) CreateUnitGroupUnit(ctx context.Context, arg CreateUnitGroupUnitParams) error {
-	_, err := q.exec(ctx, q.createUnitGroupUnitStmt, createUnitGroupUnit, arg.ID, arg.UnitGroupID, arg.UnitID)
+	_, err := q.db.ExecContext(ctx, createUnitGroupUnit, arg.ID, arg.UnitGroupID, arg.UnitID)
 	return err
 }

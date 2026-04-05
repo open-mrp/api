@@ -23,7 +23,7 @@ type AdvanceIdempotencyRecoveryPointParams struct {
 }
 
 func (q *Queries) AdvanceIdempotencyRecoveryPoint(ctx context.Context, arg AdvanceIdempotencyRecoveryPointParams) error {
-	_, err := q.exec(ctx, q.advanceIdempotencyRecoveryPointStmt, advanceIdempotencyRecoveryPoint, arg.RecoveryPoint, arg.TypeID)
+	_, err := q.db.ExecContext(ctx, advanceIdempotencyRecoveryPoint, arg.RecoveryPoint, arg.TypeID)
 	return err
 }
 
@@ -46,7 +46,7 @@ type CreateIdempotencyKeyParams struct {
 }
 
 func (q *Queries) CreateIdempotencyKey(ctx context.Context, arg CreateIdempotencyKeyParams) (int64, error) {
-	result, err := q.exec(ctx, q.createIdempotencyKeyStmt, createIdempotencyKey,
+	result, err := q.db.ExecContext(ctx, createIdempotencyKey,
 		arg.TypeID,
 		arg.ServiceName,
 		arg.Handler,
@@ -69,7 +69,7 @@ LIMIT ?
 `
 
 func (q *Queries) DeleteExpiredIdempotencyKeys(ctx context.Context, limit int32) (sql.Result, error) {
-	return q.exec(ctx, q.deleteExpiredIdempotencyKeysStmt, deleteExpiredIdempotencyKeys, limit)
+	return q.db.ExecContext(ctx, deleteExpiredIdempotencyKeys, limit)
 }
 
 const getIdempotencyKeyByScopeHash = `-- name: GetIdempotencyKeyByScopeHash :one
@@ -88,7 +88,7 @@ type GetIdempotencyKeyByScopeHashParams struct {
 }
 
 func (q *Queries) GetIdempotencyKeyByScopeHash(ctx context.Context, arg GetIdempotencyKeyByScopeHashParams) (ServiceIdempotencyKey, error) {
-	row := q.queryRow(ctx, q.getIdempotencyKeyByScopeHashStmt, getIdempotencyKeyByScopeHash, arg.ServiceName, arg.ScopeHash)
+	row := q.db.QueryRowContext(ctx, getIdempotencyKeyByScopeHash, arg.ServiceName, arg.ScopeHash)
 	var i ServiceIdempotencyKey
 	err := row.Scan(
 		&i.ID,
@@ -123,7 +123,7 @@ WHERE type_id = ?
 `
 
 func (q *Queries) GetIdempotencyKeyByTypeID(ctx context.Context, typeID string) (ServiceIdempotencyKey, error) {
-	row := q.queryRow(ctx, q.getIdempotencyKeyByTypeIDStmt, getIdempotencyKeyByTypeID, typeID)
+	row := q.db.QueryRowContext(ctx, getIdempotencyKeyByTypeID, typeID)
 	var i ServiceIdempotencyKey
 	err := row.Scan(
 		&i.ID,
@@ -155,7 +155,7 @@ WHERE type_id = ?
 `
 
 func (q *Queries) GetIdempotencyRecoveryPoint(ctx context.Context, typeID string) (string, error) {
-	row := q.queryRow(ctx, q.getIdempotencyRecoveryPointStmt, getIdempotencyRecoveryPoint, typeID)
+	row := q.db.QueryRowContext(ctx, getIdempotencyRecoveryPoint, typeID)
 	var recovery_point string
 	err := row.Scan(&recovery_point)
 	return recovery_point, err
@@ -176,7 +176,7 @@ type SetIdempotencyResponseParams struct {
 }
 
 func (q *Queries) SetIdempotencyResponse(ctx context.Context, arg SetIdempotencyResponseParams) error {
-	_, err := q.exec(ctx, q.setIdempotencyResponseStmt, setIdempotencyResponse,
+	_, err := q.db.ExecContext(ctx, setIdempotencyResponse,
 		arg.ResponseCode,
 		arg.ResponseBody,
 		arg.RecoveryPoint,

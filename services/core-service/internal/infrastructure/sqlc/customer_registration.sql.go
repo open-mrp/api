@@ -27,7 +27,7 @@ type FindCustomerAccountByExternalNumberParams struct {
 }
 
 func (q *Queries) FindCustomerAccountByExternalNumber(ctx context.Context, arg FindCustomerAccountByExternalNumberParams) (string, error) {
-	row := q.queryRow(ctx, q.findCustomerAccountByExternalNumberStmt, findCustomerAccountByExternalNumber, arg.OwnerAccountID, arg.ExternalNumber)
+	row := q.db.QueryRowContext(ctx, findCustomerAccountByExternalNumber, arg.OwnerAccountID, arg.ExternalNumber)
 	var id string
 	err := row.Scan(&id)
 	return id, err
@@ -44,7 +44,7 @@ SELECT COALESCE(
 `
 
 func (q *Queries) GetNextCustomerNumber(ctx context.Context, accountID string) (interface{}, error) {
-	row := q.queryRow(ctx, q.getNextCustomerNumberStmt, getNextCustomerNumber, accountID)
+	row := q.db.QueryRowContext(ctx, getNextCustomerNumber, accountID)
 	var next_number interface{}
 	err := row.Scan(&next_number)
 	return next_number, err
@@ -55,7 +55,7 @@ SELECT email FROM user WHERE id = ?
 `
 
 func (q *Queries) GetUserEmailByID(ctx context.Context, id string) (sql.NullString, error) {
-	row := q.queryRow(ctx, q.getUserEmailByIDStmt, getUserEmailByID, id)
+	row := q.db.QueryRowContext(ctx, getUserEmailByID, id)
 	var email sql.NullString
 	err := row.Scan(&email)
 	return email, err
@@ -74,7 +74,7 @@ type InsertAccountAddressForCustomerParams struct {
 }
 
 func (q *Queries) InsertAccountAddressForCustomer(ctx context.Context, arg InsertAccountAddressForCustomerParams) error {
-	_, err := q.exec(ctx, q.insertAccountAddressForCustomerStmt, insertAccountAddressForCustomer, arg.ID, arg.AccountID, arg.AddressID)
+	_, err := q.db.ExecContext(ctx, insertAccountAddressForCustomer, arg.ID, arg.AccountID, arg.AddressID)
 	return err
 }
 
@@ -94,7 +94,7 @@ type InsertAccountBrandingForCustomerParams struct {
 }
 
 func (q *Queries) InsertAccountBrandingForCustomer(ctx context.Context, arg InsertAccountBrandingForCustomerParams) error {
-	_, err := q.exec(ctx, q.insertAccountBrandingForCustomerStmt, insertAccountBrandingForCustomer,
+	_, err := q.db.ExecContext(ctx, insertAccountBrandingForCustomer,
 		arg.ID,
 		arg.OwnerAccountID,
 		arg.SupportEmail,
@@ -123,7 +123,7 @@ type InsertAccountForCustomerParams struct {
 }
 
 func (q *Queries) InsertAccountForCustomer(ctx context.Context, arg InsertAccountForCustomerParams) error {
-	_, err := q.exec(ctx, q.insertAccountForCustomerStmt, insertAccountForCustomer,
+	_, err := q.db.ExecContext(ctx, insertAccountForCustomer,
 		arg.ID,
 		arg.Name,
 		arg.DefaultBillingAddressID,
@@ -170,7 +170,7 @@ type InsertAccountRelationForCustomerParams struct {
 }
 
 func (q *Queries) InsertAccountRelationForCustomer(ctx context.Context, arg InsertAccountRelationForCustomerParams) error {
-	_, err := q.exec(ctx, q.insertAccountRelationForCustomerStmt, insertAccountRelationForCustomer,
+	_, err := q.db.ExecContext(ctx, insertAccountRelationForCustomer,
 		arg.ID,
 		arg.OwnerAccountID,
 		arg.CounterpartyAccountID,
@@ -199,7 +199,7 @@ type InsertAccountUserForCustomerRegistrationParams struct {
 }
 
 func (q *Queries) InsertAccountUserForCustomerRegistration(ctx context.Context, arg InsertAccountUserForCustomerRegistrationParams) error {
-	_, err := q.exec(ctx, q.insertAccountUserForCustomerRegistrationStmt, insertAccountUserForCustomerRegistration, arg.ID, arg.AccountID, arg.UserID)
+	_, err := q.db.ExecContext(ctx, insertAccountUserForCustomerRegistration, arg.ID, arg.AccountID, arg.UserID)
 	return err
 }
 
@@ -216,7 +216,7 @@ type InsertAddressForCustomerParams struct {
 }
 
 func (q *Queries) InsertAddressForCustomer(ctx context.Context, arg InsertAddressForCustomerParams) error {
-	_, err := q.exec(ctx, q.insertAddressForCustomerStmt, insertAddressForCustomer, arg.ID, arg.Name, arg.GeolocationID)
+	_, err := q.db.ExecContext(ctx, insertAddressForCustomer, arg.ID, arg.Name, arg.GeolocationID)
 	return err
 }
 
@@ -237,7 +237,7 @@ type InsertGeolocationForCustomerParams struct {
 }
 
 func (q *Queries) InsertGeolocationForCustomer(ctx context.Context, arg InsertGeolocationForCustomerParams) error {
-	_, err := q.exec(ctx, q.insertGeolocationForCustomerStmt, insertGeolocationForCustomer,
+	_, err := q.db.ExecContext(ctx, insertGeolocationForCustomer,
 		arg.ID,
 		arg.StreetLine1,
 		arg.StreetLine2,
@@ -262,7 +262,7 @@ type UpdateNextCustomerNumberParams struct {
 }
 
 func (q *Queries) UpdateNextCustomerNumber(ctx context.Context, arg UpdateNextCustomerNumberParams) error {
-	_, err := q.exec(ctx, q.updateNextCustomerNumberStmt, updateNextCustomerNumber,
+	_, err := q.db.ExecContext(ctx, updateNextCustomerNumber,
 		arg.ID,
 		arg.AccountID,
 		arg.Value,

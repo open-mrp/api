@@ -27,7 +27,7 @@ type CountVolumeDiscountsByNameParams struct {
 }
 
 func (q *Queries) CountVolumeDiscountsByName(ctx context.Context, arg CountVolumeDiscountsByNameParams) (int64, error) {
-	row := q.queryRow(ctx, q.countVolumeDiscountsByNameStmt, countVolumeDiscountsByName,
+	row := q.db.QueryRowContext(ctx, countVolumeDiscountsByName,
 		arg.AccountID,
 		arg.Name,
 		arg.ExcludeID,
@@ -44,7 +44,7 @@ WHERE B = ?
 `
 
 func (q *Queries) DeleteAttributesByDiscountID(ctx context.Context, quantityDiscountID string) error {
-	_, err := q.exec(ctx, q.deleteAttributesByDiscountIDStmt, deleteAttributesByDiscountID, quantityDiscountID)
+	_, err := q.db.ExecContext(ctx, deleteAttributesByDiscountID, quantityDiscountID)
 	return err
 }
 
@@ -54,7 +54,7 @@ WHERE B = ?
 `
 
 func (q *Queries) DeleteCategoriesByDiscountID(ctx context.Context, quantityDiscountID string) error {
-	_, err := q.exec(ctx, q.deleteCategoriesByDiscountIDStmt, deleteCategoriesByDiscountID, quantityDiscountID)
+	_, err := q.db.ExecContext(ctx, deleteCategoriesByDiscountID, quantityDiscountID)
 	return err
 }
 
@@ -64,7 +64,7 @@ WHERE quantity_discount_id = ?
 `
 
 func (q *Queries) DeleteCustomerGroupsByDiscountID(ctx context.Context, quantityDiscountID string) error {
-	_, err := q.exec(ctx, q.deleteCustomerGroupsByDiscountIDStmt, deleteCustomerGroupsByDiscountID, quantityDiscountID)
+	_, err := q.db.ExecContext(ctx, deleteCustomerGroupsByDiscountID, quantityDiscountID)
 	return err
 }
 
@@ -74,7 +74,7 @@ WHERE B = ?
 `
 
 func (q *Queries) DeleteProductLinesByDiscountID(ctx context.Context, quantityDiscountID string) error {
-	_, err := q.exec(ctx, q.deleteProductLinesByDiscountIDStmt, deleteProductLinesByDiscountID, quantityDiscountID)
+	_, err := q.db.ExecContext(ctx, deleteProductLinesByDiscountID, quantityDiscountID)
 	return err
 }
 
@@ -84,7 +84,7 @@ WHERE quantity_discount_id = ?
 `
 
 func (q *Queries) DeleteTiersByDiscountID(ctx context.Context, quantityDiscountID sql.NullString) error {
-	_, err := q.exec(ctx, q.deleteTiersByDiscountIDStmt, deleteTiersByDiscountID, quantityDiscountID)
+	_, err := q.db.ExecContext(ctx, deleteTiersByDiscountID, quantityDiscountID)
 	return err
 }
 
@@ -111,7 +111,7 @@ func (q *Queries) DeleteTiersNotInIDs(ctx context.Context, arg DeleteTiersNotInI
 	} else {
 		query = strings.Replace(query, "/*SLICE:keep_ids*/?", "NULL", 1)
 	}
-	_, err := q.exec(ctx, nil, query, queryParams...)
+	_, err := q.db.ExecContext(ctx, query, queryParams...)
 	return err
 }
 
@@ -121,7 +121,7 @@ WHERE A = ?
 `
 
 func (q *Queries) DeleteUnitsByDiscountID(ctx context.Context, quantityDiscountID string) error {
-	_, err := q.exec(ctx, q.deleteUnitsByDiscountIDStmt, deleteUnitsByDiscountID, quantityDiscountID)
+	_, err := q.db.ExecContext(ctx, deleteUnitsByDiscountID, quantityDiscountID)
 	return err
 }
 
@@ -137,7 +137,7 @@ type DeleteVolumeDiscountParams struct {
 }
 
 func (q *Queries) DeleteVolumeDiscount(ctx context.Context, arg DeleteVolumeDiscountParams) (sql.Result, error) {
-	return q.exec(ctx, q.deleteVolumeDiscountStmt, deleteVolumeDiscount, arg.ID, arg.AccountID)
+	return q.db.ExecContext(ctx, deleteVolumeDiscount, arg.ID, arg.AccountID)
 }
 
 const getVolumeDiscount = `-- name: GetVolumeDiscount :one
@@ -166,7 +166,7 @@ type GetVolumeDiscountRow struct {
 }
 
 func (q *Queries) GetVolumeDiscount(ctx context.Context, arg GetVolumeDiscountParams) (GetVolumeDiscountRow, error) {
-	row := q.queryRow(ctx, q.getVolumeDiscountStmt, getVolumeDiscount, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getVolumeDiscount, arg.ID, arg.AccountID)
 	var i GetVolumeDiscountRow
 	err := row.Scan(
 		&i.ID,
@@ -193,7 +193,7 @@ type GetVolumeDiscountAttributesRow struct {
 }
 
 func (q *Queries) GetVolumeDiscountAttributes(ctx context.Context, quantityDiscountID string) ([]GetVolumeDiscountAttributesRow, error) {
-	rows, err := q.query(ctx, q.getVolumeDiscountAttributesStmt, getVolumeDiscountAttributes, quantityDiscountID)
+	rows, err := q.db.QueryContext(ctx, getVolumeDiscountAttributes, quantityDiscountID)
 	if err != nil {
 		return nil, err
 	}
@@ -242,7 +242,7 @@ func (q *Queries) GetVolumeDiscountAttributesByDiscountIDs(ctx context.Context, 
 	} else {
 		query = strings.Replace(query, "/*SLICE:quantity_discount_ids*/?", "NULL", 1)
 	}
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -279,7 +279,7 @@ type GetVolumeDiscountCategoriesRow struct {
 }
 
 func (q *Queries) GetVolumeDiscountCategories(ctx context.Context, quantityDiscountID string) ([]GetVolumeDiscountCategoriesRow, error) {
-	rows, err := q.query(ctx, q.getVolumeDiscountCategoriesStmt, getVolumeDiscountCategories, quantityDiscountID)
+	rows, err := q.db.QueryContext(ctx, getVolumeDiscountCategories, quantityDiscountID)
 	if err != nil {
 		return nil, err
 	}
@@ -328,7 +328,7 @@ func (q *Queries) GetVolumeDiscountCategoriesByDiscountIDs(ctx context.Context, 
 	} else {
 		query = strings.Replace(query, "/*SLICE:quantity_discount_ids*/?", "NULL", 1)
 	}
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -367,7 +367,7 @@ type GetVolumeDiscountCustomerGroupsRow struct {
 }
 
 func (q *Queries) GetVolumeDiscountCustomerGroups(ctx context.Context, quantityDiscountID string) ([]GetVolumeDiscountCustomerGroupsRow, error) {
-	rows, err := q.query(ctx, q.getVolumeDiscountCustomerGroupsStmt, getVolumeDiscountCustomerGroups, quantityDiscountID)
+	rows, err := q.db.QueryContext(ctx, getVolumeDiscountCustomerGroups, quantityDiscountID)
 	if err != nil {
 		return nil, err
 	}
@@ -418,7 +418,7 @@ func (q *Queries) GetVolumeDiscountCustomerGroupsByDiscountIDs(ctx context.Conte
 	} else {
 		query = strings.Replace(query, "/*SLICE:quantity_discount_ids*/?", "NULL", 1)
 	}
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -460,7 +460,7 @@ type GetVolumeDiscountProductLinesRow struct {
 }
 
 func (q *Queries) GetVolumeDiscountProductLines(ctx context.Context, quantityDiscountID string) ([]GetVolumeDiscountProductLinesRow, error) {
-	rows, err := q.query(ctx, q.getVolumeDiscountProductLinesStmt, getVolumeDiscountProductLines, quantityDiscountID)
+	rows, err := q.db.QueryContext(ctx, getVolumeDiscountProductLines, quantityDiscountID)
 	if err != nil {
 		return nil, err
 	}
@@ -509,7 +509,7 @@ func (q *Queries) GetVolumeDiscountProductLinesByDiscountIDs(ctx context.Context
 	} else {
 		query = strings.Replace(query, "/*SLICE:quantity_discount_ids*/?", "NULL", 1)
 	}
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -556,7 +556,7 @@ type GetVolumeDiscountTiersRow struct {
 }
 
 func (q *Queries) GetVolumeDiscountTiers(ctx context.Context, quantityDiscountID sql.NullString) ([]GetVolumeDiscountTiersRow, error) {
-	rows, err := q.query(ctx, q.getVolumeDiscountTiersStmt, getVolumeDiscountTiers, quantityDiscountID)
+	rows, err := q.db.QueryContext(ctx, getVolumeDiscountTiers, quantityDiscountID)
 	if err != nil {
 		return nil, err
 	}
@@ -623,7 +623,7 @@ func (q *Queries) GetVolumeDiscountTiersByDiscountIDs(ctx context.Context, quant
 	} else {
 		query = strings.Replace(query, "/*SLICE:quantity_discount_ids*/?", "NULL", 1)
 	}
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -671,7 +671,7 @@ type GetVolumeDiscountUnitsRow struct {
 }
 
 func (q *Queries) GetVolumeDiscountUnits(ctx context.Context, quantityDiscountID string) ([]GetVolumeDiscountUnitsRow, error) {
-	rows, err := q.query(ctx, q.getVolumeDiscountUnitsStmt, getVolumeDiscountUnits, quantityDiscountID)
+	rows, err := q.db.QueryContext(ctx, getVolumeDiscountUnits, quantityDiscountID)
 	if err != nil {
 		return nil, err
 	}
@@ -722,7 +722,7 @@ func (q *Queries) GetVolumeDiscountUnitsByDiscountIDs(ctx context.Context, quant
 	} else {
 		query = strings.Replace(query, "/*SLICE:quantity_discount_ids*/?", "NULL", 1)
 	}
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -761,7 +761,7 @@ type InsertVolumeDiscountParams struct {
 }
 
 func (q *Queries) InsertVolumeDiscount(ctx context.Context, arg InsertVolumeDiscountParams) error {
-	_, err := q.exec(ctx, q.insertVolumeDiscountStmt, insertVolumeDiscount, arg.ID, arg.Name, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, insertVolumeDiscount, arg.ID, arg.Name, arg.AccountID)
 	return err
 }
 
@@ -776,7 +776,7 @@ type InsertVolumeDiscountAttributeParams struct {
 }
 
 func (q *Queries) InsertVolumeDiscountAttribute(ctx context.Context, arg InsertVolumeDiscountAttributeParams) error {
-	_, err := q.exec(ctx, q.insertVolumeDiscountAttributeStmt, insertVolumeDiscountAttribute, arg.AttributeID, arg.QuantityDiscountID)
+	_, err := q.db.ExecContext(ctx, insertVolumeDiscountAttribute, arg.AttributeID, arg.QuantityDiscountID)
 	return err
 }
 
@@ -791,7 +791,7 @@ type InsertVolumeDiscountCategoryParams struct {
 }
 
 func (q *Queries) InsertVolumeDiscountCategory(ctx context.Context, arg InsertVolumeDiscountCategoryParams) error {
-	_, err := q.exec(ctx, q.insertVolumeDiscountCategoryStmt, insertVolumeDiscountCategory, arg.ItemCategoryID, arg.QuantityDiscountID)
+	_, err := q.db.ExecContext(ctx, insertVolumeDiscountCategory, arg.ItemCategoryID, arg.QuantityDiscountID)
 	return err
 }
 
@@ -807,7 +807,7 @@ type InsertVolumeDiscountCustomerGroupParams struct {
 }
 
 func (q *Queries) InsertVolumeDiscountCustomerGroup(ctx context.Context, arg InsertVolumeDiscountCustomerGroupParams) error {
-	_, err := q.exec(ctx, q.insertVolumeDiscountCustomerGroupStmt, insertVolumeDiscountCustomerGroup, arg.ID, arg.AccountGroupID, arg.QuantityDiscountID)
+	_, err := q.db.ExecContext(ctx, insertVolumeDiscountCustomerGroup, arg.ID, arg.AccountGroupID, arg.QuantityDiscountID)
 	return err
 }
 
@@ -822,7 +822,7 @@ type InsertVolumeDiscountProductLineParams struct {
 }
 
 func (q *Queries) InsertVolumeDiscountProductLine(ctx context.Context, arg InsertVolumeDiscountProductLineParams) error {
-	_, err := q.exec(ctx, q.insertVolumeDiscountProductLineStmt, insertVolumeDiscountProductLine, arg.ProductLineID, arg.QuantityDiscountID)
+	_, err := q.db.ExecContext(ctx, insertVolumeDiscountProductLine, arg.ProductLineID, arg.QuantityDiscountID)
 	return err
 }
 
@@ -841,7 +841,7 @@ type InsertVolumeDiscountTierParams struct {
 }
 
 func (q *Queries) InsertVolumeDiscountTier(ctx context.Context, arg InsertVolumeDiscountTierParams) error {
-	_, err := q.exec(ctx, q.insertVolumeDiscountTierStmt, insertVolumeDiscountTier,
+	_, err := q.db.ExecContext(ctx, insertVolumeDiscountTier,
 		arg.ID,
 		arg.Name,
 		arg.DiscountPercentage,
@@ -863,7 +863,7 @@ type InsertVolumeDiscountUnitParams struct {
 }
 
 func (q *Queries) InsertVolumeDiscountUnit(ctx context.Context, arg InsertVolumeDiscountUnitParams) error {
-	_, err := q.exec(ctx, q.insertVolumeDiscountUnitStmt, insertVolumeDiscountUnit, arg.QuantityDiscountID, arg.UnitID)
+	_, err := q.db.ExecContext(ctx, insertVolumeDiscountUnit, arg.QuantityDiscountID, arg.UnitID)
 	return err
 }
 
@@ -917,7 +917,7 @@ type ListVolumeDiscountsBackwardRow struct {
 }
 
 func (q *Queries) ListVolumeDiscountsBackward(ctx context.Context, arg ListVolumeDiscountsBackwardParams) ([]ListVolumeDiscountsBackwardRow, error) {
-	rows, err := q.query(ctx, q.listVolumeDiscountsBackwardStmt, listVolumeDiscountsBackward,
+	rows, err := q.db.QueryContext(ctx, listVolumeDiscountsBackward,
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
@@ -1030,7 +1030,7 @@ type ListVolumeDiscountsForCustomerBackwardRow struct {
 }
 
 func (q *Queries) ListVolumeDiscountsForCustomerBackward(ctx context.Context, arg ListVolumeDiscountsForCustomerBackwardParams) ([]ListVolumeDiscountsForCustomerBackwardRow, error) {
-	rows, err := q.query(ctx, q.listVolumeDiscountsForCustomerBackwardStmt, listVolumeDiscountsForCustomerBackward,
+	rows, err := q.db.QueryContext(ctx, listVolumeDiscountsForCustomerBackward,
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
@@ -1148,7 +1148,7 @@ type ListVolumeDiscountsForCustomerForwardRow struct {
 }
 
 func (q *Queries) ListVolumeDiscountsForCustomerForward(ctx context.Context, arg ListVolumeDiscountsForCustomerForwardParams) ([]ListVolumeDiscountsForCustomerForwardRow, error) {
-	rows, err := q.query(ctx, q.listVolumeDiscountsForCustomerForwardStmt, listVolumeDiscountsForCustomerForward,
+	rows, err := q.db.QueryContext(ctx, listVolumeDiscountsForCustomerForward,
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
@@ -1242,7 +1242,7 @@ type ListVolumeDiscountsForwardRow struct {
 }
 
 func (q *Queries) ListVolumeDiscountsForward(ctx context.Context, arg ListVolumeDiscountsForwardParams) ([]ListVolumeDiscountsForwardRow, error) {
-	rows, err := q.query(ctx, q.listVolumeDiscountsForwardStmt, listVolumeDiscountsForward,
+	rows, err := q.db.QueryContext(ctx, listVolumeDiscountsForward,
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
@@ -1297,7 +1297,7 @@ type UpdateVolumeDiscountParams struct {
 }
 
 func (q *Queries) UpdateVolumeDiscount(ctx context.Context, arg UpdateVolumeDiscountParams) (sql.Result, error) {
-	return q.exec(ctx, q.updateVolumeDiscountStmt, updateVolumeDiscount, arg.Name, arg.ID, arg.AccountID)
+	return q.db.ExecContext(ctx, updateVolumeDiscount, arg.Name, arg.ID, arg.AccountID)
 }
 
 const updateVolumeDiscountTier = `-- name: UpdateVolumeDiscountTier :execresult
@@ -1322,7 +1322,7 @@ type UpdateVolumeDiscountTierParams struct {
 }
 
 func (q *Queries) UpdateVolumeDiscountTier(ctx context.Context, arg UpdateVolumeDiscountTierParams) (sql.Result, error) {
-	return q.exec(ctx, q.updateVolumeDiscountTierStmt, updateVolumeDiscountTier,
+	return q.db.ExecContext(ctx, updateVolumeDiscountTier,
 		arg.Name,
 		arg.DiscountPercentage,
 		arg.Threshold,

@@ -45,7 +45,7 @@ type FetchCurrentInventoryForItemRow struct {
 }
 
 func (q *Queries) FetchCurrentInventoryForItem(ctx context.Context, arg FetchCurrentInventoryForItemParams) (FetchCurrentInventoryForItemRow, error) {
-	row := q.queryRow(ctx, q.fetchCurrentInventoryForItemStmt, fetchCurrentInventoryForItem,
+	row := q.db.QueryRowContext(ctx, fetchCurrentInventoryForItem,
 		arg.ItemID,
 		arg.OwnerAccountID,
 		arg.ItemID,
@@ -118,7 +118,7 @@ func (q *Queries) FetchOnHandInventoryBulk(ctx context.Context, arg FetchOnHandI
 		query = strings.Replace(query, "/*SLICE:item_ids*/?", "NULL", 1)
 	}
 	queryParams = append(queryParams, arg.OwnerAccountID)
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}

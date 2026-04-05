@@ -29,7 +29,7 @@ type CountSalesTargetsParams struct {
 }
 
 func (q *Queries) CountSalesTargets(ctx context.Context, arg CountSalesTargetsParams) (int64, error) {
-	row := q.queryRow(ctx, q.countSalesTargetsStmt, countSalesTargets,
+	row := q.db.QueryRowContext(ctx, countSalesTargets,
 		arg.SalesRepID,
 		arg.AccountID,
 		arg.Search,
@@ -64,7 +64,7 @@ type GetSalesTargetRow struct {
 }
 
 func (q *Queries) GetSalesTarget(ctx context.Context, id string) (GetSalesTargetRow, error) {
-	row := q.queryRow(ctx, q.getSalesTargetStmt, getSalesTarget, id)
+	row := q.db.QueryRowContext(ctx, getSalesTarget, id)
 	var i GetSalesTargetRow
 	err := row.Scan(
 		&i.ID,
@@ -96,7 +96,7 @@ type InsertSalesTargetParams struct {
 }
 
 func (q *Queries) InsertSalesTarget(ctx context.Context, arg InsertSalesTargetParams) error {
-	_, err := q.exec(ctx, q.insertSalesTargetStmt, insertSalesTarget,
+	_, err := q.db.ExecContext(ctx, insertSalesTarget,
 		arg.ID,
 		arg.StartDate,
 		arg.EndDate,
@@ -145,7 +145,7 @@ type ListSalesTargetsRow struct {
 }
 
 func (q *Queries) ListSalesTargets(ctx context.Context, arg ListSalesTargetsParams) ([]ListSalesTargetsRow, error) {
-	rows, err := q.query(ctx, q.listSalesTargetsStmt, listSalesTargets,
+	rows, err := q.db.QueryContext(ctx, listSalesTargets,
 		arg.SalesRepID,
 		arg.AccountID,
 		arg.Search,
@@ -200,7 +200,7 @@ type SalesRepExistsInAccountParams struct {
 }
 
 func (q *Queries) SalesRepExistsInAccount(ctx context.Context, arg SalesRepExistsInAccountParams) (bool, error) {
-	row := q.queryRow(ctx, q.salesRepExistsInAccountStmt, salesRepExistsInAccount, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, salesRepExistsInAccount, arg.ID, arg.AccountID)
 	var does_exist bool
 	err := row.Scan(&does_exist)
 	return does_exist, err
@@ -211,7 +211,7 @@ SELECT EXISTS(SELECT 1 FROM target WHERE id = ?) AS does_exist
 `
 
 func (q *Queries) SalesTargetExists(ctx context.Context, id string) (bool, error) {
-	row := q.queryRow(ctx, q.salesTargetExistsStmt, salesTargetExists, id)
+	row := q.db.QueryRowContext(ctx, salesTargetExists, id)
 	var does_exist bool
 	err := row.Scan(&does_exist)
 	return does_exist, err
@@ -227,7 +227,7 @@ type SalesTargetIsInAccountParams struct {
 }
 
 func (q *Queries) SalesTargetIsInAccount(ctx context.Context, arg SalesTargetIsInAccountParams) (bool, error) {
-	row := q.queryRow(ctx, q.salesTargetIsInAccountStmt, salesTargetIsInAccount, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, salesTargetIsInAccount, arg.ID, arg.AccountID)
 	var is_in_account bool
 	err := row.Scan(&is_in_account)
 	return is_in_account, err
@@ -248,6 +248,6 @@ type UpdateSalesTargetParams struct {
 }
 
 func (q *Queries) UpdateSalesTarget(ctx context.Context, arg UpdateSalesTargetParams) error {
-	_, err := q.exec(ctx, q.updateSalesTargetStmt, updateSalesTarget, arg.StartDate, arg.EndDate, arg.ID)
+	_, err := q.db.ExecContext(ctx, updateSalesTarget, arg.StartDate, arg.EndDate, arg.ID)
 	return err
 }

@@ -23,7 +23,7 @@ type CountProductTypesByCodeParams struct {
 }
 
 func (q *Queries) CountProductTypesByCode(ctx context.Context, arg CountProductTypesByCodeParams) (int64, error) {
-	row := q.queryRow(ctx, q.countProductTypesByCodeStmt, countProductTypesByCode, arg.Code, arg.ExcludeID, arg.ExcludeID)
+	row := q.db.QueryRowContext(ctx, countProductTypesByCode, arg.Code, arg.ExcludeID, arg.ExcludeID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -41,7 +41,7 @@ type CountProductTypesByNameParams struct {
 }
 
 func (q *Queries) CountProductTypesByName(ctx context.Context, arg CountProductTypesByNameParams) (int64, error) {
-	row := q.queryRow(ctx, q.countProductTypesByNameStmt, countProductTypesByName, arg.Name, arg.ExcludeID, arg.ExcludeID)
+	row := q.db.QueryRowContext(ctx, countProductTypesByName, arg.Name, arg.ExcludeID, arg.ExcludeID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -53,7 +53,7 @@ WHERE id = ?
 `
 
 func (q *Queries) DeleteProductType(ctx context.Context, id string) (sql.Result, error) {
-	return q.exec(ctx, q.deleteProductTypeStmt, deleteProductType, id)
+	return q.db.ExecContext(ctx, deleteProductType, id)
 }
 
 const getProductType = `-- name: GetProductType :one
@@ -73,7 +73,7 @@ type GetProductTypeParams struct {
 }
 
 func (q *Queries) GetProductType(ctx context.Context, arg GetProductTypeParams) (ProductType, error) {
-	row := q.queryRow(ctx, q.getProductTypeStmt, getProductType, arg.ID, arg.Code)
+	row := q.db.QueryRowContext(ctx, getProductType, arg.ID, arg.Code)
 	var i ProductType
 	err := row.Scan(
 		&i.ID,
@@ -108,7 +108,7 @@ type InsertProductTypeParams struct {
 }
 
 func (q *Queries) InsertProductType(ctx context.Context, arg InsertProductTypeParams) error {
-	_, err := q.exec(ctx, q.insertProductTypeStmt, insertProductType, arg.ID, arg.Name, arg.Code)
+	_, err := q.db.ExecContext(ctx, insertProductType, arg.ID, arg.Name, arg.Code)
 	return err
 }
 
@@ -140,7 +140,7 @@ type ListProductTypesBackwardParams struct {
 }
 
 func (q *Queries) ListProductTypesBackward(ctx context.Context, arg ListProductTypesBackwardParams) ([]ProductType, error) {
-	rows, err := q.query(ctx, q.listProductTypesBackwardStmt, listProductTypesBackward,
+	rows, err := q.db.QueryContext(ctx, listProductTypesBackward,
 		arg.SearchQuery,
 		arg.SearchQuery,
 		arg.CursorCreatedAt,
@@ -204,7 +204,7 @@ type ListProductTypesForwardParams struct {
 }
 
 func (q *Queries) ListProductTypesForward(ctx context.Context, arg ListProductTypesForwardParams) ([]ProductType, error) {
-	rows, err := q.query(ctx, q.listProductTypesForwardStmt, listProductTypesForward,
+	rows, err := q.db.QueryContext(ctx, listProductTypesForward,
 		arg.SearchQuery,
 		arg.SearchQuery,
 		arg.CursorCreatedAt,
@@ -246,7 +246,7 @@ WHERE id = ?
 `
 
 func (q *Queries) ProductTypeExistsByID(ctx context.Context, id string) (int64, error) {
-	row := q.queryRow(ctx, q.productTypeExistsByIDStmt, productTypeExistsByID, id)
+	row := q.db.QueryRowContext(ctx, productTypeExistsByID, id)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -267,5 +267,5 @@ type UpdateProductTypeParams struct {
 }
 
 func (q *Queries) UpdateProductType(ctx context.Context, arg UpdateProductTypeParams) (sql.Result, error) {
-	return q.exec(ctx, q.updateProductTypeStmt, updateProductType, arg.Name, arg.Code, arg.ID)
+	return q.db.ExecContext(ctx, updateProductType, arg.Name, arg.Code, arg.ID)
 }

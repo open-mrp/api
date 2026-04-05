@@ -17,7 +17,7 @@ WHERE account_id = ? AND status = 'completed'
 `
 
 func (q *Queries) GetCompletedTokensByAccount(ctx context.Context, accountID string) (int64, error) {
-	row := q.queryRow(ctx, q.getCompletedTokensByAccountStmt, getCompletedTokensByAccount, accountID)
+	row := q.db.QueryRowContext(ctx, getCompletedTokensByAccount, accountID)
 	var total_tokens int64
 	err := row.Scan(&total_tokens)
 	return total_tokens, err
@@ -30,7 +30,7 @@ WHERE stripe_payment_intent_id = ?
 `
 
 func (q *Queries) GetTokenPackPurchaseByPaymentIntent(ctx context.Context, stripePaymentIntentID sql.NullString) (TokenPackPurchase, error) {
-	row := q.queryRow(ctx, q.getTokenPackPurchaseByPaymentIntentStmt, getTokenPackPurchaseByPaymentIntent, stripePaymentIntentID)
+	row := q.db.QueryRowContext(ctx, getTokenPackPurchaseByPaymentIntent, stripePaymentIntentID)
 	var i TokenPackPurchase
 	err := row.Scan(
 		&i.ID,
@@ -62,7 +62,7 @@ type InsertTokenPackPurchaseParams struct {
 }
 
 func (q *Queries) InsertTokenPackPurchase(ctx context.Context, arg InsertTokenPackPurchaseParams) error {
-	_, err := q.exec(ctx, q.insertTokenPackPurchaseStmt, insertTokenPackPurchase,
+	_, err := q.db.ExecContext(ctx, insertTokenPackPurchase,
 		arg.ID,
 		arg.AccountID,
 		arg.PackID,
@@ -85,7 +85,7 @@ type UpdateTokenPackPurchaseCheckoutSessionParams struct {
 }
 
 func (q *Queries) UpdateTokenPackPurchaseCheckoutSession(ctx context.Context, arg UpdateTokenPackPurchaseCheckoutSessionParams) error {
-	_, err := q.exec(ctx, q.updateTokenPackPurchaseCheckoutSessionStmt, updateTokenPackPurchaseCheckoutSession, arg.StripeCheckoutSessionID, arg.ID)
+	_, err := q.db.ExecContext(ctx, updateTokenPackPurchaseCheckoutSession, arg.StripeCheckoutSessionID, arg.ID)
 	return err
 }
 
@@ -101,7 +101,7 @@ type UpdateTokenPackPurchasePaymentIntentParams struct {
 }
 
 func (q *Queries) UpdateTokenPackPurchasePaymentIntent(ctx context.Context, arg UpdateTokenPackPurchasePaymentIntentParams) error {
-	_, err := q.exec(ctx, q.updateTokenPackPurchasePaymentIntentStmt, updateTokenPackPurchasePaymentIntent, arg.StripePaymentIntentID, arg.ID)
+	_, err := q.db.ExecContext(ctx, updateTokenPackPurchasePaymentIntent, arg.StripePaymentIntentID, arg.ID)
 	return err
 }
 
@@ -117,6 +117,6 @@ type UpdateTokenPackPurchaseStatusParams struct {
 }
 
 func (q *Queries) UpdateTokenPackPurchaseStatus(ctx context.Context, arg UpdateTokenPackPurchaseStatusParams) error {
-	_, err := q.exec(ctx, q.updateTokenPackPurchaseStatusStmt, updateTokenPackPurchaseStatus, arg.Status, arg.ID)
+	_, err := q.db.ExecContext(ctx, updateTokenPackPurchaseStatus, arg.Status, arg.ID)
 	return err
 }

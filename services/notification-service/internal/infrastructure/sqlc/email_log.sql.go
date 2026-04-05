@@ -27,7 +27,7 @@ type CreateEmailLogParams struct {
 }
 
 func (q *Queries) CreateEmailLog(ctx context.Context, arg CreateEmailLogParams) error {
-	_, err := q.exec(ctx, q.createEmailLogStmt, createEmailLog,
+	_, err := q.db.ExecContext(ctx, createEmailLog,
 		arg.ID,
 		arg.HasSent,
 		arg.AccountID,
@@ -58,7 +58,7 @@ type FindEmailLogBySesMessageIDRow struct {
 }
 
 func (q *Queries) FindEmailLogBySesMessageID(ctx context.Context, sesMessageID sql.NullString) (FindEmailLogBySesMessageIDRow, error) {
-	row := q.queryRow(ctx, q.findEmailLogBySesMessageIDStmt, findEmailLogBySesMessageID, sesMessageID)
+	row := q.db.QueryRowContext(ctx, findEmailLogBySesMessageID, sesMessageID)
 	var i FindEmailLogBySesMessageIDRow
 	err := row.Scan(
 		&i.ID,

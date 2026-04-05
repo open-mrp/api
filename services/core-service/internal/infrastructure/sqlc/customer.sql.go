@@ -36,7 +36,7 @@ func (q *Queries) BulkDeleteCustomerRelations(ctx context.Context, arg BulkDelet
 	} else {
 		query = strings.Replace(query, "/*SLICE:counterparty_account_ids*/?", "NULL", 1)
 	}
-	_, err := q.exec(ctx, nil, query, queryParams...)
+	_, err := q.db.ExecContext(ctx, query, queryParams...)
 	return err
 }
 
@@ -264,7 +264,7 @@ func (q *Queries) CountCustomers(ctx context.Context, arg CountCustomersParams) 
 	queryParams = append(queryParams, arg.StartDate)
 	queryParams = append(queryParams, arg.EndDate)
 	queryParams = append(queryParams, arg.EndDate)
-	row := q.queryRow(ctx, nil, query, queryParams...)
+	row := q.db.QueryRowContext(ctx, query, queryParams...)
 	var total int64
 	err := row.Scan(&total)
 	return total, err
@@ -285,7 +285,7 @@ type CustomerExistsByExternalNumberParams struct {
 }
 
 func (q *Queries) CustomerExistsByExternalNumber(ctx context.Context, arg CustomerExistsByExternalNumberParams) (bool, error) {
-	row := q.queryRow(ctx, q.customerExistsByExternalNumberStmt, customerExistsByExternalNumber,
+	row := q.db.QueryRowContext(ctx, customerExistsByExternalNumber,
 		arg.OwnerAccountID,
 		arg.ExternalNumber,
 		arg.ExcludeCounterpartyID,
@@ -302,7 +302,7 @@ WHERE account_id = ?
 `
 
 func (q *Queries) DeleteAccountAddressesByAccountID(ctx context.Context, accountID string) error {
-	_, err := q.exec(ctx, q.deleteAccountAddressesByAccountIDStmt, deleteAccountAddressesByAccountID, accountID)
+	_, err := q.db.ExecContext(ctx, deleteAccountAddressesByAccountID, accountID)
 	return err
 }
 
@@ -322,7 +322,7 @@ func (q *Queries) DeleteAccountRelationPriceGroupsByIDs(ctx context.Context, ids
 	} else {
 		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
 	}
-	_, err := q.exec(ctx, nil, query, queryParams...)
+	_, err := q.db.ExecContext(ctx, query, queryParams...)
 	return err
 }
 
@@ -332,7 +332,7 @@ WHERE account_relation_id = ?
 `
 
 func (q *Queries) DeleteAccountRelationPriceGroupsByRelationID(ctx context.Context, accountRelationID string) error {
-	_, err := q.exec(ctx, q.deleteAccountRelationPriceGroupsByRelationIDStmt, deleteAccountRelationPriceGroupsByRelationID, accountRelationID)
+	_, err := q.db.ExecContext(ctx, deleteAccountRelationPriceGroupsByRelationID, accountRelationID)
 	return err
 }
 
@@ -352,7 +352,7 @@ func (q *Queries) DeleteAccountRelationProductLinesByIDs(ctx context.Context, id
 	} else {
 		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
 	}
-	_, err := q.exec(ctx, nil, query, queryParams...)
+	_, err := q.db.ExecContext(ctx, query, queryParams...)
 	return err
 }
 
@@ -362,7 +362,7 @@ WHERE account_id = ?
 `
 
 func (q *Queries) DeleteAccountUsersByAccountID(ctx context.Context, accountID string) error {
-	_, err := q.exec(ctx, q.deleteAccountUsersByAccountIDStmt, deleteAccountUsersByAccountID, accountID)
+	_, err := q.db.ExecContext(ctx, deleteAccountUsersByAccountID, accountID)
 	return err
 }
 
@@ -379,7 +379,7 @@ type DeleteCustomerParams struct {
 }
 
 func (q *Queries) DeleteCustomer(ctx context.Context, arg DeleteCustomerParams) error {
-	_, err := q.exec(ctx, q.deleteCustomerStmt, deleteCustomer, arg.ID, arg.OwnerAccountID)
+	_, err := q.db.ExecContext(ctx, deleteCustomer, arg.ID, arg.OwnerAccountID)
 	return err
 }
 
@@ -389,7 +389,7 @@ WHERE account_id = ?
 `
 
 func (q *Queries) DeleteCustomerAccountAddresses(ctx context.Context, accountID string) error {
-	_, err := q.exec(ctx, q.deleteCustomerAccountAddressesStmt, deleteCustomerAccountAddresses, accountID)
+	_, err := q.db.ExecContext(ctx, deleteCustomerAccountAddresses, accountID)
 	return err
 }
 
@@ -399,7 +399,7 @@ WHERE account_id = ?
 `
 
 func (q *Queries) DeleteCustomerAccountUsers(ctx context.Context, accountID string) error {
-	_, err := q.exec(ctx, q.deleteCustomerAccountUsersStmt, deleteCustomerAccountUsers, accountID)
+	_, err := q.db.ExecContext(ctx, deleteCustomerAccountUsers, accountID)
 	return err
 }
 
@@ -416,7 +416,7 @@ type DeleteCustomerByAccountIDParams struct {
 }
 
 func (q *Queries) DeleteCustomerByAccountID(ctx context.Context, arg DeleteCustomerByAccountIDParams) error {
-	_, err := q.exec(ctx, q.deleteCustomerByAccountIDStmt, deleteCustomerByAccountID, arg.OwnerAccountID, arg.CounterpartyAccountID)
+	_, err := q.db.ExecContext(ctx, deleteCustomerByAccountID, arg.OwnerAccountID, arg.CounterpartyAccountID)
 	return err
 }
 
@@ -436,7 +436,7 @@ func (q *Queries) DeleteCustomerNotificationPreferences(ctx context.Context, rel
 	} else {
 		query = strings.Replace(query, "/*SLICE:relation_ids*/?", "NULL", 1)
 	}
-	_, err := q.exec(ctx, nil, query, queryParams...)
+	_, err := q.db.ExecContext(ctx, query, queryParams...)
 	return err
 }
 
@@ -456,7 +456,7 @@ func (q *Queries) DeleteCustomerProductLineAccess(ctx context.Context, relationI
 	} else {
 		query = strings.Replace(query, "/*SLICE:relation_ids*/?", "NULL", 1)
 	}
-	_, err := q.exec(ctx, nil, query, queryParams...)
+	_, err := q.db.ExecContext(ctx, query, queryParams...)
 	return err
 }
 
@@ -466,7 +466,7 @@ WHERE account_id = ?
 `
 
 func (q *Queries) GetAccountAddressIDs(ctx context.Context, accountID string) ([]string, error) {
-	rows, err := q.query(ctx, q.getAccountAddressIDsStmt, getAccountAddressIDs, accountID)
+	rows, err := q.db.QueryContext(ctx, getAccountAddressIDs, accountID)
 	if err != nil {
 		return nil, err
 	}
@@ -499,7 +499,7 @@ type GetAccountUsersByAccountIDRow struct {
 }
 
 func (q *Queries) GetAccountUsersByAccountID(ctx context.Context, accountID string) ([]GetAccountUsersByAccountIDRow, error) {
-	rows, err := q.query(ctx, q.getAccountUsersByAccountIDStmt, getAccountUsersByAccountID, accountID)
+	rows, err := q.db.QueryContext(ctx, getAccountUsersByAccountID, accountID)
 	if err != nil {
 		return nil, err
 	}
@@ -700,7 +700,7 @@ type GetCustomerRow struct {
 }
 
 func (q *Queries) GetCustomer(ctx context.Context, arg GetCustomerParams) (GetCustomerRow, error) {
-	row := q.queryRow(ctx, q.getCustomerStmt, getCustomer, arg.OwnerAccountID, arg.CounterpartyAccountID)
+	row := q.db.QueryRowContext(ctx, getCustomer, arg.OwnerAccountID, arg.CounterpartyAccountID)
 	var i GetCustomerRow
 	err := row.Scan(
 		&i.RelationID,
@@ -787,7 +787,7 @@ WHERE ab.owner_account_id = ?
 `
 
 func (q *Queries) GetCustomerEmail(ctx context.Context, accountID string) (sql.NullString, error) {
-	row := q.queryRow(ctx, q.getCustomerEmailStmt, getCustomerEmail, accountID)
+	row := q.db.QueryRowContext(ctx, getCustomerEmail, accountID)
 	var support_email sql.NullString
 	err := row.Scan(&support_email)
 	return support_email, err
@@ -807,7 +807,7 @@ type GetCustomerNotificationPreferencesRow struct {
 }
 
 func (q *Queries) GetCustomerNotificationPreferences(ctx context.Context, accountRelationID string) ([]GetCustomerNotificationPreferencesRow, error) {
-	rows, err := q.query(ctx, q.getCustomerNotificationPreferencesStmt, getCustomerNotificationPreferences, accountRelationID)
+	rows, err := q.db.QueryContext(ctx, getCustomerNotificationPreferences, accountRelationID)
 	if err != nil {
 		return nil, err
 	}
@@ -844,7 +844,7 @@ type GetCustomerPriceGroupsRow struct {
 }
 
 func (q *Queries) GetCustomerPriceGroups(ctx context.Context, accountRelationID string) ([]GetCustomerPriceGroupsRow, error) {
-	rows, err := q.query(ctx, q.getCustomerPriceGroupsStmt, getCustomerPriceGroups, accountRelationID)
+	rows, err := q.db.QueryContext(ctx, getCustomerPriceGroups, accountRelationID)
 	if err != nil {
 		return nil, err
 	}
@@ -879,7 +879,7 @@ type GetCustomerRelationIDParams struct {
 }
 
 func (q *Queries) GetCustomerRelationID(ctx context.Context, arg GetCustomerRelationIDParams) (string, error) {
-	row := q.queryRow(ctx, q.getCustomerRelationIDStmt, getCustomerRelationID, arg.OwnerAccountID, arg.CounterpartyAccountID)
+	row := q.db.QueryRowContext(ctx, getCustomerRelationID, arg.OwnerAccountID, arg.CounterpartyAccountID)
 	var id string
 	err := row.Scan(&id)
 	return id, err
@@ -904,7 +904,7 @@ type GetCustomerStripeCustomerIDRow struct {
 }
 
 func (q *Queries) GetCustomerStripeCustomerID(ctx context.Context, arg GetCustomerStripeCustomerIDParams) (GetCustomerStripeCustomerIDRow, error) {
-	row := q.queryRow(ctx, q.getCustomerStripeCustomerIDStmt, getCustomerStripeCustomerID, arg.OwnerAccountID, arg.CounterpartyAccountID)
+	row := q.db.QueryRowContext(ctx, getCustomerStripeCustomerID, arg.OwnerAccountID, arg.CounterpartyAccountID)
 	var i GetCustomerStripeCustomerIDRow
 	err := row.Scan(&i.StripeCustomerID, &i.StripeEmail)
 	return i, err
@@ -952,7 +952,7 @@ type GetFrequentlyOrderedProductsRow struct {
 }
 
 func (q *Queries) GetFrequentlyOrderedProducts(ctx context.Context, arg GetFrequentlyOrderedProductsParams) ([]GetFrequentlyOrderedProductsRow, error) {
-	rows, err := q.query(ctx, q.getFrequentlyOrderedProductsStmt, getFrequentlyOrderedProducts, arg.OwnerAccountID, arg.BuyerAccountID)
+	rows, err := q.db.QueryContext(ctx, getFrequentlyOrderedProducts, arg.OwnerAccountID, arg.BuyerAccountID)
 	if err != nil {
 		return nil, err
 	}
@@ -986,7 +986,7 @@ WHERE account_relation_id = ?
 `
 
 func (q *Queries) GetRelationPriceGroupIDs(ctx context.Context, accountRelationID string) ([]string, error) {
-	rows, err := q.query(ctx, q.getRelationPriceGroupIDsStmt, getRelationPriceGroupIDs, accountRelationID)
+	rows, err := q.db.QueryContext(ctx, getRelationPriceGroupIDs, accountRelationID)
 	if err != nil {
 		return nil, err
 	}
@@ -1014,7 +1014,7 @@ WHERE account_relation_id = ?
 `
 
 func (q *Queries) GetRelationProductLineIDs(ctx context.Context, accountRelationID string) ([]string, error) {
-	rows, err := q.query(ctx, q.getRelationProductLineIDsStmt, getRelationProductLineIDs, accountRelationID)
+	rows, err := q.db.QueryContext(ctx, getRelationProductLineIDs, accountRelationID)
 	if err != nil {
 		return nil, err
 	}
@@ -1058,7 +1058,7 @@ func (q *Queries) GetRelationsPriceGroups(ctx context.Context, relationIds []str
 	} else {
 		query = strings.Replace(query, "/*SLICE:relation_ids*/?", "NULL", 1)
 	}
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -1102,7 +1102,7 @@ func (q *Queries) GetRelationsProductLines(ctx context.Context, relationIds []st
 	} else {
 		query = strings.Replace(query, "/*SLICE:relation_ids*/?", "NULL", 1)
 	}
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -1175,7 +1175,7 @@ type InsertAccountRelationParams struct {
 }
 
 func (q *Queries) InsertAccountRelation(ctx context.Context, arg InsertAccountRelationParams) error {
-	_, err := q.exec(ctx, q.insertAccountRelationStmt, insertAccountRelation,
+	_, err := q.db.ExecContext(ctx, insertAccountRelation,
 		arg.ID,
 		arg.OwnerAccountID,
 		arg.CounterpartyAccountID,
@@ -1215,7 +1215,7 @@ type InsertAccountRelationPriceGroupParams struct {
 }
 
 func (q *Queries) InsertAccountRelationPriceGroup(ctx context.Context, arg InsertAccountRelationPriceGroupParams) error {
-	_, err := q.exec(ctx, q.insertAccountRelationPriceGroupStmt, insertAccountRelationPriceGroup, arg.ID, arg.AccountRelationID, arg.AccountGroupID)
+	_, err := q.db.ExecContext(ctx, insertAccountRelationPriceGroup, arg.ID, arg.AccountRelationID, arg.AccountGroupID)
 	return err
 }
 
@@ -1234,7 +1234,7 @@ type InsertCustomerAccountParams struct {
 }
 
 func (q *Queries) InsertCustomerAccount(ctx context.Context, arg InsertCustomerAccountParams) error {
-	_, err := q.exec(ctx, q.insertCustomerAccountStmt, insertCustomerAccount,
+	_, err := q.db.ExecContext(ctx, insertCustomerAccount,
 		arg.ID,
 		arg.Name,
 		arg.DefaultBillingAddressID,
@@ -1257,7 +1257,7 @@ type InsertCustomerAccountBrandingParams struct {
 }
 
 func (q *Queries) InsertCustomerAccountBranding(ctx context.Context, arg InsertCustomerAccountBrandingParams) error {
-	_, err := q.exec(ctx, q.insertCustomerAccountBrandingStmt, insertCustomerAccountBranding,
+	_, err := q.db.ExecContext(ctx, insertCustomerAccountBranding,
 		arg.ID,
 		arg.OwnerAccountID,
 		arg.SupportEmail,
@@ -1314,7 +1314,7 @@ type InsertCustomerRelationParams struct {
 }
 
 func (q *Queries) InsertCustomerRelation(ctx context.Context, arg InsertCustomerRelationParams) error {
-	_, err := q.exec(ctx, q.insertCustomerRelationStmt, insertCustomerRelation,
+	_, err := q.db.ExecContext(ctx, insertCustomerRelation,
 		arg.ID,
 		arg.OwnerAccountID,
 		arg.CounterpartyAccountID,
@@ -1352,7 +1352,7 @@ type InsertMergeAccountAddressParams struct {
 }
 
 func (q *Queries) InsertMergeAccountAddress(ctx context.Context, arg InsertMergeAccountAddressParams) error {
-	_, err := q.exec(ctx, q.insertMergeAccountAddressStmt, insertMergeAccountAddress, arg.ID, arg.AccountID, arg.AddressID)
+	_, err := q.db.ExecContext(ctx, insertMergeAccountAddress, arg.ID, arg.AccountID, arg.AddressID)
 	return err
 }
 
@@ -1615,7 +1615,7 @@ func (q *Queries) ListCustomersBackward(ctx context.Context, arg ListCustomersBa
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorID)
 	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -1908,7 +1908,7 @@ func (q *Queries) ListCustomersForward(ctx context.Context, arg ListCustomersFor
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorID)
 	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -1965,7 +1965,7 @@ func (q *Queries) MergeCustomerAccountPrices(ctx context.Context, arg MergeCusto
 	} else {
 		query = strings.Replace(query, "/*SLICE:source_account_ids*/?", "NULL", 1)
 	}
-	_, err := q.exec(ctx, nil, query, queryParams...)
+	_, err := q.db.ExecContext(ctx, query, queryParams...)
 	return err
 }
 
@@ -1997,7 +1997,7 @@ func (q *Queries) MergeCustomerDeliveries(ctx context.Context, arg MergeCustomer
 	} else {
 		query = strings.Replace(query, "/*SLICE:source_account_ids*/?", "NULL", 1)
 	}
-	_, err := q.exec(ctx, nil, query, queryParams...)
+	_, err := q.db.ExecContext(ctx, query, queryParams...)
 	return err
 }
 
@@ -2023,7 +2023,7 @@ func (q *Queries) MergeCustomerInventoryIssues(ctx context.Context, arg MergeCus
 	} else {
 		query = strings.Replace(query, "/*SLICE:source_account_ids*/?", "NULL", 1)
 	}
-	_, err := q.exec(ctx, nil, query, queryParams...)
+	_, err := q.db.ExecContext(ctx, query, queryParams...)
 	return err
 }
 
@@ -2052,7 +2052,7 @@ func (q *Queries) MergeCustomerInventoryReceipts(ctx context.Context, arg MergeC
 	} else {
 		query = strings.Replace(query, "/*SLICE:source_account_ids*/?", "NULL", 1)
 	}
-	_, err := q.exec(ctx, nil, query, queryParams...)
+	_, err := q.db.ExecContext(ctx, query, queryParams...)
 	return err
 }
 
@@ -2084,7 +2084,7 @@ func (q *Queries) MergeCustomerInvoices(ctx context.Context, arg MergeCustomerIn
 	} else {
 		query = strings.Replace(query, "/*SLICE:source_account_ids*/?", "NULL", 1)
 	}
-	_, err := q.exec(ctx, nil, query, queryParams...)
+	_, err := q.db.ExecContext(ctx, query, queryParams...)
 	return err
 }
 
@@ -2113,7 +2113,7 @@ func (q *Queries) MergeCustomerOrders(ctx context.Context, arg MergeCustomerOrde
 	} else {
 		query = strings.Replace(query, "/*SLICE:source_account_ids*/?", "NULL", 1)
 	}
-	_, err := q.exec(ctx, nil, query, queryParams...)
+	_, err := q.db.ExecContext(ctx, query, queryParams...)
 	return err
 }
 
@@ -2145,7 +2145,7 @@ func (q *Queries) MergeCustomerReceivingOrders(ctx context.Context, arg MergeCus
 	} else {
 		query = strings.Replace(query, "/*SLICE:source_account_ids*/?", "NULL", 1)
 	}
-	_, err := q.exec(ctx, nil, query, queryParams...)
+	_, err := q.db.ExecContext(ctx, query, queryParams...)
 	return err
 }
 
@@ -2177,7 +2177,7 @@ func (q *Queries) MergeCustomerShipments(ctx context.Context, arg MergeCustomerS
 	} else {
 		query = strings.Replace(query, "/*SLICE:source_account_ids*/?", "NULL", 1)
 	}
-	_, err := q.exec(ctx, nil, query, queryParams...)
+	_, err := q.db.ExecContext(ctx, query, queryParams...)
 	return err
 }
 
@@ -2206,7 +2206,7 @@ func (q *Queries) MergeCustomerTransactions(ctx context.Context, arg MergeCustom
 	} else {
 		query = strings.Replace(query, "/*SLICE:source_account_ids*/?", "NULL", 1)
 	}
-	_, err := q.exec(ctx, nil, query, queryParams...)
+	_, err := q.db.ExecContext(ctx, query, queryParams...)
 	return err
 }
 
@@ -2233,7 +2233,7 @@ func (q *Queries) MoveAccountRelationPriceGroups(ctx context.Context, arg MoveAc
 	} else {
 		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
 	}
-	_, err := q.exec(ctx, nil, query, queryParams...)
+	_, err := q.db.ExecContext(ctx, query, queryParams...)
 	return err
 }
 
@@ -2260,7 +2260,7 @@ func (q *Queries) MoveAccountRelationProductLines(ctx context.Context, arg MoveA
 	} else {
 		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
 	}
-	_, err := q.exec(ctx, nil, query, queryParams...)
+	_, err := q.db.ExecContext(ctx, query, queryParams...)
 	return err
 }
 
@@ -2287,7 +2287,7 @@ func (q *Queries) MoveAccountUsers(ctx context.Context, arg MoveAccountUsersPara
 	} else {
 		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
 	}
-	_, err := q.exec(ctx, nil, query, queryParams...)
+	_, err := q.db.ExecContext(ctx, query, queryParams...)
 	return err
 }
 
@@ -2314,7 +2314,7 @@ func (q *Queries) ReparentChildRelations(ctx context.Context, arg ReparentChildR
 	} else {
 		query = strings.Replace(query, "/*SLICE:source_relation_ids*/?", "NULL", 1)
 	}
-	_, err := q.exec(ctx, nil, query, queryParams...)
+	_, err := q.db.ExecContext(ctx, query, queryParams...)
 	return err
 }
 
@@ -2336,7 +2336,7 @@ type SetCustomerStripeCustomerIDParams struct {
 }
 
 func (q *Queries) SetCustomerStripeCustomerID(ctx context.Context, arg SetCustomerStripeCustomerIDParams) error {
-	_, err := q.exec(ctx, q.setCustomerStripeCustomerIDStmt, setCustomerStripeCustomerID,
+	_, err := q.db.ExecContext(ctx, setCustomerStripeCustomerID,
 		arg.StripeCustomerID,
 		arg.StripeEmail,
 		arg.OwnerAccountID,
@@ -2401,7 +2401,7 @@ type UpdateCustomerParams struct {
 }
 
 func (q *Queries) UpdateCustomer(ctx context.Context, arg UpdateCustomerParams) error {
-	_, err := q.exec(ctx, q.updateCustomerStmt, updateCustomer,
+	_, err := q.db.ExecContext(ctx, updateCustomer,
 		arg.Alias,
 		arg.ExternalNumber,
 		arg.IsEdiEnabled,
@@ -2448,7 +2448,7 @@ type UpsertCustomerBrandingParams struct {
 }
 
 func (q *Queries) UpsertCustomerBranding(ctx context.Context, arg UpsertCustomerBrandingParams) error {
-	_, err := q.exec(ctx, q.upsertCustomerBrandingStmt, upsertCustomerBranding,
+	_, err := q.db.ExecContext(ctx, upsertCustomerBranding,
 		arg.ID,
 		arg.AccountID,
 		arg.SupportEmail,

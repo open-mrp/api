@@ -39,7 +39,7 @@ func (q *Queries) ListCatalogCategoryProperties(ctx context.Context, categoryIds
 	} else {
 		query = strings.Replace(query, "/*SLICE:category_ids*/?", "NULL", 1)
 	}
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +94,7 @@ func (q *Queries) ListCatalogProductAttributes(ctx context.Context, itemIds []st
 	} else {
 		query = strings.Replace(query, "/*SLICE:item_ids*/?", "NULL", 1)
 	}
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +139,7 @@ type ListCatalogProductLinesRow struct {
 }
 
 func (q *Queries) ListCatalogProductLines(ctx context.Context, accountID string) ([]ListCatalogProductLinesRow, error) {
-	rows, err := q.query(ctx, q.listCatalogProductLinesStmt, listCatalogProductLines, accountID)
+	rows, err := q.db.QueryContext(ctx, listCatalogProductLines, accountID)
 	if err != nil {
 		return nil, err
 	}
@@ -213,7 +213,7 @@ type ListCatalogProductLinesForCustomerRow struct {
 }
 
 func (q *Queries) ListCatalogProductLinesForCustomer(ctx context.Context, arg ListCatalogProductLinesForCustomerParams) ([]ListCatalogProductLinesForCustomerRow, error) {
-	rows, err := q.query(ctx, q.listCatalogProductLinesForCustomerStmt, listCatalogProductLinesForCustomer,
+	rows, err := q.db.QueryContext(ctx, listCatalogProductLinesForCustomer,
 		arg.AccountID,
 		arg.AccountID,
 		arg.CustomerAccountID,
@@ -276,7 +276,7 @@ type ListCatalogProductsRow struct {
 }
 
 func (q *Queries) ListCatalogProducts(ctx context.Context, arg ListCatalogProductsParams) ([]ListCatalogProductsRow, error) {
-	rows, err := q.query(ctx, q.listCatalogProductsStmt, listCatalogProducts, arg.ProductLineID, arg.AccountID, arg.CategoryAccountID)
+	rows, err := q.db.QueryContext(ctx, listCatalogProducts, arg.ProductLineID, arg.AccountID, arg.CategoryAccountID)
 	if err != nil {
 		return nil, err
 	}
@@ -368,7 +368,7 @@ type ListCatalogProductsForCustomerRow struct {
 }
 
 func (q *Queries) ListCatalogProductsForCustomer(ctx context.Context, arg ListCatalogProductsForCustomerParams) ([]ListCatalogProductsForCustomerRow, error) {
-	rows, err := q.query(ctx, q.listCatalogProductsForCustomerStmt, listCatalogProductsForCustomer,
+	rows, err := q.db.QueryContext(ctx, listCatalogProductsForCustomer,
 		arg.ProductLineID,
 		arg.AccountID,
 		arg.CategoryAccountID,

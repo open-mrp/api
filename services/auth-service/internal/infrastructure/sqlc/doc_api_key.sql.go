@@ -23,7 +23,7 @@ type CreateDocAPIKeyParams struct {
 }
 
 func (q *Queries) CreateDocAPIKey(ctx context.Context, arg CreateDocAPIKeyParams) (sql.Result, error) {
-	return q.exec(ctx, q.createDocAPIKeyStmt, createDocAPIKey, arg.TypeID, arg.ApiKeyID, arg.EncryptedSecret)
+	return q.db.ExecContext(ctx, createDocAPIKey, arg.TypeID, arg.ApiKeyID, arg.EncryptedSecret)
 }
 
 const deleteDocAPIKeyByAPIKeyID = `-- name: DeleteDocAPIKeyByAPIKeyID :exec
@@ -31,7 +31,7 @@ DELETE FROM doc_api_key WHERE api_key_id = ?
 `
 
 func (q *Queries) DeleteDocAPIKeyByAPIKeyID(ctx context.Context, apiKeyID string) error {
-	_, err := q.exec(ctx, q.deleteDocAPIKeyByAPIKeyIDStmt, deleteDocAPIKeyByAPIKeyID, apiKeyID)
+	_, err := q.db.ExecContext(ctx, deleteDocAPIKeyByAPIKeyID, apiKeyID)
 	return err
 }
 
@@ -40,7 +40,7 @@ DELETE FROM doc_api_key WHERE id = ?
 `
 
 func (q *Queries) DeleteDocAPIKeyByID(ctx context.Context, id int64) error {
-	_, err := q.exec(ctx, q.deleteDocAPIKeyByIDStmt, deleteDocAPIKeyByID, id)
+	_, err := q.db.ExecContext(ctx, deleteDocAPIKeyByID, id)
 	return err
 }
 
@@ -50,7 +50,7 @@ FROM doc_api_key WHERE api_key_id = ? LIMIT 1
 `
 
 func (q *Queries) FindDocAPIKeyByAPIKeyID(ctx context.Context, apiKeyID string) (DocApiKey, error) {
-	row := q.queryRow(ctx, q.findDocAPIKeyByAPIKeyIDStmt, findDocAPIKeyByAPIKeyID, apiKeyID)
+	row := q.db.QueryRowContext(ctx, findDocAPIKeyByAPIKeyID, apiKeyID)
 	var i DocApiKey
 	err := row.Scan(
 		&i.ID,
@@ -87,7 +87,7 @@ type FindDocAPIKeyBySandboxAccountIDRow struct {
 }
 
 func (q *Queries) FindDocAPIKeyBySandboxAccountID(ctx context.Context, ownerAccountID string) (FindDocAPIKeyBySandboxAccountIDRow, error) {
-	row := q.queryRow(ctx, q.findDocAPIKeyBySandboxAccountIDStmt, findDocAPIKeyBySandboxAccountID, ownerAccountID)
+	row := q.db.QueryRowContext(ctx, findDocAPIKeyBySandboxAccountID, ownerAccountID)
 	var i FindDocAPIKeyBySandboxAccountIDRow
 	err := row.Scan(
 		&i.ID,
@@ -113,6 +113,6 @@ type UpdateDocAPIKeyParams struct {
 }
 
 func (q *Queries) UpdateDocAPIKey(ctx context.Context, arg UpdateDocAPIKeyParams) error {
-	_, err := q.exec(ctx, q.updateDocAPIKeyStmt, updateDocAPIKey, arg.ApiKeyID, arg.EncryptedSecret, arg.ID)
+	_, err := q.db.ExecContext(ctx, updateDocAPIKey, arg.ApiKeyID, arg.EncryptedSecret, arg.ID)
 	return err
 }

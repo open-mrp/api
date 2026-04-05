@@ -27,7 +27,7 @@ type ClearParentAccountRelationParams struct {
 }
 
 func (q *Queries) ClearParentAccountRelation(ctx context.Context, arg ClearParentAccountRelationParams) error {
-	_, err := q.exec(ctx, q.clearParentAccountRelationStmt, clearParentAccountRelation, arg.ChildRelationID, arg.OwnerAccountID, arg.ParentRelationID)
+	_, err := q.db.ExecContext(ctx, clearParentAccountRelation, arg.ChildRelationID, arg.OwnerAccountID, arg.ParentRelationID)
 	return err
 }
 
@@ -63,7 +63,7 @@ type GetChildAccountDetailRow struct {
 }
 
 func (q *Queries) GetChildAccountDetail(ctx context.Context, arg GetChildAccountDetailParams) (GetChildAccountDetailRow, error) {
-	row := q.queryRow(ctx, q.getChildAccountDetailStmt, getChildAccountDetail, arg.OwnerAccountID, arg.CounterpartyAccountID)
+	row := q.db.QueryRowContext(ctx, getChildAccountDetail, arg.OwnerAccountID, arg.CounterpartyAccountID)
 	var i GetChildAccountDetailRow
 	err := row.Scan(
 		&i.RelationID,
@@ -84,7 +84,7 @@ WHERE id = ?
 `
 
 func (q *Queries) GetParentAccountRelationID(ctx context.Context, id string) (sql.NullString, error) {
-	row := q.queryRow(ctx, q.getParentAccountRelationIDStmt, getParentAccountRelationID, id)
+	row := q.db.QueryRowContext(ctx, getParentAccountRelationID, id)
 	var parent_account_relation_id sql.NullString
 	err := row.Scan(&parent_account_relation_id)
 	return parent_account_relation_id, err
@@ -136,7 +136,7 @@ type ListChildAccountsBackwardRow struct {
 }
 
 func (q *Queries) ListChildAccountsBackward(ctx context.Context, arg ListChildAccountsBackwardParams) ([]ListChildAccountsBackwardRow, error) {
-	rows, err := q.query(ctx, q.listChildAccountsBackwardStmt, listChildAccountsBackward,
+	rows, err := q.db.QueryContext(ctx, listChildAccountsBackward,
 		arg.OwnerAccountID,
 		arg.ParentRelationID,
 		arg.SearchQuery,
@@ -222,7 +222,7 @@ type ListChildAccountsForwardRow struct {
 }
 
 func (q *Queries) ListChildAccountsForward(ctx context.Context, arg ListChildAccountsForwardParams) ([]ListChildAccountsForwardRow, error) {
-	rows, err := q.query(ctx, q.listChildAccountsForwardStmt, listChildAccountsForward,
+	rows, err := q.db.QueryContext(ctx, listChildAccountsForward,
 		arg.OwnerAccountID,
 		arg.ParentRelationID,
 		arg.SearchQuery,
@@ -277,6 +277,6 @@ type SetParentAccountRelationParams struct {
 }
 
 func (q *Queries) SetParentAccountRelation(ctx context.Context, arg SetParentAccountRelationParams) error {
-	_, err := q.exec(ctx, q.setParentAccountRelationStmt, setParentAccountRelation, arg.ParentRelationID, arg.ChildRelationID, arg.OwnerAccountID)
+	_, err := q.db.ExecContext(ctx, setParentAccountRelation, arg.ParentRelationID, arg.ChildRelationID, arg.OwnerAccountID)
 	return err
 }

@@ -25,7 +25,7 @@ type CreateOrderEmailContactParams struct {
 }
 
 func (q *Queries) CreateOrderEmailContact(ctx context.Context, arg CreateOrderEmailContactParams) error {
-	_, err := q.exec(ctx, q.createOrderEmailContactStmt, createOrderEmailContact,
+	_, err := q.db.ExecContext(ctx, createOrderEmailContact,
 		arg.ID,
 		arg.SalesOrderID,
 		arg.AccountUserID,
@@ -76,7 +76,7 @@ type CreatePurchaseOrderParams struct {
 }
 
 func (q *Queries) CreatePurchaseOrder(ctx context.Context, arg CreatePurchaseOrderParams) error {
-	_, err := q.exec(ctx, q.createPurchaseOrderStmt, createPurchaseOrder,
+	_, err := q.db.ExecContext(ctx, createPurchaseOrder,
 		arg.ID,
 		arg.Number,
 		arg.Note,
@@ -102,7 +102,7 @@ DELETE FROM order_email_contact WHERE sales_order_id = ?
 `
 
 func (q *Queries) DeleteOrderEmailContactsByOrder(ctx context.Context, salesOrderID string) error {
-	_, err := q.exec(ctx, q.deleteOrderEmailContactsByOrderStmt, deleteOrderEmailContactsByOrder, salesOrderID)
+	_, err := q.db.ExecContext(ctx, deleteOrderEmailContactsByOrder, salesOrderID)
 	return err
 }
 
@@ -118,7 +118,7 @@ type DeletePurchaseOrderParams struct {
 }
 
 func (q *Queries) DeletePurchaseOrder(ctx context.Context, arg DeletePurchaseOrderParams) error {
-	_, err := q.exec(ctx, q.deletePurchaseOrderStmt, deletePurchaseOrder, arg.ID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, deletePurchaseOrder, arg.ID, arg.AccountID)
 	return err
 }
 
@@ -127,7 +127,7 @@ DELETE FROM sales_order_line WHERE sales_order_id = ?
 `
 
 func (q *Queries) DeletePurchaseOrderLinesBySalesOrder(ctx context.Context, salesOrderID string) error {
-	_, err := q.exec(ctx, q.deletePurchaseOrderLinesBySalesOrderStmt, deletePurchaseOrderLinesBySalesOrder, salesOrderID)
+	_, err := q.db.ExecContext(ctx, deletePurchaseOrderLinesBySalesOrder, salesOrderID)
 	return err
 }
 
@@ -142,7 +142,7 @@ SELECT COALESCE(
 `
 
 func (q *Queries) GetNextPurchaseOrderNumber(ctx context.Context, accountID string) (interface{}, error) {
-	row := q.queryRow(ctx, q.getNextPurchaseOrderNumberStmt, getNextPurchaseOrderNumber, accountID)
+	row := q.db.QueryRowContext(ctx, getNextPurchaseOrderNumber, accountID)
 	var next_number interface{}
 	err := row.Scan(&next_number)
 	return next_number, err
@@ -161,7 +161,7 @@ type GetOrderEmailContactsRow struct {
 }
 
 func (q *Queries) GetOrderEmailContacts(ctx context.Context, salesOrderID string) ([]GetOrderEmailContactsRow, error) {
-	rows, err := q.query(ctx, q.getOrderEmailContactsStmt, getOrderEmailContacts, salesOrderID)
+	rows, err := q.db.QueryContext(ctx, getOrderEmailContacts, salesOrderID)
 	if err != nil {
 		return nil, err
 	}
@@ -341,7 +341,7 @@ type GetPurchaseOrderRow struct {
 }
 
 func (q *Queries) GetPurchaseOrder(ctx context.Context, arg GetPurchaseOrderParams) (GetPurchaseOrderRow, error) {
-	row := q.queryRow(ctx, q.getPurchaseOrderStmt, getPurchaseOrder, arg.SalesOrderID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getPurchaseOrder, arg.SalesOrderID, arg.AccountID)
 	var i GetPurchaseOrderRow
 	err := row.Scan(
 		&i.ID,
@@ -493,7 +493,7 @@ type GetPurchaseOrderLinesRow struct {
 }
 
 func (q *Queries) GetPurchaseOrderLines(ctx context.Context, salesOrderID string) ([]GetPurchaseOrderLinesRow, error) {
-	rows, err := q.query(ctx, q.getPurchaseOrderLinesStmt, getPurchaseOrderLines, salesOrderID)
+	rows, err := q.db.QueryContext(ctx, getPurchaseOrderLines, salesOrderID)
 	if err != nil {
 		return nil, err
 	}
@@ -556,7 +556,7 @@ AND u.email IS NOT NULL
 `
 
 func (q *Queries) GetPurchaseOrderSubmissionRecipients(ctx context.Context, purchaseOrderID string) ([]sql.NullString, error) {
-	rows, err := q.query(ctx, q.getPurchaseOrderSubmissionRecipientsStmt, getPurchaseOrderSubmissionRecipients, purchaseOrderID)
+	rows, err := q.db.QueryContext(ctx, getPurchaseOrderSubmissionRecipients, purchaseOrderID)
 	if err != nil {
 		return nil, err
 	}
@@ -591,7 +591,7 @@ type GetPurchaseOrderSupplierIDParams struct {
 }
 
 func (q *Queries) GetPurchaseOrderSupplierID(ctx context.Context, arg GetPurchaseOrderSupplierIDParams) (string, error) {
-	row := q.queryRow(ctx, q.getPurchaseOrderSupplierIDStmt, getPurchaseOrderSupplierID, arg.SalesOrderID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getPurchaseOrderSupplierID, arg.SalesOrderID, arg.AccountID)
 	var seller_account_id string
 	err := row.Scan(&seller_account_id)
 	return seller_account_id, err
@@ -612,7 +612,7 @@ type IsDuplicatePurchaseOrderNumberParams struct {
 }
 
 func (q *Queries) IsDuplicatePurchaseOrderNumber(ctx context.Context, arg IsDuplicatePurchaseOrderNumberParams) (int64, error) {
-	row := q.queryRow(ctx, q.isDuplicatePurchaseOrderNumberStmt, isDuplicatePurchaseOrderNumber,
+	row := q.db.QueryRowContext(ctx, isDuplicatePurchaseOrderNumber,
 		arg.AccountID,
 		arg.Number,
 		arg.ExcludeID,
@@ -770,7 +770,7 @@ func (q *Queries) ListPurchaseOrdersBackward(ctx context.Context, arg ListPurcha
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorID)
 	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -960,7 +960,7 @@ func (q *Queries) ListPurchaseOrdersForward(ctx context.Context, arg ListPurchas
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorID)
 	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -1015,7 +1015,7 @@ type MarkPurchaseOrderSubmissionSentParams struct {
 }
 
 func (q *Queries) MarkPurchaseOrderSubmissionSent(ctx context.Context, arg MarkPurchaseOrderSubmissionSentParams) error {
-	_, err := q.exec(ctx, q.markPurchaseOrderSubmissionSentStmt, markPurchaseOrderSubmissionSent, arg.ID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, markPurchaseOrderSubmissionSent, arg.ID, arg.AccountID)
 	return err
 }
 
@@ -1032,7 +1032,7 @@ type UpdateNextPurchaseOrderNumberParams struct {
 }
 
 func (q *Queries) UpdateNextPurchaseOrderNumber(ctx context.Context, arg UpdateNextPurchaseOrderNumberParams) error {
-	_, err := q.exec(ctx, q.updateNextPurchaseOrderNumberStmt, updateNextPurchaseOrderNumber,
+	_, err := q.db.ExecContext(ctx, updateNextPurchaseOrderNumber,
 		arg.ID,
 		arg.AccountID,
 		arg.Value,
@@ -1068,7 +1068,7 @@ type UpdatePurchaseOrderParams struct {
 }
 
 func (q *Queries) UpdatePurchaseOrder(ctx context.Context, arg UpdatePurchaseOrderParams) error {
-	_, err := q.exec(ctx, q.updatePurchaseOrderStmt, updatePurchaseOrder,
+	_, err := q.db.ExecContext(ctx, updatePurchaseOrder,
 		arg.Note,
 		arg.Number,
 		arg.PriorityCode,
@@ -1096,7 +1096,7 @@ type UpdatePurchaseOrderAcknowledgmentSentParams struct {
 }
 
 func (q *Queries) UpdatePurchaseOrderAcknowledgmentSent(ctx context.Context, arg UpdatePurchaseOrderAcknowledgmentSentParams) error {
-	_, err := q.exec(ctx, q.updatePurchaseOrderAcknowledgmentSentStmt, updatePurchaseOrderAcknowledgmentSent, arg.ID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, updatePurchaseOrderAcknowledgmentSent, arg.ID, arg.AccountID)
 	return err
 }
 
@@ -1119,7 +1119,7 @@ type UpdatePurchaseOrderStatusParams struct {
 }
 
 func (q *Queries) UpdatePurchaseOrderStatus(ctx context.Context, arg UpdatePurchaseOrderStatusParams) error {
-	_, err := q.exec(ctx, q.updatePurchaseOrderStatusStmt, updatePurchaseOrderStatus,
+	_, err := q.db.ExecContext(ctx, updatePurchaseOrderStatus,
 		arg.StatusCode,
 		arg.IssuedAt,
 		arg.CompletedAt,

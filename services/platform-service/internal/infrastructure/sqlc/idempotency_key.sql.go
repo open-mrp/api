@@ -25,7 +25,7 @@ type AdvanceRecoveryPointParams struct {
 }
 
 func (q *Queries) AdvanceRecoveryPoint(ctx context.Context, arg AdvanceRecoveryPointParams) error {
-	_, err := q.exec(ctx, q.advanceRecoveryPointStmt, advanceRecoveryPoint, arg.RecoveryPoint, arg.RequestParams, arg.TypeID)
+	_, err := q.db.ExecContext(ctx, advanceRecoveryPoint, arg.RecoveryPoint, arg.RequestParams, arg.TypeID)
 	return err
 }
 
@@ -53,7 +53,7 @@ type CreateIdempotencyKeyWithScopeParams struct {
 }
 
 func (q *Queries) CreateIdempotencyKeyWithScope(ctx context.Context, arg CreateIdempotencyKeyWithScopeParams) (int64, error) {
-	result, err := q.exec(ctx, q.createIdempotencyKeyWithScopeStmt, createIdempotencyKeyWithScope,
+	result, err := q.db.ExecContext(ctx, createIdempotencyKeyWithScope,
 		arg.TypeID,
 		arg.ScopeHash,
 		arg.RequestBodyHash,
@@ -79,7 +79,7 @@ LIMIT ?
 `
 
 func (q *Queries) DeleteExpiredDeletedRecords(ctx context.Context, limit int32) (sql.Result, error) {
-	return q.exec(ctx, q.deleteExpiredDeletedRecordsStmt, deleteExpiredDeletedRecords, limit)
+	return q.db.ExecContext(ctx, deleteExpiredDeletedRecords, limit)
 }
 
 const deleteExpiredIdempotencyKeys = `-- name: DeleteExpiredIdempotencyKeys :execresult
@@ -89,7 +89,7 @@ LIMIT ?
 `
 
 func (q *Queries) DeleteExpiredIdempotencyKeys(ctx context.Context, limit int32) (sql.Result, error) {
-	return q.exec(ctx, q.deleteExpiredIdempotencyKeysStmt, deleteExpiredIdempotencyKeys, limit)
+	return q.db.ExecContext(ctx, deleteExpiredIdempotencyKeys, limit)
 }
 
 const deleteExpiredServiceIdempotencyKeys = `-- name: DeleteExpiredServiceIdempotencyKeys :execresult
@@ -99,7 +99,7 @@ LIMIT ?
 `
 
 func (q *Queries) DeleteExpiredServiceIdempotencyKeys(ctx context.Context, limit int32) (sql.Result, error) {
-	return q.exec(ctx, q.deleteExpiredServiceIdempotencyKeysStmt, deleteExpiredServiceIdempotencyKeys, limit)
+	return q.db.ExecContext(ctx, deleteExpiredServiceIdempotencyKeys, limit)
 }
 
 const getIdempotencyKeyByScopeHashForUpdate = `-- name: GetIdempotencyKeyByScopeHashForUpdate :one
@@ -107,7 +107,7 @@ SELECT id, type_id, idempotency_key, actor_id, identity_type, target_account_id,
 `
 
 func (q *Queries) GetIdempotencyKeyByScopeHashForUpdate(ctx context.Context, scopeHash string) (IdempotencyKey, error) {
-	row := q.queryRow(ctx, q.getIdempotencyKeyByScopeHashForUpdateStmt, getIdempotencyKeyByScopeHashForUpdate, scopeHash)
+	row := q.db.QueryRowContext(ctx, getIdempotencyKeyByScopeHashForUpdate, scopeHash)
 	var i IdempotencyKey
 	err := row.Scan(
 		&i.ID,
@@ -148,7 +148,7 @@ type GetRecoveryPointRow struct {
 }
 
 func (q *Queries) GetRecoveryPoint(ctx context.Context, typeID string) (GetRecoveryPointRow, error) {
-	row := q.queryRow(ctx, q.getRecoveryPointStmt, getRecoveryPoint, typeID)
+	row := q.db.QueryRowContext(ctx, getRecoveryPoint, typeID)
 	var i GetRecoveryPointRow
 	err := row.Scan(&i.RecoveryPoint, &i.RequestParams)
 	return i, err
@@ -167,7 +167,7 @@ type LockIdempotencyKeyParams struct {
 }
 
 func (q *Queries) LockIdempotencyKey(ctx context.Context, arg LockIdempotencyKeyParams) (sql.Result, error) {
-	return q.exec(ctx, q.lockIdempotencyKeyStmt, lockIdempotencyKey, arg.LockOwner, arg.TypeID)
+	return q.db.ExecContext(ctx, lockIdempotencyKey, arg.LockOwner, arg.TypeID)
 }
 
 const releaseIdempotencyKeyLock = `-- name: ReleaseIdempotencyKeyLock :exec
@@ -178,7 +178,7 @@ WHERE type_id = ?
 `
 
 func (q *Queries) ReleaseIdempotencyKeyLock(ctx context.Context, typeID string) error {
-	_, err := q.exec(ctx, q.releaseIdempotencyKeyLockStmt, releaseIdempotencyKeyLock, typeID)
+	_, err := q.db.ExecContext(ctx, releaseIdempotencyKeyLock, typeID)
 	return err
 }
 
@@ -199,7 +199,7 @@ type SetIdempotencyKeyResponseParams struct {
 }
 
 func (q *Queries) SetIdempotencyKeyResponse(ctx context.Context, arg SetIdempotencyKeyResponseParams) error {
-	_, err := q.exec(ctx, q.setIdempotencyKeyResponseStmt, setIdempotencyKeyResponse,
+	_, err := q.db.ExecContext(ctx, setIdempotencyKeyResponse,
 		arg.ResponseCode,
 		arg.ResponseBody,
 		arg.ResponseHeaders,
@@ -228,7 +228,7 @@ type SetIdempotencyKeyResponseWithTTLParams struct {
 }
 
 func (q *Queries) SetIdempotencyKeyResponseWithTTL(ctx context.Context, arg SetIdempotencyKeyResponseWithTTLParams) error {
-	_, err := q.exec(ctx, q.setIdempotencyKeyResponseWithTTLStmt, setIdempotencyKeyResponseWithTTL,
+	_, err := q.db.ExecContext(ctx, setIdempotencyKeyResponseWithTTL,
 		arg.ResponseCode,
 		arg.ResponseBody,
 		arg.ResponseHeaders,

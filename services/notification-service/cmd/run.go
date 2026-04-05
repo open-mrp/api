@@ -61,11 +61,7 @@ func Run(
 	}
 	defer rabbitmq.Close()
 
-	queries, err := sqlc.Prepare(ctx, db)
-	if err != nil {
-		return err
-	}
-	defer queries.Close()
+	queries := sqlc.New(db)
 
 	templateRenderer, apiErr := email.NewTemplateRenderer()
 	if apiErr != nil {

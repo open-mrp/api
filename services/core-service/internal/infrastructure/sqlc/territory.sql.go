@@ -25,7 +25,7 @@ type CheckTerritoryInAccountParams struct {
 }
 
 func (q *Queries) CheckTerritoryInAccount(ctx context.Context, arg CheckTerritoryInAccountParams) (bool, error) {
-	row := q.queryRow(ctx, q.checkTerritoryInAccountStmt, checkTerritoryInAccount, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, checkTerritoryInAccount, arg.ID, arg.AccountID)
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err
@@ -43,7 +43,7 @@ type DeleteTerritoryParams struct {
 }
 
 func (q *Queries) DeleteTerritory(ctx context.Context, arg DeleteTerritoryParams) error {
-	_, err := q.exec(ctx, q.deleteTerritoryStmt, deleteTerritory, arg.ID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, deleteTerritory, arg.ID, arg.AccountID)
 	return err
 }
 
@@ -88,7 +88,7 @@ type GetTerritoryRow struct {
 }
 
 func (q *Queries) GetTerritory(ctx context.Context, arg GetTerritoryParams) (GetTerritoryRow, error) {
-	row := q.queryRow(ctx, q.getTerritoryStmt, getTerritory, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getTerritory, arg.ID, arg.AccountID)
 	var i GetTerritoryRow
 	err := row.Scan(
 		&i.ID,
@@ -141,7 +141,7 @@ type InsertTerritoryParams struct {
 }
 
 func (q *Queries) InsertTerritory(ctx context.Context, arg InsertTerritoryParams) error {
-	_, err := q.exec(ctx, q.insertTerritoryStmt, insertTerritory,
+	_, err := q.db.ExecContext(ctx, insertTerritory,
 		arg.ID,
 		arg.State,
 		arg.StartZipcode,
@@ -223,7 +223,7 @@ type ListTerritoriesBackwardRow struct {
 }
 
 func (q *Queries) ListTerritoriesBackward(ctx context.Context, arg ListTerritoriesBackwardParams) ([]ListTerritoriesBackwardRow, error) {
-	rows, err := q.query(ctx, q.listTerritoriesBackwardStmt, listTerritoriesBackward,
+	rows, err := q.db.QueryContext(ctx, listTerritoriesBackward,
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
@@ -343,7 +343,7 @@ type ListTerritoriesForwardRow struct {
 }
 
 func (q *Queries) ListTerritoriesForward(ctx context.Context, arg ListTerritoriesForwardParams) ([]ListTerritoriesForwardRow, error) {
-	rows, err := q.query(ctx, q.listTerritoriesForwardStmt, listTerritoriesForward,
+	rows, err := q.db.QueryContext(ctx, listTerritoriesForward,
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
@@ -431,7 +431,7 @@ type UpdateTerritoryParams struct {
 }
 
 func (q *Queries) UpdateTerritory(ctx context.Context, arg UpdateTerritoryParams) error {
-	_, err := q.exec(ctx, q.updateTerritoryStmt, updateTerritory,
+	_, err := q.db.ExecContext(ctx, updateTerritory,
 		arg.State,
 		arg.ClearStartZipcode,
 		arg.StartZipcode,

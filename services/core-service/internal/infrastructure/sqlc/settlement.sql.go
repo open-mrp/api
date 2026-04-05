@@ -27,7 +27,7 @@ type CheckSettlementNumberDuplicateParams struct {
 }
 
 func (q *Queries) CheckSettlementNumberDuplicate(ctx context.Context, arg CheckSettlementNumberDuplicateParams) (bool, error) {
-	row := q.queryRow(ctx, q.checkSettlementNumberDuplicateStmt, checkSettlementNumberDuplicate,
+	row := q.db.QueryRowContext(ctx, checkSettlementNumberDuplicate,
 		arg.AccountID,
 		arg.Number,
 		arg.ExcludeID,
@@ -105,7 +105,7 @@ func (q *Queries) CountSettlements(ctx context.Context, arg CountSettlementsPara
 	queryParams = append(queryParams, arg.StartDate)
 	queryParams = append(queryParams, arg.EndDate)
 	queryParams = append(queryParams, arg.EndDate)
-	row := q.queryRow(ctx, nil, query, queryParams...)
+	row := q.db.QueryRowContext(ctx, query, queryParams...)
 	var total_count int64
 	err := row.Scan(&total_count)
 	return total_count, err
@@ -131,7 +131,7 @@ type DeleteOrphanedAdjustmentTransactionsParams struct {
 }
 
 func (q *Queries) DeleteOrphanedAdjustmentTransactions(ctx context.Context, arg DeleteOrphanedAdjustmentTransactionsParams) error {
-	_, err := q.exec(ctx, q.deleteOrphanedAdjustmentTransactionsStmt, deleteOrphanedAdjustmentTransactions, arg.SettlementID, arg.SettlementID)
+	_, err := q.db.ExecContext(ctx, deleteOrphanedAdjustmentTransactions, arg.SettlementID, arg.SettlementID)
 	return err
 }
 
@@ -142,7 +142,7 @@ WHERE ta.settlement_id = ?
 `
 
 func (q *Queries) DeleteQuantitiesBySettlementAllocations(ctx context.Context, settlementID sql.NullString) error {
-	_, err := q.exec(ctx, q.deleteQuantitiesBySettlementAllocationsStmt, deleteQuantitiesBySettlementAllocations, settlementID)
+	_, err := q.db.ExecContext(ctx, deleteQuantitiesBySettlementAllocations, settlementID)
 	return err
 }
 
@@ -156,7 +156,7 @@ type DeleteSettlementParams struct {
 }
 
 func (q *Queries) DeleteSettlement(ctx context.Context, arg DeleteSettlementParams) error {
-	_, err := q.exec(ctx, q.deleteSettlementStmt, deleteSettlement, arg.ID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, deleteSettlement, arg.ID, arg.AccountID)
 	return err
 }
 
@@ -192,7 +192,7 @@ type DeleteSettlementAllocationsRow struct {
 }
 
 func (q *Queries) DeleteSettlementAllocations(ctx context.Context, settlementID sql.NullString) ([]DeleteSettlementAllocationsRow, error) {
-	rows, err := q.query(ctx, q.deleteSettlementAllocationsStmt, deleteSettlementAllocations, settlementID)
+	rows, err := q.db.QueryContext(ctx, deleteSettlementAllocations, settlementID)
 	if err != nil {
 		return nil, err
 	}
@@ -233,7 +233,7 @@ DELETE FROM transaction_allocation WHERE settlement_id = ?
 `
 
 func (q *Queries) DeleteTransactionAllocationsBySettlement(ctx context.Context, settlementID sql.NullString) error {
-	_, err := q.exec(ctx, q.deleteTransactionAllocationsBySettlementStmt, deleteTransactionAllocationsBySettlement, settlementID)
+	_, err := q.db.ExecContext(ctx, deleteTransactionAllocationsBySettlement, settlementID)
 	return err
 }
 
@@ -242,7 +242,7 @@ SELECT id FROM unit WHERE abbreviation = '$' AND account_id IS NULL LIMIT 1
 `
 
 func (q *Queries) GetDollarUnitID(ctx context.Context) (string, error) {
-	row := q.queryRow(ctx, q.getDollarUnitIDStmt, getDollarUnitID)
+	row := q.db.QueryRowContext(ctx, getDollarUnitID)
 	var id string
 	err := row.Scan(&id)
 	return id, err
@@ -259,7 +259,7 @@ SELECT COALESCE(
 `
 
 func (q *Queries) GetNextSettlementNumber(ctx context.Context, accountID string) (interface{}, error) {
-	row := q.queryRow(ctx, q.getNextSettlementNumberStmt, getNextSettlementNumber, accountID)
+	row := q.db.QueryRowContext(ctx, getNextSettlementNumber, accountID)
 	var next_number interface{}
 	err := row.Scan(&next_number)
 	return next_number, err
@@ -299,7 +299,7 @@ type GetSettlementRow struct {
 }
 
 func (q *Queries) GetSettlement(ctx context.Context, arg GetSettlementParams) (GetSettlementRow, error) {
-	row := q.queryRow(ctx, q.getSettlementStmt, getSettlement, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getSettlement, arg.ID, arg.AccountID)
 	var i GetSettlementRow
 	err := row.Scan(
 		&i.ID,
@@ -321,7 +321,7 @@ WHERE ta.settlement_id = ?
 `
 
 func (q *Queries) GetSettlementAllocationInvoiceIDs(ctx context.Context, settlementID sql.NullString) ([]string, error) {
-	rows, err := q.query(ctx, q.getSettlementAllocationInvoiceIDsStmt, getSettlementAllocationInvoiceIDs, settlementID)
+	rows, err := q.db.QueryContext(ctx, getSettlementAllocationInvoiceIDs, settlementID)
 	if err != nil {
 		return nil, err
 	}
@@ -350,7 +350,7 @@ WHERE ta.settlement_id = ?
 `
 
 func (q *Queries) GetSettlementAllocationTransactionIDs(ctx context.Context, settlementID sql.NullString) ([]string, error) {
-	rows, err := q.query(ctx, q.getSettlementAllocationTransactionIDsStmt, getSettlementAllocationTransactionIDs, settlementID)
+	rows, err := q.db.QueryContext(ctx, getSettlementAllocationTransactionIDs, settlementID)
 	if err != nil {
 		return nil, err
 	}
@@ -413,7 +413,7 @@ type GetSettlementAllocationsRow struct {
 }
 
 func (q *Queries) GetSettlementAllocations(ctx context.Context, settlementID sql.NullString) ([]GetSettlementAllocationsRow, error) {
-	rows, err := q.query(ctx, q.getSettlementAllocationsStmt, getSettlementAllocations, settlementID)
+	rows, err := q.db.QueryContext(ctx, getSettlementAllocations, settlementID)
 	if err != nil {
 		return nil, err
 	}
@@ -461,7 +461,7 @@ type InsertAllocationQuantityParams struct {
 }
 
 func (q *Queries) InsertAllocationQuantity(ctx context.Context, arg InsertAllocationQuantityParams) error {
-	_, err := q.exec(ctx, q.insertAllocationQuantityStmt, insertAllocationQuantity, arg.ID, arg.Value, arg.UnitID)
+	_, err := q.db.ExecContext(ctx, insertAllocationQuantity, arg.ID, arg.Value, arg.UnitID)
 	return err
 }
 
@@ -479,7 +479,7 @@ type InsertSettlementParams struct {
 }
 
 func (q *Queries) InsertSettlement(ctx context.Context, arg InsertSettlementParams) error {
-	_, err := q.exec(ctx, q.insertSettlementStmt, insertSettlement,
+	_, err := q.db.ExecContext(ctx, insertSettlement,
 		arg.ID,
 		arg.Number,
 		arg.Note,
@@ -504,7 +504,7 @@ type InsertTransactionAllocationParams struct {
 }
 
 func (q *Queries) InsertTransactionAllocation(ctx context.Context, arg InsertTransactionAllocationParams) error {
-	_, err := q.exec(ctx, q.insertTransactionAllocationStmt, insertTransactionAllocation,
+	_, err := q.db.ExecContext(ctx, insertTransactionAllocation,
 		arg.ID,
 		arg.TransactionID,
 		arg.AmountID,
@@ -628,7 +628,7 @@ func (q *Queries) ListSettlementsBackward(ctx context.Context, arg ListSettlemen
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorID)
 	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -775,7 +775,7 @@ func (q *Queries) ListSettlementsForward(ctx context.Context, arg ListSettlement
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorID)
 	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -824,7 +824,7 @@ type UpdateInvoicePaymentStatusParams struct {
 }
 
 func (q *Queries) UpdateInvoicePaymentStatus(ctx context.Context, arg UpdateInvoicePaymentStatusParams) error {
-	_, err := q.exec(ctx, q.updateInvoicePaymentStatusStmt, updateInvoicePaymentStatus, arg.IsPaidInFull, arg.IsOverPaid, arg.ID)
+	_, err := q.db.ExecContext(ctx, updateInvoicePaymentStatus, arg.IsPaidInFull, arg.IsOverPaid, arg.ID)
 	return err
 }
 
@@ -841,7 +841,7 @@ type UpdateNextSettlementNumberParams struct {
 }
 
 func (q *Queries) UpdateNextSettlementNumber(ctx context.Context, arg UpdateNextSettlementNumberParams) error {
-	_, err := q.exec(ctx, q.updateNextSettlementNumberStmt, updateNextSettlementNumber,
+	_, err := q.db.ExecContext(ctx, updateNextSettlementNumber,
 		arg.ID,
 		arg.AccountID,
 		arg.Value,
@@ -869,7 +869,7 @@ type UpdateSettlementParams struct {
 }
 
 func (q *Queries) UpdateSettlement(ctx context.Context, arg UpdateSettlementParams) error {
-	_, err := q.exec(ctx, q.updateSettlementStmt, updateSettlement,
+	_, err := q.db.ExecContext(ctx, updateSettlement,
 		arg.Number,
 		arg.Note,
 		arg.ResponsibleUserID,
@@ -902,6 +902,6 @@ func (q *Queries) UpdateTransactionsFullyAllocated(ctx context.Context, arg Upda
 	} else {
 		query = strings.Replace(query, "/*SLICE:transaction_ids*/?", "NULL", 1)
 	}
-	_, err := q.exec(ctx, nil, query, queryParams...)
+	_, err := q.db.ExecContext(ctx, query, queryParams...)
 	return err
 }

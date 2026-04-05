@@ -47,7 +47,7 @@ type ListSalesOrderStatusesBackwardRow struct {
 }
 
 func (q *Queries) ListSalesOrderStatusesBackward(ctx context.Context, arg ListSalesOrderStatusesBackwardParams) ([]ListSalesOrderStatusesBackwardRow, error) {
-	rows, err := q.query(ctx, q.listSalesOrderStatusesBackwardStmt, listSalesOrderStatusesBackward,
+	rows, err := q.db.QueryContext(ctx, listSalesOrderStatusesBackward,
 		arg.SearchQuery,
 		arg.SearchQuery,
 		arg.CursorCreatedAt,
@@ -119,7 +119,7 @@ type ListSalesOrderStatusesForwardRow struct {
 }
 
 func (q *Queries) ListSalesOrderStatusesForward(ctx context.Context, arg ListSalesOrderStatusesForwardParams) ([]ListSalesOrderStatusesForwardRow, error) {
-	rows, err := q.query(ctx, q.listSalesOrderStatusesForwardStmt, listSalesOrderStatusesForward,
+	rows, err := q.db.QueryContext(ctx, listSalesOrderStatusesForward,
 		arg.SearchQuery,
 		arg.SearchQuery,
 		arg.CursorCreatedAt,

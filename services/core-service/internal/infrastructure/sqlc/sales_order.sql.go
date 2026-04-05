@@ -42,7 +42,7 @@ type CheckSalesOrderPaymentStatusParams struct {
 }
 
 func (q *Queries) CheckSalesOrderPaymentStatus(ctx context.Context, arg CheckSalesOrderPaymentStatusParams) (sql.NullBool, error) {
-	row := q.queryRow(ctx, q.checkSalesOrderPaymentStatusStmt, checkSalesOrderPaymentStatus,
+	row := q.db.QueryRowContext(ctx, checkSalesOrderPaymentStatus,
 		arg.SalesOrderID,
 		arg.SalesOrderID,
 		arg.SalesOrderID,
@@ -66,7 +66,7 @@ type CreatePickParams struct {
 }
 
 func (q *Queries) CreatePick(ctx context.Context, arg CreatePickParams) error {
-	_, err := q.exec(ctx, q.createPickStmt, createPick,
+	_, err := q.db.ExecContext(ctx, createPick,
 		arg.ID,
 		arg.Number,
 		arg.SalesOrderID,
@@ -88,7 +88,7 @@ type CreatePickLineForOrderLineParams struct {
 }
 
 func (q *Queries) CreatePickLineForOrderLine(ctx context.Context, arg CreatePickLineForOrderLineParams) error {
-	_, err := q.exec(ctx, q.createPickLineForOrderLineStmt, createPickLineForOrderLine,
+	_, err := q.db.ExecContext(ctx, createPickLineForOrderLine,
 		arg.ID,
 		arg.PickID,
 		arg.QuantityID,
@@ -111,7 +111,7 @@ type CreateReservedInventoryIssueForSalesOrderParams struct {
 }
 
 func (q *Queries) CreateReservedInventoryIssueForSalesOrder(ctx context.Context, arg CreateReservedInventoryIssueForSalesOrderParams) error {
-	_, err := q.exec(ctx, q.createReservedInventoryIssueForSalesOrderStmt, createReservedInventoryIssueForSalesOrder,
+	_, err := q.db.ExecContext(ctx, createReservedInventoryIssueForSalesOrder,
 		arg.ID,
 		arg.AccountID,
 		arg.ItemID,
@@ -167,7 +167,7 @@ type CreateSalesOrderParams struct {
 }
 
 func (q *Queries) CreateSalesOrder(ctx context.Context, arg CreateSalesOrderParams) error {
-	_, err := q.exec(ctx, q.createSalesOrderStmt, createSalesOrder,
+	_, err := q.db.ExecContext(ctx, createSalesOrder,
 		arg.ID,
 		arg.Number,
 		arg.CustomerPoNumber,
@@ -206,7 +206,7 @@ type DeleteInventoryAllocationsByReservedSalesOrderIssuesParams struct {
 }
 
 func (q *Queries) DeleteInventoryAllocationsByReservedSalesOrderIssues(ctx context.Context, arg DeleteInventoryAllocationsByReservedSalesOrderIssuesParams) error {
-	_, err := q.exec(ctx, q.deleteInventoryAllocationsByReservedSalesOrderIssuesStmt, deleteInventoryAllocationsByReservedSalesOrderIssues, arg.SalesOrderID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, deleteInventoryAllocationsByReservedSalesOrderIssues, arg.SalesOrderID, arg.AccountID)
 	return err
 }
 
@@ -218,7 +218,7 @@ WHERE sol.sales_order_id = ?
 `
 
 func (q *Queries) DeleteInvoiceLineQuantitiesBySalesOrder(ctx context.Context, salesOrderID string) error {
-	_, err := q.exec(ctx, q.deleteInvoiceLineQuantitiesBySalesOrderStmt, deleteInvoiceLineQuantitiesBySalesOrder, salesOrderID)
+	_, err := q.db.ExecContext(ctx, deleteInvoiceLineQuantitiesBySalesOrder, salesOrderID)
 	return err
 }
 
@@ -229,7 +229,7 @@ WHERE sol.sales_order_id = ?
 `
 
 func (q *Queries) DeleteInvoiceLinesBySalesOrder(ctx context.Context, salesOrderID string) error {
-	_, err := q.exec(ctx, q.deleteInvoiceLinesBySalesOrderStmt, deleteInvoiceLinesBySalesOrder, salesOrderID)
+	_, err := q.db.ExecContext(ctx, deleteInvoiceLinesBySalesOrder, salesOrderID)
 	return err
 }
 
@@ -238,7 +238,7 @@ DELETE FROM order_email_contact WHERE sales_order_id = ?
 `
 
 func (q *Queries) DeleteOrderEmailContacts(ctx context.Context, salesOrderID string) error {
-	_, err := q.exec(ctx, q.deleteOrderEmailContactsStmt, deleteOrderEmailContacts, salesOrderID)
+	_, err := q.db.ExecContext(ctx, deleteOrderEmailContacts, salesOrderID)
 	return err
 }
 
@@ -247,7 +247,7 @@ DELETE FROM order_payment_intent WHERE sales_order_id = ?
 `
 
 func (q *Queries) DeleteOrderPaymentIntents(ctx context.Context, salesOrderID string) error {
-	_, err := q.exec(ctx, q.deleteOrderPaymentIntentsStmt, deleteOrderPaymentIntents, salesOrderID)
+	_, err := q.db.ExecContext(ctx, deleteOrderPaymentIntents, salesOrderID)
 	return err
 }
 
@@ -256,7 +256,7 @@ DELETE FROM pick WHERE sales_order_id = ?
 `
 
 func (q *Queries) DeletePickBySalesOrder(ctx context.Context, salesOrderID string) error {
-	_, err := q.exec(ctx, q.deletePickBySalesOrderStmt, deletePickBySalesOrder, salesOrderID)
+	_, err := q.db.ExecContext(ctx, deletePickBySalesOrder, salesOrderID)
 	return err
 }
 
@@ -267,7 +267,7 @@ WHERE pk.sales_order_id = ?
 `
 
 func (q *Queries) DeletePickLinesBySalesOrder(ctx context.Context, salesOrderID string) error {
-	_, err := q.exec(ctx, q.deletePickLinesBySalesOrderStmt, deletePickLinesBySalesOrder, salesOrderID)
+	_, err := q.db.ExecContext(ctx, deletePickLinesBySalesOrder, salesOrderID)
 	return err
 }
 
@@ -279,7 +279,7 @@ WHERE pk.sales_order_id = ?
 `
 
 func (q *Queries) DeleteQuantitiesByPickLines(ctx context.Context, salesOrderID string) error {
-	_, err := q.exec(ctx, q.deleteQuantitiesByPickLinesStmt, deleteQuantitiesByPickLines, salesOrderID)
+	_, err := q.db.ExecContext(ctx, deleteQuantitiesByPickLines, salesOrderID)
 	return err
 }
 
@@ -290,7 +290,7 @@ WHERE pl.sales_order_line_id = ?
 `
 
 func (q *Queries) DeleteQuantitiesByPickLinesForLine(ctx context.Context, salesOrderLineID string) error {
-	_, err := q.exec(ctx, q.deleteQuantitiesByPickLinesForLineStmt, deleteQuantitiesByPickLinesForLine, salesOrderLineID)
+	_, err := q.db.ExecContext(ctx, deleteQuantitiesByPickLinesForLine, salesOrderLineID)
 	return err
 }
 
@@ -307,7 +307,7 @@ type DeleteReservedInventoryIssuesBySalesOrderParams struct {
 }
 
 func (q *Queries) DeleteReservedInventoryIssuesBySalesOrder(ctx context.Context, arg DeleteReservedInventoryIssuesBySalesOrderParams) error {
-	_, err := q.exec(ctx, q.deleteReservedInventoryIssuesBySalesOrderStmt, deleteReservedInventoryIssuesBySalesOrder, arg.SalesOrderID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, deleteReservedInventoryIssuesBySalesOrder, arg.SalesOrderID, arg.AccountID)
 	return err
 }
 
@@ -323,7 +323,7 @@ type DeleteSalesOrderParams struct {
 }
 
 func (q *Queries) DeleteSalesOrder(ctx context.Context, arg DeleteSalesOrderParams) error {
-	_, err := q.exec(ctx, q.deleteSalesOrderStmt, deleteSalesOrder, arg.ID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, deleteSalesOrder, arg.ID, arg.AccountID)
 	return err
 }
 
@@ -332,7 +332,7 @@ DELETE FROM sales_order_line WHERE sales_order_id = ?
 `
 
 func (q *Queries) DeleteSalesOrderLinesBySalesOrder(ctx context.Context, salesOrderID string) error {
-	_, err := q.exec(ctx, q.deleteSalesOrderLinesBySalesOrderStmt, deleteSalesOrderLinesBySalesOrder, salesOrderID)
+	_, err := q.db.ExecContext(ctx, deleteSalesOrderLinesBySalesOrder, salesOrderID)
 	return err
 }
 
@@ -344,7 +344,7 @@ WHERE sol.sales_order_id = ?
 `
 
 func (q *Queries) DeleteShipmentLineQuantitiesBySalesOrder(ctx context.Context, salesOrderID string) error {
-	_, err := q.exec(ctx, q.deleteShipmentLineQuantitiesBySalesOrderStmt, deleteShipmentLineQuantitiesBySalesOrder, salesOrderID)
+	_, err := q.db.ExecContext(ctx, deleteShipmentLineQuantitiesBySalesOrder, salesOrderID)
 	return err
 }
 
@@ -355,7 +355,7 @@ WHERE sol.sales_order_id = ?
 `
 
 func (q *Queries) DeleteShipmentLinesBySalesOrder(ctx context.Context, salesOrderID string) error {
-	_, err := q.exec(ctx, q.deleteShipmentLinesBySalesOrderStmt, deleteShipmentLinesBySalesOrder, salesOrderID)
+	_, err := q.db.ExecContext(ctx, deleteShipmentLinesBySalesOrder, salesOrderID)
 	return err
 }
 
@@ -370,7 +370,7 @@ SELECT COALESCE(
 `
 
 func (q *Queries) GetNextOrderNumber(ctx context.Context, accountID string) (interface{}, error) {
-	row := q.queryRow(ctx, q.getNextOrderNumberStmt, getNextOrderNumber, accountID)
+	row := q.db.QueryRowContext(ctx, getNextOrderNumber, accountID)
 	var next_number interface{}
 	err := row.Scan(&next_number)
 	return next_number, err
@@ -386,7 +386,7 @@ AND u.email IS NOT NULL
 `
 
 func (q *Queries) GetOrderAcknowledgementRecipients(ctx context.Context, salesOrderID string) ([]sql.NullString, error) {
-	rows, err := q.query(ctx, q.getOrderAcknowledgementRecipientsStmt, getOrderAcknowledgementRecipients, salesOrderID)
+	rows, err := q.db.QueryContext(ctx, getOrderAcknowledgementRecipients, salesOrderID)
 	if err != nil {
 		return nil, err
 	}
@@ -591,7 +591,7 @@ type GetSalesOrderRow struct {
 }
 
 func (q *Queries) GetSalesOrder(ctx context.Context, arg GetSalesOrderParams) (GetSalesOrderRow, error) {
-	row := q.queryRow(ctx, q.getSalesOrderStmt, getSalesOrder, arg.SalesOrderID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getSalesOrder, arg.SalesOrderID, arg.AccountID)
 	var i GetSalesOrderRow
 	err := row.Scan(
 		&i.ID,
@@ -851,7 +851,7 @@ type GetSalesOrderForCustomerRow struct {
 }
 
 func (q *Queries) GetSalesOrderForCustomer(ctx context.Context, arg GetSalesOrderForCustomerParams) (GetSalesOrderForCustomerRow, error) {
-	row := q.queryRow(ctx, q.getSalesOrderForCustomerStmt, getSalesOrderForCustomer, arg.SalesOrderID, arg.AccountID, arg.BuyerAccountID)
+	row := q.db.QueryRowContext(ctx, getSalesOrderForCustomer, arg.SalesOrderID, arg.AccountID, arg.BuyerAccountID)
 	var i GetSalesOrderForCustomerRow
 	err := row.Scan(
 		&i.ID,
@@ -1023,7 +1023,7 @@ type GetSalesOrderLinesRow struct {
 }
 
 func (q *Queries) GetSalesOrderLines(ctx context.Context, salesOrderID string) ([]GetSalesOrderLinesRow, error) {
-	rows, err := q.query(ctx, q.getSalesOrderLinesStmt, getSalesOrderLines, salesOrderID)
+	rows, err := q.db.QueryContext(ctx, getSalesOrderLines, salesOrderID)
 	if err != nil {
 		return nil, err
 	}
@@ -1098,7 +1098,7 @@ type GetSalesOrderLinesForBOMRow struct {
 }
 
 func (q *Queries) GetSalesOrderLinesForBOM(ctx context.Context, salesOrderID string) ([]GetSalesOrderLinesForBOMRow, error) {
-	rows, err := q.query(ctx, q.getSalesOrderLinesForBOMStmt, getSalesOrderLinesForBOM, salesOrderID)
+	rows, err := q.db.QueryContext(ctx, getSalesOrderLinesForBOM, salesOrderID)
 	if err != nil {
 		return nil, err
 	}
@@ -1132,7 +1132,7 @@ WHERE pk.sales_order_id = ?
 `
 
 func (q *Queries) GetSalesOrderPickID(ctx context.Context, salesOrderID string) (string, error) {
-	row := q.queryRow(ctx, q.getSalesOrderPickIDStmt, getSalesOrderPickID, salesOrderID)
+	row := q.db.QueryRowContext(ctx, getSalesOrderPickID, salesOrderID)
 	var id string
 	err := row.Scan(&id)
 	return id, err
@@ -1155,7 +1155,7 @@ type GetSalesOrderSaleLinesForIssueRow struct {
 }
 
 func (q *Queries) GetSalesOrderSaleLinesForIssue(ctx context.Context, salesOrderID string) ([]GetSalesOrderSaleLinesForIssueRow, error) {
-	rows, err := q.query(ctx, q.getSalesOrderSaleLinesForIssueStmt, getSalesOrderSaleLinesForIssue, salesOrderID)
+	rows, err := q.db.QueryContext(ctx, getSalesOrderSaleLinesForIssue, salesOrderID)
 	if err != nil {
 		return nil, err
 	}
@@ -1199,7 +1199,7 @@ type IsDuplicateCustomerPOParams struct {
 }
 
 func (q *Queries) IsDuplicateCustomerPO(ctx context.Context, arg IsDuplicateCustomerPOParams) (int64, error) {
-	row := q.queryRow(ctx, q.isDuplicateCustomerPOStmt, isDuplicateCustomerPO,
+	row := q.db.QueryRowContext(ctx, isDuplicateCustomerPO,
 		arg.AccountID,
 		arg.AccountID,
 		arg.BuyerAccountID,
@@ -1227,7 +1227,7 @@ type IsDuplicateOrderNumberParams struct {
 }
 
 func (q *Queries) IsDuplicateOrderNumber(ctx context.Context, arg IsDuplicateOrderNumberParams) (int64, error) {
-	row := q.queryRow(ctx, q.isDuplicateOrderNumberStmt, isDuplicateOrderNumber,
+	row := q.db.QueryRowContext(ctx, isDuplicateOrderNumber,
 		arg.AccountID,
 		arg.AccountID,
 		arg.Number,
@@ -1253,7 +1253,7 @@ type IsOrderForCustomerParams struct {
 }
 
 func (q *Queries) IsOrderForCustomer(ctx context.Context, arg IsOrderForCustomerParams) (bool, error) {
-	row := q.queryRow(ctx, q.isOrderForCustomerStmt, isOrderForCustomer, arg.SalesOrderID, arg.BuyerAccountID)
+	row := q.db.QueryRowContext(ctx, isOrderForCustomer, arg.SalesOrderID, arg.BuyerAccountID)
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err
@@ -1475,7 +1475,7 @@ func (q *Queries) ListSalesOrdersBackward(ctx context.Context, arg ListSalesOrde
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorID)
 	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -1737,7 +1737,7 @@ func (q *Queries) ListSalesOrdersForward(ctx context.Context, arg ListSalesOrder
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorID)
 	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -1795,7 +1795,7 @@ type MarkAcknowledgementSentParams struct {
 }
 
 func (q *Queries) MarkAcknowledgementSent(ctx context.Context, arg MarkAcknowledgementSentParams) error {
-	_, err := q.exec(ctx, q.markAcknowledgementSentStmt, markAcknowledgementSent, arg.ID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, markAcknowledgementSent, arg.ID, arg.AccountID)
 	return err
 }
 
@@ -1815,7 +1815,7 @@ type MarkSalesOrderUnfulfilledParams struct {
 }
 
 func (q *Queries) MarkSalesOrderUnfulfilled(ctx context.Context, arg MarkSalesOrderUnfulfilledParams) error {
-	_, err := q.exec(ctx, q.markSalesOrderUnfulfilledStmt, markSalesOrderUnfulfilled, arg.ID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, markSalesOrderUnfulfilled, arg.ID, arg.AccountID)
 	return err
 }
 
@@ -1833,7 +1833,7 @@ type NoteSalesOrderFirstShipAtParams struct {
 }
 
 func (q *Queries) NoteSalesOrderFirstShipAt(ctx context.Context, arg NoteSalesOrderFirstShipAtParams) error {
-	_, err := q.exec(ctx, q.noteSalesOrderFirstShipAtStmt, noteSalesOrderFirstShipAt, arg.ID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, noteSalesOrderFirstShipAt, arg.ID, arg.AccountID)
 	return err
 }
 
@@ -1850,7 +1850,7 @@ type SetSalesOrderProductionRunIDParams struct {
 }
 
 func (q *Queries) SetSalesOrderProductionRunID(ctx context.Context, arg SetSalesOrderProductionRunIDParams) error {
-	_, err := q.exec(ctx, q.setSalesOrderProductionRunIDStmt, setSalesOrderProductionRunID, arg.ProductionRunID, arg.ID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, setSalesOrderProductionRunID, arg.ProductionRunID, arg.ID, arg.AccountID)
 	return err
 }
 
@@ -1867,7 +1867,7 @@ type UpdateNextOrderNumberParams struct {
 }
 
 func (q *Queries) UpdateNextOrderNumber(ctx context.Context, arg UpdateNextOrderNumberParams) error {
-	_, err := q.exec(ctx, q.updateNextOrderNumberStmt, updateNextOrderNumber,
+	_, err := q.db.ExecContext(ctx, updateNextOrderNumber,
 		arg.ID,
 		arg.AccountID,
 		arg.Value,
@@ -1923,7 +1923,7 @@ type UpdateSalesOrderParams struct {
 }
 
 func (q *Queries) UpdateSalesOrder(ctx context.Context, arg UpdateSalesOrderParams) error {
-	_, err := q.exec(ctx, q.updateSalesOrderStmt, updateSalesOrder,
+	_, err := q.db.ExecContext(ctx, updateSalesOrder,
 		arg.Number,
 		arg.CustomerPoNumber,
 		arg.Note,
@@ -1966,7 +1966,7 @@ type UpdateSalesOrderStatusParams struct {
 }
 
 func (q *Queries) UpdateSalesOrderStatus(ctx context.Context, arg UpdateSalesOrderStatusParams) error {
-	_, err := q.exec(ctx, q.updateSalesOrderStatusStmt, updateSalesOrderStatus,
+	_, err := q.db.ExecContext(ctx, updateSalesOrderStatus,
 		arg.StatusCode,
 		arg.IssuedAt,
 		arg.CompletedAt,

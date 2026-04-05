@@ -33,7 +33,7 @@ type CreateSupplierMaterialParams struct {
 }
 
 func (q *Queries) CreateSupplierMaterial(ctx context.Context, arg CreateSupplierMaterialParams) error {
-	_, err := q.exec(ctx, q.createSupplierMaterialStmt, createSupplierMaterial,
+	_, err := q.db.ExecContext(ctx, createSupplierMaterial,
 		arg.ID,
 		arg.MaterialID,
 		arg.SupplierAccountID,
@@ -57,7 +57,7 @@ type DeleteSupplierMaterialParams struct {
 }
 
 func (q *Queries) DeleteSupplierMaterial(ctx context.Context, arg DeleteSupplierMaterialParams) (sql.Result, error) {
-	return q.exec(ctx, q.deleteSupplierMaterialStmt, deleteSupplierMaterial, arg.ID, arg.OwnerAccountID)
+	return q.db.ExecContext(ctx, deleteSupplierMaterial, arg.ID, arg.OwnerAccountID)
 }
 
 const existsSupplierMaterialByMaterialAndSupplier = `-- name: ExistsSupplierMaterialByMaterialAndSupplier :one
@@ -75,7 +75,7 @@ type ExistsSupplierMaterialByMaterialAndSupplierParams struct {
 }
 
 func (q *Queries) ExistsSupplierMaterialByMaterialAndSupplier(ctx context.Context, arg ExistsSupplierMaterialByMaterialAndSupplierParams) (int64, error) {
-	row := q.queryRow(ctx, q.existsSupplierMaterialByMaterialAndSupplierStmt, existsSupplierMaterialByMaterialAndSupplier, arg.MaterialID, arg.SupplierAccountID, arg.OwnerAccountID)
+	row := q.db.QueryRowContext(ctx, existsSupplierMaterialByMaterialAndSupplier, arg.MaterialID, arg.SupplierAccountID, arg.OwnerAccountID)
 	var total int64
 	err := row.Scan(&total)
 	return total, err
@@ -88,7 +88,7 @@ WHERE m.id = ?
 `
 
 func (q *Queries) GetItemIDByMaterialID(ctx context.Context, materialID string) (string, error) {
-	row := q.queryRow(ctx, q.getItemIDByMaterialIDStmt, getItemIDByMaterialID, materialID)
+	row := q.db.QueryRowContext(ctx, getItemIDByMaterialID, materialID)
 	var item_id string
 	err := row.Scan(&item_id)
 	return item_id, err
@@ -109,7 +109,7 @@ type GetMaterialIDByItemIDParams struct {
 }
 
 func (q *Queries) GetMaterialIDByItemID(ctx context.Context, arg GetMaterialIDByItemIDParams) (string, error) {
-	row := q.queryRow(ctx, q.getMaterialIDByItemIDStmt, getMaterialIDByItemID, arg.ItemID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getMaterialIDByItemID, arg.ItemID, arg.AccountID)
 	var id string
 	err := row.Scan(&id)
 	return id, err
@@ -256,7 +256,7 @@ type GetSupplierMaterialBySupplierAndItemIDRow struct {
 }
 
 func (q *Queries) GetSupplierMaterialBySupplierAndItemID(ctx context.Context, arg GetSupplierMaterialBySupplierAndItemIDParams) (GetSupplierMaterialBySupplierAndItemIDRow, error) {
-	row := q.queryRow(ctx, q.getSupplierMaterialBySupplierAndItemIDStmt, getSupplierMaterialBySupplierAndItemID, arg.SupplierAccountID, arg.ItemID, arg.OwnerAccountID)
+	row := q.db.QueryRowContext(ctx, getSupplierMaterialBySupplierAndItemID, arg.SupplierAccountID, arg.ItemID, arg.OwnerAccountID)
 	var i GetSupplierMaterialBySupplierAndItemIDRow
 	err := row.Scan(
 		&i.ID,
@@ -475,7 +475,7 @@ type ListSupplierMaterialsBackwardRow struct {
 }
 
 func (q *Queries) ListSupplierMaterialsBackward(ctx context.Context, arg ListSupplierMaterialsBackwardParams) ([]ListSupplierMaterialsBackwardRow, error) {
-	rows, err := q.query(ctx, q.listSupplierMaterialsBackwardStmt, listSupplierMaterialsBackward,
+	rows, err := q.db.QueryContext(ctx, listSupplierMaterialsBackward,
 		arg.SupplierAccountID,
 		arg.OwnerAccountID,
 		arg.SearchQuery,
@@ -723,7 +723,7 @@ type ListSupplierMaterialsForwardRow struct {
 }
 
 func (q *Queries) ListSupplierMaterialsForward(ctx context.Context, arg ListSupplierMaterialsForwardParams) ([]ListSupplierMaterialsForwardRow, error) {
-	rows, err := q.query(ctx, q.listSupplierMaterialsForwardStmt, listSupplierMaterialsForward,
+	rows, err := q.db.QueryContext(ctx, listSupplierMaterialsForward,
 		arg.SupplierAccountID,
 		arg.OwnerAccountID,
 		arg.SearchQuery,
@@ -835,7 +835,7 @@ type UpdateSupplierMaterialParams struct {
 }
 
 func (q *Queries) UpdateSupplierMaterial(ctx context.Context, arg UpdateSupplierMaterialParams) (sql.Result, error) {
-	return q.exec(ctx, q.updateSupplierMaterialStmt, updateSupplierMaterial,
+	return q.db.ExecContext(ctx, updateSupplierMaterial,
 		arg.SupplierPartNumber,
 		arg.UpdateDescription,
 		arg.SupplierDescription,

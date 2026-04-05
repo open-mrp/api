@@ -25,7 +25,7 @@ type CountUnitsByAbbreviationParams struct {
 }
 
 func (q *Queries) CountUnitsByAbbreviation(ctx context.Context, arg CountUnitsByAbbreviationParams) (int64, error) {
-	row := q.queryRow(ctx, q.countUnitsByAbbreviationStmt, countUnitsByAbbreviation,
+	row := q.db.QueryRowContext(ctx, countUnitsByAbbreviation,
 		arg.Abbreviation,
 		arg.AccountID,
 		arg.ExcludeID,
@@ -49,7 +49,7 @@ type CountUnitsByNameParams struct {
 }
 
 func (q *Queries) CountUnitsByName(ctx context.Context, arg CountUnitsByNameParams) (int64, error) {
-	row := q.queryRow(ctx, q.countUnitsByNameStmt, countUnitsByName,
+	row := q.db.QueryRowContext(ctx, countUnitsByName,
 		arg.Name,
 		arg.AccountID,
 		arg.ExcludeID,
@@ -72,7 +72,7 @@ type DeleteUnitParams struct {
 }
 
 func (q *Queries) DeleteUnit(ctx context.Context, arg DeleteUnitParams) (sql.Result, error) {
-	return q.exec(ctx, q.deleteUnitStmt, deleteUnit, arg.ID, arg.AccountID)
+	return q.db.ExecContext(ctx, deleteUnit, arg.ID, arg.AccountID)
 }
 
 const deleteUnitGroupUnitsByUnitID = `-- name: DeleteUnitGroupUnitsByUnitID :exec
@@ -80,7 +80,7 @@ DELETE FROM unit_group_unit WHERE unit_id = ?
 `
 
 func (q *Queries) DeleteUnitGroupUnitsByUnitID(ctx context.Context, unitID string) error {
-	_, err := q.exec(ctx, q.deleteUnitGroupUnitsByUnitIDStmt, deleteUnitGroupUnitsByUnitID, unitID)
+	_, err := q.db.ExecContext(ctx, deleteUnitGroupUnitsByUnitID, unitID)
 	return err
 }
 
@@ -118,7 +118,7 @@ type FindUnitsByAbbreviationsRow struct {
 }
 
 func (q *Queries) FindUnitsByAbbreviations(ctx context.Context, accountID sql.NullString) ([]FindUnitsByAbbreviationsRow, error) {
-	rows, err := q.query(ctx, q.findUnitsByAbbreviationsStmt, findUnitsByAbbreviations, accountID)
+	rows, err := q.db.QueryContext(ctx, findUnitsByAbbreviations, accountID)
 	if err != nil {
 		return nil, err
 	}
@@ -193,7 +193,7 @@ type GetUnitRow struct {
 }
 
 func (q *Queries) GetUnit(ctx context.Context, arg GetUnitParams) (GetUnitRow, error) {
-	row := q.queryRow(ctx, q.getUnitStmt, getUnit, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getUnit, arg.ID, arg.AccountID)
 	var i GetUnitRow
 	err := row.Scan(
 		&i.ID,
@@ -256,7 +256,7 @@ type InsertUnitParams struct {
 }
 
 func (q *Queries) InsertUnit(ctx context.Context, arg InsertUnitParams) error {
-	_, err := q.exec(ctx, q.insertUnitStmt, insertUnit,
+	_, err := q.db.ExecContext(ctx, insertUnit,
 		arg.ID,
 		arg.Name,
 		arg.Abbreviation,
@@ -365,7 +365,7 @@ func (q *Queries) ListUnitsBackward(ctx context.Context, arg ListUnitsBackwardPa
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorID)
 	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -496,7 +496,7 @@ func (q *Queries) ListUnitsForward(ctx context.Context, arg ListUnitsForwardPara
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorID)
 	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -556,7 +556,7 @@ type UpdateUnitParams struct {
 }
 
 func (q *Queries) UpdateUnit(ctx context.Context, arg UpdateUnitParams) (sql.Result, error) {
-	return q.exec(ctx, q.updateUnitStmt, updateUnit,
+	return q.db.ExecContext(ctx, updateUnit,
 		arg.Name,
 		arg.Abbreviation,
 		arg.RatioNumerator,

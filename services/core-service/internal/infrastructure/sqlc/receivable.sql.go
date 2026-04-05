@@ -47,7 +47,7 @@ type GetOpenCreditsByCustomerRow struct {
 }
 
 func (q *Queries) GetOpenCreditsByCustomer(ctx context.Context, arg GetOpenCreditsByCustomerParams) ([]GetOpenCreditsByCustomerRow, error) {
-	rows, err := q.query(ctx, q.getOpenCreditsByCustomerStmt, getOpenCreditsByCustomer, arg.AccountID, arg.CustomerAccountID)
+	rows, err := q.db.QueryContext(ctx, getOpenCreditsByCustomer, arg.AccountID, arg.CustomerAccountID)
 	if err != nil {
 		return nil, err
 	}
@@ -149,7 +149,7 @@ type ListReceivablesBackwardRow struct {
 }
 
 func (q *Queries) ListReceivablesBackward(ctx context.Context, arg ListReceivablesBackwardParams) ([]ListReceivablesBackwardRow, error) {
-	rows, err := q.query(ctx, q.listReceivablesBackwardStmt, listReceivablesBackward,
+	rows, err := q.db.QueryContext(ctx, listReceivablesBackward,
 		arg.AllocationCutoffDate,
 		arg.AllocationCutoffDate_2,
 		arg.AccountID,
@@ -270,7 +270,7 @@ type ListReceivablesByCustomerBackwardRow struct {
 }
 
 func (q *Queries) ListReceivablesByCustomerBackward(ctx context.Context, arg ListReceivablesByCustomerBackwardParams) ([]ListReceivablesByCustomerBackwardRow, error) {
-	rows, err := q.query(ctx, q.listReceivablesByCustomerBackwardStmt, listReceivablesByCustomerBackward,
+	rows, err := q.db.QueryContext(ctx, listReceivablesByCustomerBackward,
 		arg.AllocationCutoffDate,
 		arg.AllocationCutoffDate_2,
 		arg.AccountID,
@@ -393,7 +393,7 @@ type ListReceivablesByCustomerForwardRow struct {
 }
 
 func (q *Queries) ListReceivablesByCustomerForward(ctx context.Context, arg ListReceivablesByCustomerForwardParams) ([]ListReceivablesByCustomerForwardRow, error) {
-	rows, err := q.query(ctx, q.listReceivablesByCustomerForwardStmt, listReceivablesByCustomerForward,
+	rows, err := q.db.QueryContext(ctx, listReceivablesByCustomerForward,
 		arg.AllocationCutoffDate,
 		arg.AllocationCutoffDate_2,
 		arg.AccountID,
@@ -515,7 +515,7 @@ type ListReceivablesForwardRow struct {
 }
 
 func (q *Queries) ListReceivablesForward(ctx context.Context, arg ListReceivablesForwardParams) ([]ListReceivablesForwardRow, error) {
-	rows, err := q.query(ctx, q.listReceivablesForwardStmt, listReceivablesForward,
+	rows, err := q.db.QueryContext(ctx, listReceivablesForward,
 		arg.AllocationCutoffDate,
 		arg.AllocationCutoffDate_2,
 		arg.AccountID,

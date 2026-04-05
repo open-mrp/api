@@ -16,7 +16,7 @@ DELETE FROM role_permission WHERE role_id = ?
 `
 
 func (q *Queries) DeleteRolePermissionsByRoleID(ctx context.Context, roleID string) error {
-	_, err := q.exec(ctx, q.deleteRolePermissionsByRoleIDStmt, deleteRolePermissionsByRoleID, roleID)
+	_, err := q.db.ExecContext(ctx, deleteRolePermissionsByRoleID, roleID)
 	return err
 }
 
@@ -40,7 +40,7 @@ type FindRolePermissionStringsParams struct {
 }
 
 func (q *Queries) FindRolePermissionStrings(ctx context.Context, arg FindRolePermissionStringsParams) ([]string, error) {
-	rows, err := q.query(ctx, q.findRolePermissionStringsStmt, findRolePermissionStrings,
+	rows, err := q.db.QueryContext(ctx, findRolePermissionStrings,
 		arg.RoleID,
 		arg.RoleID,
 		arg.RoleID,
@@ -83,7 +83,7 @@ type InsertRolePermissionParams struct {
 }
 
 func (q *Queries) InsertRolePermission(ctx context.Context, arg InsertRolePermissionParams) error {
-	_, err := q.exec(ctx, q.insertRolePermissionStmt, insertRolePermission,
+	_, err := q.db.ExecContext(ctx, insertRolePermission,
 		arg.ID,
 		arg.PermissionCode,
 		arg.Create,
@@ -115,7 +115,7 @@ type ListRolePermissionsByRoleIDRow struct {
 }
 
 func (q *Queries) ListRolePermissionsByRoleID(ctx context.Context, roleID string) ([]ListRolePermissionsByRoleIDRow, error) {
-	rows, err := q.query(ctx, q.listRolePermissionsByRoleIDStmt, listRolePermissionsByRoleID, roleID)
+	rows, err := q.db.QueryContext(ctx, listRolePermissionsByRoleID, roleID)
 	if err != nil {
 		return nil, err
 	}
@@ -177,7 +177,7 @@ func (q *Queries) ListRolePermissionsByRoleIDs(ctx context.Context, roleIds []st
 	} else {
 		query = strings.Replace(query, "/*SLICE:role_ids*/?", "NULL", 1)
 	}
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}

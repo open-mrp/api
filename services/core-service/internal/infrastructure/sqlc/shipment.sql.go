@@ -26,7 +26,7 @@ type CheckShipmentInAccountParams struct {
 }
 
 func (q *Queries) CheckShipmentInAccount(ctx context.Context, arg CheckShipmentInAccountParams) (bool, error) {
-	row := q.queryRow(ctx, q.checkShipmentInAccountStmt, checkShipmentInAccount, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, checkShipmentInAccount, arg.ID, arg.AccountID)
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err
@@ -44,7 +44,7 @@ type DeleteShipmentParams struct {
 }
 
 func (q *Queries) DeleteShipment(ctx context.Context, arg DeleteShipmentParams) error {
-	_, err := q.exec(ctx, q.deleteShipmentStmt, deleteShipment, arg.ID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, deleteShipment, arg.ID, arg.AccountID)
 	return err
 }
 
@@ -65,7 +65,7 @@ type FindInvoiceIDByShipmentParams struct {
 }
 
 func (q *Queries) FindInvoiceIDByShipment(ctx context.Context, arg FindInvoiceIDByShipmentParams) (string, error) {
-	row := q.queryRow(ctx, q.findInvoiceIDByShipmentStmt, findInvoiceIDByShipment, arg.ShipmentID, arg.AccountID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, findInvoiceIDByShipment, arg.ShipmentID, arg.AccountID, arg.AccountID)
 	var id string
 	err := row.Scan(&id)
 	return id, err
@@ -177,7 +177,7 @@ type GetShipmentRow struct {
 }
 
 func (q *Queries) GetShipment(ctx context.Context, arg GetShipmentParams) (GetShipmentRow, error) {
-	row := q.queryRow(ctx, q.getShipmentStmt, getShipment, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getShipment, arg.ID, arg.AccountID)
 	var i GetShipmentRow
 	err := row.Scan(
 		&i.ID,
@@ -433,7 +433,7 @@ func (q *Queries) ListShipmentsBackward(ctx context.Context, arg ListShipmentsBa
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorID)
 	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -693,7 +693,7 @@ func (q *Queries) ListShipmentsForward(ctx context.Context, arg ListShipmentsFor
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorID)
 	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -757,7 +757,7 @@ type MarkShipmentShippedParams struct {
 }
 
 func (q *Queries) MarkShipmentShipped(ctx context.Context, arg MarkShipmentShippedParams) error {
-	_, err := q.exec(ctx, q.markShipmentShippedStmt, markShipmentShipped, arg.ShippedByID, arg.ID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, markShipmentShipped, arg.ShippedByID, arg.ID, arg.AccountID)
 	return err
 }
 
@@ -779,7 +779,7 @@ type MarkShipmentVoidedParams struct {
 }
 
 func (q *Queries) MarkShipmentVoided(ctx context.Context, arg MarkShipmentVoidedParams) error {
-	_, err := q.exec(ctx, q.markShipmentVoidedStmt, markShipmentVoided, arg.ID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, markShipmentVoided, arg.ID, arg.AccountID)
 	return err
 }
 
@@ -806,7 +806,7 @@ type UpdateShipmentParams struct {
 }
 
 func (q *Queries) UpdateShipment(ctx context.Context, arg UpdateShipmentParams) (sql.Result, error) {
-	return q.exec(ctx, q.updateShipmentStmt, updateShipment,
+	return q.db.ExecContext(ctx, updateShipment,
 		arg.Note,
 		arg.Number,
 		arg.MasterTrackingNumber,

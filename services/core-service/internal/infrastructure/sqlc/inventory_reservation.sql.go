@@ -15,7 +15,7 @@ DELETE FROM inventory_issue WHERE id = ?
 `
 
 func (q *Queries) DeleteInventoryIssueByID(ctx context.Context, id string) error {
-	_, err := q.exec(ctx, q.deleteInventoryIssueByIDStmt, deleteInventoryIssueByID, id)
+	_, err := q.db.ExecContext(ctx, deleteInventoryIssueByID, id)
 	return err
 }
 
@@ -24,7 +24,7 @@ DELETE FROM quantity WHERE id = ?
 `
 
 func (q *Queries) DeleteQuantityByID(ctx context.Context, id string) error {
-	_, err := q.exec(ctx, q.deleteQuantityByIDStmt, deleteQuantityByID, id)
+	_, err := q.db.ExecContext(ctx, deleteQuantityByID, id)
 	return err
 }
 
@@ -55,7 +55,7 @@ type FindReceiptsForAllocationRow struct {
 }
 
 func (q *Queries) FindReceiptsForAllocation(ctx context.Context, arg FindReceiptsForAllocationParams) ([]FindReceiptsForAllocationRow, error) {
-	rows, err := q.query(ctx, q.findReceiptsForAllocationStmt, findReceiptsForAllocation, arg.AccountID, arg.ItemID)
+	rows, err := q.db.QueryContext(ctx, findReceiptsForAllocation, arg.AccountID, arg.ItemID)
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +117,7 @@ type FindReservedIssuesByOrderItemRow struct {
 }
 
 func (q *Queries) FindReservedIssuesByOrderItem(ctx context.Context, arg FindReservedIssuesByOrderItemParams) ([]FindReservedIssuesByOrderItemRow, error) {
-	rows, err := q.query(ctx, q.findReservedIssuesByOrderItemStmt, findReservedIssuesByOrderItem, arg.OrderID, arg.AccountID, arg.ItemID)
+	rows, err := q.db.QueryContext(ctx, findReservedIssuesByOrderItem, arg.OrderID, arg.AccountID, arg.ItemID)
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +187,7 @@ type FindReservedIssuesWithAllocationSumsRow struct {
 }
 
 func (q *Queries) FindReservedIssuesWithAllocationSums(ctx context.Context, arg FindReservedIssuesWithAllocationSumsParams) ([]FindReservedIssuesWithAllocationSumsRow, error) {
-	rows, err := q.query(ctx, q.findReservedIssuesWithAllocationSumsStmt, findReservedIssuesWithAllocationSums, arg.OrderID, arg.AccountID, arg.ItemID)
+	rows, err := q.db.QueryContext(ctx, findReservedIssuesWithAllocationSums, arg.OrderID, arg.AccountID, arg.ItemID)
 	if err != nil {
 		return nil, err
 	}
@@ -226,7 +226,7 @@ WHERE ia.inventory_receipt_id = ?
 `
 
 func (q *Queries) GetAllocationSumForReceipt(ctx context.Context, receiptID string) (interface{}, error) {
-	row := q.queryRow(ctx, q.getAllocationSumForReceiptStmt, getAllocationSumForReceipt, receiptID)
+	row := q.db.QueryRowContext(ctx, getAllocationSumForReceipt, receiptID)
 	var total_allocated interface{}
 	err := row.Scan(&total_allocated)
 	return total_allocated, err
@@ -259,7 +259,7 @@ type InsertInventoryAllocationParams struct {
 }
 
 func (q *Queries) InsertInventoryAllocation(ctx context.Context, arg InsertInventoryAllocationParams) error {
-	_, err := q.exec(ctx, q.insertInventoryAllocationStmt, insertInventoryAllocation,
+	_, err := q.db.ExecContext(ctx, insertInventoryAllocation,
 		arg.ID,
 		arg.InventoryReceiptID,
 		arg.InventoryIssueID,
@@ -305,7 +305,7 @@ type InsertInventoryIssueForReservationParams struct {
 }
 
 func (q *Queries) InsertInventoryIssueForReservation(ctx context.Context, arg InsertInventoryIssueForReservationParams) error {
-	_, err := q.exec(ctx, q.insertInventoryIssueForReservationStmt, insertInventoryIssueForReservation,
+	_, err := q.db.ExecContext(ctx, insertInventoryIssueForReservation,
 		arg.ID,
 		arg.AccountID,
 		arg.ItemID,
@@ -326,7 +326,7 @@ WHERE id = ?
 `
 
 func (q *Queries) UpdateInventoryIssueStatusToOpen(ctx context.Context, id string) error {
-	_, err := q.exec(ctx, q.updateInventoryIssueStatusToOpenStmt, updateInventoryIssueStatusToOpen, id)
+	_, err := q.db.ExecContext(ctx, updateInventoryIssueStatusToOpen, id)
 	return err
 }
 
@@ -340,6 +340,6 @@ type UpdateQuantityValueParams struct {
 }
 
 func (q *Queries) UpdateQuantityValue(ctx context.Context, arg UpdateQuantityValueParams) error {
-	_, err := q.exec(ctx, q.updateQuantityValueStmt, updateQuantityValue, arg.Value, arg.ID)
+	_, err := q.db.ExecContext(ctx, updateQuantityValue, arg.Value, arg.ID)
 	return err
 }

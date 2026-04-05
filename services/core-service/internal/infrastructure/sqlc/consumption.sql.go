@@ -16,7 +16,7 @@ DELETE FROM quantity WHERE id = ?
 `
 
 func (q *Queries) DeleteConsumptionQuantity(ctx context.Context, id string) error {
-	_, err := q.exec(ctx, q.deleteConsumptionQuantityStmt, deleteConsumptionQuantity, id)
+	_, err := q.db.ExecContext(ctx, deleteConsumptionQuantity, id)
 	return err
 }
 
@@ -25,7 +25,7 @@ DELETE FROM consumption WHERE id = ?
 `
 
 func (q *Queries) DeleteConsumptionRow(ctx context.Context, id string) error {
-	_, err := q.exec(ctx, q.deleteConsumptionRowStmt, deleteConsumptionRow, id)
+	_, err := q.db.ExecContext(ctx, deleteConsumptionRow, id)
 	return err
 }
 
@@ -89,7 +89,7 @@ type GetConsumptionRow struct {
 }
 
 func (q *Queries) GetConsumption(ctx context.Context, arg GetConsumptionParams) (GetConsumptionRow, error) {
-	row := q.queryRow(ctx, q.getConsumptionStmt, getConsumption, arg.ConsumptionID, arg.StepID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getConsumption, arg.ConsumptionID, arg.StepID, arg.AccountID)
 	var i GetConsumptionRow
 	err := row.Scan(
 		&i.ID,
@@ -119,7 +119,7 @@ SELECT instructions FROM consumption WHERE id = ?
 `
 
 func (q *Queries) GetConsumptionInstructions(ctx context.Context, id string) (sql.NullString, error) {
-	row := q.queryRow(ctx, q.getConsumptionInstructionsStmt, getConsumptionInstructions, id)
+	row := q.db.QueryRowContext(ctx, getConsumptionInstructions, id)
 	var instructions sql.NullString
 	err := row.Scan(&instructions)
 	return instructions, err
@@ -130,7 +130,7 @@ SELECT item_id FROM consumption WHERE id = ?
 `
 
 func (q *Queries) GetConsumptionItemID(ctx context.Context, id string) (string, error) {
-	row := q.queryRow(ctx, q.getConsumptionItemIDStmt, getConsumptionItemID, id)
+	row := q.db.QueryRowContext(ctx, getConsumptionItemID, id)
 	var item_id string
 	err := row.Scan(&item_id)
 	return item_id, err
@@ -146,7 +146,7 @@ type GetConsumptionQuantityIDsRow struct {
 }
 
 func (q *Queries) GetConsumptionQuantityIDs(ctx context.Context, id string) (GetConsumptionQuantityIDsRow, error) {
-	row := q.queryRow(ctx, q.getConsumptionQuantityIDsStmt, getConsumptionQuantityIDs, id)
+	row := q.db.QueryRowContext(ctx, getConsumptionQuantityIDs, id)
 	var i GetConsumptionQuantityIDsRow
 	err := row.Scan(&i.QuantityID, &i.WasteQuantityID)
 	return i, err
@@ -167,7 +167,7 @@ type InsertConsumptionParams struct {
 }
 
 func (q *Queries) InsertConsumption(ctx context.Context, arg InsertConsumptionParams) error {
-	_, err := q.exec(ctx, q.insertConsumptionStmt, insertConsumption,
+	_, err := q.db.ExecContext(ctx, insertConsumption,
 		arg.ID,
 		arg.ItemID,
 		arg.QuantityID,
@@ -190,7 +190,7 @@ type InsertConsumptionQuantityParams struct {
 }
 
 func (q *Queries) InsertConsumptionQuantity(ctx context.Context, arg InsertConsumptionQuantityParams) error {
-	_, err := q.exec(ctx, q.insertConsumptionQuantityStmt, insertConsumptionQuantity, arg.ID, arg.Value, arg.UnitID)
+	_, err := q.db.ExecContext(ctx, insertConsumptionQuantity, arg.ID, arg.Value, arg.UnitID)
 	return err
 }
 
@@ -206,7 +206,7 @@ type IsConsumptionInAccountParams struct {
 }
 
 func (q *Queries) IsConsumptionInAccount(ctx context.Context, arg IsConsumptionInAccountParams) (int64, error) {
-	row := q.queryRow(ctx, q.isConsumptionInAccountStmt, isConsumptionInAccount, arg.ConsumptionID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, isConsumptionInAccount, arg.ConsumptionID, arg.AccountID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -222,7 +222,7 @@ type IsItemInAccountParams struct {
 }
 
 func (q *Queries) IsItemInAccount(ctx context.Context, arg IsItemInAccountParams) (int64, error) {
-	row := q.queryRow(ctx, q.isItemInAccountStmt, isItemInAccount, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, isItemInAccount, arg.ID, arg.AccountID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -240,7 +240,7 @@ type UpdateConsumptionItemParams struct {
 }
 
 func (q *Queries) UpdateConsumptionItem(ctx context.Context, arg UpdateConsumptionItemParams) error {
-	_, err := q.exec(ctx, q.updateConsumptionItemStmt, updateConsumptionItem, arg.ItemID, arg.Instructions, arg.ID)
+	_, err := q.db.ExecContext(ctx, updateConsumptionItem, arg.ItemID, arg.Instructions, arg.ID)
 	return err
 }
 
@@ -256,6 +256,6 @@ type UpdateConsumptionQuantityParams struct {
 }
 
 func (q *Queries) UpdateConsumptionQuantity(ctx context.Context, arg UpdateConsumptionQuantityParams) error {
-	_, err := q.exec(ctx, q.updateConsumptionQuantityStmt, updateConsumptionQuantity, arg.Value, arg.UnitID, arg.ID)
+	_, err := q.db.ExecContext(ctx, updateConsumptionQuantity, arg.Value, arg.UnitID, arg.ID)
 	return err
 }

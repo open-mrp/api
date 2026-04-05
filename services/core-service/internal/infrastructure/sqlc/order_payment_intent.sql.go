@@ -14,7 +14,7 @@ DELETE FROM order_payment_intent WHERE id = ?
 `
 
 func (q *Queries) DeleteOrderPaymentIntent(ctx context.Context, id string) error {
-	_, err := q.exec(ctx, q.deleteOrderPaymentIntentStmt, deleteOrderPaymentIntent, id)
+	_, err := q.db.ExecContext(ctx, deleteOrderPaymentIntent, id)
 	return err
 }
 
@@ -32,7 +32,7 @@ type FindOrderPaymentIntentByPaymentIntentIDRow struct {
 }
 
 func (q *Queries) FindOrderPaymentIntentByPaymentIntentID(ctx context.Context, paymentIntentID string) (FindOrderPaymentIntentByPaymentIntentIDRow, error) {
-	row := q.queryRow(ctx, q.findOrderPaymentIntentByPaymentIntentIDStmt, findOrderPaymentIntentByPaymentIntentID, paymentIntentID)
+	row := q.db.QueryRowContext(ctx, findOrderPaymentIntentByPaymentIntentID, paymentIntentID)
 	var i FindOrderPaymentIntentByPaymentIntentIDRow
 	err := row.Scan(&i.ID, &i.PaymentIntentID, &i.SalesOrderID)
 	return i, err
@@ -50,6 +50,6 @@ type InsertOrderPaymentIntentParams struct {
 }
 
 func (q *Queries) InsertOrderPaymentIntent(ctx context.Context, arg InsertOrderPaymentIntentParams) error {
-	_, err := q.exec(ctx, q.insertOrderPaymentIntentStmt, insertOrderPaymentIntent, arg.ID, arg.PaymentIntentID, arg.SalesOrderID)
+	_, err := q.db.ExecContext(ctx, insertOrderPaymentIntent, arg.ID, arg.PaymentIntentID, arg.SalesOrderID)
 	return err
 }

@@ -20,7 +20,7 @@ type ClearStepLinksParams struct {
 }
 
 func (q *Queries) ClearStepLinks(ctx context.Context, arg ClearStepLinksParams) error {
-	_, err := q.exec(ctx, q.clearStepLinksStmt, clearStepLinks, arg.StepID, arg.StepID)
+	_, err := q.db.ExecContext(ctx, clearStepLinks, arg.StepID, arg.StepID)
 	return err
 }
 
@@ -34,7 +34,7 @@ type ConnectStepsParams struct {
 }
 
 func (q *Queries) ConnectSteps(ctx context.Context, arg ConnectStepsParams) error {
-	_, err := q.exec(ctx, q.connectStepsStmt, connectSteps, arg.SourceID, arg.TargetID)
+	_, err := q.db.ExecContext(ctx, connectSteps, arg.SourceID, arg.TargetID)
 	return err
 }
 
@@ -50,7 +50,7 @@ type ConnectStepsIdempotentParams struct {
 
 // Inserts a step connection, ignoring if it already exists.
 func (q *Queries) ConnectStepsIdempotent(ctx context.Context, arg ConnectStepsIdempotentParams) error {
-	_, err := q.exec(ctx, q.connectStepsIdempotentStmt, connectStepsIdempotent, arg.SourceID, arg.TargetID)
+	_, err := q.db.ExecContext(ctx, connectStepsIdempotent, arg.SourceID, arg.TargetID)
 	return err
 }
 
@@ -71,7 +71,7 @@ type FindDownstreamStepByItemParams struct {
 }
 
 func (q *Queries) FindDownstreamStepByItem(ctx context.Context, arg FindDownstreamStepByItemParams) (string, error) {
-	row := q.queryRow(ctx, q.findDownstreamStepByItemStmt, findDownstreamStepByItem, arg.SourceStepID, arg.AccountID, arg.ItemID)
+	row := q.db.QueryRowContext(ctx, findDownstreamStepByItem, arg.SourceStepID, arg.AccountID, arg.ItemID)
 	var id string
 	err := row.Scan(&id)
 	return id, err
@@ -97,7 +97,7 @@ type FindSourceStepsByConsumptionParams struct {
 }
 
 func (q *Queries) FindSourceStepsByConsumption(ctx context.Context, arg FindSourceStepsByConsumptionParams) ([]string, error) {
-	rows, err := q.query(ctx, q.findSourceStepsByConsumptionStmt, findSourceStepsByConsumption, arg.TargetStepID, arg.AccountID, arg.ConsumptionID)
+	rows, err := q.db.QueryContext(ctx, findSourceStepsByConsumption, arg.TargetStepID, arg.AccountID, arg.ConsumptionID)
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +135,7 @@ type FindStepsByProducedItemParams struct {
 }
 
 func (q *Queries) FindStepsByProducedItem(ctx context.Context, arg FindStepsByProducedItemParams) ([]string, error) {
-	rows, err := q.query(ctx, q.findStepsByProducedItemStmt, findStepsByProducedItem, arg.AccountID, arg.ItemID)
+	rows, err := q.db.QueryContext(ctx, findStepsByProducedItem, arg.AccountID, arg.ItemID)
 	if err != nil {
 		return nil, err
 	}
@@ -173,7 +173,7 @@ type FindStepsThatConsumeItemParams struct {
 }
 
 func (q *Queries) FindStepsThatConsumeItem(ctx context.Context, arg FindStepsThatConsumeItemParams) ([]string, error) {
-	rows, err := q.query(ctx, q.findStepsThatConsumeItemStmt, findStepsThatConsumeItem, arg.AccountID, arg.ItemID)
+	rows, err := q.db.QueryContext(ctx, findStepsThatConsumeItem, arg.AccountID, arg.ItemID)
 	if err != nil {
 		return nil, err
 	}
@@ -206,7 +206,7 @@ type FlowDisconnectStepsParams struct {
 }
 
 func (q *Queries) FlowDisconnectSteps(ctx context.Context, arg FlowDisconnectStepsParams) error {
-	_, err := q.exec(ctx, q.flowDisconnectStepsStmt, flowDisconnectSteps, arg.SourceID, arg.TargetID)
+	_, err := q.db.ExecContext(ctx, flowDisconnectSteps, arg.SourceID, arg.TargetID)
 	return err
 }
 
@@ -217,7 +217,7 @@ LIMIT 1
 `
 
 func (q *Queries) FlowGetProducedItemIDByStep(ctx context.Context, stepID sql.NullString) (string, error) {
-	row := q.queryRow(ctx, q.flowGetProducedItemIDByStepStmt, flowGetProducedItemIDByStep, stepID)
+	row := q.db.QueryRowContext(ctx, flowGetProducedItemIDByStep, stepID)
 	var item_id string
 	err := row.Scan(&item_id)
 	return item_id, err
@@ -237,7 +237,7 @@ type GetAllStepEdgesForAccountRow struct {
 
 // Gets the full parent→child graph for an account's production steps.
 func (q *Queries) GetAllStepEdgesForAccount(ctx context.Context, accountID string) ([]GetAllStepEdgesForAccountRow, error) {
-	rows, err := q.query(ctx, q.getAllStepEdgesForAccountStmt, getAllStepEdgesForAccount, accountID)
+	rows, err := q.db.QueryContext(ctx, getAllStepEdgesForAccount, accountID)
 	if err != nil {
 		return nil, err
 	}
@@ -269,7 +269,7 @@ AND ci.item_type_code = 'part'
 `
 
 func (q *Queries) GetConsumptionPartItemIDs(ctx context.Context, stepID string) ([]string, error) {
-	rows, err := q.query(ctx, q.getConsumptionPartItemIDsStmt, getConsumptionPartItemIDs, stepID)
+	rows, err := q.db.QueryContext(ctx, getConsumptionPartItemIDs, stepID)
 	if err != nil {
 		return nil, err
 	}

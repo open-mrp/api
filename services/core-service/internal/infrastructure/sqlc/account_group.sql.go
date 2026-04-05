@@ -18,7 +18,7 @@ WHERE account_group_id = ?
 `
 
 func (q *Queries) CountAccountGroupUsageInAccountGroupProductLine(ctx context.Context, accountGroupID string) (int64, error) {
-	row := q.queryRow(ctx, q.countAccountGroupUsageInAccountGroupProductLineStmt, countAccountGroupUsageInAccountGroupProductLine, accountGroupID)
+	row := q.db.QueryRowContext(ctx, countAccountGroupUsageInAccountGroupProductLine, accountGroupID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -31,7 +31,7 @@ WHERE account_group_id = ?
 `
 
 func (q *Queries) CountAccountGroupUsageInAccountGroupQuantityDiscount(ctx context.Context, accountGroupID string) (int64, error) {
-	row := q.queryRow(ctx, q.countAccountGroupUsageInAccountGroupQuantityDiscountStmt, countAccountGroupUsageInAccountGroupQuantityDiscount, accountGroupID)
+	row := q.db.QueryRowContext(ctx, countAccountGroupUsageInAccountGroupQuantityDiscount, accountGroupID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -50,7 +50,7 @@ type CountAccountGroupUsageInAccountRelationParams struct {
 }
 
 func (q *Queries) CountAccountGroupUsageInAccountRelation(ctx context.Context, arg CountAccountGroupUsageInAccountRelationParams) (int64, error) {
-	row := q.queryRow(ctx, q.countAccountGroupUsageInAccountRelationStmt, countAccountGroupUsageInAccountRelation, arg.OwnerAccountID, arg.AccountGroupID)
+	row := q.db.QueryRowContext(ctx, countAccountGroupUsageInAccountRelation, arg.OwnerAccountID, arg.AccountGroupID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -63,7 +63,7 @@ WHERE account_group_id = ?
 `
 
 func (q *Queries) CountAccountGroupUsageInAccountRelationPriceGroup(ctx context.Context, accountGroupID string) (int64, error) {
-	row := q.queryRow(ctx, q.countAccountGroupUsageInAccountRelationPriceGroupStmt, countAccountGroupUsageInAccountRelationPriceGroup, accountGroupID)
+	row := q.db.QueryRowContext(ctx, countAccountGroupUsageInAccountRelationPriceGroup, accountGroupID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -83,7 +83,7 @@ type CountAccountGroupUsageInRegistrationFlowParams struct {
 }
 
 func (q *Queries) CountAccountGroupUsageInRegistrationFlow(ctx context.Context, arg CountAccountGroupUsageInRegistrationFlowParams) (int64, error) {
-	row := q.queryRow(ctx, q.countAccountGroupUsageInRegistrationFlowStmt, countAccountGroupUsageInRegistrationFlow, arg.AccountGroupID, arg.OwnerAccountID)
+	row := q.db.QueryRowContext(ctx, countAccountGroupUsageInRegistrationFlow, arg.AccountGroupID, arg.OwnerAccountID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -102,7 +102,7 @@ type CountAccountGroupsByNameParams struct {
 }
 
 func (q *Queries) CountAccountGroupsByName(ctx context.Context, arg CountAccountGroupsByNameParams) (int64, error) {
-	row := q.queryRow(ctx, q.countAccountGroupsByNameStmt, countAccountGroupsByName,
+	row := q.db.QueryRowContext(ctx, countAccountGroupsByName,
 		arg.Name,
 		arg.OwnerAccountID,
 		arg.ExcludeID,
@@ -125,7 +125,7 @@ type DeleteAccountGroupParams struct {
 }
 
 func (q *Queries) DeleteAccountGroup(ctx context.Context, arg DeleteAccountGroupParams) (sql.Result, error) {
-	return q.exec(ctx, q.deleteAccountGroupStmt, deleteAccountGroup, arg.ID, arg.OwnerAccountID)
+	return q.db.ExecContext(ctx, deleteAccountGroup, arg.ID, arg.OwnerAccountID)
 }
 
 const deleteAccountRelationPriceGroupsByAccountGroupID = `-- name: DeleteAccountRelationPriceGroupsByAccountGroupID :exec
@@ -134,7 +134,7 @@ WHERE account_group_id = ?
 `
 
 func (q *Queries) DeleteAccountRelationPriceGroupsByAccountGroupID(ctx context.Context, accountGroupID string) error {
-	_, err := q.exec(ctx, q.deleteAccountRelationPriceGroupsByAccountGroupIDStmt, deleteAccountRelationPriceGroupsByAccountGroupID, accountGroupID)
+	_, err := q.db.ExecContext(ctx, deleteAccountRelationPriceGroupsByAccountGroupID, accountGroupID)
 	return err
 }
 
@@ -174,7 +174,7 @@ type GetAccountGroupRow struct {
 }
 
 func (q *Queries) GetAccountGroup(ctx context.Context, arg GetAccountGroupParams) (GetAccountGroupRow, error) {
-	row := q.queryRow(ctx, q.getAccountGroupStmt, getAccountGroup, arg.ID, arg.OwnerAccountID)
+	row := q.db.QueryRowContext(ctx, getAccountGroup, arg.ID, arg.OwnerAccountID)
 	var i GetAccountGroupRow
 	err := row.Scan(
 		&i.ID,
@@ -226,7 +226,7 @@ type InsertAccountGroupParams struct {
 }
 
 func (q *Queries) InsertAccountGroup(ctx context.Context, arg InsertAccountGroupParams) error {
-	_, err := q.exec(ctx, q.insertAccountGroupStmt, insertAccountGroup,
+	_, err := q.db.ExecContext(ctx, insertAccountGroup,
 		arg.ID,
 		arg.OwnerAccountID,
 		arg.Name,
@@ -292,7 +292,7 @@ type ListAccountGroupsBackwardRow struct {
 }
 
 func (q *Queries) ListAccountGroupsBackward(ctx context.Context, arg ListAccountGroupsBackwardParams) ([]ListAccountGroupsBackwardRow, error) {
-	rows, err := q.query(ctx, q.listAccountGroupsBackwardStmt, listAccountGroupsBackward,
+	rows, err := q.db.QueryContext(ctx, listAccountGroupsBackward,
 		arg.OwnerAccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
@@ -391,7 +391,7 @@ type ListAccountGroupsForwardRow struct {
 }
 
 func (q *Queries) ListAccountGroupsForward(ctx context.Context, arg ListAccountGroupsForwardParams) ([]ListAccountGroupsForwardRow, error) {
-	rows, err := q.query(ctx, q.listAccountGroupsForwardStmt, listAccountGroupsForward,
+	rows, err := q.db.QueryContext(ctx, listAccountGroupsForward,
 		arg.OwnerAccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
@@ -457,7 +457,7 @@ type UpdateAccountGroupParams struct {
 }
 
 func (q *Queries) UpdateAccountGroup(ctx context.Context, arg UpdateAccountGroupParams) (sql.Result, error) {
-	return q.exec(ctx, q.updateAccountGroupStmt, updateAccountGroup,
+	return q.db.ExecContext(ctx, updateAccountGroup,
 		arg.Name,
 		arg.Description,
 		arg.CommissionStatusCode,

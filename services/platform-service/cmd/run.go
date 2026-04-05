@@ -63,11 +63,7 @@ func Run(
 	}
 	defer rabbitmq.Close()
 
-	queries, err := sqlc.Prepare(ctx, dbpool)
-	if err != nil {
-		return err
-	}
-	defer queries.Close()
+	queries := sqlc.New(dbpool)
 
 	loggingSvc := service.NewLoggingSvc(&service.LoggingSvcConfig{
 		Repos: repository.NewRepoFactory(queries),

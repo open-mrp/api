@@ -38,7 +38,7 @@ type CreateMaterialParams struct {
 }
 
 func (q *Queries) CreateMaterial(ctx context.Context, arg CreateMaterialParams) error {
-	_, err := q.exec(ctx, q.createMaterialStmt, createMaterial,
+	_, err := q.db.ExecContext(ctx, createMaterial,
 		arg.ID,
 		arg.ItemID,
 		arg.OrderPointID,
@@ -61,7 +61,7 @@ type DeleteMaterialByItemIDParams struct {
 }
 
 func (q *Queries) DeleteMaterialByItemID(ctx context.Context, arg DeleteMaterialByItemIDParams) (sql.Result, error) {
-	return q.exec(ctx, q.deleteMaterialByItemIDStmt, deleteMaterialByItemID, arg.ID, arg.AccountID)
+	return q.db.ExecContext(ctx, deleteMaterialByItemID, arg.ID, arg.AccountID)
 }
 
 const getMaterialByItemID = `-- name: GetMaterialByItemID :one
@@ -184,7 +184,7 @@ type GetMaterialByItemIDRow struct {
 }
 
 func (q *Queries) GetMaterialByItemID(ctx context.Context, arg GetMaterialByItemIDParams) (GetMaterialByItemIDRow, error) {
-	row := q.queryRow(ctx, q.getMaterialByItemIDStmt, getMaterialByItemID, arg.ItemID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getMaterialByItemID, arg.ItemID, arg.AccountID)
 	var i GetMaterialByItemIDRow
 	err := row.Scan(
 		&i.ID,
@@ -429,7 +429,7 @@ func (q *Queries) ListMaterialsBackward(ctx context.Context, arg ListMaterialsBa
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorID)
 	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -692,7 +692,7 @@ func (q *Queries) ListMaterialsForward(ctx context.Context, arg ListMaterialsFor
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorID)
 	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -808,7 +808,7 @@ type MaterialInsertItemParams struct {
 }
 
 func (q *Queries) MaterialInsertItem(ctx context.Context, arg MaterialInsertItemParams) error {
-	_, err := q.exec(ctx, q.materialInsertItemStmt, materialInsertItem,
+	_, err := q.db.ExecContext(ctx, materialInsertItem,
 		arg.ID,
 		arg.Sku,
 		arg.Description,
@@ -846,7 +846,7 @@ type MaterialInsertQuantityParams struct {
 }
 
 func (q *Queries) MaterialInsertQuantity(ctx context.Context, arg MaterialInsertQuantityParams) error {
-	_, err := q.exec(ctx, q.materialInsertQuantityStmt, materialInsertQuantity, arg.ID, arg.Value, arg.UnitID)
+	_, err := q.db.ExecContext(ctx, materialInsertQuantity, arg.ID, arg.Value, arg.UnitID)
 	return err
 }
 
@@ -876,7 +876,7 @@ type MaterialInsertRateParams struct {
 }
 
 func (q *Queries) MaterialInsertRate(ctx context.Context, arg MaterialInsertRateParams) error {
-	_, err := q.exec(ctx, q.materialInsertRateStmt, materialInsertRate,
+	_, err := q.db.ExecContext(ctx, materialInsertRate,
 		arg.ID,
 		arg.Value,
 		arg.NumeratorUnitID,
@@ -907,7 +907,7 @@ type MaterialUpdateItemParams struct {
 }
 
 func (q *Queries) MaterialUpdateItem(ctx context.Context, arg MaterialUpdateItemParams) (sql.Result, error) {
-	return q.exec(ctx, q.materialUpdateItemStmt, materialUpdateItem,
+	return q.db.ExecContext(ctx, materialUpdateItem,
 		arg.Sku,
 		arg.UpdateDescription,
 		arg.Description,
@@ -933,7 +933,7 @@ type MaterialUpdateQuantityParams struct {
 }
 
 func (q *Queries) MaterialUpdateQuantity(ctx context.Context, arg MaterialUpdateQuantityParams) (sql.Result, error) {
-	return q.exec(ctx, q.materialUpdateQuantityStmt, materialUpdateQuantity, arg.Value, arg.UnitID, arg.ID)
+	return q.db.ExecContext(ctx, materialUpdateQuantity, arg.Value, arg.UnitID, arg.ID)
 }
 
 const updateMaterial = `-- name: UpdateMaterial :execresult
@@ -943,5 +943,5 @@ WHERE id = ?
 `
 
 func (q *Queries) UpdateMaterial(ctx context.Context, id string) (sql.Result, error) {
-	return q.exec(ctx, q.updateMaterialStmt, updateMaterial, id)
+	return q.db.ExecContext(ctx, updateMaterial, id)
 }

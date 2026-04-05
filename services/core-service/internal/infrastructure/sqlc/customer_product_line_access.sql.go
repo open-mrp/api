@@ -17,7 +17,7 @@ WHERE account_relation_id = ?
 `
 
 func (q *Queries) CountAccountRelationProductLinesByRelationID(ctx context.Context, accountRelationID string) (int64, error) {
-	row := q.queryRow(ctx, q.countAccountRelationProductLinesByRelationIDStmt, countAccountRelationProductLinesByRelationID, accountRelationID)
+	row := q.db.QueryRowContext(ctx, countAccountRelationProductLinesByRelationID, accountRelationID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -29,7 +29,7 @@ WHERE account_relation_id = ?
 `
 
 func (q *Queries) DeleteAccountRelationProductLinesByRelationID(ctx context.Context, accountRelationID string) (sql.Result, error) {
-	return q.exec(ctx, q.deleteAccountRelationProductLinesByRelationIDStmt, deleteAccountRelationProductLinesByRelationID, accountRelationID)
+	return q.db.ExecContext(ctx, deleteAccountRelationProductLinesByRelationID, accountRelationID)
 }
 
 const getAccountRelationForCustomer = `-- name: GetAccountRelationForCustomer :one
@@ -55,7 +55,7 @@ type GetAccountRelationForCustomerRow struct {
 }
 
 func (q *Queries) GetAccountRelationForCustomer(ctx context.Context, arg GetAccountRelationForCustomerParams) (GetAccountRelationForCustomerRow, error) {
-	row := q.queryRow(ctx, q.getAccountRelationForCustomerStmt, getAccountRelationForCustomer, arg.OwnerAccountID, arg.CounterpartyAccountID)
+	row := q.db.QueryRowContext(ctx, getAccountRelationForCustomer, arg.OwnerAccountID, arg.CounterpartyAccountID)
 	var i GetAccountRelationForCustomerRow
 	err := row.Scan(
 		&i.ID,
@@ -88,7 +88,7 @@ type GetCustomerProductLineAccessRow struct {
 }
 
 func (q *Queries) GetCustomerProductLineAccess(ctx context.Context, accountRelationID string) ([]GetCustomerProductLineAccessRow, error) {
-	rows, err := q.query(ctx, q.getCustomerProductLineAccessStmt, getCustomerProductLineAccess, accountRelationID)
+	rows, err := q.db.QueryContext(ctx, getCustomerProductLineAccess, accountRelationID)
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +139,7 @@ type InsertAccountRelationProductLineParams struct {
 }
 
 func (q *Queries) InsertAccountRelationProductLine(ctx context.Context, arg InsertAccountRelationProductLineParams) error {
-	_, err := q.exec(ctx, q.insertAccountRelationProductLineStmt, insertAccountRelationProductLine, arg.ID, arg.AccountRelationID, arg.ProductLineID)
+	_, err := q.db.ExecContext(ctx, insertAccountRelationProductLine, arg.ID, arg.AccountRelationID, arg.ProductLineID)
 	return err
 }
 
@@ -192,7 +192,7 @@ type ListCustomerProductLineAccessBackwardRow struct {
 }
 
 func (q *Queries) ListCustomerProductLineAccessBackward(ctx context.Context, arg ListCustomerProductLineAccessBackwardParams) ([]ListCustomerProductLineAccessBackwardRow, error) {
-	rows, err := q.query(ctx, q.listCustomerProductLineAccessBackwardStmt, listCustomerProductLineAccessBackward,
+	rows, err := q.db.QueryContext(ctx, listCustomerProductLineAccessBackward,
 		arg.OwnerAccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
@@ -282,7 +282,7 @@ type ListCustomerProductLineAccessForwardRow struct {
 }
 
 func (q *Queries) ListCustomerProductLineAccessForward(ctx context.Context, arg ListCustomerProductLineAccessForwardParams) ([]ListCustomerProductLineAccessForwardRow, error) {
-	rows, err := q.query(ctx, q.listCustomerProductLineAccessForwardStmt, listCustomerProductLineAccessForward,
+	rows, err := q.db.QueryContext(ctx, listCustomerProductLineAccessForward,
 		arg.OwnerAccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,

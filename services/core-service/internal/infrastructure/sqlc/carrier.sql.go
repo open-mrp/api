@@ -25,7 +25,7 @@ type CountCarriersByNameParams struct {
 }
 
 func (q *Queries) CountCarriersByName(ctx context.Context, arg CountCarriersByNameParams) (int64, error) {
-	row := q.queryRow(ctx, q.countCarriersByNameStmt, countCarriersByName,
+	row := q.db.QueryRowContext(ctx, countCarriersByName,
 		arg.Name,
 		arg.AccountID,
 		arg.ExcludeID,
@@ -48,7 +48,7 @@ type DeleteCarrierOptionsByCarrierIDParams struct {
 }
 
 func (q *Queries) DeleteCarrierOptionsByCarrierID(ctx context.Context, arg DeleteCarrierOptionsByCarrierIDParams) error {
-	_, err := q.exec(ctx, q.deleteCarrierOptionsByCarrierIDStmt, deleteCarrierOptionsByCarrierID, arg.CarrierID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, deleteCarrierOptionsByCarrierID, arg.CarrierID, arg.AccountID)
 	return err
 }
 
@@ -89,7 +89,7 @@ type GetCarrierRow struct {
 }
 
 func (q *Queries) GetCarrier(ctx context.Context, arg GetCarrierParams) (GetCarrierRow, error) {
-	row := q.queryRow(ctx, q.getCarrierStmt, getCarrier, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getCarrier, arg.ID, arg.AccountID)
 	var i GetCarrierRow
 	err := row.Scan(
 		&i.ID,
@@ -141,7 +141,7 @@ type InsertCarrierParams struct {
 }
 
 func (q *Queries) InsertCarrier(ctx context.Context, arg InsertCarrierParams) error {
-	_, err := q.exec(ctx, q.insertCarrierStmt, insertCarrier,
+	_, err := q.db.ExecContext(ctx, insertCarrier,
 		arg.ID,
 		arg.Name,
 		arg.Code,
@@ -202,7 +202,7 @@ type ListCarriersBackwardRow struct {
 }
 
 func (q *Queries) ListCarriersBackward(ctx context.Context, arg ListCarriersBackwardParams) ([]ListCarriersBackwardRow, error) {
-	rows, err := q.query(ctx, q.listCarriersBackwardStmt, listCarriersBackward,
+	rows, err := q.db.QueryContext(ctx, listCarriersBackward,
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
@@ -293,7 +293,7 @@ type ListCarriersForwardRow struct {
 }
 
 func (q *Queries) ListCarriersForward(ctx context.Context, arg ListCarriersForwardParams) ([]ListCarriersForwardRow, error) {
-	rows, err := q.query(ctx, q.listCarriersForwardStmt, listCarriersForward,
+	rows, err := q.db.QueryContext(ctx, listCarriersForward,
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
@@ -350,7 +350,7 @@ type SoftDeleteCarrierParams struct {
 }
 
 func (q *Queries) SoftDeleteCarrier(ctx context.Context, arg SoftDeleteCarrierParams) (sql.Result, error) {
-	return q.exec(ctx, q.softDeleteCarrierStmt, softDeleteCarrier, arg.ID, arg.AccountID)
+	return q.db.ExecContext(ctx, softDeleteCarrier, arg.ID, arg.AccountID)
 }
 
 const updateCarrier = `-- name: UpdateCarrier :execresult
@@ -371,7 +371,7 @@ type UpdateCarrierParams struct {
 }
 
 func (q *Queries) UpdateCarrier(ctx context.Context, arg UpdateCarrierParams) (sql.Result, error) {
-	return q.exec(ctx, q.updateCarrierStmt, updateCarrier,
+	return q.db.ExecContext(ctx, updateCarrier,
 		arg.Name,
 		arg.IsPortalEnabled,
 		arg.ID,

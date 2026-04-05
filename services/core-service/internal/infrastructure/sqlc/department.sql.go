@@ -25,7 +25,7 @@ type CountDepartmentsByNameParams struct {
 }
 
 func (q *Queries) CountDepartmentsByName(ctx context.Context, arg CountDepartmentsByNameParams) (int64, error) {
-	row := q.queryRow(ctx, q.countDepartmentsByNameStmt, countDepartmentsByName,
+	row := q.db.QueryRowContext(ctx, countDepartmentsByName,
 		arg.Name,
 		arg.AccountID,
 		arg.ExcludeID,
@@ -48,7 +48,7 @@ type DeleteDepartmentParams struct {
 }
 
 func (q *Queries) DeleteDepartment(ctx context.Context, arg DeleteDepartmentParams) (sql.Result, error) {
-	return q.exec(ctx, q.deleteDepartmentStmt, deleteDepartment, arg.ID, arg.AccountID)
+	return q.db.ExecContext(ctx, deleteDepartment, arg.ID, arg.AccountID)
 }
 
 const getDepartment = `-- name: GetDepartment :one
@@ -84,7 +84,7 @@ type GetDepartmentRow struct {
 }
 
 func (q *Queries) GetDepartment(ctx context.Context, arg GetDepartmentParams) (GetDepartmentRow, error) {
-	row := q.queryRow(ctx, q.getDepartmentStmt, getDepartment, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getDepartment, arg.ID, arg.AccountID)
 	var i GetDepartmentRow
 	err := row.Scan(
 		&i.ID,
@@ -128,7 +128,7 @@ type InsertDepartmentParams struct {
 }
 
 func (q *Queries) InsertDepartment(ctx context.Context, arg InsertDepartmentParams) error {
-	_, err := q.exec(ctx, q.insertDepartmentStmt, insertDepartment,
+	_, err := q.db.ExecContext(ctx, insertDepartment,
 		arg.ID,
 		arg.Name,
 		arg.Notes,
@@ -183,7 +183,7 @@ type ListDepartmentsBackwardRow struct {
 }
 
 func (q *Queries) ListDepartmentsBackward(ctx context.Context, arg ListDepartmentsBackwardParams) ([]ListDepartmentsBackwardRow, error) {
-	rows, err := q.query(ctx, q.listDepartmentsBackwardStmt, listDepartmentsBackward,
+	rows, err := q.db.QueryContext(ctx, listDepartmentsBackward,
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
@@ -268,7 +268,7 @@ type ListDepartmentsForwardRow struct {
 }
 
 func (q *Queries) ListDepartmentsForward(ctx context.Context, arg ListDepartmentsForwardParams) ([]ListDepartmentsForwardRow, error) {
-	rows, err := q.query(ctx, q.listDepartmentsForwardStmt, listDepartmentsForward,
+	rows, err := q.db.QueryContext(ctx, listDepartmentsForward,
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
@@ -328,7 +328,7 @@ type ListMachinesByDepartmentIDRow struct {
 }
 
 func (q *Queries) ListMachinesByDepartmentID(ctx context.Context, arg ListMachinesByDepartmentIDParams) ([]ListMachinesByDepartmentIDRow, error) {
-	rows, err := q.query(ctx, q.listMachinesByDepartmentIDStmt, listMachinesByDepartmentID, arg.DepartmentID, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, listMachinesByDepartmentID, arg.DepartmentID, arg.AccountID)
 	if err != nil {
 		return nil, err
 	}
@@ -369,7 +369,7 @@ type ListScanningStationsByDepartmentIDRow struct {
 }
 
 func (q *Queries) ListScanningStationsByDepartmentID(ctx context.Context, arg ListScanningStationsByDepartmentIDParams) ([]ListScanningStationsByDepartmentIDRow, error) {
-	rows, err := q.query(ctx, q.listScanningStationsByDepartmentIDStmt, listScanningStationsByDepartmentID, arg.DepartmentID, arg.AccountID)
+	rows, err := q.db.QueryContext(ctx, listScanningStationsByDepartmentID, arg.DepartmentID, arg.AccountID)
 	if err != nil {
 		return nil, err
 	}
@@ -414,7 +414,7 @@ func (q *Queries) SetMachinesDepartmentID(ctx context.Context, arg SetMachinesDe
 	} else {
 		query = strings.Replace(query, "/*SLICE:machine_ids*/?", "NULL", 1)
 	}
-	_, err := q.exec(ctx, nil, query, queryParams...)
+	_, err := q.db.ExecContext(ctx, query, queryParams...)
 	return err
 }
 
@@ -444,7 +444,7 @@ func (q *Queries) SetScanningStationsDepartmentID(ctx context.Context, arg SetSc
 		query = strings.Replace(query, "/*SLICE:scanning_station_ids*/?", "NULL", 1)
 	}
 	queryParams = append(queryParams, arg.AccountID)
-	_, err := q.exec(ctx, nil, query, queryParams...)
+	_, err := q.db.ExecContext(ctx, query, queryParams...)
 	return err
 }
 
@@ -467,7 +467,7 @@ type UpdateDepartmentParams struct {
 }
 
 func (q *Queries) UpdateDepartment(ctx context.Context, arg UpdateDepartmentParams) (sql.Result, error) {
-	return q.exec(ctx, q.updateDepartmentStmt, updateDepartment,
+	return q.db.ExecContext(ctx, updateDepartment,
 		arg.Name,
 		arg.Notes,
 		arg.LocationID,

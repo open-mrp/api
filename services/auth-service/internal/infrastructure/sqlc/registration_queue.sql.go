@@ -22,7 +22,7 @@ type CreateRegistrationQueueEntryParams struct {
 }
 
 func (q *Queries) CreateRegistrationQueueEntry(ctx context.Context, arg CreateRegistrationQueueEntryParams) error {
-	_, err := q.exec(ctx, q.createRegistrationQueueEntryStmt, createRegistrationQueueEntry,
+	_, err := q.db.ExecContext(ctx, createRegistrationQueueEntry,
 		arg.Email,
 		arg.Name,
 		arg.PlanCode,

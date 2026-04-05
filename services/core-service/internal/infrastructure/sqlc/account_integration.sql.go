@@ -23,7 +23,7 @@ type CountAccountIntegrationByCodeParams struct {
 }
 
 func (q *Queries) CountAccountIntegrationByCode(ctx context.Context, arg CountAccountIntegrationByCodeParams) (int64, error) {
-	row := q.queryRow(ctx, q.countAccountIntegrationByCodeStmt, countAccountIntegrationByCode, arg.AccountID, arg.IntegrationCode)
+	row := q.db.QueryRowContext(ctx, countAccountIntegrationByCode, arg.AccountID, arg.IntegrationCode)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -41,7 +41,7 @@ type DeleteAccountIntegrationParams struct {
 }
 
 func (q *Queries) DeleteAccountIntegration(ctx context.Context, arg DeleteAccountIntegrationParams) (sql.Result, error) {
-	return q.exec(ctx, q.deleteAccountIntegrationStmt, deleteAccountIntegration, arg.ID, arg.AccountID)
+	return q.db.ExecContext(ctx, deleteAccountIntegration, arg.ID, arg.AccountID)
 }
 
 const findAccountIntegrationByCode = `-- name: FindAccountIntegrationByCode :one
@@ -74,7 +74,7 @@ type FindAccountIntegrationByCodeRow struct {
 }
 
 func (q *Queries) FindAccountIntegrationByCode(ctx context.Context, arg FindAccountIntegrationByCodeParams) (FindAccountIntegrationByCodeRow, error) {
-	row := q.queryRow(ctx, q.findAccountIntegrationByCodeStmt, findAccountIntegrationByCode, arg.AccountID, arg.IntegrationCode)
+	row := q.db.QueryRowContext(ctx, findAccountIntegrationByCode, arg.AccountID, arg.IntegrationCode)
 	var i FindAccountIntegrationByCodeRow
 	err := row.Scan(
 		&i.ID,
@@ -118,7 +118,7 @@ type GetAccountIntegrationRow struct {
 }
 
 func (q *Queries) GetAccountIntegration(ctx context.Context, arg GetAccountIntegrationParams) (GetAccountIntegrationRow, error) {
-	row := q.queryRow(ctx, q.getAccountIntegrationStmt, getAccountIntegration, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getAccountIntegration, arg.ID, arg.AccountID)
 	var i GetAccountIntegrationRow
 	err := row.Scan(
 		&i.ID,
@@ -152,7 +152,7 @@ type GetAccountIntegrationCredentialsRow struct {
 }
 
 func (q *Queries) GetAccountIntegrationCredentials(ctx context.Context, arg GetAccountIntegrationCredentialsParams) (GetAccountIntegrationCredentialsRow, error) {
-	row := q.queryRow(ctx, q.getAccountIntegrationCredentialsStmt, getAccountIntegrationCredentials, arg.AccountID, arg.IntegrationCode)
+	row := q.db.QueryRowContext(ctx, getAccountIntegrationCredentials, arg.AccountID, arg.IntegrationCode)
 	var i GetAccountIntegrationCredentialsRow
 	err := row.Scan(&i.Credentials, &i.IsActive)
 	return i, err
@@ -189,7 +189,7 @@ type InsertAccountIntegrationParams struct {
 }
 
 func (q *Queries) InsertAccountIntegration(ctx context.Context, arg InsertAccountIntegrationParams) error {
-	_, err := q.exec(ctx, q.insertAccountIntegrationStmt, insertAccountIntegration,
+	_, err := q.db.ExecContext(ctx, insertAccountIntegration,
 		arg.ID,
 		arg.AccountID,
 		arg.IntegrationCode,
@@ -241,7 +241,7 @@ type ListAccountIntegrationsBackwardRow struct {
 }
 
 func (q *Queries) ListAccountIntegrationsBackward(ctx context.Context, arg ListAccountIntegrationsBackwardParams) ([]ListAccountIntegrationsBackwardRow, error) {
-	rows, err := q.query(ctx, q.listAccountIntegrationsBackwardStmt, listAccountIntegrationsBackward,
+	rows, err := q.db.QueryContext(ctx, listAccountIntegrationsBackward,
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
@@ -322,7 +322,7 @@ type ListAccountIntegrationsForwardRow struct {
 }
 
 func (q *Queries) ListAccountIntegrationsForward(ctx context.Context, arg ListAccountIntegrationsForwardParams) ([]ListAccountIntegrationsForwardRow, error) {
-	rows, err := q.query(ctx, q.listAccountIntegrationsForwardStmt, listAccountIntegrationsForward,
+	rows, err := q.db.QueryContext(ctx, listAccountIntegrationsForward,
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
@@ -378,7 +378,7 @@ type UpdateAccountIntegrationParams struct {
 }
 
 func (q *Queries) UpdateAccountIntegration(ctx context.Context, arg UpdateAccountIntegrationParams) (sql.Result, error) {
-	return q.exec(ctx, q.updateAccountIntegrationStmt, updateAccountIntegration,
+	return q.db.ExecContext(ctx, updateAccountIntegration,
 		arg.Name,
 		arg.IsActive,
 		arg.ID,
@@ -403,7 +403,7 @@ type UpdateAccountIntegrationCredentialsParams struct {
 }
 
 func (q *Queries) UpdateAccountIntegrationCredentials(ctx context.Context, arg UpdateAccountIntegrationCredentialsParams) (sql.Result, error) {
-	return q.exec(ctx, q.updateAccountIntegrationCredentialsStmt, updateAccountIntegrationCredentials,
+	return q.db.ExecContext(ctx, updateAccountIntegrationCredentials,
 		arg.Name,
 		arg.Credentials,
 		arg.ID,

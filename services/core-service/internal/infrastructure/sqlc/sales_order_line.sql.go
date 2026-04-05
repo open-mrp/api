@@ -23,7 +23,7 @@ type CreateOrderLineQuantityParams struct {
 }
 
 func (q *Queries) CreateOrderLineQuantity(ctx context.Context, arg CreateOrderLineQuantityParams) error {
-	_, err := q.exec(ctx, q.createOrderLineQuantityStmt, createOrderLineQuantity, arg.ID, arg.Value, arg.UnitID)
+	_, err := q.db.ExecContext(ctx, createOrderLineQuantity, arg.ID, arg.Value, arg.UnitID)
 	return err
 }
 
@@ -40,7 +40,7 @@ type CreateOrderLineRateParams struct {
 }
 
 func (q *Queries) CreateOrderLineRate(ctx context.Context, arg CreateOrderLineRateParams) error {
-	_, err := q.exec(ctx, q.createOrderLineRateStmt, createOrderLineRate,
+	_, err := q.db.ExecContext(ctx, createOrderLineRate,
 		arg.ID,
 		arg.Value,
 		arg.NumeratorUnitID,
@@ -79,7 +79,7 @@ type CreateSalesOrderLineParams struct {
 }
 
 func (q *Queries) CreateSalesOrderLine(ctx context.Context, arg CreateSalesOrderLineParams) error {
-	_, err := q.exec(ctx, q.createSalesOrderLineStmt, createSalesOrderLine,
+	_, err := q.db.ExecContext(ctx, createSalesOrderLine,
 		arg.ID,
 		arg.ProductSku,
 		arg.ProductDescription,
@@ -100,7 +100,7 @@ DELETE FROM invoice_line WHERE sales_order_line_id = ?
 `
 
 func (q *Queries) DeleteInvoiceLinesBySalesOrderLine(ctx context.Context, salesOrderLineID string) error {
-	_, err := q.exec(ctx, q.deleteInvoiceLinesBySalesOrderLineStmt, deleteInvoiceLinesBySalesOrderLine, salesOrderLineID)
+	_, err := q.db.ExecContext(ctx, deleteInvoiceLinesBySalesOrderLine, salesOrderLineID)
 	return err
 }
 
@@ -109,7 +109,7 @@ DELETE FROM pick_line WHERE sales_order_line_id = ?
 `
 
 func (q *Queries) DeletePickLinesBySalesOrderLine(ctx context.Context, salesOrderLineID string) error {
-	_, err := q.exec(ctx, q.deletePickLinesBySalesOrderLineStmt, deletePickLinesBySalesOrderLine, salesOrderLineID)
+	_, err := q.db.ExecContext(ctx, deletePickLinesBySalesOrderLine, salesOrderLineID)
 	return err
 }
 
@@ -118,7 +118,7 @@ DELETE FROM sales_order_line WHERE id = ?
 `
 
 func (q *Queries) DeleteSalesOrderLine(ctx context.Context, id string) error {
-	_, err := q.exec(ctx, q.deleteSalesOrderLineStmt, deleteSalesOrderLine, id)
+	_, err := q.db.ExecContext(ctx, deleteSalesOrderLine, id)
 	return err
 }
 
@@ -127,7 +127,7 @@ DELETE FROM shipment_line WHERE sales_order_line_id = ?
 `
 
 func (q *Queries) DeleteShipmentLinesBySalesOrderLine(ctx context.Context, salesOrderLineID string) error {
-	_, err := q.exec(ctx, q.deleteShipmentLinesBySalesOrderLineStmt, deleteShipmentLinesBySalesOrderLine, salesOrderLineID)
+	_, err := q.db.ExecContext(ctx, deleteShipmentLinesBySalesOrderLine, salesOrderLineID)
 	return err
 }
 
@@ -138,7 +138,7 @@ WHERE sales_order_id = ?
 `
 
 func (q *Queries) GetNextLineItemNumber(ctx context.Context, salesOrderID string) (int32, error) {
-	row := q.queryRow(ctx, q.getNextLineItemNumberStmt, getNextLineItemNumber, salesOrderID)
+	row := q.db.QueryRowContext(ctx, getNextLineItemNumber, salesOrderID)
 	var next_number int32
 	err := row.Scan(&next_number)
 	return next_number, err
@@ -240,7 +240,7 @@ type GetSalesOrderLineRow struct {
 }
 
 func (q *Queries) GetSalesOrderLine(ctx context.Context, salesOrderLineID string) (GetSalesOrderLineRow, error) {
-	row := q.queryRow(ctx, q.getSalesOrderLineStmt, getSalesOrderLine, salesOrderLineID)
+	row := q.db.QueryRowContext(ctx, getSalesOrderLine, salesOrderLineID)
 	var i GetSalesOrderLineRow
 	err := row.Scan(
 		&i.ID,
@@ -296,7 +296,7 @@ type IsLineInOrderParams struct {
 }
 
 func (q *Queries) IsLineInOrder(ctx context.Context, arg IsLineInOrderParams) (bool, error) {
-	row := q.queryRow(ctx, q.isLineInOrderStmt, isLineInOrder, arg.SalesOrderLineID, arg.SalesOrderID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, isLineInOrder, arg.SalesOrderLineID, arg.SalesOrderID, arg.AccountID)
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err
@@ -313,7 +313,7 @@ type SetSalesOrderLineUnitCostParams struct {
 }
 
 func (q *Queries) SetSalesOrderLineUnitCost(ctx context.Context, arg SetSalesOrderLineUnitCostParams) error {
-	_, err := q.exec(ctx, q.setSalesOrderLineUnitCostStmt, setSalesOrderLineUnitCost, arg.UnitCostID, arg.ID)
+	_, err := q.db.ExecContext(ctx, setSalesOrderLineUnitCost, arg.UnitCostID, arg.ID)
 	return err
 }
 
@@ -329,7 +329,7 @@ type UpdateOrderLineQuantityValueParams struct {
 }
 
 func (q *Queries) UpdateOrderLineQuantityValue(ctx context.Context, arg UpdateOrderLineQuantityValueParams) error {
-	_, err := q.exec(ctx, q.updateOrderLineQuantityValueStmt, updateOrderLineQuantityValue, arg.Value, arg.UnitID, arg.ID)
+	_, err := q.db.ExecContext(ctx, updateOrderLineQuantityValue, arg.Value, arg.UnitID, arg.ID)
 	return err
 }
 
@@ -350,7 +350,7 @@ type UpdateOrderLineRateValueParams struct {
 }
 
 func (q *Queries) UpdateOrderLineRateValue(ctx context.Context, arg UpdateOrderLineRateValueParams) error {
-	_, err := q.exec(ctx, q.updateOrderLineRateValueStmt, updateOrderLineRateValue,
+	_, err := q.db.ExecContext(ctx, updateOrderLineRateValue,
 		arg.Value,
 		arg.NumeratorUnitID,
 		arg.DenominatorUnitID,
@@ -380,7 +380,7 @@ type UpdateSalesOrderLineParams struct {
 }
 
 func (q *Queries) UpdateSalesOrderLine(ctx context.Context, arg UpdateSalesOrderLineParams) error {
-	_, err := q.exec(ctx, q.updateSalesOrderLineStmt, updateSalesOrderLine,
+	_, err := q.db.ExecContext(ctx, updateSalesOrderLine,
 		arg.ProductSku,
 		arg.ProductDescription,
 		arg.ProductID,

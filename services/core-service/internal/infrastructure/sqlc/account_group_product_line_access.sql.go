@@ -17,7 +17,7 @@ WHERE account_group_id = ?
 `
 
 func (q *Queries) CountAccountGroupProductLinesByAccountGroupID(ctx context.Context, accountGroupID string) (int64, error) {
-	row := q.queryRow(ctx, q.countAccountGroupProductLinesByAccountGroupIDStmt, countAccountGroupProductLinesByAccountGroupID, accountGroupID)
+	row := q.db.QueryRowContext(ctx, countAccountGroupProductLinesByAccountGroupID, accountGroupID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -29,7 +29,7 @@ WHERE account_group_id = ?
 `
 
 func (q *Queries) DeleteAccountGroupProductLinesByAccountGroupID(ctx context.Context, accountGroupID string) (sql.Result, error) {
-	return q.exec(ctx, q.deleteAccountGroupProductLinesByAccountGroupIDStmt, deleteAccountGroupProductLinesByAccountGroupID, accountGroupID)
+	return q.db.ExecContext(ctx, deleteAccountGroupProductLinesByAccountGroupID, accountGroupID)
 }
 
 const getAccountGroupByIDAndAccount = `-- name: GetAccountGroupByIDAndAccount :one
@@ -52,7 +52,7 @@ type GetAccountGroupByIDAndAccountRow struct {
 }
 
 func (q *Queries) GetAccountGroupByIDAndAccount(ctx context.Context, arg GetAccountGroupByIDAndAccountParams) (GetAccountGroupByIDAndAccountRow, error) {
-	row := q.queryRow(ctx, q.getAccountGroupByIDAndAccountStmt, getAccountGroupByIDAndAccount, arg.ID, arg.OwnerAccountID)
+	row := q.db.QueryRowContext(ctx, getAccountGroupByIDAndAccount, arg.ID, arg.OwnerAccountID)
 	var i GetAccountGroupByIDAndAccountRow
 	err := row.Scan(
 		&i.ID,
@@ -84,7 +84,7 @@ type GetAccountGroupProductLineAccessRow struct {
 }
 
 func (q *Queries) GetAccountGroupProductLineAccess(ctx context.Context, accountGroupID string) ([]GetAccountGroupProductLineAccessRow, error) {
-	rows, err := q.query(ctx, q.getAccountGroupProductLineAccessStmt, getAccountGroupProductLineAccess, accountGroupID)
+	rows, err := q.db.QueryContext(ctx, getAccountGroupProductLineAccess, accountGroupID)
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +135,7 @@ type InsertAccountGroupProductLineParams struct {
 }
 
 func (q *Queries) InsertAccountGroupProductLine(ctx context.Context, arg InsertAccountGroupProductLineParams) error {
-	_, err := q.exec(ctx, q.insertAccountGroupProductLineStmt, insertAccountGroupProductLine, arg.ID, arg.AccountGroupID, arg.ProductLineID)
+	_, err := q.db.ExecContext(ctx, insertAccountGroupProductLine, arg.ID, arg.AccountGroupID, arg.ProductLineID)
 	return err
 }
 
@@ -183,7 +183,7 @@ type ListAccountGroupProductLineAccessBackwardRow struct {
 }
 
 func (q *Queries) ListAccountGroupProductLineAccessBackward(ctx context.Context, arg ListAccountGroupProductLineAccessBackwardParams) ([]ListAccountGroupProductLineAccessBackwardRow, error) {
-	rows, err := q.query(ctx, q.listAccountGroupProductLineAccessBackwardStmt, listAccountGroupProductLineAccessBackward,
+	rows, err := q.db.QueryContext(ctx, listAccountGroupProductLineAccessBackward,
 		arg.OwnerAccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
@@ -266,7 +266,7 @@ type ListAccountGroupProductLineAccessForwardRow struct {
 }
 
 func (q *Queries) ListAccountGroupProductLineAccessForward(ctx context.Context, arg ListAccountGroupProductLineAccessForwardParams) ([]ListAccountGroupProductLineAccessForwardRow, error) {
-	rows, err := q.query(ctx, q.listAccountGroupProductLineAccessForwardStmt, listAccountGroupProductLineAccessForward,
+	rows, err := q.db.QueryContext(ctx, listAccountGroupProductLineAccessForward,
 		arg.OwnerAccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
@@ -317,7 +317,7 @@ type ProductLineExistsByIDAndAccountParams struct {
 }
 
 func (q *Queries) ProductLineExistsByIDAndAccount(ctx context.Context, arg ProductLineExistsByIDAndAccountParams) (int64, error) {
-	row := q.queryRow(ctx, q.productLineExistsByIDAndAccountStmt, productLineExistsByIDAndAccount, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, productLineExistsByIDAndAccount, arg.ID, arg.AccountID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err

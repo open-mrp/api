@@ -29,7 +29,7 @@ type CheckPartSKUExistsParams struct {
 }
 
 func (q *Queries) CheckPartSKUExists(ctx context.Context, arg CheckPartSKUExistsParams) (bool, error) {
-	row := q.queryRow(ctx, q.checkPartSKUExistsStmt, checkPartSKUExists, arg.Sku, arg.AccountID, arg.ExcludeID)
+	row := q.db.QueryRowContext(ctx, checkPartSKUExists, arg.Sku, arg.AccountID, arg.ExcludeID)
 	var sku_exists bool
 	err := row.Scan(&sku_exists)
 	return sku_exists, err
@@ -131,7 +131,7 @@ type GetPartRow struct {
 }
 
 func (q *Queries) GetPart(ctx context.Context, arg GetPartParams) (GetPartRow, error) {
-	row := q.queryRow(ctx, q.getPartStmt, getPart, arg.ItemID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getPart, arg.ItemID, arg.AccountID)
 	var i GetPartRow
 	err := row.Scan(
 		&i.PartID,
@@ -196,7 +196,7 @@ type GetPartAttributesRow struct {
 }
 
 func (q *Queries) GetPartAttributes(ctx context.Context, itemID string) ([]GetPartAttributesRow, error) {
-	rows, err := q.query(ctx, q.getPartAttributesStmt, getPartAttributes, itemID)
+	rows, err := q.db.QueryContext(ctx, getPartAttributes, itemID)
 	if err != nil {
 		return nil, err
 	}
@@ -244,7 +244,7 @@ type InsertItemForPartParams struct {
 }
 
 func (q *Queries) InsertItemForPart(ctx context.Context, arg InsertItemForPartParams) error {
-	_, err := q.exec(ctx, q.insertItemForPartStmt, insertItemForPart,
+	_, err := q.db.ExecContext(ctx, insertItemForPart,
 		arg.ID,
 		arg.Sku,
 		arg.Description,
@@ -268,7 +268,7 @@ type InsertPartParams struct {
 }
 
 func (q *Queries) InsertPart(ctx context.Context, arg InsertPartParams) error {
-	_, err := q.exec(ctx, q.insertPartStmt, insertPart, arg.ID, arg.ItemID)
+	_, err := q.db.ExecContext(ctx, insertPart, arg.ID, arg.ItemID)
 	return err
 }
 
@@ -287,7 +287,7 @@ type InsertRateForPartParams struct {
 }
 
 func (q *Queries) InsertRateForPart(ctx context.Context, arg InsertRateForPartParams) error {
-	_, err := q.exec(ctx, q.insertRateForPartStmt, insertRateForPart,
+	_, err := q.db.ExecContext(ctx, insertRateForPart,
 		arg.ID,
 		arg.Value,
 		arg.NumeratorUnitID,
@@ -463,7 +463,7 @@ func (q *Queries) ListPartsBackward(ctx context.Context, arg ListPartsBackwardPa
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorID)
 	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -692,7 +692,7 @@ func (q *Queries) ListPartsForward(ctx context.Context, arg ListPartsForwardPara
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorID)
 	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -765,7 +765,7 @@ type SoftDeletePartParams struct {
 }
 
 func (q *Queries) SoftDeletePart(ctx context.Context, arg SoftDeletePartParams) error {
-	_, err := q.exec(ctx, q.softDeletePartStmt, softDeletePart, arg.ItemID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, softDeletePart, arg.ItemID, arg.AccountID)
 	return err
 }
 
@@ -775,6 +775,6 @@ WHERE item_id = ?
 `
 
 func (q *Queries) TouchPartUpdatedAt(ctx context.Context, itemID string) error {
-	_, err := q.exec(ctx, q.touchPartUpdatedAtStmt, touchPartUpdatedAt, itemID)
+	_, err := q.db.ExecContext(ctx, touchPartUpdatedAt, itemID)
 	return err
 }

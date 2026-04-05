@@ -25,7 +25,7 @@ type CountMachinesByNameParams struct {
 }
 
 func (q *Queries) CountMachinesByName(ctx context.Context, arg CountMachinesByNameParams) (int64, error) {
-	row := q.queryRow(ctx, q.countMachinesByNameStmt, countMachinesByName,
+	row := q.db.QueryRowContext(ctx, countMachinesByName,
 		arg.Name,
 		arg.AccountID,
 		arg.ExcludeID,
@@ -49,7 +49,7 @@ type DeleteMachineParams struct {
 }
 
 func (q *Queries) DeleteMachine(ctx context.Context, arg DeleteMachineParams) (sql.Result, error) {
-	return q.exec(ctx, q.deleteMachineStmt, deleteMachine, arg.ID, arg.AccountID)
+	return q.db.ExecContext(ctx, deleteMachine, arg.ID, arg.AccountID)
 }
 
 const getMachine = `-- name: GetMachine :one
@@ -87,7 +87,7 @@ type GetMachineRow struct {
 }
 
 func (q *Queries) GetMachine(ctx context.Context, arg GetMachineParams) (GetMachineRow, error) {
-	row := q.queryRow(ctx, q.getMachineStmt, getMachine, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getMachine, arg.ID, arg.AccountID)
 	var i GetMachineRow
 	err := row.Scan(
 		&i.ID,
@@ -134,7 +134,7 @@ type InsertMachineParams struct {
 }
 
 func (q *Queries) InsertMachine(ctx context.Context, arg InsertMachineParams) error {
-	_, err := q.exec(ctx, q.insertMachineStmt, insertMachine,
+	_, err := q.db.ExecContext(ctx, insertMachine,
 		arg.ID,
 		arg.Name,
 		arg.SerialNumber,
@@ -191,7 +191,7 @@ type ListMachinesBackwardRow struct {
 }
 
 func (q *Queries) ListMachinesBackward(ctx context.Context, arg ListMachinesBackwardParams) ([]ListMachinesBackwardRow, error) {
-	rows, err := q.query(ctx, q.listMachinesBackwardStmt, listMachinesBackward,
+	rows, err := q.db.QueryContext(ctx, listMachinesBackward,
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
@@ -279,7 +279,7 @@ type ListMachinesForwardRow struct {
 }
 
 func (q *Queries) ListMachinesForward(ctx context.Context, arg ListMachinesForwardParams) ([]ListMachinesForwardRow, error) {
-	rows, err := q.query(ctx, q.listMachinesForwardStmt, listMachinesForward,
+	rows, err := q.db.QueryContext(ctx, listMachinesForward,
 		arg.AccountID,
 		arg.SearchQuery,
 		arg.SearchQuery,
@@ -341,7 +341,7 @@ type UpdateMachineParams struct {
 }
 
 func (q *Queries) UpdateMachine(ctx context.Context, arg UpdateMachineParams) (sql.Result, error) {
-	return q.exec(ctx, q.updateMachineStmt, updateMachine,
+	return q.db.ExecContext(ctx, updateMachine,
 		arg.Name,
 		arg.SerialNumber,
 		arg.Notes,

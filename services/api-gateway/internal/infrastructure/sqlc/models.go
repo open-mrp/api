@@ -171,8 +171,8 @@ type AccountPrice struct {
 	UpdatedAt          time.Time
 	OwnerAccountID     string
 	UnitValueID        string
-	ProductLineID      sql.NullString
-	RecipientAccountID sql.NullString
+	ProductLineID      string
+	RecipientAccountID string
 }
 
 type AccountPriceAttribute struct {
@@ -455,10 +455,10 @@ type Consumption struct {
 type DcLocation struct {
 	ID             string
 	Location       string
+	AccountID      string
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 	OwnerAccountID string
-	AccountID      sql.NullString
 }
 
 type DeletedRecord struct {
@@ -1098,7 +1098,7 @@ type Quantity struct {
 	Value     string
 	CreatedAt time.Time
 	UpdatedAt time.Time
-	UnitID    sql.NullString
+	UnitID    string
 }
 
 type QuantityDiscount struct {
@@ -1135,8 +1135,8 @@ type Rate struct {
 	Value             string
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
-	NumeratorUnitID   sql.NullString
-	DenominatorUnitID sql.NullString
+	NumeratorUnitID   string
+	DenominatorUnitID string
 }
 
 type ReceivingOrder struct {
@@ -1276,6 +1276,8 @@ type RoleType struct {
 
 type SalesOrder struct {
 	ID                    string
+	BillingAddressID      string
+	ShippingAddressID     string
 	CustomerPoNumber      sql.NullString
 	Note                  sql.NullString
 	Number                string
@@ -1292,6 +1294,7 @@ type SalesOrder struct {
 	PaymentTermID         sql.NullString
 	ProductionRunID       sql.NullString
 	OrderDiscountID       sql.NullString
+	BuyerAccountID        string
 	SellerAccountID       string
 	OwnerAccountID        string
 	CompletedAt           sql.NullTime
@@ -1301,9 +1304,6 @@ type SalesOrder struct {
 	PromisedAt            sql.NullTime
 	CreatedAt             time.Time
 	UpdatedAt             time.Time
-	BillingAddressID      sql.NullString
-	ShippingAddressID     sql.NullString
-	BuyerAccountID        sql.NullString
 }
 
 type SalesOrderLine struct {
@@ -1408,6 +1408,7 @@ type Shipment struct {
 	Note                 sql.NullString
 	Number               string
 	InvoiceID            sql.NullString
+	CarrierID            string
 	CarrierOptionID      sql.NullString
 	ShippingAddressID    string
 	ShippedByID          sql.NullString
@@ -1417,7 +1418,6 @@ type Shipment struct {
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
 	MasterTrackingNumber sql.NullString
-	CarrierID            sql.NullString
 }
 
 type ShipmentLine struct {

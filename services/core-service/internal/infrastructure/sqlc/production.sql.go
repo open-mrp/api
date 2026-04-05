@@ -59,7 +59,7 @@ type GetProductionByIDRow struct {
 }
 
 func (q *Queries) GetProductionByID(ctx context.Context, arg GetProductionByIDParams) (GetProductionByIDRow, error) {
-	row := q.queryRow(ctx, q.getProductionByIDStmt, getProductionByID, arg.ID, arg.ProductionStepID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getProductionByID, arg.ID, arg.ProductionStepID, arg.AccountID)
 	var i GetProductionByIDRow
 	err := row.Scan(
 		&i.ID,
@@ -84,7 +84,7 @@ SELECT quantity_id FROM production WHERE id = ?
 `
 
 func (q *Queries) GetProductionQuantityID(ctx context.Context, productionID string) (string, error) {
-	row := q.queryRow(ctx, q.getProductionQuantityIDStmt, getProductionQuantityID, productionID)
+	row := q.db.QueryRowContext(ctx, getProductionQuantityID, productionID)
 	var quantity_id string
 	err := row.Scan(&quantity_id)
 	return quantity_id, err
@@ -103,7 +103,7 @@ type UpdateProductionItemParams struct {
 }
 
 func (q *Queries) UpdateProductionItem(ctx context.Context, arg UpdateProductionItemParams) error {
-	_, err := q.exec(ctx, q.updateProductionItemStmt, updateProductionItem, arg.ItemID, arg.ID)
+	_, err := q.db.ExecContext(ctx, updateProductionItem, arg.ItemID, arg.ID)
 	return err
 }
 
@@ -121,6 +121,6 @@ type UpdateProductionQuantityParams struct {
 }
 
 func (q *Queries) UpdateProductionQuantity(ctx context.Context, arg UpdateProductionQuantityParams) error {
-	_, err := q.exec(ctx, q.updateProductionQuantityStmt, updateProductionQuantity, arg.Value, arg.UnitID, arg.ProductionID)
+	_, err := q.db.ExecContext(ctx, updateProductionQuantity, arg.Value, arg.UnitID, arg.ProductionID)
 	return err
 }

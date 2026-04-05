@@ -17,7 +17,7 @@ SELECT COUNT(*) FROM consumption WHERE production_step_id = ?
 `
 
 func (q *Queries) CountProductionStepConsumptions(ctx context.Context, productionStepID sql.NullString) (int64, error) {
-	row := q.queryRow(ctx, q.countProductionStepConsumptionsStmt, countProductionStepConsumptions, productionStepID)
+	row := q.db.QueryRowContext(ctx, countProductionStepConsumptions, productionStepID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -31,7 +31,7 @@ AND i.item_type_code = 'part'
 `
 
 func (q *Queries) CountProductionStepPartConsumptions(ctx context.Context, productionStepID sql.NullString) (int64, error) {
-	row := q.queryRow(ctx, q.countProductionStepPartConsumptionsStmt, countProductionStepPartConsumptions, productionStepID)
+	row := q.db.QueryRowContext(ctx, countProductionStepPartConsumptions, productionStepID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -44,7 +44,7 @@ WHERE c.production_step_id = ?
 `
 
 func (q *Queries) DeleteConsumptionQuantitiesByStepID(ctx context.Context, stepID sql.NullString) error {
-	_, err := q.exec(ctx, q.deleteConsumptionQuantitiesByStepIDStmt, deleteConsumptionQuantitiesByStepID, stepID)
+	_, err := q.db.ExecContext(ctx, deleteConsumptionQuantitiesByStepID, stepID)
 	return err
 }
 
@@ -53,7 +53,7 @@ DELETE FROM consumption WHERE production_step_id = ?
 `
 
 func (q *Queries) DeleteConsumptionsByStepID(ctx context.Context, stepID sql.NullString) error {
-	_, err := q.exec(ctx, q.deleteConsumptionsByStepIDStmt, deleteConsumptionsByStepID, stepID)
+	_, err := q.db.ExecContext(ctx, deleteConsumptionsByStepID, stepID)
 	return err
 }
 
@@ -64,7 +64,7 @@ WHERE p.production_step_id = ?
 `
 
 func (q *Queries) DeleteProductionQuantitiesByStepID(ctx context.Context, stepID sql.NullString) error {
-	_, err := q.exec(ctx, q.deleteProductionQuantitiesByStepIDStmt, deleteProductionQuantitiesByStepID, stepID)
+	_, err := q.db.ExecContext(ctx, deleteProductionQuantitiesByStepID, stepID)
 	return err
 }
 
@@ -78,7 +78,7 @@ type DeleteProductionStepParentChildLinksParams struct {
 }
 
 func (q *Queries) DeleteProductionStepParentChildLinks(ctx context.Context, arg DeleteProductionStepParentChildLinksParams) error {
-	_, err := q.exec(ctx, q.deleteProductionStepParentChildLinksStmt, deleteProductionStepParentChildLinks, arg.StepID, arg.StepID)
+	_, err := q.db.ExecContext(ctx, deleteProductionStepParentChildLinks, arg.StepID, arg.StepID)
 	return err
 }
 
@@ -94,7 +94,7 @@ type DeleteProductionStepRowParams struct {
 }
 
 func (q *Queries) DeleteProductionStepRow(ctx context.Context, arg DeleteProductionStepRowParams) (sql.Result, error) {
-	return q.exec(ctx, q.deleteProductionStepRowStmt, deleteProductionStepRow, arg.ID, arg.AccountID)
+	return q.db.ExecContext(ctx, deleteProductionStepRow, arg.ID, arg.AccountID)
 }
 
 const deleteProductionsByStepID = `-- name: DeleteProductionsByStepID :exec
@@ -102,7 +102,7 @@ DELETE FROM production WHERE production_step_id = ?
 `
 
 func (q *Queries) DeleteProductionsByStepID(ctx context.Context, stepID sql.NullString) error {
-	_, err := q.exec(ctx, q.deleteProductionsByStepIDStmt, deleteProductionsByStepID, stepID)
+	_, err := q.db.ExecContext(ctx, deleteProductionsByStepID, stepID)
 	return err
 }
 
@@ -119,7 +119,7 @@ type ExistsProductionStepByNameParams struct {
 }
 
 func (q *Queries) ExistsProductionStepByName(ctx context.Context, arg ExistsProductionStepByNameParams) (int64, error) {
-	row := q.queryRow(ctx, q.existsProductionStepByNameStmt, existsProductionStepByName,
+	row := q.db.QueryRowContext(ctx, existsProductionStepByName,
 		arg.Name,
 		arg.AccountID,
 		arg.ExcludeID,
@@ -136,7 +136,7 @@ WHERE p.production_step_id = ?
 `
 
 func (q *Queries) FindProducedItemIDByStep(ctx context.Context, productionStepID sql.NullString) (string, error) {
-	row := q.queryRow(ctx, q.findProducedItemIDByStepStmt, findProducedItemIDByStep, productionStepID)
+	row := q.db.QueryRowContext(ctx, findProducedItemIDByStep, productionStepID)
 	var item_id string
 	err := row.Scan(&item_id)
 	return item_id, err
@@ -157,7 +157,7 @@ type FindProducedUnitByStepRow struct {
 }
 
 func (q *Queries) FindProducedUnitByStep(ctx context.Context, productionStepID sql.NullString) (FindProducedUnitByStepRow, error) {
-	row := q.queryRow(ctx, q.findProducedUnitByStepStmt, findProducedUnitByStep, productionStepID)
+	row := q.db.QueryRowContext(ctx, findProducedUnitByStep, productionStepID)
 	var i FindProducedUnitByStepRow
 	err := row.Scan(&i.ID, &i.Abbreviation, &i.Type)
 	return i, err
@@ -175,7 +175,7 @@ type FindProductionStepIDByNameParams struct {
 }
 
 func (q *Queries) FindProductionStepIDByName(ctx context.Context, arg FindProductionStepIDByNameParams) (string, error) {
-	row := q.queryRow(ctx, q.findProductionStepIDByNameStmt, findProductionStepIDByName, arg.Name, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, findProductionStepIDByName, arg.Name, arg.AccountID)
 	var id string
 	err := row.Scan(&id)
 	return id, err
@@ -224,7 +224,7 @@ type FindStepByScanningStationAndItemRow struct {
 }
 
 func (q *Queries) FindStepByScanningStationAndItem(ctx context.Context, arg FindStepByScanningStationAndItemParams) (FindStepByScanningStationAndItemRow, error) {
-	row := q.queryRow(ctx, q.findStepByScanningStationAndItemStmt, findStepByScanningStationAndItem, arg.ScanningStationID, arg.AccountID, arg.ItemID)
+	row := q.db.QueryRowContext(ctx, findStepByScanningStationAndItem, arg.ScanningStationID, arg.AccountID, arg.ItemID)
 	var i FindStepByScanningStationAndItemRow
 	err := row.Scan(
 		&i.ID,
@@ -258,7 +258,7 @@ type FindStepIDByScanningStationAndItemParams struct {
 }
 
 func (q *Queries) FindStepIDByScanningStationAndItem(ctx context.Context, arg FindStepIDByScanningStationAndItemParams) (string, error) {
-	row := q.queryRow(ctx, q.findStepIDByScanningStationAndItemStmt, findStepIDByScanningStationAndItem, arg.ScanningStationID, arg.AccountID, arg.ItemID)
+	row := q.db.QueryRowContext(ctx, findStepIDByScanningStationAndItem, arg.ScanningStationID, arg.AccountID, arg.ItemID)
 	var id string
 	err := row.Scan(&id)
 	return id, err
@@ -331,7 +331,7 @@ type GetProductionFlowStepRow struct {
 
 // Fetches a production step with all fields needed for flow display.
 func (q *Queries) GetProductionFlowStep(ctx context.Context, arg GetProductionFlowStepParams) (GetProductionFlowStepRow, error) {
-	row := q.queryRow(ctx, q.getProductionFlowStepStmt, getProductionFlowStep, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getProductionFlowStep, arg.ID, arg.AccountID)
 	var i GetProductionFlowStepRow
 	err := row.Scan(
 		&i.ID,
@@ -403,7 +403,7 @@ type GetProductionStepRow struct {
 }
 
 func (q *Queries) GetProductionStep(ctx context.Context, arg GetProductionStepParams) (GetProductionStepRow, error) {
-	row := q.queryRow(ctx, q.getProductionStepStmt, getProductionStep, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getProductionStep, arg.ID, arg.AccountID)
 	var i GetProductionStepRow
 	err := row.Scan(
 		&i.ID,
@@ -426,7 +426,7 @@ WHERE A = ?
 `
 
 func (q *Queries) GetProductionStepChildSteps(ctx context.Context, parentStepID string) ([]string, error) {
-	rows, err := q.query(ctx, q.getProductionStepChildStepsStmt, getProductionStepChildSteps, parentStepID)
+	rows, err := q.db.QueryContext(ctx, getProductionStepChildSteps, parentStepID)
 	if err != nil {
 		return nil, err
 	}
@@ -499,7 +499,7 @@ type GetProductionStepConsumptionsRow struct {
 }
 
 func (q *Queries) GetProductionStepConsumptions(ctx context.Context, productionStepID sql.NullString) ([]GetProductionStepConsumptionsRow, error) {
-	rows, err := q.query(ctx, q.getProductionStepConsumptionsStmt, getProductionStepConsumptions, productionStepID)
+	rows, err := q.db.QueryContext(ctx, getProductionStepConsumptions, productionStepID)
 	if err != nil {
 		return nil, err
 	}
@@ -647,7 +647,7 @@ type GetProductionStepFullRow struct {
 }
 
 func (q *Queries) GetProductionStepFull(ctx context.Context, arg GetProductionStepFullParams) (GetProductionStepFullRow, error) {
-	row := q.queryRow(ctx, q.getProductionStepFullStmt, getProductionStepFull, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getProductionStepFull, arg.ID, arg.AccountID)
 	var i GetProductionStepFullRow
 	err := row.Scan(
 		&i.ID,
@@ -713,7 +713,7 @@ type GetProductionStepInputStepsRow struct {
 }
 
 func (q *Queries) GetProductionStepInputSteps(ctx context.Context, stepID string) ([]GetProductionStepInputStepsRow, error) {
-	rows, err := q.query(ctx, q.getProductionStepInputStepsStmt, getProductionStepInputSteps, stepID)
+	rows, err := q.db.QueryContext(ctx, getProductionStepInputSteps, stepID)
 	if err != nil {
 		return nil, err
 	}
@@ -746,7 +746,7 @@ type GetProductionStepMachinesRow struct {
 }
 
 func (q *Queries) GetProductionStepMachines(ctx context.Context, productionStepID sql.NullString) ([]GetProductionStepMachinesRow, error) {
-	rows, err := q.query(ctx, q.getProductionStepMachinesStmt, getProductionStepMachines, productionStepID)
+	rows, err := q.db.QueryContext(ctx, getProductionStepMachines, productionStepID)
 	if err != nil {
 		return nil, err
 	}
@@ -781,7 +781,7 @@ type GetProductionStepOutputStepsRow struct {
 }
 
 func (q *Queries) GetProductionStepOutputSteps(ctx context.Context, stepID string) ([]GetProductionStepOutputStepsRow, error) {
-	rows, err := q.query(ctx, q.getProductionStepOutputStepsStmt, getProductionStepOutputSteps, stepID)
+	rows, err := q.db.QueryContext(ctx, getProductionStepOutputSteps, stepID)
 	if err != nil {
 		return nil, err
 	}
@@ -814,7 +814,7 @@ type GetProductionStepScanningStationIDParams struct {
 }
 
 func (q *Queries) GetProductionStepScanningStationID(ctx context.Context, arg GetProductionStepScanningStationIDParams) (sql.NullString, error) {
-	row := q.queryRow(ctx, q.getProductionStepScanningStationIDStmt, getProductionStepScanningStationID, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getProductionStepScanningStationID, arg.ID, arg.AccountID)
 	var scanning_station_id sql.NullString
 	err := row.Scan(&scanning_station_id)
 	return scanning_station_id, err
@@ -842,7 +842,7 @@ type InsertProductionParams struct {
 }
 
 func (q *Queries) InsertProduction(ctx context.Context, arg InsertProductionParams) error {
-	_, err := q.exec(ctx, q.insertProductionStmt, insertProduction,
+	_, err := q.db.ExecContext(ctx, insertProduction,
 		arg.ID,
 		arg.ItemID,
 		arg.QuantityID,
@@ -866,7 +866,7 @@ type InsertProductionQuantityParams struct {
 }
 
 func (q *Queries) InsertProductionQuantity(ctx context.Context, arg InsertProductionQuantityParams) error {
-	_, err := q.exec(ctx, q.insertProductionQuantityStmt, insertProductionQuantity, arg.ID, arg.Value, arg.UnitID)
+	_, err := q.db.ExecContext(ctx, insertProductionQuantity, arg.ID, arg.Value, arg.UnitID)
 	return err
 }
 
@@ -908,7 +908,7 @@ type InsertProductionStepParams struct {
 }
 
 func (q *Queries) InsertProductionStep(ctx context.Context, arg InsertProductionStepParams) error {
-	_, err := q.exec(ctx, q.insertProductionStepStmt, insertProductionStep,
+	_, err := q.db.ExecContext(ctx, insertProductionStep,
 		arg.ID,
 		arg.Name,
 		arg.Notes,
@@ -946,7 +946,7 @@ type InsertRateForProductionStepParams struct {
 }
 
 func (q *Queries) InsertRateForProductionStep(ctx context.Context, arg InsertRateForProductionStepParams) error {
-	_, err := q.exec(ctx, q.insertRateForProductionStepStmt, insertRateForProductionStep,
+	_, err := q.db.ExecContext(ctx, insertRateForProductionStep,
 		arg.ID,
 		arg.Value,
 		arg.NumeratorUnitID,
@@ -966,7 +966,7 @@ type IsInputOfProductionStepParams struct {
 }
 
 func (q *Queries) IsInputOfProductionStep(ctx context.Context, arg IsInputOfProductionStepParams) (int64, error) {
-	row := q.queryRow(ctx, q.isInputOfProductionStepStmt, isInputOfProductionStep, arg.CurrentStepID, arg.InputStepID)
+	row := q.db.QueryRowContext(ctx, isInputOfProductionStep, arg.CurrentStepID, arg.InputStepID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -982,7 +982,7 @@ END AS is_last
 `
 
 func (q *Queries) IsLastProductionStep(ctx context.Context, id string) (int32, error) {
-	row := q.queryRow(ctx, q.isLastProductionStepStmt, isLastProductionStep, id)
+	row := q.db.QueryRowContext(ctx, isLastProductionStep, id)
 	var is_last int32
 	err := row.Scan(&is_last)
 	return is_last, err
@@ -999,7 +999,7 @@ type IsProductionStepInAccountParams struct {
 }
 
 func (q *Queries) IsProductionStepInAccount(ctx context.Context, arg IsProductionStepInAccountParams) (int64, error) {
-	row := q.queryRow(ctx, q.isProductionStepInAccountStmt, isProductionStepInAccount, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, isProductionStepInAccount, arg.ID, arg.AccountID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -1242,7 +1242,7 @@ func (q *Queries) ListProductionStepsBackward(ctx context.Context, arg ListProdu
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorID)
 	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -1550,7 +1550,7 @@ func (q *Queries) ListProductionStepsForward(ctx context.Context, arg ListProduc
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorID)
 	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -1644,7 +1644,7 @@ type UpdateProductionStepFieldsParams struct {
 }
 
 func (q *Queries) UpdateProductionStepFields(ctx context.Context, arg UpdateProductionStepFieldsParams) (sql.Result, error) {
-	return q.exec(ctx, q.updateProductionStepFieldsStmt, updateProductionStepFields,
+	return q.db.ExecContext(ctx, updateProductionStepFields,
 		arg.Name,
 		arg.LevelingFactor,
 		arg.Allowances,
@@ -1674,7 +1674,7 @@ type UpdateProductionStepFullParams struct {
 }
 
 func (q *Queries) UpdateProductionStepFull(ctx context.Context, arg UpdateProductionStepFullParams) error {
-	_, err := q.exec(ctx, q.updateProductionStepFullStmt, updateProductionStepFull,
+	_, err := q.db.ExecContext(ctx, updateProductionStepFull,
 		arg.LevelingFactor,
 		arg.Allowances,
 		arg.ScanningStationID,

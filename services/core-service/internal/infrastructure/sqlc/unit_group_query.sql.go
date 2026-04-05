@@ -36,7 +36,7 @@ type FindUnitGroupByItemRow struct {
 }
 
 func (q *Queries) FindUnitGroupByItem(ctx context.Context, arg FindUnitGroupByItemParams) (FindUnitGroupByItemRow, error) {
-	row := q.queryRow(ctx, q.findUnitGroupByItemStmt, findUnitGroupByItem, arg.ItemID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, findUnitGroupByItem, arg.ItemID, arg.AccountID)
 	var i FindUnitGroupByItemRow
 	err := row.Scan(
 		&i.ID,

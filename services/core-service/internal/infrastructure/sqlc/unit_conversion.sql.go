@@ -25,7 +25,7 @@ type GetUnitConversionFactorsRow struct {
 }
 
 func (q *Queries) GetUnitConversionFactors(ctx context.Context, unitID string) (GetUnitConversionFactorsRow, error) {
-	row := q.queryRow(ctx, q.getUnitConversionFactorsStmt, getUnitConversionFactors, unitID)
+	row := q.db.QueryRowContext(ctx, getUnitConversionFactors, unitID)
 	var i GetUnitConversionFactorsRow
 	err := row.Scan(
 		&i.ID,
@@ -59,7 +59,7 @@ type GetUnitConversionFactorsPairRow struct {
 }
 
 func (q *Queries) GetUnitConversionFactorsPair(ctx context.Context, arg GetUnitConversionFactorsPairParams) ([]GetUnitConversionFactorsPairRow, error) {
-	rows, err := q.query(ctx, q.getUnitConversionFactorsPairStmt, getUnitConversionFactorsPair, arg.FromUnitID, arg.ToUnitID)
+	rows, err := q.db.QueryContext(ctx, getUnitConversionFactorsPair, arg.FromUnitID, arg.ToUnitID)
 	if err != nil {
 		return nil, err
 	}

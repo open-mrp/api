@@ -28,7 +28,7 @@ func (q *Queries) BulkDeleteSupplierAccountAddresses(ctx context.Context, accoun
 	} else {
 		query = strings.Replace(query, "/*SLICE:account_ids*/?", "NULL", 1)
 	}
-	_, err := q.exec(ctx, nil, query, queryParams...)
+	_, err := q.db.ExecContext(ctx, query, queryParams...)
 	return err
 }
 
@@ -48,7 +48,7 @@ func (q *Queries) BulkDeleteSupplierAccountUsers(ctx context.Context, accountIds
 	} else {
 		query = strings.Replace(query, "/*SLICE:account_ids*/?", "NULL", 1)
 	}
-	_, err := q.exec(ctx, nil, query, queryParams...)
+	_, err := q.db.ExecContext(ctx, query, queryParams...)
 	return err
 }
 
@@ -76,7 +76,7 @@ func (q *Queries) BulkDeleteSupplierRelations(ctx context.Context, arg BulkDelet
 	} else {
 		query = strings.Replace(query, "/*SLICE:counterparty_account_ids*/?", "NULL", 1)
 	}
-	_, err := q.exec(ctx, nil, query, queryParams...)
+	_, err := q.db.ExecContext(ctx, query, queryParams...)
 	return err
 }
 
@@ -140,7 +140,7 @@ func (q *Queries) CountSuppliers(ctx context.Context, arg CountSuppliersParams) 
 	} else {
 		query = strings.Replace(query, "/*SLICE:item_ids*/?", "NULL", 1)
 	}
-	row := q.queryRow(ctx, nil, query, queryParams...)
+	row := q.db.QueryRowContext(ctx, query, queryParams...)
 	var total int64
 	err := row.Scan(&total)
 	return total, err
@@ -152,7 +152,7 @@ WHERE account_id = ?
 `
 
 func (q *Queries) DeleteSupplierAccountAddresses(ctx context.Context, accountID string) error {
-	_, err := q.exec(ctx, q.deleteSupplierAccountAddressesStmt, deleteSupplierAccountAddresses, accountID)
+	_, err := q.db.ExecContext(ctx, deleteSupplierAccountAddresses, accountID)
 	return err
 }
 
@@ -162,7 +162,7 @@ WHERE account_id = ?
 `
 
 func (q *Queries) DeleteSupplierAccountUsers(ctx context.Context, accountID string) error {
-	_, err := q.exec(ctx, q.deleteSupplierAccountUsersStmt, deleteSupplierAccountUsers, accountID)
+	_, err := q.db.ExecContext(ctx, deleteSupplierAccountUsers, accountID)
 	return err
 }
 
@@ -179,7 +179,7 @@ type DeleteSupplierRelationParams struct {
 }
 
 func (q *Queries) DeleteSupplierRelation(ctx context.Context, arg DeleteSupplierRelationParams) error {
-	_, err := q.exec(ctx, q.deleteSupplierRelationStmt, deleteSupplierRelation, arg.OwnerAccountID, arg.CounterpartyAccountID)
+	_, err := q.db.ExecContext(ctx, deleteSupplierRelation, arg.OwnerAccountID, arg.CounterpartyAccountID)
 	return err
 }
 
@@ -281,7 +281,7 @@ type GetSupplierRow struct {
 }
 
 func (q *Queries) GetSupplier(ctx context.Context, arg GetSupplierParams) (GetSupplierRow, error) {
-	row := q.queryRow(ctx, q.getSupplierStmt, getSupplier, arg.OwnerAccountID, arg.CounterpartyAccountID)
+	row := q.db.QueryRowContext(ctx, getSupplier, arg.OwnerAccountID, arg.CounterpartyAccountID)
 	var i GetSupplierRow
 	err := row.Scan(
 		&i.RelationID,
@@ -337,7 +337,7 @@ type InsertSupplierAccountParams struct {
 }
 
 func (q *Queries) InsertSupplierAccount(ctx context.Context, arg InsertSupplierAccountParams) error {
-	_, err := q.exec(ctx, q.insertSupplierAccountStmt, insertSupplierAccount,
+	_, err := q.db.ExecContext(ctx, insertSupplierAccount,
 		arg.ID,
 		arg.Name,
 		arg.DefaultBillingAddressID,
@@ -372,7 +372,7 @@ type InsertSupplierRelationParams struct {
 }
 
 func (q *Queries) InsertSupplierRelation(ctx context.Context, arg InsertSupplierRelationParams) error {
-	_, err := q.exec(ctx, q.insertSupplierRelationStmt, insertSupplierRelation,
+	_, err := q.db.ExecContext(ctx, insertSupplierRelation,
 		arg.ID,
 		arg.OwnerAccountID,
 		arg.CounterpartyAccountID,
@@ -479,7 +479,7 @@ func (q *Queries) ListSuppliersBackward(ctx context.Context, arg ListSuppliersBa
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorID)
 	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -605,7 +605,7 @@ func (q *Queries) ListSuppliersForward(ctx context.Context, arg ListSuppliersFor
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorID)
 	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -650,7 +650,7 @@ type SupplierExistsByNumberParams struct {
 }
 
 func (q *Queries) SupplierExistsByNumber(ctx context.Context, arg SupplierExistsByNumberParams) (bool, error) {
-	row := q.queryRow(ctx, q.supplierExistsByNumberStmt, supplierExistsByNumber,
+	row := q.db.QueryRowContext(ctx, supplierExistsByNumber,
 		arg.OwnerAccountID,
 		arg.ExternalNumber,
 		arg.ExcludeCounterpartyID,
@@ -674,7 +674,7 @@ type UpdateSupplierAccountNameParams struct {
 }
 
 func (q *Queries) UpdateSupplierAccountName(ctx context.Context, arg UpdateSupplierAccountNameParams) error {
-	_, err := q.exec(ctx, q.updateSupplierAccountNameStmt, updateSupplierAccountName, arg.Name, arg.ID)
+	_, err := q.db.ExecContext(ctx, updateSupplierAccountName, arg.Name, arg.ID)
 	return err
 }
 
@@ -701,7 +701,7 @@ type UpdateSupplierRelationParams struct {
 }
 
 func (q *Queries) UpdateSupplierRelation(ctx context.Context, arg UpdateSupplierRelationParams) error {
-	_, err := q.exec(ctx, q.updateSupplierRelationStmt, updateSupplierRelation,
+	_, err := q.db.ExecContext(ctx, updateSupplierRelation,
 		arg.ExternalNumber,
 		arg.UpdateNotes,
 		arg.Notes,

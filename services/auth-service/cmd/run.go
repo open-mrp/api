@@ -56,11 +56,7 @@ func Run(
 	}
 	defer rabbitmq.Close()
 
-	queries, err := sqlc.Prepare(ctx, db)
-	if err != nil {
-		return err
-	}
-	defer queries.Close()
+	queries := sqlc.New(db)
 
 	outboxRepo := repository.NewOutboxEnqueuerRepo(db, queries)
 	enqueuer, err := messaging.NewEnqueuer(&messaging.EnqueuerConfig{ServiceName: domain.ServiceName}, outboxRepo, rabbitmq)

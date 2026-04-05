@@ -21,7 +21,7 @@ WHERE account_billing.id = (SELECT account_billing_id FROM account WHERE account
 `
 
 func (q *Queries) ClearAccountPricingPlanSubscription(ctx context.Context, id string) error {
-	_, err := q.exec(ctx, q.clearAccountPricingPlanSubscriptionStmt, clearAccountPricingPlanSubscription, id)
+	_, err := q.db.ExecContext(ctx, clearAccountPricingPlanSubscription, id)
 	return err
 }
 
@@ -41,7 +41,7 @@ WHERE account_billing.id = (SELECT account_billing_id FROM account WHERE account
 `
 
 func (q *Queries) ClearAccountStripeCustomer(ctx context.Context, id string) error {
-	_, err := q.exec(ctx, q.clearAccountStripeCustomerStmt, clearAccountStripeCustomer, id)
+	_, err := q.db.ExecContext(ctx, clearAccountStripeCustomer, id)
 	return err
 }
 
@@ -57,7 +57,7 @@ WHERE ap.plan_type_code = ?
 `
 
 func (q *Queries) CountNonSandboxAccountsByPlanCode(ctx context.Context, planTypeCode string) (int64, error) {
-	row := q.queryRow(ctx, q.countNonSandboxAccountsByPlanCodeStmt, countNonSandboxAccountsByPlanCode, planTypeCode)
+	row := q.db.QueryRowContext(ctx, countNonSandboxAccountsByPlanCode, planTypeCode)
 	var cnt int64
 	err := row.Scan(&cnt)
 	return cnt, err
@@ -81,7 +81,7 @@ type CreateAccountParams struct {
 }
 
 func (q *Queries) CreateAccount(ctx context.Context, arg CreateAccountParams) error {
-	_, err := q.exec(ctx, q.createAccountStmt, createAccount, arg.ID, arg.Name, arg.AccountTypeCode)
+	_, err := q.db.ExecContext(ctx, createAccount, arg.ID, arg.Name, arg.AccountTypeCode)
 	return err
 }
 
@@ -106,7 +106,7 @@ type CreateAccountBillingParams struct {
 }
 
 func (q *Queries) CreateAccountBilling(ctx context.Context, arg CreateAccountBillingParams) error {
-	_, err := q.exec(ctx, q.createAccountBillingStmt, createAccountBilling,
+	_, err := q.db.ExecContext(ctx, createAccountBilling,
 		arg.ID,
 		arg.AccountPlanID,
 		arg.InternalStripeCustomerID,
@@ -137,7 +137,7 @@ type CreateAccountForRegistrationParams struct {
 }
 
 func (q *Queries) CreateAccountForRegistration(ctx context.Context, arg CreateAccountForRegistrationParams) error {
-	_, err := q.exec(ctx, q.createAccountForRegistrationStmt, createAccountForRegistration,
+	_, err := q.db.ExecContext(ctx, createAccountForRegistration,
 		arg.ID,
 		arg.Name,
 		arg.AccountTypeCode,
@@ -152,7 +152,7 @@ DELETE FROM account WHERE id = ?
 `
 
 func (q *Queries) DeleteAccountByID(ctx context.Context, id string) error {
-	_, err := q.exec(ctx, q.deleteAccountByIDStmt, deleteAccountByID, id)
+	_, err := q.db.ExecContext(ctx, deleteAccountByID, id)
 	return err
 }
 
@@ -161,7 +161,7 @@ DELETE FROM account WHERE id = ? AND account_type_code = 'sandbox'
 `
 
 func (q *Queries) DeleteAccountByIDIfSandbox(ctx context.Context, id string) (sql.Result, error) {
-	return q.exec(ctx, q.deleteAccountByIDIfSandboxStmt, deleteAccountByIDIfSandbox, id)
+	return q.db.ExecContext(ctx, deleteAccountByIDIfSandbox, id)
 }
 
 const existsPortalSlug = `-- name: ExistsPortalSlug :one
@@ -178,7 +178,7 @@ type ExistsPortalSlugParams struct {
 }
 
 func (q *Queries) ExistsPortalSlug(ctx context.Context, arg ExistsPortalSlugParams) (bool, error) {
-	row := q.queryRow(ctx, q.existsPortalSlugStmt, existsPortalSlug, arg.Slug, arg.ExcludeAccountID)
+	row := q.db.QueryRowContext(ctx, existsPortalSlug, arg.Slug, arg.ExcludeAccountID)
 	var slug_exists bool
 	err := row.Scan(&slug_exists)
 	return slug_exists, err
@@ -189,7 +189,7 @@ SELECT logo_url FROM account_branding WHERE owner_account_id = ?
 `
 
 func (q *Queries) GetAccountBrandingByAccountID(ctx context.Context, ownerAccountID string) (sql.NullString, error) {
-	row := q.queryRow(ctx, q.getAccountBrandingByAccountIDStmt, getAccountBrandingByAccountID, ownerAccountID)
+	row := q.db.QueryRowContext(ctx, getAccountBrandingByAccountID, ownerAccountID)
 	var logo_url sql.NullString
 	err := row.Scan(&logo_url)
 	return logo_url, err
@@ -200,7 +200,7 @@ SELECT logo_url FROM account_branding WHERE owner_account_id = ?
 `
 
 func (q *Queries) GetAccountBrandingLogoKey(ctx context.Context, accountID string) (sql.NullString, error) {
-	row := q.queryRow(ctx, q.getAccountBrandingLogoKeyStmt, getAccountBrandingLogoKey, accountID)
+	row := q.db.QueryRowContext(ctx, getAccountBrandingLogoKey, accountID)
 	var logo_url sql.NullString
 	err := row.Scan(&logo_url)
 	return logo_url, err
@@ -260,7 +260,7 @@ type GetAccountByIDRow struct {
 }
 
 func (q *Queries) GetAccountByID(ctx context.Context, accountID string) (GetAccountByIDRow, error) {
-	row := q.queryRow(ctx, q.getAccountByIDStmt, getAccountByID, accountID)
+	row := q.db.QueryRowContext(ctx, getAccountByID, accountID)
 	var i GetAccountByIDRow
 	err := row.Scan(
 		&i.ID,
@@ -303,7 +303,7 @@ type GetAccountByStripeCustomerIDRow struct {
 }
 
 func (q *Queries) GetAccountByStripeCustomerID(ctx context.Context, internalStripeCustomerID sql.NullString) (GetAccountByStripeCustomerIDRow, error) {
-	row := q.queryRow(ctx, q.getAccountByStripeCustomerIDStmt, getAccountByStripeCustomerID, internalStripeCustomerID)
+	row := q.db.QueryRowContext(ctx, getAccountByStripeCustomerID, internalStripeCustomerID)
 	var i GetAccountByStripeCustomerIDRow
 	err := row.Scan(&i.ID, &i.Name, &i.PlanCode)
 	return i, err
@@ -346,7 +346,7 @@ type GetAccountContextRow struct {
 }
 
 func (q *Queries) GetAccountContext(ctx context.Context, id string) (GetAccountContextRow, error) {
-	row := q.queryRow(ctx, q.getAccountContextStmt, getAccountContext, id)
+	row := q.db.QueryRowContext(ctx, getAccountContext, id)
 	var i GetAccountContextRow
 	err := row.Scan(
 		&i.ID,
@@ -364,7 +364,7 @@ SELECT name FROM account WHERE id = ?
 `
 
 func (q *Queries) GetAccountNameByID(ctx context.Context, id string) (string, error) {
-	row := q.queryRow(ctx, q.getAccountNameByIDStmt, getAccountNameByID, id)
+	row := q.db.QueryRowContext(ctx, getAccountNameByID, id)
 	var name string
 	err := row.Scan(&name)
 	return name, err
@@ -379,7 +379,7 @@ WHERE a.id = ?
 `
 
 func (q *Queries) GetAccountPlanCode(ctx context.Context, id string) (string, error) {
-	row := q.queryRow(ctx, q.getAccountPlanCodeStmt, getAccountPlanCode, id)
+	row := q.db.QueryRowContext(ctx, getAccountPlanCode, id)
 	var plan_code string
 	err := row.Scan(&plan_code)
 	return plan_code, err
@@ -395,7 +395,7 @@ LIMIT 1
 `
 
 func (q *Queries) GetAccountPlanTypeIDByCode(ctx context.Context, planTypeCode string) (string, error) {
-	row := q.queryRow(ctx, q.getAccountPlanTypeIDByCodeStmt, getAccountPlanTypeIDByCode, planTypeCode)
+	row := q.db.QueryRowContext(ctx, getAccountPlanTypeIDByCode, planTypeCode)
 	var type_id string
 	err := row.Scan(&type_id)
 	return type_id, err
@@ -406,7 +406,7 @@ SELECT slug FROM account_portal WHERE owner_account_id = ?
 `
 
 func (q *Queries) GetAccountPortalSlugByAccountID(ctx context.Context, ownerAccountID string) (string, error) {
-	row := q.queryRow(ctx, q.getAccountPortalSlugByAccountIDStmt, getAccountPortalSlugByAccountID, ownerAccountID)
+	row := q.db.QueryRowContext(ctx, getAccountPortalSlugByAccountID, ownerAccountID)
 	var slug string
 	err := row.Scan(&slug)
 	return slug, err
@@ -420,7 +420,7 @@ WHERE a.id = ?
 `
 
 func (q *Queries) GetAgentSpendingCap(ctx context.Context, id string) (sql.NullInt64, error) {
-	row := q.queryRow(ctx, q.getAgentSpendingCapStmt, getAgentSpendingCap, id)
+	row := q.db.QueryRowContext(ctx, getAgentSpendingCap, id)
 	var agent_monthly_spending_cap_cents sql.NullInt64
 	err := row.Scan(&agent_monthly_spending_cap_cents)
 	return agent_monthly_spending_cap_cents, err
@@ -450,7 +450,7 @@ type GetPublicAccountBySlugRow struct {
 }
 
 func (q *Queries) GetPublicAccountBySlug(ctx context.Context, slug string) (GetPublicAccountBySlugRow, error) {
-	row := q.queryRow(ctx, q.getPublicAccountBySlugStmt, getPublicAccountBySlug, slug)
+	row := q.db.QueryRowContext(ctx, getPublicAccountBySlug, slug)
 	var i GetPublicAccountBySlugRow
 	err := row.Scan(
 		&i.ID,
@@ -473,7 +473,7 @@ WHERE a.id = ?
 `
 
 func (q *Queries) GetSandboxLimitByAccountID(ctx context.Context, id string) (sql.NullInt32, error) {
-	row := q.queryRow(ctx, q.getSandboxLimitByAccountIDStmt, getSandboxLimitByAccountID, id)
+	row := q.db.QueryRowContext(ctx, getSandboxLimitByAccountID, id)
 	var value sql.NullInt32
 	err := row.Scan(&value)
 	return value, err
@@ -492,7 +492,7 @@ LIMIT 1
 `
 
 func (q *Queries) GetSeatLimitByPlanCode(ctx context.Context, planTypeCode string) (sql.NullInt32, error) {
-	row := q.queryRow(ctx, q.getSeatLimitByPlanCodeStmt, getSeatLimitByPlanCode, planTypeCode)
+	row := q.db.QueryRowContext(ctx, getSeatLimitByPlanCode, planTypeCode)
 	var value sql.NullInt32
 	err := row.Scan(&value)
 	return value, err
@@ -507,7 +507,7 @@ SELECT EXISTS(
 `
 
 func (q *Queries) HasActiveBillingPlan(ctx context.Context, id string) (bool, error) {
-	row := q.queryRow(ctx, q.hasActiveBillingPlanStmt, hasActiveBillingPlan, id)
+	row := q.db.QueryRowContext(ctx, hasActiveBillingPlan, id)
 	var has_plan bool
 	err := row.Scan(&has_plan)
 	return has_plan, err
@@ -538,7 +538,7 @@ type UpdateAccountBrandingParams struct {
 }
 
 func (q *Queries) UpdateAccountBranding(ctx context.Context, arg UpdateAccountBrandingParams) (sql.Result, error) {
-	return q.exec(ctx, q.updateAccountBrandingStmt, updateAccountBranding,
+	return q.db.ExecContext(ctx, updateAccountBranding,
 		arg.SupportEmail,
 		arg.PhoneNumber,
 		arg.FacebookHandle,
@@ -560,7 +560,7 @@ type UpdateAccountBrandingLogoURLParams struct {
 }
 
 func (q *Queries) UpdateAccountBrandingLogoURL(ctx context.Context, arg UpdateAccountBrandingLogoURLParams) error {
-	_, err := q.exec(ctx, q.updateAccountBrandingLogoURLStmt, updateAccountBrandingLogoURL, arg.LogoUrl, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, updateAccountBrandingLogoURL, arg.LogoUrl, arg.AccountID)
 	return err
 }
 
@@ -574,7 +574,7 @@ type UpdateAccountNameParams struct {
 }
 
 func (q *Queries) UpdateAccountName(ctx context.Context, arg UpdateAccountNameParams) (sql.Result, error) {
-	return q.exec(ctx, q.updateAccountNameStmt, updateAccountName, arg.Name, arg.AccountID)
+	return q.db.ExecContext(ctx, updateAccountName, arg.Name, arg.AccountID)
 }
 
 const updateAccountPortalSlug = `-- name: UpdateAccountPortalSlug :execresult
@@ -587,7 +587,7 @@ type UpdateAccountPortalSlugParams struct {
 }
 
 func (q *Queries) UpdateAccountPortalSlug(ctx context.Context, arg UpdateAccountPortalSlugParams) (sql.Result, error) {
-	return q.exec(ctx, q.updateAccountPortalSlugStmt, updateAccountPortalSlug, arg.Slug, arg.AccountID)
+	return q.db.ExecContext(ctx, updateAccountPortalSlug, arg.Slug, arg.AccountID)
 }
 
 const updateAccountSubscription = `-- name: UpdateAccountSubscription :exec
@@ -621,7 +621,7 @@ type UpdateAccountSubscriptionParams struct {
 }
 
 func (q *Queries) UpdateAccountSubscription(ctx context.Context, arg UpdateAccountSubscriptionParams) error {
-	_, err := q.exec(ctx, q.updateAccountSubscriptionStmt, updateAccountSubscription,
+	_, err := q.db.ExecContext(ctx, updateAccountSubscription,
 		arg.SubscriptionStatus,
 		arg.AccountPlanID,
 		arg.InternalStripeSubscriptionID,
@@ -648,6 +648,6 @@ type UpdateAgentSpendingCapParams struct {
 }
 
 func (q *Queries) UpdateAgentSpendingCap(ctx context.Context, arg UpdateAgentSpendingCapParams) error {
-	_, err := q.exec(ctx, q.updateAgentSpendingCapStmt, updateAgentSpendingCap, arg.AgentMonthlySpendingCapCents, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, updateAgentSpendingCap, arg.AgentMonthlySpendingCapCents, arg.AccountID)
 	return err
 }

@@ -45,7 +45,7 @@ type CountAccountTransactionsParams struct {
 }
 
 func (q *Queries) CountAccountTransactions(ctx context.Context, arg CountAccountTransactionsParams) (int64, error) {
-	row := q.queryRow(ctx, q.countAccountTransactionsStmt, countAccountTransactions,
+	row := q.db.QueryRowContext(ctx, countAccountTransactions,
 		arg.AccountID,
 		arg.CustomerAccountID,
 		arg.IncludeChildAccounts,
@@ -173,7 +173,7 @@ func (q *Queries) CountTransactions(ctx context.Context, arg CountTransactionsPa
 	queryParams = append(queryParams, arg.StartDate)
 	queryParams = append(queryParams, arg.EndDate)
 	queryParams = append(queryParams, arg.EndDate)
-	row := q.queryRow(ctx, nil, query, queryParams...)
+	row := q.db.QueryRowContext(ctx, query, queryParams...)
 	var cnt int64
 	err := row.Scan(&cnt)
 	return cnt, err
@@ -184,7 +184,7 @@ DELETE FROM transaction WHERE id = ?
 `
 
 func (q *Queries) DeleteTransaction(ctx context.Context, id string) error {
-	_, err := q.exec(ctx, q.deleteTransactionStmt, deleteTransaction, id)
+	_, err := q.db.ExecContext(ctx, deleteTransaction, id)
 	return err
 }
 
@@ -193,7 +193,7 @@ DELETE FROM transaction_allocation WHERE transaction_id = ?
 `
 
 func (q *Queries) DeleteTransactionAllocationsByTransactionID(ctx context.Context, transactionID string) error {
-	_, err := q.exec(ctx, q.deleteTransactionAllocationsByTransactionIDStmt, deleteTransactionAllocationsByTransactionID, transactionID)
+	_, err := q.db.ExecContext(ctx, deleteTransactionAllocationsByTransactionID, transactionID)
 	return err
 }
 
@@ -202,7 +202,7 @@ DELETE FROM quantity WHERE id = ?
 `
 
 func (q *Queries) DeleteTransactionQuantity(ctx context.Context, id string) error {
-	_, err := q.exec(ctx, q.deleteTransactionQuantityStmt, deleteTransactionQuantity, id)
+	_, err := q.db.ExecContext(ctx, deleteTransactionQuantity, id)
 	return err
 }
 
@@ -220,7 +220,7 @@ type ExistsTransactionByNumberParams struct {
 }
 
 func (q *Queries) ExistsTransactionByNumber(ctx context.Context, arg ExistsTransactionByNumberParams) (int64, error) {
-	row := q.queryRow(ctx, q.existsTransactionByNumberStmt, existsTransactionByNumber,
+	row := q.db.QueryRowContext(ctx, existsTransactionByNumber,
 		arg.AccountID,
 		arg.Number,
 		arg.ExcludeID,
@@ -310,7 +310,7 @@ type FindTransactionByIDRow struct {
 }
 
 func (q *Queries) FindTransactionByID(ctx context.Context, arg FindTransactionByIDParams) (FindTransactionByIDRow, error) {
-	row := q.queryRow(ctx, q.findTransactionByIDStmt, findTransactionByID, arg.ID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, findTransactionByID, arg.ID, arg.AccountID)
 	var i FindTransactionByIDRow
 	err := row.Scan(
 		&i.ID,
@@ -358,7 +358,7 @@ type FindTransactionByStripePaymentIDRow struct {
 }
 
 func (q *Queries) FindTransactionByStripePaymentID(ctx context.Context, stripePaymentID sql.NullString) (FindTransactionByStripePaymentIDRow, error) {
-	row := q.queryRow(ctx, q.findTransactionByStripePaymentIDStmt, findTransactionByStripePaymentID, stripePaymentID)
+	row := q.db.QueryRowContext(ctx, findTransactionByStripePaymentID, stripePaymentID)
 	var i FindTransactionByStripePaymentIDRow
 	err := row.Scan(&i.ID, &i.Number, &i.AmountID)
 	return i, err
@@ -369,7 +369,7 @@ SELECT id FROM unit WHERE abbreviation = '$' LIMIT 1
 `
 
 func (q *Queries) GetDollarUnitIDForTransaction(ctx context.Context) (string, error) {
-	row := q.queryRow(ctx, q.getDollarUnitIDForTransactionStmt, getDollarUnitIDForTransaction)
+	row := q.db.QueryRowContext(ctx, getDollarUnitIDForTransaction)
 	var id string
 	err := row.Scan(&id)
 	return id, err
@@ -386,7 +386,7 @@ SELECT COALESCE(
 `
 
 func (q *Queries) GetNextTransactionNumber(ctx context.Context, accountID string) (interface{}, error) {
-	row := q.queryRow(ctx, q.getNextTransactionNumberStmt, getNextTransactionNumber, accountID)
+	row := q.db.QueryRowContext(ctx, getNextTransactionNumber, accountID)
 	var next_number interface{}
 	err := row.Scan(&next_number)
 	return next_number, err
@@ -433,7 +433,7 @@ type GetTransactionAllocationsRow struct {
 }
 
 func (q *Queries) GetTransactionAllocations(ctx context.Context, transactionID string) ([]GetTransactionAllocationsRow, error) {
-	rows, err := q.query(ctx, q.getTransactionAllocationsStmt, getTransactionAllocations, transactionID)
+	rows, err := q.db.QueryContext(ctx, getTransactionAllocations, transactionID)
 	if err != nil {
 		return nil, err
 	}
@@ -474,7 +474,7 @@ SELECT amount_id FROM transaction WHERE id = ?
 `
 
 func (q *Queries) GetTransactionAmountID(ctx context.Context, id string) (string, error) {
-	row := q.queryRow(ctx, q.getTransactionAmountIDStmt, getTransactionAmountID, id)
+	row := q.db.QueryRowContext(ctx, getTransactionAmountID, id)
 	var amount_id string
 	err := row.Scan(&amount_id)
 	return amount_id, err
@@ -507,7 +507,7 @@ type InsertTransactionParams struct {
 }
 
 func (q *Queries) InsertTransaction(ctx context.Context, arg InsertTransactionParams) error {
-	_, err := q.exec(ctx, q.insertTransactionStmt, insertTransaction,
+	_, err := q.db.ExecContext(ctx, insertTransaction,
 		arg.ID,
 		arg.Number,
 		arg.TransactionTypeCode,
@@ -535,7 +535,7 @@ type InsertTransactionQuantityParams struct {
 }
 
 func (q *Queries) InsertTransactionQuantity(ctx context.Context, arg InsertTransactionQuantityParams) error {
-	_, err := q.exec(ctx, q.insertTransactionQuantityStmt, insertTransactionQuantity, arg.ID, arg.Value, arg.UnitID)
+	_, err := q.db.ExecContext(ctx, insertTransactionQuantity, arg.ID, arg.Value, arg.UnitID)
 	return err
 }
 
@@ -551,7 +551,7 @@ type IsDuplicateTransactionNumberParams struct {
 }
 
 func (q *Queries) IsDuplicateTransactionNumber(ctx context.Context, arg IsDuplicateTransactionNumberParams) (int64, error) {
-	row := q.queryRow(ctx, q.isDuplicateTransactionNumberStmt, isDuplicateTransactionNumber, arg.AccountID, arg.Number)
+	row := q.db.QueryRowContext(ctx, isDuplicateTransactionNumber, arg.AccountID, arg.Number)
 	var cnt int64
 	err := row.Scan(&cnt)
 	return cnt, err
@@ -660,7 +660,7 @@ type ListAccountTransactionsBackwardRow struct {
 }
 
 func (q *Queries) ListAccountTransactionsBackward(ctx context.Context, arg ListAccountTransactionsBackwardParams) ([]ListAccountTransactionsBackwardRow, error) {
-	rows, err := q.query(ctx, q.listAccountTransactionsBackwardStmt, listAccountTransactionsBackward,
+	rows, err := q.db.QueryContext(ctx, listAccountTransactionsBackward,
 		arg.AccountID,
 		arg.CustomerAccountID,
 		arg.IncludeChildAccounts,
@@ -827,7 +827,7 @@ type ListAccountTransactionsForwardRow struct {
 }
 
 func (q *Queries) ListAccountTransactionsForward(ctx context.Context, arg ListAccountTransactionsForwardParams) ([]ListAccountTransactionsForwardRow, error) {
-	rows, err := q.query(ctx, q.listAccountTransactionsForwardStmt, listAccountTransactionsForward,
+	rows, err := q.db.QueryContext(ctx, listAccountTransactionsForward,
 		arg.AccountID,
 		arg.CustomerAccountID,
 		arg.IncludeChildAccounts,
@@ -1064,7 +1064,7 @@ func (q *Queries) ListTransactionsBackward(ctx context.Context, arg ListTransact
 	queryParams = append(queryParams, arg.EndDate)
 	queryParams = append(queryParams, arg.EndDate)
 	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -1283,7 +1283,7 @@ func (q *Queries) ListTransactionsForward(ctx context.Context, arg ListTransacti
 	queryParams = append(queryParams, arg.EndDate)
 	queryParams = append(queryParams, arg.EndDate)
 	queryParams = append(queryParams, arg.Limit)
-	rows, err := q.query(ctx, nil, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -1344,7 +1344,7 @@ type ResolveResponsibleUserIDParams struct {
 }
 
 func (q *Queries) ResolveResponsibleUserID(ctx context.Context, arg ResolveResponsibleUserIDParams) (string, error) {
-	row := q.queryRow(ctx, q.resolveResponsibleUserIDStmt, resolveResponsibleUserID, arg.AccountID, arg.UserOrAccountUserID, arg.UserOrAccountUserID)
+	row := q.db.QueryRowContext(ctx, resolveResponsibleUserID, arg.AccountID, arg.UserOrAccountUserID, arg.UserOrAccountUserID)
 	var id string
 	err := row.Scan(&id)
 	return id, err
@@ -1391,7 +1391,7 @@ type UpdateTransactionParams struct {
 }
 
 func (q *Queries) UpdateTransaction(ctx context.Context, arg UpdateTransactionParams) error {
-	_, err := q.exec(ctx, q.updateTransactionStmt, updateTransaction,
+	_, err := q.db.ExecContext(ctx, updateTransaction,
 		arg.Number,
 		arg.UpdateNote,
 		arg.Note,
@@ -1422,7 +1422,7 @@ type UpdateTransactionNoteParams struct {
 }
 
 func (q *Queries) UpdateTransactionNote(ctx context.Context, arg UpdateTransactionNoteParams) error {
-	_, err := q.exec(ctx, q.updateTransactionNoteStmt, updateTransactionNote, arg.Note, arg.ID)
+	_, err := q.db.ExecContext(ctx, updateTransactionNote, arg.Note, arg.ID)
 	return err
 }
 
@@ -1439,7 +1439,7 @@ type UpdateTransactionQuantityParams struct {
 }
 
 func (q *Queries) UpdateTransactionQuantity(ctx context.Context, arg UpdateTransactionQuantityParams) error {
-	_, err := q.exec(ctx, q.updateTransactionQuantityStmt, updateTransactionQuantity, arg.Value, arg.ID)
+	_, err := q.db.ExecContext(ctx, updateTransactionQuantity, arg.Value, arg.ID)
 	return err
 }
 
@@ -1456,7 +1456,7 @@ type UpsertTransactionNumberParams struct {
 }
 
 func (q *Queries) UpsertTransactionNumber(ctx context.Context, arg UpsertTransactionNumberParams) error {
-	_, err := q.exec(ctx, q.upsertTransactionNumberStmt, upsertTransactionNumber,
+	_, err := q.db.ExecContext(ctx, upsertTransactionNumber,
 		arg.ID,
 		arg.AccountID,
 		arg.Value,

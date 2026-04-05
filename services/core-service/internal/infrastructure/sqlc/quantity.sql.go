@@ -38,7 +38,7 @@ type GetQuantityWithUnitRow struct {
 }
 
 func (q *Queries) GetQuantityWithUnit(ctx context.Context, id string) (GetQuantityWithUnitRow, error) {
-	row := q.queryRow(ctx, q.getQuantityWithUnitStmt, getQuantityWithUnit, id)
+	row := q.db.QueryRowContext(ctx, getQuantityWithUnit, id)
 	var i GetQuantityWithUnitRow
 	err := row.Scan(
 		&i.ID,
@@ -68,5 +68,5 @@ type UpdateQuantityByIDParams struct {
 }
 
 func (q *Queries) UpdateQuantityByID(ctx context.Context, arg UpdateQuantityByIDParams) (sql.Result, error) {
-	return q.exec(ctx, q.updateQuantityByIDStmt, updateQuantityByID, arg.Value, arg.UnitID, arg.ID)
+	return q.db.ExecContext(ctx, updateQuantityByID, arg.Value, arg.UnitID, arg.ID)
 }

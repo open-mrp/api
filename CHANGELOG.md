@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.1](https://github.com/Augno/api/compare/v0.9.0...v0.9.1) (2026-04-05)
+
+
+### Bug Fixes
+
+* unit group reads ([#142](https://github.com/Augno/api/issues/142)) ([e693532](https://github.com/Augno/api/commit/e693532a1987cf383e5e2de9d7967e0f570ac666))
+
 ## [0.9.0](https://github.com/Augno/api/compare/v0.8.12...v0.9.0) (2026-04-05)
 
 

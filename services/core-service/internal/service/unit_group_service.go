@@ -82,8 +82,19 @@ func (s *unitGroupSvcImpl) ListUnitGroups(ctx context.Context, params domain.Lis
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
-	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+	if apiErr := identity.CheckIsAssignedActor(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
+	}
+
+	if !identity.IsTargetAccountSet() {
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+	}
+
+	if identity.IsExternalTarget() {
+		meds := s.mediators()
+		if apiErr := meds.ReadAccess.CheckReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
 	}
 
 	params.AccountID = identity.Target.AccountID
@@ -109,9 +120,6 @@ func (s *unitGroupSvcImpl) GetUnitGroup(ctx context.Context, unitGroupID string)
 	}
 
 	if identity.IsExternalTarget() {
-		if apiErr := checkUnitGroupReadPermission(identity); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
 		meds := s.mediators()
 		if apiErr := meds.ReadAccess.CheckReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
@@ -640,9 +648,6 @@ func (s *unitGroupSvcImpl) ListUnitGroupUnits(ctx context.Context, unitGroupID s
 	}
 
 	if identity.IsExternalTarget() {
-		if apiErr := checkUnitGroupReadPermission(identity); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
 		meds := s.mediators()
 		if apiErr := meds.ReadAccess.CheckReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
@@ -679,9 +684,6 @@ func (s *unitGroupSvcImpl) GetUnitGroupUnit(ctx context.Context, params domain.G
 	}
 
 	if identity.IsExternalTarget() {
-		if apiErr := checkUnitGroupReadPermission(identity); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
 		meds := s.mediators()
 		if apiErr := meds.ReadAccess.CheckReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
@@ -702,20 +704,6 @@ func (s *unitGroupSvcImpl) GetUnitGroupUnit(ctx context.Context, params domain.G
 	return s.repos.NewUnitGroupRepo().GetUnit(ctx, params)
 }
 
-// checkUnitGroupReadPermission checks the appropriate read permission based on the identity context.
-// Internal actors need unit_groups:read for their own account, or customers:read / suppliers:read for external accounts.
-func checkUnitGroupReadPermission(identity *types.Identity) *apierror.APIError {
-	if !identity.IsInternalActor() {
-		return nil
-	}
-	if identity.IsTargetCustomerAccount() {
-		return identity.CheckHasPermission(types.PermissionDomainCustomers, types.ActionRead)
-	}
-	if identity.IsTargetSupplierAccount() {
-		return identity.CheckHasPermission(types.PermissionDomainSuppliers, types.ActionRead)
-	}
-	return identity.CheckHasPermission(types.PermissionDomainUnitGroups, types.ActionRead)
-}
 
 // validateUnitConversionTypes checks that all unit conversions have units matching the group's type.
 func (s *unitGroupSvcImpl) validateUnitConversionTypes(ctx context.Context, accountID, groupType string, conversions []domain.CreateUnitGroupUnitParams) *apierror.APIError {

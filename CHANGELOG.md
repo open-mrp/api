@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.8](https://github.com/Augno/api/compare/v0.8.7...v0.8.8) (2026-04-05)
+
+
+### Bug Fixes
+
+* avoid ip address bottleneck on deploy ([#130](https://github.com/Augno/api/issues/130)) ([5d27ca7](https://github.com/Augno/api/commit/5d27ca716f23e6ef13fa92e0c29a4a865a649ec2))
+
 ## [0.8.7](https://github.com/Augno/api/compare/v0.8.6...v0.8.7) (2026-04-05)
 
 

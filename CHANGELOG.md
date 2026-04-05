@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.5](https://github.com/Augno/api/compare/v0.8.4...v0.8.5) (2026-04-05)
+
+
+### Bug Fixes
+
+* race issue on terraform ([#124](https://github.com/Augno/api/issues/124)) ([99b67ae](https://github.com/Augno/api/commit/99b67ae76e48677b5ac497956d9792364184d91b))
+
 ## [0.8.4](https://github.com/Augno/api/compare/v0.8.3...v0.8.4) (2026-04-05)
 
 

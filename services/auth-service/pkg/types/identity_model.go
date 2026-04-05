@@ -85,12 +85,12 @@ func (i *Identity) IsInternalUser() bool {
 
 // IsSupplierUser checks that the identity is authenticated, has a valid actor, is of type supplier
 func (i *Identity) IsSupplierUser() bool {
-	return i.IsActorSet() && i.IsTargetAccountSet() && i.Actor.RelationType == IdentityRelationTypeSupplier && *i.Actor.AccountID == i.Target.AccountID
+	return i.IsActorSet() && i.IsTargetAccountSet() && i.Actor.RelationType == IdentityRelationTypeSupplier
 }
 
 // IsCustomerUser checks that the identity is authenticated, has a valid actor, is of type customer
 func (i *Identity) IsCustomerUser() bool {
-	return i.IsActorSet() && i.IsTargetAccountSet() && i.Actor.RelationType == IdentityRelationTypeCustomer && *i.Actor.AccountID == i.Target.AccountID
+	return i.IsActorSet() && i.IsTargetAccountSet() && i.Actor.RelationType == IdentityRelationTypeCustomer
 }
 
 // IsUnassignedUser checks that the identity is authenticated, has a valid actor, and is of type unassigned

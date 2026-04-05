@@ -47,7 +47,7 @@ func (*AuthEndpointGroup) Materialize(config *AuthEndpointGroupConfig) *AuthEndp
 	refreshTokenEndpoint := (&authep.RefreshTokenEndpoint{}).Materialize().WithService(inner, authController)
 	requestPasswordResetEndpoint := (&authep.RequestPasswordResetEndpoint{}).Materialize().WithService(inner, authController)
 	resetPasswordEndpoint := (&authep.ResetPasswordEndpoint{}).Materialize().WithService(inner, authController)
-	revokeRefreshTokenEndpoint := (&authep.RevokeRefreshTokenEndpoint{}).Materialize().WithService(inner, authController)
+	revokeRefreshTokenEndpoint := (&authep.RevokeRefreshTokenEndpoint{}).Materialize().WithMiddleware(authMw).WithService(inner, authController)
 	updatePasswordEndpoint := (&authep.UpdatePasswordEndpoint{}).Materialize().WithMiddleware(authMw).WithService(inner, authController)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{

@@ -5,7 +5,7 @@ SELECT id, created_at, type_id, name, plan_type_code, price_per_seat, price_per_
 FROM account_plan
 WHERE (expires_at IS NULL OR expires_at > NOW(3))
   AND effective_at <= NOW(3)
-  AND plan_type_code != 'enterprise'
+  AND is_publicly_visible = 1
   AND (
     sqlc.narg('cursor_created_at') IS NULL
     OR account_plan.created_at < sqlc.narg('cursor_created_at')
@@ -25,7 +25,7 @@ SELECT id, created_at, type_id, name, plan_type_code, price_per_seat, price_per_
 FROM account_plan
 WHERE (expires_at IS NULL OR expires_at > NOW(3))
   AND effective_at <= NOW(3)
-  AND plan_type_code != 'enterprise'
+  AND is_publicly_visible = 1
   AND (
     account_plan.created_at > sqlc.arg('cursor_created_at')
     OR (account_plan.created_at = sqlc.arg('cursor_created_at') AND account_plan.id > sqlc.arg('cursor_id'))

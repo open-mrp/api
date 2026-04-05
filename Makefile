@@ -1,4 +1,4 @@
-.PHONY: help dev sqlc proto buf-lint db-dump test test-verbose test-sql-prepare-smoke install-tools docs mocks gosec static-check check-format jaeger-tracing connect-minikube connect-eks version validate-openapi-specs httpie local-db local-db-down local-db-nuke seed-core seed-stripe teardown-stripe teardown-all-stripe fmt stripe-webhook open-tracing e2e-up e2e e2e-down fix-minikube-dns
+.PHONY: help dev sqlc proto buf-lint db-dump test test-verbose test-sql-prepare-smoke install-tools docs mocks gosec static-check check-format jaeger-tracing connect-minikube connect-eks version validate-openapi-specs httpie local-db local-db-down local-db-nuke seed-core seed-stripe teardown-stripe teardown-all-stripe fmt stripe-webhook open-tracing e2e-up e2e-up-ci e2e e2e-down fix-minikube-dns
 
 # Include .env file if it exists (optional for CI)
 -include .env
@@ -196,9 +196,15 @@ open-tracing: ## Open Jaeger UI via port-forward
 	kubectl port-forward svc/jaeger 16686:16686
 
 e2e-up: ## Start the E2E stack (isolated services + seeded DBs)
-	docker compose -f docker-compose.e2e.yml up -d --build --wait mysql-e2e postgres-e2e rabbitmq
+	docker compose -f docker-compose.e2e.yml build --parallel
+	docker compose -f docker-compose.e2e.yml up -d --wait mysql-e2e postgres-e2e rabbitmq
 	@./scripts/setup-e2e-db.sh
-	docker compose -f docker-compose.e2e.yml up -d --build --wait
+	docker compose -f docker-compose.e2e.yml up -d --wait
+
+e2e-up-ci: ## Start the E2E stack using pre-built images (for CI)
+	docker compose -f docker-compose.e2e.yml up -d --wait mysql-e2e postgres-e2e rabbitmq
+	@./scripts/setup-e2e-db.sh
+	docker compose -f docker-compose.e2e.yml up -d --wait
 
 e2e: e2e-up ## Run API E2E tests against the full stack
 	@echo "Running API E2E tests..."

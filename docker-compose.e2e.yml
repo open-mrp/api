@@ -40,6 +40,7 @@ services:
       - e2e
 
   platform-service:
+    image: augno-e2e-platform-service
     build:
       context: .
       dockerfile: infra/production/docker/Dockerfile
@@ -67,6 +68,7 @@ services:
       - e2e
 
   core-service:
+    image: augno-e2e-core-service
     build:
       context: .
       dockerfile: infra/production/docker/Dockerfile
@@ -97,6 +99,7 @@ services:
       - e2e
 
   auth-service:
+    image: augno-e2e-auth-service
     build:
       context: .
       dockerfile: infra/production/docker/Dockerfile
@@ -135,6 +138,7 @@ services:
       - e2e
 
   notification-service:
+    image: augno-e2e-notification-service
     build:
       context: .
       dockerfile: infra/production/docker/Dockerfile
@@ -161,6 +165,7 @@ services:
       - e2e
 
   billing-service:
+    image: augno-e2e-billing-service
     build:
       context: .
       dockerfile: infra/production/docker/Dockerfile
@@ -195,6 +200,7 @@ services:
       - e2e
 
   agent-service:
+    image: augno-e2e-agent-service
     build:
       context: .
       dockerfile: infra/production/docker/Dockerfile
@@ -226,6 +232,7 @@ services:
       - e2e
 
   api-gateway:
+    image: augno-e2e-api-gateway
     build:
       context: .
       dockerfile: infra/production/docker/Dockerfile

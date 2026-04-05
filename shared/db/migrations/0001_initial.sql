@@ -456,6 +456,7 @@ CREATE TABLE `account_plan` (
   `expires_at` datetime(3) DEFAULT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `is_publicly_visible` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   UNIQUE KEY `account_plan_type_id_key` (`type_id`),
   KEY `account_plan_plan_type_code_idx` (`plan_type_code`),
@@ -3630,7 +3631,7 @@ CREATE TABLE `user` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-04-04 21:32:48
+-- Dump completed on 2026-04-05  7:19:10
 
 -- +goose Down
 

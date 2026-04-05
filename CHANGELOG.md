@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.1](https://github.com/Augno/api/compare/v0.8.0...v0.8.1) (2026-04-05)
+
+
+### Bug Fixes
+
+* terraform issues ([#116](https://github.com/Augno/api/issues/116)) ([86de757](https://github.com/Augno/api/commit/86de757dff2647681b1c8b46b9b8cce94c543a7d))
+
 ## [0.8.0](https://github.com/Augno/api/compare/v0.7.0...v0.8.0) (2026-04-05)
 
 

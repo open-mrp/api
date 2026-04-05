@@ -21,6 +21,7 @@ import (
 )
 
 func TestValidateCredential_EmptyToken(t *testing.T) {
+	t.Parallel()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -36,19 +37,20 @@ func TestValidateCredential_EmptyToken(t *testing.T) {
 		coreClient: coreClient,
 	}
 
-	identity, err := med.ValidateCredential(context.Background(), "", ptrString("acct-123"))
+	identity, err := med.ValidateCredential(context.Background(), "", ptrString("acct-123"), nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if identity == nil || identity.Type != types.IdentityTypeUnauthenticated {
+	if identity == nil || identity.Type != types.IdentityActorTypeUnauthenticated {
 		t.Fatalf("expected unauthenticated identity, got %+v", identity)
 	}
-	if identity.TargetAccountID == nil || *identity.TargetAccountID != "acct-123" {
-		t.Fatalf("expected target account acct-123, got %+v", identity.TargetAccountID)
+	if identity.Target == nil || identity.Target.AccountID != "acct-123" {
+		t.Fatalf("expected target account acct-123, got %+v", identity.Target)
 	}
 }
 
 func TestValidateCredential_APIKeyOwnedAccount(t *testing.T) {
+	t.Parallel()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -100,7 +102,7 @@ func TestValidateCredential_APIKeyOwnedAccount(t *testing.T) {
 		jwtSecret:  testutil.JWTSecret,
 	}
 
-	identity, err := med.ValidateCredential(context.Background(), "aug_sk_token", ptrString("acct-1"))
+	identity, err := med.ValidateCredential(context.Background(), "aug_sk_token", ptrString("acct-1"), nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -110,11 +112,11 @@ func TestValidateCredential_APIKeyOwnedAccount(t *testing.T) {
 		t.Fatal("expected TouchIfNotRecent to be called")
 	}
 
-	if identity.Type != types.IdentityTypeAPIKey {
+	if identity.Type != types.IdentityActorTypeAPIKey {
 		t.Fatalf("expected API key identity, got %s", identity.Type)
 	}
-	if identity.Actor.Type != types.IdentityActorTypeInternal {
-		t.Fatalf("expected internal actor, got %s", identity.Actor.Type)
+	if identity.Actor.RelationType != types.IdentityRelationTypeInternal {
+		t.Fatalf("expected internal actor, got %s", identity.Actor.RelationType)
 	}
 	if identity.Actor.AccountID == nil || *identity.Actor.AccountID != "acct-1" {
 		t.Fatalf("expected owner account acct-1, got %+v", identity.Actor.AccountID)
@@ -128,6 +130,7 @@ func TestValidateCredential_APIKeyOwnedAccount(t *testing.T) {
 }
 
 func TestValidateCredential_APIKeyRelationMissing(t *testing.T) {
+	t.Parallel()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -173,7 +176,7 @@ func TestValidateCredential_APIKeyRelationMissing(t *testing.T) {
 		jwtSecret:  testutil.JWTSecret,
 	}
 
-	identity, err := med.ValidateCredential(context.Background(), "aug_sk_missing", ptrString("acct-target"))
+	identity, err := med.ValidateCredential(context.Background(), "aug_sk_missing", ptrString("acct-target"), nil)
 	select {
 	case <-touchDone:
 	case <-time.After(100 * time.Millisecond):
@@ -191,6 +194,7 @@ func TestValidateCredential_APIKeyRelationMissing(t *testing.T) {
 }
 
 func TestValidateCredential_UserAccountUserPath(t *testing.T) {
+	t.Parallel()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -234,16 +238,16 @@ func TestValidateCredential_UserAccountUserPath(t *testing.T) {
 		jwtSecret:  testutil.JWTSecret,
 	}
 
-	identity, err := med.ValidateCredential(context.Background(), validToken, &targetAccountID)
+	identity, err := med.ValidateCredential(context.Background(), validToken, &targetAccountID, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if identity.Type != types.IdentityTypeUser {
+	if identity.Type != types.IdentityActorTypeUser {
 		t.Fatalf("expected user identity, got %s", identity.Type)
 	}
-	if identity.Actor.Type != types.IdentityActorTypeInternal {
-		t.Fatalf("expected internal user, got %s", identity.Actor.Type)
+	if identity.Actor.RelationType != types.IdentityRelationTypeInternal {
+		t.Fatalf("expected internal user, got %s", identity.Actor.RelationType)
 	}
 	if identity.Actor.RoleID == nil || *identity.Actor.RoleID != "role-99" {
 		t.Fatalf("expected role role-99, got %+v", identity.Actor.RoleID)
@@ -257,6 +261,7 @@ func TestValidateCredential_UserAccountUserPath(t *testing.T) {
 }
 
 func TestValidateCredential_UserExpiredToken(t *testing.T) {
+	t.Parallel()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -277,7 +282,7 @@ func TestValidateCredential_UserExpiredToken(t *testing.T) {
 		jwtSecret:  testutil.JWTSecret,
 	}
 
-	identity, err := med.ValidateCredential(context.Background(), expiredToken, ptrString("acct-1"))
+	identity, err := med.ValidateCredential(context.Background(), expiredToken, ptrString("acct-1"), nil)
 	if err == nil {
 		t.Fatal("expected error for expired token, got nil")
 	}
@@ -296,6 +301,7 @@ func TestValidateCredential_UserExpiredToken(t *testing.T) {
 }
 
 func TestValidateCredential_EmptyToken_AccountNotFound(t *testing.T) {
+	t.Parallel()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -308,7 +314,7 @@ func TestValidateCredential_EmptyToken_AccountNotFound(t *testing.T) {
 		coreClient: coreClient,
 	}
 
-	identity, err := med.ValidateCredential(context.Background(), "", ptrString("acct-nonexistent"))
+	identity, err := med.ValidateCredential(context.Background(), "", ptrString("acct-nonexistent"), nil)
 	if err == nil {
 		t.Fatal("expected error for nonexistent account, got nil")
 	}
@@ -324,6 +330,7 @@ func TestValidateCredential_EmptyToken_AccountNotFound(t *testing.T) {
 }
 
 func TestValidateCredential_UserToken_AccountNotFound(t *testing.T) {
+	t.Parallel()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -355,7 +362,7 @@ func TestValidateCredential_UserToken_AccountNotFound(t *testing.T) {
 		jwtSecret:  testutil.JWTSecret,
 	}
 
-	identity, err := med.ValidateCredential(context.Background(), validToken, ptrString("acct-nonexistent"))
+	identity, err := med.ValidateCredential(context.Background(), validToken, ptrString("acct-nonexistent"), nil)
 	if err == nil {
 		t.Fatal("expected error for nonexistent account, got nil")
 	}
@@ -371,6 +378,7 @@ func TestValidateCredential_UserToken_AccountNotFound(t *testing.T) {
 }
 
 func TestValidateCredential_UserToken_UserAccountAccessNotFound(t *testing.T) {
+	t.Parallel()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -409,7 +417,7 @@ func TestValidateCredential_UserToken_UserAccountAccessNotFound(t *testing.T) {
 		jwtSecret:  testutil.JWTSecret,
 	}
 
-	identity, err := med.ValidateCredential(context.Background(), validToken, &targetAccountID)
+	identity, err := med.ValidateCredential(context.Background(), validToken, &targetAccountID, nil)
 	if err == nil {
 		t.Fatal("expected error for no account access, got nil")
 	}
@@ -421,6 +429,58 @@ func TestValidateCredential_UserToken_UserAccountAccessNotFound(t *testing.T) {
 	}
 	if err.PublicMessage != errNoAccountAccess("acct-no-access") {
 		t.Fatalf("expected no account access message, got %s", err.PublicMessage)
+	}
+}
+
+func TestValidateCredential_UserToken_ActorAccountHeader_RequiresAccountUser(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repoFactory := factorymock.NewMockRepoFactory(ctrl)
+	userRepo := repositorymock.NewMockUserRepo(ctrl)
+	repoFactory.EXPECT().NewUserRepo().Return(userRepo)
+
+	apiKeyMed := mediatormock.NewMockAPIKeyMed(ctrl)
+	coreClient := clientmock.NewMockAuthCoreClient(ctrl)
+
+	userID := "user-1"
+	actorAccountID := "acct-actor"
+	name := "Jane"
+	userModel := &types.User{ID: userID, Name: &name}
+
+	validToken, encErr := token.EncodeJWT(context.Background(), testutil.JWTSecret, userID, time.Hour, token.JWTTypeAccess)
+	if encErr != nil {
+		t.Fatalf("failed to encode test token: %v", encErr)
+	}
+
+	userRepo.EXPECT().Find(gomock.Any(), userID).Return(userModel, nil)
+	coreClient.EXPECT().GetAccountContext(gomock.Any(), actorAccountID).Return(&domain.AccountContext{
+		AccountID:   actorAccountID,
+		AccountMode: constants.AccountModeProduction,
+	}, nil)
+	coreClient.EXPECT().GetUserAccountAccess(gomock.Any(), userID, actorAccountID).
+		Return(nil, false, nil)
+
+	med := &userMedImpl{
+		repos:      repoFactory,
+		apiKeyMed:  apiKeyMed,
+		coreClient: coreClient,
+		jwtSecret:  testutil.JWTSecret,
+	}
+
+	identity, err := med.ValidateCredential(context.Background(), validToken, nil, &actorAccountID)
+	if err == nil {
+		t.Fatal("expected error when Augno-Actor-Account is set but user has no account-user relation, got nil")
+	}
+	if identity != nil {
+		t.Fatalf("expected nil identity on error, got %+v", identity)
+	}
+	if err.Code != apierror.ErrorCodeInvalidCredentials {
+		t.Fatalf("expected invalid_credentials (401), got %s", err.Code)
+	}
+	if err.PublicMessage != ErrActorAccountRequiresMember {
+		t.Fatalf("expected actor account requires member message, got %s", err.PublicMessage)
 	}
 }
 

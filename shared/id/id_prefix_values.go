@@ -14,9 +14,12 @@ const (
 	VocAccount      = "ac"
 	VocAddress      = "ad"
 	VocAction       = "ax"
+	VocAgent        = "ag"
 	VocAPI          = "ap"
+	VocArtifact     = "af"
 	VocAttribute    = "at"
 	VocAdjustment   = "aj"
+	VocAudit        = "au"
 	VocAllocation   = "al"
 	VocAssignment   = "as"
 	VocBatch        = "bt"
@@ -34,6 +37,7 @@ const (
 	VocConversion   = "ce"
 	VocCategory     = "cg"
 	VocDC           = "dc"
+	VocDelivery     = "dv"
 	VocDimension    = "dm"
 	VocDiscount     = "ds"
 	VocDefinition   = "df"
@@ -54,16 +58,20 @@ const (
 	VocImage        = "im"
 	VocInventory    = "in"
 	VocInquiry      = "ir"
+	VocIssue        = "rs" // "rs" derives from "receipt/shipment" — inventory issues are the counterpart to inventory receipts
 	VocIntent       = "ie"
 	VocItem         = "it"
 	VocInvoice      = "iv"
 	VocInbox        = "ix"
 	VocKey          = "ke"
 	VocLabel        = "lb"
+	VocLevel        = "lv"
 	VocLocation     = "lc"
 	VocLog          = "lg"
 	VocLine         = "ln"
+	VocLot          = "lt"
 	VocMachine      = "mc"
+	VocMemory       = "mm"
 	VocMethod       = "md"
 	VocMessage      = "mg"
 	VocMaterial     = "ml"
@@ -111,6 +119,7 @@ const (
 	VocTerritory    = "te"
 	VocTarget       = "ta"
 	VocToken        = "tk"
+	VocTool         = "tl"
 	VocTerm         = "tm"
 	VocTransform    = "tf"
 	VocTier         = "tr"
@@ -120,6 +129,7 @@ const (
 	VocUser         = "us"
 	VocVisibility   = "vi"
 	VocVerification = "ve"
+	VocReceiving    = "rc"
 )
 
 // composePrefix concatenates vocabulary words to form a prefix.
@@ -159,6 +169,21 @@ var (
 	// Action-related prefix values
 	ActionTypeIDPrefix = composePrefix(VocAction, VocType)
 
+	// Agent-related prefix values
+	AgentDefinitionIDPrefix     = composePrefix(VocAgent, VocDefinition)
+	AgentConfigIDPrefix         = composePrefix(VocAgent, VocAccount)
+	AgentRunIDPrefix            = composePrefix(VocAgent, VocRun)
+	AgentActionIDPrefix         = composePrefix(VocAgent, VocAction)
+	AgentArtifactIDPrefix       = composePrefix(VocAgent, VocArtifact)
+	AgentMemoryIDPrefix         = composePrefix(VocAgent, VocMemory)
+	AgentAlertIDPrefix          = composePrefix(VocAgent, VocNotification)
+	AgentTokenUsageIDPrefix     = composePrefix(VocAgent, VocToken)
+	TokenPackPurchaseIDPrefix   = composePrefix(VocToken, VocPayment)
+	AgentDefinitionToolIDPrefix = composePrefix(VocAgent, VocDefinition, VocTool)
+	AgentAccountStatusIDPrefix  = composePrefix(VocAgent, VocAccount, VocStatus)
+	AgentRunEventIDPrefix       = composePrefix(VocAgent, VocRun, VocEvent)
+	ToolDefinitionIDPrefix      = composePrefix(VocTool, VocDefinition)
+
 	// Address-related prefix values
 	AddressIDPrefix = composePrefix(VocAddress)
 
@@ -174,14 +199,16 @@ var (
 	BatchIDPrefix = composePrefix(VocBatch)
 
 	// Carrier-related prefix values
-	CarrierIDPrefix       = composePrefix(VocCarrier)
-	CarrierOptionIDPrefix = composePrefix(VocCarrier, VocOption)
+	CarrierIDPrefix = composePrefix(VocCarrier)
+
+	// Service level-related prefix values
+	ServiceLevelIDPrefix = composePrefix(VocService, VocLevel)
 
 	// Color-related prefix values
 	ColorIDPrefix = composePrefix(VocColor)
 
 	// Commission-related prefix values
-	CommissionStatusIDPrefix = composePrefix(VocCommission, VocStatus)
+	CommissionPolicyIDPrefix = composePrefix(VocCommission, VocStatus)
 
 	// Consumption-related prefix values
 	ConsumptionIDPrefix = composePrefix(VocConsumption)
@@ -203,6 +230,10 @@ var (
 	// CustomerPriceIDPrefix        = composePrefix(VocCustomer, VocPrice)
 	// CustomerPriceGroupsIDPrefix  = composePrefix(VocCustomer, VocPrice, VocGroup)
 
+	// Delivery-related prefix values
+	DeliveryIDPrefix     = composePrefix(VocDelivery)
+	DeliveryLineIDPrefix = composePrefix(VocDelivery, VocLine)
+
 	// Department-related prefix values
 	DepartmentIDPrefix = composePrefix(VocDepartment)
 
@@ -217,7 +248,7 @@ var (
 	ErrorLogIDPrefix      = composePrefix(VocError, VocLog)
 
 	// Freight-related prefix values
-	FreightStatusIDPrefix = composePrefix(VocFreight, VocStatus)
+	FreightPolicyIDPrefix = composePrefix(VocFreight, VocStatus)
 
 	// Geolocation-related prefix values
 	GeolocationIDPrefix = composePrefix(VocGeolocation)
@@ -324,14 +355,15 @@ var (
 	ScanningStationTypeIDPrefix = composePrefix(VocScanning, VocStation, VocType)
 
 	// Session-related prefix values
-	SessionIDPrefix = IDPrefix(VocSession)
+	SessionIDPrefix = composePrefix(VocSession)
 
 	// Shipment-related prefix values
-	ShipmentIDPrefix       = composePrefix(VocShipment)
-	ShipmentLineIDPrefix   = composePrefix(VocShipment, VocLine)
-	ShipmentStatusIDPrefix = composePrefix(VocShipment, VocStatus)
-	ShippingCaseIDPrefix   = composePrefix(VocShipment, VocCase)
-	ShippingTermIDPrefix   = composePrefix(VocShipment, VocTerm)
+	ShipmentIDPrefix         = composePrefix(VocShipment)
+	ShipmentLineIDPrefix     = composePrefix(VocShipment, VocLine)
+	ShipmentStatusIDPrefix   = composePrefix(VocShipment, VocStatus)
+	ShippingCaseIDPrefix     = composePrefix(VocShipment, VocCase)
+	ShippingTermIDPrefix     = composePrefix(VocShipment, VocTerm)
+	FreeShippingRuleIDPrefix = composePrefix(VocFreight, VocShipment)
 
 	// Unit-related prefix values
 	UnitIDPrefix            = composePrefix(VocUnit)
@@ -361,14 +393,20 @@ var (
 	// DC Location-related prefix values
 	DCLocationIDPrefix = composePrefix(VocDC, VocLocation)
 
+	// Location-related prefix values
+	LocationIDPrefix = composePrefix(VocLocation)
+
 	// Email-related prefix values
 	EmailLogIDPrefix       = composePrefix(VocEmail, VocLog)
 	EmailRecipientIDPrefix = composePrefix(VocEmail, VocRecipient)
 	OrderEmailIDPrefix     = composePrefix(VocOrder, VocEmail)
 
 	// Inventory-related prefix values
-	InventoryChangeLogIDPrefix = composePrefix(VocInventory, VocChange, VocLog)
-	InventoryLogIDPrefix       = composePrefix(VocInventory, VocLog)
+	InventoryChangeLogIDPrefix  = composePrefix(VocInventory, VocChange, VocLog)
+	InventoryLogIDPrefix        = composePrefix(VocInventory, VocLog)
+	InventoryReceiptIDPrefix    = composePrefix(VocInventory, VocRecipient)
+	InventoryIssueIDPrefix      = composePrefix(VocInventory, VocIssue)
+	InventoryAllocationIDPrefix = composePrefix(VocInventory, VocAllocation)
 
 	// Registration-related prefix values
 	RegistrationFlowIDPrefix = composePrefix(VocRegistration, VocFlow)
@@ -394,8 +432,12 @@ var (
 	// Request-related prefix values
 	RequestIDPrefix = composePrefix(VocRequest)
 
-	// Plan Change-related prefix values
-	PlanChangeIDPrefix = composePrefix(VocPlan, VocChange)
+	// Audit-related prefix values
+	AuditEventIDPrefix = composePrefix(VocAudit, VocEvent)
+
+	// Plan-related prefix values
+	PricingPlanIDPrefix = composePrefix(VocPlan)
+	PlanChangeIDPrefix  = composePrefix(VocPlan, VocChange)
 
 	// Enterprise Inquiry-related prefix values
 	EnterpriseInquiryIDPrefix = composePrefix(VocEnterprise, VocInquiry)
@@ -403,6 +445,13 @@ var (
 	// Idempotency-related prefix values
 	IdempotencyKeyIDPrefix        = composePrefix(VocIdempotency, VocKey)
 	ServiceIdempotencyKeyIDPrefix = composePrefix(VocService, VocIdempotency, VocKey)
+
+	// Lot-related prefix values
+	LotIDPrefix = composePrefix(VocLot)
+
+	// Receiving-related prefix values
+	ReceivingOrderIDPrefix     = composePrefix(VocReceiving, VocOrder)
+	ReceivingOrderLineIDPrefix = composePrefix(VocReceiving, VocOrder, VocLine)
 
 	// Messaging-related prefix values
 	MessageIDPrefix = composePrefix(VocMessage)

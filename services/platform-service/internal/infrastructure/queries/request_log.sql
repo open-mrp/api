@@ -1,9 +1,12 @@
 -- name: FindRequestLogByID :one
-SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route, rl.query_json,
+SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route,
+       COALESCE(CASE WHEN sqlc.arg('include_query_json') THEN rl.query_json ELSE NULL END, '') AS query_json,
        rl.status_code, rl.latency_us, rl.api_version, rl.actor_id,
        rl.actor_type, rl.identity_type, rl.client_ip_string, rl.user_agent,
        rl.referrer, rl.error_code, rl.error_message, rl.occurred_at, rl.created_at,
-       rl.idempotency_key_id, rl.request_body_json, rl.response_body_json,
+       rl.idempotency_key_id,
+       COALESCE(CASE WHEN sqlc.arg('include_request_body_json') THEN rl.request_body_json ELSE NULL END, '') AS request_body_json,
+       COALESCE(CASE WHEN sqlc.arg('include_response_body_json') THEN rl.response_body_json ELSE NULL END, '') AS response_body_json,
        u.email AS user_email, u.name AS user_name,
        ak.type_id AS api_key_type_id, ak.redacted_value AS api_key_redacted_value,
        ak.name AS api_key_name,
@@ -24,11 +27,14 @@ LEFT JOIN idempotency_key ik ON rl.idempotency_key_id = ik.type_id
 WHERE rl.id = ? AND rl.target_account_id = ?;
 
 -- name: ListRequestLogsForward :many
-SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route, rl.query_json,
+SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route,
+       COALESCE(CASE WHEN sqlc.arg('include_query_json') THEN rl.query_json ELSE NULL END, '') AS query_json,
        rl.status_code, rl.latency_us, rl.api_version, rl.actor_id,
        rl.actor_type, rl.identity_type, rl.client_ip_string, rl.user_agent,
        rl.referrer, rl.error_code, rl.error_message, rl.occurred_at, rl.created_at,
        rl.idempotency_key_id,
+       COALESCE(CASE WHEN sqlc.arg('include_request_body_json') THEN rl.request_body_json ELSE NULL END, '') AS request_body_json,
+       COALESCE(CASE WHEN sqlc.arg('include_response_body_json') THEN rl.response_body_json ELSE NULL END, '') AS response_body_json,
        u.email AS user_email, u.name AS user_name,
        ak.type_id AS api_key_type_id, ak.redacted_value AS api_key_redacted_value,
        ak.name AS api_key_name,
@@ -67,11 +73,14 @@ ORDER BY rl.occurred_at DESC, rl.id DESC
 LIMIT ?;
 
 -- name: ListRequestLogsBackward :many
-SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route, rl.query_json,
+SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route,
+       COALESCE(CASE WHEN sqlc.arg('include_query_json') THEN rl.query_json ELSE NULL END, '') AS query_json,
        rl.status_code, rl.latency_us, rl.api_version, rl.actor_id,
        rl.actor_type, rl.identity_type, rl.client_ip_string, rl.user_agent,
        rl.referrer, rl.error_code, rl.error_message, rl.occurred_at, rl.created_at,
        rl.idempotency_key_id,
+       COALESCE(CASE WHEN sqlc.arg('include_request_body_json') THEN rl.request_body_json ELSE NULL END, '') AS request_body_json,
+       COALESCE(CASE WHEN sqlc.arg('include_response_body_json') THEN rl.response_body_json ELSE NULL END, '') AS response_body_json,
        u.email AS user_email, u.name AS user_name,
        ak.type_id AS api_key_type_id, ak.redacted_value AS api_key_redacted_value,
        ak.name AS api_key_name,
@@ -109,11 +118,14 @@ ORDER BY rl.occurred_at ASC, rl.id ASC
 LIMIT ?;
 
 -- name: FindRequestLogBaseByID :one
-SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route, rl.query_json,
+SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route,
+       COALESCE(CASE WHEN sqlc.arg('include_query_json') THEN rl.query_json ELSE NULL END, '') AS query_json,
        rl.status_code, rl.latency_us, rl.api_version, rl.actor_id,
        rl.actor_type, rl.identity_type, rl.client_ip_string, rl.user_agent,
        rl.referrer, rl.error_code, rl.error_message, rl.occurred_at, rl.created_at,
-       rl.idempotency_key_id, rl.request_body_json, rl.response_body_json,
+       rl.idempotency_key_id,
+       COALESCE(CASE WHEN sqlc.arg('include_request_body_json') THEN rl.request_body_json ELSE NULL END, '') AS request_body_json,
+       COALESCE(CASE WHEN sqlc.arg('include_response_body_json') THEN rl.response_body_json ELSE NULL END, '') AS response_body_json,
        rl.target_account_id,
        ik.idempotency_key
 FROM request_log rl
@@ -121,11 +133,14 @@ LEFT JOIN idempotency_key ik ON rl.idempotency_key_id = ik.type_id
 WHERE rl.id = ? AND rl.target_account_id = ?;
 
 -- name: ListRequestLogsBaseForward :many
-SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route, rl.query_json,
+SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route,
+       COALESCE(CASE WHEN sqlc.arg('include_query_json') THEN rl.query_json ELSE NULL END, '') AS query_json,
        rl.status_code, rl.latency_us, rl.api_version, rl.actor_id,
        rl.actor_type, rl.identity_type, rl.client_ip_string, rl.user_agent,
        rl.referrer, rl.error_code, rl.error_message, rl.occurred_at, rl.created_at,
        rl.idempotency_key_id,
+       COALESCE(CASE WHEN sqlc.arg('include_request_body_json') THEN rl.request_body_json ELSE NULL END, '') AS request_body_json,
+       COALESCE(CASE WHEN sqlc.arg('include_response_body_json') THEN rl.response_body_json ELSE NULL END, '') AS response_body_json,
        rl.target_account_id,
        ik.idempotency_key
 FROM request_log rl
@@ -150,11 +165,14 @@ ORDER BY rl.occurred_at DESC, rl.id DESC
 LIMIT ?;
 
 -- name: ListRequestLogsBaseBackward :many
-SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route, rl.query_json,
+SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route,
+       COALESCE(CASE WHEN sqlc.arg('include_query_json') THEN rl.query_json ELSE NULL END, '') AS query_json,
        rl.status_code, rl.latency_us, rl.api_version, rl.actor_id,
        rl.actor_type, rl.identity_type, rl.client_ip_string, rl.user_agent,
        rl.referrer, rl.error_code, rl.error_message, rl.occurred_at, rl.created_at,
        rl.idempotency_key_id,
+       COALESCE(CASE WHEN sqlc.arg('include_request_body_json') THEN rl.request_body_json ELSE NULL END, '') AS request_body_json,
+       COALESCE(CASE WHEN sqlc.arg('include_response_body_json') THEN rl.response_body_json ELSE NULL END, '') AS response_body_json,
        rl.target_account_id,
        ik.idempotency_key
 FROM request_log rl
@@ -175,6 +193,11 @@ AND (
     OR (rl.occurred_at = sqlc.arg('cursor_occurred_at') AND rl.id > sqlc.arg('cursor_id'))
 )
 ORDER BY rl.occurred_at ASC, rl.id ASC
+LIMIT ?;
+
+-- name: DeleteExpiredRequestLogs :execresult
+DELETE FROM request_log
+WHERE occurred_at < DATE_SUB(NOW(3), INTERVAL 7 YEAR)
 LIMIT ?;
 
 -- name: CreateRequestLog :exec

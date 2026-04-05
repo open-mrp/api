@@ -3,10 +3,13 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/services/core-service/internal/domain"
 	"github.com/augno/api/shared/appctx"
+	"github.com/augno/api/shared/audit"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/id"
 	"github.com/augno/api/shared/idempotency"
@@ -71,6 +74,11 @@ func (s *unitSvcImpl) withTx(ctx context.Context, fn func(context.Context, *unit
 	})
 }
 
+// ListUnits returns a paginated list of units for the caller's account.
+//
+// 1. Extract and validate the caller's identity, actor type, and units:read permission.
+// 2. Require the Augno-Account header to scope the query.
+// 3. Query the unit repository with the account ID and pagination params.
 func (s *unitSvcImpl) ListUnits(ctx context.Context, params domain.ListUnitsParams) (*domain.ListUnitsResult, *apierror.APIError) {
 	ctx, span := unitSvcTracer.Start(ctx, "service.unit.list")
 	defer span.End()
@@ -80,21 +88,23 @@ func (s *unitSvcImpl) ListUnits(ctx context.Context, params domain.ListUnitsPara
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
-	if apiErr := types.CheckIsInternalActor(identity); apiErr != nil {
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if apiErr := types.CheckHasPermission(identity, types.PermissionDomainUnits, types.ActionRead); apiErr != nil {
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainUnits, types.ActionRead); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
-	}
-	if identity.TargetAccountID == nil {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
 	}
 
-	params.AccountID = *identity.TargetAccountID
+	params.AccountID = identity.Target.AccountID
 
 	return s.repos.NewUnitRepo().List(ctx, params)
 }
 
+// GetUnit retrieves a single unit by ID, scoped to the caller's account.
+//
+// 1. Extract and validate the caller's identity, actor type, and units:read permission.
+// 2. Require the Augno-Account header.
+// 3. Fetch the unit from the repository by account ID and unit ID.
 func (s *unitSvcImpl) GetUnit(ctx context.Context, unitID string) (*domain.Unit, *apierror.APIError) {
 	ctx, span := unitSvcTracer.Start(ctx, "service.unit.get")
 	defer span.End()
@@ -104,22 +114,27 @@ func (s *unitSvcImpl) GetUnit(ctx context.Context, unitID string) (*domain.Unit,
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
-	if apiErr := types.CheckIsInternalActor(identity); apiErr != nil {
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if apiErr := types.CheckHasPermission(identity, types.PermissionDomainUnits, types.ActionRead); apiErr != nil {
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainUnits, types.ActionRead); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
-	}
-	if identity.TargetAccountID == nil {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
 	}
 
 	return s.repos.NewUnitRepo().Get(ctx, domain.GetUnitParams{
-		AccountID: *identity.TargetAccountID,
+		AccountID: identity.Target.AccountID,
 		UnitID:    unitID,
 	})
 }
 
+// CreateUnit creates a new unit of measure for the caller's account, with idempotency support.
+//
+// 1. Extract and validate the caller's identity, actor type, and units:create permission.
+// 2. Generate a unique unit ID.
+// 3. Upsert an idempotency key; if already finished, return the cached response.
+// 4. Within a transaction, check for duplicate name and abbreviation.
+// 5. Insert the unit record and cache the success response.
+// 6. On error, cache the error response for idempotent replay.
 func (s *unitSvcImpl) CreateUnit(ctx context.Context, params domain.CreateUnitParams) (*domain.Unit, *apierror.APIError) {
 	ctx, span := unitSvcTracer.Start(ctx, "service.unit.create")
 	defer span.End()
@@ -129,14 +144,11 @@ func (s *unitSvcImpl) CreateUnit(ctx context.Context, params domain.CreateUnitPa
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
-	if apiErr := types.CheckIsInternalActor(identity); apiErr != nil {
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if apiErr := types.CheckHasPermission(identity, types.PermissionDomainUnits, types.ActionCreate); apiErr != nil {
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainUnits, types.ActionCreate); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
-	}
-	if identity.TargetAccountID == nil {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
 	}
 
 	unitID, apiErr := id.GenID(id.UnitIDPrefix, nil)
@@ -144,15 +156,11 @@ func (s *unitSvcImpl) CreateUnit(ctx context.Context, params domain.CreateUnitPa
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	params.AccountID = *identity.TargetAccountID
+	params.AccountID = identity.Target.AccountID
 
 	meds := s.mediators()
 
-	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, &domain.RequestIdentity{
-		ActorID:         identity.Actor.ID,
-		IdentityType:    identity.Type,
-		TargetAccountID: identity.TargetAccountID,
-	})
+	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, identity)
 	if apiErr != nil {
 		return nil, apiErr
 	}
@@ -192,6 +200,18 @@ func (s *unitSvcImpl) CreateUnit(ctx context.Context, params domain.CreateUnitPa
 			}
 			result = created
 
+			changes := audit.ComputeChanges(nil, created)
+
+			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+				ServiceName:  domain.ServiceName,
+				Action:       constants.AuditActionCreate,
+				ResourceType: constants.ObjectTypeUnit,
+				ResourceID:   created.ID,
+				Changes:      changes,
+			}); apiErr != nil {
+				return apiErr
+			}
+
 			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
 		})
 
@@ -206,6 +226,14 @@ func (s *unitSvcImpl) CreateUnit(ctx context.Context, params domain.CreateUnitPa
 	}
 }
 
+// UpdateUnit modifies an existing custom unit, with idempotency support.
+//
+// 1. Extract and validate the caller's identity, actor type, and units:update permission.
+// 2. Upsert an idempotency key; if already finished, return the cached response.
+// 3. Within a transaction, verify the unit exists and is not a system unit.
+// 4. Check for duplicate name and abbreviation (excluding the current unit).
+// 5. Apply the updates and cache the success response.
+// 6. On error, cache the error response for idempotent replay.
 func (s *unitSvcImpl) UpdateUnit(ctx context.Context, params domain.UpdateUnitParams) (*domain.Unit, *apierror.APIError) {
 	ctx, span := unitSvcTracer.Start(ctx, "service.unit.update")
 	defer span.End()
@@ -215,25 +243,18 @@ func (s *unitSvcImpl) UpdateUnit(ctx context.Context, params domain.UpdateUnitPa
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
-	if apiErr := types.CheckIsInternalActor(identity); apiErr != nil {
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if apiErr := types.CheckHasPermission(identity, types.PermissionDomainUnits, types.ActionUpdate); apiErr != nil {
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainUnits, types.ActionUpdate); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
-	}
-	if identity.TargetAccountID == nil {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
 	}
 
-	params.AccountID = *identity.TargetAccountID
+	params.AccountID = identity.Target.AccountID
 
 	meds := s.mediators()
 
-	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, &domain.RequestIdentity{
-		ActorID:         identity.Actor.ID,
-		IdentityType:    identity.Type,
-		TargetAccountID: identity.TargetAccountID,
-	})
+	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, identity)
 	if apiErr != nil {
 		return nil, apiErr
 	}
@@ -251,11 +272,11 @@ func (s *unitSvcImpl) UpdateUnit(ctx context.Context, params domain.UpdateUnitPa
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *unitSvcImpl) *apierror.APIError {
 			txRepo := txSvc.repos.NewUnitRepo()
 
-			unit, apiErr := txRepo.Get(txCtx, domain.GetUnitParams{AccountID: params.AccountID, UnitID: params.UnitID})
+			old, apiErr := txRepo.Get(txCtx, domain.GetUnitParams{AccountID: params.AccountID, UnitID: params.UnitID})
 			if apiErr != nil {
 				return apiErr
 			}
-			if unit.AccountID == nil {
+			if old.AccountID == nil {
 				return apierror.NewValidationError("System units cannot be modified.")
 			}
 
@@ -285,6 +306,18 @@ func (s *unitSvcImpl) UpdateUnit(ctx context.Context, params domain.UpdateUnitPa
 			}
 			result = updated
 
+			changes := audit.ComputeChanges(old, updated)
+
+			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+				ServiceName:  domain.ServiceName,
+				Action:       constants.AuditActionUpdate,
+				ResourceType: constants.ObjectTypeUnit,
+				ResourceID:   updated.ID,
+				Changes:      changes,
+			}); apiErr != nil {
+				return apiErr
+			}
+
 			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
 		})
 
@@ -299,6 +332,11 @@ func (s *unitSvcImpl) UpdateUnit(ctx context.Context, params domain.UpdateUnitPa
 	}
 }
 
+// DeleteUnit removes a custom unit by ID, scoped to the caller's account.
+//
+// 1. Extract and validate the caller's identity, actor type, and units:delete permission.
+// 2. Fetch the unit to verify it exists and is not a system unit.
+// 3. Within a transaction, delete the unit from the repository.
 func (s *unitSvcImpl) DeleteUnit(ctx context.Context, unitID string) *apierror.APIError {
 	ctx, span := unitSvcTracer.Start(ctx, "service.unit.delete")
 	defer span.End()
@@ -308,20 +346,26 @@ func (s *unitSvcImpl) DeleteUnit(ctx context.Context, unitID string) *apierror.A
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
-	if apiErr := types.CheckIsInternalActor(identity); apiErr != nil {
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
-	if apiErr := types.CheckHasPermission(identity, types.PermissionDomainUnits, types.ActionDelete); apiErr != nil {
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainUnits, types.ActionDelete); apiErr != nil {
 		return tracing.Trace(span, apiErr)
-	}
-	if identity.TargetAccountID == nil {
-		return tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
 	}
 
-	accountID := *identity.TargetAccountID
+	accountID := identity.Target.AccountID
 
 	unit, apiErr := s.repos.NewUnitRepo().Get(ctx, domain.GetUnitParams{AccountID: accountID, UnitID: unitID})
 	if apiErr != nil {
+		if apierror.IsNotFound(apiErr) {
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeUnit, unitID)
+			if deletedCheckErr != nil {
+				return tracing.Trace(span, deletedCheckErr)
+			}
+			if wasDeleted {
+				return tracing.Trace(span, apierror.NewAlreadyDeletedError("This unit has already been deleted and can no longer be modified."))
+			}
+		}
 		return tracing.Trace(span, apiErr)
 	}
 	if unit.AccountID == nil {
@@ -329,10 +373,30 @@ func (s *unitSvcImpl) DeleteUnit(ctx context.Context, unitID string) *apierror.A
 	}
 
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *unitSvcImpl) *apierror.APIError {
-		return txSvc.repos.NewUnitRepo().Delete(txCtx, domain.DeleteUnitParams{
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeUnit, unit.ID, unit); apiErr != nil {
+			return apiErr
+		}
+
+		if apiErr := txSvc.repos.NewUnitRepo().Delete(txCtx, domain.DeleteUnitParams{
 			AccountID: accountID,
 			UnitID:    unitID,
-		})
+		}); apiErr != nil {
+			return apiErr
+		}
+
+		changes := audit.ComputeChanges(unit, (*domain.Unit)(nil))
+
+		if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+			ServiceName:  domain.ServiceName,
+			Action:       constants.AuditActionDelete,
+			ResourceType: constants.ObjectTypeUnit,
+			ResourceID:   unit.ID,
+			Changes:      changes,
+		}); apiErr != nil {
+			return apiErr
+		}
+
+		return nil
 	})
 
 	if apiErr != nil {
@@ -340,4 +404,67 @@ func (s *unitSvcImpl) DeleteUnit(ctx context.Context, unitID string) *apierror.A
 	}
 
 	return nil
+}
+
+// ValidateUnits validates unit abbreviations and returns matching units.
+//
+// 1. Extract and validate the caller's identity (assigned actor — internal or customer).
+// 2. For internal users, check units:read permission.
+// 3. Extract abbreviations from the unit map and query the repository (case-insensitive).
+// 4. Build a result map matching original keys to found units.
+func (s *unitSvcImpl) ValidateUnits(ctx context.Context, params domain.ValidateUnitsParams) (*domain.ValidateUnitsResult, *apierror.APIError) {
+	ctx, span := unitSvcTracer.Start(ctx, "service.unit.validate")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+
+	if apiErr := identity.CheckIsAssignedActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	if identity.IsInternalUser() {
+		if apiErr := identity.CheckHasPermission(types.PermissionDomainUnits, types.ActionRead); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+	}
+
+	params.AccountID = identity.Target.AccountID
+
+	// Extract unique lowercase abbreviations
+	abbrevSet := make(map[string]struct{}, len(params.UnitMap))
+	for _, abbrev := range params.UnitMap {
+		abbrevSet[strings.ToLower(abbrev)] = struct{}{}
+	}
+	abbreviations := make([]string, 0, len(abbrevSet))
+	for a := range abbrevSet {
+		abbreviations = append(abbreviations, a)
+	}
+
+	if len(abbreviations) == 0 {
+		return &domain.ValidateUnitsResult{Units: map[string]*domain.Unit{}}, nil
+	}
+
+	units, apiErr := s.repos.NewUnitRepo().FindByAbbreviations(ctx, params.AccountID, abbreviations)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	// Build abbreviation -> unit map for quick lookup (case-insensitive)
+	abbrevToUnit := make(map[string]*domain.Unit, len(units))
+	for _, u := range units {
+		abbrevToUnit[strings.ToLower(u.Abbreviation)] = u
+	}
+
+	// Match results back to original keys
+	result := make(map[string]*domain.Unit, len(params.UnitMap))
+	for key, abbrev := range params.UnitMap {
+		if u, ok := abbrevToUnit[strings.ToLower(abbrev)]; ok {
+			result[key] = u
+		}
+	}
+
+	return &domain.ValidateUnitsResult{Units: result}, nil
 }

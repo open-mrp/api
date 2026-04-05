@@ -4,6 +4,7 @@ import (
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
+	"github.com/augno/api/shared/db"
 	pb "github.com/augno/api/shared/proto/core"
 )
 
@@ -18,12 +19,12 @@ func UnitPresenter(u *pb.UnitInfo) apiresource.Unit {
 		Name:              u.Name,
 		Abbreviation:      u.Abbreviation,
 		Type:              constants.UnitType(u.Type),
-		RatioNumerator:    u.RatioNumerator,
-		RatioDenominator:  u.RatioDenominator,
-		OffsetNumerator:   u.OffsetNumerator,
-		OffsetDenominator: u.OffsetDenominator,
+		RatioNumerator:    db.TrimDecimal(u.RatioNumerator),
+		RatioDenominator:  db.TrimDecimal(u.RatioDenominator),
+		OffsetNumerator:   db.TrimDecimal(u.OffsetNumerator),
+		OffsetDenominator: db.TrimDecimal(u.OffsetDenominator),
 		IsBaseUnit:        u.IsBaseUnit,
-		IsInternal:        u.IsInternal,
+		Owner:             apiresource.NewOwner(u.AccountId),
 		CreatedAt:         grpcutil.TimestampToTime(u.CreatedAt),
 		UpdatedAt:         grpcutil.TimestampToTime(u.UpdatedAt),
 	}
@@ -39,17 +40,25 @@ func UnitListPresenter(resp *pb.ListUnitsResponse) *apiresource.List[apiresource
 		units[i] = UnitPresenter(u)
 	}
 
-	return apiresource.NewList(units, mapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(units, grpcutil.MapProtoPageInfo(resp.PageInfo))
 }
 
-func mapProtoPageInfo(pi *pb.PageInfo) apiresource.PageInfo {
-	if pi == nil {
-		return apiresource.PageInfo{}
+func ValidateUnitsPresenter(resp *pb.ValidateUnitsResponse) *apiresource.ValidateUnitsResponse {
+	if resp == nil {
+		return &apiresource.ValidateUnitsResponse{
+			Object: constants.ObjectTypeMap,
+			Units:  map[string]*apiresource.Unit{},
+		}
 	}
-	return apiresource.PageInfo{
-		NextCursor:  pi.NextCursor,
-		PrevCursor:  pi.PrevCursor,
-		HasNextPage: pi.HasNextPage,
-		HasPrevPage: pi.HasPrevPage,
+
+	units := make(map[string]*apiresource.Unit, len(resp.Units))
+	for key, proto := range resp.Units {
+		u := UnitPresenter(proto)
+		units[key] = &u
+	}
+
+	return &apiresource.ValidateUnitsResponse{
+		Object: constants.ObjectTypeMap,
+		Units:  units,
 	}
 }

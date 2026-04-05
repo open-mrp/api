@@ -45,9 +45,8 @@ func (c *AuthCoreClient) Close() error {
 	return c.grpcConn.Close()
 }
 
-// prepareCtx adds identity metadata to the outgoing gRPC context.
 func prepareCtx(ctx context.Context) context.Context {
-	return rpc.PrepareRPCCtx(ctx, rpc.WithIdentity(ctx))
+	return rpc.PrepareServiceCallCtx(ctx)
 }
 
 func (c *AuthCoreClient) GetAccountContext(ctx context.Context, accountID string) (*domain.AccountContext, *apierror.APIError) {
@@ -116,7 +115,7 @@ func (c *AuthCoreClient) GetAccountRelationByUserID(ctx context.Context, ownerAc
 		return nil, false, nil
 	}
 
-	roleCode, ok := types.ParseIdentityActorType(resp.Relation.RoleCode)
+	roleCode, ok := types.ParseIdentityRelationType(resp.Relation.RoleCode)
 	if !ok {
 		return nil, false, apierror.NewInternalError(nil, "invalid account relation role code")
 	}
@@ -146,7 +145,7 @@ func (c *AuthCoreClient) GetAccountRelationByAPIKeyID(ctx context.Context, owner
 		return nil, false, nil
 	}
 
-	roleCode, ok := types.ParseIdentityActorType(resp.Relation.RoleCode)
+	roleCode, ok := types.ParseIdentityRelationType(resp.Relation.RoleCode)
 	if !ok {
 		return nil, false, apierror.NewInternalError(nil, "invalid account relation role code")
 	}
@@ -155,6 +154,7 @@ func (c *AuthCoreClient) GetAccountRelationByAPIKeyID(ctx context.Context, owner
 		ID:                      resp.Relation.Id,
 		CounterpartyAccountID:   resp.Relation.CounterpartyAccountId,
 		AccountRelationRoleCode: roleCode,
+		IsOwnerSide:             resp.Relation.IsOwnerSide,
 	}, true, nil
 }
 
@@ -231,10 +231,6 @@ func (c *AuthCoreClient) CompleteRegistration(ctx context.Context, input domain.
 		AccountData: &pb.RegistrationAccountData{
 			AccountName: input.AccountName,
 		},
-	}
-
-	if input.StripeSubscriptionID != "" {
-		pbReq.StripeSubscriptionId = &input.StripeSubscriptionID
 	}
 
 	if input.BusinessAddress != nil {

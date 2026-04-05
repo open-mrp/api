@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -24,7 +25,6 @@ import (
 )
 
 type APIEndpointExtras struct {
-	AllowUnknownJSONFields bool `json:"allow_unknown_json_fields" yaml:"allow_unknown_json_fields"`
 	SkipRequestBodyParsing bool `json:"skip_request_body_parsing" yaml:"skip_request_body_parsing"`
 	ShieldRequestBody      bool `json:"shield_request_body" yaml:"shield_request_body"`
 	ShieldResponseBody     bool `json:"shield_response_body" yaml:"shield_response_body"`
@@ -133,6 +133,8 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 
 	if idempotencyKey := r.Header.Get(header.IdempotencyKeyHeader); idempotencyKey != "" {
 		ctx = appctx.WithIdempotencyKey(ctx, idempotencyKey)
+	} else if rl, ok := appctx.GetRequestLog(ctx); ok && rl != nil && rl.ID != "" {
+		ctx = appctx.WithIdempotencyKey(ctx, rl.ID)
 	}
 
 	var req TReq
@@ -186,12 +188,24 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Capture request body for logging (if not shielded)
-	if !e.Extras.ShieldRequestBody && !e.Extras.SkipRequestBodyParsing && httptransport.ShouldDecodeBody(r) {
-		if rl, ok := appctx.GetRequestLog(ctx); ok {
-			bodyBytes, err := io.ReadAll(r.Body)
-			_ = r.Body.Close()
-			if err == nil && len(bodyBytes) > 0 {
+	// Buffer JSON bodies once for decode, nullable:"false" validation, and optional request logging.
+	var jsonBodyBytes []byte
+	if !e.Extras.SkipRequestBodyParsing && httptransport.ShouldDecodeBody(r) {
+		const maxJSONBodyBytes = 1 << 20 // 1 MiB
+		bodyBytes, err := io.ReadAll(io.LimitReader(r.Body, maxJSONBodyBytes))
+		_ = r.Body.Close()
+		if err != nil {
+			apiErr := apierror.NewValidationError(fmt.Sprintf("Failed to read request body: %v", err))
+			tracing.RecordControllerError(span, apiErr)
+			if span.IsRecording() {
+				span.SetAttributes(attribute.String(httptransport.AttrErrorType, "body_read"))
+			}
+			httptransport.RespondWithAPIError(ctx, w, apiErr)
+			return
+		}
+		jsonBodyBytes = bodyBytes
+		if !e.Extras.ShieldRequestBody {
+			if rl, ok := appctx.GetRequestLog(ctx); ok && len(bodyBytes) > 0 {
 				const maxBodyLogSize = 256 << 10 // 256 KB
 				if len(bodyBytes) > maxBodyLogSize {
 					s := fmt.Sprintf(`{"_truncated":true,"_original_size":%d}`, len(bodyBytes))
@@ -201,8 +215,8 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 					rl.BodyJSON = &s
 				}
 			}
-			r.Body = io.NopCloser(bytes.NewReader(bodyBytes))
 		}
+		r.Body = io.NopCloser(bytes.NewReader(bodyBytes))
 	}
 
 	if e.Extras.SkipRequestBodyParsing {
@@ -219,6 +233,8 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 			return
 		}
 	} else if httptransport.ShouldDecodeBody(r) {
+		bytesForNull := jsonBodyBytes
+
 		// Transform request body if versioned and ObjectType is set
 		if e.ObjectType != "" {
 			if requestVersion, ok := appctx.GetAPIVersionFromContext(ctx); ok {
@@ -234,18 +250,54 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 						httptransport.RespondWithAPIError(ctx, w, apiErr)
 						return
 					}
+					tb, err := io.ReadAll(r.Body)
+					_ = r.Body.Close()
+					if err != nil {
+						apiErr := apierror.NewValidationError(fmt.Sprintf("Failed to read request body: %v", err))
+						tracing.RecordControllerError(span, apiErr)
+						if span.IsRecording() {
+							span.SetAttributes(attribute.String(httptransport.AttrErrorType, "body_read"))
+						}
+						httptransport.RespondWithAPIError(ctx, w, apiErr)
+						return
+					}
+					bytesForNull = tb
+					r.Body = io.NopCloser(bytes.NewReader(tb))
 				}
 			}
 		}
 
-		if err := httptransport.DecodeJSONInto(any(req), r, !e.Extras.AllowUnknownJSONFields); err != nil {
-			apiErr, ok := err.(*apierror.APIError)
-			if !ok {
+		if err := httptransport.DecodeJSONInto(any(req), r, true); err != nil {
+			var apiErr *apierror.APIError
+			if !errors.As(err, &apiErr) {
 				apiErr = apierror.NewValidationError(err.Error())
 			}
 			tracing.RecordControllerError(span, apiErr)
 			if span.IsRecording() {
 				span.SetAttributes(attribute.String(httptransport.AttrErrorType, "json_decode"))
+			}
+			httptransport.RespondWithAPIError(ctx, w, apiErr)
+			return
+		}
+
+		validate.ApplyExplicitNulls(bytesForNull, any(req))
+		validate.ApplySlicePresenceFlags(bytesForNull, any(req))
+
+		if apiErr := validate.RejectExplicitJSONNulls(bytesForNull, any(req)); apiErr != nil {
+			tracing.RecordControllerError(span, apiErr)
+			if span.IsRecording() {
+				span.SetAttributes(attribute.String(httptransport.AttrErrorType, "json_null_validation"))
+			}
+			httptransport.RespondWithAPIError(ctx, w, apiErr)
+			return
+		}
+	}
+
+	if r.Method == http.MethodPatch && len(jsonBodyBytes) > 0 {
+		if apiErr := validate.RejectEmptyPatchBody(jsonBodyBytes, any(req)); apiErr != nil {
+			tracing.RecordControllerError(span, apiErr)
+			if span.IsRecording() {
+				span.SetAttributes(attribute.String(httptransport.AttrErrorType, "empty_patch_validation"))
 			}
 			httptransport.RespondWithAPIError(ctx, w, apiErr)
 			return
@@ -319,6 +371,12 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 		respondOpts = append(respondOpts, httptransport.WithLocation(e.LocationFunc(resp)))
 	}
 
+	// File-download response (e.g. Excel export).
+	if fd, ok := any(resp).(*httptransport.FileDownload); ok {
+		httptransport.RespondWithFile(ctx, w, e.SuccessStatusCode, fd, respondOpts...)
+		return
+	}
+
 	// Apply include transform: collapse unexpanded sub-objects to {id, object}.
 	if e.IncludeConfig != nil {
 		e.respondWithIncludeTransform(ctx, w, resp, requestedIncludes, respondOpts...)
@@ -379,11 +437,17 @@ func (e *APIEndpoint[TReq, TResp]) parseIncludeParams(r *http.Request) (map[stri
 	q := r.URL.Query()
 	var raw []string
 	if vals, ok := q["include[]"]; ok {
-		raw = append(raw, vals...)
+		for _, v := range vals {
+			for part := range strings.SplitSeq(v, ",") {
+				if s := strings.TrimSpace(part); s != "" {
+					raw = append(raw, s)
+				}
+			}
+		}
 	}
 	if vals, ok := q["include"]; ok {
 		for _, v := range vals {
-			for _, part := range strings.Split(v, ",") {
+			for part := range strings.SplitSeq(v, ",") {
 				if s := strings.TrimSpace(part); s != "" {
 					raw = append(raw, s)
 				}
@@ -425,6 +489,25 @@ func (e *APIEndpoint[TReq, TResp]) parseIncludeParams(r *http.Request) (map[stri
 // respondWithIncludeTransform marshals the response to a generic map, applies
 // the include collapse transform, and writes the result as JSON.
 func (e *APIEndpoint[TReq, TResp]) respondWithIncludeTransform(ctx context.Context, w http.ResponseWriter, resp TResp, requested map[string]bool, opts ...httptransport.RespondOption) {
+	// Merge default includes into the requested set before validation.
+	if defaults := e.IncludeConfig.DefaultFieldSet(); len(defaults) > 0 {
+		if requested == nil {
+			requested = defaults
+		} else {
+			for k := range defaults {
+				requested[k] = true
+			}
+		}
+	}
+
+	// Validate that included expandable stubs have required fields populated.
+	// Returns 500 rather than serving invalid data to the client.
+	if err := ValidateExpandableFields(resp, requested, e.IncludeConfig); err != nil {
+		apiErr := apierror.NewInvariantViolationError(err.Error())
+		httptransport.RespondWithAPIError(ctx, w, apiErr)
+		return
+	}
+
 	raw, err := json.Marshal(resp)
 	if err != nil {
 		httptransport.RespondWithJSON(ctx, w, e.SuccessStatusCode, resp, opts...)

@@ -101,7 +101,7 @@ func (c *InboxConsumer) Wrap(handler string, fn MessageHandler) MessageHandler {
 			// Check if this is a duplicate entry error
 			var mysqlErr *mysql.MySQLError
 			if errors.As(err, &mysqlErr) && mysqlErr.Number == mysqlDuplicateEntryCode {
-				return c.handleDuplicate(ctx, messageID, handler)
+				return c.handleDuplicate(ctx, messageID, handler, fn, msg)
 			}
 			// Some other error - let the handler proceed but log the issue
 			slog.Warn("Failed to insert inbox record", "handler", handler, "message_id", messageID, "error", err)
@@ -109,21 +109,25 @@ func (c *InboxConsumer) Wrap(handler string, fn MessageHandler) MessageHandler {
 		}
 
 		// New message - process it
-		if err := fn(ctx, msg); err != nil {
-			// Handler failed - record the error
-			if markErr := c.repo.MarkFailed(ctx, recordID, err.Error()); markErr != nil {
-				slog.Warn("Failed to mark inbox record as failed", "handler", handler, "message_id", messageID, "error", markErr)
-			}
-			return err
-		}
-
-		// Handler succeeded - mark as processed
-		if err := c.repo.MarkProcessed(ctx, recordID); err != nil {
-			slog.Warn("Failed to mark inbox record as processed", "handler", handler, "message_id", messageID, "error", err)
-		}
-
-		return nil
+		return c.executeAndRecord(ctx, recordID, messageID, handler, fn, msg)
 	}
+}
+
+// executeAndRecord invokes the handler and updates the inbox record based on the
+// outcome. It is called both for new messages and for duplicates that need retry.
+func (c *InboxConsumer) executeAndRecord(ctx context.Context, recordID int64, messageID, handler string, fn MessageHandler, msg amqp.Delivery) error {
+	if err := fn(ctx, msg); err != nil {
+		if markErr := c.repo.MarkFailed(ctx, recordID, err.Error()); markErr != nil {
+			slog.Warn("Failed to mark inbox record as failed", "handler", handler, "message_id", messageID, "error", markErr)
+		}
+		return err
+	}
+
+	if err := c.repo.MarkProcessed(ctx, recordID); err != nil {
+		slog.Warn("Failed to mark inbox record as processed", "handler", handler, "message_id", messageID, "error", err)
+	}
+
+	return nil
 }
 
 // handleDuplicate is called when the inbox insert fails with a duplicate-key error,
@@ -131,11 +135,9 @@ func (c *InboxConsumer) Wrap(handler string, fn MessageHandler) MessageHandler {
 // record and decides the outcome based on its status:
 //   - "processed": the handler already ran to completion — skip silently (return nil
 //     so the delivery is ACKed).
-//   - has LastError: a previous attempt failed — return an error to trigger retry
-//     through the consumer's normal retry/DLQ flow.
-//   - "received" with no error: the previous attempt likely crashed after inserting
-//     the inbox record but before completing — return an error to retry.
-func (c *InboxConsumer) handleDuplicate(ctx context.Context, messageID, handler string) error {
+//   - has LastError or "received" with no error: a previous attempt failed or crashed
+//     — re-invoke the handler to retry processing.
+func (c *InboxConsumer) handleDuplicate(ctx context.Context, messageID, handler string, fn MessageHandler, msg amqp.Delivery) error {
 	record, err := c.repo.GetByMessageAndHandler(ctx, messageID, handler)
 	if err != nil {
 		// Can't determine state - log and skip (ACK to prevent infinite redelivery)
@@ -143,24 +145,19 @@ func (c *InboxConsumer) handleDuplicate(ctx context.Context, messageID, handler 
 		return nil
 	}
 
-	switch {
-	case record.Status == InboxStatusProcessed:
-		// Already successfully processed - skip silently
+	if record.Status == InboxStatusProcessed {
 		slog.Info("Skipping already-processed message", "handler", handler, "message_id", messageID)
 		return nil
+	}
 
-	case record.LastError != nil:
-		// Previously failed - log warning and retry
+	// Message needs processing — either a previous failure or crash recovery.
+	if record.LastError != nil {
 		slog.Warn("Retrying previously-failed message",
 			"handler", handler, "message_id", messageID, "attempt", record.Attempts+1, "last_error", *record.LastError)
-		// Return an error to trigger retry behavior
-		return errors.New("inbox: retry after previous failure")
-
-	default:
-		// Status is 'received' but no error - likely a crash recovery scenario
-		slog.Warn("Crash recovery detected",
-			"handler", handler, "message_id", messageID, "status", "received", "attempts", record.Attempts)
-		// Return an error to trigger retry behavior
-		return errors.New("inbox: crash recovery retry")
+	} else {
+		slog.Warn("Crash recovery: re-processing message",
+			"handler", handler, "message_id", messageID, "attempts", record.Attempts)
 	}
+
+	return c.executeAndRecord(ctx, record.ID, messageID, handler, fn, msg)
 }

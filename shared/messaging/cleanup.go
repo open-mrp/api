@@ -17,9 +17,9 @@ const (
 	defaultCleanupMaxBatchesPerRun = 100
 )
 
-// CleanupConfig holds the configuration for the idempotency key cleanup worker.
-// The worker deletes expired rows from both the api-gateway-level idempotency_key
-// table and the service-level service_idempotency_key table.
+// CleanupConfig holds the configuration for the cleanup worker.
+// The worker deletes expired rows from idempotency key tables and old
+// deleted_record entries.
 type CleanupConfig struct {
 	// Interval (optional; default: 24h) is how often the cleanup loop fires. Each tick
 	// triggers a full run that processes up to MaxBatchesPerRun batches for each table.
@@ -64,9 +64,8 @@ func (c *CleanupConfig) validate() error {
 }
 
 // CleanupRepo defines the persistence interface for deleting expired idempotency
-// keys. The platform-service implements this interface against the idempotency_key
-// and service_idempotency_key tables. Both methods accept a row limit so the caller
-// can bound the DELETE scope and iterate in batches.
+// keys and old deleted records. The platform-service implements this interface.
+// Methods accept a row limit so the caller can bound DELETE scope and iterate in batches.
 type CleanupRepo interface {
 	// DeleteExpiredIdempotencyKeys deletes up to `limit` rows from the
 	// idempotency_key table whose expires_at timestamp has passed. These are the
@@ -80,10 +79,22 @@ type CleanupRepo interface {
 	// are the service-level keys used by individual gRPC handlers to prevent
 	// duplicate side effects. Returns the number of rows actually deleted.
 	DeleteExpiredServiceIdempotencyKeys(ctx context.Context, limit int) (int64, error)
+
+	// DeleteExpiredDeletedRecords deletes up to `limit` rows from deleted_record
+	// older than the retention window. Returns the number of rows actually deleted.
+	DeleteExpiredDeletedRecords(ctx context.Context, limit int) (int64, error)
+
+	// DeleteExpiredRequestLogs deletes up to `limit` rows from request_log
+	// older than 7 years. Returns the number of rows actually deleted.
+	DeleteExpiredRequestLogs(ctx context.Context, limit int) (int64, error)
+
+	// DeleteExpiredAuditEvents deletes up to `limit` rows from audit_event
+	// older than 7 years. Returns the number of rows actually deleted.
+	DeleteExpiredAuditEvents(ctx context.Context, limit int) (int64, error)
 }
 
 // CleanupWorker runs a single background goroutine that periodically purges
-// expired idempotency keys from both the api-gateway and service-level tables.
+// expired idempotency keys and old deleted records.
 // It fires immediately on Start (so a fresh deployment doesn't wait a full
 // Interval before its first cleanup) and then repeats at CleanupConfig.Interval.
 //
@@ -125,7 +136,7 @@ func (w *CleanupWorker) Start(ctx context.Context) error {
 	w.wg.Add(1)
 	go w.cleanupLoop()
 
-	slog.Info("Idempotency key cleanup worker started",
+	slog.Info("Cleanup worker started",
 		"interval", w.config.Interval,
 		"batch_size", w.config.BatchSize,
 		"max_batches_per_run", w.config.MaxBatchesPerRun,
@@ -141,7 +152,7 @@ func (w *CleanupWorker) Stop() {
 		w.cancel()
 	}
 	w.wg.Wait()
-	slog.Info("Idempotency key cleanup worker stopped")
+	slog.Info("Cleanup worker stopped")
 }
 
 // cleanupLoop runs cleanup immediately on startup and then on every Interval tick.
@@ -165,17 +176,23 @@ func (w *CleanupWorker) cleanupLoop() {
 	}
 }
 
-// runCleanup performs a full cleanup pass across both idempotency tables. It
+// runCleanup performs a full cleanup pass across all cleanup targets. It
 // delegates batch iteration to cleanupTable and logs a summary when at least one
 // row was deleted.
 func (w *CleanupWorker) runCleanup() {
 	apiDeleted := w.cleanupTable("idempotency_key", w.repo.DeleteExpiredIdempotencyKeys)
 	serviceDeleted := w.cleanupTable("service_idempotency_key", w.repo.DeleteExpiredServiceIdempotencyKeys)
+	deletedRecordsDeleted := w.cleanupTable("deleted_record", w.repo.DeleteExpiredDeletedRecords)
+	requestLogsDeleted := w.cleanupTable("request_log", w.repo.DeleteExpiredRequestLogs)
+	auditEventsDeleted := w.cleanupTable("audit_event", w.repo.DeleteExpiredAuditEvents)
 
-	if apiDeleted > 0 || serviceDeleted > 0 {
-		slog.Info("Idempotency key cleanup completed",
+	if apiDeleted > 0 || serviceDeleted > 0 || deletedRecordsDeleted > 0 || requestLogsDeleted > 0 || auditEventsDeleted > 0 {
+		slog.Info("Cleanup completed",
 			"api_keys_deleted", apiDeleted,
 			"service_keys_deleted", serviceDeleted,
+			"deleted_records_deleted", deletedRecordsDeleted,
+			"request_logs_deleted", requestLogsDeleted,
+			"audit_events_deleted", auditEventsDeleted,
 		)
 	}
 }
@@ -195,7 +212,7 @@ func (w *CleanupWorker) cleanupTable(tableName string, deleteFunc func(ctx conte
 
 		deleted, err := deleteFunc(w.ctx, w.config.BatchSize)
 		if err != nil {
-			slog.Error("Failed to delete expired idempotency keys",
+			slog.Error("Failed cleanup delete",
 				"table", tableName,
 				"error", err,
 			)

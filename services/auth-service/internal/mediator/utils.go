@@ -8,13 +8,20 @@ import (
 )
 
 func buildOwnedAPIKeyIdentity(apiKeyModel *apikey.APIKey, targetAccountID string, permissions map[string]bool, accountMode constants.AccountMode, subscriptionStatus *string) *types.Identity {
+	return buildOwnedAPIKeyIdentityWithRelation(apiKeyModel, targetAccountID, permissions, accountMode, subscriptionStatus, nil)
+}
+
+func buildOwnedAPIKeyIdentityWithRelation(apiKeyModel *apikey.APIKey, targetAccountID string, permissions map[string]bool, accountMode constants.AccountMode, subscriptionStatus *string, targetRelationType *types.IdentityRelationType) *types.Identity {
 	roleTypeCode := apiKeyModel.RoleTypeCode
 
 	return &types.Identity{
-		Type:            types.IdentityTypeAPIKey,
-		TargetAccountID: &targetAccountID,
+		Type: types.IdentityActorTypeAPIKey,
+		Target: &types.IdentityTarget{
+			AccountID:    targetAccountID,
+			RelationType: targetRelationType,
+		},
 		Actor: &types.IdentityActor{
-			Type:         types.IdentityActorTypeInternal,
+			RelationType: types.IdentityRelationTypeInternal,
 			ID:           apiKeyModel.TypeID,
 			Name:         &apiKeyModel.Name,
 			AccountID:    &apiKeyModel.OwnerAccountID,
@@ -27,12 +34,16 @@ func buildOwnedAPIKeyIdentity(apiKeyModel *apikey.APIKey, targetAccountID string
 	}
 }
 
-func buildRelatedAPIKeyIdentity(apiKeyModel *apikey.APIKey, accountRelation *domain.AuthAccountRelation, actorType types.IdentityActorType, targetAccountID string, accountMode constants.AccountMode, subscriptionStatus *string) *types.Identity {
+func buildRelatedAPIKeyIdentity(apiKeyModel *apikey.APIKey, accountRelation *domain.AuthAccountRelation, actorType types.IdentityRelationType, targetAccountID string, accountMode constants.AccountMode, subscriptionStatus *string) *types.Identity {
+	relationType := accountRelation.AccountRelationRoleCode
 	return &types.Identity{
-		Type:            types.IdentityTypeAPIKey,
-		TargetAccountID: &targetAccountID,
+		Type: types.IdentityActorTypeAPIKey,
+		Target: &types.IdentityTarget{
+			AccountID:    targetAccountID,
+			RelationType: &relationType,
+		},
 		Actor: &types.IdentityActor{
-			Type:         actorType,
+			RelationType: actorType,
 			ID:           apiKeyModel.TypeID,
 			Name:         &apiKeyModel.Name,
 			AccountID:    &accountRelation.CounterpartyAccountID,
@@ -47,10 +58,9 @@ func buildRelatedAPIKeyIdentity(apiKeyModel *apikey.APIKey, accountRelation *dom
 
 func buildUnassignedUserIdentity(userModel *types.User) *types.Identity {
 	return &types.Identity{
-		Type:            types.IdentityTypeUser,
-		TargetAccountID: nil,
+		Type: types.IdentityActorTypeUser,
 		Actor: &types.IdentityActor{
-			Type:         types.IdentityActorTypeUnassigned,
+			RelationType: types.IdentityRelationTypeUnassigned,
 			ID:           userModel.ID,
 			Name:         userModel.Name,
 			AccountID:    nil,
@@ -62,12 +72,12 @@ func buildUnassignedUserIdentity(userModel *types.User) *types.Identity {
 	}
 }
 
-func buildRelatedUserIdentity(userModel *types.User, accountRelation *domain.AuthAccountRelation, actorType types.IdentityActorType, targetAccountID string, accountMode constants.AccountMode, subscriptionStatus *string) *types.Identity {
+func buildRelatedUserIdentity(userModel *types.User, accountRelation *domain.AuthAccountRelation, actorType types.IdentityRelationType, targetAccountID string, accountMode constants.AccountMode, subscriptionStatus *string) *types.Identity {
 	return &types.Identity{
-		Type:            types.IdentityTypeUser,
-		TargetAccountID: &targetAccountID,
+		Type:   types.IdentityActorTypeUser,
+		Target: &types.IdentityTarget{AccountID: targetAccountID},
 		Actor: &types.IdentityActor{
-			Type:         actorType,
+			RelationType: actorType,
 			ID:           userModel.ID,
 			Name:         userModel.Name,
 			AccountID:    &accountRelation.CounterpartyAccountID,
@@ -82,10 +92,10 @@ func buildRelatedUserIdentity(userModel *types.User, accountRelation *domain.Aut
 
 func buildAccountUserIdentity(userModel *types.User, access *domain.AccountUserAccess, targetAccountID string, accountMode constants.AccountMode, subscriptionStatus *string) *types.Identity {
 	return &types.Identity{
-		Type:            types.IdentityTypeUser,
-		TargetAccountID: &targetAccountID,
+		Type:   types.IdentityActorTypeUser,
+		Target: &types.IdentityTarget{AccountID: targetAccountID},
 		Actor: &types.IdentityActor{
-			Type:         types.IdentityActorTypeInternal,
+			RelationType: types.IdentityRelationTypeInternal,
 			ID:           userModel.ID,
 			Name:         userModel.Name,
 			AccountID:    &access.AccountID,

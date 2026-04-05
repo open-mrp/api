@@ -6,6 +6,16 @@ load('ext://restart_process', 'docker_build_with_restart')
 k8s_yaml('./infra/development/kubernetes/config/secrets.yaml')
 k8s_yaml('./infra/development/kubernetes/config/app-config.yaml')
 
+# MySQL/PostgreSQL run on the host via Docker Compose; pods reach them via host.minikube.internal
+# (Minikube) or equivalent (e.g. Docker Desktop). Services fail with "connection refused" if this
+# has not been started.
+local_resource(
+  'local-databases',
+  'docker compose up -d',
+  deps=['./docker-compose.yml'],
+  labels='tooling',
+)
+
 ### Observability ###
 k8s_yaml('./infra/development/kubernetes/platform/opentelemetry-collector.yaml')
 k8s_yaml('./infra/development/kubernetes/platform/jaeger.yaml')
@@ -45,7 +55,7 @@ docker_build_with_restart(
 
 k8s_yaml('./infra/development/kubernetes/apps/api-gateway.yaml')
 k8s_resource('api-gateway', port_forwards=8081,
-             resource_deps=['api-gateway-compile', 'rabbitmq'], labels="services")
+             resource_deps=['api-gateway-compile', 'rabbitmq', 'local-databases'], labels="services")
 ### End of API Gateway ###
 
 ### Auth Service ###
@@ -76,7 +86,7 @@ k8s_yaml('./infra/development/kubernetes/apps/auth-service.yaml')
 k8s_resource(
   'auth-service',
   port_forwards='9092:9092',
-  resource_deps=['auth-service-compile', 'rabbitmq', 'core-service'],
+  resource_deps=['auth-service-compile', 'rabbitmq', 'core-service', 'local-databases'],
   labels='services',
 )
 ### End of Auth Service ###
@@ -109,7 +119,7 @@ k8s_yaml('./infra/development/kubernetes/apps/core-service.yaml')
 k8s_resource(
   'core-service',
   port_forwards='9094:9092',
-  resource_deps=['core-service-compile'],
+  resource_deps=['core-service-compile', 'local-databases'],
   labels='services',
 )
 ### End of Core Service ###
@@ -142,7 +152,7 @@ k8s_yaml('./infra/development/kubernetes/apps/notification-service.yaml')
 k8s_resource(
   'notification-service',
   port_forwards='9093:9092',
-  resource_deps=['notification-service-compile', 'rabbitmq'],
+  resource_deps=['notification-service-compile', 'rabbitmq', 'local-databases'],
   labels='services',
 )
 ### End of Notification Service ###
@@ -174,7 +184,7 @@ docker_build_with_restart(
 k8s_yaml('./infra/development/kubernetes/apps/platform-service.yaml')
 k8s_resource(
   'platform-service',
-  resource_deps=['platform-service-compile', 'rabbitmq'],
+  resource_deps=['platform-service-compile', 'rabbitmq', 'local-databases'],
   labels='services',
 )
 ### End of Logging Service ###
@@ -207,7 +217,40 @@ k8s_yaml('./infra/development/kubernetes/apps/billing-service.yaml')
 k8s_resource(
   'billing-service',
   port_forwards='9095:9092',
-  resource_deps=['billing-service-compile', 'rabbitmq'],
+  resource_deps=['billing-service-compile', 'rabbitmq', 'local-databases'],
   labels='services',
 )
 ### End of Billing Service ###
+
+### Agent Service ###
+
+agent_service_compile_cmd = 'CGO_ENABLED=0 GOOS=linux GOARCH=$(go env GOARCH) go build -o build/agent-service ./services/agent-service/cmd'
+
+local_resource(
+  'agent-service-compile',
+  agent_service_compile_cmd,
+  deps=['./services/agent-service', './shared'], labels="compiles")
+
+docker_build_with_restart(
+  'augno-api/agent-service',
+  '.',
+  entrypoint=['/app/build/agent-service'],
+  dockerfile='./infra/development/docker/agent-service.Dockerfile',
+  only=[
+    './build/agent-service',
+    './shared',
+  ],
+  live_update=[
+    sync('./build', '/app/build'),
+    sync('./shared', '/app/shared'),
+  ],
+)
+
+k8s_yaml('./infra/development/kubernetes/apps/agent-service.yaml')
+k8s_resource(
+  'agent-service',
+  port_forwards='9096:9092',
+  resource_deps=['agent-service-compile', 'rabbitmq', 'local-databases'],
+  labels='services',
+)
+### End of Agent Service ###

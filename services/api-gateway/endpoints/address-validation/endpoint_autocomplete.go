@@ -1,0 +1,37 @@
+package addressvalidationep
+
+import (
+	"context"
+	"net/http"
+
+	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	apierror "github.com/augno/api/shared/errors"
+)
+
+// AutocompleteAddressRequest is the request for address autocomplete.
+type AutocompleteAddressRequest struct {
+	// The text input for autocomplete.
+	Input string `query:"input" validate:"required"`
+	// An optional session token for grouping autocomplete requests.
+	SessionToken *string `query:"session_token,omitempty"` // #nosec G117 -- not a secret, Google Maps session correlation token
+}
+
+type AutocompleteAddressEndpoint struct{}
+
+func (e *AutocompleteAddressEndpoint) Materialize() *apiendpoint.APIEndpoint[*AutocompleteAddressRequest, *apiresource.List[apiresource.AddressSuggestion]] {
+	return &apiendpoint.APIEndpoint[*AutocompleteAddressRequest, *apiresource.List[apiresource.AddressSuggestion]]{
+		Title:             "Autocomplete Address",
+		Description:       "Returns address autocomplete suggestions based on the input text.",
+		Method:            http.MethodGet,
+		Route:             "/v1/core/addresses/autocomplete",
+		Request:           &AutocompleteAddressRequest{},
+		Response:          &apiresource.List[apiresource.AddressSuggestion]{},
+		SuccessStatusCode: http.StatusOK,
+		Public:            true,
+		Preview:           true,
+		ServiceHandler: func(svc any) func(ctx context.Context, req *AutocompleteAddressRequest) (*apiresource.List[apiresource.AddressSuggestion], *apierror.APIError) {
+			return svc.(AddressValidationSvc).AutocompleteAddress
+		},
+	}
+}

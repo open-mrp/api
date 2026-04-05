@@ -1,0 +1,90 @@
+package domain
+
+import (
+	"time"
+
+	"github.com/augno/api/shared/constants"
+	"github.com/augno/api/shared/pagination"
+)
+
+// AccountUserDetail is an enriched account user model with joined user, role,
+// and department data. Used by the account user management endpoints.
+type AccountUserDetail struct {
+	ID             string
+	UserID         string
+	Name           *string                     `audit:"name"`
+	Email          *string                     `audit:"email"`
+	Username       *string                     `audit:"username"`
+	ImageURL       *string                     `audit:"image_url"`
+	EmailVerified  bool                        `audit:"email_verified"`
+	RoleID         *string                     `audit:"role_id"`
+	RoleName       *string                     `audit:"role_name"`
+	RoleTypeCode   *string                     `audit:"role_type_code"`
+	DepartmentID   *string                     `audit:"department_id"`
+	DepartmentName *string                     `audit:"department_name"`
+	StatusCode     constants.AccountUserStatus `audit:"status_code"`
+	LastUsedAt     *time.Time
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+// ListAccountUsersParams are the parameters for listing account users.
+type ListAccountUsersParams struct {
+	AccountID      string
+	Query          *string
+	Cursor         *string
+	Limit          int32
+	RoleType       *string
+	IncludeRemoved bool
+}
+
+// ListAccountUsersResult is the result of listing account users.
+type ListAccountUsersResult struct {
+	Items      []*AccountUserDetail
+	PageInfo   pagination.PageInfo
+	TotalCount int64
+}
+
+// CreateAccountUserParams are the parameters for creating an account user.
+type CreateAccountUserParams struct {
+	AccountID                                    string
+	Name                                         *string
+	Email                                        *string
+	Username                                     *string
+	Password                                     *string // #nosec G117 -- domain model field, not a hardcoded credential
+	RoleID                                       *string
+	DepartmentID                                 *string
+	IsSalesRep                                   bool
+	ReceivesOrderAcknowledgements                bool
+	ReceivesInvoiceNotifications                 bool
+	ReceivesPurchaseOrderSubmissionNotifications bool
+}
+
+// NotificationPreference represents a stored notification preference.
+type NotificationPreference struct {
+	ID                   string
+	NotificationTypeCode string
+}
+
+// UpdateNotificationPreferenceItem represents a single preference toggle.
+type UpdateNotificationPreferenceItem struct {
+	NotificationTypeCode string
+	Enabled              bool
+}
+
+// UpdateNotificationPreferencesParams are the parameters for updating notification preferences.
+type UpdateNotificationPreferencesParams struct {
+	AccountUserID string
+	Preferences   []UpdateNotificationPreferenceItem
+}
+
+// UpdateAccountUserParams are the parameters for updating an account user.
+type UpdateAccountUserParams struct {
+	AccountID     string
+	AccountUserID string
+	Name          *string
+	Email         *string
+	Username      *string
+	RoleID        *string
+	DepartmentID  *string
+}

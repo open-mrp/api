@@ -9,11 +9,10 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-const switchPlanDescription string = `Initiates a plan switch. Handles free-to-paid (checkout redirect),
-paid-to-free (subscription cancellation), and paid-to-paid (subscription update) scenarios.`
-
+// SwitchPlanRequest is the request to switch pricing plans.
 type SwitchPlanRequest struct {
-	PlanID string `path:"id"`
+	// The ID of the target pricing plan to switch to.
+	PlanID string `path:"id" validate:"required"`
 }
 
 type SwitchPlanEndpoint struct{}
@@ -21,20 +20,17 @@ type SwitchPlanEndpoint struct{}
 func (e *SwitchPlanEndpoint) Materialize() *apiendpoint.APIEndpoint[*SwitchPlanRequest, *apiresource.SwitchPlanResponse] {
 	return &apiendpoint.APIEndpoint[*SwitchPlanRequest, *apiresource.SwitchPlanResponse]{
 		Title:             "Switch Plan",
-		Description:       switchPlanDescription,
+		Description:       "Switches the account to a different pricing plan, handling free-to-paid, paid-to-free, and paid-to-paid scenarios.",
 		Method:            http.MethodPost,
 		Route:             "/v1/billing/plans/{id}/switch",
 		ContentType:       "application/json",
 		Request:           &SwitchPlanRequest{},
-		Response:          apiresource.SampleSwitchPlanResponse,
+		Response:          &apiresource.SwitchPlanResponse{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *SwitchPlanRequest) (*apiresource.SwitchPlanResponse, *apierror.APIError) {
 			return svc.(BillingSvc).SwitchPlan
-		},
-		Extras: apiendpoint.APIEndpointExtras{
-			AllowUnknownJSONFields: false,
 		},
 	}
 }

@@ -35,7 +35,7 @@ func (*UnitsEndpointGroup) Materialize(config *UnitsEndpointGroupConfig) *UnitsE
 
 	inner := &apiendpoint.APIEndpointGroup{
 		Title:        "Units Management",
-		Description:  "Handles listing and managing units.",
+		Description:  "List and manage units.",
 		ResourceType: &apiresource.Unit{},
 	}
 
@@ -44,6 +44,7 @@ func (*UnitsEndpointGroup) Materialize(config *UnitsEndpointGroupConfig) *UnitsE
 	createUnitEndpoint := (&unitep.CreateUnitEndpoint{}).Materialize().WithService(inner, unitSvc)
 	updateUnitEndpoint := (&unitep.UpdateUnitEndpoint{}).Materialize().WithService(inner, unitSvc)
 	deleteUnitEndpoint := (&unitep.DeleteUnitEndpoint{}).Materialize().WithService(inner, unitSvc)
+	validateUnitsEndpoint := (&unitep.ValidateUnitsEndpoint{}).Materialize().WithService(inner, unitSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listUnitsEndpoint,
@@ -51,6 +52,7 @@ func (*UnitsEndpointGroup) Materialize(config *UnitsEndpointGroupConfig) *UnitsE
 		createUnitEndpoint,
 		updateUnitEndpoint,
 		deleteUnitEndpoint,
+		validateUnitsEndpoint,
 	}
 
 	return &UnitsEndpointGroup{inner}

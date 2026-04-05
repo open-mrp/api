@@ -73,6 +73,10 @@ func Run(
 		Repos: repository.NewRepoFactory(queries),
 	})
 
+	auditSvc := service.NewAuditEventSvc(&service.AuditEventSvcConfig{
+		Repos: repository.NewRepoFactory(queries),
+	})
+
 	inboxRepo := repository.NewInboxRepo(queries)
 	inboxPurgerRepo := repository.NewInboxPurgerRepo(queries)
 	inboxPurger, err := messaging.NewInboxPurger(&messaging.InboxPurgerConfig{}, inboxPurgerRepo)
@@ -87,6 +91,12 @@ func Run(
 	consumerTracer := workerTracer.Tracer(domain.ServiceName + ".request_log_consumer")
 	consumer := event.NewRequestLogConsumer(rabbitmq, loggingSvc, inboxRepo, consumerTracer)
 	if err := consumer.Listen(ctx); err != nil {
+		return err
+	}
+
+	auditConsumerTracer := workerTracer.Tracer(domain.ServiceName + ".audit_event_consumer")
+	auditConsumer := event.NewAuditEventConsumer(rabbitmq, auditSvc, inboxRepo, auditConsumerTracer)
+	if err := auditConsumer.Listen(ctx); err != nil {
 		return err
 	}
 
@@ -120,6 +130,7 @@ func Run(
 	}
 	grpc.NewGRPCHandler(server.Server(), idempotencyRepo)
 	grpc.NewLoggingHandler(server.Server(), loggingSvc)
+	grpc.NewAuditHandler(server.Server(), auditSvc)
 
 	logger.Info("Platform service starting", "port", cfg.Port)
 

@@ -14,6 +14,8 @@ import (
 	"github.com/augno/api/services/billing-service/internal/infrastructure/repository"
 	"github.com/augno/api/services/billing-service/internal/infrastructure/sqlc"
 	stripeinfra "github.com/augno/api/services/billing-service/internal/infrastructure/stripe"
+	"github.com/augno/api/services/billing-service/internal/infrastructure/stub"
+	"github.com/augno/api/services/billing-service/internal/mediator"
 	"github.com/augno/api/services/billing-service/internal/service"
 	"github.com/augno/api/shared/contracts"
 	"github.com/augno/api/shared/db"
@@ -74,10 +76,15 @@ func Run(
 	}
 	defer enqueuer.Stop()
 
-	stripeClient := stripeinfra.NewStripeClient(&stripeinfra.ClientConfig{
-		WebhookSecret: cfg.StripeWebhookSecret,
-		APIKey:        cfg.StripeAPIKey,
-	})
+	var stripeClient domain.StripeClient
+	if cfg.PlatformMode.IsTest() {
+		stripeClient = &stub.StripeClient{}
+	} else {
+		stripeClient = stripeinfra.NewStripeClient(&stripeinfra.ClientConfig{
+			WebhookSecret: cfg.StripeWebhookSecret,
+			APIKey:        cfg.StripeSecretKey,
+		})
+	}
 
 	coreClient, err := grpc.NewBillingCoreClient(cfg.CoreServiceURL)
 	if err != nil {
@@ -101,23 +108,23 @@ func Run(
 
 	repoFactory := repository.NewRepoFactory(queries)
 
+	idempotencyMed := mediator.NewIdempotencyMed(&mediator.IdempotencyMedConfig{
+		Repos: repoFactory,
+	})
+
 	billingSvc := service.NewBillingSvc(&service.BillingSvcConfig{
 		Repos:              repoFactory,
 		StripeClient:       stripeClient,
 		CoreClient:         coreClient,
 		FrontendURL:        cfg.FrontendURL,
 		NotificationClient: notificationClient,
-	})
-
-	checkoutSvc := service.NewCheckoutSvc(&service.CheckoutSvcConfig{
-		StripeClient:   stripeClient,
-		BillingSvc:     billingSvc,
-		PublishableKey: cfg.StripePublishableKey,
+		IdempotencyMed:     idempotencyMed,
 	})
 
 	stripeWebhookSvc := service.NewStripeWebhookSvc(&service.StripeWebhookSvcConfig{
-		Repos:        repoFactory,
-		StripeClient: stripeClient,
+		Repos:         repoFactory,
+		StripeClient:  stripeClient,
+		VerboseErrors: cfg.StripeWebhookVerboseErrors,
 	})
 
 	inboxRepo := repository.NewInboxRepo(queries)
@@ -132,8 +139,22 @@ func Run(
 	defer inboxPurger.Stop()
 
 	stripeEventLogRepo := repository.NewStripeEventLogRepo(queries)
-	stripeWebhookConsumer := event.NewStripeWebhookConsumer(rabbitmq, inboxRepo, stripeEventLogRepo, coreClient, stripeClient)
+	accountUsageRepo := repository.NewAccountUsageRepo(queries)
+	stripeWebhookConsumer := event.NewStripeWebhookConsumer(rabbitmq, inboxRepo, stripeEventLogRepo, coreClient, stripeClient, notificationClient, accountUsageRepo)
 	if err := stripeWebhookConsumer.Listen(ctx); err != nil {
+		return err
+	}
+
+	agentTokenBillingRepo := repository.NewAgentTokenBillingRepo(queries)
+	agentTokenHandler := event.NewAgentTokenBillingHandler(agentTokenBillingRepo, repoFactory)
+	agentRunConsumer := event.NewAgentRunCompletedConsumer(rabbitmq, inboxRepo, agentTokenHandler)
+	if err := agentRunConsumer.Listen(ctx); err != nil {
+		return err
+	}
+
+	seatChangeHandler := event.NewSeatChangeHandler(accountUsageRepo, stripeClient)
+	seatChangeConsumer := event.NewSeatChangeConsumer(rabbitmq, inboxRepo, seatChangeHandler)
+	if err := seatChangeConsumer.Listen(ctx); err != nil {
 		return err
 	}
 
@@ -141,7 +162,7 @@ func Run(
 	if err != nil {
 		return err
 	}
-	grpc.NewBillingHandler(server.Server(), billingSvc, stripeWebhookSvc, checkoutSvc)
+	grpc.NewBillingHandler(server.Server(), billingSvc, stripeWebhookSvc, cfg.StripePublishableKey)
 
 	logger.Info("Billing service starting", "port", cfg.Port)
 

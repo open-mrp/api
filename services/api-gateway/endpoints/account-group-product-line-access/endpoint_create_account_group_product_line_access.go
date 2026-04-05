@@ -1,0 +1,47 @@
+package accountgroupproductlineaccessep
+
+import (
+	"context"
+	"net/http"
+
+	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
+	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	apierror "github.com/augno/api/shared/errors"
+)
+
+// CreateAccountGroupProductLineAccessRequest is the request to create product line access for an account group.
+type CreateAccountGroupProductLineAccessRequest struct {
+	// The ID of the account group.
+	AccountGroupID string `json:"account_group_id" validate:"required"`
+	// The IDs of the product lines to grant access to.
+	ProductLineIDs []string `json:"product_line_ids" validate:"required"`
+}
+
+var sampleCreateAccountGroupProductLineAccessRequest = &CreateAccountGroupProductLineAccessRequest{
+	AccountGroupID: apiresource.SampleAccountGroupID,
+	ProductLineIDs: []string{apiresource.SampleProductLineID},
+}
+
+func (*CreateAccountGroupProductLineAccessRequest) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(sampleCreateAccountGroupProductLineAccessRequest)
+}
+
+type CreateAccountGroupProductLineAccessEndpoint struct{}
+
+func (e *CreateAccountGroupProductLineAccessEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAccountGroupProductLineAccessRequest, *apiresource.AccountGroupProductLineAccess] {
+	return &apiendpoint.APIEndpoint[*CreateAccountGroupProductLineAccessRequest, *apiresource.AccountGroupProductLineAccess]{
+		Title:             "Create Account Group Product Line Access",
+		Description:       "Creates product line access for an account group.",
+		Method:            http.MethodPost,
+		Route:             "/v1/sales/product-line-access/account-groups",
+		Request:           &CreateAccountGroupProductLineAccessRequest{},
+		Response:          &apiresource.AccountGroupProductLineAccess{},
+		SuccessStatusCode: http.StatusCreated,
+		Public:            false,
+		Preview:           true,
+		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateAccountGroupProductLineAccessRequest) (*apiresource.AccountGroupProductLineAccess, *apierror.APIError) {
+			return svc.(AccountGroupProductLineAccessSvc).CreateAccountGroupProductLineAccess
+		},
+	}
+}

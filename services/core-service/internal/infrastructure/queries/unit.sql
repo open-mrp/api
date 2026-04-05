@@ -26,9 +26,10 @@ AND (
     )
 )
 AND (
-    sqlc.narg('search_query') IS NULL
-    OR unit.name LIKE sqlc.narg('search_query')
-    OR unit.abbreviation = sqlc.narg('search_exact')
+    (sqlc.narg('search_query') IS NULL AND sqlc.narg('like_query') IS NULL)
+    OR MATCH(unit.name, unit.abbreviation) AGAINST(sqlc.narg('search_query') IN BOOLEAN MODE)
+    OR unit.name LIKE sqlc.narg('like_query')
+    OR unit.abbreviation LIKE sqlc.narg('like_query')
 )
 AND (
     sqlc.narg('cursor_created_at') IS NULL
@@ -66,9 +67,10 @@ AND (
     )
 )
 AND (
-    sqlc.narg('search_query') IS NULL
-    OR unit.name LIKE sqlc.narg('search_query')
-    OR unit.abbreviation = sqlc.narg('search_exact')
+    (sqlc.narg('search_query') IS NULL AND sqlc.narg('like_query') IS NULL)
+    OR MATCH(unit.name, unit.abbreviation) AGAINST(sqlc.narg('search_query') IN BOOLEAN MODE)
+    OR unit.name LIKE sqlc.narg('like_query')
+    OR unit.abbreviation LIKE sqlc.narg('like_query')
 )
 AND (
     unit.created_at > sqlc.arg('cursor_created_at')
@@ -153,3 +155,20 @@ AND (sqlc.narg('exclude_id') IS NULL OR id != sqlc.narg('exclude_id'));
 SELECT COUNT(*) FROM unit
 WHERE abbreviation = ? AND (account_id = ? OR account_id IS NULL)
 AND (sqlc.narg('exclude_id') IS NULL OR id != sqlc.narg('exclude_id'));
+
+-- name: FindUnitsByAbbreviations :many
+SELECT
+    unit.id,
+    unit.name,
+    unit.abbreviation,
+    unit.unit_dimension_code,
+    unit.ratio_numerator,
+    unit.ratio_denominator,
+    unit.offset_numerator,
+    unit.offset_denominator,
+    unit.is_base_unit,
+    unit.account_id,
+    unit.created_at,
+    unit.updated_at
+FROM unit
+WHERE (unit.account_id = sqlc.arg('account_id') OR unit.account_id IS NULL);

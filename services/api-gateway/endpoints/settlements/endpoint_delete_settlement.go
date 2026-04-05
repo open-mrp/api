@@ -1,0 +1,35 @@
+package settlementep
+
+import (
+	"context"
+	"net/http"
+
+	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	apierror "github.com/augno/api/shared/errors"
+)
+
+// DeleteSettlementRequest is the request to delete a settlement.
+type DeleteSettlementRequest struct {
+	// The ID of the settlement to delete.
+	SettlementID string `path:"id" validate:"required"`
+}
+
+type DeleteSettlementEndpoint struct{}
+
+func (e *DeleteSettlementEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteSettlementRequest, *apiresource.Settlement] {
+	return &apiendpoint.APIEndpoint[*DeleteSettlementRequest, *apiresource.Settlement]{
+		Title:             "Delete Settlement",
+		Description:       "Deletes a settlement, removing its allocations and reverting payment statuses on affected invoices and transactions.",
+		Method:            http.MethodDelete,
+		Route:             "/v1/finance/settlements/{id}",
+		Request:           &DeleteSettlementRequest{},
+		Response:          &apiresource.Settlement{},
+		SuccessStatusCode: http.StatusOK,
+		Public:            false,
+		Preview:           true,
+		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteSettlementRequest) (*apiresource.Settlement, *apierror.APIError) {
+			return svc.(SettlementSvc).DeleteSettlement
+		},
+	}
+}

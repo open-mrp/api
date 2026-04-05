@@ -1,0 +1,16 @@
+version: "2"
+sql:
+  - schema: "db/migrations"
+    queries: "internal/infrastructure/queries"
+    engine: "postgresql"
+    gen:
+      go:
+        out: "internal/infrastructure/sqlc"
+        package: "sqlc"
+        sql_package: "pgx/v5"
+        emit_prepared_queries: false
+        overrides:
+          - column: "message_outbox.headers"
+            go_type:
+              import: "github.com/augno/api/shared/db"
+              type: "NullableRawMessage"

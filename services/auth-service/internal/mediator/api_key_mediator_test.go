@@ -103,6 +103,7 @@ func (suite *APIKeyMedTestSuite) TearDownSuite() {
 
 // TestAPIKeyMedTestSuite runs the test suite
 func TestAPIKeyMedTestSuite(t *testing.T) {
+	t.Parallel()
 	suite.Run(t, new(APIKeyMedTestSuite))
 }
 

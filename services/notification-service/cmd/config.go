@@ -71,13 +71,16 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 // validate validates the configuration.
 func (c *config) validate() error {
 	if c == nil {
-		return fmt.Errorf("config is nil")
+		return fmt.Errorf("notification-service: config is nil")
 	}
 	if c.DBURL == "" {
-		return fmt.Errorf("the provided database URI is empty")
+		return fmt.Errorf("notification-service: the provided database URI is empty")
 	}
-	if c.AWSRegion == "" {
-		return fmt.Errorf("the provided AWS region is empty")
+	if !c.PlatformMode.IsValid() {
+		return fmt.Errorf("notification-service: the provided platform mode is invalid: %s", c.PlatformMode)
+	}
+	if !c.PlatformMode.IsTest() && c.AWSRegion == "" {
+		return fmt.Errorf("notification-service: the provided AWS region is empty")
 	}
 	return nil
 }

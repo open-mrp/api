@@ -27,9 +27,9 @@ type RegistrationSessionSvc interface {
 	CreateUser(ctx context.Context, req *CreateUserRequest) (*apiresource.CreateUserResponse, *apierror.APIError)
 	UpdateSession(ctx context.Context, req *UpdateSessionRequest) (*apiresource.RegistrationSession, *apierror.APIError)
 	ListSessions(ctx context.Context, req *apiresource.PaginationRequest) (*apiresource.List[apiresource.RegistrationSession], *apierror.APIError)
-	CreateCheckout(ctx context.Context, req *CreateCheckoutRequest) (*apiresource.CreateCheckoutResponse, *apierror.APIError)
-	CompleteRegistration(ctx context.Context, req *CompleteRegistrationRequest) (*apiresource.CompleteRegistrationResponse, *apierror.APIError)
+	SetupBilling(ctx context.Context, req *SetupBillingRequest) (*apiresource.SetupBillingResponse, *apierror.APIError)
 	ConfirmPayment(ctx context.Context, req *ConfirmPaymentRequest) (*apiresource.ConfirmPaymentResponse, *apierror.APIError)
+	CompleteRegistration(ctx context.Context, req *CompleteRegistrationRequest) (*apiresource.CompleteRegistrationResponse, *apierror.APIError)
 }
 
 type RegistrationSessionSvcConfig struct {
@@ -200,13 +200,13 @@ func (m *registrationSessionSvcImpl) ListSessions(ctx context.Context, req *apir
 		sessions[i] = *mapProtoToRegistrationSession(s)
 	}
 
-	return apiresource.NewList(sessions, mapProtoPageInfo(resp.PageInfo)), nil
+	return apiresource.NewList(sessions, grpcutil.MapProtoPageInfo(resp.PageInfo)), nil
 }
 
-func (m *registrationSessionSvcImpl) CreateCheckout(ctx context.Context, req *CreateCheckoutRequest) (*apiresource.CreateCheckoutResponse, *apierror.APIError) {
-	resp, apiErr := grpcutil.CallRPC(ctx, registrationSessionSvcTracer, "service.registration_sessions.create_checkout", domain.ServiceName,
-		func(ctx context.Context, opts ...grpc.CallOption) (*pb.CreateRegistrationCheckoutResponse, error) {
-			return m.authClient.CreateRegistrationCheckout(ctx, &pb.CreateRegistrationCheckoutRequest{
+func (m *registrationSessionSvcImpl) SetupBilling(ctx context.Context, req *SetupBillingRequest) (*apiresource.SetupBillingResponse, *apierror.APIError) {
+	resp, apiErr := grpcutil.CallRPC(ctx, registrationSessionSvcTracer, "service.registration_sessions.setup_billing", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.SetupRegistrationBillingResponse, error) {
+			return m.authClient.SetupRegistrationBilling(ctx, &pb.SetupRegistrationBillingRequest{
 				SessionId: req.SessionID,
 			}, opts...)
 		})
@@ -215,11 +215,31 @@ func (m *registrationSessionSvcImpl) CreateCheckout(ctx context.Context, req *Cr
 		return nil, apiErr
 	}
 
-	return &apiresource.CreateCheckoutResponse{
-		ClientSecret:     resp.ClientSecret,
-		CheckoutID:       resp.CheckoutId,
+	return &apiresource.SetupBillingResponse{
+		Object:           constants.ObjectTypeSetupBillingResponse,
 		StripeCustomerID: resp.StripeCustomerId,
+		ClientSecret:     resp.ClientSecret,
 		PublishableKey:   resp.PublishableKey,
+	}, nil
+}
+
+func (m *registrationSessionSvcImpl) ConfirmPayment(ctx context.Context, req *ConfirmPaymentRequest) (*apiresource.ConfirmPaymentResponse, *apierror.APIError) {
+	resp, apiErr := grpcutil.CallRPC(ctx, registrationSessionSvcTracer, "service.registration_sessions.confirm_payment", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ConfirmRegistrationPaymentResponse, error) {
+			return m.authClient.ConfirmRegistrationPayment(ctx, &pb.ConfirmRegistrationPaymentRequest{
+				SessionId:     req.SessionID,
+				SetupIntentId: req.SetupIntentID,
+			}, opts...)
+		})
+
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return &apiresource.ConfirmPaymentResponse{
+		Object:          constants.ObjectTypeConfirmPaymentResponse,
+		Status:          resp.Status,
+		PaymentMethodID: resp.PaymentMethodId,
 	}, nil
 }
 
@@ -229,7 +249,7 @@ func (m *registrationSessionSvcImpl) CompleteRegistration(ctx context.Context, r
 			return m.authClient.CompleteRegistration(ctx, &pb.CompleteRegistrationRequest{
 				SessionId: req.SessionID,
 			}, opts...)
-		})
+		}, grpcutil.WithTimeout(grpcutil.BillingOperationTimeout))
 
 	if apiErr != nil {
 		return nil, apiErr
@@ -239,44 +259,6 @@ func (m *registrationSessionSvcImpl) CompleteRegistration(ctx context.Context, r
 		ID:     resp.AccountId,
 		Object: constants.ObjectTypeAccount,
 	}, nil
-}
-
-func (m *registrationSessionSvcImpl) ConfirmPayment(ctx context.Context, req *ConfirmPaymentRequest) (*apiresource.ConfirmPaymentResponse, *apierror.APIError) {
-	resp, apiErr := grpcutil.CallRPC(ctx, registrationSessionSvcTracer, "service.registration_sessions.confirm_payment", domain.ServiceName,
-		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ConfirmRegistrationPaymentResponse, error) {
-			return m.authClient.ConfirmRegistrationPayment(ctx, &pb.ConfirmRegistrationPaymentRequest{
-				SessionId:         req.SessionID,
-				CheckoutSessionId: req.CheckoutSessionID,
-			}, opts...)
-		})
-
-	if apiErr != nil {
-		return nil, apiErr
-	}
-
-	result := &apiresource.ConfirmPaymentResponse{
-		Status: resp.Status,
-	}
-	if resp.SubscriptionId != nil {
-		result.SubscriptionID = resp.SubscriptionId
-	}
-	if resp.StripeCustomerId != nil {
-		result.StripeCustomerID = resp.StripeCustomerId
-	}
-
-	return result, nil
-}
-
-func mapProtoPageInfo(pi *pb.PageInfo) apiresource.PageInfo {
-	if pi == nil {
-		return apiresource.PageInfo{}
-	}
-	return apiresource.PageInfo{
-		NextCursor:  pi.NextCursor,
-		PrevCursor:  pi.PrevCursor,
-		HasNextPage: pi.HasNextPage,
-		HasPrevPage: pi.HasPrevPage,
-	}
 }
 
 func mapProtoToRegistrationSession(s *pb.RegistrationSessionInfo) *apiresource.RegistrationSession {
@@ -292,7 +274,7 @@ func mapProtoToRegistrationSession(s *pb.RegistrationSessionInfo) *apiresource.R
 	}
 	if s.IsEmailVerified && s.UpdatedAt != nil {
 		t := s.UpdatedAt.AsTime()
-		user.EmailVerified = &t
+		user.EmailVerifiedAt = &t
 	}
 	if s.SessionData != nil && s.SessionData.UserName != nil && *s.SessionData.UserName != "" {
 		user.Name = s.SessionData.UserName

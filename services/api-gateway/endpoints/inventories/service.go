@@ -1,0 +1,64 @@
+package inventoryep
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/augno/api/services/api-gateway/internal/domain"
+	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
+	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	apierror "github.com/augno/api/shared/errors"
+	pb "github.com/augno/api/shared/proto/core"
+	"github.com/augno/api/shared/tracing"
+	"google.golang.org/grpc"
+)
+
+type InventorySvc interface {
+	ListInventories(ctx context.Context, req *ListInventoriesRequest) (*apiresource.ListInventoriesResponse, *apierror.APIError)
+}
+
+type InventorySvcConfig struct {
+	CoreClient pb.CoreServiceClient
+}
+
+type inventorySvcImpl struct {
+	coreClient pb.CoreServiceClient
+}
+
+var inventorySvcTracer = tracing.GetTracer("api-gateway.endpoints.inventories.service")
+
+func (c *InventorySvcConfig) validate() error {
+	if c.CoreClient == nil {
+		return fmt.Errorf("inventory endpoint service: core client is required")
+	}
+	return nil
+}
+
+func NewInventorySvc(config *InventorySvcConfig) InventorySvc {
+	if err := config.validate(); err != nil {
+		panic(err)
+	}
+
+	return &inventorySvcImpl{
+		coreClient: config.CoreClient,
+	}
+}
+
+func (m *inventorySvcImpl) ListInventories(ctx context.Context, req *ListInventoriesRequest) (*apiresource.ListInventoriesResponse, *apierror.APIError) {
+	pbReq := &pb.ListInventoriesRequest{
+		Cursor: req.Cursor,
+		Limit:  req.Limit,
+		Query:  req.Query,
+	}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, inventorySvcTracer, "service.inventories.list", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ListInventoriesResponse, error) {
+			return m.coreClient.ListInventories(ctx, pbReq, opts...)
+		})
+
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return ListInventoriesPresenter(resp), nil
+}

@@ -62,28 +62,26 @@ func (s *DocAPIKeySvcTestSuite) TearDownSuite() {
 }
 
 func TestDocAPIKeySvcTestSuite(t *testing.T) {
+	t.Parallel()
 	suite.Run(t, new(DocAPIKeySvcTestSuite))
 }
 
 func (s *DocAPIKeySvcTestSuite) newAdminCtx() context.Context {
 	identity := &types.Identity{
-		Type:            types.IdentityTypeUser,
-		TargetAccountID: strPtr(testSandboxAccountID),
-		AccountMode:     constants.AccountModeSandbox,
+		Type:        types.IdentityActorTypeUser,
+		Target:      &types.IdentityTarget{AccountID: testSandboxAccountID},
+		AccountMode: constants.AccountModeSandbox,
 		Actor: &types.IdentityActor{
-			Type:         types.IdentityActorTypeInternal,
+			RelationType: types.IdentityRelationTypeInternal,
 			ID:           "usr_test123",
-			RoleTypeCode: strPtr("admin"),
+			AccountID:    new(testSandboxAccountID),
+			RoleTypeCode: new("admin"),
 		},
 	}
 	ctx := appctx.WithIdentity(context.Background(), identity)
 	ctx = appctx.WithIdempotencyKey(ctx, "test-idempotency-key")
 	ctx = appctx.WithIdempotencyResponseMetadata(ctx, &appctx.IdempotencyResponseMetadata{})
 	return ctx
-}
-
-func strPtr(s string) *string {
-	return &s
 }
 
 func (s *DocAPIKeySvcTestSuite) TestGetOrCreateDocAPIKey_DelegatesToMediator() {
@@ -194,12 +192,13 @@ func (s *DocAPIKeySvcTestSuite) TestGetOrCreateDocAPIKey_ResolveError_CachesErro
 
 func (s *DocAPIKeySvcTestSuite) TestGetOrCreateDocAPIKey_RequiresTargetAccount() {
 	identity := &types.Identity{
-		Type:        types.IdentityTypeUser,
+		Type:        types.IdentityActorTypeUser,
 		AccountMode: constants.AccountModeSandbox,
 		Actor: &types.IdentityActor{
-			Type:         types.IdentityActorTypeInternal,
+			RelationType: types.IdentityRelationTypeInternal,
 			ID:           "usr_test123",
-			RoleTypeCode: strPtr("admin"),
+			AccountID:    new(testSandboxAccountID),
+			RoleTypeCode: new("admin"),
 		},
 	}
 	ctx := appctx.WithIdentity(context.Background(), identity)
@@ -212,13 +211,14 @@ func (s *DocAPIKeySvcTestSuite) TestGetOrCreateDocAPIKey_RequiresTargetAccount()
 
 func (s *DocAPIKeySvcTestSuite) TestGetOrCreateDocAPIKey_RejectsProductionAccount() {
 	identity := &types.Identity{
-		Type:            types.IdentityTypeUser,
-		TargetAccountID: strPtr(testOwnerAccountID),
-		AccountMode:     constants.AccountModeProduction,
+		Type:        types.IdentityActorTypeUser,
+		Target:      &types.IdentityTarget{AccountID: testOwnerAccountID},
+		AccountMode: constants.AccountModeProduction,
 		Actor: &types.IdentityActor{
-			Type:         types.IdentityActorTypeInternal,
+			RelationType: types.IdentityRelationTypeInternal,
 			ID:           "usr_test123",
-			RoleTypeCode: strPtr("admin"),
+			AccountID:    new(testOwnerAccountID),
+			RoleTypeCode: new("admin"),
 		},
 	}
 	ctx := appctx.WithIdentity(context.Background(), identity)

@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+// Package core defines additional gRPC services for the core-service.
+// CoreAccountService exposes account-level RPCs consumed by the billing-service.
+package core;
+
+import "google/protobuf/empty.proto";
+import "core/core.proto";
+
+option go_package = "shared/proto/core;core";
+
+service CoreAccountService {
+  // GetAccountByStripeCustomerID resolves an account ID and plan code from a
+  // Stripe customer ID. Used by the billing-service during webhook processing.
+  rpc GetAccountByStripeCustomerID(GetAccountByStripeCustomerIDRequest) returns (GetAccountByStripeCustomerIDResponse);
+
+  // UpdateAccountSubscription updates subscription-related fields on an account.
+  // Called by the billing-service after processing Stripe subscription events.
+  rpc UpdateAccountSubscription(UpdateAccountSubscriptionRequest) returns (google.protobuf.Empty);
+
+  // ClearAccountStripeCustomer removes the Stripe customer association from an
+  // account. Used during account cleanup or billing migration.
+  rpc ClearAccountStripeCustomer(ClearAccountStripeCustomerRequest) returns (google.protobuf.Empty);
+}

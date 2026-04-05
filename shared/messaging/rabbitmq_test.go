@@ -10,6 +10,7 @@ import (
 )
 
 func TestPublishWithReconnectRetriesClosedChannel(t *testing.T) {
+	t.Parallel()
 	t.Helper()
 
 	ctx := context.Background()
@@ -39,6 +40,7 @@ func TestPublishWithReconnectRetriesClosedChannel(t *testing.T) {
 }
 
 func TestPublishWithReconnectPropagatesNonRecoverableError(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	expectedErr := errors.New("boom")
 	reconnectCalls := 0
@@ -63,6 +65,7 @@ func TestPublishWithReconnectPropagatesNonRecoverableError(t *testing.T) {
 }
 
 func TestPublishWithReconnectReturnsReconnectError(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	reconnectCalls := 0
 	publishCalls := 0
@@ -91,6 +94,7 @@ func TestPublishWithReconnectReturnsReconnectError(t *testing.T) {
 }
 
 func TestShouldReconnectRecognizesExpectedErrors(t *testing.T) {
+	t.Parallel()
 	require.True(t, shouldReconnect(amqp.ErrClosed))
 	require.True(t, shouldReconnect(&amqp.Error{Code: amqp.ChannelError}))
 	require.True(t, shouldReconnect(errors.New("Exception (504) Reason: \"channel/connection is not open\"")))

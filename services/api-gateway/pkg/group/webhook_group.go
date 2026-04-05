@@ -35,7 +35,7 @@ func (*WebhooksEndpointGroup) Materialize(config *WebhooksEndpointGroupConfig) *
 
 	inner := &apiendpoint.APIEndpointGroup{
 		Title:        "Webhooks",
-		Description:  "Handles incoming webhook events.",
+		Description:  "Incoming webhook events.",
 		ResourceType: &apiresource.WebhookResponse{},
 	}
 

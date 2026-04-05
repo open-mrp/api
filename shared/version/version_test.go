@@ -5,6 +5,7 @@ import (
 )
 
 func TestParse_ValidPreviewVersion(t *testing.T) {
+	t.Parallel()
 	v, err := Parse("1.0.forge-preview.1")
 	if err != nil {
 		t.Fatalf("Parse failed: %v", err)
@@ -36,6 +37,7 @@ func TestParse_ValidPreviewVersion(t *testing.T) {
 }
 
 func TestParse_InvalidFormat(t *testing.T) {
+	t.Parallel()
 	tests := []string{
 		"2026-02-01.forge",  // old date-based format
 		"1.0",               // missing codename
@@ -58,7 +60,10 @@ func TestParse_InvalidFormat(t *testing.T) {
 }
 
 func TestParse_UnsupportedVersion(t *testing.T) {
+	t.Parallel(
 	// Valid format but not in supported list
+	)
+
 	_, err := Parse("99.99.future")
 	if err == nil {
 		t.Error("Expected error for unsupported version")
@@ -66,6 +71,7 @@ func TestParse_UnsupportedVersion(t *testing.T) {
 }
 
 func TestAPIVersion_Before_StableVersions(t *testing.T) {
+	t.Parallel()
 	v1_0 := APIVersion{
 		Version:   "1.0.forge",
 		Minor:     1,
@@ -115,6 +121,7 @@ func TestAPIVersion_Before_StableVersions(t *testing.T) {
 }
 
 func TestAPIVersion_Before_PreviewVsStable(t *testing.T) {
+	t.Parallel()
 	v1_1_preview := APIVersion{
 		Version:   "1.1.forge-preview.1",
 		Minor:     1,
@@ -144,6 +151,7 @@ func TestAPIVersion_Before_PreviewVsStable(t *testing.T) {
 }
 
 func TestAPIVersion_Before_PreviewVersions(t *testing.T) {
+	t.Parallel()
 	preview1 := APIVersion{
 		Version:   "1.1.forge-preview.1",
 		Minor:     1,
@@ -172,6 +180,7 @@ func TestAPIVersion_Before_PreviewVersions(t *testing.T) {
 }
 
 func TestAPIVersion_Before_DifferentCodenames(t *testing.T) {
+	t.Parallel()
 	alpha := APIVersion{
 		Version:   "1.0.alpha",
 		Minor:     1,
@@ -201,6 +210,7 @@ func TestAPIVersion_Before_DifferentCodenames(t *testing.T) {
 }
 
 func TestAPIVersion_After(t *testing.T) {
+	t.Parallel()
 	older := APIVersion{
 		Version:   "1.0.forge",
 		Minor:     1,
@@ -233,6 +243,7 @@ func TestAPIVersion_After(t *testing.T) {
 }
 
 func TestAPIVersion_Equal(t *testing.T) {
+	t.Parallel()
 	v1 := V1_0_Forge_Preview1
 	v2, _ := Parse("1.0.forge-preview.1")
 
@@ -255,6 +266,7 @@ func TestAPIVersion_Equal(t *testing.T) {
 }
 
 func TestAPIVersion_String(t *testing.T) {
+	t.Parallel()
 	v := V1_0_Forge_Preview1
 	if v.String() != "1.0.forge-preview.1" {
 		t.Errorf("Expected %s, got %s", "1.0.forge-preview.1", v.String())
@@ -262,6 +274,7 @@ func TestAPIVersion_String(t *testing.T) {
 }
 
 func TestSupportedVersionStrings(t *testing.T) {
+	t.Parallel()
 	strings := SupportedVersionStrings()
 
 	if len(strings) == 0 {
@@ -282,6 +295,7 @@ func TestSupportedVersionStrings(t *testing.T) {
 }
 
 func TestIsSupported(t *testing.T) {
+	t.Parallel()
 	if !IsSupported("1.0.forge-preview.1") {
 		t.Error("Expected 1.0.forge-preview.1 to be supported")
 	}
@@ -296,6 +310,7 @@ func TestIsSupported(t *testing.T) {
 }
 
 func TestMustParse_Valid(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r != nil {
 			t.Error("MustParse panicked on valid input")
@@ -309,6 +324,7 @@ func TestMustParse_Valid(t *testing.T) {
 }
 
 func TestMustParse_Invalid(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		if r := recover(); r == nil {
 			t.Error("MustParse should panic on invalid input")
@@ -319,12 +335,14 @@ func TestMustParse_Invalid(t *testing.T) {
 }
 
 func TestLatest(t *testing.T) {
+	t.Parallel()
 	if Latest.Version != "1.0.forge-preview.1" {
 		t.Errorf("Expected Latest to be 1.0.forge-preview.1, got %s", Latest.Version)
 	}
 }
 
 func TestV1_0_Forge_Preview1(t *testing.T) {
+	t.Parallel()
 	v := V1_0_Forge_Preview1
 
 	if v.Version != "1.0.forge-preview.1" {

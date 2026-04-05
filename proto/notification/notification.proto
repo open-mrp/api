@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+// Package notification defines the gRPC contract for the notification-service.
+// It provides synchronous email sending (bypassing the outbox pattern) for cases
+// where the caller needs immediate confirmation of dispatch. For asynchronous
+// email, services write to the outbox table and the notification-service consumes
+// from the notification_cmd_send_email RabbitMQ queue instead.
+package notification;
+
+option go_package = "shared/proto/notification;notification";
+
+service NotificationService {
+  // SendEmail dispatches an email synchronously via SES. The caller blocks
+  // until the email is accepted by SES (not until delivery). Returns success
+  // if SES accepted the message for delivery. Used for transactional emails
+  // that need immediate send confirmation (e.g. password reset emails that
+  // are sent inline during the request).
+  rpc SendEmail(EmailRequest) returns (EmailResponse);
+
+  // SendEnterpriseRequest sends a pre-formatted enterprise plan inquiry email
+  // to the sales team. The notification-service fills in the email template
+  // using the provided account and requester details.
+  rpc SendEnterpriseRequest(EnterpriseRequestEmailRequest) returns (EmailResponse);
+}
+
+message EmailRequest {
+  repeated string to = 1;
+  string subject = 2;
+  string body = 3;
+  // When true, body is sent as text/html; when false, text/plain.
+  bool is_body_html = 4;
+  // Overrides the default sender address. When absent, uses the configured default.
+  optional string send_as = 5;
+  // Absent for system-generated emails (e.g. welcome emails before account creation).
+  optional string account_id = 6;
+  optional string sent_by_id = 7;
+}
+
+message EmailResponse {
+  // True when SES accepted the message. Does not guarantee delivery —
+  // bounces and complaints arrive asynchronously via notify_email_status.
+  bool success = 1;
+}
+
+message EnterpriseRequestEmailRequest {
+  string account_id = 1;
+  string account_name = 2;
+  string current_plan_name = 3;
+  string requester_name = 4;
+  string requester_email = 5;
+}

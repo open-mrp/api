@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/augno/api/services/auth-service/internal/domain"
-	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/contracts"
 	pb "github.com/augno/api/shared/proto/auth"
@@ -66,7 +65,7 @@ func (h *gRPCHandler) ValidateCredential(ctx context.Context, cred *pb.Credentia
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	result, apiErr := h.authSvc.ValidateCredential(ctx, cred.Token, cred.TargetAccountId)
+	result, apiErr := h.authSvc.ValidateCredential(ctx, cred.Token, cred.TargetAccountId, cred.ActorAccountId)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
@@ -170,15 +169,10 @@ func (h *gRPCHandler) UpdatePassword(ctx context.Context, req *pb.UpdatePassword
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
-	if !ok {
-		return nil, contracts.NewMissingIdentityMetadataError()
-	}
-
 	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
 	defer finalizeIdempotency()
 
-	apiErr := h.passwordSvc.UpdatePassword(ctx, identity.Actor.ID, req.OldPassword, req.NewPassword)
+	apiErr := h.passwordSvc.UpdatePassword(ctx, req.OldPassword, req.NewPassword)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
@@ -414,7 +408,7 @@ func (h *gRPCHandler) UpdateRegistrationSession(ctx context.Context, req *pb.Upd
 
 	// Only pass step and session_data — sensitive fields (stripe_customer_id,
 	// payment_completed, stripe_subscription_id) are ignored. Payment state
-	// should only be modified via ConfirmPayment / CreateCheckout.
+	// should only be modified via SetupBilling.
 	input := domain.UpdateRegistrationSessionInput{
 		SessionID: req.SessionId,
 	}
@@ -511,33 +505,7 @@ func (h *gRPCHandler) CompleteRegistration(ctx context.Context, req *pb.Complete
 	}, nil
 }
 
-func (h *gRPCHandler) ConfirmRegistrationPayment(ctx context.Context, req *pb.ConfirmRegistrationPaymentRequest) (*pb.ConfirmRegistrationPaymentResponse, error) {
-	if req == nil {
-		return nil, contracts.NewMissingGRPCRequestDataError()
-	}
-
-	result, apiErr := h.registrationSessionSvc.ConfirmPayment(ctx, domain.ConfirmPaymentInput{
-		SessionID:         req.SessionId,
-		CheckoutSessionID: req.CheckoutSessionId,
-	})
-	if apiErr != nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
-	}
-
-	resp := &pb.ConfirmRegistrationPaymentResponse{
-		Status: result.Status,
-	}
-	if result.SubscriptionID != "" {
-		resp.SubscriptionId = &result.SubscriptionID
-	}
-	if result.StripeCustomerID != "" {
-		resp.StripeCustomerId = &result.StripeCustomerID
-	}
-
-	return resp, nil
-}
-
-func (h *gRPCHandler) CreateRegistrationCheckout(ctx context.Context, req *pb.CreateRegistrationCheckoutRequest) (*pb.CreateRegistrationCheckoutResponse, error) {
+func (h *gRPCHandler) SetupRegistrationBilling(ctx context.Context, req *pb.SetupRegistrationBillingRequest) (*pb.SetupRegistrationBillingResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
@@ -545,17 +513,38 @@ func (h *gRPCHandler) CreateRegistrationCheckout(ctx context.Context, req *pb.Cr
 	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
 	defer finalizeIdempotency()
 
-	result, apiErr := h.registrationSessionSvc.CreateCheckout(ctx, domain.CreateRegistrationCheckoutInput{
+	result, apiErr := h.registrationSessionSvc.SetupBilling(ctx, domain.SetupBillingInput{
 		SessionID: req.SessionId,
 	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
-	return &pb.CreateRegistrationCheckoutResponse{
-		ClientSecret:     result.ClientSecret,
-		CheckoutId:       result.CheckoutID,
+	return &pb.SetupRegistrationBillingResponse{
 		StripeCustomerId: result.StripeCustomerID,
+		ClientSecret:     result.ClientSecret,
 		PublishableKey:   result.PublishableKey,
+	}, nil
+}
+
+func (h *gRPCHandler) ConfirmRegistrationPayment(ctx context.Context, req *pb.ConfirmRegistrationPaymentRequest) (*pb.ConfirmRegistrationPaymentResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	result, apiErr := h.registrationSessionSvc.ConfirmPayment(ctx, domain.ConfirmPaymentInput{
+		SessionID:     req.SessionId,
+		SetupIntentID: req.SetupIntentId,
+	})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.ConfirmRegistrationPaymentResponse{
+		Status:          result.Status,
+		PaymentMethodId: result.PaymentMethodID,
 	}, nil
 }

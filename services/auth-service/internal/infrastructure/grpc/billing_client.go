@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"time"
 
 	"github.com/augno/api/services/auth-service/internal/domain"
 	"github.com/augno/api/shared/contracts"
@@ -12,6 +13,8 @@ import (
 
 	"google.golang.org/grpc"
 )
+
+const billingOperationTimeout = 25 * time.Second
 
 const billingServiceName = "billing-service"
 
@@ -97,15 +100,45 @@ func (c *AuthBillingClient) CreateCustomer(ctx context.Context, email, name, ide
 	return &domain.StripeCustomer{ID: resp.CustomerId}, nil
 }
 
-func (c *AuthBillingClient) CreateCheckoutSession(ctx context.Context, customerID, planCode, returnURL, idempotencyKey string) (*domain.StripeCheckoutSession, *apierror.APIError) {
+func (c *AuthBillingClient) SetupBillingProfile(ctx context.Context, accountID string) (*domain.BillingProfileResult, *apierror.APIError) {
 	ctx = prepareCtx(ctx)
 
-	resp, apiErr := rpc.CallRPC(ctx, billingClientTracer, "billing_client.create_checkout_session", billingServiceName,
-		func(ctx context.Context, opts ...grpc.CallOption) (*pb.CreateCheckoutSessionResponse, error) {
-			return c.client.CreateCheckoutSession(ctx, &pb.CreateCheckoutSessionRequest{
+	resp, apiErr := rpc.CallRPC(ctx, billingClientTracer, "billing_client.setup_billing_profile", billingServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.SetupBillingProfileResponse, error) {
+			return c.client.SetupBillingProfile(ctx, &pb.SetupBillingProfileRequest{
+				AccountId: &accountID,
+			}, opts...)
+		}, rpc.WithTimeout(billingOperationTimeout))
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return &domain.BillingProfileResult{
+		ProfileID: resp.GetBillingProfileId(),
+		CadenceID: resp.GetBillingCadenceId(),
+	}, nil
+}
+
+func (c *AuthBillingClient) SubscribeToPricingPlan(ctx context.Context, stripeCustomerID, planCode string) *apierror.APIError {
+	ctx = prepareCtx(ctx)
+
+	_, apiErr := rpc.CallRPC(ctx, billingClientTracer, "billing_client.subscribe_to_pricing_plan", billingServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.SubscribeToPricingPlanResponse, error) {
+			return c.client.SubscribeToPricingPlan(ctx, &pb.SubscribeToPricingPlanRequest{
+				StripeCustomerId: stripeCustomerID,
+				PlanCode:         planCode,
+			}, opts...)
+		}, rpc.WithTimeout(billingOperationTimeout))
+	return apiErr
+}
+
+func (c *AuthBillingClient) CreateSetupIntent(ctx context.Context, customerID, idempotencyKey string) (*domain.SetupIntentResult, *apierror.APIError) {
+	ctx = prepareCtx(ctx)
+
+	resp, apiErr := rpc.CallRPC(ctx, billingClientTracer, "billing_client.create_setup_intent", billingServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.CreateSetupIntentResponse, error) {
+			return c.client.CreateSetupIntent(ctx, &pb.CreateSetupIntentRequest{
 				CustomerId:     customerID,
-				PlanCode:       planCode,
-				ReturnUrl:      returnURL,
 				IdempotencyKey: idempotencyKey,
 			}, opts...)
 		})
@@ -113,35 +146,40 @@ func (c *AuthBillingClient) CreateCheckoutSession(ctx context.Context, customerI
 		return nil, apiErr
 	}
 
-	return &domain.StripeCheckoutSession{
-		ID:             resp.SessionId,
+	return &domain.SetupIntentResult{
+		SetupIntentID:  resp.SetupIntentId,
 		ClientSecret:   resp.ClientSecret,
 		PublishableKey: resp.PublishableKey,
 	}, nil
 }
 
-func (c *AuthBillingClient) GetCheckoutSessionStatus(ctx context.Context, checkoutSessionID string) (*domain.StripeCheckoutSessionStatus, *apierror.APIError) {
+func (c *AuthBillingClient) GetSetupIntentStatus(ctx context.Context, setupIntentID string) (*domain.SetupIntentResult, *apierror.APIError) {
 	ctx = prepareCtx(ctx)
 
-	resp, apiErr := rpc.CallRPC(ctx, billingClientTracer, "billing_client.get_checkout_session_status", billingServiceName,
-		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetCheckoutSessionStatusResponse, error) {
-			return c.client.GetCheckoutSessionStatus(ctx, &pb.GetCheckoutSessionStatusRequest{
-				CheckoutSessionId: checkoutSessionID,
+	resp, apiErr := rpc.CallRPC(ctx, billingClientTracer, "billing_client.get_setup_intent_status", billingServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetSetupIntentStatusResponse, error) {
+			return c.client.GetSetupIntentStatus(ctx, &pb.GetSetupIntentStatusRequest{
+				SetupIntentId: setupIntentID,
 			}, opts...)
 		})
 	if apiErr != nil {
 		return nil, apiErr
 	}
 
-	result := &domain.StripeCheckoutSessionStatus{
-		Status: resp.Status,
-	}
-	if resp.SubscriptionId != nil {
-		result.SubscriptionID = *resp.SubscriptionId
-	}
-	if resp.CustomerId != nil {
-		result.CustomerID = *resp.CustomerId
-	}
+	return &domain.SetupIntentResult{
+		Status:          resp.Status,
+		PaymentMethodID: resp.PaymentMethodId,
+	}, nil
+}
 
-	return result, nil
+func (c *AuthBillingClient) ValidateStripePricingPlan(ctx context.Context, planCode string) *apierror.APIError {
+	ctx = prepareCtx(ctx)
+
+	_, apiErr := rpc.CallRPC(ctx, billingClientTracer, "billing_client.validate_stripe_pricing_plan", billingServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ValidateStripePricingPlanResponse, error) {
+			return c.client.ValidateStripePricingPlan(ctx, &pb.ValidateStripePricingPlanRequest{
+				PlanCode: planCode,
+			}, opts...)
+		})
+	return apiErr
 }

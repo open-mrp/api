@@ -27,15 +27,12 @@ func (*UpdatePasswordRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdatePasswordRequest)
 }
 
-const updatePasswordEndpointDescription string = `This endpoint is used to create a new password for a user. Once completed, new access and refresh tokens 
-are set in cookies, and previous tokens are revoked.`
-
 type UpdatePasswordEndpoint struct{}
 
 func (e *UpdatePasswordEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdatePasswordRequest, *apiresource.EmptyResource] {
 	return &apiendpoint.APIEndpoint[*UpdatePasswordRequest, *apiresource.EmptyResource]{
 		Title:             "Create New Password",
-		Description:       updatePasswordEndpointDescription,
+		Description:       "Updates a user's password, revoking previous tokens and setting new access and refresh tokens in cookies.",
 		Method:            http.MethodPost,
 		Route:             "/v1/auth/passwords",
 		ContentType:       "application/json",
@@ -47,8 +44,7 @@ func (e *UpdatePasswordEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateP
 			return svc.(AuthSvc).UpdatePassword
 		},
 		Extras: apiendpoint.APIEndpointExtras{
-			AllowUnknownJSONFields: false,
-			ShieldRequestBody:      true,
+			ShieldRequestBody: true,
 		},
 	}
 }

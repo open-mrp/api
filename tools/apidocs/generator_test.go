@@ -30,6 +30,15 @@ type PointersStruct struct {
 	Nested *NestedStruct `json:"nested"`
 }
 
+type OptionalPointerWithNullableOverrideStruct struct {
+	Optional *string `json:"optional,omitempty" nullable:"false"`
+}
+
+type NullableClearStruct struct {
+	CarrierID *string `json:"carrier_id,omitempty" nullable:"true"`
+	Name      *string `json:"name,omitempty"`
+}
+
 type TestSchemaStruct struct {
 	// Name doc
 	Name string `json:"name" validate:"required"`
@@ -49,7 +58,22 @@ type TestSchemaStruct struct {
 	Count int `json:"count" default:"0"`
 }
 
+type TestRawMessageStruct struct {
+	Raw json.RawMessage `json:"raw"`
+}
+
+type NullableFromExampleStruct struct {
+	Raw json.RawMessage `json:"raw"`
+}
+
+func (*NullableFromExampleStruct) SchemaExample() any {
+	return map[string]any{
+		"raw": nil,
+	}
+}
+
 func TestGetCleanTypeName(t *testing.T) {
+	t.Parallel()
 	type GenericStruct[T any] struct {
 		Data T
 	}
@@ -78,6 +102,7 @@ func TestGetCleanTypeName(t *testing.T) {
 }
 
 func TestGenerateSchema(t *testing.T) {
+	t.Parallel()
 	reader := NewDocReader()
 	components := &Components{Schemas: make(map[string]Schema)}
 	testType := reflect.TypeOf(TestSchemaStruct{})
@@ -171,6 +196,26 @@ func TestGenerateSchema(t *testing.T) {
 		t.Errorf("expected AllOf[0].Ref to be '#/components/schemas/NestedStruct', got '%s'", ptrSchema.Properties["nested"].AllOf[0].Ref)
 	}
 
+	// Test explicit nullable override for optional pointers (pointer + omitempty)
+	optType := reflect.TypeOf(OptionalPointerWithNullableOverrideStruct{})
+	optSchema := generateSchema(optType, components, reader)
+	if optSchema.Properties["optional"].Nullable {
+		t.Error("expected optional pointer field 'optional' to not be nullable when nullable override is false")
+	}
+
+	// Test nullable:"true" sets both Nullable and XNullableClear
+	clearType := reflect.TypeOf(NullableClearStruct{})
+	clearSchema := generateSchema(clearType, components, reader)
+	if !clearSchema.Properties["carrier_id"].Nullable {
+		t.Error("expected carrier_id to be nullable when nullable:\"true\"")
+	}
+	if !clearSchema.Properties["carrier_id"].XNullableClear {
+		t.Error("expected carrier_id to have x-nullable-clear when nullable:\"true\"")
+	}
+	if clearSchema.Properties["name"].XNullableClear {
+		t.Error("expected name to not have x-nullable-clear without nullable:\"true\" tag")
+	}
+
 	// Test DocumentedType
 	docType := reflect.TypeOf(DocumentedStruct{})
 	docSchema := generateSchema(docType, components, reader)
@@ -180,6 +225,29 @@ func TestGenerateSchema(t *testing.T) {
 	example := docSchema.Example.(DocumentedStruct)
 	if example.Value != "example" {
 		t.Errorf("expected example value 'example', got '%s'", example.Value)
+	}
+
+	// json.RawMessage should be treated as a JSON object for docs, not a Go slice.
+	rawType := reflect.TypeOf(TestRawMessageStruct{})
+	rawSchema := generateSchema(rawType, components, reader)
+	rawField, ok := rawSchema.Properties["raw"]
+	if !ok {
+		t.Fatal("expected property 'raw' to exist")
+	}
+	if rawField.Type != "object" {
+		t.Errorf("expected property 'raw' type 'object', got '%s'", rawField.Type)
+	}
+
+	// If a documented example encodes `null`, we should mark the field nullable
+	// even when the Go type isn't a pointer.
+	exampleNullType := reflect.TypeOf(NullableFromExampleStruct{})
+	exampleNullSchema := generateSchema(exampleNullType, components, reader)
+	exampleNullField, ok := exampleNullSchema.Properties["raw"]
+	if !ok {
+		t.Fatal("expected property 'raw' to exist on NullableFromExampleStruct")
+	}
+	if exampleNullField.Nullable != true {
+		t.Errorf("expected property 'raw' to be nullable, got %v", exampleNullField.Nullable)
 	}
 }
 
@@ -204,6 +272,7 @@ func (e *MockEndpoint) GetHandler() http.HandlerFunc {
 }
 
 func TestGenerate_FullAssembly(t *testing.T) {
+	t.Parallel()
 	tempDir, err := os.MkdirTemp("", "apidocs-assembly-test")
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
@@ -291,6 +360,7 @@ func TestGenerate_FullAssembly(t *testing.T) {
 }
 
 func TestGenerateCreatesDirectory(t *testing.T) {
+	t.Parallel()
 	tempDir, err := os.MkdirTemp("", "apidocs-test")
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
@@ -315,6 +385,7 @@ func TestGenerateCreatesDirectory(t *testing.T) {
 }
 
 func TestGetEnumValuesForStringType(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name           string
 		inputType      reflect.Type
@@ -384,6 +455,7 @@ type StructWithAccountMode struct {
 }
 
 func TestGenerateSchema_EnumTypeField(t *testing.T) {
+	t.Parallel()
 	reader := NewDocReader()
 	components := &Components{Schemas: make(map[string]Schema)}
 	testType := reflect.TypeOf(StructWithAccountMode{})

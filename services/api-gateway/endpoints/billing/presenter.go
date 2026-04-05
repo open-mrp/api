@@ -20,8 +20,9 @@ func PricingPlanPresenter(p *pb.PricingPlan) apiresource.PricingPlan {
 			value = &v
 		}
 		limits[i] = apiresource.PlanLimit{
-			Key:   l.Key,
-			Value: value,
+			Object: constants.ObjectTypePlanLimit,
+			Key:    l.Key,
+			Value:  value,
 		}
 	}
 
@@ -68,19 +69,7 @@ func PricingPlansListPresenter(resp *pb.ListPricingPlansResponse) *apiresource.L
 		plans[i] = PricingPlanPresenter(p)
 	}
 
-	return apiresource.NewList(plans, mapProtoPageInfo(resp.PageInfo))
-}
-
-func mapProtoPageInfo(pi *pb.PageInfo) apiresource.PageInfo {
-	if pi == nil {
-		return apiresource.PageInfo{}
-	}
-	return apiresource.PageInfo{
-		NextCursor:  pi.NextCursor,
-		PrevCursor:  pi.PrevCursor,
-		HasNextPage: pi.HasNextPage,
-		HasPrevPage: pi.HasPrevPage,
-	}
+	return apiresource.NewList(plans, grpcutil.MapProtoPageInfo(resp.PageInfo))
 }
 
 func usageItemPresenter(item *pb.UsageItem) apiresource.UsageItem {
@@ -88,6 +77,7 @@ func usageItemPresenter(item *pb.UsageItem) apiresource.UsageItem {
 		return apiresource.UsageItem{}
 	}
 	ui := apiresource.UsageItem{
+		Object:  constants.ObjectTypeUsageItem,
 		Current: int(item.Current),
 	}
 	if item.Limit != nil {
@@ -97,7 +87,7 @@ func usageItemPresenter(item *pb.UsageItem) apiresource.UsageItem {
 	return ui
 }
 
-func ProrationPreviewPresenter(resp *pb.GetProrationPreviewResponse) *apiresource.PlanChangeProration {
+func PlanChangePreviewPresenter(resp *pb.PreviewPlanChangeResponse) *apiresource.PlanChangeProration {
 	if resp == nil || resp.Preview == nil {
 		return &apiresource.PlanChangeProration{}
 	}
@@ -106,23 +96,20 @@ func ProrationPreviewPresenter(resp *pb.GetProrationPreviewResponse) *apiresourc
 	lineItems := make([]apiresource.PlanChangeLineItem, len(p.LineItems))
 	for i, li := range p.LineItems {
 		lineItems[i] = apiresource.PlanChangeLineItem{
+			Object:      constants.ObjectTypePlanChangeLineItem,
 			Description: li.Description,
 			Amount:      li.Amount,
-			IsProration: li.IsProration,
 		}
 	}
 
 	return &apiresource.PlanChangeProration{
-		CreditAmount:                p.CreditAmount,
-		ChargeAmount:                p.ChargeAmount,
-		NetAmount:                   p.NetAmount,
-		FormattedNetAmount:          p.FormattedNetAmount,
-		IsCredit:                    p.IsCredit,
-		TotalInvoiceAmount:          p.TotalInvoiceAmount,
-		FormattedTotalInvoiceAmount: p.FormattedTotalInvoiceAmount,
-		MonthlyBillAmount:           p.MonthlyBillAmount,
-		FormattedMonthlyBillAmount:  p.FormattedMonthlyBillAmount,
-		LineItems:                   lineItems,
+		Object:                     constants.ObjectTypePlanChangeProration,
+		NetAmount:                  p.NetAmount,
+		FormattedNetAmount:         p.FormattedNetAmount,
+		MonthlyBillAmount:          p.MonthlyBillAmount,
+		FormattedMonthlyBillAmount: p.FormattedMonthlyBillAmount,
+		LineItems:                  apiresource.NewList(lineItems, apiresource.PageInfo{}),
+		IsEstimate:                 p.IsEstimate,
 	}
 }
 
@@ -132,19 +119,9 @@ func SwitchPlanPresenter(resp *pb.SwitchPlanResponse) *apiresource.SwitchPlanRes
 	}
 
 	return &apiresource.SwitchPlanResponse{
-		Success:         resp.Success,
-		RequiresPayment: resp.RequiresPayment,
-		CheckoutURL:     resp.CheckoutUrl,
-	}
-}
-
-func ConfirmPlanSwitchPresenter(resp *pb.ConfirmPlanSwitchResponse) *apiresource.ConfirmPlanSwitchResponse {
-	if resp == nil {
-		return &apiresource.ConfirmPlanSwitchResponse{}
-	}
-
-	return &apiresource.ConfirmPlanSwitchResponse{
-		Success: resp.Success,
+		Object:   constants.ObjectTypeSwitchPlanResponse,
+		Success:  resp.Success,
+		IntentID: resp.IntentId,
 	}
 }
 
@@ -154,6 +131,7 @@ func AccountUsagePresenter(resp *pb.GetAccountUsageResponse) *apiresource.Accoun
 	}
 
 	result := &apiresource.AccountUsageResponse{
+		Object:    constants.ObjectTypeAccountUsageResponse,
 		Seats:     usageItemPresenter(resp.Seats),
 		Invoices:  usageItemPresenter(resp.Invoices),
 		Batches:   usageItemPresenter(resp.Batches),
@@ -162,11 +140,34 @@ func AccountUsagePresenter(resp *pb.GetAccountUsageResponse) *apiresource.Accoun
 
 	if resp.Subscription != nil {
 		result.Subscription = &apiresource.SubscriptionInfo{
-			Status:            resp.Subscription.Status,
-			CurrentPeriodEnd:  grpcutil.TimestampToTimePtr(resp.Subscription.CurrentPeriodEnd),
-			TrialEnd:          grpcutil.TimestampToTimePtr(resp.Subscription.TrialEnd),
-			CancelAtPeriodEnd: resp.Subscription.CancelAtPeriodEnd,
-			CancelAt:          grpcutil.TimestampToTimePtr(resp.Subscription.CancelAt),
+			Object:           constants.ObjectTypeSubscriptionInfo,
+			ServicingStatus:  resp.Subscription.ServicingStatus,
+			CollectionStatus: resp.Subscription.CollectionStatus,
+		}
+	}
+
+	result.AgentSpend = &apiresource.AgentSpendInfo{
+		Object:              constants.ObjectTypeAgentSpendInfo,
+		EstimatedSpendCents: resp.EstimatedAgentSpendCents,
+	}
+
+	if resp.AgentTokenDetail != nil {
+		d := resp.AgentTokenDetail
+		billingPeriodEnd := ""
+		if d.BillingPeriodEnd != nil {
+			billingPeriodEnd = d.BillingPeriodEnd.AsTime().UTC().Format("2006-01-02T15:04:05Z")
+		}
+		result.AgentTokenDetail = &apiresource.AgentTokenDetail{
+			Object:                      constants.ObjectTypeAgentTokenDetail,
+			IncludedTokens:              d.IncludedTokens,
+			UsedTokens:                  d.UsedTokens,
+			InputTokens:                 d.InputTokens,
+			OutputTokens:                d.OutputTokens,
+			AdditionalTokensPurchased:   d.AdditionalTokensPurchased,
+			TotalAvailable:              d.TotalAvailable,
+			CurrentPeriodCost:           d.CurrentPeriodCost,
+			BillingPeriodEnd:            billingPeriodEnd,
+			OverageCostPerMillionTokens: d.OverageCostPerMillionTokens,
 		}
 	}
 

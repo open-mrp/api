@@ -13,6 +13,7 @@ import (
 )
 
 func TestRespondWithAPIError_NilErrorPanics(t *testing.T) {
+	t.Parallel()
 	defer func() {
 		r := recover()
 		if r == nil {
@@ -30,6 +31,7 @@ func TestRespondWithAPIError_NilErrorPanics(t *testing.T) {
 }
 
 func TestRespondWithAPIError_WithoutRequestLog(t *testing.T) {
+	t.Parallel()
 	apiErr := apierror.NewValidationError("Invalid input")
 	ctx := context.Background()
 	w := httptest.NewRecorder()
@@ -60,6 +62,7 @@ func TestRespondWithAPIError_WithoutRequestLog(t *testing.T) {
 }
 
 func TestRespondWithAPIError_WithRequestLog_NonInternalError(t *testing.T) {
+	t.Parallel()
 	apiErr := apierror.NewValidationError("Invalid input")
 	rl := &appctx.RequestLog{
 		ID: "test-request-id",
@@ -105,6 +108,7 @@ func TestRespondWithAPIError_WithRequestLog_NonInternalError(t *testing.T) {
 }
 
 func TestRespondWithAPIError_WithRequestLog_InternalError(t *testing.T) {
+	t.Parallel()
 	internalErr := apierror.NewInvariantViolationError("Database connection failed.")
 	rl := &appctx.RequestLog{
 		ID: "test-request-id",
@@ -154,6 +158,7 @@ func TestRespondWithAPIError_WithRequestLog_InternalError(t *testing.T) {
 }
 
 func TestRespondWithAPIError_RequestLogURL_WithFrontendURL(t *testing.T) {
+	t.Parallel()
 	old := frontendURL
 	frontendURL = "https://app.augno.com"
 	defer func() { frontendURL = old }()
@@ -186,6 +191,7 @@ func TestRespondWithAPIError_RequestLogURL_WithFrontendURL(t *testing.T) {
 }
 
 func TestRespondWithAPIError_RequestLogURL_WithoutFrontendURL(t *testing.T) {
+	t.Parallel()
 	old := frontendURL
 	frontendURL = ""
 	defer func() { frontendURL = old }()
@@ -213,6 +219,7 @@ func TestRespondWithAPIError_RequestLogURL_WithoutFrontendURL(t *testing.T) {
 }
 
 func TestRespondWithAPIError_RequestLogURL_NoRequestLog(t *testing.T) {
+	t.Parallel()
 	old := frontendURL
 	frontendURL = "https://app.augno.com"
 	defer func() { frontendURL = old }()
@@ -239,6 +246,7 @@ func TestRespondWithAPIError_RequestLogURL_NoRequestLog(t *testing.T) {
 }
 
 func TestRespondWithAPIError_DifferentErrorCodes(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		name           string
 		apiErr         *apierror.APIError

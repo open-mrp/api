@@ -1,0 +1,413 @@
+syntax = "proto3";
+
+// CoreService message types (imported by core.proto).
+package core;
+
+import "google/protobuf/timestamp.proto";
+import "core/core_identity_context.proto";
+import "core/core_items.proto";
+import "core/core_consumption.proto";
+import "core/core_invoices.proto";
+option go_package = "shared/proto/core;core";
+
+message GetCurrentUserResponse {
+  string id = 1;
+  optional string name = 2;
+  optional string email = 3;
+  optional string username = 4;
+  optional string image_url = 5;
+  optional google.protobuf.Timestamp email_verified_at = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+message CustomerAccountSummaryProto {
+  string id = 1;
+  string name = 2;
+}
+message ListCustomerAccountsForUserRequest {
+  string user_id = 1;
+  string vendor_account_id = 2;
+}
+message ListCustomerAccountsForUserResponse {
+  repeated CustomerAccountSummaryProto accounts = 1;
+}
+message TerritoryAccountUserInfo {
+  string id = 1;
+  optional string name = 2;
+  optional string email = 3;
+}
+message TerritoryProductLineInfo {
+  string id = 1;
+  string name = 2;
+}
+message TerritoryInfo {
+  string id = 1;
+  string state = 2;
+  optional int32 start_zipcode = 3;
+  optional int32 end_zipcode = 4;
+  optional TerritoryAccountUserInfo sales_rep = 5;
+  optional TerritoryProductLineInfo product_line = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+message ListTerritoriesRequest {
+  string account_id = 1;
+  optional string cursor = 2;
+  int32 limit = 3;
+  optional string query = 4;
+}
+message ListTerritoriesResponse {
+  repeated TerritoryInfo territories = 1;
+  PageInfo page_info = 2;
+}
+message GetTerritoryRequest {
+  string account_id = 1;
+  string id = 2;
+}
+message GetTerritoryResponse {
+  TerritoryInfo territory = 1;
+}
+message CreateTerritoryRequest {
+  string account_id = 1;
+  string state = 2;
+  optional int32 start_zipcode = 3;
+  optional int32 end_zipcode = 4;
+  string sales_rep_id = 5;
+  optional string product_line_id = 6;
+}
+message CreateTerritoryResponse {
+  TerritoryInfo territory = 1;
+}
+message UpdateTerritoryRequest {
+  string account_id = 1;
+  string id = 2;
+  optional string state = 3;
+  optional int32 start_zipcode = 4;
+  optional int32 end_zipcode = 5;
+  optional string sales_rep_id = 6;
+  optional string product_line_id = 7;
+  bool clear_product_line = 8;
+  bool clear_start_zipcode = 9;
+  bool clear_end_zipcode = 10;
+}
+message UpdateTerritoryResponse {
+  TerritoryInfo territory = 1;
+}
+message DeleteTerritoryRequest {
+  string account_id = 1;
+  string id = 2;
+}
+message RegistrationFlowOptionInfo {
+  string id = 1;
+  string name = 2;
+}
+message RegistrationFlowInfo {
+  string id = 1;
+  string name = 2;
+  repeated RegistrationFlowOptionInfo customer_group_options = 3;
+  repeated RegistrationFlowOptionInfo payment_term_options = 4;
+  repeated RegistrationFlowOptionInfo shipping_term_options = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+message ListRegistrationFlowsRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+}
+message ListRegistrationFlowsResponse {
+  repeated RegistrationFlowInfo registration_flows = 1;
+  PageInfo page_info = 2;
+}
+message GetRegistrationFlowRequest {
+  string id = 1;
+}
+message GetRegistrationFlowResponse {
+  RegistrationFlowInfo registration_flow = 1;
+}
+message CreateRegistrationFlowRequest {
+  string name = 1;
+  repeated string customer_group_ids = 2;
+  repeated string payment_term_ids = 3;
+  repeated string shipping_term_ids = 4;
+}
+message CreateRegistrationFlowResponse {
+  RegistrationFlowInfo registration_flow = 1;
+}
+message UpdateRegistrationFlowRequest {
+  string id = 1;
+  optional string name = 2;
+  repeated string customer_group_ids = 3;
+  repeated string payment_term_ids = 4;
+  repeated string shipping_term_ids = 5;
+  bool has_customer_group_ids = 6;
+  bool has_payment_term_ids = 7;
+  bool has_shipping_term_ids = 8;
+}
+message UpdateRegistrationFlowResponse {
+  RegistrationFlowInfo registration_flow = 1;
+}
+message DeleteRegistrationFlowRequest {
+  string id = 1;
+}
+message GetRegistrationFlowBySlugRequest {
+  string slug = 1;
+}
+message GetRegistrationFlowBySlugResponse {
+  RegistrationFlowInfo registration_flow = 1;
+}
+message RegisterCustomerAddressInput {
+  string street_line_1 = 1;
+  optional string street_line_2 = 2;
+  string locality = 3;
+  string state = 4;
+  string postal_code = 5;
+  string country = 6;
+  optional string name = 7;
+}
+message RegisterCustomerRequest {
+  string account_slug = 1;
+  bool is_existing_customer = 2;
+  optional string customer_number = 3;
+  optional string customer_name = 4;
+  optional string customer_group_id = 5;
+  optional string phone = 6;
+  optional string shipping_term_id = 7;
+  optional string payment_term_id = 8;
+  optional RegisterCustomerAddressInput address = 9;
+}
+message RegisterCustomerResponse {}
+message DepartmentInfo {
+  string id = 1;
+  string name = 2;
+  optional string notes = 3;
+  optional string location_id = 4;
+  optional string location_name = 5;
+  repeated LightScanningStationInfo scanning_stations = 6;
+  repeated LightMachineInfo machines = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+}
+message ListDepartmentsRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+}
+message ListDepartmentsResponse {
+  repeated DepartmentInfo departments = 1;
+  PageInfo page_info = 2;
+}
+message GetDepartmentRequest {
+  string id = 1;
+}
+message GetDepartmentResponse {
+  DepartmentInfo department = 1;
+}
+message CreateDepartmentRequest {
+  string name = 1;
+  optional string notes = 2;
+  optional string location_id = 3;
+  repeated string scanning_station_ids = 4;
+  repeated string machine_ids = 5;
+}
+message CreateDepartmentResponse {
+  DepartmentInfo department = 1;
+}
+message UpdateDepartmentRequest {
+  string id = 1;
+  optional string name = 2;
+  optional string notes = 3;
+  optional string location_id = 4;
+  repeated string scanning_station_ids = 5;
+  repeated string machine_ids = 6;
+}
+message UpdateDepartmentResponse {
+  DepartmentInfo department = 1;
+}
+message DeleteDepartmentRequest {
+  string id = 1;
+}
+message EmailLogInfo {
+  string id = 1;
+  bool has_sent = 2;
+  repeated string recipients = 3;
+  optional string subject = 4;
+  optional string filename = 5;
+  optional string ses_message_id = 6;
+  optional string sent_by_id = 7;
+  optional string sent_by_name = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+}
+message ListEmailLogsRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+}
+message ListEmailLogsResponse {
+  repeated EmailLogInfo email_logs = 1;
+  PageInfo page_info = 2;
+}
+message GetEmailLogRequest {
+  string id = 1;
+}
+message GetEmailLogResponse {
+  EmailLogInfo email_log = 1;
+}
+message InventoryChangeLogInfo {
+  string id = 1;
+  string item_id = 2;
+  string item_sku = 3;
+  string quantity_id = 4;
+  string quantity_value = 5;
+  string quantity_unit_id = 6;
+  string quantity_unit_name = 7;
+  string quantity_unit_abbreviation = 8;
+  string quantity_unit_type = 9;
+  string action_type_code = 10;
+  optional string scanning_station_id = 11;
+  optional string scanning_station_name = 12;
+  optional string responsible_user_id = 13;
+  optional string responsible_user_name = 14;
+  google.protobuf.Timestamp created_at = 15;
+  google.protobuf.Timestamp updated_at = 16;
+  optional string item_type_code = 17;
+  optional string scanning_station_type = 18;
+}
+message ListInventoryChangeLogsRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+  repeated string item_ids = 4;
+  repeated string action_type_codes = 5;
+  repeated string changed_by_user_ids = 6;
+  optional google.protobuf.Timestamp start_date = 7;
+  optional google.protobuf.Timestamp end_date = 8;
+}
+message ListInventoryChangeLogsResponse {
+  repeated InventoryChangeLogInfo inventory_change_logs = 1;
+  PageInfo page_info = 2;
+}
+message GetInventoryChangeLogRequest {
+  string id = 1;
+}
+message GetInventoryChangeLogResponse {
+  InventoryChangeLogInfo inventory_change_log = 1;
+}
+message ExportInventoryChangeLogsRequest {
+  repeated string item_ids = 1;
+  repeated string action_type_codes = 2;
+  repeated string changed_by_user_ids = 3;
+  optional google.protobuf.Timestamp start_date = 4;
+  optional google.protobuf.Timestamp end_date = 5;
+}
+message ExportInventoryChangeLogsResponse {
+  repeated InventoryChangeLogInfo inventory_change_logs = 1;
+  int64 count = 2;
+}
+message ListInvoicesRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+  optional string status = 4;
+  repeated string item_ids = 5;
+  repeated string customer_ids = 6;
+  repeated string product_line_ids = 7;
+  repeated string customer_group_ids = 8;
+  repeated string sales_rep_ids = 9;
+  optional google.protobuf.Timestamp start_date = 10;
+  optional google.protobuf.Timestamp end_date = 11;
+}
+message ListInvoicesResponse {
+  repeated InvoiceSummaryInfo invoices = 1;
+  PageInfo page_info = 2;
+}
+message GetInvoiceRequest {
+  string id = 1;
+  repeated string includes = 2;
+}
+message GetInvoiceResponse {
+  InvoiceInfo invoice = 1;
+}
+message UpdateInvoiceRequest {
+  string id = 1;
+  optional string note = 2;
+  optional bool has_been_sent = 3;
+  optional bool is_edi_sent = 4;
+  optional bool is_paid_in_full = 5;
+}
+message UpdateInvoiceResponse {
+  InvoiceSummaryInfo invoice = 1;
+}
+message ListCustomerInvoicesRequest {
+  string customer_account_id = 1;
+  optional string cursor = 2;
+  int32 limit = 3;
+  optional string query = 4;
+  bool include_child_accounts = 5;
+}
+message ListCustomerInvoicesResponse {
+  repeated InvoiceForPaymentInfo invoices = 1;
+  PageInfo page_info = 2;
+}
+message InvoiceSummaryInfo {
+  string id = 1;
+  string number = 2;
+  optional string note = 3;
+  string customer_id = 4;
+  string customer_name = 5;
+  string customer_number = 6;
+  bool customer_is_edi_enabled = 7;
+  string order_id = 8;
+  string order_number = 9;
+  optional string shipment_id = 10;
+  int32 line_count = 11;
+  string billing_address_id = 12;
+  optional string billing_address_name = 13;
+  optional string billing_address_line1 = 14;
+  optional string billing_address_line2 = 15;
+  optional string billing_address_city = 16;
+  optional string billing_address_state = 17;
+  optional string billing_address_zip = 18;
+  string billing_address_country = 19;
+  string priority_code = 20;
+  optional string payment_term_id = 21;
+  optional string payment_term_name = 22;
+  optional int32 payment_term_days = 23;
+  bool is_paid_in_full = 24;
+  bool is_edi_sent = 25;
+  bool has_been_sent = 26;
+  string total_invoiced = 27;
+  bool accepts_invoice_emails = 28;
+  google.protobuf.Timestamp created_at = 29;
+  google.protobuf.Timestamp updated_at = 30;
+  optional bool payment_term_is_active = 31;
+  optional string customer_status_code = 32;
+  optional string customer_commission_policy = 33;
+}
+message InvoiceInfo {
+  string id = 1;
+  string number = 2;
+  optional string note = 3;
+  string order_id = 4;
+  string order_number = 5;
+  string billing_address_id = 6;
+  optional string billing_address_name = 7;
+  optional string billing_address_line1 = 8;
+  optional string billing_address_line2 = 9;
+  optional string billing_address_city = 10;
+  optional string billing_address_state = 11;
+  optional string billing_address_zip = 12;
+  string billing_address_country = 13;
+  optional string shipment_id = 14;
+  optional string shipment_number = 15;
+  bool is_paid_in_full = 16;
+  bool is_over_paid = 17;
+  bool is_edi_sent = 18;
+  bool has_been_sent = 19;
+  bool accepts_invoice_emails = 20;
+  repeated InvoiceLineInfo lines = 21;
+  repeated InvoiceAllocationInfo allocations = 22;
+  google.protobuf.Timestamp created_at = 23;
+  google.protobuf.Timestamp updated_at = 24;
+}

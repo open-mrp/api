@@ -9,10 +9,75 @@ func NullString(s string) sql.NullString {
 }
 
 func NullStringPtr(s *string) sql.NullString {
-	if s == nil {
+	if s == nil || *s == "" {
 		return sql.NullString{String: "", Valid: false}
 	}
 	return sql.NullString{String: *s, Valid: true}
+}
+
+// NullStringLikePtr returns a NullString with the value wrapped in % wildcards for LIKE queries.
+func NullStringLikePtr(s *string) sql.NullString {
+	if s == nil || *s == "" {
+		return sql.NullString{String: "", Valid: false}
+	}
+	return sql.NullString{String: "%" + *s + "%", Valid: true}
+}
+
+// NullStringFulltextPtr returns a NullString formatted for MySQL FULLTEXT
+// BOOLEAN MODE search. It appends a wildcard (*) so the term matches any
+// word that starts with the given value (e.g. "kilo" → "kilo*").
+func NullStringFulltextPtr(s *string) sql.NullString {
+	if s == nil || *s == "" {
+		return sql.NullString{String: "", Valid: false}
+	}
+	return sql.NullString{String: *s + "*", Valid: true}
+}
+
+// innoDBMinTokenSize is the default minimum word length for InnoDB FULLTEXT
+// indexes. Queries shorter than this must fall back to LIKE.
+const innoDBMinTokenSize = 3
+
+// FulltextSearch holds parameters for a SQL clause that supports both
+// FULLTEXT (MATCH/AGAINST) and LIKE search. Queries with at least
+// innoDBMinTokenSize characters use FULLTEXT; shorter queries fall back to
+// LIKE so that short abbreviations (e.g. "pr") are still matched.
+//
+// The SQL clause should be structured as:
+//
+//	AND (
+//	    (sqlc.narg('search_query') IS NULL AND sqlc.narg('like_query') IS NULL)
+//	    OR MATCH(...) AGAINST(sqlc.narg('search_query') IN BOOLEAN MODE)
+//	    OR col LIKE sqlc.narg('like_query')
+//	)
+//
+// Due to a sqlc bug, MATCH/AGAINST generates a duplicate parameter
+// (SearchQuery_2). This helper populates both so callers don't need to
+// know about the dedup issue.
+//
+// Usage:
+//
+//	ft := db.NewFulltextSearch(params.Query)
+//	sqlc.ListFooParams{ SearchQuery: ft.Fulltext, SearchQuery_2: ft.Fulltext2, LikeQuery: ft.Like, ... }
+type FulltextSearch struct {
+	// Fulltext is the value for the FULLTEXT IS NULL guard and AGAINST clause.
+	Fulltext sql.NullString
+	// Fulltext2 is a duplicate of Fulltext required by a sqlc dedup bug.
+	Fulltext2 sql.NullString
+	// Like is the value for the LIKE fallback (set for short queries).
+	Like sql.NullString
+}
+
+func NewFulltextSearch(s *string) FulltextSearch {
+	if s == nil || *s == "" {
+		return FulltextSearch{}
+	}
+	if len(*s) < innoDBMinTokenSize {
+		return FulltextSearch{
+			Like: sql.NullString{String: "%" + *s + "%", Valid: true},
+		}
+	}
+	ft := NullStringFulltextPtr(s)
+	return FulltextSearch{Fulltext: ft, Fulltext2: ft}
 }
 
 func StringFromNullString(ns sql.NullString) *string {
@@ -20,4 +85,21 @@ func StringFromNullString(ns sql.NullString) *string {
 		return nil
 	}
 	return &ns.String
+}
+
+// StringFromInterface extracts a string from an interface{} value.
+// MySQL CASE expressions are typed as interface{} by sqlc and may arrive
+// as []byte or string depending on the driver. Returns "" for nil.
+func StringFromInterface(v interface{}) string {
+	if v == nil {
+		return ""
+	}
+	switch s := v.(type) {
+	case string:
+		return s
+	case []byte:
+		return string(s)
+	default:
+		return ""
+	}
 }

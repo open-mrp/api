@@ -32,7 +32,6 @@ func (r *accountRepoImpl) Create(ctx context.Context, id, name string, accountTy
 		ID:              id,
 		Name:            name,
 		AccountTypeCode: string(accountTypeCode),
-		PlanCode:        string(planCode),
 	})
 
 	if apiErr := db.MapSQLError(err); apiErr != nil {
@@ -95,18 +94,25 @@ func (r *accountRepoImpl) GetAccountContext(ctx context.Context, accountID strin
 	}
 
 	var subscriptionStatus *string
-	if row.SubscriptionStatus != nil {
-		if s, ok := row.SubscriptionStatus.(string); ok && s != "" {
-			subscriptionStatus = &s
-		}
+	if s := db.StringFromInterface(row.SubscriptionStatus); s != "" {
+		subscriptionStatus = &s
+	}
+
+	planCode := db.StringFromInterface(row.PlanCode)
+
+	var spendingCap *int64
+	if v, ok := db.Int64FromInterface(row.AgentMonthlySpendingCapCents); ok {
+		spendingCap = &v
 	}
 
 	return &domain.AccountContext{
-		AccountID:          row.ID,
-		IsSandbox:          isSandbox,
-		OwnerAccountID:     db.StringFromNullString(row.OwnerAccountID),
-		AccountMode:        accountMode,
-		SubscriptionStatus: subscriptionStatus,
+		AccountID:                    row.ID,
+		IsSandbox:                    isSandbox,
+		OwnerAccountID:               db.StringFromNullString(row.OwnerAccountID),
+		AccountMode:                  accountMode,
+		SubscriptionStatus:           subscriptionStatus,
+		PlanCode:                     planCode,
+		AgentMonthlySpendingCapCents: spendingCap,
 	}, nil
 }
 
@@ -122,18 +128,22 @@ func (r *accountRepoImpl) GetPlanTypeIDByCode(ctx context.Context, planCode stri
 	return typeID, nil
 }
 
-func (r *accountRepoImpl) UpdateSubscription(ctx context.Context, accountID string, status *string, planCode string, accountPlanID *string, stripeSubID *string, periodEnd *time.Time, stripeCustomerID *string) *apierror.APIError {
+func (r *accountRepoImpl) UpdateSubscription(ctx context.Context, accountID string, status *string, planCode string, accountPlanID *string, stripeSubID *string, periodEnd *time.Time, stripeCustomerID *string, billingProfileID *string, billingCadenceID *string, pricingPlanSubscriptionID *string, servicingStatus *string, collectionStatus *string) *apierror.APIError {
 	ctx, span := accountRepoTracer.Start(ctx, "repository.account.update_subscription")
 	defer span.End()
 
 	err := r.queries.UpdateAccountSubscription(ctx, sqlc.UpdateAccountSubscriptionParams{
-		ID:                           accountID,
-		SubscriptionStatus:           db.NullStringPtr(status),
-		PlanCode:                     planCode,
-		AccountPlanID:                db.NullStringPtr(accountPlanID),
-		InternalStripeSubscriptionID: db.NullStringPtr(stripeSubID),
-		SubscriptionCurrentPeriodEnd: db.NullTimePtr(periodEnd),
-		InternalStripeCustomerID:     db.NullStringPtr(stripeCustomerID),
+		AccountID:                       accountID,
+		SubscriptionStatus:              db.NullStringPtr(status),
+		AccountPlanID:                   db.NullStringPtr(accountPlanID),
+		InternalStripeSubscriptionID:    db.NullStringPtr(stripeSubID),
+		SubscriptionCurrentPeriodEnd:    db.NullTimePtr(periodEnd),
+		InternalStripeCustomerID:        db.NullStringPtr(stripeCustomerID),
+		StripeBillingProfileID:          db.NullStringPtr(billingProfileID),
+		StripeBillingCadenceID:          db.NullStringPtr(billingCadenceID),
+		StripePricingPlanSubscriptionID: db.NullStringPtr(pricingPlanSubscriptionID),
+		ServicingStatus:                 db.NullStringPtr(servicingStatus),
+		CollectionStatus:                db.NullStringPtr(collectionStatus),
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return tracing.Trace(span, apiErr)
@@ -147,6 +157,18 @@ func (r *accountRepoImpl) ClearStripeCustomer(ctx context.Context, accountID str
 	defer span.End()
 
 	err := r.queries.ClearAccountStripeCustomer(ctx, accountID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	return nil
+}
+
+func (r *accountRepoImpl) ClearPricingPlanSubscription(ctx context.Context, accountID string) *apierror.APIError {
+	ctx, span := accountRepoTracer.Start(ctx, "repository.account.clear_pricing_plan_subscription")
+	defer span.End()
+
+	err := r.queries.ClearAccountPricingPlanSubscription(ctx, accountID)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
@@ -198,6 +220,276 @@ func (r *accountRepoImpl) CountNonSandboxByPlanCode(ctx context.Context, planCod
 	}
 
 	return count, nil
+}
+
+func (r *accountRepoImpl) UpdateAgentSpendingCap(ctx context.Context, accountID string, capCents *int64) *apierror.APIError {
+	ctx, span := accountRepoTracer.Start(ctx, "repository.account.update_agent_spending_cap")
+	defer span.End()
+
+	err := r.queries.UpdateAgentSpendingCap(ctx, sqlc.UpdateAgentSpendingCapParams{
+		AgentMonthlySpendingCapCents: db.NullInt64Ptr(capCents),
+		AccountID:                    accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	return nil
+}
+
+func (r *accountRepoImpl) GetAgentSpendingCap(ctx context.Context, accountID string) (*int64, *apierror.APIError) {
+	ctx, span := accountRepoTracer.Start(ctx, "repository.account.get_agent_spending_cap")
+	defer span.End()
+
+	result, err := r.queries.GetAgentSpendingCap(ctx, accountID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	if !result.Valid {
+		return nil, nil
+	}
+
+	return &result.Int64, nil
+}
+
+func (r *accountRepoImpl) HasActiveBillingPlan(ctx context.Context, accountID string) (bool, *apierror.APIError) {
+	ctx, span := accountRepoTracer.Start(ctx, "repository.account.has_active_billing_plan")
+	defer span.End()
+
+	hasPlan, err := r.queries.HasActiveBillingPlan(ctx, accountID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return false, tracing.Trace(span, apiErr)
+	}
+
+	return hasPlan, nil
+}
+
+func (r *accountRepoImpl) GetName(ctx context.Context, accountID string) (string, *apierror.APIError) {
+	ctx, span := accountRepoTracer.Start(ctx, "repository.account.get_name")
+	defer span.End()
+
+	name, err := r.queries.GetAccountNameByID(ctx, accountID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return "", tracing.Trace(span, apiErr)
+	}
+
+	return name, nil
+}
+
+func (r *accountRepoImpl) GetBrandingLogoURL(ctx context.Context, accountID string) (*string, *apierror.APIError) {
+	ctx, span := accountRepoTracer.Start(ctx, "repository.account.get_branding_logo_url")
+	defer span.End()
+
+	result, err := r.queries.GetAccountBrandingByAccountID(ctx, accountID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+			return nil, nil
+		}
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	if !result.Valid {
+		return nil, nil
+	}
+
+	return &result.String, nil
+}
+
+func (r *accountRepoImpl) GetPortalSlug(ctx context.Context, accountID string) (*string, *apierror.APIError) {
+	ctx, span := accountRepoTracer.Start(ctx, "repository.account.get_portal_slug")
+	defer span.End()
+
+	slug, err := r.queries.GetAccountPortalSlugByAccountID(ctx, accountID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+			return nil, nil
+		}
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	return &slug, nil
+}
+
+func (r *accountRepoImpl) GetByID(ctx context.Context, accountID string) (*domain.Account, *apierror.APIError) {
+	ctx, span := accountRepoTracer.Start(ctx, "repository.account.get_by_id")
+	defer span.End()
+
+	row, err := r.queries.GetAccountByID(ctx, accountID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	account := &domain.Account{
+		ID:                       row.ID,
+		Name:                     row.Name,
+		DefaultBillingAddressID:  db.StringFromNullString(row.DefaultBillingAddressID),
+		DefaultShippingAddressID: db.StringFromNullString(row.DefaultShippingAddressID),
+		CreatedAt:                row.CreatedAt,
+		UpdatedAt:                row.UpdatedAt,
+	}
+
+	if row.BrandingID.Valid {
+		account.Branding = &domain.AccountBranding{
+			ID:              row.BrandingID.String,
+			SupportEmail:    db.StringFromNullString(row.BrandingSupportEmail),
+			PhoneNumber:     db.StringFromNullString(row.BrandingPhoneNumber),
+			LogoURL:         db.StringFromNullString(row.BrandingLogoUrl),
+			FacebookHandle:  db.StringFromNullString(row.BrandingFacebookHandle),
+			InstagramHandle: db.StringFromNullString(row.BrandingInstagramHandle),
+			LinkedInHandle:  db.StringFromNullString(row.BrandingLinkedinHandle),
+			TwitterHandle:   db.StringFromNullString(row.BrandingTwitterHandle),
+			WebsiteURL:      db.StringFromNullString(row.BrandingWebsiteUrl),
+			CreatedAt:       row.BrandingCreatedAt.Time,
+			UpdatedAt:       row.BrandingUpdatedAt.Time,
+		}
+	}
+
+	if row.PortalID.Valid {
+		account.Portal = &domain.AccountPortal{
+			ID:        row.PortalID.String,
+			Slug:      row.PortalSlug.String,
+			CreatedAt: row.PortalCreatedAt.Time,
+			UpdatedAt: row.PortalUpdatedAt.Time,
+		}
+	}
+
+	return account, nil
+}
+
+func (r *accountRepoImpl) GetBySlug(ctx context.Context, slug string) (*domain.PublicAccountBySlug, *apierror.APIError) {
+	ctx, span := accountRepoTracer.Start(ctx, "repository.account.get_by_slug")
+	defer span.End()
+
+	row, err := r.queries.GetPublicAccountBySlug(ctx, slug)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	return &domain.PublicAccountBySlug{
+		ID:                      row.ID,
+		Name:                    row.Name,
+		Slug:                    row.Slug,
+		DefaultBillingAddressID: db.StringFromNullString(row.DefaultBillingAddressID),
+		SupportEmail:            db.StringFromNullString(row.SupportEmail),
+		LogoURL:                 db.StringFromNullString(row.LogoUrl),
+	}, nil
+}
+
+func (r *accountRepoImpl) UpdateName(ctx context.Context, accountID, name string) *apierror.APIError {
+	ctx, span := accountRepoTracer.Start(ctx, "repository.account.update_name")
+	defer span.End()
+
+	result, err := r.queries.UpdateAccountName(ctx, sqlc.UpdateAccountNameParams{
+		Name:      name,
+		AccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to check rows affected"))
+	}
+	if rowsAffected == 0 {
+		return tracing.Trace(span, apierror.NewResourceNotFoundError("Account not found."))
+	}
+
+	return nil
+}
+
+func (r *accountRepoImpl) UpdateBranding(ctx context.Context, accountID string, params domain.UpdateAccountParams) *apierror.APIError {
+	ctx, span := accountRepoTracer.Start(ctx, "repository.account.update_branding")
+	defer span.End()
+
+	_, err := r.queries.UpdateAccountBranding(ctx, sqlc.UpdateAccountBrandingParams{
+		SupportEmail:    db.NullStringPtr(params.SupportEmail),
+		PhoneNumber:     db.NullStringPtr(params.PhoneNumber),
+		FacebookHandle:  db.NullStringPtr(params.FacebookHandle),
+		InstagramHandle: db.NullStringPtr(params.InstagramHandle),
+		LinkedinHandle:  db.NullStringPtr(params.LinkedInHandle),
+		TwitterHandle:   db.NullStringPtr(params.TwitterHandle),
+		WebsiteUrl:      db.NullStringPtr(params.WebsiteURL),
+		AccountID:       accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	return nil
+}
+
+func (r *accountRepoImpl) UpdatePortalSlug(ctx context.Context, accountID, slug string) *apierror.APIError {
+	ctx, span := accountRepoTracer.Start(ctx, "repository.account.update_portal_slug")
+	defer span.End()
+
+	result, err := r.queries.UpdateAccountPortalSlug(ctx, sqlc.UpdateAccountPortalSlugParams{
+		Slug:      slug,
+		AccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to check rows affected"))
+	}
+	if rowsAffected == 0 {
+		return tracing.Trace(span, apierror.NewResourceNotFoundError("Account portal not found."))
+	}
+
+	return nil
+}
+
+func (r *accountRepoImpl) ExistsPortalSlug(ctx context.Context, slug, excludeAccountID string) (bool, *apierror.APIError) {
+	ctx, span := accountRepoTracer.Start(ctx, "repository.account.exists_portal_slug")
+	defer span.End()
+
+	exists, err := r.queries.ExistsPortalSlug(ctx, sqlc.ExistsPortalSlugParams{
+		Slug:             slug,
+		ExcludeAccountID: excludeAccountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return false, tracing.Trace(span, apiErr)
+	}
+
+	return exists, nil
+}
+
+func (r *accountRepoImpl) UpdateBrandingLogoURL(ctx context.Context, accountID, logoURL string) *apierror.APIError {
+	ctx, span := accountRepoTracer.Start(ctx, "repository.account.update_branding_logo_url")
+	defer span.End()
+
+	err := r.queries.UpdateAccountBrandingLogoURL(ctx, sqlc.UpdateAccountBrandingLogoURLParams{
+		LogoUrl:   sql.NullString{String: logoURL, Valid: true},
+		AccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	return nil
+}
+
+func (r *accountRepoImpl) GetBrandingLogoKey(ctx context.Context, accountID string) (*string, *apierror.APIError) {
+	ctx, span := accountRepoTracer.Start(ctx, "repository.account.get_branding_logo_key")
+	defer span.End()
+
+	result, err := r.queries.GetAccountBrandingLogoKey(ctx, accountID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+			return nil, nil
+		}
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	if !result.Valid {
+		return nil, nil
+	}
+
+	return &result.String, nil
 }
 
 func (r *accountRepoImpl) GetByStripeCustomerID(ctx context.Context, stripeCustomerID string) (string, string, *apierror.APIError) {

@@ -13,14 +13,15 @@ import (
 type AuthAccountRelation struct {
 	ID                      string
 	CounterpartyAccountID   string
-	AccountRelationRoleCode types.IdentityActorType
+	AccountRelationRoleCode types.IdentityRelationType
+	IsOwnerSide             bool
 }
 
 type RefreshToken struct {
 	Token     string
-	UserID    string
-	ExpiresAt time.Time
-	RevokedAt *time.Time
+	UserID    string     `audit:"user_id"`
+	ExpiresAt time.Time  `audit:"expires_at"`
+	RevokedAt *time.Time `audit:"revoked_at"`
 }
 
 // IsRevoked reports whether the refresh token has been revoked.
@@ -36,20 +37,20 @@ func (m *RefreshToken) IsExpired() bool {
 type RegistrationSession struct {
 	ID                      int64
 	TypeID                  string
-	Email                   string
-	PlanCode                string
-	Step                    constants.RegistrationStep
+	Email                   string                     `audit:"email"`
+	PlanCode                string                     `audit:"plan_code"`
+	Step                    constants.RegistrationStep `audit:"step"`
 	VerificationToken       string
-	IsEmailVerified         bool
-	IsExistingUser          *bool
-	UserID                  *string
-	AccountID               *string
+	IsEmailVerified         bool    `audit:"is_email_verified"`
+	IsExistingUser          *bool   `audit:"is_existing_user"`
+	UserID                  *string `audit:"user_id"`
+	AccountID               *string `audit:"account_id"`
 	StripeCustomerID        *string
 	StripeCheckoutSessionID *string
 	StripeSubscriptionID    *string
-	PaymentCompleted        bool
-	SessionData             RegistrationSessionData
-	CompletedAt             *time.Time
+	PaymentCompleted        bool                    `audit:"payment_completed"`
+	SessionData             RegistrationSessionData `audit:"session_data"`
+	CompletedAt             *time.Time              `audit:"completed_at"`
 	CreatedAt               time.Time
 	UpdatedAt               time.Time
 }

@@ -43,6 +43,9 @@ func NewTemplateRenderer() (TemplateRenderer, *apierror.APIError) {
 		constants.EmailTemplateNewRegistrationAlert:       "templates/new_registration_alert.html",
 		constants.EmailTemplatePlanChangeAlert:            "templates/plan_change_alert.html",
 		constants.EmailTemplateRegistrationLimitAlert:     "templates/registration_limit_alert.html",
+		constants.EmailTemplateNewUserWelcome:             "templates/new_user_welcome.html",
+		constants.EmailTemplateInvoice:                    "templates/invoice_email.html",
+		constants.EmailTemplateOrderAcknowledgement:       "templates/order_acknowledgement_email.html",
 	}
 
 	for templateID, filename := range templateFiles {

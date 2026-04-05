@@ -95,17 +95,22 @@ func mapSandboxWithOwnerBackwardRow(row sqlc.ListSandboxAccountsWithOwnerBackwar
 	return s
 }
 
-func (r *sandboxAccountRepoImpl) List(ctx context.Context, ownerAccountID string, cursor *string, limit int32, includes []string) (*domain.ListSandboxAccountsResult, *apierror.APIError) {
+func (r *sandboxAccountRepoImpl) List(ctx context.Context, ownerAccountID string, cursor *string, limit int32, query *string, includes []string) (*domain.ListSandboxAccountsResult, *apierror.APIError) {
 	ctx, span := sandboxAccountRepoTracer.Start(ctx, "repository.sandbox_account.list")
 	defer span.End()
 
-	if includesContains(includes, "owner_account") {
-		return r.listWithOwner(ctx, span, ownerAccountID, cursor, limit)
+	searchQuery := gosql.NullString{}
+	if query != nil && *query != "" {
+		searchQuery = gosql.NullString{String: "%" + *query + "%", Valid: true}
 	}
-	return r.listBase(ctx, span, ownerAccountID, cursor, limit)
+
+	if includesContains(includes, "owner_account") {
+		return r.listWithOwner(ctx, span, ownerAccountID, cursor, limit, searchQuery)
+	}
+	return r.listBase(ctx, span, ownerAccountID, cursor, limit, searchQuery)
 }
 
-func (r *sandboxAccountRepoImpl) listBase(ctx context.Context, span trace.Span, ownerAccountID string, cursor *string, limit int32) (*domain.ListSandboxAccountsResult, *apierror.APIError) {
+func (r *sandboxAccountRepoImpl) listBase(ctx context.Context, span trace.Span, ownerAccountID string, cursor *string, limit int32, searchQuery gosql.NullString) (*domain.ListSandboxAccountsResult, *apierror.APIError) {
 	var cursorDir *pagination.Direction
 
 	if cursor != nil {
@@ -120,6 +125,7 @@ func (r *sandboxAccountRepoImpl) listBase(ctx context.Context, span trace.Span, 
 				OwnerAccountID:  ownerAccountID,
 				CursorCreatedAt: cur.CreatedAt,
 				CursorID:        cur.ID,
+				SearchQuery:     searchQuery,
 				Limit:           limit + 1,
 			})
 			if apiErr := db.MapSQLError(err); apiErr != nil {
@@ -138,6 +144,7 @@ func (r *sandboxAccountRepoImpl) listBase(ctx context.Context, span trace.Span, 
 			OwnerAccountID:  ownerAccountID,
 			CursorCreatedAt: gosql.NullTime{Time: cur.CreatedAt, Valid: true},
 			CursorID:        gosql.NullInt64{Int64: cur.ID, Valid: true},
+			SearchQuery:     searchQuery,
 			Limit:           limit + 1,
 		})
 		if apiErr := db.MapSQLError(err); apiErr != nil {
@@ -154,6 +161,7 @@ func (r *sandboxAccountRepoImpl) listBase(ctx context.Context, span trace.Span, 
 	// No cursor — first page
 	rows, err := r.queries.ListSandboxAccountsForward(ctx, sqlc.ListSandboxAccountsForwardParams{
 		OwnerAccountID: ownerAccountID,
+		SearchQuery:    searchQuery,
 		Limit:          limit + 1,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
@@ -168,7 +176,7 @@ func (r *sandboxAccountRepoImpl) listBase(ctx context.Context, span trace.Span, 
 	return &domain.ListSandboxAccountsResult{Sandboxes: result, PageInfo: pageInfo}, nil
 }
 
-func (r *sandboxAccountRepoImpl) listWithOwner(ctx context.Context, span trace.Span, ownerAccountID string, cursor *string, limit int32) (*domain.ListSandboxAccountsResult, *apierror.APIError) {
+func (r *sandboxAccountRepoImpl) listWithOwner(ctx context.Context, span trace.Span, ownerAccountID string, cursor *string, limit int32, searchQuery gosql.NullString) (*domain.ListSandboxAccountsResult, *apierror.APIError) {
 	var cursorDir *pagination.Direction
 
 	if cursor != nil {
@@ -183,6 +191,7 @@ func (r *sandboxAccountRepoImpl) listWithOwner(ctx context.Context, span trace.S
 				OwnerAccountID:  ownerAccountID,
 				CursorCreatedAt: cur.CreatedAt,
 				CursorID:        cur.ID,
+				SearchQuery:     searchQuery,
 				Limit:           limit + 1,
 			})
 			if apiErr := db.MapSQLError(err); apiErr != nil {
@@ -201,6 +210,7 @@ func (r *sandboxAccountRepoImpl) listWithOwner(ctx context.Context, span trace.S
 			OwnerAccountID:  ownerAccountID,
 			CursorCreatedAt: gosql.NullTime{Time: cur.CreatedAt, Valid: true},
 			CursorID:        gosql.NullInt64{Int64: cur.ID, Valid: true},
+			SearchQuery:     searchQuery,
 			Limit:           limit + 1,
 		})
 		if apiErr := db.MapSQLError(err); apiErr != nil {
@@ -217,6 +227,7 @@ func (r *sandboxAccountRepoImpl) listWithOwner(ctx context.Context, span trace.S
 	// No cursor — first page
 	rows, err := r.queries.ListSandboxAccountsWithOwnerForward(ctx, sqlc.ListSandboxAccountsWithOwnerForwardParams{
 		OwnerAccountID: ownerAccountID,
+		SearchQuery:    searchQuery,
 		Limit:          limit + 1,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
@@ -252,7 +263,9 @@ func (r *sandboxAccountRepoImpl) CountByOwnerAccountID(ctx context.Context, owne
 	ctx, span := sandboxAccountRepoTracer.Start(ctx, "repository.sandbox_account.count_by_owner_account_id")
 	defer span.End()
 
-	count, err := r.queries.CountSandboxAccounts(ctx, ownerAccountID)
+	count, err := r.queries.CountSandboxAccounts(ctx, sqlc.CountSandboxAccountsParams{
+		OwnerAccountID: ownerAccountID,
+	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return 0, tracing.Trace(span, apiErr)
 	}

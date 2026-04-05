@@ -47,6 +47,7 @@ func (suite *SandboxMedTestSuite) TearDownSuite() {
 }
 
 func TestSandboxMedTestSuite(t *testing.T) {
+	t.Parallel()
 	suite.Run(t, new(SandboxMedTestSuite))
 }
 

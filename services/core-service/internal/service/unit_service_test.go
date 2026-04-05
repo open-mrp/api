@@ -12,34 +12,45 @@ import (
 	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/messaging"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
 )
 
+type stubOutboxRepo struct{}
+
+func (s *stubOutboxRepo) Create(_ context.Context, _ messaging.OutboxMessageInput) (int64, error) {
+	return 0, nil
+}
+
 type stubTxManager struct {
 	factory domain.RepoFactory
 }
 
-func (m *stubTxManager) WithTx(_ context.Context, fn func(context.Context, domain.RepoFactory) *apierror.APIError) *apierror.APIError {
-	return fn(context.Background(), m.factory)
+func (m *stubTxManager) WithTx(ctx context.Context, fn func(context.Context, domain.RepoFactory) *apierror.APIError) *apierror.APIError {
+	return fn(ctx, m.factory)
 }
 
 type UnitSvcTestSuite struct {
 	suite.Suite
-	unitSvc         domain.UnitSvc
-	unitRepo        *repositorymock.MockUnitRepo
-	repoFactory     *factorymock.MockRepoFactory
-	mediatorFactory *factorymock.MockMediatorFactory
-	idempotencyMed  *mediatormock.MockIdempotencyMed
-	ctrl            *gomock.Controller
+	unitSvc           domain.UnitSvc
+	unitRepo          *repositorymock.MockUnitRepo
+	deletedRecordRepo *repositorymock.MockDeletedRecordRepo
+	repoFactory       *factorymock.MockRepoFactory
+	mediatorFactory   *factorymock.MockMediatorFactory
+	idempotencyMed    *mediatormock.MockIdempotencyMed
+	ctrl              *gomock.Controller
 }
 
 func (suite *UnitSvcTestSuite) SetupSuite() {
 	suite.ctrl = gomock.NewController(suite.T())
 	suite.unitRepo = repositorymock.NewMockUnitRepo(suite.ctrl)
+	suite.deletedRecordRepo = repositorymock.NewMockDeletedRecordRepo(suite.ctrl)
 	suite.repoFactory = factorymock.NewMockRepoFactory(suite.ctrl)
 	suite.repoFactory.EXPECT().NewUnitRepo().Return(suite.unitRepo).AnyTimes()
+	suite.repoFactory.EXPECT().NewDeletedRecordRepo().Return(suite.deletedRecordRepo).AnyTimes()
+	suite.repoFactory.EXPECT().NewOutboxRepo().Return(&stubOutboxRepo{}).AnyTimes()
 
 	suite.idempotencyMed = mediatormock.NewMockIdempotencyMed(suite.ctrl)
 	suite.mediatorFactory = factorymock.NewMockMediatorFactory(suite.ctrl)
@@ -59,19 +70,19 @@ func (suite *UnitSvcTestSuite) TearDownSuite() {
 }
 
 func TestUnitSvcTestSuite(t *testing.T) {
+	t.Parallel()
 	suite.Run(t, new(UnitSvcTestSuite))
 }
-
-func strPtr(s string) *string { return &s }
 
 func internalIdentityCtx(targetAccountID string) context.Context {
 	adminCode := string(constants.RoleTypeCodeAdmin)
 	return appctx.WithIdentity(context.Background(), &types.Identity{
-		Type:            types.IdentityTypeUser,
-		TargetAccountID: &targetAccountID,
+		Type:   types.IdentityActorTypeUser,
+		Target: &types.IdentityTarget{AccountID: targetAccountID},
 		Actor: &types.IdentityActor{
-			Type:         types.IdentityActorTypeInternal,
+			RelationType: types.IdentityRelationTypeInternal,
 			ID:           "usr_test123",
+			AccountID:    &targetAccountID,
 			RoleTypeCode: &adminCode,
 			Permissions: map[string]bool{
 				"units:read":   true,
@@ -93,11 +104,12 @@ func idempotencyCtx(ctx context.Context) context.Context {
 func readOnlyIdentityCtx(targetAccountID string) context.Context {
 	customCode := string(constants.RoleTypeCodeCustom)
 	return appctx.WithIdentity(context.Background(), &types.Identity{
-		Type:            types.IdentityTypeUser,
-		TargetAccountID: &targetAccountID,
+		Type:   types.IdentityActorTypeUser,
+		Target: &types.IdentityTarget{AccountID: targetAccountID},
 		Actor: &types.IdentityActor{
-			Type:         types.IdentityActorTypeInternal,
+			RelationType: types.IdentityRelationTypeInternal,
 			ID:           "usr_test123",
+			AccountID:    &targetAccountID,
 			RoleTypeCode: &customCode,
 			Permissions: map[string]bool{
 				"units:read": true,
@@ -161,9 +173,9 @@ func (suite *UnitSvcTestSuite) TestGetUnit_MissingIdentity() {
 func (suite *UnitSvcTestSuite) TestGetUnit_MissingTargetAccount() {
 	adminCode := string(constants.RoleTypeCodeAdmin)
 	ctx := appctx.WithIdentity(context.Background(), &types.Identity{
-		Type: types.IdentityTypeUser,
+		Type: types.IdentityActorTypeUser,
 		Actor: &types.IdentityActor{
-			Type:         types.IdentityActorTypeInternal,
+			RelationType: types.IdentityRelationTypeInternal,
 			ID:           "usr_test123",
 			RoleTypeCode: &adminCode,
 			Permissions:  map[string]bool{"units:read": true},
@@ -180,10 +192,10 @@ func (suite *UnitSvcTestSuite) TestGetUnit_MissingTargetAccount() {
 func (suite *UnitSvcTestSuite) TestGetUnit_InsufficientPermissions() {
 	customCode := string(constants.RoleTypeCodeCustom)
 	ctx := appctx.WithIdentity(context.Background(), &types.Identity{
-		Type:            types.IdentityTypeUser,
-		TargetAccountID: strPtr("ac_test123"),
+		Type:   types.IdentityActorTypeUser,
+		Target: &types.IdentityTarget{AccountID: "ac_test123"},
 		Actor: &types.IdentityActor{
-			Type:         types.IdentityActorTypeInternal,
+			RelationType: types.IdentityRelationTypeInternal,
 			ID:           "usr_test123",
 			RoleTypeCode: &customCode,
 			Permissions:  map[string]bool{},
@@ -231,7 +243,7 @@ func (suite *UnitSvcTestSuite) TestCreateUnit_Success() {
 		DoAndReturn(func(_ context.Context, id string, params domain.CreateUnitParams) (*domain.Unit, *apierror.APIError) {
 			suite.Equal("ac_test123", params.AccountID)
 			suite.Equal("Gram", params.Name)
-			return &domain.Unit{ID: id, Name: "Gram", AccountID: strPtr("ac_test123")}, nil
+			return &domain.Unit{ID: id, Name: "Gram", AccountID: new("ac_test123")}, nil
 		}).
 		Times(1)
 	suite.expectCacheSuccess()
@@ -351,10 +363,10 @@ func (suite *UnitSvcTestSuite) TestUpdateUnit_Success() {
 	suite.expectIdempotencyStarted()
 	suite.unitRepo.EXPECT().
 		Get(gomock.Any(), domain.GetUnitParams{AccountID: "ac_test123", UnitID: "un_abc123"}).
-		Return(&domain.Unit{ID: "un_abc123", Name: "Old Name", AccountID: strPtr("ac_test123")}, nil).
+		Return(&domain.Unit{ID: "un_abc123", Name: "Old Name", AccountID: new("ac_test123")}, nil).
 		Times(1)
 	suite.unitRepo.EXPECT().
-		ExistsByName(gomock.Any(), "ac_test123", "Updated Name", strPtr("un_abc123")).
+		ExistsByName(gomock.Any(), "ac_test123", "Updated Name", new("un_abc123")).
 		Return(false, nil).
 		Times(1)
 	suite.unitRepo.EXPECT().
@@ -370,7 +382,7 @@ func (suite *UnitSvcTestSuite) TestUpdateUnit_Success() {
 
 	result, err := suite.unitSvc.UpdateUnit(ctx, domain.UpdateUnitParams{
 		UnitID: "un_abc123",
-		Name:   strPtr("Updated Name"),
+		Name:   new("Updated Name"),
 	})
 
 	suite.Nil(err)
@@ -408,7 +420,7 @@ func (suite *UnitSvcTestSuite) TestUpdateUnit_NotFound() {
 
 	result, err := suite.unitSvc.UpdateUnit(ctx, domain.UpdateUnitParams{
 		UnitID: "un_nonexistent",
-		Name:   strPtr("Test"),
+		Name:   new("Test"),
 	})
 
 	suite.Nil(result)
@@ -428,7 +440,7 @@ func (suite *UnitSvcTestSuite) TestUpdateUnit_SystemUnitRejected() {
 
 	result, err := suite.unitSvc.UpdateUnit(ctx, domain.UpdateUnitParams{
 		UnitID: "un_system",
-		Name:   strPtr("New Name"),
+		Name:   new("New Name"),
 	})
 
 	suite.Nil(result)
@@ -443,17 +455,17 @@ func (suite *UnitSvcTestSuite) TestUpdateUnit_DuplicateName() {
 	suite.expectIdempotencyStarted()
 	suite.unitRepo.EXPECT().
 		Get(gomock.Any(), domain.GetUnitParams{AccountID: "ac_test123", UnitID: "un_abc123"}).
-		Return(&domain.Unit{ID: "un_abc123", Name: "Old Name", AccountID: strPtr("ac_test123")}, nil).
+		Return(&domain.Unit{ID: "un_abc123", Name: "Old Name", AccountID: new("ac_test123")}, nil).
 		Times(1)
 	suite.unitRepo.EXPECT().
-		ExistsByName(gomock.Any(), "ac_test123", "Kilogram", strPtr("un_abc123")).
+		ExistsByName(gomock.Any(), "ac_test123", "Kilogram", new("un_abc123")).
 		Return(true, nil).
 		Times(1)
 	suite.expectCacheError()
 
 	result, err := suite.unitSvc.UpdateUnit(ctx, domain.UpdateUnitParams{
 		UnitID: "un_abc123",
-		Name:   strPtr("Kilogram"),
+		Name:   new("Kilogram"),
 	})
 
 	suite.Nil(result)
@@ -468,17 +480,17 @@ func (suite *UnitSvcTestSuite) TestUpdateUnit_DuplicateAbbreviation() {
 	suite.expectIdempotencyStarted()
 	suite.unitRepo.EXPECT().
 		Get(gomock.Any(), domain.GetUnitParams{AccountID: "ac_test123", UnitID: "un_abc123"}).
-		Return(&domain.Unit{ID: "un_abc123", Name: "Old Name", AccountID: strPtr("ac_test123")}, nil).
+		Return(&domain.Unit{ID: "un_abc123", Name: "Old Name", AccountID: new("ac_test123")}, nil).
 		Times(1)
 	suite.unitRepo.EXPECT().
-		ExistsByAbbreviation(gomock.Any(), "ac_test123", "kg", strPtr("un_abc123")).
+		ExistsByAbbreviation(gomock.Any(), "ac_test123", "kg", new("un_abc123")).
 		Return(true, nil).
 		Times(1)
 	suite.expectCacheError()
 
 	result, err := suite.unitSvc.UpdateUnit(ctx, domain.UpdateUnitParams{
 		UnitID:       "un_abc123",
-		Abbreviation: strPtr("kg"),
+		Abbreviation: new("kg"),
 	})
 
 	suite.Nil(result)
@@ -494,7 +506,11 @@ func (suite *UnitSvcTestSuite) TestDeleteUnit_Success() {
 
 	suite.unitRepo.EXPECT().
 		Get(gomock.Any(), domain.GetUnitParams{AccountID: "ac_test123", UnitID: "un_abc123"}).
-		Return(&domain.Unit{ID: "un_abc123", Name: "Custom Unit", AccountID: strPtr("ac_test123")}, nil).
+		Return(&domain.Unit{ID: "un_abc123", Name: "Custom Unit", AccountID: new("ac_test123")}, nil).
+		Times(1)
+	suite.deletedRecordRepo.EXPECT().
+		Create(gomock.Any(), constants.DeletedRecordResourceTypeUnit, "un_abc123", gomock.Any()).
+		Return(nil).
 		Times(1)
 	suite.unitRepo.EXPECT().
 		Delete(gomock.Any(), domain.DeleteUnitParams{AccountID: "ac_test123", UnitID: "un_abc123"}).
@@ -530,6 +546,11 @@ func (suite *UnitSvcTestSuite) TestDeleteUnit_NotFound() {
 		Return(nil, apierror.NewResourceNotFoundError("Unit not found.")).
 		Times(1)
 
+	suite.deletedRecordRepo.EXPECT().
+		Exists(gomock.Any(), constants.DeletedRecordResourceTypeUnit, "un_nonexistent").
+		Return(false, nil).
+		Times(1)
+
 	err := suite.unitSvc.DeleteUnit(ctx, "un_nonexistent")
 
 	suite.NotNil(err)
@@ -554,10 +575,10 @@ func (suite *UnitSvcTestSuite) TestDeleteUnit_SystemUnitRejected() {
 func (suite *UnitSvcTestSuite) TestDeleteUnit_ExternalActorRejected() {
 	supplierCode := string(constants.RoleTypeCodeAdmin)
 	ctx := appctx.WithIdentity(context.Background(), &types.Identity{
-		Type:            types.IdentityTypeUser,
-		TargetAccountID: strPtr("ac_test123"),
+		Type:   types.IdentityActorTypeUser,
+		Target: &types.IdentityTarget{AccountID: "ac_test123"},
 		Actor: &types.IdentityActor{
-			Type:         types.IdentityActorTypeSupplier,
+			RelationType: types.IdentityRelationTypeSupplier,
 			ID:           "usr_external",
 			RoleTypeCode: &supplierCode,
 			Permissions:  map[string]bool{"units:delete": true},

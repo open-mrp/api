@@ -7,17 +7,9 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// HashBcrypt hashes a plaintext password using bcrypt with the given cost factor.
-func HashBcrypt(password string, cost int) (string, error) {
-	if cost == 0 {
-		cost = bcrypt.DefaultCost
-	}
-
-	if cost < bcrypt.MinCost || cost > bcrypt.MaxCost {
-		return "", fmt.Errorf("invalid cost: %d", cost)
-	}
-
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), cost)
+// HashBcrypt hashes a plaintext password using bcrypt with the default cost factor.
+func HashBcrypt(password string) (string, error) {
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate bcrypt hash: %w", err)
 	}

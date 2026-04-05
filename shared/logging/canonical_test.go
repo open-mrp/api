@@ -16,11 +16,10 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func ptr(s string) *string { return &s }
-
 // --- buildCanonicalAttrs tests ---
 
 func TestBuildCanonicalAttrs_BaseFields(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	attrs := buildCanonicalAttrs(ctx, "/auth.AuthService/Login", nil, 5*time.Millisecond)
 
@@ -36,6 +35,7 @@ func TestBuildCanonicalAttrs_BaseFields(t *testing.T) {
 }
 
 func TestBuildCanonicalAttrs_WithError(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	err := status.Error(codes.NotFound, "not found")
 	attrs := buildCanonicalAttrs(ctx, "/svc/Method", err, time.Millisecond)
@@ -49,6 +49,7 @@ func TestBuildCanonicalAttrs_WithError(t *testing.T) {
 }
 
 func TestBuildCanonicalAttrs_NoErrorField_WhenNil(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	attrs := buildCanonicalAttrs(ctx, "/svc/Method", nil, time.Millisecond)
 
@@ -59,6 +60,7 @@ func TestBuildCanonicalAttrs_NoErrorField_WhenNil(t *testing.T) {
 }
 
 func TestBuildCanonicalAttrs_WithRequestID(t *testing.T) {
+	t.Parallel()
 	ctx := appctx.WithRequestID(context.Background(), "req-abc-123")
 	attrs := buildCanonicalAttrs(ctx, "/svc/Method", nil, time.Millisecond)
 
@@ -67,6 +69,7 @@ func TestBuildCanonicalAttrs_WithRequestID(t *testing.T) {
 }
 
 func TestBuildCanonicalAttrs_NoRequestID(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	attrs := buildCanonicalAttrs(ctx, "/svc/Method", nil, time.Millisecond)
 
@@ -77,6 +80,7 @@ func TestBuildCanonicalAttrs_NoRequestID(t *testing.T) {
 }
 
 func TestBuildCanonicalAttrs_DurationIsPositive(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	duration := 1234 * time.Microsecond
 	attrs := buildCanonicalAttrs(ctx, "/svc/Method", nil, duration)
@@ -94,13 +98,14 @@ func TestBuildCanonicalAttrs_DurationIsPositive(t *testing.T) {
 // --- extractIdentityAttrs tests ---
 
 func TestExtractIdentityAttrs_UserIdentity(t *testing.T) {
+	t.Parallel()
 	identity := &types.Identity{
-		Type: types.IdentityTypeUser,
+		Type: types.IdentityActorTypeUser,
 		Actor: &types.IdentityActor{
 			ID: "usr_123",
 		},
-		TargetAccountID: ptr("acct_456"),
-		AccountMode:     constants.AccountModeProduction,
+		Target:      &types.IdentityTarget{AccountID: "acct_456"},
+		AccountMode: constants.AccountModeProduction,
 	}
 
 	attrs := extractIdentityAttrs(identity)
@@ -113,8 +118,9 @@ func TestExtractIdentityAttrs_UserIdentity(t *testing.T) {
 }
 
 func TestExtractIdentityAttrs_APIKeyIdentity(t *testing.T) {
+	t.Parallel()
 	identity := &types.Identity{
-		Type: types.IdentityTypeAPIKey,
+		Type: types.IdentityActorTypeAPIKey,
 		Actor: &types.IdentityActor{
 			ID: "apke_789",
 		},
@@ -132,8 +138,9 @@ func TestExtractIdentityAttrs_APIKeyIdentity(t *testing.T) {
 }
 
 func TestExtractIdentityAttrs_NilActor(t *testing.T) {
+	t.Parallel()
 	identity := &types.Identity{
-		Type:  types.IdentityTypeUnauthenticated,
+		Type:  types.IdentityActorTypeUnauthenticated,
 		Actor: nil,
 	}
 
@@ -150,11 +157,12 @@ func TestExtractIdentityAttrs_NilActor(t *testing.T) {
 	}
 }
 
-func TestExtractIdentityAttrs_NilTargetAccountID(t *testing.T) {
+func TestExtractIdentityAttrs_NilTarget(t *testing.T) {
+	t.Parallel()
 	identity := &types.Identity{
-		Type:            types.IdentityTypeUser,
-		Actor:           &types.IdentityActor{ID: "usr_1"},
-		TargetAccountID: nil,
+		Type:   types.IdentityActorTypeUser,
+		Actor:  &types.IdentityActor{ID: "usr_1"},
+		Target: nil,
 	}
 
 	attrs := extractIdentityAttrs(identity)
@@ -166,8 +174,9 @@ func TestExtractIdentityAttrs_NilTargetAccountID(t *testing.T) {
 }
 
 func TestExtractIdentityAttrs_EmptyAccountMode(t *testing.T) {
+	t.Parallel()
 	identity := &types.Identity{
-		Type:        types.IdentityTypeUser,
+		Type:        types.IdentityActorTypeUser,
 		Actor:       &types.IdentityActor{ID: "usr_1"},
 		AccountMode: "",
 	}
@@ -181,13 +190,14 @@ func TestExtractIdentityAttrs_EmptyAccountMode(t *testing.T) {
 }
 
 func TestExtractIdentityAttrs_FullIdentity(t *testing.T) {
+	t.Parallel()
 	identity := &types.Identity{
-		Type: types.IdentityTypeUser,
+		Type: types.IdentityActorTypeUser,
 		Actor: &types.IdentityActor{
 			ID: "usr_full",
 		},
-		TargetAccountID: ptr("acct_full"),
-		AccountMode:     constants.AccountModeProduction,
+		Target:      &types.IdentityTarget{AccountID: "acct_full"},
+		AccountMode: constants.AccountModeProduction,
 	}
 
 	attrs := extractIdentityAttrs(identity)
@@ -204,8 +214,9 @@ func TestExtractIdentityAttrs_FullIdentity(t *testing.T) {
 // --- buildCanonicalAttrs with identity in context ---
 
 func TestBuildCanonicalAttrs_WithIdentityInContext(t *testing.T) {
+	t.Parallel()
 	identity := &types.Identity{
-		Type: types.IdentityTypeUser,
+		Type: types.IdentityActorTypeUser,
 		Actor: &types.IdentityActor{
 			ID: "usr_ctx",
 		},
@@ -219,6 +230,7 @@ func TestBuildCanonicalAttrs_WithIdentityInContext(t *testing.T) {
 }
 
 func TestBuildCanonicalAttrs_NoIdentityInContext(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	attrs := buildCanonicalAttrs(ctx, "/svc/Method", nil, time.Millisecond)
 
@@ -231,6 +243,7 @@ func TestBuildCanonicalAttrs_NoIdentityInContext(t *testing.T) {
 // --- CanonicalLogInterceptor tests ---
 
 func TestCanonicalLogInterceptor_CallsHandler(t *testing.T) {
+	t.Parallel()
 	logger := slog.Default()
 	interceptor := CanonicalLogInterceptor(logger)
 
@@ -255,6 +268,7 @@ func TestCanonicalLogInterceptor_CallsHandler(t *testing.T) {
 }
 
 func TestCanonicalLogInterceptor_PropagatesError(t *testing.T) {
+	t.Parallel()
 	logger := slog.Default()
 	interceptor := CanonicalLogInterceptor(logger)
 
@@ -275,6 +289,7 @@ func TestCanonicalLogInterceptor_PropagatesError(t *testing.T) {
 }
 
 func TestCanonicalLogInterceptor_PassesContextToHandler(t *testing.T) {
+	t.Parallel()
 	logger := slog.Default()
 	interceptor := CanonicalLogInterceptor(logger)
 

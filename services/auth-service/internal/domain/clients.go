@@ -38,10 +38,22 @@ type PlanInfo struct {
 type AuthBillingClient interface {
 	GetPlanByCode(ctx context.Context, planCode string) (*PlanInfo, *apierror.APIError)
 	CreateCustomer(ctx context.Context, email, name, idempotencyKey string, metadata map[string]string) (*StripeCustomer, *apierror.APIError)
-	CreateCheckoutSession(ctx context.Context, customerID, planCode, returnURL, idempotencyKey string) (*StripeCheckoutSession, *apierror.APIError)
-	GetCheckoutSessionStatus(ctx context.Context, checkoutSessionID string) (*StripeCheckoutSessionStatus, *apierror.APIError)
+	SetupBillingProfile(ctx context.Context, accountID string) (*BillingProfileResult, *apierror.APIError)
+	SubscribeToPricingPlan(ctx context.Context, stripeCustomerID, planCode string) *apierror.APIError
+	CreateSetupIntent(ctx context.Context, customerID, idempotencyKey string) (*SetupIntentResult, *apierror.APIError)
+	GetSetupIntentStatus(ctx context.Context, setupIntentID string) (*SetupIntentResult, *apierror.APIError)
+	ValidateStripePricingPlan(ctx context.Context, planCode string) *apierror.APIError
 	Close() error
 	WaitForReady(ctx context.Context) error
+}
+
+// SetupIntentResult holds the result of a Setup Intent operation from billing-service.
+type SetupIntentResult struct {
+	SetupIntentID   string
+	ClientSecret    string // #nosec G117 -- Stripe ephemeral client secret
+	Status          string
+	PaymentMethodID *string
+	PublishableKey  string
 }
 
 // StripeCustomer represents a Stripe customer created during registration.
@@ -49,19 +61,10 @@ type StripeCustomer struct {
 	ID string
 }
 
-// StripeCheckoutSessionStatus holds the status of a Stripe checkout session
-// and, when complete, the subscription and customer IDs.
-type StripeCheckoutSessionStatus struct {
-	Status         string
-	SubscriptionID string
-	CustomerID     string
-}
-
-// StripeCheckoutSession represents a created Stripe checkout session.
-type StripeCheckoutSession struct {
-	ID             string
-	ClientSecret   string // #nosec G117 - Stripe checkout client secret (ephemeral, not a stored credential)
-	PublishableKey string
+// BillingProfileResult holds the IDs of the created billing profile and cadence.
+type BillingProfileResult struct {
+	ProfileID string
+	CadenceID string
 }
 
 // AuthCoreClient is the interface for core-service operations needed by auth-service

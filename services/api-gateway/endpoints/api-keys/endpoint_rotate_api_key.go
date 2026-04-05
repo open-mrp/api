@@ -14,7 +14,7 @@ import (
 // The request to rotate an API key, optionally overriding the expiration
 type RotateAPIKeyRequest struct {
 	// The unique identifier for the API key to rotate.
-	APIKeyID string `path:"id"`
+	APIKeyID string `path:"id" validate:"required"`
 	// Optional expiration time override for the new API key.
 	ExpiresAt *time.Time `json:"expires_at,omitempty"`
 }
@@ -25,16 +25,12 @@ func (*RotateAPIKeyRequest) SchemaExample() any {
 	}
 }
 
-const rotateAPIKeyEndpointDescription string = `This endpoint rotates an API key by revoking the existing key and creating a new
-replacement with the same name, role, and owner. The new key inherits the old key's expiration unless an explicit expires_at override is provided.
-The new API key secret is returned once and is not retrievable after creation.`
-
 type RotateAPIKeyEndpoint struct{}
 
 func (e *RotateAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*RotateAPIKeyRequest, *apiresource.CreatedAPIKey] {
 	return &apiendpoint.APIEndpoint[*RotateAPIKeyRequest, *apiresource.CreatedAPIKey]{
 		Title:             "Rotate API Key",
-		Description:       rotateAPIKeyEndpointDescription,
+		Description:       "Rotates an API key by revoking the existing key and issuing a replacement with the same name, role, and expiration. The new secret is returned only once.",
 		Method:            http.MethodPost,
 		Route:             "/v1/auth/api-keys/{id}/actions/rotate",
 		ContentType:       "application/json",
@@ -49,14 +45,13 @@ func (e *RotateAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*RotateAPI
 		LocationFunc: func(resp *apiresource.CreatedAPIKey) string {
 			return "/v1/auth/api-keys/" + resp.APIKeyInfo.ID
 		},
-		IncludeConfig: &apiendpoint.IncludeConfig{
-			Fields: []apiendpoint.IncludeField{
-				{Key: "role", ObjectType: constants.ObjectTypeRole, JSONPaths: []string{"api_key_info.role"}},
-			},
-		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeAPIKey,
+			Fields:     []string{"role", "role.permissions"},
+			PathPrefix: "api_key_info",
+		}),
 		Extras: apiendpoint.APIEndpointExtras{
-			AllowUnknownJSONFields: false,
-			ShieldResponseBody:     true,
+			ShieldResponseBody: true,
 		},
 	}
 }

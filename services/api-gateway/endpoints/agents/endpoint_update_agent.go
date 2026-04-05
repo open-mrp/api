@@ -1,0 +1,66 @@
+package agentep
+
+import (
+	"context"
+	"net/http"
+
+	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
+	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
+	apierror "github.com/augno/api/shared/errors"
+)
+
+// UpdateAgentRequest is the request to partially update an agent definition.
+type UpdateAgentRequest struct {
+	// The ID of the agent definition to update.
+	AgentDefinitionID string `path:"id" validate:"required"`
+	// The display name of the agent.
+	Name *string `json:"name,omitempty" nullable:"false"`
+	// A unique URL-friendly identifier for the agent.
+	Slug *string `json:"slug,omitempty" nullable:"false"`
+	// A human-readable description of what the agent does.
+	Description *string `json:"description,omitempty"`
+	// The category code that classifies this agent (e.g. "order_processing").
+	CategoryCode *string `json:"category_code,omitempty" nullable:"false"`
+	// How this agent is triggered: "manual", "scheduled", or "event".
+	TriggerType *constants.AgentTriggerType `json:"trigger_type,omitempty" nullable:"false"`
+	// Agent-level configuration controlling LLM behavior and trigger settings.
+	Config *ConfigInput `json:"config,omitempty"`
+	// The tools to attach to this agent. Replaces the existing tool set when provided.
+	Tools *[]ToolInput `json:"tools,omitempty"`
+	// The ID of the role that defines this agent's permissions.
+	RoleID *string `json:"role_id,omitempty" nullable:"true"`
+}
+
+var sampleUpdateAgentRequest = &UpdateAgentRequest{
+	Name: new("Inventory Monitor"),
+}
+
+func (*UpdateAgentRequest) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(sampleUpdateAgentRequest)
+}
+
+type UpdateAgentEndpoint struct{}
+
+func (e *UpdateAgentEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAgentRequest, *apiresource.AgentDefinition] {
+	return &apiendpoint.APIEndpoint[*UpdateAgentRequest, *apiresource.AgentDefinition]{
+		Title:             "Update Agent",
+		Description:       "Partially updates a custom agent definition. System agents cannot be modified.",
+		Method:            http.MethodPatch,
+		Route:             "/v1/ai/agents/{id}",
+		ContentType:       "application/json",
+		Request:           &UpdateAgentRequest{},
+		Response:          &apiresource.AgentDefinition{},
+		SuccessStatusCode: http.StatusOK,
+		Public:            false,
+		Preview:           true,
+		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateAgentRequest) (*apiresource.AgentDefinition, *apierror.APIError) {
+			return svc.(AgentSvc).UpdateAgent
+		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeAgentDefinition,
+			Fields:     []string{"config", "tools", "role", "role.permissions"},
+		}),
+	}
+}

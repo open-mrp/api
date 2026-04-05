@@ -1,0 +1,815 @@
+syntax = "proto3";
+
+// CoreService message types (imported by core.proto).
+package core;
+
+import "google/protobuf/timestamp.proto";
+option go_package = "shared/proto/core;core";
+
+message GetAccountContextRequest {
+  string account_id = 1;
+}
+message GetAccountContextResponse {
+  bool is_sandbox = 1;
+  // Parent production account ID for sandbox accounts; absent for production.
+  optional string owner_account_id = 2;
+  AccountMode account_mode = 3;
+  // Stripe subscription status; absent for free-tier accounts.
+  optional string subscription_status = 4;
+  // For sandbox accounts, this is the owner account's plan code.
+  string plan_code = 5;
+  // Monthly spending cap for agent LLM usage in cents. Absent means unlimited.
+  // For sandbox accounts, this is the owner account's cap.
+  optional int64 agent_monthly_spending_cap_cents = 6;
+}
+enum AccountMode {
+  ACCOUNT_MODE_UNSPECIFIED = 0;
+  ACCOUNT_MODE_PRODUCTION = 1;
+  ACCOUNT_MODE_SANDBOX = 2;
+}
+message GetUserAccountAccessRequest {
+  string user_id = 1;
+  string account_id = 2;
+}
+message GetUserAccountAccessResponse {
+  bool has_access = 1;
+  // Present only when has_access is true.
+  optional AccountUserAccess access = 2;
+}
+message AccountUserAccess {
+  string account_user_id = 1;
+  string account_id = 2;
+  optional string role_id = 3;
+  optional string role_type_code = 4;
+  // Keys are permission codes (e.g. "invoices.create"), values are always true.
+  map<string, bool> permissions = 5;
+  optional google.protobuf.Timestamp last_used_at = 6;
+}
+message GetAccountRelationRequest {
+  string owner_account_id = 1;
+  oneof lookup {
+    string user_id = 2;
+    // Database row ID, not prefixed type ID.
+    int64 api_key_id = 3;
+  }
+}
+message GetAccountRelationResponse {
+  bool has_relation = 1;
+  // Present only when has_relation is true.
+  optional AccountRelation relation = 2;
+}
+message AccountRelation {
+  string id = 1;
+  // The account on the other side of the relationship (the entity's "home" account).
+  string counterparty_account_id = 2;
+  // Relationship type: "customer" or "supplier".
+  string role_code = 3;
+  // True when the caller's account is the owner of the relation (e.g. merchant targeting customer).
+  bool is_owner_side = 4;
+}
+message GetRolePermissionsRequest {
+  string role_id = 1;
+}
+message GetRolePermissionsResponse {
+  // Keys are permission codes (e.g. "invoices.create"), values are always true.
+  map<string, bool> permissions = 1;
+}
+message GetRoleInfoRequest {
+  string role_id = 1;
+}
+message GetRoleInfoResponse {
+  string role_id = 1;
+  string name = 2;
+  string role_type_code = 3;
+}
+message MarkAccountUserUsedRequest {
+  string account_user_id = 1;
+}
+message ListUserAccountAffiliationsRequest {
+  string user_id = 1;
+}
+message ListUserAccountAffiliationsResponse {
+  repeated AccountAffiliation affiliations = 1;
+  // Used as default selection in account switching UI. Absent if never accessed.
+  optional string last_used_account_id = 2;
+}
+message AccountAffiliation {
+  string account_id = 1;
+  string account_name = 2;
+  string role_id = 3;
+  string role_name = 4;
+  string role_type_code = 5;
+  optional google.protobuf.Timestamp last_used_at = 6;
+}
+message CompleteRegistrationRequest {
+  string user_id = 1;
+  string plan_code = 2;
+  string stripe_customer_id = 3;
+  // Absent for free-tier plans that don't create a subscription.
+  optional string stripe_subscription_id = 4;
+  RegistrationAccountData account_data = 5;
+}
+message RegistrationAccountData {
+  string account_name = 1;
+  optional RegistrationAddress business_address = 2;
+}
+message RegistrationAddress {
+  optional string line1 = 1;
+  optional string line2 = 2;
+  optional string city = 3;
+  optional string state = 4;
+  optional string postal_code = 5;
+  optional string country = 6;
+}
+message CompleteRegistrationResponse {
+  string account_id = 1;
+  string sandbox_id = 2;
+}
+message GetSandboxAccountByOwnerRequest {
+  string owner_account_id = 1;
+}
+message GetSandboxAccountByOwnerResponse {
+  string sandbox_account_id = 1;
+}
+message GetAdminRoleResponse {
+  string role_id = 1;
+}
+message RolePermissionDetail {
+  string id = 1;
+  string permission_code = 2;
+  bool create = 3;
+  bool read = 4;
+  bool update = 5;
+  bool delete = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+message RoleDetail {
+  string id = 1;
+  string name = 2;
+  string role_type_code = 3;
+  string account_id = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+  repeated RolePermissionDetail permissions = 7;
+}
+message ListRolesRequest {
+  string cursor = 1;
+  int32 limit = 2;
+  string query = 3;
+  repeated string role_type_codes = 4;
+}
+message ListRolesResponse {
+  repeated RoleDetail roles = 1;
+  PageInfo page_info = 2;
+}
+message GetRoleRequest {
+  string id = 1;
+}
+message GetRoleResponse {
+  RoleDetail role = 1;
+}
+message CreateRolePermissionInput {
+  string permission_code = 1;
+  bool create = 2;
+  bool read = 3;
+  bool update = 4;
+  bool delete = 5;
+}
+message CreateRoleRequest {
+  string name = 1;
+  repeated CreateRolePermissionInput permissions = 2;
+}
+message CreateRoleResponse {
+  RoleDetail role = 1;
+}
+message UpdateRoleRequest {
+  string id = 1;
+  string name = 2;
+  // When false, existing permissions are left unchanged.
+  bool has_permissions = 3;
+  // Only applied when has_permissions is true.
+  repeated CreateRolePermissionInput permissions = 4;
+}
+message UpdateRoleResponse {
+  RoleDetail role = 1;
+}
+message DeleteRoleRequest {
+  string id = 1;
+}
+message ListSandboxAccountsRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  repeated string includes = 3;
+  optional string query = 4;
+}
+message PageInfo {
+  optional string next_cursor = 1;
+  optional string prev_cursor = 2;
+  bool has_next_page = 3;
+  bool has_prev_page = 4;
+}
+message ListSandboxAccountsResponse {
+  repeated SandboxInfo sandboxes = 1;
+  PageInfo page_info = 2;
+}
+enum SandboxMode {
+  SANDBOX_MODE_UNSPECIFIED = 0; // defaults to blank
+  SANDBOX_MODE_BLANK = 1;
+  SANDBOX_MODE_SEEDED = 2;
+}
+message CreateSandboxRequest {
+  string name = 1;
+  SandboxMode mode = 2;
+  repeated string includes = 3;
+}
+message CreateSandboxResponse {
+  SandboxInfo sandbox = 1;
+}
+message GetSandboxRequest {
+  string id = 1;
+  repeated string includes = 2;
+}
+message GetSandboxResponse {
+  SandboxInfo sandbox = 1;
+}
+message DeleteSandboxRequest {
+  string id = 1;
+}
+message SandboxInfo {
+  string id = 1;
+  string name = 2;
+  google.protobuf.Timestamp created_at = 3;
+  google.protobuf.Timestamp updated_at = 4;
+  optional string owner_account_id = 5;
+  optional string owner_account_name = 6;
+}
+message UpdateAccountSubscriptionRequest {
+  string account_id = 1;
+  optional string subscription_status = 2;
+  string plan_code = 3;
+  optional string stripe_subscription_id = 4;
+  optional google.protobuf.Timestamp current_period_end = 5;
+  // Optional Stripe customer ID to persist when upgrading a free account.
+  optional string stripe_customer_id = 6;
+  // V2 billing fields
+  optional string billing_profile_id = 7;
+  optional string billing_cadence_id = 8;
+  optional string pricing_plan_subscription_id = 9;
+  optional string servicing_status = 10;
+  optional string collection_status = 11;
+}
+message ClearAccountStripeCustomerRequest {
+  string account_id = 1;
+}
+message GetAccountByStripeCustomerIDRequest {
+  string stripe_customer_id = 1;
+}
+message GetAccountByStripeCustomerIDResponse {
+  string account_id = 1;
+  string plan_code = 2;
+}
+message ListUnitsRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+  optional string type = 4;
+  // Only units belonging to at least one of these groups are returned.
+  repeated string unit_group_ids = 5;
+}
+message ListUnitsResponse {
+  repeated UnitInfo units = 1;
+  PageInfo page_info = 2;
+}
+message UnitInfo {
+  string id = 1;
+  string name = 2;
+  string abbreviation = 3;
+  string type = 4;
+  // Conversion ratios and offsets are decimal strings relative to the base unit.
+  string ratio_numerator = 5;
+  string ratio_denominator = 6;
+  string offset_numerator = 7;
+  string offset_denominator = 8;
+  bool is_base_unit = 9;
+  // True if owned by the requesting account, false for system/global units.
+  bool is_internal = 10;
+  google.protobuf.Timestamp created_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+  // Null for system units.
+  optional string account_id = 13;
+}
+message GetUnitRequest {
+  string id = 1;
+}
+message GetUnitResponse {
+  UnitInfo unit = 1;
+}
+message CreateUnitRequest {
+  string name = 1;
+  string abbreviation = 2;
+  string type = 3;
+  string ratio_numerator = 4;
+  string ratio_denominator = 5;
+  string offset_numerator = 6;
+  string offset_denominator = 7;
+  bool is_base_unit = 8;
+}
+message CreateUnitResponse {
+  UnitInfo unit = 1;
+}
+message UpdateUnitRequest {
+  string id = 1;
+  optional string name = 2;
+  optional string abbreviation = 3;
+  optional string ratio_numerator = 4;
+  optional string ratio_denominator = 5;
+  optional string offset_numerator = 6;
+  optional string offset_denominator = 7;
+}
+message UpdateUnitResponse {
+  UnitInfo unit = 1;
+}
+message DeleteUnitRequest {
+  string id = 1;
+}
+message UpdateAgentSpendingCapRequest {
+  optional int64 cap_cents = 1;
+}
+message UpdateAgentSpendingCapResponse {
+  optional int64 cap_cents = 1;
+}
+message ProductInfo {
+  string product_id = 1;
+  string item_id = 2;
+  string sku = 3;
+  string description = 4;
+  string unit_price = 5;
+}
+message SearchProductsRequest {
+  string account_id = 1;
+  string query = 2;
+}
+message SearchProductsResponse {
+  repeated ProductInfo products = 1;
+}
+message ListProductsRequest {
+  string account_id = 1;
+}
+message ListProductsResponse {
+  repeated ProductInfo products = 1;
+}
+message GetCustomerByEmailRequest {
+  string owner_account_id = 1;
+  string email = 2;
+}
+message GetCustomerByEmailResponse {
+  bool found = 1;
+  optional CustomerInfo customer = 2;
+}
+message CustomerInfo {
+  string relation_id = 1;
+  string owner_account_id = 2;
+  string counterparty_account_id = 3;
+  string role_code = 4;
+  string alias = 5;
+  string email = 6;
+  string user_name = 7;
+}
+message CustomerProto {
+  string id = 1;
+  string name = 2;
+  string number = 3;
+  string status = 4;
+  bool is_edi_enabled = 5;
+  bool is_parent_account = 6;
+  string commission_policy = 7;
+  string freight_policy = 8;
+  optional string note = 9;
+  optional string email = 10;
+  optional string phone = 11;
+  optional string url = 12;
+  optional string carrier_billing_type = 13;
+  optional string carrier_billing_account = 14;
+  bool accepts_invoice_emails = 15;
+  optional CustomerCarrierProto default_carrier = 16;
+  optional CustomerServiceLevelProto default_service_level = 17;
+  optional CustomerPaymentTermProto default_payment_term = 18;
+  optional CustomerShippingTermProto default_shipping_term = 19;
+  optional CustomerPriorityProto default_priority = 20;
+  optional CustomerUserProto default_sales_rep = 21;
+  optional CustomerAddressProto bill_to_address = 22;
+  optional CustomerAddressProto ship_to_address = 23;
+  optional CustomerAccountGroupProto type_group = 24;
+  repeated CustomerAccountGroupProto price_groups = 25;
+  optional CustomerLightCustomerProto parent_account = 26;
+  google.protobuf.Timestamp created_at = 27;
+  google.protobuf.Timestamp updated_at = 28;
+}
+message CustomerSummaryProto {
+  string id = 1;
+  string name = 2;
+  string number = 3;
+  optional string email = 4;
+  optional string customer_type_group = 5;
+  string status = 6;
+  google.protobuf.Timestamp created_at = 7;
+}
+message CustomerCarrierProto {
+  string id = 1;
+  string name = 2;
+  bool is_portal_enabled = 3;
+}
+message CustomerServiceLevelProto {
+  string id = 1;
+  string name = 2;
+}
+message CustomerPaymentTermProto {
+  string id = 1;
+  string name = 2;
+  bool is_active = 3;
+}
+message CustomerShippingTermProto {
+  string id = 1;
+  string name = 2;
+  string type = 3;
+}
+message CustomerPriorityProto {
+  string id = 1;
+  string code = 2;
+  string name = 3;
+}
+message CustomerAccountGroupProto {
+  string id = 1;
+  string name = 2;
+  string commission_policy = 3;
+  string freight_policy = 4;
+  string type = 5;
+}
+message CustomerUserProto {
+  string id = 1;
+  optional string name = 2;
+}
+message CustomerAddressProto {
+  string id = 1;
+  string name = 2;
+  optional string phone = 3;
+  optional string email = 4;
+  bool is_drop_ship = 5;
+  optional CustomerGeolocationProto geolocation = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+message CustomerGeolocationProto {
+  string id = 1;
+  optional string street_line_1 = 2;
+  optional string street_line_2 = 3;
+  optional string locality = 4;
+  optional string state = 5;
+  optional string postal_code = 6;
+  string country = 7;
+}
+message CustomerLightCustomerProto {
+  string id = 1;
+  string name = 2;
+  string number = 3;
+}
+message ListCustomersRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+  repeated string customer_group_ids = 4;
+  repeated string pricing_group_ids = 5;
+  repeated string sales_rep_ids = 6;
+  repeated string status_codes = 7;
+  repeated string shipping_term_ids = 8;
+  repeated string payment_term_ids = 9;
+  repeated string commission_status_codes = 10;
+  repeated string freight_status_codes = 11;
+  repeated string carrier_ids = 12;
+  repeated string service_level_ids = 13;
+  optional bool is_parent_account = 14;
+  optional string city = 15;
+  optional string state = 16;
+  optional string postal_code = 17;
+  optional google.protobuf.Timestamp start_date = 18;
+  optional google.protobuf.Timestamp end_date = 19;
+}
+message ListCustomersResponse {
+  repeated CustomerSummaryProto customers = 1;
+  PageInfo page_info = 2;
+}
+message GetCustomerRequest {
+  string id = 1;
+}
+message GetCustomerResponse {
+  CustomerProto customer = 1;
+}
+message CreateCustomerRequest {
+  string name = 1;
+  optional string number = 2;
+  optional string note = 3;
+  optional string email = 4;
+  optional string phone = 5;
+  optional string url = 6;
+  optional string status_code = 7;
+  optional bool is_edi_enabled = 8;
+  optional string commission_policy = 9;
+  optional string freight_policy = 10;
+  optional string default_carrier_id = 11;
+  optional string default_service_level_id = 12;
+  optional string default_payment_term_id = 13;
+  optional string default_shipping_term_id = 14;
+  optional string default_priority_code = 15;
+  optional string default_sales_rep_user_id = 16;
+  optional string bill_to_address_id = 17;
+  optional string ship_to_address_id = 18;
+  repeated string customer_price_group_ids = 19;
+  optional string customer_type_group_id = 20;
+  optional string carrier_billing_type = 21;
+  optional string carrier_billing_account = 22;
+}
+message CreateCustomerResponse {
+  CustomerProto customer = 1;
+}
+message UpdateCustomerRequest {
+  string id = 1;
+  optional string name = 2;
+  optional string number = 3;
+  optional string note = 4;
+  optional string email = 5;
+  optional string phone = 6;
+  optional string url = 7;
+  optional string status_code = 8;
+  optional bool is_edi_enabled = 9;
+  optional string commission_policy = 10;
+  optional string freight_policy = 11;
+  optional string default_carrier_id = 12;
+  optional string default_service_level_id = 13;
+  optional string default_payment_term_id = 14;
+  optional string default_shipping_term_id = 15;
+  optional string default_priority_code = 16;
+  optional string default_sales_rep_user_id = 17;
+  optional string bill_to_address_id = 18;
+  optional string ship_to_address_id = 19;
+  repeated string customer_price_group_ids = 20;
+  optional string customer_type_group_id = 21;
+  optional string carrier_billing_type = 22;
+  optional string carrier_billing_account = 23;
+  bool has_customer_price_group_ids = 24;
+}
+message UpdateCustomerResponse {
+  CustomerProto customer = 1;
+}
+message DeleteCustomerRequest {
+  string id = 1;
+}
+message BulkDeleteCustomersRequest {
+  repeated string customer_ids = 1;
+}
+message FrequentlyOrderedProductProto {
+  string item_id = 1;
+  string product_name = 2;
+  optional string unit_id = 3;
+  optional string unit_abbreviation = 4;
+  int32 order_count = 5;
+}
+message GetFrequentlyOrderedProductsRequest {
+  string customer_id = 1;
+}
+message GetFrequentlyOrderedProductsResponse {
+  repeated FrequentlyOrderedProductProto products = 1;
+}
+message MergeCustomersRequest {
+  string target_customer_id = 1;
+  repeated string source_customer_ids = 2;
+}
+message MergeCustomersResponse {
+  CustomerProto customer = 1;
+}
+message AnalyzeSalesRequest {
+  google.protobuf.Timestamp start_date = 1;
+  google.protobuf.Timestamp end_date = 2;
+  repeated string product_line_ids = 3;
+  repeated string customer_ids = 4;
+  repeated string sales_rep_ids = 5;
+  repeated string customer_group_ids = 6;
+  optional string query = 7;
+  bool is_sales_rep = 8;
+}
+message SalesEntryProto {
+  string id = 1;
+  google.protobuf.Timestamp issued_at = 2;
+  string customer_po = 3;
+  string order_number = 4;
+  string order_id = 5;
+  string sales_rep_id = 6;
+  string sales_rep_username = 7;
+  string customer_id = 8;
+  string customer_name = 9;
+  string customer_number = 10;
+  string customer_type_group_id = 11;
+  string customer_group_name = 12;
+  string parent_customer_id = 13;
+  google.protobuf.Timestamp customer_created_at = 14;
+  string product_line_id = 15;
+  string product_line = 16;
+  string product_type_id = 17;
+  string item_id = 18;
+  string product_sku = 19;
+  string product_description = 20;
+  string category_name = 21;
+  double quantity_invoiced = 22;
+  string unit = 23;
+  double unit_cost = 24;
+  double unit_price = 25;
+  double unit_profit = 26;
+  double total_invoiced = 27;
+  double total_cost = 28;
+  double total_profit = 29;
+  string ship_to_city = 30;
+  string ship_to_zipcode = 31;
+  string ship_to_state = 32;
+  string ship_to_country = 33;
+  string order_discount_code = 34;
+  google.protobuf.Timestamp completed_at = 35;
+  google.protobuf.Timestamp first_ship_at = 36;
+  google.protobuf.Timestamp promised_at = 37;
+  string invoice_id = 38;
+  string invoice_number = 39;
+  google.protobuf.Timestamp invoiced_at = 40;
+}
+message AnalyzeSalesResponse {
+  repeated SalesEntryProto entries = 1;
+}
+message AnalyzeProductionCostsRequest {
+  optional google.protobuf.Timestamp start_date = 1;
+  optional google.protobuf.Timestamp end_date = 2;
+  repeated string item_ids = 3;
+  repeated string product_line_ids = 4;
+  repeated string department_ids = 5;
+  repeated string category_ids = 6;
+}
+message BasicInfoProto {
+  string id = 1;
+  string name = 2;
+}
+message BaseQuantityUnitProto {
+  string name = 1;
+  string abbreviation = 2;
+  string type = 3;
+}
+message BaseQuantity {
+  double measure = 1;
+  BaseQuantityUnitProto unit = 2;
+}
+message CostBreakdown {
+  BaseQuantity total = 1;
+  BaseQuantity labor = 2;
+  BaseQuantity materials = 3;
+  BaseQuantity overhead = 4;
+  BaseQuantity time = 5;
+  BaseQuantity quantity = 6;
+}
+message ProductionCostEntryProto {
+  BasicInfoProto department = 1;
+  BasicInfoProto category = 2;
+  CostBreakdown total_costs = 3;
+  CostBreakdown productive_costs = 4;
+  CostBreakdown waste_costs = 5;
+  CostBreakdown seconds_costs = 6;
+}
+message AnalyzeProductionCostsResponse {
+  repeated ProductionCostEntryProto items = 1;
+}
+message AnalyzeDeliveriesRequest {
+  google.protobuf.Timestamp start_date = 1;
+  google.protobuf.Timestamp end_date = 2;
+  repeated string product_line_ids = 3;
+  repeated string customer_ids = 4;
+  repeated string customer_group_ids = 5;
+  repeated string sales_rep_ids = 6;
+  optional int32 target_delivery_time_days = 7;
+  optional bool override_promised_dates = 8;
+}
+message DeliveryStatisticsProto {
+  optional double average_time_to_first_shipment = 1;
+  optional double average_time_to_completion = 2;
+  optional double on_time_delivery_percentage = 3;
+  optional double on_time_first_shipment_percentage = 4;
+  int32 total_orders = 5;
+  int32 orders_with_first_shipment = 6;
+  int32 orders_with_completion = 7;
+  int32 orders_with_promise_date = 8;
+  int32 orders_partially_fulfilled_in_promise_date = 9;
+  int32 orders_completed_within_promise_date = 10;
+}
+message CoordinateProto {
+  double x = 1;
+  double y = 2;
+}
+message ChartDataPointProto {
+  string name = 1;
+  string type = 2;
+  repeated CoordinateProto data = 3;
+}
+message DeliveryChartDataProto {
+  ChartDataPointProto on_time_delivery = 1;
+  ChartDataPointProto average_delivery_time = 2;
+  ChartDataPointProto average_first_shipment_time = 3;
+}
+message AnalyzeDeliveriesResponse {
+  DeliveryStatisticsProto statistics = 1;
+  DeliveryChartDataProto chart_data = 2;
+}
+message AnalyzeManufacturingRequest {
+  google.protobuf.Timestamp start_date = 1;
+  google.protobuf.Timestamp end_date = 2;
+  string type = 3;
+}
+message AnalyzeManufacturingResponse {
+  double value = 1;
+}
+message ManufacturingMetricsProto {
+  double production = 1;
+  double costs_per_unit = 2;
+  double margin = 3;
+  double quality = 4;
+  double labor_efficiency = 5;
+}
+message AnalyzeManufacturingBatchRequest {
+  google.protobuf.Timestamp start_date = 1;
+  google.protobuf.Timestamp end_date = 2;
+  google.protobuf.Timestamp comparison_start_date = 3;
+  google.protobuf.Timestamp comparison_end_date = 4;
+  repeated string customer_ids = 5;
+  repeated string product_line_ids = 6;
+  repeated string customer_group_ids = 7;
+  repeated string item_ids = 8;
+}
+message AnalyzeManufacturingBatchResponse {
+  ManufacturingMetricsProto current = 1;
+  ManufacturingMetricsProto comparison = 2;
+}
+message AnalyzeOrdersRequest {
+  google.protobuf.Timestamp start_date = 1;
+  google.protobuf.Timestamp end_date = 2;
+  repeated string sales_rep_ids = 3;
+  repeated string product_line_ids = 4;
+  repeated string customer_ids = 5;
+  repeated string customer_group_ids = 6;
+  bool is_sales_rep = 7;
+}
+message OrderEntryProto {
+  string id = 1;
+  google.protobuf.Timestamp issued_at = 2;
+  string customer_po = 3;
+  string order_number = 4;
+  string order_id = 5;
+  string sales_rep_id = 6;
+  string sales_rep_username = 7;
+  string customer_id = 8;
+  string customer_name = 9;
+  string customer_number = 10;
+  string customer_type_group_id = 11;
+  string customer_group_name = 12;
+  string parent_customer_id = 13;
+  google.protobuf.Timestamp customer_created_at = 14;
+  string product_line_id = 15;
+  string product_line = 16;
+  string product_type_id = 17;
+  string item_id = 18;
+  string product_sku = 19;
+  string product_description = 20;
+  string category_name = 21;
+  double quantity_invoiced = 22;
+  string unit = 23;
+  double unit_cost = 24;
+  double unit_price = 25;
+  double unit_profit = 26;
+  double total_invoiced = 27;
+  double total_cost = 28;
+  double total_profit = 29;
+  string ship_to_city = 30;
+  string ship_to_zipcode = 31;
+  string ship_to_state = 32;
+  string ship_to_country = 33;
+  string order_discount_code = 34;
+  google.protobuf.Timestamp completed_at = 35;
+  google.protobuf.Timestamp first_ship_at = 36;
+  google.protobuf.Timestamp promised_at = 37;
+  double quantity_ordered = 38;
+  double quantity_back_ordered = 39;
+  double total_ordered = 40;
+  double total_back_ordered = 41;
+}
+message AnalyzeOrdersResponse {
+  repeated OrderEntryProto entries = 1;
+}
+message AnalyzeQuarterlyOrdersRequest {
+  repeated string sales_rep_ids = 1;
+  repeated string item_ids = 2;
+  repeated string product_line_ids = 3;
+  repeated string customer_ids = 4;
+  repeated string customer_group_ids = 5;
+}

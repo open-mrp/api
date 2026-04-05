@@ -10,18 +10,6 @@ import (
 
 const SampleSandboxID = "sbac_01jm4r6700f8nwq3v5hx2d9ktp"
 const SampleSandboxName = "Integration Testing"
-var SampleSandbox = &Sandbox{
-	ID:     SampleSandboxID,
-	Object: constants.ObjectTypeSandbox,
-	Name:   SampleSandboxName,
-	OwnerAccount: &LightAccount{
-		ID:     SampleAccountID,
-		Object: constants.ObjectTypeAccount,
-		Name:   SampleAccountName,
-	},
-	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
-}
 
 // Sandbox represents an isolated testing environment for an account.
 type Sandbox struct {
@@ -31,12 +19,25 @@ type Sandbox struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=sandbox"`
 	// The display name of the sandbox.
 	Name string `json:"name" validate:"required"`
-	// The owner account of this sandbox. Expandable.
-	OwnerAccount *LightAccount `json:"owner_account" expandable:"true"`
+	// The owner account of this sandbox.
+	OwnerAccount *Account `json:"owner_account" expandable:"true"`
 	// When this sandbox was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// When this sandbox was last updated.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
+}
+
+var SampleSandbox = &Sandbox{
+	ID:     SampleSandboxID,
+	Object: constants.ObjectTypeSandbox,
+	Name:   SampleSandboxName,
+	OwnerAccount: &Account{
+		ID:     SampleAccountID,
+		Object: constants.ObjectTypeAccount,
+		Name:   SampleAccountName,
+	},
+	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*Sandbox) SchemaExample() any {

@@ -19,6 +19,7 @@ type BaseConfig struct {
 	CoreClient          *grpcclient.CoreServiceClient
 	BillingClient       *grpcclient.BillingServiceClient
 	PlatformClient      *grpcclient.PlatformServiceClient
+	AgentClient         *grpcclient.AgentServiceClient
 	RequestLogPublisher domain.RequestLogPublisher
 }
 
@@ -50,6 +51,7 @@ func (c *BaseConfig) WithDefaults() *BaseConfig {
 		CoreClient:          c.CoreClient,
 		BillingClient:       c.BillingClient,
 		PlatformClient:      c.PlatformClient,
+		AgentClient:         c.AgentClient,
 		RequestLogPublisher: c.RequestLogPublisher,
 	}
 }
@@ -111,6 +113,7 @@ func BuildBaseConfig(
 	coreClient *grpcclient.CoreServiceClient,
 	billingClient *grpcclient.BillingServiceClient,
 	platformClient *grpcclient.PlatformServiceClient,
+	agentClient *grpcclient.AgentServiceClient,
 	reqLogPublisher domain.RequestLogPublisher,
 	logWriter io.Writer,
 ) *BaseConfig {
@@ -123,6 +126,7 @@ func BuildBaseConfig(
 		CoreClient:          coreClient,
 		BillingClient:       billingClient,
 		PlatformClient:      platformClient,
+		AgentClient:         agentClient,
 		RequestLogPublisher: reqLogPublisher,
 	}
 }

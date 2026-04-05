@@ -44,6 +44,7 @@ func (suite *RefreshTokenMedTestSuite) TearDownSuite() {
 
 // TestRefreshTokenMedTestSuite runs the test suite
 func TestRefreshTokenMedTestSuite(t *testing.T) {
+	t.Parallel()
 	suite.Run(t, new(RefreshTokenMedTestSuite))
 }
 

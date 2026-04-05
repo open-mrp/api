@@ -17,6 +17,7 @@ import (
 // TestConvertAPIErrorToGRPC_AllErrorCodes tests that every API error code
 // can be converted to a gRPC error without panicking.
 func TestConvertAPIErrorToGRPC_AllErrorCodes(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		name     string
 		apiErr   *apierror.APIError
@@ -209,6 +210,7 @@ func TestConvertAPIErrorToGRPC_AllErrorCodes(t *testing.T) {
 // TestConvertAPIErrorToGRPC_RoundTrip tests that converting an API error to gRPC
 // and back preserves the error code mapping (even if not exact due to many-to-one mapping).
 func TestConvertAPIErrorToGRPC_RoundTrip(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		name              string
 		apiErr            *apierror.APIError
@@ -349,6 +351,7 @@ func TestConvertAPIErrorToGRPC_RoundTrip(t *testing.T) {
 
 // TestConvertAPIErrorToGRPC_Nil tests nil handling.
 func TestConvertAPIErrorToGRPC_Nil(t *testing.T) {
+	t.Parallel()
 	grpcErr := ConvertAPIErrorToGRPC(nil)
 	if grpcErr != nil {
 		t.Errorf("expected nil, got %v", grpcErr)
@@ -357,6 +360,7 @@ func TestConvertAPIErrorToGRPC_Nil(t *testing.T) {
 
 // TestConvertAPIErrorToGRPC_MessagePreservation tests that all fields are preserved correctly.
 func TestConvertAPIErrorToGRPC_MessagePreservation(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name        string
 		apiErr      *apierror.APIError
@@ -433,6 +437,7 @@ func TestConvertAPIErrorToGRPC_MessagePreservation(t *testing.T) {
 
 // TestConvertGRPCError_AllCodes tests that all gRPC codes can be converted to API errors.
 func TestConvertGRPCError_AllCodes(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		name         string
 		grpcCode     grpccodes.Code
@@ -452,8 +457,8 @@ func TestConvertGRPCError_AllCodes(t *testing.T) {
 			name:         "NotFound",
 			grpcCode:     grpccodes.NotFound,
 			message:      "Not found",
-			expectedCode: apierror.ErrorCodeInternalError,
-			expectedType: apierror.ErrorTypeAPI,
+			expectedCode: apierror.ErrorCodeResourceNotFound,
+			expectedType: apierror.ErrorTypeInvalidRequest,
 		},
 		{
 			name:         "AlreadyExists",
@@ -571,6 +576,7 @@ func TestConvertGRPCError_AllCodes(t *testing.T) {
 
 // TestConvertGRPCError_NonStatusError tests handling of non-status errors.
 func TestConvertGRPCError_NonStatusError(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	serviceName := "test-service"
 
@@ -608,6 +614,7 @@ func TestConvertGRPCError_NonStatusError(t *testing.T) {
 // TestConvertGRPCError_ClientCancellation tests that client disconnections are
 // correctly identified and mapped to client_closed_request (HTTP 499).
 func TestConvertGRPCError_ClientCancellation(t *testing.T) {
+	t.Parallel()
 	serviceName := "test-service"
 
 	t.Run("canceled context with context.Canceled error", func(t *testing.T) {
@@ -688,6 +695,7 @@ func TestConvertGRPCError_ClientCancellation(t *testing.T) {
 
 // TestConvertGRPCError_Nil tests nil handling.
 func TestConvertGRPCError_Nil(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	apiErr := ConvertGRPCError(ctx, nil, "test-service")
 	if apiErr != nil {
@@ -698,6 +706,7 @@ func TestConvertGRPCError_Nil(t *testing.T) {
 // TestRoundTrip_AllAPIErrorCodes tests that every single API error code
 // can survive a round-trip conversion without losing critical information.
 func TestRoundTrip_AllAPIErrorCodes(t *testing.T) {
+	t.Parallel()
 	allErrorCodes := []struct {
 		name   string
 		code   apierror.ErrorCode
@@ -840,6 +849,7 @@ func TestRoundTrip_AllAPIErrorCodes(t *testing.T) {
 }
 
 func TestSetAPIVersionInMetadata(t *testing.T) {
+	t.Parallel()
 	md := metadata.New(nil)
 	SetAPIVersionInMetadata(md, "2026-02-01")
 
@@ -853,6 +863,7 @@ func TestSetAPIVersionInMetadata(t *testing.T) {
 }
 
 func TestGetAPIVersionFromMetadata(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		md       metadata.MD
@@ -885,7 +896,57 @@ func TestGetAPIVersionFromMetadata(t *testing.T) {
 	}
 }
 
+func TestGetClientIPFromMetadata(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		md       metadata.MD
+		expected string
+	}{
+		{
+			name:     "ip present",
+			md:       metadata.Pairs(ClientIPHeader, "198.51.100.7"),
+			expected: "198.51.100.7",
+		},
+		{
+			name:     "absent",
+			md:       metadata.New(nil),
+			expected: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := GetClientIPFromMetadata(tt.md); got != tt.expected {
+				t.Errorf("expected %q, got %q", tt.expected, got)
+			}
+		})
+	}
+}
+
+func TestClientIPUnaryServerInterceptor_SetsIPInContext(t *testing.T) {
+	t.Parallel()
+	interceptor := ClientIPUnaryServerInterceptor()
+
+	md := metadata.Pairs(ClientIPHeader, "198.51.100.7")
+	ctx := metadata.NewIncomingContext(context.Background(), md)
+
+	var handlerCtx context.Context
+	handler := func(ctx context.Context, req any) (any, error) {
+		handlerCtx = ctx
+		return nil, nil
+	}
+
+	_, _ = interceptor(ctx, nil, nil, handler)
+
+	ip, ok := appctx.GetPropagatedClientIP(handlerCtx)
+	if !ok || ip != "198.51.100.7" {
+		t.Errorf("expected propagated IP 198.51.100.7, ok=%v ip=%q", ok, ip)
+	}
+}
+
 func TestAPIVersionUnaryServerInterceptor_SetsVersionInContext(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name        string
 		version     string

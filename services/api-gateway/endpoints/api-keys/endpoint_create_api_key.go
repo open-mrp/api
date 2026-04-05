@@ -31,15 +31,12 @@ func (*CreateAPIKeyRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateAPIKeyRequest)
 }
 
-const createAPIKeyEndpointDescription string = `This endpoint is used to create an API key. Once completed, the API key object is
-returned, and the API key secret is returned. The secret is only returned once at creation, and is not retrievable after creation.`
-
 type CreateAPIKeyEndpoint struct{}
 
 func (e *CreateAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAPIKeyRequest, *apiresource.CreatedAPIKey] {
 	return &apiendpoint.APIEndpoint[*CreateAPIKeyRequest, *apiresource.CreatedAPIKey]{
 		Title:             "Create API Key",
-		Description:       createAPIKeyEndpointDescription,
+		Description:       "Creates a new API key. The secret value is returned only once at creation and cannot be retrieved afterward.",
 		Method:            http.MethodPost,
 		Route:             "/v1/auth/api-keys",
 		ContentType:       "application/json",
@@ -54,14 +51,13 @@ func (e *CreateAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAPI
 		LocationFunc: func(resp *apiresource.CreatedAPIKey) string {
 			return "/v1/auth/api-keys/" + resp.APIKeyInfo.ID
 		},
-		IncludeConfig: &apiendpoint.IncludeConfig{
-			Fields: []apiendpoint.IncludeField{
-				{Key: "role", ObjectType: constants.ObjectTypeRole, JSONPaths: []string{"api_key_info.role"}},
-			},
-		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeAPIKey,
+			Fields:     []string{"role", "role.permissions"},
+			PathPrefix: "api_key_info",
+		}),
 		Extras: apiendpoint.APIEndpointExtras{
-			AllowUnknownJSONFields: false,
-			ShieldResponseBody:     true,
+			ShieldResponseBody: true,
 		},
 	}
 }

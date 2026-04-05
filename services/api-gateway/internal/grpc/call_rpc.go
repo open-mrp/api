@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"net"
 	"time"
 
 	"github.com/augno/api/shared/appctx"
@@ -16,6 +17,7 @@ import (
 
 const (
 	PasswordOperationTimeout = 15 * time.Second
+	BillingOperationTimeout  = 30 * time.Second
 )
 
 // RPCOption configures the behavior of [CallRPC]. Use the With* functions
@@ -86,6 +88,18 @@ func prepareGatewayMetadata(ctx context.Context) context.Context {
 
 	if rl, ok := appctx.GetRequestLog(ctx); ok && rl != nil && rl.ID != "" {
 		mdOpts = append(mdOpts, rpc.WithMetadata(contracts.RequestIDHeader, rl.ID))
+	}
+
+	if rl, ok := appctx.GetRequestLog(ctx); ok && rl != nil {
+		var clientIP string
+		if rl.ClientIPString != nil && *rl.ClientIPString != "" {
+			clientIP = *rl.ClientIPString
+		} else if len(rl.ClientIP) > 0 {
+			clientIP = net.IP(rl.ClientIP).String()
+		}
+		if clientIP != "" {
+			mdOpts = append(mdOpts, rpc.WithMetadata(contracts.ClientIPHeader, clientIP))
+		}
 	}
 
 	return rpc.PrepareRPCCtx(ctx, mdOpts...)

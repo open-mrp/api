@@ -1,0 +1,363 @@
+package itemep
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/augno/api/services/api-gateway/internal/domain"
+	"github.com/augno/api/services/api-gateway/internal/export"
+	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
+	httptransport "github.com/augno/api/services/api-gateway/internal/http"
+	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	apierror "github.com/augno/api/shared/errors"
+	pb "github.com/augno/api/shared/proto/core"
+	"github.com/augno/api/shared/tracing"
+	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/timestamppb"
+)
+
+type ItemSvc interface {
+	ListItems(ctx context.Context, req *ListItemsRequest) (*apiresource.List[apiresource.Item], *apierror.APIError)
+	GetItem(ctx context.Context, req *GetItemRequest) (*apiresource.Item, *apierror.APIError)
+	GetItemInventory(ctx context.Context, req *GetItemInventoryRequest) (*apiresource.ItemInventory, *apierror.APIError)
+	GetItemCosts(ctx context.Context, req *GetItemCostsRequest) (*apiresource.ItemCosts, *apierror.APIError)
+	GetItemTrends(ctx context.Context, req *GetItemTrendsRequest) (*apiresource.ItemTrends, *apierror.APIError)
+	ExportItems(ctx context.Context, req *ExportItemsRequest) (*httptransport.FileDownload, *apierror.APIError)
+	UpdateItem(ctx context.Context, req *UpdateItemRequest) (*apiresource.Item, *apierror.APIError)
+	AddItemAttribute(ctx context.Context, req *AddItemAttributeRequest) (*apiresource.Item, *apierror.APIError)
+	RemoveItemAttribute(ctx context.Context, req *RemoveItemAttributeRequest) (*apiresource.Item, *apierror.APIError)
+	ChangeItemCategory(ctx context.Context, req *ChangeItemCategoryRequest) (*apiresource.Item, *apierror.APIError)
+	UpdateItemInventory(ctx context.Context, req *UpdateItemInventoryRequest) (*apiresource.EmptyResource, *apierror.APIError)
+	BulkCreateItems(ctx context.Context, req *BulkCreateItemsRequest) (*apiresource.BulkCreateItemsResponse, *apierror.APIError)
+	BulkReconcileItems(ctx context.Context, req *BulkReconcileItemsRequest) (*apiresource.BulkReconcileItemsResponse, *apierror.APIError)
+}
+
+type ItemSvcConfig struct {
+	CoreClient pb.CoreServiceClient
+}
+
+type itemSvcImpl struct {
+	coreClient pb.CoreServiceClient
+}
+
+var itemSvcTracer = tracing.GetTracer("api-gateway.endpoints.items.service")
+
+func (c *ItemSvcConfig) validate() error {
+	if c.CoreClient == nil {
+		return fmt.Errorf("item endpoint service: core client is required")
+	}
+	return nil
+}
+
+func NewItemSvc(config *ItemSvcConfig) ItemSvc {
+	if err := config.validate(); err != nil {
+		panic(err)
+	}
+
+	return &itemSvcImpl{
+		coreClient: config.CoreClient,
+	}
+}
+
+func (m *itemSvcImpl) ListItems(ctx context.Context, req *ListItemsRequest) (*apiresource.List[apiresource.Item], *apierror.APIError) {
+	pbReq := &pb.ListItemsRequest{
+		Cursor:                   req.Cursor,
+		Limit:                    req.Limit,
+		Query:                    req.Query,
+		Types:                    req.Types,
+		CategoryIds:              req.CategoryIDs,
+		AttributeIds:             req.AttributeIDs,
+		SupplierId:               req.SupplierID,
+		IsExactMatch:             req.IsExactMatch,
+		OnlyInitialSubassemblies: req.OnlyInitialSubassemblies,
+	}
+
+	if req.StartDate != nil {
+		pbReq.StartDate = timestamppb.New(*req.StartDate)
+	}
+	if req.EndDate != nil {
+		pbReq.EndDate = timestamppb.New(*req.EndDate)
+	}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, itemSvcTracer, "service.items.list", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ListItemsResponse, error) {
+			return m.coreClient.ListItems(ctx, pbReq, opts...)
+		})
+
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return ItemListPresenter(resp), nil
+}
+
+func (m *itemSvcImpl) GetItem(ctx context.Context, req *GetItemRequest) (*apiresource.Item, *apierror.APIError) {
+	pbReq := &pb.GetItemRequest{
+		Id: req.ItemID,
+	}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, itemSvcTracer, "service.items.get", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetItemResponse, error) {
+			return m.coreClient.GetItem(ctx, pbReq, opts...)
+		})
+
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	result := ItemPresenter(resp.Item)
+	return &result, nil
+}
+
+func (m *itemSvcImpl) GetItemInventory(ctx context.Context, req *GetItemInventoryRequest) (*apiresource.ItemInventory, *apierror.APIError) {
+	pbReq := &pb.GetItemInventoryRequest{
+		Id: req.ItemID,
+	}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, itemSvcTracer, "service.items.get_inventory", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetItemInventoryResponse, error) {
+			return m.coreClient.GetItemInventory(ctx, pbReq, opts...)
+		})
+
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return ItemInventoryPresenter(resp), nil
+}
+
+func (m *itemSvcImpl) GetItemCosts(ctx context.Context, req *GetItemCostsRequest) (*apiresource.ItemCosts, *apierror.APIError) {
+	pbReq := &pb.GetItemCostsRequest{
+		Id: req.ItemID,
+	}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, itemSvcTracer, "service.items.get_costs", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetItemCostsResponse, error) {
+			return m.coreClient.GetItemCosts(ctx, pbReq, opts...)
+		})
+
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return ItemCostsPresenter(resp), nil
+}
+
+func (m *itemSvcImpl) GetItemTrends(ctx context.Context, req *GetItemTrendsRequest) (*apiresource.ItemTrends, *apierror.APIError) {
+	pbReq := &pb.GetItemTrendsRequest{
+		Id:        req.ItemID,
+		TrendType: req.TrendType,
+	}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, itemSvcTracer, "service.items.get_trends", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetItemTrendsResponse, error) {
+			return m.coreClient.GetItemTrends(ctx, pbReq, opts...)
+		})
+
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return ItemTrendsPresenter(resp), nil
+}
+
+func (m *itemSvcImpl) ExportItems(ctx context.Context, req *ExportItemsRequest) (*httptransport.FileDownload, *apierror.APIError) {
+	pbReq := &pb.ExportItemsRequest{}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, itemSvcTracer, "service.items.export", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ExportItemsResponse, error) {
+			return m.coreClient.ExportItems(ctx, pbReq, opts...)
+		})
+
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	body, err := export.ItemsToExcel(resp)
+	if err != nil {
+		return nil, apierror.NewInternalError(err, "Failed to build export file.")
+	}
+
+	return &httptransport.FileDownload{
+		ContentType: export.ExcelContentType,
+		Filename:    "items.xlsx",
+		Body:        body,
+	}, nil
+}
+
+func (m *itemSvcImpl) UpdateItem(ctx context.Context, req *UpdateItemRequest) (*apiresource.Item, *apierror.APIError) {
+	pbReq := &pb.UpdateItemRequest{
+		Id:  req.ItemID,
+		Sku: req.SKU,
+	}
+
+	if req.Description != nil {
+		pbReq.UpdateDescription = true
+		pbReq.Description = req.Description
+	}
+
+	if req.Notes != nil {
+		pbReq.UpdateNotes = true
+		pbReq.Notes = req.Notes
+	}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, itemSvcTracer, "service.items.update", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateItemResponse, error) {
+			return m.coreClient.UpdateItem(ctx, pbReq, opts...)
+		})
+
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	result := ItemPresenter(resp.Item)
+	return &result, nil
+}
+
+func (m *itemSvcImpl) AddItemAttribute(ctx context.Context, req *AddItemAttributeRequest) (*apiresource.Item, *apierror.APIError) {
+	pbReq := &pb.AddItemAttributeRequest{
+		ItemId:      req.ItemID,
+		AttributeId: req.AttributeID,
+	}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, itemSvcTracer, "service.items.add_attribute", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.AddItemAttributeResponse, error) {
+			return m.coreClient.AddItemAttribute(ctx, pbReq, opts...)
+		})
+
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	result := ItemPresenter(resp.Item)
+	return &result, nil
+}
+
+func (m *itemSvcImpl) RemoveItemAttribute(ctx context.Context, req *RemoveItemAttributeRequest) (*apiresource.Item, *apierror.APIError) {
+	pbReq := &pb.RemoveItemAttributeRequest{
+		ItemId:      req.ItemID,
+		AttributeId: req.AttributeID,
+	}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, itemSvcTracer, "service.items.remove_attribute", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.RemoveItemAttributeResponse, error) {
+			return m.coreClient.RemoveItemAttribute(ctx, pbReq, opts...)
+		})
+
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	result := ItemPresenter(resp.Item)
+	return &result, nil
+}
+
+func (m *itemSvcImpl) ChangeItemCategory(ctx context.Context, req *ChangeItemCategoryRequest) (*apiresource.Item, *apierror.APIError) {
+	pbReq := &pb.ChangeItemCategoryRequest{
+		ItemId:     req.ItemID,
+		CategoryId: req.CategoryID,
+	}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, itemSvcTracer, "service.items.change_category", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ChangeItemCategoryResponse, error) {
+			return m.coreClient.ChangeItemCategory(ctx, pbReq, opts...)
+		})
+
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	result := ItemPresenter(resp.Item)
+	return &result, nil
+}
+
+func (m *itemSvcImpl) UpdateItemInventory(ctx context.Context, req *UpdateItemInventoryRequest) (*apiresource.EmptyResource, *apierror.APIError) {
+	pbReq := &pb.UpdateItemInventoryRequest{
+		ItemId:         req.ItemID,
+		QuantityChange: req.QuantityChange,
+		Reconcile:      req.Reconcile,
+		CustomerId:     req.CustomerID,
+		LocationId:     req.LocationID,
+		LotNumber:      req.LotNumber,
+		UnitId:         req.UnitID,
+	}
+
+	_, apiErr := grpcutil.CallRPC(ctx, itemSvcTracer, "service.items.update_inventory", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateItemInventoryResponse, error) {
+			return m.coreClient.UpdateItemInventory(ctx, pbReq, opts...)
+		})
+
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return &apiresource.EmptyResource{}, nil
+}
+
+func (m *itemSvcImpl) BulkCreateItems(ctx context.Context, req *BulkCreateItemsRequest) (*apiresource.BulkCreateItemsResponse, *apierror.APIError) {
+	pbItems := make([]*pb.BulkCreateItemInput, len(req.Items))
+	for i, item := range req.Items {
+		pbItems[i] = &pb.BulkCreateItemInput{
+			Sku:            item.SKU,
+			Description:    item.Description,
+			ItemCategoryId: item.ItemCategoryID,
+			ProductLineId:  item.ProductLineID,
+		}
+	}
+
+	pbReq := &pb.BulkCreateItemsRequest{
+		Items: pbItems,
+		Type:  req.Type,
+	}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, itemSvcTracer, "service.items.bulk_create", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.BulkCreateItemsResponse, error) {
+			return m.coreClient.BulkCreateItems(ctx, pbReq, opts...)
+		})
+
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	results := make([]apiresource.BulkCreateItemResult, len(resp.Results))
+	for i, r := range resp.Results {
+		results[i] = apiresource.BulkCreateItemResult{
+			SKU:     r.Sku,
+			Success: r.Success,
+			Error:   r.Error,
+			ItemID:  r.ItemId,
+		}
+	}
+
+	return &apiresource.BulkCreateItemsResponse{
+		Object: "list",
+		Data:   results,
+	}, nil
+}
+
+func (m *itemSvcImpl) BulkReconcileItems(ctx context.Context, req *BulkReconcileItemsRequest) (*apiresource.BulkReconcileItemsResponse, *apierror.APIError) {
+	pbData := make([]*pb.BulkReconcileItemInput, len(req.Data))
+	for i, d := range req.Data {
+		pbData[i] = &pb.BulkReconcileItemInput{
+			Sku:      d.SKU,
+			Unit:     d.Unit,
+			Quantity: d.Quantity,
+		}
+	}
+
+	pbReq := &pb.BulkReconcileItemsRequest{
+		Data:          pbData,
+		ReconcileType: req.ReconcileType,
+	}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, itemSvcTracer, "service.items.bulk_reconcile", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.BulkReconcileItemsResponse, error) {
+			return m.coreClient.BulkReconcileItems(ctx, pbReq, opts...)
+		})
+
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return BulkReconcileItemsPresenter(resp), nil
+}

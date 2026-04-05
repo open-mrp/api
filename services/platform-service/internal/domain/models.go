@@ -142,3 +142,68 @@ func (k *IdempotencyKey) IsLocked() bool {
 func (k *IdempotencyKey) HasResponse() bool {
 	return k.ResponseCode != nil
 }
+
+// AuditFieldChange represents a before/after transition for a single field.
+type AuditFieldChange struct {
+	Field    string
+	OldValue json.RawMessage
+	NewValue json.RawMessage
+}
+
+// AuditActor contains the actor details associated with an audit event.
+type AuditActor struct {
+	ID           string
+	ObjectType   constants.ObjectType
+	Type         string
+	IdentityType string
+	Name         *string
+	Handle       *string
+}
+
+// AuditEvent represents a single immutable audit event record.
+// It maps 1:1 with the `audit_event` table for storage.
+type AuditEvent struct {
+	ID string
+
+	ActorID      string
+	ActorType    string
+	IdentityType string
+	AccountID    string
+
+	Action       constants.AuditAction
+	ResourceType constants.ObjectType
+	ResourceID   string
+	Changes      []AuditFieldChange
+	Metadata     json.RawMessage
+
+	ServiceName      string
+	RequestID        *string
+	IdempotencyKeyID *string
+	SourceIP         *string
+
+	OccurredAt time.Time
+	CreatedAt  time.Time
+}
+
+type AuditEventRead struct {
+	AuditEvent
+	Actor *AuditActor
+}
+
+type ListAuditEventsFilter struct {
+	StartDate    *time.Time
+	EndDate      *time.Time
+	ResourceType *string
+	ResourceID   *string
+	ActorID      *string
+	Action       *string
+	AccountID    *string
+	Query        *string
+	Cursor       *string
+	Limit        int32
+}
+
+type ListAuditEventsResult struct {
+	AuditEvents []*AuditEventRead
+	PageInfo    pagination.PageInfo
+}

@@ -9,6 +9,11 @@ sql:
         package: "sqlc"
         emit_prepared_queries: true
         overrides:
+          - column: "service_idempotency_key.response_body"
+            go_type:
+              import: "encoding/json"
+              type: "RawMessage"
+              pointer: true
           - column: "message_outbox.headers"
             go_type:
               import: "github.com/augno/api/shared/db"

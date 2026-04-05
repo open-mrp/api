@@ -2,41 +2,35 @@ package grpc
 
 import (
 	"context"
-	"math"
 
 	"github.com/augno/api/services/billing-service/internal/domain"
 	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/contracts"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/billing"
+	"github.com/augno/api/shared/safeconv"
 
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func safeIntToInt32(v int) int32 {
-	if v > math.MaxInt32 {
-		return math.MaxInt32
-	}
-	if v < math.MinInt32 {
-		return math.MinInt32
-	}
-	return int32(v)
-}
-
 type billingHandler struct {
 	pb.UnimplementedBillingServiceServer
 
-	billingSvc       domain.BillingSvc
-	stripeWebhookSvc domain.StripeWebhookSvc
-	checkoutSvc      domain.CheckoutSvc
+	billingSvc           domain.BillingSvc
+	stripeWebhookSvc     domain.StripeWebhookSvc
+	stripePublishableKey string
 }
 
-func NewBillingHandler(server *grpc.Server, billingSvc domain.BillingSvc, stripeWebhookSvc domain.StripeWebhookSvc, checkoutSvc domain.CheckoutSvc) *billingHandler {
+func NewBillingHandler(server *grpc.Server, billingSvc domain.BillingSvc, stripeWebhookSvc domain.StripeWebhookSvc, stripePublishableKey ...string) *billingHandler {
+	var pubKey string
+	if len(stripePublishableKey) > 0 {
+		pubKey = stripePublishableKey[0]
+	}
 	handler := &billingHandler{
-		billingSvc:       billingSvc,
-		stripeWebhookSvc: stripeWebhookSvc,
-		checkoutSvc:      checkoutSvc,
+		billingSvc:           billingSvc,
+		stripeWebhookSvc:     stripeWebhookSvc,
+		stripePublishableKey: pubKey,
 	}
 
 	pb.RegisterBillingServiceServer(server, handler)
@@ -76,7 +70,7 @@ func (h *billingHandler) GetPlanByCode(ctx context.Context, req *pb.GetPlanByCod
 		Name:          plan.Name,
 		PlanTypeCode:  plan.PlanTypeCode,
 		PricePerSeat:  plan.PricePerSeat,
-		DisplayOrder:  safeIntToInt32(plan.DisplayOrder),
+		DisplayOrder:  safeconv.IntToInt32(plan.DisplayOrder),
 		IsHighlighted: plan.IsHighlighted,
 		ButtonText:    plan.ButtonText,
 	}
@@ -85,7 +79,7 @@ func (h *billingHandler) GetPlanByCode(ctx context.Context, req *pb.GetPlanByCod
 		pbPlan.PricePerMonth = plan.PricePerMonth
 	}
 	if plan.SeatMinimum != nil {
-		v := safeIntToInt32(*plan.SeatMinimum)
+		v := safeconv.IntToInt32(*plan.SeatMinimum)
 		pbPlan.SeatMinimum = &v
 	}
 	if plan.IncludesPreviousPlan != nil {
@@ -96,7 +90,7 @@ func (h *billingHandler) GetPlanByCode(ctx context.Context, req *pb.GetPlanByCod
 	for i, limit := range plan.Limits {
 		pbLimit := &pb.PlanLimit{Key: limit.Key}
 		if limit.Value != nil {
-			v := safeIntToInt32(*limit.Value)
+			v := safeconv.IntToInt32(*limit.Value)
 			pbLimit.Value = &v
 		}
 		pbLimits[i] = pbLimit
@@ -114,6 +108,7 @@ func (h *billingHandler) ListPricingPlans(ctx context.Context, req *pb.ListPrici
 	result, apiErr := h.billingSvc.ListPricingPlans(ctx, domain.ListPricingPlansInput{
 		Cursor: req.Cursor,
 		Limit:  req.Limit,
+		Query:  req.Query,
 	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
@@ -127,7 +122,7 @@ func (h *billingHandler) ListPricingPlans(ctx context.Context, req *pb.ListPrici
 				Key: limit.Key,
 			}
 			if limit.Value != nil {
-				v := safeIntToInt32(*limit.Value)
+				v := safeconv.IntToInt32(*limit.Value)
 				pbLimit.Value = &v
 			}
 			pbLimits[j] = pbLimit
@@ -140,7 +135,7 @@ func (h *billingHandler) ListPricingPlans(ctx context.Context, req *pb.ListPrici
 			PricePerSeat:    plan.PricePerSeat,
 			Limits:          pbLimits,
 			DisplayFeatures: plan.DisplayFeatures,
-			DisplayOrder:    safeIntToInt32(plan.DisplayOrder),
+			DisplayOrder:    safeconv.IntToInt32(plan.DisplayOrder),
 			IsHighlighted:   plan.IsHighlighted,
 			ButtonText:      plan.ButtonText,
 		}
@@ -149,7 +144,7 @@ func (h *billingHandler) ListPricingPlans(ctx context.Context, req *pb.ListPrici
 			pbPlan.PricePerMonth = plan.PricePerMonth
 		}
 		if plan.SeatMinimum != nil {
-			v := safeIntToInt32(*plan.SeatMinimum)
+			v := safeconv.IntToInt32(*plan.SeatMinimum)
 			pbPlan.SeatMinimum = &v
 		}
 		if plan.IncludesPreviousPlan != nil {
@@ -175,60 +170,25 @@ func (h *billingHandler) CreateCustomer(ctx context.Context, req *pb.CreateCusto
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	cust, apiErr := h.checkoutSvc.CreateCustomer(ctx, req.Email, req.Name, req.IdempotencyKey, req.Metadata)
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	accountID := req.Metadata["account_id"]
+
+	var result *domain.EnsureBillingCustomerResult
+	var apiErr *apierror.APIError
+
+	if accountID != "" {
+		result, apiErr = h.billingSvc.EnsureBillingCustomer(ctx, accountID)
+	} else {
+		result, apiErr = h.billingSvc.CreateRegistrationCustomer(ctx, req.Email, req.Name, req.IdempotencyKey, req.Metadata)
+	}
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
 	return &pb.CreateCustomerResponse{
-		CustomerId: cust.ID,
-	}, nil
-}
-
-func (h *billingHandler) GetCheckoutSessionStatus(ctx context.Context, req *pb.GetCheckoutSessionStatusRequest) (*pb.GetCheckoutSessionStatusResponse, error) {
-	if req == nil {
-		return nil, contracts.NewMissingGRPCRequestDataError()
-	}
-
-	result, apiErr := h.checkoutSvc.GetCheckoutSessionStatus(ctx, domain.GetCheckoutSessionStatusInput{
-		CheckoutSessionID: req.CheckoutSessionId,
-	})
-	if apiErr != nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
-	}
-
-	resp := &pb.GetCheckoutSessionStatusResponse{
-		Status: result.Status,
-	}
-	if result.SubscriptionID != "" {
-		resp.SubscriptionId = &result.SubscriptionID
-	}
-	if result.CustomerID != "" {
-		resp.CustomerId = &result.CustomerID
-	}
-
-	return resp, nil
-}
-
-func (h *billingHandler) CreateCheckoutSession(ctx context.Context, req *pb.CreateCheckoutSessionRequest) (*pb.CreateCheckoutSessionResponse, error) {
-	if req == nil {
-		return nil, contracts.NewMissingGRPCRequestDataError()
-	}
-
-	result, apiErr := h.checkoutSvc.CreateCheckoutSession(ctx, domain.CreateCheckoutSessionInput{
-		CustomerID:     req.CustomerId,
-		PlanCode:       req.PlanCode,
-		ReturnURL:      req.ReturnUrl,
-		IdempotencyKey: req.IdempotencyKey,
-	})
-	if apiErr != nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
-	}
-
-	return &pb.CreateCheckoutSessionResponse{
-		SessionId:      result.SessionID,
-		ClientSecret:   result.ClientSecret,
-		PublishableKey: result.PublishableKey,
+		CustomerId: result.StripeCustomerID,
 	}, nil
 }
 
@@ -241,54 +201,60 @@ func (h *billingHandler) GetAccountUsage(ctx context.Context, req *pb.GetAccount
 	if !ok || identity == nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Identity not found in context."))
 	}
-	if identity.TargetAccountID == nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+	if identity.Target == nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthenticationError("The Augno-Account header is required."))
 	}
 
-	result, apiErr := h.billingSvc.GetAccountUsage(ctx, *identity.TargetAccountID)
+	result, apiErr := h.billingSvc.GetAccountUsage(ctx, identity.Target.AccountID)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
 	resp := &pb.GetAccountUsageResponse{
-		Seats:     &pb.UsageItem{Current: safeIntToInt32(result.Seats.Current)},
-		Invoices:  &pb.UsageItem{Current: safeIntToInt32(result.Invoices.Current)},
-		Batches:   &pb.UsageItem{Current: safeIntToInt32(result.Batches.Current)},
-		Sandboxes: &pb.UsageItem{Current: safeIntToInt32(result.Sandboxes.Current)},
+		Seats:                    &pb.UsageItem{Current: safeconv.IntToInt32(result.Seats.Current)},
+		Invoices:                 &pb.UsageItem{Current: safeconv.IntToInt32(result.Invoices.Current)},
+		Batches:                  &pb.UsageItem{Current: safeconv.IntToInt32(result.Batches.Current)},
+		Sandboxes:                &pb.UsageItem{Current: safeconv.IntToInt32(result.Sandboxes.Current)},
+		EstimatedAgentSpendCents: result.EstimatedAgentSpendCents,
 	}
 
 	if result.Seats.Limit != nil {
-		v := safeIntToInt32(*result.Seats.Limit)
+		v := safeconv.IntToInt32(*result.Seats.Limit)
 		resp.Seats.Limit = &v
 	}
 	if result.Invoices.Limit != nil {
-		v := safeIntToInt32(*result.Invoices.Limit)
+		v := safeconv.IntToInt32(*result.Invoices.Limit)
 		resp.Invoices.Limit = &v
 	}
 	if result.Batches.Limit != nil {
-		v := safeIntToInt32(*result.Batches.Limit)
+		v := safeconv.IntToInt32(*result.Batches.Limit)
 		resp.Batches.Limit = &v
 	}
 	if result.Sandboxes.Limit != nil {
-		v := safeIntToInt32(*result.Sandboxes.Limit)
+		v := safeconv.IntToInt32(*result.Sandboxes.Limit)
 		resp.Sandboxes.Limit = &v
 	}
 
 	if result.Subscription != nil {
-		sub := &pb.SubscriptionInfo{
-			Status:            result.Subscription.Status,
-			CancelAtPeriodEnd: result.Subscription.CancelAtPeriodEnd,
+		resp.Subscription = &pb.SubscriptionInfo{
+			ServicingStatus:  result.Subscription.ServicingStatus,
+			CollectionStatus: result.Subscription.CollectionStatus,
 		}
-		if result.Subscription.CurrentPeriodEnd != nil {
-			sub.CurrentPeriodEnd = timestamppb.New(*result.Subscription.CurrentPeriodEnd)
+	}
+
+	if result.AgentTokenDetail != nil {
+		d := result.AgentTokenDetail
+		resp.AgentTokenDetail = &pb.AgentTokenUsageDetail{
+			IncludedTokens:              d.IncludedTokens,
+			UsedTokens:                  d.UsedTokens,
+			InputTokens:                 d.InputTokens,
+			OutputTokens:                d.OutputTokens,
+			AdditionalTokensPurchased:   d.AdditionalTokensPurchased,
+			TotalAvailable:              d.TotalAvailable,
+			CurrentPeriodCost:           d.CurrentPeriodCost,
+			BillingPeriodEnd:            timestamppb.New(d.BillingPeriodEnd),
+			OverageCostPerMillionTokens: d.OverageCostPerMillionTokens,
 		}
-		if result.Subscription.TrialEnd != nil {
-			sub.TrialEnd = timestamppb.New(*result.Subscription.TrialEnd)
-		}
-		if result.Subscription.CancelAt != nil {
-			sub.CancelAt = timestamppb.New(*result.Subscription.CancelAt)
-		}
-		resp.Subscription = sub
 	}
 
 	return resp, nil
@@ -309,11 +275,11 @@ func (h *billingHandler) CreateBillingPortalSession(ctx context.Context, req *pb
 	if !identity.IsInternalUser() && !identity.IsAdmin() {
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthorizationError("You are not authorized to perform this action."))
 	}
-	if identity.TargetAccountID == nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+	if identity.Target == nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthenticationError("The Augno-Account header is required."))
 	}
 
-	url, apiErr := h.billingSvc.CreateBillingPortalSession(ctx, *identity.TargetAccountID)
+	url, apiErr := h.billingSvc.CreateBillingPortalSession(ctx, identity.Target.AccountID)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
@@ -336,8 +302,8 @@ func (h *billingHandler) RequestEnterpriseUpgrade(ctx context.Context, req *pb.R
 	if !identity.IsInternalUser() && !identity.IsAdmin() {
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthorizationError("You are not authorized to perform this action."))
 	}
-	if identity.TargetAccountID == nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+	if identity.Target == nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthenticationError("The Augno-Account header is required."))
 	}
 
 	var actorID string
@@ -350,7 +316,7 @@ func (h *billingHandler) RequestEnterpriseUpgrade(ctx context.Context, req *pb.R
 	}
 
 	result, apiErr := h.billingSvc.RequestEnterpriseUpgrade(ctx, domain.RequestEnterpriseUpgradeInput{
-		AccountID: *identity.TargetAccountID,
+		AccountID: identity.Target.AccountID,
 		ActorID:   actorID,
 		ActorName: actorName,
 	})
@@ -369,26 +335,37 @@ func (h *billingHandler) EnsureBillingCustomer(ctx context.Context, req *pb.Ensu
 	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
 	defer finalizeIdempotency()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
-	if !ok || identity == nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Identity not found in context."))
-	}
-	if !identity.IsInternalUser() && !identity.IsAdmin() {
-		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthorizationError("You are not authorized to perform this action."))
-	}
-	if identity.TargetAccountID == nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+	var accountID string
+	if req.AccountId != nil && *req.AccountId != "" {
+		accountID = *req.AccountId
+	} else {
+		identity, ok := appctx.GetIdentityFromContext(ctx)
+		if !ok || identity == nil {
+			return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Identity not found in context."))
+		}
+		if !identity.IsInternalUser() && !identity.IsAdmin() {
+			return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthorizationError("You are not authorized to perform this action."))
+		}
+		if identity.Target == nil {
+			return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthenticationError("The Augno-Account header is required."))
+		}
+		accountID = identity.Target.AccountID
 	}
 
-	result, apiErr := h.billingSvc.EnsureBillingCustomer(ctx, *identity.TargetAccountID)
+	result, apiErr := h.billingSvc.EnsureBillingCustomer(ctx, accountID)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
-	return &pb.EnsureBillingCustomerResponse{
+	resp := &pb.EnsureBillingCustomerResponse{
 		StripeCustomerId: result.StripeCustomerID,
 		Created:          result.Created,
-	}, nil
+	}
+	if result.BillingProfileID != nil {
+		resp.BillingProfileId = result.BillingProfileID
+	}
+
+	return resp, nil
 }
 
 func (h *billingHandler) SwitchPlan(ctx context.Context, req *pb.SwitchPlanRequest) (*pb.SwitchPlanResponse, error) {
@@ -406,23 +383,67 @@ func (h *billingHandler) SwitchPlan(ctx context.Context, req *pb.SwitchPlanReque
 	if !identity.IsInternalUser() && !identity.IsAdmin() {
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthorizationError("You are not authorized to perform this action."))
 	}
-	if identity.TargetAccountID == nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+	if identity.Target == nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthenticationError("The Augno-Account header is required."))
 	}
 
-	result, apiErr := h.billingSvc.SwitchPlan(ctx, *identity.TargetAccountID, req.PlanId)
+	result, apiErr := h.billingSvc.SwitchPlan(ctx, identity.Target.AccountID, req.PlanId)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
-	return &pb.SwitchPlanResponse{
-		Success:         result.Success,
-		RequiresPayment: result.RequiresPayment,
-		CheckoutUrl:     result.CheckoutURL,
+	resp := &pb.SwitchPlanResponse{
+		Success: result.Success,
+	}
+	if result.IntentID != nil {
+		resp.IntentId = result.IntentID
+	}
+
+	return resp, nil
+}
+
+func (h *billingHandler) PreviewPlanChange(ctx context.Context, req *pb.PreviewPlanChangeRequest) (*pb.PreviewPlanChangeResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if !identity.IsInternalUser() && !identity.IsAdmin() {
+		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthorizationError("You are not authorized to perform this action."))
+	}
+	if identity.Target == nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthenticationError("The Augno-Account header is required."))
+	}
+
+	result, apiErr := h.billingSvc.PreviewPlanChange(ctx, identity.Target.AccountID, req.PlanId)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	pbLineItems := make([]*pb.PlanChangePreviewLineItem, len(result.LineItems))
+	for i, li := range result.LineItems {
+		pbLineItems[i] = &pb.PlanChangePreviewLineItem{
+			Description: li.Description,
+			Amount:      li.Amount,
+		}
+	}
+
+	return &pb.PreviewPlanChangeResponse{
+		Preview: &pb.PlanChangePreview{
+			NetAmount:                  result.NetAmount,
+			FormattedNetAmount:         result.FormattedNetAmount,
+			MonthlyBillAmount:          result.MonthlyBillAmount,
+			FormattedMonthlyBillAmount: result.FormattedMonthlyBillAmount,
+			LineItems:                  pbLineItems,
+			IsEstimate:                 result.IsEstimate,
+		},
 	}, nil
 }
 
-func (h *billingHandler) ConfirmPlanSwitch(ctx context.Context, req *pb.ConfirmPlanSwitchRequest) (*pb.ConfirmPlanSwitchResponse, error) {
+func (h *billingHandler) SetupBillingProfile(ctx context.Context, req *pb.SetupBillingProfileRequest) (*pb.SetupBillingProfileResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
@@ -430,69 +451,91 @@ func (h *billingHandler) ConfirmPlanSwitch(ctx context.Context, req *pb.ConfirmP
 	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
 	defer finalizeIdempotency()
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
-	if !ok || identity == nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Identity not found in context."))
-	}
-	if !identity.IsInternalUser() && !identity.IsAdmin() {
-		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthorizationError("You are not authorized to perform this action."))
-	}
-	if identity.TargetAccountID == nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+	accountID := req.GetAccountId()
+	if accountID == "" {
+		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	result, apiErr := h.billingSvc.ConfirmPlanSwitch(ctx, *identity.TargetAccountID, req.CheckoutSessionId, req.PlanId)
+	result, apiErr := h.billingSvc.SetupBillingProfile(ctx, accountID)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
-	return &pb.ConfirmPlanSwitchResponse{
-		Success: result.Success,
+	return &pb.SetupBillingProfileResponse{
+		BillingProfileId: result.ProfileID,
+		BillingCadenceId: result.CadenceID,
 	}, nil
 }
 
-func (h *billingHandler) GetProrationPreview(ctx context.Context, req *pb.GetProrationPreviewRequest) (*pb.GetProrationPreviewResponse, error) {
+func (h *billingHandler) SubscribeToPricingPlan(ctx context.Context, req *pb.SubscribeToPricingPlanRequest) (*pb.SubscribeToPricingPlanResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	identity, ok := appctx.GetIdentityFromContext(ctx)
-	if !ok || identity == nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewInvariantViolationError("Identity not found in context."))
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	if req.StripeCustomerId == "" {
+		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewValidationError("stripe_customer_id is required"))
 	}
-	if !identity.IsInternalUser() && !identity.IsAdmin() {
-		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthorizationError("You are not authorized to perform this action."))
-	}
-	if identity.TargetAccountID == nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+	if req.PlanCode == "" {
+		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewValidationError("plan_code is required"))
 	}
 
-	result, apiErr := h.billingSvc.GetProrationPreview(ctx, *identity.TargetAccountID, req.PlanId)
+	apiErr := h.billingSvc.SubscribeToPricingPlan(ctx, req.StripeCustomerId, req.PlanCode)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
-	pbLineItems := make([]*pb.ProrationLineItem, len(result.LineItems))
-	for i, li := range result.LineItems {
-		pbLineItems[i] = &pb.ProrationLineItem{
-			Description: li.Description,
-			Amount:      li.Amount,
-			IsProration: li.IsProration,
-		}
+	return &pb.SubscribeToPricingPlanResponse{}, nil
+}
+
+func (h *billingHandler) CreateSetupIntent(ctx context.Context, req *pb.CreateSetupIntentRequest) (*pb.CreateSetupIntentResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	return &pb.GetProrationPreviewResponse{
-		Preview: &pb.ProrationPreview{
-			CreditAmount:                result.CreditAmount,
-			ChargeAmount:                result.ChargeAmount,
-			NetAmount:                   result.NetAmount,
-			FormattedNetAmount:          result.FormattedNetAmount,
-			IsCredit:                    result.IsCredit,
-			TotalInvoiceAmount:          result.TotalInvoiceAmount,
-			FormattedTotalInvoiceAmount: result.FormattedTotalInvoiceAmount,
-			MonthlyBillAmount:           result.MonthlyBillAmount,
-			FormattedMonthlyBillAmount:  result.FormattedMonthlyBillAmount,
-			LineItems:                   pbLineItems,
-		},
+	result, apiErr := h.billingSvc.CreateSetupIntent(ctx, req.CustomerId, req.IdempotencyKey)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.CreateSetupIntentResponse{
+		SetupIntentId:  result.SetupIntentID,
+		ClientSecret:   result.ClientSecret,
+		PublishableKey: h.stripePublishableKey,
 	}, nil
+}
+
+func (h *billingHandler) GetSetupIntentStatus(ctx context.Context, req *pb.GetSetupIntentStatusRequest) (*pb.GetSetupIntentStatusResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	result, apiErr := h.billingSvc.GetSetupIntentStatus(ctx, req.SetupIntentId)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.GetSetupIntentStatusResponse{
+		Status:          result.Status,
+		PaymentMethodId: result.PaymentMethodID,
+	}, nil
+}
+
+func (h *billingHandler) ValidateStripePricingPlan(ctx context.Context, req *pb.ValidateStripePricingPlanRequest) (*pb.ValidateStripePricingPlanResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	if req.PlanCode == "" {
+		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewValidationError("plan_code is required"))
+	}
+
+	apiErr := h.billingSvc.ValidateStripePricingPlan(ctx, req.PlanCode)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.ValidateStripePricingPlanResponse{Valid: true}, nil
 }

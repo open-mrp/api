@@ -16,6 +16,7 @@ var (
 	defaultCoreServiceURI     = fmt.Sprintf("core-service:%d", contracts.GRPCPort)
 	defaultBillingServiceURI  = fmt.Sprintf("billing-service:%d", contracts.GRPCPort)
 	defaultPlatformServiceURI = fmt.Sprintf("platform-service:%d", contracts.GRPCPort)
+	defaultAgentServiceURI    = fmt.Sprintf("agent-service:%d", contracts.GRPCPort)
 	defaultRabbitMQURI        = "amqp://guest:guest@rabbitmq:5672/" // #nosec G101 - Default dev URI, not a production credential
 	defaultPlatformMode       = constants.PlatformModeProduction
 )
@@ -27,6 +28,7 @@ const (
 	envCoreServiceURL     = "CORE_SERVICE_URL"
 	envBillingServiceURL  = "BILLING_SERVICE_URL"
 	envPlatformServiceURL = "PLATFORM_SERVICE_URL"
+	envAgentServiceURL    = "AGENT_SERVICE_URL"
 	envDBURL              = "DB_URL"
 	envRabbitMQURI        = "RABBITMQ_URI"
 	envFrontendURL        = "FRONTEND_URL"
@@ -51,6 +53,9 @@ type config struct {
 
 	// PlatformServiceURI (optional; default: "platform-service:9092") is the platform service address for gRPC.
 	PlatformServiceURI string
+
+	// AgentServiceURI (optional; default: "agent-service:9092") is the agent service address for gRPC.
+	AgentServiceURI string
 
 	// DBURI (required) is the database connection URI.
 	DBURI string
@@ -87,6 +92,7 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 		CoreServiceURI:     cmp.Or(env.GetEnv(envCoreServiceURL, getenv), defaultCoreServiceURI),
 		BillingServiceURI:  cmp.Or(env.GetEnv(envBillingServiceURL, getenv), defaultBillingServiceURI),
 		PlatformServiceURI: cmp.Or(env.GetEnv(envPlatformServiceURL, getenv), defaultPlatformServiceURI),
+		AgentServiceURI:    cmp.Or(env.GetEnv(envAgentServiceURL, getenv), defaultAgentServiceURI),
 		DBURI:              env.GetEnv(envDBURL, getenv),
 		RabbitMQURI:        cmp.Or(env.GetEnv(envRabbitMQURI, getenv), defaultRabbitMQURI),
 		FrontendURL:        env.GetEnv(envFrontendURL, getenv),
@@ -96,13 +102,13 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 // validate validates the configuration.
 func (c *config) validate() error {
 	if c == nil {
-		return fmt.Errorf("config is nil")
+		return fmt.Errorf("api-gateway: config is nil")
 	}
 	if c.DBURI == "" {
-		return fmt.Errorf("the provided database URI is empty")
+		return fmt.Errorf("api-gateway: the provided database URI is empty")
 	}
 	if !c.PlatformMode.IsValid() {
-		return fmt.Errorf("the provided platform mode is invalid: %s", c.PlatformMode)
+		return fmt.Errorf("api-gateway: the provided platform mode is invalid: %s", c.PlatformMode)
 	}
 	return nil
 }

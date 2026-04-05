@@ -12,6 +12,7 @@ const platformServiceName = "platform-service"
 type PlatformServiceClient struct {
 	Client        pb.IdempotencyServiceClient
 	LoggingClient pb.LoggingServiceClient
+	AuditClient   pb.AuditServiceClient
 	grpcConn      *contracts.GRPCClientConn
 }
 
@@ -28,6 +29,7 @@ func NewPlatformServiceClientWithURL(url string) (*PlatformServiceClient, error)
 	return &PlatformServiceClient{
 		Client:        pb.NewIdempotencyServiceClient(grpcConn.Conn()),
 		LoggingClient: pb.NewLoggingServiceClient(grpcConn.Conn()),
+		AuditClient:   pb.NewAuditServiceClient(grpcConn.Conn()),
 		grpcConn:      grpcConn,
 	}, nil
 }

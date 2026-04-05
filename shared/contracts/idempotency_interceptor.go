@@ -163,41 +163,6 @@ func unmarshalResponse(data []byte) (any, error) {
 	return result, nil
 }
 
-// LocalIdempotencyChecker is an in-memory IdempotencyChecker backed by a simple map.
-// Intended for tests and single-instance development; not safe for concurrent use.
-type LocalIdempotencyChecker struct {
-	cache map[string]*IdempotencyCheckResult
-}
-
-// NewLocalIdempotencyChecker creates a LocalIdempotencyChecker with an empty cache.
-func NewLocalIdempotencyChecker() *LocalIdempotencyChecker {
-	return &LocalIdempotencyChecker{
-		cache: make(map[string]*IdempotencyCheckResult),
-	}
-}
-
-// CheckIdempotency looks up key in the local cache and returns the stored result if found.
-func (c *LocalIdempotencyChecker) CheckIdempotency(ctx context.Context, key string) (*IdempotencyCheckResult, error) {
-	if result, exists := c.cache[key]; exists {
-		return result, nil
-	}
-	return &IdempotencyCheckResult{Exists: false}, nil
-}
-
-// StoreResponse serializes response with proto.Marshal and stores it in the local cache.
-func (c *LocalIdempotencyChecker) StoreResponse(ctx context.Context, key string, response proto.Message) error {
-	data, err := proto.Marshal(response)
-	if err != nil {
-		return err
-	}
-	c.cache[key] = &IdempotencyCheckResult{
-		Exists:       true,
-		ResponseCode: int(codes.OK),
-		ResponseData: data,
-	}
-	return nil
-}
-
 // PlatformIdempotencyChecker delegates idempotency checks and response storage to the
 // platform service via callback functions. Used in production for database-backed deduplication.
 type PlatformIdempotencyChecker struct {

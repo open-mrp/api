@@ -1,0 +1,53 @@
+package materialep
+
+import (
+	"context"
+	"net/http"
+
+	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
+	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	apierror "github.com/augno/api/shared/errors"
+)
+
+type QuantityInputRequest struct {
+	Value  string `json:"value" validate:"required"`
+	UnitID string `json:"unit_id" validate:"required"`
+}
+
+type CreateMaterialRequest struct {
+	SKU         string                `json:"sku" validate:"required"`
+	Description *string               `json:"description,omitempty"`
+	Notes       *string               `json:"notes,omitempty"`
+	CategoryID  string                `json:"category_id" validate:"required"`
+	OrderPoint  *QuantityInputRequest `json:"order_point,omitempty"`
+	LeadTime    *QuantityInputRequest `json:"lead_time,omitempty"`
+}
+
+var sampleCreateMaterialRequest = &CreateMaterialRequest{
+	SKU:        "MAT-001",
+	CategoryID: apiresource.SampleItemCategoryID,
+}
+
+func (*CreateMaterialRequest) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(sampleCreateMaterialRequest)
+}
+
+type CreateMaterialEndpoint struct{}
+
+func (e *CreateMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateMaterialRequest, *apiresource.Material] {
+	return &apiendpoint.APIEndpoint[*CreateMaterialRequest, *apiresource.Material]{
+		Title:             "Create Material",
+		Description:       "Creates a new material.",
+		Method:            http.MethodPost,
+		Route:             "/v1/operations/materials",
+		Request:           &CreateMaterialRequest{},
+		Response:          &apiresource.Material{},
+		SuccessStatusCode: http.StatusCreated,
+		Public:            false,
+		Preview:           true,
+		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateMaterialRequest) (*apiresource.Material, *apierror.APIError) {
+			return svc.(MaterialSvc).CreateMaterial
+		},
+	}
+}

@@ -54,6 +54,7 @@ func (m *sandboxSvcImpl) ListSandboxes(ctx context.Context, req *apiresource.Pag
 		Cursor:   req.Cursor,
 		Limit:    req.Limit,
 		Includes: appctx.GetRequestedIncludeKeys(ctx),
+		Query:    req.Query,
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, sandboxSvcTracer, "service.sandboxes.list", domain.ServiceName,

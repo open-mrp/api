@@ -10,6 +10,7 @@ import (
 // correctly protect production accounts from sandbox-only operations.
 
 func TestSafety_RequireSandboxAccount_RejectsNonSandbox(t *testing.T) {
+	t.Parallel()
 	accountCtx := &AccountContext{AccountID: "ac_prod", IsSandbox: false}
 	err := RequireSandboxAccount(accountCtx)
 	if err == nil {
@@ -21,6 +22,7 @@ func TestSafety_RequireSandboxAccount_RejectsNonSandbox(t *testing.T) {
 }
 
 func TestSafety_RequireSandboxAccount_AcceptsSandbox(t *testing.T) {
+	t.Parallel()
 	accountCtx := &AccountContext{AccountID: "ac_sandbox", IsSandbox: true}
 	err := RequireSandboxAccount(accountCtx)
 	if err != nil {
@@ -29,6 +31,7 @@ func TestSafety_RequireSandboxAccount_AcceptsSandbox(t *testing.T) {
 }
 
 func TestSafety_RequireSandboxAccount_RejectsNil(t *testing.T) {
+	t.Parallel()
 	err := RequireSandboxAccount(nil)
 	if err == nil {
 		t.Fatal("expected error for nil AccountContext, got nil")
@@ -39,6 +42,7 @@ func TestSafety_RequireSandboxAccount_RejectsNil(t *testing.T) {
 }
 
 func TestSafety_RequireNotSandboxAccount_RejectsSandbox(t *testing.T) {
+	t.Parallel()
 	accountCtx := &AccountContext{AccountID: "ac_sandbox", IsSandbox: true}
 	err := RequireNotSandboxAccount(accountCtx)
 	if err == nil {
@@ -50,6 +54,7 @@ func TestSafety_RequireNotSandboxAccount_RejectsSandbox(t *testing.T) {
 }
 
 func TestSafety_RequireNotSandboxAccount_AcceptsNonSandbox(t *testing.T) {
+	t.Parallel()
 	accountCtx := &AccountContext{AccountID: "ac_prod", IsSandbox: false}
 	err := RequireNotSandboxAccount(accountCtx)
 	if err != nil {
@@ -58,6 +63,7 @@ func TestSafety_RequireNotSandboxAccount_AcceptsNonSandbox(t *testing.T) {
 }
 
 func TestSafety_RequireNotSandboxAccount_RejectsNil(t *testing.T) {
+	t.Parallel()
 	err := RequireNotSandboxAccount(nil)
 	if err == nil {
 		t.Fatal("expected error for nil AccountContext, got nil")

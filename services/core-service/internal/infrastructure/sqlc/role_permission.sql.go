@@ -7,7 +7,18 @@ package sqlc
 
 import (
 	"context"
+	"strings"
+	"time"
 )
+
+const deleteRolePermissionsByRoleID = `-- name: DeleteRolePermissionsByRoleID :exec
+DELETE FROM role_permission WHERE role_id = ?
+`
+
+func (q *Queries) DeleteRolePermissionsByRoleID(ctx context.Context, roleID string) error {
+	_, err := q.exec(ctx, q.deleteRolePermissionsByRoleIDStmt, deleteRolePermissionsByRoleID, roleID)
+	return err
+}
 
 const findRolePermissionStrings = `-- name: FindRolePermissionStrings :many
 SELECT CONCAT(role_permission.permission_code, ':create') as permission_string
@@ -46,6 +57,148 @@ func (q *Queries) FindRolePermissionStrings(ctx context.Context, arg FindRolePer
 			return nil, err
 		}
 		items = append(items, permission_string)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const insertRolePermission = `-- name: InsertRolePermission :exec
+INSERT INTO role_permission (id, permission_code, ` + "`" + `create` + "`" + `, ` + "`" + `read` + "`" + `, ` + "`" + `update` + "`" + `, ` + "`" + `delete` + "`" + `, role_id, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, NOW(3), NOW(3))
+`
+
+type InsertRolePermissionParams struct {
+	ID             string
+	PermissionCode string
+	Create         bool
+	Read           bool
+	Update         bool
+	Delete         bool
+	RoleID         string
+}
+
+func (q *Queries) InsertRolePermission(ctx context.Context, arg InsertRolePermissionParams) error {
+	_, err := q.exec(ctx, q.insertRolePermissionStmt, insertRolePermission,
+		arg.ID,
+		arg.PermissionCode,
+		arg.Create,
+		arg.Read,
+		arg.Update,
+		arg.Delete,
+		arg.RoleID,
+	)
+	return err
+}
+
+const listRolePermissionsByRoleID = `-- name: ListRolePermissionsByRoleID :many
+SELECT id, permission_code, ` + "`" + `create` + "`" + `, ` + "`" + `read` + "`" + `, ` + "`" + `update` + "`" + `, ` + "`" + `delete` + "`" + `, role_id, created_at, updated_at
+FROM role_permission
+WHERE role_id = ?
+ORDER BY permission_code
+`
+
+type ListRolePermissionsByRoleIDRow struct {
+	ID             string
+	PermissionCode string
+	Create         bool
+	Read           bool
+	Update         bool
+	Delete         bool
+	RoleID         string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+func (q *Queries) ListRolePermissionsByRoleID(ctx context.Context, roleID string) ([]ListRolePermissionsByRoleIDRow, error) {
+	rows, err := q.query(ctx, q.listRolePermissionsByRoleIDStmt, listRolePermissionsByRoleID, roleID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListRolePermissionsByRoleIDRow
+	for rows.Next() {
+		var i ListRolePermissionsByRoleIDRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.PermissionCode,
+			&i.Create,
+			&i.Read,
+			&i.Update,
+			&i.Delete,
+			&i.RoleID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listRolePermissionsByRoleIDs = `-- name: ListRolePermissionsByRoleIDs :many
+SELECT id, permission_code, ` + "`" + `create` + "`" + `, ` + "`" + `read` + "`" + `, ` + "`" + `update` + "`" + `, ` + "`" + `delete` + "`" + `, role_id, created_at, updated_at
+FROM role_permission
+WHERE role_id IN (/*SLICE:role_ids*/?)
+ORDER BY role_id, permission_code
+`
+
+type ListRolePermissionsByRoleIDsRow struct {
+	ID             string
+	PermissionCode string
+	Create         bool
+	Read           bool
+	Update         bool
+	Delete         bool
+	RoleID         string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+func (q *Queries) ListRolePermissionsByRoleIDs(ctx context.Context, roleIds []string) ([]ListRolePermissionsByRoleIDsRow, error) {
+	query := listRolePermissionsByRoleIDs
+	var queryParams []interface{}
+	if len(roleIds) > 0 {
+		for _, v := range roleIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:role_ids*/?", strings.Repeat(",?", len(roleIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:role_ids*/?", "NULL", 1)
+	}
+	rows, err := q.query(ctx, nil, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListRolePermissionsByRoleIDsRow
+	for rows.Next() {
+		var i ListRolePermissionsByRoleIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.PermissionCode,
+			&i.Create,
+			&i.Read,
+			&i.Update,
+			&i.Delete,
+			&i.RoleID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err

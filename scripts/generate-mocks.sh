@@ -3,20 +3,10 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-MODULE="github.com/augno/api"
-DEFAULT_SERVICES=("auth-service" "api-gateway" "notification-service" "platform-service" "core-service" "billing-service")
+DEFAULT_SERVICES=("auth-service" "api-gateway" "notification-service" "platform-service" "core-service" "billing-service" "agent-service")
 COMPONENTS=("factories" "mediators" "publishers" "repositories" "services" "utils" "clients")
+MAX_JOBS="${MOCK_JOBS:-8}"
 declare -a services=()
-
-to_snake_case() {
-  local input="${1}"
-  echo "${input}" \
-    | sed 's/APIKey/api_key/g' \
-    | sed -E 's/([A-Z]+)([A-Z][a-z])/\1_\2/g' \
-    | sed -E 's/([a-z0-9])([A-Z])/\1_\2/g' \
-    | tr '[:upper:]' '[:lower:]' \
-    | sed 's/^_//'
-}
 
 component_dir() {
   case "${1}" in
@@ -54,49 +44,107 @@ add_service() {
   services+=("${service}")
 }
 
-generate_for_component() {
-  local service="${1}"
-  local component="${2}"
-  local domain_dir="${3}"
-  local module_import="${4}"
-  local domain_file="${domain_dir}/${component}.go"
+# Collect all mockgen jobs as tab-separated lines:
+#   source_file \t dest_file \t package_name \t service_label
+collect_jobs() {
+  local jobs=()
+  for service in "${services[@]}"; do
+    local domain_dir="${ROOT_DIR}/services/${service}/internal/domain"
+    if [[ ! -d "${domain_dir}" ]]; then
+      echo "Skipping ${service}: domain directory not found" >&2
+      continue
+    fi
 
-  if [[ ! -f "${domain_file}" ]]; then
-    return
-  fi
+    # Remove stale mocks before regenerating
+    local mock_dir="${domain_dir}/mock"
+    if [[ -d "${mock_dir}" ]]; then
+      rm -rf "${mock_dir}"
+    fi
 
-  local interfaces
-  interfaces=$(grep -h "^type .*interface" "${domain_file}" | awk '{print $2}')
+    for component in "${COMPONENTS[@]}"; do
+      local source_file="${domain_dir}/${component}.go"
+      if [[ ! -f "${source_file}" ]]; then
+        continue
+      fi
 
-  if [[ -z "${interfaces}" ]]; then
-    return
-  fi
+      # Check that the file actually contains interfaces
+      if ! grep -q "^type .*interface" "${source_file}"; then
+        continue
+      fi
 
-  local dest_dir="${domain_dir}/mock/$(component_dir "${component}")"
-  local package_name="$(component_package "${component}")"
-  mkdir -p "${dest_dir}"
+      local dest_dir="${domain_dir}/mock/$(component_dir "${component}")"
+      local package_name
+      package_name="$(component_package "${component}")"
+      local dest_file="${dest_dir}/${component}_mock.go"
 
-  for interface in ${interfaces}; do
-    local filename
-    filename="$(to_snake_case "${interface}")"
-    echo "Generating ${service} ${component} mock for ${interface}..."
-    mockgen -destination "${dest_dir}/${filename}_mock.go" -package "${package_name}" "${module_import}" "${interface}"
+      mkdir -p "${dest_dir}"
+      jobs+=("${source_file}	${dest_file}	${package_name}	${service}/${component}")
+    done
   done
+
+  printf '%s\n' "${jobs[@]}"
 }
 
-generate_for_service() {
-  local service="${1}"
-  local domain_dir="${ROOT_DIR}/services/${service}/internal/domain"
-  local module_import="${MODULE}/services/${service}/internal/domain"
+run_jobs() {
+  local job_file
+  job_file="$(mktemp)"
+  collect_jobs > "${job_file}"
 
-  if [[ ! -d "${domain_dir}" ]]; then
-    echo "Skipping ${service}: domain directory not found at ${domain_dir}" >&2
-    return
+  local total
+  total="$(wc -l < "${job_file}" | tr -d ' ')"
+  echo "Running ${total} mockgen jobs with up to ${MAX_JOBS} parallel workers..."
+
+  local failed=0
+  local completed=0
+
+  # Process jobs in parallel using a background job pool
+  local pids=()
+  while IFS=$'\t' read -r source_file dest_file package_name label; do
+    # Wait if we've hit the max concurrent jobs
+    while (( ${#pids[@]} >= MAX_JOBS )); do
+      local new_pids=()
+      for pid in "${pids[@]}"; do
+        if kill -0 "${pid}" 2>/dev/null; then
+          new_pids+=("${pid}")
+        else
+          if ! wait "${pid}"; then
+            ((failed++))
+          else
+            ((completed++))
+          fi
+        fi
+      done
+      pids=("${new_pids[@]}")
+      if (( ${#pids[@]} >= MAX_JOBS )); then
+        sleep 0.05
+      fi
+    done
+
+    (
+      mockgen -source="${source_file}" -destination="${dest_file}" -package="${package_name}" 2>&1 && \
+        echo "  OK: ${label}" || \
+        { echo "  FAIL: ${label}" >&2; exit 1; }
+    ) &
+    pids+=("$!")
+  done < "${job_file}"
+
+  # Wait for remaining jobs
+  for pid in "${pids[@]}"; do
+    if ! wait "${pid}"; then
+      ((failed++))
+    else
+      ((completed++))
+    fi
+  done
+
+  rm -f "${job_file}"
+
+  if (( failed > 0 )); then
+    echo "ERROR: ${failed} mock generation job(s) failed." >&2
+    return 1
   fi
 
-  for component in "${COMPONENTS[@]}"; do
-    generate_for_component "${service}" "${component}" "${domain_dir}" "${module_import}"
-  done
+  echo "Done. Generated ${completed} mock file(s)."
 }
 
 main() {
@@ -153,8 +201,15 @@ main() {
     done
   fi
 
+  echo "Generating mocks..."
+  run_jobs
+
+  # Print per-service summary
   for service in "${services[@]}"; do
-    generate_for_service "${service}"
+    local mock_dir="${ROOT_DIR}/services/${service}/internal/domain/mock"
+    if [[ -d "${mock_dir}" ]]; then
+      echo "  ✓ ${service}"
+    fi
   done
 }
 

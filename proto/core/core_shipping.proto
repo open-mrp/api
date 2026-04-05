@@ -1,0 +1,352 @@
+syntax = "proto3";
+
+// Package core defines the gRPC service for shipment and shipment line management.
+package core;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "core/core.proto";
+
+option go_package = "shared/proto/core;core";
+
+service CoreShippingService {
+  // ListShipments returns a paginated list of shipments for the target account.
+  rpc ListShipments(ListShipmentsRequest) returns (ListShipmentsResponse);
+
+  // GetShipment returns a single shipment by its ID.
+  rpc GetShipment(GetShipmentRequest) returns (GetShipmentResponse);
+
+  // UpdateShipment updates an existing shipment's metadata.
+  rpc UpdateShipment(UpdateShipmentRequest) returns (UpdateShipmentResponse);
+
+  // DeleteShipment deletes a shipment by its ID.
+  rpc DeleteShipment(DeleteShipmentRequest) returns (google.protobuf.Empty);
+
+  // ShipShipment marks a shipment as shipped.
+  rpc ShipShipment(ShipShipmentRequest) returns (ShipShipmentResponse);
+
+  // VoidShipment voids a shipment.
+  rpc VoidShipment(VoidShipmentRequest) returns (VoidShipmentResponse);
+
+  // EstimateRate estimates a shipping rate for a given carrier and parcels.
+  rpc EstimateRate(EstimateRateRequest) returns (EstimateRateResponse);
+
+  // RateShop returns available carrier options with rates for the given parcels.
+  rpc RateShop(RateShopRequest) returns (RateShopResponse);
+
+  // ListShipmentLines returns a paginated list of lines for a shipment.
+  rpc ListShipmentLines(ListShipmentLinesRequest) returns (ListShipmentLinesResponse);
+
+  // GetShipmentLine returns a single shipment line by its ID.
+  rpc GetShipmentLine(GetShipmentLineRequest) returns (GetShipmentLineResponse);
+
+  // CreateShipmentLine creates a new line on a shipment.
+  rpc CreateShipmentLine(CreateShipmentLineRequest) returns (CreateShipmentLineResponse);
+
+  // UpdateShipmentLine updates a shipment line's quantity.
+  rpc UpdateShipmentLine(UpdateShipmentLineRequest) returns (UpdateShipmentLineResponse);
+
+  // DeleteShipmentLine deletes a shipment line.
+  rpc DeleteShipmentLine(DeleteShipmentLineRequest) returns (google.protobuf.Empty);
+}
+
+// ShipmentSummaryInfo represents a shipment in list views.
+message ShipmentSummaryInfo {
+  string id = 1;
+  string number = 2;
+  optional string note = 3;
+  optional string bill_of_lading = 4;
+  optional string master_tracking_number = 5;
+  string status_code = 6;
+  string status_name = 7;
+  google.protobuf.Timestamp shipped_at = 8;
+  string sales_order_id = 9;
+  string sales_order_number = 10;
+  string customer_id = 11;
+  string customer_name = 12;
+  string customer_number = 13;
+  string carrier_id = 14;
+  string carrier_name = 15;
+  optional string service_level_id = 16;
+  optional string service_level_name = 17;
+  google.protobuf.Timestamp created_at = 18;
+  google.protobuf.Timestamp updated_at = 19;
+  optional bool carrier_is_portal_enabled = 20;
+  optional bool service_level_is_portal_enabled = 21;
+  optional string service_level_token = 22;
+  optional string customer_status_code = 23;
+  optional string customer_commission_policy = 24;
+}
+
+// ShipmentInfo represents a full shipment resource.
+message ShipmentInfo {
+  string id = 1;
+  string number = 2;
+  optional string note = 3;
+  optional string bill_of_lading = 4;
+  optional string master_tracking_number = 5;
+  string status_code = 6;
+  string status_name = 7;
+  google.protobuf.Timestamp shipped_at = 8;
+  string sales_order_id = 9;
+  string sales_order_number = 10;
+  string customer_id = 11;
+  string customer_name = 12;
+  string customer_number = 13;
+  string carrier_id = 14;
+  string carrier_name = 15;
+  optional string service_level_id = 16;
+  optional string service_level_name = 17;
+  string shipping_address_id = 18;
+  optional string shipping_address_name = 19;
+  optional string shipped_by_id = 20;
+  optional string shipped_by_name = 21;
+  optional string invoice_id = 22;
+  optional string invoice_number = 23;
+  string account_id = 24;
+  google.protobuf.Timestamp created_at = 25;
+  google.protobuf.Timestamp updated_at = 26;
+  repeated ShipmentLineInfo lines = 27;
+  repeated ShippingCaseDetailInfo shipping_cases = 28;
+  optional string customer_po_number = 29;
+  optional string carrier_billing_type = 30;
+  optional string carrier_billing_account = 31;
+  optional string pick_id = 32;
+  optional string billing_address_country = 33;
+  optional string billing_address_zip = 34;
+  optional bool carrier_is_portal_enabled = 35;
+  optional bool service_level_is_portal_enabled = 36;
+  optional string service_level_token = 37;
+  optional string customer_status_code = 38;
+  optional string customer_commission_policy = 39;
+  optional string pick_number = 40;
+}
+
+// ShipmentLineInfo represents a shipment line resource.
+message ShipmentLineInfo {
+  string id = 1;
+  string shipment_id = 2;
+  string sales_order_line_id = 3;
+  string order_line_sku = 4;
+  optional string order_line_description = 5;
+  string quantity_id = 6;
+  string quantity_value = 7;
+  string quantity_unit_id = 8;
+  string quantity_unit_name = 9;
+  string quantity_unit_abbreviation = 10;
+  string quantity_unit_type = 11;
+  google.protobuf.Timestamp created_at = 12;
+  google.protobuf.Timestamp updated_at = 13;
+}
+
+// ShippingCaseDetailInfo represents a shipping case within a shipment.
+message ShippingCaseDetailInfo {
+  string id = 1;
+  string number = 2;
+  optional string sscc = 3;
+  optional string tracking_number = 4;
+  optional string shippo_transaction_id = 5;
+  optional string shipping_label_url = 6;
+  google.protobuf.Timestamp shipped_at = 7;
+  string freight_amount_id = 8;
+  string freight_amount_value = 9;
+  string freight_amount_unit_id = 10;
+  string freight_amount_unit_name = 11;
+  string freight_amount_unit_abbreviation = 12;
+  string freight_weight_id = 13;
+  string freight_weight_value = 14;
+  string freight_weight_unit_id = 15;
+  string freight_weight_unit_name = 16;
+  string freight_weight_unit_abbreviation = 17;
+  string shipment_id = 18;
+  string carrier_id = 19;
+  string carrier_name = 20;
+  google.protobuf.Timestamp created_at = 21;
+  google.protobuf.Timestamp updated_at = 22;
+  optional bool carrier_is_portal_enabled = 23;
+}
+
+// ParcelInfo represents a package for rate estimation.
+message ParcelInfo {
+  string weight = 1;
+  string length = 2;
+  string width = 3;
+  string height = 4;
+}
+
+// AddressInput represents a simplified address for rate estimation.
+message AddressInput {
+  string name = 1;
+  optional string company = 2;
+  string street1 = 3;
+  optional string street2 = 4;
+  string city = 5;
+  string state = 6;
+  string zip = 7;
+  string country = 8;
+  optional string phone = 9;
+  optional string email = 10;
+}
+
+// RateShopOptionInfo represents a single carrier option with its rate.
+message RateShopOptionInfo {
+  string carrier_id = 1;
+  string carrier_name = 2;
+  string service_level_id = 3;
+  string service_level_name = 4;
+  double rate = 5;
+  optional int32 estimated_days = 6;
+}
+
+// List shipments
+message ListShipmentsRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+  optional string status = 4;
+  repeated string item_ids = 5;
+  repeated string customer_ids = 6;
+  repeated string product_line_ids = 7;
+  repeated string customer_group_ids = 8;
+  repeated string sales_rep_ids = 9;
+  optional string start_date = 10;
+  optional string end_date = 11;
+}
+
+message ListShipmentsResponse {
+  repeated ShipmentSummaryInfo shipments = 1;
+  PageInfo page_info = 2;
+}
+
+// Get shipment
+message GetShipmentRequest {
+  string id = 1;
+  repeated string includes = 2;
+}
+
+message GetShipmentResponse {
+  ShipmentInfo shipment = 1;
+}
+
+// Update shipment
+message UpdateShipmentRequest {
+  string id = 1;
+  optional string note = 2;
+  optional string number = 3;
+  optional string master_tracking_number = 4;
+  optional string carrier_id = 5;
+  optional string service_level_id = 6;
+}
+
+message UpdateShipmentResponse {
+  ShipmentInfo shipment = 1;
+}
+
+// Delete shipment
+message DeleteShipmentRequest {
+  string id = 1;
+}
+
+// Ship shipment
+message ShipShipmentRequest {
+  string id = 1;
+  bool email_customer = 2;
+}
+
+message ShipShipmentResponse {
+  ShipmentInfo shipment = 1;
+}
+
+// Void shipment
+message VoidShipmentRequest {
+  string id = 1;
+}
+
+message VoidShipmentResponse {
+  ShipmentInfo shipment = 1;
+}
+
+// Estimate rate
+message EstimateRateRequest {
+  string carrier_id = 1;
+  string service_level_id = 2;
+  repeated string product_line_ids = 3;
+  optional string customer_id = 4;
+  AddressInput from = 5;
+  AddressInput to = 6;
+  repeated ParcelInfo parcels = 7;
+  optional double order_total = 8;
+}
+
+message EstimateRateResponse {
+  double rate = 1;
+}
+
+// Rate shop
+message RateShopRequest {
+  repeated string product_line_ids = 1;
+  optional string customer_id = 2;
+  AddressInput from = 3;
+  AddressInput to = 4;
+  repeated ParcelInfo parcels = 5;
+  optional double order_total = 6;
+}
+
+message RateShopResponse {
+  repeated RateShopOptionInfo options = 1;
+  optional string exemption_type = 2;
+  optional double flat_rate = 3;
+}
+
+// List shipment lines
+message ListShipmentLinesRequest {
+  string shipment_id = 1;
+  optional string cursor = 2;
+  int32 limit = 3;
+  optional string query = 4;
+}
+
+message ListShipmentLinesResponse {
+  repeated ShipmentLineInfo shipment_lines = 1;
+  PageInfo page_info = 2;
+}
+
+// Get shipment line
+message GetShipmentLineRequest {
+  string shipment_id = 1;
+  string id = 2;
+}
+
+message GetShipmentLineResponse {
+  ShipmentLineInfo shipment_line = 1;
+}
+
+// Create shipment line
+message CreateShipmentLineRequest {
+  string shipment_id = 1;
+  string sales_order_line_id = 2;
+  string quantity_value = 3;
+  string quantity_unit_id = 4;
+}
+
+message CreateShipmentLineResponse {
+  ShipmentLineInfo shipment_line = 1;
+}
+
+// Update shipment line
+message UpdateShipmentLineRequest {
+  string shipment_id = 1;
+  string id = 2;
+  optional string quantity_value = 3;
+  optional string quantity_unit_id = 4;
+}
+
+message UpdateShipmentLineResponse {
+  ShipmentLineInfo shipment_line = 1;
+}
+
+// Delete shipment line
+message DeleteShipmentLineRequest {
+  string shipment_id = 1;
+  string id = 2;
+}

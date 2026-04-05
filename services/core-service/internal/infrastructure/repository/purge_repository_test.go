@@ -12,6 +12,7 @@ import (
 // accidental purge operations.
 
 func TestSafety_VerifyAccountIsSandboxOrDeleted_RejectsNonSandbox(t *testing.T) {
+	t.Parallel()
 	db, mock, err := sqlmock.New()
 	if err != nil {
 		t.Fatalf("failed to create sqlmock: %v", err)
@@ -35,6 +36,7 @@ func TestSafety_VerifyAccountIsSandboxOrDeleted_RejectsNonSandbox(t *testing.T) 
 }
 
 func TestSafety_VerifyAccountIsSandboxOrDeleted_AllowsSandbox(t *testing.T) {
+	t.Parallel()
 	db, mock, err := sqlmock.New()
 	if err != nil {
 		t.Fatalf("failed to create sqlmock: %v", err)
@@ -58,6 +60,7 @@ func TestSafety_VerifyAccountIsSandboxOrDeleted_AllowsSandbox(t *testing.T) {
 }
 
 func TestSafety_VerifyAccountIsSandboxOrDeleted_AllowsDeletedAccount(t *testing.T) {
+	t.Parallel()
 	db, mock, err := sqlmock.New()
 	if err != nil {
 		t.Fatalf("failed to create sqlmock: %v", err)

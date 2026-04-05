@@ -1,0 +1,36 @@
+package accountgroupep
+
+import (
+	"context"
+	"net/http"
+
+	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	apierror "github.com/augno/api/shared/errors"
+)
+
+// DeleteAccountGroupRequest is the request to delete an account group.
+type DeleteAccountGroupRequest struct {
+	// The ID of the account group to delete.
+	AccountGroupID string `path:"id" validate:"required"`
+}
+
+type DeleteAccountGroupEndpoint struct{}
+
+func (e *DeleteAccountGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteAccountGroupRequest, *apiresource.EmptyResource] {
+	return &apiendpoint.APIEndpoint[*DeleteAccountGroupRequest, *apiresource.EmptyResource]{
+		Title:             "Delete Account Group",
+		Description:       "Deletes an account group. This request will fail if the account group is actively used in production.",
+		Method:            http.MethodDelete,
+		Route:             "/v1/sales/account-groups/{id}",
+		ContentType:       "application/json",
+		Request:           &DeleteAccountGroupRequest{},
+		Response:          &apiresource.EmptyResource{},
+		SuccessStatusCode: http.StatusOK,
+		Public:            true,
+		Preview:           true,
+		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteAccountGroupRequest) (*apiresource.EmptyResource, *apierror.APIError) {
+			return svc.(AccountGroupSvc).DeleteAccountGroup
+		},
+	}
+}

@@ -21,11 +21,13 @@ func requestLogConfig() *IncludeConfig {
 			{Key: "account", ObjectType: constants.ObjectTypeAccount, JSONPaths: []string{"account"}},
 			{Key: "actor", ObjectType: constants.ObjectTypeUser, JSONPaths: []string{"actor"}},
 			{Key: "actor.role", ObjectType: constants.ObjectTypeRole, JSONPaths: []string{"actor.role"}},
+			{Key: "query_json", ObjectType: constants.ObjectTypeRequestLog, JSONPaths: []string{"query_json"}},
 		},
 	}
 }
 
 func TestCollapseUnexpanded_SingleObject_Collapsed(t *testing.T) {
+	t.Parallel()
 	data := map[string]any{
 		"id":     "apke_xxx",
 		"object": "api_key",
@@ -44,6 +46,7 @@ func TestCollapseUnexpanded_SingleObject_Collapsed(t *testing.T) {
 }
 
 func TestCollapseUnexpanded_SingleObject_Expanded(t *testing.T) {
+	t.Parallel()
 	data := map[string]any{
 		"id":     "apke_xxx",
 		"object": "api_key",
@@ -66,6 +69,7 @@ func TestCollapseUnexpanded_SingleObject_Expanded(t *testing.T) {
 }
 
 func TestCollapseUnexpanded_ListResponse(t *testing.T) {
+	t.Parallel()
 	data := map[string]any{
 		"object": "list",
 		"data": []any{
@@ -98,6 +102,7 @@ func TestCollapseUnexpanded_ListResponse(t *testing.T) {
 }
 
 func TestCollapseUnexpanded_NestedPath_NoIncludes(t *testing.T) {
+	t.Parallel()
 	data := map[string]any{
 		"id":     "rl_xxx",
 		"object": "request_log",
@@ -119,6 +124,7 @@ func TestCollapseUnexpanded_NestedPath_NoIncludes(t *testing.T) {
 }
 
 func TestCollapseUnexpanded_NestedPath_ActorOnly(t *testing.T) {
+	t.Parallel()
 	data := map[string]any{
 		"id":     "rl_xxx",
 		"object": "request_log",
@@ -141,7 +147,21 @@ func TestCollapseUnexpanded_NestedPath_ActorOnly(t *testing.T) {
 	assert.Nil(t, actor["role"])
 }
 
+func TestCollapseUnexpanded_ScalarFieldCollapsed(t *testing.T) {
+	t.Parallel()
+	data := map[string]any{
+		"id":         "rl_xxx",
+		"object":     "request_log",
+		"query_json": `{"limit":10}`,
+	}
+
+	result := CollapseUnexpanded(data, requestLogConfig(), map[string]bool{})
+
+	assert.Nil(t, result["query_json"])
+}
+
 func TestCollapseUnexpanded_NilSubObject(t *testing.T) {
+	t.Parallel()
 	data := map[string]any{
 		"id":     "apke_xxx",
 		"object": "api_key",
@@ -154,6 +174,7 @@ func TestCollapseUnexpanded_NilSubObject(t *testing.T) {
 }
 
 func TestCollapseUnexpanded_MissingSubObject(t *testing.T) {
+	t.Parallel()
 	data := map[string]any{
 		"id":     "apke_xxx",
 		"object": "api_key",
@@ -166,6 +187,7 @@ func TestCollapseUnexpanded_MissingSubObject(t *testing.T) {
 }
 
 func TestCollapseUnexpanded_NestedPathNilParent(t *testing.T) {
+	t.Parallel()
 	data := map[string]any{
 		"id":     "rl_xxx",
 		"object": "request_log",
@@ -178,6 +200,7 @@ func TestCollapseUnexpanded_NestedPathNilParent(t *testing.T) {
 }
 
 func TestCollapseUnexpanded_MultiLevelNesting(t *testing.T) {
+	t.Parallel()
 	config := &IncludeConfig{
 		Fields: []IncludeField{
 			{Key: "role", ObjectType: constants.ObjectTypeRole, JSONPaths: []string{"api_key_info.role"}},
@@ -185,7 +208,7 @@ func TestCollapseUnexpanded_MultiLevelNesting(t *testing.T) {
 	}
 
 	data := map[string]any{
-		"api_key_secret": "aug_sk_...",
+		"api_key_secret": "aug_sk_****",
 		"api_key_info": map[string]any{
 			"id":     "apke_xxx",
 			"object": "api_key",
@@ -204,6 +227,7 @@ func TestCollapseUnexpanded_MultiLevelNesting(t *testing.T) {
 }
 
 func TestCollapseUnexpanded_AllRequested(t *testing.T) {
+	t.Parallel()
 	data := map[string]any{
 		"id":     "rl_xxx",
 		"object": "request_log",
@@ -237,6 +261,7 @@ func TestCollapseUnexpanded_AllRequested(t *testing.T) {
 }
 
 func TestCollapseUnexpanded_ChildIncludeKeepsParent(t *testing.T) {
+	t.Parallel()
 	data := map[string]any{
 		"id":     "rl_xxx",
 		"object": "request_log",
@@ -272,6 +297,7 @@ func TestCollapseUnexpanded_ChildIncludeKeepsParent(t *testing.T) {
 }
 
 func TestCollapseUnexpanded_NilConfig(t *testing.T) {
+	t.Parallel()
 	data := map[string]any{
 		"id":   "apke_xxx",
 		"role": map[string]any{"id": "rl_xxx", "name": "Admin"},

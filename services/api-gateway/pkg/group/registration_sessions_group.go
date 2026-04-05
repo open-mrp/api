@@ -40,7 +40,7 @@ func (*RegistrationSessionsEndpointGroup) Materialize(config *RegistrationSessio
 
 	inner := &apiendpoint.APIEndpointGroup{
 		Title:        "Registration Sessions",
-		Description:  "Handles creating and managing registration sessions for the multi-step registration flow.",
+		Description:  "Create and manage registration sessions for the multi-step registration flow.",
 		ResourceType: &apiresource.CreateSessionResponse{},
 	}
 
@@ -51,9 +51,9 @@ func (*RegistrationSessionsEndpointGroup) Materialize(config *RegistrationSessio
 	createUserEndpoint := (&regsessionep.CreateUserEndpoint{}).Materialize().WithMiddleware(authMw).WithService(inner, svc)
 	updateSessionEndpoint := (&regsessionep.UpdateSessionEndpoint{}).Materialize().WithMiddleware(authMw).WithService(inner, svc)
 	listSessionsEndpoint := (&regsessionep.ListSessionsEndpoint{}).Materialize().WithMiddleware(authMw).WithService(inner, svc)
-	createCheckoutEndpoint := (&regsessionep.CreateCheckoutEndpoint{}).Materialize().WithMiddleware(authMw).WithService(inner, svc)
-	completeRegistrationEndpoint := (&regsessionep.CompleteRegistrationEndpoint{}).Materialize().WithMiddleware(authMw).WithService(inner, svc)
+	setupBillingEndpoint := (&regsessionep.SetupBillingEndpoint{}).Materialize().WithMiddleware(authMw).WithService(inner, svc)
 	confirmPaymentEndpoint := (&regsessionep.ConfirmPaymentEndpoint{}).Materialize().WithMiddleware(authMw).WithService(inner, svc)
+	completeRegistrationEndpoint := (&regsessionep.CompleteRegistrationEndpoint{}).Materialize().WithMiddleware(authMw).WithService(inner, svc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		createSessionEndpoint,
@@ -63,9 +63,9 @@ func (*RegistrationSessionsEndpointGroup) Materialize(config *RegistrationSessio
 		createUserEndpoint,
 		updateSessionEndpoint,
 		listSessionsEndpoint,
-		createCheckoutEndpoint,
-		completeRegistrationEndpoint,
+		setupBillingEndpoint,
 		confirmPaymentEndpoint,
+		completeRegistrationEndpoint,
 	}
 
 	return &RegistrationSessionsEndpointGroup{inner}

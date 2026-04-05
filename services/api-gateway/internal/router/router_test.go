@@ -7,6 +7,7 @@ import (
 )
 
 func TestRouter_OPTIONS(t *testing.T) {
+	t.Parallel()
 	r := NewRouter()
 
 	// Add a dummy middleware that sets a header
@@ -53,6 +54,7 @@ func TestRouter_OPTIONS(t *testing.T) {
 }
 
 func TestRouter_PathPattern_OPTIONS(t *testing.T) {
+	t.Parallel()
 	r := NewRouter()
 
 	r.AddMiddleware(func(next http.HandlerFunc) http.HandlerFunc {

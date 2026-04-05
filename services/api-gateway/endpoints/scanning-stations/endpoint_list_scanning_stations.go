@@ -1,0 +1,40 @@
+package scanningstationep
+
+import (
+	"context"
+	"net/http"
+
+	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
+	apierror "github.com/augno/api/shared/errors"
+)
+
+// ListScanningStationsRequest is the request to list scanning stations with optional filters.
+type ListScanningStationsRequest struct {
+	apiresource.PaginationRequest
+}
+
+type ListScanningStationsEndpoint struct{}
+
+func (e *ListScanningStationsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListScanningStationsRequest, *apiresource.List[apiresource.ScanningStation]] {
+	return &apiendpoint.APIEndpoint[*ListScanningStationsRequest, *apiresource.List[apiresource.ScanningStation]]{
+		Title:             "List Scanning Stations",
+		Description:       "Returns a paginated list of scanning stations for the current account.",
+		Method:            http.MethodGet,
+		Route:             "/v1/operations/scanning-stations",
+		Request:           &ListScanningStationsRequest{},
+		Response:          &apiresource.List[apiresource.ScanningStation]{},
+		SuccessStatusCode: http.StatusOK,
+		Public:            true,
+		Preview:           true,
+		ServiceHandler: func(svc any) func(ctx context.Context, req *ListScanningStationsRequest) (*apiresource.List[apiresource.ScanningStation], *apierror.APIError) {
+			return svc.(ScanningStationSvc).ListScanningStations
+		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType:    constants.ObjectTypeScanningStation,
+			Fields:        []string{"department", "production_steps"},
+			DefaultFields: []string{"department"},
+		}),
+	}
+}

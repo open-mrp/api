@@ -1,0 +1,149 @@
+-- name: ListItemCategoriesForward :many
+SELECT
+    ic.id,
+    ic.name,
+    ic.notes,
+    ic.item_category_type_code,
+    ic.unit_group_id,
+    ic.account_id,
+    ic.created_at,
+    ic.updated_at
+FROM item_category ic
+WHERE (ic.account_id = sqlc.arg('account_id') OR ic.account_id IS NULL)
+AND (sqlc.narg('item_category_type_code') IS NULL OR ic.item_category_type_code = sqlc.narg('item_category_type_code'))
+AND (
+    sqlc.narg('search_query') IS NULL
+    OR ic.name LIKE sqlc.narg('search_query')
+)
+AND (
+    sqlc.narg('cursor_created_at') IS NULL
+    OR ic.created_at < sqlc.narg('cursor_created_at')
+    OR (ic.created_at = sqlc.narg('cursor_created_at') AND ic.id < sqlc.narg('cursor_id'))
+)
+ORDER BY ic.created_at DESC, ic.id DESC
+LIMIT ?;
+
+-- name: ListItemCategoriesBackward :many
+SELECT
+    ic.id,
+    ic.name,
+    ic.notes,
+    ic.item_category_type_code,
+    ic.unit_group_id,
+    ic.account_id,
+    ic.created_at,
+    ic.updated_at
+FROM item_category ic
+WHERE (ic.account_id = sqlc.arg('account_id') OR ic.account_id IS NULL)
+AND (sqlc.narg('item_category_type_code') IS NULL OR ic.item_category_type_code = sqlc.narg('item_category_type_code'))
+AND (
+    sqlc.narg('search_query') IS NULL
+    OR ic.name LIKE sqlc.narg('search_query')
+)
+AND (
+    ic.created_at > sqlc.arg('cursor_created_at')
+    OR (ic.created_at = sqlc.arg('cursor_created_at') AND ic.id > sqlc.arg('cursor_id'))
+)
+ORDER BY ic.created_at ASC, ic.id ASC
+LIMIT ?;
+
+-- name: GetItemCategory :one
+SELECT
+    ic.id,
+    ic.name,
+    ic.notes,
+    ic.item_category_type_code,
+    ic.unit_group_id,
+    ic.account_id,
+    ic.created_at,
+    ic.updated_at
+FROM item_category ic
+WHERE ic.id = sqlc.arg('id')
+AND (ic.account_id = sqlc.arg('account_id') OR ic.account_id IS NULL);
+
+-- name: InsertItemCategory :exec
+INSERT INTO item_category (
+    id,
+    name,
+    item_category_type_code,
+    unit_group_id,
+    account_id,
+    created_at,
+    updated_at
+) VALUES (
+    sqlc.arg('id'),
+    sqlc.arg('name'),
+    sqlc.arg('item_category_type_code'),
+    sqlc.arg('unit_group_id'),
+    sqlc.arg('account_id'),
+    NOW(3),
+    NOW(3)
+);
+
+-- name: UpdateItemCategory :execresult
+UPDATE item_category SET
+    name = COALESCE(sqlc.narg('name'), name),
+    notes = COALESCE(sqlc.narg('notes'), notes),
+    updated_at = NOW(3)
+WHERE id = sqlc.arg('id')
+AND account_id = sqlc.arg('account_id');
+
+-- name: DeleteItemCategory :execresult
+DELETE FROM item_category
+WHERE id = sqlc.arg('id')
+AND account_id = sqlc.arg('account_id');
+
+-- name: CountItemCategoryInAccount :one
+SELECT COUNT(*) FROM item_category
+WHERE id = sqlc.arg('id')
+AND (account_id = sqlc.arg('account_id') OR account_id IS NULL);
+
+-- name: InsertItemCategoryProperty :exec
+INSERT INTO _item_categories_properties (A, B)
+VALUES (sqlc.arg('item_category_id'), sqlc.arg('property_id'));
+
+-- name: DeleteItemCategoryProperty :exec
+DELETE FROM _item_categories_properties
+WHERE A = sqlc.arg('item_category_id') AND B = sqlc.arg('property_id');
+
+-- name: UpdateItemCategoryUnitGroup :execresult
+UPDATE item_category SET
+    unit_group_id = sqlc.arg('unit_group_id'),
+    updated_at = NOW(3)
+WHERE id = sqlc.arg('id')
+AND account_id = sqlc.arg('account_id');
+
+-- name: ListItemCategoryProperties :many
+SELECT
+    p.id,
+    p.name
+FROM property p
+INNER JOIN _item_categories_properties icp ON icp.B = p.id
+WHERE icp.A = sqlc.arg('item_category_id');
+
+-- name: CountUnitGroupVisibleToAccount :one
+SELECT COUNT(*) FROM unit_group
+WHERE id = sqlc.arg('id')
+AND (account_id = sqlc.arg('account_id') OR account_id IS NULL);
+
+-- name: CountPropertiesInCategoryByName :one
+SELECT COUNT(*) FROM property p
+INNER JOIN _item_categories_properties icp ON icp.B = p.id
+WHERE icp.A = sqlc.arg('item_category_id')
+AND p.name = sqlc.arg('name')
+AND p.account_id = sqlc.arg('account_id')
+AND (sqlc.narg('exclude_property_id') IS NULL OR p.id != sqlc.narg('exclude_property_id'));
+
+-- name: CountPropertyInAccount :one
+SELECT COUNT(*) FROM property
+WHERE id = sqlc.arg('id')
+AND account_id = sqlc.arg('account_id');
+
+-- name: GetUnitGroupForCategory :one
+SELECT
+    ug.id,
+    ug.name,
+    ug.base_unit_id,
+    ug.unit_type_code
+FROM unit_group ug
+WHERE ug.id = sqlc.arg('id');

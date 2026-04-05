@@ -30,6 +30,9 @@ const (
 	APIVersionHeader = "api-version"
 	// RequestIDHeader is the header name for the request ID in the metadata
 	RequestIDHeader = "request-id"
+	// ClientIPHeader is the header name for the originating HTTP client IP when
+	// the API gateway forwards a user request to a backend service.
+	ClientIPHeader = "client-ip"
 )
 
 // GetIdentityFromMetadata extracts the caller's identity from gRPC incoming metadata.
@@ -125,6 +128,8 @@ func ConvertGRPCError(ctx context.Context, err error, serviceName string) *apier
 
 	// If there is not an API error, this is an uncaught gRPC error
 	switch st.Code() {
+	case grpccodes.NotFound:
+		return apierror.NewResourceNotFoundError(message)
 	case grpccodes.Canceled:
 		if isClientCancellation(ctx, err) {
 			return apierror.NewClientClosedRequestError("Client closed the connection.")
@@ -189,6 +194,8 @@ func ConvertAPIErrorToGRPC(apiErr *apierror.APIError) error {
 	// Resource errors
 	case apierror.ErrorCodeResourceNotFound:
 		grpcCode = grpccodes.NotFound
+	case apierror.ErrorCodeResourceGone:
+		grpcCode = grpccodes.FailedPrecondition
 	case apierror.ErrorCodeResourceExists:
 		grpcCode = grpccodes.AlreadyExists
 	case apierror.ErrorCodeResourceConflict:
@@ -238,48 +245,6 @@ func GetIdempotencyKeyFromContext(ctx context.Context) *string {
 		return nil
 	}
 	values := md.Get(IdempotencyKeyHeader)
-	if len(values) == 0 {
-		return nil
-	}
-	return &values[0]
-}
-
-// SetIdempotencyKeyInMetadata sets the idempotency key in the metadata.
-func SetIdempotencyKeyInMetadata(ctx context.Context, key string) context.Context {
-	return metadata.AppendToOutgoingContext(ctx, IdempotencyKeyHeader, key)
-}
-
-// GetIdempotencyKeyIDFromContext extracts the idempotency key ID from gRPC metadata.
-func GetIdempotencyKeyIDFromContext(ctx context.Context) *string {
-	md, ok := metadata.FromIncomingContext(ctx)
-	if !ok {
-		return nil
-	}
-	values := md.Get(IdempotencyKeyIDHeader)
-	if len(values) == 0 {
-		return nil
-	}
-	return &values[0]
-}
-
-// SetIdempotencyKeyIDInMetadata sets the idempotency key ID in the metadata.
-func SetIdempotencyKeyIDInMetadata(md metadata.MD, keyID string) {
-	md.Set(IdempotencyKeyIDHeader, keyID)
-}
-
-// SetIdempotencyKeyIDInResponseHeader sets the idempotency key ID in the gRPC response header.
-// This is used by servers to return the idempotency key ID to clients.
-func SetIdempotencyKeyIDInResponseHeader(ctx context.Context, keyID string) error {
-	return grpc.SetHeader(ctx, metadata.Pairs(IdempotencyKeyIDHeader, keyID))
-}
-
-// GetIdempotencyKeyIDFromResponseHeader extracts the idempotency key ID from gRPC response header.
-// This is used by clients to read the idempotency key ID returned by servers.
-func GetIdempotencyKeyIDFromResponseHeader(header metadata.MD) *string {
-	if header == nil {
-		return nil
-	}
-	values := header.Get(IdempotencyKeyIDHeader)
 	if len(values) == 0 {
 		return nil
 	}
@@ -336,6 +301,29 @@ func RequestIDUnaryServerInterceptor() grpc.UnaryServerInterceptor {
 		if ok {
 			if requestID := GetRequestIDFromMetadata(md); requestID != "" {
 				ctx = appctx.WithRequestID(ctx, requestID)
+			}
+		}
+		return handler(ctx, req)
+	}
+}
+
+// GetClientIPFromMetadata extracts the client IP from gRPC metadata.
+func GetClientIPFromMetadata(md metadata.MD) string {
+	values := md.Get(ClientIPHeader)
+	if len(values) == 0 {
+		return ""
+	}
+	return values[0]
+}
+
+// ClientIPUnaryServerInterceptor extracts the client IP from gRPC metadata and
+// adds it to the context for downstream use (e.g. audit events).
+func ClientIPUnaryServerInterceptor() grpc.UnaryServerInterceptor {
+	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+		md, ok := metadata.FromIncomingContext(ctx)
+		if ok {
+			if ip := GetClientIPFromMetadata(md); ip != "" {
+				ctx = appctx.WithPropagatedClientIP(ctx, ip)
 			}
 		}
 		return handler(ctx, req)

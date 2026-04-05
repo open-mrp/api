@@ -359,6 +359,22 @@ func (q *Queries) ListRegistrationSessionsByUserIDForward(ctx context.Context, a
 	return items, nil
 }
 
+const updateRegistrationSessionAccountID = `-- name: UpdateRegistrationSessionAccountID :exec
+UPDATE registration_session
+SET account_id = ?, updated_at = NOW(3)
+WHERE id = ?
+`
+
+type UpdateRegistrationSessionAccountIDParams struct {
+	AccountID sql.NullString
+	ID        int64
+}
+
+func (q *Queries) UpdateRegistrationSessionAccountID(ctx context.Context, arg UpdateRegistrationSessionAccountIDParams) error {
+	_, err := q.exec(ctx, q.updateRegistrationSessionAccountIDStmt, updateRegistrationSessionAccountID, arg.AccountID, arg.ID)
+	return err
+}
+
 const updateRegistrationSessionEmailVerified = `-- name: UpdateRegistrationSessionEmailVerified :exec
 UPDATE registration_session
 SET is_email_verified = ?, is_existing_user = ?, updated_at = NOW(3)

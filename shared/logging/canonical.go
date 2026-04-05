@@ -109,15 +109,15 @@ func extractIdentityAttrs(identity *types.Identity) []slog.Attr {
 
 	if identity.Actor != nil {
 		switch identity.Type {
-		case types.IdentityTypeUser:
+		case types.IdentityActorTypeUser:
 			attrs = append(attrs, slog.String("user_id", identity.Actor.ID))
-		case types.IdentityTypeAPIKey:
+		case types.IdentityActorTypeAPIKey:
 			attrs = append(attrs, slog.String("key_id", identity.Actor.ID))
 		}
 	}
 
-	if identity.TargetAccountID != nil {
-		attrs = append(attrs, slog.String("target_account_id", *identity.TargetAccountID))
+	if identity.Target != nil && identity.Target.AccountID != "" {
+		attrs = append(attrs, slog.String("target_account_id", identity.Target.AccountID))
 	}
 
 	if identity.AccountMode != "" {

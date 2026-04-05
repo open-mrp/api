@@ -183,5 +183,6 @@ func (suite *NotificationServiceTestSuite) TestSendEnterpriseRequest_SandboxAcco
 }
 
 func TestNotificationServiceTestSuite(t *testing.T) {
+	t.Parallel()
 	suite.Run(t, new(NotificationServiceTestSuite))
 }

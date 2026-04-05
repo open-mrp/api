@@ -21,7 +21,7 @@ func SandboxPresenter(s *pb.SandboxInfo) apiresource.Sandbox {
 	}
 
 	if s.OwnerAccountId != nil && s.OwnerAccountName != nil {
-		result.OwnerAccount = &apiresource.LightAccount{
+		result.OwnerAccount = &apiresource.Account{
 			ID:     *s.OwnerAccountId,
 			Object: constants.ObjectTypeAccount,
 			Name:   *s.OwnerAccountName,
@@ -41,17 +41,5 @@ func SandboxListPresenter(resp *pb.ListSandboxAccountsResponse) *apiresource.Lis
 		sandboxes[i] = SandboxPresenter(s)
 	}
 
-	return apiresource.NewList(sandboxes, mapProtoPageInfo(resp.PageInfo))
-}
-
-func mapProtoPageInfo(pi *pb.PageInfo) apiresource.PageInfo {
-	if pi == nil {
-		return apiresource.PageInfo{}
-	}
-	return apiresource.PageInfo{
-		NextCursor:  pi.NextCursor,
-		PrevCursor:  pi.PrevCursor,
-		HasNextPage: pi.HasNextPage,
-		HasPrevPage: pi.HasPrevPage,
-	}
+	return apiresource.NewList(sandboxes, grpcutil.MapProtoPageInfo(resp.PageInfo))
 }

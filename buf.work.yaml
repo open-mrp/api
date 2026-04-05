@@ -1,0 +1,4 @@
+# Run `buf lint` from the api/ directory (or open the workspace root). Module config: proto/buf.yaml
+version: v1
+directories:
+  - proto

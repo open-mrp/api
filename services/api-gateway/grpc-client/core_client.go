@@ -10,8 +10,17 @@ import (
 const coreServiceName = "core-service"
 
 type CoreServiceClient struct {
-	Client   pb.CoreServiceClient
-	grpcConn *contracts.GRPCClientConn
+	Client         pb.CoreServiceClient
+	Sales          pb.CoreSalesServiceClient
+	Purchase       pb.CorePurchaseServiceClient
+	Fulfillment    pb.CoreFulfillmentServiceClient
+	Picking        pb.CorePickingServiceClient
+	ProductionRun  pb.CoreProductionRunServiceClient
+	ProductionStep pb.CoreProductionStepServiceClient
+	Receiving      pb.CoreReceivingServiceClient
+	Shipping       pb.CoreShippingServiceClient
+	ShippingCase   pb.CoreShippingCaseServiceClient
+	grpcConn       *contracts.GRPCClientConn
 }
 
 func NewCoreServiceClient(getenv func(string) string) (*CoreServiceClient, error) {
@@ -24,9 +33,19 @@ func NewCoreServiceClientWithURL(url string) (*CoreServiceClient, error) {
 		return nil, err
 	}
 
+	conn := grpcConn.Conn()
 	return &CoreServiceClient{
-		Client:   pb.NewCoreServiceClient(grpcConn.Conn()),
-		grpcConn: grpcConn,
+		Client:         pb.NewCoreServiceClient(conn),
+		Sales:          pb.NewCoreSalesServiceClient(conn),
+		Purchase:       pb.NewCorePurchaseServiceClient(conn),
+		Fulfillment:    pb.NewCoreFulfillmentServiceClient(conn),
+		Picking:        pb.NewCorePickingServiceClient(conn),
+		ProductionRun:  pb.NewCoreProductionRunServiceClient(conn),
+		ProductionStep: pb.NewCoreProductionStepServiceClient(conn),
+		Receiving:      pb.NewCoreReceivingServiceClient(conn),
+		Shipping:       pb.NewCoreShippingServiceClient(conn),
+		ShippingCase:   pb.NewCoreShippingCaseServiceClient(conn),
+		grpcConn:       grpcConn,
 	}, nil
 }
 

@@ -5,6 +5,7 @@ import (
 )
 
 func TestGetEnv(t *testing.T) {
+	t.Parallel()
 	getenv := func(key string) string {
 		m := map[string]string{"FOO": "  bar  ", "EMPTY": "", "MISSING": ""}
 		return m[key]

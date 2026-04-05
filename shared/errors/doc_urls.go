@@ -4,46 +4,46 @@ const (
 	docsBaseURL = "https://docs.augno.com"
 
 	// Auth & authorization
-	docURLExpiredAPIKey      = docsBaseURL + "/errors#api_key_expired"
-	docURLRevokedAPIKey      = docsBaseURL + "/errors#api_key_revoked"
-	docURLInvalidCredentials = docsBaseURL + "/errors#invalid_credentials"
-	docURLInsufficientPerms  = docsBaseURL + "/errors#insufficient_permissions"
-	docURLPaymentRequired    = docsBaseURL + "/errors#payment_required"
+	docURLExpiredAPIKey      = docsBaseURL + "/api/errors#api-key-expired"
+	docURLRevokedAPIKey      = docsBaseURL + "/api/errors#api-key-revoked"
+	docURLInvalidCredentials = docsBaseURL + "/api/errors#invalid-credentials"
+	docURLInsufficientPerms  = docsBaseURL + "/api/errors#insufficient-permissions"
+	docURLPaymentRequired    = docsBaseURL + "/api/errors#payment-required"
 
 	// Validation
-	docURLValidationFailed = docsBaseURL + "/errors#validation_failed"
-	docURLMissingField     = docsBaseURL + "/errors#missing_field"
-	docURLInvalidFormat    = docsBaseURL + "/errors#invalid_format"
-	docURLMethodNotAllowed = docsBaseURL + "/errors#method_not_allowed"
+	docURLValidationFailed = docsBaseURL + "/api/errors#validation-failed"
+	docURLMissingField     = docsBaseURL + "/api/errors#missing-field"
+	docURLInvalidFormat    = docsBaseURL + "/api/errors#invalid-format"
+	docURLMethodNotAllowed = docsBaseURL + "/api/errors#method-not-allowed"
 
 	// Resources
-	docURLResourceNotFound = docsBaseURL + "/errors#resource_not_found"
-	docURLResourceConflict = docsBaseURL + "/errors#resource_conflict"
-	docURLResourceGone     = docsBaseURL + "/errors#resource_gone"
+	docURLResourceNotFound = docsBaseURL + "/api/errors#resource-not-found"
+	docURLResourceConflict = docsBaseURL + "/api/errors#resource-conflict"
+	docURLResourceGone     = docsBaseURL + "/api/errors#resource-gone"
 
 	// Idempotency
-	docURLIdempotencyInProgress = docsBaseURL + "/errors#idempotency_in_progress"
+	docURLIdempotencyInProgress = docsBaseURL + "/api/errors#idempotency-in-progress"
 
 	// Limits
-	docURLLimitExceeded      = docsBaseURL + "/errors#limit_exceeded"
-	docURLRegistrationClosed = docsBaseURL + "/errors#registration_closed"
+	docURLLimitExceeded      = docsBaseURL + "/api/errors#limit-exceeded"
+	docURLRegistrationClosed = docsBaseURL + "/api/errors#registration-closed"
 
 	// Rate limiting
-	docURLRateLimit = docsBaseURL + "/errors#rate_limit_exceeded"
+	docURLRateLimit = docsBaseURL + "/api/errors#rate-limit-exceeded"
 
 	// Parameters
-	docURLParameterMissing    = docsBaseURL + "/errors#parameter_missing"
-	docURLParameterInvalid    = docsBaseURL + "/errors#parameter_invalid"
-	docURLParameterUnknown    = docsBaseURL + "/errors#parameter_unknown"
-	docURLParametersExclusive = docsBaseURL + "/errors#parameters_exclusive"
+	docURLParameterMissing    = docsBaseURL + "/api/errors#parameter-missing"
+	docURLParameterInvalid    = docsBaseURL + "/api/errors#parameter-invalid"
+	docURLParameterUnknown    = docsBaseURL + "/api/errors#parameter-unknown"
+	docURLParametersExclusive = docsBaseURL + "/api/errors#parameters-exclusive"
 
 	// Server errors
-	docURLInternalError       = docsBaseURL + "/errors#internal_error"
-	docURLRequestTimeout      = docsBaseURL + "/errors#request_timeout"
-	docURLClientClosedRequest = docsBaseURL + "/errors#client_closed_request"
+	docURLInternalError       = docsBaseURL + "/api/errors#internal-error"
+	docURLRequestTimeout      = docsBaseURL + "/api/errors#request-timeout"
+	docURLClientClosedRequest = docsBaseURL + "/api/errors#client-closed-request"
 
 	// API version
-	docURLAPIVersionRequired = docsBaseURL + "/errors#api_version_required"
-	docURLAPIVersionInvalid  = docsBaseURL + "/errors#api_version_invalid"
-	docURLAPIVersionTooOld   = docsBaseURL + "/errors#api_version_too_old"
+	docURLAPIVersionRequired = docsBaseURL + "/api/errors#api-version-required"
+	docURLAPIVersionInvalid  = docsBaseURL + "/api/errors#api-version-invalid"
+	docURLAPIVersionTooOld   = docsBaseURL + "/api/errors#api-version-too-old"
 )

@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"encoding/hex"
+	"fmt"
 	"io"
 	"log/slog"
 	"os"
@@ -12,9 +14,13 @@ import (
 	"github.com/augno/api/services/core-service/internal/event"
 	"github.com/augno/api/services/core-service/internal/infrastructure/grpc"
 	"github.com/augno/api/services/core-service/internal/infrastructure/repository"
+	"github.com/augno/api/services/core-service/internal/infrastructure/shippo"
 	"github.com/augno/api/services/core-service/internal/infrastructure/sqlc"
+	stripeinfra "github.com/augno/api/services/core-service/internal/infrastructure/stripe"
+	"github.com/augno/api/services/core-service/internal/infrastructure/stub"
 	"github.com/augno/api/services/core-service/internal/mediator"
 	"github.com/augno/api/services/core-service/internal/service"
+	s3client "github.com/augno/api/shared/cloud/s3"
 	"github.com/augno/api/shared/contracts"
 	"github.com/augno/api/shared/db"
 	"github.com/augno/api/shared/messaging"
@@ -74,17 +80,482 @@ func Run(
 	}
 	defer enqueuer.Stop()
 
+	var s3Store s3client.ObjectStore
+	if cfg.PlatformMode.IsTest() {
+		s3Store = &s3client.StubClient{}
+	} else {
+		s3, apiErr := s3client.NewClient(ctx, cfg.AWSRegion)
+		if apiErr != nil {
+			return fmt.Errorf("failed to create S3 client: %s", apiErr.PublicMessage)
+		}
+		s3Store = s3
+	}
+
 	repoFactory := repository.NewRepoFactory(queries)
 	txManager := service.NewTransactionManager(db, queries)
 
 	mediatorFactory := mediator.NewMediatorFactory()
-	accountSvc := service.NewAccountSvc(&service.AccountSvcConfig{RepoFactory: repoFactory, MediatorFactory: mediatorFactory, TxManager: txManager})
+	accountSvc := service.NewAccountSvc(&service.AccountSvcConfig{
+		RepoFactory:         repoFactory,
+		MediatorFactory:     mediatorFactory,
+		TxManager:           txManager,
+		S3Client:            s3Store,
+		AccountPhotosBucket: cfg.AccountPhotosBucket,
+	})
 	sandboxSvc := service.NewSandboxSvc(&service.SandboxSvcConfig{
 		Repos:           repoFactory,
 		MediatorFactory: mediatorFactory,
 		TxManager:       txManager,
 	})
 	unitSvc := service.NewUnitSvc(&service.UnitSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+	unitGroupSvc := service.NewUnitGroupSvc(&service.UnitGroupSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+	paymentTermSvc := service.NewPaymentTermSvc(&service.PaymentTermSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+	shippingTermSvc := service.NewShippingTermSvc(&service.ShippingTermSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+	accountStatusSvc := service.NewAccountStatusSvc(&service.AccountStatusSvcConfig{
+		Repos: repoFactory,
+	})
+	accountGroupSvc := service.NewAccountGroupSvc(&service.AccountGroupSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+	accountGroupProductLineAccessSvc := service.NewAccountGroupProductLineAccessSvc(&service.AccountGroupProductLineAccessSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+	customerProductLineAccessSvc := service.NewCustomerProductLineAccessSvc(&service.CustomerProductLineAccessSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+	productSvc := service.NewProductSvc(&service.ProductSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+	addressSvc := service.NewAddressSvc(&service.AddressSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+	var addressValidationSvc domain.AddressValidationSvc
+	if cfg.PlatformMode.IsTest() {
+		addressValidationSvc = &stub.AddressValidationSvc{}
+	} else {
+		addressValidationSvc = service.NewAddressValidationSvc(&service.AddressValidationSvcConfig{
+			GoogleMapsAPIKey: cfg.GoogleMapsAPIKey,
+		})
+	}
+
+	userSvc := service.NewUserSvc(&service.UserSvcConfig{
+		Repos:            repoFactory,
+		MediatorFactory:  mediatorFactory,
+		TxManager:        txManager,
+		S3Client:         s3Store,
+		UserPhotosBucket: cfg.UserPhotosBucket,
+	})
+
+	notificationPublisher := event.NewOutboxNotificationPublisher()
+	billingPublisher := event.NewOutboxBillingPublisher()
+	accountUserSvc := service.NewAccountUserSvc(&service.AccountUserSvcConfig{
+		Repos:                 repoFactory,
+		MediatorFactory:       mediatorFactory,
+		TxManager:             txManager,
+		NotificationPublisher: notificationPublisher,
+		BillingPublisher:      billingPublisher,
+	})
+	accountPriceSvc := service.NewAccountPriceSvc(&service.AccountPriceSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+	salesTargetSvc := service.NewSalesTargetSvc(&service.SalesTargetSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+
+	adjustmentTypeSvc := service.NewAdjustmentTypeSvc(&service.AdjustmentTypeSvcConfig{
+		Repos: repoFactory,
+	})
+
+	prioritySvc := service.NewPrioritySvc(&service.PrioritySvcConfig{
+		Repos: repoFactory,
+	})
+
+	propertySvc := service.NewPropertySvc(&service.PropertySvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+	attributeSvc := service.NewAttributeSvc(&service.AttributeSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+
+	var shippoFactory domain.ShippoClientFactory
+	var stripeCheckoutFactory domain.StripeCheckoutClientFactory
+	if cfg.PlatformMode.IsTest() {
+		shippoFactory = &stub.ShippoClientFactory{}
+		stripeCheckoutFactory = &stub.StripeCheckoutClientFactory{}
+	} else {
+		shippoFactory = shippo.NewClientFactory()
+		stripeCheckoutFactory = stripeinfra.NewCheckoutClientFactory()
+	}
+
+	var integrationEncryptionKey []byte
+	if cfg.IntegrationEncryptionKey != "" {
+		var err error
+		integrationEncryptionKey, err = hex.DecodeString(cfg.IntegrationEncryptionKey)
+		if err != nil {
+			return fmt.Errorf("failed to decode INTEGRATION_ENCRYPTION_KEY: %w", err)
+		}
+	}
+	accountIntegrationSvc := service.NewAccountIntegrationSvc(&service.AccountIntegrationSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+		EncryptionKey:   integrationEncryptionKey,
+		EncryptionKeyID: cfg.IntegrationEncryptionKeyID,
+	})
+
+	carrierSvc := service.NewCarrierSvc(&service.CarrierSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+		ShippoFactory:   shippoFactory,
+		EncryptionKey:   integrationEncryptionKey,
+		AccountSvc:      accountSvc,
+	})
+	serviceLevelSvc := service.NewServiceLevelSvc(&service.ServiceLevelSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+	shippingCaseSvc := service.NewShippingCaseSvc(&service.ShippingCaseSvcConfig{
+		RepoFactory:          repoFactory,
+		MediatorFactory:      mediatorFactory,
+		TxManager:            txManager,
+		S3Client:             s3Store,
+		ShippingLabelsBucket: cfg.ShippingLabelsBucket,
+	})
+
+	itemSvc := service.NewItemSvc(&service.ItemSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+
+	partSvc := service.NewPartSvc(&service.PartSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+
+	childAccountSvc := service.NewChildAccountSvc(&service.ChildAccountSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+
+	batchSvc := service.NewBatchSvc(&service.BatchSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+
+	itemCategorySvc := service.NewItemCategorySvc(&service.ItemCategorySvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+
+	productLineSvc := service.NewProductLineSvc(&service.ProductLineSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+
+	productTypeSvc := service.NewProductTypeSvc(&service.ProductTypeSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+
+	consumptionSvc := service.NewConsumptionSvc(&service.ConsumptionSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+
+	productionFlowSvc := service.NewProductionFlowSvc(&service.ProductionFlowSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+
+	productionStepSvc := service.NewProductionStepSvc(&service.ProductionStepSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+
+	productionSvc := service.NewProductionSvc(&service.ProductionSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+
+	customerSvc := service.NewCustomerSvc(&service.CustomerSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+
+	analyticsSvc := service.NewAnalyticsSvc(&service.AnalyticsSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+	})
+
+	catalogSvc := service.NewCatalogSvc(&service.CatalogSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+	})
+
+	ediSvc := service.NewEDISvc(&service.EDISvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+
+	machineSvc := service.NewMachineSvc(&service.MachineSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+
+	departmentSvc := service.NewDepartmentSvc(&service.DepartmentSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+
+	deliverySvc := service.NewDeliverySvc(&service.DeliverySvcConfig{
+		Repos: repoFactory,
+	})
+
+	emailLogSvc := service.NewEmailLogSvc(&service.EmailLogSvcConfig{
+		Repos: repoFactory,
+	})
+
+	inventoryChangeLogSvc := service.NewInventoryChangeLogSvc(&service.InventoryChangeLogSvcConfig{
+		Repos: repoFactory,
+	})
+
+	invoiceSvc := service.NewInvoiceSvc(&service.InvoiceSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+
+	salesOrderStatusSvc := service.NewSalesOrderStatusSvc(&service.SalesOrderStatusSvcConfig{
+		Repos: repoFactory,
+	})
+
+	orderDiscountSvc := service.NewOrderDiscountSvc(&service.OrderDiscountSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+
+	volumeDiscountSvc := service.NewVolumeDiscountSvc(&service.VolumeDiscountSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+
+	salesOrderSvc := service.NewSalesOrderSvc(&service.SalesOrderSvcConfig{
+		Repos:                 repoFactory,
+		MediatorFactory:       mediatorFactory,
+		TxManager:             txManager,
+		CheckoutClientFactory: stripeCheckoutFactory,
+		NotificationPublisher: notificationPublisher,
+		EncryptionKey:         integrationEncryptionKey,
+		FrontendURL:           cfg.FrontendURL,
+	})
+
+	salesOrderLineSvc := service.NewSalesOrderLineSvc(&service.SalesOrderLineSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+
+	receivableSvc := service.NewReceivableSvc(&service.ReceivableSvcConfig{
+		Repos:                 repoFactory,
+		MediatorFactory:       mediatorFactory,
+		TxManager:             txManager,
+		NotificationPublisher: notificationPublisher,
+	})
+
+	settlementSvc := service.NewSettlementSvc(&service.SettlementSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+
+	transactionAllocationSvc := service.NewTransactionAllocationSvc(&service.TransactionAllocationSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+
+	transactionSvc := service.NewTransactionSvc(&service.TransactionSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+
+	purchaseOrderSvc := service.NewPurchaseOrderSvc(&service.PurchaseOrderSvcConfig{
+		Repos:                 repoFactory,
+		MediatorFactory:       mediatorFactory,
+		TxManager:             txManager,
+		NotificationPublisher: notificationPublisher,
+	})
+
+	purchaseOrderLineSvc := service.NewPurchaseOrderLineSvc(&service.PurchaseOrderLineSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+
+	materialSvc := service.NewMaterialSvc(&service.MaterialSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+
+	permissionGroupSvc := service.NewPermissionGroupSvc(&service.PermissionGroupSvcConfig{
+		Repos: repoFactory,
+	})
+
+	supplierMaterialSvc := service.NewSupplierMaterialSvc(&service.SupplierMaterialSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+
+	pickSvc := service.NewPickSvc(&service.PickSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+
+	pickLineSvc := service.NewPickLineSvc(&service.PickLineSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+
+	receivingOrderSvc := service.NewReceivingOrderSvc(&service.ReceivingOrderSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+
+	receivingOrderLineSvc := service.NewReceivingOrderLineSvc(&service.ReceivingOrderLineSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+
+	productionRunSvc := service.NewProductionRunSvc(&service.ProductionRunSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+
+	measureSvc := service.NewMeasureSvc(&service.MeasureSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+
+	roleSvc := service.NewRoleSvc(&service.RoleSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+
+	utilsSvc := service.NewUtilsSvc(&service.UtilsSvcConfig{
+		Repos:                 repoFactory,
+		MediatorFactory:       mediatorFactory,
+		TxManager:             txManager,
+		NotificationPublisher: notificationPublisher,
+	})
+
+	locationSvc := service.NewLocationSvc(&service.LocationSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+
+	scanningStationSvc := service.NewScanningStationSvc(&service.ScanningStationSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+
+	supplierSvc := service.NewSupplierSvc(&service.SupplierSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+
+	sysPropertySvc := service.NewSysPropertySvc(&service.SysPropertySvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+
+	registrationFlowSvc := service.NewRegistrationFlowSvc(&service.RegistrationFlowSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+
+	territorySvc := service.NewTerritorySvc(&service.TerritorySvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
+
+	shipmentSvc := service.NewShipmentSvc(&service.ShipmentSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+		ShippoFactory:   shippoFactory,
+		NotificationPub: notificationPublisher,
+	})
+
+	shipmentLineSvc := service.NewShipmentLineSvc(&service.ShipmentLineSvcConfig{
 		Repos:           repoFactory,
 		MediatorFactory: mediatorFactory,
 		TxManager:       txManager,
@@ -113,11 +584,48 @@ func Run(
 		return err
 	}
 
+	execStepConsumer := event.NewExecuteProductionStepConsumer(rabbitmq, inboxRepo, queries, repoFactory)
+	if err := execStepConsumer.Listen(ctx); err != nil {
+		return err
+	}
+
 	server, err := contracts.NewGRPCServer(domain.ServiceName, nil, nil)
 	if err != nil {
 		return err
 	}
-	grpc.NewGRPCHandler(server.Server(), accountSvc, sandboxSvc, unitSvc)
+	srv := server.Server()
+	grpc.RegisterAddressService(srv, addressSvc, addressValidationSvc)
+	grpc.RegisterCarrierService(srv, carrierSvc, serviceLevelSvc)
+	grpc.RegisterShippingCaseService(srv, shippingCaseSvc)
+	grpc.RegisterMiscService(srv, accountIntegrationSvc, adjustmentTypeSvc, emailLogSvc, inventoryChangeLogSvc, prioritySvc)
+	grpc.RegisterAccountUserService(srv, accountUserSvc)
+	grpc.RegisterAnalyticsService(srv, analyticsSvc)
+	grpc.RegisterCatalogService(srv, catalogSvc)
+	grpc.RegisterEDIService(srv, ediSvc)
+	grpc.RegisterRoleService(srv, roleSvc)
+	grpc.RegisterCustomerService(srv, customerSvc, childAccountSvc, customerProductLineAccessSvc, productSvc)
+	grpc.RegisterGroupService(srv, accountGroupSvc, accountGroupProductLineAccessSvc)
+	grpc.RegisterSalesService(srv, accountPriceSvc, salesTargetSvc, productSvc, invoiceSvc, salesOrderStatusSvc, orderDiscountSvc, volumeDiscountSvc, salesOrderSvc, salesOrderLineSvc, receivableSvc, settlementSvc, transactionAllocationSvc, transactionSvc)
+	grpc.RegisterPurchaseService(srv, purchaseOrderSvc, purchaseOrderLineSvc)
+	grpc.RegisterFulfillmentService(srv, batchSvc, consumptionSvc, deliverySvc, departmentSvc, machineSvc, productionFlowSvc)
+	grpc.RegisterItemService(srv, unitSvc, unitGroupSvc, itemSvc, itemCategorySvc, propertySvc, attributeSvc, paymentTermSvc, shippingTermSvc, partSvc, productLineSvc, productTypeSvc)
+	grpc.RegisterMaterialService(srv, materialSvc, supplierMaterialSvc)
+	grpc.RegisterPermissionGroupService(srv, permissionGroupSvc)
+	grpc.RegisterPickingService(srv, pickSvc, pickLineSvc)
+	grpc.RegisterReceivingService(srv, receivingOrderSvc, receivingOrderLineSvc)
+	grpc.RegisterProductionRunService(srv, productionRunSvc)
+	grpc.RegisterProductionStepService(srv, productionStepSvc, productionSvc)
+	grpc.RegisterMeasureService(srv, measureSvc)
+	grpc.RegisterUtilsService(srv, utilsSvc)
+	grpc.RegisterUserService(srv, userSvc)
+	grpc.RegisterLocationService(srv, locationSvc)
+	grpc.RegisterScanningStationService(srv, scanningStationSvc)
+	grpc.RegisterSupplierService(srv, supplierSvc)
+	grpc.RegisterSysPropertyService(srv, sysPropertySvc)
+	grpc.RegisterRegistrationFlowService(srv, registrationFlowSvc)
+	grpc.RegisterTerritoryService(srv, territorySvc)
+	grpc.RegisterShippingService(srv, shipmentSvc, shipmentLineSvc)
+	grpc.RegisterAccountService(srv, accountSvc, sandboxSvc, accountStatusSvc)
 
 	logger.Info("Core service started", "port", cfg.Port)
 

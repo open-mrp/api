@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/augno/api/services/api-gateway/internal/header"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -21,6 +22,7 @@ type stubResponse struct {
 }
 
 func TestExecute_ErrorResponse_NoLocationHeader(t *testing.T) {
+	t.Parallel()
 	ep := &APIEndpoint[*stubRequest, *stubResponse]{
 		Method:            http.MethodPost,
 		Route:             "/v1/things",
@@ -53,6 +55,7 @@ func TestExecute_ErrorResponse_NoLocationHeader(t *testing.T) {
 }
 
 func TestExecute_SuccessResponse_SetsLocationHeader(t *testing.T) {
+	t.Parallel()
 	ep := &APIEndpoint[*stubRequest, *stubResponse]{
 		Method:            http.MethodPost,
 		Route:             "/v1/things",
@@ -81,5 +84,45 @@ func TestExecute_SuccessResponse_SetsLocationHeader(t *testing.T) {
 	}
 	if w.Header().Get(header.LocationHeader) != "/v1/things/th_123" {
 		t.Fatalf("expected Location %q, got %q", "/v1/things/th_123", w.Header().Get(header.LocationHeader))
+	}
+}
+
+func TestParseIncludeParams_SplitsCommaSeparatedIncludeArrayValues(t *testing.T) {
+	t.Parallel()
+	ep := &APIEndpoint[*stubRequest, *stubResponse]{
+		IncludeConfig: IncludesFor(IncludesParams{
+			ObjectType: constants.ObjectTypeAuditEvent,
+			Fields:     []string{"actor", "changes"},
+		}),
+	}
+
+	r := httptest.NewRequest(http.MethodGet, "/v1/core/audit-events?include[]=actor,changes", nil)
+	requested, apiErr := ep.parseIncludeParams(r)
+	if apiErr != nil {
+		t.Fatalf("expected no error, got: %v", apiErr)
+	}
+
+	if !requested["actor"] || !requested["changes"] {
+		t.Fatalf("expected actor and changes to be requested, got: %#v", requested)
+	}
+}
+
+func TestParseIncludeParams_MergesIncludeAndIncludeArrayFormats(t *testing.T) {
+	t.Parallel()
+	ep := &APIEndpoint[*stubRequest, *stubResponse]{
+		IncludeConfig: IncludesFor(IncludesParams{
+			ObjectType: constants.ObjectTypeAuditEvent,
+			Fields:     []string{"actor", "changes"},
+		}),
+	}
+
+	r := httptest.NewRequest(http.MethodGet, "/v1/core/audit-events?include=actor&include[]=changes", nil)
+	requested, apiErr := ep.parseIncludeParams(r)
+	if apiErr != nil {
+		t.Fatalf("expected no error, got: %v", apiErr)
+	}
+
+	if !requested["actor"] || !requested["changes"] {
+		t.Fatalf("expected actor and changes to be requested, got: %#v", requested)
 	}
 }

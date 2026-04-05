@@ -10,11 +10,25 @@ import (
 	publishermock "github.com/augno/api/services/auth-service/internal/domain/mock/publisher"
 	"github.com/augno/api/services/auth-service/internal/testutil"
 	"github.com/augno/api/services/auth-service/pkg/types"
+	"github.com/augno/api/shared/appctx"
 	apierror "github.com/augno/api/shared/errors"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
 )
+
+func passwordSvcIdentityCtx() context.Context {
+	acctID := "acct_test"
+	return appctx.WithIdentity(context.Background(), &types.Identity{
+		Type:   types.IdentityActorTypeUser,
+		Target: &types.IdentityTarget{AccountID: acctID},
+		Actor: &types.IdentityActor{
+			RelationType: types.IdentityRelationTypeInternal,
+			ID:           testutil.EntityIDUser,
+			AccountID:    &acctID,
+		},
+	})
+}
 
 type PasswordSvcTestSuite struct {
 	suite.Suite
@@ -35,6 +49,7 @@ func (suite *PasswordSvcTestSuite) SetupSuite() {
 	suite.repoFactory.EXPECT().NewRefreshTokenRepo().Return(nil).AnyTimes()
 	suite.repoFactory.EXPECT().NewAPIKeyRepo().Return(nil).AnyTimes()
 	suite.repoFactory.EXPECT().NewIdempotencyKeyRepo().Return(nil).AnyTimes()
+	suite.repoFactory.EXPECT().NewOutboxRepo().Return(&stubOutboxRepo{}).AnyTimes()
 
 	suite.passwordMed = mediatormock.NewMockPasswordMed(suite.ctrl)
 	suite.refreshTokenMed = mediatormock.NewMockRefreshTokenMed(suite.ctrl)
@@ -64,6 +79,7 @@ func (suite *PasswordSvcTestSuite) TearDownSuite() {
 }
 
 func TestPasswordSvcTestSuite(t *testing.T) {
+	t.Parallel()
 	suite.Run(t, new(PasswordSvcTestSuite))
 }
 
@@ -95,7 +111,7 @@ func (suite *PasswordSvcTestSuite) TestRequestPasswordReset_Success() {
 }
 
 func (suite *PasswordSvcTestSuite) TestResetPassword_Success() {
-	ctx := context.Background()
+	ctx := passwordSvcIdentityCtx()
 	token := "reset-token"
 	newPassword := "new-password"
 	user := &types.User{ID: testutil.EntityIDUser}
@@ -146,8 +162,12 @@ func (suite *PasswordSvcTestSuite) TestResetPassword_Success() {
 }
 
 func (suite *PasswordSvcTestSuite) TestUpdatePassword_Success() {
-	ctx := context.Background()
 	userID := testutil.EntityIDUser
+	acctID := "acct_test"
+	ctx := appctx.WithIdentity(context.Background(), &types.Identity{
+		Target: &types.IdentityTarget{AccountID: acctID},
+		Actor:  &types.IdentityActor{ID: userID, AccountID: &acctID},
+	})
 	oldPassword := "old-password"
 	newPassword := "new-password"
 	user := &types.User{ID: userID}
@@ -173,14 +193,16 @@ func (suite *PasswordSvcTestSuite) TestUpdatePassword_Success() {
 		Return(nil).
 		Times(1)
 
-	apiErr := suite.passwordSvc.UpdatePassword(ctx, userID, oldPassword, newPassword)
+	apiErr := suite.passwordSvc.UpdatePassword(ctx, oldPassword, newPassword)
 
 	suite.Nil(apiErr)
 }
 
 func (suite *PasswordSvcTestSuite) TestUpdatePassword_ValidateFails() {
-	ctx := context.Background()
 	userID := testutil.EntityIDUser
+	ctx := appctx.WithIdentity(context.Background(), &types.Identity{
+		Actor: &types.IdentityActor{ID: userID},
+	})
 	oldPassword := "wrong-password"
 	newPassword := "new-password"
 	expectedErr := apierror.NewAuthenticationError("invalid password")
@@ -202,7 +224,7 @@ func (suite *PasswordSvcTestSuite) TestUpdatePassword_ValidateFails() {
 		Return(expectedErr).
 		Times(1)
 
-	apiErr := suite.passwordSvc.UpdatePassword(ctx, userID, oldPassword, newPassword)
+	apiErr := suite.passwordSvc.UpdatePassword(ctx, oldPassword, newPassword)
 
 	suite.NotNil(apiErr)
 	suite.Equal(expectedErr, apiErr)

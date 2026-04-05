@@ -8,14 +8,14 @@ import (
 
 type Unit struct {
 	ID                string
-	Name              string
-	Abbreviation      string
-	UnitDimensionCode string
-	RatioNumerator    string
-	RatioDenominator  string
-	OffsetNumerator   string
-	OffsetDenominator string
-	IsBaseUnit        bool
+	Name              string `audit:"name"`
+	Abbreviation      string `audit:"abbreviation"`
+	UnitDimensionCode string `audit:"unit_dimension_code"`
+	RatioNumerator    string `audit:"ratio_numerator"`
+	RatioDenominator  string `audit:"ratio_denominator"`
+	OffsetNumerator   string `audit:"offset_numerator"`
+	OffsetDenominator string `audit:"offset_denominator"`
+	IsBaseUnit        bool   `audit:"is_base_unit"`
 	AccountID         *string
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
@@ -66,4 +66,15 @@ type UpdateUnitParams struct {
 type DeleteUnitParams struct {
 	AccountID string
 	UnitID    string
+}
+
+// ValidateUnitsParams holds parameters for validating units by abbreviation.
+type ValidateUnitsParams struct {
+	AccountID string
+	UnitMap   map[string]string // key -> abbreviation
+}
+
+// ValidateUnitsResult contains matched units keyed by the original map key.
+type ValidateUnitsResult struct {
+	Units map[string]*Unit
 }

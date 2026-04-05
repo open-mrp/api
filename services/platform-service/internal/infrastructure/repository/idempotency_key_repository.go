@@ -54,13 +54,29 @@ func (r *idempotencyKeyRepoImpl) SetResponse(ctx context.Context, params domain.
 	return nil
 }
 
+const maxDeadlockRetries = 3
+
 func (r *idempotencyKeyRepoImpl) UpsertAndLock(ctx context.Context, key *domain.IdempotencyKey) (*domain.UpsertAndLockResult, *apierror.APIError) {
 	ctx, span := idempotencyKeyRepoTracer.Start(ctx, "repository.idempotency_key.upsert_and_lock")
 	defer span.End()
 
+	for attempt := 0; attempt <= maxDeadlockRetries; attempt++ {
+		result, apiErr, retryable := r.upsertAndLockOnce(ctx, key)
+		if apiErr == nil {
+			return result, nil
+		}
+		if !retryable || attempt == maxDeadlockRetries {
+			return nil, apiErr
+		}
+	}
+
+	return nil, apierror.NewInternalError(nil, "Exhausted deadlock retries for idempotency key upsert.")
+}
+
+func (r *idempotencyKeyRepoImpl) upsertAndLockOnce(ctx context.Context, key *domain.IdempotencyKey) (*domain.UpsertAndLockResult, *apierror.APIError, bool) {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
-		return nil, apierror.NewInternalError(err, "Failed to begin transaction.")
+		return nil, apierror.NewInternalError(err, "Failed to begin transaction."), false
 	}
 	defer tx.Rollback()
 
@@ -68,7 +84,7 @@ func (r *idempotencyKeyRepoImpl) UpsertAndLock(ctx context.Context, key *domain.
 
 	existing, err := txQueries.GetIdempotencyKeyByScopeHashForUpdate(ctx, key.ScopeHash)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return nil, db.MapSQLError(err)
+		return nil, db.MapSQLError(err), db.IsDeadlock(err)
 	}
 
 	if errors.Is(err, sql.ErrNoRows) {
@@ -86,11 +102,11 @@ func (r *idempotencyKeyRepoImpl) UpsertAndLock(ctx context.Context, key *domain.
 			RecoveryPoint:   key.RecoveryPoint,
 		})
 		if createErr != nil {
-			return nil, db.MapSQLError(createErr)
+			return nil, db.MapSQLError(createErr), db.IsDeadlock(createErr)
 		}
 
 		if commitErr := tx.Commit(); commitErr != nil {
-			return nil, apierror.NewInternalError(commitErr, "Failed to commit transaction.")
+			return nil, apierror.NewInternalError(commitErr, "Failed to commit transaction."), db.IsDeadlock(commitErr)
 		}
 
 		key.InternalID = internalID
@@ -98,35 +114,35 @@ func (r *idempotencyKeyRepoImpl) UpsertAndLock(ctx context.Context, key *domain.
 			Key:     key,
 			Created: true,
 			Locked:  true,
-		}, nil
+		}, nil, false
 	}
 
 	existingKey := idempotencyKeyToDomain(&existing)
 
 	if existingKey.RequestBodyHash != key.RequestBodyHash {
-		return nil, apierror.NewIdempotencyHashMismatchError(key.IdempotencyKey)
+		return nil, apierror.NewIdempotencyHashMismatchError(key.IdempotencyKey), false
 	}
 
 	if existingKey.HasResponse() {
 		if commitErr := tx.Commit(); commitErr != nil {
-			return nil, apierror.NewInternalError(commitErr, "Failed to commit transaction.")
+			return nil, apierror.NewInternalError(commitErr, "Failed to commit transaction."), false
 		}
 		return &domain.UpsertAndLockResult{
 			Key:     existingKey,
 			Created: false,
 			Locked:  false,
-		}, nil
+		}, nil, false
 	}
 
 	if existingKey.IsLocked() {
 		if commitErr := tx.Commit(); commitErr != nil {
-			return nil, apierror.NewInternalError(commitErr, "Failed to commit transaction.")
+			return nil, apierror.NewInternalError(commitErr, "Failed to commit transaction."), false
 		}
 		return &domain.UpsertAndLockResult{
 			Key:     existingKey,
 			Created: false,
 			Locked:  false,
-		}, nil
+		}, nil, false
 	}
 
 	_, lockErr := txQueries.LockIdempotencyKey(ctx, sqlc.LockIdempotencyKeyParams{
@@ -134,18 +150,18 @@ func (r *idempotencyKeyRepoImpl) UpsertAndLock(ctx context.Context, key *domain.
 		LockOwner: db.NullStringPtr(key.ActorID),
 	})
 	if lockErr != nil {
-		return nil, db.MapSQLError(lockErr)
+		return nil, db.MapSQLError(lockErr), db.IsDeadlock(lockErr)
 	}
 
 	if commitErr := tx.Commit(); commitErr != nil {
-		return nil, apierror.NewInternalError(commitErr, "Failed to commit transaction.")
+		return nil, apierror.NewInternalError(commitErr, "Failed to commit transaction."), db.IsDeadlock(commitErr)
 	}
 
 	return &domain.UpsertAndLockResult{
 		Key:     existingKey,
 		Created: false,
 		Locked:  true,
-	}, nil
+	}, nil, false
 }
 
 func (r *idempotencyKeyRepoImpl) ReleaseLock(ctx context.Context, id string) *apierror.APIError {

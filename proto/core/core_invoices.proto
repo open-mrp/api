@@ -1,0 +1,411 @@
+syntax = "proto3";
+
+// CoreService message types (imported by core.proto).
+package core;
+
+import "google/protobuf/timestamp.proto";
+import "core/core_identity_context.proto";
+import "core/core_analytics.proto";
+import "core/core_accounts_carriers.proto";
+option go_package = "shared/proto/core;core";
+
+message InvoiceLineInfo {
+  string id = 1;
+  string quantity_id = 2;
+  string quantity_value = 3;
+  string quantity_unit_id = 4;
+  string quantity_unit_abbreviation = 5;
+  string unit_price_id = 6;
+  string unit_price_value = 7;
+  string unit_price_numerator_unit_id = 8;
+  string unit_price_denominator_unit_id = 9;
+  string order_line_id = 10;
+  optional string order_line_item_id = 11;
+  optional string order_line_item_sku = 12;
+  google.protobuf.Timestamp created_at = 13;
+  google.protobuf.Timestamp updated_at = 14;
+}
+message InvoiceAllocationInfo {
+  string id = 1;
+  string transaction_id = 2;
+  string amount_id = 3;
+  string amount_value = 4;
+  string amount_unit_id = 5;
+  string amount_unit_abbreviation = 6;
+  optional string note = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+}
+message InvoiceForPaymentInfo {
+  string id = 1;
+  string number = 2;
+  optional string customer_po = 3;
+  string customer_id = 4;
+  string customer_name = 5;
+  string customer_number = 6;
+  bool is_parent_account = 7;
+  optional string parent_account_id = 8;
+  bool is_prepaid = 9;
+  optional string billing_address_id = 10;
+  optional string billing_address_name = 11;
+  string invoice_total = 12;
+  bool is_paid_in_full = 13;
+  repeated InvoiceAllocationInfo allocations = 14;
+  google.protobuf.Timestamp created_at = 15;
+  google.protobuf.Timestamp updated_at = 16;
+}
+message MaterialInfo {
+  string id = 1;
+  string item_id = 2;
+  ItemInfo item = 3;
+  optional QuantityInfo order_point = 4;
+  optional QuantityInfo lead_time = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+message ListMaterialsRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+  repeated string category_ids = 4;
+  repeated string attribute_ids = 5;
+  optional google.protobuf.Timestamp start_date = 6;
+  optional google.protobuf.Timestamp end_date = 7;
+}
+message ListMaterialsResponse {
+  repeated MaterialInfo materials = 1;
+  PageInfo page_info = 2;
+}
+message GetMaterialRequest {
+  string item_id = 1;
+}
+message GetMaterialResponse {
+  MaterialInfo material = 1;
+}
+message CreateMaterialRequest {
+  string sku = 1;
+  optional string description = 2;
+  optional string notes = 3;
+  string category_id = 4;
+  optional QuantityInput order_point = 5;
+  optional QuantityInput lead_time = 6;
+}
+message CreateMaterialResponse {
+  MaterialInfo material = 1;
+}
+message UpdateMaterialRequest {
+  string item_id = 1;
+  optional string sku = 2;
+  optional string description = 3;
+  bool update_description = 4;
+  optional string notes = 5;
+  bool update_notes = 6;
+  optional QuantityInput order_point = 7;
+  optional QuantityInput lead_time = 8;
+}
+message UpdateMaterialResponse {
+  MaterialInfo material = 1;
+}
+message DeleteMaterialRequest {
+  string item_id = 1;
+}
+message DeleteMaterialResponse {
+  MaterialInfo material = 1;
+}
+message SupplierMaterialInfo {
+  string id = 1;
+  string material_id = 2;
+  string supplier_account_id = 3;
+  string supplier_part_number = 4;
+  optional string supplier_description = 5;
+  bool is_active = 6;
+  string owner_account_id = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+  MaterialInfo material = 10;
+}
+message ListSupplierMaterialsRequest {
+  string supplier_account_id = 1;
+  optional string cursor = 2;
+  int32 limit = 3;
+  optional string query = 4;
+}
+message ListSupplierMaterialsResponse {
+  repeated SupplierMaterialInfo supplier_materials = 1;
+  PageInfo page_info = 2;
+}
+message GetSupplierMaterialRequest {
+  string supplier_account_id = 1;
+  string item_id = 2;
+}
+message GetSupplierMaterialResponse {
+  SupplierMaterialInfo supplier_material = 1;
+}
+message CreateSupplierMaterialRequest {
+  string supplier_account_id = 1;
+  string material_id = 2;
+  string supplier_part_number = 3;
+  optional string supplier_description = 4;
+  bool is_active = 5;
+}
+message CreateSupplierMaterialResponse {
+  SupplierMaterialInfo supplier_material = 1;
+}
+message UpdateSupplierMaterialRequest {
+  string supplier_account_id = 1;
+  string item_id = 2;
+  optional string supplier_part_number = 3;
+  optional string supplier_description = 4;
+  bool update_description = 5;
+  optional bool is_active = 6;
+}
+message UpdateSupplierMaterialResponse {
+  SupplierMaterialInfo supplier_material = 1;
+}
+message DeleteSupplierMaterialRequest {
+  string supplier_account_id = 1;
+  string item_id = 2;
+}
+message DeleteSupplierMaterialResponse {
+  SupplierMaterialInfo supplier_material = 1;
+}
+message PartInfo {
+  string id = 1;
+  string item_id = 2;
+  ItemInfo item = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp updated_at = 5;
+}
+message ListPartsRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+  repeated string category_ids = 4;
+  repeated string attribute_ids = 5;
+  optional google.protobuf.Timestamp start_date = 6;
+  optional google.protobuf.Timestamp end_date = 7;
+}
+message ListPartsResponse {
+  repeated PartInfo parts = 1;
+  PageInfo page_info = 2;
+}
+message GetPartRequest {
+  string item_id = 1;
+}
+message GetPartResponse {
+  PartInfo part = 1;
+}
+message CreatePartRequest {
+  string sku = 1;
+  optional string description = 2;
+  string category_id = 3;
+}
+message CreatePartResponse {
+  PartInfo part = 1;
+}
+message UpdatePartRequest {
+  string item_id = 1;
+  optional string sku = 2;
+  optional string description = 3;
+  bool update_description = 4;
+  optional string notes = 5;
+  bool update_notes = 6;
+}
+message UpdatePartResponse {
+  PartInfo part = 1;
+}
+message DeletePartRequest {
+  string item_id = 1;
+}
+message DeletePartResponse {
+  PartInfo part = 1;
+}
+message PermissionInfo {
+  string id = 1;
+  string code = 2;
+  string name = 3;
+  optional string description = 4;
+  string permission_group_code = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+message PermissionGroupInfo {
+  string id = 1;
+  string code = 2;
+  string name = 3;
+  optional string description = 4;
+  repeated PermissionInfo permissions = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+message ListPermissionGroupsRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+}
+message ListPermissionGroupsResponse {
+  repeated PermissionGroupInfo permission_groups = 1;
+  PageInfo page_info = 2;
+}
+message PriorityInfo {
+  string id = 1;
+  string name = 2;
+  string code = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp updated_at = 5;
+}
+message ListPrioritiesRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+}
+message ListPrioritiesResponse {
+  repeated PriorityInfo priorities = 1;
+  PageInfo page_info = 2;
+}
+message GetPriorityRequest {
+  string identifier = 1;
+}
+message GetPriorityResponse {
+  PriorityInfo priority = 1;
+}
+message ProductFullInfo {
+  string id = 1;
+  string product_type_code = 2;
+  bool is_portal_ready = 3;
+  optional string product_line_id = 4;
+  string item_id = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+  ItemInfo item = 8;
+  optional ProductLineInfo product_line = 9;
+  optional ProductTypeInfo product_type = 10;
+}
+message ListProductsFullRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+  repeated string customer_ids = 4;
+  repeated string product_line_ids = 5;
+  repeated string category_ids = 6;
+  repeated string attribute_ids = 7;
+  optional google.protobuf.Timestamp start_date = 8;
+  optional google.protobuf.Timestamp end_date = 9;
+  optional bool is_portal_ready = 10;
+}
+message ListProductsFullResponse {
+  repeated ProductFullInfo products = 1;
+  PageInfo page_info = 2;
+}
+message GetProductRequest {
+  string item_id = 1;
+}
+message GetProductResponse {
+  ProductFullInfo product = 1;
+}
+message CreateProductRequest {
+  string sku = 1;
+  optional string description = 2;
+  optional string notes = 3;
+  string product_type_code = 4;
+  optional string product_line_id = 5;
+  string category_id = 6;
+  bool is_portal_ready = 7;
+  optional string unit_price = 8;
+}
+message CreateProductResponse {
+  ProductFullInfo product = 1;
+}
+message UpdateProductRequest {
+  string item_id = 1;
+  optional string sku = 2;
+  optional string description = 3;
+  bool update_description = 4;
+  optional string notes = 5;
+  bool update_notes = 6;
+  optional bool is_portal_ready = 7;
+}
+message UpdateProductResponse {
+  ProductFullInfo product = 1;
+}
+message DeleteProductRequest {
+  string item_id = 1;
+}
+message DeleteProductResponse {
+  ProductFullInfo product = 1;
+}
+message ChangeProductProductLineRequest {
+  string item_id = 1;
+  string product_line_id = 2;
+}
+message ChangeProductProductLineResponse {
+  ProductFullInfo product = 1;
+}
+message ValidateProductsRequest {
+  map<string, string> products_map = 1;
+}
+message ValidateProductsResponse {
+  map<string, ProductFullInfo> products = 1;
+}
+message ProductLineInfo {
+  string id = 1;
+  string name = 2;
+  optional string description = 3;
+  optional string notes = 4;
+  string commission_policy = 5;
+  string freight_policy = 6;
+  string unit_group_id = 7;
+  optional string account_id = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+  optional ItemCategoryUnitGroupInfo unit_group = 11;
+}
+message ListProductLinesRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+}
+message ListProductLinesResponse {
+  repeated ProductLineInfo product_lines = 1;
+  PageInfo page_info = 2;
+}
+message GetProductLineRequest {
+  string id = 1;
+}
+message GetProductLineResponse {
+  ProductLineInfo product_line = 1;
+}
+message CreateProductLineRequest {
+  string name = 1;
+  string unit_group_id = 2;
+  string commission_policy = 3;
+  string freight_policy = 4;
+}
+message CreateProductLineResponse {
+  ProductLineInfo product_line = 1;
+}
+message UpdateProductLineRequest {
+  string id = 1;
+  optional string name = 2;
+  optional string commission_policy = 3;
+  optional string freight_policy = 4;
+  optional string unit_group_id = 5;
+}
+message UpdateProductLineResponse {
+  ProductLineInfo product_line = 1;
+}
+message DeleteProductLineRequest {
+  string id = 1;
+}
+message ProductTypeInfo {
+  string id = 1;
+  string name = 2;
+  string code = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp updated_at = 5;
+}
+message ListProductTypesRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+}

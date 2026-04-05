@@ -1,0 +1,35 @@
+package userep
+
+import (
+	"context"
+	"net/http"
+
+	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	apierror "github.com/augno/api/shared/errors"
+)
+
+// GetUserRequest is the request to retrieve a single user by ID.
+type GetUserRequest struct {
+	// The ID of the user to retrieve.
+	UserID string `path:"id" validate:"required"`
+}
+
+type GetUserEndpoint struct{}
+
+func (e *GetUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetUserRequest, *apiresource.User] {
+	return &apiendpoint.APIEndpoint[*GetUserRequest, *apiresource.User]{
+		Title:             "Get User",
+		Description:       "Returns a single user's profile by its ID.",
+		Method:            http.MethodGet,
+		Route:             "/v1/identity/users/{id}",
+		Request:           &GetUserRequest{},
+		Response:          &apiresource.User{},
+		SuccessStatusCode: http.StatusOK,
+		Public:            false,
+		Preview:           true,
+		ServiceHandler: func(svc any) func(ctx context.Context, req *GetUserRequest) (*apiresource.User, *apierror.APIError) {
+			return svc.(UserSvc).GetUser
+		},
+	}
+}

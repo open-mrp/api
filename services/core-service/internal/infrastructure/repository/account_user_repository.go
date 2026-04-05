@@ -2,12 +2,15 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"time"
 
 	"github.com/augno/api/services/core-service/internal/domain"
 	"github.com/augno/api/services/core-service/internal/infrastructure/sqlc"
+	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/db"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/pagination"
 	"github.com/augno/api/shared/tracing"
 )
 
@@ -62,11 +65,12 @@ func (r *accountUserRepoImpl) FindAffiliationsByUserID(ctx context.Context, user
 	affiliations := make([]domain.AccountAffiliation, len(rows))
 	for i, row := range rows {
 		affiliations[i] = domain.AccountAffiliation{
-			AccountID:   row.AccountID,
-			AccountName: row.AccountName,
-			RoleID:      row.RoleID,
-			RoleName:    row.RoleName,
-			LastUsedAt:  db.TimeFromNullTime(row.LastUsedAt),
+			AccountID:    row.AccountID,
+			AccountName:  row.AccountName,
+			RoleID:       row.RoleID,
+			RoleName:     row.RoleName,
+			RoleTypeCode: row.RoleTypeCode,
+			LastUsedAt:   db.TimeFromNullTime(row.LastUsedAt),
 		}
 	}
 
@@ -176,3 +180,367 @@ func (r *accountUserRepoImpl) ReactivateUsers(ctx context.Context, accountID str
 	return rows, nil
 }
 
+func (r *accountUserRepoImpl) List(ctx context.Context, params domain.ListAccountUsersParams) (*domain.ListAccountUsersResult, *apierror.APIError) {
+	ctx, span := accountUserRepoTracer.Start(ctx, "repository.account_user.list")
+	defer span.End()
+
+	queryLike := accountUserQueryLike(params.Query)
+
+	countResult, err := r.queries.CountAccountUsersFiltered(ctx, sqlc.CountAccountUsersFilteredParams{
+		AccountID:      params.AccountID,
+		IncludeRemoved: params.IncludeRemoved,
+		RoleType:       db.NullStringPtr(params.RoleType),
+		Query:          db.NullStringPtr(params.Query),
+		Query_2:        db.NullStringPtr(params.Query),
+		QueryLike:      queryLike,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	base := sqlc.ListAccountUsersForwardParams{
+		AccountID:      params.AccountID,
+		IncludeRemoved: params.IncludeRemoved,
+		RoleType:       db.NullStringPtr(params.RoleType),
+		Query:          db.NullStringPtr(params.Query),
+		Query_2:        db.NullStringPtr(params.Query),
+		QueryLike:      queryLike,
+		Limit:          params.Limit + 1,
+	}
+
+	var cursorDir *pagination.Direction
+	var items []*domain.AccountUserDetail
+	var pageInfo pagination.PageInfo
+
+	if params.Cursor != nil {
+		cur, err := pagination.DecodeStringCursor(*params.Cursor)
+		if err != nil {
+			return nil, apierror.NewValidationError("Invalid pagination cursor.")
+		}
+		cursorDir = &cur.Direction
+
+		if cur.Direction == pagination.DirectionBackward {
+			brows, err := r.queries.ListAccountUsersBackward(ctx, sqlc.ListAccountUsersBackwardParams{
+				AccountID:       base.AccountID,
+				IncludeRemoved:  base.IncludeRemoved,
+				RoleType:        base.RoleType,
+				Query:           base.Query,
+				Query_2:         base.Query_2,
+				QueryLike:       base.QueryLike,
+				CursorCreatedAt: cur.OccurredAt,
+				CursorID:        cur.ID,
+				Limit:           base.Limit,
+			})
+			if apiErr := db.MapSQLError(err); apiErr != nil {
+				return nil, tracing.Trace(span, apiErr)
+			}
+			details := make([]*domain.AccountUserDetail, len(brows))
+			for i := range brows {
+				details[i] = mapAccountUserDetailBackwardRow(brows[i])
+			}
+			items, pageInfo = pagination.BuildPageString(details, params.Limit, cursorDir, accountUserDetailCreatedAt, accountUserDetailID)
+		} else {
+			frows, err := r.queries.ListAccountUsersForward(ctx, sqlc.ListAccountUsersForwardParams{
+				AccountID:       base.AccountID,
+				IncludeRemoved:  base.IncludeRemoved,
+				RoleType:        base.RoleType,
+				Query:           base.Query,
+				Query_2:         base.Query_2,
+				QueryLike:       base.QueryLike,
+				CursorCreatedAt: sql.NullTime{Time: cur.OccurredAt, Valid: true},
+				CursorID:        sql.NullString{String: cur.ID, Valid: true},
+				Limit:           base.Limit,
+			})
+			if apiErr := db.MapSQLError(err); apiErr != nil {
+				return nil, tracing.Trace(span, apiErr)
+			}
+			details := make([]*domain.AccountUserDetail, len(frows))
+			for i := range frows {
+				details[i] = mapAccountUserDetailRow(frows[i])
+			}
+			items, pageInfo = pagination.BuildPageString(details, params.Limit, cursorDir, accountUserDetailCreatedAt, accountUserDetailID)
+		}
+	} else {
+		frows, err := r.queries.ListAccountUsersForward(ctx, base)
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		details := make([]*domain.AccountUserDetail, len(frows))
+		for i := range frows {
+			details[i] = mapAccountUserDetailRow(frows[i])
+		}
+		items, pageInfo = pagination.BuildPageString(details, params.Limit, cursorDir, accountUserDetailCreatedAt, accountUserDetailID)
+	}
+
+	return &domain.ListAccountUsersResult{
+		Items:      items,
+		PageInfo:   pageInfo,
+		TotalCount: countResult,
+	}, nil
+}
+
+func accountUserQueryLike(query *string) interface{} {
+	if query == nil {
+		return nil
+	}
+	if *query == "" {
+		return nil
+	}
+	return *query
+}
+
+func accountUserDetailCreatedAt(d *domain.AccountUserDetail) time.Time { return d.CreatedAt }
+func accountUserDetailID(d *domain.AccountUserDetail) string           { return d.ID }
+
+func mapAccountUserDetailBackwardRow(row sqlc.ListAccountUsersBackwardRow) *domain.AccountUserDetail {
+	return &domain.AccountUserDetail{
+		ID:             row.ID,
+		UserID:         row.UserID,
+		Name:           db.StringFromNullString(row.Name),
+		Email:          db.StringFromNullString(row.Email),
+		Username:       db.StringFromNullString(row.Username),
+		ImageURL:       db.StringFromNullString(row.ImageUrl),
+		EmailVerified:  row.EmailVerified.Valid,
+		RoleID:         db.StringFromNullString(row.RoleID),
+		RoleName:       db.StringFromNullString(row.RoleName),
+		RoleTypeCode:   db.StringFromNullString(row.RoleTypeCode),
+		DepartmentID:   db.StringFromNullString(row.DepartmentID),
+		DepartmentName: db.StringFromNullString(row.DepartmentName),
+		StatusCode:     constants.AccountUserStatus(row.StatusCode),
+		LastUsedAt:     db.TimeFromNullTime(row.LastUsedAt),
+		CreatedAt:      row.CreatedAt,
+		UpdatedAt:      row.UpdatedAt,
+	}
+}
+
+func (r *accountUserRepoImpl) GetDetail(ctx context.Context, accountID, userID string) (*domain.AccountUserDetail, *apierror.APIError) {
+	ctx, span := accountUserRepoTracer.Start(ctx, "repository.account_user.get_detail")
+	defer span.End()
+
+	row, err := r.queries.GetAccountUserDetail(ctx, sqlc.GetAccountUserDetailParams{
+		AccountID: accountID,
+		UserID:    userID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	return mapAccountUserDetailFromGetRow(row), nil
+}
+
+func (r *accountUserRepoImpl) GetDetailByAccountAndID(ctx context.Context, accountID, accountUserID string) (*domain.AccountUserDetail, *apierror.APIError) {
+	ctx, span := accountUserRepoTracer.Start(ctx, "repository.account_user.get_detail_by_account_and_id")
+	defer span.End()
+
+	row, err := r.queries.GetAccountUserDetailByAccountAndID(ctx, sqlc.GetAccountUserDetailByAccountAndIDParams{
+		AccountID: accountID,
+		ID:        accountUserID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	return mapAccountUserDetailFromGetByIDRow(row), nil
+}
+
+func (r *accountUserRepoImpl) Create(ctx context.Context, id, accountID, userID string, roleID, departmentID *string) *apierror.APIError {
+	ctx, span := accountUserRepoTracer.Start(ctx, "repository.account_user.create")
+	defer span.End()
+
+	err := r.queries.InsertAccountUser(ctx, sqlc.InsertAccountUserParams{
+		ID:           id,
+		AccountID:    accountID,
+		UserID:       userID,
+		RoleID:       db.NullStringPtr(roleID),
+		DepartmentID: db.NullStringPtr(departmentID),
+		StatusCode:   "active",
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	return nil
+}
+
+func (r *accountUserRepoImpl) Update(ctx context.Context, accountUserID string, roleID, departmentID *string) *apierror.APIError {
+	ctx, span := accountUserRepoTracer.Start(ctx, "repository.account_user.update")
+	defer span.End()
+
+	err := r.queries.UpdateAccountUserRoleAndDepartment(ctx, sqlc.UpdateAccountUserRoleAndDepartmentParams{
+		ID:           accountUserID,
+		RoleID:       db.NullStringPtr(roleID),
+		DepartmentID: db.NullStringPtr(departmentID),
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	return nil
+}
+
+func (r *accountUserRepoImpl) SoftDelete(ctx context.Context, accountUserID string) *apierror.APIError {
+	ctx, span := accountUserRepoTracer.Start(ctx, "repository.account_user.soft_delete")
+	defer span.End()
+
+	result, err := r.queries.SoftDeleteAccountUser(ctx, accountUserID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to check rows affected."))
+	}
+	if rowsAffected == 0 {
+		return tracing.Trace(span, apierror.NewResourceNotFoundError("Account user not found."))
+	}
+
+	return nil
+}
+
+func (r *accountUserRepoImpl) UpdateStatus(ctx context.Context, accountUserID string, status constants.AccountUserStatus) *apierror.APIError {
+	ctx, span := accountUserRepoTracer.Start(ctx, "repository.account_user.update_status")
+	defer span.End()
+
+	err := r.queries.UpdateAccountUserStatus(ctx, sqlc.UpdateAccountUserStatusParams{
+		ID:         accountUserID,
+		StatusCode: string(status),
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	return nil
+}
+
+func (r *accountUserRepoImpl) RevokeRefreshTokensByUserID(ctx context.Context, userID string) *apierror.APIError {
+	ctx, span := accountUserRepoTracer.Start(ctx, "repository.account_user.revoke_refresh_tokens")
+	defer span.End()
+
+	err := r.queries.RevokeRefreshTokensByUserID(ctx, userID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	return nil
+}
+
+func (r *accountUserRepoImpl) FindFirstAccountIDByUserID(ctx context.Context, userID string) (string, *apierror.APIError) {
+	ctx, span := accountUserRepoTracer.Start(ctx, "repository.account_user.find_first_account_id_by_user_id")
+	defer span.End()
+
+	accountID, err := r.queries.FindFirstAccountIDByUserID(ctx, userID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return "", tracing.Trace(span, apiErr)
+	}
+
+	return accountID, nil
+}
+
+func mapAccountUserDetailRow(row sqlc.ListAccountUsersForwardRow) *domain.AccountUserDetail {
+	return &domain.AccountUserDetail{
+		ID:             row.ID,
+		UserID:         row.UserID,
+		Name:           db.StringFromNullString(row.Name),
+		Email:          db.StringFromNullString(row.Email),
+		Username:       db.StringFromNullString(row.Username),
+		ImageURL:       db.StringFromNullString(row.ImageUrl),
+		EmailVerified:  row.EmailVerified.Valid,
+		RoleID:         db.StringFromNullString(row.RoleID),
+		RoleName:       db.StringFromNullString(row.RoleName),
+		RoleTypeCode:   db.StringFromNullString(row.RoleTypeCode),
+		DepartmentID:   db.StringFromNullString(row.DepartmentID),
+		DepartmentName: db.StringFromNullString(row.DepartmentName),
+		StatusCode:     constants.AccountUserStatus(row.StatusCode),
+		LastUsedAt:     db.TimeFromNullTime(row.LastUsedAt),
+		CreatedAt:      row.CreatedAt,
+		UpdatedAt:      row.UpdatedAt,
+	}
+}
+
+func mapAccountUserDetailFromGetRow(row sqlc.GetAccountUserDetailRow) *domain.AccountUserDetail {
+	return &domain.AccountUserDetail{
+		ID:             row.ID,
+		UserID:         row.UserID,
+		Name:           db.StringFromNullString(row.Name),
+		Email:          db.StringFromNullString(row.Email),
+		Username:       db.StringFromNullString(row.Username),
+		ImageURL:       db.StringFromNullString(row.ImageUrl),
+		EmailVerified:  row.EmailVerified.Valid,
+		RoleID:         db.StringFromNullString(row.RoleID),
+		RoleName:       db.StringFromNullString(row.RoleName),
+		RoleTypeCode:   db.StringFromNullString(row.RoleTypeCode),
+		DepartmentID:   db.StringFromNullString(row.DepartmentID),
+		DepartmentName: db.StringFromNullString(row.DepartmentName),
+		StatusCode:     constants.AccountUserStatus(row.StatusCode),
+		LastUsedAt:     db.TimeFromNullTime(row.LastUsedAt),
+		CreatedAt:      row.CreatedAt,
+		UpdatedAt:      row.UpdatedAt,
+	}
+}
+
+func mapAccountUserDetailFromGetByIDRow(row sqlc.GetAccountUserDetailByAccountAndIDRow) *domain.AccountUserDetail {
+	return &domain.AccountUserDetail{
+		ID:             row.ID,
+		UserID:         row.UserID,
+		Name:           db.StringFromNullString(row.Name),
+		Email:          db.StringFromNullString(row.Email),
+		Username:       db.StringFromNullString(row.Username),
+		ImageURL:       db.StringFromNullString(row.ImageUrl),
+		EmailVerified:  row.EmailVerified.Valid,
+		RoleID:         db.StringFromNullString(row.RoleID),
+		RoleName:       db.StringFromNullString(row.RoleName),
+		RoleTypeCode:   db.StringFromNullString(row.RoleTypeCode),
+		DepartmentID:   db.StringFromNullString(row.DepartmentID),
+		DepartmentName: db.StringFromNullString(row.DepartmentName),
+		StatusCode:     constants.AccountUserStatus(row.StatusCode),
+		LastUsedAt:     db.TimeFromNullTime(row.LastUsedAt),
+		CreatedAt:      row.CreatedAt,
+		UpdatedAt:      row.UpdatedAt,
+	}
+}
+
+func (r *accountUserRepoImpl) FindTenancyAccountsByUserID(ctx context.Context, userID string) ([]domain.TenancyAccount, *apierror.APIError) {
+	ctx, span := accountUserRepoTracer.Start(ctx, "repository.account_user.find_tenancy_accounts_by_user_id")
+	defer span.End()
+
+	rows, err := r.queries.FindTenancyAccountsByUserID(ctx, userID)
+	if err != nil {
+		return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to find tenancy accounts by user ID."))
+	}
+
+	accounts := make([]domain.TenancyAccount, len(rows))
+	for i, row := range rows {
+		accounts[i] = domain.TenancyAccount{
+			AccountID:             row.AccountID,
+			AccountName:           row.AccountName,
+			AccountTypeCode:       row.AccountTypeCode,
+			OnboardingStatusCode:  row.OnboardingStatusCode,
+			PlanCode:              row.PlanCode,
+			AccountUserID:         row.AccountUserID,
+			AccountUserStatusCode: row.AccountUserStatusCode,
+			LastUsedAt:            db.TimeFromNullTime(row.LastUsedAt),
+			RoleID:                db.StringFromNullString(row.RoleID),
+			RoleName:              db.StringFromNullString(row.RoleName),
+			RoleTypeCode:          db.StringFromNullString(row.RoleTypeCode),
+			OwnerAccountID:        db.StringFromNullString(row.OwnerAccountID),
+		}
+	}
+
+	return accounts, nil
+}
+
+func (r *accountUserRepoImpl) MarkUsedByAccountAndUser(ctx context.Context, accountID, userID string) *apierror.APIError {
+	ctx, span := accountUserRepoTracer.Start(ctx, "repository.account_user.mark_used_by_account_and_user")
+	defer span.End()
+
+	err := r.queries.MarkUsedByAccountAndUser(ctx, sqlc.MarkUsedByAccountAndUserParams{
+		AccountID: accountID,
+		UserID:    userID,
+	})
+	if err != nil {
+		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to mark account user as used."))
+	}
+
+	return nil
+}

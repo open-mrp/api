@@ -15,13 +15,15 @@ import (
 var stripeWebhookSvcTracer = tracing.GetTracer("billing-service.stripe_webhook_service")
 
 type StripeWebhookSvcConfig struct {
-	Repos        domain.RepoFactory
-	StripeClient domain.StripeClient
+	Repos         domain.RepoFactory
+	StripeClient  domain.StripeClient
+	VerboseErrors bool // when true, include underlying Stripe error in 400 response (e.g. dev)
 }
 
 type stripeWebhookSvcImpl struct {
-	repos        domain.RepoFactory
-	stripeClient domain.StripeClient
+	repos         domain.RepoFactory
+	stripeClient  domain.StripeClient
+	verboseErrors bool
 }
 
 func (c *StripeWebhookSvcConfig) validate() error {
@@ -40,20 +42,36 @@ func NewStripeWebhookSvc(config *StripeWebhookSvcConfig) domain.StripeWebhookSvc
 	}
 
 	return &stripeWebhookSvcImpl{
-		repos:        config.Repos,
-		stripeClient: config.StripeClient,
+		repos:         config.Repos,
+		stripeClient:  config.StripeClient,
+		verboseErrors: config.VerboseErrors,
 	}
 }
 
 // handledEventTypes is the set of Stripe event types we process.
 // Unhandled types are acknowledged with a 200 but not enqueued.
 var handledEventTypes = map[string]bool{
-	"customer.subscription.updated": true,
-	"customer.subscription.deleted": true,
-	"customer.deleted":              true,
-	"invoice.payment_failed":        true,
+	"customer.deleted": true,
+	// v2 pricing plan subscription events
+	"v2.billing.pricing_plan_subscription.servicing_activated": true,
+	"v2.billing.pricing_plan_subscription.servicing_canceled":  true,
+	"v2.billing.pricing_plan_subscription.collection_paused":   true,
+	"v2.billing.pricing_plan_subscription.collection_current":  true,
+	"v2.billing.cadence.errored":                               true,
+	// New v2 events
+	"v2.billing.pricing_plan_subscription.servicing_paused":                    true,
+	"v2.billing.pricing_plan_subscription.collection_awaiting_customer_action": true,
+	"v2.billing.cadence.billed":                                                true,
+	"v2.billing.cadence.canceled":                                              true,
 }
 
+// ProcessWebhookEvent verifies and enqueues an incoming Stripe webhook event for async processing.
+//
+// 1. Verify the webhook signature against the raw payload to confirm authenticity.
+// 2. If the event type is not in the handled set, acknowledge it without enqueuing.
+// 3. Wrap the verified payload in an outbox message for the billing webhook queue.
+// 4. Persist the outbox message for later dispatch via RabbitMQ.
+// 5. Return a success result.
 func (s *stripeWebhookSvcImpl) ProcessWebhookEvent(ctx context.Context, input domain.ProcessWebhookEventInput) (*domain.ProcessWebhookEventResult, *apierror.APIError) {
 	ctx, span := tracing.StartSpan(ctx, stripeWebhookSvcTracer, "service.stripe_webhook.process_webhook_event")
 	defer span.End()
@@ -74,7 +92,13 @@ func (s *stripeWebhookSvcImpl) ProcessWebhookEvent(ctx context.Context, input do
 			"signature_length", len(input.StripeSignature),
 		)
 		span.RecordError(err)
-		return nil, apierror.NewValidationError("invalid webhook signature")
+		publicMsg := "invalid webhook signature"
+		if s.verboseErrors {
+			publicMsg = "invalid webhook signature: " + err.Error()
+		}
+		apiErr := apierror.NewValidationError(publicMsg)
+		apiErr.InternalMessage = err.Error()
+		return nil, apiErr
 	}
 
 	slog.InfoContext(ctx, "webhook signature verified",

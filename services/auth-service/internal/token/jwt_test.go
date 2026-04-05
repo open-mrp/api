@@ -9,6 +9,7 @@ import (
 )
 
 func TestEncodeJWT_Success(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	secret := "test-secret-key-123"
 	userID := "user123"
@@ -41,6 +42,7 @@ func TestEncodeJWT_Success(t *testing.T) {
 }
 
 func TestEncodeJWT_EmptyUserID(t *testing.T) {
+	t.Parallel()
 	_, err := EncodeJWT(context.Background(), "test-secret", "", time.Hour, JWTTypeAccess)
 	if err == nil {
 		t.Fatal("EncodeJWT() expected error for empty userID but got none")
@@ -51,6 +53,7 @@ func TestEncodeJWT_EmptyUserID(t *testing.T) {
 }
 
 func TestEncodeJWT_EmptyTokenType(t *testing.T) {
+	t.Parallel()
 	_, err := EncodeJWT(context.Background(), "test-secret", "user123", time.Hour, "")
 	if err == nil {
 		t.Fatal("EncodeJWT() expected error for empty token type but got none")
@@ -61,6 +64,7 @@ func TestEncodeJWT_EmptyTokenType(t *testing.T) {
 }
 
 func TestDecodeJWT_Success(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	secret := "test-secret-key-123"
 	userID := "user123"
@@ -86,6 +90,7 @@ func TestDecodeJWT_Success(t *testing.T) {
 }
 
 func TestDecodeJWT_InvalidToken(t *testing.T) {
+	t.Parallel()
 	secret := "test-secret-key-123"
 	testCases := []struct {
 		name  string
@@ -113,6 +118,7 @@ func TestDecodeJWT_InvalidToken(t *testing.T) {
 }
 
 func TestDecodeJWT_WrongTokenType(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	secret := "test-secret-key-123"
 
@@ -131,6 +137,7 @@ func TestDecodeJWT_WrongTokenType(t *testing.T) {
 }
 
 func TestDecodeJWT_WrongSecret(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 
 	token, err := EncodeJWT(ctx, "secret-one", "user123", time.Hour, JWTTypeAccess)
@@ -148,6 +155,7 @@ func TestDecodeJWT_WrongSecret(t *testing.T) {
 }
 
 func TestDecodeJWT_ExpiredToken(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	secret := "test-secret-key-123"
 
@@ -166,6 +174,7 @@ func TestDecodeJWT_ExpiredToken(t *testing.T) {
 }
 
 func TestEncodeJWT_DifferentExpirationTimes(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	secret := "test-secret-key-123"
 	userID := "user123"
@@ -203,6 +212,7 @@ func TestEncodeJWT_DifferentExpirationTimes(t *testing.T) {
 }
 
 func TestJWT_Integration(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	secret := "integration-test-secret-456"
 	userID := "integration-user-789"
@@ -241,6 +251,7 @@ func TestJWT_Integration(t *testing.T) {
 }
 
 func TestSanitizeJWT(t *testing.T) {
+	t.Parallel()
 	token := "eyJhbGciOiJIUzI1NiJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIn0.abc123"
 	sanitized := SanitizeJWT(token)
 	if sanitized == token {

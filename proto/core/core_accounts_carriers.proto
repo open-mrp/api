@@ -1,0 +1,409 @@
+syntax = "proto3";
+
+// CoreService message types (imported by core.proto).
+package core;
+
+import "google/protobuf/timestamp.proto";
+import "core/core_identity_context.proto";
+option go_package = "shared/proto/core;core";
+
+message GetStripeStatusResponse {
+  bool has_stripe_integration = 1;
+}
+message AdjustmentTypeInfo {
+  string id = 1;
+  string name = 2;
+  string code = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp updated_at = 5;
+}
+message ListAdjustmentTypesRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+}
+message ListAdjustmentTypesResponse {
+  repeated AdjustmentTypeInfo adjustment_types = 1;
+  PageInfo page_info = 2;
+}
+message AccountInfo {
+  string id = 1;
+  string name = 2;
+  optional string default_billing_address_id = 3;
+  optional string default_shipping_address_id = 4;
+  optional AccountBrandingInfo branding = 5;
+  optional AccountPortalInfo portal = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+message AccountBrandingInfo {
+  string id = 1;
+  optional string support_email = 2;
+  optional string phone_number = 3;
+  optional string logo_url = 4;
+  optional string facebook_handle = 5;
+  optional string instagram_handle = 6;
+  optional string linkedin_handle = 7;
+  optional string twitter_handle = 8;
+  optional string website_url = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+}
+message AccountPortalInfo {
+  string id = 1;
+  string slug = 2;
+  google.protobuf.Timestamp created_at = 3;
+  google.protobuf.Timestamp updated_at = 4;
+}
+message PublicAccountInfo {
+  string id = 1;
+  string name = 2;
+  string slug = 3;
+  optional string default_billing_address_id = 4;
+  optional string support_email = 5;
+  optional string logo_url = 6;
+}
+message GetAccountRequest {
+  string id = 1;
+}
+message GetAccountResponse {
+  AccountInfo account = 1;
+}
+message GetAccountBySlugRequest {
+  string slug = 1;
+}
+message GetAccountBySlugResponse {
+  PublicAccountInfo account = 1;
+}
+message UpdateAccountRequest {
+  string id = 1;
+  optional string name = 2;
+  optional string support_email = 3;
+  optional string phone_number = 4;
+  optional string slug = 5;
+  optional string website_url = 6;
+  optional string facebook_handle = 7;
+  optional string instagram_handle = 8;
+  optional string linkedin_handle = 9;
+  optional string twitter_handle = 10;
+}
+message UpdateAccountResponse {
+  AccountInfo account = 1;
+}
+message UploadAccountPhotoRequest {
+  string id = 1;
+  bytes file = 2;
+  string content_type = 3;
+}
+message UploadAccountPhotoResponse {
+  bool success = 1;
+}
+message GetAccountLogoURLRequest {
+  string id = 1;
+}
+message GetAccountLogoURLResponse {
+  optional string url = 1;
+}
+message PropertyInfo {
+  string id = 1;
+  string name = 2;
+  bool is_public = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp updated_at = 5;
+  repeated AttributeInfo attributes = 6;
+}
+message AttributeInfo {
+  string id = 1;
+  string value = 2;
+  string color_code = 3;
+  int32 sort_order = 4;
+  bool is_public = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+message ListPropertiesRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+  repeated string includes = 4;
+}
+message ListPropertiesResponse {
+  repeated PropertyInfo properties = 1;
+  PageInfo page_info = 2;
+}
+message GetPropertyRequest {
+  string id = 1;
+  repeated string includes = 2;
+}
+message GetPropertyResponse {
+  PropertyInfo property = 1;
+}
+message CreatePropertyRequest {
+  string name = 1;
+  repeated string includes = 2;
+}
+message CreatePropertyResponse {
+  PropertyInfo property = 1;
+}
+message UpdatePropertyRequest {
+  string id = 1;
+  optional string name = 2;
+  repeated string includes = 3;
+}
+message UpdatePropertyResponse {
+  PropertyInfo property = 1;
+}
+message DeletePropertyRequest {
+  string id = 1;
+}
+message ListAttributesRequest {
+  string property_id = 1;
+  optional string cursor = 2;
+  int32 limit = 3;
+  optional string query = 4;
+}
+message ListAttributesResponse {
+  repeated AttributeInfo attributes = 1;
+  PageInfo page_info = 2;
+}
+message GetAttributeRequest {
+  string property_id = 1;
+  string id = 2;
+}
+message GetAttributeResponse {
+  AttributeInfo attribute = 1;
+}
+message CreateAttributeRequest {
+  string property_id = 1;
+  string value = 2;
+  string color_code = 3;
+  int32 sort_order = 4;
+}
+message CreateAttributeResponse {
+  AttributeInfo attribute = 1;
+}
+message UpdateAttributeRequest {
+  string property_id = 1;
+  string id = 2;
+  optional string value = 3;
+  optional string color_code = 4;
+  optional int32 sort_order = 5;
+}
+message UpdateAttributeResponse {
+  AttributeInfo attribute = 1;
+}
+message DeleteAttributeRequest {
+  string property_id = 1;
+  string id = 2;
+}
+message CarrierInfo {
+  string id = 1;
+  string name = 2;
+  optional string code = 3;
+  optional string shippo_carrier_account_id = 4;
+  optional string account_number = 5;
+  bool is_portal_enabled = 6;
+  bool is_default = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+  optional google.protobuf.Timestamp deleted_at = 10;
+  repeated ServiceLevelInfo service_levels = 11;
+  // The account ID that owns this carrier. Null for system carriers.
+  optional string account_id = 12;
+}
+message ServiceLevelInfo {
+  string id = 1;
+  string name = 2;
+  string code = 3;
+  optional string service_level_token = 4;
+  bool is_portal_enabled = 5;
+  bool is_default = 6;
+  string carrier_id = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+  // The account ID that owns this service level. Null for system options.
+  optional string account_id = 10;
+}
+message ListCarriersRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+}
+message ListCarriersResponse {
+  repeated CarrierInfo carriers = 1;
+  PageInfo page_info = 2;
+}
+message GetCarrierRequest {
+  string id = 1;
+}
+message GetCarrierResponse {
+  CarrierInfo carrier = 1;
+}
+message CreateCarrierRequest {
+  string name = 1;
+  optional string code = 2;
+  optional string account_number = 3;
+  bool is_portal_enabled = 4;
+}
+message CreateCarrierResponse {
+  CarrierInfo carrier = 1;
+}
+message UpdateCarrierRequest {
+  string id = 1;
+  optional string name = 2;
+  optional bool is_portal_enabled = 3;
+}
+message UpdateCarrierResponse {
+  CarrierInfo carrier = 1;
+}
+message DeleteCarrierRequest {
+  string id = 1;
+}
+message InitiateCarrierOAuthRequest {
+  string carrier_id = 1;
+  string redirect_uri = 2;
+  optional string state = 3;
+}
+message InitiateCarrierOAuthResponse {
+  string oauth_url = 1;
+}
+message GetCarrierOAuthStatusRequest {
+  string carrier_id = 1;
+}
+message GetCarrierOAuthStatusResponse {
+  string status = 1;
+}
+message SyncServiceLevelsRequest {
+  string carrier_id = 1;
+}
+message SyncServiceLevelsResponse {
+  CarrierInfo carrier = 1;
+}
+message ListServiceLevelsRequest {
+  string carrier_id = 1;
+  optional string cursor = 2;
+  int32 limit = 3;
+  optional string query = 4;
+}
+message ListServiceLevelsResponse {
+  repeated ServiceLevelInfo service_levels = 1;
+  PageInfo page_info = 2;
+}
+message GetServiceLevelRequest {
+  string carrier_id = 1;
+  string id = 2;
+}
+message GetServiceLevelResponse {
+  ServiceLevelInfo service_level = 1;
+}
+message CreateServiceLevelRequest {
+  string carrier_id = 1;
+  string name = 2;
+  string code = 3;
+  optional string service_level_token = 4;
+  bool is_portal_enabled = 5;
+  bool is_default = 6;
+}
+message CreateServiceLevelResponse {
+  ServiceLevelInfo service_level = 1;
+}
+message UpdateServiceLevelRequest {
+  string carrier_id = 1;
+  string id = 2;
+  optional string name = 3;
+  optional string code = 4;
+  optional bool is_portal_enabled = 5;
+  optional bool is_default = 6;
+}
+message UpdateServiceLevelResponse {
+  ServiceLevelInfo service_level = 1;
+}
+message DeleteServiceLevelRequest {
+  string carrier_id = 1;
+  string id = 2;
+}
+message RateInfo {
+  string id = 1;
+  string value = 2;
+  string numerator_unit_id = 3;
+  string denominator_unit_id = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+  string numerator_unit_name = 7;
+  string numerator_unit_abbreviation = 8;
+  string numerator_unit_type = 9;
+  string denominator_unit_name = 10;
+  string denominator_unit_abbreviation = 11;
+  string denominator_unit_type = 12;
+}
+message ItemCategoryInfo {
+  string id = 1;
+  string name = 2;
+  string item_category_type_code = 3;
+  string unit_group_id = 4;
+  optional string notes = 5;
+  optional string account_id = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+  repeated ItemCategoryPropertyInfo properties = 9;
+  optional ItemCategoryUnitGroupInfo unit_group = 10;
+}
+message ItemCategoryPropertyInfo {
+  string id = 1;
+  string name = 2;
+}
+message ItemCategoryUnitGroupInfo {
+  string id = 1;
+  string name = 2;
+  string base_unit_id = 3;
+  string type = 4;
+}
+message ItemAttributeInfo {
+  string id = 1;
+  string value = 2;
+  optional string color_code = 3;
+  int32 sort_order = 4;
+  string property_id = 5;
+}
+message ItemInfo {
+  string id = 1;
+  string sku = 2;
+  optional string description = 3;
+  optional string notes = 4;
+  string item_type_code = 5;
+  ItemCategoryInfo category = 6;
+  RateInfo unit_value = 7;
+  RateInfo unit_cost = 8;
+  RateInfo burn_rate = 9;
+  string account_id = 10;
+  bool is_dirty = 11;
+  google.protobuf.Timestamp created_at = 12;
+  google.protobuf.Timestamp updated_at = 13;
+  repeated ItemAttributeInfo attributes = 14;
+}
+message ListItemsRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+  repeated string types = 4;
+  repeated string category_ids = 5;
+  repeated string attribute_ids = 6;
+  optional string supplier_id = 7;
+  optional google.protobuf.Timestamp start_date = 8;
+  optional google.protobuf.Timestamp end_date = 9;
+  bool is_exact_match = 10;
+  bool only_initial_subassemblies = 11;
+}
+message ListItemsResponse {
+  repeated ItemInfo items = 1;
+  PageInfo page_info = 2;
+}
+message GetItemRequest {
+  string id = 1;
+}
+message GetItemResponse {
+  ItemInfo item = 1;
+}
+message GetItemInventoryRequest {
+  string id = 1;
+}

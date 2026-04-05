@@ -1,0 +1,35 @@
+package locationep
+
+import (
+	"context"
+	"net/http"
+
+	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	apierror "github.com/augno/api/shared/errors"
+)
+
+// DeleteLocationRequest is the request to delete a location.
+type DeleteLocationRequest struct {
+	// The ID of the location to delete.
+	LocationID string `path:"id" validate:"required"`
+}
+
+type DeleteLocationEndpoint struct{}
+
+func (e *DeleteLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteLocationRequest, *apiresource.EmptyResource] {
+	return &apiendpoint.APIEndpoint[*DeleteLocationRequest, *apiresource.EmptyResource]{
+		Title:             "Delete Location",
+		Description:       "Deletes a location. Fails if the location has child locations.",
+		Method:            http.MethodDelete,
+		Route:             "/v1/operations/locations/{id}",
+		Request:           &DeleteLocationRequest{},
+		Response:          &apiresource.EmptyResource{},
+		SuccessStatusCode: http.StatusOK,
+		Public:            true,
+		Preview:           true,
+		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteLocationRequest) (*apiresource.EmptyResource, *apierror.APIError) {
+			return svc.(LocationSvc).DeleteLocation
+		},
+	}
+}

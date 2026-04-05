@@ -6,6 +6,7 @@ import (
 )
 
 func TestRandAlphanumericString(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		length   int
@@ -67,6 +68,7 @@ func TestRandAlphanumericString(t *testing.T) {
 }
 
 func TestRandAlphanumericString_Uniqueness(t *testing.T) {
+	t.Parallel()
 	key1, err := RandAlphanumericString(16)
 	if err != nil {
 		t.Fatalf("RandAlphanumericString() unexpected error = %v", err)

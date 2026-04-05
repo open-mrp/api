@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/go-sql-driver/mysql"
+	"github.com/jackc/pgx/v5/pgconn"
 
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -52,6 +53,26 @@ func MapSQLError(err error) *apierror.APIError {
 		}
 	}
 
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) {
+		switch pgErr.Code {
+		case "23505": // unique_violation
+			return apierror.NewResourceExistsError("Resource already exists.")
+		case "23503": // foreign_key_violation
+			return apierror.NewValidationError("Referenced resource does not exist.")
+		case "23502": // not_null_violation
+			return apierror.NewValidationError("A required field is missing.")
+		case "40001", "40P01": // serialization_failure / deadlock_detected
+			return apierror.NewInternalError(err, "Database request timed out.")
+		case "53300", "53400": // too_many_connections / configuration_limit_exceeded
+			return apierror.NewInternalError(err, "Database unavailable.")
+		case "42P01": // undefined_table
+			return apierror.NewInternalError(err, "Database table does not exist.")
+		case "42703": // undefined_column
+			return apierror.NewInternalError(err, "Database column does not exist.")
+		}
+	}
+
 	return apierror.NewInternalError(err, "Database request failed for unknown reason.")
 }
 
@@ -72,13 +93,35 @@ func MapSQLErrorWithDuplicateKeys(err error, mapping DuplicateKeyMapping) *apier
 		}
 	}
 
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+		if fn, ok := mapping[pgErr.ConstraintName]; ok {
+			return fn()
+		}
+	}
+
 	return MapSQLError(err)
+}
+
+// IsDeadlock reports whether err is a MySQL 1213 (deadlock) or
+// PostgreSQL 40P01 (deadlock_detected) / 40001 (serialization_failure) error.
+func IsDeadlock(err error) bool {
+	var mysqlErr *mysql.MySQLError
+	if errors.As(err, &mysqlErr) && mysqlErr.Number == 1213 {
+		return true
+	}
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && (pgErr.Code == "40P01" || pgErr.Code == "40001")
 }
 
 // IsDuplicateEntry reports whether err is a MySQL 1062 (duplicate entry) error.
 func IsDuplicateEntry(err error) bool {
 	var mysqlErr *mysql.MySQLError
-	return errors.As(err, &mysqlErr) && mysqlErr.Number == 1062
+	if errors.As(err, &mysqlErr) && mysqlErr.Number == 1062 {
+		return true
+	}
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "23505"
 }
 
 // extractKeyName parses "Duplicate entry '...' for key '<table>.<key_name>'"

@@ -8,6 +8,7 @@ import (
 )
 
 func TestDocReader_GetTypeDoc(t *testing.T) {
+	t.Parallel()
 	reader := NewDocReader()
 	testType := reflect.TypeOf(testdata.TestStruct{})
 

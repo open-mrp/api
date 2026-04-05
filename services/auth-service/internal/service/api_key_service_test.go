@@ -7,6 +7,7 @@ import (
 
 	factorymock "github.com/augno/api/services/auth-service/internal/domain/mock/factory"
 	mediatormock "github.com/augno/api/services/auth-service/internal/domain/mock/mediator"
+	repositorymock "github.com/augno/api/services/auth-service/internal/domain/mock/repository"
 
 	"github.com/augno/api/services/auth-service/internal/apikey"
 	"github.com/augno/api/services/auth-service/internal/domain"
@@ -23,6 +24,7 @@ type APIKeySvcTestSuite struct {
 	suite.Suite
 	ctrl           *gomock.Controller
 	repoFactory    *factorymock.MockRepoFactory
+	apiKeyRepo     *repositorymock.MockAPIKeyRepo
 	apiKeyMed      *mediatormock.MockAPIKeyMed
 	docAPIKeyMed   *mediatormock.MockDocAPIKeyMed
 	idempotencyMed *mediatormock.MockIdempotencyMed
@@ -37,6 +39,9 @@ func (s *APIKeySvcTestSuite) SetupSuite() {
 	s.idempotencyMed = mediatormock.NewMockIdempotencyMed(s.ctrl)
 
 	s.repoFactory = factorymock.NewMockRepoFactory(s.ctrl)
+	s.apiKeyRepo = repositorymock.NewMockAPIKeyRepo(s.ctrl)
+	s.repoFactory.EXPECT().NewAPIKeyRepo().Return(s.apiKeyRepo).AnyTimes()
+	s.repoFactory.EXPECT().NewOutboxRepo().Return(&stubOutboxRepo{}).AnyTimes()
 
 	s.svc = NewAPIKeySvc(&APIKeySvcConfig{
 		Repos: s.repoFactory,
@@ -56,18 +61,20 @@ func (s *APIKeySvcTestSuite) TearDownSuite() {
 }
 
 func TestAPIKeySvcTestSuite(t *testing.T) {
+	t.Parallel()
 	suite.Run(t, new(APIKeySvcTestSuite))
 }
 
 func (s *APIKeySvcTestSuite) newAdminCtx() context.Context {
 	identity := &types.Identity{
-		Type:            types.IdentityTypeUser,
-		TargetAccountID: strPtr(testOwnerAccountID),
-		AccountMode:     constants.AccountModeProduction,
+		Type:        types.IdentityActorTypeUser,
+		Target:      &types.IdentityTarget{AccountID: testOwnerAccountID},
+		AccountMode: constants.AccountModeProduction,
 		Actor: &types.IdentityActor{
-			Type:         types.IdentityActorTypeInternal,
+			RelationType: types.IdentityRelationTypeInternal,
 			ID:           "usr_test123",
-			RoleTypeCode: strPtr("admin"),
+			AccountID:    new(testOwnerAccountID),
+			RoleTypeCode: new("admin"),
 		},
 	}
 	ctx := appctx.WithIdentity(context.Background(), identity)
@@ -97,6 +104,14 @@ func (s *APIKeySvcTestSuite) TestRotateAPIKey_Success_NoDocAPIKey() {
 	s.idempotencyMed.EXPECT().
 		UpsertIdempotencyKey(gomock.Any(), gomock.Any()).
 		Return(idempotencyKey, nil)
+
+	s.apiKeyRepo.EXPECT().
+		FindByTypeID(gomock.Any(), testAPIKeyTypeID, gomock.Nil()).
+		Return(&apikey.APIKey{
+			TypeID:         testAPIKeyTypeID,
+			OwnerAccountID: testOwnerAccountID,
+		}, nil).
+		Times(2)
 
 	s.apiKeyMed.EXPECT().
 		Rotate(gomock.Any(), gomock.Any()).
@@ -146,6 +161,14 @@ func (s *APIKeySvcTestSuite) TestRotateAPIKey_SyncDocAPIKeyError() {
 	s.idempotencyMed.EXPECT().
 		UpsertIdempotencyKey(gomock.Any(), gomock.Any()).
 		Return(idempotencyKey, nil)
+
+	s.apiKeyRepo.EXPECT().
+		FindByTypeID(gomock.Any(), testAPIKeyTypeID, gomock.Nil()).
+		Return(&apikey.APIKey{
+			TypeID:         testAPIKeyTypeID,
+			OwnerAccountID: testOwnerAccountID,
+		}, nil).
+		Times(1)
 
 	s.apiKeyMed.EXPECT().
 		Rotate(gomock.Any(), gomock.Any()).

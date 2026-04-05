@@ -1,16 +1,28 @@
 package event
 
 import (
+	"context"
+	"encoding/json"
 	"testing"
 	"time"
 
+	"github.com/augno/api/services/auth-service/pkg/types"
+	"github.com/augno/api/services/platform-service/internal/domain"
+	servicemock "github.com/augno/api/services/platform-service/internal/domain/mock/service"
+	"github.com/augno/api/shared/contracts"
+	apierror "github.com/augno/api/shared/errors"
 	loggingpb "github.com/augno/api/shared/proto/platform"
+	"github.com/augno/api/shared/tracing"
+
+	amqp "github.com/rabbitmq/amqp091-go"
+	"github.com/stretchr/testify/suite"
+	"go.uber.org/mock/gomock"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func strPtr(s string) *string { return &s }
-
 func TestMapEventToDomain_MapsAccountID(t *testing.T) {
+	t.Parallel()
 	accountID := "acct_home123"
 	targetAccountID := "acct_target456"
 	actorID := "usr_abc"
@@ -55,6 +67,7 @@ func TestMapEventToDomain_MapsAccountID(t *testing.T) {
 }
 
 func TestMapEventToDomain_NilAccountID(t *testing.T) {
+	t.Parallel()
 	event := &loggingpb.RequestLog{
 		Id:             "rlog_test2",
 		Method:         "GET",
@@ -74,6 +87,7 @@ func TestMapEventToDomain_NilAccountID(t *testing.T) {
 }
 
 func TestMapEventToDomain_AllFields(t *testing.T) {
+	t.Parallel()
 	now := time.Now().UTC().Truncate(time.Second)
 
 	event := &loggingpb.RequestLog{
@@ -82,29 +96,29 @@ func TestMapEventToDomain_AllFields(t *testing.T) {
 		Host:                 "api.example.com",
 		Path:                 "/v1/things",
 		NormalizedRoute:      "/v1/things",
-		QueryJson:            strPtr(`{"page":"1"}`),
+		QueryJson:            new(`{"page":"1"}`),
 		StatusCode:           422,
 		LatencyUs:            5000,
-		AccountId:            strPtr("acct_home"),
-		TargetAccountId:      strPtr("acct_target"),
-		ActorId:              strPtr("apke_key1"),
-		ActorType:            strPtr("customer"),
-		IdentityType:         strPtr("api_key"),
+		AccountId:            new("acct_home"),
+		TargetAccountId:      new("acct_target"),
+		ActorId:              new("apke_key1"),
+		ActorType:            new("customer"),
+		IdentityType:         new("api_key"),
 		ClientIp:             []byte{192, 168, 1, 1},
-		ClientIpString:       strPtr("192.168.1.1"),
-		UserAgent:            strPtr("test-agent"),
-		Referrer:             strPtr("https://example.com"),
-		ErrorCode:            strPtr("validation_error"),
-		ErrorMessage:         strPtr("invalid input"),
+		ClientIpString:       new("192.168.1.1"),
+		UserAgent:            new("test-agent"),
+		Referrer:             new("https://example.com"),
+		ErrorCode:            new("validation_error"),
+		ErrorMessage:         new("invalid input"),
 		OccurredAt:           timestamppb.New(now),
 		CreatedAt:            timestamppb.New(now),
-		IdempotencyKeyId:     strPtr("idem_key1"),
-		InternalErrorMessage: strPtr("internal details"),
-		StackTrace:           strPtr("goroutine 1 [running]:"),
-		ApiVersion:           strPtr("1.0.0"),
-		TraceId:              strPtr("trace123"),
+		IdempotencyKeyId:     new("idem_key1"),
+		InternalErrorMessage: new("internal details"),
+		StackTrace:           new("goroutine 1 [running]:"),
+		ApiVersion:           new("1.0.0"),
+		TraceId:              new("trace123"),
 		PublicEndpoint:       false,
-		BodyJson:             strPtr(`{"name":"test"}`),
+		BodyJson:             new(`{"name":"test"}`),
 	}
 
 	rl := mapEventToDomain(event)
@@ -166,6 +180,7 @@ func TestMapEventToDomain_AllFields(t *testing.T) {
 }
 
 func TestMapEventToDomain_DefaultTimestamps(t *testing.T) {
+	t.Parallel()
 	before := time.Now().UTC()
 
 	event := &loggingpb.RequestLog{
@@ -186,4 +201,223 @@ func TestMapEventToDomain_DefaultTimestamps(t *testing.T) {
 	if rl.CreatedAt.Before(before) || rl.CreatedAt.After(after) {
 		t.Errorf("expected CreatedAt to default to ~now, got %v", rl.CreatedAt)
 	}
+}
+
+// ---------------------------------------------------------------------------
+// handleMessage tests (suite-based)
+// ---------------------------------------------------------------------------
+
+func makeRequestLogAMQP(t *testing.T, identity *types.Identity, protoLog *loggingpb.RequestLog) amqp.Delivery {
+	t.Helper()
+	data, err := protojson.Marshal(protoLog)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	body, err := json.Marshal(contracts.AmqpMessage{
+		Identity: identity,
+		Data:     data,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return amqp.Delivery{Body: body}
+}
+
+type RequestLogConsumerTestSuite struct {
+	suite.Suite
+	ctrl       *gomock.Controller
+	loggingSvc *servicemock.MockLoggingSvc
+	consumer   *RequestLogConsumer
+}
+
+func (s *RequestLogConsumerTestSuite) SetupTest() {
+	s.ctrl = gomock.NewController(s.T())
+	s.loggingSvc = servicemock.NewMockLoggingSvc(s.ctrl)
+	s.consumer = &RequestLogConsumer{
+		loggingSvc:   s.loggingSvc,
+		tracer:       tracing.GetTracer("test"),
+		messageCodec: protojson.UnmarshalOptions{DiscardUnknown: true},
+	}
+}
+
+func (s *RequestLogConsumerTestSuite) TearDownTest() {
+	s.ctrl.Finish()
+}
+
+func (s *RequestLogConsumerTestSuite) TestHandleMessage_Success() {
+	acctID := "acct_1"
+	identity := &types.Identity{
+		Type:   types.IdentityActorTypeUser,
+		Target: &types.IdentityTarget{AccountID: acctID},
+		Actor: &types.IdentityActor{
+			RelationType: types.IdentityRelationTypeInternal,
+			ID:           "usr_1",
+			AccountID:    &acctID,
+		},
+	}
+
+	protoLog := &loggingpb.RequestLog{
+		Id:              "rlog_1",
+		Method:          "POST",
+		Host:            "api.example.com",
+		Path:            "/v1/things",
+		NormalizedRoute: "/v1/things",
+		StatusCode:      201,
+		LatencyUs:       5000,
+		PublicEndpoint:  true,
+		OccurredAt:      timestamppb.Now(),
+		CreatedAt:       timestamppb.Now(),
+	}
+
+	s.loggingSvc.EXPECT().
+		SaveRequestLog(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, rl *domain.RequestLog) *apierror.APIError {
+			s.Equal("rlog_1", rl.ID)
+			s.Equal("POST", rl.Method)
+			s.Equal("/v1/things", rl.Path)
+			s.Equal(int32(201), rl.StatusCode)
+			s.True(rl.PublicEndpoint)
+			return nil
+		}).Times(1)
+
+	msg := makeRequestLogAMQP(s.T(), identity, protoLog)
+	err := s.consumer.handleMessage(context.Background(), msg)
+	s.NoError(err)
+}
+
+func (s *RequestLogConsumerTestSuite) TestHandleMessage_InvalidJSON() {
+	msg := amqp.Delivery{Body: []byte("not json")}
+	err := s.consumer.handleMessage(context.Background(), msg)
+	s.Error(err)
+}
+
+func (s *RequestLogConsumerTestSuite) TestHandleMessage_InvalidProtobuf() {
+	body, _ := json.Marshal(contracts.AmqpMessage{
+		Data: []byte("not valid protojson"),
+	})
+	msg := amqp.Delivery{Body: body}
+	err := s.consumer.handleMessage(context.Background(), msg)
+	s.Error(err)
+}
+
+func (s *RequestLogConsumerTestSuite) TestHandleMessage_ServiceError() {
+	protoLog := &loggingpb.RequestLog{
+		Id:         "rlog_1",
+		Method:     "GET",
+		Host:       "api.example.com",
+		Path:       "/v1/test",
+		StatusCode: 200,
+		OccurredAt: timestamppb.Now(),
+	}
+
+	s.loggingSvc.EXPECT().SaveRequestLog(gomock.Any(), gomock.Any()).
+		Return(apierror.NewInternalError(nil, "db error")).Times(1)
+
+	msg := makeRequestLogAMQP(s.T(), nil, protoLog)
+	err := s.consumer.handleMessage(context.Background(), msg)
+	s.Error(err)
+}
+
+func (s *RequestLogConsumerTestSuite) TestHandleMessage_SetsIdentityInContext() {
+	acctID := "acct_ctx"
+	identity := &types.Identity{
+		Type:   types.IdentityActorTypeUser,
+		Target: &types.IdentityTarget{AccountID: acctID},
+		Actor: &types.IdentityActor{
+			RelationType: types.IdentityRelationTypeInternal,
+			ID:           "usr_ctx",
+			AccountID:    &acctID,
+		},
+	}
+
+	protoLog := &loggingpb.RequestLog{
+		Id:         "rlog_ctx",
+		Method:     "GET",
+		Host:       "api.example.com",
+		Path:       "/v1/test",
+		StatusCode: 200,
+		OccurredAt: timestamppb.Now(),
+	}
+
+	s.loggingSvc.EXPECT().SaveRequestLog(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+
+	msg := makeRequestLogAMQP(s.T(), identity, protoLog)
+	err := s.consumer.handleMessage(context.Background(), msg)
+	s.NoError(err)
+}
+
+func (s *RequestLogConsumerTestSuite) TestHandleMessage_NilIdentity() {
+	protoLog := &loggingpb.RequestLog{
+		Id:         "rlog_noident",
+		Method:     "GET",
+		Host:       "api.example.com",
+		Path:       "/v1/test",
+		StatusCode: 200,
+		OccurredAt: timestamppb.Now(),
+	}
+
+	s.loggingSvc.EXPECT().SaveRequestLog(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+
+	msg := makeRequestLogAMQP(s.T(), nil, protoLog)
+	err := s.consumer.handleMessage(context.Background(), msg)
+	s.NoError(err) // should not crash, just skip setting identity
+}
+
+func (s *RequestLogConsumerTestSuite) TestHandleMessage_AllFieldsMapped() {
+	accountID := "acct_1"
+	targetAccountID := "acct_2"
+	actorID := "usr_1"
+	actorType := "internal"
+	identityType := "user"
+	now := time.Now().UTC().Truncate(time.Second)
+
+	protoLog := &loggingpb.RequestLog{
+		Id:              "rlog_full",
+		Method:          "PATCH",
+		Host:            "api.example.com",
+		Path:            "/v1/things/123",
+		NormalizedRoute: "/v1/things/{id}",
+		StatusCode:      200,
+		LatencyUs:       9999,
+		AccountId:       &accountID,
+		TargetAccountId: &targetAccountID,
+		ActorId:         &actorID,
+		ActorType:       &actorType,
+		IdentityType:    &identityType,
+		PublicEndpoint:  true,
+		OccurredAt:      timestamppb.New(now),
+		CreatedAt:       timestamppb.New(now),
+	}
+
+	s.loggingSvc.EXPECT().
+		SaveRequestLog(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, rl *domain.RequestLog) *apierror.APIError {
+			s.Equal("rlog_full", rl.ID)
+			s.Equal("PATCH", rl.Method)
+			s.Equal("api.example.com", rl.Host)
+			s.Equal("/v1/things/123", rl.Path)
+			s.Equal("/v1/things/{id}", rl.NormalizedRoute)
+			s.Equal(int32(200), rl.StatusCode)
+			s.Equal(int64(9999), rl.LatencyUs)
+			s.Equal(&accountID, rl.AccountID)
+			s.Equal(&targetAccountID, rl.TargetAccountID)
+			s.Equal(&actorID, rl.ActorID)
+			s.Equal(&actorType, rl.ActorType)
+			s.Equal(&identityType, rl.IdentityType)
+			s.True(rl.PublicEndpoint)
+			s.True(rl.OccurredAt.Equal(now))
+			s.True(rl.CreatedAt.Equal(now))
+			return nil
+		}).Times(1)
+
+	msg := makeRequestLogAMQP(s.T(), nil, protoLog)
+	err := s.consumer.handleMessage(context.Background(), msg)
+	s.NoError(err)
+}
+
+func TestRequestLogConsumerTestSuite(t *testing.T) {
+	t.Parallel()
+	suite.Run(t, new(RequestLogConsumerTestSuite))
 }

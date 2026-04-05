@@ -19,7 +19,7 @@ func TestCheckNotSandboxMode(t *testing.T) {
 		{
 			name: "rejects sandbox mode",
 			identity: &Identity{
-				Type:        IdentityTypeUser,
+				Type:        IdentityActorTypeUser,
 				AccountMode: constants.AccountModeSandbox,
 				Actor:       &IdentityActor{ID: "usr_123"},
 			},
@@ -28,7 +28,7 @@ func TestCheckNotSandboxMode(t *testing.T) {
 		{
 			name: "allows production mode",
 			identity: &Identity{
-				Type:        IdentityTypeUser,
+				Type:        IdentityActorTypeUser,
 				AccountMode: constants.AccountModeProduction,
 				Actor:       &IdentityActor{ID: "usr_123"},
 			},
@@ -37,7 +37,7 @@ func TestCheckNotSandboxMode(t *testing.T) {
 		{
 			name: "rejects unauthenticated",
 			identity: &Identity{
-				Type: IdentityTypeUnauthenticated,
+				Type: IdentityActorTypeUnauthenticated,
 			},
 			expectedCode: apierror.ErrorCodeInvalidCredentials,
 		},
@@ -48,7 +48,7 @@ func TestCheckNotSandboxMode(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			err := CheckNotSandboxMode(tt.identity)
+			err := tt.identity.CheckNotSandboxMode()
 			if tt.expectNil {
 				if err != nil {
 					t.Fatalf("expected nil error, got %v", err)

@@ -12,21 +12,9 @@ const SampleUserID = "us_01gf7a8200e9pvbd6bgyq395ae"
 const SampleUserUsername = "jdoe"
 const SampleUserEmail = "jdoe@augno.com"
 const SampleUserName = "John Doe"
-const SampleUserImageUrl = "https://example.com/avatar.jpg"
+const SampleUserImageUrl = "https://cdn.augno.com/avatars/us_01gf7a8200e9pvbd6bgyq395ae.jpg"
 const SampleUserPassword = "QgS7Z8Hhj3&1"     // #nosec G101 -- sample data for API docs
 const SampleNewUserPassword = "50iR2X0r@bvIH" // #nosec G101 -- sample data for API docs
-
-var SampleUser = &User{
-	ID:            SampleUserID,
-	Object:        constants.ObjectTypeUser,
-	Username:      new(SampleUserUsername),
-	Email:         new(SampleUserEmail),
-	Name:          new(SampleUserName),
-	ImageUrl:      new(SampleUserImageUrl),
-	EmailVerified: timeutil.TimestampToTimePtr(sampleExpiresAtTimestamp),
-	CreatedAt:     timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt:     timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
-}
 
 // A user in the Augno system.
 type User struct {
@@ -41,7 +29,7 @@ type User struct {
 	// The user's unique username.
 	Username *string `json:"username"`
 	// When the user's email was verified, null if unverified.
-	EmailVerified *time.Time `json:"email_verified"`
+	EmailVerifiedAt *time.Time `json:"email_verified_at"`
 	// URL to the user's profile image.
 	ImageUrl *string `json:"image_url"`
 	// When this user was created.
@@ -50,6 +38,44 @@ type User struct {
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
+var SampleUser = &User{
+	ID:              SampleUserID,
+	Object:          constants.ObjectTypeUser,
+	Username:        new(SampleUserUsername),
+	Email:           new(SampleUserEmail),
+	Name:            new(SampleUserName),
+	ImageUrl:        new(SampleUserImageUrl),
+	EmailVerifiedAt: timeutil.TimestampToTimePtr(sampleExpiresAtTimestamp),
+	CreatedAt:       timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:       timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+}
+
 func (*User) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleUser)
+}
+
+// UserPhotoUploadResult is the response for a user photo upload.
+type UserPhotoUploadResult struct {
+	// Whether the upload was successful.
+	Success bool `json:"success"`
+}
+
+var SampleUserPhotoUploadResult = &UserPhotoUploadResult{
+	Success: true,
+}
+
+func (*UserPhotoUploadResult) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(SampleUserPhotoUploadResult)
+}
+
+// UserPhotoURL holds a presigned URL for a user's profile photo.
+type UserPhotoURL struct {
+	// The presigned URL for the profile photo, or null if no photo exists.
+	URL *string `json:"url"`
+}
+
+var SampleUserPhotoURL = &UserPhotoURL{}
+
+func (*UserPhotoURL) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(SampleUserPhotoURL)
 }

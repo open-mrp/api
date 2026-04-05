@@ -15,10 +15,17 @@ import (
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/messaging"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
 )
+
+type stubOutboxRepo struct{}
+
+func (s *stubOutboxRepo) Create(_ context.Context, _ messaging.OutboxMessageInput) (int64, error) {
+	return 0, nil
+}
 
 type staticMediatorFactory struct {
 	mediators domain.Mediators
@@ -71,6 +78,7 @@ func (suite *AuthSvcTestSuite) SetupSuite() {
 	suite.repoFactory.EXPECT().NewRefreshTokenRepo().Return(suite.refreshTokenRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewAPIKeyRepo().Return(suite.apiKeyRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewIdempotencyKeyRepo().Return(suite.idempotencyKeyRepo).AnyTimes()
+	suite.repoFactory.EXPECT().NewOutboxRepo().Return(&stubOutboxRepo{}).AnyTimes()
 
 	suite.notificationPublisher = publishermock.NewMockNotificationPublisher(suite.ctrl)
 
@@ -96,6 +104,7 @@ func (suite *AuthSvcTestSuite) TearDownSuite() {
 }
 
 func TestAuthSvcTestSuite(t *testing.T) {
+	t.Parallel()
 	suite.Run(t, new(AuthSvcTestSuite))
 }
 
@@ -104,16 +113,16 @@ func (suite *AuthSvcTestSuite) TestValidateCredential_NoAuthHeader() {
 
 	expectedIdentity := types.GetUnauthenticatedIdentity(nil)
 	suite.userMed.EXPECT().
-		ValidateCredential(gomock.Any(), "", (*string)(nil)).
+		ValidateCredential(gomock.Any(), "", (*string)(nil), (*string)(nil)).
 		Return(expectedIdentity, nil).
 		Times(1)
 
-	identity, err := suite.authSvc.ValidateCredential(ctx, "", nil)
+	identity, err := suite.authSvc.ValidateCredential(ctx, "", nil, nil)
 
 	suite.Nil(err)
 	suite.NotNil(identity)
-	suite.Equal(types.IdentityTypeUnauthenticated, identity.Type)
-	suite.Nil(identity.TargetAccountID)
+	suite.Equal(types.IdentityActorTypeUnauthenticated, identity.Type)
+	suite.Nil(identity.Target)
 	suite.Nil(identity.Actor)
 	suite.Equal(constants.AccountModeProduction, identity.AccountMode)
 }
@@ -128,10 +137,10 @@ func (suite *AuthSvcTestSuite) TestValidateCredential_APIKey_DefaultsToOwnerAcco
 
 	// When no target account is specified, the API key defaults to its owner account
 	identityResponse := &types.Identity{
-		Type:            types.IdentityTypeAPIKey,
-		TargetAccountID: new(testutil.EntityIDAccount),
+		Type:   types.IdentityActorTypeAPIKey,
+		Target: &types.IdentityTarget{AccountID: testutil.EntityIDAccount},
 		Actor: &types.IdentityActor{
-			Type:         types.IdentityActorTypeInternal,
+			RelationType: types.IdentityRelationTypeInternal,
 			ID:           testutil.EntityIDAPIKeyValidProdMode,
 			Name:         new("Test API Key"),
 			AccountID:    new(testutil.EntityIDAccount),
@@ -143,18 +152,18 @@ func (suite *AuthSvcTestSuite) TestValidateCredential_APIKey_DefaultsToOwnerAcco
 	}
 
 	suite.userMed.EXPECT().
-		ValidateCredential(gomock.Any(), testutil.APIKeyValidProdMode, (*string)(nil)).
+		ValidateCredential(gomock.Any(), testutil.APIKeyValidProdMode, (*string)(nil), (*string)(nil)).
 		Return(identityResponse, nil).
 		Times(1)
 
-	identity, err := suite.authSvc.ValidateCredential(ctx, testutil.APIKeyValidProdMode, nil)
+	identity, err := suite.authSvc.ValidateCredential(ctx, testutil.APIKeyValidProdMode, nil, nil)
 	suite.Nil(err)
 	suite.NotNil(identity)
-	suite.Equal(types.IdentityTypeAPIKey, identity.Type)
-	suite.NotNil(identity.TargetAccountID)
-	suite.Equal(testutil.EntityIDAccount, *identity.TargetAccountID)
+	suite.Equal(types.IdentityActorTypeAPIKey, identity.Type)
+	suite.NotNil(identity.Target)
+	suite.Equal(testutil.EntityIDAccount, identity.Target.AccountID)
 	suite.NotNil(identity.Actor)
-	suite.Equal(types.IdentityActorTypeInternal, identity.Actor.Type)
+	suite.Equal(types.IdentityRelationTypeInternal, identity.Actor.RelationType)
 	suite.Equal(testutil.EntityIDAPIKeyValidProdMode, identity.Actor.ID)
 	suite.NotNil(identity.Actor.AccountID)
 	suite.Equal(testutil.EntityIDAccount, *identity.Actor.AccountID)
@@ -172,10 +181,10 @@ func (suite *AuthSvcTestSuite) TestValidateCredential_APIKey_Internal() {
 	}
 
 	identityResponse := &types.Identity{
-		Type:            types.IdentityTypeAPIKey,
-		TargetAccountID: new(testutil.EntityIDAccount),
+		Type:   types.IdentityActorTypeAPIKey,
+		Target: &types.IdentityTarget{AccountID: testutil.EntityIDAccount},
 		Actor: &types.IdentityActor{
-			Type:         types.IdentityActorTypeInternal,
+			RelationType: types.IdentityRelationTypeInternal,
 			ID:           testutil.EntityIDAPIKeyValidProdMode,
 			Name:         new("Test API Key"),
 			AccountID:    new(testutil.EntityIDAccount),
@@ -187,18 +196,18 @@ func (suite *AuthSvcTestSuite) TestValidateCredential_APIKey_Internal() {
 	}
 
 	suite.userMed.EXPECT().
-		ValidateCredential(gomock.Any(), testutil.APIKeyValidProdMode, new(testutil.EntityIDAccount)).
+		ValidateCredential(gomock.Any(), testutil.APIKeyValidProdMode, new(testutil.EntityIDAccount), (*string)(nil)).
 		Return(identityResponse, nil).
 		Times(1)
 
-	identity, err := suite.authSvc.ValidateCredential(ctx, testutil.APIKeyValidProdMode, new(testutil.EntityIDAccount))
+	identity, err := suite.authSvc.ValidateCredential(ctx, testutil.APIKeyValidProdMode, new(testutil.EntityIDAccount), nil)
 	suite.Nil(err)
 	suite.NotNil(identity)
-	suite.Equal(types.IdentityTypeAPIKey, identity.Type)
-	suite.NotNil(identity.TargetAccountID)
-	suite.Equal(testutil.EntityIDAccount, *identity.TargetAccountID)
+	suite.Equal(types.IdentityActorTypeAPIKey, identity.Type)
+	suite.NotNil(identity.Target)
+	suite.Equal(testutil.EntityIDAccount, identity.Target.AccountID)
 	suite.NotNil(identity.Actor)
-	suite.Equal(types.IdentityActorTypeInternal, identity.Actor.Type)
+	suite.Equal(types.IdentityRelationTypeInternal, identity.Actor.RelationType)
 	suite.Equal(testutil.EntityIDAPIKeyValidProdMode, identity.Actor.ID)
 	suite.NotNil(identity.Actor.AccountID)
 	suite.Equal(testutil.EntityIDAccount, *identity.Actor.AccountID)
@@ -211,10 +220,10 @@ func (suite *AuthSvcTestSuite) TestValidateCredential_APIKey_Customer() {
 	ctx := context.Background()
 
 	identityResponse := &types.Identity{
-		Type:            types.IdentityTypeAPIKey,
-		TargetAccountID: new(testutil.EntityIDAccount),
+		Type:   types.IdentityActorTypeAPIKey,
+		Target: &types.IdentityTarget{AccountID: testutil.EntityIDAccount},
 		Actor: &types.IdentityActor{
-			Type:         types.IdentityActorTypeCustomer,
+			RelationType: types.IdentityRelationTypeCustomer,
 			ID:           testutil.EntityIDAPIKeyValidProdMode,
 			Name:         new("Test API Key"),
 			AccountID:    new("acc_customer123"),
@@ -226,18 +235,18 @@ func (suite *AuthSvcTestSuite) TestValidateCredential_APIKey_Customer() {
 	}
 
 	suite.userMed.EXPECT().
-		ValidateCredential(gomock.Any(), testutil.APIKeyValidProdMode, new(testutil.EntityIDAccount)).
+		ValidateCredential(gomock.Any(), testutil.APIKeyValidProdMode, new(testutil.EntityIDAccount), (*string)(nil)).
 		Return(identityResponse, nil).
 		Times(1)
 
-	identity, err := suite.authSvc.ValidateCredential(ctx, testutil.APIKeyValidProdMode, new(testutil.EntityIDAccount))
+	identity, err := suite.authSvc.ValidateCredential(ctx, testutil.APIKeyValidProdMode, new(testutil.EntityIDAccount), nil)
 	suite.Nil(err)
 	suite.NotNil(identity)
-	suite.Equal(types.IdentityTypeAPIKey, identity.Type)
-	suite.NotNil(identity.TargetAccountID)
-	suite.Equal(testutil.EntityIDAccount, *identity.TargetAccountID)
+	suite.Equal(types.IdentityActorTypeAPIKey, identity.Type)
+	suite.NotNil(identity.Target)
+	suite.Equal(testutil.EntityIDAccount, identity.Target.AccountID)
 	suite.NotNil(identity.Actor)
-	suite.Equal(types.IdentityActorTypeCustomer, identity.Actor.Type)
+	suite.Equal(types.IdentityRelationTypeCustomer, identity.Actor.RelationType)
 	suite.Equal(testutil.EntityIDAPIKeyValidProdMode, identity.Actor.ID)
 	suite.NotNil(identity.Actor.AccountID)
 	suite.Equal("acc_customer123", *identity.Actor.AccountID)
@@ -253,10 +262,10 @@ func (suite *AuthSvcTestSuite) TestValidateCredential_JWT_Unassigned() {
 	suite.Nil(err)
 
 	identityResponse := &types.Identity{
-		Type:            types.IdentityTypeUser,
-		TargetAccountID: nil,
+		Type:   types.IdentityActorTypeUser,
+		Target: nil,
 		Actor: &types.IdentityActor{
-			Type:         types.IdentityActorTypeUnassigned,
+			RelationType: types.IdentityRelationTypeUnassigned,
 			ID:           userID,
 			Name:         new("Test User"),
 			AccountID:    nil,
@@ -268,17 +277,17 @@ func (suite *AuthSvcTestSuite) TestValidateCredential_JWT_Unassigned() {
 	}
 
 	suite.userMed.EXPECT().
-		ValidateCredential(gomock.Any(), token, (*string)(nil)).
+		ValidateCredential(gomock.Any(), token, (*string)(nil), (*string)(nil)).
 		Return(identityResponse, nil).
 		Times(1)
 
-	identity, err := suite.authSvc.ValidateCredential(ctx, token, nil)
+	identity, err := suite.authSvc.ValidateCredential(ctx, token, nil, nil)
 	suite.Nil(err)
 	suite.NotNil(identity)
-	suite.Equal(types.IdentityTypeUser, identity.Type)
-	suite.Nil(identity.TargetAccountID)
+	suite.Equal(types.IdentityActorTypeUser, identity.Type)
+	suite.Nil(identity.Target)
 	suite.NotNil(identity.Actor)
-	suite.Equal(types.IdentityActorTypeUnassigned, identity.Actor.Type)
+	suite.Equal(types.IdentityRelationTypeUnassigned, identity.Actor.RelationType)
 	suite.Equal(userID, identity.Actor.ID)
 	suite.Nil(identity.Actor.AccountID)
 	suite.Nil(identity.Actor.RoleID)
@@ -298,10 +307,10 @@ func (suite *AuthSvcTestSuite) TestValidateCredential_JWT_Internal() {
 	}
 
 	identityResponse := &types.Identity{
-		Type:            types.IdentityTypeUser,
-		TargetAccountID: new(testutil.EntityIDAccount),
+		Type:   types.IdentityActorTypeUser,
+		Target: &types.IdentityTarget{AccountID: testutil.EntityIDAccount},
 		Actor: &types.IdentityActor{
-			Type:         types.IdentityActorTypeInternal,
+			RelationType: types.IdentityRelationTypeInternal,
 			ID:           userID,
 			Name:         new("Test User"),
 			AccountID:    new(testutil.EntityIDAccount),
@@ -313,18 +322,18 @@ func (suite *AuthSvcTestSuite) TestValidateCredential_JWT_Internal() {
 	}
 
 	suite.userMed.EXPECT().
-		ValidateCredential(gomock.Any(), token, new(testutil.EntityIDAccount)).
+		ValidateCredential(gomock.Any(), token, new(testutil.EntityIDAccount), (*string)(nil)).
 		Return(identityResponse, nil).
 		Times(1)
 
-	identity, err := suite.authSvc.ValidateCredential(ctx, token, new(testutil.EntityIDAccount))
+	identity, err := suite.authSvc.ValidateCredential(ctx, token, new(testutil.EntityIDAccount), nil)
 	suite.Nil(err)
 	suite.NotNil(identity)
-	suite.Equal(types.IdentityTypeUser, identity.Type)
-	suite.NotNil(identity.TargetAccountID)
-	suite.Equal(testutil.EntityIDAccount, *identity.TargetAccountID)
+	suite.Equal(types.IdentityActorTypeUser, identity.Type)
+	suite.NotNil(identity.Target)
+	suite.Equal(testutil.EntityIDAccount, identity.Target.AccountID)
 	suite.NotNil(identity.Actor)
-	suite.Equal(types.IdentityActorTypeInternal, identity.Actor.Type)
+	suite.Equal(types.IdentityRelationTypeInternal, identity.Actor.RelationType)
 	suite.Equal(userID, identity.Actor.ID)
 	suite.NotNil(identity.Actor.AccountID)
 	suite.Equal(testutil.EntityIDAccount, *identity.Actor.AccountID)
@@ -341,10 +350,10 @@ func (suite *AuthSvcTestSuite) TestValidateCredential_JWT_Customer() {
 	suite.Nil(err)
 
 	identityResponse := &types.Identity{
-		Type:            types.IdentityTypeUser,
-		TargetAccountID: new(testutil.EntityIDAccount),
+		Type:   types.IdentityActorTypeUser,
+		Target: &types.IdentityTarget{AccountID: testutil.EntityIDAccount},
 		Actor: &types.IdentityActor{
-			Type:         types.IdentityActorTypeCustomer,
+			RelationType: types.IdentityRelationTypeCustomer,
 			ID:           userID,
 			Name:         new("Test User"),
 			AccountID:    new("acc_customer123"),
@@ -356,18 +365,18 @@ func (suite *AuthSvcTestSuite) TestValidateCredential_JWT_Customer() {
 	}
 
 	suite.userMed.EXPECT().
-		ValidateCredential(gomock.Any(), token, new(testutil.EntityIDAccount)).
+		ValidateCredential(gomock.Any(), token, new(testutil.EntityIDAccount), (*string)(nil)).
 		Return(identityResponse, nil).
 		Times(1)
 
-	identity, err := suite.authSvc.ValidateCredential(ctx, token, new(testutil.EntityIDAccount))
+	identity, err := suite.authSvc.ValidateCredential(ctx, token, new(testutil.EntityIDAccount), nil)
 	suite.Nil(err)
 	suite.NotNil(identity)
-	suite.Equal(types.IdentityTypeUser, identity.Type)
-	suite.NotNil(identity.TargetAccountID)
-	suite.Equal(testutil.EntityIDAccount, *identity.TargetAccountID)
+	suite.Equal(types.IdentityActorTypeUser, identity.Type)
+	suite.NotNil(identity.Target)
+	suite.Equal(testutil.EntityIDAccount, identity.Target.AccountID)
 	suite.NotNil(identity.Actor)
-	suite.Equal(types.IdentityActorTypeCustomer, identity.Actor.Type)
+	suite.Equal(types.IdentityRelationTypeCustomer, identity.Actor.RelationType)
 	suite.Equal(userID, identity.Actor.ID)
 	suite.NotNil(identity.Actor.AccountID)
 	suite.Equal("acc_customer123", *identity.Actor.AccountID)
@@ -382,11 +391,11 @@ func (suite *AuthSvcTestSuite) TestValidateCredential_JWT_Expired() {
 
 	ctx := context.Background()
 	suite.userMed.EXPECT().
-		ValidateCredential(gomock.Any(), token, new(testutil.EntityIDAccount)).
+		ValidateCredential(gomock.Any(), token, new(testutil.EntityIDAccount), (*string)(nil)).
 		Return(nil, apierror.NewAuthenticationError("Access token has expired.")).
 		Times(1)
 
-	identity, err := suite.authSvc.ValidateCredential(ctx, token, new(testutil.EntityIDAccount))
+	identity, err := suite.authSvc.ValidateCredential(ctx, token, new(testutil.EntityIDAccount), nil)
 	suite.NotNil(err)
 	suite.Equal(apierror.ErrorCodeInvalidCredentials, err.Code)
 	suite.Nil(identity)
@@ -396,11 +405,11 @@ func (suite *AuthSvcTestSuite) TestValidateCredential_JWT_Invalid() {
 	invalidToken := "invalid.jwt.token"
 	ctx := context.Background()
 	suite.userMed.EXPECT().
-		ValidateCredential(gomock.Any(), invalidToken, new(testutil.EntityIDAccount)).
+		ValidateCredential(gomock.Any(), invalidToken, new(testutil.EntityIDAccount), (*string)(nil)).
 		Return(nil, apierror.NewAuthenticationError("Invalid token")).
 		Times(1)
 
-	identity, err := suite.authSvc.ValidateCredential(ctx, invalidToken, new(testutil.EntityIDAccount))
+	identity, err := suite.authSvc.ValidateCredential(ctx, invalidToken, new(testutil.EntityIDAccount), nil)
 	suite.NotNil(err)
 	suite.Equal(apierror.ErrorCodeInvalidCredentials, err.Code)
 	suite.Nil(identity)
@@ -413,11 +422,11 @@ func (suite *AuthSvcTestSuite) TestValidateCredential_JWT_UserNotFound() {
 
 	ctx := context.Background()
 	suite.userMed.EXPECT().
-		ValidateCredential(gomock.Any(), token, new(testutil.EntityIDAccount)).
+		ValidateCredential(gomock.Any(), token, new(testutil.EntityIDAccount), (*string)(nil)).
 		Return(nil, apierror.NewAuthenticationError("Invalid token")).
 		Times(1)
 
-	identity, err := suite.authSvc.ValidateCredential(ctx, token, new(testutil.EntityIDAccount))
+	identity, err := suite.authSvc.ValidateCredential(ctx, token, new(testutil.EntityIDAccount), nil)
 	suite.NotNil(err)
 	suite.Equal(apierror.ErrorCodeInvalidCredentials, err.Code)
 	suite.Nil(identity)
@@ -427,11 +436,11 @@ func (suite *AuthSvcTestSuite) TestValidateCredential_APIKey_Invalid() {
 	ctx := context.Background()
 
 	suite.userMed.EXPECT().
-		ValidateCredential(gomock.Any(), testutil.APIKeyValidProdMode, new(testutil.EntityIDAccount)).
+		ValidateCredential(gomock.Any(), testutil.APIKeyValidProdMode, new(testutil.EntityIDAccount), (*string)(nil)).
 		Return(nil, apierror.NewAuthenticationError("Invalid API key")).
 		Times(1)
 
-	identity, err := suite.authSvc.ValidateCredential(ctx, testutil.APIKeyValidProdMode, new(testutil.EntityIDAccount))
+	identity, err := suite.authSvc.ValidateCredential(ctx, testutil.APIKeyValidProdMode, new(testutil.EntityIDAccount), nil)
 	suite.NotNil(err)
 	suite.Equal(apierror.ErrorCodeInvalidCredentials, err.Code)
 	suite.Nil(identity)

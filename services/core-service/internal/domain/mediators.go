@@ -7,18 +7,13 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-type RequestIdentity struct {
-	ActorID         string
-	IdentityType    types.IdentityType
-	TargetAccountID *string
-}
 type IdempotencyMed interface {
 	// UpsertIdempotencyKey returns the existing idempotency key for the request scope,
 	// or creates one if it does not exist.
 	//
 	// Side effects:
 	//   - May persist a new idempotency key for the computed request scope.
-	UpsertIdempotencyKey(ctx context.Context, identity *RequestIdentity) (*IdempotencyKey, *apierror.APIError)
+	UpsertIdempotencyKey(ctx context.Context, identity *types.Identity) (*IdempotencyKey, *apierror.APIError)
 
 	// CacheErrorResponse caches a non-transient error response for the given idempotency key
 	// and returns the original error.
@@ -35,6 +30,38 @@ type IdempotencyMed interface {
 	// Side effects:
 	//   - Persists the response for subsequent replays of the same idempotency key.
 	CacheSuccessResponse(ctx context.Context, typeID string, data any) *apierror.APIError
+}
+
+type ReadAccessMed interface {
+	// CheckReadAccess verifies that the actor account has read access to the
+	// target account. Same-account access is always allowed. Cross-account
+	// access requires an account_relation record.
+	CheckReadAccess(ctx context.Context, actorAccountID, targetAccountID string) *apierror.APIError
+}
+
+type EditAccessMed interface {
+	// CheckEditAccess verifies that the actor account has edit access to the
+	// target account. Same-account access is always allowed. Cross-account
+	// access requires: the target has no active billing plan, a relation exists
+	// between the accounts, and the target has no other owner relations.
+	CheckEditAccess(ctx context.Context, actorAccountID, targetAccountID string) *apierror.APIError
+}
+
+type ProductionFlowMed interface {
+	// LinkFlow recomputes all parent-child production step connections for a step
+	// based on its current consumptions and productions.
+	LinkFlow(ctx context.Context, productionStepID, accountID string) *apierror.APIError
+
+	// DisconnectSteps removes a specific parent-child connection between two steps.
+	DisconnectSteps(ctx context.Context, sourceID, targetID string) *apierror.APIError
+
+	// FindSourceStepsByConsumption returns IDs of parent steps that should be disconnected
+	// when a consumption is deleted.
+	FindSourceStepsByConsumption(ctx context.Context, productionStepID, consumptionID, accountID string) ([]string, *apierror.APIError)
+
+	// FindDownstreamStepByItem returns the ID of a downstream step connected via a specific
+	// consumed item, if one exists.
+	FindDownstreamStepByItem(ctx context.Context, productionStepID, itemID, accountID string) (*string, *apierror.APIError)
 }
 
 type SandboxMed interface {

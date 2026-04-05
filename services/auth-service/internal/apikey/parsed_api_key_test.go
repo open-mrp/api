@@ -7,6 +7,7 @@ import (
 )
 
 func TestAPIKey_JSONExcludesSensitiveFields(t *testing.T) {
+	t.Parallel()
 	key := &APIKey{
 		ID:             1,
 		KeyID:          "secret-key-id",

@@ -9,28 +9,22 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-const createEnterpriseInquiryDescription string = `Sends a notification to the sales team requesting information about enterprise plans.
-Returns a confirmation that the inquiry was submitted.`
-
 type CreateEnterpriseInquiryEndpoint struct{}
 
 func (e *CreateEnterpriseInquiryEndpoint) Materialize() *apiendpoint.APIEndpoint[*apiresource.EmptyResource, *apiresource.EnterpriseInquiry] {
 	return &apiendpoint.APIEndpoint[*apiresource.EmptyResource, *apiresource.EnterpriseInquiry]{
 		Title:             "Create Enterprise Inquiry",
-		Description:       createEnterpriseInquiryDescription,
+		Description:       "Submits an enterprise plan inquiry to the sales team.",
 		Method:            http.MethodPost,
 		Route:             "/v1/billing/actions/request-enterprise",
 		ContentType:       "application/json",
 		Request:           &apiresource.EmptyResource{},
-		Response:          apiresource.SampleEnterpriseInquiry,
+		Response:          &apiresource.EnterpriseInquiry{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *apiresource.EmptyResource) (*apiresource.EnterpriseInquiry, *apierror.APIError) {
 			return svc.(BillingSvc).CreateEnterpriseInquiry
-		},
-		Extras: apiendpoint.APIEndpointExtras{
-			AllowUnknownJSONFields: false,
 		},
 	}
 }

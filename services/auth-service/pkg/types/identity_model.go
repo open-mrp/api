@@ -6,7 +6,7 @@ import (
 )
 
 type IdentityActor struct {
-	Type         IdentityActorType
+	RelationType IdentityRelationType
 	ID           string
 	Name         *string
 	AccountID    *string
@@ -16,51 +16,114 @@ type IdentityActor struct {
 }
 
 type Identity struct {
-	Type               IdentityType
-	TargetAccountID    *string
+	Type               IdentityActorType
+	Target             *IdentityTarget
 	Actor              *IdentityActor
 	AccountMode        constants.AccountMode
 	SubscriptionStatus *string
 }
 
+// IsAuthenticated checks that the identity exists and is not unauthenticated
 func (i *Identity) IsAuthenticated() bool {
-	return i != nil && i.Type != IdentityTypeUnauthenticated
+	return i != nil && i.Type != IdentityActorTypeUnauthenticated
 }
 
+// IsActorSet checks that the identity is authenticated, has a valid actor, and has a valid actor account
+func (i *Identity) IsActorSet() bool {
+	return i.IsAuthenticated() && i.Actor != nil && i.Actor.ID != "" && i.Actor.AccountID != nil && *i.Actor.AccountID != ""
+}
+
+// IsRoleSet checks that the identity has a valid actor and a valid role
+func (i *Identity) IsRoleSet() bool {
+	return i.IsActorSet() && i.Actor.RoleTypeCode != nil && *i.Actor.RoleTypeCode != ""
+}
+
+// IsAdmin checks that the identity is authenticated, has a valid actor, a valid role, and is of type admin
 func (i *Identity) IsAdmin() bool {
-	return i.IsAuthenticated() && i.Actor != nil && i.Actor.RoleTypeCode != nil && *i.Actor.RoleTypeCode == string(constants.RoleTypeCodeAdmin)
+	return i.IsRoleSet() && *i.Actor.RoleTypeCode == string(constants.RoleTypeCodeAdmin)
 }
 
+// IsScanner checks that the identity is authenticated, has a valid actor, a valid role, and is of type scanner
 func (i *Identity) IsScanner() bool {
-	return i.IsAuthenticated() && i.Actor != nil && i.Actor.RoleTypeCode != nil && *i.Actor.RoleTypeCode == string(constants.RoleTypeCodeScanner)
+	return i.IsRoleSet() && *i.Actor.RoleTypeCode == string(constants.RoleTypeCodeScanner)
 }
 
+// IsSalesRep checks that the identity is authenticated, has a valid actor, a valid role, and is of type sales rep
 func (i *Identity) IsSalesRep() bool {
-	return i.IsAuthenticated() && i.Actor != nil && i.Actor.RoleTypeCode != nil && *i.Actor.RoleTypeCode == string(constants.RoleTypeCodeSalesRep)
+	return i.IsRoleSet() && *i.Actor.RoleTypeCode == string(constants.RoleTypeCodeSalesRep)
 }
 
+// IsSandbox checks that the target account is a sandbox
+func (i *Identity) IsSandbox() bool {
+	return i != nil && i.AccountMode == constants.AccountModeSandbox
+}
+
+// IsNotSandbox checks that the target account is not a sandbox
+func (i *Identity) IsNotSandbox() bool {
+	return i != nil && i.AccountMode != constants.AccountModeSandbox
+}
+
+// IsAPIKey checks that the identity is an API key and a valid actor was found
 func (i *Identity) IsAPIKey() bool {
-	return i != nil && i.Type == IdentityTypeAPIKey
+	return i.IsActorSet() && i.Type == IdentityActorTypeAPIKey
 }
 
+// IsUser checks that the identity is a user and a valid actor was found
 func (i *Identity) IsUser() bool {
-	return i != nil && i.Type == IdentityTypeUser
+	return i.IsActorSet() && i.Type == IdentityActorTypeUser
 }
 
+// IsInternalActor checks that the identity has a valid actor of type internal, regardless of target account.
+func (i *Identity) IsInternalActor() bool {
+	return i.IsActorSet() && i.Actor.RelationType == IdentityRelationTypeInternal
+}
+
+// IsInternalUser checks that the identity is authenticated, has a valid actor, is of type internal, and has a valid actor account
 func (i *Identity) IsInternalUser() bool {
-	return i.IsAuthenticated() && i.Actor != nil && i.Actor.Type == IdentityActorTypeInternal
+	return i.IsActorSet() && i.IsTargetAccountSet() && i.Actor.RelationType == IdentityRelationTypeInternal && *i.Actor.AccountID == i.Target.AccountID
 }
 
+// IsSupplierUser checks that the identity is authenticated, has a valid actor, is of type supplier
 func (i *Identity) IsSupplierUser() bool {
-	return i.IsAuthenticated() && i.Actor != nil && i.Actor.Type == IdentityActorTypeSupplier
+	return i.IsActorSet() && i.IsTargetAccountSet() && i.Actor.RelationType == IdentityRelationTypeSupplier && *i.Actor.AccountID == i.Target.AccountID
 }
 
+// IsCustomerUser checks that the identity is authenticated, has a valid actor, is of type customer
 func (i *Identity) IsCustomerUser() bool {
-	return i.IsAuthenticated() && i.Actor != nil && i.Actor.Type == IdentityActorTypeCustomer
+	return i.IsActorSet() && i.IsTargetAccountSet() && i.Actor.RelationType == IdentityRelationTypeCustomer && *i.Actor.AccountID == i.Target.AccountID
 }
 
+// IsUnassignedUser checks that the identity is authenticated, has a valid actor, and is of type unassigned
 func (i *Identity) IsUnassignedUser() bool {
-	return i.IsAuthenticated() && i.Actor != nil && i.Actor.Type == IdentityActorTypeUnassigned
+	return i.IsActorSet() && i.Actor.RelationType == IdentityRelationTypeUnassigned
+}
+
+// IsExternalTarget checks that the identity has a valid actor, a valid actor account, and a valid target account, and that the actor's account differs from the target account
+func (i *Identity) IsExternalTarget() bool {
+	return i.IsActorSet() && i.ActorAccountID() != nil && i.IsTargetAccountSet() && *i.ActorAccountID() != i.Target.AccountID
+}
+
+// IsTargetCustomerAccount returns true when the target account is a customer account relative to the actor.
+func (i *Identity) IsTargetCustomerAccount() bool {
+	return i.Target != nil && i.Target.RelationType != nil && *i.Target.RelationType == IdentityRelationTypeCustomer
+}
+
+// IsTargetSupplierAccount returns true when the target account is a supplier account relative to the actor.
+func (i *Identity) IsTargetSupplierAccount() bool {
+	return i.Target != nil && i.Target.RelationType != nil && *i.Target.RelationType == IdentityRelationTypeSupplier
+}
+
+// IsTargetAccountSet returns true when a target account ID is present.
+func (i *Identity) IsTargetAccountSet() bool {
+	return i != nil && i.Target != nil && i.Target.AccountID != ""
+}
+
+// ActorAccountID returns the actor's account ID, or nil if unavailable.
+func (i *Identity) ActorAccountID() *string {
+	if i == nil || i.Actor == nil || i.Actor.AccountID == nil || *i.Actor.AccountID == "" {
+		return nil
+	}
+	return i.Actor.AccountID
 }
 
 func GetUnauthenticatedIdentity(targetAccountID *string) *Identity {
@@ -68,12 +131,15 @@ func GetUnauthenticatedIdentity(targetAccountID *string) *Identity {
 }
 
 func GetUnauthenticatedIdentityWithMode(targetAccountID *string, accountMode constants.AccountMode) *Identity {
-	return &Identity{
-		Type:            IdentityTypeUnauthenticated,
-		Actor:           nil,
-		AccountMode:     accountMode,
-		TargetAccountID: targetAccountID,
+	identity := &Identity{
+		Type:        IdentityActorTypeUnauthenticated,
+		Actor:       nil,
+		AccountMode: accountMode,
 	}
+	if targetAccountID != nil {
+		identity.Target = &IdentityTarget{AccountID: *targetAccountID}
+	}
+	return identity
 }
 
 func (i *Identity) ToProto() *pb.Identity {
@@ -84,7 +150,7 @@ func (i *Identity) ToProto() *pb.Identity {
 	var actor *pb.IdentityActor
 	if i.Actor != nil {
 		actor = &pb.IdentityActor{
-			Type:         convertIdentityActorTypeToProto(i.Actor.Type),
+			RelationType: i.Actor.RelationType.toProto(),
 			Id:           i.Actor.ID,
 			Name:         i.Actor.Name,
 			AccountId:    i.Actor.AccountID,
@@ -94,40 +160,53 @@ func (i *Identity) ToProto() *pb.Identity {
 		}
 	}
 
+	var target *pb.IdentityTarget
+	if i.Target != nil {
+		target = &pb.IdentityTarget{
+			AccountId: i.Target.AccountID,
+		}
+		if i.Target.RelationType != nil {
+			s := string(*i.Target.RelationType)
+			target.RelationType = &s
+		}
+	}
+
 	return &pb.Identity{
-		Type:               convertIdentityTypeToProto(i.Type),
-		TargetAccountId:    i.TargetAccountID,
+		Type:               i.Type.toProto(),
 		Actor:              actor,
 		AccountMode:        convertAccountModeToProto(i.AccountMode),
 		SubscriptionStatus: i.SubscriptionStatus,
+		Target:             target,
 	}
 }
 
-func convertIdentityTypeToProto(t IdentityType) pb.IdentityType {
+func (t IdentityActorType) toProto() pb.IdentityActorType {
 	switch t {
-	case IdentityTypeUser:
-		return pb.IdentityType_IDENTITY_TYPE_USER
-	case IdentityTypeAPIKey:
-		return pb.IdentityType_IDENTITY_TYPE_API_KEY
-	case IdentityTypeUnauthenticated:
-		return pb.IdentityType_IDENTITY_TYPE_UNAUTHENTICATED
-	default:
-		return pb.IdentityType_IDENTITY_TYPE_UNSPECIFIED
-	}
-}
-
-func convertIdentityActorTypeToProto(t IdentityActorType) pb.IdentityActorType {
-	switch t {
-	case IdentityActorTypeInternal:
-		return pb.IdentityActorType_IDENTITY_ACTOR_TYPE_INTERNAL
-	case IdentityActorTypeCustomer:
-		return pb.IdentityActorType_IDENTITY_ACTOR_TYPE_CUSTOMER
-	case IdentityActorTypeSupplier:
-		return pb.IdentityActorType_IDENTITY_ACTOR_TYPE_SUPPLIER
-	case IdentityActorTypeUnassigned:
-		return pb.IdentityActorType_IDENTITY_ACTOR_TYPE_UNASSIGNED
+	case IdentityActorTypeUser:
+		return pb.IdentityActorType_IDENTITY_ACTOR_TYPE_USER
+	case IdentityActorTypeAPIKey:
+		return pb.IdentityActorType_IDENTITY_ACTOR_TYPE_API_KEY
+	case IdentityActorTypeUnauthenticated:
+		return pb.IdentityActorType_IDENTITY_ACTOR_TYPE_UNAUTHENTICATED
+	case IdentityActorTypeAgent:
+		return pb.IdentityActorType_IDENTITY_ACTOR_TYPE_AGENT
 	default:
 		return pb.IdentityActorType_IDENTITY_ACTOR_TYPE_UNSPECIFIED
+	}
+}
+
+func (t IdentityRelationType) toProto() pb.IdentityRelationType {
+	switch t {
+	case IdentityRelationTypeInternal:
+		return pb.IdentityRelationType_IDENTITY_RELATION_TYPE_INTERNAL
+	case IdentityRelationTypeCustomer:
+		return pb.IdentityRelationType_IDENTITY_RELATION_TYPE_CUSTOMER
+	case IdentityRelationTypeSupplier:
+		return pb.IdentityRelationType_IDENTITY_RELATION_TYPE_SUPPLIER
+	case IdentityRelationTypeUnassigned:
+		return pb.IdentityRelationType_IDENTITY_RELATION_TYPE_UNASSIGNED
+	default:
+		return pb.IdentityRelationType_IDENTITY_RELATION_TYPE_UNSPECIFIED
 	}
 }
 
@@ -150,7 +229,7 @@ func IdentityFromProto(pbIdentity *pb.Identity) *Identity {
 	var actor *IdentityActor
 	if pbIdentity.Actor != nil {
 		actor = &IdentityActor{
-			Type:         convertIdentityActorTypeFromProto(pbIdentity.Actor.Type),
+			RelationType: convertIdentityRelationTypeFromProto(pbIdentity.Actor.RelationType),
 			ID:           pbIdentity.Actor.Id,
 			Name:         pbIdentity.Actor.Name,
 			AccountID:    pbIdentity.Actor.AccountId,
@@ -160,40 +239,55 @@ func IdentityFromProto(pbIdentity *pb.Identity) *Identity {
 		}
 	}
 
+	var target *IdentityTarget
+	if pbIdentity.Target != nil {
+		target = &IdentityTarget{
+			AccountID: pbIdentity.Target.AccountId,
+		}
+		if pbIdentity.Target.RelationType != nil {
+			parsed, ok := ParseIdentityRelationType(*pbIdentity.Target.RelationType)
+			if ok {
+				target.RelationType = &parsed
+			}
+		}
+	}
+
 	return &Identity{
-		Type:               convertIdentityTypeFromProto(pbIdentity.Type),
-		TargetAccountID:    pbIdentity.TargetAccountId,
+		Type:               convertIdentityActorTypeFromProto(pbIdentity.Type),
+		Target:             target,
 		Actor:              actor,
 		AccountMode:        convertAccountModeFromProto(pbIdentity.AccountMode),
 		SubscriptionStatus: pbIdentity.SubscriptionStatus,
 	}
 }
 
-func convertIdentityTypeFromProto(t pb.IdentityType) IdentityType {
+func convertIdentityActorTypeFromProto(t pb.IdentityActorType) IdentityActorType {
 	switch t {
-	case pb.IdentityType_IDENTITY_TYPE_USER:
-		return IdentityTypeUser
-	case pb.IdentityType_IDENTITY_TYPE_API_KEY:
-		return IdentityTypeAPIKey
-	case pb.IdentityType_IDENTITY_TYPE_UNAUTHENTICATED:
-		return IdentityTypeUnauthenticated
+	case pb.IdentityActorType_IDENTITY_ACTOR_TYPE_USER:
+		return IdentityActorTypeUser
+	case pb.IdentityActorType_IDENTITY_ACTOR_TYPE_API_KEY:
+		return IdentityActorTypeAPIKey
+	case pb.IdentityActorType_IDENTITY_ACTOR_TYPE_UNAUTHENTICATED:
+		return IdentityActorTypeUnauthenticated
+	case pb.IdentityActorType_IDENTITY_ACTOR_TYPE_AGENT:
+		return IdentityActorTypeAgent
 	default:
-		return IdentityTypeUnauthenticated
+		return IdentityActorTypeUnauthenticated
 	}
 }
 
-func convertIdentityActorTypeFromProto(t pb.IdentityActorType) IdentityActorType {
+func convertIdentityRelationTypeFromProto(t pb.IdentityRelationType) IdentityRelationType {
 	switch t {
-	case pb.IdentityActorType_IDENTITY_ACTOR_TYPE_INTERNAL:
-		return IdentityActorTypeInternal
-	case pb.IdentityActorType_IDENTITY_ACTOR_TYPE_CUSTOMER:
-		return IdentityActorTypeCustomer
-	case pb.IdentityActorType_IDENTITY_ACTOR_TYPE_SUPPLIER:
-		return IdentityActorTypeSupplier
-	case pb.IdentityActorType_IDENTITY_ACTOR_TYPE_UNASSIGNED:
-		return IdentityActorTypeUnassigned
+	case pb.IdentityRelationType_IDENTITY_RELATION_TYPE_INTERNAL:
+		return IdentityRelationTypeInternal
+	case pb.IdentityRelationType_IDENTITY_RELATION_TYPE_CUSTOMER:
+		return IdentityRelationTypeCustomer
+	case pb.IdentityRelationType_IDENTITY_RELATION_TYPE_SUPPLIER:
+		return IdentityRelationTypeSupplier
+	case pb.IdentityRelationType_IDENTITY_RELATION_TYPE_UNASSIGNED:
+		return IdentityRelationTypeUnassigned
 	default:
-		return IdentityActorTypeUnassigned
+		return IdentityRelationTypeUnassigned
 	}
 }
 

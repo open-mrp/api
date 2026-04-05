@@ -12,6 +12,7 @@ import (
 )
 
 func TestRespondWithJSON_WithoutRequestLog(t *testing.T) {
+	t.Parallel()
 	payload := map[string]any{
 		"message": "success",
 		"data":    "test",
@@ -48,6 +49,7 @@ func TestRespondWithJSON_WithoutRequestLog(t *testing.T) {
 }
 
 func TestRespondWithJSON_WithRequestLog(t *testing.T) {
+	t.Parallel()
 	payload := map[string]any{
 		"message": "success",
 	}
@@ -84,6 +86,7 @@ func TestRespondWithJSON_WithRequestLog(t *testing.T) {
 }
 
 func TestRespondWithJSON_WithCurlUserAgent_PrettyPrint(t *testing.T) {
+	t.Parallel()
 	payload := map[string]any{
 		"message": "success",
 		"data":    "test",
@@ -124,6 +127,7 @@ func TestRespondWithJSON_WithCurlUserAgent_PrettyPrint(t *testing.T) {
 }
 
 func TestRespondWithJSON_WithNonCurlUserAgent_CompactJSON(t *testing.T) {
+	t.Parallel()
 	payload := map[string]any{
 		"message": "success",
 		"data":    "test",
@@ -169,6 +173,7 @@ func TestRespondWithJSON_WithNonCurlUserAgent_CompactJSON(t *testing.T) {
 }
 
 func TestRespondWithJSON_UnauthorizedStatus_SetsWWWAuthenticate(t *testing.T) {
+	t.Parallel()
 	payload := map[string]any{
 		"error": "unauthorized",
 	}
@@ -191,6 +196,7 @@ func TestRespondWithJSON_UnauthorizedStatus_SetsWWWAuthenticate(t *testing.T) {
 }
 
 func TestRespondWithJSON_DifferentStatusCodes(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		name           string
 		statusCode     int
@@ -247,6 +253,7 @@ func TestRespondWithJSON_DifferentStatusCodes(t *testing.T) {
 }
 
 func TestRespondWithJSON_ComplexPayload(t *testing.T) {
+	t.Parallel()
 	payload := map[string]any{
 		"user": map[string]any{
 			"id":    "user-123",
@@ -284,6 +291,7 @@ func TestRespondWithJSON_ComplexPayload(t *testing.T) {
 }
 
 func TestRespondWithJSON_ArrayPayload(t *testing.T) {
+	t.Parallel()
 	payload := []map[string]any{
 		{"id": "1", "name": "Item 1"},
 		{"id": "2", "name": "Item 2"},
@@ -313,7 +321,10 @@ func TestRespondWithJSON_ArrayPayload(t *testing.T) {
 }
 
 func TestRespondWithJSON_JSONMarshallingError_Returns500(t *testing.T) {
+	t.Parallel(
 	// Create a type that fails to marshal
+	)
+
 	type unmarshalableType struct {
 		Value chan int // Channels cannot be marshalled to JSON
 	}
@@ -337,6 +348,7 @@ func TestRespondWithJSON_JSONMarshallingError_Returns500(t *testing.T) {
 }
 
 func TestRespondWithJSON_WriteError_LogsError(t *testing.T) {
+	t.Parallel()
 	payload := map[string]any{
 		"message": "success",
 	}
@@ -387,6 +399,7 @@ func containsNewlines(s string) bool {
 }
 
 func TestRespondWithJSON_WithOptions(t *testing.T) {
+	t.Parallel()
 	payload := map[string]any{"message": "success"}
 	ctx := context.Background()
 	w := httptest.NewRecorder()
@@ -405,6 +418,7 @@ func TestRespondWithJSON_WithOptions(t *testing.T) {
 }
 
 func TestRespondWithJSON_WithLocation(t *testing.T) {
+	t.Parallel()
 	payload := map[string]any{"id": "ak_123"}
 	ctx := context.Background()
 	w := httptest.NewRecorder()
@@ -420,6 +434,7 @@ func TestRespondWithJSON_WithLocation(t *testing.T) {
 }
 
 func TestRespondWithJSONBytes(t *testing.T) {
+	t.Parallel()
 	body := []byte(`{"replayed":true}`)
 	rl := &appctx.RequestLog{ID: "req-123"}
 	ctx := appctx.WithRequestLog(context.Background(), rl)

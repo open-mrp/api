@@ -1,0 +1,214 @@
+syntax = "proto3";
+
+// Package core defines the gRPC service for pick and pick line management.
+package core;
+
+import "google/protobuf/timestamp.proto";
+import "core/core.proto";
+
+option go_package = "shared/proto/core;core";
+
+service CorePickingService {
+  // ListPicks returns a paginated list of picks for the target account.
+  rpc ListPicks(ListPicksRequest) returns (ListPicksResponse);
+
+  // GetPick returns a single pick by its ID.
+  rpc GetPick(GetPickRequest) returns (GetPickResponse);
+
+  // UpdatePick updates an existing pick's metadata.
+  rpc UpdatePick(UpdatePickRequest) returns (UpdatePickResponse);
+
+  // PickAllLines picks all unpacked lines in a pick to their remaining quantities.
+  rpc PickAllLines(PickAllLinesRequest) returns (PickAllLinesResponse);
+
+  // VoidPick voids all lines in a pick by setting quantities to zero.
+  rpc VoidPick(VoidPickRequest) returns (VoidPickResponse);
+
+  // PackPick packs all eligible lines and creates a shipment.
+  rpc PackPick(PackPickRequest) returns (PackPickResponse);
+
+  // GetPickShipments returns shipment numbers for a pick's order.
+  rpc GetPickShipments(GetPickShipmentsRequest) returns (GetPickShipmentsResponse);
+
+  // UpdatePickLine updates a pick line's quantity.
+  rpc UpdatePickLine(UpdatePickLineRequest) returns (UpdatePickLineResponse);
+
+  // PickPickLine picks a single line to its remaining quantity.
+  rpc PickPickLine(PickPickLineRequest) returns (PickPickLineResponse);
+
+  // VoidPickLine voids a single pick line by setting its quantity to zero.
+  rpc VoidPickLine(VoidPickLineRequest) returns (VoidPickLineResponse);
+}
+
+// PickSummaryInfo represents a pick in list views.
+message PickSummaryInfo {
+  string id = 1;
+  string number = 2;
+  string sales_order_id = 3;
+  string customer_id = 4;
+  string customer_name = 5;
+  string customer_number = 6;
+  string priority_code = 7;
+  string priority_name = 8;
+  google.protobuf.Timestamp finished_at = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+}
+
+// PickInfo represents a full pick resource.
+message PickInfo {
+  string id = 1;
+  string number = 2;
+  string sales_order_id = 3;
+  string customer_id = 4;
+  string customer_name = 5;
+  string customer_number = 6;
+  string priority_code = 7;
+  string priority_name = 8;
+  google.protobuf.Timestamp finished_at = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+  repeated PickLineInfo lines = 12;
+  repeated PickDepartmentInfo departments = 13;
+}
+
+// PickLineInfo represents a pick line resource.
+message PickLineInfo {
+  string id = 1;
+  string pick_id = 2;
+  string sales_order_line_id = 3;
+  string quantity_id = 4;
+  string quantity_value = 5;
+  string quantity_unit_id = 6;
+  string quantity_unit_name = 7;
+  string quantity_unit_abbreviation = 8;
+  google.protobuf.Timestamp packed_at = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+  int32 order_line_item_number = 12;
+  string order_line_sku = 13;
+  optional string order_line_description = 14;
+  string ordered_quantity_value = 15;
+  string ordered_quantity_unit_id = 16;
+  string ordered_quantity_unit_name = 17;
+  string ordered_quantity_unit_abbreviation = 18;
+}
+
+// PickDepartmentInfo represents a department associated with a pick.
+message PickDepartmentInfo {
+  string id = 1;
+  string name = 2;
+}
+
+// List picks
+message ListPicksRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+  optional string status = 4;
+  repeated string customer_ids = 5;
+  repeated string product_line_ids = 6;
+  repeated string customer_group_ids = 7;
+  repeated string department_ids = 8;
+  optional string start_date = 9;
+  optional string end_date = 10;
+}
+
+message ListPicksResponse {
+  repeated PickSummaryInfo picks = 1;
+  PageInfo page_info = 2;
+}
+
+// Get pick
+message GetPickRequest {
+  string id = 1;
+  repeated string includes = 2;
+}
+
+message GetPickResponse {
+  PickInfo pick = 1;
+}
+
+// Update pick
+message UpdatePickRequest {
+  string id = 1;
+  optional string number = 2;
+  optional string finished_at = 3;
+}
+
+message UpdatePickResponse {
+  PickInfo pick = 1;
+}
+
+// Pick all lines
+message PickAllLinesRequest {
+  string id = 1;
+}
+
+message PickAllLinesResponse {
+  PickInfo pick = 1;
+}
+
+// Void pick
+message VoidPickRequest {
+  string id = 1;
+}
+
+message VoidPickResponse {
+  PickInfo pick = 1;
+}
+
+// Pack pick
+message PackPickRequest {
+  string id = 1;
+  int32 shipment_case_count = 2;
+}
+
+message PackPickResponse {
+  PickInfo pick = 1;
+  string shipment_number = 2;
+}
+
+// Get pick shipments
+message GetPickShipmentsRequest {
+  string id = 1;
+  optional string query = 2;
+  optional int32 limit = 3;
+  optional int32 offset = 4;
+}
+
+message GetPickShipmentsResponse {
+  repeated string shipment_numbers = 1;
+  int32 count = 2;
+}
+
+// Update pick line
+message UpdatePickLineRequest {
+  string pick_id = 1;
+  string id = 2;
+  optional string quantity_value = 3;
+}
+
+message UpdatePickLineResponse {
+  PickLineInfo pick_line = 1;
+}
+
+// Pick pick line
+message PickPickLineRequest {
+  string pick_id = 1;
+  string id = 2;
+}
+
+message PickPickLineResponse {
+  PickLineInfo pick_line = 1;
+}
+
+// Void pick line
+message VoidPickLineRequest {
+  string pick_id = 1;
+  string id = 2;
+}
+
+message VoidPickLineResponse {
+  PickLineInfo pick_line = 1;
+}

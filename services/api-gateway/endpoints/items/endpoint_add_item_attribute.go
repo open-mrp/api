@@ -1,0 +1,42 @@
+package itemep
+
+import (
+	"context"
+	"net/http"
+
+	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
+	apierror "github.com/augno/api/shared/errors"
+)
+
+// AddItemAttributeRequest is the request to add an attribute to an item.
+type AddItemAttributeRequest struct {
+	// The ID of the item.
+	ItemID string `path:"id" validate:"required"`
+	// The ID of the attribute to add.
+	AttributeID string `path:"attribute_id" validate:"required"`
+}
+
+type AddItemAttributeEndpoint struct{}
+
+func (e *AddItemAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*AddItemAttributeRequest, *apiresource.Item] {
+	return &apiendpoint.APIEndpoint[*AddItemAttributeRequest, *apiresource.Item]{
+		Title:             "Add Item Attribute",
+		Description:       "Adds an attribute to an item. If the attribute is already associated with the item, this is a no-op.",
+		Method:            http.MethodPut,
+		Route:             "/v1/catalog/items/{id}/attributes/{attribute_id}",
+		Request:           &AddItemAttributeRequest{},
+		Response:          &apiresource.Item{},
+		SuccessStatusCode: http.StatusOK,
+		Public:            false,
+		Preview:           true,
+		ServiceHandler: func(svc any) func(ctx context.Context, req *AddItemAttributeRequest) (*apiresource.Item, *apierror.APIError) {
+			return svc.(ItemSvc).AddItemAttribute
+		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeItem,
+			Fields:     []string{"category", "unit_value", "unit_cost", "burn_rate", "attributes"},
+		}),
+	}
+}

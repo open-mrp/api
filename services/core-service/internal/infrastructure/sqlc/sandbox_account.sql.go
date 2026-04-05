@@ -13,11 +13,21 @@ import (
 
 const countSandboxAccounts = `-- name: CountSandboxAccounts :one
 SELECT COUNT(*) FROM sandbox_account
+JOIN account ON sandbox_account.account_id = account.id
 WHERE sandbox_account.owner_account_id = ?
+AND (
+    ? IS NULL
+    OR account.name LIKE ?
+)
 `
 
-func (q *Queries) CountSandboxAccounts(ctx context.Context, ownerAccountID string) (int64, error) {
-	row := q.queryRow(ctx, q.countSandboxAccountsStmt, countSandboxAccounts, ownerAccountID)
+type CountSandboxAccountsParams struct {
+	OwnerAccountID string
+	SearchQuery    sql.NullString
+}
+
+func (q *Queries) CountSandboxAccounts(ctx context.Context, arg CountSandboxAccountsParams) (int64, error) {
+	row := q.queryRow(ctx, q.countSandboxAccountsStmt, countSandboxAccounts, arg.OwnerAccountID, arg.SearchQuery, arg.SearchQuery)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -193,6 +203,10 @@ AND (
     sandbox_account.created_at > ?
     OR (sandbox_account.created_at = ? AND sandbox_account.id > ?)
 )
+AND (
+    ? IS NULL
+    OR account.name LIKE ?
+)
 ORDER BY sandbox_account.created_at ASC, sandbox_account.id ASC
 LIMIT ?
 `
@@ -201,6 +215,7 @@ type ListSandboxAccountsBackwardParams struct {
 	OwnerAccountID  string
 	CursorCreatedAt time.Time
 	CursorID        int64
+	SearchQuery     sql.NullString
 	Limit           int32
 }
 
@@ -220,6 +235,8 @@ func (q *Queries) ListSandboxAccountsBackward(ctx context.Context, arg ListSandb
 		arg.CursorCreatedAt,
 		arg.CursorCreatedAt,
 		arg.CursorID,
+		arg.SearchQuery,
+		arg.SearchQuery,
 		arg.Limit,
 	)
 	if err != nil {
@@ -263,6 +280,10 @@ AND (
     OR sandbox_account.created_at < ?
     OR (sandbox_account.created_at = ? AND sandbox_account.id < ?)
 )
+AND (
+    ? IS NULL
+    OR account.name LIKE ?
+)
 ORDER BY sandbox_account.created_at DESC, sandbox_account.id DESC
 LIMIT ?
 `
@@ -271,6 +292,7 @@ type ListSandboxAccountsForwardParams struct {
 	OwnerAccountID  string
 	CursorCreatedAt sql.NullTime
 	CursorID        sql.NullInt64
+	SearchQuery     sql.NullString
 	Limit           int32
 }
 
@@ -291,6 +313,8 @@ func (q *Queries) ListSandboxAccountsForward(ctx context.Context, arg ListSandbo
 		arg.CursorCreatedAt,
 		arg.CursorCreatedAt,
 		arg.CursorID,
+		arg.SearchQuery,
+		arg.SearchQuery,
 		arg.Limit,
 	)
 	if err != nil {
@@ -335,6 +359,10 @@ AND (
     sandbox_account.created_at > ?
     OR (sandbox_account.created_at = ? AND sandbox_account.id > ?)
 )
+AND (
+    ? IS NULL
+    OR account.name LIKE ?
+)
 ORDER BY sandbox_account.created_at ASC, sandbox_account.id ASC
 LIMIT ?
 `
@@ -343,6 +371,7 @@ type ListSandboxAccountsWithOwnerBackwardParams struct {
 	OwnerAccountID  string
 	CursorCreatedAt time.Time
 	CursorID        int64
+	SearchQuery     sql.NullString
 	Limit           int32
 }
 
@@ -363,6 +392,8 @@ func (q *Queries) ListSandboxAccountsWithOwnerBackward(ctx context.Context, arg 
 		arg.CursorCreatedAt,
 		arg.CursorCreatedAt,
 		arg.CursorID,
+		arg.SearchQuery,
+		arg.SearchQuery,
 		arg.Limit,
 	)
 	if err != nil {
@@ -409,6 +440,10 @@ AND (
     OR sandbox_account.created_at < ?
     OR (sandbox_account.created_at = ? AND sandbox_account.id < ?)
 )
+AND (
+    ? IS NULL
+    OR account.name LIKE ?
+)
 ORDER BY sandbox_account.created_at DESC, sandbox_account.id DESC
 LIMIT ?
 `
@@ -417,6 +452,7 @@ type ListSandboxAccountsWithOwnerForwardParams struct {
 	OwnerAccountID  string
 	CursorCreatedAt sql.NullTime
 	CursorID        sql.NullInt64
+	SearchQuery     sql.NullString
 	Limit           int32
 }
 
@@ -438,6 +474,8 @@ func (q *Queries) ListSandboxAccountsWithOwnerForward(ctx context.Context, arg L
 		arg.CursorCreatedAt,
 		arg.CursorCreatedAt,
 		arg.CursorID,
+		arg.SearchQuery,
+		arg.SearchQuery,
 		arg.Limit,
 	)
 	if err != nil {

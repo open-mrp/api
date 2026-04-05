@@ -104,6 +104,10 @@ type RegistrationSessionRepo interface {
 	// given user with cursor-based pagination.
 	ListByUserID(ctx context.Context, userID string, cursor *string, limit int32) ([]*RegistrationSession, pagination.PageInfo, *apierror.APIError)
 
+	// UpdateAccountID sets the account ID on the registration session without
+	// marking it as completed.
+	UpdateAccountID(ctx context.Context, id int64, accountID string) *apierror.APIError
+
 	// Complete marks the registration session as completed and records the
 	// account ID.
 	Complete(ctx context.Context, id int64, accountID *string) *apierror.APIError

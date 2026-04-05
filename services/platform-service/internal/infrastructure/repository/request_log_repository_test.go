@@ -34,6 +34,7 @@ func baseRow() sqlc.FindRequestLogByIDRow {
 }
 
 func TestMapRowToRequestLogRead_UserActor(t *testing.T) {
+	t.Parallel()
 	row := baseRow()
 	row.ActorID = nullStr("usr_abc123")
 	row.ActorType = nullStr("internal")
@@ -73,13 +74,14 @@ func TestMapRowToRequestLogRead_UserActor(t *testing.T) {
 }
 
 func TestMapRowToRequestLogRead_APIKeyActor(t *testing.T) {
+	t.Parallel()
 	row := baseRow()
 	row.ActorID = nullStr("apke_key_id_123")
 	row.ActorType = nullStr("customer")
 	row.IdentityType = nullStr("api_key")
 	row.ApiKeyTypeID = nullStr("apk_type_id_456")
 	row.ApiKeyName = nullStr("My API Key")
-	row.ApiKeyRedactedValue = nullStr("sk_test_...abc")
+	row.ApiKeyRedactedValue = nullStr("sk_test_****abc")
 	row.ApiKeyRoleID = nullStr("role_member")
 	row.ApiKeyRoleName = nullStr("Member")
 	row.ApiKeyRoleTypeCode = nullStr("member")
@@ -99,8 +101,8 @@ func TestMapRowToRequestLogRead_APIKeyActor(t *testing.T) {
 	if rl.Actor.Name == nil || *rl.Actor.Name != "My API Key" {
 		t.Errorf("expected name 'My API Key', got %v", rl.Actor.Name)
 	}
-	if rl.Actor.RedactedValue == nil || *rl.Actor.RedactedValue != "sk_test_...abc" {
-		t.Errorf("expected redacted value 'sk_test_...abc', got %v", rl.Actor.RedactedValue)
+	if rl.Actor.RedactedValue == nil || *rl.Actor.RedactedValue != "sk_test_****abc" {
+		t.Errorf("expected redacted value 'sk_test_****abc', got %v", rl.Actor.RedactedValue)
 	}
 	if rl.Actor.RoleID == nil || *rl.Actor.RoleID != "role_member" {
 		t.Errorf("expected role ID 'role_member', got %v", rl.Actor.RoleID)
@@ -108,6 +110,7 @@ func TestMapRowToRequestLogRead_APIKeyActor(t *testing.T) {
 }
 
 func TestMapRowToRequestLogRead_APIKeyActor_FallbackToActorID(t *testing.T) {
+	t.Parallel()
 	row := baseRow()
 	row.ActorID = nullStr("apke_key_id_123")
 	row.ActorType = nullStr("customer")
@@ -127,6 +130,7 @@ func TestMapRowToRequestLogRead_APIKeyActor_FallbackToActorID(t *testing.T) {
 }
 
 func TestMapRowToRequestLogRead_NoActor_WhenIdentityTypeNil(t *testing.T) {
+	t.Parallel()
 	row := baseRow()
 	row.ActorID = nullStr("usr_abc123")
 	row.ActorType = nullStr("internal")
@@ -140,6 +144,7 @@ func TestMapRowToRequestLogRead_NoActor_WhenIdentityTypeNil(t *testing.T) {
 }
 
 func TestMapRowToRequestLogRead_NoActor_WhenActorIDNil(t *testing.T) {
+	t.Parallel()
 	row := baseRow()
 	row.ActorID = nullStrEmpty() // nil actor ID
 	row.ActorType = nullStr("internal")
@@ -153,6 +158,7 @@ func TestMapRowToRequestLogRead_NoActor_WhenActorIDNil(t *testing.T) {
 }
 
 func TestMapRowToRequestLogRead_NoActor_WhenUnauthenticated(t *testing.T) {
+	t.Parallel()
 	row := baseRow()
 	row.ActorID = nullStr("usr_abc123")
 	row.ActorType = nullStr("internal")
@@ -167,8 +173,11 @@ func TestMapRowToRequestLogRead_NoActor_WhenUnauthenticated(t *testing.T) {
 }
 
 func TestMapRowToRequestLogRead_InternalActorType_WithUserIdentity(t *testing.T) {
+	t.Parallel(
 	// This was the original bug: actor_type "internal" was used for the switch,
 	// never matching "user" or "api_key". Now we switch on identity_type.
+	)
+
 	row := baseRow()
 	row.ActorID = nullStr("usr_abc123")
 	row.ActorType = nullStr("internal") // was incorrectly used for switching
@@ -190,7 +199,10 @@ func TestMapRowToRequestLogRead_InternalActorType_WithUserIdentity(t *testing.T)
 }
 
 func TestMapRowToRequestLogRead_CustomerActorType_WithAPIKeyIdentity(t *testing.T) {
+	t.Parallel(
 	// Similar to above: actor_type "customer" should not block API key resolution
+	)
+
 	row := baseRow()
 	row.ActorID = nullStr("apke_key1")
 	row.ActorType = nullStr("customer")
@@ -209,6 +221,7 @@ func TestMapRowToRequestLogRead_CustomerActorType_WithAPIKeyIdentity(t *testing.
 }
 
 func TestMapRowToRequestLogRead_AccountInfo(t *testing.T) {
+	t.Parallel()
 	row := baseRow()
 	row.TargetAccountID = nullStr("acct_12345")
 	row.AccountName = nullStr("My Company")
@@ -224,9 +237,10 @@ func TestMapRowToRequestLogRead_AccountInfo(t *testing.T) {
 }
 
 func TestMapRowToRequestLogRead_QueryAndBodyJSON(t *testing.T) {
+	t.Parallel()
 	row := baseRow()
 	row.QueryJson = db.NullableRawMessage(`{"page":"2"}`)
-	row.RequestBodyJson = db.NullableRawMessage(`{"name":"test"}`)
+	row.RequestBodyJson = `{"name":"test"}`
 
 	rl := mapRowToRequestLogRead(&row)
 
@@ -239,9 +253,10 @@ func TestMapRowToRequestLogRead_QueryAndBodyJSON(t *testing.T) {
 }
 
 func TestMapRowToRequestLogRead_NilQueryAndBodyJSON(t *testing.T) {
+	t.Parallel()
 	row := baseRow()
 	row.QueryJson = nil
-	row.RequestBodyJson = nil
+	row.RequestBodyJson = ""
 
 	rl := mapRowToRequestLogRead(&row)
 
@@ -254,6 +269,7 @@ func TestMapRowToRequestLogRead_NilQueryAndBodyJSON(t *testing.T) {
 }
 
 func TestMapRowToRequestLogRead_IdempotencyKey(t *testing.T) {
+	t.Parallel()
 	row := baseRow()
 	row.IdempotencyKey = nullStr("idem-123-abc")
 
@@ -265,6 +281,7 @@ func TestMapRowToRequestLogRead_IdempotencyKey(t *testing.T) {
 }
 
 func TestMapRowToRequestLogRead_BasicFields(t *testing.T) {
+	t.Parallel()
 	row := baseRow()
 	row.ApiVersion = nullStr("2.0.0")
 	row.IdentityType = nullStr("user")

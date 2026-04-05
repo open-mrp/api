@@ -1,0 +1,420 @@
+syntax = "proto3";
+
+// Package auth defines the gRPC contract for the auth-service. It handles user
+// authentication (login, registration, credential validation), token lifecycle
+// (refresh, revoke), and password management (reset, update). The api-gateway
+// calls these RPCs on every authenticated request (ValidateCredential) and for
+// all auth-related HTTP endpoints.
+package auth;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+option go_package = "shared/proto/auth;auth";
+
+service AuthService {
+  // Verifies a bearer token (JWT or API key) and returns the resolved Identity.
+  rpc ValidateCredential(Credential) returns (Identity);
+
+  // Authenticates a user by identifier + password and returns a token pair + user profile.
+  rpc Login(LoginRequest) returns (LoginResponse);
+
+  // Creates a new user and returns a token pair for immediate login.
+  rpc Register(RegisterRequest) returns (LoginResponse);
+
+  // Exchanges a valid refresh token for a new access token.
+  rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse);
+
+  // Sends a password reset email. Returns Empty regardless of whether the
+  // identifier exists (to prevent user enumeration).
+  rpc RequestPasswordReset(RequestPasswordResetRequest) returns (google.protobuf.Empty);
+
+  // Completes password reset using the email token and returns a token pair.
+  rpc ResetPassword(ResetPasswordRequest) returns (LoginResponse);
+
+  // Invalidates a refresh token. Used on logout.
+  rpc RevokeRefreshToken(RevokeRefreshTokenRequest) returns (google.protobuf.Empty);
+
+  // Changes the authenticated user's password (requires old password).
+  rpc UpdatePassword(UpdatePasswordRequest) returns (google.protobuf.Empty);
+
+  // Creates a new API key. Returns the full secret (shown once) and metadata.
+  rpc CreateAPIKey(CreateAPIKeyRequest) returns (CreateAPIKeyResponse);
+
+  // Revokes an API key and creates a replacement with the same name/role/owner.
+  rpc RotateAPIKey(RotateAPIKeyRequest) returns (RotateAPIKeyResponse);
+
+  // Permanently revokes an API key with no replacement.
+  rpc RevokeAPIKey(RevokeAPIKeyRequest) returns (google.protobuf.Empty);
+
+  // Returns a paginated list of API keys for the target account.
+  rpc ListAPIKeys(ListAPIKeysRequest) returns (ListAPIKeysResponse);
+
+  // Returns a single API key's metadata by ID.
+  rpc GetAPIKey(GetAPIKeyRequest) returns (GetAPIKeyResponse);
+
+  // Returns a sandbox API key for API docs, reusing or creating as needed.
+  rpc GetOrCreateDocAPIKey(GetOrCreateDocAPIKeyRequest) returns (GetOrCreateDocAPIKeyResponse);
+
+  // Creates a registration session (or returns existing). Sends a verification email.
+  rpc CreateRegistrationSession(CreateRegistrationSessionRequest) returns (CreateRegistrationSessionResponse);
+
+  // Resends the verification email for a registration session.
+  rpc ResendVerificationEmail(ResendVerificationEmailRequest) returns (google.protobuf.Empty);
+
+  // Verifies the email token and advances the session step. Idempotent.
+  rpc VerifyRegistrationToken(VerifyRegistrationTokenRequest) returns (VerifyRegistrationTokenResponse);
+
+  // Returns the current state of a registration session.
+  rpc GetRegistrationSession(GetRegistrationSessionRequest) returns (GetRegistrationSessionResponse);
+
+  // Creates or resolves a user for a registration session. Returns user ID and tokens.
+  rpc CreateUserForRegistration(CreateUserForRegistrationRequest) returns (CreateUserForRegistrationResponse);
+
+  // Updates a registration session's step, form data, or Stripe fields.
+  rpc UpdateRegistrationSession(UpdateRegistrationSessionRequest) returns (UpdateRegistrationSessionResponse);
+
+  // Returns a paginated list of open registration sessions for the authenticated user.
+  rpc ListRegistrationSessions(ListRegistrationSessionsRequest) returns (ListRegistrationSessionsResponse);
+
+  // Creates a Stripe customer and billing profile for a registration session.
+  rpc SetupRegistrationBilling(SetupRegistrationBillingRequest) returns (SetupRegistrationBillingResponse);
+
+  // Verifies a Setup Intent succeeded and marks payment as completed.
+  rpc ConfirmRegistrationPayment(ConfirmRegistrationPaymentRequest) returns (ConfirmRegistrationPaymentResponse);
+
+  // Finalizes registration: creates accounts, roles, permissions, and account-users.
+  rpc CompleteRegistration(CompleteRegistrationRequest) returns (CompleteRegistrationResponse);
+}
+
+message CompleteRegistrationRequest {
+  string session_id = 1;
+}
+
+message CompleteRegistrationResponse {
+  string account_id = 1;
+  string sandbox_id = 2;
+}
+
+message LoginRequest {
+  // Email address, username, or user ID. The auth-service resolves by trying each format in order.
+  string identifier = 1;
+  string password = 2;
+}
+
+// Returned by Login, Register, and ResetPassword.
+message LoginResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+  User user = 3;
+}
+
+message User {
+  string id = 1;
+  optional string email = 2;
+  optional string name = 3;
+  optional string username = 4;
+  optional string image_url = 5;
+  optional google.protobuf.Timestamp email_verified = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+// Sent by the api-gateway to ValidateCredential on every authenticated request.
+message Credential {
+  // Bearer token from Authorization header. May be a JWT or API key;
+  // the auth-service determines the type by inspecting the format.
+  string token = 1;
+  // From the Augno-Account header. When absent, the user's default account is used.
+  optional string target_account_id = 2;
+  // From the Augno-Actor-Account header. When present, the identity is resolved
+  // against this account instead of the target account.
+  optional string actor_account_id = 3;
+}
+
+// Resolved authentication context returned by ValidateCredential. Serialized
+// into gRPC metadata by the api-gateway for downstream services.
+message Identity {
+  IdentityActorType type = 1;
+  reserved 2, 6;
+  IdentityActor actor = 3;
+  AccountMode account_mode = 4;
+  optional string subscription_status = 5;
+  IdentityTarget target = 7;
+}
+
+message IdentityTarget {
+  string account_id = 1;
+  // The relationship type when the target account differs from the actor's account
+  // (e.g. "customer" or "supplier"). Empty when targeting the actor's own account.
+  optional string relation_type = 2;
+}
+
+message IdentityActor {
+  IdentityRelationType relation_type = 1;
+  string id = 2;
+  optional string name = 3;
+  // The actor's "home" account, which may differ from the target's account_id in cross-account scenarios.
+  optional string account_id = 4;
+  optional string role_id = 5;
+  optional string role_type_code = 6;
+  // Keys are permission codes (e.g. "invoices.create"); only granted permissions are present.
+  map<string, bool> permissions = 7;
+}
+
+enum IdentityActorType {
+  IDENTITY_ACTOR_TYPE_UNSPECIFIED = 0;
+  IDENTITY_ACTOR_TYPE_USER = 1;
+  IDENTITY_ACTOR_TYPE_API_KEY = 2;
+  IDENTITY_ACTOR_TYPE_UNAUTHENTICATED = 3;
+  IDENTITY_ACTOR_TYPE_AGENT = 4;
+}
+
+enum IdentityRelationType {
+  IDENTITY_RELATION_TYPE_UNSPECIFIED = 0;
+  IDENTITY_RELATION_TYPE_INTERNAL = 1;
+  IDENTITY_RELATION_TYPE_CUSTOMER = 2;
+  IDENTITY_RELATION_TYPE_SUPPLIER = 3;
+  IDENTITY_RELATION_TYPE_UNASSIGNED = 4;
+}
+
+enum AccountMode {
+  ACCOUNT_MODE_UNSPECIFIED = 0;
+  ACCOUNT_MODE_PRODUCTION = 1;
+  ACCOUNT_MODE_SANDBOX = 2;
+}
+
+message RegisterRequest {
+  string email = 1;
+  string password = 2;
+  string name = 3;
+}
+
+message RefreshTokenRequest {
+  string refresh_token = 1;
+}
+
+message RefreshTokenResponse {
+  string access_token = 1;
+}
+
+message RequestPasswordResetRequest {
+  string identifier = 1;
+  // Scopes the reset email's branding/links to a specific account context.
+  optional string account_slug = 2;
+}
+
+message ResetPasswordRequest {
+  string token = 1;
+  string password = 2;
+}
+
+message RevokeRefreshTokenRequest {
+  string refresh_token = 1;
+}
+
+message UpdatePasswordRequest {
+  string old_password = 1;
+  string new_password = 2;
+}
+
+message CreateAPIKeyRequest {
+  string role_id = 1;
+  string name = 2;
+  optional google.protobuf.Timestamp expires_at = 3;
+  repeated string includes = 4;
+}
+
+message CreateAPIKeyResponse {
+  // Full secret value, shown only at creation time.
+  string api_key_secret = 1;
+  APIKeyInfo api_key = 2;
+}
+
+message RotateAPIKeyRequest {
+  string api_key_id = 1;
+  // If not set, the new key inherits the old key's expiration.
+  optional google.protobuf.Timestamp expires_at = 2;
+  repeated string includes = 3;
+}
+
+message RotateAPIKeyResponse {
+  // Full secret value, shown only once.
+  string api_key_secret = 1;
+  APIKeyInfo api_key = 2;
+}
+
+message RevokeAPIKeyRequest {
+  string api_key_id = 1;
+}
+
+message ListAPIKeysRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+  // Valid values: "active", "expired", "revoked". When empty, all statuses are included.
+  repeated string statuses = 4;
+  repeated string includes = 5;
+}
+
+message PageInfo {
+  optional string next_cursor = 1;
+  optional string prev_cursor = 2;
+  bool has_next_page = 3;
+  bool has_prev_page = 4;
+}
+
+message ListAPIKeysResponse {
+  repeated APIKeyInfo api_keys = 1;
+  PageInfo page_info = 2;
+}
+
+message GetAPIKeyRequest {
+  string api_key_id = 1;
+  repeated string includes = 2;
+}
+
+message GetAPIKeyResponse {
+  APIKeyInfo api_key = 1;
+}
+
+message APIKeyInfo {
+  string id = 1;
+  string name = 2;
+  string redacted_value = 3;
+  optional string role_id = 4;
+  optional string role_name = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+  optional google.protobuf.Timestamp last_used_at = 8;
+  optional google.protobuf.Timestamp expires_at = 9;
+  optional google.protobuf.Timestamp revoked_at = 10;
+  optional string role_type_code = 11;
+}
+
+message GetOrCreateDocAPIKeyRequest {
+  repeated string includes = 1;
+}
+
+message GetOrCreateDocAPIKeyResponse {
+  string api_key_secret = 1;
+  APIKeyInfo api_key = 2;
+}
+
+message CreateRegistrationSessionRequest {
+  string email = 1;
+  string plan_code = 2;
+}
+
+message CreateRegistrationSessionResponse {
+  string session_id = 1;
+}
+
+message ResendVerificationEmailRequest {
+  string session_id = 1;
+}
+
+message RegistrationSessionData {
+  optional string user_name = 1;
+  optional string account_name = 2;
+  optional string billing_address_line1 = 3;
+  optional string billing_address_line2 = 4;
+  optional string billing_address_city = 5;
+  optional string billing_address_state = 6;
+  optional string billing_address_postal_code = 7;
+  optional string billing_address_country = 8;
+}
+
+message RegistrationSessionInfo {
+  string id = 1;
+  string email = 2;
+  string plan_code = 3;
+  string step = 4;
+  bool is_email_verified = 5;
+  optional bool is_existing_user = 6;
+  optional string user_id = 7;
+  optional string account_id = 8;
+  optional string stripe_customer_id = 9;
+  optional string stripe_checkout_session_id = 10;
+  optional string stripe_subscription_id = 11;
+  bool payment_completed = 12;
+  RegistrationSessionData session_data = 13;
+  optional google.protobuf.Timestamp completed_at = 14;
+  google.protobuf.Timestamp created_at = 15;
+  google.protobuf.Timestamp updated_at = 16;
+}
+
+message VerifyRegistrationTokenRequest {
+  string token = 1;
+}
+
+message VerifyRegistrationTokenResponse {
+  RegistrationSessionInfo session = 1;
+}
+
+message GetRegistrationSessionRequest {
+  string session_id = 1;
+}
+
+message GetRegistrationSessionResponse {
+  RegistrationSessionInfo session = 1;
+}
+
+message CreateUserForRegistrationRequest {
+  string session_id = 1;
+  string name = 2;
+  string password = 3;
+}
+
+message CreateUserForRegistrationResponse {
+  string user_id = 1;
+  string access_token = 2;
+  string refresh_token = 3;
+}
+
+message UpdateRegistrationSessionRequest {
+  string session_id = 1;
+  optional string step = 2;
+  optional RegistrationSessionData session_data = 3;
+  optional string stripe_customer_id = 4;
+  optional bool payment_completed = 5;
+  optional string stripe_subscription_id = 6;
+}
+
+message UpdateRegistrationSessionResponse {
+  RegistrationSessionInfo session = 1;
+}
+
+message ListRegistrationSessionsRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+}
+
+message ListRegistrationSessionsResponse {
+  repeated RegistrationSessionInfo sessions = 1;
+  PageInfo page_info = 2;
+}
+
+message SetupRegistrationBillingRequest {
+  string session_id = 1;
+}
+
+message ConfirmRegistrationPaymentRequest {
+  string session_id = 1;
+  string setup_intent_id = 2;
+}
+
+message ConfirmRegistrationPaymentResponse {
+  string status = 1;
+  optional string payment_method_id = 2;
+}
+
+message SetupRegistrationBillingResponse {
+  string stripe_customer_id = 1;
+  string billing_profile_id = 2;
+  string billing_cadence_id = 3;
+  // Stripe Setup Intent client secret for Stripe.js.
+  string client_secret = 4;
+  // Stripe publishable key for Stripe.js initialization.
+  string publishable_key = 5;
+}

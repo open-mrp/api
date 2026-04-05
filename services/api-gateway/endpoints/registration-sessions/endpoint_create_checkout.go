@@ -9,34 +9,28 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// The request to create a checkout session for a registration session
-type CreateCheckoutRequest struct {
+// SetupBillingRequest is the request to set up billing for a registration session.
+type SetupBillingRequest struct {
 	// The session ID.
 	SessionID string `json:"-" path:"session_id" validate:"required"`
 }
 
-const createCheckoutEndpointDescription string = `Creates a Stripe checkout session for a registration session. Creates the Stripe customer,
-product, price, and checkout session. Uses recovery points for safe retries after failures.`
+type SetupBillingEndpoint struct{}
 
-type CreateCheckoutEndpoint struct{}
-
-func (e *CreateCheckoutEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateCheckoutRequest, *apiresource.CreateCheckoutResponse] {
-	return &apiendpoint.APIEndpoint[*CreateCheckoutRequest, *apiresource.CreateCheckoutResponse]{
-		Title:             "Create Registration Checkout",
-		Description:       createCheckoutEndpointDescription,
+func (e *SetupBillingEndpoint) Materialize() *apiendpoint.APIEndpoint[*SetupBillingRequest, *apiresource.SetupBillingResponse] {
+	return &apiendpoint.APIEndpoint[*SetupBillingRequest, *apiresource.SetupBillingResponse]{
+		Title:             "Setup Registration Billing",
+		Description:       "Creates a Stripe customer and billing profile for a registration session.",
 		Method:            http.MethodPost,
-		Route:             "/v1/auth/registration-sessions/{session_id}/actions/checkout",
+		Route:             "/v1/auth/registration-sessions/{session_id}/actions/setup-billing",
 		ContentType:       "application/json",
-		Request:           &CreateCheckoutRequest{},
-		Response:          &apiresource.CreateCheckoutResponse{},
+		Request:           &SetupBillingRequest{},
+		Response:          &apiresource.SetupBillingResponse{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
-		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateCheckoutRequest) (*apiresource.CreateCheckoutResponse, *apierror.APIError) {
-			return svc.(RegistrationSessionSvc).CreateCheckout
-		},
-		Extras: apiendpoint.APIEndpointExtras{
-			AllowUnknownJSONFields: false,
+		ServiceHandler: func(svc any) func(ctx context.Context, req *SetupBillingRequest) (*apiresource.SetupBillingResponse, *apierror.APIError) {
+			return svc.(RegistrationSessionSvc).SetupBilling
 		},
 	}
 }

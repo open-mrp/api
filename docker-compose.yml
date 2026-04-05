@@ -1,0 +1,37 @@
+services:
+  mysql:
+    image: mysql:8
+    container_name: augno-mysql
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: "Testing123!"
+      MYSQL_DATABASE: augno
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-pTesting123!"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  postgres:
+    image: postgres:16
+    container_name: augno-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: augno_agents
+      POSTGRES_USER: augno
+      POSTGRES_HOST_AUTH_METHOD: trust
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U augno -d augno_agents"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  mysql-data:
+  postgres-data:

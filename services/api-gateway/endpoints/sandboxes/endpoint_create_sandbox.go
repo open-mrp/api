@@ -11,9 +11,6 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-const createSandboxEndpointDescription string = `This endpoint creates a new sandbox account for the target account.
-Enforces a per-account sandbox limit. Requires admin permissions.`
-
 // The request to create a sandbox.
 type CreateSandboxRequest struct {
 	// The display name for the sandbox.
@@ -36,22 +33,18 @@ type CreateSandboxEndpoint struct{}
 func (e *CreateSandboxEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateSandboxRequest, *apiresource.Sandbox] {
 	return &apiendpoint.APIEndpoint[*CreateSandboxRequest, *apiresource.Sandbox]{
 		Title:             "Create Sandbox",
-		Description:       createSandboxEndpointDescription,
+		Description:       "Creates a new sandbox account for the target account.",
 		Method:            http.MethodPost,
 		Route:             "/v1/core/sandboxes",
 		Request:           &CreateSandboxRequest{},
-		Response:          apiresource.SampleSandbox,
+		Response:          &apiresource.Sandbox{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
 		Preview:           true,
-		IncludeConfig: &apiendpoint.IncludeConfig{
-			Fields: []apiendpoint.IncludeField{
-				{Key: "owner_account", ObjectType: constants.ObjectTypeAccount, JSONPaths: []string{"owner_account"}},
-			},
-		},
-		Extras: apiendpoint.APIEndpointExtras{
-			AllowUnknownJSONFields: false,
-		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeSandbox,
+			Fields:     []string{"owner_account"},
+		}),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateSandboxRequest) (*apiresource.Sandbox, *apierror.APIError) {
 			return svc.(SandboxSvc).CreateSandbox
 		},

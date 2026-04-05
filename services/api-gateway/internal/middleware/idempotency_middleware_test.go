@@ -7,6 +7,7 @@ import (
 )
 
 func TestIdempotencyScopeHash_SameTargetAccountSharesScope(t *testing.T) {
+	t.Parallel()
 	actorID := "user_123"
 	targetAccountID := "acct_456"
 	method := "POST"
@@ -22,6 +23,7 @@ func TestIdempotencyScopeHash_SameTargetAccountSharesScope(t *testing.T) {
 }
 
 func TestIdempotencyScopeHash_DifferentTargetAccountDifferentScope(t *testing.T) {
+	t.Parallel()
 	actorID := "user_123"
 	targetAccountID1 := "acct_456"
 	targetAccountID2 := "acct_789"
@@ -38,6 +40,7 @@ func TestIdempotencyScopeHash_DifferentTargetAccountDifferentScope(t *testing.T)
 }
 
 func TestIdempotencyScopeHash_NilTargetAccountHandledCorrectly(t *testing.T) {
+	t.Parallel()
 	actorID := "user_123"
 	targetAccountID := "acct_456"
 	method := "POST"
@@ -55,7 +58,10 @@ func TestIdempotencyScopeHash_NilTargetAccountHandledCorrectly(t *testing.T) {
 }
 
 func TestIdempotencyScopeHash_NilIdentityHandledCorrectly(t *testing.T) {
+	t.Parallel(
 	// When identity is nil, both actorID and targetAccountID should be nil
+	)
+
 	method := "POST"
 	route := "/api/v1/orders"
 	key := "idem-key-1"
@@ -69,6 +75,7 @@ func TestIdempotencyScopeHash_NilIdentityHandledCorrectly(t *testing.T) {
 }
 
 func TestIsTransientStatusCode(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		code     int
 		expected bool
@@ -99,8 +106,11 @@ func TestIsTransientStatusCode(t *testing.T) {
 }
 
 func TestIdempotencyScopeHash_AttackScenarioPrevented(t *testing.T) {
+	t.Parallel(
 	// This test verifies that the security issue is fixed:
 	// An attacker cannot replay a request intended for account A against account B
+	)
+
 	actorID := "attacker_123"
 	targetAccountA := "acct_victim_A"
 	targetAccountB := "acct_victim_B"

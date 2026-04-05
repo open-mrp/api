@@ -12,18 +12,15 @@ import (
 // RevokeAPIKeyRequest is the request to revoke an API key.
 type RevokeAPIKeyRequest struct {
 	// The ID of the API key to revoke.
-	APIKeyID string `path:"id"`
+	APIKeyID string `path:"id" validate:"required"`
 }
-
-const revokeAPIKeyEndpointDescription string = `This endpoint revokes an API key so it can no longer be used to 
-authenticate requests. The API key will be marked as revoked and will no longer be usable.`
 
 type RevokeAPIKeyEndpoint struct{}
 
 func (e *RevokeAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*RevokeAPIKeyRequest, *apiresource.EmptyResource] {
 	return &apiendpoint.APIEndpoint[*RevokeAPIKeyRequest, *apiresource.EmptyResource]{
 		Title:             "Revoke API Key",
-		Description:       revokeAPIKeyEndpointDescription,
+		Description:       "Revokes an API key so it can no longer be used to authenticate requests.",
 		Method:            http.MethodDelete,
 		Route:             "/v1/auth/api-keys/{id}",
 		ContentType:       "application/json",
@@ -34,9 +31,6 @@ func (e *RevokeAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*RevokeAPI
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RevokeAPIKeyRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(APIKeySvc).RevokeAPIKey
-		},
-		Extras: apiendpoint.APIEndpointExtras{
-			AllowUnknownJSONFields: false,
 		},
 	}
 }

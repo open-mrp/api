@@ -15,11 +15,15 @@ type BillingEndpointGroup struct {
 
 type BillingEndpointGroupConfig struct {
 	BillingClient *grpcclient.BillingServiceClient
+	CoreClient    *grpcclient.CoreServiceClient
 }
 
 func (c *BillingEndpointGroupConfig) validate() error {
 	if c.BillingClient == nil {
 		return fmt.Errorf("billing endpoint group: billing client is required")
+	}
+	if c.CoreClient == nil {
+		return fmt.Errorf("billing endpoint group: core client is required")
 	}
 	return nil
 }
@@ -31,11 +35,12 @@ func (*BillingEndpointGroup) Materialize(config *BillingEndpointGroupConfig) *Bi
 
 	billingSvc := billingep.NewBillingSvc(&billingep.BillingSvcConfig{
 		BillingClient: config.BillingClient.Client,
+		CoreClient:    config.CoreClient.Client,
 	})
 
 	inner := &apiendpoint.APIEndpointGroup{
 		Title:        "Billing",
-		Description:  "Handles billing and pricing plan operations.",
+		Description:  "Billing and pricing plan operations.",
 		ResourceType: &apiresource.PricingPlan{},
 	}
 
@@ -46,8 +51,8 @@ func (*BillingEndpointGroup) Materialize(config *BillingEndpointGroupConfig) *Bi
 	createEnterpriseInquiryEndpoint := (&billingep.CreateEnterpriseInquiryEndpoint{}).Materialize().WithService(inner, billingSvc)
 	ensureBillingCustomerEndpoint := (&billingep.EnsureBillingCustomerEndpoint{}).Materialize().WithService(inner, billingSvc)
 	switchPlanEndpoint := (&billingep.SwitchPlanEndpoint{}).Materialize().WithService(inner, billingSvc)
-	confirmPlanSwitchEndpoint := (&billingep.ConfirmPlanSwitchEndpoint{}).Materialize().WithService(inner, billingSvc)
-
+	getSpendingCapEndpoint := (&billingep.GetSpendingCapEndpoint{}).Materialize().WithService(inner, billingSvc)
+	setSpendingCapEndpoint := (&billingep.SetSpendingCapEndpoint{}).Materialize().WithService(inner, billingSvc)
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		getPricingPlansEndpoint,
 		getAccountUsageEndpoint,
@@ -56,7 +61,8 @@ func (*BillingEndpointGroup) Materialize(config *BillingEndpointGroupConfig) *Bi
 		createEnterpriseInquiryEndpoint,
 		ensureBillingCustomerEndpoint,
 		switchPlanEndpoint,
-		confirmPlanSwitchEndpoint,
+		getSpendingCapEndpoint,
+		setSpendingCapEndpoint,
 	}
 
 	return &BillingEndpointGroup{inner}

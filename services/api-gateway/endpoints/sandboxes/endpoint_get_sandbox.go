@@ -13,35 +13,29 @@ import (
 // GetSandboxRequest is the request to retrieve a single sandbox.
 type GetSandboxRequest struct {
 	// The ID of the sandbox to retrieve.
-	SandboxID string `path:"id"`
+	SandboxID string `path:"id" validate:"required"`
 }
-
-const getSandboxEndpointDescription string = `This endpoint returns a single sandbox account by its ID.`
 
 type GetSandboxEndpoint struct{}
 
 func (e *GetSandboxEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetSandboxRequest, *apiresource.Sandbox] {
 	return &apiendpoint.APIEndpoint[*GetSandboxRequest, *apiresource.Sandbox]{
 		Title:             "Get Sandbox",
-		Description:       getSandboxEndpointDescription,
+		Description:       "Returns a single sandbox account by its ID.",
 		Method:            http.MethodGet,
 		Route:             "/v1/core/sandboxes/{id}",
 		ContentType:       "application/json",
 		Request:           &GetSandboxRequest{},
-		Response:          apiresource.SampleSandbox,
+		Response:          &apiresource.Sandbox{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetSandboxRequest) (*apiresource.Sandbox, *apierror.APIError) {
 			return svc.(SandboxSvc).GetSandbox
 		},
-		IncludeConfig: &apiendpoint.IncludeConfig{
-			Fields: []apiendpoint.IncludeField{
-				{Key: "owner_account", ObjectType: constants.ObjectTypeAccount, JSONPaths: []string{"owner_account"}},
-			},
-		},
-		Extras: apiendpoint.APIEndpointExtras{
-			AllowUnknownJSONFields: false,
-		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeSandbox,
+			Fields:     []string{"owner_account"},
+		}),
 	}
 }

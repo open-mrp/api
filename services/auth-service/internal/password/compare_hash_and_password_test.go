@@ -6,7 +6,10 @@ import (
 )
 
 func TestCompareHashAndPassword(t *testing.T) {
+	t.Parallel(
 	// First, we need to create some hashed passwords for testing
+	)
+
 	password1 := "correctPassword123!"
 	password2 := "anotherPassword456!"
 	hash1, _ := HashPassword(context.Background(), password1)

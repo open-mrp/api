@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/services/core-service/internal/domain"
 	"github.com/augno/api/shared/appctx"
+	"github.com/augno/api/shared/audit"
 	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/contracts"
 	apierror "github.com/augno/api/shared/errors"
@@ -74,6 +76,9 @@ func (s *sandboxSvcImpl) withTx(ctx context.Context, fn func(context.Context, *s
 	})
 }
 
+// GetSandboxAccountByOwner returns the first sandbox account ID owned by the given production account.
+//
+// 1. Query the sandbox account repository for the first sandbox matching the owner account ID.
 func (s *sandboxSvcImpl) GetSandboxAccountByOwner(ctx context.Context, ownerAccountID string) (string, *apierror.APIError) {
 	ctx, span := sandboxSvcTracer.Start(ctx, "service.sandbox.get_sandbox_account_by_owner")
 	defer span.End()
@@ -81,7 +86,12 @@ func (s *sandboxSvcImpl) GetSandboxAccountByOwner(ctx context.Context, ownerAcco
 	return s.repos.NewSandboxAccountRepo().FindFirstByOwnerAccountID(ctx, ownerAccountID)
 }
 
-func (s *sandboxSvcImpl) ListSandboxAccounts(ctx context.Context, cursor *string, limit int32, includes []string) (*domain.ListSandboxAccountsResult, *apierror.APIError) {
+// ListSandboxAccounts returns a paginated list of sandbox accounts for the caller's production account.
+//
+// 1. Extract and validate the caller's identity, actor type, sandbox:read permission, and non-sandbox mode.
+// 2. Require the Augno-Account header.
+// 3. Query the sandbox account repository with pagination and optional includes.
+func (s *sandboxSvcImpl) ListSandboxAccounts(ctx context.Context, cursor *string, limit int32, query *string, includes []string) (*domain.ListSandboxAccountsResult, *apierror.APIError) {
 	ctx, span := sandboxSvcTracer.Start(ctx, "service.sandbox.list_sandbox_accounts")
 	defer span.End()
 
@@ -90,22 +100,26 @@ func (s *sandboxSvcImpl) ListSandboxAccounts(ctx context.Context, cursor *string
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
-	if apiErr := types.CheckIsInternalActor(identity); apiErr != nil {
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if apiErr := types.CheckNotSandboxMode(identity); apiErr != nil {
+	if apiErr := identity.CheckNotSandboxMode(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if apiErr := types.CheckHasPermission(identity, types.PermissionDomainSandbox, types.ActionRead); apiErr != nil {
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainSandbox, types.ActionRead); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
-	}
-	if identity.TargetAccountID == nil {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
 	}
 
-	return s.repos.NewSandboxAccountRepo().List(ctx, *identity.TargetAccountID, cursor, limit, includes)
+	return s.repos.NewSandboxAccountRepo().List(ctx, identity.Target.AccountID, cursor, limit, query, includes)
 }
 
+// CreateSandbox provisions a new sandbox account for the caller's production account, with idempotency support.
+//
+// 1. Extract and validate the caller's identity, actor type, sandbox:create permission, and non-sandbox mode.
+// 2. Upsert an idempotency key; if already finished, return the cached response.
+// 3. Within a transaction, delegate to the sandbox mediator to create the sandbox account.
+// 4. If the mode is "seeded", enqueue a seed-data message for async population.
+// 5. Cache the success response for idempotent replay.
 func (s *sandboxSvcImpl) CreateSandbox(ctx context.Context, name string, mode constants.SandboxMode) (*domain.SandboxAccount, *apierror.APIError) {
 	ctx, span := sandboxSvcTracer.Start(ctx, "service.sandbox.create")
 	defer span.End()
@@ -115,28 +129,25 @@ func (s *sandboxSvcImpl) CreateSandbox(ctx context.Context, name string, mode co
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
-	if apiErr := types.CheckIsInternalActor(identity); apiErr != nil {
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if apiErr := types.CheckNotSandboxMode(identity); apiErr != nil {
+	if apiErr := identity.CheckNotSandboxMode(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if apiErr := types.CheckHasPermission(identity, types.PermissionDomainSandbox, types.ActionCreate); apiErr != nil {
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainSandbox, types.ActionCreate); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
-	}
-	if identity.TargetAccountID == nil {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
 	}
 
-	ownerAccountID := *identity.TargetAccountID
+	if strings.TrimSpace(name) == "" {
+		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("Name is required.", "name"))
+	}
+
+	ownerAccountID := identity.Target.AccountID
 
 	meds := s.mediators()
 
-	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, &domain.RequestIdentity{
-		ActorID:         identity.Actor.ID,
-		IdentityType:    identity.Type,
-		TargetAccountID: identity.TargetAccountID,
-	})
+	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, identity)
 	if apiErr != nil {
 		return nil, apiErr
 	}
@@ -160,6 +171,18 @@ func (s *sandboxSvcImpl) CreateSandbox(ctx context.Context, name string, mode co
 			}
 
 			result = sandbox
+
+			changes := audit.ComputeChanges(nil, sandbox)
+
+			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+				ServiceName:  domain.ServiceName,
+				Action:       constants.AuditActionCreate,
+				ResourceType: constants.ObjectTypeSandbox,
+				ResourceID:   sandbox.TypeID,
+				Changes:      changes,
+			}); apiErr != nil {
+				return apiErr
+			}
 
 			if mode == constants.SandboxModeSeeded {
 				payloadJSON, err := json.Marshal(map[string]string{"account_id": sandbox.AccountID})
@@ -200,6 +223,11 @@ func (s *sandboxSvcImpl) CreateSandbox(ctx context.Context, name string, mode co
 	}
 }
 
+// GetSandbox retrieves a single sandbox by type ID, verifying ownership against the caller's account.
+//
+// 1. Extract and validate the caller's identity, actor type, sandbox:read permission, and non-sandbox mode.
+// 2. Fetch the sandbox by type ID from the repository.
+// 3. Verify the sandbox belongs to the caller's account; return not-found if ownership mismatches.
 func (s *sandboxSvcImpl) GetSandbox(ctx context.Context, sandboxTypeID string, includes []string) (*domain.SandboxAccount, *apierror.APIError) {
 	ctx, span := sandboxSvcTracer.Start(ctx, "service.sandbox.get")
 	defer span.End()
@@ -209,17 +237,14 @@ func (s *sandboxSvcImpl) GetSandbox(ctx context.Context, sandboxTypeID string, i
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
-	if apiErr := types.CheckIsInternalActor(identity); apiErr != nil {
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if apiErr := types.CheckNotSandboxMode(identity); apiErr != nil {
+	if apiErr := identity.CheckNotSandboxMode(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if apiErr := types.CheckHasPermission(identity, types.PermissionDomainSandbox, types.ActionRead); apiErr != nil {
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainSandbox, types.ActionRead); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
-	}
-	if identity.TargetAccountID == nil {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
 	}
 
 	sandbox, apiErr := s.repos.NewSandboxAccountRepo().FindByTypeID(ctx, sandboxTypeID, includes)
@@ -227,13 +252,18 @@ func (s *sandboxSvcImpl) GetSandbox(ctx context.Context, sandboxTypeID string, i
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	if sandbox.OwnerAccountID != *identity.TargetAccountID {
+	if sandbox.OwnerAccountID != identity.Target.AccountID {
 		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Sandbox not found."))
 	}
 
 	return sandbox, nil
 }
 
+// DeleteSandbox removes a sandbox account and enqueues a purge message for async data cleanup.
+//
+// 1. Extract and validate the caller's identity, actor type, sandbox:delete permission, and non-sandbox mode.
+// 2. Within a transaction, delegate to the sandbox mediator to delete the sandbox and its account record.
+// 3. Enqueue a purge-account-data message via the outbox for downstream cleanup.
 func (s *sandboxSvcImpl) DeleteSandbox(ctx context.Context, sandboxTypeID string) *apierror.APIError {
 	ctx, span := sandboxSvcTracer.Start(ctx, "service.sandbox.delete")
 	defer span.End()
@@ -243,30 +273,60 @@ func (s *sandboxSvcImpl) DeleteSandbox(ctx context.Context, sandboxTypeID string
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
-	if apiErr := types.CheckIsInternalActor(identity); apiErr != nil {
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
-	if apiErr := types.CheckNotSandboxMode(identity); apiErr != nil {
+	if apiErr := identity.CheckNotSandboxMode(); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
-	if apiErr := types.CheckHasPermission(identity, types.PermissionDomainSandbox, types.ActionDelete); apiErr != nil {
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainSandbox, types.ActionDelete); apiErr != nil {
 		return tracing.Trace(span, apiErr)
-	}
-	if identity.TargetAccountID == nil {
-		return tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
 	}
 
-	ownerAccountID := *identity.TargetAccountID
+	ownerAccountID := identity.Target.AccountID
+
+	sandbox, apiErr := s.repos.NewSandboxAccountRepo().FindByTypeID(ctx, sandboxTypeID, nil)
+	if apiErr != nil {
+		if apierror.IsNotFound(apiErr) {
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeSandbox, sandboxTypeID)
+			if deletedCheckErr != nil {
+				return tracing.Trace(span, deletedCheckErr)
+			}
+			if wasDeleted {
+				return tracing.Trace(span, apierror.NewAlreadyDeletedError("This sandbox has already been deleted and can no longer be modified."))
+			}
+		}
+		return tracing.Trace(span, apiErr)
+	}
+	if sandbox.OwnerAccountID != ownerAccountID {
+		return tracing.Trace(span, apierror.NewResourceNotFoundError("Sandbox not found."))
+	}
 
 	var accountID string
-	apiErr := s.withTx(ctx, func(txCtx context.Context, txSvc *sandboxSvcImpl) *apierror.APIError {
+	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *sandboxSvcImpl) *apierror.APIError {
 		txMeds := txSvc.mediators()
+
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeSandbox, sandbox.TypeID, sandbox); apiErr != nil {
+			return apiErr
+		}
 
 		deletedAccountID, deleteErr := txMeds.Sandbox.Delete(txCtx, ownerAccountID, sandboxTypeID)
 		if deleteErr != nil {
 			return deleteErr
 		}
 		accountID = deletedAccountID
+
+		changes := audit.ComputeChanges(sandbox, (*domain.SandboxAccount)(nil))
+
+		if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+			ServiceName:  domain.ServiceName,
+			Action:       constants.AuditActionDelete,
+			ResourceType: constants.ObjectTypeSandbox,
+			ResourceID:   sandbox.TypeID,
+			Changes:      changes,
+		}); apiErr != nil {
+			return apiErr
+		}
 
 		payloadData := map[string]string{"account_id": accountID}
 		payloadJSON, err := json.Marshal(payloadData)

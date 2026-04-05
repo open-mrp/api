@@ -71,6 +71,7 @@ func (suite *UserSvcTestSuite) TearDownSuite() {
 }
 
 func TestUserSvcTestSuite(t *testing.T) {
+	t.Parallel()
 	suite.Run(t, new(UserSvcTestSuite))
 }
 
@@ -228,6 +229,7 @@ func (m *trackingTxManager) Reset() {
 }
 
 func TestLogin_Success_RefreshTokenAndResponseInSameTx(t *testing.T) {
+	t.Parallel()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -284,6 +286,7 @@ func TestLogin_Success_RefreshTokenAndResponseInSameTx(t *testing.T) {
 }
 
 func TestLogin_Success_ResponseFailsCausesRollback(t *testing.T) {
+	t.Parallel()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -342,6 +345,7 @@ func TestLogin_Success_ResponseFailsCausesRollback(t *testing.T) {
 }
 
 func TestLogin_RefreshTokenFails_NonTransientErrorCached(t *testing.T) {
+	t.Parallel()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -400,6 +404,7 @@ func TestLogin_RefreshTokenFails_NonTransientErrorCached(t *testing.T) {
 }
 
 func TestLogin_RefreshTokenFails_TransientErrorNotCached(t *testing.T) {
+	t.Parallel()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 

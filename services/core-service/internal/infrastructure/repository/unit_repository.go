@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	gosql "database/sql"
+	"strings"
 	"time"
 
 	"github.com/augno/api/services/core-service/internal/domain"
@@ -34,14 +35,6 @@ func NewUnitRepo(queries *sqlc.Queries) domain.UnitRepo {
 
 func unitCreatedAt(u *domain.Unit) time.Time { return u.CreatedAt }
 func unitID(u *domain.Unit) string           { return u.ID }
-
-func buildSearchParams(query *string) (gosql.NullString, gosql.NullString) {
-	if query == nil || *query == "" {
-		return gosql.NullString{}, gosql.NullString{}
-	}
-	return gosql.NullString{String: "%" + *query + "%", Valid: true},
-		gosql.NullString{String: *query, Valid: true}
-}
 
 func buildDimensionFilter(t *string) gosql.NullString {
 	if t == nil || *t == "" {
@@ -93,7 +86,7 @@ func mapGetUnitRow(row sqlc.GetUnitRow) *domain.Unit {
 }
 
 func toNullString(s *string) gosql.NullString {
-	if s == nil {
+	if s == nil || *s == "" {
 		return gosql.NullString{}
 	}
 	return gosql.NullString{String: *s, Valid: true}
@@ -124,7 +117,7 @@ func (r *unitRepoImpl) List(ctx context.Context, params domain.ListUnitsParams) 
 	ctx, span := unitRepoTracer.Start(ctx, "repository.unit.list")
 	defer span.End()
 
-	searchQuery, searchExact := buildSearchParams(params.Query)
+	ft := db.NewFulltextSearch(params.Query)
 	dimensionFilter := buildDimensionFilter(params.Type)
 	includeGroupFilter := len(params.UnitGroupIDs) > 0
 	accountID := gosql.NullString{String: params.AccountID, Valid: true}
@@ -150,8 +143,9 @@ func (r *unitRepoImpl) List(ctx context.Context, params domain.ListUnitsParams) 
 				UnitDimensionCode:      dimensionFilter,
 				IncludeUnitGroupFilter: includeGroupFilter,
 				UnitGroupIds:           unitGroupIDs,
-				SearchQuery:            searchQuery,
-				SearchExact:            searchExact,
+				SearchQuery:            ft.Fulltext,
+				SearchQuery_2:          ft.Fulltext2,
+				LikeQuery:              ft.Like,
 				CursorCreatedAt:        cur.OccurredAt,
 				CursorID:               cur.ID,
 				Limit:                  params.Limit + 1,
@@ -173,8 +167,9 @@ func (r *unitRepoImpl) List(ctx context.Context, params domain.ListUnitsParams) 
 			UnitDimensionCode:      dimensionFilter,
 			IncludeUnitGroupFilter: includeGroupFilter,
 			UnitGroupIds:           unitGroupIDs,
-			SearchQuery:            searchQuery,
-			SearchExact:            searchExact,
+			SearchQuery:            ft.Fulltext,
+			SearchQuery_2:          ft.Fulltext2,
+			LikeQuery:              ft.Like,
 			CursorCreatedAt:        gosql.NullTime{Time: cur.OccurredAt, Valid: true},
 			CursorID:               gosql.NullString{String: cur.ID, Valid: true},
 			Limit:                  params.Limit + 1,
@@ -196,8 +191,9 @@ func (r *unitRepoImpl) List(ctx context.Context, params domain.ListUnitsParams) 
 		UnitDimensionCode:      dimensionFilter,
 		IncludeUnitGroupFilter: includeGroupFilter,
 		UnitGroupIds:           unitGroupIDs,
-		SearchQuery:            searchQuery,
-		SearchExact:            searchExact,
+		SearchQuery:            ft.Fulltext,
+		SearchQuery_2:          ft.Fulltext2,
+		LikeQuery:              ft.Like,
 		Limit:                  params.Limit + 1,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
@@ -307,6 +303,50 @@ func (r *unitRepoImpl) ExistsByAbbreviation(ctx context.Context, accountID, abbr
 		return false, tracing.Trace(span, apiErr)
 	}
 	return count > 0, nil
+}
+
+func (r *unitRepoImpl) FindByAbbreviations(ctx context.Context, accountID string, abbreviations []string) ([]*domain.Unit, *apierror.APIError) {
+	ctx, span := unitRepoTracer.Start(ctx, "repository.unit.find_by_abbreviations")
+	defer span.End()
+
+	// NOTE: sqlc generation for FindUnitsByAbbreviations currently only accepts accountID.
+	// Filter abbreviations in-memory for now.
+	rows, err := r.queries.FindUnitsByAbbreviations(ctx, gosql.NullString{String: accountID, Valid: true})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	abbrSet := make(map[string]struct{}, len(abbreviations))
+	for _, a := range abbreviations {
+		abbrSet[strings.ToLower(a)] = struct{}{}
+	}
+
+	units := make([]*domain.Unit, len(rows))
+	out := units[:0]
+	for _, row := range rows {
+		var accID *string
+		if row.AccountID.Valid {
+			accID = &row.AccountID.String
+		}
+		if _, ok := abbrSet[strings.ToLower(row.Abbreviation)]; !ok {
+			continue
+		}
+		out = append(out, &domain.Unit{
+			ID:                row.ID,
+			Name:              row.Name,
+			Abbreviation:      row.Abbreviation,
+			UnitDimensionCode: row.UnitDimensionCode,
+			RatioNumerator:    row.RatioNumerator,
+			RatioDenominator:  row.RatioDenominator,
+			OffsetNumerator:   row.OffsetNumerator,
+			OffsetDenominator: row.OffsetDenominator,
+			IsBaseUnit:        row.IsBaseUnit,
+			AccountID:         accID,
+			CreatedAt:         row.CreatedAt,
+			UpdatedAt:         row.UpdatedAt,
+		})
+	}
+	return out, nil
 }
 
 func (r *unitRepoImpl) Delete(ctx context.Context, params domain.DeleteUnitParams) *apierror.APIError {

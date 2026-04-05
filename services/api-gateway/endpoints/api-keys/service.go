@@ -10,6 +10,7 @@ import (
 	"github.com/augno/api/shared/appctx"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/auth"
+	corepb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -27,10 +28,12 @@ type APIKeySvc interface {
 
 type APIKeySvcConfig struct {
 	AuthClient pb.AuthServiceClient
+	CoreClient corepb.CoreServiceClient
 }
 
 type apiKeySvcImpl struct {
 	authClient pb.AuthServiceClient
+	coreClient corepb.CoreServiceClient
 }
 
 var apiKeySvcTracer = tracing.GetTracer("api-gateway.endpoints.api_keys.service")
@@ -38,6 +41,9 @@ var apiKeySvcTracer = tracing.GetTracer("api-gateway.endpoints.api_keys.service"
 func (c *APIKeySvcConfig) validate() error {
 	if c.AuthClient == nil {
 		return fmt.Errorf("api key endpoint service: auth client is required")
+	}
+	if c.CoreClient == nil {
+		return fmt.Errorf("api key endpoint service: core client is required")
 	}
 	return nil
 }
@@ -49,7 +55,19 @@ func NewAPIKeySvc(config *APIKeySvcConfig) APIKeySvc {
 
 	return &apiKeySvcImpl{
 		authClient: config.AuthClient,
+		coreClient: config.CoreClient,
 	}
+}
+
+func (m *apiKeySvcImpl) resolveRolePermissions(ctx context.Context, roleID *string) map[string]bool {
+	if roleID == nil || !appctx.IsIncludeRequested(ctx, "role.permissions") {
+		return nil
+	}
+	resp, err := m.coreClient.GetRolePermissions(ctx, &corepb.GetRolePermissionsRequest{RoleId: *roleID})
+	if err != nil {
+		return nil
+	}
+	return resp.Permissions
 }
 
 func (m *apiKeySvcImpl) GetAPIKey(ctx context.Context, req *GetAPIKeyRequest) (*apiresource.APIKey, *apierror.APIError) {
@@ -65,7 +83,8 @@ func (m *apiKeySvcImpl) GetAPIKey(ctx context.Context, req *GetAPIKeyRequest) (*
 		return nil, apiErr
 	}
 
-	presented := APIKeyPresenter(resp.ApiKey)
+	perms := m.resolveRolePermissions(ctx, resp.ApiKey.RoleId)
+	presented := APIKeyPresenter(resp.ApiKey, perms)
 	return &presented, nil
 }
 
@@ -89,7 +108,8 @@ func (m *apiKeySvcImpl) CreateAPIKey(ctx context.Context, req *CreateAPIKeyReque
 		return nil, apiErr
 	}
 
-	presented := APIKeyCreatedPresenter(resp)
+	perms := m.resolveRolePermissions(ctx, resp.ApiKey.RoleId)
+	presented := APIKeyCreatedPresenter(resp, perms)
 	return &presented, nil
 }
 
@@ -112,7 +132,8 @@ func (m *apiKeySvcImpl) RotateAPIKey(ctx context.Context, req *RotateAPIKeyReque
 		return nil, apiErr
 	}
 
-	presented := APIKeyRotatedPresenter(resp)
+	perms := m.resolveRolePermissions(ctx, resp.ApiKey.RoleId)
+	presented := APIKeyRotatedPresenter(resp, perms)
 	return &presented, nil
 }
 
@@ -154,7 +175,9 @@ func (m *apiKeySvcImpl) ListAPIKeys(ctx context.Context, req *ListAPIKeysRequest
 		return nil, apiErr
 	}
 
-	return APIKeyListPresenter(resp), nil
+	return APIKeyListPresenter(resp, func(roleID *string) map[string]bool {
+		return m.resolveRolePermissions(ctx, roleID)
+	}), nil
 }
 
 func (m *apiKeySvcImpl) GetOrCreateDocAPIKey(ctx context.Context) (*apiresource.CreatedAPIKey, *apierror.APIError) {
@@ -169,6 +192,7 @@ func (m *apiKeySvcImpl) GetOrCreateDocAPIKey(ctx context.Context) (*apiresource.
 		return nil, apiErr
 	}
 
-	presented := APIKeyDocPresenter(resp)
+	perms := m.resolveRolePermissions(ctx, resp.ApiKey.RoleId)
+	presented := APIKeyDocPresenter(resp, perms)
 	return &presented, nil
 }

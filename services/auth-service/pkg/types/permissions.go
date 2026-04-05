@@ -3,9 +3,11 @@ package types
 type PermissionDomain string
 
 const (
+	PermissionDomainAgents                        PermissionDomain = "agents"
+	PermissionDomainAgentRuns                     PermissionDomain = "agent_runs"
 	PermissionDomainAccount                       PermissionDomain = "self"
 	PermissionDomainDeliveries                    PermissionDomain = "deliveries"
-	PermissionDomainStorageLocations              PermissionDomain = "storage_locations"
+	PermissionDomainLocations                     PermissionDomain = "locations"
 	PermissionDomainSettlements                   PermissionDomain = "settlements"
 	PermissionDomainTransactions                  PermissionDomain = "transactions"
 	PermissionDomainBatches                       PermissionDomain = "batches"
@@ -62,8 +64,14 @@ const (
 	PermissionDomainUnits                         PermissionDomain = "units"
 	PermissionDomainUnitGroups                    PermissionDomain = "unit_groups"
 	PermissionDomainRequestLogs                   PermissionDomain = "request_logs"
+	PermissionDomainAuditEvents                   PermissionDomain = "audit_events"
 	PermissionDomainAPIKeys                       PermissionDomain = "api_keys"
-	PermissionDomainSandbox                       PermissionDomain = "sandbox"
+	PermissionDomainSandbox                       PermissionDomain = "sandboxes"
+	PermissionDomainAddresses                     PermissionDomain = "addresses"
+	PermissionDomainIntegrations                  PermissionDomain = "integrations"
+	PermissionDomainAdjustmentTypes               PermissionDomain = "adjustment_types"
+	PermissionDomainPriorities                    PermissionDomain = "priorities"
+	PermissionDomainProductTypes                  PermissionDomain = "product_types"
 )
 
 type Action string

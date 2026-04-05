@@ -15,15 +15,12 @@ type ResendEmailRequest struct {
 	SessionID string `json:"-" path:"session_id" validate:"required"`
 }
 
-const resendEmailDescription string = `Resends the verification email for an existing registration session. A new verification
-token is generated and the previous token is invalidated.`
-
 type ResendEmailEndpoint struct{}
 
 func (e *ResendEmailEndpoint) Materialize() *apiendpoint.APIEndpoint[*ResendEmailRequest, *apiresource.EmptyResource] {
 	return &apiendpoint.APIEndpoint[*ResendEmailRequest, *apiresource.EmptyResource]{
 		Title:             "Resend Verification Email",
-		Description:       resendEmailDescription,
+		Description:       "Resends the verification email for a registration session, generating a new token and invalidating the previous one.",
 		Method:            http.MethodPost,
 		Route:             "/v1/auth/registration-sessions/{session_id}/actions/resend-verification-email",
 		ContentType:       "application/json",
@@ -34,9 +31,6 @@ func (e *ResendEmailEndpoint) Materialize() *apiendpoint.APIEndpoint[*ResendEmai
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ResendEmailRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(RegistrationSessionSvc).ResendVerificationEmail
-		},
-		Extras: apiendpoint.APIEndpointExtras{
-			AllowUnknownJSONFields: false,
 		},
 	}
 }

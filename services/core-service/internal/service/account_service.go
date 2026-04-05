@@ -1,6 +1,7 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -8,12 +9,16 @@ import (
 	"math"
 	"time"
 
+	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/services/core-service/internal/domain"
 	"github.com/augno/api/shared/appctx"
+	"github.com/augno/api/shared/audit"
+	s3client "github.com/augno/api/shared/cloud/s3"
 	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/contracts"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/id"
+	"github.com/augno/api/shared/idempotency"
 	"github.com/augno/api/shared/messaging"
 	"github.com/augno/api/shared/tracing"
 )
@@ -25,15 +30,21 @@ type accountSvcImpl struct {
 	accountUserRepo     domain.AccountUserRepo
 	accountRelationRepo domain.AccountRelationRepo
 	rolePermissionRepo  domain.RolePermissionRepo
+	roleRepo            domain.RoleRepo
+	repos               domain.RepoFactory
 	mediatorFactory     domain.MediatorFactory
 	txManager           TransactionManager
 	outboxRepo          messaging.OutboxRepo
+	s3Client            s3client.ObjectStore
+	accountPhotosBucket string
 }
 
 type AccountSvcConfig struct {
-	RepoFactory     domain.RepoFactory
-	MediatorFactory domain.MediatorFactory
-	TxManager       TransactionManager
+	RepoFactory         domain.RepoFactory
+	MediatorFactory     domain.MediatorFactory
+	TxManager           TransactionManager
+	S3Client            s3client.ObjectStore
+	AccountPhotosBucket string
 }
 
 func (c *AccountSvcConfig) validate() error {
@@ -45,6 +56,9 @@ func (c *AccountSvcConfig) validate() error {
 	}
 	if c.TxManager == nil {
 		return fmt.Errorf("account service: tx manager is required")
+	}
+	if c.S3Client == nil {
+		return fmt.Errorf("account service: s3 client is required")
 	}
 	return nil
 }
@@ -59,12 +73,19 @@ func NewAccountSvc(config *AccountSvcConfig) domain.AccountSvc {
 		accountUserRepo:     config.RepoFactory.NewAccountUserRepo(),
 		accountRelationRepo: config.RepoFactory.NewAccountRelationRepo(),
 		rolePermissionRepo:  config.RepoFactory.NewRolePermissionRepo(),
+		roleRepo:            config.RepoFactory.NewRoleRepo(),
+		repos:               config.RepoFactory,
 		mediatorFactory:     config.MediatorFactory,
 		txManager:           config.TxManager,
 		outboxRepo:          config.RepoFactory.NewOutboxRepo(),
+		s3Client:            config.S3Client,
+		accountPhotosBucket: config.AccountPhotosBucket,
 	}
 }
 
+// GetAccountContext retrieves the account context (type, mode, and related metadata) for the given account.
+//
+// 1. Query the account repository for the account context by ID.
 func (s *accountSvcImpl) GetAccountContext(ctx context.Context, accountID string) (*domain.AccountContext, *apierror.APIError) {
 	ctx, span := accountSvcTracer.Start(ctx, "service.account.get_account_context")
 	defer span.End()
@@ -72,6 +93,13 @@ func (s *accountSvcImpl) GetAccountContext(ctx context.Context, accountID string
 	return s.accountRepo.GetAccountContext(ctx, accountID)
 }
 
+// GetUserAccountAccess checks whether a user has access to an account and returns their
+// access details including role and permissions.
+//
+// 1. Look up the account-user link by user ID and account ID.
+// 2. If not found, return nil with false (no access) without an error.
+// 3. If the user has a role, fetch the role's permissions.
+// 4. Return the access record with permissions and true (has access).
 func (s *accountSvcImpl) GetUserAccountAccess(ctx context.Context, userID, accountID string) (*domain.AccountUserAccess, bool, *apierror.APIError) {
 	ctx, span := accountSvcTracer.Start(ctx, "service.account.get_user_account_access")
 	defer span.End()
@@ -104,6 +132,10 @@ func (s *accountSvcImpl) GetUserAccountAccess(ctx context.Context, userID, accou
 	}, true, nil
 }
 
+// GetRolePermissions returns the set of permissions granted by a role.
+//
+// 1. If the role ID is empty, return an empty permission map.
+// 2. Query the role-permission repository for all permissions associated with the role.
 func (s *accountSvcImpl) GetRolePermissions(ctx context.Context, roleID string) (map[string]bool, *apierror.APIError) {
 	ctx, span := accountSvcTracer.Start(ctx, "service.account.get_role_permissions")
 	defer span.End()
@@ -115,6 +147,25 @@ func (s *accountSvcImpl) GetRolePermissions(ctx context.Context, roleID string) 
 	return s.rolePermissionRepo.FindByRoleID(ctx, roleID)
 }
 
+// GetRoleInfo returns the name and type code for a role.
+//
+// 1. If the role ID is empty, return a validation error.
+// 2. Query the role repository by role ID and return the role info.
+func (s *accountSvcImpl) GetRoleInfo(ctx context.Context, roleID string) (*domain.RoleInfo, *apierror.APIError) {
+	ctx, span := accountSvcTracer.Start(ctx, "service.account.get_role_info")
+	defer span.End()
+
+	if roleID == "" {
+		return nil, apierror.NewInvariantViolationError("role ID is required")
+	}
+
+	return s.roleRepo.GetByID(ctx, roleID)
+}
+
+// GetAccountRelationByUserID finds the account relation linking a user to an owner account.
+//
+// 1. Query the account relation repository by owner account and user ID.
+// 2. If not found, return nil without an error.
 func (s *accountSvcImpl) GetAccountRelationByUserID(ctx context.Context, ownerAccountID, userID string) (*domain.AccountRelation, *apierror.APIError) {
 	ctx, span := accountSvcTracer.Start(ctx, "service.account.get_account_relation_by_user_id")
 	defer span.End()
@@ -129,11 +180,28 @@ func (s *accountSvcImpl) GetAccountRelationByUserID(ctx context.Context, ownerAc
 	return relation, nil
 }
 
-func (s *accountSvcImpl) GetAccountRelationByAPIKeyID(ctx context.Context, ownerAccountID string, apiKeyID int64) (*domain.AccountRelation, *apierror.APIError) {
+// GetAccountRelationByAPIKeyID finds the account relation linking an API key to a target account.
+//
+// 1. Query by owner account (counterparty-side: e.g. customer API key targeting merchant).
+// 2. If not found, query by counterparty account (owner-side: e.g. merchant API key targeting customer).
+// 3. If neither found, return nil without an error.
+func (s *accountSvcImpl) GetAccountRelationByAPIKeyID(ctx context.Context, targetAccountID string, apiKeyID int64) (*domain.AccountRelation, *apierror.APIError) {
 	ctx, span := accountSvcTracer.Start(ctx, "service.account.get_account_relation_by_api_key_id")
 	defer span.End()
 
-	relation, apiErr := s.accountRelationRepo.FindByOwnerAccountAndAPIKeyID(ctx, ownerAccountID, apiKeyID)
+	// Try counterparty-side first (target is the relation owner, API key belongs to counterparty).
+	relation, apiErr := s.accountRelationRepo.FindByOwnerAccountAndAPIKeyID(ctx, targetAccountID, apiKeyID)
+	if apiErr != nil {
+		if apiErr.Code != apierror.ErrorCodeResourceNotFound {
+			return nil, tracing.Trace(span, apiErr)
+		}
+	}
+	if relation != nil {
+		return relation, nil
+	}
+
+	// Try owner-side (target is the counterparty, API key belongs to the relation owner).
+	relation, apiErr = s.accountRelationRepo.FindByCounterpartyAccountAndAPIKeyID(ctx, targetAccountID, apiKeyID)
 	if apiErr != nil {
 		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
 			return nil, nil
@@ -143,6 +211,9 @@ func (s *accountSvcImpl) GetAccountRelationByAPIKeyID(ctx context.Context, owner
 	return relation, nil
 }
 
+// MarkAccountUserUsed updates the last-used timestamp on an account-user link to the current time.
+//
+// 1. Update the last_used_at field for the account-user record to now (UTC).
 func (s *accountSvcImpl) MarkAccountUserUsed(ctx context.Context, accountUserID string) *apierror.APIError {
 	ctx, span := accountSvcTracer.Start(ctx, "service.account.mark_account_user_used")
 	defer span.End()
@@ -150,6 +221,11 @@ func (s *accountSvcImpl) MarkAccountUserUsed(ctx context.Context, accountUserID 
 	return s.accountUserRepo.UpdateLastUsedAt(ctx, accountUserID, time.Now().UTC())
 }
 
+// ListUserAccountAffiliations returns all accounts a user belongs to and the ID of the most recently used one.
+//
+// 1. Fetch all account affiliations for the user.
+// 2. Determine which account was last used by the user.
+// 3. Return the affiliations and the last-used account ID (nil if none).
 func (s *accountSvcImpl) ListUserAccountAffiliations(ctx context.Context, userID string) ([]domain.AccountAffiliation, *string, *apierror.APIError) {
 	ctx, span := accountSvcTracer.Start(ctx, "service.account.list_user_account_affiliations")
 	defer span.End()
@@ -172,6 +248,9 @@ func (s *accountSvcImpl) ListUserAccountAffiliations(ctx context.Context, userID
 	return affiliations, lastUsedPtr, nil
 }
 
+// GetAdminRole returns the role ID for the built-in admin role.
+//
+// 1. Query the account-user repository for the admin role ID.
 func (s *accountSvcImpl) GetAdminRole(ctx context.Context) (string, *apierror.APIError) {
 	ctx, span := accountSvcTracer.Start(ctx, "service.account.get_admin_role")
 	defer span.End()
@@ -179,29 +258,106 @@ func (s *accountSvcImpl) GetAdminRole(ctx context.Context) (string, *apierror.AP
 	return s.accountUserRepo.GetAdminRoleID(ctx)
 }
 
-func (s *accountSvcImpl) UpdateAccountSubscription(ctx context.Context, accountID string, status *string, planCode string, stripeSubID *string, periodEnd *time.Time, stripeCustomerID *string) *apierror.APIError {
+// UpdateAccountSubscription persists subscription changes for an account and reconciles seats.
+//
+// 1. Fetch the account's current plan code to detect plan changes.
+// 2. Resolve the plan type ID from the new plan code.
+// 3. Update the account's subscription record (status, plan, Stripe IDs, period end).
+// 4. If the plan changed, publish an admin notification email via the outbox.
+// 5. Adjust active users to match the new plan's seat limit (deactivate or reactivate).
+//
+// Side effects:
+//   - Sends a plan-change alert email to admins on plan transitions.
+//   - Deactivates or reactivates account users based on the new seat limit.
+func (s *accountSvcImpl) UpdateAccountSubscription(ctx context.Context, accountID string, status *string, planCode string, stripeSubID *string, periodEnd *time.Time, stripeCustomerID *string, billingProfileID *string, billingCadenceID *string, pricingPlanSubscriptionID *string, servicingStatus *string, collectionStatus *string) *apierror.APIError {
 	ctx, span := accountSvcTracer.Start(ctx, "service.account.update_account_subscription")
 	defer span.End()
 
-	// Fetch old plan code before updating so we can detect changes.
-	oldPlanCode, _ := s.accountRepo.GetPlanCode(ctx, accountID)
+	var oldPlanCode constants.PlanCode
+	var planTypeID *string
 
-	planTypeID, apiErr := s.accountRepo.GetPlanTypeIDByCode(ctx, planCode)
+	if planCode != "" {
+		oldPlanCode, _ = s.accountRepo.GetPlanCode(ctx, accountID)
+
+		resolved, apiErr := s.accountRepo.GetPlanTypeIDByCode(ctx, planCode)
+		if apiErr != nil {
+			return tracing.Trace(span, apiErr)
+		}
+		planTypeID = &resolved
+	}
+
+	apiErr := s.withTx(ctx, func(txCtx context.Context, txSvc *accountSvcImpl) *apierror.APIError {
+		if apiErr := txSvc.accountRepo.UpdateSubscription(txCtx, accountID, status, planCode, planTypeID, stripeSubID, periodEnd, stripeCustomerID, billingProfileID, billingCadenceID, pricingPlanSubscriptionID, servicingStatus, collectionStatus); apiErr != nil {
+			return apiErr
+		}
+
+		// When downgrading to Free, clear subscription fields that COALESCE won't null out.
+		if planCode == string(constants.PlanCodeFree) {
+			if apiErr := txSvc.accountRepo.ClearPricingPlanSubscription(txCtx, accountID); apiErr != nil {
+				return apiErr
+			}
+		}
+
+		if planCode != "" && oldPlanCode != "" && string(oldPlanCode) != planCode {
+			txSvc.publishPlanChangeAlert(txCtx, accountID, string(oldPlanCode), planCode)
+		}
+
+		var changes []audit.FieldChange
+		if planCode != "" && string(oldPlanCode) != planCode {
+			oldPlanJSON, _ := json.Marshal(string(oldPlanCode))
+			newPlanJSON, _ := json.Marshal(planCode)
+			changes = append(changes, audit.FieldChange{
+				Field:    "plan_code",
+				OldValue: json.RawMessage(oldPlanJSON),
+				NewValue: json.RawMessage(newPlanJSON),
+			})
+		}
+		if status != nil {
+			statusJSON, _ := json.Marshal(*status)
+			changes = append(changes, audit.FieldChange{
+				Field:    "subscription_status",
+				OldValue: json.RawMessage("null"),
+				NewValue: json.RawMessage(statusJSON),
+			})
+		}
+		if servicingStatus != nil {
+			sJSON, _ := json.Marshal(*servicingStatus)
+			changes = append(changes, audit.FieldChange{
+				Field:    "servicing_status",
+				OldValue: json.RawMessage("null"),
+				NewValue: json.RawMessage(sJSON),
+			})
+		}
+		if collectionStatus != nil {
+			cJSON, _ := json.Marshal(*collectionStatus)
+			changes = append(changes, audit.FieldChange{
+				Field:    "collection_status",
+				OldValue: json.RawMessage("null"),
+				NewValue: json.RawMessage(cJSON),
+			})
+		}
+
+		if len(changes) > 0 {
+			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+				ServiceName:  domain.ServiceName,
+				Action:       constants.AuditActionUpdate,
+				ResourceType: constants.ObjectTypeAccount,
+				ResourceID:   accountID,
+				Changes:      changes,
+			}); apiErr != nil {
+				return apiErr
+			}
+		}
+
+		return nil
+	})
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
 
-	if apiErr := s.accountRepo.UpdateSubscription(ctx, accountID, status, planCode, &planTypeID, stripeSubID, periodEnd, stripeCustomerID); apiErr != nil {
-		return tracing.Trace(span, apiErr)
+	if planCode != "" {
+		s.adjustAccountSeats(ctx, accountID, planCode)
 	}
-
-	// Send admin notification if the plan changed.
-	if oldPlanCode != "" && string(oldPlanCode) != planCode {
-		s.publishPlanChangeAlert(ctx, accountID, string(oldPlanCode), planCode)
-	}
-
-	// Adjust active users based on the new plan's seat limit.
-	s.adjustAccountSeats(ctx, accountID, planCode)
 
 	return nil
 }
@@ -341,6 +497,9 @@ func (s *accountSvcImpl) deactivateExcessUsers(ctx context.Context, accountID, k
 	}
 }
 
+// ClearAccountStripeCustomer removes the Stripe customer ID from an account record.
+//
+// 1. Clear the Stripe customer reference in the account repository.
 func (s *accountSvcImpl) ClearAccountStripeCustomer(ctx context.Context, accountID string) *apierror.APIError {
 	ctx, span := accountSvcTracer.Start(ctx, "service.account.clear_account_stripe_customer")
 	defer span.End()
@@ -348,6 +507,9 @@ func (s *accountSvcImpl) ClearAccountStripeCustomer(ctx context.Context, account
 	return s.accountRepo.ClearStripeCustomer(ctx, accountID)
 }
 
+// GetAccountByStripeCustomerID looks up an account by its associated Stripe customer ID.
+//
+// 1. Query the account repository by Stripe customer ID and return the account ID and plan code.
 func (s *accountSvcImpl) GetAccountByStripeCustomerID(ctx context.Context, stripeCustomerID string) (string, string, *apierror.APIError) {
 	ctx, span := accountSvcTracer.Start(ctx, "service.account.get_account_by_stripe_customer_id")
 	defer span.End()
@@ -355,6 +517,21 @@ func (s *accountSvcImpl) GetAccountByStripeCustomerID(ctx context.Context, strip
 	return s.accountRepo.GetByStripeCustomerID(ctx, stripeCustomerID)
 }
 
+// CompleteRegistration provisions a new production account with all supporting resources
+// inside a single transaction.
+//
+//  1. Generate a new account ID.
+//  2. Enforce registration limits for the selected plan.
+//  3. Fetch the admin role ID for linking the user.
+//  4. Within a transaction:
+//     a. Create the production account record.
+//     b. Link the registering user to the account with the admin role.
+//     c. Create the business address (best-effort).
+//     d. Create the account portal, system products, and branding records.
+//     e. Create a sandbox account via the sandbox mediator.
+//     f. Enqueue a seed-data message for the sandbox.
+//     g. Enqueue an admin notification email for the new registration.
+//  5. Return the production account ID and sandbox account ID.
 func (s *accountSvcImpl) CompleteRegistration(ctx context.Context, input domain.CompleteRegistrationInput) (*domain.CompleteRegistrationOutput, *apierror.APIError) {
 	ctx, span := accountSvcTracer.Start(ctx, "service.account.complete_registration")
 	defer span.End()
@@ -494,4 +671,323 @@ func (s *accountSvcImpl) CompleteRegistration(ctx context.Context, input domain.
 		AccountID: accountID,
 		SandboxID: sandboxAccountID,
 	}, nil
+}
+
+func (s *accountSvcImpl) mediators() domain.Mediators {
+	return s.mediatorFactory.Build(s.repos)
+}
+
+func (s *accountSvcImpl) withTx(ctx context.Context, fn func(context.Context, *accountSvcImpl) *apierror.APIError) *apierror.APIError {
+	if s.txManager == nil {
+		panic("txManager is nil")
+	}
+
+	return s.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
+		txSvc := &accountSvcImpl{
+			accountRepo:         f.NewAccountRepo(),
+			accountUserRepo:     f.NewAccountUserRepo(),
+			accountRelationRepo: f.NewAccountRelationRepo(),
+			rolePermissionRepo:  f.NewRolePermissionRepo(),
+			roleRepo:            f.NewRoleRepo(),
+			repos:               f,
+			mediatorFactory:     s.mediatorFactory,
+			txManager:           s.txManager,
+			outboxRepo:          f.NewOutboxRepo(),
+			s3Client:            s.s3Client,
+			accountPhotosBucket: s.accountPhotosBucket,
+		}
+		return fn(txCtx, txSvc)
+	})
+}
+
+// agentCapUpdate is used as the idempotency cache payload for UpdateAgentSpendingCap.
+// A wrapper struct is required so that a nil cap is round-tripped correctly through JSON.
+type agentCapUpdate struct {
+	CapCents *int64 `json:"cap_cents"`
+}
+
+func (s *accountSvcImpl) UpdateAgentSpendingCap(ctx context.Context, capCents *int64) (*int64, *apierror.APIError) {
+	ctx, span := accountSvcTracer.Start(ctx, "service.account.update_agent_spending_cap")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	accountID := identity.Target.AccountID
+
+	meds := s.mediators()
+
+	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, identity)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
+	case domain.RecoveryPointFinished:
+		cached, err := idempotency.UnmarshalCachedResponse[agentCapUpdate](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		if err != nil {
+			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
+		}
+		if cached.Data != nil {
+			return cached.Data.CapCents, cached.Error
+		}
+		return nil, cached.Error
+
+	case domain.RecoveryPointStarted:
+		var result *int64
+		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *accountSvcImpl) *apierror.APIError {
+			oldCap, apiErr := txSvc.accountRepo.GetAgentSpendingCap(txCtx, accountID)
+			if apiErr != nil {
+				return apiErr
+			}
+
+			if apiErr := txSvc.accountRepo.UpdateAgentSpendingCap(txCtx, accountID, capCents); apiErr != nil {
+				return apiErr
+			}
+
+			oldCapJSON, _ := json.Marshal(oldCap)
+			newCapJSON, _ := json.Marshal(capCents)
+
+			changes := []audit.FieldChange{
+				{
+					Field:    "agent_monthly_spending_cap_cents",
+					OldValue: json.RawMessage(oldCapJSON),
+					NewValue: json.RawMessage(newCapJSON),
+				},
+			}
+
+			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+				ServiceName:  domain.ServiceName,
+				Action:       constants.AuditActionUpdate,
+				ResourceType: constants.ObjectTypeAccount,
+				ResourceID:   accountID,
+				Changes:      changes,
+			}); apiErr != nil {
+				return apiErr
+			}
+
+			result = capCents
+			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, agentCapUpdate{CapCents: capCents})
+		})
+
+		if apiErr != nil {
+			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
+		}
+
+		return result, nil
+
+	default:
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Unexpected recovery point: "+idempotencyKey.RecoveryPoint))
+	}
+}
+
+// GetAccount returns the full account with branding and portal sub-resources.
+func (s *accountSvcImpl) GetAccount(ctx context.Context, accountID string) (*domain.Account, *apierror.APIError) {
+	ctx, span := accountSvcTracer.Start(ctx, "service.account.get_account")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainAccount, types.ActionRead); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	if accountID != identity.Target.AccountID {
+		return nil, tracing.Trace(span, apierror.NewAuthorizationError("You can only access your own account."))
+	}
+
+	return s.accountRepo.GetByID(ctx, accountID)
+}
+
+// GetAccountBySlug returns a minimal public account by portal slug (unauthenticated).
+func (s *accountSvcImpl) GetAccountBySlug(ctx context.Context, slug string) (*domain.PublicAccountBySlug, *apierror.APIError) {
+	ctx, span := accountSvcTracer.Start(ctx, "service.account.get_account_by_slug")
+	defer span.End()
+
+	return s.accountRepo.GetBySlug(ctx, slug)
+}
+
+// UpdateAccount partially updates an account's name, branding fields, and/or portal slug.
+func (s *accountSvcImpl) UpdateAccount(ctx context.Context, params domain.UpdateAccountParams) (*domain.Account, *apierror.APIError) {
+	ctx, span := accountSvcTracer.Start(ctx, "service.account.update_account")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainAccount, types.ActionUpdate); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	if params.AccountID != identity.Target.AccountID {
+		return nil, tracing.Trace(span, apierror.NewAuthorizationError("You can only update your own account."))
+	}
+
+	meds := s.mediators()
+
+	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, identity)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
+	case domain.RecoveryPointFinished:
+		cached, err := idempotency.UnmarshalCachedResponse[domain.Account](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		if err != nil {
+			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
+		}
+		return cached.Data, cached.Error
+
+	case domain.RecoveryPointStarted:
+		var result *domain.Account
+		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *accountSvcImpl) *apierror.APIError {
+			txRepo := txSvc.repos.NewAccountRepo()
+
+			old, apiErr := txRepo.GetByID(txCtx, params.AccountID)
+			if apiErr != nil {
+				return apiErr
+			}
+
+			if params.Name != nil {
+				if apiErr := txRepo.UpdateName(txCtx, params.AccountID, *params.Name); apiErr != nil {
+					return apiErr
+				}
+			}
+
+			if params.HasBrandingUpdates() {
+				if apiErr := txRepo.UpdateBranding(txCtx, params.AccountID, params); apiErr != nil {
+					return apiErr
+				}
+			}
+
+			if params.Slug != nil {
+				exists, apiErr := txRepo.ExistsPortalSlug(txCtx, *params.Slug, params.AccountID)
+				if apiErr != nil {
+					return apiErr
+				}
+				if exists {
+					return apierror.NewConflictErrorWithParam("A portal with this slug already exists.", "slug")
+				}
+
+				if apiErr := txRepo.UpdatePortalSlug(txCtx, params.AccountID, *params.Slug); apiErr != nil {
+					return apiErr
+				}
+			}
+
+			updated, apiErr := txRepo.GetByID(txCtx, params.AccountID)
+			if apiErr != nil {
+				return apiErr
+			}
+			result = updated
+
+			changes := audit.ComputeChanges(old, updated)
+
+			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+				ServiceName:  domain.ServiceName,
+				Action:       constants.AuditActionUpdate,
+				ResourceType: constants.ObjectTypeAccount,
+				ResourceID:   updated.ID,
+				Changes:      changes,
+			}); apiErr != nil {
+				return apiErr
+			}
+
+			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
+		})
+
+		if apiErr != nil {
+			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
+		}
+
+		return result, nil
+
+	default:
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Unexpected recovery point: "+idempotencyKey.RecoveryPoint))
+	}
+}
+
+// UploadAccountPhoto uploads an account logo to S3 and updates the branding record.
+func (s *accountSvcImpl) UploadAccountPhoto(ctx context.Context, accountID string, file []byte, contentType string) *apierror.APIError {
+	ctx, span := accountSvcTracer.Start(ctx, "service.account.upload_account_photo")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckHasPermission(types.PermissionDomainAccount, types.ActionUpdate); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	if accountID != identity.Target.AccountID {
+		return tracing.Trace(span, apierror.NewAuthorizationError("You can only update your own account."))
+	}
+
+	if contentType == "" {
+		contentType = "image/png"
+	}
+
+	s3Key := accountID + "/logo.png"
+
+	if apiErr := s.s3Client.Upload(ctx, s.accountPhotosBucket, s3Key, bytes.NewReader(file), contentType); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	if apiErr := s.accountRepo.UpdateBrandingLogoURL(ctx, accountID, s3Key); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	return nil
+}
+
+// GetAccountLogoURL returns a presigned S3 URL for the account's logo.
+func (s *accountSvcImpl) GetAccountLogoURL(ctx context.Context, accountID string) (*string, *apierror.APIError) {
+	ctx, span := accountSvcTracer.Start(ctx, "service.account.get_account_logo_url")
+	defer span.End()
+
+	logoKey, apiErr := s.accountRepo.GetBrandingLogoKey(ctx, accountID)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	if logoKey == nil {
+		return nil, nil
+	}
+
+	exists, apiErr := s.s3Client.FileExists(ctx, s.accountPhotosBucket, *logoKey)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	if !exists {
+		return nil, nil
+	}
+
+	url, apiErr := s.s3Client.GetPresignedURL(ctx, s.accountPhotosBucket, *logoKey, time.Hour)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	return &url, nil
 }

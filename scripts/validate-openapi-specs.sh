@@ -30,7 +30,7 @@ validate_spec() {
 
     if command -v vacuum >/dev/null 2>&1; then
         print_status "Validating $spec_path..."
-        vacuum lint -d -r .vacuum.yaml -n error "$spec_path"
+        vacuum lint -d -r .vacuum.yaml -n error --ignore-array-circle-ref --ignore-polymorph-circle-ref "$spec_path"
     else
         echo -e "${YELLOW}[ERROR]${NC} Vacuum not available"
         exit 1

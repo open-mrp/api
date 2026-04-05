@@ -2,6 +2,7 @@ package event
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"log"
 
@@ -138,17 +139,28 @@ func (c *NotificationConsumer) handleSendEmail(ctx context.Context, payload mess
 		return apiErr
 	}
 
-	sesMessageID, apiErr := c.notificationSvc.SendEmail(
-		ctx,
-		domain.EmailSendData{
-			To:        payload.To,
-			Subject:   payload.Subject,
-			Body:      body,
-			SendAs:    payload.SendAs,
-			AccountID: payload.AccountID,
-			SentByID:  payload.SentByID,
-		},
-	)
+	sendData := domain.EmailSendData{
+		To:        payload.To,
+		Subject:   payload.Subject,
+		Body:      body,
+		SendAs:    payload.SendAs,
+		AccountID: payload.AccountID,
+		SentByID:  payload.SentByID,
+	}
+
+	// Pass through attachment fields if present.
+	if payload.AttachmentData != nil {
+		decoded, err := base64.StdEncoding.DecodeString(*payload.AttachmentData)
+		if err != nil {
+			log.Printf("Failed to decode attachment data: %v", err)
+			span.RecordError(err)
+			return err
+		}
+		sendData.Attachment = decoded
+		sendData.Filename = payload.AttachmentFilename
+	}
+
+	sesMessageID, apiErr := c.notificationSvc.SendEmail(ctx, sendData)
 
 	if apiErr != nil {
 		span.RecordError(apiErr)

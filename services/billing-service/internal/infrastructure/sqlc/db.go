@@ -27,6 +27,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.acquireOutboxMessagesStmt, err = db.PrepareContext(ctx, acquireOutboxMessages); err != nil {
 		return nil, fmt.Errorf("error preparing query AcquireOutboxMessages: %w", err)
 	}
+	if q.advanceIdempotencyRecoveryPointStmt, err = db.PrepareContext(ctx, advanceIdempotencyRecoveryPoint); err != nil {
+		return nil, fmt.Errorf("error preparing query AdvanceIdempotencyRecoveryPoint: %w", err)
+	}
 	if q.cleanupExpiredOutboxLocksStmt, err = db.PrepareContext(ctx, cleanupExpiredOutboxLocks); err != nil {
 		return nil, fmt.Errorf("error preparing query CleanupExpiredOutboxLocks: %w", err)
 	}
@@ -48,8 +51,14 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.countUsersByAccountIDStmt, err = db.PrepareContext(ctx, countUsersByAccountID); err != nil {
 		return nil, fmt.Errorf("error preparing query CountUsersByAccountID: %w", err)
 	}
+	if q.createIdempotencyKeyStmt, err = db.PrepareContext(ctx, createIdempotencyKey); err != nil {
+		return nil, fmt.Errorf("error preparing query CreateIdempotencyKey: %w", err)
+	}
 	if q.createOutboxMessageStmt, err = db.PrepareContext(ctx, createOutboxMessage); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateOutboxMessage: %w", err)
+	}
+	if q.deleteExpiredIdempotencyKeysStmt, err = db.PrepareContext(ctx, deleteExpiredIdempotencyKeys); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteExpiredIdempotencyKeys: %w", err)
 	}
 	if q.getAccountNameAndPlanCodeStmt, err = db.PrepareContext(ctx, getAccountNameAndPlanCode); err != nil {
 		return nil, fmt.Errorf("error preparing query GetAccountNameAndPlanCode: %w", err)
@@ -59,6 +68,24 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.getAdminEmailByAccountIDStmt, err = db.PrepareContext(ctx, getAdminEmailByAccountID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetAdminEmailByAccountID: %w", err)
+	}
+	if q.getAgentTokenBillingByAccountAndPeriodStmt, err = db.PrepareContext(ctx, getAgentTokenBillingByAccountAndPeriod); err != nil {
+		return nil, fmt.Errorf("error preparing query GetAgentTokenBillingByAccountAndPeriod: %w", err)
+	}
+	if q.getAgentTokenUsageSummaryStmt, err = db.PrepareContext(ctx, getAgentTokenUsageSummary); err != nil {
+		return nil, fmt.Errorf("error preparing query GetAgentTokenUsageSummary: %w", err)
+	}
+	if q.getCompletedTokensByAccountStmt, err = db.PrepareContext(ctx, getCompletedTokensByAccount); err != nil {
+		return nil, fmt.Errorf("error preparing query GetCompletedTokensByAccount: %w", err)
+	}
+	if q.getIdempotencyKeyByScopeHashStmt, err = db.PrepareContext(ctx, getIdempotencyKeyByScopeHash); err != nil {
+		return nil, fmt.Errorf("error preparing query GetIdempotencyKeyByScopeHash: %w", err)
+	}
+	if q.getIdempotencyKeyByTypeIDStmt, err = db.PrepareContext(ctx, getIdempotencyKeyByTypeID); err != nil {
+		return nil, fmt.Errorf("error preparing query GetIdempotencyKeyByTypeID: %w", err)
+	}
+	if q.getIdempotencyRecoveryPointStmt, err = db.PrepareContext(ctx, getIdempotencyRecoveryPoint); err != nil {
+		return nil, fmt.Errorf("error preparing query GetIdempotencyRecoveryPoint: %w", err)
 	}
 	if q.getInboxRecordByMessageAndHandlerStmt, err = db.PrepareContext(ctx, getInboxRecordByMessageAndHandler); err != nil {
 		return nil, fmt.Errorf("error preparing query GetInboxRecordByMessageAndHandler: %w", err)
@@ -81,11 +108,17 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getStripeCustomerIDByAccountIDStmt, err = db.PrepareContext(ctx, getStripeCustomerIDByAccountID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetStripeCustomerIDByAccountID: %w", err)
 	}
+	if q.getTokenPackPurchaseByPaymentIntentStmt, err = db.PrepareContext(ctx, getTokenPackPurchaseByPaymentIntent); err != nil {
+		return nil, fmt.Errorf("error preparing query GetTokenPackPurchaseByPaymentIntent: %w", err)
+	}
 	if q.getUserEmailByIDStmt, err = db.PrepareContext(ctx, getUserEmailByID); err != nil {
 		return nil, fmt.Errorf("error preparing query GetUserEmailByID: %w", err)
 	}
 	if q.insertStripeEventLogStmt, err = db.PrepareContext(ctx, insertStripeEventLog); err != nil {
 		return nil, fmt.Errorf("error preparing query InsertStripeEventLog: %w", err)
+	}
+	if q.insertTokenPackPurchaseStmt, err = db.PrepareContext(ctx, insertTokenPackPurchase); err != nil {
+		return nil, fmt.Errorf("error preparing query InsertTokenPackPurchase: %w", err)
 	}
 	if q.listPricingPlansBackwardStmt, err = db.PrepareContext(ctx, listPricingPlansBackward); err != nil {
 		return nil, fmt.Errorf("error preparing query ListPricingPlansBackward: %w", err)
@@ -111,6 +144,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.purgePublishedOutboxMessagesStmt, err = db.PrepareContext(ctx, purgePublishedOutboxMessages); err != nil {
 		return nil, fmt.Errorf("error preparing query PurgePublishedOutboxMessages: %w", err)
 	}
+	if q.setIdempotencyResponseStmt, err = db.PrepareContext(ctx, setIdempotencyResponse); err != nil {
+		return nil, fmt.Errorf("error preparing query SetIdempotencyResponse: %w", err)
+	}
 	if q.stripeEventLogExistsStmt, err = db.PrepareContext(ctx, stripeEventLogExists); err != nil {
 		return nil, fmt.Errorf("error preparing query StripeEventLogExists: %w", err)
 	}
@@ -120,6 +156,21 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.updateStripeCustomerIDByAccountIDStmt, err = db.PrepareContext(ctx, updateStripeCustomerIDByAccountID); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateStripeCustomerIDByAccountID: %w", err)
 	}
+	if q.updateTokenPackPurchaseCheckoutSessionStmt, err = db.PrepareContext(ctx, updateTokenPackPurchaseCheckoutSession); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateTokenPackPurchaseCheckoutSession: %w", err)
+	}
+	if q.updateTokenPackPurchasePaymentIntentStmt, err = db.PrepareContext(ctx, updateTokenPackPurchasePaymentIntent); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateTokenPackPurchasePaymentIntent: %w", err)
+	}
+	if q.updateTokenPackPurchaseStatusStmt, err = db.PrepareContext(ctx, updateTokenPackPurchaseStatus); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateTokenPackPurchaseStatus: %w", err)
+	}
+	if q.updateTokensReportedToStripeStmt, err = db.PrepareContext(ctx, updateTokensReportedToStripe); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateTokensReportedToStripe: %w", err)
+	}
+	if q.upsertAgentTokenBillingStmt, err = db.PrepareContext(ctx, upsertAgentTokenBilling); err != nil {
+		return nil, fmt.Errorf("error preparing query UpsertAgentTokenBilling: %w", err)
+	}
 	return &q, nil
 }
 
@@ -128,6 +179,11 @@ func (q *Queries) Close() error {
 	if q.acquireOutboxMessagesStmt != nil {
 		if cerr := q.acquireOutboxMessagesStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing acquireOutboxMessagesStmt: %w", cerr)
+		}
+	}
+	if q.advanceIdempotencyRecoveryPointStmt != nil {
+		if cerr := q.advanceIdempotencyRecoveryPointStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing advanceIdempotencyRecoveryPointStmt: %w", cerr)
 		}
 	}
 	if q.cleanupExpiredOutboxLocksStmt != nil {
@@ -165,9 +221,19 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing countUsersByAccountIDStmt: %w", cerr)
 		}
 	}
+	if q.createIdempotencyKeyStmt != nil {
+		if cerr := q.createIdempotencyKeyStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing createIdempotencyKeyStmt: %w", cerr)
+		}
+	}
 	if q.createOutboxMessageStmt != nil {
 		if cerr := q.createOutboxMessageStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing createOutboxMessageStmt: %w", cerr)
+		}
+	}
+	if q.deleteExpiredIdempotencyKeysStmt != nil {
+		if cerr := q.deleteExpiredIdempotencyKeysStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteExpiredIdempotencyKeysStmt: %w", cerr)
 		}
 	}
 	if q.getAccountNameAndPlanCodeStmt != nil {
@@ -183,6 +249,36 @@ func (q *Queries) Close() error {
 	if q.getAdminEmailByAccountIDStmt != nil {
 		if cerr := q.getAdminEmailByAccountIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getAdminEmailByAccountIDStmt: %w", cerr)
+		}
+	}
+	if q.getAgentTokenBillingByAccountAndPeriodStmt != nil {
+		if cerr := q.getAgentTokenBillingByAccountAndPeriodStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getAgentTokenBillingByAccountAndPeriodStmt: %w", cerr)
+		}
+	}
+	if q.getAgentTokenUsageSummaryStmt != nil {
+		if cerr := q.getAgentTokenUsageSummaryStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getAgentTokenUsageSummaryStmt: %w", cerr)
+		}
+	}
+	if q.getCompletedTokensByAccountStmt != nil {
+		if cerr := q.getCompletedTokensByAccountStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getCompletedTokensByAccountStmt: %w", cerr)
+		}
+	}
+	if q.getIdempotencyKeyByScopeHashStmt != nil {
+		if cerr := q.getIdempotencyKeyByScopeHashStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getIdempotencyKeyByScopeHashStmt: %w", cerr)
+		}
+	}
+	if q.getIdempotencyKeyByTypeIDStmt != nil {
+		if cerr := q.getIdempotencyKeyByTypeIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getIdempotencyKeyByTypeIDStmt: %w", cerr)
+		}
+	}
+	if q.getIdempotencyRecoveryPointStmt != nil {
+		if cerr := q.getIdempotencyRecoveryPointStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getIdempotencyRecoveryPointStmt: %w", cerr)
 		}
 	}
 	if q.getInboxRecordByMessageAndHandlerStmt != nil {
@@ -220,6 +316,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getStripeCustomerIDByAccountIDStmt: %w", cerr)
 		}
 	}
+	if q.getTokenPackPurchaseByPaymentIntentStmt != nil {
+		if cerr := q.getTokenPackPurchaseByPaymentIntentStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getTokenPackPurchaseByPaymentIntentStmt: %w", cerr)
+		}
+	}
 	if q.getUserEmailByIDStmt != nil {
 		if cerr := q.getUserEmailByIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getUserEmailByIDStmt: %w", cerr)
@@ -228,6 +329,11 @@ func (q *Queries) Close() error {
 	if q.insertStripeEventLogStmt != nil {
 		if cerr := q.insertStripeEventLogStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing insertStripeEventLogStmt: %w", cerr)
+		}
+	}
+	if q.insertTokenPackPurchaseStmt != nil {
+		if cerr := q.insertTokenPackPurchaseStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing insertTokenPackPurchaseStmt: %w", cerr)
 		}
 	}
 	if q.listPricingPlansBackwardStmt != nil {
@@ -270,6 +376,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing purgePublishedOutboxMessagesStmt: %w", cerr)
 		}
 	}
+	if q.setIdempotencyResponseStmt != nil {
+		if cerr := q.setIdempotencyResponseStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing setIdempotencyResponseStmt: %w", cerr)
+		}
+	}
 	if q.stripeEventLogExistsStmt != nil {
 		if cerr := q.stripeEventLogExistsStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing stripeEventLogExistsStmt: %w", cerr)
@@ -283,6 +394,31 @@ func (q *Queries) Close() error {
 	if q.updateStripeCustomerIDByAccountIDStmt != nil {
 		if cerr := q.updateStripeCustomerIDByAccountIDStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing updateStripeCustomerIDByAccountIDStmt: %w", cerr)
+		}
+	}
+	if q.updateTokenPackPurchaseCheckoutSessionStmt != nil {
+		if cerr := q.updateTokenPackPurchaseCheckoutSessionStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateTokenPackPurchaseCheckoutSessionStmt: %w", cerr)
+		}
+	}
+	if q.updateTokenPackPurchasePaymentIntentStmt != nil {
+		if cerr := q.updateTokenPackPurchasePaymentIntentStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateTokenPackPurchasePaymentIntentStmt: %w", cerr)
+		}
+	}
+	if q.updateTokenPackPurchaseStatusStmt != nil {
+		if cerr := q.updateTokenPackPurchaseStatusStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateTokenPackPurchaseStatusStmt: %w", cerr)
+		}
+	}
+	if q.updateTokensReportedToStripeStmt != nil {
+		if cerr := q.updateTokensReportedToStripeStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateTokensReportedToStripeStmt: %w", cerr)
+		}
+	}
+	if q.upsertAgentTokenBillingStmt != nil {
+		if cerr := q.upsertAgentTokenBillingStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing upsertAgentTokenBillingStmt: %w", cerr)
 		}
 	}
 	return err
@@ -322,77 +458,111 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 }
 
 type Queries struct {
-	db                                    DBTX
-	tx                                    *sql.Tx
-	acquireOutboxMessagesStmt             *sql.Stmt
-	cleanupExpiredOutboxLocksStmt         *sql.Stmt
-	countBatchesByAccountIDStmt           *sql.Stmt
-	countBatchesByAccountIDInPeriodStmt   *sql.Stmt
-	countInvoicesByAccountIDStmt          *sql.Stmt
-	countInvoicesByAccountIDInPeriodStmt  *sql.Stmt
-	countSandboxesByAccountIDStmt         *sql.Stmt
-	countUsersByAccountIDStmt             *sql.Stmt
-	createOutboxMessageStmt               *sql.Stmt
-	getAccountNameAndPlanCodeStmt         *sql.Stmt
-	getAccountSubscriptionInfoStmt        *sql.Stmt
-	getAdminEmailByAccountIDStmt          *sql.Stmt
-	getInboxRecordByMessageAndHandlerStmt *sql.Stmt
-	getLimitsByAccountIDStmt              *sql.Stmt
-	getLockedOutboxMessagesStmt           *sql.Stmt
-	getPlanByCodeStmt                     *sql.Stmt
-	getPlanByTypeIDStmt                   *sql.Stmt
-	getPlanLimitsByTypeIDStmt             *sql.Stmt
-	getStripeCustomerIDByAccountIDStmt    *sql.Stmt
-	getUserEmailByIDStmt                  *sql.Stmt
-	insertStripeEventLogStmt              *sql.Stmt
-	listPricingPlansBackwardStmt          *sql.Stmt
-	listPricingPlansForwardStmt           *sql.Stmt
-	markInboxRecordFailedStmt             *sql.Stmt
-	markInboxRecordProcessedStmt          *sql.Stmt
-	markOutboxMessageFailedStmt           *sql.Stmt
-	markOutboxMessagePublishedStmt        *sql.Stmt
-	purgeProcessedInboxMessagesStmt       *sql.Stmt
-	purgePublishedOutboxMessagesStmt      *sql.Stmt
-	stripeEventLogExistsStmt              *sql.Stmt
-	tryInsertInboxRecordStmt              *sql.Stmt
-	updateStripeCustomerIDByAccountIDStmt *sql.Stmt
+	db                                         DBTX
+	tx                                         *sql.Tx
+	acquireOutboxMessagesStmt                  *sql.Stmt
+	advanceIdempotencyRecoveryPointStmt        *sql.Stmt
+	cleanupExpiredOutboxLocksStmt              *sql.Stmt
+	countBatchesByAccountIDStmt                *sql.Stmt
+	countBatchesByAccountIDInPeriodStmt        *sql.Stmt
+	countInvoicesByAccountIDStmt               *sql.Stmt
+	countInvoicesByAccountIDInPeriodStmt       *sql.Stmt
+	countSandboxesByAccountIDStmt              *sql.Stmt
+	countUsersByAccountIDStmt                  *sql.Stmt
+	createIdempotencyKeyStmt                   *sql.Stmt
+	createOutboxMessageStmt                    *sql.Stmt
+	deleteExpiredIdempotencyKeysStmt           *sql.Stmt
+	getAccountNameAndPlanCodeStmt              *sql.Stmt
+	getAccountSubscriptionInfoStmt             *sql.Stmt
+	getAdminEmailByAccountIDStmt               *sql.Stmt
+	getAgentTokenBillingByAccountAndPeriodStmt *sql.Stmt
+	getAgentTokenUsageSummaryStmt              *sql.Stmt
+	getCompletedTokensByAccountStmt            *sql.Stmt
+	getIdempotencyKeyByScopeHashStmt           *sql.Stmt
+	getIdempotencyKeyByTypeIDStmt              *sql.Stmt
+	getIdempotencyRecoveryPointStmt            *sql.Stmt
+	getInboxRecordByMessageAndHandlerStmt      *sql.Stmt
+	getLimitsByAccountIDStmt                   *sql.Stmt
+	getLockedOutboxMessagesStmt                *sql.Stmt
+	getPlanByCodeStmt                          *sql.Stmt
+	getPlanByTypeIDStmt                        *sql.Stmt
+	getPlanLimitsByTypeIDStmt                  *sql.Stmt
+	getStripeCustomerIDByAccountIDStmt         *sql.Stmt
+	getTokenPackPurchaseByPaymentIntentStmt    *sql.Stmt
+	getUserEmailByIDStmt                       *sql.Stmt
+	insertStripeEventLogStmt                   *sql.Stmt
+	insertTokenPackPurchaseStmt                *sql.Stmt
+	listPricingPlansBackwardStmt               *sql.Stmt
+	listPricingPlansForwardStmt                *sql.Stmt
+	markInboxRecordFailedStmt                  *sql.Stmt
+	markInboxRecordProcessedStmt               *sql.Stmt
+	markOutboxMessageFailedStmt                *sql.Stmt
+	markOutboxMessagePublishedStmt             *sql.Stmt
+	purgeProcessedInboxMessagesStmt            *sql.Stmt
+	purgePublishedOutboxMessagesStmt           *sql.Stmt
+	setIdempotencyResponseStmt                 *sql.Stmt
+	stripeEventLogExistsStmt                   *sql.Stmt
+	tryInsertInboxRecordStmt                   *sql.Stmt
+	updateStripeCustomerIDByAccountIDStmt      *sql.Stmt
+	updateTokenPackPurchaseCheckoutSessionStmt *sql.Stmt
+	updateTokenPackPurchasePaymentIntentStmt   *sql.Stmt
+	updateTokenPackPurchaseStatusStmt          *sql.Stmt
+	updateTokensReportedToStripeStmt           *sql.Stmt
+	upsertAgentTokenBillingStmt                *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:                                    tx,
-		tx:                                    tx,
-		acquireOutboxMessagesStmt:             q.acquireOutboxMessagesStmt,
-		cleanupExpiredOutboxLocksStmt:         q.cleanupExpiredOutboxLocksStmt,
-		countBatchesByAccountIDStmt:           q.countBatchesByAccountIDStmt,
-		countBatchesByAccountIDInPeriodStmt:   q.countBatchesByAccountIDInPeriodStmt,
-		countInvoicesByAccountIDStmt:          q.countInvoicesByAccountIDStmt,
-		countInvoicesByAccountIDInPeriodStmt:  q.countInvoicesByAccountIDInPeriodStmt,
-		countSandboxesByAccountIDStmt:         q.countSandboxesByAccountIDStmt,
-		countUsersByAccountIDStmt:             q.countUsersByAccountIDStmt,
-		createOutboxMessageStmt:               q.createOutboxMessageStmt,
-		getAccountNameAndPlanCodeStmt:         q.getAccountNameAndPlanCodeStmt,
-		getAccountSubscriptionInfoStmt:        q.getAccountSubscriptionInfoStmt,
-		getAdminEmailByAccountIDStmt:          q.getAdminEmailByAccountIDStmt,
-		getInboxRecordByMessageAndHandlerStmt: q.getInboxRecordByMessageAndHandlerStmt,
-		getLimitsByAccountIDStmt:              q.getLimitsByAccountIDStmt,
-		getLockedOutboxMessagesStmt:           q.getLockedOutboxMessagesStmt,
-		getPlanByCodeStmt:                     q.getPlanByCodeStmt,
-		getPlanByTypeIDStmt:                   q.getPlanByTypeIDStmt,
-		getPlanLimitsByTypeIDStmt:             q.getPlanLimitsByTypeIDStmt,
-		getStripeCustomerIDByAccountIDStmt:    q.getStripeCustomerIDByAccountIDStmt,
-		getUserEmailByIDStmt:                  q.getUserEmailByIDStmt,
-		insertStripeEventLogStmt:              q.insertStripeEventLogStmt,
-		listPricingPlansBackwardStmt:          q.listPricingPlansBackwardStmt,
-		listPricingPlansForwardStmt:           q.listPricingPlansForwardStmt,
-		markInboxRecordFailedStmt:             q.markInboxRecordFailedStmt,
-		markInboxRecordProcessedStmt:          q.markInboxRecordProcessedStmt,
-		markOutboxMessageFailedStmt:           q.markOutboxMessageFailedStmt,
-		markOutboxMessagePublishedStmt:        q.markOutboxMessagePublishedStmt,
-		purgeProcessedInboxMessagesStmt:       q.purgeProcessedInboxMessagesStmt,
-		purgePublishedOutboxMessagesStmt:      q.purgePublishedOutboxMessagesStmt,
-		stripeEventLogExistsStmt:              q.stripeEventLogExistsStmt,
-		tryInsertInboxRecordStmt:              q.tryInsertInboxRecordStmt,
-		updateStripeCustomerIDByAccountIDStmt: q.updateStripeCustomerIDByAccountIDStmt,
+		db:                                         tx,
+		tx:                                         tx,
+		acquireOutboxMessagesStmt:                  q.acquireOutboxMessagesStmt,
+		advanceIdempotencyRecoveryPointStmt:        q.advanceIdempotencyRecoveryPointStmt,
+		cleanupExpiredOutboxLocksStmt:              q.cleanupExpiredOutboxLocksStmt,
+		countBatchesByAccountIDStmt:                q.countBatchesByAccountIDStmt,
+		countBatchesByAccountIDInPeriodStmt:        q.countBatchesByAccountIDInPeriodStmt,
+		countInvoicesByAccountIDStmt:               q.countInvoicesByAccountIDStmt,
+		countInvoicesByAccountIDInPeriodStmt:       q.countInvoicesByAccountIDInPeriodStmt,
+		countSandboxesByAccountIDStmt:              q.countSandboxesByAccountIDStmt,
+		countUsersByAccountIDStmt:                  q.countUsersByAccountIDStmt,
+		createIdempotencyKeyStmt:                   q.createIdempotencyKeyStmt,
+		createOutboxMessageStmt:                    q.createOutboxMessageStmt,
+		deleteExpiredIdempotencyKeysStmt:           q.deleteExpiredIdempotencyKeysStmt,
+		getAccountNameAndPlanCodeStmt:              q.getAccountNameAndPlanCodeStmt,
+		getAccountSubscriptionInfoStmt:             q.getAccountSubscriptionInfoStmt,
+		getAdminEmailByAccountIDStmt:               q.getAdminEmailByAccountIDStmt,
+		getAgentTokenBillingByAccountAndPeriodStmt: q.getAgentTokenBillingByAccountAndPeriodStmt,
+		getAgentTokenUsageSummaryStmt:              q.getAgentTokenUsageSummaryStmt,
+		getCompletedTokensByAccountStmt:            q.getCompletedTokensByAccountStmt,
+		getIdempotencyKeyByScopeHashStmt:           q.getIdempotencyKeyByScopeHashStmt,
+		getIdempotencyKeyByTypeIDStmt:              q.getIdempotencyKeyByTypeIDStmt,
+		getIdempotencyRecoveryPointStmt:            q.getIdempotencyRecoveryPointStmt,
+		getInboxRecordByMessageAndHandlerStmt:      q.getInboxRecordByMessageAndHandlerStmt,
+		getLimitsByAccountIDStmt:                   q.getLimitsByAccountIDStmt,
+		getLockedOutboxMessagesStmt:                q.getLockedOutboxMessagesStmt,
+		getPlanByCodeStmt:                          q.getPlanByCodeStmt,
+		getPlanByTypeIDStmt:                        q.getPlanByTypeIDStmt,
+		getPlanLimitsByTypeIDStmt:                  q.getPlanLimitsByTypeIDStmt,
+		getStripeCustomerIDByAccountIDStmt:         q.getStripeCustomerIDByAccountIDStmt,
+		getTokenPackPurchaseByPaymentIntentStmt:    q.getTokenPackPurchaseByPaymentIntentStmt,
+		getUserEmailByIDStmt:                       q.getUserEmailByIDStmt,
+		insertStripeEventLogStmt:                   q.insertStripeEventLogStmt,
+		insertTokenPackPurchaseStmt:                q.insertTokenPackPurchaseStmt,
+		listPricingPlansBackwardStmt:               q.listPricingPlansBackwardStmt,
+		listPricingPlansForwardStmt:                q.listPricingPlansForwardStmt,
+		markInboxRecordFailedStmt:                  q.markInboxRecordFailedStmt,
+		markInboxRecordProcessedStmt:               q.markInboxRecordProcessedStmt,
+		markOutboxMessageFailedStmt:                q.markOutboxMessageFailedStmt,
+		markOutboxMessagePublishedStmt:             q.markOutboxMessagePublishedStmt,
+		purgeProcessedInboxMessagesStmt:            q.purgeProcessedInboxMessagesStmt,
+		purgePublishedOutboxMessagesStmt:           q.purgePublishedOutboxMessagesStmt,
+		setIdempotencyResponseStmt:                 q.setIdempotencyResponseStmt,
+		stripeEventLogExistsStmt:                   q.stripeEventLogExistsStmt,
+		tryInsertInboxRecordStmt:                   q.tryInsertInboxRecordStmt,
+		updateStripeCustomerIDByAccountIDStmt:      q.updateStripeCustomerIDByAccountIDStmt,
+		updateTokenPackPurchaseCheckoutSessionStmt: q.updateTokenPackPurchaseCheckoutSessionStmt,
+		updateTokenPackPurchasePaymentIntentStmt:   q.updateTokenPackPurchasePaymentIntentStmt,
+		updateTokenPackPurchaseStatusStmt:          q.updateTokenPackPurchaseStatusStmt,
+		updateTokensReportedToStripeStmt:           q.updateTokensReportedToStripeStmt,
+		upsertAgentTokenBillingStmt:                q.upsertAgentTokenBillingStmt,
 	}
 }

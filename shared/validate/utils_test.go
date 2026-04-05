@@ -14,6 +14,7 @@ type requiredPasswordTestStruct struct {
 }
 
 func TestValidatePasswordTag(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		password string
@@ -120,6 +121,7 @@ func TestValidatePasswordTag(t *testing.T) {
 }
 
 func TestValidatePasswordTagWithRequired(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		password string
@@ -164,6 +166,7 @@ type requiredIdentifierTestStruct struct {
 }
 
 func TestValidateIdentifierTag(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name       string
 		identifier string
@@ -240,6 +243,7 @@ func TestValidateIdentifierTag(t *testing.T) {
 }
 
 func TestValidateIdentifierTagWithRequired(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name       string
 		identifier string
@@ -284,6 +288,7 @@ type requiredCustomEmailTestStruct struct {
 }
 
 func TestValidateCustomEmailTag(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		email    string
@@ -420,6 +425,7 @@ func TestValidateCustomEmailTag(t *testing.T) {
 }
 
 func TestValidateCustomEmailTagWithRequired(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		email    string
@@ -456,6 +462,7 @@ func TestValidateCustomEmailTagWithRequired(t *testing.T) {
 }
 
 func TestValidatePasswordErrorMessage(t *testing.T) {
+	t.Parallel()
 	req := &requiredPasswordTestStruct{Password: "short"}
 	err := Validate(req)
 
@@ -470,6 +477,7 @@ func TestValidatePasswordErrorMessage(t *testing.T) {
 }
 
 func TestValidateIdentifierErrorMessage(t *testing.T) {
+	t.Parallel()
 	req := &requiredIdentifierTestStruct{Identifier: "ab"}
 	err := Validate(req)
 
@@ -484,6 +492,7 @@ func TestValidateIdentifierErrorMessage(t *testing.T) {
 }
 
 func TestValidateCustomEmailErrorMessage(t *testing.T) {
+	t.Parallel()
 	req := &requiredCustomEmailTestStruct{Email: "invalid"}
 	err := Validate(req)
 

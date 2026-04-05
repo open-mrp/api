@@ -3,10 +3,11 @@ package domain
 type RecoveryPoint string
 
 const (
-	RecoveryPointStarted         RecoveryPoint = "auth:started"
-	RecoveryPointCustomerCreated RecoveryPoint = "auth:customer_created"
-	RecoveryPointAccountsCreated RecoveryPoint = "auth:accounts_created"
-	RecoveryPointFinished        RecoveryPoint = "auth:finished"
+	RecoveryPointStarted            RecoveryPoint = "auth:started"
+	RecoveryPointCustomerCreated    RecoveryPoint = "auth:customer_created"
+	RecoveryPointCoreAccountCreated RecoveryPoint = "auth:core_account_created"
+	RecoveryPointAccountsCreated    RecoveryPoint = "auth:accounts_created"
+	RecoveryPointFinished           RecoveryPoint = "auth:finished"
 )
 
 func (r RecoveryPoint) String() string {
@@ -23,7 +24,7 @@ func (r RecoveryPoint) IsStarted() bool {
 
 func (r RecoveryPoint) IsValid() bool {
 	switch r {
-	case RecoveryPointStarted, RecoveryPointCustomerCreated, RecoveryPointAccountsCreated, RecoveryPointFinished:
+	case RecoveryPointStarted, RecoveryPointCustomerCreated, RecoveryPointCoreAccountCreated, RecoveryPointAccountsCreated, RecoveryPointFinished:
 		return true
 	default:
 		return false

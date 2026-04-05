@@ -59,6 +59,7 @@ func (suite *PasswordMedTestSuite) TearDownSuite() {
 
 // TestPasswordMedTestSuite runs the test suite
 func TestPasswordMedTestSuite(t *testing.T) {
+	t.Parallel()
 	suite.Run(t, new(PasswordMedTestSuite))
 }
 

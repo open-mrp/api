@@ -26,13 +26,10 @@ func (*RevokeRefreshTokenRequest) SchemaExample() any {
 
 type RevokeRefreshTokenEndpoint struct{}
 
-const revokeRefreshTokenEndpointDescription string = `This endpoint is used to revoke a refresh token.
-Once completed, the refresh token is revoked and is no longer valid for refreshing an access token.`
-
 func (e *RevokeRefreshTokenEndpoint) Materialize() *apiendpoint.APIEndpoint[*RevokeRefreshTokenRequest, *apiresource.EmptyResource] {
 	return &apiendpoint.APIEndpoint[*RevokeRefreshTokenRequest, *apiresource.EmptyResource]{
 		Title:             "Revoke Refresh Token",
-		Description:       revokeRefreshTokenEndpointDescription,
+		Description:       "Revokes a refresh token, making it no longer valid for obtaining new access tokens.",
 		Method:            http.MethodDelete,
 		Route:             "/v1/auth/refresh-tokens",
 		ContentType:       "application/json",
@@ -42,9 +39,6 @@ func (e *RevokeRefreshTokenEndpoint) Materialize() *apiendpoint.APIEndpoint[*Rev
 		Public:            false,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RevokeRefreshTokenRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(AuthSvc).RevokeRefreshToken
-		},
-		Extras: apiendpoint.APIEndpointExtras{
-			AllowUnknownJSONFields: false,
 		},
 	}
 }

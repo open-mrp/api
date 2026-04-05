@@ -1,0 +1,47 @@
+package producttypeep
+
+import (
+	"context"
+	"net/http"
+
+	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
+	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	apierror "github.com/augno/api/shared/errors"
+)
+
+// CreateProductTypeRequest is the request to create a new product type.
+type CreateProductTypeRequest struct {
+	// The display name of the product type.
+	Name string `json:"name" validate:"required"`
+	// The unique code for the product type.
+	Code string `json:"code" validate:"required"`
+}
+
+var sampleCreateProductTypeRequest = &CreateProductTypeRequest{
+	Name: "Sale",
+	Code: "sale",
+}
+
+func (*CreateProductTypeRequest) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(sampleCreateProductTypeRequest)
+}
+
+type CreateProductTypeEndpoint struct{}
+
+func (e *CreateProductTypeEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateProductTypeRequest, *apiresource.ProductType] {
+	return &apiendpoint.APIEndpoint[*CreateProductTypeRequest, *apiresource.ProductType]{
+		Title:             "Create Product Type",
+		Description:       "Creates a new product type.",
+		Method:            http.MethodPost,
+		Route:             "/v1/catalog/product-types",
+		Request:           &CreateProductTypeRequest{},
+		Response:          &apiresource.ProductType{},
+		SuccessStatusCode: http.StatusCreated,
+		Public:            false,
+		Preview:           true,
+		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateProductTypeRequest) (*apiresource.ProductType, *apierror.APIError) {
+			return svc.(ProductTypeSvc).CreateProductType
+		},
+	}
+}

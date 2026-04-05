@@ -6,7 +6,7 @@ import (
 	"github.com/augno/api/shared/constants"
 )
 
-// CollapseUnexpanded replaces non-requested sub-objects with null.
+// CollapseUnexpanded replaces non-requested include fields with null.
 // It handles both single-object and list responses (object == "list").
 func CollapseUnexpanded(data map[string]any, config *IncludeConfig, requested map[string]bool) map[string]any {
 	if config == nil {
@@ -79,10 +79,6 @@ func collapseAtPath(data map[string]any, path string) {
 	terminalKey := parts[len(parts)-1]
 	val, ok := current[terminalKey]
 	if !ok || val == nil {
-		return
-	}
-
-	if _, ok := val.(map[string]any); !ok {
 		return
 	}
 

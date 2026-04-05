@@ -9,6 +9,7 @@ import (
 	"github.com/augno/api/services/notification-service/internal/infrastructure/aws"
 	"github.com/augno/api/services/notification-service/internal/infrastructure/repository"
 	"github.com/augno/api/services/notification-service/internal/infrastructure/sqlc"
+	"github.com/augno/api/services/notification-service/internal/infrastructure/stub"
 	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
@@ -60,9 +61,15 @@ func (c *NotificationSvcConfig) WithDefaults(queries *sqlc.Queries, platformMode
 		c = &NotificationSvcConfig{}
 	}
 
-	emailSender, apiErr := aws.NewSESEmailSender(context.Background(), platformMode, awsRegion)
-	if apiErr != nil {
-		return nil, apiErr
+	var emailSender domain.EmailSender
+	if platformMode.IsTest() {
+		emailSender = &stub.EmailSender{}
+	} else {
+		var apiErr *apierror.APIError
+		emailSender, apiErr = aws.NewSESEmailSender(context.Background(), platformMode, awsRegion)
+		if apiErr != nil {
+			return nil, apiErr
+		}
 	}
 
 	return &NotificationSvcConfig{
@@ -72,6 +79,11 @@ func (c *NotificationSvcConfig) WithDefaults(queries *sqlc.Queries, platformMode
 	}, nil
 }
 
+// SendEmail sends an email via SES, or logs a suppressed entry if the request originates from a sandbox.
+//
+// 1. If the request is from a sandbox account, log a suppressed email record and return without sending.
+// 2. Otherwise, send the email through the configured email sender (SES).
+// 3. Return the SES message ID on success.
 func (s *notificationSvcImpl) SendEmail(ctx context.Context, data domain.EmailSendData) (*string, *apierror.APIError) {
 	ctx, span := notificationSvcTracer.Start(ctx, "service.notification.send_email")
 	defer span.End()
@@ -81,10 +93,12 @@ func (s *notificationSvcImpl) SendEmail(ctx context.Context, data domain.EmailSe
 	}
 
 	sesMessageID, apiErr := s.emailSender.Send(ctx, domain.EmailData{
-		To:      data.To,
-		Subject: data.Subject,
-		Body:    data.Body,
-		SendAs:  data.SendAs,
+		To:         data.To,
+		Subject:    data.Subject,
+		Body:       data.Body,
+		SendAs:     data.SendAs,
+		Attachment: data.Attachment,
+		Filename:   data.Filename,
 	})
 	if apiErr != nil {
 		return nil, apiErr
@@ -93,6 +107,11 @@ func (s *notificationSvcImpl) SendEmail(ctx context.Context, data domain.EmailSe
 	return sesMessageID, nil
 }
 
+// LogEmail records a sent email in the email log, deduplicating by SES message ID.
+//
+// 1. Check if an email log entry already exists for the given SES message ID.
+// 2. If a duplicate is found, return early (idempotent).
+// 3. Generate a new email log ID and persist the log entry.
 func (s *notificationSvcImpl) LogEmail(ctx context.Context, data domain.EmailLogData) *apierror.APIError {
 	ctx, span := notificationSvcTracer.Start(ctx, "service.notification.log_email")
 	defer span.End()
@@ -129,6 +148,11 @@ func (s *notificationSvcImpl) LogEmail(ctx context.Context, data domain.EmailLog
 	return s.emailLogRepo.Create(ctx, emailLog)
 }
 
+// SendEnterpriseRequest sends an enterprise upgrade request email to the sales team.
+//
+// 1. If the request originates from a sandbox, skip sending and return immediately.
+// 2. Render the enterprise request email template with account and requester details.
+// 3. Send the rendered email to the sales team address.
 func (s *notificationSvcImpl) SendEnterpriseRequest(ctx context.Context, req *domain.EnterpriseRequestData) *apierror.APIError {
 	ctx, span := notificationSvcTracer.Start(ctx, "service.notification.send_enterprise_request")
 	defer span.End()

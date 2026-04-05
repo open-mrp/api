@@ -8,6 +8,7 @@ import (
 
 	"github.com/augno/api/services/api-gateway/internal/header"
 	httptransport "github.com/augno/api/services/api-gateway/internal/http"
+	"github.com/augno/api/shared/appctx"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/retry"
 )
@@ -137,8 +138,12 @@ func RateLimitMiddlewareWithConfig(limit int, window time.Duration) func(http.Ha
 func rateLimitMiddleware(rateLimiter *RateLimiter) func(http.HandlerFunc) http.HandlerFunc {
 	return func(next http.HandlerFunc) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
-			// Skip rate limiting for health check endpoint.
+			// Skip rate limiting for health checks and test mode.
 			if r.URL.Path == "/healthz" {
+				next.ServeHTTP(w, r)
+				return
+			}
+			if platform, ok := appctx.GetPlatformFromContext(r.Context()); ok && platform.IsTest() {
 				next.ServeHTTP(w, r)
 				return
 			}

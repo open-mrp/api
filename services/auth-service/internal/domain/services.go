@@ -35,7 +35,7 @@ type AuthSvc interface {
 	//   - If authToken is empty, returns an unauthenticated identity.
 	//   - If authToken is an API key credential, validates it as an API key.
 	//   - Otherwise, validates it as a user credential.
-	ValidateCredential(ctx context.Context, authToken string, targetAccountID *string) (*types.Identity, *apierror.APIError)
+	ValidateCredential(ctx context.Context, authToken string, targetAccountID *string, actorAccountID *string) (*types.Identity, *apierror.APIError)
 }
 
 type TokenSvc interface {
@@ -59,7 +59,7 @@ type PasswordSvc interface {
 	//
 	// Side effects:
 	//   - Revokes existing refresh tokens for the user.
-	UpdatePassword(ctx context.Context, userID string, oldPassword, newPassword string) *apierror.APIError
+	UpdatePassword(ctx context.Context, oldPassword, newPassword string) *apierror.APIError
 
 	// ResetPassword completes the password reset flow and returns a token pair plus the user profile.
 	//
@@ -122,26 +122,24 @@ type UpdateRegistrationSessionInput struct {
 	SessionData *UpdateRegistrationSessionData
 }
 
-type ConfirmPaymentInput struct {
-	SessionID         string
-	CheckoutSessionID string
-}
-
-type ConfirmPaymentOutput struct {
-	Status           string
-	SubscriptionID   string
-	StripeCustomerID string
-}
-
-type CreateRegistrationCheckoutInput struct {
+type SetupBillingInput struct {
 	SessionID string
 }
 
-type CreateRegistrationCheckoutOutput struct {
-	ClientSecret     string // #nosec G117 - Stripe checkout client secret (ephemeral, not a stored credential)
-	CheckoutID       string
+type SetupBillingOutput struct {
 	StripeCustomerID string
+	ClientSecret     string // #nosec G117 -- Stripe ephemeral client secret
 	PublishableKey   string
+}
+
+type ConfirmPaymentInput struct {
+	SessionID     string
+	SetupIntentID string
+}
+
+type ConfirmPaymentOutput struct {
+	Status          string
+	PaymentMethodID *string
 }
 
 type ListRegistrationSessionsInput struct {
@@ -202,12 +200,19 @@ type RegistrationSessionSvc interface {
 	//   - Requires a user identity in context.
 	ListSessions(ctx context.Context, input ListRegistrationSessionsInput) (*ListRegistrationSessionsResult, *apierror.APIError)
 
-	// CreateCheckout creates a Stripe checkout session for a registration session.
-	// Uses recovery points for crash safety across Stripe API calls.
+	// SetupBilling creates a Stripe customer and Setup Intent for a
+	// registration session. Uses recovery points for crash safety.
 	//
 	// Authorization:
 	//   - Requires a user identity in context.
-	CreateCheckout(ctx context.Context, input CreateRegistrationCheckoutInput) (*CreateRegistrationCheckoutOutput, *apierror.APIError)
+	SetupBilling(ctx context.Context, input SetupBillingInput) (*SetupBillingOutput, *apierror.APIError)
+
+	// ConfirmPayment verifies that a Setup Intent succeeded and marks the
+	// registration session's payment as completed.
+	//
+	// Authorization:
+	//   - Requires a user identity in context matching the session's user.
+	ConfirmPayment(ctx context.Context, input ConfirmPaymentInput) (*ConfirmPaymentOutput, *apierror.APIError)
 
 	// CompleteRegistration finalizes a registration session by calling
 	// core-service to create the production account, sandbox, roles, and
@@ -216,11 +221,6 @@ type RegistrationSessionSvc interface {
 	// Authorization:
 	//   - Requires a user identity in context matching the session's user.
 	CompleteRegistration(ctx context.Context, sessionID string) (*CompleteRegistrationOutput, *apierror.APIError)
-
-	// ConfirmPayment verifies a Stripe checkout session's payment status via the
-	// billing service. If the checkout is complete, marks the registration
-	// session's payment as done and records the subscription ID.
-	ConfirmPayment(ctx context.Context, input ConfirmPaymentInput) (*ConfirmPaymentOutput, *apierror.APIError)
 }
 
 // CompleteRegistrationOutput holds the IDs of the newly created accounts.
@@ -232,12 +232,11 @@ type CompleteRegistrationOutput struct {
 // CompleteAccountRegistrationInput carries the data sent to core-service
 // to create the account and sandbox.
 type CompleteAccountRegistrationInput struct {
-	UserID               string
-	PlanCode             string
-	StripeCustomerID     string
-	StripeSubscriptionID string
-	AccountName          string
-	BusinessAddress      *RegistrationAddress
+	UserID           string
+	PlanCode         string
+	StripeCustomerID string
+	AccountName      string
+	BusinessAddress  *RegistrationAddress
 }
 
 // RegistrationAddress is a structured postal address collected during

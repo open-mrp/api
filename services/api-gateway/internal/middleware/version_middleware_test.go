@@ -13,6 +13,7 @@ import (
 )
 
 func TestVersionMiddleware_MissingHeader(t *testing.T) {
+	t.Parallel()
 	middleware := VersionMiddleware()
 
 	handler := middleware(func(w http.ResponseWriter, r *http.Request) {
@@ -41,6 +42,7 @@ func TestVersionMiddleware_MissingHeader(t *testing.T) {
 }
 
 func TestVersionMiddleware_InvalidVersion(t *testing.T) {
+	t.Parallel()
 	middleware := VersionMiddleware()
 
 	handler := middleware(func(w http.ResponseWriter, r *http.Request) {
@@ -70,6 +72,7 @@ func TestVersionMiddleware_InvalidVersion(t *testing.T) {
 }
 
 func TestVersionMiddleware_InvalidFormat(t *testing.T) {
+	t.Parallel()
 	middleware := VersionMiddleware()
 
 	handler := middleware(func(w http.ResponseWriter, r *http.Request) {
@@ -100,6 +103,7 @@ func TestVersionMiddleware_InvalidFormat(t *testing.T) {
 }
 
 func TestVersionMiddleware_ValidVersion(t *testing.T) {
+	t.Parallel()
 	middleware := VersionMiddleware()
 
 	var capturedVersion version.APIVersion
@@ -139,6 +143,7 @@ func TestVersionMiddleware_ValidVersion(t *testing.T) {
 }
 
 func TestVersionMiddleware_SkipsHealthz(t *testing.T) {
+	t.Parallel()
 	middleware := VersionMiddleware()
 
 	handlerCalled := false

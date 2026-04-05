@@ -46,16 +46,28 @@ func (r *registrationRepoImpl) CreateAccountForRegistration(ctx context.Context,
 		subscriptionStatus = constants.SubscriptionStatusActive
 	}
 
-	err = r.queries.CreateAccountForRegistration(ctx, sqlc.CreateAccountForRegistrationParams{
-		ID:                           params.ID,
-		Name:                         params.Name,
-		AccountTypeCode:              string(domain.AccountTypeCompany),
-		OnboardingStatusCode:         "active",
-		PlanCode:                     params.PlanCode,
-		AccountPlanID:                sql.NullString{String: planTypeID, Valid: true},
+	billingID, genErr := id.GenID(id.AccountBillingIDPrefix, nil)
+	if genErr != nil {
+		return tracing.Trace(span, genErr)
+	}
+
+	err = r.queries.CreateAccountBilling(ctx, sqlc.CreateAccountBillingParams{
+		ID:                           billingID,
+		AccountPlanID:                planTypeID,
 		InternalStripeCustomerID:     nullStr(params.StripeCustomerID),
 		InternalStripeSubscriptionID: nullStr(params.StripeSubscriptionID),
 		SubscriptionStatus:           sql.NullString{String: subscriptionStatus.String(), Valid: true},
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	err = r.queries.CreateAccountForRegistration(ctx, sqlc.CreateAccountForRegistrationParams{
+		ID:                   params.ID,
+		Name:                 params.Name,
+		AccountTypeCode:      string(domain.AccountTypeCompany),
+		OnboardingStatusCode: "active",
+		AccountBillingID:     sql.NullString{String: billingID, Valid: true},
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return tracing.Trace(span, apiErr)

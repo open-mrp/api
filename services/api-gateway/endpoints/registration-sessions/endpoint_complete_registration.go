@@ -15,15 +15,12 @@ type CompleteRegistrationRequest struct {
 	SessionID string `json:"-" path:"session_id" validate:"required"`
 }
 
-const completeRegistrationEndpointDescription string = `Completes the registration flow by creating the production account, sandbox account,
-roles, permissions, and account-user records. Requires payment to be completed first.`
-
 type CompleteRegistrationEndpoint struct{}
 
 func (e *CompleteRegistrationEndpoint) Materialize() *apiendpoint.APIEndpoint[*CompleteRegistrationRequest, *apiresource.CompleteRegistrationResponse] {
 	return &apiendpoint.APIEndpoint[*CompleteRegistrationRequest, *apiresource.CompleteRegistrationResponse]{
 		Title:             "Complete Registration",
-		Description:       completeRegistrationEndpointDescription,
+		Description:       "Completes the registration flow by provisioning accounts, roles, and permissions. Requires payment to be confirmed first.",
 		Method:            http.MethodPost,
 		Route:             "/v1/auth/registration-sessions/{session_id}/accounts",
 		ContentType:       "application/json",
@@ -34,9 +31,6 @@ func (e *CompleteRegistrationEndpoint) Materialize() *apiendpoint.APIEndpoint[*C
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CompleteRegistrationRequest) (*apiresource.CompleteRegistrationResponse, *apierror.APIError) {
 			return svc.(RegistrationSessionSvc).CompleteRegistration
-		},
-		Extras: apiendpoint.APIEndpointExtras{
-			AllowUnknownJSONFields: false,
 		},
 	}
 }

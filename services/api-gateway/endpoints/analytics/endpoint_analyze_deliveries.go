@@ -1,0 +1,51 @@
+package analyticsep
+
+import (
+	"context"
+	"net/http"
+	"time"
+
+	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	apierror "github.com/augno/api/shared/errors"
+)
+
+// AnalyzeDeliveriesRequest is the request to analyze delivery performance.
+type AnalyzeDeliveriesRequest struct {
+	// The start date for the analysis period.
+	StartDate time.Time `json:"start_date" validate:"required"`
+	// The end date for the analysis period.
+	EndDate time.Time `json:"end_date" validate:"required"`
+	// Optional product line IDs to filter by.
+	ProductLineIDs []string `json:"product_line_ids,omitempty"`
+	// Optional customer IDs to filter by.
+	CustomerIDs []string `json:"customer_ids,omitempty"`
+	// Optional customer group IDs to filter by.
+	CustomerGroupIDs []string `json:"customer_group_ids,omitempty"`
+	// Optional sales rep IDs to filter by.
+	SalesRepIDs []string `json:"sales_rep_ids,omitempty"`
+	// Optional target delivery time in days.
+	TargetDeliveryTimeDays *int64 `json:"target_delivery_time_days,omitempty"`
+	// Whether to override promised dates with the target delivery time.
+	OverridePromisedDates *bool `json:"override_promised_dates,omitempty"`
+}
+
+type AnalyzeDeliveriesEndpoint struct{}
+
+func (e *AnalyzeDeliveriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeDeliveriesRequest, *apiresource.AnalyzeDeliveriesResponse] {
+	return &apiendpoint.APIEndpoint[*AnalyzeDeliveriesRequest, *apiresource.AnalyzeDeliveriesResponse]{
+		Title:             "Analyze Deliveries",
+		Description:       "Returns delivery performance statistics over a date range, including on-time rates, average delivery times, and time-to-first-shipment metrics.",
+		Method:            http.MethodPut,
+		Route:             "/v1/core/analytics/deliveries",
+		ContentType:       "application/json",
+		Request:           &AnalyzeDeliveriesRequest{},
+		Response:          &apiresource.AnalyzeDeliveriesResponse{},
+		SuccessStatusCode: http.StatusOK,
+		Public:            false,
+		Preview:           true,
+		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeDeliveriesRequest) (*apiresource.AnalyzeDeliveriesResponse, *apierror.APIError) {
+			return svc.(AnalyticsSvc).AnalyzeDeliveries
+		},
+	}
+}

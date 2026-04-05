@@ -33,17 +33,32 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.cleanupExpiredOutboxLocksStmt, err = db.PrepareContext(ctx, cleanupExpiredOutboxLocks); err != nil {
 		return nil, fmt.Errorf("error preparing query CleanupExpiredOutboxLocks: %w", err)
 	}
+	if q.createAuditEventStmt, err = db.PrepareContext(ctx, createAuditEvent); err != nil {
+		return nil, fmt.Errorf("error preparing query CreateAuditEvent: %w", err)
+	}
 	if q.createIdempotencyKeyWithScopeStmt, err = db.PrepareContext(ctx, createIdempotencyKeyWithScope); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateIdempotencyKeyWithScope: %w", err)
 	}
 	if q.createRequestLogStmt, err = db.PrepareContext(ctx, createRequestLog); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateRequestLog: %w", err)
 	}
+	if q.deleteExpiredAuditEventsStmt, err = db.PrepareContext(ctx, deleteExpiredAuditEvents); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteExpiredAuditEvents: %w", err)
+	}
+	if q.deleteExpiredDeletedRecordsStmt, err = db.PrepareContext(ctx, deleteExpiredDeletedRecords); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteExpiredDeletedRecords: %w", err)
+	}
 	if q.deleteExpiredIdempotencyKeysStmt, err = db.PrepareContext(ctx, deleteExpiredIdempotencyKeys); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteExpiredIdempotencyKeys: %w", err)
 	}
+	if q.deleteExpiredRequestLogsStmt, err = db.PrepareContext(ctx, deleteExpiredRequestLogs); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteExpiredRequestLogs: %w", err)
+	}
 	if q.deleteExpiredServiceIdempotencyKeysStmt, err = db.PrepareContext(ctx, deleteExpiredServiceIdempotencyKeys); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteExpiredServiceIdempotencyKeys: %w", err)
+	}
+	if q.findAuditEventByIDStmt, err = db.PrepareContext(ctx, findAuditEventByID); err != nil {
+		return nil, fmt.Errorf("error preparing query FindAuditEventByID: %w", err)
 	}
 	if q.findRequestLogBaseByIDStmt, err = db.PrepareContext(ctx, findRequestLogBaseByID); err != nil {
 		return nil, fmt.Errorf("error preparing query FindRequestLogBaseByID: %w", err)
@@ -62,6 +77,12 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.getRecoveryPointStmt, err = db.PrepareContext(ctx, getRecoveryPoint); err != nil {
 		return nil, fmt.Errorf("error preparing query GetRecoveryPoint: %w", err)
+	}
+	if q.listAuditEventsBackwardStmt, err = db.PrepareContext(ctx, listAuditEventsBackward); err != nil {
+		return nil, fmt.Errorf("error preparing query ListAuditEventsBackward: %w", err)
+	}
+	if q.listAuditEventsForwardStmt, err = db.PrepareContext(ctx, listAuditEventsForward); err != nil {
+		return nil, fmt.Errorf("error preparing query ListAuditEventsForward: %w", err)
 	}
 	if q.listRequestLogsBackwardStmt, err = db.PrepareContext(ctx, listRequestLogsBackward); err != nil {
 		return nil, fmt.Errorf("error preparing query ListRequestLogsBackward: %w", err)
@@ -128,6 +149,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing cleanupExpiredOutboxLocksStmt: %w", cerr)
 		}
 	}
+	if q.createAuditEventStmt != nil {
+		if cerr := q.createAuditEventStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing createAuditEventStmt: %w", cerr)
+		}
+	}
 	if q.createIdempotencyKeyWithScopeStmt != nil {
 		if cerr := q.createIdempotencyKeyWithScopeStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing createIdempotencyKeyWithScopeStmt: %w", cerr)
@@ -138,14 +164,34 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing createRequestLogStmt: %w", cerr)
 		}
 	}
+	if q.deleteExpiredAuditEventsStmt != nil {
+		if cerr := q.deleteExpiredAuditEventsStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteExpiredAuditEventsStmt: %w", cerr)
+		}
+	}
+	if q.deleteExpiredDeletedRecordsStmt != nil {
+		if cerr := q.deleteExpiredDeletedRecordsStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteExpiredDeletedRecordsStmt: %w", cerr)
+		}
+	}
 	if q.deleteExpiredIdempotencyKeysStmt != nil {
 		if cerr := q.deleteExpiredIdempotencyKeysStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing deleteExpiredIdempotencyKeysStmt: %w", cerr)
 		}
 	}
+	if q.deleteExpiredRequestLogsStmt != nil {
+		if cerr := q.deleteExpiredRequestLogsStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteExpiredRequestLogsStmt: %w", cerr)
+		}
+	}
 	if q.deleteExpiredServiceIdempotencyKeysStmt != nil {
 		if cerr := q.deleteExpiredServiceIdempotencyKeysStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing deleteExpiredServiceIdempotencyKeysStmt: %w", cerr)
+		}
+	}
+	if q.findAuditEventByIDStmt != nil {
+		if cerr := q.findAuditEventByIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing findAuditEventByIDStmt: %w", cerr)
 		}
 	}
 	if q.findRequestLogBaseByIDStmt != nil {
@@ -176,6 +222,16 @@ func (q *Queries) Close() error {
 	if q.getRecoveryPointStmt != nil {
 		if cerr := q.getRecoveryPointStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getRecoveryPointStmt: %w", cerr)
+		}
+	}
+	if q.listAuditEventsBackwardStmt != nil {
+		if cerr := q.listAuditEventsBackwardStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing listAuditEventsBackwardStmt: %w", cerr)
+		}
+	}
+	if q.listAuditEventsForwardStmt != nil {
+		if cerr := q.listAuditEventsForwardStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing listAuditEventsForwardStmt: %w", cerr)
 		}
 	}
 	if q.listRequestLogsBackwardStmt != nil {
@@ -295,16 +351,23 @@ type Queries struct {
 	acquireOutboxMessagesStmt                 *sql.Stmt
 	advanceRecoveryPointStmt                  *sql.Stmt
 	cleanupExpiredOutboxLocksStmt             *sql.Stmt
+	createAuditEventStmt                      *sql.Stmt
 	createIdempotencyKeyWithScopeStmt         *sql.Stmt
 	createRequestLogStmt                      *sql.Stmt
+	deleteExpiredAuditEventsStmt              *sql.Stmt
+	deleteExpiredDeletedRecordsStmt           *sql.Stmt
 	deleteExpiredIdempotencyKeysStmt          *sql.Stmt
+	deleteExpiredRequestLogsStmt              *sql.Stmt
 	deleteExpiredServiceIdempotencyKeysStmt   *sql.Stmt
+	findAuditEventByIDStmt                    *sql.Stmt
 	findRequestLogBaseByIDStmt                *sql.Stmt
 	findRequestLogByIDStmt                    *sql.Stmt
 	getIdempotencyKeyByScopeHashForUpdateStmt *sql.Stmt
 	getInboxRecordByMessageAndHandlerStmt     *sql.Stmt
 	getLockedOutboxMessagesStmt               *sql.Stmt
 	getRecoveryPointStmt                      *sql.Stmt
+	listAuditEventsBackwardStmt               *sql.Stmt
+	listAuditEventsForwardStmt                *sql.Stmt
 	listRequestLogsBackwardStmt               *sql.Stmt
 	listRequestLogsBaseBackwardStmt           *sql.Stmt
 	listRequestLogsBaseForwardStmt            *sql.Stmt
@@ -329,16 +392,23 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		acquireOutboxMessagesStmt:                 q.acquireOutboxMessagesStmt,
 		advanceRecoveryPointStmt:                  q.advanceRecoveryPointStmt,
 		cleanupExpiredOutboxLocksStmt:             q.cleanupExpiredOutboxLocksStmt,
+		createAuditEventStmt:                      q.createAuditEventStmt,
 		createIdempotencyKeyWithScopeStmt:         q.createIdempotencyKeyWithScopeStmt,
 		createRequestLogStmt:                      q.createRequestLogStmt,
+		deleteExpiredAuditEventsStmt:              q.deleteExpiredAuditEventsStmt,
+		deleteExpiredDeletedRecordsStmt:           q.deleteExpiredDeletedRecordsStmt,
 		deleteExpiredIdempotencyKeysStmt:          q.deleteExpiredIdempotencyKeysStmt,
+		deleteExpiredRequestLogsStmt:              q.deleteExpiredRequestLogsStmt,
 		deleteExpiredServiceIdempotencyKeysStmt:   q.deleteExpiredServiceIdempotencyKeysStmt,
+		findAuditEventByIDStmt:                    q.findAuditEventByIDStmt,
 		findRequestLogBaseByIDStmt:                q.findRequestLogBaseByIDStmt,
 		findRequestLogByIDStmt:                    q.findRequestLogByIDStmt,
 		getIdempotencyKeyByScopeHashForUpdateStmt: q.getIdempotencyKeyByScopeHashForUpdateStmt,
 		getInboxRecordByMessageAndHandlerStmt:     q.getInboxRecordByMessageAndHandlerStmt,
 		getLockedOutboxMessagesStmt:               q.getLockedOutboxMessagesStmt,
 		getRecoveryPointStmt:                      q.getRecoveryPointStmt,
+		listAuditEventsBackwardStmt:               q.listAuditEventsBackwardStmt,
+		listAuditEventsForwardStmt:                q.listAuditEventsForwardStmt,
 		listRequestLogsBackwardStmt:               q.listRequestLogsBackwardStmt,
 		listRequestLogsBaseBackwardStmt:           q.listRequestLogsBaseBackwardStmt,
 		listRequestLogsBaseForwardStmt:            q.listRequestLogsBaseForwardStmt,

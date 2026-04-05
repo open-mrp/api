@@ -48,6 +48,7 @@ func AuthMiddleware(config *AuthMiddlewareConfig) func(http.HandlerFunc) http.Ha
 
 			authHeader := r.Header.Get(header.AuthorizationHeader)
 			augnoAccountIDHeader := r.Header.Get(header.TargetAccountIDHeader)
+			actorAccountIDHeader := r.Header.Get(header.ActorAccountIDHeader)
 
 			platform, _ := appctx.GetPlatformFromContext(r.Context())
 			isProduction := platform.IsProduction()
@@ -93,14 +94,31 @@ func AuthMiddleware(config *AuthMiddlewareConfig) func(http.HandlerFunc) http.Ha
 				authToken = cookieToken
 			}
 
+			if authToken != "" && header.IsAPIKey(authToken) && actorAccountIDHeader != "" {
+				apiErr := apierror.NewValidationErrorWithParam(
+					"Augno-Actor-Account header is not allowed when authenticating with an API key. API keys always act on behalf of the account they were created by.",
+					header.ActorAccountIDHeader,
+				)
+				httptransport.RespondWithAPIError(r.Context(), w, apiErr)
+				tracing.RecordControllerError(span, apiErr)
+				span.End()
+				return
+			}
+
 			var targetAccountID *string
 			if augnoAccountIDHeader != "" {
 				targetAccountID = &augnoAccountIDHeader
 			}
 
+			var actorAccountID *string
+			if actorAccountIDHeader != "" {
+				actorAccountID = &actorAccountIDHeader
+			}
+
 			identity, err := config.AuthClient.Client.ValidateCredential(ctx, &pb.Credential{
 				Token:           authToken,
 				TargetAccountId: targetAccountID,
+				ActorAccountId:  actorAccountID,
 			})
 
 			apiErr := contracts.ConvertGRPCError(ctx, err, "auth-service")
@@ -117,13 +135,14 @@ func AuthMiddleware(config *AuthMiddlewareConfig) func(http.HandlerFunc) http.Ha
 
 			if rl, ok := appctx.GetRequestLog(r.Context()); ok && rl != nil {
 				if identity.Actor != nil {
-					actorType := normalizeActorType(identity.Actor.Type)
+					actorType := normalizeActorType(identity.Actor.RelationType)
 					rl.ActorType = &actorType
 					rl.ActorID = &identity.Actor.Id
 					rl.AccountID = identity.Actor.AccountId
 				}
-				if identity.TargetAccountId != nil {
-					rl.TargetAccountID = identity.TargetAccountId
+				if identity.Target != nil && identity.Target.AccountId != "" {
+					accountId := identity.Target.AccountId
+					rl.TargetAccountID = &accountId
 				}
 				identityType := normalizeIdentityType(identity.Type)
 				rl.IdentityType = &identityType
@@ -138,28 +157,28 @@ func AuthMiddleware(config *AuthMiddlewareConfig) func(http.HandlerFunc) http.Ha
 	}
 }
 
-func normalizeIdentityType(t pb.IdentityType) string {
+func normalizeIdentityType(t pb.IdentityActorType) string {
 	switch t {
-	case pb.IdentityType_IDENTITY_TYPE_USER:
+	case pb.IdentityActorType_IDENTITY_ACTOR_TYPE_USER:
 		return "user"
-	case pb.IdentityType_IDENTITY_TYPE_API_KEY:
+	case pb.IdentityActorType_IDENTITY_ACTOR_TYPE_API_KEY:
 		return "api_key"
-	case pb.IdentityType_IDENTITY_TYPE_UNAUTHENTICATED:
+	case pb.IdentityActorType_IDENTITY_ACTOR_TYPE_UNAUTHENTICATED:
 		return "unauthenticated"
 	default:
 		return ""
 	}
 }
 
-func normalizeActorType(t pb.IdentityActorType) string {
+func normalizeActorType(t pb.IdentityRelationType) string {
 	switch t {
-	case pb.IdentityActorType_IDENTITY_ACTOR_TYPE_INTERNAL:
+	case pb.IdentityRelationType_IDENTITY_RELATION_TYPE_INTERNAL:
 		return "internal"
-	case pb.IdentityActorType_IDENTITY_ACTOR_TYPE_CUSTOMER:
+	case pb.IdentityRelationType_IDENTITY_RELATION_TYPE_CUSTOMER:
 		return "customer"
-	case pb.IdentityActorType_IDENTITY_ACTOR_TYPE_SUPPLIER:
+	case pb.IdentityRelationType_IDENTITY_RELATION_TYPE_SUPPLIER:
 		return "supplier"
-	case pb.IdentityActorType_IDENTITY_ACTOR_TYPE_UNASSIGNED:
+	case pb.IdentityRelationType_IDENTITY_RELATION_TYPE_UNASSIGNED:
 		return "unassigned"
 	default:
 		return ""

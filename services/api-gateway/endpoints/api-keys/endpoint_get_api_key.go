@@ -13,17 +13,15 @@ import (
 // GetAPIKeyRequest is the request to retrieve a single API key by ID.
 type GetAPIKeyRequest struct {
 	// The ID of the API key to retrieve.
-	APIKeyID string `path:"id"`
+	APIKeyID string `path:"id" validate:"required"`
 }
-
-const getAPIKeyEndpointDescription string = `This endpoint returns a single API key's metadata by its ID.`
 
 type GetAPIKeyEndpoint struct{}
 
 func (e *GetAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetAPIKeyRequest, *apiresource.APIKey] {
 	return &apiendpoint.APIEndpoint[*GetAPIKeyRequest, *apiresource.APIKey]{
 		Title:             "Get API Key",
-		Description:       getAPIKeyEndpointDescription,
+		Description:       "Returns a single API key by its ID.",
 		Method:            http.MethodGet,
 		Route:             "/v1/auth/api-keys/{id}",
 		Request:           &GetAPIKeyRequest{},
@@ -34,13 +32,9 @@ func (e *GetAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetAPIKeyReq
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetAPIKeyRequest) (*apiresource.APIKey, *apierror.APIError) {
 			return svc.(APIKeySvc).GetAPIKey
 		},
-		IncludeConfig: &apiendpoint.IncludeConfig{
-			Fields: []apiendpoint.IncludeField{
-				{Key: "role", ObjectType: constants.ObjectTypeRole, JSONPaths: []string{"role"}},
-			},
-		},
-		Extras: apiendpoint.APIEndpointExtras{
-			AllowUnknownJSONFields: false,
-		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeAPIKey,
+			Fields:     []string{"role", "role.permissions"},
+		}),
 	}
 }

@@ -22,6 +22,7 @@ func testKey(t *testing.T) []byte {
 // ---------------------------------------------------------------------------
 
 func TestEncryptAESGCM_RoundTrip(t *testing.T) {
+	t.Parallel()
 	key := testKey(t)
 	plaintext := []byte("this is a secret API key value")
 	aad := []byte("apke_abc123")
@@ -42,6 +43,7 @@ func TestEncryptAESGCM_RoundTrip(t *testing.T) {
 }
 
 func TestEncryptAESGCM_RoundTripNilAAD(t *testing.T) {
+	t.Parallel()
 	key := testKey(t)
 	plaintext := []byte("secret")
 
@@ -61,6 +63,7 @@ func TestEncryptAESGCM_RoundTripNilAAD(t *testing.T) {
 }
 
 func TestEncryptAESGCM_EmptyPlaintext(t *testing.T) {
+	t.Parallel()
 	key := testKey(t)
 
 	encrypted, err := EncryptAESGCM([]byte{}, key, nil, "k1")
@@ -79,6 +82,7 @@ func TestEncryptAESGCM_EmptyPlaintext(t *testing.T) {
 }
 
 func TestEncryptAESGCM_LargePlaintext(t *testing.T) {
+	t.Parallel()
 	key := testKey(t)
 	plaintext := make([]byte, 64*1024)
 	if _, err := rand.Read(plaintext); err != nil {
@@ -101,6 +105,7 @@ func TestEncryptAESGCM_LargePlaintext(t *testing.T) {
 }
 
 func TestEncryptAESGCM_UniqueNonces(t *testing.T) {
+	t.Parallel()
 	key := testKey(t)
 	plaintext := []byte("same plaintext")
 
@@ -119,6 +124,7 @@ func TestEncryptAESGCM_UniqueNonces(t *testing.T) {
 }
 
 func TestEncryptAESGCM_EnvelopeFormat(t *testing.T) {
+	t.Parallel()
 	key := testKey(t)
 
 	tests := []struct {
@@ -144,6 +150,7 @@ func TestEncryptAESGCM_EnvelopeFormat(t *testing.T) {
 }
 
 func TestEncryptAESGCM_KeyValidation(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		keyLen  int
@@ -169,6 +176,7 @@ func TestEncryptAESGCM_KeyValidation(t *testing.T) {
 }
 
 func TestEncryptAESGCM_KeyIDValidation(t *testing.T) {
+	t.Parallel()
 	key := testKey(t)
 
 	tests := []struct {
@@ -200,6 +208,7 @@ func TestEncryptAESGCM_KeyIDValidation(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestDecryptAESGCM_WrongKey(t *testing.T) {
+	t.Parallel()
 	key1 := testKey(t)
 	key2 := testKey(t)
 
@@ -215,6 +224,7 @@ func TestDecryptAESGCM_WrongKey(t *testing.T) {
 }
 
 func TestDecryptAESGCM_AADMismatch(t *testing.T) {
+	t.Parallel()
 	key := testKey(t)
 
 	tests := []struct {
@@ -243,6 +253,7 @@ func TestDecryptAESGCM_AADMismatch(t *testing.T) {
 }
 
 func TestDecryptAESGCM_TamperedPayload(t *testing.T) {
+	t.Parallel()
 	key := testKey(t)
 
 	encrypted, err := EncryptAESGCM([]byte("secret"), key, nil, "k1")
@@ -267,6 +278,7 @@ func TestDecryptAESGCM_TamperedPayload(t *testing.T) {
 }
 
 func TestDecryptAESGCM_TruncatedPayload(t *testing.T) {
+	t.Parallel()
 	key := testKey(t)
 
 	encrypted, err := EncryptAESGCM([]byte("secret"), key, nil, "k1")
@@ -285,6 +297,7 @@ func TestDecryptAESGCM_TruncatedPayload(t *testing.T) {
 }
 
 func TestDecryptAESGCM_InvalidEnvelope(t *testing.T) {
+	t.Parallel()
 	key := testKey(t)
 
 	tests := []struct {
@@ -308,6 +321,7 @@ func TestDecryptAESGCM_InvalidEnvelope(t *testing.T) {
 }
 
 func TestDecryptAESGCM_KeyValidation(t *testing.T) {
+	t.Parallel()
 	key := testKey(t)
 
 	encrypted, err := EncryptAESGCM([]byte("test"), key, nil, "k1")
@@ -329,6 +343,7 @@ func TestDecryptAESGCM_KeyValidation(t *testing.T) {
 }
 
 func TestDecryptAESGCM_InvalidBase64Payload(t *testing.T) {
+	t.Parallel()
 	key := testKey(t)
 
 	// Valid envelope structure but payload is not valid base64url
@@ -343,6 +358,7 @@ func TestDecryptAESGCM_InvalidBase64Payload(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestParseAESGCMEnvelope_Valid(t *testing.T) {
+	t.Parallel()
 	key := testKey(t)
 
 	tests := []struct {
@@ -381,6 +397,7 @@ func TestParseAESGCMEnvelope_Valid(t *testing.T) {
 }
 
 func TestParseAESGCMEnvelope_Invalid(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		encoded string
@@ -408,8 +425,11 @@ func TestParseAESGCMEnvelope_Invalid(t *testing.T) {
 }
 
 func TestParseAESGCMEnvelope_PayloadPreservesUnderscores(t *testing.T) {
+	t.Parallel(
 	// Payload section may contain underscores (base64url doesn't use them,
 	// but SplitN with limit 4 should capture everything after the third _).
+	)
+
 	env, err := ParseAESGCMEnvelope("enc_v1_k1_payload_with_extra_underscores")
 	if err != nil {
 		t.Fatalf("parse: %v", err)
@@ -424,6 +444,7 @@ func TestParseAESGCMEnvelope_PayloadPreservesUnderscores(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestDecodeHexKey256_Valid(t *testing.T) {
+	t.Parallel()
 	hexKey := "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 	key, err := DecodeHexKey256(hexKey)
 	if err != nil {
@@ -435,6 +456,7 @@ func TestDecodeHexKey256_Valid(t *testing.T) {
 }
 
 func TestDecodeHexKey256_UppercaseHex(t *testing.T) {
+	t.Parallel()
 	hexKey := "0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF"
 	key, err := DecodeHexKey256(hexKey)
 	if err != nil {
@@ -446,6 +468,7 @@ func TestDecodeHexKey256_UppercaseHex(t *testing.T) {
 }
 
 func TestDecodeHexKey256_Invalid(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		hexKey string
@@ -473,6 +496,7 @@ func TestDecodeHexKey256_Invalid(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestFullFlow_EncryptParseDecrypt(t *testing.T) {
+	t.Parallel()
 	key := testKey(t)
 	plaintext := []byte("aug_sk_test_abc123_secret")
 	aad := []byte("apke_test123")
@@ -506,6 +530,7 @@ func TestFullFlow_EncryptParseDecrypt(t *testing.T) {
 }
 
 func TestFullFlow_KeyIDSelectsContext(t *testing.T) {
+	t.Parallel()
 	key1 := testKey(t)
 	key2 := testKey(t)
 
@@ -561,6 +586,7 @@ func TestFullFlow_KeyIDSelectsContext(t *testing.T) {
 }
 
 func TestFullFlow_AADPreventsRowSwap(t *testing.T) {
+	t.Parallel()
 	key := testKey(t)
 
 	enc1, err := EncryptAESGCM([]byte("secret1"), key, []byte("row1"), "k1")
@@ -590,6 +616,7 @@ func TestFullFlow_AADPreventsRowSwap(t *testing.T) {
 }
 
 func TestFullFlow_DecodeHexKeyAndEncrypt(t *testing.T) {
+	t.Parallel()
 	hexKey := fmt.Sprintf("%064x", 42)
 	key, err := DecodeHexKey256(hexKey)
 	if err != nil {

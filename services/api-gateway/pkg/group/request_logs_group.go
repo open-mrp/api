@@ -3,7 +3,7 @@ package httpgroup
 import (
 	"fmt"
 
-	requestlogep "github.com/augno/api/services/api-gateway/endpoints/request_logs"
+	requestlogep "github.com/augno/api/services/api-gateway/endpoints/request-logs"
 	grpcclient "github.com/augno/api/services/api-gateway/grpc-client"
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
@@ -15,11 +15,15 @@ type RequestLogsEndpointGroup struct {
 
 type RequestLogsEndpointGroupConfig struct {
 	PlatformClient *grpcclient.PlatformServiceClient
+	CoreClient     *grpcclient.CoreServiceClient
 }
 
 func (c *RequestLogsEndpointGroupConfig) validate() error {
 	if c.PlatformClient == nil {
 		return fmt.Errorf("request logs endpoint group: platform client is required")
+	}
+	if c.CoreClient == nil {
+		return fmt.Errorf("request logs endpoint group: core client is required")
 	}
 	return nil
 }
@@ -31,11 +35,12 @@ func (*RequestLogsEndpointGroup) Materialize(config *RequestLogsEndpointGroupCon
 
 	requestLogSvc := requestlogep.NewRequestLogSvc(&requestlogep.RequestLogSvcConfig{
 		LoggingClient: config.PlatformClient.LoggingClient,
+		CoreClient:    config.CoreClient.Client,
 	})
 
 	inner := &apiendpoint.APIEndpointGroup{
 		Title:        "Request Log Management",
-		Description:  "Handles listing and retrieving request logs.",
+		Description:  "List and retrieve request logs.",
 		ResourceType: &apiresource.RequestLog{},
 	}
 

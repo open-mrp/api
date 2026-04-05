@@ -1,0 +1,54 @@
+package departmentep
+
+import (
+	"context"
+	"net/http"
+
+	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
+	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	apierror "github.com/augno/api/shared/errors"
+)
+
+// CreateDepartmentRequest is the request to create a new department.
+type CreateDepartmentRequest struct {
+	// The display name of the department.
+	Name string `json:"name" validate:"required"`
+	// Optional notes about the department.
+	Notes *string `json:"notes,omitempty"`
+	// The ID of the storage location to associate with this department.
+	LocationID *string `json:"location_id,omitempty"`
+	// IDs of scanning stations to connect to this department.
+	ScanningStationIDs []string `json:"scanning_station_ids,omitempty"`
+	// IDs of machines to connect to this department.
+	MachineIDs []string `json:"machine_ids,omitempty"`
+}
+
+var sampleCreateDepartmentRequest = &CreateDepartmentRequest{
+	Name:               apiresource.SampleDepartmentName,
+	ScanningStationIDs: []string{apiresource.SampleScanningStationID},
+	MachineIDs:         []string{apiresource.SampleMachineID},
+}
+
+func (*CreateDepartmentRequest) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(sampleCreateDepartmentRequest)
+}
+
+type CreateDepartmentEndpoint struct{}
+
+func (e *CreateDepartmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateDepartmentRequest, *apiresource.Department] {
+	return &apiendpoint.APIEndpoint[*CreateDepartmentRequest, *apiresource.Department]{
+		Title:             "Create Department",
+		Description:       "Creates a new department.",
+		Method:            http.MethodPost,
+		Route:             "/v1/operations/departments",
+		Request:           &CreateDepartmentRequest{},
+		Response:          &apiresource.Department{},
+		SuccessStatusCode: http.StatusCreated,
+		Public:            false,
+		Preview:           true,
+		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateDepartmentRequest) (*apiresource.Department, *apierror.APIError) {
+			return svc.(DepartmentSvc).CreateDepartment
+		},
+	}
+}

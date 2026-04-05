@@ -14,14 +14,14 @@ func UserPresenter(user *pb.User) apiresource.User {
 	}
 
 	return apiresource.User{
-		ID:            user.Id,
-		Object:        constants.ObjectTypeUser,
-		Email:         user.Email,
-		Name:          user.Name,
-		Username:      user.Username,
-		EmailVerified: grpc.TimestampToTimePtr(user.EmailVerified),
-		ImageUrl:      user.ImageUrl,
-		CreatedAt:     grpc.TimestampToTime(user.CreatedAt),
-		UpdatedAt:     grpc.TimestampToTime(user.UpdatedAt),
+		ID:              user.Id,
+		Object:          constants.ObjectTypeUser,
+		Email:           user.Email,
+		Name:            user.Name,
+		Username:        user.Username,
+		EmailVerifiedAt: grpc.TimestampToTimePtr(user.EmailVerified),
+		ImageUrl:        user.ImageUrl,
+		CreatedAt:       grpc.TimestampToTime(user.CreatedAt),
+		UpdatedAt:       grpc.TimestampToTime(user.UpdatedAt),
 	}
 }

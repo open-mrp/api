@@ -27,11 +27,6 @@ const (
 	AttrErrorType      = "error.type"
 )
 
-// SetHeader sets a response header.
-func SetHeader(w http.ResponseWriter, key, value string) {
-	w.Header().Set(key, value)
-}
-
 func GetIdentity(ctx context.Context) (*types.Identity, *apierror.APIError) {
 	if identity, ok := appctx.GetIdentityFromContext(ctx); ok {
 		return identity, nil
@@ -75,13 +70,17 @@ func DecodeJSONInto(dst any, r *http.Request, disallowUnknown bool) error {
 			return apierror.NewParameterUnknownError(msg, field)
 		}
 
-		if uterr, ok := err.(*json.UnmarshalTypeError); ok {
+		if uterr, ok := errors.AsType[*json.UnmarshalTypeError](err); ok {
 			msg := fmt.Sprintf("Invalid type for field '%s': expected %s, got %s", uterr.Field, uterr.Type.String(), uterr.Value)
 			return apierror.NewInvalidFormatError(msg, uterr.Field)
 		}
 
-		if serr, ok := err.(*json.SyntaxError); ok {
+		if serr, ok := errors.AsType[*json.SyntaxError](err); ok {
 			return apierror.NewValidationError(fmt.Sprintf("Invalid JSON in request body at offset %d: %v", serr.Offset, serr.Error()))
+		}
+
+		if apiErr, ok := errors.AsType[*apierror.APIError](err); ok {
+			return apiErr
 		}
 
 		return err
@@ -417,7 +416,7 @@ func walkStruct(dst any, fn func(fieldInfo) error) error {
 		}
 		if sf.Type.Kind() == reflect.Ptr && sf.Type.Elem().Kind() == reflect.Struct {
 			if fv.IsNil() {
-				fv.Set(reflect.New(fv.Type().Elem()))
+				continue
 			}
 			if err := walkStruct(fv.Interface(), fn); err != nil {
 				return err

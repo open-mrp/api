@@ -11,6 +11,7 @@ import (
 )
 
 func TestSpanFilter(t *testing.T) {
+	t.Parallel()
 	tp := trace.NewTracerProvider()
 	otel.SetTracerProvider(tp)
 	tracer := tp.Tracer("test")

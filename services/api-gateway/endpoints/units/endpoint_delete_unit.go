@@ -12,31 +12,25 @@ import (
 // DeleteUnitRequest is the request to delete a unit.
 type DeleteUnitRequest struct {
 	// The ID of the unit to delete.
-	UnitID string `path:"id"`
+	UnitID string `path:"id" validate:"required"`
 }
-
-const deleteUnitEndpointDescription string = `This endpoint deletes an account-owned unit.
-Associated unit group memberships are also removed. System units cannot be deleted.`
 
 type DeleteUnitEndpoint struct{}
 
 func (e *DeleteUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteUnitRequest, *apiresource.EmptyResource] {
 	return &apiendpoint.APIEndpoint[*DeleteUnitRequest, *apiresource.EmptyResource]{
 		Title:             "Delete Unit",
-		Description:       deleteUnitEndpointDescription,
+		Description:       "Deletes an account-owned unit. Associated unit group memberships are also removed, and system units cannot be deleted.",
 		Method:            http.MethodDelete,
-		Route:             "/v1/core/units/{id}",
+		Route:             "/v1/catalog/units/{id}",
 		ContentType:       "application/json",
 		Request:           &DeleteUnitRequest{},
 		Response:          &apiresource.EmptyResource{},
-		SuccessStatusCode: http.StatusNoContent,
+		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteUnitRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(UnitSvc).DeleteUnit
-		},
-		Extras: apiendpoint.APIEndpointExtras{
-			AllowUnknownJSONFields: false,
 		},
 	}
 }

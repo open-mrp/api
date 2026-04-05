@@ -111,4 +111,3 @@ func (r *docAPIKeyRepoImpl) Delete(ctx context.Context, id int64) *apierror.APIE
 
 	return nil
 }
-

@@ -51,6 +51,11 @@ func mapPricingPlanForwardRow(row sqlc.ListPricingPlansForwardRow) domain.Pricin
 		includesPreviousPlan = &row.IncludesPreviousPlan.String
 	}
 
+	var stripePricingPlanID *string
+	if row.StripePricingPlanID.Valid {
+		stripePricingPlanID = &row.StripePricingPlanID.String
+	}
+
 	return domain.PricingPlan{
 		ID:                   row.ID,
 		CreatedAt:            row.CreatedAt,
@@ -65,6 +70,7 @@ func mapPricingPlanForwardRow(row sqlc.ListPricingPlansForwardRow) domain.Pricin
 		IsHighlighted:        row.IsHighlighted,
 		ButtonText:           row.ButtonText,
 		IncludesPreviousPlan: includesPreviousPlan,
+		StripePricingPlanID:  stripePricingPlanID,
 	}
 }
 
@@ -91,6 +97,11 @@ func mapPricingPlanBackwardRow(row sqlc.ListPricingPlansBackwardRow) domain.Pric
 		includesPreviousPlan = &row.IncludesPreviousPlan.String
 	}
 
+	var stripePricingPlanID *string
+	if row.StripePricingPlanID.Valid {
+		stripePricingPlanID = &row.StripePricingPlanID.String
+	}
+
 	return domain.PricingPlan{
 		ID:                   row.ID,
 		CreatedAt:            row.CreatedAt,
@@ -105,6 +116,7 @@ func mapPricingPlanBackwardRow(row sqlc.ListPricingPlansBackwardRow) domain.Pric
 		IsHighlighted:        row.IsHighlighted,
 		ButtonText:           row.ButtonText,
 		IncludesPreviousPlan: includesPreviousPlan,
+		StripePricingPlanID:  stripePricingPlanID,
 	}
 }
 
@@ -131,6 +143,11 @@ func mapGetPlanByCodeRow(row sqlc.GetPlanByCodeRow) domain.PricingPlan {
 		includesPreviousPlan = &row.IncludesPreviousPlan.String
 	}
 
+	var stripePricingPlanID *string
+	if row.StripePricingPlanID.Valid {
+		stripePricingPlanID = &row.StripePricingPlanID.String
+	}
+
 	return domain.PricingPlan{
 		ID:                   row.ID,
 		CreatedAt:            row.CreatedAt,
@@ -145,6 +162,7 @@ func mapGetPlanByCodeRow(row sqlc.GetPlanByCodeRow) domain.PricingPlan {
 		IsHighlighted:        row.IsHighlighted,
 		ButtonText:           row.ButtonText,
 		IncludesPreviousPlan: includesPreviousPlan,
+		StripePricingPlanID:  stripePricingPlanID,
 	}
 }
 
@@ -171,6 +189,11 @@ func mapGetPlanByTypeIDRow(row sqlc.GetPlanByTypeIDRow) domain.PricingPlan {
 		includesPreviousPlan = &row.IncludesPreviousPlan.String
 	}
 
+	var stripePricingPlanID *string
+	if row.StripePricingPlanID.Valid {
+		stripePricingPlanID = &row.StripePricingPlanID.String
+	}
+
 	return domain.PricingPlan{
 		ID:                   row.ID,
 		CreatedAt:            row.CreatedAt,
@@ -185,6 +208,7 @@ func mapGetPlanByTypeIDRow(row sqlc.GetPlanByTypeIDRow) domain.PricingPlan {
 		IsHighlighted:        row.IsHighlighted,
 		ButtonText:           row.ButtonText,
 		IncludesPreviousPlan: includesPreviousPlan,
+		StripePricingPlanID:  stripePricingPlanID,
 	}
 }
 
@@ -216,9 +240,14 @@ func (r *pricingPlanRepoImpl) GetPlanByCode(ctx context.Context, planCode string
 	return &plan, nil
 }
 
-func (r *pricingPlanRepoImpl) ListPricingPlans(ctx context.Context, cursor *string, limit int32) ([]domain.PricingPlan, pagination.PageInfo, *apierror.APIError) {
+func (r *pricingPlanRepoImpl) ListPricingPlans(ctx context.Context, cursor *string, limit int32, query *string) ([]domain.PricingPlan, pagination.PageInfo, *apierror.APIError) {
 	ctx, span := tracing.StartSpan(ctx, pricingPlanRepoTracer, "repository.pricing_plan.list_pricing_plans")
 	defer span.End()
+
+	searchQuery := gosql.NullString{}
+	if query != nil && *query != "" {
+		searchQuery = gosql.NullString{String: "%" + *query + "%", Valid: true}
+	}
 
 	var cursorDir *pagination.Direction
 
@@ -233,6 +262,7 @@ func (r *pricingPlanRepoImpl) ListPricingPlans(ctx context.Context, cursor *stri
 			rows, err := r.queries.ListPricingPlansBackward(ctx, sqlc.ListPricingPlansBackwardParams{
 				CursorCreatedAt: cur.CreatedAt,
 				CursorID:        cur.ID,
+				SearchQuery:     searchQuery,
 				Limit:           limit + 1,
 			})
 			if err != nil {
@@ -251,6 +281,7 @@ func (r *pricingPlanRepoImpl) ListPricingPlans(ctx context.Context, cursor *stri
 		rows, err := r.queries.ListPricingPlansForward(ctx, sqlc.ListPricingPlansForwardParams{
 			CursorCreatedAt: gosql.NullTime{Time: cur.CreatedAt, Valid: true},
 			CursorID:        gosql.NullInt64{Int64: cur.ID, Valid: true},
+			SearchQuery:     searchQuery,
 			Limit:           limit + 1,
 		})
 		if err != nil {
@@ -267,7 +298,8 @@ func (r *pricingPlanRepoImpl) ListPricingPlans(ctx context.Context, cursor *stri
 
 	// No cursor — first page
 	rows, err := r.queries.ListPricingPlansForward(ctx, sqlc.ListPricingPlansForwardParams{
-		Limit: limit + 1,
+		SearchQuery: searchQuery,
+		Limit:       limit + 1,
 	})
 	if err != nil {
 		span.RecordError(err)

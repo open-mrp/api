@@ -1,0 +1,45 @@
+package agentep
+
+import (
+	"context"
+	"net/http"
+
+	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
+	apierror "github.com/augno/api/shared/errors"
+)
+
+// ListAgentsRequest is the request to list agent definitions.
+type ListAgentsRequest struct {
+	apiresource.PaginationRequest
+	// Filter by account-level status. Defaults to "active".
+	Status []constants.AgentAccountStatus `query:"status" default:"active"`
+	// Filter by definition type (e.g. "system", "custom").
+	DefinitionType []string `query:"definition_type"`
+	// Filter by trigger type (e.g. "manual", "scheduled", "event").
+	TriggerType []string `query:"trigger_type"`
+}
+
+type ListAgentsEndpoint struct{}
+
+func (e *ListAgentsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAgentsRequest, *apiresource.List[apiresource.AgentDefinition]] {
+	return &apiendpoint.APIEndpoint[*ListAgentsRequest, *apiresource.List[apiresource.AgentDefinition]]{
+		Title:             "List Agents",
+		Description:       "Returns all system and custom agent definitions for the current account.",
+		Method:            http.MethodGet,
+		Route:             "/v1/ai/agents",
+		Request:           &ListAgentsRequest{},
+		Response:          &apiresource.List[apiresource.AgentDefinition]{},
+		SuccessStatusCode: http.StatusOK,
+		Public:            false,
+		Preview:           true,
+		ServiceHandler: func(svc any) func(ctx context.Context, req *ListAgentsRequest) (*apiresource.List[apiresource.AgentDefinition], *apierror.APIError) {
+			return svc.(AgentSvc).ListAgents
+		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeAgentDefinition,
+			Fields:     []string{"config", "tools", "role", "role.permissions"},
+		}),
+	}
+}

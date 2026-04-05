@@ -26,8 +26,7 @@ func (e *HealthEndpoint) Materialize() *apiendpoint.APIEndpoint[*apiresource.Emp
 			return svc.(HealthSvc).GetHealth
 		},
 		Extras: apiendpoint.APIEndpointExtras{
-			AllowUnknownJSONFields: false,
-			SkipRequestLogging:     true,
+			SkipRequestLogging: true,
 		},
 	}
 }

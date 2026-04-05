@@ -145,12 +145,25 @@ func (q *Queries) CreateRequestLog(ctx context.Context, arg CreateRequestLogPara
 	return err
 }
 
+const deleteExpiredRequestLogs = `-- name: DeleteExpiredRequestLogs :execresult
+DELETE FROM request_log
+WHERE occurred_at < DATE_SUB(NOW(3), INTERVAL 7 YEAR)
+LIMIT ?
+`
+
+func (q *Queries) DeleteExpiredRequestLogs(ctx context.Context, limit int32) (sql.Result, error) {
+	return q.exec(ctx, q.deleteExpiredRequestLogsStmt, deleteExpiredRequestLogs, limit)
+}
+
 const findRequestLogBaseByID = `-- name: FindRequestLogBaseByID :one
-SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route, rl.query_json,
+SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route,
+       COALESCE(CASE WHEN ? THEN rl.query_json ELSE NULL END, '') AS query_json,
        rl.status_code, rl.latency_us, rl.api_version, rl.actor_id,
        rl.actor_type, rl.identity_type, rl.client_ip_string, rl.user_agent,
        rl.referrer, rl.error_code, rl.error_message, rl.occurred_at, rl.created_at,
-       rl.idempotency_key_id, rl.request_body_json, rl.response_body_json,
+       rl.idempotency_key_id,
+       COALESCE(CASE WHEN ? THEN rl.request_body_json ELSE NULL END, '') AS request_body_json,
+       COALESCE(CASE WHEN ? THEN rl.response_body_json ELSE NULL END, '') AS response_body_json,
        rl.target_account_id,
        ik.idempotency_key
 FROM request_log rl
@@ -159,8 +172,11 @@ WHERE rl.id = ? AND rl.target_account_id = ?
 `
 
 type FindRequestLogBaseByIDParams struct {
-	ID              string
-	TargetAccountID sql.NullString
+	IncludeQueryJson        db.NullableRawMessage
+	IncludeRequestBodyJson  db.NullableRawMessage
+	IncludeResponseBodyJson db.NullableRawMessage
+	ID                      string
+	TargetAccountID         sql.NullString
 }
 
 type FindRequestLogBaseByIDRow struct {
@@ -169,7 +185,7 @@ type FindRequestLogBaseByIDRow struct {
 	Host             string
 	Path             string
 	NormalizedRoute  string
-	QueryJson        db.NullableRawMessage
+	QueryJson        interface{}
 	StatusCode       int32
 	LatencyUs        int64
 	ApiVersion       sql.NullString
@@ -184,14 +200,20 @@ type FindRequestLogBaseByIDRow struct {
 	OccurredAt       time.Time
 	CreatedAt        time.Time
 	IdempotencyKeyID sql.NullString
-	RequestBodyJson  db.NullableRawMessage
-	ResponseBodyJson db.NullableRawMessage
+	RequestBodyJson  interface{}
+	ResponseBodyJson interface{}
 	TargetAccountID  sql.NullString
 	IdempotencyKey   sql.NullString
 }
 
 func (q *Queries) FindRequestLogBaseByID(ctx context.Context, arg FindRequestLogBaseByIDParams) (FindRequestLogBaseByIDRow, error) {
-	row := q.queryRow(ctx, q.findRequestLogBaseByIDStmt, findRequestLogBaseByID, arg.ID, arg.TargetAccountID)
+	row := q.queryRow(ctx, q.findRequestLogBaseByIDStmt, findRequestLogBaseByID,
+		arg.IncludeQueryJson,
+		arg.IncludeRequestBodyJson,
+		arg.IncludeResponseBodyJson,
+		arg.ID,
+		arg.TargetAccountID,
+	)
 	var i FindRequestLogBaseByIDRow
 	err := row.Scan(
 		&i.ID,
@@ -223,11 +245,14 @@ func (q *Queries) FindRequestLogBaseByID(ctx context.Context, arg FindRequestLog
 }
 
 const findRequestLogByID = `-- name: FindRequestLogByID :one
-SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route, rl.query_json,
+SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route,
+       COALESCE(CASE WHEN ? THEN rl.query_json ELSE NULL END, '') AS query_json,
        rl.status_code, rl.latency_us, rl.api_version, rl.actor_id,
        rl.actor_type, rl.identity_type, rl.client_ip_string, rl.user_agent,
        rl.referrer, rl.error_code, rl.error_message, rl.occurred_at, rl.created_at,
-       rl.idempotency_key_id, rl.request_body_json, rl.response_body_json,
+       rl.idempotency_key_id,
+       COALESCE(CASE WHEN ? THEN rl.request_body_json ELSE NULL END, '') AS request_body_json,
+       COALESCE(CASE WHEN ? THEN rl.response_body_json ELSE NULL END, '') AS response_body_json,
        u.email AS user_email, u.name AS user_name,
        ak.type_id AS api_key_type_id, ak.redacted_value AS api_key_redacted_value,
        ak.name AS api_key_name,
@@ -249,8 +274,11 @@ WHERE rl.id = ? AND rl.target_account_id = ?
 `
 
 type FindRequestLogByIDParams struct {
-	ID              string
-	TargetAccountID sql.NullString
+	IncludeQueryJson        db.NullableRawMessage
+	IncludeRequestBodyJson  db.NullableRawMessage
+	IncludeResponseBodyJson db.NullableRawMessage
+	ID                      string
+	TargetAccountID         sql.NullString
 }
 
 type FindRequestLogByIDRow struct {
@@ -259,7 +287,7 @@ type FindRequestLogByIDRow struct {
 	Host                string
 	Path                string
 	NormalizedRoute     string
-	QueryJson           db.NullableRawMessage
+	QueryJson           interface{}
 	StatusCode          int32
 	LatencyUs           int64
 	ApiVersion          sql.NullString
@@ -274,8 +302,8 @@ type FindRequestLogByIDRow struct {
 	OccurredAt          time.Time
 	CreatedAt           time.Time
 	IdempotencyKeyID    sql.NullString
-	RequestBodyJson     db.NullableRawMessage
-	ResponseBodyJson    db.NullableRawMessage
+	RequestBodyJson     interface{}
+	ResponseBodyJson    interface{}
 	UserEmail           sql.NullString
 	UserName            sql.NullString
 	ApiKeyTypeID        sql.NullString
@@ -293,7 +321,13 @@ type FindRequestLogByIDRow struct {
 }
 
 func (q *Queries) FindRequestLogByID(ctx context.Context, arg FindRequestLogByIDParams) (FindRequestLogByIDRow, error) {
-	row := q.queryRow(ctx, q.findRequestLogByIDStmt, findRequestLogByID, arg.ID, arg.TargetAccountID)
+	row := q.queryRow(ctx, q.findRequestLogByIDStmt, findRequestLogByID,
+		arg.IncludeQueryJson,
+		arg.IncludeRequestBodyJson,
+		arg.IncludeResponseBodyJson,
+		arg.ID,
+		arg.TargetAccountID,
+	)
 	var i FindRequestLogByIDRow
 	err := row.Scan(
 		&i.ID,
@@ -337,11 +371,14 @@ func (q *Queries) FindRequestLogByID(ctx context.Context, arg FindRequestLogByID
 }
 
 const listRequestLogsBackward = `-- name: ListRequestLogsBackward :many
-SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route, rl.query_json,
+SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route,
+       COALESCE(CASE WHEN ? THEN rl.query_json ELSE NULL END, '') AS query_json,
        rl.status_code, rl.latency_us, rl.api_version, rl.actor_id,
        rl.actor_type, rl.identity_type, rl.client_ip_string, rl.user_agent,
        rl.referrer, rl.error_code, rl.error_message, rl.occurred_at, rl.created_at,
        rl.idempotency_key_id,
+       COALESCE(CASE WHEN ? THEN rl.request_body_json ELSE NULL END, '') AS request_body_json,
+       COALESCE(CASE WHEN ? THEN rl.response_body_json ELSE NULL END, '') AS response_body_json,
        u.email AS user_email, u.name AS user_name,
        ak.type_id AS api_key_type_id, ak.redacted_value AS api_key_redacted_value,
        ak.name AS api_key_name,
@@ -380,23 +417,26 @@ LIMIT ?
 `
 
 type ListRequestLogsBackwardParams struct {
-	TargetAccountID     sql.NullString
-	QueryFilter         string
-	QueryPathFilter     string
-	QueryErrorMsgFilter sql.NullString
-	StartDate           sql.NullTime
-	EndDate             sql.NullTime
-	MethodFilter        string
-	StatusCode          sql.NullInt32
-	ErrorCodeFilter     sql.NullString
-	AccountIDFilter     sql.NullString
-	ActorIDFilter       sql.NullString
-	ActorTypeFilter     sql.NullString
-	ActorNameFilter     sql.NullString
-	PublicEndpoint      sql.NullBool
-	CursorOccurredAt    time.Time
-	CursorID            string
-	Limit               int32
+	IncludeQueryJson        db.NullableRawMessage
+	IncludeRequestBodyJson  db.NullableRawMessage
+	IncludeResponseBodyJson db.NullableRawMessage
+	TargetAccountID         sql.NullString
+	QueryFilter             string
+	QueryPathFilter         string
+	QueryErrorMsgFilter     sql.NullString
+	StartDate               sql.NullTime
+	EndDate                 sql.NullTime
+	MethodFilter            string
+	StatusCode              sql.NullInt32
+	ErrorCodeFilter         sql.NullString
+	AccountIDFilter         sql.NullString
+	ActorIDFilter           sql.NullString
+	ActorTypeFilter         sql.NullString
+	ActorNameFilter         sql.NullString
+	PublicEndpoint          sql.NullBool
+	CursorOccurredAt        time.Time
+	CursorID                string
+	Limit                   int32
 }
 
 type ListRequestLogsBackwardRow struct {
@@ -405,7 +445,7 @@ type ListRequestLogsBackwardRow struct {
 	Host                string
 	Path                string
 	NormalizedRoute     string
-	QueryJson           db.NullableRawMessage
+	QueryJson           interface{}
 	StatusCode          int32
 	LatencyUs           int64
 	ApiVersion          sql.NullString
@@ -420,6 +460,8 @@ type ListRequestLogsBackwardRow struct {
 	OccurredAt          time.Time
 	CreatedAt           time.Time
 	IdempotencyKeyID    sql.NullString
+	RequestBodyJson     interface{}
+	ResponseBodyJson    interface{}
 	UserEmail           sql.NullString
 	UserName            sql.NullString
 	ApiKeyTypeID        sql.NullString
@@ -438,6 +480,9 @@ type ListRequestLogsBackwardRow struct {
 
 func (q *Queries) ListRequestLogsBackward(ctx context.Context, arg ListRequestLogsBackwardParams) ([]ListRequestLogsBackwardRow, error) {
 	rows, err := q.query(ctx, q.listRequestLogsBackwardStmt, listRequestLogsBackward,
+		arg.IncludeQueryJson,
+		arg.IncludeRequestBodyJson,
+		arg.IncludeResponseBodyJson,
 		arg.TargetAccountID,
 		arg.QueryFilter,
 		arg.QueryFilter,
@@ -497,6 +542,8 @@ func (q *Queries) ListRequestLogsBackward(ctx context.Context, arg ListRequestLo
 			&i.OccurredAt,
 			&i.CreatedAt,
 			&i.IdempotencyKeyID,
+			&i.RequestBodyJson,
+			&i.ResponseBodyJson,
 			&i.UserEmail,
 			&i.UserName,
 			&i.ApiKeyTypeID,
@@ -526,11 +573,14 @@ func (q *Queries) ListRequestLogsBackward(ctx context.Context, arg ListRequestLo
 }
 
 const listRequestLogsBaseBackward = `-- name: ListRequestLogsBaseBackward :many
-SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route, rl.query_json,
+SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route,
+       COALESCE(CASE WHEN ? THEN rl.query_json ELSE NULL END, '') AS query_json,
        rl.status_code, rl.latency_us, rl.api_version, rl.actor_id,
        rl.actor_type, rl.identity_type, rl.client_ip_string, rl.user_agent,
        rl.referrer, rl.error_code, rl.error_message, rl.occurred_at, rl.created_at,
        rl.idempotency_key_id,
+       COALESCE(CASE WHEN ? THEN rl.request_body_json ELSE NULL END, '') AS request_body_json,
+       COALESCE(CASE WHEN ? THEN rl.response_body_json ELSE NULL END, '') AS response_body_json,
        rl.target_account_id,
        ik.idempotency_key
 FROM request_log rl
@@ -555,22 +605,25 @@ LIMIT ?
 `
 
 type ListRequestLogsBaseBackwardParams struct {
-	TargetAccountID     sql.NullString
-	QueryFilter         string
-	QueryPathFilter     string
-	QueryErrorMsgFilter sql.NullString
-	StartDate           sql.NullTime
-	EndDate             sql.NullTime
-	MethodFilter        string
-	StatusCode          sql.NullInt32
-	ErrorCodeFilter     sql.NullString
-	AccountIDFilter     sql.NullString
-	ActorIDFilter       sql.NullString
-	ActorTypeFilter     sql.NullString
-	PublicEndpoint      sql.NullBool
-	CursorOccurredAt    time.Time
-	CursorID            string
-	Limit               int32
+	IncludeQueryJson        db.NullableRawMessage
+	IncludeRequestBodyJson  db.NullableRawMessage
+	IncludeResponseBodyJson db.NullableRawMessage
+	TargetAccountID         sql.NullString
+	QueryFilter             string
+	QueryPathFilter         string
+	QueryErrorMsgFilter     sql.NullString
+	StartDate               sql.NullTime
+	EndDate                 sql.NullTime
+	MethodFilter            string
+	StatusCode              sql.NullInt32
+	ErrorCodeFilter         sql.NullString
+	AccountIDFilter         sql.NullString
+	ActorIDFilter           sql.NullString
+	ActorTypeFilter         sql.NullString
+	PublicEndpoint          sql.NullBool
+	CursorOccurredAt        time.Time
+	CursorID                string
+	Limit                   int32
 }
 
 type ListRequestLogsBaseBackwardRow struct {
@@ -579,7 +632,7 @@ type ListRequestLogsBaseBackwardRow struct {
 	Host             string
 	Path             string
 	NormalizedRoute  string
-	QueryJson        db.NullableRawMessage
+	QueryJson        interface{}
 	StatusCode       int32
 	LatencyUs        int64
 	ApiVersion       sql.NullString
@@ -594,12 +647,17 @@ type ListRequestLogsBaseBackwardRow struct {
 	OccurredAt       time.Time
 	CreatedAt        time.Time
 	IdempotencyKeyID sql.NullString
+	RequestBodyJson  interface{}
+	ResponseBodyJson interface{}
 	TargetAccountID  sql.NullString
 	IdempotencyKey   sql.NullString
 }
 
 func (q *Queries) ListRequestLogsBaseBackward(ctx context.Context, arg ListRequestLogsBaseBackwardParams) ([]ListRequestLogsBaseBackwardRow, error) {
 	rows, err := q.query(ctx, q.listRequestLogsBaseBackwardStmt, listRequestLogsBaseBackward,
+		arg.IncludeQueryJson,
+		arg.IncludeRequestBodyJson,
+		arg.IncludeResponseBodyJson,
 		arg.TargetAccountID,
 		arg.QueryFilter,
 		arg.QueryFilter,
@@ -656,6 +714,8 @@ func (q *Queries) ListRequestLogsBaseBackward(ctx context.Context, arg ListReque
 			&i.OccurredAt,
 			&i.CreatedAt,
 			&i.IdempotencyKeyID,
+			&i.RequestBodyJson,
+			&i.ResponseBodyJson,
 			&i.TargetAccountID,
 			&i.IdempotencyKey,
 		); err != nil {
@@ -673,11 +733,14 @@ func (q *Queries) ListRequestLogsBaseBackward(ctx context.Context, arg ListReque
 }
 
 const listRequestLogsBaseForward = `-- name: ListRequestLogsBaseForward :many
-SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route, rl.query_json,
+SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route,
+       COALESCE(CASE WHEN ? THEN rl.query_json ELSE NULL END, '') AS query_json,
        rl.status_code, rl.latency_us, rl.api_version, rl.actor_id,
        rl.actor_type, rl.identity_type, rl.client_ip_string, rl.user_agent,
        rl.referrer, rl.error_code, rl.error_message, rl.occurred_at, rl.created_at,
        rl.idempotency_key_id,
+       COALESCE(CASE WHEN ? THEN rl.request_body_json ELSE NULL END, '') AS request_body_json,
+       COALESCE(CASE WHEN ? THEN rl.response_body_json ELSE NULL END, '') AS response_body_json,
        rl.target_account_id,
        ik.idempotency_key
 FROM request_log rl
@@ -703,22 +766,25 @@ LIMIT ?
 `
 
 type ListRequestLogsBaseForwardParams struct {
-	TargetAccountID     sql.NullString
-	QueryFilter         string
-	QueryPathFilter     string
-	QueryErrorMsgFilter sql.NullString
-	StartDate           sql.NullTime
-	EndDate             sql.NullTime
-	MethodFilter        string
-	StatusCode          sql.NullInt32
-	ErrorCodeFilter     sql.NullString
-	AccountIDFilter     sql.NullString
-	ActorIDFilter       sql.NullString
-	ActorTypeFilter     sql.NullString
-	PublicEndpoint      sql.NullBool
-	CursorOccurredAt    sql.NullTime
-	CursorID            sql.NullString
-	Limit               int32
+	IncludeQueryJson        db.NullableRawMessage
+	IncludeRequestBodyJson  db.NullableRawMessage
+	IncludeResponseBodyJson db.NullableRawMessage
+	TargetAccountID         sql.NullString
+	QueryFilter             string
+	QueryPathFilter         string
+	QueryErrorMsgFilter     sql.NullString
+	StartDate               sql.NullTime
+	EndDate                 sql.NullTime
+	MethodFilter            string
+	StatusCode              sql.NullInt32
+	ErrorCodeFilter         sql.NullString
+	AccountIDFilter         sql.NullString
+	ActorIDFilter           sql.NullString
+	ActorTypeFilter         sql.NullString
+	PublicEndpoint          sql.NullBool
+	CursorOccurredAt        sql.NullTime
+	CursorID                sql.NullString
+	Limit                   int32
 }
 
 type ListRequestLogsBaseForwardRow struct {
@@ -727,7 +793,7 @@ type ListRequestLogsBaseForwardRow struct {
 	Host             string
 	Path             string
 	NormalizedRoute  string
-	QueryJson        db.NullableRawMessage
+	QueryJson        interface{}
 	StatusCode       int32
 	LatencyUs        int64
 	ApiVersion       sql.NullString
@@ -742,12 +808,17 @@ type ListRequestLogsBaseForwardRow struct {
 	OccurredAt       time.Time
 	CreatedAt        time.Time
 	IdempotencyKeyID sql.NullString
+	RequestBodyJson  interface{}
+	ResponseBodyJson interface{}
 	TargetAccountID  sql.NullString
 	IdempotencyKey   sql.NullString
 }
 
 func (q *Queries) ListRequestLogsBaseForward(ctx context.Context, arg ListRequestLogsBaseForwardParams) ([]ListRequestLogsBaseForwardRow, error) {
 	rows, err := q.query(ctx, q.listRequestLogsBaseForwardStmt, listRequestLogsBaseForward,
+		arg.IncludeQueryJson,
+		arg.IncludeRequestBodyJson,
+		arg.IncludeResponseBodyJson,
 		arg.TargetAccountID,
 		arg.QueryFilter,
 		arg.QueryFilter,
@@ -805,6 +876,8 @@ func (q *Queries) ListRequestLogsBaseForward(ctx context.Context, arg ListReques
 			&i.OccurredAt,
 			&i.CreatedAt,
 			&i.IdempotencyKeyID,
+			&i.RequestBodyJson,
+			&i.ResponseBodyJson,
 			&i.TargetAccountID,
 			&i.IdempotencyKey,
 		); err != nil {
@@ -822,11 +895,14 @@ func (q *Queries) ListRequestLogsBaseForward(ctx context.Context, arg ListReques
 }
 
 const listRequestLogsForward = `-- name: ListRequestLogsForward :many
-SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route, rl.query_json,
+SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route,
+       COALESCE(CASE WHEN ? THEN rl.query_json ELSE NULL END, '') AS query_json,
        rl.status_code, rl.latency_us, rl.api_version, rl.actor_id,
        rl.actor_type, rl.identity_type, rl.client_ip_string, rl.user_agent,
        rl.referrer, rl.error_code, rl.error_message, rl.occurred_at, rl.created_at,
        rl.idempotency_key_id,
+       COALESCE(CASE WHEN ? THEN rl.request_body_json ELSE NULL END, '') AS request_body_json,
+       COALESCE(CASE WHEN ? THEN rl.response_body_json ELSE NULL END, '') AS response_body_json,
        u.email AS user_email, u.name AS user_name,
        ak.type_id AS api_key_type_id, ak.redacted_value AS api_key_redacted_value,
        ak.name AS api_key_name,
@@ -866,23 +942,26 @@ LIMIT ?
 `
 
 type ListRequestLogsForwardParams struct {
-	TargetAccountID     sql.NullString
-	QueryFilter         string
-	QueryPathFilter     string
-	QueryErrorMsgFilter sql.NullString
-	StartDate           sql.NullTime
-	EndDate             sql.NullTime
-	MethodFilter        string
-	StatusCode          sql.NullInt32
-	ErrorCodeFilter     sql.NullString
-	AccountIDFilter     sql.NullString
-	ActorIDFilter       sql.NullString
-	ActorTypeFilter     sql.NullString
-	ActorNameFilter     sql.NullString
-	PublicEndpoint      sql.NullBool
-	CursorOccurredAt    sql.NullTime
-	CursorID            sql.NullString
-	Limit               int32
+	IncludeQueryJson        db.NullableRawMessage
+	IncludeRequestBodyJson  db.NullableRawMessage
+	IncludeResponseBodyJson db.NullableRawMessage
+	TargetAccountID         sql.NullString
+	QueryFilter             string
+	QueryPathFilter         string
+	QueryErrorMsgFilter     sql.NullString
+	StartDate               sql.NullTime
+	EndDate                 sql.NullTime
+	MethodFilter            string
+	StatusCode              sql.NullInt32
+	ErrorCodeFilter         sql.NullString
+	AccountIDFilter         sql.NullString
+	ActorIDFilter           sql.NullString
+	ActorTypeFilter         sql.NullString
+	ActorNameFilter         sql.NullString
+	PublicEndpoint          sql.NullBool
+	CursorOccurredAt        sql.NullTime
+	CursorID                sql.NullString
+	Limit                   int32
 }
 
 type ListRequestLogsForwardRow struct {
@@ -891,7 +970,7 @@ type ListRequestLogsForwardRow struct {
 	Host                string
 	Path                string
 	NormalizedRoute     string
-	QueryJson           db.NullableRawMessage
+	QueryJson           interface{}
 	StatusCode          int32
 	LatencyUs           int64
 	ApiVersion          sql.NullString
@@ -906,6 +985,8 @@ type ListRequestLogsForwardRow struct {
 	OccurredAt          time.Time
 	CreatedAt           time.Time
 	IdempotencyKeyID    sql.NullString
+	RequestBodyJson     interface{}
+	ResponseBodyJson    interface{}
 	UserEmail           sql.NullString
 	UserName            sql.NullString
 	ApiKeyTypeID        sql.NullString
@@ -924,6 +1005,9 @@ type ListRequestLogsForwardRow struct {
 
 func (q *Queries) ListRequestLogsForward(ctx context.Context, arg ListRequestLogsForwardParams) ([]ListRequestLogsForwardRow, error) {
 	rows, err := q.query(ctx, q.listRequestLogsForwardStmt, listRequestLogsForward,
+		arg.IncludeQueryJson,
+		arg.IncludeRequestBodyJson,
+		arg.IncludeResponseBodyJson,
 		arg.TargetAccountID,
 		arg.QueryFilter,
 		arg.QueryFilter,
@@ -984,6 +1068,8 @@ func (q *Queries) ListRequestLogsForward(ctx context.Context, arg ListRequestLog
 			&i.OccurredAt,
 			&i.CreatedAt,
 			&i.IdempotencyKeyID,
+			&i.RequestBodyJson,
+			&i.ResponseBodyJson,
 			&i.UserEmail,
 			&i.UserName,
 			&i.ApiKeyTypeID,

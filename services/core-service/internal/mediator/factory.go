@@ -10,7 +10,10 @@ func NewMediatorFactory() domain.MediatorFactory {
 
 func (f *mediatorFactoryImpl) Build(repoFactory domain.RepoFactory) domain.Mediators {
 	return domain.Mediators{
-		Sandbox:     NewSandboxMed(&SandboxMedConfig{Repos: repoFactory}),
-		Idempotency: NewIdempotencyMed(&IdempotencyMedConfig{Repos: repoFactory}),
+		Sandbox:        NewSandboxMed(&SandboxMedConfig{Repos: repoFactory}),
+		Idempotency:    NewIdempotencyMed(&IdempotencyMedConfig{Repos: repoFactory}),
+		ReadAccess:     NewReadAccessMed(&ReadAccessMedConfig{Repos: repoFactory}),
+		EditAccess:     NewEditAccessMed(&EditAccessMedConfig{Repos: repoFactory}),
+		ProductionFlow: NewProductionFlowMed(repoFactory),
 	}
 }

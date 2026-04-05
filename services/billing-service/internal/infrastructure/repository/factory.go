@@ -22,6 +22,14 @@ func (r *repoFactoryImpl) NewAccountUsageRepo() domain.AccountUsageRepo {
 	return NewAccountUsageRepo(r.queries)
 }
 
+func (r *repoFactoryImpl) NewAgentTokenBillingRepo() domain.AgentTokenBillingRepo {
+	return NewAgentTokenBillingRepo(r.queries)
+}
+
+func (r *repoFactoryImpl) NewIdempotencyKeyRepo() domain.IdempotencyKeyRepo {
+	return NewIdempotencyKeyRepo(r.queries)
+}
+
 func (r *repoFactoryImpl) NewOutboxRepo() messaging.OutboxRepo {
 	return NewOutboxRepo(r.queries)
 }

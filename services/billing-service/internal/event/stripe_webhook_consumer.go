@@ -4,10 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"strings"
 
 	"github.com/augno/api/services/billing-service/internal/domain"
-	billinggrpc "github.com/augno/api/services/billing-service/internal/infrastructure/grpc"
-	"github.com/augno/api/services/billing-service/internal/infrastructure/repository"
 	"github.com/augno/api/shared/contracts"
 	"github.com/augno/api/shared/messaging"
 	"github.com/augno/api/shared/tracing"
@@ -20,18 +19,22 @@ import (
 type StripeWebhookConsumer struct {
 	rabbitmq           messaging.MessageBroker
 	inboxConsumer      *messaging.InboxConsumer
-	stripeEventLogRepo *repository.StripeEventLogRepo
-	coreClient         *billinggrpc.BillingCoreClient
+	stripeEventLogRepo EventLogRepo
+	coreClient         WebhookCoreClient
 	stripeClient       domain.StripeClient
+	notificationClient WebhookNotificationClient
+	accountUsageRepo   WebhookAccountUsageRepo
 	tracer             trace.Tracer
 }
 
 func NewStripeWebhookConsumer(
 	rabbitmq messaging.MessageBroker,
 	inboxRepo messaging.InboxRepo,
-	stripeEventLogRepo *repository.StripeEventLogRepo,
-	coreClient *billinggrpc.BillingCoreClient,
+	stripeEventLogRepo EventLogRepo,
+	coreClient WebhookCoreClient,
 	stripeClient domain.StripeClient,
+	notificationClient WebhookNotificationClient,
+	accountUsageRepo WebhookAccountUsageRepo,
 ) *StripeWebhookConsumer {
 	return &StripeWebhookConsumer{
 		rabbitmq:           rabbitmq,
@@ -39,6 +42,8 @@ func NewStripeWebhookConsumer(
 		stripeEventLogRepo: stripeEventLogRepo,
 		coreClient:         coreClient,
 		stripeClient:       stripeClient,
+		notificationClient: notificationClient,
+		accountUsageRepo:   accountUsageRepo,
 		tracer:             tracing.GetTracer("billing-service.stripe_webhook_consumer"),
 	}
 }
@@ -54,6 +59,16 @@ type stripeEventEnvelope struct {
 	ID   string          `json:"id"`
 	Type string          `json:"type"`
 	Data json.RawMessage `json:"data"`
+
+	// v2 thin events use related_object instead of data.object
+	RelatedObject *relatedObject `json:"related_object,omitempty"`
+}
+
+// relatedObject holds the reference from a v2 thin event to the actual object.
+type relatedObject struct {
+	ID   string `json:"id"`
+	Type string `json:"type"`
+	URL  string `json:"url"`
 }
 
 // stripeEventData wraps the data.object as raw JSON for flexible parsing.
@@ -90,19 +105,36 @@ func (c *StripeWebhookConsumer) handleStripeWebhook(ctx context.Context, msg amq
 		return err
 	}
 
-	// Parse data.object to extract the object ID
-	var data stripeEventData
-	if err := json.Unmarshal(event.Data, &data); err != nil {
-		log.Printf("[stripe_webhook] Failed to unmarshal event data: %v", err)
-		span.RecordError(err)
-		return err
-	}
-
+	// Resolve the object data: v2 thin events use related_object, v1 events use data.object
+	var objectData json.RawMessage
 	var objID objectIDExtractor
-	if err := json.Unmarshal(data.Object, &objID); err != nil {
-		log.Printf("[stripe_webhook] Failed to extract object ID: %v", err)
-		span.RecordError(err)
-		return err
+	isV2 := strings.HasPrefix(event.Type, "v2.")
+
+	if isV2 && event.RelatedObject != nil {
+		// v2 thin event: fetch the full object from the related_object URL
+		objID.ID = event.RelatedObject.ID
+		fetched, fetchErr := c.stripeClient.FetchObject(ctx, event.RelatedObject.URL)
+		if fetchErr != nil {
+			log.Printf("[stripe_webhook] Failed to fetch v2 related object %s: %v", event.RelatedObject.URL, fetchErr)
+			span.RecordError(fetchErr)
+			return fetchErr
+		}
+		objectData = fetched
+	} else {
+		// v1 event: parse data.object inline
+		var data stripeEventData
+		if err := json.Unmarshal(event.Data, &data); err != nil {
+			log.Printf("[stripe_webhook] Failed to unmarshal event data: %v", err)
+			span.RecordError(err)
+			return err
+		}
+		objectData = data.Object
+
+		if err := json.Unmarshal(data.Object, &objID); err != nil {
+			log.Printf("[stripe_webhook] Failed to extract object ID: %v", err)
+			span.RecordError(err)
+			return err
+		}
 	}
 
 	span.SetAttributes(
@@ -127,14 +159,28 @@ func (c *StripeWebhookConsumer) handleStripeWebhook(ctx context.Context, msg amq
 	// Dispatch to handler based on event type
 	var handlerErr error
 	switch event.Type {
-	case "customer.subscription.updated":
-		handlerErr = c.handleSubscriptionUpdated(ctx, event.ID, data.Object)
-	case "customer.subscription.deleted":
-		handlerErr = c.handleSubscriptionDeleted(ctx, event.ID, data.Object)
 	case "customer.deleted":
-		handlerErr = c.handleCustomerDeleted(ctx, event.ID, data.Object)
-	case "invoice.payment_failed":
-		handlerErr = c.handleInvoicePaymentFailed(ctx, event.ID, data.Object)
+		handlerErr = c.handleCustomerDeleted(ctx, event.ID, objectData)
+
+	// v2 pricing plan subscription events
+	case "v2.billing.pricing_plan_subscription.servicing_activated":
+		handlerErr = c.handleServicingActivated(ctx, event.ID, objectData)
+	case "v2.billing.pricing_plan_subscription.servicing_canceled":
+		handlerErr = c.handleServicingCanceled(ctx, event.ID, objectData)
+	case "v2.billing.pricing_plan_subscription.collection_paused":
+		handlerErr = c.handleCollectionPaused(ctx, event.ID, objectData)
+	case "v2.billing.pricing_plan_subscription.collection_current":
+		handlerErr = c.handleCollectionCurrent(ctx, event.ID, objectData)
+	case "v2.billing.cadence.errored":
+		handlerErr = c.handleCadenceErrored(ctx, event.ID, objectData)
+	case "v2.billing.pricing_plan_subscription.servicing_paused":
+		handlerErr = c.handleServicingPaused(ctx, event.ID, objectData)
+	case "v2.billing.pricing_plan_subscription.collection_awaiting_customer_action":
+		handlerErr = c.handleCollectionAwaitingCustomerAction(ctx, event.ID, objectData)
+	case "v2.billing.cadence.billed":
+		handlerErr = c.handleCadenceBilled(ctx, event.ID, objectData)
+	case "v2.billing.cadence.canceled":
+		handlerErr = c.handleCadenceCanceled(ctx, event.ID, objectData)
 	default:
 		log.Printf("[stripe_webhook] Unhandled event type %s (event=%s)", event.Type, event.ID)
 		return nil

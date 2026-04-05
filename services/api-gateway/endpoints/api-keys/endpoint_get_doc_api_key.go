@@ -28,14 +28,13 @@ func (e *GetDocAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*apiresour
 				return svc.(APIKeySvc).GetOrCreateDocAPIKey(ctx)
 			}
 		},
-		IncludeConfig: &apiendpoint.IncludeConfig{
-			Fields: []apiendpoint.IncludeField{
-				{Key: "role", ObjectType: constants.ObjectTypeRole, JSONPaths: []string{"api_key_info.role"}},
-			},
-		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeAPIKey,
+			Fields:     []string{"role", "role.permissions"},
+			PathPrefix: "api_key_info",
+		}),
 		Extras: apiendpoint.APIEndpointExtras{
-			AllowUnknownJSONFields: false,
-			ShieldResponseBody:     true,
+			ShieldResponseBody: true,
 		},
 	}
 }

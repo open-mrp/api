@@ -84,6 +84,15 @@ func (s *userMedImpl) GenAuthAccessToken(ctx context.Context, userID string) (st
 	return token.EncodeJWT(ctx, s.jwtSecret, userID, time.Hour, token.JWTTypeAccess)
 }
 
+// Register registers a new user with the given input.
+//
+// 1. Check if a user with the given email already exists; return a validation error if so.
+// 2. Generate a unique user ID.
+// 3. Create the user record in the repository.
+// 4. Send a welcome email if the user has an email and name.
+//
+// Side effects:
+//   - Sends a welcome email.
 func (s *userMedImpl) Register(ctx context.Context, input domain.RegisterUserInput) (*types.User, *apierror.APIError) {
 	ctx, span := userMedTracer.Start(ctx, "domain.auth.register")
 	defer span.End()
@@ -130,8 +139,18 @@ func (s *userMedImpl) Register(ctx context.Context, input domain.RegisterUserInp
 	return user, nil
 }
 
-// ValidateCredential validates a credentials provided by a request and returns an identity.
-func (s *userMedImpl) ValidateCredential(ctx context.Context, authToken string, targetAccountID *string) (*types.Identity, *apierror.APIError) {
+// ValidateCredential validates credentials provided by a request and returns an identity.
+//
+//  1. If authToken is empty, resolve the account mode for the target account (if provided)
+//     and return an unauthenticated identity.
+//  2. If authToken has the API key prefix, delegate to validateAPIKeyCredential.
+//  3. Otherwise, delegate to validateUserCredential for JWT-based validation.
+//
+// Behavior:
+//   - If authToken is empty, returns an unauthenticated identity.
+//   - If authToken is an API key credential, validates it as an API key.
+//   - Otherwise, validates it as a user credential (JWT).
+func (s *userMedImpl) ValidateCredential(ctx context.Context, authToken string, targetAccountID *string, actorAccountID *string) (*types.Identity, *apierror.APIError) {
 	ctx, span := userMedTracer.Start(ctx, "mediator.user.validate_credential")
 	defer span.End()
 
@@ -164,7 +183,29 @@ func (s *userMedImpl) ValidateCredential(ctx context.Context, authToken string, 
 	}
 
 	// Otherwise, validate it as a user credential
-	return s.validateUserCredential(ctx, span, authToken, targetAccountID)
+	// When actorAccountID is provided for user identities, resolve identity
+	// against the actor account instead of the target account. In that case
+	// the user must have an account-user relation (member) for that account;
+	// customer/supplier relations are not sufficient. After validation, the
+	// identity's Target is restored to the original target so that
+	// downstream services query the correct account.
+	effectiveTargetAccountID := targetAccountID
+	requireAccountUser := actorAccountID != nil
+	if actorAccountID != nil {
+		effectiveTargetAccountID = actorAccountID
+	}
+	identity, apiErr := s.validateUserCredential(ctx, span, authToken, effectiveTargetAccountID, requireAccountUser)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	if actorAccountID != nil && targetAccountID != nil {
+		if identity.Target != nil {
+			identity.Target.AccountID = *targetAccountID
+		} else {
+			identity.Target = &types.IdentityTarget{AccountID: *targetAccountID}
+		}
+	}
+	return identity, nil
 }
 
 func (s *userMedImpl) validateAPIKeyCredential(ctx context.Context, span trace.Span, authToken string, targetAccountID *string) (*types.Identity, *apierror.APIError) {
@@ -239,13 +280,37 @@ func (s *userMedImpl) validateAPIKeyCredential(ctx context.Context, span trace.S
 		return nil, tracing.Trace(span, apierror.NewAuthorizationError(errNoAccountAccess(finalTargetAccountID)))
 	}
 
-	// Determine the actor type based on the account relation role code
-	var actorType types.IdentityActorType
+	// Owner-side: the API key's account owns the relation (e.g. merchant targeting customer).
+	// Treat as internal actor with the API key's own account permissions.
+	if accountRelation.IsOwnerSide {
+		access, err := s.apiKeyMed.GetKeyAccountAccess(ctx, domain.APIKeyGetAccountAccessInput{
+			AccountMode:     accountMode,
+			APIKeyID:        apiKeyModel.ID,
+			TargetAccountID: apiKeyModel.OwnerAccountID,
+		})
+		if err != nil {
+			if err.Code == apierror.ErrorCodeResourceNotFound {
+				return nil, tracing.Trace(span, apierror.NewAuthorizationError(errNoAccountAccess(finalTargetAccountID)))
+			}
+			return nil, err
+		}
+
+		permissions := map[string]bool{}
+		if access != nil {
+			permissions = access.Permissions
+		}
+
+		relationType := accountRelation.AccountRelationRoleCode
+		return buildOwnedAPIKeyIdentityWithRelation(apiKeyModel, finalTargetAccountID, permissions, accountMode, accountCtx.SubscriptionStatus, &relationType), nil
+	}
+
+	// Counterparty-side: the API key's account is the counterparty (e.g. customer targeting merchant).
+	var actorType types.IdentityRelationType
 	switch accountRelation.AccountRelationRoleCode {
-	case types.IdentityActorTypeCustomer:
-		actorType = types.IdentityActorTypeCustomer
-	case types.IdentityActorTypeSupplier:
-		actorType = types.IdentityActorTypeSupplier
+	case types.IdentityRelationTypeCustomer:
+		actorType = types.IdentityRelationTypeCustomer
+	case types.IdentityRelationTypeSupplier:
+		actorType = types.IdentityRelationTypeSupplier
 	default:
 		return nil, tracing.Trace(span, apierror.NewInternalError(nil, "Failed to find account relation."))
 	}
@@ -253,7 +318,7 @@ func (s *userMedImpl) validateAPIKeyCredential(ctx context.Context, span trace.S
 	return buildRelatedAPIKeyIdentity(apiKeyModel, accountRelation, actorType, finalTargetAccountID, accountMode, accountCtx.SubscriptionStatus), nil
 }
 
-func (s *userMedImpl) validateUserCredential(ctx context.Context, span trace.Span, authToken string, targetAccountID *string) (*types.Identity, *apierror.APIError) {
+func (s *userMedImpl) validateUserCredential(ctx context.Context, span trace.Span, authToken string, targetAccountID *string, requireAccountUser bool) (*types.Identity, *apierror.APIError) {
 	// Find the user by the token
 	userModel, err := s.findUserByToken(ctx, authToken)
 	if err != nil {
@@ -283,6 +348,11 @@ func (s *userMedImpl) validateUserCredential(ctx context.Context, span trace.Spa
 		return nil, err
 	}
 
+	// When requireAccountUser is set (e.g. Augno-Actor-Account header), the user must be an account member.
+	if requireAccountUser && !hasAccess {
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError(ErrActorAccountRequiresMember))
+	}
+
 	// This user isn't associated with the target account, but they may have a relationship with it
 	if !hasAccess {
 		// Find the account relation by the owner account and user
@@ -297,12 +367,12 @@ func (s *userMedImpl) validateUserCredential(ctx context.Context, span trace.Spa
 		}
 
 		// Determine the actor type based on the account relation role code
-		var actorType types.IdentityActorType
+		var actorType types.IdentityRelationType
 		switch accountRelation.AccountRelationRoleCode {
-		case types.IdentityActorTypeCustomer:
-			actorType = types.IdentityActorTypeCustomer
-		case types.IdentityActorTypeSupplier:
-			actorType = types.IdentityActorTypeSupplier
+		case types.IdentityRelationTypeCustomer:
+			actorType = types.IdentityRelationTypeCustomer
+		case types.IdentityRelationTypeSupplier:
+			actorType = types.IdentityRelationTypeSupplier
 		default:
 			return nil, tracing.Trace(span, apierror.NewAuthorizationError(errNoAccountAccess(finalTargetAccountID)))
 		}

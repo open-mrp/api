@@ -7,7 +7,7 @@ type AccountTypeCode string
 const (
 	// AccountTypeCodeStandard indicates that the account is a standard account
 	// that is used for production and integration purposes.
-	AccountTypeCodeStandard AccountTypeCode = "company" // TODO: Should update to "standard" in DB and app code
+	AccountTypeCodeStandard AccountTypeCode = "company" // ! NOTE: Should update to "standard" in DB and app code
 	// AccountTypeCodeSandbox indicates that the account is a sandbox account
 	// that is used for testing and development purposes.
 	AccountTypeCodeSandbox AccountTypeCode = "sandbox"

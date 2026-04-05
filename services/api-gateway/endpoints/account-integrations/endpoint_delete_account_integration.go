@@ -1,0 +1,36 @@
+package accountintegrationep
+
+import (
+	"context"
+	"net/http"
+
+	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	apierror "github.com/augno/api/shared/errors"
+)
+
+// DeleteAccountIntegrationRequest is the request to delete an account integration.
+type DeleteAccountIntegrationRequest struct {
+	// The ID of the account integration to delete.
+	AccountIntegrationID string `path:"id" validate:"required"`
+}
+
+type DeleteAccountIntegrationEndpoint struct{}
+
+func (e *DeleteAccountIntegrationEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteAccountIntegrationRequest, *apiresource.AccountIntegration] {
+	return &apiendpoint.APIEndpoint[*DeleteAccountIntegrationRequest, *apiresource.AccountIntegration]{
+		Title:             "Delete Account Integration",
+		Description:       "Deletes an account integration and returns the deleted resource.",
+		Method:            http.MethodDelete,
+		Route:             "/v1/identity/integrations/{id}",
+		ContentType:       "application/json",
+		Request:           &DeleteAccountIntegrationRequest{},
+		Response:          &apiresource.AccountIntegration{},
+		SuccessStatusCode: http.StatusOK,
+		Public:            false,
+		Preview:           true,
+		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteAccountIntegrationRequest) (*apiresource.AccountIntegration, *apierror.APIError) {
+			return svc.(AccountIntegrationSvc).DeleteAccountIntegration
+		},
+	}
+}

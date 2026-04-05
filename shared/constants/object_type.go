@@ -12,6 +12,8 @@ const (
 	ObjectTypeAddress ObjectType = "address"
 	// ObjectTypeAPIKey indicates that the object is an API key.
 	ObjectTypeAPIKey ObjectType = "api_key"
+	// ObjectTypeRefreshToken indicates that the object is a refresh token.
+	ObjectTypeRefreshToken ObjectType = "refresh_token"
 	// ObjectTypeList indicates that the object is a list.
 	ObjectTypeList ObjectType = "list"
 	// ObjectTypeSandbox indicates that the object is a sandbox.
@@ -26,17 +28,351 @@ const (
 	ObjectTypeEnterpriseInquiry ObjectType = "enterprise_inquiry"
 	// ObjectTypeRequestLog indicates that the object is a request log.
 	ObjectTypeRequestLog ObjectType = "request_log"
+	// ObjectTypeAuditEvent indicates that the object is an audit event record.
+	ObjectTypeAuditEvent ObjectType = "audit_event"
 	// ObjectTypeRole indicates that the object is a role.
 	ObjectTypeRole ObjectType = "role"
 	// ObjectTypeUnit indicates that the object is a unit.
 	ObjectTypeUnit ObjectType = "unit"
 	// ObjectTypeAccountAffiliation indicates that the object is an account affiliation.
 	ObjectTypeAccountAffiliation ObjectType = "account_affiliation"
+	// ObjectTypeAgentDefinition indicates that the object is an agent definition.
+	ObjectTypeAgentDefinition ObjectType = "agent_definition"
+	// ObjectTypeAvailableTool indicates that the object is an available tool.
+	ObjectTypeAvailableTool ObjectType = "available_tool"
+	// ObjectTypeAgentDefinitionTool indicates that the object is an agent definition tool.
+	ObjectTypeAgentDefinitionTool ObjectType = "agent_definition_tool"
+	// ObjectTypeAgentAccountStatus indicates that the object is an agent account status.
+	ObjectTypeAgentAccountStatus ObjectType = "agent_account_status"
+	// ObjectTypeAgentRun indicates that the object is an agent run.
+	ObjectTypeAgentRun ObjectType = "agent_run"
+	// ObjectTypeAgentAction indicates that the object is an agent action.
+	ObjectTypeAgentAction ObjectType = "agent_action"
+	// ObjectTypeAgentRunStep indicates that the object is an agent run step.
+	ObjectTypeAgentRunStep ObjectType = "agent_run_step"
+	// ObjectTypeAgentTokenUsage indicates that the object is an agent token usage record.
+	ObjectTypeAgentTokenUsage ObjectType = "agent_token_usage"
+	// ObjectTypeAgentMemory indicates that the object is an agent memory.
+	ObjectTypeAgentMemory ObjectType = "agent_memory"
+	// ObjectTypeAgentAlert indicates that the object is an agent alert.
+	ObjectTypeAgentAlert ObjectType = "agent_alert"
+	// ObjectTypeToolGroup indicates that the object is a tool group.
+	ObjectTypeToolGroup ObjectType = "tool_group"
+	// ObjectTypePaymentTerm indicates that the object is a payment term.
+	ObjectTypePaymentTerm ObjectType = "payment_term"
+	// ObjectTypeShippingTerm indicates that the object is a shipping term.
+	ObjectTypeShippingTerm ObjectType = "shipping_term"
+	// ObjectTypeQuantity indicates that the object is a quantity.
+	ObjectTypeQuantity ObjectType = "quantity"
+	// ObjectTypeAccountGroup indicates that the object is an account group.
+	ObjectTypeAccountGroup ObjectType = "account_group"
+	// ObjectTypeAccountStatus indicates that the object is an account status.
+	ObjectTypeAccountStatus ObjectType = "account_status"
+	// ObjectTypeGeolocation indicates that the object is a geolocation.
+	ObjectTypeGeolocation ObjectType = "geolocation"
+	// ObjectTypeAccountUser indicates that the object is an account user.
+	ObjectTypeAccountUser ObjectType = "account_user"
+	// ObjectTypeDepartment indicates that the object is a department.
+	ObjectTypeDepartment ObjectType = "department"
+	// ObjectTypeAccountIntegration indicates that the object is an account integration.
+	ObjectTypeAccountIntegration ObjectType = "account_integration"
+	// ObjectTypeAccountPrice indicates that the object is an account price.
+	ObjectTypeAccountPrice ObjectType = "account_price"
+	// ObjectTypeProductLine indicates that the object is a product line.
+	ObjectTypeProductLine ObjectType = "product_line"
+	// ObjectTypeItemCategory indicates that the object is an item category.
+	ObjectTypeItemCategory ObjectType = "item_category"
+	// ObjectTypeAttribute indicates that the object is an attribute.
+	ObjectTypeAttribute ObjectType = "attribute"
+	// ObjectTypeRate indicates that the object is a rate.
+	ObjectTypeRate ObjectType = "rate"
+	// ObjectTypeAccountGroupProductLineAccess indicates that the object is an account group product line access.
+	ObjectTypeAccountGroupProductLineAccess ObjectType = "account_group_product_line_access"
+	// ObjectTypeSalesTarget indicates that the object is a sales target.
+	ObjectTypeSalesTarget ObjectType = "sales_target"
+	// ObjectTypeAdjustmentType indicates that the object is an adjustment type.
+	ObjectTypeAdjustmentType ObjectType = "adjustment_type"
+	// ObjectTypeAccountBranding indicates that the object is an account branding record.
+	ObjectTypeAccountBranding ObjectType = "account_branding"
+	// ObjectTypeAccountPortal indicates that the object is an account portal record.
+	ObjectTypeAccountPortal ObjectType = "account_portal"
+	// ObjectTypeAccountLogoURL indicates that the object is an account logo URL response.
+	ObjectTypeAccountLogoURL ObjectType = "account_logo_url"
+	// ObjectTypePublicAccount indicates that the object is a public account record.
+	ObjectTypePublicAccount ObjectType = "public_account"
+	// ObjectTypeProperty indicates that the object is a property.
+	ObjectTypeProperty ObjectType = "property"
+	// ObjectTypeCarrier indicates that the object is a carrier.
+	ObjectTypeCarrier ObjectType = "carrier"
+	// ObjectTypeServiceLevel indicates that the object is a service level.
+	ObjectTypeServiceLevel ObjectType = "service_level"
+	// ObjectTypeItem indicates that the object is an item.
+	ObjectTypeItem ObjectType = "item"
+	// ObjectTypeProduct indicates that the object is a product.
+	ObjectTypeProduct ObjectType = "product"
+	// ObjectTypeBatch indicates that the object is a batch.
+	ObjectTypeBatch ObjectType = "batch"
+	// ObjectTypeBatchFlowNode indicates that the object is a batch flow node.
+	ObjectTypeBatchFlowNode ObjectType = "batch_flow_node"
+	// ObjectTypeScanningConsumption indicates that the object is a scanning consumption.
+	ObjectTypeScanningConsumption ObjectType = "scanning_consumption"
+	// ObjectTypeOpenBatchSummary indicates that the object is an open batch summary.
+	ObjectTypeOpenBatchSummary ObjectType = "open_batch_summary"
+	// ObjectTypeScanningProductionStepInfo indicates that the object is a scanning production step info.
+	ObjectTypeScanningProductionStepInfo ObjectType = "scanning_production_step_info"
+	// ObjectTypeScanningStation indicates that the object is a scanning station.
+	ObjectTypeScanningStation ObjectType = "scanning_station"
+	// ObjectTypeProductionStep indicates that the object is a production step.
+	ObjectTypeProductionStep ObjectType = "production_step"
+	// ObjectTypeProductionRun indicates that the object is a production run.
+	ObjectTypeProductionRun ObjectType = "production_run"
+	// ObjectTypeMachine indicates that the object is a machine.
+	ObjectTypeMachine ObjectType = "machine"
+	// ObjectTypeChildAccount indicates that the object is a child account.
+	ObjectTypeChildAccount ObjectType = "child_account"
+	// ObjectTypeUnitGroup indicates that the object is a unit group.
+	ObjectTypeUnitGroup ObjectType = "unit_group"
+	// ObjectTypeUnitGroupUnit indicates that the object is a unit group unit conversion.
+	ObjectTypeUnitGroupUnit ObjectType = "unit_group_unit"
+	// ObjectTypeConsumption indicates that the object is a consumption.
+	ObjectTypeConsumption ObjectType = "consumption"
+	// ObjectTypeCustomerProductLineAccess indicates that the object is a customer product line access.
+	ObjectTypeCustomerProductLineAccess ObjectType = "customer_product_line_access"
+	// ObjectTypeCustomer indicates that the object is a customer.
+	ObjectTypeCustomer ObjectType = "customer"
+	// ObjectTypeCustomerSummary indicates that the object is a customer summary.
+	ObjectTypeCustomerSummary ObjectType = "customer_summary"
+	// ObjectTypeFrequentlyOrderedProduct indicates that the object is a frequently ordered product.
+	ObjectTypeFrequentlyOrderedProduct ObjectType = "frequently_ordered_product"
+	// ObjectTypePriority indicates that the object is a priority.
+	ObjectTypePriority ObjectType = "priority"
+	// ObjectTypeDelivery indicates that the object is a delivery.
+	ObjectTypeDelivery ObjectType = "delivery"
+	// ObjectTypeDeliveryLine indicates that the object is a delivery line.
+	ObjectTypeDeliveryLine ObjectType = "delivery_line"
+	// ObjectTypeSalesOrder indicates that the object is a sales order.
+	ObjectTypeSalesOrder ObjectType = "sales_order"
+	// ObjectTypeLocation indicates that the object is a location.
+	ObjectTypeLocation ObjectType = "location"
+	// ObjectTypeLocationType indicates that the object is a location type.
+	ObjectTypeLocationType ObjectType = "location_type"
+	// ObjectTypeLot indicates that the object is a lot.
+	ObjectTypeLot ObjectType = "lot"
+	// ObjectTypeEmailLog indicates that the object is an email log.
+	ObjectTypeEmailLog ObjectType = "email_log"
+	// ObjectTypeInventoryChangeLog indicates that the object is an inventory change log.
+	ObjectTypeInventoryChangeLog ObjectType = "inventory_change_log"
+	// ObjectTypeInvoice indicates that the object is an invoice.
+	ObjectTypeInvoice ObjectType = "invoice"
+	// ObjectTypeInvoiceSummary indicates that the object is an invoice summary.
+	ObjectTypeInvoiceSummary ObjectType = "invoice_summary"
+	// ObjectTypeInvoiceLine indicates that the object is an invoice line.
+	ObjectTypeInvoiceLine ObjectType = "invoice_line"
+	// ObjectTypeInvoiceAllocation indicates that the object is an invoice allocation.
+	ObjectTypeInvoiceAllocation ObjectType = "invoice_allocation"
+	// ObjectTypeInvoiceForPayment indicates that the object is an invoice for payment.
+	ObjectTypeInvoiceForPayment ObjectType = "invoice_for_payment"
+	// ObjectTypeShipment indicates that the object is a shipment.
+	ObjectTypeShipment ObjectType = "shipment"
+	// ObjectTypeShipmentSummary indicates that the object is a shipment summary.
+	ObjectTypeShipmentSummary ObjectType = "shipment_summary"
+	// ObjectTypeShipmentLine indicates that the object is a shipment line.
+	ObjectTypeShipmentLine ObjectType = "shipment_line"
+	// ObjectTypeShippingCase indicates that the object is a shipping case.
+	ObjectTypeShippingCase ObjectType = "shipping_case"
+	// ObjectTypeShippingCaseLabelURL indicates that the object is a shipping case label URL response.
+	ObjectTypeShippingCaseLabelURL ObjectType = "shipping_case_label_url"
+	// ObjectTypeSettlement indicates that the object is a settlement.
+	ObjectTypeSettlement ObjectType = "settlement"
+	// ObjectTypeSettlementSummary indicates that the object is a settlement summary.
+	ObjectTypeSettlementSummary ObjectType = "settlement_summary"
+	// ObjectTypeRolePermission indicates that the object is a role permission.
+	ObjectTypeRolePermission ObjectType = "role_permission"
+	// ObjectTypeRegistrationFlow indicates that the object is a registration flow.
+	ObjectTypeRegistrationFlow ObjectType = "registration_flow"
+	// ObjectTypeRegistrationFlowOption indicates that the object is a registration flow option.
+	ObjectTypeRegistrationFlowOption ObjectType = "registration_flow_option"
+	// ObjectTypeTransaction indicates that the object is a transaction.
+	ObjectTypeTransaction ObjectType = "transaction"
+	// ObjectTypeTransactionSummary indicates that the object is a transaction summary.
+	ObjectTypeTransactionSummary ObjectType = "transaction_summary"
+	// ObjectTypeTransactionMethod indicates that the object is a transaction method.
+	ObjectTypeTransactionMethod ObjectType = "transaction_method"
+	// ObjectTypeTransactionType indicates that the object is a transaction type.
+	ObjectTypeTransactionType ObjectType = "transaction_type"
+	// ObjectTypeTransactionAllocation indicates that the object is a transaction allocation.
+	ObjectTypeTransactionAllocation ObjectType = "transaction_allocation"
+	// ObjectTypeUsageItem indicates that the object is a usage item.
+	ObjectTypeUsageItem ObjectType = "usage_item"
+	// ObjectTypeAgentTokenDetail indicates that the object is an agent token detail.
+	ObjectTypeAgentTokenDetail ObjectType = "agent_token_detail"
+	// ObjectTypeAccountUsageResponse indicates that the object is an account usage response.
+	ObjectTypeAccountUsageResponse ObjectType = "account_usage_response"
+	// ObjectTypeSubscriptionInfo indicates that the object is a subscription info.
+	ObjectTypeSubscriptionInfo ObjectType = "subscription_info"
+	// ObjectTypeBillingPortalSessionResponse indicates that the object is a billing portal session response.
+	ObjectTypeBillingPortalSessionResponse ObjectType = "billing_portal_session_response"
+	// ObjectTypeSwitchPlanResponse indicates that the object is a switch plan response.
+	ObjectTypeSwitchPlanResponse ObjectType = "switch_plan_response"
+	// ObjectTypeEnsureBillingCustomerResponse indicates that the object is an ensure billing customer response.
+	ObjectTypeEnsureBillingCustomerResponse ObjectType = "ensure_billing_customer_response"
+	// ObjectTypeSpendingCapResponse indicates that the object is a spending cap response.
+	ObjectTypeSpendingCapResponse ObjectType = "spending_cap_response"
+	// ObjectTypeAgentSpendInfo indicates that the object is an agent spend info.
+	ObjectTypeAgentSpendInfo ObjectType = "agent_spend_info"
+	// ObjectTypeWebhookResponse indicates that the object is a webhook response.
+	ObjectTypeWebhookResponse ObjectType = "webhook_response"
+	// ObjectTypeAddressSuggestion indicates that the object is an address suggestion.
+	ObjectTypeAddressSuggestion ObjectType = "address_suggestion"
+	// ObjectTypeAddressComponents indicates that the object is an address components record.
+	ObjectTypeAddressComponents ObjectType = "address_components"
+	// ObjectTypeAddressDetailsResult indicates that the object is an address details result.
+	ObjectTypeAddressDetailsResult ObjectType = "address_details_result"
+	// ObjectTypeValidatedAddress indicates that the object is a validated address.
+	ObjectTypeValidatedAddress ObjectType = "validated_address"
+	// ObjectTypePlanLimit indicates that the object is a plan limit.
+	ObjectTypePlanLimit ObjectType = "plan_limit"
+	// ObjectTypePlanChangeProration indicates that the object is a plan change proration.
+	ObjectTypePlanChangeProration ObjectType = "plan_change_proration"
+	// ObjectTypePlanChangeLineItem indicates that the object is a plan change line item.
+	ObjectTypePlanChangeLineItem ObjectType = "plan_change_line_item"
+	// ObjectTypeSetupBillingResponse indicates that the object is a setup billing response.
+	ObjectTypeSetupBillingResponse ObjectType = "setup_billing_response"
+	// ObjectTypeConfirmPaymentResponse indicates that the object is a confirm payment response.
+	ObjectTypeConfirmPaymentResponse ObjectType = "confirm_payment_response"
+	// ObjectTypeOAuthResponse indicates that the object is an OAuth response.
+	ObjectTypeOAuthResponse ObjectType = "oauth_response"
+	// ObjectTypeOAuthStatusResponse indicates that the object is an OAuth status response.
+	ObjectTypeOAuthStatusResponse ObjectType = "oauth_status_response"
+	// ObjectTypeStripePublishableKey indicates that the object is a Stripe publishable key.
+	ObjectTypeStripePublishableKey ObjectType = "stripe_publishable_key"
+	// ObjectTypeStripeStatus indicates that the object is a Stripe status.
+	ObjectTypeStripeStatus ObjectType = "stripe_status"
+	// ObjectTypeHealthcheck indicates that the object is a healthcheck.
+	ObjectTypeHealthcheck ObjectType = "healthcheck"
+	// ObjectTypeAgentDefinitionConfig indicates that the object is an agent definition config.
+	ObjectTypeAgentDefinitionConfig ObjectType = "agent_definition_config"
+	// ObjectTypeTriggerConfig indicates that the object is a trigger config.
+	ObjectTypeTriggerConfig ObjectType = "trigger_config"
+	// ObjectTypeCustomerContactInfo indicates that the object is customer contact info.
+	ObjectTypeCustomerContactInfo ObjectType = "customer_contact_info"
+	// ObjectTypeCustomerFreightPreferences indicates that the object is customer freight preferences.
+	ObjectTypeCustomerFreightPreferences ObjectType = "customer_freight_preferences"
+	// ObjectTypeCustomerDefaults indicates that the object is customer defaults.
+	ObjectTypeCustomerDefaults ObjectType = "customer_defaults"
+	// ObjectTypeCustomerNotificationPreferences indicates that the object is customer notification preferences.
+	ObjectTypeCustomerNotificationPreferences ObjectType = "customer_notification_preferences"
+	// ObjectTypeOrderDiscount indicates that the object is an order discount.
+	ObjectTypeOrderDiscount ObjectType = "order_discount"
+	// ObjectTypeSalesOrderLine indicates that the object is a sales order line.
+	ObjectTypeSalesOrderLine ObjectType = "sales_order_line"
+	// ObjectTypeSalesOrderType indicates that the object is a sales order type.
+	ObjectTypeSalesOrderType ObjectType = "sales_order_type"
+	// ObjectTypeSalesOrderStatus indicates that the object is a sales order status.
+	ObjectTypeSalesOrderStatus ObjectType = "sales_order_status"
+	// ObjectTypeMaterial indicates that the object is a material.
+	ObjectTypeMaterial ObjectType = "material"
+	// ObjectTypeSupplierMaterial indicates that the object is a supplier material.
+	ObjectTypeSupplierMaterial ObjectType = "supplier_material"
+	// ObjectTypePart indicates that the object is a part.
+	ObjectTypePart ObjectType = "part"
+	// ObjectTypePermissionGroup indicates that the object is a permission group.
+	ObjectTypePermissionGroup ObjectType = "permission_group"
+	// ObjectTypePermission indicates that the object is a permission.
+	ObjectTypePermission ObjectType = "permission"
+	// ObjectTypePick indicates that the object is a pick.
+	ObjectTypePick ObjectType = "pick"
+	// ObjectTypePickLine indicates that the object is a pick line.
+	ObjectTypePickLine ObjectType = "pick_line"
+	// ObjectTypeProductType indicates that the object is a product type.
+	ObjectTypeProductType ObjectType = "product_type"
+	// ObjectTypeProduction indicates that the object is a production output.
+	ObjectTypeProduction ObjectType = "production"
+	// ObjectTypeProductionFlow indicates that the object is a production flow.
+	ObjectTypeProductionFlow ObjectType = "production_flow"
+	// ObjectTypeMap indicates that the object is a map.
+	ObjectTypeMap ObjectType = "map"
+	// ObjectTypePurchaseOrder indicates that the object is a purchase order.
+	ObjectTypePurchaseOrder ObjectType = "purchase_order"
+	// ObjectTypePurchaseOrderLine indicates that the object is a purchase order line.
+	ObjectTypePurchaseOrderLine ObjectType = "purchase_order_line"
+	// ObjectTypeSupplier indicates that the object is a supplier.
+	ObjectTypeSupplier ObjectType = "supplier"
+	// ObjectTypeSupplierSummary indicates that the object is a supplier summary.
+	ObjectTypeSupplierSummary ObjectType = "supplier_summary"
+	// ObjectTypeReceivableEntry indicates that the object is a receivable entry.
+	ObjectTypeReceivableEntry ObjectType = "receivable_entry"
+	// ObjectTypeReceivingOrder indicates that the object is a receiving order.
+	ObjectTypeReceivingOrder ObjectType = "receiving_order"
+	// ObjectTypeReceivingOrderLine indicates that the object is a receiving order line.
+	ObjectTypeReceivingOrderLine ObjectType = "receiving_order_line"
+	// ObjectTypeEmailContact indicates that the object is an email contact.
+	ObjectTypeEmailContact ObjectType = "email_contact"
+	// ObjectTypeAllocationEntry indicates that the object is an allocation entry.
+	ObjectTypeAllocationEntry ObjectType = "allocation_entry"
+	// ObjectTypeOpenCreditEntry indicates that the object is an open credit entry.
+	ObjectTypeOpenCreditEntry ObjectType = "open_credit_entry" // #nosec G101 -- constant name, not a credential
+	// ObjectTypeVolumeDiscount indicates that the object is a volume discount.
+	ObjectTypeVolumeDiscount ObjectType = "volume_discount"
+	// ObjectTypeVolumeDiscountTier indicates that the object is a volume discount tier.
+	ObjectTypeVolumeDiscountTier ObjectType = "volume_discount_tier"
+	// ObjectTypeAnalyzeDeliveriesResponse indicates that the object is an analyze deliveries response.
+	ObjectTypeAnalyzeDeliveriesResponse ObjectType = "analyze_deliveries_response"
+	// ObjectTypeAnalyzeManufacturingResponse indicates that the object is an analyze manufacturing response.
+	ObjectTypeAnalyzeManufacturingResponse ObjectType = "analyze_manufacturing_response"
+	// ObjectTypeAnalyzeManufacturingBatchResponse indicates that the object is an analyze manufacturing batch response.
+	ObjectTypeAnalyzeManufacturingBatchResponse ObjectType = "analyze_manufacturing_batch_response"
+	// ObjectTypeAnalyzeQuarterlyOrdersResponse indicates that the object is an analyze quarterly orders response.
+	ObjectTypeAnalyzeQuarterlyOrdersResponse ObjectType = "analyze_quarterly_orders_response"
+	// ObjectTypeAnalyzeNewCustomersResponse indicates that the object is an analyze new customers response.
+	ObjectTypeAnalyzeNewCustomersResponse ObjectType = "analyze_new_customers_response"
+	// ObjectTypeAnalyzeOeeResponse indicates that the object is an analyze OEE response.
+	ObjectTypeAnalyzeOeeResponse ObjectType = "analyze_oee_response"
+	// ObjectTypeCatalogProductLine indicates that the object is a catalog product line.
+	ObjectTypeCatalogProductLine ObjectType = "catalog_product_line"
+	// ObjectTypeCatalogCategory indicates that the object is a catalog category.
+	ObjectTypeCatalogCategory ObjectType = "catalog_category"
+	// ObjectTypeCatalogProduct indicates that the object is a catalog product.
+	ObjectTypeCatalogProduct ObjectType = "catalog_product"
+	// ObjectTypeCatalogProperty indicates that the object is a catalog property.
+	ObjectTypeCatalogProperty ObjectType = "catalog_property"
+	// ObjectTypeCatalogAttribute indicates that the object is a catalog attribute.
+	ObjectTypeCatalogAttribute ObjectType = "catalog_attribute"
+	// ObjectTypeDCLocation indicates that the object is a DC location.
+	ObjectTypeDCLocation ObjectType = "dc_location"
+	// ObjectTypeEDIRun indicates that the object is an EDI run.
+	ObjectTypeEDIRun ObjectType = "edi_run"
+	// ObjectTypeInventoryItem indicates that the object is an inventory item.
+	ObjectTypeInventoryItem ObjectType = "inventory_item"
+	// ObjectTypeAnalyzeWeeksOfSalesResponse indicates that the object is a weeks of sales analytics response.
+	ObjectTypeAnalyzeWeeksOfSalesResponse ObjectType = "analyze_weeks_of_sales_response"
+	// ObjectTypeBulkReconcileItemsResponse indicates that the object is a bulk reconcile items response.
+	ObjectTypeBulkReconcileItemsResponse ObjectType = "bulk_reconcile_items_response"
+	// ObjectTypeSysProperty indicates that the object is a system property.
+	ObjectTypeSysProperty ObjectType = "sys_property"
+	// ObjectTypeSysPropertyType indicates that the object is a system property type.
+	ObjectTypeSysPropertyType ObjectType = "sys_property_type"
+	// ObjectTypeSysPropertyValue indicates that the object is a system property value.
+	ObjectTypeSysPropertyValue ObjectType = "sys_property_value"
+	// ObjectTypeTerritory indicates that the object is a territory.
+	ObjectTypeTerritory ObjectType = "territory"
+	// ObjectTypeTenancy indicates that the object is a tenancy.
+	ObjectTypeTenancy ObjectType = "tenancy"
+	// ObjectTypeCheckoutSession indicates that the object is a checkout session.
+	ObjectTypeCheckoutSession ObjectType = "checkout_session"
+	// ObjectTypeEstimateRateResult indicates that the object is an estimate rate result.
+	ObjectTypeEstimateRateResult ObjectType = "estimate_rate_result"
+	// ObjectTypeRateShopOption indicates that the object is a rate shop option.
+	ObjectTypeRateShopOption ObjectType = "rate_shop_option"
+	// ObjectTypeRateShopResult indicates that the object is a rate shop result.
+	ObjectTypeRateShopResult ObjectType = "rate_shop_result"
+	// ObjectTypeOwner indicates that the object is a resource owner.
+	ObjectTypeOwner ObjectType = "owner"
 )
 
 func (m ObjectType) IsValid() bool {
 	switch m {
-	case ObjectTypeAccount, ObjectTypeUser, ObjectTypeAddress, ObjectTypeAPIKey, ObjectTypeList, ObjectTypeSandbox, ObjectTypeRegistrationSession, ObjectTypePricingPlan, ObjectTypePlanChange, ObjectTypeEnterpriseInquiry, ObjectTypeRequestLog, ObjectTypeUnit, ObjectTypeAccountAffiliation:
+	case ObjectTypeAccount, ObjectTypeUser, ObjectTypeAddress, ObjectTypeAPIKey, ObjectTypeRefreshToken, ObjectTypeList, ObjectTypeSandbox, ObjectTypeRegistrationSession, ObjectTypePricingPlan, ObjectTypePlanChange, ObjectTypeEnterpriseInquiry, ObjectTypeRequestLog, ObjectTypeAuditEvent, ObjectTypeRole, ObjectTypeUnit, ObjectTypeAccountAffiliation, ObjectTypeAgentDefinition, ObjectTypeAvailableTool, ObjectTypeAgentDefinitionTool, ObjectTypeAgentAccountStatus, ObjectTypeAgentRun, ObjectTypeAgentAction, ObjectTypeAgentRunStep, ObjectTypeAgentTokenUsage, ObjectTypeAgentMemory, ObjectTypeAgentAlert, ObjectTypeToolGroup, ObjectTypePaymentTerm, ObjectTypeShippingTerm, ObjectTypeQuantity, ObjectTypeAccountGroup, ObjectTypeAccountStatus, ObjectTypeGeolocation, ObjectTypeAccountUser, ObjectTypeDepartment, ObjectTypeAccountIntegration, ObjectTypeAccountPrice, ObjectTypeProductLine, ObjectTypeItemCategory, ObjectTypeAttribute, ObjectTypeRate, ObjectTypeAccountGroupProductLineAccess, ObjectTypeSalesTarget, ObjectTypeAdjustmentType, ObjectTypeAccountBranding, ObjectTypeAccountPortal, ObjectTypeAccountLogoURL, ObjectTypePublicAccount, ObjectTypeProperty, ObjectTypeCarrier, ObjectTypeServiceLevel, ObjectTypeItem, ObjectTypeProduct, ObjectTypeBatch, ObjectTypeBatchFlowNode, ObjectTypeScanningConsumption, ObjectTypeOpenBatchSummary, ObjectTypeScanningProductionStepInfo, ObjectTypeScanningStation, ObjectTypeProductionStep, ObjectTypeProductionRun, ObjectTypeMachine, ObjectTypeChildAccount, ObjectTypeUnitGroup, ObjectTypeUnitGroupUnit, ObjectTypeConsumption, ObjectTypeCustomerProductLineAccess, ObjectTypeCustomer, ObjectTypeCustomerSummary, ObjectTypeFrequentlyOrderedProduct, ObjectTypePriority, ObjectTypeDelivery, ObjectTypeDeliveryLine, ObjectTypeSalesOrder, ObjectTypeSalesOrderLine, ObjectTypeSalesOrderType, ObjectTypeLocation, ObjectTypeLocationType, ObjectTypeLot, ObjectTypeEmailLog, ObjectTypeInventoryChangeLog, ObjectTypeInvoice, ObjectTypeInvoiceSummary, ObjectTypeInvoiceLine, ObjectTypeInvoiceAllocation, ObjectTypeInvoiceForPayment, ObjectTypeShipment, ObjectTypeShipmentSummary, ObjectTypeShipmentLine, ObjectTypeShippingCase, ObjectTypeShippingCaseLabelURL, ObjectTypeSettlement, ObjectTypeSettlementSummary, ObjectTypeRolePermission, ObjectTypeRegistrationFlow, ObjectTypeRegistrationFlowOption, ObjectTypeTransaction, ObjectTypeTransactionSummary, ObjectTypeTransactionMethod, ObjectTypeTransactionType, ObjectTypeTransactionAllocation, ObjectTypeUsageItem, ObjectTypeAgentTokenDetail, ObjectTypeAccountUsageResponse, ObjectTypeSubscriptionInfo, ObjectTypeBillingPortalSessionResponse, ObjectTypeSwitchPlanResponse, ObjectTypeEnsureBillingCustomerResponse, ObjectTypeSpendingCapResponse, ObjectTypeAgentSpendInfo, ObjectTypeWebhookResponse, ObjectTypeAddressSuggestion, ObjectTypeAddressComponents, ObjectTypeAddressDetailsResult, ObjectTypeValidatedAddress, ObjectTypePlanLimit, ObjectTypePlanChangeProration, ObjectTypePlanChangeLineItem, ObjectTypeSetupBillingResponse, ObjectTypeConfirmPaymentResponse, ObjectTypeOAuthResponse, ObjectTypeOAuthStatusResponse, ObjectTypeStripePublishableKey, ObjectTypeStripeStatus, ObjectTypeHealthcheck, ObjectTypeAgentDefinitionConfig, ObjectTypeTriggerConfig, ObjectTypeCustomerContactInfo, ObjectTypeCustomerFreightPreferences, ObjectTypeCustomerDefaults, ObjectTypeCustomerNotificationPreferences, ObjectTypeOrderDiscount, ObjectTypeSalesOrderStatus, ObjectTypeMaterial, ObjectTypeSupplierMaterial, ObjectTypePart, ObjectTypePermissionGroup, ObjectTypePermission, ObjectTypePick, ObjectTypePickLine, ObjectTypeProductType, ObjectTypeProduction, ObjectTypeProductionFlow, ObjectTypeMap, ObjectTypePurchaseOrder, ObjectTypePurchaseOrderLine, ObjectTypeSupplier, ObjectTypeSupplierSummary, ObjectTypeReceivableEntry, ObjectTypeReceivingOrder, ObjectTypeReceivingOrderLine, ObjectTypeEmailContact, ObjectTypeAllocationEntry, ObjectTypeOpenCreditEntry, ObjectTypeVolumeDiscount, ObjectTypeVolumeDiscountTier, ObjectTypeAnalyzeDeliveriesResponse, ObjectTypeAnalyzeManufacturingResponse, ObjectTypeAnalyzeManufacturingBatchResponse, ObjectTypeAnalyzeQuarterlyOrdersResponse, ObjectTypeAnalyzeNewCustomersResponse, ObjectTypeAnalyzeOeeResponse, ObjectTypeCatalogProductLine, ObjectTypeCatalogCategory, ObjectTypeCatalogProduct, ObjectTypeCatalogProperty, ObjectTypeCatalogAttribute, ObjectTypeDCLocation, ObjectTypeEDIRun, ObjectTypeInventoryItem, ObjectTypeAnalyzeWeeksOfSalesResponse, ObjectTypeBulkReconcileItemsResponse, ObjectTypeSysProperty, ObjectTypeSysPropertyType, ObjectTypeSysPropertyValue, ObjectTypeTerritory, ObjectTypeTenancy, ObjectTypeCheckoutSession, ObjectTypeEstimateRateResult, ObjectTypeRateShopOption, ObjectTypeRateShopResult, ObjectTypeOwner:
 		return true
 	default:
 		return false
@@ -44,5 +380,5 @@ func (m ObjectType) IsValid() bool {
 }
 
 func (m ObjectType) EnumValues() []string {
-	return []string{string(ObjectTypeAccount), string(ObjectTypeUser), string(ObjectTypeAddress), string(ObjectTypeAPIKey), string(ObjectTypeList), string(ObjectTypeSandbox), string(ObjectTypeRegistrationSession), string(ObjectTypePricingPlan), string(ObjectTypePlanChange), string(ObjectTypeEnterpriseInquiry), string(ObjectTypeRequestLog), string(ObjectTypeUnit), string(ObjectTypeAccountAffiliation)}
+	return []string{string(ObjectTypeAccount), string(ObjectTypeUser), string(ObjectTypeAddress), string(ObjectTypeAPIKey), string(ObjectTypeRefreshToken), string(ObjectTypeList), string(ObjectTypeSandbox), string(ObjectTypeRegistrationSession), string(ObjectTypePricingPlan), string(ObjectTypePlanChange), string(ObjectTypeEnterpriseInquiry), string(ObjectTypeRequestLog), string(ObjectTypeAuditEvent), string(ObjectTypeRole), string(ObjectTypeUnit), string(ObjectTypeAccountAffiliation), string(ObjectTypeAgentDefinition), string(ObjectTypeAvailableTool), string(ObjectTypeAgentDefinitionTool), string(ObjectTypeAgentAccountStatus), string(ObjectTypeAgentRun), string(ObjectTypeAgentAction), string(ObjectTypeAgentRunStep), string(ObjectTypeAgentTokenUsage), string(ObjectTypeAgentMemory), string(ObjectTypeAgentAlert), string(ObjectTypeToolGroup), string(ObjectTypePaymentTerm), string(ObjectTypeShippingTerm), string(ObjectTypeQuantity), string(ObjectTypeAccountGroup), string(ObjectTypeAccountStatus), string(ObjectTypeGeolocation), string(ObjectTypeAccountUser), string(ObjectTypeDepartment), string(ObjectTypeAccountIntegration), string(ObjectTypeAccountPrice), string(ObjectTypeProductLine), string(ObjectTypeItemCategory), string(ObjectTypeAttribute), string(ObjectTypeRate), string(ObjectTypeAccountGroupProductLineAccess), string(ObjectTypeSalesTarget), string(ObjectTypeAdjustmentType), string(ObjectTypeAccountBranding), string(ObjectTypeAccountPortal), string(ObjectTypeAccountLogoURL), string(ObjectTypePublicAccount), string(ObjectTypeProperty), string(ObjectTypeCarrier), string(ObjectTypeServiceLevel), string(ObjectTypeItem), string(ObjectTypeProduct), string(ObjectTypeBatch), string(ObjectTypeBatchFlowNode), string(ObjectTypeScanningConsumption), string(ObjectTypeOpenBatchSummary), string(ObjectTypeScanningProductionStepInfo), string(ObjectTypeScanningStation), string(ObjectTypeProductionStep), string(ObjectTypeProductionRun), string(ObjectTypeMachine), string(ObjectTypeChildAccount), string(ObjectTypeUnitGroup), string(ObjectTypeUnitGroupUnit), string(ObjectTypeConsumption), string(ObjectTypeCustomerProductLineAccess), string(ObjectTypeCustomer), string(ObjectTypeCustomerSummary), string(ObjectTypeFrequentlyOrderedProduct), string(ObjectTypePriority), string(ObjectTypeDelivery), string(ObjectTypeDeliveryLine), string(ObjectTypeSalesOrder), string(ObjectTypeSalesOrderLine), string(ObjectTypeSalesOrderType), string(ObjectTypeLocation), string(ObjectTypeLocationType), string(ObjectTypeLot), string(ObjectTypeEmailLog), string(ObjectTypeInventoryChangeLog), string(ObjectTypeInvoice), string(ObjectTypeInvoiceSummary), string(ObjectTypeInvoiceLine), string(ObjectTypeInvoiceAllocation), string(ObjectTypeInvoiceForPayment), string(ObjectTypeShipment), string(ObjectTypeShipmentSummary), string(ObjectTypeShipmentLine), string(ObjectTypeShippingCase), string(ObjectTypeShippingCaseLabelURL), string(ObjectTypeSettlement), string(ObjectTypeSettlementSummary), string(ObjectTypeRolePermission), string(ObjectTypeRegistrationFlow), string(ObjectTypeRegistrationFlowOption), string(ObjectTypeTransaction), string(ObjectTypeTransactionSummary), string(ObjectTypeTransactionMethod), string(ObjectTypeTransactionType), string(ObjectTypeTransactionAllocation), string(ObjectTypeUsageItem), string(ObjectTypeAgentTokenDetail), string(ObjectTypeAccountUsageResponse), string(ObjectTypeSubscriptionInfo), string(ObjectTypeBillingPortalSessionResponse), string(ObjectTypeSwitchPlanResponse), string(ObjectTypeEnsureBillingCustomerResponse), string(ObjectTypeSpendingCapResponse), string(ObjectTypeAgentSpendInfo), string(ObjectTypeWebhookResponse), string(ObjectTypeAddressSuggestion), string(ObjectTypeAddressComponents), string(ObjectTypeAddressDetailsResult), string(ObjectTypeValidatedAddress), string(ObjectTypePlanLimit), string(ObjectTypePlanChangeProration), string(ObjectTypePlanChangeLineItem), string(ObjectTypeSetupBillingResponse), string(ObjectTypeConfirmPaymentResponse), string(ObjectTypeOAuthResponse), string(ObjectTypeOAuthStatusResponse), string(ObjectTypeStripePublishableKey), string(ObjectTypeStripeStatus), string(ObjectTypeHealthcheck), string(ObjectTypeAgentDefinitionConfig), string(ObjectTypeTriggerConfig), string(ObjectTypeCustomerContactInfo), string(ObjectTypeCustomerFreightPreferences), string(ObjectTypeCustomerDefaults), string(ObjectTypeCustomerNotificationPreferences), string(ObjectTypeOrderDiscount), string(ObjectTypeSalesOrderStatus), string(ObjectTypeMaterial), string(ObjectTypeSupplierMaterial), string(ObjectTypePart), string(ObjectTypePermissionGroup), string(ObjectTypePermission), string(ObjectTypePick), string(ObjectTypePickLine), string(ObjectTypeProductType), string(ObjectTypeProduction), string(ObjectTypeProductionFlow), string(ObjectTypeMap), string(ObjectTypePurchaseOrder), string(ObjectTypePurchaseOrderLine), string(ObjectTypeSupplier), string(ObjectTypeSupplierSummary), string(ObjectTypeReceivableEntry), string(ObjectTypeReceivingOrder), string(ObjectTypeReceivingOrderLine), string(ObjectTypeEmailContact), string(ObjectTypeAllocationEntry), string(ObjectTypeOpenCreditEntry), string(ObjectTypeVolumeDiscount), string(ObjectTypeVolumeDiscountTier), string(ObjectTypeAnalyzeDeliveriesResponse), string(ObjectTypeAnalyzeManufacturingResponse), string(ObjectTypeAnalyzeManufacturingBatchResponse), string(ObjectTypeAnalyzeQuarterlyOrdersResponse), string(ObjectTypeAnalyzeNewCustomersResponse), string(ObjectTypeAnalyzeOeeResponse), string(ObjectTypeCatalogProductLine), string(ObjectTypeCatalogCategory), string(ObjectTypeCatalogProduct), string(ObjectTypeCatalogProperty), string(ObjectTypeCatalogAttribute), string(ObjectTypeDCLocation), string(ObjectTypeEDIRun), string(ObjectTypeInventoryItem), string(ObjectTypeAnalyzeWeeksOfSalesResponse), string(ObjectTypeBulkReconcileItemsResponse), string(ObjectTypeSysProperty), string(ObjectTypeSysPropertyType), string(ObjectTypeSysPropertyValue), string(ObjectTypeTerritory), string(ObjectTypeTenancy), string(ObjectTypeCheckoutSession), string(ObjectTypeEstimateRateResult), string(ObjectTypeRateShopOption), string(ObjectTypeRateShopResult), string(ObjectTypeOwner)}
 }

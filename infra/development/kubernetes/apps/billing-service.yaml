@@ -38,7 +38,7 @@ spec:
                         valueFrom:
                             secretKeyRef:
                                 name: database-credentials
-                                key: uri
+                                key: core-service-uri
                       - name: RABBITMQ_URI
                         valueFrom:
                             secretKeyRef:

@@ -40,7 +40,7 @@ spec:
                         valueFrom:
                             secretKeyRef:
                                 name: database-credentials
-                                key: uri
+                                key: core-service-uri
                       - name: RABBITMQ_URI
                         valueFrom:
                             secretKeyRef:
@@ -56,6 +56,56 @@ spec:
                             secretKeyRef:
                                 name: cursor-hmac-key
                                 key: key
+                      - name: GOOGLE_MAPS_API_KEY
+                        valueFrom:
+                            secretKeyRef:
+                                name: google-maps-credentials
+                                key: api-key
+                      - name: INTEGRATION_ENCRYPTION_KEY
+                        valueFrom:
+                            secretKeyRef:
+                                name: integration-credentials
+                                key: encryption-key
+                      - name: INTEGRATION_ENCRYPTION_KEY_ID
+                        valueFrom:
+                            secretKeyRef:
+                                name: integration-credentials
+                                key: encryption-key-id
+                      - name: AWS_REGION
+                        valueFrom:
+                            configMapKeyRef:
+                                key: AWS_REGION
+                                name: app-config
+                      - name: ACCOUNT_PHOTOS_BUCKET
+                        valueFrom:
+                            configMapKeyRef:
+                                key: ACCOUNT_PHOTOS_BUCKET
+                                name: app-config
+                      - name: USER_PHOTOS_BUCKET
+                        valueFrom:
+                            configMapKeyRef:
+                                key: USER_PHOTOS_BUCKET
+                                name: app-config
+                      - name: SHIPPING_LABELS_BUCKET
+                        valueFrom:
+                            configMapKeyRef:
+                                key: SHIPPING_LABELS_BUCKET
+                                name: app-config
+                      - name: AWS_ACCESS_KEY_ID
+                        valueFrom:
+                            secretKeyRef:
+                                name: aws-credentials
+                                key: access-key-id
+                      - name: AWS_SECRET_ACCESS_KEY
+                        valueFrom:
+                            secretKeyRef:
+                                name: aws-credentials
+                                key: secret-access-key
+                      - name: FRONTEND_URL
+                        valueFrom:
+                            configMapKeyRef:
+                                key: FRONTEND_URL
+                                name: app-config
 ---
 apiVersion: v1
 kind: Service

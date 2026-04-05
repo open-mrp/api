@@ -1,0 +1,85 @@
+syntax = "proto3";
+
+// Package core defines additional gRPC services for the core-service.
+// CoreFulfillmentService handles machine management RPCs.
+package core;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "core/core.proto";
+
+option go_package = "shared/proto/core;core";
+
+service CoreFulfillmentService {
+  // ListMachines returns a paginated list of machines for the target account.
+  rpc ListMachines(ListMachinesRequest) returns (ListMachinesResponse);
+
+  // GetMachine returns a single machine by its ID.
+  rpc GetMachine(GetMachineRequest) returns (GetMachineResponse);
+
+  // CreateMachine creates a new machine for the target account.
+  rpc CreateMachine(CreateMachineRequest) returns (CreateMachineResponse);
+
+  // UpdateMachine updates an existing machine's metadata.
+  rpc UpdateMachine(UpdateMachineRequest) returns (UpdateMachineResponse);
+
+  // DeleteMachine deletes a machine by its ID.
+  rpc DeleteMachine(DeleteMachineRequest) returns (google.protobuf.Empty);
+}
+
+// MachineInfo represents a machine resource returned by the core-service.
+message MachineInfo {
+  string id = 1;
+  string name = 2;
+  string serial_number = 3;
+  optional string notes = 4;
+  optional string department_id = 5;
+  optional string department_name = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+message ListMachinesRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+}
+
+message ListMachinesResponse {
+  repeated MachineInfo machines = 1;
+  PageInfo page_info = 2;
+}
+
+message GetMachineRequest {
+  string id = 1;
+}
+
+message GetMachineResponse {
+  MachineInfo machine = 1;
+}
+
+message CreateMachineRequest {
+  string name = 1;
+  string serial_number = 2;
+  optional string notes = 3;
+  string department_id = 4;
+}
+
+message CreateMachineResponse {
+  MachineInfo machine = 1;
+}
+
+message UpdateMachineRequest {
+  string id = 1;
+  optional string name = 2;
+  optional string serial_number = 3;
+  optional string notes = 4;
+}
+
+message UpdateMachineResponse {
+  MachineInfo machine = 1;
+}
+
+message DeleteMachineRequest {
+  string id = 1;
+}

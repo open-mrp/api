@@ -1,0 +1,505 @@
+syntax = "proto3";
+
+package agent;
+
+option go_package = "shared/proto/agent;agent";
+
+service AgentService {
+  // TriggerRun initiates an agent run for the specified agent definition and account.
+  rpc TriggerRun(TriggerRunRequest) returns (TriggerRunResponse);
+
+  // GetRunStatus returns the current status and summary of an agent run.
+  rpc GetRunStatus(GetRunStatusRequest) returns (GetRunStatusResponse);
+
+  // CancelRun cancels a running or pending agent run.
+  rpc CancelRun(CancelRunRequest) returns (CancelRunResponse);
+
+  // CreateCustomAgent creates a new custom agent definition for an account.
+  rpc CreateCustomAgent(CreateCustomAgentRequest) returns (CreateCustomAgentResponse);
+
+  // UpdateCustomAgent updates an existing custom agent definition.
+  rpc UpdateCustomAgent(UpdateCustomAgentRequest) returns (UpdateCustomAgentResponse);
+
+  // DeleteCustomAgent soft-deletes a custom agent definition.
+  rpc DeleteCustomAgent(DeleteCustomAgentRequest) returns (DeleteCustomAgentResponse);
+
+  // GetAgentDefinition returns a single agent definition with its tools.
+  rpc GetAgentDefinition(GetAgentDefinitionRequest) returns (GetAgentDefinitionResponse);
+
+  // ListAgentDefinitions returns system + custom agent definitions for an account.
+  rpc ListAgentDefinitions(ListAgentDefinitionsRequest) returns (ListAgentDefinitionsResponse);
+
+  // ListAvailableTools returns all available platform tools.
+  rpc ListAvailableTools(ListAvailableToolsRequest) returns (ListAvailableToolsResponse);
+
+  // UpdateAgentAccountStatus upserts the per-account status for an agent definition.
+  rpc UpdateAgentAccountStatus(UpdateAgentAccountStatusRequest) returns (UpdateAgentAccountStatusResponse);
+
+  // GetRun returns a full agent run with optional actions and definition.
+  rpc GetRun(GetRunRequest) returns (GetRunResponse);
+
+  // ListRuns returns a paginated list of agent runs for an account.
+  rpc ListRuns(ListRunsRequest) returns (ListRunsResponse);
+
+  // ContinueRun continues an agent run that is awaiting input.
+  rpc ContinueRun(ContinueRunRequest) returns (ContinueRunResponse);
+
+  // ListTokenUsage returns a paginated list of daily agent token usage records.
+  rpc ListTokenUsage(ListTokenUsageRequest) returns (ListTokenUsageResponse);
+
+  // ListAgentMemories returns a paginated list of agent memories for an account.
+  rpc ListAgentMemories(ListAgentMemoriesRequest) returns (ListAgentMemoriesResponse);
+
+  // GetAgentMemory returns a single agent memory by ID.
+  rpc GetAgentMemory(GetAgentMemoryRequest) returns (GetAgentMemoryResponse);
+
+  // CreateAgentMemory creates a new agent memory.
+  rpc CreateAgentMemory(CreateAgentMemoryRequest) returns (CreateAgentMemoryResponse);
+
+  // UpdateAgentMemory updates an existing agent memory.
+  rpc UpdateAgentMemory(UpdateAgentMemoryRequest) returns (UpdateAgentMemoryResponse);
+
+  // DeleteAgentMemory deletes an agent memory.
+  rpc DeleteAgentMemory(DeleteAgentMemoryRequest) returns (DeleteAgentMemoryResponse);
+
+  // ListAgentAlerts returns a paginated list of agent alerts for an account.
+  rpc ListAgentAlerts(ListAgentAlertsRequest) returns (ListAgentAlertsResponse);
+
+  // GetAgentAlert returns a single agent alert by ID.
+  rpc GetAgentAlert(GetAgentAlertRequest) returns (GetAgentAlertResponse);
+
+  // AcknowledgeAgentAlert marks an alert as acknowledged.
+  rpc AcknowledgeAgentAlert(AcknowledgeAgentAlertRequest) returns (AcknowledgeAgentAlertResponse);
+
+}
+
+message TriggerRunRequest {
+  string agent_definition_code = 1;
+  string input = 2;
+}
+
+message TriggerRunResponse {
+  string agent_run_id = 1;
+}
+
+message GetRunStatusRequest {
+  string agent_run_id = 1;
+}
+
+message GetRunStatusResponse {
+  string agent_run_id = 1;
+  string status_code = 2;
+  string output_summary = 3;
+  int32 total_tokens = 4;
+  int32 duration_ms = 5;
+}
+
+message CancelRunRequest {
+  string agent_run_id = 1;
+}
+
+message CancelRunResponse {
+  bool success = 1;
+}
+
+message AgentToolConfig {
+  string tool_id = 1;
+  string config_json = 2;
+  int32 sort_order = 3;
+  bool require_review = 4;
+}
+
+message CreateCustomAgentRequest {
+  string name = 1;
+  string slug = 2;
+  string description = 3;
+  string category_code = 4;
+  string trigger_type = 5;
+  string config_json = 6;
+  repeated AgentToolConfig tools = 7;
+  repeated string includes = 8;
+  string role_id = 9;
+}
+
+message CreateCustomAgentResponse {
+  AgentDefinitionInfo agent = 1;
+}
+
+message UpdateCustomAgentRequest {
+  string agent_definition_id = 1;
+  optional string name = 2;
+  optional string slug = 3;
+  optional string description = 4;
+  optional string category_code = 5;
+  optional string trigger_type = 6;
+  optional string config_json = 7;
+  repeated AgentToolConfig tools = 8;
+  repeated string includes = 9;
+  optional string role_id = 10;
+  bool tools_provided = 11;
+}
+
+message UpdateCustomAgentResponse {
+  AgentDefinitionInfo agent = 1;
+}
+
+message DeleteCustomAgentRequest {
+  string agent_definition_id = 1;
+}
+
+message DeleteCustomAgentResponse {
+  bool success = 1;
+}
+
+message GetAgentDefinitionRequest {
+  string agent_definition_id = 1;
+  repeated string includes = 2;
+}
+
+message GetAgentDefinitionResponse {
+  AgentDefinitionInfo agent = 1;
+}
+
+message ListAgentDefinitionsRequest {
+  repeated string includes = 1;
+  repeated string statuses = 2;
+  repeated string definition_types = 3;
+  repeated string trigger_types = 4;
+  optional string cursor = 5;
+  int32 limit = 6;
+  optional string query = 7;
+}
+
+message ListAgentDefinitionsResponse {
+  repeated AgentDefinitionInfo agents = 1;
+  PageInfo page_info = 2;
+}
+
+message ListAvailableToolsRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+}
+
+message ListAvailableToolsResponse {
+  repeated AvailableToolInfo tools = 1;
+  repeated ToolGroupInfo groups = 2;
+}
+
+message UpdateAgentAccountStatusRequest {
+  string agent_definition_id = 1;
+  string status_code = 2;
+}
+
+message UpdateAgentAccountStatusResponse {
+  AgentAccountStatusInfo status = 1;
+}
+
+message AgentAccountStatusInfo {
+  string id = 1;
+  string account_id = 2;
+  string agent_definition_id = 3;
+  string status_code = 4;
+  string created_at = 5;
+  string updated_at = 6;
+}
+
+message AgentDefinitionInfo {
+  string id = 1;
+  string name = 2;
+  string slug = 3;
+  string description = 4;
+  string definition_type = 5;
+  string category_code = 6;
+  string trigger_type = 7;
+  bool is_editable = 8;
+  string config_json = 9;
+  repeated AgentDefinitionToolInfo tools = 10;
+  string created_at = 11;
+  string updated_at = 12;
+  string role_id = 13;
+  AgentAccountStatusInfo account_status = 14;
+}
+
+message AgentDefinitionToolInfo {
+  string id = 1;
+  string tool_id = 2;
+  string display_name = 3;
+  string description = 4;
+  string config_schema_json = 5;
+  string category = 6;
+  string config_json = 7;
+  int32 sort_order = 8;
+  bool require_review = 9;
+  string group_id = 10;
+  string group_name = 11;
+  repeated string required_permissions = 12;
+}
+
+message AvailableToolInfo {
+  string id = 1;
+  string display_name = 2;
+  string description = 3;
+  string config_schema_json = 4;
+  string category = 5;
+  string group_id = 6;
+  string group_name = 7;
+  repeated string required_permissions = 8;
+}
+
+message ToolGroupInfo {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string slug = 4;
+  string icon = 5;
+  int32 sort_order = 6;
+}
+
+message PageInfo {
+  optional string next_cursor = 1;
+  optional string prev_cursor = 2;
+  bool has_next_page = 3;
+  bool has_prev_page = 4;
+}
+
+message AgentRunStepInfo {
+  string id = 1;
+  string agent_run_id = 2;
+  string step_type = 3;
+  string title = 4;
+  string content = 5;
+  int32 sequence = 6;
+  int32 duration_ms = 7;
+  string agent_action_id = 8;
+  string metadata_json = 9;
+  string created_at = 10;
+  string actor_id = 11;
+  string actor_type = 12;
+  string actor_name = 13;
+}
+
+message AgentRunInfo {
+  string id = 1;
+  string account_id = 2;
+  string agent_definition_id = 3;
+  string agent_config_id = 4;
+  string status_code = 5;
+  string trigger_type = 6;
+  string input = 7;
+  string output = 8;
+  string error_message = 9;
+  string started_at = 10;
+  string completed_at = 11;
+  int32 duration_ms = 12;
+  int64 total_input_tokens = 13;
+  int64 total_output_tokens = 14;
+  string created_at = 15;
+  string updated_at = 16;
+  repeated AgentActionInfo actions = 17;
+  AgentDefinitionInfo definition = 18;
+  repeated AgentRunStepInfo steps = 19;
+  string triggered_by_actor_id = 20;
+  string triggered_by_identity_type = 21;
+  string triggered_by_actor_name = 22;
+}
+
+message AgentActionInfo {
+  string id = 1;
+  string account_id = 2;
+  string agent_run_id = 3;
+  string tool_slug = 4;
+  string status_code = 5;
+  string label = 6;
+  string description = 7;
+  string input = 8;
+  string output = 9;
+  string error_message = 10;
+  string entity_type = 11;
+  string entity_id = 12;
+  bool requires_review = 13;
+  string reviewed_at = 14;
+  string reviewed_by = 15;
+  string executed_at = 16;
+  string created_at = 17;
+  string updated_at = 18;
+  string reviewed_by_actor_type = 19;
+  string reviewed_by_actor_name = 20;
+  optional string run_status_code = 21;
+  optional string run_trigger_type = 22;
+}
+
+message GetRunRequest {
+  string agent_run_id = 1;
+  repeated string includes = 2;
+}
+
+message GetRunResponse {
+  AgentRunInfo run = 1;
+}
+
+message ListRunsRequest {
+  string status_code = 1;
+  string agent_definition_id = 2;
+  int32 limit = 3;
+  optional string cursor = 4;
+  repeated string includes = 5;
+  optional string query = 6;
+}
+
+message ListRunsResponse {
+  repeated AgentRunInfo runs = 1;
+  PageInfo page_info = 2;
+}
+
+message ContinueRunRequest {
+  string agent_run_id = 1;
+  string message = 2;
+  repeated string approved_tool_slugs = 3;
+  repeated string allowed_tool_slugs = 4;
+}
+
+message ContinueRunResponse {
+  string agent_run_id = 1;
+}
+
+message ListTokenUsageRequest {
+  int32 days = 1;
+  int32 limit = 2;
+  optional string cursor = 3;
+}
+
+message AgentTokenUsageInfo {
+  string id = 1;
+  string date = 2;
+  int64 input_tokens = 3;
+  int64 output_tokens = 4;
+  double total_cost = 5;
+  int32 run_count = 6;
+  string created_at = 7;
+  string updated_at = 8;
+}
+
+message ListTokenUsageResponse {
+  repeated AgentTokenUsageInfo usage = 1;
+  PageInfo page_info = 2;
+}
+
+message AgentMemoryInfo {
+  string id = 1;
+  string account_id = 2;
+  string category = 3;
+  string content = 4;
+  string metadata_json = 5;
+  string entity_type = 6;
+  string entity_id = 7;
+  double importance = 8;
+  string expires_at = 9;
+  string created_at = 10;
+  string updated_at = 11;
+}
+
+message ListAgentMemoriesRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  string category = 3;
+  string entity_type = 4;
+  optional string query = 5;
+}
+
+message ListAgentMemoriesResponse {
+  repeated AgentMemoryInfo memories = 1;
+  PageInfo page_info = 2;
+}
+
+message GetAgentMemoryRequest {
+  string id = 1;
+}
+
+message GetAgentMemoryResponse {
+  AgentMemoryInfo memory = 1;
+}
+
+message CreateAgentMemoryRequest {
+  string category = 1;
+  string content = 2;
+  string metadata_json = 3;
+  string entity_type = 4;
+  string entity_id = 5;
+  double importance = 6;
+  string expires_at = 7;
+}
+
+message CreateAgentMemoryResponse {
+  AgentMemoryInfo memory = 1;
+}
+
+message UpdateAgentMemoryRequest {
+  string id = 1;
+  string category = 2;
+  string content = 3;
+  string metadata_json = 4;
+  string entity_type = 5;
+  string entity_id = 6;
+  double importance = 7;
+  string expires_at = 8;
+}
+
+message UpdateAgentMemoryResponse {
+  AgentMemoryInfo memory = 1;
+}
+
+message DeleteAgentMemoryRequest {
+  string id = 1;
+}
+
+message DeleteAgentMemoryResponse {
+  bool success = 1;
+}
+
+message AgentAlertInfo {
+  string id = 1;
+  string account_id = 2;
+  string agent_run_id = 3;
+  string agent_action_id = 4;
+  string severity_code = 5;
+  string status_code = 6;
+  string title = 7;
+  string message = 8;
+  string metadata_json = 9;
+  string acknowledged_at = 10;
+  string acknowledged_by = 11;
+  string created_at = 12;
+  string updated_at = 13;
+  string acknowledged_by_actor_type = 14;
+  string acknowledged_by_actor_name = 15;
+}
+
+message ListAgentAlertsRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  string severity_code = 3;
+  string status_code = 4;
+  optional string query = 5;
+}
+
+message ListAgentAlertsResponse {
+  repeated AgentAlertInfo alerts = 1;
+  PageInfo page_info = 2;
+}
+
+message GetAgentAlertRequest {
+  string id = 1;
+}
+
+message GetAgentAlertResponse {
+  AgentAlertInfo alert = 1;
+}
+
+message AcknowledgeAgentAlertRequest {
+  string id = 1;
+}
+
+message AcknowledgeAgentAlertResponse {
+  AgentAlertInfo alert = 1;
+}

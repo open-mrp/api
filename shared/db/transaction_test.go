@@ -29,6 +29,7 @@ type mockFactory struct {
 }
 
 func TestTransactionManager_WithTx_Success(t *testing.T) {
+	t.Parallel()
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
 	defer db.Close()
@@ -57,6 +58,7 @@ func TestTransactionManager_WithTx_Success(t *testing.T) {
 }
 
 func TestTransactionManager_WithTx_RollbackOnError(t *testing.T) {
+	t.Parallel()
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
 	defer db.Close()
@@ -81,6 +83,7 @@ func TestTransactionManager_WithTx_RollbackOnError(t *testing.T) {
 }
 
 func TestTransactionManager_WithTx_BeginError(t *testing.T) {
+	t.Parallel()
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
 	defer db.Close()
@@ -107,6 +110,7 @@ func TestTransactionManager_WithTx_BeginError(t *testing.T) {
 }
 
 func TestTransactionManager_WithTx_CommitError(t *testing.T) {
+	t.Parallel()
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
 	defer db.Close()
@@ -131,6 +135,7 @@ func TestTransactionManager_WithTx_CommitError(t *testing.T) {
 }
 
 func TestTransactionManager_WithTx_FactoryReceivesTxQueries(t *testing.T) {
+	t.Parallel()
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
 	defer db.Close()

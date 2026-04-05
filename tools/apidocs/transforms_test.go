@@ -8,6 +8,7 @@ import (
 )
 
 func TestApplyTransforms(t *testing.T) {
+	t.Parallel()
 	specJSON := `{
 		"openapi": "3.0.3",
 		"info": {
@@ -148,6 +149,7 @@ func TestApplyTransforms(t *testing.T) {
 }
 
 func TestApplyTransformsMerge(t *testing.T) {
+	t.Parallel()
 	specJSON := `{
 		"components": {
 			"schemas": {
@@ -194,6 +196,7 @@ func TestApplyTransformsMerge(t *testing.T) {
 }
 
 func TestApplyTransformsRemove(t *testing.T) {
+	t.Parallel()
 	specJSON := `{
 		"paths": {
 			"/users": { "get": {} }

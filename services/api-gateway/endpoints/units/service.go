@@ -20,6 +20,7 @@ type UnitSvc interface {
 	CreateUnit(ctx context.Context, req *CreateUnitRequest) (*apiresource.Unit, *apierror.APIError)
 	UpdateUnit(ctx context.Context, req *UpdateUnitRequest) (*apiresource.Unit, *apierror.APIError)
 	DeleteUnit(ctx context.Context, req *DeleteUnitRequest) (*apiresource.EmptyResource, *apierror.APIError)
+	ValidateUnits(ctx context.Context, req *ValidateUnitsRequest) (*apiresource.ValidateUnitsResponse, *apierror.APIError)
 }
 
 type UnitSvcConfig struct {
@@ -50,11 +51,17 @@ func NewUnitSvc(config *UnitSvcConfig) UnitSvc {
 }
 
 func (m *unitSvcImpl) ListUnits(ctx context.Context, req *ListUnitsRequest) (*apiresource.List[apiresource.Unit], *apierror.APIError) {
+	var unitType *string
+	if req.Type != nil {
+		s := string(*req.Type)
+		unitType = &s
+	}
+
 	pbReq := &pb.ListUnitsRequest{
 		Cursor:       req.Cursor,
 		Limit:        req.Limit,
 		Query:        req.Query,
-		Type:         req.Type,
+		Type:         unitType,
 		UnitGroupIds: req.UnitGroupIDs,
 	}
 
@@ -97,7 +104,7 @@ func (m *unitSvcImpl) CreateUnit(ctx context.Context, req *CreateUnitRequest) (*
 		RatioDenominator:  req.RatioDenominator,
 		OffsetNumerator:   req.OffsetNumerator,
 		OffsetDenominator: req.OffsetDenominator,
-		IsBaseUnit:        req.IsBaseUnit,
+		IsBaseUnit:        false,
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, unitSvcTracer, "service.units.create", domain.ServiceName,
@@ -152,4 +159,21 @@ func (m *unitSvcImpl) DeleteUnit(ctx context.Context, req *DeleteUnitRequest) (*
 	}
 
 	return &apiresource.EmptyResource{}, nil
+}
+
+func (m *unitSvcImpl) ValidateUnits(ctx context.Context, req *ValidateUnitsRequest) (*apiresource.ValidateUnitsResponse, *apierror.APIError) {
+	pbReq := &pb.ValidateUnitsRequest{
+		UnitMap: req.UnitMap,
+	}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, unitSvcTracer, "service.units.validate", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ValidateUnitsResponse, error) {
+			return m.coreClient.ValidateUnits(ctx, pbReq, opts...)
+		})
+
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return ValidateUnitsPresenter(resp), nil
 }

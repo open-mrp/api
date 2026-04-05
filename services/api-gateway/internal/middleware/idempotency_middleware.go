@@ -148,7 +148,7 @@ func IdempotencyMiddleware(config *IdempotencyMiddlewareConfig) func(http.Handle
 				return
 			}
 
-			if r.Method != http.MethodPost && r.Method != http.MethodPatch && r.Method != http.MethodDelete {
+			if r.Method != http.MethodPost && r.Method != http.MethodPatch {
 				next.ServeHTTP(w, r)
 				return
 			}
@@ -180,10 +180,10 @@ func IdempotencyMiddleware(config *IdempotencyMiddlewareConfig) func(http.Handle
 				identityType = string(identity.Type)
 			} else {
 				actorID = nil
-				identityType = string(types.IdentityTypeUnauthenticated)
+				identityType = string(types.IdentityActorTypeUnauthenticated)
 			}
-			if identity != nil {
-				targetAccountID = identity.TargetAccountID
+			if identity != nil && identity.Target != nil && identity.Target.AccountID != "" {
+				targetAccountID = &identity.Target.AccountID
 			}
 
 			rl, ok := appctx.GetRequestLog(r.Context())
@@ -262,15 +262,6 @@ func IdempotencyMiddleware(config *IdempotencyMiddlewareConfig) func(http.Handle
 				}
 
 				w.Header().Set(header.IdempotentReplayedHeader, "true")
-
-				if r.Method == http.MethodDelete && resp.ResponseCode != nil {
-					originalCode := int(*resp.ResponseCode)
-					if originalCode >= 200 && originalCode < 300 {
-						apiErr := apierror.NewResourceGoneError("Resource was deleted.")
-						httptransport.RespondWithAPIError(ctx, w, apiErr)
-						return
-					}
-				}
 
 				code := http.StatusOK
 				if resp.ResponseCode != nil {

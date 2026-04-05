@@ -1,0 +1,40 @@
+package agentalertep
+
+import (
+	"context"
+	"net/http"
+
+	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
+	apierror "github.com/augno/api/shared/errors"
+)
+
+// AcknowledgeAlertRequest is the request to acknowledge an agent alert.
+type AcknowledgeAlertRequest struct {
+	// The ID of the alert to acknowledge.
+	AlertID string `path:"id" validate:"required"`
+}
+
+type AcknowledgeAlertEndpoint struct{}
+
+func (e *AcknowledgeAlertEndpoint) Materialize() *apiendpoint.APIEndpoint[*AcknowledgeAlertRequest, *apiresource.AgentAlert] {
+	return &apiendpoint.APIEndpoint[*AcknowledgeAlertRequest, *apiresource.AgentAlert]{
+		Title:             "Acknowledge Agent Alert",
+		Description:       "Marks an agent alert as acknowledged.",
+		Method:            http.MethodPost,
+		Route:             "/v1/ai/alerts/{id}/actions/acknowledge",
+		Request:           &AcknowledgeAlertRequest{},
+		Response:          &apiresource.AgentAlert{},
+		SuccessStatusCode: http.StatusOK,
+		Public:            false,
+		Preview:           true,
+		ServiceHandler: func(svc any) func(ctx context.Context, req *AcknowledgeAlertRequest) (*apiresource.AgentAlert, *apierror.APIError) {
+			return svc.(AgentAlertSvc).AcknowledgeAlert
+		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeAgentAlert,
+			Fields:     []string{"run", "action"},
+		}),
+	}
+}

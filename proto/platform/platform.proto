@@ -1,0 +1,338 @@
+syntax = "proto3";
+
+// Package platform defines the gRPC contracts for the platform-service, which
+// provides cross-cutting infrastructure capabilities: idempotency key management
+// (with recovery points for multi-step atomic operations) and request logging.
+// The api-gateway calls these RPCs on every mutating request (idempotency) and
+// after every request (logging).
+package platform;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "shared/proto/platform;platform";
+
+// IdempotencyService manages the lifecycle of idempotency keys. The api-gateway
+// calls ProcessIdempotencyKey at the start of every mutating request to determine
+// whether to process, replay, or reject. Backend services call
+// SetIdempotencyKeyResponse to cache the result, and AdvanceRecoveryPoint /
+// GetRecoveryPoint for multi-step atomic workflows.
+service IdempotencyService {
+  // Looks up or creates an idempotency key and returns NEW, REPLAY, IN_PROGRESS, or HASH_MISMATCH.
+  rpc ProcessIdempotencyKey(ProcessIdempotencyKeyRequest) returns (ProcessIdempotencyKeyResponse);
+
+  // Caches the final HTTP response for a completed idempotent request.
+  rpc SetIdempotencyKeyResponse(SetIdempotencyKeyResponseRequest) returns (SetIdempotencyKeyResponseResponse);
+
+  // Releases the lock on a key without caching a response, used for transient errors.
+  rpc ReleaseIdempotencyKey(ReleaseIdempotencyKeyRequest) returns (ReleaseIdempotencyKeyResponse);
+
+  // Advances a multi-step idempotent operation to its next recovery point.
+  rpc AdvanceRecoveryPoint(AdvanceRecoveryPointRequest) returns (AdvanceRecoveryPointResponse);
+
+  // Reads the current recovery point and step data for a multi-step operation.
+  rpc GetRecoveryPoint(GetRecoveryPointRequest) returns (GetRecoveryPointResponse);
+}
+
+// LoggingService persists structured request logs for auditing and analytics.
+service LoggingService {
+  // Inserts a request log record after every HTTP request completes.
+  rpc CreateRequestLog(CreateRequestLogRequest) returns (CreateRequestLogResponse);
+
+  // Returns a paginated, filterable list of request logs for the target account.
+  rpc ListRequestLogs(ListRequestLogsRequest) returns (ListRequestLogsResponse);
+
+  // Returns a single request log by ID for the target account.
+  rpc GetRequestLog(GetRequestLogRequest) returns (GetRequestLogResponse);
+}
+
+// AuditService persists immutable audit events produced via the transactional outbox.
+service AuditService {
+  // Inserts a single audit event record.
+  rpc CreateAuditEvent(CreateAuditEventRequest) returns (CreateAuditEventResponse);
+
+  // Returns a paginated, filterable list of audit events for the target account.
+  rpc ListAuditEvents(ListAuditEventsRequest) returns (ListAuditEventsResponse);
+
+  // Returns a single audit event by ID.
+  rpc GetAuditEvent(GetAuditEventRequest) returns (GetAuditEventResponse);
+}
+
+enum ProcessIdempotencyKeyResult {
+  PROCESS_RESULT_UNSPECIFIED = 0;
+  // PROCESS_RESULT_NEW means this key has not been seen before. The caller
+  // should process the request normally and call SetIdempotencyKeyResponse
+  // when done.
+  PROCESS_RESULT_NEW = 1;
+  // PROCESS_RESULT_REPLAY means this key was already processed successfully.
+  // The caller should return the cached response from the response fields.
+  PROCESS_RESULT_REPLAY = 2;
+  // PROCESS_RESULT_IN_PROGRESS means another request with this key is
+  // currently being processed. The caller should return HTTP 409 and ask
+  // the client to retry later.
+  PROCESS_RESULT_IN_PROGRESS = 3;
+  // PROCESS_RESULT_HASH_MISMATCH means the key was used before but with
+  // different request parameters. The caller should return HTTP 409 since
+  // the same idempotency key cannot be reused for different operations.
+  PROCESS_RESULT_HASH_MISMATCH = 4;
+}
+
+message ProcessIdempotencyKeyRequest {
+  optional string actor_id = 1;
+  string identity_type = 2;
+  string request_id = 3;
+  string request_method = 4;
+  string normalized_route = 5;
+  string idempotency_key = 6;
+  bytes request_params = 7;
+  // SHA-256(actor_id + target_account_id + method + route + idempotency_key) to scope keys per actor/route.
+  string scope_hash = 8;
+  // SHA-256(canonicalized request body) to detect hash mismatches on reuse.
+  string request_body_hash = 9;
+  optional string target_account_id = 10;
+}
+
+message ProcessIdempotencyKeyResponse {
+  ProcessIdempotencyKeyResult result = 1;
+  string idempotency_key_id = 2;
+  // Present only for REPLAY results.
+  optional int32 response_code = 3;
+  // Present only for REPLAY results.
+  optional bytes response_body = 4;
+  // Present for REPLAY and NEW (initial "started" point).
+  optional string recovery_point = 5;
+  // Present only for REPLAY results.
+  optional bytes response_headers = 6;
+}
+
+message SetIdempotencyKeyResponseRequest {
+  string idempotency_key_id = 1;
+  int32 response_code = 2;
+  bytes response_body = 3;
+  optional bytes response_headers = 4;
+  // Overrides the default expiry (typically 24 hours) for this key.
+  optional int32 ttl_seconds = 5;
+}
+
+message SetIdempotencyKeyResponseResponse {
+  bool success = 1;
+}
+
+message ReleaseIdempotencyKeyRequest {
+  string idempotency_key_id = 1;
+}
+
+message ReleaseIdempotencyKeyResponse {
+  bool success = 1;
+}
+
+message AdvanceRecoveryPointRequest {
+  string idempotency_key_id = 1;
+  string recovery_point = 2;
+  // JSON-serialized intermediate data produced by this step, available on retry.
+  optional bytes step_data = 3;
+}
+
+message AdvanceRecoveryPointResponse {
+  bool success = 1;
+}
+
+message GetRecoveryPointRequest {
+  string idempotency_key_id = 1;
+}
+
+message GetRecoveryPointResponse {
+  string recovery_point = 1;
+  optional bytes step_data = 2;
+}
+
+message RequestLog {
+  string id = 1;
+  string method = 2;
+  string host = 3;
+  string path = 4;
+  string normalized_route = 5;
+  optional string query_json = 6;
+  int32 status_code = 7;
+  // Total request duration in microseconds.
+  int64 latency_us = 8;
+  optional string account_id = 9;
+  optional string target_account_id = 10;
+  // Binary IP address (4 or 16 bytes).
+  optional bytes client_ip = 11;
+  optional string client_ip_string = 12;
+  optional string user_agent = 13;
+  optional string referrer = 14;
+  optional string error_code = 15;
+  optional string error_message = 16;
+  google.protobuf.Timestamp occurred_at = 17;
+  optional string idempotency_key_id = 18;
+  optional string actor_id = 19;
+  optional string actor_type = 20;
+  // Detailed error message for 5xx errors, not exposed to the client.
+  optional string internal_error_message = 21;
+  // Goroutine stack trace captured for 5xx errors.
+  optional string stack_trace = 22;
+  optional string identity_type = 23;
+  google.protobuf.Timestamp created_at = 24;
+  optional string api_version = 25;
+  optional string trace_id = 26;
+  // Non-public endpoints (internal, automation) are filtered from default listings.
+  bool public_endpoint = 27;
+  // Absent for shielded endpoints and requests with no body.
+  optional string body_json = 28;
+  // Absent for shielded endpoints and responses exceeding 256 KB.
+  optional string response_json = 29;
+}
+
+message CreateRequestLogRequest {
+  RequestLog request_log = 1;
+}
+
+message CreateRequestLogResponse {
+  bool success = 1;
+}
+
+message PageInfo {
+  optional string next_cursor = 1;
+  optional string prev_cursor = 2;
+  bool has_next_page = 3;
+  bool has_prev_page = 4;
+}
+
+message ListRequestLogsRequest {
+  optional google.protobuf.Timestamp start_date = 1;
+  optional google.protobuf.Timestamp end_date = 2;
+  optional string method = 3;
+  optional int32 status_code = 4;
+  optional string error_code = 5;
+  optional string account_id = 6;
+  optional string actor_id = 7;
+  optional string actor_type = 8;
+  optional string actor_name = 9;
+  optional bool exact_match = 10;
+  optional string cursor = 11;
+  int32 limit = 12;
+  optional string query = 13;
+  repeated string includes = 14;
+}
+
+message ListRequestLogsResponse {
+  repeated RequestLogInfo request_logs = 1;
+  PageInfo page_info = 2;
+}
+
+message GetRequestLogRequest {
+  string id = 1;
+  repeated string includes = 2;
+}
+
+message GetRequestLogResponse {
+  RequestLogInfo request_log = 1;
+}
+
+message RequestLogInfo {
+  string id = 1;
+  string method = 2;
+  string path = 3;
+  string host = 4;
+  string normalized_route = 5;
+  optional string query_json = 6;
+  int32 status_code = 7;
+  int64 latency_us = 8;
+  optional string api_version = 9;
+  optional string identity_type = 10;
+  optional string client_ip = 11;
+  optional string user_agent = 12;
+  optional string referrer = 13;
+  optional string error_code = 14;
+  optional string error_message = 15;
+  google.protobuf.Timestamp occurred_at = 16;
+  google.protobuf.Timestamp created_at = 17;
+  optional string account_id = 18;
+  optional string account_name = 19;
+  optional RequestLogActor actor = 20;
+  optional string idempotency_key = 21;
+  optional string body_json = 22;
+  optional string response_json = 23;
+}
+
+// Fields are populated based on whether the actor is a user or API key.
+message RequestLogActor {
+  string id = 1;
+  string object_type = 2;
+  optional string name = 3;
+  optional string email = 4;
+  optional string redacted_value = 5;
+  optional string role_id = 6;
+  optional string role_name = 7;
+  optional string role_type_code = 8;
+}
+
+message CreateAuditEventRequest {
+  AuditEventInfo audit_event = 1;
+}
+
+message CreateAuditEventResponse {
+  bool success = 1;
+}
+
+message ListAuditEventsRequest {
+  optional google.protobuf.Timestamp start_date = 1;
+  optional google.protobuf.Timestamp end_date = 2;
+  optional string resource_type = 3;
+  optional string resource_id = 4;
+  optional string actor_id = 5;
+  optional string action = 6;
+  optional string account_id = 7;
+  optional string cursor = 8;
+  int32 limit = 9;
+  repeated string includes = 10;
+  optional string query = 11;
+}
+
+message ListAuditEventsResponse {
+  repeated AuditEventInfo audit_events = 1;
+  PageInfo page_info = 2;
+}
+
+message GetAuditEventRequest {
+  string id = 1;
+  repeated string includes = 2;
+}
+
+message GetAuditEventResponse {
+  AuditEventInfo audit_event = 1;
+}
+
+message AuditEventInfo {
+  string id = 1;
+  string action = 2;
+  string resource_type = 3;
+  string resource_id = 4;
+  optional AuditActor actor = 5;
+  // Field-level before/after values; typically empty for create/delete.
+  repeated AuditFieldChange changes = 6;
+  optional string metadata_json = 7;
+  optional string service_name = 8;
+  optional string request_id = 9;
+  optional string idempotency_key_id = 10;
+  optional string source_ip = 11;
+  google.protobuf.Timestamp occurred_at = 12;
+  google.protobuf.Timestamp created_at = 13;
+}
+
+message AuditActor {
+  string id = 1;
+  string object_type = 2;
+  string type = 3;
+  string identity_type = 4;
+  optional string name = 5;
+  // Email for users, redacted value for API keys.
+  optional string handle = 6;
+}
+
+message AuditFieldChange {
+  string field = 1;
+  optional string old_value_json = 2;
+  optional string new_value_json = 3;
+}

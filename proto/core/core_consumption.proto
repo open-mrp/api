@@ -1,0 +1,410 @@
+syntax = "proto3";
+
+// CoreService message types (imported by core.proto).
+package core;
+
+import "google/protobuf/timestamp.proto";
+import "core/core_identity_context.proto";
+import "core/core_items.proto";
+option go_package = "shared/proto/core;core";
+
+message CreateConsumptionRequest {
+  string production_step_id = 1;
+  string item_id = 2;
+  string quantity_value = 3;
+  string quantity_unit_id = 4;
+  string waste_quantity_value = 5;
+  string waste_quantity_unit_id = 6;
+  optional string instructions = 7;
+}
+message CreateConsumptionResponse {
+  ConsumptionInfo consumption = 1;
+}
+message UpdateConsumptionRequest {
+  string production_step_id = 1;
+  string id = 2;
+  optional string item_id = 3;
+  optional string quantity_value = 4;
+  optional string quantity_unit_id = 5;
+  optional string waste_quantity_value = 6;
+  optional string waste_quantity_unit_id = 7;
+  optional string instructions = 8;
+}
+message UpdateConsumptionResponse {
+  ConsumptionInfo consumption = 1;
+}
+message DeleteConsumptionRequest {
+  string production_step_id = 1;
+  string id = 2;
+}
+message DeleteConsumptionResponse {
+  ConsumptionInfo consumption = 1;
+}
+message ListDeliveriesRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+  optional string status = 4;
+  repeated string item_ids = 5;
+  repeated string supplier_ids = 6;
+  optional google.protobuf.Timestamp start_date = 7;
+  optional google.protobuf.Timestamp end_date = 8;
+}
+message ListDeliveriesResponse {
+  repeated DeliverySummaryInfo deliveries = 1;
+  PageInfo page_info = 2;
+}
+message GetDeliveryRequest {
+  string id = 1;
+}
+message GetDeliveryResponse {
+  DeliveryInfo delivery = 1;
+}
+message DeliverySummaryInfo {
+  string id = 1;
+  string number = 2;
+  string purchase_order_id = 3;
+  string purchase_order_number = 4;
+  string status = 5;
+  int32 line_count = 6;
+  optional google.protobuf.Timestamp accepted_at = 7;
+  optional google.protobuf.Timestamp rejected_at = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+}
+message DeliveryInfo {
+  string id = 1;
+  string number = 2;
+  string purchase_order_id = 3;
+  string purchase_order_number = 4;
+  string status = 5;
+  repeated DeliveryLineInfo lines = 6;
+  optional google.protobuf.Timestamp accepted_at = 7;
+  optional google.protobuf.Timestamp rejected_at = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+}
+message DeliveryLineInfo {
+  string id = 1;
+  optional string item_id = 2;
+  optional string item_sku = 3;
+  optional string item_description = 4;
+  string quantity_id = 5;
+  string quantity_value = 6;
+  string quantity_unit_id = 7;
+  string quantity_unit_abbreviation = 8;
+  string unit_cost_id = 9;
+  string unit_cost_value = 10;
+  string unit_cost_numerator_unit_id = 11;
+  string unit_cost_denominator_unit_id = 12;
+  optional string location_id = 13;
+  optional string location_name = 14;
+  optional string lot_id = 15;
+  optional string lot_number = 16;
+  optional google.protobuf.Timestamp accepted_at = 17;
+  optional google.protobuf.Timestamp rejected_at = 18;
+  google.protobuf.Timestamp created_at = 19;
+  google.protobuf.Timestamp updated_at = 20;
+}
+message LightScanningStationInfo {
+  string id = 1;
+  string name = 2;
+}
+message LightProductionStepInfo {
+  string id = 1;
+  string name = 2;
+}
+message ScanningStationInfo {
+  string id = 1;
+  string name = 2;
+  optional string notes = 3;
+  string type = 4;
+  optional string label_size_code = 5;
+  optional string label_type_code = 6;
+  bool material_check_required = 7;
+  string department_id = 8;
+  string department_name = 9;
+  repeated LightProductionStepInfo production_steps = 10;
+  google.protobuf.Timestamp created_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+}
+message ListScanningStationsRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+}
+message ListScanningStationsResponse {
+  repeated ScanningStationInfo scanning_stations = 1;
+  PageInfo page_info = 2;
+}
+message GetScanningStationRequest {
+  string id = 1;
+}
+message GetScanningStationResponse {
+  ScanningStationInfo scanning_station = 1;
+}
+message CreateScanningStationRequest {
+  string name = 1;
+  optional string notes = 2;
+  string type = 3;
+  bool material_check_required = 4;
+  string department_id = 5;
+}
+message CreateScanningStationResponse {
+  ScanningStationInfo scanning_station = 1;
+}
+message UpdateScanningStationRequest {
+  string id = 1;
+  optional string name = 2;
+  optional string notes = 3;
+  optional string label_size_code = 4;
+  optional string label_type_code = 5;
+  optional bool material_check_required = 6;
+}
+message UpdateScanningStationResponse {
+  ScanningStationInfo scanning_station = 1;
+}
+message DeleteScanningStationRequest {
+  string id = 1;
+}
+message ConnectProductionStepsByScanningStationRequest {
+  string id = 1;
+  string name = 2;
+}
+message LocationChildInfo {
+  string id = 1;
+  string name = 2;
+  string type_code = 3;
+}
+message LocationInfo {
+  string id = 1;
+  string name = 2;
+  string type_code = 3;
+  reserved 4;
+  optional string parent_id = 5;
+  optional string parent_name = 6;
+  repeated LocationChildInfo children = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+  optional string parent_type_code = 10;
+}
+message LocationTypeInfo {
+  string id = 1;
+  string code = 2;
+  string name = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp updated_at = 5;
+}
+message ListLocationsRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+}
+message ListLocationsResponse {
+  repeated LocationInfo locations = 1;
+  PageInfo page_info = 2;
+}
+message GetLocationRequest {
+  string id = 1;
+}
+message GetLocationResponse {
+  LocationInfo location = 1;
+}
+message CreateLocationRequest {
+  string name = 1;
+  string type_code = 2;
+  optional string parent_id = 3;
+  repeated string child_ids = 4;
+}
+message CreateLocationResponse {
+  LocationInfo location = 1;
+}
+message UpdateLocationRequest {
+  string id = 1;
+  optional string name = 2;
+  optional string type_code = 3;
+  optional string parent_id = 4;
+  bool clear_parent = 5;
+  repeated string child_ids = 6;
+  bool update_children = 7;
+}
+message UpdateLocationResponse {
+  LocationInfo location = 1;
+}
+message DeleteLocationRequest {
+  string id = 1;
+}
+message ListLocationTypesRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+}
+message ListLocationTypesResponse {
+  repeated LocationTypeInfo location_types = 1;
+  PageInfo page_info = 2;
+}
+message GetLocationTypeRequest {
+  string identifier = 1;
+}
+message GetLocationTypeResponse {
+  LocationTypeInfo location_type = 1;
+}
+message SupplierSummaryProto {
+  string id = 1;
+  string name = 2;
+  string number = 3;
+  int64 material_count = 4;
+  google.protobuf.Timestamp created_at = 5;
+}
+message SupplierProto {
+  string id = 1;
+  string name = 2;
+  string number = 3;
+  optional string note = 4;
+  optional CustomerAddressProto bill_to_address = 5;
+  optional CustomerAddressProto ship_to_address = 6;
+  int64 material_count = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+}
+message CreateSupplierAddressInput {
+  string name = 1;
+  optional string phone = 2;
+  optional string email = 3;
+  bool is_drop_ship = 4;
+  optional string street_line_1 = 5;
+  optional string street_line_2 = 6;
+  optional string locality = 7;
+  optional string state = 8;
+  optional string postal_code = 9;
+  string country = 10;
+}
+message ListSuppliersRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+  optional google.protobuf.Timestamp start_date = 4;
+  optional google.protobuf.Timestamp end_date = 5;
+  repeated string item_ids = 6;
+}
+message ListSuppliersResponse {
+  repeated SupplierSummaryProto suppliers = 1;
+  PageInfo page_info = 2;
+}
+message GetSupplierRequest {
+  string id = 1;
+}
+message GetSupplierResponse {
+  SupplierProto supplier = 1;
+}
+message CreateSupplierRequest {
+  string name = 1;
+  string number = 2;
+  optional string note = 3;
+  optional CreateSupplierAddressInput bill_to_address = 4;
+  optional CreateSupplierAddressInput ship_to_address = 5;
+}
+message CreateSupplierResponse {
+  SupplierProto supplier = 1;
+}
+message UpdateSupplierRequest {
+  string id = 1;
+  optional string name = 2;
+  optional string number = 3;
+  optional string note = 4;
+  bool update_note = 5;
+  optional string bill_to_address_id = 6;
+  optional string ship_to_address_id = 7;
+}
+message UpdateSupplierResponse {
+  SupplierProto supplier = 1;
+}
+message DeleteSupplierRequest {
+  string id = 1;
+}
+message DeleteSupplierResponse {
+  SupplierProto supplier = 1;
+}
+message BulkDeleteSuppliersRequest {
+  repeated string supplier_ids = 1;
+}
+message SysPropertyInfo {
+  string id = 1;
+  string type_id = 2;
+  string type_code = 3;
+  string type_name = 4;
+  int32 value = 5;
+  string account_id = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+message ListSysPropertiesRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+}
+message ListSysPropertiesResponse {
+  repeated SysPropertyInfo sys_properties = 1;
+  PageInfo page_info = 2;
+}
+message GetSysPropertyRequest {
+  string id = 1;
+}
+message GetSysPropertyResponse {
+  SysPropertyInfo sys_property = 1;
+}
+message UpdateSysPropertyRequest {
+  string id = 1;
+  optional int32 value = 2;
+}
+message UpdateSysPropertyResponse {
+  SysPropertyInfo sys_property = 1;
+}
+message GetLatestSysPropertyValueRequest {
+  string type_code = 1;
+}
+message GetLatestSysPropertyValueResponse {
+  int32 value = 1;
+}
+message TenancyRoleProto {
+  string id = 1;
+  string name = 2;
+  string role_type_code = 3;
+}
+message TenancyCurrentAccountProto {
+  string id = 1;
+  optional string slug = 2;
+  string name = 3;
+  string type = 4;
+  string onboarding_status = 5;
+  string plan_code = 6;
+  optional TenancyRoleProto role = 7;
+}
+message TenancyAccountSummaryProto {
+  string id = 1;
+  string name = 2;
+}
+message TenancyOtherAccountProto {
+  string id = 1;
+  string name = 2;
+  string type = 3;
+}
+message GetTenancyRequest {
+  string user_id = 1;
+  optional string target_account_id = 2;
+}
+message SwitchTenancyAccountRequest {
+  string user_id = 1;
+  string account_id = 2;
+}
+message GetTenancyResponse {
+  bool has_tenancy = 1;
+  optional TenancyCurrentAccountProto current_account = 2;
+  optional TenancyAccountSummaryProto owner_account = 3;
+  repeated TenancyAccountSummaryProto sandboxes = 4;
+  repeated TenancyOtherAccountProto other_accounts = 5;
+}
+message GetCurrentUserRequest {
+  string user_id = 1;
+  optional string target_account_id = 2;
+}

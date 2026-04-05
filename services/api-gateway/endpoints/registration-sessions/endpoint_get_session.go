@@ -15,15 +15,12 @@ type GetSessionRequest struct {
 	SessionID string `json:"-" path:"session_id" validate:"required"`
 }
 
-const getSessionDescription string = `Returns the current state of a registration session, including user details, account details,
-and the current step in the registration flow.`
-
 type GetSessionEndpoint struct{}
 
 func (e *GetSessionEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetSessionRequest, *apiresource.RegistrationSession] {
 	return &apiendpoint.APIEndpoint[*GetSessionRequest, *apiresource.RegistrationSession]{
 		Title:             "Get Registration Session",
-		Description:       getSessionDescription,
+		Description:       "Returns the current state of a registration session, including its step and associated user and account details.",
 		Method:            http.MethodGet,
 		Route:             "/v1/auth/registration-sessions/{session_id}",
 		ContentType:       "application/json",
@@ -34,9 +31,6 @@ func (e *GetSessionEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetSessionR
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetSessionRequest) (*apiresource.RegistrationSession, *apierror.APIError) {
 			return svc.(RegistrationSessionSvc).GetSession
-		},
-		Extras: apiendpoint.APIEndpointExtras{
-			AllowUnknownJSONFields: false,
 		},
 	}
 }

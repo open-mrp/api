@@ -13,6 +13,7 @@ import (
 )
 
 func TestTraceAddsAPIErrorEventWithoutException(t *testing.T) {
+	t.Parallel()
 	spanRecorder := tracetest.NewSpanRecorder()
 	tracerProvider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
 	tracer := tracerProvider.Tracer("test")
@@ -49,6 +50,7 @@ func TestTraceAddsAPIErrorEventWithoutException(t *testing.T) {
 }
 
 func TestTraceSkipsNilError(t *testing.T) {
+	t.Parallel()
 	spanRecorder := tracetest.NewSpanRecorder()
 	tracerProvider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
 	tracer := tracerProvider.Tracer("test")

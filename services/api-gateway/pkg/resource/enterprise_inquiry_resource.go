@@ -20,12 +20,12 @@ type EnterpriseInquiry struct {
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 }
 
-func (*EnterpriseInquiry) SchemaExample() any {
-	return apiexample.ValidateAndMarshalToMap(SampleEnterpriseInquiry)
-}
-
 var SampleEnterpriseInquiry = &EnterpriseInquiry{
 	ID:        SampleEnterpriseInquiryID,
 	Object:    constants.ObjectTypeEnterpriseInquiry,
 	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+}
+
+func (*EnterpriseInquiry) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(SampleEnterpriseInquiry)
 }

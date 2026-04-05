@@ -107,6 +107,11 @@ WHERE registration_session.user_id = sqlc.arg('user_id')
 ORDER BY registration_session.created_at ASC, registration_session.id ASC
 LIMIT ?;
 
+-- name: UpdateRegistrationSessionAccountID :exec
+UPDATE registration_session
+SET account_id = ?, updated_at = NOW(3)
+WHERE id = ?;
+
 -- name: UpdateRegistrationSessionPlanCode :exec
 UPDATE registration_session
 SET plan_code = ?, updated_at = NOW(3)

@@ -1,0 +1,189 @@
+syntax = "proto3";
+
+// Package core defines the gRPC service for receiving order management.
+package core;
+
+import "google/protobuf/timestamp.proto";
+import "core/core.proto";
+
+option go_package = "shared/proto/core;core";
+
+service CoreReceivingService {
+  // ListReceivingOrders returns a paginated list of receiving orders.
+  rpc ListReceivingOrders(ListReceivingOrdersRequest) returns (ListReceivingOrdersResponse);
+
+  // GetReceivingOrder returns a single receiving order by ID with lines.
+  rpc GetReceivingOrder(GetReceivingOrderRequest) returns (GetReceivingOrderResponse);
+
+  // StockReceivingOrder stocks a receiving order.
+  rpc StockReceivingOrder(StockReceivingOrderRequest) returns (StockReceivingOrderResponse);
+
+  // ReceiveReceivingOrder receives all unstocked lines.
+  rpc ReceiveReceivingOrder(ReceiveReceivingOrderRequest) returns (ReceiveReceivingOrderResponse);
+
+  // VoidReceivingOrder voids all lines in a receiving order.
+  rpc VoidReceivingOrder(VoidReceivingOrderRequest) returns (VoidReceivingOrderResponse);
+
+  // UpdateReceivingOrderLine updates a receiving order line's quantity.
+  rpc UpdateReceivingOrderLine(UpdateReceivingOrderLineRequest) returns (UpdateReceivingOrderLineResponse);
+
+  // VoidReceivingOrderLine voids a single receiving order line.
+  rpc VoidReceivingOrderLine(VoidReceivingOrderLineRequest) returns (VoidReceivingOrderLineResponse);
+
+  // ReceiveReceivingOrderLine receives a single receiving order line.
+  rpc ReceiveReceivingOrderLine(ReceiveReceivingOrderLineRequest) returns (ReceiveReceivingOrderLineResponse);
+}
+
+// ReceivingOrderSummaryInfo represents a receiving order in list views.
+message ReceivingOrderSummaryInfo {
+  string id = 1;
+  string number = 2;
+  string purchase_order_id = 3;
+  string purchase_order_number = 4;
+  optional string supplier_id = 5;
+  optional string supplier_name = 6;
+  int32 line_count = 7;
+  double completion_percentage = 8;
+  optional google.protobuf.Timestamp completed_at = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+}
+
+// ReceivingOrderInfo represents a full receiving order with lines.
+message ReceivingOrderInfo {
+  string id = 1;
+  string number = 2;
+  string purchase_order_id = 3;
+  string purchase_order_number = 4;
+  optional string supplier_id = 5;
+  optional string supplier_name = 6;
+  optional string note = 7;
+  repeated ReceivingOrderLineInfo lines = 8;
+  optional google.protobuf.Timestamp completed_at = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+}
+
+// ReceivingOrderLineInfo represents a receiving order line.
+message ReceivingOrderLineInfo {
+  string id = 1;
+  string quantity_id = 2;
+  string quantity_value = 3;
+  string quantity_unit_id = 4;
+  string quantity_unit_abbreviation = 5;
+  optional string rejected_quantity_value = 6;
+  string order_line_id = 7;
+  optional string order_line_item_id = 8;
+  optional string order_line_item_sku = 9;
+  optional string order_line_item_description = 10;
+  string order_line_quantity_ordered = 11;
+  string order_line_unit_id = 12;
+  string order_line_unit_abbreviation = 13;
+  optional google.protobuf.Timestamp stocked_at = 14;
+  google.protobuf.Timestamp created_at = 15;
+  google.protobuf.Timestamp updated_at = 16;
+}
+
+// StockingDataInfo contains stocking data for the stock action.
+message StockingDataInfo {
+  repeated StockingLineItemInfo line_items = 1;
+}
+
+// StockingLineItemInfo represents a single line item in a stocking request.
+message StockingLineItemInfo {
+  string receiving_order_line_id = 1;
+  optional string lot_number = 2;
+  optional string rejected_quantity = 3;
+  repeated StorageAllocationInfo allocations = 4;
+}
+
+// StorageAllocationInfo represents a storage allocation.
+message StorageAllocationInfo {
+  optional string location_id = 1;
+  string quantity = 2;
+}
+
+// List receiving orders
+message ListReceivingOrdersRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+  optional string status = 4;
+  repeated string item_ids = 5;
+  repeated string supplier_ids = 6;
+  optional google.protobuf.Timestamp start_date = 7;
+  optional google.protobuf.Timestamp end_date = 8;
+}
+
+message ListReceivingOrdersResponse {
+  repeated ReceivingOrderSummaryInfo receiving_orders = 1;
+  PageInfo page_info = 2;
+}
+
+// Get receiving order
+message GetReceivingOrderRequest {
+  string id = 1;
+}
+
+message GetReceivingOrderResponse {
+  ReceivingOrderInfo receiving_order = 1;
+}
+
+// Stock receiving order
+message StockReceivingOrderRequest {
+  string id = 1;
+  StockingDataInfo data = 2;
+}
+
+message StockReceivingOrderResponse {
+  ReceivingOrderInfo receiving_order = 1;
+}
+
+// Receive receiving order
+message ReceiveReceivingOrderRequest {
+  string id = 1;
+}
+
+message ReceiveReceivingOrderResponse {
+  ReceivingOrderInfo receiving_order = 1;
+}
+
+// Void receiving order
+message VoidReceivingOrderRequest {
+  string id = 1;
+}
+
+message VoidReceivingOrderResponse {
+  ReceivingOrderInfo receiving_order = 1;
+}
+
+// Update receiving order line
+message UpdateReceivingOrderLineRequest {
+  string receiving_order_id = 1;
+  string id = 2;
+  optional string quantity_value = 3;
+}
+
+message UpdateReceivingOrderLineResponse {
+  ReceivingOrderLineInfo line = 1;
+}
+
+// Void receiving order line
+message VoidReceivingOrderLineRequest {
+  string receiving_order_id = 1;
+  string id = 2;
+}
+
+message VoidReceivingOrderLineResponse {
+  ReceivingOrderLineInfo line = 1;
+}
+
+// Receive receiving order line
+message ReceiveReceivingOrderLineRequest {
+  string receiving_order_id = 1;
+  string id = 2;
+}
+
+message ReceiveReceivingOrderLineResponse {
+  ReceivingOrderLineInfo line = 1;
+}

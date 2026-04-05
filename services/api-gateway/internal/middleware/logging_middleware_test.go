@@ -22,6 +22,7 @@ func (s *stubSaver) Save(ctx context.Context, rl *appctx.RequestLog) error {
 }
 
 func TestLoggingMiddleware_CapturesAPIVersion(t *testing.T) {
+	t.Parallel()
 	logger := log.New(io.Discard, "", 0)
 	saver := &stubSaver{}
 
@@ -47,6 +48,7 @@ func TestLoggingMiddleware_CapturesAPIVersion(t *testing.T) {
 }
 
 func TestLoggingMiddleware_CapturesAPIVersionEvenIfInvalid(t *testing.T) {
+	t.Parallel()
 	logger := log.New(io.Discard, "", 0)
 	saver := &stubSaver{}
 
@@ -74,6 +76,7 @@ func TestLoggingMiddleware_CapturesAPIVersionEvenIfInvalid(t *testing.T) {
 }
 
 func TestLoggingMiddleware_NoAPIVersionWhenHeaderMissing(t *testing.T) {
+	t.Parallel()
 	logger := log.New(io.Discard, "", 0)
 	saver := &stubSaver{}
 
@@ -97,6 +100,7 @@ func TestLoggingMiddleware_NoAPIVersionWhenHeaderMissing(t *testing.T) {
 }
 
 func TestLoggingMiddleware_RequestLogInContext(t *testing.T) {
+	t.Parallel()
 	logger := log.New(io.Discard, "", 0)
 	saver := &stubSaver{}
 
@@ -136,6 +140,7 @@ type stubRouteMatcher struct {
 func (s *stubRouteMatcher) GetRoutes() []any { return s.routes }
 
 func TestLoggingMiddleware_PublicEndpoint_WithPublicRoute(t *testing.T) {
+	t.Parallel()
 	logger := log.New(io.Discard, "", 0)
 	saver := &stubSaver{}
 
@@ -162,6 +167,7 @@ func TestLoggingMiddleware_PublicEndpoint_WithPublicRoute(t *testing.T) {
 }
 
 func TestLoggingMiddleware_PublicEndpoint_WithPrivateRoute(t *testing.T) {
+	t.Parallel()
 	logger := log.New(io.Discard, "", 0)
 	saver := &stubSaver{}
 
@@ -188,6 +194,7 @@ func TestLoggingMiddleware_PublicEndpoint_WithPrivateRoute(t *testing.T) {
 }
 
 func TestLoggingMiddleware_PublicEndpoint_ExcludedRoute(t *testing.T) {
+	t.Parallel()
 	logger := log.New(io.Discard, "", 0)
 	saver := &stubSaver{}
 
@@ -214,6 +221,7 @@ func TestLoggingMiddleware_PublicEndpoint_ExcludedRoute(t *testing.T) {
 }
 
 func TestLoggingMiddleware_PublicEndpoint_NoRouter(t *testing.T) {
+	t.Parallel()
 	logger := log.New(io.Discard, "", 0)
 	saver := &stubSaver{}
 

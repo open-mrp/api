@@ -9,7 +9,6 @@ import (
 	"github.com/augno/api/services/auth-service/internal/infrastructure/repository"
 	"github.com/augno/api/services/auth-service/internal/infrastructure/sqlc"
 	"github.com/augno/api/services/auth-service/internal/mediator"
-	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
@@ -94,6 +93,18 @@ func (s *docAPIKeySvcImpl) withTx(ctx context.Context, fn func(context.Context, 
 	})
 }
 
+// GetOrCreateDocAPIKey returns an existing doc API key for the caller's sandbox account,
+// or creates one if none exists.
+//
+//  1. Extract the identity from the context and verify the caller is an internal user
+//     targeting a sandbox account.
+//  2. Upsert an idempotency key; return the cached response if already finished.
+//  3. Resolve the doc API key inside a transaction via the doc API key mediator.
+//  4. Cache the success response and return the key with its plaintext secret.
+//
+// Preconditions:
+//   - The caller must be an authenticated user with an internal actor type.
+//   - The target account must be in sandbox mode.
 func (s *docAPIKeySvcImpl) GetOrCreateDocAPIKey(ctx context.Context) (*domain.GetOrCreateDocAPIKeyResult, *apierror.APIError) {
 	ctx, span := docAPIKeySvcTracer.Start(ctx, "service.doc_api_key.get_or_create")
 	defer span.End()
@@ -102,14 +113,14 @@ func (s *docAPIKeySvcImpl) GetOrCreateDocAPIKey(ctx context.Context) (*domain.Ge
 	if !ok || identity == nil {
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
-	if apiErr := types.CheckIsUser(identity); apiErr != nil {
+	if apiErr := identity.CheckIsUser(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if apiErr := types.CheckIsInternalActor(identity); apiErr != nil {
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if identity.TargetAccountID == nil {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+	if !identity.IsTargetAccountSet() {
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account header is required."))
 	}
 	if identity.AccountMode != constants.AccountModeSandbox {
 		return nil, tracing.Trace(span, apierror.NewValidationError("A sandbox account ID is required. Production account IDs are not accepted."))
@@ -120,7 +131,7 @@ func (s *docAPIKeySvcImpl) GetOrCreateDocAPIKey(ctx context.Context) (*domain.Ge
 	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, &domain.RequestIdentity{
 		ActorID:         identity.Actor.ID,
 		IdentityType:    identity.Type,
-		TargetAccountID: identity.TargetAccountID,
+		TargetAccountID: &identity.Target.AccountID,
 	})
 	if apiErr != nil {
 		return nil, apiErr
@@ -139,7 +150,7 @@ func (s *docAPIKeySvcImpl) GetOrCreateDocAPIKey(ctx context.Context) (*domain.Ge
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *docAPIKeySvcImpl) *apierror.APIError {
 			txMeds := txSvc.mediators()
 			var resolveErr *apierror.APIError
-			result, resolveErr = txMeds.DocAPIKey.Resolve(txCtx, *identity.TargetAccountID)
+			result, resolveErr = txMeds.DocAPIKey.Resolve(txCtx, identity.Target.AccountID)
 			if resolveErr != nil {
 				return resolveErr
 			}

@@ -1,0 +1,89 @@
+syntax = "proto3";
+
+// Package core defines the gRPC service for shipping case management.
+package core;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "shared/proto/core;core";
+
+service CoreShippingCaseService {
+  // GetShippingCase returns a single shipping case by its ID.
+  rpc GetShippingCase(GetShippingCaseRequest) returns (GetShippingCaseResponse);
+
+  // UpdateShippingCase updates an existing shipping case.
+  rpc UpdateShippingCase(UpdateShippingCaseRequest) returns (UpdateShippingCaseResponse);
+
+  // DeleteShippingCase deletes a shipping case.
+  rpc DeleteShippingCase(DeleteShippingCaseRequest) returns (DeleteShippingCaseResponse);
+
+  // GetShippingCaseLabel returns a presigned URL for the shipping case's label.
+  rpc GetShippingCaseLabel(GetShippingCaseLabelRequest) returns (GetShippingCaseLabelResponse);
+}
+
+// ShippingCaseInfo represents a shipping case resource.
+message ShippingCaseInfo {
+  string id = 1;
+  string number = 2;
+  optional string sscc = 3;
+  optional string tracking_number = 4;
+  optional google.protobuf.Timestamp shipped_at = 5;
+  string shipment_id = 6;
+  string carrier_id = 7;
+  string carrier_name = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+  // Freight amount quantity fields
+  string freight_amount_id = 11;
+  string freight_amount_value = 12;
+  string freight_amount_unit_id = 13;
+  string freight_amount_unit_name = 14;
+  string freight_amount_unit_abbreviation = 15;
+  string freight_amount_unit_type = 16;
+  // Freight weight quantity fields
+  string freight_weight_id = 17;
+  string freight_weight_value = 18;
+  string freight_weight_unit_id = 19;
+  string freight_weight_unit_name = 20;
+  string freight_weight_unit_abbreviation = 21;
+  string freight_weight_unit_type = 22;
+}
+
+// Get shipping case
+message GetShippingCaseRequest {
+  string id = 1;
+}
+
+message GetShippingCaseResponse {
+  ShippingCaseInfo shipping_case = 1;
+}
+
+// Update shipping case
+message UpdateShippingCaseRequest {
+  string id = 1;
+  optional string tracking_number = 2;
+  optional string freight_amount_value = 3;
+  optional string freight_amount_unit_id = 4;
+  optional string freight_weight_value = 5;
+  optional string freight_weight_unit_id = 6;
+}
+
+message UpdateShippingCaseResponse {
+  ShippingCaseInfo shipping_case = 1;
+}
+
+// Delete shipping case
+message DeleteShippingCaseRequest {
+  string id = 1;
+}
+
+message DeleteShippingCaseResponse {}
+
+// Get shipping case label
+message GetShippingCaseLabelRequest {
+  string id = 1;
+}
+
+message GetShippingCaseLabelResponse {
+  optional string url = 1;
+}

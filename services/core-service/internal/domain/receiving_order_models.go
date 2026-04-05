@@ -1,0 +1,143 @@
+package domain
+
+import (
+	"time"
+
+	"github.com/augno/api/shared/pagination"
+	"github.com/shopspring/decimal"
+)
+
+// ReceivingOrderSummary represents a receiving order in list views.
+type ReceivingOrderSummary struct {
+	ID                   string
+	Number               string
+	PurchaseOrderID      string
+	PurchaseOrderNumber  string
+	SupplierID           *string
+	SupplierName         *string
+	LineCount            int32
+	CompletionPercentage float64
+	CompletedAt          *time.Time
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+}
+
+// ReceivingOrder represents a full receiving order with its lines.
+type ReceivingOrder struct {
+	ID                  string
+	Number              string `audit:"number"`
+	PurchaseOrderID     string
+	PurchaseOrderNumber string  `audit:"purchase_order_number"`
+	SupplierID          *string `audit:"supplier_id"`
+	SupplierName        *string `audit:"supplier_name"`
+	Note                *string `audit:"note"`
+	Lines               []*ReceivingOrderLine
+	CompletedAt         *time.Time `audit:"completed_at"`
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
+}
+
+// ReceivingOrderLine represents a line item in a receiving order.
+type ReceivingOrderLine struct {
+	ID                        string
+	QuantityID                string
+	QuantityValue             string `audit:"quantity_value"`
+	QuantityUnitID            string
+	QuantityUnitAbbreviation  string  `audit:"quantity_unit_abbreviation"`
+	RejectedQuantityValue     *string `audit:"rejected_quantity_value"`
+	OrderLineID               string
+	OrderLineItemID           *string `audit:"order_line_item_id"`
+	OrderLineItemSKU          *string `audit:"order_line_item_sku"`
+	OrderLineItemDescription  *string `audit:"order_line_item_description"`
+	OrderLineQuantityOrdered  string  `audit:"order_line_quantity_ordered"`
+	OrderLineUnitID           string
+	OrderLineUnitAbbreviation string     `audit:"order_line_unit_abbreviation"`
+	StockedAt                 *time.Time `audit:"stocked_at"`
+	CreatedAt                 time.Time
+	UpdatedAt                 time.Time
+}
+
+// ListReceivingOrdersParams holds parameters for listing receiving orders.
+type ListReceivingOrdersParams struct {
+	AccountID   string
+	Cursor      *string
+	Limit       int32
+	Query       *string
+	Status      *string
+	ItemIDs     []string
+	SupplierIDs []string
+	StartDate   *time.Time
+	EndDate     *time.Time
+}
+
+// ListReceivingOrdersResult holds the result of listing receiving orders.
+type ListReceivingOrdersResult struct {
+	ReceivingOrders []*ReceivingOrderSummary
+	PageInfo        pagination.PageInfo
+}
+
+// GetReceivingOrderParams holds parameters for getting a single receiving order.
+type GetReceivingOrderParams struct {
+	AccountID        string
+	ReceivingOrderID string
+}
+
+// StockReceivingOrderParams holds parameters for stocking a receiving order.
+type StockReceivingOrderParams struct {
+	AccountID        string
+	ReceivingOrderID string
+	Data             StockingData
+}
+
+// StockingData contains the stocking data sent in the request body.
+type StockingData struct {
+	LineItems []StockingLineItem
+}
+
+// StockingLineItem represents a single line item in a stocking request.
+type StockingLineItem struct {
+	ReceivingOrderLineID string
+	LotNumber            *string
+	RejectedQuantity     *decimal.Decimal
+	Allocations          []StorageAllocation
+}
+
+// StorageAllocation represents a storage allocation for a stocking line item.
+type StorageAllocation struct {
+	LocationID *string
+	Quantity   decimal.Decimal
+}
+
+// UpdateReceivingOrderLineParams holds parameters for updating a receiving order line.
+type UpdateReceivingOrderLineParams struct {
+	AccountID        string
+	ReceivingOrderID string
+	LineID           string
+	QuantityValue    *string
+}
+
+// UnstockedLine holds the ID and order line ID of an unstocked line.
+type UnstockedLine struct {
+	ID          string
+	OrderLineID string
+}
+
+// ReceivingOrderLineUnitPrice holds unit price information for a receiving order line.
+type ReceivingOrderLineUnitPrice struct {
+	ReceivingOrderLineID       string
+	ItemID                     string
+	UnitPriceValue             string
+	UnitPriceNumeratorUnitID   string
+	UnitPriceDenominatorUnitID string
+	QuantityUnitID             string
+}
+
+// OpenInventoryIssue represents an open inventory issue for FIFO allocation.
+type OpenInventoryIssue struct {
+	ID            string
+	QuantityID    string
+	QuantityValue string
+	UnitID        string
+	LocationID    *string
+	LotID         *string
+}

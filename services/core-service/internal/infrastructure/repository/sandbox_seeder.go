@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"regexp"
 	"strings"
 
 	"github.com/augno/api/services/core-service/internal/infrastructure/queries"
@@ -12,6 +13,11 @@ import (
 )
 
 var seederRepoTracer = tracing.GetTracer("core-service.sandbox_seeder")
+
+var (
+	userVarSetRe = regexp.MustCompile(`(?i)^SET\s+@(\w+)\s*=\s*(.+)$`)
+	userVarRefRe = regexp.MustCompile(`@(\w+)`)
+)
 
 type SandboxSeeder struct {
 	db *sql.DB
@@ -47,12 +53,26 @@ func (r *SandboxSeeder) Seed(ctx context.Context, accountID string) error {
 	}
 	defer tx.Rollback() //nolint:errcheck
 
+	vars := map[string]string{}
+
 	for _, stmt := range strings.Split(query, ";") {
 		stmt = strings.TrimSpace(stmt)
 		if stmt == "" {
 			continue
 		}
-		if _, err := tx.ExecContext(ctx, stmt); err != nil {
+
+		if varName, expr, ok := parseUserVarSet(stmt); ok {
+			resolvedExpr := substituteVars(expr, vars)
+			value, resolveErr := resolveSetExpression(ctx, tx, resolvedExpr)
+			if resolveErr != nil {
+				return fmt.Errorf("resolve seed variable %s: %w", varName, resolveErr)
+			}
+			vars[varName] = value
+			continue
+		}
+
+		resolvedStmt := substituteVars(stmt, vars)
+		if _, err := tx.ExecContext(ctx, resolvedStmt); err != nil {
 			return fmt.Errorf("exec seed statement: %w", err)
 		}
 	}
@@ -63,4 +83,50 @@ func (r *SandboxSeeder) Seed(ctx context.Context, accountID string) error {
 
 	log.Printf("[seed] Successfully seeded sandbox account %s", accountID)
 	return nil
+}
+
+func parseUserVarSet(stmt string) (string, string, bool) {
+	matches := userVarSetRe.FindStringSubmatch(strings.TrimSpace(stmt))
+	if len(matches) != 3 {
+		return "", "", false
+	}
+
+	return matches[1], strings.TrimSpace(matches[2]), true
+}
+
+func resolveSetExpression(ctx context.Context, tx *sql.Tx, expr string) (string, error) {
+	query := expr
+	if strings.HasPrefix(expr, "(") && strings.HasSuffix(expr, ")") {
+		query = strings.TrimSpace(expr[1 : len(expr)-1])
+	} else {
+		query = "SELECT " + expr
+	}
+
+	var value sql.NullString
+	if err := tx.QueryRowContext(ctx, query).Scan(&value); err != nil {
+		return "", err
+	}
+
+	if !value.Valid {
+		return "", nil
+	}
+
+	return value.String, nil
+}
+
+func substituteVars(stmt string, vars map[string]string) string {
+	return userVarRefRe.ReplaceAllStringFunc(stmt, func(token string) string {
+		matches := userVarRefRe.FindStringSubmatch(token)
+		if len(matches) != 2 {
+			return token
+		}
+
+		value, ok := vars[matches[1]]
+		if !ok {
+			return token
+		}
+
+		escaped := strings.ReplaceAll(value, `'`, `''`)
+		return "'" + escaped + "'"
+	})
 }

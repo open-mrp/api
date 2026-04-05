@@ -1,0 +1,55 @@
+package httpgroup
+
+import (
+	"fmt"
+
+	utilsep "github.com/augno/api/services/api-gateway/endpoints/utils"
+	grpcclient "github.com/augno/api/services/api-gateway/grpc-client"
+	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+)
+
+type UtilsEndpointGroup struct {
+	*apiendpoint.APIEndpointGroup
+}
+
+type UtilsEndpointGroupConfig struct {
+	CoreClient *grpcclient.CoreServiceClient
+}
+
+func (c *UtilsEndpointGroupConfig) validate() error {
+	if c.CoreClient == nil {
+		return fmt.Errorf("utils endpoint group: core client is required")
+	}
+	return nil
+}
+
+func (*UtilsEndpointGroup) Materialize(config *UtilsEndpointGroupConfig) *UtilsEndpointGroup {
+	if err := config.validate(); err != nil {
+		panic(err)
+	}
+
+	utilsSvc := utilsep.NewUtilsSvc(&utilsep.UtilsSvcConfig{
+		CoreClient: config.CoreClient.Client,
+	})
+
+	inner := &apiendpoint.APIEndpointGroup{
+		Title:        "Utils",
+		Description:  "Utility action endpoints for checking duplicates and emailing records.",
+		ResourceType: &apiresource.CheckDuplicateResult{},
+	}
+
+	checkDuplicateEndpoint := (&utilsep.CheckDuplicateEndpoint{}).Materialize().WithService(inner, utilsSvc)
+	emailRecordEndpoint := (&utilsep.EmailRecordEndpoint{}).Materialize().WithService(inner, utilsSvc)
+	requestDemoEndpoint := (&utilsep.RequestDemoEndpoint{}).Materialize().WithService(inner, utilsSvc)
+	submitFeedbackEndpoint := (&utilsep.SubmitFeedbackEndpoint{}).Materialize().WithService(inner, utilsSvc)
+
+	inner.Endpoints = []apiendpoint.APIEndpointer{
+		checkDuplicateEndpoint,
+		emailRecordEndpoint,
+		requestDemoEndpoint,
+		submitFeedbackEndpoint,
+	}
+
+	return &UtilsEndpointGroup{inner}
+}

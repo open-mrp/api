@@ -8,6 +8,7 @@ import (
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/billing"
 	"github.com/augno/api/shared/tracing"
@@ -16,6 +17,7 @@ import (
 
 type WebhookSvc interface {
 	ProcessWebhook(ctx context.Context, req *apiresource.StripeWebhookRequest) (*apiresource.WebhookResponse, *apierror.APIError)
+	ProcessAccountWebhook(ctx context.Context, req *AccountStripeWebhookRequest) (*apiresource.WebhookResponse, *apierror.APIError)
 }
 
 type WebhookSvcConfig struct {
@@ -63,14 +65,55 @@ func (m *webhookSvcImpl) ProcessWebhook(ctx context.Context, req *apiresource.St
 		})
 
 	if apiErr != nil {
-		slog.ErrorContext(ctx, "webhook processing failed",
+		attrs := []any{
 			"error_code", apiErr.Code,
 			"error_message", apiErr.PublicMessage,
 			"payload_size", len(req.RawBody),
-		)
+		}
+		if apiErr.InternalMessage != "" {
+			attrs = append(attrs, "internal_message", apiErr.InternalMessage)
+		}
+		slog.ErrorContext(ctx, "webhook processing failed", attrs...)
 		return nil, apiErr
 	}
 
 	slog.InfoContext(ctx, "webhook processed successfully")
-	return &apiresource.WebhookResponse{Received: true}, nil
+	return &apiresource.WebhookResponse{Object: constants.ObjectTypeWebhookResponse, Received: true}, nil
+}
+
+func (m *webhookSvcImpl) ProcessAccountWebhook(ctx context.Context, req *AccountStripeWebhookRequest) (*apiresource.WebhookResponse, *apierror.APIError) {
+	slog.InfoContext(ctx, "account webhook received at gateway",
+		"account_id", req.AccountID,
+		"payload_size", len(req.RawBody),
+		"signature_present", req.Signature != "",
+		"signature_length", len(req.Signature),
+	)
+
+	pbReq := &pb.ProcessAccountWebhookEventRequest{
+		RawPayload:      req.RawBody,
+		StripeSignature: req.Signature,
+		AccountId:       req.AccountID,
+	}
+
+	_, apiErr := grpcutil.CallRPC(ctx, webhookSvcTracer, "service.webhooks.process_account_webhook", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ProcessWebhookEventResponse, error) {
+			return m.billingClient.ProcessAccountWebhookEvent(ctx, pbReq, opts...)
+		})
+
+	if apiErr != nil {
+		attrs := []any{
+			"error_code", apiErr.Code,
+			"error_message", apiErr.PublicMessage,
+			"account_id", req.AccountID,
+			"payload_size", len(req.RawBody),
+		}
+		if apiErr.InternalMessage != "" {
+			attrs = append(attrs, "internal_message", apiErr.InternalMessage)
+		}
+		slog.ErrorContext(ctx, "account webhook processing failed", attrs...)
+		return nil, apiErr
+	}
+
+	slog.InfoContext(ctx, "account webhook processed successfully", "account_id", req.AccountID)
+	return &apiresource.WebhookResponse{Object: constants.ObjectTypeWebhookResponse, Received: true}, nil
 }

@@ -56,6 +56,7 @@ func (s *DocAPIKeyMedTestSuite) TearDownTest() {
 }
 
 func TestDocAPIKeyMedTestSuite(t *testing.T) {
+	t.Parallel()
 	suite.Run(t, new(DocAPIKeyMedTestSuite))
 }
 

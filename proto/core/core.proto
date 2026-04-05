@@ -1,0 +1,734 @@
+syntax = "proto3";
+
+// Package core defines the gRPC contract for the core-service. It manages
+// accounts, account-user relationships, roles, permissions, and cross-account
+// business relationships (customer/supplier). The auth-service and api-gateway
+// call these RPCs during credential validation to resolve the caller's
+// authorization context.
+package core;
+
+import "google/protobuf/empty.proto";
+import public "core/core_identity_context.proto";
+import public "core/core_analytics.proto";
+import public "core/core_account_groups.proto";
+import public "core/core_accounts_carriers.proto";
+import public "core/core_items.proto";
+import public "core/core_consumption.proto";
+import public "core/core_users_territories.proto";
+import public "core/core_invoices.proto";
+import public "core/core_lookups.proto";
+
+option go_package = "shared/proto/core;core";
+
+service CoreService {
+  // Returns account metadata (sandbox status, parent account, mode) for identity resolution.
+  rpc GetAccountContext(GetAccountContextRequest) returns (GetAccountContextResponse);
+
+  // Checks user access to an account and returns their role/permissions.
+  rpc GetUserAccountAccess(GetUserAccountAccessRequest) returns (GetUserAccountAccessResponse);
+
+  // Returns the full permission set for a role (used for API key resolution).
+  rpc GetRolePermissions(GetRolePermissionsRequest) returns (GetRolePermissionsResponse);
+
+  // Returns a role's name and type code.
+  rpc GetRoleInfo(GetRoleInfoRequest) returns (GetRoleInfoResponse);
+
+  // Checks cross-account business relationship (customer/supplier) during credential validation.
+  rpc GetAccountRelation(GetAccountRelationRequest) returns (GetAccountRelationResponse);
+
+  // Updates last_used_at on an account-user record after successful auth.
+  rpc MarkAccountUserUsed(MarkAccountUserUsedRequest) returns (google.protobuf.Empty);
+
+  // Returns all accounts a user can access, with their role in each.
+  rpc ListUserAccountAffiliations(ListUserAccountAffiliationsRequest) returns (ListUserAccountAffiliationsResponse);
+
+  // Returns the sandbox account ID for a given production account.
+  rpc GetSandboxAccountByOwner(GetSandboxAccountByOwnerRequest) returns (GetSandboxAccountByOwnerResponse);
+
+  // Returns the admin role ID (used by doc API key flow).
+  rpc GetAdminRole(google.protobuf.Empty) returns (GetAdminRoleResponse);
+
+  // Returns a paginated list of sandbox accounts owned by a production account.
+  rpc ListSandboxAccounts(ListSandboxAccountsRequest) returns (ListSandboxAccountsResponse);
+
+  // Creates a new sandbox account; enforces per-account sandbox limit.
+  rpc CreateSandbox(CreateSandboxRequest) returns (CreateSandboxResponse);
+
+  // Returns a single sandbox account by ID.
+  rpc GetSandbox(GetSandboxRequest) returns (GetSandboxResponse);
+
+  // Deletes a sandbox and purges account-scoped data asynchronously; rejects if last sandbox.
+  rpc DeleteSandbox(DeleteSandboxRequest) returns (google.protobuf.Empty);
+
+  // Updates subscription fields (plan, status, Stripe ID, period end) from billing webhooks.
+  rpc UpdateAccountSubscription(UpdateAccountSubscriptionRequest) returns (google.protobuf.Empty);
+
+  // Removes all Stripe-related fields from an account.
+  rpc ClearAccountStripeCustomer(ClearAccountStripeCustomerRequest) returns (google.protobuf.Empty);
+
+  // Sets or removes the monthly agent LLM spending cap.
+  rpc UpdateAgentSpendingCap(UpdateAgentSpendingCapRequest) returns (UpdateAgentSpendingCapResponse);
+
+  // Resolves an account from a Stripe customer ID.
+  rpc GetAccountByStripeCustomerID(GetAccountByStripeCustomerIDRequest) returns (GetAccountByStripeCustomerIDResponse);
+
+  // Creates production account, sandbox, roles, permissions, and account-user for a new registration.
+  rpc CompleteRegistration(CompleteRegistrationRequest) returns (CompleteRegistrationResponse);
+
+  // Returns a paginated list of units (account-specific and system) with filtering support.
+  rpc ListUnits(ListUnitsRequest) returns (ListUnitsResponse);
+
+  // Returns a single unit by ID (account-owned or system).
+  rpc GetUnit(GetUnitRequest) returns (GetUnitResponse);
+
+  // Creates a new account-owned unit.
+  rpc CreateUnit(CreateUnitRequest) returns (CreateUnitResponse);
+
+  // Partially updates an account-owned unit; system units cannot be updated.
+  rpc UpdateUnit(UpdateUnitRequest) returns (UpdateUnitResponse);
+
+  // Deletes an account-owned unit and cascades to unit_group_unit associations.
+  rpc DeleteUnit(DeleteUnitRequest) returns (google.protobuf.Empty);
+
+  // Searches sale-type products by SKU pattern (used by agent-service).
+  rpc SearchProducts(SearchProductsRequest) returns (SearchProductsResponse);
+
+  // Returns all sale-type products for an account (used by agent-service).
+  rpc ListProducts(ListProductsRequest) returns (ListProductsResponse);
+
+  // Resolves an email to a customer account_relation (used by agent-service).
+  rpc GetCustomerByEmail(GetCustomerByEmailRequest) returns (GetCustomerByEmailResponse);
+
+  // Returns a paginated list of payment terms (account-specific and default).
+  rpc ListPaymentTerms(ListPaymentTermsRequest) returns (ListPaymentTermsResponse);
+
+  // Returns a single payment term by ID.
+  rpc GetPaymentTerm(GetPaymentTermRequest) returns (GetPaymentTermResponse);
+
+  // Creates a new account-owned payment term.
+  rpc CreatePaymentTerm(CreatePaymentTermRequest) returns (CreatePaymentTermResponse);
+
+  // Partially updates an account-owned payment term; default terms cannot be updated.
+  rpc UpdatePaymentTerm(UpdatePaymentTermRequest) returns (UpdatePaymentTermResponse);
+
+  // Deletes an account-owned payment term; default terms cannot be deleted.
+  rpc DeletePaymentTerm(DeletePaymentTermRequest) returns (google.protobuf.Empty);
+
+  // Returns a paginated list of shipping terms (account-specific and default).
+  rpc ListShippingTerms(ListShippingTermsRequest) returns (ListShippingTermsResponse);
+
+  // Returns a single shipping term by ID.
+  rpc GetShippingTerm(GetShippingTermRequest) returns (GetShippingTermResponse);
+
+  // Creates a new account-owned shipping term.
+  rpc CreateShippingTerm(CreateShippingTermRequest) returns (CreateShippingTermResponse);
+
+  // Partially updates an account-owned shipping term; default terms cannot be updated.
+  rpc UpdateShippingTerm(UpdateShippingTermRequest) returns (UpdateShippingTermResponse);
+
+  // Deletes an account-owned shipping term; default terms cannot be deleted.
+  rpc DeleteShippingTerm(DeleteShippingTermRequest) returns (google.protobuf.Empty);
+
+  // Returns a single address by ID within an account.
+  rpc GetAddress(GetAddressRequest) returns (GetAddressResponse);
+
+  // Returns a paginated list of addresses for an account.
+  rpc ListAddresses(ListAddressesRequest) returns (ListAddressesResponse);
+
+  // Creates a new address linked to an account.
+  rpc CreateAddress(CreateAddressRequest) returns (CreateAddressResponse);
+
+  // Partially updates an address within an account.
+  rpc UpdateAddress(UpdateAddressRequest) returns (UpdateAddressResponse);
+
+  // Deletes an address from an account.
+  rpc DeleteAddress(DeleteAddressRequest) returns (google.protobuf.Empty);
+
+  // Returns address autocomplete suggestions from Google Places.
+  rpc AutocompleteAddress(AutocompleteAddressRequest) returns (AutocompleteAddressResponse);
+
+  // Returns parsed address components from a Google Places ID.
+  rpc GetAddressDetails(GetAddressDetailsRequest) returns (GetAddressDetailsResponse);
+
+  // Validates an address using Google Address Validation API.
+  rpc ValidateAddress(ValidateAddressRequest) returns (ValidateAddressResponse);
+
+  // Returns a paginated list of account statuses (global lookup values).
+  rpc ListAccountStatuses(ListAccountStatusesRequest) returns (ListAccountStatusesResponse);
+
+  // Returns a single account status by ID.
+  rpc GetAccountStatus(GetAccountStatusRequest) returns (GetAccountStatusResponse);
+
+  // Returns a paginated list of account groups with filtering by type and search.
+  rpc ListAccountGroups(ListAccountGroupsRequest) returns (ListAccountGroupsResponse);
+
+  // Returns a single account group by ID.
+  rpc GetAccountGroup(GetAccountGroupRequest) returns (GetAccountGroupResponse);
+
+  // Creates a new account group.
+  rpc CreateAccountGroup(CreateAccountGroupRequest) returns (CreateAccountGroupResponse);
+
+  // Partially updates an account group.
+  rpc UpdateAccountGroup(UpdateAccountGroupRequest) returns (UpdateAccountGroupResponse);
+
+  // Deletes an account group.
+  rpc DeleteAccountGroup(DeleteAccountGroupRequest) returns (google.protobuf.Empty);
+
+  // Returns product line access records grouped by account group.
+  rpc ListAccountGroupProductLineAccess(ListAccountGroupProductLineAccessRequest) returns (ListAccountGroupProductLineAccessResponse);
+
+  // Returns the product line access for a single account group.
+  rpc GetAccountGroupProductLineAccess(GetAccountGroupProductLineAccessRequest) returns (GetAccountGroupProductLineAccessResponse);
+
+  // Creates product line access for an account group.
+  rpc CreateAccountGroupProductLineAccess(CreateAccountGroupProductLineAccessRequest) returns (CreateAccountGroupProductLineAccessResponse);
+
+  // Replaces all product lines for an account group.
+  rpc UpdateAccountGroupProductLineAccess(UpdateAccountGroupProductLineAccessRequest) returns (UpdateAccountGroupProductLineAccessResponse);
+
+  // Removes all product line access for an account group.
+  rpc DeleteAccountGroupProductLineAccess(DeleteAccountGroupProductLineAccessRequest) returns (google.protobuf.Empty);
+
+  // Returns product line access records grouped by customer.
+  rpc ListCustomerProductLineAccess(ListCustomerProductLineAccessRequest) returns (ListCustomerProductLineAccessResponse);
+
+  // Returns the product line access for a single customer.
+  rpc GetCustomerProductLineAccess(GetCustomerProductLineAccessRequest) returns (GetCustomerProductLineAccessResponse);
+
+  // Creates product line access for a customer.
+  rpc CreateCustomerProductLineAccess(CreateCustomerProductLineAccessRequest) returns (CreateCustomerProductLineAccessResponse);
+
+  // Replaces all product lines for a customer.
+  rpc UpdateCustomerProductLineAccess(UpdateCustomerProductLineAccessRequest) returns (UpdateCustomerProductLineAccessResponse);
+
+  // Removes all product line access for a customer.
+  rpc DeleteCustomerProductLineAccess(DeleteCustomerProductLineAccessRequest) returns (google.protobuf.Empty);
+
+  // Returns a paginated list of account users for the target account.
+  rpc ListAccountUsers(ListAccountUsersRequest) returns (ListAccountUsersResponse);
+
+  // Returns a single account user by user ID within the target account.
+  rpc GetAccountUser(GetAccountUserRequest) returns (GetAccountUserResponse);
+
+  // Creates a new account user.
+  rpc CreateAccountUser(CreateAccountUserRequest) returns (CreateAccountUserResponse);
+
+  // Partially updates an account user.
+  rpc UpdateAccountUser(UpdateAccountUserRequest) returns (UpdateAccountUserResponse);
+
+  // Soft-deletes an account user.
+  rpc DeleteAccountUser(DeleteAccountUserRequest) returns (google.protobuf.Empty);
+
+  // Disables an account user and revokes their refresh tokens.
+  rpc LockAccountUser(LockAccountUserRequest) returns (google.protobuf.Empty);
+
+  // Re-enables a disabled account user.
+  rpc UnlockAccountUser(UnlockAccountUserRequest) returns (google.protobuf.Empty);
+
+  // Restores a soft-deleted account user.
+  rpc RestoreAccountUser(RestoreAccountUserRequest) returns (google.protobuf.Empty);
+
+  // Updates the password for an account user.
+  rpc UpdateAccountUserPassword(UpdateAccountUserPasswordRequest) returns (google.protobuf.Empty);
+
+  // Updates notification preferences for an account user.
+  rpc UpdateNotificationPreferences(UpdateNotificationPreferencesRequest) returns (UpdateNotificationPreferencesResponse);
+
+  // Returns a paginated list of sales targets for an account user.
+  rpc ListSalesTargets(ListSalesTargetsRequest) returns (ListSalesTargetsResponse);
+
+  // Creates a new sales target for an account user.
+  rpc CreateSalesTarget(CreateSalesTargetRequest) returns (CreateSalesTargetResponse);
+
+  // Creates or updates a sales target by ID.
+  rpc UpsertSalesTarget(UpsertSalesTargetRequest) returns (UpsertSalesTargetResponse);
+
+  // Returns a paginated list of account prices with search and filtering support.
+  rpc ListAccountPrices(ListAccountPricesRequest) returns (ListAccountPricesResponse);
+
+  // Returns a single account price by ID.
+  rpc GetAccountPrice(GetAccountPriceRequest) returns (GetAccountPriceResponse);
+
+  // Creates a new account price with rate, category, and attribute associations.
+  rpc CreateAccountPrice(CreateAccountPriceRequest) returns (CreateAccountPriceResponse);
+
+  // Partially updates an account price; categories/attributes are replaced entirely if provided.
+  rpc UpdateAccountPrice(UpdateAccountPriceRequest) returns (UpdateAccountPriceResponse);
+
+  // Deletes an account price and its associated rate, categories, and attributes.
+  rpc DeleteAccountPrice(DeleteAccountPriceRequest) returns (google.protobuf.Empty);
+
+  // Returns a paginated list of account integrations (credentials excluded).
+  rpc ListAccountIntegrations(ListAccountIntegrationsRequest) returns (ListAccountIntegrationsResponse);
+
+  // Creates or upserts an integration; updates existing if same code exists.
+  rpc CreateAccountIntegration(CreateAccountIntegrationRequest) returns (CreateAccountIntegrationResponse);
+
+  // Updates name and/or is_active on an integration; credentials cannot be changed.
+  rpc UpdateAccountIntegration(UpdateAccountIntegrationRequest) returns (UpdateAccountIntegrationResponse);
+
+  // Deletes an account integration and returns the deleted resource.
+  rpc DeleteAccountIntegration(DeleteAccountIntegrationRequest) returns (DeleteAccountIntegrationResponse);
+
+  // Returns the Stripe publishable key for the caller's account.
+  rpc GetStripePublishableKey(GetStripePublishableKeyRequest) returns (GetStripePublishableKeyResponse);
+
+  // Returns whether the caller's account has a Stripe integration configured.
+  rpc GetStripeStatus(GetStripeStatusRequest) returns (GetStripeStatusResponse);
+
+  // Returns a paginated list of adjustment types.
+  rpc ListAdjustmentTypes(ListAdjustmentTypesRequest) returns (ListAdjustmentTypesResponse);
+
+  // Returns full account details including branding and portal sub-resources.
+  rpc GetAccount(GetAccountRequest) returns (GetAccountResponse);
+
+  // Returns a public account by its portal slug (unauthenticated).
+  rpc GetAccountBySlug(GetAccountBySlugRequest) returns (GetAccountBySlugResponse);
+
+  // Partially updates an account's name, branding, and portal fields.
+  rpc UpdateAccount(UpdateAccountRequest) returns (UpdateAccountResponse);
+
+  // Uploads a logo image for an account to S3.
+  rpc UploadAccountPhoto(UploadAccountPhotoRequest) returns (UploadAccountPhotoResponse);
+
+  // Returns a presigned S3 URL for the account's logo.
+  rpc GetAccountLogoURL(GetAccountLogoURLRequest) returns (GetAccountLogoURLResponse);
+
+  // Returns a paginated list of properties for the caller's account.
+  rpc ListProperties(ListPropertiesRequest) returns (ListPropertiesResponse);
+
+  // Returns a single property by ID.
+  rpc GetProperty(GetPropertyRequest) returns (GetPropertyResponse);
+
+  // Creates a new property.
+  rpc CreateProperty(CreatePropertyRequest) returns (CreatePropertyResponse);
+
+  // Partially updates a property.
+  rpc UpdateProperty(UpdatePropertyRequest) returns (UpdatePropertyResponse);
+
+  // Deletes a property and cascades to its attributes.
+  rpc DeleteProperty(DeletePropertyRequest) returns (google.protobuf.Empty);
+
+  // Returns a paginated list of attributes for a property.
+  rpc ListAttributes(ListAttributesRequest) returns (ListAttributesResponse);
+
+  // Returns a single attribute by ID.
+  rpc GetAttribute(GetAttributeRequest) returns (GetAttributeResponse);
+
+  // Creates a new attribute under a property.
+  rpc CreateAttribute(CreateAttributeRequest) returns (CreateAttributeResponse);
+
+  // Partially updates an attribute.
+  rpc UpdateAttribute(UpdateAttributeRequest) returns (UpdateAttributeResponse);
+
+  // Deletes an attribute.
+  rpc DeleteAttribute(DeleteAttributeRequest) returns (google.protobuf.Empty);
+
+  // Returns a paginated list of carriers visible to the caller's account.
+  rpc ListCarriers(ListCarriersRequest) returns (ListCarriersResponse);
+
+  // Returns a single carrier by ID.
+  rpc GetCarrier(GetCarrierRequest) returns (GetCarrierResponse);
+
+  // Creates a new carrier, optionally registering with Shippo.
+  rpc CreateCarrier(CreateCarrierRequest) returns (CreateCarrierResponse);
+
+  // Partially updates a carrier.
+  rpc UpdateCarrier(UpdateCarrierRequest) returns (UpdateCarrierResponse);
+
+  // Soft-deletes a carrier and cascades to options.
+  rpc DeleteCarrier(DeleteCarrierRequest) returns (google.protobuf.Empty);
+
+  // Starts the OAuth flow for a Shippo-managed carrier.
+  rpc InitiateCarrierOAuth(InitiateCarrierOAuthRequest) returns (InitiateCarrierOAuthResponse);
+
+  // Returns the OAuth connection status for a carrier.
+  rpc GetCarrierOAuthStatus(GetCarrierOAuthStatusRequest) returns (GetCarrierOAuthStatusResponse);
+
+  // Syncs service levels from Shippo service levels.
+  rpc SyncServiceLevels(SyncServiceLevelsRequest) returns (SyncServiceLevelsResponse);
+
+  // Returns a paginated list of service levels for a carrier.
+  rpc ListServiceLevels(ListServiceLevelsRequest) returns (ListServiceLevelsResponse);
+
+  // Returns a single service level by ID.
+  rpc GetServiceLevel(GetServiceLevelRequest) returns (GetServiceLevelResponse);
+
+  // Creates a new service level.
+  rpc CreateServiceLevel(CreateServiceLevelRequest) returns (CreateServiceLevelResponse);
+
+  // Partially updates a service level.
+  rpc UpdateServiceLevel(UpdateServiceLevelRequest) returns (UpdateServiceLevelResponse);
+
+  // Deletes a service level.
+  rpc DeleteServiceLevel(DeleteServiceLevelRequest) returns (google.protobuf.Empty);
+
+  // Returns a paginated list of items with filtering by type, category, attribute, supplier, date, and search.
+  rpc ListItems(ListItemsRequest) returns (ListItemsResponse);
+
+  // Returns a single item by ID.
+  rpc GetItem(GetItemRequest) returns (GetItemResponse);
+
+  // Returns inventory quantities (on-hand, reserved, ATP, short) for an item.
+  rpc GetItemInventory(GetItemInventoryRequest) returns (GetItemInventoryResponse);
+
+  // Returns production cost breakdown for an item.
+  rpc GetItemCosts(GetItemCostsRequest) returns (GetItemCostsResponse);
+
+  // Returns historical trend data for an item.
+  rpc GetItemTrends(GetItemTrendsRequest) returns (GetItemTrendsResponse);
+
+  // Returns all items with on-hand inventory for export.
+  rpc ExportItems(ExportItemsRequest) returns (ExportItemsResponse);
+  // Partially updates an item (sku, description, notes).
+  rpc UpdateItem(UpdateItemRequest) returns (UpdateItemResponse);
+  // Adds an attribute to an item.
+  rpc AddItemAttribute(AddItemAttributeRequest) returns (AddItemAttributeResponse);
+  // Removes an attribute from an item.
+  rpc RemoveItemAttribute(RemoveItemAttributeRequest) returns (RemoveItemAttributeResponse);
+  // Changes an item's category and updates rate units accordingly.
+  rpc ChangeItemCategory(ChangeItemCategoryRequest) returns (ChangeItemCategoryResponse);
+  // Adjusts or reconciles inventory for an item.
+  rpc UpdateItemInventory(UpdateItemInventoryRequest) returns (UpdateItemInventoryResponse);
+  // Creates multiple items in a single operation.
+  rpc BulkCreateItems(BulkCreateItemsRequest) returns (BulkCreateItemsResponse);
+  // Reconciles inventory for multiple items by SKU.
+  rpc BulkReconcileItems(BulkReconcileItemsRequest) returns (BulkReconcileItemsResponse);
+
+  // Returns all items with their on-hand inventory quantities.
+  rpc ListInventories(ListInventoriesRequest) returns (ListInventoriesResponse);
+  // Returns weeks-of-sales metrics by product line.
+  rpc AnalyzeWeeksOfSales(AnalyzeWeeksOfSalesRequest) returns (AnalyzeWeeksOfSalesResponse);
+
+  // Returns child accounts for the target (parent) account.
+  rpc ListChildAccounts(ListChildAccountsRequest) returns (ListChildAccountsResponse);
+  // Adds a child account to the target (parent) account.
+  rpc AddChildAccount(AddChildAccountRequest) returns (AddChildAccountResponse);
+  // Removes a child account from the target (parent) account.
+  rpc RemoveChildAccount(RemoveChildAccountRequest) returns (google.protobuf.Empty);
+
+  // Returns the production flow graph for a batch.
+  rpc GetBatchFlow(GetBatchFlowRequest) returns (GetBatchFlowResponse);
+  // Returns batches for a scanning station.
+  rpc ListBatchesByScanningStation(ListBatchesByScanningStationRequest) returns (ListBatchesByScanningStationResponse);
+  // Returns possible next production steps for a batch at a scanning station.
+  rpc GetBatchPossibleNextSteps(GetBatchPossibleNextStepsRequest) returns (GetBatchPossibleNextStepsResponse);
+  // Returns aggregated open batch summaries for analytics.
+  rpc AnalyzeOpenBatches(AnalyzeOpenBatchesRequest) returns (AnalyzeOpenBatchesResponse);
+  // Initializes a batch at a scanning station.
+  rpc InitializeBatch(InitializeBatchRequest) returns (InitializeBatchResponse);
+  // Moves one or more batches to a new production step.
+  rpc MoveBatches(MoveBatchesRequest) returns (MoveBatchesResponse);
+  // Merges multiple batches into a single batch.
+  rpc MergeBatches(MergeBatchesRequest) returns (MergeBatchesResponse);
+  // Splits a batch into firsts, seconds, and waste.
+  rpc SplitBatch(SplitBatchRequest) returns (SplitBatchResponse);
+  // Returns the remaining quantity available to split from a batch flow.
+  rpc GetRemainingQuantityToSplit(GetRemainingQuantityToSplitRequest) returns (GetRemainingQuantityToSplitResponse);
+  // Returns consumption demand for a scanning station.
+  rpc GetScanningStationConsumption(GetScanningStationConsumptionRequest) returns (GetScanningStationConsumptionResponse);
+  // Closes a batch.
+  rpc CloseBatch(CloseBatchRequest) returns (CloseBatchResponse);
+  // Deletes a single batch.
+  rpc DeleteBatch(DeleteBatchRequest) returns (DeleteBatchResponse);
+  // Deletes multiple batches.
+  rpc DeleteManyBatches(DeleteManyBatchesRequest) returns (google.protobuf.Empty);
+
+  rpc ListItemCategories(ListItemCategoriesRequest) returns (ListItemCategoriesResponse);
+  rpc GetItemCategory(GetItemCategoryRequest) returns (GetItemCategoryResponse);
+  rpc CreateItemCategory(CreateItemCategoryRequest) returns (CreateItemCategoryResponse);
+  rpc UpdateItemCategory(UpdateItemCategoryRequest) returns (UpdateItemCategoryResponse);
+  rpc DeleteItemCategory(DeleteItemCategoryRequest) returns (google.protobuf.Empty);
+  rpc AddItemCategoryProperty(AddItemCategoryPropertyRequest) returns (google.protobuf.Empty);
+  rpc RemoveItemCategoryProperty(RemoveItemCategoryPropertyRequest) returns (google.protobuf.Empty);
+  // Changes the unit group of an item category and updates related rate units.
+  rpc ChangeItemCategoryUnitGroup(ChangeItemCategoryUnitGroupRequest) returns (google.protobuf.Empty);
+
+  // Returns products with full item data.
+  rpc ListProductsFull(ListProductsFullRequest) returns (ListProductsFullResponse);
+  rpc GetProduct(GetProductRequest) returns (GetProductResponse);
+  rpc CreateProduct(CreateProductRequest) returns (CreateProductResponse);
+  rpc UpdateProduct(UpdateProductRequest) returns (UpdateProductResponse);
+  // Soft-deletes a product.
+  rpc DeleteProduct(DeleteProductRequest) returns (DeleteProductResponse);
+  rpc ChangeProductProductLine(ChangeProductProductLineRequest) returns (ChangeProductProductLineResponse);
+  // Validates SKUs and returns matching products.
+  rpc ValidateProducts(ValidateProductsRequest) returns (ValidateProductsResponse);
+
+  rpc ListProductLines(ListProductLinesRequest) returns (ListProductLinesResponse);
+  rpc GetProductLine(GetProductLineRequest) returns (GetProductLineResponse);
+  rpc CreateProductLine(CreateProductLineRequest) returns (CreateProductLineResponse);
+  rpc UpdateProductLine(UpdateProductLineRequest) returns (UpdateProductLineResponse);
+  rpc DeleteProductLine(DeleteProductLineRequest) returns (google.protobuf.Empty);
+
+  rpc GetConsumption(GetConsumptionRequest) returns (GetConsumptionResponse);
+  rpc CreateConsumption(CreateConsumptionRequest) returns (CreateConsumptionResponse);
+  rpc UpdateConsumption(UpdateConsumptionRequest) returns (UpdateConsumptionResponse);
+  rpc DeleteConsumption(DeleteConsumptionRequest) returns (DeleteConsumptionResponse);
+
+  // Returns the production flow graph for a given item.
+  rpc GetProductionFlow(GetProductionFlowRequest) returns (GetProductionFlowResponse);
+  // Links two production steps in the flow DAG.
+  rpc ConnectProductionSteps(ConnectProductionStepsRequest) returns (google.protobuf.Empty);
+
+  rpc ListCustomers(ListCustomersRequest) returns (ListCustomersResponse);
+  rpc GetCustomer(GetCustomerRequest) returns (GetCustomerResponse);
+  rpc CreateCustomer(CreateCustomerRequest) returns (CreateCustomerResponse);
+  // Deletes a customer and its associated relations.
+  rpc DeleteCustomer(DeleteCustomerRequest) returns (google.protobuf.Empty);
+  rpc BulkDeleteCustomers(BulkDeleteCustomersRequest) returns (google.protobuf.Empty);
+  // Returns the most frequently ordered products for a customer.
+  rpc GetFrequentlyOrderedProducts(GetFrequentlyOrderedProductsRequest) returns (GetFrequentlyOrderedProductsResponse);
+  rpc UpdateCustomer(UpdateCustomerRequest) returns (UpdateCustomerResponse);
+  // Merges source customers into a target customer.
+  rpc MergeCustomers(MergeCustomersRequest) returns (MergeCustomersResponse);
+
+  // --- Analytics RPCs ---
+
+  rpc AnalyzeSales(AnalyzeSalesRequest) returns (AnalyzeSalesResponse);
+  rpc AnalyzeProductionCosts(AnalyzeProductionCostsRequest) returns (AnalyzeProductionCostsResponse);
+  rpc AnalyzeDeliveries(AnalyzeDeliveriesRequest) returns (AnalyzeDeliveriesResponse);
+  rpc AnalyzeManufacturing(AnalyzeManufacturingRequest) returns (AnalyzeManufacturingResponse);
+  // Returns all manufacturing metrics for two date ranges.
+  rpc AnalyzeManufacturingBatch(AnalyzeManufacturingBatchRequest) returns (AnalyzeManufacturingBatchResponse);
+  rpc AnalyzeOrders(AnalyzeOrdersRequest) returns (AnalyzeOrdersResponse);
+  rpc AnalyzeQuarterlyOrders(AnalyzeQuarterlyOrdersRequest) returns (AnalyzeQuarterlyOrdersResponse);
+  rpc AnalyzeMaterials(AnalyzeMaterialsRequest) returns (AnalyzeMaterialsResponse);
+  rpc AnalyzeInventoryReceipts(AnalyzeInventoryReceiptsRequest) returns (AnalyzeInventoryReceiptsResponse);
+  rpc AnalyzeNewCustomers(AnalyzeNewCustomersRequest) returns (AnalyzeNewCustomersResponse);
+  rpc AnalyzeDemandForecast(AnalyzeDemandForecastRequest) returns (AnalyzeDemandForecastResponse);
+  // Returns OEE analytics by department.
+  rpc AnalyzeOee(AnalyzeOeeRequest) returns (AnalyzeOeeResponse);
+
+  rpc ListDeliveries(ListDeliveriesRequest) returns (ListDeliveriesResponse);
+  rpc GetDelivery(GetDeliveryRequest) returns (GetDeliveryResponse);
+
+  rpc ListDepartments(ListDepartmentsRequest) returns (ListDepartmentsResponse);
+  rpc GetDepartment(GetDepartmentRequest) returns (GetDepartmentResponse);
+  rpc CreateDepartment(CreateDepartmentRequest) returns (CreateDepartmentResponse);
+  rpc UpdateDepartment(UpdateDepartmentRequest) returns (UpdateDepartmentResponse);
+  rpc DeleteDepartment(DeleteDepartmentRequest) returns (google.protobuf.Empty);
+
+  rpc ListEmailLogs(ListEmailLogsRequest) returns (ListEmailLogsResponse);
+  rpc GetEmailLog(GetEmailLogRequest) returns (GetEmailLogResponse);
+
+  // Supports filtering by item, action type, user, and date range.
+  rpc ListInventoryChangeLogs(ListInventoryChangeLogsRequest) returns (ListInventoryChangeLogsResponse);
+  rpc GetInventoryChangeLog(GetInventoryChangeLogRequest) returns (GetInventoryChangeLogResponse);
+  // Returns all matching inventory change logs without pagination (for export).
+  rpc ExportInventoryChangeLogs(ExportInventoryChangeLogsRequest) returns (ExportInventoryChangeLogsResponse);
+
+  rpc ListInvoices(ListInvoicesRequest) returns (ListInvoicesResponse);
+  rpc GetInvoice(GetInvoiceRequest) returns (GetInvoiceResponse);
+  rpc UpdateInvoice(UpdateInvoiceRequest) returns (UpdateInvoiceResponse);
+  rpc ListCustomerInvoices(ListCustomerInvoicesRequest) returns (ListCustomerInvoicesResponse);
+
+  // Materials
+  rpc ListMaterials(ListMaterialsRequest) returns (ListMaterialsResponse);
+  rpc GetMaterial(GetMaterialRequest) returns (GetMaterialResponse);
+  rpc CreateMaterial(CreateMaterialRequest) returns (CreateMaterialResponse);
+  rpc UpdateMaterial(UpdateMaterialRequest) returns (UpdateMaterialResponse);
+  rpc DeleteMaterial(DeleteMaterialRequest) returns (DeleteMaterialResponse);
+
+  // Supplier Materials
+  rpc ListSupplierMaterials(ListSupplierMaterialsRequest) returns (ListSupplierMaterialsResponse);
+  rpc GetSupplierMaterial(GetSupplierMaterialRequest) returns (GetSupplierMaterialResponse);
+  rpc CreateSupplierMaterial(CreateSupplierMaterialRequest) returns (CreateSupplierMaterialResponse);
+  rpc UpdateSupplierMaterial(UpdateSupplierMaterialRequest) returns (UpdateSupplierMaterialResponse);
+  rpc DeleteSupplierMaterial(DeleteSupplierMaterialRequest) returns (DeleteSupplierMaterialResponse);
+
+  // Parts
+  rpc CreatePart(CreatePartRequest) returns (CreatePartResponse);
+  rpc GetPart(GetPartRequest) returns (GetPartResponse);
+  rpc ListParts(ListPartsRequest) returns (ListPartsResponse);
+  rpc UpdatePart(UpdatePartRequest) returns (UpdatePartResponse);
+  rpc DeletePart(DeletePartRequest) returns (DeletePartResponse);
+
+  // Permission Groups
+  rpc ListPermissionGroups(ListPermissionGroupsRequest) returns (ListPermissionGroupsResponse);
+
+  // Priorities are global lookup values (not account-scoped).
+  rpc ListPriorities(ListPrioritiesRequest) returns (ListPrioritiesResponse);
+  rpc GetPriority(GetPriorityRequest) returns (GetPriorityResponse);
+
+  // Product Types (global, not account-scoped)
+
+  rpc ListProductTypes(ListProductTypesRequest) returns (ListProductTypesResponse);
+  rpc GetProductType(GetProductTypeRequest) returns (GetProductTypeResponse);
+  rpc CreateProductType(CreateProductTypeRequest) returns (CreateProductTypeResponse);
+  rpc UpdateProductType(UpdateProductTypeRequest) returns (UpdateProductTypeResponse);
+  rpc DeleteProductType(DeleteProductTypeRequest) returns (google.protobuf.Empty);
+
+  // Quantities
+
+  rpc UpdateQuantity(UpdateQuantityRequest) returns (UpdateQuantityResponse);
+
+  // Rates
+
+  rpc UpdateRate(UpdateRateRequest) returns (UpdateRateResponse);
+
+  // Receivables
+
+  // Returns unpaid invoices (receivables) for the caller's account.
+  rpc ListReceivables(ListReceivablesRequest) returns (ListReceivablesResponse);
+  // Returns unpaid invoices for a specific customer.
+  rpc ListReceivablesByCustomer(ListReceivablesByCustomerRequest) returns (ListReceivablesByCustomerResponse);
+  // Returns all unpaid invoices for a customer (no pagination, for CSV export).
+  rpc ExportReceivablesByCustomer(ExportReceivablesByCustomerRequest) returns (ExportReceivablesByCustomerResponse);
+  // Generates a statement of account Excel file and emails it to recipients.
+  rpc EmailReceivablesForCustomer(EmailReceivablesForCustomerRequest) returns (EmailReceivablesForCustomerResponse);
+
+  rpc ListUnitGroups(ListUnitGroupsRequest) returns (ListUnitGroupsResponse);
+  rpc GetUnitGroup(GetUnitGroupRequest) returns (GetUnitGroupResponse);
+  rpc CreateUnitGroup(CreateUnitGroupRequest) returns (CreateUnitGroupResponse);
+  // Type is immutable after creation.
+  rpc UpdateUnitGroup(UpdateUnitGroupRequest) returns (UpdateUnitGroupResponse);
+  // Cascades to unit_group_unit records.
+  rpc DeleteUnitGroup(DeleteUnitGroupRequest) returns (google.protobuf.Empty);
+  // Creates or updates a unit conversion within a unit group.
+  rpc UpsertUnitGroupUnit(UpsertUnitGroupUnitRequest) returns (UpsertUnitGroupUnitResponse);
+  rpc DeleteUnitGroupUnit(DeleteUnitGroupUnitRequest) returns (google.protobuf.Empty);
+  rpc ListUnitGroupUnits(ListUnitGroupUnitsRequest) returns (ListUnitGroupUnitsResponse);
+  rpc GetUnitGroupUnit(GetUnitGroupUnitRequest) returns (GetUnitGroupUnitResponse);
+  // Validates unit abbreviations and returns matching units.
+  rpc ValidateUnits(ValidateUnitsRequest) returns (ValidateUnitsResponse);
+
+  rpc ListTransactions(ListTransactionsRequest) returns (ListTransactionsResponse);
+  rpc GetTransaction(GetTransactionRequest) returns (GetTransactionResponse);
+  rpc CreateTransaction(CreateTransactionRequest) returns (CreateTransactionResponse);
+  rpc UpdateTransaction(UpdateTransactionRequest) returns (UpdateTransactionResponse);
+  // Deletes a transaction and its allocations.
+  rpc DeleteTransaction(DeleteTransactionRequest) returns (DeleteTransactionResponse);
+  // Returns transactions scoped to a customer account.
+  rpc ListAccountTransactions(ListAccountTransactionsRequest) returns (ListAccountTransactionsResponse);
+
+  // Settlements
+  rpc ListSettlements(ListSettlementsRequest) returns (ListSettlementsResponse);
+  rpc GetSettlement(GetSettlementRequest) returns (GetSettlementResponse);
+  rpc CreateSettlement(CreateSettlementRequest) returns (CreateSettlementResponse);
+  rpc UpdateSettlement(UpdateSettlementRequest) returns (UpdateSettlementResponse);
+  rpc DeleteSettlement(DeleteSettlementRequest) returns (DeleteSettlementResponse);
+
+  // Transaction Allocations
+  rpc ListAllocationEntries(ListAllocationEntriesRequest) returns (ListAllocationEntriesResponse);
+  rpc UpdateTransactionAllocation(UpdateTransactionAllocationRequest) returns (UpdateTransactionAllocationResponse);
+  rpc DeleteTransactionAllocation(DeleteTransactionAllocationRequest) returns (DeleteTransactionAllocationResponse);
+  rpc ListOpenCredits(ListOpenCreditsRequest) returns (ListOpenCreditsResponse);
+
+  // Users
+
+  rpc GetUser(GetUserRequest) returns (GetUserResponse);
+  rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse);
+  // Uploads a profile photo to S3.
+  rpc UploadUserPhoto(UploadUserPhotoRequest) returns (UploadUserPhotoResponse);
+  // Returns a presigned S3 URL for the user's profile photo.
+  rpc GetUserPhotoURL(GetUserPhotoURLRequest) returns (GetUserPhotoURLResponse);
+
+  // Utils
+
+  // Checks whether a record number already exists (invoice, order, or customer PO).
+  rpc CheckDuplicate(CheckDuplicateRequest) returns (CheckDuplicateResponse);
+  // Emails a record (invoice, sales order, or purchase order) with PDF attachment.
+  rpc EmailRecord(EmailRecordRequest) returns (EmailRecordResponse);
+  rpc RequestDemo(RequestDemoRequest) returns (RequestDemoResponse);
+  rpc SubmitFeedback(SubmitFeedbackRequest) returns (SubmitFeedbackResponse);
+
+  // Catalog (supports customer actor access)
+
+  // Customers only see product lines they have access to.
+  rpc ListCatalogProductLines(ListCatalogProductLinesRequest) returns (ListCatalogProductLinesResponse);
+  // Returns products in a product line, grouped by item category.
+  rpc ListCatalogProducts(ListCatalogProductsRequest) returns (ListCatalogProductsResponse);
+
+  // EDI (internal actor only)
+
+  // Fetches orders from FTP and processes invoices via Stedi.
+  rpc PullEDIOrders(PullEDIOrdersRequest) returns (PullEDIOrdersResponse);
+  // Resubmits an invoice via EDI.
+  rpc ResubmitEDIInvoice(ResubmitEDIInvoiceRequest) returns (ResubmitEDIInvoiceResponse);
+
+  // DC Locations
+
+  rpc ListDCLocations(ListDCLocationsRequest) returns (ListDCLocationsResponse);
+  rpc GetDCLocation(GetDCLocationRequest) returns (GetDCLocationResponse);
+  rpc CreateDCLocation(CreateDCLocationRequest) returns (CreateDCLocationResponse);
+  rpc UpdateDCLocation(UpdateDCLocationRequest) returns (UpdateDCLocationResponse);
+  rpc DeleteDCLocation(DeleteDCLocationRequest) returns (google.protobuf.Empty);
+
+  // EDI Runs
+
+  rpc ListEDIRuns(ListEDIRunsRequest) returns (ListEDIRunsResponse);
+  rpc GetEDIRun(GetEDIRunRequest) returns (GetEDIRunResponse);
+
+  // Roles
+
+  rpc ListRoles(ListRolesRequest) returns (ListRolesResponse);
+  rpc GetRole(GetRoleRequest) returns (GetRoleResponse);
+  rpc CreateRole(CreateRoleRequest) returns (CreateRoleResponse);
+  rpc UpdateRole(UpdateRoleRequest) returns (UpdateRoleResponse);
+  rpc DeleteRole(DeleteRoleRequest) returns (google.protobuf.Empty);
+
+  // Registration Flows
+
+  rpc ListRegistrationFlows(ListRegistrationFlowsRequest) returns (ListRegistrationFlowsResponse);
+  rpc GetRegistrationFlow(GetRegistrationFlowRequest) returns (GetRegistrationFlowResponse);
+  rpc CreateRegistrationFlow(CreateRegistrationFlowRequest) returns (CreateRegistrationFlowResponse);
+  rpc UpdateRegistrationFlow(UpdateRegistrationFlowRequest) returns (UpdateRegistrationFlowResponse);
+  rpc DeleteRegistrationFlow(DeleteRegistrationFlowRequest) returns (google.protobuf.Empty);
+  rpc GetRegistrationFlowBySlug(GetRegistrationFlowBySlugRequest) returns (GetRegistrationFlowBySlugResponse);
+  // Registers a new customer via a registration flow.
+  rpc RegisterCustomer(RegisterCustomerRequest) returns (RegisterCustomerResponse);
+
+  // Scanning Stations
+
+  rpc ListScanningStations(ListScanningStationsRequest) returns (ListScanningStationsResponse);
+  rpc GetScanningStation(GetScanningStationRequest) returns (GetScanningStationResponse);
+  rpc CreateScanningStation(CreateScanningStationRequest) returns (CreateScanningStationResponse);
+  rpc UpdateScanningStation(UpdateScanningStationRequest) returns (UpdateScanningStationResponse);
+  rpc DeleteScanningStation(DeleteScanningStationRequest) returns (google.protobuf.Empty);
+  rpc ConnectProductionStepsByScanningStation(ConnectProductionStepsByScanningStationRequest) returns (google.protobuf.Empty);
+
+  // Locations
+
+  rpc ListLocations(ListLocationsRequest) returns (ListLocationsResponse);
+  rpc GetLocation(GetLocationRequest) returns (GetLocationResponse);
+  rpc CreateLocation(CreateLocationRequest) returns (CreateLocationResponse);
+  rpc UpdateLocation(UpdateLocationRequest) returns (UpdateLocationResponse);
+  rpc DeleteLocation(DeleteLocationRequest) returns (google.protobuf.Empty);
+  rpc ListLocationTypes(ListLocationTypesRequest) returns (ListLocationTypesResponse);
+  rpc GetLocationType(GetLocationTypeRequest) returns (GetLocationTypeResponse);
+
+  // Suppliers
+
+  rpc ListSuppliers(ListSuppliersRequest) returns (ListSuppliersResponse);
+  rpc GetSupplier(GetSupplierRequest) returns (GetSupplierResponse);
+  rpc CreateSupplier(CreateSupplierRequest) returns (CreateSupplierResponse);
+  rpc UpdateSupplier(UpdateSupplierRequest) returns (UpdateSupplierResponse);
+  rpc DeleteSupplier(DeleteSupplierRequest) returns (DeleteSupplierResponse);
+  rpc BulkDeleteSuppliers(BulkDeleteSuppliersRequest) returns (google.protobuf.Empty);
+
+  // System Properties
+
+  rpc ListSysProperties(ListSysPropertiesRequest) returns (ListSysPropertiesResponse);
+  rpc GetSysProperty(GetSysPropertyRequest) returns (GetSysPropertyResponse);
+  rpc UpdateSysProperty(UpdateSysPropertyRequest) returns (UpdateSysPropertyResponse);
+  // Returns the latest value for a system property.
+  rpc GetLatestSysPropertyValue(GetLatestSysPropertyValueRequest) returns (GetLatestSysPropertyValueResponse);
+
+  // Tenancy
+
+  rpc GetTenancy(GetTenancyRequest) returns (GetTenancyResponse);
+  // Switches the active account for the current user.
+  rpc SwitchAccount(SwitchTenancyAccountRequest) returns (GetTenancyResponse);
+  rpc GetCurrentUser(GetCurrentUserRequest) returns (GetCurrentUserResponse);
+  // Returns customer accounts accessible by the current user.
+  rpc ListCustomerAccountsForUser(ListCustomerAccountsForUserRequest) returns (ListCustomerAccountsForUserResponse);
+
+  // Territories
+
+  rpc ListTerritories(ListTerritoriesRequest) returns (ListTerritoriesResponse);
+  rpc GetTerritory(GetTerritoryRequest) returns (GetTerritoryResponse);
+  rpc CreateTerritory(CreateTerritoryRequest) returns (CreateTerritoryResponse);
+  rpc UpdateTerritory(UpdateTerritoryRequest) returns (UpdateTerritoryResponse);
+  rpc DeleteTerritory(DeleteTerritoryRequest) returns (google.protobuf.Empty);
+}

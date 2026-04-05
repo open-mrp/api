@@ -1,0 +1,50 @@
+package salesorderep
+
+import (
+	"context"
+	"net/http"
+
+	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	apierror "github.com/augno/api/shared/errors"
+)
+
+// CheckoutSalesOrderRequest is the request to create a checkout session for a sales order.
+type CheckoutSalesOrderRequest struct {
+	// The ID of the sales order.
+	SalesOrderID string `path:"id" validate:"required"`
+	// The email for the checkout session.
+	Email string `json:"email" validate:"required,email"`
+	// The URL to redirect to on success.
+	SuccessURL *string `json:"success_url,omitempty"`
+	// The URL to redirect to on cancel.
+	CancelURL *string `json:"cancel_url,omitempty"`
+}
+
+// CheckoutSalesOrderResponse represents the checkout result.
+type CheckoutSalesOrderResponse struct {
+	// The checkout URL.
+	CheckoutURL string `json:"checkout_url" validate:"required"`
+}
+
+func (*CheckoutSalesOrderResponse) SchemaExample() any {
+	return map[string]any{"checkout_url": "https://checkout.stripe.com/pay/cs_test_example"}
+}
+
+type CheckoutSalesOrderEndpoint struct{}
+
+func (e *CheckoutSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*CheckoutSalesOrderRequest, *CheckoutSalesOrderResponse] {
+	return &apiendpoint.APIEndpoint[*CheckoutSalesOrderRequest, *CheckoutSalesOrderResponse]{
+		Title:             "Checkout Sales Order",
+		Description:       "Creates a checkout session for a sales order.",
+		Method:            http.MethodPost,
+		Route:             "/v1/sales/sales-orders/{id}/checkout",
+		Request:           &CheckoutSalesOrderRequest{},
+		Response:          &CheckoutSalesOrderResponse{},
+		SuccessStatusCode: http.StatusOK,
+		Public:            false,
+		Preview:           true,
+		ServiceHandler: func(svc any) func(ctx context.Context, req *CheckoutSalesOrderRequest) (*CheckoutSalesOrderResponse, *apierror.APIError) {
+			return svc.(SalesOrderSvc).CheckoutSalesOrder
+		},
+	}
+}

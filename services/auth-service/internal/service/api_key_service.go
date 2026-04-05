@@ -10,8 +10,8 @@ import (
 	"github.com/augno/api/services/auth-service/internal/infrastructure/repository"
 	"github.com/augno/api/services/auth-service/internal/infrastructure/sqlc"
 	"github.com/augno/api/services/auth-service/internal/mediator"
-	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/shared/appctx"
+	"github.com/augno/api/shared/audit"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/idempotency"
@@ -96,6 +96,11 @@ func (s *apiKeySvcImpl) withTx(ctx context.Context, fn func(context.Context, *ap
 	})
 }
 
+// GetAPIKey retrieves an API key by its type ID for the caller's target account.
+//
+// 1. Extract the identity from the context and verify API key access permissions.
+// 2. Look up the API key by type ID.
+// 3. Confirm the key belongs to the caller's target account; return not-found otherwise.
 func (s *apiKeySvcImpl) GetAPIKey(ctx context.Context, apiKeyID string, includes []string) (*apikey.APIKey, *apierror.APIError) {
 	ctx, span := apiKeySvcTracer.Start(ctx, "service.api_key.get")
 	defer span.End()
@@ -105,11 +110,11 @@ func (s *apiKeySvcImpl) GetAPIKey(ctx context.Context, apiKeyID string, includes
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
-	if apiErr := checkApiKeyAccess(identity); apiErr != nil {
+	if apiErr := identity.CheckAPIKeyAccess(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	ownerAccountID := *identity.TargetAccountID
+	ownerAccountID := identity.Target.AccountID
 
 	key, apiErr := s.repos.NewAPIKeyRepo().FindByTypeID(ctx, apiKeyID, includes)
 	if apiErr != nil {
@@ -123,6 +128,12 @@ func (s *apiKeySvcImpl) GetAPIKey(ctx context.Context, apiKeyID string, includes
 	return key, nil
 }
 
+// CreateAPIKey creates a new API key for the caller's target account.
+//
+// 1. Extract the identity from the context and verify API key access permissions.
+// 2. Upsert an idempotency key; return the cached response if already finished.
+// 3. Delegate to the API key mediator to generate and persist the key inside a transaction.
+// 4. Cache the success response and return the new key with its plaintext secret.
 func (s *apiKeySvcImpl) CreateAPIKey(ctx context.Context, input domain.CreateAPIKeyInput) (*domain.CreateAPIKeyResult, *apierror.APIError) {
 	ctx, span := apiKeySvcTracer.Start(ctx, "service.api_key.create")
 	defer span.End()
@@ -132,18 +143,18 @@ func (s *apiKeySvcImpl) CreateAPIKey(ctx context.Context, input domain.CreateAPI
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
-	if apiErr := checkApiKeyAccess(identity); apiErr != nil {
+	if apiErr := identity.CheckAPIKeyAccess(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	ownerAccountID := *identity.TargetAccountID
+	ownerAccountID := identity.Target.AccountID
 
 	meds := s.mediators()
 
 	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, &domain.RequestIdentity{
 		ActorID:         identity.Actor.ID,
 		IdentityType:    identity.Type,
-		TargetAccountID: identity.TargetAccountID,
+		TargetAccountID: &identity.Target.AccountID,
 	})
 	if apiErr != nil {
 		return nil, apiErr
@@ -179,6 +190,18 @@ func (s *apiKeySvcImpl) CreateAPIKey(ctx context.Context, input domain.CreateAPI
 				APIKey:       apiKey,
 			}
 
+			changes := audit.ComputeChanges(nil, apiKey)
+
+			if apiErr := audit.NewPublisher().Publish(txCtx, svc.repos.NewOutboxRepo(), audit.EventData{
+				ServiceName:  domain.ServiceName,
+				Action:       constants.AuditActionCreate,
+				ResourceType: constants.ObjectTypeAPIKey,
+				ResourceID:   apiKey.TypeID,
+				Changes:      changes,
+			}); apiErr != nil {
+				return apiErr
+			}
+
 			return txMeds.Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
 		})
 
@@ -193,6 +216,10 @@ func (s *apiKeySvcImpl) CreateAPIKey(ctx context.Context, input domain.CreateAPI
 	}
 }
 
+// ListAPIKeys returns a paginated list of API keys for the caller's target account.
+//
+// 1. Extract the identity from the context and verify API key access permissions.
+// 2. Delegate to the API key mediator with the owner account ID and filter parameters.
 func (s *apiKeySvcImpl) ListAPIKeys(ctx context.Context, cursor *string, limit int32, query *string, statuses []constants.APIKeyStatus, includes []string) (*domain.ListAPIKeysResult, *apierror.APIError) {
 	ctx, span := apiKeySvcTracer.Start(ctx, "service.api_key.list")
 	defer span.End()
@@ -202,11 +229,11 @@ func (s *apiKeySvcImpl) ListAPIKeys(ctx context.Context, cursor *string, limit i
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
-	if apiErr := checkApiKeyAccess(identity); apiErr != nil {
+	if apiErr := identity.CheckAPIKeyAccess(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	ownerAccountID := *identity.TargetAccountID
+	ownerAccountID := identity.Target.AccountID
 
 	meds := s.mediators()
 
@@ -226,6 +253,16 @@ func (s *apiKeySvcImpl) ListAPIKeys(ctx context.Context, cursor *string, limit i
 	return result, nil
 }
 
+// RevokeAPIKey revokes an API key by its type ID.
+//
+// 1. Extract the identity from the context and verify API key access permissions.
+// 2. Upsert an idempotency key; return the cached response if already finished.
+// 3. Revoke the API key inside a transaction via the API key mediator.
+// 4. Cache the success response.
+//
+// Behavior:
+//   - The associated doc API key record (if any) is intentionally kept so that
+//     Resolve() detects the revocation and refuses to auto-regenerate.
 func (s *apiKeySvcImpl) RevokeAPIKey(ctx context.Context, input domain.RevokeAPIKeyInput) *apierror.APIError {
 	ctx, span := apiKeySvcTracer.Start(ctx, "service.api_key.revoke")
 	defer span.End()
@@ -235,7 +272,7 @@ func (s *apiKeySvcImpl) RevokeAPIKey(ctx context.Context, input domain.RevokeAPI
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
-	if apiErr := checkApiKeyAccess(identity); apiErr != nil {
+	if apiErr := identity.CheckAPIKeyAccess(); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
 
@@ -244,7 +281,7 @@ func (s *apiKeySvcImpl) RevokeAPIKey(ctx context.Context, input domain.RevokeAPI
 	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, &domain.RequestIdentity{
 		ActorID:         identity.Actor.ID,
 		IdentityType:    identity.Type,
-		TargetAccountID: identity.TargetAccountID,
+		TargetAccountID: &identity.Target.AccountID,
 	})
 
 	if apiErr != nil {
@@ -263,10 +300,32 @@ func (s *apiKeySvcImpl) RevokeAPIKey(ctx context.Context, input domain.RevokeAPI
 		apiErr = s.withTx(ctx, func(txCtx context.Context, svc *apiKeySvcImpl) *apierror.APIError {
 			txMeds := svc.mediators()
 
+			old, apiErr := svc.repos.NewAPIKeyRepo().FindByTypeID(txCtx, input.APIKeyID, nil)
+			if apiErr != nil {
+				return apiErr
+			}
+
 			// Revoke the API key. The doc API key row is intentionally kept so that
 			// Resolve() sees the revocation and refuses to auto-regenerate.
 			if revokeErr := txMeds.APIKey.Revoke(txCtx, input.APIKeyID); revokeErr != nil {
 				return revokeErr
+			}
+
+			revoked, apiErr := svc.repos.NewAPIKeyRepo().FindByTypeID(txCtx, input.APIKeyID, nil)
+			if apiErr != nil {
+				return apiErr
+			}
+
+			changes := audit.ComputeChanges(old, revoked)
+
+			if apiErr := audit.NewPublisher().Publish(txCtx, svc.repos.NewOutboxRepo(), audit.EventData{
+				ServiceName:  domain.ServiceName,
+				Action:       constants.AuditActionUpdate,
+				ResourceType: constants.ObjectTypeAPIKey,
+				ResourceID:   old.TypeID,
+				Changes:      changes,
+			}); apiErr != nil {
+				return apiErr
 			}
 
 			return txMeds.Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, struct{}{})
@@ -283,6 +342,13 @@ func (s *apiKeySvcImpl) RevokeAPIKey(ctx context.Context, input domain.RevokeAPI
 	}
 }
 
+// RotateAPIKey revokes an existing API key and creates a replacement with a new secret.
+//
+// 1. Extract the identity from the context and verify API key access permissions.
+// 2. Upsert an idempotency key; return the cached response if already finished.
+// 3. Rotate the API key via the API key mediator inside a transaction.
+// 4. Sync the doc API key record (if one exists) with the new key.
+// 5. Cache the success response and return the new key with its plaintext secret.
 func (s *apiKeySvcImpl) RotateAPIKey(ctx context.Context, input domain.RotateAPIKeyInput) (*domain.CreateAPIKeyResult, *apierror.APIError) {
 	ctx, span := apiKeySvcTracer.Start(ctx, "service.api_key.rotate")
 	defer span.End()
@@ -292,7 +358,7 @@ func (s *apiKeySvcImpl) RotateAPIKey(ctx context.Context, input domain.RotateAPI
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
-	if apiErr := checkApiKeyAccess(identity); apiErr != nil {
+	if apiErr := identity.CheckAPIKeyAccess(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
@@ -301,7 +367,7 @@ func (s *apiKeySvcImpl) RotateAPIKey(ctx context.Context, input domain.RotateAPI
 	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, &domain.RequestIdentity{
 		ActorID:         identity.Actor.ID,
 		IdentityType:    identity.Type,
-		TargetAccountID: identity.TargetAccountID,
+		TargetAccountID: &identity.Target.AccountID,
 	})
 	if apiErr != nil {
 		return nil, apiErr
@@ -319,6 +385,11 @@ func (s *apiKeySvcImpl) RotateAPIKey(ctx context.Context, input domain.RotateAPI
 		var result *domain.CreateAPIKeyResult
 		apiErr = s.withTx(ctx, func(txCtx context.Context, svc *apiKeySvcImpl) *apierror.APIError {
 			txMeds := svc.mediators()
+
+			oldKey, apiErr := svc.repos.NewAPIKeyRepo().FindByTypeID(txCtx, input.APIKeyID, nil)
+			if apiErr != nil {
+				return apiErr
+			}
 
 			// Rotate the API key
 			secret, apiKey, rotateErr := txMeds.APIKey.Rotate(txCtx, domain.APIKeyRotateInput{
@@ -339,6 +410,37 @@ func (s *apiKeySvcImpl) RotateAPIKey(ctx context.Context, input domain.RotateAPI
 				return syncErr
 			}
 
+			// Audit the revocation of the old key
+			revokedKey, apiErr := svc.repos.NewAPIKeyRepo().FindByTypeID(txCtx, input.APIKeyID, nil)
+			if apiErr != nil {
+				return apiErr
+			}
+
+			revokeChanges := audit.ComputeChanges(oldKey, revokedKey)
+
+			if apiErr := audit.NewPublisher().Publish(txCtx, svc.repos.NewOutboxRepo(), audit.EventData{
+				ServiceName:  domain.ServiceName,
+				Action:       constants.AuditActionUpdate,
+				ResourceType: constants.ObjectTypeAPIKey,
+				ResourceID:   oldKey.TypeID,
+				Changes:      revokeChanges,
+			}); apiErr != nil {
+				return apiErr
+			}
+
+			// Audit the creation of the new key
+			createChanges := audit.ComputeChanges(nil, apiKey)
+
+			if apiErr := audit.NewPublisher().Publish(txCtx, svc.repos.NewOutboxRepo(), audit.EventData{
+				ServiceName:  domain.ServiceName,
+				Action:       constants.AuditActionCreate,
+				ResourceType: constants.ObjectTypeAPIKey,
+				ResourceID:   apiKey.TypeID,
+				Changes:      createChanges,
+			}); apiErr != nil {
+				return apiErr
+			}
+
 			result = &domain.CreateAPIKeyResult{
 				APIKeySecret: secret,
 				APIKey:       apiKey,
@@ -356,24 +458,4 @@ func (s *apiKeySvcImpl) RotateAPIKey(ctx context.Context, input domain.RotateAPI
 	default:
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Unexpected recovery point: "+idempotencyKey.RecoveryPoint.String()))
 	}
-}
-
-// checkApiKeyAccess makes sure the identity has permissions to preform CRUD operations on API keys
-func checkApiKeyAccess(identity *types.Identity) *apierror.APIError {
-	// We want to make sure we are only targeting an internal account
-	if apiErr := types.CheckIsInternalActor(identity); apiErr != nil {
-		return apiErr
-	}
-
-	// For now, we only allow admin roles to make changes to API keys or fetch them
-	if apiErr := types.CheckIsAdmin(identity); apiErr != nil {
-		return apiErr
-	}
-
-	// If we don't have a target account ID, this request should fail
-	if identity.TargetAccountID == nil {
-		return apierror.NewAuthenticationError("The Augno-Account-ID header is required.")
-	}
-
-	return nil
 }

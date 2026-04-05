@@ -47,7 +47,11 @@ func (m *idempotencyMedImpl) UpsertIdempotencyKey(ctx context.Context, identity 
 
 	idempotencyKey, hasKey := appctx.GetIdempotencyKey(ctx)
 	if !hasKey {
-		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Idempotency key required in context."))
+		if requestID, ok := appctx.GetRequestID(ctx); ok {
+			idempotencyKey = requestID
+		} else {
+			return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Idempotency key required in context."))
+		}
 	}
 
 	handler, ok := appctx.GetHandler(ctx)
@@ -62,7 +66,7 @@ func (m *idempotencyMedImpl) UpsertIdempotencyKey(ctx context.Context, identity 
 
 	var actorID *string = nil
 	var targetAccountID *string = nil
-	var identityType = string(types.IdentityTypeUnauthenticated)
+	var identityType = string(types.IdentityActorTypeUnauthenticated)
 	if identity != nil {
 		actorID = &identity.ActorID
 		identityType = string(identity.IdentityType)

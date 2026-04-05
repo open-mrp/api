@@ -37,3 +37,11 @@ sql:
             go_type:
               import: "github.com/augno/api/shared/db"
               type: "NullableRawMessage"
+          - column: "audit_event.changes"
+            go_type:
+              import: "github.com/augno/api/shared/db"
+              type: "NullableRawMessage"
+          - column: "audit_event.metadata"
+            go_type:
+              import: "github.com/augno/api/shared/db"
+              type: "NullableRawMessage"

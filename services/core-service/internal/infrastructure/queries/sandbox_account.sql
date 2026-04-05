@@ -35,6 +35,10 @@ AND (
     OR sandbox_account.created_at < sqlc.narg('cursor_created_at')
     OR (sandbox_account.created_at = sqlc.narg('cursor_created_at') AND sandbox_account.id < sqlc.narg('cursor_id'))
 )
+AND (
+    sqlc.narg('search_query') IS NULL
+    OR account.name LIKE sqlc.narg('search_query')
+)
 ORDER BY sandbox_account.created_at DESC, sandbox_account.id DESC
 LIMIT ?;
 
@@ -48,6 +52,10 @@ WHERE sandbox_account.owner_account_id = sqlc.arg('owner_account_id')
 AND (
     sandbox_account.created_at > sqlc.arg('cursor_created_at')
     OR (sandbox_account.created_at = sqlc.arg('cursor_created_at') AND sandbox_account.id > sqlc.arg('cursor_id'))
+)
+AND (
+    sqlc.narg('search_query') IS NULL
+    OR account.name LIKE sqlc.narg('search_query')
 )
 ORDER BY sandbox_account.created_at ASC, sandbox_account.id ASC
 LIMIT ?;
@@ -76,6 +84,10 @@ AND (
     OR sandbox_account.created_at < sqlc.narg('cursor_created_at')
     OR (sandbox_account.created_at = sqlc.narg('cursor_created_at') AND sandbox_account.id < sqlc.narg('cursor_id'))
 )
+AND (
+    sqlc.narg('search_query') IS NULL
+    OR account.name LIKE sqlc.narg('search_query')
+)
 ORDER BY sandbox_account.created_at DESC, sandbox_account.id DESC
 LIMIT ?;
 
@@ -92,12 +104,21 @@ AND (
     sandbox_account.created_at > sqlc.arg('cursor_created_at')
     OR (sandbox_account.created_at = sqlc.arg('cursor_created_at') AND sandbox_account.id > sqlc.arg('cursor_id'))
 )
+AND (
+    sqlc.narg('search_query') IS NULL
+    OR account.name LIKE sqlc.narg('search_query')
+)
 ORDER BY sandbox_account.created_at ASC, sandbox_account.id ASC
 LIMIT ?;
 
 -- name: CountSandboxAccounts :one
 SELECT COUNT(*) FROM sandbox_account
-WHERE sandbox_account.owner_account_id = ?;
+JOIN account ON sandbox_account.account_id = account.id
+WHERE sandbox_account.owner_account_id = sqlc.arg('owner_account_id')
+AND (
+    sqlc.narg('search_query') IS NULL
+    OR account.name LIKE sqlc.narg('search_query')
+);
 
 -- name: DeleteSandboxAccountByID :exec
 DELETE FROM sandbox_account WHERE id = ?;

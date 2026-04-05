@@ -18,7 +18,12 @@ const (
 )
 
 func (p PlanCode) IsValid() bool {
-	return p == PlanCodeFree || p == PlanCodeStarter || p == PlanCodePro || p == PlanCodeEnterprise || p == PlanCodeEnterpriseTemplate
+	switch p {
+	case PlanCodeFree, PlanCodeStarter, PlanCodePro, PlanCodeEnterprise, PlanCodeEnterpriseTemplate:
+		return true
+	default:
+		return false
+	}
 }
 
 func (p PlanCode) EnumValues() []string {
@@ -38,7 +43,12 @@ const (
 )
 
 func (p PublicPlanCode) IsValid() bool {
-	return p == PublicPlanCodeFree || p == PublicPlanCodeStarter || p == PublicPlanCodePro
+	switch p {
+	case PublicPlanCodeFree, PublicPlanCodeStarter, PublicPlanCodePro:
+		return true
+	default:
+		return false
+	}
 }
 
 func (p PublicPlanCode) EnumValues() []string {

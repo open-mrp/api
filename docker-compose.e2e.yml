@@ -1,0 +1,270 @@
+services:
+  mysql-e2e:
+    image: mysql:8
+    container_name: augno-mysql-e2e
+    environment:
+      MYSQL_ROOT_PASSWORD: "Testing123!"
+      MYSQL_DATABASE: augno
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-pTesting123!"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - e2e
+
+  postgres-e2e:
+    image: postgres:16
+    container_name: augno-postgres-e2e
+    environment:
+      POSTGRES_DB: augno_agents
+      POSTGRES_USER: augno
+      POSTGRES_HOST_AUTH_METHOD: trust
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U augno -d augno_agents"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - e2e
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: augno-rabbitmq-e2e
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - e2e
+
+  platform-service:
+    build:
+      context: .
+      dockerfile: infra/production/docker/Dockerfile
+      args:
+        SERVICE_NAME: platform-service
+    container_name: augno-platform-service-e2e
+    environment:
+      PLATFORM: test
+      PORT: "9092"
+      DB_URL: root:Testing123!@tcp(mysql-e2e:3306)/augno?parseTime=true
+      RABBITMQ_URI: amqp://guest:guest@rabbitmq:5672/
+      CURSOR_HMAC_KEY: b073b04358fbd77eaf3ce224de1ba3c7d8f91fa5bdea440dc5a37c9e1627197d
+    depends_on:
+      mysql-e2e:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "sh", "-c", "nc -z localhost 9092 || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+      start_period: 10s
+    networks:
+      - e2e
+
+  core-service:
+    build:
+      context: .
+      dockerfile: infra/production/docker/Dockerfile
+      args:
+        SERVICE_NAME: core-service
+    container_name: augno-core-service-e2e
+    environment:
+      PLATFORM: test
+      PORT: "9092"
+      DB_URL: root:Testing123!@tcp(mysql-e2e:3306)/augno?parseTime=true
+      RABBITMQ_URI: amqp://guest:guest@rabbitmq:5672/
+      CURSOR_HMAC_KEY: b073b04358fbd77eaf3ce224de1ba3c7d8f91fa5bdea440dc5a37c9e1627197d
+      INTEGRATION_ENCRYPTION_KEY: "4815cd74058e6ce82216c9b89dac44dbd171371243342f96fa7a6d8c81c1a491"
+      INTEGRATION_ENCRYPTION_KEY_ID: dev-key-1
+      FRONTEND_URL: http://localhost:4200
+    depends_on:
+      mysql-e2e:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "sh", "-c", "nc -z localhost 9092 || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+      start_period: 10s
+    networks:
+      - e2e
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: infra/production/docker/Dockerfile
+      args:
+        SERVICE_NAME: auth-service
+    container_name: augno-auth-service-e2e
+    environment:
+      PLATFORM: test
+      PORT: "9092"
+      DB_URL: root:Testing123!@tcp(mysql-e2e:3306)/augno?parseTime=true
+      RABBITMQ_URI: amqp://guest:guest@rabbitmq:5672/
+      JWT_SECRET: test-token-secret
+      PEPPER: pepper
+      CURSOR_HMAC_KEY: b073b04358fbd77eaf3ce224de1ba3c7d8f91fa5bdea440dc5a37c9e1627197d
+      DOC_API_KEY_ENCRYPTION_KEY: "4815cd74058e6ce82216c9b89dac44dbd171371243342f96fa7a6d8c81c1a491"
+      CORE_SERVICE_URL: core-service:9092
+      BILLING_SERVICE_URL: billing-service:9092
+      PLATFORM_SERVICE_URL: platform-service:9092
+      FRONTEND_URL: http://localhost:4200
+    depends_on:
+      mysql-e2e:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      core-service:
+        condition: service_healthy
+      platform-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "sh", "-c", "nc -z localhost 9092 || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+      start_period: 10s
+    networks:
+      - e2e
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: infra/production/docker/Dockerfile
+      args:
+        SERVICE_NAME: notification-service
+    container_name: augno-notification-service-e2e
+    environment:
+      PLATFORM: test
+      PORT: "9092"
+      DB_URL: root:Testing123!@tcp(mysql-e2e:3306)/augno?parseTime=true
+      RABBITMQ_URI: amqp://guest:guest@rabbitmq:5672/
+    depends_on:
+      mysql-e2e:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "sh", "-c", "nc -z localhost 9092 || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+      start_period: 10s
+    networks:
+      - e2e
+
+  billing-service:
+    build:
+      context: .
+      dockerfile: infra/production/docker/Dockerfile
+      args:
+        SERVICE_NAME: billing-service
+    container_name: augno-billing-service-e2e
+    environment:
+      PLATFORM: test
+      PORT: "9092"
+      DB_URL: root:Testing123!@tcp(mysql-e2e:3306)/augno?parseTime=true
+      RABBITMQ_URI: amqp://guest:guest@rabbitmq:5672/
+      CURSOR_HMAC_KEY: b073b04358fbd77eaf3ce224de1ba3c7d8f91fa5bdea440dc5a37c9e1627197d
+      CORE_SERVICE_URL: core-service:9092
+      NOTIFICATION_SERVICE_URL: notification-service:9092
+      FRONTEND_URL: http://localhost:4200
+    depends_on:
+      mysql-e2e:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      core-service:
+        condition: service_healthy
+      notification-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "sh", "-c", "nc -z localhost 9092 || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+      start_period: 10s
+    networks:
+      - e2e
+
+  agent-service:
+    build:
+      context: .
+      dockerfile: infra/production/docker/Dockerfile
+      args:
+        SERVICE_NAME: agent-service
+    container_name: augno-agent-service-e2e
+    environment:
+      PLATFORM: test
+      PORT: "9092"
+      DB_URL: postgres://augno@postgres-e2e:5432/augno_agents?sslmode=disable
+      RABBITMQ_URI: amqp://guest:guest@rabbitmq:5672/
+      CURSOR_HMAC_KEY: b073b04358fbd77eaf3ce224de1ba3c7d8f91fa5bdea440dc5a37c9e1627197d
+      CORE_SERVICE_URL: core-service:9092
+      BILLING_SERVICE_URL: billing-service:9092
+    depends_on:
+      postgres-e2e:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      core-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "sh", "-c", "nc -z localhost 9092 || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+      start_period: 10s
+    networks:
+      - e2e
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: infra/production/docker/Dockerfile
+      args:
+        SERVICE_NAME: api-gateway
+    container_name: augno-api-gateway-e2e
+    environment:
+      PLATFORM: test
+      PORT: "8081"
+      DB_URL: root:Testing123!@tcp(mysql-e2e:3306)/augno?parseTime=true
+      RABBITMQ_URI: amqp://guest:guest@rabbitmq:5672/
+      AUTH_SERVICE_URL: auth-service:9092
+      CORE_SERVICE_URL: core-service:9092
+      BILLING_SERVICE_URL: billing-service:9092
+      PLATFORM_SERVICE_URL: platform-service:9092
+      AGENT_SERVICE_URL: agent-service:9092
+      FRONTEND_URL: http://localhost:4200
+    ports:
+      - "8082:8081"
+    depends_on:
+      auth-service:
+        condition: service_healthy
+      core-service:
+        condition: service_healthy
+      billing-service:
+        condition: service_healthy
+      platform-service:
+        condition: service_healthy
+      agent-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "sh", "-c", "wget -q --spider http://localhost:8081/healthz || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+      start_period: 10s
+    networks:
+      - e2e
+
+networks:
+  e2e:
+    driver: bridge

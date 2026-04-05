@@ -13,6 +13,7 @@ import (
 )
 
 func TestGRPCSpanNameFormatter(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		method   string
@@ -50,6 +51,7 @@ func TestGRPCSpanNameFormatter(t *testing.T) {
 }
 
 func TestRenamingClientHandlerSetsGrpcPrefix(t *testing.T) {
+	// Not parallel: mutates global otel tracer provider.
 	origTP := otel.GetTracerProvider()
 	spanRecorder := tracetest.NewSpanRecorder()
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
@@ -68,6 +70,7 @@ func TestRenamingClientHandlerSetsGrpcPrefix(t *testing.T) {
 }
 
 func TestIsHealthCheckMethod(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		method   string
@@ -110,6 +113,7 @@ func TestIsHealthCheckMethod(t *testing.T) {
 }
 
 func TestRenamingClientHandlerSkipsHealthCheck(t *testing.T) {
+	// Not parallel: mutates global otel tracer provider.
 	origTP := otel.GetTracerProvider()
 	spanRecorder := tracetest.NewSpanRecorder()
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
@@ -128,6 +132,7 @@ func TestRenamingClientHandlerSkipsHealthCheck(t *testing.T) {
 }
 
 func TestRenamingClientHandlerStillTracesNonHealthCheckMethods(t *testing.T) {
+	// Not parallel: mutates global otel tracer provider.
 	origTP := otel.GetTracerProvider()
 	spanRecorder := tracetest.NewSpanRecorder()
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))

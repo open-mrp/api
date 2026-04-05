@@ -1,0 +1,804 @@
+syntax = "proto3";
+
+// CoreService message types (imported by core.proto).
+package core;
+
+import "google/protobuf/timestamp.proto";
+import "core/core_identity_context.proto";
+import "core/core_analytics.proto";
+import "core/core_accounts_carriers.proto";
+import "core/core_invoices.proto";
+option go_package = "shared/proto/core;core";
+
+message ListProductTypesResponse {
+  repeated ProductTypeInfo product_types = 1;
+  PageInfo page_info = 2;
+}
+message GetProductTypeRequest {
+  string identifier = 1;
+}
+message GetProductTypeResponse {
+  ProductTypeInfo product_type = 1;
+}
+message CreateProductTypeRequest {
+  string name = 1;
+  string code = 2;
+}
+message CreateProductTypeResponse {
+  ProductTypeInfo product_type = 1;
+}
+message UpdateProductTypeRequest {
+  string id = 1;
+  optional string name = 2;
+  optional string code = 3;
+}
+message UpdateProductTypeResponse {
+  ProductTypeInfo product_type = 1;
+}
+message DeleteProductTypeRequest {
+  string id = 1;
+}
+message GetProductionFlowRequest {
+  string item_id = 1;
+}
+message GetProductionFlowResponse {
+  repeated ProductionFlowStepInfo steps = 1;
+}
+message ProductionFlowStepInfo {
+  string id = 1;
+  string name = 2;
+  ProductionFlowProductionInfo production = 3;
+  repeated ProductionFlowConsumptionInfo consumptions = 4;
+  repeated string in_step_ids = 5;
+  repeated string out_step_ids = 6;
+  optional string scanning_station_id = 7;
+  string leveling_factor = 8;
+  string allowances = 9;
+  optional RateInfo labor_rate = 10;
+  optional RateInfo labor_time = 11;
+  optional RateInfo overhead_rate = 12;
+}
+message ProductionFlowProductionInfo {
+  string id = 1;
+  string item_id = 2;
+  string item_sku = 3;
+  QuantityInfo quantity = 4;
+}
+message ProductionFlowConsumptionInfo {
+  string id = 1;
+  string item_id = 2;
+  string item_sku = 3;
+  QuantityInfo quantity = 4;
+  QuantityInfo waste_quantity = 5;
+  optional string instructions = 6;
+}
+message ConnectProductionStepsRequest {
+  string source_production_step_id = 1;
+  string target_production_step_id = 2;
+}
+message UpdateQuantityRequest {
+  string id = 1;
+  optional string value = 2;
+  optional string unit_id = 3;
+  optional string object_id = 4;
+  optional string object_type = 5;
+}
+message UpdateQuantityResponse {
+  QuantityInfo quantity = 1;
+}
+message UpdateRateRequest {
+  string id = 1;
+  optional string value = 2;
+  optional string numerator_unit_id = 3;
+  optional string denominator_unit_id = 4;
+  optional string object_id = 5;
+  optional string object_type = 6;
+}
+message UpdateRateResponse {
+  RateInfo rate = 1;
+}
+message ReceivableEntryProto {
+  string invoice_id = 1;
+  string invoice_number = 2;
+  optional string po_number = 3;
+  google.protobuf.Timestamp invoiced_at = 4;
+  string customer_id = 5;
+  string customer_number = 6;
+  string customer_name = 7;
+  string remaining_balance = 8;
+  bool is_paid_in_full = 9;
+}
+message OpenCreditEntryProto {
+  string id = 1;
+  string number = 2;
+  google.protobuf.Timestamp created_at = 3;
+  string original_amount = 4;
+  string leftover_amount = 5;
+}
+message ListReceivablesRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional google.protobuf.Timestamp cutoff_date = 3;
+  optional string query = 4;
+}
+message ListReceivablesResponse {
+  repeated ReceivableEntryProto receivables = 1;
+  PageInfo page_info = 2;
+}
+message ListReceivablesByCustomerRequest {
+  string customer_account_id = 1;
+  optional string cursor = 2;
+  int32 limit = 3;
+  optional google.protobuf.Timestamp cutoff_date = 4;
+  optional string query = 5;
+}
+message ListReceivablesByCustomerResponse {
+  repeated ReceivableEntryProto receivables = 1;
+  PageInfo page_info = 2;
+}
+message ExportReceivablesByCustomerRequest {
+  string customer_account_id = 1;
+  optional google.protobuf.Timestamp cutoff_date = 2;
+}
+message ExportReceivablesByCustomerResponse {
+  repeated ReceivableEntryProto receivables = 1;
+}
+message EmailReceivablesForCustomerRequest {
+  string customer_account_id = 1;
+  repeated string recipient_emails = 2;
+}
+message EmailReceivablesForCustomerResponse {}
+message UnitGroupInfo {
+  string id = 1;
+  string name = 2;
+  optional string notes = 3;
+  string type = 4;
+  UnitInfo base_unit = 5;
+  repeated UnitGroupUnitInfo unit_conversions = 6;
+  bool is_internal = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+  // The account ID that owns this unit group. Null for system unit groups.
+  optional string account_id = 10;
+}
+message UnitGroupUnitInfo {
+  string id = 1;
+  string unit_id = 2;
+  string unit_group_id = 3;
+  string discount_percentage = 4;
+  bool is_visible = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+  string discount_fixed = 8;
+  UnitInfo unit = 9;
+}
+message ListUnitGroupsRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+  optional string type = 4;
+}
+message ListUnitGroupsResponse {
+  repeated UnitGroupInfo unit_groups = 1;
+  PageInfo page_info = 2;
+}
+message GetUnitGroupRequest {
+  string id = 1;
+}
+message GetUnitGroupResponse {
+  UnitGroupInfo unit_group = 1;
+}
+message CreateUnitGroupUnitParam {
+  string unit_id = 1;
+  string discount_percentage = 2;
+  bool is_visible = 3;
+  string discount_fixed = 4;
+}
+message CreateUnitGroupRequest {
+  string name = 1;
+  optional string notes = 2;
+  string type = 3;
+  string base_unit_id = 4;
+  repeated CreateUnitGroupUnitParam unit_conversions = 5;
+}
+message CreateUnitGroupResponse {
+  UnitGroupInfo unit_group = 1;
+}
+message UpdateUnitGroupRequest {
+  string id = 1;
+  optional string name = 2;
+  optional string notes = 3;
+  bool update_notes = 4;
+  optional string base_unit_id = 5;
+  repeated CreateUnitGroupUnitParam unit_conversions = 6;
+  bool update_unit_conversions = 7;
+}
+message UpdateUnitGroupResponse {
+  UnitGroupInfo unit_group = 1;
+}
+message DeleteUnitGroupRequest {
+  string id = 1;
+}
+message UpsertUnitGroupUnitRequest {
+  string unit_group_id = 1;
+  string unit_group_unit_id = 2;
+  string unit_id = 3;
+  string discount_percentage = 4;
+  bool is_visible = 5;
+  string discount_fixed = 6;
+}
+message UpsertUnitGroupUnitResponse {
+  UnitGroupUnitInfo unit_group_unit = 1;
+}
+message DeleteUnitGroupUnitRequest {
+  string unit_group_id = 1;
+  string unit_group_unit_id = 2;
+}
+message ListUnitGroupUnitsRequest {
+  string unit_group_id = 1;
+}
+message ListUnitGroupUnitsResponse {
+  repeated UnitGroupUnitInfo unit_group_units = 1;
+}
+message GetUnitGroupUnitRequest {
+  string unit_group_id = 1;
+  string unit_group_unit_id = 2;
+}
+message GetUnitGroupUnitResponse {
+  UnitGroupUnitInfo unit_group_unit = 1;
+}
+message ValidateUnitsRequest {
+  map<string, string> unit_map = 1;
+}
+message ValidateUnitsResponse {
+  map<string, UnitInfo> units = 1;
+}
+message TransactionInfo {
+  string id = 1;
+  string number = 2;
+  string amount_id = 3;
+  string amount_value = 4;
+  string amount_unit_id = 5;
+  string amount_unit_abbreviation = 6;
+  optional string customer_id = 7;
+  optional string customer_name = 8;
+  optional string customer_number = 9;
+  optional string responsible_user_id = 10;
+  optional string responsible_user_name = 11;
+  optional string note = 12;
+  string transaction_type_code = 13;
+  string transaction_type_name = 14;
+  string transaction_type_id = 15;
+  reserved 28; // was transaction_type_commission_relevance
+  optional string transaction_method_code = 16;
+  optional string transaction_method_name = 17;
+  optional string transaction_method_id = 18;
+  optional string adjustment_type_code = 19;
+  optional string adjustment_type_name = 20;
+  optional string adjustment_type_id = 21;
+  bool is_fully_allocated = 22;
+  optional string stripe_payment_id = 23;
+  int32 allocation_count = 24;
+  repeated TransactionAllocationInfo allocations = 25;
+  google.protobuf.Timestamp created_at = 26;
+  google.protobuf.Timestamp updated_at = 27;
+}
+message TransactionSummaryInfo {
+  string id = 1;
+  string number = 2;
+  string amount_id = 3;
+  string amount_value = 4;
+  string amount_unit_id = 5;
+  string amount_unit_abbreviation = 6;
+  optional string customer_id = 7;
+  optional string customer_name = 8;
+  optional string customer_number = 9;
+  string transaction_type_code = 10;
+  string transaction_type_name = 11;
+  string transaction_type_id = 12;
+  reserved 23; // was transaction_type_commission_relevance
+  optional string transaction_method_code = 13;
+  optional string transaction_method_name = 14;
+  optional string transaction_method_id = 15;
+  optional string adjustment_type_code = 16;
+  optional string adjustment_type_name = 17;
+  optional string adjustment_type_id = 18;
+  bool is_fully_allocated = 19;
+  int32 allocation_count = 20;
+  google.protobuf.Timestamp created_at = 21;
+  google.protobuf.Timestamp updated_at = 22;
+}
+message TransactionAllocationInfo {
+  string id = 1;
+  string amount_id = 2;
+  string amount_value = 3;
+  string amount_unit_id = 4;
+  string amount_unit_abbreviation = 5;
+  optional string note = 6;
+  string transaction_id = 7;
+  optional string invoice_id = 8;
+  optional string invoice_number = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+  optional string transaction_number = 12;
+  optional string transaction_type = 13;
+}
+message ListTransactionsRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+  optional string status = 4;
+  repeated string type_codes = 5;
+  repeated string adjustment_type_codes = 6;
+  repeated string method_codes = 7;
+  repeated string customer_ids = 8;
+  repeated string customer_group_ids = 9;
+  optional google.protobuf.Timestamp start_date = 10;
+  optional google.protobuf.Timestamp end_date = 11;
+}
+message ListTransactionsResponse {
+  repeated TransactionSummaryInfo transactions = 1;
+  PageInfo page_info = 2;
+}
+message GetTransactionRequest {
+  string id = 1;
+  repeated string includes = 2;
+}
+message GetTransactionResponse {
+  TransactionInfo transaction = 1;
+}
+message CreateTransactionRequest {
+  string customer_id = 1;
+  string transaction_type_code = 2;
+  string amount = 3;
+  optional string transaction_method_code = 4;
+  optional string adjustment_type_code = 5;
+  optional string responsible_user_id = 6;
+  optional string note = 7;
+  optional string stripe_payment_id = 8;
+}
+message CreateTransactionResponse {
+  TransactionInfo transaction = 1;
+}
+message UpdateTransactionRequest {
+  string id = 1;
+  optional string number = 2;
+  optional string note = 3;
+  optional string amount = 4;
+  optional string transaction_method_code = 5;
+  optional string adjustment_type_code = 6;
+  optional string responsible_user_id = 7;
+  bool clear_responsible_user = 8;
+  bool clear_transaction_method = 9;
+  bool clear_adjustment_type = 10;
+  optional bool is_fully_allocated = 11;
+}
+message UpdateTransactionResponse {
+  TransactionInfo transaction = 1;
+}
+message DeleteTransactionRequest {
+  string id = 1;
+}
+message DeleteTransactionResponse {
+  TransactionInfo transaction = 1;
+}
+message ListAccountTransactionsRequest {
+  string customer_account_id = 1;
+  optional string cursor = 2;
+  int32 limit = 3;
+  optional string query = 4;
+  optional string status = 5;
+  optional string type = 6;
+  bool include_child_accounts = 7;
+}
+message ListAccountTransactionsResponse {
+  repeated TransactionInfo transactions = 1;
+  PageInfo page_info = 2;
+}
+message ListSettlementsRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+  repeated string transaction_ids = 4;
+  repeated string invoice_ids = 5;
+  optional google.protobuf.Timestamp start_date = 6;
+  optional google.protobuf.Timestamp end_date = 7;
+}
+message ListSettlementsResponse {
+  repeated SettlementSummaryInfo settlements = 1;
+  PageInfo page_info = 2;
+}
+message GetSettlementRequest {
+  string id = 1;
+  repeated string includes = 2;
+}
+message GetSettlementResponse {
+  SettlementInfo settlement = 1;
+}
+message CreateSettlementRequest {
+  string responsible_user_id = 1;
+  repeated CreateSettlementAllocationParam allocations = 2;
+}
+message CreateSettlementAllocationParam {
+  string transaction_id = 1;
+  string invoice_id = 2;
+  string amount = 3;
+  optional string note = 4;
+}
+message CreateSettlementResponse {
+  SettlementInfo settlement = 1;
+}
+message UpdateSettlementRequest {
+  string id = 1;
+  optional string number = 2;
+  optional string note = 3;
+  optional string responsible_user_id = 4;
+}
+message UpdateSettlementResponse {
+  SettlementInfo settlement = 1;
+}
+message DeleteSettlementRequest {
+  string id = 1;
+}
+message DeleteSettlementResponse {
+  SettlementInfo settlement = 1;
+}
+message SettlementInfo {
+  string id = 1;
+  string number = 2;
+  optional string note = 3;
+  optional string responsible_user_id = 4;
+  optional string responsible_user_name = 5;
+  repeated TransactionAllocationInfo allocations = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+message SettlementSummaryInfo {
+  string id = 1;
+  string number = 2;
+  int32 allocation_count = 3;
+  optional string total_payments = 4;
+  optional string total_rebates = 5;
+  optional string total_adjustments = 6;
+  optional string total_credits = 7;
+  repeated string invoice_numbers = 8;
+  repeated string customer_names = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+}
+message ListAllocationEntriesRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+  optional string transaction_type = 4;
+  optional google.protobuf.Timestamp start_date = 5;
+  optional google.protobuf.Timestamp end_date = 6;
+}
+message ListAllocationEntriesResponse {
+  repeated AllocationEntryInfo entries = 1;
+  PageInfo page_info = 2;
+}
+message AllocationEntryInfo {
+  string id = 1;
+  string amount_value = 2;
+  string amount_unit_abbr = 3;
+  string customer_name = 4;
+  optional string customer_number = 5;
+  string transaction_id = 6;
+  string transaction_type = 7;
+  optional string transaction_method = 8;
+  optional string adjustment_type = 9;
+  string invoice_id = 10;
+  string invoice_number = 11;
+  optional string note = 12;
+  google.protobuf.Timestamp created_at = 13;
+}
+message UpdateTransactionAllocationRequest {
+  string id = 1;
+  optional string amount = 2;
+}
+message UpdateTransactionAllocationResponse {
+  TransactionAllocationInfo allocation = 1;
+}
+message DeleteTransactionAllocationRequest {
+  string id = 1;
+}
+message DeleteTransactionAllocationResponse {}
+message ListOpenCreditsRequest {
+  optional google.protobuf.Timestamp start_date = 1;
+  optional google.protobuf.Timestamp end_date = 2;
+  repeated string customer_ids = 3;
+  optional string query = 4;
+  optional string cursor = 5;
+  int32 limit = 6;
+}
+message ListOpenCreditsResponse {
+  repeated OpenCreditEntryInfo entries = 1;
+  PageInfo page_info = 2;
+}
+message OpenCreditEntryInfo {
+  string id = 1;
+  string number = 2;
+  string original_amount = 3;
+  string allocated_amount = 4;
+  string leftover_amount = 5;
+  string customer_name = 6;
+  optional string customer_number = 7;
+  string transaction_type = 8;
+  optional string transaction_method = 9;
+  optional string adjustment_type = 10;
+  optional string responsible_user_name = 11;
+  optional string note = 12;
+  optional string stripe_payment_id = 13;
+  repeated OpenCreditInvoiceAllocationInfo invoice_allocations = 14;
+  google.protobuf.Timestamp created_at = 15;
+}
+message OpenCreditInvoiceAllocationInfo {
+  string invoice_number = 1;
+  string amount = 2;
+}
+message UserInfo {
+  string id = 1;
+  optional string email = 2;
+  optional string name = 3;
+  optional string username = 4;
+  optional google.protobuf.Timestamp email_verified_at = 5;
+  optional string image_url = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+message GetUserRequest {
+  string id = 1;
+}
+message GetUserResponse {
+  UserInfo user = 1;
+}
+message UpdateUserRequest {
+  string id = 1;
+  optional string name = 2;
+  optional string image_url = 3;
+  optional google.protobuf.Timestamp email_verified_at = 4;
+}
+message UpdateUserResponse {
+  UserInfo user = 1;
+}
+message UploadUserPhotoRequest {
+  string id = 1;
+  bytes file = 2;
+  string content_type = 3;
+}
+message UploadUserPhotoResponse {
+  bool success = 1;
+}
+message GetUserPhotoURLRequest {
+  string id = 1;
+}
+message GetUserPhotoURLResponse {
+  optional string url = 1;
+}
+enum DuplicateCheckType {
+  DUPLICATE_CHECK_TYPE_UNSPECIFIED = 0;
+  DUPLICATE_CHECK_TYPE_INVOICE_NUMBER = 1;
+  DUPLICATE_CHECK_TYPE_ORDER_NUMBER = 2;
+  DUPLICATE_CHECK_TYPE_CUSTOMER_PO_NUMBER = 3;
+}
+message CheckDuplicateRequest {
+  DuplicateCheckType type = 1;
+  string record_number = 2;
+  optional string customer_id = 3;
+}
+message CheckDuplicateResponse {
+  bool is_duplicate = 1;
+  optional string message = 2;
+}
+enum EmailRecordType {
+  EMAIL_RECORD_TYPE_UNSPECIFIED = 0;
+  EMAIL_RECORD_TYPE_INVOICE = 1;
+  EMAIL_RECORD_TYPE_SALES_ORDER = 2;
+  EMAIL_RECORD_TYPE_PURCHASE_ORDER = 3;
+}
+message EmailRecordRequest {
+  string id = 1;
+  EmailRecordType type = 2;
+}
+message EmailRecordResponse {}
+message RequestDemoRequest {
+  string name = 1;
+  string email = 2;
+  string company = 3;
+  optional string phone_number = 4;
+  optional string message = 5;
+}
+message RequestDemoResponse {
+  string message = 1;
+}
+message SubmitFeedbackRequest {
+  string question = 1;
+  string answer = 2;
+  optional string page_url = 3;
+}
+message SubmitFeedbackResponse {
+  string message = 1;
+}
+message ListCatalogProductLinesRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+}
+message ListCatalogProductLinesResponse {
+  repeated CatalogProductLineProto product_lines = 1;
+  PageInfo page_info = 2;
+}
+message CatalogProductLineProto {
+  string id = 1;
+  string name = 2;
+}
+message ListCatalogProductsRequest {
+  string product_line_id = 1;
+  optional string cursor = 2;
+  int32 limit = 3;
+  optional string query = 4;
+}
+message ListCatalogProductsResponse {
+  repeated CatalogCategoryProto categories = 1;
+  PageInfo page_info = 2;
+}
+message CatalogCategoryProto {
+  string id = 1;
+  string name = 2;
+  repeated CatalogProductProto products = 3;
+  repeated CatalogPropertyProto properties = 4;
+}
+message CatalogProductProto {
+  string item_id = 1;
+  string sku = 2;
+  string description = 3;
+  repeated CatalogAttributeProto attributes = 4;
+}
+message CatalogPropertyProto {
+  string id = 1;
+  string name = 2;
+}
+message CatalogAttributeProto {
+  string id = 1;
+  string name = 2;
+  string property_id = 3;
+  string property_name = 4;
+}
+message PullEDIOrdersRequest {}
+message PullEDIOrdersResponse {
+  string message = 1;
+}
+message ResubmitEDIInvoiceRequest {
+  string invoice_id = 1;
+}
+message ResubmitEDIInvoiceResponse {
+  string message = 1;
+}
+message DCLocationProto {
+  string id = 1;
+  string location = 2;
+  string customer_id = 3;
+  string customer_name = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+message ListDCLocationsRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+}
+message ListDCLocationsResponse {
+  repeated DCLocationProto dc_locations = 1;
+  PageInfo page_info = 2;
+}
+message GetDCLocationRequest {
+  string id = 1;
+}
+message GetDCLocationResponse {
+  DCLocationProto dc_location = 1;
+}
+message CreateDCLocationRequest {
+  string customer_id = 1;
+  string location = 2;
+}
+message CreateDCLocationResponse {
+  DCLocationProto dc_location = 1;
+}
+message UpdateDCLocationRequest {
+  string id = 1;
+  optional string customer_id = 2;
+  optional string location = 3;
+}
+message UpdateDCLocationResponse {
+  DCLocationProto dc_location = 1;
+}
+message DeleteDCLocationRequest {
+  string id = 1;
+}
+message EDIRunProto {
+  string id = 1;
+  optional google.protobuf.Timestamp completed_at = 2;
+  bool has_succeeded = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp updated_at = 5;
+}
+message ListEDIRunsRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional bool has_succeeded = 3;
+  optional string query = 4;
+}
+message ListEDIRunsResponse {
+  repeated EDIRunProto edi_runs = 1;
+  PageInfo page_info = 2;
+}
+message GetEDIRunRequest {
+  string id = 1;
+}
+message GetEDIRunResponse {
+  EDIRunProto edi_run = 1;
+}
+message ListInventoriesRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+}
+message InventoryItemProto {
+  double on_hand_quantity = 1;
+  string on_hand_unit_id = 2;
+  string on_hand_unit_abbreviation = 3;
+  string on_hand_unit_type = 4;
+  ItemInfo item = 5;
+}
+message ListInventoriesResponse {
+  repeated InventoryItemProto items = 1;
+  int64 count = 2;
+  PageInfo page_info = 3;
+}
+message AnalyzeWeeksOfSalesRequest {
+  optional int32 period_in_weeks = 1;
+}
+message WeeksOfSalesItemProto {
+  string product_line_id = 1;
+  string product_line_name = 2;
+  string quantity_on_hand_unit_abbreviation = 3;
+  string quantity_on_hand_unit_type = 4;
+  double average_sales_quantity = 5;
+  string average_sales_quantity_unit_abbreviation = 6;
+  string average_sales_quantity_unit_type = 7;
+  double weeks_of_sales = 8;
+  double quantity_on_hand = 9;
+}
+message AnalyzeWeeksOfSalesResponse {
+  repeated WeeksOfSalesItemProto items = 1;
+  int64 count = 2;
+}
+message BulkReconcileItemInput {
+  string sku = 1;
+  string unit = 2;
+  double quantity = 3;
+}
+message BulkReconcileItemsRequest {
+  string reconcile_type = 1;
+  repeated BulkReconcileItemInput data = 2;
+}
+message ReconciledItemProto {
+  string item_id = 1;
+  string sku = 2;
+  double previous_quantity = 3;
+  double new_quantity = 4;
+}
+message SkippedItemProto {
+  string sku = 1;
+  string reason = 2;
+}
+message ReconcileErrorProto {
+  string sku = 1;
+  string error = 2;
+}
+message BulkReconcileItemsResponse {
+  repeated ReconciledItemProto reconciled_items = 1;
+  repeated SkippedItemProto skipped_items = 2;
+  repeated ReconcileErrorProto errors = 3;
+}

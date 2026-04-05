@@ -1,8 +1,8 @@
 -- name: GetLimitsByAccountID :many
 SELECT apl.`key`, apl.value
 FROM account_plan_limit apl
-JOIN account_plan ap ON ap.type_id = apl.account_plan_id
-JOIN account a ON a.account_plan_id = ap.type_id
+JOIN account_billing ab ON ab.account_plan_id = apl.account_plan_id
+JOIN account a ON a.account_billing_id = ab.id
 WHERE a.id = ?
 ORDER BY apl.`key` ASC;
 
@@ -25,19 +25,31 @@ SELECT COUNT(*) AS cnt FROM batch WHERE account_id = ?;
 SELECT COUNT(*) AS cnt FROM batch WHERE account_id = ? AND created_at >= ?;
 
 -- name: GetAccountSubscriptionInfo :one
-SELECT subscription_status, subscription_current_period_end, internal_stripe_subscription_id
-FROM account
-WHERE id = ?;
+SELECT
+    ab.subscription_status,
+    ab.subscription_current_period_end,
+    ab.internal_stripe_subscription_id,
+    ab.stripe_billing_profile_id,
+    ab.stripe_billing_cadence_id,
+    ab.stripe_pricing_plan_subscription_id,
+    ab.servicing_status,
+    ab.collection_status
+FROM account a
+JOIN account_billing ab ON a.account_billing_id = ab.id
+WHERE a.id = ?;
 
 -- name: GetStripeCustomerIDByAccountID :one
-SELECT internal_stripe_customer_id
-FROM account
-WHERE id = ?;
+SELECT ab.internal_stripe_customer_id
+FROM account a
+JOIN account_billing ab ON a.account_billing_id = ab.id
+WHERE a.id = ?;
 
 -- name: GetAccountNameAndPlanCode :one
-SELECT name, plan_code
-FROM account
-WHERE id = ?;
+SELECT a.name, ap.plan_type_code AS plan_code
+FROM account a
+JOIN account_billing ab ON a.account_billing_id = ab.id
+JOIN account_plan ap ON ab.account_plan_id = ap.type_id
+WHERE a.id = ?;
 
 -- name: GetUserEmailByID :one
 SELECT email, name AS display_name
@@ -53,4 +65,5 @@ WHERE au.account_id = ? AND r.role_type_code = 'admin'
 LIMIT 1;
 
 -- name: UpdateStripeCustomerIDByAccountID :exec
-UPDATE account SET internal_stripe_customer_id = ? WHERE id = ?;
+UPDATE account_billing SET internal_stripe_customer_id = ?
+WHERE account_billing.id = (SELECT account_billing_id FROM account WHERE account.id = sqlc.arg(account_id));

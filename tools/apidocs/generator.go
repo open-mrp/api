@@ -96,9 +96,7 @@ func generate(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOn
 
 				hasJSONFields := false
 				if reqType.Kind() == reflect.Struct {
-					for i := 0; i < reqType.NumField(); i++ {
-						f := reqType.Field(i)
-
+					for _, f := range flattenStructFields(reqType) {
 						// Handle Parameters
 						if header := f.Tag.Get("header"); header != "" {
 							desc := fmt.Sprintf("Header parameter: %s for %s", header, title)
@@ -119,8 +117,16 @@ func generate(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOn
 							if desc == "" {
 								desc = fmt.Sprintf("Query parameter: %s for %s", query, title)
 							}
+
+							// Normalize array query parameter names to use [] suffix so Stainless
+							// sees a consistent brackets format across the spec.
+							paramName := query
+							if paramSchema.Type == "array" && !strings.HasSuffix(paramName, "[]") {
+								paramName = paramName + "[]"
+							}
+
 							operation.Parameters = append(operation.Parameters, Parameter{
-								Name:        query,
+								Name:        paramName,
 								In:          "query",
 								Description: desc,
 								Required:    strings.Contains(f.Tag.Get("validate"), "required"),
@@ -163,7 +169,11 @@ func generate(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOn
 					}
 				}
 
-				// Add include[] parameter if endpoint has IncludeConfig
+				// Add include[] parameter if endpoint has IncludeConfig.
+				// If the request struct already added an include[] parameter
+				// (via a query:"include" field), replace it with the richer
+				// IncludeConfig version that carries enum values and a proper
+				// description.
 				includeConfigField := specField.FieldByName("IncludeConfig")
 				if includeConfigField.IsValid() && !includeConfigField.IsNil() {
 					includeConfig := includeConfigField.Interface().(*apiendpoint.IncludeConfig)
@@ -172,7 +182,7 @@ func generate(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOn
 					for i, k := range allowedKeys {
 						enumValues[i] = k
 					}
-					operation.Parameters = append(operation.Parameters, Parameter{
+					includeParam := Parameter{
 						Name:        "include[]",
 						In:          "query",
 						Description: "Sub-objects to expand in the response. When omitted, sub-objects are returned as `null`.",
@@ -182,7 +192,19 @@ func generate(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOn
 							Items: &Schema{Type: "string", Enum: enumValues},
 						},
 						Example: []any{allowedKeys[0]},
-					})
+					}
+
+					replaced := false
+					for i, p := range operation.Parameters {
+						if p.Name == "include[]" && p.In == "query" {
+							operation.Parameters[i] = includeParam
+							replaced = true
+							break
+						}
+					}
+					if !replaced {
+						operation.Parameters = append(operation.Parameters, includeParam)
+					}
 				}
 
 				schemaName := getCleanTypeName(reqType)
@@ -319,7 +341,17 @@ func generate(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOn
 		log.Fatalf("Error writing spec to %s: %v", outputPath, err)
 	}
 
-	log.Printf("OpenAPI spec generated in %s\n", outputPath)
+	// Count total endpoints
+	totalEndpoints := 0
+	for _, methods := range spec.Paths {
+		totalEndpoints += len(methods)
+	}
+
+	specType := "internal"
+	if publicOnly {
+		specType = "public"
+	}
+	log.Printf("OpenAPI spec generated in %s (%d %s endpoints)\n", outputPath, totalEndpoints, specType)
 }
 
 func getCleanTypeName(t reflect.Type) string {
@@ -370,6 +402,14 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 	// Handle time.Time as a string with date-time format
 	if t.Kind() == reflect.Struct && t.PkgPath() == "time" && t.Name() == "Time" {
 		return Schema{Type: "string", Format: "date-time"}
+	}
+
+	// json.RawMessage represents arbitrary JSON (object/array/primitives).
+	// For documentation purposes, model it as a generic JSON object.
+	// Without this special-case, we'd treat it like a Go slice ([]byte) and
+	// incorrectly render it as `type: array` in the OpenAPI schema.
+	if t.Kind() == reflect.Slice && t.PkgPath() == "encoding/json" && t.Name() == "RawMessage" {
+		return Schema{Type: "object"}
 	}
 
 	switch t.Kind() {
@@ -471,6 +511,15 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 		}()
 	}
 
+	// If a documented example encodes `null` for a field (represented as nil in Go),
+	// we should mark that field as nullable in the OpenAPI schema even when the
+	// Go type isn't a pointer. This keeps the UI's `nullable` pill aligned with
+	// real example output.
+	var exampleMap map[string]any
+	if m, ok := example.(map[string]any); ok {
+		exampleMap = m
+	}
+
 	typeDoc := docReader.GetTypeDoc(t)
 	description := typeDoc.Doc
 
@@ -542,6 +591,20 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 		fieldSchema := Schema{
 			Description: typeDoc.Fields[f.Name],
 			Nullable:    f.Type.Kind() == reflect.Pointer,
+		}
+
+		// Allow explicitly overriding nullable inference (e.g. pointer + omitempty
+		// for request fields that are optional-but-not-"nullable" in the docs).
+		//
+		// Any non-empty value overrides the pointer-based default.
+		if nullableTag := strings.ToLower(strings.TrimSpace(f.Tag.Get("nullable"))); nullableTag != "" {
+			switch nullableTag {
+			case "false", "0", "no":
+				fieldSchema.Nullable = false
+			case "true", "1", "yes":
+				fieldSchema.Nullable = true
+				fieldSchema.XNullableClear = true
+			}
 		}
 
 		// Add Stainless pagination annotations and unique descriptions for List types
@@ -628,6 +691,13 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 				fieldSchema = generateSchema(fieldType, components, docReader)
 			}
 		case reflect.Slice:
+			// Treat json.RawMessage as a JSON object for docs. RawMessage is a
+			// Go slice ([]byte), so without this check we'd render it as an array.
+			if fieldType.PkgPath() == "encoding/json" && fieldType.Name() == "RawMessage" {
+				fieldSchema.Type = "object"
+				break
+			}
+
 			fieldSchema.Type = "array"
 			elemType := fieldType.Elem()
 			if elemType.Kind() == reflect.Pointer {
@@ -660,15 +730,74 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 			fieldSchema.Enum = append(fieldSchema.Enum, nil)
 		}
 
+		// If the schema example provides `null` for this property, mark it nullable.
+		// This is independent of the Go type so we don't miss nullable badges when
+		// the API chooses to return null even for non-pointer fields.
+		if exampleMap != nil {
+			if val, exists := exampleMap[name]; exists && val == nil {
+				fieldSchema.Nullable = true
+				// Keep nullable-enum null-inclusion consistent with the updated flag.
+				// Only append nil if not already present (the block above may have added it).
+				if len(fieldSchema.Enum) > 0 && !enumContainsNil(fieldSchema.Enum) {
+					fieldSchema.Enum = append(fieldSchema.Enum, nil)
+				}
+			}
+		}
+
 		schema.Properties[name] = fieldSchema
 		schema.PropertyOrder = append(schema.PropertyOrder, name)
 	}
+
+	// Hardening: Some request examples may be produced by marshaling the full Go
+	// struct (including fields that are marked as `path` or otherwise not part
+	// of the JSON payload). Filter object examples down to schema properties so
+	// `requestBody.example` never includes invalid keys.
+	schema.Example = filterExampleToSchemaProperties(schema.Example, schema)
 
 	if len(schema.Properties) == 0 && schema.AdditionalProperties == nil && len(schema.AllOf) == 0 {
 		schema.XStainlessEmptyObject = true
 	}
 
 	return schema
+}
+
+func filterExampleToSchemaProperties(example any, schema Schema) any {
+	if example == nil {
+		return example
+	}
+
+	// Only filter map-like object examples when the schema has known properties.
+	if schema.Type == "object" && (len(schema.Properties) > 0 || schema.AdditionalProperties != nil) {
+		m, ok := example.(map[string]any)
+		if !ok {
+			return example
+		}
+		filtered := make(map[string]any, len(m))
+		for k, v := range m {
+			if propSchema, ok := schema.Properties[k]; ok {
+				filtered[k] = filterExampleToSchemaProperties(v, propSchema)
+				continue
+			}
+			// If additionalProperties are allowed, keep unknown keys but still
+			// recursively filter nested structure when possible.
+			if schema.AdditionalProperties != nil {
+				filtered[k] = filterExampleToSchemaProperties(v, *schema.AdditionalProperties)
+			}
+		}
+		return filtered
+	}
+
+	// Recursively filter arrays if we have an item schema.
+	if schema.Type == "array" && schema.Items != nil {
+		if arr, ok := example.([]any); ok {
+			for i := range arr {
+				arr[i] = filterExampleToSchemaProperties(arr[i], *schema.Items)
+			}
+			return arr
+		}
+	}
+
+	return example
 }
 
 func getEnumValuesForStringType(t reflect.Type) []any {
@@ -968,4 +1097,35 @@ func getFieldDoc(structType reflect.Type, field reflect.StructField, docReader *
 	}
 	typeDoc := docReader.GetTypeDoc(declaringType)
 	return typeDoc.Fields[field.Name]
+}
+
+// flattenStructFields returns all fields of a struct type, recursively expanding
+// anonymous (embedded) struct fields so that promoted fields are included directly.
+func flattenStructFields(t reflect.Type) []reflect.StructField {
+	var fields []reflect.StructField
+	for i := 0; i < t.NumField(); i++ {
+		f := t.Field(i)
+		if f.Anonymous {
+			embedded := f.Type
+			if embedded.Kind() == reflect.Pointer {
+				embedded = embedded.Elem()
+			}
+			if embedded.Kind() == reflect.Struct {
+				fields = append(fields, flattenStructFields(embedded)...)
+				continue
+			}
+		}
+		fields = append(fields, f)
+	}
+	return fields
+}
+
+// enumContainsNil returns true if the enum slice already contains a nil entry.
+func enumContainsNil(enum []any) bool {
+	for _, v := range enum {
+		if v == nil {
+			return true
+		}
+	}
+	return false
 }

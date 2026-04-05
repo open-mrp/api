@@ -41,8 +41,25 @@ func (c *BillingNotificationClient) Close() error {
 	return c.grpcConn.Close()
 }
 
+func (c *BillingNotificationClient) SendPaymentActionRequired(ctx context.Context, accountID, adminEmail string) *apierror.APIError {
+	ctx = prepareCtx(ctx, "")
+
+	_, apiErr := rpc.CallRPC(ctx, notificationClientTracer, "notification_client.send_payment_action_required", notificationServiceName,
+		func(ctx context.Context, opts ...grpclib.CallOption) (*pb.EmailResponse, error) {
+			return c.client.SendEmail(ctx, &pb.EmailRequest{
+				To:         []string{adminEmail},
+				Subject:    "Action required: update your payment method",
+				Body:       "Your subscription payment requires action. Please update your payment method to avoid service interruption. You can update your payment details from the billing section of your dashboard.",
+				IsBodyHtml: false,
+				AccountId:  &accountID,
+			}, opts...)
+		})
+
+	return apiErr
+}
+
 func (c *BillingNotificationClient) SendEnterpriseRequest(ctx context.Context, accountID, accountName, currentPlanName, requesterName, requesterEmail string) *apierror.APIError {
-	ctx = rpc.PrepareRPCCtx(ctx, rpc.WithIdentity(ctx))
+	ctx = prepareCtx(ctx, "")
 
 	_, apiErr := rpc.CallRPC(ctx, notificationClientTracer, "notification_client.send_enterprise_request", notificationServiceName,
 		func(ctx context.Context, opts ...grpclib.CallOption) (*pb.EmailResponse, error) {

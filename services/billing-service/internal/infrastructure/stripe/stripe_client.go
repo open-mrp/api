@@ -5,21 +5,50 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"time"
+	"net/http"
+	"strings"
+	"unicode"
 
 	"github.com/augno/api/services/billing-service/internal/domain"
+	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/tracing"
 	"github.com/stripe/stripe-go/v84"
 	portalsession "github.com/stripe/stripe-go/v84/billingportal/session"
-	"github.com/stripe/stripe-go/v84/checkout/session"
 	"github.com/stripe/stripe-go/v84/customer"
-	"github.com/stripe/stripe-go/v84/invoice"
+	"github.com/stripe/stripe-go/v84/paymentintent"
 	"github.com/stripe/stripe-go/v84/paymentmethod"
-	"github.com/stripe/stripe-go/v84/price"
-	"github.com/stripe/stripe-go/v84/product"
-	"github.com/stripe/stripe-go/v84/subscription"
+	"github.com/stripe/stripe-go/v84/setupintent"
 	"github.com/stripe/stripe-go/v84/webhook"
 )
+
+type versionOverrideTransport struct {
+	wrapped http.RoundTripper
+}
+
+func (t *versionOverrideTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	req.Header.Set("Stripe-Version", constants.StripeAPIVersion)
+	slog.Info("stripe outgoing request", // #nosec G706 -- values sanitized via sanitizeLogValue
+		"method", sanitizeLogValue(req.Method),
+		"url", sanitizeLogValue(req.URL.String()),
+		"stripe_version", sanitizeLogValue(req.Header.Get("Stripe-Version")),
+		"has_auth", req.Header.Get("Authorization") != "",
+		"content_type", sanitizeLogValue(req.Header.Get("Content-Type")),
+		"stripe_account", sanitizeLogValue(req.Header.Get("Stripe-Account")),
+		"stripe_context", sanitizeLogValue(req.Header.Get("Stripe-Context")),
+	)
+	return t.wrapped.RoundTrip(req)
+}
+
+// sanitizeLogValue strips control characters (newlines, tabs, etc.) from a
+// string before it is written to structured logs, preventing log injection.
+func sanitizeLogValue(s string) string {
+	return strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) {
+			return -1
+		}
+		return r
+	}, s)
+}
 
 var stripeClientTracer = tracing.GetTracer("billing-service.stripe_client")
 
@@ -34,124 +63,20 @@ type stripeClientImpl struct {
 
 func NewStripeClient(cfg *ClientConfig) domain.StripeClient {
 	stripe.Key = cfg.APIKey
+
+	httpClient := &http.Client{
+		Transport: &versionOverrideTransport{wrapped: http.DefaultTransport},
+	}
+	stripe.SetBackend(stripe.APIBackend, stripe.GetBackendWithConfig(
+		stripe.APIBackend,
+		&stripe.BackendConfig{
+			HTTPClient: httpClient,
+		},
+	))
+
 	return &stripeClientImpl{
 		webhookSecret: cfg.WebhookSecret,
 	}
-}
-
-func (c *stripeClientImpl) CreateSubscription(ctx context.Context, customerID, priceID string, quantity int64, defaultPaymentMethodID string) (*domain.StripeSubscription, error) {
-	_, span := stripeClientTracer.Start(ctx, "stripe_client.create_subscription")
-	defer span.End()
-
-	params := &stripe.SubscriptionParams{
-		Customer: stripe.String(customerID),
-		Items: []*stripe.SubscriptionItemsParams{
-			{
-				Price:    stripe.String(priceID),
-				Quantity: stripe.Int64(quantity),
-			},
-		},
-		PaymentBehavior: stripe.String("error_if_incomplete"),
-	}
-	if defaultPaymentMethodID != "" {
-		params.DefaultPaymentMethod = stripe.String(defaultPaymentMethodID)
-	}
-	params.AddExpand("items.data.price.product")
-	params.AddExpand("latest_invoice.payment_intent")
-
-	sub, err := subscription.New(params)
-	if err != nil {
-		span.RecordError(err)
-		return nil, fmt.Errorf("failed to create subscription: %w", err)
-	}
-
-	var planCode string
-	var currentPeriodStart time.Time
-	var currentPeriodEnd time.Time
-	if len(sub.Items.Data) > 0 {
-		item := sub.Items.Data[0]
-		if item.Price != nil && item.Price.Product != nil {
-			planCode = item.Price.Product.Metadata["plan_code"]
-		}
-		if item.CurrentPeriodStart > 0 {
-			currentPeriodStart = time.Unix(item.CurrentPeriodStart, 0)
-		}
-		if item.CurrentPeriodEnd > 0 {
-			currentPeriodEnd = time.Unix(item.CurrentPeriodEnd, 0)
-		}
-	}
-
-	result := &domain.StripeSubscription{
-		ID:                 sub.ID,
-		CustomerID:         sub.Customer.ID,
-		Status:             string(sub.Status),
-		PlanCode:           planCode,
-		CurrentPeriodStart: currentPeriodStart,
-		CurrentPeriodEnd:   currentPeriodEnd,
-		CancelAtPeriodEnd:  sub.CancelAtPeriodEnd,
-	}
-
-	if sub.TrialEnd > 0 {
-		t := time.Unix(sub.TrialEnd, 0)
-		result.TrialEnd = &t
-	}
-	if sub.CancelAt > 0 {
-		t := time.Unix(sub.CancelAt, 0)
-		result.CancelAt = &t
-	}
-
-	return result, nil
-}
-
-func (c *stripeClientImpl) GetSubscription(ctx context.Context, subscriptionID string) (*domain.StripeSubscription, error) {
-	_, span := stripeClientTracer.Start(ctx, "stripe_client.get_subscription")
-	defer span.End()
-
-	params := &stripe.SubscriptionParams{}
-	params.AddExpand("items.data.price.product")
-
-	sub, err := subscription.Get(subscriptionID, params)
-	if err != nil {
-		span.RecordError(err)
-		return nil, fmt.Errorf("failed to get subscription %s: %w", subscriptionID, err)
-	}
-
-	var planCode string
-	var currentPeriodStart time.Time
-	var currentPeriodEnd time.Time
-	if len(sub.Items.Data) > 0 {
-		item := sub.Items.Data[0]
-		if item.Price != nil && item.Price.Product != nil {
-			planCode = item.Price.Product.Metadata["plan_code"]
-		}
-		if item.CurrentPeriodStart > 0 {
-			currentPeriodStart = time.Unix(item.CurrentPeriodStart, 0)
-		}
-		if item.CurrentPeriodEnd > 0 {
-			currentPeriodEnd = time.Unix(item.CurrentPeriodEnd, 0)
-		}
-	}
-
-	result := &domain.StripeSubscription{
-		ID:                 sub.ID,
-		CustomerID:         sub.Customer.ID,
-		Status:             string(sub.Status),
-		PlanCode:           planCode,
-		CurrentPeriodStart: currentPeriodStart,
-		CurrentPeriodEnd:   currentPeriodEnd,
-		CancelAtPeriodEnd:  sub.CancelAtPeriodEnd,
-	}
-
-	if sub.TrialEnd > 0 {
-		t := time.Unix(sub.TrialEnd, 0)
-		result.TrialEnd = &t
-	}
-	if sub.CancelAt > 0 {
-		t := time.Unix(sub.CancelAt, 0)
-		result.CancelAt = &t
-	}
-
-	return result, nil
 }
 
 func (c *stripeClientImpl) CreateCustomer(ctx context.Context, email, name, idempotencyKey string, metadata map[string]string) (*domain.StripeCustomer, error) {
@@ -176,130 +101,6 @@ func (c *stripeClientImpl) CreateCustomer(ctx context.Context, email, name, idem
 	return &domain.StripeCustomer{ID: cust.ID}, nil
 }
 
-func (c *stripeClientImpl) GetOrCreateProduct(ctx context.Context, planCode, planName, idempotencyKey string) (*stripe.Product, error) {
-	_, span := stripeClientTracer.Start(ctx, "stripe_client.get_or_create_product")
-	defer span.End()
-
-	searchParams := &stripe.ProductSearchParams{}
-	searchParams.Query = fmt.Sprintf("metadata['plan_code']:'%s'", planCode)
-	iter := product.Search(searchParams)
-	if iter.Next() {
-		return iter.Product(), nil
-	}
-
-	params := &stripe.ProductParams{
-		Name: stripe.String(planName),
-	}
-	params.IdempotencyKey = stripe.String(idempotencyKey)
-	params.AddMetadata("plan_code", planCode)
-
-	prod, err := product.New(params)
-	if err != nil {
-		span.RecordError(err)
-		return nil, fmt.Errorf("failed to create Stripe product: %w", err)
-	}
-
-	return prod, nil
-}
-
-func (c *stripeClientImpl) GetOrCreatePrice(ctx context.Context, productID string, unitAmount int64, planCode, idempotencyKey string) (*stripe.Price, error) {
-	_, span := stripeClientTracer.Start(ctx, "stripe_client.get_or_create_price")
-	defer span.End()
-
-	lookupKey := fmt.Sprintf("reg_price_%s", planCode)
-	listParams := &stripe.PriceListParams{
-		LookupKeys: []*string{stripe.String(lookupKey)},
-	}
-	iter := price.List(listParams)
-	if iter.Next() {
-		return iter.Price(), nil
-	}
-
-	params := &stripe.PriceParams{
-		Product:    stripe.String(productID),
-		UnitAmount: stripe.Int64(unitAmount),
-		Currency:   stripe.String(string(stripe.CurrencyUSD)),
-		Recurring: &stripe.PriceRecurringParams{
-			Interval: stripe.String(string(stripe.PriceRecurringIntervalMonth)),
-		},
-		LookupKey: stripe.String(lookupKey),
-	}
-	params.IdempotencyKey = stripe.String(idempotencyKey)
-
-	p, err := price.New(params)
-	if err != nil {
-		span.RecordError(err)
-		return nil, fmt.Errorf("failed to create Stripe price: %w", err)
-	}
-
-	return p, nil
-}
-
-func (c *stripeClientImpl) CreateCheckoutSession(ctx context.Context, input domain.StripeCheckoutSessionInput) (*domain.StripeCheckoutSession, error) {
-	_, span := stripeClientTracer.Start(ctx, "stripe_client.create_checkout_session")
-	defer span.End()
-
-	params := &stripe.CheckoutSessionParams{
-		Customer: stripe.String(input.CustomerID),
-		Mode:     stripe.String(string(stripe.CheckoutSessionModeSubscription)),
-		UIMode:   stripe.String(string(stripe.CheckoutSessionUIModeCustom)),
-		PaymentMethodTypes: []*string{
-			stripe.String("card"),
-		},
-		LineItems: []*stripe.CheckoutSessionLineItemParams{
-			{
-				Price:    stripe.String(input.PriceID),
-				Quantity: stripe.Int64(input.Quantity),
-			},
-		},
-		ReturnURL: stripe.String(input.ReturnURL),
-	}
-	params.IdempotencyKey = stripe.String(input.IdempotencyKey)
-
-	if input.TrialDays > 0 {
-		params.SubscriptionData = &stripe.CheckoutSessionSubscriptionDataParams{
-			TrialPeriodDays: stripe.Int64(input.TrialDays),
-		}
-	}
-
-	sess, err := session.New(params)
-	if err != nil {
-		span.RecordError(err)
-		return nil, fmt.Errorf("failed to create Stripe checkout session: %w", err)
-	}
-
-	return &domain.StripeCheckoutSession{
-		ID:           sess.ID,
-		ClientSecret: sess.ClientSecret,
-	}, nil
-}
-
-func (c *stripeClientImpl) GetCheckoutSession(ctx context.Context, sessionID string) (*domain.StripeCheckoutSessionStatus, error) {
-	_, span := stripeClientTracer.Start(ctx, "stripe_client.get_checkout_session")
-	defer span.End()
-
-	params := &stripe.CheckoutSessionParams{}
-	params.AddExpand("subscription")
-
-	sess, err := session.Get(sessionID, params)
-	if err != nil {
-		span.RecordError(err)
-		return nil, fmt.Errorf("failed to get checkout session %s: %w", sessionID, err)
-	}
-
-	result := &domain.StripeCheckoutSessionStatus{
-		Status: string(sess.Status),
-	}
-	if sess.Subscription != nil {
-		result.SubscriptionID = sess.Subscription.ID
-	}
-	if sess.Customer != nil {
-		result.CustomerID = sess.Customer.ID
-	}
-
-	return result, nil
-}
-
 func (c *stripeClientImpl) CreateBillingPortalSession(ctx context.Context, customerID, returnURL string) (*domain.StripeBillingPortalSession, error) {
 	_, span := stripeClientTracer.Start(ctx, "stripe_client.create_billing_portal_session")
 	defer span.End()
@@ -318,163 +119,502 @@ func (c *stripeClientImpl) CreateBillingPortalSession(ctx context.Context, custo
 	return &domain.StripeBillingPortalSession{URL: sess.URL}, nil
 }
 
-func (c *stripeClientImpl) ListSubscriptions(ctx context.Context, customerID string) ([]*stripe.Subscription, error) {
-	_, span := stripeClientTracer.Start(ctx, "stripe_client.list_subscriptions")
+func (c *stripeClientImpl) GetPricingPlan(ctx context.Context, pricingPlanID string) (*domain.StripePricingPlan, error) {
+	_, span := stripeClientTracer.Start(ctx, "stripe_client.get_pricing_plan")
 	defer span.End()
 
-	params := &stripe.SubscriptionListParams{
-		Customer: stripe.String(customerID),
+	resp, err := stripe.RawRequest(http.MethodGet,
+		fmt.Sprintf("/v2/billing/pricing_plans/%s", pricingPlanID), "", nil)
+	if err != nil {
+		span.RecordError(err)
+		return nil, fmt.Errorf("failed to fetch pricing plan: %w", err)
 	}
-	params.AddExpand("data.items.data.price")
+	var result struct {
+		ID          string `json:"id"`
+		LiveVersion string `json:"live_version"`
+	}
+	if err := json.Unmarshal(resp.RawJSON, &result); err != nil {
+		return nil, fmt.Errorf("failed to parse pricing plan response: %w", err)
+	}
+	if result.LiveVersion == "" {
+		return nil, fmt.Errorf("pricing plan %s has no live version", pricingPlanID)
+	}
 
-	var subs []*stripe.Subscription
-	iter := subscription.List(params)
-	for iter.Next() {
-		sub := iter.Subscription()
-		// Include active and trialing subscriptions
-		if sub.Status == stripe.SubscriptionStatusActive || sub.Status == stripe.SubscriptionStatusTrialing {
-			subs = append(subs, sub)
+	plan := &domain.StripePricingPlan{
+		ID:          result.ID,
+		LiveVersion: result.LiveVersion,
+	}
+
+	// Fetch the version to get the license fee component ID
+	versionResp, err := stripe.RawRequest(http.MethodGet,
+		fmt.Sprintf("/v2/billing/pricing_plan_versions/%s", result.LiveVersion), "", nil)
+	if err == nil {
+		var version struct {
+			Components []struct {
+				ID   string `json:"id"`
+				Type string `json:"type"`
+			} `json:"components"`
+		}
+		if parseErr := json.Unmarshal(versionResp.RawJSON, &version); parseErr == nil {
+			for _, comp := range version.Components {
+				if comp.Type == "license_fee" {
+					plan.LicenseFeeComponentID = comp.ID
+					break
+				}
+			}
 		}
 	}
-	if err := iter.Err(); err != nil {
-		span.RecordError(err)
-		return nil, fmt.Errorf("failed to list subscriptions for customer %s: %w", customerID, err)
-	}
 
-	return subs, nil
+	return plan, nil
 }
 
-func (c *stripeClientImpl) GetCustomerBalance(ctx context.Context, customerID string) (int64, error) {
-	_, span := stripeClientTracer.Start(ctx, "stripe_client.get_customer_balance")
+func (c *stripeClientImpl) CreateBillingProfile(ctx context.Context, customerID, idempotencyKey string) (string, error) {
+	_, span := stripeClientTracer.Start(ctx, "stripe_client.create_billing_profile")
 	defer span.End()
 
+	body := fmt.Sprintf(`{"customer":"%s"}`, customerID)
+	resp, err := stripe.RawRequest(http.MethodPost, "/v2/billing/profiles", body, &stripe.RawParams{
+		Params: stripe.Params{
+			IdempotencyKey: stripe.String(idempotencyKey),
+		},
+	})
+	if err != nil {
+		span.RecordError(err)
+		return "", fmt.Errorf("failed to create billing profile: %w", err)
+	}
+	var result struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(resp.RawJSON, &result); err != nil {
+		return "", fmt.Errorf("failed to parse billing profile response: %w", err)
+	}
+
+	return result.ID, nil
+}
+
+func (c *stripeClientImpl) CreateBillingCadence(ctx context.Context, billingProfileID, idempotencyKey string) (string, error) {
+	_, span := stripeClientTracer.Start(ctx, "stripe_client.create_billing_cadence")
+	defer span.End()
+
+	body := fmt.Sprintf(`{
+		"payer":{"billing_profile":"%s"},
+		"billing_cycle":{"type":"month","interval_count":1}
+	}`, billingProfileID)
+	resp, err := stripe.RawRequest(http.MethodPost, "/v2/billing/cadences", body, &stripe.RawParams{
+		Params: stripe.Params{
+			IdempotencyKey: stripe.String(idempotencyKey),
+		},
+	})
+	if err != nil {
+		span.RecordError(err)
+		return "", fmt.Errorf("failed to create billing cadence: %w", err)
+	}
+	var result struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(resp.RawJSON, &result); err != nil {
+		return "", fmt.Errorf("failed to parse billing cadence response: %w", err)
+	}
+
+	return result.ID, nil
+}
+
+func (c *stripeClientImpl) CreateBillingIntent(ctx context.Context, cadenceID string, actions []domain.BillingIntentAction, idempotencyKey string) (string, error) {
+	_, span := stripeClientTracer.Start(ctx, "stripe_client.create_billing_intent")
+	defer span.End()
+
+	actionsJSON := buildActionsJSON(actions)
+	body := fmt.Sprintf(`{
+		"currency":"usd",
+		"cadence":"%s",
+		"actions":%s
+	}`, cadenceID, actionsJSON)
+
+	var rawParams *stripe.RawParams
+	if idempotencyKey != "" {
+		rawParams = &stripe.RawParams{
+			Params: stripe.Params{
+				IdempotencyKey: stripe.String(idempotencyKey),
+			},
+		}
+	}
+
+	resp, err := stripe.RawRequest(http.MethodPost, "/v2/billing/intents", body, rawParams)
+	if err != nil {
+		span.RecordError(err)
+		if conflictID, ok := parseBillingIntentConflict(err); ok {
+			return "", &domain.ErrBillingIntentConflict{ConflictingIntentID: conflictID, Err: err}
+		}
+		return "", fmt.Errorf("failed to create billing intent: %w", err)
+	}
+	var result struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(resp.RawJSON, &result); err != nil {
+		return "", fmt.Errorf("failed to parse billing intent response: %w", err)
+	}
+
+	return result.ID, nil
+}
+
+func buildComponentConfigurations(configs []domain.ComponentConfiguration) []any {
+	if len(configs) == 0 {
+		return []any{}
+	}
+	result := make([]any, len(configs))
+	for i, c := range configs {
+		result[i] = map[string]any{
+			"pricing_plan_component": c.PricingPlanComponentID,
+			"quantity":               c.Quantity,
+		}
+	}
+	return result
+}
+
+func buildActionsJSON(actions []domain.BillingIntentAction) string {
+	type subscribeDetails struct {
+		PricingPlan             string `json:"pricing_plan"`
+		PricingPlanVersion      string `json:"pricing_plan_version"`
+		ComponentConfigurations []any  `json:"component_configurations"`
+	}
+	type subscribeAction struct {
+		Type                           string           `json:"type"`
+		PricingPlanSubscriptionDetails subscribeDetails `json:"pricing_plan_subscription_details"`
+	}
+
+	type modifyDetails struct {
+		PricingPlanSubscription string `json:"pricing_plan_subscription"`
+		NewPricingPlan          string `json:"new_pricing_plan"`
+		NewPricingPlanVersion   string `json:"new_pricing_plan_version"`
+		ComponentConfigurations []any  `json:"component_configurations"`
+	}
+	type modifyAction struct {
+		Type                           string        `json:"type"`
+		PricingPlanSubscriptionDetails modifyDetails `json:"pricing_plan_subscription_details"`
+	}
+
+	type deactivateDetails struct {
+		PricingPlanSubscription string `json:"pricing_plan_subscription"`
+	}
+	type deactivateAction struct {
+		Type                           string            `json:"type"`
+		PricingPlanSubscriptionDetails deactivateDetails `json:"pricing_plan_subscription_details"`
+	}
+
+	type actionJSON struct {
+		Type       string            `json:"type"`
+		Subscribe  *subscribeAction  `json:"subscribe,omitempty"`
+		Modify     *modifyAction     `json:"modify,omitempty"`
+		Deactivate *deactivateAction `json:"deactivate,omitempty"`
+	}
+
+	var jsonActions []actionJSON
+	for _, a := range actions {
+		aj := actionJSON{Type: a.Type}
+		compConfigs := buildComponentConfigurations(a.ComponentConfigurations)
+		switch a.Type {
+		case "subscribe":
+			aj.Subscribe = &subscribeAction{
+				Type: "pricing_plan_subscription_details",
+				PricingPlanSubscriptionDetails: subscribeDetails{
+					PricingPlan:             a.PricingPlanID,
+					PricingPlanVersion:      a.PricingPlanVersion,
+					ComponentConfigurations: compConfigs,
+				},
+			}
+		case "modify":
+			aj.Modify = &modifyAction{
+				Type: "pricing_plan_subscription_details",
+				PricingPlanSubscriptionDetails: modifyDetails{
+					PricingPlanSubscription: a.SubscriptionID,
+					NewPricingPlan:          a.PricingPlanID,
+					NewPricingPlanVersion:   a.PricingPlanVersion,
+					ComponentConfigurations: compConfigs,
+				},
+			}
+		case "deactivate":
+			aj.Deactivate = &deactivateAction{
+				Type: "pricing_plan_subscription_details",
+				PricingPlanSubscriptionDetails: deactivateDetails{
+					PricingPlanSubscription: a.SubscriptionID,
+				},
+			}
+		}
+		jsonActions = append(jsonActions, aj)
+	}
+
+	b, _ := json.Marshal(jsonActions)
+	return string(b)
+}
+
+func (c *stripeClientImpl) ReserveBillingIntent(ctx context.Context, intentID string) (*domain.BillingIntentReservation, error) {
+	_, span := stripeClientTracer.Start(ctx, "stripe_client.reserve_billing_intent")
+	defer span.End()
+
+	_, err := stripe.RawRequest(http.MethodPost,
+		fmt.Sprintf("/v2/billing/intents/%s/reserve", intentID), "", nil)
+	if err != nil {
+		span.RecordError(err)
+		return nil, fmt.Errorf("failed to reserve billing intent: %w", err)
+	}
+
+	// Fetch the reserved intent to get amount_details.total — the reserve
+	// response itself does not include the total at the top level.
+	intentResp, err := stripe.RawRequest(http.MethodGet,
+		fmt.Sprintf("/v2/billing/intents/%s", intentID), "", nil)
+	if err != nil {
+		span.RecordError(err)
+		return nil, fmt.Errorf("failed to fetch reserved billing intent: %w", err)
+	}
+
+	var result struct {
+		AmountDetails struct {
+			Total json.Number `json:"total"`
+		} `json:"amount_details"`
+	}
+	if err := json.Unmarshal(intentResp.RawJSON, &result); err != nil {
+		return nil, fmt.Errorf("failed to parse reserved billing intent: %w", err)
+	}
+
+	total, err := result.AmountDetails.Total.Int64()
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse amount_details.total %q: %w", result.AmountDetails.Total, err)
+	}
+
+	reservation := &domain.BillingIntentReservation{
+		IntentID:  intentID,
+		NetAmount: total,
+	}
+
+	return reservation, nil
+}
+
+func (c *stripeClientImpl) CreatePaymentIntent(ctx context.Context, amountCents int64, currency, customerID, returnURL string) (string, error) {
+	_, span := stripeClientTracer.Start(ctx, "stripe_client.create_payment_intent")
+	defer span.End()
+
+	// Look up the customer's default payment method. If none is set on
+	// invoice_settings, fall back to the first attached payment method.
 	cust, err := customer.Get(customerID, nil)
 	if err != nil {
 		span.RecordError(err)
-		return 0, fmt.Errorf("failed to get customer %s: %w", customerID, err)
+		return "", fmt.Errorf("failed to fetch customer for payment method: %w", err)
 	}
 
-	return cust.Balance, nil
-}
-
-func (c *stripeClientImpl) CreateInvoicePreview(ctx context.Context, customerID string, subscriptionID string, items []*stripe.InvoiceCreatePreviewSubscriptionDetailsItemParams) (*stripe.Invoice, error) {
-	_, span := stripeClientTracer.Start(ctx, "stripe_client.create_invoice_preview")
-	defer span.End()
-
-	params := &stripe.InvoiceCreatePreviewParams{
-		Customer: stripe.String(customerID),
-		SubscriptionDetails: &stripe.InvoiceCreatePreviewSubscriptionDetailsParams{
-			Items: items,
-		},
+	var paymentMethodID string
+	if cust.InvoiceSettings != nil && cust.InvoiceSettings.DefaultPaymentMethod != nil {
+		paymentMethodID = cust.InvoiceSettings.DefaultPaymentMethod.ID
+	}
+	if paymentMethodID == "" {
+		pmList := paymentmethod.List(&stripe.PaymentMethodListParams{
+			Customer: stripe.String(customerID),
+			Type:     stripe.String("card"),
+		})
+		if pmList.Next() {
+			paymentMethodID = pmList.PaymentMethod().ID
+		}
+	}
+	if paymentMethodID == "" {
+		return "", fmt.Errorf("customer %s has no payment method attached", customerID)
 	}
 
-	if subscriptionID != "" {
-		params.Subscription = stripe.String(subscriptionID)
+	params := &stripe.PaymentIntentParams{
+		Amount:        stripe.Int64(amountCents),
+		Currency:      stripe.String(currency),
+		Customer:      stripe.String(customerID),
+		PaymentMethod: stripe.String(paymentMethodID),
+		Confirm:       stripe.Bool(true),
+		ReturnURL:     stripe.String(returnURL),
 	}
 
-	inv, err := invoice.CreatePreview(params)
+	pi, err := paymentintent.New(params)
 	if err != nil {
 		span.RecordError(err)
-		return nil, fmt.Errorf("failed to create invoice preview: %w", err)
+		return "", fmt.Errorf("failed to create payment intent: %w", err)
 	}
 
-	return inv, nil
+	return pi.ID, nil
 }
 
-func (c *stripeClientImpl) CancelSubscription(ctx context.Context, subscriptionID string) error {
-	_, span := stripeClientTracer.Start(ctx, "stripe_client.cancel_subscription")
+func (c *stripeClientImpl) CommitBillingIntent(ctx context.Context, intentID string, paymentIntentID *string, cadenceID string) (*domain.BillingIntentCommitResult, error) {
+	_, span := stripeClientTracer.Start(ctx, "stripe_client.commit_billing_intent")
 	defer span.End()
 
-	params := &stripe.SubscriptionCancelParams{}
-	_, err := subscription.Cancel(subscriptionID, params)
+	body := "{}"
+	if paymentIntentID != nil {
+		body = fmt.Sprintf(`{"payment_intent":"%s"}`, *paymentIntentID)
+	}
+
+	resp, err := stripe.RawRequest(http.MethodPost,
+		fmt.Sprintf("/v2/billing/intents/%s/commit", intentID), body, nil)
 	if err != nil {
 		span.RecordError(err)
-		return fmt.Errorf("failed to cancel subscription %s: %w", subscriptionID, err)
+		return nil, fmt.Errorf("failed to commit billing intent: %w", err)
+	}
+
+	// Try to extract subscription IDs from the commit response.
+	ids := extractSubscriptionIDs(resp.RawJSON)
+
+	// Fallback: fetch the committed intent if commit response didn't include them.
+	if len(ids) == 0 {
+		intentResp, getErr := stripe.RawRequest(http.MethodGet,
+			fmt.Sprintf("/v2/billing/intents/%s", intentID), "", nil)
+		if getErr == nil {
+			ids = extractSubscriptionIDs(intentResp.RawJSON)
+		}
+	}
+
+	// Fallback: list subscriptions by cadence.
+	if len(ids) == 0 && cadenceID != "" {
+		listResp, listErr := stripe.RawRequest(http.MethodGet,
+			fmt.Sprintf("/v2/billing/pricing_plan_subscriptions?billing_cadence=%s", cadenceID), "", nil)
+		if listErr == nil {
+			var listResult struct {
+				Data []struct {
+					ID string `json:"id"`
+				} `json:"data"`
+			}
+			if json.Unmarshal(listResp.RawJSON, &listResult) == nil {
+				for _, sub := range listResult.Data {
+					if sub.ID != "" {
+						ids = append(ids, sub.ID)
+					}
+				}
+			}
+		}
+	}
+
+	return &domain.BillingIntentCommitResult{PricingPlanSubscriptionIDs: ids}, nil
+}
+
+// extractSubscriptionIDs parses subscription IDs from a billing intent response.
+func extractSubscriptionIDs(raw []byte) []string {
+	var resp struct {
+		Actions []struct {
+			Subscribe *struct {
+				PricingPlanSubscriptionDetails struct {
+					PricingPlanSubscription string `json:"pricing_plan_subscription"`
+				} `json:"pricing_plan_subscription_details"`
+			} `json:"subscribe"`
+			Modify *struct {
+				PricingPlanSubscriptionDetails struct {
+					PricingPlanSubscription string `json:"pricing_plan_subscription"`
+				} `json:"pricing_plan_subscription_details"`
+			} `json:"modify"`
+		} `json:"actions"`
+	}
+	if json.Unmarshal(raw, &resp) != nil {
+		return nil
+	}
+	var ids []string
+	for _, action := range resp.Actions {
+		if action.Subscribe != nil && action.Subscribe.PricingPlanSubscriptionDetails.PricingPlanSubscription != "" {
+			ids = append(ids, action.Subscribe.PricingPlanSubscriptionDetails.PricingPlanSubscription)
+		}
+		if action.Modify != nil && action.Modify.PricingPlanSubscriptionDetails.PricingPlanSubscription != "" {
+			ids = append(ids, action.Modify.PricingPlanSubscriptionDetails.PricingPlanSubscription)
+		}
+	}
+	return ids
+}
+
+func (c *stripeClientImpl) VoidBillingIntent(ctx context.Context, intentID string) error {
+	_, span := stripeClientTracer.Start(ctx, "stripe_client.void_billing_intent")
+	defer span.End()
+
+	_, err := stripe.RawRequest(http.MethodPost,
+		fmt.Sprintf("/v2/billing/intents/%s/cancel", intentID), "", nil)
+	if err != nil {
+		span.RecordError(err)
+		return fmt.Errorf("failed to void billing intent: %w", err)
 	}
 
 	return nil
 }
 
-func (c *stripeClientImpl) UpdateSubscription(ctx context.Context, subscriptionID string, items []*stripe.SubscriptionItemsParams) (*stripe.Subscription, error) {
-	_, span := stripeClientTracer.Start(ctx, "stripe_client.update_subscription")
-	defer span.End()
-
-	params := &stripe.SubscriptionParams{
-		Items: items,
+// parseBillingIntentConflict checks if a Stripe error indicates a billing intent
+// conflict and extracts the conflicting intent ID from the message.
+func parseBillingIntentConflict(err error) (string, bool) {
+	if err == nil {
+		return "", false
 	}
-
-	sub, err := subscription.Update(subscriptionID, params)
-	if err != nil {
-		span.RecordError(err)
-		return nil, fmt.Errorf("failed to update subscription %s: %w", subscriptionID, err)
+	msg := err.Error()
+	const marker = "reserved by billing intent "
+	idx := strings.Index(msg, marker)
+	if idx < 0 {
+		return "", false
 	}
-
-	return sub, nil
+	rest := msg[idx+len(marker):]
+	// The intent ID ends at the first character that isn't alphanumeric or underscore.
+	end := strings.IndexFunc(rest, func(r rune) bool {
+		return !unicode.IsLetter(r) && !unicode.IsDigit(r) && r != '_'
+	})
+	if end < 0 {
+		end = len(rest)
+	}
+	intentID := rest[:end]
+	if !strings.HasPrefix(intentID, "bilint_") {
+		return "", false
+	}
+	return intentID, true
 }
 
-func (c *stripeClientImpl) CreateHostedCheckoutSession(ctx context.Context, input domain.StripeHostedCheckoutInput) (*domain.StripeHostedCheckoutSession, error) {
-	_, span := stripeClientTracer.Start(ctx, "stripe_client.create_hosted_checkout_session")
+func (c *stripeClientImpl) CreateSetupIntent(ctx context.Context, customerID, idempotencyKey string) (*domain.StripeSetupIntent, error) {
+	_, span := stripeClientTracer.Start(ctx, "stripe_client.create_setup_intent")
 	defer span.End()
 
-	params := &stripe.CheckoutSessionParams{
-		Customer: stripe.String(input.CustomerID),
-		Mode:     stripe.String(string(stripe.CheckoutSessionModeSubscription)),
-		PaymentMethodTypes: []*string{
-			stripe.String("card"),
-		},
-		LineItems: []*stripe.CheckoutSessionLineItemParams{
-			{
-				Price:    stripe.String(input.PriceID),
-				Quantity: stripe.Int64(input.Quantity),
-			},
-		},
-		SuccessURL: stripe.String(input.SuccessURL),
-		CancelURL:  stripe.String(input.CancelURL),
+	params := &stripe.SetupIntentParams{
+		Customer:           stripe.String(customerID),
+		PaymentMethodTypes: stripe.StringSlice([]string{"card"}),
 	}
+	params.IdempotencyKey = stripe.String(idempotencyKey)
 
-	sess, err := session.New(params)
+	si, err := setupintent.New(params)
 	if err != nil {
 		span.RecordError(err)
-		return nil, fmt.Errorf("failed to create hosted checkout session: %w", err)
+		return nil, fmt.Errorf("failed to create Setup Intent: %w", err)
 	}
 
-	return &domain.StripeHostedCheckoutSession{
-		ID:  sess.ID,
-		URL: sess.URL,
+	return &domain.StripeSetupIntent{
+		ID:           si.ID,
+		ClientSecret: si.ClientSecret,
+		Status:       string(si.Status),
 	}, nil
 }
 
-func (c *stripeClientImpl) ListPaymentMethods(ctx context.Context, customerID string) ([]string, error) {
-	_, span := stripeClientTracer.Start(ctx, "stripe_client.list_payment_methods")
+func (c *stripeClientImpl) GetSetupIntent(ctx context.Context, setupIntentID string) (*domain.StripeSetupIntent, error) {
+	_, span := stripeClientTracer.Start(ctx, "stripe_client.get_setup_intent")
 	defer span.End()
 
-	params := &stripe.PaymentMethodListParams{
-		Customer: stripe.String(customerID),
-	}
-
-	var ids []string
-	iter := paymentmethod.List(params)
-	for iter.Next() {
-		ids = append(ids, iter.PaymentMethod().ID)
-	}
-	if err := iter.Err(); err != nil {
+	si, err := setupintent.Get(setupIntentID, nil)
+	if err != nil {
 		span.RecordError(err)
-		return nil, fmt.Errorf("failed to list payment methods for customer %s: %w", customerID, err)
+		return nil, fmt.Errorf("failed to get Setup Intent: %w", err)
 	}
 
-	return ids, nil
+	result := &domain.StripeSetupIntent{
+		ID:           si.ID,
+		ClientSecret: si.ClientSecret,
+		Status:       string(si.Status),
+	}
+	if si.PaymentMethod != nil {
+		result.PaymentMethodID = &si.PaymentMethod.ID
+	}
+
+	return result, nil
 }
 
 func (c *stripeClientImpl) VerifyWebhookSignature(payload []byte, signature string) (*domain.StripeEvent, error) {
 	slog.Info("verifying webhook signature",
 		"payload_size", len(payload),
 		"signature_preview", truncate(signature, 30),
-		"secret_prefix", truncate(c.webhookSecret, 12),
 	)
 
-	event, err := webhook.ConstructEvent(payload, signature, c.webhookSecret)
-	if err != nil {
-		slog.Error("stripe webhook.ConstructEvent failed",
+	// Use ValidatePayload instead of ConstructEvent so that both v1 events
+	// ("object":"event") and v2 event notifications ("object":"v2.core.event")
+	// pass signature verification. ConstructEvent rejects v2 payloads.
+	if err := webhook.ValidatePayload(payload, signature, c.webhookSecret); err != nil {
+		slog.Error("stripe webhook signature validation failed",
 			"error", err.Error(),
 			"payload_size", len(payload),
 			"signature_preview", truncate(signature, 30),
@@ -482,20 +622,76 @@ func (c *stripeClientImpl) VerifyWebhookSignature(payload []byte, signature stri
 		return nil, fmt.Errorf("failed to verify webhook signature: %w", err)
 	}
 
+	// Parse the event envelope to extract ID, type, and object data.
+	// This works for both v1 and v2 event payloads.
+	var envelope struct {
+		ID   string `json:"id"`
+		Type string `json:"type"`
+		// v1 events embed data.object inline
+		Data json.RawMessage `json:"data"`
+		// v2 thin events reference a related_object instead
+		RelatedObject *struct {
+			ID string `json:"id"`
+		} `json:"related_object,omitempty"`
+	}
+	if err := json.Unmarshal(payload, &envelope); err != nil {
+		return nil, fmt.Errorf("failed to parse webhook event envelope: %w", err)
+	}
+
+	// Extract object ID from the payload.
 	var objectID string
-	var rawObject map[string]any
-	if err := json.Unmarshal(event.Data.Raw, &rawObject); err == nil {
-		if id, ok := rawObject["id"].(string); ok {
-			objectID = id
+	if envelope.RelatedObject != nil {
+		objectID = envelope.RelatedObject.ID
+	} else if len(envelope.Data) > 0 {
+		var data struct {
+			Object struct {
+				ID string `json:"id"`
+			} `json:"object"`
+		}
+		if json.Unmarshal(envelope.Data, &data) == nil {
+			objectID = data.Object.ID
 		}
 	}
 
 	return &domain.StripeEvent{
-		ID:       event.ID,
-		Type:     string(event.Type),
+		ID:       envelope.ID,
+		Type:     envelope.Type,
 		ObjectID: objectID,
-		Data:     event.Data.Raw,
+		Data:     payload, // pass full raw payload; consumer re-parses envelope
 	}, nil
+}
+
+func (c *stripeClientImpl) FetchObject(ctx context.Context, objectURL string) ([]byte, error) {
+	_, span := stripeClientTracer.Start(ctx, "stripe_client.fetch_object")
+	defer span.End()
+
+	resp, err := stripe.RawRequest(http.MethodGet, objectURL, "", nil)
+	if err != nil {
+		span.RecordError(err)
+		return nil, fmt.Errorf("failed to fetch Stripe object at %s: %w", objectURL, err)
+	}
+
+	return resp.RawJSON, nil
+}
+
+func (c *stripeClientImpl) ReportMeterEvent(ctx context.Context, eventName, stripeCustomerID string, value int, idempotencyKey string) error {
+	_, span := stripeClientTracer.Start(ctx, "stripe_client.report_meter_event")
+	defer span.End()
+
+	body := fmt.Sprintf(`{"event_name":%q,"payload":{"stripe_customer_id":%q,"value":"%d"}}`,
+		eventName, stripeCustomerID, value)
+
+	_, err := stripe.RawRequest(http.MethodPost, "/v2/billing/meter_events", body, &stripe.RawParams{
+		Params: stripe.Params{
+			IdempotencyKey: stripe.String(idempotencyKey),
+		},
+	})
+	if err != nil {
+		span.RecordError(err)
+		return fmt.Errorf("failed to report meter event: %w", err)
+	}
+
+	return nil
 }
 
 func truncate(s string, maxLen int) string {

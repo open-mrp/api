@@ -83,9 +83,17 @@ func (s *authSvcImpl) mediators() domain.Mediators {
 	return s.mediatorFactory.Build(s.repos)
 }
 
-func (s *authSvcImpl) ValidateCredential(ctx context.Context, authToken string, targetAccountID *string) (*types.Identity, *apierror.APIError) {
+// ValidateCredential validates an auth token and returns the resulting identity.
+//
+// 1. Delegate to the user mediator's ValidateCredential method.
+//
+// Behavior:
+//   - If authToken is empty, returns an unauthenticated identity.
+//   - If authToken is an API key credential, validates it as an API key.
+//   - Otherwise, validates it as a user credential (JWT).
+func (s *authSvcImpl) ValidateCredential(ctx context.Context, authToken string, targetAccountID *string, actorAccountID *string) (*types.Identity, *apierror.APIError) {
 	ctx, span := authSvcTracer.Start(ctx, "service.auth.validate_credential")
 	defer span.End()
 
-	return s.mediators().User.ValidateCredential(ctx, authToken, targetAccountID)
+	return s.mediators().User.ValidateCredential(ctx, authToken, targetAccountID, actorAccountID)
 }

@@ -9,6 +9,7 @@ import (
 )
 
 func TestWithDefaults(t *testing.T) {
+	t.Parallel()
 	cfg := new(Config).WithDefaults()
 
 	if cfg.MaxRetries != DefaultMaxRetries {
@@ -29,6 +30,7 @@ func TestWithDefaults(t *testing.T) {
 }
 
 func TestWithDefaults_PreservesExplicitValues(t *testing.T) {
+	t.Parallel()
 	cfg := (&Config{
 		MaxRetries:  10,
 		InitialWait: 500 * time.Millisecond,
@@ -49,6 +51,7 @@ func TestWithDefaults_PreservesExplicitValues(t *testing.T) {
 }
 
 func TestWithDefaults_NilReceiver(t *testing.T) {
+	t.Parallel()
 	var cfg *Config
 	got := cfg.WithDefaults()
 	if got.MaxRetries != DefaultMaxRetries {
@@ -57,6 +60,7 @@ func TestWithDefaults_NilReceiver(t *testing.T) {
 }
 
 func TestValidate_ValidConfigs(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name string
 		cfg  Config
@@ -78,6 +82,7 @@ func TestValidate_ValidConfigs(t *testing.T) {
 }
 
 func TestValidate_NegativeMaxRetries(t *testing.T) {
+	t.Parallel()
 	cfg := Config{MaxRetries: -1, InitialWait: time.Second, MaxWait: time.Second, Multiplier: 1.0}
 	err := cfg.validate()
 	if err == nil {
@@ -89,6 +94,7 @@ func TestValidate_NegativeMaxRetries(t *testing.T) {
 }
 
 func TestValidate_ZeroInitialWait(t *testing.T) {
+	t.Parallel()
 	cfg := Config{MaxRetries: 1, InitialWait: 0, MaxWait: time.Second, Multiplier: 1.0}
 	err := cfg.validate()
 	if err == nil {
@@ -100,6 +106,7 @@ func TestValidate_ZeroInitialWait(t *testing.T) {
 }
 
 func TestValidate_NegativeInitialWait(t *testing.T) {
+	t.Parallel()
 	cfg := Config{MaxRetries: 1, InitialWait: -time.Second, MaxWait: time.Second, Multiplier: 1.0}
 	err := cfg.validate()
 	if err == nil {
@@ -108,6 +115,7 @@ func TestValidate_NegativeInitialWait(t *testing.T) {
 }
 
 func TestValidate_ZeroMaxWait(t *testing.T) {
+	t.Parallel()
 	cfg := Config{MaxRetries: 1, InitialWait: time.Second, MaxWait: 0, Multiplier: 1.0}
 	err := cfg.validate()
 	if err == nil {
@@ -119,6 +127,7 @@ func TestValidate_ZeroMaxWait(t *testing.T) {
 }
 
 func TestValidate_MaxWaitLessThanInitialWait(t *testing.T) {
+	t.Parallel()
 	cfg := Config{MaxRetries: 1, InitialWait: 5 * time.Second, MaxWait: time.Second, Multiplier: 1.0}
 	err := cfg.validate()
 	if err == nil {
@@ -130,6 +139,7 @@ func TestValidate_MaxWaitLessThanInitialWait(t *testing.T) {
 }
 
 func TestValidate_MultiplierBelowOne(t *testing.T) {
+	t.Parallel()
 	cfg := Config{MaxRetries: 1, InitialWait: time.Second, MaxWait: 10 * time.Second, Multiplier: 0.5}
 	err := cfg.validate()
 	if err == nil {
@@ -141,6 +151,7 @@ func TestValidate_MultiplierBelowOne(t *testing.T) {
 }
 
 func TestValidate_NegativeJitterFraction(t *testing.T) {
+	t.Parallel()
 	cfg := Config{MaxRetries: 1, InitialWait: time.Second, MaxWait: 10 * time.Second, Multiplier: 2.0, JitterFraction: -0.1}
 	err := cfg.validate()
 	if err == nil {
@@ -152,6 +163,7 @@ func TestValidate_NegativeJitterFraction(t *testing.T) {
 }
 
 func TestValidate_JitterFractionAboveOne(t *testing.T) {
+	t.Parallel()
 	cfg := Config{MaxRetries: 1, InitialWait: time.Second, MaxWait: 10 * time.Second, Multiplier: 2.0, JitterFraction: 1.5}
 	err := cfg.validate()
 	if err == nil {
@@ -160,6 +172,7 @@ func TestValidate_JitterFractionAboveOne(t *testing.T) {
 }
 
 func TestCalculateDelay_NoJitter(t *testing.T) {
+	t.Parallel()
 	cfg := &Config{
 		InitialWait:    100 * time.Millisecond,
 		MaxWait:        10 * time.Second,
@@ -186,6 +199,7 @@ func TestCalculateDelay_NoJitter(t *testing.T) {
 }
 
 func TestCalculateDelay_CapsAtMaxWait(t *testing.T) {
+	t.Parallel()
 	cfg := &Config{
 		InitialWait:    100 * time.Millisecond,
 		MaxWait:        500 * time.Millisecond,
@@ -200,6 +214,7 @@ func TestCalculateDelay_CapsAtMaxWait(t *testing.T) {
 }
 
 func TestCalculateDelay_CustomMultiplier(t *testing.T) {
+	t.Parallel()
 	cfg := &Config{
 		InitialWait:    100 * time.Millisecond,
 		MaxWait:        10 * time.Second,
@@ -225,6 +240,7 @@ func TestCalculateDelay_CustomMultiplier(t *testing.T) {
 }
 
 func TestCalculateDelay_NilConfig(t *testing.T) {
+	t.Parallel()
 	got := CalculateDelay(nil, 0)
 	// nil config uses defaults which include 10% jitter, so the result
 	// should be within ±10% of defaultInitialWait.
@@ -236,6 +252,7 @@ func TestCalculateDelay_NilConfig(t *testing.T) {
 }
 
 func TestCalculateDelay_JitterWithinBounds(t *testing.T) {
+	t.Parallel()
 	cfg := &Config{
 		InitialWait:    1 * time.Second,
 		MaxWait:        10 * time.Second,
@@ -267,6 +284,7 @@ func TestCalculateDelay_JitterWithinBounds(t *testing.T) {
 }
 
 func TestCalculateDelay_ZeroJitterIsDeterministic(t *testing.T) {
+	t.Parallel()
 	cfg := &Config{
 		InitialWait:    100 * time.Millisecond,
 		MaxWait:        10 * time.Second,
@@ -284,6 +302,7 @@ func TestCalculateDelay_ZeroJitterIsDeterministic(t *testing.T) {
 }
 
 func TestWithBackoff_SucceedsFirstAttempt(t *testing.T) {
+	t.Parallel()
 	cfg := &Config{
 		MaxRetries:     3,
 		InitialWait:    1 * time.Millisecond,
@@ -307,6 +326,7 @@ func TestWithBackoff_SucceedsFirstAttempt(t *testing.T) {
 }
 
 func TestWithBackoff_SucceedsAfterRetries(t *testing.T) {
+	t.Parallel()
 	cfg := &Config{
 		MaxRetries:     5,
 		InitialWait:    1 * time.Millisecond,
@@ -333,6 +353,7 @@ func TestWithBackoff_SucceedsAfterRetries(t *testing.T) {
 }
 
 func TestWithBackoff_ExhaustsRetries(t *testing.T) {
+	t.Parallel()
 	cfg := &Config{
 		MaxRetries:     2,
 		InitialWait:    1 * time.Millisecond,
@@ -358,6 +379,7 @@ func TestWithBackoff_ExhaustsRetries(t *testing.T) {
 }
 
 func TestWithBackoff_ContextCancellation(t *testing.T) {
+	t.Parallel()
 	cfg := &Config{
 		MaxRetries:     10,
 		InitialWait:    1 * time.Second,
@@ -380,6 +402,7 @@ func TestWithBackoff_ContextCancellation(t *testing.T) {
 }
 
 func TestWithBackoff_NilConfig(t *testing.T) {
+	t.Parallel()
 	calls := 0
 	err := WithBackoff(context.Background(), nil, func() error {
 		calls++
@@ -395,6 +418,7 @@ func TestWithBackoff_NilConfig(t *testing.T) {
 }
 
 func TestWithBackoff_ValidationError(t *testing.T) {
+	t.Parallel()
 	cfg := &Config{
 		MaxRetries:  1,
 		InitialWait: time.Second,

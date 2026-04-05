@@ -37,7 +37,12 @@ func NewRefreshTokenMed(config *RefreshTokenMedConfig) domain.RefreshTokenMed {
 	}
 }
 
-// Validate validates a refresh token and returns the user ID if it is valid.
+// Validate validates a refresh token and returns the associated user ID.
+//
+// 1. Look up the refresh token in the repository.
+// 2. Verify the token is not revoked.
+// 3. Verify the token is not expired.
+// 4. Return the associated user ID.
 func (s *refreshTokenMedImpl) Validate(ctx context.Context, refreshToken string) (userID string, err *apierror.APIError) {
 	ctx, span := refreshTokenMedTracer.Start(ctx, "mediator.refresh_token.validate")
 	defer span.End()
@@ -62,10 +67,13 @@ func (s *refreshTokenMedImpl) Validate(ctx context.Context, refreshToken string)
 	return refreshTokenModel.UserID, nil
 }
 
-// TODO: We should hash rather than use opaque tokens.
+// ! NOTE: We should hash rather than use opaque tokens.
 
-// Create creates a new refresh token for the given user ID that will expire in the given number of days.
-// If the number of days is not provided, it will default to 30 days.
+// Create issues a new refresh token for the given user ID.
+//
+// 1. Generate a cryptographically random opaque token.
+// 2. Default expiration to 30 days if expiresInDays is nil.
+// 3. Persist the token in the repository with the computed expiration.
 func (s *refreshTokenMedImpl) Create(ctx context.Context, userID string, expiresInDays *int) (*domain.RefreshToken, *apierror.APIError) {
 	ctx, span := refreshTokenMedTracer.Start(ctx, "mediator.refresh_token.create")
 	defer span.End()
@@ -89,8 +97,11 @@ func (s *refreshTokenMedImpl) Create(ctx context.Context, userID string, expires
 	return refreshTokenModel, nil
 }
 
-// Revoke revokes a refresh token. This will prevent the refresh token from being used to mint
-// a new access token.
+// Revoke revokes a single refresh token, preventing it from being used to mint new access tokens.
+//
+// 1. Look up the refresh token in the repository.
+// 2. Verify the token is not already revoked or expired.
+// 3. Mark the token as revoked in the repository.
 func (s *refreshTokenMedImpl) Revoke(ctx context.Context, refreshToken string) *apierror.APIError {
 	ctx, span := refreshTokenMedTracer.Start(ctx, "mediator.refresh_token.revoke")
 	defer span.End()
@@ -119,8 +130,12 @@ func (s *refreshTokenMedImpl) Revoke(ctx context.Context, refreshToken string) *
 	return nil
 }
 
-// RevokeAll revokes all refresh tokens associated with a user. This will prevent stale tokens from
-// being minted after a password change.
+// RevokeAll revokes all refresh tokens associated with a user.
+//
+// 1. Revoke all refresh tokens for the given user ID in the repository.
+//
+// Behavior:
+//   - Prevents stale tokens from being used after a password change.
 func (s *refreshTokenMedImpl) RevokeAll(ctx context.Context, userID string) *apierror.APIError {
 	ctx, span := refreshTokenMedTracer.Start(ctx, "mediator.refresh_token.revoke_all")
 	defer span.End()

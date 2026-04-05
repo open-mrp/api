@@ -67,7 +67,12 @@ func NewPasswordMed(config *PasswordMedConfig) domain.PasswordMed {
 	}
 }
 
-// Validate is a method that validates a user's password and returns the user if it is valid.
+// Validate validates the identifier/password combination and returns the associated user.
+//
+// 1. Look up the user by identifier (email or user ID).
+// 2. Verify the user has a stored password hash.
+// 3. Compare the provided password against the stored hash.
+// 4. Return the user if the password matches; return an authentication error otherwise.
 func (s *passwordMedImpl) Validate(ctx context.Context, identifier, password string) (*types.User, *apierror.APIError) {
 	ctx, span := passwordMedTracer.Start(ctx, "mediator.password.validate")
 	defer span.End()
@@ -99,6 +104,16 @@ func (s *passwordMedImpl) Validate(ctx context.Context, identifier, password str
 }
 
 // Update updates a user's password.
+//
+// 1. Hash the new password.
+// 2. Persist the updated password hash in the repository.
+// 3. Revoke all existing refresh tokens for the user.
+// 4. Send a password updated notification email.
+//
+// Side effects:
+//   - Updates the stored password hash.
+//   - Revokes all refresh tokens for the user.
+//   - Sends a password updated email.
 func (s *passwordMedImpl) Update(ctx context.Context, user *types.User, newPassword string) *apierror.APIError {
 	ctx, span := passwordMedTracer.Start(ctx, "mediator.password.update")
 	defer span.End()
@@ -138,7 +153,11 @@ func (s *passwordMedImpl) Update(ctx context.Context, user *types.User, newPassw
 	return nil
 }
 
-// ValidatePasswordResetToken validates a password reset token and returns the user if it is valid.
+// ValidatePasswordResetToken validates a password reset token and returns the associated user.
+//
+// 1. Decode and verify the JWT token as a password-reset type.
+// 2. Look up the user by the token's subject (user ID).
+// 3. Return an authentication error if the user is not found.
 func (s *passwordMedImpl) ValidatePasswordResetToken(ctx context.Context, token string) (*types.User, *apierror.APIError) {
 	ctx, span := passwordMedTracer.Start(ctx, "mediator.password.validate_password_reset_token")
 	defer span.End()
@@ -161,9 +180,20 @@ func (s *passwordMedImpl) ValidatePasswordResetToken(ctx context.Context, token 
 	return user, nil
 }
 
-// RequestReset handles the business logic for a request to reset a password.
-// We only want to return an explicit error for internal service errors so we do not leak information about which identifiers
-// are registered.
+// RequestReset initiates a password reset flow for the given identifier.
+//
+//  1. Look up the user by identifier; silently succeed if not found to avoid leaking
+//     information about registered identifiers.
+//  2. Generate a short-lived password reset JWT (15 minutes).
+//  3. Build the reset link, optionally scoped to an account slug.
+//  4. Send a password reset email with the link.
+//
+// Behavior:
+//   - Only returns an error for internal service failures; unknown identifiers
+//     succeed silently to prevent enumeration.
+//
+// Side effects:
+//   - Sends a password reset email.
 func (s *passwordMedImpl) RequestReset(ctx context.Context, identifier string, accountSlug *string) *apierror.APIError {
 	ctx, span := passwordMedTracer.Start(ctx, "mediator.password.request_reset")
 	defer span.End()

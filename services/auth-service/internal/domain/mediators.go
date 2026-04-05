@@ -167,7 +167,7 @@ type UserMed interface {
 	//   - If authToken is empty, returns an unauthenticated identity.
 	//   - If authToken is an API key credential, validates it as an API key.
 	//   - Otherwise, validates it as a user credential.
-	ValidateCredential(ctx context.Context, authToken string, targetAccountID *string) (*types.Identity, *apierror.APIError)
+	ValidateCredential(ctx context.Context, authToken string, targetAccountID *string, actorAccountID *string) (*types.Identity, *apierror.APIError)
 }
 
 type RegistrationMed interface {
@@ -216,7 +216,7 @@ type RegistrationMed interface {
 
 type RequestIdentity struct {
 	ActorID         string
-	IdentityType    types.IdentityType
+	IdentityType    types.IdentityActorType
 	TargetAccountID *string
 }
 

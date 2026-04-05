@@ -41,13 +41,17 @@ func NewIdempotencyMed(config *IdempotencyMedConfig) domain.IdempotencyMed {
 	}
 }
 
-func (m *idempotencyMedImpl) UpsertIdempotencyKey(ctx context.Context, identity *domain.RequestIdentity) (*domain.IdempotencyKey, *apierror.APIError) {
+func (m *idempotencyMedImpl) UpsertIdempotencyKey(ctx context.Context, identity *types.Identity) (*domain.IdempotencyKey, *apierror.APIError) {
 	ctx, span := idempotencyMedTracer.Start(ctx, "mediator.idempotency.upsert_idempotency_key")
 	defer span.End()
 
 	idempotencyKey, hasKey := appctx.GetIdempotencyKey(ctx)
 	if !hasKey {
-		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Idempotency key required in context."))
+		if requestID, ok := appctx.GetRequestID(ctx); ok {
+			idempotencyKey = requestID
+		} else {
+			return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Idempotency key required in context."))
+		}
 	}
 
 	handler, ok := appctx.GetHandler(ctx)
@@ -62,11 +66,13 @@ func (m *idempotencyMedImpl) UpsertIdempotencyKey(ctx context.Context, identity 
 
 	var actorID *string = nil
 	var targetAccountID *string = nil
-	var identityType = string(types.IdentityTypeUnauthenticated)
+	var identityType = string(types.IdentityActorTypeUnauthenticated)
 	if identity != nil {
-		actorID = &identity.ActorID
-		identityType = string(identity.IdentityType)
-		targetAccountID = identity.TargetAccountID
+		actorID = &identity.Actor.ID
+		identityType = string(identity.Type)
+		if identity.Target != nil {
+			targetAccountID = &identity.Target.AccountID
+		}
 	}
 
 	scopeHash := idempotency.ComputeServiceScopeHash(actorID, targetAccountID, domain.ServiceName, handler, idempotencyKey)

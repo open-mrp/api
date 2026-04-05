@@ -9,6 +9,7 @@ import (
 )
 
 func TestGenerateRawEmail(t *testing.T) {
+	t.Parallel()
 	t.Run("should generate valid raw email with HTML body", func(t *testing.T) {
 		subject := "Test Subject"
 		body := "<h1>Hello World</h1>"
@@ -136,6 +137,7 @@ func TestGenerateRawEmail(t *testing.T) {
 }
 
 func TestSplitString(t *testing.T) {
+	t.Parallel()
 	t.Run("should split string into chunks", func(t *testing.T) {
 		s := "abcdefghij"
 		chunked := splitString(s, 3)

@@ -1,0 +1,244 @@
+syntax = "proto3";
+
+// Package core defines the gRPC service for production step and production management.
+package core;
+
+import "google/protobuf/timestamp.proto";
+import "core/core.proto";
+
+option go_package = "shared/proto/core;core";
+
+service CoreProductionStepService {
+  // ListProductionSteps returns a paginated list of production steps.
+  rpc ListProductionSteps(ListProductionStepsRequest) returns (ListProductionStepsResponse);
+
+  // GetProductionStep returns a single production step by its ID.
+  rpc GetProductionStep(GetProductionStepRequest) returns (GetProductionStepResponse);
+
+  // CreateProductionStep creates a new production step.
+  rpc CreateProductionStep(CreateProductionStepRequest) returns (CreateProductionStepResponse);
+
+  // UpdateProductionStep partially updates a production step.
+  rpc UpdateProductionStep(UpdateProductionStepRequest) returns (UpdateProductionStepResponse);
+
+  // DeleteProductionStep deletes a production step by its ID.
+  rpc DeleteProductionStep(DeleteProductionStepRequest) returns (DeleteProductionStepResponse);
+
+  // GetProduction returns a single production output within a production step.
+  rpc GetProduction(GetProductionRequest) returns (GetProductionResponse);
+
+  // UpdateProduction partially updates a production output.
+  rpc UpdateProduction(UpdateProductionRequest) returns (UpdateProductionResponse);
+
+  // BulkCreateProductionSteps creates multiple production steps in a single operation.
+  rpc BulkCreateProductionSteps(BulkCreateProductionStepsRequest) returns (BulkCreateProductionStepsResponse);
+}
+
+// ProductionStepInfo represents a full production step with all nested data.
+message ProductionStepInfo {
+  string id = 1;
+  string name = 2;
+  optional string notes = 3;
+  string leveling_factor = 4;
+  string allowances = 5;
+  ProductionStepRateInfo labor_rate = 6;
+  ProductionStepRateInfo labor_time = 7;
+  ProductionStepRateInfo overhead_rate = 8;
+  ProductionInfo production = 9;
+  repeated ConsumptionInfo consumptions = 10;
+  repeated LightMachineInfo machines = 11;
+  LightScanningStationInfo scanning_station = 12;
+  repeated LightProductionStepInfo in_steps = 13;
+  repeated LightProductionStepInfo out_steps = 14;
+  optional string department_id = 15;
+  google.protobuf.Timestamp created_at = 16;
+  google.protobuf.Timestamp updated_at = 17;
+}
+
+// ProductionStepRateInfo represents a rate (labor, time, overhead) on a production step.
+message ProductionStepRateInfo {
+  string id = 1;
+  string value = 2;
+  string numerator_unit_id = 3;
+  string numerator_unit_abbreviation = 4;
+  string numerator_unit_type = 5;
+  string denominator_unit_id = 6;
+  string denominator_unit_abbreviation = 7;
+  string denominator_unit_type = 8;
+}
+
+// ProductionInfo represents the output of a production step.
+message ProductionInfo {
+  string id = 1;
+  string item_id = 2;
+  string item_sku = 3;
+  optional string item_description = 4;
+  string item_type_code = 5;
+  QuantityInfo quantity = 6;
+  string production_step_id = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+}
+
+// LightMachineInfo, LightScanningStationInfo, and LightProductionStepInfo are defined in core.proto.
+
+// --- List ---
+
+message ListProductionStepsRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+  repeated string item_ids = 4;
+  repeated string machine_ids = 5;
+  repeated string scanning_station_ids = 6;
+  repeated string input_step_ids = 7;
+  repeated string output_step_ids = 8;
+  optional google.protobuf.Timestamp start_date = 9;
+  optional google.protobuf.Timestamp end_date = 10;
+}
+
+message ListProductionStepsResponse {
+  repeated ProductionStepInfo production_steps = 1;
+  PageInfo page_info = 2;
+}
+
+// --- Get ---
+
+message GetProductionStepRequest {
+  string id = 1;
+}
+
+message GetProductionStepResponse {
+  ProductionStepInfo production_step = 1;
+}
+
+// --- Create ---
+
+message CreateProductionStepRequest {
+  string name = 1;
+  optional string notes = 2;
+  string leveling_factor = 3;
+  string allowances = 4;
+  optional string scanning_station_id = 5;
+  optional string department_id = 6;
+  CreateRateInput labor_rate = 7;
+  CreateRateInput labor_time = 8;
+  CreateRateInput overhead_rate = 9;
+  CreateProductionInput production = 10;
+  repeated CreateStepConsumptionInput consumptions = 11;
+}
+
+message CreateRateInput {
+  string value = 1;
+  string numerator_unit_id = 2;
+  string denominator_unit_id = 3;
+}
+
+message CreateProductionInput {
+  string item_id = 1;
+  string quantity_value = 2;
+  string quantity_unit_id = 3;
+}
+
+message CreateStepConsumptionInput {
+  string item_id = 1;
+  string quantity_value = 2;
+  string quantity_unit_id = 3;
+  string waste_quantity_value = 4;
+  string waste_quantity_unit_id = 5;
+  optional string instructions = 6;
+}
+
+message CreateProductionStepResponse {
+  ProductionStepInfo production_step = 1;
+}
+
+// --- Update ---
+
+message UpdateProductionStepRequest {
+  string id = 1;
+  optional string name = 2;
+  optional string leveling_factor = 3;
+  optional string allowances = 4;
+  optional string scanning_station_id = 5;
+}
+
+message UpdateProductionStepResponse {
+  ProductionStepInfo production_step = 1;
+}
+
+// --- Delete ---
+
+message DeleteProductionStepRequest {
+  string id = 1;
+}
+
+message DeleteProductionStepResponse {}
+
+// --- Get Production ---
+
+message GetProductionRequest {
+  string production_step_id = 1;
+  string id = 2;
+}
+
+message GetProductionResponse {
+  ProductionInfo production = 1;
+}
+
+// --- Update Production ---
+
+message UpdateProductionRequest {
+  string production_step_id = 1;
+  string id = 2;
+  optional string item_id = 3;
+  optional string quantity_value = 4;
+  optional string quantity_unit_id = 5;
+}
+
+message UpdateProductionResponse {
+  ProductionInfo production = 1;
+}
+
+// --- Bulk Create Production Steps ---
+
+message BulkCreateConsumptionInput {
+  string sku = 1;
+  string measure = 2;
+  optional string instructions = 3;
+}
+
+message BulkCreateProductionInput {
+  string sku = 1;
+  string measure = 2;
+}
+
+message BulkCreateProductionStepInput {
+  string name = 1;
+  repeated BulkCreateConsumptionInput consumptions = 2;
+  repeated BulkCreateProductionInput productions = 3;
+  string labor_rate = 4;
+  string labor_time = 5;
+  optional string labor_time_unit = 6;
+  string overhead_rate = 7;
+  optional string allowances = 8;
+  optional string leveling_factor = 9;
+  optional string station = 10;
+}
+
+message BulkCreateProductionStepsRequest {
+  repeated BulkCreateProductionStepInput steps = 1;
+}
+
+message BulkCreateProductionStepResult {
+  string name = 1;
+  bool success = 2;
+  optional string error = 3;
+  optional string production_step_id = 4;
+  // "created", "updated", or "skipped"
+  string action = 5;
+}
+
+message BulkCreateProductionStepsResponse {
+  repeated BulkCreateProductionStepResult results = 1;
+}

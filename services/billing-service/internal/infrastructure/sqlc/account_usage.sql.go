@@ -88,9 +88,11 @@ func (q *Queries) CountUsersByAccountID(ctx context.Context, accountID string) (
 }
 
 const getAccountNameAndPlanCode = `-- name: GetAccountNameAndPlanCode :one
-SELECT name, plan_code
-FROM account
-WHERE id = ?
+SELECT a.name, ap.plan_type_code AS plan_code
+FROM account a
+JOIN account_billing ab ON a.account_billing_id = ab.id
+JOIN account_plan ap ON ab.account_plan_id = ap.type_id
+WHERE a.id = ?
 `
 
 type GetAccountNameAndPlanCodeRow struct {
@@ -106,21 +108,44 @@ func (q *Queries) GetAccountNameAndPlanCode(ctx context.Context, id string) (Get
 }
 
 const getAccountSubscriptionInfo = `-- name: GetAccountSubscriptionInfo :one
-SELECT subscription_status, subscription_current_period_end, internal_stripe_subscription_id
-FROM account
-WHERE id = ?
+SELECT
+    ab.subscription_status,
+    ab.subscription_current_period_end,
+    ab.internal_stripe_subscription_id,
+    ab.stripe_billing_profile_id,
+    ab.stripe_billing_cadence_id,
+    ab.stripe_pricing_plan_subscription_id,
+    ab.servicing_status,
+    ab.collection_status
+FROM account a
+JOIN account_billing ab ON a.account_billing_id = ab.id
+WHERE a.id = ?
 `
 
 type GetAccountSubscriptionInfoRow struct {
-	SubscriptionStatus           sql.NullString
-	SubscriptionCurrentPeriodEnd sql.NullTime
-	InternalStripeSubscriptionID sql.NullString
+	SubscriptionStatus              sql.NullString
+	SubscriptionCurrentPeriodEnd    sql.NullTime
+	InternalStripeSubscriptionID    sql.NullString
+	StripeBillingProfileID          sql.NullString
+	StripeBillingCadenceID          sql.NullString
+	StripePricingPlanSubscriptionID sql.NullString
+	ServicingStatus                 sql.NullString
+	CollectionStatus                sql.NullString
 }
 
 func (q *Queries) GetAccountSubscriptionInfo(ctx context.Context, id string) (GetAccountSubscriptionInfoRow, error) {
 	row := q.queryRow(ctx, q.getAccountSubscriptionInfoStmt, getAccountSubscriptionInfo, id)
 	var i GetAccountSubscriptionInfoRow
-	err := row.Scan(&i.SubscriptionStatus, &i.SubscriptionCurrentPeriodEnd, &i.InternalStripeSubscriptionID)
+	err := row.Scan(
+		&i.SubscriptionStatus,
+		&i.SubscriptionCurrentPeriodEnd,
+		&i.InternalStripeSubscriptionID,
+		&i.StripeBillingProfileID,
+		&i.StripeBillingCadenceID,
+		&i.StripePricingPlanSubscriptionID,
+		&i.ServicingStatus,
+		&i.CollectionStatus,
+	)
 	return i, err
 }
 
@@ -143,8 +168,8 @@ func (q *Queries) GetAdminEmailByAccountID(ctx context.Context, accountID string
 const getLimitsByAccountID = `-- name: GetLimitsByAccountID :many
 SELECT apl.` + "`" + `key` + "`" + `, apl.value
 FROM account_plan_limit apl
-JOIN account_plan ap ON ap.type_id = apl.account_plan_id
-JOIN account a ON a.account_plan_id = ap.type_id
+JOIN account_billing ab ON ab.account_plan_id = apl.account_plan_id
+JOIN account a ON a.account_billing_id = ab.id
 WHERE a.id = ?
 ORDER BY apl.` + "`" + `key` + "`" + ` ASC
 `
@@ -178,9 +203,10 @@ func (q *Queries) GetLimitsByAccountID(ctx context.Context, id string) ([]GetLim
 }
 
 const getStripeCustomerIDByAccountID = `-- name: GetStripeCustomerIDByAccountID :one
-SELECT internal_stripe_customer_id
-FROM account
-WHERE id = ?
+SELECT ab.internal_stripe_customer_id
+FROM account a
+JOIN account_billing ab ON a.account_billing_id = ab.id
+WHERE a.id = ?
 `
 
 func (q *Queries) GetStripeCustomerIDByAccountID(ctx context.Context, id string) (sql.NullString, error) {
@@ -209,15 +235,16 @@ func (q *Queries) GetUserEmailByID(ctx context.Context, id string) (GetUserEmail
 }
 
 const updateStripeCustomerIDByAccountID = `-- name: UpdateStripeCustomerIDByAccountID :exec
-UPDATE account SET internal_stripe_customer_id = ? WHERE id = ?
+UPDATE account_billing SET internal_stripe_customer_id = ?
+WHERE account_billing.id = (SELECT account_billing_id FROM account WHERE account.id = ?)
 `
 
 type UpdateStripeCustomerIDByAccountIDParams struct {
 	InternalStripeCustomerID sql.NullString
-	ID                       string
+	AccountID                string
 }
 
 func (q *Queries) UpdateStripeCustomerIDByAccountID(ctx context.Context, arg UpdateStripeCustomerIDByAccountIDParams) error {
-	_, err := q.exec(ctx, q.updateStripeCustomerIDByAccountIDStmt, updateStripeCustomerIDByAccountID, arg.InternalStripeCustomerID, arg.ID)
+	_, err := q.exec(ctx, q.updateStripeCustomerIDByAccountIDStmt, updateStripeCustomerIDByAccountID, arg.InternalStripeCustomerID, arg.AccountID)
 	return err
 }

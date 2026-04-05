@@ -16,6 +16,7 @@ import (
 )
 
 func TestRecordControllerErrorAPIErrorAddsApiErrorEvent(t *testing.T) {
+	t.Parallel()
 	spanRecorder := tracetest.NewSpanRecorder()
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
 	tracer := tp.Tracer("test")
@@ -52,6 +53,7 @@ func TestRecordControllerErrorAPIErrorAddsApiErrorEvent(t *testing.T) {
 }
 
 func TestRecordControllerErrorNilDoesNothing(t *testing.T) {
+	t.Parallel()
 	spanRecorder := tracetest.NewSpanRecorder()
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
 	tracer := tp.Tracer("test")
@@ -67,6 +69,7 @@ func TestRecordControllerErrorNilDoesNothing(t *testing.T) {
 }
 
 func TestRecordControllerErrorNonAPIErrorRecordsException(t *testing.T) {
+	t.Parallel()
 	spanRecorder := tracetest.NewSpanRecorder()
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
 	tracer := tp.Tracer("test")
@@ -102,6 +105,7 @@ func attrsToMap(attrs []attribute.KeyValue) map[string]string {
 }
 
 func TestWithNoTraceDisablesTracing(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	require.True(t, appctx.ShouldTrace(ctx), "default context should allow tracing")
 
@@ -110,6 +114,7 @@ func TestWithNoTraceDisablesTracing(t *testing.T) {
 }
 
 func TestStartSpanReturnsNoopWhenNoTrace(t *testing.T) {
+	t.Parallel()
 	spanRecorder := tracetest.NewSpanRecorder()
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
 	tracer := tp.Tracer("test")

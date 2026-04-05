@@ -1,0 +1,35 @@
+package childaccountep
+
+import (
+	"context"
+	"net/http"
+
+	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	apierror "github.com/augno/api/shared/errors"
+)
+
+// AddChildAccountRequest is the request to add a child account.
+type AddChildAccountRequest struct {
+	// The account ID of the child to add.
+	ChildAccountID string `path:"child_account_id" validate:"required"`
+}
+
+type AddChildAccountEndpoint struct{}
+
+func (e *AddChildAccountEndpoint) Materialize() *apiendpoint.APIEndpoint[*AddChildAccountRequest, *apiresource.ChildAccount] {
+	return &apiendpoint.APIEndpoint[*AddChildAccountRequest, *apiresource.ChildAccount]{
+		Title:             "Add Child Account",
+		Description:       "Adds a child account relationship to the target account.",
+		Method:            http.MethodPut,
+		Route:             "/v1/identity/child-accounts/{child_account_id}",
+		Request:           &AddChildAccountRequest{},
+		Response:          &apiresource.ChildAccount{},
+		SuccessStatusCode: http.StatusOK,
+		Public:            false,
+		Preview:           true,
+		ServiceHandler: func(svc any) func(ctx context.Context, req *AddChildAccountRequest) (*apiresource.ChildAccount, *apierror.APIError) {
+			return svc.(ChildAccountSvc).AddChildAccount
+		},
+	}
+}

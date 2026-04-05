@@ -44,6 +44,7 @@ func (r *capturingOutboxRepo) waitForCreate(t *testing.T) *messaging.OutboxMessa
 }
 
 func TestPublisher_MapsAccountID(t *testing.T) {
+	t.Parallel()
 	repo := newCapturingOutboxRepo()
 	pub := NewRequestLogOutboxPublisher(repo, "", constants.PlatformModeProduction)
 
@@ -100,6 +101,7 @@ func TestPublisher_MapsAccountID(t *testing.T) {
 }
 
 func TestPublisher_NilAccountID(t *testing.T) {
+	t.Parallel()
 	repo := newCapturingOutboxRepo()
 	pub := NewRequestLogOutboxPublisher(repo, "", constants.PlatformModeProduction)
 
@@ -134,6 +136,7 @@ func TestPublisher_NilAccountID(t *testing.T) {
 }
 
 func TestPublisher_MapsAllFields(t *testing.T) {
+	t.Parallel()
 	repo := newCapturingOutboxRepo()
 	pub := NewRequestLogOutboxPublisher(repo, "", constants.PlatformModeProduction)
 

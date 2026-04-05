@@ -6,6 +6,7 @@ import (
 )
 
 func TestComputeHTTPScopeHash_SameInputsSameHash(t *testing.T) {
+	t.Parallel()
 	actorID := "user_123"
 	targetAccountID := "acct_456"
 	method := "POST"
@@ -21,6 +22,7 @@ func TestComputeHTTPScopeHash_SameInputsSameHash(t *testing.T) {
 }
 
 func TestComputeHTTPScopeHash_DifferentActorID(t *testing.T) {
+	t.Parallel()
 	actorID1 := "user_123"
 	actorID2 := "user_456"
 	targetAccountID := "acct_456"
@@ -37,6 +39,7 @@ func TestComputeHTTPScopeHash_DifferentActorID(t *testing.T) {
 }
 
 func TestComputeHTTPScopeHash_DifferentTargetAccountID(t *testing.T) {
+	t.Parallel()
 	actorID := "user_123"
 	targetAccountID1 := "acct_456"
 	targetAccountID2 := "acct_789"
@@ -53,6 +56,7 @@ func TestComputeHTTPScopeHash_DifferentTargetAccountID(t *testing.T) {
 }
 
 func TestComputeHTTPScopeHash_DifferentMethod(t *testing.T) {
+	t.Parallel()
 	actorID := "user_123"
 	targetAccountID := "acct_456"
 	normalizedRoute := "/api/v1/orders"
@@ -67,6 +71,7 @@ func TestComputeHTTPScopeHash_DifferentMethod(t *testing.T) {
 }
 
 func TestComputeHTTPScopeHash_DifferentRoute(t *testing.T) {
+	t.Parallel()
 	actorID := "user_123"
 	targetAccountID := "acct_456"
 	method := "POST"
@@ -81,6 +86,7 @@ func TestComputeHTTPScopeHash_DifferentRoute(t *testing.T) {
 }
 
 func TestComputeHTTPScopeHash_DifferentIdempotencyKey(t *testing.T) {
+	t.Parallel()
 	actorID := "user_123"
 	targetAccountID := "acct_456"
 	method := "POST"
@@ -95,6 +101,7 @@ func TestComputeHTTPScopeHash_DifferentIdempotencyKey(t *testing.T) {
 }
 
 func TestComputeHTTPScopeHash_NilActorID(t *testing.T) {
+	t.Parallel()
 	targetAccountID := "acct_456"
 	method := "POST"
 	normalizedRoute := "/api/v1/orders"
@@ -109,6 +116,7 @@ func TestComputeHTTPScopeHash_NilActorID(t *testing.T) {
 }
 
 func TestComputeHTTPScopeHash_NilTargetAccountID(t *testing.T) {
+	t.Parallel()
 	actorID := "user_123"
 	method := "POST"
 	normalizedRoute := "/api/v1/orders"
@@ -123,6 +131,7 @@ func TestComputeHTTPScopeHash_NilTargetAccountID(t *testing.T) {
 }
 
 func TestComputeHTTPScopeHash_NilVsEmptyString(t *testing.T) {
+	t.Parallel()
 	emptyString := ""
 	targetAccountID := "acct_456"
 	method := "POST"
@@ -139,6 +148,7 @@ func TestComputeHTTPScopeHash_NilVsEmptyString(t *testing.T) {
 }
 
 func TestComputeHTTPScopeHash_NilVsEmptyStringTargetAccount(t *testing.T) {
+	t.Parallel()
 	actorID := "user_123"
 	emptyString := ""
 	method := "POST"
@@ -155,6 +165,7 @@ func TestComputeHTTPScopeHash_NilVsEmptyStringTargetAccount(t *testing.T) {
 }
 
 func TestComputeHTTPScopeHash_BothNullableFieldsNil(t *testing.T) {
+	t.Parallel()
 	method := "POST"
 	normalizedRoute := "/api/v1/orders"
 	idempotencyKey := "key-abc"
@@ -168,6 +179,7 @@ func TestComputeHTTPScopeHash_BothNullableFieldsNil(t *testing.T) {
 }
 
 func TestComputeHTTPScopeHash_NilActorVsNilTargetAccount(t *testing.T) {
+	t.Parallel()
 	actorID := "user_123"
 	targetAccountID := "acct_456"
 	method := "POST"
@@ -187,6 +199,7 @@ func TestComputeHTTPScopeHash_NilActorVsNilTargetAccount(t *testing.T) {
 // --- ComputeServiceScopeHash ---
 
 func TestComputeServiceScopeHash_SameInputsSameHash(t *testing.T) {
+	t.Parallel()
 	actorID := "user_123"
 	accountID := "acct_456"
 	hash1 := ComputeServiceScopeHash(&actorID, &accountID, "order-service", "CreateOrder", "key-1")
@@ -197,6 +210,7 @@ func TestComputeServiceScopeHash_SameInputsSameHash(t *testing.T) {
 }
 
 func TestComputeServiceScopeHash_DifferentService(t *testing.T) {
+	t.Parallel()
 	actorID := "user_123"
 	accountID := "acct_456"
 	hash1 := ComputeServiceScopeHash(&actorID, &accountID, "order-service", "Create", "key-1")
@@ -207,6 +221,7 @@ func TestComputeServiceScopeHash_DifferentService(t *testing.T) {
 }
 
 func TestComputeServiceScopeHash_DifferentHandler(t *testing.T) {
+	t.Parallel()
 	actorID := "user_123"
 	accountID := "acct_456"
 	hash1 := ComputeServiceScopeHash(&actorID, &accountID, "order-service", "Create", "key-1")
@@ -217,6 +232,7 @@ func TestComputeServiceScopeHash_DifferentHandler(t *testing.T) {
 }
 
 func TestComputeServiceScopeHash_DifferentKey(t *testing.T) {
+	t.Parallel()
 	actorID := "user_123"
 	accountID := "acct_456"
 	hash1 := ComputeServiceScopeHash(&actorID, &accountID, "order-service", "Create", "key-1")
@@ -227,6 +243,7 @@ func TestComputeServiceScopeHash_DifferentKey(t *testing.T) {
 }
 
 func TestComputeServiceScopeHash_DifferentAccount(t *testing.T) {
+	t.Parallel()
 	actorID := "user_123"
 	accountA := "acct_A"
 	accountB := "acct_B"
@@ -238,6 +255,7 @@ func TestComputeServiceScopeHash_DifferentAccount(t *testing.T) {
 }
 
 func TestComputeServiceScopeHash_NilActorID(t *testing.T) {
+	t.Parallel()
 	hash1 := ComputeServiceScopeHash(nil, nil, "svc", "handler", "key")
 	hash2 := ComputeServiceScopeHash(nil, nil, "svc", "handler", "key")
 	if hash1 != hash2 {
@@ -246,6 +264,7 @@ func TestComputeServiceScopeHash_NilActorID(t *testing.T) {
 }
 
 func TestComputeServiceScopeHash_NilVsEmptyActorID(t *testing.T) {
+	t.Parallel()
 	empty := ""
 	hashNil := ComputeServiceScopeHash(nil, nil, "svc", "handler", "key")
 	hashEmpty := ComputeServiceScopeHash(&empty, nil, "svc", "handler", "key")
@@ -255,6 +274,7 @@ func TestComputeServiceScopeHash_NilVsEmptyActorID(t *testing.T) {
 }
 
 func TestComputeServiceScopeHash_NilVsEmptyTargetAccountID(t *testing.T) {
+	t.Parallel()
 	actorID := "user_123"
 	empty := ""
 	hashNil := ComputeServiceScopeHash(&actorID, nil, "svc", "handler", "key")
@@ -267,6 +287,7 @@ func TestComputeServiceScopeHash_NilVsEmptyTargetAccountID(t *testing.T) {
 // --- ComputeRequestBodyHash ---
 
 func TestComputeRequestBodyHash_SameBodySameHash(t *testing.T) {
+	t.Parallel()
 	body := []byte(`{"name":"test","value":1}`)
 	hash1 := ComputeRequestBodyHash(body, nil)
 	hash2 := ComputeRequestBodyHash(body, nil)
@@ -276,6 +297,7 @@ func TestComputeRequestBodyHash_SameBodySameHash(t *testing.T) {
 }
 
 func TestComputeRequestBodyHash_KeyOrderInsensitive(t *testing.T) {
+	t.Parallel()
 	body1 := []byte(`{"name":"test","value":1}`)
 	body2 := []byte(`{"value":1,"name":"test"}`)
 	hash1 := ComputeRequestBodyHash(body1, nil)
@@ -286,6 +308,7 @@ func TestComputeRequestBodyHash_KeyOrderInsensitive(t *testing.T) {
 }
 
 func TestComputeRequestBodyHash_DifferentBodyDifferentHash(t *testing.T) {
+	t.Parallel()
 	body1 := []byte(`{"name":"a"}`)
 	body2 := []byte(`{"name":"b"}`)
 	hash1 := ComputeRequestBodyHash(body1, nil)
@@ -296,6 +319,7 @@ func TestComputeRequestBodyHash_DifferentBodyDifferentHash(t *testing.T) {
 }
 
 func TestComputeRequestBodyHash_WithParams(t *testing.T) {
+	t.Parallel()
 	body := []byte(`{"name":"test"}`)
 	params := map[string]string{"page": "1", "limit": "10"}
 	hash := ComputeRequestBodyHash(body, params)
@@ -311,6 +335,7 @@ func TestComputeRequestBodyHash_WithParams(t *testing.T) {
 }
 
 func TestComputeRequestBodyHash_ParamOrderInsensitive(t *testing.T) {
+	t.Parallel()
 	body := []byte(`{}`)
 	params1 := map[string]string{"b": "2", "a": "1"}
 	params2 := map[string]string{"a": "1", "b": "2"}
@@ -322,6 +347,7 @@ func TestComputeRequestBodyHash_ParamOrderInsensitive(t *testing.T) {
 }
 
 func TestComputeRequestBodyHash_DifferentParamsDifferentHash(t *testing.T) {
+	t.Parallel()
 	body := []byte(`{}`)
 	hash1 := ComputeRequestBodyHash(body, map[string]string{"page": "1"})
 	hash2 := ComputeRequestBodyHash(body, map[string]string{"page": "2"})
@@ -331,6 +357,7 @@ func TestComputeRequestBodyHash_DifferentParamsDifferentHash(t *testing.T) {
 }
 
 func TestComputeRequestBodyHash_NilVsEmptyParams(t *testing.T) {
+	t.Parallel()
 	body := []byte(`{"name":"test"}`)
 	hashNil := ComputeRequestBodyHash(body, nil)
 	hashEmpty := ComputeRequestBodyHash(body, map[string]string{})
@@ -340,6 +367,7 @@ func TestComputeRequestBodyHash_NilVsEmptyParams(t *testing.T) {
 }
 
 func TestComputeRequestBodyHash_EmptyBody(t *testing.T) {
+	t.Parallel()
 	hash := ComputeRequestBodyHash([]byte{}, nil)
 	if hash == "" {
 		t.Error("expected non-empty hash for empty body")
@@ -347,6 +375,7 @@ func TestComputeRequestBodyHash_EmptyBody(t *testing.T) {
 }
 
 func TestComputeRequestBodyHash_InvalidJSON_FallsBackToRawBody(t *testing.T) {
+	t.Parallel()
 	body := []byte(`not valid json`)
 	hash1 := ComputeRequestBodyHash(body, nil)
 	hash2 := ComputeRequestBodyHash(body, nil)
@@ -356,6 +385,7 @@ func TestComputeRequestBodyHash_InvalidJSON_FallsBackToRawBody(t *testing.T) {
 }
 
 func TestComputeRequestBodyHash_NestedJSON(t *testing.T) {
+	t.Parallel()
 	body1 := []byte(`{"outer":{"b":2,"a":1}}`)
 	body2 := []byte(`{"outer":{"a":1,"b":2}}`)
 	hash1 := ComputeRequestBodyHash(body1, nil)
@@ -366,6 +396,7 @@ func TestComputeRequestBodyHash_NestedJSON(t *testing.T) {
 }
 
 func TestComputeRequestBodyHash_WhitespaceInsensitive(t *testing.T) {
+	t.Parallel()
 	compact := []byte(`{"a":1,"b":2}`)
 	pretty := []byte(`{  "a" : 1 ,  "b" : 2  }`)
 	hash1 := ComputeRequestBodyHash(compact, nil)
@@ -378,6 +409,7 @@ func TestComputeRequestBodyHash_WhitespaceInsensitive(t *testing.T) {
 // --- CanonicalizeJSON ---
 
 func TestCanonicalizeJSON_EmptyInput(t *testing.T) {
+	t.Parallel()
 	result, err := CanonicalizeJSON([]byte{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -388,6 +420,7 @@ func TestCanonicalizeJSON_EmptyInput(t *testing.T) {
 }
 
 func TestCanonicalizeJSON_NilInput(t *testing.T) {
+	t.Parallel()
 	result, err := CanonicalizeJSON(nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -398,6 +431,7 @@ func TestCanonicalizeJSON_NilInput(t *testing.T) {
 }
 
 func TestCanonicalizeJSON_InvalidJSON(t *testing.T) {
+	t.Parallel()
 	_, err := CanonicalizeJSON([]byte(`{invalid`))
 	if err == nil {
 		t.Error("expected error for invalid JSON")
@@ -405,6 +439,7 @@ func TestCanonicalizeJSON_InvalidJSON(t *testing.T) {
 }
 
 func TestCanonicalizeJSON_KeyOrderNormalized(t *testing.T) {
+	t.Parallel()
 	input1 := []byte(`{"b":2,"a":1}`)
 	input2 := []byte(`{"a":1,"b":2}`)
 
@@ -423,6 +458,7 @@ func TestCanonicalizeJSON_KeyOrderNormalized(t *testing.T) {
 }
 
 func TestCanonicalizeJSON_PreservesValues(t *testing.T) {
+	t.Parallel()
 	input := []byte(`{"name":"test","count":42,"active":true,"tags":["a","b"]}`)
 	result, err := CanonicalizeJSON(input)
 	if err != nil {
@@ -446,6 +482,7 @@ func TestCanonicalizeJSON_PreservesValues(t *testing.T) {
 }
 
 func TestCanonicalizeJSON_NestedObjects(t *testing.T) {
+	t.Parallel()
 	input1 := []byte(`{"outer":{"c":3,"a":1,"b":2}}`)
 	input2 := []byte(`{"outer":{"a":1,"b":2,"c":3}}`)
 
@@ -458,7 +495,10 @@ func TestCanonicalizeJSON_NestedObjects(t *testing.T) {
 }
 
 func TestCanonicalizeJSON_Arrays(t *testing.T) {
+	t.Parallel(
 	// Array order should be preserved (arrays are ordered).
+	)
+
 	input := []byte(`{"items":[3,1,2]}`)
 	result, err := CanonicalizeJSON(input)
 	if err != nil {
@@ -477,6 +517,7 @@ func TestCanonicalizeJSON_Arrays(t *testing.T) {
 }
 
 func TestCanonicalizeJSON_ScalarValues(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name  string
 		input string
@@ -503,6 +544,7 @@ func TestCanonicalizeJSON_ScalarValues(t *testing.T) {
 // --- Hash output format ---
 
 func TestHashOutputFormat_SHA256Hex(t *testing.T) {
+	t.Parallel()
 	actorID := "user_123"
 	hash := ComputeHTTPScopeHash(&actorID, nil, "POST", "/api/v1/orders", "key-1")
 

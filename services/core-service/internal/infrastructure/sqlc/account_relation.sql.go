@@ -7,10 +7,82 @@ package sqlc
 
 import (
 	"context"
+	"database/sql"
 )
 
+const countCounterpartyRelationsExcluding = `-- name: CountCounterpartyRelationsExcluding :one
+SELECT COUNT(*) AS cnt
+FROM account_relation
+WHERE counterparty_account_id = ? AND owner_account_id != ?
+`
+
+type CountCounterpartyRelationsExcludingParams struct {
+	CounterpartyAccountID string
+	OwnerAccountID        string
+}
+
+func (q *Queries) CountCounterpartyRelationsExcluding(ctx context.Context, arg CountCounterpartyRelationsExcludingParams) (int64, error) {
+	row := q.queryRow(ctx, q.countCounterpartyRelationsExcludingStmt, countCounterpartyRelationsExcluding, arg.CounterpartyAccountID, arg.OwnerAccountID)
+	var cnt int64
+	err := row.Scan(&cnt)
+	return cnt, err
+}
+
+const deleteNotificationPreference = `-- name: DeleteNotificationPreference :exec
+DELETE FROM account_relation_notification_preference
+WHERE account_relation_id = ? AND recipient_account_user_id = ? AND notification_type_code = ?
+`
+
+type DeleteNotificationPreferenceParams struct {
+	AccountRelationID      string
+	RecipientAccountUserID string
+	NotificationTypeCode   string
+}
+
+func (q *Queries) DeleteNotificationPreference(ctx context.Context, arg DeleteNotificationPreferenceParams) error {
+	_, err := q.exec(ctx, q.deleteNotificationPreferenceStmt, deleteNotificationPreference, arg.AccountRelationID, arg.RecipientAccountUserID, arg.NotificationTypeCode)
+	return err
+}
+
+const findAccountRelationByCounterpartyAccountIDAndAPIKeyID = `-- name: FindAccountRelationByCounterpartyAccountIDAndAPIKeyID :one
+SELECT
+    account_relation.id,
+    account_relation.counterparty_account_id,
+    account_relation.owner_account_id,
+    account_relation.account_relation_role_code
+FROM account_relation
+INNER JOIN api_key ON account_relation.owner_account_id = api_key.owner_account_id
+WHERE account_relation.counterparty_account_id = ?
+  AND api_key.id = ?
+LIMIT 1
+`
+
+type FindAccountRelationByCounterpartyAccountIDAndAPIKeyIDParams struct {
+	CounterpartyAccountID string
+	ID                    int64
+}
+
+type FindAccountRelationByCounterpartyAccountIDAndAPIKeyIDRow struct {
+	ID                      string
+	CounterpartyAccountID   string
+	OwnerAccountID          string
+	AccountRelationRoleCode string
+}
+
+func (q *Queries) FindAccountRelationByCounterpartyAccountIDAndAPIKeyID(ctx context.Context, arg FindAccountRelationByCounterpartyAccountIDAndAPIKeyIDParams) (FindAccountRelationByCounterpartyAccountIDAndAPIKeyIDRow, error) {
+	row := q.queryRow(ctx, q.findAccountRelationByCounterpartyAccountIDAndAPIKeyIDStmt, findAccountRelationByCounterpartyAccountIDAndAPIKeyID, arg.CounterpartyAccountID, arg.ID)
+	var i FindAccountRelationByCounterpartyAccountIDAndAPIKeyIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.CounterpartyAccountID,
+		&i.OwnerAccountID,
+		&i.AccountRelationRoleCode,
+	)
+	return i, err
+}
+
 const findAccountRelationByOwnerAccountIDAndAPIKeyID = `-- name: FindAccountRelationByOwnerAccountIDAndAPIKeyID :one
-SELECT 
+SELECT
     account_relation.id,
     account_relation.counterparty_account_id,
     account_relation.account_relation_role_code
@@ -67,4 +139,189 @@ func (q *Queries) FindAccountRelationByOwnerAccountIDAndUserID(ctx context.Conte
 	var i FindAccountRelationByOwnerAccountIDAndUserIDRow
 	err := row.Scan(&i.ID, &i.CounterpartyAccountID, &i.AccountRelationRoleCode)
 	return i, err
+}
+
+const findAccountRelationByOwnerAndCounterparty = `-- name: FindAccountRelationByOwnerAndCounterparty :one
+SELECT id FROM account_relation
+WHERE owner_account_id = ? AND counterparty_account_id = ?
+`
+
+type FindAccountRelationByOwnerAndCounterpartyParams struct {
+	OwnerAccountID        string
+	CounterpartyAccountID string
+}
+
+func (q *Queries) FindAccountRelationByOwnerAndCounterparty(ctx context.Context, arg FindAccountRelationByOwnerAndCounterpartyParams) (string, error) {
+	row := q.queryRow(ctx, q.findAccountRelationByOwnerAndCounterpartyStmt, findAccountRelationByOwnerAndCounterparty, arg.OwnerAccountID, arg.CounterpartyAccountID)
+	var id string
+	err := row.Scan(&id)
+	return id, err
+}
+
+const findCustomerAccountsByVendorAndUser = `-- name: FindCustomerAccountsByVendorAndUser :many
+SELECT a.id, a.name
+FROM account a
+INNER JOIN account_user au ON au.account_id = a.id
+INNER JOIN account_relation ar ON ar.counterparty_account_id = a.id
+WHERE a.onboarding_status_code IN ('active', 'unclaimed')
+  AND au.user_id = ?
+  AND au.status_code = 'active'
+  AND ar.owner_account_id = ?
+  AND ar.account_relation_role_code = 'customer'
+`
+
+type FindCustomerAccountsByVendorAndUserParams struct {
+	UserID         string
+	OwnerAccountID string
+}
+
+type FindCustomerAccountsByVendorAndUserRow struct {
+	ID   string
+	Name string
+}
+
+func (q *Queries) FindCustomerAccountsByVendorAndUser(ctx context.Context, arg FindCustomerAccountsByVendorAndUserParams) ([]FindCustomerAccountsByVendorAndUserRow, error) {
+	rows, err := q.query(ctx, q.findCustomerAccountsByVendorAndUserStmt, findCustomerAccountsByVendorAndUser, arg.UserID, arg.OwnerAccountID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []FindCustomerAccountsByVendorAndUserRow
+	for rows.Next() {
+		var i FindCustomerAccountsByVendorAndUserRow
+		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const findCustomerByEmail = `-- name: FindCustomerByEmail :one
+SELECT ar.id as relation_id, ar.owner_account_id, ar.counterparty_account_id,
+       ar.account_relation_role_code, ar.alias, u.email, u.name as user_name
+FROM user u
+JOIN account_user au ON au.user_id = u.id
+JOIN account_relation ar ON ar.counterparty_account_id = au.account_id
+     AND ar.owner_account_id = ?
+WHERE u.email = ?
+LIMIT 1
+`
+
+type FindCustomerByEmailParams struct {
+	OwnerAccountID string
+	Email          sql.NullString
+}
+
+type FindCustomerByEmailRow struct {
+	RelationID              string
+	OwnerAccountID          string
+	CounterpartyAccountID   string
+	AccountRelationRoleCode string
+	Alias                   sql.NullString
+	Email                   sql.NullString
+	UserName                sql.NullString
+}
+
+func (q *Queries) FindCustomerByEmail(ctx context.Context, arg FindCustomerByEmailParams) (FindCustomerByEmailRow, error) {
+	row := q.queryRow(ctx, q.findCustomerByEmailStmt, findCustomerByEmail, arg.OwnerAccountID, arg.Email)
+	var i FindCustomerByEmailRow
+	err := row.Scan(
+		&i.RelationID,
+		&i.OwnerAccountID,
+		&i.CounterpartyAccountID,
+		&i.AccountRelationRoleCode,
+		&i.Alias,
+		&i.Email,
+		&i.UserName,
+	)
+	return i, err
+}
+
+const hasRelationByOwnerAndCounterparty = `-- name: HasRelationByOwnerAndCounterparty :one
+SELECT EXISTS(
+    SELECT 1
+    FROM account_relation
+    WHERE owner_account_id = ?
+      AND counterparty_account_id = ?
+) AS has_relation
+`
+
+type HasRelationByOwnerAndCounterpartyParams struct {
+	OwnerAccountID        string
+	CounterpartyAccountID string
+}
+
+func (q *Queries) HasRelationByOwnerAndCounterparty(ctx context.Context, arg HasRelationByOwnerAndCounterpartyParams) (bool, error) {
+	row := q.queryRow(ctx, q.hasRelationByOwnerAndCounterpartyStmt, hasRelationByOwnerAndCounterparty, arg.OwnerAccountID, arg.CounterpartyAccountID)
+	var has_relation bool
+	err := row.Scan(&has_relation)
+	return has_relation, err
+}
+
+const insertAccountRelationNotificationPreference = `-- name: InsertAccountRelationNotificationPreference :exec
+INSERT INTO account_relation_notification_preference (id, account_relation_id, recipient_account_user_id, notification_type_code, created_at, updated_at)
+VALUES (?, ?, ?, ?, NOW(3), NOW(3))
+`
+
+type InsertAccountRelationNotificationPreferenceParams struct {
+	ID                     string
+	AccountRelationID      string
+	RecipientAccountUserID string
+	NotificationTypeCode   string
+}
+
+func (q *Queries) InsertAccountRelationNotificationPreference(ctx context.Context, arg InsertAccountRelationNotificationPreferenceParams) error {
+	_, err := q.exec(ctx, q.insertAccountRelationNotificationPreferenceStmt, insertAccountRelationNotificationPreference,
+		arg.ID,
+		arg.AccountRelationID,
+		arg.RecipientAccountUserID,
+		arg.NotificationTypeCode,
+	)
+	return err
+}
+
+const listNotificationPreferences = `-- name: ListNotificationPreferences :many
+SELECT id, notification_type_code
+FROM account_relation_notification_preference
+WHERE account_relation_id = ? AND recipient_account_user_id = ?
+`
+
+type ListNotificationPreferencesParams struct {
+	AccountRelationID      string
+	RecipientAccountUserID string
+}
+
+type ListNotificationPreferencesRow struct {
+	ID                   string
+	NotificationTypeCode string
+}
+
+func (q *Queries) ListNotificationPreferences(ctx context.Context, arg ListNotificationPreferencesParams) ([]ListNotificationPreferencesRow, error) {
+	rows, err := q.query(ctx, q.listNotificationPreferencesStmt, listNotificationPreferences, arg.AccountRelationID, arg.RecipientAccountUserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListNotificationPreferencesRow
+	for rows.Next() {
+		var i ListNotificationPreferencesRow
+		if err := rows.Scan(&i.ID, &i.NotificationTypeCode); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

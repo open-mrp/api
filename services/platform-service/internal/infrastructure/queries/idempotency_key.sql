@@ -55,3 +55,8 @@ WHERE type_id = ?;
 DELETE FROM service_idempotency_key
 WHERE expires_at < NOW(3)
 LIMIT ?;
+
+-- name: DeleteExpiredDeletedRecords :execresult
+DELETE FROM deleted_record
+WHERE deleted_at < DATE_SUB(NOW(3), INTERVAL 30 DAY)
+LIMIT ?;

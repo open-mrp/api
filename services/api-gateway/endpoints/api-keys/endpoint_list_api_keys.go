@@ -17,15 +17,12 @@ type ListAPIKeysRequest struct {
 	Status []constants.APIKeyStatus `query:"status" default:"active,expired,revoked"`
 }
 
-const listAPIKeysEndpointDescription string = `This endpoint returns a paginated list of API keys for the target account.
-Supports cursor-based pagination and optional search filtering by name.`
-
 type ListAPIKeysEndpoint struct{}
 
 func (e *ListAPIKeysEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAPIKeysRequest, *apiresource.List[apiresource.APIKey]] {
 	return &apiendpoint.APIEndpoint[*ListAPIKeysRequest, *apiresource.List[apiresource.APIKey]]{
 		Title:             "List API Keys",
-		Description:       listAPIKeysEndpointDescription,
+		Description:       "Returns a paginated list of API keys for the current account.",
 		Method:            http.MethodGet,
 		Route:             "/v1/auth/api-keys",
 		Request:           &ListAPIKeysRequest{},
@@ -36,13 +33,9 @@ func (e *ListAPIKeysEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAPIKey
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListAPIKeysRequest) (*apiresource.List[apiresource.APIKey], *apierror.APIError) {
 			return svc.(APIKeySvc).ListAPIKeys
 		},
-		IncludeConfig: &apiendpoint.IncludeConfig{
-			Fields: []apiendpoint.IncludeField{
-				{Key: "role", ObjectType: constants.ObjectTypeRole, JSONPaths: []string{"role"}},
-			},
-		},
-		Extras: apiendpoint.APIEndpointExtras{
-			AllowUnknownJSONFields: false,
-		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeAPIKey,
+			Fields:     []string{"role", "role.permissions"},
+		}),
 	}
 }

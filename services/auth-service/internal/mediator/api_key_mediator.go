@@ -51,6 +51,9 @@ func NewAPIKeyMed(config *APIKeyMedConfig) domain.APIKeyMed {
 	}
 }
 
+// ParseKey parses a raw API key string into its component parts.
+//
+// 1. Delegate to apikey.ParseAPIKey to extract the prefix, ID, and secret.
 func (s *apiKeyMedImpl) ParseKey(ctx context.Context, apiKey string) (*apikey.ParsedAPIKey, *apierror.APIError) {
 	_, span := apiKeyMedTracer.Start(ctx, "mediator.api_key.parse")
 	defer span.End()
@@ -58,6 +61,12 @@ func (s *apiKeyMedImpl) ParseKey(ctx context.Context, apiKey string) (*apikey.Pa
 	return apikey.ParseAPIKey(apiKey)
 }
 
+// FindAndValidate validates a raw API key string and returns the corresponding API key model.
+//
+// 1. Parse the raw API key string to extract the key ID and secret.
+// 2. Look up the API key by its parsed ID.
+// 3. Verify the secret HMAC against the stored hash using the pepper.
+// 4. Check that the key is not expired or revoked.
 func (s *apiKeyMedImpl) FindAndValidate(ctx context.Context, apiKey string) (*apikey.APIKey, *apierror.APIError) {
 	ctx, span := apiKeyMedTracer.Start(ctx, "mediator.api_key.find")
 	defer span.End()
@@ -108,6 +117,13 @@ func (s *apiKeyMedImpl) TouchIfNotRecent(ctx context.Context, apiKeyModel *apike
 	return nil
 }
 
+// Create creates a new API key for the requested account mode and persists it.
+//
+// 1. Generate a new parsed API key with a random secret for the given account mode.
+// 2. Compute the HMAC hash of the secret using the pepper.
+// 3. Generate a unique type ID and build the API key model.
+// 4. Persist the API key in the repository.
+// 5. Re-fetch the key to populate joined fields (role name, type code).
 func (s *apiKeyMedImpl) Create(ctx context.Context, input domain.APIKeyCreateInput) (string, *apikey.APIKey, *apierror.APIError) {
 	ctx, span := apiKeyMedTracer.Start(ctx, "mediator.api_key.create")
 	defer span.End()
@@ -151,6 +167,10 @@ func (s *apiKeyMedImpl) Create(ctx context.Context, input domain.APIKeyCreateInp
 	return fullKey, created, nil
 }
 
+// Revoke revokes an API key by its type ID.
+//
+// 1. Verify the API key exists by looking it up.
+// 2. Mark the API key as revoked in the repository.
 func (s *apiKeyMedImpl) Revoke(ctx context.Context, apiKeyTypeID string) *apierror.APIError {
 	ctx, span := apiKeyMedTracer.Start(ctx, "mediator.api_key.revoke")
 	defer span.End()
@@ -164,6 +184,12 @@ func (s *apiKeyMedImpl) Revoke(ctx context.Context, apiKeyTypeID string) *apierr
 	return apiKeyRepo.Revoke(ctx, apiKeyTypeID)
 }
 
+// Rotate revokes the specified API key and creates a replacement with the same name,
+// owner account, and role.
+//
+// 1. Look up the existing API key by type ID.
+// 2. Revoke the existing key.
+// 3. Create a new key using the old key's properties, with an optionally overridden expiration.
 func (s *apiKeyMedImpl) Rotate(ctx context.Context, input domain.APIKeyRotateInput) (string, *apikey.APIKey, *apierror.APIError) {
 	ctx, span := apiKeyMedTracer.Start(ctx, "mediator.api_key.rotate")
 	defer span.End()
@@ -193,6 +219,10 @@ func (s *apiKeyMedImpl) Rotate(ctx context.Context, input domain.APIKeyRotateInp
 	})
 }
 
+// List returns a paginated list of API keys for the given owner account and filters.
+//
+// 1. Query the API key repository with the provided filters and pagination parameters.
+// 2. Return the list of API keys and page info.
 func (s *apiKeyMedImpl) List(ctx context.Context, input domain.APIKeyListInput) (*domain.ListAPIKeysResult, *apierror.APIError) {
 	ctx, span := apiKeyMedTracer.Start(ctx, "mediator.api_key.list")
 	defer span.End()
@@ -208,6 +238,12 @@ func (s *apiKeyMedImpl) List(ctx context.Context, input domain.APIKeyListInput) 
 	}, nil
 }
 
+// GetKeyAccountAccess returns the resolved account access for an API key targeting a specific account.
+//
+// 1. Look up the API key by its database ID.
+// 2. Verify the key's owner account matches the target account.
+// 3. Fetch the role permissions from core-service if a role is assigned.
+// 4. Return the access record with role and permission details.
 func (s *apiKeyMedImpl) GetKeyAccountAccess(ctx context.Context, input domain.APIKeyGetAccountAccessInput) (*domain.APIKeyAccountAccess, *apierror.APIError) {
 	ctx, span := apiKeyMedTracer.Start(ctx, "mediator.api_key.get_key_account_access")
 	defer span.End()

@@ -18,6 +18,7 @@ import (
 	"github.com/augno/api/services/api-gateway/internal/infrastructure/repository"
 	"github.com/augno/api/services/api-gateway/internal/infrastructure/sqlc"
 	"github.com/augno/api/services/api-gateway/internal/router"
+	"github.com/augno/api/services/api-gateway/internal/ws"
 	"github.com/augno/api/shared/db"
 	"github.com/augno/api/shared/messaging"
 	"github.com/augno/api/shared/tracing"
@@ -144,23 +145,45 @@ func Run(
 		return err
 	}
 
+	// Agent Service
+	agentClient, err := grpcclient.NewAgentServiceClientWithURL(cfg.AgentServiceURI)
+	if err != nil {
+		return err
+	}
+	defer agentClient.Close()
+
+	logger.Info("Waiting for Agent Service to be ready...")
+	if err := agentClient.WaitForReady(ctx); err != nil {
+		return err
+	}
+
 	// Initialize the request log publisher.
 	reqLogPublisher := publisher.NewRequestLogOutboxPublisher(repository.NewOutboxRepo(queries), cfg.FrontendURL, cfg.PlatformMode)
 
 	// Initialize the main router.
-	mainBaseCfg := router.BuildBaseConfig(cfg.PlatformMode, "main ", authClient, coreClient, billingClient, platformClient, reqLogPublisher, stdout)
+	mainBaseCfg := router.BuildBaseConfig(cfg.PlatformMode, "main ", authClient, coreClient, billingClient, platformClient, agentClient, reqLogPublisher, stdout)
 	mainRouter := router.NewMainRouter(mainBaseCfg)
 
 	// Initialize the auth router.
-	authBaseCfg := router.BuildBaseConfig(cfg.PlatformMode, "auth ", authClient, coreClient, billingClient, platformClient, reqLogPublisher, stdout)
+	authBaseCfg := router.BuildBaseConfig(cfg.PlatformMode, "auth ", authClient, coreClient, billingClient, platformClient, agentClient, reqLogPublisher, stdout)
 	authRouter := router.NewAuthRouter(authBaseCfg)
 
 	// Initialize the webhook router (no auth, minimal middleware).
-	webhookBaseCfg := router.BuildBaseConfig(cfg.PlatformMode, "webhook ", authClient, coreClient, billingClient, platformClient, reqLogPublisher, stdout)
+	webhookBaseCfg := router.BuildBaseConfig(cfg.PlatformMode, "webhook ", authClient, coreClient, billingClient, platformClient, agentClient, reqLogPublisher, stdout)
 	webhookRouter := router.NewWebhookRouter(webhookBaseCfg)
+
+	// Initialize WebSocket hub and event consumer.
+	wsHub := ws.NewHub()
+	if err := ws.StartEventConsumer(ctx, rabbitmq, wsHub); err != nil {
+		return err
+	}
+	if err := ws.StartRunCompletedConsumer(ctx, rabbitmq, wsHub); err != nil {
+		return err
+	}
 
 	// Initialize the HTTP server.
 	mux := http.NewServeMux()
+	mux.HandleFunc("/v1/ws", ws.NewHandler(wsHub, authClient))
 	mux.Handle("/v1/webhooks/", webhookRouter)
 	mux.Handle("/v1/auth/", authRouter)
 	mux.Handle("/", mainRouter)

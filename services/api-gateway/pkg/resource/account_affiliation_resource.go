@@ -6,16 +6,6 @@ import (
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 )
 
-// AccountAffiliationRole represents a minimal role reference within an account affiliation.
-type AccountAffiliationRole struct {
-	// The unique identifier for the role.
-	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
-	Object constants.ObjectType `json:"object" validate:"required,enum=role"`
-	// The display name of the role.
-	Name string `json:"name" validate:"required"`
-}
-
 // AccountAffiliation represents an account the user is a member of.
 type AccountAffiliation struct {
 	// The unique identifier of the affiliated account.
@@ -25,17 +15,18 @@ type AccountAffiliation struct {
 	// The display name of the affiliated account.
 	Name string `json:"name" validate:"required"`
 	// The user's role within this account.
-	Role AccountAffiliationRole `json:"role" validate:"required"`
+	Role Role `json:"role" validate:"required"`
 }
 
 var SampleAccountAffiliation = &AccountAffiliation{
 	ID:     SampleAccountID,
 	Object: constants.ObjectTypeAccountAffiliation,
 	Name:   SampleAccountName,
-	Role: AccountAffiliationRole{
-		ID:     SampleRoleID,
-		Object: constants.ObjectTypeRole,
-		Name:   SampleRoleName,
+	Role: Role{
+		ID:       SampleRoleID,
+		Object:   constants.ObjectTypeRole,
+		Name:     SampleRoleName,
+		TypeCode: constants.RoleTypeCodeAdmin,
 	},
 }
 

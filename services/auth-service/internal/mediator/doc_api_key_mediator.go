@@ -64,6 +64,18 @@ func NewDocAPIKeyMed(config *DocAPIKeyMedConfig) domain.DocAPIKeyMed {
 	}
 }
 
+// Resolve returns an existing doc API key for the given sandbox account, or creates one if needed.
+//
+// 1. Look up an existing doc API key for the sandbox account.
+// 2. If none exists, create a new doc API key with the system admin role.
+// 3. If the existing key is revoked, return an error indicating manual rotation is required.
+// 4. If the existing key is expired, rotate it and return the new key.
+// 5. Otherwise, decrypt and return the existing key's secret.
+//
+// Behavior:
+//   - If a non-revoked, non-expired doc API key exists, it is returned.
+//   - If the existing key is expired, a new key is created via rotation.
+//   - If the existing key is revoked, returns an error indicating rotation is required.
 func (m *docAPIKeyMedImpl) Resolve(ctx context.Context, sandboxAccountID string) (*domain.GetOrCreateDocAPIKeyResult, *apierror.APIError) {
 	ctx, span := docAPIKeyMedTracer.Start(ctx, "mediator.doc_api_key.resolve")
 	defer span.End()
@@ -90,6 +102,20 @@ func (m *docAPIKeyMedImpl) Resolve(ctx context.Context, sandboxAccountID string)
 	return m.returnExistingKey(ctx, existing)
 }
 
+// SyncRotatedAPIKey updates doc API key state after the underlying API key has been rotated.
+//
+// 1. Look up the existing doc API key by the old API key ID.
+// 2. If no doc API key exists for the old key, return without error (no-op).
+// 3. Delete the old doc API key record.
+// 4. Encrypt the new secret using AES-GCM.
+// 5. Create a new doc API key record pointing to the rotated API key.
+//
+// Behavior:
+//   - No-op if no doc API key exists for the old API key.
+//
+// Side effects:
+//   - Deletes the old doc API key record (if present).
+//   - Creates a new doc API key record using the rotated API key and secret.
 func (m *docAPIKeyMedImpl) SyncRotatedAPIKey(ctx context.Context, input domain.DocAPIKeySyncInput) *apierror.APIError {
 	ctx, span := docAPIKeyMedTracer.Start(ctx, "mediator.doc_api_key.sync_rotated_api_key")
 	defer span.End()

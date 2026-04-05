@@ -8,10 +8,12 @@ import (
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/id"
 	pb "github.com/augno/api/shared/proto/billing"
+	corepb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
 	"google.golang.org/grpc"
 )
@@ -24,15 +26,18 @@ type BillingSvc interface {
 	CreateEnterpriseInquiry(ctx context.Context, req *apiresource.EmptyResource) (*apiresource.EnterpriseInquiry, *apierror.APIError)
 	EnsureBillingCustomer(ctx context.Context, req *apiresource.EmptyResource) (*apiresource.EnsureBillingCustomerResponse, *apierror.APIError)
 	SwitchPlan(ctx context.Context, req *SwitchPlanRequest) (*apiresource.SwitchPlanResponse, *apierror.APIError)
-	ConfirmPlanSwitch(ctx context.Context, req *ConfirmPlanSwitchRequest) (*apiresource.ConfirmPlanSwitchResponse, *apierror.APIError)
+	GetSpendingCap(ctx context.Context, req *apiresource.EmptyResource) (*apiresource.SpendingCapResponse, *apierror.APIError)
+	SetSpendingCap(ctx context.Context, req *SetSpendingCapRequest) (*apiresource.SpendingCapResponse, *apierror.APIError)
 }
 
 type BillingSvcConfig struct {
 	BillingClient pb.BillingServiceClient
+	CoreClient    corepb.CoreServiceClient
 }
 
 type billingSvcImpl struct {
 	billingClient pb.BillingServiceClient
+	coreClient    corepb.CoreServiceClient
 }
 
 var billingSvcTracer = tracing.GetTracer("api-gateway.endpoints.billing.service")
@@ -40,6 +45,9 @@ var billingSvcTracer = tracing.GetTracer("api-gateway.endpoints.billing.service"
 func (c *BillingSvcConfig) validate() error {
 	if c.BillingClient == nil {
 		return fmt.Errorf("billing endpoint service: billing client is required")
+	}
+	if c.CoreClient == nil {
+		return fmt.Errorf("billing endpoint service: core client is required")
 	}
 	return nil
 }
@@ -51,6 +59,7 @@ func NewBillingSvc(config *BillingSvcConfig) BillingSvc {
 
 	return &billingSvcImpl{
 		billingClient: config.BillingClient,
+		coreClient:    config.CoreClient,
 	}
 }
 
@@ -64,7 +73,7 @@ func (m *billingSvcImpl) CreateBillingPortalSession(ctx context.Context, _ *apir
 		return nil, apiErr
 	}
 
-	return &apiresource.BillingPortalSessionResponse{URL: resp.Url}, nil
+	return &apiresource.BillingPortalSessionResponse{Object: constants.ObjectTypeBillingPortalSessionResponse, URL: resp.Url}, nil
 }
 
 func (m *billingSvcImpl) GetAccountUsage(ctx context.Context, _ *apiresource.EmptyResource) (*apiresource.AccountUsageResponse, *apierror.APIError) {
@@ -77,13 +86,30 @@ func (m *billingSvcImpl) GetAccountUsage(ctx context.Context, _ *apiresource.Emp
 		return nil, apiErr
 	}
 
-	return AccountUsagePresenter(resp), nil
+	result := AccountUsagePresenter(resp)
+
+	// Fetch spending cap from core-service to include in agent spend info.
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if ok && identity != nil && identity.Target != nil && identity.Target.AccountID != "" {
+		acctResp, capErr := grpcutil.CallRPC(ctx, billingSvcTracer, "service.billing.get_spending_cap_for_usage", domain.ServiceName,
+			func(ctx context.Context, opts ...grpc.CallOption) (*corepb.GetAccountContextResponse, error) {
+				return m.coreClient.GetAccountContext(ctx, &corepb.GetAccountContextRequest{
+					AccountId: identity.Target.AccountID,
+				}, opts...)
+			})
+		if capErr == nil && result.AgentSpend != nil {
+			result.AgentSpend.CapCents = acctResp.AgentMonthlySpendingCapCents
+		}
+	}
+
+	return result, nil
 }
 
 func (m *billingSvcImpl) GetPricingPlans(ctx context.Context, req *apiresource.PaginationRequest) (*apiresource.List[apiresource.PricingPlan], *apierror.APIError) {
 	pbReq := &pb.ListPricingPlansRequest{
 		Cursor: req.Cursor,
 		Limit:  req.Limit,
+		Query:  req.Query,
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, billingSvcTracer, "service.billing.list_pricing_plans", domain.ServiceName,
@@ -99,9 +125,9 @@ func (m *billingSvcImpl) GetPricingPlans(ctx context.Context, req *apiresource.P
 }
 
 func (m *billingSvcImpl) GetPlanChangePreview(ctx context.Context, req *GetPlanProrationRequest) (*apiresource.PlanChangeProration, *apierror.APIError) {
-	resp, apiErr := grpcutil.CallRPC(ctx, billingSvcTracer, "service.billing.get_proration_preview", domain.ServiceName,
-		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetProrationPreviewResponse, error) {
-			return m.billingClient.GetProrationPreview(ctx, &pb.GetProrationPreviewRequest{
+	resp, apiErr := grpcutil.CallRPC(ctx, billingSvcTracer, "service.billing.preview_plan_change", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.PreviewPlanChangeResponse, error) {
+			return m.billingClient.PreviewPlanChange(ctx, &pb.PreviewPlanChangeRequest{
 				PlanId: req.PlanID,
 			}, opts...)
 		})
@@ -110,7 +136,7 @@ func (m *billingSvcImpl) GetPlanChangePreview(ctx context.Context, req *GetPlanP
 		return nil, apiErr
 	}
 
-	return ProrationPreviewPresenter(resp), nil
+	return PlanChangePreviewPresenter(resp), nil
 }
 
 func (m *billingSvcImpl) EnsureBillingCustomer(ctx context.Context, _ *apiresource.EmptyResource) (*apiresource.EnsureBillingCustomerResponse, *apierror.APIError) {
@@ -124,8 +150,10 @@ func (m *billingSvcImpl) EnsureBillingCustomer(ctx context.Context, _ *apiresour
 	}
 
 	return &apiresource.EnsureBillingCustomerResponse{
+		Object:           constants.ObjectTypeEnsureBillingCustomerResponse,
 		StripeCustomerID: resp.StripeCustomerId,
 		Created:          resp.Created,
+		BillingProfileID: resp.BillingProfileId,
 	}, nil
 }
 
@@ -166,12 +194,16 @@ func (m *billingSvcImpl) SwitchPlan(ctx context.Context, req *SwitchPlanRequest)
 	return SwitchPlanPresenter(resp), nil
 }
 
-func (m *billingSvcImpl) ConfirmPlanSwitch(ctx context.Context, req *ConfirmPlanSwitchRequest) (*apiresource.ConfirmPlanSwitchResponse, *apierror.APIError) {
-	resp, apiErr := grpcutil.CallRPC(ctx, billingSvcTracer, "service.billing.confirm_plan_switch", domain.ServiceName,
-		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ConfirmPlanSwitchResponse, error) {
-			return m.billingClient.ConfirmPlanSwitch(ctx, &pb.ConfirmPlanSwitchRequest{
-				CheckoutSessionId: req.SessionID,
-				PlanId:            req.PlanID,
+func (m *billingSvcImpl) GetSpendingCap(ctx context.Context, _ *apiresource.EmptyResource) (*apiresource.SpendingCapResponse, *apierror.APIError) {
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil || identity.Target == nil || identity.Target.AccountID == "" {
+		return nil, apierror.NewAuthenticationError("Missing account context")
+	}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, billingSvcTracer, "service.billing.get_spending_cap", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*corepb.GetAccountContextResponse, error) {
+			return m.coreClient.GetAccountContext(ctx, &corepb.GetAccountContextRequest{
+				AccountId: identity.Target.AccountID,
 			}, opts...)
 		})
 
@@ -179,5 +211,26 @@ func (m *billingSvcImpl) ConfirmPlanSwitch(ctx context.Context, req *ConfirmPlan
 		return nil, apiErr
 	}
 
-	return ConfirmPlanSwitchPresenter(resp), nil
+	return &apiresource.SpendingCapResponse{
+		Object:   constants.ObjectTypeSpendingCapResponse,
+		CapCents: resp.AgentMonthlySpendingCapCents,
+	}, nil
+}
+
+func (m *billingSvcImpl) SetSpendingCap(ctx context.Context, req *SetSpendingCapRequest) (*apiresource.SpendingCapResponse, *apierror.APIError) {
+	resp, apiErr := grpcutil.CallRPC(ctx, billingSvcTracer, "service.billing.set_spending_cap", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*corepb.UpdateAgentSpendingCapResponse, error) {
+			return m.coreClient.UpdateAgentSpendingCap(ctx, &corepb.UpdateAgentSpendingCapRequest{
+				CapCents: req.CapCents,
+			}, opts...)
+		})
+
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return &apiresource.SpendingCapResponse{
+		Object:   constants.ObjectTypeSpendingCapResponse,
+		CapCents: resp.CapCents,
+	}, nil
 }

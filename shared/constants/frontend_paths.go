@@ -20,9 +20,13 @@ const (
 
 func (m DashboardPath) IsValid() bool {
 	switch m {
-	case DashboardPathRegisterVerify:
+	case DashboardPathRegisterVerify, DashboardPathResetPassword, DashboardPathLogin, DashboardPathRegisterCheckoutReturn, DashboardPathBillingPortal:
 		return true
 	default:
 		return false
 	}
+}
+
+func (m DashboardPath) EnumValues() []string {
+	return []string{string(DashboardPathRegisterVerify), string(DashboardPathResetPassword), string(DashboardPathLogin), string(DashboardPathRegisterCheckoutReturn), string(DashboardPathBillingPortal)}
 }

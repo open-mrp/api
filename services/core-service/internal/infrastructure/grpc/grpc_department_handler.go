@@ -1,0 +1,162 @@
+package grpc
+
+import (
+	"context"
+
+	"github.com/augno/api/services/core-service/internal/domain"
+	"github.com/augno/api/shared/contracts"
+	pb "github.com/augno/api/shared/proto/core"
+
+	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
+)
+
+func departmentToProto(d *domain.Department) *pb.DepartmentInfo {
+	info := &pb.DepartmentInfo{
+		Id:        d.ID,
+		Name:      d.Name,
+		Notes:     d.Notes,
+		CreatedAt: timestamppb.New(d.CreatedAt),
+		UpdatedAt: timestamppb.New(d.UpdatedAt),
+	}
+
+	if d.LocationID != nil {
+		info.LocationId = d.LocationID
+	}
+	if d.LocationName != nil {
+		info.LocationName = d.LocationName
+	}
+
+	stations := make([]*pb.LightScanningStationInfo, len(d.ScanningStations))
+	for i, s := range d.ScanningStations {
+		stations[i] = &pb.LightScanningStationInfo{
+			Id:   s.ID,
+			Name: s.Name,
+		}
+	}
+	info.ScanningStations = stations
+
+	machines := make([]*pb.LightMachineInfo, len(d.Machines))
+	for i, m := range d.Machines {
+		machines[i] = &pb.LightMachineInfo{
+			Id:   m.ID,
+			Name: m.Name,
+		}
+	}
+	info.Machines = machines
+
+	return info
+}
+
+func (h *gRPCHandler) ListDepartments(ctx context.Context, req *pb.ListDepartmentsRequest) (*pb.ListDepartmentsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	params := domain.ListDepartmentsParams{
+		Cursor: req.Cursor,
+		Limit:  req.Limit,
+		Query:  req.Query,
+	}
+
+	result, apiErr := h.departmentSvc.ListDepartments(ctx, params)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	pbDepts := make([]*pb.DepartmentInfo, len(result.Departments))
+	for i, d := range result.Departments {
+		pbDepts[i] = departmentToProto(d)
+	}
+
+	return &pb.ListDepartmentsResponse{
+		Departments: pbDepts,
+		PageInfo: &pb.PageInfo{
+			NextCursor:  result.PageInfo.NextCursor,
+			PrevCursor:  result.PageInfo.PrevCursor,
+			HasNextPage: result.PageInfo.HasNextPage,
+			HasPrevPage: result.PageInfo.HasPrevPage,
+		},
+	}, nil
+}
+
+func (h *gRPCHandler) GetDepartment(ctx context.Context, req *pb.GetDepartmentRequest) (*pb.GetDepartmentResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	dept, apiErr := h.departmentSvc.GetDepartment(ctx, req.Id)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.GetDepartmentResponse{
+		Department: departmentToProto(dept),
+	}, nil
+}
+
+func (h *gRPCHandler) CreateDepartment(ctx context.Context, req *pb.CreateDepartmentRequest) (*pb.CreateDepartmentResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	params := domain.CreateDepartmentParams{
+		Name:               req.Name,
+		Notes:              req.Notes,
+		LocationID:         req.LocationId,
+		ScanningStationIDs: req.ScanningStationIds,
+		MachineIDs:         req.MachineIds,
+	}
+
+	dept, apiErr := h.departmentSvc.CreateDepartment(ctx, params)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.CreateDepartmentResponse{
+		Department: departmentToProto(dept),
+	}, nil
+}
+
+func (h *gRPCHandler) UpdateDepartment(ctx context.Context, req *pb.UpdateDepartmentRequest) (*pb.UpdateDepartmentResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	params := domain.UpdateDepartmentParams{
+		DepartmentID:       req.Id,
+		Name:               req.Name,
+		Notes:              req.Notes,
+		LocationID:         req.LocationId,
+		ScanningStationIDs: req.ScanningStationIds,
+		MachineIDs:         req.MachineIds,
+	}
+
+	dept, apiErr := h.departmentSvc.UpdateDepartment(ctx, params)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.UpdateDepartmentResponse{
+		Department: departmentToProto(dept),
+	}, nil
+}
+
+func (h *gRPCHandler) DeleteDepartment(ctx context.Context, req *pb.DeleteDepartmentRequest) (*emptypb.Empty, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	apiErr := h.departmentSvc.DeleteDepartment(ctx, req.Id)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &emptypb.Empty{}, nil
+}

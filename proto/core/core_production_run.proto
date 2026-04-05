@@ -1,0 +1,139 @@
+syntax = "proto3";
+
+// Package core defines additional gRPC services for the core-service.
+// CoreProductionRunService handles production run management RPCs.
+package core;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "core/core.proto";
+
+option go_package = "shared/proto/core;core";
+
+service CoreProductionRunService {
+  // ListProductionRuns returns a paginated list of production runs.
+  rpc ListProductionRuns(ListProductionRunsRequest) returns (ListProductionRunsResponse);
+
+  // GetProductionRun returns a single production run by its ID.
+  rpc GetProductionRun(GetProductionRunRequest) returns (GetProductionRunResponse);
+
+  // CreateProductionRun creates a new production run.
+  rpc CreateProductionRun(CreateProductionRunRequest) returns (CreateProductionRunResponse);
+
+  // UpdateProductionRun updates an existing production run.
+  rpc UpdateProductionRun(UpdateProductionRunRequest) returns (UpdateProductionRunResponse);
+
+  // DeleteProductionRun deletes a production run by its ID.
+  rpc DeleteProductionRun(DeleteProductionRunRequest) returns (google.protobuf.Empty);
+
+  // AddBatchesToProductionRun adds batches to a production run.
+  rpc AddBatchesToProductionRun(AddBatchesToProductionRunRequest) returns (AddBatchesToProductionRunResponse);
+
+  // ListBatchesByProductionRun returns all batches for a production run.
+  rpc ListBatchesByProductionRun(ListBatchesByProductionRunRequest) returns (ListBatchesByProductionRunResponse);
+}
+
+// ProductionRunInfo represents a full production run resource.
+message ProductionRunInfo {
+  string id = 1;
+  string number = 2;
+  string responsible_user_id = 3;
+  optional string responsible_user_name = 4;
+  int32 batch_count = 5;
+  optional google.protobuf.Timestamp started_at = 6;
+  optional google.protobuf.Timestamp completed_at = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+}
+
+// ProductionRunSummaryInfo represents a production run for list views.
+message ProductionRunSummaryInfo {
+  string id = 1;
+  string number = 2;
+  string responsible_user_id = 3;
+  optional string responsible_user_name = 4;
+  int32 batch_count = 5;
+  optional google.protobuf.Timestamp started_at = 6;
+  optional google.protobuf.Timestamp completed_at = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+}
+
+message ListProductionRunsRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+  optional string status = 4;
+  repeated string item_ids = 5;
+  repeated string machine_ids = 6;
+  optional string start_date = 7;
+  optional string end_date = 8;
+}
+
+message ListProductionRunsResponse {
+  repeated ProductionRunSummaryInfo production_runs = 1;
+  PageInfo page_info = 2;
+}
+
+message GetProductionRunRequest {
+  string id = 1;
+}
+
+message GetProductionRunResponse {
+  ProductionRunInfo production_run = 1;
+}
+
+message CreateProductionRunRequest {
+  string responsible_user_id = 1;
+}
+
+message CreateProductionRunResponse {
+  ProductionRunInfo production_run = 1;
+}
+
+message UpdateProductionRunRequest {
+  string id = 1;
+  optional string number = 2;
+  optional string responsible_user_id = 3;
+}
+
+message UpdateProductionRunResponse {
+  ProductionRunInfo production_run = 1;
+}
+
+message DeleteProductionRunRequest {
+  string id = 1;
+}
+
+message AddBatchInput {
+  string item_id = 1;
+  string quantity_value = 2;
+  string quantity_unit_id = 3;
+  optional string seconds_value = 4;
+  optional string seconds_unit_id = 5;
+  optional string waste_value = 6;
+  optional string waste_unit_id = 7;
+  optional string production_step_id = 8;
+  optional string scanning_station_id = 9;
+}
+
+message AddBatchesToProductionRunRequest {
+  string production_run_id = 1;
+  repeated AddBatchInput batches = 2;
+}
+
+message AddBatchesToProductionRunResponse {
+  repeated BaseBatchInfo batches = 1;
+}
+
+message ListBatchesByProductionRunRequest {
+  string production_run_id = 1;
+  optional string cursor = 2;
+  int32 limit = 3;
+  optional string query = 4;
+}
+
+message ListBatchesByProductionRunResponse {
+  repeated BatchInfo batches = 1;
+  PageInfo page_info = 2;
+}

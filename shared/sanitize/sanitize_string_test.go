@@ -6,6 +6,7 @@ import (
 )
 
 func TestSanitizeString(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name                string
 		key                 string
@@ -111,6 +112,7 @@ func TestSanitizeString(t *testing.T) {
 }
 
 func TestSanitizeString_EdgeCases(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name                string
 		key                 string

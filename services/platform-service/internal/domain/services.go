@@ -18,3 +18,17 @@ type LoggingSvc interface {
 	// scoped to the caller's target account.
 	ListRequestLogs(ctx context.Context, filter *ListRequestLogsFilter, includes []string) (*ListRequestLogsResult, *apierror.APIError)
 }
+
+type AuditEventSvc interface {
+	// SaveAuditEvent persists a single audit event. It is intended to be
+	// invoked by the platform-service's async consumer pipeline.
+	SaveAuditEvent(ctx context.Context, event *AuditEvent) *apierror.APIError
+
+	// GetAuditEvent returns a single audit event by ID, scoped to the caller's
+	// target account.
+	GetAuditEvent(ctx context.Context, id string, includes []string) (*AuditEventRead, *apierror.APIError)
+
+	// ListAuditEvents returns a filtered, cursor-paginated list of audit events
+	// scoped to the caller's target account.
+	ListAuditEvents(ctx context.Context, filter *ListAuditEventsFilter, includes []string) (*ListAuditEventsResult, *apierror.APIError)
+}

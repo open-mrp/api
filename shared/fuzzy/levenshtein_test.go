@@ -3,6 +3,7 @@ package fuzzy
 import "testing"
 
 func TestLevenshteinDistance(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		a, b     string
@@ -59,6 +60,7 @@ func TestLevenshteinDistance(t *testing.T) {
 }
 
 func TestLevenshteinDistance_Symmetry(t *testing.T) {
+	t.Parallel()
 	pairs := [][2]string{
 		{"kitten", "sitting"},
 		{"saturday", "sunday"},
@@ -78,7 +80,10 @@ func TestLevenshteinDistance_Symmetry(t *testing.T) {
 }
 
 func TestLevenshteinDistance_TriangleInequality(t *testing.T) {
+	t.Parallel(
 	// For any strings a, b, c: dist(a, c) <= dist(a, b) + dist(b, c)
+	)
+
 	triples := [][3]string{
 		{"kitten", "sitting", "bitten"},
 		{"abc", "axc", "xyz"},
@@ -97,6 +102,7 @@ func TestLevenshteinDistance_TriangleInequality(t *testing.T) {
 }
 
 func TestFindClosestByLevenshtein(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name         string
 		target       string

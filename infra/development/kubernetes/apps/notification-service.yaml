@@ -40,7 +40,7 @@ spec:
                         valueFrom:
                             secretKeyRef:
                                 name: database-credentials
-                                key: uri
+                                key: core-service-uri
                       - name: RABBITMQ_URI
                         valueFrom:
                             secretKeyRef:
@@ -48,9 +48,9 @@ spec:
                                 key: uri
                       - name: AWS_REGION
                         valueFrom:
-                            secretKeyRef:
-                                name: aws-credentials
-                                key: region
+                            configMapKeyRef:
+                                key: AWS_REGION
+                                name: app-config
                       - name: AWS_ACCESS_KEY_ID
                         valueFrom:
                             secretKeyRef:

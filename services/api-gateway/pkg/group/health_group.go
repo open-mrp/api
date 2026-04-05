@@ -16,7 +16,7 @@ type HealthEndpointGroupConfig struct {
 func (*HealthEndpointGroup) Materialize(config HealthEndpointGroupConfig) *HealthEndpointGroup {
 	inner := &apiendpoint.APIEndpointGroup{
 		Title:        "Health",
-		Description:  "API health monitoring endpoints for service status and environment information.",
+		Description:  "Health monitoring endpoints for service status and environment information.",
 		ResourceType: &apiresource.Healthcheck{},
 	}
 

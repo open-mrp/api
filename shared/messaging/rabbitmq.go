@@ -574,6 +574,15 @@ func (r *rabbitMQ) setupExchangesAndQueues() error {
 		return err
 	}
 
+	// Audit event queue (handled by platform-service)
+	if err := r.declareAndBindQueue(
+		PlatformEventAuditLogQueue,
+		[]string{string(contracts.PlatformEventAuditLogged)},
+		ApplicationExchange,
+	); err != nil {
+		return err
+	}
+
 	// Core purge account data command queue (handled by core-service)
 	if err := r.declareAndBindQueue(
 		CoreCmdPurgeAccountDataQueue,
@@ -592,10 +601,73 @@ func (r *rabbitMQ) setupExchangesAndQueues() error {
 		return err
 	}
 
+	// Core execute production step command queue (handled by core-service)
+	if err := r.declareAndBindQueue(
+		CoreCmdExecuteProductionStepQueue,
+		[]string{string(contracts.CoreCmdExecuteProductionStep)},
+		ApplicationExchange,
+	); err != nil {
+		return err
+	}
+
 	// Billing stripe webhook event queue (handled by billing-service)
 	if err := r.declareAndBindQueue(
 		BillingEventStripeWebhookQueue,
 		[]string{string(contracts.BillingEventStripeWebhook)},
+		ApplicationExchange,
+	); err != nil {
+		return err
+	}
+
+	// Agent command queue: execute run (handled by agent-service)
+	if err := r.declareAndBindQueue(
+		AgentCmdExecuteRunQueue,
+		[]string{string(contracts.AgentCmdExecuteRun)},
+		ApplicationExchange,
+	); err != nil {
+		return err
+	}
+
+	// Agent command queue: process email (handled by agent-service)
+	if err := r.declareAndBindQueue(
+		AgentCmdProcessEmailQueue,
+		[]string{string(contracts.AgentCmdProcessEmail)},
+		ApplicationExchange,
+	); err != nil {
+		return err
+	}
+
+	// Agent command queue: execute action (handled by agent-service)
+	if err := r.declareAndBindQueue(
+		AgentCmdExecuteActionQueue,
+		[]string{string(contracts.AgentCmdExecuteAction)},
+		ApplicationExchange,
+	); err != nil {
+		return err
+	}
+
+	// Agent command queue: continue run (handled by agent-service)
+	if err := r.declareAndBindQueue(
+		AgentCmdContinueRunQueue,
+		[]string{string(contracts.AgentCmdContinueRun)},
+		ApplicationExchange,
+	); err != nil {
+		return err
+	}
+
+	// Agent event queue: run completed
+	if err := r.declareAndBindQueue(
+		AgentEventRunCompletedQueue,
+		[]string{string(contracts.AgentEventRunCompleted)},
+		ApplicationExchange,
+	); err != nil {
+		return err
+	}
+
+	// Agent event queue: run step (for WebSocket streaming)
+	if err := r.declareAndBindQueue(
+		AgentEventRunStepQueue,
+		[]string{string(contracts.AgentEventRunStep)},
 		ApplicationExchange,
 	); err != nil {
 		return err

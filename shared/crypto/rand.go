@@ -2,6 +2,7 @@ package crypto
 
 import (
 	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 )
 
@@ -57,4 +58,17 @@ func RandAlphanumericString(n int) (string, error) {
 		return "", err
 	}
 	return string(b), nil
+}
+
+// RandHexString returns a hex-encoded string of n random bytes (2*n hex
+// characters). Useful for random tokens or passwords.
+func RandHexString(n int) (string, error) {
+	if n < 0 {
+		return "", fmt.Errorf("n must be >= 0")
+	}
+	b := make([]byte, n)
+	if _, err := rand.Read(b); err != nil {
+		return "", fmt.Errorf("failed to generate random bytes: %w", err)
+	}
+	return hex.EncodeToString(b), nil
 }

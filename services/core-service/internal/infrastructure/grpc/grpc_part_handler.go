@@ -1,0 +1,148 @@
+package grpc
+
+import (
+	"context"
+
+	"github.com/augno/api/services/core-service/internal/domain"
+	"github.com/augno/api/shared/contracts"
+	pb "github.com/augno/api/shared/proto/core"
+	"google.golang.org/protobuf/types/known/timestamppb"
+)
+
+func partToProto(p *domain.Part) *pb.PartInfo {
+	if p == nil {
+		return nil
+	}
+
+	return &pb.PartInfo{
+		Id:        p.ID,
+		ItemId:    p.ItemID,
+		Item:      itemToProto(p.Item),
+		CreatedAt: timestamppb.New(p.CreatedAt),
+		UpdatedAt: timestamppb.New(p.UpdatedAt),
+	}
+}
+
+func (h *gRPCHandler) CreatePart(ctx context.Context, req *pb.CreatePartRequest) (*pb.CreatePartResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	params := domain.CreatePartParams{
+		SKU:         req.Sku,
+		Description: req.Description,
+		CategoryID:  req.CategoryId,
+	}
+
+	part, apiErr := h.partSvc.CreatePart(ctx, params)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.CreatePartResponse{
+		Part: partToProto(part),
+	}, nil
+}
+
+func (h *gRPCHandler) GetPart(ctx context.Context, req *pb.GetPartRequest) (*pb.GetPartResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	part, apiErr := h.partSvc.GetPart(ctx, req.ItemId)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.GetPartResponse{
+		Part: partToProto(part),
+	}, nil
+}
+
+func (h *gRPCHandler) ListParts(ctx context.Context, req *pb.ListPartsRequest) (*pb.ListPartsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	params := domain.ListPartsParams{
+		Cursor:       req.Cursor,
+		Limit:        req.Limit,
+		Query:        req.Query,
+		CategoryIDs:  req.CategoryIds,
+		AttributeIDs: req.AttributeIds,
+	}
+
+	if req.StartDate != nil {
+		t := req.StartDate.AsTime()
+		params.StartDate = &t
+	}
+	if req.EndDate != nil {
+		t := req.EndDate.AsTime()
+		params.EndDate = &t
+	}
+
+	result, apiErr := h.partSvc.ListParts(ctx, params)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	pbParts := make([]*pb.PartInfo, len(result.Parts))
+	for i, part := range result.Parts {
+		pbParts[i] = partToProto(part)
+	}
+
+	return &pb.ListPartsResponse{
+		Parts: pbParts,
+		PageInfo: &pb.PageInfo{
+			NextCursor:  result.PageInfo.NextCursor,
+			PrevCursor:  result.PageInfo.PrevCursor,
+			HasNextPage: result.PageInfo.HasNextPage,
+			HasPrevPage: result.PageInfo.HasPrevPage,
+		},
+	}, nil
+}
+
+func (h *gRPCHandler) UpdatePart(ctx context.Context, req *pb.UpdatePartRequest) (*pb.UpdatePartResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	params := domain.UpdatePartParams{
+		ItemID:            req.ItemId,
+		SKU:               req.Sku,
+		Description:       req.Description,
+		UpdateDescription: req.UpdateDescription,
+		Notes:             req.Notes,
+		UpdateNotes:       req.UpdateNotes,
+	}
+
+	part, apiErr := h.partSvc.UpdatePart(ctx, params)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.UpdatePartResponse{
+		Part: partToProto(part),
+	}, nil
+}
+
+func (h *gRPCHandler) DeletePart(ctx context.Context, req *pb.DeletePartRequest) (*pb.DeletePartResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	part, apiErr := h.partSvc.DeletePart(ctx, req.ItemId)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.DeletePartResponse{
+		Part: partToProto(part),
+	}, nil
+}

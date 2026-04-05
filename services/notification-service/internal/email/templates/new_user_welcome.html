@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome!</title>
+</head>
+<body style="margin: 0; padding: 0; width: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+    <table role="presentation" cellPadding="0" cellSpacing="0" width="100%" bgcolor="#F4F5F7" style="width: 100%; background-color: #F4F5F7; padding-top: 24px; padding-bottom: 24px;">
+        <tbody>
+            <tr>
+                <td>
+                    <table role="presentation" cellPadding="0" cellSpacing="0" style="width: 100%; max-width: 600px; margin-left: auto; margin-right: auto; background-color: #FFFFFF; border-radius: 12px; border: 1px solid #E5E7EB; border-top: 4px solid #2563EB;" width="100%" bgcolor="#FFFFFF">
+                        <tbody>
+                            <tr>
+                                <td style="padding: 24px 24px 0 24px; text-align: center; background-color: #FFFFFF;">
+                                    {{if .IsBranded}}{{if .LogoURL}}<img src="{{.LogoURL}}" alt="{{.AccountName}}" style="height: 40px; width: auto;">{{else}}<span style="font-size: 18px; font-weight: 700; color: #0F172A;">{{.AccountName}}</span>{{end}}{{else}}<img src="https://augno-public-images.s3.us-east-2.amazonaws.com/dark-logo.png" alt="Augno" style="height: 40px; width: auto;">{{end}}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="background-color: #FFFFFF; padding: 24px;">
+                                    <h1 style="margin: 0; margin-bottom: 8px; font-size: 22px; line-height: 28px; font-weight: 700; color: #0F172A; text-align: center;">Welcome!</h1>
+                                    <p style="margin: 0; margin-bottom: 16px; font-size: 14px; line-height: 20px; color: #475569; text-align: center;">Hi {{.Name}}, an account has been created for you{{if .IsBranded}} on the {{.AccountName}} platform{{end}}.</p>
+
+                                    <p style="margin: 0; margin-bottom: 12px; font-size: 14px; line-height: 22px; color: #0F172A; text-align: center;">Your temporary password is:</p>
+
+                                    <div style="margin: 0 auto 16px auto; max-width: 400px; padding: 12px 16px; background-color: #F1F5F9; border-radius: 8px; text-align: center;">
+                                        <code style="font-size: 16px; font-weight: 600; color: #0F172A; letter-spacing: 1px;">{{.Password}}</code>
+                                    </div>
+
+                                    <p style="margin: 0; margin-bottom: 12px; font-size: 14px; line-height: 22px; color: #0F172A; text-align: center;">Please sign in and change your password as soon as possible.</p>
+
+                                    {{if .LoginLink}}
+                                    <div style="text-align: center; margin-top: 16px;">
+                                        <a href="{{.LoginLink}}" style="display: inline-block; padding: 10px 24px; background-color: #2563EB; color: #FFFFFF; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 600;">Sign In</a>
+                                    </div>
+                                    {{end}}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="height: 1px; background-color: #E5E7EB;"></td>
+                            </tr>
+                            <tr>
+                                <td style="background-color: #FFFFFF; padding: 16px; text-align: center; color: #6B7280; font-size: 12px;">
+                                    <div>
+                                        {{if .IsBranded}}
+                                        <div style="font-size: 12px; color: #9CA3AF; margin-bottom: 4px;">
+                                            Powered by <a href="https://www.augno.com" style="color: #2563EB; text-decoration: none;">Augno</a>
+                                        </div>
+                                        {{else}}
+                                        <div style="font-size: 12px; color: #6B7280; margin-bottom: 4px;">
+                                            Email: <a href="mailto:support@augno.com" style="color: #2563EB; text-decoration: none;">support@augno.com</a>
+                                        </div>
+                                        <div style="font-size: 12px; color: #6B7280;">
+                                            Website: <a href="https://www.augno.com" style="color: #2563EB; text-decoration: none;">https://www.augno.com</a>
+                                        </div>
+                                        {{end}}
+                                        <div style="margin-top: 8px; font-size: 12px; color: #9CA3AF;">
+                                            &copy; 2024 Augno Inc. All rights reserved.
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</body>
+</html>

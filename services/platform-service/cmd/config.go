@@ -32,7 +32,7 @@ type config struct {
 	// RabbitMQURI (optional; default: "amqp://guest:guest@rabbitmq:5672/") is the RabbitMQ connection URI.
 	RabbitMQURI string
 
-	// CursorHMACKey is the HMAC key used to sign and verify pagination cursors.
+	// CursorHMACKey (required) is the HMAC key used to sign and verify pagination cursors.
 	CursorHMACKey []byte
 }
 
@@ -58,10 +58,10 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 // validate validates the configuration.
 func (c *config) validate() error {
 	if c == nil {
-		return fmt.Errorf("config is nil")
+		return fmt.Errorf("platform-service: config is nil")
 	}
 	if c.DBURL == "" {
-		return fmt.Errorf("the provided database URI is empty")
+		return fmt.Errorf("platform-service: the provided database URI is empty")
 	}
 	return nil
 }

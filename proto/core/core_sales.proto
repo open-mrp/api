@@ -1,0 +1,690 @@
+syntax = "proto3";
+
+// Package core defines additional gRPC services for the core-service.
+// CoreSalesService handles order discount and sales order status RPCs.
+package core;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "core/core.proto";
+
+option go_package = "shared/proto/core;core";
+
+service CoreSalesService {
+  // ListOrderDiscounts returns a paginated list of order discounts.
+  rpc ListOrderDiscounts(ListOrderDiscountsRequest) returns (ListOrderDiscountsResponse);
+
+  // GetOrderDiscount returns a single order discount by its ID.
+  rpc GetOrderDiscount(GetOrderDiscountRequest) returns (GetOrderDiscountResponse);
+
+  // CreateOrderDiscount creates a new order discount.
+  rpc CreateOrderDiscount(CreateOrderDiscountRequest) returns (CreateOrderDiscountResponse);
+
+  // UpdateOrderDiscount updates an existing order discount.
+  rpc UpdateOrderDiscount(UpdateOrderDiscountRequest) returns (UpdateOrderDiscountResponse);
+
+  // DeleteOrderDiscount deletes an order discount by its ID.
+  rpc DeleteOrderDiscount(DeleteOrderDiscountRequest) returns (DeleteOrderDiscountResponse);
+
+  // FindOrderDiscountByCode looks up an order discount by its unique code.
+  rpc FindOrderDiscountByCode(FindOrderDiscountByCodeRequest) returns (FindOrderDiscountByCodeResponse);
+
+  // ListSalesOrderStatuses returns a paginated list of sales order statuses.
+  rpc ListSalesOrderStatuses(ListSalesOrderStatusesRequest) returns (ListSalesOrderStatusesResponse);
+
+  // ListSalesOrders returns a paginated list of sales orders.
+  rpc ListSalesOrders(ListSalesOrdersRequest) returns (ListSalesOrdersResponse);
+
+  // GetSalesOrder returns a single sales order by ID.
+  rpc GetSalesOrder(GetSalesOrderRequest) returns (GetSalesOrderResponse);
+
+  // CreateSalesOrder creates a new sales order.
+  rpc CreateSalesOrder(CreateSalesOrderRequest) returns (CreateSalesOrderResponse);
+
+  // UpdateSalesOrder updates an existing sales order.
+  rpc UpdateSalesOrder(UpdateSalesOrderRequest) returns (UpdateSalesOrderResponse);
+
+  // DeleteSalesOrder deletes a sales order by ID.
+  rpc DeleteSalesOrder(DeleteSalesOrderRequest) returns (google.protobuf.Empty);
+
+  // BulkDeleteSalesOrders deletes multiple sales orders.
+  rpc BulkDeleteSalesOrders(BulkDeleteSalesOrdersRequest) returns (google.protobuf.Empty);
+
+  // ChangeSalesOrderStatus changes the status of a sales order.
+  rpc ChangeSalesOrderStatus(ChangeSalesOrderStatusRequest) returns (ChangeSalesOrderStatusResponse);
+
+  // CheckoutSalesOrder initiates a checkout for a sales order.
+  rpc CheckoutSalesOrder(CheckoutSalesOrderRequest) returns (CheckoutSalesOrderResponse);
+
+  // CreateSalesOrderProductionRun creates a production run from a sales order.
+  rpc CreateSalesOrderProductionRun(CreateSalesOrderProductionRunRequest) returns (CreateSalesOrderProductionRunResponse);
+
+  // CreateSalesOrderLine creates a new line on a sales order.
+  rpc CreateSalesOrderLine(CreateSalesOrderLineRequest) returns (CreateSalesOrderLineResponse);
+
+  // ListVolumeDiscounts returns a paginated list of volume discounts.
+  rpc ListVolumeDiscounts(ListVolumeDiscountsRequest) returns (ListVolumeDiscountsResponse);
+
+  // GetVolumeDiscount returns a single volume discount by ID.
+  rpc GetVolumeDiscount(GetVolumeDiscountRequest) returns (GetVolumeDiscountResponse);
+
+  // CreateVolumeDiscount creates a new volume discount.
+  rpc CreateVolumeDiscount(CreateVolumeDiscountRequest) returns (CreateVolumeDiscountResponse);
+
+  // UpdateVolumeDiscount updates an existing volume discount.
+  rpc UpdateVolumeDiscount(UpdateVolumeDiscountRequest) returns (UpdateVolumeDiscountResponse);
+
+  // DeleteVolumeDiscount deletes a volume discount by its ID.
+  rpc DeleteVolumeDiscount(DeleteVolumeDiscountRequest) returns (google.protobuf.Empty);
+
+  // UpdateSalesOrderLine updates an existing sales order line.
+  rpc UpdateSalesOrderLine(UpdateSalesOrderLineRequest) returns (UpdateSalesOrderLineResponse);
+
+  // DeleteSalesOrderLine deletes a sales order line.
+  rpc DeleteSalesOrderLine(DeleteSalesOrderLineRequest) returns (google.protobuf.Empty);
+
+  // CreateCustomerCheckoutSession creates a checkout session for a customer order.
+  rpc CreateCustomerCheckoutSession(CreateCustomerCheckoutSessionRequest) returns (CreateCustomerCheckoutSessionResponse);
+}
+
+// OrderDiscountInfo represents an order discount resource returned by the core-service.
+message OrderDiscountInfo {
+  string id = 1;
+  string name = 2;
+  string code = 3;
+  string percentage = 4;
+  string amount = 5;
+  string discount_type = 6;
+  int32 order_count = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+}
+
+// SalesOrderStatusInfo represents a sales order status resource returned by the core-service.
+message SalesOrderStatusInfo {
+  string id = 1;
+  string code = 2;
+  string name = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp updated_at = 5;
+}
+
+message ListOrderDiscountsRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+}
+
+message ListOrderDiscountsResponse {
+  repeated OrderDiscountInfo order_discounts = 1;
+  PageInfo page_info = 2;
+}
+
+message GetOrderDiscountRequest {
+  string id = 1;
+}
+
+message GetOrderDiscountResponse {
+  OrderDiscountInfo order_discount = 1;
+}
+
+message CreateOrderDiscountRequest {
+  string name = 1;
+  string code = 2;
+  optional string percentage = 3;
+  optional string amount = 4;
+  string discount_type = 5;
+}
+
+message CreateOrderDiscountResponse {
+  OrderDiscountInfo order_discount = 1;
+}
+
+message UpdateOrderDiscountRequest {
+  string id = 1;
+  optional string name = 2;
+  optional string code = 3;
+  optional string percentage = 4;
+  optional string amount = 5;
+  optional string discount_type = 6;
+}
+
+message UpdateOrderDiscountResponse {
+  OrderDiscountInfo order_discount = 1;
+}
+
+message DeleteOrderDiscountRequest {
+  string id = 1;
+}
+
+message DeleteOrderDiscountResponse {
+  OrderDiscountInfo order_discount = 1;
+}
+
+message FindOrderDiscountByCodeRequest {
+  string code = 1;
+  optional string buyer_account_id = 2;
+  optional string sales_order_id = 3;
+}
+
+message FindOrderDiscountByCodeResponse {
+  OrderDiscountInfo order_discount = 1;
+}
+
+message ListSalesOrderStatusesRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+}
+
+message ListSalesOrderStatusesResponse {
+  repeated SalesOrderStatusInfo sales_order_statuses = 1;
+  PageInfo page_info = 2;
+}
+
+// SalesOrderSummaryInfo represents a sales order in list views.
+message SalesOrderSummaryInfo {
+  string id = 1;
+  string number = 2;
+  optional string customer_po_number = 3;
+  string status_code = 4;
+  string status_name = 5;
+  string type_code = 6;
+  string type_name = 7;
+  string customer_id = 8;
+  string customer_name = 9;
+  string customer_number = 10;
+  int32 line_count = 11;
+  bool is_acknowledgment_sent = 12;
+  string priority_code = 13;
+  string priority_name = 14;
+  optional google.protobuf.Timestamp issued_at = 15;
+  optional google.protobuf.Timestamp completed_at = 16;
+  google.protobuf.Timestamp created_at = 17;
+  google.protobuf.Timestamp updated_at = 18;
+  optional string priority_id = 19;
+  optional string customer_status_code = 20;
+  optional string customer_commission_policy = 21;
+}
+
+// SalesOrderInfo represents a full sales order with all detail.
+message SalesOrderInfo {
+  string id = 1;
+  string number = 2;
+  optional string customer_po_number = 3;
+  optional string note = 4;
+  bool is_acknowledgment_sent = 5;
+  // Address IDs
+  string billing_address_id = 6;
+  string shipping_address_id = 7;
+  // Address details
+  optional string bill_to_name = 8;
+  optional string bill_to_street_line_1 = 9;
+  optional string bill_to_street_line_2 = 10;
+  optional string bill_to_locality = 11;
+  optional string bill_to_state = 12;
+  optional string bill_to_postal_code = 13;
+  optional string bill_to_country = 14;
+  optional string bill_to_phone = 15;
+  optional string bill_to_email = 16;
+  optional string ship_to_name = 17;
+  optional string ship_to_street_line_1 = 18;
+  optional string ship_to_street_line_2 = 19;
+  optional string ship_to_locality = 20;
+  optional string ship_to_state = 21;
+  optional string ship_to_postal_code = 22;
+  optional string ship_to_country = 23;
+  optional string ship_to_phone = 24;
+  optional string ship_to_email = 25;
+  // Carrier
+  optional string carrier_id = 26;
+  optional string carrier_name = 27;
+  optional string service_level_id = 28;
+  optional string service_level_name = 29;
+  optional string carrier_billing_type = 30;
+  optional string carrier_billing_account = 31;
+  // Customer
+  string customer_id = 32;
+  string customer_name = 33;
+  string customer_number = 34;
+  // Sales rep
+  optional string sales_rep_id = 35;
+  optional string sales_rep_name = 36;
+  // Status
+  string status_code = 37;
+  string status_name = 38;
+  // Type
+  string type_code = 39;
+  string type_name = 40;
+  // Priority
+  string priority_code = 41;
+  string priority_name = 42;
+  // Payment term
+  optional string payment_term_id = 43;
+  optional string payment_term_name = 44;
+  // Shipping term
+  optional string shipping_term_id = 45;
+  optional string shipping_term_name = 46;
+  // Order discount
+  optional string order_discount_id = 47;
+  optional string order_discount_name = 48;
+  // Production run
+  optional string production_run_id = 49;
+  // Pick
+  optional string pick_id = 50;
+  // Lines (populated when included)
+  repeated SalesOrderLineInfo lines = 51;
+  // Timestamps
+  optional google.protobuf.Timestamp issued_at = 52;
+  optional google.protobuf.Timestamp completed_at = 53;
+  optional google.protobuf.Timestamp first_ship_at = 54;
+  optional google.protobuf.Timestamp expired_at = 55;
+  optional google.protobuf.Timestamp promised_at = 56;
+  google.protobuf.Timestamp created_at = 57;
+  google.protobuf.Timestamp updated_at = 58;
+  optional bool carrier_is_portal_enabled = 59;
+  optional bool service_level_is_portal_enabled = 60;
+  optional bool payment_term_is_active = 61;
+  optional string shipping_term_type = 62;
+  optional string priority_id = 63;
+  optional string service_level_token = 64;
+  optional string customer_status_code = 65;
+  optional string customer_commission_policy = 66;
+}
+
+// SalesOrderLineInfo represents a sales order line.
+message SalesOrderLineInfo {
+  string id = 1;
+  int32 line_item_number = 2;
+  string product_sku = 3;
+  optional string product_description = 4;
+  optional string product_id = 5;
+  optional string item_id = 6;
+  optional string item_sku = 7;
+  optional string edi_line_item_id = 8;
+  // Quantity ordered
+  string quantity_id = 9;
+  string quantity_value = 10;
+  string quantity_unit_id = 11;
+  string quantity_unit_name = 12;
+  string quantity_unit_abbreviation = 13;
+  string quantity_unit_type = 14;
+  // Quantity picked
+  optional string quantity_picked_value = 15;
+  // Quantity packed
+  optional string quantity_packed_value = 16;
+  // Quantity invoiced
+  optional string quantity_invoiced_value = 17;
+  // Unit price
+  string unit_price_id = 18;
+  string unit_price_value = 19;
+  string unit_price_numerator_unit_id = 20;
+  string unit_price_numerator_unit_abbreviation = 21;
+  string unit_price_denominator_unit_id = 22;
+  string unit_price_denominator_unit_abbreviation = 23;
+  // Unit cost
+  optional string unit_cost_id = 24;
+  optional string unit_cost_value = 25;
+  optional string unit_cost_numerator_unit_id = 26;
+  optional string unit_cost_numerator_unit_abbreviation = 27;
+  optional string unit_cost_denominator_unit_id = 28;
+  optional string unit_cost_denominator_unit_abbreviation = 29;
+  // Timestamps
+  optional google.protobuf.Timestamp completed_at = 30;
+  google.protobuf.Timestamp created_at = 31;
+  google.protobuf.Timestamp updated_at = 32;
+}
+
+// --- Sales Order Request/Response messages ---
+
+message ListSalesOrdersRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+  repeated string status_codes = 4;
+  repeated string item_ids = 5;
+  repeated string product_line_ids = 6;
+  repeated string customer_ids = 7;
+  repeated string customer_group_ids = 8;
+  repeated string sales_rep_ids = 9;
+  optional string start_date = 10;
+  optional string end_date = 11;
+  bool exclude_internal_orders = 12;
+  // If set, filters orders by buyer_account_id (for customer actor access).
+  optional string buyer_account_id = 13;
+}
+
+message ListSalesOrdersResponse {
+  repeated SalesOrderSummaryInfo sales_orders = 1;
+  PageInfo page_info = 2;
+}
+
+message GetSalesOrderRequest {
+  string id = 1;
+  repeated string includes = 2;
+  // If set, filters by buyer_account_id (for customer actor access).
+  optional string buyer_account_id = 3;
+}
+
+message GetSalesOrderResponse {
+  SalesOrderInfo sales_order = 1;
+}
+
+message CreateSalesOrderRequest {
+  string buyer_account_id = 1;
+  optional string customer_po_number = 2;
+  optional string note = 3;
+  optional string carrier_id = 4;
+  optional string service_level_id = 5;
+  optional string carrier_billing_type = 6;
+  optional string carrier_billing_account = 7;
+  string priority_code = 8;
+  optional string sales_rep_id = 9;
+  optional string shipping_term_id = 10;
+  string sales_order_type_code = 11;
+  optional string payment_term_id = 12;
+  optional string order_discount_id = 13;
+  // Address fields for bill-to
+  optional string bill_to_name = 14;
+  optional string bill_to_street_line_1 = 15;
+  optional string bill_to_street_line_2 = 16;
+  optional string bill_to_locality = 17;
+  optional string bill_to_state = 18;
+  optional string bill_to_postal_code = 19;
+  optional string bill_to_country = 20;
+  // Address fields for ship-to
+  optional string ship_to_name = 21;
+  optional string ship_to_street_line_1 = 22;
+  optional string ship_to_street_line_2 = 23;
+  optional string ship_to_locality = 24;
+  optional string ship_to_state = 25;
+  optional string ship_to_postal_code = 26;
+  optional string ship_to_country = 27;
+  // Lines to create with the order
+  repeated CreateSalesOrderLineInput lines = 28;
+}
+
+message CreateSalesOrderLineInput {
+  string product_id = 1;
+  optional string item_id = 2;
+  string product_sku = 3;
+  optional string product_description = 4;
+  string quantity_value = 5;
+  string quantity_unit_id = 6;
+  string unit_price_value = 7;
+  string unit_price_numerator_unit_id = 8;
+  string unit_price_denominator_unit_id = 9;
+  optional string unit_cost_value = 10;
+  optional string unit_cost_numerator_unit_id = 11;
+  optional string unit_cost_denominator_unit_id = 12;
+  optional string edi_line_item_id = 13;
+}
+
+message CreateSalesOrderResponse {
+  SalesOrderInfo sales_order = 1;
+}
+
+message UpdateSalesOrderRequest {
+  string id = 1;
+  optional string customer_po_number = 2;
+  optional string note = 3;
+  optional string carrier_id = 4;
+  optional string service_level_id = 5;
+  optional string carrier_billing_type = 6;
+  optional string carrier_billing_account = 7;
+  optional string priority_code = 8;
+  optional string sales_rep_id = 9;
+  optional string shipping_term_id = 10;
+  optional string payment_term_id = 11;
+  optional string order_discount_id = 12;
+  // Address fields for bill-to
+  optional string bill_to_name = 13;
+  optional string bill_to_street_line_1 = 14;
+  optional string bill_to_street_line_2 = 15;
+  optional string bill_to_locality = 16;
+  optional string bill_to_state = 17;
+  optional string bill_to_postal_code = 18;
+  optional string bill_to_country = 19;
+  // Address fields for ship-to
+  optional string ship_to_name = 20;
+  optional string ship_to_street_line_1 = 21;
+  optional string ship_to_street_line_2 = 22;
+  optional string ship_to_locality = 23;
+  optional string ship_to_state = 24;
+  optional string ship_to_postal_code = 25;
+  optional string ship_to_country = 26;
+  // Additional updatable fields
+  optional string number = 27;
+  optional bool is_acknowledgment_sent = 28;
+  optional google.protobuf.Timestamp promised_at = 29;
+  optional string customer_id = 30;
+}
+
+message UpdateSalesOrderResponse {
+  SalesOrderInfo sales_order = 1;
+}
+
+message DeleteSalesOrderRequest {
+  string id = 1;
+}
+
+message BulkDeleteSalesOrdersRequest {
+  repeated string ids = 1;
+}
+
+message ChangeSalesOrderStatusRequest {
+  string id = 1;
+  string status_change = 2;
+  bool send_email = 3;
+}
+
+message ChangeSalesOrderStatusResponse {
+  SalesOrderInfo sales_order = 1;
+}
+
+message CheckoutSalesOrderRequest {
+  string id = 1;
+  string email = 2;
+  optional string success_url = 3;
+  optional string cancel_url = 4;
+}
+
+message CheckoutSalesOrderResponse {
+  string checkout_url = 1;
+}
+
+message CreateSalesOrderProductionRunRequest {
+  string id = 1;
+}
+
+message CreateSalesOrderProductionRunResponse {
+  string production_run_id = 1;
+}
+
+message CreateSalesOrderLineRequest {
+  string sales_order_id = 1;
+  string product_id = 2;
+  optional string item_id = 3;
+  string product_sku = 4;
+  optional string product_description = 5;
+  string quantity_value = 6;
+  string quantity_unit_id = 7;
+  string unit_price_value = 8;
+  string unit_price_numerator_unit_id = 9;
+  string unit_price_denominator_unit_id = 10;
+  optional string unit_cost_value = 11;
+  optional string unit_cost_numerator_unit_id = 12;
+  optional string unit_cost_denominator_unit_id = 13;
+  optional string edi_line_item_id = 14;
+}
+
+message CreateSalesOrderLineResponse {
+  SalesOrderLineInfo sales_order_line = 1;
+}
+
+message UpdateSalesOrderLineRequest {
+  string sales_order_id = 1;
+  string id = 2;
+  optional string product_id = 3;
+  optional string item_id = 4;
+  optional string product_sku = 5;
+  optional string product_description = 6;
+  optional string quantity_value = 7;
+  optional string quantity_unit_id = 8;
+  optional string unit_price_value = 9;
+  optional string unit_price_numerator_unit_id = 10;
+  optional string unit_price_denominator_unit_id = 11;
+  optional string unit_cost_value = 12;
+  optional string unit_cost_numerator_unit_id = 13;
+  optional string unit_cost_denominator_unit_id = 14;
+  optional string edi_line_item_id = 15;
+}
+
+message UpdateSalesOrderLineResponse {
+  SalesOrderLineInfo sales_order_line = 1;
+}
+
+message DeleteSalesOrderLineRequest {
+  string sales_order_id = 1;
+  string id = 2;
+}
+
+// --- Volume Discount messages ---
+
+message VolumeDiscountTierInfo {
+  string id = 1;
+  string name = 2;
+  string discount_percentage = 3;
+  string threshold = 4;
+  optional string parent_tier_id = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+
+message VolumeDiscountCustomerGroupInfo {
+  string id = 1;
+  string account_group_id = 2;
+  string name = 3;
+}
+
+message VolumeDiscountProductLineInfo {
+  string id = 1;
+  string name = 2;
+}
+
+message VolumeDiscountCategoryInfo {
+  string id = 1;
+  string name = 2;
+}
+
+message VolumeDiscountAttributeInfo {
+  string id = 1;
+  string name = 2;
+}
+
+message VolumeDiscountUnitInfo {
+  string id = 1;
+  string name = 2;
+  string abbreviation = 3;
+}
+
+message VolumeDiscountInfo {
+  string id = 1;
+  string name = 2;
+  repeated VolumeDiscountTierInfo tiers = 3;
+  repeated VolumeDiscountCustomerGroupInfo customer_groups = 4;
+  repeated VolumeDiscountProductLineInfo product_lines = 5;
+  repeated VolumeDiscountCategoryInfo categories = 6;
+  repeated VolumeDiscountAttributeInfo attributes = 7;
+  repeated VolumeDiscountUnitInfo acceptable_units = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+}
+
+message ListVolumeDiscountsRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+  // If set, filters for customer actor access.
+  optional string customer_account_id = 4;
+}
+
+message ListVolumeDiscountsResponse {
+  repeated VolumeDiscountInfo volume_discounts = 1;
+  PageInfo page_info = 2;
+}
+
+message GetVolumeDiscountRequest {
+  string id = 1;
+  // If set, filters for customer actor access.
+  optional string customer_account_id = 2;
+}
+
+message GetVolumeDiscountResponse {
+  VolumeDiscountInfo volume_discount = 1;
+}
+
+message CreateVolumeDiscountTierInput {
+  string name = 1;
+  string discount_percentage = 2;
+  string threshold = 3;
+  optional string parent_tier_id = 4;
+}
+
+message CreateVolumeDiscountRequest {
+  string name = 1;
+  repeated CreateVolumeDiscountTierInput tiers = 2;
+  repeated string customer_group_ids = 3;
+  repeated string product_line_ids = 4;
+  repeated string category_ids = 5;
+  repeated string attribute_ids = 6;
+  repeated string unit_ids = 7;
+}
+
+message CreateVolumeDiscountResponse {
+  VolumeDiscountInfo volume_discount = 1;
+}
+
+message UpdateVolumeDiscountTierInput {
+  optional string id = 1;
+  optional string name = 2;
+  optional string discount_percentage = 3;
+  optional string threshold = 4;
+  optional string parent_tier_id = 5;
+}
+
+message UpdateVolumeDiscountRequest {
+  string id = 1;
+  optional string name = 2;
+  repeated UpdateVolumeDiscountTierInput tiers = 3;
+  repeated string customer_group_ids = 4;
+  repeated string product_line_ids = 5;
+  repeated string category_ids = 6;
+  repeated string attribute_ids = 7;
+  repeated string unit_ids = 8;
+  bool has_tiers = 9;
+  bool has_customer_groups = 10;
+  bool has_product_lines = 11;
+  bool has_categories = 12;
+  bool has_attributes = 13;
+  bool has_units = 14;
+}
+
+message UpdateVolumeDiscountResponse {
+  VolumeDiscountInfo volume_discount = 1;
+}
+
+message DeleteVolumeDiscountRequest {
+  string id = 1;
+}
+
+message CreateCustomerCheckoutSessionRequest {
+  string order_id = 1;
+  string order_number = 2;
+  int64 order_total_cents = 3;
+  optional string customer_po = 4;
+}
+
+message CreateCustomerCheckoutSessionResponse {
+  string client_secret = 1;
+}

@@ -26,15 +26,12 @@ func (*RequestPasswordResetRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleRequestPasswordResetRequest)
 }
 
-const requestPasswordResetEndpointDescription string = `This endpoint is used to request a password reset for a user. An email will be sent to the user 
-with a link to reset their password.`
-
 type RequestPasswordResetEndpoint struct{}
 
 func (e *RequestPasswordResetEndpoint) Materialize() *apiendpoint.APIEndpoint[*RequestPasswordResetRequest, *apiresource.EmptyResource] {
 	return &apiendpoint.APIEndpoint[*RequestPasswordResetRequest, *apiresource.EmptyResource]{
 		Title:             "Request Password Reset",
-		Description:       requestPasswordResetEndpointDescription,
+		Description:       "Sends a password reset email to the user with a link to reset their password.",
 		Method:            http.MethodPost,
 		Route:             "/v1/auth/passwords/actions/request-reset",
 		ContentType:       "application/json",
@@ -44,9 +41,6 @@ func (e *RequestPasswordResetEndpoint) Materialize() *apiendpoint.APIEndpoint[*R
 		Public:            false,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RequestPasswordResetRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(AuthSvc).RequestPasswordReset
-		},
-		Extras: apiendpoint.APIEndpointExtras{
-			AllowUnknownJSONFields: false,
 		},
 	}
 }

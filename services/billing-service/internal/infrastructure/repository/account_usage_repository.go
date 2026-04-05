@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"time"
 
 	"github.com/augno/api/services/billing-service/internal/domain"
@@ -123,6 +124,21 @@ func (r *accountUsageRepoImpl) GetAccountSubscriptionInfo(ctx context.Context, a
 	if row.InternalStripeSubscriptionID.Valid {
 		info.StripeSubscriptionID = &row.InternalStripeSubscriptionID.String
 	}
+	if row.StripeBillingProfileID.Valid {
+		info.BillingProfileID = &row.StripeBillingProfileID.String
+	}
+	if row.StripeBillingCadenceID.Valid {
+		info.BillingCadenceID = &row.StripeBillingCadenceID.String
+	}
+	if row.StripePricingPlanSubscriptionID.Valid {
+		info.PricingPlanSubscriptionID = &row.StripePricingPlanSubscriptionID.String
+	}
+	if row.ServicingStatus.Valid {
+		info.ServicingStatus = &row.ServicingStatus.String
+	}
+	if row.CollectionStatus.Valid {
+		info.CollectionStatus = &row.CollectionStatus.String
+	}
 
 	return info, nil
 }
@@ -133,6 +149,9 @@ func (r *accountUsageRepoImpl) GetStripeCustomerIDByAccountID(ctx context.Contex
 
 	row, err := r.queries.GetStripeCustomerIDByAccountID(ctx, accountID)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
 		span.RecordError(err)
 		return nil, db.MapSQLError(err)
 	}
@@ -201,7 +220,7 @@ func (r *accountUsageRepoImpl) UpdateStripeCustomerIDByAccountID(ctx context.Con
 
 	err := r.queries.UpdateStripeCustomerIDByAccountID(ctx, sqlc.UpdateStripeCustomerIDByAccountIDParams{
 		InternalStripeCustomerID: sql.NullString{String: stripeCustomerID, Valid: true},
-		ID:                       accountID,
+		AccountID:                accountID,
 	})
 	if err != nil {
 		span.RecordError(err)

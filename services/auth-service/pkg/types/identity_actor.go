@@ -3,21 +3,8 @@ package types
 type IdentityActorType string
 
 const (
-	IdentityActorTypeInternal   IdentityActorType = "internal"
-	IdentityActorTypeCustomer   IdentityActorType = "customer"
-	IdentityActorTypeSupplier   IdentityActorType = "supplier"
-	IdentityActorTypeUnassigned IdentityActorType = "unassigned"
-	// IdentityActorTypePartner               IdentityActorType = "partner"
+	IdentityActorTypeUser            IdentityActorType = "user"
+	IdentityActorTypeAPIKey          IdentityActorType = "api_key"
+	IdentityActorTypeAgent           IdentityActorType = "agent"
+	IdentityActorTypeUnauthenticated IdentityActorType = "unauthenticated"
 )
-
-func ParseIdentityActorType(code string) (IdentityActorType, bool) {
-	switch IdentityActorType(code) {
-	case IdentityActorTypeInternal,
-		IdentityActorTypeCustomer,
-		IdentityActorTypeSupplier,
-		IdentityActorTypeUnassigned:
-		return IdentityActorType(code), true
-	default:
-		return "", false
-	}
-}

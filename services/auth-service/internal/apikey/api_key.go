@@ -11,18 +11,18 @@ type APIKey struct {
 	ID             int64
 	KeyID          string `json:"-"`
 	TypeID         string
-	Name           string
+	Name           string `audit:"name"`
 	SecretHash     []byte `json:"-"`
 	OwnerAccountID string
-	RoleID         string
-	RoleName       string
-	RoleTypeCode   string
-	RedactedValue  string
+	RoleID         string `audit:"role_id"`
+	RoleName       string `audit:"role_name"`
+	RoleTypeCode   string `audit:"role_type_code"`
+	RedactedValue  string `audit:"redacted_value"`
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 	LastUsedAt     *time.Time
-	ExpiresAt      *time.Time
-	RevokedAt      *time.Time
+	ExpiresAt      *time.Time `audit:"expires_at"`
+	RevokedAt      *time.Time `audit:"revoked_at"`
 }
 
 // IsExpired reports whether the API key has passed its expiration time.

@@ -9,6 +9,7 @@ import (
 // --- GenID tests ---
 
 func TestGenID_DefaultLength(t *testing.T) {
+	t.Parallel()
 	id, apiErr := GenID(UserIDPrefix, nil)
 	if apiErr != nil {
 		t.Fatalf("unexpected error: %v", apiErr)
@@ -27,6 +28,7 @@ func TestGenID_DefaultLength(t *testing.T) {
 }
 
 func TestGenID_CustomLengths(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		length IDLength
@@ -54,6 +56,7 @@ func TestGenID_CustomLengths(t *testing.T) {
 }
 
 func TestGenID_UsesCorrectCharset(t *testing.T) {
+	t.Parallel()
 	for range 50 {
 		id, apiErr := GenID(UserIDPrefix, nil)
 		if apiErr != nil {
@@ -70,6 +73,7 @@ func TestGenID_UsesCorrectCharset(t *testing.T) {
 }
 
 func TestGenID_Uniqueness(t *testing.T) {
+	t.Parallel()
 	const count = 1000
 	seen := make(map[string]struct{}, count)
 
@@ -86,6 +90,7 @@ func TestGenID_Uniqueness(t *testing.T) {
 }
 
 func TestGenID_DifferentPrefixes(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		prefix   IDPrefix
 		expected string
@@ -114,6 +119,7 @@ func TestGenID_DifferentPrefixes(t *testing.T) {
 // --- composePrefix tests ---
 
 func TestComposePrefix_SingleWord(t *testing.T) {
+	t.Parallel()
 	prefix := composePrefix(VocUser)
 	if prefix != "us" {
 		t.Errorf("expected %q, got %q", "us", prefix)
@@ -121,6 +127,7 @@ func TestComposePrefix_SingleWord(t *testing.T) {
 }
 
 func TestComposePrefix_MultipleWords(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		words    []string
 		expected IDPrefix
@@ -144,6 +151,7 @@ func TestComposePrefix_MultipleWords(t *testing.T) {
 // --- genNanoID tests ---
 
 func TestGenNanoID_Length(t *testing.T) {
+	t.Parallel()
 	for _, length := range []IDLength{IDLength12, IDLength19, IDLength22} {
 		t.Run(fmt.Sprintf("length_%d", length), func(t *testing.T) {
 			id, apiErr := genNanoID(length)
@@ -158,6 +166,7 @@ func TestGenNanoID_Length(t *testing.T) {
 }
 
 func TestGenNanoID_Charset(t *testing.T) {
+	t.Parallel()
 	for range 50 {
 		id, apiErr := genNanoID(IDLength22)
 		if apiErr != nil {
@@ -174,7 +183,10 @@ func TestGenNanoID_Charset(t *testing.T) {
 // --- IDPrefix uniqueness test ---
 
 func TestIDPrefixes_NoDuplicates(t *testing.T) {
+	t.Parallel(
 	// All prefix values that are actively used (non-deprecated).
+	)
+
 	prefixes := []struct {
 		name  string
 		value IDPrefix
@@ -208,9 +220,9 @@ func TestIDPrefixes_NoDuplicates(t *testing.T) {
 		{"AttributeIDPrefix", AttributeIDPrefix},
 		{"BatchIDPrefix", BatchIDPrefix},
 		{"CarrierIDPrefix", CarrierIDPrefix},
-		{"CarrierOptionIDPrefix", CarrierOptionIDPrefix},
+		{"ServiceLevelIDPrefix", ServiceLevelIDPrefix},
 		{"ColorIDPrefix", ColorIDPrefix},
-		{"CommissionStatusIDPrefix", CommissionStatusIDPrefix},
+		{"CommissionPolicyIDPrefix", CommissionPolicyIDPrefix},
 		{"ConsumptionIDPrefix", ConsumptionIDPrefix},
 		{"ContactIDPrefix", ContactIDPrefix},
 		{"ContactTypeIDPrefix", ContactTypeIDPrefix},
@@ -221,7 +233,219 @@ func TestIDPrefixes_NoDuplicates(t *testing.T) {
 		{"QuantityDiscountTierIDPrefix", QuantityDiscountTierIDPrefix},
 		{"ErrorSeverityIDPrefix", ErrorSeverityIDPrefix},
 		{"ErrorLogIDPrefix", ErrorLogIDPrefix},
-		{"FreightStatusIDPrefix", FreightStatusIDPrefix},
+		{"FreightPolicyIDPrefix", FreightPolicyIDPrefix},
+		{"GeolocationIDPrefix", GeolocationIDPrefix},
+		{"IntegrationIDPrefix", IntegrationIDPrefix},
+		{"InvoiceIDPrefix", InvoiceIDPrefix},
+		{"InvoiceLineIDPrefix", InvoiceLineIDPrefix},
+		{"ItemIDPrefix", ItemIDPrefix},
+		{"ItemCategoryIDPrefix", ItemCategoryIDPrefix},
+		{"ItemCategoryTypeIDPrefix", ItemCategoryTypeIDPrefix},
+		{"ItemTypeIDPrefix", ItemTypeIDPrefix},
+		{"LabelSizeIDPrefix", LabelSizeIDPrefix},
+		{"LabelTypeIDPrefix", LabelTypeIDPrefix},
+		{"MachineIDPrefix", MachineIDPrefix},
+		{"MaterialIDPrefix", MaterialIDPrefix},
+		{"SupplierMaterialIDPrefix", SupplierMaterialIDPrefix},
+		{"OrganizationIDPrefix", OrganizationIDPrefix},
+		{"PartIDPrefix", PartIDPrefix},
+		{"PaymentTermIDPrefix", PaymentTermIDPrefix},
+		{"OrderPaymentIntentIDPrefix", OrderPaymentIntentIDPrefix},
+		{"PermissionIDPrefix", PermissionIDPrefix},
+		{"PermissionGroupIDPrefix", PermissionGroupIDPrefix},
+		{"PickIDPrefix", PickIDPrefix},
+		{"PickLineIDPrefix", PickLineIDPrefix},
+		{"PickAssignmentIDPrefix", PickAssignmentIDPrefix},
+		{"PreferenceDefinitionIDPrefix", PreferenceDefinitionIDPrefix},
+		{"PriorityIDPrefix", PriorityIDPrefix},
+		{"ProductIDPrefix", ProductIDPrefix},
+		{"ProductLineIDPrefix", ProductLineIDPrefix},
+		{"ProductLineTargetIDPrefix", ProductLineTargetIDPrefix},
+		{"ProductTypeIDPrefix", ProductTypeIDPrefix},
+		{"ProductImageIDPrefix", ProductImageIDPrefix},
+		{"ProductionIDPrefix", ProductionIDPrefix},
+		{"ProductionFormulaIDPrefix", ProductionFormulaIDPrefix},
+		{"ProductionFormulaItemIDPrefix", ProductionFormulaItemIDPrefix},
+		{"ProductionProcessIDPrefix", ProductionProcessIDPrefix},
+		{"ProductionProcessItemCategoryIDPrefix", ProductionProcessItemCategoryIDPrefix},
+		{"ProductionRunIDPrefix", ProductionRunIDPrefix},
+		{"ProductionStepIDPrefix", ProductionStepIDPrefix},
+		{"ProductionStepTransformIDPrefix", ProductionStepTransformIDPrefix},
+		{"PropertyIDPrefix", PropertyIDPrefix},
+		{"SysPropertyIDPrefix", SysPropertyIDPrefix},
+		{"SysPropertyTypeIDPrefix", SysPropertyTypeIDPrefix},
+		{"QuantityIDPrefix", QuantityIDPrefix},
+		{"RateIDPrefix", RateIDPrefix},
+		{"RoleIDPrefix", RoleIDPrefix},
+		{"RolePermissionIDPrefix", RolePermissionIDPrefix},
+		{"RoleTypeIDPrefix", RoleTypeIDPrefix},
+		{"OrderIDPrefix", OrderIDPrefix},
+		{"OrderLineIDPrefix", OrderLineIDPrefix},
+		{"OrderStatusIDPrefix", OrderStatusIDPrefix},
+		{"OrderTypeIDPrefix", OrderTypeIDPrefix},
+		{"TerritoryIDPrefix", TerritoryIDPrefix},
+		{"TargetIDPrefix", TargetIDPrefix},
+		{"SandboxAccountIDPrefix", SandboxAccountIDPrefix},
+		{"ScanningStationIDPrefix", ScanningStationIDPrefix},
+		{"ScanningStationTypeIDPrefix", ScanningStationTypeIDPrefix},
+		{"SessionIDPrefix", SessionIDPrefix},
+		{"ShipmentIDPrefix", ShipmentIDPrefix},
+		{"ShipmentLineIDPrefix", ShipmentLineIDPrefix},
+		{"ShipmentStatusIDPrefix", ShipmentStatusIDPrefix},
+		{"ShippingCaseIDPrefix", ShippingCaseIDPrefix},
+		{"ShippingTermIDPrefix", ShippingTermIDPrefix},
+		{"UnitIDPrefix", UnitIDPrefix},
+		{"UnitDimensionIDPrefix", UnitDimensionIDPrefix},
+		{"UnitGroupIDPrefix", UnitGroupIDPrefix},
+		{"UnitGroupsUnitsIDPrefix", UnitGroupsUnitsIDPrefix},
+		{"UnitConversionIDPrefix", UnitConversionIDPrefix},
+		{"UserIDPrefix", UserIDPrefix},
+		{"UserAccountIDPrefix", UserAccountIDPrefix},
+		{"UserStatusIDPrefix", UserStatusIDPrefix},
+		{"UserTypeIDPrefix", UserTypeIDPrefix},
+		{"VerificationTokenIDPrefix", VerificationTokenIDPrefix},
+		{"VisibilityTypeIDPrefix", VisibilityTypeIDPrefix},
+		{"AdjustmentTypeIDPrefix", AdjustmentTypeIDPrefix},
+		{"ChangeLogIDPrefix", ChangeLogIDPrefix},
+		{"DCLocationIDPrefix", DCLocationIDPrefix},
+		{"EmailLogIDPrefix", EmailLogIDPrefix},
+		{"EmailRecipientIDPrefix", EmailRecipientIDPrefix},
+		{"OrderEmailIDPrefix", OrderEmailIDPrefix},
+		{"InventoryChangeLogIDPrefix", InventoryChangeLogIDPrefix},
+		{"InventoryLogIDPrefix", InventoryLogIDPrefix},
+		{"RegistrationFlowIDPrefix", RegistrationFlowIDPrefix},
+		{"OnboardingStatusIDPrefix", OnboardingStatusIDPrefix},
+		{"SettlementIDPrefix", SettlementIDPrefix},
+		{"StripeEventLogIDPrefix", StripeEventLogIDPrefix},
+		{"TransactionIDPrefix", TransactionIDPrefix},
+		{"TransactionAllocationIDPrefix", TransactionAllocationIDPrefix},
+		{"TransactionMethodIDPrefix", TransactionMethodIDPrefix},
+		{"TransactionTypeIDPrefix", TransactionTypeIDPrefix},
+		{"EDIRunIDPrefix", EDIRunIDPrefix},
+		{"RequestIDPrefix", RequestIDPrefix},
+		{"AuditEventIDPrefix", AuditEventIDPrefix},
+		{"PlanChangeIDPrefix", PlanChangeIDPrefix},
+		{"EnterpriseInquiryIDPrefix", EnterpriseInquiryIDPrefix},
+		{"IdempotencyKeyIDPrefix", IdempotencyKeyIDPrefix},
+		{"ServiceIdempotencyKeyIDPrefix", ServiceIdempotencyKeyIDPrefix},
+		{"MessageIDPrefix", MessageIDPrefix},
+		{"InventoryReceiptIDPrefix", InventoryReceiptIDPrefix},
+		{"InventoryIssueIDPrefix", InventoryIssueIDPrefix},
+		{"FreeShippingRuleIDPrefix", FreeShippingRuleIDPrefix},
+		{"PricingPlanIDPrefix", PricingPlanIDPrefix},
+	}
+
+	seen := make(map[IDPrefix]string, len(prefixes))
+	for _, p := range prefixes {
+		if existing, exists := seen[p.value]; exists {
+			t.Errorf("duplicate prefix value %q: %s and %s", p.value, existing, p.name)
+		}
+		seen[p.value] = p.name
+	}
+}
+
+// --- IDPrefix vocabulary composition test ---
+
+func TestIDPrefixes_ValidVocabularyComposition(t *testing.T) {
+	t.Parallel(
+	// All known 2-letter vocabulary codes.
+	)
+
+	knownVocabs := map[string]bool{
+		VocAccount: true, VocAddress: true, VocAction: true, VocAgent: true,
+		VocAPI: true, VocArtifact: true, VocAttribute: true, VocAdjustment: true,
+		VocAudit:      true,
+		VocAllocation: true, VocAssignment: true, VocBatch: true, VocBilling: true,
+		VocBranding: true, VocCache: true, VocChange: true, VocColor: true,
+		VocCommission: true, VocConsumption: true, VocCarrier: true, VocCase: true,
+		VocContact: true, VocCustomer: true, VocConversion: true, VocCategory: true,
+		VocDC: true, VocDimension: true, VocDiscount: true, VocDefinition: true,
+		VocDepartment: true, VocDocument: true, VocEDI: true, VocEmail: true,
+		VocEnterprise: true, VocError: true, VocEvent: true, VocFormula: true,
+		VocFreight: true, VocFlow: true, VocGeolocation: true, VocGroup: true,
+		VocIdempotency: true, VocIntegration: true, VocImage: true, VocInventory: true,
+		VocInquiry: true, VocIntent: true, VocItem: true, VocInvoice: true,
+		VocInbox: true, VocKey: true, VocLabel: true, VocLevel: true, VocLocation: true,
+		VocLog: true, VocLine: true, VocMachine: true, VocMemory: true,
+		VocMethod: true, VocMessage: true, VocMaterial: true, VocNotification: true,
+		VocOrganization: true, VocOnboarding: true, VocOption: true, VocOrder: true,
+		VocOutbox: true, VocProduct: true, VocPreference: true, VocPriority: true,
+		VocPick: true, VocPortal: true, VocPlan: true, VocPermission: true,
+		VocProduction: true, VocProperty: true, VocPrice: true, VocProcess: true,
+		VocPart: true, VocPayment: true, VocQuantity: true, VocRecipient: true,
+		VocRelation: true, VocRegistration: true, VocRole: true, VocRun: true,
+		VocRequest: true, VocRate: true, VocSandbox: true, VocSession: true,
+		VocShipment: true, VocSettlement: true, VocScanning: true, VocService: true,
+		VocStripe: true, VocStep: true, VocStation: true, VocStatus: true,
+		VocSupplier: true, VocSeverity: true, VocSystem: true, VocSize: true,
+		VocTerritory: true, VocTarget: true, VocToken: true, VocTool: true,
+		VocTerm: true, VocTransform: true, VocTier: true, VocTransaction: true,
+		VocType: true, VocUnit: true, VocUser: true, VocVisibility: true,
+		VocVerification: true,
+		VocIssue:        true,
+	}
+
+	prefixes := []struct {
+		name  string
+		value IDPrefix
+	}{
+		{"AccountIDPrefix", AccountIDPrefix},
+		{"AccountAddressIDPrefix", AccountAddressIDPrefix},
+		{"AccountBillingIDPrefix", AccountBillingIDPrefix},
+		{"AccountBrandingIDPrefix", AccountBrandingIDPrefix},
+		{"AccountPortalIDPrefix", AccountPortalIDPrefix},
+		{"AccountIntegrationIDPrefix", AccountIntegrationIDPrefix},
+		{"AccountGroupIDPrefix", AccountGroupIDPrefix},
+		{"AccountGroupTypeIDPrefix", AccountGroupTypeIDPrefix},
+		{"AccountTypeIDPrefix", AccountTypeIDPrefix},
+		{"AccountRelationIDPrefix", AccountRelationIDPrefix},
+		{"AccountStatusIDPrefix", AccountStatusIDPrefix},
+		{"AccountPriceIDPrefix", AccountPriceIDPrefix},
+		{"AccountPriceItemCategoryIDPrefix", AccountPriceItemCategoryIDPrefix},
+		{"AccountGroupQuantityDiscountIDPrefix", AccountGroupQuantityDiscountIDPrefix},
+		{"AccountPriceAttributeIDPrefix", AccountPriceAttributeIDPrefix},
+		{"AccountRelationProductLineIDPrefix", AccountRelationProductLineIDPrefix},
+		{"AccountRelationPriceGroupIDPrefix", AccountRelationPriceGroupIDPrefix},
+		{"AccountRelationNotificationPreferenceIDPrefix", AccountRelationNotificationPreferenceIDPrefix},
+		{"AccountRelationNotificationTypeIDPrefix", AccountRelationNotificationTypeIDPrefix},
+		{"AccountGroupProductLineIDPrefix", AccountGroupProductLineIDPrefix},
+		{"AccountPreferenceIDPrefix", AccountPreferenceIDPrefix},
+		{"AccountUserIDPrefix", AccountUserIDPrefix},
+		{"ActionTypeIDPrefix", ActionTypeIDPrefix},
+		{"AgentDefinitionIDPrefix", AgentDefinitionIDPrefix},
+		{"AgentConfigIDPrefix", AgentConfigIDPrefix},
+		{"AgentRunIDPrefix", AgentRunIDPrefix},
+		{"AgentActionIDPrefix", AgentActionIDPrefix},
+		{"AgentArtifactIDPrefix", AgentArtifactIDPrefix},
+		{"AgentMemoryIDPrefix", AgentMemoryIDPrefix},
+		{"AgentAlertIDPrefix", AgentAlertIDPrefix},
+		{"AgentTokenUsageIDPrefix", AgentTokenUsageIDPrefix},
+		{"TokenPackPurchaseIDPrefix", TokenPackPurchaseIDPrefix},
+		{"AgentDefinitionToolIDPrefix", AgentDefinitionToolIDPrefix},
+		{"AgentAccountStatusIDPrefix", AgentAccountStatusIDPrefix},
+		{"AgentRunEventIDPrefix", AgentRunEventIDPrefix},
+		{"ToolDefinitionIDPrefix", ToolDefinitionIDPrefix},
+		{"AddressIDPrefix", AddressIDPrefix},
+		{"APILocationIDPrefix", APILocationIDPrefix},
+		{"APIKeyIDPrefix", APIKeyIDPrefix},
+		{"DocAPIKeyIDPrefix", DocAPIKeyIDPrefix},
+		{"AttributeIDPrefix", AttributeIDPrefix},
+		{"BatchIDPrefix", BatchIDPrefix},
+		{"CarrierIDPrefix", CarrierIDPrefix},
+		{"ServiceLevelIDPrefix", ServiceLevelIDPrefix},
+		{"ColorIDPrefix", ColorIDPrefix},
+		{"CommissionPolicyIDPrefix", CommissionPolicyIDPrefix},
+		{"ConsumptionIDPrefix", ConsumptionIDPrefix},
+		{"ContactIDPrefix", ContactIDPrefix},
+		{"ContactTypeIDPrefix", ContactTypeIDPrefix},
+		{"DepartmentIDPrefix", DepartmentIDPrefix},
+		{"DiscountTypeIDPrefix", DiscountTypeIDPrefix},
+		{"OrderDiscountIDPrefix", OrderDiscountIDPrefix},
+		{"QuantityDiscountIDPrefix", QuantityDiscountIDPrefix},
+		{"QuantityDiscountTierIDPrefix", QuantityDiscountTierIDPrefix},
+		{"ErrorSeverityIDPrefix", ErrorSeverityIDPrefix},
+		{"ErrorLogIDPrefix", ErrorLogIDPrefix},
+		{"FreightPolicyIDPrefix", FreightPolicyIDPrefix},
 		{"GeolocationIDPrefix", GeolocationIDPrefix},
 		{"IntegrationIDPrefix", IntegrationIDPrefix},
 		{"InvoiceIDPrefix", InvoiceIDPrefix},
@@ -316,20 +540,35 @@ func TestIDPrefixes_NoDuplicates(t *testing.T) {
 		{"IdempotencyKeyIDPrefix", IdempotencyKeyIDPrefix},
 		{"ServiceIdempotencyKeyIDPrefix", ServiceIdempotencyKeyIDPrefix},
 		{"MessageIDPrefix", MessageIDPrefix},
+		{"InventoryReceiptIDPrefix", InventoryReceiptIDPrefix},
+		{"InventoryIssueIDPrefix", InventoryIssueIDPrefix},
+		{"FreeShippingRuleIDPrefix", FreeShippingRuleIDPrefix},
+		{"PricingPlanIDPrefix", PricingPlanIDPrefix},
 	}
 
-	seen := make(map[IDPrefix]string, len(prefixes))
 	for _, p := range prefixes {
-		if existing, exists := seen[p.value]; exists {
-			t.Errorf("duplicate prefix value %q: %s and %s", p.value, existing, p.name)
-		}
-		seen[p.value] = p.name
+		t.Run(p.name, func(t *testing.T) {
+			prefix := string(p.value)
+			if len(prefix) == 0 {
+				t.Fatalf("prefix is empty")
+			}
+			if len(prefix)%2 != 0 {
+				t.Fatalf("prefix %q has odd length %d — must be composed of 2-char vocabulary codes", prefix, len(prefix))
+			}
+			for i := 0; i < len(prefix); i += 2 {
+				chunk := prefix[i : i+2]
+				if !knownVocabs[chunk] {
+					t.Errorf("prefix %q contains unknown vocabulary code %q at position %d", prefix, chunk, i)
+				}
+			}
+		})
 	}
 }
 
 // --- IDPrefix format tests ---
 
 func TestIDPrefixes_NonEmpty(t *testing.T) {
+	t.Parallel()
 	prefixes := []struct {
 		name  string
 		value IDPrefix
@@ -358,6 +597,7 @@ func TestIDPrefixes_NonEmpty(t *testing.T) {
 // --- Vocabulary uniqueness test ---
 
 func TestVocabulary_NoDuplicates(t *testing.T) {
+	t.Parallel()
 	vocabs := []struct {
 		name  string
 		value string
@@ -368,6 +608,7 @@ func TestVocabulary_NoDuplicates(t *testing.T) {
 		{"VocAPI", VocAPI},
 		{"VocAttribute", VocAttribute},
 		{"VocAdjustment", VocAdjustment},
+		{"VocAudit", VocAudit},
 		{"VocAllocation", VocAllocation},
 		{"VocAssignment", VocAssignment},
 		{"VocBatch", VocBatch},
@@ -470,6 +711,7 @@ func TestVocabulary_NoDuplicates(t *testing.T) {
 		{"VocUser", VocUser},
 		{"VocVisibility", VocVisibility},
 		{"VocVerification", VocVerification},
+		{"VocIssue", VocIssue},
 	}
 
 	seen := make(map[string]string, len(vocabs))

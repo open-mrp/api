@@ -40,7 +40,7 @@ spec:
                         valueFrom:
                             secretKeyRef:
                                 name: database-credentials
-                                key: uri
+                                key: core-service-uri
                       - name: FRONTEND_URL
                         valueFrom:
                             configMapKeyRef:

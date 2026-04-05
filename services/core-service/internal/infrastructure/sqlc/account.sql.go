@@ -8,16 +8,36 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"time"
 )
 
+const clearAccountPricingPlanSubscription = `-- name: ClearAccountPricingPlanSubscription :exec
+UPDATE account_billing SET
+    stripe_pricing_plan_subscription_id = NULL,
+    servicing_status = NULL,
+    collection_status = NULL,
+    updated_at = NOW(3)
+WHERE account_billing.id = (SELECT account_billing_id FROM account WHERE account.id = ?)
+`
+
+func (q *Queries) ClearAccountPricingPlanSubscription(ctx context.Context, id string) error {
+	_, err := q.exec(ctx, q.clearAccountPricingPlanSubscriptionStmt, clearAccountPricingPlanSubscription, id)
+	return err
+}
+
 const clearAccountStripeCustomer = `-- name: ClearAccountStripeCustomer :exec
-UPDATE account SET
+UPDATE account_billing SET
     internal_stripe_customer_id = NULL,
     internal_stripe_subscription_id = NULL,
     subscription_status = NULL,
     subscription_current_period_end = NULL,
+    stripe_billing_profile_id = NULL,
+    stripe_billing_cadence_id = NULL,
+    stripe_pricing_plan_subscription_id = NULL,
+    servicing_status = NULL,
+    collection_status = NULL,
     updated_at = NOW(3)
-WHERE id = ?
+WHERE account_billing.id = (SELECT account_billing_id FROM account WHERE account.id = ?)
 `
 
 func (q *Queries) ClearAccountStripeCustomer(ctx context.Context, id string) error {
@@ -28,14 +48,16 @@ func (q *Queries) ClearAccountStripeCustomer(ctx context.Context, id string) err
 const countNonSandboxAccountsByPlanCode = `-- name: CountNonSandboxAccountsByPlanCode :one
 SELECT COUNT(*) AS cnt
 FROM account a
+JOIN account_billing ab ON a.account_billing_id = ab.id
+JOIN account_plan ap ON ab.account_plan_id = ap.type_id
 LEFT JOIN sandbox_account sa ON a.id = sa.account_id
-WHERE a.plan_code = ?
+WHERE ap.plan_type_code = ?
   AND sa.id IS NULL
   AND a.onboarding_status_code = 'active'
 `
 
-func (q *Queries) CountNonSandboxAccountsByPlanCode(ctx context.Context, planCode string) (int64, error) {
-	row := q.queryRow(ctx, q.countNonSandboxAccountsByPlanCodeStmt, countNonSandboxAccountsByPlanCode, planCode)
+func (q *Queries) CountNonSandboxAccountsByPlanCode(ctx context.Context, planTypeCode string) (int64, error) {
+	row := q.queryRow(ctx, q.countNonSandboxAccountsByPlanCodeStmt, countNonSandboxAccountsByPlanCode, planTypeCode)
 	var cnt int64
 	err := row.Scan(&cnt)
 	return cnt, err
@@ -47,25 +69,49 @@ INSERT INTO account (
     name,
     account_type_code,
     onboarding_status_code,
-    plan_code,
     created_at,
     updated_at
-) VALUES (?, ?, ?, 'active', ?, NOW(3), NOW(3))
+) VALUES (?, ?, ?, 'active', NOW(3), NOW(3))
 `
 
 type CreateAccountParams struct {
 	ID              string
 	Name            string
 	AccountTypeCode string
-	PlanCode        string
 }
 
 func (q *Queries) CreateAccount(ctx context.Context, arg CreateAccountParams) error {
-	_, err := q.exec(ctx, q.createAccountStmt, createAccount,
+	_, err := q.exec(ctx, q.createAccountStmt, createAccount, arg.ID, arg.Name, arg.AccountTypeCode)
+	return err
+}
+
+const createAccountBilling = `-- name: CreateAccountBilling :exec
+INSERT INTO account_billing (
+    id,
+    account_plan_id,
+    internal_stripe_customer_id,
+    internal_stripe_subscription_id,
+    subscription_status,
+    created_at,
+    updated_at
+) VALUES (?, ?, ?, ?, ?, NOW(3), NOW(3))
+`
+
+type CreateAccountBillingParams struct {
+	ID                           string
+	AccountPlanID                string
+	InternalStripeCustomerID     sql.NullString
+	InternalStripeSubscriptionID sql.NullString
+	SubscriptionStatus           sql.NullString
+}
+
+func (q *Queries) CreateAccountBilling(ctx context.Context, arg CreateAccountBillingParams) error {
+	_, err := q.exec(ctx, q.createAccountBillingStmt, createAccountBilling,
 		arg.ID,
-		arg.Name,
-		arg.AccountTypeCode,
-		arg.PlanCode,
+		arg.AccountPlanID,
+		arg.InternalStripeCustomerID,
+		arg.InternalStripeSubscriptionID,
+		arg.SubscriptionStatus,
 	)
 	return err
 }
@@ -76,26 +122,18 @@ INSERT INTO account (
     name,
     account_type_code,
     onboarding_status_code,
-    plan_code,
-    account_plan_id,
-    internal_stripe_customer_id,
-    internal_stripe_subscription_id,
-    subscription_status,
+    account_billing_id,
     created_at,
     updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(3), NOW(3))
+) VALUES (?, ?, ?, ?, ?, NOW(3), NOW(3))
 `
 
 type CreateAccountForRegistrationParams struct {
-	ID                           string
-	Name                         string
-	AccountTypeCode              string
-	OnboardingStatusCode         string
-	PlanCode                     string
-	AccountPlanID                sql.NullString
-	InternalStripeCustomerID     sql.NullString
-	InternalStripeSubscriptionID sql.NullString
-	SubscriptionStatus           sql.NullString
+	ID                   string
+	Name                 string
+	AccountTypeCode      string
+	OnboardingStatusCode string
+	AccountBillingID     sql.NullString
 }
 
 func (q *Queries) CreateAccountForRegistration(ctx context.Context, arg CreateAccountForRegistrationParams) error {
@@ -104,11 +142,7 @@ func (q *Queries) CreateAccountForRegistration(ctx context.Context, arg CreateAc
 		arg.Name,
 		arg.AccountTypeCode,
 		arg.OnboardingStatusCode,
-		arg.PlanCode,
-		arg.AccountPlanID,
-		arg.InternalStripeCustomerID,
-		arg.InternalStripeSubscriptionID,
-		arg.SubscriptionStatus,
+		arg.AccountBillingID,
 	)
 	return err
 }
@@ -130,8 +164,136 @@ func (q *Queries) DeleteAccountByIDIfSandbox(ctx context.Context, id string) (sq
 	return q.exec(ctx, q.deleteAccountByIDIfSandboxStmt, deleteAccountByIDIfSandbox, id)
 }
 
+const existsPortalSlug = `-- name: ExistsPortalSlug :one
+SELECT EXISTS(
+    SELECT 1 FROM account_portal
+    WHERE slug = ?
+    AND owner_account_id != ?
+) AS slug_exists
+`
+
+type ExistsPortalSlugParams struct {
+	Slug             string
+	ExcludeAccountID string
+}
+
+func (q *Queries) ExistsPortalSlug(ctx context.Context, arg ExistsPortalSlugParams) (bool, error) {
+	row := q.queryRow(ctx, q.existsPortalSlugStmt, existsPortalSlug, arg.Slug, arg.ExcludeAccountID)
+	var slug_exists bool
+	err := row.Scan(&slug_exists)
+	return slug_exists, err
+}
+
+const getAccountBrandingByAccountID = `-- name: GetAccountBrandingByAccountID :one
+SELECT logo_url FROM account_branding WHERE owner_account_id = ?
+`
+
+func (q *Queries) GetAccountBrandingByAccountID(ctx context.Context, ownerAccountID string) (sql.NullString, error) {
+	row := q.queryRow(ctx, q.getAccountBrandingByAccountIDStmt, getAccountBrandingByAccountID, ownerAccountID)
+	var logo_url sql.NullString
+	err := row.Scan(&logo_url)
+	return logo_url, err
+}
+
+const getAccountBrandingLogoKey = `-- name: GetAccountBrandingLogoKey :one
+SELECT logo_url FROM account_branding WHERE owner_account_id = ?
+`
+
+func (q *Queries) GetAccountBrandingLogoKey(ctx context.Context, accountID string) (sql.NullString, error) {
+	row := q.queryRow(ctx, q.getAccountBrandingLogoKeyStmt, getAccountBrandingLogoKey, accountID)
+	var logo_url sql.NullString
+	err := row.Scan(&logo_url)
+	return logo_url, err
+}
+
+const getAccountByID = `-- name: GetAccountByID :one
+SELECT
+    a.id,
+    a.name,
+    a.default_billing_address_id,
+    a.default_shipping_address_id,
+    a.created_at,
+    a.updated_at,
+    ab.id AS branding_id,
+    ab.support_email AS branding_support_email,
+    ab.phone_number AS branding_phone_number,
+    ab.logo_url AS branding_logo_url,
+    ab.facebook_handle AS branding_facebook_handle,
+    ab.instagram_handle AS branding_instagram_handle,
+    ab.linkedin_handle AS branding_linkedin_handle,
+    ab.twitter_handle AS branding_twitter_handle,
+    ab.website_url AS branding_website_url,
+    ab.created_at AS branding_created_at,
+    ab.updated_at AS branding_updated_at,
+    ap.id AS portal_id,
+    ap.slug AS portal_slug,
+    ap.created_at AS portal_created_at,
+    ap.updated_at AS portal_updated_at
+FROM account a
+LEFT JOIN account_branding ab ON ab.owner_account_id = a.id
+LEFT JOIN account_portal ap ON ap.owner_account_id = a.id
+WHERE a.id = ?
+`
+
+type GetAccountByIDRow struct {
+	ID                       string
+	Name                     string
+	DefaultBillingAddressID  sql.NullString
+	DefaultShippingAddressID sql.NullString
+	CreatedAt                time.Time
+	UpdatedAt                time.Time
+	BrandingID               sql.NullString
+	BrandingSupportEmail     sql.NullString
+	BrandingPhoneNumber      sql.NullString
+	BrandingLogoUrl          sql.NullString
+	BrandingFacebookHandle   sql.NullString
+	BrandingInstagramHandle  sql.NullString
+	BrandingLinkedinHandle   sql.NullString
+	BrandingTwitterHandle    sql.NullString
+	BrandingWebsiteUrl       sql.NullString
+	BrandingCreatedAt        sql.NullTime
+	BrandingUpdatedAt        sql.NullTime
+	PortalID                 sql.NullString
+	PortalSlug               sql.NullString
+	PortalCreatedAt          sql.NullTime
+	PortalUpdatedAt          sql.NullTime
+}
+
+func (q *Queries) GetAccountByID(ctx context.Context, accountID string) (GetAccountByIDRow, error) {
+	row := q.queryRow(ctx, q.getAccountByIDStmt, getAccountByID, accountID)
+	var i GetAccountByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.DefaultBillingAddressID,
+		&i.DefaultShippingAddressID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.BrandingID,
+		&i.BrandingSupportEmail,
+		&i.BrandingPhoneNumber,
+		&i.BrandingLogoUrl,
+		&i.BrandingFacebookHandle,
+		&i.BrandingInstagramHandle,
+		&i.BrandingLinkedinHandle,
+		&i.BrandingTwitterHandle,
+		&i.BrandingWebsiteUrl,
+		&i.BrandingCreatedAt,
+		&i.BrandingUpdatedAt,
+		&i.PortalID,
+		&i.PortalSlug,
+		&i.PortalCreatedAt,
+		&i.PortalUpdatedAt,
+	)
+	return i, err
+}
+
 const getAccountByStripeCustomerID = `-- name: GetAccountByStripeCustomerID :one
-SELECT id, name, plan_code FROM account WHERE internal_stripe_customer_id = ?
+SELECT a.id, a.name, ap.plan_type_code AS plan_code
+FROM account a
+JOIN account_billing ab ON a.account_billing_id = ab.id
+JOIN account_plan ap ON ab.account_plan_id = ap.type_id
+WHERE ab.internal_stripe_customer_id = ?
 `
 
 type GetAccountByStripeCustomerIDRow struct {
@@ -153,20 +315,34 @@ SELECT
     a.account_type_code,
     sa.owner_account_id,
     CASE
-        WHEN sa.owner_account_id IS NOT NULL THEN owner.subscription_status
-        ELSE a.subscription_status
-    END AS subscription_status
+        WHEN sa.owner_account_id IS NOT NULL THEN owner_ab.subscription_status
+        ELSE ab.subscription_status
+    END AS subscription_status,
+    CASE
+        WHEN sa.owner_account_id IS NOT NULL THEN owner_ap.plan_type_code
+        ELSE ap.plan_type_code
+    END AS plan_code,
+    CASE
+        WHEN sa.owner_account_id IS NOT NULL THEN owner_ab.agent_monthly_spending_cap_cents
+        ELSE ab.agent_monthly_spending_cap_cents
+    END AS agent_monthly_spending_cap_cents
 FROM account a
+LEFT JOIN account_billing ab ON a.account_billing_id = ab.id
+LEFT JOIN account_plan ap ON ab.account_plan_id = ap.type_id
 LEFT JOIN sandbox_account sa ON a.id = sa.account_id
 LEFT JOIN account owner ON sa.owner_account_id = owner.id
+LEFT JOIN account_billing owner_ab ON owner.account_billing_id = owner_ab.id
+LEFT JOIN account_plan owner_ap ON owner_ab.account_plan_id = owner_ap.type_id
 WHERE a.id = ?
 `
 
 type GetAccountContextRow struct {
-	ID                 string
-	AccountTypeCode    string
-	OwnerAccountID     sql.NullString
-	SubscriptionStatus interface{}
+	ID                           string
+	AccountTypeCode              string
+	OwnerAccountID               sql.NullString
+	SubscriptionStatus           interface{}
+	PlanCode                     interface{}
+	AgentMonthlySpendingCapCents interface{}
 }
 
 func (q *Queries) GetAccountContext(ctx context.Context, id string) (GetAccountContextRow, error) {
@@ -177,12 +353,29 @@ func (q *Queries) GetAccountContext(ctx context.Context, id string) (GetAccountC
 		&i.AccountTypeCode,
 		&i.OwnerAccountID,
 		&i.SubscriptionStatus,
+		&i.PlanCode,
+		&i.AgentMonthlySpendingCapCents,
 	)
 	return i, err
 }
 
+const getAccountNameByID = `-- name: GetAccountNameByID :one
+SELECT name FROM account WHERE id = ?
+`
+
+func (q *Queries) GetAccountNameByID(ctx context.Context, id string) (string, error) {
+	row := q.queryRow(ctx, q.getAccountNameByIDStmt, getAccountNameByID, id)
+	var name string
+	err := row.Scan(&name)
+	return name, err
+}
+
 const getAccountPlanCode = `-- name: GetAccountPlanCode :one
-SELECT plan_code FROM account WHERE id = ?
+SELECT ap.plan_type_code AS plan_code
+FROM account a
+JOIN account_billing ab ON a.account_billing_id = ab.id
+JOIN account_plan ap ON ab.account_plan_id = ap.type_id
+WHERE a.id = ?
 `
 
 func (q *Queries) GetAccountPlanCode(ctx context.Context, id string) (string, error) {
@@ -193,9 +386,9 @@ func (q *Queries) GetAccountPlanCode(ctx context.Context, id string) (string, er
 }
 
 const getAccountPlanTypeIDByCode = `-- name: GetAccountPlanTypeIDByCode :one
-SELECT type_id FROM account_plan 
-WHERE plan_type_code = ? 
-AND effective_at <= NOW(3) 
+SELECT type_id FROM account_plan
+WHERE plan_type_code = ?
+AND effective_at <= NOW(3)
 AND (expires_at IS NULL OR expires_at > NOW(3))
 ORDER BY effective_at DESC, version DESC
 LIMIT 1
@@ -208,17 +401,75 @@ func (q *Queries) GetAccountPlanTypeIDByCode(ctx context.Context, planTypeCode s
 	return type_id, err
 }
 
+const getAccountPortalSlugByAccountID = `-- name: GetAccountPortalSlugByAccountID :one
+SELECT slug FROM account_portal WHERE owner_account_id = ?
+`
+
+func (q *Queries) GetAccountPortalSlugByAccountID(ctx context.Context, ownerAccountID string) (string, error) {
+	row := q.queryRow(ctx, q.getAccountPortalSlugByAccountIDStmt, getAccountPortalSlugByAccountID, ownerAccountID)
+	var slug string
+	err := row.Scan(&slug)
+	return slug, err
+}
+
+const getAgentSpendingCap = `-- name: GetAgentSpendingCap :one
+SELECT ab.agent_monthly_spending_cap_cents
+FROM account a
+JOIN account_billing ab ON a.account_billing_id = ab.id
+WHERE a.id = ?
+`
+
+func (q *Queries) GetAgentSpendingCap(ctx context.Context, id string) (sql.NullInt64, error) {
+	row := q.queryRow(ctx, q.getAgentSpendingCapStmt, getAgentSpendingCap, id)
+	var agent_monthly_spending_cap_cents sql.NullInt64
+	err := row.Scan(&agent_monthly_spending_cap_cents)
+	return agent_monthly_spending_cap_cents, err
+}
+
+const getPublicAccountBySlug = `-- name: GetPublicAccountBySlug :one
+SELECT
+    a.id,
+    a.name,
+    a.default_billing_address_id,
+    ap.slug,
+    ab.support_email,
+    ab.logo_url
+FROM account_portal ap
+JOIN account a ON a.id = ap.owner_account_id
+LEFT JOIN account_branding ab ON ab.owner_account_id = a.id
+WHERE ap.slug = ?
+`
+
+type GetPublicAccountBySlugRow struct {
+	ID                      string
+	Name                    string
+	DefaultBillingAddressID sql.NullString
+	Slug                    string
+	SupportEmail            sql.NullString
+	LogoUrl                 sql.NullString
+}
+
+func (q *Queries) GetPublicAccountBySlug(ctx context.Context, slug string) (GetPublicAccountBySlugRow, error) {
+	row := q.queryRow(ctx, q.getPublicAccountBySlugStmt, getPublicAccountBySlug, slug)
+	var i GetPublicAccountBySlugRow
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.DefaultBillingAddressID,
+		&i.Slug,
+		&i.SupportEmail,
+		&i.LogoUrl,
+	)
+	return i, err
+}
+
 const getSandboxLimitByAccountID = `-- name: GetSandboxLimitByAccountID :one
 SELECT apl.value
 FROM account a
-JOIN account_plan ap ON ap.plan_type_code = a.plan_code
-    AND ap.effective_at <= NOW(3)
-    AND (ap.expires_at IS NULL OR ap.expires_at > NOW(3))
-JOIN account_plan_limit apl ON apl.account_plan_id = ap.type_id
+JOIN account_billing ab ON a.account_billing_id = ab.id
+JOIN account_plan_limit apl ON apl.account_plan_id = ab.account_plan_id
     AND apl.key = 'sandboxes_maximum'
 WHERE a.id = ?
-ORDER BY ap.effective_at DESC, ap.version DESC
-LIMIT 1
 `
 
 func (q *Queries) GetSandboxLimitByAccountID(ctx context.Context, id string) (sql.NullInt32, error) {
@@ -247,37 +498,156 @@ func (q *Queries) GetSeatLimitByPlanCode(ctx context.Context, planTypeCode strin
 	return value, err
 }
 
-const updateAccountSubscription = `-- name: UpdateAccountSubscription :exec
-UPDATE account SET
-    subscription_status = ?,
-    plan_code = ?,
-    account_plan_id = ?,
-    internal_stripe_subscription_id = ?,
-    subscription_current_period_end = ?,
-    internal_stripe_customer_id = COALESCE(?, internal_stripe_customer_id),
+const hasActiveBillingPlan = `-- name: HasActiveBillingPlan :one
+SELECT EXISTS(
+    SELECT 1 FROM account a
+    JOIN account_billing ab ON a.account_billing_id = ab.id
+    WHERE a.id = ? AND ab.account_plan_id IS NOT NULL
+) AS has_plan
+`
+
+func (q *Queries) HasActiveBillingPlan(ctx context.Context, id string) (bool, error) {
+	row := q.queryRow(ctx, q.hasActiveBillingPlanStmt, hasActiveBillingPlan, id)
+	var has_plan bool
+	err := row.Scan(&has_plan)
+	return has_plan, err
+}
+
+const updateAccountBranding = `-- name: UpdateAccountBranding :execresult
+UPDATE account_branding SET
+    support_email = COALESCE(?, support_email),
+    phone_number = COALESCE(?, phone_number),
+    facebook_handle = COALESCE(?, facebook_handle),
+    instagram_handle = COALESCE(?, instagram_handle),
+    linkedin_handle = COALESCE(?, linkedin_handle),
+    twitter_handle = COALESCE(?, twitter_handle),
+    website_url = COALESCE(?, website_url),
     updated_at = NOW(3)
-WHERE id = ?
+WHERE owner_account_id = ?
+`
+
+type UpdateAccountBrandingParams struct {
+	SupportEmail    sql.NullString
+	PhoneNumber     sql.NullString
+	FacebookHandle  sql.NullString
+	InstagramHandle sql.NullString
+	LinkedinHandle  sql.NullString
+	TwitterHandle   sql.NullString
+	WebsiteUrl      sql.NullString
+	AccountID       string
+}
+
+func (q *Queries) UpdateAccountBranding(ctx context.Context, arg UpdateAccountBrandingParams) (sql.Result, error) {
+	return q.exec(ctx, q.updateAccountBrandingStmt, updateAccountBranding,
+		arg.SupportEmail,
+		arg.PhoneNumber,
+		arg.FacebookHandle,
+		arg.InstagramHandle,
+		arg.LinkedinHandle,
+		arg.TwitterHandle,
+		arg.WebsiteUrl,
+		arg.AccountID,
+	)
+}
+
+const updateAccountBrandingLogoURL = `-- name: UpdateAccountBrandingLogoURL :exec
+UPDATE account_branding SET logo_url = ?, updated_at = NOW(3) WHERE owner_account_id = ?
+`
+
+type UpdateAccountBrandingLogoURLParams struct {
+	LogoUrl   sql.NullString
+	AccountID string
+}
+
+func (q *Queries) UpdateAccountBrandingLogoURL(ctx context.Context, arg UpdateAccountBrandingLogoURLParams) error {
+	_, err := q.exec(ctx, q.updateAccountBrandingLogoURLStmt, updateAccountBrandingLogoURL, arg.LogoUrl, arg.AccountID)
+	return err
+}
+
+const updateAccountName = `-- name: UpdateAccountName :execresult
+UPDATE account SET name = ?, updated_at = NOW(3) WHERE id = ?
+`
+
+type UpdateAccountNameParams struct {
+	Name      string
+	AccountID string
+}
+
+func (q *Queries) UpdateAccountName(ctx context.Context, arg UpdateAccountNameParams) (sql.Result, error) {
+	return q.exec(ctx, q.updateAccountNameStmt, updateAccountName, arg.Name, arg.AccountID)
+}
+
+const updateAccountPortalSlug = `-- name: UpdateAccountPortalSlug :execresult
+UPDATE account_portal SET slug = ?, updated_at = NOW(3) WHERE owner_account_id = ?
+`
+
+type UpdateAccountPortalSlugParams struct {
+	Slug      string
+	AccountID string
+}
+
+func (q *Queries) UpdateAccountPortalSlug(ctx context.Context, arg UpdateAccountPortalSlugParams) (sql.Result, error) {
+	return q.exec(ctx, q.updateAccountPortalSlugStmt, updateAccountPortalSlug, arg.Slug, arg.AccountID)
+}
+
+const updateAccountSubscription = `-- name: UpdateAccountSubscription :exec
+UPDATE account_billing SET
+    subscription_status = COALESCE(?, subscription_status),
+    account_plan_id = COALESCE(?, account_plan_id),
+    internal_stripe_subscription_id = COALESCE(?, internal_stripe_subscription_id),
+    subscription_current_period_end = COALESCE(?, subscription_current_period_end),
+    internal_stripe_customer_id = COALESCE(?, internal_stripe_customer_id),
+    stripe_billing_profile_id = COALESCE(?, stripe_billing_profile_id),
+    stripe_billing_cadence_id = COALESCE(?, stripe_billing_cadence_id),
+    stripe_pricing_plan_subscription_id = COALESCE(?, stripe_pricing_plan_subscription_id),
+    servicing_status = COALESCE(?, servicing_status),
+    collection_status = COALESCE(?, collection_status),
+    updated_at = NOW(3)
+WHERE account_billing.id = (SELECT account_billing_id FROM account WHERE account.id = ?)
 `
 
 type UpdateAccountSubscriptionParams struct {
-	SubscriptionStatus           sql.NullString
-	PlanCode                     string
-	AccountPlanID                sql.NullString
-	InternalStripeSubscriptionID sql.NullString
-	SubscriptionCurrentPeriodEnd sql.NullTime
-	InternalStripeCustomerID     sql.NullString
-	ID                           string
+	SubscriptionStatus              sql.NullString
+	AccountPlanID                   sql.NullString
+	InternalStripeSubscriptionID    sql.NullString
+	SubscriptionCurrentPeriodEnd    sql.NullTime
+	InternalStripeCustomerID        sql.NullString
+	StripeBillingProfileID          sql.NullString
+	StripeBillingCadenceID          sql.NullString
+	StripePricingPlanSubscriptionID sql.NullString
+	ServicingStatus                 sql.NullString
+	CollectionStatus                sql.NullString
+	AccountID                       string
 }
 
 func (q *Queries) UpdateAccountSubscription(ctx context.Context, arg UpdateAccountSubscriptionParams) error {
 	_, err := q.exec(ctx, q.updateAccountSubscriptionStmt, updateAccountSubscription,
 		arg.SubscriptionStatus,
-		arg.PlanCode,
 		arg.AccountPlanID,
 		arg.InternalStripeSubscriptionID,
 		arg.SubscriptionCurrentPeriodEnd,
 		arg.InternalStripeCustomerID,
-		arg.ID,
+		arg.StripeBillingProfileID,
+		arg.StripeBillingCadenceID,
+		arg.StripePricingPlanSubscriptionID,
+		arg.ServicingStatus,
+		arg.CollectionStatus,
+		arg.AccountID,
 	)
+	return err
+}
+
+const updateAgentSpendingCap = `-- name: UpdateAgentSpendingCap :exec
+UPDATE account_billing SET agent_monthly_spending_cap_cents = ?, updated_at = NOW(3)
+WHERE account_billing.id = (SELECT account_billing_id FROM account WHERE account.id = ?)
+`
+
+type UpdateAgentSpendingCapParams struct {
+	AgentMonthlySpendingCapCents sql.NullInt64
+	AccountID                    string
+}
+
+func (q *Queries) UpdateAgentSpendingCap(ctx context.Context, arg UpdateAgentSpendingCapParams) error {
+	_, err := q.exec(ctx, q.updateAgentSpendingCapStmt, updateAgentSpendingCap, arg.AgentMonthlySpendingCapCents, arg.AccountID)
 	return err
 }

@@ -15,6 +15,7 @@ func ptr[T any](v T) *T { return &v }
 // --- Success responses ---
 
 func TestUnmarshalCachedResponse_Success(t *testing.T) {
+	t.Parallel()
 	type Order struct {
 		ID   string `json:"id"`
 		Name string `json:"name"`
@@ -50,6 +51,7 @@ func TestUnmarshalCachedResponse_Success(t *testing.T) {
 }
 
 func TestUnmarshalCachedResponse_SuccessWithCreatedStatus(t *testing.T) {
+	t.Parallel()
 	type Item struct {
 		Value int `json:"value"`
 	}
@@ -73,6 +75,7 @@ func TestUnmarshalCachedResponse_SuccessWithCreatedStatus(t *testing.T) {
 // --- Error responses ---
 
 func TestUnmarshalCachedResponse_ErrorResponse(t *testing.T) {
+	t.Parallel()
 	apiErr := apierror.NewValidationError("Invalid email")
 	apiErr.Param = "email"
 	errJSON, err := apiErr.ToJSON()
@@ -109,6 +112,7 @@ func TestUnmarshalCachedResponse_ErrorResponse(t *testing.T) {
 }
 
 func TestUnmarshalCachedResponse_500ErrorResponse(t *testing.T) {
+	t.Parallel()
 	apiErr := apierror.NewInternalError(nil, "db connection failed")
 	errJSON, err := apiErr.ToJSON()
 	if err != nil {
@@ -134,6 +138,7 @@ func TestUnmarshalCachedResponse_500ErrorResponse(t *testing.T) {
 // --- No cache ---
 
 func TestUnmarshalCachedResponse_NilStatusCode(t *testing.T) {
+	t.Parallel()
 	result, err := UnmarshalCachedResponse[any](context.Background(), nil, json.RawMessage(`{}`))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -147,6 +152,7 @@ func TestUnmarshalCachedResponse_NilStatusCode(t *testing.T) {
 // --- Error cases ---
 
 func TestUnmarshalCachedResponse_EmptyBody(t *testing.T) {
+	t.Parallel()
 	_, err := UnmarshalCachedResponse[any](context.Background(), ptr(http.StatusOK), json.RawMessage{})
 	if err == nil {
 		t.Fatal("expected error for empty body")
@@ -154,6 +160,7 @@ func TestUnmarshalCachedResponse_EmptyBody(t *testing.T) {
 }
 
 func TestUnmarshalCachedResponse_NilBody(t *testing.T) {
+	t.Parallel()
 	_, err := UnmarshalCachedResponse[any](context.Background(), ptr(http.StatusOK), nil)
 	if err == nil {
 		t.Fatal("expected error for nil body")
@@ -161,6 +168,7 @@ func TestUnmarshalCachedResponse_NilBody(t *testing.T) {
 }
 
 func TestUnmarshalCachedResponse_InvalidSuccessJSON(t *testing.T) {
+	t.Parallel()
 	type Strict struct {
 		ID int `json:"id"`
 	}
@@ -172,6 +180,7 @@ func TestUnmarshalCachedResponse_InvalidSuccessJSON(t *testing.T) {
 }
 
 func TestUnmarshalCachedResponse_InvalidErrorJSON(t *testing.T) {
+	t.Parallel()
 	_, err := UnmarshalCachedResponse[any](context.Background(), ptr(http.StatusBadRequest), json.RawMessage(`not json`))
 	if err == nil {
 		t.Fatal("expected error for invalid JSON in error body")
@@ -181,6 +190,7 @@ func TestUnmarshalCachedResponse_InvalidErrorJSON(t *testing.T) {
 // --- Replayed flag without metadata in context ---
 
 func TestUnmarshalCachedResponse_NoMetadataInContext(t *testing.T) {
+	t.Parallel()
 	body := json.RawMessage(`{"id":"test"}`)
 	// appctx.MarkIdempotencyReplayed is a no-op when no metadata is in context; should not panic.
 	result, err := UnmarshalCachedResponse[map[string]string](context.Background(), ptr(http.StatusOK), body)
@@ -195,6 +205,7 @@ func TestUnmarshalCachedResponse_NoMetadataInContext(t *testing.T) {
 // --- Boundary: status code at 400 threshold ---
 
 func TestUnmarshalCachedResponse_StatusCode399IsSuccess(t *testing.T) {
+	t.Parallel()
 	body := json.RawMessage(`{"ok":true}`)
 	result, err := UnmarshalCachedResponse[map[string]bool](context.Background(), ptr(399), body)
 	if err != nil {
@@ -209,6 +220,7 @@ func TestUnmarshalCachedResponse_StatusCode399IsSuccess(t *testing.T) {
 }
 
 func TestUnmarshalCachedResponse_StatusCode400IsError(t *testing.T) {
+	t.Parallel()
 	apiErr := apierror.NewValidationError("bad request")
 	errJSON, _ := apiErr.ToJSON()
 

@@ -11,6 +11,7 @@ import (
 )
 
 func TestGenParsedAPIKey(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		mode     constants.AccountMode
@@ -64,6 +65,7 @@ func TestGenParsedAPIKey(t *testing.T) {
 }
 
 func TestGenParsedAPIKey_Uniqueness(t *testing.T) {
+	t.Parallel()
 	keys := make(map[string]bool)
 	for i := 0; i < 10; i++ {
 		key, err := GenParsedAPIKey(constants.AccountModeProduction, nil)
@@ -80,6 +82,7 @@ func TestGenParsedAPIKey_Uniqueness(t *testing.T) {
 }
 
 func TestGenParsedAPIKey_KeyStrengths(t *testing.T) {
+	t.Parallel()
 	lowConfig := &APIKeyGenConfig{
 		SecretKeyStrength: KeyStrengthLow,
 		IDKeyStrength:     KeyStrengthLow,
@@ -127,6 +130,7 @@ func TestGenParsedAPIKey_KeyStrengths(t *testing.T) {
 }
 
 func TestParseAPIKey_ValidKeys(t *testing.T) {
+	t.Parallel()
 	originalKey, err := GenParsedAPIKey(constants.AccountModeProduction, nil)
 	if err != nil {
 		t.Fatalf("Failed to generate test key: %v", err)
@@ -154,6 +158,7 @@ func TestParseAPIKey_ValidKeys(t *testing.T) {
 }
 
 func TestParseAPIKey_InvalidKeys(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name string
 		key  string
@@ -181,6 +186,7 @@ func TestParseAPIKey_InvalidKeys(t *testing.T) {
 }
 
 func TestParsedAPIKey_GenSecretHMAC(t *testing.T) {
+	t.Parallel()
 	pepper := []byte("test-pepper-123")
 
 	key, err := GenParsedAPIKey(constants.AccountModeProduction, nil)
@@ -204,6 +210,7 @@ func TestParsedAPIKey_GenSecretHMAC(t *testing.T) {
 }
 
 func TestParsedAPIKey_VerifySecretHMAC(t *testing.T) {
+	t.Parallel()
 	pepper := []byte("test-pepper-123")
 
 	key, err := GenParsedAPIKey(constants.AccountModeProduction, nil)
@@ -234,6 +241,7 @@ func TestParsedAPIKey_VerifySecretHMAC(t *testing.T) {
 }
 
 func TestSanitizeAPIKey(t *testing.T) {
+	t.Parallel()
 	key := "aug_sk_prod_testid123_testsecret456abc123"
 	sanitized := SanitizeAPIKey(key)
 
@@ -246,6 +254,7 @@ func TestSanitizeAPIKey(t *testing.T) {
 }
 
 func TestToProto_NilReturnsNil(t *testing.T) {
+	t.Parallel()
 	var apiKey *APIKey
 	proto := apiKey.ToProto()
 	if proto != nil {
@@ -254,6 +263,7 @@ func TestToProto_NilReturnsNil(t *testing.T) {
 }
 
 func TestToProto_OptionalTimestamps(t *testing.T) {
+	t.Parallel()
 	now := time.Now().UTC()
 	lastUsed := now.Add(-time.Hour)
 	expires := now.Add(24 * time.Hour)
@@ -282,6 +292,7 @@ func TestToProto_OptionalTimestamps(t *testing.T) {
 }
 
 func TestParsedAPIKey_RedactedValue(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		mode     constants.AccountMode
@@ -318,6 +329,7 @@ func TestParsedAPIKey_RedactedValue(t *testing.T) {
 }
 
 func TestParsedAPIKey_String(t *testing.T) {
+	t.Parallel()
 	key := &ParsedAPIKey{
 		AccountMode: constants.AccountModeProduction,
 		ID:          "testid123",
@@ -334,6 +346,7 @@ func TestParsedAPIKey_String(t *testing.T) {
 }
 
 func TestAPIKey_Integration(t *testing.T) {
+	t.Parallel()
 	pepper := []byte("test-pepper")
 
 	// Generate a key

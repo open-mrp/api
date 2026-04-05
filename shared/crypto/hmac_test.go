@@ -5,6 +5,7 @@ import (
 )
 
 func TestHMACSHA256_RoundTrip(t *testing.T) {
+	t.Parallel()
 	key := []byte("test-secret-key")
 	data := []byte("hello world")
 
@@ -16,6 +17,7 @@ func TestHMACSHA256_RoundTrip(t *testing.T) {
 }
 
 func TestHMACSHA256_OutputLength(t *testing.T) {
+	t.Parallel()
 	key := []byte("key")
 	data := []byte("data")
 
@@ -27,6 +29,7 @@ func TestHMACSHA256_OutputLength(t *testing.T) {
 }
 
 func TestHMACSHA256_Deterministic(t *testing.T) {
+	t.Parallel()
 	key := []byte("key")
 	data := []byte("data")
 
@@ -39,6 +42,7 @@ func TestHMACSHA256_Deterministic(t *testing.T) {
 }
 
 func TestVerifyHMACSHA256_WrongData(t *testing.T) {
+	t.Parallel()
 	key := []byte("key")
 	mac := HMACSHA256(key, []byte("correct data"))
 
@@ -48,6 +52,7 @@ func TestVerifyHMACSHA256_WrongData(t *testing.T) {
 }
 
 func TestVerifyHMACSHA256_WrongKey(t *testing.T) {
+	t.Parallel()
 	data := []byte("data")
 	mac := HMACSHA256([]byte("correct-key"), data)
 

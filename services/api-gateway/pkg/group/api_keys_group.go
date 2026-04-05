@@ -16,11 +16,15 @@ type APIKeysEndpointGroup struct {
 
 type APIKeysEndpointGroupConfig struct {
 	AuthClient *grpcclient.AuthServiceClient
+	CoreClient *grpcclient.CoreServiceClient
 }
 
 func (c *APIKeysEndpointGroupConfig) validate() error {
 	if c.AuthClient == nil {
 		return fmt.Errorf("api keys endpoint group: auth client is required")
+	}
+	if c.CoreClient == nil {
+		return fmt.Errorf("api keys endpoint group: core client is required")
 	}
 	return nil
 }
@@ -32,6 +36,7 @@ func (*APIKeysEndpointGroup) Materialize(config *APIKeysEndpointGroupConfig) *AP
 
 	apiKeySvc := apikeyep.NewAPIKeySvc(&apikeyep.APIKeySvcConfig{
 		AuthClient: config.AuthClient.Client,
+		CoreClient: config.CoreClient.Client,
 	})
 
 	authMw := middleware.AuthMiddleware(&middleware.AuthMiddlewareConfig{
@@ -40,7 +45,7 @@ func (*APIKeysEndpointGroup) Materialize(config *APIKeysEndpointGroupConfig) *AP
 
 	inner := &apiendpoint.APIEndpointGroup{
 		Title:        "API Key Management",
-		Description:  "Handles creating and managing API keys for programmatic access.",
+		Description:  "Create and manage API keys for programmatic access.",
 		ResourceType: &apiresource.APIKey{},
 	}
 

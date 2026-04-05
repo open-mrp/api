@@ -14,6 +14,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestEncodeDecode_RoundTrip(t *testing.T) {
+	t.Parallel()
 	now := time.Date(2025, 1, 15, 10, 30, 0, 0, time.UTC)
 	original := Cursor{CreatedAt: now, ID: 42, Direction: DirectionForward}
 
@@ -35,6 +36,7 @@ func TestEncodeDecode_RoundTrip(t *testing.T) {
 }
 
 func TestDecodeCursor_TamperedPayload(t *testing.T) {
+	t.Parallel()
 	original := Cursor{CreatedAt: time.Now(), ID: 42, Direction: DirectionForward}
 	encoded := EncodeCursor(original)
 
@@ -48,6 +50,7 @@ func TestDecodeCursor_TamperedPayload(t *testing.T) {
 }
 
 func TestDecodeCursor_TamperedSignature(t *testing.T) {
+	t.Parallel()
 	original := Cursor{CreatedAt: time.Now(), ID: 42, Direction: DirectionForward}
 	encoded := EncodeCursor(original)
 
@@ -60,6 +63,7 @@ func TestDecodeCursor_TamperedSignature(t *testing.T) {
 }
 
 func TestDecodeCursor_MissingSeparator(t *testing.T) {
+	t.Parallel()
 	_, err := DecodeCursor("noseparatorhere")
 	if err == nil {
 		t.Fatal("expected error for missing separator")
@@ -67,6 +71,7 @@ func TestDecodeCursor_MissingSeparator(t *testing.T) {
 }
 
 func TestDecodeCursor_InvalidEncoding(t *testing.T) {
+	t.Parallel()
 	_, err := DecodeCursor("!!!invalid.base64!!!")
 	if err == nil {
 		t.Fatal("expected error for invalid base64")
@@ -74,7 +79,10 @@ func TestDecodeCursor_InvalidEncoding(t *testing.T) {
 }
 
 func TestDecodeCursor_InvalidJSON(t *testing.T) {
+	t.Parallel(
 	// Encode a valid-looking cursor but with non-JSON payload, properly signed
+	)
+
 	payload := base64.RawURLEncoding.EncodeToString([]byte("not-json"))
 	encoded := EncodeCursor(Cursor{CreatedAt: time.Now(), ID: 1, Direction: DirectionForward})
 	parts := strings.SplitN(encoded, ".", 2)
@@ -87,6 +95,7 @@ func TestDecodeCursor_InvalidJSON(t *testing.T) {
 }
 
 func TestDecodeCursor_InvalidDirection(t *testing.T) {
+	t.Parallel()
 	c := Cursor{CreatedAt: time.Now(), ID: 1, Direction: "x"}
 	encoded := EncodeCursor(c)
 
@@ -105,6 +114,7 @@ func getCreatedAt(t testItem) time.Time { return t.createdAt }
 func getID(t testItem) int64            { return t.id }
 
 func TestBuildPage_FirstPage_HasMore(t *testing.T) {
+	t.Parallel()
 	now := time.Now().UTC()
 	items := make([]testItem, 4)
 	for i := range items {
@@ -131,6 +141,7 @@ func TestBuildPage_FirstPage_HasMore(t *testing.T) {
 }
 
 func TestBuildPage_FirstPage_NoMore(t *testing.T) {
+	t.Parallel()
 	now := time.Now().UTC()
 	items := []testItem{
 		{id: 100, createdAt: now},
@@ -154,6 +165,7 @@ func TestBuildPage_FirstPage_NoMore(t *testing.T) {
 }
 
 func TestBuildPage_ForwardCursor_MiddlePage(t *testing.T) {
+	t.Parallel()
 	now := time.Now().UTC()
 	items := make([]testItem, 4)
 	for i := range items {
@@ -181,6 +193,7 @@ func TestBuildPage_ForwardCursor_MiddlePage(t *testing.T) {
 }
 
 func TestBuildPage_ForwardCursor_LastPage(t *testing.T) {
+	t.Parallel()
 	now := time.Now().UTC()
 	items := []testItem{
 		{id: 10, createdAt: now},
@@ -208,6 +221,7 @@ func TestBuildPage_ForwardCursor_LastPage(t *testing.T) {
 }
 
 func TestBuildPage_BackwardCursor_Reverses(t *testing.T) {
+	t.Parallel()
 	now := time.Now().UTC()
 	// Backward query returns ASC order: oldest first
 	items := []testItem{
@@ -239,6 +253,7 @@ func TestBuildPage_BackwardCursor_Reverses(t *testing.T) {
 }
 
 func TestBuildPage_BackwardCursor_FirstPageReached(t *testing.T) {
+	t.Parallel()
 	now := time.Now().UTC()
 	// Only 2 items returned, no extra — we've reached the first page
 	items := []testItem{
@@ -268,6 +283,7 @@ func TestBuildPage_BackwardCursor_FirstPageReached(t *testing.T) {
 }
 
 func TestBuildPage_Empty(t *testing.T) {
+	t.Parallel()
 	result, pi := BuildPage([]testItem{}, 10, nil, getCreatedAt, getID)
 
 	if len(result) != 0 {

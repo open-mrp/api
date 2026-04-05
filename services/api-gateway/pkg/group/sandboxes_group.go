@@ -35,7 +35,7 @@ func (*SandboxesEndpointGroup) Materialize(config *SandboxesEndpointGroupConfig)
 
 	inner := &apiendpoint.APIEndpointGroup{
 		Title:        "Sandbox Management",
-		Description:  "Handles listing and managing sandbox environments.",
+		Description:  "List and manage sandbox environments.",
 		ResourceType: &apiresource.Sandbox{},
 	}
 

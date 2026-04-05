@@ -174,6 +174,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.updateDocAPIKeyStmt, err = db.PrepareContext(ctx, updateDocAPIKey); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateDocAPIKey: %w", err)
 	}
+	if q.updateRegistrationSessionAccountIDStmt, err = db.PrepareContext(ctx, updateRegistrationSessionAccountID); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateRegistrationSessionAccountID: %w", err)
+	}
 	if q.updateRegistrationSessionEmailVerifiedStmt, err = db.PrepareContext(ctx, updateRegistrationSessionEmailVerified); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateRegistrationSessionEmailVerified: %w", err)
 	}
@@ -453,6 +456,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing updateDocAPIKeyStmt: %w", cerr)
 		}
 	}
+	if q.updateRegistrationSessionAccountIDStmt != nil {
+		if cerr := q.updateRegistrationSessionAccountIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateRegistrationSessionAccountIDStmt: %w", cerr)
+		}
+	}
 	if q.updateRegistrationSessionEmailVerifiedStmt != nil {
 		if cerr := q.updateRegistrationSessionEmailVerifiedStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing updateRegistrationSessionEmailVerifiedStmt: %w", cerr)
@@ -582,6 +590,7 @@ type Queries struct {
 	setIdempotencyResponseStmt                    *sql.Stmt
 	touchAPIKeyByIDStmt                           *sql.Stmt
 	updateDocAPIKeyStmt                           *sql.Stmt
+	updateRegistrationSessionAccountIDStmt        *sql.Stmt
 	updateRegistrationSessionEmailVerifiedStmt    *sql.Stmt
 	updateRegistrationSessionPaymentCompletedStmt *sql.Stmt
 	updateRegistrationSessionPlanCodeStmt         *sql.Stmt
@@ -646,6 +655,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		setIdempotencyResponseStmt:                    q.setIdempotencyResponseStmt,
 		touchAPIKeyByIDStmt:                           q.touchAPIKeyByIDStmt,
 		updateDocAPIKeyStmt:                           q.updateDocAPIKeyStmt,
+		updateRegistrationSessionAccountIDStmt:        q.updateRegistrationSessionAccountIDStmt,
 		updateRegistrationSessionEmailVerifiedStmt:    q.updateRegistrationSessionEmailVerifiedStmt,
 		updateRegistrationSessionPaymentCompletedStmt: q.updateRegistrationSessionPaymentCompletedStmt,
 		updateRegistrationSessionPlanCodeStmt:         q.updateRegistrationSessionPlanCodeStmt,

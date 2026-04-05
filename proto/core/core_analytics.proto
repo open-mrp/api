@@ -1,0 +1,402 @@
+syntax = "proto3";
+
+// CoreService message types (imported by core.proto).
+package core;
+
+import "google/protobuf/timestamp.proto";
+import "core/core_identity_context.proto";
+option go_package = "shared/proto/core;core";
+
+message QuarterlyDataProto {
+  double q1 = 1;
+  double q2 = 2;
+  double q3 = 3;
+  double q4 = 4;
+  double total = 5;
+}
+message AnalyzeQuarterlyOrdersResponse {
+  map<string, QuarterlyDataProto> data = 1;
+}
+message AnalyzeMaterialsRequest {
+  repeated string sales_order_ids = 1;
+  repeated string supplier_ids = 2;
+}
+message AnalyticsUnitGroupUnitProto {
+  string id = 1;
+  string name = 2;
+  string abbreviation = 3;
+  double conversion_factor = 4;
+  bool is_base_unit = 5;
+}
+message AnalyticsUnitGroup {
+  string id = 1;
+  string name = 2;
+  repeated AnalyticsUnitGroupUnitProto units = 3;
+}
+message MaterialAnalyticsEntryProto {
+  string id = 1;
+  string item_id = 2;
+  string sku = 3;
+  string description = 4;
+  BaseQuantity quantity_in_inventory = 5;
+  BaseQuantity quantity_in_demand = 6;
+  repeated string supplier_names = 7;
+  repeated string supplier_part_numbers = 8;
+  BaseQuantity order_point = 9;
+  BaseQuantity lead_time = 10;
+  AnalyticsUnitGroup unit_group = 11;
+}
+message AnalyzeMaterialsResponse {
+  repeated MaterialAnalyticsEntryProto entries = 1;
+}
+message AnalyzeInventoryReceiptsRequest {
+  repeated string item_ids = 1;
+  repeated string location_ids = 2;
+  repeated string lot_ids = 3;
+}
+message LightItemProto {
+  string id = 1;
+  string sku = 2;
+  string description = 3;
+}
+message AnalyticsLotProto {
+  string id = 1;
+  string number = 2;
+}
+message AnalyticsRateProto {
+  BaseQuantity numerator = 1;
+  BaseQuantity denominator = 2;
+}
+message InventoryReceiptEntryProto {
+  LightItemProto item = 1;
+  BasicInfoProto owner_account = 2;
+  BasicInfoProto holder_account = 3;
+  BaseQuantity remaining_quantity = 4;
+  AnalyticsRateProto weighted_average_unit_cost = 5;
+  google.protobuf.Timestamp oldest_receipt_at = 6;
+  google.protobuf.Timestamp newest_receipt_at = 7;
+  BasicInfoProto location = 8;
+  AnalyticsLotProto lot = 9;
+  BaseQuantity inventory_value = 10;
+}
+message AnalyzeInventoryReceiptsResponse {
+  repeated InventoryReceiptEntryProto entries = 1;
+}
+message DateTimeCoordinateProto {
+  google.protobuf.Timestamp x = 1;
+  double y = 2;
+}
+message NewCustomersChartDataProto {
+  string label = 1;
+  repeated DateTimeCoordinateProto data = 2;
+}
+message AnalyzeNewCustomersRequest {
+  google.protobuf.Timestamp start_date = 1;
+  google.protobuf.Timestamp end_date = 2;
+  repeated string customer_group_ids = 3;
+  repeated string sales_rep_ids = 4;
+}
+message AnalyzeNewCustomersResponse {
+  NewCustomersChartDataProto new_customers = 1;
+}
+message DemandHistoryPointProto {
+  google.protobuf.Timestamp date = 1;
+  double demand = 2;
+}
+message DemandForecastPointProto {
+  google.protobuf.Timestamp date = 1;
+  double forecast = 2;
+  double lower_bound = 3;
+  double upper_bound = 4;
+}
+message RevenueHistoryPointProto {
+  google.protobuf.Timestamp date = 1;
+  double revenue = 2;
+}
+message DemandForecastRowProto {
+  string item_id = 1;
+  string product_line_id = 2;
+  string product_sku = 3;
+  string product_description = 4;
+  string unit = 5;
+  string currency = 6;
+  repeated DemandHistoryPointProto history = 7;
+  repeated DemandForecastPointProto forecast = 8;
+  repeated RevenueHistoryPointProto revenue_history = 9;
+  repeated DemandForecastPointProto revenue_forecast = 10;
+  repeated RevenueHistoryPointProto sales_history = 11;
+  repeated DemandForecastPointProto sales_forecast = 12;
+  double current_month_demand = 13;
+  double current_month_revenue = 14;
+  double current_month_sales = 15;
+}
+message AnalyzeDemandForecastRequest {
+  repeated string product_line_ids = 1;
+  repeated string item_ids = 2;
+  optional int32 history_months = 3;
+  optional int32 forecast_months = 4;
+}
+message AnalyzeDemandForecastResponse {
+  repeated DemandForecastRowProto rows = 1;
+  double current_month_fraction = 2;
+}
+message OeeDepartmentProto {
+  string department_id = 1;
+  string department_name = 2;
+  double good_units = 3;
+  double waste_units = 4;
+  double seconds_units = 5;
+  double estimated_runtime_hours = 6;
+}
+message AnalyzeOeeRequest {
+  google.protobuf.Timestamp start_date = 1;
+  google.protobuf.Timestamp end_date = 2;
+  repeated string department_ids = 3;
+}
+message AnalyzeOeeResponse {
+  repeated OeeDepartmentProto departments = 1;
+}
+message PaymentTermInfo {
+  string id = 1;
+  string name = 2;
+  string status = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp updated_at = 5;
+  // The account ID that owns this payment term. Null for system payment terms.
+  optional string account_id = 6;
+}
+message ListPaymentTermsRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+}
+message ListPaymentTermsResponse {
+  repeated PaymentTermInfo payment_terms = 1;
+  PageInfo page_info = 2;
+}
+message GetPaymentTermRequest {
+  string id = 1;
+}
+message GetPaymentTermResponse {
+  PaymentTermInfo payment_term = 1;
+}
+message CreatePaymentTermRequest {
+  string name = 1;
+}
+message CreatePaymentTermResponse {
+  PaymentTermInfo payment_term = 1;
+}
+message UpdatePaymentTermRequest {
+  string id = 1;
+  optional string name = 2;
+}
+message UpdatePaymentTermResponse {
+  PaymentTermInfo payment_term = 1;
+}
+message DeletePaymentTermRequest {
+  string id = 1;
+}
+message QuantityInfo {
+  string id = 1;
+  string value = 2;
+  string unit_id = 3;
+  string unit_abbreviation = 4;
+  string unit_type = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+  string unit_name = 8;
+}
+message ShippingTermInfo {
+  string id = 1;
+  string name = 2;
+  string type = 3;
+  optional QuantityInfo flat_rate = 4;
+  optional QuantityInfo minimum_order_value = 5;
+  repeated string free_shipping_service_level_ids = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+  optional string account_id = 9;
+}
+message ListShippingTermsRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+}
+message ListShippingTermsResponse {
+  repeated ShippingTermInfo shipping_terms = 1;
+  PageInfo page_info = 2;
+}
+message GetShippingTermRequest {
+  string id = 1;
+}
+message GetShippingTermResponse {
+  ShippingTermInfo shipping_term = 1;
+}
+message QuantityInput {
+  string value = 1;
+  string unit_id = 2;
+}
+message CreateShippingTermRequest {
+  string name = 1;
+  string type = 2;
+  optional QuantityInput flat_rate = 3;
+  optional QuantityInput minimum_order_value = 4;
+  repeated string free_shipping_service_level_ids = 5;
+}
+message CreateShippingTermResponse {
+  ShippingTermInfo shipping_term = 1;
+}
+message UpdateShippingTermRequest {
+  string id = 1;
+  optional string name = 2;
+  optional string type = 3;
+  optional QuantityInput flat_rate = 4;
+  optional QuantityInput minimum_order_value = 5;
+  repeated string free_shipping_service_level_ids = 6;
+  bool has_free_shipping_service_level_ids = 7;
+  bool has_flat_rate = 8;
+  bool has_minimum_order_value = 9;
+}
+message UpdateShippingTermResponse {
+  ShippingTermInfo shipping_term = 1;
+}
+message DeleteShippingTermRequest {
+  string id = 1;
+}
+message GeolocationInfo {
+  string id = 1;
+  optional string street_line_1 = 2;
+  optional string street_line_2 = 3;
+  optional string locality = 4;
+  optional string state = 5;
+  optional string postal_code = 6;
+  string country = 7;
+  optional string google_place_id = 8;
+  optional double latitude = 9;
+  optional double longitude = 10;
+}
+message AddressInfo {
+  string id = 1;
+  string name = 2;
+  optional string phone = 3;
+  optional string email = 4;
+  bool is_drop_ship = 5;
+  GeolocationInfo geolocation = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+message GetAddressRequest {
+  string id = 1;
+}
+message GetAddressResponse {
+  AddressInfo address = 1;
+}
+message ListAddressesRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+}
+message ListAddressesResponse {
+  repeated AddressInfo addresses = 1;
+  PageInfo page_info = 2;
+}
+message CreateAddressRequest {
+  string name = 1;
+  optional string phone = 2;
+  optional string email = 3;
+  bool is_drop_ship = 4;
+  optional string street_line_1 = 5;
+  optional string street_line_2 = 6;
+  optional string locality = 7;
+  optional string state = 8;
+  optional string postal_code = 9;
+  string country = 10;
+}
+message CreateAddressResponse {
+  AddressInfo address = 1;
+}
+message UpdateAddressRequest {
+  string id = 1;
+  optional string name = 2;
+  optional string phone = 3;
+  optional string email = 4;
+  optional bool is_drop_ship = 5;
+  optional string street_line_1 = 6;
+  optional string street_line_2 = 7;
+  optional string locality = 8;
+  optional string state = 9;
+  optional string postal_code = 10;
+  optional string country = 11;
+}
+message UpdateAddressResponse {
+  AddressInfo address = 1;
+}
+message DeleteAddressRequest {
+  string id = 1;
+}
+message AutocompleteAddressRequest {
+  string input = 1;
+  optional string session_token = 2;
+}
+message AddressSuggestion {
+  string id = 1;
+  string description = 2;
+  string main_text = 3;
+  string secondary_text = 4;
+}
+message AutocompleteAddressResponse {
+  repeated AddressSuggestion suggestions = 1;
+}
+message GetAddressDetailsRequest {
+  string place_id = 1;
+  optional string session_token = 2;
+}
+message AddressComponentsInfo {
+  string address_line_1 = 1;
+  optional string address_line_2 = 2;
+  string city = 3;
+  string state = 4;
+  string postal_code = 5;
+  string country = 6;
+  string country_code = 7;
+}
+message GetAddressDetailsResponse {
+  AddressComponentsInfo address = 1;
+  string formatted_address = 2;
+}
+message ValidateAddressRequest {
+  string address_line_1 = 1;
+  optional string address_line_2 = 2;
+  string city = 3;
+  string state = 4;
+  string postal_code = 5;
+  string country = 6;
+}
+message ValidateAddressResponse {
+  bool is_valid = 1;
+  optional string formatted_address = 2;
+  optional AddressComponentsInfo components = 3;
+  repeated string validation_messages = 4;
+}
+message AccountStatusInfo {
+  string id = 1;
+  string code = 2;
+  string name = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp updated_at = 5;
+}
+message ListAccountStatusesRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+}
+message ListAccountStatusesResponse {
+  repeated AccountStatusInfo account_statuses = 1;
+  PageInfo page_info = 2;
+}
+message GetAccountStatusRequest {
+  string identifier = 1;
+}
+message GetAccountStatusResponse {
+  AccountStatusInfo account_status = 1;
+}

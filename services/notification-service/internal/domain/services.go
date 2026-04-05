@@ -37,6 +37,9 @@ type EmailSendData struct {
 	SendAs    *string  `json:"send_as,omitempty"`
 	AccountID *string  `json:"account_id,omitempty"`
 	SentByID  *string  `json:"sent_by_id,omitempty"`
+	// Attachment fields for raw MIME emails.
+	Attachment []byte  `json:"attachment,omitempty"`
+	Filename   *string `json:"filename,omitempty"`
 }
 
 // EnterpriseRequestData contains data for an enterprise upgrade request email
@@ -53,8 +56,10 @@ type EmailSender interface {
 }
 
 type EmailData struct {
-	To      []string `json:"to"`
-	Subject string   `json:"subject"`
-	Body    string   `json:"body"`
-	SendAs  *string  `json:"send_as,omitempty"`
+	To         []string `json:"to"`
+	Subject    string   `json:"subject"`
+	Body       string   `json:"body"`
+	SendAs     *string  `json:"send_as,omitempty"`
+	Attachment []byte   `json:"attachment,omitempty"`
+	Filename   *string  `json:"filename,omitempty"`
 }

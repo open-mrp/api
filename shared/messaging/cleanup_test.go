@@ -14,8 +14,14 @@ type mockCleanupRepo struct {
 	mu                 sync.Mutex
 	apiDeleteCalls     int
 	serviceDeleteCalls int
+	deletedRecordCalls int
+	requestLogCalls    int
+	auditEventCalls    int
 	apiDeleteFunc      func(ctx context.Context, limit int) (int64, error)
 	serviceDeleteFunc  func(ctx context.Context, limit int) (int64, error)
+	deletedRecordFunc  func(ctx context.Context, limit int) (int64, error)
+	requestLogFunc     func(ctx context.Context, limit int) (int64, error)
+	auditEventFunc     func(ctx context.Context, limit int) (int64, error)
 }
 
 func (m *mockCleanupRepo) DeleteExpiredIdempotencyKeys(ctx context.Context, limit int) (int64, error) {
@@ -38,13 +44,44 @@ func (m *mockCleanupRepo) DeleteExpiredServiceIdempotencyKeys(ctx context.Contex
 	return 0, nil
 }
 
-func (m *mockCleanupRepo) getCallCounts() (int, int) {
+func (m *mockCleanupRepo) DeleteExpiredDeletedRecords(ctx context.Context, limit int) (int64, error) {
+	m.mu.Lock()
+	m.deletedRecordCalls++
+	m.mu.Unlock()
+	if m.deletedRecordFunc != nil {
+		return m.deletedRecordFunc(ctx, limit)
+	}
+	return 0, nil
+}
+
+func (m *mockCleanupRepo) DeleteExpiredRequestLogs(ctx context.Context, limit int) (int64, error) {
+	m.mu.Lock()
+	m.requestLogCalls++
+	m.mu.Unlock()
+	if m.requestLogFunc != nil {
+		return m.requestLogFunc(ctx, limit)
+	}
+	return 0, nil
+}
+
+func (m *mockCleanupRepo) DeleteExpiredAuditEvents(ctx context.Context, limit int) (int64, error) {
+	m.mu.Lock()
+	m.auditEventCalls++
+	m.mu.Unlock()
+	if m.auditEventFunc != nil {
+		return m.auditEventFunc(ctx, limit)
+	}
+	return 0, nil
+}
+
+func (m *mockCleanupRepo) getCallCounts() (int, int, int) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	return m.apiDeleteCalls, m.serviceDeleteCalls
+	return m.apiDeleteCalls, m.serviceDeleteCalls, m.deletedRecordCalls
 }
 
 func TestCleanupWorkerStartStop(t *testing.T) {
+	t.Parallel()
 	repo := &mockCleanupRepo{}
 	worker, err := NewCleanupWorker(&CleanupConfig{
 		Interval:         time.Hour,
@@ -62,12 +99,14 @@ func TestCleanupWorkerStartStop(t *testing.T) {
 	worker.Stop()
 
 	// Verify cleanup was called at least once (initial run on startup)
-	apiCalls, serviceCalls := repo.getCallCounts()
+	apiCalls, serviceCalls, deletedRecordCalls := repo.getCallCounts()
 	require.GreaterOrEqual(t, apiCalls, 1)
 	require.GreaterOrEqual(t, serviceCalls, 1)
+	require.GreaterOrEqual(t, deletedRecordCalls, 1)
 }
 
 func TestCleanupWorkerDeletesBatches(t *testing.T) {
+	t.Parallel()
 	apiBatchesDeleted := 0
 	serviceBatchesDeleted := 0
 	repo := &mockCleanupRepo{
@@ -81,6 +120,9 @@ func TestCleanupWorkerDeletesBatches(t *testing.T) {
 		serviceDeleteFunc: func(ctx context.Context, limit int) (int64, error) {
 			serviceBatchesDeleted++
 			return 0, nil // No records to delete
+		},
+		deletedRecordFunc: func(ctx context.Context, limit int) (int64, error) {
+			return 0, nil
 		},
 	}
 
@@ -106,6 +148,7 @@ func TestCleanupWorkerDeletesBatches(t *testing.T) {
 }
 
 func TestCleanupWorkerRespectsMaxBatches(t *testing.T) {
+	t.Parallel()
 	apiBatchesDeleted := 0
 	repo := &mockCleanupRepo{
 		apiDeleteFunc: func(ctx context.Context, limit int) (int64, error) {
@@ -113,6 +156,9 @@ func TestCleanupWorkerRespectsMaxBatches(t *testing.T) {
 			return int64(limit), nil // Always return full batch
 		},
 		serviceDeleteFunc: func(ctx context.Context, limit int) (int64, error) {
+			return 0, nil
+		},
+		deletedRecordFunc: func(ctx context.Context, limit int) (int64, error) {
 			return 0, nil
 		},
 	}
@@ -136,6 +182,7 @@ func TestCleanupWorkerRespectsMaxBatches(t *testing.T) {
 }
 
 func TestCleanupWorkerHandlesErrors(t *testing.T) {
+	t.Parallel()
 	expectedErr := errors.New("database error")
 	apiBatchesDeleted := 0
 	repo := &mockCleanupRepo{
@@ -144,6 +191,9 @@ func TestCleanupWorkerHandlesErrors(t *testing.T) {
 			return 0, expectedErr
 		},
 		serviceDeleteFunc: func(ctx context.Context, limit int) (int64, error) {
+			return 0, nil
+		},
+		deletedRecordFunc: func(ctx context.Context, limit int) (int64, error) {
 			return 0, nil
 		},
 	}
@@ -167,6 +217,7 @@ func TestCleanupWorkerHandlesErrors(t *testing.T) {
 }
 
 func TestCleanupConfigWithDefaults(t *testing.T) {
+	t.Parallel()
 	config := new(CleanupConfig).WithDefaults()
 
 	require.Equal(t, 24*time.Hour, config.Interval)

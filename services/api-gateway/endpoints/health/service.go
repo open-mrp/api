@@ -4,6 +4,7 @@ import (
 	"context"
 
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -20,6 +21,7 @@ func NewHealthSvc() HealthSvc {
 
 func (c *healthSvcImpl) GetHealth(ctx context.Context, req *apiresource.EmptyResource) (*apiresource.Healthcheck, *apierror.APIError) {
 	hc := &apiresource.Healthcheck{
+		Object: constants.ObjectTypeHealthcheck,
 		Status: "healthy",
 	}
 	return hc, nil

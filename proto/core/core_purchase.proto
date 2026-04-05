@@ -1,0 +1,341 @@
+syntax = "proto3";
+
+// Package core defines the CorePurchaseService for purchase order management.
+package core;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "core/core.proto";
+
+option go_package = "shared/proto/core;core";
+
+service CorePurchaseService {
+  // ListPurchaseOrders returns a paginated list of purchase orders.
+  rpc ListPurchaseOrders(ListPurchaseOrdersRequest) returns (ListPurchaseOrdersResponse);
+
+  // GetPurchaseOrder returns a single purchase order by ID.
+  rpc GetPurchaseOrder(GetPurchaseOrderRequest) returns (GetPurchaseOrderResponse);
+
+  // CreatePurchaseOrder creates a new purchase order.
+  rpc CreatePurchaseOrder(CreatePurchaseOrderRequest) returns (CreatePurchaseOrderResponse);
+
+  // UpdatePurchaseOrder updates an existing purchase order.
+  rpc UpdatePurchaseOrder(UpdatePurchaseOrderRequest) returns (UpdatePurchaseOrderResponse);
+
+  // DeletePurchaseOrder deletes a purchase order by ID.
+  rpc DeletePurchaseOrder(DeletePurchaseOrderRequest) returns (google.protobuf.Empty);
+
+  // BulkDeletePurchaseOrders deletes multiple purchase orders.
+  rpc BulkDeletePurchaseOrders(BulkDeletePurchaseOrdersRequest) returns (google.protobuf.Empty);
+
+  // ChangePurchaseOrderStatus changes the status of a purchase order.
+  rpc ChangePurchaseOrderStatus(ChangePurchaseOrderStatusRequest) returns (ChangePurchaseOrderStatusResponse);
+
+  // CreatePurchaseOrderLine creates a new line on a purchase order.
+  rpc CreatePurchaseOrderLine(CreatePurchaseOrderLineRequest) returns (CreatePurchaseOrderLineResponse);
+
+  // UpdatePurchaseOrderLine updates an existing purchase order line.
+  rpc UpdatePurchaseOrderLine(UpdatePurchaseOrderLineRequest) returns (UpdatePurchaseOrderLineResponse);
+
+  // DeletePurchaseOrderLine deletes a purchase order line.
+  rpc DeletePurchaseOrderLine(DeletePurchaseOrderLineRequest) returns (google.protobuf.Empty);
+}
+
+// PurchaseOrderSummaryInfo represents a purchase order in list views.
+message PurchaseOrderSummaryInfo {
+  string id = 1;
+  string number = 2;
+  string status_code = 3;
+  string status_name = 4;
+  string type_code = 5;
+  string type_name = 6;
+  string supplier_id = 7;
+  string supplier_name = 8;
+  string supplier_number = 9;
+  bool is_acknowledgment_sent = 10;
+  string priority_code = 11;
+  string priority_name = 12;
+  optional google.protobuf.Timestamp issued_at = 13;
+  optional google.protobuf.Timestamp completed_at = 14;
+  google.protobuf.Timestamp created_at = 15;
+  google.protobuf.Timestamp updated_at = 16;
+  int32 line_count = 17;
+  optional string priority_id = 18;
+}
+
+// PurchaseOrderInfo represents a full purchase order with all detail.
+message PurchaseOrderInfo {
+  string id = 1;
+  string number = 2;
+  optional string note = 3;
+  bool is_acknowledgment_sent = 4;
+  // Address IDs
+  string billing_address_id = 5;
+  string shipping_address_id = 6;
+  // Address details
+  optional string bill_to_name = 7;
+  optional string bill_to_street_line_1 = 8;
+  optional string bill_to_street_line_2 = 9;
+  optional string bill_to_locality = 10;
+  optional string bill_to_state = 11;
+  optional string bill_to_postal_code = 12;
+  optional string bill_to_country = 13;
+  optional string bill_to_phone = 14;
+  optional string bill_to_email = 15;
+  optional string ship_to_name = 16;
+  optional string ship_to_street_line_1 = 17;
+  optional string ship_to_street_line_2 = 18;
+  optional string ship_to_locality = 19;
+  optional string ship_to_state = 20;
+  optional string ship_to_postal_code = 21;
+  optional string ship_to_country = 22;
+  optional string ship_to_phone = 23;
+  optional string ship_to_email = 24;
+  // Carrier
+  optional string carrier_id = 25;
+  optional string carrier_name = 26;
+  optional string service_level_id = 27;
+  optional string service_level_name = 28;
+  optional string carrier_billing_type = 29;
+  optional string carrier_billing_account = 30;
+  // Supplier
+  string supplier_id = 31;
+  string supplier_name = 32;
+  string supplier_number = 33;
+  // Status
+  string status_code = 34;
+  string status_name = 35;
+  // Type
+  string type_code = 36;
+  string type_name = 37;
+  // Priority
+  string priority_code = 38;
+  string priority_name = 39;
+  // Payment term
+  optional string payment_term_id = 40;
+  optional string payment_term_name = 41;
+  // Shipping term
+  optional string shipping_term_id = 42;
+  optional string shipping_term_name = 43;
+  // Receiving order
+  optional string receiving_order_id = 44;
+  // Lines (populated when included)
+  repeated PurchaseOrderLineInfo lines = 45;
+  // Email contacts
+  repeated EmailContactInfo contacts = 46;
+  // Timestamps
+  optional google.protobuf.Timestamp issued_at = 47;
+  optional google.protobuf.Timestamp completed_at = 48;
+  optional google.protobuf.Timestamp promised_at = 49;
+  google.protobuf.Timestamp created_at = 50;
+  google.protobuf.Timestamp updated_at = 51;
+  optional bool carrier_is_portal_enabled = 52;
+  optional bool service_level_is_portal_enabled = 53;
+  optional bool payment_term_is_active = 54;
+  optional string shipping_term_type = 55;
+  optional string priority_id = 56;
+  optional string service_level_token = 57;
+}
+
+// PurchaseOrderLineInfo represents a purchase order line.
+message PurchaseOrderLineInfo {
+  string id = 1;
+  int32 line_item_number = 2;
+  string product_sku = 3;
+  optional string product_description = 4;
+  optional string product_id = 5;
+  optional string item_id = 6;
+  optional string item_sku = 7;
+  // Quantity ordered
+  string quantity_id = 8;
+  string quantity_value = 9;
+  string quantity_unit_id = 10;
+  string quantity_unit_name = 11;
+  string quantity_unit_abbreviation = 12;
+  string quantity_unit_type = 13;
+  // Quantity received
+  optional string quantity_received_value = 14;
+  // Unit price
+  string unit_price_id = 15;
+  string unit_price_value = 16;
+  string unit_price_numerator_unit_id = 17;
+  string unit_price_numerator_unit_abbreviation = 18;
+  string unit_price_denominator_unit_id = 19;
+  string unit_price_denominator_unit_abbreviation = 20;
+  // Unit cost
+  optional string unit_cost_id = 21;
+  optional string unit_cost_value = 22;
+  optional string unit_cost_numerator_unit_id = 23;
+  optional string unit_cost_numerator_unit_abbreviation = 24;
+  optional string unit_cost_denominator_unit_id = 25;
+  optional string unit_cost_denominator_unit_abbreviation = 26;
+  // Timestamps
+  google.protobuf.Timestamp created_at = 27;
+  google.protobuf.Timestamp updated_at = 28;
+}
+
+// EmailContactInfo represents an email contact on a purchase order.
+message EmailContactInfo {
+  string id = 1;
+  string account_user_id = 2;
+}
+
+// --- Purchase Order Request/Response messages ---
+
+message ListPurchaseOrdersRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+  repeated string status_codes = 4;
+  repeated string item_ids = 5;
+  repeated string supplier_ids = 6;
+  optional string start_date = 7;
+  optional string end_date = 8;
+}
+
+message ListPurchaseOrdersResponse {
+  repeated PurchaseOrderSummaryInfo purchase_orders = 1;
+  PageInfo page_info = 2;
+}
+
+message GetPurchaseOrderRequest {
+  string id = 1;
+  repeated string includes = 2;
+}
+
+message GetPurchaseOrderResponse {
+  PurchaseOrderInfo purchase_order = 1;
+}
+
+message CreatePurchaseOrderRequest {
+  string supplier_account_id = 1;
+  optional string note = 2;
+  optional string carrier_id = 3;
+  optional string service_level_id = 4;
+  optional string carrier_billing_type = 5;
+  optional string carrier_billing_account = 6;
+  string priority_code = 7;
+  optional string shipping_term_id = 8;
+  optional string payment_term_id = 9;
+  // Address fields for bill-to
+  optional string bill_to_name = 10;
+  optional string bill_to_street_line_1 = 11;
+  optional string bill_to_street_line_2 = 12;
+  optional string bill_to_locality = 13;
+  optional string bill_to_state = 14;
+  optional string bill_to_postal_code = 15;
+  optional string bill_to_country = 16;
+  // Address fields for ship-to
+  optional string ship_to_name = 17;
+  optional string ship_to_street_line_1 = 18;
+  optional string ship_to_street_line_2 = 19;
+  optional string ship_to_locality = 20;
+  optional string ship_to_state = 21;
+  optional string ship_to_postal_code = 22;
+  optional string ship_to_country = 23;
+  // Lines to create with the order
+  repeated CreatePurchaseOrderLineInput lines = 24;
+  // Email contacts
+  repeated string contact_account_user_ids = 25;
+  // Promised date
+  optional string promised_at = 26;
+}
+
+message CreatePurchaseOrderLineInput {
+  string product_id = 1;
+  optional string item_id = 2;
+  string product_sku = 3;
+  optional string product_description = 4;
+  string quantity_value = 5;
+  string quantity_unit_id = 6;
+  string unit_price_value = 7;
+  string unit_price_numerator_unit_id = 8;
+  string unit_price_denominator_unit_id = 9;
+  optional string unit_cost_value = 10;
+  optional string unit_cost_numerator_unit_id = 11;
+  optional string unit_cost_denominator_unit_id = 12;
+}
+
+message CreatePurchaseOrderResponse {
+  PurchaseOrderInfo purchase_order = 1;
+}
+
+message UpdatePurchaseOrderRequest {
+  string id = 1;
+  optional string note = 2;
+  optional string number = 3;
+  optional string priority_code = 4;
+  optional string billing_address_id = 5;
+  optional string shipping_address_id = 6;
+  optional string promised_at = 7;
+  // Email contacts (replaces existing)
+  repeated string contact_account_user_ids = 8;
+}
+
+message UpdatePurchaseOrderResponse {
+  PurchaseOrderInfo purchase_order = 1;
+}
+
+message DeletePurchaseOrderRequest {
+  string id = 1;
+}
+
+message BulkDeletePurchaseOrdersRequest {
+  repeated string ids = 1;
+}
+
+message ChangePurchaseOrderStatusRequest {
+  string id = 1;
+  string status_change = 2;
+  bool send_email = 3;
+}
+
+message ChangePurchaseOrderStatusResponse {
+  PurchaseOrderInfo purchase_order = 1;
+}
+
+message CreatePurchaseOrderLineRequest {
+  string purchase_order_id = 1;
+  string product_id = 2;
+  optional string item_id = 3;
+  string product_sku = 4;
+  optional string product_description = 5;
+  string quantity_value = 6;
+  string quantity_unit_id = 7;
+  string unit_price_value = 8;
+  string unit_price_numerator_unit_id = 9;
+  string unit_price_denominator_unit_id = 10;
+  optional string unit_cost_value = 11;
+  optional string unit_cost_numerator_unit_id = 12;
+  optional string unit_cost_denominator_unit_id = 13;
+}
+
+message CreatePurchaseOrderLineResponse {
+  PurchaseOrderLineInfo purchase_order_line = 1;
+}
+
+message UpdatePurchaseOrderLineRequest {
+  string purchase_order_id = 1;
+  string id = 2;
+  optional string product_id = 3;
+  optional string item_id = 4;
+  optional string product_sku = 5;
+  optional string product_description = 6;
+  optional string quantity_value = 7;
+  optional string quantity_unit_id = 8;
+  optional string unit_price_value = 9;
+  optional string unit_price_numerator_unit_id = 10;
+  optional string unit_price_denominator_unit_id = 11;
+  optional string unit_cost_value = 12;
+  optional string unit_cost_numerator_unit_id = 13;
+  optional string unit_cost_denominator_unit_id = 14;
+}
+
+message UpdatePurchaseOrderLineResponse {
+  PurchaseOrderLineInfo purchase_order_line = 1;
+}
+
+message DeletePurchaseOrderLineRequest {
+  string purchase_order_id = 1;
+  string id = 2;
+}

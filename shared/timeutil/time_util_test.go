@@ -6,6 +6,7 @@ import (
 )
 
 func TestTimestampToTimePtr(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name      string
 		input     string
@@ -66,6 +67,7 @@ func TestTimestampToTimePtr(t *testing.T) {
 }
 
 func TestTimestampToTime(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name      string
 		input     string

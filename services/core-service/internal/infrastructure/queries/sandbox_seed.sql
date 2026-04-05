@@ -291,12 +291,12 @@
 
 SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 
-SELECT @un1 := id FROM unit WHERE name = 'Each' AND account_id = '@account_id';
+SET @un1 = (SELECT id FROM unit WHERE name = 'Each' AND account_id = '@account_id');
 SET @un2 = CONCAT('un_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @un3 = CONCAT('un_', LEFT(REPLACE(UUID(), '-', ''), 12));
-SELECT @un4 := id FROM unit WHERE name = 'Dollar' AND account_id = '@account_id';
+SET @un4 = (SELECT id FROM unit WHERE name = 'Dollar' AND account_id = '@account_id');
 SET @un5 = CONCAT('un_', LEFT(REPLACE(UUID(), '-', ''), 12));
-SELECT @un6 := id FROM unit WHERE name = 'Day' AND account_id = '@account_id';
+SET @un6 = (SELECT id FROM unit WHERE name = 'Day' AND account_id = '@account_id');
 SET @un7 = CONCAT('un_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @un8 = CONCAT('un_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @un9 = CONCAT('un_', LEFT(REPLACE(UUID(), '-', ''), 12));
@@ -305,7 +305,7 @@ SET @ungp1 = CONCAT('ungp_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @ungp2 = CONCAT('ungp_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @ungp3 = CONCAT('ungp_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @ungp4 = CONCAT('ungp_', LEFT(REPLACE(UUID(), '-', ''), 12));
-SELECT @ungp5 := id FROM unit_group WHERE name = 'Each Units' AND account_id = '@account_id';
+SET @ungp5 = (SELECT id FROM unit_group WHERE name = 'Each Units' AND account_id = '@account_id');
 SET @ungp6 = CONCAT('ungp_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @ungp7 = CONCAT('ungp_', LEFT(REPLACE(UUID(), '-', ''), 12));
 
@@ -350,14 +350,14 @@ SET @itmcat3 = CONCAT('itcg_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @itmcat4 = CONCAT('itcg_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @itmcat5 = CONCAT('itcg_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @itmcat6 = CONCAT('itcg_', LEFT(REPLACE(UUID(), '-', ''), 12));
-SELECT @itmcat7 := id FROM item_category WHERE name = 'Shipping' AND account_id = '@account_id';
-SELECT @itmcat8 := id FROM item_category WHERE name = 'Credit' AND account_id = '@account_id';
+SET @itmcat7 = (SELECT id FROM item_category WHERE name = 'Shipping' AND account_id = '@account_id');
+SET @itmcat8 = (SELECT id FROM item_category WHERE name = 'Credit' AND account_id = '@account_id');
 
 SET @pdln1 = CONCAT('pdln_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @pdln2 = CONCAT('pdln_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @pdln3 = CONCAT('pdln_', LEFT(REPLACE(UUID(), '-', ''), 12));
-SELECT @pdln4 := id FROM product_line WHERE name = 'Shipping' AND account_id = '@account_id';
-SELECT @pdln5 := id FROM product_line WHERE name = 'Credit' AND account_id = '@account_id';
+SET @pdln4 = (SELECT id FROM product_line WHERE name = 'Shipping' AND account_id = '@account_id');
+SET @pdln5 = (SELECT id FROM product_line WHERE name = 'Credit' AND account_id = '@account_id');
 
 SET @rt1 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @rt2 = CONCAT('rt_', LEFT(REPLACE(UUID(), '-', ''), 12));
@@ -780,10 +780,14 @@ SET @it15 = CONCAT('it_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @it16 = CONCAT('it_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @it17 = CONCAT('it_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @it18 = CONCAT('it_', LEFT(REPLACE(UUID(), '-', ''), 12));
-SELECT @it19 := id FROM item WHERE sku = 'Shipping' AND account_id = '@account_id';
-SELECT @it20 := id FROM item WHERE sku = 'Credit' AND account_id = '@account_id';
-SELECT @rt55 := unit_value_id, @rt56 := unit_cost_id, @rt57 := burn_rate_id FROM item WHERE id = @it19;
-SELECT @rt58 := unit_value_id, @rt59 := unit_cost_id, @rt60 := burn_rate_id FROM item WHERE id = @it20;
+SET @it19 = (SELECT id FROM item WHERE sku = 'Shipping' AND account_id = '@account_id');
+SET @it20 = (SELECT id FROM item WHERE sku = 'Credit' AND account_id = '@account_id');
+SET @rt55 = (SELECT unit_value_id FROM item WHERE id = @it19);
+SET @rt56 = (SELECT unit_cost_id FROM item WHERE id = @it19);
+SET @rt57 = (SELECT burn_rate_id FROM item WHERE id = @it19);
+SET @rt58 = (SELECT unit_value_id FROM item WHERE id = @it20);
+SET @rt59 = (SELECT unit_cost_id FROM item WHERE id = @it20);
+SET @rt60 = (SELECT burn_rate_id FROM item WHERE id = @it20);
 SET @it21 = CONCAT('it_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @it22 = CONCAT('it_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @it23 = CONCAT('it_', LEFT(REPLACE(UUID(), '-', ''), 12));
@@ -830,8 +834,8 @@ SET @pd15 = CONCAT('pd_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @pd16 = CONCAT('pd_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @pd17 = CONCAT('pd_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @pd18 = CONCAT('pd_', LEFT(REPLACE(UUID(), '-', ''), 12));
-SELECT @pd19 := p.id FROM product p JOIN item i ON p.item_id = i.id WHERE i.sku = 'Shipping' AND i.account_id = '@account_id';
-SELECT @pd20 := p.id FROM product p JOIN item i ON p.item_id = i.id WHERE i.sku = 'Credit' AND i.account_id = '@account_id';
+SET @pd19 = (SELECT p.id FROM product p JOIN item i ON p.item_id = i.id WHERE i.sku = 'Shipping' AND i.account_id = '@account_id');
+SET @pd20 = (SELECT p.id FROM product p JOIN item i ON p.item_id = i.id WHERE i.sku = 'Credit' AND i.account_id = '@account_id');
 
 SET @mat1 = CONCAT('ml_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @mat2 = CONCAT('ml_', LEFT(REPLACE(UUID(), '-', ''), 12));
@@ -1209,6 +1213,13 @@ SET @acadr3 = CONCAT('acad_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @acadr4 = CONCAT('acad_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @acadr5 = CONCAT('acad_', LEFT(REPLACE(UUID(), '-', ''), 12));
 SET @acadr6 = CONCAT('acad_', LEFT(REPLACE(UUID(), '-', ''), 12));
+
+-- Payment terms
+SET @pytm1 = CONCAT('pytm_', LEFT(REPLACE(UUID(), '-', ''), 12));
+SET @pytm2 = CONCAT('pytm_', LEFT(REPLACE(UUID(), '-', ''), 12));
+
+-- Shipping terms
+SET @shtm1 = CONCAT('shtm_', LEFT(REPLACE(UUID(), '-', ''), 12));
 
 -- Account relations
 SET @acrel1 = CONCAT('acre_', LEFT(REPLACE(UUID(), '-', ''), 12));
@@ -2744,10 +2755,10 @@ INSERT INTO `account_group` (`id`, `owner_account_id`, `name`, `description`, `c
 -- SECTION 35: CUSTOMER ACCOUNTS
 -- ============================================================================
 
-INSERT INTO `account` (`id`, `name`, `account_type_code`, `onboarding_status_code`, `plan_code`) VALUES
-  (@cust1, 'Global Manufacturing Solutions', 'company', 'unclaimed', 'free'),
-  (@cust2, 'Pacific Coast Distributors',     'company', 'unclaimed', 'free'),
-  (@cust3, 'Northeast Medical Supplies',     'company', 'unclaimed', 'free');
+INSERT INTO `account` (`id`, `name`, `account_type_code`, `onboarding_status_code`) VALUES
+  (@cust1, 'Global Manufacturing Solutions', 'company', 'unclaimed'),
+  (@cust2, 'Pacific Coast Distributors',     'company', 'unclaimed'),
+  (@cust3, 'Northeast Medical Supplies',     'company', 'unclaimed');
 
 
 -- ============================================================================
@@ -2778,6 +2789,23 @@ INSERT INTO `address` (`id`, `name`, `phone`, `email`, `is_drop_ship`, `geolocat
 
 
 -- ============================================================================
+-- SECTION 33: PAYMENT TERMS
+-- ============================================================================
+
+INSERT INTO `payment_term` (`id`, `is_active`, `name`, `account_id`) VALUES
+  (@pytm1, 1, 'Net 30', '@account_id'),
+  (@pytm2, 1, 'Net 60', '@account_id');
+
+
+-- ============================================================================
+-- SECTION 34: SHIPPING TERMS
+-- ============================================================================
+
+INSERT INTO `shipping_term` (`id`, `name`, `is_freight_exempt`, `is_carrier_rate`, `account_id`) VALUES
+  (@shtm1, 'Prepaid', 0, 1, '@account_id');
+
+
+-- ============================================================================
 -- SECTION 37: ACCOUNT ADDRESSES + ACCOUNT RELATIONS
 -- ============================================================================
 
@@ -2794,9 +2822,9 @@ UPDATE `account` SET default_billing_address_id = @caddr3, default_shipping_addr
 UPDATE `account` SET default_billing_address_id = @caddr5, default_shipping_address_id = @caddr6 WHERE id = @cust3;
 
 INSERT INTO `account_relation` (`id`, `owner_account_id`, `counterparty_account_id`, `account_relation_role_code`, `external_number`, `priority_code`, `account_group_id`, `payment_term_id`, `shipping_term_id`, `default_carrier_id`, `default_carrier_option_id`, `default_billing_address_id`, `default_shipping_address_id`, `account_status_code`, `commission_status_code`, `freight_status_code`) VALUES
-  (@acrel1, '@account_id', @cust1, 'customer', 'CUST-001', 'normal', @acgrp1, 'net_30', 'prepaid', 'delivery', NULL, @caddr1, @caddr2, 'normal', 'applied', 'billed'),
-  (@acrel2, '@account_id', @cust2, 'customer', 'CUST-002', 'normal', @acgrp1, 'net_30', 'prepaid', 'delivery', NULL, @caddr3, @caddr4, 'normal', 'applied', 'billed'),
-  (@acrel3, '@account_id', @cust3, 'customer', 'CUST-003', 'normal', @acgrp1, 'net_60', 'prepaid', 'delivery', NULL, @caddr5, @caddr6, 'normal', 'applied', 'billed');
+  (@acrel1, '@account_id', @cust1, 'customer', 'CUST-001', 'normal', @acgrp1, @pytm1, @shtm1, 'delivery', NULL, @caddr1, @caddr2, 'normal', 'applied', 'billed'),
+  (@acrel2, '@account_id', @cust2, 'customer', 'CUST-002', 'normal', @acgrp1, @pytm1, @shtm1, 'delivery', NULL, @caddr3, @caddr4, 'normal', 'applied', 'billed'),
+  (@acrel3, '@account_id', @cust3, 'customer', 'CUST-003', 'normal', @acgrp1, @pytm2, @shtm1, 'delivery', NULL, @caddr5, @caddr6, 'normal', 'applied', 'billed');
 
 
 -- ============================================================================
@@ -2884,17 +2912,17 @@ INSERT INTO `quantity` (`id`, `value`, `unit_id`) VALUES
 
 INSERT INTO `sales_order` (`id`, `number`, `sales_order_status_code`, `sales_order_type_code`, `priority_code`, `buyer_account_id`, `seller_account_id`, `owner_account_id`, `billing_address_id`, `shipping_address_id`, `carrier_id`, `carrier_option_id`, `payment_term_id`, `shipping_term_id`, `issued_at`, `completed_at`) VALUES
   -- EST-001: estimate for Customer 1
-  (@so1, 'EST-001', 'estimate',  'sales_order', 'normal', @cust1, '@account_id', '@account_id', @caddr1, @caddr2, 'delivery', NULL, 'net_30', 'prepaid', NULL, NULL),
+  (@so1, 'EST-001', 'estimate',  'sales_order', 'normal', @cust1, '@account_id', '@account_id', @caddr1, @caddr2, 'delivery', NULL, @pytm1, @shtm1, NULL, NULL),
   -- ORD-001: issued for Customer 1
-  (@so2, 'ORD-001', 'issued',    'sales_order', 'normal', @cust1, '@account_id', '@account_id', @caddr1, @caddr2, 'delivery', NULL, 'net_30', 'prepaid', NOW() - INTERVAL 10 DAY, NULL),
+  (@so2, 'ORD-001', 'issued',    'sales_order', 'normal', @cust1, '@account_id', '@account_id', @caddr1, @caddr2, 'delivery', NULL, @pytm1, @shtm1, NOW() - INTERVAL 10 DAY, NULL),
   -- ORD-002: issued for Customer 2
-  (@so3, 'ORD-002', 'issued',    'sales_order', 'normal', @cust2, '@account_id', '@account_id', @caddr3, @caddr4, 'delivery', NULL, 'net_30', 'prepaid', NOW() - INTERVAL 8 DAY, NULL),
+  (@so3, 'ORD-002', 'issued',    'sales_order', 'normal', @cust2, '@account_id', '@account_id', @caddr3, @caddr4, 'delivery', NULL, @pytm1, @shtm1, NOW() - INTERVAL 8 DAY, NULL),
   -- ORD-003: issued for Customer 2 (packed shipment)
-  (@so4, 'ORD-003', 'issued',    'sales_order', 'high',   @cust2, '@account_id', '@account_id', @caddr3, @caddr4, 'delivery', NULL, 'net_30', 'prepaid', NOW() - INTERVAL 6 DAY, NULL),
+  (@so4, 'ORD-003', 'issued',    'sales_order', 'high',   @cust2, '@account_id', '@account_id', @caddr3, @caddr4, 'delivery', NULL, @pytm1, @shtm1, NOW() - INTERVAL 6 DAY, NULL),
   -- ORD-004: fulfilled for Customer 1
-  (@so5, 'ORD-004', 'fulfilled', 'sales_order', 'normal', @cust1, '@account_id', '@account_id', @caddr1, @caddr2, 'delivery', NULL, 'net_30', 'prepaid', NOW() - INTERVAL 14 DAY, NOW() - INTERVAL 2 DAY),
+  (@so5, 'ORD-004', 'fulfilled', 'sales_order', 'normal', @cust1, '@account_id', '@account_id', @caddr1, @caddr2, 'delivery', NULL, @pytm1, @shtm1, NOW() - INTERVAL 14 DAY, NOW() - INTERVAL 2 DAY),
   -- ORD-005: fulfilled for Customer 3
-  (@so6, 'ORD-005', 'fulfilled', 'sales_order', 'normal', @cust3, '@account_id', '@account_id', @caddr5, @caddr6, 'delivery', NULL, 'net_60', 'prepaid', NOW() - INTERVAL 12 DAY, NOW() - INTERVAL 1 DAY);
+  (@so6, 'ORD-005', 'fulfilled', 'sales_order', 'normal', @cust3, '@account_id', '@account_id', @caddr5, @caddr6, 'delivery', NULL, @pytm2, @shtm1, NOW() - INTERVAL 12 DAY, NOW() - INTERVAL 1 DAY);
 
 INSERT INTO `sales_order_line` (`id`, `product_sku`, `product_description`, `line_item_number`, `product_id`, `item_id`, `sales_order_id`, `quantity_id`, `unit_price_id`, `unit_cost_id`) VALUES
   -- EST-001 lines

@@ -11,6 +11,51 @@ import (
 	"time"
 )
 
+const countAccountUsersFiltered = `-- name: CountAccountUsersFiltered :one
+SELECT COUNT(*) AS cnt
+FROM account_user au
+JOIN ` + "`" + `user` + "`" + ` u ON au.user_id = u.id
+LEFT JOIN role r ON au.role_id = r.id
+LEFT JOIN department d ON au.department_id = d.id
+WHERE au.account_id = ?
+    AND (CASE WHEN ? = true THEN true ELSE au.status_code != 'removed' END)
+    AND (CASE WHEN ? IS NOT NULL THEN r.role_type_code = ? ELSE true END)
+    AND (? IS NULL OR (
+        MATCH(u.name) AGAINST(? IN BOOLEAN MODE)
+        OR u.username LIKE CONCAT('%', ?, '%')
+        OR u.email LIKE CONCAT('%', ?, '%')
+        OR r.name LIKE CONCAT('%', ?, '%')
+        OR d.name LIKE CONCAT('%', ?, '%')
+    ))
+`
+
+type CountAccountUsersFilteredParams struct {
+	AccountID      string
+	IncludeRemoved interface{}
+	RoleType       sql.NullString
+	Query          sql.NullString
+	Query_2        sql.NullString
+	QueryLike      interface{}
+}
+
+func (q *Queries) CountAccountUsersFiltered(ctx context.Context, arg CountAccountUsersFilteredParams) (int64, error) {
+	row := q.queryRow(ctx, q.countAccountUsersFilteredStmt, countAccountUsersFiltered,
+		arg.AccountID,
+		arg.IncludeRemoved,
+		arg.RoleType,
+		arg.RoleType,
+		arg.Query,
+		arg.Query_2,
+		arg.QueryLike,
+		arg.QueryLike,
+		arg.QueryLike,
+		arg.QueryLike,
+	)
+	var cnt int64
+	err := row.Scan(&cnt)
+	return cnt, err
+}
+
 const countActiveAccountUsers = `-- name: CountActiveAccountUsers :one
 SELECT COUNT(*) AS cnt
 FROM account_user
@@ -89,13 +134,14 @@ func (q *Queries) EnsureAccountUserActive(ctx context.Context, arg EnsureAccount
 }
 
 const findAccountAffiliationsByUserID = `-- name: FindAccountAffiliationsByUserID :many
-SELECT 
+SELECT
     account.id as account_id,
     account.name as account_name,
     role.id as role_id,
     role.name as role_name,
+    role.role_type_code as role_type_code,
     account_user.last_used_at as last_used_at
-FROM account_user 
+FROM account_user
 JOIN account ON account_user.account_id = account.id
 JOIN role ON account_user.role_id = role.id
 WHERE account_user.user_id = ?
@@ -103,11 +149,12 @@ WHERE account_user.user_id = ?
 `
 
 type FindAccountAffiliationsByUserIDRow struct {
-	AccountID   string
-	AccountName string
-	RoleID      string
-	RoleName    string
-	LastUsedAt  sql.NullTime
+	AccountID    string
+	AccountName  string
+	RoleID       string
+	RoleName     string
+	RoleTypeCode string
+	LastUsedAt   sql.NullTime
 }
 
 func (q *Queries) FindAccountAffiliationsByUserID(ctx context.Context, userID string) ([]FindAccountAffiliationsByUserIDRow, error) {
@@ -124,6 +171,7 @@ func (q *Queries) FindAccountAffiliationsByUserID(ctx context.Context, userID st
 			&i.AccountName,
 			&i.RoleID,
 			&i.RoleName,
+			&i.RoleTypeCode,
 			&i.LastUsedAt,
 		); err != nil {
 			return nil, err
@@ -190,6 +238,17 @@ func (q *Queries) FindAccountUserWithRoleByAccountIDAndUserID(ctx context.Contex
 	return i, err
 }
 
+const findFirstAccountIDByUserID = `-- name: FindFirstAccountIDByUserID :one
+SELECT account_id FROM account_user WHERE user_id = ? LIMIT 1
+`
+
+func (q *Queries) FindFirstAccountIDByUserID(ctx context.Context, userID string) (string, error) {
+	row := q.queryRow(ctx, q.findFirstAccountIDByUserIDStmt, findFirstAccountIDByUserID, userID)
+	var account_id string
+	err := row.Scan(&account_id)
+	return account_id, err
+}
+
 const findLastUsedAccountID = `-- name: FindLastUsedAccountID :one
 SELECT account_user.account_id
 FROM account_user 
@@ -206,6 +265,226 @@ func (q *Queries) FindLastUsedAccountID(ctx context.Context, userID string) (str
 	return account_id, err
 }
 
+const findTenancyAccountsByUserID = `-- name: FindTenancyAccountsByUserID :many
+SELECT
+    a.id AS account_id,
+    a.name AS account_name,
+    a.account_type_code,
+    a.onboarding_status_code,
+    COALESCE(ap.plan_type_code, 'free') AS plan_code,
+    au.id AS account_user_id,
+    au.status_code AS account_user_status_code,
+    au.last_used_at,
+    au.role_id,
+    r.name AS role_name,
+    r.role_type_code,
+    sa.owner_account_id
+FROM account_user au
+JOIN account a ON au.account_id = a.id
+LEFT JOIN role r ON au.role_id = r.id
+LEFT JOIN account_billing ab ON a.account_billing_id = ab.id
+LEFT JOIN account_plan ap ON ab.account_plan_id = ap.type_id
+LEFT JOIN sandbox_account sa ON sa.account_id = a.id
+WHERE au.user_id = ?
+`
+
+type FindTenancyAccountsByUserIDRow struct {
+	AccountID             string
+	AccountName           string
+	AccountTypeCode       string
+	OnboardingStatusCode  string
+	PlanCode              string
+	AccountUserID         string
+	AccountUserStatusCode string
+	LastUsedAt            sql.NullTime
+	RoleID                sql.NullString
+	RoleName              sql.NullString
+	RoleTypeCode          sql.NullString
+	OwnerAccountID        sql.NullString
+}
+
+func (q *Queries) FindTenancyAccountsByUserID(ctx context.Context, userID string) ([]FindTenancyAccountsByUserIDRow, error) {
+	rows, err := q.query(ctx, q.findTenancyAccountsByUserIDStmt, findTenancyAccountsByUserID, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []FindTenancyAccountsByUserIDRow
+	for rows.Next() {
+		var i FindTenancyAccountsByUserIDRow
+		if err := rows.Scan(
+			&i.AccountID,
+			&i.AccountName,
+			&i.AccountTypeCode,
+			&i.OnboardingStatusCode,
+			&i.PlanCode,
+			&i.AccountUserID,
+			&i.AccountUserStatusCode,
+			&i.LastUsedAt,
+			&i.RoleID,
+			&i.RoleName,
+			&i.RoleTypeCode,
+			&i.OwnerAccountID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getAccountUserDetail = `-- name: GetAccountUserDetail :one
+SELECT
+    au.id,
+    au.user_id,
+    u.name,
+    u.email,
+    u.username,
+    u.image_url,
+    u.email_verified,
+    au.role_id,
+    r.name AS role_name,
+    r.role_type_code,
+    au.department_id,
+    d.name AS department_name,
+    au.status_code,
+    au.last_used_at,
+    au.created_at,
+    au.updated_at
+FROM account_user au
+JOIN ` + "`" + `user` + "`" + ` u ON au.user_id = u.id
+LEFT JOIN role r ON au.role_id = r.id
+LEFT JOIN department d ON au.department_id = d.id
+WHERE au.account_id = ? AND au.user_id = ?
+`
+
+type GetAccountUserDetailParams struct {
+	AccountID string
+	UserID    string
+}
+
+type GetAccountUserDetailRow struct {
+	ID             string
+	UserID         string
+	Name           sql.NullString
+	Email          sql.NullString
+	Username       sql.NullString
+	ImageUrl       sql.NullString
+	EmailVerified  sql.NullTime
+	RoleID         sql.NullString
+	RoleName       sql.NullString
+	RoleTypeCode   sql.NullString
+	DepartmentID   sql.NullString
+	DepartmentName sql.NullString
+	StatusCode     string
+	LastUsedAt     sql.NullTime
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+func (q *Queries) GetAccountUserDetail(ctx context.Context, arg GetAccountUserDetailParams) (GetAccountUserDetailRow, error) {
+	row := q.queryRow(ctx, q.getAccountUserDetailStmt, getAccountUserDetail, arg.AccountID, arg.UserID)
+	var i GetAccountUserDetailRow
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Name,
+		&i.Email,
+		&i.Username,
+		&i.ImageUrl,
+		&i.EmailVerified,
+		&i.RoleID,
+		&i.RoleName,
+		&i.RoleTypeCode,
+		&i.DepartmentID,
+		&i.DepartmentName,
+		&i.StatusCode,
+		&i.LastUsedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getAccountUserDetailByAccountAndID = `-- name: GetAccountUserDetailByAccountAndID :one
+SELECT
+    au.id,
+    au.user_id,
+    u.name,
+    u.email,
+    u.username,
+    u.image_url,
+    u.email_verified,
+    au.role_id,
+    r.name AS role_name,
+    r.role_type_code,
+    au.department_id,
+    d.name AS department_name,
+    au.status_code,
+    au.last_used_at,
+    au.created_at,
+    au.updated_at
+FROM account_user au
+JOIN ` + "`" + `user` + "`" + ` u ON au.user_id = u.id
+LEFT JOIN role r ON au.role_id = r.id
+LEFT JOIN department d ON au.department_id = d.id
+WHERE au.account_id = ? AND au.id = ?
+`
+
+type GetAccountUserDetailByAccountAndIDParams struct {
+	AccountID string
+	ID        string
+}
+
+type GetAccountUserDetailByAccountAndIDRow struct {
+	ID             string
+	UserID         string
+	Name           sql.NullString
+	Email          sql.NullString
+	Username       sql.NullString
+	ImageUrl       sql.NullString
+	EmailVerified  sql.NullTime
+	RoleID         sql.NullString
+	RoleName       sql.NullString
+	RoleTypeCode   sql.NullString
+	DepartmentID   sql.NullString
+	DepartmentName sql.NullString
+	StatusCode     string
+	LastUsedAt     sql.NullTime
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+func (q *Queries) GetAccountUserDetailByAccountAndID(ctx context.Context, arg GetAccountUserDetailByAccountAndIDParams) (GetAccountUserDetailByAccountAndIDRow, error) {
+	row := q.queryRow(ctx, q.getAccountUserDetailByAccountAndIDStmt, getAccountUserDetailByAccountAndID, arg.AccountID, arg.ID)
+	var i GetAccountUserDetailByAccountAndIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Name,
+		&i.Email,
+		&i.Username,
+		&i.ImageUrl,
+		&i.EmailVerified,
+		&i.RoleID,
+		&i.RoleName,
+		&i.RoleTypeCode,
+		&i.DepartmentID,
+		&i.DepartmentName,
+		&i.StatusCode,
+		&i.LastUsedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getAdminRoleID = `-- name: GetAdminRoleID :one
 SELECT r.id
 FROM role r
@@ -218,6 +497,302 @@ func (q *Queries) GetAdminRoleID(ctx context.Context) (string, error) {
 	var id string
 	err := row.Scan(&id)
 	return id, err
+}
+
+const insertAccountUser = `-- name: InsertAccountUser :exec
+INSERT INTO account_user (id, account_id, user_id, role_id, department_id, status_code, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, NOW(3), NOW(3))
+`
+
+type InsertAccountUserParams struct {
+	ID           string
+	AccountID    string
+	UserID       string
+	RoleID       sql.NullString
+	DepartmentID sql.NullString
+	StatusCode   string
+}
+
+func (q *Queries) InsertAccountUser(ctx context.Context, arg InsertAccountUserParams) error {
+	_, err := q.exec(ctx, q.insertAccountUserStmt, insertAccountUser,
+		arg.ID,
+		arg.AccountID,
+		arg.UserID,
+		arg.RoleID,
+		arg.DepartmentID,
+		arg.StatusCode,
+	)
+	return err
+}
+
+const listAccountUsersBackward = `-- name: ListAccountUsersBackward :many
+SELECT
+    au.id,
+    au.user_id,
+    u.name,
+    u.email,
+    u.username,
+    u.image_url,
+    u.email_verified,
+    au.role_id,
+    r.name AS role_name,
+    r.role_type_code,
+    au.department_id,
+    d.name AS department_name,
+    au.status_code,
+    au.last_used_at,
+    au.created_at,
+    au.updated_at
+FROM account_user au
+JOIN ` + "`" + `user` + "`" + ` u ON au.user_id = u.id
+LEFT JOIN role r ON au.role_id = r.id
+LEFT JOIN department d ON au.department_id = d.id
+WHERE au.account_id = ?
+    AND (CASE WHEN ? = true THEN true ELSE au.status_code != 'removed' END)
+    AND (CASE WHEN ? IS NOT NULL THEN r.role_type_code = ? ELSE true END)
+    AND (? IS NULL OR (
+        MATCH(u.name) AGAINST(? IN BOOLEAN MODE)
+        OR u.username LIKE CONCAT('%', ?, '%')
+        OR u.email LIKE CONCAT('%', ?, '%')
+        OR r.name LIKE CONCAT('%', ?, '%')
+        OR d.name LIKE CONCAT('%', ?, '%')
+    ))
+    AND (
+        au.created_at > ?
+        OR (au.created_at = ? AND au.id > ?)
+    )
+ORDER BY au.created_at ASC, au.id ASC
+LIMIT ?
+`
+
+type ListAccountUsersBackwardParams struct {
+	AccountID       string
+	IncludeRemoved  interface{}
+	RoleType        sql.NullString
+	Query           sql.NullString
+	Query_2         sql.NullString
+	QueryLike       interface{}
+	CursorCreatedAt time.Time
+	CursorID        string
+	Limit           int32
+}
+
+type ListAccountUsersBackwardRow struct {
+	ID             string
+	UserID         string
+	Name           sql.NullString
+	Email          sql.NullString
+	Username       sql.NullString
+	ImageUrl       sql.NullString
+	EmailVerified  sql.NullTime
+	RoleID         sql.NullString
+	RoleName       sql.NullString
+	RoleTypeCode   sql.NullString
+	DepartmentID   sql.NullString
+	DepartmentName sql.NullString
+	StatusCode     string
+	LastUsedAt     sql.NullTime
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+func (q *Queries) ListAccountUsersBackward(ctx context.Context, arg ListAccountUsersBackwardParams) ([]ListAccountUsersBackwardRow, error) {
+	rows, err := q.query(ctx, q.listAccountUsersBackwardStmt, listAccountUsersBackward,
+		arg.AccountID,
+		arg.IncludeRemoved,
+		arg.RoleType,
+		arg.RoleType,
+		arg.Query,
+		arg.Query_2,
+		arg.QueryLike,
+		arg.QueryLike,
+		arg.QueryLike,
+		arg.QueryLike,
+		arg.CursorCreatedAt,
+		arg.CursorCreatedAt,
+		arg.CursorID,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListAccountUsersBackwardRow
+	for rows.Next() {
+		var i ListAccountUsersBackwardRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Name,
+			&i.Email,
+			&i.Username,
+			&i.ImageUrl,
+			&i.EmailVerified,
+			&i.RoleID,
+			&i.RoleName,
+			&i.RoleTypeCode,
+			&i.DepartmentID,
+			&i.DepartmentName,
+			&i.StatusCode,
+			&i.LastUsedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAccountUsersForward = `-- name: ListAccountUsersForward :many
+SELECT
+    au.id,
+    au.user_id,
+    u.name,
+    u.email,
+    u.username,
+    u.image_url,
+    u.email_verified,
+    au.role_id,
+    r.name AS role_name,
+    r.role_type_code,
+    au.department_id,
+    d.name AS department_name,
+    au.status_code,
+    au.last_used_at,
+    au.created_at,
+    au.updated_at
+FROM account_user au
+JOIN ` + "`" + `user` + "`" + ` u ON au.user_id = u.id
+LEFT JOIN role r ON au.role_id = r.id
+LEFT JOIN department d ON au.department_id = d.id
+WHERE au.account_id = ?
+    AND (CASE WHEN ? = true THEN true ELSE au.status_code != 'removed' END)
+    AND (CASE WHEN ? IS NOT NULL THEN r.role_type_code = ? ELSE true END)
+    AND (? IS NULL OR (
+        MATCH(u.name) AGAINST(? IN BOOLEAN MODE)
+        OR u.username LIKE CONCAT('%', ?, '%')
+        OR u.email LIKE CONCAT('%', ?, '%')
+        OR r.name LIKE CONCAT('%', ?, '%')
+        OR d.name LIKE CONCAT('%', ?, '%')
+    ))
+    AND (
+        ? IS NULL
+        OR au.created_at < ?
+        OR (au.created_at = ? AND au.id < ?)
+    )
+ORDER BY au.created_at DESC, au.id DESC
+LIMIT ?
+`
+
+type ListAccountUsersForwardParams struct {
+	AccountID       string
+	IncludeRemoved  interface{}
+	RoleType        sql.NullString
+	Query           sql.NullString
+	Query_2         sql.NullString
+	QueryLike       interface{}
+	CursorCreatedAt sql.NullTime
+	CursorID        sql.NullString
+	Limit           int32
+}
+
+type ListAccountUsersForwardRow struct {
+	ID             string
+	UserID         string
+	Name           sql.NullString
+	Email          sql.NullString
+	Username       sql.NullString
+	ImageUrl       sql.NullString
+	EmailVerified  sql.NullTime
+	RoleID         sql.NullString
+	RoleName       sql.NullString
+	RoleTypeCode   sql.NullString
+	DepartmentID   sql.NullString
+	DepartmentName sql.NullString
+	StatusCode     string
+	LastUsedAt     sql.NullTime
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+func (q *Queries) ListAccountUsersForward(ctx context.Context, arg ListAccountUsersForwardParams) ([]ListAccountUsersForwardRow, error) {
+	rows, err := q.query(ctx, q.listAccountUsersForwardStmt, listAccountUsersForward,
+		arg.AccountID,
+		arg.IncludeRemoved,
+		arg.RoleType,
+		arg.RoleType,
+		arg.Query,
+		arg.Query_2,
+		arg.QueryLike,
+		arg.QueryLike,
+		arg.QueryLike,
+		arg.QueryLike,
+		arg.CursorCreatedAt,
+		arg.CursorCreatedAt,
+		arg.CursorCreatedAt,
+		arg.CursorID,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListAccountUsersForwardRow
+	for rows.Next() {
+		var i ListAccountUsersForwardRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Name,
+			&i.Email,
+			&i.Username,
+			&i.ImageUrl,
+			&i.EmailVerified,
+			&i.RoleID,
+			&i.RoleName,
+			&i.RoleTypeCode,
+			&i.DepartmentID,
+			&i.DepartmentName,
+			&i.StatusCode,
+			&i.LastUsedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const markUsedByAccountAndUser = `-- name: MarkUsedByAccountAndUser :exec
+UPDATE account_user
+SET last_used_at = NOW(3), updated_at = NOW(3)
+WHERE account_id = ? AND user_id = ?
+`
+
+type MarkUsedByAccountAndUserParams struct {
+	AccountID string
+	UserID    string
+}
+
+func (q *Queries) MarkUsedByAccountAndUser(ctx context.Context, arg MarkUsedByAccountAndUserParams) error {
+	_, err := q.exec(ctx, q.markUsedByAccountAndUserStmt, markUsedByAccountAndUser, arg.AccountID, arg.UserID)
+	return err
 }
 
 const reactivateAccountUsers = `-- name: ReactivateAccountUsers :execresult
@@ -237,6 +812,27 @@ func (q *Queries) ReactivateAccountUsers(ctx context.Context, arg ReactivateAcco
 	return q.exec(ctx, q.reactivateAccountUsersStmt, reactivateAccountUsers, arg.AccountID, arg.Limit)
 }
 
+const revokeRefreshTokensByUserID = `-- name: RevokeRefreshTokensByUserID :exec
+UPDATE refresh_token
+SET revoked_at = NOW(3)
+WHERE user_id = ? AND revoked_at IS NULL
+`
+
+func (q *Queries) RevokeRefreshTokensByUserID(ctx context.Context, userID string) error {
+	_, err := q.exec(ctx, q.revokeRefreshTokensByUserIDStmt, revokeRefreshTokensByUserID, userID)
+	return err
+}
+
+const softDeleteAccountUser = `-- name: SoftDeleteAccountUser :execresult
+UPDATE account_user
+SET status_code = 'removed', updated_at = NOW(3)
+WHERE id = ?
+`
+
+func (q *Queries) SoftDeleteAccountUser(ctx context.Context, id string) (sql.Result, error) {
+	return q.exec(ctx, q.softDeleteAccountUserStmt, softDeleteAccountUser, id)
+}
+
 const updateAccountUserLastUsedAt = `-- name: UpdateAccountUserLastUsedAt :exec
 UPDATE account_user SET last_used_at = ? WHERE id = ?
 `
@@ -248,5 +844,40 @@ type UpdateAccountUserLastUsedAtParams struct {
 
 func (q *Queries) UpdateAccountUserLastUsedAt(ctx context.Context, arg UpdateAccountUserLastUsedAtParams) error {
 	_, err := q.exec(ctx, q.updateAccountUserLastUsedAtStmt, updateAccountUserLastUsedAt, arg.LastUsedAt, arg.ID)
+	return err
+}
+
+const updateAccountUserRoleAndDepartment = `-- name: UpdateAccountUserRoleAndDepartment :exec
+UPDATE account_user
+SET role_id = ?,
+    department_id = ?,
+    updated_at = NOW(3)
+WHERE id = ?
+`
+
+type UpdateAccountUserRoleAndDepartmentParams struct {
+	RoleID       sql.NullString
+	DepartmentID sql.NullString
+	ID           string
+}
+
+func (q *Queries) UpdateAccountUserRoleAndDepartment(ctx context.Context, arg UpdateAccountUserRoleAndDepartmentParams) error {
+	_, err := q.exec(ctx, q.updateAccountUserRoleAndDepartmentStmt, updateAccountUserRoleAndDepartment, arg.RoleID, arg.DepartmentID, arg.ID)
+	return err
+}
+
+const updateAccountUserStatus = `-- name: UpdateAccountUserStatus :exec
+UPDATE account_user
+SET status_code = ?, updated_at = NOW(3)
+WHERE id = ?
+`
+
+type UpdateAccountUserStatusParams struct {
+	StatusCode string
+	ID         string
+}
+
+func (q *Queries) UpdateAccountUserStatus(ctx context.Context, arg UpdateAccountUserStatusParams) error {
+	_, err := q.exec(ctx, q.updateAccountUserStatusStmt, updateAccountUserStatus, arg.StatusCode, arg.ID)
 	return err
 }

@@ -1,0 +1,254 @@
+-- name: InsertPart :exec
+INSERT INTO part (id, item_id, created_at, updated_at)
+VALUES (?, ?, NOW(3), NOW(3));
+
+-- name: InsertItemForPart :exec
+INSERT INTO item (
+    id, sku, description, notes, unit_value_id, burn_rate_id,
+    account_id, item_type_code, unit_cost_id, item_category_id, is_dirty,
+    created_at, updated_at
+) VALUES (?, ?, ?, NULL, ?, ?, ?, 'part', ?, ?, false, NOW(3), NOW(3));
+
+-- name: InsertRateForPart :exec
+INSERT INTO rate (
+    id, value, numerator_unit_id, denominator_unit_id,
+    created_at, updated_at
+) VALUES (?, ?, ?, ?, NOW(3), NOW(3));
+
+-- name: GetPart :one
+SELECT
+    p.id AS part_id,
+    p.created_at AS part_created_at,
+    p.updated_at AS part_updated_at,
+    i.id,
+    i.sku,
+    i.description,
+    i.notes,
+    i.item_type_code,
+    i.item_category_id,
+    i.unit_value_id,
+    i.unit_cost_id,
+    i.burn_rate_id,
+    i.account_id,
+    i.is_dirty,
+    i.created_at,
+    i.updated_at,
+    ic.name AS category_name,
+    ic.item_category_type_code,
+    ic.unit_group_id AS category_unit_group_id,
+    rv.id AS unit_value_rate_id,
+    rv.value AS unit_value_rate_value,
+    rv.numerator_unit_id AS unit_value_numerator_unit_id,
+    rv.denominator_unit_id AS unit_value_denominator_unit_id,
+    rv.created_at AS unit_value_created_at,
+    rv.updated_at AS unit_value_updated_at,
+    rc.id AS unit_cost_rate_id,
+    rc.value AS unit_cost_rate_value,
+    rc.numerator_unit_id AS unit_cost_numerator_unit_id,
+    rc.denominator_unit_id AS unit_cost_denominator_unit_id,
+    rc.created_at AS unit_cost_created_at,
+    rc.updated_at AS unit_cost_updated_at,
+    rb.id AS burn_rate_id_joined,
+    rb.value AS burn_rate_value,
+    rb.numerator_unit_id AS burn_rate_numerator_unit_id,
+    rb.denominator_unit_id AS burn_rate_denominator_unit_id,
+    rb.created_at AS burn_rate_created_at,
+    rb.updated_at AS burn_rate_updated_at
+FROM part p
+JOIN item i ON i.id = p.item_id
+JOIN item_category ic ON ic.id = i.item_category_id
+JOIN rate rv ON rv.id = i.unit_value_id
+JOIN rate rc ON rc.id = i.unit_cost_id
+JOIN rate rb ON rb.id = i.burn_rate_id
+WHERE i.id = sqlc.arg('item_id')
+AND i.account_id = sqlc.arg('account_id')
+AND i.deleted_at IS NULL;
+
+-- name: GetPartAttributes :many
+SELECT
+    a.id,
+    a.text,
+    a.color_code,
+    a.`order`,
+    a.property_id
+FROM _item_attributes ia
+JOIN attribute a ON a.id = ia.A
+WHERE ia.B = sqlc.arg('item_id');
+
+-- name: ListPartsForward :many
+SELECT
+    p.id AS part_id,
+    p.created_at AS part_created_at,
+    p.updated_at AS part_updated_at,
+    i.id,
+    i.sku,
+    i.description,
+    i.notes,
+    i.item_type_code,
+    i.item_category_id,
+    i.unit_value_id,
+    i.unit_cost_id,
+    i.burn_rate_id,
+    i.account_id,
+    i.is_dirty,
+    i.created_at,
+    i.updated_at,
+    ic.name AS category_name,
+    ic.item_category_type_code,
+    ic.unit_group_id AS category_unit_group_id,
+    rv.id AS unit_value_rate_id,
+    rv.value AS unit_value_rate_value,
+    rv.numerator_unit_id AS unit_value_numerator_unit_id,
+    rv.denominator_unit_id AS unit_value_denominator_unit_id,
+    rv.created_at AS unit_value_created_at,
+    rv.updated_at AS unit_value_updated_at,
+    rc.id AS unit_cost_rate_id,
+    rc.value AS unit_cost_rate_value,
+    rc.numerator_unit_id AS unit_cost_numerator_unit_id,
+    rc.denominator_unit_id AS unit_cost_denominator_unit_id,
+    rc.created_at AS unit_cost_created_at,
+    rc.updated_at AS unit_cost_updated_at,
+    rb.id AS burn_rate_id_joined,
+    rb.value AS burn_rate_value,
+    rb.numerator_unit_id AS burn_rate_numerator_unit_id,
+    rb.denominator_unit_id AS burn_rate_denominator_unit_id,
+    rb.created_at AS burn_rate_created_at,
+    rb.updated_at AS burn_rate_updated_at
+FROM part p
+JOIN item i ON i.id = p.item_id
+JOIN item_category ic ON ic.id = i.item_category_id
+JOIN rate rv ON rv.id = i.unit_value_id
+JOIN rate rc ON rc.id = i.unit_cost_id
+JOIN rate rb ON rb.id = i.burn_rate_id
+WHERE i.account_id = sqlc.arg('account_id')
+AND i.deleted_at IS NULL
+AND (
+    sqlc.arg('include_category_filter') = false
+    OR i.item_category_id IN (sqlc.slice('category_ids'))
+)
+AND (
+    sqlc.arg('include_attribute_filter') = false
+    OR EXISTS (
+        SELECT 1 FROM _item_attributes ia
+        WHERE ia.B = i.id
+        AND ia.A IN (sqlc.slice('attribute_ids'))
+    )
+)
+AND (
+    sqlc.narg('start_date') IS NULL
+    OR i.created_at >= sqlc.narg('start_date')
+)
+AND (
+    sqlc.narg('end_date') IS NULL
+    OR i.created_at <= sqlc.narg('end_date')
+)
+AND (
+    sqlc.narg('search_query') IS NULL
+    OR i.sku LIKE sqlc.narg('search_query')
+    OR i.description LIKE sqlc.narg('search_query')
+)
+AND (
+    sqlc.narg('cursor_created_at') IS NULL
+    OR i.created_at < sqlc.narg('cursor_created_at')
+    OR (i.created_at = sqlc.narg('cursor_created_at') AND i.id < sqlc.narg('cursor_id'))
+)
+ORDER BY i.created_at DESC, i.id DESC
+LIMIT ?;
+
+-- name: ListPartsBackward :many
+SELECT
+    p.id AS part_id,
+    p.created_at AS part_created_at,
+    p.updated_at AS part_updated_at,
+    i.id,
+    i.sku,
+    i.description,
+    i.notes,
+    i.item_type_code,
+    i.item_category_id,
+    i.unit_value_id,
+    i.unit_cost_id,
+    i.burn_rate_id,
+    i.account_id,
+    i.is_dirty,
+    i.created_at,
+    i.updated_at,
+    ic.name AS category_name,
+    ic.item_category_type_code,
+    ic.unit_group_id AS category_unit_group_id,
+    rv.id AS unit_value_rate_id,
+    rv.value AS unit_value_rate_value,
+    rv.numerator_unit_id AS unit_value_numerator_unit_id,
+    rv.denominator_unit_id AS unit_value_denominator_unit_id,
+    rv.created_at AS unit_value_created_at,
+    rv.updated_at AS unit_value_updated_at,
+    rc.id AS unit_cost_rate_id,
+    rc.value AS unit_cost_rate_value,
+    rc.numerator_unit_id AS unit_cost_numerator_unit_id,
+    rc.denominator_unit_id AS unit_cost_denominator_unit_id,
+    rc.created_at AS unit_cost_created_at,
+    rc.updated_at AS unit_cost_updated_at,
+    rb.id AS burn_rate_id_joined,
+    rb.value AS burn_rate_value,
+    rb.numerator_unit_id AS burn_rate_numerator_unit_id,
+    rb.denominator_unit_id AS burn_rate_denominator_unit_id,
+    rb.created_at AS burn_rate_created_at,
+    rb.updated_at AS burn_rate_updated_at
+FROM part p
+JOIN item i ON i.id = p.item_id
+JOIN item_category ic ON ic.id = i.item_category_id
+JOIN rate rv ON rv.id = i.unit_value_id
+JOIN rate rc ON rc.id = i.unit_cost_id
+JOIN rate rb ON rb.id = i.burn_rate_id
+WHERE i.account_id = sqlc.arg('account_id')
+AND i.deleted_at IS NULL
+AND (
+    sqlc.arg('include_category_filter') = false
+    OR i.item_category_id IN (sqlc.slice('category_ids'))
+)
+AND (
+    sqlc.arg('include_attribute_filter') = false
+    OR EXISTS (
+        SELECT 1 FROM _item_attributes ia
+        WHERE ia.B = i.id
+        AND ia.A IN (sqlc.slice('attribute_ids'))
+    )
+)
+AND (
+    sqlc.narg('start_date') IS NULL
+    OR i.created_at >= sqlc.narg('start_date')
+)
+AND (
+    sqlc.narg('end_date') IS NULL
+    OR i.created_at <= sqlc.narg('end_date')
+)
+AND (
+    sqlc.narg('search_query') IS NULL
+    OR i.sku LIKE sqlc.narg('search_query')
+    OR i.description LIKE sqlc.narg('search_query')
+)
+AND (
+    i.created_at > sqlc.arg('cursor_created_at')
+    OR (i.created_at = sqlc.arg('cursor_created_at') AND i.id > sqlc.arg('cursor_id'))
+)
+ORDER BY i.created_at ASC, i.id ASC
+LIMIT ?;
+
+-- name: SoftDeletePart :exec
+UPDATE item SET deleted_at = NOW(3), updated_at = NOW(3)
+WHERE id = sqlc.arg('item_id')
+AND account_id = sqlc.arg('account_id')
+AND deleted_at IS NULL;
+
+-- name: TouchPartUpdatedAt :exec
+UPDATE part SET updated_at = NOW(3)
+WHERE item_id = sqlc.arg('item_id');
+
+-- name: CheckPartSKUExists :one
+SELECT EXISTS(
+  SELECT 1 FROM item
+  WHERE sku = sqlc.arg('sku')
+  AND account_id = sqlc.arg('account_id')
+  AND id != sqlc.arg('exclude_id')
+  AND deleted_at IS NULL
+) AS sku_exists;

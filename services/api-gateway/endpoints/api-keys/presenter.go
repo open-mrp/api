@@ -7,7 +7,7 @@ import (
 	pb "github.com/augno/api/shared/proto/auth"
 )
 
-func APIKeyPresenter(key *pb.APIKeyInfo) apiresource.APIKey {
+func APIKeyPresenter(key *pb.APIKeyInfo, permissions map[string]bool) apiresource.APIKey {
 	if key == nil {
 		return apiresource.APIKey{}
 	}
@@ -24,75 +24,61 @@ func APIKeyPresenter(key *pb.APIKeyInfo) apiresource.APIKey {
 		RevokedAt:     grpc.TimestampToTimePtr(key.RevokedAt),
 	}
 
-	if key.RoleId != nil && key.RoleName != nil {
-		role := &apiresource.LightRole{
-			ID:     *key.RoleId,
-			Object: constants.ObjectTypeRole,
-			Name:   *key.RoleName,
+	if key.RoleId != nil && key.RoleName != nil && key.RoleTypeCode != nil {
+		res.Role = &apiresource.Role{
+			ID:       *key.RoleId,
+			Object:   constants.ObjectTypeRole,
+			Name:     *key.RoleName,
+			TypeCode: constants.RoleTypeCode(*key.RoleTypeCode),
+			Owner:    apiresource.SystemOwner(),
 		}
-		if key.RoleTypeCode != nil {
-			role.RoleTypeCode = constants.RoleTypeCode(*key.RoleTypeCode)
-		}
-		res.Role = role
 	}
 
 	return res
 }
 
-func APIKeyCreatedPresenter(resp *pb.CreateAPIKeyResponse) apiresource.CreatedAPIKey {
+func APIKeyCreatedPresenter(resp *pb.CreateAPIKeyResponse, permissions map[string]bool) apiresource.CreatedAPIKey {
 	if resp == nil {
 		return apiresource.CreatedAPIKey{}
 	}
 
 	return apiresource.CreatedAPIKey{
 		APIKeySecret: resp.ApiKeySecret,
-		APIKeyInfo:   APIKeyPresenter(resp.ApiKey),
+		APIKeyInfo:   APIKeyPresenter(resp.ApiKey, permissions),
 	}
 }
 
-func APIKeyRotatedPresenter(resp *pb.RotateAPIKeyResponse) apiresource.CreatedAPIKey {
+func APIKeyRotatedPresenter(resp *pb.RotateAPIKeyResponse, permissions map[string]bool) apiresource.CreatedAPIKey {
 	if resp == nil {
 		return apiresource.CreatedAPIKey{}
 	}
 
 	return apiresource.CreatedAPIKey{
 		APIKeySecret: resp.ApiKeySecret,
-		APIKeyInfo:   APIKeyPresenter(resp.ApiKey),
+		APIKeyInfo:   APIKeyPresenter(resp.ApiKey, permissions),
 	}
 }
 
-func APIKeyDocPresenter(resp *pb.GetOrCreateDocAPIKeyResponse) apiresource.CreatedAPIKey {
+func APIKeyDocPresenter(resp *pb.GetOrCreateDocAPIKeyResponse, permissions map[string]bool) apiresource.CreatedAPIKey {
 	if resp == nil {
 		return apiresource.CreatedAPIKey{}
 	}
 
 	return apiresource.CreatedAPIKey{
 		APIKeySecret: resp.ApiKeySecret,
-		APIKeyInfo:   APIKeyPresenter(resp.ApiKey),
+		APIKeyInfo:   APIKeyPresenter(resp.ApiKey, permissions),
 	}
 }
 
-func APIKeyListPresenter(resp *pb.ListAPIKeysResponse) *apiresource.List[apiresource.APIKey] {
+func APIKeyListPresenter(resp *pb.ListAPIKeysResponse, permResolver func(roleID *string) map[string]bool) *apiresource.List[apiresource.APIKey] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.APIKey](nil, apiresource.PageInfo{})
 	}
 
 	keys := make([]apiresource.APIKey, len(resp.ApiKeys))
 	for i, pbKey := range resp.ApiKeys {
-		keys[i] = APIKeyPresenter(pbKey)
+		keys[i] = APIKeyPresenter(pbKey, permResolver(pbKey.RoleId))
 	}
 
-	return apiresource.NewList(keys, mapProtoPageInfo(resp.PageInfo))
-}
-
-func mapProtoPageInfo(pi *pb.PageInfo) apiresource.PageInfo {
-	if pi == nil {
-		return apiresource.PageInfo{}
-	}
-	return apiresource.PageInfo{
-		NextCursor:  pi.NextCursor,
-		PrevCursor:  pi.PrevCursor,
-		HasNextPage: pi.HasNextPage,
-		HasPrevPage: pi.HasPrevPage,
-	}
+	return apiresource.NewList(keys, grpc.MapProtoPageInfo(resp.PageInfo))
 }

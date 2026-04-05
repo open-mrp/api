@@ -12,6 +12,7 @@ import (
 )
 
 func TestWrapGatewayHandler_Filter(t *testing.T) {
+	// Not parallel: mutates global otel tracer provider; parallel tests would race.
 	tests := []struct {
 		name          string
 		method        string

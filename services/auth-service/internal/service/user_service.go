@@ -100,6 +100,13 @@ func (s *userSvcImpl) withTx(ctx context.Context, fn func(context.Context, *user
 	})
 }
 
+// Login authenticates a user by identifier and password and returns auth tokens.
+//
+// 1. Upsert an idempotency key; return the cached response if already finished.
+// 2. Validate the identifier/password combination via the password mediator.
+// 3. Mint an access token for the authenticated user.
+// 4. Create a refresh token inside a transaction.
+// 5. Cache the success response and return the login result.
 func (s *userSvcImpl) Login(ctx context.Context, identifier, password string) (*domain.LoginResult, *apierror.APIError) {
 	ctx, span := userSvcTracer.Start(ctx, "service.user.login")
 	defer span.End()
@@ -161,6 +168,16 @@ func (s *userSvcImpl) Login(ctx context.Context, identifier, password string) (*
 	}
 }
 
+// Register creates a new user account and returns auth tokens.
+//
+// 1. Upsert an idempotency key; return the cached response if already finished.
+// 2. Hash the provided password.
+// 3. Register the user via the user mediator inside a transaction.
+// 4. Create a refresh token and mint an access token.
+// 5. Cache the success response and return the login result.
+//
+// Side effects:
+//   - Sends a welcome email (via the user mediator).
 func (s *userSvcImpl) Register(ctx context.Context, input domain.RegisterInput) (*domain.LoginResult, *apierror.APIError) {
 	ctx, span := userSvcTracer.Start(ctx, "service.user.register")
 	defer span.End()

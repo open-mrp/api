@@ -1,0 +1,39 @@
+package priorityep
+
+import (
+	"context"
+	"net/http"
+
+	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
+	apierror "github.com/augno/api/shared/errors"
+)
+
+// ListPrioritiesRequest is the request to list priorities with optional search.
+type ListPrioritiesRequest struct {
+	apiresource.PaginationRequest
+}
+
+type ListPrioritiesEndpoint struct{}
+
+func (e *ListPrioritiesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPrioritiesRequest, *apiresource.List[apiresource.Priority]] {
+	return &apiendpoint.APIEndpoint[*ListPrioritiesRequest, *apiresource.List[apiresource.Priority]]{
+		Title:             "List Priorities",
+		Description:       "Returns a paginated list of priorities.",
+		Method:            http.MethodGet,
+		Route:             "/v1/sales/priorities",
+		Request:           &ListPrioritiesRequest{},
+		Response:          &apiresource.List[apiresource.Priority]{},
+		SuccessStatusCode: http.StatusOK,
+		Public:            true,
+		Preview:           true,
+		ServiceHandler: func(svc any) func(ctx context.Context, req *ListPrioritiesRequest) (*apiresource.List[apiresource.Priority], *apierror.APIError) {
+			return svc.(PrioritySvc).ListPriorities
+		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypePriority,
+			Fields:     []string{"owner"},
+		}),
+	}
+}

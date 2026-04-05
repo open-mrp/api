@@ -33,6 +33,7 @@ func (t *mockTransformer) TransformRequest(objectType constants.ObjectType, data
 }
 
 func TestTransformerRegistry_NoTransformers(t *testing.T) {
+	t.Parallel()
 	registry := NewTransformerRegistry()
 
 	data := map[string]any{"key": "value"}
@@ -44,6 +45,7 @@ func TestTransformerRegistry_NoTransformers(t *testing.T) {
 }
 
 func TestTransformerRegistry_SameVersion(t *testing.T) {
+	t.Parallel()
 	registry := NewTransformerRegistry()
 
 	// Register a transformer that would modify data
@@ -67,6 +69,7 @@ func TestTransformerRegistry_SameVersion(t *testing.T) {
 }
 
 func TestTransformerRegistry_NewerVersionRequested(t *testing.T) {
+	t.Parallel()
 	older := APIVersion{
 		Version:   "1.0.forge",
 		Minor:     1,
@@ -106,6 +109,7 @@ func TestTransformerRegistry_NewerVersionRequested(t *testing.T) {
 }
 
 func TestTransformerRegistry_TransformApplied(t *testing.T) {
+	t.Parallel()
 	older := APIVersion{
 		Version:   "1.0.forge",
 		Minor:     1,
@@ -152,6 +156,7 @@ func TestTransformerRegistry_TransformApplied(t *testing.T) {
 }
 
 func TestTransformerRegistry_ObjectTypeMismatch(t *testing.T) {
+	t.Parallel()
 	older := APIVersion{
 		Version:   "1.0.forge",
 		Minor:     1,
@@ -191,7 +196,10 @@ func TestTransformerRegistry_ObjectTypeMismatch(t *testing.T) {
 }
 
 func TestDefaultRegistry(t *testing.T) {
+	t.Parallel(
 	// Test that default registry exists and can be used
+	)
+
 	data := map[string]any{"key": "value"}
 	result := Transform(Latest, Latest, constants.ObjectTypeUser, data)
 
@@ -201,6 +209,7 @@ func TestDefaultRegistry(t *testing.T) {
 }
 
 func TestTransformerRegistry_MultipleObjectTypes(t *testing.T) {
+	t.Parallel()
 	older := APIVersion{
 		Version:   "1.0.forge",
 		Minor:     1,
@@ -242,6 +251,7 @@ func TestTransformerRegistry_MultipleObjectTypes(t *testing.T) {
 }
 
 func TestTransformerRegistry_TransformRequestApplied(t *testing.T) {
+	t.Parallel()
 	older := APIVersion{
 		Version:   "1.0.forge",
 		Minor:     1,
@@ -289,6 +299,7 @@ func TestTransformerRegistry_TransformRequestApplied(t *testing.T) {
 }
 
 func TestTransformerRegistry_TransformRequestSameVersion(t *testing.T) {
+	t.Parallel()
 	registry := NewTransformerRegistry()
 
 	registry.Register(&mockTransformer{
@@ -311,6 +322,7 @@ func TestTransformerRegistry_TransformRequestSameVersion(t *testing.T) {
 }
 
 func TestTransformerRegistry_TransformRequestOlderVersionRequested(t *testing.T) {
+	t.Parallel()
 	older := APIVersion{
 		Version:   "1.0.forge",
 		Minor:     1,
@@ -350,6 +362,7 @@ func TestTransformerRegistry_TransformRequestOlderVersionRequested(t *testing.T)
 }
 
 func TestTransformerRegistry_BidirectionalTransformation(t *testing.T) {
+	t.Parallel()
 	older := APIVersion{
 		Version:   "1.0.forge",
 		Minor:     1,
@@ -415,7 +428,10 @@ func TestTransformerRegistry_BidirectionalTransformation(t *testing.T) {
 }
 
 func TestDefaultRegistry_TransformRequest(t *testing.T) {
+	t.Parallel(
 	// Test that default registry's TransformRequest exists and can be used
+	)
+
 	data := map[string]any{"key": "value"}
 	result := TransformRequest(Latest, Latest, constants.ObjectTypeUser, data)
 

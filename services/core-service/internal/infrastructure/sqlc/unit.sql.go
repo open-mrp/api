@@ -84,6 +84,75 @@ func (q *Queries) DeleteUnitGroupUnitsByUnitID(ctx context.Context, unitID strin
 	return err
 }
 
+const findUnitsByAbbreviations = `-- name: FindUnitsByAbbreviations :many
+SELECT
+    unit.id,
+    unit.name,
+    unit.abbreviation,
+    unit.unit_dimension_code,
+    unit.ratio_numerator,
+    unit.ratio_denominator,
+    unit.offset_numerator,
+    unit.offset_denominator,
+    unit.is_base_unit,
+    unit.account_id,
+    unit.created_at,
+    unit.updated_at
+FROM unit
+WHERE (unit.account_id = ? OR unit.account_id IS NULL)
+`
+
+type FindUnitsByAbbreviationsRow struct {
+	ID                string
+	Name              string
+	Abbreviation      string
+	UnitDimensionCode string
+	RatioNumerator    string
+	RatioDenominator  string
+	OffsetNumerator   string
+	OffsetDenominator string
+	IsBaseUnit        bool
+	AccountID         sql.NullString
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+}
+
+func (q *Queries) FindUnitsByAbbreviations(ctx context.Context, accountID sql.NullString) ([]FindUnitsByAbbreviationsRow, error) {
+	rows, err := q.query(ctx, q.findUnitsByAbbreviationsStmt, findUnitsByAbbreviations, accountID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []FindUnitsByAbbreviationsRow
+	for rows.Next() {
+		var i FindUnitsByAbbreviationsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Abbreviation,
+			&i.UnitDimensionCode,
+			&i.RatioNumerator,
+			&i.RatioDenominator,
+			&i.OffsetNumerator,
+			&i.OffsetDenominator,
+			&i.IsBaseUnit,
+			&i.AccountID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getUnit = `-- name: GetUnit :one
 SELECT
     unit.id,
@@ -230,9 +299,10 @@ AND (
     )
 )
 AND (
-    ? IS NULL
+    (? IS NULL AND ? IS NULL)
+    OR MATCH(unit.name, unit.abbreviation) AGAINST(? IN BOOLEAN MODE)
     OR unit.name LIKE ?
-    OR unit.abbreviation = ?
+    OR unit.abbreviation LIKE ?
 )
 AND (
     unit.created_at > ?
@@ -248,7 +318,8 @@ type ListUnitsBackwardParams struct {
 	IncludeUnitGroupFilter interface{}
 	UnitGroupIds           []string
 	SearchQuery            sql.NullString
-	SearchExact            sql.NullString
+	LikeQuery              sql.NullString
+	SearchQuery_2          sql.NullString
 	CursorCreatedAt        time.Time
 	CursorID               string
 	Limit                  int32
@@ -286,8 +357,10 @@ func (q *Queries) ListUnitsBackward(ctx context.Context, arg ListUnitsBackwardPa
 	}
 	queryParams = append(queryParams, arg.AccountID)
 	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchExact)
+	queryParams = append(queryParams, arg.LikeQuery)
+	queryParams = append(queryParams, arg.SearchQuery_2)
+	queryParams = append(queryParams, arg.LikeQuery)
+	queryParams = append(queryParams, arg.LikeQuery)
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorID)
@@ -355,9 +428,10 @@ AND (
     )
 )
 AND (
-    ? IS NULL
+    (? IS NULL AND ? IS NULL)
+    OR MATCH(unit.name, unit.abbreviation) AGAINST(? IN BOOLEAN MODE)
     OR unit.name LIKE ?
-    OR unit.abbreviation = ?
+    OR unit.abbreviation LIKE ?
 )
 AND (
     ? IS NULL
@@ -374,7 +448,8 @@ type ListUnitsForwardParams struct {
 	IncludeUnitGroupFilter interface{}
 	UnitGroupIds           []string
 	SearchQuery            sql.NullString
-	SearchExact            sql.NullString
+	LikeQuery              sql.NullString
+	SearchQuery_2          sql.NullString
 	CursorCreatedAt        sql.NullTime
 	CursorID               sql.NullString
 	Limit                  int32
@@ -412,8 +487,10 @@ func (q *Queries) ListUnitsForward(ctx context.Context, arg ListUnitsForwardPara
 	}
 	queryParams = append(queryParams, arg.AccountID)
 	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchQuery)
-	queryParams = append(queryParams, arg.SearchExact)
+	queryParams = append(queryParams, arg.LikeQuery)
+	queryParams = append(queryParams, arg.SearchQuery_2)
+	queryParams = append(queryParams, arg.LikeQuery)
+	queryParams = append(queryParams, arg.LikeQuery)
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorCreatedAt)

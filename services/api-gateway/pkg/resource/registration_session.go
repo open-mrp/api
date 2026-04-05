@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleRegistrationSessionID = "rs_01gf7a8200eaj8fke1xvw4h50x"
+const SampleRegistrationSessionID = "rgfw_01gf7a8200eaj8fke1xvw4h50x"
 const SampleCheckoutSessionID = "cs_test_a1VnbGQ4ZTFRdGRqUWpYR3h6OG"
 const SampleAddressID = "ad_01gf7a8200eaj8fke1xvw4h50x"
 const SampleAddressLine1 = "123 Main Street"
@@ -17,47 +17,6 @@ const SampleAddressCity = "San Francisco"
 const SampleAddressState = "CA"
 const SampleAddressPostalCode = "94105"
 const SampleAddressCountry = "US"
-
-var SampleRegistrationSessionAddress = &RegistrationSessionAddress{
-	ID:         new(SampleAddressID),
-	Object:     constants.ObjectTypeAddress,
-	Line1:      new(SampleAddressLine1),
-	Line2:      new(SampleAddressLine2),
-	City:       new(SampleAddressCity),
-	State:      new(SampleAddressState),
-	PostalCode: new(SampleAddressPostalCode),
-	Country:    new(SampleAddressCountry),
-}
-
-var SampleRegistrationSessionUser = &RegistrationSessionUser{
-	ID:            new(SampleUserID),
-	Object:        constants.ObjectTypeUser,
-	Email:         SampleUserEmail,
-	EmailVerified: timeutil.TimestampToTimePtr(sampleExpiresAtTimestamp),
-	Name:          new(SampleUserName),
-}
-
-var SampleRegistrationSessionAccount = &RegistrationSessionAccount{
-	ID:             new(SampleAccountID),
-	Object:         constants.ObjectTypeAccount,
-	Name:           SampleAccountName,
-	BillingAddress: *SampleRegistrationSessionAddress,
-}
-
-var SampleRegistrationSession = &RegistrationSession{
-	ID:                      SampleRegistrationSessionID,
-	Object:                  constants.ObjectTypeRegistrationSession,
-	PlanCode:                string(constants.PlanCodeStarter),
-	Step:                    constants.RegistrationStepVerification,
-	StripeCustomerID:        new(SampleStripeCustomerID),
-	StripeCheckoutSessionID: new(SampleCheckoutSessionID),
-	PaymentCompleted:        false,
-	Account:                 SampleRegistrationSessionAccount,
-	User:                    *SampleRegistrationSessionUser,
-	CompletedAt:             nil,
-	CreatedAt:               timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt:               timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
-}
 
 // RegistrationSessionUser represents user data within a registration session.
 type RegistrationSessionUser struct {
@@ -68,13 +27,9 @@ type RegistrationSessionUser struct {
 	// Email address provided during registration.
 	Email string `json:"email" validate:"required"`
 	// Timestamp when email was verified, null if pending.
-	EmailVerified *time.Time `json:"email_verified"`
+	EmailVerifiedAt *time.Time `json:"email_verified_at"`
 	// Display name provided during registration.
 	Name *string `json:"name"`
-}
-
-func (*RegistrationSessionUser) SchemaExample() any {
-	return apiexample.ValidateAndMarshalToMap(SampleRegistrationSessionUser)
 }
 
 // RegistrationSessionAccount represents account data within a registration session.
@@ -87,10 +42,6 @@ type RegistrationSessionAccount struct {
 	Name string `json:"name" validate:"required"`
 	// The account's billing address.
 	BillingAddress RegistrationSessionAddress `json:"billing_address" validate:"required"`
-}
-
-func (*RegistrationSessionAccount) SchemaExample() any {
-	return apiexample.ValidateAndMarshalToMap(SampleRegistrationSessionAccount)
 }
 
 // RegistrationSessionAddress represents an address within a registration session.
@@ -111,10 +62,6 @@ type RegistrationSessionAddress struct {
 	PostalCode *string `json:"postal_code"`
 	// Two-letter country code.
 	Country *string `json:"country"`
-}
-
-func (*RegistrationSessionAddress) SchemaExample() any {
-	return apiexample.ValidateAndMarshalToMap(SampleRegistrationSessionAddress)
 }
 
 // RegistrationSession represents a registration session.
@@ -145,8 +92,91 @@ type RegistrationSession struct {
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
-func (*RegistrationSession) SchemaExample() any {
-	return apiexample.ValidateAndMarshalToMap(SampleRegistrationSession)
+// CreateSessionResponse is the response from creating a registration session.
+type CreateSessionResponse struct {
+	// The unique identifier of the created registration session.
+	ID string `json:"id" validate:"required"`
+	// The resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=registration_session"`
+}
+
+// CompleteRegistrationResponse is the response from completing a registration.
+type CompleteRegistrationResponse struct {
+	// The ID of the created account.
+	ID string `json:"id" validate:"required"`
+	// The resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=account"`
+}
+
+// CreateUserResponse is the response from creating a user for a registration session.
+type CreateUserResponse struct {
+	// The ID of the created user.
+	ID string `json:"id" validate:"required"`
+	// The resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=user"`
+}
+
+// SetupBillingResponse is the response from setting up billing for a registration.
+type SetupBillingResponse struct {
+	// The resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=setup_billing_response"`
+	// The Stripe customer ID created for this registration.
+	StripeCustomerID string `json:"stripe_customer_id" validate:"required"`
+	// The Stripe Setup Intent client secret for Stripe.js payment collection.
+	ClientSecret string `json:"client_secret" validate:"required"` // #nosec G117 -- Stripe client_secret passed to frontend, not a hardcoded secret
+	// The Stripe publishable key for Stripe.js initialization.
+	PublishableKey string `json:"publishable_key" validate:"required"`
+}
+
+// ConfirmPaymentResponse is the response from confirming payment for a registration.
+type ConfirmPaymentResponse struct {
+	// The resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=confirm_payment_response"`
+	// The Setup Intent status (e.g. "succeeded").
+	Status string `json:"status" validate:"required"`
+	// The payment method ID attached by the Setup Intent.
+	PaymentMethodID *string `json:"payment_method_id"`
+}
+
+var SampleRegistrationSessionAddress = &RegistrationSessionAddress{
+	ID:         new(SampleAddressID),
+	Object:     constants.ObjectTypeAddress,
+	Line1:      new(SampleAddressLine1),
+	Line2:      new(SampleAddressLine2),
+	City:       new(SampleAddressCity),
+	State:      new(SampleAddressState),
+	PostalCode: new(SampleAddressPostalCode),
+	Country:    new(SampleAddressCountry),
+}
+
+var SampleRegistrationSessionUser = &RegistrationSessionUser{
+	ID:              new(SampleUserID),
+	Object:          constants.ObjectTypeUser,
+	Email:           SampleUserEmail,
+	EmailVerifiedAt: timeutil.TimestampToTimePtr(sampleExpiresAtTimestamp),
+	Name:            new(SampleUserName),
+}
+
+var SampleRegistrationSessionAccount = &RegistrationSessionAccount{
+	ID:             new(SampleAccountID),
+	Object:         constants.ObjectTypeAccount,
+	Name:           SampleAccountName,
+	BillingAddress: *SampleRegistrationSessionAddress,
+}
+
+var SampleRegistrationSession = &RegistrationSession{
+	ID:                      SampleRegistrationSessionID,
+	Object:                  constants.ObjectTypeRegistrationSession,
+	PlanCode:                string(constants.PlanCodeStarter),
+	Step:                    constants.RegistrationStepVerification,
+	StripeCustomerID:        new(SampleStripeCustomerID),
+	StripeCheckoutSessionID: new(SampleCheckoutSessionID),
+	PaymentCompleted:        false,
+	Account:                 SampleRegistrationSessionAccount,
+	User:                    *SampleRegistrationSessionUser,
+	CompletedAt:             nil,
+	CreatedAt:               timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:               timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 var SampleCreateSessionResponse = &CreateSessionResponse{
@@ -159,84 +189,53 @@ var SampleCompleteRegistrationResponse = &CompleteRegistrationResponse{
 	Object: constants.ObjectTypeAccount,
 }
 
-// CreateSessionResponse is the response from creating a registration session.
-type CreateSessionResponse struct {
-	// The unique identifier of the created registration session.
-	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
-	Object constants.ObjectType `json:"object" validate:"required,enum=registration_session"`
+var SampleCreateUserResponse = &CreateUserResponse{
+	ID:     SampleUserID,
+	Object: constants.ObjectTypeUser,
+}
+
+var SampleSetupBillingResponse = &SetupBillingResponse{
+	Object:           constants.ObjectTypeSetupBillingResponse,
+	StripeCustomerID: SampleStripeCustomerID,
+	ClientSecret:     "seti_1234_secret_5678",
+	PublishableKey:   "pk_test_example",
+}
+
+var SampleConfirmPaymentResponse = &ConfirmPaymentResponse{
+	Object: constants.ObjectTypeConfirmPaymentResponse,
+	Status: "succeeded",
+}
+
+func (*RegistrationSessionUser) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(SampleRegistrationSessionUser)
+}
+
+func (*RegistrationSessionAccount) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(SampleRegistrationSessionAccount)
+}
+
+func (*RegistrationSessionAddress) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(SampleRegistrationSessionAddress)
+}
+
+func (*RegistrationSession) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(SampleRegistrationSession)
 }
 
 func (*CreateSessionResponse) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleCreateSessionResponse)
 }
 
-// CompleteRegistrationResponse is the response from completing a registration.
-type CompleteRegistrationResponse struct {
-	// The ID of the created account.
-	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
-	Object constants.ObjectType `json:"object" validate:"required,enum=account"`
-}
-
 func (*CompleteRegistrationResponse) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleCompleteRegistrationResponse)
-}
-
-var SampleCreateUserResponse = &CreateUserResponse{
-	ID:     SampleUserID,
-	Object: constants.ObjectTypeUser,
-}
-
-// CreateUserResponse is the response from creating a user for a registration session.
-type CreateUserResponse struct {
-	// The ID of the created user.
-	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
-	Object constants.ObjectType `json:"object" validate:"required,enum=user"`
 }
 
 func (*CreateUserResponse) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleCreateUserResponse)
 }
 
-var SampleCreateCheckoutResponse = &CreateCheckoutResponse{
-	ClientSecret:     SampleClientSecret,
-	CheckoutID:       SampleCheckoutSessionID,
-	StripeCustomerID: SampleStripeCustomerID,
-	PublishableKey:   SamplePublishableKey,
-}
-
-// CreateCheckoutResponse is the response from creating a checkout session for a registration.
-type CreateCheckoutResponse struct {
-	// The Stripe checkout session client secret for the embedded checkout UI.
-	ClientSecret string `json:"client_secret" validate:"required"` // #nosec G117 - Stripe checkout client secret (ephemeral, not a credential)
-	// The Stripe checkout session ID.
-	CheckoutID string `json:"checkout_id" validate:"required"`
-	// The Stripe customer ID created for this registration.
-	StripeCustomerID string `json:"stripe_customer_id" validate:"required"`
-	// The Stripe publishable key for the frontend.
-	PublishableKey string `json:"publishable_key" validate:"required"`
-}
-
-func (*CreateCheckoutResponse) SchemaExample() any {
-	return apiexample.ValidateAndMarshalToMap(SampleCreateCheckoutResponse)
-}
-
-var SampleConfirmPaymentResponse = &ConfirmPaymentResponse{
-	Status:           "complete",
-	SubscriptionID:   new(SampleSubscriptionID),
-	StripeCustomerID: new(SampleStripeCustomerID),
-}
-
-// ConfirmPaymentResponse is the response from confirming a registration payment.
-type ConfirmPaymentResponse struct {
-	// The Stripe checkout session status (e.g., "complete", "open", "expired").
-	Status string `json:"status" validate:"required"`
-	// The Stripe subscription ID, present when payment is complete.
-	SubscriptionID *string `json:"subscription_id"`
-	// The Stripe customer ID associated with the checkout.
-	StripeCustomerID *string `json:"stripe_customer_id"`
+func (*SetupBillingResponse) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(SampleSetupBillingResponse)
 }
 
 func (*ConfirmPaymentResponse) SchemaExample() any {

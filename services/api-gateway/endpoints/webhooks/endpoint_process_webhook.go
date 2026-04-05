@@ -9,14 +9,12 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-const processWebhookDescription string = `Receives and processes Stripe webhook events. This endpoint verifies the webhook signature and dispatches events for processing.`
-
 type ProcessWebhookEndpoint struct{}
 
 func (e *ProcessWebhookEndpoint) Materialize() *apiendpoint.APIEndpoint[*apiresource.StripeWebhookRequest, *apiresource.WebhookResponse] {
 	return &apiendpoint.APIEndpoint[*apiresource.StripeWebhookRequest, *apiresource.WebhookResponse]{
 		Title:             "Process Stripe Webhook",
-		Description:       processWebhookDescription,
+		Description:       "Receives and processes a Stripe webhook event, verifying the signature before dispatching.",
 		Method:            http.MethodPost,
 		Route:             "/v1/webhooks/stripe",
 		Request:           &apiresource.StripeWebhookRequest{},

@@ -101,22 +101,22 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 // validate validates the configuration.
 func (c *config) validate() error {
 	if c == nil {
-		return fmt.Errorf("config is nil")
+		return fmt.Errorf("auth-service: config is nil")
 	}
 	if c.DBURL == "" {
-		return fmt.Errorf("the provided database URI is empty")
+		return fmt.Errorf("auth-service: the provided database URI is empty")
 	}
 	if c.FrontendURL == "" {
-		return fmt.Errorf("the provided frontend URL is empty")
+		return fmt.Errorf("auth-service: the provided frontend URL is empty")
 	}
 	if c.JWTSecret == "" {
-		return fmt.Errorf("the provided JWT secret is empty")
+		return fmt.Errorf("auth-service: the provided JWT secret is empty")
 	}
 	if len(c.Pepper) == 0 {
-		return fmt.Errorf("the provided pepper is empty")
+		return fmt.Errorf("auth-service: the provided pepper is empty")
 	}
 	if len(c.CursorHMACKey) == 0 {
-		return fmt.Errorf("CURSOR_HMAC_KEY is required")
+		return fmt.Errorf("auth-service: CURSOR_HMAC_KEY is required")
 	}
 	return nil
 }

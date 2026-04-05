@@ -5,9 +5,10 @@ import (
 )
 
 func TestHashBcrypt_RoundTrip(t *testing.T) {
+	t.Parallel()
 	password := "correctPassword123!"
 
-	hash, err := HashBcrypt(password, 4) // low cost for fast tests
+	hash, err := HashBcrypt(password)
 	if err != nil {
 		t.Fatalf("HashBcrypt() unexpected error: %v", err)
 	}
@@ -23,7 +24,8 @@ func TestHashBcrypt_RoundTrip(t *testing.T) {
 }
 
 func TestCompareBcryptHash_WrongPassword(t *testing.T) {
-	hash, err := HashBcrypt("correctPassword", 4)
+	t.Parallel()
+	hash, err := HashBcrypt("correctPassword")
 	if err != nil {
 		t.Fatalf("HashBcrypt() unexpected error: %v", err)
 	}
@@ -39,6 +41,7 @@ func TestCompareBcryptHash_WrongPassword(t *testing.T) {
 }
 
 func TestCompareBcryptHash_InvalidHash(t *testing.T) {
+	t.Parallel()
 	match, err := CompareBcryptHash("invalidhash", "password")
 
 	if err == nil {

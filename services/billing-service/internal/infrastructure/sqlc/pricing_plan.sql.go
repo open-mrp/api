@@ -15,7 +15,7 @@ import (
 const getPlanByCode = `-- name: GetPlanByCode :one
 SELECT id, created_at, type_id, name, plan_type_code, price_per_seat, price_per_month,
        seat_minimum, display_features, display_order, is_highlighted,
-       button_text, includes_previous_plan
+       button_text, includes_previous_plan, stripe_pricing_plan_id
 FROM account_plan
 WHERE plan_type_code = ?
   AND (expires_at IS NULL OR expires_at > NOW(3))
@@ -37,6 +37,7 @@ type GetPlanByCodeRow struct {
 	IsHighlighted        bool
 	ButtonText           string
 	IncludesPreviousPlan sql.NullString
+	StripePricingPlanID  sql.NullString
 }
 
 func (q *Queries) GetPlanByCode(ctx context.Context, planTypeCode string) (GetPlanByCodeRow, error) {
@@ -56,6 +57,7 @@ func (q *Queries) GetPlanByCode(ctx context.Context, planTypeCode string) (GetPl
 		&i.IsHighlighted,
 		&i.ButtonText,
 		&i.IncludesPreviousPlan,
+		&i.StripePricingPlanID,
 	)
 	return i, err
 }
@@ -63,7 +65,7 @@ func (q *Queries) GetPlanByCode(ctx context.Context, planTypeCode string) (GetPl
 const getPlanByTypeID = `-- name: GetPlanByTypeID :one
 SELECT id, created_at, type_id, name, plan_type_code, price_per_seat, price_per_month,
        seat_minimum, display_features, display_order, is_highlighted,
-       button_text, includes_previous_plan
+       button_text, includes_previous_plan, stripe_pricing_plan_id
 FROM account_plan
 WHERE type_id = ?
   AND (expires_at IS NULL OR expires_at > NOW(3))
@@ -85,6 +87,7 @@ type GetPlanByTypeIDRow struct {
 	IsHighlighted        bool
 	ButtonText           string
 	IncludesPreviousPlan sql.NullString
+	StripePricingPlanID  sql.NullString
 }
 
 func (q *Queries) GetPlanByTypeID(ctx context.Context, typeID string) (GetPlanByTypeIDRow, error) {
@@ -104,6 +107,7 @@ func (q *Queries) GetPlanByTypeID(ctx context.Context, typeID string) (GetPlanBy
 		&i.IsHighlighted,
 		&i.ButtonText,
 		&i.IncludesPreviousPlan,
+		&i.StripePricingPlanID,
 	)
 	return i, err
 }
@@ -146,7 +150,7 @@ func (q *Queries) GetPlanLimitsByTypeID(ctx context.Context, accountPlanID strin
 const listPricingPlansBackward = `-- name: ListPricingPlansBackward :many
 SELECT id, created_at, type_id, name, plan_type_code, price_per_seat, price_per_month,
        seat_minimum, display_features, display_order, is_highlighted,
-       button_text, includes_previous_plan
+       button_text, includes_previous_plan, stripe_pricing_plan_id
 FROM account_plan
 WHERE (expires_at IS NULL OR expires_at > NOW(3))
   AND effective_at <= NOW(3)
@@ -155,6 +159,10 @@ WHERE (expires_at IS NULL OR expires_at > NOW(3))
     account_plan.created_at > ?
     OR (account_plan.created_at = ? AND account_plan.id > ?)
   )
+  AND (
+    ? IS NULL
+    OR account_plan.name LIKE ?
+  )
 ORDER BY account_plan.created_at ASC, account_plan.id ASC
 LIMIT ?
 `
@@ -162,6 +170,7 @@ LIMIT ?
 type ListPricingPlansBackwardParams struct {
 	CursorCreatedAt time.Time
 	CursorID        int64
+	SearchQuery     sql.NullString
 	Limit           int32
 }
 
@@ -179,6 +188,7 @@ type ListPricingPlansBackwardRow struct {
 	IsHighlighted        bool
 	ButtonText           string
 	IncludesPreviousPlan sql.NullString
+	StripePricingPlanID  sql.NullString
 }
 
 func (q *Queries) ListPricingPlansBackward(ctx context.Context, arg ListPricingPlansBackwardParams) ([]ListPricingPlansBackwardRow, error) {
@@ -186,6 +196,8 @@ func (q *Queries) ListPricingPlansBackward(ctx context.Context, arg ListPricingP
 		arg.CursorCreatedAt,
 		arg.CursorCreatedAt,
 		arg.CursorID,
+		arg.SearchQuery,
+		arg.SearchQuery,
 		arg.Limit,
 	)
 	if err != nil {
@@ -209,6 +221,7 @@ func (q *Queries) ListPricingPlansBackward(ctx context.Context, arg ListPricingP
 			&i.IsHighlighted,
 			&i.ButtonText,
 			&i.IncludesPreviousPlan,
+			&i.StripePricingPlanID,
 		); err != nil {
 			return nil, err
 		}
@@ -226,7 +239,7 @@ func (q *Queries) ListPricingPlansBackward(ctx context.Context, arg ListPricingP
 const listPricingPlansForward = `-- name: ListPricingPlansForward :many
 SELECT id, created_at, type_id, name, plan_type_code, price_per_seat, price_per_month,
        seat_minimum, display_features, display_order, is_highlighted,
-       button_text, includes_previous_plan
+       button_text, includes_previous_plan, stripe_pricing_plan_id
 FROM account_plan
 WHERE (expires_at IS NULL OR expires_at > NOW(3))
   AND effective_at <= NOW(3)
@@ -236,6 +249,10 @@ WHERE (expires_at IS NULL OR expires_at > NOW(3))
     OR account_plan.created_at < ?
     OR (account_plan.created_at = ? AND account_plan.id < ?)
   )
+  AND (
+    ? IS NULL
+    OR account_plan.name LIKE ?
+  )
 ORDER BY account_plan.created_at DESC, account_plan.id DESC
 LIMIT ?
 `
@@ -243,6 +260,7 @@ LIMIT ?
 type ListPricingPlansForwardParams struct {
 	CursorCreatedAt sql.NullTime
 	CursorID        sql.NullInt64
+	SearchQuery     sql.NullString
 	Limit           int32
 }
 
@@ -260,6 +278,7 @@ type ListPricingPlansForwardRow struct {
 	IsHighlighted        bool
 	ButtonText           string
 	IncludesPreviousPlan sql.NullString
+	StripePricingPlanID  sql.NullString
 }
 
 func (q *Queries) ListPricingPlansForward(ctx context.Context, arg ListPricingPlansForwardParams) ([]ListPricingPlansForwardRow, error) {
@@ -268,6 +287,8 @@ func (q *Queries) ListPricingPlansForward(ctx context.Context, arg ListPricingPl
 		arg.CursorCreatedAt,
 		arg.CursorCreatedAt,
 		arg.CursorID,
+		arg.SearchQuery,
+		arg.SearchQuery,
 		arg.Limit,
 	)
 	if err != nil {
@@ -291,6 +312,7 @@ func (q *Queries) ListPricingPlansForward(ctx context.Context, arg ListPricingPl
 			&i.IsHighlighted,
 			&i.ButtonText,
 			&i.IncludesPreviousPlan,
+			&i.StripePricingPlanID,
 		); err != nil {
 			return nil, err
 		}

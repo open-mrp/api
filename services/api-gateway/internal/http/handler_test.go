@@ -4,10 +4,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -24,6 +27,7 @@ type enumTestRequest struct {
 }
 
 func TestValidateEnumFields(t *testing.T) {
+	t.Parallel()
 	t.Run("Valid enum value", func(t *testing.T) {
 		req := &enumTestRequest{
 			Mode: constants.AccountModeProduction,
@@ -78,6 +82,7 @@ type rawBodyTestRequest struct {
 }
 
 func TestBindRawBody(t *testing.T) {
+	t.Parallel()
 	t.Run("Successfully binds raw body", func(t *testing.T) {
 		body := []byte(`{"webhook":"payload","event":"test"}`)
 		req := httptest.NewRequest(http.MethodPost, "/webhook", bytes.NewReader(body))
@@ -141,6 +146,7 @@ func TestBindRawBody(t *testing.T) {
 }
 
 func TestBindFromQuery(t *testing.T) {
+	t.Parallel()
 	t.Run("Binds valid query parameters", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/test?id=123", nil)
 		dst := &testRequest{}
@@ -164,6 +170,7 @@ func TestBindFromQuery(t *testing.T) {
 }
 
 func TestDecodeJSONInto(t *testing.T) {
+	t.Parallel()
 	t.Run("Decodes valid JSON", func(t *testing.T) {
 		body := `{"id": 1, "name": "Test", "email": "test@example.com"}`
 		req := httptest.NewRequest(http.MethodPost, "/test", bytes.NewBufferString(body))
@@ -216,7 +223,32 @@ func TestDecodeJSONInto(t *testing.T) {
 	})
 }
 
+type unwrapTestType struct{}
+
+func (*unwrapTestType) UnmarshalJSON([]byte) error {
+	return fmt.Errorf("wrap: %w", apierror.NewInvalidFormatError("bad", "field"))
+}
+
+func TestDecodeJSONInto_unwrapsWrappedAPIError(t *testing.T) {
+	t.Parallel()
+	body := `{}`
+	req := httptest.NewRequest(http.MethodPost, "/test", bytes.NewBufferString(body))
+	var dst any = &unwrapTestType{}
+	err := DecodeJSONInto(dst, req, true)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	var ae *apierror.APIError
+	if !errors.As(err, &ae) {
+		t.Fatalf("expected *apierror.APIError via errors.As, got %T: %v", err, err)
+	}
+	if ae.Code != apierror.ErrorCodeInvalidFormat {
+		t.Fatalf("expected invalid_format, got %s", ae.Code)
+	}
+}
+
 func TestShouldDecodeBody(t *testing.T) {
+	t.Parallel()
 	t.Run("Returns true for POST with content", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/test", bytes.NewBufferString("body"))
 		if !ShouldDecodeBody(req) {
@@ -255,6 +287,7 @@ func TestShouldDecodeBody(t *testing.T) {
 }
 
 func TestAllocIfPtr(t *testing.T) {
+	t.Parallel()
 	t.Run("Allocates nil pointer", func(t *testing.T) {
 		var ptr *testRequest
 		result := AllocIfPtr(ptr)
@@ -273,6 +306,7 @@ func TestAllocIfPtr(t *testing.T) {
 }
 
 func TestBindFromHeaders(t *testing.T) {
+	t.Parallel()
 	type headerRequest struct {
 		Auth string `header:"Authorization" scheme:"Bearer"`
 	}
@@ -291,7 +325,189 @@ func TestBindFromHeaders(t *testing.T) {
 	})
 }
 
+// patchRequest mimics a PATCH endpoint with optional nested struct pointers.
+type patchRequest struct {
+	ID     string       `path:"id" validate:"required"`
+	Name   *string      `json:"name,omitempty"`
+	Config *nestedInput `json:"config,omitempty"`
+	Items  *[]string    `json:"items,omitempty"`
+}
+
+type nestedInput struct {
+	Model       *string   `json:"model,omitempty"`
+	Temperature *float64  `json:"temperature,omitempty"`
+	Sub         *subInput `json:"sub,omitempty"`
+}
+
+type subInput struct {
+	Schedule *string `json:"schedule,omitempty"`
+}
+
+func newRequestWithPathParams(method, url string, body *bytes.Buffer, params map[string]string) *http.Request {
+	var req *http.Request
+	if body != nil {
+		req = httptest.NewRequest(method, url, body)
+	} else {
+		req = httptest.NewRequest(method, url, nil)
+	}
+	ctx := appctx.WithPathParams(req.Context(), params)
+	return req.WithContext(ctx)
+}
+
+func TestWalkStruct_doesNotInitNilPointerToStruct(t *testing.T) {
+	t.Parallel()
+	t.Run("BindFromPath preserves nil pointer-to-struct fields", func(t *testing.T) {
+		req := newRequestWithPathParams(http.MethodPatch, "/agents/123", nil, map[string]string{"id": "123"})
+		dst := &patchRequest{}
+		err := BindFromPath(req, dst)
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if dst.ID != "123" {
+			t.Errorf("expected ID '123', got '%s'", dst.ID)
+		}
+		if dst.Config != nil {
+			t.Error("expected Config to remain nil after BindFromPath")
+		}
+		if dst.Items != nil {
+			t.Error("expected Items to remain nil after BindFromPath")
+		}
+	})
+
+	t.Run("BindFromHeaders preserves nil pointer-to-struct fields", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPatch, "/agents/123", nil)
+		dst := &patchRequest{}
+		err := BindFromHeaders(req, dst)
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if dst.Config != nil {
+			t.Error("expected Config to remain nil after BindFromHeaders")
+		}
+	})
+
+	t.Run("BindFromQuery preserves nil pointer-to-struct fields", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPatch, "/agents/123", nil)
+		dst := &patchRequest{}
+		err := BindFromQuery(req.URL, dst)
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if dst.Config != nil {
+			t.Error("expected Config to remain nil after BindFromQuery")
+		}
+	})
+
+	t.Run("Non-nil pointer-to-struct is still traversed", func(t *testing.T) {
+		req := newRequestWithPathParams(http.MethodPatch, "/agents/123", nil, map[string]string{"id": "123"})
+		model := "claude-sonnet-4"
+		dst := &patchRequest{
+			Config: &nestedInput{Model: &model},
+		}
+		err := BindFromPath(req, dst)
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if dst.Config == nil {
+			t.Fatal("expected Config to remain non-nil")
+		}
+		if dst.Config.Model == nil || *dst.Config.Model != "claude-sonnet-4" {
+			t.Error("expected Config.Model to be preserved")
+		}
+		if dst.Config.Sub != nil {
+			t.Error("expected Config.Sub to remain nil")
+		}
+	})
+}
+
+func TestPatchRequest_JSONDecodePreservesNilStructPointers(t *testing.T) {
+	t.Parallel()
+	t.Run("Absent config stays nil after full bind+decode flow", func(t *testing.T) {
+		body := `{"name": "Updated"}`
+		httpReq := newRequestWithPathParams(http.MethodPatch, "/agents/123", bytes.NewBufferString(body), map[string]string{"id": "123"})
+
+		dst := &patchRequest{}
+
+		// Simulate the api_endpoint.go flow: headers → path → query → JSON decode
+		if err := BindFromHeaders(httpReq, dst); err != nil {
+			t.Fatalf("BindFromHeaders: %v", err)
+		}
+		if err := BindFromPath(httpReq, dst); err != nil {
+			t.Fatalf("BindFromPath: %v", err)
+		}
+		if err := BindFromQuery(httpReq.URL, dst); err != nil {
+			t.Fatalf("BindFromQuery: %v", err)
+		}
+		if err := DecodeJSONInto(dst, httpReq, false); err != nil {
+			t.Fatalf("DecodeJSONInto: %v", err)
+		}
+
+		if dst.ID != "123" {
+			t.Errorf("expected ID '123', got '%s'", dst.ID)
+		}
+		if dst.Name == nil || *dst.Name != "Updated" {
+			t.Errorf("expected Name 'Updated', got %v", dst.Name)
+		}
+		if dst.Config != nil {
+			t.Errorf("expected Config nil, got %+v", dst.Config)
+		}
+		if dst.Items != nil {
+			t.Errorf("expected Items nil, got %v", dst.Items)
+		}
+	})
+
+	t.Run("Provided config is decoded correctly", func(t *testing.T) {
+		body := `{"name": "Updated", "config": {"model": "claude-sonnet-4", "temperature": 0.5}}`
+		httpReq := newRequestWithPathParams(http.MethodPatch, "/agents/123", bytes.NewBufferString(body), map[string]string{"id": "123"})
+
+		dst := &patchRequest{}
+
+		if err := BindFromHeaders(httpReq, dst); err != nil {
+			t.Fatalf("BindFromHeaders: %v", err)
+		}
+		if err := BindFromPath(httpReq, dst); err != nil {
+			t.Fatalf("BindFromPath: %v", err)
+		}
+		if err := BindFromQuery(httpReq.URL, dst); err != nil {
+			t.Fatalf("BindFromQuery: %v", err)
+		}
+		if err := DecodeJSONInto(dst, httpReq, false); err != nil {
+			t.Fatalf("DecodeJSONInto: %v", err)
+		}
+
+		if dst.Config == nil {
+			t.Fatal("expected Config to be non-nil")
+		}
+		if dst.Config.Model == nil || *dst.Config.Model != "claude-sonnet-4" {
+			t.Errorf("expected Model 'claude-sonnet-4', got %v", dst.Config.Model)
+		}
+		if dst.Config.Temperature == nil || *dst.Config.Temperature != 0.5 {
+			t.Errorf("expected Temperature 0.5, got %v", dst.Config.Temperature)
+		}
+		if dst.Config.Sub != nil {
+			t.Error("expected Config.Sub to remain nil")
+		}
+	})
+
+	t.Run("Empty config object is non-nil with nil inner fields", func(t *testing.T) {
+		body := `{"config": {}}`
+		httpReq := newRequestWithPathParams(http.MethodPatch, "/agents/123", bytes.NewBufferString(body), map[string]string{"id": "123"})
+
+		dst := &patchRequest{}
+		_ = BindFromPath(httpReq, dst)
+		_ = DecodeJSONInto(dst, httpReq, false)
+
+		if dst.Config == nil {
+			t.Fatal("expected Config to be non-nil for empty object")
+		}
+		if dst.Config.Model != nil {
+			t.Error("expected Config.Model to be nil")
+		}
+	})
+}
+
 func TestRespondWithJSON(t *testing.T) {
+	t.Parallel()
 	t.Run("Writes JSON response", func(t *testing.T) {
 		w := httptest.NewRecorder()
 		ctx := context.Background()

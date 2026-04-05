@@ -6,6 +6,7 @@ import (
 )
 
 func TestGenOpaqueToken_Success(t *testing.T) {
+	t.Parallel()
 	token, err := GenOpaqueToken(context.Background())
 	if err != nil {
 		t.Fatalf("GenOpaqueToken() unexpected error: %v", err)
@@ -19,6 +20,7 @@ func TestGenOpaqueToken_Success(t *testing.T) {
 }
 
 func TestGenOpaqueToken_Uniqueness(t *testing.T) {
+	t.Parallel()
 	token1, err := GenOpaqueToken(context.Background())
 	if err != nil {
 		t.Fatalf("GenOpaqueToken() first call unexpected error: %v", err)

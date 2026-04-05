@@ -1,0 +1,49 @@
+package paymenttermep
+
+import (
+	"context"
+	"net/http"
+
+	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
+	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
+	apierror "github.com/augno/api/shared/errors"
+)
+
+// CreatePaymentTermRequest is the request to create a new payment term.
+type CreatePaymentTermRequest struct {
+	// The display name of the payment term (e.g. "Net 30").
+	Name string `json:"name" validate:"required"`
+}
+
+var sampleCreatePaymentTermRequest = &CreatePaymentTermRequest{
+	Name: "Net 30",
+}
+
+func (*CreatePaymentTermRequest) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(sampleCreatePaymentTermRequest)
+}
+
+type CreatePaymentTermEndpoint struct{}
+
+func (e *CreatePaymentTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreatePaymentTermRequest, *apiresource.PaymentTerm] {
+	return &apiendpoint.APIEndpoint[*CreatePaymentTermRequest, *apiresource.PaymentTerm]{
+		Title:             "Create Payment Term",
+		Description:       "Creates a new payment term.",
+		Method:            http.MethodPost,
+		Route:             "/v1/finance/payment-terms",
+		Request:           &CreatePaymentTermRequest{},
+		Response:          &apiresource.PaymentTerm{},
+		SuccessStatusCode: http.StatusCreated,
+		Public:            true,
+		Preview:           true,
+		ServiceHandler: func(svc any) func(ctx context.Context, req *CreatePaymentTermRequest) (*apiresource.PaymentTerm, *apierror.APIError) {
+			return svc.(PaymentTermSvc).CreatePaymentTerm
+		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypePaymentTerm,
+			Fields:     []string{"owner"},
+		}),
+	}
+}

@@ -12,6 +12,7 @@ import (
 )
 
 func TestTracedPublisherSpanNameUsesRoutingKey(t *testing.T) {
+	// Not parallel: mutates global otel tracer provider.
 	origTP := otel.GetTracerProvider()
 	spanRecorder := tracetest.NewSpanRecorder()
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
@@ -29,6 +30,7 @@ func TestTracedPublisherSpanNameUsesRoutingKey(t *testing.T) {
 }
 
 func TestTracedConsumerSpanNamePrefersRoutingKey(t *testing.T) {
+	// Not parallel: mutates global otel tracer provider.
 	origTP := otel.GetTracerProvider()
 	spanRecorder := tracetest.NewSpanRecorder()
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
@@ -51,6 +53,7 @@ func TestTracedConsumerSpanNamePrefersRoutingKey(t *testing.T) {
 }
 
 func TestNormalizeMessagingNameHandlesSeparators(t *testing.T) {
+	t.Parallel()
 	cases := map[string]string{
 		"app/notification.cmd.send_email": "app.notification.cmd.send_email",
 		"Notification-Cmd.SendEmail":      "notification_cmd.send_email",

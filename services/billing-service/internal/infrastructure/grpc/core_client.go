@@ -20,8 +20,8 @@ const coreServiceName = "core-service"
 var coreClientTracer = tracing.GetTracer("billing-service.core_client")
 
 type BillingCoreClient struct {
-	grpcConn *contracts.GRPCClientConn
-	client   pb.CoreServiceClient
+	grpcConn      *contracts.GRPCClientConn
+	accountClient pb.CoreAccountServiceClient
 }
 
 func NewBillingCoreClient(url string) (*BillingCoreClient, error) {
@@ -31,8 +31,8 @@ func NewBillingCoreClient(url string) (*BillingCoreClient, error) {
 	}
 
 	return &BillingCoreClient{
-		grpcConn: grpcConn,
-		client:   pb.NewCoreServiceClient(grpcConn.Conn()),
+		grpcConn:      grpcConn,
+		accountClient: pb.NewCoreAccountServiceClient(grpcConn.Conn()),
 	}, nil
 }
 
@@ -45,19 +45,18 @@ func (c *BillingCoreClient) Close() error {
 }
 
 func prepareCtx(ctx context.Context, idempotencyKey string) context.Context {
-	opts := []rpc.MetadataOption{rpc.WithIdentity(ctx)}
 	if idempotencyKey != "" {
-		opts = append(opts, rpc.WithMetadata(contracts.IdempotencyKeyHeader, idempotencyKey))
+		return rpc.PrepareServiceCallCtx(ctx, rpc.WithIdempotencyKeyOverride(idempotencyKey))
 	}
-	return rpc.PrepareRPCCtx(ctx, opts...)
+	return rpc.PrepareServiceCallCtx(ctx)
 }
 
 func (c *BillingCoreClient) GetAccountByStripeCustomerID(ctx context.Context, stripeCustomerID string) (string, string, *apierror.APIError) {
-	ctx = rpc.PrepareRPCCtx(ctx, rpc.WithIdentity(ctx))
+	ctx = prepareCtx(ctx, "")
 
 	resp, apiErr := rpc.CallRPC(ctx, coreClientTracer, "core_client.get_account_by_stripe_customer_id", coreServiceName,
 		func(ctx context.Context, opts ...grpclib.CallOption) (*pb.GetAccountByStripeCustomerIDResponse, error) {
-			return c.client.GetAccountByStripeCustomerID(ctx, &pb.GetAccountByStripeCustomerIDRequest{
+			return c.accountClient.GetAccountByStripeCustomerID(ctx, &pb.GetAccountByStripeCustomerIDRequest{
 				StripeCustomerId: stripeCustomerID,
 			}, opts...)
 		})
@@ -68,7 +67,7 @@ func (c *BillingCoreClient) GetAccountByStripeCustomerID(ctx context.Context, st
 	return resp.AccountId, resp.PlanCode, nil
 }
 
-func (c *BillingCoreClient) UpdateAccountSubscription(ctx context.Context, idempotencyKey, accountID string, status *string, planCode string, stripeSubID *string, periodEnd *time.Time, stripeCustomerID *string) *apierror.APIError {
+func (c *BillingCoreClient) UpdateAccountSubscription(ctx context.Context, idempotencyKey, accountID string, status *string, planCode string, stripeSubID *string, periodEnd *time.Time, stripeCustomerID *string, billingProfileID *string, billingCadenceID *string, pricingPlanSubscriptionID *string, servicingStatus *string, collectionStatus *string) *apierror.APIError {
 	ctx = prepareCtx(ctx, idempotencyKey)
 
 	var periodEndPb *timestamppb.Timestamp
@@ -78,13 +77,18 @@ func (c *BillingCoreClient) UpdateAccountSubscription(ctx context.Context, idemp
 
 	_, apiErr := rpc.CallRPC(ctx, coreClientTracer, "core_client.update_account_subscription", coreServiceName,
 		func(ctx context.Context, opts ...grpclib.CallOption) (*emptypb.Empty, error) {
-			return c.client.UpdateAccountSubscription(ctx, &pb.UpdateAccountSubscriptionRequest{
-				AccountId:            accountID,
-				SubscriptionStatus:   status,
-				PlanCode:             planCode,
-				StripeSubscriptionId: stripeSubID,
-				CurrentPeriodEnd:     periodEndPb,
-				StripeCustomerId:     stripeCustomerID,
+			return c.accountClient.UpdateAccountSubscription(ctx, &pb.UpdateAccountSubscriptionRequest{
+				AccountId:                 accountID,
+				SubscriptionStatus:        status,
+				PlanCode:                  planCode,
+				StripeSubscriptionId:      stripeSubID,
+				CurrentPeriodEnd:          periodEndPb,
+				StripeCustomerId:          stripeCustomerID,
+				BillingProfileId:          billingProfileID,
+				BillingCadenceId:          billingCadenceID,
+				PricingPlanSubscriptionId: pricingPlanSubscriptionID,
+				ServicingStatus:           servicingStatus,
+				CollectionStatus:          collectionStatus,
 			}, opts...)
 		})
 
@@ -96,7 +100,7 @@ func (c *BillingCoreClient) ClearAccountStripeCustomer(ctx context.Context, idem
 
 	_, apiErr := rpc.CallRPC(ctx, coreClientTracer, "core_client.clear_account_stripe_customer", coreServiceName,
 		func(ctx context.Context, opts ...grpclib.CallOption) (*emptypb.Empty, error) {
-			return c.client.ClearAccountStripeCustomer(ctx, &pb.ClearAccountStripeCustomerRequest{
+			return c.accountClient.ClearAccountStripeCustomer(ctx, &pb.ClearAccountStripeCustomerRequest{
 				AccountId: accountID,
 			}, opts...)
 		})

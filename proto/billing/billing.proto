@@ -1,0 +1,279 @@
+syntax = "proto3";
+
+package billing;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "shared/proto/billing;billing";
+
+service BillingService {
+  // ListPricingPlans returns a paginated list of currently active pricing plans.
+  rpc ListPricingPlans(ListPricingPlansRequest) returns (ListPricingPlansResponse);
+
+  // GetPlanByCode returns a single pricing plan by its plan type code.
+  rpc GetPlanByCode(GetPlanByCodeRequest) returns (GetPlanByCodeResponse);
+
+  // ProcessWebhookEvent verifies and processes an incoming Stripe webhook event.
+  rpc ProcessWebhookEvent(ProcessWebhookEventRequest) returns (ProcessWebhookEventResponse);
+
+  // ProcessAccountWebhookEvent verifies and processes an incoming Stripe webhook
+  // event for a specific account using the account's Stripe credentials.
+  rpc ProcessAccountWebhookEvent(ProcessAccountWebhookEventRequest) returns (ProcessWebhookEventResponse);
+
+  // CreateCustomer creates a Stripe customer for a registration session.
+  rpc CreateCustomer(CreateCustomerRequest) returns (CreateCustomerResponse);
+
+  // GetAccountUsage returns current resource usage for an account with plan
+  // limits and subscription info.
+  rpc GetAccountUsage(GetAccountUsageRequest) returns (GetAccountUsageResponse);
+
+  // CreateBillingPortalSession creates a Stripe billing portal session for
+  // managing subscriptions.
+  rpc CreateBillingPortalSession(CreateBillingPortalSessionRequest) returns (CreateBillingPortalSessionResponse);
+
+  // PreviewPlanChange returns a cost preview for switching to a different plan
+  // using the billing intent reserve+void pattern.
+  rpc PreviewPlanChange(PreviewPlanChangeRequest) returns (PreviewPlanChangeResponse);
+
+  // RequestEnterpriseUpgrade sends an enterprise plan inquiry to the sales
+  // team on behalf of the requesting admin.
+  rpc RequestEnterpriseUpgrade(RequestEnterpriseUpgradeRequest) returns (RequestEnterpriseUpgradeResponse);
+
+  // EnsureBillingCustomer links or fetches a Stripe customer for an account.
+  // If the account already has a Stripe customer ID it is returned; otherwise
+  // a new Stripe customer is created and linked.
+  rpc EnsureBillingCustomer(EnsureBillingCustomerRequest) returns (EnsureBillingCustomerResponse);
+
+  // SwitchPlan initiates a plan switch using v2 billing intents.
+  rpc SwitchPlan(SwitchPlanRequest) returns (SwitchPlanResponse);
+
+  // SetupBillingProfile creates a billing profile and cadence for an account.
+  rpc SetupBillingProfile(SetupBillingProfileRequest) returns (SetupBillingProfileResponse);
+
+  // SubscribeToPricingPlan creates a v2 pricing plan subscription for an account.
+  rpc SubscribeToPricingPlan(SubscribeToPricingPlanRequest) returns (SubscribeToPricingPlanResponse);
+
+  // CreateSetupIntent creates a Stripe Setup Intent for collecting a payment
+  // method during registration.
+  rpc CreateSetupIntent(CreateSetupIntentRequest) returns (CreateSetupIntentResponse);
+
+  // GetSetupIntentStatus returns the current status of a Stripe Setup Intent.
+  rpc GetSetupIntentStatus(GetSetupIntentStatusRequest) returns (GetSetupIntentStatusResponse);
+
+  // ValidateStripePricingPlan checks whether the Stripe pricing plan for a
+  // given plan code is accessible before account creation.
+  rpc ValidateStripePricingPlan(ValidateStripePricingPlanRequest) returns (ValidateStripePricingPlanResponse);
+
+}
+
+message PricingPlan {
+  string id = 1;
+  string name = 2;
+  string plan_type_code = 3;
+  double price_per_seat = 4;
+  optional double price_per_month = 5;
+  optional int32 seat_minimum = 6;
+  repeated PlanLimit limits = 7;
+  repeated string display_features = 8;
+  int32 display_order = 9;
+  bool is_highlighted = 10;
+  string button_text = 11;
+  optional string includes_previous_plan = 12;
+}
+
+message PlanLimit {
+  string key = 1;
+  optional int32 value = 2;
+}
+
+message ListPricingPlansRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+}
+
+message PageInfo {
+  optional string next_cursor = 1;
+  optional string prev_cursor = 2;
+  bool has_next_page = 3;
+  bool has_prev_page = 4;
+}
+
+message ListPricingPlansResponse {
+  repeated PricingPlan plans = 1;
+  PageInfo page_info = 2;
+}
+
+message GetPlanByCodeRequest {
+  string plan_code = 1;
+}
+
+message GetPlanByCodeResponse {
+  PricingPlan plan = 1;
+}
+
+message ProcessWebhookEventRequest {
+  bytes raw_payload = 1;
+  string stripe_signature = 2;
+}
+
+message ProcessWebhookEventResponse {
+  bool success = 1;
+  bool is_duplicate = 2;
+}
+
+message ProcessAccountWebhookEventRequest {
+  bytes raw_payload = 1;
+  string stripe_signature = 2;
+  string account_id = 3;
+}
+
+message CreateCustomerRequest {
+  string email = 1;
+  string name = 2;
+  string idempotency_key = 3;
+  map<string, string> metadata = 4;
+}
+
+message CreateCustomerResponse {
+  string customer_id = 1;
+}
+
+// Intentionally empty; account is identified by the caller's identity metadata.
+message GetAccountUsageRequest {}
+
+message UsageItem {
+  int32 current = 1;
+  optional int32 limit = 2;
+}
+
+message SubscriptionInfo {
+  string servicing_status = 1;
+  string collection_status = 2;
+  optional google.protobuf.Timestamp current_period_end = 3;
+}
+
+message AgentTokenUsageDetail {
+  int64 included_tokens = 1;
+  int64 used_tokens = 2;
+  int64 input_tokens = 3;
+  int64 output_tokens = 4;
+  int64 additional_tokens_purchased = 5;
+  int64 total_available = 6;
+  double current_period_cost = 7;
+  google.protobuf.Timestamp billing_period_end = 8;
+  double overage_cost_per_million_tokens = 9;
+}
+
+message GetAccountUsageResponse {
+  UsageItem seats = 1;
+  UsageItem invoices = 2;
+  UsageItem batches = 3;
+  UsageItem sandboxes = 4;
+  optional SubscriptionInfo subscription = 5;
+  UsageItem agent_tokens = 6;
+  AgentTokenUsageDetail agent_token_detail = 7;
+  int64 estimated_agent_spend_cents = 8;
+}
+
+// Intentionally empty; account is identified by the caller's identity metadata.
+message CreateBillingPortalSessionRequest {}
+
+message CreateBillingPortalSessionResponse {
+  string url = 1;
+}
+
+message PreviewPlanChangeRequest {
+  string plan_id = 1;
+}
+
+message PlanChangePreviewLineItem {
+  string description = 1;
+  int64 amount = 2;
+}
+
+message PlanChangePreview {
+  int64 net_amount = 1;
+  string formatted_net_amount = 2;
+  int64 monthly_bill_amount = 3;
+  string formatted_monthly_bill_amount = 4;
+  repeated PlanChangePreviewLineItem line_items = 5;
+  // True when the preview is a local estimate rather than a Stripe billing intent calculation.
+  bool is_estimate = 6;
+}
+
+message PreviewPlanChangeResponse {
+  PlanChangePreview preview = 1;
+}
+
+// Intentionally empty.
+message RequestEnterpriseUpgradeRequest {}
+
+message RequestEnterpriseUpgradeResponse {
+  bool success = 1;
+}
+
+message EnsureBillingCustomerRequest {
+  optional string account_id = 1;
+}
+
+message EnsureBillingCustomerResponse {
+  string stripe_customer_id = 1;
+  bool created = 2;
+  // The billing profile ID, present if a billing profile was created or already exists.
+  optional string billing_profile_id = 3;
+}
+
+message SwitchPlanRequest {
+  string plan_id = 1;
+}
+
+message SwitchPlanResponse {
+  bool success = 1;
+  optional string intent_id = 2;
+}
+
+message SetupBillingProfileRequest {
+  optional string account_id = 1;
+}
+
+message SetupBillingProfileResponse {
+  string billing_profile_id = 1;
+  string billing_cadence_id = 2;
+}
+
+message SubscribeToPricingPlanRequest {
+  string stripe_customer_id = 1;
+  string plan_code = 2;
+}
+
+// Intentionally empty; success is indicated by a nil error.
+message SubscribeToPricingPlanResponse {}
+
+message CreateSetupIntentRequest {
+  string customer_id = 1;
+  string idempotency_key = 2;
+}
+
+message CreateSetupIntentResponse {
+  string setup_intent_id = 1;
+  string client_secret = 2;
+  string publishable_key = 3;
+}
+
+message GetSetupIntentStatusRequest {
+  string setup_intent_id = 1;
+}
+
+message GetSetupIntentStatusResponse {
+  string status = 1;
+  optional string payment_method_id = 2;
+}
+
+message ValidateStripePricingPlanRequest {
+  string plan_code = 1;
+}
+
+message ValidateStripePricingPlanResponse {
+  bool valid = 1;
+}

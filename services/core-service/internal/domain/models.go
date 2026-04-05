@@ -20,7 +20,7 @@ type SandboxAccount struct {
 	TypeID           string
 	OwnerAccountID   string
 	AccountID        string
-	Name             string
+	Name             string `audit:"name"`
 	OwnerAccountName *string
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
@@ -32,11 +32,13 @@ type ListSandboxAccountsResult struct {
 }
 
 type AccountContext struct {
-	AccountID          string
-	IsSandbox          bool
-	OwnerAccountID     *string
-	AccountMode        constants.AccountMode
-	SubscriptionStatus *string
+	AccountID                    string
+	IsSandbox                    bool
+	OwnerAccountID               *string
+	AccountMode                  constants.AccountMode
+	SubscriptionStatus           *string
+	PlanCode                     string
+	AgentMonthlySpendingCapCents *int64
 }
 
 type AccountUser struct {
@@ -64,14 +66,71 @@ type AccountRelation struct {
 	ID                    string
 	CounterpartyAccountID string
 	RoleCode              string
+	// IsOwnerSide is true when the caller's account is the owner of the relation
+	// (i.e. the API key belongs to the merchant targeting a customer/supplier account).
+	IsOwnerSide bool
 }
 
 type AccountAffiliation struct {
-	AccountID   string
-	AccountName string
-	RoleID      string
-	RoleName    string
-	LastUsedAt  *time.Time
+	AccountID    string
+	AccountName  string
+	RoleID       string
+	RoleName     string
+	RoleTypeCode string
+	LastUsedAt   *time.Time
+}
+
+type RoleInfo struct {
+	ID           string
+	Name         string
+	RoleTypeCode string
+}
+
+type ProductInfo struct {
+	ProductID   string
+	ItemID      string
+	SKU         string
+	Description string
+	UnitPrice   string
+}
+
+type CustomerByEmail struct {
+	RelationID            string
+	OwnerAccountID        string
+	CounterpartyAccountID string
+	RoleCode              string
+	Alias                 string
+	Email                 string
+	UserName              string
+}
+
+// UserRecord represents a row from the user table.
+type UserRecord struct {
+	ID             string
+	Email          *string `audit:"email"`
+	Name           *string `audit:"name"`
+	Username       *string `audit:"username"`
+	HashedPassword *string
+	EmailVerified  *time.Time `audit:"email_verified"`
+	ImageURL       *string    `audit:"image_url"`
+	StatusCode     string     `audit:"status_code"`
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+// CreateUserRecordParams are the parameters for creating a user record.
+type CreateUserRecordParams struct {
+	Name           *string
+	Email          *string
+	Username       *string
+	HashedPassword *string
+}
+
+// UpdateUserParams are the parameters for updating a user record.
+type UpdateUserParams struct {
+	Name          *string
+	ImageURL      *string
+	EmailVerified *time.Time
 }
 
 type IdempotencyKey struct {

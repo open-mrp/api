@@ -1,0 +1,142 @@
+package inventorychangelogep
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/augno/api/services/api-gateway/internal/domain"
+	"github.com/augno/api/services/api-gateway/internal/export"
+	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
+	httptransport "github.com/augno/api/services/api-gateway/internal/http"
+	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	apierror "github.com/augno/api/shared/errors"
+	pb "github.com/augno/api/shared/proto/core"
+	"github.com/augno/api/shared/tracing"
+	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/timestamppb"
+)
+
+type InventoryChangeLogSvc interface {
+	ListInventoryChangeLogs(ctx context.Context, req *ListInventoryChangeLogsRequest) (*apiresource.List[apiresource.InventoryChangeLog], *apierror.APIError)
+	GetInventoryChangeLog(ctx context.Context, req *GetInventoryChangeLogRequest) (*apiresource.InventoryChangeLog, *apierror.APIError)
+	ExportInventoryChangeLogs(ctx context.Context, req *ExportInventoryChangeLogsRequest) (*httptransport.FileDownload, *apierror.APIError)
+}
+
+type InventoryChangeLogSvcConfig struct {
+	CoreClient pb.CoreServiceClient
+}
+
+type inventoryChangeLogSvcImpl struct {
+	coreClient pb.CoreServiceClient
+}
+
+var inventoryChangeLogSvcTracer = tracing.GetTracer("api-gateway.endpoints.inventory_change_logs.service")
+
+func (c *InventoryChangeLogSvcConfig) validate() error {
+	if c.CoreClient == nil {
+		return fmt.Errorf("inventory change log endpoint service: core client is required")
+	}
+	return nil
+}
+
+func NewInventoryChangeLogSvc(config *InventoryChangeLogSvcConfig) InventoryChangeLogSvc {
+	if err := config.validate(); err != nil {
+		panic(err)
+	}
+
+	return &inventoryChangeLogSvcImpl{
+		coreClient: config.CoreClient,
+	}
+}
+
+func (m *inventoryChangeLogSvcImpl) ListInventoryChangeLogs(ctx context.Context, req *ListInventoryChangeLogsRequest) (*apiresource.List[apiresource.InventoryChangeLog], *apierror.APIError) {
+	pbReq := &pb.ListInventoryChangeLogsRequest{
+		Cursor:           req.Cursor,
+		Limit:            req.Limit,
+		Query:            req.Query,
+		ItemIds:          req.ItemIDs,
+		ActionTypeCodes:  req.ActionTypeCodes,
+		ChangedByUserIds: req.ChangedByUserIDs,
+	}
+
+	if req.StartDate != nil {
+		pbReq.StartDate = timestamppb.New(*req.StartDate)
+	}
+	if req.EndDate != nil {
+		pbReq.EndDate = timestamppb.New(*req.EndDate)
+	}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, inventoryChangeLogSvcTracer, "service.inventory_change_logs.list", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ListInventoryChangeLogsResponse, error) {
+			return m.coreClient.ListInventoryChangeLogs(ctx, pbReq, opts...)
+		})
+
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return InventoryChangeLogListPresenter(resp), nil
+}
+
+func (m *inventoryChangeLogSvcImpl) GetInventoryChangeLog(ctx context.Context, req *GetInventoryChangeLogRequest) (*apiresource.InventoryChangeLog, *apierror.APIError) {
+	pbReq := &pb.GetInventoryChangeLogRequest{
+		Id: req.InventoryChangeLogID,
+	}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, inventoryChangeLogSvcTracer, "service.inventory_change_logs.get", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetInventoryChangeLogResponse, error) {
+			return m.coreClient.GetInventoryChangeLog(ctx, pbReq, opts...)
+		})
+
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	result := InventoryChangeLogPresenter(resp.InventoryChangeLog)
+	return &result, nil
+}
+
+func (m *inventoryChangeLogSvcImpl) ExportInventoryChangeLogs(ctx context.Context, req *ExportInventoryChangeLogsRequest) (*httptransport.FileDownload, *apierror.APIError) {
+	pbReq := &pb.ExportInventoryChangeLogsRequest{
+		ItemIds:          req.ItemIDs,
+		ActionTypeCodes:  req.ActionTypeCodes,
+		ChangedByUserIds: req.ChangedByUserIDs,
+	}
+
+	if req.StartDate != nil {
+		pbReq.StartDate = timestamppb.New(*req.StartDate)
+	}
+	if req.EndDate != nil {
+		pbReq.EndDate = timestamppb.New(*req.EndDate)
+	}
+
+	resp, apiErr := grpcutil.CallRPC(ctx, inventoryChangeLogSvcTracer, "service.inventory_change_logs.export", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ExportInventoryChangeLogsResponse, error) {
+			return m.coreClient.ExportInventoryChangeLogs(ctx, pbReq, opts...)
+		})
+
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	body, err := export.InventoryChangeLogsToExcel(resp)
+	if err != nil {
+		return nil, apierror.NewInternalError(err, "Failed to build export file.")
+	}
+
+	startDateStr := "all"
+	if req.StartDate != nil {
+		startDateStr = req.StartDate.Format("2006-01-02")
+	}
+	endDateStr := "all"
+	if req.EndDate != nil {
+		endDateStr = req.EndDate.Format("2006-01-02")
+	}
+	filename := fmt.Sprintf("inventory-change-logs-%s-%s.xlsx", startDateStr, endDateStr)
+
+	return &httptransport.FileDownload{
+		ContentType: export.ExcelContentType,
+		Filename:    filename,
+		Body:        body,
+	}, nil
+}

@@ -17,16 +17,16 @@ type Account struct {
 	Name                         string
 	AccountTypeCode              string
 	OnboardingStatusCode         string
-	PlanCode                     string
+	AccountBillingID             sql.NullString
+	DefaultBillingAddressID      sql.NullString
+	DefaultShippingAddressID     sql.NullString
+	UpdatedAt                    time.Time
+	CreatedAt                    time.Time
 	AccountPlanID                sql.NullString
 	InternalStripeCustomerID     sql.NullString
 	InternalStripeSubscriptionID sql.NullString
 	SubscriptionStatus           sql.NullString
 	SubscriptionCurrentPeriodEnd sql.NullTime
-	DefaultBillingAddressID      sql.NullString
-	DefaultShippingAddressID     sql.NullString
-	UpdatedAt                    time.Time
-	CreatedAt                    time.Time
 }
 
 type AccountAddress struct {
@@ -35,6 +35,23 @@ type AccountAddress struct {
 	AddressID string
 	CreatedAt time.Time
 	UpdatedAt time.Time
+}
+
+type AccountBilling struct {
+	ID                              string
+	AccountPlanID                   string
+	InternalStripeCustomerID        sql.NullString
+	InternalStripeSubscriptionID    sql.NullString
+	SubscriptionStatus              sql.NullString
+	SubscriptionCurrentPeriodEnd    sql.NullTime
+	StripeBillingProfileID          sql.NullString
+	StripeBillingCadenceID          sql.NullString
+	StripePricingPlanSubscriptionID sql.NullString
+	ServicingStatus                 sql.NullString
+	CollectionStatus                sql.NullString
+	AgentMonthlySpendingCapCents    sql.NullInt64
+	CreatedAt                       time.Time
+	UpdatedAt                       time.Time
 }
 
 type AccountBranding struct {
@@ -109,6 +126,7 @@ type AccountPlan struct {
 	PricePerSeat         string
 	PricePerMonth        sql.NullString
 	SeatMinimum          sql.NullInt32
+	StripePricingPlanID  sql.NullString
 	RegistrationLimit    sql.NullInt32
 	DisplayFeatures      json.RawMessage
 	DisplayOrder         int32
@@ -201,6 +219,7 @@ type AccountRelation struct {
 	ShippingTermID           sql.NullString
 	CarrierBillingType       sql.NullString
 	CarrierBillingAccount    sql.NullString
+	HubspotCompanyID         sql.NullString
 }
 
 type AccountRelationNotificationPreference struct {
@@ -283,6 +302,21 @@ type AdjustmentType struct {
 	UpdatedAt time.Time
 }
 
+type AgentTokenBilling struct {
+	ID                     string
+	AccountID              string
+	PeriodStart            time.Time
+	PeriodEnd              time.Time
+	TotalInputTokens       int64
+	TotalOutputTokens      int64
+	TotalTokens            int64
+	TokensReportedToStripe int64
+	StripeMeteredItemID    sql.NullString
+	RunCount               int32
+	CreatedAt              time.Time
+	UpdatedAt              time.Time
+}
+
 type ApiKey struct {
 	ID             int64
 	TypeID         string
@@ -309,6 +343,26 @@ type Attribute struct {
 	ColorCode  string
 	AccountID  string
 	IsPublic   bool
+}
+
+type AuditEvent struct {
+	ID               int64
+	TypeID           string
+	ActorID          string
+	ActorType        string
+	IdentityType     string
+	AccountID        string
+	Action           string
+	ResourceType     string
+	ResourceID       string
+	Changes          json.RawMessage
+	Metadata         json.RawMessage
+	ServiceName      string
+	RequestID        sql.NullString
+	IdempotencyKeyID sql.NullString
+	SourceIp         sql.NullString
+	OccurredAt       time.Time
+	CreatedAt        time.Time
 }
 
 type Batch struct {
@@ -348,6 +402,7 @@ type Carrier struct {
 	AccountID              sql.NullString
 	CreatedAt              time.Time
 	UpdatedAt              time.Time
+	IsPortalEnabled        bool
 	DeletedAt              sql.NullTime
 }
 
@@ -356,6 +411,8 @@ type CarrierOption struct {
 	Code              string
 	Name              string
 	ServiceLevelToken sql.NullString
+	IsPortalEnabled   bool
+	IsDefault         bool
 	CarrierID         string
 	AccountID         sql.NullString
 	CreatedAt         time.Time
@@ -402,6 +459,14 @@ type DcLocation struct {
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 	OwnerAccountID string
+}
+
+type DeletedRecord struct {
+	ID           int64
+	DeletedAt    time.Time
+	ResourceType string
+	ResourceID   string
+	Data         json.RawMessage
 }
 
 type Delivery struct {
@@ -520,6 +585,16 @@ type Geolocation struct {
 	UpdatedAt      time.Time
 	Latitude       sql.NullFloat64
 	Longitude      sql.NullFloat64
+}
+
+type HubspotAccountUserLink struct {
+	ID                string
+	AccountUserID     string
+	HubspotContactID  string
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	OwnerAccountID    string
+	CustomerAccountID string
 }
 
 type IdempotencyKey struct {
@@ -932,6 +1007,7 @@ type Product struct {
 	ItemID          string
 	ProductTypeCode string
 	ProductLineID   sql.NullString
+	IsPortalReady   bool
 }
 
 type ProductLine struct {
@@ -1390,6 +1466,13 @@ type ShippingTerm struct {
 	UpdatedAt       time.Time
 }
 
+type ShippingTermFreeShippingRule struct {
+	ID              string
+	ShippingTermID  string
+	CarrierOptionID string
+	CreatedAt       time.Time
+}
+
 type StorageLocation struct {
 	ID                      string
 	AccountID               string
@@ -1468,6 +1551,19 @@ type Territory struct {
 	ProductLineID sql.NullString
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
+}
+
+type TokenPackPurchase struct {
+	ID                      string
+	AccountID               string
+	PackID                  string
+	TokenCount              int64
+	PriceCents              int64
+	StripePaymentIntentID   sql.NullString
+	StripeCheckoutSessionID sql.NullString
+	Status                  string
+	CreatedAt               time.Time
+	UpdatedAt               time.Time
 }
 
 type Transaction struct {
@@ -1549,6 +1645,7 @@ type UnitGroupUnit struct {
 	UnitID             string
 	DiscountPercentage string
 	IsVisible          bool
+	DiscountFixed      string
 }
 
 type UnitType struct {

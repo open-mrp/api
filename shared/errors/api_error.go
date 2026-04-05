@@ -219,6 +219,9 @@ type APIError struct {
 // Error returns the internal (non-public) error string for logging. If an underlying
 // error is wrapped, it is appended to the internal message.
 func (e *APIError) Error() string {
+	if e == nil {
+		return ""
+	}
 	if e.Internal != nil {
 		return e.InternalMessage + ": " + e.Internal.Error()
 	}
@@ -227,6 +230,9 @@ func (e *APIError) Error() string {
 
 // Unwrap returns the underlying error for use with errors.Is/errors.As.
 func (e *APIError) Unwrap() error {
+	if e == nil {
+		return nil
+	}
 	return e.Internal
 }
 
@@ -426,7 +432,12 @@ func NewResourceExistsError(publicMessage string) *APIError {
 
 // NewResourceGoneError creates a 410 Gone error for permanently deleted resources.
 func NewResourceGoneError(publicMessage string) *APIError {
-	return NewAPIError(ErrorCodeResourceGone, ErrorTypeAPI, publicMessage, "", WithDocURL(docURLResourceGone))
+	return NewAPIError(ErrorCodeResourceGone, ErrorTypeInvalidRequest, publicMessage, "", WithDocURL(docURLResourceGone))
+}
+
+// NewAlreadyDeletedError creates a 410 Gone error for resources that were already deleted.
+func NewAlreadyDeletedError(publicMessage string) *APIError {
+	return NewAPIError(ErrorCodeResourceGone, ErrorTypeInvalidRequest, publicMessage, "", WithDocURL(docURLResourceGone))
 }
 
 // NewIdempotencyInProgressError creates a 409 Conflict error when a request with the
@@ -560,6 +571,9 @@ func (r APIErrorResponse) SchemaExample() any {
 // ToResponseMap converts the APIError into an APIErrorResponse suitable for JSON
 // serialization in HTTP responses. Only public fields are included.
 func (e *APIError) ToResponseMap() any {
+	if e == nil {
+		return APIErrorResponse{}
+	}
 	resp := ResponseError{
 		Code:        e.Code,
 		Type:        e.Type,

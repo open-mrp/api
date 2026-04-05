@@ -53,7 +53,10 @@ func RespondWithJSON(ctx context.Context, w http.ResponseWriter, code int, paylo
 	}
 	if err != nil {
 		log.Printf("Error marshalling JSON: %s", err)
-		w.WriteHeader(500)
+		w.WriteHeader(http.StatusInternalServerError)
+		if _, werr := w.Write([]byte(`{"error":{"code":"internal_error","type":"api_error","message":"Something went wrong.","is_transient":false}}`)); werr != nil {
+			log.Printf("Error writing fallback JSON error body: %s", werr)
+		}
 		return
 	}
 	w.WriteHeader(code)
@@ -67,5 +70,38 @@ func RespondWithJSONBytes(ctx context.Context, w http.ResponseWriter, code int, 
 	w.WriteHeader(code)
 	if _, err := w.Write(body); err != nil {
 		log.Printf("Error writing response: %s", err)
+	}
+}
+
+// FileDownload is a response type for endpoints that return a file (e.g. Excel export).
+// When the service returns *FileDownload, the handler writes the body with Content-Type and Content-Disposition.
+type FileDownload struct {
+	ContentType string
+	Filename    string
+	Body        []byte
+}
+
+// RespondWithFile writes a file download response.
+func RespondWithFile(ctx context.Context, w http.ResponseWriter, code int, fd *FileDownload, opts ...RespondOption) {
+	if fd == nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set(header.ContentTypeHeader, fd.ContentType)
+	w.Header().Set("Content-Disposition", "attachment; filename=\""+fd.Filename+"\"")
+	if v, ok := appctx.GetAPIVersionFromContext(ctx); ok {
+		w.Header().Set(header.VersionHeader, v.String())
+	} else {
+		w.Header().Set(header.VersionHeader, version.Latest.String())
+	}
+	if rl, ok := appctx.GetRequestLog(ctx); ok && rl != nil {
+		w.Header().Set(header.RequestIDHeader, rl.ID)
+	}
+	for _, opt := range opts {
+		opt(w.Header())
+	}
+	w.WriteHeader(code)
+	if _, err := w.Write(fd.Body); err != nil {
+		log.Printf("Error writing file response: %s", err)
 	}
 }

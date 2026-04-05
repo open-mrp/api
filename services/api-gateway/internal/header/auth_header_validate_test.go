@@ -10,6 +10,7 @@ import (
 )
 
 func TestValidateAndExtractAuthHeader(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name           string
 		authHeader     string
@@ -208,6 +209,7 @@ func TestValidateAndExtractAuthHeader(t *testing.T) {
 }
 
 func TestValidateAndExtractAuthHeader_ErrorMessages(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name                string
 		authHeader          string
@@ -291,6 +293,7 @@ func TestValidateAndExtractAuthHeader_ErrorMessages(t *testing.T) {
 }
 
 func TestValidateBasicAuthHeader(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name          string
 		authHeader    string
@@ -371,6 +374,7 @@ func TestValidateBasicAuthHeader(t *testing.T) {
 }
 
 func TestValidateBearerHeader(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name          string
 		authHeader    string
@@ -441,6 +445,7 @@ func TestValidateBearerHeader(t *testing.T) {
 }
 
 func TestValidateTokenString(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		token    string
@@ -507,6 +512,7 @@ func TestValidateTokenString(t *testing.T) {
 }
 
 func TestValidateAndExtractAuthHeaderNotEmpty(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name       string
 		authHeader string
@@ -572,6 +578,7 @@ func TestValidateAndExtractAuthHeaderNotEmpty(t *testing.T) {
 }
 
 func TestCleanTokenForResponse(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name           string
 		token          string
@@ -623,7 +630,10 @@ func TestCleanTokenForResponse(t *testing.T) {
 }
 
 func TestAuthSchemeConstants(t *testing.T) {
+	t.Parallel(
 	// Test that the constants are properly defined
+	)
+
 	if AuthSchemeBasic != "basic" {
 		t.Errorf("expected AuthSchemeBasic to be 'basic', got: %s", AuthSchemeBasic)
 	}
@@ -634,7 +644,10 @@ func TestAuthSchemeConstants(t *testing.T) {
 }
 
 func TestAuthHeaderResult(t *testing.T) {
+	t.Parallel(
 	// Test the AuthHeaderResult struct
+	)
+
 	result := &AuthHeaderResult{
 		TokenString: "test-token",
 		Scheme:      AuthSchemeBasic,
@@ -650,6 +663,7 @@ func TestAuthHeaderResult(t *testing.T) {
 }
 
 func TestValidateAndExtractAuthHeader_EdgeCases(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name       string
 		authHeader string
@@ -705,7 +719,10 @@ func TestValidateAndExtractAuthHeader_EdgeCases(t *testing.T) {
 }
 
 func TestValidateAndExtractAuthHeader_ErrorConstants(t *testing.T) {
+	t.Parallel(
 	// Test that error constants are properly defined
+	)
+
 	if ErrHeaderPrefix == "" {
 		t.Error("expected ErrHeaderPrefix to be defined")
 	}

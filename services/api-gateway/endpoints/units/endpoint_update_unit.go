@@ -5,18 +5,16 @@ import (
 	"net/http"
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
-
-const updateUnitEndpointDescription string = `This endpoint partially updates an account-owned unit.
-Only provided fields are updated; absent fields retain their current values.
-System units cannot be updated.`
 
 // UpdateUnitRequest is the request to partially update a unit.
 type UpdateUnitRequest struct {
 	// The ID of the unit to update.
-	UnitID string `path:"id"`
+	UnitID string `path:"id" validate:"required"`
 	// The display name of the unit.
 	Name *string `json:"name,omitempty"`
 	// The short abbreviation for the unit.
@@ -31,25 +29,35 @@ type UpdateUnitRequest struct {
 	OffsetDenominator *string `json:"offset_denominator,omitempty"`
 }
 
+var sampleUpdateUnitRequest = &UpdateUnitRequest{
+	Name:         new("Kilogram"),
+	Abbreviation: new("kg"),
+}
+
+func (*UpdateUnitRequest) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(sampleUpdateUnitRequest)
+}
+
 type UpdateUnitEndpoint struct{}
 
 func (e *UpdateUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateUnitRequest, *apiresource.Unit] {
 	return &apiendpoint.APIEndpoint[*UpdateUnitRequest, *apiresource.Unit]{
 		Title:             "Update Unit",
-		Description:       updateUnitEndpointDescription,
+		Description:       "Partially updates an account-owned unit; system units cannot be updated.",
 		Method:            http.MethodPatch,
-		Route:             "/v1/core/units/{id}",
+		Route:             "/v1/catalog/units/{id}",
 		ContentType:       "application/json",
 		Request:           &UpdateUnitRequest{},
-		Response:          apiresource.SampleUnit,
+		Response:          &apiresource.Unit{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateUnitRequest) (*apiresource.Unit, *apierror.APIError) {
 			return svc.(UnitSvc).UpdateUnit
 		},
-		Extras: apiendpoint.APIEndpointExtras{
-			AllowUnknownJSONFields: false,
-		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeUnit,
+			Fields:     []string{"owner"},
+		}),
 	}
 }

@@ -27,6 +27,7 @@ go.work.sum
 
 # env file
 .env
+.env.e2e
 
 # Editor/IDE
 .idea/
@@ -44,6 +45,7 @@ test/logs/
 
 # generated openapi spec docs
 specs/
+httpie/
 
 # Added by goreleaser init:
 dist/
@@ -70,3 +72,13 @@ crash.log
 
 # cache
 .cache/
+
+# migration verification working directory
+.migration-verify/logs/
+.migration-verify/queue/
+.audit-verify/logs/
+.audit-verify/queue/
+.delete-verify/logs/
+.delete-verify/queue/
+.endpoint-verify/
+.auth-pattern-verify/

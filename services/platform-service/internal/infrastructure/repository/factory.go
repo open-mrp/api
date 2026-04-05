@@ -17,3 +17,7 @@ func NewRepoFactory(db *sqlc.Queries) domain.RepoFactory {
 func (f *repoFactoryImpl) NewRequestLogRepo() domain.RequestLogRepo {
 	return NewRequestLogRepo(f.db)
 }
+
+func (f *repoFactoryImpl) NewAuditEventRepo() domain.AuditEventRepo {
+	return NewAuditEventRepo(f.db)
+}

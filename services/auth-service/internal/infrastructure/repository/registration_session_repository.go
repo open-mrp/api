@@ -250,6 +250,21 @@ func (r *registrationSessionRepoImpl) UpdatePaymentCompleted(ctx context.Context
 	return nil
 }
 
+func (r *registrationSessionRepoImpl) UpdateAccountID(ctx context.Context, id int64, accountID string) *apierror.APIError {
+	ctx, span := registrationSessionRepoTracer.Start(ctx, "repository.registration_session.update_account_id")
+	defer span.End()
+
+	err := r.queries.UpdateRegistrationSessionAccountID(ctx, sqlc.UpdateRegistrationSessionAccountIDParams{
+		AccountID: gosql.NullString{String: accountID, Valid: true},
+		ID:        id,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	return nil
+}
+
 func (r *registrationSessionRepoImpl) Complete(ctx context.Context, id int64, accountID *string) *apierror.APIError {
 	ctx, span := registrationSessionRepoTracer.Start(ctx, "repository.registration_session.complete")
 	defer span.End()

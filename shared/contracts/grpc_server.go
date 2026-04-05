@@ -44,7 +44,7 @@ type GRPCServerConfig struct {
 	EnforcementPolicy keepalive.EnforcementPolicy
 
 	// UnaryInterceptors (optional; default: SpanRenamer, Recovery, Identity, IdempotencyKey,
-	// RequestID, CanonicalLog) is the chain of server-side unary interceptors.
+	// RequestID, ClientIP, CanonicalLog) is the chain of server-side unary interceptors.
 	UnaryInterceptors []grpc.UnaryServerInterceptor
 }
 
@@ -66,6 +66,7 @@ func (c *GRPCServerConfig) WithDefaults(logger *slog.Logger) *GRPCServerConfig {
 			IdentityUnaryServerInterceptor(),
 			IdempotencyKeyUnaryServerInterceptor(),
 			RequestIDUnaryServerInterceptor(),
+			ClientIPUnaryServerInterceptor(),
 			logging.CanonicalLogInterceptor(logger),
 		}
 	}

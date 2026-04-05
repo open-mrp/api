@@ -1,0 +1,407 @@
+syntax = "proto3";
+
+// CoreService message types (imported by core.proto).
+package core;
+
+import "google/protobuf/timestamp.proto";
+import "core/core_identity_context.proto";
+option go_package = "shared/proto/core;core";
+
+message AccountGroupInfo {
+  string id = 1;
+  string name = 2;
+  optional string description = 3;
+  string commission_policy = 4;
+  string freight_policy = 5;
+  string type = 6;
+  optional string registration_flow_id = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+}
+message ListAccountGroupsRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+  optional string type = 4;
+}
+message ListAccountGroupsResponse {
+  repeated AccountGroupInfo account_groups = 1;
+  PageInfo page_info = 2;
+}
+message GetAccountGroupRequest {
+  string id = 1;
+}
+message GetAccountGroupResponse {
+  AccountGroupInfo account_group = 1;
+}
+message CreateAccountGroupRequest {
+  string name = 1;
+  string type = 2;
+  string commission_policy = 3;
+  string freight_policy = 4;
+  optional string description = 5;
+}
+message CreateAccountGroupResponse {
+  AccountGroupInfo account_group = 1;
+}
+message UpdateAccountGroupRequest {
+  string id = 1;
+  optional string name = 2;
+  optional string description = 3;
+  optional string commission_policy = 4;
+  optional string freight_policy = 5;
+}
+message UpdateAccountGroupResponse {
+  AccountGroupInfo account_group = 1;
+}
+message DeleteAccountGroupRequest {
+  string id = 1;
+}
+message AccountUserDetail {
+  string id = 1;
+  string user_id = 2;
+  optional string name = 3;
+  optional string email = 4;
+  optional string username = 5;
+  optional string image_url = 6;
+  bool email_verified = 7;
+  optional string role_id = 8;
+  optional string role_name = 9;
+  optional string role_type_code = 10;
+  optional string department_id = 11;
+  optional string department_name = 12;
+  string status_code = 13;
+  optional google.protobuf.Timestamp last_used_at = 14;
+  google.protobuf.Timestamp created_at = 15;
+  google.protobuf.Timestamp updated_at = 16;
+}
+message ListAccountUsersRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+  optional string role_type = 4;
+  bool include_removed = 5;
+}
+message ListAccountUsersResponse {
+  repeated AccountUserDetail account_users = 1;
+  PageInfo page_info = 2;
+  int64 total_count = 3;
+}
+message GetAccountUserRequest {
+  string account_user_id = 1;
+}
+message GetAccountUserResponse {
+  AccountUserDetail account_user = 1;
+}
+message CreateAccountUserRequest {
+  optional string name = 1;
+  optional string email = 2;
+  optional string username = 3;
+  optional string password = 4;
+  optional string role_id = 5;
+  optional string department_id = 6;
+  optional bool is_sales_rep = 7;
+  bool receives_order_acknowledgements = 8;
+  bool receives_invoice_notifications = 9;
+  bool receives_purchase_order_submission_notifications = 10;
+}
+message CreateAccountUserResponse {
+  AccountUserDetail account_user = 1;
+}
+message UpdateAccountUserRequest {
+  string account_user_id = 1;
+  optional string name = 2;
+  optional string email = 3;
+  optional string username = 4;
+  optional string role_id = 5;
+  optional string department_id = 6;
+}
+message UpdateAccountUserResponse {
+  AccountUserDetail account_user = 1;
+}
+message DeleteAccountUserRequest {
+  string account_user_id = 1;
+}
+message LockAccountUserRequest {
+  string account_user_id = 1;
+}
+message UnlockAccountUserRequest {
+  string account_user_id = 1;
+}
+message RestoreAccountUserRequest {
+  string account_user_id = 1;
+}
+message UpdateAccountUserPasswordRequest {
+  string account_user_id = 1;
+  string requester_password = 2;
+  string new_password = 3;
+}
+message UpdateNotificationPreferenceItem {
+  string notification_type_code = 1;
+  bool enabled = 2;
+}
+message UpdateNotificationPreferencesRequest {
+  string account_user_id = 1;
+  repeated UpdateNotificationPreferenceItem preferences = 2;
+}
+message UpdateNotificationPreferencesResponse {
+  AccountUserDetail account_user = 1;
+}
+message SalesTargetProto {
+  string id = 1;
+  string start_date = 2;
+  string end_date = 3;
+  string sales_rep_id = 4;
+  string account_id = 5;
+  string amount_value = 6;
+  string amount_unit_id = 7;
+  string amount_id = 8;
+  string created_at = 9;
+  string updated_at = 10;
+}
+message ListSalesTargetsRequest {
+  string sales_rep_id = 1;
+  optional string query = 2;
+  int32 limit = 3;
+  int32 offset = 4;
+}
+message ListSalesTargetsResponse {
+  repeated SalesTargetProto sales_targets = 1;
+  int64 total = 2;
+}
+message CreateSalesTargetRequest {
+  string sales_rep_id = 1;
+  string start_date = 2;
+  string end_date = 3;
+  string amount_value = 4;
+  string amount_unit_id = 5;
+}
+message CreateSalesTargetResponse {
+  SalesTargetProto sales_target = 1;
+}
+message UpsertSalesTargetRequest {
+  string target_id = 1;
+  string sales_rep_id = 2;
+  string start_date = 3;
+  string end_date = 4;
+  string amount_value = 5;
+  string amount_unit_id = 6;
+}
+message UpsertSalesTargetResponse {
+  SalesTargetProto sales_target = 1;
+}
+message AccountPriceInfo {
+  string id = 1;
+  AccountPriceRecipientInfo recipient_account = 2;
+  AccountPriceProductLineInfo product_line = 3;
+  AccountPriceRateInfo rate = 4;
+  repeated AccountPriceCategoryInfo categories = 5;
+  repeated AccountPriceAttributeInfo attributes = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+message AccountPriceRecipientInfo {
+  string id = 1;
+  string name = 2;
+}
+message AccountPriceProductLineInfo {
+  string id = 1;
+  string name = 2;
+}
+message AccountPriceRateInfo {
+  string id = 1;
+  string value = 2;
+  AccountPriceUnitInfo numerator_unit = 3;
+  AccountPriceUnitInfo denominator_unit = 4;
+}
+message AccountPriceUnitInfo {
+  string id = 1;
+  string name = 2;
+  string abbreviation = 3;
+  string type = 4;
+}
+message AccountPriceCategoryInfo {
+  string id = 1;
+  string name = 2;
+}
+message AccountPriceAttributeInfo {
+  string id = 1;
+  string value = 2;
+}
+message ListAccountPricesRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+  optional string recipient_account_id = 4;
+}
+message ListAccountPricesResponse {
+  repeated AccountPriceInfo account_prices = 1;
+  PageInfo page_info = 2;
+}
+message GetAccountPriceRequest {
+  string id = 1;
+}
+message GetAccountPriceResponse {
+  AccountPriceInfo account_price = 1;
+}
+message CreateAccountPriceRequest {
+  string recipient_account_id = 1;
+  string product_line_id = 2;
+  string rate_value = 3;
+  string rate_numerator_unit_id = 4;
+  string rate_denominator_unit_id = 5;
+  repeated string category_ids = 6;
+  repeated string attribute_ids = 7;
+}
+message CreateAccountPriceResponse {
+  AccountPriceInfo account_price = 1;
+}
+message UpdateAccountPriceRequest {
+  string id = 1;
+  optional string recipient_account_id = 2;
+  optional string product_line_id = 3;
+  optional string rate_value = 4;
+  optional string rate_numerator_unit_id = 5;
+  optional string rate_denominator_unit_id = 6;
+  // When set, replaces all category associations. Empty list clears them.
+  optional AccountPriceIDList category_ids = 7;
+  // When set, replaces all attribute associations. Empty list clears them.
+  optional AccountPriceIDList attribute_ids = 8;
+}
+message AccountPriceIDList {
+  repeated string ids = 1;
+}
+message UpdateAccountPriceResponse {
+  AccountPriceInfo account_price = 1;
+}
+message DeleteAccountPriceRequest {
+  string id = 1;
+}
+message AccountGroupProductLineAccessInfo {
+  string account_group_id = 1;
+  string account_group_name = 2;
+  repeated ProductLineAccessInfo product_lines = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp updated_at = 5;
+}
+message ProductLineAccessInfo {
+  string id = 1;
+  string name = 2;
+}
+message ListAccountGroupProductLineAccessRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+}
+message ListAccountGroupProductLineAccessResponse {
+  repeated AccountGroupProductLineAccessInfo items = 1;
+  PageInfo page_info = 2;
+}
+message GetAccountGroupProductLineAccessRequest {
+  string account_group_id = 1;
+}
+message GetAccountGroupProductLineAccessResponse {
+  AccountGroupProductLineAccessInfo item = 1;
+}
+message CreateAccountGroupProductLineAccessRequest {
+  string account_group_id = 1;
+  repeated string product_line_ids = 2;
+}
+message CreateAccountGroupProductLineAccessResponse {
+  AccountGroupProductLineAccessInfo item = 1;
+}
+message UpdateAccountGroupProductLineAccessRequest {
+  string account_group_id = 1;
+  repeated string product_line_ids = 2;
+}
+message UpdateAccountGroupProductLineAccessResponse {
+  AccountGroupProductLineAccessInfo item = 1;
+}
+message DeleteAccountGroupProductLineAccessRequest {
+  string account_group_id = 1;
+}
+message CustomerProductLineAccessInfo {
+  string customer_id = 1;
+  string customer_name = 2;
+  string customer_number = 3;
+  repeated ProductLineAccessInfo product_lines = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+message ListCustomerProductLineAccessRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+}
+message ListCustomerProductLineAccessResponse {
+  repeated CustomerProductLineAccessInfo items = 1;
+  PageInfo page_info = 2;
+}
+message GetCustomerProductLineAccessRequest {
+  string customer_id = 1;
+}
+message GetCustomerProductLineAccessResponse {
+  CustomerProductLineAccessInfo item = 1;
+}
+message CreateCustomerProductLineAccessRequest {
+  string customer_id = 1;
+  repeated string product_line_ids = 2;
+}
+message CreateCustomerProductLineAccessResponse {
+  CustomerProductLineAccessInfo item = 1;
+}
+message UpdateCustomerProductLineAccessRequest {
+  string customer_id = 1;
+  repeated string product_line_ids = 2;
+}
+message UpdateCustomerProductLineAccessResponse {
+  CustomerProductLineAccessInfo item = 1;
+}
+message DeleteCustomerProductLineAccessRequest {
+  string customer_id = 1;
+}
+message AccountIntegrationInfo {
+  string id = 1;
+  string name = 2;
+  string integration_code = 3;
+  bool is_active = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+message ListAccountIntegrationsRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+  optional string query = 3;
+}
+message ListAccountIntegrationsResponse {
+  repeated AccountIntegrationInfo account_integrations = 1;
+  PageInfo page_info = 2;
+}
+message CreateAccountIntegrationRequest {
+  string name = 1;
+  string integration_code = 2;
+  // JSON-encoded credentials specific to the integration type.
+  string credentials = 3;
+}
+message CreateAccountIntegrationResponse {
+  AccountIntegrationInfo account_integration = 1;
+}
+message UpdateAccountIntegrationRequest {
+  string id = 1;
+  optional string name = 2;
+  optional bool is_active = 3;
+}
+message UpdateAccountIntegrationResponse {
+  AccountIntegrationInfo account_integration = 1;
+}
+message DeleteAccountIntegrationRequest {
+  string id = 1;
+}
+message DeleteAccountIntegrationResponse {
+  AccountIntegrationInfo account_integration = 1;
+}
+message GetStripePublishableKeyRequest {}
+message GetStripePublishableKeyResponse {
+  string publishable_key = 1;
+}
+message GetStripeStatusRequest {}

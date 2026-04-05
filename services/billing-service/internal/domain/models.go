@@ -1,6 +1,9 @@
 package domain
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 type PricingPlan struct {
 	ID                   int64
@@ -17,6 +20,7 @@ type PricingPlan struct {
 	IsHighlighted        bool
 	ButtonText           string
 	IncludesPreviousPlan *string
+	StripePricingPlanID  *string
 }
 
 type PlanLimit struct {
@@ -39,38 +43,32 @@ type UsageItem struct {
 }
 
 type SubscriptionInfoResult struct {
-	Status            string
-	CurrentPeriodEnd  *time.Time
-	TrialEnd          *time.Time
-	CancelAtPeriodEnd bool
-	CancelAt          *time.Time
+	ServicingStatus  string
+	CollectionStatus string
 }
 
 type AccountUsage struct {
-	Seats        UsageItem
-	Invoices     UsageItem
-	Batches      UsageItem
-	Sandboxes    UsageItem
-	Subscription *SubscriptionInfoResult
+	Seats                    UsageItem
+	Invoices                 UsageItem
+	Batches                  UsageItem
+	Sandboxes                UsageItem
+	Subscription             *SubscriptionInfoResult
+	EstimatedAgentSpendCents int64
+	AgentTokenDetail         *AgentTokenDetail
 }
 
-type ProrationPreview struct {
-	CreditAmount                int64
-	ChargeAmount                int64
-	NetAmount                   int64
-	FormattedNetAmount          string
-	IsCredit                    bool
-	TotalInvoiceAmount          int64
-	FormattedTotalInvoiceAmount string
-	MonthlyBillAmount           int64
-	FormattedMonthlyBillAmount  string
-	LineItems                   []ProrationLineItem
+type PlanChangePreview struct {
+	NetAmount                  int64
+	FormattedNetAmount         string
+	MonthlyBillAmount          int64
+	FormattedMonthlyBillAmount string
+	LineItems                  []PlanChangePreviewLineItem
+	IsEstimate                 bool
 }
 
-type ProrationLineItem struct {
+type PlanChangePreviewLineItem struct {
 	Description string
 	Amount      int64
-	IsProration bool
 }
 
 type RequestEnterpriseUpgradeResult struct {
@@ -80,33 +78,75 @@ type RequestEnterpriseUpgradeResult struct {
 type EnsureBillingCustomerResult struct {
 	StripeCustomerID string
 	Created          bool
+	BillingProfileID *string
 }
 
 type SwitchPlanResult struct {
-	Success         bool
-	RequiresPayment bool
-	CheckoutURL     *string
+	Success  bool
+	IntentID *string
 }
 
-type ConfirmPlanSwitchResult struct {
-	Success bool
-}
-
-type StripeHostedCheckoutInput struct {
-	CustomerID string
-	PriceID    string
-	Quantity   int64
-	SuccessURL string
-	CancelURL  string
-}
-
-type StripeHostedCheckoutSession struct {
-	ID  string
-	URL string
+type BillingProfileResult struct {
+	ProfileID string
+	CadenceID string
 }
 
 type AccountSubscriptionInfo struct {
 	SubscriptionStatus           *string
 	SubscriptionCurrentPeriodEnd *time.Time
 	StripeSubscriptionID         *string
+	ServicingStatus              *string
+	CollectionStatus             *string
+	BillingProfileID             *string
+	BillingCadenceID             *string
+	PricingPlanSubscriptionID    *string
+}
+
+type IdempotencyKey struct {
+	ID             int64
+	TypeID         string
+	ServiceName    string
+	Handler        string
+	IdempotencyKey string
+	ActorID        *string
+	IdentityType   string
+	ScopeHash      string
+	ResponseCode   *int
+	ResponseBody   json.RawMessage
+	RecoveryPoint  string
+}
+
+func (k *IdempotencyKey) HasResponse() bool {
+	return k.ResponseCode != nil
+}
+
+func (k *IdempotencyKey) IsFinished() bool {
+	return k.RecoveryPoint == string(RecoveryPointFinished)
+}
+
+type AgentTokenDetail struct {
+	IncludedTokens              int64
+	UsedTokens                  int64
+	InputTokens                 int64
+	OutputTokens                int64
+	AdditionalTokensPurchased   int64
+	TotalAvailable              int64
+	CurrentPeriodCost           float64
+	BillingPeriodEnd            time.Time
+	OverageCostPerMillionTokens float64
+}
+
+type AgentTokenBilling struct {
+	ID                     string
+	AccountID              string
+	PeriodStart            time.Time
+	PeriodEnd              time.Time
+	TotalInputTokens       int64
+	TotalOutputTokens      int64
+	TotalTokens            int64
+	TokensReportedToStripe int64
+	StripeMeteredItemID    *string
+	RunCount               int
+	CreatedAt              time.Time
+	UpdatedAt              time.Time
 }

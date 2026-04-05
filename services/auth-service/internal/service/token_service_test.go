@@ -10,11 +10,26 @@ import (
 	publishermock "github.com/augno/api/services/auth-service/internal/domain/mock/publisher"
 	repositorymock "github.com/augno/api/services/auth-service/internal/domain/mock/repository"
 	"github.com/augno/api/services/auth-service/internal/testutil"
+	"github.com/augno/api/services/auth-service/pkg/types"
+	"github.com/augno/api/shared/appctx"
 	apierror "github.com/augno/api/shared/errors"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
 )
+
+func tokenSvcIdentityCtx() context.Context {
+	acctID := "acct_test"
+	return appctx.WithIdentity(context.Background(), &types.Identity{
+		Type:   types.IdentityActorTypeUser,
+		Target: &types.IdentityTarget{AccountID: acctID},
+		Actor: &types.IdentityActor{
+			RelationType: types.IdentityRelationTypeInternal,
+			ID:           testutil.EntityIDUser,
+			AccountID:    &acctID,
+		},
+	})
+}
 
 type TokenSvcTestSuite struct {
 	suite.Suite
@@ -36,6 +51,7 @@ func (suite *TokenSvcTestSuite) SetupSuite() {
 	suite.repoFactory.EXPECT().NewUserRepo().Return(nil).AnyTimes()
 	suite.repoFactory.EXPECT().NewAPIKeyRepo().Return(nil).AnyTimes()
 	suite.repoFactory.EXPECT().NewIdempotencyKeyRepo().Return(nil).AnyTimes()
+	suite.repoFactory.EXPECT().NewOutboxRepo().Return(&stubOutboxRepo{}).AnyTimes()
 
 	suite.refreshTokenMed = mediatormock.NewMockRefreshTokenMed(suite.ctrl)
 	suite.userMed = mediatormock.NewMockUserMed(suite.ctrl)
@@ -64,6 +80,7 @@ func (suite *TokenSvcTestSuite) TearDownSuite() {
 }
 
 func TestTokenSvcTestSuite(t *testing.T) {
+	t.Parallel()
 	suite.Run(t, new(TokenSvcTestSuite))
 }
 
@@ -107,7 +124,7 @@ func (suite *TokenSvcTestSuite) TestRefreshToken_ValidateFails() {
 }
 
 func (suite *TokenSvcTestSuite) TestRevokeRefreshToken_Success() {
-	ctx := context.Background()
+	ctx := tokenSvcIdentityCtx()
 	refreshToken := "refresh-token"
 	idempotencyKey := &domain.IdempotencyKey{
 		TypeID:        "idk_123",
@@ -118,6 +135,10 @@ func (suite *TokenSvcTestSuite) TestRevokeRefreshToken_Success() {
 		UpsertIdempotencyKey(gomock.Any(), nil).
 		Return(idempotencyKey, nil).
 		Times(1)
+	suite.refreshTokenRepo.EXPECT().
+		Find(gomock.Any(), refreshToken).
+		Return(&domain.RefreshToken{Token: refreshToken, UserID: testutil.EntityIDUser}, nil).
+		Times(2)
 	suite.refreshTokenMed.EXPECT().
 		Revoke(gomock.Any(), refreshToken).
 		Return(nil).
@@ -133,7 +154,7 @@ func (suite *TokenSvcTestSuite) TestRevokeRefreshToken_Success() {
 }
 
 func (suite *TokenSvcTestSuite) TestRevokeRefreshToken_RevokeFails() {
-	ctx := context.Background()
+	ctx := tokenSvcIdentityCtx()
 	refreshToken := "refresh-token"
 	expectedErr := apierror.NewAuthenticationError("token not found")
 	idempotencyKey := &domain.IdempotencyKey{
@@ -144,6 +165,10 @@ func (suite *TokenSvcTestSuite) TestRevokeRefreshToken_RevokeFails() {
 	suite.idempotencyMed.EXPECT().
 		UpsertIdempotencyKey(gomock.Any(), nil).
 		Return(idempotencyKey, nil).
+		Times(1)
+	suite.refreshTokenRepo.EXPECT().
+		Find(gomock.Any(), refreshToken).
+		Return(&domain.RefreshToken{Token: refreshToken, UserID: testutil.EntityIDUser}, nil).
 		Times(1)
 	suite.refreshTokenMed.EXPECT().
 		Revoke(gomock.Any(), refreshToken).

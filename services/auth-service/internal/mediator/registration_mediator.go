@@ -77,6 +77,18 @@ func NewRegistrationMed(config *RegistrationMedConfig) domain.RegistrationMed {
 	}
 }
 
+// CreateSession creates a new registration session or returns an existing active session
+// for the given email (idempotent).
+//
+//  1. Check if the user already exists (noted but does not prevent session creation).
+//  2. Look for an existing non-expired session for the email; if found, update the plan code
+//     if different and resend the verification email.
+//  3. Generate a unique type ID and verification token.
+//  4. Create a new registration session record.
+//  5. Send the verification email.
+//
+// Side effects:
+//   - Sends a verification email to the user.
 func (m *registrationMedImpl) CreateSession(ctx context.Context, input domain.CreateRegistrationSessionInput) (*domain.CreateRegistrationSessionResult, *apierror.APIError) {
 	ctx, span := registrationMedTracer.Start(ctx, "mediator.registration.create_session")
 	defer span.End()
@@ -143,6 +155,16 @@ func (m *registrationMedImpl) CreateSession(ctx context.Context, input domain.Cr
 	}, nil
 }
 
+// ResendVerificationEmail regenerates the verification token and resends the verification email.
+//
+// 1. Look up the session by type ID.
+// 2. Validate the session is not completed and email is not already verified.
+// 3. Generate a new verification token and update the session.
+// 4. Send the verification email with the new token.
+//
+// Side effects:
+//   - Rotates the verification token.
+//   - Sends a new verification email.
 func (m *registrationMedImpl) ResendVerificationEmail(ctx context.Context, sessionID string) *apierror.APIError {
 	ctx, span := registrationMedTracer.Start(ctx, "mediator.registration.resend_verification_email")
 	defer span.End()
@@ -177,6 +199,15 @@ func (m *registrationMedImpl) ResendVerificationEmail(ctx context.Context, sessi
 	return nil
 }
 
+// VerifyToken verifies the email verification token and marks the session as email-verified.
+//
+// 1. Look up the session by verification token.
+// 2. Reject completed sessions.
+// 3. Check token expiry (24-hour TTL from last update).
+// 4. If already verified, return the current session without changes (idempotent).
+// 5. Check if a user already exists for the session's email.
+// 6. Mark the email as verified and advance the step to user_details.
+// 7. Re-fetch and return the updated session.
 func (m *registrationMedImpl) VerifyToken(ctx context.Context, token string) (*domain.RegistrationSession, *apierror.APIError) {
 	ctx, span := registrationMedTracer.Start(ctx, "mediator.registration.verify_token")
 	defer span.End()
@@ -232,6 +263,21 @@ func (m *registrationMedImpl) VerifyToken(ctx context.Context, token string) (*d
 	return result, nil
 }
 
+// CreateUserForSession creates or resolves a user for the registration session and returns
+// the user ID with auth tokens.
+//
+// 1. Look up the session by type ID and validate it is not completed and email is verified.
+// 2. If the session already has a user, generate tokens for the existing user (idempotent).
+// 3. Check if a user already exists with the session's email; reuse if so.
+// 4. Otherwise, hash the password and create a new user record.
+// 5. Associate the user with the session and update session data with the user name.
+// 6. Advance the session step to account_details.
+// 7. Generate and return an access token and refresh token.
+//
+// Side effects:
+//   - May create a new user record.
+//   - Associates the user with the session.
+//   - Advances the session step to account_details.
 func (m *registrationMedImpl) CreateUserForSession(ctx context.Context, input domain.CreateUserForRegistrationInput) (*domain.CreateUserForRegistrationOutput, *apierror.APIError) {
 	ctx, span := registrationMedTracer.Start(ctx, "mediator.registration.create_user_for_session")
 	defer span.End()
@@ -334,6 +380,13 @@ func (m *registrationMedImpl) getSessionByTypeID(ctx context.Context, sessionID 
 	return regSessionRepo.GetByTypeID(ctx, sessionID)
 }
 
+// UpdateSession updates an in-progress registration session's step and form data.
+//
+// 1. Look up the session by type ID and validate it is not completed.
+// 2. Validate the step transition allows only forward progression.
+// 3. Merge the provided session data into the existing data (non-nil fields only).
+// 4. Persist the updated step and data.
+// 5. Re-fetch and return the refreshed session.
 func (m *registrationMedImpl) UpdateSession(ctx context.Context, sessionID string, step *constants.RegistrationStep, sessionData *domain.UpdateRegistrationSessionData) (*domain.RegistrationSession, *apierror.APIError) {
 	ctx, span := registrationMedTracer.Start(ctx, "mediator.registration.update_session")
 	defer span.End()
@@ -381,10 +434,17 @@ func (m *registrationMedImpl) UpdateSession(ctx context.Context, sessionID strin
 	return result, nil
 }
 
+// GetSession returns the registration session for the given type ID.
+//
+// 1. Look up and return the session by its type ID.
 func (m *registrationMedImpl) GetSession(ctx context.Context, sessionID string) (*domain.RegistrationSession, *apierror.APIError) {
 	return m.getSessionByTypeID(ctx, sessionID)
 }
 
+// CompleteSession marks a registration session as completed and records the account ID.
+//
+// 1. Look up the session by type ID.
+// 2. Mark the session as completed with the provided account ID in the repository.
 func (m *registrationMedImpl) CompleteSession(ctx context.Context, sessionID, accountID string) *apierror.APIError {
 	ctx, span := registrationMedTracer.Start(ctx, "mediator.registration.complete_session")
 	defer span.End()

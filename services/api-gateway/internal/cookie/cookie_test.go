@@ -7,6 +7,7 @@ import (
 )
 
 func TestGetAccessTokenFromRequest(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name       string
 		path       string
@@ -70,6 +71,7 @@ func TestGetAccessTokenFromRequest(t *testing.T) {
 }
 
 func TestGetRefreshTokenFromRequest(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name       string
 		path       string
@@ -127,6 +129,7 @@ func TestGetRefreshTokenFromRequest(t *testing.T) {
 }
 
 func TestCookiePaths(t *testing.T) {
+	t.Parallel()
 	w := httptest.NewRecorder()
 	opts := getCookieOptions(false, "/")
 	setAccessTokenCookie(w, "access", opts)
@@ -165,6 +168,7 @@ func TestCookiePaths(t *testing.T) {
 }
 
 func TestCookieDomains(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name         string
 		isProduction bool

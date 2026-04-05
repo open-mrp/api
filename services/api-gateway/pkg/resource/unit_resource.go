@@ -8,25 +8,9 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleUnitID = "unit_01jm4r6700f8nwq3v5hx2d9ktp"
+const SampleUnitID = "un_01jm4r6700f8nwq3v5hx2d9ktp"
 const SampleUnitName = "Kilogram"
 const SampleUnitAbbreviation = "kg"
-
-var SampleUnit = &Unit{
-	ID:                SampleUnitID,
-	Object:            constants.ObjectTypeUnit,
-	Name:              SampleUnitName,
-	Abbreviation:      SampleUnitAbbreviation,
-	Type:              constants.UnitTypeMass,
-	RatioNumerator:    "1000.000000000000000000000000000000",
-	RatioDenominator:  "1.000000000000000000000000000000",
-	OffsetNumerator:   "0.000000000000000000000000000000",
-	OffsetDenominator: "1.000000000000000000000000000000",
-	IsBaseUnit:        false,
-	IsInternal:        false,
-	CreatedAt:         timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt:         timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
-}
 
 // Unit represents a unit of measurement used for conversions and product quantities.
 type Unit struct {
@@ -38,7 +22,7 @@ type Unit struct {
 	Name string `json:"name" validate:"required"`
 	// The short abbreviation for the unit (e.g. "g", "kg").
 	Abbreviation string `json:"abbreviation" validate:"required"`
-	// The unit dimension (e.g. "quantity", "mass", "time", "currency").
+	// The unit dimension.
 	Type constants.UnitType `json:"type" validate:"required"`
 	// The conversion ratio numerator relative to the base unit in the same dimension.
 	RatioNumerator string `json:"ratio_numerator" validate:"required" format:"decimal"`
@@ -50,14 +34,47 @@ type Unit struct {
 	OffsetDenominator string `json:"offset_denominator" validate:"required" format:"decimal"`
 	// Whether this unit is the base unit for its dimension. Conversion ratios are relative to this unit.
 	IsBaseUnit bool `json:"is_base_unit"`
-	// Whether this unit belongs to the requesting account. False for system/global units.
-	IsInternal bool `json:"is_internal"`
+	// The owner of this resource.
+	Owner *Owner `json:"owner" expandable:"true"`
 	// When this unit was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// When this unit was last updated.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
+var SampleUnit = &Unit{
+	ID:                SampleUnitID,
+	Object:            constants.ObjectTypeUnit,
+	Name:              SampleUnitName,
+	Abbreviation:      SampleUnitAbbreviation,
+	Type:              constants.UnitTypeMass,
+	RatioNumerator:    "1000",
+	RatioDenominator:  "1",
+	OffsetNumerator:   "0",
+	OffsetDenominator: "1",
+	IsBaseUnit:        false,
+	Owner:             SampleOwnerSystem,
+	CreatedAt:         timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:         timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+}
+
 func (*Unit) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleUnit)
+}
+
+// ValidateUnitsResponse represents the response for the validate units endpoint.
+type ValidateUnitsResponse struct {
+	// The resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=map"`
+	// The validated units keyed by the original map key.
+	Units map[string]*Unit `json:"units" validate:"required"`
+}
+
+var SampleValidateUnitsResponse = &ValidateUnitsResponse{
+	Object: constants.ObjectTypeMap,
+	Units:  map[string]*Unit{"0": SampleUnit},
+}
+
+func (*ValidateUnitsResponse) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(SampleValidateUnitsResponse)
 }

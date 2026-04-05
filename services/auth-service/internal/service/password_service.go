@@ -9,6 +9,9 @@ import (
 	"github.com/augno/api/services/auth-service/internal/infrastructure/repository"
 	"github.com/augno/api/services/auth-service/internal/infrastructure/sqlc"
 	"github.com/augno/api/services/auth-service/internal/mediator"
+	"github.com/augno/api/shared/appctx"
+	"github.com/augno/api/shared/audit"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/idempotency"
 	"github.com/augno/api/shared/tracing"
@@ -99,6 +102,14 @@ func (s *passwordSvcImpl) withTx(ctx context.Context, fn func(context.Context, *
 	})
 }
 
+// RequestPasswordReset initiates a password reset flow for the given identifier.
+//
+// 1. Upsert an idempotency key; return the cached response if already finished.
+// 2. Delegate to the password mediator's RequestReset inside a transaction.
+// 3. Cache the success response.
+//
+// Side effects:
+//   - Sends a password reset email if the identifier matches a known user.
 func (s *passwordSvcImpl) RequestPasswordReset(ctx context.Context, identifier string, accountSlug *string) *apierror.APIError {
 	ctx, span := passwordSvcTracer.Start(ctx, "service.password.request_password_reset")
 	defer span.End()
@@ -137,6 +148,18 @@ func (s *passwordSvcImpl) RequestPasswordReset(ctx context.Context, identifier s
 	}
 }
 
+// ResetPassword validates a password reset token and sets a new password, returning auth tokens.
+//
+//  1. Upsert an idempotency key; return the cached response if already finished.
+//  2. Validate the password reset token and retrieve the associated user.
+//  3. Mint an access token for the user.
+//  4. Update the password, revoke all existing refresh tokens, and create a new refresh token
+//     inside a transaction.
+//  5. Cache the success response and return the login result.
+//
+// Side effects:
+//   - Revokes all existing refresh tokens for the user.
+//   - Sends a password updated email.
 func (s *passwordSvcImpl) ResetPassword(ctx context.Context, token, newPassword string) (*domain.LoginResult, *apierror.APIError) {
 	ctx, span := passwordSvcTracer.Start(ctx, "service.password.reset_password")
 	defer span.End()
@@ -185,6 +208,16 @@ func (s *passwordSvcImpl) ResetPassword(ctx context.Context, token, newPassword 
 
 			refreshToken = refreshTokenModel.Token
 
+			if apiErr := audit.NewPublisher().Publish(txCtx, svc.repos.NewOutboxRepo(), audit.EventData{
+				ServiceName:  domain.ServiceName,
+				Action:       constants.AuditActionUpdate,
+				ResourceType: constants.ObjectTypeUser,
+				ResourceID:   user.ID,
+				Changes:      nil,
+			}); apiErr != nil {
+				return apiErr
+			}
+
 			return txMeds.Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, domain.LoginResult{
 				User:         user,
 				AccessToken:  accessToken,
@@ -209,9 +242,24 @@ func (s *passwordSvcImpl) ResetPassword(ctx context.Context, token, newPassword 
 	}
 }
 
-func (s *passwordSvcImpl) UpdatePassword(ctx context.Context, userID string, oldPassword, newPassword string) *apierror.APIError {
+// UpdatePassword changes a user's password after verifying the old password.
+//
+// 1. Upsert an idempotency key; return the cached response if already finished.
+// 2. Validate the old password via the password mediator.
+// 3. Update to the new password inside a transaction.
+// 4. Cache the success response.
+//
+// Side effects:
+//   - Revokes all existing refresh tokens for the user.
+//   - Sends a password updated email.
+func (s *passwordSvcImpl) UpdatePassword(ctx context.Context, oldPassword, newPassword string) *apierror.APIError {
 	ctx, span := passwordSvcTracer.Start(ctx, "service.password.update_password")
 	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
 
 	meds := s.mediators()
 
@@ -229,16 +277,27 @@ func (s *passwordSvcImpl) UpdatePassword(ctx context.Context, userID string, old
 		return cached.Error
 
 	case domain.RecoveryPointStarted:
-		user, apiErr := meds.Password.Validate(ctx, userID, oldPassword)
+		user, apiErr := meds.Password.Validate(ctx, identity.Actor.ID, oldPassword)
 		if apiErr != nil {
 			return meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
 		}
 
-		apiErr = s.withTx(ctx, func(txCtx context.Context, svc *passwordSvcImpl) *apierror.APIError {
-			txMeds := svc.mediators()
+		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *passwordSvcImpl) *apierror.APIError {
+			txMeds := txSvc.mediators()
 			if err := txMeds.Password.Update(txCtx, user, newPassword); err != nil {
 				return err
 			}
+
+			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+				ServiceName:  domain.ServiceName,
+				Action:       constants.AuditActionUpdate,
+				ResourceType: constants.ObjectTypeUser,
+				ResourceID:   identity.Actor.ID,
+				Changes:      nil,
+			}); apiErr != nil {
+				return apiErr
+			}
+
 			return txMeds.Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, struct{}{})
 		})
 

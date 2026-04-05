@@ -2,11 +2,13 @@ package apierror
 
 import (
 	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 )
 
 func TestAPIErrorResponse_SchemaExample(t *testing.T) {
+	t.Parallel()
 	resp := APIErrorResponse{}
 	example := resp.SchemaExample()
 
@@ -25,6 +27,7 @@ func TestAPIErrorResponse_SchemaExample(t *testing.T) {
 }
 
 func TestResponseError_SchemaExample(t *testing.T) {
+	t.Parallel()
 	resp := ResponseError{}
 	example := resp.SchemaExample()
 
@@ -42,7 +45,20 @@ func TestResponseError_SchemaExample(t *testing.T) {
 	}
 }
 
+func TestAPIError_nilReceiver_implementsError(t *testing.T) {
+	t.Parallel()
+	var apiErr *APIError
+	var err error = apiErr
+	if err.Error() != "" {
+		t.Errorf("nil *APIError Error() = %q, want empty string", err.Error())
+	}
+	if unw := errors.Unwrap(err); unw != nil {
+		t.Errorf("errors.Unwrap(nil *APIError) = %v, want nil", unw)
+	}
+}
+
 func TestIsNotFound(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		err      *APIError
@@ -81,12 +97,13 @@ func TestIsNotFound(t *testing.T) {
 }
 
 func TestAPIError_ToResponseMap_Order(t *testing.T) {
+	t.Parallel()
 	apiErr := &APIError{
 		Code:          ErrorCodeValidationFailed,
 		Type:          ErrorTypeInvalidRequest,
 		PublicMessage: "Invalid input",
 		Param:         "email",
-		DocURL:        "https://docs.example.com/errors",
+		DocURL:        "https://docs.example.com/api/errors",
 	}
 
 	resp := apiErr.ToResponseMap()
@@ -106,7 +123,7 @@ func TestAPIError_ToResponseMap_Order(t *testing.T) {
 		`"type":"invalid_request_error"`,
 		`"message":"Invalid input"`,
 		`"param":"email"`,
-		`"doc_url":"https://docs.example.com/errors"`,
+		`"doc_url":"https://docs.example.com/api/errors"`,
 	}
 
 	lastIdx := -1

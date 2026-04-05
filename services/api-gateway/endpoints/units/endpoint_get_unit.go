@@ -6,37 +6,36 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
 
 // GetUnitRequest is the request to retrieve a single unit.
 type GetUnitRequest struct {
 	// The ID of the unit to retrieve.
-	UnitID string `path:"id"`
+	UnitID string `path:"id" validate:"required"`
 }
-
-const getUnitEndpointDescription string = `This endpoint returns a single unit by its ID.
-The unit must belong to the requesting account or be a system (global) unit.`
 
 type GetUnitEndpoint struct{}
 
 func (e *GetUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetUnitRequest, *apiresource.Unit] {
 	return &apiendpoint.APIEndpoint[*GetUnitRequest, *apiresource.Unit]{
 		Title:             "Get Unit",
-		Description:       getUnitEndpointDescription,
+		Description:       "Returns a single unit by its ID, including both account-owned and global system units.",
 		Method:            http.MethodGet,
-		Route:             "/v1/core/units/{id}",
+		Route:             "/v1/catalog/units/{id}",
 		ContentType:       "application/json",
 		Request:           &GetUnitRequest{},
-		Response:          apiresource.SampleUnit,
+		Response:          &apiresource.Unit{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetUnitRequest) (*apiresource.Unit, *apierror.APIError) {
 			return svc.(UnitSvc).GetUnit
 		},
-		Extras: apiendpoint.APIEndpointExtras{
-			AllowUnknownJSONFields: false,
-		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeUnit,
+			Fields:     []string{"owner"},
+		}),
 	}
 }

@@ -72,6 +72,16 @@ func (q *Queries) CreateIdempotencyKeyWithScope(ctx context.Context, arg CreateI
 	return result.LastInsertId()
 }
 
+const deleteExpiredDeletedRecords = `-- name: DeleteExpiredDeletedRecords :execresult
+DELETE FROM deleted_record
+WHERE deleted_at < DATE_SUB(NOW(3), INTERVAL 30 DAY)
+LIMIT ?
+`
+
+func (q *Queries) DeleteExpiredDeletedRecords(ctx context.Context, limit int32) (sql.Result, error) {
+	return q.exec(ctx, q.deleteExpiredDeletedRecordsStmt, deleteExpiredDeletedRecords, limit)
+}
+
 const deleteExpiredIdempotencyKeys = `-- name: DeleteExpiredIdempotencyKeys :execresult
 DELETE FROM idempotency_key
 WHERE expires_at < NOW(3)

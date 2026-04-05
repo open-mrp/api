@@ -13,6 +13,12 @@ type RequestLogRepo interface {
 	List(ctx context.Context, targetAccountID string, filter *ListRequestLogsFilter, includes []string) (*ListRequestLogsResult, *apierror.APIError)
 }
 
+type AuditEventRepo interface {
+	Create(ctx context.Context, event *AuditEvent) *apierror.APIError
+	FindByID(ctx context.Context, id, targetAccountID string, includes []string) (*AuditEventRead, *apierror.APIError)
+	List(ctx context.Context, targetAccountID string, filter *ListAuditEventsFilter, includes []string) (*ListAuditEventsResult, *apierror.APIError)
+}
+
 type UpsertAndLockResult struct {
 	Key     *IdempotencyKey
 	Created bool

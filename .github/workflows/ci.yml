@@ -46,7 +46,7 @@ jobs:
         run: make static-check
 
       - name: Run Doc Generation Check
-        run: make gen-openapi-specs
+        run: make openapi
 
       - name: Validate OpenAPI Specs
         run: make validate-openapi-specs
@@ -67,5 +67,50 @@ jobs:
       - name: Display Go version
         run: go version
 
+      - name: Install CI tools
+        run: make install-ci-tools
+
+      - name: Generate sqlc
+        run: make sqlc
+
+      - name: Start local databases and run migrations
+        run: make local-db
+
+      - name: Run SQL Prepare Smoke Tests
+        run: make test-sql-prepare-smoke
+
       - name: Run Tests
         run: make test
+
+      - name: Tear down local databases
+        if: always()
+        run: make local-db-down
+
+  e2e:
+    name: E2E
+    runs-on: ubuntu-latest
+    env:
+      GOTOOLCHAIN: local
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Generate OpenAPI spec
+        run: make openapi
+
+      - name: Start E2E stack
+        run: make e2e-up
+
+      - name: Install CI tools
+        run: make install-ci-tools
+
+      - name: Run E2E tests
+        run: ./scripts/run-e2e-tests.sh 300s
+
+      - name: Tear down E2E stack
+        if: always()
+        run: make e2e-down

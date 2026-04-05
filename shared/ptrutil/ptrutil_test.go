@@ -5,6 +5,7 @@ import "testing"
 // --- ValOrDefault ---
 
 func TestValOrDefault_NonNilPointer(t *testing.T) {
+	t.Parallel()
 	v := new("actual")
 	got := ValOrDefault(v, "fallback")
 	if got != "actual" {
@@ -13,6 +14,7 @@ func TestValOrDefault_NonNilPointer(t *testing.T) {
 }
 
 func TestValOrDefault_NilPointer(t *testing.T) {
+	t.Parallel()
 	got := ValOrDefault(nil, "fallback")
 	if got != "fallback" {
 		t.Errorf("expected %q, got %q", "fallback", got)
@@ -20,6 +22,7 @@ func TestValOrDefault_NilPointer(t *testing.T) {
 }
 
 func TestValOrDefault_NilPointerInt(t *testing.T) {
+	t.Parallel()
 	got := ValOrDefault(nil, 99)
 	if got != 99 {
 		t.Errorf("expected 99, got %d", got)
@@ -27,6 +30,7 @@ func TestValOrDefault_NilPointerInt(t *testing.T) {
 }
 
 func TestValOrDefault_ZeroValuePointer(t *testing.T) {
+	t.Parallel()
 	p := new(0)
 	got := ValOrDefault(p, 99)
 	if got != 0 {
@@ -35,6 +39,7 @@ func TestValOrDefault_ZeroValuePointer(t *testing.T) {
 }
 
 func TestValOrDefault_EmptyStringPointer(t *testing.T) {
+	t.Parallel()
 	p := new("")
 	got := ValOrDefault(p, "default")
 	if got != "" {
@@ -43,6 +48,7 @@ func TestValOrDefault_EmptyStringPointer(t *testing.T) {
 }
 
 func TestValOrDefault_FalsePointer(t *testing.T) {
+	t.Parallel()
 	p := new(false)
 	got := ValOrDefault(p, true)
 	if got != false {
@@ -53,6 +59,7 @@ func TestValOrDefault_FalsePointer(t *testing.T) {
 // --- ValOrDefaultFunc ---
 
 func TestValOrDefaultFunc_NonNilPointer(t *testing.T) {
+	t.Parallel()
 	v := new("actual")
 	called := false
 	got := ValOrDefaultFunc(v, func() string {
@@ -68,6 +75,7 @@ func TestValOrDefaultFunc_NonNilPointer(t *testing.T) {
 }
 
 func TestValOrDefaultFunc_NilPointer(t *testing.T) {
+	t.Parallel()
 	called := false
 	got := ValOrDefaultFunc(nil, func() string {
 		called = true
@@ -82,6 +90,7 @@ func TestValOrDefaultFunc_NilPointer(t *testing.T) {
 }
 
 func TestValOrDefaultFunc_ZeroValuePointer(t *testing.T) {
+	t.Parallel()
 	p := new(int)
 	got := ValOrDefaultFunc(p, func() int { return 42 })
 	if got != 0 {
@@ -90,6 +99,7 @@ func TestValOrDefaultFunc_ZeroValuePointer(t *testing.T) {
 }
 
 func TestValOrDefaultFunc_NilPointerInt(t *testing.T) {
+	t.Parallel()
 	got := ValOrDefaultFunc(nil, func() int { return 42 })
 	if got != 42 {
 		t.Errorf("expected 42, got %d", got)

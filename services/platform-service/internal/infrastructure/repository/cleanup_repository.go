@@ -56,3 +56,60 @@ func (r *cleanupRepoImpl) DeleteExpiredServiceIdempotencyKeys(ctx context.Contex
 
 	return count, nil
 }
+
+func (r *cleanupRepoImpl) DeleteExpiredDeletedRecords(ctx context.Context, limit int) (int64, error) {
+	ctx, span := tracing.StartSpan(ctx, cleanupRepoTracer, "repository.cleanup.delete_expired_deleted_records")
+	defer span.End()
+
+	result, err := r.queries.DeleteExpiredDeletedRecords(ctx, int32(limit)) // #nosec G115 - small config value
+	if err != nil {
+		span.RecordError(err)
+		return 0, err
+	}
+
+	count, err := result.RowsAffected()
+	if err != nil {
+		span.RecordError(err)
+		return 0, err
+	}
+
+	return count, nil
+}
+
+func (r *cleanupRepoImpl) DeleteExpiredRequestLogs(ctx context.Context, limit int) (int64, error) {
+	ctx, span := tracing.StartSpan(ctx, cleanupRepoTracer, "repository.cleanup.delete_expired_request_logs")
+	defer span.End()
+
+	result, err := r.queries.DeleteExpiredRequestLogs(ctx, int32(limit)) // #nosec G115 - small config value
+	if err != nil {
+		span.RecordError(err)
+		return 0, err
+	}
+
+	count, err := result.RowsAffected()
+	if err != nil {
+		span.RecordError(err)
+		return 0, err
+	}
+
+	return count, nil
+}
+
+func (r *cleanupRepoImpl) DeleteExpiredAuditEvents(ctx context.Context, limit int) (int64, error) {
+	ctx, span := tracing.StartSpan(ctx, cleanupRepoTracer, "repository.cleanup.delete_expired_audit_events")
+	defer span.End()
+
+	result, err := r.queries.DeleteExpiredAuditEvents(ctx, int32(limit)) // #nosec G115 - small config value
+	if err != nil {
+		span.RecordError(err)
+		return 0, err
+	}
+
+	count, err := result.RowsAffected()
+	if err != nil {
+		span.RecordError(err)
+		return 0, err
+	}
+
+	return count, nil
+}

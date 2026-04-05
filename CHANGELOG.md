@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.4](https://github.com/Augno/api/compare/v0.8.3...v0.8.4) (2026-04-05)
+
+
+### Bug Fixes
+
+* IAM issue on terraform ([#122](https://github.com/Augno/api/issues/122)) ([ce8e4d4](https://github.com/Augno/api/commit/ce8e4d4e071b30b78b1a60e222958be5016a8773))
+
 ## [0.8.3](https://github.com/Augno/api/compare/v0.8.2...v0.8.3) (2026-04-05)
 
 

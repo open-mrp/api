@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.3](https://github.com/Augno/api/compare/v0.8.2...v0.8.3) (2026-04-05)
+
+
+### Bug Fixes
+
+* add private link to planetscale for pg ([#120](https://github.com/Augno/api/issues/120)) ([01e8de9](https://github.com/Augno/api/commit/01e8de973d2be18ec94bb56e07e238241c31a5d3))
+
 ## [0.8.2](https://github.com/Augno/api/compare/v0.8.1...v0.8.2) (2026-04-05)
 
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.11](https://github.com/Augno/api/compare/v0.8.10...v0.8.11) (2026-04-05)
+
+
+### Bug Fixes
+
+* tf ([#136](https://github.com/Augno/api/issues/136)) ([7a45e51](https://github.com/Augno/api/commit/7a45e51e8358c8196bd998448447465735ad710d))
+
 ## [0.8.10](https://github.com/Augno/api/compare/v0.8.9...v0.8.10) (2026-04-05)
 
 

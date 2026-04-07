@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.9](https://github.com/Augno/api/compare/v0.9.8...v0.9.9) (2026-04-07)
+
+
+### Bug Fixes
+
+* update parent account object type and add new fields in customer presenter ([#158](https://github.com/Augno/api/issues/158)) ([45d7d44](https://github.com/Augno/api/commit/45d7d448657be81108283ba8c7478b87a24b939a))
+
 ## [0.9.8](https://github.com/Augno/api/compare/v0.9.7...v0.9.8) (2026-04-07)
 
 

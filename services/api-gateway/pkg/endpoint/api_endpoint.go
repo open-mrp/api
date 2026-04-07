@@ -522,13 +522,7 @@ func (e *APIEndpoint[TReq, TResp]) respondWithIncludeTransform(ctx context.Conte
 
 	transformed := CollapseUnexpanded(data, e.IncludeConfig, requested)
 
-	transformedBytes, err := json.Marshal(transformed)
-	if err != nil {
-		httptransport.RespondWithJSON(ctx, w, e.SuccessStatusCode, resp, opts...)
-		return
-	}
-
-	httptransport.RespondWithJSONBytes(ctx, w, e.SuccessStatusCode, transformedBytes, opts...)
+	httptransport.RespondWithJSON(ctx, w, e.SuccessStatusCode, transformed, opts...)
 }
 
 type APIEndpointer interface {

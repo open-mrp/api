@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	httptransport "github.com/augno/api/services/api-gateway/internal/http"
 	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/version"
@@ -59,10 +60,10 @@ func VersionTransformMiddleware(objectType constants.ObjectType) func(http.Handl
 			if capture.statusCode >= 200 && capture.statusCode < 300 {
 				contentType := w.Header().Get("Content-Type")
 				if contentType == "application/json" || contentType == "" {
-					transformed := transformResponse(capture.body.Bytes(), version.Latest, requestVersion, objectType)
-					w.WriteHeader(capture.statusCode)
-					_, _ = w.Write(transformed) // #nosec G705 - Response body is generated internally, not user-controlled
-					return
+					if transformed, ok := transformResponseData(capture.body.Bytes(), version.Latest, requestVersion, objectType); ok {
+						httptransport.RespondWithJSON(ctx, w, capture.statusCode, transformed)
+						return
+					}
 				}
 			}
 
@@ -73,22 +74,13 @@ func VersionTransformMiddleware(objectType constants.ObjectType) func(http.Handl
 	}
 }
 
-// transformResponse applies the transformer chain to the response body
-func transformResponse(body []byte, from, to version.APIVersion, objectType constants.ObjectType) []byte {
+// transformResponseData applies the transformer chain to the response body,
+// returning the transformed data structure for RespondWithJSON to marshal.
+func transformResponseData(body []byte, from, to version.APIVersion, objectType constants.ObjectType) (any, bool) {
 	var data map[string]any
 	if err := json.Unmarshal(body, &data); err != nil {
-		// If we can't parse as JSON, return original
-		return body
+		return nil, false
 	}
 
-	// Apply transformers
-	transformed := version.Transform(from, to, objectType, data)
-
-	// Re-encode
-	result, err := json.Marshal(transformed)
-	if err != nil {
-		return body
-	}
-
-	return result
+	return version.Transform(from, to, objectType, data), true
 }

@@ -433,25 +433,3 @@ func TestRespondWithJSON_WithLocation(t *testing.T) {
 	}
 }
 
-func TestRespondWithJSONBytes(t *testing.T) {
-	t.Parallel()
-	body := []byte(`{"replayed":true}`)
-	rl := &appctx.RequestLog{ID: "req-123"}
-	ctx := appctx.WithRequestLog(context.Background(), rl)
-	w := httptest.NewRecorder()
-
-	RespondWithJSONBytes(ctx, w, http.StatusOK, body, WithHeader(header.IdempotentReplayedHeader, "true"))
-
-	if w.Code != http.StatusOK {
-		t.Fatalf("expected status code %d, got %d", http.StatusOK, w.Code)
-	}
-	if w.Header().Get(header.RequestIDHeader) != "req-123" {
-		t.Fatalf("expected Request-ID req-123, got %q", w.Header().Get(header.RequestIDHeader))
-	}
-	if w.Header().Get(header.IdempotentReplayedHeader) != "true" {
-		t.Fatalf("expected Idempotent-Replayed true, got %q", w.Header().Get(header.IdempotentReplayedHeader))
-	}
-	if w.Body.String() != string(body) {
-		t.Fatalf("expected body %s, got %s", body, w.Body.String())
-	}
-}

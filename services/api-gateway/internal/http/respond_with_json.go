@@ -65,14 +65,6 @@ func RespondWithJSON(ctx context.Context, w http.ResponseWriter, code int, paylo
 	}
 }
 
-func RespondWithJSONBytes(ctx context.Context, w http.ResponseWriter, code int, body []byte, opts ...RespondOption) {
-	applyRespondOptions(w, ctx, code, opts)
-	w.WriteHeader(code)
-	if _, err := w.Write(body); err != nil {
-		log.Printf("Error writing response: %s", err)
-	}
-}
-
 // FileDownload is a response type for endpoints that return a file (e.g. Excel export).
 // When the service returns *FileDownload, the handler writes the body with Content-Type and Content-Disposition.
 type FileDownload struct {

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.8](https://github.com/Augno/api/compare/v0.9.7...v0.9.8) (2026-04-07)
+
+
+### Bug Fixes
+
+* prettier formatting for curls ([#156](https://github.com/Augno/api/issues/156)) ([f6d8df7](https://github.com/Augno/api/commit/f6d8df7baf8341e89d6120c246454215931485ad))
+
 ## [0.9.7](https://github.com/Augno/api/compare/v0.9.6...v0.9.7) (2026-04-07)
 
 

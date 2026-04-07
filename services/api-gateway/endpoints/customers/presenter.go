@@ -154,10 +154,12 @@ func CustomerPresenter(c *pb.CustomerProto) apiresource.Customer {
 	var parentAccount *apiresource.Customer
 	if c.ParentAccount != nil {
 		parentAccount = &apiresource.Customer{
-			ID:     c.ParentAccount.Id,
-			Object: constants.ObjectTypeCustomer,
-			Name:   c.ParentAccount.Name,
-			Number: c.ParentAccount.Number,
+			ID:               c.ParentAccount.Id,
+			Object:           constants.ObjectTypeCustomer,
+			Name:             c.ParentAccount.Name,
+			Number:           c.ParentAccount.Number,
+			Status:           constants.AccountStatusCodeNormal,
+			CommissionPolicy: constants.CommissionPolicyApplied,
 		}
 	}
 

@@ -112,7 +112,7 @@ func init() {
 			{Key: "bill_to_address", ObjectType: constants.ObjectTypeAddress},
 			{Key: "ship_to_address", ObjectType: constants.ObjectTypeAddress},
 			{Key: "type", ObjectType: constants.ObjectTypeAccountGroup},
-			{Key: "parent_account", ObjectType: constants.ObjectTypeAccount},
+			{Key: "parent_account", ObjectType: constants.ObjectTypeCustomer},
 			{
 				Key:        "freight_preferences",
 				ObjectType: constants.ObjectTypeCustomer,

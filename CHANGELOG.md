@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.10](https://github.com/Augno/api/compare/v0.9.9...v0.9.10) (2026-04-07)
+
+
+### Bug Fixes
+
+* reset password issue ([#160](https://github.com/Augno/api/issues/160)) ([e6b7327](https://github.com/Augno/api/commit/e6b732713d77719d304f4eb52212b1ad32e192ea))
+
 ## [0.9.9](https://github.com/Augno/api/compare/v0.9.8...v0.9.9) (2026-04-07)
 
 

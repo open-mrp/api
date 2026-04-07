@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.7](https://github.com/Augno/api/compare/v0.9.6...v0.9.7) (2026-04-07)
+
+
+### Bug Fixes
+
+* auth flow bug ([#154](https://github.com/Augno/api/issues/154)) ([6071c6e](https://github.com/Augno/api/commit/6071c6e26de45d6553ff481bff66f543dcd50898))
+
 ## [0.9.6](https://github.com/Augno/api/compare/v0.9.5...v0.9.6) (2026-04-05)
 
 

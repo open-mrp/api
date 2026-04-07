@@ -24,6 +24,7 @@ type UserSvcTestSuite struct {
 	suite.Suite
 	userSvc               domain.UserSvc
 	repoFactory           *factorymock.MockRepoFactory
+	userRepo              *repositorymock.MockUserRepo
 	userMed               *mediatormock.MockUserMed
 	passwordMed           *mediatormock.MockPasswordMed
 	refreshTokenMed       *mediatormock.MockRefreshTokenMed
@@ -36,7 +37,8 @@ type UserSvcTestSuite struct {
 func (suite *UserSvcTestSuite) SetupSuite() {
 	suite.ctrl = gomock.NewController(suite.T())
 	suite.repoFactory = factorymock.NewMockRepoFactory(suite.ctrl)
-	suite.repoFactory.EXPECT().NewUserRepo().Return(nil).AnyTimes()
+	suite.userRepo = repositorymock.NewMockUserRepo(suite.ctrl)
+	suite.repoFactory.EXPECT().NewUserRepo().Return(suite.userRepo).AnyTimes()
 	suite.repoFactory.EXPECT().NewRefreshTokenRepo().Return(nil).AnyTimes()
 	suite.repoFactory.EXPECT().NewAPIKeyRepo().Return(nil).AnyTimes()
 
@@ -171,6 +173,10 @@ func (suite *UserSvcTestSuite) TestRegister_Success() {
 	suite.idempotencyMed.EXPECT().
 		UpsertIdempotencyKey(gomock.Any(), gomock.Any()).
 		Return(idempotencyKey, nil).
+		Times(1)
+	suite.userRepo.EXPECT().
+		Find(gomock.Any(), input.Email).
+		Return(nil, apierror.NewResourceNotFoundError("not found")).
 		Times(1)
 	suite.userMed.EXPECT().
 		Register(gomock.Any(), gomock.AssignableToTypeOf(domain.RegisterUserInput{})).

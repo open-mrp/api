@@ -24,6 +24,7 @@ var userMedTracer = tracing.GetTracer("auth-service.user_mediator")
 type userMedImpl struct {
 	repos                 domain.RepoFactory
 	jwtSecret             string
+	frontendURL           string
 	refreshTokenMed       domain.RefreshTokenMed
 	apiKeyMed             domain.APIKeyMed
 	coreClient            domain.AuthCoreClient
@@ -33,6 +34,7 @@ type userMedImpl struct {
 type UserMedConfig struct {
 	Repos                 domain.RepoFactory
 	JWTSecret             string // #nosec G117 - Struct field, not a hardcoded credential
+	FrontendURL           string
 	RefreshTokenMed       domain.RefreshTokenMed
 	APIKeyMed             domain.APIKeyMed
 	CoreClient            domain.AuthCoreClient
@@ -58,6 +60,9 @@ func (c *UserMedConfig) validate() error {
 	if c.NotificationPublisher == nil {
 		return fmt.Errorf("user mediator: notification publisher is required")
 	}
+	if c.FrontendURL == "" {
+		return fmt.Errorf("user mediator: frontend url is required")
+	}
 	return nil
 }
 
@@ -69,6 +74,7 @@ func NewUserMed(config *UserMedConfig) domain.UserMed {
 	return &userMedImpl{
 		repos:                 config.Repos,
 		jwtSecret:             config.JWTSecret,
+		frontendURL:           config.FrontendURL,
 		refreshTokenMed:       config.RefreshTokenMed,
 		apiKeyMed:             config.APIKeyMed,
 		coreClient:            config.CoreClient,
@@ -104,9 +110,10 @@ func (s *userMedImpl) Register(ctx context.Context, input domain.RegisterUserInp
 		return nil, err
 	}
 
-	// If the user already exists, return a 400 error to not reveal that an email is taken
+	// If the user already exists, return a validation error to not reveal that an email is taken.
+	// The email is sent at the service layer outside the transaction so the outbox message is not rolled back.
 	if existingUser != nil {
-		return nil, tracing.Trace(span, apierror.NewValidationError("Unable to process registration."))
+		return nil, tracing.Trace(span, apierror.NewValidationError("Unable to process registration. If you already have an account, we will email you a magic login link."))
 	}
 
 	userID, err := id.GenID(id.UserIDPrefix, nil)
@@ -137,6 +144,69 @@ func (s *userMedImpl) Register(ctx context.Context, input domain.RegisterUserInp
 	}
 
 	return user, nil
+}
+
+// ValidateMagicLoginToken validates a magic-login token and returns the associated user.
+func (s *userMedImpl) ValidateMagicLoginToken(ctx context.Context, magicToken string) (*types.User, *apierror.APIError) {
+	ctx, span := userMedTracer.Start(ctx, "mediator.user.validate_magic_login_token")
+	defer span.End()
+
+	claims, err := token.DecodeJWT(ctx, s.jwtSecret, magicToken, token.JWTTypeMagicLogin)
+	if err != nil {
+		return nil, err
+	}
+
+	userRepo := s.repos.NewUserRepo()
+	user, err := userRepo.Find(ctx, claims.Subject)
+	if err != nil {
+		if apierror.IsNotFound(err) {
+			return nil, tracing.Trace(span, apierror.NewAuthenticationError(token.ErrInvalidJWT))
+		}
+		return nil, err
+	}
+
+	return user, nil
+}
+
+// SendAlreadyRegisteredEmail generates a magic login token and sends the
+// "already registered" email so the user can log in with one click.
+// This must be called outside a transaction so the outbox message is not rolled back.
+func (s *userMedImpl) SendAlreadyRegisteredEmail(ctx context.Context, user *types.User, accountSlug *string) {
+	if user.Email == nil {
+		return
+	}
+
+	magicToken, err := token.EncodeJWT(ctx, s.jwtSecret, user.ID, 15*time.Minute, token.JWTTypeMagicLogin)
+	if err != nil {
+		return
+	}
+
+	var loginURL string
+	if accountSlug != nil && *accountSlug != "" {
+		loginURL = fmt.Sprintf("%s/%s%s?t=%s", s.frontendURL, *accountSlug, constants.DashboardPathMagicLogin, magicToken)
+	} else {
+		loginURL = fmt.Sprintf("%s%s?t=%s", s.frontendURL, constants.DashboardPathMagicLogin, magicToken)
+	}
+
+	var userName string
+	if user.Name != nil {
+		userName = *user.Name
+	}
+
+	publishCtx := event.WithRepos(ctx, s.repos)
+	s.notificationPublisher.PublishSendEmail(
+		publishCtx,
+		messaging.EmailSendData{
+			To:         []string{*user.Email},
+			Subject:    "You Already Have an Account",
+			TemplateID: constants.EmailTemplateAlreadyRegistered,
+			Params: map[string]any{
+				"LoginURL": loginURL,
+				"UserName": userName,
+			},
+			SentByID: &user.ID,
+		},
+	)
 }
 
 // ValidateCredential validates credentials provided by a request and returns an identity.

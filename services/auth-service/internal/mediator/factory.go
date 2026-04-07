@@ -76,6 +76,7 @@ func (f *mediatorFactoryImpl) Build(repoFactory domain.RepoFactory) domain.Media
 	userMed := NewUserMed(&UserMedConfig{
 		Repos:                 repoFactory,
 		JWTSecret:             f.jwtSecret,
+		FrontendURL:           f.frontendURL,
 		RefreshTokenMed:       refreshTokenMed,
 		APIKeyMed:             apiKeyMed,
 		CoreClient:            f.coreClient,

@@ -198,6 +198,21 @@ func (s *userSvcImpl) Register(ctx context.Context, input domain.RegisterInput) 
 		return cached.Data, cached.Error
 
 	case domain.RecoveryPointStarted:
+		// Check for existing user before the transaction so we can send the
+		// magic-login email outside the tx (outbox writes inside a rolled-back
+		// tx are lost).
+		userRepo := s.repos.NewUserRepo()
+		existingUser, findErr := userRepo.Find(ctx, input.Email)
+		if findErr != nil && !apierror.IsNotFound(findErr) {
+			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, findErr)
+		}
+		if existingUser != nil {
+			publishCtx := event.WithRepos(ctx, s.repos)
+			meds.User.SendAlreadyRegisteredEmail(publishCtx, existingUser, input.AccountSlug)
+			regErr := apierror.NewValidationError("Unable to process registration. If you already have an account, we will email you a magic login link.")
+			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, regErr)
+		}
+
 		hashedPassword, err := pwdutil.HashPassword(ctx, input.Password)
 		if err != nil {
 			apiErr := apierror.NewInternalError(err, "failed to hash password")
@@ -211,6 +226,7 @@ func (s *userSvcImpl) Register(ctx context.Context, input domain.RegisterInput) 
 				Name:           input.Name,
 				Email:          input.Email,
 				HashedPassword: hashedPassword,
+				AccountSlug:    input.AccountSlug,
 			})
 			if regErr != nil {
 				return regErr
@@ -240,6 +256,76 @@ func (s *userSvcImpl) Register(ctx context.Context, input domain.RegisterInput) 
 		}
 
 		return result, nil
+
+	default:
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Unexpected recovery point: "+idempotencyKey.RecoveryPoint.String()))
+	}
+}
+
+// MagicLogin exchanges a magic-login token for auth tokens, logging the user
+// in without a password.
+//
+//  1. Decode and validate the magic-login JWT.
+//  2. Look up the user by the token's subject.
+//  3. Mint an access token and create a refresh token.
+func (s *userSvcImpl) MagicLogin(ctx context.Context, magicToken string) (*domain.LoginResult, *apierror.APIError) {
+	ctx, span := userSvcTracer.Start(ctx, "service.user.magic_login")
+	defer span.End()
+
+	meds := s.mediators()
+
+	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, nil)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	switch idempotencyKey.RecoveryPoint {
+	case domain.RecoveryPointFinished:
+		cached, err := idempotency.UnmarshalCachedResponse[domain.LoginResult](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		if err != nil {
+			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
+		}
+		if cached.Error != nil {
+			return nil, cached.Error
+		}
+		return cached.Data, nil
+
+	case domain.RecoveryPointStarted:
+		user, apiErr := meds.User.ValidateMagicLoginToken(ctx, magicToken)
+		if apiErr != nil {
+			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
+		}
+
+		accessToken, apiErr := meds.User.GenAuthAccessToken(ctx, user.ID)
+		if apiErr != nil {
+			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
+		}
+
+		var refreshToken string
+		apiErr = s.withTx(ctx, func(txCtx context.Context, svc *userSvcImpl) *apierror.APIError {
+			txMeds := svc.mediators()
+			refreshTokenModel, err := txMeds.RefreshToken.Create(txCtx, user.ID, nil)
+			if err != nil {
+				return err
+			}
+			refreshToken = refreshTokenModel.Token
+
+			return txMeds.Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, domain.LoginResult{
+				User:         user,
+				AccessToken:  accessToken,
+				RefreshToken: refreshToken,
+			})
+		})
+
+		if apiErr != nil {
+			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
+		}
+
+		return &domain.LoginResult{
+			User:         user,
+			AccessToken:  accessToken,
+			RefreshToken: refreshToken,
+		}, nil
 
 	default:
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Unexpected recovery point: "+idempotencyKey.RecoveryPoint.String()))

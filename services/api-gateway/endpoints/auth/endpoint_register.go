@@ -18,6 +18,8 @@ type RegisterRequest struct {
 	Password string `json:"password" validate:"required,password"` // #nosec G117 - Struct field, not a hardcoded credential
 	// The full name of the new user.
 	Name string `json:"name" validate:"required"`
+	// When registering from a customer portal, scopes the magic-login link in the "already registered" email.
+	AccountSlug *string `json:"account_slug,omitempty" validate:"omitempty"`
 }
 
 var sampleRegisterRequest = &RegisterRequest{

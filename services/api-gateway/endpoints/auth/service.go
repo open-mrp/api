@@ -24,6 +24,7 @@ const (
 type AuthSvc interface {
 	Login(ctx context.Context, req *LoginRequest) (*apiresource.User, *apierror.APIError)
 	Register(ctx context.Context, req *RegisterRequest) (*apiresource.User, *apierror.APIError)
+	MagicLogin(ctx context.Context, req *MagicLoginRequest) (*apiresource.User, *apierror.APIError)
 	RefreshToken(ctx context.Context, req *RefreshTokenRequest) (*apiresource.EmptyResource, *apierror.APIError)
 	RequestPasswordReset(ctx context.Context, req *RequestPasswordResetRequest) (*apiresource.EmptyResource, *apierror.APIError)
 	ResetPassword(ctx context.Context, req *ResetPasswordRequest) (*apiresource.EmptyResource, *apierror.APIError)
@@ -81,9 +82,28 @@ func (m *authSvcImpl) Register(ctx context.Context, req *RegisterRequest) (*apir
 	resp, apiErr := grpcutil.CallRPC(ctx, authSvcTracer, "service.auth.register", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.LoginResponse, error) {
 			return m.authClient.Register(ctx, &pb.RegisterRequest{
-				Email:    req.Email,
-				Password: req.Password,
-				Name:     req.Name,
+				Email:       req.Email,
+				Password:    req.Password,
+				Name:        req.Name,
+				AccountSlug: req.AccountSlug,
+			}, opts...)
+		})
+
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	appctx.AddCookies(ctx, cookie.MakeAuthCookies(ctx, resp.AccessToken, resp.RefreshToken))
+
+	presented := UserPresenter(resp.User)
+	return &presented, nil
+}
+
+func (m *authSvcImpl) MagicLogin(ctx context.Context, req *MagicLoginRequest) (*apiresource.User, *apierror.APIError) {
+	resp, apiErr := grpcutil.CallRPC(ctx, authSvcTracer, "service.auth.magic_login", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.LoginResponse, error) {
+			return m.authClient.MagicLogin(ctx, &pb.MagicLoginRequest{
+				Token: req.Token,
 			}, opts...)
 		})
 

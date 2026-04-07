@@ -708,7 +708,6 @@ func (s *unitGroupSvcImpl) GetUnitGroupUnit(ctx context.Context, params domain.G
 	return s.repos.NewUnitGroupRepo().GetUnit(ctx, params)
 }
 
-
 // validateUnitConversionTypes checks that all unit conversions have units matching the group's type.
 func (s *unitGroupSvcImpl) validateUnitConversionTypes(ctx context.Context, accountID, groupType string, conversions []domain.CreateUnitGroupUnitParams) *apierror.APIError {
 	for _, uc := range conversions {

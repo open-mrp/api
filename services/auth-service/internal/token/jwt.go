@@ -20,6 +20,8 @@ const (
 	JWTTypeAccess JWTType = "access"
 	// JWTTypePasswordReset represents a password reset token.
 	JWTTypePasswordReset JWTType = "password_reset"
+	// JWTTypeMagicLogin represents a magic login token sent in the "already registered" email.
+	JWTTypeMagicLogin JWTType = "magic_login"
 )
 
 type JWTClaims struct {

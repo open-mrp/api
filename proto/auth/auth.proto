@@ -85,6 +85,9 @@ service AuthService {
 
   // Finalizes registration: creates accounts, roles, permissions, and account-users.
   rpc CompleteRegistration(CompleteRegistrationRequest) returns (CompleteRegistrationResponse);
+
+  // Exchanges a magic-login token (from the "already registered" email) for a token pair.
+  rpc MagicLogin(MagicLoginRequest) returns (LoginResponse);
 }
 
 message CompleteRegistrationRequest {
@@ -188,6 +191,13 @@ message RegisterRequest {
   string email = 1;
   string password = 2;
   string name = 3;
+  // When registering from a customer portal, the account slug scopes the
+  // magic-login link in the "already registered" email.
+  optional string account_slug = 4;
+}
+
+message MagicLoginRequest {
+  string token = 1;
 }
 
 message RefreshTokenRequest {

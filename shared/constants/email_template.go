@@ -36,6 +36,8 @@ const (
 	EmailTemplateInvoice EmailTemplate = "invoice"
 	// EmailTemplateOrderAcknowledgement indicates that the email template is for an order acknowledgement email.
 	EmailTemplateOrderAcknowledgement EmailTemplate = "order_acknowledgement"
+	// EmailTemplateAlreadyRegistered indicates that the email template is for an already registered email with a magic login link.
+	EmailTemplateAlreadyRegistered EmailTemplate = "already_registered"
 )
 
 func (t EmailTemplate) IsValid() bool {
@@ -55,12 +57,13 @@ func (t EmailTemplate) IsValid() bool {
 		EmailTemplatePurchaseOrderSubmission,
 		EmailTemplateStatementOfAccount,
 		EmailTemplateInvoice,
-		EmailTemplateOrderAcknowledgement:
+		EmailTemplateOrderAcknowledgement,
+		EmailTemplateAlreadyRegistered:
 		return true
 	}
 	return false
 }
 
 func (t EmailTemplate) EnumValues() []string {
-	return []string{string(EmailTemplateWelcome), string(EmailTemplatePasswordReset), string(EmailTemplatePasswordUpdated), string(EmailTemplateRegistrationVerify), string(EmailTemplateRegistrationVerifyExisting), string(EmailTemplateEnterpriseRequest), string(EmailTemplateInternalErrorAlert), string(EmailTemplateNewRegistrationAlert), string(EmailTemplatePlanChangeAlert), string(EmailTemplateRegistrationLimitAlert), string(EmailTemplateNewUserWelcome), string(EmailTemplateOrderCheckout), string(EmailTemplatePurchaseOrderSubmission), string(EmailTemplateStatementOfAccount), string(EmailTemplateInvoice), string(EmailTemplateOrderAcknowledgement)}
+	return []string{string(EmailTemplateWelcome), string(EmailTemplatePasswordReset), string(EmailTemplatePasswordUpdated), string(EmailTemplateRegistrationVerify), string(EmailTemplateRegistrationVerifyExisting), string(EmailTemplateEnterpriseRequest), string(EmailTemplateInternalErrorAlert), string(EmailTemplateNewRegistrationAlert), string(EmailTemplatePlanChangeAlert), string(EmailTemplateRegistrationLimitAlert), string(EmailTemplateNewUserWelcome), string(EmailTemplateOrderCheckout), string(EmailTemplatePurchaseOrderSubmission), string(EmailTemplateStatementOfAccount), string(EmailTemplateInvoice), string(EmailTemplateOrderAcknowledgement), string(EmailTemplateAlreadyRegistered)}
 }

@@ -436,6 +436,18 @@ func (mr *MockUserMedMockRecorder) Register(ctx, input any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Register", reflect.TypeOf((*MockUserMed)(nil).Register), ctx, input)
 }
 
+// SendAlreadyRegisteredEmail mocks base method.
+func (m *MockUserMed) SendAlreadyRegisteredEmail(ctx context.Context, user *types.User, accountSlug *string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SendAlreadyRegisteredEmail", ctx, user, accountSlug)
+}
+
+// SendAlreadyRegisteredEmail indicates an expected call of SendAlreadyRegisteredEmail.
+func (mr *MockUserMedMockRecorder) SendAlreadyRegisteredEmail(ctx, user, accountSlug any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendAlreadyRegisteredEmail", reflect.TypeOf((*MockUserMed)(nil).SendAlreadyRegisteredEmail), ctx, user, accountSlug)
+}
+
 // ValidateCredential mocks base method.
 func (m *MockUserMed) ValidateCredential(ctx context.Context, authToken string, targetAccountID, actorAccountID *string) (*types.Identity, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -449,6 +461,21 @@ func (m *MockUserMed) ValidateCredential(ctx context.Context, authToken string, 
 func (mr *MockUserMedMockRecorder) ValidateCredential(ctx, authToken, targetAccountID, actorAccountID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateCredential", reflect.TypeOf((*MockUserMed)(nil).ValidateCredential), ctx, authToken, targetAccountID, actorAccountID)
+}
+
+// ValidateMagicLoginToken mocks base method.
+func (m *MockUserMed) ValidateMagicLoginToken(ctx context.Context, token string) (*types.User, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateMagicLoginToken", ctx, token)
+	ret0, _ := ret[0].(*types.User)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ValidateMagicLoginToken indicates an expected call of ValidateMagicLoginToken.
+func (mr *MockUserMedMockRecorder) ValidateMagicLoginToken(ctx, token any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateMagicLoginToken", reflect.TypeOf((*MockUserMed)(nil).ValidateMagicLoginToken), ctx, token)
 }
 
 // MockRegistrationMed is a mock of RegistrationMed interface.

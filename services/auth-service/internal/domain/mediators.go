@@ -149,6 +149,7 @@ type RegisterUserInput struct {
 	Name           string
 	Email          string
 	HashedPassword string
+	AccountSlug    *string // Portal context for the "already registered" magic login link.
 }
 
 type UserMed interface {
@@ -160,6 +161,13 @@ type UserMed interface {
 	// Side effects:
 	//   - Sends a welcome email.
 	Register(ctx context.Context, input RegisterUserInput) (*types.User, *apierror.APIError)
+
+	// ValidateMagicLoginToken validates a magic-login token and returns the associated user.
+	ValidateMagicLoginToken(ctx context.Context, token string) (*types.User, *apierror.APIError)
+
+	// SendAlreadyRegisteredEmail sends a magic login email to an existing user.
+	// Must be called outside a transaction.
+	SendAlreadyRegisteredEmail(ctx context.Context, user *types.User, accountSlug *string)
 
 	// ValidateCredential validates an auth token and returns the resulting identity.
 	//

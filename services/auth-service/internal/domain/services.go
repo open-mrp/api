@@ -23,9 +23,10 @@ type RefreshTokenResult struct {
 }
 
 type RegisterInput struct {
-	Name     string
-	Email    string
-	Password string // #nosec G117 - Struct field, not a hardcoded credential
+	Name        string
+	Email       string
+	Password    string  // #nosec G117 - Struct field, not a hardcoded credential
+	AccountSlug *string // Portal context for the "already registered" magic login link.
 }
 
 type AuthSvc interface {
@@ -52,6 +53,9 @@ type UserSvc interface {
 
 	// Register creates a new user and returns a token pair so the user is immediately logged in.
 	Register(ctx context.Context, input RegisterInput) (*LoginResult, *apierror.APIError)
+
+	// MagicLogin exchanges a magic-login token for a token pair, logging the user in without a password.
+	MagicLogin(ctx context.Context, token string) (*LoginResult, *apierror.APIError)
 }
 
 type PasswordSvc interface {

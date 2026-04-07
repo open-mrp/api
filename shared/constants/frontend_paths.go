@@ -16,11 +16,13 @@ const (
 	DashboardPathRegisterCheckoutReturn DashboardPath = "/auth/register/%s?checkout_session_id={CHECKOUT_SESSION_ID}"
 	// DashboardPathBillingPortal is the path users return to after the Stripe billing portal.
 	DashboardPathBillingPortal DashboardPath = "/dashboard/account?tab=billing"
+	// DashboardPathMagicLogin is the path where a magic login token is exchanged for a session.
+	DashboardPathMagicLogin DashboardPath = "/auth/magic-login"
 )
 
 func (m DashboardPath) IsValid() bool {
 	switch m {
-	case DashboardPathRegisterVerify, DashboardPathResetPassword, DashboardPathLogin, DashboardPathRegisterCheckoutReturn, DashboardPathBillingPortal:
+	case DashboardPathRegisterVerify, DashboardPathResetPassword, DashboardPathLogin, DashboardPathRegisterCheckoutReturn, DashboardPathBillingPortal, DashboardPathMagicLogin:
 		return true
 	default:
 		return false
@@ -28,5 +30,5 @@ func (m DashboardPath) IsValid() bool {
 }
 
 func (m DashboardPath) EnumValues() []string {
-	return []string{string(DashboardPathRegisterVerify), string(DashboardPathResetPassword), string(DashboardPathLogin), string(DashboardPathRegisterCheckoutReturn), string(DashboardPathBillingPortal)}
+	return []string{string(DashboardPathRegisterVerify), string(DashboardPathResetPassword), string(DashboardPathLogin), string(DashboardPathRegisterCheckoutReturn), string(DashboardPathBillingPortal), string(DashboardPathMagicLogin)}
 }

@@ -432,4 +432,3 @@ func TestRespondWithJSON_WithLocation(t *testing.T) {
 		t.Fatalf("expected Location %q, got %q", "/v1/auth/api-keys/ak_123", w.Header().Get(header.LocationHeader))
 	}
 }
-

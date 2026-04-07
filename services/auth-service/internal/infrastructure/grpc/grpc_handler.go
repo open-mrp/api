@@ -82,10 +82,31 @@ func (h *gRPCHandler) Register(ctx context.Context, req *pb.RegisterRequest) (*p
 	defer finalizeIdempotency()
 
 	result, apiErr := h.userSvc.Register(ctx, domain.RegisterInput{
-		Name:     req.Name,
-		Email:    req.Email,
-		Password: req.Password,
+		Name:        req.Name,
+		Email:       req.Email,
+		Password:    req.Password,
+		AccountSlug: req.AccountSlug,
 	})
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.LoginResponse{
+		AccessToken:  result.AccessToken,
+		RefreshToken: result.RefreshToken,
+		User:         result.User.ToProto(),
+	}, nil
+}
+
+func (h *gRPCHandler) MagicLogin(ctx context.Context, req *pb.MagicLoginRequest) (*pb.LoginResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
+	result, apiErr := h.userSvc.MagicLogin(ctx, req.Token)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}

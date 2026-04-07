@@ -152,6 +152,21 @@ func (mr *MockUserSvcMockRecorder) Login(ctx, identifier, password any) *gomock.
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Login", reflect.TypeOf((*MockUserSvc)(nil).Login), ctx, identifier, password)
 }
 
+// MagicLogin mocks base method.
+func (m *MockUserSvc) MagicLogin(ctx context.Context, token string) (*domain.LoginResult, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MagicLogin", ctx, token)
+	ret0, _ := ret[0].(*domain.LoginResult)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// MagicLogin indicates an expected call of MagicLogin.
+func (mr *MockUserSvcMockRecorder) MagicLogin(ctx, token any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MagicLogin", reflect.TypeOf((*MockUserSvc)(nil).MagicLogin), ctx, token)
+}
+
 // Register mocks base method.
 func (m *MockUserSvc) Register(ctx context.Context, input domain.RegisterInput) (*domain.LoginResult, *apierror.APIError) {
 	m.ctrl.T.Helper()

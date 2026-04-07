@@ -8,6 +8,7 @@ const (
 	SeedAPIKey    = "aug_sk_prod_u6Xh5ZpaUruMAU12EPAs4z_rSA4zJM5NbRqAtalvXMoRWOUPohFKJtX7ZUFUOp36IVwdiUCZu"
 	SeedAccountID = "ac_01k0a5smf9ekb8rqg12555zjqa"
 	SeedUserID    = "us_1wjfmmbwg8l7"
+	SeedUser2ID   = "us_6p7460uuwibz"
 
 	// Customers
 	SeedCustomerAccountID  = "ac_01k09wm2fgevdsc344gpbcj30f"

@@ -47,8 +47,8 @@ type Customer struct {
 	TypeGroupCommissionPolicy     *constants.CommissionPolicy
 	TypeGroupFreightPolicy        *constants.FreightPolicy
 	TypeGroupType                 *constants.AccountGroupType
-	PriceGroups                   []CustomerAccountGroup
-	ParentAccountID               *string `audit:"parent_account_id"`
+	PriceGroups                   []CustomerAccountGroup `audit:"price_groups"`
+	ParentAccountID               *string                `audit:"parent_account_id"`
 	ParentAccountName             *string
 	ParentAccountNumber           *string
 	CreatedAt                     time.Time

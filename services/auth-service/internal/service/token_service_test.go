@@ -135,10 +135,6 @@ func (suite *TokenSvcTestSuite) TestRevokeRefreshToken_Success() {
 		UpsertIdempotencyKey(gomock.Any(), nil).
 		Return(idempotencyKey, nil).
 		Times(1)
-	suite.refreshTokenRepo.EXPECT().
-		Find(gomock.Any(), refreshToken).
-		Return(&domain.RefreshToken{Token: refreshToken, UserID: testutil.EntityIDUser}, nil).
-		Times(2)
 	suite.refreshTokenMed.EXPECT().
 		Revoke(gomock.Any(), refreshToken).
 		Return(nil).
@@ -165,10 +161,6 @@ func (suite *TokenSvcTestSuite) TestRevokeRefreshToken_RevokeFails() {
 	suite.idempotencyMed.EXPECT().
 		UpsertIdempotencyKey(gomock.Any(), nil).
 		Return(idempotencyKey, nil).
-		Times(1)
-	suite.refreshTokenRepo.EXPECT().
-		Find(gomock.Any(), refreshToken).
-		Return(&domain.RefreshToken{Token: refreshToken, UserID: testutil.EntityIDUser}, nil).
 		Times(1)
 	suite.refreshTokenMed.EXPECT().
 		Revoke(gomock.Any(), refreshToken).

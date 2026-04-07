@@ -9,8 +9,6 @@ import (
 	"github.com/augno/api/services/auth-service/internal/infrastructure/repository"
 	"github.com/augno/api/services/auth-service/internal/infrastructure/sqlc"
 	"github.com/augno/api/services/auth-service/internal/mediator"
-	"github.com/augno/api/shared/audit"
-	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/idempotency"
 	"github.com/augno/api/shared/tracing"
@@ -150,30 +148,8 @@ func (s *tokenSvcImpl) RevokeRefreshToken(ctx context.Context, refreshToken stri
 		apiErr = s.withTx(ctx, func(txCtx context.Context, svc *tokenSvcImpl) *apierror.APIError {
 			txMeds := svc.mediators()
 
-			old, findErr := svc.repos.NewRefreshTokenRepo().Find(txCtx, refreshToken)
-			if findErr != nil {
-				return findErr
-			}
-
 			if err := txMeds.RefreshToken.Revoke(txCtx, refreshToken); err != nil {
 				return err
-			}
-
-			revoked, findErr := svc.repos.NewRefreshTokenRepo().Find(txCtx, refreshToken)
-			if findErr != nil {
-				return findErr
-			}
-
-			changes := audit.ComputeChanges(old, revoked)
-
-			if apiErr := audit.NewPublisher().Publish(txCtx, svc.repos.NewOutboxRepo(), audit.EventData{
-				ServiceName:  domain.ServiceName,
-				Action:       constants.AuditActionUpdate,
-				ResourceType: constants.ObjectTypeRefreshToken,
-				ResourceID:   old.UserID,
-				Changes:      changes,
-			}); apiErr != nil {
-				return apiErr
 			}
 
 			return txMeds.Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, struct{}{})

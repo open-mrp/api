@@ -2,7 +2,10 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"reflect"
+	"slices"
 
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/services/core-service/internal/domain"
@@ -306,6 +309,11 @@ func (s *roleSvcImpl) UpdateRole(ctx context.Context, params domain.UpdateRolePa
 				return apierror.NewValidationError("Global roles cannot be modified.")
 			}
 
+			oldPermissions, apiErr := txRolePermRepo.ListByRoleID(txCtx, params.RoleID)
+			if apiErr != nil {
+				return apiErr
+			}
+
 			if params.Name != nil {
 				exists, apiErr := txRoleRepo.ExistsByName(txCtx, params.AccountID, *params.Name, &params.RoleID)
 				if apiErr != nil {
@@ -354,6 +362,10 @@ func (s *roleSvcImpl) UpdateRole(ctx context.Context, params domain.UpdateRolePa
 			}
 
 			changes := audit.ComputeChanges(old, updatedRole)
+
+			if permChange := computePermissionsChange(oldPermissions, permissions); permChange != nil {
+				changes = append(changes, *permChange)
+			}
 
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 				ServiceName:  domain.ServiceName,
@@ -446,4 +458,56 @@ func (s *roleSvcImpl) DeleteRole(ctx context.Context, roleID string) *apierror.A
 	}
 
 	return nil
+}
+
+// permissionSummary is a lightweight, stable representation of a role permission
+// used for audit diff comparison. It excludes metadata fields (ID, RoleID,
+// timestamps) that change on every delete+recreate cycle.
+type permissionSummary struct {
+	PermissionCode string `json:"permission_code"`
+	Create         bool   `json:"create"`
+	Read           bool   `json:"read"`
+	Update         bool   `json:"update"`
+	Delete         bool   `json:"delete"`
+}
+
+func toPermissionSummaries(perms []*domain.RolePermission) []permissionSummary {
+	summaries := make([]permissionSummary, len(perms))
+	for i, p := range perms {
+		summaries[i] = permissionSummary{
+			PermissionCode: p.PermissionCode,
+			Create:         p.Create,
+			Read:           p.Read,
+			Update:         p.Update,
+			Delete:         p.Delete,
+		}
+	}
+	slices.SortFunc(summaries, func(a, b permissionSummary) int {
+		if a.PermissionCode < b.PermissionCode {
+			return -1
+		}
+		if a.PermissionCode > b.PermissionCode {
+			return 1
+		}
+		return 0
+	})
+	return summaries
+}
+
+func computePermissionsChange(oldPerms, newPerms []*domain.RolePermission) *audit.FieldChange {
+	oldSummaries := toPermissionSummaries(oldPerms)
+	newSummaries := toPermissionSummaries(newPerms)
+
+	if reflect.DeepEqual(oldSummaries, newSummaries) {
+		return nil
+	}
+
+	oldJSON, _ := json.Marshal(oldSummaries)
+	newJSON, _ := json.Marshal(newSummaries)
+
+	return &audit.FieldChange{
+		Field:    "permissions",
+		OldValue: json.RawMessage(oldJSON),
+		NewValue: json.RawMessage(newJSON),
+	}
 }

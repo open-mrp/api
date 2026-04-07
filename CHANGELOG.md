@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.1](https://github.com/Augno/api/compare/v0.10.0...v0.10.1) (2026-04-07)
+
+
+### Bug Fixes
+
+* broken audit logs ([#164](https://github.com/Augno/api/issues/164)) ([a5dd64d](https://github.com/Augno/api/commit/a5dd64d56bf59defbcf4db6f14265aee05f95702))
+
 ## [0.10.0](https://github.com/Augno/api/compare/v0.9.10...v0.10.0) (2026-04-07)
 
 

@@ -17,19 +17,6 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func passwordSvcIdentityCtx() context.Context {
-	acctID := "acct_test"
-	return appctx.WithIdentity(context.Background(), &types.Identity{
-		Type:   types.IdentityActorTypeUser,
-		Target: &types.IdentityTarget{AccountID: acctID},
-		Actor: &types.IdentityActor{
-			RelationType: types.IdentityRelationTypeInternal,
-			ID:           testutil.EntityIDUser,
-			AccountID:    &acctID,
-		},
-	})
-}
-
 type PasswordSvcTestSuite struct {
 	suite.Suite
 	passwordSvc           domain.PasswordSvc
@@ -111,7 +98,7 @@ func (suite *PasswordSvcTestSuite) TestRequestPasswordReset_Success() {
 }
 
 func (suite *PasswordSvcTestSuite) TestResetPassword_Success() {
-	ctx := passwordSvcIdentityCtx()
+	ctx := context.Background()
 	token := "reset-token"
 	newPassword := "new-password"
 	user := &types.User{ID: testutil.EntityIDUser}

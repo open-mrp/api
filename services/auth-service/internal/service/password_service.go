@@ -208,16 +208,6 @@ func (s *passwordSvcImpl) ResetPassword(ctx context.Context, token, newPassword 
 
 			refreshToken = refreshTokenModel.Token
 
-			if apiErr := audit.NewPublisher().Publish(txCtx, svc.repos.NewOutboxRepo(), audit.EventData{
-				ServiceName:  domain.ServiceName,
-				Action:       constants.AuditActionUpdate,
-				ResourceType: constants.ObjectTypeUser,
-				ResourceID:   user.ID,
-				Changes:      nil,
-			}); apiErr != nil {
-				return apiErr
-			}
-
 			return txMeds.Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, domain.LoginResult{
 				User:         user,
 				AccessToken:  accessToken,

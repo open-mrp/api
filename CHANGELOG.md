@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.0](https://github.com/Augno/api/compare/v0.9.10...v0.10.0) (2026-04-07)
+
+
+### Features
+
+* **auth:** add magic login functionality and account slug support ([#162](https://github.com/Augno/api/issues/162)) ([635b9d5](https://github.com/Augno/api/commit/635b9d5ba127cffd6ec0950014a3453851528e7b))
+
 ## [0.9.10](https://github.com/Augno/api/compare/v0.9.9...v0.9.10) (2026-04-07)
 
 

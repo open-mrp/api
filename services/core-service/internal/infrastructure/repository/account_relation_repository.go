@@ -44,6 +44,30 @@ func (r *accountRelationRepoImpl) FindByOwnerAccountAndUserID(ctx context.Contex
 	}, nil
 }
 
+func (r *accountRelationRepoImpl) FindByCounterpartyAccountAndUserID(ctx context.Context, counterpartyAccountID, userID string) (*domain.AccountRelation, *apierror.APIError) {
+	ctx, span := accountRelationRepoTracer.Start(ctx, "repository.account_relation.find_by_counterparty_account_and_user_id")
+	defer span.End()
+
+	row, err := r.queries.FindAccountRelationByCounterpartyAccountIDAndUserID(ctx, sqlc.FindAccountRelationByCounterpartyAccountIDAndUserIDParams{
+		CounterpartyAccountID: counterpartyAccountID,
+		UserID:                userID,
+	})
+
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
+			return nil, apiErr
+		}
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	return &domain.AccountRelation{
+		ID:                    row.ID,
+		CounterpartyAccountID: row.CounterpartyAccountID,
+		RoleCode:              row.AccountRelationRoleCode,
+		IsOwnerSide:           true,
+	}, nil
+}
+
 func (r *accountRelationRepoImpl) FindByOwnerAccountAndAPIKeyID(ctx context.Context, ownerAccountID string, apiKeyID int64) (*domain.AccountRelation, *apierror.APIError) {
 	ctx, span := accountRelationRepoTracer.Start(ctx, "repository.account_relation.find_by_owner_account_and_api_key_id")
 	defer span.End()

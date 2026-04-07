@@ -217,6 +217,17 @@ func (s *userMedImpl) ValidateCredential(ctx context.Context, authToken string, 
 			return nil, tracing.Trace(span, apierror.NewAuthorizationError(errNoAccountAccess(*targetAccountID)))
 		}
 
+		// Owner-side: the user's actor account owns the relation (e.g. merchant targeting customer).
+		// Keep the actor's own account permissions.
+		if accountRelation.IsOwnerSide {
+			relationType := accountRelation.AccountRelationRoleCode
+			identity.Target.AccountID = *targetAccountID
+			identity.Target.RelationType = &relationType
+			return identity, nil
+		}
+
+		// Counterparty-side: the user belongs to the counterparty (e.g. customer user targeting merchant).
+		// Strip actor permissions since they don't apply to the owner's account.
 		identity.Actor.RelationType = actorType
 		identity.Actor.RoleID = nil
 		identity.Actor.RoleTypeCode = nil

@@ -32,6 +32,19 @@ WHERE account_relation.counterparty_account_id = ?
   AND api_key.id = ?
 LIMIT 1;
 
+-- name: FindAccountRelationByCounterpartyAccountIDAndUserID :one
+SELECT
+    account_relation.id,
+    account_relation.counterparty_account_id,
+    account_relation.owner_account_id,
+    account_relation.account_relation_role_code
+FROM account_relation
+INNER JOIN account_user ON account_relation.owner_account_id = account_user.account_id
+WHERE account_relation.counterparty_account_id = ?
+  AND account_user.user_id = ?
+  AND (account_user.status_code = 'active' OR account_user.status_code IS NULL)
+LIMIT 1;
+
 -- name: HasRelationByOwnerAndCounterparty :one
 SELECT EXISTS(
     SELECT 1

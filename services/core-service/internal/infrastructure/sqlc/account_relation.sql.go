@@ -81,6 +81,44 @@ func (q *Queries) FindAccountRelationByCounterpartyAccountIDAndAPIKeyID(ctx cont
 	return i, err
 }
 
+const findAccountRelationByCounterpartyAccountIDAndUserID = `-- name: FindAccountRelationByCounterpartyAccountIDAndUserID :one
+SELECT
+    account_relation.id,
+    account_relation.counterparty_account_id,
+    account_relation.owner_account_id,
+    account_relation.account_relation_role_code
+FROM account_relation
+INNER JOIN account_user ON account_relation.owner_account_id = account_user.account_id
+WHERE account_relation.counterparty_account_id = ?
+  AND account_user.user_id = ?
+  AND (account_user.status_code = 'active' OR account_user.status_code IS NULL)
+LIMIT 1
+`
+
+type FindAccountRelationByCounterpartyAccountIDAndUserIDParams struct {
+	CounterpartyAccountID string
+	UserID                string
+}
+
+type FindAccountRelationByCounterpartyAccountIDAndUserIDRow struct {
+	ID                      string
+	CounterpartyAccountID   string
+	OwnerAccountID          string
+	AccountRelationRoleCode string
+}
+
+func (q *Queries) FindAccountRelationByCounterpartyAccountIDAndUserID(ctx context.Context, arg FindAccountRelationByCounterpartyAccountIDAndUserIDParams) (FindAccountRelationByCounterpartyAccountIDAndUserIDRow, error) {
+	row := q.db.QueryRowContext(ctx, findAccountRelationByCounterpartyAccountIDAndUserID, arg.CounterpartyAccountID, arg.UserID)
+	var i FindAccountRelationByCounterpartyAccountIDAndUserIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.CounterpartyAccountID,
+		&i.OwnerAccountID,
+		&i.AccountRelationRoleCode,
+	)
+	return i, err
+}
+
 const findAccountRelationByOwnerAccountIDAndAPIKeyID = `-- name: FindAccountRelationByOwnerAccountIDAndAPIKeyID :one
 SELECT
     account_relation.id,

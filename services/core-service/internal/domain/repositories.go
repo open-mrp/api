@@ -86,6 +86,7 @@ type SandboxAccountRepo interface {
 type AccountRelationRepo interface {
 	FindByOwnerAccountAndUserID(ctx context.Context, ownerAccountID, userID string) (*AccountRelation, *apierror.APIError)
 	FindByOwnerAccountAndAPIKeyID(ctx context.Context, ownerAccountID string, apiKeyID int64) (*AccountRelation, *apierror.APIError)
+	FindByCounterpartyAccountAndUserID(ctx context.Context, counterpartyAccountID, userID string) (*AccountRelation, *apierror.APIError)
 	FindByCounterpartyAccountAndAPIKeyID(ctx context.Context, counterpartyAccountID string, apiKeyID int64) (*AccountRelation, *apierror.APIError)
 	FindCustomerByEmail(ctx context.Context, ownerAccountID, email string) (*CustomerByEmail, *apierror.APIError)
 	HasRelation(ctx context.Context, ownerAccountID, counterpartyAccountID string) (bool, *apierror.APIError)

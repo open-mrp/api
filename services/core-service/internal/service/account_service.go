@@ -162,15 +162,28 @@ func (s *accountSvcImpl) GetRoleInfo(ctx context.Context, roleID string) (*domai
 	return s.roleRepo.GetByID(ctx, roleID)
 }
 
-// GetAccountRelationByUserID finds the account relation linking a user to an owner account.
+// GetAccountRelationByUserID finds the account relation linking a user to a target account.
 //
-// 1. Query the account relation repository by owner account and user ID.
-// 2. If not found, return nil without an error.
-func (s *accountSvcImpl) GetAccountRelationByUserID(ctx context.Context, ownerAccountID, userID string) (*domain.AccountRelation, *apierror.APIError) {
+// 1. Query by owner account (counterparty-side: e.g. customer user targeting merchant).
+// 2. If not found, query by counterparty account (owner-side: e.g. merchant user targeting customer).
+// 3. If neither found, return nil without an error.
+func (s *accountSvcImpl) GetAccountRelationByUserID(ctx context.Context, targetAccountID, userID string) (*domain.AccountRelation, *apierror.APIError) {
 	ctx, span := accountSvcTracer.Start(ctx, "service.account.get_account_relation_by_user_id")
 	defer span.End()
 
-	relation, apiErr := s.accountRelationRepo.FindByOwnerAccountAndUserID(ctx, ownerAccountID, userID)
+	// Try counterparty-side first (target is the relation owner, user belongs to counterparty).
+	relation, apiErr := s.accountRelationRepo.FindByOwnerAccountAndUserID(ctx, targetAccountID, userID)
+	if apiErr != nil {
+		if apiErr.Code != apierror.ErrorCodeResourceNotFound {
+			return nil, tracing.Trace(span, apiErr)
+		}
+	}
+	if relation != nil {
+		return relation, nil
+	}
+
+	// Try owner-side (target is the counterparty, user belongs to the relation owner).
+	relation, apiErr = s.accountRelationRepo.FindByCounterpartyAccountAndUserID(ctx, targetAccountID, userID)
 	if apiErr != nil {
 		if apiErr.Code == apierror.ErrorCodeResourceNotFound {
 			return nil, nil

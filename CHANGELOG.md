@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.10.3](https://github.com/Augno/api/compare/v0.10.2...v0.10.3) (2026-04-08)
+
+
+### Bug Fixes
+
+* ci issues ([#168](https://github.com/Augno/api/issues/168)) ([725bdd9](https://github.com/Augno/api/commit/725bdd96491c610fefb067a70f99085f41ee3818))
+* update configuration and improve idempotency handling ([#170](https://github.com/Augno/api/issues/170)) ([a04ac67](https://github.com/Augno/api/commit/a04ac677a88e0155fe69b4aca91aee7ffe8046ac))
+
 ## [0.10.2](https://github.com/Augno/api/compare/v0.10.1...v0.10.2) (2026-04-08)
 
 

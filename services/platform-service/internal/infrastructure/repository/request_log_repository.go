@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"slices"
 	"time"
 
 	"github.com/augno/api/services/platform-service/internal/domain"
@@ -327,16 +328,14 @@ func (r *requestLogRepoImpl) List(ctx context.Context, targetAccountID string, f
 }
 
 // anyIncludeRequested returns true when any of the given keys is present in includes.
-// When includes is nil (no include param), returns true for backward compat.
+// When includes is nil (no include param), returns false — no enriched data is needed.
 func anyIncludeRequested(includes []string, keys ...string) bool {
 	if includes == nil {
-		return true
+		return false
 	}
 	for _, inc := range includes {
-		for _, key := range keys {
-			if inc == key {
-				return true
-			}
+		if slices.Contains(keys, inc) {
+			return true
 		}
 	}
 	return false
@@ -346,16 +345,14 @@ func includeJSONFieldParam(includes []string, key string) db.NullableRawMessage 
 	if includes == nil {
 		return nil
 	}
-	for _, inc := range includes {
-		if inc == key {
-			return db.NullableRawMessage("1")
-		}
+	if slices.Contains(includes, key) {
+		return db.NullableRawMessage("1")
 	}
 	return nil
 }
 
 func applyRequestedJSONIncludes(rl *domain.RequestLogRead, includes []string) {
-	if rl == nil || includes == nil {
+	if rl == nil {
 		return
 	}
 	if !anyIncludeRequested(includes, "query_json") {

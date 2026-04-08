@@ -226,10 +226,10 @@ func apiKeyCreatedAt(k *apikey.APIKey) time.Time { return k.CreatedAt }
 func apiKeyID(k *apikey.APIKey) int64            { return k.ID }
 
 // includesContains returns true when the given key is in the includes list.
-// When includes is nil (no include param), returns true for backward compat.
+// When includes is nil (no include param), returns false — no enriched data is needed.
 func includesContains(includes []string, key string) bool {
 	if includes == nil {
-		return true
+		return false
 	}
 	for _, v := range includes {
 		if v == key {

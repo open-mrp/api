@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.4](https://github.com/Augno/api/compare/v0.10.3...v0.10.4) (2026-04-08)
+
+
+### Bug Fixes
+
+* longer timeout values ([#171](https://github.com/Augno/api/issues/171)) ([3b3abea](https://github.com/Augno/api/commit/3b3abea2ea32e113fb126d1bc4a59a49634364ad))
+
 ## [0.10.3](https://github.com/Augno/api/compare/v0.10.2...v0.10.3) (2026-04-08)
 
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.5](https://github.com/Augno/api/compare/v0.10.4...v0.10.5) (2026-04-08)
+
+
+### Bug Fixes
+
+* release issue for openapi specs ([#173](https://github.com/Augno/api/issues/173)) ([0a226af](https://github.com/Augno/api/commit/0a226af7c7c03e54b1531ac242e76cadf62e5cd5))
+
 ## [0.10.4](https://github.com/Augno/api/compare/v0.10.3...v0.10.4) (2026-04-08)
 
 

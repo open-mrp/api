@@ -164,6 +164,11 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - name: Install Modules
+        run: |
+          go mod tidy
+          cd tools && go mod tidy
+
       - name: Generate OpenAPI spec
         run: make openapi
 

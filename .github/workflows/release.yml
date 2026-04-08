@@ -167,6 +167,11 @@ jobs:
           API_VERSION=$(go run ./cmd/print-version)
           echo "api_version=$API_VERSION" >> "$GITHUB_OUTPUT"
 
+      - name: Tidy Go Modules
+        run: |
+          go mod tidy
+          cd tools && go mod tidy
+
       - name: Generate OpenAPI Specs
         run: make openapi
 

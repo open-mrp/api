@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.7](https://github.com/Augno/api/compare/v0.10.6...v0.10.7) (2026-04-08)
+
+
+### Bug Fixes
+
+* e2e test workflow ([#177](https://github.com/Augno/api/issues/177)) ([37ee21e](https://github.com/Augno/api/commit/37ee21eed1a5d89799f2f2d5679bd1a6c572b314))
+
 ## [0.10.6](https://github.com/Augno/api/compare/v0.10.5...v0.10.6) (2026-04-08)
 
 

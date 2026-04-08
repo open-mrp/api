@@ -26,8 +26,8 @@ import (
 
 const (
 	httpIdleTimeout     = time.Minute
-	httpReadTimeout     = 5 * time.Second
-	httpWriteTimeout    = 10 * time.Second
+	httpReadTimeout     = 10 * time.Second
+	httpWriteTimeout    = 30 * time.Second
 	httpShutdownTimeout = 10 * time.Second
 )
 

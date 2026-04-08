@@ -13,7 +13,7 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-const DefaultTimeout = 5 * time.Second
+const DefaultTimeout = 10 * time.Second
 
 // Option configures the behavior of [CallRPC].
 type Option func(*config)

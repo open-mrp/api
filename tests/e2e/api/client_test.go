@@ -277,13 +277,11 @@ func (c *Client) DeleteFull(path string) (*Response, error) {
 	return c.DoFull(http.MethodDelete, path, nil, "")
 }
 
-// isTransientError checks if an *http.Response is a transient server error by
-// peeking at the body. It returns true for 5xx responses where is_transient is true.
+// isTransientError checks if an *http.Response contains a transient error by
+// peeking at the body. It returns true when the error envelope has is_transient
+// set to true (e.g., 5xx server errors, 409 idempotency_in_progress).
 // The response body is replaced so it can still be read after this call.
 func isTransientError(resp *http.Response) bool {
-	if resp.StatusCode < 500 {
-		return false
-	}
 	body, err := io.ReadAll(resp.Body)
 	resp.Body.Close()
 	resp.Body = io.NopCloser(bytes.NewReader(body))
@@ -293,12 +291,9 @@ func isTransientError(resp *http.Response) bool {
 	return isTransientServerError(resp.StatusCode, body)
 }
 
-// isTransientServerError checks if a response with the given status code and body
-// represents a transient server error that is safe to retry.
-func isTransientServerError(statusCode int, body []byte) bool {
-	if statusCode < 500 {
-		return false
-	}
+// isTransientServerError checks if a response body contains an error with
+// is_transient set to true, indicating the request is safe to retry.
+func isTransientServerError(_ int, body []byte) bool {
 	var envelope struct {
 		Error struct {
 			IsTransient bool `json:"is_transient"`

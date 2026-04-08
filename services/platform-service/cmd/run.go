@@ -98,7 +98,7 @@ func Run(
 
 	// Start the outbox enqueuer to publish messages from the outbox table
 	outboxRepo := repository.NewOutboxEnqueuerRepo(dbpool, queries)
-	enqueuer, err := messaging.NewEnqueuer(&messaging.EnqueuerConfig{ServiceName: domain.ServiceName}, outboxRepo, rabbitmq)
+	enqueuer, err := messaging.NewEnqueuer(&messaging.EnqueuerConfig{ServiceName: domain.ServiceName, PlatformMode: cfg.PlatformMode}, outboxRepo, rabbitmq)
 	if err != nil {
 		return err
 	}

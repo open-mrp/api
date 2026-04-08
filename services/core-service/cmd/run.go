@@ -67,7 +67,7 @@ func Run(
 	queries := sqlc.New(db)
 
 	outboxEnqueuerRepo := repository.NewOutboxEnqueuerRepo(db, queries)
-	enqueuer, err := messaging.NewEnqueuer(&messaging.EnqueuerConfig{ServiceName: domain.ServiceName}, outboxEnqueuerRepo, rabbitmq)
+	enqueuer, err := messaging.NewEnqueuer(&messaging.EnqueuerConfig{ServiceName: domain.ServiceName, PlatformMode: cfg.PlatformMode}, outboxEnqueuerRepo, rabbitmq)
 	if err != nil {
 		return err
 	}

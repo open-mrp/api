@@ -162,6 +162,9 @@ func TestAccountUsers_CreateAndGet(t *testing.T) {
 	assert.Equal(t, id, jsonField(got, "id"))
 	assert.Equal(t, name, jsonField(got, "name"))
 
+	// Audit
+	expectAuditEvent(t, id, "account_user", "create")
+
 	// Cleanup
 	apiClient.Delete(accountUsersPath + "/" + id)
 }
@@ -247,6 +250,10 @@ func TestAccountUsers_CreateAndUpdateAllFields(t *testing.T) {
 	updDept := jsonObject(updated, "department")
 	require.NotNil(t, updDept, "department should be preserved")
 	assert.Equal(t, SeedDepartmentID, jsonField(updDept, "id"))
+
+	// Audit
+	expectAuditEvent(t, id, "account_user", "create")
+	expectAuditEvent(t, id, "account_user", "update")
 }
 
 func TestAccountUsers_Update(t *testing.T) {
@@ -270,6 +277,9 @@ func TestAccountUsers_Update(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
 	assert.Equal(t, newName, jsonField(parseJSON(patchBody), "name"))
+
+	// Audit
+	expectAuditEvent(t, id, "account_user", "update")
 
 	// Cleanup
 	apiClient.Delete(accountUsersPath + "/" + id)
@@ -298,6 +308,10 @@ func TestAccountUsers_Delete(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, getStatus == 200 || getStatus == 404,
 		"Deleted user should return 200 (with removed status) or 404, got %d", getStatus)
+
+	// Audit
+	expectAuditEvent(t, id, "account_user", "create")
+	expectAuditEvent(t, id, "account_user", "delete")
 }
 
 func TestAccountUsers_LockAndUnlock(t *testing.T) {
@@ -337,6 +351,10 @@ func TestAccountUsers_LockAndUnlock(t *testing.T) {
 	requireStatus(t, 200, getStatus2, getBody2)
 	assert.Equal(t, "active", jsonField(parseJSON(getBody2), "status"))
 
+	// Audit — lock and unlock both emit "update" actions
+	expectAuditEvent(t, id, "account_user", "create")
+	expectAuditEvent(t, id, "account_user", "update")
+
 	// Cleanup
 	apiClient.Delete(accountUsersPath + "/" + id)
 }
@@ -372,6 +390,11 @@ func TestAccountUsers_DeleteAndRestore(t *testing.T) {
 	status := jsonField(parseJSON(getBody), "status")
 	assert.True(t, status == "active" || status == "pending",
 		"Restored user should have active or pending status, got %q", status)
+
+	// Audit
+	expectAuditEvent(t, id, "account_user", "create")
+	expectAuditEvent(t, id, "account_user", "delete")
+	expectAuditEvent(t, id, "account_user", "update") // restore emits update
 
 	// Cleanup
 	apiClient.Delete(accountUsersPath + "/" + id)

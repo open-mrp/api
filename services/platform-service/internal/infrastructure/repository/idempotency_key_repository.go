@@ -100,9 +100,12 @@ func (r *idempotencyKeyRepoImpl) upsertAndLockOnce(ctx context.Context, key *dom
 			IdempotencyKey:  key.IdempotencyKey,
 			RequestParams:   db.NullableRawMessage(key.RequestParams),
 			RecoveryPoint:   key.RecoveryPoint,
+			LockOwner:       db.NullStringPtr(key.ActorID),
 		})
 		if createErr != nil {
-			return nil, db.MapSQLError(createErr), db.IsDeadlock(createErr)
+			// A concurrent request inserted the same scope_hash first.
+			// Treat as retryable so the next attempt finds the existing row.
+			return nil, db.MapSQLError(createErr), db.IsDeadlock(createErr) || db.IsDuplicateEntry(createErr)
 		}
 
 		if commitErr := tx.Commit(); commitErr != nil {

@@ -135,6 +135,7 @@ type AccountPlan struct {
 	ExpiresAt            sql.NullTime
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
+	IsPubliclyVisible    bool
 }
 
 type AccountPlanFeature struct {

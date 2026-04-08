@@ -67,6 +67,7 @@ func Run(
 	outboxRepo := repository.NewOutboxEnqueuerRepo(pgpool, queries)
 	enqueuer, err := messaging.NewEnqueuer(&messaging.EnqueuerConfig{
 		ServiceName:  domain.ServiceName,
+		PlatformMode: cfg.PlatformMode,
 		PollInterval: 1 * time.Second,
 	}, outboxRepo, rabbitmq)
 	if err != nil {

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/augno/api/shared/appctx"
+	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/retry"
 )
 
@@ -17,6 +18,11 @@ type EnqueuerConfig struct {
 	// ServiceName (required) identifies which service owns this enqueuer instance.
 	// Used in log messages and to scope outbox queries to the owning service's messages.
 	ServiceName string
+
+	// PlatformMode (optional) is the platform mode. When set to "test", the default
+	// PollInterval is reduced from 30s to 1s so that e2e tests can verify async
+	// side-effects (audit logs, request logs, etc.) without long waits.
+	PlatformMode constants.PlatformMode
 
 	// LockOwner (optional; default: "{hostname}-{pid}") is a unique identifier for this
 	// process instance, used to claim outbox messages via optimistic locking.
@@ -65,7 +71,11 @@ func (c *EnqueuerConfig) WithDefaults() *EnqueuerConfig {
 		c.LockOwner = fmt.Sprintf("%s-%d", hostname, os.Getpid())
 	}
 	if c.PollInterval == 0 {
-		c.PollInterval = 30 * time.Second
+		if c.PlatformMode.IsTest() {
+			c.PollInterval = 1 * time.Second
+		} else {
+			c.PollInterval = 30 * time.Second
+		}
 	}
 	if c.BatchSize == 0 {
 		c.BatchSize = 100

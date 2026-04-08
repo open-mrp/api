@@ -31,6 +31,40 @@ jobs:
               - 'infra/production/docker/Dockerfile'
               - 'tools/apidocs/**'
 
+  gosec-full:
+    name: Gosec (Full Scan)
+    needs: [changes]
+    if: needs.changes.outputs.go == 'true'
+    runs-on: ubuntu-latest
+    env:
+      CGO_ENABLED: 0
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+
+      - name: Cache gosec
+        uses: actions/cache@v4
+        id: cache-gosec
+        with:
+          path: ~/go/bin/gosec
+          key: ${{ runner.os }}-gosec-${{ hashFiles('tools/tool-versions') }}
+
+      - name: Install gosec
+        if: steps.cache-gosec.outputs.cache-hit != 'true'
+        run: go install github.com/securego/gosec/v2/cmd/gosec@v$(awk '/gosec/{gsub(/^v/,"",$2); print $2}' tools/tool-versions)
+
+      - name: Run gosec (all rules)
+        run: |
+          gosec -exclude-generated \
+            -exclude-dir=sqlc -exclude-dir=proto -exclude-dir=tools \
+            -concurrency=$(nproc) \
+            ./...
+
   smoke-test:
     name: SQL Prepare Smoke Tests
     needs: [changes]

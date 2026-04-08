@@ -30,9 +30,13 @@ SELECT * FROM idempotency_key WHERE scope_hash = ? FOR UPDATE;
 -- name: CreateIdempotencyKeyWithScope :execlastid
 INSERT INTO idempotency_key (
     type_id, scope_hash, request_body_hash, actor_id, identity_type, target_account_id, request_method,
-    normalized_route, idempotency_key, request_params, recovery_point, last_run_at, expires_at
+    normalized_route, idempotency_key, request_params, recovery_point,
+    locked_at, lock_owner, lock_expires_at,
+    last_run_at, expires_at
 ) VALUES (
-    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(3), DATE_ADD(NOW(3), INTERVAL 30 DAY)
+    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+    NOW(3), ?, DATE_ADD(NOW(3), INTERVAL 5 MINUTE),
+    NOW(3), DATE_ADD(NOW(3), INTERVAL 30 DAY)
 );
 
 -- name: AdvanceRecoveryPoint :exec

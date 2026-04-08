@@ -79,8 +79,7 @@ func (s *loggingSvcImpl) GetRequestLog(ctx context.Context, id string, includes 
 //
 // 1. Extract and validate the caller's identity, actor type, and request_logs:read permission.
 // 2. Require the Augno-Account header.
-// 3. Default the public_endpoint filter to true if not specified.
-// 4. Query the repository with the account ID, filters, and optional includes.
+// 3. Query the repository with the account ID, filters, and optional includes.
 func (s *loggingSvcImpl) ListRequestLogs(ctx context.Context, filter *domain.ListRequestLogsFilter, includes []string) (*domain.ListRequestLogsResult, *apierror.APIError) {
 	ctx, span := loggingSvcTracer.Start(ctx, "service.logging.list_request_logs")
 	defer span.End()
@@ -98,11 +97,6 @@ func (s *loggingSvcImpl) ListRequestLogs(ctx context.Context, filter *domain.Lis
 	}
 	if !identity.IsTargetAccountSet() {
 		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account header is required."))
-	}
-
-	if filter.PublicEndpoint == nil {
-		t := true
-		filter.PublicEndpoint = &t
 	}
 
 	return s.requestLogRepo.List(ctx, identity.Target.AccountID, filter, includes)

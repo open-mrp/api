@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/contracts"
 	"github.com/augno/api/shared/crypto"
 	"github.com/augno/api/shared/env"
@@ -29,6 +30,7 @@ const (
 	envDocAPIKeyEncryptionKey = "DOC_API_KEY_ENCRYPTION_KEY" // #nosec G101 - Env var name, not a credential
 	envBillingServiceURL      = "BILLING_SERVICE_URL"
 	envCursorHMACKey          = "CURSOR_HMAC_KEY" // #nosec G101 - Env var name, not a credential
+	envPlatformMode           = "PLATFORM"
 )
 
 // config represents the configuration for the auth service.
@@ -65,6 +67,9 @@ type config struct {
 
 	// CursorHMACKey (required) is the key used to HMAC-sign pagination cursors.
 	CursorHMACKey []byte
+
+	// PlatformMode (optional; default: "production") determines the platform mode.
+	PlatformMode constants.PlatformMode
 }
 
 // withDefaults sets the default values for the configuration.
@@ -83,6 +88,11 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 		panic(err)
 	}
 
+	platformMode := constants.PlatformModeProduction
+	if p := env.GetEnv(envPlatformMode, getenv); p != "" {
+		platformMode = constants.PlatformMode(p)
+	}
+
 	return &config{
 		Port:                   port,
 		DBURL:                  env.GetEnv(envDBURL, getenv),
@@ -95,6 +105,7 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 		DocAPIKeyEncryptionKey: key,
 		BillingServiceURL:      cmp.Or(env.GetEnv(envBillingServiceURL, getenv), defaultBillingServiceURL),
 		CursorHMACKey:          []byte(env.GetEnv(envCursorHMACKey, getenv)),
+		PlatformMode:           platformMode,
 	}
 }
 

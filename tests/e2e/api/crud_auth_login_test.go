@@ -5,6 +5,7 @@ package api_test
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -281,6 +282,11 @@ func TestLogin_Idempotent(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 200, status1, body1)
 	id1 := jsonField(parseJSON(body1), "id")
+
+	// The idempotency response is cached asynchronously after the first
+	// request returns. Give the goroutine time to store the response and
+	// release the lock before sending the replay request.
+	time.Sleep(500 * time.Millisecond)
 
 	status2, body2, err := apiClient.Post(loginPath, reqBody, idemKey)
 	require.NoError(t, err)

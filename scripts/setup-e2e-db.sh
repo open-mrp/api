@@ -48,16 +48,20 @@ fi
 info "Applying core-service MySQL migration..."
 
 MAX_RETRIES=15
-for i in $(seq 1 $MAX_RETRIES); do
-    if extract_up_sql "shared/db/migrations/0001_initial.sql" \
-        | docker exec -i "$MYSQL_CONTAINER" $MYSQL_CMD 2>/dev/null; then
-        break
-    fi
-    if [ "$i" -eq "$MAX_RETRIES" ]; then
-        error "Failed to apply MySQL migration after $MAX_RETRIES attempts."
-        exit 1
-    fi
-    sleep 2
+for migration_file in shared/db/migrations/*.sql; do
+    [ -f "$migration_file" ] || continue
+    filename="$(basename "$migration_file")"
+    for i in $(seq 1 $MAX_RETRIES); do
+        if extract_up_sql "$migration_file" \
+            | docker exec -i "$MYSQL_CONTAINER" $MYSQL_CMD 2>/dev/null; then
+            break
+        fi
+        if [ "$i" -eq "$MAX_RETRIES" ]; then
+            error "Failed to apply MySQL migration $filename after $MAX_RETRIES attempts."
+            exit 1
+        fi
+        sleep 2
+    done
 done
 
 info "MySQL migration complete."

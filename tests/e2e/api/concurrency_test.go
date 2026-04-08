@@ -27,7 +27,7 @@ func TestConcurrency_ParallelPatchSameResource(t *testing.T) {
 	results := make([]int, concurrency)
 	errors := make([]error, concurrency)
 
-	for i := 0; i < concurrency; i++ {
+	for i := range concurrency {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()
@@ -40,7 +40,7 @@ func TestConcurrency_ParallelPatchSameResource(t *testing.T) {
 	}
 	wg.Wait()
 
-	for i := 0; i < concurrency; i++ {
+	for i := range concurrency {
 		require.NoError(t, errors[i], "Request %d failed with error", i)
 		assert.NotEqual(t, 500, results[i],
 			"Request %d returned 500 — concurrent PATCH should not cause server errors", i)
@@ -63,7 +63,7 @@ func TestConcurrency_ParallelCreateSameIdempotencyKey(t *testing.T) {
 	bodies := make([][]byte, concurrency)
 	errs := make([]error, concurrency)
 
-	for i := 0; i < concurrency; i++ {
+	for i := range concurrency {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()
@@ -77,7 +77,7 @@ func TestConcurrency_ParallelCreateSameIdempotencyKey(t *testing.T) {
 
 	// Collect unique resource IDs from successful responses.
 	ids := make(map[string]bool)
-	for i := 0; i < concurrency; i++ {
+	for i := range concurrency {
 		require.NoError(t, errs[i], "Request %d failed", i)
 		assert.NotEqual(t, 500, statuses[i],
 			"Request %d returned 500 — concurrent idempotent create should not cause server errors", i)
@@ -90,12 +90,10 @@ func TestConcurrency_ParallelCreateSameIdempotencyKey(t *testing.T) {
 		}
 	}
 
-	// Ideally all concurrent creates with the same idempotency key produce
-	// the same resource. Under high concurrency, a race may cause multiple
-	// resources to be created — log it as a warning rather than a hard failure.
-	if len(ids) > 1 {
-		t.Logf("WARNING: Concurrent idempotent creates produced %d distinct IDs (expected 1) — possible race in idempotency layer", len(ids))
-	}
+	// Concurrent creates with the same idempotency key must always resolve
+	// to a single resource.
+	require.LessOrEqualf(t, len(ids), 1,
+		"Concurrent idempotent creates produced %d distinct IDs (expected 1)", len(ids))
 
 	// Clean up all created resources.
 	for id := range ids {
@@ -114,7 +112,7 @@ func TestConcurrency_ParallelCreateDifferentResources(t *testing.T) {
 	bodies := make([][]byte, concurrency)
 	errs := make([]error, concurrency)
 
-	for i := 0; i < concurrency; i++ {
+	for i := range concurrency {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()
@@ -127,7 +125,7 @@ func TestConcurrency_ParallelCreateDifferentResources(t *testing.T) {
 	wg.Wait()
 
 	var createdIDs []string
-	for i := 0; i < concurrency; i++ {
+	for i := range concurrency {
 		require.NoError(t, errs[i], "Request %d failed", i)
 		assert.NotEqual(t, 500, statuses[i],
 			"Request %d returned 500 — burst create should not cause server errors", i)
@@ -144,13 +142,8 @@ func TestConcurrency_ParallelCreateDifferentResources(t *testing.T) {
 		apiClient.Delete(customersPath + "/" + id)
 	}
 
-	// All should succeed (allowing for rate limiting).
-	successCount := 0
-	for _, s := range statuses {
-		if s == 201 {
-			successCount++
-		}
+	// All should succeed for distinct concurrent creates.
+	for i, s := range statuses {
+		assert.Equal(t, 201, s, "Request %d: expected 201, got %d", i, s)
 	}
-	assert.GreaterOrEqual(t, successCount, 1,
-		"At least 1 of %d concurrent creates should succeed", concurrency)
 }

@@ -274,6 +274,31 @@ func createAPIKeyAndCleanup(t *testing.T, name string) map[string]any {
 	return parsed
 }
 
+// eventually retries fn until it returns nil or the timeout expires.
+// fn should perform an assertion and return an error describing the failure.
+// Typical usage:
+//
+//	eventually(t, 10*time.Second, 500*time.Millisecond, func() error {
+//	    status, body, err := apiClient.Get(auditEventsPath, url.Values{"resource_id": {id}})
+//	    if err != nil { return err }
+//	    list := parseJSON(body)
+//	    data := jsonArray(list, "data")
+//	    if len(data) == 0 { return fmt.Errorf("no audit events yet for %s", id) }
+//	    return nil
+//	})
+func eventually(t *testing.T, timeout, interval time.Duration, fn func() error) {
+	t.Helper()
+	deadline := time.Now().Add(timeout)
+	var lastErr error
+	for time.Now().Before(deadline) {
+		if lastErr = fn(); lastErr == nil {
+			return
+		}
+		time.Sleep(interval)
+	}
+	t.Fatalf("condition not met after %s: %v", timeout, lastErr)
+}
+
 // jsonArray extracts a JSON array from a parsed JSON map.
 func jsonArray(m map[string]any, key string) []any {
 	if m == nil {

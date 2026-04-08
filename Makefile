@@ -1,4 +1,4 @@
-.PHONY: help dev sqlc proto buf-lint db-dump test test-verbose test-sql-prepare-smoke install-tools docs mocks lint gosec static-check check-format jaeger-tracing connect-minikube connect-eks version validate-openapi-specs httpie local-db local-db-down local-db-nuke seed-core seed-stripe teardown-stripe teardown-all-stripe fmt stripe-webhook open-tracing e2e-up e2e-up-ci e2e e2e-down fix-minikube-dns
+.PHONY: help dev sqlc proto buf-lint db-dump test test-verbose test-sql-prepare-smoke install-tools docs mocks lint gosec gosec-fast govet static-check check-format jaeger-tracing connect-minikube connect-eks version validate-openapi-specs httpie local-db local-db-down local-db-nuke seed-core seed-stripe teardown-stripe teardown-all-stripe fmt stripe-webhook open-tracing e2e-up e2e-up-ci e2e e2e-down fix-minikube-dns
 
 # Include .env file if it exists (optional for CI)
 -include .env
@@ -150,7 +150,6 @@ install-tools: ## Install required development tools
 	@go install github.com/securego/gosec/v2/cmd/gosec@$(call tool-version,github.com/securego/gosec/v2)
 	@go install honnef.co/go/tools/cmd/staticcheck@$(call tool-version,honnef.co/go/tools)
 	@go install golang.org/x/tools/cmd/goimports@$(call tool-version,golang.org/x/tools)
-	@go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(call tool-version,github.com/golangci/golangci-lint/v2)
 
 install-ci-tools: ## Install minimum tools for CI
 	@go install github.com/sqlc-dev/sqlc/cmd/sqlc@$(call tool-version,github.com/sqlc-dev/sqlc)
@@ -160,13 +159,23 @@ install-ci-tools: ## Install minimum tools for CI
 mocks: ## Generate mocks. Usage: make mocks [services]
 	@$(MOCK_SCRIPT) $(ARGS)
 
-lint: ## Run golangci-lint (gosec + staticcheck)
-	@echo "Running golangci-lint..."
-	@golangci-lint run ./...
+lint: gosec static-check ## Run gosec + staticcheck
 
-gosec: ## Run gosec
+gosec: ## Run gosec (all rules)
 	@echo "Running gosec..."
-	@gosec -exclude-generated -exclude-dir=sqlc -exclude-dir=proto -exclude-dir=tools ./...
+	@gosec -exclude-generated -exclude-dir=sqlc -exclude-dir=proto -exclude-dir=tools --concurrency=24 ./...
+
+# Fast rules: pattern-matching only, excludes taint-tracking rules (G107,G201,G202,G203,G204).
+# Update this list when upgrading gosec — new rules land in the full scan only.
+GOSEC_FAST_RULES := G101,G102,G103,G104,G401,G402,G404
+
+gosec-fast: ## Run gosec (fast pattern-matching rules only)
+	@echo "Running gosec (fast rules)..."
+	@gosec -include=$(GOSEC_FAST_RULES) -exclude-generated -exclude-dir=sqlc -exclude-dir=proto -exclude-dir=tools --concurrency=24 ./...
+
+govet: ## Run go vet
+	@echo "Running go vet..."
+	@go vet ./...
 
 static-check: ## Run staticcheck
 	@echo "Running static check..."

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/contracts"
 	"github.com/augno/api/shared/env"
 )
@@ -19,6 +20,7 @@ const (
 	envDBURL         = "DB_URL"
 	envRabbitMQURI   = "RABBITMQ_URI"
 	envCursorHMACKey = "CURSOR_HMAC_KEY"
+	envPlatformMode  = "PLATFORM"
 )
 
 // config represents the configuration for the platform service.
@@ -34,6 +36,9 @@ type config struct {
 
 	// CursorHMACKey (required) is the HMAC key used to sign and verify pagination cursors.
 	CursorHMACKey []byte
+
+	// PlatformMode (optional; default: "production") determines the platform mode.
+	PlatformMode constants.PlatformMode
 }
 
 // withDefaults sets the default values for the configuration.
@@ -47,11 +52,17 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 		port = p
 	}
 
+	platformMode := constants.PlatformModeProduction
+	if p := env.GetEnv(envPlatformMode, getenv); p != "" {
+		platformMode = constants.PlatformMode(p)
+	}
+
 	return &config{
 		Port:          port,
 		DBURL:         env.GetEnv(envDBURL, getenv),
 		RabbitMQURI:   cmp.Or(env.GetEnv(envRabbitMQURI, getenv), defaultRabbitMQURI),
 		CursorHMACKey: []byte(env.GetEnv(envCursorHMACKey, getenv)),
+		PlatformMode:  platformMode,
 	}
 }
 

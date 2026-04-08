@@ -23,8 +23,8 @@ jobs:
               - 'tools/tool-versions'
               - 'shared/db/migrations/**'
 
-  lint:
-    name: Lint
+  validate-version:
+    name: Validate Version
     needs: [changes]
     if: needs.changes.outputs.go == 'true'
     runs-on: ubuntu-latest
@@ -37,16 +37,127 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+          cache-dependency-path: go.sum
 
       - name: Validate version
         run: |
           source ./scripts/version.sh
           validate_version "$(go run ./cmd/print-version)" || exit 1
 
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v7
+  gosec:
+    name: Gosec
+    needs: [changes]
+    if: needs.changes.outputs.go == 'true'
+    runs-on: ubuntu-latest
+    env:
+      CGO_ENABLED: 0
+    steps:
+      - uses: actions/checkout@v4
         with:
-          version: v2.1.2
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+
+      - name: Cache gosec
+        uses: actions/cache@v4
+        id: cache-gosec
+        with:
+          path: ~/go/bin/gosec
+          key: ${{ runner.os }}-gosec-${{ hashFiles('tools/tool-versions') }}
+
+      - name: Install gosec
+        if: steps.cache-gosec.outputs.cache-hit != 'true'
+        run: go install github.com/securego/gosec/v2/cmd/gosec@v$(awk '/gosec/{gsub(/^v/,"",$2); print $2}' tools/tool-versions)
+
+      - name: Get changed packages
+        id: pkgs
+        run: |
+          PKGS=$(git diff --name-only origin/main...HEAD -- '*.go' \
+            | grep -v -E '(^|/)sqlc/|(/|^)proto/|(/|^)tools/|^tests/' \
+            | xargs -I{} dirname {} | sort -u | sed 's|^|./|' | paste -sd ' ')
+          echo "pkgs=${PKGS:-}" >> "$GITHUB_OUTPUT"
+
+      - name: Run gosec (fast rules)
+        if: steps.pkgs.outputs.pkgs != ''
+        run: |
+          gosec -include=G101,G102,G103,G104,G401,G402,G404 \
+            -exclude-generated -concurrency=$(nproc) \
+            ${{ steps.pkgs.outputs.pkgs }}
+
+  staticcheck:
+    name: Staticcheck
+    needs: [changes]
+    if: needs.changes.outputs.go == 'true'
+    runs-on: ubuntu-latest
+    env:
+      CGO_ENABLED: 0
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+
+      - name: Cache staticcheck
+        uses: actions/cache@v4
+        id: cache-staticcheck
+        with:
+          path: ~/go/bin/staticcheck
+          key: ${{ runner.os }}-staticcheck-${{ hashFiles('tools/tool-versions') }}
+
+      - name: Install staticcheck
+        if: steps.cache-staticcheck.outputs.cache-hit != 'true'
+        run: go install honnef.co/go/tools/cmd/staticcheck@v$(awk '/honnef.co\/go\/tools/{gsub(/^v/,"",$2); print $2}' tools/tool-versions)
+
+      - name: Get changed packages
+        id: pkgs
+        run: |
+          PKGS=$(git diff --name-only origin/main...HEAD -- '*.go' \
+            | grep -v -E '(^|/)sqlc/|(/|^)proto/|(/|^)tools/|^tests/' \
+            | xargs -I{} dirname {} | sort -u | sed 's|^|./|' | paste -sd ' ')
+          echo "pkgs=${PKGS:-}" >> "$GITHUB_OUTPUT"
+
+      - name: Run staticcheck
+        if: steps.pkgs.outputs.pkgs != ''
+        run: staticcheck ${{ steps.pkgs.outputs.pkgs }}
+
+  govet:
+    name: Govet
+    needs: [changes]
+    if: needs.changes.outputs.go == 'true'
+    runs-on: ubuntu-latest
+    env:
+      CGO_ENABLED: 0
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+
+      - name: Get changed packages
+        id: pkgs
+        run: |
+          PKGS=$(git diff --name-only origin/main...HEAD -- '*.go' \
+            | grep -v -E '(^|/)sqlc/|(/|^)proto/|(/|^)tools/|^tests/' \
+            | xargs -I{} dirname {} | sort -u | sed 's|^|./|' | paste -sd ' ')
+          echo "pkgs=${PKGS:-}" >> "$GITHUB_OUTPUT"
+
+      - name: Run govet
+        if: steps.pkgs.outputs.pkgs != ''
+        run: go vet ${{ steps.pkgs.outputs.pkgs }}
 
   test:
     name: Test
@@ -55,32 +166,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GOTOOLCHAIN: local
-    services:
-      mysql:
-        image: mysql:8
-        env:
-          MYSQL_ROOT_PASSWORD: "Testing123!"
-          MYSQL_DATABASE: augno
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping -h localhost -uroot -pTesting123!"
-          --health-interval=5s
-          --health-timeout=5s
-          --health-retries=10
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_DB: augno_agents
-          POSTGRES_USER: augno
-          POSTGRES_HOST_AUTH_METHOD: trust
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd="pg_isready -U augno -d augno_agents"
-          --health-interval=5s
-          --health-timeout=5s
-          --health-retries=10
     steps:
       - uses: actions/checkout@v4
 
@@ -88,41 +173,18 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+          cache-dependency-path: go.sum
 
-      - name: Cache test tools
+      - name: Cache Go build/test results
         uses: actions/cache@v4
-        id: cache-test-tools
         with:
-          path: /usr/local/bin/ci-tools
-          key: ${{ runner.os }}-test-tools-${{ hashFiles('tools/tool-versions') }}
+          path: ~/.cache/go-build
+          key: ${{ runner.os }}-go-test-${{ hashFiles('**/*.go', 'go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-test-
 
-      - name: Install test tools
-        if: steps.cache-test-tools.outputs.cache-hit != 'true'
-        run: |
-          mkdir -p /usr/local/bin/ci-tools
-          SQLC_V=$(awk '/sqlc/{gsub(/^v/,"",$2); print $2}' tools/tool-versions)
-          curl -sSL "https://github.com/sqlc-dev/sqlc/releases/download/v${SQLC_V}/sqlc_${SQLC_V}_linux_amd64.tar.gz" | tar xz -C /usr/local/bin/ci-tools sqlc
-          GOOSE_V=$(awk '/goose/{gsub(/^v/,"",$2); print $2}' tools/tool-versions)
-          curl -sSL "https://github.com/pressly/goose/releases/download/v${GOOSE_V}/goose_linux_x86_64" -o /usr/local/bin/ci-tools/goose
-          chmod +x /usr/local/bin/ci-tools/goose
-
-      - name: Add tools to PATH
-        run: echo "/usr/local/bin/ci-tools" >> $GITHUB_PATH
-
-      - name: Generate sqlc
-        run: make sqlc
-
-      - name: Apply MySQL migrations
-        run: |
-          GOOSE_DRIVER=mysql \
-          GOOSE_DBSTRING="root:Testing123!@tcp(localhost:3306)/augno?parseTime=true" \
-            goose -dir shared/db/migrations up
-
-      - name: Apply PostgreSQL migrations
-        run: |
-          GOOSE_DRIVER=postgres \
-          GOOSE_DBSTRING="postgres://augno@localhost:5432/augno_agents?sslmode=disable" \
-            goose -dir services/agent-service/db/migrations up
+      - name: Download modules
+        run: go mod download
 
       - name: Run Tests
         run: make test

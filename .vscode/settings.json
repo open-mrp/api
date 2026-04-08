@@ -1,0 +1,20 @@
+{
+  "explorer.fileNesting.enabled": true,
+  "explorer.fileNesting.patterns": {
+    "*.go": "${capture}_test.go"
+  },
+  "explorer.fileNesting.expand": false,
+  "[json]": {
+    "editor.tabSize": 4
+  },
+  "[yaml]": {
+    "editor.tabSize": 4
+  },
+  "[go]": {
+    "editor.wordWrap": "on"
+  },
+  "makefile.configureOnOpen": false,
+  "gopls": {
+    "buildFlags": ["-tags=e2e"]
+  }
+}

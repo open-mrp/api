@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -34,11 +35,15 @@ func TestSortingFiltering_DefaultOrderConsistent(t *testing.T) {
 	// created_at is >= the next item's (descending), confirming the
 	// server returns a deterministic sort.
 	for i := 0; i < len(list.Data)-1; i++ {
-		cur := DataItemField(list.Data[i], "created_at")
-		next := DataItemField(list.Data[i+1], "created_at")
-		assert.GreaterOrEqual(t, cur, next,
+		curStr := DataItemField(list.Data[i], "created_at")
+		nextStr := DataItemField(list.Data[i+1], "created_at")
+		curTime, err := time.Parse(time.RFC3339Nano, curStr)
+		require.NoError(t, err, "parsing created_at for item[%d]", i)
+		nextTime, err := time.Parse(time.RFC3339Nano, nextStr)
+		require.NoError(t, err, "parsing created_at for item[%d]", i+1)
+		assert.False(t, curTime.Before(nextTime),
 			"Default ordering should be created_at DESC: item[%d] (%s) should be >= item[%d] (%s)",
-			i, cur, i+1, next)
+			i, curStr, i+1, nextStr)
 	}
 }
 

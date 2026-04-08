@@ -197,13 +197,12 @@ func (s *LoggingServiceTestSuite) TestListRequestLogs_Success() {
 	s.True(result.PageInfo.HasNextPage)
 }
 
-func (s *LoggingServiceTestSuite) TestListRequestLogs_DefaultsPublicEndpointToTrue() {
+func (s *LoggingServiceTestSuite) TestListRequestLogs_NilPublicEndpointPassedThrough() {
 	ctx := internalLoggingCtx("acct_123")
 	s.requestLogRepo.EXPECT().
 		List(gomock.Any(), "acct_123", gomock.Any(), gomock.Any()).
 		DoAndReturn(func(_ context.Context, _ string, filter *domain.ListRequestLogsFilter, _ []string) (*domain.ListRequestLogsResult, *apierror.APIError) {
-			s.NotNil(filter.PublicEndpoint)
-			s.True(*filter.PublicEndpoint)
+			s.Nil(filter.PublicEndpoint)
 			return &domain.ListRequestLogsResult{}, nil
 		}).Times(1)
 

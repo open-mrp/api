@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.2](https://github.com/Augno/api/compare/v0.10.1...v0.10.2) (2026-04-08)
+
+
+### Bug Fixes
+
+* customer creation issues ([#166](https://github.com/Augno/api/issues/166)) ([ec4d6a0](https://github.com/Augno/api/commit/ec4d6a06956894e174363dd0b6b8c4cc03b0f521))
+
 ## [0.10.1](https://github.com/Augno/api/compare/v0.10.0...v0.10.1) (2026-04-07)
 
 

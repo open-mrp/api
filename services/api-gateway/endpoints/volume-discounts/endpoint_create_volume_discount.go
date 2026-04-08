@@ -13,19 +13,19 @@ import (
 // CreateVolumeDiscountTierInput represents a tier to create.
 type CreateVolumeDiscountTierInput struct {
 	// The display name for the tier.
-	Name string `json:"name" validate:"required"`
+	Name string `json:"name" validate:"required,max=255"`
 	// The discount percentage as a decimal string.
 	DiscountPercentage string `json:"discount_percentage" validate:"required" format:"decimal"`
 	// The quantity threshold for this tier as a decimal string.
 	Threshold string `json:"threshold" validate:"required" format:"decimal"`
 	// Optional parent tier ID for tier chaining.
-	ParentTierID *string `json:"parent_tier_id,omitempty"`
+	ParentTierID *string `json:"parent_tier_id,omitempty" validate:"omitempty,max=191"`
 }
 
 // CreateVolumeDiscountRequest is the request to create a new volume discount.
 type CreateVolumeDiscountRequest struct {
 	// The display name of the volume discount.
-	Name string `json:"name" validate:"required"`
+	Name string `json:"name" validate:"required,max=255"`
 	// The tiers for this volume discount.
 	Tiers []CreateVolumeDiscountTierInput `json:"tiers" validate:"required"`
 	// The account group IDs to associate as customer groups.

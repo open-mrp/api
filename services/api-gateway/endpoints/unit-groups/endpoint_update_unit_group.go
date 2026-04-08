@@ -16,11 +16,11 @@ type UpdateUnitGroupRequest struct {
 	// The ID of the unit group to update.
 	UnitGroupID string `path:"id" validate:"required"`
 	// The display name of the unit group.
-	Name *string `json:"name,omitempty"`
+	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
 	// Optional notes about the unit group. Set to null to clear.
 	Notes *string `json:"notes,omitempty"`
 	// The base unit ID.
-	BaseUnitID *string `json:"base_unit_id,omitempty"`
+	BaseUnitID *string `json:"base_unit_id,omitempty" validate:"omitempty,max=191"`
 	// If provided, upserts associated units. Existing associated units not in the list are preserved.
 	AssociatedUnits *[]CreateUnitGroupUnitParam `json:"associated_units,omitempty"`
 }

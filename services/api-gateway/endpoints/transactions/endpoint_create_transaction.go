@@ -13,17 +13,17 @@ import (
 // CreateTransactionRequest is the request to create a new transaction.
 type CreateTransactionRequest struct {
 	// The ID of the customer for this transaction.
-	CustomerID string `json:"customer_id" validate:"required"`
+	CustomerID string `json:"customer_id" validate:"required,max=191"`
 	// The transaction type code.
-	TransactionTypeCode string `json:"transaction_type_code" validate:"required"`
+	TransactionTypeCode string `json:"transaction_type_code" validate:"required,max=255"`
 	// The transaction amount as a decimal string.
 	Amount string `json:"amount" validate:"required"`
 	// The transaction method code.
-	TransactionMethodCode *string `json:"transaction_method_code"`
+	TransactionMethodCode *string `json:"transaction_method_code" validate:"omitempty,max=255"`
 	// The adjustment type code, if applicable.
-	AdjustmentTypeCode *string `json:"adjustment_type_code"`
+	AdjustmentTypeCode *string `json:"adjustment_type_code" validate:"omitempty,max=255"`
 	// The ID of the user responsible for this transaction.
-	ResponsibleUserID *string `json:"responsible_user_id"`
+	ResponsibleUserID *string `json:"responsible_user_id" validate:"omitempty,max=191"`
 	// A note about this transaction.
 	Note *string `json:"note"`
 }

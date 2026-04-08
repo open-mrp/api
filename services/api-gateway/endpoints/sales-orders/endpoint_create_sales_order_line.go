@@ -17,7 +17,7 @@ type CreateSalesOrderLineRequest struct {
 	SalesOrderID string `path:"id" validate:"required"`
 	apirequest.OrderLineInput
 	// The EDI line item ID.
-	EdiLineItemID *string `json:"edi_line_item_id,omitempty"`
+	EdiLineItemID *string `json:"edi_line_item_id,omitempty" validate:"omitempty,max=191"`
 }
 
 var sampleCreateSOLineItemID = apiresource.SampleItemID

@@ -13,9 +13,9 @@ import (
 // CreateDCLocationRequest is the request to create a new DC location.
 type CreateDCLocationRequest struct {
 	// The ID of the customer account to associate with this DC location.
-	CustomerID string `json:"customer_id" validate:"required"`
+	CustomerID string `json:"customer_id" validate:"required,max=191"`
 	// The location description.
-	Location string `json:"location" validate:"required"`
+	Location string `json:"location" validate:"required,max=255"`
 }
 
 var sampleCreateDCLocationRequest = &CreateDCLocationRequest{

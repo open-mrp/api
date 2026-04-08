@@ -13,7 +13,7 @@ import (
 // CreateAccountGroupProductLineAccessRequest is the request to create product line access for an account group.
 type CreateAccountGroupProductLineAccessRequest struct {
 	// The ID of the account group.
-	AccountGroupID string `json:"account_group_id" validate:"required"`
+	AccountGroupID string `json:"account_group_id" validate:"required,max=191"`
 	// The IDs of the product lines to grant access to.
 	ProductLineIDs []string `json:"product_line_ids" validate:"required"`
 }

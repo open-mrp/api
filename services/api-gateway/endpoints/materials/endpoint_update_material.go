@@ -12,7 +12,7 @@ import (
 
 type UpdateMaterialRequest struct {
 	ItemID      string                `path:"id" validate:"required"`
-	SKU         *string               `json:"sku,omitempty"`
+	SKU         *string               `json:"sku,omitempty" validate:"omitempty,max=255"`
 	Description *string               `json:"description,omitempty"`
 	Notes       *string               `json:"notes,omitempty"`
 	OrderPoint  *QuantityInputRequest `json:"order_point,omitempty"`

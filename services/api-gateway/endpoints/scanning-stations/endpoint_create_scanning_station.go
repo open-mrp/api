@@ -14,7 +14,7 @@ import (
 // CreateScanningStationRequest is the request to create a new scanning station.
 type CreateScanningStationRequest struct {
 	// The display name of the scanning station.
-	Name string `json:"name" validate:"required"`
+	Name string `json:"name" validate:"required,max=255"`
 	// Optional notes about the scanning station.
 	Notes *string `json:"notes,omitempty"`
 	// The type of scanning station.
@@ -22,7 +22,7 @@ type CreateScanningStationRequest struct {
 	// Whether material check is required at this station.
 	MaterialCheckRequired bool `json:"material_check_required"`
 	// The ID of the department to associate with this scanning station.
-	DepartmentID string `json:"department_id" validate:"required"`
+	DepartmentID string `json:"department_id" validate:"required,max=191"`
 }
 
 var sampleCreateScanningStationRequest = &CreateScanningStationRequest{

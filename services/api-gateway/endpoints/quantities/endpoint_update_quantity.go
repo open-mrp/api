@@ -18,11 +18,11 @@ type UpdateQuantityRequest struct {
 	// The new decimal value of the quantity.
 	Value *string `json:"value,omitempty"`
 	// The new unit ID for this quantity.
-	UnitID *string `json:"unit_id,omitempty"`
+	UnitID *string `json:"unit_id,omitempty" validate:"omitempty,max=191"`
 	// The ID of the parent resource that owns this quantity.
-	ObjectID *string `json:"object_id,omitempty" nullable:"false"`
+	ObjectID *string `json:"object_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
 	// The type of the parent resource (e.g. "item", "production_step").
-	ObjectType *string `json:"object_type,omitempty" nullable:"false"`
+	ObjectType *string `json:"object_type,omitempty" nullable:"false" validate:"omitempty,max=255"`
 }
 
 var sampleUpdateQuantityValue = "50.000000000000000000000000000000"

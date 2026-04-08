@@ -13,9 +13,9 @@ import (
 // CreateProductTypeRequest is the request to create a new product type.
 type CreateProductTypeRequest struct {
 	// The display name of the product type.
-	Name string `json:"name" validate:"required"`
+	Name string `json:"name" validate:"required,max=255"`
 	// The unique code for the product type.
-	Code string `json:"code" validate:"required"`
+	Code string `json:"code" validate:"required,max=255"`
 }
 
 var sampleCreateProductTypeRequest = &CreateProductTypeRequest{

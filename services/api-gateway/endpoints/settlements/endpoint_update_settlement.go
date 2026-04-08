@@ -15,11 +15,11 @@ type UpdateSettlementRequest struct {
 	// The ID of the settlement to update.
 	SettlementID string `path:"id" validate:"required"`
 	// The new settlement number.
-	Number *string `json:"number"`
+	Number *string `json:"number" validate:"omitempty,max=255"`
 	// The new note for this settlement.
 	Note *string `json:"note"`
 	// The ID of the responsible user for this settlement.
-	ResponsibleUserID *string `json:"responsible_user_id" nullable:"true"`
+	ResponsibleUserID *string `json:"responsible_user_id" nullable:"true" validate:"omitempty,max=191"`
 }
 
 var sampleUpdateSettlementNote = "Partial payment applied"

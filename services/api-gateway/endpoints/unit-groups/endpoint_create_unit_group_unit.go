@@ -16,7 +16,7 @@ type CreateUnitGroupUnitRequest struct {
 	// The ID of the unit group.
 	UnitGroupID string `path:"unitGroupId" validate:"required"`
 	// The unit ID.
-	UnitID string `json:"unit_id" validate:"required"`
+	UnitID string `json:"unit_id" validate:"required,max=191"`
 	// The discount percentage.
 	DiscountPercentage *float64 `json:"discount_percentage,omitempty" default:"1" nullable:"false"`
 	// The fixed discount amount.

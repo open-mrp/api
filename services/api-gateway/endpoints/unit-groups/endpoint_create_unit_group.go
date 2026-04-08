@@ -14,7 +14,7 @@ import (
 // CreateUnitGroupUnitParam carries data for a single associated unit.
 type CreateUnitGroupUnitParam struct {
 	// The unit ID.
-	UnitID string `json:"unit_id" validate:"required"`
+	UnitID string `json:"unit_id" validate:"required,max=191"`
 	// The discount percentage.
 	DiscountPercentage *float64 `json:"discount_percentage,omitempty" default:"1" nullable:"false"`
 	// The fixed discount amount.
@@ -26,13 +26,13 @@ type CreateUnitGroupUnitParam struct {
 // CreateUnitGroupRequest is the request to create a new unit group.
 type CreateUnitGroupRequest struct {
 	// The display name of the unit group.
-	Name string `json:"name" validate:"required"`
+	Name string `json:"name" validate:"required,max=255"`
 	// Optional notes about the unit group.
 	Notes *string `json:"notes,omitempty" default:"null"`
 	// The unit type code (e.g. "mass", "quantity").
 	Type constants.UnitType `json:"type" validate:"required"`
 	// The base unit ID.
-	BaseUnitID string `json:"base_unit_id" validate:"required"`
+	BaseUnitID string `json:"base_unit_id" validate:"required,max=191"`
 	// Optional associated units to create with the group.
 	AssociatedUnits []CreateUnitGroupUnitParam `json:"associated_units,omitempty"`
 }

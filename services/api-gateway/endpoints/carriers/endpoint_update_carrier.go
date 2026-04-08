@@ -16,7 +16,7 @@ type UpdateCarrierRequest struct {
 	// The ID of the carrier to update.
 	CarrierID string `path:"id" validate:"required"`
 	// The new display name for the carrier.
-	Name *string `json:"name"`
+	Name *string `json:"name" validate:"omitempty,max=255"`
 	// Whether this carrier is visible in the customer portal.
 	CustomerPortalVisibility *constants.CustomerPortalVisibility `json:"customer_portal_visibility"`
 }

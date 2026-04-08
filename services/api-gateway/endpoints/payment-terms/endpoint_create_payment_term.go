@@ -14,7 +14,7 @@ import (
 // CreatePaymentTermRequest is the request to create a new payment term.
 type CreatePaymentTermRequest struct {
 	// The display name of the payment term (e.g. "Net 30").
-	Name string `json:"name" validate:"required"`
+	Name string `json:"name" validate:"required,max=255"`
 }
 
 var sampleCreatePaymentTermRequest = &CreatePaymentTermRequest{

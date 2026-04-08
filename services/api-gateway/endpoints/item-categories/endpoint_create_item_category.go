@@ -14,11 +14,11 @@ import (
 // CreateItemCategoryRequest is the request to create a new item category.
 type CreateItemCategoryRequest struct {
 	// The display name of the item category.
-	Name string `json:"name" validate:"required"`
+	Name string `json:"name" validate:"required,max=255"`
 	// The type of item category (material_category or product_category).
-	Type string `json:"type" validate:"required"`
+	Type string `json:"type" validate:"required,max=255"`
 	// The ID of the unit group to associate with this item category.
-	UnitGroupID string `json:"unit_group_id" validate:"required"`
+	UnitGroupID string `json:"unit_group_id" validate:"required,max=191"`
 }
 
 var sampleCreateItemCategoryRequest = &CreateItemCategoryRequest{

@@ -20,9 +20,7 @@ import (
 func TestDeleteBehavior_DoubleDeleteCustomer(t *testing.T) {
 	t.Parallel()
 
-	status, body, err := apiClient.Post(customersPath, map[string]any{
-		"name": uniqueName("e2e-dbldelete"),
-	}, newIdempotencyKey())
+	status, body, err := apiClient.Post(customersPath, validCustomerBody(uniqueName("e2e-dbldelete")), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
 	id := jsonField(parseJSON(body), "id")
@@ -91,9 +89,7 @@ func TestDeleteBehavior_DeletedCustomerNotInList(t *testing.T) {
 	t.Parallel()
 
 	distinctName := uniqueName("e2e-softdel-list")
-	status, body, err := apiClient.Post(customersPath, map[string]any{
-		"name": distinctName,
-	}, newIdempotencyKey())
+	status, body, err := apiClient.Post(customersPath, validCustomerBody(distinctName), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
 	id := jsonField(parseJSON(body), "id")
@@ -144,9 +140,7 @@ func TestDeleteBehavior_DeletedAccountGroupNotInList(t *testing.T) {
 func TestDeleteBehavior_DeleteReturnsCorrectShape(t *testing.T) {
 	t.Parallel()
 
-	status, body, err := apiClient.Post(customersPath, map[string]any{
-		"name": uniqueName("e2e-delshape"),
-	}, newIdempotencyKey())
+	status, body, err := apiClient.Post(customersPath, validCustomerBody(uniqueName("e2e-delshape")), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
 	id := jsonField(parseJSON(body), "id")

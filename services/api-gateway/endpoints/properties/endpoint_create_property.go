@@ -14,7 +14,7 @@ import (
 // CreatePropertyRequest is the request to create a new property.
 type CreatePropertyRequest struct {
 	// The name of the property.
-	Name string `json:"name" validate:"required"`
+	Name string `json:"name" validate:"required,max=255"`
 }
 
 var sampleCreatePropertyRequest = &CreatePropertyRequest{

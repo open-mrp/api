@@ -13,25 +13,25 @@ import (
 // CreateAddressRequest is the request to create a new address.
 type CreateAddressRequest struct {
 	// The display name of the address.
-	Name string `json:"name" validate:"required"`
+	Name string `json:"name" validate:"required,max=255"`
 	// The phone number associated with this address.
-	Phone *string `json:"phone,omitempty"`
+	Phone *string `json:"phone,omitempty" validate:"omitempty,max=255"`
 	// The email address associated with this address.
-	Email *string `json:"email,omitempty" validate:"omitnil,custom_email"`
+	Email *string `json:"email,omitempty" validate:"omitnil,custom_email,max=255"`
 	// Whether this is a drop ship address.
 	IsDropShip bool `json:"is_drop_ship"`
 	// The first line of the street address.
-	StreetLine1 *string `json:"street_line_1,omitempty"`
+	StreetLine1 *string `json:"street_line_1,omitempty" validate:"omitempty,max=255"`
 	// The second line of the street address.
-	StreetLine2 *string `json:"street_line_2,omitempty"`
+	StreetLine2 *string `json:"street_line_2,omitempty" validate:"omitempty,max=255"`
 	// The city or locality.
-	Locality *string `json:"locality,omitempty"`
+	Locality *string `json:"locality,omitempty" validate:"omitempty,max=255"`
 	// The state or administrative area.
-	State *string `json:"state,omitempty"`
+	State *string `json:"state,omitempty" validate:"omitempty,max=255"`
 	// The postal or zip code.
-	PostalCode *string `json:"postal_code,omitempty"`
+	PostalCode *string `json:"postal_code,omitempty" validate:"omitempty,max=255"`
 	// The two-letter country code.
-	Country string `json:"country" validate:"required"`
+	Country string `json:"country" validate:"required,max=2"`
 }
 
 var sampleCreateStreetLine1 = "123 Main St"

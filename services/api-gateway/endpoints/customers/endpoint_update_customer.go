@@ -36,29 +36,29 @@ type UpdateCustomerRequest struct {
 	// The freight policy for this customer.
 	FreightPolicy *constants.FreightPolicy `json:"freight_policy,omitempty" nullable:"false"`
 	// The default carrier ID.
-	DefaultCarrierID *string `json:"default_carrier_id,omitempty" nullable:"true"`
+	DefaultCarrierID *string `json:"default_carrier_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
 	// The default service level ID.
-	DefaultServiceLevelID *string `json:"default_service_level_id,omitempty" nullable:"true"`
+	DefaultServiceLevelID *string `json:"default_service_level_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
 	// The default payment term ID.
-	DefaultPaymentTermID *string `json:"default_payment_term_id,omitempty" nullable:"true"`
+	DefaultPaymentTermID *string `json:"default_payment_term_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
 	// The default shipping term ID.
-	DefaultShippingTermID *string `json:"default_shipping_term_id,omitempty" nullable:"true"`
+	DefaultShippingTermID *string `json:"default_shipping_term_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
 	// The default priority code.
 	DefaultPriorityCode *constants.PriorityCode `json:"default_priority_code,omitempty"`
 	// The default sales rep user ID.
-	DefaultSalesRepUserID *string `json:"default_sales_rep_user_id,omitempty" nullable:"true"`
+	DefaultSalesRepUserID *string `json:"default_sales_rep_user_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
 	// The bill-to address ID.
-	BillToAddressID *string `json:"bill_to_address_id,omitempty" nullable:"true"`
+	BillToAddressID *string `json:"bill_to_address_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
 	// The ship-to address ID.
-	ShipToAddressID *string `json:"ship_to_address_id,omitempty" nullable:"true"`
+	ShipToAddressID *string `json:"ship_to_address_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
 	// The customer price group IDs. When provided, replaces all existing price groups.
 	CustomerPriceGroupIDs *[]string `json:"customer_price_group_ids,omitempty"`
 	// The customer type group ID.
-	CustomerTypeGroupID *string `json:"customer_type_group_id,omitempty" nullable:"true"`
+	CustomerTypeGroupID *string `json:"customer_type_group_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
 	// The carrier billing type.
 	CarrierBillingType *constants.CarrierBillingType `json:"carrier_billing_type,omitempty"`
 	// The carrier billing account number.
-	CarrierBillingAccount *string `json:"carrier_billing_account,omitempty" nullable:"true"`
+	CarrierBillingAccount *string `json:"carrier_billing_account,omitempty" nullable:"true" validate:"omitempty,max=255"`
 }
 
 var sampleUpdateCustomerName = "Acme Corp Updated"

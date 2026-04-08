@@ -13,17 +13,17 @@ import (
 // CreateProductRequest is the request to create a new product.
 type CreateProductRequest struct {
 	// The stock keeping unit code for the product.
-	SKU string `json:"sku" validate:"required"`
+	SKU string `json:"sku" validate:"required,max=255"`
 	// A description of the product.
 	Description *string `json:"description"`
 	// Additional notes about the product.
 	Notes *string `json:"notes"`
 	// The product type code (e.g. sale, sample).
-	ProductTypeCode string `json:"product_type_code" validate:"required"`
+	ProductTypeCode string `json:"product_type_code" validate:"required,max=255"`
 	// The ID of the product line to assign to this product.
-	ProductLineID *string `json:"product_line_id"`
+	ProductLineID *string `json:"product_line_id" validate:"omitempty,max=191"`
 	// The ID of the item category.
-	CategoryID string `json:"category_id" validate:"required"`
+	CategoryID string `json:"category_id" validate:"required,max=191"`
 	// Whether this product is visible on the customer portal.
 	IsPortalReady bool `json:"is_portal_ready"`
 	// The unit price for this product.

@@ -99,16 +99,11 @@ func TestCustomers_GetIncludedFieldsNotEmpty(t *testing.T) {
 func TestCustomers_CreateIncludedFieldsNotEmpty(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-cust-noempty-c")
+	payload := validCustomerBody(name)
+	payload["default_priority_code"] = SeedPriorityCode
 	status, body, err := apiClient.Post(
 		customersPath+"?include="+allCustomerIncludes,
-		map[string]any{
-			"name":                     name,
-			"default_carrier_id":       SeedCarrierID,
-			"default_payment_term_id":  SeedPaymentTermID,
-			"default_shipping_term_id": SeedShippingTermID,
-			"default_priority_code":    SeedPriorityCode,
-			"customer_type_group_id":   SeedCustomerGroupID,
-		},
+		payload,
 		newIdempotencyKey(),
 	)
 	require.NoError(t, err)
@@ -123,14 +118,9 @@ func TestCustomers_CreateIncludedFieldsNotEmpty(t *testing.T) {
 func TestCustomers_UpdateIncludedFieldsNotEmpty(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-cust-noempty-u")
-	createStatus, createBody, err := apiClient.Post(customersPath, map[string]any{
-		"name":                     name,
-		"default_carrier_id":       SeedCarrierID,
-		"default_payment_term_id":  SeedPaymentTermID,
-		"default_shipping_term_id": SeedShippingTermID,
-		"default_priority_code":    SeedPriorityCode,
-		"customer_type_group_id":   SeedCustomerGroupID,
-	}, newIdempotencyKey())
+	updPayload := validCustomerBody(name)
+	updPayload["default_priority_code"] = SeedPriorityCode
+	createStatus, createBody, err := apiClient.Post(customersPath, updPayload, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
 	id := jsonField(parseJSON(createBody), "id")

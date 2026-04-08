@@ -13,7 +13,7 @@ import (
 // CreateRegistrationFlowRequest is the request to create a new registration flow.
 type CreateRegistrationFlowRequest struct {
 	// The display name of the registration flow.
-	Name string `json:"name" validate:"required"`
+	Name string `json:"name" validate:"required,max=255"`
 	// The IDs of the customer groups associated with this registration flow.
 	CustomerGroupIDs []string `json:"customer_group_ids"`
 	// The IDs of the payment terms associated with this registration flow.

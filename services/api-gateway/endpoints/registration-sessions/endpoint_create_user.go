@@ -15,7 +15,7 @@ type CreateUserRequest struct {
 	// The session ID.
 	SessionID string `json:"-" path:"session_id" validate:"required"`
 	// Display name for the new user.
-	Name string `json:"name" validate:"required"`
+	Name string `json:"name" validate:"required,max=255"`
 	// Password for the new user account.
 	Password string `json:"password" validate:"required,password"` // #nosec G117 - Struct field, not a hardcoded credential
 }

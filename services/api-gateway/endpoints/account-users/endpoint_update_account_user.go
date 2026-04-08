@@ -15,15 +15,15 @@ type UpdateAccountUserRequest struct {
 	// The ID of the account user to update.
 	AccountUserID string `path:"id" validate:"required"`
 	// The user's display name.
-	Name *string `json:"name,omitempty"`
+	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
 	// The user's email address.
-	Email *string `json:"email,omitempty" validate:"omitnil,custom_email"`
+	Email *string `json:"email,omitempty" validate:"omitnil,custom_email,max=255"`
 	// The user's username.
-	Username *string `json:"username,omitempty"`
+	Username *string `json:"username,omitempty" validate:"omitempty,max=255"`
 	// The ID of the role to assign.
-	RoleID *string `json:"role_id,omitempty" nullable:"true"`
+	RoleID *string `json:"role_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
 	// The ID of the department to assign.
-	DepartmentID *string `json:"department_id,omitempty" nullable:"true"`
+	DepartmentID *string `json:"department_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
 }
 
 var sampleUpdateAccountUserName = apiresource.SampleUserName

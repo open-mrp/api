@@ -114,6 +114,7 @@
         "GOCACHE",
         "gofmt",
         "goimports",
+        "golangci",
         "gomock",
         "gomod",
         "GOMODCACHE",

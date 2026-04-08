@@ -16,23 +16,23 @@ type UpdateAccountRequest struct {
 	// The ID of the account to update.
 	AccountID string `path:"id" validate:"required"`
 	// The display name of the account.
-	Name *string `json:"name,omitempty"`
+	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
 	// The support email address.
-	SupportEmail *string `json:"support_email,omitempty" validate:"omitnil,custom_email" nullable:"true"`
+	SupportEmail *string `json:"support_email,omitempty" validate:"omitnil,custom_email,max=255" nullable:"true"`
 	// The support phone number.
-	PhoneNumber *string `json:"phone_number,omitempty" nullable:"true"`
+	PhoneNumber *string `json:"phone_number,omitempty" nullable:"true" validate:"omitempty,max=255"`
 	// The portal slug.
-	Slug *string `json:"slug,omitempty" validate:"omitempty,min=3"`
+	Slug *string `json:"slug,omitempty" validate:"omitempty,min=3,max=255"`
 	// The website URL.
-	WebsiteURL *string `json:"website_url,omitempty" validate:"omitempty,url" nullable:"true"`
+	WebsiteURL *string `json:"website_url,omitempty" validate:"omitempty,url,max=2083" nullable:"true"`
 	// The Facebook handle.
-	FacebookHandle *string `json:"facebook_handle,omitempty" nullable:"true"`
+	FacebookHandle *string `json:"facebook_handle,omitempty" nullable:"true" validate:"omitempty,max=255"`
 	// The Instagram handle.
-	InstagramHandle *string `json:"instagram_handle,omitempty" nullable:"true"`
+	InstagramHandle *string `json:"instagram_handle,omitempty" nullable:"true" validate:"omitempty,max=255"`
 	// The LinkedIn handle.
-	LinkedInHandle *string `json:"linkedin_handle,omitempty" nullable:"true"`
+	LinkedInHandle *string `json:"linkedin_handle,omitempty" nullable:"true" validate:"omitempty,max=255"`
 	// The Twitter handle.
-	TwitterHandle *string `json:"twitter_handle,omitempty" nullable:"true"`
+	TwitterHandle *string `json:"twitter_handle,omitempty" nullable:"true" validate:"omitempty,max=255"`
 }
 
 var sampleUpdateAccountName = "Acme Inc."

@@ -6,6 +6,7 @@ import (
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
+	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
@@ -201,12 +202,17 @@ func (m *customerSvcImpl) CreateCustomer(ctx context.Context, req *CreateCustome
 		DefaultShippingTermId: req.DefaultShippingTermID,
 		DefaultPriorityCode:   optPriorityCodeToStringPtr(req.DefaultPriorityCode),
 		DefaultSalesRepUserId: req.DefaultSalesRepUserID,
-		BillToAddressId:       req.BillToAddressID,
-		ShipToAddressId:       req.ShipToAddressID,
 		CustomerPriceGroupIds: req.CustomerPriceGroupIDs,
 		CustomerTypeGroupId:   req.CustomerTypeGroupID,
 		CarrierBillingType:    optCarrierBillingTypeToStringPtr(req.CarrierBillingType),
 		CarrierBillingAccount: req.CarrierBillingAccount,
+	}
+
+	if req.BillToAddress != nil {
+		pbReq.BillToAddress = addressInputToCustomerProto(req.BillToAddress)
+	}
+	if req.ShipToAddress != nil {
+		pbReq.ShipToAddress = addressInputToCustomerProto(req.ShipToAddress)
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, customerSvcTracer, "service.customers.create", domain.ServiceName,
@@ -354,4 +360,22 @@ func (m *customerSvcImpl) UpdateCustomer(ctx context.Context, req *UpdateCustome
 
 	result := CustomerPresenter(resp.Customer)
 	return &result, nil
+}
+
+func addressInputToCustomerProto(a *apirequest.AddressInput) *pb.CreateCustomerAddressInput {
+	if a == nil {
+		return nil
+	}
+	return &pb.CreateCustomerAddressInput{
+		Name:         a.Name,
+		Phone:        a.Phone,
+		Email:        a.Email,
+		IsDropShip:   a.IsDropShip,
+		StreetLine_1: a.StreetLine1,
+		StreetLine_2: a.StreetLine2,
+		Locality:     a.Locality,
+		State:        a.State,
+		PostalCode:   a.PostalCode,
+		Country:      a.Country,
+	}
 }

@@ -9,13 +9,12 @@
 package core
 
 import (
-	reflect "reflect"
-	sync "sync"
-	unsafe "unsafe"
-
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
+	reflect "reflect"
+	sync "sync"
+	unsafe "unsafe"
 )
 
 const (
@@ -5568,37 +5567,155 @@ func (x *GetCustomerResponse) GetCustomer() *CustomerProto {
 	return nil
 }
 
+type CreateCustomerAddressInput struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Phone         *string                `protobuf:"bytes,2,opt,name=phone,proto3,oneof" json:"phone,omitempty"`
+	Email         *string                `protobuf:"bytes,3,opt,name=email,proto3,oneof" json:"email,omitempty"`
+	IsDropShip    bool                   `protobuf:"varint,4,opt,name=is_drop_ship,json=isDropShip,proto3" json:"is_drop_ship,omitempty"`
+	StreetLine_1  *string                `protobuf:"bytes,5,opt,name=street_line_1,json=streetLine1,proto3,oneof" json:"street_line_1,omitempty"`
+	StreetLine_2  *string                `protobuf:"bytes,6,opt,name=street_line_2,json=streetLine2,proto3,oneof" json:"street_line_2,omitempty"`
+	Locality      *string                `protobuf:"bytes,7,opt,name=locality,proto3,oneof" json:"locality,omitempty"`
+	State         *string                `protobuf:"bytes,8,opt,name=state,proto3,oneof" json:"state,omitempty"`
+	PostalCode    *string                `protobuf:"bytes,9,opt,name=postal_code,json=postalCode,proto3,oneof" json:"postal_code,omitempty"`
+	Country       string                 `protobuf:"bytes,10,opt,name=country,proto3" json:"country,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateCustomerAddressInput) Reset() {
+	*x = CreateCustomerAddressInput{}
+	mi := &file_core_core_identity_context_proto_msgTypes[84]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateCustomerAddressInput) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateCustomerAddressInput) ProtoMessage() {}
+
+func (x *CreateCustomerAddressInput) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_identity_context_proto_msgTypes[84]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateCustomerAddressInput.ProtoReflect.Descriptor instead.
+func (*CreateCustomerAddressInput) Descriptor() ([]byte, []int) {
+	return file_core_core_identity_context_proto_rawDescGZIP(), []int{84}
+}
+
+func (x *CreateCustomerAddressInput) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *CreateCustomerAddressInput) GetPhone() string {
+	if x != nil && x.Phone != nil {
+		return *x.Phone
+	}
+	return ""
+}
+
+func (x *CreateCustomerAddressInput) GetEmail() string {
+	if x != nil && x.Email != nil {
+		return *x.Email
+	}
+	return ""
+}
+
+func (x *CreateCustomerAddressInput) GetIsDropShip() bool {
+	if x != nil {
+		return x.IsDropShip
+	}
+	return false
+}
+
+func (x *CreateCustomerAddressInput) GetStreetLine_1() string {
+	if x != nil && x.StreetLine_1 != nil {
+		return *x.StreetLine_1
+	}
+	return ""
+}
+
+func (x *CreateCustomerAddressInput) GetStreetLine_2() string {
+	if x != nil && x.StreetLine_2 != nil {
+		return *x.StreetLine_2
+	}
+	return ""
+}
+
+func (x *CreateCustomerAddressInput) GetLocality() string {
+	if x != nil && x.Locality != nil {
+		return *x.Locality
+	}
+	return ""
+}
+
+func (x *CreateCustomerAddressInput) GetState() string {
+	if x != nil && x.State != nil {
+		return *x.State
+	}
+	return ""
+}
+
+func (x *CreateCustomerAddressInput) GetPostalCode() string {
+	if x != nil && x.PostalCode != nil {
+		return *x.PostalCode
+	}
+	return ""
+}
+
+func (x *CreateCustomerAddressInput) GetCountry() string {
+	if x != nil {
+		return x.Country
+	}
+	return ""
+}
+
 type CreateCustomerRequest struct {
-	state                 protoimpl.MessageState `protogen:"open.v1"`
-	Name                  string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Number                *string                `protobuf:"bytes,2,opt,name=number,proto3,oneof" json:"number,omitempty"`
-	Note                  *string                `protobuf:"bytes,3,opt,name=note,proto3,oneof" json:"note,omitempty"`
-	Email                 *string                `protobuf:"bytes,4,opt,name=email,proto3,oneof" json:"email,omitempty"`
-	Phone                 *string                `protobuf:"bytes,5,opt,name=phone,proto3,oneof" json:"phone,omitempty"`
-	Url                   *string                `protobuf:"bytes,6,opt,name=url,proto3,oneof" json:"url,omitempty"`
-	StatusCode            *string                `protobuf:"bytes,7,opt,name=status_code,json=statusCode,proto3,oneof" json:"status_code,omitempty"`
-	IsEdiEnabled          *bool                  `protobuf:"varint,8,opt,name=is_edi_enabled,json=isEdiEnabled,proto3,oneof" json:"is_edi_enabled,omitempty"`
-	CommissionPolicy      *string                `protobuf:"bytes,9,opt,name=commission_policy,json=commissionPolicy,proto3,oneof" json:"commission_policy,omitempty"`
-	FreightPolicy         *string                `protobuf:"bytes,10,opt,name=freight_policy,json=freightPolicy,proto3,oneof" json:"freight_policy,omitempty"`
-	DefaultCarrierId      *string                `protobuf:"bytes,11,opt,name=default_carrier_id,json=defaultCarrierId,proto3,oneof" json:"default_carrier_id,omitempty"`
-	DefaultServiceLevelId *string                `protobuf:"bytes,12,opt,name=default_service_level_id,json=defaultServiceLevelId,proto3,oneof" json:"default_service_level_id,omitempty"`
-	DefaultPaymentTermId  *string                `protobuf:"bytes,13,opt,name=default_payment_term_id,json=defaultPaymentTermId,proto3,oneof" json:"default_payment_term_id,omitempty"`
-	DefaultShippingTermId *string                `protobuf:"bytes,14,opt,name=default_shipping_term_id,json=defaultShippingTermId,proto3,oneof" json:"default_shipping_term_id,omitempty"`
-	DefaultPriorityCode   *string                `protobuf:"bytes,15,opt,name=default_priority_code,json=defaultPriorityCode,proto3,oneof" json:"default_priority_code,omitempty"`
-	DefaultSalesRepUserId *string                `protobuf:"bytes,16,opt,name=default_sales_rep_user_id,json=defaultSalesRepUserId,proto3,oneof" json:"default_sales_rep_user_id,omitempty"`
-	BillToAddressId       *string                `protobuf:"bytes,17,opt,name=bill_to_address_id,json=billToAddressId,proto3,oneof" json:"bill_to_address_id,omitempty"`
-	ShipToAddressId       *string                `protobuf:"bytes,18,opt,name=ship_to_address_id,json=shipToAddressId,proto3,oneof" json:"ship_to_address_id,omitempty"`
-	CustomerPriceGroupIds []string               `protobuf:"bytes,19,rep,name=customer_price_group_ids,json=customerPriceGroupIds,proto3" json:"customer_price_group_ids,omitempty"`
-	CustomerTypeGroupId   *string                `protobuf:"bytes,20,opt,name=customer_type_group_id,json=customerTypeGroupId,proto3,oneof" json:"customer_type_group_id,omitempty"`
-	CarrierBillingType    *string                `protobuf:"bytes,21,opt,name=carrier_billing_type,json=carrierBillingType,proto3,oneof" json:"carrier_billing_type,omitempty"`
-	CarrierBillingAccount *string                `protobuf:"bytes,22,opt,name=carrier_billing_account,json=carrierBillingAccount,proto3,oneof" json:"carrier_billing_account,omitempty"`
+	state                 protoimpl.MessageState      `protogen:"open.v1"`
+	Name                  string                      `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Number                *string                     `protobuf:"bytes,2,opt,name=number,proto3,oneof" json:"number,omitempty"`
+	Note                  *string                     `protobuf:"bytes,3,opt,name=note,proto3,oneof" json:"note,omitempty"`
+	Email                 *string                     `protobuf:"bytes,4,opt,name=email,proto3,oneof" json:"email,omitempty"`
+	Phone                 *string                     `protobuf:"bytes,5,opt,name=phone,proto3,oneof" json:"phone,omitempty"`
+	Url                   *string                     `protobuf:"bytes,6,opt,name=url,proto3,oneof" json:"url,omitempty"`
+	StatusCode            *string                     `protobuf:"bytes,7,opt,name=status_code,json=statusCode,proto3,oneof" json:"status_code,omitempty"`
+	IsEdiEnabled          *bool                       `protobuf:"varint,8,opt,name=is_edi_enabled,json=isEdiEnabled,proto3,oneof" json:"is_edi_enabled,omitempty"`
+	CommissionPolicy      *string                     `protobuf:"bytes,9,opt,name=commission_policy,json=commissionPolicy,proto3,oneof" json:"commission_policy,omitempty"`
+	FreightPolicy         *string                     `protobuf:"bytes,10,opt,name=freight_policy,json=freightPolicy,proto3,oneof" json:"freight_policy,omitempty"`
+	DefaultCarrierId      *string                     `protobuf:"bytes,11,opt,name=default_carrier_id,json=defaultCarrierId,proto3,oneof" json:"default_carrier_id,omitempty"`
+	DefaultServiceLevelId *string                     `protobuf:"bytes,12,opt,name=default_service_level_id,json=defaultServiceLevelId,proto3,oneof" json:"default_service_level_id,omitempty"`
+	DefaultPaymentTermId  *string                     `protobuf:"bytes,13,opt,name=default_payment_term_id,json=defaultPaymentTermId,proto3,oneof" json:"default_payment_term_id,omitempty"`
+	DefaultShippingTermId *string                     `protobuf:"bytes,14,opt,name=default_shipping_term_id,json=defaultShippingTermId,proto3,oneof" json:"default_shipping_term_id,omitempty"`
+	DefaultPriorityCode   *string                     `protobuf:"bytes,15,opt,name=default_priority_code,json=defaultPriorityCode,proto3,oneof" json:"default_priority_code,omitempty"`
+	DefaultSalesRepUserId *string                     `protobuf:"bytes,16,opt,name=default_sales_rep_user_id,json=defaultSalesRepUserId,proto3,oneof" json:"default_sales_rep_user_id,omitempty"`
+	BillToAddressId       *string                     `protobuf:"bytes,17,opt,name=bill_to_address_id,json=billToAddressId,proto3,oneof" json:"bill_to_address_id,omitempty"`
+	ShipToAddressId       *string                     `protobuf:"bytes,18,opt,name=ship_to_address_id,json=shipToAddressId,proto3,oneof" json:"ship_to_address_id,omitempty"`
+	CustomerPriceGroupIds []string                    `protobuf:"bytes,19,rep,name=customer_price_group_ids,json=customerPriceGroupIds,proto3" json:"customer_price_group_ids,omitempty"`
+	CustomerTypeGroupId   *string                     `protobuf:"bytes,20,opt,name=customer_type_group_id,json=customerTypeGroupId,proto3,oneof" json:"customer_type_group_id,omitempty"`
+	CarrierBillingType    *string                     `protobuf:"bytes,21,opt,name=carrier_billing_type,json=carrierBillingType,proto3,oneof" json:"carrier_billing_type,omitempty"`
+	CarrierBillingAccount *string                     `protobuf:"bytes,22,opt,name=carrier_billing_account,json=carrierBillingAccount,proto3,oneof" json:"carrier_billing_account,omitempty"`
+	BillToAddress         *CreateCustomerAddressInput `protobuf:"bytes,23,opt,name=bill_to_address,json=billToAddress,proto3,oneof" json:"bill_to_address,omitempty"`
+	ShipToAddress         *CreateCustomerAddressInput `protobuf:"bytes,24,opt,name=ship_to_address,json=shipToAddress,proto3,oneof" json:"ship_to_address,omitempty"`
 	unknownFields         protoimpl.UnknownFields
 	sizeCache             protoimpl.SizeCache
 }
 
 func (x *CreateCustomerRequest) Reset() {
 	*x = CreateCustomerRequest{}
-	mi := &file_core_core_identity_context_proto_msgTypes[84]
+	mi := &file_core_core_identity_context_proto_msgTypes[85]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5610,7 +5727,7 @@ func (x *CreateCustomerRequest) String() string {
 func (*CreateCustomerRequest) ProtoMessage() {}
 
 func (x *CreateCustomerRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_identity_context_proto_msgTypes[84]
+	mi := &file_core_core_identity_context_proto_msgTypes[85]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5623,7 +5740,7 @@ func (x *CreateCustomerRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateCustomerRequest.ProtoReflect.Descriptor instead.
 func (*CreateCustomerRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_identity_context_proto_rawDescGZIP(), []int{84}
+	return file_core_core_identity_context_proto_rawDescGZIP(), []int{85}
 }
 
 func (x *CreateCustomerRequest) GetName() string {
@@ -5780,6 +5897,20 @@ func (x *CreateCustomerRequest) GetCarrierBillingAccount() string {
 	return ""
 }
 
+func (x *CreateCustomerRequest) GetBillToAddress() *CreateCustomerAddressInput {
+	if x != nil {
+		return x.BillToAddress
+	}
+	return nil
+}
+
+func (x *CreateCustomerRequest) GetShipToAddress() *CreateCustomerAddressInput {
+	if x != nil {
+		return x.ShipToAddress
+	}
+	return nil
+}
+
 type CreateCustomerResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Customer      *CustomerProto         `protobuf:"bytes,1,opt,name=customer,proto3" json:"customer,omitempty"`
@@ -5789,7 +5920,7 @@ type CreateCustomerResponse struct {
 
 func (x *CreateCustomerResponse) Reset() {
 	*x = CreateCustomerResponse{}
-	mi := &file_core_core_identity_context_proto_msgTypes[85]
+	mi := &file_core_core_identity_context_proto_msgTypes[86]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5801,7 +5932,7 @@ func (x *CreateCustomerResponse) String() string {
 func (*CreateCustomerResponse) ProtoMessage() {}
 
 func (x *CreateCustomerResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_identity_context_proto_msgTypes[85]
+	mi := &file_core_core_identity_context_proto_msgTypes[86]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5814,7 +5945,7 @@ func (x *CreateCustomerResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateCustomerResponse.ProtoReflect.Descriptor instead.
 func (*CreateCustomerResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_identity_context_proto_rawDescGZIP(), []int{85}
+	return file_core_core_identity_context_proto_rawDescGZIP(), []int{86}
 }
 
 func (x *CreateCustomerResponse) GetCustomer() *CustomerProto {
@@ -5856,7 +5987,7 @@ type UpdateCustomerRequest struct {
 
 func (x *UpdateCustomerRequest) Reset() {
 	*x = UpdateCustomerRequest{}
-	mi := &file_core_core_identity_context_proto_msgTypes[86]
+	mi := &file_core_core_identity_context_proto_msgTypes[87]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5868,7 +5999,7 @@ func (x *UpdateCustomerRequest) String() string {
 func (*UpdateCustomerRequest) ProtoMessage() {}
 
 func (x *UpdateCustomerRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_identity_context_proto_msgTypes[86]
+	mi := &file_core_core_identity_context_proto_msgTypes[87]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5881,7 +6012,7 @@ func (x *UpdateCustomerRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateCustomerRequest.ProtoReflect.Descriptor instead.
 func (*UpdateCustomerRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_identity_context_proto_rawDescGZIP(), []int{86}
+	return file_core_core_identity_context_proto_rawDescGZIP(), []int{87}
 }
 
 func (x *UpdateCustomerRequest) GetId() string {
@@ -6061,7 +6192,7 @@ type UpdateCustomerResponse struct {
 
 func (x *UpdateCustomerResponse) Reset() {
 	*x = UpdateCustomerResponse{}
-	mi := &file_core_core_identity_context_proto_msgTypes[87]
+	mi := &file_core_core_identity_context_proto_msgTypes[88]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6073,7 +6204,7 @@ func (x *UpdateCustomerResponse) String() string {
 func (*UpdateCustomerResponse) ProtoMessage() {}
 
 func (x *UpdateCustomerResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_identity_context_proto_msgTypes[87]
+	mi := &file_core_core_identity_context_proto_msgTypes[88]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6086,7 +6217,7 @@ func (x *UpdateCustomerResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateCustomerResponse.ProtoReflect.Descriptor instead.
 func (*UpdateCustomerResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_identity_context_proto_rawDescGZIP(), []int{87}
+	return file_core_core_identity_context_proto_rawDescGZIP(), []int{88}
 }
 
 func (x *UpdateCustomerResponse) GetCustomer() *CustomerProto {
@@ -6105,7 +6236,7 @@ type DeleteCustomerRequest struct {
 
 func (x *DeleteCustomerRequest) Reset() {
 	*x = DeleteCustomerRequest{}
-	mi := &file_core_core_identity_context_proto_msgTypes[88]
+	mi := &file_core_core_identity_context_proto_msgTypes[89]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6117,7 +6248,7 @@ func (x *DeleteCustomerRequest) String() string {
 func (*DeleteCustomerRequest) ProtoMessage() {}
 
 func (x *DeleteCustomerRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_identity_context_proto_msgTypes[88]
+	mi := &file_core_core_identity_context_proto_msgTypes[89]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6130,7 +6261,7 @@ func (x *DeleteCustomerRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteCustomerRequest.ProtoReflect.Descriptor instead.
 func (*DeleteCustomerRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_identity_context_proto_rawDescGZIP(), []int{88}
+	return file_core_core_identity_context_proto_rawDescGZIP(), []int{89}
 }
 
 func (x *DeleteCustomerRequest) GetId() string {
@@ -6149,7 +6280,7 @@ type BulkDeleteCustomersRequest struct {
 
 func (x *BulkDeleteCustomersRequest) Reset() {
 	*x = BulkDeleteCustomersRequest{}
-	mi := &file_core_core_identity_context_proto_msgTypes[89]
+	mi := &file_core_core_identity_context_proto_msgTypes[90]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6161,7 +6292,7 @@ func (x *BulkDeleteCustomersRequest) String() string {
 func (*BulkDeleteCustomersRequest) ProtoMessage() {}
 
 func (x *BulkDeleteCustomersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_identity_context_proto_msgTypes[89]
+	mi := &file_core_core_identity_context_proto_msgTypes[90]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6174,7 +6305,7 @@ func (x *BulkDeleteCustomersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BulkDeleteCustomersRequest.ProtoReflect.Descriptor instead.
 func (*BulkDeleteCustomersRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_identity_context_proto_rawDescGZIP(), []int{89}
+	return file_core_core_identity_context_proto_rawDescGZIP(), []int{90}
 }
 
 func (x *BulkDeleteCustomersRequest) GetCustomerIds() []string {
@@ -6197,7 +6328,7 @@ type FrequentlyOrderedProductProto struct {
 
 func (x *FrequentlyOrderedProductProto) Reset() {
 	*x = FrequentlyOrderedProductProto{}
-	mi := &file_core_core_identity_context_proto_msgTypes[90]
+	mi := &file_core_core_identity_context_proto_msgTypes[91]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6209,7 +6340,7 @@ func (x *FrequentlyOrderedProductProto) String() string {
 func (*FrequentlyOrderedProductProto) ProtoMessage() {}
 
 func (x *FrequentlyOrderedProductProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_identity_context_proto_msgTypes[90]
+	mi := &file_core_core_identity_context_proto_msgTypes[91]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6222,7 +6353,7 @@ func (x *FrequentlyOrderedProductProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FrequentlyOrderedProductProto.ProtoReflect.Descriptor instead.
 func (*FrequentlyOrderedProductProto) Descriptor() ([]byte, []int) {
-	return file_core_core_identity_context_proto_rawDescGZIP(), []int{90}
+	return file_core_core_identity_context_proto_rawDescGZIP(), []int{91}
 }
 
 func (x *FrequentlyOrderedProductProto) GetItemId() string {
@@ -6269,7 +6400,7 @@ type GetFrequentlyOrderedProductsRequest struct {
 
 func (x *GetFrequentlyOrderedProductsRequest) Reset() {
 	*x = GetFrequentlyOrderedProductsRequest{}
-	mi := &file_core_core_identity_context_proto_msgTypes[91]
+	mi := &file_core_core_identity_context_proto_msgTypes[92]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6281,7 +6412,7 @@ func (x *GetFrequentlyOrderedProductsRequest) String() string {
 func (*GetFrequentlyOrderedProductsRequest) ProtoMessage() {}
 
 func (x *GetFrequentlyOrderedProductsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_identity_context_proto_msgTypes[91]
+	mi := &file_core_core_identity_context_proto_msgTypes[92]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6294,7 +6425,7 @@ func (x *GetFrequentlyOrderedProductsRequest) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use GetFrequentlyOrderedProductsRequest.ProtoReflect.Descriptor instead.
 func (*GetFrequentlyOrderedProductsRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_identity_context_proto_rawDescGZIP(), []int{91}
+	return file_core_core_identity_context_proto_rawDescGZIP(), []int{92}
 }
 
 func (x *GetFrequentlyOrderedProductsRequest) GetCustomerId() string {
@@ -6313,7 +6444,7 @@ type GetFrequentlyOrderedProductsResponse struct {
 
 func (x *GetFrequentlyOrderedProductsResponse) Reset() {
 	*x = GetFrequentlyOrderedProductsResponse{}
-	mi := &file_core_core_identity_context_proto_msgTypes[92]
+	mi := &file_core_core_identity_context_proto_msgTypes[93]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6325,7 +6456,7 @@ func (x *GetFrequentlyOrderedProductsResponse) String() string {
 func (*GetFrequentlyOrderedProductsResponse) ProtoMessage() {}
 
 func (x *GetFrequentlyOrderedProductsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_identity_context_proto_msgTypes[92]
+	mi := &file_core_core_identity_context_proto_msgTypes[93]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6338,7 +6469,7 @@ func (x *GetFrequentlyOrderedProductsResponse) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use GetFrequentlyOrderedProductsResponse.ProtoReflect.Descriptor instead.
 func (*GetFrequentlyOrderedProductsResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_identity_context_proto_rawDescGZIP(), []int{92}
+	return file_core_core_identity_context_proto_rawDescGZIP(), []int{93}
 }
 
 func (x *GetFrequentlyOrderedProductsResponse) GetProducts() []*FrequentlyOrderedProductProto {
@@ -6358,7 +6489,7 @@ type MergeCustomersRequest struct {
 
 func (x *MergeCustomersRequest) Reset() {
 	*x = MergeCustomersRequest{}
-	mi := &file_core_core_identity_context_proto_msgTypes[93]
+	mi := &file_core_core_identity_context_proto_msgTypes[94]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6370,7 +6501,7 @@ func (x *MergeCustomersRequest) String() string {
 func (*MergeCustomersRequest) ProtoMessage() {}
 
 func (x *MergeCustomersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_identity_context_proto_msgTypes[93]
+	mi := &file_core_core_identity_context_proto_msgTypes[94]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6383,7 +6514,7 @@ func (x *MergeCustomersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MergeCustomersRequest.ProtoReflect.Descriptor instead.
 func (*MergeCustomersRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_identity_context_proto_rawDescGZIP(), []int{93}
+	return file_core_core_identity_context_proto_rawDescGZIP(), []int{94}
 }
 
 func (x *MergeCustomersRequest) GetTargetCustomerId() string {
@@ -6409,7 +6540,7 @@ type MergeCustomersResponse struct {
 
 func (x *MergeCustomersResponse) Reset() {
 	*x = MergeCustomersResponse{}
-	mi := &file_core_core_identity_context_proto_msgTypes[94]
+	mi := &file_core_core_identity_context_proto_msgTypes[95]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6421,7 +6552,7 @@ func (x *MergeCustomersResponse) String() string {
 func (*MergeCustomersResponse) ProtoMessage() {}
 
 func (x *MergeCustomersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_identity_context_proto_msgTypes[94]
+	mi := &file_core_core_identity_context_proto_msgTypes[95]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6434,7 +6565,7 @@ func (x *MergeCustomersResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MergeCustomersResponse.ProtoReflect.Descriptor instead.
 func (*MergeCustomersResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_identity_context_proto_rawDescGZIP(), []int{94}
+	return file_core_core_identity_context_proto_rawDescGZIP(), []int{95}
 }
 
 func (x *MergeCustomersResponse) GetCustomer() *CustomerProto {
@@ -6460,7 +6591,7 @@ type AnalyzeSalesRequest struct {
 
 func (x *AnalyzeSalesRequest) Reset() {
 	*x = AnalyzeSalesRequest{}
-	mi := &file_core_core_identity_context_proto_msgTypes[95]
+	mi := &file_core_core_identity_context_proto_msgTypes[96]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6472,7 +6603,7 @@ func (x *AnalyzeSalesRequest) String() string {
 func (*AnalyzeSalesRequest) ProtoMessage() {}
 
 func (x *AnalyzeSalesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_identity_context_proto_msgTypes[95]
+	mi := &file_core_core_identity_context_proto_msgTypes[96]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6485,7 +6616,7 @@ func (x *AnalyzeSalesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AnalyzeSalesRequest.ProtoReflect.Descriptor instead.
 func (*AnalyzeSalesRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_identity_context_proto_rawDescGZIP(), []int{95}
+	return file_core_core_identity_context_proto_rawDescGZIP(), []int{96}
 }
 
 func (x *AnalyzeSalesRequest) GetStartDate() *timestamppb.Timestamp {
@@ -6592,7 +6723,7 @@ type SalesEntryProto struct {
 
 func (x *SalesEntryProto) Reset() {
 	*x = SalesEntryProto{}
-	mi := &file_core_core_identity_context_proto_msgTypes[96]
+	mi := &file_core_core_identity_context_proto_msgTypes[97]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6604,7 +6735,7 @@ func (x *SalesEntryProto) String() string {
 func (*SalesEntryProto) ProtoMessage() {}
 
 func (x *SalesEntryProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_identity_context_proto_msgTypes[96]
+	mi := &file_core_core_identity_context_proto_msgTypes[97]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6617,7 +6748,7 @@ func (x *SalesEntryProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SalesEntryProto.ProtoReflect.Descriptor instead.
 func (*SalesEntryProto) Descriptor() ([]byte, []int) {
-	return file_core_core_identity_context_proto_rawDescGZIP(), []int{96}
+	return file_core_core_identity_context_proto_rawDescGZIP(), []int{97}
 }
 
 func (x *SalesEntryProto) GetId() string {
@@ -6909,7 +7040,7 @@ type AnalyzeSalesResponse struct {
 
 func (x *AnalyzeSalesResponse) Reset() {
 	*x = AnalyzeSalesResponse{}
-	mi := &file_core_core_identity_context_proto_msgTypes[97]
+	mi := &file_core_core_identity_context_proto_msgTypes[98]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6921,7 +7052,7 @@ func (x *AnalyzeSalesResponse) String() string {
 func (*AnalyzeSalesResponse) ProtoMessage() {}
 
 func (x *AnalyzeSalesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_identity_context_proto_msgTypes[97]
+	mi := &file_core_core_identity_context_proto_msgTypes[98]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6934,7 +7065,7 @@ func (x *AnalyzeSalesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AnalyzeSalesResponse.ProtoReflect.Descriptor instead.
 func (*AnalyzeSalesResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_identity_context_proto_rawDescGZIP(), []int{97}
+	return file_core_core_identity_context_proto_rawDescGZIP(), []int{98}
 }
 
 func (x *AnalyzeSalesResponse) GetEntries() []*SalesEntryProto {
@@ -6958,7 +7089,7 @@ type AnalyzeProductionCostsRequest struct {
 
 func (x *AnalyzeProductionCostsRequest) Reset() {
 	*x = AnalyzeProductionCostsRequest{}
-	mi := &file_core_core_identity_context_proto_msgTypes[98]
+	mi := &file_core_core_identity_context_proto_msgTypes[99]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6970,7 +7101,7 @@ func (x *AnalyzeProductionCostsRequest) String() string {
 func (*AnalyzeProductionCostsRequest) ProtoMessage() {}
 
 func (x *AnalyzeProductionCostsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_identity_context_proto_msgTypes[98]
+	mi := &file_core_core_identity_context_proto_msgTypes[99]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6983,7 +7114,7 @@ func (x *AnalyzeProductionCostsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AnalyzeProductionCostsRequest.ProtoReflect.Descriptor instead.
 func (*AnalyzeProductionCostsRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_identity_context_proto_rawDescGZIP(), []int{98}
+	return file_core_core_identity_context_proto_rawDescGZIP(), []int{99}
 }
 
 func (x *AnalyzeProductionCostsRequest) GetStartDate() *timestamppb.Timestamp {
@@ -7038,7 +7169,7 @@ type BasicInfoProto struct {
 
 func (x *BasicInfoProto) Reset() {
 	*x = BasicInfoProto{}
-	mi := &file_core_core_identity_context_proto_msgTypes[99]
+	mi := &file_core_core_identity_context_proto_msgTypes[100]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7050,7 +7181,7 @@ func (x *BasicInfoProto) String() string {
 func (*BasicInfoProto) ProtoMessage() {}
 
 func (x *BasicInfoProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_identity_context_proto_msgTypes[99]
+	mi := &file_core_core_identity_context_proto_msgTypes[100]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7063,7 +7194,7 @@ func (x *BasicInfoProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BasicInfoProto.ProtoReflect.Descriptor instead.
 func (*BasicInfoProto) Descriptor() ([]byte, []int) {
-	return file_core_core_identity_context_proto_rawDescGZIP(), []int{99}
+	return file_core_core_identity_context_proto_rawDescGZIP(), []int{100}
 }
 
 func (x *BasicInfoProto) GetId() string {
@@ -7091,7 +7222,7 @@ type BaseQuantityUnitProto struct {
 
 func (x *BaseQuantityUnitProto) Reset() {
 	*x = BaseQuantityUnitProto{}
-	mi := &file_core_core_identity_context_proto_msgTypes[100]
+	mi := &file_core_core_identity_context_proto_msgTypes[101]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7103,7 +7234,7 @@ func (x *BaseQuantityUnitProto) String() string {
 func (*BaseQuantityUnitProto) ProtoMessage() {}
 
 func (x *BaseQuantityUnitProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_identity_context_proto_msgTypes[100]
+	mi := &file_core_core_identity_context_proto_msgTypes[101]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7116,7 +7247,7 @@ func (x *BaseQuantityUnitProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BaseQuantityUnitProto.ProtoReflect.Descriptor instead.
 func (*BaseQuantityUnitProto) Descriptor() ([]byte, []int) {
-	return file_core_core_identity_context_proto_rawDescGZIP(), []int{100}
+	return file_core_core_identity_context_proto_rawDescGZIP(), []int{101}
 }
 
 func (x *BaseQuantityUnitProto) GetName() string {
@@ -7150,7 +7281,7 @@ type BaseQuantity struct {
 
 func (x *BaseQuantity) Reset() {
 	*x = BaseQuantity{}
-	mi := &file_core_core_identity_context_proto_msgTypes[101]
+	mi := &file_core_core_identity_context_proto_msgTypes[102]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7162,7 +7293,7 @@ func (x *BaseQuantity) String() string {
 func (*BaseQuantity) ProtoMessage() {}
 
 func (x *BaseQuantity) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_identity_context_proto_msgTypes[101]
+	mi := &file_core_core_identity_context_proto_msgTypes[102]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7175,7 +7306,7 @@ func (x *BaseQuantity) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BaseQuantity.ProtoReflect.Descriptor instead.
 func (*BaseQuantity) Descriptor() ([]byte, []int) {
-	return file_core_core_identity_context_proto_rawDescGZIP(), []int{101}
+	return file_core_core_identity_context_proto_rawDescGZIP(), []int{102}
 }
 
 func (x *BaseQuantity) GetMeasure() float64 {
@@ -7206,7 +7337,7 @@ type CostBreakdown struct {
 
 func (x *CostBreakdown) Reset() {
 	*x = CostBreakdown{}
-	mi := &file_core_core_identity_context_proto_msgTypes[102]
+	mi := &file_core_core_identity_context_proto_msgTypes[103]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7218,7 +7349,7 @@ func (x *CostBreakdown) String() string {
 func (*CostBreakdown) ProtoMessage() {}
 
 func (x *CostBreakdown) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_identity_context_proto_msgTypes[102]
+	mi := &file_core_core_identity_context_proto_msgTypes[103]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7231,7 +7362,7 @@ func (x *CostBreakdown) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CostBreakdown.ProtoReflect.Descriptor instead.
 func (*CostBreakdown) Descriptor() ([]byte, []int) {
-	return file_core_core_identity_context_proto_rawDescGZIP(), []int{102}
+	return file_core_core_identity_context_proto_rawDescGZIP(), []int{103}
 }
 
 func (x *CostBreakdown) GetTotal() *BaseQuantity {
@@ -7290,7 +7421,7 @@ type ProductionCostEntryProto struct {
 
 func (x *ProductionCostEntryProto) Reset() {
 	*x = ProductionCostEntryProto{}
-	mi := &file_core_core_identity_context_proto_msgTypes[103]
+	mi := &file_core_core_identity_context_proto_msgTypes[104]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7302,7 +7433,7 @@ func (x *ProductionCostEntryProto) String() string {
 func (*ProductionCostEntryProto) ProtoMessage() {}
 
 func (x *ProductionCostEntryProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_identity_context_proto_msgTypes[103]
+	mi := &file_core_core_identity_context_proto_msgTypes[104]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7315,7 +7446,7 @@ func (x *ProductionCostEntryProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProductionCostEntryProto.ProtoReflect.Descriptor instead.
 func (*ProductionCostEntryProto) Descriptor() ([]byte, []int) {
-	return file_core_core_identity_context_proto_rawDescGZIP(), []int{103}
+	return file_core_core_identity_context_proto_rawDescGZIP(), []int{104}
 }
 
 func (x *ProductionCostEntryProto) GetDepartment() *BasicInfoProto {
@@ -7369,7 +7500,7 @@ type AnalyzeProductionCostsResponse struct {
 
 func (x *AnalyzeProductionCostsResponse) Reset() {
 	*x = AnalyzeProductionCostsResponse{}
-	mi := &file_core_core_identity_context_proto_msgTypes[104]
+	mi := &file_core_core_identity_context_proto_msgTypes[105]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7381,7 +7512,7 @@ func (x *AnalyzeProductionCostsResponse) String() string {
 func (*AnalyzeProductionCostsResponse) ProtoMessage() {}
 
 func (x *AnalyzeProductionCostsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_identity_context_proto_msgTypes[104]
+	mi := &file_core_core_identity_context_proto_msgTypes[105]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7394,7 +7525,7 @@ func (x *AnalyzeProductionCostsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AnalyzeProductionCostsResponse.ProtoReflect.Descriptor instead.
 func (*AnalyzeProductionCostsResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_identity_context_proto_rawDescGZIP(), []int{104}
+	return file_core_core_identity_context_proto_rawDescGZIP(), []int{105}
 }
 
 func (x *AnalyzeProductionCostsResponse) GetItems() []*ProductionCostEntryProto {
@@ -7420,7 +7551,7 @@ type AnalyzeDeliveriesRequest struct {
 
 func (x *AnalyzeDeliveriesRequest) Reset() {
 	*x = AnalyzeDeliveriesRequest{}
-	mi := &file_core_core_identity_context_proto_msgTypes[105]
+	mi := &file_core_core_identity_context_proto_msgTypes[106]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7432,7 +7563,7 @@ func (x *AnalyzeDeliveriesRequest) String() string {
 func (*AnalyzeDeliveriesRequest) ProtoMessage() {}
 
 func (x *AnalyzeDeliveriesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_identity_context_proto_msgTypes[105]
+	mi := &file_core_core_identity_context_proto_msgTypes[106]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7445,7 +7576,7 @@ func (x *AnalyzeDeliveriesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AnalyzeDeliveriesRequest.ProtoReflect.Descriptor instead.
 func (*AnalyzeDeliveriesRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_identity_context_proto_rawDescGZIP(), []int{105}
+	return file_core_core_identity_context_proto_rawDescGZIP(), []int{106}
 }
 
 func (x *AnalyzeDeliveriesRequest) GetStartDate() *timestamppb.Timestamp {
@@ -7522,7 +7653,7 @@ type DeliveryStatisticsProto struct {
 
 func (x *DeliveryStatisticsProto) Reset() {
 	*x = DeliveryStatisticsProto{}
-	mi := &file_core_core_identity_context_proto_msgTypes[106]
+	mi := &file_core_core_identity_context_proto_msgTypes[107]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7534,7 +7665,7 @@ func (x *DeliveryStatisticsProto) String() string {
 func (*DeliveryStatisticsProto) ProtoMessage() {}
 
 func (x *DeliveryStatisticsProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_identity_context_proto_msgTypes[106]
+	mi := &file_core_core_identity_context_proto_msgTypes[107]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7547,7 +7678,7 @@ func (x *DeliveryStatisticsProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeliveryStatisticsProto.ProtoReflect.Descriptor instead.
 func (*DeliveryStatisticsProto) Descriptor() ([]byte, []int) {
-	return file_core_core_identity_context_proto_rawDescGZIP(), []int{106}
+	return file_core_core_identity_context_proto_rawDescGZIP(), []int{107}
 }
 
 func (x *DeliveryStatisticsProto) GetAverageTimeToFirstShipment() float64 {
@@ -7630,7 +7761,7 @@ type CoordinateProto struct {
 
 func (x *CoordinateProto) Reset() {
 	*x = CoordinateProto{}
-	mi := &file_core_core_identity_context_proto_msgTypes[107]
+	mi := &file_core_core_identity_context_proto_msgTypes[108]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7642,7 +7773,7 @@ func (x *CoordinateProto) String() string {
 func (*CoordinateProto) ProtoMessage() {}
 
 func (x *CoordinateProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_identity_context_proto_msgTypes[107]
+	mi := &file_core_core_identity_context_proto_msgTypes[108]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7655,7 +7786,7 @@ func (x *CoordinateProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CoordinateProto.ProtoReflect.Descriptor instead.
 func (*CoordinateProto) Descriptor() ([]byte, []int) {
-	return file_core_core_identity_context_proto_rawDescGZIP(), []int{107}
+	return file_core_core_identity_context_proto_rawDescGZIP(), []int{108}
 }
 
 func (x *CoordinateProto) GetX() float64 {
@@ -7683,7 +7814,7 @@ type ChartDataPointProto struct {
 
 func (x *ChartDataPointProto) Reset() {
 	*x = ChartDataPointProto{}
-	mi := &file_core_core_identity_context_proto_msgTypes[108]
+	mi := &file_core_core_identity_context_proto_msgTypes[109]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7695,7 +7826,7 @@ func (x *ChartDataPointProto) String() string {
 func (*ChartDataPointProto) ProtoMessage() {}
 
 func (x *ChartDataPointProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_identity_context_proto_msgTypes[108]
+	mi := &file_core_core_identity_context_proto_msgTypes[109]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7708,7 +7839,7 @@ func (x *ChartDataPointProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChartDataPointProto.ProtoReflect.Descriptor instead.
 func (*ChartDataPointProto) Descriptor() ([]byte, []int) {
-	return file_core_core_identity_context_proto_rawDescGZIP(), []int{108}
+	return file_core_core_identity_context_proto_rawDescGZIP(), []int{109}
 }
 
 func (x *ChartDataPointProto) GetName() string {
@@ -7743,7 +7874,7 @@ type DeliveryChartDataProto struct {
 
 func (x *DeliveryChartDataProto) Reset() {
 	*x = DeliveryChartDataProto{}
-	mi := &file_core_core_identity_context_proto_msgTypes[109]
+	mi := &file_core_core_identity_context_proto_msgTypes[110]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7755,7 +7886,7 @@ func (x *DeliveryChartDataProto) String() string {
 func (*DeliveryChartDataProto) ProtoMessage() {}
 
 func (x *DeliveryChartDataProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_identity_context_proto_msgTypes[109]
+	mi := &file_core_core_identity_context_proto_msgTypes[110]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7768,7 +7899,7 @@ func (x *DeliveryChartDataProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeliveryChartDataProto.ProtoReflect.Descriptor instead.
 func (*DeliveryChartDataProto) Descriptor() ([]byte, []int) {
-	return file_core_core_identity_context_proto_rawDescGZIP(), []int{109}
+	return file_core_core_identity_context_proto_rawDescGZIP(), []int{110}
 }
 
 func (x *DeliveryChartDataProto) GetOnTimeDelivery() *ChartDataPointProto {
@@ -7802,7 +7933,7 @@ type AnalyzeDeliveriesResponse struct {
 
 func (x *AnalyzeDeliveriesResponse) Reset() {
 	*x = AnalyzeDeliveriesResponse{}
-	mi := &file_core_core_identity_context_proto_msgTypes[110]
+	mi := &file_core_core_identity_context_proto_msgTypes[111]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7814,7 +7945,7 @@ func (x *AnalyzeDeliveriesResponse) String() string {
 func (*AnalyzeDeliveriesResponse) ProtoMessage() {}
 
 func (x *AnalyzeDeliveriesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_identity_context_proto_msgTypes[110]
+	mi := &file_core_core_identity_context_proto_msgTypes[111]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7827,7 +7958,7 @@ func (x *AnalyzeDeliveriesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AnalyzeDeliveriesResponse.ProtoReflect.Descriptor instead.
 func (*AnalyzeDeliveriesResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_identity_context_proto_rawDescGZIP(), []int{110}
+	return file_core_core_identity_context_proto_rawDescGZIP(), []int{111}
 }
 
 func (x *AnalyzeDeliveriesResponse) GetStatistics() *DeliveryStatisticsProto {
@@ -7855,7 +7986,7 @@ type AnalyzeManufacturingRequest struct {
 
 func (x *AnalyzeManufacturingRequest) Reset() {
 	*x = AnalyzeManufacturingRequest{}
-	mi := &file_core_core_identity_context_proto_msgTypes[111]
+	mi := &file_core_core_identity_context_proto_msgTypes[112]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7867,7 +7998,7 @@ func (x *AnalyzeManufacturingRequest) String() string {
 func (*AnalyzeManufacturingRequest) ProtoMessage() {}
 
 func (x *AnalyzeManufacturingRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_identity_context_proto_msgTypes[111]
+	mi := &file_core_core_identity_context_proto_msgTypes[112]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7880,7 +8011,7 @@ func (x *AnalyzeManufacturingRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AnalyzeManufacturingRequest.ProtoReflect.Descriptor instead.
 func (*AnalyzeManufacturingRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_identity_context_proto_rawDescGZIP(), []int{111}
+	return file_core_core_identity_context_proto_rawDescGZIP(), []int{112}
 }
 
 func (x *AnalyzeManufacturingRequest) GetStartDate() *timestamppb.Timestamp {
@@ -7913,7 +8044,7 @@ type AnalyzeManufacturingResponse struct {
 
 func (x *AnalyzeManufacturingResponse) Reset() {
 	*x = AnalyzeManufacturingResponse{}
-	mi := &file_core_core_identity_context_proto_msgTypes[112]
+	mi := &file_core_core_identity_context_proto_msgTypes[113]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7925,7 +8056,7 @@ func (x *AnalyzeManufacturingResponse) String() string {
 func (*AnalyzeManufacturingResponse) ProtoMessage() {}
 
 func (x *AnalyzeManufacturingResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_identity_context_proto_msgTypes[112]
+	mi := &file_core_core_identity_context_proto_msgTypes[113]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7938,7 +8069,7 @@ func (x *AnalyzeManufacturingResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AnalyzeManufacturingResponse.ProtoReflect.Descriptor instead.
 func (*AnalyzeManufacturingResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_identity_context_proto_rawDescGZIP(), []int{112}
+	return file_core_core_identity_context_proto_rawDescGZIP(), []int{113}
 }
 
 func (x *AnalyzeManufacturingResponse) GetValue() float64 {
@@ -7961,7 +8092,7 @@ type ManufacturingMetricsProto struct {
 
 func (x *ManufacturingMetricsProto) Reset() {
 	*x = ManufacturingMetricsProto{}
-	mi := &file_core_core_identity_context_proto_msgTypes[113]
+	mi := &file_core_core_identity_context_proto_msgTypes[114]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7973,7 +8104,7 @@ func (x *ManufacturingMetricsProto) String() string {
 func (*ManufacturingMetricsProto) ProtoMessage() {}
 
 func (x *ManufacturingMetricsProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_identity_context_proto_msgTypes[113]
+	mi := &file_core_core_identity_context_proto_msgTypes[114]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7986,7 +8117,7 @@ func (x *ManufacturingMetricsProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ManufacturingMetricsProto.ProtoReflect.Descriptor instead.
 func (*ManufacturingMetricsProto) Descriptor() ([]byte, []int) {
-	return file_core_core_identity_context_proto_rawDescGZIP(), []int{113}
+	return file_core_core_identity_context_proto_rawDescGZIP(), []int{114}
 }
 
 func (x *ManufacturingMetricsProto) GetProduction() float64 {
@@ -8040,7 +8171,7 @@ type AnalyzeManufacturingBatchRequest struct {
 
 func (x *AnalyzeManufacturingBatchRequest) Reset() {
 	*x = AnalyzeManufacturingBatchRequest{}
-	mi := &file_core_core_identity_context_proto_msgTypes[114]
+	mi := &file_core_core_identity_context_proto_msgTypes[115]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8052,7 +8183,7 @@ func (x *AnalyzeManufacturingBatchRequest) String() string {
 func (*AnalyzeManufacturingBatchRequest) ProtoMessage() {}
 
 func (x *AnalyzeManufacturingBatchRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_identity_context_proto_msgTypes[114]
+	mi := &file_core_core_identity_context_proto_msgTypes[115]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8065,7 +8196,7 @@ func (x *AnalyzeManufacturingBatchRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AnalyzeManufacturingBatchRequest.ProtoReflect.Descriptor instead.
 func (*AnalyzeManufacturingBatchRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_identity_context_proto_rawDescGZIP(), []int{114}
+	return file_core_core_identity_context_proto_rawDescGZIP(), []int{115}
 }
 
 func (x *AnalyzeManufacturingBatchRequest) GetStartDate() *timestamppb.Timestamp {
@@ -8134,7 +8265,7 @@ type AnalyzeManufacturingBatchResponse struct {
 
 func (x *AnalyzeManufacturingBatchResponse) Reset() {
 	*x = AnalyzeManufacturingBatchResponse{}
-	mi := &file_core_core_identity_context_proto_msgTypes[115]
+	mi := &file_core_core_identity_context_proto_msgTypes[116]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8146,7 +8277,7 @@ func (x *AnalyzeManufacturingBatchResponse) String() string {
 func (*AnalyzeManufacturingBatchResponse) ProtoMessage() {}
 
 func (x *AnalyzeManufacturingBatchResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_identity_context_proto_msgTypes[115]
+	mi := &file_core_core_identity_context_proto_msgTypes[116]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8159,7 +8290,7 @@ func (x *AnalyzeManufacturingBatchResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use AnalyzeManufacturingBatchResponse.ProtoReflect.Descriptor instead.
 func (*AnalyzeManufacturingBatchResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_identity_context_proto_rawDescGZIP(), []int{115}
+	return file_core_core_identity_context_proto_rawDescGZIP(), []int{116}
 }
 
 func (x *AnalyzeManufacturingBatchResponse) GetCurrent() *ManufacturingMetricsProto {
@@ -8191,7 +8322,7 @@ type AnalyzeOrdersRequest struct {
 
 func (x *AnalyzeOrdersRequest) Reset() {
 	*x = AnalyzeOrdersRequest{}
-	mi := &file_core_core_identity_context_proto_msgTypes[116]
+	mi := &file_core_core_identity_context_proto_msgTypes[117]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8203,7 +8334,7 @@ func (x *AnalyzeOrdersRequest) String() string {
 func (*AnalyzeOrdersRequest) ProtoMessage() {}
 
 func (x *AnalyzeOrdersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_identity_context_proto_msgTypes[116]
+	mi := &file_core_core_identity_context_proto_msgTypes[117]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8216,7 +8347,7 @@ func (x *AnalyzeOrdersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AnalyzeOrdersRequest.ProtoReflect.Descriptor instead.
 func (*AnalyzeOrdersRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_identity_context_proto_rawDescGZIP(), []int{116}
+	return file_core_core_identity_context_proto_rawDescGZIP(), []int{117}
 }
 
 func (x *AnalyzeOrdersRequest) GetStartDate() *timestamppb.Timestamp {
@@ -8317,7 +8448,7 @@ type OrderEntryProto struct {
 
 func (x *OrderEntryProto) Reset() {
 	*x = OrderEntryProto{}
-	mi := &file_core_core_identity_context_proto_msgTypes[117]
+	mi := &file_core_core_identity_context_proto_msgTypes[118]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8329,7 +8460,7 @@ func (x *OrderEntryProto) String() string {
 func (*OrderEntryProto) ProtoMessage() {}
 
 func (x *OrderEntryProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_identity_context_proto_msgTypes[117]
+	mi := &file_core_core_identity_context_proto_msgTypes[118]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8342,7 +8473,7 @@ func (x *OrderEntryProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OrderEntryProto.ProtoReflect.Descriptor instead.
 func (*OrderEntryProto) Descriptor() ([]byte, []int) {
-	return file_core_core_identity_context_proto_rawDescGZIP(), []int{117}
+	return file_core_core_identity_context_proto_rawDescGZIP(), []int{118}
 }
 
 func (x *OrderEntryProto) GetId() string {
@@ -8641,7 +8772,7 @@ type AnalyzeOrdersResponse struct {
 
 func (x *AnalyzeOrdersResponse) Reset() {
 	*x = AnalyzeOrdersResponse{}
-	mi := &file_core_core_identity_context_proto_msgTypes[118]
+	mi := &file_core_core_identity_context_proto_msgTypes[119]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8653,7 +8784,7 @@ func (x *AnalyzeOrdersResponse) String() string {
 func (*AnalyzeOrdersResponse) ProtoMessage() {}
 
 func (x *AnalyzeOrdersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_identity_context_proto_msgTypes[118]
+	mi := &file_core_core_identity_context_proto_msgTypes[119]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8666,7 +8797,7 @@ func (x *AnalyzeOrdersResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AnalyzeOrdersResponse.ProtoReflect.Descriptor instead.
 func (*AnalyzeOrdersResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_identity_context_proto_rawDescGZIP(), []int{118}
+	return file_core_core_identity_context_proto_rawDescGZIP(), []int{119}
 }
 
 func (x *AnalyzeOrdersResponse) GetEntries() []*OrderEntryProto {
@@ -8689,7 +8820,7 @@ type AnalyzeQuarterlyOrdersRequest struct {
 
 func (x *AnalyzeQuarterlyOrdersRequest) Reset() {
 	*x = AnalyzeQuarterlyOrdersRequest{}
-	mi := &file_core_core_identity_context_proto_msgTypes[119]
+	mi := &file_core_core_identity_context_proto_msgTypes[120]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8701,7 +8832,7 @@ func (x *AnalyzeQuarterlyOrdersRequest) String() string {
 func (*AnalyzeQuarterlyOrdersRequest) ProtoMessage() {}
 
 func (x *AnalyzeQuarterlyOrdersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_identity_context_proto_msgTypes[119]
+	mi := &file_core_core_identity_context_proto_msgTypes[120]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8714,7 +8845,7 @@ func (x *AnalyzeQuarterlyOrdersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AnalyzeQuarterlyOrdersRequest.ProtoReflect.Descriptor instead.
 func (*AnalyzeQuarterlyOrdersRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_identity_context_proto_rawDescGZIP(), []int{119}
+	return file_core_core_identity_context_proto_rawDescGZIP(), []int{120}
 }
 
 func (x *AnalyzeQuarterlyOrdersRequest) GetSalesRepIds() []string {
@@ -9280,7 +9411,28 @@ const file_core_core_identity_context_proto_rawDesc = "" +
 	"\x12GetCustomerRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"F\n" +
 	"\x13GetCustomerResponse\x12/\n" +
-	"\bcustomer\x18\x01 \x01(\v2\x13.core.CustomerProtoR\bcustomer\"\xaa\v\n" +
+	"\bcustomer\x18\x01 \x01(\v2\x13.core.CustomerProtoR\bcustomer\"\xb5\x03\n" +
+	"\x1aCreateCustomerAddressInput\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x19\n" +
+	"\x05phone\x18\x02 \x01(\tH\x00R\x05phone\x88\x01\x01\x12\x19\n" +
+	"\x05email\x18\x03 \x01(\tH\x01R\x05email\x88\x01\x01\x12 \n" +
+	"\fis_drop_ship\x18\x04 \x01(\bR\n" +
+	"isDropShip\x12'\n" +
+	"\rstreet_line_1\x18\x05 \x01(\tH\x02R\vstreetLine1\x88\x01\x01\x12'\n" +
+	"\rstreet_line_2\x18\x06 \x01(\tH\x03R\vstreetLine2\x88\x01\x01\x12\x1f\n" +
+	"\blocality\x18\a \x01(\tH\x04R\blocality\x88\x01\x01\x12\x19\n" +
+	"\x05state\x18\b \x01(\tH\x05R\x05state\x88\x01\x01\x12$\n" +
+	"\vpostal_code\x18\t \x01(\tH\x06R\n" +
+	"postalCode\x88\x01\x01\x12\x18\n" +
+	"\acountry\x18\n" +
+	" \x01(\tR\acountryB\b\n" +
+	"\x06_phoneB\b\n" +
+	"\x06_emailB\x10\n" +
+	"\x0e_street_line_1B\x10\n" +
+	"\x0e_street_line_2B\v\n" +
+	"\t_localityB\b\n" +
+	"\x06_stateB\x0e\n" +
+	"\f_postal_code\"\xf0\f\n" +
 	"\x15CreateCustomerRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1b\n" +
 	"\x06number\x18\x02 \x01(\tH\x00R\x06number\x88\x01\x01\x12\x17\n" +
@@ -9306,7 +9458,9 @@ const file_core_core_identity_context_proto_rawDesc = "" +
 	"\x18customer_price_group_ids\x18\x13 \x03(\tR\x15customerPriceGroupIds\x128\n" +
 	"\x16customer_type_group_id\x18\x14 \x01(\tH\x11R\x13customerTypeGroupId\x88\x01\x01\x125\n" +
 	"\x14carrier_billing_type\x18\x15 \x01(\tH\x12R\x12carrierBillingType\x88\x01\x01\x12;\n" +
-	"\x17carrier_billing_account\x18\x16 \x01(\tH\x13R\x15carrierBillingAccount\x88\x01\x01B\t\n" +
+	"\x17carrier_billing_account\x18\x16 \x01(\tH\x13R\x15carrierBillingAccount\x88\x01\x01\x12M\n" +
+	"\x0fbill_to_address\x18\x17 \x01(\v2 .core.CreateCustomerAddressInputH\x14R\rbillToAddress\x88\x01\x01\x12M\n" +
+	"\x0fship_to_address\x18\x18 \x01(\v2 .core.CreateCustomerAddressInputH\x15R\rshipToAddress\x88\x01\x01B\t\n" +
 	"\a_numberB\a\n" +
 	"\x05_noteB\b\n" +
 	"\x06_emailB\b\n" +
@@ -9326,7 +9480,9 @@ const file_core_core_identity_context_proto_rawDesc = "" +
 	"\x13_ship_to_address_idB\x19\n" +
 	"\x17_customer_type_group_idB\x17\n" +
 	"\x15_carrier_billing_typeB\x1a\n" +
-	"\x18_carrier_billing_account\"I\n" +
+	"\x18_carrier_billing_accountB\x12\n" +
+	"\x10_bill_to_addressB\x12\n" +
+	"\x10_ship_to_address\"I\n" +
 	"\x16CreateCustomerResponse\x12/\n" +
 	"\bcustomer\x18\x01 \x01(\v2\x13.core.CustomerProtoR\bcustomer\"\x88\f\n" +
 	"\x15UpdateCustomerRequest\x12\x0e\n" +
@@ -9678,7 +9834,7 @@ func file_core_core_identity_context_proto_rawDescGZIP() []byte {
 }
 
 var file_core_core_identity_context_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_core_core_identity_context_proto_msgTypes = make([]protoimpl.MessageInfo, 122)
+var file_core_core_identity_context_proto_msgTypes = make([]protoimpl.MessageInfo, 123)
 var file_core_core_identity_context_proto_goTypes = []any{
 	(AccountMode)(0),                             // 0: core.AccountMode
 	(SandboxMode)(0),                             // 1: core.SandboxMode
@@ -9766,61 +9922,62 @@ var file_core_core_identity_context_proto_goTypes = []any{
 	(*ListCustomersResponse)(nil),                // 83: core.ListCustomersResponse
 	(*GetCustomerRequest)(nil),                   // 84: core.GetCustomerRequest
 	(*GetCustomerResponse)(nil),                  // 85: core.GetCustomerResponse
-	(*CreateCustomerRequest)(nil),                // 86: core.CreateCustomerRequest
-	(*CreateCustomerResponse)(nil),               // 87: core.CreateCustomerResponse
-	(*UpdateCustomerRequest)(nil),                // 88: core.UpdateCustomerRequest
-	(*UpdateCustomerResponse)(nil),               // 89: core.UpdateCustomerResponse
-	(*DeleteCustomerRequest)(nil),                // 90: core.DeleteCustomerRequest
-	(*BulkDeleteCustomersRequest)(nil),           // 91: core.BulkDeleteCustomersRequest
-	(*FrequentlyOrderedProductProto)(nil),        // 92: core.FrequentlyOrderedProductProto
-	(*GetFrequentlyOrderedProductsRequest)(nil),  // 93: core.GetFrequentlyOrderedProductsRequest
-	(*GetFrequentlyOrderedProductsResponse)(nil), // 94: core.GetFrequentlyOrderedProductsResponse
-	(*MergeCustomersRequest)(nil),                // 95: core.MergeCustomersRequest
-	(*MergeCustomersResponse)(nil),               // 96: core.MergeCustomersResponse
-	(*AnalyzeSalesRequest)(nil),                  // 97: core.AnalyzeSalesRequest
-	(*SalesEntryProto)(nil),                      // 98: core.SalesEntryProto
-	(*AnalyzeSalesResponse)(nil),                 // 99: core.AnalyzeSalesResponse
-	(*AnalyzeProductionCostsRequest)(nil),        // 100: core.AnalyzeProductionCostsRequest
-	(*BasicInfoProto)(nil),                       // 101: core.BasicInfoProto
-	(*BaseQuantityUnitProto)(nil),                // 102: core.BaseQuantityUnitProto
-	(*BaseQuantity)(nil),                         // 103: core.BaseQuantity
-	(*CostBreakdown)(nil),                        // 104: core.CostBreakdown
-	(*ProductionCostEntryProto)(nil),             // 105: core.ProductionCostEntryProto
-	(*AnalyzeProductionCostsResponse)(nil),       // 106: core.AnalyzeProductionCostsResponse
-	(*AnalyzeDeliveriesRequest)(nil),             // 107: core.AnalyzeDeliveriesRequest
-	(*DeliveryStatisticsProto)(nil),              // 108: core.DeliveryStatisticsProto
-	(*CoordinateProto)(nil),                      // 109: core.CoordinateProto
-	(*ChartDataPointProto)(nil),                  // 110: core.ChartDataPointProto
-	(*DeliveryChartDataProto)(nil),               // 111: core.DeliveryChartDataProto
-	(*AnalyzeDeliveriesResponse)(nil),            // 112: core.AnalyzeDeliveriesResponse
-	(*AnalyzeManufacturingRequest)(nil),          // 113: core.AnalyzeManufacturingRequest
-	(*AnalyzeManufacturingResponse)(nil),         // 114: core.AnalyzeManufacturingResponse
-	(*ManufacturingMetricsProto)(nil),            // 115: core.ManufacturingMetricsProto
-	(*AnalyzeManufacturingBatchRequest)(nil),     // 116: core.AnalyzeManufacturingBatchRequest
-	(*AnalyzeManufacturingBatchResponse)(nil),    // 117: core.AnalyzeManufacturingBatchResponse
-	(*AnalyzeOrdersRequest)(nil),                 // 118: core.AnalyzeOrdersRequest
-	(*OrderEntryProto)(nil),                      // 119: core.OrderEntryProto
-	(*AnalyzeOrdersResponse)(nil),                // 120: core.AnalyzeOrdersResponse
-	(*AnalyzeQuarterlyOrdersRequest)(nil),        // 121: core.AnalyzeQuarterlyOrdersRequest
-	nil,                                          // 122: core.AccountUserAccess.PermissionsEntry
-	nil,                                          // 123: core.GetRolePermissionsResponse.PermissionsEntry
-	(*timestamppb.Timestamp)(nil),                // 124: google.protobuf.Timestamp
+	(*CreateCustomerAddressInput)(nil),           // 86: core.CreateCustomerAddressInput
+	(*CreateCustomerRequest)(nil),                // 87: core.CreateCustomerRequest
+	(*CreateCustomerResponse)(nil),               // 88: core.CreateCustomerResponse
+	(*UpdateCustomerRequest)(nil),                // 89: core.UpdateCustomerRequest
+	(*UpdateCustomerResponse)(nil),               // 90: core.UpdateCustomerResponse
+	(*DeleteCustomerRequest)(nil),                // 91: core.DeleteCustomerRequest
+	(*BulkDeleteCustomersRequest)(nil),           // 92: core.BulkDeleteCustomersRequest
+	(*FrequentlyOrderedProductProto)(nil),        // 93: core.FrequentlyOrderedProductProto
+	(*GetFrequentlyOrderedProductsRequest)(nil),  // 94: core.GetFrequentlyOrderedProductsRequest
+	(*GetFrequentlyOrderedProductsResponse)(nil), // 95: core.GetFrequentlyOrderedProductsResponse
+	(*MergeCustomersRequest)(nil),                // 96: core.MergeCustomersRequest
+	(*MergeCustomersResponse)(nil),               // 97: core.MergeCustomersResponse
+	(*AnalyzeSalesRequest)(nil),                  // 98: core.AnalyzeSalesRequest
+	(*SalesEntryProto)(nil),                      // 99: core.SalesEntryProto
+	(*AnalyzeSalesResponse)(nil),                 // 100: core.AnalyzeSalesResponse
+	(*AnalyzeProductionCostsRequest)(nil),        // 101: core.AnalyzeProductionCostsRequest
+	(*BasicInfoProto)(nil),                       // 102: core.BasicInfoProto
+	(*BaseQuantityUnitProto)(nil),                // 103: core.BaseQuantityUnitProto
+	(*BaseQuantity)(nil),                         // 104: core.BaseQuantity
+	(*CostBreakdown)(nil),                        // 105: core.CostBreakdown
+	(*ProductionCostEntryProto)(nil),             // 106: core.ProductionCostEntryProto
+	(*AnalyzeProductionCostsResponse)(nil),       // 107: core.AnalyzeProductionCostsResponse
+	(*AnalyzeDeliveriesRequest)(nil),             // 108: core.AnalyzeDeliveriesRequest
+	(*DeliveryStatisticsProto)(nil),              // 109: core.DeliveryStatisticsProto
+	(*CoordinateProto)(nil),                      // 110: core.CoordinateProto
+	(*ChartDataPointProto)(nil),                  // 111: core.ChartDataPointProto
+	(*DeliveryChartDataProto)(nil),               // 112: core.DeliveryChartDataProto
+	(*AnalyzeDeliveriesResponse)(nil),            // 113: core.AnalyzeDeliveriesResponse
+	(*AnalyzeManufacturingRequest)(nil),          // 114: core.AnalyzeManufacturingRequest
+	(*AnalyzeManufacturingResponse)(nil),         // 115: core.AnalyzeManufacturingResponse
+	(*ManufacturingMetricsProto)(nil),            // 116: core.ManufacturingMetricsProto
+	(*AnalyzeManufacturingBatchRequest)(nil),     // 117: core.AnalyzeManufacturingBatchRequest
+	(*AnalyzeManufacturingBatchResponse)(nil),    // 118: core.AnalyzeManufacturingBatchResponse
+	(*AnalyzeOrdersRequest)(nil),                 // 119: core.AnalyzeOrdersRequest
+	(*OrderEntryProto)(nil),                      // 120: core.OrderEntryProto
+	(*AnalyzeOrdersResponse)(nil),                // 121: core.AnalyzeOrdersResponse
+	(*AnalyzeQuarterlyOrdersRequest)(nil),        // 122: core.AnalyzeQuarterlyOrdersRequest
+	nil,                                          // 123: core.AccountUserAccess.PermissionsEntry
+	nil,                                          // 124: core.GetRolePermissionsResponse.PermissionsEntry
+	(*timestamppb.Timestamp)(nil),                // 125: google.protobuf.Timestamp
 }
 var file_core_core_identity_context_proto_depIdxs = []int32{
 	0,   // 0: core.GetAccountContextResponse.account_mode:type_name -> core.AccountMode
 	6,   // 1: core.GetUserAccountAccessResponse.access:type_name -> core.AccountUserAccess
-	122, // 2: core.AccountUserAccess.permissions:type_name -> core.AccountUserAccess.PermissionsEntry
-	124, // 3: core.AccountUserAccess.last_used_at:type_name -> google.protobuf.Timestamp
+	123, // 2: core.AccountUserAccess.permissions:type_name -> core.AccountUserAccess.PermissionsEntry
+	125, // 3: core.AccountUserAccess.last_used_at:type_name -> google.protobuf.Timestamp
 	9,   // 4: core.GetAccountRelationResponse.relation:type_name -> core.AccountRelation
-	123, // 5: core.GetRolePermissionsResponse.permissions:type_name -> core.GetRolePermissionsResponse.PermissionsEntry
+	124, // 5: core.GetRolePermissionsResponse.permissions:type_name -> core.GetRolePermissionsResponse.PermissionsEntry
 	17,  // 6: core.ListUserAccountAffiliationsResponse.affiliations:type_name -> core.AccountAffiliation
-	124, // 7: core.AccountAffiliation.last_used_at:type_name -> google.protobuf.Timestamp
+	125, // 7: core.AccountAffiliation.last_used_at:type_name -> google.protobuf.Timestamp
 	19,  // 8: core.CompleteRegistrationRequest.account_data:type_name -> core.RegistrationAccountData
 	20,  // 9: core.RegistrationAccountData.business_address:type_name -> core.RegistrationAddress
-	124, // 10: core.RolePermissionDetail.created_at:type_name -> google.protobuf.Timestamp
-	124, // 11: core.RolePermissionDetail.updated_at:type_name -> google.protobuf.Timestamp
-	124, // 12: core.RoleDetail.created_at:type_name -> google.protobuf.Timestamp
-	124, // 13: core.RoleDetail.updated_at:type_name -> google.protobuf.Timestamp
+	125, // 10: core.RolePermissionDetail.created_at:type_name -> google.protobuf.Timestamp
+	125, // 11: core.RolePermissionDetail.updated_at:type_name -> google.protobuf.Timestamp
+	125, // 12: core.RoleDetail.created_at:type_name -> google.protobuf.Timestamp
+	125, // 13: core.RoleDetail.updated_at:type_name -> google.protobuf.Timestamp
 	25,  // 14: core.RoleDetail.permissions:type_name -> core.RolePermissionDetail
 	26,  // 15: core.ListRolesResponse.roles:type_name -> core.RoleDetail
 	38,  // 16: core.ListRolesResponse.page_info:type_name -> core.PageInfo
@@ -9834,13 +9991,13 @@ var file_core_core_identity_context_proto_depIdxs = []int32{
 	1,   // 24: core.CreateSandboxRequest.mode:type_name -> core.SandboxMode
 	45,  // 25: core.CreateSandboxResponse.sandbox:type_name -> core.SandboxInfo
 	45,  // 26: core.GetSandboxResponse.sandbox:type_name -> core.SandboxInfo
-	124, // 27: core.SandboxInfo.created_at:type_name -> google.protobuf.Timestamp
-	124, // 28: core.SandboxInfo.updated_at:type_name -> google.protobuf.Timestamp
-	124, // 29: core.UpdateAccountSubscriptionRequest.current_period_end:type_name -> google.protobuf.Timestamp
+	125, // 27: core.SandboxInfo.created_at:type_name -> google.protobuf.Timestamp
+	125, // 28: core.SandboxInfo.updated_at:type_name -> google.protobuf.Timestamp
+	125, // 29: core.UpdateAccountSubscriptionRequest.current_period_end:type_name -> google.protobuf.Timestamp
 	52,  // 30: core.ListUnitsResponse.units:type_name -> core.UnitInfo
 	38,  // 31: core.ListUnitsResponse.page_info:type_name -> core.PageInfo
-	124, // 32: core.UnitInfo.created_at:type_name -> google.protobuf.Timestamp
-	124, // 33: core.UnitInfo.updated_at:type_name -> google.protobuf.Timestamp
+	125, // 32: core.UnitInfo.created_at:type_name -> google.protobuf.Timestamp
+	125, // 33: core.UnitInfo.updated_at:type_name -> google.protobuf.Timestamp
 	52,  // 34: core.GetUnitResponse.unit:type_name -> core.UnitInfo
 	52,  // 35: core.CreateUnitResponse.unit:type_name -> core.UnitInfo
 	52,  // 36: core.UpdateUnitResponse.unit:type_name -> core.UnitInfo
@@ -9858,75 +10015,77 @@ var file_core_core_identity_context_proto_depIdxs = []int32{
 	77,  // 48: core.CustomerProto.type_group:type_name -> core.CustomerAccountGroupProto
 	77,  // 49: core.CustomerProto.price_groups:type_name -> core.CustomerAccountGroupProto
 	81,  // 50: core.CustomerProto.parent_account:type_name -> core.CustomerLightCustomerProto
-	124, // 51: core.CustomerProto.created_at:type_name -> google.protobuf.Timestamp
-	124, // 52: core.CustomerProto.updated_at:type_name -> google.protobuf.Timestamp
-	124, // 53: core.CustomerSummaryProto.created_at:type_name -> google.protobuf.Timestamp
+	125, // 51: core.CustomerProto.created_at:type_name -> google.protobuf.Timestamp
+	125, // 52: core.CustomerProto.updated_at:type_name -> google.protobuf.Timestamp
+	125, // 53: core.CustomerSummaryProto.created_at:type_name -> google.protobuf.Timestamp
 	80,  // 54: core.CustomerAddressProto.geolocation:type_name -> core.CustomerGeolocationProto
-	124, // 55: core.CustomerAddressProto.created_at:type_name -> google.protobuf.Timestamp
-	124, // 56: core.CustomerAddressProto.updated_at:type_name -> google.protobuf.Timestamp
-	124, // 57: core.ListCustomersRequest.start_date:type_name -> google.protobuf.Timestamp
-	124, // 58: core.ListCustomersRequest.end_date:type_name -> google.protobuf.Timestamp
+	125, // 55: core.CustomerAddressProto.created_at:type_name -> google.protobuf.Timestamp
+	125, // 56: core.CustomerAddressProto.updated_at:type_name -> google.protobuf.Timestamp
+	125, // 57: core.ListCustomersRequest.start_date:type_name -> google.protobuf.Timestamp
+	125, // 58: core.ListCustomersRequest.end_date:type_name -> google.protobuf.Timestamp
 	71,  // 59: core.ListCustomersResponse.customers:type_name -> core.CustomerSummaryProto
 	38,  // 60: core.ListCustomersResponse.page_info:type_name -> core.PageInfo
 	70,  // 61: core.GetCustomerResponse.customer:type_name -> core.CustomerProto
-	70,  // 62: core.CreateCustomerResponse.customer:type_name -> core.CustomerProto
-	70,  // 63: core.UpdateCustomerResponse.customer:type_name -> core.CustomerProto
-	92,  // 64: core.GetFrequentlyOrderedProductsResponse.products:type_name -> core.FrequentlyOrderedProductProto
-	70,  // 65: core.MergeCustomersResponse.customer:type_name -> core.CustomerProto
-	124, // 66: core.AnalyzeSalesRequest.start_date:type_name -> google.protobuf.Timestamp
-	124, // 67: core.AnalyzeSalesRequest.end_date:type_name -> google.protobuf.Timestamp
-	124, // 68: core.SalesEntryProto.issued_at:type_name -> google.protobuf.Timestamp
-	124, // 69: core.SalesEntryProto.customer_created_at:type_name -> google.protobuf.Timestamp
-	124, // 70: core.SalesEntryProto.completed_at:type_name -> google.protobuf.Timestamp
-	124, // 71: core.SalesEntryProto.first_ship_at:type_name -> google.protobuf.Timestamp
-	124, // 72: core.SalesEntryProto.promised_at:type_name -> google.protobuf.Timestamp
-	124, // 73: core.SalesEntryProto.invoiced_at:type_name -> google.protobuf.Timestamp
-	98,  // 74: core.AnalyzeSalesResponse.entries:type_name -> core.SalesEntryProto
-	124, // 75: core.AnalyzeProductionCostsRequest.start_date:type_name -> google.protobuf.Timestamp
-	124, // 76: core.AnalyzeProductionCostsRequest.end_date:type_name -> google.protobuf.Timestamp
-	102, // 77: core.BaseQuantity.unit:type_name -> core.BaseQuantityUnitProto
-	103, // 78: core.CostBreakdown.total:type_name -> core.BaseQuantity
-	103, // 79: core.CostBreakdown.labor:type_name -> core.BaseQuantity
-	103, // 80: core.CostBreakdown.materials:type_name -> core.BaseQuantity
-	103, // 81: core.CostBreakdown.overhead:type_name -> core.BaseQuantity
-	103, // 82: core.CostBreakdown.time:type_name -> core.BaseQuantity
-	103, // 83: core.CostBreakdown.quantity:type_name -> core.BaseQuantity
-	101, // 84: core.ProductionCostEntryProto.department:type_name -> core.BasicInfoProto
-	101, // 85: core.ProductionCostEntryProto.category:type_name -> core.BasicInfoProto
-	104, // 86: core.ProductionCostEntryProto.total_costs:type_name -> core.CostBreakdown
-	104, // 87: core.ProductionCostEntryProto.productive_costs:type_name -> core.CostBreakdown
-	104, // 88: core.ProductionCostEntryProto.waste_costs:type_name -> core.CostBreakdown
-	104, // 89: core.ProductionCostEntryProto.seconds_costs:type_name -> core.CostBreakdown
-	105, // 90: core.AnalyzeProductionCostsResponse.items:type_name -> core.ProductionCostEntryProto
-	124, // 91: core.AnalyzeDeliveriesRequest.start_date:type_name -> google.protobuf.Timestamp
-	124, // 92: core.AnalyzeDeliveriesRequest.end_date:type_name -> google.protobuf.Timestamp
-	109, // 93: core.ChartDataPointProto.data:type_name -> core.CoordinateProto
-	110, // 94: core.DeliveryChartDataProto.on_time_delivery:type_name -> core.ChartDataPointProto
-	110, // 95: core.DeliveryChartDataProto.average_delivery_time:type_name -> core.ChartDataPointProto
-	110, // 96: core.DeliveryChartDataProto.average_first_shipment_time:type_name -> core.ChartDataPointProto
-	108, // 97: core.AnalyzeDeliveriesResponse.statistics:type_name -> core.DeliveryStatisticsProto
-	111, // 98: core.AnalyzeDeliveriesResponse.chart_data:type_name -> core.DeliveryChartDataProto
-	124, // 99: core.AnalyzeManufacturingRequest.start_date:type_name -> google.protobuf.Timestamp
-	124, // 100: core.AnalyzeManufacturingRequest.end_date:type_name -> google.protobuf.Timestamp
-	124, // 101: core.AnalyzeManufacturingBatchRequest.start_date:type_name -> google.protobuf.Timestamp
-	124, // 102: core.AnalyzeManufacturingBatchRequest.end_date:type_name -> google.protobuf.Timestamp
-	124, // 103: core.AnalyzeManufacturingBatchRequest.comparison_start_date:type_name -> google.protobuf.Timestamp
-	124, // 104: core.AnalyzeManufacturingBatchRequest.comparison_end_date:type_name -> google.protobuf.Timestamp
-	115, // 105: core.AnalyzeManufacturingBatchResponse.current:type_name -> core.ManufacturingMetricsProto
-	115, // 106: core.AnalyzeManufacturingBatchResponse.comparison:type_name -> core.ManufacturingMetricsProto
-	124, // 107: core.AnalyzeOrdersRequest.start_date:type_name -> google.protobuf.Timestamp
-	124, // 108: core.AnalyzeOrdersRequest.end_date:type_name -> google.protobuf.Timestamp
-	124, // 109: core.OrderEntryProto.issued_at:type_name -> google.protobuf.Timestamp
-	124, // 110: core.OrderEntryProto.customer_created_at:type_name -> google.protobuf.Timestamp
-	124, // 111: core.OrderEntryProto.completed_at:type_name -> google.protobuf.Timestamp
-	124, // 112: core.OrderEntryProto.first_ship_at:type_name -> google.protobuf.Timestamp
-	124, // 113: core.OrderEntryProto.promised_at:type_name -> google.protobuf.Timestamp
-	119, // 114: core.AnalyzeOrdersResponse.entries:type_name -> core.OrderEntryProto
-	115, // [115:115] is the sub-list for method output_type
-	115, // [115:115] is the sub-list for method input_type
-	115, // [115:115] is the sub-list for extension type_name
-	115, // [115:115] is the sub-list for extension extendee
-	0,   // [0:115] is the sub-list for field type_name
+	86,  // 62: core.CreateCustomerRequest.bill_to_address:type_name -> core.CreateCustomerAddressInput
+	86,  // 63: core.CreateCustomerRequest.ship_to_address:type_name -> core.CreateCustomerAddressInput
+	70,  // 64: core.CreateCustomerResponse.customer:type_name -> core.CustomerProto
+	70,  // 65: core.UpdateCustomerResponse.customer:type_name -> core.CustomerProto
+	93,  // 66: core.GetFrequentlyOrderedProductsResponse.products:type_name -> core.FrequentlyOrderedProductProto
+	70,  // 67: core.MergeCustomersResponse.customer:type_name -> core.CustomerProto
+	125, // 68: core.AnalyzeSalesRequest.start_date:type_name -> google.protobuf.Timestamp
+	125, // 69: core.AnalyzeSalesRequest.end_date:type_name -> google.protobuf.Timestamp
+	125, // 70: core.SalesEntryProto.issued_at:type_name -> google.protobuf.Timestamp
+	125, // 71: core.SalesEntryProto.customer_created_at:type_name -> google.protobuf.Timestamp
+	125, // 72: core.SalesEntryProto.completed_at:type_name -> google.protobuf.Timestamp
+	125, // 73: core.SalesEntryProto.first_ship_at:type_name -> google.protobuf.Timestamp
+	125, // 74: core.SalesEntryProto.promised_at:type_name -> google.protobuf.Timestamp
+	125, // 75: core.SalesEntryProto.invoiced_at:type_name -> google.protobuf.Timestamp
+	99,  // 76: core.AnalyzeSalesResponse.entries:type_name -> core.SalesEntryProto
+	125, // 77: core.AnalyzeProductionCostsRequest.start_date:type_name -> google.protobuf.Timestamp
+	125, // 78: core.AnalyzeProductionCostsRequest.end_date:type_name -> google.protobuf.Timestamp
+	103, // 79: core.BaseQuantity.unit:type_name -> core.BaseQuantityUnitProto
+	104, // 80: core.CostBreakdown.total:type_name -> core.BaseQuantity
+	104, // 81: core.CostBreakdown.labor:type_name -> core.BaseQuantity
+	104, // 82: core.CostBreakdown.materials:type_name -> core.BaseQuantity
+	104, // 83: core.CostBreakdown.overhead:type_name -> core.BaseQuantity
+	104, // 84: core.CostBreakdown.time:type_name -> core.BaseQuantity
+	104, // 85: core.CostBreakdown.quantity:type_name -> core.BaseQuantity
+	102, // 86: core.ProductionCostEntryProto.department:type_name -> core.BasicInfoProto
+	102, // 87: core.ProductionCostEntryProto.category:type_name -> core.BasicInfoProto
+	105, // 88: core.ProductionCostEntryProto.total_costs:type_name -> core.CostBreakdown
+	105, // 89: core.ProductionCostEntryProto.productive_costs:type_name -> core.CostBreakdown
+	105, // 90: core.ProductionCostEntryProto.waste_costs:type_name -> core.CostBreakdown
+	105, // 91: core.ProductionCostEntryProto.seconds_costs:type_name -> core.CostBreakdown
+	106, // 92: core.AnalyzeProductionCostsResponse.items:type_name -> core.ProductionCostEntryProto
+	125, // 93: core.AnalyzeDeliveriesRequest.start_date:type_name -> google.protobuf.Timestamp
+	125, // 94: core.AnalyzeDeliveriesRequest.end_date:type_name -> google.protobuf.Timestamp
+	110, // 95: core.ChartDataPointProto.data:type_name -> core.CoordinateProto
+	111, // 96: core.DeliveryChartDataProto.on_time_delivery:type_name -> core.ChartDataPointProto
+	111, // 97: core.DeliveryChartDataProto.average_delivery_time:type_name -> core.ChartDataPointProto
+	111, // 98: core.DeliveryChartDataProto.average_first_shipment_time:type_name -> core.ChartDataPointProto
+	109, // 99: core.AnalyzeDeliveriesResponse.statistics:type_name -> core.DeliveryStatisticsProto
+	112, // 100: core.AnalyzeDeliveriesResponse.chart_data:type_name -> core.DeliveryChartDataProto
+	125, // 101: core.AnalyzeManufacturingRequest.start_date:type_name -> google.protobuf.Timestamp
+	125, // 102: core.AnalyzeManufacturingRequest.end_date:type_name -> google.protobuf.Timestamp
+	125, // 103: core.AnalyzeManufacturingBatchRequest.start_date:type_name -> google.protobuf.Timestamp
+	125, // 104: core.AnalyzeManufacturingBatchRequest.end_date:type_name -> google.protobuf.Timestamp
+	125, // 105: core.AnalyzeManufacturingBatchRequest.comparison_start_date:type_name -> google.protobuf.Timestamp
+	125, // 106: core.AnalyzeManufacturingBatchRequest.comparison_end_date:type_name -> google.protobuf.Timestamp
+	116, // 107: core.AnalyzeManufacturingBatchResponse.current:type_name -> core.ManufacturingMetricsProto
+	116, // 108: core.AnalyzeManufacturingBatchResponse.comparison:type_name -> core.ManufacturingMetricsProto
+	125, // 109: core.AnalyzeOrdersRequest.start_date:type_name -> google.protobuf.Timestamp
+	125, // 110: core.AnalyzeOrdersRequest.end_date:type_name -> google.protobuf.Timestamp
+	125, // 111: core.OrderEntryProto.issued_at:type_name -> google.protobuf.Timestamp
+	125, // 112: core.OrderEntryProto.customer_created_at:type_name -> google.protobuf.Timestamp
+	125, // 113: core.OrderEntryProto.completed_at:type_name -> google.protobuf.Timestamp
+	125, // 114: core.OrderEntryProto.first_ship_at:type_name -> google.protobuf.Timestamp
+	125, // 115: core.OrderEntryProto.promised_at:type_name -> google.protobuf.Timestamp
+	120, // 116: core.AnalyzeOrdersResponse.entries:type_name -> core.OrderEntryProto
+	117, // [117:117] is the sub-list for method output_type
+	117, // [117:117] is the sub-list for method input_type
+	117, // [117:117] is the sub-list for extension type_name
+	117, // [117:117] is the sub-list for extension extendee
+	0,   // [0:117] is the sub-list for field type_name
 }
 
 func init() { file_core_core_identity_context_proto_init() }
@@ -9964,19 +10123,20 @@ func file_core_core_identity_context_proto_init() {
 	file_core_core_identity_context_proto_msgTypes[78].OneofWrappers = []any{}
 	file_core_core_identity_context_proto_msgTypes[80].OneofWrappers = []any{}
 	file_core_core_identity_context_proto_msgTypes[84].OneofWrappers = []any{}
-	file_core_core_identity_context_proto_msgTypes[86].OneofWrappers = []any{}
-	file_core_core_identity_context_proto_msgTypes[90].OneofWrappers = []any{}
-	file_core_core_identity_context_proto_msgTypes[95].OneofWrappers = []any{}
-	file_core_core_identity_context_proto_msgTypes[98].OneofWrappers = []any{}
-	file_core_core_identity_context_proto_msgTypes[105].OneofWrappers = []any{}
+	file_core_core_identity_context_proto_msgTypes[85].OneofWrappers = []any{}
+	file_core_core_identity_context_proto_msgTypes[87].OneofWrappers = []any{}
+	file_core_core_identity_context_proto_msgTypes[91].OneofWrappers = []any{}
+	file_core_core_identity_context_proto_msgTypes[96].OneofWrappers = []any{}
+	file_core_core_identity_context_proto_msgTypes[99].OneofWrappers = []any{}
 	file_core_core_identity_context_proto_msgTypes[106].OneofWrappers = []any{}
+	file_core_core_identity_context_proto_msgTypes[107].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_core_core_identity_context_proto_rawDesc), len(file_core_core_identity_context_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   122,
+			NumMessages:   123,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

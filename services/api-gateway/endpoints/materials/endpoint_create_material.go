@@ -12,14 +12,14 @@ import (
 
 type QuantityInputRequest struct {
 	Value  string `json:"value" validate:"required"`
-	UnitID string `json:"unit_id" validate:"required"`
+	UnitID string `json:"unit_id" validate:"required,max=191"`
 }
 
 type CreateMaterialRequest struct {
-	SKU         string                `json:"sku" validate:"required"`
+	SKU         string                `json:"sku" validate:"required,max=255"`
 	Description *string               `json:"description,omitempty"`
 	Notes       *string               `json:"notes,omitempty"`
-	CategoryID  string                `json:"category_id" validate:"required"`
+	CategoryID  string                `json:"category_id" validate:"required,max=191"`
 	OrderPoint  *QuantityInputRequest `json:"order_point,omitempty"`
 	LeadTime    *QuantityInputRequest `json:"lead_time,omitempty"`
 }

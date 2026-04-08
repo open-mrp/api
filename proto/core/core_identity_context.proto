@@ -505,6 +505,18 @@ message GetCustomerRequest {
 message GetCustomerResponse {
   CustomerProto customer = 1;
 }
+message CreateCustomerAddressInput {
+  string name = 1;
+  optional string phone = 2;
+  optional string email = 3;
+  bool is_drop_ship = 4;
+  optional string street_line_1 = 5;
+  optional string street_line_2 = 6;
+  optional string locality = 7;
+  optional string state = 8;
+  optional string postal_code = 9;
+  string country = 10;
+}
 message CreateCustomerRequest {
   string name = 1;
   optional string number = 2;
@@ -528,6 +540,8 @@ message CreateCustomerRequest {
   optional string customer_type_group_id = 20;
   optional string carrier_billing_type = 21;
   optional string carrier_billing_account = 22;
+  optional CreateCustomerAddressInput bill_to_address = 23;
+  optional CreateCustomerAddressInput ship_to_address = 24;
 }
 message CreateCustomerResponse {
   CustomerProto customer = 1;

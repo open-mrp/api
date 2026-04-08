@@ -16,7 +16,7 @@ type UpdateAgentStatusRequest struct {
 	// The ID of the agent definition to update.
 	AgentDefinitionID string `path:"id" validate:"required"`
 	// The new account-level status code: "active" or "inactive".
-	StatusCode string `json:"status_code" validate:"required"`
+	StatusCode string `json:"status_code" validate:"required,max=255"`
 }
 
 var sampleUpdateAgentStatusRequest = &UpdateAgentStatusRequest{

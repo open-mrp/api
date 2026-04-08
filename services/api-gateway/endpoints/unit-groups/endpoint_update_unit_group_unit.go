@@ -18,7 +18,7 @@ type UpdateUnitGroupUnitRequest struct {
 	// The ID of the associated unit.
 	AssociatedUnitID string `path:"id" validate:"required"`
 	// The unit ID.
-	UnitID *string `json:"unit_id,omitempty"`
+	UnitID *string `json:"unit_id,omitempty" validate:"omitempty,max=191"`
 	// The discount percentage.
 	DiscountPercentage *float64 `json:"discount_percentage,omitempty"`
 	// The fixed discount amount.

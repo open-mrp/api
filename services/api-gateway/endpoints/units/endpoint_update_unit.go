@@ -16,9 +16,9 @@ type UpdateUnitRequest struct {
 	// The ID of the unit to update.
 	UnitID string `path:"id" validate:"required"`
 	// The display name of the unit.
-	Name *string `json:"name,omitempty"`
+	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
 	// The short abbreviation for the unit.
-	Abbreviation *string `json:"abbreviation,omitempty"`
+	Abbreviation *string `json:"abbreviation,omitempty" validate:"omitempty,max=191"`
 	// The conversion ratio numerator, as a decimal string.
 	RatioNumerator *string `json:"ratio_numerator,omitempty"`
 	// The conversion ratio denominator, as a decimal string.

@@ -18,13 +18,13 @@ type UpdatePurchaseOrderRequest struct {
 	// A note for the order.
 	Note *string `json:"note,omitempty"`
 	// The purchase order number.
-	Number *string `json:"number,omitempty"`
+	Number *string `json:"number,omitempty" validate:"omitempty,max=255"`
 	// The priority code.
-	PriorityCode *string `json:"priority_code,omitempty"`
+	PriorityCode *string `json:"priority_code,omitempty" validate:"omitempty,max=255"`
 	// The billing address ID.
-	BillingAddressID *string `json:"billing_address_id,omitempty" nullable:"true"`
+	BillingAddressID *string `json:"billing_address_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
 	// The shipping address ID.
-	ShippingAddressID *string `json:"shipping_address_id,omitempty" nullable:"true"`
+	ShippingAddressID *string `json:"shipping_address_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
 	// The promised/scheduled delivery date.
 	PromisedAt *string `json:"promised_at,omitempty"`
 	// The account user IDs for email contacts (replaces existing).

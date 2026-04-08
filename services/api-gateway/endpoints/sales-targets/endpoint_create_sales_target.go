@@ -22,7 +22,7 @@ type CreateSalesTargetRequest struct {
 	// The target amount value (decimal string).
 	AmountValue string `json:"amount_value"`
 	// The unit ID for the target amount.
-	AmountUnitID string `json:"amount_unit_id"`
+	AmountUnitID string `json:"amount_unit_id" validate:"max=191"`
 }
 
 var sampleCreateSalesTargetRequest = &CreateSalesTargetRequest{

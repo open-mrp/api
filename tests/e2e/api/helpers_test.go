@@ -205,6 +205,27 @@ func assertNilField(t *testing.T, m map[string]any, field string) {
 	assert.Nil(t, m[field], "%s should be null", field)
 }
 
+// validCustomerBody returns a map with all required fields for creating a customer.
+// Tests can override individual fields by writing to the returned map before posting.
+func validCustomerBody(name string) map[string]any {
+	return map[string]any{
+		"name":                     name,
+		"status_code":              "normal",
+		"default_carrier_id":       SeedCarrierID,
+		"default_payment_term_id":  SeedPaymentTermID,
+		"default_shipping_term_id": SeedShippingTermID,
+		"customer_type_group_id":   SeedCustomerGroupID,
+		"bill_to_address": map[string]any{
+			"name":    name + " Billing",
+			"country": "US",
+		},
+		"ship_to_address": map[string]any{
+			"name":    name + " Shipping",
+			"country": "US",
+		},
+	}
+}
+
 // createAndCleanup creates a resource via POST and registers t.Cleanup to delete it.
 // Returns the parsed response body. Fails the test if creation fails.
 func createAndCleanup(t *testing.T, path string, body map[string]any) map[string]any {

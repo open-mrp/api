@@ -62,9 +62,7 @@ func TestResponseHeaders_LocationOnCreate(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-hdr-loc")
 
-	resp, err := apiClient.PostFull(headersTestCustomerPath, map[string]any{
-		"name": name,
-	}, newIdempotencyKey())
+	resp, err := apiClient.PostFull(headersTestCustomerPath, validCustomerBody(name), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, resp.StatusCode, resp.Body)
 
@@ -86,7 +84,7 @@ func TestResponseHeaders_IdempotentReplayed(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-hdr-idem")
 	idemKey := newIdempotencyKey()
-	payload := map[string]any{"name": name}
+	payload := validCustomerBody(name)
 
 	resp1, err := apiClient.PostFull(headersTestCustomerPath, payload, idemKey)
 	require.NoError(t, err)

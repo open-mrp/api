@@ -15,7 +15,7 @@ type UpdateAccountIntegrationRequest struct {
 	// The ID of the account integration to update.
 	AccountIntegrationID string `path:"id" validate:"required"`
 	// The human-readable name for the integration.
-	Name *string `json:"name,omitempty"`
+	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
 	// Whether this integration is currently active.
 	IsActive *bool `json:"is_active,omitempty"`
 }

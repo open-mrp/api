@@ -19,13 +19,13 @@ type UpdateItemInventoryRequest struct {
 	// Whether to reconcile (force to exact value) or adjust (add delta).
 	Reconcile *bool `json:"reconcile,omitempty"`
 	// Optional customer to update inventory for.
-	CustomerID *string `json:"customer_id,omitempty"`
+	CustomerID *string `json:"customer_id,omitempty" validate:"omitempty,max=191"`
 	// Optional location.
-	LocationID *string `json:"location_id,omitempty"`
+	LocationID *string `json:"location_id,omitempty" validate:"omitempty,max=191"`
 	// Optional lot number.
-	LotNumber *string `json:"lot_number,omitempty"`
+	LotNumber *string `json:"lot_number,omitempty" validate:"omitempty,max=255"`
 	// The unit ID for the quantity change.
-	UnitID *string `json:"unit_id,omitempty" nullable:"false"`
+	UnitID *string `json:"unit_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
 }
 
 var sampleUpdateItemInventoryRequest = &UpdateItemInventoryRequest{

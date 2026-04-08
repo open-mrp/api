@@ -50,10 +50,7 @@ func TestSortingFiltering_FilterByCustomerTypeGroup(t *testing.T) {
 	t.Parallel()
 
 	// Create a customer with a specific type group.
-	created := createAndCleanup(t, customersPath, map[string]any{
-		"name":                   uniqueName("e2e-filt-type"),
-		"customer_type_group_id": SeedCustomerGroupID,
-	})
+	created := createAndCleanup(t, customersPath, validCustomerBody(uniqueName("e2e-filt-type")))
 	id := jsonField(created, "id")
 
 	// Filter by that type group.
@@ -78,9 +75,7 @@ func TestSortingFiltering_SearchMatchesExpected(t *testing.T) {
 
 	// Create a customer with a distinctive name.
 	distinctName := uniqueName("e2e-filt-search")
-	created := createAndCleanup(t, customersPath, map[string]any{
-		"name": distinctName,
-	})
+	created := createAndCleanup(t, customersPath, validCustomerBody(distinctName))
 	id := jsonField(created, "id")
 
 	// Search for the distinctive name.
@@ -191,10 +186,9 @@ func TestSortingFiltering_CustomerStatusFilter(t *testing.T) {
 	t.Parallel()
 
 	// Create a customer with hold_shipment status.
-	created := createAndCleanup(t, customersPath, map[string]any{
-		"name":        uniqueName("e2e-filt-status"),
-		"status_code": "hold_shipment",
-	})
+	statusPayload := validCustomerBody(uniqueName("e2e-filt-status"))
+	statusPayload["status_code"] = "hold_shipment"
+	created := createAndCleanup(t, customersPath, statusPayload)
 	id := jsonField(created, "id")
 
 	// Filter by hold_shipment — should include it.

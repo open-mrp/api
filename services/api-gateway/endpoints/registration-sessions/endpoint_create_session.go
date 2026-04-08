@@ -14,7 +14,7 @@ import (
 // The request to create a registration session
 type CreateRegistrationSessionRequest struct {
 	// The email address for the registration session.
-	Email string `json:"email" validate:"required,custom_email"`
+	Email string `json:"email" validate:"required,custom_email,max=255"`
 	// The plan code for the registration session.
 	PlanCode constants.PublicPlanCode `json:"plan_code" validate:"required"`
 }

@@ -14,11 +14,11 @@ import (
 // CreateCarrierRequest is the request to create a new carrier.
 type CreateCarrierRequest struct {
 	// The display name of the carrier.
-	Name string `json:"name" validate:"required"`
+	Name string `json:"name" validate:"required,max=255"`
 	// The carrier code.
 	Code *constants.CarrierCode `json:"code"`
 	// The carrier account number, required for UPS and USPS carriers.
-	AccountNumber *string `json:"account_number"`
+	AccountNumber *string `json:"account_number" validate:"omitempty,max=255"`
 	// Whether this carrier is visible in the customer portal.
 	CustomerPortalVisibility *constants.CustomerPortalVisibility `json:"customer_portal_visibility,omitempty" default:"visible" nullable:"false"`
 }

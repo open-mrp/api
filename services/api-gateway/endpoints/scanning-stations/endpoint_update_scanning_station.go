@@ -16,7 +16,7 @@ type UpdateScanningStationRequest struct {
 	// The ID of the scanning station to update.
 	ScanningStationID string `path:"id" validate:"required"`
 	// The display name of the scanning station.
-	Name *string `json:"name,omitempty"`
+	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
 	// Optional notes about the scanning station.
 	Notes *string `json:"notes,omitempty"`
 	// The label size code for the scanning station.

@@ -36,9 +36,7 @@ func TestTenantIsolation_GetByID(t *testing.T) {
 	clientB := getTenantBClient()
 
 	// Create a resource in tenant A.
-	created := createAndCleanup(t, customersPath, map[string]any{
-		"name": uniqueName("e2e-iso-get"),
-	})
+	created := createAndCleanup(t, customersPath, validCustomerBody(uniqueName("e2e-iso-get")))
 	id := jsonField(created, "id")
 
 	// Attempt to GET it from tenant B.
@@ -54,9 +52,7 @@ func TestTenantIsolation_UpdateByID(t *testing.T) {
 	t.Parallel()
 	clientB := getTenantBClient()
 
-	created := createAndCleanup(t, customersPath, map[string]any{
-		"name": uniqueName("e2e-iso-patch"),
-	})
+	created := createAndCleanup(t, customersPath, validCustomerBody(uniqueName("e2e-iso-patch")))
 	id := jsonField(created, "id")
 
 	statusCode, body, err := clientB.Patch(customersPath+"/"+id, map[string]any{
@@ -73,9 +69,7 @@ func TestTenantIsolation_DeleteByID(t *testing.T) {
 	t.Parallel()
 	clientB := getTenantBClient()
 
-	created := createAndCleanup(t, customersPath, map[string]any{
-		"name": uniqueName("e2e-iso-delete"),
-	})
+	created := createAndCleanup(t, customersPath, validCustomerBody(uniqueName("e2e-iso-delete")))
 	id := jsonField(created, "id")
 
 	statusCode, body, err := clientB.Delete(customersPath + "/" + id)
@@ -97,9 +91,7 @@ func TestTenantIsolation_ListDoesNotLeak(t *testing.T) {
 
 	// Create a resource with a distinctive name in tenant A.
 	distinctName := uniqueName("e2e-iso-leak")
-	createAndCleanup(t, customersPath, map[string]any{
-		"name": distinctName,
-	})
+	createAndCleanup(t, customersPath, validCustomerBody(distinctName))
 
 	// List from tenant B with search for the distinctive name.
 	list, _, err := clientB.GetList(customersPath, url.Values{"q": {distinctName}})

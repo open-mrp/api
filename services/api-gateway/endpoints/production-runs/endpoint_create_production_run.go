@@ -14,7 +14,7 @@ import (
 // CreateProductionRunRequest is the request to create a new production run.
 type CreateProductionRunRequest struct {
 	// The user ID of the user responsible for this production run.
-	ResponsibleUserID string `json:"responsible_user_id" validate:"required"`
+	ResponsibleUserID string `json:"responsible_user_id" validate:"required,max=191"`
 }
 
 var sampleCreateProductionRunRequest = &CreateProductionRunRequest{

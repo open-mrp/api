@@ -14,7 +14,7 @@ import (
 // CreateAccountIntegrationRequest is the request to create or upsert an account integration.
 type CreateAccountIntegrationRequest struct {
 	// The human-readable name for the integration.
-	Name string `json:"name" validate:"required"`
+	Name string `json:"name" validate:"required,max=255"`
 	// The integration provider code (e.g. "stripe", "shippo").
 	IntegrationCode constants.IntegrationCode `json:"integration_code" validate:"required"`
 	// The credentials JSON string containing provider-specific keys.

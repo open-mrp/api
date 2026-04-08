@@ -14,7 +14,7 @@ import (
 // CreateAccountGroupRequest is the request to create a new account group.
 type CreateAccountGroupRequest struct {
 	// The display name of the account group.
-	Name string `json:"name" validate:"required"`
+	Name string `json:"name" validate:"required,max=255"`
 	// The account group type code.
 	Type constants.AccountGroupType `json:"type" validate:"required"`
 	// The commission status code.

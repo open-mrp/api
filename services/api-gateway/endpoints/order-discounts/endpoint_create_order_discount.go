@@ -13,15 +13,15 @@ import (
 // CreateOrderDiscountRequest is the request to create a new order discount.
 type CreateOrderDiscountRequest struct {
 	// The display name of the discount.
-	Name string `json:"name" validate:"required"`
+	Name string `json:"name" validate:"required,max=255"`
 	// The unique code for this discount.
-	Code string `json:"code" validate:"required"`
+	Code string `json:"code" validate:"required,max=255"`
 	// The percentage value of the discount as a decimal string. Required when discount_type is "percentage".
 	Percentage *string `json:"percentage,omitempty" format:"decimal"`
 	// The fixed amount of the discount as a decimal string. Required when discount_type is "amount".
 	Amount *string `json:"amount,omitempty" format:"decimal"`
 	// The type of discount: "percentage" or "amount".
-	DiscountType string `json:"discount_type" validate:"required"`
+	DiscountType string `json:"discount_type" validate:"required,max=255"`
 }
 
 var sampleCreateOrderDiscountRequest = &CreateOrderDiscountRequest{

@@ -16,7 +16,7 @@ type UpdatePickRequest struct {
 	// The ID of the pick to update.
 	PickID string `path:"id" validate:"required"`
 	// The pick number.
-	Number *string `json:"number,omitempty"`
+	Number *string `json:"number,omitempty" validate:"omitempty,max=255"`
 	// The timestamp when the pick was finished. Pass an empty string to clear.
 	FinishedAt *string `json:"finished_at,omitempty"`
 }

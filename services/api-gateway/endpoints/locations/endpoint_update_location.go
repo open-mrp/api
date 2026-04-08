@@ -16,11 +16,11 @@ type UpdateLocationRequest struct {
 	// The ID of the location to update.
 	LocationID string `path:"id" validate:"required"`
 	// The display name of the location.
-	Name *string `json:"name,omitempty"`
+	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
 	// The code of the location type.
 	TypeCode *constants.LocationTypeCode `json:"type_code,omitempty" nullable:"false"`
 	// The ID of the parent location. Send null to clear.
-	ParentID *string `json:"parent_id,omitempty" nullable:"true"`
+	ParentID *string `json:"parent_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
 	// Set to true to remove the parent (make top-level).
 	ClearParent bool `json:"clear_parent"`
 	// The IDs of child locations. When provided, replaces all current children.

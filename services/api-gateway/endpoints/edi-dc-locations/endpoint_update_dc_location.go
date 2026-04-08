@@ -15,9 +15,9 @@ type UpdateDCLocationRequest struct {
 	// The ID of the DC location to update.
 	DCLocationID string `path:"id" validate:"required"`
 	// The ID of the customer account to associate with this DC location.
-	CustomerID *string `json:"customer_id,omitempty" nullable:"true"`
+	CustomerID *string `json:"customer_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
 	// The location description.
-	Location *string `json:"location,omitempty"`
+	Location *string `json:"location,omitempty" validate:"omitempty,max=255"`
 }
 
 var sampleUpdateDCLocationLocation = "Warehouse B - Bay 1"

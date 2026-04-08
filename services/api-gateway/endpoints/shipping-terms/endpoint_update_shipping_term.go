@@ -20,7 +20,7 @@ type UpdateShippingTermRequest struct {
 	// The ID of the shipping term to update.
 	ShippingTermID string `path:"id" validate:"required"`
 	// The display name of the shipping term.
-	Name *string `json:"name,omitempty"`
+	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
 	// The shipping term type.
 	Type *constants.ShippingTermType `json:"type,omitempty" nullable:"false"`
 	// The flat rate for this shipping term. Send null to clear.

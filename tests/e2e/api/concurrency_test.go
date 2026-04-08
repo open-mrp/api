@@ -18,9 +18,7 @@ import (
 func TestConcurrency_ParallelPatchSameResource(t *testing.T) {
 	t.Parallel()
 
-	created := createAndCleanup(t, customersPath, map[string]any{
-		"name": uniqueName("e2e-conc-patch"),
-	})
+	created := createAndCleanup(t, customersPath, validCustomerBody(uniqueName("e2e-conc-patch")))
 	id := jsonField(created, "id")
 	path := customersPath + "/" + id
 
@@ -69,9 +67,7 @@ func TestConcurrency_ParallelCreateSameIdempotencyKey(t *testing.T) {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()
-			status, body, err := apiClient.Post(customersPath, map[string]any{
-				"name": name,
-			}, idemKey)
+			status, body, err := apiClient.Post(customersPath, validCustomerBody(name), idemKey)
 			statuses[idx] = status
 			bodies[idx] = body
 			errs[idx] = err
@@ -122,9 +118,7 @@ func TestConcurrency_ParallelCreateDifferentResources(t *testing.T) {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()
-			status, body, err := apiClient.Post(customersPath, map[string]any{
-				"name": uniqueName("e2e-conc-burst"),
-			}, newIdempotencyKey())
+			status, body, err := apiClient.Post(customersPath, validCustomerBody(uniqueName("e2e-conc-burst")), newIdempotencyKey())
 			statuses[idx] = status
 			bodies[idx] = body
 			errs[idx] = err

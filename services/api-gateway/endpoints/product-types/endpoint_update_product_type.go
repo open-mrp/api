@@ -15,9 +15,9 @@ type UpdateProductTypeRequest struct {
 	// The ID of the product type to update.
 	ProductTypeID string `path:"id" validate:"required"`
 	// The display name of the product type.
-	Name *string `json:"name,omitempty"`
+	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
 	// The unique code for the product type.
-	Code *string `json:"code,omitempty"`
+	Code *string `json:"code,omitempty" validate:"omitempty,max=255"`
 }
 
 var sampleUpdateProductTypeRequest = &UpdateProductTypeRequest{

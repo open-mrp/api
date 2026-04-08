@@ -16,15 +16,15 @@ type CreateTerritoryRequest struct {
 	// The ID of the account to create the territory for.
 	AccountID string `path:"account_id" validate:"required"`
 	// The state this territory covers.
-	State string `json:"state" validate:"required"`
+	State string `json:"state" validate:"required,max=255"`
 	// The start of the zipcode range (501-99999).
 	StartZipcode *int32 `json:"start_zipcode,omitempty"`
 	// The end of the zipcode range (501-99999).
 	EndZipcode *int32 `json:"end_zipcode,omitempty"`
 	// The ID of the sales rep (account user) assigned to this territory.
-	SalesRepID string `json:"sales_rep_id" validate:"required"`
+	SalesRepID string `json:"sales_rep_id" validate:"required,max=191"`
 	// The ID of the product line this territory is scoped to.
-	ProductLineID *string `json:"product_line_id,omitempty"`
+	ProductLineID *string `json:"product_line_id,omitempty" validate:"omitempty,max=191"`
 }
 
 var sampleCreateStartZipcode int32 = 10001

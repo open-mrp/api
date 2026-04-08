@@ -1,0 +1,17 @@
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  disable-all: true
+  enable:
+    - gosec
+    - staticcheck
+
+issues:
+  exclude-generated: strict
+  exclude-dirs:
+    - sqlc
+    - proto
+    - tools

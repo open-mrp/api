@@ -16,7 +16,7 @@ type UpdateAccountGroupRequest struct {
 	// The ID of the account group to update.
 	AccountGroupID string `path:"id" validate:"required"`
 	// The display name of the account group.
-	Name *string `json:"name,omitempty" nullable:"false"`
+	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// An optional description of the account group.
 	Description *string `json:"description,omitempty"`
 	// The commission status code.

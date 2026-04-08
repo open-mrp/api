@@ -300,12 +300,17 @@ func (h *gRPCHandler) CreateCustomer(ctx context.Context, req *pb.CreateCustomer
 		DefaultShippingTermID: req.DefaultShippingTermId,
 		DefaultPriorityCode:   req.DefaultPriorityCode,
 		DefaultSalesRepUserID: req.DefaultSalesRepUserId,
-		BillToAddressID:       req.BillToAddressId,
-		ShipToAddressID:       req.ShipToAddressId,
 		CustomerPriceGroupIDs: req.CustomerPriceGroupIds,
 		CustomerTypeGroupID:   req.CustomerTypeGroupId,
 		CarrierBillingType:    req.CarrierBillingType,
 		CarrierBillingAccount: req.CarrierBillingAccount,
+	}
+
+	if req.BillToAddress != nil {
+		params.BillToAddress = protoCustomerAddressInputToCreateParams(req.BillToAddress)
+	}
+	if req.ShipToAddress != nil {
+		params.ShipToAddress = protoCustomerAddressInputToCreateParams(req.ShipToAddress)
 	}
 
 	customer, apiErr := h.customerSvc.CreateCustomer(ctx, params)
@@ -442,4 +447,22 @@ func (h *gRPCHandler) MergeCustomers(ctx context.Context, req *pb.MergeCustomers
 	return &pb.MergeCustomersResponse{
 		Customer: customerToProto(customer),
 	}, nil
+}
+
+func protoCustomerAddressInputToCreateParams(input *pb.CreateCustomerAddressInput) *domain.CreateAddressParams {
+	if input == nil {
+		return nil
+	}
+	return &domain.CreateAddressParams{
+		Name:        input.Name,
+		Phone:       input.Phone,
+		Email:       input.Email,
+		IsDropShip:  input.IsDropShip,
+		StreetLine1: input.StreetLine_1,
+		StreetLine2: input.StreetLine_2,
+		Locality:    input.Locality,
+		State:       input.State,
+		PostalCode:  input.PostalCode,
+		Country:     input.Country,
+	}
 }

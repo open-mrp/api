@@ -15,59 +15,59 @@ import (
 // CreateSalesOrderRequest is the request to create a new sales order.
 type CreateSalesOrderRequest struct {
 	// The customer account ID.
-	BuyerAccountID string `json:"buyer_account_id" validate:"required"`
+	BuyerAccountID string `json:"buyer_account_id" validate:"required,max=191"`
 	// The customer purchase order number.
-	CustomerPONumber *string `json:"customer_po_number,omitempty"`
+	CustomerPONumber *string `json:"customer_po_number,omitempty" validate:"omitempty,max=255"`
 	// A note for the order.
 	Note *string `json:"note,omitempty"`
 	// The carrier ID.
-	CarrierID *string `json:"carrier_id,omitempty"`
+	CarrierID *string `json:"carrier_id,omitempty" validate:"omitempty,max=191"`
 	// The service level ID.
-	ServiceLevelID *string `json:"service_level_id,omitempty"`
+	ServiceLevelID *string `json:"service_level_id,omitempty" validate:"omitempty,max=191"`
 	// The carrier billing type.
-	CarrierBillingType *string `json:"carrier_billing_type,omitempty"`
+	CarrierBillingType *string `json:"carrier_billing_type,omitempty" validate:"omitempty,max=255"`
 	// The carrier billing account number.
-	CarrierBillingAccount *string `json:"carrier_billing_account,omitempty"`
+	CarrierBillingAccount *string `json:"carrier_billing_account,omitempty" validate:"omitempty,max=255"`
 	// The priority code.
-	PriorityCode string `json:"priority_code" validate:"required"`
+	PriorityCode string `json:"priority_code" validate:"required,max=255"`
 	// The sales rep ID.
-	SalesRepID *string `json:"sales_rep_id,omitempty"`
+	SalesRepID *string `json:"sales_rep_id,omitempty" validate:"omitempty,max=191"`
 	// The shipping term ID.
-	ShippingTermID *string `json:"shipping_term_id,omitempty"`
+	ShippingTermID *string `json:"shipping_term_id,omitempty" validate:"omitempty,max=191"`
 	// The sales order type code.
-	SalesOrderTypeCode string `json:"sales_order_type_code" validate:"required"`
+	SalesOrderTypeCode string `json:"sales_order_type_code" validate:"required,max=255"`
 	// The payment term ID.
-	PaymentTermID *string `json:"payment_term_id,omitempty"`
+	PaymentTermID *string `json:"payment_term_id,omitempty" validate:"omitempty,max=191"`
 	// The order discount ID.
-	OrderDiscountID *string `json:"order_discount_id,omitempty"`
+	OrderDiscountID *string `json:"order_discount_id,omitempty" validate:"omitempty,max=191"`
 	// Bill-to address name.
-	BillToName *string `json:"bill_to_name,omitempty"`
+	BillToName *string `json:"bill_to_name,omitempty" validate:"omitempty,max=255"`
 	// Bill-to street line 1.
-	BillToStreetLine1 *string `json:"bill_to_street_line_1,omitempty"`
+	BillToStreetLine1 *string `json:"bill_to_street_line_1,omitempty" validate:"omitempty,max=255"`
 	// Bill-to street line 2.
-	BillToStreetLine2 *string `json:"bill_to_street_line_2,omitempty"`
+	BillToStreetLine2 *string `json:"bill_to_street_line_2,omitempty" validate:"omitempty,max=255"`
 	// Bill-to locality/city.
-	BillToLocality *string `json:"bill_to_locality,omitempty"`
+	BillToLocality *string `json:"bill_to_locality,omitempty" validate:"omitempty,max=255"`
 	// Bill-to state/province.
-	BillToState *string `json:"bill_to_state,omitempty"`
+	BillToState *string `json:"bill_to_state,omitempty" validate:"omitempty,max=255"`
 	// Bill-to postal code.
-	BillToPostalCode *string `json:"bill_to_postal_code,omitempty"`
+	BillToPostalCode *string `json:"bill_to_postal_code,omitempty" validate:"omitempty,max=255"`
 	// Bill-to country.
-	BillToCountry *string `json:"bill_to_country,omitempty"`
+	BillToCountry *string `json:"bill_to_country,omitempty" validate:"omitempty,max=2"`
 	// Ship-to address name.
-	ShipToName *string `json:"ship_to_name,omitempty"`
+	ShipToName *string `json:"ship_to_name,omitempty" validate:"omitempty,max=255"`
 	// Ship-to street line 1.
-	ShipToStreetLine1 *string `json:"ship_to_street_line_1,omitempty"`
+	ShipToStreetLine1 *string `json:"ship_to_street_line_1,omitempty" validate:"omitempty,max=255"`
 	// Ship-to street line 2.
-	ShipToStreetLine2 *string `json:"ship_to_street_line_2,omitempty"`
+	ShipToStreetLine2 *string `json:"ship_to_street_line_2,omitempty" validate:"omitempty,max=255"`
 	// Ship-to locality/city.
-	ShipToLocality *string `json:"ship_to_locality,omitempty"`
+	ShipToLocality *string `json:"ship_to_locality,omitempty" validate:"omitempty,max=255"`
 	// Ship-to state/province.
-	ShipToState *string `json:"ship_to_state,omitempty"`
+	ShipToState *string `json:"ship_to_state,omitempty" validate:"omitempty,max=255"`
 	// Ship-to postal code.
-	ShipToPostalCode *string `json:"ship_to_postal_code,omitempty"`
+	ShipToPostalCode *string `json:"ship_to_postal_code,omitempty" validate:"omitempty,max=255"`
 	// Ship-to country.
-	ShipToCountry *string `json:"ship_to_country,omitempty"`
+	ShipToCountry *string `json:"ship_to_country,omitempty" validate:"omitempty,max=2"`
 	// The order lines to create.
 	Lines []CreateSalesOrderLineInput `json:"lines"`
 }
@@ -76,7 +76,7 @@ type CreateSalesOrderRequest struct {
 type CreateSalesOrderLineInput struct {
 	apirequest.OrderLineInput
 	// The EDI line item ID.
-	EdiLineItemID *string `json:"edi_line_item_id,omitempty"`
+	EdiLineItemID *string `json:"edi_line_item_id,omitempty" validate:"omitempty,max=191"`
 }
 
 var sampleCreateSONote = "Rush order for trade show"

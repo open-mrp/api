@@ -15,17 +15,17 @@ type UpdateTransactionRequest struct {
 	// The ID of the transaction to update.
 	TransactionID string `path:"id" validate:"required"`
 	// The new transaction number.
-	Number *string `json:"number"`
+	Number *string `json:"number" validate:"omitempty,max=255"`
 	// The new note for this transaction.
 	Note *string `json:"note"`
 	// The new amount as a decimal string.
 	Amount *string `json:"amount"`
 	// The new transaction method code.
-	TransactionMethodCode *string `json:"transaction_method_code"`
+	TransactionMethodCode *string `json:"transaction_method_code" validate:"omitempty,max=255"`
 	// The new adjustment type code.
-	AdjustmentTypeCode *string `json:"adjustment_type_code"`
+	AdjustmentTypeCode *string `json:"adjustment_type_code" validate:"omitempty,max=255"`
 	// The new responsible user ID.
-	ResponsibleUserID *string `json:"responsible_user_id"`
+	ResponsibleUserID *string `json:"responsible_user_id" validate:"omitempty,max=191"`
 	// Set to true to clear the responsible user.
 	ClearResponsibleUser bool `json:"clear_responsible_user"`
 	// Set to true to clear the transaction method.

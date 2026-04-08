@@ -16,13 +16,13 @@ type QuantityInputRequest struct {
 	// The decimal value.
 	Value string `json:"value" validate:"required"`
 	// The unit ID for the value.
-	UnitID string `json:"unit_id" validate:"required"`
+	UnitID string `json:"unit_id" validate:"required,max=191"`
 }
 
 // CreateShippingTermRequest is the request to create a new shipping term.
 type CreateShippingTermRequest struct {
 	// The display name of the shipping term.
-	Name string `json:"name" validate:"required"`
+	Name string `json:"name" validate:"required,max=255"`
 	// The shipping term type.
 	Type constants.ShippingTermType `json:"type" validate:"required"`
 	// The flat rate for this shipping term.

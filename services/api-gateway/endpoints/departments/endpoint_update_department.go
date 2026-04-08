@@ -15,11 +15,11 @@ type UpdateDepartmentRequest struct {
 	// The ID of the department to update.
 	DepartmentID string `path:"id" validate:"required"`
 	// The display name of the department.
-	Name *string `json:"name,omitempty"`
+	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
 	// Optional notes about the department.
 	Notes *string `json:"notes,omitempty"`
 	// The ID of the storage location to associate with this department.
-	LocationID *string `json:"location_id,omitempty" nullable:"true"`
+	LocationID *string `json:"location_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
 	// IDs of scanning stations to connect to this department (additive).
 	ScanningStationIDs []string `json:"scanning_station_ids,omitempty"`
 	// IDs of machines to connect to this department (additive).

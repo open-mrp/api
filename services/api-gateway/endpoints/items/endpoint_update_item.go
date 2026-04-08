@@ -16,7 +16,7 @@ type UpdateItemRequest struct {
 	// The ID of the item to update.
 	ItemID string `path:"id" validate:"required"`
 	// The item SKU.
-	SKU *string `json:"sku,omitempty"`
+	SKU *string `json:"sku,omitempty" validate:"omitempty,max=255"`
 	// The item description.
 	Description *string `json:"description"`
 	// Optional notes about the item.

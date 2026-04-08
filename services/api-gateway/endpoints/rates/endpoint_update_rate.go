@@ -18,13 +18,13 @@ type UpdateRateRequest struct {
 	// The new decimal value of the rate.
 	Value *string `json:"value,omitempty"`
 	// The new numerator unit ID for this rate.
-	NumeratorUnitID *string `json:"numerator_unit_id,omitempty"`
+	NumeratorUnitID *string `json:"numerator_unit_id,omitempty" validate:"omitempty,max=191"`
 	// The new denominator unit ID for this rate.
-	DenominatorUnitID *string `json:"denominator_unit_id,omitempty"`
+	DenominatorUnitID *string `json:"denominator_unit_id,omitempty" validate:"omitempty,max=191"`
 	// The ID of the parent resource that owns this rate.
-	ObjectID *string `json:"object_id,omitempty" nullable:"false"`
+	ObjectID *string `json:"object_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
 	// The type of the parent resource (e.g. "item", "production_step").
-	ObjectType *string `json:"object_type,omitempty" nullable:"false"`
+	ObjectType *string `json:"object_type,omitempty" nullable:"false" validate:"omitempty,max=255"`
 }
 
 var sampleUpdateRateValue = apiresource.SampleRateValue

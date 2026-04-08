@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
+	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
@@ -26,7 +27,7 @@ type CreateCustomerRequest struct {
 	// The customer website URL.
 	URL *string `json:"url,omitempty" validate:"omitempty,max=255"`
 	// The account status code.
-	StatusCode *constants.AccountStatusCode `json:"status_code,omitempty"`
+	StatusCode *constants.AccountStatusCode `json:"status_code" validate:"required"`
 	// Whether the customer is EDI enabled.
 	IsEdiEnabled *bool `json:"is_edi_enabled,omitempty"`
 	// The commission policy for this customer.
@@ -34,39 +35,65 @@ type CreateCustomerRequest struct {
 	// The freight policy for this customer.
 	FreightPolicy *constants.FreightPolicy `json:"freight_policy,omitempty" nullable:"false"`
 	// The default carrier ID.
-	DefaultCarrierID *string `json:"default_carrier_id,omitempty"`
+	DefaultCarrierID *string `json:"default_carrier_id" validate:"required,max=191"`
 	// The default service level ID.
-	DefaultServiceLevelID *string `json:"default_service_level_id,omitempty"`
+	DefaultServiceLevelID *string `json:"default_service_level_id,omitempty" validate:"omitempty,max=191"`
 	// The default payment term ID.
-	DefaultPaymentTermID *string `json:"default_payment_term_id,omitempty"`
+	DefaultPaymentTermID *string `json:"default_payment_term_id" validate:"required,max=191"`
 	// The default shipping term ID.
-	DefaultShippingTermID *string `json:"default_shipping_term_id,omitempty"`
+	DefaultShippingTermID *string `json:"default_shipping_term_id" validate:"required,max=191"`
 	// The default priority code.
 	DefaultPriorityCode *constants.PriorityCode `json:"default_priority_code,omitempty"`
 	// The default sales rep user ID.
-	DefaultSalesRepUserID *string `json:"default_sales_rep_user_id,omitempty"`
-	// The bill-to address ID.
-	BillToAddressID *string `json:"bill_to_address_id,omitempty"`
-	// The ship-to address ID.
-	ShipToAddressID *string `json:"ship_to_address_id,omitempty"`
+	DefaultSalesRepUserID *string `json:"default_sales_rep_user_id,omitempty" validate:"omitempty,max=191"`
 	// The customer price group IDs.
 	CustomerPriceGroupIDs []string `json:"customer_price_group_ids,omitempty"`
 	// The customer type group ID.
-	CustomerTypeGroupID *string `json:"customer_type_group_id,omitempty"`
+	CustomerTypeGroupID *string `json:"customer_type_group_id" validate:"required,max=191"`
 	// The carrier billing type.
 	CarrierBillingType *constants.CarrierBillingType `json:"carrier_billing_type,omitempty"`
 	// The carrier billing account number.
 	CarrierBillingAccount *string `json:"carrier_billing_account,omitempty" validate:"omitempty,max=255"`
+	// The bill-to address for this customer.
+	BillToAddress *apirequest.AddressInput `json:"bill_to_address" validate:"required"`
+	// The ship-to address for this customer.
+	ShipToAddress *apirequest.AddressInput `json:"ship_to_address" validate:"required"`
 }
 
 var sampleCreateCustomerNote = "Key enterprise account"
+var sampleCreateCustomerStatusCode = constants.AccountStatusCodeNormal
 var sampleCreateCustomerDefaultCarrierID = apiresource.SampleCarrierID
 var sampleCreateCustomerDefaultPaymentTermID = apiresource.SamplePaymentTermID
+var sampleCreateCustomerDefaultShippingTermID = apiresource.SampleShippingTermID
+var sampleCreateCustomerCustomerTypeGroupID = apiresource.SampleAccountGroupID
+var sampleCreateCustomerStreetLine1 = "123 Main St"
+var sampleCreateCustomerLocality = "New York"
+var sampleCreateCustomerState = "NY"
+var sampleCreateCustomerPostalCode = "10001"
 var sampleCreateCustomerRequest = &CreateCustomerRequest{
-	Name:                 apiresource.SampleCustomerName,
-	Note:                 &sampleCreateCustomerNote,
-	DefaultCarrierID:     &sampleCreateCustomerDefaultCarrierID,
-	DefaultPaymentTermID: &sampleCreateCustomerDefaultPaymentTermID,
+	Name:                  apiresource.SampleCustomerName,
+	Note:                  &sampleCreateCustomerNote,
+	StatusCode:            &sampleCreateCustomerStatusCode,
+	DefaultCarrierID:      &sampleCreateCustomerDefaultCarrierID,
+	DefaultPaymentTermID:  &sampleCreateCustomerDefaultPaymentTermID,
+	DefaultShippingTermID: &sampleCreateCustomerDefaultShippingTermID,
+	CustomerTypeGroupID:   &sampleCreateCustomerCustomerTypeGroupID,
+	BillToAddress: &apirequest.AddressInput{
+		Name:        apiresource.SampleCustomerName,
+		StreetLine1: &sampleCreateCustomerStreetLine1,
+		Locality:    &sampleCreateCustomerLocality,
+		State:       &sampleCreateCustomerState,
+		PostalCode:  &sampleCreateCustomerPostalCode,
+		Country:     "US",
+	},
+	ShipToAddress: &apirequest.AddressInput{
+		Name:        apiresource.SampleCustomerName,
+		StreetLine1: &sampleCreateCustomerStreetLine1,
+		Locality:    &sampleCreateCustomerLocality,
+		State:       &sampleCreateCustomerState,
+		PostalCode:  &sampleCreateCustomerPostalCode,
+		Country:     "US",
+	},
 }
 
 func (*CreateCustomerRequest) SchemaExample() any {

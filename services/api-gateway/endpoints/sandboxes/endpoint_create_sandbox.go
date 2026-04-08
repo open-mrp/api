@@ -14,7 +14,7 @@ import (
 // The request to create a sandbox.
 type CreateSandboxRequest struct {
 	// The display name for the sandbox.
-	Name string `json:"name" validate:"required"`
+	Name string `json:"name" validate:"required,max=255"`
 	// Controls whether the sandbox is blank or seeded with tutorial data.
 	Mode constants.SandboxMode `json:"mode,omitempty" validate:"omitempty"`
 }

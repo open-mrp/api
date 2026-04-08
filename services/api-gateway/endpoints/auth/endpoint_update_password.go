@@ -13,9 +13,9 @@ import (
 // The request to update a user's password
 type UpdatePasswordRequest struct {
 	// The user's current password.
-	OldPassword string `json:"old_password" validate:"required,password"`
+	OldPassword string `json:"old_password" validate:"required,password,max=255"`
 	// The new password to be set.
-	NewPassword string `json:"new_password" validate:"required,password"`
+	NewPassword string `json:"new_password" validate:"required,password,max=255"`
 }
 
 var sampleUpdatePasswordRequest = &UpdatePasswordRequest{

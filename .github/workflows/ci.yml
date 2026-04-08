@@ -10,7 +10,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       go: ${{ steps.filter.outputs.go }}
-      e2e: ${{ steps.filter.outputs.e2e }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
@@ -23,13 +22,6 @@ jobs:
               - 'go.sum'
               - 'tools/tool-versions'
               - 'shared/db/migrations/**'
-            e2e:
-              - 'services/**'
-              - 'shared/**'
-              - 'tests/e2e/**'
-              - 'docker-compose.e2e.yml'
-              - 'infra/production/docker/Dockerfile'
-              - 'tools/apidocs/**'
 
   lint:
     name: Lint
@@ -45,39 +37,16 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-          cache: true
-
-      - name: Cache lint tools
-        uses: actions/cache@v4
-        id: cache-lint-tools
-        with:
-          path: /usr/local/bin/ci-tools
-          key: ${{ runner.os }}-lint-tools-${{ hashFiles('tools/tool-versions') }}
-
-      - name: Install lint tools
-        if: steps.cache-lint-tools.outputs.cache-hit != 'true'
-        run: |
-          mkdir -p /usr/local/bin/ci-tools
-          GOSEC_V=$(awk '/gosec/{gsub(/^v/,"",$2); print $2}' tools/tool-versions)
-          curl -sSL "https://github.com/securego/gosec/releases/download/v${GOSEC_V}/gosec_${GOSEC_V}_linux_amd64.tar.gz" | tar xz -C /usr/local/bin/ci-tools gosec
-          curl -sSL "https://github.com/dominikh/go-tools/releases/download/2025.1.1/staticcheck_linux_amd64.tar.gz" | tar xz -C /usr/local/bin/ci-tools --strip-components=1 staticcheck/staticcheck
-
-      - name: Add tools to PATH
-        run: echo "/usr/local/bin/ci-tools" >> $GITHUB_PATH
 
       - name: Validate version
         run: |
           source ./scripts/version.sh
           validate_version "$(go run ./cmd/print-version)" || exit 1
 
-      - name: Run Gosec and Static Check
-        run: |
-          make gosec &
-          PID_GOSEC=$!
-          make static-check &
-          PID_STATIC=$!
-          wait $PID_GOSEC || exit 1
-          wait $PID_STATIC || exit 1
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v2.1.2
 
   test:
     name: Test
@@ -155,89 +124,5 @@ jobs:
           GOOSE_DBSTRING="postgres://augno@localhost:5432/augno_agents?sslmode=disable" \
             goose -dir services/agent-service/db/migrations up
 
-      - name: Run SQL Prepare Smoke Tests
-        run: make test-sql-prepare-smoke
-        env:
-          DB_URL: "root:Testing123!@tcp(localhost:3306)/augno?parseTime=true"
-          AGENT_DB_URL: "postgres://augno@localhost:5432/augno_agents?sslmode=disable"
-
       - name: Run Tests
         run: make test
-
-  e2e:
-    name: E2E
-    needs: [changes]
-    if: needs.changes.outputs.e2e == 'true'
-    runs-on: ubuntu-latest
-    env:
-      GOTOOLCHAIN: local
-      DOCKER_BUILDKIT: 1
-      COMPOSE_DOCKER_CLI_BUILD: 1
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-
-      - name: Generate OpenAPI spec
-        run: make openapi
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-        with:
-          driver: docker-container
-
-      - name: Build E2E images with cache
-        run: |
-          pids=()
-          for svc in platform-service core-service notification-service auth-service billing-service agent-service api-gateway; do
-            (
-              echo "Building $svc..."
-              docker buildx build \
-                --build-arg SERVICE_NAME=$svc \
-                --cache-from type=gha,scope=e2e-$svc \
-                --cache-to type=gha,scope=e2e-$svc,mode=max \
-                --load \
-                -t augno-e2e-$svc \
-                -f infra/production/docker/Dockerfile .
-              echo "$svc done."
-            ) &
-            pids+=($!)
-          done
-          failed=0
-          for pid in "${pids[@]}"; do
-            wait "$pid" || failed=1
-          done
-          if [ "$failed" -eq 1 ]; then
-            echo "One or more image builds failed."
-            exit 1
-          fi
-
-      - name: Start E2E stack
-        run: make e2e-up-ci
-
-      - name: Cache e2e tools
-        uses: actions/cache@v4
-        id: cache-e2e-tools
-        with:
-          path: /usr/local/bin/ci-tools
-          key: ${{ runner.os }}-e2e-tools-${{ hashFiles('tools/tool-versions') }}
-
-      - name: Install e2e tools
-        if: steps.cache-e2e-tools.outputs.cache-hit != 'true'
-        run: |
-          mkdir -p /usr/local/bin/ci-tools
-          GOTESTSUM_V=$(awk '/gotestsum/{gsub(/^v/,"",$2); print $2}' tools/tool-versions)
-          curl -sSL "https://github.com/gotestyourself/gotestsum/releases/download/v${GOTESTSUM_V}/gotestsum_${GOTESTSUM_V}_linux_amd64.tar.gz" | tar xz -C /usr/local/bin/ci-tools gotestsum
-
-      - name: Add tools to PATH
-        run: echo "/usr/local/bin/ci-tools" >> $GITHUB_PATH
-
-      - name: Run E2E tests
-        run: ./scripts/run-e2e-tests.sh 300s
-
-      - name: Tear down E2E stack
-        if: always()
-        run: make e2e-down

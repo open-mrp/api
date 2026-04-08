@@ -24,7 +24,7 @@ func TestInputValidation_RequiredField_Customer(t *testing.T) {
 	status, body, err := apiClient.Post(customersPath, map[string]any{}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
-	errObj := requireErrorResponse(t, body, "missing_field", "invalid_request_error")
+	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "name")
 }
 
@@ -135,9 +135,10 @@ func TestInputValidation_LongStringAccepted(t *testing.T) {
 	t.Parallel()
 	// 255 chars is the DB max for name — should be accepted.
 	longName := strings.Repeat("a", 255)
-	status, body, err := apiClient.Post(customersPath, map[string]any{
-		"name": longName,
-	}, newIdempotencyKey())
+	payload := validCustomerBody(longName)
+	payload["bill_to_address"] = map[string]any{"name": "Billing", "country": "US"}
+	payload["ship_to_address"] = map[string]any{"name": "Shipping", "country": "US"}
+	status, body, err := apiClient.Post(customersPath, payload, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
 	apiClient.Delete(customersPath + "/" + jsonField(parseJSON(body), "id"))
@@ -152,7 +153,7 @@ func TestInputValidation_ExtremelyLongString_Rejected(t *testing.T) {
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
-	requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
+	requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 }
 
 func TestInputValidation_UnicodeString(t *testing.T) {

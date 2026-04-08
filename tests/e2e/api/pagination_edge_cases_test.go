@@ -169,9 +169,7 @@ func TestPaginationEdge_PrevCursorNavigation(t *testing.T) {
 	// (parallel tests create/delete customers that can disappear mid-pagination).
 	searchTag := "prevnav-" + uniqueName("pag")
 	for i := 0; i < 3; i++ {
-		createAndCleanup(t, customersPath, map[string]any{
-			"name": fmt.Sprintf("%s-%d", searchTag, i),
-		})
+		createAndCleanup(t, customersPath, validCustomerBody(fmt.Sprintf("%s-%d", searchTag, i)))
 	}
 
 	params := url.Values{

@@ -16,7 +16,7 @@ type UpdatePropertyRequest struct {
 	// The ID of the property to update.
 	PropertyID string `path:"id" validate:"required"`
 	// The new name of the property.
-	Name *string `json:"name,omitempty"`
+	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
 }
 
 var sampleUpdatePropertyRequest = &UpdatePropertyRequest{

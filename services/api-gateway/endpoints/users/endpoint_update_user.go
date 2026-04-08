@@ -16,9 +16,9 @@ type UpdateUserRequest struct {
 	// The ID of the user to update.
 	UserID string `path:"id" validate:"required"`
 	// The user's display name.
-	Name *string `json:"name"`
+	Name *string `json:"name" validate:"omitempty,max=255"`
 	// URL to the user's profile image.
-	ImageUrl *string `json:"image_url"`
+	ImageUrl *string `json:"image_url" validate:"omitempty,max=2083"`
 	// When the user's email was verified. Set to null to mark as unverified.
 	EmailVerified *time.Time `json:"email_verified"`
 }

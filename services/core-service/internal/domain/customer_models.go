@@ -146,6 +146,8 @@ type CreateCustomerParams struct {
 	DefaultSalesRepUserID *string
 	BillToAddressID       *string
 	ShipToAddressID       *string
+	BillToAddress         *CreateAddressParams
+	ShipToAddress         *CreateAddressParams
 	CustomerPriceGroupIDs []string
 	CustomerTypeGroupID   *string
 	CarrierBillingType    *string

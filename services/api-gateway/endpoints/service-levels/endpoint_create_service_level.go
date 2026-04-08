@@ -16,9 +16,9 @@ type CreateServiceLevelRequest struct {
 	// The ID of the carrier.
 	CarrierID string `path:"carrier_id" validate:"required"`
 	// The display name of the service level.
-	Name string `json:"name" validate:"required"`
+	Name string `json:"name" validate:"required,max=255"`
 	// The service level code.
-	Code string `json:"code" validate:"required"`
+	Code string `json:"code" validate:"required,max=255"`
 	// Whether this service level is visible in the customer portal.
 	CustomerPortalVisibility *constants.CustomerPortalVisibility `json:"customer_portal_visibility,omitempty" default:"visible" nullable:"false"`
 	// Whether this is a default (system-synced) service level.

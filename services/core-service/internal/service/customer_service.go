@@ -159,6 +159,13 @@ func (s *customerSvcImpl) CreateCustomer(ctx context.Context, params domain.Crea
 		return nil, tracing.Trace(span, apiErr)
 	}
 
+	if params.BillToAddress == nil {
+		return nil, tracing.Trace(span, apierror.NewValidationError("A bill-to address is required when creating a customer."))
+	}
+	if params.ShipToAddress == nil {
+		return nil, tracing.Trace(span, apierror.NewValidationError("A ship-to address is required when creating a customer."))
+	}
+
 	accountID, apiErr := id.GenID(id.AccountIDPrefix, nil)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -240,11 +247,41 @@ func (s *customerSvcImpl) CreateCustomer(ctx context.Context, params domain.Crea
 				}
 			}
 
+			// Create inline bill-to address.
+			if params.BillToAddress != nil {
+				addrID, geoID, acctAddrID, apiErr := generateAddressIDs()
+				if apiErr != nil {
+					return apiErr
+				}
+				params.BillToAddress.AccountID = accountID
+				if _, apiErr := txSvc.repos.NewAddressRepo().Create(txCtx, addrID, geoID, acctAddrID, *params.BillToAddress); apiErr != nil {
+					return apiErr
+				}
+				params.BillToAddressID = &addrID
+			}
+
+			// Create inline ship-to address, reusing the bill-to if identical.
+			if params.ShipToAddress != nil {
+				if params.BillToAddress != nil && addressParamsEqual(*params.BillToAddress, *params.ShipToAddress) {
+					params.ShipToAddressID = params.BillToAddressID
+				} else {
+					addrID, geoID, acctAddrID, apiErr := generateAddressIDs()
+					if apiErr != nil {
+						return apiErr
+					}
+					params.ShipToAddress.AccountID = accountID
+					if _, apiErr := txSvc.repos.NewAddressRepo().Create(txCtx, addrID, geoID, acctAddrID, *params.ShipToAddress); apiErr != nil {
+						return apiErr
+					}
+					params.ShipToAddressID = &addrID
+				}
+			}
+
 			if _, apiErr := txCustomerRepo.Create(txCtx, accountID, relationID, brandingID, params, customerNumber); apiErr != nil {
 				return apiErr
 			}
 
-			// Link billing/shipping addresses to the customer account.
+			// Ensure billing/shipping addresses are linked to the customer account.
 			if params.BillToAddressID != nil {
 				if apiErr := ensureAccountAddressLink(txCtx, txCustomerRepo, accountID, *params.BillToAddressID); apiErr != nil {
 					return apiErr
@@ -1026,4 +1063,29 @@ func ensureAccountAddressLink(ctx context.Context, repo domain.CustomerRepo, acc
 		return apiErr
 	}
 	return repo.InsertAccountAddress(ctx, newID, accountID, addressID)
+}
+
+// addressParamsEqual returns true when two CreateAddressParams represent the
+// same physical address (ignoring AccountID which is set later).
+func addressParamsEqual(a, b domain.CreateAddressParams) bool {
+	return a.Name == b.Name &&
+		optStrEqual(a.Phone, b.Phone) &&
+		optStrEqual(a.Email, b.Email) &&
+		a.IsDropShip == b.IsDropShip &&
+		optStrEqual(a.StreetLine1, b.StreetLine1) &&
+		optStrEqual(a.StreetLine2, b.StreetLine2) &&
+		optStrEqual(a.Locality, b.Locality) &&
+		optStrEqual(a.State, b.State) &&
+		optStrEqual(a.PostalCode, b.PostalCode) &&
+		a.Country == b.Country
+}
+
+func optStrEqual(a, b *string) bool {
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+	return *a == *b
 }

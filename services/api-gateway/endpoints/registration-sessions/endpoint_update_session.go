@@ -36,21 +36,21 @@ func (*UpdateSessionRequest) SchemaExample() any {
 // UpdateSessionDataRequest holds the mutable form data fields for updating a session
 type UpdateSessionDataRequest struct {
 	// Display name for the user.
-	UserName *string `json:"user_name,omitempty"`
+	UserName *string `json:"user_name,omitempty" validate:"omitempty,max=255"`
 	// Display name for the account.
-	AccountName *string `json:"account_name,omitempty"`
+	AccountName *string `json:"account_name,omitempty" validate:"omitempty,max=255"`
 	// Billing address line 1.
-	BillingAddressLine1 *string `json:"billing_address_line1,omitempty"`
+	BillingAddressLine1 *string `json:"billing_address_line1,omitempty" validate:"omitempty,max=255"`
 	// Billing address line 2.
-	BillingAddressLine2 *string `json:"billing_address_line2,omitempty"`
+	BillingAddressLine2 *string `json:"billing_address_line2,omitempty" validate:"omitempty,max=255"`
 	// Billing address city.
-	BillingAddressCity *string `json:"billing_address_city,omitempty"`
+	BillingAddressCity *string `json:"billing_address_city,omitempty" validate:"omitempty,max=255"`
 	// Billing address state.
-	BillingAddressState *string `json:"billing_address_state,omitempty"`
+	BillingAddressState *string `json:"billing_address_state,omitempty" validate:"omitempty,max=255"`
 	// Billing address postal code.
-	BillingAddressPostalCode *string `json:"billing_address_postal_code,omitempty"`
+	BillingAddressPostalCode *string `json:"billing_address_postal_code,omitempty" validate:"omitempty,max=255"`
 	// Billing address country.
-	BillingAddressCountry *string `json:"billing_address_country,omitempty"`
+	BillingAddressCountry *string `json:"billing_address_country,omitempty" validate:"omitempty,max=2"`
 }
 
 type UpdateSessionEndpoint struct{}

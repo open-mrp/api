@@ -16,7 +16,7 @@ type UpdateRoleRequest struct {
 	// The ID of the role to update.
 	RoleID string `path:"id" validate:"required"`
 	// The new display name for the role.
-	Name *string `json:"name"`
+	Name *string `json:"name" validate:"omitempty,max=255"`
 	// The full set of permissions to replace existing ones with in "domain:action" format. If omitted, permissions are not changed.
 	Permissions *[]string `json:"permissions"`
 }

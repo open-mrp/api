@@ -13,13 +13,13 @@ import (
 // CreateMachineRequest is the request to create a new machine.
 type CreateMachineRequest struct {
 	// The display name of the machine.
-	Name string `json:"name" validate:"required"`
+	Name string `json:"name" validate:"required,max=255"`
 	// The serial number of the machine.
-	SerialNumber string `json:"serial_number" validate:"required"`
+	SerialNumber string `json:"serial_number" validate:"required,max=255"`
 	// Optional notes about the machine.
 	Notes *string `json:"notes,omitempty"`
 	// The ID of the department this machine belongs to.
-	DepartmentID string `json:"department_id" validate:"required"`
+	DepartmentID string `json:"department_id" validate:"required,max=191"`
 }
 
 var sampleCreateMachineRequest = &CreateMachineRequest{

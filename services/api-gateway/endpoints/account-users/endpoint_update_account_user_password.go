@@ -15,9 +15,9 @@ type UpdateAccountUserPasswordRequest struct {
 	// The ID of the account user whose password to update.
 	AccountUserID string `path:"id" validate:"required"`
 	// The requester's current password for verification.
-	RequesterPassword string `json:"requester_password" validate:"required,password"`
+	RequesterPassword string `json:"requester_password" validate:"required,password,max=255"`
 	// The new password to set for the account user.
-	NewPassword string `json:"new_password" validate:"required,password"`
+	NewPassword string `json:"new_password" validate:"required,password,max=255"`
 }
 
 var sampleUpdateAccountUserPasswordRequest = &UpdateAccountUserPasswordRequest{

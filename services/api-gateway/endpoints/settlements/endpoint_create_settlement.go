@@ -13,9 +13,9 @@ import (
 // CreateSettlementAllocationRequest represents a single allocation in a create settlement request.
 type CreateSettlementAllocationRequest struct {
 	// The ID of the transaction to allocate.
-	TransactionID string `json:"transaction_id" validate:"required"`
+	TransactionID string `json:"transaction_id" validate:"required,max=191"`
 	// The ID of the invoice to allocate against.
-	InvoiceID string `json:"invoice_id" validate:"required"`
+	InvoiceID string `json:"invoice_id" validate:"required,max=191"`
 	// The amount to allocate as a decimal string.
 	Amount string `json:"amount" validate:"required"`
 	// A note about this allocation.
@@ -25,7 +25,7 @@ type CreateSettlementAllocationRequest struct {
 // CreateSettlementRequest is the request to create a new settlement.
 type CreateSettlementRequest struct {
 	// The ID of the user responsible for this settlement.
-	ResponsibleUserID string `json:"responsible_user_id" validate:"required"`
+	ResponsibleUserID string `json:"responsible_user_id" validate:"required,max=191"`
 	// The allocations to create with this settlement.
 	Allocations []CreateSettlementAllocationRequest `json:"allocations" validate:"required,min=1"`
 }

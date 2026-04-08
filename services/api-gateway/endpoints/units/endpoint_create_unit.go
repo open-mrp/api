@@ -14,9 +14,9 @@ import (
 // CreateUnitRequest is the request to create a new unit.
 type CreateUnitRequest struct {
 	// The display name of the unit (e.g. "Gram").
-	Name string `json:"name" validate:"required"`
+	Name string `json:"name" validate:"required,max=255"`
 	// The short abbreviation for the unit (e.g. "g").
-	Abbreviation string `json:"abbreviation" validate:"required"`
+	Abbreviation string `json:"abbreviation" validate:"required,max=191"`
 	// The unit dimension code.
 	Type constants.UnitType `json:"type" validate:"required"`
 	// The conversion ratio numerator relative to the base unit, as a decimal string.

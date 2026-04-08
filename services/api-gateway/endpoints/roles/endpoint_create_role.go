@@ -14,7 +14,7 @@ import (
 // CreateRoleRequest is the request to create a new role.
 type CreateRoleRequest struct {
 	// The display name of the role.
-	Name string `json:"name" validate:"required"`
+	Name string `json:"name" validate:"required,max=255"`
 	// The permissions to attach to this role in "domain:action" format.
 	Permissions []string `json:"permissions"`
 }

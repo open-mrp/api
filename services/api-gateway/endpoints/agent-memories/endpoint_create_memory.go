@@ -14,15 +14,15 @@ import (
 // CreateMemoryRequest is the request to create a new agent memory.
 type CreateMemoryRequest struct {
 	// The memory category (e.g. "preference", "fact", "instruction").
-	Category string `json:"category" validate:"required"`
+	Category string `json:"category" validate:"required,max=255"`
 	// The text content of the memory.
 	Content string `json:"content" validate:"required"`
 	// Optional JSON metadata associated with this memory.
 	Metadata json.RawMessage `json:"metadata,omitempty"`
 	// The type of entity this memory is scoped to (e.g. "customer", "product").
-	EntityType *string `json:"entity_type,omitempty"`
+	EntityType *string `json:"entity_type,omitempty" validate:"omitempty,max=255"`
 	// The ID of the entity this memory is scoped to.
-	EntityID *string `json:"entity_id,omitempty"`
+	EntityID *string `json:"entity_id,omitempty" validate:"omitempty,max=191"`
 	// A numeric importance score between 0 and 1.
 	Importance float64 `json:"importance,omitempty"`
 	// An ISO 8601 timestamp after which this memory expires.

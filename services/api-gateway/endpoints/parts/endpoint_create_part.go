@@ -14,11 +14,11 @@ import (
 // CreatePartRequest is the request to create a new part.
 type CreatePartRequest struct {
 	// The stock keeping unit code.
-	SKU string `json:"sku" validate:"required"`
+	SKU string `json:"sku" validate:"required,max=255"`
 	// A description of the part.
 	Description *string `json:"description"`
 	// The category ID for the part.
-	CategoryID string `json:"category_id" validate:"required"`
+	CategoryID string `json:"category_id" validate:"required,max=191"`
 }
 
 var sampleCreatePartDescription = "Deep groove ball bearing, 20x47x14mm"

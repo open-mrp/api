@@ -20,9 +20,7 @@ import (
 
 func TestStateTransition_CustomerStatus_NormalToHoldShipment(t *testing.T) {
 	t.Parallel()
-	created := createAndCleanup(t, customersPath, map[string]any{
-		"name": uniqueName("e2e-state-cust"),
-	})
+	created := createAndCleanup(t, customersPath, validCustomerBody(uniqueName("e2e-state-cust")))
 	id := jsonField(created, "id")
 	assert.Equal(t, "normal", jsonField(created, "status"))
 
@@ -37,9 +35,7 @@ func TestStateTransition_CustomerStatus_NormalToHoldShipment(t *testing.T) {
 
 func TestStateTransition_CustomerStatus_HoldShipmentBackToNormal(t *testing.T) {
 	t.Parallel()
-	created := createAndCleanup(t, customersPath, map[string]any{
-		"name": uniqueName("e2e-state-unsus"),
-	})
+	created := createAndCleanup(t, customersPath, validCustomerBody(uniqueName("e2e-state-unsus")))
 	id := jsonField(created, "id")
 
 	// Hold.
@@ -60,9 +56,7 @@ func TestStateTransition_CustomerStatus_HoldShipmentBackToNormal(t *testing.T) {
 
 func TestStateTransition_CustomerStatus_InvalidTransition(t *testing.T) {
 	t.Parallel()
-	created := createAndCleanup(t, customersPath, map[string]any{
-		"name": uniqueName("e2e-state-inv"),
-	})
+	created := createAndCleanup(t, customersPath, validCustomerBody(uniqueName("e2e-state-inv")))
 	id := jsonField(created, "id")
 
 	status, body, err := apiClient.Patch(customersPath+"/"+id, map[string]any{
@@ -189,11 +183,10 @@ func TestStateTransition_PartialUpdatePreservesFields(t *testing.T) {
 	t.Parallel()
 
 	name := uniqueName("e2e-state-pres")
-	created := createAndCleanup(t, customersPath, map[string]any{
-		"name":              name,
-		"note":              "original note",
-		"commission_policy": "commission_exempt",
-	})
+	presPayload := validCustomerBody(name)
+	presPayload["note"] = "original note"
+	presPayload["commission_policy"] = "commission_exempt"
+	created := createAndCleanup(t, customersPath, presPayload)
 	id := jsonField(created, "id")
 	originalNumber := jsonField(created, "number")
 
@@ -245,9 +238,7 @@ func TestStateTransition_AccountGroupType_FilterByType(t *testing.T) {
 func TestStateTransition_IDIsImmutable(t *testing.T) {
 	t.Parallel()
 
-	created := createAndCleanup(t, customersPath, map[string]any{
-		"name": uniqueName("e2e-state-immid"),
-	})
+	created := createAndCleanup(t, customersPath, validCustomerBody(uniqueName("e2e-state-immid")))
 	originalID := jsonField(created, "id")
 
 	// Update and verify ID doesn't change.
@@ -262,9 +253,7 @@ func TestStateTransition_IDIsImmutable(t *testing.T) {
 func TestStateTransition_NumberIsImmutable(t *testing.T) {
 	t.Parallel()
 
-	created := createAndCleanup(t, customersPath, map[string]any{
-		"name": uniqueName("e2e-state-immnum"),
-	})
+	created := createAndCleanup(t, customersPath, validCustomerBody(uniqueName("e2e-state-immnum")))
 	id := jsonField(created, "id")
 	originalNumber := jsonField(created, "number")
 

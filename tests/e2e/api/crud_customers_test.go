@@ -21,9 +21,7 @@ func TestCustomers_CRUD(t *testing.T) {
 	name := uniqueName("e2e-cust")
 
 	// CREATE
-	createStatus, createBody, err := apiClient.Post(customersPath, map[string]any{
-		"name": name,
-	}, newIdempotencyKey())
+	createStatus, createBody, err := apiClient.Post(customersPath, validCustomerBody(name), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
 
@@ -73,9 +71,7 @@ func TestCustomers_CRUD(t *testing.T) {
 func TestCustomers_CreateResponseShape(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-cust-shape")
-	status, body, err := apiClient.Post(customersPath, map[string]any{
-		"name": name,
-	}, newIdempotencyKey())
+	status, body, err := apiClient.Post(customersPath, validCustomerBody(name), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
 
@@ -127,6 +123,14 @@ func TestCustomers_CreateWithAllFields(t *testing.T) {
 		"customer_type_group_id":    SeedCustomerGroupID,
 		"carrier_billing_type":      "third_party",
 		"carrier_billing_account":   "ACCT-12345",
+		"bill_to_address": map[string]any{
+			"name":    name + " Billing",
+			"country": "US",
+		},
+		"ship_to_address": map[string]any{
+			"name":    name + " Shipping",
+			"country": "US",
+		},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
@@ -176,6 +180,14 @@ func TestCustomers_CreateAndUpdateAllFields(t *testing.T) {
 			"customer_type_group_id":    SeedCustomerGroupID,
 			"carrier_billing_type":      "third_party",
 			"carrier_billing_account":   "ACCT-12345",
+			"bill_to_address": map[string]any{
+				"name":    name + " Billing",
+				"country": "US",
+			},
+			"ship_to_address": map[string]any{
+				"name":    name + " Shipping",
+				"country": "US",
+			},
 		},
 		newIdempotencyKey(),
 	)
@@ -245,9 +257,14 @@ func TestCustomers_CreateAndUpdateAllFields(t *testing.T) {
 	require.NotNil(t, typeGroup, "type should be expanded after create")
 	assert.Equal(t, SeedCustomerGroupID, jsonField(typeGroup, "id"))
 
-	// addresses (not set on create since SeedAddressID has a unique constraint on account)
-	assert.Nil(t, got["bill_to_address"], "bill_to_address should be null when not set")
-	assert.Nil(t, got["ship_to_address"], "ship_to_address should be null when not set")
+	// addresses (set on create via inline address objects)
+	billAddr := jsonObject(got, "bill_to_address")
+	require.NotNil(t, billAddr, "bill_to_address should be expanded after create")
+	assert.Equal(t, name+" Billing", jsonField(billAddr, "name"))
+
+	shipAddr := jsonObject(got, "ship_to_address")
+	require.NotNil(t, shipAddr, "ship_to_address should be expanded after create")
+	assert.Equal(t, name+" Shipping", jsonField(shipAddr, "name"))
 
 	// notification_preferences
 	np := jsonObject(got, "notification_preferences")
@@ -461,7 +478,7 @@ func TestCustomers_CreateValidation_MissingName_ErrorShape(t *testing.T) {
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)
 
-	errObj := requireErrorResponse(t, body, "missing_field", "invalid_request_error")
+	errObj := requireErrorResponse(t, body, "validation_failed", "invalid_request_error")
 	assertErrorParam(t, errObj, "name")
 }
 
@@ -477,9 +494,7 @@ func TestCustomers_GetNotFound_ErrorShape(t *testing.T) {
 func TestCustomers_ResponseFieldFormats(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-cust-fmt")
-	status, body, err := apiClient.Post(customersPath, map[string]any{
-		"name": name,
-	}, newIdempotencyKey())
+	status, body, err := apiClient.Post(customersPath, validCustomerBody(name), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
 
@@ -502,7 +517,7 @@ func TestCustomers_CreateIdempotent(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-idem-cust")
 	idemKey := newIdempotencyKey()
-	payload := map[string]any{"name": name}
+	payload := validCustomerBody(name)
 
 	status1, body1, err := apiClient.Post(customersPath, payload, idemKey)
 	require.NoError(t, err)
@@ -520,7 +535,7 @@ func TestCustomers_CreateIdempotent(t *testing.T) {
 func TestCustomers_UpdateIdempotent(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-idem-cust-upd")
-	createStatus, createBody, err := apiClient.Post(customersPath, map[string]any{"name": name}, newIdempotencyKey())
+	createStatus, createBody, err := apiClient.Post(customersPath, validCustomerBody(name), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
 	id := jsonField(parseJSON(createBody), "id")
@@ -575,7 +590,7 @@ func TestCustomers_GetNotFound(t *testing.T) {
 func TestCustomers_UpdateOnlyNote(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-cust-upd-note")
-	createStatus, createBody, err := apiClient.Post(customersPath, map[string]any{"name": name}, newIdempotencyKey())
+	createStatus, createBody, err := apiClient.Post(customersPath, validCustomerBody(name), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
 	id := jsonField(parseJSON(createBody), "id")
@@ -596,7 +611,7 @@ func TestCustomers_UpdateOnlyNote(t *testing.T) {
 func TestCustomers_UpdateMultipleFields(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-cust-upd-multi")
-	createStatus, createBody, err := apiClient.Post(customersPath, map[string]any{"name": name}, newIdempotencyKey())
+	createStatus, createBody, err := apiClient.Post(customersPath, validCustomerBody(name), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
 	id := jsonField(parseJSON(createBody), "id")
@@ -626,7 +641,7 @@ func TestCustomers_UpdateMultipleFields(t *testing.T) {
 func TestCustomers_DeleteThenGetReturns404(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-cust-del")
-	createStatus, createBody, err := apiClient.Post(customersPath, map[string]any{"name": name}, newIdempotencyKey())
+	createStatus, createBody, err := apiClient.Post(customersPath, validCustomerBody(name), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
 	id := jsonField(parseJSON(createBody), "id")
@@ -896,11 +911,10 @@ func TestCustomers_CreateWithInclude(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-cust-inc-create")
 	email := name + "@e2e-test.augno.com"
-	status, body, err := apiClient.Post(customersPath+"?include=contact_info", map[string]any{
-		"name":  name,
-		"email": email,
-		"phone": "555-111-2222",
-	}, newIdempotencyKey())
+	payload := validCustomerBody(name)
+	payload["email"] = email
+	payload["phone"] = "555-111-2222"
+	status, body, err := apiClient.Post(customersPath+"?include=contact_info", payload, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
 
@@ -921,10 +935,9 @@ func TestCustomers_CreateWithInclude(t *testing.T) {
 func TestCustomers_UpdateWithInclude(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-cust-inc-upd")
-	createStatus, createBody, err := apiClient.Post(customersPath, map[string]any{
-		"name":  name,
-		"email": name + "@e2e-test.augno.com",
-	}, newIdempotencyKey())
+	createPayload := validCustomerBody(name)
+	createPayload["email"] = name + "@e2e-test.augno.com"
+	createStatus, createBody, err := apiClient.Post(customersPath, createPayload, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
 	id := jsonField(parseJSON(createBody), "id")
@@ -958,9 +971,7 @@ func TestCustomers_OmittedFields(t *testing.T) {
 		name := uniqueName("e2e-cust-omit")
 		includeStr := "contact_info,defaults,freight_preferences,notification_preferences"
 
-		status, body, err := apiClient.Post(customersPath+"?include="+includeStr, map[string]any{
-			"name": name,
-		}, newIdempotencyKey())
+		status, body, err := apiClient.Post(customersPath+"?include="+includeStr, validCustomerBody(name), newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 201, status, body)
 
@@ -1028,24 +1039,19 @@ func TestCustomers_OmittedFields(t *testing.T) {
 
 		// Create with all fields
 		name := uniqueName("e2e-cust-pres")
-		createStatus, createBody, err := apiClient.Post(customersPath+"?include="+includeStr, map[string]any{
-			"name":                      name,
-			"note":                      "Original note",
-			"email":                     name + "@e2e-test.augno.com",
-			"phone":                     "555-000-1234",
-			"url":                       "https://original.e2e.augno.com",
-			"is_edi_enabled":            true,
-			"commission_policy":         "commission_exempt",
-			"freight_policy":            "free_freight",
-			"default_carrier_id":        SeedCarrierID,
-			"default_payment_term_id":   SeedPaymentTermID,
-			"default_shipping_term_id":  SeedShippingTermID,
-			"default_priority_code":     SeedPriorityCode,
-			"default_sales_rep_user_id": SeedUserID,
-			"customer_type_group_id":    SeedCustomerGroupID,
-			"carrier_billing_type":      "third_party",
-			"carrier_billing_account":   "ACCT-ORIG",
-		}, newIdempotencyKey())
+		createPayload := validCustomerBody(name)
+		createPayload["note"] = "Original note"
+		createPayload["email"] = name + "@e2e-test.augno.com"
+		createPayload["phone"] = "555-000-1234"
+		createPayload["url"] = "https://original.e2e.augno.com"
+		createPayload["is_edi_enabled"] = true
+		createPayload["commission_policy"] = "commission_exempt"
+		createPayload["freight_policy"] = "free_freight"
+		createPayload["default_priority_code"] = SeedPriorityCode
+		createPayload["default_sales_rep_user_id"] = SeedUserID
+		createPayload["carrier_billing_type"] = "third_party"
+		createPayload["carrier_billing_account"] = "ACCT-ORIG"
+		createStatus, createBody, err := apiClient.Post(customersPath+"?include="+includeStr, createPayload, newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 201, createStatus, createBody)
 
@@ -1148,9 +1154,7 @@ func TestCustomers_CreateWithBillingAddressLinksAccountAddress(t *testing.T) {
 	t.Parallel()
 
 	// Create a customer first.
-	cust := createAndCleanup(t, customersPath, map[string]any{
-		"name": uniqueName("e2e-cust-addr-link"),
-	})
+	cust := createAndCleanup(t, customersPath, validCustomerBody(uniqueName("e2e-cust-addr-link")))
 	custID := jsonField(cust, "id")
 	customerClient := apiClient.WithAccountID(custID)
 
@@ -1196,9 +1200,7 @@ func TestCustomers_UpdateBillingAddressLinksAccountAddress(t *testing.T) {
 	t.Parallel()
 
 	// Create a customer.
-	cust := createAndCleanup(t, customersPath, map[string]any{
-		"name": uniqueName("e2e-cust-upd-addr"),
-	})
+	cust := createAndCleanup(t, customersPath, validCustomerBody(uniqueName("e2e-cust-upd-addr")))
 	custID := jsonField(cust, "id")
 	customerClient := apiClient.WithAccountID(custID)
 
@@ -1268,9 +1270,7 @@ func TestCustomers_UpdateShippingAddressLinksAccountAddress(t *testing.T) {
 	t.Parallel()
 
 	// Create a customer.
-	cust := createAndCleanup(t, customersPath, map[string]any{
-		"name": uniqueName("e2e-cust-ship-addr"),
-	})
+	cust := createAndCleanup(t, customersPath, validCustomerBody(uniqueName("e2e-cust-ship-addr")))
 	custID := jsonField(cust, "id")
 	customerClient := apiClient.WithAccountID(custID)
 
@@ -1328,9 +1328,7 @@ func TestCustomers_SameAddressForBillingAndShipping(t *testing.T) {
 	t.Parallel()
 
 	// Create a customer.
-	cust := createAndCleanup(t, customersPath, map[string]any{
-		"name": uniqueName("e2e-cust-same-addr"),
-	})
+	cust := createAndCleanup(t, customersPath, validCustomerBody(uniqueName("e2e-cust-same-addr")))
 	custID := jsonField(cust, "id")
 	customerClient := apiClient.WithAccountID(custID)
 
@@ -1398,9 +1396,7 @@ func TestCustomers_UpdatePriceGroups(t *testing.T) {
 	pg2ID := jsonField(pg2, "id")
 
 	// Create a customer.
-	cust := createAndCleanup(t, customersPath, map[string]any{
-		"name": uniqueName("e2e-cust-pg"),
-	})
+	cust := createAndCleanup(t, customersPath, validCustomerBody(uniqueName("e2e-cust-pg")))
 	custID := jsonField(cust, "id")
 
 	// Verify no price groups initially.
@@ -1496,12 +1492,11 @@ func TestCustomers_UpdateContactInfo(t *testing.T) {
 
 	// Create a customer with contact info.
 	name := uniqueName("e2e-cust-ci")
-	cust := createAndCleanup(t, customersPath+"?include=contact_info", map[string]any{
-		"name":  name,
-		"email": name + "@test.com",
-		"phone": "555-111-2222",
-		"url":   "https://original.example.com",
-	})
+	payload := validCustomerBody(name)
+	payload["email"] = name + "@test.com"
+	payload["phone"] = "555-111-2222"
+	payload["url"] = "https://original.example.com"
+	cust := createAndCleanup(t, customersPath+"?include=contact_info", payload)
 	custID := jsonField(cust, "id")
 
 	// Verify contact info was set.
@@ -1554,10 +1549,9 @@ func TestCustomers_UpdateContactInfo(t *testing.T) {
 func TestCustomers_UpdateAndClearNote(t *testing.T) {
 	t.Parallel()
 
-	cust := createAndCleanup(t, customersPath, map[string]any{
-		"name": uniqueName("e2e-cust-note"),
-		"note": "initial note",
-	})
+	notePayload := validCustomerBody(uniqueName("e2e-cust-note"))
+	notePayload["note"] = "initial note"
+	cust := createAndCleanup(t, customersPath, notePayload)
 	custID := jsonField(cust, "id")
 	assert.Equal(t, "initial note", jsonField(cust, "note"))
 
@@ -1603,13 +1597,9 @@ func TestCustomers_ClearNullableDefaults(t *testing.T) {
 	includeQS := "?" + includeAll.Encode()
 
 	// Create customer with all default fields set.
-	cust := createAndCleanup(t, customersPath+includeQS, map[string]any{
-		"name":                      uniqueName("e2e-cust-clr"),
-		"default_carrier_id":        SeedCarrierID,
-		"default_payment_term_id":   SeedPaymentTermID,
-		"default_shipping_term_id":  SeedShippingTermID,
-		"default_sales_rep_user_id": SeedUserID,
-	})
+	clrPayload := validCustomerBody(uniqueName("e2e-cust-clr"))
+	clrPayload["default_sales_rep_user_id"] = SeedUserID
+	cust := createAndCleanup(t, customersPath+includeQS, clrPayload)
 	custID := jsonField(cust, "id")
 
 	// Verify defaults were set.
@@ -1681,9 +1671,7 @@ func TestCustomers_ClearNullableDefaults(t *testing.T) {
 func TestCustomers_UpdateRejectsNullForNonNullableFields(t *testing.T) {
 	t.Parallel()
 
-	cust := createAndCleanup(t, customersPath, map[string]any{
-		"name": uniqueName("e2e-cust-nonnull"),
-	})
+	cust := createAndCleanup(t, customersPath, validCustomerBody(uniqueName("e2e-cust-nonnull")))
 	custID := jsonField(cust, "id")
 
 	tests := []struct {
@@ -1722,10 +1710,9 @@ func TestCustomers_CreateRejectsNullForNonNullableFields(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			status, body, err := apiClient.Post(customersPath, map[string]any{
-				"name":   uniqueName("e2e-cust-nonnull"),
-				tc.field: nil,
-			}, newIdempotencyKey())
+			payload := validCustomerBody(uniqueName("e2e-cust-nonnull"))
+			payload[tc.field] = nil
+			status, body, err := apiClient.Post(customersPath, payload, newIdempotencyKey())
 			require.NoError(t, err)
 			requireStatus(t, 400, status, body)
 			errObj := requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
@@ -1745,10 +1732,9 @@ func TestCustomers_UpdatePreservesPriceGroupsWhenNotSent(t *testing.T) {
 	pgID := jsonField(pg, "id")
 
 	// Create a customer with the pricing group.
-	cust := createAndCleanup(t, customersPath, map[string]any{
-		"name":                     uniqueName("e2e-cust-pg-pres"),
-		"customer_price_group_ids": []string{pgID},
-	})
+	pgPresPayload := validCustomerBody(uniqueName("e2e-cust-pg-pres"))
+	pgPresPayload["customer_price_group_ids"] = []string{pgID}
+	cust := createAndCleanup(t, customersPath, pgPresPayload)
 	custID := jsonField(cust, "id")
 
 	// Update an unrelated field (note) — should NOT clear price groups.

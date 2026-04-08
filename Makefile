@@ -1,4 +1,4 @@
-.PHONY: help dev sqlc proto buf-lint db-dump test test-verbose test-sql-prepare-smoke install-tools docs mocks gosec static-check check-format jaeger-tracing connect-minikube connect-eks version validate-openapi-specs httpie local-db local-db-down local-db-nuke seed-core seed-stripe teardown-stripe teardown-all-stripe fmt stripe-webhook open-tracing e2e-up e2e-up-ci e2e e2e-down fix-minikube-dns
+.PHONY: help dev sqlc proto buf-lint db-dump test test-verbose test-sql-prepare-smoke install-tools docs mocks lint gosec static-check check-format jaeger-tracing connect-minikube connect-eks version validate-openapi-specs httpie local-db local-db-down local-db-nuke seed-core seed-stripe teardown-stripe teardown-all-stripe fmt stripe-webhook open-tracing e2e-up e2e-up-ci e2e e2e-down fix-minikube-dns
 
 # Include .env file if it exists (optional for CI)
 -include .env
@@ -150,16 +150,19 @@ install-tools: ## Install required development tools
 	@go install github.com/securego/gosec/v2/cmd/gosec@$(call tool-version,github.com/securego/gosec/v2)
 	@go install honnef.co/go/tools/cmd/staticcheck@$(call tool-version,honnef.co/go/tools)
 	@go install golang.org/x/tools/cmd/goimports@$(call tool-version,golang.org/x/tools)
+	@go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(call tool-version,github.com/golangci/golangci-lint/v2)
 
 install-ci-tools: ## Install minimum tools for CI
 	@go install github.com/sqlc-dev/sqlc/cmd/sqlc@$(call tool-version,github.com/sqlc-dev/sqlc)
 	@go install gotest.tools/gotestsum@$(call tool-version,gotest.tools/gotestsum)
 	@go install github.com/pressly/goose/v3/cmd/goose@$(call tool-version,github.com/pressly/goose/v3)
-	@go install github.com/securego/gosec/v2/cmd/gosec@$(call tool-version,github.com/securego/gosec/v2)
-	@go install honnef.co/go/tools/cmd/staticcheck@$(call tool-version,honnef.co/go/tools)
 
 mocks: ## Generate mocks. Usage: make mocks [services]
 	@$(MOCK_SCRIPT) $(ARGS)
+
+lint: ## Run golangci-lint (gosec + staticcheck)
+	@echo "Running golangci-lint..."
+	@golangci-lint run ./...
 
 gosec: ## Run gosec
 	@echo "Running gosec..."

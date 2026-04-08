@@ -16,7 +16,7 @@ type UpdatePartRequest struct {
 	// The item ID of the part to update.
 	ItemID string `path:"id" validate:"required"`
 	// The part SKU.
-	SKU *string `json:"sku,omitempty"`
+	SKU *string `json:"sku,omitempty" validate:"omitempty,max=255"`
 	// The part description.
 	Description *string `json:"description"`
 	// Optional notes about the part.

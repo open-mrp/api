@@ -13,8 +13,8 @@ import (
 type UpdateSupplierMaterialRequest struct {
 	SupplierID          string  `path:"supplier_id" validate:"required"`
 	ItemID              string  `path:"id" validate:"required"`
-	SupplierPartNumber  *string `json:"supplier_part_number,omitempty"`
-	SupplierDescription *string `json:"supplier_description,omitempty"`
+	SupplierPartNumber  *string `json:"supplier_part_number,omitempty" validate:"omitempty,max=255"`
+	SupplierDescription *string `json:"supplier_description,omitempty" validate:"omitempty,max=255"`
 	IsActive            *bool   `json:"is_active,omitempty"`
 }
 

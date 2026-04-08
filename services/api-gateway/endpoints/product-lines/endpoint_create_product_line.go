@@ -14,9 +14,9 @@ import (
 // CreateProductLineRequest is the request to create a new product line.
 type CreateProductLineRequest struct {
 	// The display name of the product line.
-	Name string `json:"name" validate:"required"`
+	Name string `json:"name" validate:"required,max=255"`
 	// The ID of the unit group to associate with this product line.
-	UnitGroupID string `json:"unit_group_id" validate:"required"`
+	UnitGroupID string `json:"unit_group_id" validate:"required,max=191"`
 	// The commission policy for this product line.
 	CommissionPolicy constants.CommissionPolicy `json:"commission_policy" validate:"required"`
 	// The freight policy for this product line.

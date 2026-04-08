@@ -12,13 +12,13 @@ import (
 // CreateCheckoutSessionRequest is the request to create a customer checkout session.
 type CreateCheckoutSessionRequest struct {
 	// The ID of the sales order.
-	OrderID string `json:"order_id" validate:"required"`
+	OrderID string `json:"order_id" validate:"required,max=191"`
 	// The order number for display.
-	OrderNumber string `json:"order_number" validate:"required"`
+	OrderNumber string `json:"order_number" validate:"required,max=255"`
 	// The order total in cents.
 	OrderTotalCents int64 `json:"order_total_cents" validate:"required"`
 	// The customer PO number, if any.
-	CustomerPO *string `json:"customer_po,omitempty"`
+	CustomerPO *string `json:"customer_po,omitempty" validate:"omitempty,max=255"`
 }
 
 // CheckoutSessionResponse represents the result of creating a customer checkout session.
@@ -26,7 +26,7 @@ type CheckoutSessionResponse struct {
 	// The resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=checkout_session"`
 	// The Stripe checkout session client secret for embedded checkout.
-	CheckoutSessionClientSecret string `json:"checkout_session_client_secret" validate:"required"`
+	CheckoutSessionClientSecret string `json:"checkout_session_client_secret" validate:"required,max=255"`
 }
 
 func (*CheckoutSessionResponse) SchemaExample() any {

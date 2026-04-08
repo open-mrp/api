@@ -14,11 +14,11 @@ import (
 // CreateLocationRequest is the request to create a new location.
 type CreateLocationRequest struct {
 	// The display name of the location.
-	Name string `json:"name" validate:"required"`
+	Name string `json:"name" validate:"required,max=255"`
 	// The code of the location type.
 	TypeCode constants.LocationTypeCode `json:"type_code" validate:"required"`
 	// The ID of the parent location. Null for top-level locations.
-	ParentID *string `json:"parent_id,omitempty"`
+	ParentID *string `json:"parent_id,omitempty" validate:"omitempty,max=191"`
 	// IDs of existing locations to attach as children of this location.
 	ChildIDs []string `json:"child_ids,omitempty"`
 }

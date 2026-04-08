@@ -18,13 +18,13 @@ type UpdateShipmentRequest struct {
 	// An optional note for the shipment.
 	Note *string `json:"note,omitempty"`
 	// The shipment number.
-	Number *string `json:"number,omitempty"`
+	Number *string `json:"number,omitempty" validate:"omitempty,max=255"`
 	// The master tracking number for the shipment.
-	MasterTrackingNumber *string `json:"master_tracking_number,omitempty"`
+	MasterTrackingNumber *string `json:"master_tracking_number,omitempty" validate:"omitempty,max=255"`
 	// The ID of the carrier for this shipment.
-	CarrierID *string `json:"carrier_id,omitempty"`
+	CarrierID *string `json:"carrier_id,omitempty" validate:"omitempty,max=191"`
 	// The ID of the service level for this shipment.
-	ServiceLevelID *string `json:"service_level_id,omitempty" nullable:"true"`
+	ServiceLevelID *string `json:"service_level_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
 }
 
 var sampleUpdateNote = "Updated shipping note"

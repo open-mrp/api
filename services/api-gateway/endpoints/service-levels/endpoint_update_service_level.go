@@ -18,9 +18,9 @@ type UpdateServiceLevelRequest struct {
 	// The ID of the service level to update.
 	ServiceLevelID string `path:"id" validate:"required"`
 	// The new display name for the service level.
-	Name *string `json:"name"`
+	Name *string `json:"name" validate:"omitempty,max=255"`
 	// The new service level code.
-	Code *string `json:"code"`
+	Code *string `json:"code" validate:"omitempty,max=255"`
 	// Whether this service level is visible in the customer portal.
 	CustomerPortalVisibility *constants.CustomerPortalVisibility `json:"customer_portal_visibility"`
 	// Whether this is a default (system-synced) service level.

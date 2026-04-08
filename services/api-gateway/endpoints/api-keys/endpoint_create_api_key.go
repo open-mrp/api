@@ -15,9 +15,9 @@ import (
 // The request to create an API key
 type CreateAPIKeyRequest struct {
 	// The role ID for the API key.
-	RoleID string `json:"role_id" validate:"required"`
+	RoleID string `json:"role_id" validate:"required,max=191"`
 	// The name for the API key.
-	Name string `json:"name" validate:"required"`
+	Name string `json:"name" validate:"required,max=255"`
 	// Optional expiration time for the API key.
 	ExpiresAt *time.Time `json:"expires_at,omitempty"`
 }

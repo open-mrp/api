@@ -15,7 +15,7 @@ import (
 // ToolInput represents a tool to attach to an agent definition.
 type ToolInput struct {
 	// The identifier of the available tool to attach.
-	ToolID string `json:"tool_id" validate:"required"`
+	ToolID string `json:"tool_id" validate:"required,max=191"`
 	// Optional JSON configuration for this tool instance.
 	ConfigJSON string `json:"config_json,omitempty"`
 	// Display order among the agent's tools (lower values appear first).
@@ -37,9 +37,9 @@ func (*ToolInput) SchemaExample() any {
 // TriggerConfigInput holds trigger-type-specific settings for agent creation/update requests.
 type TriggerConfigInput struct {
 	// Cron expression for scheduled triggers (e.g. "0 9 * * *").
-	CronSchedule *string `json:"cron_schedule"`
+	CronSchedule *string `json:"cron_schedule" validate:"omitempty,max=255"`
 	// IANA timezone for the cron schedule (e.g. "America/New_York").
-	Timezone *string `json:"timezone"`
+	Timezone *string `json:"timezone" validate:"omitempty,max=255"`
 	// Event types that trigger this agent (e.g. ["email.received", "order.created"]).
 	EventFilters []string `json:"event_filters"`
 }
@@ -57,9 +57,9 @@ type ConfigInput struct {
 	// The system prompt / instructions given to the agent.
 	SystemPrompt *string `json:"system_prompt"`
 	// The LLM model identifier (e.g. "claude-sonnet-4").
-	Model *string `json:"model"`
+	Model *string `json:"model" validate:"omitempty,max=255"`
 	// The LLM provider name (e.g. "anthropic", "openai"). Inferred from model if omitted.
-	Provider *string `json:"provider"`
+	Provider *string `json:"provider" validate:"omitempty,max=255"`
 	// LLM sampling temperature between 0 and 1.
 	Temperature *float64 `json:"temperature" validate:"omitempty,min=0,max=1"`
 	// Trigger-specific configuration. Shape depends on the agent's trigger_type.
@@ -92,13 +92,13 @@ func (c *ConfigInput) Validate(triggerType constants.AgentTriggerType) error {
 // CreateAgentRequest is the request to create a new agent definition.
 type CreateAgentRequest struct {
 	// The display name of the agent.
-	Name string `json:"name" validate:"required"`
+	Name string `json:"name" validate:"required,max=255"`
 	// A unique URL-friendly identifier for the agent.
-	Slug string `json:"slug" validate:"required"`
+	Slug string `json:"slug" validate:"required,max=255"`
 	// A human-readable description of what the agent does.
 	Description string `json:"description,omitempty"`
 	// The category code that classifies this agent (e.g. "order_processing").
-	CategoryCode string `json:"category_code" validate:"required"`
+	CategoryCode string `json:"category_code" validate:"required,max=255"`
 	// How this agent is triggered: "manual", "scheduled", or "event".
 	TriggerType constants.AgentTriggerType `json:"trigger_type" validate:"required"`
 	// Agent-level configuration controlling LLM behavior and trigger settings.
@@ -106,7 +106,7 @@ type CreateAgentRequest struct {
 	// The tools to attach to this agent.
 	Tools []ToolInput `json:"tools,omitempty"`
 	// The ID of the role that defines this agent's permissions.
-	RoleID string `json:"role_id,omitempty"`
+	RoleID string `json:"role_id,omitempty" validate:"max=191"`
 }
 
 var sampleCreateAgentRequest = &CreateAgentRequest{

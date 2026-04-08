@@ -14,9 +14,9 @@ import (
 // CreateSupplierRequest is the request to create a new supplier.
 type CreateSupplierRequest struct {
 	// The display name of the supplier.
-	Name string `json:"name" validate:"required"`
+	Name string `json:"name" validate:"required,max=255"`
 	// The supplier number (must be unique per account).
-	Number string `json:"number" validate:"required"`
+	Number string `json:"number" validate:"required,max=255"`
 	// Notes about the supplier.
 	Note *string `json:"note"`
 	// An optional bill-to address to create inline.

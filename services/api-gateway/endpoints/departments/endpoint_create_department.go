@@ -13,11 +13,11 @@ import (
 // CreateDepartmentRequest is the request to create a new department.
 type CreateDepartmentRequest struct {
 	// The display name of the department.
-	Name string `json:"name" validate:"required"`
+	Name string `json:"name" validate:"required,max=255"`
 	// Optional notes about the department.
 	Notes *string `json:"notes,omitempty"`
 	// The ID of the storage location to associate with this department.
-	LocationID *string `json:"location_id,omitempty"`
+	LocationID *string `json:"location_id,omitempty" validate:"omitempty,max=191"`
 	// IDs of scanning stations to connect to this department.
 	ScanningStationIDs []string `json:"scanning_station_ids,omitempty"`
 	// IDs of machines to connect to this department.

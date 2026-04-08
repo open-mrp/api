@@ -15,9 +15,9 @@ type UpdateMachineRequest struct {
 	// The ID of the machine to update.
 	MachineID string `path:"id" validate:"required"`
 	// The display name of the machine.
-	Name *string `json:"name,omitempty"`
+	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
 	// The serial number of the machine.
-	SerialNumber *string `json:"serial_number,omitempty"`
+	SerialNumber *string `json:"serial_number,omitempty" validate:"omitempty,max=255"`
 	// Optional notes about the machine.
 	Notes *string `json:"notes,omitempty"`
 }

@@ -12,9 +12,9 @@ import (
 
 type CreateSupplierMaterialRequest struct {
 	SupplierID          string  `path:"supplier_id" validate:"required"`
-	MaterialID          string  `json:"material_id" validate:"required"`
-	SupplierPartNumber  string  `json:"supplier_part_number" validate:"required"`
-	SupplierDescription *string `json:"supplier_description,omitempty"`
+	MaterialID          string  `json:"material_id" validate:"required,max=191"`
+	SupplierPartNumber  string  `json:"supplier_part_number" validate:"required,max=255"`
+	SupplierDescription *string `json:"supplier_description,omitempty" validate:"omitempty,max=255"`
 	IsActive            *bool   `json:"is_active"`
 }
 

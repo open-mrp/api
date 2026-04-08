@@ -15,7 +15,7 @@ type UpdateProductRequest struct {
 	// The ID of the product to update.
 	ProductID string `path:"id" validate:"required"`
 	// The stock keeping unit code.
-	SKU *string `json:"sku,omitempty"`
+	SKU *string `json:"sku,omitempty" validate:"omitempty,max=255"`
 	// A description of the product.
 	Description *string `json:"description,omitempty"`
 	// Additional notes about the product.

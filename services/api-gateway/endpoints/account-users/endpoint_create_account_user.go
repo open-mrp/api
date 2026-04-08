@@ -14,17 +14,17 @@ import (
 // CreateAccountUserRequest is the request to create a new account user.
 type CreateAccountUserRequest struct {
 	// The user's display name.
-	Name *string `json:"name"`
+	Name *string `json:"name" validate:"omitempty,max=255"`
 	// The user's email address.
-	Email *string `json:"email" validate:"omitnil,custom_email"`
+	Email *string `json:"email" validate:"omitnil,custom_email,max=255"`
 	// The user's username.
-	Username *string `json:"username"`
+	Username *string `json:"username" validate:"omitempty,max=255"`
 	// The user's password.
 	Password *string `json:"password"` // #nosec G117 -- API request field for user password input
 	// The ID of the role to assign. Expandable.
-	RoleID *string `json:"role_id,omitempty"`
+	RoleID *string `json:"role_id,omitempty" validate:"omitempty,max=191"`
 	// The ID of the department to assign. Expandable.
-	DepartmentID *string `json:"department_id,omitempty"`
+	DepartmentID *string `json:"department_id,omitempty" validate:"omitempty,max=191"`
 	// Whether the user is a sales representative.
 	IsSalesRep *bool `json:"is_sales_rep,omitempty"`
 	// Whether the user receives order acknowledgement notifications.

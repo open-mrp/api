@@ -13,7 +13,7 @@ import (
 // CreateProductionStepRequest is the request to create a new production step.
 type CreateProductionStepRequest struct {
 	// The name of the production step.
-	Name string `json:"name" validate:"required"`
+	Name string `json:"name" validate:"required,max=255"`
 	// Optional notes about the production step.
 	Notes *string `json:"notes,omitempty"`
 	// The leveling factor as a decimal string.
@@ -21,9 +21,9 @@ type CreateProductionStepRequest struct {
 	// The allowances as a decimal string.
 	Allowances string `json:"allowances" validate:"required"`
 	// The scanning station ID.
-	ScanningStationID *string `json:"scanning_station_id,omitempty"`
+	ScanningStationID *string `json:"scanning_station_id,omitempty" validate:"omitempty,max=191"`
 	// The department ID.
-	DepartmentID *string `json:"department_id,omitempty"`
+	DepartmentID *string `json:"department_id,omitempty" validate:"omitempty,max=191"`
 	// The labor rate configuration.
 	LaborRate CreateRateInput `json:"labor_rate" validate:"required"`
 	// The labor time configuration.
@@ -41,33 +41,33 @@ type CreateRateInput struct {
 	// The rate value as a decimal string.
 	Value string `json:"value" validate:"required"`
 	// The numerator unit ID.
-	NumeratorUnitID string `json:"numerator_unit_id" validate:"required"`
+	NumeratorUnitID string `json:"numerator_unit_id" validate:"required,max=191"`
 	// The denominator unit ID.
-	DenominatorUnitID string `json:"denominator_unit_id" validate:"required"`
+	DenominatorUnitID string `json:"denominator_unit_id" validate:"required,max=191"`
 }
 
 // CreateProductionInput holds the input for creating a production output.
 type CreateProductionInput struct {
 	// The item ID to produce.
-	ItemID string `json:"item_id" validate:"required"`
+	ItemID string `json:"item_id" validate:"required,max=191"`
 	// The quantity value as a decimal string.
 	QuantityValue string `json:"quantity_value" validate:"required"`
 	// The quantity unit ID.
-	QuantityUnitID string `json:"quantity_unit_id" validate:"required"`
+	QuantityUnitID string `json:"quantity_unit_id" validate:"required,max=191"`
 }
 
 // CreateConsumptionInput holds the input for creating a consumption within a step.
 type CreateConsumptionInput struct {
 	// The item ID being consumed.
-	ItemID string `json:"item_id" validate:"required"`
+	ItemID string `json:"item_id" validate:"required,max=191"`
 	// The quantity value as a decimal string.
 	QuantityValue string `json:"quantity_value" validate:"required"`
 	// The quantity unit ID.
-	QuantityUnitID string `json:"quantity_unit_id" validate:"required"`
+	QuantityUnitID string `json:"quantity_unit_id" validate:"required,max=191"`
 	// The waste quantity value as a decimal string.
 	WasteQuantityValue string `json:"waste_quantity_value" validate:"required"`
 	// The waste quantity unit ID.
-	WasteQuantityUnitID string `json:"waste_quantity_unit_id" validate:"required"`
+	WasteQuantityUnitID string `json:"waste_quantity_unit_id" validate:"required,max=191"`
 	// Optional instructions for how this material is consumed.
 	Instructions *string `json:"instructions,omitempty"`
 }

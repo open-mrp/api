@@ -143,9 +143,7 @@ func TestSchemaValidation_CreateAndGetResponseKeysMatch(t *testing.T) {
 
 	// Test with customers — a well-defined CRUD resource.
 	name := uniqueName("e2e-schema-keys")
-	createStatus, createBody, err := apiClient.Post(customersPath, map[string]any{
-		"name": name,
-	}, newIdempotencyKey())
+	createStatus, createBody, err := apiClient.Post(customersPath, validCustomerBody(name), newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
 
@@ -180,9 +178,7 @@ func TestSchemaValidation_CreateAndGetResponseKeysMatch(t *testing.T) {
 func TestSchemaValidation_UpdateResponseKeysMatchGet(t *testing.T) {
 	t.Parallel()
 
-	created := createAndCleanup(t, customersPath, map[string]any{
-		"name": uniqueName("e2e-schema-upd"),
-	})
+	created := createAndCleanup(t, customersPath, validCustomerBody(uniqueName("e2e-schema-upd")))
 	id := jsonField(created, "id")
 
 	// PATCH.
@@ -340,13 +336,7 @@ func TestSchemaValidation_IncludeFieldsPopulated(t *testing.T) {
 	t.Parallel()
 
 	// Without include, expandable fields should be null.
-	created := createAndCleanup(t, customersPath, map[string]any{
-		"name":                     uniqueName("e2e-schema-inc"),
-		"default_payment_term_id":  SeedPaymentTermID,
-		"default_shipping_term_id": SeedShippingTermID,
-		"default_carrier_id":       SeedCarrierID,
-		"customer_type_group_id":   SeedCustomerGroupID,
-	})
+	created := createAndCleanup(t, customersPath, validCustomerBody(uniqueName("e2e-schema-inc")))
 	id := jsonField(created, "id")
 
 	// Verify expandable fields are null without include.

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.6](https://github.com/Augno/api/compare/v0.10.5...v0.10.6) (2026-04-08)
+
+
+### Bug Fixes
+
+* complex joins even without includes ([#175](https://github.com/Augno/api/issues/175)) ([b1be209](https://github.com/Augno/api/commit/b1be2091774f40609c61764d74f4f11ed0aba6e1))
+
 ## [0.10.5](https://github.com/Augno/api/compare/v0.10.4...v0.10.5) (2026-04-08)
 
 

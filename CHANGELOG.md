@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.0](https://github.com/Augno/api/compare/v0.10.8...v0.11.0) (2026-04-09)
+
+
+### Features
+
+* add credit limit to customer object ([#181](https://github.com/Augno/api/issues/181)) ([eb748bc](https://github.com/Augno/api/commit/eb748bcaebcdf595303dddf9c4c2dfc77baa3064))
+
 ## [0.10.8](https://github.com/Augno/api/compare/v0.10.7...v0.10.8) (2026-04-09)
 
 

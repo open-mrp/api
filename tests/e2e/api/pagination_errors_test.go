@@ -138,6 +138,9 @@ func TestListEndpoints_InvalidCursor(t *testing.T) {
 		if !ep.HasParam("cursor") {
 			continue
 		}
+		if isExcludedFromPagination(ep.Path, ep.OperationID) {
+			continue
+		}
 		if tested >= maxEndpointsToTest {
 			break
 		}

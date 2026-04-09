@@ -425,6 +425,8 @@ func (r *customerRepoImpl) Get(ctx context.Context, ownerAccountID, customerAcco
 		DefaultPriorityName:           nullStringPtr(row.PriorityName),
 		DefaultSalesRepID:             nullStringPtr(row.DefaultSalesRepID),
 		DefaultSalesRepName:           nullStringPtr(row.DefaultSalesRepName),
+		BillToAddressID:               nullStringPtr(row.DefaultBillingAddressID),
+		ShipToAddressID:               nullStringPtr(row.DefaultShippingAddressID),
 		BillToAddress:                 billToAddress,
 		ShipToAddress:                 shipToAddress,
 		TypeGroupID:                   nullStringPtr(row.TypeGroupID),

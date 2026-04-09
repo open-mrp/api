@@ -107,6 +107,24 @@ done
 
 info "Agent-service migration complete."
 
+# --- Seed PostgreSQL ---
+
+info "Seeding agent-service data..."
+
+for seed_file in services/agent-service/db/seeds/*.sql; do
+    if [ ! -f "$seed_file" ]; then
+        continue
+    fi
+
+    filename="$(basename "$seed_file")"
+    info "Running $filename..."
+
+    extract_up_sql "$seed_file" \
+        | docker exec -i "$POSTGRES_CONTAINER" $PSQL_CMD
+done
+
+info "Agent-service seed complete."
+
 # --- Done ---
 
 echo ""

@@ -92,11 +92,12 @@ INSERT IGNORE INTO supplier_material (id, material_id, supplier_account_id, supp
 -- TERRITORIES (2 rows for pagination)
 -- ============================================================
 
--- Note: the list-territories path is /v1/sales/accounts/{account_id}/territories
--- where account_id = SeedCustomerAccountID. The query filters by t.account_id.
+-- Note: the list-territories path is /v1/sales/accounts/{account_id}/territories.
+-- The territory service overrides account_id with the authenticated user's account
+-- (identity.Target.AccountID), so territories must belong to SeedAccountID.
 INSERT IGNORE INTO territory (id, start_zipcode, end_zipcode, state, sales_rep_id, account_id, product_line_id, created_at, updated_at) VALUES
-    ('tr_01seedterritory1_000', 10000, 19999, 'NY', 'acus_s83fjhyfmqen', 'ac_01k09wm2fgevdsc344gpbcj30f', 'pdln_01k0a735ype5e8nrhv1n5dhq1q', NOW(), NOW()),
-    ('tr_01seedterritory2_000', 90000, 99999, 'CA', 'acus_s83fjhyfmqen', 'ac_01k09wm2fgevdsc344gpbcj30f', 'pdln_01k0a735ype5e8nrhv1n5dhq1q', NOW(), NOW());
+    ('tr_01seedterritory1_000', 10000, 19999, 'NY', 'acus_s83fjhyfmqen', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'pdln_01k0a735ype5e8nrhv1n5dhq1q', NOW(), NOW()),
+    ('tr_01seedterritory2_000', 90000, 99999, 'CA', 'acus_s83fjhyfmqen', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'pdln_01k0a735ype5e8nrhv1n5dhq1q', NOW(), NOW());
 
 -- ============================================================
 -- SECOND INVOICE (for pagination on /v1/finance/invoices)

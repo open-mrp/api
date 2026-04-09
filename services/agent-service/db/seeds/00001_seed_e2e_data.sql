@@ -9,6 +9,12 @@ VALUES
     ('agdf_01seede2e_csbot0000', 'Customer Service Bot', 'customer_service_bot', 'Handles customer inquiries', 'system', 'customer_service', 'manual', true, '{"model":"claude-sonnet-4-20250514","max_tokens":4096}')
 ON CONFLICT (id) DO NOTHING;
 
+-- Custom agent definition (account-scoped, updatable via PATCH)
+INSERT INTO agent_definition (id, account_id, name, slug, description, definition_type, category_code, trigger_type, is_active, config)
+VALUES
+    ('agdf_01seede2e_custom00', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'Custom Test Agent', 'custom_test_agent', 'A custom agent for e2e update tests', 'custom', 'operations', 'manual', true, '{"model":"claude-sonnet-4-20250514","max_tokens":4096}')
+ON CONFLICT (id) DO NOTHING;
+
 -- Agent configs (account-scoped instances of the definitions)
 INSERT INTO agent_config (id, account_id, agent_definition_id, is_enabled, config)
 VALUES

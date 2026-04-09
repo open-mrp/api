@@ -56,7 +56,7 @@ type UpdateCustomerRequest struct {
 	// The customer type group ID.
 	CustomerTypeGroupID *string `json:"customer_type_group_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
 	// The carrier billing type.
-	CarrierBillingType *constants.CarrierBillingType `json:"carrier_billing_type,omitempty"`
+	CarrierBillingType *constants.CarrierBillingType `json:"carrier_billing_type,omitempty" nullable:"false"`
 	// The carrier billing account number.
 	CarrierBillingAccount *string `json:"carrier_billing_account,omitempty" nullable:"true" validate:"omitempty,max=255"`
 }

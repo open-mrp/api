@@ -417,7 +417,7 @@ UPDATE account_relation SET
     priority_code = COALESCE(sqlc.narg('priority_code'), priority_code),
     shipping_term_id = sqlc.narg('shipping_term_id'),
     carrier_billing_type = COALESCE(sqlc.narg('carrier_billing_type'), carrier_billing_type),
-    carrier_billing_account = COALESCE(sqlc.narg('carrier_billing_account'), carrier_billing_account),
+    carrier_billing_account = sqlc.narg('carrier_billing_account'),
     default_billing_address_id = sqlc.narg('default_billing_address_id'),
     default_shipping_address_id = sqlc.narg('default_shipping_address_id'),
     stripe_customer_id = COALESCE(sqlc.narg('stripe_customer_id'), stripe_customer_id),

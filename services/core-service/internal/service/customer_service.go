@@ -419,6 +419,9 @@ func (s *customerSvcImpl) UpdateCustomer(ctx context.Context, params domain.Upda
 			if params.Note == nil {
 				params.Note = old.Note
 			}
+			if params.CarrierBillingAccount == nil {
+				params.CarrierBillingAccount = old.CarrierBillingAccount
+			}
 			if params.BillToAddressID == nil && old.BillToAddress != nil {
 				params.BillToAddressID = &old.BillToAddress.ID
 			}

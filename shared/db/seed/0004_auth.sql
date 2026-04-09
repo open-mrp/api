@@ -67,7 +67,9 @@ INSERT IGNORE INTO permission (id, code, name, permission_group_code, created_at
     ('unit_groups', 'unit_groups', 'Unit Groups', 'admin', NOW(), NOW()),
     ('request_logs', 'request_logs', 'Request Logs', 'admin', NOW(), NOW()),
     ('audit_events', 'audit_events', 'Audit Events', 'admin', NOW(), NOW()),
-    ('sandboxes', 'sandboxes', 'Sandboxes', 'admin', NOW(), NOW());
+    ('sandboxes', 'sandboxes', 'Sandboxes', 'admin', NOW(), NOW()),
+    ('agents', 'agents', 'Agents', 'admin', NOW(), NOW()),
+    ('agent_runs', 'agent_runs', 'Agent Runs', 'admin', NOW(), NOW());
 
 -- Roles
 INSERT IGNORE INTO role (id, name, role_type_code, account_id, created_at, updated_at) VALUES
@@ -137,7 +139,9 @@ INSERT IGNORE INTO role_permission (id, role_id, permission_code, `create`, `rea
     ('rlpm_01seedadm_unitgp0', 'rl_mtg88e6u6fbu', 'unit_groups', 1, 1, 1, 1, NOW(), NOW()),
     ('rlpm_01seedadm_reqlg00', 'rl_mtg88e6u6fbu', 'request_logs', 1, 1, 1, 1, NOW(), NOW()),
     ('rlpm_01seedadm_audit00', 'rl_mtg88e6u6fbu', 'audit_events', 1, 1, 1, 1, NOW(), NOW()),
-    ('rlpm_01seedadm_sandbo0', 'rl_mtg88e6u6fbu', 'sandboxes', 1, 1, 1, 1, NOW(), NOW());
+    ('rlpm_01seedadm_sandbo0', 'rl_mtg88e6u6fbu', 'sandboxes', 1, 1, 1, 1, NOW(), NOW()),
+    ('rlpm_01seedadm_agents0', 'rl_mtg88e6u6fbu', 'agents', 1, 1, 1, 1, NOW(), NOW()),
+    ('rlpm_01seedadm_agentr0', 'rl_mtg88e6u6fbu', 'agent_runs', 1, 1, 1, 1, NOW(), NOW());
 
 -- Sales Rep role permissions (only sales_orders)
 INSERT IGNORE INTO role_permission (id, role_id, permission_code, `create`, `read`, `update`, `delete`, created_at, updated_at) VALUES

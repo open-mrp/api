@@ -40,6 +40,8 @@ type Customer struct {
 	DefaultPriorityName           *string
 	DefaultSalesRepID             *string `audit:"default_sales_rep_id"`
 	DefaultSalesRepName           *string
+	BillToAddressID               *string          `audit:"bill_to_address_id"`
+	ShipToAddressID               *string          `audit:"ship_to_address_id"`
 	BillToAddress                 *CustomerAddress
 	ShipToAddress                 *CustomerAddress
 	TypeGroupID                   *string `audit:"type_group_id"`

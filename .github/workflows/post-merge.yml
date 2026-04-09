@@ -169,9 +169,6 @@ jobs:
           go mod tidy
           cd tools && go mod tidy
 
-      - name: Generate OpenAPI spec
-        run: make openapi
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:

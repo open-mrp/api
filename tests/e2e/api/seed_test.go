@@ -129,10 +129,11 @@ const (
 	SeedChildAccountID2        = "ac_01seedchild_acct0002"
 	SeedChildRelationID2       = "acre_01seedchild_rel002"
 
-	// Agents (seeded in agent-service 00003_seed_e2e_data.sql)
-	SeedAgentDefinitionID = "agdf_01seede2e_orderbot0"
-	SeedAgentConfigID     = "agcf_01seede2e_ordercfg0"
-	SeedAgentMemoryID     = "agmm_01seede2e_memory01"
+	// Agents (seeded in agent-service 00001_seed_e2e_data.sql)
+	SeedAgentDefinitionID       = "agdf_01seede2e_orderbot0"
+	SeedCustomAgentDefinitionID = "agdf_01seede2e_custom00"
+	SeedAgentConfigID           = "agcf_01seede2e_ordercfg0"
+	SeedAgentMemoryID           = "agmm_01seede2e_memory01"
 
 	// Tenant B (seeded in 0015_tenant_b_e2e.sql) — used for tenant isolation tests
 	SeedTenantBAccountID = "ac_tenant2_e2e_isolati"
@@ -224,7 +225,7 @@ var pathSpecificIDSeeds = map[string]string{
 	"/v1/sales/sales-orders/":                                            SeedSalesOrderID,
 	"/v1/sales/volume-discounts/":                                        SeedVolumeDiscountID,
 
-	"/v1/ai/agents/":       SeedAgentDefinitionID,
+	"/v1/ai/agents/":       SeedCustomAgentDefinitionID,
 	"/v1/ai/memories/":     SeedAgentMemoryID,
 	"/v1/core/email-logs/": SeedEmailLogID1,
 	"/v1/operations/receiving-orders/{receivingOrderId}/lines/": SeedReceivingOrderLineID,

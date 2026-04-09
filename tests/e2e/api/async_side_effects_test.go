@@ -219,6 +219,263 @@ func TestCustomers_AuditEvents_Changes(t *testing.T) {
 	assert.Nil(t, nameDeleteChange["new_value"])
 }
 
+func TestCustomers_AuditEvents_UpdateAllFields(t *testing.T) {
+	t.Parallel()
+
+	// Create a customer with all fields populated so we can test changing each one.
+	name := uniqueName("e2e-cust-audit-all")
+	body := validCustomerBody(name)
+	body["carrier_billing_type"] = "sender"
+	body["carrier_billing_account"] = "ORIG-ACCT"
+	body["default_priority_code"] = SeedPriorityCode
+	body["default_sales_rep_user_id"] = SeedUserID
+
+	createStatus, createBody, err := apiClient.Post(customersPath, body, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, createStatus, createBody)
+	created := parseJSON(createBody)
+	id := jsonField(created, "id")
+	t.Cleanup(func() { apiClient.Delete(customersPath + "/" + id) })
+
+	expectAuditEvent(t, id, "customer", "create")
+
+	// Get initial address IDs.
+	getStatus, getBody, err := apiClient.GetListRaw(
+		customersPath+"/"+id,
+		url.Values{"include": {"bill_to_address,ship_to_address"}},
+	)
+	require.NoError(t, err)
+	requireStatus(t, 200, getStatus, getBody)
+	got := parseJSON(getBody)
+	origBillToID := jsonField(jsonObject(got, "bill_to_address"), "id")
+	origShipToID := jsonField(jsonObject(got, "ship_to_address"), "id")
+	require.NotEmpty(t, origBillToID)
+	require.NotEmpty(t, origShipToID)
+
+	// Create new addresses for the update.
+	customerClient := apiClient.WithAccountID(id)
+
+	billAddrStatus, billAddrBody, err := customerClient.Post(addressesPath, map[string]any{
+		"name": uniqueName("e2e-addr-bill"), "country": "US",
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, billAddrStatus, billAddrBody)
+	newBillToID := jsonField(parseJSON(billAddrBody), "id")
+	t.Cleanup(func() { customerClient.Delete(addressesPath + "/" + newBillToID) })
+
+	shipAddrStatus, shipAddrBody, err := customerClient.Post(addressesPath, map[string]any{
+		"name": uniqueName("e2e-addr-ship"), "country": "US",
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, shipAddrStatus, shipAddrBody)
+	newShipToID := jsonField(parseJSON(shipAddrBody), "id")
+	t.Cleanup(func() { customerClient.Delete(addressesPath + "/" + newShipToID) })
+
+	// Update ALL changeable fields at once.
+	updatedName := uniqueName("e2e-cust-audit-upd")
+	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+id, map[string]any{
+		"name":                    updatedName,
+		"note":                    "audit update note",
+		"email":                   "audit-update@e2e.augno.com",
+		"phone":                   "555-AUDIT",
+		"url":                     "https://audit.e2e.augno.com",
+		"is_edi_enabled":          true,
+		"commission_policy":       "commission_exempt",
+		"freight_policy":          "free_freight",
+		"carrier_billing_type":    "third_party",
+		"carrier_billing_account": "NEW-ACCT",
+		"default_payment_term_id": SeedDefaultPaymentTermID,
+		"bill_to_address_id":      newBillToID,
+		"ship_to_address_id":      newShipToID,
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, patchStatus, patchBody)
+
+	event := expectAuditEventWithChanges(t, id, "customer", "update")
+	changes := jsonArray(event, "changes")
+	require.NotEmpty(t, changes, "update audit event should include changes")
+
+	// Verify string field changes.
+	nameChange, ok := changeForField(changes, "name")
+	require.True(t, ok, "should include name change")
+	assert.Equal(t, name, jsonField(nameChange, "old_value"))
+	assert.Equal(t, updatedName, jsonField(nameChange, "new_value"))
+
+	// Verify nullable string fields set from nil.
+	for _, tc := range []struct {
+		field string
+		value string
+	}{
+		{"note", "audit update note"},
+		{"email", "audit-update@e2e.augno.com"},
+		{"phone", "555-AUDIT"},
+		{"url", "https://audit.e2e.augno.com"},
+	} {
+		change, ok := changeForField(changes, tc.field)
+		require.True(t, ok, "should include %s change", tc.field)
+		assert.Nil(t, change["old_value"], "%s old_value should be null", tc.field)
+		assert.Equal(t, tc.value, jsonField(change, "new_value"), "%s new_value mismatch", tc.field)
+	}
+
+	// Verify boolean field change.
+	ediChange, ok := changeForField(changes, "is_edi_enabled")
+	require.True(t, ok, "should include is_edi_enabled change")
+	assert.Equal(t, false, ediChange["old_value"], "is_edi_enabled old_value should be false")
+	assert.Equal(t, true, ediChange["new_value"], "is_edi_enabled new_value should be true")
+
+	// Verify enum/policy field changes.
+	commChange, ok := changeForField(changes, "commission_policy")
+	require.True(t, ok, "should include commission_policy change")
+	assert.Equal(t, "commission_applied", jsonField(commChange, "old_value"))
+	assert.Equal(t, "commission_exempt", jsonField(commChange, "new_value"))
+
+	freightChange, ok := changeForField(changes, "freight_policy")
+	require.True(t, ok, "should include freight_policy change")
+	assert.Equal(t, "billed_freight", jsonField(freightChange, "old_value"))
+	assert.Equal(t, "free_freight", jsonField(freightChange, "new_value"))
+
+	cbtChange, ok := changeForField(changes, "carrier_billing_type")
+	require.True(t, ok, "should include carrier_billing_type change")
+	assert.Equal(t, "sender", jsonField(cbtChange, "old_value"))
+	assert.Equal(t, "third_party", jsonField(cbtChange, "new_value"))
+
+	// Verify carrier billing account change.
+	cbaChange, ok := changeForField(changes, "carrier_billing_account")
+	require.True(t, ok, "should include carrier_billing_account change")
+	assert.Equal(t, "ORIG-ACCT", jsonField(cbaChange, "old_value"))
+	assert.Equal(t, "NEW-ACCT", jsonField(cbaChange, "new_value"))
+
+	// Verify ID-reference field change.
+	ptChange, ok := changeForField(changes, "default_payment_term_id")
+	require.True(t, ok, "should include default_payment_term_id change")
+	assert.Equal(t, SeedPaymentTermID, jsonField(ptChange, "old_value"))
+	assert.Equal(t, SeedDefaultPaymentTermID, jsonField(ptChange, "new_value"))
+
+	// Verify address ID changes.
+	billChange, ok := changeForField(changes, "bill_to_address_id")
+	require.True(t, ok, "should include bill_to_address_id change")
+	assert.Equal(t, origBillToID, jsonField(billChange, "old_value"))
+	assert.Equal(t, newBillToID, jsonField(billChange, "new_value"))
+
+	shipChange, ok := changeForField(changes, "ship_to_address_id")
+	require.True(t, ok, "should include ship_to_address_id change")
+	assert.Equal(t, origShipToID, jsonField(shipChange, "old_value"))
+	assert.Equal(t, newShipToID, jsonField(shipChange, "new_value"))
+}
+
+func TestCustomers_AuditEvents_ClearAllNullableFields(t *testing.T) {
+	t.Parallel()
+
+	// Create a customer with ALL nullable fields populated.
+	name := uniqueName("e2e-cust-audit-clr")
+	body := validCustomerBody(name)
+	body["note"] = "clear-test note"
+	body["email"] = "clear-test@e2e.augno.com"
+	body["phone"] = "555-CLEAR"
+	body["url"] = "https://clear-test.e2e.augno.com"
+	body["carrier_billing_type"] = "third_party"
+	body["carrier_billing_account"] = "CLR-ACCT"
+	body["default_priority_code"] = SeedPriorityCode
+	body["default_sales_rep_user_id"] = SeedUserID
+
+	createStatus, createBody, err := apiClient.Post(customersPath, body, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, createStatus, createBody)
+	created := parseJSON(createBody)
+	id := jsonField(created, "id")
+	t.Cleanup(func() { apiClient.Delete(customersPath + "/" + id) })
+
+	expectAuditEvent(t, id, "customer", "create")
+
+	// Get the customer to capture initial IDs for address and sales rep.
+	getStatus, getBody, err := apiClient.GetListRaw(
+		customersPath+"/"+id,
+		url.Values{"include": {"bill_to_address,ship_to_address,defaults.sales_rep"}},
+	)
+	require.NoError(t, err)
+	requireStatus(t, 200, getStatus, getBody)
+	got := parseJSON(getBody)
+
+	origBillToID := jsonField(jsonObject(got, "bill_to_address"), "id")
+	origShipToID := jsonField(jsonObject(got, "ship_to_address"), "id")
+	origSalesRepID := jsonField(jsonObject(jsonObject(got, "defaults"), "sales_rep"), "id")
+	require.NotEmpty(t, origBillToID)
+	require.NotEmpty(t, origShipToID)
+	require.NotEmpty(t, origSalesRepID)
+
+	// Clear ALL nullable fields at once.
+	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+id, map[string]any{
+		"note":                      nil,
+		"email":                     nil,
+		"phone":                     nil,
+		"url":                       nil,
+		"carrier_billing_account":   nil,
+		"default_carrier_id":        nil,
+		"default_payment_term_id":   nil,
+		"default_shipping_term_id":  nil,
+		"default_sales_rep_user_id": nil,
+		"bill_to_address_id":        nil,
+		"ship_to_address_id":        nil,
+		"customer_type_group_id":    nil,
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, patchStatus, patchBody)
+
+	event := expectAuditEventWithChanges(t, id, "customer", "update")
+	changes := jsonArray(event, "changes")
+	require.NotEmpty(t, changes, "update audit event should include changes")
+
+	// Verify nullable string fields cleared to null.
+	for _, tc := range []struct {
+		field    string
+		oldValue string
+	}{
+		{"note", "clear-test note"},
+		{"email", "clear-test@e2e.augno.com"},
+		{"phone", "555-CLEAR"},
+		{"url", "https://clear-test.e2e.augno.com"},
+		{"carrier_billing_account", "CLR-ACCT"},
+	} {
+		change, ok := changeForField(changes, tc.field)
+		require.True(t, ok, "should include %s change", tc.field)
+		assert.Equal(t, tc.oldValue, jsonField(change, "old_value"), "%s old_value mismatch", tc.field)
+		assert.Nil(t, change["new_value"], "%s new_value should be null", tc.field)
+	}
+
+	// Verify ID-reference fields cleared to null.
+	for _, tc := range []struct {
+		field    string
+		oldValue string
+	}{
+		{"default_carrier_id", SeedCarrierID},
+		{"default_payment_term_id", SeedPaymentTermID},
+		{"default_shipping_term_id", SeedShippingTermID},
+		{"type_group_id", SeedCustomerGroupID},
+	} {
+		change, ok := changeForField(changes, tc.field)
+		require.True(t, ok, "should include %s change", tc.field)
+		assert.Equal(t, tc.oldValue, jsonField(change, "old_value"), "%s old_value mismatch", tc.field)
+		assert.Nil(t, change["new_value"], "%s new_value should be null", tc.field)
+	}
+
+	// Verify sales rep cleared (API field: default_sales_rep_user_id → audit field: default_sales_rep_id).
+	salesRepChange, ok := changeForField(changes, "default_sales_rep_id")
+	require.True(t, ok, "should include default_sales_rep_id change")
+	assert.Equal(t, origSalesRepID, jsonField(salesRepChange, "old_value"))
+	assert.Nil(t, salesRepChange["new_value"])
+
+	// Verify address IDs cleared to null.
+	billChange, ok := changeForField(changes, "bill_to_address_id")
+	require.True(t, ok, "should include bill_to_address_id change")
+	assert.Equal(t, origBillToID, jsonField(billChange, "old_value"))
+	assert.Nil(t, billChange["new_value"])
+
+	shipChange, ok := changeForField(changes, "ship_to_address_id")
+	require.True(t, ok, "should include ship_to_address_id change")
+	assert.Equal(t, origShipToID, jsonField(shipChange, "old_value"))
+	assert.Nil(t, shipChange["new_value"])
+}
+
 func TestCustomers_RequestLogs(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-cust-rlog")

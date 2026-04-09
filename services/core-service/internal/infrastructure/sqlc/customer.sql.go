@@ -2363,7 +2363,7 @@ UPDATE account_relation SET
     priority_code = COALESCE(?, priority_code),
     shipping_term_id = ?,
     carrier_billing_type = COALESCE(?, carrier_billing_type),
-    carrier_billing_account = COALESCE(?, carrier_billing_account),
+    carrier_billing_account = ?,
     default_billing_address_id = ?,
     default_shipping_address_id = ?,
     stripe_customer_id = COALESCE(?, stripe_customer_id),

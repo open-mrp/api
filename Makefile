@@ -206,13 +206,13 @@ open-tracing: ## Open Jaeger UI via port-forward
 	@echo "Opening Jaeger UI at http://localhost:16686"
 	kubectl port-forward svc/jaeger 16686:16686
 
-e2e-up: ## Start the E2E stack (isolated services + seeded DBs)
+e2e-up: openapi ## Start the E2E stack (isolated services + seeded DBs)
 	docker compose -f docker-compose.e2e.yml build --parallel
 	docker compose -f docker-compose.e2e.yml up -d --wait mysql-e2e postgres-e2e rabbitmq
 	@./scripts/setup-e2e-db.sh
 	docker compose -f docker-compose.e2e.yml up -d --wait
 
-e2e-up-ci: ## Start the E2E stack using pre-built images (for CI)
+e2e-up-ci: openapi ## Start the E2E stack using pre-built images (for CI)
 	docker compose -f docker-compose.e2e.yml up -d --wait mysql-e2e postgres-e2e rabbitmq
 	@./scripts/setup-e2e-db.sh
 	docker compose -f docker-compose.e2e.yml up -d --wait

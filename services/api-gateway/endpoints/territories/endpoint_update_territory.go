@@ -24,7 +24,7 @@ type UpdateTerritoryRequest struct {
 	// The end of the zipcode range (501-99999).
 	EndZipcode *int32 `json:"end_zipcode,omitempty"`
 	// The ID of the sales rep (account user) assigned to this territory.
-	SalesRepID *string `json:"sales_rep_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
+	SalesRepID *string `json:"sales_rep_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
 	// The ID of the product line this territory is scoped to.
 	ProductLineID *string `json:"product_line_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
 	// Set to true to remove the product line from this territory.

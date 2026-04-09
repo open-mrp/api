@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.8](https://github.com/Augno/api/compare/v0.10.7...v0.10.8) (2026-04-09)
+
+
+### Bug Fixes
+
+* update Makefile targets and enhance E2E database setup ([#179](https://github.com/Augno/api/issues/179)) ([758eb19](https://github.com/Augno/api/commit/758eb19947d8947b2c0bdf54fc892e3642002567))
+
 ## [0.10.7](https://github.com/Augno/api/compare/v0.10.6...v0.10.7) (2026-04-08)
 
 

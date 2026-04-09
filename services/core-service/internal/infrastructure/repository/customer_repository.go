@@ -408,6 +408,12 @@ func (r *customerRepoImpl) Get(ctx context.Context, ownerAccountID, customerAcco
 		URL:                           nullStringPtr(row.WebsiteUrl),
 		CarrierBillingType:            nullCarrierBillingType(row.CarrierBillingType),
 		CarrierBillingAccount:         nullStringPtr(row.CarrierBillingAccount),
+		CreditLimitID:                 nullStringPtr(row.CreditLimitID),
+		CreditLimitValue:              nullStringPtr(row.CreditLimitValue),
+		CreditLimitUnitID:             nullStringPtr(row.CreditLimitUnitID),
+		CreditLimitUnitAbbreviation:   nullStringPtr(row.CreditLimitUnitAbbreviation),
+		CreditLimitUnitName:           nullStringPtr(row.CreditLimitUnitName),
+		CreditLimitUnitType:           nullStringPtr(row.CreditLimitUnitType),
 		AcceptsInvoiceEmails:          acceptsInvoiceEmails,
 		DefaultCarrierID:              nullStringPtr(row.DefaultCarrierID),
 		DefaultCarrierName:            nullStringPtr(row.DefaultCarrierName),
@@ -563,6 +569,7 @@ func (r *customerRepoImpl) Create(ctx context.Context, accountID, relationID, br
 		CarrierBillingAccount:    toNullString(params.CarrierBillingAccount),
 		DefaultBillingAddressID:  toNullString(params.BillToAddressID),
 		DefaultShippingAddressID: toNullString(params.ShipToAddressID),
+		CreditLimitID:            toNullString(params.CreditLimitID),
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -612,6 +619,7 @@ func (r *customerRepoImpl) Update(ctx context.Context, relationID string, params
 		CarrierBillingAccount:    stringToNullString(params.CarrierBillingAccount),
 		DefaultBillingAddressID:  stringToNullString(params.BillToAddressID),
 		DefaultShippingAddressID: stringToNullString(params.ShipToAddressID),
+		CreditLimitID:            stringToNullString(params.CreditLimitID),
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return tracing.Trace(span, apiErr)
@@ -1273,6 +1281,50 @@ func (r *customerRepoImpl) GetCustomerEmail(ctx context.Context, customerAccount
 	}
 
 	return nullStringPtr(email), nil
+}
+
+func (r *customerRepoImpl) InsertCreditLimitQuantity(ctx context.Context, id, value, unitID string) *apierror.APIError {
+	ctx, span := customerRepoTracer.Start(ctx, "repository.customer.insert_credit_limit_quantity")
+	defer span.End()
+
+	err := r.queries.InsertCustomerCreditLimitQuantity(ctx, sqlc.InsertCustomerCreditLimitQuantityParams{
+		ID:     id,
+		Value:  value,
+		UnitID: unitID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	return nil
+}
+
+func (r *customerRepoImpl) UpdateCreditLimitQuantity(ctx context.Context, id, value, unitID string) *apierror.APIError {
+	ctx, span := customerRepoTracer.Start(ctx, "repository.customer.update_credit_limit_quantity")
+	defer span.End()
+
+	err := r.queries.UpdateCustomerCreditLimitQuantity(ctx, sqlc.UpdateCustomerCreditLimitQuantityParams{
+		Value:  value,
+		UnitID: unitID,
+		ID:     id,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	return nil
+}
+
+func (r *customerRepoImpl) DeleteCreditLimitQuantity(ctx context.Context, id string) *apierror.APIError {
+	ctx, span := customerRepoTracer.Start(ctx, "repository.customer.delete_credit_limit_quantity")
+	defer span.End()
+
+	err := r.queries.DeleteCustomerCreditLimitQuantity(ctx, id)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	return nil
 }
 
 // toNullString is defined in unit_repository.go

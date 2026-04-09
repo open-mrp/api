@@ -420,6 +420,15 @@ func (q *Queries) DeleteCustomerByAccountID(ctx context.Context, arg DeleteCusto
 	return err
 }
 
+const deleteCustomerCreditLimitQuantity = `-- name: DeleteCustomerCreditLimitQuantity :exec
+DELETE FROM quantity WHERE id = ?
+`
+
+func (q *Queries) DeleteCustomerCreditLimitQuantity(ctx context.Context, id string) error {
+	_, err := q.db.ExecContext(ctx, deleteCustomerCreditLimitQuantity, id)
+	return err
+}
+
 const deleteCustomerNotificationPreferences = `-- name: DeleteCustomerNotificationPreferences :exec
 DELETE FROM account_relation_notification_preference
 WHERE account_relation_id IN (/*SLICE:relation_ids*/?)
@@ -594,6 +603,12 @@ SELECT
     sg.country AS default_shipping_country,
     sa.created_at AS default_shipping_address_created_at,
     sa.updated_at AS default_shipping_address_updated_at,
+    clq.id AS credit_limit_id,
+    clq.value AS credit_limit_value,
+    clu.id AS credit_limit_unit_id,
+    clu.abbreviation AS credit_limit_unit_abbreviation,
+    clu.name AS credit_limit_unit_name,
+    clu.unit_dimension_code AS credit_limit_unit_type,
     ar.created_at,
     ar.updated_at
 FROM account_relation ar
@@ -613,6 +628,8 @@ LEFT JOIN address ba ON ba.id = ar.default_billing_address_id
 LEFT JOIN geolocation bg ON bg.id = ba.geolocation_id
 LEFT JOIN address sa ON sa.id = ar.default_shipping_address_id
 LEFT JOIN geolocation sg ON sg.id = sa.geolocation_id
+LEFT JOIN quantity clq ON clq.id = ar.credit_limit_id
+LEFT JOIN unit clu ON clu.id = clq.unit_id
 WHERE ar.owner_account_id = ?
   AND ar.counterparty_account_id = ?
   AND ar.account_relation_role_code = 'customer'
@@ -695,6 +712,12 @@ type GetCustomerRow struct {
 	DefaultShippingCountry          sql.NullString
 	DefaultShippingAddressCreatedAt sql.NullTime
 	DefaultShippingAddressUpdatedAt sql.NullTime
+	CreditLimitID                   sql.NullString
+	CreditLimitValue                sql.NullString
+	CreditLimitUnitID               sql.NullString
+	CreditLimitUnitAbbreviation     sql.NullString
+	CreditLimitUnitName             sql.NullString
+	CreditLimitUnitType             sql.NullString
 	CreatedAt                       time.Time
 	UpdatedAt                       time.Time
 }
@@ -774,6 +797,12 @@ func (q *Queries) GetCustomer(ctx context.Context, arg GetCustomerParams) (GetCu
 		&i.DefaultShippingCountry,
 		&i.DefaultShippingAddressCreatedAt,
 		&i.DefaultShippingAddressUpdatedAt,
+		&i.CreditLimitID,
+		&i.CreditLimitValue,
+		&i.CreditLimitUnitID,
+		&i.CreditLimitUnitAbbreviation,
+		&i.CreditLimitUnitName,
+		&i.CreditLimitUnitType,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -1267,6 +1296,22 @@ func (q *Queries) InsertCustomerAccountBranding(ctx context.Context, arg InsertC
 	return err
 }
 
+const insertCustomerCreditLimitQuantity = `-- name: InsertCustomerCreditLimitQuantity :exec
+INSERT INTO quantity (id, value, unit_id, created_at, updated_at)
+VALUES (?, ?, ?, NOW(3), NOW(3))
+`
+
+type InsertCustomerCreditLimitQuantityParams struct {
+	ID     string
+	Value  string
+	UnitID string
+}
+
+func (q *Queries) InsertCustomerCreditLimitQuantity(ctx context.Context, arg InsertCustomerCreditLimitQuantityParams) error {
+	_, err := q.db.ExecContext(ctx, insertCustomerCreditLimitQuantity, arg.ID, arg.Value, arg.UnitID)
+	return err
+}
+
 const insertCustomerRelation = `-- name: InsertCustomerRelation :exec
 INSERT INTO account_relation (
     id, owner_account_id, counterparty_account_id, account_relation_role_code,
@@ -1276,6 +1321,7 @@ INSERT INTO account_relation (
     account_status_code, payment_term_id, account_group_id, priority_code,
     shipping_term_id, carrier_billing_type, carrier_billing_account,
     default_billing_address_id, default_shipping_address_id,
+    credit_limit_id,
     created_at, updated_at
 ) VALUES (
     ?, ?, ?, 'customer',
@@ -1285,6 +1331,7 @@ INSERT INTO account_relation (
     ?, ?, ?, ?,
     ?, ?, ?,
     ?, ?,
+    ?,
     NOW(3), NOW(3)
 )
 `
@@ -1311,6 +1358,7 @@ type InsertCustomerRelationParams struct {
 	CarrierBillingAccount    sql.NullString
 	DefaultBillingAddressID  sql.NullString
 	DefaultShippingAddressID sql.NullString
+	CreditLimitID            sql.NullString
 }
 
 func (q *Queries) InsertCustomerRelation(ctx context.Context, arg InsertCustomerRelationParams) error {
@@ -1336,6 +1384,7 @@ func (q *Queries) InsertCustomerRelation(ctx context.Context, arg InsertCustomer
 		arg.CarrierBillingAccount,
 		arg.DefaultBillingAddressID,
 		arg.DefaultShippingAddressID,
+		arg.CreditLimitID,
 	)
 	return err
 }
@@ -2366,6 +2415,7 @@ UPDATE account_relation SET
     carrier_billing_account = ?,
     default_billing_address_id = ?,
     default_shipping_address_id = ?,
+    credit_limit_id = ?,
     stripe_customer_id = COALESCE(?, stripe_customer_id),
     stripe_email = COALESCE(?, stripe_email),
     updated_at = NOW(3)
@@ -2394,6 +2444,7 @@ type UpdateCustomerParams struct {
 	CarrierBillingAccount    sql.NullString
 	DefaultBillingAddressID  sql.NullString
 	DefaultShippingAddressID sql.NullString
+	CreditLimitID            sql.NullString
 	StripeCustomerID         sql.NullString
 	StripeEmail              sql.NullString
 	ID                       string
@@ -2421,11 +2472,28 @@ func (q *Queries) UpdateCustomer(ctx context.Context, arg UpdateCustomerParams) 
 		arg.CarrierBillingAccount,
 		arg.DefaultBillingAddressID,
 		arg.DefaultShippingAddressID,
+		arg.CreditLimitID,
 		arg.StripeCustomerID,
 		arg.StripeEmail,
 		arg.ID,
 		arg.OwnerAccountID,
 	)
+	return err
+}
+
+const updateCustomerCreditLimitQuantity = `-- name: UpdateCustomerCreditLimitQuantity :exec
+UPDATE quantity SET value = ?, unit_id = ?, updated_at = NOW(3)
+WHERE id = ?
+`
+
+type UpdateCustomerCreditLimitQuantityParams struct {
+	Value  string
+	UnitID string
+	ID     string
+}
+
+func (q *Queries) UpdateCustomerCreditLimitQuantity(ctx context.Context, arg UpdateCustomerCreditLimitQuantityParams) error {
+	_, err := q.db.ExecContext(ctx, updateCustomerCreditLimitQuantity, arg.Value, arg.UnitID, arg.ID)
 	return err
 }
 

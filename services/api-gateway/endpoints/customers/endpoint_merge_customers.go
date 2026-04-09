@@ -63,6 +63,7 @@ func (e *MergeCustomersEndpoint) Materialize() *apiendpoint.APIEndpoint[*MergeCu
 				"notification_preferences",
 				"price_groups",
 				"child_accounts",
+				"credit_limit",
 			},
 		}),
 	}

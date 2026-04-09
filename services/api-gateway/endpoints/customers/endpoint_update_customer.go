@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
+	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
@@ -59,6 +60,8 @@ type UpdateCustomerRequest struct {
 	CarrierBillingType *constants.CarrierBillingType `json:"carrier_billing_type,omitempty" nullable:"false"`
 	// The carrier billing account number.
 	CarrierBillingAccount *string `json:"carrier_billing_account,omitempty" nullable:"true" validate:"omitempty,max=255"`
+	// The credit limit for this customer. Send null to clear.
+	CreditLimit apirequest.NullableInput[apirequest.QuantityInput] `json:"credit_limit,omitempty"`
 }
 
 var sampleUpdateCustomerName = "Acme Corp Updated"
@@ -111,6 +114,7 @@ func (e *UpdateCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateC
 				"notification_preferences",
 				"price_groups",
 				"child_accounts",
+				"credit_limit",
 			},
 		}),
 	}

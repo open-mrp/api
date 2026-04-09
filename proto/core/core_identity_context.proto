@@ -405,6 +405,7 @@ message CustomerProto {
   optional CustomerLightCustomerProto parent_account = 26;
   google.protobuf.Timestamp created_at = 27;
   google.protobuf.Timestamp updated_at = 28;
+  optional CustomerCreditLimitProto credit_limit = 29;
 }
 message CustomerSummaryProto {
   string id = 1;
@@ -474,6 +475,14 @@ message CustomerLightCustomerProto {
   string name = 2;
   string number = 3;
 }
+message CustomerCreditLimitProto {
+  string id = 1;
+  string value = 2;
+  string unit_id = 3;
+  string unit_abbreviation = 4;
+  string unit_name = 5;
+  string unit_type = 6;
+}
 message ListCustomersRequest {
   optional string cursor = 1;
   int32 limit = 2;
@@ -542,6 +551,8 @@ message CreateCustomerRequest {
   optional string carrier_billing_account = 22;
   optional CreateCustomerAddressInput bill_to_address = 23;
   optional CreateCustomerAddressInput ship_to_address = 24;
+  optional string credit_limit_value = 25;
+  optional string credit_limit_unit_id = 26;
 }
 message CreateCustomerResponse {
   CustomerProto customer = 1;
@@ -571,6 +582,8 @@ message UpdateCustomerRequest {
   optional string carrier_billing_type = 22;
   optional string carrier_billing_account = 23;
   bool has_customer_price_group_ids = 24;
+  optional string credit_limit_value = 25;
+  optional string credit_limit_unit_id = 26;
 }
 message UpdateCustomerResponse {
   CustomerProto customer = 1;

@@ -33,6 +33,8 @@ type Customer struct {
 	CommissionPolicy constants.CommissionPolicy `json:"commission_policy" validate:"required"`
 	// Notes about the customer.
 	Note *string `json:"note"`
+	// The customer's credit limit.
+	CreditLimit *Quantity `json:"credit_limit" expandable:"true"`
 	// The customer's contact information.
 	ContactInfo *CustomerContactInfo `json:"contact_info" expandable:"true"`
 	// The customer's freight preferences.
@@ -148,6 +150,7 @@ var SampleCustomer = &Customer{
 	IsParentAccount:  false,
 	CommissionPolicy: constants.CommissionPolicyApplied,
 	Note:             &sampleCustomerNote,
+	CreditLimit:      SampleQuantity,
 	ContactInfo: &CustomerContactInfo{
 		Object: constants.ObjectTypeCustomerContactInfo,
 		Email:  &sampleCustomerEmail,

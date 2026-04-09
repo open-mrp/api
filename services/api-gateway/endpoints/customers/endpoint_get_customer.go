@@ -52,6 +52,7 @@ func (e *GetCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetCustome
 				"notification_preferences",
 				"price_groups",
 				"child_accounts",
+				"credit_limit",
 			},
 		}),
 	}

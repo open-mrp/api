@@ -208,6 +208,11 @@ func (m *customerSvcImpl) CreateCustomer(ctx context.Context, req *CreateCustome
 		CarrierBillingAccount: req.CarrierBillingAccount,
 	}
 
+	if req.CreditLimit != nil {
+		pbReq.CreditLimitValue = &req.CreditLimit.Value
+		pbReq.CreditLimitUnitId = &req.CreditLimit.UnitID
+	}
+
 	if req.BillToAddress != nil {
 		pbReq.BillToAddress = addressInputToCustomerProto(req.BillToAddress)
 	}
@@ -347,6 +352,14 @@ func (m *customerSvcImpl) UpdateCustomer(ctx context.Context, req *UpdateCustome
 		CarrierBillingType:       optCarrierBillingTypeToStringPtr(req.CarrierBillingType),
 		CarrierBillingAccount:    req.CarrierBillingAccount,
 		HasCustomerPriceGroupIds: req.CustomerPriceGroupIDs != nil,
+	}
+
+	if req.CreditLimit.IsNull() {
+		empty := ""
+		pbReq.CreditLimitValue = &empty
+	} else if v := req.CreditLimit.Value(); v != nil {
+		pbReq.CreditLimitValue = &v.Value
+		pbReq.CreditLimitUnitId = &v.UnitID
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, customerSvcTracer, "service.customers.update", domain.ServiceName,

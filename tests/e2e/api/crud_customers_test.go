@@ -98,6 +98,7 @@ func TestCustomers_CreateResponseShape(t *testing.T) {
 	assert.Nil(t, got["price_groups"], "price_groups should be null without ?include=price_groups")
 	assert.Nil(t, got["parent_account"], "parent_account should be null without ?include=parent_account")
 	assert.Nil(t, got["child_accounts"], "child_accounts should be null without ?include=child_accounts")
+	assert.Nil(t, got["credit_limit"], "credit_limit should be null without ?include=credit_limit")
 
 	apiClient.Delete(customersPath + "/" + jsonField(got, "id"))
 }
@@ -123,6 +124,10 @@ func TestCustomers_CreateWithAllFields(t *testing.T) {
 		"customer_type_group_id":    SeedCustomerGroupID,
 		"carrier_billing_type":      "third_party",
 		"carrier_billing_account":   "ACCT-12345",
+		"credit_limit": map[string]any{
+			"value":   "7500.00",
+			"unit_id": SeedUnitID,
+		},
 		"bill_to_address": map[string]any{
 			"name":    name + " Billing",
 			"country": "US",
@@ -155,7 +160,7 @@ func TestCustomers_CreateWithAllFields(t *testing.T) {
 func TestCustomers_CreateAndUpdateAllFields(t *testing.T) {
 	t.Parallel()
 
-	includeStr := "contact_info,defaults.payment_term,defaults.shipping_term,defaults.priority,defaults.sales_rep,freight_preferences.carrier,type,bill_to_address,ship_to_address,notification_preferences,freight_preferences"
+	includeStr := "contact_info,defaults.payment_term,defaults.shipping_term,defaults.priority,defaults.sales_rep,freight_preferences.carrier,type,bill_to_address,ship_to_address,notification_preferences,freight_preferences,credit_limit"
 
 	// ── CREATE with every settable field ──
 
@@ -180,6 +185,10 @@ func TestCustomers_CreateAndUpdateAllFields(t *testing.T) {
 			"customer_type_group_id":    SeedCustomerGroupID,
 			"carrier_billing_type":      "third_party",
 			"carrier_billing_account":   "ACCT-12345",
+			"credit_limit": map[string]any{
+				"value":   "10000.00",
+				"unit_id": SeedUnitID,
+			},
 			"bill_to_address": map[string]any{
 				"name":    name + " Billing",
 				"country": "US",
@@ -271,6 +280,16 @@ func TestCustomers_CreateAndUpdateAllFields(t *testing.T) {
 	require.NotNil(t, np, "notification_preferences should be expanded after create")
 	assert.Equal(t, "customer_notification_preferences", jsonField(np, "object"))
 
+	// credit_limit
+	cl := jsonObject(got, "credit_limit")
+	require.NotNil(t, cl, "credit_limit should be expanded after create")
+	assert.Equal(t, "quantity", jsonField(cl, "object"))
+	assert.Equal(t, "10000", jsonField(cl, "value"))
+	assert.NotEmpty(t, jsonField(cl, "id"))
+	clUnit := jsonObject(cl, "unit")
+	require.NotNil(t, clUnit, "credit_limit.unit should be set")
+	assert.Equal(t, SeedUnitID, jsonField(clUnit, "id"))
+
 	// ── UPDATE with different values for changeable fields ──
 
 	updatedName := uniqueName("e2e-cust-allf-upd")
@@ -288,6 +307,10 @@ func TestCustomers_CreateAndUpdateAllFields(t *testing.T) {
 			"default_payment_term_id": SeedDefaultPaymentTermID,
 			"carrier_billing_type":    "sender",
 			"carrier_billing_account": "ACCT-99999",
+			"credit_limit": map[string]any{
+				"value":   "25000.50",
+				"unit_id": SeedUnitID,
+			},
 		},
 		newIdempotencyKey(),
 	)
@@ -370,6 +393,11 @@ func TestCustomers_CreateAndUpdateAllFields(t *testing.T) {
 	// freight_preferences.service_level was not set, should be nil
 	assert.Nil(t, updFp["service_level"], "freight_preferences.service_level should be nil when not set")
 
+	// Updated credit_limit
+	updCL := jsonObject(updated, "credit_limit")
+	require.NotNil(t, updCL, "credit_limit should be expanded after update")
+	assert.Equal(t, "25000.5", jsonField(updCL, "value"))
+
 	// ── CLEAR all nullable fields by sending null ──
 
 	clearStatus, clearBody, err := apiClient.Patch(
@@ -384,6 +412,7 @@ func TestCustomers_CreateAndUpdateAllFields(t *testing.T) {
 			"default_shipping_term_id":  nil,
 			"default_sales_rep_user_id": nil,
 			"customer_type_group_id":    nil,
+			"credit_limit":              nil,
 		},
 		newIdempotencyKey(),
 	)
@@ -412,6 +441,7 @@ func TestCustomers_CreateAndUpdateAllFields(t *testing.T) {
 	assertNilField(t, clearedFP, "carrier")
 
 	assertNilField(t, cleared, "type")
+	assertNilField(t, cleared, "credit_limit")
 
 	// Non-nullable fields should be preserved.
 	assert.Equal(t, updatedName, jsonField(cleared, "name"), "name should be preserved")
@@ -452,6 +482,7 @@ func TestCustomers_CreateAndUpdateAllFields(t *testing.T) {
 	require.NotNil(t, preservedFP)
 	assertNilField(t, preservedFP, "carrier")
 	assertNilField(t, preserved, "type")
+	assertNilField(t, preserved, "credit_limit")
 }
 
 func TestCustomers_CreateValidation_MissingName(t *testing.T) {
@@ -677,6 +708,7 @@ func TestCustomers_ExpandableFieldsNullWithoutInclude(t *testing.T) {
 	assert.Nil(t, got["price_groups"], "price_groups should be null without ?include=price_groups")
 	assert.Nil(t, got["parent_account"], "parent_account should be null without ?include=parent_account")
 	assert.Nil(t, got["child_accounts"], "child_accounts should be null without ?include=child_accounts")
+	assert.Nil(t, got["credit_limit"], "credit_limit should be null without ?include=credit_limit")
 }
 
 // ──────────────────────────────────────────────
@@ -794,6 +826,38 @@ func TestCustomers_IncludePriceGroups(t *testing.T) {
 	pgMap, ok := pg.(map[string]any)
 	require.True(t, ok, "price_groups should be a list object")
 	assert.Equal(t, "list", pgMap["object"])
+}
+
+func TestCustomers_IncludeCreditLimit(t *testing.T) {
+	t.Parallel()
+
+	// Create a customer with a credit limit.
+	payload := validCustomerBody(uniqueName("e2e-cust-cl-inc"))
+	payload["credit_limit"] = map[string]any{
+		"value":   "5000.00",
+		"unit_id": SeedUnitID,
+	}
+	cust := createAndCleanup(t, customersPath+"?include=credit_limit", payload)
+
+	cl := jsonObject(cust, "credit_limit")
+	require.NotNil(t, cl, "credit_limit should be present with ?include=credit_limit")
+	assert.Equal(t, "quantity", jsonField(cl, "object"))
+	assert.Equal(t, "5000", jsonField(cl, "value"))
+	assert.NotEmpty(t, jsonField(cl, "display_value"))
+	assert.NotEmpty(t, jsonField(cl, "id"))
+
+	clUnit := jsonObject(cl, "unit")
+	require.NotNil(t, clUnit, "credit_limit.unit should be set")
+	assert.Equal(t, SeedUnitID, jsonField(clUnit, "id"))
+	assert.Equal(t, "unit", jsonField(clUnit, "object"))
+}
+
+func TestCustomers_IncludeCreditLimitNullWhenNotSet(t *testing.T) {
+	t.Parallel()
+
+	// Create a customer without a credit limit.
+	cust := createAndCleanup(t, customersPath+"?include=credit_limit", validCustomerBody(uniqueName("e2e-cust-cl-nil")))
+	assertNilField(t, cust, "credit_limit")
 }
 
 // ──────────────────────────────────────────────

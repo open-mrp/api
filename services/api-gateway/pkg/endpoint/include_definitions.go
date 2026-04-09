@@ -135,6 +135,9 @@ func init() {
 			{Key: "notification_preferences", ObjectType: constants.ObjectTypeCustomerNotificationPreferences},
 			{Key: "price_groups", ObjectType: constants.ObjectTypeAccountGroup},
 			{Key: "child_accounts", ObjectType: constants.ObjectTypeCustomer},
+			{Key: "credit_limit", ObjectType: constants.ObjectTypeQuantity, Children: []IncludeFieldDef{
+				{Key: "unit", ObjectType: constants.ObjectTypeUnit},
+			}},
 		},
 	})
 

@@ -106,6 +106,25 @@ func CustomerPresenter(c *pb.CustomerProto) apiresource.Customer {
 		defaults = d
 	}
 
+	// Credit limit
+	var creditLimit *apiresource.Quantity
+	if c.CreditLimit != nil {
+		unitType := c.CreditLimit.UnitType
+		creditLimit = &apiresource.Quantity{
+			ID:           c.CreditLimit.Id,
+			Object:       constants.ObjectTypeQuantity,
+			Value:        apiresource.NormalizeQuantityValue(c.CreditLimit.Value, unitType),
+			DisplayValue: apiresource.FormatDisplayValue(c.CreditLimit.Value, c.CreditLimit.UnitAbbreviation, unitType),
+			Unit: &apiresource.Unit{
+				ID:           c.CreditLimit.UnitId,
+				Object:       constants.ObjectTypeUnit,
+				Name:         c.CreditLimit.UnitName,
+				Abbreviation: c.CreditLimit.UnitAbbreviation,
+				Type:         constants.UnitType(unitType),
+			},
+		}
+	}
+
 	// Notification preferences
 	notificationPreferences := &apiresource.CustomerNotificationPreferences{
 		Object:               constants.ObjectTypeCustomerNotificationPreferences,
@@ -173,6 +192,7 @@ func CustomerPresenter(c *pb.CustomerProto) apiresource.Customer {
 		IsParentAccount:         c.IsParentAccount,
 		CommissionPolicy:        constants.CommissionPolicy(c.CommissionPolicy),
 		Note:                    c.Note,
+		CreditLimit:             creditLimit,
 		ContactInfo:             contactInfo,
 		FreightPreferences:      freightPreferences,
 		Defaults:                defaults,

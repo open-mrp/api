@@ -653,6 +653,9 @@ type CustomerRepo interface {
 	GetStripeCustomerID(ctx context.Context, ownerAccountID, customerAccountID string) (stripeCustomerID *string, stripeEmail *string, err *apierror.APIError)
 	SetStripeCustomerID(ctx context.Context, ownerAccountID, customerAccountID, stripeCustomerID, stripeEmail string) *apierror.APIError
 	GetCustomerEmail(ctx context.Context, customerAccountID string) (*string, *apierror.APIError)
+	InsertCreditLimitQuantity(ctx context.Context, id, value, unitID string) *apierror.APIError
+	UpdateCreditLimitQuantity(ctx context.Context, id, value, unitID string) *apierror.APIError
+	DeleteCreditLimitQuantity(ctx context.Context, id string) *apierror.APIError
 }
 
 type AnalyticsRepo interface {

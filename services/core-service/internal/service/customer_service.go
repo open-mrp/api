@@ -277,6 +277,18 @@ func (s *customerSvcImpl) CreateCustomer(ctx context.Context, params domain.Crea
 				}
 			}
 
+			// Create credit limit quantity if provided.
+			if params.CreditLimitValue != nil && params.CreditLimitUnitID != nil {
+				creditLimitQtyID, apiErr := id.GenID(id.QuantityIDPrefix, nil)
+				if apiErr != nil {
+					return apiErr
+				}
+				if apiErr := txCustomerRepo.InsertCreditLimitQuantity(txCtx, creditLimitQtyID, *params.CreditLimitValue, *params.CreditLimitUnitID); apiErr != nil {
+					return apiErr
+				}
+				params.CreditLimitID = &creditLimitQtyID
+			}
+
 			if _, apiErr := txCustomerRepo.Create(txCtx, accountID, relationID, brandingID, params, customerNumber); apiErr != nil {
 				return apiErr
 			}
@@ -427,6 +439,37 @@ func (s *customerSvcImpl) UpdateCustomer(ctx context.Context, params domain.Upda
 			}
 			if params.ShipToAddressID == nil && old.ShipToAddress != nil {
 				params.ShipToAddressID = &old.ShipToAddress.ID
+			}
+
+			// Handle credit limit quantity lifecycle.
+			if params.CreditLimitValue == nil && params.CreditLimitUnitID == nil {
+				// Not provided — preserve existing credit limit.
+				params.CreditLimitID = old.CreditLimitID
+			} else if params.CreditLimitValue != nil && *params.CreditLimitValue == "" {
+				// Explicitly cleared — delete old quantity if it exists.
+				if old.CreditLimitID != nil {
+					if apiErr := txCustomerRepo.DeleteCreditLimitQuantity(txCtx, *old.CreditLimitID); apiErr != nil {
+						return apiErr
+					}
+				}
+				params.CreditLimitID = nil
+			} else if params.CreditLimitValue != nil && params.CreditLimitUnitID != nil {
+				// Setting or updating credit limit.
+				if old.CreditLimitID != nil {
+					if apiErr := txCustomerRepo.UpdateCreditLimitQuantity(txCtx, *old.CreditLimitID, *params.CreditLimitValue, *params.CreditLimitUnitID); apiErr != nil {
+						return apiErr
+					}
+					params.CreditLimitID = old.CreditLimitID
+				} else {
+					creditLimitQtyID, apiErr := id.GenID(id.QuantityIDPrefix, nil)
+					if apiErr != nil {
+						return apiErr
+					}
+					if apiErr := txCustomerRepo.InsertCreditLimitQuantity(txCtx, creditLimitQtyID, *params.CreditLimitValue, *params.CreditLimitUnitID); apiErr != nil {
+						return apiErr
+					}
+					params.CreditLimitID = &creditLimitQtyID
+				}
 			}
 
 			// Check for duplicate customer number if being updated.

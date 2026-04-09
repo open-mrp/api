@@ -23,8 +23,14 @@ type Customer struct {
 	URL                           *string                       `audit:"url"`
 	CarrierBillingType            *constants.CarrierBillingType `audit:"carrier_billing_type"`
 	CarrierBillingAccount         *string                       `audit:"carrier_billing_account"`
-	AcceptsInvoiceEmails          bool                          `audit:"accepts_invoice_emails"`
-	DefaultCarrierID              *string                       `audit:"default_carrier_id"`
+	CreditLimitID                 *string                       `audit:"credit_limit_id"`
+	CreditLimitValue              *string
+	CreditLimitUnitID             *string
+	CreditLimitUnitAbbreviation   *string
+	CreditLimitUnitName           *string
+	CreditLimitUnitType           *string
+	AcceptsInvoiceEmails          bool    `audit:"accepts_invoice_emails"`
+	DefaultCarrierID              *string `audit:"default_carrier_id"`
 	DefaultCarrierName            *string
 	DefaultCarrierIsPortalEnabled *bool
 	DefaultServiceLevelID         *string `audit:"default_service_level_id"`
@@ -40,8 +46,8 @@ type Customer struct {
 	DefaultPriorityName           *string
 	DefaultSalesRepID             *string `audit:"default_sales_rep_id"`
 	DefaultSalesRepName           *string
-	BillToAddressID               *string          `audit:"bill_to_address_id"`
-	ShipToAddressID               *string          `audit:"ship_to_address_id"`
+	BillToAddressID               *string `audit:"bill_to_address_id"`
+	ShipToAddressID               *string `audit:"ship_to_address_id"`
 	BillToAddress                 *CustomerAddress
 	ShipToAddress                 *CustomerAddress
 	TypeGroupID                   *string `audit:"type_group_id"`
@@ -154,6 +160,9 @@ type CreateCustomerParams struct {
 	CustomerTypeGroupID   *string
 	CarrierBillingType    *string
 	CarrierBillingAccount *string
+	CreditLimitValue      *string
+	CreditLimitUnitID     *string
+	CreditLimitID         *string
 }
 
 // DeleteCustomerParams holds the parameters for deleting a customer.
@@ -220,6 +229,9 @@ type UpdateCustomerParams struct {
 	CustomerTypeGroupID      *string
 	CarrierBillingType       *string
 	CarrierBillingAccount    *string
+	CreditLimitValue         *string
+	CreditLimitUnitID        *string
+	CreditLimitID            *string
 }
 
 // FrequentlyOrderedProduct represents a product frequently ordered by a customer.

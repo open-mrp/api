@@ -54,6 +54,8 @@ type CreateCustomerRequest struct {
 	CarrierBillingType *constants.CarrierBillingType `json:"carrier_billing_type,omitempty"`
 	// The carrier billing account number.
 	CarrierBillingAccount *string `json:"carrier_billing_account,omitempty" validate:"omitempty,max=255"`
+	// The credit limit for this customer.
+	CreditLimit *apirequest.QuantityInput `json:"credit_limit,omitempty"`
 	// The bill-to address for this customer.
 	BillToAddress *apirequest.AddressInput `json:"bill_to_address" validate:"required"`
 	// The ship-to address for this customer.
@@ -136,6 +138,7 @@ func (e *CreateCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateC
 				"notification_preferences",
 				"price_groups",
 				"child_accounts",
+				"credit_limit",
 			},
 		}),
 	}

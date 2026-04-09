@@ -581,7 +581,19 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 		validateTag := f.Tag.Get("validate")
 		hasRequiredInValidate := strings.Contains(validateTag, "required")
 
-		isPointer := f.Type.Kind() == reflect.Pointer
+		// Detect NullableInput[T] wrapper types via the OpenAPINullableInner interface.
+		// These are treated as nullable pointers to the inner type for schema generation.
+		isNullableWrapper := false
+		fieldType := f.Type
+		if fieldType.Kind() == reflect.Struct {
+			if m, ok := fieldType.MethodByName("OpenAPINullableInner"); ok && m.Type.NumIn() == 1 && m.Type.NumOut() == 1 {
+				innerType := reflect.New(fieldType).Elem().MethodByName("OpenAPINullableInner").Call(nil)[0].Interface().(reflect.Type)
+				fieldType = innerType
+				isNullableWrapper = true
+			}
+		}
+
+		isPointer := f.Type.Kind() == reflect.Pointer || isNullableWrapper
 		isRequired := hasRequiredInJSON || hasRequiredInValidate || !(isPointer && hasOmitempty)
 
 		if isRequired {
@@ -590,7 +602,11 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 
 		fieldSchema := Schema{
 			Description: typeDoc.Fields[f.Name],
-			Nullable:    f.Type.Kind() == reflect.Pointer,
+			Nullable:    isPointer,
+		}
+
+		if isNullableWrapper {
+			fieldSchema.XNullableClear = true
 		}
 
 		// Allow explicitly overriding nullable inference (e.g. pointer + omitempty
@@ -652,7 +668,9 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 			fieldSchema.Format = formatVal
 		}
 
-		fieldType := f.Type
+		if !isNullableWrapper {
+			fieldType = f.Type
+		}
 		if fieldType.Kind() == reflect.Pointer {
 			fieldType = fieldType.Elem()
 		}

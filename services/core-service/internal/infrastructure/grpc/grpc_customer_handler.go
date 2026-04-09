@@ -97,6 +97,17 @@ func customerToProto(c *domain.Customer) *pb.CustomerProto {
 		p.CarrierBillingType = &s
 	}
 
+	if c.CreditLimitID != nil {
+		p.CreditLimit = &pb.CustomerCreditLimitProto{
+			Id:               *c.CreditLimitID,
+			Value:            *c.CreditLimitValue,
+			UnitId:           *c.CreditLimitUnitID,
+			UnitAbbreviation: *c.CreditLimitUnitAbbreviation,
+			UnitName:         *c.CreditLimitUnitName,
+			UnitType:         *c.CreditLimitUnitType,
+		}
+	}
+
 	if c.DefaultCarrierID != nil {
 		carrier := &pb.CustomerCarrierProto{
 			Id:   *c.DefaultCarrierID,
@@ -304,6 +315,8 @@ func (h *gRPCHandler) CreateCustomer(ctx context.Context, req *pb.CreateCustomer
 		CustomerTypeGroupID:   req.CustomerTypeGroupId,
 		CarrierBillingType:    req.CarrierBillingType,
 		CarrierBillingAccount: req.CarrierBillingAccount,
+		CreditLimitValue:      req.CreditLimitValue,
+		CreditLimitUnitID:     req.CreditLimitUnitId,
 	}
 
 	if req.BillToAddress != nil {
@@ -356,6 +369,8 @@ func (h *gRPCHandler) UpdateCustomer(ctx context.Context, req *pb.UpdateCustomer
 		CustomerTypeGroupID:      req.CustomerTypeGroupId,
 		CarrierBillingType:       req.CarrierBillingType,
 		CarrierBillingAccount:    req.CarrierBillingAccount,
+		CreditLimitValue:         req.CreditLimitValue,
+		CreditLimitUnitID:        req.CreditLimitUnitId,
 	}
 
 	customer, apiErr := h.customerSvc.UpdateCustomer(ctx, params)

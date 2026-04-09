@@ -7049,6 +7049,20 @@ func (mr *MockCustomerRepoMockRecorder) DeleteAccountUsers(ctx, accountID any) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAccountUsers", reflect.TypeOf((*MockCustomerRepo)(nil).DeleteAccountUsers), ctx, accountID)
 }
 
+// DeleteCreditLimitQuantity mocks base method.
+func (m *MockCustomerRepo) DeleteCreditLimitQuantity(ctx context.Context, id string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteCreditLimitQuantity", ctx, id)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// DeleteCreditLimitQuantity indicates an expected call of DeleteCreditLimitQuantity.
+func (mr *MockCustomerRepoMockRecorder) DeleteCreditLimitQuantity(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteCreditLimitQuantity", reflect.TypeOf((*MockCustomerRepo)(nil).DeleteCreditLimitQuantity), ctx, id)
+}
+
 // DeleteNotificationPreferences mocks base method.
 func (m *MockCustomerRepo) DeleteNotificationPreferences(ctx context.Context, relationIDs []string) *apierror.APIError {
 	m.ctrl.T.Helper()
@@ -7329,6 +7343,20 @@ func (mr *MockCustomerRepoMockRecorder) InsertAccountAddress(ctx, id, accountID,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertAccountAddress", reflect.TypeOf((*MockCustomerRepo)(nil).InsertAccountAddress), ctx, id, accountID, addressID)
 }
 
+// InsertCreditLimitQuantity mocks base method.
+func (m *MockCustomerRepo) InsertCreditLimitQuantity(ctx context.Context, id, value, unitID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InsertCreditLimitQuantity", ctx, id, value, unitID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// InsertCreditLimitQuantity indicates an expected call of InsertCreditLimitQuantity.
+func (mr *MockCustomerRepoMockRecorder) InsertCreditLimitQuantity(ctx, id, value, unitID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertCreditLimitQuantity", reflect.TypeOf((*MockCustomerRepo)(nil).InsertCreditLimitQuantity), ctx, id, value, unitID)
+}
+
 // InsertPriceGroup mocks base method.
 func (m *MockCustomerRepo) InsertPriceGroup(ctx context.Context, id, relationID, groupID string) *apierror.APIError {
 	m.ctrl.T.Helper()
@@ -7580,6 +7608,20 @@ func (m *MockCustomerRepo) UpdateBranding(ctx context.Context, customerAccountID
 func (mr *MockCustomerRepoMockRecorder) UpdateBranding(ctx, customerAccountID, email, phone, url any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateBranding", reflect.TypeOf((*MockCustomerRepo)(nil).UpdateBranding), ctx, customerAccountID, email, phone, url)
+}
+
+// UpdateCreditLimitQuantity mocks base method.
+func (m *MockCustomerRepo) UpdateCreditLimitQuantity(ctx context.Context, id, value, unitID string) *apierror.APIError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateCreditLimitQuantity", ctx, id, value, unitID)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
+}
+
+// UpdateCreditLimitQuantity indicates an expected call of UpdateCreditLimitQuantity.
+func (mr *MockCustomerRepoMockRecorder) UpdateCreditLimitQuantity(ctx, id, value, unitID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateCreditLimitQuantity", reflect.TypeOf((*MockCustomerRepo)(nil).UpdateCreditLimitQuantity), ctx, id, value, unitID)
 }
 
 // UpdateName mocks base method.

@@ -325,3 +325,12 @@ func jsonArray(m map[string]any, key string) []any {
 	}
 	return arr
 }
+
+// jsonListData extracts the "data" array from a List[T] field ({"object":"list","data":[...]}).
+func jsonListData(m map[string]any, key string) []any {
+	obj := jsonObject(m, key)
+	if obj == nil {
+		return nil
+	}
+	return jsonArray(obj, "data")
+}

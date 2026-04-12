@@ -33,7 +33,7 @@ type AgentDefinition struct {
 	// The agent configuration.
 	Config *AgentDefinitionConfig `json:"config" expandable:"true"`
 	// The tools attached to this agent.
-	Tools []AgentDefinitionTool `json:"tools" expandable:"true"`
+	Tools *List[AgentDefinitionTool] `json:"tools" expandable:"true"`
 	// The per-account activation status for this agent definition.
 	AccountStatus constants.AgentAccountStatus `json:"status" validate:"required"`
 	// When this agent definition was created.
@@ -53,9 +53,9 @@ var SampleAgentDefinition = &AgentDefinition{
 	TriggerType:    constants.AgentTriggerTypeEvent,
 	IsEditable:     false,
 	Config:         &SampleAgentDefinitionConfig,
-	Tools: []AgentDefinitionTool{
+	Tools: NewList([]AgentDefinitionTool{
 		*SampleAgentDefinitionTool,
-	},
+	}, PageInfo{}),
 	AccountStatus: constants.AgentAccountStatusInactive,
 	CreatedAt:     timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:     timeutil.TimestampToTime(sampleUpdatedAtTimestamp),

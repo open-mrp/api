@@ -28,7 +28,7 @@ type Carrier struct {
 	// The owner of this resource.
 	Owner *Owner `json:"owner" expandable:"true"`
 	// The service levels (shipping service levels).
-	ServiceLevels []ServiceLevel `json:"service_levels" expandable:"true"`
+	ServiceLevels *List[ServiceLevel] `json:"service_levels" expandable:"true"`
 	// When the carrier was soft-deleted, if applicable.
 	DeletedAt *time.Time `json:"deleted_at"`
 	// When the carrier was created.

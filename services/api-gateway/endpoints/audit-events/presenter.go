@@ -66,7 +66,7 @@ func AuditEventListPresenter(resp *pb.ListAuditEventsResponse) *apiresource.List
 	return apiresource.NewList(events, grpcutil.MapProtoPageInfo(resp.PageInfo))
 }
 
-func AuditFieldChangesPresenter(changes []*pb.AuditFieldChange) []apiresource.AuditFieldChange {
+func AuditFieldChangesPresenter(changes []*pb.AuditFieldChange) *apiresource.List[apiresource.AuditFieldChange] {
 	if len(changes) == 0 {
 		return nil
 	}
@@ -83,7 +83,7 @@ func AuditFieldChangesPresenter(changes []*pb.AuditFieldChange) []apiresource.Au
 			NewValue: rawMessageFromOptionalString(c.NewValueJson),
 		}
 	}
-	return out
+	return apiresource.NewList(out, apiresource.PageInfo{})
 }
 
 func timestampToTime(ts *timestamppb.Timestamp) time.Time {

@@ -101,7 +101,7 @@ type PurchaseOrderDetail struct {
 	// The order lines.
 	Lines *List[PurchaseOrderLineDetail] `json:"lines" expandable:"true"`
 	// The email contacts for this order.
-	Contacts []EmailContact `json:"contacts" expandable:"true"`
+	Contacts *List[EmailContact] `json:"contacts" expandable:"true"`
 	// The timestamp when the order was issued.
 	IssuedAt *time.Time `json:"issued_at"`
 	// The timestamp when the order was completed.

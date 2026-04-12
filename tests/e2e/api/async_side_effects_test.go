@@ -181,7 +181,7 @@ func TestCustomers_AuditEvents_Changes(t *testing.T) {
 	require.NotEmpty(t, id)
 
 	createdEvent := expectAuditEventWithChanges(t, id, "customer", "create")
-	createChanges := jsonArray(createdEvent, "changes")
+	createChanges := jsonListData(createdEvent, "changes")
 	require.NotEmpty(t, createChanges, "create audit event should include changes")
 
 	nameCreateChange, ok := changeForField(createChanges, "name")
@@ -197,7 +197,7 @@ func TestCustomers_AuditEvents_Changes(t *testing.T) {
 	requireStatus(t, 200, patchStatus, patchBody)
 
 	updatedEvent := expectAuditEventWithChanges(t, id, "customer", "update")
-	updateChanges := jsonArray(updatedEvent, "changes")
+	updateChanges := jsonListData(updatedEvent, "changes")
 	require.NotEmpty(t, updateChanges, "update audit event should include changes")
 
 	noteUpdateChange, ok := changeForField(updateChanges, "note")
@@ -210,7 +210,7 @@ func TestCustomers_AuditEvents_Changes(t *testing.T) {
 	requireStatus(t, 200, delStatus, delBody)
 
 	deletedEvent := expectAuditEventWithChanges(t, id, "customer", "delete")
-	deleteChanges := jsonArray(deletedEvent, "changes")
+	deleteChanges := jsonListData(deletedEvent, "changes")
 	require.NotEmpty(t, deleteChanges, "delete audit event should include changes")
 
 	nameDeleteChange, ok := changeForField(deleteChanges, "name")
@@ -292,7 +292,7 @@ func TestCustomers_AuditEvents_UpdateAllFields(t *testing.T) {
 	requireStatus(t, 200, patchStatus, patchBody)
 
 	event := expectAuditEventWithChanges(t, id, "customer", "update")
-	changes := jsonArray(event, "changes")
+	changes := jsonListData(event, "changes")
 	require.NotEmpty(t, changes, "update audit event should include changes")
 
 	// Verify string field changes.
@@ -418,7 +418,7 @@ func TestCustomers_AuditEvents_ClearAllNullableFields(t *testing.T) {
 	requireStatus(t, 200, patchStatus, patchBody)
 
 	event := expectAuditEventWithChanges(t, id, "customer", "update")
-	changes := jsonArray(event, "changes")
+	changes := jsonListData(event, "changes")
 	require.NotEmpty(t, changes, "update audit event should include changes")
 
 	// Verify nullable string fields cleared to null.

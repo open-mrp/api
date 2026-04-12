@@ -28,9 +28,9 @@ func AgentDefinitionPresenter(a *pb.AgentDefinitionInfo, roleInfo *resolvedRole)
 		return apiresource.AgentDefinition{}
 	}
 
-	tools := make([]apiresource.AgentDefinitionTool, len(a.Tools))
+	toolItems := make([]apiresource.AgentDefinitionTool, len(a.Tools))
 	for i, t := range a.Tools {
-		tools[i] = apiresource.AgentDefinitionTool{
+		toolItems[i] = apiresource.AgentDefinitionTool{
 			ID:     t.Id,
 			Object: constants.ObjectTypeAgentDefinitionTool,
 			Tool: apiresource.AvailableTool{
@@ -47,6 +47,7 @@ func AgentDefinitionPresenter(a *pb.AgentDefinitionInfo, roleInfo *resolvedRole)
 			RequireReview: t.RequireReview,
 		}
 	}
+	tools := apiresource.NewList(toolItems, apiresource.PageInfo{})
 
 	var role *apiresource.Role
 	if a.RoleId != "" && roleInfo != nil {

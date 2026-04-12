@@ -12,12 +12,13 @@ func CarrierPresenter(c *pb.CarrierInfo) apiresource.Carrier {
 		return apiresource.Carrier{}
 	}
 
-	var serviceLevels []apiresource.ServiceLevel
+	var serviceLevels *apiresource.List[apiresource.ServiceLevel]
 	if c.ServiceLevels != nil {
-		serviceLevels = make([]apiresource.ServiceLevel, len(c.ServiceLevels))
+		items := make([]apiresource.ServiceLevel, len(c.ServiceLevels))
 		for i, o := range c.ServiceLevels {
-			serviceLevels[i] = ServiceLevelPresenter(o)
+			items[i] = ServiceLevelPresenter(o)
 		}
+		serviceLevels = apiresource.NewList(items, apiresource.PageInfo{})
 	}
 
 	carrierVisibility := constants.CustomerPortalVisibilityHidden

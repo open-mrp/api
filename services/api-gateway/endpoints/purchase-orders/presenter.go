@@ -188,9 +188,9 @@ func PurchaseOrderDetailPresenter(info *pb.PurchaseOrderInfo) apiresource.Purcha
 
 	// Contacts
 	if len(info.Contacts) > 0 {
-		contacts := make([]apiresource.EmailContact, len(info.Contacts))
+		contactItems := make([]apiresource.EmailContact, len(info.Contacts))
 		for i, c := range info.Contacts {
-			contacts[i] = apiresource.EmailContact{
+			contactItems[i] = apiresource.EmailContact{
 				ID:     c.Id,
 				Object: constants.ObjectTypeEmailContact,
 				AccountUser: &apiresource.AccountUser{
@@ -199,7 +199,7 @@ func PurchaseOrderDetailPresenter(info *pb.PurchaseOrderInfo) apiresource.Purcha
 				},
 			}
 		}
-		d.Contacts = contacts
+		d.Contacts = apiresource.NewList(contactItems, apiresource.PageInfo{})
 	}
 
 	// Timestamps

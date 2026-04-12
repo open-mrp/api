@@ -257,10 +257,11 @@ func TestCarriers_IncludeServiceLevels(t *testing.T) {
 	requireStatus(t, 200, status, body)
 
 	got := parseJSON(body)
-	sl, ok := got["service_levels"]
-	require.True(t, ok, "service_levels field should be present with ?include=service_levels")
-	_, isArray := sl.([]any)
-	assert.True(t, isArray, "service_levels should be an array, got %T", sl)
+	sl := jsonObject(got, "service_levels")
+	require.NotNil(t, sl, "service_levels field should be present with ?include=service_levels")
+	assert.Equal(t, "list", jsonField(sl, "object"))
+	_, hasData := sl["data"].([]any)
+	assert.True(t, hasData, "service_levels.data should be an array")
 }
 
 func TestCarriers_UpdateOnlyName(t *testing.T) {

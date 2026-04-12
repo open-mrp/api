@@ -49,7 +49,7 @@ type AuditEvent struct {
 	// The actor who performed the mutation.
 	Actor *Actor `json:"actor" expandable:"true"`
 	// The field-level changes recorded for this event.
-	Changes []AuditFieldChange `json:"changes" expandable:"true"`
+	Changes *List[AuditFieldChange] `json:"changes" expandable:"true"`
 	// Arbitrary JSON metadata associated with the mutation (e.g. reason, source, tags).
 	Metadata json.RawMessage `json:"metadata"`
 
@@ -73,13 +73,13 @@ var SampleAuditEvent = &AuditEvent{
 	ResourceType: SampleAuditEventResourceType,
 	ResourceID:   SampleAuditEventResourceID,
 	Actor:        SampleActor,
-	Changes: []AuditFieldChange{
+	Changes: NewList([]AuditFieldChange{
 		{
 			Field:    "email",
 			OldValue: json.RawMessage(`"old@example.com"`),
 			NewValue: json.RawMessage(`"new@example.com"`),
 		},
-	},
+	}, PageInfo{}),
 	Metadata:   json.RawMessage(SampleAuditEventMetadataReason),
 	RequestID:  new(SampleAuditEventRequestID),
 	SourceIP:   new(SampleAuditEventSourceIP),

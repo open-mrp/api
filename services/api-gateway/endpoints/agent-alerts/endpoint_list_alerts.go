@@ -26,6 +26,7 @@ func (e *ListAlertsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAlertsR
 		Title:             "List Agent Alerts",
 		Description:       "Returns a paginated list of agent alerts for the current account.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/ai/alerts",
 		Request:           &ListAlertsRequest{},
 		Response:          &apiresource.List[apiresource.AgentAlert]{},

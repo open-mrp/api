@@ -15,15 +15,15 @@ type UpdateOrderDiscountRequest struct {
 	// The ID of the order discount to update.
 	OrderDiscountID string `path:"id" validate:"required"`
 	// The display name of the discount.
-	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
+	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// The unique code for this discount.
-	Code *string `json:"code,omitempty" validate:"omitempty,max=255"`
+	Code *string `json:"code,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// The percentage value of the discount as a decimal string.
-	Percentage *string `json:"percentage,omitempty" format:"decimal"`
+	Percentage *string `json:"percentage,omitempty" nullable:"false" format:"decimal"`
 	// The fixed amount of the discount as a decimal string.
-	Amount *string `json:"amount,omitempty" format:"decimal"`
+	Amount *string `json:"amount,omitempty" nullable:"false" format:"decimal"`
 	// The type of discount: "percentage" or "amount".
-	DiscountType *string `json:"discount_type,omitempty" validate:"omitempty,max=255"`
+	DiscountType *string `json:"discount_type,omitempty" nullable:"false" validate:"omitempty,max=255"`
 }
 
 var sampleUpdateOrderDiscountRequest = &UpdateOrderDiscountRequest{

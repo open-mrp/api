@@ -21,6 +21,7 @@ func (e *ListDepartmentsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListDe
 		Title:             "List Departments",
 		Description:       "Returns a paginated list of departments for the current account.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/departments",
 		Request:           &ListDepartmentsRequest{},
 		Response:          &apiresource.List[apiresource.Department]{},

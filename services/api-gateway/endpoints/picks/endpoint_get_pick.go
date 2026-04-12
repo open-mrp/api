@@ -22,6 +22,7 @@ func (e *GetPickEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetPickRequest
 		Title:             "Get Pick",
 		Description:       "Returns a single pick by its ID.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/picks/{id}",
 		Request:           &GetPickRequest{},
 		Response:          &apiresource.PickDetail{},

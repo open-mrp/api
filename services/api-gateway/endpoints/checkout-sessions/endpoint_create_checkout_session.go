@@ -43,6 +43,7 @@ func (e *CreateCheckoutSessionEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		Title:             "Create Customer Checkout Session",
 		Description:       "Creates an embedded Stripe checkout session for a customer actor and returns a client secret for use with Stripe.js.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/sales/checkout-sessions",
 		Request:           &CreateCheckoutSessionRequest{},
 		Response:          &CheckoutSessionResponse{},

@@ -15,7 +15,7 @@ type ValidateAddressRequest struct {
 	// The first line of the street address.
 	AddressLine1 string `json:"address_line_1" validate:"required"`
 	// The second line of the street address.
-	AddressLine2 *string `json:"address_line_2,omitempty"`
+	AddressLine2 *string `json:"address_line_2,omitempty" nullable:"false"`
 	// The city.
 	City string `json:"city" validate:"required"`
 	// The state or administrative area.
@@ -44,8 +44,9 @@ func (e *ValidateAddressEndpoint) Materialize() *apiendpoint.APIEndpoint[*Valida
 	return &apiendpoint.APIEndpoint[*ValidateAddressRequest, *apiresource.ValidatedAddress]{
 		Title:             "Validate Address",
 		Description:       "Validates an address and returns whether it is valid, a formatted version, and any validation messages.",
-		Method:            http.MethodPost,
-		Route:             "/v1/core/addresses/validate",
+		Method:            http.MethodPut,
+		ContentType:       "application/json",
+		Route:             "/v1/core/addresses/actions/validate",
 		Request:           &ValidateAddressRequest{},
 		Response:          &apiresource.ValidatedAddress{},
 		SuccessStatusCode: http.StatusOK,

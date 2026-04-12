@@ -15,11 +15,11 @@ type UpdateSettlementRequest struct {
 	// The ID of the settlement to update.
 	SettlementID string `path:"id" validate:"required"`
 	// The new settlement number.
-	Number *string `json:"number" validate:"omitempty,max=255"`
+	Number *string `json:"number" nullable:"false" validate:"omitempty,max=255"`
 	// The new note for this settlement.
-	Note *string `json:"note"`
+	Note *string `json:"note" nullable:"false"`
 	// The ID of the responsible user for this settlement.
-	ResponsibleUserID *string `json:"responsible_user_id" nullable:"true" validate:"omitempty,max=191"`
+	ResponsibleUserID *string `json:"responsible_user_id" nullable:"false" validate:"omitempty,max=191"`
 }
 
 var sampleUpdateSettlementNote = "Partial payment applied"
@@ -40,6 +40,7 @@ func (e *UpdateSettlementEndpoint) Materialize() *apiendpoint.APIEndpoint[*Updat
 		Title:             "Update Settlement",
 		Description:       "Partially updates a settlement's number, note, or responsible user.",
 		Method:            http.MethodPatch,
+		ContentType:       "application/json",
 		Route:             "/v1/finance/settlements/{id}",
 		Request:           &UpdateSettlementRequest{},
 		Response:          &apiresource.Settlement{},

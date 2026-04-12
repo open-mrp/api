@@ -24,6 +24,7 @@ func (e *ListUnitGroupsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListUni
 		Title:             "List Unit Groups",
 		Description:       "Returns a paginated list of unit groups for the current account, including system unit groups.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/catalog/unit-groups",
 		Request:           &ListUnitGroupsRequest{},
 		Response:          &apiresource.List[apiresource.UnitGroup]{},

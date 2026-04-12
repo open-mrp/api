@@ -25,6 +25,7 @@ func (e *GetSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetSales
 		Title:             "Get Sales Order",
 		Description:       "Returns a single sales order by its ID.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/sales/sales-orders/{id}",
 		Request:           &GetSalesOrderRequest{},
 		Response:          &apiresource.SalesOrderDetail{},

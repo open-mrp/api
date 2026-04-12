@@ -24,6 +24,7 @@ func (e *ListTerritoriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListTe
 		Title:             "List Territories",
 		Description:       "Returns a paginated list of territories for the specified account.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/sales/accounts/{account_id}/territories",
 		Request:           &ListTerritoriesRequest{},
 		Response:          &apiresource.List[apiresource.Territory]{},

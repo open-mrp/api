@@ -43,6 +43,7 @@ func (e *ListRequestLogsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListRe
 		Title:             "List Request Logs",
 		Description:       "Returns a paginated, filterable list of request logs for the target account.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/core/request-logs",
 		Request:           &ListRequestLogsRequest{},
 		Response:          &apiresource.List[apiresource.RequestLog]{},

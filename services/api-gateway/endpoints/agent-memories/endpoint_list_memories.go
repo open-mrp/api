@@ -25,6 +25,7 @@ func (e *ListMemoriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListMemor
 		Title:             "List Agent Memories",
 		Description:       "Returns a paginated list of agent memories for the current account.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/ai/memories",
 		Request:           &ListMemoriesRequest{},
 		Response:          &apiresource.List[apiresource.AgentMemory]{},

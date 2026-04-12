@@ -23,6 +23,7 @@ func (e *GetShippingCaseEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetShi
 		Title:             "Get Shipping Case",
 		Description:       "Returns a single shipping case by its ID.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/shipping-cases/{id}",
 		Request:           &GetShippingCaseRequest{},
 		Response:          &apiresource.ShippingCase{},

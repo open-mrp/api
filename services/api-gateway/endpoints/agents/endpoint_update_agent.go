@@ -20,15 +20,15 @@ type UpdateAgentRequest struct {
 	// A unique URL-friendly identifier for the agent.
 	Slug *string `json:"slug,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// A human-readable description of what the agent does.
-	Description *string `json:"description,omitempty"`
+	Description *string `json:"description,omitempty" nullable:"true"`
 	// The category code that classifies this agent (e.g. "order_processing").
 	CategoryCode *string `json:"category_code,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// How this agent is triggered: "manual", "scheduled", or "event".
 	TriggerType *constants.AgentTriggerType `json:"trigger_type,omitempty" nullable:"false"`
 	// Agent-level configuration controlling LLM behavior and trigger settings.
-	Config *ConfigInput `json:"config,omitempty"`
+	Config *ConfigInput `json:"config,omitempty" nullable:"false"`
 	// The tools to attach to this agent. Replaces the existing tool set when provided.
-	Tools *[]ToolInput `json:"tools,omitempty"`
+	Tools *[]ToolInput `json:"tools,omitempty" nullable:"false"`
 	// The ID of the role that defines this agent's permissions.
 	RoleID *string `json:"role_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
 }

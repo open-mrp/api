@@ -451,7 +451,7 @@ func (q *Queries) SetScanningStationsDepartmentID(ctx context.Context, arg SetSc
 const updateDepartment = `-- name: UpdateDepartment :execresult
 UPDATE department SET
     name = COALESCE(?, name),
-    notes = COALESCE(?, notes),
+    notes = ?,
     location_id = COALESCE(?, location_id),
     updated_at = NOW(3)
 WHERE id = ?

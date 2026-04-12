@@ -22,6 +22,7 @@ func (e *GetFrequentlyOrderedProductsEndpoint) Materialize() *apiendpoint.APIEnd
 		Title:             "Get Frequently Ordered Products",
 		Description:       "Returns the most frequently ordered products for a customer based on historical sales order data.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/sales/customers/{id}/frequently-ordered-products",
 		Request:           &GetFrequentlyOrderedProductsRequest{},
 		Response:          &apiresource.List[apiresource.FrequentlyOrderedProduct]{},

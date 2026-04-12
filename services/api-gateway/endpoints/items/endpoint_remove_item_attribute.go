@@ -25,6 +25,7 @@ func (e *RemoveItemAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*Re
 		Title:             "Remove Item Attribute",
 		Description:       "Removes an attribute from an item.",
 		Method:            http.MethodDelete,
+		ContentType:       "application/json",
 		Route:             "/v1/catalog/items/{id}/attributes/{attribute_id}",
 		Request:           &RemoveItemAttributeRequest{},
 		Response:          &apiresource.Item{},

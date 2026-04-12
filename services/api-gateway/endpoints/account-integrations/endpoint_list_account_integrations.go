@@ -21,6 +21,7 @@ func (e *ListAccountIntegrationsEndpoint) Materialize() *apiendpoint.APIEndpoint
 		Title:             "List Account Integrations",
 		Description:       "Returns a paginated list of account integrations for the target account.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/identity/integrations",
 		Request:           &ListAccountIntegrationsRequest{},
 		Response:          &apiresource.List[apiresource.AccountIntegration]{},

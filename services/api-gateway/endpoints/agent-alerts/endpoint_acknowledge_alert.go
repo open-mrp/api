@@ -23,6 +23,7 @@ func (e *AcknowledgeAlertEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ackno
 		Title:             "Acknowledge Agent Alert",
 		Description:       "Marks an agent alert as acknowledged.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/ai/alerts/{id}/actions/acknowledge",
 		Request:           &AcknowledgeAlertRequest{},
 		Response:          &apiresource.AgentAlert{},

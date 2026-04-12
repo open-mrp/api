@@ -373,7 +373,7 @@ func (s *AuditHandlerTestSuite) TestAuditEventToProto_WithActor() {
 		},
 		Actor: &domain.AuditActor{
 			ID:           "usr_1",
-			ObjectType:   constants.ObjectTypeUser,
+			ActorType:    constants.ActorTypeUser,
 			Type:         "internal",
 			IdentityType: "user",
 			Name:         &name,
@@ -384,7 +384,7 @@ func (s *AuditHandlerTestSuite) TestAuditEventToProto_WithActor() {
 	proto := auditEventToProto(ev)
 	s.NotNil(proto.Actor)
 	s.Equal("usr_1", proto.Actor.Id)
-	s.Equal(string(constants.ObjectTypeUser), proto.Actor.ObjectType)
+	s.Equal(string(constants.ActorTypeUser), proto.Actor.ActorType)
 	s.Equal("internal", proto.Actor.Type)
 	s.Equal(&name, proto.Actor.Name)
 	s.Equal(&handle, proto.Actor.Handle)

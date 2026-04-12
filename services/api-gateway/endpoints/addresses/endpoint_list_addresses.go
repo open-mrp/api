@@ -21,6 +21,7 @@ func (e *ListAddressesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAddr
 		Title:             "List Addresses",
 		Description:       "Returns a paginated list of addresses.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/sales/addresses",
 		Request:           &ListAddressesRequest{},
 		Response:          &apiresource.List[apiresource.Address]{},

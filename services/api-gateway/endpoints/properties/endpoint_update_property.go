@@ -16,7 +16,7 @@ type UpdatePropertyRequest struct {
 	// The ID of the property to update.
 	PropertyID string `path:"id" validate:"required"`
 	// The new name of the property.
-	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
+	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
 }
 
 var sampleUpdatePropertyRequest = &UpdatePropertyRequest{
@@ -34,6 +34,7 @@ func (e *UpdatePropertyEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateP
 		Title:             "Update Property",
 		Description:       "Partially updates a property.",
 		Method:            http.MethodPatch,
+		ContentType:       "application/json",
 		Route:             "/v1/catalog/properties/{id}",
 		Request:           &UpdatePropertyRequest{},
 		Response:          &apiresource.Property{},

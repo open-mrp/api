@@ -33,6 +33,7 @@ func (e *UpdateAccountGroupProductLineAccessEndpoint) Materialize() *apiendpoint
 		Title:             "Update Account Group Product Line Access",
 		Description:       "Replaces all product line access for an account group.",
 		Method:            http.MethodPatch,
+		ContentType:       "application/json",
 		Route:             "/v1/sales/product-line-access/account-groups/{account_group_id}",
 		Request:           &UpdateAccountGroupProductLineAccessRequest{},
 		Response:          &apiresource.AccountGroupProductLineAccess{},

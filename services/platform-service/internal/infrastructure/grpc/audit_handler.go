@@ -223,7 +223,7 @@ func auditEventToProto(ev *domain.AuditEventRead) *pb.AuditEventInfo {
 	if ev.Actor != nil {
 		actor = &pb.AuditActor{
 			Id:           ev.Actor.ID,
-			ObjectType:   string(ev.Actor.ObjectType),
+			ActorType:    string(ev.Actor.ActorType),
 			Type:         ev.Actor.Type,
 			IdentityType: ev.Actor.IdentityType,
 			Name:         ev.Actor.Name,

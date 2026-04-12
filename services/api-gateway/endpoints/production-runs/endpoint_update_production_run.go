@@ -16,9 +16,9 @@ type UpdateProductionRunRequest struct {
 	// The ID of the production run to update.
 	ProductionRunID string `path:"id" validate:"required"`
 	// The new production run number.
-	Number *string `json:"number" validate:"omitempty,max=255"`
+	Number *string `json:"number" nullable:"false" validate:"omitempty,max=255"`
 	// The user ID of the new responsible user.
-	ResponsibleUserID *string `json:"responsible_user_id" nullable:"true" validate:"omitempty,max=191"`
+	ResponsibleUserID *string `json:"responsible_user_id" nullable:"false" validate:"omitempty,max=191"`
 }
 
 var sampleUpdateProductionRunNumber = "PR-00042"
@@ -39,6 +39,7 @@ func (e *UpdateProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*Up
 		Title:             "Update Production Run",
 		Description:       "Partially updates a production run. Only non-completed runs can be updated.",
 		Method:            http.MethodPatch,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/production-runs/{id}",
 		Request:           &UpdateProductionRunRequest{},
 		Response:          &apiresource.ProductionRunDetail{},

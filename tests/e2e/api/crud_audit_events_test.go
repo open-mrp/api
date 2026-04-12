@@ -101,5 +101,6 @@ func TestAuditEvents_IncludeActor(t *testing.T) {
 	actor := jsonObject(parseJSON(getBody), "actor")
 	require.NotNil(t, actor)
 	assert.NotEmpty(t, jsonField(actor, "id"))
-	assert.NotEmpty(t, jsonField(actor, "object"))
+	assert.Equal(t, "actor", jsonField(actor, "object"))
+	assert.NotEmpty(t, jsonField(actor, "type"))
 }

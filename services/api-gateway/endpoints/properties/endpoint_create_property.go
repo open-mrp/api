@@ -32,6 +32,7 @@ func (e *CreatePropertyEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateP
 		Title:             "Create Property",
 		Description:       "Creates a new property.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/catalog/properties",
 		Request:           &CreatePropertyRequest{},
 		Response:          &apiresource.Property{},
@@ -44,6 +45,9 @@ func (e *CreatePropertyEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateP
 		}),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreatePropertyRequest) (*apiresource.Property, *apierror.APIError) {
 			return svc.(PropertySvc).CreateProperty
+		},
+		LocationFunc: func(resp *apiresource.Property) string {
+			return "/v1/catalog/properties/" + resp.ID
 		},
 	}
 }

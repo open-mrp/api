@@ -23,6 +23,7 @@ func (e *GetPriorityEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetPriorit
 		Title:             "Get Priority",
 		Description:       "Returns a single priority by its ID or code.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/sales/priorities/{id}",
 		Request:           &GetPriorityRequest{},
 		Response:          &apiresource.Priority{},

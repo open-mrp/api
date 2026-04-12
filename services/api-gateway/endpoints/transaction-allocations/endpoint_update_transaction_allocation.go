@@ -15,7 +15,7 @@ type UpdateTransactionAllocationRequest struct {
 	// The ID of the transaction allocation to update.
 	AllocationID string `path:"id" validate:"required"`
 	// The new allocation amount as a decimal string.
-	Amount *string `json:"amount"`
+	Amount *string `json:"amount" nullable:"false"`
 }
 
 var sampleUpdateTransactionAllocationAmount = "150.00"
@@ -34,6 +34,7 @@ func (e *UpdateTransactionAllocationEndpoint) Materialize() *apiendpoint.APIEndp
 		Title:             "Update Transaction Allocation",
 		Description:       "Partially updates a transaction allocation.",
 		Method:            http.MethodPatch,
+		ContentType:       "application/json",
 		Route:             "/v1/finance/transaction-allocations/{id}",
 		Request:           &UpdateTransactionAllocationRequest{},
 		Response:          &apiresource.TransactionAllocation{},

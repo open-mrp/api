@@ -15,11 +15,11 @@ type UpdateDepartmentRequest struct {
 	// The ID of the department to update.
 	DepartmentID string `path:"id" validate:"required"`
 	// The display name of the department.
-	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
+	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// Optional notes about the department.
-	Notes *string `json:"notes,omitempty"`
+	Notes *string `json:"notes,omitempty" nullable:"true"`
 	// The ID of the storage location to associate with this department.
-	LocationID *string `json:"location_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
+	LocationID *string `json:"location_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
 	// IDs of scanning stations to connect to this department (additive).
 	ScanningStationIDs []string `json:"scanning_station_ids,omitempty"`
 	// IDs of machines to connect to this department (additive).
@@ -42,6 +42,7 @@ func (e *UpdateDepartmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*Updat
 		Title:             "Update Department",
 		Description:       "Partially updates a department. Adding scanning stations or machines is additive and does not remove existing ones.",
 		Method:            http.MethodPatch,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/departments/{id}",
 		Request:           &UpdateDepartmentRequest{},
 		Response:          &apiresource.Department{},

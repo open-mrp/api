@@ -40,6 +40,7 @@ func (e *CreateMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateM
 		Title:             "Create Material",
 		Description:       "Creates a new material.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/materials",
 		Request:           &CreateMaterialRequest{},
 		Response:          &apiresource.Material{},
@@ -48,6 +49,9 @@ func (e *CreateMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateM
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateMaterialRequest) (*apiresource.Material, *apierror.APIError) {
 			return svc.(MaterialSvc).CreateMaterial
+		},
+		LocationFunc: func(resp *apiresource.Material) string {
+			return "/v1/operations/materials/" + resp.ID
 		},
 	}
 }

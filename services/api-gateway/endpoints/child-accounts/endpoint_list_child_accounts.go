@@ -21,6 +21,7 @@ func (e *ListChildAccountsEndpoint) Materialize() *apiendpoint.APIEndpoint[*List
 		Title:             "List Child Accounts",
 		Description:       "Returns a paginated list of child accounts for the target account.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/identity/child-accounts",
 		Request:           &ListChildAccountsRequest{},
 		Response:          &apiresource.List[apiresource.ChildAccount]{},

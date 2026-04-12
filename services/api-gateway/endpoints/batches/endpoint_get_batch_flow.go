@@ -22,6 +22,7 @@ func (e *GetBatchFlowEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetBatchF
 		Title:             "Get Batch Flow",
 		Description:       "Returns the production flow graph for a batch, including all input and output batch relationships.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/batches/{id}/flow",
 		Request:           &GetBatchFlowRequest{},
 		Response:          &apiresource.List[apiresource.BatchFlowNode]{},

@@ -62,6 +62,7 @@ func (e *CreateVolumeDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*C
 		Title:             "Create Volume Discount",
 		Description:       "Creates a new volume discount for the target account.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/sales/volume-discounts",
 		Request:           &CreateVolumeDiscountRequest{},
 		Response:          &apiresource.VolumeDiscount{},
@@ -70,6 +71,9 @@ func (e *CreateVolumeDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*C
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateVolumeDiscountRequest) (*apiresource.VolumeDiscount, *apierror.APIError) {
 			return svc.(VolumeDiscountSvc).CreateVolumeDiscount
+		},
+		LocationFunc: func(resp *apiresource.VolumeDiscount) string {
+			return "/v1/sales/volume-discounts/" + resp.ID
 		},
 	}
 }

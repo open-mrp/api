@@ -52,6 +52,7 @@ func (e *CreateSettlementEndpoint) Materialize() *apiendpoint.APIEndpoint[*Creat
 		Title:             "Create Settlement",
 		Description:       "Creates a new settlement with transaction allocations. A settlement number is automatically generated.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/finance/settlements",
 		Request:           &CreateSettlementRequest{},
 		Response:          &apiresource.Settlement{},
@@ -60,6 +61,9 @@ func (e *CreateSettlementEndpoint) Materialize() *apiendpoint.APIEndpoint[*Creat
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateSettlementRequest) (*apiresource.Settlement, *apierror.APIError) {
 			return svc.(SettlementSvc).CreateSettlement
+		},
+		LocationFunc: func(resp *apiresource.Settlement) string {
+			return "/v1/finance/settlements/" + resp.ID
 		},
 	}
 }

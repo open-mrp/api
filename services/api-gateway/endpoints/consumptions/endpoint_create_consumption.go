@@ -49,6 +49,7 @@ func (e *CreateConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Crea
 		Title:             "Create Consumption",
 		Description:       "Creates a new consumption within a production step.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/production-steps/{production_step_id}/consumptions",
 		Request:           &CreateConsumptionRequest{},
 		Response:          &apiresource.Consumption{},

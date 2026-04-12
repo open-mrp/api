@@ -65,6 +65,7 @@ func (e *CreateUnitGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*Create
 		Title:             "Create Unit Group",
 		Description:       "Creates a new unit group with optional associated units.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/catalog/unit-groups",
 		Request:           &CreateUnitGroupRequest{},
 		Response:          &apiresource.UnitGroup{},
@@ -73,6 +74,9 @@ func (e *CreateUnitGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*Create
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateUnitGroupRequest) (*apiresource.UnitGroup, *apierror.APIError) {
 			return svc.(UnitGroupSvc).CreateUnitGroup
+		},
+		LocationFunc: func(resp *apiresource.UnitGroup) string {
+			return "/v1/catalog/unit-groups/" + resp.ID
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeUnitGroup,

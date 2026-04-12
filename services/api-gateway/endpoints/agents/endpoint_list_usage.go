@@ -26,6 +26,7 @@ func (e *ListUsageEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListUsageReq
 		Title:             "List Agent Usage",
 		Description:       "Returns a paginated list of daily agent token usage records for the current account.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/ai/usage",
 		Request:           &ListUsageRequest{},
 		Response:          &apiresource.List[apiresource.AgentTokenUsage]{},

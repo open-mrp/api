@@ -16,6 +16,7 @@ func (e *GetSpendingCapEndpoint) Materialize() *apiendpoint.APIEndpoint[*apireso
 		Title:             "Get Spending Cap",
 		Description:       "Returns the current monthly agent spending cap for the account. A null cap_cents indicates no cap.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/billing/spending-cap",
 		Request:           &apiresource.EmptyResource{},
 		Response:          &apiresource.SpendingCapResponse{},

@@ -29,6 +29,7 @@ func (e *ListSettlementsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSe
 		Title:             "List Settlements",
 		Description:       "Returns a paginated list of settlements for the current account.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/finance/settlements",
 		Request:           &ListSettlementsRequest{},
 		Response:          &apiresource.List[apiresource.SettlementSummary]{},

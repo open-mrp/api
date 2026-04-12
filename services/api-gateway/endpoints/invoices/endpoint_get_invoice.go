@@ -25,6 +25,7 @@ func (e *GetInvoiceEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetInvoiceR
 		Title:             "Get Invoice",
 		Description:       "Returns a single invoice by its ID.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/finance/invoices/{id}",
 		Request:           &GetInvoiceRequest{},
 		Response:          &apiresource.Invoice{},

@@ -120,6 +120,7 @@ func (e *CreateProductionStepEndpoint) Materialize() *apiendpoint.APIEndpoint[*C
 		Title:             "Create Production Step",
 		Description:       "Creates a new production step with production output, rates, and consumptions.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/production-steps",
 		Request:           &CreateProductionStepRequest{},
 		Response:          &apiresource.ProductionStep{},
@@ -128,6 +129,9 @@ func (e *CreateProductionStepEndpoint) Materialize() *apiendpoint.APIEndpoint[*C
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateProductionStepRequest) (*apiresource.ProductionStep, *apierror.APIError) {
 			return svc.(ProductionStepSvc).CreateProductionStep
+		},
+		LocationFunc: func(resp *apiresource.ProductionStep) string {
+			return "/v1/operations/production-steps/" + resp.ID
 		},
 	}
 }

@@ -24,6 +24,7 @@ func (e *VoidReceivingOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		Title:             "Void Receiving Order Line",
 		Description:       "Voids a single receiving order line.",
 		Method:            http.MethodPut,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/receiving-orders/{receivingOrderId}/lines/{id}/actions/void",
 		Request:           &VoidReceivingOrderLineRequest{},
 		Response:          &apiresource.ReceivingOrderLine{},

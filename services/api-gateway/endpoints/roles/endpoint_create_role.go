@@ -38,6 +38,7 @@ func (e *CreateRoleEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateRoleR
 		Title:             "Create Role",
 		Description:       "Creates a new custom role with the specified permissions.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/identity/roles",
 		Request:           &CreateRoleRequest{},
 		Response:          &apiresource.Role{},
@@ -46,6 +47,9 @@ func (e *CreateRoleEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateRoleR
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateRoleRequest) (*apiresource.Role, *apierror.APIError) {
 			return svc.(RoleSvc).CreateRole
+		},
+		LocationFunc: func(resp *apiresource.Role) string {
+			return "/v1/identity/roles/" + resp.ID
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeRole,

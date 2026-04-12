@@ -501,7 +501,7 @@ func mapRowToRequestLogRead(row *sqlc.FindRequestLogByIDRow) *domain.RequestLogR
 		case "user":
 			rl.Actor = &domain.RequestLogActor{
 				ID:           *actorID,
-				ObjectType:   constants.ObjectTypeUser,
+				ActorType:    constants.ActorTypeUser,
 				Name:         db.StringFromNullString(row.UserName),
 				Email:        db.StringFromNullString(row.UserEmail),
 				RoleID:       db.StringFromNullString(row.UserRoleID),
@@ -515,7 +515,7 @@ func mapRowToRequestLogRead(row *sqlc.FindRequestLogByIDRow) *domain.RequestLogR
 			}
 			rl.Actor = &domain.RequestLogActor{
 				ID:            id,
-				ObjectType:    constants.ObjectTypeAPIKey,
+				ActorType:     constants.ActorTypeAPIKey,
 				Name:          db.StringFromNullString(row.ApiKeyName),
 				RedactedValue: db.StringFromNullString(row.ApiKeyRedactedValue),
 				RoleID:        db.StringFromNullString(row.ApiKeyRoleID),

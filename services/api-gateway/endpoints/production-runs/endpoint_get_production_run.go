@@ -25,6 +25,7 @@ func (e *GetProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetPr
 		Title:             "Get Production Run",
 		Description:       "Returns a single production run by its ID.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/production-runs/{id}",
 		Request:           &GetProductionRunRequest{},
 		Response:          &apiresource.ProductionRunDetail{},

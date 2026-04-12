@@ -7,6 +7,7 @@ import (
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/appctx"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
@@ -47,9 +48,10 @@ func NewEmailLogSvc(config *EmailLogSvcConfig) EmailLogSvc {
 
 func (m *emailLogSvcImpl) ListEmailLogs(ctx context.Context, req *ListEmailLogsRequest) (*apiresource.List[apiresource.EmailLog], *apierror.APIError) {
 	pbReq := &pb.ListEmailLogsRequest{
-		Cursor: req.Cursor,
-		Limit:  req.Limit,
-		Query:  req.Query,
+		Cursor:   req.Cursor,
+		Limit:    req.Limit,
+		Query:    req.Query,
+		Includes: appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, emailLogSvcTracer, "service.email_logs.list", domain.ServiceName,
@@ -66,7 +68,8 @@ func (m *emailLogSvcImpl) ListEmailLogs(ctx context.Context, req *ListEmailLogsR
 
 func (m *emailLogSvcImpl) GetEmailLog(ctx context.Context, req *GetEmailLogRequest) (*apiresource.EmailLog, *apierror.APIError) {
 	pbReq := &pb.GetEmailLogRequest{
-		Id: req.EmailLogID,
+		Id:       req.EmailLogID,
+		Includes: appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, emailLogSvcTracer, "service.email_logs.get", domain.ServiceName,

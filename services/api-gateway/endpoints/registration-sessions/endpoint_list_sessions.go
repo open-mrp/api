@@ -16,6 +16,7 @@ func (e *ListSessionsEndpoint) Materialize() *apiendpoint.APIEndpoint[*apiresour
 		Title:             "List Registration Sessions",
 		Description:       "Returns a paginated list of open registration sessions for the authenticated user.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/auth/registration-sessions",
 		Request:           &apiresource.PaginationRequest{},
 		Response:          &apiresource.List[apiresource.RegistrationSession]{},

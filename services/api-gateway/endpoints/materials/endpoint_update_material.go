@@ -12,11 +12,11 @@ import (
 
 type UpdateMaterialRequest struct {
 	ItemID      string                `path:"id" validate:"required"`
-	SKU         *string               `json:"sku,omitempty" validate:"omitempty,max=255"`
-	Description *string               `json:"description,omitempty"`
-	Notes       *string               `json:"notes,omitempty"`
-	OrderPoint  *QuantityInputRequest `json:"order_point,omitempty"`
-	LeadTime    *QuantityInputRequest `json:"lead_time,omitempty"`
+	SKU         *string               `json:"sku,omitempty" nullable:"false" validate:"omitempty,max=255"`
+	Description *string               `json:"description,omitempty" nullable:"false"`
+	Notes       *string               `json:"notes,omitempty" nullable:"false"`
+	OrderPoint  *QuantityInputRequest `json:"order_point,omitempty" nullable:"false"`
+	LeadTime    *QuantityInputRequest `json:"lead_time,omitempty" nullable:"false"`
 }
 
 var sampleUpdateMaterialSKU = "MAT-001-UPDATED"
@@ -35,6 +35,7 @@ func (e *UpdateMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateM
 		Title:             "Update Material",
 		Description:       "Partially updates a material.",
 		Method:            http.MethodPatch,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/materials/{id}",
 		Request:           &UpdateMaterialRequest{},
 		Response:          &apiresource.Material{},

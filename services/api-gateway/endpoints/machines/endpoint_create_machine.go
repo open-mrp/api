@@ -39,6 +39,7 @@ func (e *CreateMachineEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateMa
 		Title:             "Create Machine",
 		Description:       "Creates a new machine and associates it with a department.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/machines",
 		Request:           &CreateMachineRequest{},
 		Response:          &apiresource.Machine{},
@@ -47,6 +48,9 @@ func (e *CreateMachineEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateMa
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateMachineRequest) (*apiresource.Machine, *apierror.APIError) {
 			return svc.(MachineSvc).CreateMachine
+		},
+		LocationFunc: func(resp *apiresource.Machine) string {
+			return "/v1/operations/machines/" + resp.ID
 		},
 	}
 }

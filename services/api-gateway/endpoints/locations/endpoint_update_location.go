@@ -16,15 +16,13 @@ type UpdateLocationRequest struct {
 	// The ID of the location to update.
 	LocationID string `path:"id" validate:"required"`
 	// The display name of the location.
-	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
+	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// The code of the location type.
-	TypeCode *constants.LocationTypeCode `json:"type_code,omitempty" nullable:"false"`
+	TypeCode *constants.LocationTypeCode `json:"type,omitempty" nullable:"false"`
 	// The ID of the parent location. Send null to clear.
 	ParentID *string `json:"parent_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
-	// Set to true to remove the parent (make top-level).
-	ClearParent bool `json:"clear_parent"`
 	// The IDs of child locations. When provided, replaces all current children.
-	ChildIDs *[]string `json:"child_ids,omitempty"`
+	ChildIDs *[]string `json:"child_ids,omitempty" nullable:"false"`
 }
 
 var sampleUpdateName = "Warehouse B"
@@ -42,8 +40,9 @@ type UpdateLocationEndpoint struct{}
 func (e *UpdateLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateLocationRequest, *apiresource.Location] {
 	return &apiendpoint.APIEndpoint[*UpdateLocationRequest, *apiresource.Location]{
 		Title:             "Update Location",
-		Description:       "Partially updates a location. Set clear_parent to true to remove the parent.",
+		Description:       "Partially updates a location.",
 		Method:            http.MethodPatch,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/locations/{id}",
 		Request:           &UpdateLocationRequest{},
 		Response:          &apiresource.Location{},

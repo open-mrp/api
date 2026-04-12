@@ -21,6 +21,7 @@ func (e *ListProductTypesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListP
 		Title:             "List Product Types",
 		Description:       "Returns a paginated list of product types. Product types are global and not scoped to a specific account.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/catalog/product-types",
 		Request:           &ListProductTypesRequest{},
 		Response:          &apiresource.List[apiresource.ProductType]{},

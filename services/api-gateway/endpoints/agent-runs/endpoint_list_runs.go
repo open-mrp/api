@@ -14,7 +14,7 @@ import (
 type ListRunsRequest struct {
 	apiresource.PaginationRequest
 	// Filter by run status code (e.g. "running", "completed", "failed").
-	StatusCode *string `query:"status_code"`
+	StatusCode *string `query:"status"`
 	// Filter by agent definition ID.
 	AgentDefinitionID *string `query:"agent_definition_id"`
 }
@@ -26,6 +26,7 @@ func (e *ListRunsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListRunsReque
 		Title:             "List Runs",
 		Description:       "Returns a paginated list of agent runs for the current account.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/ai/runs",
 		Request:           &ListRunsRequest{},
 		Response:          &apiresource.List[apiresource.AgentRun]{},

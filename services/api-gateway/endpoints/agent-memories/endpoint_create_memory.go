@@ -57,5 +57,8 @@ func (e *CreateMemoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateMem
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateMemoryRequest) (*apiresource.AgentMemory, *apierror.APIError) {
 			return svc.(AgentMemorySvc).CreateMemory
 		},
+		LocationFunc: func(resp *apiresource.AgentMemory) string {
+			return "/v1/ai/memories/" + resp.ID
+		},
 	}
 }

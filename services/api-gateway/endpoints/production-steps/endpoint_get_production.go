@@ -24,6 +24,7 @@ func (e *GetProductionEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetProdu
 		Title:             "Get Production",
 		Description:       "Returns a single production output by its ID within a production step.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/production-steps/{production_step_id}/productions/{id}",
 		Request:           &GetProductionRequest{},
 		Response:          &apiresource.ProductionOutput{},

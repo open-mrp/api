@@ -22,6 +22,7 @@ func (e *ListPropertiesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPro
 		Title:             "List Properties",
 		Description:       "Returns a paginated list of properties for the target account.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/catalog/properties",
 		Request:           &ListPropertiesRequest{},
 		Response:          &apiresource.List[apiresource.Property]{},

@@ -39,6 +39,7 @@ func (e *ListItemsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListItemsReq
 		Title:             "List Items",
 		Description:       "Returns a paginated list of items for the target account, with filtering by type, category, attributes, supplier, and date range.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/catalog/items",
 		Request:           &ListItemsRequest{},
 		Response:          &apiresource.List[apiresource.Item]{},

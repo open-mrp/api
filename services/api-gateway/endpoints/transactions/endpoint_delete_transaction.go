@@ -22,6 +22,7 @@ func (e *DeleteTransactionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Dele
 		Title:             "Delete Transaction",
 		Description:       "Deletes a transaction and cascades deletion to its allocations.",
 		Method:            http.MethodDelete,
+		ContentType:       "application/json",
 		Route:             "/v1/finance/transactions/{id}",
 		Request:           &DeleteTransactionRequest{},
 		Response:          &apiresource.TransactionDetail{},

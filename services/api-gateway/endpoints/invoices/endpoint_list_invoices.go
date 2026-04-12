@@ -37,6 +37,7 @@ func (e *ListInvoicesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListInvoi
 		Title:             "List Invoices",
 		Description:       "Returns a paginated list of invoices for the current account.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/finance/invoices",
 		Request:           &ListInvoicesRequest{},
 		Response:          &apiresource.List[apiresource.InvoiceSummary]{},

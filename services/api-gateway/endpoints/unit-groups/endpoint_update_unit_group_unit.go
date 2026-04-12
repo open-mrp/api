@@ -18,11 +18,11 @@ type UpdateUnitGroupUnitRequest struct {
 	// The ID of the associated unit.
 	AssociatedUnitID string `path:"id" validate:"required"`
 	// The unit ID.
-	UnitID *string `json:"unit_id,omitempty" validate:"omitempty,max=191"`
+	UnitID *string `json:"unit_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
 	// The discount percentage.
-	DiscountPercentage *float64 `json:"discount_percentage,omitempty"`
+	DiscountPercentage *float64 `json:"discount_percentage,omitempty" nullable:"false"`
 	// The fixed discount amount.
-	DiscountFixed *float64 `json:"discount_fixed,omitempty"`
+	DiscountFixed *float64 `json:"discount_fixed,omitempty" nullable:"false"`
 	// Whether this associated unit is visible in the customer portal.
 	CustomerPortalVisibility *constants.CustomerPortalVisibility `json:"customer_portal_visibility,omitempty" nullable:"false"`
 }

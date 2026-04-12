@@ -15,17 +15,17 @@ type UpdateSupplierRequest struct {
 	// The ID of the supplier to update.
 	SupplierID string `path:"id" validate:"required"`
 	// The new display name.
-	Name *string `json:"name" validate:"omitempty,max=255"`
+	Name *string `json:"name" nullable:"false" validate:"omitempty,max=255"`
 	// The new supplier number.
-	Number *string `json:"number" validate:"omitempty,max=255"`
+	Number *string `json:"number" nullable:"false" validate:"omitempty,max=255"`
 	// The new note. Set update_note to true to apply.
 	Note *string `json:"note"`
 	// Whether to update the note field (allows setting to null).
 	UpdateNote bool `json:"update_note"`
 	// The ID of the bill-to address to set.
-	BillToAddressID *string `json:"bill_to_address_id" nullable:"true" validate:"omitempty,max=191"`
+	BillToAddressID *string `json:"bill_to_address_id" nullable:"false" validate:"omitempty,max=191"`
 	// The ID of the ship-to address to set.
-	ShipToAddressID *string `json:"ship_to_address_id" nullable:"true" validate:"omitempty,max=191"`
+	ShipToAddressID *string `json:"ship_to_address_id" nullable:"false" validate:"omitempty,max=191"`
 }
 
 var sampleUpdateSupplierName = "Acme Supplies LLC"

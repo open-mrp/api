@@ -22,6 +22,7 @@ func (e *GetAccountGroupProductLineAccessEndpoint) Materialize() *apiendpoint.AP
 		Title:             "Get Account Group Product Line Access",
 		Description:       "Returns the product line access for a single account group.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/sales/product-line-access/account-groups/{account_group_id}",
 		Request:           &GetAccountGroupProductLineAccessRequest{},
 		Response:          &apiresource.AccountGroupProductLineAccess{},

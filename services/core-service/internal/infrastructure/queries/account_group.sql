@@ -101,7 +101,7 @@ INSERT INTO account_group (
 -- name: UpdateAccountGroup :execresult
 UPDATE account_group SET
     name = COALESCE(sqlc.narg('name'), name),
-    description = COALESCE(sqlc.narg('description'), description),
+    description = sqlc.narg('description'),
     commission_status_code = COALESCE(sqlc.narg('commission_status_code'), commission_status_code),
     freight_status_code = COALESCE(sqlc.narg('freight_status_code'), freight_status_code),
     updated_at = NOW(3)

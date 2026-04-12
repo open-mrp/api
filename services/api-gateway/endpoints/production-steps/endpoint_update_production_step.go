@@ -15,13 +15,13 @@ type UpdateProductionStepRequest struct {
 	// The ID of the production step to update.
 	ProductionStepID string `path:"id" validate:"required"`
 	// The new name.
-	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
+	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// The new leveling factor as a decimal string.
-	LevelingFactor *string `json:"leveling_factor,omitempty"`
+	LevelingFactor *string `json:"leveling_factor,omitempty" nullable:"false"`
 	// The new allowances as a decimal string.
-	Allowances *string `json:"allowances,omitempty"`
+	Allowances *string `json:"allowances,omitempty" nullable:"false"`
 	// The new scanning station ID.
-	ScanningStationID *string `json:"scanning_station_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
+	ScanningStationID *string `json:"scanning_station_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
 }
 
 var sampleUpdateProductionStepName = "Assembly Step A"
@@ -44,6 +44,7 @@ func (e *UpdateProductionStepEndpoint) Materialize() *apiendpoint.APIEndpoint[*U
 		Title:             "Update Production Step",
 		Description:       "Partially updates a production step.",
 		Method:            http.MethodPatch,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/production-steps/{id}",
 		Request:           &UpdateProductionStepRequest{},
 		Response:          &apiresource.ProductionStep{},

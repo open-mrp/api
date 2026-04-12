@@ -22,6 +22,7 @@ func (e *ListAdjustmentTypesEndpoint) Materialize() *apiendpoint.APIEndpoint[*Li
 		Title:             "List Adjustment Types",
 		Description:       "Returns a paginated list of adjustment types.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/finance/adjustment-types",
 		Request:           &ListAdjustmentTypesRequest{},
 		Response:          &apiresource.List[apiresource.AdjustmentType]{},

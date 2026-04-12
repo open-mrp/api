@@ -25,6 +25,7 @@ func (e *GetShipmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetShipmen
 		Title:             "Get Shipment",
 		Description:       "Returns a single shipment by its ID.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/shipments/{id}",
 		Request:           &GetShipmentRequest{},
 		Response:          &apiresource.ShipmentDetail{},

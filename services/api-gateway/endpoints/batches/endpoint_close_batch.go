@@ -31,6 +31,7 @@ func (e *CloseBatchEndpoint) Materialize() *apiendpoint.APIEndpoint[*CloseBatchR
 		Title:             "Close Batch",
 		Description:       "Closes a batch, marking it as completed.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/batches/actions/close",
 		Request:           &CloseBatchRequest{},
 		Response:          &apiresource.Batch{},

@@ -23,6 +23,7 @@ func (e *ListAccountPricesEndpoint) Materialize() *apiendpoint.APIEndpoint[*List
 		Title:             "List Account Prices",
 		Description:       "Returns a paginated list of account prices for the current account.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/sales/account-prices",
 		Request:           &ListAccountPricesRequest{},
 		Response:          &apiresource.List[apiresource.AccountPrice]{},

@@ -166,11 +166,12 @@ func SalesOrderDetailPresenter(info *pb.SalesOrderInfo) apiresource.SalesOrderDe
 
 	// Sales rep (as Actor sub-resource)
 	if info.SalesRepId != nil {
-		d.SalesRep = &apiresource.Actor{
-			ID:     *info.SalesRepId,
-			Object: constants.ObjectTypeUser,
-			Name:   info.SalesRepName,
-		}
+		d.SalesRep = apiresource.NewActor(
+			*info.SalesRepId,
+			constants.ActorTypeUser,
+			info.SalesRepName,
+			nil,
+		)
 	}
 
 	// Payment term

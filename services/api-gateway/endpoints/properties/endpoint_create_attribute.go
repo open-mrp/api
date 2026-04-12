@@ -18,7 +18,7 @@ type CreateAttributeRequest struct {
 	// The value of the attribute.
 	Value string `json:"value" validate:"required"`
 	// The color code of the attribute. Randomly assigned if not provided.
-	ColorCode *constants.Color `json:"color_code,omitempty"`
+	ColorCode *constants.Color `json:"color,omitempty"`
 	// The display order of the attribute. Defaults to last position if not provided.
 	SortOrder *int32 `json:"sort_order" validate:"omitempty,min=1"`
 }
@@ -45,6 +45,7 @@ func (e *CreateAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*Create
 		Title:             "Create Attribute",
 		Description:       "Creates a new attribute under a property.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/catalog/properties/{property_id}/attributes",
 		Request:           &CreateAttributeRequest{},
 		Response:          &apiresource.Attribute{},

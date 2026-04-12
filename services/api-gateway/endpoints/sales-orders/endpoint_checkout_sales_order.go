@@ -37,6 +37,7 @@ func (e *CheckoutSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*Che
 		Title:             "Checkout Sales Order",
 		Description:       "Creates a checkout session for a sales order.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/sales/sales-orders/{id}/checkout",
 		Request:           &CheckoutSalesOrderRequest{},
 		Response:          &CheckoutSalesOrderResponse{},

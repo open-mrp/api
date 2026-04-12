@@ -40,6 +40,7 @@ func (e *CreateRegistrationFlowEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		Title:             "Create Registration Flow",
 		Description:       "Creates a new registration flow.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/sales/registration-flows",
 		Request:           &CreateRegistrationFlowRequest{},
 		Response:          &apiresource.RegistrationFlow{},
@@ -48,6 +49,9 @@ func (e *CreateRegistrationFlowEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateRegistrationFlowRequest) (*apiresource.RegistrationFlow, *apierror.APIError) {
 			return svc.(RegistrationFlowSvc).CreateRegistrationFlow
+		},
+		LocationFunc: func(resp *apiresource.RegistrationFlow) string {
+			return "/v1/sales/registration-flows/" + resp.ID
 		},
 	}
 }

@@ -115,7 +115,6 @@ func (m *locationSvcImpl) UpdateLocation(ctx context.Context, req *UpdateLocatio
 		Name:           req.Name,
 		TypeCode:       req.TypeCode.StringPtr(),
 		ParentId:       req.ParentID,
-		ClearParent:    req.ClearParent,
 		UpdateChildren: req.ChildIDs != nil,
 	}
 	if req.ChildIDs != nil {

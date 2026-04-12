@@ -227,6 +227,14 @@ message UpdateDepartmentResponse {
 message DeleteDepartmentRequest {
   string id = 1;
 }
+// Fields are populated based on the actor type (currently only users send emails).
+message EmailLogActor {
+  string id = 1;
+  string actor_type = 2;
+  optional string name = 3;
+  // Email for users, redacted value for API keys.
+  optional string handle = 4;
+}
 message EmailLogInfo {
   string id = 1;
   bool has_sent = 2;
@@ -234,8 +242,8 @@ message EmailLogInfo {
   optional string subject = 4;
   optional string filename = 5;
   optional string ses_message_id = 6;
-  optional string sent_by_id = 7;
-  optional string sent_by_name = 8;
+  optional EmailLogActor sent_by = 7;
+  reserved 8; // previously optional string sent_by_name
   google.protobuf.Timestamp created_at = 9;
   google.protobuf.Timestamp updated_at = 10;
 }
@@ -243,6 +251,7 @@ message ListEmailLogsRequest {
   optional string cursor = 1;
   int32 limit = 2;
   optional string query = 3;
+  repeated string includes = 4;
 }
 message ListEmailLogsResponse {
   repeated EmailLogInfo email_logs = 1;
@@ -250,6 +259,7 @@ message ListEmailLogsResponse {
 }
 message GetEmailLogRequest {
   string id = 1;
+  repeated string includes = 2;
 }
 message GetEmailLogResponse {
   EmailLogInfo email_log = 1;

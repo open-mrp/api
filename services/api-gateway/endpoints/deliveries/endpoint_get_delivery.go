@@ -22,6 +22,7 @@ func (e *GetDeliveryEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetDeliver
 		Title:             "Get Delivery",
 		Description:       "Returns a single delivery by its ID, including all delivery lines.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/deliveries/{id}",
 		Request:           &GetDeliveryRequest{},
 		Response:          &apiresource.Delivery{},

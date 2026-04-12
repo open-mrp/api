@@ -227,7 +227,7 @@ func TestCustomers_AuditEvents_UpdateAllFields(t *testing.T) {
 	body := validCustomerBody(name)
 	body["carrier_billing_type"] = "sender"
 	body["carrier_billing_account"] = "ORIG-ACCT"
-	body["default_priority_code"] = SeedPriorityCode
+	body["default_priority"] = SeedPriorityCode
 	body["default_sales_rep_user_id"] = SeedUserID
 
 	createStatus, createBody, err := apiClient.Post(customersPath, body, newIdempotencyKey())
@@ -375,7 +375,7 @@ func TestCustomers_AuditEvents_ClearAllNullableFields(t *testing.T) {
 	body["url"] = "https://clear-test.e2e.augno.com"
 	body["carrier_billing_type"] = "third_party"
 	body["carrier_billing_account"] = "CLR-ACCT"
-	body["default_priority_code"] = SeedPriorityCode
+	body["default_priority"] = SeedPriorityCode
 	body["default_sales_rep_user_id"] = SeedUserID
 
 	createStatus, createBody, err := apiClient.Post(customersPath, body, newIdempotencyKey())
@@ -410,13 +410,9 @@ func TestCustomers_AuditEvents_ClearAllNullableFields(t *testing.T) {
 		"phone":                     nil,
 		"url":                       nil,
 		"carrier_billing_account":   nil,
-		"default_carrier_id":        nil,
-		"default_payment_term_id":   nil,
-		"default_shipping_term_id":  nil,
 		"default_sales_rep_user_id": nil,
 		"bill_to_address_id":        nil,
 		"ship_to_address_id":        nil,
-		"customer_type_group_id":    nil,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
@@ -435,22 +431,6 @@ func TestCustomers_AuditEvents_ClearAllNullableFields(t *testing.T) {
 		{"phone", "555-CLEAR"},
 		{"url", "https://clear-test.e2e.augno.com"},
 		{"carrier_billing_account", "CLR-ACCT"},
-	} {
-		change, ok := changeForField(changes, tc.field)
-		require.True(t, ok, "should include %s change", tc.field)
-		assert.Equal(t, tc.oldValue, jsonField(change, "old_value"), "%s old_value mismatch", tc.field)
-		assert.Nil(t, change["new_value"], "%s new_value should be null", tc.field)
-	}
-
-	// Verify ID-reference fields cleared to null.
-	for _, tc := range []struct {
-		field    string
-		oldValue string
-	}{
-		{"default_carrier_id", SeedCarrierID},
-		{"default_payment_term_id", SeedPaymentTermID},
-		{"default_shipping_term_id", SeedShippingTermID},
-		{"type_group_id", SeedCustomerGroupID},
 	} {
 		change, ok := changeForField(changes, tc.field)
 		require.True(t, ok, "should include %s change", tc.field)
@@ -589,8 +569,8 @@ func TestAttributes_AuditEvents(t *testing.T) {
 	path := attributesPath(SeedPropertyID)
 
 	status, body, err := apiClient.Post(path, map[string]any{
-		"value":      uniqueName("e2e-attr-audit"),
-		"color_code": "blue",
+		"value": uniqueName("e2e-attr-audit"),
+		"color": "blue",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
@@ -613,8 +593,8 @@ func TestAttributes_RequestLogs(t *testing.T) {
 	path := attributesPath(SeedPropertyID)
 
 	status, body, err := apiClient.Post(path, map[string]any{
-		"value":      uniqueName("e2e-attr-rlog"),
-		"color_code": "blue",
+		"value": uniqueName("e2e-attr-rlog"),
+		"color": "blue",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
@@ -693,8 +673,8 @@ func TestItemCategories_RequestLogs(t *testing.T) {
 func TestLocations_AuditEvents(t *testing.T) {
 	t.Parallel()
 	created := createAndCleanup(t, locationsPath, map[string]any{
-		"name":      uniqueName("e2e-loc-audit"),
-		"type_code": "building",
+		"name": uniqueName("e2e-loc-audit"),
+		"type": "building",
 	})
 	id := jsonField(created, "id")
 
@@ -712,8 +692,8 @@ func TestLocations_AuditEvents(t *testing.T) {
 func TestLocations_RequestLogs(t *testing.T) {
 	t.Parallel()
 	createAndCleanup(t, locationsPath, map[string]any{
-		"name":      uniqueName("e2e-loc-rlog"),
-		"type_code": "building",
+		"name": uniqueName("e2e-loc-rlog"),
+		"type": "building",
 	})
 
 	expectRequestLog(t, "POST", "201", locationsPath)

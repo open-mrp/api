@@ -38,6 +38,7 @@ func (e *CreateProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cr
 		Title:             "Create Production Run from Sales Order",
 		Description:       "Creates a production run from a sales order.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/sales/sales-orders/{id}/actions/create-production-run",
 		Request:           &CreateProductionRunRequest{},
 		Response:          &CreateProductionRunResponse{},

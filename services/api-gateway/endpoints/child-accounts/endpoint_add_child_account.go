@@ -22,6 +22,7 @@ func (e *AddChildAccountEndpoint) Materialize() *apiendpoint.APIEndpoint[*AddChi
 		Title:             "Add Child Account",
 		Description:       "Adds a child account relationship to the target account.",
 		Method:            http.MethodPut,
+		ContentType:       "application/json",
 		Route:             "/v1/identity/child-accounts/{child_account_id}",
 		Request:           &AddChildAccountRequest{},
 		Response:          &apiresource.ChildAccount{},

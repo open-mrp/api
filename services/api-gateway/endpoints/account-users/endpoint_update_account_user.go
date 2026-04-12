@@ -15,11 +15,11 @@ type UpdateAccountUserRequest struct {
 	// The ID of the account user to update.
 	AccountUserID string `path:"id" validate:"required"`
 	// The user's display name.
-	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
+	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// The user's email address.
-	Email *string `json:"email,omitempty" validate:"omitnil,custom_email,max=255"`
+	Email *string `json:"email,omitempty" nullable:"false" validate:"omitnil,custom_email,max=255"`
 	// The user's username.
-	Username *string `json:"username,omitempty" validate:"omitempty,max=255"`
+	Username *string `json:"username,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// The ID of the role to assign.
 	RoleID *string `json:"role_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
 	// The ID of the department to assign.
@@ -46,6 +46,7 @@ func (e *UpdateAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upda
 		Title:             "Update Account User",
 		Description:       "Partially updates an account user.",
 		Method:            http.MethodPatch,
+		ContentType:       "application/json",
 		Route:             "/v1/identity/account-users/{id}",
 		Request:           &UpdateAccountUserRequest{},
 		Response:          &apiresource.AccountUser{},

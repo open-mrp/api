@@ -22,6 +22,7 @@ func (e *UnlockAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*Unlo
 		Title:             "Unlock Account User",
 		Description:       "Unlocks a previously locked account user, restoring their access to the account.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/identity/account-users/{id}/unlock",
 		Request:           &UnlockAccountUserRequest{},
 		Response:          &apiresource.EmptyResource{},

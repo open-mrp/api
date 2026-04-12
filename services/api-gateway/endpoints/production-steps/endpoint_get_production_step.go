@@ -22,6 +22,7 @@ func (e *GetProductionStepEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetP
 		Title:             "Get Production Step",
 		Description:       "Returns a single production step by its ID.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/production-steps/{id}",
 		Request:           &GetProductionStepRequest{},
 		Response:          &apiresource.ProductionStep{},

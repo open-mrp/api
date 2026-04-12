@@ -97,7 +97,7 @@ type RequestLogRead struct {
 
 type RequestLogActor struct {
 	ID            string
-	ObjectType    constants.ObjectType
+	ActorType     constants.ActorType
 	Name          *string
 	Email         *string
 	RedactedValue *string
@@ -153,7 +153,7 @@ type AuditFieldChange struct {
 // AuditActor contains the actor details associated with an audit event.
 type AuditActor struct {
 	ID           string
-	ObjectType   constants.ObjectType
+	ActorType    constants.ActorType
 	Type         string
 	IdentityType string
 	Name         *string

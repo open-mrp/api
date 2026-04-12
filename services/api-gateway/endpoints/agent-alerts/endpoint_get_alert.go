@@ -23,6 +23,7 @@ func (e *GetAlertEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetAlertReque
 		Title:             "Get Agent Alert",
 		Description:       "Returns a single agent alert by ID.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/ai/alerts/{id}",
 		Request:           &GetAlertRequest{},
 		Response:          &apiresource.AgentAlert{},

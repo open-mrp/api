@@ -31,6 +31,7 @@ func (e *ListPartsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPartsReq
 		Title:             "List Parts",
 		Description:       "Returns a paginated list of parts for the current account.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/parts",
 		Request:           &ListPartsRequest{},
 		Response:          &apiresource.List[apiresource.Part]{},

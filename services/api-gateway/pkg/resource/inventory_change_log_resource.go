@@ -17,7 +17,7 @@ type InventoryChangeLog struct {
 	// The resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=inventory_change_log"`
 	// The code indicating the type of inventory change action.
-	ActionTypeCode constants.InventoryActionType `json:"action_type_code" validate:"required"`
+	ActionTypeCode constants.InventoryActionType `json:"action_type" validate:"required"`
 	// The quantity associated with this change.
 	Quantity *Quantity `json:"quantity" expandable:"true"`
 	// The item affected by this change.

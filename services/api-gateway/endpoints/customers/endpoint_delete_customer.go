@@ -22,6 +22,7 @@ func (e *DeleteCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteC
 		Title:             "Delete Customer",
 		Description:       "Deletes a customer and its associated account relations, addresses, and account users.",
 		Method:            http.MethodDelete,
+		ContentType:       "application/json",
 		Route:             "/v1/sales/customers/{id}",
 		Request:           &DeleteCustomerRequest{},
 		Response:          &apiresource.EmptyResource{},

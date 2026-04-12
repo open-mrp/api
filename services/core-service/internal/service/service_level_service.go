@@ -289,13 +289,6 @@ func (s *serviceLevelSvcImpl) UpdateServiceLevel(ctx context.Context, params dom
 				return apiErr
 			}
 
-			// If setting this service level as default, clear any existing defaults for the carrier
-			if params.IsDefault != nil && *params.IsDefault {
-				if apiErr := serviceLevelRepo.ClearDefaultsForCarrier(txCtx, params.AccountID, params.CarrierID); apiErr != nil {
-					return apiErr
-				}
-			}
-
 			// Check code uniqueness if code is being changed
 			if params.Code != nil {
 				exists, apiErr := serviceLevelRepo.ExistsByCodeInCarrier(txCtx, params.CarrierID, *params.Code, &params.ServiceLevelID)

@@ -23,6 +23,7 @@ func (e *ListServiceLevelsEndpoint) Materialize() *apiendpoint.APIEndpoint[*List
 		Title:             "List Service Levels",
 		Description:       "Returns a paginated list of service levels for a carrier.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/carriers/{carrier_id}/service-levels",
 		Request:           &ListServiceLevelsRequest{},
 		Response:          &apiresource.List[apiresource.ServiceLevel]{},

@@ -41,6 +41,7 @@ func (e *CreateDepartmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*Creat
 		Title:             "Create Department",
 		Description:       "Creates a new department.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/departments",
 		Request:           &CreateDepartmentRequest{},
 		Response:          &apiresource.Department{},
@@ -49,6 +50,9 @@ func (e *CreateDepartmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*Creat
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateDepartmentRequest) (*apiresource.Department, *apierror.APIError) {
 			return svc.(DepartmentSvc).CreateDepartment
+		},
+		LocationFunc: func(resp *apiresource.Department) string {
+			return "/v1/operations/departments/" + resp.ID
 		},
 	}
 }

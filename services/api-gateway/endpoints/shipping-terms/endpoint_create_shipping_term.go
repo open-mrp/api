@@ -50,6 +50,7 @@ func (e *CreateShippingTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cre
 		Title:             "Create Shipping Term",
 		Description:       "Creates a new account-owned shipping term.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/shipping-terms",
 		Request:           &CreateShippingTermRequest{},
 		Response:          &apiresource.ShippingTerm{},
@@ -62,6 +63,9 @@ func (e *CreateShippingTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cre
 		}),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateShippingTermRequest) (*apiresource.ShippingTerm, *apierror.APIError) {
 			return svc.(ShippingTermSvc).CreateShippingTerm
+		},
+		LocationFunc: func(resp *apiresource.ShippingTerm) string {
+			return "/v1/operations/shipping-terms/" + resp.ID
 		},
 	}
 }

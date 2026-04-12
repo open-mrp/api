@@ -28,16 +28,17 @@ func AuditEventPresenter(ev *pb.AuditEventInfo) *apiresource.AuditEvent {
 	}
 
 	if ev.Actor != nil {
-		actor := &apiresource.Actor{
-			ID:     ev.Actor.Id,
-			Object: constants.ObjectType(ev.Actor.ObjectType),
-			Handle: stringPtrFromOptional(ev.Actor.Handle),
-		}
+		var name *string
 		if ev.Actor.Name != nil && *ev.Actor.Name != "" {
 			n := *ev.Actor.Name
-			actor.Name = &n
+			name = &n
 		}
-		result.Actor = actor
+		result.Actor = apiresource.NewActor(
+			ev.Actor.Id,
+			constants.ActorType(ev.Actor.ActorType),
+			name,
+			stringPtrFromOptional(ev.Actor.Handle),
+		)
 	}
 
 	result.Changes = AuditFieldChangesPresenter(ev.Changes)

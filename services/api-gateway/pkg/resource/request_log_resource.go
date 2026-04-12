@@ -70,7 +70,8 @@ type RequestLog struct {
 
 var SampleRequestLogActor = &Actor{
 	ID:     SampleUserID,
-	Object: constants.ObjectTypeUser,
+	Object: constants.ObjectTypeActor,
+	Type:   constants.ActorTypeUser,
 	Name:   new(SampleUserName),
 	Handle: new(SampleUserEmail),
 	Role:   SampleRole,

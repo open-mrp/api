@@ -22,6 +22,7 @@ func (e *DeleteCustomerProductLineAccessEndpoint) Materialize() *apiendpoint.API
 		Title:             "Delete Customer Product Line Access",
 		Description:       "Removes all product line access for a customer.",
 		Method:            http.MethodDelete,
+		ContentType:       "application/json",
 		Route:             "/v1/sales/product-line-access/customers/{customer_id}",
 		Request:           &DeleteCustomerProductLineAccessRequest{},
 		Response:          &apiresource.EmptyResource{},

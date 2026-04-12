@@ -31,6 +31,7 @@ func (e *BulkDeleteSalesOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		Title:             "Bulk Delete Sales Orders",
 		Description:       "Deletes multiple sales orders in a single operation.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/sales/sales-orders/actions/bulk-delete",
 		Request:           &BulkDeleteSalesOrdersRequest{},
 		Response:          &apiresource.EmptyResource{},

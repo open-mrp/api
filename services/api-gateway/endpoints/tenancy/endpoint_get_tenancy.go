@@ -19,6 +19,7 @@ func (e *GetTenancyEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetTenancyR
 		Title:             "Get Tenancy",
 		Description:       "Returns the authenticated user's tenancy context.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/identity/me/tenancy",
 		Request:           &GetTenancyRequest{},
 		Response:          &apiresource.Tenancy{},

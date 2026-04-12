@@ -16,15 +16,15 @@ type UpdateShippingCaseRequest struct {
 	// The ID of the shipping case to update.
 	ShippingCaseID string `path:"id" validate:"required"`
 	// The new tracking number.
-	TrackingNumber *string `json:"tracking_number" validate:"omitempty,max=255"`
+	TrackingNumber *string `json:"tracking_number" nullable:"false" validate:"omitempty,max=255"`
 	// The new freight amount value.
-	FreightAmountValue *string `json:"freight_amount_value"`
+	FreightAmountValue *string `json:"freight_amount_value" nullable:"false"`
 	// The new freight amount unit ID.
-	FreightAmountUnitID *string `json:"freight_amount_unit_id" validate:"omitempty,max=191"`
+	FreightAmountUnitID *string `json:"freight_amount_unit_id" nullable:"false" validate:"omitempty,max=191"`
 	// The new freight weight value.
-	FreightWeightValue *string `json:"freight_weight_value"`
+	FreightWeightValue *string `json:"freight_weight_value" nullable:"false"`
 	// The new freight weight unit ID.
-	FreightWeightUnitID *string `json:"freight_weight_unit_id" validate:"omitempty,max=191"`
+	FreightWeightUnitID *string `json:"freight_weight_unit_id" nullable:"false" validate:"omitempty,max=191"`
 }
 
 var sampleTrackingNumber = "1Z999AA10123456784"
@@ -43,6 +43,7 @@ func (e *UpdateShippingCaseEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upd
 		Title:             "Update Shipping Case",
 		Description:       "Partially updates a shipping case's tracking number and freight quantities.",
 		Method:            http.MethodPatch,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/shipping-cases/{id}",
 		Request:           &UpdateShippingCaseRequest{},
 		Response:          &apiresource.ShippingCase{},

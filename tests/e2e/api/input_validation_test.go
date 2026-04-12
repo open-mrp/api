@@ -179,8 +179,8 @@ func TestInputValidation_UnicodeString(t *testing.T) {
 func TestInputValidation_InvalidEnum_StatusCode(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.Post(customersPath, map[string]any{
-		"name":        uniqueName("e2e-val-enum"),
-		"status_code": "totally_invalid_status",
+		"name":   uniqueName("e2e-val-enum"),
+		"status": "totally_invalid_status",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 400, status, body)

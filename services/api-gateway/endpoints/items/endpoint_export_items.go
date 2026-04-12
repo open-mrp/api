@@ -19,6 +19,7 @@ func (e *ExportItemsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ExportItem
 		Title:             "Export Items",
 		Description:       "Exports all items with their on-hand inventory for the target account as an Excel file.",
 		Method:            http.MethodGet,
+		ContentType:       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 		Route:             "/v1/catalog/items/actions/export",
 		Request:           &ExportItemsRequest{},
 		Response:          &httptransport.FileDownload{},

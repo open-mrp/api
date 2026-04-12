@@ -45,13 +45,20 @@ func init() {
 	})
 
 	RegisterIncludes(&ObjectIncludes{
+		ObjectType: constants.ObjectTypeActor,
+		Fields: []IncludeFieldDef{
+			{Key: "role", ObjectType: constants.ObjectTypeRole},
+		},
+	})
+
+	RegisterIncludes(&ObjectIncludes{
 		ObjectType: constants.ObjectTypeRequestLog,
 		Fields: []IncludeFieldDef{
 			{Key: "account", ObjectType: constants.ObjectTypeAccount},
 			{Key: "query_json", ObjectType: constants.ObjectTypeRequestLog},
 			{Key: "request_body_json", ObjectType: constants.ObjectTypeRequestLog},
 			{Key: "response_body_json", ObjectType: constants.ObjectTypeRequestLog},
-			{Key: "actor", ObjectType: constants.ObjectTypeUser, Children: []IncludeFieldDef{
+			{Key: "actor", ObjectType: constants.ObjectTypeActor, Children: []IncludeFieldDef{
 				{Key: "role", ObjectType: constants.ObjectTypeRole},
 			}},
 		},
@@ -60,9 +67,16 @@ func init() {
 	RegisterIncludes(&ObjectIncludes{
 		ObjectType: constants.ObjectTypeAuditEvent,
 		Fields: []IncludeFieldDef{
-			{Key: "actor", ObjectType: constants.ObjectTypeUser},
+			{Key: "actor", ObjectType: constants.ObjectTypeActor},
 			{Key: "changes", ObjectType: constants.ObjectTypeAuditEvent},
 			{Key: "metadata", ObjectType: constants.ObjectTypeAuditEvent},
+		},
+	})
+
+	RegisterIncludes(&ObjectIncludes{
+		ObjectType: constants.ObjectTypeEmailLog,
+		Fields: []IncludeFieldDef{
+			{Key: "sent_by", ObjectType: constants.ObjectTypeActor},
 		},
 	})
 

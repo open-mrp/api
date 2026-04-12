@@ -22,6 +22,7 @@ func (e *GetPlanChangePreviewEndpoint) Materialize() *apiendpoint.APIEndpoint[*G
 		Title:             "Preview Plan Change",
 		Description:       "Returns a proration preview for switching the account to a different pricing plan.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/billing/plans/{id}/proration",
 		Request:           &GetPlanProrationRequest{},
 		Response:          &apiresource.PlanChangeProration{},

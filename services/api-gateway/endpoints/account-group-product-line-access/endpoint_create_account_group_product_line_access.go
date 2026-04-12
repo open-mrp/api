@@ -34,6 +34,7 @@ func (e *CreateAccountGroupProductLineAccessEndpoint) Materialize() *apiendpoint
 		Title:             "Create Account Group Product Line Access",
 		Description:       "Creates product line access for an account group.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/sales/product-line-access/account-groups",
 		Request:           &CreateAccountGroupProductLineAccessRequest{},
 		Response:          &apiresource.AccountGroupProductLineAccess{},
@@ -42,6 +43,9 @@ func (e *CreateAccountGroupProductLineAccessEndpoint) Materialize() *apiendpoint
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateAccountGroupProductLineAccessRequest) (*apiresource.AccountGroupProductLineAccess, *apierror.APIError) {
 			return svc.(AccountGroupProductLineAccessSvc).CreateAccountGroupProductLineAccess
+		},
+		LocationFunc: func(resp *apiresource.AccountGroupProductLineAccess) string {
+			return "/v1/sales/product-line-access/account-groups/" + resp.AccountGroup.ID
 		},
 	}
 }

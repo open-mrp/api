@@ -23,6 +23,7 @@ func (e *ListShipmentLinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*List
 		Title:             "List Shipment Lines",
 		Description:       "Returns a paginated list of lines for the specified shipment.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/shipments/{shipment_id}/lines",
 		Request:           &ListShipmentLinesRequest{},
 		Response:          &apiresource.List[apiresource.ShipmentLine]{},

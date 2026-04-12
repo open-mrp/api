@@ -22,6 +22,7 @@ func (e *DeleteMachineEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteMa
 		Title:             "Delete Machine",
 		Description:       "Deletes a machine.",
 		Method:            http.MethodDelete,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/machines/{id}",
 		Request:           &DeleteMachineRequest{},
 		Response:          &apiresource.EmptyResource{},

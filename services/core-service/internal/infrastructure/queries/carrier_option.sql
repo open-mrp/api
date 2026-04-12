@@ -97,7 +97,6 @@ UPDATE carrier_option SET
     name = COALESCE(sqlc.narg('name'), name),
     code = COALESCE(sqlc.narg('code'), code),
     is_portal_enabled = COALESCE(sqlc.narg('is_portal_enabled'), is_portal_enabled),
-    is_default = COALESCE(sqlc.narg('is_default'), is_default),
     updated_at = NOW(3)
 WHERE id = sqlc.arg('id')
 AND account_id = sqlc.arg('account_id');

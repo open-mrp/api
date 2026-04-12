@@ -31,6 +31,7 @@ func (e *SwitchAccountEndpoint) Materialize() *apiendpoint.APIEndpoint[*SwitchAc
 		Title:             "Switch Account",
 		Description:       "Switches the authenticated user's active account and returns the updated tenancy context.",
 		Method:            http.MethodPut,
+		ContentType:       "application/json",
 		Route:             "/v1/identity/me/tenancy",
 		Request:           &SwitchAccountRequest{},
 		Response:          &apiresource.Tenancy{},

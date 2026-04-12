@@ -21,6 +21,7 @@ func (e *ListToolGroupsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListToo
 		Title:             "List Tool Groups",
 		Description:       "Returns all tool groups used to organize available platform tools.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/ai/tool-groups",
 		Request:           &ListToolGroupsRequest{},
 		Response:          apiresource.NewList[apiresource.ToolGroup](nil, apiresource.PageInfo{}),

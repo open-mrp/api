@@ -17,17 +17,18 @@ func TestCarriers_CRUD(t *testing.T) {
 
 	// CREATE
 	name := uniqueName("e2e-carrier")
-	createStatus, createBody, err := apiClient.Post(carriersPath, map[string]any{
+	createResp, err := apiClient.PostFull(carriersPath, map[string]any{
 		"name": name,
 		"code": "will_call",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, createStatus, createBody)
+	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
 
-	created := parseJSON(createBody)
+	created := parseJSON(createResp.Body)
 	assert.Equal(t, "carrier", jsonField(created, "object"))
 	id := jsonField(created, "id")
 	assert.NotEmpty(t, id)
+	assertCreatedLocation(t, createResp.Header, id)
 	assert.Equal(t, name, jsonField(created, "name"))
 	assert.Equal(t, "will_call", jsonField(created, "code"))
 	assert.Equal(t, "visible", jsonField(created, "customer_portal_visibility"))
@@ -66,18 +67,19 @@ func TestCarriers_CreateAndUpdateAllFields(t *testing.T) {
 
 	// ── CREATE with all fields ──
 	name := uniqueName("e2e-carr-allf")
-	createStatus, createBody, err := apiClient.Post(carriersPath, map[string]any{
+	createResp, err := apiClient.PostFull(carriersPath, map[string]any{
 		"name":                       name,
 		"code":                       "will_call",
 		"account_number":             "CARRIER-001",
 		"customer_portal_visibility": "visible",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, createStatus, createBody)
+	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
 
-	got := parseJSON(createBody)
+	got := parseJSON(createResp.Body)
 	id := jsonField(got, "id")
 	require.NotEmpty(t, id)
+	assertCreatedLocation(t, createResp.Header, id)
 	defer apiClient.Delete(carriersPath + "/" + id)
 
 	assert.Equal(t, "carrier", jsonField(got, "object"))
@@ -183,16 +185,18 @@ func TestCarriers_GetSeeded(t *testing.T) {
 func TestCarriers_CreateResponseShape(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-carrier-shape")
-	status, body, err := apiClient.Post(carriersPath, map[string]any{
+	createResp, err := apiClient.PostFull(carriersPath, map[string]any{
 		"name":                       name,
 		"code":                       "will_call",
 		"customer_portal_visibility": "hidden",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, status, body)
+	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
 
-	got := parseJSON(body)
-	assert.NotEmpty(t, jsonField(got, "id"))
+	got := parseJSON(createResp.Body)
+	id := jsonField(got, "id")
+	assert.NotEmpty(t, id)
+	assertCreatedLocation(t, createResp.Header, id)
 	assert.Equal(t, "carrier", jsonField(got, "object"))
 	assert.Equal(t, name, jsonField(got, "name"))
 	assert.Equal(t, "will_call", jsonField(got, "code"))
@@ -204,7 +208,7 @@ func TestCarriers_CreateResponseShape(t *testing.T) {
 	assert.Nil(t, got["owner"], "owner should be null without ?include=owner")
 	assert.Nil(t, got["service_levels"], "service_levels should be null without ?include=service_levels")
 
-	apiClient.Delete(carriersPath + "/" + jsonField(got, "id"))
+	apiClient.Delete(carriersPath + "/" + id)
 }
 
 func TestCarriers_CreateIdempotent(t *testing.T) {

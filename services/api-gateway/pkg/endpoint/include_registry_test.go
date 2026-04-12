@@ -84,7 +84,7 @@ func TestIncludesFor_RequestLog(t *testing.T) {
 	})
 	require.Len(t, cfg.Fields, 6)
 	assert.Equal(t, IncludeField{Key: "account", ObjectType: constants.ObjectTypeAccount, JSONPaths: []string{"account"}}, cfg.Fields[0])
-	assert.Equal(t, IncludeField{Key: "actor", ObjectType: constants.ObjectTypeUser, JSONPaths: []string{"actor"}}, cfg.Fields[1])
+	assert.Equal(t, IncludeField{Key: "actor", ObjectType: constants.ObjectTypeActor, JSONPaths: []string{"actor"}}, cfg.Fields[1])
 	assert.Equal(t, IncludeField{Key: "actor.role", ObjectType: constants.ObjectTypeRole, JSONPaths: []string{"actor.role"}}, cfg.Fields[2])
 	assert.Equal(t, IncludeField{Key: "query_json", ObjectType: constants.ObjectTypeRequestLog, JSONPaths: []string{"query_json"}}, cfg.Fields[3])
 	assert.Equal(t, IncludeField{Key: "request_body_json", ObjectType: constants.ObjectTypeRequestLog, JSONPaths: []string{"request_body_json"}}, cfg.Fields[4])

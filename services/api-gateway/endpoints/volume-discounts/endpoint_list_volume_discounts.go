@@ -21,6 +21,7 @@ func (e *ListVolumeDiscountsEndpoint) Materialize() *apiendpoint.APIEndpoint[*Li
 		Title:             "List Volume Discounts",
 		Description:       "Returns a paginated list of volume discounts for the target account.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/sales/volume-discounts",
 		Request:           &ListVolumeDiscountsRequest{},
 		Response:          &apiresource.List[apiresource.VolumeDiscount]{},

@@ -16,17 +16,17 @@ type UpdatePurchaseOrderRequest struct {
 	// The ID of the purchase order to update.
 	PurchaseOrderID string `path:"id" validate:"required"`
 	// A note for the order.
-	Note *string `json:"note,omitempty"`
+	Note *string `json:"note,omitempty" nullable:"false"`
 	// The purchase order number.
-	Number *string `json:"number,omitempty" validate:"omitempty,max=255"`
+	Number *string `json:"number,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// The priority code.
-	PriorityCode *string `json:"priority_code,omitempty" validate:"omitempty,max=255"`
+	PriorityCode *string `json:"priority_code,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// The billing address ID.
 	BillingAddressID *string `json:"billing_address_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
 	// The shipping address ID.
 	ShippingAddressID *string `json:"shipping_address_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
 	// The promised/scheduled delivery date.
-	PromisedAt *string `json:"promised_at,omitempty"`
+	PromisedAt *string `json:"promised_at,omitempty" nullable:"false"`
 	// The account user IDs for email contacts (replaces existing).
 	ContactAccountUserIDs []string `json:"contact_account_user_ids,omitempty"`
 }
@@ -53,6 +53,7 @@ func (e *UpdatePurchaseOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*Up
 		Title:             "Update Purchase Order",
 		Description:       "Partially updates a purchase order.",
 		Method:            http.MethodPatch,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/purchase-orders/{id}",
 		Request:           &UpdatePurchaseOrderRequest{},
 		Response:          &apiresource.PurchaseOrderDetail{},

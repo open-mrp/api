@@ -24,6 +24,7 @@ func (e *ListItemCategoriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*Lis
 		Title:             "List Item Categories",
 		Description:       "Returns a paginated list of item categories for the current account, including account-specific and global system categories.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/catalog/item-categories",
 		Request:           &ListItemCategoriesRequest{},
 		Response:          &apiresource.List[apiresource.ItemCategory]{},

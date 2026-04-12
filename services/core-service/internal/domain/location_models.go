@@ -71,7 +71,6 @@ type UpdateLocationParams struct {
 	Name           *string
 	TypeCode       *string
 	ParentID       *string
-	ClearParent    bool
 	ChildIDs       []string
 	UpdateChildren bool
 }

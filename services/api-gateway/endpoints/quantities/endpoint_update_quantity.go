@@ -16,9 +16,9 @@ type UpdateQuantityRequest struct {
 	// The ID of the quantity to update.
 	QuantityID string `path:"id" validate:"required"`
 	// The new decimal value of the quantity.
-	Value *string `json:"value,omitempty"`
+	Value *string `json:"value,omitempty" nullable:"false"`
 	// The new unit ID for this quantity.
-	UnitID *string `json:"unit_id,omitempty" validate:"omitempty,max=191"`
+	UnitID *string `json:"unit_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
 	// The ID of the parent resource that owns this quantity.
 	ObjectID *string `json:"object_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
 	// The type of the parent resource (e.g. "item", "production_step").

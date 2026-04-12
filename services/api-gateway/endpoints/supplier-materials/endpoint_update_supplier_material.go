@@ -13,9 +13,9 @@ import (
 type UpdateSupplierMaterialRequest struct {
 	SupplierID          string  `path:"supplier_id" validate:"required"`
 	ItemID              string  `path:"id" validate:"required"`
-	SupplierPartNumber  *string `json:"supplier_part_number,omitempty" validate:"omitempty,max=255"`
-	SupplierDescription *string `json:"supplier_description,omitempty" validate:"omitempty,max=255"`
-	IsActive            *bool   `json:"is_active,omitempty"`
+	SupplierPartNumber  *string `json:"supplier_part_number,omitempty" nullable:"false" validate:"omitempty,max=255"`
+	SupplierDescription *string `json:"supplier_description,omitempty" nullable:"true" validate:"omitempty,max=255"`
+	IsActive            *bool   `json:"is_active,omitempty" nullable:"false"`
 }
 
 var sampleUpdateSupplierPartNumber = "SUP-PART-002"
@@ -34,6 +34,7 @@ func (e *UpdateSupplierMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		Title:             "Update Supplier Material",
 		Description:       "Partially updates a supplier material.",
 		Method:            http.MethodPatch,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/suppliers/{supplier_id}/materials/{id}",
 		Request:           &UpdateSupplierMaterialRequest{},
 		Response:          &apiresource.SupplierMaterial{},

@@ -15,11 +15,11 @@ type UpdateMachineRequest struct {
 	// The ID of the machine to update.
 	MachineID string `path:"id" validate:"required"`
 	// The display name of the machine.
-	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
+	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// The serial number of the machine.
-	SerialNumber *string `json:"serial_number,omitempty" validate:"omitempty,max=255"`
+	SerialNumber *string `json:"serial_number,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// Optional notes about the machine.
-	Notes *string `json:"notes,omitempty"`
+	Notes *string `json:"notes,omitempty" nullable:"false"`
 }
 
 var sampleUpdateMachineName = "Updated CNC Router"
@@ -38,6 +38,7 @@ func (e *UpdateMachineEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateMa
 		Title:             "Update Machine",
 		Description:       "Partially updates a machine.",
 		Method:            http.MethodPatch,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/machines/{id}",
 		Request:           &UpdateMachineRequest{},
 		Response:          &apiresource.Machine{},

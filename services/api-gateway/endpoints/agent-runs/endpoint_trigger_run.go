@@ -45,6 +45,9 @@ func (e *TriggerRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*TriggerRunR
 		ServiceHandler: func(svc any) func(ctx context.Context, req *TriggerRunRequest) (*apiresource.AgentRun, *apierror.APIError) {
 			return svc.(AgentRunSvc).TriggerAgentRun
 		},
+		LocationFunc: func(resp *apiresource.AgentRun) string {
+			return "/v1/ai/runs/" + resp.ID
+		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeAgentRun,
 			Fields:     []string{"actions", "definition", "definition.config", "definition.tools", "definition.role"},

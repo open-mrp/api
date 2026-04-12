@@ -56,8 +56,8 @@ func TestResponseHeaders_AugnoVersion(t *testing.T) {
 	assertResponseHeaderPresent(t, resp.Header, "Augno-Version")
 }
 
-// TestResponseHeaders_LocationOnCreate validates that 201 Created includes a Location header
-// when the endpoint's LocationFunc is configured.
+// TestResponseHeaders_LocationOnCreate validates that 201 Created includes a
+// Location header containing the new resource's id.
 func TestResponseHeaders_LocationOnCreate(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-hdr-loc")
@@ -67,13 +67,7 @@ func TestResponseHeaders_LocationOnCreate(t *testing.T) {
 	requireStatus(t, 201, resp.StatusCode, resp.Body)
 
 	id := jsonField(parseJSON(resp.Body), "id")
-
-	location := resp.Header.Get("Location")
-	if location != "" {
-		assert.Contains(t, location, id, "Location header should contain the new resource ID")
-	}
-	// Note: Not all 201 endpoints set Location. This test validates the header
-	// is correct when present, rather than mandating its presence.
+	assertCreatedLocation(t, resp.Header, id)
 
 	apiClient.Delete(headersTestCustomerPath + "/" + id)
 }

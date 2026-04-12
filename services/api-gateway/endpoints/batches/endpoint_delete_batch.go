@@ -22,6 +22,7 @@ func (e *DeleteBatchEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteBatc
 		Title:             "Delete Batch",
 		Description:       "Deletes a batch by ID.",
 		Method:            http.MethodDelete,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/batches/{id}",
 		Request:           &DeleteBatchRequest{},
 		Response:          &apiresource.Batch{},

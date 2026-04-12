@@ -145,7 +145,6 @@ func (h *gRPCHandler) UpdateLocation(ctx context.Context, req *pb.UpdateLocation
 		Name:           req.Name,
 		TypeCode:       req.TypeCode,
 		ParentID:       req.ParentId,
-		ClearParent:    req.ClearParent,
 		ChildIDs:       req.ChildIds,
 		UpdateChildren: req.UpdateChildren,
 	}

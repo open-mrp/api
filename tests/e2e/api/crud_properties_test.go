@@ -15,14 +15,15 @@ const propertiesPath = "/v1/catalog/properties"
 func TestProperties_CRUD(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-prop")
-	createStatus, createBody, err := apiClient.Post(propertiesPath, map[string]any{"name": name}, newIdempotencyKey())
+	createResp, err := apiClient.PostFull(propertiesPath, map[string]any{"name": name}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, createStatus, createBody)
+	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
 
-	created := parseJSON(createBody)
+	created := parseJSON(createResp.Body)
 	assert.Equal(t, "property", jsonField(created, "object"))
 	id := jsonField(created, "id")
 	assert.NotEmpty(t, id)
+	assertCreatedLocation(t, createResp.Header, id)
 	assert.Equal(t, name, jsonField(created, "name"))
 
 	getStatus, getBody, err := apiClient.GetListRaw(propertiesPath+"/"+id, nil)
@@ -55,15 +56,16 @@ func TestProperties_CreateAndUpdateAllFields(t *testing.T) {
 
 	// ── CREATE ──
 	name := uniqueName("e2e-prop-allf")
-	createStatus, createBody, err := apiClient.Post(propertiesPath, map[string]any{
+	createResp, err := apiClient.PostFull(propertiesPath, map[string]any{
 		"name": name,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, createStatus, createBody)
+	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
 
-	got := parseJSON(createBody)
+	got := parseJSON(createResp.Body)
 	id := jsonField(got, "id")
 	require.NotEmpty(t, id)
+	assertCreatedLocation(t, createResp.Header, id)
 	defer apiClient.Delete(propertiesPath + "/" + id)
 
 	assert.Equal(t, "property", jsonField(got, "object"))

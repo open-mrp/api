@@ -17,13 +17,13 @@ type UpdateItemInventoryRequest struct {
 	// The quantity change to apply.
 	QuantityChange *float64 `json:"quantity_change,omitempty" nullable:"false"`
 	// Whether to reconcile (force to exact value) or adjust (add delta).
-	Reconcile *bool `json:"reconcile,omitempty"`
+	Reconcile *bool `json:"reconcile,omitempty" nullable:"false"`
 	// Optional customer to update inventory for.
-	CustomerID *string `json:"customer_id,omitempty" validate:"omitempty,max=191"`
+	CustomerID *string `json:"customer_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
 	// Optional location.
-	LocationID *string `json:"location_id,omitempty" validate:"omitempty,max=191"`
+	LocationID *string `json:"location_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
 	// Optional lot number.
-	LotNumber *string `json:"lot_number,omitempty" validate:"omitempty,max=255"`
+	LotNumber *string `json:"lot_number,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// The unit ID for the quantity change.
 	UnitID *string `json:"unit_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
 }

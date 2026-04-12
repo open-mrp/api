@@ -35,6 +35,15 @@ func ptrToNullString(s *string) sql.NullString {
 	return sql.NullString{}
 }
 
+// clearableStringToNullString converts a *string using the sentinel pattern:
+// nil → keep existing (caller must backfill), ptr("") → SQL NULL, ptr("value") → "value".
+func clearableStringToNullString(s *string) sql.NullString {
+	if s == nil || *s == "" {
+		return sql.NullString{}
+	}
+	return sql.NullString{String: *s, Valid: true}
+}
+
 func mapGetConsumptionRow(row sqlc.GetConsumptionRow, productionStepID string) *domain.Consumption {
 	return &domain.Consumption{
 		ID:              row.ID,
@@ -122,7 +131,7 @@ func (r *consumptionRepoImpl) UpdateItem(ctx context.Context, accountID, consump
 
 	err := r.queries.UpdateConsumptionItem(ctx, sqlc.UpdateConsumptionItemParams{
 		ItemID:       itemID,
-		Instructions: ptrToNullString(instructions),
+		Instructions: clearableStringToNullString(instructions),
 		ID:           consumptionID,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {

@@ -25,6 +25,7 @@ func (e *ExportReceivablesByCustomerEndpoint) Materialize() *apiendpoint.APIEndp
 		Title:             "Export Receivables by Customer",
 		Description:       "Exports all receivable entries for a specific customer account as a CSV file.",
 		Method:            http.MethodGet,
+		ContentType:       "text/csv",
 		Route:             "/v1/finance/receivables/accounts/{account_id}/actions/export",
 		Request:           &ExportReceivablesByCustomerRequest{},
 		Response:          &httptransport.FileDownload{},

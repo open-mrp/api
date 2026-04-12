@@ -22,6 +22,7 @@ func (e *ListScanningStationsEndpoint) Materialize() *apiendpoint.APIEndpoint[*L
 		Title:             "List Scanning Stations",
 		Description:       "Returns a paginated list of scanning stations for the current account.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/scanning-stations",
 		Request:           &ListScanningStationsRequest{},
 		Response:          &apiresource.List[apiresource.ScanningStation]{},

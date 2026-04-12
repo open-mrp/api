@@ -22,6 +22,7 @@ func (e *ListPrioritiesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPri
 		Title:             "List Priorities",
 		Description:       "Returns a paginated list of priorities.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/sales/priorities",
 		Request:           &ListPrioritiesRequest{},
 		Response:          &apiresource.List[apiresource.Priority]{},

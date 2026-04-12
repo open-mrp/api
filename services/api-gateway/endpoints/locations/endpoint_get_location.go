@@ -23,6 +23,7 @@ func (e *GetLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetLocatio
 		Title:             "Get Location",
 		Description:       "Returns a single location by its ID.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/locations/{id}",
 		Request:           &GetLocationRequest{},
 		Response:          &apiresource.Location{},

@@ -16,11 +16,11 @@ type UpdateUserRequest struct {
 	// The ID of the user to update.
 	UserID string `path:"id" validate:"required"`
 	// The user's display name.
-	Name *string `json:"name" validate:"omitempty,max=255"`
+	Name *string `json:"name" nullable:"false" validate:"omitempty,max=255"`
 	// URL to the user's profile image.
-	ImageUrl *string `json:"image_url" validate:"omitempty,max=2083"`
+	ImageUrl *string `json:"image_url" nullable:"false" validate:"omitempty,max=2083"`
 	// When the user's email was verified. Set to null to mark as unverified.
-	EmailVerified *time.Time `json:"email_verified"`
+	EmailVerified *time.Time `json:"email_verified" nullable:"false"`
 }
 
 var sampleUpdateUserName = apiresource.SampleUserName
@@ -41,6 +41,7 @@ func (e *UpdateUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateUserR
 		Title:             "Update User",
 		Description:       "Partially updates a user's profile.",
 		Method:            http.MethodPatch,
+		ContentType:       "application/json",
 		Route:             "/v1/identity/users/{id}",
 		Request:           &UpdateUserRequest{},
 		Response:          &apiresource.User{},

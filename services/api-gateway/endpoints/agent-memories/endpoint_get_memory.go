@@ -22,6 +22,7 @@ func (e *GetMemoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetMemoryReq
 		Title:             "Get Agent Memory",
 		Description:       "Returns a single agent memory by ID.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/ai/memories/{id}",
 		Request:           &GetMemoryRequest{},
 		Response:          &apiresource.AgentMemory{},

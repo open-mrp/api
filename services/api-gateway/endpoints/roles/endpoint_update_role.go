@@ -16,9 +16,9 @@ type UpdateRoleRequest struct {
 	// The ID of the role to update.
 	RoleID string `path:"id" validate:"required"`
 	// The new display name for the role.
-	Name *string `json:"name" validate:"omitempty,max=255"`
+	Name *string `json:"name" nullable:"false" validate:"omitempty,max=255"`
 	// The full set of permissions to replace existing ones with in "domain:action" format. If omitted, permissions are not changed.
-	Permissions *[]string `json:"permissions"`
+	Permissions *[]string `json:"permissions" nullable:"false"`
 }
 
 var sampleUpdateRoleName = "Updated Manager"
@@ -39,6 +39,7 @@ func (e *UpdateRoleEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateRoleR
 		Title:             "Update Role",
 		Description:       "Partially updates a custom role's name or permissions. Provided permissions replace all existing ones; global roles cannot be modified.",
 		Method:            http.MethodPatch,
+		ContentType:       "application/json",
 		Route:             "/v1/identity/roles/{id}",
 		Request:           &UpdateRoleRequest{},
 		Response:          &apiresource.Role{},

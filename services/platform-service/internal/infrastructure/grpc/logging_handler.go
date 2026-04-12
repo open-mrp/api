@@ -180,7 +180,7 @@ func requestLogToProto(rl *domain.RequestLogRead) *pb.RequestLogInfo {
 	if rl.Actor != nil {
 		info.Actor = &pb.RequestLogActor{
 			Id:            rl.Actor.ID,
-			ObjectType:    string(rl.Actor.ObjectType),
+			ActorType:     string(rl.Actor.ActorType),
 			Name:          rl.Actor.Name,
 			Email:         rl.Actor.Email,
 			RedactedValue: rl.Actor.RedactedValue,

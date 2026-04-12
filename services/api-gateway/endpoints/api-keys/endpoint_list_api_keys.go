@@ -24,6 +24,7 @@ func (e *ListAPIKeysEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAPIKey
 		Title:             "List API Keys",
 		Description:       "Returns a paginated list of API keys for the current account.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/auth/api-keys",
 		Request:           &ListAPIKeysRequest{},
 		Response:          &apiresource.List[apiresource.APIKey]{},

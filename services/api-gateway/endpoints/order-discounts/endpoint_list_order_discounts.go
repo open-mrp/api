@@ -21,6 +21,7 @@ func (e *ListOrderDiscountsEndpoint) Materialize() *apiendpoint.APIEndpoint[*Lis
 		Title:             "List Order Discounts",
 		Description:       "Returns a paginated list of order discounts for the current account.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/sales/order-discounts",
 		Request:           &ListOrderDiscountsRequest{},
 		Response:          &apiresource.List[apiresource.OrderDiscount]{},

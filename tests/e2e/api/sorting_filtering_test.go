@@ -192,7 +192,7 @@ func TestSortingFiltering_CustomerStatusFilter(t *testing.T) {
 
 	// Create a customer with hold_shipment status.
 	statusPayload := validCustomerBody(uniqueName("e2e-filt-status"))
-	statusPayload["status_code"] = "hold_shipment"
+	statusPayload["status"] = "hold_shipment"
 	created := createAndCleanup(t, customersPath, statusPayload)
 	id := jsonField(created, "id")
 

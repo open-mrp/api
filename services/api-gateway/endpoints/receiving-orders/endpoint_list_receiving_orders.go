@@ -31,6 +31,7 @@ func (e *ListReceivingOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*Li
 		Title:             "List Receiving Orders",
 		Description:       "Returns a paginated list of receiving orders for the current account.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/receiving-orders",
 		Request:           &ListReceivingOrdersRequest{},
 		Response:          &apiresource.List[apiresource.ReceivingOrderSummary]{},

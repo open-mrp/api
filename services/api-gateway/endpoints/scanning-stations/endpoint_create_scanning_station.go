@@ -43,6 +43,7 @@ func (e *CreateScanningStationEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		Title:             "Create Scanning Station",
 		Description:       "Creates a new scanning station associated with a department.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/scanning-stations",
 		Request:           &CreateScanningStationRequest{},
 		Response:          &apiresource.ScanningStation{},
@@ -51,6 +52,9 @@ func (e *CreateScanningStationEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateScanningStationRequest) (*apiresource.ScanningStation, *apierror.APIError) {
 			return svc.(ScanningStationSvc).CreateScanningStation
+		},
+		LocationFunc: func(resp *apiresource.ScanningStation) string {
+			return "/v1/operations/scanning-stations/" + resp.ID
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType:    constants.ObjectTypeScanningStation,

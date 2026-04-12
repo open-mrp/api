@@ -34,6 +34,7 @@ func (e *CreateDCLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*Creat
 		Title:             "Create DC Location",
 		Description:       "Creates a new DC location.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/dc-locations",
 		Request:           &CreateDCLocationRequest{},
 		Response:          &apiresource.DCLocation{},
@@ -42,6 +43,9 @@ func (e *CreateDCLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*Creat
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateDCLocationRequest) (*apiresource.DCLocation, *apierror.APIError) {
 			return svc.(EDIDCLocationSvc).CreateDCLocation
+		},
+		LocationFunc: func(resp *apiresource.DCLocation) string {
+			return "/v1/operations/dc-locations/" + resp.ID
 		},
 	}
 }

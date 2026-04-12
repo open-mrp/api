@@ -16,11 +16,11 @@ type UpdateItemRequest struct {
 	// The ID of the item to update.
 	ItemID string `path:"id" validate:"required"`
 	// The item SKU.
-	SKU *string `json:"sku,omitempty" validate:"omitempty,max=255"`
+	SKU *string `json:"sku,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// The item description.
-	Description *string `json:"description"`
+	Description *string `json:"description" nullable:"true"`
 	// Optional notes about the item.
-	Notes *string `json:"notes"`
+	Notes *string `json:"notes" nullable:"true"`
 }
 
 var sampleUpdateItemSKU = apiresource.SampleItemSKU

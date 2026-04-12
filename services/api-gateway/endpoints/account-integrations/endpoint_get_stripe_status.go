@@ -19,6 +19,7 @@ func (e *GetStripeStatusEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetStr
 		Title:             "Get Stripe Status",
 		Description:       "Returns whether the target account has a Stripe integration configured.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/identity/integrations/stripe/status",
 		Request:           &GetStripeStatusRequest{},
 		Response:          &apiresource.StripeStatus{},

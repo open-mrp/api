@@ -34,6 +34,7 @@ func (e *GetRemainingQuantityToSplitEndpoint) Materialize() *apiendpoint.APIEndp
 		Title:             "Get Remaining Quantity to Split",
 		Description:       "Returns the remaining quantity available to split from the specified batches at a given production step.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/batches/remaining-quantities",
 		Request:           &GetRemainingQuantityToSplitRequest{},
 		Response:          &apiresource.Quantity{},

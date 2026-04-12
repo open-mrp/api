@@ -23,6 +23,7 @@ func (e *GetMachineEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetMachineR
 		Title:             "Get Machine",
 		Description:       "Returns a single machine by its ID.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/machines/{id}",
 		Request:           &GetMachineRequest{},
 		Response:          &apiresource.Machine{},

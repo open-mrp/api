@@ -22,6 +22,7 @@ func (e *DeleteAccountGroupProductLineAccessEndpoint) Materialize() *apiendpoint
 		Title:             "Delete Account Group Product Line Access",
 		Description:       "Removes all product line access for an account group.",
 		Method:            http.MethodDelete,
+		ContentType:       "application/json",
 		Route:             "/v1/sales/product-line-access/account-groups/{account_group_id}",
 		Request:           &DeleteAccountGroupProductLineAccessRequest{},
 		Response:          &apiresource.EmptyResource{},

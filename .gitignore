@@ -82,3 +82,4 @@ crash.log
 .delete-verify/queue/
 .endpoint-verify/
 .auth-pattern-verify/
+.nullable-tags-verify/

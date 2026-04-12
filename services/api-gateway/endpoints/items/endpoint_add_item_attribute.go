@@ -25,6 +25,7 @@ func (e *AddItemAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*AddIt
 		Title:             "Add Item Attribute",
 		Description:       "Adds an attribute to an item. If the attribute is already associated with the item, this is a no-op.",
 		Method:            http.MethodPut,
+		ContentType:       "application/json",
 		Route:             "/v1/catalog/items/{id}/attributes/{attribute_id}",
 		Request:           &AddItemAttributeRequest{},
 		Response:          &apiresource.Item{},

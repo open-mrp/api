@@ -35,6 +35,7 @@ func (e *InitiateOAuthEndpoint) Materialize() *apiendpoint.APIEndpoint[*Initiate
 		Title:             "Initiate Carrier OAuth",
 		Description:       "Initiates the OAuth flow for a Shippo-managed carrier and returns an OAuth URL to redirect the user to. Not available in sandbox mode.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/carriers/{id}/actions/initiate-oauth",
 		Request:           &InitiateOAuthRequest{},
 		Response:          &apiresource.OAuthResponse{},

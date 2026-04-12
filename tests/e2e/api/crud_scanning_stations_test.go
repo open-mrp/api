@@ -18,7 +18,7 @@ func TestScanningStations_CRUD(t *testing.T) {
 	notes := "test station notes"
 
 	// CREATE
-	createStatus, createBody, err := apiClient.Post(scanningStationsPath, map[string]any{
+	createResp, err := apiClient.PostFull(scanningStationsPath, map[string]any{
 		"name":                    name,
 		"type":                    "init_batch",
 		"notes":                   notes,
@@ -26,11 +26,12 @@ func TestScanningStations_CRUD(t *testing.T) {
 		"department_id":           SeedDepartmentID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, createStatus, createBody)
+	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
 
-	created := parseJSON(createBody)
+	created := parseJSON(createResp.Body)
 	id := jsonField(created, "id")
 	assert.NotEmpty(t, id)
+	assertCreatedLocation(t, createResp.Header, id)
 	assert.Equal(t, "scanning_station", jsonField(created, "object"))
 	assert.Equal(t, name, jsonField(created, "name"))
 	assert.Equal(t, notes, jsonField(created, "notes"))
@@ -83,7 +84,7 @@ func TestScanningStations_CreateAndUpdateAllFields(t *testing.T) {
 
 	// ── CREATE with all fields ──
 	name := uniqueName("e2e-stn-allf")
-	createStatus, createBody, err := apiClient.Post(scanningStationsPath, map[string]any{
+	createResp, err := apiClient.PostFull(scanningStationsPath, map[string]any{
 		"name":                    name,
 		"type":                    "init_batch",
 		"notes":                   "Create notes",
@@ -91,11 +92,12 @@ func TestScanningStations_CreateAndUpdateAllFields(t *testing.T) {
 		"department_id":           SeedDepartmentID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, createStatus, createBody)
+	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
 
-	got := parseJSON(createBody)
+	got := parseJSON(createResp.Body)
 	id := jsonField(got, "id")
 	require.NotEmpty(t, id)
+	assertCreatedLocation(t, createResp.Header, id)
 	defer apiClient.Delete(scanningStationsPath + "/" + id)
 
 	assert.Equal(t, "scanning_station", jsonField(got, "object"))

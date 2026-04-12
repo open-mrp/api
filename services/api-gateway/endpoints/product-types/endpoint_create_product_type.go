@@ -34,6 +34,7 @@ func (e *CreateProductTypeEndpoint) Materialize() *apiendpoint.APIEndpoint[*Crea
 		Title:             "Create Product Type",
 		Description:       "Creates a new product type.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/catalog/product-types",
 		Request:           &CreateProductTypeRequest{},
 		Response:          &apiresource.ProductType{},
@@ -42,6 +43,9 @@ func (e *CreateProductTypeEndpoint) Materialize() *apiendpoint.APIEndpoint[*Crea
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateProductTypeRequest) (*apiresource.ProductType, *apierror.APIError) {
 			return svc.(ProductTypeSvc).CreateProductType
+		},
+		LocationFunc: func(resp *apiresource.ProductType) string {
+			return "/v1/catalog/product-types/" + resp.ID
 		},
 	}
 }

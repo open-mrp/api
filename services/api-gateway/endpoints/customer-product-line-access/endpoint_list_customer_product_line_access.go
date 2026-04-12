@@ -21,6 +21,7 @@ func (e *ListCustomerProductLineAccessEndpoint) Materialize() *apiendpoint.APIEn
 		Title:             "List Customer Product Line Access",
 		Description:       "Returns a paginated list of product line access records grouped by customer.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/sales/product-line-access/customers",
 		Request:           &ListCustomerProductLineAccessRequest{},
 		Response:          &apiresource.List[apiresource.CustomerProductLineAccess]{},

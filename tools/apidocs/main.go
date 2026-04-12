@@ -212,6 +212,9 @@ func main() {
 		*(&httpgroup.CarriersEndpointGroup{}).Materialize(&httpgroup.CarriersEndpointGroupConfig{
 			CoreClient: coreClient,
 		}).APIEndpointGroup,
+		*(&httpgroup.ServiceLevelsEndpointGroup{}).Materialize(&httpgroup.ServiceLevelsEndpointGroupConfig{
+			CoreClient: coreClient,
+		}).APIEndpointGroup,
 		*(&httpgroup.ChildAccountsEndpointGroup{}).Materialize(&httpgroup.ChildAccountsEndpointGroupConfig{
 			CoreClient: coreClient,
 		}).APIEndpointGroup,

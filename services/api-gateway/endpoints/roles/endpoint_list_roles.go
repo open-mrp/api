@@ -24,6 +24,7 @@ func (e *ListRolesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListRolesReq
 		Title:             "List Roles",
 		Description:       "Returns a paginated list of roles for the target account, including global roles.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/identity/roles",
 		Request:           &ListRolesRequest{},
 		Response:          &apiresource.List[apiresource.Role]{},

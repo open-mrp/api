@@ -115,11 +115,7 @@ AND account_id = sqlc.arg('account_id');
 UPDATE storage_location SET
     name = COALESCE(sqlc.narg('name'), name),
     storage_location_type_code = COALESCE(sqlc.narg('storage_location_type_code'), storage_location_type_code),
-    parent_id = CASE
-        WHEN sqlc.arg('clear_parent') = 1 THEN NULL
-        WHEN sqlc.narg('parent_id') IS NOT NULL THEN sqlc.narg('parent_id')
-        ELSE parent_id
-    END,
+    parent_id = sqlc.narg('parent_id'),
     updated_at = NOW(3)
 WHERE id = sqlc.arg('id')
 AND account_id = sqlc.arg('account_id');

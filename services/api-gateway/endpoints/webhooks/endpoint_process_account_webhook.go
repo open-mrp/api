@@ -26,6 +26,7 @@ func (e *ProcessAccountWebhookEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		Title:             "Process Account Stripe Webhook",
 		Description:       "Receives and processes a Stripe webhook event for a specific account, verifying the signature using the account's Stripe credentials.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/webhooks/stripe/{accountID}",
 		Request:           &AccountStripeWebhookRequest{},
 		Response:          &apiresource.WebhookResponse{},

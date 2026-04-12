@@ -27,6 +27,7 @@ func (e *GetPickShipmentsEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetPi
 		Title:             "Get Pick Shipments",
 		Description:       "Returns the shipment numbers associated with a pick.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/picks/{id}/shipments",
 		Request:           &GetPickShipmentsRequest{},
 		Response:          &apiresource.PickShipmentsResponse{},

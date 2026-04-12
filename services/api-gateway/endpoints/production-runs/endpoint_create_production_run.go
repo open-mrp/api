@@ -32,6 +32,7 @@ func (e *CreateProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cr
 		Title:             "Create Production Run",
 		Description:       "Creates a new production run for the current account.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/production-runs",
 		Request:           &CreateProductionRunRequest{},
 		Response:          &apiresource.ProductionRunDetail{},
@@ -40,6 +41,9 @@ func (e *CreateProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cr
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateProductionRunRequest) (*apiresource.ProductionRunDetail, *apierror.APIError) {
 			return svc.(ProductionRunSvc).CreateProductionRun
+		},
+		LocationFunc: func(resp *apiresource.ProductionRunDetail) string {
+			return "/v1/operations/production-runs/" + resp.ID
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeProductionRun,

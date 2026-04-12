@@ -21,6 +21,7 @@ func (e *ListCarriersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListCarri
 		Title:             "List Carriers",
 		Description:       "Returns a paginated list of carriers for the current account.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/carriers",
 		Request:           &ListCarriersRequest{},
 		Response:          &apiresource.List[apiresource.Carrier]{},

@@ -47,21 +47,16 @@ func RequestLogPresenter(rl *pb.RequestLogInfo, permissions map[string]bool) api
 	}
 
 	if rl.Actor != nil {
-		actorObjectType := constants.ObjectType(rl.Actor.ObjectType)
+		actorType := constants.ActorType(rl.Actor.ActorType)
 		var handle *string
-		switch actorObjectType {
-		case constants.ObjectTypeAPIKey:
+		switch actorType {
+		case constants.ActorTypeAPIKey:
 			handle = rl.Actor.RedactedValue
-		case constants.ObjectTypeUser:
+		case constants.ActorTypeUser:
 			handle = rl.Actor.Email
 		}
 
-		actor := &apiresource.Actor{
-			ID:     rl.Actor.Id,
-			Object: actorObjectType,
-			Name:   rl.Actor.Name,
-			Handle: handle,
-		}
+		actor := apiresource.NewActor(rl.Actor.Id, actorType, rl.Actor.Name, handle)
 		if rl.Actor.RoleId != nil && rl.Actor.RoleName != nil && rl.Actor.RoleTypeCode != nil {
 			rolePermissions := rolePermissionsFromMap(permissions)
 			actor.Role = &apiresource.Role{

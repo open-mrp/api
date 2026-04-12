@@ -16,15 +16,15 @@ type UpdateScanningStationRequest struct {
 	// The ID of the scanning station to update.
 	ScanningStationID string `path:"id" validate:"required"`
 	// The display name of the scanning station.
-	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
+	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// Optional notes about the scanning station.
-	Notes *string `json:"notes,omitempty"`
+	Notes *string `json:"notes,omitempty" nullable:"true"`
 	// The label size code for the scanning station.
-	LabelSizeCode *constants.LabelSizeCode `json:"label_size_code,omitempty" nullable:"false"`
+	LabelSizeCode *constants.LabelSizeCode `json:"label_size,omitempty" nullable:"false"`
 	// The label type code for the scanning station.
-	LabelTypeCode *constants.LabelTypeCode `json:"label_type_code,omitempty" nullable:"false"`
+	LabelTypeCode *constants.LabelTypeCode `json:"label_type,omitempty" nullable:"false"`
 	// Whether material check is required at this station.
-	MaterialCheckRequired *bool `json:"material_check_required,omitempty"`
+	MaterialCheckRequired *bool `json:"material_check_required,omitempty" nullable:"false"`
 }
 
 var sampleUpdateScanningStationName = "Station B"
@@ -43,6 +43,7 @@ func (e *UpdateScanningStationEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		Title:             "Update Scanning Station",
 		Description:       "Partially updates a scanning station.",
 		Method:            http.MethodPatch,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/scanning-stations/{id}",
 		Request:           &UpdateScanningStationRequest{},
 		Response:          &apiresource.ScanningStation{},

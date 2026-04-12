@@ -23,6 +23,7 @@ func (e *GetRoleEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetRoleRequest
 		Title:             "Get Role",
 		Description:       "Returns a single role by its ID, including its structured permissions.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/identity/roles/{id}",
 		Request:           &GetRoleRequest{},
 		Response:          &apiresource.Role{},

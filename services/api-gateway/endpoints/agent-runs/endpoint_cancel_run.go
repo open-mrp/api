@@ -23,6 +23,7 @@ func (e *CancelRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*CancelRunReq
 		Title:             "Cancel Run",
 		Description:       "Cancels a running or pending agent run.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/ai/runs/{id}/actions/cancel",
 		Request:           &CancelRunRequest{},
 		Response:          &apiresource.AgentRun{},

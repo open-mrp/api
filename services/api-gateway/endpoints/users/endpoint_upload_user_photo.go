@@ -26,6 +26,7 @@ func (e *UploadUserPhotoEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upload
 		Title:             "Upload User Photo",
 		Description:       "Uploads a profile photo for a user.",
 		Method:            http.MethodPut,
+		ContentType:       "application/json",
 		Route:             "/v1/identity/users/{id}/photo",
 		Request:           &UploadUserPhotoRequest{},
 		Response:          &apiresource.UserPhotoUploadResult{},

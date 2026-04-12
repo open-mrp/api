@@ -16,7 +16,7 @@ type CreateLocationRequest struct {
 	// The display name of the location.
 	Name string `json:"name" validate:"required,max=255"`
 	// The code of the location type.
-	TypeCode constants.LocationTypeCode `json:"type_code" validate:"required"`
+	TypeCode constants.LocationTypeCode `json:"type" validate:"required"`
 	// The ID of the parent location. Null for top-level locations.
 	ParentID *string `json:"parent_id,omitempty" validate:"omitempty,max=191"`
 	// IDs of existing locations to attach as children of this location.
@@ -39,6 +39,7 @@ func (e *CreateLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateL
 		Title:             "Create Location",
 		Description:       "Creates a new location for the caller's account.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/locations",
 		Request:           &CreateLocationRequest{},
 		Response:          &apiresource.Location{},
@@ -47,6 +48,9 @@ func (e *CreateLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateL
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateLocationRequest) (*apiresource.Location, *apierror.APIError) {
 			return svc.(LocationSvc).CreateLocation
+		},
+		LocationFunc: func(resp *apiresource.Location) string {
+			return "/v1/operations/locations/" + resp.ID
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeLocation,

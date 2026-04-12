@@ -275,6 +275,13 @@ func (s *departmentSvcImpl) UpdateDepartment(ctx context.Context, params domain.
 				}
 			}
 
+			// Backfill unchanged nullable fields with existing values.
+			// Since the SQL uses direct assignment (no COALESCE) for notes,
+			// we must provide the existing value when the field was not sent.
+			if params.Notes == nil {
+				params.Notes = old.Notes
+			}
+
 			updated, apiErr := txRepo.Update(txCtx, params)
 			if apiErr != nil {
 				return apiErr

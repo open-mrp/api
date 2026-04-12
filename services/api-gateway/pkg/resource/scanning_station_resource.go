@@ -27,9 +27,9 @@ type ScanningStation struct {
 	// The type of scanning station.
 	Type constants.ScanningStationType `json:"type" validate:"required"`
 	// The label size code for the scanning station.
-	LabelSizeCode *constants.LabelSizeCode `json:"label_size_code"`
+	LabelSizeCode *constants.LabelSizeCode `json:"label_size"`
 	// The label type code for the scanning station.
-	LabelTypeCode *constants.LabelTypeCode `json:"label_type_code"`
+	LabelTypeCode *constants.LabelTypeCode `json:"label_type"`
 	// Whether material check is required at this station.
 	MaterialCheckRequired bool `json:"material_check_required"`
 	// The department this scanning station belongs to.

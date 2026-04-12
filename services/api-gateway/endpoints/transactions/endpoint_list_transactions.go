@@ -15,11 +15,11 @@ type ListTransactionsRequest struct {
 	// Filter by allocation status (allocated, unallocated, partially_allocated).
 	Status *string `query:"status"`
 	// Filter by transaction type codes.
-	TypeCodes []string `query:"type_codes"`
+	TypeCodes []string `query:"types"`
 	// Filter by adjustment type codes.
-	AdjustmentTypeCodes []string `query:"adjustment_type_codes"`
+	AdjustmentTypeCodes []string `query:"adjustment_types"`
 	// Filter by transaction method codes.
-	MethodCodes []string `query:"method_codes"`
+	MethodCodes []string `query:"methods"`
 	// Filter by customer IDs.
 	CustomerIDs []string `query:"customer_ids"`
 	// Filter by customer group IDs.
@@ -37,6 +37,7 @@ func (e *ListTransactionsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListT
 		Title:             "List Transactions",
 		Description:       "Returns a paginated list of transactions for the current account.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/finance/transactions",
 		Request:           &ListTransactionsRequest{},
 		Response:          &apiresource.List[apiresource.TransactionSummary]{},

@@ -33,6 +33,7 @@ func (e *UpdateCustomerProductLineAccessEndpoint) Materialize() *apiendpoint.API
 		Title:             "Update Customer Product Line Access",
 		Description:       "Replaces all product line access for a customer.",
 		Method:            http.MethodPatch,
+		ContentType:       "application/json",
 		Route:             "/v1/sales/product-line-access/customers/{customer_id}",
 		Request:           &UpdateCustomerProductLineAccessRequest{},
 		Response:          &apiresource.CustomerProductLineAccess{},

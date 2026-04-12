@@ -259,7 +259,7 @@ message RequestLogInfo {
 // Fields are populated based on whether the actor is a user or API key.
 message RequestLogActor {
   string id = 1;
-  string object_type = 2;
+  string actor_type = 2;
   optional string name = 3;
   optional string email = 4;
   optional string redacted_value = 5;
@@ -323,7 +323,7 @@ message AuditEventInfo {
 
 message AuditActor {
   string id = 1;
-  string object_type = 2;
+  string actor_type = 2;
   string type = 3;
   string identity_type = 4;
   optional string name = 5;

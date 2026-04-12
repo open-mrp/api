@@ -16,9 +16,9 @@ type UpdatePickRequest struct {
 	// The ID of the pick to update.
 	PickID string `path:"id" validate:"required"`
 	// The pick number.
-	Number *string `json:"number,omitempty" validate:"omitempty,max=255"`
+	Number *string `json:"number,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// The timestamp when the pick was finished. Pass an empty string to clear.
-	FinishedAt *string `json:"finished_at,omitempty"`
+	FinishedAt *string `json:"finished_at,omitempty" nullable:"true"`
 }
 
 var sampleUpdatePickNumber = "PCK-2025-0042"
@@ -37,6 +37,7 @@ func (e *UpdatePickEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdatePickR
 		Title:             "Update Pick",
 		Description:       "Partially updates a pick's metadata.",
 		Method:            http.MethodPatch,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/picks/{id}",
 		Request:           &UpdatePickRequest{},
 		Response:          &apiresource.PickDetail{},

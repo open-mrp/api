@@ -22,6 +22,7 @@ func (e *ListPermissionGroupsEndpoint) Materialize() *apiendpoint.APIEndpoint[*L
 		Title:             "List Permission Groups",
 		Description:       "Returns a paginated list of permission groups with their nested permissions.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/identity/permission-groups",
 		Request:           &ListPermissionGroupsRequest{},
 		Response:          &apiresource.List[apiresource.PermissionGroup]{},

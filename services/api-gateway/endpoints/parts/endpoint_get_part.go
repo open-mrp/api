@@ -23,6 +23,7 @@ func (e *GetPartEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetPartRequest
 		Title:             "Get Part",
 		Description:       "Returns a single part by its ID.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/parts/{id}",
 		Request:           &GetPartRequest{},
 		Response:          &apiresource.Part{},

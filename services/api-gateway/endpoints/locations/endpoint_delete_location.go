@@ -22,6 +22,7 @@ func (e *DeleteLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteL
 		Title:             "Delete Location",
 		Description:       "Deletes a location. Fails if the location has child locations.",
 		Method:            http.MethodDelete,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/locations/{id}",
 		Request:           &DeleteLocationRequest{},
 		Response:          &apiresource.EmptyResource{},

@@ -34,6 +34,7 @@ func (e *InitializeBatchEndpoint) Materialize() *apiendpoint.APIEndpoint[*Initia
 		Title:             "Initialize Batch",
 		Description:       "Initializes a batch at the specified scanning station.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/batches/actions/initialize",
 		Request:           &InitializeBatchRequest{},
 		Response:          &apiresource.Batch{},

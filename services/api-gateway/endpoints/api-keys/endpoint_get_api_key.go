@@ -23,6 +23,7 @@ func (e *GetAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetAPIKeyReq
 		Title:             "Get API Key",
 		Description:       "Returns a single API key by its ID.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/auth/api-keys/{id}",
 		Request:           &GetAPIKeyRequest{},
 		Response:          &apiresource.APIKey{},

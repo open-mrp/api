@@ -2,57 +2,33 @@ package shippingtermep
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
+	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
 
 // UpdateShippingTermRequest is the request to partially update a shipping term.
-// All fields are optional. Absent fields are left unchanged. Explicitly null
-// values for flat_rate, minimum_order_value, and free_shipping_service_level_ids
-// clear the existing value.
+// All fields are optional. Absent fields are left unchanged. Send an explicit
+// JSON null for flat_rate, minimum_order_value, or free_shipping_service_level_ids
+// to clear the existing value.
 type UpdateShippingTermRequest struct {
 	// The ID of the shipping term to update.
 	ShippingTermID string `path:"id" validate:"required"`
 	// The display name of the shipping term.
-	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
+	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// The shipping term type.
 	Type *constants.ShippingTermType `json:"type,omitempty" nullable:"false"`
 	// The flat rate for this shipping term. Send null to clear.
-	FlatRate *QuantityInputRequest `json:"flat_rate,omitempty"`
+	FlatRate apirequest.NullableInput[QuantityInputRequest] `json:"flat_rate,omitempty"`
 	// The minimum order value for free shipping under this term. Send null to clear.
-	MinimumOrderValue *QuantityInputRequest `json:"minimum_order_value,omitempty"`
+	MinimumOrderValue apirequest.NullableInput[QuantityInputRequest] `json:"minimum_order_value,omitempty"`
 	// The service level IDs that qualify for free shipping. Send null to clear.
-	FreeShippingServiceLevelIDs []string `json:"free_shipping_service_level_ids,omitempty"`
-
-	hasFlatRate                    bool
-	hasMinimumOrderValue           bool
-	hasFreeShippingServiceLevelIDs bool
-}
-
-func (r *UpdateShippingTermRequest) UnmarshalJSON(data []byte) error {
-	var raw map[string]json.RawMessage
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
-	}
-	if _, ok := raw["flat_rate"]; ok {
-		r.hasFlatRate = true
-	}
-	if _, ok := raw["minimum_order_value"]; ok {
-		r.hasMinimumOrderValue = true
-	}
-	if _, ok := raw["free_shipping_service_level_ids"]; ok {
-		r.hasFreeShippingServiceLevelIDs = true
-	}
-
-	type Alias UpdateShippingTermRequest
-	aux := &struct{ *Alias }{Alias: (*Alias)(r)}
-	return json.Unmarshal(data, aux)
+	FreeShippingServiceLevelIDs apirequest.NullableInput[[]string] `json:"free_shipping_service_level_ids,omitempty"`
 }
 
 var sampleUpdateShippingTermRequest = &UpdateShippingTermRequest{

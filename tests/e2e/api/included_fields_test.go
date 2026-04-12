@@ -100,7 +100,7 @@ func TestCustomers_CreateIncludedFieldsNotEmpty(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-cust-noempty-c")
 	payload := validCustomerBody(name)
-	payload["default_priority_code"] = SeedPriorityCode
+	payload["default_priority"] = SeedPriorityCode
 	status, body, err := apiClient.Post(
 		customersPath+"?include="+allCustomerIncludes,
 		payload,
@@ -119,7 +119,7 @@ func TestCustomers_UpdateIncludedFieldsNotEmpty(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-cust-noempty-u")
 	updPayload := validCustomerBody(name)
-	updPayload["default_priority_code"] = SeedPriorityCode
+	updPayload["default_priority"] = SeedPriorityCode
 	createStatus, createBody, err := apiClient.Post(customersPath, updPayload, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)

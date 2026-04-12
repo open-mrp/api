@@ -9,12 +9,13 @@
 package core
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
@@ -2410,7 +2411,6 @@ type UpdateLocationRequest struct {
 	Name           *string                `protobuf:"bytes,2,opt,name=name,proto3,oneof" json:"name,omitempty"`
 	TypeCode       *string                `protobuf:"bytes,3,opt,name=type_code,json=typeCode,proto3,oneof" json:"type_code,omitempty"`
 	ParentId       *string                `protobuf:"bytes,4,opt,name=parent_id,json=parentId,proto3,oneof" json:"parent_id,omitempty"`
-	ClearParent    bool                   `protobuf:"varint,5,opt,name=clear_parent,json=clearParent,proto3" json:"clear_parent,omitempty"`
 	ChildIds       []string               `protobuf:"bytes,6,rep,name=child_ids,json=childIds,proto3" json:"child_ids,omitempty"`
 	UpdateChildren bool                   `protobuf:"varint,7,opt,name=update_children,json=updateChildren,proto3" json:"update_children,omitempty"`
 	unknownFields  protoimpl.UnknownFields
@@ -2473,13 +2473,6 @@ func (x *UpdateLocationRequest) GetParentId() string {
 		return *x.ParentId
 	}
 	return ""
-}
-
-func (x *UpdateLocationRequest) GetClearParent() bool {
-	if x != nil {
-		return x.ClearParent
-	}
-	return false
 }
 
 func (x *UpdateLocationRequest) GetChildIds() []string {
@@ -4933,13 +4926,12 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"\n" +
 	"_parent_id\"H\n" +
 	"\x16CreateLocationResponse\x12.\n" +
-	"\blocation\x18\x01 \x01(\v2\x12.core.LocationInfoR\blocation\"\x92\x02\n" +
+	"\blocation\x18\x01 \x01(\v2\x12.core.LocationInfoR\blocation\"\xef\x01\n" +
 	"\x15UpdateLocationRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12 \n" +
 	"\ttype_code\x18\x03 \x01(\tH\x01R\btypeCode\x88\x01\x01\x12 \n" +
-	"\tparent_id\x18\x04 \x01(\tH\x02R\bparentId\x88\x01\x01\x12!\n" +
-	"\fclear_parent\x18\x05 \x01(\bR\vclearParent\x12\x1b\n" +
+	"\tparent_id\x18\x04 \x01(\tH\x02R\bparentId\x88\x01\x01\x12\x1b\n" +
 	"\tchild_ids\x18\x06 \x03(\tR\bchildIds\x12'\n" +
 	"\x0fupdate_children\x18\a \x01(\bR\x0eupdateChildrenB\a\n" +
 	"\x05_nameB\f\n" +

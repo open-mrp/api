@@ -28,6 +28,7 @@ func (e *ListSuppliersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSupp
 		Title:             "List Suppliers",
 		Description:       "Returns a paginated list of suppliers for the current account.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/suppliers",
 		Request:           &ListSuppliersRequest{},
 		Response:          &apiresource.List[apiresource.SupplierSummary]{},

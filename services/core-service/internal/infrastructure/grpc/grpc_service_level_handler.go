@@ -117,7 +117,6 @@ func (h *gRPCHandler) UpdateServiceLevel(ctx context.Context, req *pb.UpdateServ
 		Name:            req.Name,
 		Code:            req.Code,
 		IsPortalEnabled: req.IsPortalEnabled,
-		IsDefault:       req.IsDefault,
 	}
 
 	serviceLevel, apiErr := h.serviceLevelSvc.UpdateServiceLevel(ctx, params)

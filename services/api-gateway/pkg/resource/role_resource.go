@@ -17,10 +17,10 @@ type Role struct {
 	// The display name of the role.
 	Name string `json:"name" validate:"required"`
 	// The role type code.
-	TypeCode constants.RoleTypeCode `json:"type_code" validate:"required"`
+	TypeCode constants.RoleTypeCode `json:"type" validate:"required"`
 	// The owner of this resource.
 	Owner *Owner `json:"owner" expandable:"true"`
-	// The permissions for this role in "{domain}:{action}" format.
+	// The permissions for this role in `{domain}:{action}` format.
 	Permissions *[]string `json:"permissions" expandable:"true"`
 	// The timestamp when the role was created.
 	CreatedAt time.Time `json:"created_at"`

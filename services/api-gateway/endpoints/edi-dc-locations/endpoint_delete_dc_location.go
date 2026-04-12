@@ -22,6 +22,7 @@ func (e *DeleteDCLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*Delet
 		Title:             "Delete DC Location",
 		Description:       "Deletes a DC location.",
 		Method:            http.MethodDelete,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/dc-locations/{id}",
 		Request:           &DeleteDCLocationRequest{},
 		Response:          &apiresource.EmptyResource{},

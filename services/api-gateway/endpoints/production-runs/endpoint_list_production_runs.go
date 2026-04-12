@@ -31,6 +31,7 @@ func (e *ListProductionRunsEndpoint) Materialize() *apiendpoint.APIEndpoint[*Lis
 		Title:             "List Production Runs",
 		Description:       "Returns a paginated list of production runs for the current account.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/production-runs",
 		Request:           &ListProductionRunsRequest{},
 		Response:          &apiresource.List[apiresource.ProductionRunSummary]{},

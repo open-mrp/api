@@ -26,6 +26,7 @@ func (e *ListMaterialsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListMate
 		Title:             "List Materials",
 		Description:       "Returns a paginated list of materials for the current account.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/materials",
 		Request:           &ListMaterialsRequest{},
 		Response:          &apiresource.List[apiresource.Material]{},

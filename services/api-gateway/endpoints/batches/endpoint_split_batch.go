@@ -61,6 +61,7 @@ func (e *SplitBatchEndpoint) Materialize() *apiendpoint.APIEndpoint[*SplitBatchR
 		Title:             "Split Batch",
 		Description:       "Splits one or more batches into multiple parts with specified quantities, optionally tracking waste and closing the originals.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/batches/actions/split",
 		Request:           &SplitBatchRequest{},
 		Response:          &apiresource.Batch{},

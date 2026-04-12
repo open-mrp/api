@@ -16,6 +16,7 @@ func (e *GetPricingPlansEndpoint) Materialize() *apiendpoint.APIEndpoint[*apires
 		Title:             "List Pricing Plans",
 		Description:       "Returns a paginated list of available pricing plans with their limits and features.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/billing/plans",
 		Request:           &apiresource.PaginationRequest{},
 		Response:          &apiresource.List[apiresource.PricingPlan]{},

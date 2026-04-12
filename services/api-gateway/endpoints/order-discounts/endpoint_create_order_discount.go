@@ -42,6 +42,7 @@ func (e *CreateOrderDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cr
 		Title:             "Create Order Discount",
 		Description:       "Creates a new order discount.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/sales/order-discounts",
 		Request:           &CreateOrderDiscountRequest{},
 		Response:          &apiresource.OrderDiscount{},
@@ -50,6 +51,9 @@ func (e *CreateOrderDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cr
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateOrderDiscountRequest) (*apiresource.OrderDiscount, *apierror.APIError) {
 			return svc.(OrderDiscountSvc).CreateOrderDiscount
+		},
+		LocationFunc: func(resp *apiresource.OrderDiscount) string {
+			return "/v1/sales/order-discounts/" + resp.ID
 		},
 	}
 }

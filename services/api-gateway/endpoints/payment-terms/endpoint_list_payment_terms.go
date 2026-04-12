@@ -22,6 +22,7 @@ func (e *ListPaymentTermsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListP
 		Title:             "List Payment Terms",
 		Description:       "Returns a paginated list of payment terms for the account, including both account-specific and default system payment terms.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/finance/payment-terms",
 		Request:           &ListPaymentTermsRequest{},
 		Response:          &apiresource.List[apiresource.PaymentTerm]{},

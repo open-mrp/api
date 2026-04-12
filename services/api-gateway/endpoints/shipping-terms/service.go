@@ -120,27 +120,37 @@ func (m *shippingTermSvcImpl) CreateShippingTerm(ctx context.Context, req *Creat
 
 func (m *shippingTermSvcImpl) UpdateShippingTerm(ctx context.Context, req *UpdateShippingTermRequest) (*apiresource.ShippingTerm, *apierror.APIError) {
 	pbReq := &pb.UpdateShippingTermRequest{
-		Id:                             req.ShippingTermID,
-		Name:                           req.Name,
-		HasFlatRate:                    req.hasFlatRate,
-		HasMinimumOrderValue:           req.hasMinimumOrderValue,
-		HasFreeShippingServiceLevelIds: req.hasFreeShippingServiceLevelIDs,
-		FreeShippingServiceLevelIds:    req.FreeShippingServiceLevelIDs,
+		Id:   req.ShippingTermID,
+		Name: req.Name,
 	}
 	if req.Type != nil {
 		t := string(*req.Type)
 		pbReq.Type = &t
 	}
-	if req.FlatRate != nil {
-		pbReq.FlatRate = &pb.QuantityInput{
-			Value:  req.FlatRate.Value,
-			UnitId: req.FlatRate.UnitID,
+	if req.FlatRate.IsSet() {
+		pbReq.HasFlatRate = true
+		if !req.FlatRate.IsNull() {
+			v := req.FlatRate.Value()
+			pbReq.FlatRate = &pb.QuantityInput{
+				Value:  v.Value,
+				UnitId: v.UnitID,
+			}
 		}
 	}
-	if req.MinimumOrderValue != nil {
-		pbReq.MinimumOrderValue = &pb.QuantityInput{
-			Value:  req.MinimumOrderValue.Value,
-			UnitId: req.MinimumOrderValue.UnitID,
+	if req.MinimumOrderValue.IsSet() {
+		pbReq.HasMinimumOrderValue = true
+		if !req.MinimumOrderValue.IsNull() {
+			v := req.MinimumOrderValue.Value()
+			pbReq.MinimumOrderValue = &pb.QuantityInput{
+				Value:  v.Value,
+				UnitId: v.UnitID,
+			}
+		}
+	}
+	if req.FreeShippingServiceLevelIDs.IsSet() {
+		pbReq.HasFreeShippingServiceLevelIds = true
+		if !req.FreeShippingServiceLevelIDs.IsNull() {
+			pbReq.FreeShippingServiceLevelIds = *req.FreeShippingServiceLevelIDs.Value()
 		}
 	}
 

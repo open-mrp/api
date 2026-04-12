@@ -13,12 +13,13 @@
 package platform
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
@@ -1661,7 +1662,7 @@ func (x *RequestLogInfo) GetResponseJson() string {
 type RequestLogActor struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	ObjectType    string                 `protobuf:"bytes,2,opt,name=object_type,json=objectType,proto3" json:"object_type,omitempty"`
+	ActorType     string                 `protobuf:"bytes,2,opt,name=actor_type,json=actorType,proto3" json:"actor_type,omitempty"`
 	Name          *string                `protobuf:"bytes,3,opt,name=name,proto3,oneof" json:"name,omitempty"`
 	Email         *string                `protobuf:"bytes,4,opt,name=email,proto3,oneof" json:"email,omitempty"`
 	RedactedValue *string                `protobuf:"bytes,5,opt,name=redacted_value,json=redactedValue,proto3,oneof" json:"redacted_value,omitempty"`
@@ -1709,9 +1710,9 @@ func (x *RequestLogActor) GetId() string {
 	return ""
 }
 
-func (x *RequestLogActor) GetObjectType() string {
+func (x *RequestLogActor) GetActorType() string {
 	if x != nil {
-		return x.ObjectType
+		return x.ActorType
 	}
 	return ""
 }
@@ -2262,7 +2263,7 @@ func (x *AuditEventInfo) GetCreatedAt() *timestamppb.Timestamp {
 type AuditActor struct {
 	state        protoimpl.MessageState `protogen:"open.v1"`
 	Id           string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	ObjectType   string                 `protobuf:"bytes,2,opt,name=object_type,json=objectType,proto3" json:"object_type,omitempty"`
+	ActorType    string                 `protobuf:"bytes,2,opt,name=actor_type,json=actorType,proto3" json:"actor_type,omitempty"`
 	Type         string                 `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"`
 	IdentityType string                 `protobuf:"bytes,4,opt,name=identity_type,json=identityType,proto3" json:"identity_type,omitempty"`
 	Name         *string                `protobuf:"bytes,5,opt,name=name,proto3,oneof" json:"name,omitempty"`
@@ -2309,9 +2310,9 @@ func (x *AuditActor) GetId() string {
 	return ""
 }
 
-func (x *AuditActor) GetObjectType() string {
+func (x *AuditActor) GetActorType() string {
 	if x != nil {
-		return x.ObjectType
+		return x.ActorType
 	}
 	return ""
 }
@@ -2640,11 +2641,11 @@ const file_platform_platform_proto_rawDesc = "" +
 	"\x10_idempotency_keyB\f\n" +
 	"\n" +
 	"_body_jsonB\x10\n" +
-	"\x0e_response_json\"\xe0\x02\n" +
+	"\x0e_response_json\"\xde\x02\n" +
 	"\x0fRequestLogActor\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
-	"\vobject_type\x18\x02 \x01(\tR\n" +
-	"objectType\x12\x17\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
+	"\n" +
+	"actor_type\x18\x02 \x01(\tR\tactorType\x12\x17\n" +
 	"\x04name\x18\x03 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x19\n" +
 	"\x05email\x18\x04 \x01(\tH\x01R\x05email\x88\x01\x01\x12*\n" +
 	"\x0eredacted_value\x18\x05 \x01(\tH\x02R\rredactedValue\x88\x01\x01\x12\x1c\n" +
@@ -2723,12 +2724,12 @@ const file_platform_platform_proto_rawDesc = "" +
 	"\v_request_idB\x15\n" +
 	"\x13_idempotency_key_idB\f\n" +
 	"\n" +
-	"_source_ip\"\xc0\x01\n" +
+	"_source_ip\"\xbe\x01\n" +
 	"\n" +
 	"AuditActor\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
-	"\vobject_type\x18\x02 \x01(\tR\n" +
-	"objectType\x12\x12\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
+	"\n" +
+	"actor_type\x18\x02 \x01(\tR\tactorType\x12\x12\n" +
 	"\x04type\x18\x03 \x01(\tR\x04type\x12#\n" +
 	"\ridentity_type\x18\x04 \x01(\tR\fidentityType\x12\x17\n" +
 	"\x04name\x18\x05 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x1b\n" +

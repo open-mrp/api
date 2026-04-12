@@ -212,10 +212,6 @@ func (r *serviceLevelRepoImpl) Update(ctx context.Context, params domain.UpdateS
 	if params.IsPortalEnabled != nil {
 		isPortalEnabled = gosql.NullBool{Bool: *params.IsPortalEnabled, Valid: true}
 	}
-	var isDefault gosql.NullBool
-	if params.IsDefault != nil {
-		isDefault = gosql.NullBool{Bool: *params.IsDefault, Valid: true}
-	}
 
 	result, err := r.queries.UpdateCarrierOption(ctx, sqlc.UpdateCarrierOptionParams{
 		ID:              params.ServiceLevelID,
@@ -223,7 +219,6 @@ func (r *serviceLevelRepoImpl) Update(ctx context.Context, params domain.UpdateS
 		Name:            toNullString(params.Name),
 		Code:            toNullString(params.Code),
 		IsPortalEnabled: isPortalEnabled,
-		IsDefault:       isDefault,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)

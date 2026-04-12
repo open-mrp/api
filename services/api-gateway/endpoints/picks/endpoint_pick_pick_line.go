@@ -24,6 +24,7 @@ func (e *PickPickLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*PickPickL
 		Title:             "Pick Pick Line",
 		Description:       "Marks a single pick line as picked.",
 		Method:            http.MethodPut,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/picks/{pickId}/lines/{id}/actions/pick",
 		Request:           &PickPickLineRequest{},
 		Response:          &apiresource.PickLineDetail{},

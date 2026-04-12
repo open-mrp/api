@@ -22,6 +22,7 @@ func (e *GetCustomerProductLineAccessEndpoint) Materialize() *apiendpoint.APIEnd
 		Title:             "Get Customer Product Line Access",
 		Description:       "Returns the product line access for a customer.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/sales/product-line-access/customers/{customer_id}",
 		Request:           &GetCustomerProductLineAccessRequest{},
 		Response:          &apiresource.CustomerProductLineAccess{},

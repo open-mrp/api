@@ -263,7 +263,6 @@ func (r *locationRepoImpl) Update(ctx context.Context, params domain.UpdateLocat
 		Name:                    toNullString(params.Name),
 		StorageLocationTypeCode: toNullString(params.TypeCode),
 		ParentID:                toNullString(params.ParentID),
-		ClearParent:             params.ClearParent,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)

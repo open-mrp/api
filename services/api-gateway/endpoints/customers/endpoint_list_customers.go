@@ -55,6 +55,7 @@ func (e *ListCustomersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListCust
 		Title:             "List Customers",
 		Description:       "Returns a paginated list of customers for the current account.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/sales/customers",
 		Request:           &ListCustomersRequest{},
 		Response:          &apiresource.List[apiresource.CustomerSummary]{},

@@ -18,21 +18,21 @@ type UpdateTerritoryRequest struct {
 	// The ID of the territory to update.
 	TerritoryID string `path:"id" validate:"required"`
 	// The state this territory covers.
-	State *string `json:"state,omitempty" validate:"omitempty,max=255"`
+	State *string `json:"state,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// The start of the zipcode range (501-99999).
-	StartZipcode *int32 `json:"start_zipcode,omitempty"`
+	StartZipcode *int32 `json:"start_zipcode,omitempty" nullable:"false"`
 	// The end of the zipcode range (501-99999).
-	EndZipcode *int32 `json:"end_zipcode,omitempty"`
+	EndZipcode *int32 `json:"end_zipcode,omitempty" nullable:"false"`
 	// The ID of the sales rep (account user) assigned to this territory.
 	SalesRepID *string `json:"sales_rep_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
 	// The ID of the product line this territory is scoped to.
-	ProductLineID *string `json:"product_line_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
+	ProductLineID *string `json:"product_line_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
 	// Set to true to remove the product line from this territory.
-	ClearProductLine *bool `json:"clear_product_line,omitempty"`
+	ClearProductLine *bool `json:"clear_product_line,omitempty" nullable:"false"`
 	// Set to true to remove the start zipcode from this territory.
-	ClearStartZipcode *bool `json:"clear_start_zipcode,omitempty"`
+	ClearStartZipcode *bool `json:"clear_start_zipcode,omitempty" nullable:"false"`
 	// Set to true to remove the end zipcode from this territory.
-	ClearEndZipcode *bool `json:"clear_end_zipcode,omitempty"`
+	ClearEndZipcode *bool `json:"clear_end_zipcode,omitempty" nullable:"false"`
 }
 
 var sampleUpdateState = "CA"

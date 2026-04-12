@@ -22,6 +22,7 @@ func (e *GetCarrierEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetCarrierR
 		Title:             "Get Carrier",
 		Description:       "Returns a single carrier by ID.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/carriers/{id}",
 		Request:           &GetCarrierRequest{},
 		Response:          &apiresource.Carrier{},

@@ -141,6 +141,9 @@ func (e *CreateAgentEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAgen
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateAgentRequest) (*apiresource.AgentDefinition, *apierror.APIError) {
 			return svc.(AgentSvc).CreateAgent
 		},
+		LocationFunc: func(resp *apiresource.AgentDefinition) string {
+			return "/v1/ai/agents/" + resp.ID
+		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeAgentDefinition,
 			Fields:     []string{"config", "tools", "role", "role.permissions"},

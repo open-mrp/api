@@ -15,13 +15,13 @@ type UpdateProductRequest struct {
 	// The ID of the product to update.
 	ProductID string `path:"id" validate:"required"`
 	// The stock keeping unit code.
-	SKU *string `json:"sku,omitempty" validate:"omitempty,max=255"`
+	SKU *string `json:"sku,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// A description of the product.
-	Description *string `json:"description,omitempty"`
+	Description *string `json:"description,omitempty" nullable:"false"`
 	// Additional notes about the product.
-	Notes *string `json:"notes,omitempty"`
+	Notes *string `json:"notes,omitempty" nullable:"false"`
 	// Whether this product is visible on the customer portal.
-	IsPortalReady *bool `json:"is_portal_ready,omitempty"`
+	IsPortalReady *bool `json:"is_portal_ready,omitempty" nullable:"false"`
 }
 
 var sampleUpdateProductSKU = "SKU-002"

@@ -15,17 +15,17 @@ type UpdateTransactionRequest struct {
 	// The ID of the transaction to update.
 	TransactionID string `path:"id" validate:"required"`
 	// The new transaction number.
-	Number *string `json:"number" validate:"omitempty,max=255"`
+	Number *string `json:"number" nullable:"false" validate:"omitempty,max=255"`
 	// The new note for this transaction.
-	Note *string `json:"note"`
+	Note *string `json:"note" nullable:"false"`
 	// The new amount as a decimal string.
-	Amount *string `json:"amount"`
+	Amount *string `json:"amount" nullable:"false"`
 	// The new transaction method code.
-	TransactionMethodCode *string `json:"transaction_method_code" validate:"omitempty,max=255"`
+	TransactionMethodCode *string `json:"method" nullable:"false" validate:"omitempty,max=255"`
 	// The new adjustment type code.
-	AdjustmentTypeCode *string `json:"adjustment_type_code" validate:"omitempty,max=255"`
+	AdjustmentTypeCode *string `json:"adjustment_type" nullable:"false" validate:"omitempty,max=255"`
 	// The new responsible user ID.
-	ResponsibleUserID *string `json:"responsible_user_id" validate:"omitempty,max=191"`
+	ResponsibleUserID *string `json:"responsible_user_id" nullable:"false" validate:"omitempty,max=191"`
 	// Set to true to clear the responsible user.
 	ClearResponsibleUser bool `json:"clear_responsible_user"`
 	// Set to true to clear the transaction method.
@@ -33,7 +33,7 @@ type UpdateTransactionRequest struct {
 	// Set to true to clear the adjustment type.
 	ClearAdjustmentType bool `json:"clear_adjustment_type"`
 	// The allocation status of the transaction.
-	IsFullyAllocated *bool `json:"is_fully_allocated"`
+	IsFullyAllocated *bool `json:"is_fully_allocated" nullable:"false"`
 }
 
 var sampleUpdateTransactionNote = "Updated payment note"
@@ -56,6 +56,7 @@ func (e *UpdateTransactionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upda
 		Title:             "Update Transaction",
 		Description:       "Partially updates a transaction.",
 		Method:            http.MethodPatch,
+		ContentType:       "application/json",
 		Route:             "/v1/finance/transactions/{id}",
 		Request:           &UpdateTransactionRequest{},
 		Response:          &apiresource.TransactionDetail{},

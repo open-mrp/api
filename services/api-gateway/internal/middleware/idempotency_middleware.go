@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"maps"
 	"net/http"
 	"time"
 
@@ -37,8 +38,13 @@ var idempotencyMiddlewareTracer = tracing.GetTracer("api-gateway.idempotency_mid
 
 const maxIdempotencyResponseSize = 1024 * 64
 
+// responseRecorder buffers the downstream handler's response so the
+// idempotency record can be persisted synchronously before the client
+// receives the response. Without buffering, a client could receive its
+// response and fire a duplicate request before the async store completes,
+// causing the duplicate to observe the key as still "in progress".
 type responseRecorder struct {
-	http.ResponseWriter
+	headers         http.Header
 	statusCode      int
 	body            bytes.Buffer
 	written         bool
@@ -47,24 +53,28 @@ type responseRecorder struct {
 
 func newResponseRecorder(w http.ResponseWriter) *responseRecorder {
 	return &responseRecorder{
-		ResponseWriter:  w,
+		headers:         w.Header().Clone(),
 		statusCode:      http.StatusOK,
 		capturedCookies: make([]*http.Cookie, 0),
 	}
+}
+
+func (r *responseRecorder) Header() http.Header {
+	return r.headers
 }
 
 func (r *responseRecorder) WriteHeader(code int) {
 	if !r.written {
 		r.statusCode = code
 		r.written = true
-		// Capture cookies before writing header
+		// Capture cookies before "writing" the header to the buffer.
 		r.captureCookies()
 	}
-	r.ResponseWriter.WriteHeader(code)
 }
 
 func (r *responseRecorder) Write(b []byte) (int, error) {
 	if !r.written {
+		r.statusCode = http.StatusOK
 		r.written = true
 		// Capture cookies if WriteHeader wasn't called explicitly
 		r.captureCookies()
@@ -77,11 +87,24 @@ func (r *responseRecorder) Write(b []byte) (int, error) {
 			r.body.Write(b[:remaining])
 		}
 	}
-	return r.ResponseWriter.Write(b)
+	return len(b), nil
+}
+
+// flush writes the buffered headers, status, and body to the real
+// ResponseWriter. Callers must invoke this exactly once after the
+// idempotency record has been persisted.
+func (r *responseRecorder) flush(w http.ResponseWriter) {
+	maps.Copy(w.Header(), r.headers)
+	if r.written {
+		w.WriteHeader(r.statusCode)
+	}
+	if r.body.Len() > 0 {
+		_, _ = w.Write(r.body.Bytes())
+	}
 }
 
 func (r *responseRecorder) captureCookies() {
-	for _, cookieStr := range r.ResponseWriter.Header()["Set-Cookie"] {
+	for _, cookieStr := range r.headers["Set-Cookie"] {
 		h := http.Header{"Set-Cookie": {cookieStr}}
 		resp := &http.Response{Header: h}
 		cookies := resp.Cookies()
@@ -302,7 +325,11 @@ func IdempotencyMiddleware(config *IdempotencyMiddlewareConfig) func(http.Handle
 					ttl = &ttlVal
 				}
 
-				go storeIdempotencyResponse(
+				// Persist the idempotency record synchronously before the
+				// client sees the response so that a duplicate request
+				// arriving immediately after does not observe the key as
+				// still "in progress".
+				storeIdempotencyResponse(
 					context.WithoutCancel(ctx),
 					config.PlatformClient,
 					resp.IdempotencyKeyId,
@@ -311,6 +338,8 @@ func IdempotencyMiddleware(config *IdempotencyMiddlewareConfig) func(http.Handle
 					headers,
 					ttl,
 				)
+
+				recorder.flush(w)
 				return
 
 			default:

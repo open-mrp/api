@@ -15,9 +15,9 @@ type UpdateDCLocationRequest struct {
 	// The ID of the DC location to update.
 	DCLocationID string `path:"id" validate:"required"`
 	// The ID of the customer account to associate with this DC location.
-	CustomerID *string `json:"customer_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
+	CustomerID *string `json:"customer_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
 	// The location description.
-	Location *string `json:"location,omitempty" validate:"omitempty,max=255"`
+	Location *string `json:"location,omitempty" nullable:"false" validate:"omitempty,max=255"`
 }
 
 var sampleUpdateDCLocationLocation = "Warehouse B - Bay 1"
@@ -36,6 +36,7 @@ func (e *UpdateDCLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*Updat
 		Title:             "Update DC Location",
 		Description:       "Partially updates a DC location.",
 		Method:            http.MethodPatch,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/dc-locations/{id}",
 		Request:           &UpdateDCLocationRequest{},
 		Response:          &apiresource.DCLocation{},

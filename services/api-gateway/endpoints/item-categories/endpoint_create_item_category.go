@@ -38,6 +38,7 @@ func (e *CreateItemCategoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cre
 		Title:             "Create Item Category",
 		Description:       "Creates a new account-owned item category.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/catalog/item-categories",
 		Request:           &CreateItemCategoryRequest{},
 		Response:          &apiresource.ItemCategory{},
@@ -46,6 +47,9 @@ func (e *CreateItemCategoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cre
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateItemCategoryRequest) (*apiresource.ItemCategory, *apierror.APIError) {
 			return svc.(ItemCategorySvc).CreateItemCategory
+		},
+		LocationFunc: func(resp *apiresource.ItemCategory) string {
+			return "/v1/catalog/item-categories/" + resp.ID
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeItemCategory,

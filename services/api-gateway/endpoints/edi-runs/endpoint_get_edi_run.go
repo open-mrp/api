@@ -22,6 +22,7 @@ func (e *GetEDIRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetEDIRunReq
 		Title:             "Get EDI Run",
 		Description:       "Returns a single EDI run by its ID.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/edi-runs/{id}",
 		Request:           &GetEDIRunRequest{},
 		Response:          &apiresource.EDIRun{},

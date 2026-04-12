@@ -24,7 +24,7 @@ type Item struct {
 	// Additional notes about the item.
 	Notes *string `json:"notes"`
 	// The item type code.
-	ItemTypeCode constants.ItemTypeCode `json:"item_type_code" validate:"required"`
+	ItemTypeCode constants.ItemTypeCode `json:"type" validate:"required"`
 	// The item category.
 	Category *ItemCategory `json:"category" expandable:"true"`
 	// The unit value rate for this item.
@@ -180,7 +180,7 @@ type ExportItem struct {
 	// Additional notes about the item.
 	Notes *string `json:"notes"`
 	// The item type code.
-	ItemTypeCode constants.ItemTypeCode `json:"item_type_code" validate:"required"`
+	ItemTypeCode constants.ItemTypeCode `json:"type" validate:"required"`
 	// The category name.
 	CategoryName string `json:"category_name"`
 	// The on-hand quantity.

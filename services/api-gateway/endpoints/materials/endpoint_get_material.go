@@ -21,6 +21,7 @@ func (e *GetMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetMateria
 		Title:             "Get Material",
 		Description:       "Returns a single material by its ID.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/materials/{id}",
 		Request:           &GetMaterialRequest{},
 		Response:          &apiresource.Material{},

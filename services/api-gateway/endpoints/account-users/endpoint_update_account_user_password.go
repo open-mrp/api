@@ -36,6 +36,7 @@ func (e *UpdateAccountUserPasswordEndpoint) Materialize() *apiendpoint.APIEndpoi
 		Title:             "Update Account User Password",
 		Description:       "Updates an account user's password, requiring the requester's current password for verification.",
 		Method:            http.MethodPut,
+		ContentType:       "application/json",
 		Route:             "/v1/identity/account-users/{id}/password",
 		Request:           &UpdateAccountUserPasswordRequest{},
 		Response:          &apiresource.EmptyResource{},

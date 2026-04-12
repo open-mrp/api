@@ -25,6 +25,7 @@ func (e *ListCustomerInvoicesEndpoint) Materialize() *apiendpoint.APIEndpoint[*L
 		Title:             "List Customer Invoices",
 		Description:       "Returns a paginated list of invoices for a specific customer account, optionally including child account invoices.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/finance/accounts/{account_id}/invoices",
 		Request:           &ListCustomerInvoicesRequest{},
 		Response:          &apiresource.List[apiresource.InvoiceForPayment]{},

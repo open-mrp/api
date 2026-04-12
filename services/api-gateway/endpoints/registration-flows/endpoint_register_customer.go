@@ -78,6 +78,7 @@ func (e *RegisterCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*Regis
 		Title:             "Register Customer",
 		Description:       "Submits a customer registration request through a registration flow.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/sales/customers/registration",
 		Request:           &RegisterCustomerRequest{},
 		Response:          &apiresource.EmptyResource{},

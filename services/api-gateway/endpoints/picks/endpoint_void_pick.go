@@ -22,6 +22,7 @@ func (e *VoidPickEndpoint) Materialize() *apiendpoint.APIEndpoint[*VoidPickReque
 		Title:             "Void Pick",
 		Description:       "Voids a pick, cancelling all of its lines.",
 		Method:            http.MethodPut,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/picks/{id}/actions/void",
 		Request:           &VoidPickRequest{},
 		Response:          &apiresource.PickDetail{},

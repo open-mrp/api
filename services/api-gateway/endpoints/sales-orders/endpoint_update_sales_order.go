@@ -17,19 +17,19 @@ type UpdateSalesOrderRequest struct {
 	// The ID of the sales order to update.
 	SalesOrderID string `path:"id" validate:"required"`
 	// The customer purchase order number.
-	CustomerPONumber *string `json:"customer_po_number,omitempty" validate:"omitempty,max=255"`
+	CustomerPONumber *string `json:"customer_po_number,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// A note for the order.
-	Note *string `json:"note,omitempty"`
+	Note *string `json:"note,omitempty" nullable:"false"`
 	// The carrier ID.
 	CarrierID *string `json:"carrier_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
 	// The service level ID.
 	ServiceLevelID *string `json:"service_level_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
 	// The carrier billing type.
-	CarrierBillingType *string `json:"carrier_billing_type,omitempty" validate:"omitempty,max=255"`
+	CarrierBillingType *string `json:"carrier_billing_type,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// The carrier billing account number.
-	CarrierBillingAccount *string `json:"carrier_billing_account,omitempty" validate:"omitempty,max=255"`
+	CarrierBillingAccount *string `json:"carrier_billing_account,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// The priority code.
-	PriorityCode *string `json:"priority_code,omitempty" validate:"omitempty,max=255"`
+	PriorityCode *string `json:"priority_code,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// The sales rep ID.
 	SalesRepID *string `json:"sales_rep_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
 	// The shipping term ID.
@@ -39,39 +39,39 @@ type UpdateSalesOrderRequest struct {
 	// The order discount ID.
 	OrderDiscountID *string `json:"order_discount_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
 	// Bill-to address name.
-	BillToName *string `json:"bill_to_name,omitempty" validate:"omitempty,max=255"`
+	BillToName *string `json:"bill_to_name,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// Bill-to street line 1.
-	BillToStreetLine1 *string `json:"bill_to_street_line_1,omitempty" validate:"omitempty,max=255"`
+	BillToStreetLine1 *string `json:"bill_to_street_line_1,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// Bill-to street line 2.
-	BillToStreetLine2 *string `json:"bill_to_street_line_2,omitempty" validate:"omitempty,max=255"`
+	BillToStreetLine2 *string `json:"bill_to_street_line_2,omitempty" nullable:"true" validate:"omitempty,max=255"`
 	// Bill-to locality/city.
-	BillToLocality *string `json:"bill_to_locality,omitempty" validate:"omitempty,max=255"`
+	BillToLocality *string `json:"bill_to_locality,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// Bill-to state/province.
-	BillToState *string `json:"bill_to_state,omitempty" validate:"omitempty,max=255"`
+	BillToState *string `json:"bill_to_state,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// Bill-to postal code.
-	BillToPostalCode *string `json:"bill_to_postal_code,omitempty" validate:"omitempty,max=255"`
+	BillToPostalCode *string `json:"bill_to_postal_code,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// Bill-to country.
-	BillToCountry *string `json:"bill_to_country,omitempty" validate:"omitempty,max=2"`
+	BillToCountry *string `json:"bill_to_country,omitempty" nullable:"false" validate:"omitempty,max=2"`
 	// Ship-to address name.
-	ShipToName *string `json:"ship_to_name,omitempty" validate:"omitempty,max=255"`
+	ShipToName *string `json:"ship_to_name,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// Ship-to street line 1.
-	ShipToStreetLine1 *string `json:"ship_to_street_line_1,omitempty" validate:"omitempty,max=255"`
+	ShipToStreetLine1 *string `json:"ship_to_street_line_1,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// Ship-to street line 2.
-	ShipToStreetLine2 *string `json:"ship_to_street_line_2,omitempty" validate:"omitempty,max=255"`
+	ShipToStreetLine2 *string `json:"ship_to_street_line_2,omitempty" nullable:"true" validate:"omitempty,max=255"`
 	// Ship-to locality/city.
-	ShipToLocality *string `json:"ship_to_locality,omitempty" validate:"omitempty,max=255"`
+	ShipToLocality *string `json:"ship_to_locality,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// Ship-to state/province.
-	ShipToState *string `json:"ship_to_state,omitempty" validate:"omitempty,max=255"`
+	ShipToState *string `json:"ship_to_state,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// Ship-to postal code.
-	ShipToPostalCode *string `json:"ship_to_postal_code,omitempty" validate:"omitempty,max=255"`
+	ShipToPostalCode *string `json:"ship_to_postal_code,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// Ship-to country.
-	ShipToCountry *string `json:"ship_to_country,omitempty" validate:"omitempty,max=2"`
+	ShipToCountry *string `json:"ship_to_country,omitempty" nullable:"false" validate:"omitempty,max=2"`
 	// The order number.
-	Number *string `json:"number,omitempty" validate:"omitempty,max=255"`
+	Number *string `json:"number,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// Whether the order acknowledgment has been sent.
-	IsAcknowledgmentSent *bool `json:"is_acknowledgment_sent,omitempty"`
+	IsAcknowledgmentSent *bool `json:"is_acknowledgment_sent,omitempty" nullable:"false"`
 	// The promised delivery date.
-	PromisedAt *time.Time `json:"promised_at,omitempty"`
+	PromisedAt *time.Time `json:"promised_at,omitempty" nullable:"false"`
 	// The customer (buyer account) ID.
 	CustomerID *string `json:"customer_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
 }
@@ -100,6 +100,7 @@ func (e *UpdateSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*Updat
 		Title:             "Update Sales Order",
 		Description:       "Partially updates a sales order.",
 		Method:            http.MethodPatch,
+		ContentType:       "application/json",
 		Route:             "/v1/sales/sales-orders/{id}",
 		Request:           &UpdateSalesOrderRequest{},
 		Response:          &apiresource.SalesOrderDetail{},

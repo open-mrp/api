@@ -24,6 +24,7 @@ func (e *GetItemTrendsEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetItemT
 		Title:             "Get Item Trends",
 		Description:       "Returns historical trend data for an item for the specified metric.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/catalog/items/{id}/trends",
 		Request:           &GetItemTrendsRequest{},
 		Response:          &apiresource.ItemTrends{},

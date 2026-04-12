@@ -21,6 +21,7 @@ func (e *ListMachinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListMachi
 		Title:             "List Machines",
 		Description:       "Returns a paginated list of machines for the target account.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/machines",
 		Request:           &ListMachinesRequest{},
 		Response:          &apiresource.List[apiresource.Machine]{},

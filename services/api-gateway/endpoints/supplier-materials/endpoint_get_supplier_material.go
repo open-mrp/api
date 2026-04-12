@@ -22,6 +22,7 @@ func (e *GetSupplierMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ge
 		Title:             "Get Supplier Material",
 		Description:       "Returns a single supplier material by supplier and item ID.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/suppliers/{supplier_id}/materials/{id}",
 		Request:           &GetSupplierMaterialRequest{},
 		Response:          &apiresource.SupplierMaterial{},

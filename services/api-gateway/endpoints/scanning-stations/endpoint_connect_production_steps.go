@@ -33,6 +33,7 @@ func (e *ConnectProductionStepsEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		Title:             "Connect Production Steps to Scanning Station",
 		Description:       "Connects production steps matching the provided name to a scanning station.",
 		Method:            http.MethodPut,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/scanning-stations/{id}/production-steps",
 		Request:           &ConnectProductionStepsRequest{},
 		Response:          &apiresource.EmptyResource{},

@@ -22,6 +22,7 @@ func (e *ListShippingTermsEndpoint) Materialize() *apiendpoint.APIEndpoint[*List
 		Title:             "List Shipping Terms",
 		Description:       "Returns a paginated list of shipping terms for the account, including default system shipping terms.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/shipping-terms",
 		Request:           &ListShippingTermsRequest{},
 		Response:          &apiresource.List[apiresource.ShippingTerm]{},

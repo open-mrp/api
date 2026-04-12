@@ -22,6 +22,7 @@ func (e *GetReceivingOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetR
 		Title:             "Get Receiving Order",
 		Description:       "Returns a single receiving order by its ID.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/receiving-orders/{id}",
 		Request:           &GetReceivingOrderRequest{},
 		Response:          &apiresource.ReceivingOrder{},

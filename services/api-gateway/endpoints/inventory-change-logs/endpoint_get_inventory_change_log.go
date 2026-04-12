@@ -23,6 +23,7 @@ func (e *GetInventoryChangeLogEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		Title:             "Get Inventory Change Log",
 		Description:       "Returns a single inventory change log by its ID.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/inventory-change-logs/{id}",
 		Request:           &GetInventoryChangeLogRequest{},
 		Response:          &apiresource.InventoryChangeLog{},

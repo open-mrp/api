@@ -15,25 +15,25 @@ type UpdateAddressRequest struct {
 	// The ID of the address to update.
 	AddressID string `path:"id" validate:"required"`
 	// The display name of the address.
-	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
+	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// The phone number associated with this address.
-	Phone *string `json:"phone,omitempty" validate:"omitempty,max=255"`
+	Phone *string `json:"phone,omitempty" nullable:"true" validate:"omitempty,max=255"`
 	// The email address associated with this address.
-	Email *string `json:"email,omitempty" validate:"omitempty,max=255"`
+	Email *string `json:"email,omitempty" nullable:"true" validate:"omitempty,max=255"`
 	// Whether this is a drop ship address.
-	IsDropShip *bool `json:"is_drop_ship,omitempty"`
+	IsDropShip *bool `json:"is_drop_ship,omitempty" nullable:"false"`
 	// The first line of the street address.
-	StreetLine1 *string `json:"street_line_1,omitempty" validate:"omitempty,max=255"`
+	StreetLine1 *string `json:"street_line_1,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// The second line of the street address.
-	StreetLine2 *string `json:"street_line_2,omitempty" validate:"omitempty,max=255"`
+	StreetLine2 *string `json:"street_line_2,omitempty" nullable:"true" validate:"omitempty,max=255"`
 	// The city or locality.
-	Locality *string `json:"locality,omitempty" validate:"omitempty,max=255"`
+	Locality *string `json:"locality,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// The state or administrative area.
-	State *string `json:"state,omitempty" validate:"omitempty,max=255"`
+	State *string `json:"state,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// The postal or zip code.
-	PostalCode *string `json:"postal_code,omitempty" validate:"omitempty,max=255"`
+	PostalCode *string `json:"postal_code,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// The two-letter country code.
-	Country *string `json:"country,omitempty" validate:"omitempty,max=2"`
+	Country *string `json:"country,omitempty" nullable:"false" validate:"omitempty,max=2"`
 }
 
 var sampleUpdateName = "Warehouse"

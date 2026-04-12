@@ -19,7 +19,7 @@ func TestAddresses_CRUD(t *testing.T) {
 	email := name + "@e2e-test.augno.com"
 
 	// CREATE
-	createStatus, createBody, err := apiClient.Post(addressesPath, map[string]any{
+	createResp, err := apiClient.PostFull(addressesPath, map[string]any{
 		"name":          name,
 		"phone":         phone,
 		"email":         email,
@@ -32,11 +32,12 @@ func TestAddresses_CRUD(t *testing.T) {
 		"country":       "US",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, createStatus, createBody)
+	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
 
-	created := parseJSON(createBody)
+	created := parseJSON(createResp.Body)
 	id := jsonField(created, "id")
 	assert.NotEmpty(t, id)
+	assertCreatedLocation(t, createResp.Header, id)
 	assert.Equal(t, "address", jsonField(created, "object"))
 	assert.Equal(t, name, jsonField(created, "name"))
 	assert.Equal(t, phone, jsonField(created, "phone"))
@@ -95,7 +96,7 @@ func TestAddresses_CreateAndUpdateAllFields(t *testing.T) {
 	// ── CREATE with all fields ──
 	name := uniqueName("e2e-addr-allf")
 	email := name + "@e2e-test.augno.com"
-	createStatus, createBody, err := apiClient.Post(addressesPath, map[string]any{
+	createResp, err := apiClient.PostFull(addressesPath, map[string]any{
 		"name":          name,
 		"phone":         "555-000-1234",
 		"email":         email,
@@ -108,11 +109,12 @@ func TestAddresses_CreateAndUpdateAllFields(t *testing.T) {
 		"country":       "US",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, createStatus, createBody)
+	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
 
-	got := parseJSON(createBody)
+	got := parseJSON(createResp.Body)
 	id := jsonField(got, "id")
 	require.NotEmpty(t, id)
+	assertCreatedLocation(t, createResp.Header, id)
 	defer apiClient.Delete(addressesPath + "/" + id)
 
 	assert.Equal(t, "address", jsonField(got, "object"))

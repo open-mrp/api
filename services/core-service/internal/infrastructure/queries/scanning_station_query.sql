@@ -114,7 +114,7 @@ AND (sqlc.narg('exclude_id') IS NULL OR id != sqlc.narg('exclude_id'));
 -- name: UpdateScanningStation :execresult
 UPDATE scanning_station SET
     name = COALESCE(sqlc.narg('name'), name),
-    notes = COALESCE(sqlc.narg('notes'), notes),
+    notes = sqlc.narg('notes'),
     label_size_code = COALESCE(sqlc.narg('label_size_code'), label_size_code),
     label_type_code = COALESCE(sqlc.narg('label_type_code'), label_type_code),
     material_check_required = COALESCE(sqlc.narg('material_check_required'), material_check_required),

@@ -97,7 +97,7 @@ func TestPermissionGroups_PermissionFields(t *testing.T) {
 		assert.NotEmpty(t, jsonField(perm, "id"))
 		assert.NotEmpty(t, jsonField(perm, "code"))
 		assert.NotEmpty(t, jsonField(perm, "name"))
-		assert.NotEmpty(t, jsonField(perm, "permission_group_code"))
+		assert.NotEmpty(t, jsonField(perm, "group"))
 		assert.NotEmpty(t, jsonField(perm, "created_at"))
 		assert.NotEmpty(t, jsonField(perm, "updated_at"))
 		return

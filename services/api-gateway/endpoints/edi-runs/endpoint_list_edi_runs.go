@@ -23,6 +23,7 @@ func (e *ListEDIRunsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListEDIRun
 		Title:             "List EDI Runs",
 		Description:       "Returns a paginated list of EDI runs for the target account.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/edi-runs",
 		Request:           &ListEDIRunsRequest{},
 		Response:          &apiresource.List[apiresource.EDIRun]{},

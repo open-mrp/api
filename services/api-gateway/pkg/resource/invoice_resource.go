@@ -81,7 +81,7 @@ type InvoiceSummary struct {
 	// The billing address for this invoice.
 	BillingAddress *Address `json:"billing_address" expandable:"true"`
 	// The priority code for the customer.
-	PriorityCode constants.PriorityCode `json:"priority_code" validate:"required"`
+	PriorityCode constants.PriorityCode `json:"priority" validate:"required"`
 	// The payment term for this invoice.
 	PaymentTerm *PaymentTerm `json:"payment_term" expandable:"true"`
 	// Whether the invoice has been paid in full.

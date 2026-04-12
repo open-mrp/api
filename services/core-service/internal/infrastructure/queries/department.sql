@@ -84,7 +84,7 @@ INSERT INTO department (
 -- name: UpdateDepartment :execresult
 UPDATE department SET
     name = COALESCE(sqlc.narg('name'), name),
-    notes = COALESCE(sqlc.narg('notes'), notes),
+    notes = sqlc.narg('notes'),
     location_id = COALESCE(sqlc.narg('location_id'), location_id),
     updated_at = NOW(3)
 WHERE id = sqlc.arg('id')

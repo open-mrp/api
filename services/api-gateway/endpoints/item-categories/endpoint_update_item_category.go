@@ -16,9 +16,9 @@ type UpdateItemCategoryRequest struct {
 	// The ID of the item category to update.
 	ItemCategoryID string `path:"id" validate:"required"`
 	// The display name of the item category.
-	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
+	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// Optional notes about the item category.
-	Notes *string `json:"notes,omitempty"`
+	Notes *string `json:"notes,omitempty" nullable:"false"`
 }
 
 var sampleUpdateItemCategoryRequest = &UpdateItemCategoryRequest{

@@ -31,6 +31,7 @@ func (e *ExportInventoryChangeLogsEndpoint) Materialize() *apiendpoint.APIEndpoi
 		Title:             "Export Inventory Change Logs",
 		Description:       "Exports inventory change logs matching the provided filters as an Excel file.",
 		Method:            http.MethodGet,
+		ContentType:       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 		Route:             "/v1/operations/inventory-change-logs/actions/export",
 		Request:           &ExportInventoryChangeLogsRequest{},
 		Response:          &httptransport.FileDownload{},

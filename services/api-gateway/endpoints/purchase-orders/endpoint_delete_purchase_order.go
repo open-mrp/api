@@ -22,6 +22,7 @@ func (e *DeletePurchaseOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*De
 		Title:             "Delete Purchase Order",
 		Description:       "Deletes a purchase order and all its related records.",
 		Method:            http.MethodDelete,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/purchase-orders/{id}",
 		Request:           &DeletePurchaseOrderRequest{},
 		Response:          &apiresource.EmptyResource{},

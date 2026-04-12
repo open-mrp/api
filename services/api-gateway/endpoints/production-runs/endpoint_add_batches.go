@@ -63,6 +63,7 @@ func (e *AddBatchesToProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoi
 		Title:             "Add Batches to Production Run",
 		Description:       "Adds batches to a production run. Fails if the run is already completed.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/production-runs/{id}/batches",
 		Request:           &AddBatchesToProductionRunRequest{},
 		Response:          &apiresource.List[apiresource.Batch]{},

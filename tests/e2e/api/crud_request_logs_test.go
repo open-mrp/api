@@ -262,7 +262,8 @@ func TestRequestLogs_IncludeActor(t *testing.T) {
 	actor := jsonObject(got, "actor")
 	require.NotNil(t, actor, "actor should be present with ?include=actor")
 	assert.NotEmpty(t, jsonField(actor, "id"))
-	assert.NotEmpty(t, jsonField(actor, "object"))
+	assert.Equal(t, "actor", jsonField(actor, "object"))
+	assert.NotEmpty(t, jsonField(actor, "type"))
 }
 
 func TestRequestLogs_IncludeActorRole(t *testing.T) {
@@ -324,6 +325,7 @@ func TestRequestLogs_ListIncludeActor(t *testing.T) {
 		actor := jsonObject(m, "actor")
 		require.NotNil(t, actor, "actor should be present on list items with ?include=actor")
 		assert.NotEmpty(t, jsonField(actor, "id"))
-		assert.NotEmpty(t, jsonField(actor, "object"))
+		assert.Equal(t, "actor", jsonField(actor, "object"))
+		assert.NotEmpty(t, jsonField(actor, "type"))
 	}
 }

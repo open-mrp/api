@@ -24,7 +24,7 @@ type Permission struct {
 	// An optional description of what this permission controls.
 	Description *string `json:"description"`
 	// The code of the permission group this permission belongs to.
-	PermissionGroupCode string `json:"permission_group_code" validate:"required"`
+	PermissionGroupCode string `json:"group" validate:"required"`
 	// When the permission was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// When the permission was last updated.

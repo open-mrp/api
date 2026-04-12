@@ -17,13 +17,13 @@ type UpdateCustomerRequest struct {
 	// The ID of the customer to update.
 	CustomerID string `path:"id" validate:"required"`
 	// The customer name.
-	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
+	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// The customer number.
-	Number *string `json:"number,omitempty" validate:"omitempty,max=255"`
+	Number *string `json:"number,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// A note about the customer.
 	Note *string `json:"note,omitempty" nullable:"true"`
 	// The status code.
-	StatusCode *constants.AccountStatusCode `json:"status_code,omitempty"`
+	StatusCode *constants.AccountStatusCode `json:"status,omitempty" nullable:"false"`
 	// The customer email address. Send null to clear.
 	Email *string `json:"email,omitempty" validate:"omitempty,max=255" nullable:"true"`
 	// The customer phone number. Send null to clear.
@@ -31,21 +31,21 @@ type UpdateCustomerRequest struct {
 	// The customer website URL. Send null to clear.
 	URL *string `json:"url,omitempty" validate:"omitempty,max=255" nullable:"true"`
 	// Whether the customer is EDI enabled.
-	IsEdiEnabled *bool `json:"is_edi_enabled,omitempty"`
+	IsEdiEnabled *bool `json:"is_edi_enabled,omitempty" nullable:"false"`
 	// The commission policy for this customer.
 	CommissionPolicy *constants.CommissionPolicy `json:"commission_policy,omitempty" nullable:"false"`
 	// The freight policy for this customer.
 	FreightPolicy *constants.FreightPolicy `json:"freight_policy,omitempty" nullable:"false"`
 	// The default carrier ID.
-	DefaultCarrierID *string `json:"default_carrier_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
+	DefaultCarrierID *string `json:"default_carrier_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
 	// The default service level ID.
 	DefaultServiceLevelID *string `json:"default_service_level_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
 	// The default payment term ID.
-	DefaultPaymentTermID *string `json:"default_payment_term_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
+	DefaultPaymentTermID *string `json:"default_payment_term_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
 	// The default shipping term ID.
-	DefaultShippingTermID *string `json:"default_shipping_term_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
+	DefaultShippingTermID *string `json:"default_shipping_term_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
 	// The default priority code.
-	DefaultPriorityCode *constants.PriorityCode `json:"default_priority_code,omitempty"`
+	DefaultPriorityCode *constants.PriorityCode `json:"default_priority,omitempty" nullable:"false"`
 	// The default sales rep user ID.
 	DefaultSalesRepUserID *string `json:"default_sales_rep_user_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
 	// The bill-to address ID.
@@ -53,9 +53,9 @@ type UpdateCustomerRequest struct {
 	// The ship-to address ID.
 	ShipToAddressID *string `json:"ship_to_address_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
 	// The customer price group IDs. When provided, replaces all existing price groups.
-	CustomerPriceGroupIDs *[]string `json:"customer_price_group_ids,omitempty"`
+	CustomerPriceGroupIDs *[]string `json:"customer_price_group_ids,omitempty" nullable:"false"`
 	// The customer type group ID.
-	CustomerTypeGroupID *string `json:"customer_type_group_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
+	CustomerTypeGroupID *string `json:"customer_type_group_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
 	// The carrier billing type.
 	CarrierBillingType *constants.CarrierBillingType `json:"carrier_billing_type,omitempty" nullable:"false"`
 	// The carrier billing account number.
@@ -86,6 +86,7 @@ func (e *UpdateCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateC
 		Title:             "Update Customer",
 		Description:       "Partially updates a customer account. When a Stripe integration is active, customer changes are synced to Stripe.",
 		Method:            http.MethodPatch,
+		ContentType:       "application/json",
 		Route:             "/v1/sales/customers/{id}",
 		Request:           &UpdateCustomerRequest{},
 		Response:          &apiresource.Customer{},

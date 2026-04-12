@@ -313,7 +313,8 @@ message UpdateServiceLevelRequest {
   optional string name = 3;
   optional string code = 4;
   optional bool is_portal_enabled = 5;
-  optional bool is_default = 6;
+  reserved 6;
+  reserved "is_default";
 }
 message UpdateServiceLevelResponse {
   ServiceLevelInfo service_level = 1;

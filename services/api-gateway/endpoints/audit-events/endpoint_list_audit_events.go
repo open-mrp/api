@@ -40,6 +40,7 @@ func (e *ListAuditEventsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAu
 		Title:             "List Audit Events",
 		Description:       "Returns a paginated list of audit events for the current account.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/core/audit-events",
 		Request:           &ListAuditEventsRequest{},
 		Response:          &apiresource.List[apiresource.AuditEvent]{},

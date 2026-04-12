@@ -37,6 +37,7 @@ func (e *ChangePurchaseOrderStatusEndpoint) Materialize() *apiendpoint.APIEndpoi
 		Title:             "Change Purchase Order Status",
 		Description:       "Changes the status of a purchase order using actions: issue (draft to issued), unissue (issued to draft), close (issued to closed), or open (closed to issued).",
 		Method:            http.MethodPut,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/purchase-orders/{id}/actions/change-status",
 		Request:           &ChangePurchaseOrderStatusRequest{},
 		Response:          &apiresource.PurchaseOrderDetail{},

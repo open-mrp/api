@@ -23,6 +23,7 @@ func (e *ListUnitGroupUnitsEndpoint) Materialize() *apiendpoint.APIEndpoint[*Lis
 		Title:             "List Unit Group Units",
 		Description:       "Returns the list of associated units within the specified unit group.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/catalog/unit-groups/{unitGroupId}/units",
 		Request:           &ListUnitGroupUnitsRequest{},
 		Response:          &apiresource.List[apiresource.UnitGroupUnit]{},

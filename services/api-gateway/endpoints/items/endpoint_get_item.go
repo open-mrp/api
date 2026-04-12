@@ -23,6 +23,7 @@ func (e *GetItemEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetItemRequest
 		Title:             "Get Item",
 		Description:       "Returns a single item by its ID.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/catalog/items/{id}",
 		Request:           &GetItemRequest{},
 		Response:          &apiresource.Item{},

@@ -126,17 +126,18 @@ func TestShippingTerms_CRUD(t *testing.T) {
 	name := uniqueName("e2e-shipterm")
 
 	// Create
-	createStatus, createBody, err := apiClient.Post(shippingTermsPath, map[string]any{
+	createResp, err := apiClient.PostFull(shippingTermsPath, map[string]any{
 		"name": name,
 		"type": "free_freight",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, createStatus, createBody)
+	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
 
-	created := parseJSON(createBody)
+	created := parseJSON(createResp.Body)
 	assert.Equal(t, "shipping_term", jsonField(created, "object"))
 	id := jsonField(created, "id")
 	assert.NotEmpty(t, id)
+	assertCreatedLocation(t, createResp.Header, id)
 	assert.Equal(t, name, jsonField(created, "name"))
 	assert.Equal(t, "free_freight", jsonField(created, "type"))
 
@@ -179,7 +180,7 @@ func TestShippingTerms_CreateAndUpdateAllFields(t *testing.T) {
 
 	// ── CREATE with all fields including flat_rate ──
 	name := uniqueName("e2e-st-allf")
-	createStatus, createBody, err := apiClient.Post(shippingTermsPath+"?include=flat_rate.unit", map[string]any{
+	createResp, err := apiClient.PostFull(shippingTermsPath+"?include=flat_rate.unit", map[string]any{
 		"name": name,
 		"type": "flat_rate_freight",
 		"flat_rate": map[string]any{
@@ -188,11 +189,12 @@ func TestShippingTerms_CreateAndUpdateAllFields(t *testing.T) {
 		},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, createStatus, createBody)
+	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
 
-	got := parseJSON(createBody)
+	got := parseJSON(createResp.Body)
 	id := jsonField(got, "id")
 	require.NotEmpty(t, id)
+	assertCreatedLocation(t, createResp.Header, id)
 	defer apiClient.Delete(shippingTermsPath + "/" + id)
 
 	assert.Equal(t, "shipping_term", jsonField(got, "object"))
@@ -234,28 +236,30 @@ func TestShippingTerms_CreateAndUpdateAllFields(t *testing.T) {
 func TestShippingTerms_CreateResponseShape(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-shipterm-shape")
-	createStatus, createBody, err := apiClient.Post(shippingTermsPath, map[string]any{
+	createResp, err := apiClient.PostFull(shippingTermsPath, map[string]any{
 		"name": name,
 		"type": "carrier_rate_freight",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, createStatus, createBody)
+	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
 
-	created := parseJSON(createBody)
-	assert.NotEmpty(t, jsonField(created, "id"))
+	created := parseJSON(createResp.Body)
+	id := jsonField(created, "id")
+	assert.NotEmpty(t, id)
+	assertCreatedLocation(t, createResp.Header, id)
 	assert.Equal(t, "shipping_term", jsonField(created, "object"))
 	assert.Equal(t, name, jsonField(created, "name"))
 	assert.Equal(t, "carrier_rate_freight", jsonField(created, "type"))
 	assert.NotEmpty(t, jsonField(created, "created_at"))
 	assert.NotEmpty(t, jsonField(created, "updated_at"))
 
-	apiClient.Delete(shippingTermsPath + "/" + jsonField(created, "id"))
+	apiClient.Delete(shippingTermsPath + "/" + id)
 }
 
 func TestShippingTerms_CreateWithFlatRate(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-shipterm-flat")
-	createStatus, createBody, err := apiClient.Post(shippingTermsPath, map[string]any{
+	createResp, err := apiClient.PostFull(shippingTermsPath, map[string]any{
 		"name": name,
 		"type": "flat_rate_freight",
 		"flat_rate": map[string]any{
@@ -264,11 +268,12 @@ func TestShippingTerms_CreateWithFlatRate(t *testing.T) {
 		},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, createStatus, createBody)
+	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
 
-	created := parseJSON(createBody)
+	created := parseJSON(createResp.Body)
 	id := jsonField(created, "id")
 	assert.NotEmpty(t, id)
+	assertCreatedLocation(t, createResp.Header, id)
 	assert.Equal(t, "flat_rate_freight", jsonField(created, "type"))
 
 	flatRate := jsonObject(created, "flat_rate")

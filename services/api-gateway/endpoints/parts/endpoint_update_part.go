@@ -16,11 +16,11 @@ type UpdatePartRequest struct {
 	// The item ID of the part to update.
 	ItemID string `path:"id" validate:"required"`
 	// The part SKU.
-	SKU *string `json:"sku,omitempty" validate:"omitempty,max=255"`
+	SKU *string `json:"sku,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// The part description.
-	Description *string `json:"description"`
+	Description *string `json:"description" nullable:"true"`
 	// Optional notes about the part.
-	Notes *string `json:"notes"`
+	Notes *string `json:"notes" nullable:"true"`
 }
 
 var sampleUpdatePartSKU = apiresource.SamplePartSKU

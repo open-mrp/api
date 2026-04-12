@@ -16,19 +16,19 @@ type UpdateAccountPriceRequest struct {
 	// The ID of the account price to update.
 	AccountPriceID string `path:"id" validate:"required"`
 	// The ID of the recipient (customer) account.
-	RecipientAccountID *string `json:"recipient_account_id,omitempty" validate:"omitempty,max=191"`
+	RecipientAccountID *string `json:"recipient_account_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
 	// The ID of the product line this price applies to.
-	ProductLineID *string `json:"product_line_id,omitempty" validate:"omitempty,max=191"`
+	ProductLineID *string `json:"product_line_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
 	// The rate value as a decimal string.
-	RateValue *string `json:"rate_value,omitempty"`
+	RateValue *string `json:"rate_value,omitempty" nullable:"false"`
 	// The ID of the numerator unit for the rate.
-	RateNumeratorUnitID *string `json:"rate_numerator_unit_id,omitempty" validate:"omitempty,max=191"`
+	RateNumeratorUnitID *string `json:"rate_numerator_unit_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
 	// The ID of the denominator unit for the rate.
-	RateDenominatorUnitID *string `json:"rate_denominator_unit_id,omitempty" validate:"omitempty,max=191"`
+	RateDenominatorUnitID *string `json:"rate_denominator_unit_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
 	// The IDs of item categories to constrain this price to. Replaces existing categories.
-	CategoryIDs *[]string `json:"category_ids,omitempty"`
+	CategoryIDs *[]string `json:"category_ids,omitempty" nullable:"false"`
 	// The IDs of attributes to constrain this price to. Replaces existing attributes.
-	AttributeIDs *[]string `json:"attribute_ids,omitempty"`
+	AttributeIDs *[]string `json:"attribute_ids,omitempty" nullable:"false"`
 }
 
 var sampleUpdateAccountPriceRequest = &UpdateAccountPriceRequest{

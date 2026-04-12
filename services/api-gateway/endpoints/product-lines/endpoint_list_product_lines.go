@@ -22,6 +22,7 @@ func (e *ListProductLinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListP
 		Title:             "List Product Lines",
 		Description:       "Returns a paginated list of product lines for the target account, including both account-specific and global system product lines.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/catalog/product-lines",
 		Request:           &ListProductLinesRequest{},
 		Response:          &apiresource.List[apiresource.ProductLine]{},

@@ -62,6 +62,7 @@ func (e *CreateAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*Crea
 		Title:             "Create Account User",
 		Description:       "Creates a new account user and invites them to the account.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/identity/account-users",
 		Request:           &CreateAccountUserRequest{},
 		Response:          &apiresource.AccountUser{},
@@ -73,6 +74,9 @@ func (e *CreateAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*Crea
 		},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateAccountUserRequest) (*apiresource.AccountUser, *apierror.APIError) {
 			return svc.(AccountUserSvc).CreateAccountUser
+		},
+		LocationFunc: func(resp *apiresource.AccountUser) string {
+			return "/v1/identity/account-users/" + resp.ID
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeAccountUser,

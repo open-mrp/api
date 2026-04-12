@@ -22,6 +22,7 @@ func (e *GetSysPropertyEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetSysP
 		Title:             "Get System Property",
 		Description:       "Returns a single system property by its ID.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/core/sys-properties/{id}",
 		Request:           &GetSysPropertyRequest{},
 		Response:          &apiresource.SysProperty{},

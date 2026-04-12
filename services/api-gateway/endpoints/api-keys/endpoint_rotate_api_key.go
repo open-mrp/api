@@ -16,7 +16,7 @@ type RotateAPIKeyRequest struct {
 	// The unique identifier for the API key to rotate.
 	APIKeyID string `path:"id" validate:"required"`
 	// Optional expiration time override for the new API key.
-	ExpiresAt *time.Time `json:"expires_at,omitempty"`
+	ExpiresAt *time.Time `json:"expires_at,omitempty" nullable:"false"`
 }
 
 func (*RotateAPIKeyRequest) SchemaExample() any {

@@ -41,6 +41,7 @@ func (e *CreateAccountGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cre
 		Title:             "Create Account Group",
 		Description:       "Creates a new account group.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/sales/account-groups",
 		Request:           &CreateAccountGroupRequest{},
 		Response:          &apiresource.AccountGroup{},
@@ -49,6 +50,9 @@ func (e *CreateAccountGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cre
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateAccountGroupRequest) (*apiresource.AccountGroup, *apierror.APIError) {
 			return svc.(AccountGroupSvc).CreateAccountGroup
+		},
+		LocationFunc: func(resp *apiresource.AccountGroup) string {
+			return "/v1/sales/account-groups/" + resp.ID
 		},
 	}
 }

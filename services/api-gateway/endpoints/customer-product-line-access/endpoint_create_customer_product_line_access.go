@@ -34,6 +34,7 @@ func (e *CreateCustomerProductLineAccessEndpoint) Materialize() *apiendpoint.API
 		Title:             "Create Customer Product Line Access",
 		Description:       "Creates product line access for a customer.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/sales/product-line-access/customers",
 		Request:           &CreateCustomerProductLineAccessRequest{},
 		Response:          &apiresource.CustomerProductLineAccess{},
@@ -42,6 +43,9 @@ func (e *CreateCustomerProductLineAccessEndpoint) Materialize() *apiendpoint.API
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateCustomerProductLineAccessRequest) (*apiresource.CustomerProductLineAccess, *apierror.APIError) {
 			return svc.(CustomerProductLineAccessSvc).CreateCustomerProductLineAccess
+		},
+		LocationFunc: func(resp *apiresource.CustomerProductLineAccess) string {
+			return "/v1/sales/product-line-access/customers/" + resp.Customer.ID
 		},
 	}
 }

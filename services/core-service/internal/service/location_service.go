@@ -279,8 +279,14 @@ func (s *locationSvcImpl) UpdateLocation(ctx context.Context, params domain.Upda
 				return apiErr
 			}
 
-			// Validate parent exists if provided
-			if params.ParentID != nil {
+			// Backfill ParentID with existing value when not provided.
+			// ptr("") is the sentinel for "clear"; nil means "not sent".
+			if params.ParentID == nil {
+				params.ParentID = old.ParentID
+			}
+
+			// Validate parent exists if provided (skip validation for clear sentinel).
+			if params.ParentID != nil && *params.ParentID != "" {
 				if *params.ParentID == params.LocationID {
 					return apierror.NewValidationErrorWithParam("A location cannot be its own parent.", "parent_id")
 				}

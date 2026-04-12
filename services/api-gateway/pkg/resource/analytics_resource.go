@@ -89,7 +89,7 @@ type SalesEntry struct {
 	// The ship-to country.
 	ShipToCountry *string `json:"ship_to_country"`
 	// The order discount code.
-	OrderDiscountCode *string `json:"order_discount_code"`
+	OrderDiscountCode *string `json:"discount_code"`
 	// The date the order was completed.
 	CompletedAt *time.Time `json:"completed_at"`
 	// The date of the first shipment.
@@ -350,7 +350,7 @@ type OrderEntry struct {
 	// The ship-to country.
 	ShipToCountry *string `json:"ship_to_country"`
 	// The order discount code.
-	OrderDiscountCode *string `json:"order_discount_code"`
+	OrderDiscountCode *string `json:"discount_code"`
 	// The date the order was completed.
 	CompletedAt *time.Time `json:"completed_at"`
 	// The date of the first shipment.

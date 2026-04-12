@@ -20,6 +20,7 @@ func (e *ListToolsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListToolsReq
 		Title:             "List Tools",
 		Description:       "Returns all available platform tools that can be assigned to agents.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/ai/tools",
 		Request:           &ListToolsRequest{},
 		Response:          &apiresource.List[apiresource.AvailableTool]{},

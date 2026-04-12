@@ -15,20 +15,21 @@ const apiKeysPath = "/v1/auth/api-keys"
 func TestAPIKeys_CreateAndGet(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-key")
-	status, body, err := apiClient.Post(apiKeysPath, map[string]any{
+	createResp, err := apiClient.PostFull(apiKeysPath, map[string]any{
 		"name":    name,
 		"role_id": SeedAdminRoleID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, status, body)
+	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
 
-	m := parseJSON(body)
+	m := parseJSON(createResp.Body)
 	assert.NotEmpty(t, jsonField(m, "api_key_secret"))
 	info := jsonObject(m, "api_key_info")
 	require.NotNil(t, info)
 	assert.Equal(t, "api_key", jsonField(info, "object"))
 	id := jsonField(info, "id")
 	assert.NotEmpty(t, id)
+	assertCreatedLocation(t, createResp.Header, id)
 	assert.Equal(t, name, jsonField(info, "name"))
 	assert.NotEmpty(t, jsonField(info, "redacted_value"))
 	assertValidTimestamp(t, jsonField(info, "created_at"), "created_at")

@@ -42,7 +42,7 @@ func TestRoles_ListResponseShape(t *testing.T) {
 		assert.Equal(t, "role", jsonField(m, "object"))
 		assert.NotEmpty(t, jsonField(m, "id"))
 		assert.NotEmpty(t, jsonField(m, "name"))
-		assert.NotEmpty(t, jsonField(m, "type_code"))
+		assert.NotEmpty(t, jsonField(m, "type"))
 		assert.NotEmpty(t, jsonField(m, "created_at"))
 		assert.NotEmpty(t, jsonField(m, "updated_at"))
 	}
@@ -55,7 +55,7 @@ func TestRoles_ListFilterByRoleType(t *testing.T) {
 	assert.GreaterOrEqual(t, len(list.Data), 1, "Should have at least 1 admin role")
 
 	for _, item := range list.Data {
-		assert.Equal(t, "admin", DataItemField(item, "type_code"))
+		assert.Equal(t, "admin", DataItemField(item, "type"))
 	}
 }
 
@@ -92,7 +92,7 @@ func TestRoles_GetByID(t *testing.T) {
 	assert.Equal(t, SeedAdminRoleID, jsonField(got, "id"))
 	assert.Equal(t, "role", jsonField(got, "object"))
 	assert.NotEmpty(t, jsonField(got, "name"))
-	assert.NotEmpty(t, jsonField(got, "type_code"))
+	assert.NotEmpty(t, jsonField(got, "type"))
 	assert.NotEmpty(t, jsonField(got, "created_at"))
 	assert.NotEmpty(t, jsonField(got, "updated_at"))
 }
@@ -183,17 +183,18 @@ func TestRoles_CRUD(t *testing.T) {
 	name := uniqueName("e2e-role")
 
 	// Create
-	createStatus, createBody, err := apiClient.Post(rolesPath, map[string]any{
+	createResp, err := apiClient.PostFull(rolesPath, map[string]any{
 		"name":        name,
 		"permissions": []string{"customers:read"},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, createStatus, createBody)
+	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
 
-	created := parseJSON(createBody)
+	created := parseJSON(createResp.Body)
 	assert.Equal(t, "role", jsonField(created, "object"))
 	id := jsonField(created, "id")
 	assert.NotEmpty(t, id)
+	assertCreatedLocation(t, createResp.Header, id)
 	assert.Equal(t, name, jsonField(created, "name"))
 
 	// Get
@@ -478,21 +479,22 @@ func TestRoles_CreateAndUpdateAllFields(t *testing.T) {
 
 	// ── CREATE with all fields ──
 	name := uniqueName("e2e-role-allf")
-	createStatus, createBody, err := apiClient.Post(rolesPath+"?include=permissions", map[string]any{
+	createResp, err := apiClient.PostFull(rolesPath+"?include=permissions", map[string]any{
 		"name":        name,
 		"permissions": []string{"customers:create", "customers:read"},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, createStatus, createBody)
+	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
 
-	got := parseJSON(createBody)
+	got := parseJSON(createResp.Body)
 	id := jsonField(got, "id")
 	require.NotEmpty(t, id)
+	assertCreatedLocation(t, createResp.Header, id)
 	defer apiClient.Delete(rolesPath + "/" + id)
 
 	assert.Equal(t, "role", jsonField(got, "object"))
 	assert.Equal(t, name, jsonField(got, "name"))
-	assert.Equal(t, "user", jsonField(got, "type_code"))
+	assert.Equal(t, "user", jsonField(got, "type"))
 	assert.NotEmpty(t, jsonField(got, "created_at"))
 	assert.NotEmpty(t, jsonField(got, "updated_at"))
 
@@ -514,7 +516,7 @@ func TestRoles_CreateAndUpdateAllFields(t *testing.T) {
 	updated := parseJSON(patchBody)
 	assert.Equal(t, id, jsonField(updated, "id"), "ID must not change")
 	assert.Equal(t, updatedName, jsonField(updated, "name"))
-	assert.Equal(t, "user", jsonField(updated, "type_code"), "type_code should be preserved")
+	assert.Equal(t, "user", jsonField(updated, "type"), "type should be preserved")
 
 	updPerms, ok := updated["permissions"]
 	require.True(t, ok, "permissions should be expanded after update")
@@ -526,22 +528,24 @@ func TestRoles_CreateAndUpdateAllFields(t *testing.T) {
 func TestRoles_CreateResponseShape(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-role-shape")
-	createStatus, createBody, err := apiClient.Post(rolesPath, map[string]any{
+	createResp, err := apiClient.PostFull(rolesPath, map[string]any{
 		"name":        name,
 		"permissions": []string{"customers:create", "customers:read"},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, createStatus, createBody)
+	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
 
-	created := parseJSON(createBody)
-	assert.NotEmpty(t, jsonField(created, "id"))
+	created := parseJSON(createResp.Body)
+	id := jsonField(created, "id")
+	assert.NotEmpty(t, id)
+	assertCreatedLocation(t, createResp.Header, id)
 	assert.Equal(t, "role", jsonField(created, "object"))
 	assert.Equal(t, name, jsonField(created, "name"))
-	assert.Equal(t, "user", jsonField(created, "type_code"), "Custom roles should have type_code 'user'")
+	assert.Equal(t, "user", jsonField(created, "type"), "Custom roles should have type 'user'")
 	assert.NotEmpty(t, jsonField(created, "created_at"))
 	assert.NotEmpty(t, jsonField(created, "updated_at"))
 
-	apiClient.Delete(rolesPath + "/" + jsonField(created, "id"))
+	apiClient.Delete(rolesPath + "/" + id)
 }
 
 func TestRoles_ListCursorPagination(t *testing.T) {

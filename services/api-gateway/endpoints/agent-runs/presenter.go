@@ -169,22 +169,24 @@ func lightStepActorPresenter(s *pb.AgentRunStepInfo) *apiresource.Actor {
 	if s.ActorId == "" || s.ActorType == "" {
 		return nil
 	}
-	return &apiresource.Actor{
-		ID:     s.ActorId,
-		Object: constants.ObjectType(s.ActorType),
-		Name:   ptrStringOrNil(s.ActorName),
-	}
+	return apiresource.NewActor(
+		s.ActorId,
+		constants.ActorType(s.ActorType),
+		ptrStringOrNil(s.ActorName),
+		nil,
+	)
 }
 
 func lightActorPresenter(r *pb.AgentRunInfo) *apiresource.Actor {
 	if r.TriggeredByActorId == "" || r.TriggeredByIdentityType == "" {
 		return nil
 	}
-	return &apiresource.Actor{
-		ID:     r.TriggeredByActorId,
-		Object: constants.ObjectType(r.TriggeredByIdentityType),
-		Name:   ptrStringOrNil(r.TriggeredByActorName),
-	}
+	return apiresource.NewActor(
+		r.TriggeredByActorId,
+		constants.ActorType(r.TriggeredByIdentityType),
+		ptrStringOrNil(r.TriggeredByActorName),
+		nil,
+	)
 }
 
 func ptrStringOrNil(s string) *string {
@@ -212,19 +214,17 @@ func entityPresenter(entityType, entityID string) *apiresource.Entity {
 	if entityType == "" || entityID == "" {
 		return nil
 	}
-	return &apiresource.Entity{
-		ID:     entityID,
-		Object: constants.ObjectType(entityType),
-	}
+	return apiresource.NewEntity(entityID, constants.ObjectType(entityType))
 }
 
 func reviewedByPresenter(a *pb.AgentActionInfo) *apiresource.Actor {
 	if a.ReviewedBy == "" {
 		return nil
 	}
-	return &apiresource.Actor{
-		ID:     a.ReviewedBy,
-		Object: constants.ObjectType(a.ReviewedByActorType),
-		Name:   ptrStringOrNil(a.ReviewedByActorName),
-	}
+	return apiresource.NewActor(
+		a.ReviewedBy,
+		constants.ActorType(a.ReviewedByActorType),
+		ptrStringOrNil(a.ReviewedByActorName),
+		nil,
+	)
 }

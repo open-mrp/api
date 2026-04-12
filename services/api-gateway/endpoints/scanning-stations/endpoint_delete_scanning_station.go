@@ -22,6 +22,7 @@ func (e *DeleteScanningStationEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		Title:             "Delete Scanning Station",
 		Description:       "Deletes a scanning station.",
 		Method:            http.MethodDelete,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/scanning-stations/{id}",
 		Request:           &DeleteScanningStationRequest{},
 		Response:          &apiresource.EmptyResource{},

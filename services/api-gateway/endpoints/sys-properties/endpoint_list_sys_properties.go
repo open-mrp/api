@@ -21,6 +21,7 @@ func (e *ListSysPropertiesEndpoint) Materialize() *apiendpoint.APIEndpoint[*List
 		Title:             "List System Properties",
 		Description:       "Returns a paginated list of system properties for the current account.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/core/sys-properties",
 		Request:           &ListSysPropertiesRequest{},
 		Response:          &apiresource.List[apiresource.SysProperty]{},

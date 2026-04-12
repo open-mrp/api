@@ -120,6 +120,7 @@ func (e *CreatePurchaseOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cr
 		Title:             "Create Purchase Order",
 		Description:       "Creates a new purchase order.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/purchase-orders",
 		Request:           &CreatePurchaseOrderRequest{},
 		Response:          &apiresource.PurchaseOrderDetail{},
@@ -128,6 +129,9 @@ func (e *CreatePurchaseOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cr
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreatePurchaseOrderRequest) (*apiresource.PurchaseOrderDetail, *apierror.APIError) {
 			return svc.(PurchaseOrderSvc).CreatePurchaseOrder
+		},
+		LocationFunc: func(resp *apiresource.PurchaseOrderDetail) string {
+			return "/v1/operations/purchase-orders/" + resp.ID
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypePurchaseOrder,

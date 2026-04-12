@@ -21,6 +21,7 @@ func (e *ListDCLocationsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListDC
 		Title:             "List DC Locations",
 		Description:       "Returns a paginated list of DC locations for the current account.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/dc-locations",
 		Request:           &ListDCLocationsRequest{},
 		Response:          &apiresource.List[apiresource.DCLocation]{},

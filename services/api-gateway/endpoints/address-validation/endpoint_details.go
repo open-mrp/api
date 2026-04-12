@@ -24,6 +24,7 @@ func (e *GetAddressDetailsEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetA
 		Title:             "Get Address Details",
 		Description:       "Returns parsed address components for a Google Places ID.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/core/addresses/details/{id}",
 		Request:           &GetAddressDetailsRequest{},
 		Response:          &apiresource.AddressDetailsResult{},

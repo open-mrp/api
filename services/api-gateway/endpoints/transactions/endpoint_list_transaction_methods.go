@@ -21,6 +21,7 @@ func (e *ListTransactionMethodsEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		Title:             "List Transaction Methods",
 		Description:       "Returns a paginated list of transaction methods.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/finance/transaction-methods",
 		Request:           &ListTransactionMethodsRequest{},
 		Response:          &apiresource.List[apiresource.TransactionMethod]{},

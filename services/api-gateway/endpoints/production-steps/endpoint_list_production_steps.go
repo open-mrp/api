@@ -36,6 +36,7 @@ func (e *ListProductionStepsEndpoint) Materialize() *apiendpoint.APIEndpoint[*Li
 		Title:             "List Production Steps",
 		Description:       "Returns a paginated list of production steps for the current account.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/production-steps",
 		Request:           &ListProductionStepsRequest{},
 		Response:          &apiresource.List[apiresource.ProductionStep]{},

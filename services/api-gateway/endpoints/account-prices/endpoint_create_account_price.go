@@ -50,6 +50,7 @@ func (e *CreateAccountPriceEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cre
 		Title:             "Create Account Price",
 		Description:       "Creates a new account price for a recipient customer account. Account prices override all other pricing rules.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/sales/account-prices",
 		Request:           &CreateAccountPriceRequest{},
 		Response:          &apiresource.AccountPrice{},
@@ -58,6 +59,9 @@ func (e *CreateAccountPriceEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cre
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateAccountPriceRequest) (*apiresource.AccountPrice, *apierror.APIError) {
 			return svc.(AccountPriceSvc).CreateAccountPrice
+		},
+		LocationFunc: func(resp *apiresource.AccountPrice) string {
+			return "/v1/sales/account-prices/" + resp.ID
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeAccountPrice,

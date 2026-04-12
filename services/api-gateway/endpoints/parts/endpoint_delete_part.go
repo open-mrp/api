@@ -22,6 +22,7 @@ func (e *DeletePartEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeletePartR
 		Title:             "Delete Part",
 		Description:       "Soft-deletes a part by setting its deleted_at timestamp.",
 		Method:            http.MethodDelete,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/parts/{id}",
 		Request:           &DeletePartRequest{},
 		Response:          &apiresource.Part{},

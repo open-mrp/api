@@ -20,7 +20,7 @@ type Attribute struct {
 	// The value of the attribute.
 	Value string `json:"value" validate:"required"`
 	// The color code of the attribute.
-	ColorCode constants.Color `json:"color_code" validate:"required"`
+	ColorCode constants.Color `json:"color" validate:"required"`
 	// The display order of the attribute.
 	SortOrder int32 `json:"sort_order"`
 	// The timestamp when the attribute was created.

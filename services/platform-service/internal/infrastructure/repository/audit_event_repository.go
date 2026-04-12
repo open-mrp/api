@@ -271,14 +271,9 @@ func mapAuditEventBaseRow(
 		metadataRaw = json.RawMessage(metadataBytes)
 	}
 
-	objectType := constants.ObjectTypeUser
-	if identityType == "api_key" {
-		objectType = constants.ObjectTypeAPIKey
-	}
-
 	actor := &domain.AuditActor{
 		ID:           actorID,
-		ObjectType:   objectType,
+		ActorType:    constants.ActorType(identityType),
 		Type:         actorType,
 		IdentityType: identityType,
 		Name:         auditActorDisplayName(userName, apiKeyName),

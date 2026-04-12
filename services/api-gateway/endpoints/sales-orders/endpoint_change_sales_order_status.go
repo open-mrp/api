@@ -37,6 +37,7 @@ func (e *ChangeSalesOrderStatusEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		Title:             "Change Sales Order Status",
 		Description:       "Changes the status of a sales order. Supported actions: issue, unissue, close, and open.",
 		Method:            http.MethodPut,
+		ContentType:       "application/json",
 		Route:             "/v1/sales/sales-orders/{id}/actions/change-status",
 		Request:           &ChangeSalesOrderStatusRequest{},
 		Response:          &apiresource.SalesOrderDetail{},

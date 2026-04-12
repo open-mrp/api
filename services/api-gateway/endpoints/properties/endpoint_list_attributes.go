@@ -23,6 +23,7 @@ func (e *ListAttributesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAtt
 		Title:             "List Attributes",
 		Description:       "Returns a paginated list of attributes for a property.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/catalog/properties/{property_id}/attributes",
 		Request:           &ListAttributesRequest{},
 		Response:          &apiresource.List[apiresource.Attribute]{},

@@ -20,6 +20,7 @@ func (e *DeleteMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteM
 		Title:             "Delete Material",
 		Description:       "Deletes a material by its ID.",
 		Method:            http.MethodDelete,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/materials/{id}",
 		Request:           &DeleteMaterialRequest{},
 		Response:          &apiresource.Material{},

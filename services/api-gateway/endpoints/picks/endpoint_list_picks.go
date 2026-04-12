@@ -27,6 +27,7 @@ func (e *ListPicksEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPicksReq
 		Title:             "List Picks",
 		Description:       "Returns a paginated list of picks.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/picks",
 		Request:           &ListPicksRequest{},
 		Response:          &apiresource.List[apiresource.PickSummary]{},

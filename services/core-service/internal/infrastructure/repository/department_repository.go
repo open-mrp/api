@@ -263,7 +263,7 @@ func (r *departmentRepoImpl) Update(ctx context.Context, params domain.UpdateDep
 		ID:         params.DepartmentID,
 		AccountID:  params.AccountID,
 		Name:       deptToNullString(params.Name),
-		Notes:      deptToNullString(params.Notes),
+		Notes:      stringToNullString(params.Notes),
 		LocationID: deptToNullString(params.LocationID),
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {

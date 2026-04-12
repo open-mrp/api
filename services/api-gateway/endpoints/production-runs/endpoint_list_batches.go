@@ -23,6 +23,7 @@ func (e *ListBatchesByProductionRunEndpoint) Materialize() *apiendpoint.APIEndpo
 		Title:             "List Batches by Production Run",
 		Description:       "Returns a paginated list of batches associated with a production run.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/production-runs/{id}/batches",
 		Request:           &ListBatchesByProductionRunRequest{},
 		Response:          &apiresource.List[apiresource.Batch]{},

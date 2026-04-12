@@ -24,6 +24,7 @@ func (e *GetServiceLevelEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetSer
 		Title:             "Get Service Level",
 		Description:       "Returns a single service level by its ID.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/carriers/{carrier_id}/service-levels/{id}",
 		Request:           &GetServiceLevelRequest{},
 		Response:          &apiresource.ServiceLevel{},

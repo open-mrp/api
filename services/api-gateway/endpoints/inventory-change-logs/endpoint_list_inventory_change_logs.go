@@ -33,6 +33,7 @@ func (e *ListInventoryChangeLogsEndpoint) Materialize() *apiendpoint.APIEndpoint
 		Title:             "List Inventory Change Logs",
 		Description:       "Returns a paginated list of inventory change logs for the target account.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/inventory-change-logs",
 		Request:           &ListInventoryChangeLogsRequest{},
 		Response:          &apiresource.List[apiresource.InventoryChangeLog]{},

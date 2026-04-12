@@ -26,6 +26,7 @@ func (e *ListUnitsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListUnitsReq
 		Title:             "List Units",
 		Description:       "Returns a paginated list of units for the current account, including both account-owned and global system units.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/catalog/units",
 		Request:           &ListUnitsRequest{},
 		Response:          &apiresource.List[apiresource.Unit]{},

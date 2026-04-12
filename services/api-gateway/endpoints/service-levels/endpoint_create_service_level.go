@@ -42,6 +42,7 @@ func (e *CreateServiceLevelEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cre
 		Title:             "Create Service Level",
 		Description:       "Creates a new service level (shipping service level) for a carrier.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/carriers/{carrier_id}/service-levels",
 		Request:           &CreateServiceLevelRequest{},
 		Response:          &apiresource.ServiceLevel{},

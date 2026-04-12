@@ -35,6 +35,7 @@ func (e *CreateSandboxEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateSa
 		Title:             "Create Sandbox",
 		Description:       "Creates a new sandbox account for the target account.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/core/sandboxes",
 		Request:           &CreateSandboxRequest{},
 		Response:          &apiresource.Sandbox{},
@@ -47,6 +48,9 @@ func (e *CreateSandboxEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateSa
 		}),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateSandboxRequest) (*apiresource.Sandbox, *apierror.APIError) {
 			return svc.(SandboxSvc).CreateSandbox
+		},
+		LocationFunc: func(resp *apiresource.Sandbox) string {
+			return "/v1/core/sandboxes/" + resp.ID
 		},
 	}
 }

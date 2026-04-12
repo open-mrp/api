@@ -26,7 +26,7 @@ func TestStateTransition_CustomerStatus_NormalToHoldShipment(t *testing.T) {
 
 	// Transition to hold_shipment.
 	status, body, err := apiClient.Patch(customersPath+"/"+id, map[string]any{
-		"status_code": "hold_shipment",
+		"status": "hold_shipment",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
@@ -40,14 +40,14 @@ func TestStateTransition_CustomerStatus_HoldShipmentBackToNormal(t *testing.T) {
 
 	// Hold.
 	s1, b1, err := apiClient.Patch(customersPath+"/"+id, map[string]any{
-		"status_code": "hold_shipment",
+		"status": "hold_shipment",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, s1, b1)
 
 	// Resume.
 	s2, b2, err := apiClient.Patch(customersPath+"/"+id, map[string]any{
-		"status_code": "normal",
+		"status": "normal",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, s2, b2)
@@ -60,7 +60,7 @@ func TestStateTransition_CustomerStatus_InvalidTransition(t *testing.T) {
 	id := jsonField(created, "id")
 
 	status, body, err := apiClient.Patch(customersPath+"/"+id, map[string]any{
-		"status_code": "totally_fake_status",
+		"status": "totally_fake_status",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	assert.True(t, status == 400 || status == 422,

@@ -11,9 +11,9 @@ import (
 )
 
 const (
-	addressAutocompletePath = "/v1/core/addresses/autocomplete"
+	addressAutocompletePath = "/v1/core/addresses/suggestions"
 	addressDetailsPath      = "/v1/core/addresses/details"
-	addressValidatePath     = "/v1/core/addresses/validate"
+	addressValidatePath     = "/v1/core/addresses/actions/validate"
 )
 
 // ---------------------------------------------------------------------------
@@ -22,13 +22,13 @@ const (
 
 func TestAddressValidation_ValidAddress(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Post(addressValidatePath, map[string]any{
+	status, body, err := apiClient.Put(addressValidatePath, map[string]any{
 		"address_line_1": "1600 Amphitheatre Parkway",
 		"city":           "Mountain View",
 		"state":          "CA",
 		"postal_code":    "94043",
 		"country":        "US",
-	}, newIdempotencyKey())
+	})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
@@ -50,14 +50,14 @@ func TestAddressValidation_ValidAddress(t *testing.T) {
 
 func TestAddressValidation_ValidAddressWithLine2(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Post(addressValidatePath, map[string]any{
+	status, body, err := apiClient.Put(addressValidatePath, map[string]any{
 		"address_line_1": "20 W 34th St",
 		"address_line_2": "Suite 100",
 		"city":           "New York",
 		"state":          "NY",
 		"postal_code":    "10001",
 		"country":        "US",
-	}, newIdempotencyKey())
+	})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
@@ -72,13 +72,13 @@ func TestAddressValidation_ValidAddressWithLine2(t *testing.T) {
 
 func TestAddressValidation_InvalidAddress(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Post(addressValidatePath, map[string]any{
+	status, body, err := apiClient.Put(addressValidatePath, map[string]any{
 		"address_line_1": "99999 Nonexistent Blvd",
 		"city":           "Faketown",
 		"state":          "ZZ",
 		"postal_code":    "00000",
 		"country":        "US",
-	}, newIdempotencyKey())
+	})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
@@ -94,12 +94,12 @@ func TestAddressValidation_InvalidAddress(t *testing.T) {
 
 func TestAddressValidation_MissingRequiredFields(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Post(addressValidatePath, map[string]any{
+	status, body, err := apiClient.Put(addressValidatePath, map[string]any{
 		"city":        "Denver",
 		"state":       "CO",
 		"postal_code": "80202",
 		"country":     "US",
-	}, newIdempotencyKey())
+	})
 	require.NoError(t, err)
 	assert.True(t, status == 400 || status == 422,
 		"Missing address_line_1 should return 400 or 422, got %d: %s", status, string(body))
@@ -107,12 +107,12 @@ func TestAddressValidation_MissingRequiredFields(t *testing.T) {
 
 func TestAddressValidation_MissingCity(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Post(addressValidatePath, map[string]any{
+	status, body, err := apiClient.Put(addressValidatePath, map[string]any{
 		"address_line_1": "123 Main St",
 		"state":          "CO",
 		"postal_code":    "80202",
 		"country":        "US",
-	}, newIdempotencyKey())
+	})
 	require.NoError(t, err)
 	assert.True(t, status == 400 || status == 422,
 		"Missing city should return 400 or 422, got %d: %s", status, string(body))
@@ -120,12 +120,12 @@ func TestAddressValidation_MissingCity(t *testing.T) {
 
 func TestAddressValidation_MissingCountry(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Post(addressValidatePath, map[string]any{
+	status, body, err := apiClient.Put(addressValidatePath, map[string]any{
 		"address_line_1": "123 Main St",
 		"city":           "Denver",
 		"state":          "CO",
 		"postal_code":    "80202",
-	}, newIdempotencyKey())
+	})
 	require.NoError(t, err)
 	assert.True(t, status == 400 || status == 422,
 		"Missing country should return 400 or 422, got %d: %s", status, string(body))
@@ -133,13 +133,13 @@ func TestAddressValidation_MissingCountry(t *testing.T) {
 
 func TestAddressValidation_CountryNameNormalization(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.Post(addressValidatePath, map[string]any{
+	status, body, err := apiClient.Put(addressValidatePath, map[string]any{
 		"address_line_1": "1600 Amphitheatre Parkway",
 		"city":           "Mountain View",
 		"state":          "CA",
 		"postal_code":    "94043",
 		"country":        "United States",
-	}, newIdempotencyKey())
+	})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 

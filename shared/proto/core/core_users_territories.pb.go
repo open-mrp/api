@@ -9,12 +9,13 @@
 package core
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
@@ -2608,6 +2609,76 @@ func (x *DeleteDepartmentRequest) GetId() string {
 	return ""
 }
 
+// Fields are populated based on the actor type (currently only users send emails).
+type EmailLogActor struct {
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	Id        string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	ActorType string                 `protobuf:"bytes,2,opt,name=actor_type,json=actorType,proto3" json:"actor_type,omitempty"`
+	Name      *string                `protobuf:"bytes,3,opt,name=name,proto3,oneof" json:"name,omitempty"`
+	// Email for users, redacted value for API keys.
+	Handle        *string `protobuf:"bytes,4,opt,name=handle,proto3,oneof" json:"handle,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EmailLogActor) Reset() {
+	*x = EmailLogActor{}
+	mi := &file_core_core_users_territories_proto_msgTypes[42]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EmailLogActor) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EmailLogActor) ProtoMessage() {}
+
+func (x *EmailLogActor) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_users_territories_proto_msgTypes[42]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EmailLogActor.ProtoReflect.Descriptor instead.
+func (*EmailLogActor) Descriptor() ([]byte, []int) {
+	return file_core_core_users_territories_proto_rawDescGZIP(), []int{42}
+}
+
+func (x *EmailLogActor) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *EmailLogActor) GetActorType() string {
+	if x != nil {
+		return x.ActorType
+	}
+	return ""
+}
+
+func (x *EmailLogActor) GetName() string {
+	if x != nil && x.Name != nil {
+		return *x.Name
+	}
+	return ""
+}
+
+func (x *EmailLogActor) GetHandle() string {
+	if x != nil && x.Handle != nil {
+		return *x.Handle
+	}
+	return ""
+}
+
 type EmailLogInfo struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -2616,8 +2687,7 @@ type EmailLogInfo struct {
 	Subject       *string                `protobuf:"bytes,4,opt,name=subject,proto3,oneof" json:"subject,omitempty"`
 	Filename      *string                `protobuf:"bytes,5,opt,name=filename,proto3,oneof" json:"filename,omitempty"`
 	SesMessageId  *string                `protobuf:"bytes,6,opt,name=ses_message_id,json=sesMessageId,proto3,oneof" json:"ses_message_id,omitempty"`
-	SentById      *string                `protobuf:"bytes,7,opt,name=sent_by_id,json=sentById,proto3,oneof" json:"sent_by_id,omitempty"`
-	SentByName    *string                `protobuf:"bytes,8,opt,name=sent_by_name,json=sentByName,proto3,oneof" json:"sent_by_name,omitempty"`
+	SentBy        *EmailLogActor         `protobuf:"bytes,7,opt,name=sent_by,json=sentBy,proto3,oneof" json:"sent_by,omitempty"`
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -2626,7 +2696,7 @@ type EmailLogInfo struct {
 
 func (x *EmailLogInfo) Reset() {
 	*x = EmailLogInfo{}
-	mi := &file_core_core_users_territories_proto_msgTypes[42]
+	mi := &file_core_core_users_territories_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2638,7 +2708,7 @@ func (x *EmailLogInfo) String() string {
 func (*EmailLogInfo) ProtoMessage() {}
 
 func (x *EmailLogInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_users_territories_proto_msgTypes[42]
+	mi := &file_core_core_users_territories_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2651,7 +2721,7 @@ func (x *EmailLogInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EmailLogInfo.ProtoReflect.Descriptor instead.
 func (*EmailLogInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_users_territories_proto_rawDescGZIP(), []int{42}
+	return file_core_core_users_territories_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *EmailLogInfo) GetId() string {
@@ -2696,18 +2766,11 @@ func (x *EmailLogInfo) GetSesMessageId() string {
 	return ""
 }
 
-func (x *EmailLogInfo) GetSentById() string {
-	if x != nil && x.SentById != nil {
-		return *x.SentById
+func (x *EmailLogInfo) GetSentBy() *EmailLogActor {
+	if x != nil {
+		return x.SentBy
 	}
-	return ""
-}
-
-func (x *EmailLogInfo) GetSentByName() string {
-	if x != nil && x.SentByName != nil {
-		return *x.SentByName
-	}
-	return ""
+	return nil
 }
 
 func (x *EmailLogInfo) GetCreatedAt() *timestamppb.Timestamp {
@@ -2729,13 +2792,14 @@ type ListEmailLogsRequest struct {
 	Cursor        *string                `protobuf:"bytes,1,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
 	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
 	Query         *string                `protobuf:"bytes,3,opt,name=query,proto3,oneof" json:"query,omitempty"`
+	Includes      []string               `protobuf:"bytes,4,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListEmailLogsRequest) Reset() {
 	*x = ListEmailLogsRequest{}
-	mi := &file_core_core_users_territories_proto_msgTypes[43]
+	mi := &file_core_core_users_territories_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2747,7 +2811,7 @@ func (x *ListEmailLogsRequest) String() string {
 func (*ListEmailLogsRequest) ProtoMessage() {}
 
 func (x *ListEmailLogsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_users_territories_proto_msgTypes[43]
+	mi := &file_core_core_users_territories_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2760,7 +2824,7 @@ func (x *ListEmailLogsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListEmailLogsRequest.ProtoReflect.Descriptor instead.
 func (*ListEmailLogsRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_users_territories_proto_rawDescGZIP(), []int{43}
+	return file_core_core_users_territories_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *ListEmailLogsRequest) GetCursor() string {
@@ -2784,6 +2848,13 @@ func (x *ListEmailLogsRequest) GetQuery() string {
 	return ""
 }
 
+func (x *ListEmailLogsRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
+}
+
 type ListEmailLogsResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	EmailLogs     []*EmailLogInfo        `protobuf:"bytes,1,rep,name=email_logs,json=emailLogs,proto3" json:"email_logs,omitempty"`
@@ -2794,7 +2865,7 @@ type ListEmailLogsResponse struct {
 
 func (x *ListEmailLogsResponse) Reset() {
 	*x = ListEmailLogsResponse{}
-	mi := &file_core_core_users_territories_proto_msgTypes[44]
+	mi := &file_core_core_users_territories_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2806,7 +2877,7 @@ func (x *ListEmailLogsResponse) String() string {
 func (*ListEmailLogsResponse) ProtoMessage() {}
 
 func (x *ListEmailLogsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_users_territories_proto_msgTypes[44]
+	mi := &file_core_core_users_territories_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2819,7 +2890,7 @@ func (x *ListEmailLogsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListEmailLogsResponse.ProtoReflect.Descriptor instead.
 func (*ListEmailLogsResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_users_territories_proto_rawDescGZIP(), []int{44}
+	return file_core_core_users_territories_proto_rawDescGZIP(), []int{45}
 }
 
 func (x *ListEmailLogsResponse) GetEmailLogs() []*EmailLogInfo {
@@ -2839,13 +2910,14 @@ func (x *ListEmailLogsResponse) GetPageInfo() *PageInfo {
 type GetEmailLogRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Includes      []string               `protobuf:"bytes,2,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetEmailLogRequest) Reset() {
 	*x = GetEmailLogRequest{}
-	mi := &file_core_core_users_territories_proto_msgTypes[45]
+	mi := &file_core_core_users_territories_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2857,7 +2929,7 @@ func (x *GetEmailLogRequest) String() string {
 func (*GetEmailLogRequest) ProtoMessage() {}
 
 func (x *GetEmailLogRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_users_territories_proto_msgTypes[45]
+	mi := &file_core_core_users_territories_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2870,7 +2942,7 @@ func (x *GetEmailLogRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetEmailLogRequest.ProtoReflect.Descriptor instead.
 func (*GetEmailLogRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_users_territories_proto_rawDescGZIP(), []int{45}
+	return file_core_core_users_territories_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *GetEmailLogRequest) GetId() string {
@@ -2878,6 +2950,13 @@ func (x *GetEmailLogRequest) GetId() string {
 		return x.Id
 	}
 	return ""
+}
+
+func (x *GetEmailLogRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
 }
 
 type GetEmailLogResponse struct {
@@ -2889,7 +2968,7 @@ type GetEmailLogResponse struct {
 
 func (x *GetEmailLogResponse) Reset() {
 	*x = GetEmailLogResponse{}
-	mi := &file_core_core_users_territories_proto_msgTypes[46]
+	mi := &file_core_core_users_territories_proto_msgTypes[47]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2901,7 +2980,7 @@ func (x *GetEmailLogResponse) String() string {
 func (*GetEmailLogResponse) ProtoMessage() {}
 
 func (x *GetEmailLogResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_users_territories_proto_msgTypes[46]
+	mi := &file_core_core_users_territories_proto_msgTypes[47]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2914,7 +2993,7 @@ func (x *GetEmailLogResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetEmailLogResponse.ProtoReflect.Descriptor instead.
 func (*GetEmailLogResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_users_territories_proto_rawDescGZIP(), []int{46}
+	return file_core_core_users_territories_proto_rawDescGZIP(), []int{47}
 }
 
 func (x *GetEmailLogResponse) GetEmailLog() *EmailLogInfo {
@@ -2950,7 +3029,7 @@ type InventoryChangeLogInfo struct {
 
 func (x *InventoryChangeLogInfo) Reset() {
 	*x = InventoryChangeLogInfo{}
-	mi := &file_core_core_users_territories_proto_msgTypes[47]
+	mi := &file_core_core_users_territories_proto_msgTypes[48]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2962,7 +3041,7 @@ func (x *InventoryChangeLogInfo) String() string {
 func (*InventoryChangeLogInfo) ProtoMessage() {}
 
 func (x *InventoryChangeLogInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_users_territories_proto_msgTypes[47]
+	mi := &file_core_core_users_territories_proto_msgTypes[48]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2975,7 +3054,7 @@ func (x *InventoryChangeLogInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InventoryChangeLogInfo.ProtoReflect.Descriptor instead.
 func (*InventoryChangeLogInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_users_territories_proto_rawDescGZIP(), []int{47}
+	return file_core_core_users_territories_proto_rawDescGZIP(), []int{48}
 }
 
 func (x *InventoryChangeLogInfo) GetId() string {
@@ -3120,7 +3199,7 @@ type ListInventoryChangeLogsRequest struct {
 
 func (x *ListInventoryChangeLogsRequest) Reset() {
 	*x = ListInventoryChangeLogsRequest{}
-	mi := &file_core_core_users_territories_proto_msgTypes[48]
+	mi := &file_core_core_users_territories_proto_msgTypes[49]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3132,7 +3211,7 @@ func (x *ListInventoryChangeLogsRequest) String() string {
 func (*ListInventoryChangeLogsRequest) ProtoMessage() {}
 
 func (x *ListInventoryChangeLogsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_users_territories_proto_msgTypes[48]
+	mi := &file_core_core_users_territories_proto_msgTypes[49]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3145,7 +3224,7 @@ func (x *ListInventoryChangeLogsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListInventoryChangeLogsRequest.ProtoReflect.Descriptor instead.
 func (*ListInventoryChangeLogsRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_users_territories_proto_rawDescGZIP(), []int{48}
+	return file_core_core_users_territories_proto_rawDescGZIP(), []int{49}
 }
 
 func (x *ListInventoryChangeLogsRequest) GetCursor() string {
@@ -3214,7 +3293,7 @@ type ListInventoryChangeLogsResponse struct {
 
 func (x *ListInventoryChangeLogsResponse) Reset() {
 	*x = ListInventoryChangeLogsResponse{}
-	mi := &file_core_core_users_territories_proto_msgTypes[49]
+	mi := &file_core_core_users_territories_proto_msgTypes[50]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3226,7 +3305,7 @@ func (x *ListInventoryChangeLogsResponse) String() string {
 func (*ListInventoryChangeLogsResponse) ProtoMessage() {}
 
 func (x *ListInventoryChangeLogsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_users_territories_proto_msgTypes[49]
+	mi := &file_core_core_users_territories_proto_msgTypes[50]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3239,7 +3318,7 @@ func (x *ListInventoryChangeLogsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListInventoryChangeLogsResponse.ProtoReflect.Descriptor instead.
 func (*ListInventoryChangeLogsResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_users_territories_proto_rawDescGZIP(), []int{49}
+	return file_core_core_users_territories_proto_rawDescGZIP(), []int{50}
 }
 
 func (x *ListInventoryChangeLogsResponse) GetInventoryChangeLogs() []*InventoryChangeLogInfo {
@@ -3265,7 +3344,7 @@ type GetInventoryChangeLogRequest struct {
 
 func (x *GetInventoryChangeLogRequest) Reset() {
 	*x = GetInventoryChangeLogRequest{}
-	mi := &file_core_core_users_territories_proto_msgTypes[50]
+	mi := &file_core_core_users_territories_proto_msgTypes[51]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3277,7 +3356,7 @@ func (x *GetInventoryChangeLogRequest) String() string {
 func (*GetInventoryChangeLogRequest) ProtoMessage() {}
 
 func (x *GetInventoryChangeLogRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_users_territories_proto_msgTypes[50]
+	mi := &file_core_core_users_territories_proto_msgTypes[51]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3290,7 +3369,7 @@ func (x *GetInventoryChangeLogRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetInventoryChangeLogRequest.ProtoReflect.Descriptor instead.
 func (*GetInventoryChangeLogRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_users_territories_proto_rawDescGZIP(), []int{50}
+	return file_core_core_users_territories_proto_rawDescGZIP(), []int{51}
 }
 
 func (x *GetInventoryChangeLogRequest) GetId() string {
@@ -3309,7 +3388,7 @@ type GetInventoryChangeLogResponse struct {
 
 func (x *GetInventoryChangeLogResponse) Reset() {
 	*x = GetInventoryChangeLogResponse{}
-	mi := &file_core_core_users_territories_proto_msgTypes[51]
+	mi := &file_core_core_users_territories_proto_msgTypes[52]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3321,7 +3400,7 @@ func (x *GetInventoryChangeLogResponse) String() string {
 func (*GetInventoryChangeLogResponse) ProtoMessage() {}
 
 func (x *GetInventoryChangeLogResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_users_territories_proto_msgTypes[51]
+	mi := &file_core_core_users_territories_proto_msgTypes[52]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3334,7 +3413,7 @@ func (x *GetInventoryChangeLogResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetInventoryChangeLogResponse.ProtoReflect.Descriptor instead.
 func (*GetInventoryChangeLogResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_users_territories_proto_rawDescGZIP(), []int{51}
+	return file_core_core_users_territories_proto_rawDescGZIP(), []int{52}
 }
 
 func (x *GetInventoryChangeLogResponse) GetInventoryChangeLog() *InventoryChangeLogInfo {
@@ -3357,7 +3436,7 @@ type ExportInventoryChangeLogsRequest struct {
 
 func (x *ExportInventoryChangeLogsRequest) Reset() {
 	*x = ExportInventoryChangeLogsRequest{}
-	mi := &file_core_core_users_territories_proto_msgTypes[52]
+	mi := &file_core_core_users_territories_proto_msgTypes[53]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3369,7 +3448,7 @@ func (x *ExportInventoryChangeLogsRequest) String() string {
 func (*ExportInventoryChangeLogsRequest) ProtoMessage() {}
 
 func (x *ExportInventoryChangeLogsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_users_territories_proto_msgTypes[52]
+	mi := &file_core_core_users_territories_proto_msgTypes[53]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3382,7 +3461,7 @@ func (x *ExportInventoryChangeLogsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExportInventoryChangeLogsRequest.ProtoReflect.Descriptor instead.
 func (*ExportInventoryChangeLogsRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_users_territories_proto_rawDescGZIP(), []int{52}
+	return file_core_core_users_territories_proto_rawDescGZIP(), []int{53}
 }
 
 func (x *ExportInventoryChangeLogsRequest) GetItemIds() []string {
@@ -3430,7 +3509,7 @@ type ExportInventoryChangeLogsResponse struct {
 
 func (x *ExportInventoryChangeLogsResponse) Reset() {
 	*x = ExportInventoryChangeLogsResponse{}
-	mi := &file_core_core_users_territories_proto_msgTypes[53]
+	mi := &file_core_core_users_territories_proto_msgTypes[54]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3442,7 +3521,7 @@ func (x *ExportInventoryChangeLogsResponse) String() string {
 func (*ExportInventoryChangeLogsResponse) ProtoMessage() {}
 
 func (x *ExportInventoryChangeLogsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_users_territories_proto_msgTypes[53]
+	mi := &file_core_core_users_territories_proto_msgTypes[54]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3455,7 +3534,7 @@ func (x *ExportInventoryChangeLogsResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use ExportInventoryChangeLogsResponse.ProtoReflect.Descriptor instead.
 func (*ExportInventoryChangeLogsResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_users_territories_proto_rawDescGZIP(), []int{53}
+	return file_core_core_users_territories_proto_rawDescGZIP(), []int{54}
 }
 
 func (x *ExportInventoryChangeLogsResponse) GetInventoryChangeLogs() []*InventoryChangeLogInfo {
@@ -3491,7 +3570,7 @@ type ListInvoicesRequest struct {
 
 func (x *ListInvoicesRequest) Reset() {
 	*x = ListInvoicesRequest{}
-	mi := &file_core_core_users_territories_proto_msgTypes[54]
+	mi := &file_core_core_users_territories_proto_msgTypes[55]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3503,7 +3582,7 @@ func (x *ListInvoicesRequest) String() string {
 func (*ListInvoicesRequest) ProtoMessage() {}
 
 func (x *ListInvoicesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_users_territories_proto_msgTypes[54]
+	mi := &file_core_core_users_territories_proto_msgTypes[55]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3516,7 +3595,7 @@ func (x *ListInvoicesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListInvoicesRequest.ProtoReflect.Descriptor instead.
 func (*ListInvoicesRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_users_territories_proto_rawDescGZIP(), []int{54}
+	return file_core_core_users_territories_proto_rawDescGZIP(), []int{55}
 }
 
 func (x *ListInvoicesRequest) GetCursor() string {
@@ -3606,7 +3685,7 @@ type ListInvoicesResponse struct {
 
 func (x *ListInvoicesResponse) Reset() {
 	*x = ListInvoicesResponse{}
-	mi := &file_core_core_users_territories_proto_msgTypes[55]
+	mi := &file_core_core_users_territories_proto_msgTypes[56]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3618,7 +3697,7 @@ func (x *ListInvoicesResponse) String() string {
 func (*ListInvoicesResponse) ProtoMessage() {}
 
 func (x *ListInvoicesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_users_territories_proto_msgTypes[55]
+	mi := &file_core_core_users_territories_proto_msgTypes[56]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3631,7 +3710,7 @@ func (x *ListInvoicesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListInvoicesResponse.ProtoReflect.Descriptor instead.
 func (*ListInvoicesResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_users_territories_proto_rawDescGZIP(), []int{55}
+	return file_core_core_users_territories_proto_rawDescGZIP(), []int{56}
 }
 
 func (x *ListInvoicesResponse) GetInvoices() []*InvoiceSummaryInfo {
@@ -3658,7 +3737,7 @@ type GetInvoiceRequest struct {
 
 func (x *GetInvoiceRequest) Reset() {
 	*x = GetInvoiceRequest{}
-	mi := &file_core_core_users_territories_proto_msgTypes[56]
+	mi := &file_core_core_users_territories_proto_msgTypes[57]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3670,7 +3749,7 @@ func (x *GetInvoiceRequest) String() string {
 func (*GetInvoiceRequest) ProtoMessage() {}
 
 func (x *GetInvoiceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_users_territories_proto_msgTypes[56]
+	mi := &file_core_core_users_territories_proto_msgTypes[57]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3683,7 +3762,7 @@ func (x *GetInvoiceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetInvoiceRequest.ProtoReflect.Descriptor instead.
 func (*GetInvoiceRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_users_territories_proto_rawDescGZIP(), []int{56}
+	return file_core_core_users_territories_proto_rawDescGZIP(), []int{57}
 }
 
 func (x *GetInvoiceRequest) GetId() string {
@@ -3709,7 +3788,7 @@ type GetInvoiceResponse struct {
 
 func (x *GetInvoiceResponse) Reset() {
 	*x = GetInvoiceResponse{}
-	mi := &file_core_core_users_territories_proto_msgTypes[57]
+	mi := &file_core_core_users_territories_proto_msgTypes[58]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3721,7 +3800,7 @@ func (x *GetInvoiceResponse) String() string {
 func (*GetInvoiceResponse) ProtoMessage() {}
 
 func (x *GetInvoiceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_users_territories_proto_msgTypes[57]
+	mi := &file_core_core_users_territories_proto_msgTypes[58]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3734,7 +3813,7 @@ func (x *GetInvoiceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetInvoiceResponse.ProtoReflect.Descriptor instead.
 func (*GetInvoiceResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_users_territories_proto_rawDescGZIP(), []int{57}
+	return file_core_core_users_territories_proto_rawDescGZIP(), []int{58}
 }
 
 func (x *GetInvoiceResponse) GetInvoice() *InvoiceInfo {
@@ -3757,7 +3836,7 @@ type UpdateInvoiceRequest struct {
 
 func (x *UpdateInvoiceRequest) Reset() {
 	*x = UpdateInvoiceRequest{}
-	mi := &file_core_core_users_territories_proto_msgTypes[58]
+	mi := &file_core_core_users_territories_proto_msgTypes[59]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3769,7 +3848,7 @@ func (x *UpdateInvoiceRequest) String() string {
 func (*UpdateInvoiceRequest) ProtoMessage() {}
 
 func (x *UpdateInvoiceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_users_territories_proto_msgTypes[58]
+	mi := &file_core_core_users_territories_proto_msgTypes[59]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3782,7 +3861,7 @@ func (x *UpdateInvoiceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateInvoiceRequest.ProtoReflect.Descriptor instead.
 func (*UpdateInvoiceRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_users_territories_proto_rawDescGZIP(), []int{58}
+	return file_core_core_users_territories_proto_rawDescGZIP(), []int{59}
 }
 
 func (x *UpdateInvoiceRequest) GetId() string {
@@ -3829,7 +3908,7 @@ type UpdateInvoiceResponse struct {
 
 func (x *UpdateInvoiceResponse) Reset() {
 	*x = UpdateInvoiceResponse{}
-	mi := &file_core_core_users_territories_proto_msgTypes[59]
+	mi := &file_core_core_users_territories_proto_msgTypes[60]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3841,7 +3920,7 @@ func (x *UpdateInvoiceResponse) String() string {
 func (*UpdateInvoiceResponse) ProtoMessage() {}
 
 func (x *UpdateInvoiceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_users_territories_proto_msgTypes[59]
+	mi := &file_core_core_users_territories_proto_msgTypes[60]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3854,7 +3933,7 @@ func (x *UpdateInvoiceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateInvoiceResponse.ProtoReflect.Descriptor instead.
 func (*UpdateInvoiceResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_users_territories_proto_rawDescGZIP(), []int{59}
+	return file_core_core_users_territories_proto_rawDescGZIP(), []int{60}
 }
 
 func (x *UpdateInvoiceResponse) GetInvoice() *InvoiceSummaryInfo {
@@ -3877,7 +3956,7 @@ type ListCustomerInvoicesRequest struct {
 
 func (x *ListCustomerInvoicesRequest) Reset() {
 	*x = ListCustomerInvoicesRequest{}
-	mi := &file_core_core_users_territories_proto_msgTypes[60]
+	mi := &file_core_core_users_territories_proto_msgTypes[61]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3889,7 +3968,7 @@ func (x *ListCustomerInvoicesRequest) String() string {
 func (*ListCustomerInvoicesRequest) ProtoMessage() {}
 
 func (x *ListCustomerInvoicesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_users_territories_proto_msgTypes[60]
+	mi := &file_core_core_users_territories_proto_msgTypes[61]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3902,7 +3981,7 @@ func (x *ListCustomerInvoicesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCustomerInvoicesRequest.ProtoReflect.Descriptor instead.
 func (*ListCustomerInvoicesRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_users_territories_proto_rawDescGZIP(), []int{60}
+	return file_core_core_users_territories_proto_rawDescGZIP(), []int{61}
 }
 
 func (x *ListCustomerInvoicesRequest) GetCustomerAccountId() string {
@@ -3950,7 +4029,7 @@ type ListCustomerInvoicesResponse struct {
 
 func (x *ListCustomerInvoicesResponse) Reset() {
 	*x = ListCustomerInvoicesResponse{}
-	mi := &file_core_core_users_territories_proto_msgTypes[61]
+	mi := &file_core_core_users_territories_proto_msgTypes[62]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3962,7 +4041,7 @@ func (x *ListCustomerInvoicesResponse) String() string {
 func (*ListCustomerInvoicesResponse) ProtoMessage() {}
 
 func (x *ListCustomerInvoicesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_users_territories_proto_msgTypes[61]
+	mi := &file_core_core_users_territories_proto_msgTypes[62]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3975,7 +4054,7 @@ func (x *ListCustomerInvoicesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCustomerInvoicesResponse.ProtoReflect.Descriptor instead.
 func (*ListCustomerInvoicesResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_users_territories_proto_rawDescGZIP(), []int{61}
+	return file_core_core_users_territories_proto_rawDescGZIP(), []int{62}
 }
 
 func (x *ListCustomerInvoicesResponse) GetInvoices() []*InvoiceForPaymentInfo {
@@ -4033,7 +4112,7 @@ type InvoiceSummaryInfo struct {
 
 func (x *InvoiceSummaryInfo) Reset() {
 	*x = InvoiceSummaryInfo{}
-	mi := &file_core_core_users_territories_proto_msgTypes[62]
+	mi := &file_core_core_users_territories_proto_msgTypes[63]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4045,7 +4124,7 @@ func (x *InvoiceSummaryInfo) String() string {
 func (*InvoiceSummaryInfo) ProtoMessage() {}
 
 func (x *InvoiceSummaryInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_users_territories_proto_msgTypes[62]
+	mi := &file_core_core_users_territories_proto_msgTypes[63]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4058,7 +4137,7 @@ func (x *InvoiceSummaryInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InvoiceSummaryInfo.ProtoReflect.Descriptor instead.
 func (*InvoiceSummaryInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_users_territories_proto_rawDescGZIP(), []int{62}
+	return file_core_core_users_territories_proto_rawDescGZIP(), []int{63}
 }
 
 func (x *InvoiceSummaryInfo) GetId() string {
@@ -4324,7 +4403,7 @@ type InvoiceInfo struct {
 
 func (x *InvoiceInfo) Reset() {
 	*x = InvoiceInfo{}
-	mi := &file_core_core_users_territories_proto_msgTypes[63]
+	mi := &file_core_core_users_territories_proto_msgTypes[64]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4336,7 +4415,7 @@ func (x *InvoiceInfo) String() string {
 func (*InvoiceInfo) ProtoMessage() {}
 
 func (x *InvoiceInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_users_territories_proto_msgTypes[63]
+	mi := &file_core_core_users_territories_proto_msgTypes[64]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4349,7 +4428,7 @@ func (x *InvoiceInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InvoiceInfo.ProtoReflect.Descriptor instead.
 func (*InvoiceInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_users_territories_proto_rawDescGZIP(), []int{63}
+	return file_core_core_users_territories_proto_rawDescGZIP(), []int{64}
 }
 
 func (x *InvoiceInfo) GetId() string {
@@ -4777,7 +4856,15 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"department\x18\x01 \x01(\v2\x14.core.DepartmentInfoR\n" +
 	"department\")\n" +
 	"\x17DeleteDepartmentRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"\xd0\x03\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\x88\x01\n" +
+	"\rEmailLogActor\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
+	"\n" +
+	"actor_type\x18\x02 \x01(\tR\tactorType\x12\x17\n" +
+	"\x04name\x18\x03 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x1b\n" +
+	"\x06handle\x18\x04 \x01(\tH\x01R\x06handle\x88\x01\x01B\a\n" +
+	"\x05_nameB\t\n" +
+	"\a_handle\"\xab\x03\n" +
 	"\fEmailLogInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
 	"\bhas_sent\x18\x02 \x01(\bR\ahasSent\x12\x1e\n" +
@@ -4786,11 +4873,8 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"recipients\x12\x1d\n" +
 	"\asubject\x18\x04 \x01(\tH\x00R\asubject\x88\x01\x01\x12\x1f\n" +
 	"\bfilename\x18\x05 \x01(\tH\x01R\bfilename\x88\x01\x01\x12)\n" +
-	"\x0eses_message_id\x18\x06 \x01(\tH\x02R\fsesMessageId\x88\x01\x01\x12!\n" +
-	"\n" +
-	"sent_by_id\x18\a \x01(\tH\x03R\bsentById\x88\x01\x01\x12%\n" +
-	"\fsent_by_name\x18\b \x01(\tH\x04R\n" +
-	"sentByName\x88\x01\x01\x129\n" +
+	"\x0eses_message_id\x18\x06 \x01(\tH\x02R\fsesMessageId\x88\x01\x01\x121\n" +
+	"\asent_by\x18\a \x01(\v2\x13.core.EmailLogActorH\x03R\x06sentBy\x88\x01\x01\x129\n" +
 	"\n" +
 	"created_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
@@ -4799,21 +4883,23 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"\n" +
 	"\b_subjectB\v\n" +
 	"\t_filenameB\x11\n" +
-	"\x0f_ses_message_idB\r\n" +
-	"\v_sent_by_idB\x0f\n" +
-	"\r_sent_by_name\"y\n" +
+	"\x0f_ses_message_idB\n" +
+	"\n" +
+	"\b_sent_byJ\x04\b\b\x10\t\"\x95\x01\n" +
 	"\x14ListEmailLogsRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x19\n" +
-	"\x05query\x18\x03 \x01(\tH\x01R\x05query\x88\x01\x01B\t\n" +
+	"\x05query\x18\x03 \x01(\tH\x01R\x05query\x88\x01\x01\x12\x1a\n" +
+	"\bincludes\x18\x04 \x03(\tR\bincludesB\t\n" +
 	"\a_cursorB\b\n" +
 	"\x06_query\"w\n" +
 	"\x15ListEmailLogsResponse\x121\n" +
 	"\n" +
 	"email_logs\x18\x01 \x03(\v2\x12.core.EmailLogInfoR\temailLogs\x12+\n" +
-	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"$\n" +
+	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"@\n" +
 	"\x12GetEmailLogRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"F\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
+	"\bincludes\x18\x02 \x03(\tR\bincludes\"F\n" +
 	"\x13GetEmailLogResponse\x12/\n" +
 	"\temail_log\x18\x01 \x01(\v2\x12.core.EmailLogInfoR\bemailLog\"\xd9\a\n" +
 	"\x16InventoryChangeLogInfo\x12\x0e\n" +
@@ -5035,7 +5121,7 @@ func file_core_core_users_territories_proto_rawDescGZIP() []byte {
 	return file_core_core_users_territories_proto_rawDescData
 }
 
-var file_core_core_users_territories_proto_msgTypes = make([]protoimpl.MessageInfo, 64)
+var file_core_core_users_territories_proto_msgTypes = make([]protoimpl.MessageInfo, 65)
 var file_core_core_users_territories_proto_goTypes = []any{
 	(*GetCurrentUserResponse)(nil),              // 0: core.GetCurrentUserResponse
 	(*CustomerAccountSummaryProto)(nil),         // 1: core.CustomerAccountSummaryProto
@@ -5079,105 +5165,107 @@ var file_core_core_users_territories_proto_goTypes = []any{
 	(*UpdateDepartmentRequest)(nil),             // 39: core.UpdateDepartmentRequest
 	(*UpdateDepartmentResponse)(nil),            // 40: core.UpdateDepartmentResponse
 	(*DeleteDepartmentRequest)(nil),             // 41: core.DeleteDepartmentRequest
-	(*EmailLogInfo)(nil),                        // 42: core.EmailLogInfo
-	(*ListEmailLogsRequest)(nil),                // 43: core.ListEmailLogsRequest
-	(*ListEmailLogsResponse)(nil),               // 44: core.ListEmailLogsResponse
-	(*GetEmailLogRequest)(nil),                  // 45: core.GetEmailLogRequest
-	(*GetEmailLogResponse)(nil),                 // 46: core.GetEmailLogResponse
-	(*InventoryChangeLogInfo)(nil),              // 47: core.InventoryChangeLogInfo
-	(*ListInventoryChangeLogsRequest)(nil),      // 48: core.ListInventoryChangeLogsRequest
-	(*ListInventoryChangeLogsResponse)(nil),     // 49: core.ListInventoryChangeLogsResponse
-	(*GetInventoryChangeLogRequest)(nil),        // 50: core.GetInventoryChangeLogRequest
-	(*GetInventoryChangeLogResponse)(nil),       // 51: core.GetInventoryChangeLogResponse
-	(*ExportInventoryChangeLogsRequest)(nil),    // 52: core.ExportInventoryChangeLogsRequest
-	(*ExportInventoryChangeLogsResponse)(nil),   // 53: core.ExportInventoryChangeLogsResponse
-	(*ListInvoicesRequest)(nil),                 // 54: core.ListInvoicesRequest
-	(*ListInvoicesResponse)(nil),                // 55: core.ListInvoicesResponse
-	(*GetInvoiceRequest)(nil),                   // 56: core.GetInvoiceRequest
-	(*GetInvoiceResponse)(nil),                  // 57: core.GetInvoiceResponse
-	(*UpdateInvoiceRequest)(nil),                // 58: core.UpdateInvoiceRequest
-	(*UpdateInvoiceResponse)(nil),               // 59: core.UpdateInvoiceResponse
-	(*ListCustomerInvoicesRequest)(nil),         // 60: core.ListCustomerInvoicesRequest
-	(*ListCustomerInvoicesResponse)(nil),        // 61: core.ListCustomerInvoicesResponse
-	(*InvoiceSummaryInfo)(nil),                  // 62: core.InvoiceSummaryInfo
-	(*InvoiceInfo)(nil),                         // 63: core.InvoiceInfo
-	(*timestamppb.Timestamp)(nil),               // 64: google.protobuf.Timestamp
-	(*PageInfo)(nil),                            // 65: core.PageInfo
-	(*LightScanningStationInfo)(nil),            // 66: core.LightScanningStationInfo
-	(*LightMachineInfo)(nil),                    // 67: core.LightMachineInfo
-	(*InvoiceForPaymentInfo)(nil),               // 68: core.InvoiceForPaymentInfo
-	(*InvoiceLineInfo)(nil),                     // 69: core.InvoiceLineInfo
-	(*InvoiceAllocationInfo)(nil),               // 70: core.InvoiceAllocationInfo
+	(*EmailLogActor)(nil),                       // 42: core.EmailLogActor
+	(*EmailLogInfo)(nil),                        // 43: core.EmailLogInfo
+	(*ListEmailLogsRequest)(nil),                // 44: core.ListEmailLogsRequest
+	(*ListEmailLogsResponse)(nil),               // 45: core.ListEmailLogsResponse
+	(*GetEmailLogRequest)(nil),                  // 46: core.GetEmailLogRequest
+	(*GetEmailLogResponse)(nil),                 // 47: core.GetEmailLogResponse
+	(*InventoryChangeLogInfo)(nil),              // 48: core.InventoryChangeLogInfo
+	(*ListInventoryChangeLogsRequest)(nil),      // 49: core.ListInventoryChangeLogsRequest
+	(*ListInventoryChangeLogsResponse)(nil),     // 50: core.ListInventoryChangeLogsResponse
+	(*GetInventoryChangeLogRequest)(nil),        // 51: core.GetInventoryChangeLogRequest
+	(*GetInventoryChangeLogResponse)(nil),       // 52: core.GetInventoryChangeLogResponse
+	(*ExportInventoryChangeLogsRequest)(nil),    // 53: core.ExportInventoryChangeLogsRequest
+	(*ExportInventoryChangeLogsResponse)(nil),   // 54: core.ExportInventoryChangeLogsResponse
+	(*ListInvoicesRequest)(nil),                 // 55: core.ListInvoicesRequest
+	(*ListInvoicesResponse)(nil),                // 56: core.ListInvoicesResponse
+	(*GetInvoiceRequest)(nil),                   // 57: core.GetInvoiceRequest
+	(*GetInvoiceResponse)(nil),                  // 58: core.GetInvoiceResponse
+	(*UpdateInvoiceRequest)(nil),                // 59: core.UpdateInvoiceRequest
+	(*UpdateInvoiceResponse)(nil),               // 60: core.UpdateInvoiceResponse
+	(*ListCustomerInvoicesRequest)(nil),         // 61: core.ListCustomerInvoicesRequest
+	(*ListCustomerInvoicesResponse)(nil),        // 62: core.ListCustomerInvoicesResponse
+	(*InvoiceSummaryInfo)(nil),                  // 63: core.InvoiceSummaryInfo
+	(*InvoiceInfo)(nil),                         // 64: core.InvoiceInfo
+	(*timestamppb.Timestamp)(nil),               // 65: google.protobuf.Timestamp
+	(*PageInfo)(nil),                            // 66: core.PageInfo
+	(*LightScanningStationInfo)(nil),            // 67: core.LightScanningStationInfo
+	(*LightMachineInfo)(nil),                    // 68: core.LightMachineInfo
+	(*InvoiceForPaymentInfo)(nil),               // 69: core.InvoiceForPaymentInfo
+	(*InvoiceLineInfo)(nil),                     // 70: core.InvoiceLineInfo
+	(*InvoiceAllocationInfo)(nil),               // 71: core.InvoiceAllocationInfo
 }
 var file_core_core_users_territories_proto_depIdxs = []int32{
-	64, // 0: core.GetCurrentUserResponse.email_verified_at:type_name -> google.protobuf.Timestamp
-	64, // 1: core.GetCurrentUserResponse.created_at:type_name -> google.protobuf.Timestamp
-	64, // 2: core.GetCurrentUserResponse.updated_at:type_name -> google.protobuf.Timestamp
+	65, // 0: core.GetCurrentUserResponse.email_verified_at:type_name -> google.protobuf.Timestamp
+	65, // 1: core.GetCurrentUserResponse.created_at:type_name -> google.protobuf.Timestamp
+	65, // 2: core.GetCurrentUserResponse.updated_at:type_name -> google.protobuf.Timestamp
 	1,  // 3: core.ListCustomerAccountsForUserResponse.accounts:type_name -> core.CustomerAccountSummaryProto
 	4,  // 4: core.TerritoryInfo.sales_rep:type_name -> core.TerritoryAccountUserInfo
 	5,  // 5: core.TerritoryInfo.product_line:type_name -> core.TerritoryProductLineInfo
-	64, // 6: core.TerritoryInfo.created_at:type_name -> google.protobuf.Timestamp
-	64, // 7: core.TerritoryInfo.updated_at:type_name -> google.protobuf.Timestamp
+	65, // 6: core.TerritoryInfo.created_at:type_name -> google.protobuf.Timestamp
+	65, // 7: core.TerritoryInfo.updated_at:type_name -> google.protobuf.Timestamp
 	6,  // 8: core.ListTerritoriesResponse.territories:type_name -> core.TerritoryInfo
-	65, // 9: core.ListTerritoriesResponse.page_info:type_name -> core.PageInfo
+	66, // 9: core.ListTerritoriesResponse.page_info:type_name -> core.PageInfo
 	6,  // 10: core.GetTerritoryResponse.territory:type_name -> core.TerritoryInfo
 	6,  // 11: core.CreateTerritoryResponse.territory:type_name -> core.TerritoryInfo
 	6,  // 12: core.UpdateTerritoryResponse.territory:type_name -> core.TerritoryInfo
 	16, // 13: core.RegistrationFlowInfo.customer_group_options:type_name -> core.RegistrationFlowOptionInfo
 	16, // 14: core.RegistrationFlowInfo.payment_term_options:type_name -> core.RegistrationFlowOptionInfo
 	16, // 15: core.RegistrationFlowInfo.shipping_term_options:type_name -> core.RegistrationFlowOptionInfo
-	64, // 16: core.RegistrationFlowInfo.created_at:type_name -> google.protobuf.Timestamp
-	64, // 17: core.RegistrationFlowInfo.updated_at:type_name -> google.protobuf.Timestamp
+	65, // 16: core.RegistrationFlowInfo.created_at:type_name -> google.protobuf.Timestamp
+	65, // 17: core.RegistrationFlowInfo.updated_at:type_name -> google.protobuf.Timestamp
 	17, // 18: core.ListRegistrationFlowsResponse.registration_flows:type_name -> core.RegistrationFlowInfo
-	65, // 19: core.ListRegistrationFlowsResponse.page_info:type_name -> core.PageInfo
+	66, // 19: core.ListRegistrationFlowsResponse.page_info:type_name -> core.PageInfo
 	17, // 20: core.GetRegistrationFlowResponse.registration_flow:type_name -> core.RegistrationFlowInfo
 	17, // 21: core.CreateRegistrationFlowResponse.registration_flow:type_name -> core.RegistrationFlowInfo
 	17, // 22: core.UpdateRegistrationFlowResponse.registration_flow:type_name -> core.RegistrationFlowInfo
 	17, // 23: core.GetRegistrationFlowBySlugResponse.registration_flow:type_name -> core.RegistrationFlowInfo
 	29, // 24: core.RegisterCustomerRequest.address:type_name -> core.RegisterCustomerAddressInput
-	66, // 25: core.DepartmentInfo.scanning_stations:type_name -> core.LightScanningStationInfo
-	67, // 26: core.DepartmentInfo.machines:type_name -> core.LightMachineInfo
-	64, // 27: core.DepartmentInfo.created_at:type_name -> google.protobuf.Timestamp
-	64, // 28: core.DepartmentInfo.updated_at:type_name -> google.protobuf.Timestamp
+	67, // 25: core.DepartmentInfo.scanning_stations:type_name -> core.LightScanningStationInfo
+	68, // 26: core.DepartmentInfo.machines:type_name -> core.LightMachineInfo
+	65, // 27: core.DepartmentInfo.created_at:type_name -> google.protobuf.Timestamp
+	65, // 28: core.DepartmentInfo.updated_at:type_name -> google.protobuf.Timestamp
 	32, // 29: core.ListDepartmentsResponse.departments:type_name -> core.DepartmentInfo
-	65, // 30: core.ListDepartmentsResponse.page_info:type_name -> core.PageInfo
+	66, // 30: core.ListDepartmentsResponse.page_info:type_name -> core.PageInfo
 	32, // 31: core.GetDepartmentResponse.department:type_name -> core.DepartmentInfo
 	32, // 32: core.CreateDepartmentResponse.department:type_name -> core.DepartmentInfo
 	32, // 33: core.UpdateDepartmentResponse.department:type_name -> core.DepartmentInfo
-	64, // 34: core.EmailLogInfo.created_at:type_name -> google.protobuf.Timestamp
-	64, // 35: core.EmailLogInfo.updated_at:type_name -> google.protobuf.Timestamp
-	42, // 36: core.ListEmailLogsResponse.email_logs:type_name -> core.EmailLogInfo
-	65, // 37: core.ListEmailLogsResponse.page_info:type_name -> core.PageInfo
-	42, // 38: core.GetEmailLogResponse.email_log:type_name -> core.EmailLogInfo
-	64, // 39: core.InventoryChangeLogInfo.created_at:type_name -> google.protobuf.Timestamp
-	64, // 40: core.InventoryChangeLogInfo.updated_at:type_name -> google.protobuf.Timestamp
-	64, // 41: core.ListInventoryChangeLogsRequest.start_date:type_name -> google.protobuf.Timestamp
-	64, // 42: core.ListInventoryChangeLogsRequest.end_date:type_name -> google.protobuf.Timestamp
-	47, // 43: core.ListInventoryChangeLogsResponse.inventory_change_logs:type_name -> core.InventoryChangeLogInfo
-	65, // 44: core.ListInventoryChangeLogsResponse.page_info:type_name -> core.PageInfo
-	47, // 45: core.GetInventoryChangeLogResponse.inventory_change_log:type_name -> core.InventoryChangeLogInfo
-	64, // 46: core.ExportInventoryChangeLogsRequest.start_date:type_name -> google.protobuf.Timestamp
-	64, // 47: core.ExportInventoryChangeLogsRequest.end_date:type_name -> google.protobuf.Timestamp
-	47, // 48: core.ExportInventoryChangeLogsResponse.inventory_change_logs:type_name -> core.InventoryChangeLogInfo
-	64, // 49: core.ListInvoicesRequest.start_date:type_name -> google.protobuf.Timestamp
-	64, // 50: core.ListInvoicesRequest.end_date:type_name -> google.protobuf.Timestamp
-	62, // 51: core.ListInvoicesResponse.invoices:type_name -> core.InvoiceSummaryInfo
-	65, // 52: core.ListInvoicesResponse.page_info:type_name -> core.PageInfo
-	63, // 53: core.GetInvoiceResponse.invoice:type_name -> core.InvoiceInfo
-	62, // 54: core.UpdateInvoiceResponse.invoice:type_name -> core.InvoiceSummaryInfo
-	68, // 55: core.ListCustomerInvoicesResponse.invoices:type_name -> core.InvoiceForPaymentInfo
-	65, // 56: core.ListCustomerInvoicesResponse.page_info:type_name -> core.PageInfo
-	64, // 57: core.InvoiceSummaryInfo.created_at:type_name -> google.protobuf.Timestamp
-	64, // 58: core.InvoiceSummaryInfo.updated_at:type_name -> google.protobuf.Timestamp
-	69, // 59: core.InvoiceInfo.lines:type_name -> core.InvoiceLineInfo
-	70, // 60: core.InvoiceInfo.allocations:type_name -> core.InvoiceAllocationInfo
-	64, // 61: core.InvoiceInfo.created_at:type_name -> google.protobuf.Timestamp
-	64, // 62: core.InvoiceInfo.updated_at:type_name -> google.protobuf.Timestamp
-	63, // [63:63] is the sub-list for method output_type
-	63, // [63:63] is the sub-list for method input_type
-	63, // [63:63] is the sub-list for extension type_name
-	63, // [63:63] is the sub-list for extension extendee
-	0,  // [0:63] is the sub-list for field type_name
+	42, // 34: core.EmailLogInfo.sent_by:type_name -> core.EmailLogActor
+	65, // 35: core.EmailLogInfo.created_at:type_name -> google.protobuf.Timestamp
+	65, // 36: core.EmailLogInfo.updated_at:type_name -> google.protobuf.Timestamp
+	43, // 37: core.ListEmailLogsResponse.email_logs:type_name -> core.EmailLogInfo
+	66, // 38: core.ListEmailLogsResponse.page_info:type_name -> core.PageInfo
+	43, // 39: core.GetEmailLogResponse.email_log:type_name -> core.EmailLogInfo
+	65, // 40: core.InventoryChangeLogInfo.created_at:type_name -> google.protobuf.Timestamp
+	65, // 41: core.InventoryChangeLogInfo.updated_at:type_name -> google.protobuf.Timestamp
+	65, // 42: core.ListInventoryChangeLogsRequest.start_date:type_name -> google.protobuf.Timestamp
+	65, // 43: core.ListInventoryChangeLogsRequest.end_date:type_name -> google.protobuf.Timestamp
+	48, // 44: core.ListInventoryChangeLogsResponse.inventory_change_logs:type_name -> core.InventoryChangeLogInfo
+	66, // 45: core.ListInventoryChangeLogsResponse.page_info:type_name -> core.PageInfo
+	48, // 46: core.GetInventoryChangeLogResponse.inventory_change_log:type_name -> core.InventoryChangeLogInfo
+	65, // 47: core.ExportInventoryChangeLogsRequest.start_date:type_name -> google.protobuf.Timestamp
+	65, // 48: core.ExportInventoryChangeLogsRequest.end_date:type_name -> google.protobuf.Timestamp
+	48, // 49: core.ExportInventoryChangeLogsResponse.inventory_change_logs:type_name -> core.InventoryChangeLogInfo
+	65, // 50: core.ListInvoicesRequest.start_date:type_name -> google.protobuf.Timestamp
+	65, // 51: core.ListInvoicesRequest.end_date:type_name -> google.protobuf.Timestamp
+	63, // 52: core.ListInvoicesResponse.invoices:type_name -> core.InvoiceSummaryInfo
+	66, // 53: core.ListInvoicesResponse.page_info:type_name -> core.PageInfo
+	64, // 54: core.GetInvoiceResponse.invoice:type_name -> core.InvoiceInfo
+	63, // 55: core.UpdateInvoiceResponse.invoice:type_name -> core.InvoiceSummaryInfo
+	69, // 56: core.ListCustomerInvoicesResponse.invoices:type_name -> core.InvoiceForPaymentInfo
+	66, // 57: core.ListCustomerInvoicesResponse.page_info:type_name -> core.PageInfo
+	65, // 58: core.InvoiceSummaryInfo.created_at:type_name -> google.protobuf.Timestamp
+	65, // 59: core.InvoiceSummaryInfo.updated_at:type_name -> google.protobuf.Timestamp
+	70, // 60: core.InvoiceInfo.lines:type_name -> core.InvoiceLineInfo
+	71, // 61: core.InvoiceInfo.allocations:type_name -> core.InvoiceAllocationInfo
+	65, // 62: core.InvoiceInfo.created_at:type_name -> google.protobuf.Timestamp
+	65, // 63: core.InvoiceInfo.updated_at:type_name -> google.protobuf.Timestamp
+	64, // [64:64] is the sub-list for method output_type
+	64, // [64:64] is the sub-list for method input_type
+	64, // [64:64] is the sub-list for extension type_name
+	64, // [64:64] is the sub-list for extension extendee
+	0,  // [0:64] is the sub-list for field type_name
 }
 
 func init() { file_core_core_users_territories_proto_init() }
@@ -5205,21 +5293,22 @@ func file_core_core_users_territories_proto_init() {
 	file_core_core_users_territories_proto_msgTypes[39].OneofWrappers = []any{}
 	file_core_core_users_territories_proto_msgTypes[42].OneofWrappers = []any{}
 	file_core_core_users_territories_proto_msgTypes[43].OneofWrappers = []any{}
-	file_core_core_users_territories_proto_msgTypes[47].OneofWrappers = []any{}
+	file_core_core_users_territories_proto_msgTypes[44].OneofWrappers = []any{}
 	file_core_core_users_territories_proto_msgTypes[48].OneofWrappers = []any{}
-	file_core_core_users_territories_proto_msgTypes[52].OneofWrappers = []any{}
-	file_core_core_users_territories_proto_msgTypes[54].OneofWrappers = []any{}
-	file_core_core_users_territories_proto_msgTypes[58].OneofWrappers = []any{}
-	file_core_core_users_territories_proto_msgTypes[60].OneofWrappers = []any{}
-	file_core_core_users_territories_proto_msgTypes[62].OneofWrappers = []any{}
+	file_core_core_users_territories_proto_msgTypes[49].OneofWrappers = []any{}
+	file_core_core_users_territories_proto_msgTypes[53].OneofWrappers = []any{}
+	file_core_core_users_territories_proto_msgTypes[55].OneofWrappers = []any{}
+	file_core_core_users_territories_proto_msgTypes[59].OneofWrappers = []any{}
+	file_core_core_users_territories_proto_msgTypes[61].OneofWrappers = []any{}
 	file_core_core_users_territories_proto_msgTypes[63].OneofWrappers = []any{}
+	file_core_core_users_territories_proto_msgTypes[64].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_core_core_users_territories_proto_rawDesc), len(file_core_core_users_territories_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   64,
+			NumMessages:   65,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

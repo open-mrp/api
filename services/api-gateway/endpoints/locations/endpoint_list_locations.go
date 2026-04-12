@@ -22,6 +22,7 @@ func (e *ListLocationsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListLoca
 		Title:             "List Locations",
 		Description:       "Returns a paginated list of locations for the caller's account.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/locations",
 		Request:           &ListLocationsRequest{},
 		Response:          &apiresource.List[apiresource.Location]{},

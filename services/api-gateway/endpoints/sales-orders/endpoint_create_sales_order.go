@@ -127,6 +127,7 @@ func (e *CreateSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*Creat
 		Title:             "Create Sales Order",
 		Description:       "Creates a new sales order.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/sales/sales-orders",
 		Request:           &CreateSalesOrderRequest{},
 		Response:          &apiresource.SalesOrderDetail{},
@@ -135,6 +136,9 @@ func (e *CreateSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*Creat
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateSalesOrderRequest) (*apiresource.SalesOrderDetail, *apierror.APIError) {
 			return svc.(SalesOrderSvc).CreateSalesOrder
+		},
+		LocationFunc: func(resp *apiresource.SalesOrderDetail) string {
+			return "/v1/sales/sales-orders/" + resp.ID
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeSalesOrder,

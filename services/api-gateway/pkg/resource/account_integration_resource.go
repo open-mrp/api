@@ -20,7 +20,7 @@ type AccountIntegration struct {
 	// The human-readable name for the integration.
 	Name string `json:"name" validate:"required"`
 	// The integration provider code (e.g. "stripe", "shippo").
-	IntegrationCode constants.IntegrationCode `json:"integration_code" validate:"required"`
+	IntegrationCode constants.IntegrationCode `json:"provider" validate:"required"`
 	// Whether this integration is currently active.
 	IsActive bool `json:"is_active"`
 	// When this integration was created.

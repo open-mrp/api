@@ -28,6 +28,7 @@ func (e *ListAgentsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAgentsR
 		Title:             "List Agents",
 		Description:       "Returns all system and custom agent definitions for the current account.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/ai/agents",
 		Request:           &ListAgentsRequest{},
 		Response:          &apiresource.List[apiresource.AgentDefinition]{},

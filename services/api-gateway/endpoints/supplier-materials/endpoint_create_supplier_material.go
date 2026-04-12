@@ -37,6 +37,7 @@ func (e *CreateSupplierMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		Title:             "Create Supplier Material",
 		Description:       "Creates a new supplier material association.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/suppliers/{supplier_id}/materials",
 		Request:           &CreateSupplierMaterialRequest{},
 		Response:          &apiresource.SupplierMaterial{},

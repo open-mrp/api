@@ -18,7 +18,7 @@ type UpdateAccountGroupRequest struct {
 	// The display name of the account group.
 	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// An optional description of the account group.
-	Description *string `json:"description,omitempty"`
+	Description *string `json:"description,omitempty" nullable:"true"`
 	// The commission status code.
 	CommissionPolicy *constants.CommissionPolicy `json:"commission_policy,omitempty" nullable:"false"`
 	// The freight status code.

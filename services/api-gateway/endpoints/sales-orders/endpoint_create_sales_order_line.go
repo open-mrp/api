@@ -45,6 +45,7 @@ func (e *CreateSalesOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*C
 		Title:             "Create Sales Order Line",
 		Description:       "Creates a new line item on a sales order.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/sales/sales-orders/{id}/lines",
 		Request:           &CreateSalesOrderLineRequest{},
 		Response:          &apiresource.SalesOrderLineDetail{},

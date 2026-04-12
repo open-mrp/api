@@ -49,6 +49,9 @@ func (e *CreatePartEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreatePartR
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreatePartRequest) (*apiresource.Part, *apierror.APIError) {
 			return svc.(PartSvc).CreatePart
 		},
+		LocationFunc: func(resp *apiresource.Part) string {
+			return "/v1/operations/parts/" + resp.ID
+		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypePart,
 			Fields:     []string{"category", "unit_value", "unit_cost", "burn_rate"},

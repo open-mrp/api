@@ -23,6 +23,7 @@ func (e *GetAccountStatusEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetAc
 		Title:             "Get Account Status",
 		Description:       "Returns a single account status by its ID or code.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/sales/account-statuses/{id}",
 		Request:           &GetAccountStatusRequest{},
 		Response:          &apiresource.AccountStatus{},

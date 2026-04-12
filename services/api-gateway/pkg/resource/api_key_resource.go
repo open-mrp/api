@@ -56,17 +56,12 @@ var SampleAPIKey = &APIKey{
 	Object:        constants.ObjectTypeAPIKey,
 	Name:          SampleAPIKeyName,
 	RedactedValue: SampleProdAPIKeyRedactedValue,
-	Role: &Role{
-		ID:       SampleRoleID,
-		Object:   constants.ObjectTypeRole,
-		Name:     SampleRoleName,
-		TypeCode: constants.RoleTypeCodeAdmin,
-	},
-	CreatedAt:  timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt:  timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
-	LastUsedAt: timeutil.TimestampToTimePtr(sampleUpdatedAtTimestamp),
-	ExpiresAt:  timeutil.TimestampToTimePtr(sampleExpiresAtTimestamp),
-	RevokedAt:  nil,
+	Role:          SampleRole,
+	CreatedAt:     timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:     timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	LastUsedAt:    timeutil.TimestampToTimePtr(sampleUpdatedAtTimestamp),
+	ExpiresAt:     timeutil.TimestampToTimePtr(sampleExpiresAtTimestamp),
+	RevokedAt:     nil,
 }
 
 var SampleCreatedAPIKey = &CreatedAPIKey{

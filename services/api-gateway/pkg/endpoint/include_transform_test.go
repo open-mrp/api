@@ -33,10 +33,10 @@ func TestCollapseUnexpanded_SingleObject_Collapsed(t *testing.T) {
 		"object": "api_key",
 		"name":   "My Key",
 		"role": map[string]any{
-			"id":             "rl_xxx",
-			"object":         "role",
-			"name":           "Admin",
-			"role_type_code": "admin",
+			"id":     "rl_xxx",
+			"object": "role",
+			"name":   "Admin",
+			"type":   "admin",
 		},
 	}
 
@@ -52,10 +52,10 @@ func TestCollapseUnexpanded_SingleObject_Expanded(t *testing.T) {
 		"object": "api_key",
 		"name":   "My Key",
 		"role": map[string]any{
-			"id":             "rl_xxx",
-			"object":         "role",
-			"name":           "Admin",
-			"role_type_code": "admin",
+			"id":     "rl_xxx",
+			"object": "role",
+			"name":   "Admin",
+			"type":   "admin",
 		},
 	}
 
@@ -65,7 +65,7 @@ func TestCollapseUnexpanded_SingleObject_Expanded(t *testing.T) {
 	assert.Equal(t, "rl_xxx", role["id"])
 	assert.Equal(t, "role", role["object"])
 	assert.Equal(t, "Admin", role["name"])
-	assert.Equal(t, "admin", role["role_type_code"])
+	assert.Equal(t, "admin", role["type"])
 }
 
 func TestCollapseUnexpanded_ListResponse(t *testing.T) {

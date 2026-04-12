@@ -21,6 +21,7 @@ func (e *DeleteSupplierMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		Title:             "Delete Supplier Material",
 		Description:       "Deletes a supplier material association.",
 		Method:            http.MethodDelete,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/suppliers/{supplier_id}/materials/{id}",
 		Request:           &DeleteSupplierMaterialRequest{},
 		Response:          &apiresource.SupplierMaterial{},

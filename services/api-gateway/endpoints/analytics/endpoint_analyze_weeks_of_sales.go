@@ -22,6 +22,7 @@ func (e *AnalyzeWeeksOfSalesEndpoint) Materialize() *apiendpoint.APIEndpoint[*An
 		Title:             "Analyze Weeks of Sales",
 		Description:       "Returns weeks-of-sales metrics per product line, including on-hand quantity, average weekly sales, and weeks of inventory remaining.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/core/analytics/weeks-of-sales",
 		Request:           &AnalyzeWeeksOfSalesRequest{},
 		Response:          &apiresource.AnalyzeWeeksOfSalesResponse{},

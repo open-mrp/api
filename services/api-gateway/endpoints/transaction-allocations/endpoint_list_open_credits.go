@@ -27,6 +27,7 @@ func (e *ListOpenCreditsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListOp
 		Title:             "List Open Credits",
 		Description:       "Returns a paginated list of open credit transactions for the current account.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/finance/open-credits",
 		Request:           &ListOpenCreditsRequest{},
 		Response:          &apiresource.List[apiresource.OpenCreditEntry]{},

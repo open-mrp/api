@@ -25,6 +25,7 @@ func (e *PullEDIOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*PullEDIO
 		Title:             "Pull EDI Orders",
 		Description:       "Triggers an EDI pull-orders operation, pulling orders from FTP and processing invoices via Stedi.",
 		Method:            http.MethodPut,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/edi/actions/pull-orders",
 		Request:           &PullEDIOrdersRequest{},
 		Response:          &apiresource.MessageResource{},

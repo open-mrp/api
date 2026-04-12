@@ -22,6 +22,7 @@ func (e *DeleteAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*Dele
 		Title:             "Delete Account User",
 		Description:       "Soft-deletes an account user, setting their status to removed.",
 		Method:            http.MethodDelete,
+		ContentType:       "application/json",
 		Route:             "/v1/identity/account-users/{id}",
 		Request:           &DeleteAccountUserRequest{},
 		Response:          &apiresource.EmptyResource{},

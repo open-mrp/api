@@ -22,6 +22,7 @@ func (e *GetOAuthStatusEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetOAut
 		Title:             "Get Carrier OAuth Status",
 		Description:       "Returns the OAuth connection status for a carrier. Sandbox accounts always return disconnected.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/carriers/{id}/oauth-status",
 		Request:           &GetOAuthStatusRequest{},
 		Response:          &apiresource.OAuthStatusResponse{},

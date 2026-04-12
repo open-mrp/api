@@ -43,6 +43,7 @@ func (e *CreateSalesTargetEndpoint) Materialize() *apiendpoint.APIEndpoint[*Crea
 		Title:             "Create Sales Target",
 		Description:       "Creates a new sales target for an account user.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/sales/account-users/{id}/sales-targets",
 		Request:           &CreateSalesTargetRequest{},
 		Response:          &apiresource.SalesTarget{},

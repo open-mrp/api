@@ -30,11 +30,12 @@ func AgentAlertPresenter(a *pb.AgentAlertInfo) apiresource.AgentAlert {
 		alert.AcknowledgedAt = &t
 	}
 	if a.AcknowledgedBy != "" {
-		alert.AcknowledgedBy = &apiresource.Actor{
-			ID:     a.AcknowledgedBy,
-			Object: constants.ObjectType(a.AcknowledgedByActorType),
-			Name:   ptrStringOrNil(a.AcknowledgedByActorName),
-		}
+		alert.AcknowledgedBy = apiresource.NewActor(
+			a.AcknowledgedBy,
+			constants.ActorType(a.AcknowledgedByActorType),
+			ptrStringOrNil(a.AcknowledgedByActorName),
+			nil,
+		)
 	}
 	if a.MetadataJson != "" && a.MetadataJson != "{}" {
 		alert.Metadata = json.RawMessage(a.MetadataJson)

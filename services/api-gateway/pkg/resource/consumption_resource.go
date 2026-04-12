@@ -41,7 +41,7 @@ type ConsumptionItem struct {
 	// A description of the item.
 	Description *string `json:"description"`
 	// The item type code.
-	ItemTypeCode constants.ItemTypeCode `json:"item_type_code" validate:"required"`
+	ItemTypeCode constants.ItemTypeCode `json:"item_type" validate:"required"`
 }
 
 var sampleConsumptionInstructions = "Mix with water before adding"

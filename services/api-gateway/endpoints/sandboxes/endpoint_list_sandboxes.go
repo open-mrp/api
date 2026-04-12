@@ -17,6 +17,7 @@ func (e *ListSandboxesEndpoint) Materialize() *apiendpoint.APIEndpoint[*apiresou
 		Title:             "List Sandboxes",
 		Description:       "Returns a paginated list of sandbox accounts for the target account.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/core/sandboxes",
 		Request:           &apiresource.PaginationRequest{},
 		Response:          &apiresource.List[apiresource.Sandbox]{},

@@ -19,16 +19,17 @@ func TestAccountGroups_CRUD(t *testing.T) {
 
 	// Create
 	name := uniqueName("e2e-acgrp")
-	createStatus, createBody, err := apiClient.Post(accountGroupsPath, map[string]any{
+	createResp, err := apiClient.PostFull(accountGroupsPath, map[string]any{
 		"name": name,
 		"type": "type_group",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, createStatus, createBody)
+	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
 
-	created := parseJSON(createBody)
+	created := parseJSON(createResp.Body)
 	id := jsonField(created, "id")
 	assert.NotEmpty(t, id)
+	assertCreatedLocation(t, createResp.Header, id)
 	assert.Equal(t, "account_group", jsonField(created, "object"))
 	assert.Equal(t, name, jsonField(created, "name"))
 	assert.Equal(t, "type_group", jsonField(created, "type"))

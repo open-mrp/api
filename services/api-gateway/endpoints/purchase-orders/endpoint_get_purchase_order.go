@@ -25,6 +25,7 @@ func (e *GetPurchaseOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetPu
 		Title:             "Get Purchase Order",
 		Description:       "Returns a single purchase order by its ID.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/purchase-orders/{id}",
 		Request:           &GetPurchaseOrderRequest{},
 		Response:          &apiresource.PurchaseOrderDetail{},

@@ -439,7 +439,7 @@ func (q *Queries) ListAccountGroupsForward(ctx context.Context, arg ListAccountG
 const updateAccountGroup = `-- name: UpdateAccountGroup :execresult
 UPDATE account_group SET
     name = COALESCE(?, name),
-    description = COALESCE(?, description),
+    description = ?,
     commission_status_code = COALESCE(?, commission_status_code),
     freight_status_code = COALESCE(?, freight_status_code),
     updated_at = NOW(3)

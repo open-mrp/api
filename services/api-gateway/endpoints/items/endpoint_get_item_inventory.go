@@ -22,6 +22,7 @@ func (e *GetItemInventoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetIt
 		Title:             "Get Item Inventory",
 		Description:       "Returns inventory quantities for an item, including on-hand, reserved, available-to-promise, and short amounts.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/catalog/items/{id}/inventory",
 		Request:           &GetItemInventoryRequest{},
 		Response:          &apiresource.ItemInventory{},

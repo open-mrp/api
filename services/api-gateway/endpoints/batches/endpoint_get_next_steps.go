@@ -33,6 +33,7 @@ func (e *GetPossibleNextStepsEndpoint) Materialize() *apiendpoint.APIEndpoint[*G
 		Title:             "Get Possible Next Steps",
 		Description:       "Returns the possible next production steps for a batch at a given scanning station.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/batches/{id}/next-steps",
 		Request:           &GetPossibleNextStepsRequest{},
 		Response:          &apiresource.List[apiresource.ScanningProductionStepInfo]{},

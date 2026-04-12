@@ -23,6 +23,7 @@ func (e *GetDCLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetDCLoc
 		Title:             "Get DC Location",
 		Description:       "Returns a single DC location by its ID.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/dc-locations/{id}",
 		Request:           &GetDCLocationRequest{},
 		Response:          &apiresource.DCLocation{},

@@ -21,6 +21,7 @@ func (e *ListPurchaseOrderStatusesEndpoint) Materialize() *apiendpoint.APIEndpoi
 		Title:             "List Purchase Order Statuses",
 		Description:       "Returns a paginated list of available purchase order status values.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/purchase-orders/statuses",
 		Request:           &ListPurchaseOrderStatusesRequest{},
 		Response:          &apiresource.List[apiresource.SalesOrderStatus]{},

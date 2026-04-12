@@ -50,8 +50,8 @@ func TestMapRowToRequestLogRead_UserActor(t *testing.T) {
 	if rl.Actor == nil {
 		t.Fatal("expected Actor to be resolved for identity_type=user")
 	}
-	if rl.Actor.ObjectType != constants.ObjectTypeUser {
-		t.Errorf("expected ObjectType %q, got %q", constants.ObjectTypeUser, rl.Actor.ObjectType)
+	if rl.Actor.ActorType != constants.ActorTypeUser {
+		t.Errorf("expected ActorType %q, got %q", constants.ActorTypeUser, rl.Actor.ActorType)
 	}
 	if rl.Actor.ID != "usr_abc123" {
 		t.Errorf("expected actor ID 'usr_abc123', got %q", rl.Actor.ID)
@@ -91,8 +91,8 @@ func TestMapRowToRequestLogRead_APIKeyActor(t *testing.T) {
 	if rl.Actor == nil {
 		t.Fatal("expected Actor to be resolved for identity_type=api_key")
 	}
-	if rl.Actor.ObjectType != constants.ObjectTypeAPIKey {
-		t.Errorf("expected ObjectType %q, got %q", constants.ObjectTypeAPIKey, rl.Actor.ObjectType)
+	if rl.Actor.ActorType != constants.ActorTypeAPIKey {
+		t.Errorf("expected ActorType %q, got %q", constants.ActorTypeAPIKey, rl.Actor.ActorType)
 	}
 	// Should use ApiKeyTypeID as the ID when available
 	if rl.Actor.ID != "apk_type_id_456" {
@@ -190,8 +190,8 @@ func TestMapRowToRequestLogRead_InternalActorType_WithUserIdentity(t *testing.T)
 	if rl.Actor == nil {
 		t.Fatal("expected Actor to be resolved when identity_type=user, even with actor_type=internal")
 	}
-	if rl.Actor.ObjectType != constants.ObjectTypeUser {
-		t.Errorf("expected ObjectType %q, got %q", constants.ObjectTypeUser, rl.Actor.ObjectType)
+	if rl.Actor.ActorType != constants.ActorTypeUser {
+		t.Errorf("expected ActorType %q, got %q", constants.ActorTypeUser, rl.Actor.ActorType)
 	}
 	if rl.Actor.Email == nil || *rl.Actor.Email != "admin@example.com" {
 		t.Errorf("expected email 'admin@example.com', got %v", rl.Actor.Email)
@@ -215,8 +215,8 @@ func TestMapRowToRequestLogRead_CustomerActorType_WithAPIKeyIdentity(t *testing.
 	if rl.Actor == nil {
 		t.Fatal("expected Actor to be resolved when identity_type=api_key, even with actor_type=customer")
 	}
-	if rl.Actor.ObjectType != constants.ObjectTypeAPIKey {
-		t.Errorf("expected ObjectType %q, got %q", constants.ObjectTypeAPIKey, rl.Actor.ObjectType)
+	if rl.Actor.ActorType != constants.ActorTypeAPIKey {
+		t.Errorf("expected ActorType %q, got %q", constants.ActorTypeAPIKey, rl.Actor.ActorType)
 	}
 }
 

@@ -38,7 +38,7 @@ func NewClient(baseURL, apiKey, accountID string) *Client {
 		apiKey:     apiKey,
 		accountID:  accountID,
 		apiVersion: defaultAPIVersion,
-		retries:    3,
+		retries:    5,
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},

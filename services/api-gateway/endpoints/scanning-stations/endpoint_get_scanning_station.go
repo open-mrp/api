@@ -23,6 +23,7 @@ func (e *GetScanningStationEndpoint) Materialize() *apiendpoint.APIEndpoint[*Get
 		Title:             "Get Scanning Station",
 		Description:       "Returns a single scanning station by its ID.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/scanning-stations/{id}",
 		Request:           &GetScanningStationRequest{},
 		Response:          &apiresource.ScanningStation{},

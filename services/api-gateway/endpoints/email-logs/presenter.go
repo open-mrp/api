@@ -28,13 +28,13 @@ func EmailLogPresenter(el *pb.EmailLogInfo) apiresource.EmailLog {
 		result.Recipients = []string{}
 	}
 
-	if el.SentById != nil && *el.SentById != "" {
-		sentBy := &apiresource.User{
-			ID:     *el.SentById,
-			Object: constants.ObjectTypeUser,
-			Name:   el.SentByName,
-		}
-		result.SentBy = sentBy
+	if el.SentBy != nil && el.SentBy.Id != "" {
+		result.SentBy = apiresource.NewActor(
+			el.SentBy.Id,
+			constants.ActorType(el.SentBy.ActorType),
+			el.SentBy.Name,
+			el.SentBy.Handle,
+		)
 	}
 
 	return result

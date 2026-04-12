@@ -224,7 +224,6 @@ message UpdateLocationRequest {
   optional string name = 2;
   optional string type_code = 3;
   optional string parent_id = 4;
-  bool clear_parent = 5;
   repeated string child_ids = 6;
   bool update_children = 7;
 }

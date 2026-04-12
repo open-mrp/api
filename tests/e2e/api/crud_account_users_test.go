@@ -140,18 +140,19 @@ func TestAccountUsers_CreateAndGet(t *testing.T) {
 	name := uniqueName("e2e-acuser")
 	email := name + "@e2e-test.augno.com"
 
-	createStatus, createBody, err := apiClient.Post(accountUsersPath, map[string]any{
+	createResp, err := apiClient.PostFull(accountUsersPath, map[string]any{
 		"name":    name,
 		"email":   email,
 		"role_id": SeedAdminRoleID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, createStatus, createBody)
+	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
 
-	created := parseJSON(createBody)
+	created := parseJSON(createResp.Body)
 	assert.Equal(t, "account_user", jsonField(created, "object"))
 	id := jsonField(created, "id")
 	assert.NotEmpty(t, id)
+	assertCreatedLocation(t, createResp.Header, id)
 	assert.Equal(t, name, jsonField(created, "name"))
 
 	// Get
@@ -175,7 +176,7 @@ func TestAccountUsers_CreateAndUpdateAllFields(t *testing.T) {
 	// ── CREATE with all fields ──
 	name := uniqueName("e2e-au-allf")
 	email := name + "@e2e-test.augno.com"
-	createStatus, createBody, err := apiClient.Post(accountUsersPath, map[string]any{
+	createResp, err := apiClient.PostFull(accountUsersPath, map[string]any{
 		"name":          name,
 		"email":         email,
 		"role_id":       SeedAdminRoleID,
@@ -183,11 +184,12 @@ func TestAccountUsers_CreateAndUpdateAllFields(t *testing.T) {
 		"is_sales_rep":  true,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, createStatus, createBody)
+	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
 
-	got := parseJSON(createBody)
+	got := parseJSON(createResp.Body)
 	id := jsonField(got, "id")
 	require.NotEmpty(t, id)
+	assertCreatedLocation(t, createResp.Header, id)
 	defer apiClient.Delete(accountUsersPath + "/" + id)
 
 	assert.Equal(t, "account_user", jsonField(got, "object"))

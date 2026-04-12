@@ -23,6 +23,7 @@ func (e *GetAgentEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetAgentReque
 		Title:             "Get Agent",
 		Description:       "Returns a single agent definition with its tool configuration.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/ai/agents/{id}",
 		Request:           &GetAgentRequest{},
 		Response:          &apiresource.AgentDefinition{},

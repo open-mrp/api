@@ -16,23 +16,23 @@ type UpdateAccountRequest struct {
 	// The ID of the account to update.
 	AccountID string `path:"id" validate:"required"`
 	// The display name of the account.
-	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
+	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// The support email address.
-	SupportEmail *string `json:"support_email,omitempty" validate:"omitnil,custom_email,max=255" nullable:"true"`
+	SupportEmail *string `json:"support_email,omitempty" nullable:"false" validate:"omitnil,custom_email,max=255"`
 	// The support phone number.
-	PhoneNumber *string `json:"phone_number,omitempty" nullable:"true" validate:"omitempty,max=255"`
+	PhoneNumber *string `json:"phone_number,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// The portal slug.
-	Slug *string `json:"slug,omitempty" validate:"omitempty,min=3,max=255"`
+	Slug *string `json:"slug,omitempty" nullable:"false" validate:"omitempty,min=3,max=255"`
 	// The website URL.
-	WebsiteURL *string `json:"website_url,omitempty" validate:"omitempty,url,max=2083" nullable:"true"`
+	WebsiteURL *string `json:"website_url,omitempty" nullable:"false" validate:"omitempty,url,max=2083"`
 	// The Facebook handle.
-	FacebookHandle *string `json:"facebook_handle,omitempty" nullable:"true" validate:"omitempty,max=255"`
+	FacebookHandle *string `json:"facebook_handle,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// The Instagram handle.
-	InstagramHandle *string `json:"instagram_handle,omitempty" nullable:"true" validate:"omitempty,max=255"`
+	InstagramHandle *string `json:"instagram_handle,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// The LinkedIn handle.
-	LinkedInHandle *string `json:"linkedin_handle,omitempty" nullable:"true" validate:"omitempty,max=255"`
+	LinkedInHandle *string `json:"linkedin_handle,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// The Twitter handle.
-	TwitterHandle *string `json:"twitter_handle,omitempty" nullable:"true" validate:"omitempty,max=255"`
+	TwitterHandle *string `json:"twitter_handle,omitempty" nullable:"false" validate:"omitempty,max=255"`
 }
 
 var sampleUpdateAccountName = "Acme Inc."

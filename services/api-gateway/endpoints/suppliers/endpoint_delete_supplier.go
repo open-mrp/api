@@ -22,6 +22,7 @@ func (e *DeleteSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteS
 		Title:             "Delete Supplier",
 		Description:       "Deletes a supplier and its associated account relations, addresses, and account users.",
 		Method:            http.MethodDelete,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/suppliers/{id}",
 		Request:           &DeleteSupplierRequest{},
 		Response:          &apiresource.SupplierDetail{},

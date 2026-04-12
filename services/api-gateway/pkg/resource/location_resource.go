@@ -61,7 +61,7 @@ type Location struct {
 	// The display name of the location.
 	Name string `json:"name" validate:"required"`
 	// The code of the location type.
-	TypeCode constants.LocationTypeCode `json:"type_code" validate:"required"`
+	TypeCode constants.LocationTypeCode `json:"type" validate:"required"`
 	// The parent location. Null if this is a top-level location. Expandable.
 	Parent *Location `json:"parent" expandable:"true"`
 	// The child locations. Expandable.

@@ -124,19 +124,20 @@ func TestProductLines_CRUD(t *testing.T) {
 	name := uniqueName("e2e-pdln")
 
 	// Create
-	createStatus, createBody, err := apiClient.Post(productLinesPath, map[string]any{
+	createResp, err := apiClient.PostFull(productLinesPath, map[string]any{
 		"name":              name,
 		"unit_group_id":     SeedUnitGroupID,
 		"commission_policy": "commission_applied",
 		"freight_policy":    "billed_freight",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, createStatus, createBody)
+	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
 
-	created := parseJSON(createBody)
+	created := parseJSON(createResp.Body)
 	assert.Equal(t, "product_line", jsonField(created, "object"))
 	id := jsonField(created, "id")
 	assert.NotEmpty(t, id)
+	assertCreatedLocation(t, createResp.Header, id)
 	assert.Equal(t, name, jsonField(created, "name"))
 
 	// Get
@@ -178,18 +179,19 @@ func TestProductLines_CreateAndUpdateAllFields(t *testing.T) {
 
 	// ── CREATE with all fields ──
 	name := uniqueName("e2e-pdln-allf")
-	createStatus, createBody, err := apiClient.Post(productLinesPath+"?include=unit_group", map[string]any{
+	createResp, err := apiClient.PostFull(productLinesPath+"?include=unit_group", map[string]any{
 		"name":              name,
 		"unit_group_id":     SeedUnitGroupID,
 		"commission_policy": "commission_applied",
 		"freight_policy":    "billed_freight",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, createStatus, createBody)
+	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
 
-	got := parseJSON(createBody)
+	got := parseJSON(createResp.Body)
 	id := jsonField(got, "id")
 	require.NotEmpty(t, id)
+	assertCreatedLocation(t, createResp.Header, id)
 	defer apiClient.Delete(productLinesPath + "/" + id)
 
 	assert.Equal(t, "product_line", jsonField(got, "object"))
@@ -234,18 +236,19 @@ func TestProductLines_CreateAndUpdateAllFields(t *testing.T) {
 func TestProductLines_CreateResponseShape(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-pdln-shape")
-	createStatus, createBody, err := apiClient.Post(productLinesPath, map[string]any{
+	createResp, err := apiClient.PostFull(productLinesPath, map[string]any{
 		"name":              name,
 		"unit_group_id":     SeedUnitGroupID,
 		"commission_policy": "commission_exempt",
 		"freight_policy":    "billed_freight",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, createStatus, createBody)
+	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
 
-	created := parseJSON(createBody)
+	created := parseJSON(createResp.Body)
 	id := jsonField(created, "id")
 	assert.NotEmpty(t, id)
+	assertCreatedLocation(t, createResp.Header, id)
 	assert.Equal(t, "product_line", jsonField(created, "object"))
 	assert.Equal(t, name, jsonField(created, "name"))
 	assert.NotEmpty(t, jsonField(created, "created_at"))

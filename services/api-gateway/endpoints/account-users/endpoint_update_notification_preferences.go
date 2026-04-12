@@ -44,6 +44,7 @@ func (e *UpdateNotificationPreferencesEndpoint) Materialize() *apiendpoint.APIEn
 		Title:             "Update Notification Preferences",
 		Description:       "Updates notification preferences for an account user.",
 		Method:            http.MethodPut,
+		ContentType:       "application/json",
 		Route:             "/v1/identity/account-users/{id}/notification-preferences",
 		Request:           &UpdateNotificationPreferencesRequest{},
 		Response:          &apiresource.AccountUser{},

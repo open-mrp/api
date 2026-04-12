@@ -24,6 +24,7 @@ func (e *CreatePurchaseOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint
 		Title:             "Create Purchase Order Line",
 		Description:       "Creates a new line item on a purchase order.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/purchase-orders/{id}/lines",
 		Request:           &CreatePurchaseOrderLineRequest{},
 		Response:          &apiresource.PurchaseOrderLineDetail{},

@@ -19,6 +19,7 @@ func (e *GetCurrentUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetCurr
 		Title:             "Get Current User",
 		Description:       "Returns the authenticated user's profile information.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/identity/me",
 		Request:           &GetCurrentUserRequest{},
 		Response:          &apiresource.User{},

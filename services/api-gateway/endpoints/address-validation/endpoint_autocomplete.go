@@ -21,10 +21,11 @@ type AutocompleteAddressEndpoint struct{}
 
 func (e *AutocompleteAddressEndpoint) Materialize() *apiendpoint.APIEndpoint[*AutocompleteAddressRequest, *apiresource.List[apiresource.AddressSuggestion]] {
 	return &apiendpoint.APIEndpoint[*AutocompleteAddressRequest, *apiresource.List[apiresource.AddressSuggestion]]{
-		Title:             "Autocomplete Address",
-		Description:       "Returns address autocomplete suggestions based on the input text.",
+		Title:             "Get Address Suggestions",
+		Description:       "Returns address suggestions based on the input text.",
 		Method:            http.MethodGet,
-		Route:             "/v1/core/addresses/autocomplete",
+		ContentType:       "application/json",
+		Route:             "/v1/core/addresses/suggestions",
 		Request:           &AutocompleteAddressRequest{},
 		Response:          &apiresource.List[apiresource.AddressSuggestion]{},
 		SuccessStatusCode: http.StatusOK,

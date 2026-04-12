@@ -175,6 +175,17 @@ func assertResponseHeaderPresent(t *testing.T, header http.Header, name string) 
 	assert.NotEmpty(t, header.Get(name), "header %s should be present and non-empty", name)
 }
 
+// assertCreatedLocation asserts that a 201 response includes a Location header
+// pointing at the newly created resource. The header must be present and must
+// contain the new resource's id (typically as the last path segment).
+func assertCreatedLocation(t *testing.T, header http.Header, id string) {
+	t.Helper()
+	location := header.Get("Location")
+	require.NotEmpty(t, location, "201 Created response must include a Location header")
+	assert.Contains(t, location, id,
+		"Location header %q should contain the new resource id %q", location, id)
+}
+
 // assertIDFormat asserts the ID starts with the given prefix followed by "_".
 func assertIDFormat(t *testing.T, id, expectedPrefix string) {
 	t.Helper()
@@ -210,7 +221,7 @@ func assertNilField(t *testing.T, m map[string]any, field string) {
 func validCustomerBody(name string) map[string]any {
 	return map[string]any{
 		"name":                     name,
-		"status_code":              "normal",
+		"status":                   "normal",
 		"default_carrier_id":       SeedCarrierID,
 		"default_payment_term_id":  SeedPaymentTermID,
 		"default_shipping_term_id": SeedShippingTermID,

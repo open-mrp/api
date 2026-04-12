@@ -23,6 +23,7 @@ func (e *GetPropertyEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetPropert
 		Title:             "Get Property",
 		Description:       "Returns a single property by its ID.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/catalog/properties/{id}",
 		Request:           &GetPropertyRequest{},
 		Response:          &apiresource.Property{},

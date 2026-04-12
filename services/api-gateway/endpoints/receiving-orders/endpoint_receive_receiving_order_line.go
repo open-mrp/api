@@ -24,6 +24,7 @@ func (e *ReceiveReceivingOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoi
 		Title:             "Receive Receiving Order Line",
 		Description:       "Marks a single receiving order line as received.",
 		Method:            http.MethodPut,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/receiving-orders/{receivingOrderId}/lines/{id}/actions/receive",
 		Request:           &ReceiveReceivingOrderLineRequest{},
 		Response:          &apiresource.ReceivingOrderLine{},

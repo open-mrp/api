@@ -37,6 +37,7 @@ func (e *MoveBatchesEndpoint) Materialize() *apiendpoint.APIEndpoint[*MoveBatche
 		Title:             "Move Batches",
 		Description:       "Moves one or more batches to a new production step at the specified scanning station.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/batches/actions/move",
 		Request:           &MoveBatchesRequest{},
 		Response:          &apiresource.Batch{},

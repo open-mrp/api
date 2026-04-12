@@ -22,6 +22,7 @@ func (e *GetLatestSysPropertyValueEndpoint) Materialize() *apiendpoint.APIEndpoi
 		Title:             "Get Latest System Property Value",
 		Description:       "Returns the next available counter value for a system property type, initializing it if it does not exist for the account.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/core/sys-properties/{type_code}/latest-value",
 		Request:           &GetLatestSysPropertyValueRequest{},
 		Response:          &apiresource.SysPropertyValue{},

@@ -29,6 +29,7 @@ func (e *ListAccountTransactionsEndpoint) Materialize() *apiendpoint.APIEndpoint
 		Title:             "List Account Transactions",
 		Description:       "Returns a paginated list of transactions scoped to a specific customer account, optionally including transactions from child accounts.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/finance/accounts/{account_id}/transactions",
 		Request:           &ListAccountTransactionsRequest{},
 		Response:          &apiresource.List[apiresource.TransactionDetail]{},

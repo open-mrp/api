@@ -25,6 +25,7 @@ func (e *GetTransactionEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetTran
 		Title:             "Get Transaction",
 		Description:       "Returns a single transaction by its ID.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/finance/transactions/{id}",
 		Request:           &GetTransactionRequest{},
 		Response:          &apiresource.TransactionDetail{},

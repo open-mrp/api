@@ -23,6 +23,7 @@ func (e *GetDepartmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetDepar
 		Title:             "Get Department",
 		Description:       "Returns a single department by its ID.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/departments/{id}",
 		Request:           &GetDepartmentRequest{},
 		Response:          &apiresource.Department{},

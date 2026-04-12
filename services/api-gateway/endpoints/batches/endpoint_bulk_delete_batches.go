@@ -31,6 +31,7 @@ func (e *BulkDeleteBatchesEndpoint) Materialize() *apiendpoint.APIEndpoint[*Dele
 		Title:             "Bulk Delete Batches",
 		Description:       "Deletes multiple batches in a single operation.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/batches/actions/bulk-delete",
 		Request:           &DeleteManyBatchesRequest{},
 		Response:          &apiresource.EmptyResource{},

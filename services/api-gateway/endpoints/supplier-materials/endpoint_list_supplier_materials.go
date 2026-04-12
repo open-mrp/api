@@ -22,6 +22,7 @@ func (e *ListSupplierMaterialsEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		Title:             "List Supplier Materials",
 		Description:       "Returns a paginated list of supplier materials for a given supplier.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/suppliers/{supplier_id}/materials",
 		Request:           &ListSupplierMaterialsRequest{},
 		Response:          &apiresource.List[apiresource.SupplierMaterial]{},

@@ -16,9 +16,9 @@ type UpdateCarrierRequest struct {
 	// The ID of the carrier to update.
 	CarrierID string `path:"id" validate:"required"`
 	// The new display name for the carrier.
-	Name *string `json:"name" validate:"omitempty,max=255"`
+	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// Whether this carrier is visible in the customer portal.
-	CustomerPortalVisibility *constants.CustomerPortalVisibility `json:"customer_portal_visibility"`
+	CustomerPortalVisibility *constants.CustomerPortalVisibility `json:"customer_portal_visibility,omitempty" nullable:"false"`
 }
 
 var sampleUpdateCarrierName = "FedEx Express"
@@ -37,6 +37,7 @@ func (e *UpdateCarrierEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateCa
 		Title:             "Update Carrier",
 		Description:       "Partially updates a carrier's name and portal visibility.",
 		Method:            http.MethodPatch,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/carriers/{id}",
 		Request:           &UpdateCarrierRequest{},
 		Response:          &apiresource.Carrier{},

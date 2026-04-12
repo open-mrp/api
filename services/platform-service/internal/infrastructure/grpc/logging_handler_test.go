@@ -267,7 +267,7 @@ func (s *LoggingHandlerTestSuite) TestRequestLogToProto_WithActor() {
 		CreatedAt:  time.Now().UTC(),
 		Actor: &domain.RequestLogActor{
 			ID:           "usr_1",
-			ObjectType:   constants.ObjectTypeUser,
+			ActorType:    constants.ActorTypeUser,
 			Name:         &name,
 			Email:        &email,
 			RoleID:       &roleID,
@@ -279,7 +279,7 @@ func (s *LoggingHandlerTestSuite) TestRequestLogToProto_WithActor() {
 	proto := requestLogToProto(rl)
 	s.NotNil(proto.Actor)
 	s.Equal("usr_1", proto.Actor.Id)
-	s.Equal(string(constants.ObjectTypeUser), proto.Actor.ObjectType)
+	s.Equal(string(constants.ActorTypeUser), proto.Actor.ActorType)
 	s.Equal(&name, proto.Actor.Name)
 	s.Equal(&email, proto.Actor.Email)
 	s.Equal(&roleID, proto.Actor.RoleId)

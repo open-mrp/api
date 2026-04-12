@@ -22,6 +22,7 @@ func (e *RestoreAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*Res
 		Title:             "Restore Account User",
 		Description:       "Restores a previously removed account user, setting their status back to active.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/identity/account-users/{id}/restore",
 		Request:           &RestoreAccountUserRequest{},
 		Response:          &apiresource.EmptyResource{},

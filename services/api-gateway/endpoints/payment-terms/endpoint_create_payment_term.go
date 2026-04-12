@@ -32,6 +32,7 @@ func (e *CreatePaymentTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*Crea
 		Title:             "Create Payment Term",
 		Description:       "Creates a new payment term.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/finance/payment-terms",
 		Request:           &CreatePaymentTermRequest{},
 		Response:          &apiresource.PaymentTerm{},
@@ -40,6 +41,9 @@ func (e *CreatePaymentTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*Crea
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreatePaymentTermRequest) (*apiresource.PaymentTerm, *apierror.APIError) {
 			return svc.(PaymentTermSvc).CreatePaymentTerm
+		},
+		LocationFunc: func(resp *apiresource.PaymentTerm) string {
+			return "/v1/finance/payment-terms/" + resp.ID
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypePaymentTerm,

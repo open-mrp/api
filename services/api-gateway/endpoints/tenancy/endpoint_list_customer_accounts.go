@@ -23,6 +23,7 @@ func (e *ListCustomerAccountsEndpoint) Materialize() *apiendpoint.APIEndpoint[*L
 		Title:             "List Customer Accounts",
 		Description:       "Returns the customer accounts accessible to the authenticated user under the specified vendor account.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/identity/me/tenancy/customer-accounts/{vendor_account_id}",
 		Request:           &ListCustomerAccountsRequest{},
 		Response:          &apiresource.List[apiresource.CustomerAccountSummary]{},

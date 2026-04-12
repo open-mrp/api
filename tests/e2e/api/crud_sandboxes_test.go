@@ -15,38 +15,42 @@ const sandboxesPath = "/v1/core/sandboxes"
 func TestSandboxes_CreateBlank(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-sandbox")
-	status, body, err := apiClient.Post(sandboxesPath, map[string]any{
+	createResp, err := apiClient.PostFull(sandboxesPath, map[string]any{
 		"name": name,
 		"mode": "blank",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, status, body)
+	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
 
-	m := parseJSON(body)
+	m := parseJSON(createResp.Body)
 	assert.Equal(t, "sandbox", jsonField(m, "object"))
-	assert.NotEmpty(t, jsonField(m, "id"))
+	id := jsonField(m, "id")
+	assert.NotEmpty(t, id)
+	assertCreatedLocation(t, createResp.Header, id)
 	assert.Equal(t, name, jsonField(m, "name"))
 	assert.NotEmpty(t, jsonField(m, "created_at"))
 	assert.NotEmpty(t, jsonField(m, "updated_at"))
 
-	apiClient.Delete(sandboxesPath + "/" + jsonField(m, "id"))
+	apiClient.Delete(sandboxesPath + "/" + id)
 }
 
 func TestSandboxes_CreateSeeded(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-seeded")
-	status, body, err := apiClient.Post(sandboxesPath, map[string]any{
+	createResp, err := apiClient.PostFull(sandboxesPath, map[string]any{
 		"name": name,
 		"mode": "seeded",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, status, body)
+	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
 
-	m := parseJSON(body)
+	m := parseJSON(createResp.Body)
 	assert.Equal(t, "sandbox", jsonField(m, "object"))
-	assert.NotEmpty(t, jsonField(m, "id"))
+	id := jsonField(m, "id")
+	assert.NotEmpty(t, id)
+	assertCreatedLocation(t, createResp.Header, id)
 
-	apiClient.Delete(sandboxesPath + "/" + jsonField(m, "id"))
+	apiClient.Delete(sandboxesPath + "/" + id)
 }
 
 func TestSandboxes_Get(t *testing.T) {

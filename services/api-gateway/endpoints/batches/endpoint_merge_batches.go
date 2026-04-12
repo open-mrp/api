@@ -37,6 +37,7 @@ func (e *MergeBatchesEndpoint) Materialize() *apiendpoint.APIEndpoint[*MergeBatc
 		Title:             "Merge Batches",
 		Description:       "Merges multiple batches into a single batch at the specified production step and scanning station.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/batches/actions/merge",
 		Request:           &MergeBatchesRequest{},
 		Response:          &apiresource.Batch{},

@@ -22,6 +22,7 @@ func (e *DeleteDepartmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*Delet
 		Title:             "Delete Department",
 		Description:       "Deletes a department. Fails if the department still has associated scanning stations or machines.",
 		Method:            http.MethodDelete,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/departments/{id}",
 		Request:           &DeleteDepartmentRequest{},
 		Response:          &apiresource.EmptyResource{},

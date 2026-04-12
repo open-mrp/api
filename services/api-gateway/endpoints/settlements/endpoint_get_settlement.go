@@ -25,6 +25,7 @@ func (e *GetSettlementEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetSettl
 		Title:             "Get Settlement",
 		Description:       "Returns a single settlement by its ID.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/finance/settlements/{id}",
 		Request:           &GetSettlementRequest{},
 		Response:          &apiresource.Settlement{},

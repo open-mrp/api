@@ -16,13 +16,13 @@ type UpdateUnitGroupRequest struct {
 	// The ID of the unit group to update.
 	UnitGroupID string `path:"id" validate:"required"`
 	// The display name of the unit group.
-	Name *string `json:"name,omitempty" validate:"omitempty,max=255"`
+	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// Optional notes about the unit group. Set to null to clear.
-	Notes *string `json:"notes,omitempty"`
+	Notes *string `json:"notes,omitempty" nullable:"true"`
 	// The base unit ID.
-	BaseUnitID *string `json:"base_unit_id,omitempty" validate:"omitempty,max=191"`
+	BaseUnitID *string `json:"base_unit_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
 	// If provided, upserts associated units. Existing associated units not in the list are preserved.
-	AssociatedUnits *[]CreateUnitGroupUnitParam `json:"associated_units,omitempty"`
+	AssociatedUnits *[]CreateUnitGroupUnitParam `json:"associated_units,omitempty" nullable:"false"`
 }
 
 var sampleUpdateUnitGroupName = "Weight Units (Updated)"

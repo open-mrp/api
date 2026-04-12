@@ -24,6 +24,7 @@ func (e *VoidPickLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*VoidPickL
 		Title:             "Void Pick Line",
 		Description:       "Voids a single pick line.",
 		Method:            http.MethodPut,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/picks/{pickId}/lines/{id}/actions/void",
 		Request:           &VoidPickLineRequest{},
 		Response:          &apiresource.PickLineDetail{},

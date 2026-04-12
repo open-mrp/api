@@ -25,6 +25,7 @@ func (e *ChangeItemCategoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cha
 		Title:             "Change Item Category",
 		Description:       "Changes the category of an item. When the category changes, the item's rate units are updated to the new category's base unit.",
 		Method:            http.MethodPut,
+		ContentType:       "application/json",
 		Route:             "/v1/catalog/items/{id}/category/{category_id}",
 		Request:           &ChangeItemCategoryRequest{},
 		Response:          &apiresource.Item{},

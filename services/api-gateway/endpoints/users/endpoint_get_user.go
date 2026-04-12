@@ -22,6 +22,7 @@ func (e *GetUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetUserRequest
 		Title:             "Get User",
 		Description:       "Returns a single user's profile by its ID.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/identity/users/{id}",
 		Request:           &GetUserRequest{},
 		Response:          &apiresource.User{},

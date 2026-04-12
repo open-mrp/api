@@ -21,6 +21,7 @@ func (e *ListRegistrationFlowsEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		Title:             "List Registration Flows",
 		Description:       "Returns a paginated list of registration flows for the current account.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/sales/registration-flows",
 		Request:           &ListRegistrationFlowsRequest{},
 		Response:          &apiresource.List[apiresource.RegistrationFlow]{},

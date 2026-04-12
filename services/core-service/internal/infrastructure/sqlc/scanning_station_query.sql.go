@@ -469,7 +469,7 @@ func (q *Queries) ListScanningStationsForward(ctx context.Context, arg ListScann
 const updateScanningStation = `-- name: UpdateScanningStation :execresult
 UPDATE scanning_station SET
     name = COALESCE(?, name),
-    notes = COALESCE(?, notes),
+    notes = ?,
     label_size_code = COALESCE(?, label_size_code),
     label_type_code = COALESCE(?, label_type_code),
     material_check_required = COALESCE(?, material_check_required),

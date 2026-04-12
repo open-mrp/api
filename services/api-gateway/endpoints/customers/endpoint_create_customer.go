@@ -27,7 +27,7 @@ type CreateCustomerRequest struct {
 	// The customer website URL.
 	URL *string `json:"url,omitempty" validate:"omitempty,max=255"`
 	// The account status code.
-	StatusCode *constants.AccountStatusCode `json:"status_code" validate:"required"`
+	StatusCode *constants.AccountStatusCode `json:"status" validate:"required"`
 	// Whether the customer is EDI enabled.
 	IsEdiEnabled *bool `json:"is_edi_enabled,omitempty"`
 	// The commission policy for this customer.
@@ -43,7 +43,7 @@ type CreateCustomerRequest struct {
 	// The default shipping term ID.
 	DefaultShippingTermID *string `json:"default_shipping_term_id" validate:"required,max=191"`
 	// The default priority code.
-	DefaultPriorityCode *constants.PriorityCode `json:"default_priority_code,omitempty"`
+	DefaultPriorityCode *constants.PriorityCode `json:"default_priority,omitempty"`
 	// The default sales rep user ID.
 	DefaultSalesRepUserID *string `json:"default_sales_rep_user_id,omitempty" validate:"omitempty,max=191"`
 	// The customer price group IDs.
@@ -118,6 +118,9 @@ func (e *CreateCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateC
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateCustomerRequest) (*apiresource.Customer, *apierror.APIError) {
 			return svc.(CustomerSvc).CreateCustomer
+		},
+		LocationFunc: func(resp *apiresource.Customer) string {
+			return "/v1/sales/customers/" + resp.ID
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeCustomer,

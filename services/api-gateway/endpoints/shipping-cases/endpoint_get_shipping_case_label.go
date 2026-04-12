@@ -22,6 +22,7 @@ func (e *GetShippingCaseLabelEndpoint) Materialize() *apiendpoint.APIEndpoint[*G
 		Title:             "Get Shipping Case Label",
 		Description:       "Returns a presigned URL for the shipping case's label image.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/shipping-cases/{id}/label",
 		Request:           &GetShippingCaseLabelRequest{},
 		Response:          &apiresource.ShippingCaseLabelURL{},

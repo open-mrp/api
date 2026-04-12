@@ -45,6 +45,7 @@ func (e *UpsertSalesTargetEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upse
 		Title:             "Upsert Sales Target",
 		Description:       "Creates or updates a sales target by ID.",
 		Method:            http.MethodPut,
+		ContentType:       "application/json",
 		Route:             "/v1/sales/account-users/{id}/sales-targets/{target_id}",
 		Request:           &UpsertSalesTargetRequest{},
 		Response:          &apiresource.SalesTarget{},

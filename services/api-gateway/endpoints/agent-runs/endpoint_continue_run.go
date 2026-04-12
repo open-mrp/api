@@ -38,6 +38,7 @@ func (e *ContinueRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*ContinueRu
 		Title:             "Continue Run",
 		Description:       "Continues an agent run that is awaiting input with a new user message.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/ai/runs/{id}/actions/continue",
 		Request:           &ContinueRunRequest{},
 		Response:          &apiresource.AgentRun{},

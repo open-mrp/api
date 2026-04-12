@@ -43,6 +43,7 @@ func (e *GetScanningStationConsumptionEndpoint) Materialize() *apiendpoint.APIEn
 		Title:             "Get Scanning Station Consumption",
 		Description:       "Returns material consumption data for the specified batches at a scanning station, optionally scoped to a production step and split quantity.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/scanning-stations/{id}/consumptions",
 		Request:           &GetScanningStationConsumptionRequest{},
 		Response:          &apiresource.List[apiresource.ScanningConsumption]{},

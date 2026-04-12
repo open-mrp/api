@@ -23,6 +23,7 @@ func (e *ListBatchesByScanningStationEndpoint) Materialize() *apiendpoint.APIEnd
 		Title:             "List Batches by Scanning Station",
 		Description:       "Returns a paginated list of batches for a given scanning station.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/scanning-stations/{id}/batches",
 		Request:           &ListBatchesByScanningStationRequest{},
 		Response:          &apiresource.List[apiresource.Batch]{},

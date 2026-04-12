@@ -65,5 +65,8 @@ func (e *CreateSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateS
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateSupplierRequest) (*apiresource.SupplierDetail, *apierror.APIError) {
 			return svc.(SupplierSvc).CreateSupplier
 		},
+		LocationFunc: func(resp *apiresource.SupplierDetail) string {
+			return "/v1/operations/suppliers/" + resp.ID
+		},
 	}
 }

@@ -23,6 +23,7 @@ func (e *ListSalesTargetsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListS
 		Title:             "List Sales Targets",
 		Description:       "Returns a paginated list of sales targets for a specific account user.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/sales/account-users/{id}/sales-targets",
 		Request:           &ListSalesTargetsRequest{},
 		Response:          &apiresource.List[apiresource.SalesTarget]{},

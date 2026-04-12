@@ -22,6 +22,7 @@ func (e *GetItemCostsEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetItemCo
 		Title:             "Get Item Costs",
 		Description:       "Returns the production cost breakdown for an item, including direct material, direct labor, overhead, and total costs.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/catalog/items/{id}/costs",
 		Request:           &GetItemCostsRequest{},
 		Response:          &apiresource.ItemCosts{},

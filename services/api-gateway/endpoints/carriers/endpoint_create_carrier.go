@@ -40,6 +40,7 @@ func (e *CreateCarrierEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateCa
 		Title:             "Create Carrier",
 		Description:       "Creates a new carrier. If a Shippo-supported carrier code is provided, the carrier will be registered with Shippo and service levels will be auto-synced as options.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/carriers",
 		Request:           &CreateCarrierRequest{},
 		Response:          &apiresource.Carrier{},
@@ -48,6 +49,9 @@ func (e *CreateCarrierEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateCa
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateCarrierRequest) (*apiresource.Carrier, *apierror.APIError) {
 			return svc.(CarrierSvc).CreateCarrier
+		},
+		LocationFunc: func(resp *apiresource.Carrier) string {
+			return "/v1/operations/carriers/" + resp.ID
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeCarrier,

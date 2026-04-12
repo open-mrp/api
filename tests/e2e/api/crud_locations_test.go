@@ -94,7 +94,7 @@ func TestLocations_ListResponseShape(t *testing.T) {
 		assert.Equal(t, "location", jsonField(m, "object"))
 		assert.NotEmpty(t, jsonField(m, "id"))
 		assert.NotEmpty(t, jsonField(m, "name"))
-		assert.NotEmpty(t, jsonField(m, "type_code"))
+		assert.NotEmpty(t, jsonField(m, "type"))
 		assert.NotEmpty(t, jsonField(m, "created_at"))
 		assert.NotEmpty(t, jsonField(m, "updated_at"))
 	}
@@ -172,7 +172,7 @@ func TestLocations_GetByID(t *testing.T) {
 	assert.Equal(t, SeedLocationID, jsonField(got, "id"))
 	assert.Equal(t, "location", jsonField(got, "object"))
 	assert.NotEmpty(t, jsonField(got, "name"))
-	assert.NotEmpty(t, jsonField(got, "type_code"))
+	assert.NotEmpty(t, jsonField(got, "type"))
 	assert.NotEmpty(t, jsonField(got, "created_at"))
 	assert.NotEmpty(t, jsonField(got, "updated_at"))
 }
@@ -193,19 +193,20 @@ func TestLocations_CRUD(t *testing.T) {
 	name := uniqueName("e2e-loc")
 
 	// Create
-	createStatus, createBody, err := apiClient.Post(locationsPath, map[string]any{
-		"name":      name,
-		"type_code": "building",
+	createResp, err := apiClient.PostFull(locationsPath, map[string]any{
+		"name": name,
+		"type": "building",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, createStatus, createBody)
+	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
 
-	created := parseJSON(createBody)
+	created := parseJSON(createResp.Body)
 	assert.Equal(t, "location", jsonField(created, "object"))
 	id := jsonField(created, "id")
 	assert.NotEmpty(t, id)
+	assertCreatedLocation(t, createResp.Header, id)
 	assert.Equal(t, name, jsonField(created, "name"))
-	assert.Equal(t, "building", jsonField(created, "type_code"))
+	assert.Equal(t, "building", jsonField(created, "type"))
 
 	// Get
 	getStatus, getBody, err := apiClient.GetListRaw(locationsPath+"/"+id, nil)
@@ -247,8 +248,8 @@ func TestLocations_CreateAndUpdateAllFields(t *testing.T) {
 	// ── CREATE parent ──
 	parentName := uniqueName("e2e-loc-allf-p")
 	pStatus, pBody, err := apiClient.Post(locationsPath, map[string]any{
-		"name":      parentName,
-		"type_code": "building",
+		"name": parentName,
+		"type": "building",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, pStatus, pBody)
@@ -257,22 +258,23 @@ func TestLocations_CreateAndUpdateAllFields(t *testing.T) {
 
 	// ── CREATE child with parent_id ──
 	name := uniqueName("e2e-loc-allf")
-	createStatus, createBody, err := apiClient.Post(locationsPath, map[string]any{
+	createResp, err := apiClient.PostFull(locationsPath, map[string]any{
 		"name":      name,
-		"type_code": "section",
+		"type":      "section",
 		"parent_id": parentID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, createStatus, createBody)
+	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
 
-	got := parseJSON(createBody)
+	got := parseJSON(createResp.Body)
 	id := jsonField(got, "id")
 	require.NotEmpty(t, id)
+	assertCreatedLocation(t, createResp.Header, id)
 	defer apiClient.Delete(locationsPath + "/" + id)
 
 	assert.Equal(t, "location", jsonField(got, "object"))
 	assert.Equal(t, name, jsonField(got, "name"))
-	assert.Equal(t, "section", jsonField(got, "type_code"))
+	assert.Equal(t, "section", jsonField(got, "type"))
 	assert.NotEmpty(t, jsonField(got, "created_at"))
 	assert.NotEmpty(t, jsonField(got, "updated_at"))
 
@@ -295,7 +297,7 @@ func TestLocations_CreateAndUpdateAllFields(t *testing.T) {
 	updated := parseJSON(patchBody)
 	assert.Equal(t, id, jsonField(updated, "id"), "ID must not change")
 	assert.Equal(t, updatedName, jsonField(updated, "name"))
-	assert.Equal(t, "section", jsonField(updated, "type_code"), "type_code should be preserved")
+	assert.Equal(t, "section", jsonField(updated, "type"), "type_code should be preserved")
 
 	// Verify parent still set after name-only update
 	getStatus2, getBody2, err := apiClient.GetListRaw(locationsPath+"/"+id, url.Values{"include": {"parent"}})
@@ -309,28 +311,30 @@ func TestLocations_CreateAndUpdateAllFields(t *testing.T) {
 func TestLocations_CreateResponseShape(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-loc-shape")
-	createStatus, createBody, err := apiClient.Post(locationsPath, map[string]any{
-		"name":      name,
-		"type_code": "building",
+	createResp, err := apiClient.PostFull(locationsPath, map[string]any{
+		"name": name,
+		"type": "building",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, createStatus, createBody)
+	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
 
-	created := parseJSON(createBody)
-	assert.NotEmpty(t, jsonField(created, "id"))
+	created := parseJSON(createResp.Body)
+	id := jsonField(created, "id")
+	assert.NotEmpty(t, id)
+	assertCreatedLocation(t, createResp.Header, id)
 	assert.Equal(t, "location", jsonField(created, "object"))
 	assert.Equal(t, name, jsonField(created, "name"))
-	assert.Equal(t, "building", jsonField(created, "type_code"))
+	assert.Equal(t, "building", jsonField(created, "type"))
 	assert.NotEmpty(t, jsonField(created, "created_at"))
 	assert.NotEmpty(t, jsonField(created, "updated_at"))
 
-	apiClient.Delete(locationsPath + "/" + jsonField(created, "id"))
+	apiClient.Delete(locationsPath + "/" + id)
 }
 
 func TestLocations_CreateValidation_MissingName(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.Post(locationsPath, map[string]any{
-		"type_code": "building",
+		"type": "building",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	assert.True(t, status == 400 || status == 422,
@@ -353,16 +357,16 @@ func TestLocations_CreateIdempotent(t *testing.T) {
 	idemKey := newIdempotencyKey()
 
 	status1, body1, err := apiClient.Post(locationsPath, map[string]any{
-		"name":      name,
-		"type_code": "building",
+		"name": name,
+		"type": "building",
 	}, idemKey)
 	require.NoError(t, err)
 	requireStatus(t, 201, status1, body1)
 	id1 := jsonField(parseJSON(body1), "id")
 
 	status2, body2, err := apiClient.Post(locationsPath, map[string]any{
-		"name":      name,
-		"type_code": "building",
+		"name": name,
+		"type": "building",
 	}, idemKey)
 	require.NoError(t, err)
 	requireStatus(t, 201, status2, body2)
@@ -377,8 +381,8 @@ func TestLocations_UpdateOnlyName(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-loc-pname")
 	createStatus, createBody, err := apiClient.Post(locationsPath, map[string]any{
-		"name":      name,
-		"type_code": "section",
+		"name": name,
+		"type": "section",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
@@ -393,7 +397,7 @@ func TestLocations_UpdateOnlyName(t *testing.T) {
 
 	patched := parseJSON(patchBody)
 	assert.Equal(t, newName, jsonField(patched, "name"))
-	assert.Equal(t, "section", jsonField(patched, "type_code"), "type_code should be preserved when only name is updated")
+	assert.Equal(t, "section", jsonField(patched, "type"), "type_code should be preserved when only name is updated")
 
 	apiClient.Delete(locationsPath + "/" + id)
 }
@@ -402,8 +406,8 @@ func TestLocations_UpdateIdempotent(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-loc-idem-upd")
 	createStatus, createBody, err := apiClient.Post(locationsPath, map[string]any{
-		"name":      name,
-		"type_code": "building",
+		"name": name,
+		"type": "building",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
@@ -430,8 +434,8 @@ func TestLocations_UpdateEmptyBodyRejected(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-loc-empty")
 	createStatus, createBody, err := apiClient.Post(locationsPath, map[string]any{
-		"name":      name,
-		"type_code": "building",
+		"name": name,
+		"type": "building",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
@@ -450,8 +454,8 @@ func TestLocations_DeleteAlreadyDeletedFails(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-loc-deldel")
 	createStatus, createBody, err := apiClient.Post(locationsPath, map[string]any{
-		"name":      name,
-		"type_code": "building",
+		"name": name,
+		"type": "building",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
@@ -473,8 +477,8 @@ func TestLocations_DeleteWithChildrenFails(t *testing.T) {
 	// Create parent
 	parentName := uniqueName("e2e-loc-parent")
 	createStatus, createBody, err := apiClient.Post(locationsPath, map[string]any{
-		"name":      parentName,
-		"type_code": "building",
+		"name": parentName,
+		"type": "building",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
@@ -484,7 +488,7 @@ func TestLocations_DeleteWithChildrenFails(t *testing.T) {
 	childName := uniqueName("e2e-loc-child")
 	createStatus2, createBody2, err := apiClient.Post(locationsPath, map[string]any{
 		"name":      childName,
-		"type_code": "section",
+		"type":      "section",
 		"parent_id": parentID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -512,8 +516,8 @@ func TestLocations_CreateWithParent(t *testing.T) {
 	// Create parent
 	parentName := uniqueName("e2e-loc-par")
 	createStatus, createBody, err := apiClient.Post(locationsPath, map[string]any{
-		"name":      parentName,
-		"type_code": "building",
+		"name": parentName,
+		"type": "building",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
@@ -521,14 +525,15 @@ func TestLocations_CreateWithParent(t *testing.T) {
 
 	// Create child with parent_id
 	childName := uniqueName("e2e-loc-cld")
-	createStatus2, createBody2, err := apiClient.Post(locationsPath, map[string]any{
+	childResp, err := apiClient.PostFull(locationsPath, map[string]any{
 		"name":      childName,
-		"type_code": "section",
+		"type":      "section",
 		"parent_id": parentID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, createStatus2, createBody2)
-	childID := jsonField(parseJSON(createBody2), "id")
+	requireStatus(t, 201, childResp.StatusCode, childResp.Body)
+	childID := jsonField(parseJSON(childResp.Body), "id")
+	assertCreatedLocation(t, childResp.Header, childID)
 
 	// Get child with include=parent
 	getStatus, getBody, err := apiClient.GetListRaw(locationsPath+"/"+childID, url.Values{"include": {"parent"}})
@@ -552,8 +557,8 @@ func TestLocations_CreateWithChildren(t *testing.T) {
 	// Create two children first (without parent)
 	child1Name := uniqueName("e2e-loc-c1")
 	c1Status, c1Body, err := apiClient.Post(locationsPath, map[string]any{
-		"name":      child1Name,
-		"type_code": "section",
+		"name": child1Name,
+		"type": "section",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, c1Status, c1Body)
@@ -561,8 +566,8 @@ func TestLocations_CreateWithChildren(t *testing.T) {
 
 	child2Name := uniqueName("e2e-loc-c2")
 	c2Status, c2Body, err := apiClient.Post(locationsPath, map[string]any{
-		"name":      child2Name,
-		"type_code": "section",
+		"name": child2Name,
+		"type": "section",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, c2Status, c2Body)
@@ -570,14 +575,15 @@ func TestLocations_CreateWithChildren(t *testing.T) {
 
 	// Create parent with child_ids
 	parentName := uniqueName("e2e-loc-pwc")
-	pStatus, pBody, err := apiClient.Post(locationsPath, map[string]any{
+	parentResp, err := apiClient.PostFull(locationsPath, map[string]any{
 		"name":      parentName,
-		"type_code": "building",
+		"type":      "building",
 		"child_ids": []string{child1ID, child2ID},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, pStatus, pBody)
-	parentID := jsonField(parseJSON(pBody), "id")
+	requireStatus(t, 201, parentResp.StatusCode, parentResp.Body)
+	parentID := jsonField(parseJSON(parentResp.Body), "id")
+	assertCreatedLocation(t, parentResp.Header, parentID)
 
 	// Get parent with include=children
 	getStatus, getBody, err := apiClient.GetListRaw(locationsPath+"/"+parentID, url.Values{"include": {"children"}})
@@ -601,8 +607,8 @@ func TestLocations_UpdateClearParent(t *testing.T) {
 	// Create parent
 	parentName := uniqueName("e2e-loc-clrp")
 	createStatus, createBody, err := apiClient.Post(locationsPath, map[string]any{
-		"name":      parentName,
-		"type_code": "building",
+		"name": parentName,
+		"type": "building",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createStatus, createBody)
@@ -612,16 +618,16 @@ func TestLocations_UpdateClearParent(t *testing.T) {
 	childName := uniqueName("e2e-loc-clrc")
 	c2Status, c2Body, err := apiClient.Post(locationsPath, map[string]any{
 		"name":      childName,
-		"type_code": "section",
+		"type":      "section",
 		"parent_id": parentID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, c2Status, c2Body)
 	childID := jsonField(parseJSON(c2Body), "id")
 
-	// Clear parent
+	// Clear parent by sending null
 	patchStatus, patchBody, err := apiClient.Patch(locationsPath+"/"+childID, map[string]any{
-		"clear_parent": true,
+		"parent_id": nil,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
@@ -632,7 +638,7 @@ func TestLocations_UpdateClearParent(t *testing.T) {
 	requireStatus(t, 200, getStatus, getBody)
 
 	got := parseJSON(getBody)
-	assert.Nil(t, got["parent"], "parent should be null after clear_parent")
+	assert.Nil(t, got["parent"], "parent should be null after sending parent_id: null")
 
 	// Cleanup
 	apiClient.Delete(locationsPath + "/" + childID)
@@ -673,8 +679,8 @@ func TestLocations_IncludeChildren(t *testing.T) {
 	// Create parent with a child to guarantee children are present
 	parentName := uniqueName("e2e-loc-inclch")
 	pStatus, pBody, err := apiClient.Post(locationsPath, map[string]any{
-		"name":      parentName,
-		"type_code": "building",
+		"name": parentName,
+		"type": "building",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, pStatus, pBody)
@@ -683,7 +689,7 @@ func TestLocations_IncludeChildren(t *testing.T) {
 	childName := uniqueName("e2e-loc-inclc2")
 	cStatus, cBody, err := apiClient.Post(locationsPath, map[string]any{
 		"name":      childName,
-		"type_code": "section",
+		"type":      "section",
 		"parent_id": parentID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -711,8 +717,8 @@ func TestLocations_IncludeParentAndChildren(t *testing.T) {
 	// Create grandparent -> parent -> child
 	gpName := uniqueName("e2e-loc-gp")
 	gpStatus, gpBody, err := apiClient.Post(locationsPath, map[string]any{
-		"name":      gpName,
-		"type_code": "building",
+		"name": gpName,
+		"type": "building",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, gpStatus, gpBody)
@@ -721,7 +727,7 @@ func TestLocations_IncludeParentAndChildren(t *testing.T) {
 	parentName := uniqueName("e2e-loc-mid")
 	pStatus, pBody, err := apiClient.Post(locationsPath, map[string]any{
 		"name":      parentName,
-		"type_code": "section",
+		"type":      "section",
 		"parent_id": gpID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -731,7 +737,7 @@ func TestLocations_IncludeParentAndChildren(t *testing.T) {
 	childName := uniqueName("e2e-loc-leaf")
 	cStatus, cBody, err := apiClient.Post(locationsPath, map[string]any{
 		"name":      childName,
-		"type_code": "aisle",
+		"type":      "aisle",
 		"parent_id": parentID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)

@@ -24,6 +24,7 @@ func (e *ListAccountGroupsEndpoint) Materialize() *apiendpoint.APIEndpoint[*List
 		Title:             "List Account Groups",
 		Description:       "Returns a paginated list of account groups.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/sales/account-groups",
 		Request:           &ListAccountGroupsRequest{},
 		Response:          &apiresource.List[apiresource.AccountGroup]{},

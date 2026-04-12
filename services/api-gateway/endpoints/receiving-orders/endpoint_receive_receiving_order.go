@@ -22,6 +22,7 @@ func (e *ReceiveReceivingOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		Title:             "Receive Receiving Order",
 		Description:       "Marks all unstocked lines on a receiving order as received.",
 		Method:            http.MethodPut,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/receiving-orders/{id}/actions/receive",
 		Request:           &ReceiveReceivingOrderRequest{},
 		Response:          &apiresource.ReceivingOrder{},

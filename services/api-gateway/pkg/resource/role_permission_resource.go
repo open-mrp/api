@@ -15,7 +15,7 @@ type RolePermission struct {
 	// The resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=role_permission"`
 	// The permission domain code.
-	PermissionCode string `json:"permission_code" validate:"required"`
+	PermissionCode string `json:"domain" validate:"required"`
 	// Whether this permission grants create access.
 	Create bool `json:"create"`
 	// Whether this permission grants read access.

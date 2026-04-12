@@ -35,6 +35,7 @@ func (e *FindOrderDiscountByCodeEndpoint) Materialize() *apiendpoint.APIEndpoint
 		Title:             "Find Order Discount by Code",
 		Description:       "Finds an order discount by its unique code, optionally scoped to a buyer account or sales order.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/sales/order-discounts/actions/find-by-code",
 		Request:           &FindOrderDiscountByCodeRequest{},
 		Response:          &apiresource.OrderDiscount{},

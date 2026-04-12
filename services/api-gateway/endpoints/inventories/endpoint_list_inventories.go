@@ -21,6 +21,7 @@ func (e *ListInventoriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListIn
 		Title:             "List Inventories",
 		Description:       "Returns a paginated list of items with on-hand inventory quantities for the account.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/inventories",
 		Request:           &ListInventoriesRequest{},
 		Response:          &apiresource.ListInventoriesResponse{},

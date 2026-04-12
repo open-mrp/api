@@ -7,6 +7,7 @@ import (
 
 	"github.com/augno/api/services/core-service/internal/domain"
 	"github.com/augno/api/services/core-service/internal/infrastructure/sqlc"
+	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/db"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/pagination"
@@ -62,10 +63,19 @@ func mapEmailLogRow(
 	if sesMessageID.Valid {
 		el.SESMessageID = &sesMessageID.String
 	}
+
 	if sentByID.Valid {
-		el.SentByID = &sentByID.String
+		actor := &domain.EmailLogActor{
+			ID:        sentByID.String,
+			ActorType: string(constants.ActorTypeUser),
+			Name:      resolveSentByName(sentByName, sentByUsername, sentByEmail),
+		}
+		if sentByEmail.Valid && sentByEmail.String != "" {
+			handle := sentByEmail.String
+			actor.Handle = &handle
+		}
+		el.SentBy = actor
 	}
-	el.SentByName = resolveSentByName(sentByName, sentByUsername, sentByEmail)
 
 	return el
 }

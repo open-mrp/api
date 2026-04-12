@@ -68,7 +68,7 @@ func TestEmailLogs_ListSearchNoResults(t *testing.T) {
 
 func TestEmailLogs_GetByID(t *testing.T) {
 	t.Parallel()
-	getStatus, getBody, err := apiClient.GetListRaw(emailLogsPath+"/"+SeedEmailLogID1, nil)
+	getStatus, getBody, err := apiClient.GetListRaw(emailLogsPath+"/"+SeedEmailLogID1, url.Values{"include": {"sent_by"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, getStatus, getBody)
 
@@ -91,7 +91,8 @@ func TestEmailLogs_GetByID(t *testing.T) {
 	sentBy := jsonObject(got, "sent_by")
 	require.NotNil(t, sentBy, "sent_by should be present for seeded email log")
 	assert.Equal(t, SeedUserID, jsonField(sentBy, "id"))
-	assert.Equal(t, "user", jsonField(sentBy, "object"))
+	assert.Equal(t, "actor", jsonField(sentBy, "object"))
+	assert.Equal(t, "user", jsonField(sentBy, "type"))
 }
 
 func TestEmailLogs_GetByID_NotFound(t *testing.T) {

@@ -51,7 +51,7 @@ func newFullRequestLogInfo() *pb.RequestLogInfo {
 		ResponseJson:    &responseJSON,
 		Actor: &pb.RequestLogActor{
 			Id:           "us_01abc",
-			ObjectType:   "user",
+			ActorType:    "user",
 			Name:         &actorName,
 			Email:        &actorEmail,
 			RoleId:       &roleID,
@@ -91,7 +91,7 @@ func TestRequestLogPresenter_ActorRoleWithoutTypeCode(t *testing.T) {
 		CreatedAt:       timestamppb.Now(),
 		Actor: &pb.RequestLogActor{
 			Id:           "us_01abc",
-			ObjectType:   "user",
+			ActorType:    "user",
 			Name:         &actorName,
 			RoleId:       &roleID,
 			RoleName:     &roleName,
@@ -123,7 +123,7 @@ func TestRequestLogPresenter_APIKeyActorUsesRedactedValueAsHandle(t *testing.T) 
 		CreatedAt:       timestamppb.Now(),
 		Actor: &pb.RequestLogActor{
 			Id:            "apke_01abc",
-			ObjectType:    "api_key",
+			ActorType:     "api_key",
 			Name:          &actorName,
 			RedactedValue: &redactedValue,
 		},

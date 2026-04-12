@@ -566,11 +566,7 @@ const updateLocation = `-- name: UpdateLocation :execresult
 UPDATE storage_location SET
     name = COALESCE(?, name),
     storage_location_type_code = COALESCE(?, storage_location_type_code),
-    parent_id = CASE
-        WHEN ? = 1 THEN NULL
-        WHEN ? IS NOT NULL THEN ?
-        ELSE parent_id
-    END,
+    parent_id = ?,
     updated_at = NOW(3)
 WHERE id = ?
 AND account_id = ?
@@ -579,7 +575,6 @@ AND account_id = ?
 type UpdateLocationParams struct {
 	Name                    sql.NullString
 	StorageLocationTypeCode sql.NullString
-	ClearParent             interface{}
 	ParentID                sql.NullString
 	ID                      string
 	AccountID               string
@@ -589,8 +584,6 @@ func (q *Queries) UpdateLocation(ctx context.Context, arg UpdateLocationParams) 
 	return q.db.ExecContext(ctx, updateLocation,
 		arg.Name,
 		arg.StorageLocationTypeCode,
-		arg.ClearParent,
-		arg.ParentID,
 		arg.ParentID,
 		arg.ID,
 		arg.AccountID,

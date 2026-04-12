@@ -26,6 +26,7 @@ func (e *ListAccountUsersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListA
 		Title:             "List Account Users",
 		Description:       "Returns a paginated list of account users for the current account.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/identity/account-users",
 		Request:           &ListAccountUsersRequest{},
 		Response:          &apiresource.List[apiresource.AccountUser]{},

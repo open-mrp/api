@@ -22,6 +22,7 @@ func (e *DeleteProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*De
 		Title:             "Delete Production Run",
 		Description:       "Deletes a production run and its associated batches and order links.",
 		Method:            http.MethodDelete,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/production-runs/{id}",
 		Request:           &DeleteProductionRunRequest{},
 		Response:          &apiresource.EmptyResource{},

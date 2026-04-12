@@ -27,6 +27,7 @@ func (e *ListAllocationEntriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		Title:             "List Allocation Entries",
 		Description:       "Returns a paginated list of transaction allocation entries for the current account.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/finance/transaction-allocations",
 		Request:           &ListAllocationEntriesRequest{},
 		Response:          &apiresource.List[apiresource.AllocationEntry]{},

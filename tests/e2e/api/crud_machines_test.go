@@ -18,18 +18,19 @@ func TestMachines_CRUD(t *testing.T) {
 	serialNumber := uniqueName("SN")
 
 	// CREATE
-	createStatus, createBody, err := apiClient.Post(machinesPath, map[string]any{
+	createResp, err := apiClient.PostFull(machinesPath, map[string]any{
 		"name":          name,
 		"serial_number": serialNumber,
 		"notes":         "test machine notes",
 		"department_id": SeedDepartmentID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, createStatus, createBody)
+	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
 
-	created := parseJSON(createBody)
+	created := parseJSON(createResp.Body)
 	id := jsonField(created, "id")
 	assert.NotEmpty(t, id)
+	assertCreatedLocation(t, createResp.Header, id)
 	assert.Equal(t, "machine", jsonField(created, "object"))
 	assert.Equal(t, name, jsonField(created, "name"))
 	assert.Equal(t, serialNumber, jsonField(created, "serial_number"))
@@ -83,18 +84,19 @@ func TestMachines_CreateAndUpdateAllFields(t *testing.T) {
 	// ── CREATE with all fields ──
 	name := uniqueName("e2e-mc-allf")
 	serial := uniqueName("SN-ALLF")
-	createStatus, createBody, err := apiClient.Post(machinesPath, map[string]any{
+	createResp, err := apiClient.PostFull(machinesPath, map[string]any{
 		"name":          name,
 		"serial_number": serial,
 		"notes":         "Create notes",
 		"department_id": SeedDepartmentID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, createStatus, createBody)
+	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
 
-	got := parseJSON(createBody)
+	got := parseJSON(createResp.Body)
 	id := jsonField(got, "id")
 	require.NotEmpty(t, id)
+	assertCreatedLocation(t, createResp.Header, id)
 	defer apiClient.Delete(machinesPath + "/" + id)
 
 	assert.Equal(t, "machine", jsonField(got, "object"))

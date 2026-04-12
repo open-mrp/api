@@ -26,6 +26,7 @@ func (e *UploadAccountPhotoEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upl
 		Title:             "Upload Account Photo",
 		Description:       "Uploads a logo image for an account as a raw binary body.",
 		Method:            http.MethodPut,
+		ContentType:       "application/json",
 		Route:             "/v1/identity/accounts/{id}/photo",
 		Request:           &UploadAccountPhotoRequest{},
 		Response:          &apiresource.AccountPhotoUploadResult{},

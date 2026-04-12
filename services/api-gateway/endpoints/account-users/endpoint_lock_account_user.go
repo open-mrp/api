@@ -22,6 +22,7 @@ func (e *LockAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*LockAc
 		Title:             "Lock Account User",
 		Description:       "Locks an account user, preventing them from accessing the account.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/identity/account-users/{id}/lock",
 		Request:           &LockAccountUserRequest{},
 		Response:          &apiresource.EmptyResource{},

@@ -41,6 +41,7 @@ func (e *CreateProductLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*Crea
 		Title:             "Create Product Line",
 		Description:       "Creates a new account-owned product line.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/catalog/product-lines",
 		Request:           &CreateProductLineRequest{},
 		Response:          &apiresource.ProductLine{},
@@ -49,6 +50,9 @@ func (e *CreateProductLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*Crea
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateProductLineRequest) (*apiresource.ProductLine, *apierror.APIError) {
 			return svc.(ProductLineSvc).CreateProductLine
+		},
+		LocationFunc: func(resp *apiresource.ProductLine) string {
+			return "/v1/catalog/product-lines/" + resp.ID
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeProductLine,

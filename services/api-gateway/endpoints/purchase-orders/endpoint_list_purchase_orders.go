@@ -31,6 +31,7 @@ func (e *ListPurchaseOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*Lis
 		Title:             "List Purchase Orders",
 		Description:       "Returns a paginated list of purchase orders for the current account.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/purchase-orders",
 		Request:           &ListPurchaseOrdersRequest{},
 		Response:          &apiresource.List[apiresource.PurchaseOrderSummary]{},

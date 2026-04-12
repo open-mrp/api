@@ -23,6 +23,7 @@ func (e *GetAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetAcco
 		Title:             "Get Account User",
 		Description:       "Returns a single account user by ID.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/identity/account-users/{id}",
 		Request:           &GetAccountUserRequest{},
 		Response:          &apiresource.AccountUser{},

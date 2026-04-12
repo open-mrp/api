@@ -22,6 +22,7 @@ func (e *GetLocationTypeEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetLoc
 		Title:             "Get Location Type",
 		Description:       "Returns a single location type by its ID or code.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/location-types/{id}",
 		Request:           &GetLocationTypeRequest{},
 		Response:          &apiresource.LocationType{},

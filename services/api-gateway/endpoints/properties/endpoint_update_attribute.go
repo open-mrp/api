@@ -18,11 +18,11 @@ type UpdateAttributeRequest struct {
 	// The ID of the attribute to update.
 	AttributeID string `path:"id" validate:"required"`
 	// The new value of the attribute.
-	Value *string `json:"value,omitempty"`
+	Value *string `json:"value,omitempty" nullable:"false"`
 	// The new color code of the attribute.
-	ColorCode *constants.Color `json:"color_code,omitempty"`
+	ColorCode *constants.Color `json:"color,omitempty" nullable:"false"`
 	// The new display order of the attribute.
-	SortOrder *int32 `json:"sort_order,omitempty" validate:"omitempty,min=1"`
+	SortOrder *int32 `json:"sort_order,omitempty" nullable:"false" validate:"omitempty,min=1"`
 }
 
 var sampleUpdateAttributeRequest = &UpdateAttributeRequest{
@@ -40,6 +40,7 @@ func (e *UpdateAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*Update
 		Title:             "Update Attribute",
 		Description:       "Partially updates an attribute.",
 		Method:            http.MethodPatch,
+		ContentType:       "application/json",
 		Route:             "/v1/catalog/properties/{property_id}/attributes/{id}",
 		Request:           &UpdateAttributeRequest{},
 		Response:          &apiresource.Attribute{},

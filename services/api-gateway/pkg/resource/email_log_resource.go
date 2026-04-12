@@ -26,8 +26,9 @@ type EmailLog struct {
 	Filename *string `json:"filename"`
 	// The SES message ID returned by AWS.
 	SESMessageID *string `json:"ses_message_id"`
-	// The user who sent the email. Null if not associated with a user.
-	SentBy *User `json:"sent_by"`
+	// The actor who sent the email. Null when the email was sent by the
+	// system, or when the caller did not request `include=sent_by`.
+	SentBy *Actor `json:"sent_by" expandable:"true"`
 	// When this email log was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// When this email log was last updated.
@@ -44,7 +45,7 @@ var SampleEmailLog = &EmailLog{
 	Recipients: []string{"customer@example.com"},
 	Subject:    &sampleEmailLogSubject,
 	Filename:   &sampleEmailLogFilename,
-	SentBy:     SampleUser,
+	SentBy:     SampleActor,
 	CreatedAt:  timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:  timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }

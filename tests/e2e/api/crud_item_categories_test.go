@@ -146,18 +146,19 @@ func TestItemCategories_CRUD(t *testing.T) {
 	name := uniqueName("e2e-itcg")
 
 	// Create
-	createStatus, createBody, err := apiClient.Post(itemCategoriesPath, map[string]any{
+	createResp, err := apiClient.PostFull(itemCategoriesPath, map[string]any{
 		"name":          name,
 		"type":          "material_category",
 		"unit_group_id": SeedUnitGroupID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, createStatus, createBody)
+	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
 
-	created := parseJSON(createBody)
+	created := parseJSON(createResp.Body)
 	assert.Equal(t, "item_category", jsonField(created, "object"))
 	id := jsonField(created, "id")
 	assert.NotEmpty(t, id)
+	assertCreatedLocation(t, createResp.Header, id)
 	assert.Equal(t, name, jsonField(created, "name"))
 	assert.Equal(t, "material_category", jsonField(created, "type"))
 
@@ -200,17 +201,18 @@ func TestItemCategories_CreateAndUpdateAllFields(t *testing.T) {
 
 	// ── CREATE with all fields ──
 	name := uniqueName("e2e-itcg-allf")
-	createStatus, createBody, err := apiClient.Post(itemCategoriesPath+"?include=unit_group", map[string]any{
+	createResp, err := apiClient.PostFull(itemCategoriesPath+"?include=unit_group", map[string]any{
 		"name":          name,
 		"type":          "material_category",
 		"unit_group_id": SeedUnitGroupID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, createStatus, createBody)
+	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
 
-	got := parseJSON(createBody)
+	got := parseJSON(createResp.Body)
 	id := jsonField(got, "id")
 	require.NotEmpty(t, id)
+	assertCreatedLocation(t, createResp.Header, id)
 	defer apiClient.Delete(itemCategoriesPath + "/" + id)
 
 	assert.Equal(t, "item_category", jsonField(got, "object"))
@@ -250,23 +252,25 @@ func TestItemCategories_CreateAndUpdateAllFields(t *testing.T) {
 func TestItemCategories_CreateResponseShape(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-itcg-shape")
-	createStatus, createBody, err := apiClient.Post(itemCategoriesPath, map[string]any{
+	createResp, err := apiClient.PostFull(itemCategoriesPath, map[string]any{
 		"name":          name,
 		"type":          "product_category",
 		"unit_group_id": SeedUnitGroupID,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, createStatus, createBody)
+	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
 
-	created := parseJSON(createBody)
-	assert.NotEmpty(t, jsonField(created, "id"))
+	created := parseJSON(createResp.Body)
+	id := jsonField(created, "id")
+	assert.NotEmpty(t, id)
+	assertCreatedLocation(t, createResp.Header, id)
 	assert.Equal(t, "item_category", jsonField(created, "object"))
 	assert.Equal(t, name, jsonField(created, "name"))
 	assert.Equal(t, "product_category", jsonField(created, "type"))
 	assert.NotEmpty(t, jsonField(created, "created_at"))
 	assert.NotEmpty(t, jsonField(created, "updated_at"))
 
-	apiClient.Delete(itemCategoriesPath + "/" + jsonField(created, "id"))
+	apiClient.Delete(itemCategoriesPath + "/" + id)
 }
 
 func TestItemCategories_CreateValidation_MissingName(t *testing.T) {

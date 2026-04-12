@@ -39,6 +39,7 @@ func (e *ListSalesOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSa
 		Title:             "List Sales Orders",
 		Description:       "Returns a paginated list of sales orders for the current account.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/sales/sales-orders",
 		Request:           &ListSalesOrdersRequest{},
 		Response:          &apiresource.List[apiresource.SalesOrderSummary]{},

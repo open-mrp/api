@@ -38,6 +38,7 @@ func (e *CreateAccountIntegrationEndpoint) Materialize() *apiendpoint.APIEndpoin
 		Title:             "Create Account Integration",
 		Description:       "Creates a new account integration, or updates an existing one with the same integration code. Credentials are encrypted at rest and never returned in API responses.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/identity/integrations",
 		Request:           &CreateAccountIntegrationRequest{},
 		Response:          &apiresource.AccountIntegration{},
@@ -49,6 +50,9 @@ func (e *CreateAccountIntegrationEndpoint) Materialize() *apiendpoint.APIEndpoin
 		},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateAccountIntegrationRequest) (*apiresource.AccountIntegration, *apierror.APIError) {
 			return svc.(AccountIntegrationSvc).CreateAccountIntegration
+		},
+		LocationFunc: func(resp *apiresource.AccountIntegration) string {
+			return "/v1/identity/integrations/" + resp.ID
 		},
 	}
 }

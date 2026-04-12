@@ -31,6 +31,7 @@ func (e *BulkDeletePurchaseOrdersEndpoint) Materialize() *apiendpoint.APIEndpoin
 		Title:             "Bulk Delete Purchase Orders",
 		Description:       "Deletes multiple purchase orders in a single operation.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/purchase-orders/actions/bulk-delete",
 		Request:           &BulkDeletePurchaseOrdersRequest{},
 		Response:          &apiresource.EmptyResource{},

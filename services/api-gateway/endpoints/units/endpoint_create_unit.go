@@ -50,6 +50,7 @@ func (e *CreateUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateUnitR
 		Title:             "Create Unit",
 		Description:       "Creates a new account-owned unit.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/catalog/units",
 		Request:           &CreateUnitRequest{},
 		Response:          &apiresource.Unit{},
@@ -58,6 +59,9 @@ func (e *CreateUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateUnitR
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateUnitRequest) (*apiresource.Unit, *apierror.APIError) {
 			return svc.(UnitSvc).CreateUnit
+		},
+		LocationFunc: func(resp *apiresource.Unit) string {
+			return "/v1/catalog/units/" + resp.ID
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeUnit,

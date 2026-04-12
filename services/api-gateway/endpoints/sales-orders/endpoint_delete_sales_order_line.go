@@ -24,6 +24,7 @@ func (e *DeleteSalesOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*D
 		Title:             "Delete Sales Order Line",
 		Description:       "Deletes a sales order line item and its related records.",
 		Method:            http.MethodDelete,
+		ContentType:       "application/json",
 		Route:             "/v1/sales/sales-orders/{id}/lines/{lineId}",
 		Request:           &DeleteSalesOrderLineRequest{},
 		Response:          &apiresource.EmptyResource{},

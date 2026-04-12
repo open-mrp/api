@@ -15,13 +15,13 @@ type CreateTransactionRequest struct {
 	// The ID of the customer for this transaction.
 	CustomerID string `json:"customer_id" validate:"required,max=191"`
 	// The transaction type code.
-	TransactionTypeCode string `json:"transaction_type_code" validate:"required,max=255"`
+	TransactionTypeCode string `json:"type" validate:"required,max=255"`
 	// The transaction amount as a decimal string.
 	Amount string `json:"amount" validate:"required"`
 	// The transaction method code.
-	TransactionMethodCode *string `json:"transaction_method_code" validate:"omitempty,max=255"`
+	TransactionMethodCode *string `json:"method" validate:"omitempty,max=255"`
 	// The adjustment type code, if applicable.
-	AdjustmentTypeCode *string `json:"adjustment_type_code" validate:"omitempty,max=255"`
+	AdjustmentTypeCode *string `json:"adjustment_type" validate:"omitempty,max=255"`
 	// The ID of the user responsible for this transaction.
 	ResponsibleUserID *string `json:"responsible_user_id" validate:"omitempty,max=191"`
 	// A note about this transaction.
@@ -49,6 +49,7 @@ func (e *CreateTransactionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Crea
 		Title:             "Create Transaction",
 		Description:       "Creates a new transaction with an automatically generated transaction number.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/finance/transactions",
 		Request:           &CreateTransactionRequest{},
 		Response:          &apiresource.TransactionDetail{},
@@ -57,6 +58,9 @@ func (e *CreateTransactionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Crea
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateTransactionRequest) (*apiresource.TransactionDetail, *apierror.APIError) {
 			return svc.(TransactionSvc).CreateTransaction
+		},
+		LocationFunc: func(resp *apiresource.TransactionDetail) string {
+			return "/v1/finance/transactions/" + resp.ID
 		},
 	}
 }

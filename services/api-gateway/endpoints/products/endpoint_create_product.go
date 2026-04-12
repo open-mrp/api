@@ -19,7 +19,7 @@ type CreateProductRequest struct {
 	// Additional notes about the product.
 	Notes *string `json:"notes"`
 	// The product type code (e.g. sale, sample).
-	ProductTypeCode string `json:"product_type_code" validate:"required,max=255"`
+	ProductTypeCode string `json:"type" validate:"required,max=255"`
 	// The ID of the product line to assign to this product.
 	ProductLineID *string `json:"product_line_id" validate:"omitempty,max=191"`
 	// The ID of the item category.
@@ -48,6 +48,7 @@ func (e *CreateProductEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreatePr
 		Title:             "Create Product",
 		Description:       "Creates a new product.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/catalog/products",
 		Request:           &CreateProductRequest{},
 		Response:          &apiresource.Product{},
@@ -56,6 +57,9 @@ func (e *CreateProductEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreatePr
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateProductRequest) (*apiresource.Product, *apierror.APIError) {
 			return svc.(ProductSvc).CreateProduct
+		},
+		LocationFunc: func(resp *apiresource.Product) string {
+			return "/v1/catalog/products/" + resp.ID
 		},
 	}
 }

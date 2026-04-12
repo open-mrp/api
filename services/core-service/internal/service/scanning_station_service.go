@@ -259,6 +259,13 @@ func (s *scanningStationSvcImpl) UpdateScanningStation(ctx context.Context, para
 				}
 			}
 
+			// Backfill unchanged nullable field with existing value.
+			// Since the SQL uses direct assignment (no COALESCE) for notes,
+			// we must provide the existing value when the field was not sent.
+			if params.Notes == nil {
+				params.Notes = old.Notes
+			}
+
 			updated, apiErr := txRepo.Update(txCtx, params)
 			if apiErr != nil {
 				return apiErr

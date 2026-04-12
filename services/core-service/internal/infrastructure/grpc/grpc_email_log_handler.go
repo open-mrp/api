@@ -21,10 +21,17 @@ func emailLogToProto(el *domain.EmailLog) *pb.EmailLogInfo {
 		Subject:      el.Subject,
 		Filename:     el.Filename,
 		SesMessageId: el.SESMessageID,
-		SentById:     el.SentByID,
-		SentByName:   el.SentByName,
 		CreatedAt:    timestamppb.New(el.CreatedAt),
 		UpdatedAt:    timestamppb.New(el.UpdatedAt),
+	}
+
+	if el.SentBy != nil {
+		info.SentBy = &pb.EmailLogActor{
+			Id:        el.SentBy.ID,
+			ActorType: el.SentBy.ActorType,
+			Name:      el.SentBy.Name,
+			Handle:    el.SentBy.Handle,
+		}
 	}
 
 	return info
@@ -36,9 +43,10 @@ func (h *gRPCHandler) ListEmailLogs(ctx context.Context, req *pb.ListEmailLogsRe
 	}
 
 	params := domain.ListEmailLogsParams{
-		Cursor: req.Cursor,
-		Limit:  req.Limit,
-		Query:  req.Query,
+		Cursor:   req.Cursor,
+		Limit:    req.Limit,
+		Query:    req.Query,
+		Includes: req.Includes,
 	}
 
 	result, apiErr := h.emailLogSvc.ListEmailLogs(ctx, params)
@@ -69,6 +77,7 @@ func (h *gRPCHandler) GetEmailLog(ctx context.Context, req *pb.GetEmailLogReques
 
 	emailLog, apiErr := h.emailLogSvc.GetEmailLog(ctx, domain.GetEmailLogParams{
 		EmailLogID: req.Id,
+		Includes:   req.Includes,
 	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)

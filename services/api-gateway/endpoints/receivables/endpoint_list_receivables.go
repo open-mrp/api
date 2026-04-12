@@ -24,6 +24,7 @@ func (e *ListReceivablesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListRe
 		Title:             "List Receivables",
 		Description:       "Returns a paginated list of receivable entries for the current account.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/finance/receivables",
 		Request:           &ListReceivablesRequest{},
 		Response:          &apiresource.List[apiresource.ReceivableEntry]{},

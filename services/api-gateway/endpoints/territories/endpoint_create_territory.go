@@ -48,6 +48,7 @@ func (e *CreateTerritoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Create
 		Title:             "Create Territory",
 		Description:       "Creates a new territory for the specified account.",
 		Method:            http.MethodPost,
+		ContentType:       "application/json",
 		Route:             "/v1/sales/accounts/{account_id}/territories",
 		Request:           &CreateTerritoryRequest{},
 		Response:          &apiresource.Territory{},

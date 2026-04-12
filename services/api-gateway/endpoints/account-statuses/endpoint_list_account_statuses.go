@@ -22,6 +22,7 @@ func (e *ListAccountStatusesEndpoint) Materialize() *apiendpoint.APIEndpoint[*Li
 		Title:             "List Account Statuses",
 		Description:       "Returns a paginated list of account statuses, which are global lookup values used when setting account relationship statuses.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/sales/account-statuses",
 		Request:           &ListAccountStatusesRequest{},
 		Response:          &apiresource.List[apiresource.AccountStatus]{},

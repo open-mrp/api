@@ -129,7 +129,6 @@ func (m *serviceLevelSvcImpl) UpdateServiceLevel(ctx context.Context, req *Updat
 		Name:            req.Name,
 		Code:            req.Code,
 		IsPortalEnabled: isPortalEnabled,
-		IsDefault:       req.IsDefault,
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, serviceLevelSvcTracer, "service.service_levels.update", domain.ServiceName,

@@ -22,6 +22,7 @@ func (e *DeleteSettlementEndpoint) Materialize() *apiendpoint.APIEndpoint[*Delet
 		Title:             "Delete Settlement",
 		Description:       "Deletes a settlement, removing its allocations and reverting payment statuses on affected invoices and transactions.",
 		Method:            http.MethodDelete,
+		ContentType:       "application/json",
 		Route:             "/v1/finance/settlements/{id}",
 		Request:           &DeleteSettlementRequest{},
 		Response:          &apiresource.Settlement{},

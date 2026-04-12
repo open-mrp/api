@@ -140,18 +140,19 @@ func TestUnitGroups_CRUD(t *testing.T) {
 	name := uniqueName("e2e-unitgrp")
 
 	// Create
-	createStatus, createBody, err := apiClient.Post(unitGroupsPath, map[string]any{
+	createResp, err := apiClient.PostFull(unitGroupsPath, map[string]any{
 		"name":         name,
 		"type":         "quantity",
 		"base_unit_id": "each",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, createStatus, createBody)
+	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
 
-	created := parseJSON(createBody)
+	created := parseJSON(createResp.Body)
 	assert.Equal(t, "unit_group", jsonField(created, "object"))
 	id := jsonField(created, "id")
 	assert.NotEmpty(t, id)
+	assertCreatedLocation(t, createResp.Header, id)
 	assert.Equal(t, name, jsonField(created, "name"))
 	assert.Equal(t, "quantity", jsonField(created, "type"))
 
@@ -194,18 +195,19 @@ func TestUnitGroups_CreateAndUpdateAllFields(t *testing.T) {
 
 	// ── CREATE with all fields ──
 	name := uniqueName("e2e-ug-allf")
-	createStatus, createBody, err := apiClient.Post(unitGroupsPath+"?include=base_unit", map[string]any{
+	createResp, err := apiClient.PostFull(unitGroupsPath+"?include=base_unit", map[string]any{
 		"name":         name,
 		"type":         "quantity",
 		"base_unit_id": "each",
 		"notes":        "Create notes",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, createStatus, createBody)
+	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
 
-	got := parseJSON(createBody)
+	got := parseJSON(createResp.Body)
 	id := jsonField(got, "id")
 	require.NotEmpty(t, id)
+	assertCreatedLocation(t, createResp.Header, id)
 	defer apiClient.Delete(unitGroupsPath + "/" + id)
 
 	assert.Equal(t, "unit_group", jsonField(got, "object"))
@@ -243,29 +245,31 @@ func TestUnitGroups_CreateAndUpdateAllFields(t *testing.T) {
 func TestUnitGroups_CreateResponseShape(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-unitgrp-shape")
-	createStatus, createBody, err := apiClient.Post(unitGroupsPath, map[string]any{
+	createResp, err := apiClient.PostFull(unitGroupsPath, map[string]any{
 		"name":         name,
 		"type":         "quantity",
 		"base_unit_id": "each",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, createStatus, createBody)
+	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
 
-	created := parseJSON(createBody)
-	assert.NotEmpty(t, jsonField(created, "id"))
+	created := parseJSON(createResp.Body)
+	id := jsonField(created, "id")
+	assert.NotEmpty(t, id)
+	assertCreatedLocation(t, createResp.Header, id)
 	assert.Equal(t, "unit_group", jsonField(created, "object"))
 	assert.Equal(t, name, jsonField(created, "name"))
 	assert.Equal(t, "quantity", jsonField(created, "type"))
 	assert.NotEmpty(t, jsonField(created, "created_at"))
 	assert.NotEmpty(t, jsonField(created, "updated_at"))
 
-	apiClient.Delete(unitGroupsPath + "/" + jsonField(created, "id"))
+	apiClient.Delete(unitGroupsPath + "/" + id)
 }
 
 func TestUnitGroups_CreateWithAssociatedUnits(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-unitgrp-assoc")
-	createStatus, createBody, err := apiClient.Post(unitGroupsPath, map[string]any{
+	createResp, err := apiClient.PostFull(unitGroupsPath, map[string]any{
 		"name":         name,
 		"type":         "quantity",
 		"base_unit_id": "each",
@@ -277,11 +281,12 @@ func TestUnitGroups_CreateWithAssociatedUnits(t *testing.T) {
 		},
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, createStatus, createBody)
+	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
 
-	created := parseJSON(createBody)
+	created := parseJSON(createResp.Body)
 	id := jsonField(created, "id")
 	assert.NotEmpty(t, id)
+	assertCreatedLocation(t, createResp.Header, id)
 
 	// Fetch with include to verify associated units
 	getStatus, getBody, err := apiClient.GetListRaw(unitGroupsPath+"/"+id, url.Values{"include": {"associated_units"}})
@@ -304,17 +309,19 @@ func TestUnitGroups_CreateWithNotes(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-unitgrp-notes")
 	notes := "Test notes for unit group"
-	createStatus, createBody, err := apiClient.Post(unitGroupsPath, map[string]any{
+	createResp, err := apiClient.PostFull(unitGroupsPath, map[string]any{
 		"name":         name,
 		"type":         "quantity",
 		"base_unit_id": "each",
 		"notes":        notes,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, createStatus, createBody)
+	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
 
-	created := parseJSON(createBody)
+	created := parseJSON(createResp.Body)
 	id := jsonField(created, "id")
+	assert.NotEmpty(t, id)
+	assertCreatedLocation(t, createResp.Header, id)
 	assert.Equal(t, notes, jsonField(created, "notes"))
 
 	apiClient.Delete(unitGroupsPath + "/" + id)
@@ -797,13 +804,15 @@ func TestUnitGroupUnits_CreateIncludeUnit(t *testing.T) {
 	groupID := createTestUnitGroup(t, uniqueName("e2e-ugunit-crincl"))
 	defer apiClient.Delete(unitGroupsPath + "/" + groupID)
 
-	createStatus, createBody, err := apiClient.Post(unitGroupUnitsPath(groupID)+"?include=unit", map[string]any{
+	createResp, err := apiClient.PostFull(unitGroupUnitsPath(groupID)+"?include=unit", map[string]any{
 		"unit_id": "un_01seeddozen00000000",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, createStatus, createBody)
+	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
 
-	created := parseJSON(createBody)
+	created := parseJSON(createResp.Body)
+	id := jsonField(created, "id")
+	assert.NotEmpty(t, id)
 	unit := jsonObject(created, "unit")
 	require.NotNil(t, unit, "unit should be present with ?include=unit on create")
 	assert.Equal(t, "unit", jsonField(unit, "object"))
@@ -878,15 +887,16 @@ func TestUnitGroupUnits_Create(t *testing.T) {
 	groupID := createTestUnitGroup(t, uniqueName("e2e-ugunit-create"))
 	defer apiClient.Delete(unitGroupsPath + "/" + groupID)
 
-	createStatus, createBody, err := apiClient.Post(unitGroupUnitsPath(groupID), map[string]any{
+	createResp, err := apiClient.PostFull(unitGroupUnitsPath(groupID), map[string]any{
 		"unit_id": "un_01seeddozen00000000",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, createStatus, createBody)
+	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
 
-	created := parseJSON(createBody)
+	created := parseJSON(createResp.Body)
 	assert.Equal(t, "unit_group_unit", jsonField(created, "object"))
-	assert.NotEmpty(t, jsonField(created, "id"))
+	id := jsonField(created, "id")
+	assert.NotEmpty(t, id)
 	assert.NotEmpty(t, jsonField(created, "created_at"))
 	assert.NotEmpty(t, jsonField(created, "updated_at"))
 }
@@ -896,17 +906,19 @@ func TestUnitGroupUnits_CreateWithDiscountAndVisibility(t *testing.T) {
 	groupID := createTestUnitGroup(t, uniqueName("e2e-ugunit-disc"))
 	defer apiClient.Delete(unitGroupsPath + "/" + groupID)
 
-	createStatus, createBody, err := apiClient.Post(unitGroupUnitsPath(groupID), map[string]any{
+	createResp, err := apiClient.PostFull(unitGroupUnitsPath(groupID), map[string]any{
 		"unit_id":                    "un_01seeddozen00000000",
 		"discount_percentage":        10.5,
 		"discount_fixed":             2.50,
 		"customer_portal_visibility": "hidden",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, createStatus, createBody)
+	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
 
-	created := parseJSON(createBody)
+	created := parseJSON(createResp.Body)
 	assert.Equal(t, "unit_group_unit", jsonField(created, "object"))
+	id := jsonField(created, "id")
+	assert.NotEmpty(t, id)
 	assert.Equal(t, "10.5", jsonField(created, "discount_percentage"))
 	assert.Equal(t, "2.5", jsonField(created, "discount_fixed"))
 	assert.Equal(t, "hidden", jsonField(created, "customer_portal_visibility"))

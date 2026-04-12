@@ -22,6 +22,7 @@ func (e *PickAllLinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*PickAllLi
 		Title:             "Pick All Lines",
 		Description:       "Marks all lines on a pick as picked.",
 		Method:            http.MethodPut,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/picks/{id}/actions/pick",
 		Request:           &PickAllLinesRequest{},
 		Response:          &apiresource.PickDetail{},

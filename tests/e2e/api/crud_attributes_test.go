@@ -21,19 +21,19 @@ func attributePath(propertyID, attributeID string) string {
 func TestAttributes_CRUD(t *testing.T) {
 	t.Parallel()
 	value := uniqueName("e2e-attr")
-	createStatus, createBody, err := apiClient.Post(attributesPath(SeedPropertyID), map[string]any{
-		"value":      value,
-		"color_code": "blue",
+	createResp, err := apiClient.PostFull(attributesPath(SeedPropertyID), map[string]any{
+		"value": value,
+		"color": "blue",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, createStatus, createBody)
+	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
 
-	created := parseJSON(createBody)
+	created := parseJSON(createResp.Body)
 	assert.Equal(t, "attribute", jsonField(created, "object"))
 	id := jsonField(created, "id")
 	assert.NotEmpty(t, id)
 	assert.Equal(t, value, jsonField(created, "value"))
-	assert.Equal(t, "blue", jsonField(created, "color_code"))
+	assert.Equal(t, "blue", jsonField(created, "color"))
 
 	getStatus, getBody, err := apiClient.GetListRaw(attributePath(SeedPropertyID, id), nil)
 	require.NoError(t, err)
@@ -42,13 +42,13 @@ func TestAttributes_CRUD(t *testing.T) {
 
 	newValue := uniqueName("e2e-attr-upd")
 	patchStatus, patchBody, err := apiClient.Patch(attributePath(SeedPropertyID, id), map[string]any{
-		"value":      newValue,
-		"color_code": "red",
+		"value": newValue,
+		"color": "red",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
 	assert.Equal(t, newValue, jsonField(parseJSON(patchBody), "value"))
-	assert.Equal(t, "red", jsonField(parseJSON(patchBody), "color_code"))
+	assert.Equal(t, "red", jsonField(parseJSON(patchBody), "color"))
 
 	delStatus, delBody, err := apiClient.Delete(attributePath(SeedPropertyID, id))
 	require.NoError(t, err)
@@ -64,21 +64,21 @@ func TestAttributes_CreateAndUpdateAllFields(t *testing.T) {
 
 	// ── CREATE with all fields ──
 	value := uniqueName("e2e-attr-allf")
-	createStatus, createBody, err := apiClient.Post(attributesPath(SeedPropertyID), map[string]any{
-		"value":      value,
-		"color_code": "blue",
+	createResp, err := apiClient.PostFull(attributesPath(SeedPropertyID), map[string]any{
+		"value": value,
+		"color": "blue",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, createStatus, createBody)
+	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
 
-	got := parseJSON(createBody)
+	got := parseJSON(createResp.Body)
 	id := jsonField(got, "id")
 	require.NotEmpty(t, id)
 	defer apiClient.Delete(attributePath(SeedPropertyID, id))
 
 	assert.Equal(t, "attribute", jsonField(got, "object"))
 	assert.Equal(t, value, jsonField(got, "value"))
-	assert.Equal(t, "blue", jsonField(got, "color_code"))
+	assert.Equal(t, "blue", jsonField(got, "color"))
 	assert.NotEmpty(t, jsonField(got, "sort_order"))
 	assert.NotEmpty(t, jsonField(got, "created_at"))
 	assert.NotEmpty(t, jsonField(got, "updated_at"))
@@ -87,7 +87,7 @@ func TestAttributes_CreateAndUpdateAllFields(t *testing.T) {
 	updatedValue := uniqueName("e2e-attr-allf-u")
 	patchStatus, patchBody, err := apiClient.Patch(attributePath(SeedPropertyID, id), map[string]any{
 		"value":      updatedValue,
-		"color_code": "red",
+		"color":      "red",
 		"sort_order": 1,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -96,7 +96,7 @@ func TestAttributes_CreateAndUpdateAllFields(t *testing.T) {
 	updated := parseJSON(patchBody)
 	assert.Equal(t, id, jsonField(updated, "id"), "ID must not change")
 	assert.Equal(t, updatedValue, jsonField(updated, "value"))
-	assert.Equal(t, "red", jsonField(updated, "color_code"))
+	assert.Equal(t, "red", jsonField(updated, "color"))
 	assert.Equal(t, "1", jsonField(updated, "sort_order"))
 }
 

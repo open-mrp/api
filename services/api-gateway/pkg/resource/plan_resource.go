@@ -28,7 +28,7 @@ type PricingPlan struct {
 	// The display name of the plan.
 	Name string `json:"name" validate:"required"`
 	// The plan type code.
-	PlanTypeCode constants.PublicPlanCode `json:"plan_type_code" validate:"required"`
+	PlanTypeCode constants.PublicPlanCode `json:"plan_type" validate:"required"`
 	// The price per seat per month in dollars.
 	PricePerSeat float64 `json:"price_per_seat"`
 	// The flat monthly price in dollars, if applicable.

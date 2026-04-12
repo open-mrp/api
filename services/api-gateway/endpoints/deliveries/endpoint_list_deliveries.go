@@ -31,6 +31,7 @@ func (e *ListDeliveriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListDel
 		Title:             "List Deliveries",
 		Description:       "Returns a paginated list of deliveries for the caller's account.",
 		Method:            http.MethodGet,
+		ContentType:       "application/json",
 		Route:             "/v1/operations/deliveries",
 		Request:           &ListDeliveriesRequest{},
 		Response:          &apiresource.List[apiresource.DeliverySummary]{},

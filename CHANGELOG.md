@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.11.1](https://github.com/Augno/api/compare/v0.11.0...v0.11.1) (2026-04-12)
+
+
+### Bug Fixes
+
+* cleanup public endpoints to better reflect our best practices and keep consistent conventions ([#183](https://github.com/Augno/api/issues/183)) ([c51492d](https://github.com/Augno/api/commit/c51492d51d5d6a15ddd342c7592f4ad13967982c))
+* minor deviations from code conventions ([#185](https://github.com/Augno/api/issues/185)) ([a9b2899](https://github.com/Augno/api/commit/a9b2899c16c64a2b8bda67abc90b6f8c1b93bf86))
+
 ## [0.11.0](https://github.com/Augno/api/compare/v0.10.8...v0.11.0) (2026-04-09)
 
 

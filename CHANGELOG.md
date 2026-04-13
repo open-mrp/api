@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.2](https://github.com/Augno/api/compare/v0.11.1...v0.11.2) (2026-04-13)
+
+
+### Bug Fixes
+
+* various styling issues with a variety of the public endpoints ([#186](https://github.com/Augno/api/issues/186)) ([7cdbc10](https://github.com/Augno/api/commit/7cdbc102551e54ea45d4df8dd0461d3f935defd2))
+
 ## [0.11.1](https://github.com/Augno/api/compare/v0.11.0...v0.11.1) (2026-04-12)
 
 

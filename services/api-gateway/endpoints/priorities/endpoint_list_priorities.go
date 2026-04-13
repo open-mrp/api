@@ -34,7 +34,7 @@ func (e *ListPrioritiesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPri
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypePriority,
-			Fields:     []string{"owner"},
+			Fields:     []string{"owner", "owner.account"},
 		}),
 	}
 }

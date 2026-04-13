@@ -17,7 +17,7 @@ type UpdateRoleRequest struct {
 	RoleID string `path:"id" validate:"required"`
 	// The new display name for the role.
 	Name *string `json:"name" nullable:"false" validate:"omitempty,max=255"`
-	// The full set of permissions to replace existing ones with in "domain:action" format. If omitted, permissions are not changed.
+	// The full set of permissions to replace existing ones with in `<domain>:<action>` format. If omitted, permissions are not changed.
 	Permissions *[]string `json:"permissions" nullable:"false"`
 }
 
@@ -51,7 +51,7 @@ func (e *UpdateRoleEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateRoleR
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeRole,
-			Fields:     []string{"owner", "permissions"},
+			Fields:     []string{"owner", "owner.account", "permissions"},
 		}),
 	}
 }

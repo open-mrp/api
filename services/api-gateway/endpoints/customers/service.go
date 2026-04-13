@@ -185,6 +185,28 @@ func (m *customerSvcImpl) GetCustomer(ctx context.Context, req *GetCustomerReque
 }
 
 func (m *customerSvcImpl) CreateCustomer(ctx context.Context, req *CreateCustomerRequest) (*apiresource.Customer, *apierror.APIError) {
+	statusCode := constants.AccountStatusCodeNormal
+	if req.StatusCode != nil {
+		statusCode = *req.StatusCode
+	}
+	commissionPolicy := constants.CommissionPolicyExempt
+	if req.CommissionPolicy != nil {
+		commissionPolicy = *req.CommissionPolicy
+	}
+	freightPolicy := constants.FreightPolicyBilled
+	if req.FreightPolicy != nil {
+		freightPolicy = *req.FreightPolicy
+	}
+	priorityCode := constants.PriorityCodeNormal
+	if req.DefaultPriorityCode != nil {
+		priorityCode = *req.DefaultPriorityCode
+	}
+
+	statusCodeStr := string(statusCode)
+	commissionPolicyStr := string(commissionPolicy)
+	freightPolicyStr := string(freightPolicy)
+	priorityCodeStr := string(priorityCode)
+
 	pbReq := &pb.CreateCustomerRequest{
 		Name:                  req.Name,
 		Number:                req.Number,
@@ -192,18 +214,18 @@ func (m *customerSvcImpl) CreateCustomer(ctx context.Context, req *CreateCustome
 		Email:                 req.Email,
 		Phone:                 req.Phone,
 		Url:                   req.URL,
-		StatusCode:            optAccountStatusCodeToStringPtr(req.StatusCode),
+		StatusCode:            &statusCodeStr,
 		IsEdiEnabled:          req.IsEdiEnabled,
-		CommissionPolicy:      optCommissionPolicyToStringPtr(req.CommissionPolicy),
-		FreightPolicy:         optFreightPolicyToStringPtr(req.FreightPolicy),
-		DefaultCarrierId:      req.DefaultCarrierID,
+		CommissionPolicy:      &commissionPolicyStr,
+		FreightPolicy:         &freightPolicyStr,
+		DefaultCarrierId:      &req.DefaultCarrierID,
 		DefaultServiceLevelId: req.DefaultServiceLevelID,
-		DefaultPaymentTermId:  req.DefaultPaymentTermID,
-		DefaultShippingTermId: req.DefaultShippingTermID,
-		DefaultPriorityCode:   optPriorityCodeToStringPtr(req.DefaultPriorityCode),
+		DefaultPaymentTermId:  &req.DefaultPaymentTermID,
+		DefaultShippingTermId: &req.DefaultShippingTermID,
+		DefaultPriorityCode:   &priorityCodeStr,
 		DefaultSalesRepUserId: req.DefaultSalesRepUserID,
 		CustomerPriceGroupIds: req.CustomerPriceGroupIDs,
-		CustomerTypeGroupId:   req.CustomerTypeGroupID,
+		CustomerTypeGroupId:   &req.CustomerTypeGroupID,
 		CarrierBillingType:    optCarrierBillingTypeToStringPtr(req.CarrierBillingType),
 		CarrierBillingAccount: req.CarrierBillingAccount,
 	}
@@ -213,12 +235,8 @@ func (m *customerSvcImpl) CreateCustomer(ctx context.Context, req *CreateCustome
 		pbReq.CreditLimitUnitId = &req.CreditLimit.UnitID
 	}
 
-	if req.BillToAddress != nil {
-		pbReq.BillToAddress = addressInputToCustomerProto(req.BillToAddress)
-	}
-	if req.ShipToAddress != nil {
-		pbReq.ShipToAddress = addressInputToCustomerProto(req.ShipToAddress)
-	}
+	pbReq.BillToAddress = addressInputToCustomerProto(&req.BillToAddress)
+	pbReq.ShipToAddress = addressInputToCustomerProto(&req.ShipToAddress)
 
 	resp, apiErr := grpcutil.CallRPC(ctx, customerSvcTracer, "service.customers.create", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.CreateCustomerResponse, error) {

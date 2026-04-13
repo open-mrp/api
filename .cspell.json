@@ -161,6 +161,7 @@
         "isgomock",
         "isqlc",
         "isready",
+        "itemcategoryep",
         "jackc",
         "jaegertracing",
         "jetify",

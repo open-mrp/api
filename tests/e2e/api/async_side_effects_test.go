@@ -280,7 +280,7 @@ func TestCustomers_AuditEvents_UpdateAllFields(t *testing.T) {
 		"phone":                   "555-AUDIT",
 		"url":                     "https://audit.e2e.augno.com",
 		"is_edi_enabled":          true,
-		"commission_policy":       "commission_exempt",
+		"commission_policy":       "commission_applied",
 		"freight_policy":          "free_freight",
 		"carrier_billing_type":    "third_party",
 		"carrier_billing_account": "NEW-ACCT",
@@ -326,8 +326,8 @@ func TestCustomers_AuditEvents_UpdateAllFields(t *testing.T) {
 	// Verify enum/policy field changes.
 	commChange, ok := changeForField(changes, "commission_policy")
 	require.True(t, ok, "should include commission_policy change")
-	assert.Equal(t, "commission_applied", jsonField(commChange, "old_value"))
-	assert.Equal(t, "commission_exempt", jsonField(commChange, "new_value"))
+	assert.Equal(t, "commission_exempt", jsonField(commChange, "old_value"))
+	assert.Equal(t, "commission_applied", jsonField(commChange, "new_value"))
 
 	freightChange, ok := changeForField(changes, "freight_policy")
 	require.True(t, ok, "should include freight_policy change")

@@ -183,13 +183,13 @@ func (m *registrationFlowSvcImpl) RegisterCustomer(ctx context.Context, req *Reg
 
 	if req.Address != nil {
 		pbReq.Address = &pb.RegisterCustomerAddressInput{
-			StreetLine_1: req.Address.StreetLine1,
+			StreetLine_1: derefStr(req.Address.StreetLine1),
 			StreetLine_2: req.Address.StreetLine2,
-			Locality:     req.Address.Locality,
-			State:        req.Address.State,
-			PostalCode:   req.Address.PostalCode,
+			Locality:     derefStr(req.Address.Locality),
+			State:        derefStr(req.Address.State),
+			PostalCode:   derefStr(req.Address.PostalCode),
 			Country:      req.Address.Country,
-			Name:         req.Address.Name,
+			Name:         &req.Address.Name,
 		}
 	}
 
@@ -203,4 +203,11 @@ func (m *registrationFlowSvcImpl) RegisterCustomer(ctx context.Context, req *Reg
 	}
 
 	return &apiresource.EmptyResource{}, nil
+}
+
+func derefStr(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
 }

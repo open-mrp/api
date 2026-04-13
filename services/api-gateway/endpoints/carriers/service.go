@@ -6,6 +6,7 @@ import (
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
+	ownerutil "github.com/augno/api/services/api-gateway/internal/owner"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
@@ -69,7 +70,15 @@ func (m *carrierSvcImpl) ListCarriers(ctx context.Context, req *ListCarriersRequ
 		return nil, apiErr
 	}
 
-	return CarrierListPresenter(resp), nil
+	var ownerAccount *apiresource.Account
+	for _, c := range resp.Carriers {
+		if c.AccountId != nil {
+			ownerAccount = ownerutil.ResolveOwnerAccount(ctx, m.coreClient, c.AccountId)
+			break
+		}
+	}
+
+	return CarrierListPresenter(resp, ownerAccount), nil
 }
 
 func (m *carrierSvcImpl) GetCarrier(ctx context.Context, req *GetCarrierRequest) (*apiresource.Carrier, *apierror.APIError) {
@@ -86,7 +95,8 @@ func (m *carrierSvcImpl) GetCarrier(ctx context.Context, req *GetCarrierRequest)
 		return nil, apiErr
 	}
 
-	result := CarrierPresenter(resp.Carrier)
+	ownerAccount := ownerutil.ResolveOwnerAccount(ctx, m.coreClient, resp.Carrier.AccountId)
+	result := CarrierPresenter(resp.Carrier, ownerAccount)
 	return &result, nil
 }
 
@@ -118,7 +128,8 @@ func (m *carrierSvcImpl) CreateCarrier(ctx context.Context, req *CreateCarrierRe
 		return nil, apiErr
 	}
 
-	result := CarrierPresenter(resp.Carrier)
+	ownerAccount := ownerutil.ResolveOwnerAccount(ctx, m.coreClient, resp.Carrier.AccountId)
+	result := CarrierPresenter(resp.Carrier, ownerAccount)
 	return &result, nil
 }
 
@@ -144,7 +155,8 @@ func (m *carrierSvcImpl) UpdateCarrier(ctx context.Context, req *UpdateCarrierRe
 		return nil, apiErr
 	}
 
-	result := CarrierPresenter(resp.Carrier)
+	ownerAccount := ownerutil.ResolveOwnerAccount(ctx, m.coreClient, resp.Carrier.AccountId)
+	result := CarrierPresenter(resp.Carrier, ownerAccount)
 	return &result, nil
 }
 
@@ -215,6 +227,7 @@ func (m *carrierSvcImpl) SyncOptions(ctx context.Context, req *SyncOptionsReques
 		return nil, apiErr
 	}
 
-	result := CarrierPresenter(resp.Carrier)
+	ownerAccount := ownerutil.ResolveOwnerAccount(ctx, m.coreClient, resp.Carrier.AccountId)
+	result := CarrierPresenter(resp.Carrier, ownerAccount)
 	return &result, nil
 }

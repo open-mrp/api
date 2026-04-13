@@ -36,7 +36,7 @@ func (e *ListRolesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListRolesReq
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeRole,
-			Fields:     []string{"owner", "permissions"},
+			Fields:     []string{"owner", "owner.account", "permissions"},
 		}),
 	}
 }

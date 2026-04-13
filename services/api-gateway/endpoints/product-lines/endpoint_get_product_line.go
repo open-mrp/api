@@ -35,7 +35,7 @@ func (e *GetProductLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetProd
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeProductLine,
-			Fields:     []string{"owner", "unit_group"},
+			Fields:     []string{"owner", "owner.account", "unit_group"},
 		}),
 	}
 }

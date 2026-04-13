@@ -35,7 +35,7 @@ func (e *GetUnitGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetUnitGr
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeUnitGroup,
-			Fields:     []string{"owner", "base_unit", "associated_units"},
+			Fields:     []string{"owner", "owner.account", "base_unit", "associated_units"},
 		}),
 	}
 }

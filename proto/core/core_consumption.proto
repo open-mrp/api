@@ -149,6 +149,8 @@ message CreateScanningStationRequest {
   string type = 3;
   bool material_check_required = 4;
   string department_id = 5;
+  optional string label_size_code = 6;
+  optional string label_type_code = 7;
 }
 message CreateScanningStationResponse {
   ScanningStationInfo scanning_station = 1;

@@ -47,7 +47,7 @@ func (e *CreatePaymentTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*Crea
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypePaymentTerm,
-			Fields:     []string{"owner"},
+			Fields:     []string{"owner", "owner.account"},
 		}),
 	}
 }

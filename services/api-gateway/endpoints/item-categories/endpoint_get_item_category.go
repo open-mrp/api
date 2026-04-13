@@ -35,7 +35,7 @@ func (e *GetItemCategoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetIte
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeItemCategory,
-			Fields:     []string{"owner", "properties", "unit_group"},
+			Fields:     []string{"owner", "owner.account", "properties", "unit_group"},
 		}),
 	}
 }

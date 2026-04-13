@@ -28,8 +28,8 @@ type CreateUnitGroupRequest struct {
 	// The display name of the unit group.
 	Name string `json:"name" validate:"required,max=255"`
 	// Optional notes about the unit group.
-	Notes *string `json:"notes,omitempty" default:"null"`
-	// The unit type code (e.g. "mass", "quantity").
+	Notes *string `json:"notes,omitempty" default:"null" nullable:"false"`
+	// The unit type code.
 	Type constants.UnitType `json:"type" validate:"required"`
 	// The base unit ID.
 	BaseUnitID string `json:"base_unit_id" validate:"required,max=191"`
@@ -80,7 +80,7 @@ func (e *CreateUnitGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*Create
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeUnitGroup,
-			Fields:     []string{"owner", "base_unit", "associated_units"},
+			Fields:     []string{"owner", "owner.account", "base_unit", "associated_units"},
 		}),
 	}
 }

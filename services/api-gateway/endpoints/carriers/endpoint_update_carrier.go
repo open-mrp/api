@@ -49,7 +49,7 @@ func (e *UpdateCarrierEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateCa
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeCarrier,
-			Fields:     []string{"owner", "service_levels"},
+			Fields:     []string{"owner", "owner.account", "service_levels"},
 		}),
 	}
 }

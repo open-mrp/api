@@ -15,13 +15,15 @@ import (
 type CreateSandboxRequest struct {
 	// The display name for the sandbox.
 	Name string `json:"name" validate:"required,max=255"`
-	// Controls whether the sandbox is blank or seeded with tutorial data.
-	Mode constants.SandboxMode `json:"mode,omitempty" validate:"omitempty"`
+	// Controls whether the sandbox is blank or seeded with tutorial data. Defaults to blank.
+	Mode *constants.SandboxMode `json:"mode,omitempty" validate:"omitempty"`
 }
+
+var sampleSandboxMode = constants.SandboxModeBlank
 
 var sampleCreateSandboxRequest = &CreateSandboxRequest{
 	Name: "Integration Testing",
-	Mode: "blank",
+	Mode: &sampleSandboxMode,
 }
 
 func (*CreateSandboxRequest) SchemaExample() any {

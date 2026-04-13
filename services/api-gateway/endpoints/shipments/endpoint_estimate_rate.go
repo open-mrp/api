@@ -34,30 +34,43 @@ type EstimateRateRequest struct {
 	// The customer ID for the shipment.
 	CustomerID *string `json:"customer_id,omitempty"`
 	// The origin address.
-	FromAddress apirequest.ShippingAddressInput `json:"from_address" validate:"required"`
+	FromAddress apirequest.AddressInput `json:"from_address" validate:"required"`
 	// The destination address.
-	ToAddress apirequest.ShippingAddressInput `json:"to_address" validate:"required"`
+	ToAddress apirequest.AddressInput `json:"to_address" validate:"required"`
 	// The parcels to estimate rates for.
 	Parcels []ParcelInput `json:"parcels" validate:"required,min=1"`
 	// The total order value.
 	OrderTotal *float64 `json:"order_total,omitempty"`
 }
 
+var (
+	sampleEstimateFromStreetLine1 = apiresource.SampleAddressLine1
+	sampleEstimateFromLocality    = apiresource.SampleAddressCity
+	sampleEstimateFromState       = apiresource.SampleAddressState
+	sampleEstimateFromPostalCode  = apiresource.SampleAddressPostalCode
+	sampleEstimateToStreetLine1   = "456 Oak Avenue"
+	sampleEstimateToLocality      = "Los Angeles"
+	sampleEstimateToState         = "CA"
+	sampleEstimateToPostalCode    = "90001"
+)
+
 var sampleEstimateRateRequest = &EstimateRateRequest{
 	CarrierID:      apiresource.SampleCarrierID,
 	ServiceLevelID: apiresource.SampleServiceLevelID,
-	FromAddress: apirequest.ShippingAddressInput{
-		StreetLine1: apiresource.SampleAddressLine1,
-		Locality:    apiresource.SampleAddressCity,
-		State:       apiresource.SampleAddressState,
-		PostalCode:  apiresource.SampleAddressPostalCode,
+	FromAddress: apirequest.AddressInput{
+		Name:        "Origin Warehouse",
+		StreetLine1: &sampleEstimateFromStreetLine1,
+		Locality:    &sampleEstimateFromLocality,
+		State:       &sampleEstimateFromState,
+		PostalCode:  &sampleEstimateFromPostalCode,
 		Country:     apiresource.SampleAddressCountry,
 	},
-	ToAddress: apirequest.ShippingAddressInput{
-		StreetLine1: "456 Oak Avenue",
-		Locality:    "Los Angeles",
-		State:       "CA",
-		PostalCode:  "90001",
+	ToAddress: apirequest.AddressInput{
+		Name:        "Destination",
+		StreetLine1: &sampleEstimateToStreetLine1,
+		Locality:    &sampleEstimateToLocality,
+		State:       &sampleEstimateToState,
+		PostalCode:  &sampleEstimateToPostalCode,
 		Country:     "US",
 	},
 	Parcels: []ParcelInput{

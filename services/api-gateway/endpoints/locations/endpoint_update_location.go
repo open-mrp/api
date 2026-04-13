@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
+	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
@@ -21,8 +22,8 @@ type UpdateLocationRequest struct {
 	TypeCode *constants.LocationTypeCode `json:"type,omitempty" nullable:"false"`
 	// The ID of the parent location. Send null to clear.
 	ParentID *string `json:"parent_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
-	// The IDs of child locations. When provided, replaces all current children.
-	ChildIDs *[]string `json:"child_ids,omitempty" nullable:"false"`
+	// The IDs of child locations. When provided, replaces all current children. Send null to clear.
+	ChildIDs apirequest.NullableInput[[]string] `json:"child_ids,omitempty"`
 }
 
 var sampleUpdateName = "Warehouse B"

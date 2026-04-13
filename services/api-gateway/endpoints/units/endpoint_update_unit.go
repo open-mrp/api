@@ -20,13 +20,13 @@ type UpdateUnitRequest struct {
 	// The short abbreviation for the unit.
 	Abbreviation *string `json:"abbreviation,omitempty" nullable:"false" validate:"omitempty,max=191"`
 	// The conversion ratio numerator, as a decimal string.
-	RatioNumerator *string `json:"ratio_numerator,omitempty" nullable:"false"`
+	RatioNumerator *string `json:"ratio_numerator,omitempty" nullable:"false" format:"decimal"`
 	// The conversion ratio denominator, as a decimal string.
-	RatioDenominator *string `json:"ratio_denominator,omitempty" nullable:"false"`
+	RatioDenominator *string `json:"ratio_denominator,omitempty" nullable:"false" format:"decimal"`
 	// The conversion offset numerator, as a decimal string.
-	OffsetNumerator *string `json:"offset_numerator,omitempty" nullable:"false"`
+	OffsetNumerator *string `json:"offset_numerator,omitempty" nullable:"false" format:"decimal"`
 	// The conversion offset denominator, as a decimal string.
-	OffsetDenominator *string `json:"offset_denominator,omitempty" nullable:"false"`
+	OffsetDenominator *string `json:"offset_denominator,omitempty" nullable:"false" format:"decimal"`
 }
 
 var sampleUpdateUnitRequest = &UpdateUnitRequest{
@@ -57,7 +57,7 @@ func (e *UpdateUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateUnitR
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeUnit,
-			Fields:     []string{"owner"},
+			Fields:     []string{"owner", "owner.account"},
 		}),
 	}
 }

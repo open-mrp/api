@@ -27,6 +27,6 @@ func TestUnitPresenter(t *testing.T) {
 		UpdatedAt:         timestamppb.Now(),
 	}
 
-	result := UnitPresenter(unit)
+	result := UnitPresenter(unit, nil)
 	resourcetest.ValidateResourceStruct(t, "Unit", result)
 }

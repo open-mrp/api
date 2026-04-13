@@ -22,7 +22,7 @@ type CreateAccountGroupRequest struct {
 	// The freight status code.
 	FreightPolicy *constants.FreightPolicy `json:"freight_policy,omitempty" default:"billed_freight" nullable:"false"`
 	// An optional description of the account group.
-	Description *string `json:"description,omitempty"`
+	Description *string `json:"description,omitempty" nullable:"false"`
 }
 
 var sampleCreateAccountGroupRequest = &CreateAccountGroupRequest{

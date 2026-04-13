@@ -119,10 +119,12 @@ SELECT ae.type_id,
        u.name AS user_name,
        u.email AS user_email,
        ak.name AS api_key_name,
-       ak.redacted_value AS api_key_redacted_value
+       ak.redacted_value AS api_key_redacted_value,
+       ik.idempotency_key
 FROM audit_event ae
 LEFT JOIN ` + "`" + `user` + "`" + ` u ON ae.actor_id = u.id AND ae.identity_type = 'user'
 LEFT JOIN api_key ak ON ae.actor_id = ak.type_id AND ae.identity_type = 'api_key'
+LEFT JOIN idempotency_key ik ON ae.idempotency_key_id = ik.type_id
 WHERE ae.type_id = ? AND ae.account_id = ?
 `
 
@@ -154,6 +156,7 @@ type FindAuditEventByIDRow struct {
 	UserEmail           sql.NullString
 	ApiKeyName          sql.NullString
 	ApiKeyRedactedValue sql.NullString
+	IdempotencyKey      sql.NullString
 }
 
 func (q *Queries) FindAuditEventByID(ctx context.Context, arg FindAuditEventByIDParams) (FindAuditEventByIDRow, error) {
@@ -185,6 +188,7 @@ func (q *Queries) FindAuditEventByID(ctx context.Context, arg FindAuditEventByID
 		&i.UserEmail,
 		&i.ApiKeyName,
 		&i.ApiKeyRedactedValue,
+		&i.IdempotencyKey,
 	)
 	return i, err
 }
@@ -209,10 +213,12 @@ SELECT ae.type_id,
        u.name AS user_name,
        u.email AS user_email,
        ak.name AS api_key_name,
-       ak.redacted_value AS api_key_redacted_value
+       ak.redacted_value AS api_key_redacted_value,
+       ik.idempotency_key
 FROM audit_event ae
 LEFT JOIN ` + "`" + `user` + "`" + ` u ON ae.actor_id = u.id AND ae.identity_type = 'user'
 LEFT JOIN api_key ak ON ae.actor_id = ak.type_id AND ae.identity_type = 'api_key'
+LEFT JOIN idempotency_key ik ON ae.idempotency_key_id = ik.type_id
 WHERE ae.account_id = ?
 AND (? = '' OR ae.resource_type = ?)
 AND (? = '' OR ae.resource_id = ?)
@@ -270,6 +276,7 @@ type ListAuditEventsBackwardRow struct {
 	UserEmail           sql.NullString
 	ApiKeyName          sql.NullString
 	ApiKeyRedactedValue sql.NullString
+	IdempotencyKey      sql.NullString
 }
 
 func (q *Queries) ListAuditEventsBackward(ctx context.Context, arg ListAuditEventsBackwardParams) ([]ListAuditEventsBackwardRow, error) {
@@ -325,6 +332,7 @@ func (q *Queries) ListAuditEventsBackward(ctx context.Context, arg ListAuditEven
 			&i.UserEmail,
 			&i.ApiKeyName,
 			&i.ApiKeyRedactedValue,
+			&i.IdempotencyKey,
 		); err != nil {
 			return nil, err
 		}
@@ -359,10 +367,12 @@ SELECT ae.type_id,
        u.name AS user_name,
        u.email AS user_email,
        ak.name AS api_key_name,
-       ak.redacted_value AS api_key_redacted_value
+       ak.redacted_value AS api_key_redacted_value,
+       ik.idempotency_key
 FROM audit_event ae
 LEFT JOIN ` + "`" + `user` + "`" + ` u ON ae.actor_id = u.id AND ae.identity_type = 'user'
 LEFT JOIN api_key ak ON ae.actor_id = ak.type_id AND ae.identity_type = 'api_key'
+LEFT JOIN idempotency_key ik ON ae.idempotency_key_id = ik.type_id
 WHERE ae.account_id = ?
 AND (? = '' OR ae.resource_type = ?)
 AND (? = '' OR ae.resource_id = ?)
@@ -421,6 +431,7 @@ type ListAuditEventsForwardRow struct {
 	UserEmail           sql.NullString
 	ApiKeyName          sql.NullString
 	ApiKeyRedactedValue sql.NullString
+	IdempotencyKey      sql.NullString
 }
 
 func (q *Queries) ListAuditEventsForward(ctx context.Context, arg ListAuditEventsForwardParams) ([]ListAuditEventsForwardRow, error) {
@@ -477,6 +488,7 @@ func (q *Queries) ListAuditEventsForward(ctx context.Context, arg ListAuditEvent
 			&i.UserEmail,
 			&i.ApiKeyName,
 			&i.ApiKeyRedactedValue,
+			&i.IdempotencyKey,
 		); err != nil {
 			return nil, err
 		}

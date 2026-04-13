@@ -349,19 +349,14 @@ func (m *shipmentSvcImpl) DeleteShipmentLine(ctx context.Context, req *DeleteShi
 	return &apiresource.EmptyResource{}, nil
 }
 
-func addressInputToProto(a apirequest.ShippingAddressInput) *pb.AddressInput {
-	name := ""
-	if a.Name != nil {
-		name = *a.Name
-	}
+func addressInputToProto(a apirequest.AddressInput) *pb.AddressInput {
 	return &pb.AddressInput{
-		Name:    name,
-		Company: a.Company,
-		Street1: a.StreetLine1,
+		Name:    a.Name,
+		Street1: derefStr(a.StreetLine1),
 		Street2: a.StreetLine2,
-		City:    a.Locality,
-		State:   a.State,
-		Zip:     a.PostalCode,
+		City:    derefStr(a.Locality),
+		State:   derefStr(a.State),
+		Zip:     derefStr(a.PostalCode),
 		Country: a.Country,
 		Phone:   a.Phone,
 		Email:   a.Email,

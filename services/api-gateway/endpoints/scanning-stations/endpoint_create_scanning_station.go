@@ -16,13 +16,17 @@ type CreateScanningStationRequest struct {
 	// The display name of the scanning station.
 	Name string `json:"name" validate:"required,max=255"`
 	// Optional notes about the scanning station.
-	Notes *string `json:"notes,omitempty"`
+	Notes *string `json:"notes,omitempty" nullable:"false"`
 	// The type of scanning station.
 	Type constants.ScanningStationType `json:"type" validate:"required"`
 	// Whether material check is required at this station.
 	MaterialCheckRequired bool `json:"material_check_required"`
 	// The ID of the department to associate with this scanning station.
 	DepartmentID string `json:"department_id" validate:"required,max=191"`
+	// The label size code for the scanning station.
+	LabelSizeCode *constants.LabelSizeCode `json:"label_size,omitempty" nullable:"false"`
+	// The label type code for the scanning station.
+	LabelTypeCode *constants.LabelTypeCode `json:"label_type,omitempty" nullable:"false"`
 }
 
 var sampleCreateScanningStationRequest = &CreateScanningStationRequest{

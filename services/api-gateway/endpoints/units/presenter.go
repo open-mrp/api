@@ -8,7 +8,7 @@ import (
 	pb "github.com/augno/api/shared/proto/core"
 )
 
-func UnitPresenter(u *pb.UnitInfo) apiresource.Unit {
+func UnitPresenter(u *pb.UnitInfo, ownerAccount *apiresource.Account) apiresource.Unit {
 	if u == nil {
 		return apiresource.Unit{}
 	}
@@ -24,20 +24,20 @@ func UnitPresenter(u *pb.UnitInfo) apiresource.Unit {
 		OffsetNumerator:   db.TrimDecimal(u.OffsetNumerator),
 		OffsetDenominator: db.TrimDecimal(u.OffsetDenominator),
 		IsBaseUnit:        u.IsBaseUnit,
-		Owner:             apiresource.NewOwner(u.AccountId),
+		Owner:             apiresource.NewOwnerWithAccount(u.AccountId, ownerAccount),
 		CreatedAt:         grpcutil.TimestampToTime(u.CreatedAt),
 		UpdatedAt:         grpcutil.TimestampToTime(u.UpdatedAt),
 	}
 }
 
-func UnitListPresenter(resp *pb.ListUnitsResponse) *apiresource.List[apiresource.Unit] {
+func UnitListPresenter(resp *pb.ListUnitsResponse, ownerAccount *apiresource.Account) *apiresource.List[apiresource.Unit] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.Unit](nil, apiresource.PageInfo{})
 	}
 
 	units := make([]apiresource.Unit, len(resp.Units))
 	for i, u := range resp.Units {
-		units[i] = UnitPresenter(u)
+		units[i] = UnitPresenter(u, ownerAccount)
 	}
 
 	return apiresource.NewList(units, grpcutil.MapProtoPageInfo(resp.PageInfo))
@@ -53,7 +53,7 @@ func ValidateUnitsPresenter(resp *pb.ValidateUnitsResponse) *apiresource.Validat
 
 	units := make(map[string]*apiresource.Unit, len(resp.Units))
 	for key, proto := range resp.Units {
-		u := UnitPresenter(proto)
+		u := UnitPresenter(proto, nil)
 		units[key] = &u
 	}
 

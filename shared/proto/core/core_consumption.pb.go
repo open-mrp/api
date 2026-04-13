@@ -9,13 +9,12 @@
 package core
 
 import (
-	reflect "reflect"
-	sync "sync"
-	unsafe "unsafe"
-
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
+	reflect "reflect"
+	sync "sync"
+	unsafe "unsafe"
 )
 
 const (
@@ -1512,6 +1511,8 @@ type CreateScanningStationRequest struct {
 	Type                  string                 `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"`
 	MaterialCheckRequired bool                   `protobuf:"varint,4,opt,name=material_check_required,json=materialCheckRequired,proto3" json:"material_check_required,omitempty"`
 	DepartmentId          string                 `protobuf:"bytes,5,opt,name=department_id,json=departmentId,proto3" json:"department_id,omitempty"`
+	LabelSizeCode         *string                `protobuf:"bytes,6,opt,name=label_size_code,json=labelSizeCode,proto3,oneof" json:"label_size_code,omitempty"`
+	LabelTypeCode         *string                `protobuf:"bytes,7,opt,name=label_type_code,json=labelTypeCode,proto3,oneof" json:"label_type_code,omitempty"`
 	unknownFields         protoimpl.UnknownFields
 	sizeCache             protoimpl.SizeCache
 }
@@ -1577,6 +1578,20 @@ func (x *CreateScanningStationRequest) GetMaterialCheckRequired() bool {
 func (x *CreateScanningStationRequest) GetDepartmentId() string {
 	if x != nil {
 		return x.DepartmentId
+	}
+	return ""
+}
+
+func (x *CreateScanningStationRequest) GetLabelSizeCode() string {
+	if x != nil && x.LabelSizeCode != nil {
+		return *x.LabelSizeCode
+	}
+	return ""
+}
+
+func (x *CreateScanningStationRequest) GetLabelTypeCode() string {
+	if x != nil && x.LabelTypeCode != nil {
+		return *x.LabelTypeCode
 	}
 	return ""
 }
@@ -4846,14 +4861,18 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"\x19GetScanningStationRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"b\n" +
 	"\x1aGetScanningStationResponse\x12D\n" +
-	"\x10scanning_station\x18\x01 \x01(\v2\x19.core.ScanningStationInfoR\x0fscanningStation\"\xc8\x01\n" +
+	"\x10scanning_station\x18\x01 \x01(\v2\x19.core.ScanningStationInfoR\x0fscanningStation\"\xca\x02\n" +
 	"\x1cCreateScanningStationRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x19\n" +
 	"\x05notes\x18\x02 \x01(\tH\x00R\x05notes\x88\x01\x01\x12\x12\n" +
 	"\x04type\x18\x03 \x01(\tR\x04type\x126\n" +
 	"\x17material_check_required\x18\x04 \x01(\bR\x15materialCheckRequired\x12#\n" +
-	"\rdepartment_id\x18\x05 \x01(\tR\fdepartmentIdB\b\n" +
-	"\x06_notes\"e\n" +
+	"\rdepartment_id\x18\x05 \x01(\tR\fdepartmentId\x12+\n" +
+	"\x0flabel_size_code\x18\x06 \x01(\tH\x01R\rlabelSizeCode\x88\x01\x01\x12+\n" +
+	"\x0flabel_type_code\x18\a \x01(\tH\x02R\rlabelTypeCode\x88\x01\x01B\b\n" +
+	"\x06_notesB\x12\n" +
+	"\x10_label_size_codeB\x12\n" +
+	"\x10_label_type_code\"e\n" +
 	"\x1dCreateScanningStationResponse\x12D\n" +
 	"\x10scanning_station\x18\x01 \x01(\v2\x19.core.ScanningStationInfoR\x0fscanningStation\"\xd0\x02\n" +
 	"\x1cUpdateScanningStationRequest\x12\x0e\n" +

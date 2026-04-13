@@ -36,6 +36,7 @@ var resourceRegistry = map[constants.ObjectType]any{
 	constants.ObjectTypeItemCategory:     apiresource.ItemCategory{},
 	constants.ObjectTypeMachine:          apiresource.Machine{},
 	constants.ObjectTypeMaterial:         apiresource.Material{},
+	constants.ObjectTypeOwner:            apiresource.Owner{},
 	constants.ObjectTypePart:             apiresource.Part{},
 	constants.ObjectTypePick:             apiresource.PickDetail{},
 	constants.ObjectTypeProduct:          apiresource.Product{},

@@ -13,13 +13,12 @@
 package platform
 
 import (
-	reflect "reflect"
-	sync "sync"
-	unsafe "unsafe"
-
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
+	reflect "reflect"
+	sync "sync"
+	unsafe "unsafe"
 )
 
 const (
@@ -2127,16 +2126,16 @@ type AuditEventInfo struct {
 	ResourceId   string                 `protobuf:"bytes,4,opt,name=resource_id,json=resourceId,proto3" json:"resource_id,omitempty"`
 	Actor        *AuditActor            `protobuf:"bytes,5,opt,name=actor,proto3,oneof" json:"actor,omitempty"`
 	// Field-level before/after values; typically empty for create/delete.
-	Changes          []*AuditFieldChange    `protobuf:"bytes,6,rep,name=changes,proto3" json:"changes,omitempty"`
-	MetadataJson     *string                `protobuf:"bytes,7,opt,name=metadata_json,json=metadataJson,proto3,oneof" json:"metadata_json,omitempty"`
-	ServiceName      *string                `protobuf:"bytes,8,opt,name=service_name,json=serviceName,proto3,oneof" json:"service_name,omitempty"`
-	RequestId        *string                `protobuf:"bytes,9,opt,name=request_id,json=requestId,proto3,oneof" json:"request_id,omitempty"`
-	IdempotencyKeyId *string                `protobuf:"bytes,10,opt,name=idempotency_key_id,json=idempotencyKeyId,proto3,oneof" json:"idempotency_key_id,omitempty"`
-	SourceIp         *string                `protobuf:"bytes,11,opt,name=source_ip,json=sourceIp,proto3,oneof" json:"source_ip,omitempty"`
-	OccurredAt       *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
-	CreatedAt        *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	Changes        []*AuditFieldChange    `protobuf:"bytes,6,rep,name=changes,proto3" json:"changes,omitempty"`
+	MetadataJson   *string                `protobuf:"bytes,7,opt,name=metadata_json,json=metadataJson,proto3,oneof" json:"metadata_json,omitempty"`
+	ServiceName    *string                `protobuf:"bytes,8,opt,name=service_name,json=serviceName,proto3,oneof" json:"service_name,omitempty"`
+	RequestId      *string                `protobuf:"bytes,9,opt,name=request_id,json=requestId,proto3,oneof" json:"request_id,omitempty"`
+	IdempotencyKey *string                `protobuf:"bytes,10,opt,name=idempotency_key,json=idempotencyKey,proto3,oneof" json:"idempotency_key,omitempty"`
+	SourceIp       *string                `protobuf:"bytes,11,opt,name=source_ip,json=sourceIp,proto3,oneof" json:"source_ip,omitempty"`
+	OccurredAt     *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
+	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *AuditEventInfo) Reset() {
@@ -2232,9 +2231,9 @@ func (x *AuditEventInfo) GetRequestId() string {
 	return ""
 }
 
-func (x *AuditEventInfo) GetIdempotencyKeyId() string {
-	if x != nil && x.IdempotencyKeyId != nil {
-		return *x.IdempotencyKeyId
+func (x *AuditEventInfo) GetIdempotencyKey() string {
+	if x != nil && x.IdempotencyKey != nil {
+		return *x.IdempotencyKey
 	}
 	return ""
 }
@@ -2698,7 +2697,7 @@ const file_platform_platform_proto_rawDesc = "" +
 	"\bincludes\x18\x02 \x03(\tR\bincludes\"R\n" +
 	"\x15GetAuditEventResponse\x129\n" +
 	"\vaudit_event\x18\x01 \x01(\v2\x18.platform.AuditEventInfoR\n" +
-	"auditEvent\"\x89\x05\n" +
+	"auditEvent\"\x81\x05\n" +
 	"\x0eAuditEventInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06action\x18\x02 \x01(\tR\x06action\x12#\n" +
@@ -2710,9 +2709,9 @@ const file_platform_platform_proto_rawDesc = "" +
 	"\rmetadata_json\x18\a \x01(\tH\x01R\fmetadataJson\x88\x01\x01\x12&\n" +
 	"\fservice_name\x18\b \x01(\tH\x02R\vserviceName\x88\x01\x01\x12\"\n" +
 	"\n" +
-	"request_id\x18\t \x01(\tH\x03R\trequestId\x88\x01\x01\x121\n" +
-	"\x12idempotency_key_id\x18\n" +
-	" \x01(\tH\x04R\x10idempotencyKeyId\x88\x01\x01\x12 \n" +
+	"request_id\x18\t \x01(\tH\x03R\trequestId\x88\x01\x01\x12,\n" +
+	"\x0fidempotency_key\x18\n" +
+	" \x01(\tH\x04R\x0eidempotencyKey\x88\x01\x01\x12 \n" +
 	"\tsource_ip\x18\v \x01(\tH\x05R\bsourceIp\x88\x01\x01\x12;\n" +
 	"\voccurred_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"occurredAt\x129\n" +
@@ -2721,8 +2720,8 @@ const file_platform_platform_proto_rawDesc = "" +
 	"\x06_actorB\x10\n" +
 	"\x0e_metadata_jsonB\x0f\n" +
 	"\r_service_nameB\r\n" +
-	"\v_request_idB\x15\n" +
-	"\x13_idempotency_key_idB\f\n" +
+	"\v_request_idB\x12\n" +
+	"\x10_idempotency_keyB\f\n" +
 	"\n" +
 	"_source_ip\"\xbe\x01\n" +
 	"\n" +

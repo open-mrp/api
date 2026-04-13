@@ -38,7 +38,7 @@ func (e *ListUnitsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListUnitsReq
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeUnit,
-			Fields:     []string{"owner"},
+			Fields:     []string{"owner", "owner.account"},
 		}),
 	}
 }

@@ -6,6 +6,7 @@ import (
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
+	ownerutil "github.com/augno/api/services/api-gateway/internal/owner"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
@@ -65,7 +66,15 @@ func (m *shippingTermSvcImpl) ListShippingTerms(ctx context.Context, req *ListSh
 		return nil, apiErr
 	}
 
-	return ShippingTermListPresenter(resp), nil
+	var ownerAccount *apiresource.Account
+	for _, st := range resp.ShippingTerms {
+		if st.AccountId != nil {
+			ownerAccount = ownerutil.ResolveOwnerAccount(ctx, m.coreClient, st.AccountId)
+			break
+		}
+	}
+
+	return ShippingTermListPresenter(resp, ownerAccount), nil
 }
 
 func (m *shippingTermSvcImpl) GetShippingTerm(ctx context.Context, req *GetShippingTermRequest) (*apiresource.ShippingTerm, *apierror.APIError) {
@@ -82,7 +91,8 @@ func (m *shippingTermSvcImpl) GetShippingTerm(ctx context.Context, req *GetShipp
 		return nil, apiErr
 	}
 
-	result := ShippingTermPresenter(resp.ShippingTerm)
+	ownerAccount := ownerutil.ResolveOwnerAccount(ctx, m.coreClient, resp.ShippingTerm.AccountId)
+	result := ShippingTermPresenter(resp.ShippingTerm, ownerAccount)
 	return &result, nil
 }
 
@@ -114,7 +124,8 @@ func (m *shippingTermSvcImpl) CreateShippingTerm(ctx context.Context, req *Creat
 		return nil, apiErr
 	}
 
-	result := ShippingTermPresenter(resp.ShippingTerm)
+	ownerAccount := ownerutil.ResolveOwnerAccount(ctx, m.coreClient, resp.ShippingTerm.AccountId)
+	result := ShippingTermPresenter(resp.ShippingTerm, ownerAccount)
 	return &result, nil
 }
 
@@ -163,7 +174,8 @@ func (m *shippingTermSvcImpl) UpdateShippingTerm(ctx context.Context, req *Updat
 		return nil, apiErr
 	}
 
-	result := ShippingTermPresenter(resp.ShippingTerm)
+	ownerAccount := ownerutil.ResolveOwnerAccount(ctx, m.coreClient, resp.ShippingTerm.AccountId)
+	result := ShippingTermPresenter(resp.ShippingTerm, ownerAccount)
 	return &result, nil
 }
 

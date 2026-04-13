@@ -10,7 +10,7 @@ import (
 	pb "github.com/augno/api/shared/proto/core"
 )
 
-func UnitGroupPresenter(ug *pb.UnitGroupInfo) apiresource.UnitGroup {
+func UnitGroupPresenter(ug *pb.UnitGroupInfo, ownerAccount *apiresource.Account) apiresource.UnitGroup {
 	if ug == nil {
 		return apiresource.UnitGroup{}
 	}
@@ -52,7 +52,7 @@ func UnitGroupPresenter(ug *pb.UnitGroupInfo) apiresource.UnitGroup {
 		Type:            constants.UnitType(ug.Type),
 		BaseUnit:        baseUnit,
 		AssociatedUnits: associatedUnits,
-		Owner:           apiresource.NewOwner(ug.AccountId),
+		Owner:           apiresource.NewOwnerWithAccount(ug.AccountId, ownerAccount),
 		CreatedAt:       grpcutil.TimestampToTime(ug.CreatedAt),
 		UpdatedAt:       grpcutil.TimestampToTime(ug.UpdatedAt),
 	}
@@ -116,14 +116,14 @@ func UnitGroupUnitListPresenter(resp *pb.ListUnitGroupUnitsResponse) *apiresourc
 	return apiresource.NewList(units, apiresource.PageInfo{})
 }
 
-func UnitGroupListPresenter(resp *pb.ListUnitGroupsResponse) *apiresource.List[apiresource.UnitGroup] {
+func UnitGroupListPresenter(resp *pb.ListUnitGroupsResponse, ownerAccount *apiresource.Account) *apiresource.List[apiresource.UnitGroup] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.UnitGroup](nil, apiresource.PageInfo{})
 	}
 
 	unitGroups := make([]apiresource.UnitGroup, len(resp.UnitGroups))
 	for i, ug := range resp.UnitGroups {
-		unitGroups[i] = UnitGroupPresenter(ug)
+		unitGroups[i] = UnitGroupPresenter(ug, ownerAccount)
 	}
 
 	return apiresource.NewList(unitGroups, grpcutil.MapProtoPageInfo(resp.PageInfo))

@@ -6,27 +6,10 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
+	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
 )
-
-// RegisterCustomerAddressRequest is the address information for a customer registration.
-type RegisterCustomerAddressRequest struct {
-	// The first line of the street address.
-	StreetLine1 string `json:"street_line_1" validate:"required"`
-	// The second line of the street address.
-	StreetLine2 *string `json:"street_line_2,omitempty"`
-	// The city or locality.
-	Locality string `json:"locality" validate:"required"`
-	// The state or region.
-	State string `json:"state" validate:"required"`
-	// The postal code.
-	PostalCode string `json:"postal_code" validate:"required"`
-	// The country code.
-	Country string `json:"country" validate:"required"`
-	// The name associated with the address.
-	Name *string `json:"name,omitempty"`
-}
 
 // RegisterCustomerRequest is the request to register a new or existing customer.
 type RegisterCustomerRequest struct {
@@ -43,12 +26,17 @@ type RegisterCustomerRequest struct {
 	// The phone number of the customer.
 	Phone *string `json:"phone,omitempty"`
 	// The address of the customer.
-	Address *RegisterCustomerAddressRequest `json:"address,omitempty"`
+	Address *apirequest.AddressInput `json:"address,omitempty"`
 	// The ID of the shipping term to associate with the customer.
 	ShippingTermID *string `json:"shipping_term_id,omitempty"`
 	// The ID of the payment term to associate with the customer.
 	PaymentTermID *string `json:"payment_term_id,omitempty"`
 }
+
+var sampleRegisterStreetLine1 = "123 Main St"
+var sampleRegisterLocality = "Springfield"
+var sampleRegisterState = "IL"
+var sampleRegisterPostalCode = "62701"
 
 var sampleRegisterCustomerRequest = &RegisterCustomerRequest{
 	AccountSlug:        "my-company",
@@ -56,11 +44,12 @@ var sampleRegisterCustomerRequest = &RegisterCustomerRequest{
 	CustomerName:       new("Acme Corp"),
 	CustomerGroupID:    new("cgrp_01abc"),
 	Phone:              new("+15551234567"),
-	Address: &RegisterCustomerAddressRequest{
-		StreetLine1: "123 Main St",
-		Locality:    "Springfield",
-		State:       "IL",
-		PostalCode:  "62701",
+	Address: &apirequest.AddressInput{
+		Name:        "Headquarters",
+		StreetLine1: &sampleRegisterStreetLine1,
+		Locality:    &sampleRegisterLocality,
+		State:       &sampleRegisterState,
+		PostalCode:  &sampleRegisterPostalCode,
 		Country:     "US",
 	},
 	PaymentTermID:  new("pt_01abc"),

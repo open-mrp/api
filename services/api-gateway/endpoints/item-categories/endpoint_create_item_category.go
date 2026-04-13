@@ -16,14 +16,14 @@ type CreateItemCategoryRequest struct {
 	// The display name of the item category.
 	Name string `json:"name" validate:"required,max=255"`
 	// The type of item category (material_category or product_category).
-	Type string `json:"type" validate:"required,max=255"`
+	Type constants.ItemCategoryType `json:"type" validate:"required"`
 	// The ID of the unit group to associate with this item category.
 	UnitGroupID string `json:"unit_group_id" validate:"required,max=191"`
 }
 
 var sampleCreateItemCategoryRequest = &CreateItemCategoryRequest{
 	Name:        "Electronics",
-	Type:        string(constants.ItemCategoryTypeMaterial),
+	Type:        constants.ItemCategoryTypeMaterial,
 	UnitGroupID: apiresource.SampleUnitGroupID,
 }
 
@@ -53,7 +53,7 @@ func (e *CreateItemCategoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cre
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeItemCategory,
-			Fields:     []string{"owner", "properties", "unit_group"},
+			Fields:     []string{"owner", "owner.account", "properties", "unit_group"},
 		}),
 	}
 }

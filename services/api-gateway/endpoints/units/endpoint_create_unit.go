@@ -20,13 +20,13 @@ type CreateUnitRequest struct {
 	// The unit dimension code.
 	Type constants.UnitType `json:"type" validate:"required"`
 	// The conversion ratio numerator relative to the base unit, as a decimal string.
-	RatioNumerator string `json:"ratio_numerator" validate:"required"`
+	RatioNumerator string `json:"ratio_numerator" validate:"required" format:"decimal"`
 	// The conversion ratio denominator relative to the base unit, as a decimal string.
-	RatioDenominator string `json:"ratio_denominator" validate:"required"`
+	RatioDenominator string `json:"ratio_denominator" validate:"required" format:"decimal"`
 	// The conversion offset numerator, as a decimal string.
-	OffsetNumerator string `json:"offset_numerator" validate:"required"`
+	OffsetNumerator string `json:"offset_numerator" validate:"required" format:"decimal"`
 	// The conversion offset denominator, as a decimal string.
-	OffsetDenominator string `json:"offset_denominator" validate:"required"`
+	OffsetDenominator string `json:"offset_denominator" validate:"required" format:"decimal"`
 }
 
 var sampleCreateUnitRequest = &CreateUnitRequest{
@@ -65,7 +65,7 @@ func (e *CreateUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateUnitR
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeUnit,
-			Fields:     []string{"owner"},
+			Fields:     []string{"owner", "owner.account"},
 		}),
 	}
 }

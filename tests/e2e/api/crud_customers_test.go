@@ -86,7 +86,7 @@ func TestCustomers_CreateResponseShape(t *testing.T) {
 	assert.Equal(t, "normal", jsonField(got, "status"))
 	assert.Equal(t, "false", jsonField(got, "is_edi_enabled"))
 	assert.Equal(t, "false", jsonField(got, "is_parent_account"))
-	assert.Equal(t, "commission_applied", jsonField(got, "commission_policy"))
+	assert.Equal(t, "commission_exempt", jsonField(got, "commission_policy"))
 	assert.NotEmpty(t, jsonField(got, "created_at"))
 	assert.NotEmpty(t, jsonField(got, "updated_at"))
 
@@ -1054,7 +1054,7 @@ func TestCustomers_OmittedFields(t *testing.T) {
 		assert.Equal(t, "normal", jsonField(got, "status"))
 		assert.Equal(t, "false", jsonField(got, "is_edi_enabled"))
 		assert.Equal(t, "false", jsonField(got, "is_parent_account"))
-		assert.Equal(t, "commission_applied", jsonField(got, "commission_policy"))
+		assert.Equal(t, "commission_exempt", jsonField(got, "commission_policy"))
 		assertNilField(t, got, "note")
 		assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
 		assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")

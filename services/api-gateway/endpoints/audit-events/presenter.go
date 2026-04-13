@@ -44,7 +44,7 @@ func AuditEventPresenter(ev *pb.AuditEventInfo) *apiresource.AuditEvent {
 	result.Changes = AuditFieldChangesPresenter(ev.Changes)
 
 	result.RequestID = stringPtrFromOptional(ev.RequestId)
-	result.IdempotencyKeyID = stringPtrFromOptional(ev.IdempotencyKeyId)
+	result.IdempotencyKey = stringPtrFromOptional(ev.IdempotencyKey)
 	result.SourceIP = stringPtrFromOptional(ev.SourceIp)
 
 	return result

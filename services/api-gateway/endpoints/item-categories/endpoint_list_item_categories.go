@@ -14,7 +14,7 @@ import (
 type ListItemCategoriesRequest struct {
 	apiresource.PaginationRequest
 	// Filter by item category type code (material_category or product_category).
-	Type *string `query:"type"`
+	Type *constants.ItemCategoryType `query:"type"`
 }
 
 type ListItemCategoriesEndpoint struct{}
@@ -36,7 +36,7 @@ func (e *ListItemCategoriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*Lis
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeItemCategory,
-			Fields:     []string{"owner", "properties", "unit_group"},
+			Fields:     []string{"owner", "owner.account", "properties", "unit_group"},
 		}),
 	}
 }

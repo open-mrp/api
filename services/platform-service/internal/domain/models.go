@@ -187,7 +187,8 @@ type AuditEvent struct {
 
 type AuditEventRead struct {
 	AuditEvent
-	Actor *AuditActor
+	Actor          *AuditActor
+	IdempotencyKey *string
 }
 
 type ListAuditEventsFilter struct {

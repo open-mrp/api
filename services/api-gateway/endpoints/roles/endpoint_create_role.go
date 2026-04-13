@@ -15,7 +15,7 @@ import (
 type CreateRoleRequest struct {
 	// The display name of the role.
 	Name string `json:"name" validate:"required,max=255"`
-	// The permissions to attach to this role in "domain:action" format.
+	// The permissions to attach to this role in `<domain>:<action>` format.
 	Permissions []string `json:"permissions"`
 }
 
@@ -53,7 +53,7 @@ func (e *CreateRoleEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateRoleR
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeRole,
-			Fields:     []string{"owner", "permissions"},
+			Fields:     []string{"owner", "owner.account", "permissions"},
 		}),
 	}
 }

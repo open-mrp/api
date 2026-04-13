@@ -7,6 +7,7 @@ import (
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
+	ownerutil "github.com/augno/api/services/api-gateway/internal/owner"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
@@ -76,7 +77,15 @@ func (m *roleSvcImpl) ListRoles(ctx context.Context, req *ListRolesRequest) (*ap
 		return nil, apiErr
 	}
 
-	return RoleListPresenter(resp), nil
+	var ownerAccount *apiresource.Account
+	for _, r := range resp.Roles {
+		if r.AccountId != "" {
+			ownerAccount = ownerutil.ResolveOwnerAccount(ctx, m.coreClient, stringPtrIfNotEmpty(r.AccountId))
+			break
+		}
+	}
+
+	return RoleListPresenter(resp, ownerAccount), nil
 }
 
 func (m *roleSvcImpl) GetRole(ctx context.Context, req *GetRoleRequest) (*apiresource.Role, *apierror.APIError) {
@@ -93,7 +102,8 @@ func (m *roleSvcImpl) GetRole(ctx context.Context, req *GetRoleRequest) (*apires
 		return nil, apiErr
 	}
 
-	result := RolePresenter(resp.Role)
+	ownerAccount := ownerutil.ResolveOwnerAccount(ctx, m.coreClient, stringPtrIfNotEmpty(resp.Role.AccountId))
+	result := RolePresenter(resp.Role, ownerAccount)
 	return &result, nil
 }
 
@@ -117,7 +127,8 @@ func (m *roleSvcImpl) CreateRole(ctx context.Context, req *CreateRoleRequest) (*
 		return nil, apiErr
 	}
 
-	result := RolePresenter(resp.Role)
+	ownerAccount := ownerutil.ResolveOwnerAccount(ctx, m.coreClient, stringPtrIfNotEmpty(resp.Role.AccountId))
+	result := RolePresenter(resp.Role, ownerAccount)
 	return &result, nil
 }
 
@@ -150,7 +161,8 @@ func (m *roleSvcImpl) UpdateRole(ctx context.Context, req *UpdateRoleRequest) (*
 		return nil, apiErr
 	}
 
-	result := RolePresenter(resp.Role)
+	ownerAccount := ownerutil.ResolveOwnerAccount(ctx, m.coreClient, stringPtrIfNotEmpty(resp.Role.AccountId))
+	result := RolePresenter(resp.Role, ownerAccount)
 	return &result, nil
 }
 
@@ -171,7 +183,7 @@ func (m *roleSvcImpl) DeleteRole(ctx context.Context, req *DeleteRoleRequest) (*
 	return &apiresource.EmptyResource{}, nil
 }
 
-// parsePermissionStrings converts "domain:action" strings (e.g. "customers:create")
+// parsePermissionStrings converts `<domain>:<action>` strings (e.g. "customers:create")
 // into grouped proto permission inputs keyed by domain.
 func parsePermissionStrings(perms []string) ([]*pb.CreateRolePermissionInput, *apierror.APIError) {
 	grouped := make(map[string]*pb.CreateRolePermissionInput)

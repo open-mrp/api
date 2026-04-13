@@ -33,7 +33,7 @@ func (e *ListCarriersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListCarri
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: "carrier",
-			Fields:     []string{"owner", "service_levels"},
+			Fields:     []string{"owner", "owner.account", "service_levels"},
 		}),
 	}
 }

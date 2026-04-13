@@ -6,6 +6,7 @@ import (
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
+	ownerutil "github.com/augno/api/services/api-gateway/internal/owner"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
@@ -74,7 +75,15 @@ func (m *unitSvcImpl) ListUnits(ctx context.Context, req *ListUnitsRequest) (*ap
 		return nil, apiErr
 	}
 
-	return UnitListPresenter(resp), nil
+	var ownerAccount *apiresource.Account
+	for _, u := range resp.Units {
+		if u.AccountId != nil {
+			ownerAccount = ownerutil.ResolveOwnerAccount(ctx, m.coreClient, u.AccountId)
+			break
+		}
+	}
+
+	return UnitListPresenter(resp, ownerAccount), nil
 }
 
 func (m *unitSvcImpl) GetUnit(ctx context.Context, req *GetUnitRequest) (*apiresource.Unit, *apierror.APIError) {
@@ -91,7 +100,8 @@ func (m *unitSvcImpl) GetUnit(ctx context.Context, req *GetUnitRequest) (*apires
 		return nil, apiErr
 	}
 
-	result := UnitPresenter(resp.Unit)
+	ownerAccount := ownerutil.ResolveOwnerAccount(ctx, m.coreClient, resp.Unit.AccountId)
+	result := UnitPresenter(resp.Unit, ownerAccount)
 	return &result, nil
 }
 
@@ -116,7 +126,8 @@ func (m *unitSvcImpl) CreateUnit(ctx context.Context, req *CreateUnitRequest) (*
 		return nil, apiErr
 	}
 
-	result := UnitPresenter(resp.Unit)
+	ownerAccount := ownerutil.ResolveOwnerAccount(ctx, m.coreClient, resp.Unit.AccountId)
+	result := UnitPresenter(resp.Unit, ownerAccount)
 	return &result, nil
 }
 
@@ -140,7 +151,8 @@ func (m *unitSvcImpl) UpdateUnit(ctx context.Context, req *UpdateUnitRequest) (*
 		return nil, apiErr
 	}
 
-	result := UnitPresenter(resp.Unit)
+	ownerAccount := ownerutil.ResolveOwnerAccount(ctx, m.coreClient, resp.Unit.AccountId)
+	result := UnitPresenter(resp.Unit, ownerAccount)
 	return &result, nil
 }
 

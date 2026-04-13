@@ -7,7 +7,7 @@ import (
 	pb "github.com/augno/api/shared/proto/core"
 )
 
-func ProductLinePresenter(pl *pb.ProductLineInfo) apiresource.ProductLine {
+func ProductLinePresenter(pl *pb.ProductLineInfo, ownerAccount *apiresource.Account) apiresource.ProductLine {
 	if pl == nil {
 		return apiresource.ProductLine{}
 	}
@@ -20,7 +20,7 @@ func ProductLinePresenter(pl *pb.ProductLineInfo) apiresource.ProductLine {
 		Notes:            pl.Notes,
 		CommissionPolicy: constants.CommissionPolicy(pl.CommissionPolicy),
 		FreightPolicy:    constants.FreightPolicy(pl.FreightPolicy),
-		Owner:            apiresource.NewOwner(pl.AccountId),
+		Owner:            apiresource.NewOwnerWithAccount(pl.AccountId, ownerAccount),
 		CreatedAt:        grpcutil.TimestampToTime(pl.CreatedAt),
 		UpdatedAt:        grpcutil.TimestampToTime(pl.UpdatedAt),
 	}
@@ -37,14 +37,14 @@ func ProductLinePresenter(pl *pb.ProductLineInfo) apiresource.ProductLine {
 	return result
 }
 
-func ProductLineListPresenter(resp *pb.ListProductLinesResponse) *apiresource.List[apiresource.ProductLine] {
+func ProductLineListPresenter(resp *pb.ListProductLinesResponse, ownerAccount *apiresource.Account) *apiresource.List[apiresource.ProductLine] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.ProductLine](nil, apiresource.PageInfo{})
 	}
 
 	productLines := make([]apiresource.ProductLine, len(resp.ProductLines))
 	for i, pl := range resp.ProductLines {
-		productLines[i] = ProductLinePresenter(pl)
+		productLines[i] = ProductLinePresenter(pl, ownerAccount)
 	}
 
 	return apiresource.NewList(productLines, grpcutil.MapProtoPageInfo(resp.PageInfo))

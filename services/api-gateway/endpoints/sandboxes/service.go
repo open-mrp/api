@@ -8,6 +8,7 @@ import (
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/appctx"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
@@ -71,10 +72,9 @@ func (m *sandboxSvcImpl) ListSandboxes(ctx context.Context, req *apiresource.Pag
 
 func (m *sandboxSvcImpl) CreateSandbox(ctx context.Context, req *CreateSandboxRequest) (*apiresource.Sandbox, *apierror.APIError) {
 	var mode pb.SandboxMode
-	switch req.Mode {
-	case "seeded":
+	if req.Mode != nil && *req.Mode == constants.SandboxModeSeeded {
 		mode = pb.SandboxMode_SANDBOX_MODE_SEEDED
-	case "blank", "":
+	} else {
 		mode = pb.SandboxMode_SANDBOX_MODE_BLANK
 	}
 

@@ -31,7 +31,7 @@ func RolePermissionPresenter(rp *pb.RolePermissionDetail) []string {
 	return perms
 }
 
-func RolePresenter(r *pb.RoleDetail) apiresource.Role {
+func RolePresenter(r *pb.RoleDetail, ownerAccount *apiresource.Account) apiresource.Role {
 	if r == nil {
 		return apiresource.Role{}
 	}
@@ -41,7 +41,7 @@ func RolePresenter(r *pb.RoleDetail) apiresource.Role {
 		Object:    constants.ObjectTypeRole,
 		Name:      r.Name,
 		TypeCode:  constants.RoleTypeCode(r.RoleTypeCode),
-		Owner:     apiresource.NewOwner(stringPtrIfNotEmpty(r.AccountId)),
+		Owner:     apiresource.NewOwnerWithAccount(stringPtrIfNotEmpty(r.AccountId), ownerAccount),
 		CreatedAt: grpcutil.TimestampToTime(r.CreatedAt),
 		UpdatedAt: grpcutil.TimestampToTime(r.UpdatedAt),
 	}
@@ -59,14 +59,14 @@ func RolePresenter(r *pb.RoleDetail) apiresource.Role {
 	return role
 }
 
-func RoleListPresenter(resp *pb.ListRolesResponse) *apiresource.List[apiresource.Role] {
+func RoleListPresenter(resp *pb.ListRolesResponse, ownerAccount *apiresource.Account) *apiresource.List[apiresource.Role] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.Role](nil, apiresource.PageInfo{})
 	}
 
 	roles := make([]apiresource.Role, len(resp.Roles))
 	for i, r := range resp.Roles {
-		roles[i] = RolePresenter(r)
+		roles[i] = RolePresenter(r, ownerAccount)
 	}
 
 	return apiresource.NewList(roles, grpcutil.MapProtoPageInfo(resp.PageInfo))

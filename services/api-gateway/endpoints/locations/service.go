@@ -93,7 +93,9 @@ func (m *locationSvcImpl) CreateLocation(ctx context.Context, req *CreateLocatio
 		Name:     req.Name,
 		TypeCode: string(req.TypeCode),
 		ParentId: req.ParentID,
-		ChildIds: req.ChildIDs,
+	}
+	if req.ChildIDs != nil {
+		pbReq.ChildIds = *req.ChildIDs
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, locationSvcTracer, "service.locations.create", domain.ServiceName,
@@ -111,14 +113,16 @@ func (m *locationSvcImpl) CreateLocation(ctx context.Context, req *CreateLocatio
 
 func (m *locationSvcImpl) UpdateLocation(ctx context.Context, req *UpdateLocationRequest) (*apiresource.Location, *apierror.APIError) {
 	pbReq := &pb.UpdateLocationRequest{
-		Id:             req.LocationID,
-		Name:           req.Name,
-		TypeCode:       req.TypeCode.StringPtr(),
-		ParentId:       req.ParentID,
-		UpdateChildren: req.ChildIDs != nil,
+		Id:       req.LocationID,
+		Name:     req.Name,
+		TypeCode: req.TypeCode.StringPtr(),
+		ParentId: req.ParentID,
 	}
-	if req.ChildIDs != nil {
-		pbReq.ChildIds = *req.ChildIDs
+	if req.ChildIDs.IsSet() {
+		pbReq.UpdateChildren = true
+		if !req.ChildIDs.IsNull() {
+			pbReq.ChildIds = *req.ChildIDs.Value()
+		}
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, locationSvcTracer, "service.locations.update", domain.ServiceName,

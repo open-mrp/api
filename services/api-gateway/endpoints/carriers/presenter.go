@@ -7,7 +7,7 @@ import (
 	pb "github.com/augno/api/shared/proto/core"
 )
 
-func CarrierPresenter(c *pb.CarrierInfo) apiresource.Carrier {
+func CarrierPresenter(c *pb.CarrierInfo, ownerAccount *apiresource.Account) apiresource.Carrier {
 	if c == nil {
 		return apiresource.Carrier{}
 	}
@@ -33,7 +33,7 @@ func CarrierPresenter(c *pb.CarrierInfo) apiresource.Carrier {
 		Code:                     carrierCodePtr(c.Code),
 		AccountNumber:            c.AccountNumber,
 		CustomerPortalVisibility: carrierVisibility,
-		Owner:                    apiresource.NewOwner(c.AccountId),
+		Owner:                    apiresource.NewOwnerWithAccount(c.AccountId, ownerAccount),
 		ServiceLevels:            serviceLevels,
 		CreatedAt:                grpcutil.TimestampToTime(c.CreatedAt),
 		UpdatedAt:                grpcutil.TimestampToTime(c.UpdatedAt),
@@ -75,14 +75,14 @@ func carrierCodePtr(s *string) *constants.CarrierCode {
 	return &c
 }
 
-func CarrierListPresenter(resp *pb.ListCarriersResponse) *apiresource.List[apiresource.Carrier] {
+func CarrierListPresenter(resp *pb.ListCarriersResponse, ownerAccount *apiresource.Account) *apiresource.List[apiresource.Carrier] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.Carrier](nil, apiresource.PageInfo{})
 	}
 
 	carriers := make([]apiresource.Carrier, len(resp.Carriers))
 	for i, c := range resp.Carriers {
-		carriers[i] = CarrierPresenter(c)
+		carriers[i] = CarrierPresenter(c, ownerAccount)
 	}
 
 	return apiresource.NewList(carriers, grpcutil.MapProtoPageInfo(resp.PageInfo))

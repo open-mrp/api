@@ -94,6 +94,8 @@ func (m *scanningStationSvcImpl) CreateScanningStation(ctx context.Context, req 
 		Type:                  string(req.Type),
 		MaterialCheckRequired: req.MaterialCheckRequired,
 		DepartmentId:          req.DepartmentID,
+		LabelSizeCode:         req.LabelSizeCode.StringPtr(),
+		LabelTypeCode:         req.LabelTypeCode.StringPtr(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, scanningStationSvcTracer, "service.scanning_stations.create", domain.ServiceName,

@@ -14,7 +14,7 @@ type AutocompleteAddressRequest struct {
 	// The text input for autocomplete.
 	Input string `query:"input" validate:"required"`
 	// An optional session token for grouping autocomplete requests.
-	SessionToken *string `query:"session_token,omitempty"` // #nosec G117 -- not a secret, Google Maps session correlation token
+	SessionToken *string `query:"session_token"` // #nosec G117 -- not a secret, Google Maps session correlation token
 }
 
 type AutocompleteAddressEndpoint struct{}

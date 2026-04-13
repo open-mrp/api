@@ -34,7 +34,7 @@ func (e *GetCarrierEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetCarrierR
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: "carrier",
-			Fields:     []string{"owner", "service_levels"},
+			Fields:     []string{"owner", "owner.account", "service_levels"},
 		}),
 	}
 }

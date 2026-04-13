@@ -7,7 +7,7 @@ import (
 	pb "github.com/augno/api/shared/proto/core"
 )
 
-func ItemCategoryPresenter(ic *pb.ItemCategoryInfo) apiresource.ItemCategory {
+func ItemCategoryPresenter(ic *pb.ItemCategoryInfo, ownerAccount *apiresource.Account) apiresource.ItemCategory {
 	if ic == nil {
 		return apiresource.ItemCategory{}
 	}
@@ -18,7 +18,7 @@ func ItemCategoryPresenter(ic *pb.ItemCategoryInfo) apiresource.ItemCategory {
 		Name:      ic.Name,
 		Notes:     ic.Notes,
 		Type:      constants.ItemCategoryType(ic.ItemCategoryTypeCode),
-		Owner:     apiresource.NewOwner(ic.AccountId),
+		Owner:     apiresource.NewOwnerWithAccount(ic.AccountId, ownerAccount),
 		CreatedAt: grpcutil.TimestampToTime(ic.CreatedAt),
 		UpdatedAt: grpcutil.TimestampToTime(ic.UpdatedAt),
 	}
@@ -47,14 +47,14 @@ func ItemCategoryPresenter(ic *pb.ItemCategoryInfo) apiresource.ItemCategory {
 	return result
 }
 
-func ItemCategoryListPresenter(resp *pb.ListItemCategoriesResponse) *apiresource.List[apiresource.ItemCategory] {
+func ItemCategoryListPresenter(resp *pb.ListItemCategoriesResponse, ownerAccount *apiresource.Account) *apiresource.List[apiresource.ItemCategory] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.ItemCategory](nil, apiresource.PageInfo{})
 	}
 
 	categories := make([]apiresource.ItemCategory, len(resp.ItemCategories))
 	for i, ic := range resp.ItemCategories {
-		categories[i] = ItemCategoryPresenter(ic)
+		categories[i] = ItemCategoryPresenter(ic, ownerAccount)
 	}
 
 	return apiresource.NewList(categories, grpcutil.MapProtoPageInfo(resp.PageInfo))

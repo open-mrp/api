@@ -6,6 +6,7 @@ import (
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
+	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
@@ -17,7 +18,7 @@ import (
 type AddressSvc interface {
 	ListAddresses(ctx context.Context, req *ListAddressesRequest) (*apiresource.List[apiresource.Address], *apierror.APIError)
 	GetAddress(ctx context.Context, req *GetAddressRequest) (*apiresource.Address, *apierror.APIError)
-	CreateAddress(ctx context.Context, req *CreateAddressRequest) (*apiresource.Address, *apierror.APIError)
+	CreateAddress(ctx context.Context, req *apirequest.AddressInput) (*apiresource.Address, *apierror.APIError)
 	UpdateAddress(ctx context.Context, req *UpdateAddressRequest) (*apiresource.Address, *apierror.APIError)
 	DeleteAddress(ctx context.Context, req *DeleteAddressRequest) (*apiresource.EmptyResource, *apierror.APIError)
 }
@@ -86,7 +87,7 @@ func (m *addressSvcImpl) GetAddress(ctx context.Context, req *GetAddressRequest)
 	return &result, nil
 }
 
-func (m *addressSvcImpl) CreateAddress(ctx context.Context, req *CreateAddressRequest) (*apiresource.Address, *apierror.APIError) {
+func (m *addressSvcImpl) CreateAddress(ctx context.Context, req *apirequest.AddressInput) (*apiresource.Address, *apierror.APIError) {
 	pbReq := &pb.CreateAddressRequest{
 		Name:         req.Name,
 		Phone:        req.Phone,

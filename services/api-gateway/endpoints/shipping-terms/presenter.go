@@ -21,7 +21,7 @@ func quantityPresenter(q *pb.QuantityInfo) *apiresource.Quantity {
 	}
 }
 
-func ShippingTermPresenter(st *pb.ShippingTermInfo) apiresource.ShippingTerm {
+func ShippingTermPresenter(st *pb.ShippingTermInfo, ownerAccount *apiresource.Account) apiresource.ShippingTerm {
 	if st == nil {
 		return apiresource.ShippingTerm{}
 	}
@@ -42,20 +42,20 @@ func ShippingTermPresenter(st *pb.ShippingTermInfo) apiresource.ShippingTerm {
 		FlatRate:                  quantityPresenter(st.FlatRate),
 		MinimumOrderValue:         quantityPresenter(st.MinimumOrderValue),
 		FreeShippingServiceLevels: apiresource.NewList(freeShippingServiceLevels, apiresource.PageInfo{}),
-		Owner:                     apiresource.NewOwner(st.AccountId),
+		Owner:                     apiresource.NewOwnerWithAccount(st.AccountId, ownerAccount),
 		CreatedAt:                 grpcutil.TimestampToTime(st.CreatedAt),
 		UpdatedAt:                 grpcutil.TimestampToTime(st.UpdatedAt),
 	}
 }
 
-func ShippingTermListPresenter(resp *pb.ListShippingTermsResponse) *apiresource.List[apiresource.ShippingTerm] {
+func ShippingTermListPresenter(resp *pb.ListShippingTermsResponse, ownerAccount *apiresource.Account) *apiresource.List[apiresource.ShippingTerm] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.ShippingTerm](nil, apiresource.PageInfo{})
 	}
 
 	shippingTerms := make([]apiresource.ShippingTerm, len(resp.ShippingTerms))
 	for i, st := range resp.ShippingTerms {
-		shippingTerms[i] = ShippingTermPresenter(st)
+		shippingTerms[i] = ShippingTermPresenter(st, ownerAccount)
 	}
 
 	return apiresource.NewList(shippingTerms, grpcutil.MapProtoPageInfo(resp.PageInfo))

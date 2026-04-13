@@ -315,7 +315,7 @@ message AuditEventInfo {
   optional string metadata_json = 7;
   optional string service_name = 8;
   optional string request_id = 9;
-  optional string idempotency_key_id = 10;
+  optional string idempotency_key = 10;
   optional string source_ip = 11;
   google.protobuf.Timestamp occurred_at = 12;
   google.protobuf.Timestamp created_at = 13;

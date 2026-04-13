@@ -7,7 +7,7 @@ import (
 	pb "github.com/augno/api/shared/proto/core"
 )
 
-func PaymentTermPresenter(pt *pb.PaymentTermInfo) apiresource.PaymentTerm {
+func PaymentTermPresenter(pt *pb.PaymentTermInfo, ownerAccount *apiresource.Account) apiresource.PaymentTerm {
 	if pt == nil {
 		return apiresource.PaymentTerm{}
 	}
@@ -17,20 +17,20 @@ func PaymentTermPresenter(pt *pb.PaymentTermInfo) apiresource.PaymentTerm {
 		Object:    constants.ObjectTypePaymentTerm,
 		Name:      pt.Name,
 		Status:    constants.PaymentTermStatus(pt.Status),
-		Owner:     apiresource.NewOwner(pt.AccountId),
+		Owner:     apiresource.NewOwnerWithAccount(pt.AccountId, ownerAccount),
 		CreatedAt: grpcutil.TimestampToTime(pt.CreatedAt),
 		UpdatedAt: grpcutil.TimestampToTime(pt.UpdatedAt),
 	}
 }
 
-func PaymentTermListPresenter(resp *pb.ListPaymentTermsResponse) *apiresource.List[apiresource.PaymentTerm] {
+func PaymentTermListPresenter(resp *pb.ListPaymentTermsResponse, ownerAccount *apiresource.Account) *apiresource.List[apiresource.PaymentTerm] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.PaymentTerm](nil, apiresource.PageInfo{})
 	}
 
 	paymentTerms := make([]apiresource.PaymentTerm, len(resp.PaymentTerms))
 	for i, pt := range resp.PaymentTerms {
-		paymentTerms[i] = PaymentTermPresenter(pt)
+		paymentTerms[i] = PaymentTermPresenter(pt, ownerAccount)
 	}
 
 	return apiresource.NewList(paymentTerms, grpcutil.MapProtoPageInfo(resp.PageInfo))

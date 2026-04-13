@@ -18,28 +18,41 @@ type RateShopRequest struct {
 	// The customer ID for the shipment.
 	CustomerID *string `json:"customer_id,omitempty"`
 	// The origin address.
-	FromAddress apirequest.ShippingAddressInput `json:"from_address" validate:"required"`
+	FromAddress apirequest.AddressInput `json:"from_address" validate:"required"`
 	// The destination address.
-	ToAddress apirequest.ShippingAddressInput `json:"to_address" validate:"required"`
+	ToAddress apirequest.AddressInput `json:"to_address" validate:"required"`
 	// The parcels to rate shop for.
 	Parcels []ParcelInput `json:"parcels" validate:"required,min=1"`
 	// The total order value.
 	OrderTotal *float64 `json:"order_total,omitempty"`
 }
 
+var (
+	sampleRateShopFromStreetLine1 = apiresource.SampleAddressLine1
+	sampleRateShopFromLocality    = apiresource.SampleAddressCity
+	sampleRateShopFromState       = apiresource.SampleAddressState
+	sampleRateShopFromPostalCode  = apiresource.SampleAddressPostalCode
+	sampleRateShopToStreetLine1   = "456 Oak Avenue"
+	sampleRateShopToLocality      = "Los Angeles"
+	sampleRateShopToState         = "CA"
+	sampleRateShopToPostalCode    = "90001"
+)
+
 var sampleRateShopRequest = &RateShopRequest{
-	FromAddress: apirequest.ShippingAddressInput{
-		StreetLine1: apiresource.SampleAddressLine1,
-		Locality:    apiresource.SampleAddressCity,
-		State:       apiresource.SampleAddressState,
-		PostalCode:  apiresource.SampleAddressPostalCode,
+	FromAddress: apirequest.AddressInput{
+		Name:        "Origin Warehouse",
+		StreetLine1: &sampleRateShopFromStreetLine1,
+		Locality:    &sampleRateShopFromLocality,
+		State:       &sampleRateShopFromState,
+		PostalCode:  &sampleRateShopFromPostalCode,
 		Country:     apiresource.SampleAddressCountry,
 	},
-	ToAddress: apirequest.ShippingAddressInput{
-		StreetLine1: "456 Oak Avenue",
-		Locality:    "Los Angeles",
-		State:       "CA",
-		PostalCode:  "90001",
+	ToAddress: apirequest.AddressInput{
+		Name:        "Destination",
+		StreetLine1: &sampleRateShopToStreetLine1,
+		Locality:    &sampleRateShopToLocality,
+		State:       &sampleRateShopToState,
+		PostalCode:  &sampleRateShopToPostalCode,
 		Country:     "US",
 	},
 	Parcels: []ParcelInput{

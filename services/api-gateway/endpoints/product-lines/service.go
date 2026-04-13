@@ -6,6 +6,7 @@ import (
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
+	ownerutil "github.com/augno/api/services/api-gateway/internal/owner"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
@@ -65,7 +66,15 @@ func (m *productLineSvcImpl) ListProductLines(ctx context.Context, req *ListProd
 		return nil, apiErr
 	}
 
-	return ProductLineListPresenter(resp), nil
+	var ownerAccount *apiresource.Account
+	for _, pl := range resp.ProductLines {
+		if pl.AccountId != nil {
+			ownerAccount = ownerutil.ResolveOwnerAccount(ctx, m.coreClient, pl.AccountId)
+			break
+		}
+	}
+
+	return ProductLineListPresenter(resp, ownerAccount), nil
 }
 
 func (m *productLineSvcImpl) GetProductLine(ctx context.Context, req *GetProductLineRequest) (*apiresource.ProductLine, *apierror.APIError) {
@@ -82,7 +91,8 @@ func (m *productLineSvcImpl) GetProductLine(ctx context.Context, req *GetProduct
 		return nil, apiErr
 	}
 
-	result := ProductLinePresenter(resp.ProductLine)
+	ownerAccount := ownerutil.ResolveOwnerAccount(ctx, m.coreClient, resp.ProductLine.AccountId)
+	result := ProductLinePresenter(resp.ProductLine, ownerAccount)
 	return &result, nil
 }
 
@@ -103,7 +113,8 @@ func (m *productLineSvcImpl) CreateProductLine(ctx context.Context, req *CreateP
 		return nil, apiErr
 	}
 
-	result := ProductLinePresenter(resp.ProductLine)
+	ownerAccount := ownerutil.ResolveOwnerAccount(ctx, m.coreClient, resp.ProductLine.AccountId)
+	result := ProductLinePresenter(resp.ProductLine, ownerAccount)
 	return &result, nil
 }
 
@@ -131,7 +142,8 @@ func (m *productLineSvcImpl) UpdateProductLine(ctx context.Context, req *UpdateP
 		return nil, apiErr
 	}
 
-	result := ProductLinePresenter(resp.ProductLine)
+	ownerAccount := ownerutil.ResolveOwnerAccount(ctx, m.coreClient, resp.ProductLine.AccountId)
+	result := ProductLinePresenter(resp.ProductLine, ownerAccount)
 	return &result, nil
 }
 

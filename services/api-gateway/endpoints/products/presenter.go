@@ -29,7 +29,7 @@ func ProductPresenter(proto *pb.ProductFullInfo) apiresource.Product {
 	}
 
 	if proto.ProductLine != nil {
-		pl := productlineep.ProductLinePresenter(proto.ProductLine)
+		pl := productlineep.ProductLinePresenter(proto.ProductLine, nil)
 		result.ProductLine = &pl
 	}
 

@@ -14,7 +14,7 @@ type GetAddressDetailsRequest struct {
 	// The Google Places ID to look up.
 	PlaceID string `path:"id" validate:"required"`
 	// An optional session token for grouping with a previous autocomplete request.
-	SessionToken *string `query:"session_token,omitempty"` // #nosec G117 -- not a secret, Google Maps session correlation token
+	SessionToken *string `query:"session_token"` // #nosec G117 -- not a secret, Google Maps session correlation token
 }
 
 type GetAddressDetailsEndpoint struct{}

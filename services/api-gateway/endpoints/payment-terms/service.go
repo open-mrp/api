@@ -6,6 +6,7 @@ import (
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
+	ownerutil "github.com/augno/api/services/api-gateway/internal/owner"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
@@ -65,7 +66,15 @@ func (m *paymentTermSvcImpl) ListPaymentTerms(ctx context.Context, req *ListPaym
 		return nil, apiErr
 	}
 
-	return PaymentTermListPresenter(resp), nil
+	var ownerAccount *apiresource.Account
+	for _, pt := range resp.PaymentTerms {
+		if pt.AccountId != nil {
+			ownerAccount = ownerutil.ResolveOwnerAccount(ctx, m.coreClient, pt.AccountId)
+			break
+		}
+	}
+
+	return PaymentTermListPresenter(resp, ownerAccount), nil
 }
 
 func (m *paymentTermSvcImpl) GetPaymentTerm(ctx context.Context, req *GetPaymentTermRequest) (*apiresource.PaymentTerm, *apierror.APIError) {
@@ -82,7 +91,8 @@ func (m *paymentTermSvcImpl) GetPaymentTerm(ctx context.Context, req *GetPayment
 		return nil, apiErr
 	}
 
-	result := PaymentTermPresenter(resp.PaymentTerm)
+	ownerAccount := ownerutil.ResolveOwnerAccount(ctx, m.coreClient, resp.PaymentTerm.AccountId)
+	result := PaymentTermPresenter(resp.PaymentTerm, ownerAccount)
 	return &result, nil
 }
 
@@ -100,7 +110,8 @@ func (m *paymentTermSvcImpl) CreatePaymentTerm(ctx context.Context, req *CreateP
 		return nil, apiErr
 	}
 
-	result := PaymentTermPresenter(resp.PaymentTerm)
+	ownerAccount := ownerutil.ResolveOwnerAccount(ctx, m.coreClient, resp.PaymentTerm.AccountId)
+	result := PaymentTermPresenter(resp.PaymentTerm, ownerAccount)
 	return &result, nil
 }
 
@@ -119,7 +130,8 @@ func (m *paymentTermSvcImpl) UpdatePaymentTerm(ctx context.Context, req *UpdateP
 		return nil, apiErr
 	}
 
-	result := PaymentTermPresenter(resp.PaymentTerm)
+	ownerAccount := ownerutil.ResolveOwnerAccount(ctx, m.coreClient, resp.PaymentTerm.AccountId)
+	result := PaymentTermPresenter(resp.PaymentTerm, ownerAccount)
 	return &result, nil
 }
 

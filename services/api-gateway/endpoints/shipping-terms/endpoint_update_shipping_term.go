@@ -24,9 +24,9 @@ type UpdateShippingTermRequest struct {
 	// The shipping term type.
 	Type *constants.ShippingTermType `json:"type,omitempty" nullable:"false"`
 	// The flat rate for this shipping term. Send null to clear.
-	FlatRate apirequest.NullableInput[QuantityInputRequest] `json:"flat_rate,omitempty"`
+	FlatRate apirequest.NullableInput[apirequest.QuantityInput] `json:"flat_rate,omitempty"`
 	// The minimum order value for free shipping under this term. Send null to clear.
-	MinimumOrderValue apirequest.NullableInput[QuantityInputRequest] `json:"minimum_order_value,omitempty"`
+	MinimumOrderValue apirequest.NullableInput[apirequest.QuantityInput] `json:"minimum_order_value,omitempty"`
 	// The service level IDs that qualify for free shipping. Send null to clear.
 	FreeShippingServiceLevelIDs apirequest.NullableInput[[]string] `json:"free_shipping_service_level_ids,omitempty"`
 }
@@ -55,7 +55,7 @@ func (e *UpdateShippingTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upd
 		Preview:           true,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeShippingTerm,
-			Fields:     []string{"owner", "flat_rate.unit", "minimum_order_value.unit", "free_shipping_service_levels"},
+			Fields:     []string{"owner", "owner.account", "flat_rate.unit", "minimum_order_value.unit", "free_shipping_service_levels"},
 		}),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateShippingTermRequest) (*apiresource.ShippingTerm, *apierror.APIError) {
 			return svc.(ShippingTermSvc).UpdateShippingTerm

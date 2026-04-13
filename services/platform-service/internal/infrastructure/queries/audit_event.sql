@@ -18,10 +18,12 @@ SELECT ae.type_id,
        u.name AS user_name,
        u.email AS user_email,
        ak.name AS api_key_name,
-       ak.redacted_value AS api_key_redacted_value
+       ak.redacted_value AS api_key_redacted_value,
+       ik.idempotency_key
 FROM audit_event ae
 LEFT JOIN `user` u ON ae.actor_id = u.id AND ae.identity_type = 'user'
 LEFT JOIN api_key ak ON ae.actor_id = ak.type_id AND ae.identity_type = 'api_key'
+LEFT JOIN idempotency_key ik ON ae.idempotency_key_id = ik.type_id
 WHERE ae.type_id = ? AND ae.account_id = ?;
 
 -- name: ListAuditEventsForward :many
@@ -44,10 +46,12 @@ SELECT ae.type_id,
        u.name AS user_name,
        u.email AS user_email,
        ak.name AS api_key_name,
-       ak.redacted_value AS api_key_redacted_value
+       ak.redacted_value AS api_key_redacted_value,
+       ik.idempotency_key
 FROM audit_event ae
 LEFT JOIN `user` u ON ae.actor_id = u.id AND ae.identity_type = 'user'
 LEFT JOIN api_key ak ON ae.actor_id = ak.type_id AND ae.identity_type = 'api_key'
+LEFT JOIN idempotency_key ik ON ae.idempotency_key_id = ik.type_id
 WHERE ae.account_id = sqlc.arg('target_account_id')
 AND (sqlc.arg('resource_type_filter') = '' OR ae.resource_type = sqlc.arg('resource_type_filter'))
 AND (sqlc.arg('resource_id_filter') = '' OR ae.resource_id = sqlc.arg('resource_id_filter'))
@@ -88,10 +92,12 @@ SELECT ae.type_id,
        u.name AS user_name,
        u.email AS user_email,
        ak.name AS api_key_name,
-       ak.redacted_value AS api_key_redacted_value
+       ak.redacted_value AS api_key_redacted_value,
+       ik.idempotency_key
 FROM audit_event ae
 LEFT JOIN `user` u ON ae.actor_id = u.id AND ae.identity_type = 'user'
 LEFT JOIN api_key ak ON ae.actor_id = ak.type_id AND ae.identity_type = 'api_key'
+LEFT JOIN idempotency_key ik ON ae.idempotency_key_id = ik.type_id
 WHERE ae.account_id = sqlc.arg('target_account_id')
 AND (sqlc.arg('resource_type_filter') = '' OR ae.resource_type = sqlc.arg('resource_type_filter'))
 AND (sqlc.arg('resource_id_filter') = '' OR ae.resource_id = sqlc.arg('resource_id_filter'))

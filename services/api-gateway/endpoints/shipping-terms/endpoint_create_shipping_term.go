@@ -6,18 +6,11 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
+	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
-
-// QuantityInputRequest represents a quantity value and unit pair.
-type QuantityInputRequest struct {
-	// The decimal value.
-	Value string `json:"value" validate:"required"`
-	// The unit ID for the value.
-	UnitID string `json:"unit_id" validate:"required,max=191"`
-}
 
 // CreateShippingTermRequest is the request to create a new shipping term.
 type CreateShippingTermRequest struct {
@@ -26,9 +19,9 @@ type CreateShippingTermRequest struct {
 	// The shipping term type.
 	Type constants.ShippingTermType `json:"type" validate:"required"`
 	// The flat rate for this shipping term.
-	FlatRate *QuantityInputRequest `json:"flat_rate,omitempty"`
+	FlatRate *apirequest.QuantityInput `json:"flat_rate,omitempty"`
 	// The minimum order value for free shipping under this term.
-	MinimumOrderValue *QuantityInputRequest `json:"minimum_order_value,omitempty"`
+	MinimumOrderValue *apirequest.QuantityInput `json:"minimum_order_value,omitempty"`
 	// The service level IDs that qualify for free shipping.
 	FreeShippingServiceLevelIDs []string `json:"free_shipping_service_level_ids,omitempty"`
 }
@@ -59,7 +52,7 @@ func (e *CreateShippingTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cre
 		Preview:           true,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeShippingTerm,
-			Fields:     []string{"owner", "flat_rate.unit", "minimum_order_value.unit", "free_shipping_service_levels"},
+			Fields:     []string{"owner", "owner.account", "flat_rate.unit", "minimum_order_value.unit", "free_shipping_service_levels"},
 		}),
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateShippingTermRequest) (*apiresource.ShippingTerm, *apierror.APIError) {
 			return svc.(ShippingTermSvc).CreateShippingTerm

@@ -6,6 +6,7 @@ import (
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
+	ownerutil "github.com/augno/api/services/api-gateway/internal/owner"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
@@ -57,7 +58,7 @@ func (m *itemCategorySvcImpl) ListItemCategories(ctx context.Context, req *ListI
 		Cursor: req.Cursor,
 		Limit:  req.Limit,
 		Query:  req.Query,
-		Type:   req.Type,
+		Type:   req.Type.StringPtr(),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, itemCategorySvcTracer, "service.item-categories.list", domain.ServiceName,
@@ -69,7 +70,15 @@ func (m *itemCategorySvcImpl) ListItemCategories(ctx context.Context, req *ListI
 		return nil, apiErr
 	}
 
-	return ItemCategoryListPresenter(resp), nil
+	var ownerAccount *apiresource.Account
+	for _, ic := range resp.ItemCategories {
+		if ic.AccountId != nil {
+			ownerAccount = ownerutil.ResolveOwnerAccount(ctx, m.coreClient, ic.AccountId)
+			break
+		}
+	}
+
+	return ItemCategoryListPresenter(resp, ownerAccount), nil
 }
 
 func (m *itemCategorySvcImpl) GetItemCategory(ctx context.Context, req *GetItemCategoryRequest) (*apiresource.ItemCategory, *apierror.APIError) {
@@ -86,14 +95,15 @@ func (m *itemCategorySvcImpl) GetItemCategory(ctx context.Context, req *GetItemC
 		return nil, apiErr
 	}
 
-	result := ItemCategoryPresenter(resp.ItemCategory)
+	ownerAccount := ownerutil.ResolveOwnerAccount(ctx, m.coreClient, resp.ItemCategory.AccountId)
+	result := ItemCategoryPresenter(resp.ItemCategory, ownerAccount)
 	return &result, nil
 }
 
 func (m *itemCategorySvcImpl) CreateItemCategory(ctx context.Context, req *CreateItemCategoryRequest) (*apiresource.ItemCategory, *apierror.APIError) {
 	pbReq := &pb.CreateItemCategoryRequest{
 		Name:        req.Name,
-		Type:        req.Type,
+		Type:        string(req.Type),
 		UnitGroupId: req.UnitGroupID,
 	}
 
@@ -106,7 +116,8 @@ func (m *itemCategorySvcImpl) CreateItemCategory(ctx context.Context, req *Creat
 		return nil, apiErr
 	}
 
-	result := ItemCategoryPresenter(resp.ItemCategory)
+	ownerAccount := ownerutil.ResolveOwnerAccount(ctx, m.coreClient, resp.ItemCategory.AccountId)
+	result := ItemCategoryPresenter(resp.ItemCategory, ownerAccount)
 	return &result, nil
 }
 
@@ -126,7 +137,8 @@ func (m *itemCategorySvcImpl) UpdateItemCategory(ctx context.Context, req *Updat
 		return nil, apiErr
 	}
 
-	result := ItemCategoryPresenter(resp.ItemCategory)
+	ownerAccount := ownerutil.ResolveOwnerAccount(ctx, m.coreClient, resp.ItemCategory.AccountId)
+	result := ItemCategoryPresenter(resp.ItemCategory, ownerAccount)
 	return &result, nil
 }
 

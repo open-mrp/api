@@ -471,6 +471,13 @@ func init() {
 	})
 
 	RegisterIncludes(&ObjectIncludes{
+		ObjectType: constants.ObjectTypeOwner,
+		Fields: []IncludeFieldDef{
+			{Key: "account", ObjectType: constants.ObjectTypeAccount},
+		},
+	})
+
+	RegisterIncludes(&ObjectIncludes{
 		ObjectType: constants.ObjectTypeUnit,
 		Fields: []IncludeFieldDef{
 			{Key: "owner", ObjectType: constants.ObjectTypeOwner},

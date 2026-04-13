@@ -55,8 +55,8 @@ type AuditEvent struct {
 
 	// The originating HTTP request ID, when available.
 	RequestID *string `json:"request_id"`
-	// The idempotency key ID associated with the originating request, when applicable.
-	IdempotencyKeyID *string `json:"idempotency_key_id"`
+	// The idempotency key associated with the originating request, when applicable.
+	IdempotencyKey *string `json:"idempotency_key"`
 	// The originating client IP address, when available.
 	SourceIP *string `json:"source_ip"`
 

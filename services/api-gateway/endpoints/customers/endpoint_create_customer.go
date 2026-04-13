@@ -17,57 +17,52 @@ type CreateCustomerRequest struct {
 	// The display name of the customer.
 	Name string `json:"name" validate:"required,max=255"`
 	// The customer number (auto-generated if omitted).
-	Number *string `json:"number,omitempty" validate:"omitempty,max=255"`
+	Number *string `json:"number,omitempty" validate:"omitempty,max=255" nullable:"false"`
 	// A note about the customer.
-	Note *string `json:"note,omitempty"`
+	Note *string `json:"note,omitempty" nullable:"false"`
 	// The customer email address.
-	Email *string `json:"email,omitempty" validate:"omitempty,max=255"`
+	Email *string `json:"email,omitempty" validate:"omitempty,max=255" nullable:"false"`
 	// The customer phone number.
-	Phone *string `json:"phone,omitempty" validate:"omitempty,max=255"`
+	Phone *string `json:"phone,omitempty" validate:"omitempty,max=255" nullable:"false"`
 	// The customer website URL.
-	URL *string `json:"url,omitempty" validate:"omitempty,max=255"`
+	URL *string `json:"url,omitempty" validate:"omitempty,max=255" nullable:"false"`
 	// The account status code.
-	StatusCode *constants.AccountStatusCode `json:"status" validate:"required"`
+	StatusCode *constants.AccountStatusCode `json:"status,omitempty" default:"normal" nullable:"false"`
 	// Whether the customer is EDI enabled.
-	IsEdiEnabled *bool `json:"is_edi_enabled,omitempty"`
+	IsEdiEnabled *bool `json:"is_edi_enabled,omitempty" nullable:"false" default:"false"`
 	// The commission policy for this customer.
-	CommissionPolicy *constants.CommissionPolicy `json:"commission_policy,omitempty" nullable:"false"`
+	CommissionPolicy *constants.CommissionPolicy `json:"commission_policy,omitempty" default:"commission_exempt" nullable:"false"`
 	// The freight policy for this customer.
-	FreightPolicy *constants.FreightPolicy `json:"freight_policy,omitempty" nullable:"false"`
+	FreightPolicy *constants.FreightPolicy `json:"freight_policy,omitempty" default:"billed_freight" nullable:"false"`
 	// The default carrier ID.
-	DefaultCarrierID *string `json:"default_carrier_id" validate:"required,max=191"`
+	DefaultCarrierID string `json:"default_carrier_id" validate:"required,max=191"`
 	// The default service level ID.
-	DefaultServiceLevelID *string `json:"default_service_level_id,omitempty" validate:"omitempty,max=191"`
+	DefaultServiceLevelID *string `json:"default_service_level_id,omitempty" validate:"omitempty,max=191" nullable:"false"`
 	// The default payment term ID.
-	DefaultPaymentTermID *string `json:"default_payment_term_id" validate:"required,max=191"`
+	DefaultPaymentTermID string `json:"default_payment_term_id" validate:"required,max=191"`
 	// The default shipping term ID.
-	DefaultShippingTermID *string `json:"default_shipping_term_id" validate:"required,max=191"`
+	DefaultShippingTermID string `json:"default_shipping_term_id" validate:"required,max=191"`
 	// The default priority code.
-	DefaultPriorityCode *constants.PriorityCode `json:"default_priority,omitempty"`
+	DefaultPriorityCode *constants.PriorityCode `json:"default_priority,omitempty" default:"normal" nullable:"false"`
 	// The default sales rep user ID.
-	DefaultSalesRepUserID *string `json:"default_sales_rep_user_id,omitempty" validate:"omitempty,max=191"`
+	DefaultSalesRepUserID *string `json:"default_sales_rep_user_id,omitempty" validate:"omitempty,max=191" nullable:"false"`
 	// The customer price group IDs.
-	CustomerPriceGroupIDs []string `json:"customer_price_group_ids,omitempty"`
+	CustomerPriceGroupIDs []string `json:"customer_price_group_ids,omitempty" nullable:"false"`
 	// The customer type group ID.
-	CustomerTypeGroupID *string `json:"customer_type_group_id" validate:"required,max=191"`
+	CustomerTypeGroupID string `json:"customer_type_group_id" validate:"required,max=191"`
 	// The carrier billing type.
-	CarrierBillingType *constants.CarrierBillingType `json:"carrier_billing_type,omitempty"`
+	CarrierBillingType *constants.CarrierBillingType `json:"carrier_billing_type,omitempty" nullable:"false" default:"sender"`
 	// The carrier billing account number.
-	CarrierBillingAccount *string `json:"carrier_billing_account,omitempty" validate:"omitempty,max=255"`
+	CarrierBillingAccount *string `json:"carrier_billing_account,omitempty" validate:"omitempty,max=255" nullable:"false"`
 	// The credit limit for this customer.
-	CreditLimit *apirequest.QuantityInput `json:"credit_limit,omitempty"`
+	CreditLimit *apirequest.QuantityInput `json:"credit_limit,omitempty" nullable:"false"`
 	// The bill-to address for this customer.
-	BillToAddress *apirequest.AddressInput `json:"bill_to_address" validate:"required"`
+	BillToAddress apirequest.AddressInput `json:"bill_to_address" validate:"required"`
 	// The ship-to address for this customer.
-	ShipToAddress *apirequest.AddressInput `json:"ship_to_address" validate:"required"`
+	ShipToAddress apirequest.AddressInput `json:"ship_to_address" validate:"required"`
 }
 
 var sampleCreateCustomerNote = "Key enterprise account"
-var sampleCreateCustomerStatusCode = constants.AccountStatusCodeNormal
-var sampleCreateCustomerDefaultCarrierID = apiresource.SampleCarrierID
-var sampleCreateCustomerDefaultPaymentTermID = apiresource.SamplePaymentTermID
-var sampleCreateCustomerDefaultShippingTermID = apiresource.SampleShippingTermID
-var sampleCreateCustomerCustomerTypeGroupID = apiresource.SampleAccountGroupID
 var sampleCreateCustomerStreetLine1 = "123 Main St"
 var sampleCreateCustomerLocality = "New York"
 var sampleCreateCustomerState = "NY"
@@ -75,12 +70,11 @@ var sampleCreateCustomerPostalCode = "10001"
 var sampleCreateCustomerRequest = &CreateCustomerRequest{
 	Name:                  apiresource.SampleCustomerName,
 	Note:                  &sampleCreateCustomerNote,
-	StatusCode:            &sampleCreateCustomerStatusCode,
-	DefaultCarrierID:      &sampleCreateCustomerDefaultCarrierID,
-	DefaultPaymentTermID:  &sampleCreateCustomerDefaultPaymentTermID,
-	DefaultShippingTermID: &sampleCreateCustomerDefaultShippingTermID,
-	CustomerTypeGroupID:   &sampleCreateCustomerCustomerTypeGroupID,
-	BillToAddress: &apirequest.AddressInput{
+	DefaultCarrierID:      apiresource.SampleCarrierID,
+	DefaultPaymentTermID:  apiresource.SamplePaymentTermID,
+	DefaultShippingTermID: apiresource.SampleShippingTermID,
+	CustomerTypeGroupID:   apiresource.SampleAccountGroupID,
+	BillToAddress: apirequest.AddressInput{
 		Name:        apiresource.SampleCustomerName,
 		StreetLine1: &sampleCreateCustomerStreetLine1,
 		Locality:    &sampleCreateCustomerLocality,
@@ -88,7 +82,7 @@ var sampleCreateCustomerRequest = &CreateCustomerRequest{
 		PostalCode:  &sampleCreateCustomerPostalCode,
 		Country:     "US",
 	},
-	ShipToAddress: &apirequest.AddressInput{
+	ShipToAddress: apirequest.AddressInput{
 		Name:        apiresource.SampleCustomerName,
 		StreetLine1: &sampleCreateCustomerStreetLine1,
 		Locality:    &sampleCreateCustomerLocality,

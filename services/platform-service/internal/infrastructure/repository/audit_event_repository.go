@@ -225,11 +225,11 @@ func auditEventID(ae *domain.AuditEventRead) string            { return ae.ID }
 func mapAuditEventRowToRead(row any) *domain.AuditEventRead {
 	switch r := row.(type) {
 	case *sqlc.FindAuditEventByIDRow:
-		return mapAuditEventBaseRow(r.TypeID, r.ActorID, r.ActorType, r.IdentityType, r.AccountID, r.Action, r.ResourceType, r.ResourceID, r.Changes, r.Metadata, r.ServiceName, r.RequestID, r.IdempotencyKeyID, r.SourceIp, r.OccurredAt, r.CreatedAt, r.UserName, r.UserEmail, r.ApiKeyName, r.ApiKeyRedactedValue)
+		return mapAuditEventBaseRow(r.TypeID, r.ActorID, r.ActorType, r.IdentityType, r.AccountID, r.Action, r.ResourceType, r.ResourceID, r.Changes, r.Metadata, r.ServiceName, r.RequestID, r.IdempotencyKeyID, r.SourceIp, r.OccurredAt, r.CreatedAt, r.UserName, r.UserEmail, r.ApiKeyName, r.ApiKeyRedactedValue, r.IdempotencyKey)
 	case *sqlc.ListAuditEventsForwardRow:
-		return mapAuditEventBaseRow(r.TypeID, r.ActorID, r.ActorType, r.IdentityType, r.AccountID, r.Action, r.ResourceType, r.ResourceID, r.Changes, r.Metadata, r.ServiceName, r.RequestID, r.IdempotencyKeyID, r.SourceIp, r.OccurredAt, r.CreatedAt, r.UserName, r.UserEmail, r.ApiKeyName, r.ApiKeyRedactedValue)
+		return mapAuditEventBaseRow(r.TypeID, r.ActorID, r.ActorType, r.IdentityType, r.AccountID, r.Action, r.ResourceType, r.ResourceID, r.Changes, r.Metadata, r.ServiceName, r.RequestID, r.IdempotencyKeyID, r.SourceIp, r.OccurredAt, r.CreatedAt, r.UserName, r.UserEmail, r.ApiKeyName, r.ApiKeyRedactedValue, r.IdempotencyKey)
 	case *sqlc.ListAuditEventsBackwardRow:
-		return mapAuditEventBaseRow(r.TypeID, r.ActorID, r.ActorType, r.IdentityType, r.AccountID, r.Action, r.ResourceType, r.ResourceID, r.Changes, r.Metadata, r.ServiceName, r.RequestID, r.IdempotencyKeyID, r.SourceIp, r.OccurredAt, r.CreatedAt, r.UserName, r.UserEmail, r.ApiKeyName, r.ApiKeyRedactedValue)
+		return mapAuditEventBaseRow(r.TypeID, r.ActorID, r.ActorType, r.IdentityType, r.AccountID, r.Action, r.ResourceType, r.ResourceID, r.Changes, r.Metadata, r.ServiceName, r.RequestID, r.IdempotencyKeyID, r.SourceIp, r.OccurredAt, r.CreatedAt, r.UserName, r.UserEmail, r.ApiKeyName, r.ApiKeyRedactedValue, r.IdempotencyKey)
 	default:
 		// Should never happen
 		return &domain.AuditEventRead{}
@@ -257,6 +257,7 @@ func mapAuditEventBaseRow(
 	userEmail sql.NullString,
 	apiKeyName sql.NullString,
 	apiKeyRedactedValue sql.NullString,
+	idempotencyKey sql.NullString,
 ) *domain.AuditEventRead {
 	var changesSlice []domain.AuditFieldChange
 	if changesBytes := interfaceToBytes(changes); changesBytes != nil {
@@ -303,7 +304,8 @@ func mapAuditEventBaseRow(
 			OccurredAt: occurredAt,
 			CreatedAt:  createdAt,
 		},
-		Actor: actor,
+		Actor:          actor,
+		IdempotencyKey: db.StringFromNullString(idempotencyKey),
 	}
 }
 

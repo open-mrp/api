@@ -97,7 +97,7 @@ func (h *auditHandler) CreateAuditEvent(ctx context.Context, req *pb.CreateAudit
 
 		ServiceName:      info.GetServiceName(),
 		RequestID:        info.RequestId,
-		IdempotencyKeyID: info.IdempotencyKeyId,
+		IdempotencyKeyID: info.IdempotencyKey,
 		SourceIP:         info.SourceIp,
 
 		OccurredAt: occurredAt,
@@ -241,7 +241,7 @@ func auditEventToProto(ev *domain.AuditEventRead) *pb.AuditEventInfo {
 		MetadataJson:     metadata,
 		ServiceName:      serviceName,
 		RequestId:        ev.RequestID,
-		IdempotencyKeyId: ev.IdempotencyKeyID,
+		IdempotencyKey: ev.IdempotencyKey,
 		SourceIp:         ev.SourceIP,
 		OccurredAt:       occurredAt,
 		CreatedAt:        createdAt,

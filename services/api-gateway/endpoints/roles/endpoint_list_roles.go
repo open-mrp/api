@@ -10,7 +10,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListRolesRequest is the request to list roles.
+// ListRolesRequest is a request to list roles.
 type ListRolesRequest struct {
 	apiresource.PaginationRequest
 	// Filter by role type code(s).

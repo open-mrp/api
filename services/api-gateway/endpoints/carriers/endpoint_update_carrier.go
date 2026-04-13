@@ -11,13 +11,13 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpdateCarrierRequest is the request to update a carrier.
+// Request to update a carrier.
 type UpdateCarrierRequest struct {
-	// The ID of the carrier to update.
+	// Carrier ID.
 	CarrierID string `path:"id" validate:"required"`
-	// The new display name for the carrier.
+	// Display name.
 	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// Whether this carrier is visible in the customer portal.
+	// Customer portal visibility.
 	CustomerPortalVisibility *constants.CustomerPortalVisibility `json:"customer_portal_visibility,omitempty" nullable:"false"`
 }
 

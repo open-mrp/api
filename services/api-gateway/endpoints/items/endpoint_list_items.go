@@ -11,7 +11,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListItemsRequest is the request to list items with optional filters.
+// ListItemsRequest is the request to list items.
 type ListItemsRequest struct {
 	apiresource.PaginationRequest
 	// Filter by item type codes.
@@ -37,7 +37,7 @@ type ListItemsEndpoint struct{}
 func (e *ListItemsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListItemsRequest, *apiresource.List[apiresource.Item]] {
 	return &apiendpoint.APIEndpoint[*ListItemsRequest, *apiresource.List[apiresource.Item]]{
 		Title:             "List Items",
-		Description:       "Returns a paginated list of items for the target account, with filtering by type, category, attributes, supplier, and date range.",
+		Description:       "Returns a paginated list of items.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/items",

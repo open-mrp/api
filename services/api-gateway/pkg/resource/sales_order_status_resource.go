@@ -14,21 +14,21 @@ var SampleSalesOrderStatusCode = constants.SalesOrderStatusCodeEstimate
 
 const SampleSalesOrderStatusName = "Estimate"
 
-// SalesOrderStatus represents a sales order status lookup value.
+// Sales order status lookup value.
 type SalesOrderStatus struct {
-	// The unique identifier for the sales order status.
+	// Sales order status ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=sales_order_status"`
-	// The machine-readable code for this status.
+	// Machine-readable status code.
 	Code constants.SalesOrderStatusCode `json:"code" validate:"required"`
-	// The display name of the sales order status.
+	// Display name.
 	Name string `json:"name" validate:"required"`
-	// The owner of this resource.
+	// Owner.
 	Owner *Owner `json:"owner" expandable:"true"`
-	// When this sales order status was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// When this sales order status was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 

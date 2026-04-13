@@ -10,7 +10,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListProductionStepsRequest is the request to list production steps.
+// Request to list production steps.
 type ListProductionStepsRequest struct {
 	apiresource.PaginationRequest
 	// Filter by produced item IDs.

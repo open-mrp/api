@@ -8,23 +8,23 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-// Role represents a role reference.
+// Role resource.
 type Role struct {
-	// The unique identifier for the role.
+	// Role ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=role"`
-	// The display name of the role.
+	// Display name.
 	Name string `json:"name" validate:"required"`
-	// The role type code.
+	// Role type code.
 	TypeCode constants.RoleTypeCode `json:"type" validate:"required"`
-	// The owner of this resource.
+	// Owner of this resource.
 	Owner *Owner `json:"owner" expandable:"true"`
-	// The permissions for this role in `{domain}:{action}` format.
+	// Permissions in `{domain}:{action}` format.
 	Permissions *[]string `json:"permissions" expandable:"true"`
-	// The timestamp when the role was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at"`
-	// The timestamp when the role was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at"`
 }
 

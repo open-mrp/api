@@ -10,9 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetInventoryChangeLogRequest is the request to retrieve a single inventory change log by ID.
+// GetInventoryChangeLogRequest is the request to retrieve an inventory change log by ID.
 type GetInventoryChangeLogRequest struct {
-	// The ID of the inventory change log to retrieve.
+	// Inventory change log ID.
 	InventoryChangeLogID string `path:"id" validate:"required"`
 }
 
@@ -21,7 +21,7 @@ type GetInventoryChangeLogEndpoint struct{}
 func (e *GetInventoryChangeLogEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetInventoryChangeLogRequest, *apiresource.InventoryChangeLog] {
 	return &apiendpoint.APIEndpoint[*GetInventoryChangeLogRequest, *apiresource.InventoryChangeLog]{
 		Title:             "Get Inventory Change Log",
-		Description:       "Returns a single inventory change log by its ID.",
+		Description:       "Returns an inventory change log by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/inventory-change-logs/{id}",

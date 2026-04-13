@@ -11,9 +11,9 @@ import (
 
 // ChangeProductProductLineRequest is the request to change a product's product line.
 type ChangeProductProductLineRequest struct {
-	// The ID of the product to update.
+	// Product ID.
 	ProductID string `path:"id" validate:"required"`
-	// The ID of the new product line.
+	// Product line ID.
 	ProductLineID string `path:"product_line_id" validate:"required"`
 }
 

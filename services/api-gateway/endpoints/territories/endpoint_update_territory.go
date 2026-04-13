@@ -11,27 +11,27 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpdateTerritoryRequest is the request to partially update a territory.
+// Request to partially update a territory.
 type UpdateTerritoryRequest struct {
-	// The ID of the account that owns the territory.
+	// Account ID.
 	AccountID string `path:"account_id" validate:"required"`
-	// The ID of the territory to update.
+	// Territory ID.
 	TerritoryID string `path:"id" validate:"required"`
-	// The state this territory covers.
+	// State this territory covers.
 	State *string `json:"state,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// The start of the zipcode range (501-99999).
+	// Start of ZIP code range (501-99999).
 	StartZipcode *int32 `json:"start_zipcode,omitempty" nullable:"false"`
-	// The end of the zipcode range (501-99999).
+	// End of ZIP code range (501-99999).
 	EndZipcode *int32 `json:"end_zipcode,omitempty" nullable:"false"`
-	// The ID of the sales rep (account user) assigned to this territory.
+	// Sales rep (account user) ID.
 	SalesRepID *string `json:"sales_rep_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
-	// The ID of the product line this territory is scoped to.
+	// Product line ID.
 	ProductLineID *string `json:"product_line_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
-	// Set to true to remove the product line from this territory.
+	// Set to true to remove the product line.
 	ClearProductLine *bool `json:"clear_product_line,omitempty" nullable:"false"`
-	// Set to true to remove the start zipcode from this territory.
+	// Set to true to remove the start ZIP code.
 	ClearStartZipcode *bool `json:"clear_start_zipcode,omitempty" nullable:"false"`
-	// Set to true to remove the end zipcode from this territory.
+	// Set to true to remove the end ZIP code.
 	ClearEndZipcode *bool `json:"clear_end_zipcode,omitempty" nullable:"false"`
 }
 

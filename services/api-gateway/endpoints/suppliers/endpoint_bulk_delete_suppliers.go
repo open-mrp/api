@@ -12,7 +12,7 @@ import (
 
 // BulkDeleteSuppliersRequest is the request to bulk delete suppliers.
 type BulkDeleteSuppliersRequest struct {
-	// The IDs of the suppliers to delete.
+	// Supplier IDs to delete.
 	SupplierIDs []string `json:"supplier_ids" validate:"required"`
 }
 

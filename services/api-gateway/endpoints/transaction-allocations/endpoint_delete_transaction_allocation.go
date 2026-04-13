@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// DeleteTransactionAllocationRequest is the request to delete a transaction allocation.
+// Request to delete a transaction allocation.
 type DeleteTransactionAllocationRequest struct {
-	// The ID of the transaction allocation to delete.
+	// Transaction allocation ID.
 	AllocationID string `path:"id" validate:"required"`
 }
 

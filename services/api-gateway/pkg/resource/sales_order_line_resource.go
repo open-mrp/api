@@ -10,39 +10,39 @@ import (
 
 const SampleSalesOrderLineDetailID = "orln_01jm4r6700f8nwq3v5hx2d9ktp"
 
-// SalesOrderLineDetail represents a full sales order line resource.
+// Full sales order line resource.
 type SalesOrderLineDetail struct {
-	// The unique identifier for the sales order line.
+	// Sales order line ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=sales_order_line"`
-	// The line item number.
+	// Line item number.
 	LineItemNumber int32 `json:"line_item_number" validate:"required"`
-	// The product SKU.
+	// Product SKU.
 	ProductSKU string `json:"product_sku" validate:"required"`
-	// The product description.
+	// Product description.
 	ProductDescription *string `json:"product_description"`
-	// The item associated with this line.
+	// Associated item.
 	Item *Item `json:"item"`
-	// The quantity ordered.
+	// Quantity ordered.
 	QuantityOrdered *Quantity `json:"quantity_ordered" validate:"required"`
-	// The quantity picked.
+	// Quantity picked.
 	QuantityPicked *Quantity `json:"quantity_picked"`
-	// The quantity packed.
+	// Quantity packed.
 	QuantityPacked *Quantity `json:"quantity_packed"`
-	// The quantity invoiced.
+	// Quantity invoiced.
 	QuantityInvoiced *Quantity `json:"quantity_invoiced"`
-	// The unit price for this line.
+	// Unit price.
 	UnitPrice *Rate `json:"unit_price" validate:"required"`
-	// The unit cost for this line.
+	// Unit cost.
 	UnitCost *Rate `json:"unit_cost"`
-	// The EDI line item ID.
+	// EDI line item ID.
 	EdiLineItemID *string `json:"edi_line_item_id"`
-	// The timestamp when the line was completed.
+	// Completed timestamp.
 	CompletedAt *time.Time `json:"completed_at"`
-	// The timestamp when the line was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The timestamp when the line was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 

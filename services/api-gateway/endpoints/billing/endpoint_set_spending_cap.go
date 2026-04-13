@@ -10,8 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
+// Request to set or remove the monthly spending cap.
 type SetSpendingCapRequest struct {
-	// The monthly spending cap in cents. Null to remove the cap.
+	// Monthly spending cap in cents. Null removes the cap.
 	CapCents *int64 `json:"cap_cents"`
 }
 
@@ -30,7 +31,7 @@ type SetSpendingCapEndpoint struct{}
 func (e *SetSpendingCapEndpoint) Materialize() *apiendpoint.APIEndpoint[*SetSpendingCapRequest, *apiresource.SpendingCapResponse] {
 	return &apiendpoint.APIEndpoint[*SetSpendingCapRequest, *apiresource.SpendingCapResponse]{
 		Title:             "Set Spending Cap",
-		Description:       "Sets or removes the monthly agent spending cap for the account. Pass null cap_cents to remove the cap.",
+		Description:       "Sets or removes the monthly agent spending cap for the account.",
 		Method:            http.MethodPut,
 		Route:             "/v1/billing/spending-cap",
 		ContentType:       "application/json",

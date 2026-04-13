@@ -11,19 +11,19 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpdateShippingCaseRequest is the request to update a shipping case.
+// Request to update a shipping case.
 type UpdateShippingCaseRequest struct {
-	// The ID of the shipping case to update.
+	// Shipping case ID.
 	ShippingCaseID string `path:"id" validate:"required"`
-	// The new tracking number.
+	// Tracking number.
 	TrackingNumber *string `json:"tracking_number" nullable:"false" validate:"omitempty,max=255"`
-	// The new freight amount value.
+	// Freight amount value.
 	FreightAmountValue *string `json:"freight_amount_value" nullable:"false"`
-	// The new freight amount unit ID.
+	// Freight amount unit ID.
 	FreightAmountUnitID *string `json:"freight_amount_unit_id" nullable:"false" validate:"omitempty,max=191"`
-	// The new freight weight value.
+	// Freight weight value.
 	FreightWeightValue *string `json:"freight_weight_value" nullable:"false"`
-	// The new freight weight unit ID.
+	// Freight weight unit ID.
 	FreightWeightUnitID *string `json:"freight_weight_unit_id" nullable:"false" validate:"omitempty,max=191"`
 }
 

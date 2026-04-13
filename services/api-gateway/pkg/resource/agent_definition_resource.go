@@ -8,37 +8,37 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-// AgentDefinition represents an agent definition.
+// Agent definition resource.
 type AgentDefinition struct {
-	// The unique identifier for the agent definition.
+	// Agent definition ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=agent_definition"`
-	// The display name of the agent.
+	// Display name.
 	Name string `json:"name" validate:"required"`
-	// The unique slug identifier.
+	// URL-friendly slug.
 	Slug string `json:"slug" validate:"required"`
-	// A description of what the agent does.
+	// Description of what the agent does.
 	Description *string `json:"description"`
 	// Agent definition type.
 	DefinitionType constants.AgentDefinitionType `json:"definition_type" validate:"required"`
-	// The category code for this agent.
+	// Category code.
 	CategoryCode string `json:"category_code" validate:"required"`
 	// How this agent is triggered.
 	TriggerType constants.AgentTriggerType `json:"trigger_type" validate:"required"`
 	// Whether the current user can edit this agent definition.
 	IsEditable bool `json:"is_editable"`
-	// The role that defines this agent's permissions.
+	// Role defining agent permissions.
 	Role *Role `json:"role" expandable:"true"`
-	// The agent configuration.
+	// Agent configuration.
 	Config *AgentDefinitionConfig `json:"config" expandable:"true"`
-	// The tools attached to this agent.
+	// Tools attached to this agent.
 	Tools *List[AgentDefinitionTool] `json:"tools" expandable:"true"`
-	// The per-account activation status for this agent definition.
+	// Per-account activation status.
 	AccountStatus constants.AgentAccountStatus `json:"status" validate:"required"`
-	// When this agent definition was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// When this agent definition was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 

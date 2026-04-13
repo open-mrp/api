@@ -10,11 +10,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// CreateProductTypeRequest is the request to create a new product type.
+// Request to create a product type.
 type CreateProductTypeRequest struct {
-	// The display name of the product type.
+	// Display name.
 	Name string `json:"name" validate:"required,max=255"`
-	// The unique code for the product type.
+	// Unique code.
 	Code string `json:"code" validate:"required,max=255"`
 }
 
@@ -32,7 +32,7 @@ type CreateProductTypeEndpoint struct{}
 func (e *CreateProductTypeEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateProductTypeRequest, *apiresource.ProductType] {
 	return &apiendpoint.APIEndpoint[*CreateProductTypeRequest, *apiresource.ProductType]{
 		Title:             "Create Product Type",
-		Description:       "Creates a new product type.",
+		Description:       "Creates a product type.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/product-types",

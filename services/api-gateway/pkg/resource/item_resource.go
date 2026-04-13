@@ -11,35 +11,35 @@ import (
 const SampleItemID = "it_01jm4r6700f8nwq3v5hx2d9ktp"
 const SampleItemSKU = "ALM-2024-1001"
 
-// Item represents an inventory item (product, material, or part).
+// Item is an inventory item (product, material, or part).
 type Item struct {
-	// The unique identifier for the item.
+	// Item ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=item"`
-	// The stock keeping unit code.
+	// Stock keeping unit code.
 	SKU string `json:"sku" validate:"required"`
-	// A description of the item.
+	// Item description.
 	Description *string `json:"description"`
-	// Additional notes about the item.
+	// Notes.
 	Notes *string `json:"notes"`
-	// The item type code.
+	// Item type code.
 	ItemTypeCode constants.ItemTypeCode `json:"type" validate:"required"`
-	// The item category.
+	// Item category.
 	Category *ItemCategory `json:"category" expandable:"true"`
-	// The unit value rate for this item.
+	// Unit value rate.
 	UnitValue *Rate `json:"unit_value" expandable:"true"`
-	// The unit cost rate for this item.
+	// Unit cost rate.
 	UnitCost *Rate `json:"unit_cost" expandable:"true"`
-	// The burn rate for this item.
+	// Burn rate.
 	BurnRate *Rate `json:"burn_rate" expandable:"true"`
-	// The attributes assigned to this item.
+	// Attributes assigned to this item.
 	Attributes *List[Attribute] `json:"attributes"`
 	// Whether the item has unsaved changes.
 	IsDirty bool `json:"is_dirty"`
-	// The timestamp when the item was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The timestamp when the item was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
@@ -66,25 +66,25 @@ func (*Item) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleItem)
 }
 
-// ItemInventory represents inventory quantities for an item.
+// ItemInventory contains inventory quantities for an item.
 type ItemInventory struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=item"`
-	// The on-hand quantity and its unit.
+	// On-hand quantity and unit.
 	OnHand *QuantityInfo `json:"on_hand" validate:"required"`
-	// The reserved quantity and its unit.
+	// Reserved quantity and unit.
 	Reserved *QuantityInfo `json:"reserved" validate:"required"`
-	// The available-to-promise quantity and its unit.
+	// Available-to-promise quantity and unit.
 	AvailableToPromise *QuantityInfo `json:"available_to_promise" validate:"required"`
-	// The short quantity and its unit.
+	// Short quantity and unit.
 	Short *QuantityInfo `json:"short" validate:"required"`
 }
 
-// QuantityInfo represents a quantity with its associated unit.
+// QuantityInfo is a quantity with its associated unit.
 type QuantityInfo struct {
-	// The decimal quantity value.
+	// Decimal quantity value.
 	Value string `json:"value" validate:"required" format:"decimal"`
-	// The unit for this quantity.
+	// Unit.
 	Unit *Unit `json:"unit"`
 }
 
@@ -105,19 +105,19 @@ func (*ItemInventory) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleItemInventory)
 }
 
-// ItemCosts represents cost breakdown for an item.
+// ItemCosts is the cost breakdown for an item.
 type ItemCosts struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=item"`
-	// The direct material cost.
+	// Direct material cost.
 	DirectMaterialCost string `json:"direct_material_cost" validate:"required" format:"decimal"`
-	// The direct labor cost.
+	// Direct labor cost.
 	DirectLaborCost string `json:"direct_labor_cost" validate:"required" format:"decimal"`
-	// The overhead cost.
+	// Overhead cost.
 	OverheadCost string `json:"overhead_cost" validate:"required" format:"decimal"`
-	// The total cost.
+	// Total cost.
 	TotalCost string `json:"total_cost" validate:"required" format:"decimal"`
-	// The unit for cost values.
+	// Unit for cost values.
 	Unit *Unit `json:"unit"`
 }
 
@@ -134,21 +134,21 @@ func (*ItemCosts) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleItemCosts)
 }
 
-// ItemTrendPoint represents a single trend data point.
+// ItemTrendPoint is a single trend data point.
 type ItemTrendPoint struct {
-	// The date of the trend data point.
+	// Timestamp of the data point.
 	OccurredAt time.Time `json:"occurred_at" validate:"required"`
-	// The value at this date.
+	// Value at this date.
 	Value string `json:"value" validate:"required" format:"decimal"`
 }
 
-// ItemTrends represents historical trend data for an item.
+// ItemTrends is the historical trend data for an item.
 type ItemTrends struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=item"`
-	// The trend type that was requested.
+	// Requested trend type.
 	TrendType string `json:"trend_type" validate:"required"`
-	// The trend data points.
+	// Trend data points.
 	Points *List[ItemTrendPoint] `json:"points" validate:"required"`
 }
 
@@ -167,29 +167,29 @@ func (*ItemTrends) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleItemTrends)
 }
 
-// ExportItem represents an item with inventory for export.
+// ExportItem is an item with inventory for export.
 type ExportItem struct {
-	// The unique identifier for the item.
+	// Item ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=item"`
-	// The stock keeping unit code.
+	// Stock keeping unit code.
 	SKU string `json:"sku" validate:"required"`
-	// A description of the item.
+	// Item description.
 	Description *string `json:"description"`
-	// Additional notes about the item.
+	// Notes.
 	Notes *string `json:"notes"`
-	// The item type code.
+	// Item type code.
 	ItemTypeCode constants.ItemTypeCode `json:"type" validate:"required"`
-	// The category name.
+	// Category name.
 	CategoryName string `json:"category_name"`
-	// The on-hand quantity.
+	// On-hand quantity.
 	OnHandQuantity string `json:"on_hand_quantity" format:"decimal"`
-	// The on-hand unit.
+	// On-hand unit.
 	OnHandUnit *Unit `json:"on_hand_unit"`
-	// The timestamp when the item was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The timestamp when the item was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
@@ -211,14 +211,14 @@ func (*ExportItem) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleExportItem)
 }
 
-// ExportItemsResponse represents the export items response when returning JSON.
-// Export endpoints may use arrays; they typically return an Excel file instead.
+// ExportItemsResponse is the export items response in JSON format.
+// Export endpoints typically return an Excel file instead.
 type ExportItemsResponse struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=list"`
-	// The exported items.
+	// Exported items.
 	Items []*ExportItem `json:"items" validate:"required"`
-	// The total count of exported items.
+	// Total count of exported items.
 	Count int64 `json:"count"`
 }
 
@@ -232,42 +232,42 @@ func (*ExportItemsResponse) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleExportItemsResponse)
 }
 
-// BulkReconcileItemsResponse represents the response from bulk reconciling items.
+// BulkReconcileItemsResponse is the response from bulk reconciling items.
 type BulkReconcileItemsResponse struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=bulk_reconcile_items_response"`
-	// The reconciled items.
+	// Successfully reconciled items.
 	ReconciledItems []ReconciledItemResult `json:"reconciled_items" validate:"required"`
-	// The skipped items.
+	// Skipped items.
 	SkippedItems []SkippedItemResult `json:"skipped_items" validate:"required"`
-	// The errors.
+	// Reconciliation errors.
 	Errors []ReconcileErrorResult `json:"errors" validate:"required"`
 }
 
-// ReconciledItemResult represents a successfully reconciled item.
+// ReconciledItemResult is a successfully reconciled item.
 type ReconciledItemResult struct {
-	// The item ID.
+	// Item ID.
 	ItemID string `json:"item_id" validate:"required"`
-	// The SKU.
+	// Item SKU.
 	SKU string `json:"sku" validate:"required"`
-	// The previous quantity.
+	// Previous quantity.
 	PreviousQuantity float64 `json:"previous_quantity" validate:"required"`
-	// The new quantity.
+	// New quantity.
 	NewQuantity float64 `json:"new_quantity" validate:"required"`
 }
 
-// SkippedItemResult represents a skipped item during reconciliation.
+// SkippedItemResult is a skipped item during reconciliation.
 type SkippedItemResult struct {
-	// The SKU.
+	// Item SKU.
 	SKU string `json:"sku" validate:"required"`
-	// The reason for skipping.
+	// Reason for skipping.
 	Reason string `json:"reason" validate:"required"`
 }
 
-// ReconcileErrorResult represents an error during reconciliation.
+// ReconcileErrorResult is an error during reconciliation.
 type ReconcileErrorResult struct {
-	// The SKU.
+	// Item SKU.
 	SKU string `json:"sku" validate:"required"`
-	// The error message.
+	// Error message.
 	Error string `json:"error" validate:"required"`
 }

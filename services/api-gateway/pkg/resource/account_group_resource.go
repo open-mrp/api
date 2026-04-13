@@ -11,25 +11,25 @@ import (
 const SampleAccountGroupID = "acgp_01jm4r6700f8nwq3v5hx2d9ktp"
 const SampleAccountGroupName = "Wholesale Customers"
 
-// AccountGroup represents an account group used for organizing customer accounts.
+// Account group resource.
 type AccountGroup struct {
-	// The unique identifier for the account group.
+	// Account group ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=account_group"`
-	// The display name of the account group.
+	// Display name.
 	Name string `json:"name" validate:"required"`
-	// A description of the account group.
+	// Description.
 	Description *string `json:"description"`
-	// The commission policy of the account group.
+	// Commission policy.
 	CommissionPolicy constants.CommissionPolicy `json:"commission_policy" validate:"required"`
-	// The freight policy of the account group.
+	// Freight policy.
 	FreightPolicy constants.FreightPolicy `json:"freight_policy" validate:"required"`
-	// The account group type.
+	// Account group type.
 	Type constants.AccountGroupType `json:"type" validate:"required"`
-	// When this account group was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// When this account group was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 

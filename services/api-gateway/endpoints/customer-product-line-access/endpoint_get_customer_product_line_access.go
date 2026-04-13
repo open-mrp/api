@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetCustomerProductLineAccessRequest is the request to retrieve product line access for a single customer.
+// Request to retrieve product line access for a customer.
 type GetCustomerProductLineAccessRequest struct {
-	// The ID of the customer.
+	// Customer ID.
 	CustomerID string `path:"customer_id" validate:"required"`
 }
 

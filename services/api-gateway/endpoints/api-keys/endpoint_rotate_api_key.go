@@ -11,11 +11,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// The request to rotate an API key, optionally overriding the expiration
+// Request to rotate an API key.
 type RotateAPIKeyRequest struct {
-	// The unique identifier for the API key to rotate.
+	// API key ID to rotate.
 	APIKeyID string `path:"id" validate:"required"`
-	// Optional expiration time override for the new API key.
+	// Expiration time override.
 	ExpiresAt *time.Time `json:"expires_at,omitempty" nullable:"false"`
 }
 
@@ -30,7 +30,7 @@ type RotateAPIKeyEndpoint struct{}
 func (e *RotateAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*RotateAPIKeyRequest, *apiresource.CreatedAPIKey] {
 	return &apiendpoint.APIEndpoint[*RotateAPIKeyRequest, *apiresource.CreatedAPIKey]{
 		Title:             "Rotate API Key",
-		Description:       "Rotates an API key by revoking the existing key and issuing a replacement with the same name, role, and expiration. The new secret is returned only once.",
+		Description:       "Rotates an API key by revoking the existing key and issuing a replacement with the same name, role, and expiration. The new secret is returned once.",
 		Method:            http.MethodPost,
 		Route:             "/v1/auth/api-keys/{id}/actions/rotate",
 		ContentType:       "application/json",

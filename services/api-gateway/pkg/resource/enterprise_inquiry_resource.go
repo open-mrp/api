@@ -10,11 +10,11 @@ import (
 
 const SampleEnterpriseInquiryID = "enir_01gf7a8200eaj8fke1xvw4h50x"
 
-// EnterpriseInquiry represents a request for an enterprise plan upgrade.
+// Enterprise plan upgrade request.
 type EnterpriseInquiry struct {
-	// The unique identifier for this enterprise inquiry.
+	// Enterprise inquiry ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=enterprise_inquiry"`
 	// When this inquiry was submitted.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

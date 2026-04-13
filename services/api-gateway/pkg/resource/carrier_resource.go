@@ -11,29 +11,29 @@ import (
 const SampleCarrierID = "cr_01jm4r6700f8nwq3v5hx2d9ktp"
 const SampleCarrierName = "FedEx"
 
-// Carrier represents a shipping carrier configured for the account.
+// Carrier resource.
 type Carrier struct {
-	// The unique identifier for the carrier.
+	// Carrier ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=carrier"`
-	// The display name of the carrier.
+	// Display name.
 	Name string `json:"name" validate:"required"`
-	// The carrier code.
+	// Carrier code.
 	Code *constants.CarrierCode `json:"code"`
-	// The carrier account number, if applicable.
+	// Account number.
 	AccountNumber *string `json:"account_number"`
-	// Whether this carrier is visible in the customer portal.
+	// Customer portal visibility.
 	CustomerPortalVisibility constants.CustomerPortalVisibility `json:"customer_portal_visibility" validate:"required,enum"`
-	// The owner of this resource.
+	// Owner.
 	Owner *Owner `json:"owner" expandable:"true"`
-	// The service levels (shipping service levels).
+	// Service levels.
 	ServiceLevels *List[ServiceLevel] `json:"service_levels" expandable:"true"`
-	// When the carrier was soft-deleted, if applicable.
+	// Soft-delete timestamp.
 	DeletedAt *time.Time `json:"deleted_at"`
-	// When the carrier was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// When the carrier was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
@@ -54,11 +54,11 @@ func (*Carrier) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleCarrier)
 }
 
-// OAuthResponse represents the response from initiating carrier OAuth.
+// Response from initiating carrier OAuth.
 type OAuthResponse struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=oauth_response"`
-	// The OAuth URL to redirect the user to.
+	// OAuth URL to redirect the user to.
 	OAuthURL string `json:"oauth_url" validate:"required"`
 }
 
@@ -71,11 +71,11 @@ func (*OAuthResponse) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleOAuthResponse)
 }
 
-// OAuthStatusResponse represents the OAuth connection status for a carrier.
+// OAuth connection status for a carrier.
 type OAuthStatusResponse struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=oauth_status_response"`
-	// The OAuth connection status ("connected" or "disconnected").
+	// OAuth connection status. Either "connected" or "disconnected".
 	Status string `json:"status" validate:"required"`
 }
 

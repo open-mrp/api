@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetFrequentlyOrderedProductsRequest is the request to get a customer's frequently ordered products.
+// Request to get frequently ordered products for a customer.
 type GetFrequentlyOrderedProductsRequest struct {
-	// The ID of the customer.
+	// Customer ID.
 	CustomerID string `path:"id" validate:"required"`
 }
 

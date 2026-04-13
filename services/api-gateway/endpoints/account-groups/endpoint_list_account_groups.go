@@ -10,10 +10,10 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListAccountGroupsRequest is the request to list account groups with optional filters.
+// Request to list account groups.
 type ListAccountGroupsRequest struct {
 	apiresource.PaginationRequest
-	// Filter by account group type code.
+	// Account group type filter.
 	Type *constants.AccountGroupType `query:"type"`
 }
 

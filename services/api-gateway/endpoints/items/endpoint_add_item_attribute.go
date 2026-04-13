@@ -12,9 +12,9 @@ import (
 
 // AddItemAttributeRequest is the request to add an attribute to an item.
 type AddItemAttributeRequest struct {
-	// The ID of the item.
+	// Item ID.
 	ItemID string `path:"id" validate:"required"`
-	// The ID of the attribute to add.
+	// Attribute ID.
 	AttributeID string `path:"attribute_id" validate:"required"`
 }
 

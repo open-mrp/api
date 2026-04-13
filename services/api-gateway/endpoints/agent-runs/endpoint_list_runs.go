@@ -10,12 +10,12 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListRunsRequest is the request to list agent runs.
+// Request to list agent runs.
 type ListRunsRequest struct {
 	apiresource.PaginationRequest
-	// Filter by run status code (e.g. "running", "completed", "failed").
+	// Run status filter (e.g. "running", "completed", "failed").
 	StatusCode *string `query:"status"`
-	// Filter by agent definition ID.
+	// Agent definition ID filter.
 	AgentDefinitionID *string `query:"agent_definition_id"`
 }
 

@@ -11,29 +11,29 @@ import (
 const SampleProductLineID = "pl_01jm4r6700f8nwq3v5hx2d9ktp"
 const SampleProductLineName = "Industrial Fasteners"
 
-// ProductLine represents a full product line resource.
+// Product line resource.
 type ProductLine struct {
-	// The unique identifier for the product line.
+	// Product line ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=product_line"`
-	// The display name of the product line.
+	// Display name.
 	Name string `json:"name" validate:"required"`
-	// Optional description of the product line.
+	// Description.
 	Description *string `json:"description"`
-	// Optional notes about the product line.
+	// Notes.
 	Notes *string `json:"notes"`
-	// The commission policy for this product line.
+	// Commission policy.
 	CommissionPolicy constants.CommissionPolicy `json:"commission_policy" validate:"required"`
-	// The freight policy for this product line.
+	// Freight policy.
 	FreightPolicy constants.FreightPolicy `json:"freight_policy" validate:"required"`
-	// The owner of this resource.
+	// Owner.
 	Owner *Owner `json:"owner" expandable:"true"`
-	// The unit group associated with this product line.
+	// Unit group.
 	UnitGroup *UnitGroup `json:"unit_group" expandable:"true"`
-	// The timestamp when the product line was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The timestamp when the product line was last updated.
+	// Last-updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 

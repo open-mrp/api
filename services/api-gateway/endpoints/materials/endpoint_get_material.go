@@ -10,7 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
+// Request to get a material.
 type GetMaterialRequest struct {
+	// Material ID.
 	ItemID string `path:"id" validate:"required"`
 }
 
@@ -19,7 +21,7 @@ type GetMaterialEndpoint struct{}
 func (e *GetMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetMaterialRequest, *apiresource.Material] {
 	return &apiendpoint.APIEndpoint[*GetMaterialRequest, *apiresource.Material]{
 		Title:             "Get Material",
-		Description:       "Returns a single material by its ID.",
+		Description:       "Returns a material by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/materials/{id}",

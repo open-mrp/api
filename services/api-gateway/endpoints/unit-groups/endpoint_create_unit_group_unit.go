@@ -11,17 +11,17 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// CreateUnitGroupUnitRequest is the request to create an associated unit within a unit group.
+// CreateUnitGroupUnitRequest is a request to create an associated unit within a unit group.
 type CreateUnitGroupUnitRequest struct {
-	// The ID of the unit group.
+	// Unit group ID.
 	UnitGroupID string `path:"unitGroupId" validate:"required"`
-	// The unit ID.
+	// Unit ID.
 	UnitID string `json:"unit_id" validate:"required,max=191"`
-	// The discount percentage.
+	// Discount percentage.
 	DiscountPercentage *float64 `json:"discount_percentage,omitempty" default:"1" nullable:"false"`
-	// The fixed discount amount.
+	// Fixed discount amount.
 	DiscountFixed *float64 `json:"discount_fixed,omitempty" default:"0" nullable:"false"`
-	// Whether this associated unit is visible in the customer portal.
+	// Customer portal visibility.
 	CustomerPortalVisibility *constants.CustomerPortalVisibility `json:"customer_portal_visibility,omitempty" default:"visible" nullable:"false"`
 }
 

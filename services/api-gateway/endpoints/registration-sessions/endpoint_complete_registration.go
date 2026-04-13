@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// The request to complete registration for a registration session
+// Request to complete registration for a session.
 type CompleteRegistrationRequest struct {
-	// The session ID.
+	// Session ID.
 	SessionID string `json:"-" path:"session_id" validate:"required"`
 }
 

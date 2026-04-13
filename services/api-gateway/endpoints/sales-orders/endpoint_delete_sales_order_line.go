@@ -9,11 +9,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// DeleteSalesOrderLineRequest is the request to delete a sales order line.
+// Request to delete a sales order line.
 type DeleteSalesOrderLineRequest struct {
-	// The ID of the sales order.
+	// Sales order ID.
 	SalesOrderID string `path:"id" validate:"required"`
-	// The ID of the sales order line to delete.
+	// Sales order line ID.
 	SalesOrderLineID string `path:"lineId" validate:"required"`
 }
 
@@ -22,7 +22,7 @@ type DeleteSalesOrderLineEndpoint struct{}
 func (e *DeleteSalesOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteSalesOrderLineRequest, *apiresource.EmptyResource] {
 	return &apiendpoint.APIEndpoint[*DeleteSalesOrderLineRequest, *apiresource.EmptyResource]{
 		Title:             "Delete Sales Order Line",
-		Description:       "Deletes a sales order line item and its related records.",
+		Description:       "Deletes a sales order line and related records.",
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/sales-orders/{id}/lines/{lineId}",

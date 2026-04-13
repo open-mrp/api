@@ -12,23 +12,23 @@ const SampleSettlementID = "sl_01jm4r6700f8nwq3v5hx2d9ktp"
 const SampleSettlementSummaryID = "sl_01jm4r6700f8nwq3v5hx2d9ktp"
 const SampleTransactionAllocationID2 = "txal_01jm4r67aab8nwq3v5hx2d9ktp"
 
-// Settlement represents a full settlement with expandable allocations.
+// Settlement with expandable allocations.
 type Settlement struct {
-	// The unique identifier for the settlement.
+	// Settlement ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=settlement"`
-	// The settlement number.
+	// Settlement number.
 	Number string `json:"number" validate:"required"`
-	// A note attached to this settlement.
+	// Note attached to this settlement.
 	Note *string `json:"note"`
-	// The user responsible for this settlement.
+	// Responsible user.
 	ResponsibleUser *AccountUser `json:"responsible_user" expandable:"true"`
-	// The transaction allocations in this settlement.
+	// Transaction allocations in this settlement.
 	Allocations *List[TransactionAllocation] `json:"allocations" expandable:"true"`
-	// The timestamp when the settlement was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The timestamp when the settlement was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
@@ -48,31 +48,31 @@ func (*Settlement) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleSettlement)
 }
 
-// SettlementSummary represents a lightweight settlement for list views.
+// SettlementSummary is a lightweight settlement for list views.
 type SettlementSummary struct {
-	// The unique identifier for the settlement.
+	// Settlement ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=settlement_summary"`
-	// The settlement number.
+	// Settlement number.
 	Number string `json:"number" validate:"required"`
-	// The number of allocations in this settlement.
+	// Number of allocations in this settlement.
 	AllocationCount int32 `json:"allocation_count"`
-	// The total payment amount as a decimal string.
+	// Total payment amount as a decimal string.
 	TotalPayments *string `json:"total_payments"`
-	// The total rebate amount as a decimal string.
+	// Total rebate amount as a decimal string.
 	TotalRebates *string `json:"total_rebates"`
-	// The total adjustment amount as a decimal string.
+	// Total adjustment amount as a decimal string.
 	TotalAdjustments *string `json:"total_adjustments"`
-	// The total credit amount as a decimal string.
+	// Total credit amount as a decimal string.
 	TotalCredits *string `json:"total_credits"`
-	// The invoice numbers included in this settlement.
+	// Invoice numbers included in this settlement.
 	InvoiceNumbers []string `json:"invoice_numbers"`
-	// The customer names included in this settlement.
+	// Customer names included in this settlement.
 	CustomerNames []string `json:"customer_names"`
-	// The timestamp when the settlement was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The timestamp when the settlement was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
@@ -91,23 +91,23 @@ func (*SettlementSummary) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleSettlementSummary)
 }
 
-// TransactionAllocation represents an allocation of a transaction against an invoice.
+// Allocation of a transaction against an invoice.
 type TransactionAllocation struct {
-	// The unique identifier for the allocation.
+	// Allocation ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=transaction_allocation"`
-	// The allocated amount.
+	// Allocated amount.
 	Amount *Quantity `json:"amount" validate:"required"`
-	// A note about this allocation.
+	// Note.
 	Note *string `json:"note"`
-	// The transaction associated with this allocation.
+	// Associated transaction.
 	Transaction *Transaction `json:"transaction" validate:"required"`
-	// The invoice associated with this allocation.
+	// Associated invoice.
 	Invoice *InvoiceSummary `json:"invoice"`
-	// The timestamp when the allocation was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The timestamp when the allocation was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 

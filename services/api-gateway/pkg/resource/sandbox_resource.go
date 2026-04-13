@@ -11,15 +11,15 @@ import (
 const SampleSandboxID = "sbac_01jm4r6700f8nwq3v5hx2d9ktp"
 const SampleSandboxName = "Integration Testing"
 
-// Sandbox represents an isolated testing environment for an account.
+// Sandbox account for isolated testing.
 type Sandbox struct {
-	// The unique identifier for the sandbox.
+	// Sandbox ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=sandbox"`
-	// The display name of the sandbox.
+	// Display name.
 	Name string `json:"name" validate:"required"`
-	// The owner account of this sandbox.
+	// Owner account.
 	OwnerAccount *Account `json:"owner_account" expandable:"true"`
 	// When this sandbox was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

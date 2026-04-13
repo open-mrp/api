@@ -10,11 +10,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ConfirmPaymentRequest is the request to confirm payment for a registration session.
+// Request to confirm payment for a registration session.
 type ConfirmPaymentRequest struct {
-	// The session ID.
+	// Session ID.
 	SessionID string `json:"-" path:"session_id" validate:"required"`
-	// The Stripe Setup Intent ID to verify.
+	// Stripe Setup Intent ID to verify.
 	SetupIntentID string `json:"setup_intent_id" validate:"required"`
 }
 

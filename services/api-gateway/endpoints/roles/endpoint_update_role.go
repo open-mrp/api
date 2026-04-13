@@ -11,13 +11,13 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpdateRoleRequest is the request to update a role.
+// UpdateRoleRequest is a request to update a role.
 type UpdateRoleRequest struct {
-	// The ID of the role to update.
+	// Role ID.
 	RoleID string `path:"id" validate:"required"`
-	// The new display name for the role.
+	// Display name.
 	Name *string `json:"name" nullable:"false" validate:"omitempty,max=255"`
-	// The full set of permissions to replace existing ones with in `<domain>:<action>` format. If omitted, permissions are not changed.
+	// Permissions in `<domain>:<action>` format. Replaces all existing permissions; omit to leave unchanged.
 	Permissions *[]string `json:"permissions" nullable:"false"`
 }
 

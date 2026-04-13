@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// RevokeAPIKeyRequest is the request to revoke an API key.
+// Request to revoke an API key.
 type RevokeAPIKeyRequest struct {
-	// The ID of the API key to revoke.
+	// API key ID.
 	APIKeyID string `path:"id" validate:"required"`
 }
 
@@ -20,7 +20,7 @@ type RevokeAPIKeyEndpoint struct{}
 func (e *RevokeAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*RevokeAPIKeyRequest, *apiresource.EmptyResource] {
 	return &apiendpoint.APIEndpoint[*RevokeAPIKeyRequest, *apiresource.EmptyResource]{
 		Title:             "Revoke API Key",
-		Description:       "Revokes an API key so it can no longer be used to authenticate requests.",
+		Description:       "Revokes an API key, preventing it from being used to authenticate requests.",
 		Method:            http.MethodDelete,
 		Route:             "/v1/auth/api-keys/{id}",
 		ContentType:       "application/json",

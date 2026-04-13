@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// DeleteSandboxRequest is the request to delete a sandbox
+// Request to delete a sandbox.
 type DeleteSandboxRequest struct {
-	// The ID of the sandbox to delete.
+	// Sandbox ID.
 	SandboxID string `path:"id" validate:"required"`
 }
 

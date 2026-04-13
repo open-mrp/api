@@ -11,11 +11,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpdatePropertyRequest is the request to update a property.
+// Request to update a property.
 type UpdatePropertyRequest struct {
-	// The ID of the property to update.
+	// Property ID.
 	PropertyID string `path:"id" validate:"required"`
-	// The new name of the property.
+	// Name.
 	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
 }
 

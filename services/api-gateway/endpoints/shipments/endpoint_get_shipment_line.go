@@ -9,11 +9,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetShipmentLineRequest is the request to retrieve a single shipment line.
+// Request to retrieve a shipment line.
 type GetShipmentLineRequest struct {
-	// The ID of the shipment.
+	// Shipment ID.
 	ShipmentID string `path:"shipment_id" validate:"required"`
-	// The ID of the shipment line to retrieve.
+	// Shipment line ID.
 	ShipmentLineID string `path:"id" validate:"required"`
 }
 
@@ -22,7 +22,7 @@ type GetShipmentLineEndpoint struct{}
 func (e *GetShipmentLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetShipmentLineRequest, *apiresource.ShipmentLine] {
 	return &apiendpoint.APIEndpoint[*GetShipmentLineRequest, *apiresource.ShipmentLine]{
 		Title:             "Get Shipment Line",
-		Description:       "Returns a single shipment line by its ID.",
+		Description:       "Returns a shipment line by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/shipments/{shipment_id}/lines/{id}",

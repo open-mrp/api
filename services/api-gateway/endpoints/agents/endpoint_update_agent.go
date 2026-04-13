@@ -11,25 +11,25 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpdateAgentRequest is the request to partially update an agent definition.
+// Request to partially update an agent definition.
 type UpdateAgentRequest struct {
-	// The ID of the agent definition to update.
+	// Agent definition ID.
 	AgentDefinitionID string `path:"id" validate:"required"`
-	// The display name of the agent.
+	// Display name.
 	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// A unique URL-friendly identifier for the agent.
+	// URL-friendly identifier.
 	Slug *string `json:"slug,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// A human-readable description of what the agent does.
+	// Description of what the agent does.
 	Description *string `json:"description,omitempty" nullable:"true"`
-	// The category code that classifies this agent (e.g. "order_processing").
+	// Category code (e.g. "order_processing").
 	CategoryCode *string `json:"category_code,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// How this agent is triggered: "manual", "scheduled", or "event".
+	// Trigger type: "manual", "scheduled", or "event".
 	TriggerType *constants.AgentTriggerType `json:"trigger_type,omitempty" nullable:"false"`
 	// Agent-level configuration controlling LLM behavior and trigger settings.
 	Config *ConfigInput `json:"config,omitempty" nullable:"false"`
-	// The tools to attach to this agent. Replaces the existing tool set when provided.
+	// Tools to attach. Replaces the existing tool set when provided.
 	Tools *[]ToolInput `json:"tools,omitempty" nullable:"false"`
-	// The ID of the role that defines this agent's permissions.
+	// Role ID defining agent permissions.
 	RoleID *string `json:"role_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
 }
 

@@ -9,7 +9,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetStripePublishableKeyRequest is the request to retrieve the Stripe publishable key.
+// Request to retrieve the Stripe publishable key.
 type GetStripePublishableKeyRequest struct{}
 
 type GetStripePublishableKeyEndpoint struct{}

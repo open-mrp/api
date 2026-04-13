@@ -153,8 +153,8 @@ func (m *apiKeySvcImpl) RevokeAPIKey(ctx context.Context, req *RevokeAPIKeyReque
 }
 
 func (m *apiKeySvcImpl) ListAPIKeys(ctx context.Context, req *ListAPIKeysRequest) (*apiresource.List[apiresource.APIKey], *apierror.APIError) {
-	statuses := make([]string, len(req.Status))
-	for i, s := range req.Status {
+	statuses := make([]string, len(req.Statuses))
+	for i, s := range req.Statuses {
 		statuses[i] = string(s)
 	}
 

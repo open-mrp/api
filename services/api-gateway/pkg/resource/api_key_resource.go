@@ -19,35 +19,35 @@ const SampleTestAPIKeyValue = "aug_sk_test_RhxFDvTdDnb0bgtcoA5P79_60EmH4h9j9Zlds
 // #nosec G101 - This is sample data for API documentation, not a real credential
 const SampleProdAPIKeyValue = "aug_sk_prod_RhxFDvTdDnb0bgtcoA5P79_60EmH4h9j9ZldsuU9XyngXlpu8NqdIlGTQw8OM8cGeCadyhjtr"
 
-// APIKey represents an API key for authenticating API requests.
+// API key resource.
 type APIKey struct {
-	// The unique identifier for the API key.
+	// API key ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=api_key"`
-	// The human-readable name for the API key.
+	// Human-readable name for the API key.
 	Name string `json:"name" validate:"required"`
-	// The redacted value of the API key for display purposes.
+	// Redacted key value.
 	RedactedValue string `json:"redacted_value" validate:"required"`
-	// The role associated with this API key.
+	// Assigned role.
 	Role *Role `json:"role" expandable:"true"`
-	// The timestamp when the API key was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The timestamp when the API key was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
-	// The timestamp when the API key was last used.
+	// Last used timestamp.
 	LastUsedAt *time.Time `json:"last_used_at"`
-	// The timestamp when the API key expires.
+	// Expiration timestamp.
 	ExpiresAt *time.Time `json:"expires_at"`
-	// The timestamp when the API key was revoked.
+	// Revocation timestamp.
 	RevokedAt *time.Time `json:"revoked_at"`
 }
 
-// CreatedAPIKey represents a newly created API key with the full secret value.
+// Result of creating an API key, with the full secret value.
 type CreatedAPIKey struct {
-	// The full API key secret value (only shown once at creation).
+	// Full secret value. Returned once and cannot be retrieved later.
 	APIKeySecret string `json:"api_key_secret" validate:"required"`
-	// The API key metadata.
+	// API key metadata.
 	APIKeyInfo APIKey `json:"api_key_info" validate:"required"`
 }
 

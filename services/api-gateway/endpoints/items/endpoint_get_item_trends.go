@@ -9,11 +9,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetItemTrendsRequest is the request to retrieve trend data for an item.
+// GetItemTrendsRequest is the request to get trend data for an item.
 type GetItemTrendsRequest struct {
-	// The ID of the item to retrieve trends for.
+	// Item ID.
 	ItemID string `path:"id" validate:"required"`
-	// The type of trend to retrieve (e.g. "on_hand", "cost").
+	// Trend type (e.g. "on_hand", "cost").
 	TrendType string `query:"trend_type" validate:"required"`
 }
 

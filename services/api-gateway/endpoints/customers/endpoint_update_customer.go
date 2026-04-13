@@ -12,55 +12,55 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpdateCustomerRequest is the request to partially update a customer.
+// Request to partially update a customer.
 type UpdateCustomerRequest struct {
-	// The ID of the customer to update.
+	// Customer ID.
 	CustomerID string `path:"id" validate:"required"`
-	// The customer name.
+	// Customer name.
 	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// The customer number.
+	// Customer number.
 	Number *string `json:"number,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// A note about the customer.
+	// Note.
 	Note *string `json:"note,omitempty" nullable:"true"`
-	// The status code.
+	// Account status code.
 	StatusCode *constants.AccountStatusCode `json:"status,omitempty" nullable:"false"`
-	// The customer email address. Send null to clear.
+	// Email address. Send null to clear.
 	Email *string `json:"email,omitempty" validate:"omitempty,max=255" nullable:"true"`
-	// The customer phone number. Send null to clear.
+	// Phone number. Send null to clear.
 	Phone *string `json:"phone,omitempty" validate:"omitempty,max=255" nullable:"true"`
-	// The customer website URL. Send null to clear.
+	// Website URL. Send null to clear.
 	URL *string `json:"url,omitempty" validate:"omitempty,max=255" nullable:"true"`
-	// Whether the customer is EDI enabled.
+	// Whether EDI is enabled.
 	IsEdiEnabled *bool `json:"is_edi_enabled,omitempty" nullable:"false"`
-	// The commission policy for this customer.
+	// Commission policy.
 	CommissionPolicy *constants.CommissionPolicy `json:"commission_policy,omitempty" nullable:"false"`
-	// The freight policy for this customer.
+	// Freight policy.
 	FreightPolicy *constants.FreightPolicy `json:"freight_policy,omitempty" nullable:"false"`
-	// The default carrier ID.
+	// Default carrier ID.
 	DefaultCarrierID *string `json:"default_carrier_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
-	// The default service level ID.
+	// Default service level ID.
 	DefaultServiceLevelID *string `json:"default_service_level_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
-	// The default payment term ID.
+	// Default payment term ID.
 	DefaultPaymentTermID *string `json:"default_payment_term_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
-	// The default shipping term ID.
+	// Default shipping term ID.
 	DefaultShippingTermID *string `json:"default_shipping_term_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
-	// The default priority code.
+	// Default priority code.
 	DefaultPriorityCode *constants.PriorityCode `json:"default_priority,omitempty" nullable:"false"`
-	// The default sales rep user ID.
+	// Default sales rep user ID.
 	DefaultSalesRepUserID *string `json:"default_sales_rep_user_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
-	// The bill-to address ID.
+	// Bill-to address ID.
 	BillToAddressID *string `json:"bill_to_address_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
-	// The ship-to address ID.
+	// Ship-to address ID.
 	ShipToAddressID *string `json:"ship_to_address_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
-	// The customer price group IDs. When provided, replaces all existing price groups.
+	// Price group IDs. Replaces all existing price groups when provided.
 	CustomerPriceGroupIDs *[]string `json:"customer_price_group_ids,omitempty" nullable:"false"`
-	// The customer type group ID.
+	// Customer type group ID.
 	CustomerTypeGroupID *string `json:"customer_type_group_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
-	// The carrier billing type.
+	// Carrier billing type.
 	CarrierBillingType *constants.CarrierBillingType `json:"carrier_billing_type,omitempty" nullable:"false"`
-	// The carrier billing account number.
+	// Carrier billing account number.
 	CarrierBillingAccount *string `json:"carrier_billing_account,omitempty" nullable:"true" validate:"omitempty,max=255"`
-	// The credit limit for this customer. Send null to clear.
+	// Credit limit. Send null to clear.
 	CreditLimit apirequest.NullableInput[apirequest.QuantityInput] `json:"credit_limit,omitempty"`
 }
 

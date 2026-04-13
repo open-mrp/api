@@ -9,7 +9,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListDepartmentsRequest is the request to list departments with optional filters.
+// Request to list departments.
 type ListDepartmentsRequest struct {
 	apiresource.PaginationRequest
 }
@@ -19,7 +19,7 @@ type ListDepartmentsEndpoint struct{}
 func (e *ListDepartmentsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListDepartmentsRequest, *apiresource.List[apiresource.Department]] {
 	return &apiendpoint.APIEndpoint[*ListDepartmentsRequest, *apiresource.List[apiresource.Department]]{
 		Title:             "List Departments",
-		Description:       "Returns a paginated list of departments for the current account.",
+		Description:       "Returns a paginated list of departments.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/departments",

@@ -11,17 +11,17 @@ import (
 
 const SampleQuantityID = "qty_01jm4r6700f8nwq3v5hx2d9ktp"
 
-// Quantity represents a value with an associated unit.
+// Value with an associated unit.
 type Quantity struct {
-	// The unique identifier for the quantity.
+	// Quantity ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=quantity"`
-	// The decimal value of the quantity.
+	// Decimal value.
 	Value string `json:"value" validate:"required" format:"decimal"`
-	// A human-readable formatted value including the unit (e.g. "$1,234.56" or "100 kg").
+	// Formatted value with unit abbreviation (e.g. "$1,234.56" or "100 kg").
 	DisplayValue string `json:"display_value" validate:"required"`
-	// The unit associated with this quantity.
+	// Associated unit.
 	Unit *Unit `json:"unit" expandable:"true"`
 }
 

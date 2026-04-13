@@ -9,11 +9,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetProductionRequest is the request to retrieve a single production output.
+// Request to retrieve a production output.
 type GetProductionRequest struct {
-	// The ID of the production step.
+	// Production step ID.
 	ProductionStepID string `path:"production_step_id" validate:"required"`
-	// The ID of the production to retrieve.
+	// Production ID.
 	ProductionID string `path:"id" validate:"required"`
 }
 
@@ -22,7 +22,7 @@ type GetProductionEndpoint struct{}
 func (e *GetProductionEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetProductionRequest, *apiresource.ProductionOutput] {
 	return &apiendpoint.APIEndpoint[*GetProductionRequest, *apiresource.ProductionOutput]{
 		Title:             "Get Production",
-		Description:       "Returns a single production output by its ID within a production step.",
+		Description:       "Returns a production output by ID within a production step.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/production-steps/{production_step_id}/productions/{id}",

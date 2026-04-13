@@ -11,13 +11,13 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpdateItemCategoryRequest is the request to partially update an item category.
+// Request to partially update an item category.
 type UpdateItemCategoryRequest struct {
-	// The ID of the item category to update.
+	// Item category ID.
 	ItemCategoryID string `path:"id" validate:"required"`
-	// The display name of the item category.
+	// Display name.
 	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// Optional notes about the item category.
+	// Notes.
 	Notes *string `json:"notes,omitempty" nullable:"false"`
 }
 

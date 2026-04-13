@@ -9,7 +9,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListSysPropertiesRequest is the request to list system properties.
+// Request to list system properties.
 type ListSysPropertiesRequest struct {
 	apiresource.PaginationRequest
 }

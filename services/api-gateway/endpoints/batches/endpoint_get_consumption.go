@@ -10,15 +10,15 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetScanningStationConsumptionRequest is the request to get material consumption data for a scanning station.
+// Request to get material consumption data for a scanning station.
 type GetScanningStationConsumptionRequest struct {
-	// The ID of the scanning station.
+	// Scanning station ID.
 	ScanningStationID string `path:"id" validate:"required"`
-	// The IDs of the batches to calculate consumption for.
+	// Batch IDs to calculate consumption for.
 	BatchIDs []string `json:"batch_ids" validate:"required"`
-	// Optional production step ID to scope the consumption calculation.
+	// Production step ID to scope the consumption calculation.
 	ProductionStepID *string `json:"production_step_id"`
-	// Optional split quantity to factor into the consumption calculation.
+	// Split quantity to factor into the consumption calculation.
 	SplitQuantity *SplitQuantityInput `json:"split_quantity"`
 }
 

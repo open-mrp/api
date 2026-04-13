@@ -10,7 +10,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListShippingTermsRequest is the request to list shipping terms with optional filters.
+// Request to list shipping terms.
 type ListShippingTermsRequest struct {
 	apiresource.PaginationRequest
 }

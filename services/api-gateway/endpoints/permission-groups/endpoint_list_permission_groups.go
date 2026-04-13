@@ -10,7 +10,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListPermissionGroupsRequest is the request to list permission groups.
+// Request to list permission groups.
 type ListPermissionGroupsRequest struct {
 	apiresource.PaginationRequest
 }

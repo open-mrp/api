@@ -11,7 +11,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListPartsRequest is the request to list parts with optional filters.
+// Request to list parts.
 type ListPartsRequest struct {
 	apiresource.PaginationRequest
 	// Filter by category IDs.

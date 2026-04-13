@@ -10,8 +10,10 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
+// Request to list supplier materials.
 type ListSupplierMaterialsRequest struct {
 	apiresource.PaginationRequest
+	// Supplier ID.
 	SupplierID string `path:"supplier_id" validate:"required"`
 }
 
@@ -20,7 +22,7 @@ type ListSupplierMaterialsEndpoint struct{}
 func (e *ListSupplierMaterialsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSupplierMaterialsRequest, *apiresource.List[apiresource.SupplierMaterial]] {
 	return &apiendpoint.APIEndpoint[*ListSupplierMaterialsRequest, *apiresource.List[apiresource.SupplierMaterial]]{
 		Title:             "List Supplier Materials",
-		Description:       "Returns a paginated list of supplier materials for a given supplier.",
+		Description:       "Returns a paginated list of supplier materials.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/suppliers/{supplier_id}/materials",

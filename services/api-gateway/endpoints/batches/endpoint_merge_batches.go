@@ -10,13 +10,13 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// MergeBatchesRequest is the request to merge multiple batches into one.
+// Request to merge multiple batches into one.
 type MergeBatchesRequest struct {
-	// The IDs of the batches to merge.
+	// Batch IDs to merge.
 	BatchIDs []string `json:"batch_ids" validate:"required"`
-	// The ID of the scanning station performing the merge.
+	// Scanning station ID performing the merge.
 	ScanningStationID string `json:"scanning_station_id" validate:"required"`
-	// The ID of the production step for the merged batch.
+	// Production step ID for the merged batch.
 	ProductionStepID string `json:"production_step_id" validate:"required"`
 }
 
@@ -35,7 +35,7 @@ type MergeBatchesEndpoint struct{}
 func (e *MergeBatchesEndpoint) Materialize() *apiendpoint.APIEndpoint[*MergeBatchesRequest, *apiresource.Batch] {
 	return &apiendpoint.APIEndpoint[*MergeBatchesRequest, *apiresource.Batch]{
 		Title:             "Merge Batches",
-		Description:       "Merges multiple batches into a single batch at the specified production step and scanning station.",
+		Description:       "Merges multiple batches into one at the specified production step and scanning station.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/batches/actions/merge",

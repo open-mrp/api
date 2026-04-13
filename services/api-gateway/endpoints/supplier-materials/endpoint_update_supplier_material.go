@@ -10,12 +10,18 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
+// Request to update a supplier material.
 type UpdateSupplierMaterialRequest struct {
-	SupplierID          string  `path:"supplier_id" validate:"required"`
-	ItemID              string  `path:"id" validate:"required"`
-	SupplierPartNumber  *string `json:"supplier_part_number,omitempty" nullable:"false" validate:"omitempty,max=255"`
+	// Supplier ID.
+	SupplierID string `path:"supplier_id" validate:"required"`
+	// Supplier material ID.
+	ItemID string `path:"id" validate:"required"`
+	// Supplier part number for this material.
+	SupplierPartNumber *string `json:"supplier_part_number,omitempty" nullable:"false" validate:"omitempty,max=255"`
+	// Supplier description for this material.
 	SupplierDescription *string `json:"supplier_description,omitempty" nullable:"true" validate:"omitempty,max=255"`
-	IsActive            *bool   `json:"is_active,omitempty" nullable:"false"`
+	// Active status.
+	IsActive *bool `json:"is_active,omitempty" nullable:"false"`
 }
 
 var sampleUpdateSupplierPartNumber = "SUP-PART-002"

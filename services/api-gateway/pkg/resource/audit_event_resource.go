@@ -20,44 +20,41 @@ const SampleAuditEventSourceIP = "198.51.100.8"
 
 const SampleAuditEventMetadataReason = `{"reason":"operator override"}`
 
-// AuditFieldChange represents a single field-level before/after transition
-// recorded during an update mutation.
+// Field-level before/after transition recorded during a mutation.
 type AuditFieldChange struct {
-	// The name of the field that changed.
+	// Name of the changed field.
 	Field string `json:"field" validate:"required"`
-	// The previous value of the field as a JSON fragment, or null for creation events.
+	// Previous value as a JSON fragment. Null for creation events.
 	OldValue json.RawMessage `json:"old_value"`
-	// The new value of the field as a JSON fragment, or null for deletion events.
+	// New value as a JSON fragment. Null for deletion events.
 	NewValue json.RawMessage `json:"new_value"`
 }
 
-// AuditEvent represents a single immutable audit event record. Audit events
-// capture who mutated a resource, what changed, and when, providing a
-// comprehensive edit history for compliance and traceability.
+// Immutable audit event record. Captures the actor, changed resource, and timestamp.
 type AuditEvent struct {
-	// The unique identifier for the audit event.
+	// Audit event ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=audit_event"`
-	// The type of mutation that occurred.
+	// Mutation type.
 	Action constants.AuditAction `json:"action" validate:"required"`
-	// The resource type of the audited entity.
+	// Resource type of the audited entity.
 	ResourceType constants.ObjectType `json:"resource_type" validate:"required"`
-	// The unique identifier of the audited resource.
+	// Audited resource ID.
 	ResourceID string `json:"resource_id" validate:"required"`
 
-	// The actor who performed the mutation.
+	// Actor who performed the mutation.
 	Actor *Actor `json:"actor" expandable:"true"`
-	// The field-level changes recorded for this event.
+	// Field-level changes recorded for this event.
 	Changes *List[AuditFieldChange] `json:"changes" expandable:"true"`
-	// Arbitrary JSON metadata associated with the mutation (e.g. reason, source, tags).
+	// Arbitrary JSON metadata for the mutation (e.g. reason, source, tags).
 	Metadata json.RawMessage `json:"metadata"`
 
-	// The originating HTTP request ID, when available.
+	// Originating HTTP request ID.
 	RequestID *string `json:"request_id"`
-	// The idempotency key associated with the originating request, when applicable.
+	// Idempotency key of the originating request.
 	IdempotencyKey *string `json:"idempotency_key"`
-	// The originating client IP address, when available.
+	// Originating client IP address.
 	SourceIP *string `json:"source_ip"`
 
 	// When the audited mutation occurred.

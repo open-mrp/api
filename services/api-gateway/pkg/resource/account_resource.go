@@ -14,25 +14,25 @@ const SampleAccountBrandingID = "abr_01gf7a8200eaj8fke1xvw4h50x"
 const SampleAccountPortalID = "apo_01gf7a8200eaj8fke1xvw4h50x"
 const SampleAccountPortalSlug = "acme"
 
-// Account represents a full account with optional branding and portal sub-resources.
+// Account with optional branding and portal sub-resources.
 type Account struct {
-	// The unique identifier for the account.
+	// Account ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=account"`
-	// The display name of the account.
+	// Display name.
 	Name string `json:"name" validate:"required"`
-	// The default billing address.
+	// Default billing address.
 	DefaultBillingAddress *Address `json:"default_billing_address" expandable:"true"`
-	// The default shipping address.
+	// Default shipping address.
 	DefaultShippingAddress *Address `json:"default_shipping_address" expandable:"true"`
-	// The account branding configuration.
+	// Branding configuration.
 	Branding *AccountBranding `json:"branding" expandable:"true"`
-	// The account portal configuration.
+	// Portal configuration.
 	Portal *AccountPortal `json:"portal" expandable:"true"`
-	// The timestamp when the account was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The timestamp when the account was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
@@ -48,31 +48,31 @@ func (*Account) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleAccount)
 }
 
-// AccountBranding holds the branding metadata for an account.
+// Branding metadata for an account.
 type AccountBranding struct {
-	// The unique identifier for the branding record.
+	// Branding ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=account_branding"`
-	// The support email address.
+	// Support email address.
 	SupportEmail *string `json:"support_email"`
-	// The support phone number.
+	// Support phone number.
 	PhoneNumber *string `json:"phone_number"`
-	// The logo URL (S3 key).
+	// Logo URL (S3 key).
 	LogoURL *string `json:"logo_url"`
-	// The Facebook handle.
+	// Facebook handle.
 	FacebookHandle *string `json:"facebook_handle"`
-	// The Instagram handle.
+	// Instagram handle.
 	InstagramHandle *string `json:"instagram_handle"`
-	// The LinkedIn handle.
+	// LinkedIn handle.
 	LinkedInHandle *string `json:"linkedin_handle"`
-	// The Twitter handle.
+	// Twitter handle.
 	TwitterHandle *string `json:"twitter_handle"`
-	// The website URL.
+	// Website URL.
 	WebsiteURL *string `json:"website_url"`
-	// The timestamp when the branding was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The timestamp when the branding was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
@@ -87,17 +87,17 @@ func (*AccountBranding) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleAccountBranding)
 }
 
-// AccountPortal holds the portal metadata for an account.
+// Portal metadata for an account.
 type AccountPortal struct {
-	// The unique identifier for the portal record.
+	// Portal ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=account_portal"`
-	// The portal slug.
+	// Portal slug.
 	Slug string `json:"slug" validate:"required"`
-	// The timestamp when the portal was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The timestamp when the portal was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
@@ -113,21 +113,21 @@ func (*AccountPortal) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleAccountPortal)
 }
 
-// PublicAccount is a minimal account representation for unauthenticated slug lookups.
+// Minimal account representation for unauthenticated slug lookups.
 type PublicAccount struct {
-	// The unique identifier for the account.
+	// Account ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=public_account"`
-	// The display name of the account.
+	// Display name.
 	Name string `json:"name" validate:"required"`
-	// The portal slug.
+	// Portal slug.
 	Slug string `json:"slug" validate:"required"`
-	// The default billing address.
+	// Default billing address.
 	DefaultBillingAddress *Address `json:"default_billing_address" expandable:"true"`
-	// The support email address.
+	// Support email address.
 	SupportEmail *string `json:"support_email"`
-	// The logo URL.
+	// Logo URL.
 	LogoURL *string `json:"logo_url"`
 }
 
@@ -142,9 +142,9 @@ func (*PublicAccount) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SamplePublicAccount)
 }
 
-// AccountLogoURL holds a presigned URL for an account's logo.
+// Presigned URL for an account's logo.
 type AccountLogoURL struct {
-	// The presigned URL for the logo image, or null if no logo exists.
+	// Presigned URL. Null if no logo exists.
 	URL *string `json:"url"`
 }
 
@@ -154,7 +154,7 @@ func (*AccountLogoURL) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleAccountLogoURL)
 }
 
-// AccountPhotoUploadResult is the response for a photo upload.
+// Result of an account photo upload.
 type AccountPhotoUploadResult struct {
 	// Whether the upload was successful.
 	Success bool `json:"success"`

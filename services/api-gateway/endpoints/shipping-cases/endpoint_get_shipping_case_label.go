@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetShippingCaseLabelRequest is the request to retrieve a shipping case label URL.
+// Request to retrieve a shipping case label URL.
 type GetShippingCaseLabelRequest struct {
-	// The ID of the shipping case.
+	// Shipping case ID.
 	ShippingCaseID string `path:"id" validate:"required"`
 }
 

@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// The request to verify a registration token
+// Request to verify a registration token.
 type VerifyTokenRequest struct {
-	// The verification token from the email link.
+	// Verification token from the email link.
 	Token string `json:"-" path:"token" validate:"required"`
 }
 

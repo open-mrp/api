@@ -10,23 +10,23 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// CreateSettlementAllocationRequest represents a single allocation in a create settlement request.
+// CreateSettlementAllocationRequest is an allocation in a create settlement request.
 type CreateSettlementAllocationRequest struct {
-	// The ID of the transaction to allocate.
+	// Transaction ID.
 	TransactionID string `json:"transaction_id" validate:"required,max=191"`
-	// The ID of the invoice to allocate against.
+	// Invoice ID.
 	InvoiceID string `json:"invoice_id" validate:"required,max=191"`
-	// The amount to allocate as a decimal string.
+	// Amount to allocate as a decimal string.
 	Amount string `json:"amount" validate:"required"`
-	// A note about this allocation.
+	// Note about this allocation.
 	Note *string `json:"note"`
 }
 
-// CreateSettlementRequest is the request to create a new settlement.
+// CreateSettlementRequest is the request to create a settlement.
 type CreateSettlementRequest struct {
-	// The ID of the user responsible for this settlement.
+	// Responsible user ID.
 	ResponsibleUserID string `json:"responsible_user_id" validate:"required,max=191"`
-	// The allocations to create with this settlement.
+	// Allocations for this settlement.
 	Allocations []CreateSettlementAllocationRequest `json:"allocations" validate:"required,min=1"`
 }
 
@@ -50,7 +50,7 @@ type CreateSettlementEndpoint struct{}
 func (e *CreateSettlementEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateSettlementRequest, *apiresource.Settlement] {
 	return &apiendpoint.APIEndpoint[*CreateSettlementRequest, *apiresource.Settlement]{
 		Title:             "Create Settlement",
-		Description:       "Creates a new settlement with transaction allocations. A settlement number is automatically generated.",
+		Description:       "Creates a settlement with transaction allocations. A settlement number is automatically generated.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/finance/settlements",

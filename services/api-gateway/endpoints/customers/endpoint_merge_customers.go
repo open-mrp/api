@@ -11,11 +11,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// MergeCustomersRequest is the request to merge source customers into a target customer.
+// Request to merge source customers into a target customer.
 type MergeCustomersRequest struct {
-	// The ID of the target customer to merge into.
+	// Target customer ID.
 	CustomerID string `path:"id" validate:"required"`
-	// The IDs of the source customers to merge from.
+	// Source customer IDs.
 	SourceCustomerIDs []string `json:"source_customer_ids" validate:"required"`
 }
 

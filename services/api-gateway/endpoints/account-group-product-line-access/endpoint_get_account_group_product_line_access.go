@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetAccountGroupProductLineAccessRequest is the request to retrieve product line access for a single account group.
+// GetAccountGroupProductLineAccessRequest is a request to get product line access for an account group.
 type GetAccountGroupProductLineAccessRequest struct {
-	// The ID of the account group.
+	// Account group ID.
 	AccountGroupID string `path:"account_group_id" validate:"required"`
 }
 
@@ -20,7 +20,7 @@ type GetAccountGroupProductLineAccessEndpoint struct{}
 func (e *GetAccountGroupProductLineAccessEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetAccountGroupProductLineAccessRequest, *apiresource.AccountGroupProductLineAccess] {
 	return &apiendpoint.APIEndpoint[*GetAccountGroupProductLineAccessRequest, *apiresource.AccountGroupProductLineAccess]{
 		Title:             "Get Account Group Product Line Access",
-		Description:       "Returns the product line access for a single account group.",
+		Description:       "Returns product line access for an account group.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/product-line-access/account-groups/{account_group_id}",

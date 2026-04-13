@@ -9,7 +9,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetTenancyRequest is the request to retrieve the authenticated user's tenancy context.
+// Request to retrieve the authenticated user's tenancy context.
 type GetTenancyRequest struct{}
 
 type GetTenancyEndpoint struct{}

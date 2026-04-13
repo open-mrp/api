@@ -10,33 +10,33 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// CreateVolumeDiscountTierInput represents a tier to create.
+// Volume discount tier to create.
 type CreateVolumeDiscountTierInput struct {
-	// The display name for the tier.
+	// Display name.
 	Name string `json:"name" validate:"required,max=255"`
-	// The discount percentage as a decimal string.
+	// Discount percentage as a decimal string.
 	DiscountPercentage string `json:"discount_percentage" validate:"required" format:"decimal"`
-	// The quantity threshold for this tier as a decimal string.
+	// Quantity threshold as a decimal string.
 	Threshold string `json:"threshold" validate:"required" format:"decimal"`
-	// Optional parent tier ID for tier chaining.
+	// Parent tier ID for tier chaining.
 	ParentTierID *string `json:"parent_tier_id,omitempty" validate:"omitempty,max=191"`
 }
 
-// CreateVolumeDiscountRequest is the request to create a new volume discount.
+// Request to create a volume discount.
 type CreateVolumeDiscountRequest struct {
-	// The display name of the volume discount.
+	// Display name.
 	Name string `json:"name" validate:"required,max=255"`
-	// The tiers for this volume discount.
+	// Tiers for this volume discount.
 	Tiers []CreateVolumeDiscountTierInput `json:"tiers" validate:"required"`
-	// The account group IDs to associate as customer groups.
+	// Account group IDs to associate as customer groups.
 	CustomerGroupIDs []string `json:"customer_group_ids,omitempty"`
-	// The product line IDs to associate.
+	// Product line IDs to associate.
 	ProductLineIDs []string `json:"product_line_ids,omitempty"`
-	// The item category IDs to associate.
+	// Item category IDs to associate.
 	CategoryIDs []string `json:"category_ids,omitempty"`
-	// The attribute IDs to associate.
+	// Attribute IDs to associate.
 	AttributeIDs []string `json:"attribute_ids,omitempty"`
-	// The unit IDs to associate as acceptable units.
+	// Unit IDs to associate as acceptable units.
 	UnitIDs []string `json:"unit_ids,omitempty"`
 }
 
@@ -60,7 +60,7 @@ type CreateVolumeDiscountEndpoint struct{}
 func (e *CreateVolumeDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateVolumeDiscountRequest, *apiresource.VolumeDiscount] {
 	return &apiendpoint.APIEndpoint[*CreateVolumeDiscountRequest, *apiresource.VolumeDiscount]{
 		Title:             "Create Volume Discount",
-		Description:       "Creates a new volume discount for the target account.",
+		Description:       "Creates a volume discount for the target account.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/volume-discounts",

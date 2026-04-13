@@ -9,11 +9,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// AutocompleteAddressRequest is the request for address autocomplete.
+// Request for address autocomplete.
 type AutocompleteAddressRequest struct {
-	// The text input for autocomplete.
+	// Autocomplete input text.
 	Input string `query:"input" validate:"required"`
-	// An optional session token for grouping autocomplete requests.
+	// Session token for grouping autocomplete requests.
 	SessionToken *string `query:"session_token"` // #nosec G117 -- not a secret, Google Maps session correlation token
 }
 
@@ -21,8 +21,8 @@ type AutocompleteAddressEndpoint struct{}
 
 func (e *AutocompleteAddressEndpoint) Materialize() *apiendpoint.APIEndpoint[*AutocompleteAddressRequest, *apiresource.List[apiresource.AddressSuggestion]] {
 	return &apiendpoint.APIEndpoint[*AutocompleteAddressRequest, *apiresource.List[apiresource.AddressSuggestion]]{
-		Title:             "Get Address Suggestions",
-		Description:       "Returns address suggestions based on the input text.",
+		Title:             "List Address Suggestions",
+		Description:       "Returns address suggestions based on input text.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/core/addresses/suggestions",

@@ -10,9 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetUnitRequest is the request to retrieve a single unit.
+// Request to retrieve a unit.
 type GetUnitRequest struct {
-	// The ID of the unit to retrieve.
+	// Unit ID.
 	UnitID string `path:"id" validate:"required"`
 }
 
@@ -21,7 +21,7 @@ type GetUnitEndpoint struct{}
 func (e *GetUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetUnitRequest, *apiresource.Unit] {
 	return &apiendpoint.APIEndpoint[*GetUnitRequest, *apiresource.Unit]{
 		Title:             "Get Unit",
-		Description:       "Returns a single unit by its ID, including both account-owned and global system units.",
+		Description:       "Returns a unit by ID, including both account-owned and global system units.",
 		Method:            http.MethodGet,
 		Route:             "/v1/catalog/units/{id}",
 		ContentType:       "application/json",

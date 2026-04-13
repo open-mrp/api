@@ -10,19 +10,19 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpdateAccountUserRequest is the request to partially update an account user.
+// Request to partially update an account user.
 type UpdateAccountUserRequest struct {
-	// The ID of the account user to update.
+	// Account user ID.
 	AccountUserID string `path:"id" validate:"required"`
-	// The user's display name.
+	// Display name.
 	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// The user's email address.
+	// Email address.
 	Email *string `json:"email,omitempty" nullable:"false" validate:"omitnil,custom_email,max=255"`
-	// The user's username.
+	// Username.
 	Username *string `json:"username,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// The ID of the role to assign.
+	// Role ID.
 	RoleID *string `json:"role_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
-	// The ID of the department to assign.
+	// Department ID.
 	DepartmentID *string `json:"department_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
 }
 

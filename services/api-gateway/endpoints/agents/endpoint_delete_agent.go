@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// DeleteAgentRequest is the request to delete a custom agent definition.
+// Request to delete a custom agent definition.
 type DeleteAgentRequest struct {
-	// The ID of the agent definition to delete.
+	// Agent definition ID.
 	AgentDefinitionID string `path:"id" validate:"required"`
 }
 

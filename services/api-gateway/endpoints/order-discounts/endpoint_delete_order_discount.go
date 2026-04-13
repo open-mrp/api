@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// DeleteOrderDiscountRequest is the request to delete an order discount.
+// Request to delete an order discount.
 type DeleteOrderDiscountRequest struct {
-	// The ID of the order discount to delete.
+	// Order discount ID.
 	OrderDiscountID string `path:"id" validate:"required"`
 }
 
@@ -20,7 +20,7 @@ type DeleteOrderDiscountEndpoint struct{}
 func (e *DeleteOrderDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteOrderDiscountRequest, *apiresource.OrderDiscount] {
 	return &apiendpoint.APIEndpoint[*DeleteOrderDiscountRequest, *apiresource.OrderDiscount]{
 		Title:             "Delete Order Discount",
-		Description:       "Deletes an order discount by its ID.",
+		Description:       "Deletes an order discount by ID.",
 		Method:            http.MethodDelete,
 		Route:             "/v1/sales/order-discounts/{id}",
 		ContentType:       "application/json",

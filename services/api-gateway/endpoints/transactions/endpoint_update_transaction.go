@@ -10,21 +10,21 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpdateTransactionRequest is the request to update a transaction.
+// Request to update a transaction.
 type UpdateTransactionRequest struct {
-	// The ID of the transaction to update.
+	// Transaction ID.
 	TransactionID string `path:"id" validate:"required"`
-	// The new transaction number.
+	// Transaction number.
 	Number *string `json:"number" nullable:"false" validate:"omitempty,max=255"`
-	// The new note for this transaction.
+	// Note.
 	Note *string `json:"note" nullable:"false"`
-	// The new amount as a decimal string.
+	// Amount as a decimal string.
 	Amount *string `json:"amount" nullable:"false"`
-	// The new transaction method code.
+	// Transaction method code.
 	TransactionMethodCode *string `json:"method" nullable:"false" validate:"omitempty,max=255"`
-	// The new adjustment type code.
+	// Adjustment type code.
 	AdjustmentTypeCode *string `json:"adjustment_type" nullable:"false" validate:"omitempty,max=255"`
-	// The new responsible user ID.
+	// Responsible user ID.
 	ResponsibleUserID *string `json:"responsible_user_id" nullable:"false" validate:"omitempty,max=191"`
 	// Set to true to clear the responsible user.
 	ClearResponsibleUser bool `json:"clear_responsible_user"`
@@ -32,7 +32,7 @@ type UpdateTransactionRequest struct {
 	ClearTransactionMethod bool `json:"clear_transaction_method"`
 	// Set to true to clear the adjustment type.
 	ClearAdjustmentType bool `json:"clear_adjustment_type"`
-	// The allocation status of the transaction.
+	// Allocation status.
 	IsFullyAllocated *bool `json:"is_fully_allocated" nullable:"false"`
 }
 

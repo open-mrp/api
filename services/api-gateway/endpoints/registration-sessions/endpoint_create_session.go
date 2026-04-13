@@ -11,11 +11,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// The request to create a registration session
+// Request to create a registration session.
 type CreateRegistrationSessionRequest struct {
-	// The email address for the registration session.
+	// Email address.
 	Email string `json:"email" validate:"required,custom_email,max=255"`
-	// The plan code for the registration session.
+	// Plan code.
 	PlanCode constants.PublicPlanCode `json:"plan_code" validate:"required"`
 }
 
@@ -33,7 +33,7 @@ type CreateSessionEndpoint struct{}
 func (e *CreateSessionEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateRegistrationSessionRequest, *apiresource.CreateSessionResponse] {
 	return &apiendpoint.APIEndpoint[*CreateRegistrationSessionRequest, *apiresource.CreateSessionResponse]{
 		Title:             "Create Registration Session",
-		Description:       "Creates a new registration session for the given email and plan code. Returns the existing session ID if an active session already exists for that email.",
+		Description:       "Creates a registration session. Returns the existing session ID if an active session already exists for that email.",
 		Method:            http.MethodPost,
 		Route:             "/v1/auth/registration-sessions",
 		ContentType:       "application/json",

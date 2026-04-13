@@ -11,12 +11,12 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// CreateSalesOrderLineRequest is the request to create a new line on a sales order.
+// Request to create a line on a sales order.
 type CreateSalesOrderLineRequest struct {
-	// The ID of the sales order.
+	// Sales order ID.
 	SalesOrderID string `path:"id" validate:"required"`
 	apirequest.OrderLineInput
-	// The EDI line item ID.
+	// EDI line item ID.
 	EdiLineItemID *string `json:"edi_line_item_id,omitempty" validate:"omitempty,max=191"`
 }
 
@@ -43,7 +43,7 @@ type CreateSalesOrderLineEndpoint struct{}
 func (e *CreateSalesOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateSalesOrderLineRequest, *apiresource.SalesOrderLineDetail] {
 	return &apiendpoint.APIEndpoint[*CreateSalesOrderLineRequest, *apiresource.SalesOrderLineDetail]{
 		Title:             "Create Sales Order Line",
-		Description:       "Creates a new line item on a sales order.",
+		Description:       "Creates a line item on a sales order.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/sales-orders/{id}/lines",

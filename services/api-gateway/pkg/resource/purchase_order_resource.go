@@ -14,15 +14,15 @@ const SampleSupplierID = "ac_02kn5s7811g9qwce7cizr4e0mq"
 const SampleSupplierName = "Acme Supplies Inc."
 const SampleSupplierNumber = "SUP-001"
 
-// Supplier represents a supplier sub-resource.
+// Supplier sub-resource.
 type Supplier struct {
-	// The unique identifier for the supplier.
+	// Supplier ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=supplier"`
-	// The display name of the supplier.
+	// Display name.
 	Name string `json:"name" validate:"required"`
-	// The supplier number.
+	// Supplier number.
 	Number string `json:"number" validate:"required"`
 }
 
@@ -37,13 +37,13 @@ func (*Supplier) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleSupplier)
 }
 
-// EmailContact represents an email contact sub-resource.
+// Email contact sub-resource.
 type EmailContact struct {
-	// The unique identifier for the email contact.
+	// Email contact ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=email_contact"`
-	// The account user associated with this contact.
+	// Account user.
 	AccountUser *AccountUser `json:"account_user" validate:"required"`
 }
 
@@ -60,57 +60,57 @@ func (*EmailContact) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleEmailContact)
 }
 
-// PurchaseOrderDetail represents a full purchase order resource.
+// Full purchase order resource.
 type PurchaseOrderDetail struct {
-	// The unique identifier for the purchase order.
+	// Purchase order ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=purchase_order"`
-	// The purchase order number.
+	// Purchase order number.
 	Number string `json:"number" validate:"required"`
-	// A note attached to this purchase order.
+	// Order note.
 	Note *string `json:"note"`
 	// Whether the acknowledgment has been sent.
 	IsAcknowledgmentSent bool `json:"is_acknowledgment_sent"`
-	// The supplier associated with this order.
+	// Supplier.
 	Supplier *Supplier `json:"supplier" expandable:"true"`
-	// The billing address.
+	// Billing address.
 	BillToAddress *Address `json:"bill_to_address" expandable:"true"`
-	// The shipping address.
+	// Shipping address.
 	ShipToAddress *Address `json:"ship_to_address" expandable:"true"`
-	// The carrier for this order.
+	// Carrier.
 	Carrier *Carrier `json:"carrier" expandable:"true"`
-	// The service level for this order.
+	// Service level.
 	ServiceLevel *ServiceLevel `json:"service_level" expandable:"true"`
-	// The carrier billing type.
+	// Carrier billing type.
 	CarrierBillingType *string `json:"carrier_billing_type"`
-	// The carrier billing account number.
+	// Carrier billing account number.
 	CarrierBillingAccount *string `json:"carrier_billing_account"`
-	// The order status.
+	// Order status.
 	Status *SalesOrderStatusDetail `json:"status" validate:"required"`
-	// The order type.
+	// Order type.
 	Type *SalesOrderType `json:"type" validate:"required"`
-	// The priority.
+	// Priority.
 	Priority *Priority `json:"priority" validate:"required"`
-	// The payment term.
+	// Payment term.
 	PaymentTerm *PaymentTerm `json:"payment_term" expandable:"true"`
-	// The shipping term.
+	// Shipping term.
 	ShippingTerm *ShippingTerm `json:"shipping_term" expandable:"true"`
-	// The receiving order associated with this purchase order.
+	// Receiving order.
 	ReceivingOrder *ReceivingOrder `json:"receiving_order" expandable:"true"`
-	// The order lines.
+	// Order lines.
 	Lines *List[PurchaseOrderLineDetail] `json:"lines" expandable:"true"`
-	// The email contacts for this order.
+	// Email contacts.
 	Contacts *List[EmailContact] `json:"contacts" expandable:"true"`
-	// The timestamp when the order was issued.
+	// Issued timestamp.
 	IssuedAt *time.Time `json:"issued_at"`
-	// The timestamp when the order was completed.
+	// Completed timestamp.
 	CompletedAt *time.Time `json:"completed_at"`
-	// The timestamp when the order is scheduled/promised.
+	// Scheduled/promised timestamp.
 	ScheduledAt *time.Time `json:"scheduled_at"`
-	// The timestamp when the order was created.
+	// Created timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The timestamp when the order was last updated.
+	// Updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
@@ -137,33 +137,33 @@ func (*PurchaseOrderDetail) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SamplePurchaseOrderDetail)
 }
 
-// PurchaseOrderSummary represents a lightweight purchase order for list views.
+// Lightweight purchase order for list views.
 type PurchaseOrderSummary struct {
-	// The unique identifier for the purchase order.
+	// Purchase order ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=purchase_order"`
-	// The purchase order number.
+	// Purchase order number.
 	Number string `json:"number" validate:"required"`
-	// The supplier associated with this order.
+	// Supplier.
 	Supplier *Supplier `json:"supplier" validate:"required"`
-	// The order status.
+	// Order status.
 	Status *SalesOrderStatusDetail `json:"status" validate:"required"`
-	// The order type.
+	// Order type.
 	Type *SalesOrderType `json:"type" validate:"required"`
-	// The priority.
+	// Priority.
 	Priority *Priority `json:"priority" validate:"required"`
-	// The number of line items.
+	// Line item count.
 	LineCount int32 `json:"line_count"`
 	// Whether the acknowledgment has been sent.
 	IsAcknowledgmentSent bool `json:"is_acknowledgment_sent"`
-	// The timestamp when the order was issued.
+	// Issued timestamp.
 	IssuedAt *time.Time `json:"issued_at"`
-	// The timestamp when the order was completed.
+	// Completed timestamp.
 	CompletedAt *time.Time `json:"completed_at"`
-	// The timestamp when the order was created.
+	// Created timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The timestamp when the order was last updated.
+	// Updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 

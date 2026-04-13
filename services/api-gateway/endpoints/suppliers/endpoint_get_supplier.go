@@ -10,9 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetSupplierRequest is the request to retrieve a single supplier by ID.
+// GetSupplierRequest is the request to get a supplier by ID.
 type GetSupplierRequest struct {
-	// The ID of the supplier to retrieve.
+	// Supplier ID.
 	SupplierID string `path:"id" validate:"required"`
 }
 
@@ -21,7 +21,7 @@ type GetSupplierEndpoint struct{}
 func (e *GetSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetSupplierRequest, *apiresource.SupplierDetail] {
 	return &apiendpoint.APIEndpoint[*GetSupplierRequest, *apiresource.SupplierDetail]{
 		Title:             "Get Supplier",
-		Description:       "Returns a single supplier by its ID.",
+		Description:       "Returns a supplier by ID.",
 		Method:            http.MethodGet,
 		Route:             "/v1/operations/suppliers/{id}",
 		ContentType:       "application/json",

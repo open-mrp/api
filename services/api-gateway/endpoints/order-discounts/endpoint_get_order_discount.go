@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetOrderDiscountRequest is the request to retrieve a single order discount.
+// Request to retrieve an order discount.
 type GetOrderDiscountRequest struct {
-	// The ID of the order discount to retrieve.
+	// Order discount ID.
 	OrderDiscountID string `path:"id" validate:"required"`
 }
 
@@ -20,7 +20,7 @@ type GetOrderDiscountEndpoint struct{}
 func (e *GetOrderDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetOrderDiscountRequest, *apiresource.OrderDiscount] {
 	return &apiendpoint.APIEndpoint[*GetOrderDiscountRequest, *apiresource.OrderDiscount]{
 		Title:             "Get Order Discount",
-		Description:       "Returns a single order discount by its ID.",
+		Description:       "Returns an order discount by ID.",
 		Method:            http.MethodGet,
 		Route:             "/v1/sales/order-discounts/{id}",
 		ContentType:       "application/json",

@@ -11,47 +11,47 @@ import (
 const SamplePickDetailID = "pk_01jm4r6700f8nwq3v5hx2d9ktp"
 const SamplePickNumber = "PK-001"
 
-// PickSalesOrder is a minimal sales order sub-resource for picks.
+// PickSalesOrder is a sales order sub-resource for picks.
 type PickSalesOrder struct {
-	// The unique identifier for the sales order.
+	// Sales order ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=sales_order"`
 }
 
-// PickDepartment is a minimal department sub-resource for picks.
+// PickDepartment is a department sub-resource for picks.
 type PickDepartment struct {
-	// The unique identifier for the department.
+	// Department ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=department"`
-	// The display name of the department.
+	// Display name.
 	Name string `json:"name" validate:"required"`
 }
 
-// PickDetail represents a full pick resource.
+// PickDetail is a full pick resource.
 type PickDetail struct {
-	// The unique identifier for the pick.
+	// Pick ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=pick"`
-	// The pick number.
+	// Pick number.
 	Number string `json:"number" validate:"required"`
-	// The sales order associated with this pick.
+	// Associated sales order.
 	SalesOrder *PickSalesOrder `json:"sales_order"`
-	// The customer associated with this pick.
+	// Associated customer.
 	Customer *Customer `json:"customer"`
-	// The priority of this pick.
+	// Pick priority.
 	Priority *Priority `json:"priority"`
-	// The pick lines.
+	// Pick lines.
 	Lines *List[PickLineDetail] `json:"lines" expandable:"true"`
-	// The departments associated with this pick.
+	// Associated departments.
 	Departments []PickDepartment `json:"departments"`
-	// The timestamp when the pick was finished.
+	// Timestamp when the pick was finished.
 	FinishedAt *time.Time `json:"finished_at"`
-	// The timestamp when the pick was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The timestamp when the pick was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
@@ -88,25 +88,25 @@ func (*PickDetail) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SamplePickDetail)
 }
 
-// PickSummary represents a pick in list views.
+// PickSummary is a pick resource for list views.
 type PickSummary struct {
-	// The unique identifier for the pick.
+	// Pick ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=pick"`
-	// The pick number.
+	// Pick number.
 	Number string `json:"number" validate:"required"`
-	// The sales order associated with this pick.
+	// Associated sales order.
 	SalesOrder *PickSalesOrder `json:"sales_order"`
-	// The customer associated with this pick.
+	// Associated customer.
 	Customer *Customer `json:"customer"`
-	// The priority of this pick.
+	// Pick priority.
 	Priority *Priority `json:"priority"`
-	// The timestamp when the pick was finished.
+	// Timestamp when the pick was finished.
 	FinishedAt *time.Time `json:"finished_at"`
-	// The timestamp when the pick was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The timestamp when the pick was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
@@ -130,11 +130,11 @@ func (*PickSummary) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SamplePickSummary)
 }
 
-// PackPickResponse represents the response from packing a pick.
+// PackPickResponse is the result of packing a pick.
 type PackPickResponse struct {
-	// The updated pick.
+	// Updated pick.
 	Pick *PickDetail `json:"pick" validate:"required"`
-	// The shipment number created.
+	// Created shipment number.
 	ShipmentNumber string `json:"shipment_number" validate:"required"`
 }
 
@@ -147,11 +147,11 @@ func (*PackPickResponse) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SamplePackPickResponse)
 }
 
-// PickShipmentsResponse represents the response from getting shipments for a pick.
+// PickShipmentsResponse is the result of getting shipments for a pick.
 type PickShipmentsResponse struct {
-	// The shipment numbers associated with the pick.
+	// Shipment numbers associated with the pick.
 	ShipmentNumbers []string `json:"shipment_numbers" validate:"required"`
-	// The total count of matching shipment numbers.
+	// Total count of matching shipment numbers.
 	Count int32 `json:"count" validate:"required"`
 }
 

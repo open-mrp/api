@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetEDIRunRequest is the request to retrieve a single EDI run.
+// Request to retrieve an EDI run.
 type GetEDIRunRequest struct {
-	// The ID of the EDI run to retrieve.
+	// EDI run ID.
 	EDIRunID string `path:"id" validate:"required"`
 }
 
@@ -20,7 +20,7 @@ type GetEDIRunEndpoint struct{}
 func (e *GetEDIRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetEDIRunRequest, *apiresource.EDIRun] {
 	return &apiendpoint.APIEndpoint[*GetEDIRunRequest, *apiresource.EDIRun]{
 		Title:             "Get EDI Run",
-		Description:       "Returns a single EDI run by its ID.",
+		Description:       "Returns an EDI run by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/edi-runs/{id}",

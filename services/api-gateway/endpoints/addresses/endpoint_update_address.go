@@ -10,29 +10,29 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpdateAddressRequest is the request to partially update an address.
+// Request to partially update an address.
 type UpdateAddressRequest struct {
-	// The ID of the address to update.
+	// Address ID.
 	AddressID string `path:"id" validate:"required"`
-	// The display name of the address.
+	// Display name of the address.
 	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// The phone number associated with this address.
+	// Phone number associated with the address.
 	Phone *string `json:"phone,omitempty" nullable:"true" validate:"omitempty,max=255"`
-	// The email address associated with this address.
+	// Email address associated with the address.
 	Email *string `json:"email,omitempty" nullable:"true" validate:"omitempty,max=255"`
-	// Whether this is a drop ship address.
+	// Whether the address is a drop ship location.
 	IsDropShip *bool `json:"is_drop_ship,omitempty" nullable:"false"`
-	// The first line of the street address.
+	// First line of the street address.
 	StreetLine1 *string `json:"street_line_1,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// The second line of the street address.
+	// Second line of the street address.
 	StreetLine2 *string `json:"street_line_2,omitempty" nullable:"true" validate:"omitempty,max=255"`
-	// The city or locality.
+	// City or locality.
 	Locality *string `json:"locality,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// The state or administrative area.
+	// State or administrative area.
 	State *string `json:"state,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// The postal or zip code.
+	// Postal or ZIP code.
 	PostalCode *string `json:"postal_code,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// The two-letter country code.
+	// Two-letter country code.
 	Country *string `json:"country,omitempty" nullable:"false" validate:"omitempty,max=2"`
 }
 

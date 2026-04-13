@@ -11,27 +11,27 @@ import (
 
 const SampleAgentMemoryID = "agmm_01jm4r6700f8nwq3v5hx2d9ktp"
 
-// AgentMemory represents a piece of agent memory stored for contextual recall.
+// Agent memory resource.
 type AgentMemory struct {
-	// The unique identifier for the memory.
+	// Memory ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=agent_memory"`
-	// The category of memory.
+	// Memory category.
 	Category string `json:"category" validate:"required"`
-	// The content of the memory.
+	// Memory content.
 	Content string `json:"content" validate:"required"`
 	// Arbitrary metadata as JSON.
 	Metadata json.RawMessage `json:"metadata"`
-	// The entity this memory relates to.
+	// Associated entity.
 	Entity *Entity `json:"entity"`
-	// How important this memory is (0-1 scale).
+	// Importance score (0–1 scale).
 	Importance float64 `json:"importance"`
-	// When this memory expires. Null means it never expires.
+	// Expiration timestamp. Null means it never expires.
 	ExpiresAt *time.Time `json:"expires_at"`
-	// When this memory was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// When this memory was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 

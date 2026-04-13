@@ -9,7 +9,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListAddressesRequest is the request to list addresses.
+// Request to list addresses.
 type ListAddressesRequest struct {
 	apiresource.PaginationRequest
 }

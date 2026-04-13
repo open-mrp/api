@@ -10,9 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListUnitGroupUnitsRequest is the request to list units within a unit group.
+// ListUnitGroupUnitsRequest is a request to list units within a unit group.
 type ListUnitGroupUnitsRequest struct {
-	// The ID of the unit group.
+	// Unit group ID.
 	UnitGroupID string `path:"unitGroupId" validate:"required"`
 }
 
@@ -21,7 +21,7 @@ type ListUnitGroupUnitsEndpoint struct{}
 func (e *ListUnitGroupUnitsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListUnitGroupUnitsRequest, *apiresource.List[apiresource.UnitGroupUnit]] {
 	return &apiendpoint.APIEndpoint[*ListUnitGroupUnitsRequest, *apiresource.List[apiresource.UnitGroupUnit]]{
 		Title:             "List Unit Group Units",
-		Description:       "Returns the list of associated units within the specified unit group.",
+		Description:       "Returns a list of associated units within a unit group.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/unit-groups/{unitGroupId}/units",

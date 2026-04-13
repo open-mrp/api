@@ -171,7 +171,7 @@ func TestAPIKeys_ListResponseShape(t *testing.T) {
 
 func TestAPIKeys_ListFilterByStatusActive(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(apiKeysPath, url.Values{"status": {"active"}})
+	list, _, err := apiClient.GetList(apiKeysPath, url.Values{"statuses": {"active"}})
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(list.Data), 1, "Should have at least 1 active API key")
 
@@ -194,7 +194,7 @@ func TestAPIKeys_ListFilterByStatusRevoked(t *testing.T) {
 	id := jsonField(jsonObject(parseJSON(createBody), "api_key_info"), "id")
 	apiClient.Delete(apiKeysPath + "/" + id)
 
-	list, _, err := apiClient.GetList(apiKeysPath, url.Values{"status": {"revoked"}})
+	list, _, err := apiClient.GetList(apiKeysPath, url.Values{"statuses": {"revoked"}})
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(list.Data), 1, "Should have at least 1 revoked API key")
 

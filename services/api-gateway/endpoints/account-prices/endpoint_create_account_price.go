@@ -11,21 +11,21 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// CreateAccountPriceRequest is the request to create a new account price.
+// Request to create an account price.
 type CreateAccountPriceRequest struct {
-	// The ID of the recipient customer account.
+	// Recipient customer account ID.
 	RecipientAccountID string `json:"recipient_account_id" validate:"required,max=191"`
-	// The ID of the product line this price applies to.
+	// Product line ID.
 	ProductLineID string `json:"product_line_id" validate:"required,max=191"`
-	// The rate value as a decimal string.
+	// Rate value as a decimal string.
 	RateValue string `json:"rate_value" validate:"required"`
-	// The ID of the numerator unit for the rate.
+	// Rate numerator unit ID.
 	RateNumeratorUnitID string `json:"rate_numerator_unit_id" validate:"required,max=191"`
-	// The ID of the denominator unit for the rate.
+	// Rate denominator unit ID.
 	RateDenominatorUnitID string `json:"rate_denominator_unit_id" validate:"required,max=191"`
-	// The IDs of item categories to constrain this price to.
+	// Item category IDs to constrain this price to.
 	CategoryIDs []string `json:"category_ids"`
-	// The IDs of attributes to constrain this price to.
+	// Attribute IDs to constrain this price to.
 	AttributeIDs []string `json:"attribute_ids"`
 }
 
@@ -48,7 +48,7 @@ type CreateAccountPriceEndpoint struct{}
 func (e *CreateAccountPriceEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAccountPriceRequest, *apiresource.AccountPrice] {
 	return &apiendpoint.APIEndpoint[*CreateAccountPriceRequest, *apiresource.AccountPrice]{
 		Title:             "Create Account Price",
-		Description:       "Creates a new account price for a recipient customer account. Account prices override all other pricing rules.",
+		Description:       "Creates an account price for a recipient customer account. Account prices override all other pricing rules.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/account-prices",

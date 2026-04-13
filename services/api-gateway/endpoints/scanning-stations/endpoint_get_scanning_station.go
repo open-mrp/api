@@ -10,9 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetScanningStationRequest is the request to retrieve a single scanning station.
+// Request to retrieve a scanning station.
 type GetScanningStationRequest struct {
-	// The ID of the scanning station to retrieve.
+	// Scanning station ID.
 	ScanningStationID string `path:"id" validate:"required"`
 }
 
@@ -21,7 +21,7 @@ type GetScanningStationEndpoint struct{}
 func (e *GetScanningStationEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetScanningStationRequest, *apiresource.ScanningStation] {
 	return &apiendpoint.APIEndpoint[*GetScanningStationRequest, *apiresource.ScanningStation]{
 		Title:             "Get Scanning Station",
-		Description:       "Returns a single scanning station by its ID.",
+		Description:       "Returns a scanning station by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/scanning-stations/{id}",

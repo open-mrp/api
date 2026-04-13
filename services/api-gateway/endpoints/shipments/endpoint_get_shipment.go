@@ -10,11 +10,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetShipmentRequest is the request to retrieve a single shipment by ID.
+// Request to retrieve a shipment by ID.
 type GetShipmentRequest struct {
-	// The ID of the shipment to retrieve.
+	// Shipment ID.
 	ShipmentID string `path:"id" validate:"required"`
-	// The list of related resources to include.
+	// Related resources to include.
 	Includes []string `query:"include"`
 }
 
@@ -23,7 +23,7 @@ type GetShipmentEndpoint struct{}
 func (e *GetShipmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetShipmentRequest, *apiresource.ShipmentDetail] {
 	return &apiendpoint.APIEndpoint[*GetShipmentRequest, *apiresource.ShipmentDetail]{
 		Title:             "Get Shipment",
-		Description:       "Returns a single shipment by its ID.",
+		Description:       "Returns a shipment by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/shipments/{id}",

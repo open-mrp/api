@@ -8,13 +8,13 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-// AgentTokenUsage represents a daily token usage record for an account.
+// Daily agent token usage record.
 type AgentTokenUsage struct {
-	// The unique identifier for this usage record.
+	// Usage record ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=agent_token_usage"`
-	// The date of usage (YYYY-MM-DD).
+	// Date of usage (YYYY-MM-DD).
 	Date string `json:"date" validate:"required"`
 	// Total input tokens consumed.
 	InputTokens int64 `json:"input_tokens"`
@@ -24,9 +24,9 @@ type AgentTokenUsage struct {
 	TotalCost float64 `json:"total_cost"`
 	// Number of agent runs.
 	RunCount int32 `json:"run_count"`
-	// When this record was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// When this record was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 

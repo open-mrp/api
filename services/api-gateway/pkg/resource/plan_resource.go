@@ -9,43 +9,43 @@ const SamplePlanTypeIDFree = "pl_01gf7a8200eaj8fke1xvw4h50x"
 const SamplePlanTypeIDStarter = "pl_01gf7a8200er3ar3pkfrb6kk29"
 const SamplePlanTypeIDPro = "pl_01gf7a8200e9pvbd6bgyq395ae"
 
-// PlanLimit represents a resource limit for a pricing plan.
+// Resource limit for a pricing plan.
 type PlanLimit struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=plan_limit"`
-	// The resource key this limit applies to (e.g., "sandboxes", "seats", "invoices").
+	// Resource key this limit applies to (e.g., "sandboxes", "seats", "invoices").
 	Key string `json:"key" validate:"required"`
-	// The maximum allowed value, null means unlimited.
+	// Maximum allowed value. Null means unlimited.
 	Value *int `json:"value"`
 }
 
-// PricingPlan represents a pricing plan available for purchase.
+// Pricing plan available for purchase.
 type PricingPlan struct {
-	// The unique ID of the plan.
+	// Plan ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=pricing_plan"`
-	// The display name of the plan.
+	// Display name of the plan.
 	Name string `json:"name" validate:"required"`
-	// The plan type code.
+	// Plan type code.
 	PlanTypeCode constants.PublicPlanCode `json:"plan_type" validate:"required"`
-	// The price per seat per month in dollars.
+	// Price per seat per month in dollars.
 	PricePerSeat float64 `json:"price_per_seat"`
-	// The flat monthly price in dollars, if applicable.
+	// Flat monthly price in dollars, if applicable.
 	PricePerMonth *float64 `json:"price_per_month"`
-	// The minimum number of seats required for this plan.
+	// Minimum seats required for this plan.
 	SeatMinimum *int `json:"seat_minimum"`
-	// The resource limits for this plan.
+	// Resource limits for this plan.
 	Limits []PlanLimit `json:"limits" validate:"required"`
-	// The features to display on the pricing page.
+	// Features to display on the pricing page.
 	DisplayFeatures []string `json:"display_features" validate:"required"`
-	// The display order for sorting plans on the pricing page.
+	// Display order for sorting on the pricing page.
 	DisplayOrder int `json:"display_order"`
 	// Whether this plan should be visually highlighted.
 	IsHighlighted bool `json:"is_highlighted"`
-	// The call-to-action button text for this plan.
+	// Call-to-action button text.
 	ButtonText string `json:"button_text" validate:"required"`
-	// The name of the previous plan tier that this plan includes.
+	// Name of the previous plan tier this plan includes.
 	IncludesPreviousPlan *string `json:"includes_previous_plan"`
 }
 

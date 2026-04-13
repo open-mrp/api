@@ -14,7 +14,7 @@ type GetAccountUsageEndpoint struct{}
 func (e *GetAccountUsageEndpoint) Materialize() *apiendpoint.APIEndpoint[*apiresource.EmptyResource, *apiresource.AccountUsageResponse] {
 	return &apiendpoint.APIEndpoint[*apiresource.EmptyResource, *apiresource.AccountUsageResponse]{
 		Title:             "Get Account Usage",
-		Description:       "Returns current resource usage for the account, including seats, invoices, batches, and sandboxes, along with plan limits and subscription details.",
+		Description:       "Returns resource usage for the account, including seats, invoices, batches, sandboxes, and subscription details.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/billing/accounts/usage",

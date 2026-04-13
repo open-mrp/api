@@ -5,61 +5,61 @@ import (
 	"github.com/augno/api/shared/constants"
 )
 
-// CatalogProductLine represents a product line available in the catalog.
+// Product line available in the catalog.
 type CatalogProductLine struct {
-	// The unique identifier for the product line.
+	// Product line ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=catalog_product_line"`
-	// The name of the product line.
+	// Name.
 	Name string `json:"name" validate:"required"`
 }
 
-// CatalogCategory represents a category of products in the catalog.
+// Category of products in the catalog.
 type CatalogCategory struct {
-	// The unique identifier for the item category.
+	// Item category ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=catalog_category"`
-	// The name of the item category.
+	// Name.
 	Name string `json:"name" validate:"required"`
-	// The properties associated with this item category.
+	// Properties associated with this item category.
 	Properties []CatalogProperty `json:"properties" validate:"required"`
-	// The products in this category.
+	// Products in this category.
 	Products []CatalogProduct `json:"products" validate:"required"`
 }
 
-// CatalogProperty represents a property associated with an item category.
+// Property associated with an item category.
 type CatalogProperty struct {
-	// The unique identifier for the property.
+	// Property ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=catalog_property"`
-	// The name of the property.
+	// Name.
 	Name string `json:"name" validate:"required"`
 }
 
-// CatalogProduct represents a product in the catalog.
+// Product in the catalog.
 type CatalogProduct struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=catalog_product"`
-	// The item associated with this catalog product.
+	// Associated item.
 	Item *Item `json:"item" validate:"required"`
-	// The product description.
+	// Description.
 	Description string `json:"description" validate:"required"`
-	// The attributes of this product.
+	// Attributes.
 	Attributes []CatalogAttribute `json:"attributes" validate:"required"`
 }
 
-// CatalogAttribute represents an attribute of a product in the catalog.
+// Attribute of a product in the catalog.
 type CatalogAttribute struct {
-	// The unique identifier for the attribute.
+	// Attribute ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=catalog_attribute"`
-	// The attribute value (text).
+	// Attribute value.
 	Name string `json:"name" validate:"required"`
-	// The property this attribute belongs to.
+	// Property this attribute belongs to.
 	Property *CatalogProperty `json:"property" validate:"required"`
 }
 

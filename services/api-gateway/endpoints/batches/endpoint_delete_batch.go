@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// DeleteBatchRequest is the request to delete a batch.
+// Request to delete a batch.
 type DeleteBatchRequest struct {
-	// The ID of the batch to delete.
+	// Batch ID.
 	BatchID string `path:"id" validate:"required"`
 }
 

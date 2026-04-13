@@ -1,8 +1,8 @@
 package apiresource
 
-// MessageResource is a simple resource containing a message string.
+// Message resource.
 type MessageResource struct {
-	// A human-readable message.
+	// Human-readable message.
 	Message string `json:"message" validate:"required"`
 }
 

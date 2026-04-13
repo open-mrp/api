@@ -5,19 +5,19 @@ import (
 	"github.com/augno/api/shared/constants"
 )
 
-// Actor is a reference to an actor (user, API key, or agent).
+// Reference to an actor (user, API key, or agent).
 type Actor struct {
-	// The unique identifier for the actor.
+	// Actor ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=actor"`
-	// The type of actor.
+	// Actor type.
 	Type constants.ActorType `json:"type" validate:"required"`
-	// The display name of the actor.
+	// Display name.
 	Name *string `json:"name"`
 	// Human-readable handle (email for users, redacted value for API keys, slug for agents).
 	Handle *string `json:"handle"`
-	// The role assigned to the actor.
+	// Assigned role.
 	Role *Role `json:"role" expandable:"true"`
 }
 

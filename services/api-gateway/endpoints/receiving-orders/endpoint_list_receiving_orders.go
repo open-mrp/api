@@ -9,7 +9,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListReceivingOrdersRequest is the request to list receiving orders.
+// Request to list receiving orders.
 type ListReceivingOrdersRequest struct {
 	apiresource.PaginationRequest
 	// Filter by status.

@@ -9,7 +9,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListShipmentsRequest is the request to list shipments.
+// Request to list shipments.
 type ListShipmentsRequest struct {
 	apiresource.PaginationRequest
 	// Filter by shipment status.

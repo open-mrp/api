@@ -9,9 +9,12 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
+// Request to delete a supplier material.
 type DeleteSupplierMaterialRequest struct {
+	// Supplier ID.
 	SupplierID string `path:"supplier_id" validate:"required"`
-	ItemID     string `path:"id" validate:"required"`
+	// Supplier material ID.
+	ItemID string `path:"id" validate:"required"`
 }
 
 type DeleteSupplierMaterialEndpoint struct{}

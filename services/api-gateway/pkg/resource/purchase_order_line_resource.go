@@ -10,31 +10,31 @@ import (
 
 const SamplePurchaseOrderLineDetailID = "poln_01jm4r6700f8nwq3v5hx2d9ktp"
 
-// PurchaseOrderLineDetail represents a full purchase order line resource.
+// Full purchase order line resource.
 type PurchaseOrderLineDetail struct {
-	// The unique identifier for the purchase order line.
+	// Purchase order line ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=purchase_order_line"`
-	// The line item number.
+	// Line item number.
 	LineItemNumber int32 `json:"line_item_number" validate:"required"`
-	// The product SKU.
+	// Product SKU.
 	ProductSKU string `json:"product_sku" validate:"required"`
-	// The product description.
+	// Product description.
 	ProductDescription *string `json:"product_description"`
-	// The item associated with this line.
+	// Item.
 	Item *Item `json:"item"`
-	// The quantity ordered.
+	// Quantity ordered.
 	QuantityOrdered *Quantity `json:"quantity_ordered" validate:"required"`
-	// The quantity received.
+	// Quantity received.
 	QuantityReceived *Quantity `json:"quantity_received"`
-	// The unit price for this line.
+	// Unit price.
 	UnitPrice *Rate `json:"unit_price" validate:"required"`
-	// The unit cost for this line.
+	// Unit cost.
 	UnitCost *Rate `json:"unit_cost"`
-	// The timestamp when the line was created.
+	// Created timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The timestamp when the line was last updated.
+	// Updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 

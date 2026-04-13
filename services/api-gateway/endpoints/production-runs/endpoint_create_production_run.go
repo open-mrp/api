@@ -11,9 +11,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// CreateProductionRunRequest is the request to create a new production run.
+// Request to create a production run.
 type CreateProductionRunRequest struct {
-	// The user ID of the user responsible for this production run.
+	// Responsible user ID.
 	ResponsibleUserID string `json:"responsible_user_id" validate:"required,max=191"`
 }
 
@@ -30,7 +30,7 @@ type CreateProductionRunEndpoint struct{}
 func (e *CreateProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateProductionRunRequest, *apiresource.ProductionRunDetail] {
 	return &apiendpoint.APIEndpoint[*CreateProductionRunRequest, *apiresource.ProductionRunDetail]{
 		Title:             "Create Production Run",
-		Description:       "Creates a new production run for the current account.",
+		Description:       "Creates a production run.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/production-runs",

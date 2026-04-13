@@ -9,7 +9,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListCarriersRequest is the request to list carriers.
+// Request to list carriers.
 type ListCarriersRequest struct {
 	apiresource.PaginationRequest
 }

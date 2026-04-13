@@ -10,15 +10,15 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpdateMachineRequest is the request to partially update a machine.
+// Request to partially update a machine.
 type UpdateMachineRequest struct {
-	// The ID of the machine to update.
+	// Machine ID.
 	MachineID string `path:"id" validate:"required"`
-	// The display name of the machine.
+	// Display name.
 	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// The serial number of the machine.
+	// Serial number.
 	SerialNumber *string `json:"serial_number,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// Optional notes about the machine.
+	// Notes.
 	Notes *string `json:"notes,omitempty" nullable:"false"`
 }
 

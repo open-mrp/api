@@ -4,69 +4,69 @@ import (
 	"github.com/augno/api/shared/constants"
 )
 
-// Tenancy represents the authenticated user's tenancy context.
+// Authenticated user's tenancy context.
 type Tenancy struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=tenancy"`
-	// The current account the user is operating in.
+	// Current account the user is operating in.
 	CurrentAccount *TenancyCurrentAccount `json:"current_account"`
-	// The sandbox accounts available to the user.
+	// Sandbox accounts available to the user.
 	Sandboxes []TenancySandboxAccount `json:"sandboxes" validate:"required"`
-	// The owner account for the user's tenancy.
+	// Owner account for the user's tenancy.
 	OwnerAccount *TenancyOwnerAccount `json:"owner_account"`
 	// Other accounts the user has access to.
 	OtherAccounts []TenancyOtherAccount `json:"other_accounts" validate:"required"`
 }
 
-// TenancyCurrentAccount represents the account the user is currently operating in.
+// Account the user is currently operating in.
 type TenancyCurrentAccount struct {
-	// The unique identifier for the account.
+	// Account ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=account"`
-	// The display name of the account.
+	// Display name.
 	Name string `json:"name" validate:"required"`
-	// The type of the account.
+	// Account type.
 	Type string `json:"type" validate:"required"`
-	// The onboarding status of the account.
+	// Onboarding status.
 	OnboardingStatus string `json:"onboarding_status" validate:"required"`
-	// The plan the account is on.
+	// Plan code.
 	Plan string `json:"plan" validate:"required"`
-	// The account's unique slug.
+	// Account slug.
 	Slug *string `json:"slug"`
-	// The user's role in this account.
+	// Role in this account.
 	Role *Role `json:"role"`
 }
 
-// TenancySandboxAccount represents a sandbox account available to the user.
+// Sandbox account available to the user.
 type TenancySandboxAccount struct {
-	// The unique identifier for the sandbox account.
+	// Account ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=account"`
-	// The display name of the sandbox account.
+	// Display name.
 	Name string `json:"name" validate:"required"`
 }
 
-// TenancyOwnerAccount represents the owner account for the user's tenancy.
+// Owner account for the user's tenancy.
 type TenancyOwnerAccount struct {
-	// The unique identifier for the owner account.
+	// Account ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=account"`
-	// The display name of the owner account.
+	// Display name.
 	Name string `json:"name" validate:"required"`
 }
 
-// TenancyOtherAccount represents another account the user has access to.
+// Additional account the user has access to.
 type TenancyOtherAccount struct {
-	// The unique identifier for the account.
+	// Account ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=account"`
-	// The display name of the account.
+	// Display name.
 	Name string `json:"name" validate:"required"`
-	// The type of the account.
+	// Account type.
 	Type string `json:"type" validate:"required"`
 }
 
@@ -80,12 +80,12 @@ func (*Tenancy) SchemaExample() any {
 	}
 }
 
-// CustomerAccountSummary represents a minimal customer account summary.
+// Minimal customer account summary.
 type CustomerAccountSummary struct {
-	// The unique identifier for the account.
+	// Account ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=account"`
-	// The display name of the account.
+	// Display name.
 	Name string `json:"name" validate:"required"`
 }

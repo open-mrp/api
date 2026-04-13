@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// VoidShipmentRequest is the request to void a shipment.
+// Request to void a shipment.
 type VoidShipmentRequest struct {
-	// The ID of the shipment to void.
+	// Shipment ID.
 	ShipmentID string `path:"id" validate:"required"`
 }
 

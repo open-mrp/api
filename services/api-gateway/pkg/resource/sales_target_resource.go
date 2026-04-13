@@ -10,23 +10,23 @@ import (
 
 const SampleSalesTargetID = "ta_01jm4r6700f8nwq3v5hx2d9ktp"
 
-// SalesTarget represents a sales target for an account user.
+// Sales target for an account user.
 type SalesTarget struct {
-	// The unique identifier for the sales target.
+	// Sales target ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=sales_target"`
-	// The start date for this sales target.
+	// Start date.
 	StartAt time.Time `json:"start_at" validate:"required"`
-	// The end date for this sales target.
+	// End date.
 	EndAt time.Time `json:"end_at" validate:"required"`
-	// The sales representative this target belongs to.
+	// Sales representative.
 	SalesRep *User `json:"sales_rep" expandable:"true"`
-	// The target amount. Contains the value and unit.
+	// Target amount.
 	Amount *Quantity `json:"amount" validate:"required"`
-	// When the sales target was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// When the sales target was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 

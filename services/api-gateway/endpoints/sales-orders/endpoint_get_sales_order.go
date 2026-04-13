@@ -10,11 +10,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetSalesOrderRequest is the request to retrieve a single sales order by ID.
+// Request to retrieve a sales order by ID.
 type GetSalesOrderRequest struct {
-	// The ID of the sales order to retrieve.
+	// Sales order ID.
 	SalesOrderID string `path:"id" validate:"required"`
-	// The fields to include in the response.
+	// Fields to include in the response.
 	Includes []string `query:"include"`
 }
 
@@ -23,7 +23,7 @@ type GetSalesOrderEndpoint struct{}
 func (e *GetSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetSalesOrderRequest, *apiresource.SalesOrderDetail] {
 	return &apiendpoint.APIEndpoint[*GetSalesOrderRequest, *apiresource.SalesOrderDetail]{
 		Title:             "Get Sales Order",
-		Description:       "Returns a single sales order by its ID.",
+		Description:       "Returns a sales order by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/sales-orders/{id}",

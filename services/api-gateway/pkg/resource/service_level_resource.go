@@ -11,23 +11,23 @@ import (
 const SampleServiceLevelID = "crop_01jm4r6700f8nwq3v5hx2d9ktp"
 const SampleServiceLevelName = "FedEx Ground"
 
-// ServiceLevel represents a shipping service level for a carrier.
+// Shipping service level for a carrier.
 type ServiceLevel struct {
-	// The unique identifier for the service level.
+	// Service level ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=service_level"`
-	// The display name of the service level.
+	// Display name.
 	Name string `json:"name" validate:"required"`
-	// The service level token identifying this shipping service level.
+	// Service level token.
 	ServiceLevelToken constants.ServiceLevelCode `json:"service_level_token" validate:"required"`
-	// Whether this service level is visible in the customer portal.
+	// Customer portal visibility.
 	CustomerPortalVisibility constants.CustomerPortalVisibility `json:"customer_portal_visibility" validate:"required,enum"`
-	// Whether this is the default service level for the carrier.
+	// Default service level for the carrier.
 	IsDefault bool `json:"is_default"`
-	// When the service level was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// When the service level was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 

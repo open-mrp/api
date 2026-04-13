@@ -232,18 +232,18 @@ func auditEventToProto(ev *domain.AuditEventRead) *pb.AuditEventInfo {
 	}
 
 	return &pb.AuditEventInfo{
-		Id:               ev.ID,
-		Action:           string(ev.Action),
-		ResourceType:     string(ev.ResourceType),
-		ResourceId:       ev.ResourceID,
-		Actor:            actor,
-		Changes:          pbChanges,
-		MetadataJson:     metadata,
-		ServiceName:      serviceName,
-		RequestId:        ev.RequestID,
+		Id:             ev.ID,
+		Action:         string(ev.Action),
+		ResourceType:   string(ev.ResourceType),
+		ResourceId:     ev.ResourceID,
+		Actor:          actor,
+		Changes:        pbChanges,
+		MetadataJson:   metadata,
+		ServiceName:    serviceName,
+		RequestId:      ev.RequestID,
 		IdempotencyKey: ev.IdempotencyKey,
-		SourceIp:         ev.SourceIP,
-		OccurredAt:       occurredAt,
-		CreatedAt:        createdAt,
+		SourceIp:       ev.SourceIP,
+		OccurredAt:     occurredAt,
+		CreatedAt:      createdAt,
 	}
 }

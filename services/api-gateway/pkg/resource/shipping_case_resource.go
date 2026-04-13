@@ -10,39 +10,39 @@ import (
 
 const SampleShippingCaseID = "shcs_01jm4r6700f8nwq3v5hx2d9ktp"
 
-// ShippingCase represents a physical shipping case within a shipment.
+// Physical shipping case within a shipment.
 type ShippingCase struct {
-	// The unique identifier for the shipping case.
+	// Shipping case ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=shipping_case"`
-	// The human-readable case number.
+	// Human-readable case number.
 	Number string `json:"number" validate:"required"`
-	// The Serial Shipping Container Code.
+	// Serial Shipping Container Code.
 	SSCC *string `json:"sscc"`
-	// The carrier tracking number for this case.
+	// Carrier tracking number.
 	TrackingNumber *string `json:"tracking_number"`
-	// The timestamp when the case was shipped.
+	// Shipped timestamp.
 	ShippedAt *time.Time `json:"shipped_at"`
-	// The freight amount for this case.
+	// Freight amount.
 	FreightAmount *Quantity `json:"freight_amount" expandable:"true"`
-	// The freight weight for this case.
+	// Freight weight.
 	FreightWeight *Quantity `json:"freight_weight" expandable:"true"`
-	// The shipment this case belongs to.
+	// Associated shipment.
 	Shipment *ShipmentDetail `json:"shipment" expandable:"true"`
-	// The carrier for this case.
+	// Carrier.
 	Carrier *Carrier `json:"carrier" expandable:"true"`
-	// The timestamp when the shipping case was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The timestamp when the shipping case was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
-// ShippingCaseLabelURL represents the response for a shipping case label URL.
+// Shipping case label URL.
 type ShippingCaseLabelURL struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=shipping_case_label_url"`
-	// The presigned URL for the label, or null if no label exists.
+	// Presigned label URL, or null if no label exists.
 	URL *string `json:"url"`
 }
 

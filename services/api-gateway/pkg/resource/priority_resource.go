@@ -12,21 +12,21 @@ const SamplePriorityID = "pi_01jm4r6700f8nwq3v5hx2d9ktp"
 const SamplePriorityCode = constants.PriorityCodeNormal
 const SamplePriorityName = "Normal"
 
-// Priority represents a priority level used by sales orders and picks.
+// Priority level used by sales orders and picks.
 type Priority struct {
-	// The unique identifier for the priority.
+	// Priority ID.
 	ID string `json:"id"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=priority"`
-	// The machine-readable code.
+	// Machine-readable code.
 	Code constants.PriorityCode `json:"code" validate:"required"`
-	// The display name of the priority.
+	// Display name.
 	Name string `json:"name" validate:"required"`
-	// The owner of this resource.
+	// Owner of this resource.
 	Owner *Owner `json:"owner" expandable:"true"`
-	// When this priority was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at"`
-	// When this priority was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at"`
 }
 

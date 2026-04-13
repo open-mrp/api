@@ -19,7 +19,7 @@ type ListToolGroupsEndpoint struct{}
 func (e *ListToolGroupsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListToolGroupsRequest, *apiresource.List[apiresource.ToolGroup]] {
 	return &apiendpoint.APIEndpoint[*ListToolGroupsRequest, *apiresource.List[apiresource.ToolGroup]]{
 		Title:             "List Tool Groups",
-		Description:       "Returns all tool groups used to organize available platform tools.",
+		Description:       "Returns a paginated list of tool groups.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/ai/tool-groups",

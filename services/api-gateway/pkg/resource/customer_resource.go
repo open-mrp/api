@@ -13,121 +13,121 @@ const SampleCustomerName = "Acme Inc."
 const SampleCustomerNumber = "100042"
 const SampleCustomerRelationID = "acre_01gf7a8200er3ar3pkfrb6kk30"
 
-// Customer represents a customer account with full detail.
+// Customer account.
 type Customer struct {
-	// The unique identifier for the customer (account ID).
+	// Customer ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=customer"`
-	// The display name of the customer.
+	// Display name.
 	Name string `json:"name" validate:"required"`
-	// The external customer number.
+	// Customer number.
 	Number string `json:"number" validate:"required"`
-	// The customer's account status code.
+	// Account status code.
 	Status constants.AccountStatusCode `json:"status" validate:"required"`
-	// Whether EDI is enabled for this customer.
+	// Whether EDI is enabled.
 	IsEdiEnabled bool `json:"is_edi_enabled"`
-	// Whether this customer is a parent account.
+	// Whether this is a parent account.
 	IsParentAccount bool `json:"is_parent_account"`
-	// The commission status for this customer.
+	// Commission policy.
 	CommissionPolicy constants.CommissionPolicy `json:"commission_policy" validate:"required"`
-	// Notes about the customer.
+	// Note.
 	Note *string `json:"note"`
-	// The customer's credit limit.
+	// Credit limit.
 	CreditLimit *Quantity `json:"credit_limit" expandable:"true"`
-	// The customer's contact information.
+	// Contact information.
 	ContactInfo *CustomerContactInfo `json:"contact_info" expandable:"true"`
-	// The customer's freight preferences.
+	// Freight preferences.
 	FreightPreferences *CustomerFreightPreferences `json:"freight_preferences" expandable:"true"`
-	// The customer's default settings.
+	// Default settings.
 	Defaults *CustomerDefaults `json:"defaults" expandable:"true"`
-	// The customer's notification preferences.
+	// Notification preferences.
 	NotificationPreferences *CustomerNotificationPreferences `json:"notification_preferences" expandable:"true"`
-	// The customer's default billing address.
+	// Default billing address.
 	BillToAddress *Address `json:"bill_to_address" expandable:"true"`
-	// The customer's default shipping address.
+	// Default shipping address.
 	ShipToAddress *Address `json:"ship_to_address" expandable:"true"`
-	// The customer type group.
+	// Customer type group.
 	Type *AccountGroup `json:"type" expandable:"true"`
-	// The customer's pricing groups.
+	// Pricing groups.
 	PriceGroups *List[AccountGroup] `json:"price_groups" expandable:"true"`
-	// The parent customer account, if this is a child account.
+	// Parent account. Present if this is a child account.
 	ParentAccount *Customer `json:"parent_account" expandable:"true"`
-	// The child customer accounts, if this is a parent account.
+	// Child accounts. Present if this is a parent account.
 	ChildAccounts *List[Customer] `json:"child_accounts" expandable:"true"`
-	// When this customer was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// When this customer was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
-// CustomerContactInfo groups the customer's contact information.
+// Customer contact information.
 type CustomerContactInfo struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=customer_contact_info"`
-	// The customer's email address.
+	// Email address.
 	Email *string `json:"email"`
-	// The customer's phone number.
+	// Phone number.
 	Phone *string `json:"phone"`
-	// The customer's website URL.
+	// Website URL.
 	URL *string `json:"url"`
 }
 
-// CustomerFreightPreferences groups the customer's freight and carrier settings.
+// Customer freight and carrier settings.
 type CustomerFreightPreferences struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=customer_freight_preferences"`
-	// The freight status for this customer.
+	// Freight policy.
 	Status constants.FreightPolicy `json:"status" validate:"required"`
-	// The default carrier.
+	// Default carrier.
 	Carrier *Carrier `json:"carrier" expandable:"true"`
-	// The default service level.
+	// Default service level.
 	ServiceLevel *ServiceLevel `json:"service_level" expandable:"true"`
-	// The carrier billing type.
+	// Carrier billing type.
 	BillingType *constants.CarrierBillingType `json:"billing_type"`
-	// The carrier billing account number.
+	// Carrier billing account number.
 	BillingAccount *string `json:"billing_account"`
 }
 
-// CustomerDefaults groups the customer's default configuration.
+// Customer default configuration.
 type CustomerDefaults struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=customer_defaults"`
-	// The default payment term.
+	// Default payment term.
 	PaymentTerm *PaymentTerm `json:"payment_term" expandable:"true"`
-	// The default shipping term.
+	// Default shipping term.
 	ShippingTerm *ShippingTerm `json:"shipping_term" expandable:"true"`
-	// The default priority.
+	// Default priority.
 	Priority *Priority `json:"priority" expandable:"true"`
-	// The default sales representative.
+	// Default sales rep.
 	SalesRep *User `json:"sales_rep" expandable:"true"`
 }
 
-// CustomerNotificationPreferences groups the customer's notification settings.
+// Customer notification settings.
 type CustomerNotificationPreferences struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=customer_notification_preferences"`
-	// Whether the customer accepts invoice emails.
+	// Whether invoice emails are accepted.
 	AcceptsInvoiceEmails bool `json:"accepts_invoice_emails"`
 }
 
-// CustomerSummary is a lightweight customer representation for list responses.
+// Lightweight customer representation for list responses.
 type CustomerSummary struct {
-	// The unique identifier for the customer (account ID).
+	// Customer ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=customer_summary"`
-	// The display name of the customer.
+	// Display name.
 	Name string `json:"name" validate:"required"`
-	// The external customer number.
+	// Customer number.
 	Number string `json:"number" validate:"required"`
-	// The customer's email address.
+	// Email address.
 	Email *string `json:"email"`
-	// The customer type group name.
+	// Customer type group name.
 	CustomerTypeGroup *string `json:"customer_type_group"`
-	// The customer's account status code.
+	// Account status code.
 	Status constants.AccountStatusCode `json:"status" validate:"required"`
-	// When this customer was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 }
 
@@ -208,15 +208,15 @@ func (*CustomerSummary) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleCustomerSummary)
 }
 
-// FrequentlyOrderedProduct represents a product frequently ordered by a customer.
+// Product frequently ordered by a customer.
 type FrequentlyOrderedProduct struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=frequently_ordered_product"`
-	// The item associated with this product.
+	// Associated item.
 	Item *Item `json:"item" validate:"required"`
-	// The most commonly ordered unit.
+	// Most commonly ordered unit.
 	Unit *Unit `json:"unit"`
-	// The number of times this product has been ordered.
+	// Number of times ordered.
 	OrderCount int32 `json:"order_count" validate:"required"`
 }
 

@@ -11,13 +11,13 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// CreatePartRequest is the request to create a new part.
+// Request to create a part.
 type CreatePartRequest struct {
-	// The stock keeping unit code.
+	// SKU.
 	SKU string `json:"sku" validate:"required,max=255"`
-	// A description of the part.
+	// Description.
 	Description *string `json:"description"`
-	// The category ID for the part.
+	// Category ID.
 	CategoryID string `json:"category_id" validate:"required,max=191"`
 }
 
@@ -37,7 +37,7 @@ type CreatePartEndpoint struct{}
 func (e *CreatePartEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreatePartRequest, *apiresource.Part] {
 	return &apiendpoint.APIEndpoint[*CreatePartRequest, *apiresource.Part]{
 		Title:             "Create Part",
-		Description:       "Creates a new part with the specified SKU and category.",
+		Description:       "Creates a part with the specified SKU and category.",
 		Method:            http.MethodPost,
 		Route:             "/v1/operations/parts",
 		ContentType:       "application/json",

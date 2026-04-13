@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// DeleteRoleRequest is the request to delete a role.
+// DeleteRoleRequest is a request to delete a role.
 type DeleteRoleRequest struct {
-	// The ID of the role to delete.
+	// Role ID.
 	RoleID string `path:"id" validate:"required"`
 }
 

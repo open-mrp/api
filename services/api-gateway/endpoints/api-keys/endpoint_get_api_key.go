@@ -10,9 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetAPIKeyRequest is the request to retrieve a single API key by ID.
+// Request to get an API key by ID.
 type GetAPIKeyRequest struct {
-	// The ID of the API key to retrieve.
+	// API key ID.
 	APIKeyID string `path:"id" validate:"required"`
 }
 
@@ -21,7 +21,7 @@ type GetAPIKeyEndpoint struct{}
 func (e *GetAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetAPIKeyRequest, *apiresource.APIKey] {
 	return &apiendpoint.APIEndpoint[*GetAPIKeyRequest, *apiresource.APIKey]{
 		Title:             "Get API Key",
-		Description:       "Returns a single API key by its ID.",
+		Description:       "Returns API key metadata by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/auth/api-keys/{id}",

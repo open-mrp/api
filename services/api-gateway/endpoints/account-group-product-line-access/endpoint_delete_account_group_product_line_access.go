@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// DeleteAccountGroupProductLineAccessRequest is the request to delete all product line access for an account group.
+// DeleteAccountGroupProductLineAccessRequest is a request to delete all product line access for an account group.
 type DeleteAccountGroupProductLineAccessRequest struct {
-	// The ID of the account group.
+	// Account group ID.
 	AccountGroupID string `path:"account_group_id" validate:"required"`
 }
 

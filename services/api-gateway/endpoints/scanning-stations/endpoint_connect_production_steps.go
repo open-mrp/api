@@ -10,11 +10,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ConnectProductionStepsRequest is the request to connect production steps to a scanning station.
+// Request to connect production steps to a scanning station.
 type ConnectProductionStepsRequest struct {
-	// The ID of the scanning station.
+	// Scanning station ID.
 	ScanningStationID string `path:"id" validate:"required"`
-	// The name (or partial name) of production steps to connect.
+	// Name or partial name of production steps to connect.
 	Name string `json:"name" validate:"required"`
 }
 

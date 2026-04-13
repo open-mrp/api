@@ -10,9 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListTerritoriesRequest is the request to list territories for an account.
+// Request to list territories.
 type ListTerritoriesRequest struct {
-	// The ID of the account to list territories for.
+	// Account ID.
 	AccountID string `path:"account_id" validate:"required"`
 	apiresource.PaginationRequest
 }
@@ -22,7 +22,7 @@ type ListTerritoriesEndpoint struct{}
 func (e *ListTerritoriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListTerritoriesRequest, *apiresource.List[apiresource.Territory]] {
 	return &apiendpoint.APIEndpoint[*ListTerritoriesRequest, *apiresource.List[apiresource.Territory]]{
 		Title:             "List Territories",
-		Description:       "Returns a paginated list of territories for the specified account.",
+		Description:       "Returns a paginated list of territories.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/accounts/{account_id}/territories",

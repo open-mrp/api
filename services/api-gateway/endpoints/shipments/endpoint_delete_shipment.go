@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// DeleteShipmentRequest is the request to delete a shipment.
+// Request to delete a shipment.
 type DeleteShipmentRequest struct {
-	// The ID of the shipment to delete.
+	// Shipment ID.
 	ShipmentID string `path:"id" validate:"required"`
 }
 
@@ -20,7 +20,7 @@ type DeleteShipmentEndpoint struct{}
 func (e *DeleteShipmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteShipmentRequest, *apiresource.EmptyResource] {
 	return &apiendpoint.APIEndpoint[*DeleteShipmentRequest, *apiresource.EmptyResource]{
 		Title:             "Delete Shipment",
-		Description:       "Deletes a shipment. Cannot be deleted if it has already been shipped.",
+		Description:       "Deletes a shipment. Fails if already shipped.",
 		Method:            http.MethodDelete,
 		Route:             "/v1/operations/shipments/{id}",
 		ContentType:       "application/json",

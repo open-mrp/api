@@ -10,7 +10,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListPropertiesRequest is the request to list properties.
+// Request to list properties.
 type ListPropertiesRequest struct {
 	apiresource.PaginationRequest
 }

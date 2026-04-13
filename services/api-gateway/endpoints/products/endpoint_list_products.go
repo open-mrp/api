@@ -11,7 +11,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListProductsRequest is the request to list products with optional filters.
+// ListProductsRequest is the request to list products.
 type ListProductsRequest struct {
 	apiresource.PaginationRequest
 	// Filter by customer IDs.
@@ -22,9 +22,9 @@ type ListProductsRequest struct {
 	CategoryIDs []string `query:"category_ids"`
 	// Filter by attribute IDs.
 	AttributeIDs []string `query:"attribute_ids"`
-	// Filter products created on or after this date.
+	// Start of creation date range.
 	StartDate *time.Time `query:"start_date"`
-	// Filter products created on or before this date.
+	// End of creation date range.
 	EndDate *time.Time `query:"end_date"`
 	// Filter by portal ready status.
 	IsPortalReady *bool `query:"is_portal_ready"`

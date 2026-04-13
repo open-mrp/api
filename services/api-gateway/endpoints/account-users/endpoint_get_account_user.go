@@ -10,9 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetAccountUserRequest is the request to retrieve a single account user.
+// Request to retrieve an account user.
 type GetAccountUserRequest struct {
-	// The ID of the account user to retrieve.
+	// Account user ID.
 	AccountUserID string `path:"id" validate:"required"`
 }
 
@@ -21,7 +21,7 @@ type GetAccountUserEndpoint struct{}
 func (e *GetAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetAccountUserRequest, *apiresource.AccountUser] {
 	return &apiendpoint.APIEndpoint[*GetAccountUserRequest, *apiresource.AccountUser]{
 		Title:             "Get Account User",
-		Description:       "Returns a single account user by ID.",
+		Description:       "Returns an account user by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/account-users/{id}",

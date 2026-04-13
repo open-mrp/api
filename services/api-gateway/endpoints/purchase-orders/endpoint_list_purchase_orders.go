@@ -9,7 +9,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListPurchaseOrdersRequest is the request to list purchase orders.
+// Request to list purchase orders.
 type ListPurchaseOrdersRequest struct {
 	apiresource.PaginationRequest
 	// Filter by status codes.

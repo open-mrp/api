@@ -10,19 +10,19 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// NotificationPreferenceItem represents a single notification preference toggle.
+// Notification preference toggle.
 type NotificationPreferenceItem struct {
-	// The notification type code (e.g. "invoice", "order_acknowledgement", "purchase_order_submission").
+	// Notification type code (e.g. "invoice", "order_acknowledgement", "purchase_order_submission").
 	NotificationTypeCode string `json:"notification_type_code" validate:"max=255"`
 	// Whether the notification is enabled.
 	Enabled bool `json:"enabled"`
 }
 
-// UpdateNotificationPreferencesRequest is the request to update notification preferences for an account user.
+// Request to update notification preferences for an account user.
 type UpdateNotificationPreferencesRequest struct {
-	// The user ID of the account user.
+	// Account user ID.
 	AccountUserID string `path:"id" validate:"required"`
-	// The notification preferences to update.
+	// Notification preferences to update.
 	Preferences []NotificationPreferenceItem `json:"preferences"`
 }
 

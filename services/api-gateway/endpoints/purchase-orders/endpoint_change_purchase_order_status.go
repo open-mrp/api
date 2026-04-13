@@ -11,11 +11,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ChangePurchaseOrderStatusRequest is the request to change the status of a purchase order.
+// Request to change the status of a purchase order.
 type ChangePurchaseOrderStatusRequest struct {
-	// The ID of the purchase order.
+	// Purchase order ID.
 	PurchaseOrderID string `path:"id" validate:"required"`
-	// The status change action to perform (e.g., "issue", "unissue", "close", "open").
+	// Status change action (e.g., "issue", "unissue", "close", "open").
 	StatusChange string `json:"status_change" validate:"required"`
 	// Whether to send a notification email.
 	SendEmail bool `json:"send_email"`
@@ -35,7 +35,7 @@ type ChangePurchaseOrderStatusEndpoint struct{}
 func (e *ChangePurchaseOrderStatusEndpoint) Materialize() *apiendpoint.APIEndpoint[*ChangePurchaseOrderStatusRequest, *apiresource.PurchaseOrderDetail] {
 	return &apiendpoint.APIEndpoint[*ChangePurchaseOrderStatusRequest, *apiresource.PurchaseOrderDetail]{
 		Title:             "Change Purchase Order Status",
-		Description:       "Changes the status of a purchase order using actions: issue (draft to issued), unissue (issued to draft), close (issued to closed), or open (closed to issued).",
+		Description:       "Changes the status of a purchase order. Supported actions: issue (draft to issued), unissue (issued to draft), close (issued to closed), open (closed to issued).",
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/purchase-orders/{id}/actions/change-status",

@@ -10,11 +10,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// The request to update a user's password
+// Request to update a user's password.
 type UpdatePasswordRequest struct {
-	// The user's current password.
+	// Current password.
 	OldPassword string `json:"old_password" validate:"required,password,max=255"`
-	// The new password to be set.
+	// New password.
 	NewPassword string `json:"new_password" validate:"required,password,max=255"`
 }
 
@@ -31,7 +31,7 @@ type UpdatePasswordEndpoint struct{}
 
 func (e *UpdatePasswordEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdatePasswordRequest, *apiresource.EmptyResource] {
 	return &apiendpoint.APIEndpoint[*UpdatePasswordRequest, *apiresource.EmptyResource]{
-		Title:             "Create New Password",
+		Title:             "Update Password",
 		Description:       "Updates a user's password, revoking previous tokens and setting new access and refresh tokens in cookies.",
 		Method:            http.MethodPost,
 		Route:             "/v1/auth/passwords",

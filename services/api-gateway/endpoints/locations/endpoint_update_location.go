@@ -12,17 +12,17 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpdateLocationRequest is the request to partially update a location.
+// Request to partially update a location.
 type UpdateLocationRequest struct {
-	// The ID of the location to update.
+	// Location ID.
 	LocationID string `path:"id" validate:"required"`
-	// The display name of the location.
+	// Display name.
 	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// The code of the location type.
+	// Location type code.
 	TypeCode *constants.LocationTypeCode `json:"type,omitempty" nullable:"false"`
-	// The ID of the parent location. Send null to clear.
+	// Parent location ID. Send null to clear.
 	ParentID *string `json:"parent_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
-	// The IDs of child locations. When provided, replaces all current children. Send null to clear.
+	// Child location IDs. Replaces all current children when provided. Send null to clear.
 	ChildIDs apirequest.NullableInput[[]string] `json:"child_ids,omitempty"`
 }
 

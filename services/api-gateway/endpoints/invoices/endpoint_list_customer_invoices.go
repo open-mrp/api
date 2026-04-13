@@ -9,10 +9,10 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListCustomerInvoicesRequest is the request to list invoices for a customer account.
+// Request to list invoices for a customer account.
 type ListCustomerInvoicesRequest struct {
 	apiresource.PaginationRequest
-	// The customer account ID to list invoices for.
+	// Customer account ID.
 	CustomerAccountID string `path:"account_id" validate:"required"`
 	// Whether to include child account invoices.
 	IncludeChildAccounts bool `query:"include_child_accounts"`

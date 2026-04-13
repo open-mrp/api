@@ -10,7 +10,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListPrioritiesRequest is the request to list priorities with optional search.
+// Request to list priorities.
 type ListPrioritiesRequest struct {
 	apiresource.PaginationRequest
 }

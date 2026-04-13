@@ -8,21 +8,21 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// CheckoutSalesOrderRequest is the request to create a checkout session for a sales order.
+// Request to create a checkout session for a sales order.
 type CheckoutSalesOrderRequest struct {
-	// The ID of the sales order.
+	// Sales order ID.
 	SalesOrderID string `path:"id" validate:"required"`
-	// The email for the checkout session.
+	// Email for the checkout session.
 	Email string `json:"email" validate:"required,email"`
-	// The URL to redirect to on success.
+	// Redirect URL on success.
 	SuccessURL *string `json:"success_url,omitempty"`
-	// The URL to redirect to on cancel.
+	// Redirect URL on cancel.
 	CancelURL *string `json:"cancel_url,omitempty"`
 }
 
-// CheckoutSalesOrderResponse represents the checkout result.
+// Checkout session result.
 type CheckoutSalesOrderResponse struct {
-	// The checkout URL.
+	// Checkout URL.
 	CheckoutURL string `json:"checkout_url" validate:"required"`
 }
 

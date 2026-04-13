@@ -10,10 +10,10 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListReceivablesRequest is the request to list all receivable entries.
+// Request to list all receivable entries.
 type ListReceivablesRequest struct {
 	apiresource.PaginationRequest
-	// Optional cutoff date for the receivables snapshot.
+	// Cutoff date for the receivables snapshot.
 	CutoffDate *time.Time `query:"cutoff_date"`
 }
 

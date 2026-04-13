@@ -10,10 +10,10 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListUnitGroupsRequest is the request to list unit groups with optional filters.
+// ListUnitGroupsRequest is a request to list unit groups.
 type ListUnitGroupsRequest struct {
 	apiresource.PaginationRequest
-	// Filter by unit type code (e.g. "mass", "quantity").
+	// Unit type filter (e.g. "mass", "quantity").
 	Type *constants.UnitType `query:"type"`
 }
 
@@ -22,7 +22,7 @@ type ListUnitGroupsEndpoint struct{}
 func (e *ListUnitGroupsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListUnitGroupsRequest, *apiresource.List[apiresource.UnitGroup]] {
 	return &apiendpoint.APIEndpoint[*ListUnitGroupsRequest, *apiresource.List[apiresource.UnitGroup]]{
 		Title:             "List Unit Groups",
-		Description:       "Returns a paginated list of unit groups for the current account, including system unit groups.",
+		Description:       "Returns a paginated list of unit groups, including system unit groups.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/unit-groups",

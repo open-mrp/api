@@ -11,17 +11,17 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpdateAccountGroupRequest is the request to partially update an account group.
+// Request to partially update an account group.
 type UpdateAccountGroupRequest struct {
-	// The ID of the account group to update.
+	// Account group ID.
 	AccountGroupID string `path:"id" validate:"required"`
-	// The display name of the account group.
+	// Display name.
 	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// An optional description of the account group.
+	// Description.
 	Description *string `json:"description,omitempty" nullable:"true"`
-	// The commission status code.
+	// Commission policy.
 	CommissionPolicy *constants.CommissionPolicy `json:"commission_policy,omitempty" nullable:"false"`
-	// The freight status code.
+	// Freight policy.
 	FreightPolicy *constants.FreightPolicy `json:"freight_policy,omitempty" nullable:"false"`
 }
 

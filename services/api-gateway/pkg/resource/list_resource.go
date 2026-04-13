@@ -4,23 +4,23 @@ import "github.com/augno/api/shared/constants"
 
 // PageInfo contains cursor-based pagination metadata.
 type PageInfo struct {
-	// Cursor to fetch the next page of results, null if no more pages.
+	// Cursor to fetch the next page, `null` if no more pages.
 	NextCursor *string `json:"next_cursor"`
-	// Cursor to fetch the previous page of results, null if on the first page.
+	// Cursor to fetch the previous page, `null` if on the first page.
 	PrevCursor *string `json:"prev_cursor"`
-	// Whether there are more results after this page.
+	// Whether more results exist after this page.
 	HasNextPage bool `json:"has_next_page"`
-	// Whether there are results before this page.
+	// Whether results exist before this page.
 	HasPrevPage bool `json:"has_prev_page"`
 }
 
 // List represents a paginated list of resources.
 type List[T any] struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=list"`
 	// Pagination metadata.
 	PageInfo PageInfo `json:"page_info"`
-	// The array of resources in this page.
+	// Resources in this page.
 	Data []T `json:"data" validate:"required"`
 }
 

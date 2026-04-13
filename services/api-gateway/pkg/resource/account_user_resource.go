@@ -8,27 +8,27 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-// AccountUser represents an account user with their profile, role, and department.
+// Account user with profile, role, and department.
 type AccountUser struct {
-	// The account_user join record ID.
+	// Account user ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=account_user"`
-	// The user's display name.
+	// Display name.
 	Name *string `json:"name"`
-	// The user's email address.
+	// Email address.
 	Email *string `json:"email"`
-	// The user's username.
+	// Username.
 	Username *string `json:"username"`
-	// The user's profile image URL.
+	// Profile image URL.
 	ImageURL *string `json:"image_url"`
 	// Whether the user's email is verified.
 	IsVerified bool `json:"is_verified" validate:"required"`
-	// The account user status.
+	// Account user status.
 	Status constants.AccountUserStatus `json:"status" validate:"required"`
-	// The role assigned to this account user.
+	// Assigned role.
 	Role *Role `json:"role" expandable:"true"`
-	// The department assigned to this account user.
+	// Assigned department.
 	Department *Department `json:"department" expandable:"true"`
 	// When the user last used this account.
 	LastUsedAt *time.Time `json:"last_used_at"`

@@ -9,11 +9,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// PickPickLineRequest is the request to mark a single pick line as picked.
+// PickPickLineRequest is the request to mark a pick line as picked.
 type PickPickLineRequest struct {
-	// The ID of the pick.
+	// Pick ID.
 	PickID string `path:"pickId" validate:"required"`
-	// The ID of the pick line to pick.
+	// Pick line ID.
 	PickLineID string `path:"id" validate:"required"`
 }
 
@@ -22,7 +22,7 @@ type PickPickLineEndpoint struct{}
 func (e *PickPickLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*PickPickLineRequest, *apiresource.PickLineDetail] {
 	return &apiendpoint.APIEndpoint[*PickPickLineRequest, *apiresource.PickLineDetail]{
 		Title:             "Pick Pick Line",
-		Description:       "Marks a single pick line as picked.",
+		Description:       "Marks a pick line as picked.",
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/picks/{pickId}/lines/{id}/actions/pick",

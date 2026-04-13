@@ -9,11 +9,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// DeleteServiceLevelRequest is the request to delete a service level.
+// Request to delete a service level.
 type DeleteServiceLevelRequest struct {
-	// The ID of the carrier.
+	// Carrier ID.
 	CarrierID string `path:"carrier_id" validate:"required"`
-	// The ID of the service level to delete.
+	// Service level ID.
 	ServiceLevelID string `path:"id" validate:"required"`
 }
 
@@ -22,7 +22,7 @@ type DeleteServiceLevelEndpoint struct{}
 func (e *DeleteServiceLevelEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteServiceLevelRequest, *apiresource.EmptyResource] {
 	return &apiendpoint.APIEndpoint[*DeleteServiceLevelRequest, *apiresource.EmptyResource]{
 		Title:             "Delete Service Level",
-		Description:       "Permanently deletes a service level. Default (system-synced) service levels cannot be deleted.",
+		Description:       "Permanently deletes a service level. Fails if the service level is a default (system-synced) level.",
 		Method:            http.MethodDelete,
 		Route:             "/v1/operations/carriers/{carrier_id}/service-levels/{id}",
 		ContentType:       "application/json",

@@ -2,23 +2,23 @@ package apiresource
 
 import "github.com/augno/api/shared/constants"
 
-// InventoryItem represents an item with its on-hand inventory quantity.
+// Item with on-hand inventory quantity.
 type InventoryItem struct {
-	// The item details.
+	// Item details.
 	Item Item `json:"item" validate:"required"`
-	// The on-hand quantity.
+	// On-hand quantity.
 	Quantity BaseQuantity `json:"quantity" validate:"required"`
 }
 
-// ListInventoriesResponse represents the response from listing all item inventories.
+// Paginated list of inventory items.
 type ListInventoriesResponse struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=list"`
 	// Pagination metadata.
 	PageInfo PageInfo `json:"page_info"`
-	// The inventory items.
+	// Inventory items.
 	Data []InventoryItem `json:"data" validate:"required"`
-	// The total count.
+	// Total count.
 	Count int64 `json:"count" validate:"required"`
 }
 

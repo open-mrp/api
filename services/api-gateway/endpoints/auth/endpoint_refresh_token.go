@@ -10,9 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// Represents a request to refresh an access token
+// Request to refresh an access token.
 type RefreshTokenRequest struct {
-	// The refresh token cookie.
+	// Refresh token cookie.
 	RefreshToken string `cookie:"__Secure-augno.refresh-token" validate:"required"` // #nosec G117 - Struct field, not a hardcoded credential
 }
 

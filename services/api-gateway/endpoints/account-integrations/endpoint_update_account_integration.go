@@ -10,13 +10,13 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpdateAccountIntegrationRequest is the request to update an account integration.
+// Request to update an account integration.
 type UpdateAccountIntegrationRequest struct {
-	// The ID of the account integration to update.
+	// Account integration ID.
 	AccountIntegrationID string `path:"id" validate:"required"`
-	// The human-readable name for the integration.
+	// Display name of the integration.
 	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// Whether this integration is currently active.
+	// Whether the integration is active.
 	IsActive *bool `json:"is_active,omitempty" nullable:"false"`
 }
 

@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetReceivingOrderRequest is the request to retrieve a single receiving order.
+// Request to retrieve a receiving order.
 type GetReceivingOrderRequest struct {
-	// The ID of the receiving order to retrieve.
+	// Receiving order ID.
 	ReceivingOrderID string `path:"id" validate:"required"`
 }
 
@@ -20,7 +20,7 @@ type GetReceivingOrderEndpoint struct{}
 func (e *GetReceivingOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetReceivingOrderRequest, *apiresource.ReceivingOrder] {
 	return &apiendpoint.APIEndpoint[*GetReceivingOrderRequest, *apiresource.ReceivingOrder]{
 		Title:             "Get Receiving Order",
-		Description:       "Returns a single receiving order by its ID.",
+		Description:       "Returns a receiving order by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/receiving-orders/{id}",

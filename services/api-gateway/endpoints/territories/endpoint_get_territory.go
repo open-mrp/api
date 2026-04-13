@@ -10,11 +10,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetTerritoryRequest is the request to retrieve a single territory.
+// Request to retrieve a territory.
 type GetTerritoryRequest struct {
-	// The ID of the account that owns the territory.
+	// Account ID.
 	AccountID string `path:"account_id" validate:"required"`
-	// The ID of the territory to retrieve.
+	// Territory ID.
 	TerritoryID string `path:"id" validate:"required"`
 }
 
@@ -23,7 +23,7 @@ type GetTerritoryEndpoint struct{}
 func (e *GetTerritoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetTerritoryRequest, *apiresource.Territory] {
 	return &apiendpoint.APIEndpoint[*GetTerritoryRequest, *apiresource.Territory]{
 		Title:             "Get Territory",
-		Description:       "Returns a single territory by its ID.",
+		Description:       "Returns a territory by ID.",
 		Method:            http.MethodGet,
 		Route:             "/v1/sales/accounts/{account_id}/territories/{id}",
 		ContentType:       "application/json",

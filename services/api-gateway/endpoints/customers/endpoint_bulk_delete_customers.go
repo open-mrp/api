@@ -10,9 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// BulkDeleteCustomersRequest is the request to delete multiple customers at once.
+// Request to delete multiple customers.
 type BulkDeleteCustomersRequest struct {
-	// The IDs of the customers to delete.
+	// Customer IDs to delete.
 	CustomerIDs []string `json:"customer_ids" validate:"required"`
 }
 
@@ -29,7 +29,7 @@ type BulkDeleteCustomersEndpoint struct{}
 func (e *BulkDeleteCustomersEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkDeleteCustomersRequest, *apiresource.EmptyResource] {
 	return &apiendpoint.APIEndpoint[*BulkDeleteCustomersRequest, *apiresource.EmptyResource]{
 		Title:             "Bulk Delete Customers",
-		Description:       "Deletes multiple customers in a single operation.",
+		Description:       "Deletes multiple customers.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/customers/actions/bulk-delete",

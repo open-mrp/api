@@ -9,23 +9,23 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// CreateCheckoutSessionRequest is the request to create a customer checkout session.
+// Request to create a customer checkout session.
 type CreateCheckoutSessionRequest struct {
-	// The ID of the sales order.
+	// Sales order ID.
 	OrderID string `json:"order_id" validate:"required,max=191"`
-	// The order number for display.
+	// Order number for display.
 	OrderNumber string `json:"order_number" validate:"required,max=255"`
-	// The order total in cents.
+	// Order total in cents.
 	OrderTotalCents int64 `json:"order_total_cents" validate:"required"`
-	// The customer PO number, if any.
+	// Customer PO number.
 	CustomerPO *string `json:"customer_po,omitempty" validate:"omitempty,max=255"`
 }
 
-// CheckoutSessionResponse represents the result of creating a customer checkout session.
+// Result of creating a customer checkout session.
 type CheckoutSessionResponse struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=checkout_session"`
-	// The Stripe checkout session client secret for embedded checkout.
+	// Stripe checkout session client secret for embedded checkout.
 	CheckoutSessionClientSecret string `json:"checkout_session_client_secret" validate:"required,max=255"`
 }
 

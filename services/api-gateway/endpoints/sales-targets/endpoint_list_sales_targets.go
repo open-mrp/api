@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListSalesTargetsRequest is the request to list sales targets for an account user.
+// Request to list sales targets for an account user.
 type ListSalesTargetsRequest struct {
-	// The user ID (sales rep) whose targets to list.
+	// Sales rep user ID.
 	SalesRepID string `path:"id" validate:"required"`
 	apiresource.PaginationRequest
 }
@@ -21,7 +21,7 @@ type ListSalesTargetsEndpoint struct{}
 func (e *ListSalesTargetsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSalesTargetsRequest, *apiresource.List[apiresource.SalesTarget]] {
 	return &apiendpoint.APIEndpoint[*ListSalesTargetsRequest, *apiresource.List[apiresource.SalesTarget]]{
 		Title:             "List Sales Targets",
-		Description:       "Returns a paginated list of sales targets for a specific account user.",
+		Description:       "Returns a paginated list of sales targets for an account user.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/account-users/{id}/sales-targets",

@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetCarrierRequest is the request to retrieve a single carrier by ID.
+// Request to retrieve a carrier by ID.
 type GetCarrierRequest struct {
-	// The ID of the carrier to retrieve.
+	// Carrier ID.
 	CarrierID string `path:"id" validate:"required"`
 }
 
@@ -20,7 +20,7 @@ type GetCarrierEndpoint struct{}
 func (e *GetCarrierEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetCarrierRequest, *apiresource.Carrier] {
 	return &apiendpoint.APIEndpoint[*GetCarrierRequest, *apiresource.Carrier]{
 		Title:             "Get Carrier",
-		Description:       "Returns a single carrier by ID.",
+		Description:       "Returns a carrier by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/carriers/{id}",

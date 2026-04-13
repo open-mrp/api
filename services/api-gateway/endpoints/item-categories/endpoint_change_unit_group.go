@@ -9,11 +9,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ChangeItemCategoryUnitGroupRequest is the request to change the unit group of an item category.
+// Request to change the unit group of an item category.
 type ChangeItemCategoryUnitGroupRequest struct {
-	// The ID of the item category.
+	// Item category ID.
 	ItemCategoryID string `path:"id" validate:"required"`
-	// The ID of the new unit group.
+	// Unit group ID.
 	UnitGroupID string `path:"unit_group_id" validate:"required"`
 }
 

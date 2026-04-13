@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListBatchesByScanningStationRequest is the request to list batches for a scanning station.
+// Request to list batches for a scanning station.
 type ListBatchesByScanningStationRequest struct {
-	// The ID of the scanning station to list batches for.
+	// Scanning station ID.
 	ScanningStationID string `path:"id" validate:"required"`
 	apiresource.PaginationRequest
 }

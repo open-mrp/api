@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// DeletePropertyRequest is the request to delete a property.
+// Request to delete a property.
 type DeletePropertyRequest struct {
-	// The ID of the property to delete.
+	// Property ID.
 	PropertyID string `path:"id" validate:"required"`
 }
 
@@ -20,7 +20,7 @@ type DeletePropertyEndpoint struct{}
 func (e *DeletePropertyEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeletePropertyRequest, *apiresource.EmptyResource] {
 	return &apiendpoint.APIEndpoint[*DeletePropertyRequest, *apiresource.EmptyResource]{
 		Title:             "Delete Property",
-		Description:       "Deletes a property and all its associated attributes.",
+		Description:       "Deletes a property and all associated attributes.",
 		Method:            http.MethodDelete,
 		Route:             "/v1/catalog/properties/{id}",
 		ContentType:       "application/json",

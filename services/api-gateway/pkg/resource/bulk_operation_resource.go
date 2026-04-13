@@ -19,7 +19,7 @@ type BulkCreateItemResult struct {
 
 // BulkCreateItemsResponse represents the response from the bulk create items endpoint.
 type BulkCreateItemsResponse struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=list"`
 	// The results of each item creation.
 	Data []BulkCreateItemResult `json:"data" validate:"required"`
@@ -48,7 +48,7 @@ type BulkCreateProductionStepResult struct {
 
 // BulkCreateProductionStepsResponse represents the response from the bulk create production steps endpoint.
 type BulkCreateProductionStepsResponse struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=list"`
 	// The results of each production step creation.
 	Data []BulkCreateProductionStepResult `json:"data" validate:"required"`

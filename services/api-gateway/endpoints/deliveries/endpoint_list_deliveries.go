@@ -9,7 +9,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListDeliveriesRequest is the request to list deliveries.
+// Request to list deliveries.
 type ListDeliveriesRequest struct {
 	apiresource.PaginationRequest
 	// Filter by status: all, accepted, or rejected. Defaults to accepted.

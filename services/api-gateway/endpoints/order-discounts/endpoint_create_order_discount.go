@@ -10,17 +10,17 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// CreateOrderDiscountRequest is the request to create a new order discount.
+// Request to create an order discount.
 type CreateOrderDiscountRequest struct {
-	// The display name of the discount.
+	// Display name.
 	Name string `json:"name" validate:"required,max=255"`
-	// The unique code for this discount.
+	// Discount code.
 	Code string `json:"code" validate:"required,max=255"`
-	// The percentage value of the discount as a decimal string. Required when discount_type is "percentage".
+	// Percentage value as a decimal string. Required when discount_type is "percentage".
 	Percentage *string `json:"percentage,omitempty" format:"decimal"`
-	// The fixed amount of the discount as a decimal string. Required when discount_type is "amount".
+	// Fixed amount as a decimal string. Required when discount_type is "amount".
 	Amount *string `json:"amount,omitempty" format:"decimal"`
-	// The type of discount: "percentage" or "amount".
+	// Discount type: "percentage" or "amount".
 	DiscountType string `json:"discount_type" validate:"required,max=255"`
 }
 
@@ -40,7 +40,7 @@ type CreateOrderDiscountEndpoint struct{}
 func (e *CreateOrderDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateOrderDiscountRequest, *apiresource.OrderDiscount] {
 	return &apiendpoint.APIEndpoint[*CreateOrderDiscountRequest, *apiresource.OrderDiscount]{
 		Title:             "Create Order Discount",
-		Description:       "Creates a new order discount.",
+		Description:       "Creates an order discount.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/order-discounts",

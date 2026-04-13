@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetMemoryRequest is the request to retrieve a single agent memory.
+// Request to get an agent memory.
 type GetMemoryRequest struct {
-	// The ID of the memory to retrieve.
+	// Memory ID.
 	ID string `path:"id" validate:"required"`
 }
 
@@ -20,7 +20,7 @@ type GetMemoryEndpoint struct{}
 func (e *GetMemoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetMemoryRequest, *apiresource.AgentMemory] {
 	return &apiendpoint.APIEndpoint[*GetMemoryRequest, *apiresource.AgentMemory]{
 		Title:             "Get Agent Memory",
-		Description:       "Returns a single agent memory by ID.",
+		Description:       "Returns an agent memory by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/ai/memories/{id}",

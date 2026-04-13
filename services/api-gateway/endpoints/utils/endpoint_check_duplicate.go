@@ -9,13 +9,13 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// CheckDuplicateRequest is the request to check for a duplicate record number.
+// Request to check for a duplicate record number.
 type CheckDuplicateRequest struct {
-	// The type of duplicate check to perform: invoice_number, order_number, or customer_po_number.
+	// Duplicate check type: invoice_number, order_number, or customer_po_number.
 	Type string `json:"type" validate:"required"`
-	// The record number to check.
+	// Record number to check.
 	RecordNumber string `json:"record_number" validate:"required"`
-	// The customer ID, required for customer_po_number checks.
+	// Customer ID, required for customer_po_number checks.
 	CustomerID *string `json:"customer_id"`
 }
 

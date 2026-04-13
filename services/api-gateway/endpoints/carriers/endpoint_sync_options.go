@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// SyncOptionsRequest is the request to sync carrier options from Shippo.
+// Request to sync carrier options from Shippo.
 type SyncOptionsRequest struct {
-	// The ID of the carrier.
+	// Carrier ID.
 	CarrierID string `path:"id" validate:"required"`
 }
 

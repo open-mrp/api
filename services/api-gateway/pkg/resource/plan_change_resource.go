@@ -5,27 +5,27 @@ import (
 	"github.com/augno/api/shared/constants"
 )
 
-// PlanChangeProration represents the cost preview for a plan change.
+// Cost preview for a plan change.
 type PlanChangeProration struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=plan_change_proration"`
-	// The net amount in cents.
+	// Net amount in cents.
 	NetAmount int64 `json:"net_amount"`
-	// The formatted net amount for display (e.g., "$49.00").
+	// Formatted net amount for display (e.g., "$49.00").
 	FormattedNetAmount string `json:"formatted_net_amount" validate:"required"`
-	// The estimated monthly bill amount in cents after the change.
+	// Estimated monthly bill amount in cents after the change.
 	MonthlyBillAmount int64 `json:"monthly_bill_amount"`
-	// The formatted monthly bill amount for display.
+	// Formatted monthly bill amount for display.
 	FormattedMonthlyBillAmount string `json:"formatted_monthly_bill_amount" validate:"required"`
 	// Detailed line items from the cost preview.
 	LineItems *List[PlanChangeLineItem] `json:"line_items"`
-	// True when the amounts are locally estimated rather than calculated by Stripe.
+	// Whether the amounts are locally estimated rather than calculated by Stripe.
 	IsEstimate bool `json:"is_estimate"`
 }
 
-// PlanChangeLineItem represents a single line item in a plan change preview.
+// Line item in a plan change cost preview.
 type PlanChangeLineItem struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=plan_change_line_item"`
 	// Description of the line item.
 	Description string `json:"description" validate:"required"`

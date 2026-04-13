@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetPlanProrationRequest is the request to preview the cost impact of a plan change.
+// Request to preview the cost of a plan change.
 type GetPlanProrationRequest struct {
-	// The ID of the target pricing plan to preview switching to.
+	// Target pricing plan ID.
 	PlanID string `path:"id" validate:"required"`
 }
 

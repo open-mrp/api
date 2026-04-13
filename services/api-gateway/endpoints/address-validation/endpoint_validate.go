@@ -10,19 +10,19 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ValidateAddressRequest is the request to validate an address.
+// Request to validate an address.
 type ValidateAddressRequest struct {
-	// The first line of the street address.
+	// First line of the street address.
 	AddressLine1 string `json:"address_line_1" validate:"required"`
-	// The second line of the street address.
+	// Second line of the street address.
 	AddressLine2 *string `json:"address_line_2,omitempty" nullable:"false"`
-	// The city.
+	// City.
 	City string `json:"city" validate:"required"`
-	// The state or administrative area.
+	// State or administrative area.
 	State string `json:"state" validate:"required"`
-	// The postal or zip code.
+	// Postal or ZIP code.
 	PostalCode string `json:"postal_code" validate:"required"`
-	// The country name or code.
+	// Country name or code.
 	Country string `json:"country" validate:"required"`
 }
 

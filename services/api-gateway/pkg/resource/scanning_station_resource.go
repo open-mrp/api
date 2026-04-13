@@ -14,31 +14,31 @@ import (
 
 const SampleScanningStationName = "Packaging Line 1"
 
-// ScanningStation represents a scanning station with all its details.
+// Scanning station resource.
 type ScanningStation struct {
-	// The unique identifier for the scanning station.
+	// Scanning station ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=scanning_station"`
-	// The display name of the scanning station.
+	// Display name.
 	Name string `json:"name" validate:"required"`
-	// Optional notes about the scanning station.
+	// Notes.
 	Notes *string `json:"notes"`
-	// The type of scanning station.
+	// Scanning station type.
 	Type constants.ScanningStationType `json:"type" validate:"required"`
-	// The label size code for the scanning station.
+	// Label size code.
 	LabelSizeCode *constants.LabelSizeCode `json:"label_size"`
-	// The label type code for the scanning station.
+	// Label type code.
 	LabelTypeCode *constants.LabelTypeCode `json:"label_type"`
-	// Whether material check is required at this station.
+	// Whether material check is required.
 	MaterialCheckRequired bool `json:"material_check_required"`
-	// The department this scanning station belongs to.
+	// Department.
 	Department *Department `json:"department" expandable:"true"`
-	// The production steps connected to this scanning station.
+	// Connected production steps.
 	ProductionSteps *List[ProductionStep] `json:"production_steps" expandable:"true"`
-	// The timestamp when the scanning station was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The timestamp when the scanning station was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 

@@ -10,9 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetSettlementRequest is the request to retrieve a single settlement.
+// GetSettlementRequest is the request to get a settlement.
 type GetSettlementRequest struct {
-	// The ID of the settlement to retrieve.
+	// Settlement ID.
 	SettlementID string `path:"id" validate:"required"`
 	// Sub-resources to include in the response.
 	Includes []string `include:"true"`
@@ -23,7 +23,7 @@ type GetSettlementEndpoint struct{}
 func (e *GetSettlementEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetSettlementRequest, *apiresource.Settlement] {
 	return &apiendpoint.APIEndpoint[*GetSettlementRequest, *apiresource.Settlement]{
 		Title:             "Get Settlement",
-		Description:       "Returns a single settlement by its ID.",
+		Description:       "Returns a settlement by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/finance/settlements/{id}",

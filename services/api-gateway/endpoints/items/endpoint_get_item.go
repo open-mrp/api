@@ -10,9 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetItemRequest is the request to retrieve a single item by ID.
+// GetItemRequest is the request to get an item by ID.
 type GetItemRequest struct {
-	// The ID of the item to retrieve.
+	// Item ID.
 	ItemID string `path:"id" validate:"required"`
 }
 
@@ -21,7 +21,7 @@ type GetItemEndpoint struct{}
 func (e *GetItemEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetItemRequest, *apiresource.Item] {
 	return &apiendpoint.APIEndpoint[*GetItemRequest, *apiresource.Item]{
 		Title:             "Get Item",
-		Description:       "Returns a single item by its ID.",
+		Description:       "Returns an item by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/items/{id}",

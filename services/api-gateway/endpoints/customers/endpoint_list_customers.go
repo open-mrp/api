@@ -11,7 +11,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListCustomersRequest is the request to list customers.
+// Request to list customers.
 type ListCustomersRequest struct {
 	apiresource.PaginationRequest
 	// Filter by customer group IDs.

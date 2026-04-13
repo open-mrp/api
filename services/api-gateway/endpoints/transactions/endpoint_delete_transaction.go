@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// DeleteTransactionRequest is the request to delete a transaction.
+// Request to delete a transaction.
 type DeleteTransactionRequest struct {
-	// The ID of the transaction to delete.
+	// Transaction ID.
 	TransactionID string `path:"id" validate:"required"`
 }
 
@@ -20,7 +20,7 @@ type DeleteTransactionEndpoint struct{}
 func (e *DeleteTransactionEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteTransactionRequest, *apiresource.TransactionDetail] {
 	return &apiendpoint.APIEndpoint[*DeleteTransactionRequest, *apiresource.TransactionDetail]{
 		Title:             "Delete Transaction",
-		Description:       "Deletes a transaction and cascades deletion to its allocations.",
+		Description:       "Deletes a transaction and cascades deletion to allocations.",
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
 		Route:             "/v1/finance/transactions/{id}",

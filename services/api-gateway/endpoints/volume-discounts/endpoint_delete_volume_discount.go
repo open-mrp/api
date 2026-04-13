@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// DeleteVolumeDiscountRequest is the request to delete a volume discount.
+// Request to delete a volume discount.
 type DeleteVolumeDiscountRequest struct {
-	// The ID of the volume discount to delete.
+	// Volume discount ID.
 	VolumeDiscountID string `path:"id" validate:"required"`
 }
 

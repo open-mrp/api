@@ -10,13 +10,13 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// InitiateOAuthRequest is the request to initiate carrier OAuth.
+// Request to initiate carrier OAuth.
 type InitiateOAuthRequest struct {
-	// The ID of the carrier.
+	// Carrier ID.
 	CarrierID string `path:"id" validate:"required"`
-	// The URI to redirect to after OAuth completes.
+	// Redirect URI after OAuth completes.
 	RedirectURI string `json:"redirect_uri" validate:"required"`
-	// An optional opaque state value passed through the OAuth flow.
+	// Opaque state value passed through the OAuth flow.
 	State *string `json:"state"`
 }
 
@@ -33,7 +33,7 @@ type InitiateOAuthEndpoint struct{}
 func (e *InitiateOAuthEndpoint) Materialize() *apiendpoint.APIEndpoint[*InitiateOAuthRequest, *apiresource.OAuthResponse] {
 	return &apiendpoint.APIEndpoint[*InitiateOAuthRequest, *apiresource.OAuthResponse]{
 		Title:             "Initiate Carrier OAuth",
-		Description:       "Initiates the OAuth flow for a Shippo-managed carrier and returns an OAuth URL to redirect the user to. Not available in sandbox mode.",
+		Description:       "Initiates the OAuth flow for a Shippo-managed carrier and returns an OAuth URL. Not available in sandbox mode.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/carriers/{id}/actions/initiate-oauth",

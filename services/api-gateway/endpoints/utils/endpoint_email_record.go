@@ -9,11 +9,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// EmailRecordRequest is the request to email a record to its configured recipients.
+// Request to email a record to its configured recipients.
 type EmailRecordRequest struct {
-	// The ID of the record to email.
+	// Record ID.
 	ID string `json:"id" validate:"required"`
-	// The type of record: invoice, sales_order, or purchase_order.
+	// Record type: invoice, sales_order, or purchase_order.
 	Type string `json:"type" validate:"required"`
 }
 

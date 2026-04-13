@@ -10,15 +10,15 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpdateShipmentLineRequest is the request to partially update a shipment line.
+// Request to partially update a shipment line.
 type UpdateShipmentLineRequest struct {
-	// The ID of the shipment.
+	// Shipment ID.
 	ShipmentID string `path:"shipment_id" validate:"required"`
-	// The ID of the shipment line to update.
+	// Shipment line ID.
 	ShipmentLineID string `path:"id" validate:"required"`
-	// The quantity value to set.
+	// Quantity value.
 	QuantityValue *string `json:"quantity_value,omitempty" nullable:"false"`
-	// The ID of the unit for the quantity.
+	// Quantity unit ID.
 	QuantityUnitID *string `json:"quantity_unit_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
 }
 

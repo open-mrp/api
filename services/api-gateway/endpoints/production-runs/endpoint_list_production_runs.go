@@ -9,7 +9,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListProductionRunsRequest is the request to list production runs.
+// Request to list production runs.
 type ListProductionRunsRequest struct {
 	apiresource.PaginationRequest
 	// Filter by status: "open" or "closed".
@@ -29,7 +29,7 @@ type ListProductionRunsEndpoint struct{}
 func (e *ListProductionRunsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListProductionRunsRequest, *apiresource.List[apiresource.ProductionRunSummary]] {
 	return &apiendpoint.APIEndpoint[*ListProductionRunsRequest, *apiresource.List[apiresource.ProductionRunSummary]]{
 		Title:             "List Production Runs",
-		Description:       "Returns a paginated list of production runs for the current account.",
+		Description:       "Returns a paginated list of production runs.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/production-runs",

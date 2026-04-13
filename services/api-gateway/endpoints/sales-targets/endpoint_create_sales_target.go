@@ -11,17 +11,17 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// CreateSalesTargetRequest is the request to create a new sales target.
+// Request to create a sales target.
 type CreateSalesTargetRequest struct {
-	// The user ID (sales rep) to create the target for.
+	// Sales rep user ID.
 	SalesRepID string `path:"id" validate:"required"`
-	// The start date for the sales target.
+	// Start date.
 	StartDate time.Time `json:"start_date"`
-	// The end date for the sales target.
+	// End date.
 	EndDate time.Time `json:"end_date"`
-	// The target amount value (decimal string).
+	// Target amount value (decimal string).
 	AmountValue string `json:"amount_value"`
-	// The unit ID for the target amount.
+	// Amount unit ID.
 	AmountUnitID string `json:"amount_unit_id" validate:"max=191"`
 }
 
@@ -41,7 +41,7 @@ type CreateSalesTargetEndpoint struct{}
 func (e *CreateSalesTargetEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateSalesTargetRequest, *apiresource.SalesTarget] {
 	return &apiendpoint.APIEndpoint[*CreateSalesTargetRequest, *apiresource.SalesTarget]{
 		Title:             "Create Sales Target",
-		Description:       "Creates a new sales target for an account user.",
+		Description:       "Creates a sales target for an account user.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/account-users/{id}/sales-targets",

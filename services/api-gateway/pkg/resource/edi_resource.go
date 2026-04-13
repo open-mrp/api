@@ -10,29 +10,29 @@ import (
 
 const SampleDCLocationID = "dclo_01gf7a8200er3ar3pkfrb6kk30"
 
-// DCLocationCustomer is a lightweight customer sub-resource on a DC location.
+// Customer sub-resource on a DC location.
 type DCLocationCustomer struct {
-	// The unique identifier for the customer.
+	// Customer ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=customer"`
-	// The display name of the customer.
+	// Display name.
 	Name string `json:"name" validate:"required"`
 }
 
-// DCLocation represents a DC location.
+// DC location resource.
 type DCLocation struct {
-	// The unique identifier for the DC location.
+	// DC location ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=dc_location"`
-	// The location description.
+	// Location description.
 	Location string `json:"location" validate:"required"`
-	// The customer associated with this DC location.
+	// Associated customer.
 	Customer *DCLocationCustomer `json:"customer"`
-	// The timestamp when the DC location was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The timestamp when the DC location was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
@@ -59,19 +59,19 @@ func (*DCLocation) SchemaExample() any {
 
 const SampleEDIRunID = "edru_01gf7a8200er3ar3pkfrb6kk30"
 
-// EDIRun represents an EDI run.
+// EDI run resource.
 type EDIRun struct {
-	// The unique identifier for the EDI run.
+	// EDI run ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=edi_run"`
-	// The timestamp when the EDI run completed.
+	// Timestamp when the EDI run completed.
 	CompletedAt time.Time `json:"completed_at" validate:"required"`
 	// Whether the EDI run succeeded.
 	HasSucceeded bool `json:"has_succeeded" validate:"required"`
-	// The timestamp when the EDI run was created.
+	// Timestamp when the EDI run was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The timestamp when the EDI run was last updated.
+	// Timestamp when the EDI run was last updated.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 

@@ -11,15 +11,15 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// CreateCarrierRequest is the request to create a new carrier.
+// Request to create a carrier.
 type CreateCarrierRequest struct {
-	// The display name of the carrier.
+	// Display name.
 	Name string `json:"name" validate:"required,max=255"`
-	// The carrier code.
+	// Carrier code.
 	Code *constants.CarrierCode `json:"code"`
-	// The carrier account number, required for UPS and USPS carriers.
+	// Carrier account number. Required for UPS and USPS carriers.
 	AccountNumber *string `json:"account_number" validate:"omitempty,max=255"`
-	// Whether this carrier is visible in the customer portal.
+	// Customer portal visibility.
 	CustomerPortalVisibility *constants.CustomerPortalVisibility `json:"customer_portal_visibility,omitempty" default:"visible" nullable:"false"`
 }
 
@@ -38,7 +38,7 @@ type CreateCarrierEndpoint struct{}
 func (e *CreateCarrierEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateCarrierRequest, *apiresource.Carrier] {
 	return &apiendpoint.APIEndpoint[*CreateCarrierRequest, *apiresource.Carrier]{
 		Title:             "Create Carrier",
-		Description:       "Creates a new carrier. If a Shippo-supported carrier code is provided, the carrier will be registered with Shippo and service levels will be auto-synced as options.",
+		Description:       "Creates a carrier. If a Shippo-supported carrier code is provided, the carrier will be registered with Shippo and service levels will be auto-synced as options.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/carriers",

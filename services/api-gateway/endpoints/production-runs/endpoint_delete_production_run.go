@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// DeleteProductionRunRequest is the request to delete a production run.
+// Request to delete a production run.
 type DeleteProductionRunRequest struct {
-	// The ID of the production run to delete.
+	// Production run ID.
 	ProductionRunID string `path:"id" validate:"required"`
 }
 

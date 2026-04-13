@@ -10,28 +10,28 @@ import (
 
 const SampleEmailLogID = "eml_01jm4r6700f8nwq3v5hx2d9ktp"
 
-// EmailLog represents an email log entry.
+// Email log entry.
 type EmailLog struct {
-	// The unique identifier for the email log.
+	// Email log ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=email_log"`
 	// Whether the email was sent.
 	HasSent bool `json:"has_sent"`
-	// The recipient email addresses.
+	// Recipient email addresses.
 	Recipients []string `json:"recipients" validate:"required"`
-	// The email subject line.
+	// Email subject line.
 	Subject *string `json:"subject"`
-	// The filename of any attachment.
+	// Filename of any attachment.
 	Filename *string `json:"filename"`
-	// The SES message ID returned by AWS.
+	// SES message ID returned by AWS.
 	SESMessageID *string `json:"ses_message_id"`
-	// The actor who sent the email. Null when the email was sent by the
+	// Actor who sent the email. Null when the email was sent by the
 	// system, or when the caller did not request `include=sent_by`.
 	SentBy *Actor `json:"sent_by" expandable:"true"`
-	// When this email log was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// When this email log was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 

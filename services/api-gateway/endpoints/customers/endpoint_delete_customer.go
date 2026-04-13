@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// DeleteCustomerRequest is the request to delete a single customer.
+// Request to delete a customer.
 type DeleteCustomerRequest struct {
-	// The ID of the customer to delete.
+	// Customer ID.
 	CustomerID string `path:"id" validate:"required"`
 }
 
@@ -20,7 +20,7 @@ type DeleteCustomerEndpoint struct{}
 func (e *DeleteCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteCustomerRequest, *apiresource.EmptyResource] {
 	return &apiendpoint.APIEndpoint[*DeleteCustomerRequest, *apiresource.EmptyResource]{
 		Title:             "Delete Customer",
-		Description:       "Deletes a customer and its associated account relations, addresses, and account users.",
+		Description:       "Deletes a customer and associated account relations, addresses, and account users.",
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/customers/{id}",

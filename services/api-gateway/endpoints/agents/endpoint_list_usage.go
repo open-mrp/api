@@ -9,7 +9,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListUsageRequest is the request to list agent token usage records.
+// Request to list agent token usage records.
 type ListUsageRequest struct {
 	// Number of days of usage history to return. Defaults to 30.
 	Days int32 `query:"days" default:"30" validate:"min=1,max=365"`

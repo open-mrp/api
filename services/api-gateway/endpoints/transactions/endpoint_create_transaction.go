@@ -10,21 +10,21 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// CreateTransactionRequest is the request to create a new transaction.
+// Request to create a transaction.
 type CreateTransactionRequest struct {
-	// The ID of the customer for this transaction.
+	// Customer ID.
 	CustomerID string `json:"customer_id" validate:"required,max=191"`
-	// The transaction type code.
+	// Transaction type code.
 	TransactionTypeCode string `json:"type" validate:"required,max=255"`
-	// The transaction amount as a decimal string.
+	// Transaction amount as a decimal string.
 	Amount string `json:"amount" validate:"required"`
-	// The transaction method code.
+	// Transaction method code.
 	TransactionMethodCode *string `json:"method" validate:"omitempty,max=255"`
-	// The adjustment type code, if applicable.
+	// Adjustment type code.
 	AdjustmentTypeCode *string `json:"adjustment_type" validate:"omitempty,max=255"`
-	// The ID of the user responsible for this transaction.
+	// Responsible user ID.
 	ResponsibleUserID *string `json:"responsible_user_id" validate:"omitempty,max=191"`
-	// A note about this transaction.
+	// Note.
 	Note *string `json:"note"`
 }
 
@@ -47,7 +47,7 @@ type CreateTransactionEndpoint struct{}
 func (e *CreateTransactionEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateTransactionRequest, *apiresource.TransactionDetail] {
 	return &apiendpoint.APIEndpoint[*CreateTransactionRequest, *apiresource.TransactionDetail]{
 		Title:             "Create Transaction",
-		Description:       "Creates a new transaction with an automatically generated transaction number.",
+		Description:       "Creates a transaction with an automatically generated transaction number.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/finance/transactions",

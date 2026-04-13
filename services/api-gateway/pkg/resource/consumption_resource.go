@@ -10,37 +10,37 @@ import (
 
 const SampleConsumptionID = "cp_01jm4r6700f8nwq3v5hx2d9ktp"
 
-// Consumption represents a material consumed by a production step.
+// Material consumed by a production step.
 type Consumption struct {
-	// The unique identifier for the consumption.
+	// Consumption ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=consumption"`
-	// The quantity consumed.
+	// Quantity consumed.
 	Quantity *Quantity `json:"quantity" expandable:"true"`
-	// The waste quantity.
+	// Waste quantity.
 	WasteQuantity *Quantity `json:"waste_quantity" expandable:"true"`
-	// The consumed item.
+	// Consumed item.
 	ConsumedItem *ConsumptionItem `json:"consumed_item" expandable:"true"`
-	// Optional instructions for how this material is consumed.
+	// Instructions for how this material is consumed.
 	Instructions *string `json:"instructions"`
-	// The timestamp when the consumption was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The timestamp when the consumption was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
-// ConsumptionItem is a lightweight item representation for consumption sub-resources.
+// Item embedded within a consumption.
 type ConsumptionItem struct {
-	// The unique identifier for the item.
+	// Item ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=item"`
-	// The stock keeping unit code.
+	// Stock keeping unit code.
 	SKU string `json:"sku" validate:"required"`
-	// A description of the item.
+	// Item description.
 	Description *string `json:"description"`
-	// The item type code.
+	// Item type code.
 	ItemTypeCode constants.ItemTypeCode `json:"item_type" validate:"required"`
 }
 

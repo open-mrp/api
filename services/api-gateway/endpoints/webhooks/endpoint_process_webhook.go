@@ -14,7 +14,7 @@ type ProcessWebhookEndpoint struct{}
 func (e *ProcessWebhookEndpoint) Materialize() *apiendpoint.APIEndpoint[*apiresource.StripeWebhookRequest, *apiresource.WebhookResponse] {
 	return &apiendpoint.APIEndpoint[*apiresource.StripeWebhookRequest, *apiresource.WebhookResponse]{
 		Title:             "Process Stripe Webhook",
-		Description:       "Receives and processes a Stripe webhook event, verifying the signature before dispatching.",
+		Description:       "Processes a Stripe webhook event, verifying the signature before dispatching.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/webhooks/stripe",

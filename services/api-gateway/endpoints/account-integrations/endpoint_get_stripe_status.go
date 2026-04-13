@@ -9,7 +9,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetStripeStatusRequest is the request to check Stripe integration status.
+// Request to check Stripe integration status.
 type GetStripeStatusRequest struct{}
 
 type GetStripeStatusEndpoint struct{}

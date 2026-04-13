@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// DeleteRegistrationFlowRequest is the request to delete a registration flow.
+// Request to delete a registration flow.
 type DeleteRegistrationFlowRequest struct {
-	// The ID of the registration flow to delete.
+	// Registration flow ID.
 	RegistrationFlowID string `path:"id" validate:"required"`
 }
 

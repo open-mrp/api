@@ -10,11 +10,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// EmailReceivablesForCustomerRequest is the request to email receivable entries for a specific customer.
+// Request to email receivable entries for a specific customer.
 type EmailReceivablesForCustomerRequest struct {
-	// The customer account ID.
+	// Customer account ID.
 	AccountID string `json:"-" path:"account_id" validate:"required"`
-	// The email addresses to send the receivables report to.
+	// Email addresses to send the receivables report to.
 	RecipientEmails []string `json:"recipient_emails" validate:"required,min=1"`
 }
 

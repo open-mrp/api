@@ -11,23 +11,23 @@ import (
 const SampleRateID = "ra_01jm4r6700f8nwq3v5hx2d9ktp"
 const SampleRateValue = "25.500000000000000000000000000000"
 
-// Rate represents a ratio between two quantities with different units.
+// Rate resource.
 type Rate struct {
-	// The unique identifier for the rate.
+	// Rate ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=rate"`
-	// The rate value as a decimal string.
+	// Rate value as a decimal string.
 	Value string `json:"value" validate:"required" format:"decimal"`
-	// The numerator unit for this rate.
+	// Numerator unit.
 	NumeratorUnit *Unit `json:"numerator_unit" expandable:"true"`
-	// The denominator unit for this rate.
+	// Denominator unit.
 	DenominatorUnit *Unit `json:"denominator_unit" expandable:"true"`
-	// A human-readable formatted value including the unit (e.g. "$25.50 / kg" or "100 kg / hr").
+	// Human-readable formatted value (e.g. "$25.50 / kg" or "100 kg / hr").
 	DisplayValue string `json:"display_value" validate:"required"`
-	// When this rate was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// When this rate was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 

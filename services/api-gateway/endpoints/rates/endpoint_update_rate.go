@@ -11,19 +11,19 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpdateRateRequest is the request to partially update a rate.
+// Request to partially update a rate.
 type UpdateRateRequest struct {
-	// The ID of the rate to update.
+	// Rate ID.
 	RateID string `path:"id" validate:"required"`
-	// The new decimal value of the rate.
+	// Decimal value of the rate.
 	Value *string `json:"value,omitempty" nullable:"false"`
-	// The new numerator unit ID for this rate.
+	// Numerator unit ID.
 	NumeratorUnitID *string `json:"numerator_unit_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
-	// The new denominator unit ID for this rate.
+	// Denominator unit ID.
 	DenominatorUnitID *string `json:"denominator_unit_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
-	// The ID of the parent resource that owns this rate.
+	// Parent resource ID.
 	ObjectID *string `json:"object_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
-	// The type of the parent resource (e.g. "item", "production_step").
+	// Parent resource type (e.g. "item", "production_step").
 	ObjectType *string `json:"object_type,omitempty" nullable:"false" validate:"omitempty,max=255"`
 }
 
@@ -43,7 +43,7 @@ type UpdateRateEndpoint struct{}
 func (e *UpdateRateEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateRateRequest, *apiresource.Rate] {
 	return &apiendpoint.APIEndpoint[*UpdateRateRequest, *apiresource.Rate]{
 		Title:             "Update Rate",
-		Description:       "Partially updates a rate record.",
+		Description:       "Partially updates a rate.",
 		Method:            http.MethodPatch,
 		Route:             "/v1/operations/rates/{id}",
 		ContentType:       "application/json",

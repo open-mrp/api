@@ -10,9 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetShippingTermRequest is the request to retrieve a single shipping term.
+// Request to retrieve a shipping term.
 type GetShippingTermRequest struct {
-	// The ID of the shipping term to retrieve.
+	// Shipping term ID.
 	ShippingTermID string `path:"id" validate:"required"`
 }
 
@@ -21,7 +21,7 @@ type GetShippingTermEndpoint struct{}
 func (e *GetShippingTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetShippingTermRequest, *apiresource.ShippingTerm] {
 	return &apiendpoint.APIEndpoint[*GetShippingTermRequest, *apiresource.ShippingTerm]{
 		Title:             "Get Shipping Term",
-		Description:       "Returns a single shipping term by its ID.",
+		Description:       "Returns a shipping term by ID.",
 		Method:            http.MethodGet,
 		Route:             "/v1/operations/shipping-terms/{id}",
 		ContentType:       "application/json",

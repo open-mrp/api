@@ -10,11 +10,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ConnectStepsRequest is the request to connect two production steps in the flow DAG.
+// ConnectStepsRequest is the request to connect two steps in the production flow DAG.
 type ConnectStepsRequest struct {
-	// The source (upstream) production step ID.
+	// Source (upstream) production step ID.
 	SourceProductionStepID string `json:"source_production_step_id" validate:"required"`
-	// The target (downstream) production step ID.
+	// Target (downstream) production step ID.
 	TargetProductionStepID string `json:"target_production_step_id" validate:"required"`
 }
 
@@ -32,7 +32,7 @@ type ConnectStepsEndpoint struct{}
 func (e *ConnectStepsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ConnectStepsRequest, *apiresource.EmptyResource] {
 	return &apiendpoint.APIEndpoint[*ConnectStepsRequest, *apiresource.EmptyResource]{
 		Title:             "Connect Production Steps",
-		Description:       "Links two production steps in the production flow DAG, making the source step an upstream dependency of the target step.",
+		Description:       "Connects two production steps in the production flow DAG. The source step becomes an upstream dependency of the target step.",
 		Method:            http.MethodPost,
 		Route:             "/v1/operations/production-flows/actions/connect-steps",
 		ContentType:       "application/json",

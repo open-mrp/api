@@ -9,7 +9,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListOrderDiscountsRequest is the request to list order discounts.
+// Request to list order discounts.
 type ListOrderDiscountsRequest struct {
 	apiresource.PaginationRequest
 }

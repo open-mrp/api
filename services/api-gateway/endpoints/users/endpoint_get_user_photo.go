@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetUserPhotoURLRequest is the request to get a presigned photo URL.
+// Request for a user's presigned photo URL.
 type GetUserPhotoURLRequest struct {
-	// The ID of the user.
+	// User ID.
 	UserID string `path:"id" validate:"required"`
 }
 
@@ -20,7 +20,7 @@ type GetUserPhotoURLEndpoint struct{}
 func (e *GetUserPhotoURLEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetUserPhotoURLRequest, *apiresource.UserPhotoURL] {
 	return &apiendpoint.APIEndpoint[*GetUserPhotoURLRequest, *apiresource.UserPhotoURL]{
 		Title:             "Get User Photo URL",
-		Description:       "Returns a presigned URL for the user's profile photo. The URL expires after one hour.",
+		Description:       "Returns a presigned URL for the user's profile photo. Expires after one hour.",
 		Method:            http.MethodGet,
 		Route:             "/v1/identity/users/{id}/photo",
 		ContentType:       "application/json",

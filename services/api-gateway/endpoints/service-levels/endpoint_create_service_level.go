@@ -11,17 +11,17 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// CreateServiceLevelRequest is the request to create a new service level.
+// Request to create a service level.
 type CreateServiceLevelRequest struct {
-	// The ID of the carrier.
+	// Carrier ID.
 	CarrierID string `path:"carrier_id" validate:"required"`
-	// The display name of the service level.
+	// Display name.
 	Name string `json:"name" validate:"required,max=255"`
-	// The service level code.
+	// Service level code.
 	Code string `json:"code" validate:"required,max=255"`
-	// Whether this service level is visible in the customer portal.
+	// Customer portal visibility.
 	CustomerPortalVisibility *constants.CustomerPortalVisibility `json:"customer_portal_visibility,omitempty" default:"visible" nullable:"false"`
-	// Whether this is a default (system-synced) service level.
+	// Default (system-synced) service level.
 	IsDefault bool `json:"is_default"`
 }
 
@@ -40,7 +40,7 @@ type CreateServiceLevelEndpoint struct{}
 func (e *CreateServiceLevelEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateServiceLevelRequest, *apiresource.ServiceLevel] {
 	return &apiendpoint.APIEndpoint[*CreateServiceLevelRequest, *apiresource.ServiceLevel]{
 		Title:             "Create Service Level",
-		Description:       "Creates a new service level (shipping service level) for a carrier.",
+		Description:       "Creates a service level for a carrier.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/carriers/{carrier_id}/service-levels",

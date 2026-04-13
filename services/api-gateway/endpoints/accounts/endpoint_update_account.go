@@ -11,27 +11,27 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpdateAccountRequest is the request to partially update an account.
+// Request to partially update an account.
 type UpdateAccountRequest struct {
-	// The ID of the account to update.
+	// Account ID.
 	AccountID string `path:"id" validate:"required"`
-	// The display name of the account.
+	// Display name.
 	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// The support email address.
+	// Support email address.
 	SupportEmail *string `json:"support_email,omitempty" nullable:"false" validate:"omitnil,custom_email,max=255"`
-	// The support phone number.
+	// Support phone number.
 	PhoneNumber *string `json:"phone_number,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// The portal slug.
+	// Portal slug.
 	Slug *string `json:"slug,omitempty" nullable:"false" validate:"omitempty,min=3,max=255"`
-	// The website URL.
+	// Website URL.
 	WebsiteURL *string `json:"website_url,omitempty" nullable:"false" validate:"omitempty,url,max=2083"`
-	// The Facebook handle.
+	// Facebook handle.
 	FacebookHandle *string `json:"facebook_handle,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// The Instagram handle.
+	// Instagram handle.
 	InstagramHandle *string `json:"instagram_handle,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// The LinkedIn handle.
+	// LinkedIn handle.
 	LinkedInHandle *string `json:"linkedin_handle,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// The Twitter handle.
+	// Twitter handle.
 	TwitterHandle *string `json:"twitter_handle,omitempty" nullable:"false" validate:"omitempty,max=255"`
 }
 

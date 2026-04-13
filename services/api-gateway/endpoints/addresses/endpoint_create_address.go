@@ -15,7 +15,7 @@ type CreateAddressEndpoint struct{}
 func (e *CreateAddressEndpoint) Materialize() *apiendpoint.APIEndpoint[*apirequest.AddressInput, *apiresource.Address] {
 	return &apiendpoint.APIEndpoint[*apirequest.AddressInput, *apiresource.Address]{
 		Title:             "Create Address",
-		Description:       "Creates a new address.",
+		Description:       "Creates an address.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/addresses",

@@ -12,13 +12,13 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// The request to create an API key
+// Request to create an API key.
 type CreateAPIKeyRequest struct {
-	// The role ID for the API key.
+	// Role ID assigned to the API key.
 	RoleID string `json:"role_id" validate:"required,max=191"`
-	// The name for the API key.
+	// Human-readable name for the API key.
 	Name string `json:"name" validate:"required,max=255"`
-	// Optional expiration time for the API key.
+	// Expiration time. If not set, the key does not expire.
 	ExpiresAt *time.Time `json:"expires_at,omitempty" nullable:"false"`
 }
 
@@ -36,7 +36,7 @@ type CreateAPIKeyEndpoint struct{}
 func (e *CreateAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAPIKeyRequest, *apiresource.CreatedAPIKey] {
 	return &apiendpoint.APIEndpoint[*CreateAPIKeyRequest, *apiresource.CreatedAPIKey]{
 		Title:             "Create API Key",
-		Description:       "Creates a new API key. The secret value is returned only once at creation and cannot be retrieved afterward.",
+		Description:       "Creates an API key. The secret key is returned once and cannot be retrieved later.",
 		Method:            http.MethodPost,
 		Route:             "/v1/auth/api-keys",
 		ContentType:       "application/json",

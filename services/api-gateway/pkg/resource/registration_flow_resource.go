@@ -13,33 +13,33 @@ const SampleRegistrationFlowName = "Default Registration Flow"
 const SampleRegistrationFlowOptionID = "rgfwo_01jm4r6700f8nwq3v5hx2d9ktp"
 const SampleRegistrationFlowOptionName = "Standard Option"
 
-// RegistrationFlowOption represents a selectable option within a registration flow.
+// Selectable option within a registration flow.
 type RegistrationFlowOption struct {
-	// The unique identifier for the registration flow option.
+	// Registration flow option ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=registration_flow_option"`
-	// The display name of the registration flow option.
+	// Display name.
 	Name string `json:"name" validate:"required"`
 }
 
-// RegistrationFlow represents a configured registration flow for customer onboarding.
+// Registration flow for customer onboarding.
 type RegistrationFlow struct {
-	// The unique identifier for the registration flow.
+	// Registration flow ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=registration_flow"`
-	// The display name of the registration flow.
+	// Display name.
 	Name string `json:"name" validate:"required"`
-	// The customer group options available in this registration flow.
+	// Customer group options available in this flow.
 	CustomerGroupOptions []RegistrationFlowOption `json:"customer_group_options" validate:"required"`
-	// The payment term options available in this registration flow.
+	// Payment term options available in this flow.
 	PaymentTermOptions []RegistrationFlowOption `json:"payment_term_options" validate:"required"`
-	// The shipping term options available in this registration flow.
+	// Shipping term options available in this flow.
 	ShippingTermOptions []RegistrationFlowOption `json:"shipping_term_options" validate:"required"`
-	// When this registration flow was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// When this registration flow was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 

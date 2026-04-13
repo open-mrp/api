@@ -10,9 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetRunRequest is the request to retrieve a single agent run.
+// Request to retrieve an agent run.
 type GetRunRequest struct {
-	// The ID of the agent run to retrieve.
+	// Agent run ID.
 	AgentRunID string `path:"id" validate:"required"`
 }
 
@@ -21,7 +21,7 @@ type GetRunEndpoint struct{}
 func (e *GetRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetRunRequest, *apiresource.AgentRun] {
 	return &apiendpoint.APIEndpoint[*GetRunRequest, *apiresource.AgentRun]{
 		Title:             "Get Run",
-		Description:       "Returns a single agent run by its ID.",
+		Description:       "Returns an agent run by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/ai/runs/{id}",

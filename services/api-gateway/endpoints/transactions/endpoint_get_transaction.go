@@ -10,9 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetTransactionRequest is the request to retrieve a single transaction.
+// Request to get a transaction.
 type GetTransactionRequest struct {
-	// The ID of the transaction to retrieve.
+	// Transaction ID.
 	TransactionID string `path:"id" validate:"required"`
 	// Sub-resources to include in the response.
 	Includes []string `include:"true"`
@@ -23,7 +23,7 @@ type GetTransactionEndpoint struct{}
 func (e *GetTransactionEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetTransactionRequest, *apiresource.TransactionDetail] {
 	return &apiendpoint.APIEndpoint[*GetTransactionRequest, *apiresource.TransactionDetail]{
 		Title:             "Get Transaction",
-		Description:       "Returns a single transaction by its ID.",
+		Description:       "Returns a transaction by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/finance/transactions/{id}",

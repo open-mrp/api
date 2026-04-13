@@ -10,31 +10,31 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// SplitQuantityInput represents a quantity input for a split operation.
+// Quantity input for a split operation.
 type SplitQuantityInput struct {
-	// An optional identifier for this split quantity.
+	// Identifier for this split quantity.
 	ID string `json:"id"`
-	// The decimal measure value.
+	// Decimal measure value.
 	Measure string `json:"measure" validate:"required"`
-	// The ID of the unit for this quantity.
+	// Unit ID.
 	UnitID string `json:"unit_id" validate:"required"`
 }
 
-// SplitBatchRequest is the request to split a batch into multiple parts.
+// Request to split batches into multiple parts.
 type SplitBatchRequest struct {
-	// The IDs of the batches to split.
+	// Batch IDs to split.
 	BatchIDs []string `json:"batch_ids" validate:"required"`
-	// The ID of the scanning station performing the split.
+	// Scanning station ID performing the split.
 	ScanningStationID string `json:"scanning_station_id" validate:"required"`
-	// The ID of the production step for the split.
+	// Production step ID for the split.
 	ProductionStepID string `json:"production_step_id" validate:"required"`
-	// The first split quantity (required).
+	// First split quantity.
 	Firsts SplitQuantityInput `json:"firsts" validate:"required"`
-	// The second split quantity (optional).
+	// Second split quantity.
 	Seconds *SplitQuantityInput `json:"seconds"`
-	// The waste quantity (optional).
+	// Waste quantity.
 	Waste *SplitQuantityInput `json:"waste"`
-	// Whether to close the original batch after splitting.
+	// Whether to close the original batches after splitting.
 	CloseBatch bool `json:"close_batch"`
 }
 

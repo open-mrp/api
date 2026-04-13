@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// DeleteAccountGroupRequest is the request to delete an account group.
+// Request to delete an account group.
 type DeleteAccountGroupRequest struct {
-	// The ID of the account group to delete.
+	// Account group ID.
 	AccountGroupID string `path:"id" validate:"required"`
 }
 
@@ -20,7 +20,7 @@ type DeleteAccountGroupEndpoint struct{}
 func (e *DeleteAccountGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteAccountGroupRequest, *apiresource.EmptyResource] {
 	return &apiendpoint.APIEndpoint[*DeleteAccountGroupRequest, *apiresource.EmptyResource]{
 		Title:             "Delete Account Group",
-		Description:       "Deletes an account group. This request will fail if the account group is actively used in production.",
+		Description:       "Deletes an account group. Fails if the account group is actively used in production.",
 		Method:            http.MethodDelete,
 		Route:             "/v1/sales/account-groups/{id}",
 		ContentType:       "application/json",

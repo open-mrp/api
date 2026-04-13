@@ -12,9 +12,9 @@ import (
 
 // RemoveItemAttributeRequest is the request to remove an attribute from an item.
 type RemoveItemAttributeRequest struct {
-	// The ID of the item.
+	// Item ID.
 	ItemID string `path:"id" validate:"required"`
-	// The ID of the attribute to remove.
+	// Attribute ID.
 	AttributeID string `path:"attribute_id" validate:"required"`
 }
 

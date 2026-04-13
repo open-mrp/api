@@ -11,57 +11,57 @@ import (
 const SampleAllocationEntryID = "txal_01jm4r6700f8nwq3v5hx2d9ktp"
 const SampleOpenCreditEntryID = "txn_01jm4r6700f8nwq3v5hx2d9ktp" // #nosec G101 -- sample ID, not a credential
 
-// AllocationEntry represents a transaction allocation entry in list views.
+// Transaction allocation entry in list views.
 type AllocationEntry struct {
-	// The unique identifier for the allocation.
+	// Allocation ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=allocation_entry"`
-	// The allocated amount as a decimal string.
+	// Allocated amount as a decimal string.
 	Amount string `json:"amount" validate:"required"`
-	// A human-readable formatted amount (e.g. "$500.00").
+	// Human-readable formatted amount (e.g. "$500.00").
 	DisplayAmount string `json:"display_amount" validate:"required"`
-	// The customer associated with this allocation.
+	// Customer associated with this allocation.
 	Customer *AllocationCustomer `json:"customer" validate:"required"`
-	// The transaction associated with this allocation.
+	// Transaction associated with this allocation.
 	Transaction *AllocationTransaction `json:"transaction" validate:"required"`
-	// The invoice associated with this allocation.
+	// Invoice associated with this allocation.
 	Invoice *AllocationInvoice `json:"invoice" validate:"required"`
-	// A note about this allocation.
+	// Note about this allocation.
 	Note *string `json:"note"`
-	// The timestamp when the allocation was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 }
 
-// AllocationCustomer is a minimal customer sub-resource for allocation entries.
+// Minimal customer sub-resource for allocation entries.
 type AllocationCustomer struct {
-	// The customer display name.
+	// Customer display name.
 	Name string `json:"name" validate:"required"`
-	// The customer number.
+	// Customer number.
 	Number *string `json:"number"`
 }
 
-// AllocationTransaction is a minimal transaction sub-resource for allocation entries.
+// Minimal transaction sub-resource for allocation entries.
 type AllocationTransaction struct {
-	// The unique identifier for the transaction.
+	// Transaction ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=transaction"`
-	// The type of transaction (e.g. "payment", "credit").
+	// Transaction type (e.g. "payment", "credit").
 	Type string `json:"type" validate:"required"`
-	// The transaction method (e.g. "check", "wire").
+	// Transaction method (e.g. "check", "wire").
 	Method *string `json:"method"`
-	// The adjustment type, if applicable.
+	// Adjustment type, if applicable.
 	AdjustmentType *string `json:"adjustment_type"`
 }
 
-// AllocationInvoice is a minimal invoice sub-resource for allocation entries.
+// Minimal invoice sub-resource for allocation entries.
 type AllocationInvoice struct {
-	// The unique identifier for the invoice.
+	// Invoice ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=invoice_summary"`
-	// The invoice number.
+	// Invoice number.
 	Number string `json:"number" validate:"required"`
 }
 
@@ -90,45 +90,45 @@ func (*AllocationEntry) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleAllocationEntry)
 }
 
-// OpenCreditEntry represents an open (not fully allocated) credit transaction.
+// Open (not fully allocated) credit transaction.
 type OpenCreditEntry struct {
-	// The unique identifier for the transaction.
+	// Transaction ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=open_credit_entry"`
-	// The transaction number.
+	// Transaction number.
 	Number string `json:"number" validate:"required"`
-	// The original transaction amount as a decimal string.
+	// Original transaction amount as a decimal string.
 	OriginalAmount string `json:"original_amount" validate:"required"`
-	// The total amount already allocated as a decimal string.
+	// Total amount already allocated as a decimal string.
 	AllocatedAmount string `json:"allocated_amount" validate:"required"`
-	// The remaining unallocated amount as a decimal string.
+	// Remaining unallocated amount as a decimal string.
 	LeftoverAmount string `json:"leftover_amount" validate:"required"`
-	// The customer associated with this transaction.
+	// Customer associated with this transaction.
 	Customer *AllocationCustomer `json:"customer" validate:"required"`
-	// The type of transaction.
+	// Transaction type.
 	TransactionType string `json:"transaction_type" validate:"required"`
-	// The transaction method.
+	// Transaction method.
 	TransactionMethod *string `json:"transaction_method"`
-	// The adjustment type, if applicable.
+	// Adjustment type, if applicable.
 	AdjustmentType *string `json:"adjustment_type"`
-	// The responsible user's name.
+	// Responsible user's name.
 	ResponsibleUserName *string `json:"responsible_user_name"`
-	// A note about this transaction.
+	// Note about this transaction.
 	Note *string `json:"note"`
-	// The Stripe payment ID, if applicable.
+	// Stripe payment ID, if applicable.
 	StripePaymentID *string `json:"stripe_payment_id"`
-	// The allocations against invoices for this transaction.
+	// Allocations against invoices for this transaction.
 	InvoiceAllocations []InvoiceAllocationEntry `json:"invoice_allocations"`
-	// The timestamp when the transaction was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 }
 
-// InvoiceAllocationEntry represents an allocation of a credit against an invoice.
+// Allocation of a credit against an invoice.
 type InvoiceAllocationEntry struct {
-	// The invoice number.
+	// Invoice number.
 	InvoiceNumber string `json:"invoice_number" validate:"required"`
-	// The allocated amount as a decimal string.
+	// Allocated amount as a decimal string.
 	Amount string `json:"amount" validate:"required"`
 }
 

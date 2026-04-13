@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// SwitchPlanRequest is the request to switch pricing plans.
+// Request to switch pricing plans.
 type SwitchPlanRequest struct {
-	// The ID of the target pricing plan to switch to.
+	// Target pricing plan ID.
 	PlanID string `path:"id" validate:"required"`
 }
 

@@ -11,19 +11,19 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// RateShopRequest is the request to rate shop across carriers.
+// Request to rate shop across carriers.
 type RateShopRequest struct {
-	// The product line IDs for the shipment.
+	// Product line IDs.
 	ProductLineIDs []string `json:"product_line_ids,omitempty"`
-	// The customer ID for the shipment.
+	// Customer ID.
 	CustomerID *string `json:"customer_id,omitempty"`
-	// The origin address.
+	// Origin address.
 	FromAddress apirequest.AddressInput `json:"from_address" validate:"required"`
-	// The destination address.
+	// Destination address.
 	ToAddress apirequest.AddressInput `json:"to_address" validate:"required"`
-	// The parcels to rate shop for.
+	// Parcels to rate shop.
 	Parcels []ParcelInput `json:"parcels" validate:"required,min=1"`
-	// The total order value.
+	// Total order value.
 	OrderTotal *float64 `json:"order_total,omitempty"`
 }
 

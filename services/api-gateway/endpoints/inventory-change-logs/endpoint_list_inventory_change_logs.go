@@ -11,7 +11,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListInventoryChangeLogsRequest is the request to list inventory change logs with optional filters.
+// ListInventoryChangeLogsRequest is the request to list inventory change logs.
 type ListInventoryChangeLogsRequest struct {
 	apiresource.PaginationRequest
 	// Filter by item IDs.

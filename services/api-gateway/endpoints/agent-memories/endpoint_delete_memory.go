@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// DeleteMemoryRequest is the request to delete an agent memory.
+// Request to delete an agent memory.
 type DeleteMemoryRequest struct {
-	// The ID of the memory to delete.
+	// Memory ID.
 	ID string `path:"id" validate:"required"`
 }
 

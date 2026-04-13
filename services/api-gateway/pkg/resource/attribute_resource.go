@@ -11,21 +11,21 @@ import (
 const SampleAttributeID = "at_01jm4r6700f8nwq3v5hx2d9ktp"
 const SampleAttributeValue = "Premium"
 
-// Attribute represents a value option within a property.
+// Value option within a property.
 type Attribute struct {
-	// The unique identifier for the attribute.
+	// Attribute ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=attribute"`
-	// The value of the attribute.
+	// Attribute value.
 	Value string `json:"value" validate:"required"`
-	// The color code of the attribute.
+	// Color code.
 	ColorCode constants.Color `json:"color" validate:"required"`
-	// The display order of the attribute.
+	// Display order.
 	SortOrder int32 `json:"sort_order"`
-	// The timestamp when the attribute was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The timestamp when the attribute was last updated.
+	// Last update timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 

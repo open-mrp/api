@@ -10,9 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// AcknowledgeAlertRequest is the request to acknowledge an agent alert.
+// AcknowledgeAlertRequest is a request to acknowledge an agent alert.
 type AcknowledgeAlertRequest struct {
-	// The ID of the alert to acknowledge.
+	// Alert ID.
 	AlertID string `path:"id" validate:"required"`
 }
 

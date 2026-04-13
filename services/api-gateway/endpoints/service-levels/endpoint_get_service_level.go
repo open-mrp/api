@@ -9,11 +9,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetServiceLevelRequest is the request to retrieve a single service level.
+// Request to retrieve a service level.
 type GetServiceLevelRequest struct {
-	// The ID of the carrier.
+	// Carrier ID.
 	CarrierID string `path:"carrier_id" validate:"required"`
-	// The ID of the service level to retrieve.
+	// Service level ID.
 	ServiceLevelID string `path:"id" validate:"required"`
 }
 
@@ -22,7 +22,7 @@ type GetServiceLevelEndpoint struct{}
 func (e *GetServiceLevelEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetServiceLevelRequest, *apiresource.ServiceLevel] {
 	return &apiendpoint.APIEndpoint[*GetServiceLevelRequest, *apiresource.ServiceLevel]{
 		Title:             "Get Service Level",
-		Description:       "Returns a single service level by its ID.",
+		Description:       "Returns a service level by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/carriers/{carrier_id}/service-levels/{id}",

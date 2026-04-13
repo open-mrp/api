@@ -11,7 +11,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListAuditEventsRequest is the request to list audit events with filters.
+// Request to list audit events.
 type ListAuditEventsRequest struct {
 	apiresource.PaginationRequest
 	// Start of date range for occurred_at.
@@ -19,17 +19,17 @@ type ListAuditEventsRequest struct {
 	// End of date range for occurred_at.
 	EndDate *time.Time `query:"end_date"`
 
-	// Resource type, matching the object type of the audited entity.
+	// Resource type of the audited entity.
 	ResourceType *constants.ObjectType `query:"resource_type"`
-	// Resource ID (type_id of the audited resource).
+	// Audited resource ID.
 	ResourceID *string `query:"resource_id"`
 
-	// Actor ID (user ID or API key type_id).
+	// Actor ID.
 	ActorID *string `query:"actor_id"`
 	// Audit action.
 	Action *constants.AuditAction `query:"action"`
 
-	// Actor's home account ID.
+	// Actor home account ID.
 	AccountID *string `query:"account_id"`
 }
 

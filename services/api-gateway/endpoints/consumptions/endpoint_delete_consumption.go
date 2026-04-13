@@ -10,11 +10,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// DeleteConsumptionRequest is the request to delete a consumption.
+// Request to delete a consumption.
 type DeleteConsumptionRequest struct {
-	// The ID of the production step.
+	// Production step ID.
 	ProductionStepID string `path:"production_step_id" validate:"required"`
-	// The ID of the consumption to delete.
+	// Consumption ID.
 	ConsumptionID string `path:"id" validate:"required"`
 }
 

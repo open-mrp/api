@@ -10,9 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetDepartmentRequest is the request to retrieve a single department.
+// Request to get a department.
 type GetDepartmentRequest struct {
-	// The ID of the department to retrieve.
+	// Department ID.
 	DepartmentID string `path:"id" validate:"required"`
 }
 
@@ -21,7 +21,7 @@ type GetDepartmentEndpoint struct{}
 func (e *GetDepartmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetDepartmentRequest, *apiresource.Department] {
 	return &apiendpoint.APIEndpoint[*GetDepartmentRequest, *apiresource.Department]{
 		Title:             "Get Department",
-		Description:       "Returns a single department by its ID.",
+		Description:       "Returns a department by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/departments/{id}",

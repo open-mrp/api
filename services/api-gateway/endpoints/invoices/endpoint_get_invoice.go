@@ -10,9 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetInvoiceRequest is the request to retrieve a single invoice.
+// Request to get an invoice.
 type GetInvoiceRequest struct {
-	// The ID of the invoice to retrieve.
+	// Invoice ID.
 	InvoiceID string `path:"id" validate:"required"`
 	// Sub-resources to include in the response.
 	Includes []string `include:"true"`
@@ -23,7 +23,7 @@ type GetInvoiceEndpoint struct{}
 func (e *GetInvoiceEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetInvoiceRequest, *apiresource.Invoice] {
 	return &apiendpoint.APIEndpoint[*GetInvoiceRequest, *apiresource.Invoice]{
 		Title:             "Get Invoice",
-		Description:       "Returns a single invoice by its ID.",
+		Description:       "Returns an invoice by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/finance/invoices/{id}",

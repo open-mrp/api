@@ -11,25 +11,25 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// RegisterCustomerRequest is the request to register a new or existing customer.
+// Request to register a new or existing customer.
 type RegisterCustomerRequest struct {
-	// The slug of the account to register with.
+	// Account slug.
 	AccountSlug string `json:"account_slug" validate:"required"`
 	// Whether the registrant is an existing customer.
 	IsExistingCustomer bool `json:"is_existing_customer"`
-	// The customer number, if registering as an existing customer.
+	// Customer number, if registering as an existing customer.
 	CustomerNumber *string `json:"customer_number,omitempty"`
-	// The name of the customer.
+	// Customer name.
 	CustomerName *string `json:"customer_name,omitempty"`
-	// The ID of the customer group to associate with the customer.
+	// Customer group ID.
 	CustomerGroupID *string `json:"customer_group_id,omitempty"`
-	// The phone number of the customer.
+	// Phone number.
 	Phone *string `json:"phone,omitempty"`
-	// The address of the customer.
+	// Customer address.
 	Address *apirequest.AddressInput `json:"address,omitempty"`
-	// The ID of the shipping term to associate with the customer.
+	// Shipping term ID.
 	ShippingTermID *string `json:"shipping_term_id,omitempty"`
-	// The ID of the payment term to associate with the customer.
+	// Payment term ID.
 	PaymentTermID *string `json:"payment_term_id,omitempty"`
 }
 
@@ -65,7 +65,7 @@ type RegisterCustomerEndpoint struct{}
 func (e *RegisterCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*RegisterCustomerRequest, *apiresource.EmptyResource] {
 	return &apiendpoint.APIEndpoint[*RegisterCustomerRequest, *apiresource.EmptyResource]{
 		Title:             "Register Customer",
-		Description:       "Submits a customer registration request through a registration flow.",
+		Description:       "Registers a customer through a registration flow.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/customers/registration",

@@ -11,19 +11,19 @@ import (
 const SamplePropertyID = "pp_01jm4r6700f8nwq3v5hx2d9ktp"
 const SamplePropertyName = "Color"
 
-// Property represents a property that groups attributes.
+// Property that groups attributes.
 type Property struct {
-	// The unique identifier for the property.
+	// Property ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=property"`
-	// The name of the property.
+	// Name.
 	Name string `json:"name" validate:"required"`
-	// The attributes belonging to this property.
+	// Attributes belonging to this property.
 	Attributes *List[Attribute] `json:"attributes" expandable:"true"`
-	// The timestamp when the property was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The timestamp when the property was last updated.
+	// Last update timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 

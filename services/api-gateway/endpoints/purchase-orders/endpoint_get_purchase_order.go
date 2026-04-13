@@ -10,11 +10,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetPurchaseOrderRequest is the request to retrieve a single purchase order by ID.
+// Request to retrieve a purchase order by ID.
 type GetPurchaseOrderRequest struct {
-	// The ID of the purchase order to retrieve.
+	// Purchase order ID.
 	PurchaseOrderID string `path:"id" validate:"required"`
-	// The fields to include in the response.
+	// Fields to include in the response.
 	Includes []string `query:"include"`
 }
 
@@ -23,7 +23,7 @@ type GetPurchaseOrderEndpoint struct{}
 func (e *GetPurchaseOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetPurchaseOrderRequest, *apiresource.PurchaseOrderDetail] {
 	return &apiendpoint.APIEndpoint[*GetPurchaseOrderRequest, *apiresource.PurchaseOrderDetail]{
 		Title:             "Get Purchase Order",
-		Description:       "Returns a single purchase order by its ID.",
+		Description:       "Returns a purchase order by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/purchase-orders/{id}",

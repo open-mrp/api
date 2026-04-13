@@ -8,23 +8,23 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-// Machine represents a machine within an account.
+// Machine within an account.
 type Machine struct {
-	// The unique identifier for the machine.
+	// Machine ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=machine"`
-	// The display name of the machine.
+	// Display name.
 	Name string `json:"name" validate:"required"`
-	// The serial number of the machine.
+	// Serial number.
 	SerialNumber string `json:"serial_number" validate:"required"`
-	// Optional notes about the machine.
+	// Notes.
 	Notes *string `json:"notes"`
-	// The department this machine belongs to.
+	// Associated department.
 	Department *Department `json:"department" expandable:"true"`
-	// The timestamp when the machine was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The timestamp when the machine was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 

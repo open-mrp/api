@@ -11,15 +11,15 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ContinueRunRequest is the request to continue an agent run awaiting input.
+// Request to continue an agent run awaiting input.
 type ContinueRunRequest struct {
-	// The ID of the agent run to continue.
+	// Agent run ID.
 	AgentRunID string `path:"id" validate:"required"`
-	// The user message to send to the agent.
+	// User message to send to the agent.
 	Message string `json:"message" validate:"required"`
-	// Optional list of tool slugs to approve individually. If empty, all pending tools are approved.
+	// Tool slugs to approve individually. If empty, all pending tools are approved.
 	ApprovedToolSlugs []string `json:"approved_tool_slugs"`
-	// Optional list of tool slugs to allow for the rest of the run without further approval.
+	// Tool slugs to allow for the rest of the run without further approval.
 	AllowedToolSlugs []string `json:"allowed_tool_slugs"`
 }
 
@@ -36,7 +36,7 @@ type ContinueRunEndpoint struct{}
 func (e *ContinueRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*ContinueRunRequest, *apiresource.AgentRun] {
 	return &apiendpoint.APIEndpoint[*ContinueRunRequest, *apiresource.AgentRun]{
 		Title:             "Continue Run",
-		Description:       "Continues an agent run that is awaiting input with a new user message.",
+		Description:       "Continues an agent run awaiting input with a user message.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/ai/runs/{id}/actions/continue",

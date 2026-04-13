@@ -9,17 +9,17 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// RequestDemoRequest is the request to submit a demo request.
+// Request to submit a demo request.
 type RequestDemoRequest struct {
-	// The name of the person requesting the demo.
+	// Name of the requester.
 	Name string `json:"name" validate:"required"`
-	// The email address of the person requesting the demo.
+	// Email address of the requester.
 	Email string `json:"email" validate:"required,custom_email"`
-	// The company name of the person requesting the demo.
+	// Company name.
 	Company string `json:"company" validate:"required"`
-	// The phone number of the person requesting the demo.
+	// Phone number.
 	PhoneNumber *string `json:"phone_number"`
-	// An optional message from the person requesting the demo.
+	// Message from the requester.
 	Message *string `json:"message"`
 }
 

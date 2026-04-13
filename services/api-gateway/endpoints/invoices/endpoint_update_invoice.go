@@ -10,11 +10,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpdateInvoiceRequest is the request to partially update an invoice.
+// Request to partially update an invoice.
 type UpdateInvoiceRequest struct {
-	// The ID of the invoice to update.
+	// Invoice ID.
 	InvoiceID string `path:"id" validate:"required"`
-	// A note to attach to the invoice.
+	// Note to attach to the invoice.
 	Note *string `json:"note,omitempty" nullable:"false"`
 	// Whether the invoice has been sent.
 	HasBeenSent *bool `json:"has_been_sent,omitempty" nullable:"false"`

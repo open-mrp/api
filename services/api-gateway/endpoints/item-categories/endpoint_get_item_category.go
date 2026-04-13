@@ -10,9 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetItemCategoryRequest is the request to retrieve a single item category.
+// Request to retrieve an item category.
 type GetItemCategoryRequest struct {
-	// The ID of the item category to retrieve.
+	// Item category ID.
 	ItemCategoryID string `path:"id" validate:"required"`
 }
 
@@ -21,7 +21,7 @@ type GetItemCategoryEndpoint struct{}
 func (e *GetItemCategoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetItemCategoryRequest, *apiresource.ItemCategory] {
 	return &apiendpoint.APIEndpoint[*GetItemCategoryRequest, *apiresource.ItemCategory]{
 		Title:             "Get Item Category",
-		Description:       "Returns a single item category by its ID, including account-specific and global system categories.",
+		Description:       "Returns an item category by ID. Includes account-specific and global system categories.",
 		Method:            http.MethodGet,
 		Route:             "/v1/catalog/item-categories/{id}",
 		ContentType:       "application/json",

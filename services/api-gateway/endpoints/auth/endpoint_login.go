@@ -10,11 +10,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// The request to login a user
+// Request to log in a user.
 type LoginRequest struct {
-	// The username or email for authentication.
+	// Username or email for authentication.
 	Identifier string `json:"identifier" validate:"required,identifier"`
-	// The password of the user.
+	// User password.
 	Password string `json:"password" validate:"required,max=72"` // #nosec G117 - Struct field, not a hardcoded credential
 }
 

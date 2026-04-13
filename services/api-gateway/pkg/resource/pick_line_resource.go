@@ -10,37 +10,37 @@ import (
 
 const SamplePickLineDetailID = "pkln_01jm4r6700f8nwq3v5hx2d9ktp"
 
-// PickSalesOrderLine is a minimal sales order line sub-resource for pick lines.
+// PickSalesOrderLine is a sales order line sub-resource for pick lines.
 type PickSalesOrderLine struct {
-	// The unique identifier for the sales order line.
+	// Sales order line ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=sales_order_line"`
-	// The line item number.
+	// Line item number.
 	LineItemNumber int32 `json:"line_item_number"`
-	// The product SKU.
+	// Product SKU.
 	ProductSKU string `json:"product_sku" validate:"required"`
-	// The product description.
+	// Product description.
 	ProductDescription *string `json:"product_description"`
 }
 
-// PickLineDetail represents a pick line resource.
+// PickLineDetail is a pick line resource.
 type PickLineDetail struct {
-	// The unique identifier for the pick line.
+	// Pick line ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=pick_line"`
-	// The quantity picked for this line.
+	// Quantity picked for this line.
 	Quantity *Quantity `json:"quantity" validate:"required"`
-	// The ordered quantity for this line.
+	// Ordered quantity for this line.
 	OrderedQuantity *Quantity `json:"ordered_quantity" validate:"required"`
-	// The sales order line info.
+	// Associated sales order line.
 	SalesOrderLine *PickSalesOrderLine `json:"sales_order_line"`
-	// The timestamp when the line was packed.
+	// Timestamp when the line was packed.
 	PackedAt *time.Time `json:"packed_at"`
-	// The timestamp when the line was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The timestamp when the line was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 

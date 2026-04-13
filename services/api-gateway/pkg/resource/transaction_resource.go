@@ -12,15 +12,15 @@ const SampleTransactionDetailID = "tx_01jm4r6700f8nwq3v5hx2d9ktp"
 const SampleTransactionMethodID = "txmd_01jm4r6700f8nwq3v5hx2d9ktp"
 const SampleTransactionTypeID = "txtp_01jm4r6700f8nwq3v5hx2d9ktp"
 
-// TransactionType represents a type of transaction.
+// Transaction type resource.
 type TransactionType struct {
-	// The unique identifier for the transaction type.
+	// Transaction type ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=transaction_type"`
-	// The display name of the transaction type.
+	// Display name.
 	Name string `json:"name" validate:"required"`
-	// The machine-readable code for the transaction type.
+	// Machine-readable code.
 	Code constants.TransactionType `json:"code" validate:"required"`
 }
 
@@ -35,15 +35,15 @@ func (*TransactionType) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleTransactionType)
 }
 
-// TransactionMethod represents a method used for a transaction.
+// Transaction method resource.
 type TransactionMethod struct {
-	// The unique identifier for the transaction method.
+	// Transaction method ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=transaction_method"`
-	// The display name of the transaction method.
+	// Display name.
 	Name string `json:"name" validate:"required"`
-	// The machine-readable code for the transaction method.
+	// Machine-readable code.
 	Code constants.TransactionMethod `json:"code" validate:"required"`
 }
 
@@ -58,39 +58,39 @@ func (*TransactionMethod) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleTransactionMethod)
 }
 
-// TransactionDetail represents a full transaction API resource.
+// Full transaction resource.
 type TransactionDetail struct {
-	// The unique identifier for the transaction.
+	// Transaction ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=transaction"`
-	// The transaction number.
+	// Transaction number.
 	Number string `json:"number" validate:"required"`
-	// The transaction amount.
+	// Transaction amount.
 	Amount *Quantity `json:"amount" validate:"required"`
-	// The customer associated with this transaction.
+	// Associated customer.
 	Customer *Customer `json:"customer" expandable:"true"`
-	// The user responsible for this transaction.
+	// Responsible user.
 	ResponsibleUser *AccountUser `json:"responsible_user" expandable:"true"`
-	// A note attached to this transaction.
+	// Note.
 	Note *string `json:"note"`
-	// The type of this transaction.
+	// Transaction type.
 	TransactionType *TransactionType `json:"transaction_type" validate:"required"`
-	// The method used for this transaction.
+	// Transaction method.
 	TransactionMethod *TransactionMethod `json:"transaction_method"`
-	// The adjustment type, if this is an adjustment transaction.
+	// Adjustment type.
 	AdjustmentType *AdjustmentType `json:"adjustment_type"`
-	// Whether this transaction is fully allocated against invoices.
+	// Whether fully allocated against invoices.
 	IsFullyAllocated bool `json:"is_fully_allocated" validate:"required"`
-	// The Stripe payment ID associated with this transaction.
+	// Stripe payment ID.
 	StripePaymentID *string `json:"stripe_payment_id"`
-	// The number of allocations for this transaction.
+	// Number of allocations.
 	AllocationCount int32 `json:"allocation_count" validate:"required"`
-	// The allocations for this transaction.
+	// Allocations.
 	Allocations *List[TransactionAllocation] `json:"allocations" expandable:"true"`
-	// The timestamp when the transaction was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The timestamp when the transaction was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
@@ -131,31 +131,31 @@ func (*TransactionDetail) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleTransactionDetail)
 }
 
-// TransactionSummary represents a lightweight transaction for list views.
+// Lightweight transaction for list views.
 type TransactionSummary struct {
-	// The unique identifier for the transaction.
+	// Transaction ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=transaction_summary"`
-	// The transaction number.
+	// Transaction number.
 	Number string `json:"number" validate:"required"`
-	// The transaction amount.
+	// Transaction amount.
 	Amount *Quantity `json:"amount" validate:"required"`
-	// The customer associated with this transaction.
+	// Associated customer.
 	Customer *Customer `json:"customer" expandable:"true"`
-	// The type of this transaction.
+	// Transaction type.
 	TransactionType *TransactionType `json:"transaction_type" validate:"required"`
-	// The method used for this transaction.
+	// Transaction method.
 	TransactionMethod *TransactionMethod `json:"transaction_method"`
-	// The adjustment type, if this is an adjustment transaction.
+	// Adjustment type.
 	AdjustmentType *AdjustmentType `json:"adjustment_type"`
-	// Whether this transaction is fully allocated against invoices.
+	// Whether fully allocated against invoices.
 	IsFullyAllocated bool `json:"is_fully_allocated" validate:"required"`
-	// The number of allocations for this transaction.
+	// Number of allocations.
 	AllocationCount int32 `json:"allocation_count" validate:"required"`
-	// The timestamp when the transaction was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The timestamp when the transaction was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 

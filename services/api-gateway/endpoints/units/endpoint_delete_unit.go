@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// DeleteUnitRequest is the request to delete a unit.
+// Request to delete a unit.
 type DeleteUnitRequest struct {
-	// The ID of the unit to delete.
+	// Unit ID.
 	UnitID string `path:"id" validate:"required"`
 }
 

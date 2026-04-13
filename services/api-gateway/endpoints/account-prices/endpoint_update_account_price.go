@@ -11,23 +11,23 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpdateAccountPriceRequest is the request to partially update an account price.
+// Request to partially update an account price.
 type UpdateAccountPriceRequest struct {
-	// The ID of the account price to update.
+	// Account price ID.
 	AccountPriceID string `path:"id" validate:"required"`
-	// The ID of the recipient (customer) account.
+	// Recipient account ID.
 	RecipientAccountID *string `json:"recipient_account_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
-	// The ID of the product line this price applies to.
+	// Product line ID.
 	ProductLineID *string `json:"product_line_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
-	// The rate value as a decimal string.
+	// Rate value as a decimal string.
 	RateValue *string `json:"rate_value,omitempty" nullable:"false"`
-	// The ID of the numerator unit for the rate.
+	// Rate numerator unit ID.
 	RateNumeratorUnitID *string `json:"rate_numerator_unit_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
-	// The ID of the denominator unit for the rate.
+	// Rate denominator unit ID.
 	RateDenominatorUnitID *string `json:"rate_denominator_unit_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
-	// The IDs of item categories to constrain this price to. Replaces existing categories.
+	// Item category IDs to constrain this price to. Replaces existing categories.
 	CategoryIDs *[]string `json:"category_ids,omitempty" nullable:"false"`
-	// The IDs of attributes to constrain this price to. Replaces existing attributes.
+	// Attribute IDs to constrain this price to. Replaces existing attributes.
 	AttributeIDs *[]string `json:"attribute_ids,omitempty" nullable:"false"`
 }
 

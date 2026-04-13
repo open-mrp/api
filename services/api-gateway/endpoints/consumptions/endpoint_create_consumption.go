@@ -11,21 +11,21 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// CreateConsumptionRequest is the request to create a new consumption.
+// Request to create a consumption.
 type CreateConsumptionRequest struct {
-	// The ID of the production step.
+	// Production step ID.
 	ProductionStepID string `path:"production_step_id" validate:"required"`
-	// The ID of the item being consumed.
+	// Item ID.
 	ItemID string `json:"item_id" validate:"required,max=191"`
-	// The decimal value of the quantity consumed.
+	// Consumed quantity value.
 	QuantityValue string `json:"quantity_value" validate:"required"`
-	// The unit ID for the quantity consumed.
+	// Consumed quantity unit ID.
 	QuantityUnitID string `json:"quantity_unit_id" validate:"required,max=191"`
-	// The decimal value of the waste quantity.
+	// Waste quantity value.
 	WasteQuantityValue string `json:"waste_quantity_value" validate:"required"`
-	// The unit ID for the waste quantity.
+	// Waste quantity unit ID.
 	WasteQuantityUnitID string `json:"waste_quantity_unit_id" validate:"required,max=191"`
-	// Optional instructions for how this material is consumed.
+	// Instructions for how this material is consumed.
 	Instructions *string `json:"instructions,omitempty"`
 }
 
@@ -47,7 +47,7 @@ type CreateConsumptionEndpoint struct{}
 func (e *CreateConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateConsumptionRequest, *apiresource.Consumption] {
 	return &apiendpoint.APIEndpoint[*CreateConsumptionRequest, *apiresource.Consumption]{
 		Title:             "Create Consumption",
-		Description:       "Creates a new consumption within a production step.",
+		Description:       "Creates a consumption within a production step.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/production-steps/{production_step_id}/consumptions",

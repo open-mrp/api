@@ -11,11 +11,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpdateAgentStatusRequest is the request to update the per-account status of an agent.
+// Request to update the per-account status of an agent.
 type UpdateAgentStatusRequest struct {
-	// The ID of the agent definition to update.
+	// Agent definition ID.
 	AgentDefinitionID string `path:"id" validate:"required"`
-	// The new account-level status code: "active" or "inactive".
+	// Account-level status code: "active" or "inactive".
 	StatusCode string `json:"status_code" validate:"required,max=255"`
 }
 

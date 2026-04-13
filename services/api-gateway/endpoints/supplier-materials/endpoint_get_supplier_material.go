@@ -10,9 +10,12 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
+// Request to get a supplier material.
 type GetSupplierMaterialRequest struct {
+	// Supplier ID.
 	SupplierID string `path:"supplier_id" validate:"required"`
-	ItemID     string `path:"id" validate:"required"`
+	// Supplier material ID.
+	ItemID string `path:"id" validate:"required"`
 }
 
 type GetSupplierMaterialEndpoint struct{}
@@ -20,7 +23,7 @@ type GetSupplierMaterialEndpoint struct{}
 func (e *GetSupplierMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetSupplierMaterialRequest, *apiresource.SupplierMaterial] {
 	return &apiendpoint.APIEndpoint[*GetSupplierMaterialRequest, *apiresource.SupplierMaterial]{
 		Title:             "Get Supplier Material",
-		Description:       "Returns a single supplier material by supplier and item ID.",
+		Description:       "Returns a supplier material by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/suppliers/{supplier_id}/materials/{id}",

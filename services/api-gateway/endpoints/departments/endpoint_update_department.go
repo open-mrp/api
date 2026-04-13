@@ -10,19 +10,19 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpdateDepartmentRequest is the request to partially update a department.
+// Request to partially update a department.
 type UpdateDepartmentRequest struct {
-	// The ID of the department to update.
+	// Department ID.
 	DepartmentID string `path:"id" validate:"required"`
-	// The display name of the department.
+	// Display name.
 	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// Optional notes about the department.
+	// Notes about the department.
 	Notes *string `json:"notes,omitempty" nullable:"true"`
-	// The ID of the storage location to associate with this department.
+	// Storage location ID.
 	LocationID *string `json:"location_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
-	// IDs of scanning stations to connect to this department (additive).
+	// Scanning station IDs to connect (additive).
 	ScanningStationIDs []string `json:"scanning_station_ids,omitempty"`
-	// IDs of machines to connect to this department (additive).
+	// Machine IDs to connect (additive).
 	MachineIDs []string `json:"machine_ids,omitempty"`
 }
 

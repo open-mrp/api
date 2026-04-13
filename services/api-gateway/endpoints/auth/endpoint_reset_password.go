@@ -10,11 +10,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// The request to reset a user's password
+// Request to reset a user's password.
 type ResetPasswordRequest struct {
-	// The password reset token (from request_password_reset endpoint).
+	// Password reset token.
 	Token string `json:"token" validate:"required"`
-	// The new password of the user.
+	// New password.
 	Password string `json:"password" validate:"required,password"` // #nosec G117 - Struct field, not a hardcoded credential
 }
 

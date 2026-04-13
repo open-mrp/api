@@ -8,81 +8,81 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-// ProductionStep represents a production step with all nested data.
+// Production step with all nested data.
 type ProductionStep struct {
-	// The unique identifier for the production step.
+	// Production step ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=production_step"`
-	// The display name of the production step.
+	// Display name.
 	Name string `json:"name" validate:"required"`
-	// Optional notes about the production step.
+	// Notes.
 	Notes *string `json:"notes"`
-	// The leveling factor as a decimal string.
+	// Leveling factor as a decimal string.
 	LevelingFactor string `json:"leveling_factor" validate:"required" format:"decimal"`
-	// The allowances as a decimal string.
+	// Allowances as a decimal string.
 	Allowances string `json:"allowances" validate:"required" format:"decimal"`
-	// The labor rate for this step.
+	// Labor rate.
 	LaborRate *Rate `json:"labor_rate"`
-	// The labor time for this step.
+	// Labor time.
 	LaborTime *Rate `json:"labor_time"`
-	// The overhead rate for this step.
+	// Overhead rate.
 	OverheadRate *Rate `json:"overhead_rate"`
-	// The production output for this step.
+	// Production output.
 	Production *ProductionOutput `json:"production"`
-	// The consumptions for this step.
+	// Consumptions.
 	Consumptions []Consumption `json:"consumptions"`
-	// The machines assigned to this step.
+	// Machines assigned to this step.
 	Machines []ProductionStepMachine `json:"machines"`
-	// The scanning station for this step.
+	// Scanning station.
 	ScanningStation *ProductionStepScanStation `json:"scanning_station"`
-	// The input steps that feed into this step.
+	// Input steps feeding into this step.
 	InSteps []ProductionStepRef `json:"in_steps"`
-	// The output steps that this step feeds into.
+	// Output steps this step feeds into.
 	OutSteps []ProductionStepRef `json:"out_steps"`
-	// The department this step belongs to.
+	// Department.
 	Department *ProductionStepDepartment `json:"department"`
-	// The timestamp when the production step was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The timestamp when the production step was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
-// ProductionStepRef is a minimal production step reference.
+// Minimal production step reference.
 type ProductionStepRef struct {
-	// The unique identifier for the production step.
+	// Production step ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=production_step"`
-	// The display name of the production step.
+	// Display name.
 	Name string `json:"name" validate:"required"`
 }
 
-// ProductionStepScanStation is a scanning station reference on a production step.
+// Scanning station reference on a production step.
 type ProductionStepScanStation struct {
-	// The unique identifier for the scanning station.
+	// Scanning station ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=scanning_station"`
-	// The display name of the scanning station.
+	// Display name.
 	Name string `json:"name" validate:"required"`
 }
 
-// ProductionStepDepartment is a department reference on a production step.
+// Department reference on a production step.
 type ProductionStepDepartment struct {
-	// The unique identifier for the department.
+	// Department ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=department"`
 }
 
-// ProductionStepMachine is a machine reference on a production step.
+// Machine reference on a production step.
 type ProductionStepMachine struct {
-	// The unique identifier for the machine.
+	// Machine ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=machine"`
-	// The display name of the machine.
+	// Display name.
 	Name string `json:"name" validate:"required"`
 }
 

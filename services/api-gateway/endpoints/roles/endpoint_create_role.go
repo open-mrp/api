@@ -11,11 +11,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// CreateRoleRequest is the request to create a new role.
+// CreateRoleRequest is a request to create a role.
 type CreateRoleRequest struct {
-	// The display name of the role.
+	// Display name.
 	Name string `json:"name" validate:"required,max=255"`
-	// The permissions to attach to this role in `<domain>:<action>` format.
+	// Permissions to attach in `<domain>:<action>` format.
 	Permissions []string `json:"permissions"`
 }
 
@@ -36,7 +36,7 @@ type CreateRoleEndpoint struct{}
 func (e *CreateRoleEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateRoleRequest, *apiresource.Role] {
 	return &apiendpoint.APIEndpoint[*CreateRoleRequest, *apiresource.Role]{
 		Title:             "Create Role",
-		Description:       "Creates a new custom role with the specified permissions.",
+		Description:       "Creates a custom role with the specified permissions.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/roles",

@@ -10,11 +10,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpdateSysPropertyRequest is the request to update a system property value.
+// Request to update a system property.
 type UpdateSysPropertyRequest struct {
-	// The ID of the system property to update.
+	// System property ID.
 	SysPropertyID string `path:"id" validate:"required"`
-	// The new value for the system property.
+	// Counter value.
 	Value *int32 `json:"value,omitempty" nullable:"false"`
 }
 

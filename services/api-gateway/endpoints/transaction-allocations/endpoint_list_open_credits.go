@@ -9,7 +9,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListOpenCreditsRequest is the request to list open credit transactions.
+// Request to list open credit transactions.
 type ListOpenCreditsRequest struct {
 	apiresource.PaginationRequest
 	// Filter by start date (inclusive, YYYY-MM-DD).

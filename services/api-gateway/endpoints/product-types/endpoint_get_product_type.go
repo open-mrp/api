@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetProductTypeRequest is the request to retrieve a single product type.
+// Request to get a product type.
 type GetProductTypeRequest struct {
-	// The ID or code of the product type to retrieve.
+	// Product type ID or code.
 	ProductTypeID string `path:"id" validate:"required"`
 }
 
@@ -20,7 +20,7 @@ type GetProductTypeEndpoint struct{}
 func (e *GetProductTypeEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetProductTypeRequest, *apiresource.ProductType] {
 	return &apiendpoint.APIEndpoint[*GetProductTypeRequest, *apiresource.ProductType]{
 		Title:             "Get Product Type",
-		Description:       "Returns a single product type by its ID or code.",
+		Description:       "Returns a product type by ID or code.",
 		Method:            http.MethodGet,
 		Route:             "/v1/catalog/product-types/{id}",
 		ContentType:       "application/json",

@@ -12,53 +12,53 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// CreateCustomerRequest is the request to create a new customer.
+// Request to create a customer.
 type CreateCustomerRequest struct {
-	// The display name of the customer.
+	// Display name.
 	Name string `json:"name" validate:"required,max=255"`
-	// The customer number (auto-generated if omitted).
+	// Customer number. Auto-generated if omitted.
 	Number *string `json:"number,omitempty" validate:"omitempty,max=255" nullable:"false"`
-	// A note about the customer.
+	// Note.
 	Note *string `json:"note,omitempty" nullable:"false"`
-	// The customer email address.
+	// Email address.
 	Email *string `json:"email,omitempty" validate:"omitempty,max=255" nullable:"false"`
-	// The customer phone number.
+	// Phone number.
 	Phone *string `json:"phone,omitempty" validate:"omitempty,max=255" nullable:"false"`
-	// The customer website URL.
+	// Website URL.
 	URL *string `json:"url,omitempty" validate:"omitempty,max=255" nullable:"false"`
-	// The account status code.
+	// Account status code.
 	StatusCode *constants.AccountStatusCode `json:"status,omitempty" default:"normal" nullable:"false"`
-	// Whether the customer is EDI enabled.
+	// Whether EDI is enabled.
 	IsEdiEnabled *bool `json:"is_edi_enabled,omitempty" nullable:"false" default:"false"`
-	// The commission policy for this customer.
+	// Commission policy.
 	CommissionPolicy *constants.CommissionPolicy `json:"commission_policy,omitempty" default:"commission_exempt" nullable:"false"`
-	// The freight policy for this customer.
+	// Freight policy.
 	FreightPolicy *constants.FreightPolicy `json:"freight_policy,omitempty" default:"billed_freight" nullable:"false"`
-	// The default carrier ID.
+	// Default carrier ID.
 	DefaultCarrierID string `json:"default_carrier_id" validate:"required,max=191"`
-	// The default service level ID.
+	// Default service level ID.
 	DefaultServiceLevelID *string `json:"default_service_level_id,omitempty" validate:"omitempty,max=191" nullable:"false"`
-	// The default payment term ID.
+	// Default payment term ID.
 	DefaultPaymentTermID string `json:"default_payment_term_id" validate:"required,max=191"`
-	// The default shipping term ID.
+	// Default shipping term ID.
 	DefaultShippingTermID string `json:"default_shipping_term_id" validate:"required,max=191"`
-	// The default priority code.
+	// Default priority code.
 	DefaultPriorityCode *constants.PriorityCode `json:"default_priority,omitempty" default:"normal" nullable:"false"`
-	// The default sales rep user ID.
+	// Default sales rep user ID.
 	DefaultSalesRepUserID *string `json:"default_sales_rep_user_id,omitempty" validate:"omitempty,max=191" nullable:"false"`
-	// The customer price group IDs.
+	// Price group IDs.
 	CustomerPriceGroupIDs []string `json:"customer_price_group_ids,omitempty" nullable:"false"`
-	// The customer type group ID.
+	// Customer type group ID.
 	CustomerTypeGroupID string `json:"customer_type_group_id" validate:"required,max=191"`
-	// The carrier billing type.
+	// Carrier billing type.
 	CarrierBillingType *constants.CarrierBillingType `json:"carrier_billing_type,omitempty" nullable:"false" default:"sender"`
-	// The carrier billing account number.
+	// Carrier billing account number.
 	CarrierBillingAccount *string `json:"carrier_billing_account,omitempty" validate:"omitempty,max=255" nullable:"false"`
-	// The credit limit for this customer.
+	// Credit limit.
 	CreditLimit *apirequest.QuantityInput `json:"credit_limit,omitempty" nullable:"false"`
-	// The bill-to address for this customer.
+	// Bill-to address.
 	BillToAddress apirequest.AddressInput `json:"bill_to_address" validate:"required"`
-	// The ship-to address for this customer.
+	// Ship-to address.
 	ShipToAddress apirequest.AddressInput `json:"ship_to_address" validate:"required"`
 }
 
@@ -101,7 +101,7 @@ type CreateCustomerEndpoint struct{}
 func (e *CreateCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateCustomerRequest, *apiresource.Customer] {
 	return &apiendpoint.APIEndpoint[*CreateCustomerRequest, *apiresource.Customer]{
 		Title:             "Create Customer",
-		Description:       "Creates a new customer account, auto-generating a customer number if one is not provided.",
+		Description:       "Creates a customer account. Auto-generates a customer number if one is not provided.",
 		Method:            http.MethodPost,
 		Route:             "/v1/sales/customers",
 		ContentType:       "application/json",

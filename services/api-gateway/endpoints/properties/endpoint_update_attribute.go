@@ -11,17 +11,17 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpdateAttributeRequest is the request to update an attribute.
+// Request to update an attribute.
 type UpdateAttributeRequest struct {
-	// The ID of the property.
+	// Property ID.
 	PropertyID string `path:"property_id" validate:"required"`
-	// The ID of the attribute to update.
+	// Attribute ID.
 	AttributeID string `path:"id" validate:"required"`
-	// The new value of the attribute.
+	// Attribute value.
 	Value *string `json:"value,omitempty" nullable:"false"`
-	// The new color code of the attribute.
+	// Color code.
 	ColorCode *constants.Color `json:"color,omitempty" nullable:"false"`
-	// The new display order of the attribute.
+	// Display order.
 	SortOrder *int32 `json:"sort_order,omitempty" nullable:"false" validate:"omitempty,min=1"`
 }
 

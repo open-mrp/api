@@ -9,13 +9,13 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UploadUserPhotoRequest is the request to upload a user profile photo.
+// Request to upload a user profile photo.
 type UploadUserPhotoRequest struct {
-	// The ID of the user.
+	// User ID.
 	UserID string `path:"id" validate:"required"`
-	// The raw image bytes.
+	// Raw image bytes.
 	RawBody []byte `rawbody:"true"`
-	// The content type of the image (e.g. image/png).
+	// Content type of the image (e.g. image/png).
 	ContentType string `header:"Content-Type"`
 }
 

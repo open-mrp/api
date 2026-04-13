@@ -18,37 +18,37 @@ const SampleAddressState = "CA"
 const SampleAddressPostalCode = "94105"
 const SampleAddressCountry = "US"
 
-// RegistrationSessionUser represents user data within a registration session.
+// User data within a registration session.
 type RegistrationSessionUser struct {
-	// The user ID, null until user is created.
+	// User ID, null until user is created.
 	ID *string `json:"id"`
-	// Object type identifier for registration session user.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=user"`
-	// Email address provided during registration.
+	// Email address.
 	Email string `json:"email" validate:"required"`
 	// Timestamp when email was verified, null if pending.
 	EmailVerifiedAt *time.Time `json:"email_verified_at"`
-	// Display name provided during registration.
+	// Display name.
 	Name *string `json:"name"`
 }
 
-// RegistrationSessionAccount represents account data within a registration session.
+// Account data within a registration session.
 type RegistrationSessionAccount struct {
-	// The account ID, null until account is created.
+	// Account ID, null until account is created.
 	ID *string `json:"id"`
-	// Object type identifier for registration session account.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=account"`
-	// The account's display name.
+	// Display name.
 	Name string `json:"name" validate:"required"`
-	// The account's billing address.
+	// Billing address.
 	BillingAddress RegistrationSessionAddress `json:"billing_address" validate:"required"`
 }
 
-// RegistrationSessionAddress represents an address within a registration session.
+// Address within a registration session.
 type RegistrationSessionAddress struct {
-	// The address ID, null until address is created.
+	// Address ID, null until address is created.
 	ID *string `json:"id"`
-	// Object type identifier for registration session address.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=address"`
 	// Street address line 1.
 	Line1 *string `json:"line1"`
@@ -64,77 +64,77 @@ type RegistrationSessionAddress struct {
 	Country *string `json:"country"`
 }
 
-// RegistrationSession represents a registration session.
+// Registration session.
 type RegistrationSession struct {
-	// The unique identifier for this registration session.
+	// Session ID.
 	ID string `json:"id" validate:"required"`
-	// The type of this object.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=registration_session"`
-	// The pricing plan code selected during registration.
+	// Pricing plan code.
 	PlanCode string `json:"plan_code" validate:"required"`
-	// The current step in the registration flow.
+	// Current registration step.
 	Step constants.RegistrationStep `json:"step" validate:"required"`
-	// The Stripe customer ID, if one has been created.
+	// Stripe customer ID.
 	StripeCustomerID *string `json:"stripe_customer_id"`
-	// The Stripe checkout session ID, if checkout was initiated.
+	// Stripe checkout session ID.
 	StripeCheckoutSessionID *string `json:"stripe_checkout_session_id"`
-	// Whether payment has been completed for this registration.
+	// Whether payment has been completed.
 	PaymentCompleted bool `json:"payment_completed"`
-	// The account being registered.
+	// Account being registered.
 	Account *RegistrationSessionAccount `json:"account"`
-	// The user being registered.
+	// User being registered.
 	User RegistrationSessionUser `json:"user" validate:"required"`
-	// When the registration was completed, null if still in progress.
+	// Timestamp when registration was completed. Null if still in progress.
 	CompletedAt *time.Time `json:"completed_at"`
-	// When this registration session was created.
+	// Timestamp when this session was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// When this registration session was last updated.
+	// Timestamp when this session was last updated.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
-// CreateSessionResponse is the response from creating a registration session.
+// Result of creating a registration session.
 type CreateSessionResponse struct {
-	// The unique identifier of the created registration session.
+	// Session ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=registration_session"`
 }
 
-// CompleteRegistrationResponse is the response from completing a registration.
+// Result of completing a registration.
 type CompleteRegistrationResponse struct {
-	// The ID of the created account.
+	// Account ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=account"`
 }
 
-// CreateUserResponse is the response from creating a user for a registration session.
+// Result of creating a user for a registration session.
 type CreateUserResponse struct {
-	// The ID of the created user.
+	// User ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=user"`
 }
 
-// SetupBillingResponse is the response from setting up billing for a registration.
+// Result of setting up billing for a registration.
 type SetupBillingResponse struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=setup_billing_response"`
-	// The Stripe customer ID created for this registration.
+	// Stripe customer ID.
 	StripeCustomerID string `json:"stripe_customer_id" validate:"required"`
-	// The Stripe Setup Intent client secret for Stripe.js payment collection.
+	// Stripe Setup Intent client secret for Stripe.js payment collection.
 	ClientSecret string `json:"client_secret" validate:"required"` // #nosec G117 -- Stripe client_secret passed to frontend, not a hardcoded secret
-	// The Stripe publishable key for Stripe.js initialization.
+	// Stripe publishable key for Stripe.js initialization.
 	PublishableKey string `json:"publishable_key" validate:"required"`
 }
 
-// ConfirmPaymentResponse is the response from confirming payment for a registration.
+// Result of confirming payment for a registration.
 type ConfirmPaymentResponse struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=confirm_payment_response"`
-	// The Setup Intent status (e.g. "succeeded").
+	// Setup Intent status (e.g., "succeeded").
 	Status string `json:"status" validate:"required"`
-	// The payment method ID attached by the Setup Intent.
+	// Payment method ID attached by the Setup Intent.
 	PaymentMethodID *string `json:"payment_method_id"`
 }
 

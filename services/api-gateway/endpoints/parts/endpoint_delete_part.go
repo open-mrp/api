@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// DeletePartRequest is the request to delete a part.
+// Request to delete a part.
 type DeletePartRequest struct {
-	// The item ID of the part to delete.
+	// Part ID.
 	ItemID string `path:"id" validate:"required"`
 }
 
@@ -20,7 +20,7 @@ type DeletePartEndpoint struct{}
 func (e *DeletePartEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeletePartRequest, *apiresource.Part] {
 	return &apiendpoint.APIEndpoint[*DeletePartRequest, *apiresource.Part]{
 		Title:             "Delete Part",
-		Description:       "Soft-deletes a part by setting its deleted_at timestamp.",
+		Description:       "Deletes a part. Sets the deleted_at timestamp rather than removing the record.",
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/parts/{id}",

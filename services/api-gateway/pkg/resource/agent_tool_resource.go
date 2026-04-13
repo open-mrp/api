@@ -7,40 +7,37 @@ import (
 	"github.com/augno/api/shared/constants"
 )
 
-// ToolGroup represents a logical grouping of platform tools.
+// Logical grouping of platform tools.
 type ToolGroup struct {
-	// The unique identifier for the group.
+	// Group ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=tool_group"`
-	// The display name of the group.
+	// Display name.
 	Name string `json:"name" validate:"required"`
-	// A description of the tool group.
+	// Description.
 	Description string `json:"description"`
-	// A URL-friendly slug for the group.
+	// URL-friendly slug.
 	Slug string `json:"slug" validate:"required"`
-	// An icon identifier for the group (e.g. a Material Icon name).
+	// Icon identifier (e.g. a Material Icon name).
 	Icon string `json:"icon"`
-	// Sort order for display purposes.
+	// Display sort order.
 	SortOrder int32 `json:"sort_order"`
-	// The tools belonging to this group.
+	// Tools belonging to this group.
 	Tools *List[AvailableTool] `json:"tools" expandable:"true"`
 }
 
-// AvailableTool represents a platform tool that can be attached to agents.
-// Each tool has a config_schema that describes what configuration options it accepts,
-// and an input_schema (internal, not exposed via API) that tells the LLM what arguments
-// to pass when invoking the tool at runtime.
+// Platform tool that can be attached to agents.
 type AvailableTool struct {
-	// The unique identifier for the tool.
+	// Tool ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=available_tool"`
-	// The name of the tool.
+	// Tool name.
 	Name string `json:"name" validate:"required"`
-	// A description of the tool.
+	// Tool description.
 	Description *string `json:"description"`
-	// A JSON schema describing what configuration options this tool accepts.
+	// JSON schema describing the configuration options this tool accepts.
 	// Defines the shape of the `config` field on AgentDefinitionTool.
 	//
 	// For example:
@@ -57,31 +54,27 @@ type AvailableTool struct {
 	// }
 	// ```
 	ConfigSchema json.RawMessage `json:"config_schema"`
-	// The tool category.
+	// Tool category.
 	Category string `json:"category" validate:"required"`
-	// Permissions required to use this tool.
+	// Required permissions.
 	RequiredPermissions []string `json:"required_permissions"`
 }
 
-// AgentDefinitionTool represents a tool attached to an agent definition.
-// It pairs an AvailableTool with agent-specific configuration and settings.
-// The tool's config_schema defines what options are available; the config field
-// here holds the actual values chosen for this particular agent.
-// Different agents using the same tool can have different config values.
+// Tool attached to an agent definition.
+// Pairs an AvailableTool with agent-specific config values.
 type AgentDefinitionTool struct {
-	// The unique identifier for this agent-tool link.
+	// Agent definition tool ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=agent_definition_tool"`
-	// The tool attached to this agent definition.
+	// Attached tool.
 	Tool AvailableTool `json:"tool" validate:"required"`
-	// The instance-specific configuration values for this tool on this agent.
-	// Must conform to the tool's config_schema. These values are used by the
-	// tool handler at runtime but are not exposed to the LLM.
+	// Instance-specific configuration for this tool.
+	// Must conform to the tool's config_schema.
 	Config json.RawMessage `json:"config"`
-	// The sort order of this tool within the agent.
+	// Sort order within the agent.
 	SortOrder int32 `json:"sort_order"`
-	// Whether this tool requires human review before execution.
+	// Requires human review before execution.
 	RequireReview bool `json:"require_review"`
 }
 

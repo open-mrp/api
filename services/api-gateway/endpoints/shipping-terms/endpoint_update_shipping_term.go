@@ -12,22 +12,22 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpdateShippingTermRequest is the request to partially update a shipping term.
+// Request to partially update a shipping term.
 // All fields are optional. Absent fields are left unchanged. Send an explicit
 // JSON null for flat_rate, minimum_order_value, or free_shipping_service_level_ids
 // to clear the existing value.
 type UpdateShippingTermRequest struct {
-	// The ID of the shipping term to update.
+	// Shipping term ID.
 	ShippingTermID string `path:"id" validate:"required"`
-	// The display name of the shipping term.
+	// Display name.
 	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// The shipping term type.
+	// Shipping term type.
 	Type *constants.ShippingTermType `json:"type,omitempty" nullable:"false"`
-	// The flat rate for this shipping term. Send null to clear.
+	// Flat rate. Send null to clear.
 	FlatRate apirequest.NullableInput[apirequest.QuantityInput] `json:"flat_rate,omitempty"`
-	// The minimum order value for free shipping under this term. Send null to clear.
+	// Minimum order value for free shipping. Send null to clear.
 	MinimumOrderValue apirequest.NullableInput[apirequest.QuantityInput] `json:"minimum_order_value,omitempty"`
-	// The service level IDs that qualify for free shipping. Send null to clear.
+	// Service level IDs that qualify for free shipping. Send null to clear.
 	FreeShippingServiceLevelIDs apirequest.NullableInput[[]string] `json:"free_shipping_service_level_ids,omitempty"`
 }
 

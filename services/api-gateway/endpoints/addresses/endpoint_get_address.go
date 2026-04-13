@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetAddressRequest is the request to retrieve a single address.
+// Request to get an address.
 type GetAddressRequest struct {
-	// The ID of the address to retrieve.
+	// Address ID.
 	AddressID string `path:"id" validate:"required"`
 }
 
@@ -20,7 +20,7 @@ type GetAddressEndpoint struct{}
 func (e *GetAddressEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetAddressRequest, *apiresource.Address] {
 	return &apiendpoint.APIEndpoint[*GetAddressRequest, *apiresource.Address]{
 		Title:             "Get Address",
-		Description:       "Returns a single address by its ID.",
+		Description:       "Returns an address by ID.",
 		Method:            http.MethodGet,
 		Route:             "/v1/sales/addresses/{id}",
 		ContentType:       "application/json",

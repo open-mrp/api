@@ -10,13 +10,13 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpdateAccountUserPasswordRequest is the request to update an account user's password.
+// Request to update an account user's password.
 type UpdateAccountUserPasswordRequest struct {
-	// The ID of the account user whose password to update.
+	// Account user ID.
 	AccountUserID string `path:"id" validate:"required"`
-	// The requester's current password for verification.
+	// Requester's current password.
 	RequesterPassword string `json:"requester_password" validate:"required,password,max=255"`
-	// The new password to set for the account user.
+	// New password.
 	NewPassword string `json:"new_password" validate:"required,password,max=255"`
 }
 
@@ -34,7 +34,7 @@ type UpdateAccountUserPasswordEndpoint struct{}
 func (e *UpdateAccountUserPasswordEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAccountUserPasswordRequest, *apiresource.EmptyResource] {
 	return &apiendpoint.APIEndpoint[*UpdateAccountUserPasswordRequest, *apiresource.EmptyResource]{
 		Title:             "Update Account User Password",
-		Description:       "Updates an account user's password, requiring the requester's current password for verification.",
+		Description:       "Updates an account user's password. Requires the requester's current password for verification.",
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/account-users/{id}/password",

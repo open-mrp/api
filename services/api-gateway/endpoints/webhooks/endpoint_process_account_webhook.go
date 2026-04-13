@@ -9,13 +9,13 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// AccountStripeWebhookRequest carries the raw body, signature, and account ID for per-account Stripe webhook verification.
+// Request for per-account Stripe webhook processing.
 type AccountStripeWebhookRequest struct {
-	// The raw request body bytes for webhook signature verification.
+	// Raw request body bytes for signature verification.
 	RawBody []byte `rawbody:"true"`
-	// The Stripe-Signature header value used to verify the webhook payload.
+	// Stripe-Signature header value for payload verification.
 	Signature string `header:"Stripe-Signature"`
-	// The account ID from the URL path.
+	// Account ID from the URL path.
 	AccountID string `path:"accountID" validate:"required"`
 }
 
@@ -24,7 +24,7 @@ type ProcessAccountWebhookEndpoint struct{}
 func (e *ProcessAccountWebhookEndpoint) Materialize() *apiendpoint.APIEndpoint[*AccountStripeWebhookRequest, *apiresource.WebhookResponse] {
 	return &apiendpoint.APIEndpoint[*AccountStripeWebhookRequest, *apiresource.WebhookResponse]{
 		Title:             "Process Account Stripe Webhook",
-		Description:       "Receives and processes a Stripe webhook event for a specific account, verifying the signature using the account's Stripe credentials.",
+		Description:       "Processes a Stripe webhook event for an account, verifying the signature using the account's credentials.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/webhooks/stripe/{accountID}",

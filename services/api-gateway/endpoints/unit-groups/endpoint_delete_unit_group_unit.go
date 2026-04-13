@@ -9,11 +9,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// DeleteUnitGroupUnitRequest is the request to delete an associated unit from a unit group.
+// DeleteUnitGroupUnitRequest is a request to delete an associated unit from a unit group.
 type DeleteUnitGroupUnitRequest struct {
-	// The ID of the unit group.
+	// Unit group ID.
 	UnitGroupID string `path:"unitGroupId" validate:"required"`
-	// The ID of the associated unit to delete.
+	// Unit group unit ID.
 	AssociatedUnitID string `path:"id" validate:"required"`
 }
 

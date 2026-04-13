@@ -10,9 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// BulkDeletePurchaseOrdersRequest is the request to delete multiple purchase orders.
+// Request to delete multiple purchase orders.
 type BulkDeletePurchaseOrdersRequest struct {
-	// The IDs of the purchase orders to delete.
+	// Purchase order IDs.
 	PurchaseOrderIDs []string `json:"purchase_order_ids" validate:"required"`
 }
 
@@ -29,7 +29,7 @@ type BulkDeletePurchaseOrdersEndpoint struct{}
 func (e *BulkDeletePurchaseOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkDeletePurchaseOrdersRequest, *apiresource.EmptyResource] {
 	return &apiendpoint.APIEndpoint[*BulkDeletePurchaseOrdersRequest, *apiresource.EmptyResource]{
 		Title:             "Bulk Delete Purchase Orders",
-		Description:       "Deletes multiple purchase orders in a single operation.",
+		Description:       "Deletes multiple purchase orders.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/purchase-orders/actions/bulk-delete",

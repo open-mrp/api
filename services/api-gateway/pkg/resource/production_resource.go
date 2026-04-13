@@ -10,19 +10,19 @@ import (
 
 const SampleProductionID = "pn_01jm4r6700f8nwq3v5hx2d9ktp"
 
-// ProductionOutput represents the production output of a production step.
+// Production output of a production step.
 type ProductionOutput struct {
-	// The unique identifier for the production.
+	// Production ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=production"`
-	// The produced item.
+	// Produced item.
 	ProducedItem *ConsumptionItem `json:"produced_item"`
-	// The quantity produced.
+	// Quantity produced.
 	Quantity *Quantity `json:"quantity"`
-	// The timestamp when the production was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The timestamp when the production was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 

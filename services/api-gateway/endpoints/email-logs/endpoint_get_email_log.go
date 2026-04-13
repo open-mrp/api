@@ -10,9 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetEmailLogRequest is the request to retrieve a single email log.
+// Request to retrieve an email log.
 type GetEmailLogRequest struct {
-	// The ID of the email log to retrieve.
+	// Email log ID.
 	EmailLogID string `path:"id" validate:"required"`
 }
 
@@ -21,7 +21,7 @@ type GetEmailLogEndpoint struct{}
 func (e *GetEmailLogEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetEmailLogRequest, *apiresource.EmailLog] {
 	return &apiendpoint.APIEndpoint[*GetEmailLogRequest, *apiresource.EmailLog]{
 		Title:             "Get Email Log",
-		Description:       "Returns a single email log by its ID.",
+		Description:       "Returns an email log by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/core/email-logs/{id}",

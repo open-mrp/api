@@ -10,13 +10,13 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// The request to create a user for a registration session
+// Request to create a user for a registration session.
 type CreateUserRequest struct {
-	// The session ID.
+	// Session ID.
 	SessionID string `json:"-" path:"session_id" validate:"required"`
-	// Display name for the new user.
+	// Display name.
 	Name string `json:"name" validate:"required,max=255"`
-	// Password for the new user account.
+	// Password.
 	Password string `json:"password" validate:"required,password"` // #nosec G117 - Struct field, not a hardcoded credential
 }
 

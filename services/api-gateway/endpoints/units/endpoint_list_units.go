@@ -10,7 +10,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListUnitsRequest is the request to list units with optional filters.
+// Request to list units.
 type ListUnitsRequest struct {
 	apiresource.PaginationRequest
 	// Filter by unit dimension code.

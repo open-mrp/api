@@ -13,11 +13,11 @@ import (
 
 // UpdatePickRequest is the request to partially update a pick's metadata.
 type UpdatePickRequest struct {
-	// The ID of the pick to update.
+	// Pick ID.
 	PickID string `path:"id" validate:"required"`
-	// The pick number.
+	// Pick number.
 	Number *string `json:"number,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// The timestamp when the pick was finished. Pass an empty string to clear.
+	// Timestamp when the pick was finished. Pass an empty string to clear.
 	FinishedAt *string `json:"finished_at,omitempty" nullable:"true"`
 }
 

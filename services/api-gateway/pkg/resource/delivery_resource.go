@@ -13,13 +13,13 @@ const SampleDeliveryLineID = "dlvl_01jm4r6700f8nwq3v5hx2d9ktp"
 const SampleSalesOrderID = "so_01jm4r6700f8nwq3v5hx2d9ktp"
 const SampleLotID = "lot_01jm4r6700f8nwq3v5hx2d9ktp"
 
-// SalesOrder represents a sales order sub-resource.
+// Sales order sub-resource.
 type SalesOrder struct {
-	// The unique identifier for the sales order.
+	// Sales order ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=sales_order"`
-	// The sales order number.
+	// Sales order number.
 	Number string `json:"number" validate:"required"`
 }
 
@@ -29,13 +29,13 @@ var SampleSalesOrder = &SalesOrder{
 	Number: "PO-001",
 }
 
-// Lot represents a lot sub-resource.
+// Lot sub-resource.
 type Lot struct {
-	// The unique identifier for the lot.
+	// Lot ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=lot"`
-	// The lot number.
+	// Lot number.
 	LotNumber string `json:"lot_number" validate:"required"`
 }
 
@@ -45,27 +45,27 @@ var SampleLot = &Lot{
 	LotNumber: "LOT-001",
 }
 
-// DeliverySummary represents a delivery with a line count.
+// Delivery summary with line count.
 type DeliverySummary struct {
-	// The unique identifier for the delivery.
+	// Delivery ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=delivery"`
-	// The delivery number.
+	// Delivery number.
 	Number string `json:"number" validate:"required"`
-	// The purchase order associated with this delivery.
+	// Associated purchase order.
 	PurchaseOrder *SalesOrder `json:"purchase_order" validate:"required"`
-	// The delivery status (accepted or rejected).
+	// Delivery status (accepted or rejected).
 	Status constants.DeliveryStatus `json:"status" validate:"required"`
-	// The number of lines in this delivery.
+	// Number of delivery lines.
 	LineCount int32 `json:"line_count"`
-	// The timestamp when the delivery was accepted.
+	// Accepted timestamp.
 	AcceptedAt *time.Time `json:"accepted_at"`
-	// The timestamp when the delivery was rejected.
+	// Rejected timestamp.
 	RejectedAt *time.Time `json:"rejected_at"`
-	// The timestamp when the delivery was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The timestamp when the delivery was last updated.
+	// Last update timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
@@ -84,27 +84,27 @@ func (*DeliverySummary) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleDeliverySummary)
 }
 
-// Delivery represents a full delivery with lines.
+// Delivery with line items.
 type Delivery struct {
-	// The unique identifier for the delivery.
+	// Delivery ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=delivery"`
-	// The delivery number.
+	// Delivery number.
 	Number string `json:"number" validate:"required"`
-	// The purchase order associated with this delivery.
+	// Associated purchase order.
 	PurchaseOrder *SalesOrder `json:"purchase_order" validate:"required"`
-	// The delivery status (accepted or rejected).
+	// Delivery status (accepted or rejected).
 	Status constants.DeliveryStatus `json:"status" validate:"required"`
-	// The line items in this delivery.
+	// Delivery line items.
 	Lines *List[DeliveryLine] `json:"lines"`
-	// The timestamp when the delivery was accepted.
+	// Accepted timestamp.
 	AcceptedAt *time.Time `json:"accepted_at"`
-	// The timestamp when the delivery was rejected.
+	// Rejected timestamp.
 	RejectedAt *time.Time `json:"rejected_at"`
-	// The timestamp when the delivery was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The timestamp when the delivery was last updated.
+	// Last update timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
@@ -123,29 +123,29 @@ func (*Delivery) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleDelivery)
 }
 
-// DeliveryLine represents a line item in a delivery.
+// Delivery line item.
 type DeliveryLine struct {
-	// The unique identifier for the delivery line.
+	// Delivery line ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=delivery_line"`
-	// The item associated with this line. Nullable if the item has been deleted.
+	// Associated item. Null if the item has been deleted.
 	Item *Item `json:"item"`
-	// The quantity received.
+	// Quantity received.
 	Quantity *Quantity `json:"quantity" validate:"required"`
-	// The unit cost for this line.
+	// Unit cost.
 	UnitCost *Rate `json:"unit_cost" validate:"required"`
-	// The location where this delivery was received.
+	// Receiving location.
 	Location *Location `json:"location"`
-	// The lot associated with this line.
+	// Associated lot.
 	Lot *Lot `json:"lot"`
-	// The timestamp when the line was accepted.
+	// Accepted timestamp.
 	AcceptedAt *time.Time `json:"accepted_at"`
-	// The timestamp when the line was rejected.
+	// Rejected timestamp.
 	RejectedAt *time.Time `json:"rejected_at"`
-	// The timestamp when the line was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The timestamp when the line was last updated.
+	// Last update timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 

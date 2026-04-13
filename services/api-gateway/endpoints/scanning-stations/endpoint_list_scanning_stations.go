@@ -10,7 +10,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListScanningStationsRequest is the request to list scanning stations with optional filters.
+// Request to list scanning stations.
 type ListScanningStationsRequest struct {
 	apiresource.PaginationRequest
 }

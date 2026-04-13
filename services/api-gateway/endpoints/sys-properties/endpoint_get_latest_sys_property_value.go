@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetLatestSysPropertyValueRequest is the request to get the latest value for a system property type.
+// Request to get the latest value for a system property type.
 type GetLatestSysPropertyValueRequest struct {
-	// The type code of the system property (e.g. transaction_number).
+	// System property type code (e.g. transaction_number).
 	TypeCode string `path:"type_code" validate:"required"`
 }
 

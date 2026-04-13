@@ -8,25 +8,25 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-// RolePermission represents a structured permission entry on a role.
+// RolePermission is a permission entry on a role.
 type RolePermission struct {
-	// The unique identifier for this role permission.
+	// Role permission ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=role_permission"`
-	// The permission domain code.
+	// Permission domain code.
 	PermissionCode string `json:"domain" validate:"required"`
-	// Whether this permission grants create access.
+	// Grants create access.
 	Create bool `json:"create"`
-	// Whether this permission grants read access.
+	// Grants read access.
 	Read bool `json:"read"`
-	// Whether this permission grants update access.
+	// Grants update access.
 	Update bool `json:"update"`
-	// Whether this permission grants delete access.
+	// Grants delete access.
 	Delete bool `json:"delete"`
-	// When this role permission was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// When this role permission was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 

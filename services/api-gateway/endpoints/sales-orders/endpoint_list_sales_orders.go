@@ -9,7 +9,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListSalesOrdersRequest is the request to list sales orders.
+// Request to list sales orders.
 type ListSalesOrdersRequest struct {
 	apiresource.PaginationRequest
 	// Filter by status codes.

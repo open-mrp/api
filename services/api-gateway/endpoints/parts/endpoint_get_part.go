@@ -10,9 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetPartRequest is the request to retrieve a single part by item ID.
+// Request to retrieve a part by ID.
 type GetPartRequest struct {
-	// The item ID of the part to retrieve.
+	// Part ID.
 	ItemID string `path:"id" validate:"required"`
 }
 
@@ -21,7 +21,7 @@ type GetPartEndpoint struct{}
 func (e *GetPartEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetPartRequest, *apiresource.Part] {
 	return &apiendpoint.APIEndpoint[*GetPartRequest, *apiresource.Part]{
 		Title:             "Get Part",
-		Description:       "Returns a single part by its ID.",
+		Description:       "Returns a part by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/parts/{id}",

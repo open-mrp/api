@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// DeleteSalesOrderRequest is the request to delete a sales order.
+// Request to delete a sales order.
 type DeleteSalesOrderRequest struct {
-	// The ID of the sales order to delete.
+	// Sales order ID.
 	SalesOrderID string `path:"id" validate:"required"`
 }
 

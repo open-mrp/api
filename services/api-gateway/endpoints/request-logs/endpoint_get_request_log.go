@@ -10,9 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetRequestLogRequest is the request to retrieve a single request log.
+// GetRequestLogRequest is a request to get a request log.
 type GetRequestLogRequest struct {
-	// The ID of the request log to retrieve.
+	// Request log ID.
 	ID string `path:"id" validate:"required"`
 }
 
@@ -21,7 +21,7 @@ type GetRequestLogEndpoint struct{}
 func (e *GetRequestLogEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetRequestLogRequest, *apiresource.RequestLog] {
 	return &apiendpoint.APIEndpoint[*GetRequestLogRequest, *apiresource.RequestLog]{
 		Title:             "Get Request Log",
-		Description:       "Returns a single request log by its ID.",
+		Description:       "Returns a request log by ID.",
 		Method:            http.MethodGet,
 		Route:             "/v1/core/request-logs/{id}",
 		ContentType:       "application/json",

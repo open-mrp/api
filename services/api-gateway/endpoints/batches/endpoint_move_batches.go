@@ -10,13 +10,13 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// MoveBatchesRequest is the request to move batches to a new production step.
+// Request to move batches to a production step.
 type MoveBatchesRequest struct {
-	// The IDs of the batches to move.
+	// Batch IDs to move.
 	BatchIDs []string `json:"batch_ids" validate:"required"`
-	// The ID of the target production step.
+	// Target production step ID.
 	ProductionStepID string `json:"production_step_id" validate:"required"`
-	// The ID of the scanning station performing the move.
+	// Scanning station ID performing the move.
 	ScanningStationID string `json:"scanning_station_id" validate:"required"`
 }
 
@@ -35,7 +35,7 @@ type MoveBatchesEndpoint struct{}
 func (e *MoveBatchesEndpoint) Materialize() *apiendpoint.APIEndpoint[*MoveBatchesRequest, *apiresource.Batch] {
 	return &apiendpoint.APIEndpoint[*MoveBatchesRequest, *apiresource.Batch]{
 		Title:             "Move Batches",
-		Description:       "Moves one or more batches to a new production step at the specified scanning station.",
+		Description:       "Moves batches to a production step at the specified scanning station.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/batches/actions/move",

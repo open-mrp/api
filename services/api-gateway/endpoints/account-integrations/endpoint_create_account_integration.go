@@ -11,13 +11,13 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// CreateAccountIntegrationRequest is the request to create or upsert an account integration.
+// Request to create or upsert an account integration.
 type CreateAccountIntegrationRequest struct {
-	// The human-readable name for the integration.
+	// Display name of the integration.
 	Name string `json:"name" validate:"required,max=255"`
-	// The integration provider code (e.g. "stripe", "shippo").
+	// Integration provider code (e.g. "stripe", "shippo").
 	IntegrationCode constants.IntegrationCode `json:"integration_code" validate:"required"`
-	// The credentials JSON string containing provider-specific keys.
+	// Credentials JSON string containing provider-specific keys.
 	Credentials string `json:"credentials" validate:"required"`
 }
 
@@ -36,7 +36,7 @@ type CreateAccountIntegrationEndpoint struct{}
 func (e *CreateAccountIntegrationEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAccountIntegrationRequest, *apiresource.AccountIntegration] {
 	return &apiendpoint.APIEndpoint[*CreateAccountIntegrationRequest, *apiresource.AccountIntegration]{
 		Title:             "Create Account Integration",
-		Description:       "Creates a new account integration, or updates an existing one with the same integration code. Credentials are encrypted at rest and never returned in API responses.",
+		Description:       "Creates an account integration, or updates an existing one with the same integration code. Credentials are encrypted at rest and never returned in API responses.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/integrations",

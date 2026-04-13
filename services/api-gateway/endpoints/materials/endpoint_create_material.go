@@ -10,18 +10,28 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
+// QuantityInputRequest is a quantity value and unit.
 type QuantityInputRequest struct {
-	Value  string `json:"value" validate:"required"`
+	// Quantity value.
+	Value string `json:"value" validate:"required"`
+	// Unit ID.
 	UnitID string `json:"unit_id" validate:"required,max=191"`
 }
 
+// Request to create a material.
 type CreateMaterialRequest struct {
-	SKU         string                `json:"sku" validate:"required,max=255"`
-	Description *string               `json:"description,omitempty"`
-	Notes       *string               `json:"notes,omitempty"`
-	CategoryID  string                `json:"category_id" validate:"required,max=191"`
-	OrderPoint  *QuantityInputRequest `json:"order_point,omitempty"`
-	LeadTime    *QuantityInputRequest `json:"lead_time,omitempty"`
+	// SKU code.
+	SKU string `json:"sku" validate:"required,max=255"`
+	// Description.
+	Description *string `json:"description,omitempty"`
+	// Notes.
+	Notes *string `json:"notes,omitempty"`
+	// Category ID.
+	CategoryID string `json:"category_id" validate:"required,max=191"`
+	// Order point quantity.
+	OrderPoint *QuantityInputRequest `json:"order_point,omitempty"`
+	// Lead time quantity.
+	LeadTime *QuantityInputRequest `json:"lead_time,omitempty"`
 }
 
 var sampleCreateMaterialRequest = &CreateMaterialRequest{
@@ -38,7 +48,7 @@ type CreateMaterialEndpoint struct{}
 func (e *CreateMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateMaterialRequest, *apiresource.Material] {
 	return &apiendpoint.APIEndpoint[*CreateMaterialRequest, *apiresource.Material]{
 		Title:             "Create Material",
-		Description:       "Creates a new material.",
+		Description:       "Creates a material.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/materials",

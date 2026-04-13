@@ -10,12 +10,12 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListReceivablesByCustomerRequest is the request to list receivable entries for a specific customer.
+// Request to list receivable entries for a specific customer.
 type ListReceivablesByCustomerRequest struct {
 	apiresource.PaginationRequest
-	// The customer account ID.
+	// Customer account ID.
 	AccountID string `json:"-" path:"account_id" validate:"required"`
-	// Optional cutoff date for the receivables snapshot.
+	// Cutoff date for the receivables snapshot.
 	CutoffDate *time.Time `query:"cutoff_date"`
 }
 

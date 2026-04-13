@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetRegistrationFlowRequest is the request to retrieve a single registration flow.
+// Request to retrieve a registration flow.
 type GetRegistrationFlowRequest struct {
-	// The ID of the registration flow to retrieve.
+	// Registration flow ID.
 	RegistrationFlowID string `path:"id" validate:"required"`
 }
 
@@ -20,7 +20,7 @@ type GetRegistrationFlowEndpoint struct{}
 func (e *GetRegistrationFlowEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetRegistrationFlowRequest, *apiresource.RegistrationFlow] {
 	return &apiendpoint.APIEndpoint[*GetRegistrationFlowRequest, *apiresource.RegistrationFlow]{
 		Title:             "Get Registration Flow",
-		Description:       "Returns a single registration flow by its ID.",
+		Description:       "Returns a registration flow by ID.",
 		Method:            http.MethodGet,
 		Route:             "/v1/sales/registration-flows/{id}",
 		ContentType:       "application/json",

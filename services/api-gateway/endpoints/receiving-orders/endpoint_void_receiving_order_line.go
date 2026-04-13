@@ -9,11 +9,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// VoidReceivingOrderLineRequest is the request to void a single receiving order line.
+// Request to void a receiving order line.
 type VoidReceivingOrderLineRequest struct {
-	// The ID of the receiving order.
+	// Receiving order ID.
 	ReceivingOrderID string `path:"receivingOrderId" validate:"required"`
-	// The ID of the receiving order line to void.
+	// Receiving order line ID.
 	LineID string `path:"id" validate:"required"`
 }
 
@@ -22,7 +22,7 @@ type VoidReceivingOrderLineEndpoint struct{}
 func (e *VoidReceivingOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*VoidReceivingOrderLineRequest, *apiresource.ReceivingOrderLine] {
 	return &apiendpoint.APIEndpoint[*VoidReceivingOrderLineRequest, *apiresource.ReceivingOrderLine]{
 		Title:             "Void Receiving Order Line",
-		Description:       "Voids a single receiving order line.",
+		Description:       "Voids a receiving order line.",
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/receiving-orders/{receivingOrderId}/lines/{id}/actions/void",

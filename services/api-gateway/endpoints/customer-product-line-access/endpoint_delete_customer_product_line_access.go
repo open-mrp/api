@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// DeleteCustomerProductLineAccessRequest is the request to delete all product line access for a customer.
+// Request to delete all product line access for a customer.
 type DeleteCustomerProductLineAccessRequest struct {
-	// The ID of the customer.
+	// Customer ID.
 	CustomerID string `path:"customer_id" validate:"required"`
 }
 

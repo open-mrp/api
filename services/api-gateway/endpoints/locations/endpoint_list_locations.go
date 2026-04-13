@@ -10,7 +10,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListLocationsRequest is the request to list locations.
+// Request to list locations.
 type ListLocationsRequest struct {
 	apiresource.PaginationRequest
 }

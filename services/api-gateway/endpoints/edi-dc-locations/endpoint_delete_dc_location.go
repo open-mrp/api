@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// DeleteDCLocationRequest is the request to delete a DC location.
+// Request to delete a DC location.
 type DeleteDCLocationRequest struct {
-	// The ID of the DC location to delete.
+	// DC location ID.
 	DCLocationID string `path:"id" validate:"required"`
 }
 

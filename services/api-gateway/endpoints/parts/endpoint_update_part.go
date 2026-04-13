@@ -11,15 +11,15 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpdatePartRequest is the request to partially update a part.
+// Request to partially update a part.
 type UpdatePartRequest struct {
-	// The item ID of the part to update.
+	// Part ID.
 	ItemID string `path:"id" validate:"required"`
-	// The part SKU.
+	// SKU.
 	SKU *string `json:"sku,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// The part description.
+	// Description.
 	Description *string `json:"description" nullable:"true"`
-	// Optional notes about the part.
+	// Notes.
 	Notes *string `json:"notes" nullable:"true"`
 }
 

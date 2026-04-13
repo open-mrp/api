@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListCatalogProductsRequest is the request to list products in a catalog product line.
+// Request to list products in a catalog product line.
 type ListCatalogProductsRequest struct {
-	// The ID of the product line.
+	// Product line ID.
 	ProductLineID string `path:"id" validate:"required"`
 	apiresource.PaginationRequest
 }

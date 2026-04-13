@@ -11,19 +11,19 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpdateScanningStationRequest is the request to partially update a scanning station.
+// Request to partially update a scanning station.
 type UpdateScanningStationRequest struct {
-	// The ID of the scanning station to update.
+	// Scanning station ID.
 	ScanningStationID string `path:"id" validate:"required"`
-	// The display name of the scanning station.
+	// Display name.
 	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// Optional notes about the scanning station.
+	// Notes.
 	Notes *string `json:"notes,omitempty" nullable:"true"`
-	// The label size code for the scanning station.
+	// Label size code.
 	LabelSizeCode *constants.LabelSizeCode `json:"label_size,omitempty" nullable:"false"`
-	// The label type code for the scanning station.
+	// Label type code.
 	LabelTypeCode *constants.LabelTypeCode `json:"label_type,omitempty" nullable:"false"`
-	// Whether material check is required at this station.
+	// Whether material check is required.
 	MaterialCheckRequired *bool `json:"material_check_required,omitempty" nullable:"false"`
 }
 

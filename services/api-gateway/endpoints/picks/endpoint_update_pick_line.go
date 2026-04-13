@@ -12,11 +12,11 @@ import (
 
 // UpdatePickLineRequest is the request to update a pick line's quantity.
 type UpdatePickLineRequest struct {
-	// The ID of the pick.
+	// Pick ID.
 	PickID string `path:"pickId" validate:"required"`
-	// The ID of the pick line to update.
+	// Pick line ID.
 	PickLineID string `path:"id" validate:"required"`
-	// The quantity value to set for this line.
+	// Quantity value to set for this line.
 	QuantityValue *string `json:"quantity_value,omitempty" nullable:"false"`
 }
 

@@ -9,7 +9,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListInventoriesRequest is the request to list all item inventories.
+// Request to list inventories.
 type ListInventoriesRequest struct {
 	apiresource.PaginationRequest
 }

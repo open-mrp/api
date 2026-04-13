@@ -9,11 +9,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// DeleteShipmentLineRequest is the request to delete a shipment line.
+// Request to delete a shipment line.
 type DeleteShipmentLineRequest struct {
-	// The ID of the shipment.
+	// Shipment ID.
 	ShipmentID string `path:"shipment_id" validate:"required"`
-	// The ID of the shipment line to delete.
+	// Shipment line ID.
 	ShipmentLineID string `path:"id" validate:"required"`
 }
 

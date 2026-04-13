@@ -10,13 +10,13 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// FindOrderDiscountByCodeRequest is the request to find an order discount by code.
+// Request to find an order discount by code.
 type FindOrderDiscountByCodeRequest struct {
-	// The discount code to look up.
+	// Discount code.
 	Code string `json:"code" validate:"required"`
-	// Optional buyer account ID to scope the lookup.
+	// Buyer account ID to scope the lookup.
 	BuyerAccountID *string `json:"buyer_account_id,omitempty"`
-	// Optional sales order ID to scope the lookup.
+	// Sales order ID to scope the lookup.
 	SalesOrderID *string `json:"sales_order_id,omitempty"`
 }
 
@@ -33,7 +33,7 @@ type FindOrderDiscountByCodeEndpoint struct{}
 func (e *FindOrderDiscountByCodeEndpoint) Materialize() *apiendpoint.APIEndpoint[*FindOrderDiscountByCodeRequest, *apiresource.OrderDiscount] {
 	return &apiendpoint.APIEndpoint[*FindOrderDiscountByCodeRequest, *apiresource.OrderDiscount]{
 		Title:             "Find Order Discount by Code",
-		Description:       "Finds an order discount by its unique code, optionally scoped to a buyer account or sales order.",
+		Description:       "Finds an order discount by code, optionally scoped to a buyer account or sales order.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/order-discounts/actions/find-by-code",

@@ -10,11 +10,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpdateTransactionAllocationRequest is the request to update a transaction allocation.
+// Request to update a transaction allocation.
 type UpdateTransactionAllocationRequest struct {
-	// The ID of the transaction allocation to update.
+	// Transaction allocation ID.
 	AllocationID string `path:"id" validate:"required"`
-	// The new allocation amount as a decimal string.
+	// Allocation amount as a decimal string.
 	Amount *string `json:"amount" nullable:"false"`
 }
 

@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UnlockAccountUserRequest is the request to unlock an account user.
+// Request to unlock an account user.
 type UnlockAccountUserRequest struct {
-	// The ID of the account user to unlock.
+	// Account user ID.
 	AccountUserID string `path:"id" validate:"required"`
 }
 
@@ -20,7 +20,7 @@ type UnlockAccountUserEndpoint struct{}
 func (e *UnlockAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*UnlockAccountUserRequest, *apiresource.EmptyResource] {
 	return &apiendpoint.APIEndpoint[*UnlockAccountUserRequest, *apiresource.EmptyResource]{
 		Title:             "Unlock Account User",
-		Description:       "Unlocks a previously locked account user, restoring their access to the account.",
+		Description:       "Unlocks an account user, restoring their access to the account.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/account-users/{id}/unlock",

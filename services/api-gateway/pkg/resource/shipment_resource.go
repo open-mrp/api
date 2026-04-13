@@ -12,181 +12,181 @@ const SampleShipmentDetailID = "sh_01jm4r6700f8nwq3v5hx2d9ktp"
 const SampleShipmentNumber = "SH-001"
 const SampleShipmentLineID = "shln_01jm4r6700f8nwq3v5hx2d9ktp"
 
-// ShipmentStatus is a sub-resource for shipment status.
+// Shipment status sub-resource.
 type ShipmentStatus struct {
-	// The status code.
+	// Status code.
 	Code string `json:"code" validate:"required"`
-	// The display name of the status.
+	// Display name.
 	Name string `json:"name" validate:"required"`
 }
 
-// ShipmentBilling represents carrier billing info on a shipment.
+// Carrier billing info on a shipment.
 type ShipmentBilling struct {
-	// The carrier billing type (e.g. "third_party").
+	// Carrier billing type (e.g. "third_party").
 	Type string `json:"type" validate:"required"`
-	// The carrier billing account number.
+	// Carrier billing account number.
 	Account *string `json:"account"`
-	// The billing address country.
+	// Billing address country.
 	Country *string `json:"country"`
-	// The billing address postal code.
+	// Billing address postal code.
 	Zip *string `json:"zip"`
 }
 
-// ShipmentDetail represents a full shipment API resource.
+// Full shipment resource.
 type ShipmentDetail struct {
-	// The unique identifier for the shipment.
+	// Shipment ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=shipment"`
-	// The shipment number.
+	// Shipment number.
 	Number string `json:"number" validate:"required"`
-	// A note attached to this shipment.
+	// Note attached to this shipment.
 	Note *string `json:"note"`
-	// The bill of lading number.
+	// Bill of lading number.
 	BillOfLading *string `json:"bill_of_lading"`
-	// The master tracking number for this shipment.
+	// Master tracking number.
 	MasterTrackingNumber *string `json:"master_tracking_number"`
-	// The shipment status.
+	// Shipment status.
 	Status ShipmentStatus `json:"status" validate:"required"`
-	// The timestamp when the shipment was shipped.
+	// Timestamp when shipped.
 	ShippedAt *time.Time `json:"shipped_at"`
-	// The sales order associated with this shipment.
+	// Associated sales order.
 	SalesOrder *SalesOrderDetail `json:"sales_order" expandable:"true"`
-	// The customer associated with this shipment.
+	// Associated customer.
 	Customer *Customer `json:"customer" expandable:"true"`
-	// The carrier for this shipment.
+	// Carrier.
 	Carrier *Carrier `json:"carrier" expandable:"true"`
-	// The service level for this shipment.
+	// Service level.
 	ServiceLevel *ServiceLevel `json:"service_level" expandable:"true"`
-	// The shipping address.
+	// Shipping address.
 	ShippingAddress *Address `json:"shipping_address" expandable:"true"`
-	// The user who shipped this shipment.
+	// User who shipped this shipment.
 	ShippedBy *AccountUser `json:"shipped_by" expandable:"true"`
-	// The invoice associated with this shipment.
+	// Associated invoice.
 	Invoice *Invoice `json:"invoice" expandable:"true"`
-	// The pick associated with this shipment's order.
+	// Pick associated with this shipment's order.
 	Pick *PickDetail `json:"pick" expandable:"true"`
-	// The carrier billing information.
+	// Carrier billing information.
 	Billing *ShipmentBilling `json:"billing"`
-	// The shipment lines.
+	// Shipment lines.
 	Lines *List[ShipmentLine] `json:"lines" expandable:"true"`
-	// The shipping cases.
+	// Shipping cases.
 	ShippingCases *List[ShippingCaseDetail] `json:"shipping_cases" expandable:"true"`
-	// The timestamp when the shipment was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The timestamp when the shipment was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
-// ShipmentSummary is the list view of a shipment.
+// Shipment list view resource.
 type ShipmentSummary struct {
-	// The unique identifier for the shipment.
+	// Shipment ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=shipment_summary"`
-	// The shipment number.
+	// Shipment number.
 	Number string `json:"number" validate:"required"`
-	// A note attached to this shipment.
+	// Note attached to this shipment.
 	Note *string `json:"note"`
-	// The bill of lading number.
+	// Bill of lading number.
 	BillOfLading *string `json:"bill_of_lading"`
-	// The master tracking number for this shipment.
+	// Master tracking number.
 	MasterTrackingNumber *string `json:"master_tracking_number"`
-	// The shipment status.
+	// Shipment status.
 	Status ShipmentStatus `json:"status" validate:"required"`
-	// The timestamp when the shipment was shipped.
+	// Timestamp when shipped.
 	ShippedAt *time.Time `json:"shipped_at"`
-	// The sales order associated with this shipment.
+	// Associated sales order.
 	SalesOrder *SalesOrderDetail `json:"sales_order" expandable:"true"`
-	// The customer associated with this shipment.
+	// Associated customer.
 	Customer *Customer `json:"customer" expandable:"true"`
-	// The carrier for this shipment.
+	// Carrier.
 	Carrier *Carrier `json:"carrier" expandable:"true"`
-	// The service level for this shipment.
+	// Service level.
 	ServiceLevel *ServiceLevel `json:"service_level" expandable:"true"`
-	// The timestamp when the shipment was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The timestamp when the shipment was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
-// ShipmentLine represents a shipment line API resource.
+// Shipment line resource.
 type ShipmentLine struct {
-	// The unique identifier for the shipment line.
+	// Shipment line ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=shipment_line"`
-	// The sales order line associated with this shipment line.
+	// Associated sales order line.
 	SalesOrderLine *SalesOrderLineDetail `json:"sales_order_line" expandable:"true"`
-	// The quantity shipped.
+	// Quantity shipped.
 	Quantity *Quantity `json:"quantity" validate:"required"`
-	// The timestamp when the shipment line was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The timestamp when the shipment line was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
-// ShippingCaseDetail represents a shipping case in shipment detail views.
+// Shipping case resource in shipment detail views.
 type ShippingCaseDetail struct {
-	// The unique identifier for the shipping case.
+	// Shipping case ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=shipping_case"`
-	// The human-readable case number.
+	// Human-readable case number.
 	Number string `json:"number" validate:"required"`
-	// The Serial Shipping Container Code.
+	// Serial Shipping Container Code.
 	SSCC *string `json:"sscc"`
-	// The carrier tracking number for this case.
+	// Carrier tracking number.
 	TrackingNumber *string `json:"tracking_number"`
-	// The Shippo transaction ID for this case.
+	// Shippo transaction ID.
 	ShippoTransactionID *string `json:"shippo_transaction_id"`
-	// The URL for the shipping label.
+	// Shipping label URL.
 	ShippingLabelURL *string `json:"shipping_label_url"`
-	// The timestamp when the case was shipped.
+	// Timestamp when shipped.
 	ShippedAt *time.Time `json:"shipped_at"`
-	// The freight amount for this case.
+	// Freight amount.
 	FreightAmount *Quantity `json:"freight_amount"`
-	// The freight weight for this case.
+	// Freight weight.
 	FreightWeight *Quantity `json:"freight_weight"`
-	// The carrier for this case.
+	// Carrier.
 	Carrier *Carrier `json:"carrier" expandable:"true"`
-	// The timestamp when the shipping case was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The timestamp when the shipping case was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
-// RateShopResult represents the result of rate shopping.
+// Result of rate shopping.
 type RateShopResult struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=rate_shop_result"`
-	// The available rate options.
+	// Available rate options.
 	Options *List[RateShopOption] `json:"options" validate:"required"`
-	// The exemption type, if applicable.
+	// Exemption type, if applicable.
 	ExemptionType *string `json:"exemption_type"`
-	// The flat rate amount, if applicable.
+	// Flat rate amount, if applicable.
 	FlatRate *float64 `json:"flat_rate"`
 }
 
-// RateShopOption represents a single rate shop option.
+// Rate shop option.
 type RateShopOption struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=rate_shop_option"`
-	// The carrier for this option.
+	// Carrier.
 	Carrier *Carrier `json:"carrier" expandable:"true"`
-	// The service level for this option.
+	// Service level.
 	ServiceLevel *ServiceLevel `json:"service_level" expandable:"true"`
-	// The rate amount.
+	// Rate amount.
 	Rate float64 `json:"rate" validate:"required"`
-	// The estimated delivery days.
+	// Estimated delivery days.
 	EstimatedDays *int32 `json:"estimated_days"`
 }
 
-// EstimateRateResult represents the result of estimating a rate.
+// Result of estimating a shipping rate.
 type EstimateRateResult struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=estimate_rate_result"`
-	// The estimated rate amount.
+	// Estimated rate amount.
 	Rate float64 `json:"rate" validate:"required"`
 }
 

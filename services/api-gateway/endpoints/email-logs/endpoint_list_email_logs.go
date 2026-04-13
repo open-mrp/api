@@ -10,7 +10,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListEmailLogsRequest is the request to list email logs.
+// Request to list email logs.
 type ListEmailLogsRequest struct {
 	apiresource.PaginationRequest
 }

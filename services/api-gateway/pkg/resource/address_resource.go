@@ -11,45 +11,45 @@ import (
 const SampleCRUDAddressID = "ad_01jm4r6700f8nwq3v5hx2d9ktp"
 const SampleGeolocationID = "gl_01jm4r6700f8nwq3v5hx2d9ktp"
 
-// Geolocation represents a geolocation sub-resource within an address.
+// Geolocation sub-resource.
 type Geolocation struct {
-	// The unique identifier for the geolocation.
+	// Geolocation ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=geolocation"`
-	// The first line of the street address.
+	// First line of the street address.
 	StreetLine1 *string `json:"street_line_1"`
-	// The second line of the street address.
+	// Second line of the street address.
 	StreetLine2 *string `json:"street_line_2"`
-	// The city or locality.
+	// City or locality.
 	Locality *string `json:"locality"`
-	// The state or administrative area.
+	// State or administrative area.
 	State *string `json:"state"`
-	// The postal or zip code.
+	// Postal or ZIP code.
 	PostalCode *string `json:"postal_code"`
-	// The two-letter country code.
+	// Two-letter country code.
 	Country string `json:"country" validate:"required"`
 }
 
-// Address represents an address with its associated geolocation.
+// Address with associated geolocation.
 type Address struct {
-	// The unique identifier for the address.
+	// Address ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=address"`
-	// The display name of the address.
+	// Display name of the address.
 	Name string `json:"name" validate:"required"`
-	// The phone number associated with this address.
+	// Phone number associated with the address.
 	Phone *string `json:"phone"`
-	// The email address associated with this address.
+	// Email address associated with the address.
 	Email *string `json:"email"`
-	// Whether this is a drop ship address.
+	// Whether the address is a drop ship location.
 	IsDropShip bool `json:"is_drop_ship"`
-	// The geolocation details for this address.
+	// Geolocation details for the address.
 	Geolocation *Geolocation `json:"geolocation" validate:"required"`
-	// When this address was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// When this address was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 

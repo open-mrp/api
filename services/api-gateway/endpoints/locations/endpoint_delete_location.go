@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// DeleteLocationRequest is the request to delete a location.
+// Request to delete a location.
 type DeleteLocationRequest struct {
-	// The ID of the location to delete.
+	// Location ID.
 	LocationID string `path:"id" validate:"required"`
 }
 

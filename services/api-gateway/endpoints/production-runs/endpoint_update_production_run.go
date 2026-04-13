@@ -11,13 +11,13 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpdateProductionRunRequest is the request to update an existing production run.
+// Request to update a production run.
 type UpdateProductionRunRequest struct {
-	// The ID of the production run to update.
+	// Production run ID.
 	ProductionRunID string `path:"id" validate:"required"`
-	// The new production run number.
+	// Production run number.
 	Number *string `json:"number" nullable:"false" validate:"omitempty,max=255"`
-	// The user ID of the new responsible user.
+	// Responsible user ID.
 	ResponsibleUserID *string `json:"responsible_user_id" nullable:"false" validate:"omitempty,max=191"`
 }
 
@@ -37,7 +37,7 @@ type UpdateProductionRunEndpoint struct{}
 func (e *UpdateProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateProductionRunRequest, *apiresource.ProductionRunDetail] {
 	return &apiendpoint.APIEndpoint[*UpdateProductionRunRequest, *apiresource.ProductionRunDetail]{
 		Title:             "Update Production Run",
-		Description:       "Partially updates a production run. Only non-completed runs can be updated.",
+		Description:       "Partially updates a production run. Fails if the run is completed.",
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/production-runs/{id}",

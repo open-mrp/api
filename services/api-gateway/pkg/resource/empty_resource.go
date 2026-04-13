@@ -1,6 +1,6 @@
 package apiresource
 
-// EmptyResource is an empty resource.
+// Empty resource.
 type EmptyResource struct {
 }
 

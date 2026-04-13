@@ -10,11 +10,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ExportReceivablesByCustomerRequest is the request to export receivable entries for a specific customer as CSV.
+// Request to export receivable entries for a specific customer as CSV.
 type ExportReceivablesByCustomerRequest struct {
-	// The customer account ID.
+	// Customer account ID.
 	AccountID string `json:"-" path:"account_id" validate:"required"`
-	// Optional cutoff date for the receivables snapshot.
+	// Cutoff date for the receivables snapshot.
 	CutoffDate *time.Time `query:"cutoff_date"`
 }
 

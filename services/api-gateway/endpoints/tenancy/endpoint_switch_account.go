@@ -10,9 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// SwitchAccountRequest is the request to switch the user's current account.
+// Request to switch the authenticated user's active account.
 type SwitchAccountRequest struct {
-	// The ID of the account to switch to.
+	// Account ID.
 	AccountID string `json:"account_id" validate:"required"`
 }
 

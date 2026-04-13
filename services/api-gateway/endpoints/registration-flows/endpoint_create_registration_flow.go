@@ -10,15 +10,15 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// CreateRegistrationFlowRequest is the request to create a new registration flow.
+// Request to create a registration flow.
 type CreateRegistrationFlowRequest struct {
-	// The display name of the registration flow.
+	// Display name.
 	Name string `json:"name" validate:"required,max=255"`
-	// The IDs of the customer groups associated with this registration flow.
+	// Customer group IDs.
 	CustomerGroupIDs []string `json:"customer_group_ids"`
-	// The IDs of the payment terms associated with this registration flow.
+	// Payment term IDs.
 	PaymentTermIDs []string `json:"payment_term_ids"`
-	// The IDs of the shipping terms associated with this registration flow.
+	// Shipping term IDs.
 	ShippingTermIDs []string `json:"shipping_term_ids"`
 }
 
@@ -38,7 +38,7 @@ type CreateRegistrationFlowEndpoint struct{}
 func (e *CreateRegistrationFlowEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateRegistrationFlowRequest, *apiresource.RegistrationFlow] {
 	return &apiendpoint.APIEndpoint[*CreateRegistrationFlowRequest, *apiresource.RegistrationFlow]{
 		Title:             "Create Registration Flow",
-		Description:       "Creates a new registration flow.",
+		Description:       "Creates a registration flow.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/registration-flows",

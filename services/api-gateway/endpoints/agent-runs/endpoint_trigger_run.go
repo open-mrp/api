@@ -11,11 +11,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// TriggerRunRequest is the request to trigger a new agent run.
+// Request to trigger an agent run.
 type TriggerRunRequest struct {
-	// The ID of the agent definition to run.
+	// Agent definition ID.
 	AgentDefinitionID string `json:"agent_definition_id" validate:"required"`
-	// Optional input text to provide to the agent at the start of the run.
+	// Input text for the agent.
 	Input string `json:"input,omitempty"`
 }
 
@@ -33,7 +33,7 @@ type TriggerRunEndpoint struct{}
 func (e *TriggerRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*TriggerRunRequest, *apiresource.AgentRun] {
 	return &apiendpoint.APIEndpoint[*TriggerRunRequest, *apiresource.AgentRun]{
 		Title:             "Trigger Run",
-		Description:       "Triggers a new agent run for the specified agent definition.",
+		Description:       "Triggers an agent run for the specified agent definition.",
 		Method:            http.MethodPost,
 		Route:             "/v1/ai/runs",
 		ContentType:       "application/json",

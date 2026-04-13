@@ -10,9 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// The request to exchange a magic login token for a session
+// Request to exchange a magic login token for a session.
 type MagicLoginRequest struct {
-	// The magic login token from the "already registered" email.
+	// Magic login token from the "already registered" email.
 	Token string `json:"token" validate:"required"`
 }
 

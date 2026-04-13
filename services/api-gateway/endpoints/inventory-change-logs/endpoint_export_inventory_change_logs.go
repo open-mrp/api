@@ -10,7 +10,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ExportInventoryChangeLogsRequest is the request to export inventory change logs with optional filters.
+// ExportInventoryChangeLogsRequest is the request to export inventory change logs.
 type ExportInventoryChangeLogsRequest struct {
 	// Filter by item IDs.
 	ItemIDs []string `query:"item_ids"`

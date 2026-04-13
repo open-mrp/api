@@ -9,10 +9,10 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListAttributesRequest is the request to list attributes for a property.
+// Request to list attributes for a property.
 type ListAttributesRequest struct {
 	apiresource.PaginationRequest
-	// The ID of the property to list attributes for.
+	// Property ID.
 	PropertyID string `path:"property_id" validate:"required"`
 }
 

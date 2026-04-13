@@ -10,35 +10,35 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpdatePurchaseOrderLineRequest is the request to update a purchase order line.
+// Request to update a purchase order line.
 type UpdatePurchaseOrderLineRequest struct {
-	// The ID of the purchase order.
+	// Purchase order ID.
 	PurchaseOrderID string `path:"id" validate:"required"`
-	// The ID of the purchase order line.
+	// Purchase order line ID.
 	PurchaseOrderLineID string `path:"lineId" validate:"required"`
-	// The product ID.
+	// Product ID.
 	ProductID *string `json:"product_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
-	// The item ID.
+	// Item ID.
 	ItemID *string `json:"item_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
-	// The product SKU.
+	// Product SKU.
 	ProductSKU *string `json:"product_sku,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// The product description.
+	// Product description.
 	ProductDescription *string `json:"product_description,omitempty" nullable:"false"`
-	// The quantity value.
+	// Quantity value.
 	QuantityValue *string `json:"quantity_value,omitempty" nullable:"false" format:"decimal"`
-	// The quantity unit ID.
+	// Quantity unit ID.
 	QuantityUnitID *string `json:"quantity_unit_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
-	// The unit price value.
+	// Unit price value.
 	UnitPriceValue *string `json:"unit_price_value,omitempty" nullable:"false" format:"decimal"`
-	// The unit price numerator unit ID.
+	// Unit price numerator unit ID.
 	UnitPriceNumeratorUnitID *string `json:"unit_price_numerator_unit_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
-	// The unit price denominator unit ID.
+	// Unit price denominator unit ID.
 	UnitPriceDenominatorUnitID *string `json:"unit_price_denominator_unit_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
-	// The unit cost value.
+	// Unit cost value.
 	UnitCostValue *string `json:"unit_cost_value,omitempty" nullable:"false" format:"decimal"`
-	// The unit cost numerator unit ID.
+	// Unit cost numerator unit ID.
 	UnitCostNumeratorUnitID *string `json:"unit_cost_numerator_unit_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
-	// The unit cost denominator unit ID.
+	// Unit cost denominator unit ID.
 	UnitCostDenominatorUnitID *string `json:"unit_cost_denominator_unit_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
 }
 

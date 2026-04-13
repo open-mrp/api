@@ -11,17 +11,17 @@ import (
 const SampleChildAccountRelationID = "acre_01jm4r6700f8nwq3v5hx2d9ktp"
 const SampleChildAccountExternalNumber = "CUST-001"
 
-// ChildAccount represents a child customer account in a parent-child relationship.
+// Child customer account in a parent-child relationship.
 type ChildAccount struct {
-	// The account relation ID.
+	// Account relation ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=child_account"`
-	// The counterparty account.
+	// Counterparty account.
 	Account *Account `json:"account" validate:"required"`
-	// The external number for the account relation.
+	// External number for the account relation.
 	ExternalNumber *string `json:"external_number"`
-	// The support email from account branding.
+	// Support email from account branding.
 	Email *string `json:"email"`
 	// When this relation was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

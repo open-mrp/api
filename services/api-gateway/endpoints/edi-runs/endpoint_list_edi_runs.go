@@ -9,10 +9,10 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListEDIRunsRequest is the request to list EDI runs with optional filters.
+// Request to list EDI runs.
 type ListEDIRunsRequest struct {
 	apiresource.PaginationRequest
-	// Filter by whether the EDI run succeeded.
+	// Success status filter.
 	HasSucceeded *bool `query:"has_succeeded"`
 }
 

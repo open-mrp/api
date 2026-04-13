@@ -257,7 +257,8 @@ var excludedPaginationOperations = map[string]bool{
 // excludedListOperations are operationIDs omitted from list endpoint tests.
 // These are stale OpenAPI entries removed from runtime routing.
 var excludedListOperations = map[string]bool{
-	"list-carrier-options": true,
+	"list-carrier-options":     true,
+	"list-address-suggestions": true, // requires mandatory `input` query param
 }
 
 // excludedUpdateOperations are operationIDs omitted from update endpoint tests.

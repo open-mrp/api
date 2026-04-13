@@ -10,9 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// CreatePurchaseOrderLineRequest is the request to create a new line on a purchase order.
+// Request to create a line on a purchase order.
 type CreatePurchaseOrderLineRequest struct {
-	// The ID of the purchase order.
+	// Purchase order ID.
 	PurchaseOrderID string `path:"id" validate:"required"`
 	apirequest.OrderLineInput
 }
@@ -22,7 +22,7 @@ type CreatePurchaseOrderLineEndpoint struct{}
 func (e *CreatePurchaseOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreatePurchaseOrderLineRequest, *apiresource.PurchaseOrderLineDetail] {
 	return &apiendpoint.APIEndpoint[*CreatePurchaseOrderLineRequest, *apiresource.PurchaseOrderLineDetail]{
 		Title:             "Create Purchase Order Line",
-		Description:       "Creates a new line item on a purchase order.",
+		Description:       "Creates a line item on a purchase order.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/purchase-orders/{id}/lines",

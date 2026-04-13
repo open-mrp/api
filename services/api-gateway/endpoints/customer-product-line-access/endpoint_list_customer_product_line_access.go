@@ -9,7 +9,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListCustomerProductLineAccessRequest is the request to list product line access records grouped by customer.
+// Request to list product line access records grouped by customer.
 type ListCustomerProductLineAccessRequest struct {
 	apiresource.PaginationRequest
 }

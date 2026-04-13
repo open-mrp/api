@@ -9,11 +9,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetAddressDetailsRequest is the request to get details for a place.
+// Request to get details for a place.
 type GetAddressDetailsRequest struct {
-	// The Google Places ID to look up.
+	// Google Places ID.
 	PlaceID string `path:"id" validate:"required"`
-	// An optional session token for grouping with a previous autocomplete request.
+	// Session token for grouping with a previous autocomplete request.
 	SessionToken *string `query:"session_token"` // #nosec G117 -- not a secret, Google Maps session correlation token
 }
 

@@ -10,9 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetAgentRequest is the request to retrieve a single agent definition.
+// Request to retrieve an agent definition.
 type GetAgentRequest struct {
-	// The ID of the agent definition to retrieve.
+	// ID of the agent definition to retrieve.
 	AgentDefinitionID string `path:"id" validate:"required"`
 }
 
@@ -21,7 +21,7 @@ type GetAgentEndpoint struct{}
 func (e *GetAgentEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetAgentRequest, *apiresource.AgentDefinition] {
 	return &apiendpoint.APIEndpoint[*GetAgentRequest, *apiresource.AgentDefinition]{
 		Title:             "Get Agent",
-		Description:       "Returns a single agent definition with its tool configuration.",
+		Description:       "Returns an agent definition by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/ai/agents/{id}",

@@ -11,19 +11,19 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpdateShipmentRequest is the request to partially update a shipment.
+// Request to partially update a shipment.
 type UpdateShipmentRequest struct {
-	// The ID of the shipment to update.
+	// Shipment ID.
 	ShipmentID string `path:"id" validate:"required"`
-	// An optional note for the shipment.
+	// Note for the shipment.
 	Note *string `json:"note,omitempty" nullable:"false"`
-	// The shipment number.
+	// Shipment number.
 	Number *string `json:"number,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// The master tracking number for the shipment.
+	// Master tracking number.
 	MasterTrackingNumber *string `json:"master_tracking_number,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// The ID of the carrier for this shipment.
+	// Carrier ID.
 	CarrierID *string `json:"carrier_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
-	// The ID of the service level for this shipment.
+	// Service level ID.
 	ServiceLevelID *string `json:"service_level_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
 }
 

@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// DeleteProductionStepRequest is the request to delete a production step.
+// Request to delete a production step.
 type DeleteProductionStepRequest struct {
-	// The ID of the production step to delete.
+	// Production step ID.
 	ProductionStepID string `path:"id" validate:"required"`
 }
 

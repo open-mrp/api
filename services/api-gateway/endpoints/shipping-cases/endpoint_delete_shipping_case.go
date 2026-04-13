@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// DeleteShippingCaseRequest is the request to delete a shipping case.
+// Request to delete a shipping case.
 type DeleteShippingCaseRequest struct {
-	// The ID of the shipping case to delete.
+	// Shipping case ID.
 	ShippingCaseID string `path:"id" validate:"required"`
 }
 

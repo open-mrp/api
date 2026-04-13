@@ -12,19 +12,19 @@ const SampleProductTypeID = "prty_01jm4r6700f8nwq3v5hx2d9ktp"
 const SampleProductTypeName = "Sale"
 const SampleProductTypeCode = "sale"
 
-// ProductType represents a product type that categorizes products.
+// ProductType resource.
 type ProductType struct {
-	// The unique identifier for the product type.
+	// Product type ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=product_type"`
-	// The display name of the product type.
+	// Display name.
 	Name string `json:"name" validate:"required"`
-	// The unique code for the product type.
+	// Unique code.
 	Code string `json:"code" validate:"required"`
-	// When this product type was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// When this product type was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 

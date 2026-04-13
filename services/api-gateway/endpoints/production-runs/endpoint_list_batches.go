@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListBatchesByProductionRunRequest is the request to list batches for a production run.
+// Request to list batches for a production run.
 type ListBatchesByProductionRunRequest struct {
-	// The ID of the production run.
+	// Production run ID.
 	ProductionRunID string `path:"id" validate:"required"`
 	apiresource.PaginationRequest
 }

@@ -9,7 +9,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListTransactionMethodsRequest is the request to list transaction methods.
+// Request to list transaction methods.
 type ListTransactionMethodsRequest struct {
 	apiresource.PaginationRequest
 }

@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetAccountLogoURLRequest is the request to get a presigned logo URL.
+// Request to get a presigned logo URL.
 type GetAccountLogoURLRequest struct {
-	// The ID of the account.
+	// Account ID.
 	AccountID string `path:"id" validate:"required"`
 }
 
@@ -20,7 +20,7 @@ type GetAccountLogoURLEndpoint struct{}
 func (e *GetAccountLogoURLEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetAccountLogoURLRequest, *apiresource.AccountLogoURL] {
 	return &apiendpoint.APIEndpoint[*GetAccountLogoURLRequest, *apiresource.AccountLogoURL]{
 		Title:             "Get Account Logo URL",
-		Description:       "Returns a presigned URL for the account's logo image. The URL expires after one hour.",
+		Description:       "Returns a presigned URL for the account's logo. Expires after one hour.",
 		Method:            http.MethodGet,
 		Route:             "/v1/identity/accounts/{id}/logo",
 		ContentType:       "application/json",

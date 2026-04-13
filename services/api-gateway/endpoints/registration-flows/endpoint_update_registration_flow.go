@@ -10,17 +10,17 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpdateRegistrationFlowRequest is the request to partially update a registration flow.
+// Request to partially update a registration flow.
 type UpdateRegistrationFlowRequest struct {
-	// The ID of the registration flow to update.
+	// Registration flow ID.
 	RegistrationFlowID string `path:"id" validate:"required"`
-	// The display name of the registration flow.
+	// Display name.
 	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// The IDs of the customer groups associated with this registration flow.
+	// Customer group IDs.
 	CustomerGroupIDs []string `json:"customer_group_ids,omitempty"`
-	// The IDs of the payment terms associated with this registration flow.
+	// Payment term IDs.
 	PaymentTermIDs []string `json:"payment_term_ids,omitempty"`
-	// The IDs of the shipping terms associated with this registration flow.
+	// Shipping term IDs.
 	ShippingTermIDs []string `json:"shipping_term_ids,omitempty"`
 	// Whether to replace customer groups.
 	HasCustomerGroupIDs bool `json:"has_customer_group_ids,omitempty"`

@@ -10,37 +10,37 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpdateVolumeDiscountTierInput represents a tier to upsert.
+// Volume discount tier to upsert.
 type UpdateVolumeDiscountTierInput struct {
-	// The ID of an existing tier to update. Omit for new tiers.
+	// Existing tier ID. Omit for new tiers.
 	ID *string `json:"id,omitempty" nullable:"false" validate:"omitempty,max=191"`
-	// The display name for the tier.
+	// Display name.
 	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// The discount percentage as a decimal string.
+	// Discount percentage as a decimal string.
 	DiscountPercentage *string `json:"discount_percentage,omitempty" nullable:"false" format:"decimal"`
-	// The quantity threshold for this tier as a decimal string.
+	// Quantity threshold as a decimal string.
 	Threshold *string `json:"threshold,omitempty" nullable:"false" format:"decimal"`
-	// Optional parent tier ID for tier chaining.
+	// Parent tier ID for tier chaining.
 	ParentTierID *string `json:"parent_tier_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
 }
 
-// UpdateVolumeDiscountRequest is the request to partially update a volume discount.
+// Request to partially update a volume discount.
 type UpdateVolumeDiscountRequest struct {
-	// The ID of the volume discount to update.
+	// Volume discount ID.
 	VolumeDiscountID string `path:"id" validate:"required"`
-	// The display name of the volume discount.
+	// Display name.
 	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// The tiers for this volume discount (upsert semantics).
+	// Tiers (upsert semantics).
 	Tiers []UpdateVolumeDiscountTierInput `json:"tiers,omitempty"`
-	// The account group IDs to set as customer groups.
+	// Account group IDs to set as customer groups.
 	CustomerGroupIDs []string `json:"customer_group_ids,omitempty"`
-	// The product line IDs to set.
+	// Product line IDs to set.
 	ProductLineIDs []string `json:"product_line_ids,omitempty"`
-	// The item category IDs to set.
+	// Item category IDs to set.
 	CategoryIDs []string `json:"category_ids,omitempty"`
-	// The attribute IDs to set.
+	// Attribute IDs to set.
 	AttributeIDs []string `json:"attribute_ids,omitempty"`
-	// The unit IDs to set as acceptable units.
+	// Unit IDs to set as acceptable units.
 	UnitIDs []string `json:"unit_ids,omitempty"`
 	// Whether to replace tiers.
 	HasTiers bool `json:"has_tiers,omitempty"`

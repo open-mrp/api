@@ -11,17 +11,17 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpdateQuantityRequest is the request to partially update a quantity.
+// Request to partially update a quantity.
 type UpdateQuantityRequest struct {
-	// The ID of the quantity to update.
+	// Quantity ID.
 	QuantityID string `path:"id" validate:"required"`
-	// The new decimal value of the quantity.
+	// Decimal value.
 	Value *string `json:"value,omitempty" nullable:"false"`
-	// The new unit ID for this quantity.
+	// Unit ID.
 	UnitID *string `json:"unit_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
-	// The ID of the parent resource that owns this quantity.
+	// Owner resource ID.
 	ObjectID *string `json:"object_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
-	// The type of the parent resource (e.g. "item", "production_step").
+	// Owner resource type (e.g. "item", "production_step").
 	ObjectType *string `json:"object_type,omitempty" nullable:"false" validate:"omitempty,max=255"`
 }
 

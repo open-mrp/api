@@ -10,23 +10,23 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// BulkCreateItemInput represents a single item to create in a bulk operation.
+// BulkCreateItemInput is the input for a single item in a bulk create operation.
 type BulkCreateItemInput struct {
-	// The SKU for the item.
+	// Item SKU.
 	SKU string `json:"sku" validate:"required"`
-	// The description for the item.
+	// Item description.
 	Description *string `json:"description,omitempty"`
-	// The item category ID.
+	// Item category ID.
 	ItemCategoryID string `json:"item_category_id" validate:"required"`
-	// The product line ID.
+	// Product line ID.
 	ProductLineID *string `json:"product_line_id,omitempty"`
 }
 
 // BulkCreateItemsRequest is the request to create multiple items.
 type BulkCreateItemsRequest struct {
-	// The items to create.
+	// Items to create.
 	Items []BulkCreateItemInput `json:"items" validate:"required"`
-	// The type of items to create (product, material, part).
+	// Item type (product, material, or part).
 	Type string `json:"type" validate:"required"`
 }
 

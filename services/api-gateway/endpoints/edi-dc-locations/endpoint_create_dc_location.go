@@ -10,11 +10,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// CreateDCLocationRequest is the request to create a new DC location.
+// Request to create a DC location.
 type CreateDCLocationRequest struct {
-	// The ID of the customer account to associate with this DC location.
+	// Customer account ID.
 	CustomerID string `json:"customer_id" validate:"required,max=191"`
-	// The location description.
+	// Location description.
 	Location string `json:"location" validate:"required,max=255"`
 }
 
@@ -32,7 +32,7 @@ type CreateDCLocationEndpoint struct{}
 func (e *CreateDCLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateDCLocationRequest, *apiresource.DCLocation] {
 	return &apiendpoint.APIEndpoint[*CreateDCLocationRequest, *apiresource.DCLocation]{
 		Title:             "Create DC Location",
-		Description:       "Creates a new DC location.",
+		Description:       "Creates a DC location.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/dc-locations",

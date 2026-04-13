@@ -9,7 +9,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListChildAccountsRequest is the request to list child accounts.
+// Request to list child accounts.
 type ListChildAccountsRequest struct {
 	apiresource.PaginationRequest
 }

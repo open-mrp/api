@@ -18,53 +18,53 @@ const SampleRequestLogClientIP = "198.51.100.7"
 const SampleRequestLogUserAgent = "Mozilla/5.0"
 const SampleRequestLogResponseBody = `{"object":"list","data":[...]}`
 
-// RequestLog represents a single API request log entry.
+// RequestLog is an API request log entry.
 type RequestLog struct {
-	// The unique identifier for the request log.
+	// Request log ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=request_log"`
-	// The HTTP method.
+	// HTTP method.
 	Method string `json:"method" validate:"required"`
-	// The request host.
+	// Request host.
 	Host string `json:"host" validate:"required"`
-	// The request path.
+	// Request path.
 	Path string `json:"path" validate:"required"`
-	// The normalized route pattern.
+	// Normalized route pattern.
 	NormalizedRoute string `json:"normalized_route" validate:"required"`
-	// The query parameters as JSON.
+	// Query parameters as JSON.
 	QueryJSON *string `json:"query_json" expandable:"true"`
-	// The HTTP status code.
+	// HTTP status code.
 	StatusCode int32 `json:"status_code" validate:"required"`
-	// The request latency in microseconds.
+	// Request latency in microseconds.
 	LatencyUs int64 `json:"latency_us" validate:"required"`
-	// The API version used.
+	// API version used.
 	APIVersion *string `json:"api_version"`
-	// The identity type of the caller.
+	// Caller identity type.
 	IdentityType *string `json:"identity_type"`
-	// The client IP address.
+	// Client IP address.
 	ClientIP *string `json:"client_ip"`
-	// The user agent string.
+	// User agent string.
 	UserAgent *string `json:"user_agent"`
-	// The referrer header.
+	// Referrer header.
 	Referrer *string `json:"referrer"`
-	// The API error code, if any.
+	// API error code.
 	ErrorCode *string `json:"error_code"`
-	// The error message, if any.
+	// Error message.
 	ErrorMessage *string `json:"error_message"`
 	// When the request occurred.
 	OccurredAt time.Time `json:"occurred_at" validate:"required"`
 	// When the log entry was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The account targeted by the request.
+	// Account targeted by the request.
 	Account *Account `json:"account" expandable:"true"`
 	// Actor details (user or API key).
 	Actor *Actor `json:"actor" expandable:"true"`
-	// The user-provided idempotency key value.
+	// User-provided idempotency key.
 	IdempotencyKey *string `json:"idempotency_key"`
-	// The JSON request body.
+	// Request body as JSON.
 	RequestBodyJSON *string `json:"request_body_json" expandable:"true"`
-	// The JSON response body.
+	// Response body as JSON.
 	ResponseBodyJSON *string `json:"response_body_json" expandable:"true"`
 }
 

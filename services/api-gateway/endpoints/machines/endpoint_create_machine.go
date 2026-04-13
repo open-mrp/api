@@ -10,15 +10,15 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// CreateMachineRequest is the request to create a new machine.
+// Request to create a machine.
 type CreateMachineRequest struct {
-	// The display name of the machine.
+	// Display name.
 	Name string `json:"name" validate:"required,max=255"`
-	// The serial number of the machine.
+	// Serial number.
 	SerialNumber string `json:"serial_number" validate:"required,max=255"`
-	// Optional notes about the machine.
+	// Notes.
 	Notes *string `json:"notes,omitempty"`
-	// The ID of the department this machine belongs to.
+	// Department ID.
 	DepartmentID string `json:"department_id" validate:"required,max=191"`
 }
 
@@ -37,7 +37,7 @@ type CreateMachineEndpoint struct{}
 func (e *CreateMachineEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateMachineRequest, *apiresource.Machine] {
 	return &apiendpoint.APIEndpoint[*CreateMachineRequest, *apiresource.Machine]{
 		Title:             "Create Machine",
-		Description:       "Creates a new machine and associates it with a department.",
+		Description:       "Creates a machine and associates it with a department.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/machines",

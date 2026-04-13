@@ -10,13 +10,13 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpdateProductTypeRequest is the request to partially update a product type.
+// Request to partially update a product type.
 type UpdateProductTypeRequest struct {
-	// The ID of the product type to update.
+	// Product type ID.
 	ProductTypeID string `path:"id" validate:"required"`
-	// The display name of the product type.
+	// Display name.
 	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// The unique code for the product type.
+	// Unique code.
 	Code *string `json:"code,omitempty" nullable:"false" validate:"omitempty,max=255"`
 }
 

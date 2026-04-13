@@ -8,13 +8,13 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-// CustomerProductLineAccess represents the product lines accessible to a customer.
+// Product lines accessible to a customer.
 type CustomerProductLineAccess struct {
-	// The customer.
+	// Customer.
 	Customer *Customer `json:"customer" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=customer_product_line_access"`
-	// The product lines accessible to this customer.
+	// Product lines accessible to this customer.
 	ProductLines *List[ProductLine] `json:"product_lines" validate:"required"`
 	// When this record was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

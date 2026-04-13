@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetItemInventoryRequest is the request to retrieve inventory for an item.
+// GetItemInventoryRequest is the request to get an item's inventory.
 type GetItemInventoryRequest struct {
-	// The ID of the item to retrieve inventory for.
+	// Item ID.
 	ItemID string `path:"id" validate:"required"`
 }
 

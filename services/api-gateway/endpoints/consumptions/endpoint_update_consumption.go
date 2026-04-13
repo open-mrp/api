@@ -11,23 +11,23 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpdateConsumptionRequest is the request to partially update a consumption.
+// Request to partially update a consumption.
 type UpdateConsumptionRequest struct {
-	// The ID of the production step.
+	// Production step ID.
 	ProductionStepID string `path:"production_step_id" validate:"required"`
-	// The ID of the consumption to update.
+	// Consumption ID.
 	ConsumptionID string `path:"id" validate:"required"`
-	// The ID of the item being consumed.
+	// Item ID.
 	ItemID *string `json:"item_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
-	// The decimal value of the quantity consumed.
+	// Consumed quantity value.
 	QuantityValue *string `json:"quantity_value,omitempty" nullable:"false"`
-	// The unit ID for the quantity consumed.
+	// Consumed quantity unit ID.
 	QuantityUnitID *string `json:"quantity_unit_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
-	// The decimal value of the waste quantity.
+	// Waste quantity value.
 	WasteQuantityValue *string `json:"waste_quantity_value,omitempty" nullable:"false"`
-	// The unit ID for the waste quantity.
+	// Waste quantity unit ID.
 	WasteQuantityUnitID *string `json:"waste_quantity_unit_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
-	// Optional instructions for how this material is consumed.
+	// Instructions for how this material is consumed.
 	Instructions *string `json:"instructions,omitempty" nullable:"true"`
 }
 

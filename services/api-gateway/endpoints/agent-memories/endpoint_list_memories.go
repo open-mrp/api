@@ -9,12 +9,12 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListMemoriesRequest is the request to list agent memories.
+// Request to list agent memories.
 type ListMemoriesRequest struct {
 	apiresource.PaginationRequest
-	// Filter by memory category (e.g. "preference", "fact").
+	// Category filter (e.g. "preference", "fact").
 	Category *string `query:"category"`
-	// Filter by entity type (e.g. "customer", "product").
+	// Entity type filter (e.g. "customer", "product").
 	EntityType *string `query:"entity_type"`
 }
 
@@ -23,7 +23,7 @@ type ListMemoriesEndpoint struct{}
 func (e *ListMemoriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListMemoriesRequest, *apiresource.List[apiresource.AgentMemory]] {
 	return &apiendpoint.APIEndpoint[*ListMemoriesRequest, *apiresource.List[apiresource.AgentMemory]]{
 		Title:             "List Agent Memories",
-		Description:       "Returns a paginated list of agent memories for the current account.",
+		Description:       "Returns a paginated list of agent memories.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/ai/memories",

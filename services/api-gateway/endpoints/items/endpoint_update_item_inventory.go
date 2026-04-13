@@ -12,19 +12,19 @@ import (
 
 // UpdateItemInventoryRequest is the request to adjust or reconcile inventory for an item.
 type UpdateItemInventoryRequest struct {
-	// The ID of the item to update inventory for.
+	// Item ID.
 	ItemID string `path:"id" validate:"required"`
-	// The quantity change to apply.
+	// Quantity change to apply.
 	QuantityChange *float64 `json:"quantity_change,omitempty" nullable:"false"`
 	// Whether to reconcile (force to exact value) or adjust (add delta).
 	Reconcile *bool `json:"reconcile,omitempty" nullable:"false"`
-	// Optional customer to update inventory for.
+	// Customer ID.
 	CustomerID *string `json:"customer_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
-	// Optional location.
+	// Location ID.
 	LocationID *string `json:"location_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
-	// Optional lot number.
+	// Lot number.
 	LotNumber *string `json:"lot_number,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// The unit ID for the quantity change.
+	// Unit ID for the quantity change.
 	UnitID *string `json:"unit_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
 }
 

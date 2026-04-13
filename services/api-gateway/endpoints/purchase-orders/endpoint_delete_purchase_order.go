@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// DeletePurchaseOrderRequest is the request to delete a purchase order.
+// Request to delete a purchase order.
 type DeletePurchaseOrderRequest struct {
-	// The ID of the purchase order to delete.
+	// Purchase order ID.
 	PurchaseOrderID string `path:"id" validate:"required"`
 }
 

@@ -10,21 +10,21 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// BulkReconcileItemInput represents a single item to reconcile.
+// BulkReconcileItemInput is the input for a single item in a bulk reconcile operation.
 type BulkReconcileItemInput struct {
-	// The SKU of the item to reconcile.
+	// Item SKU.
 	SKU string `json:"sku" validate:"required"`
-	// The unit abbreviation for the quantity.
+	// Unit abbreviation for the quantity.
 	Unit string `json:"unit" validate:"required"`
-	// The quantity value.
+	// Quantity.
 	Quantity float64 `json:"quantity" validate:"required"`
 }
 
 // BulkReconcileItemsRequest is the request to bulk reconcile item inventory.
 type BulkReconcileItemsRequest struct {
-	// The items to reconcile.
+	// Items to reconcile.
 	Data []BulkReconcileItemInput `json:"data" validate:"required"`
-	// The reconcile type: "addition" or "force".
+	// Reconcile type: "addition" or "force".
 	ReconcileType string `json:"reconcile_type" validate:"required"`
 }
 

@@ -8,19 +8,19 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-// ReceivableEntry represents an outstanding receivable tied to an invoice.
+// Outstanding receivable tied to an invoice.
 type ReceivableEntry struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=receivable_entry"`
-	// The invoice associated with this receivable entry.
+	// Associated invoice.
 	Invoice *Invoice `json:"invoice"`
-	// The customer who owes the receivable.
+	// Customer who owes the receivable.
 	Customer *Customer `json:"customer"`
-	// The purchase order number on the invoice, if any.
+	// Purchase order number, if any.
 	PONumber *string `json:"po_number"`
-	// The date the invoice was created.
+	// Invoice creation date.
 	InvoicedAt time.Time `json:"invoiced_at" validate:"required"`
-	// The remaining balance on the invoice.
+	// Remaining balance on the invoice.
 	RemainingBalance string `json:"remaining_balance" validate:"required"`
 	// Whether the invoice has been paid in full.
 	IsPaidInFull bool `json:"is_paid_in_full"`

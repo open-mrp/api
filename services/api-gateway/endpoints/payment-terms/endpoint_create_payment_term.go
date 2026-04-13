@@ -11,9 +11,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// CreatePaymentTermRequest is the request to create a new payment term.
+// Request to create a payment term.
 type CreatePaymentTermRequest struct {
-	// The display name of the payment term (e.g. "Net 30").
+	// Display name (e.g. "Net 30").
 	Name string `json:"name" validate:"required,max=255"`
 }
 
@@ -30,7 +30,7 @@ type CreatePaymentTermEndpoint struct{}
 func (e *CreatePaymentTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreatePaymentTermRequest, *apiresource.PaymentTerm] {
 	return &apiendpoint.APIEndpoint[*CreatePaymentTermRequest, *apiresource.PaymentTerm]{
 		Title:             "Create Payment Term",
-		Description:       "Creates a new payment term.",
+		Description:       "Creates a payment term.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/finance/payment-terms",

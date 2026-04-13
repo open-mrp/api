@@ -11,17 +11,17 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// CreateAccountGroupRequest is the request to create a new account group.
+// Request to create an account group.
 type CreateAccountGroupRequest struct {
-	// The display name of the account group.
+	// Display name.
 	Name string `json:"name" validate:"required,max=255"`
-	// The account group type code.
+	// Account group type.
 	Type constants.AccountGroupType `json:"type" validate:"required"`
-	// The commission status code.
+	// Commission policy.
 	CommissionPolicy *constants.CommissionPolicy `json:"commission_policy,omitempty" default:"commission_exempt" nullable:"false"`
-	// The freight status code.
+	// Freight policy.
 	FreightPolicy *constants.FreightPolicy `json:"freight_policy,omitempty" default:"billed_freight" nullable:"false"`
-	// An optional description of the account group.
+	// Description.
 	Description *string `json:"description,omitempty" nullable:"false"`
 }
 
@@ -39,7 +39,7 @@ type CreateAccountGroupEndpoint struct{}
 func (e *CreateAccountGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAccountGroupRequest, *apiresource.AccountGroup] {
 	return &apiendpoint.APIEndpoint[*CreateAccountGroupRequest, *apiresource.AccountGroup]{
 		Title:             "Create Account Group",
-		Description:       "Creates a new account group.",
+		Description:       "Creates an account group.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/account-groups",

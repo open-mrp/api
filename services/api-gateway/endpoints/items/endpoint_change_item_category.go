@@ -12,9 +12,9 @@ import (
 
 // ChangeItemCategoryRequest is the request to change an item's category.
 type ChangeItemCategoryRequest struct {
-	// The ID of the item.
+	// Item ID.
 	ItemID string `path:"id" validate:"required"`
-	// The ID of the new category.
+	// Category ID.
 	CategoryID string `path:"category_id" validate:"required"`
 }
 

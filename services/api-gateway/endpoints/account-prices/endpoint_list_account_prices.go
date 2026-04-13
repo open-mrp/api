@@ -9,10 +9,10 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListAccountPricesRequest is the request to list account prices with optional filters.
+// Request to list account prices.
 type ListAccountPricesRequest struct {
 	apiresource.PaginationRequest
-	// Filter by recipient account ID.
+	// Recipient account ID filter.
 	RecipientAccountID *string `query:"recipient_account_id"`
 }
 

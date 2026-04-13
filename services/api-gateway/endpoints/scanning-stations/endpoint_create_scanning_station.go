@@ -11,21 +11,21 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// CreateScanningStationRequest is the request to create a new scanning station.
+// Request to create a scanning station.
 type CreateScanningStationRequest struct {
-	// The display name of the scanning station.
+	// Display name.
 	Name string `json:"name" validate:"required,max=255"`
-	// Optional notes about the scanning station.
+	// Notes.
 	Notes *string `json:"notes,omitempty" nullable:"false"`
-	// The type of scanning station.
+	// Scanning station type.
 	Type constants.ScanningStationType `json:"type" validate:"required"`
-	// Whether material check is required at this station.
+	// Whether material check is required.
 	MaterialCheckRequired bool `json:"material_check_required"`
-	// The ID of the department to associate with this scanning station.
+	// Department ID.
 	DepartmentID string `json:"department_id" validate:"required,max=191"`
-	// The label size code for the scanning station.
+	// Label size code.
 	LabelSizeCode *constants.LabelSizeCode `json:"label_size,omitempty" nullable:"false"`
-	// The label type code for the scanning station.
+	// Label type code.
 	LabelTypeCode *constants.LabelTypeCode `json:"label_type,omitempty" nullable:"false"`
 }
 
@@ -45,7 +45,7 @@ type CreateScanningStationEndpoint struct{}
 func (e *CreateScanningStationEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateScanningStationRequest, *apiresource.ScanningStation] {
 	return &apiendpoint.APIEndpoint[*CreateScanningStationRequest, *apiresource.ScanningStation]{
 		Title:             "Create Scanning Station",
-		Description:       "Creates a new scanning station associated with a department.",
+		Description:       "Creates a scanning station associated with a department.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/scanning-stations",

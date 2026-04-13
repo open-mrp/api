@@ -10,12 +10,18 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
+// Request to create a supplier material.
 type CreateSupplierMaterialRequest struct {
-	SupplierID          string  `path:"supplier_id" validate:"required"`
-	MaterialID          string  `json:"material_id" validate:"required,max=191"`
-	SupplierPartNumber  string  `json:"supplier_part_number" validate:"required,max=255"`
+	// Supplier ID.
+	SupplierID string `path:"supplier_id" validate:"required"`
+	// Material ID.
+	MaterialID string `json:"material_id" validate:"required,max=191"`
+	// Supplier part number for this material.
+	SupplierPartNumber string `json:"supplier_part_number" validate:"required,max=255"`
+	// Supplier description for this material.
 	SupplierDescription *string `json:"supplier_description,omitempty" validate:"omitempty,max=255"`
-	IsActive            *bool   `json:"is_active"`
+	// Active status.
+	IsActive *bool `json:"is_active"`
 }
 
 var sampleIsActive = true
@@ -35,7 +41,7 @@ type CreateSupplierMaterialEndpoint struct{}
 func (e *CreateSupplierMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateSupplierMaterialRequest, *apiresource.SupplierMaterial] {
 	return &apiendpoint.APIEndpoint[*CreateSupplierMaterialRequest, *apiresource.SupplierMaterial]{
 		Title:             "Create Supplier Material",
-		Description:       "Creates a new supplier material association.",
+		Description:       "Creates a supplier material association.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/suppliers/{supplier_id}/materials",

@@ -9,13 +9,13 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UploadAccountPhotoRequest is the request to upload an account logo.
+// Request to upload an account logo.
 type UploadAccountPhotoRequest struct {
-	// The ID of the account.
+	// Account ID.
 	AccountID string `path:"id" validate:"required"`
-	// The raw image bytes.
+	// Raw image bytes.
 	RawBody []byte `rawbody:"true"`
-	// The content type of the image (e.g. image/png).
+	// Content type of the image (e.g., image/png).
 	ContentType string `header:"Content-Type"`
 }
 
@@ -24,7 +24,7 @@ type UploadAccountPhotoEndpoint struct{}
 func (e *UploadAccountPhotoEndpoint) Materialize() *apiendpoint.APIEndpoint[*UploadAccountPhotoRequest, *apiresource.AccountPhotoUploadResult] {
 	return &apiendpoint.APIEndpoint[*UploadAccountPhotoRequest, *apiresource.AccountPhotoUploadResult]{
 		Title:             "Upload Account Photo",
-		Description:       "Uploads a logo image for an account as a raw binary body.",
+		Description:       "Uploads an account logo. Send as raw binary body.",
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/accounts/{id}/photo",

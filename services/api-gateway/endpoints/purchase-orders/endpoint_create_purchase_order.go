@@ -12,25 +12,25 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// CreatePurchaseOrderRequest is the request to create a new purchase order.
+// Request to create a purchase order.
 type CreatePurchaseOrderRequest struct {
-	// The supplier account ID.
+	// Supplier account ID.
 	SupplierAccountID string `json:"supplier_account_id" validate:"required,max=191"`
-	// A note for the order.
+	// Order note.
 	Note *string `json:"note,omitempty"`
-	// The carrier ID.
+	// Carrier ID.
 	CarrierID *string `json:"carrier_id,omitempty" validate:"omitempty,max=191"`
-	// The service level ID.
+	// Service level ID.
 	ServiceLevelID *string `json:"service_level_id,omitempty" validate:"omitempty,max=191"`
-	// The carrier billing type.
+	// Carrier billing type.
 	CarrierBillingType *string `json:"carrier_billing_type,omitempty" validate:"omitempty,max=255"`
-	// The carrier billing account number.
+	// Carrier billing account number.
 	CarrierBillingAccount *string `json:"carrier_billing_account,omitempty" validate:"omitempty,max=255"`
-	// The priority code.
+	// Priority code.
 	PriorityCode string `json:"priority_code" validate:"required,max=255"`
-	// The shipping term ID.
+	// Shipping term ID.
 	ShippingTermID *string `json:"shipping_term_id,omitempty" validate:"omitempty,max=191"`
-	// The payment term ID.
+	// Payment term ID.
 	PaymentTermID *string `json:"payment_term_id,omitempty" validate:"omitempty,max=191"`
 	// Bill-to address name.
 	BillToName *string `json:"bill_to_name,omitempty" validate:"omitempty,max=255"`
@@ -60,15 +60,15 @@ type CreatePurchaseOrderRequest struct {
 	ShipToPostalCode *string `json:"ship_to_postal_code,omitempty" validate:"omitempty,max=255"`
 	// Ship-to country.
 	ShipToCountry *string `json:"ship_to_country,omitempty" validate:"omitempty,max=2"`
-	// The order lines to create.
+	// Order lines to create.
 	Lines []CreatePurchaseOrderLineInput `json:"lines"`
-	// The account user IDs for email contacts.
+	// Account user IDs for email contacts.
 	ContactAccountUserIDs []string `json:"contact_account_user_ids,omitempty"`
-	// The promised/scheduled delivery date.
+	// Promised delivery date.
 	PromisedAt *string `json:"promised_at,omitempty"`
 }
 
-// CreatePurchaseOrderLineInput represents a line item in a create purchase order request.
+// Line item input for creating a purchase order.
 type CreatePurchaseOrderLineInput struct {
 	apirequest.OrderLineInput
 }
@@ -118,7 +118,7 @@ type CreatePurchaseOrderEndpoint struct{}
 func (e *CreatePurchaseOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreatePurchaseOrderRequest, *apiresource.PurchaseOrderDetail] {
 	return &apiendpoint.APIEndpoint[*CreatePurchaseOrderRequest, *apiresource.PurchaseOrderDetail]{
 		Title:             "Create Purchase Order",
-		Description:       "Creates a new purchase order.",
+		Description:       "Creates a purchase order.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/purchase-orders",

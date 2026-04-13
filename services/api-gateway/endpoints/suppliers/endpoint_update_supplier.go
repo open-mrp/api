@@ -12,19 +12,19 @@ import (
 
 // UpdateSupplierRequest is the request to update a supplier.
 type UpdateSupplierRequest struct {
-	// The ID of the supplier to update.
+	// Supplier ID.
 	SupplierID string `path:"id" validate:"required"`
-	// The new display name.
+	// Display name.
 	Name *string `json:"name" nullable:"false" validate:"omitempty,max=255"`
-	// The new supplier number.
+	// Supplier number.
 	Number *string `json:"number" nullable:"false" validate:"omitempty,max=255"`
-	// The new note. Set update_note to true to apply.
+	// Note value. Set update_note to true to apply.
 	Note *string `json:"note"`
-	// Whether to update the note field (allows setting to null).
+	// Whether to update the note field. Allows clearing to null.
 	UpdateNote bool `json:"update_note"`
-	// The ID of the bill-to address to set.
+	// Bill-to address ID.
 	BillToAddressID *string `json:"bill_to_address_id" nullable:"false" validate:"omitempty,max=191"`
-	// The ID of the ship-to address to set.
+	// Ship-to address ID.
 	ShipToAddressID *string `json:"ship_to_address_id" nullable:"false" validate:"omitempty,max=191"`
 }
 

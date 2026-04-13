@@ -7,9 +7,9 @@ import (
 
 // Entity is a polymorphic reference to any resource in the system.
 type Entity struct {
-	// The unique identifier for the entity.
+	// Unique identifier for the entity.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=entity"`
 	// The resource kind that this entity references (e.g. "user", "customer", "sales_order").
 	Type constants.ObjectType `json:"type" validate:"required"`

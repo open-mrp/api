@@ -12,7 +12,7 @@ import (
 
 // ValidateProductsRequest is the request to validate products by SKU.
 type ValidateProductsRequest struct {
-	// A map of arbitrary keys to SKU values to validate.
+	// Map of arbitrary keys to SKU values.
 	ProductsMap map[string]string `json:"products_map" validate:"required"`
 }
 

@@ -9,31 +9,31 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-// AgentAction represents a single action performed during an agent run.
+// Agent action resource.
 type AgentAction struct {
-	// The unique identifier for the action.
+	// Agent action ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=agent_action"`
-	// The agent run this action belongs to.
+	// Agent run this action belongs to.
 	Run *AgentRun `json:"run" validate:"required" expandable:"true"`
-	// The tool slug identifier.
+	// Tool slug.
 	ToolSlug constants.ToolSlug `json:"tool_slug" validate:"required"`
-	// The current status of this action.
+	// Current action status.
 	Status constants.AgentActionStatus `json:"status" validate:"required"`
-	// A short label for the action.
+	// Short label.
 	Label *string `json:"label"`
-	// A description of what the action does.
+	// Action description.
 	Description *string `json:"description"`
-	// The input to the action.
+	// Action input.
 	Input json.RawMessage `json:"input"`
-	// The output from the action.
+	// Action output.
 	Output json.RawMessage `json:"output"`
 	// Error message if the action failed.
 	ErrorMessage *string `json:"error_message"`
-	// The entity this action relates to.
+	// Entity this action relates to.
 	Entity *Entity `json:"entity"`
-	// Whether this action requires human review.
+	// Whether human review is required.
 	RequiresReview bool `json:"requires_review"`
 	// When the action was reviewed.
 	ReviewedAt *time.Time `json:"reviewed_at"`

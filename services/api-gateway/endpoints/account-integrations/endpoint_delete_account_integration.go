@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// DeleteAccountIntegrationRequest is the request to delete an account integration.
+// Request to delete an account integration.
 type DeleteAccountIntegrationRequest struct {
-	// The ID of the account integration to delete.
+	// Account integration ID.
 	AccountIntegrationID string `path:"id" validate:"required"`
 }
 

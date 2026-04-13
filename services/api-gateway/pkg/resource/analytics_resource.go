@@ -9,7 +9,7 @@ import (
 
 // AnalyzeSalesResponse represents the response from the analyze sales endpoint.
 type AnalyzeSalesResponse struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=list"`
 	// The sales entry data.
 	Data []SalesEntry `json:"data" validate:"required"`
@@ -22,7 +22,7 @@ func (*AnalyzeSalesResponse) SchemaExample() any {
 
 // SalesEntry represents a single sales transaction entry for analytics.
 type SalesEntry struct {
-	// The unique identifier for this entry.
+	// Unique identifier for this entry.
 	ID string `json:"id" validate:"required"`
 	// The date the order was issued.
 	IssuedAt *time.Time `json:"issued_at"`
@@ -107,7 +107,7 @@ type SalesEntry struct {
 // AnalyzeOpenBatchesResponse represents the response from the analyze open batches endpoint.
 // Uses the existing OpenBatchSummary type from batch_resource.go.
 type AnalyzeOpenBatchesResponse struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=list"`
 	// The open batch summary data.
 	Data []OpenBatchSummary `json:"data" validate:"required"`
@@ -115,7 +115,7 @@ type AnalyzeOpenBatchesResponse struct {
 
 // AnalyzeProductionCostsResponse represents the response from the analyze production costs endpoint.
 type AnalyzeProductionCostsResponse struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=list"`
 	// The production cost data.
 	Data []ProductionCostItem `json:"data" validate:"required"`
@@ -181,7 +181,7 @@ type BaseQuantityUnit struct {
 
 // AnalyzeDeliveriesResponse represents the response from the analyze deliveries endpoint.
 type AnalyzeDeliveriesResponse struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=analyze_deliveries_response"`
 	// The delivery statistics.
 	Statistics DeliveryStatistics `json:"statistics" validate:"required"`
@@ -243,7 +243,7 @@ type Coordinate struct {
 
 // AnalyzeManufacturingResponse represents the response from the analyze manufacturing endpoint.
 type AnalyzeManufacturingResponse struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=analyze_manufacturing_response"`
 	// The computed manufacturing value.
 	Value float64 `json:"value" validate:"required"`
@@ -251,7 +251,7 @@ type AnalyzeManufacturingResponse struct {
 
 // AnalyzeManufacturingBatchResponse represents the response from the analyze manufacturing batch endpoint.
 type AnalyzeManufacturingBatchResponse struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=analyze_manufacturing_batch_response"`
 	// The current period metrics.
 	Current ManufacturingMetrics `json:"current" validate:"required"`
@@ -275,7 +275,7 @@ type ManufacturingMetrics struct {
 
 // AnalyzeOrdersResponse represents the response from the analyze orders endpoint.
 type AnalyzeOrdersResponse struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=list"`
 	// The order entry data.
 	Data []OrderEntry `json:"data" validate:"required"`
@@ -283,7 +283,7 @@ type AnalyzeOrdersResponse struct {
 
 // OrderEntry represents a single order entry for analytics.
 type OrderEntry struct {
-	// The unique identifier for this entry.
+	// Unique identifier for this entry.
 	ID string `json:"id" validate:"required"`
 	// The date the order was issued.
 	IssuedAt *time.Time `json:"issued_at"`
@@ -369,7 +369,7 @@ type OrderEntry struct {
 
 // AnalyzeQuarterlyOrdersResponse represents the response from the analyze quarterly orders endpoint.
 type AnalyzeQuarterlyOrdersResponse struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=analyze_quarterly_orders_response"`
 	// The yearly sales data keyed by year string.
 	Data map[string]QuarterlySalesData `json:"data" validate:"required"`
@@ -391,7 +391,7 @@ type QuarterlySalesData struct {
 
 // AnalyzeMaterialsResponse represents the response from the analyze materials endpoint.
 type AnalyzeMaterialsResponse struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=list"`
 	// The material analytics data.
 	Data []MaterialAnalyticsEntry `json:"data" validate:"required"`
@@ -399,7 +399,7 @@ type AnalyzeMaterialsResponse struct {
 
 // MaterialAnalyticsEntry represents a single material analytics entry.
 type MaterialAnalyticsEntry struct {
-	// The unique identifier for this entry.
+	// Unique identifier for this entry.
 	ID string `json:"id" validate:"required"`
 	// The item ID.
 	ItemID string `json:"item_id" validate:"required"`
@@ -449,7 +449,7 @@ type AnalyticsUnitGroupUnit struct {
 
 // AnalyzeInventoryReceiptsResponse represents the response from the analyze inventory receipts endpoint.
 type AnalyzeInventoryReceiptsResponse struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=list"`
 	// The inventory receipt summary data.
 	Data []InventoryReceiptSummaryEntry `json:"data" validate:"required"`
@@ -507,7 +507,7 @@ type AnalyticsRate struct {
 
 // AnalyzeNewCustomersResponse represents the response from the analyze new customers endpoint.
 type AnalyzeNewCustomersResponse struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=analyze_new_customers_response"`
 	// The new customers data.
 	NewCustomers NewCustomersData `json:"new_customers" validate:"required"`
@@ -531,7 +531,7 @@ type DateTimeCoordinate struct {
 
 // AnalyzeDemandForecastResponse represents the response from the demand forecast endpoint.
 type AnalyzeDemandForecastResponse struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=list"`
 	// The demand forecast rows.
 	Data []DemandForecastRow `json:"data" validate:"required"`
@@ -603,7 +603,7 @@ type RevenueForecastPoint struct {
 
 // AnalyzeOeeResponse represents the response from the analyze OEE endpoint.
 type AnalyzeOeeResponse struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=analyze_oee_response"`
 	// The OEE data by department.
 	Departments []OeeDepartment `json:"departments" validate:"required"`
@@ -627,7 +627,7 @@ type OeeDepartment struct {
 
 // AnalyzeWeeksOfSalesResponse represents the response from the weeks-of-sales analytics endpoint.
 type AnalyzeWeeksOfSalesResponse struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=analyze_weeks_of_sales_response"`
 	// The weeks-of-sales items.
 	Data []WeeksOfSalesItem `json:"data" validate:"required"`

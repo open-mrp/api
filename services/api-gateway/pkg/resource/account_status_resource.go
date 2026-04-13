@@ -14,21 +14,21 @@ var SampleAccountStatusCode = constants.AccountStatusCodeNormal
 
 const SampleAccountStatusName = "Normal"
 
-// AccountStatus represents an account status lookup value.
+// AccountStatus is an account status lookup value.
 type AccountStatus struct {
-	// The unique identifier for the account status.
+	// Account status ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=account_status"`
-	// The machine-readable code for this status.
+	// Machine-readable status code.
 	Code constants.AccountStatusCode `json:"code" validate:"required"`
-	// The display name of the account status.
+	// Display name.
 	Name string `json:"name" validate:"required"`
-	// The owner of this resource.
+	// Owner of this resource.
 	Owner *Owner `json:"owner" expandable:"true"`
-	// When this account status was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// When this account status was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 

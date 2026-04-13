@@ -10,7 +10,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListAgentsRequest is the request to list agent definitions.
+// Request to list agent definitions.
 type ListAgentsRequest struct {
 	apiresource.PaginationRequest
 	// Filter by account-level status. Defaults to "active".
@@ -26,7 +26,7 @@ type ListAgentsEndpoint struct{}
 func (e *ListAgentsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAgentsRequest, *apiresource.List[apiresource.AgentDefinition]] {
 	return &apiendpoint.APIEndpoint[*ListAgentsRequest, *apiresource.List[apiresource.AgentDefinition]]{
 		Title:             "List Agents",
-		Description:       "Returns all system and custom agent definitions for the current account.",
+		Description:       "Returns a paginated list of agent definitions for the current account.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/ai/agents",

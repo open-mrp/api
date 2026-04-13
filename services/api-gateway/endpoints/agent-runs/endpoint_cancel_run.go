@@ -10,9 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// CancelRunRequest is the request to cancel an agent run.
+// Request to cancel an agent run.
 type CancelRunRequest struct {
-	// The ID of the agent run to cancel.
+	// Agent run ID.
 	AgentRunID string `path:"id" validate:"required"`
 }
 

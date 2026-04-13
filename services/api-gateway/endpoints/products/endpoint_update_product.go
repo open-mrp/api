@@ -12,15 +12,15 @@ import (
 
 // UpdateProductRequest is the request to partially update a product.
 type UpdateProductRequest struct {
-	// The ID of the product to update.
+	// Product ID.
 	ProductID string `path:"id" validate:"required"`
-	// The stock keeping unit code.
+	// SKU.
 	SKU *string `json:"sku,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// A description of the product.
+	// Description.
 	Description *string `json:"description,omitempty" nullable:"false"`
-	// Additional notes about the product.
+	// Notes.
 	Notes *string `json:"notes,omitempty" nullable:"false"`
-	// Whether this product is visible on the customer portal.
+	// Whether visible on the customer portal.
 	IsPortalReady *bool `json:"is_portal_ready,omitempty" nullable:"false"`
 }
 

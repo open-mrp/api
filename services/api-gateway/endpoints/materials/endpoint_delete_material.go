@@ -9,7 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
+// Request to delete a material.
 type DeleteMaterialRequest struct {
+	// Material ID.
 	ItemID string `path:"id" validate:"required"`
 }
 
@@ -18,7 +20,7 @@ type DeleteMaterialEndpoint struct{}
 func (e *DeleteMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteMaterialRequest, *apiresource.Material] {
 	return &apiendpoint.APIEndpoint[*DeleteMaterialRequest, *apiresource.Material]{
 		Title:             "Delete Material",
-		Description:       "Deletes a material by its ID.",
+		Description:       "Deletes a material by ID.",
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/materials/{id}",

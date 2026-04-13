@@ -11,15 +11,15 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// CreateProductLineRequest is the request to create a new product line.
+// Request to create a product line.
 type CreateProductLineRequest struct {
-	// The display name of the product line.
+	// Display name.
 	Name string `json:"name" validate:"required,max=255"`
-	// The ID of the unit group to associate with this product line.
+	// Unit group ID.
 	UnitGroupID string `json:"unit_group_id" validate:"required,max=191"`
-	// The commission policy for this product line.
+	// Commission policy.
 	CommissionPolicy constants.CommissionPolicy `json:"commission_policy" validate:"required"`
-	// The freight policy for this product line.
+	// Freight policy.
 	FreightPolicy constants.FreightPolicy `json:"freight_policy" validate:"required"`
 }
 
@@ -39,7 +39,7 @@ type CreateProductLineEndpoint struct{}
 func (e *CreateProductLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateProductLineRequest, *apiresource.ProductLine] {
 	return &apiendpoint.APIEndpoint[*CreateProductLineRequest, *apiresource.ProductLine]{
 		Title:             "Create Product Line",
-		Description:       "Creates a new account-owned product line.",
+		Description:       "Creates an account-owned product line.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/product-lines",

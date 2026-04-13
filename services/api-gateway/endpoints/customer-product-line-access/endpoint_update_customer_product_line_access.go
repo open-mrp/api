@@ -10,11 +10,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpdateCustomerProductLineAccessRequest is the request to update product line access for a customer.
+// Request to update product line access for a customer.
 type UpdateCustomerProductLineAccessRequest struct {
-	// The ID of the customer.
+	// Customer ID.
 	CustomerID string `path:"customer_id" validate:"required"`
-	// The IDs of the product lines to grant access to.
+	// Product line IDs to grant access to.
 	ProductLineIDs *[]string `json:"product_line_ids,omitempty" nullable:"false"`
 }
 

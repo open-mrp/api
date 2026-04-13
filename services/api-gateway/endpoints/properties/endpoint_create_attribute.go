@@ -11,15 +11,15 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// CreateAttributeRequest is the request to create a new attribute.
+// Request to create an attribute.
 type CreateAttributeRequest struct {
-	// The ID of the property to create the attribute under.
+	// Property ID.
 	PropertyID string `path:"property_id" validate:"required"`
-	// The value of the attribute.
+	// Attribute value.
 	Value string `json:"value" validate:"required"`
-	// The color code of the attribute. Randomly assigned if not provided.
+	// Color code. Randomly assigned if not provided.
 	ColorCode *constants.Color `json:"color,omitempty"`
-	// The display order of the attribute. Defaults to last position if not provided.
+	// Display order. Defaults to last position if not provided.
 	SortOrder *int32 `json:"sort_order" validate:"omitempty,min=1"`
 }
 
@@ -43,7 +43,7 @@ type CreateAttributeEndpoint struct{}
 func (e *CreateAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAttributeRequest, *apiresource.Attribute] {
 	return &apiendpoint.APIEndpoint[*CreateAttributeRequest, *apiresource.Attribute]{
 		Title:             "Create Attribute",
-		Description:       "Creates a new attribute under a property.",
+		Description:       "Creates an attribute under a property.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/properties/{property_id}/attributes",

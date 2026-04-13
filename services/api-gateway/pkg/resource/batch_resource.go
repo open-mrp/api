@@ -24,13 +24,13 @@ const SampleMachineID = "mc_01jm4r6700f8nwq3v5hx2d9ktp"
 // ProductionRun — production run reference
 // ---------------------------------------------------------------------------
 
-// ProductionRun represents a production run sub-resource.
+// Production run sub-resource.
 type ProductionRun struct {
-	// The unique identifier for the production run.
+	// Production run ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=production_run"`
-	// The production run number.
+	// Production run number.
 	Number string `json:"number" validate:"required"`
 }
 
@@ -48,51 +48,51 @@ func (*ProductionRun) SchemaExample() any {
 // Batch — full batch resource
 // ---------------------------------------------------------------------------
 
-// BatchLot represents a lot associated with a batch.
+// Lot associated with a batch.
 type BatchLot struct {
-	// The lot number.
+	// Lot number.
 	LotNumber string `json:"lot_number" validate:"required"`
-	// The lot type (material or productionRun).
+	// Lot type (material or productionRun).
 	Type string `json:"type" validate:"required"`
 }
 
-// Batch represents a production batch.
+// Production batch.
 type Batch struct {
-	// The unique identifier for the batch.
+	// Batch ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=batch"`
-	// The item associated with this batch.
+	// Item.
 	Item *Item `json:"item" expandable:"true"`
-	// The quantity produced in this batch.
+	// Quantity produced.
 	Quantity *Quantity `json:"quantity" expandable:"true"`
-	// The time measurement for this batch in seconds.
+	// Time measurement in seconds.
 	Seconds *Quantity `json:"seconds" expandable:"true"`
-	// The waste measurement for this batch.
+	// Waste measurement.
 	Waste *Quantity `json:"waste" expandable:"true"`
-	// The scanning station where this batch was scanned.
+	// Scanning station.
 	ScanningStation *ScanningStation `json:"scanning_station" expandable:"true"`
-	// The department associated with this batch's scanning station.
+	// Department of the scanning station.
 	Department *Department `json:"department" expandable:"true"`
-	// The production step this batch belongs to.
+	// Production step.
 	ProductionStep *ProductionStep `json:"production_step" expandable:"true"`
-	// The production run this batch belongs to.
+	// Production run.
 	ProductionRun *ProductionRun `json:"production_run" expandable:"true"`
-	// The machines used for this batch.
+	// Machines used.
 	Machines *List[Machine] `json:"machines" expandable:"true"`
-	// The lots associated with this batch.
+	// Associated lots.
 	Lots *List[BatchLot] `json:"lots"`
-	// The IDs of batches that feed into this batch.
+	// Input batch IDs.
 	InputBatchIDs []string `json:"input_batch_ids"`
-	// The IDs of batches that this batch feeds into.
+	// Output batch IDs.
 	OutputBatchIDs []string `json:"output_batch_ids"`
-	// The timestamp when the batch was closed.
+	// Closed timestamp.
 	ClosedAt *time.Time `json:"closed_at"`
-	// The timestamp when the batch was scanned.
+	// Scanned timestamp.
 	ScannedAt *time.Time `json:"scanned_at"`
-	// The timestamp when the batch was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The timestamp when the batch was last updated.
+	// Last-updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
@@ -127,15 +127,15 @@ func (*Batch) SchemaExample() any {
 // BatchFlowNode — batch with flow graph edges
 // ---------------------------------------------------------------------------
 
-// BatchFlowNode represents a batch within a production flow graph, including its input and output edges.
+// Batch within a production flow graph, including input and output edges.
 type BatchFlowNode struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=batch_flow_node"`
-	// The batch at this node.
+	// Batch at this node.
 	Batch Batch `json:"batch"`
-	// The IDs of batches that feed into this batch.
+	// IDs of batches that feed into this batch.
 	InputBatchIDs []string `json:"input_batch_ids"`
-	// The IDs of batches that this batch feeds into.
+	// IDs of batches this batch feeds into.
 	OutputBatchIDs []string `json:"output_batch_ids"`
 }
 
@@ -154,21 +154,21 @@ func (*BatchFlowNode) SchemaExample() any {
 // ScanningConsumption — consumption data for a scanning operation
 // ---------------------------------------------------------------------------
 
-// ScanningConsumption represents the material consumption data for a scanning operation.
+// Material consumption data for a scanning operation.
 type ScanningConsumption struct {
-	// The stock keeping unit code.
+	// SKU.
 	SKU string `json:"sku" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=scanning_consumption"`
-	// The demand measure value.
+	// Demand measure value.
 	DemandMeasure string `json:"demand_measure" validate:"required" format:"decimal"`
-	// The demand unit abbreviation.
+	// Demand unit abbreviation.
 	DemandUnit string `json:"demand_unit" validate:"required"`
-	// The inventory measure value.
+	// Inventory measure value.
 	InventoryMeasure string `json:"inventory_measure" validate:"required" format:"decimal"`
-	// The inventory unit abbreviation.
+	// Inventory unit abbreviation.
 	InventoryUnit string `json:"inventory_unit" validate:"required"`
-	// Optional instructions for this consumption.
+	// Consumption instructions.
 	Instructions *string `json:"instructions"`
 }
 
@@ -190,19 +190,19 @@ func (*ScanningConsumption) SchemaExample() any {
 // OpenBatchSummary — summary of open batches
 // ---------------------------------------------------------------------------
 
-// OpenBatchSummary represents an aggregated summary of open batches.
+// Aggregated summary of open batches.
 type OpenBatchSummary struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=open_batch_summary"`
-	// The department name.
+	// Department name.
 	DepartmentName string `json:"department_name" validate:"required"`
-	// The item associated with this summary.
+	// Item associated with this summary.
 	Item *Item `json:"item" validate:"required"`
-	// The scanning station associated with this summary.
+	// Scanning station associated with this summary.
 	ScanningStation *ScanningStation `json:"scanning_station" validate:"required"`
-	// The count of open batches.
+	// Count of open batches.
 	Count string `json:"count" validate:"required" format:"decimal"`
-	// The unit abbreviation.
+	// Unit abbreviation.
 	Unit string `json:"unit" validate:"required"`
 }
 
@@ -227,15 +227,15 @@ func (*OpenBatchSummary) SchemaExample() any {
 // ScanningProductionStepInfo — production step info for scanning
 // ---------------------------------------------------------------------------
 
-// ScanningProductionStepInfo provides production step information for the scanning next-steps response.
+// Production step information for the scanning next-steps response.
 type ScanningProductionStepInfo struct {
-	// The unique identifier for the production step.
+	// Production step ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=scanning_production_step_info"`
-	// The display name of the production step.
+	// Display name.
 	Name string `json:"name" validate:"required"`
-	// Whether this production step supports multi-part batches.
+	// Whether this step supports multi-part batches.
 	IsMultiPart bool `json:"is_multi_part"`
 }
 

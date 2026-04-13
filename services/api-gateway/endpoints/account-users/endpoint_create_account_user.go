@@ -11,19 +11,19 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// CreateAccountUserRequest is the request to create a new account user.
+// Request to create an account user.
 type CreateAccountUserRequest struct {
-	// The user's display name.
+	// Display name.
 	Name *string `json:"name" validate:"omitempty,max=255"`
-	// The user's email address.
+	// Email address.
 	Email *string `json:"email" validate:"omitnil,custom_email,max=255"`
-	// The user's username.
+	// Username.
 	Username *string `json:"username" validate:"omitempty,max=255"`
-	// The user's password.
+	// Password.
 	Password *string `json:"password"` // #nosec G117 -- API request field for user password input
-	// The ID of the role to assign. Expandable.
+	// Role ID. Expandable.
 	RoleID *string `json:"role_id,omitempty" validate:"omitempty,max=191"`
-	// The ID of the department to assign. Expandable.
+	// Department ID. Expandable.
 	DepartmentID *string `json:"department_id,omitempty" validate:"omitempty,max=191"`
 	// Whether the user is a sales representative.
 	IsSalesRep *bool `json:"is_sales_rep,omitempty"`
@@ -60,7 +60,7 @@ type CreateAccountUserEndpoint struct{}
 func (e *CreateAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAccountUserRequest, *apiresource.AccountUser] {
 	return &apiendpoint.APIEndpoint[*CreateAccountUserRequest, *apiresource.AccountUser]{
 		Title:             "Create Account User",
-		Description:       "Creates a new account user and invites them to the account.",
+		Description:       "Creates an account user and invites them to the account.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/account-users",

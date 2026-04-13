@@ -10,9 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetAuditEventRequest is the request to retrieve a single audit event.
+// Request to retrieve an audit event.
 type GetAuditEventRequest struct {
-	// The ID of the audit event to retrieve.
+	// Audit event ID.
 	ID string `path:"id" validate:"required"`
 }
 
@@ -21,7 +21,7 @@ type GetAuditEventEndpoint struct{}
 func (e *GetAuditEventEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetAuditEventRequest, *apiresource.AuditEvent] {
 	return &apiendpoint.APIEndpoint[*GetAuditEventRequest, *apiresource.AuditEvent]{
 		Title:             "Get Audit Event",
-		Description:       "Returns a single audit event by its ID.",
+		Description:       "Returns an audit event by ID.",
 		Method:            http.MethodGet,
 		Route:             "/v1/core/audit-events/{id}",
 		ContentType:       "application/json",

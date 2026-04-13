@@ -11,12 +11,17 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
+// Request to list materials.
 type ListMaterialsRequest struct {
 	apiresource.PaginationRequest
-	CategoryIDs  []string   `query:"category_ids"`
-	AttributeIDs []string   `query:"attribute_ids"`
-	StartDate    *time.Time `query:"start_date"`
-	EndDate      *time.Time `query:"end_date"`
+	// Filter by category IDs.
+	CategoryIDs []string `query:"category_ids"`
+	// Filter by attribute IDs.
+	AttributeIDs []string `query:"attribute_ids"`
+	// Filter to materials created on or after this date.
+	StartDate *time.Time `query:"start_date"`
+	// Filter to materials created on or before this date.
+	EndDate *time.Time `query:"end_date"`
 }
 
 type ListMaterialsEndpoint struct{}
@@ -24,7 +29,7 @@ type ListMaterialsEndpoint struct{}
 func (e *ListMaterialsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListMaterialsRequest, *apiresource.List[apiresource.Material]] {
 	return &apiendpoint.APIEndpoint[*ListMaterialsRequest, *apiresource.List[apiresource.Material]]{
 		Title:             "List Materials",
-		Description:       "Returns a paginated list of materials for the current account.",
+		Description:       "Returns a paginated list of materials.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/materials",

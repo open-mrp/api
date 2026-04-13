@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// LockAccountUserRequest is the request to lock an account user.
+// Request to lock an account user.
 type LockAccountUserRequest struct {
-	// The ID of the account user to lock.
+	// Account user ID.
 	AccountUserID string `path:"id" validate:"required"`
 }
 

@@ -10,23 +10,23 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// CreateProductRequest is the request to create a new product.
+// CreateProductRequest is the request to create a product.
 type CreateProductRequest struct {
-	// The stock keeping unit code for the product.
+	// SKU.
 	SKU string `json:"sku" validate:"required,max=255"`
-	// A description of the product.
+	// Description.
 	Description *string `json:"description"`
-	// Additional notes about the product.
+	// Notes.
 	Notes *string `json:"notes"`
-	// The product type code (e.g. sale, sample).
+	// Product type code (e.g. sale, sample).
 	ProductTypeCode string `json:"type" validate:"required,max=255"`
-	// The ID of the product line to assign to this product.
+	// Product line ID.
 	ProductLineID *string `json:"product_line_id" validate:"omitempty,max=191"`
-	// The ID of the item category.
+	// Category ID.
 	CategoryID string `json:"category_id" validate:"required,max=191"`
-	// Whether this product is visible on the customer portal.
+	// Whether visible on the customer portal.
 	IsPortalReady bool `json:"is_portal_ready"`
-	// The unit price for this product.
+	// Unit price.
 	UnitPrice *string `json:"unit_price"`
 }
 
@@ -46,7 +46,7 @@ type CreateProductEndpoint struct{}
 func (e *CreateProductEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateProductRequest, *apiresource.Product] {
 	return &apiendpoint.APIEndpoint[*CreateProductRequest, *apiresource.Product]{
 		Title:             "Create Product",
-		Description:       "Creates a new product.",
+		Description:       "Creates a product.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/products",

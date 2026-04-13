@@ -11,23 +11,23 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpdatePurchaseOrderRequest is the request to update a purchase order.
+// Request to update a purchase order.
 type UpdatePurchaseOrderRequest struct {
-	// The ID of the purchase order to update.
+	// Purchase order ID.
 	PurchaseOrderID string `path:"id" validate:"required"`
-	// A note for the order.
+	// Order note.
 	Note *string `json:"note,omitempty" nullable:"false"`
-	// The purchase order number.
+	// Purchase order number.
 	Number *string `json:"number,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// The priority code.
+	// Priority code.
 	PriorityCode *string `json:"priority_code,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// The billing address ID.
+	// Billing address ID.
 	BillingAddressID *string `json:"billing_address_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
-	// The shipping address ID.
+	// Shipping address ID.
 	ShippingAddressID *string `json:"shipping_address_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
-	// The promised/scheduled delivery date.
+	// Promised delivery date.
 	PromisedAt *string `json:"promised_at,omitempty" nullable:"false"`
-	// The account user IDs for email contacts (replaces existing).
+	// Account user IDs for email contacts. Replaces existing contacts.
 	ContactAccountUserIDs []string `json:"contact_account_user_ids,omitempty"`
 }
 

@@ -13,13 +13,13 @@ import (
 
 // UpdateItemRequest is the request to partially update an item.
 type UpdateItemRequest struct {
-	// The ID of the item to update.
+	// Item ID.
 	ItemID string `path:"id" validate:"required"`
-	// The item SKU.
+	// Item SKU.
 	SKU *string `json:"sku,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// The item description.
+	// Item description.
 	Description *string `json:"description" nullable:"true"`
-	// Optional notes about the item.
+	// Notes.
 	Notes *string `json:"notes" nullable:"true"`
 }
 

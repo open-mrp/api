@@ -11,21 +11,21 @@ import (
 const SampleAccountIntegrationID = "ai_01jm4r6700f8nwq3v5hx2d9ktp"
 const SampleAccountIntegrationName = "My Stripe Integration"
 
-// AccountIntegration represents a third-party integration connected to an account.
+// Third-party integration connected to an account.
 type AccountIntegration struct {
-	// The unique identifier for the account integration.
+	// Account integration ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=account_integration"`
-	// The human-readable name for the integration.
+	// Display name of the integration.
 	Name string `json:"name" validate:"required"`
-	// The integration provider code (e.g. "stripe", "shippo").
+	// Integration provider code (e.g. "stripe", "shippo").
 	IntegrationCode constants.IntegrationCode `json:"provider" validate:"required"`
-	// Whether this integration is currently active.
+	// Whether the integration is active.
 	IsActive bool `json:"is_active"`
-	// When this integration was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// When this integration was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
@@ -43,11 +43,11 @@ func (*AccountIntegration) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleAccountIntegration)
 }
 
-// StripePublishableKey represents the Stripe publishable key for an account.
+// Stripe publishable key for an account.
 type StripePublishableKey struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=stripe_publishable_key"`
-	// The Stripe publishable key.
+	// Stripe publishable key.
 	PublishableKey string `json:"publishable_key" validate:"required"`
 }
 
@@ -60,11 +60,11 @@ func (*StripePublishableKey) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleStripePublishableKey)
 }
 
-// StripeStatus represents whether an account has a Stripe integration.
+// Stripe integration status for an account.
 type StripeStatus struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=stripe_status"`
-	// Whether the account has a Stripe integration configured.
+	// Whether a Stripe integration is configured.
 	HasStripeIntegration bool `json:"has_stripe_integration"`
 }
 

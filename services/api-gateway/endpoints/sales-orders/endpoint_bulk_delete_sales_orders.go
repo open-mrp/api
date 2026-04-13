@@ -10,9 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// BulkDeleteSalesOrdersRequest is the request to delete multiple sales orders.
+// Request to bulk delete sales orders.
 type BulkDeleteSalesOrdersRequest struct {
-	// The IDs of the sales orders to delete.
+	// Sales order IDs.
 	SalesOrderIDs []string `json:"sales_order_ids" validate:"required"`
 }
 

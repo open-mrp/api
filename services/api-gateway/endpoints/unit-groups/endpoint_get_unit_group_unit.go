@@ -10,11 +10,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetUnitGroupUnitRequest is the request to retrieve a single unit group unit.
+// GetUnitGroupUnitRequest is a request to retrieve a unit group unit.
 type GetUnitGroupUnitRequest struct {
-	// The ID of the unit group.
+	// Unit group ID.
 	UnitGroupID string `path:"unitGroupId" validate:"required"`
-	// The ID of the unit group unit to retrieve.
+	// Unit group unit ID.
 	UnitGroupUnitID string `path:"id" validate:"required"`
 }
 
@@ -23,7 +23,7 @@ type GetUnitGroupUnitEndpoint struct{}
 func (e *GetUnitGroupUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetUnitGroupUnitRequest, *apiresource.UnitGroupUnit] {
 	return &apiendpoint.APIEndpoint[*GetUnitGroupUnitRequest, *apiresource.UnitGroupUnit]{
 		Title:             "Get Unit Group Unit",
-		Description:       "Returns a single associated unit within a unit group by its ID.",
+		Description:       "Returns an associated unit within a unit group by ID.",
 		Method:            http.MethodGet,
 		Route:             "/v1/catalog/unit-groups/{unitGroupId}/units/{id}",
 		ContentType:       "application/json",

@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// DeleteSupplierRequest is the request to delete a single supplier.
+// DeleteSupplierRequest is the request to delete a supplier.
 type DeleteSupplierRequest struct {
-	// The ID of the supplier to delete.
+	// Supplier ID.
 	SupplierID string `path:"id" validate:"required"`
 }
 

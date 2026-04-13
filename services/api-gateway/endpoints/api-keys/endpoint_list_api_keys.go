@@ -10,11 +10,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListAPIKeysRequest embeds PaginationRequest and adds a status filter.
+// Request to list API keys.
 type ListAPIKeysRequest struct {
 	apiresource.PaginationRequest
-	// Filter API keys by status.
-	Status []constants.APIKeyStatus `query:"status" default:"active,expired,revoked"`
+	// API key statuses to filter by.
+	Statuses []constants.APIKeyStatus `query:"statuses" default:"active,expired,revoked"`
 }
 
 type ListAPIKeysEndpoint struct{}
@@ -22,7 +22,7 @@ type ListAPIKeysEndpoint struct{}
 func (e *ListAPIKeysEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAPIKeysRequest, *apiresource.List[apiresource.APIKey]] {
 	return &apiendpoint.APIEndpoint[*ListAPIKeysRequest, *apiresource.List[apiresource.APIKey]]{
 		Title:             "List API Keys",
-		Description:       "Returns a paginated list of API keys for the current account.",
+		Description:       "Returns a paginated list of API keys.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/auth/api-keys",

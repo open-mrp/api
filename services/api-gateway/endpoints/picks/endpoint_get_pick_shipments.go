@@ -11,12 +11,12 @@ import (
 
 // GetPickShipmentsRequest is the request to get shipments for a pick.
 type GetPickShipmentsRequest struct {
-	// The ID of the pick.
+	// Pick ID.
 	PickID string  `path:"id" validate:"required"`
 	Query  *string `query:"q"`
-	// The maximum number of results to return.
+	// Maximum number of results to return.
 	Limit *int32 `query:"limit"`
-	// The number of results to skip.
+	// Number of results to skip.
 	Offset *int32 `query:"offset"`
 }
 

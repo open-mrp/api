@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetAccountGroupRequest is the request to retrieve a single account group.
+// Request to retrieve an account group.
 type GetAccountGroupRequest struct {
-	// The ID of the account group to retrieve.
+	// Account group ID.
 	AccountGroupID string `path:"id" validate:"required"`
 }
 
@@ -19,8 +19,8 @@ type GetAccountGroupEndpoint struct{}
 
 func (e *GetAccountGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetAccountGroupRequest, *apiresource.AccountGroup] {
 	return &apiendpoint.APIEndpoint[*GetAccountGroupRequest, *apiresource.AccountGroup]{
-		Title:             "Retrieve Account Group",
-		Description:       "Retrieves a single account group by its ID.",
+		Title:             "Get Account Group",
+		Description:       "Returns an account group by ID.",
 		Method:            http.MethodGet,
 		Route:             "/v1/sales/account-groups/{id}",
 		ContentType:       "application/json",

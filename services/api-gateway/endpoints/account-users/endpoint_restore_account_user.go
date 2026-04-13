@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// RestoreAccountUserRequest is the request to restore a removed account user.
+// Request to restore a removed account user.
 type RestoreAccountUserRequest struct {
-	// The ID of the account user to restore.
+	// Account user ID.
 	AccountUserID string `path:"id" validate:"required"`
 }
 
@@ -20,7 +20,7 @@ type RestoreAccountUserEndpoint struct{}
 func (e *RestoreAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*RestoreAccountUserRequest, *apiresource.EmptyResource] {
 	return &apiendpoint.APIEndpoint[*RestoreAccountUserRequest, *apiresource.EmptyResource]{
 		Title:             "Restore Account User",
-		Description:       "Restores a previously removed account user, setting their status back to active.",
+		Description:       "Restores a removed account user, setting their status to active.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/account-users/{id}/restore",

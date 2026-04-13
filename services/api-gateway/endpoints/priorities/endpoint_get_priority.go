@@ -10,9 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetPriorityRequest is the request to retrieve a single priority.
+// Request to get a priority.
 type GetPriorityRequest struct {
-	// The ID or code of the priority to retrieve.
+	// Priority ID or code.
 	PriorityID string `path:"id" validate:"required"`
 }
 
@@ -21,7 +21,7 @@ type GetPriorityEndpoint struct{}
 func (e *GetPriorityEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetPriorityRequest, *apiresource.Priority] {
 	return &apiendpoint.APIEndpoint[*GetPriorityRequest, *apiresource.Priority]{
 		Title:             "Get Priority",
-		Description:       "Returns a single priority by its ID or code.",
+		Description:       "Returns a priority by ID or code.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/priorities/{id}",

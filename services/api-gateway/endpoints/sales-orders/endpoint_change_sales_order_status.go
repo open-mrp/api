@@ -11,11 +11,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ChangeSalesOrderStatusRequest is the request to change the status of a sales order.
+// Request to change the status of a sales order.
 type ChangeSalesOrderStatusRequest struct {
-	// The ID of the sales order.
+	// Sales order ID.
 	SalesOrderID string `path:"id" validate:"required"`
-	// The status change action to perform (e.g., "issue", "unissue", "close", "open").
+	// Status change action (e.g., "issue", "unissue", "close", "open").
 	StatusChange string `json:"status_change" validate:"required"`
 	// Whether to send a notification email.
 	SendEmail bool `json:"send_email"`

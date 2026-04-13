@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// DeleteShippingTermRequest is the request to delete a shipping term.
+// Request to delete a shipping term.
 type DeleteShippingTermRequest struct {
-	// The ID of the shipping term to delete.
+	// Shipping term ID.
 	ShippingTermID string `path:"id" validate:"required"`
 }
 

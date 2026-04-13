@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// DeleteAccountPriceRequest is the request to delete an account price.
+// Request to delete an account price.
 type DeleteAccountPriceRequest struct {
-	// The ID of the account price to delete.
+	// Account price ID.
 	AccountPriceID string `path:"id" validate:"required"`
 }
 

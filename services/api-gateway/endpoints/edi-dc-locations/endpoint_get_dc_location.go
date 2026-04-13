@@ -10,9 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetDCLocationRequest is the request to retrieve a single DC location.
+// Request to retrieve a DC location.
 type GetDCLocationRequest struct {
-	// The ID of the DC location to retrieve.
+	// DC location ID.
 	DCLocationID string `path:"id" validate:"required"`
 }
 
@@ -21,7 +21,7 @@ type GetDCLocationEndpoint struct{}
 func (e *GetDCLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetDCLocationRequest, *apiresource.DCLocation] {
 	return &apiendpoint.APIEndpoint[*GetDCLocationRequest, *apiresource.DCLocation]{
 		Title:             "Get DC Location",
-		Description:       "Returns a single DC location by its ID.",
+		Description:       "Returns a DC location by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/dc-locations/{id}",

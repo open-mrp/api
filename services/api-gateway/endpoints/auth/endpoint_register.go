@@ -10,13 +10,13 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// The request to register a new user
+// Request to register a user.
 type RegisterRequest struct {
-	// The email address for the new user.
+	// Email address.
 	Email string `json:"email" validate:"required,custom_email"`
-	// The password for the new user.
+	// User password.
 	Password string `json:"password" validate:"required,password"` // #nosec G117 - Struct field, not a hardcoded credential
-	// The full name of the new user.
+	// Full name.
 	Name string `json:"name" validate:"required"`
 	// When registering from a customer portal, scopes the magic-login link in the "already registered" email.
 	AccountSlug *string `json:"account_slug,omitempty" validate:"omitempty"`
@@ -37,7 +37,7 @@ type RegisterEndpoint struct{}
 func (e *RegisterEndpoint) Materialize() *apiendpoint.APIEndpoint[*RegisterRequest, *apiresource.User] {
 	return &apiendpoint.APIEndpoint[*RegisterRequest, *apiresource.User]{
 		Title:             "Register User",
-		Description:       "Registers a new user on the customer portal, returning the user object and setting access and refresh tokens in cookies.",
+		Description:       "Registers a user on the customer portal. Returns the user object and sets access and refresh tokens in cookies.",
 		Method:            http.MethodPost,
 		Route:             "/v1/auth/users",
 		ContentType:       "application/json",

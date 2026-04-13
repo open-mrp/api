@@ -7,7 +7,7 @@ import (
 
 // Owner describes the provenance of a resource.
 type Owner struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=owner"`
 	// The owner type: "system" for platform defaults, "account" for account-owned resources.
 	Type constants.OwnerType `json:"type" validate:"required"`

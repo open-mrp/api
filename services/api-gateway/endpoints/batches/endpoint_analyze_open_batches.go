@@ -10,11 +10,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// AnalyzeOpenBatchesRequest is the request to analyze open batches filtered by items or product lines.
+// Request to analyze open batches.
 type AnalyzeOpenBatchesRequest struct {
-	// Optional list of item IDs to filter by.
+	// Item IDs to filter by.
 	ItemIDs []string `json:"item_ids"`
-	// Optional list of product line IDs to filter by.
+	// Product line IDs to filter by.
 	ProductLineIDs []string `json:"product_line_ids"`
 }
 
@@ -31,7 +31,7 @@ type AnalyzeOpenBatchesEndpoint struct{}
 
 func (e *AnalyzeOpenBatchesEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeOpenBatchesRequest, *apiresource.List[apiresource.OpenBatchSummary]] {
 	return &apiendpoint.APIEndpoint[*AnalyzeOpenBatchesRequest, *apiresource.List[apiresource.OpenBatchSummary]]{
-		Title:             "Analyze Open Batch Summaries",
+		Title:             "Analyze Open Batches",
 		Description:       "Returns aggregated summaries of open batches, optionally filtered by item IDs or product line IDs.",
 		Method:            http.MethodPut,
 		ContentType:       "application/json",

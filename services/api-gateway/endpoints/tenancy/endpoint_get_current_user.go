@@ -9,7 +9,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetCurrentUserRequest is the request to retrieve the authenticated user's profile.
+// Request to retrieve the authenticated user's profile.
 type GetCurrentUserRequest struct{}
 
 type GetCurrentUserEndpoint struct{}

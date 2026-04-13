@@ -10,7 +10,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListProductLinesRequest is the request to list product lines with optional filters.
+// Request to list product lines.
 type ListProductLinesRequest struct {
 	apiresource.PaginationRequest
 }
@@ -20,7 +20,7 @@ type ListProductLinesEndpoint struct{}
 func (e *ListProductLinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListProductLinesRequest, *apiresource.List[apiresource.ProductLine]] {
 	return &apiendpoint.APIEndpoint[*ListProductLinesRequest, *apiresource.List[apiresource.ProductLine]]{
 		Title:             "List Product Lines",
-		Description:       "Returns a paginated list of product lines for the target account, including both account-specific and global system product lines.",
+		Description:       "Returns a paginated list of product lines, including account-owned and system product lines.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/product-lines",

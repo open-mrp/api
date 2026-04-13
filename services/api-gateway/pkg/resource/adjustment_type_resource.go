@@ -12,21 +12,21 @@ const SampleAdjustmentTypeID = "adjt_01jm4r6700f8nwq3v5hx2d9ktp"
 const SampleAdjustmentTypeName = "Discount"
 const SampleAdjustmentTypeCode = string(constants.AdjustmentTypeDiscount)
 
-// AdjustmentType represents a type of inventory adjustment.
+// Adjustment type resource.
 type AdjustmentType struct {
-	// The unique identifier for the adjustment type.
+	// Adjustment type ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=adjustment_type"`
-	// The display name of the adjustment type.
+	// Display name.
 	Name string `json:"name" validate:"required"`
-	// The machine-readable code for the adjustment type.
+	// Machine-readable code.
 	Code constants.AdjustmentType `json:"code" validate:"required"`
-	// The owner of this resource.
+	// Resource owner.
 	Owner *Owner `json:"owner" expandable:"true"`
-	// When this adjustment type was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// When this adjustment type was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 

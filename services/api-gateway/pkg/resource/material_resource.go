@@ -10,21 +10,21 @@ import (
 
 const SampleMaterialID = "ml_01jm4r6700f8nwq3v5hx2d9ktp"
 
-// Material represents a material entity, extending an item with order point and lead time.
+// Material with order point and lead time.
 type Material struct {
-	// The unique identifier for the material.
+	// Material ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=material"`
-	// The item this material extends.
+	// Item this material extends.
 	Item *Item `json:"item" expandable:"true"`
-	// The order point quantity for this material.
+	// Order point quantity.
 	OrderPoint *QuantityInfo `json:"order_point"`
-	// The lead time quantity for this material.
+	// Lead time quantity.
 	LeadTime *QuantityInfo `json:"lead_time"`
-	// The timestamp when the material was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The timestamp when the material was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 

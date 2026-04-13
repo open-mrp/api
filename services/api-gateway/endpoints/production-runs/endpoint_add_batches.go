@@ -10,33 +10,33 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// AddBatchInputRequest represents a single batch to add to a production run.
+// Batch to add to a production run.
 type AddBatchInputRequest struct {
-	// The item ID for the batch.
+	// Item ID.
 	ItemID string `json:"item_id" validate:"required"`
-	// The quantity value as a decimal string.
+	// Quantity value as a decimal string.
 	QuantityValue string `json:"quantity_value" validate:"required"`
-	// The unit ID for the quantity.
+	// Quantity unit ID.
 	QuantityUnitID string `json:"quantity_unit_id" validate:"required"`
-	// The seconds value as a decimal string.
+	// Seconds value as a decimal string.
 	SecondsValue *string `json:"seconds_value"`
-	// The unit ID for seconds.
+	// Seconds unit ID.
 	SecondsUnitID *string `json:"seconds_unit_id"`
-	// The waste value as a decimal string.
+	// Waste value as a decimal string.
 	WasteValue *string `json:"waste_value"`
-	// The unit ID for waste.
+	// Waste unit ID.
 	WasteUnitID *string `json:"waste_unit_id"`
-	// The production step ID.
+	// Production step ID.
 	ProductionStepID *string `json:"production_step_id"`
-	// The scanning station ID.
+	// Scanning station ID.
 	ScanningStationID *string `json:"scanning_station_id"`
 }
 
-// AddBatchesToProductionRunRequest is the request to add batches to a production run.
+// Request to add batches to a production run.
 type AddBatchesToProductionRunRequest struct {
-	// The ID of the production run.
+	// Production run ID.
 	ProductionRunID string `path:"id" validate:"required"`
-	// The batches to add.
+	// Batches to add.
 	Batches []AddBatchInputRequest `json:"batches" validate:"required,min=1"`
 }
 
@@ -61,7 +61,7 @@ type AddBatchesToProductionRunEndpoint struct{}
 func (e *AddBatchesToProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*AddBatchesToProductionRunRequest, *apiresource.List[apiresource.Batch]] {
 	return &apiendpoint.APIEndpoint[*AddBatchesToProductionRunRequest, *apiresource.List[apiresource.Batch]]{
 		Title:             "Add Batches to Production Run",
-		Description:       "Adds batches to a production run. Fails if the run is already completed.",
+		Description:       "Adds batches to a production run. Fails if the run is completed.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/production-runs/{id}/batches",

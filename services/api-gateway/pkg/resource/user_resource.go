@@ -16,25 +16,25 @@ const SampleUserImageUrl = "https://cdn.augno.com/avatars/us_01gf7a8200e9pvbd6bg
 const SampleUserPassword = "QgS7Z8Hhj3&1"     // #nosec G101 -- sample data for API docs
 const SampleNewUserPassword = "50iR2X0r@bvIH" // #nosec G101 -- sample data for API docs
 
-// A user in the Augno system.
+// User resource.
 type User struct {
-	// The unique identifier for this user.
+	// User ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=user"`
-	// The user's email address.
+	// Email address.
 	Email *string `json:"email"`
-	// The user's display name.
+	// Display name.
 	Name *string `json:"name"`
-	// The user's unique username.
+	// Username.
 	Username *string `json:"username"`
-	// When the user's email was verified, null if unverified.
+	// Email verified timestamp, null if unverified.
 	EmailVerifiedAt *time.Time `json:"email_verified_at"`
-	// URL to the user's profile image.
+	// Profile image URL.
 	ImageUrl *string `json:"image_url"`
-	// When this user was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// When this user was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
@@ -54,9 +54,9 @@ func (*User) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleUser)
 }
 
-// UserPhotoUploadResult is the response for a user photo upload.
+// Result of a user photo upload.
 type UserPhotoUploadResult struct {
-	// Whether the upload was successful.
+	// Upload success status.
 	Success bool `json:"success"`
 }
 
@@ -68,9 +68,9 @@ func (*UserPhotoUploadResult) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleUserPhotoUploadResult)
 }
 
-// UserPhotoURL holds a presigned URL for a user's profile photo.
+// Presigned URL for a user's profile photo.
 type UserPhotoURL struct {
-	// The presigned URL for the profile photo, or null if no photo exists.
+	// Presigned URL for the profile photo, or null if no photo exists.
 	URL *string `json:"url"`
 }
 

@@ -9,11 +9,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// AddItemCategoryPropertyRequest is the request to add a property to an item category.
+// Request to add a property to an item category.
 type AddItemCategoryPropertyRequest struct {
-	// The ID of the item category.
+	// Item category ID.
 	ItemCategoryID string `path:"id" validate:"required"`
-	// The ID of the property to add.
+	// Property ID.
 	PropertyID string `path:"property_id" validate:"required"`
 }
 

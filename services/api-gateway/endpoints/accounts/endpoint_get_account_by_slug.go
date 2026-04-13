@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetAccountBySlugRequest is the request to look up an account by portal slug.
+// Request to look up an account by portal slug.
 type GetAccountBySlugRequest struct {
-	// The portal slug to look up.
+	// Portal slug.
 	Slug string `path:"slug" validate:"required"`
 }
 
@@ -20,7 +20,7 @@ type GetAccountBySlugEndpoint struct{}
 func (e *GetAccountBySlugEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetAccountBySlugRequest, *apiresource.PublicAccount] {
 	return &apiendpoint.APIEndpoint[*GetAccountBySlugRequest, *apiresource.PublicAccount]{
 		Title:             "Get Account by Slug",
-		Description:       "Returns a minimal public account by its portal slug. Unauthenticated.",
+		Description:       "Returns a public account by portal slug. Unauthenticated.",
 		Method:            http.MethodGet,
 		Route:             "/v1/identity/portal-branding/{slug}",
 		ContentType:       "application/json",

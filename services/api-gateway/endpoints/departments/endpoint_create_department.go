@@ -10,17 +10,17 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// CreateDepartmentRequest is the request to create a new department.
+// Request to create a department.
 type CreateDepartmentRequest struct {
-	// The display name of the department.
+	// Display name.
 	Name string `json:"name" validate:"required,max=255"`
-	// Optional notes about the department.
+	// Notes about the department.
 	Notes *string `json:"notes,omitempty"`
-	// The ID of the storage location to associate with this department.
+	// Storage location ID.
 	LocationID *string `json:"location_id,omitempty" validate:"omitempty,max=191"`
-	// IDs of scanning stations to connect to this department.
+	// Scanning station IDs to connect.
 	ScanningStationIDs []string `json:"scanning_station_ids,omitempty"`
-	// IDs of machines to connect to this department.
+	// Machine IDs to connect.
 	MachineIDs []string `json:"machine_ids,omitempty"`
 }
 
@@ -39,7 +39,7 @@ type CreateDepartmentEndpoint struct{}
 func (e *CreateDepartmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateDepartmentRequest, *apiresource.Department] {
 	return &apiendpoint.APIEndpoint[*CreateDepartmentRequest, *apiresource.Department]{
 		Title:             "Create Department",
-		Description:       "Creates a new department.",
+		Description:       "Creates a department.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/departments",

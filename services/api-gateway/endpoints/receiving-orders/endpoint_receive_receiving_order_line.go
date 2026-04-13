@@ -9,11 +9,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ReceiveReceivingOrderLineRequest is the request to receive a single receiving order line.
+// Request to receive a receiving order line.
 type ReceiveReceivingOrderLineRequest struct {
-	// The ID of the receiving order.
+	// Receiving order ID.
 	ReceivingOrderID string `path:"receivingOrderId" validate:"required"`
-	// The ID of the receiving order line to receive.
+	// Receiving order line ID.
 	LineID string `path:"id" validate:"required"`
 }
 
@@ -22,7 +22,7 @@ type ReceiveReceivingOrderLineEndpoint struct{}
 func (e *ReceiveReceivingOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*ReceiveReceivingOrderLineRequest, *apiresource.ReceivingOrderLine] {
 	return &apiendpoint.APIEndpoint[*ReceiveReceivingOrderLineRequest, *apiresource.ReceivingOrderLine]{
 		Title:             "Receive Receiving Order Line",
-		Description:       "Marks a single receiving order line as received.",
+		Description:       "Marks a receiving order line as received.",
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/receiving-orders/{receivingOrderId}/lines/{id}/actions/receive",

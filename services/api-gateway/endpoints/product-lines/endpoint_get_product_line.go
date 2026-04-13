@@ -10,9 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetProductLineRequest is the request to retrieve a single product line.
+// Request to get a product line.
 type GetProductLineRequest struct {
-	// The ID of the product line to retrieve.
+	// Product line ID.
 	ProductLineID string `path:"id" validate:"required"`
 }
 
@@ -21,7 +21,7 @@ type GetProductLineEndpoint struct{}
 func (e *GetProductLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetProductLineRequest, *apiresource.ProductLine] {
 	return &apiendpoint.APIEndpoint[*GetProductLineRequest, *apiresource.ProductLine]{
 		Title:             "Get Product Line",
-		Description:       "Returns a product line by its ID, including system-owned product lines accessible to the account.",
+		Description:       "Returns a product line by ID, including system-owned product lines accessible to the account.",
 		Method:            http.MethodGet,
 		Route:             "/v1/catalog/product-lines/{id}",
 		ContentType:       "application/json",

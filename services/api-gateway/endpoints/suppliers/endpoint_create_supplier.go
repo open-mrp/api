@@ -11,17 +11,17 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// CreateSupplierRequest is the request to create a new supplier.
+// CreateSupplierRequest is the request to create a supplier.
 type CreateSupplierRequest struct {
-	// The display name of the supplier.
+	// Display name.
 	Name string `json:"name" validate:"required,max=255"`
-	// The supplier number (must be unique per account).
+	// Supplier number. Must be unique per account.
 	Number string `json:"number" validate:"required,max=255"`
-	// Notes about the supplier.
+	// Supplier notes.
 	Note *string `json:"note"`
-	// An optional bill-to address to create inline.
+	// Bill-to address to create inline.
 	BillToAddress *apirequest.AddressInput `json:"bill_to_address"`
-	// An optional ship-to address to create inline.
+	// Ship-to address to create inline.
 	ShipToAddress *apirequest.AddressInput `json:"ship_to_address"`
 }
 
@@ -53,7 +53,7 @@ type CreateSupplierEndpoint struct{}
 func (e *CreateSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateSupplierRequest, *apiresource.SupplierDetail] {
 	return &apiendpoint.APIEndpoint[*CreateSupplierRequest, *apiresource.SupplierDetail]{
 		Title:             "Create Supplier",
-		Description:       "Creates a new supplier, optionally with inline bill-to and ship-to addresses.",
+		Description:       "Creates a supplier, optionally with inline bill-to and ship-to addresses.",
 		Method:            http.MethodPost,
 		Route:             "/v1/operations/suppliers",
 		ContentType:       "application/json",

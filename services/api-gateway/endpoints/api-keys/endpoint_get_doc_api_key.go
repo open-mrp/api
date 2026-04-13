@@ -15,7 +15,7 @@ type GetDocAPIKeyEndpoint struct{}
 func (e *GetDocAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*apiresource.EmptyResource, *apiresource.CreatedAPIKey] {
 	return &apiendpoint.APIEndpoint[*apiresource.EmptyResource, *apiresource.CreatedAPIKey]{
 		Title:             "Get Documentation API Key",
-		Description:       "Returns a sandbox API key for use in API documentation. Reuses an existing valid key or creates a new one.",
+		Description:       "Returns a sandbox API key for documentation. Reuses an existing valid key or creates one if none exists.",
 		Method:            http.MethodPost,
 		Route:             "/v1/auth/api-keys/actions/fetch-doc-api-key",
 		ContentType:       "application/json",

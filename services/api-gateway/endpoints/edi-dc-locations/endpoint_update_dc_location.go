@@ -10,13 +10,13 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpdateDCLocationRequest is the request to partially update a DC location.
+// Request to partially update a DC location.
 type UpdateDCLocationRequest struct {
-	// The ID of the DC location to update.
+	// DC location ID.
 	DCLocationID string `path:"id" validate:"required"`
-	// The ID of the customer account to associate with this DC location.
+	// Customer account ID.
 	CustomerID *string `json:"customer_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
-	// The location description.
+	// Location description.
 	Location *string `json:"location,omitempty" nullable:"false" validate:"omitempty,max=255"`
 }
 

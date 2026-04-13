@@ -20,7 +20,7 @@ type GetPickEndpoint struct{}
 func (e *GetPickEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetPickRequest, *apiresource.PickDetail] {
 	return &apiendpoint.APIEndpoint[*GetPickRequest, *apiresource.PickDetail]{
 		Title:             "Get Pick",
-		Description:       "Returns a single pick by its ID.",
+		Description:       "Returns a pick by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/picks/{id}",

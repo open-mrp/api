@@ -10,11 +10,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpdateAccountGroupProductLineAccessRequest is the request to update product line access for an account group.
+// UpdateAccountGroupProductLineAccessRequest is a request to update product line access for an account group.
 type UpdateAccountGroupProductLineAccessRequest struct {
-	// The ID of the account group.
+	// Account group ID.
 	AccountGroupID string `path:"account_group_id" validate:"required"`
-	// The IDs of the product lines to grant access to.
+	// Product line IDs to grant access to.
 	ProductLineIDs *[]string `json:"product_line_ids,omitempty" nullable:"false"`
 }
 

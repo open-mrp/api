@@ -11,9 +11,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// The request to create a sandbox.
+// Request to create a sandbox.
 type CreateSandboxRequest struct {
-	// The display name for the sandbox.
+	// Display name.
 	Name string `json:"name" validate:"required,max=255"`
 	// Controls whether the sandbox is blank or seeded with tutorial data. Defaults to blank.
 	Mode *constants.SandboxMode `json:"mode,omitempty" validate:"omitempty"`
@@ -35,7 +35,7 @@ type CreateSandboxEndpoint struct{}
 func (e *CreateSandboxEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateSandboxRequest, *apiresource.Sandbox] {
 	return &apiendpoint.APIEndpoint[*CreateSandboxRequest, *apiresource.Sandbox]{
 		Title:             "Create Sandbox",
-		Description:       "Creates a new sandbox account for the target account.",
+		Description:       "Creates a sandbox account.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/core/sandboxes",

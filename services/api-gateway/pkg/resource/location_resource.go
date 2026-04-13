@@ -16,19 +16,19 @@ const SampleLocationTypeID = "lc_01gf7a8200er3ar3pkfrb6kk31"
 const SampleLocationTypeCode = constants.LocationTypeCodeBuilding
 const SampleLocationTypeName = "Building"
 
-// LocationType represents a location type.
+// LocationType resource.
 type LocationType struct {
-	// The unique identifier for the location type.
+	// Location type ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=location_type"`
-	// The unique code for this type.
+	// Location type code.
 	Code constants.LocationTypeCode `json:"code" validate:"required"`
-	// The display name of the type.
+	// Display name.
 	Name string `json:"name" validate:"required"`
-	// The timestamp when the type was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at"`
-	// The timestamp when the type was last updated.
+	// Last-updated timestamp.
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
@@ -52,23 +52,23 @@ func (*LocationType) SchemaExample() any {
 const SampleLocationID = "lc_01gf7a8200er3ar3pkfrb6kk30"
 const SampleLocationName = "Warehouse A"
 
-// Location represents a location.
+// Location resource.
 type Location struct {
-	// The unique identifier for the location.
+	// Location ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=location"`
-	// The display name of the location.
+	// Display name.
 	Name string `json:"name" validate:"required"`
-	// The code of the location type.
+	// Location type code.
 	TypeCode constants.LocationTypeCode `json:"type" validate:"required"`
-	// The parent location. Null if this is a top-level location. Expandable.
+	// Parent location. Null for top-level locations. Expandable.
 	Parent *Location `json:"parent" expandable:"true"`
-	// The child locations. Expandable.
+	// Child locations. Expandable.
 	Children *List[Location] `json:"children" expandable:"true"`
-	// The timestamp when the location was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at"`
-	// The timestamp when the location was last updated.
+	// Last-updated timestamp.
 	UpdatedAt time.Time `json:"updated_at"`
 }
 

@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ReceiveReceivingOrderRequest is the request to receive all unstocked lines on a receiving order.
+// Request to receive all unstocked lines on a receiving order.
 type ReceiveReceivingOrderRequest struct {
-	// The ID of the receiving order to receive.
+	// Receiving order ID.
 	ReceivingOrderID string `path:"id" validate:"required"`
 }
 

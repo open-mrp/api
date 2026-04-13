@@ -9,7 +9,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListCatalogProductLinesRequest is the request to list catalog product lines.
+// Request to list catalog product lines.
 type ListCatalogProductLinesRequest struct {
 	apiresource.PaginationRequest
 }

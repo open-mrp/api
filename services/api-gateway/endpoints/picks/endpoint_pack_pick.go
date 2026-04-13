@@ -10,11 +10,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// PackPickRequest is the request to pack a pick and create a shipment.
+// PackPickRequest is the request to pack a pick, creating a shipment from the picked lines.
 type PackPickRequest struct {
-	// The ID of the pick to pack.
+	// Pick ID.
 	PickID string `path:"id" validate:"required"`
-	// The number of cases for the shipment.
+	// Number of cases for the shipment.
 	ShipmentCaseCount int32 `json:"shipment_case_count" validate:"required,gte=1"`
 }
 

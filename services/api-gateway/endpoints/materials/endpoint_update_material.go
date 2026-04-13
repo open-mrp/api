@@ -10,13 +10,20 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
+// Request to update a material.
 type UpdateMaterialRequest struct {
-	ItemID      string                `path:"id" validate:"required"`
-	SKU         *string               `json:"sku,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	Description *string               `json:"description,omitempty" nullable:"false"`
-	Notes       *string               `json:"notes,omitempty" nullable:"false"`
-	OrderPoint  *QuantityInputRequest `json:"order_point,omitempty" nullable:"false"`
-	LeadTime    *QuantityInputRequest `json:"lead_time,omitempty" nullable:"false"`
+	// Material ID.
+	ItemID string `path:"id" validate:"required"`
+	// SKU code.
+	SKU *string `json:"sku,omitempty" nullable:"false" validate:"omitempty,max=255"`
+	// Description.
+	Description *string `json:"description,omitempty" nullable:"false"`
+	// Notes.
+	Notes *string `json:"notes,omitempty" nullable:"false"`
+	// Order point quantity.
+	OrderPoint *QuantityInputRequest `json:"order_point,omitempty" nullable:"false"`
+	// Lead time quantity.
+	LeadTime *QuantityInputRequest `json:"lead_time,omitempty" nullable:"false"`
 }
 
 var sampleUpdateMaterialSKU = "MAT-001-UPDATED"

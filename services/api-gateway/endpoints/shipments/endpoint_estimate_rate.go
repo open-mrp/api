@@ -11,35 +11,35 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ParcelInput represents a parcel for rate estimation.
+// Parcel for rate estimation.
 type ParcelInput struct {
-	// The weight of the parcel.
+	// Weight.
 	Weight float64 `json:"weight" validate:"required"`
-	// The length of the parcel.
+	// Length.
 	Length float64 `json:"length" validate:"required"`
-	// The width of the parcel.
+	// Width.
 	Width float64 `json:"width" validate:"required"`
-	// The height of the parcel.
+	// Height.
 	Height float64 `json:"height" validate:"required"`
 }
 
-// EstimateRateRequest is the request to estimate a shipping rate.
+// Request to estimate a shipping rate.
 type EstimateRateRequest struct {
-	// The ID of the carrier to estimate rates for.
+	// Carrier ID.
 	CarrierID string `json:"carrier_id" validate:"required"`
-	// The ID of the service level to estimate rates for.
+	// Service level ID.
 	ServiceLevelID string `json:"service_level_id" validate:"required"`
-	// The product line IDs for the shipment.
+	// Product line IDs.
 	ProductLineIDs []string `json:"product_line_ids,omitempty"`
-	// The customer ID for the shipment.
+	// Customer ID.
 	CustomerID *string `json:"customer_id,omitempty"`
-	// The origin address.
+	// Origin address.
 	FromAddress apirequest.AddressInput `json:"from_address" validate:"required"`
-	// The destination address.
+	// Destination address.
 	ToAddress apirequest.AddressInput `json:"to_address" validate:"required"`
-	// The parcels to estimate rates for.
+	// Parcels to estimate rates for.
 	Parcels []ParcelInput `json:"parcels" validate:"required,min=1"`
-	// The total order value.
+	// Total order value.
 	OrderTotal *float64 `json:"order_total,omitempty"`
 }
 

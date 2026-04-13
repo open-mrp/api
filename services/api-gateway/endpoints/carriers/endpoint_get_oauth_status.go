@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetOAuthStatusRequest is the request to get carrier OAuth status.
+// Request to get carrier OAuth status.
 type GetOAuthStatusRequest struct {
-	// The ID of the carrier.
+	// Carrier ID.
 	CarrierID string `path:"id" validate:"required"`
 }
 

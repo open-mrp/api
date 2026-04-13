@@ -10,31 +10,31 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// StockReceivingOrderRequest is the request to stock a receiving order.
+// Request to stock a receiving order.
 type StockReceivingOrderRequest struct {
-	// The ID of the receiving order to stock.
+	// Receiving order ID.
 	ReceivingOrderID string `path:"id" validate:"required"`
-	// The line items to stock with allocation details.
+	// Line items to stock with allocation details.
 	LineItems []StockLineItemRequest `json:"line_items"`
 }
 
-// StockLineItemRequest represents a single line item in a stocking request.
+// Line item in a stocking request.
 type StockLineItemRequest struct {
-	// The ID of the receiving order line to stock.
+	// Receiving order line ID.
 	ReceivingOrderLineID string `json:"receiving_order_line_id"`
-	// The lot number to assign.
+	// Lot number to assign.
 	LotNumber *string `json:"lot_number,omitempty"`
-	// The rejected quantity value.
+	// Rejected quantity value.
 	RejectedQuantity *string `json:"rejected_quantity,omitempty"`
-	// The storage allocations for this line item.
+	// Storage allocations for this line item.
 	Allocations []AllocationRequest `json:"allocations"`
 }
 
-// AllocationRequest represents a storage allocation.
+// Storage allocation.
 type AllocationRequest struct {
-	// The location ID to allocate to.
+	// Location ID to allocate to.
 	LocationID *string `json:"location_id,omitempty"`
-	// The quantity to allocate.
+	// Quantity to allocate.
 	Quantity string `json:"quantity"`
 }
 

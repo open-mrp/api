@@ -9,7 +9,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// PullEDIOrdersRequest is the request to trigger an EDI pull-orders operation.
+// Request to trigger an EDI pull-orders operation.
 type PullEDIOrdersRequest struct{}
 
 var examplePullEDIOrdersRequest = &PullEDIOrdersRequest{}

@@ -10,9 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ValidateUnitsRequest is the request to validate units by abbreviation.
+// Request to validate units by abbreviation.
 type ValidateUnitsRequest struct {
-	// A map of arbitrary keys to unit abbreviation values to validate.
+	// Map of arbitrary keys to unit abbreviation values to validate.
 	UnitMap map[string]string `json:"unit_map" validate:"required"`
 }
 

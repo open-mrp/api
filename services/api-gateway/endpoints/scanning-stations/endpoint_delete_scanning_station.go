@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// DeleteScanningStationRequest is the request to delete a scanning station.
+// Request to delete a scanning station.
 type DeleteScanningStationRequest struct {
-	// The ID of the scanning station to delete.
+	// Scanning station ID.
 	ScanningStationID string `path:"id" validate:"required"`
 }
 

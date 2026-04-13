@@ -9,13 +9,13 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// SubmitFeedbackRequest is the request to submit user feedback.
+// Request to submit user feedback.
 type SubmitFeedbackRequest struct {
-	// The question that was presented to the user.
+	// Question presented to the user.
 	Question string `json:"question" validate:"required"`
-	// The user's answer to the question.
+	// Answer to the question.
 	Answer string `json:"answer" validate:"required"`
-	// The URL of the page where the feedback was submitted.
+	// URL of the page where feedback was submitted.
 	PageURL *string `json:"page_url"`
 }
 

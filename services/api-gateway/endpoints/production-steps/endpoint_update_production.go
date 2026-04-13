@@ -10,17 +10,17 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpdateProductionRequest is the request to update a production output.
+// Request to update a production output.
 type UpdateProductionRequest struct {
-	// The ID of the production step.
+	// Production step ID.
 	ProductionStepID string `path:"production_step_id" validate:"required"`
-	// The ID of the production to update.
+	// Production ID.
 	ProductionID string `path:"id" validate:"required"`
-	// The new item ID.
+	// Item ID.
 	ItemID *string `json:"item_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
-	// The new quantity value as a decimal string.
+	// Quantity value as a decimal string.
 	QuantityValue *string `json:"quantity_value,omitempty" nullable:"false"`
-	// The new quantity unit ID.
+	// Quantity unit ID.
 	QuantityUnitID *string `json:"quantity_unit_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
 }
 

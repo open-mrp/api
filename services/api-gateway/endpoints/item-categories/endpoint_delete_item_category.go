@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// DeleteItemCategoryRequest is the request to delete an item category.
+// Request to delete an item category.
 type DeleteItemCategoryRequest struct {
-	// The ID of the item category to delete.
+	// Item category ID.
 	ItemCategoryID string `path:"id" validate:"required"`
 }
 

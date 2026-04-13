@@ -10,12 +10,12 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListAccountUsersRequest is the request to list account users with optional filters.
+// Request to list account users.
 type ListAccountUsersRequest struct {
 	apiresource.PaginationRequest
 	// Filter by role type code.
 	RoleType *constants.RoleTypeCode `query:"role_type"`
-	// Whether to include removed account users in the results.
+	// Whether to include removed account users.
 	IncludeRemoved bool `query:"include_removed"`
 }
 

@@ -11,9 +11,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ShipShipmentRequest is the request to mark a shipment as shipped.
+// Request to mark a shipment as shipped.
 type ShipShipmentRequest struct {
-	// The ID of the shipment to ship.
+	// Shipment ID.
 	ShipmentID string `path:"id" validate:"required"`
 	// Whether to email the customer a shipping notification.
 	EmailCustomer bool `json:"email_customer"`

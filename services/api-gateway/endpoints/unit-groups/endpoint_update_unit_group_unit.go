@@ -11,19 +11,19 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpdateUnitGroupUnitRequest is the request to update an associated unit.
+// UpdateUnitGroupUnitRequest is a request to update an associated unit.
 type UpdateUnitGroupUnitRequest struct {
-	// The ID of the unit group.
+	// Unit group ID.
 	UnitGroupID string `path:"unitGroupId" validate:"required"`
-	// The ID of the associated unit.
+	// Unit group unit ID.
 	AssociatedUnitID string `path:"id" validate:"required"`
-	// The unit ID.
+	// Unit ID.
 	UnitID *string `json:"unit_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
-	// The discount percentage.
+	// Discount percentage.
 	DiscountPercentage *float64 `json:"discount_percentage,omitempty" nullable:"false"`
-	// The fixed discount amount.
+	// Fixed discount amount.
 	DiscountFixed *float64 `json:"discount_fixed,omitempty" nullable:"false"`
-	// Whether this associated unit is visible in the customer portal.
+	// Customer portal visibility.
 	CustomerPortalVisibility *constants.CustomerPortalVisibility `json:"customer_portal_visibility,omitempty" nullable:"false"`
 }
 
@@ -43,7 +43,7 @@ type UpdateUnitGroupUnitEndpoint struct{}
 func (e *UpdateUnitGroupUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateUnitGroupUnitRequest, *apiresource.UnitGroupUnit] {
 	return &apiendpoint.APIEndpoint[*UpdateUnitGroupUnitRequest, *apiresource.UnitGroupUnit]{
 		Title:             "Update Unit Group Associated Unit",
-		Description:       "Updates an associated unit within a unit group.",
+		Description:       "Partially updates an associated unit within a unit group.",
 		Method:            http.MethodPatch,
 		Route:             "/v1/catalog/unit-groups/{unitGroupId}/units/{id}",
 		ContentType:       "application/json",

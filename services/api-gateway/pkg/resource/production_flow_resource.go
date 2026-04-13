@@ -5,87 +5,87 @@ import (
 	"github.com/augno/api/shared/constants"
 )
 
-// ProductionFlow represents the production flow graph for an item.
+// ProductionFlow is the production flow graph for an item.
 type ProductionFlow struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=production_flow"`
-	// The steps in the production flow graph.
+	// Steps in the production flow graph.
 	Steps []ProductionFlowStep `json:"steps" validate:"required"`
 }
 
-// ProductionFlowStep represents a single step in the production flow.
+// ProductionFlowStep is a step in the production flow.
 type ProductionFlowStep struct {
-	// The unique identifier for the production step.
+	// Production step ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=production_step"`
-	// The production step name.
+	// Production step name.
 	Name string `json:"name" validate:"required"`
-	// The production output for this step.
+	// Production output for this step.
 	Production *ProductionFlowProduction `json:"production" validate:"required"`
-	// The consumptions (inputs) for this step.
+	// Consumptions (inputs) for this step.
 	Consumptions []ProductionFlowConsumption `json:"consumptions" validate:"required"`
-	// The steps that feed into this step.
+	// Steps that feed into this step.
 	InSteps []ProductionFlowStepRef `json:"in_steps" validate:"required"`
-	// The steps that this step feeds into.
+	// Steps that this step feeds into.
 	OutSteps []ProductionFlowStepRef `json:"out_steps" validate:"required"`
-	// The scanning station, if assigned.
+	// Scanning station, if assigned.
 	ScanningStation *ProductionFlowStepRef `json:"scanning_station"`
-	// The leveling factor as a decimal string.
+	// Leveling factor as a decimal string.
 	LevelingFactor string `json:"leveling_factor" validate:"required" format:"decimal"`
-	// The allowances as a decimal string.
+	// Allowances as a decimal string.
 	Allowances string `json:"allowances" validate:"required" format:"decimal"`
-	// The labor rate for this step.
+	// Labor rate.
 	LaborRate *Rate `json:"labor_rate"`
-	// The labor time for this step.
+	// Labor time.
 	LaborTime *Rate `json:"labor_time"`
-	// The overhead rate for this step.
+	// Overhead rate.
 	OverheadRate *Rate `json:"overhead_rate"`
 }
 
-// ProductionFlowProduction represents the production output of a step.
+// ProductionFlowProduction is the production output of a flow step.
 type ProductionFlowProduction struct {
-	// The unique identifier for the production record.
+	// Production record ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=production"`
-	// The produced item.
+	// Produced item.
 	Item *ProductionFlowItemRef `json:"item" validate:"required"`
-	// The produced quantity.
+	// Produced quantity.
 	Quantity *Quantity `json:"quantity" validate:"required"`
 }
 
-// ProductionFlowConsumption represents a consumption input of a step.
+// ProductionFlowConsumption is a consumption input of a flow step.
 type ProductionFlowConsumption struct {
-	// The unique identifier for the consumption record.
+	// Consumption record ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=consumption"`
-	// The consumed item.
+	// Consumed item.
 	Item *ProductionFlowItemRef `json:"item" validate:"required"`
-	// The consumed quantity.
+	// Consumed quantity.
 	Quantity *Quantity `json:"quantity" validate:"required"`
-	// The waste quantity.
+	// Waste quantity.
 	WasteQuantity *Quantity `json:"waste_quantity" validate:"required"`
-	// Optional instructions for this consumption.
+	// Consumption instructions.
 	Instructions *string `json:"instructions"`
 }
 
 // ProductionFlowStepRef is a lightweight reference to a production step.
 type ProductionFlowStepRef struct {
-	// The unique identifier.
+	// ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required"`
 }
 
 // ProductionFlowItemRef is a lightweight reference to an item.
 type ProductionFlowItemRef struct {
-	// The unique identifier.
+	// Item ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=item"`
-	// The item SKU.
+	// Item SKU.
 	SKU string `json:"sku" validate:"required"`
 }
 

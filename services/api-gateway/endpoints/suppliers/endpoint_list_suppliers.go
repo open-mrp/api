@@ -13,11 +13,11 @@ import (
 // ListSuppliersRequest is the request to list suppliers.
 type ListSuppliersRequest struct {
 	apiresource.PaginationRequest
-	// Filter suppliers that have materials for these item IDs.
+	// Item IDs filter. Returns suppliers with materials for these items.
 	ItemIDs []string `query:"item_ids"`
-	// Filter by start date (created after).
+	// Start date filter (created after).
 	StartDate *time.Time `query:"start_date"`
-	// Filter by end date (created before).
+	// End date filter (created before).
 	EndDate *time.Time `query:"end_date"`
 }
 

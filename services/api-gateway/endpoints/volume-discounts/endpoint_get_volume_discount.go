@@ -10,9 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetVolumeDiscountRequest is the request to retrieve a single volume discount.
+// Request to retrieve a volume discount.
 type GetVolumeDiscountRequest struct {
-	// The ID of the volume discount to retrieve.
+	// Volume discount ID.
 	VolumeDiscountID string `path:"id" validate:"required"`
 }
 
@@ -21,7 +21,7 @@ type GetVolumeDiscountEndpoint struct{}
 func (e *GetVolumeDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetVolumeDiscountRequest, *apiresource.VolumeDiscount] {
 	return &apiendpoint.APIEndpoint[*GetVolumeDiscountRequest, *apiresource.VolumeDiscount]{
 		Title:             "Get Volume Discount",
-		Description:       "Returns a single volume discount by its ID.",
+		Description:       "Returns a volume discount by ID.",
 		Method:            http.MethodGet,
 		Route:             "/v1/sales/volume-discounts/{id}",
 		ContentType:       "application/json",

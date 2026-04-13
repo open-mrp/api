@@ -11,21 +11,21 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// CreateUnitRequest is the request to create a new unit.
+// Request to create a unit.
 type CreateUnitRequest struct {
-	// The display name of the unit (e.g. "Gram").
+	// Display name of the unit (e.g. "Gram").
 	Name string `json:"name" validate:"required,max=255"`
-	// The short abbreviation for the unit (e.g. "g").
+	// Short abbreviation for the unit (e.g. "g").
 	Abbreviation string `json:"abbreviation" validate:"required,max=191"`
-	// The unit dimension code.
+	// Unit dimension code.
 	Type constants.UnitType `json:"type" validate:"required"`
-	// The conversion ratio numerator relative to the base unit, as a decimal string.
+	// Conversion ratio numerator relative to the base unit, as a decimal string.
 	RatioNumerator string `json:"ratio_numerator" validate:"required" format:"decimal"`
-	// The conversion ratio denominator relative to the base unit, as a decimal string.
+	// Conversion ratio denominator relative to the base unit, as a decimal string.
 	RatioDenominator string `json:"ratio_denominator" validate:"required" format:"decimal"`
-	// The conversion offset numerator, as a decimal string.
+	// Conversion offset numerator, as a decimal string.
 	OffsetNumerator string `json:"offset_numerator" validate:"required" format:"decimal"`
-	// The conversion offset denominator, as a decimal string.
+	// Conversion offset denominator, as a decimal string.
 	OffsetDenominator string `json:"offset_denominator" validate:"required" format:"decimal"`
 }
 
@@ -48,7 +48,7 @@ type CreateUnitEndpoint struct{}
 func (e *CreateUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateUnitRequest, *apiresource.Unit] {
 	return &apiendpoint.APIEndpoint[*CreateUnitRequest, *apiresource.Unit]{
 		Title:             "Create Unit",
-		Description:       "Creates a new account-owned unit.",
+		Description:       "Creates an account-owned unit.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/units",

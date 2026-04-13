@@ -7,7 +7,7 @@ import (
 
 // Healthcheck contains information on the health of the application.
 type Healthcheck struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=healthcheck"`
 	// Current operational status of the API service.
 	Status string `json:"status" validate:"required"`

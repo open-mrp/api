@@ -9,11 +9,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// RemoveItemCategoryPropertyRequest is the request to remove a property from an item category.
+// Request to remove a property from an item category.
 type RemoveItemCategoryPropertyRequest struct {
-	// The ID of the item category.
+	// Item category ID.
 	ItemCategoryID string `path:"id" validate:"required"`
-	// The ID of the property to remove.
+	// Property ID.
 	PropertyID string `path:"property_id" validate:"required"`
 }
 

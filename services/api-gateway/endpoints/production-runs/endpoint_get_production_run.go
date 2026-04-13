@@ -10,11 +10,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetProductionRunRequest is the request to retrieve a single production run by ID.
+// Request to get a production run by ID.
 type GetProductionRunRequest struct {
-	// The ID of the production run to retrieve.
+	// Production run ID.
 	ProductionRunID string `path:"id" validate:"required"`
-	// The fields to include in the response.
+	// Fields to include in the response.
 	Includes []string `query:"include"`
 }
 
@@ -23,7 +23,7 @@ type GetProductionRunEndpoint struct{}
 func (e *GetProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetProductionRunRequest, *apiresource.ProductionRunDetail] {
 	return &apiendpoint.APIEndpoint[*GetProductionRunRequest, *apiresource.ProductionRunDetail]{
 		Title:             "Get Production Run",
-		Description:       "Returns a single production run by its ID.",
+		Description:       "Returns a production run by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/production-runs/{id}",

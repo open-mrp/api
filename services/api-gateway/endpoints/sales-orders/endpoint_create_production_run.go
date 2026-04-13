@@ -9,21 +9,21 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// CreateProductionRunRequest is the request to create a production run from a sales order.
+// Request to create a production run from a sales order.
 type CreateProductionRunRequest struct {
-	// The ID of the sales order.
+	// Sales order ID.
 	SalesOrderID string `path:"id" validate:"required"`
 }
 
-// CreateProductionRunResponseRef is a lightweight reference to the created production run.
+// Lightweight reference to a production run.
 type CreateProductionRunResponseRef struct {
-	// The unique identifier of the created production run.
+	// Production run ID.
 	ID string `json:"id" validate:"required,max=191"`
 }
 
-// CreateProductionRunResponse represents the result of creating a production run.
+// Result of creating a production run.
 type CreateProductionRunResponse struct {
-	// The created production run.
+	// Created production run.
 	ProductionRun CreateProductionRunResponseRef `json:"production_run" validate:"required"`
 }
 

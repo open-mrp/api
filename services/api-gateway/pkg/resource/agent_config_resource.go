@@ -5,17 +5,16 @@ import (
 	"github.com/augno/api/shared/constants"
 )
 
-// AgentDefinitionConfig holds agent-level configuration that controls LLM behavior.
-// This is separate from tool-level config (AgentDefinitionTool.Config) which
-// configures individual tools attached to the agent.
+// Agent-level configuration controlling LLM behavior.
+// Separate from AgentDefinitionTool.Config, which configures individual tools.
 type AgentDefinitionConfig struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=agent_definition_config"`
-	// The system prompt / instructions given to the agent.
+	// System prompt / instructions for the agent.
 	SystemPrompt *string `json:"system_prompt"`
-	// The LLM model identifier (e.g. "claude-sonnet-4").
+	// LLM model identifier (e.g. "claude-sonnet-4").
 	Model *string `json:"model"`
-	// The LLM provider name (e.g. "anthropic", "openai"). Inferred from model if omitted.
+	// LLM provider name (e.g. "anthropic", "openai"). Inferred from model if omitted.
 	Provider *string `json:"provider"`
 	// LLM sampling temperature between 0 and 1.
 	Temperature *float64 `json:"temperature"`
@@ -23,12 +22,12 @@ type AgentDefinitionConfig struct {
 	TriggerConfig *TriggerConfig `json:"trigger_config"`
 }
 
-// TriggerConfig holds trigger-type-specific settings.
+// Trigger-type-specific configuration.
 // For "scheduled": CronSchedule is populated.
 // For "event": EventFilters is populated.
 // For "manual": all fields are empty.
 type TriggerConfig struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=trigger_config"`
 	// Cron expression for scheduled triggers (e.g. "0 9 * * *").
 	CronSchedule *string `json:"cron_schedule"`

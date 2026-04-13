@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetBatchFlowRequest is the request to retrieve the production flow graph for a batch.
+// Request to retrieve the production flow graph for a batch.
 type GetBatchFlowRequest struct {
-	// The ID of the batch to retrieve the flow for.
+	// Batch ID.
 	BatchID string `path:"id" validate:"required"`
 }
 

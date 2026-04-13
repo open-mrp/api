@@ -15,13 +15,13 @@ const SampleShipmentID = "sh_01jm4r6700f8nwq3v5hx2d9ktp"
 const SampleTransactionID = "tx_01jm4r6700f8nwq3v5hx2d9ktp"
 const SampleOrderLineID = "soln_01jm4r6700f8nwq3v5hx2d9ktp"
 
-// Shipment is a minimal shipment sub-resource.
+// Minimal shipment sub-resource.
 type Shipment struct {
-	// The unique identifier for the shipment.
+	// Shipment ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=shipment"`
-	// The shipment number.
+	// Shipment number.
 	Number string `json:"number" validate:"required"`
 }
 
@@ -31,11 +31,11 @@ var SampleShipment = &Shipment{
 	Number: "SH-001",
 }
 
-// Transaction is a minimal transaction sub-resource.
+// Minimal transaction sub-resource.
 type Transaction struct {
-	// The unique identifier for the transaction.
+	// Transaction ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=transaction"`
 }
 
@@ -44,13 +44,13 @@ var SampleTransaction = &Transaction{
 	Object: constants.ObjectTypeTransaction,
 }
 
-// SalesOrderLine is a minimal sales order line sub-resource.
+// Minimal sales order line sub-resource.
 type SalesOrderLine struct {
-	// The unique identifier for the sales order line.
+	// Sales order line ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=sales_order"`
-	// The item associated with this order line.
+	// Item associated with this order line.
 	Item *Item `json:"item"`
 }
 
@@ -60,29 +60,29 @@ var SampleSalesOrderLine = &SalesOrderLine{
 	Item:   SampleItem,
 }
 
-// InvoiceSummary represents a lightweight invoice for list views.
+// Lightweight invoice for list views.
 type InvoiceSummary struct {
-	// The unique identifier for the invoice.
+	// Invoice ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=invoice_summary"`
-	// The invoice number.
+	// Invoice number.
 	Number string `json:"number" validate:"required"`
-	// A note attached to this invoice.
+	// Note attached to the invoice.
 	Note *string `json:"note"`
-	// The customer associated with this invoice.
+	// Customer associated with this invoice.
 	Customer *Customer `json:"customer" expandable:"true"`
-	// The sales order associated with this invoice.
+	// Sales order associated with this invoice.
 	Order *SalesOrder `json:"order" expandable:"true"`
-	// The shipment associated with this invoice.
+	// Shipment associated with this invoice.
 	Shipment *Shipment `json:"shipment" expandable:"true"`
-	// The number of line items in this invoice.
+	// Number of line items.
 	LineCount int32 `json:"line_count"`
-	// The billing address for this invoice.
+	// Billing address.
 	BillingAddress *Address `json:"billing_address" expandable:"true"`
-	// The priority code for the customer.
+	// Customer priority code.
 	PriorityCode constants.PriorityCode `json:"priority" validate:"required"`
-	// The payment term for this invoice.
+	// Payment term.
 	PaymentTerm *PaymentTerm `json:"payment_term" expandable:"true"`
 	// Whether the invoice has been paid in full.
 	IsPaidInFull bool `json:"is_paid_in_full"`
@@ -90,15 +90,15 @@ type InvoiceSummary struct {
 	IsEdiSent bool `json:"is_edi_sent"`
 	// Whether the invoice has been sent.
 	HasBeenSent bool `json:"has_been_sent"`
-	// The total invoiced amount as a decimal string.
+	// Total invoiced amount as a decimal string.
 	TotalInvoiced string `json:"total_invoiced" validate:"required" format:"decimal"`
 	// Whether the customer accepts invoice emails.
 	AcceptsInvoiceEmails bool `json:"accepts_invoice_emails"`
 	// Whether the customer is EDI enabled.
 	CustomerIsEdiEnabled bool `json:"customer_is_edi_enabled"`
-	// The timestamp when the invoice was created.
+	// Timestamp when the invoice was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The timestamp when the invoice was last updated.
+	// Timestamp when the invoice was last updated.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
@@ -135,21 +135,21 @@ func (*InvoiceSummary) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleInvoiceSummary)
 }
 
-// Invoice represents a full invoice with expandable lines and allocations.
+// Full invoice with expandable lines and allocations.
 type Invoice struct {
-	// The unique identifier for the invoice.
+	// Invoice ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=invoice"`
-	// The invoice number.
+	// Invoice number.
 	Number string `json:"number" validate:"required"`
-	// A note attached to this invoice.
+	// Note attached to the invoice.
 	Note *string `json:"note"`
-	// The sales order associated with this invoice.
+	// Sales order associated with this invoice.
 	Order *SalesOrder `json:"order" expandable:"true"`
-	// The billing address for this invoice.
+	// Billing address.
 	BillingAddress *Address `json:"billing_address" expandable:"true"`
-	// The shipment associated with this invoice.
+	// Shipment associated with this invoice.
 	Shipment *Shipment `json:"shipment" expandable:"true"`
 	// Whether the invoice has been paid in full.
 	IsPaidInFull bool `json:"is_paid_in_full"`
@@ -161,13 +161,13 @@ type Invoice struct {
 	HasBeenSent bool `json:"has_been_sent"`
 	// Whether the customer accepts invoice emails.
 	AcceptsInvoiceEmails bool `json:"accepts_invoice_emails"`
-	// The line items in this invoice.
+	// Line items in this invoice.
 	Lines *List[InvoiceLine] `json:"lines" expandable:"true"`
-	// The allocations against this invoice.
+	// Allocations against this invoice.
 	Allocations *List[InvoiceAllocation] `json:"allocations" expandable:"true"`
-	// The timestamp when the invoice was created.
+	// Timestamp when the invoice was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The timestamp when the invoice was last updated.
+	// Timestamp when the invoice was last updated.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
@@ -191,21 +191,21 @@ func (*Invoice) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleInvoice)
 }
 
-// InvoiceLine represents a line item in an invoice.
+// Line item in an invoice.
 type InvoiceLine struct {
-	// The unique identifier for the invoice line.
+	// Invoice line ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=invoice_line"`
-	// The quantity for this line.
+	// Quantity for this line.
 	Quantity *Quantity `json:"quantity" validate:"required"`
-	// The unit price for this line.
+	// Unit price for this line.
 	UnitPrice *Rate `json:"unit_price" validate:"required"`
-	// The sales order line associated with this invoice line.
+	// Sales order line associated with this invoice line.
 	OrderLine *SalesOrderLine `json:"order_line" validate:"required"`
-	// The timestamp when the line was created.
+	// Timestamp when the line was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The timestamp when the line was last updated.
+	// Timestamp when the line was last updated.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
@@ -235,21 +235,21 @@ func (*InvoiceLine) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleInvoiceLine)
 }
 
-// InvoiceAllocation represents a transaction allocation against an invoice.
+// Transaction allocation against an invoice.
 type InvoiceAllocation struct {
-	// The unique identifier for the allocation.
+	// Allocation ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=invoice_allocation"`
-	// The transaction associated with this allocation.
+	// Transaction associated with this allocation.
 	Transaction *Transaction `json:"transaction" validate:"required"`
-	// The allocated amount.
+	// Allocated amount.
 	Amount *Quantity `json:"amount" validate:"required"`
-	// A note about this allocation.
+	// Note about this allocation.
 	Note *string `json:"note"`
-	// The timestamp when the allocation was created.
+	// Timestamp when the allocation was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The timestamp when the allocation was last updated.
+	// Timestamp when the allocation was last updated.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
@@ -278,35 +278,35 @@ func (*InvoiceAllocation) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleInvoiceAllocation)
 }
 
-// InvoiceForPayment represents an invoice in the customer payment context.
+// Invoice in the customer payment context.
 type InvoiceForPayment struct {
-	// The unique identifier for the invoice.
+	// Invoice ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=invoice_for_payment"`
-	// The invoice number.
+	// Invoice number.
 	Number string `json:"number" validate:"required"`
-	// The customer's purchase order number.
+	// Customer's purchase order number.
 	CustomerPO *string `json:"customer_po"`
-	// The customer associated with this invoice.
+	// Customer associated with this invoice.
 	Customer *Customer `json:"customer" expandable:"true"`
 	// Whether the customer is a parent account.
 	IsParentAccount bool `json:"is_parent_account"`
-	// The parent account if this is a child account.
+	// Parent account if this is a child account.
 	ParentAccount *Account `json:"parent_account" expandable:"true"`
 	// Whether the order was prepaid.
 	IsPrepaid bool `json:"is_prepaid"`
-	// The billing address for this invoice.
+	// Billing address.
 	BillingAddress *Address `json:"billing_address" expandable:"true"`
-	// The total invoiced amount as a decimal string.
+	// Total invoiced amount as a decimal string.
 	InvoiceTotal string `json:"invoice_total" validate:"required" format:"decimal"`
 	// Whether the invoice has been paid in full.
 	IsPaidInFull bool `json:"is_paid_in_full"`
-	// The allocations against this invoice.
+	// Allocations against this invoice.
 	Allocations *List[InvoiceAllocation] `json:"allocations" expandable:"true"`
-	// The timestamp when the invoice was created.
+	// Timestamp when the invoice was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The timestamp when the invoice was last updated.
+	// Timestamp when the invoice was last updated.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 

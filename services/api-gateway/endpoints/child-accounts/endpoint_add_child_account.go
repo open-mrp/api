@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// AddChildAccountRequest is the request to add a child account.
+// Request to add a child account.
 type AddChildAccountRequest struct {
-	// The account ID of the child to add.
+	// Child account ID.
 	ChildAccountID string `path:"child_account_id" validate:"required"`
 }
 

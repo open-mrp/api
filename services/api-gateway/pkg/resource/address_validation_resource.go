@@ -5,17 +5,17 @@ import (
 	"github.com/augno/api/shared/constants"
 )
 
-// AddressSuggestion represents an autocomplete suggestion.
+// Autocomplete address suggestion.
 type AddressSuggestion struct {
-	// The Google Places ID for the suggestion.
+	// Google Places ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=address_suggestion"`
-	// The full text description of the suggestion.
+	// Full description.
 	Description string `json:"description" validate:"required"`
-	// The main text of the suggestion (typically the street address).
+	// Main text (typically the street address).
 	MainText string `json:"main_text" validate:"required"`
-	// The secondary text of the suggestion (typically city, state, country).
+	// Secondary text (typically city, state, country).
 	SecondaryText string `json:"secondary_text" validate:"required"`
 }
 
@@ -31,47 +31,47 @@ func (*AddressSuggestion) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleAddressSuggestion)
 }
 
-// AddressComponents represents parsed address components.
+// Parsed address components.
 type AddressComponents struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=address_components"`
-	// The first line of the street address.
+	// First line of the street address.
 	AddressLine1 string `json:"address_line_1" validate:"required"`
-	// The second line of the street address.
+	// Second line of the street address.
 	AddressLine2 *string `json:"address_line_2"`
-	// The city.
+	// City.
 	City string `json:"city" validate:"required"`
-	// The state or administrative area.
+	// State or administrative area.
 	State string `json:"state" validate:"required"`
-	// The postal or zip code.
+	// Postal or ZIP code.
 	PostalCode string `json:"postal_code" validate:"required"`
-	// The country name or code.
+	// Country name or code.
 	Country string `json:"country" validate:"required"`
-	// The two-letter country code.
+	// Two-letter country code.
 	CountryCode string `json:"country_code" validate:"required"`
 }
 
-// AddressDetailsResult represents the result of a place details lookup.
+// Result of a place details lookup.
 type AddressDetailsResult struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=address_details_result"`
-	// The parsed address components.
+	// Parsed address components.
 	Address *AddressComponents `json:"address" validate:"required"`
-	// The formatted full address string.
+	// Formatted full address string.
 	FormattedAddress string `json:"formatted_address" validate:"required"`
 }
 
-// ValidatedAddress represents the result of address validation.
+// Result of address validation.
 type ValidatedAddress struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=validated_address"`
-	// Whether the address is considered valid.
+	// Whether the address is valid.
 	IsValid bool `json:"is_valid"`
-	// The formatted address as returned by the validation service.
+	// Formatted address from the validation service.
 	FormattedAddress *string `json:"formatted_address"`
-	// The standardized address components.
+	// Standardized address components.
 	Components *AddressComponents `json:"components"`
-	// Validation messages describing any issues found.
+	// Validation messages for issues found.
 	ValidationMessages []string `json:"validation_messages"`
 }
 

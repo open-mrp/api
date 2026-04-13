@@ -10,10 +10,10 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListItemCategoriesRequest is the request to list item categories with optional filters.
+// Request to list item categories.
 type ListItemCategoriesRequest struct {
 	apiresource.PaginationRequest
-	// Filter by item category type code (material_category or product_category).
+	// Filter by item category type (material_category or product_category).
 	Type *constants.ItemCategoryType `query:"type"`
 }
 

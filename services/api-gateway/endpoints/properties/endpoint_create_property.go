@@ -11,9 +11,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// CreatePropertyRequest is the request to create a new property.
+// Request to create a property.
 type CreatePropertyRequest struct {
-	// The name of the property.
+	// Name.
 	Name string `json:"name" validate:"required,max=255"`
 }
 
@@ -30,7 +30,7 @@ type CreatePropertyEndpoint struct{}
 func (e *CreatePropertyEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreatePropertyRequest, *apiresource.Property] {
 	return &apiendpoint.APIEndpoint[*CreatePropertyRequest, *apiresource.Property]{
 		Title:             "Create Property",
-		Description:       "Creates a new property.",
+		Description:       "Creates a property.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/properties",

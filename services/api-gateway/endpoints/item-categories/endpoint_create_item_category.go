@@ -11,13 +11,13 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// CreateItemCategoryRequest is the request to create a new item category.
+// Request to create an item category.
 type CreateItemCategoryRequest struct {
-	// The display name of the item category.
+	// Display name.
 	Name string `json:"name" validate:"required,max=255"`
-	// The type of item category (material_category or product_category).
+	// Item category type (material_category or product_category).
 	Type constants.ItemCategoryType `json:"type" validate:"required"`
-	// The ID of the unit group to associate with this item category.
+	// Unit group ID.
 	UnitGroupID string `json:"unit_group_id" validate:"required,max=191"`
 }
 
@@ -36,7 +36,7 @@ type CreateItemCategoryEndpoint struct{}
 func (e *CreateItemCategoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateItemCategoryRequest, *apiresource.ItemCategory] {
 	return &apiendpoint.APIEndpoint[*CreateItemCategoryRequest, *apiresource.ItemCategory]{
 		Title:             "Create Item Category",
-		Description:       "Creates a new account-owned item category.",
+		Description:       "Creates an account-owned item category.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/item-categories",

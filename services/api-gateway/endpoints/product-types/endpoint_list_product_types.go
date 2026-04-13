@@ -9,7 +9,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListProductTypesRequest is the request to list product types with optional filters.
+// Request to list product types.
 type ListProductTypesRequest struct {
 	apiresource.PaginationRequest
 }

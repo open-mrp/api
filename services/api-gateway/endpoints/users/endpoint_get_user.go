@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetUserRequest is the request to retrieve a single user by ID.
+// Request to retrieve a user by ID.
 type GetUserRequest struct {
-	// The ID of the user to retrieve.
+	// User ID.
 	UserID string `path:"id" validate:"required"`
 }
 
@@ -20,7 +20,7 @@ type GetUserEndpoint struct{}
 func (e *GetUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetUserRequest, *apiresource.User] {
 	return &apiendpoint.APIEndpoint[*GetUserRequest, *apiresource.User]{
 		Title:             "Get User",
-		Description:       "Returns a single user's profile by its ID.",
+		Description:       "Returns a user by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/users/{id}",

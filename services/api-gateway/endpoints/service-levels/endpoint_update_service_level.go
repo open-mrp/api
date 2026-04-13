@@ -11,17 +11,17 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpdateServiceLevelRequest is the request to update a service level.
+// Request to update a service level.
 type UpdateServiceLevelRequest struct {
-	// The ID of the carrier.
+	// Carrier ID.
 	CarrierID string `path:"carrier_id" validate:"required"`
-	// The ID of the service level to update.
+	// Service level ID.
 	ServiceLevelID string `path:"id" validate:"required"`
-	// The new display name for the service level.
+	// Display name.
 	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// The new service level code.
+	// Service level code.
 	Code *string `json:"code,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// Whether this service level is visible in the customer portal.
+	// Customer portal visibility.
 	CustomerPortalVisibility *constants.CustomerPortalVisibility `json:"customer_portal_visibility,omitempty" nullable:"false"`
 }
 

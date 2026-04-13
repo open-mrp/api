@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetDeliveryRequest is the request to retrieve a single delivery.
+// Request to retrieve a delivery.
 type GetDeliveryRequest struct {
-	// The ID of the delivery to retrieve.
+	// Delivery ID.
 	DeliveryID string `path:"id" validate:"required"`
 }
 
@@ -20,7 +20,7 @@ type GetDeliveryEndpoint struct{}
 func (e *GetDeliveryEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetDeliveryRequest, *apiresource.Delivery] {
 	return &apiendpoint.APIEndpoint[*GetDeliveryRequest, *apiresource.Delivery]{
 		Title:             "Get Delivery",
-		Description:       "Returns a single delivery by its ID, including all delivery lines.",
+		Description:       "Returns a delivery by ID, including all delivery lines.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/deliveries/{id}",

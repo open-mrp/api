@@ -10,7 +10,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListPaymentTermsRequest is the request to list payment terms with optional filters.
+// Request to list payment terms.
 type ListPaymentTermsRequest struct {
 	apiresource.PaginationRequest
 }
@@ -20,7 +20,7 @@ type ListPaymentTermsEndpoint struct{}
 func (e *ListPaymentTermsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPaymentTermsRequest, *apiresource.List[apiresource.PaymentTerm]] {
 	return &apiendpoint.APIEndpoint[*ListPaymentTermsRequest, *apiresource.List[apiresource.PaymentTerm]]{
 		Title:             "List Payment Terms",
-		Description:       "Returns a paginated list of payment terms for the account, including both account-specific and default system payment terms.",
+		Description:       "Returns a paginated list of payment terms. Includes both account-specific and system default payment terms.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/finance/payment-terms",

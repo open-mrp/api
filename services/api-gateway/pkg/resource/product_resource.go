@@ -10,23 +10,23 @@ import (
 
 const SampleProductID = "pr_01jm4r6700f8nwq3v5hx2d9ktp"
 
-// Product represents a product resource with expandable item, product line, and product type.
+// Product with expandable item, product line, and product type.
 type Product struct {
-	// The unique identifier for the product.
+	// Product ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=product"`
-	// Whether this product is visible on the customer portal.
+	// Whether visible on the customer portal.
 	IsPortalReady bool `json:"is_portal_ready"`
-	// The product type.
+	// Product type.
 	ProductType *ProductType `json:"product_type" expandable:"true"`
-	// The product line this product belongs to.
+	// Product line.
 	ProductLine *ProductLine `json:"product_line" expandable:"true"`
-	// The underlying item for this product.
+	// Item.
 	Item *Item `json:"item" expandable:"true"`
-	// The timestamp when the product was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The timestamp when the product was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
@@ -45,11 +45,11 @@ func (*Product) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleProduct)
 }
 
-// ValidateProductsResponse represents the response for the validate products endpoint.
+// ValidateProductsResponse is the response for the validate products endpoint.
 type ValidateProductsResponse struct {
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=map"`
-	// The validated products keyed by the original map key.
+	// Validated products keyed by original map key.
 	Products map[string]*Product `json:"products" validate:"required"`
 }
 

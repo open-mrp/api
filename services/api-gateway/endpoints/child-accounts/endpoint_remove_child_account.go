@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// RemoveChildAccountRequest is the request to remove a child account.
+// Request to remove a child account.
 type RemoveChildAccountRequest struct {
-	// The account ID of the child to remove.
+	// Child account ID.
 	ChildAccountID string `path:"child_account_id" validate:"required"`
 }
 

@@ -11,17 +11,17 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpdateProductLineRequest is the request to partially update a product line.
+// Request to partially update a product line.
 type UpdateProductLineRequest struct {
-	// The ID of the product line to update.
+	// Product line ID.
 	ProductLineID string `path:"id" validate:"required"`
-	// The display name of the product line.
+	// Display name.
 	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// The commission policy for this product line.
+	// Commission policy.
 	CommissionPolicy *constants.CommissionPolicy `json:"commission_policy,omitempty" nullable:"false"`
-	// The freight policy for this product line.
+	// Freight policy.
 	FreightPolicy *constants.FreightPolicy `json:"freight_policy,omitempty" nullable:"false"`
-	// The ID of the unit group to associate with this product line.
+	// Unit group ID.
 	UnitGroupID *string `json:"unit_group_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
 }
 

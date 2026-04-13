@@ -10,9 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetSandboxRequest is the request to retrieve a single sandbox.
+// Request to get a sandbox.
 type GetSandboxRequest struct {
-	// The ID of the sandbox to retrieve.
+	// Sandbox ID.
 	SandboxID string `path:"id" validate:"required"`
 }
 
@@ -21,7 +21,7 @@ type GetSandboxEndpoint struct{}
 func (e *GetSandboxEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetSandboxRequest, *apiresource.Sandbox] {
 	return &apiendpoint.APIEndpoint[*GetSandboxRequest, *apiresource.Sandbox]{
 		Title:             "Get Sandbox",
-		Description:       "Returns a single sandbox account by its ID.",
+		Description:       "Returns a sandbox by ID.",
 		Method:            http.MethodGet,
 		Route:             "/v1/core/sandboxes/{id}",
 		ContentType:       "application/json",

@@ -8,17 +8,17 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-// AccountGroupProductLineAccess represents the product lines accessible to an account group.
+// AccountGroupProductLineAccess is the product lines accessible to an account group.
 type AccountGroupProductLineAccess struct {
-	// The account group.
+	// Account group.
 	AccountGroup *AccountGroup `json:"account_group" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=account_group_product_line_access"`
-	// The product lines accessible to this account group.
+	// Product lines accessible to this account group.
 	ProductLines *List[ProductLine] `json:"product_lines" validate:"required"`
-	// When this record was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// When this record was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 

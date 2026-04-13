@@ -163,7 +163,7 @@ func TestSortingFiltering_APIKeyStatusFilter(t *testing.T) {
 	apiClient.Delete(apiKeysPath + "/" + revokedID)
 
 	// Active filter should not include revoked key.
-	activeList, _, err := apiClient.GetList(apiKeysPath, url.Values{"status": {"active"}})
+	activeList, _, err := apiClient.GetList(apiKeysPath, url.Values{"statuses": {"active"}})
 	require.NoError(t, err)
 	for _, item := range activeList.Data {
 		assert.NotEqual(t, revokedID, DataItemField(item, "id"),
@@ -171,7 +171,7 @@ func TestSortingFiltering_APIKeyStatusFilter(t *testing.T) {
 	}
 
 	// Revoked filter should include it.
-	revokedList, _, err := apiClient.GetList(apiKeysPath, url.Values{"status": {"revoked"}})
+	revokedList, _, err := apiClient.GetList(apiKeysPath, url.Values{"statuses": {"revoked"}})
 	require.NoError(t, err)
 	found := false
 	for _, item := range revokedList.Data {

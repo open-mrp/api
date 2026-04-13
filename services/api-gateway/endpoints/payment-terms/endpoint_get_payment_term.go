@@ -10,9 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetPaymentTermRequest is the request to retrieve a single payment term.
+// Request to retrieve a payment term.
 type GetPaymentTermRequest struct {
-	// The ID of the payment term to retrieve.
+	// Payment term ID.
 	PaymentTermID string `path:"id" validate:"required"`
 }
 
@@ -21,7 +21,7 @@ type GetPaymentTermEndpoint struct{}
 func (e *GetPaymentTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetPaymentTermRequest, *apiresource.PaymentTerm] {
 	return &apiendpoint.APIEndpoint[*GetPaymentTermRequest, *apiresource.PaymentTerm]{
 		Title:             "Get Payment Term",
-		Description:       "Returns a single payment term by its ID.",
+		Description:       "Returns a payment term by ID.",
 		Method:            http.MethodGet,
 		Route:             "/v1/finance/payment-terms/{id}",
 		ContentType:       "application/json",

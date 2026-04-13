@@ -10,9 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// Request to revoke a refresh token
+// Request to revoke a refresh token.
 type RevokeRefreshTokenRequest struct {
-	// The refresh token cookie.
+	// Refresh token cookie.
 	RefreshToken string `cookie:"__Secure-augno.refresh-token" validate:"required"` // #nosec G117 - Struct field, not a hardcoded credential
 }
 
@@ -29,7 +29,7 @@ type RevokeRefreshTokenEndpoint struct{}
 func (e *RevokeRefreshTokenEndpoint) Materialize() *apiendpoint.APIEndpoint[*RevokeRefreshTokenRequest, *apiresource.EmptyResource] {
 	return &apiendpoint.APIEndpoint[*RevokeRefreshTokenRequest, *apiresource.EmptyResource]{
 		Title:             "Revoke Refresh Token",
-		Description:       "Revokes a refresh token, making it no longer valid for obtaining new access tokens.",
+		Description:       "Revokes a refresh token.",
 		Method:            http.MethodDelete,
 		Route:             "/v1/auth/refresh-tokens",
 		ContentType:       "application/json",

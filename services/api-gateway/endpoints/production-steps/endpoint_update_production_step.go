@@ -10,17 +10,17 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpdateProductionStepRequest is the request to update a production step.
+// Request to update a production step.
 type UpdateProductionStepRequest struct {
-	// The ID of the production step to update.
+	// Production step ID.
 	ProductionStepID string `path:"id" validate:"required"`
-	// The new name.
+	// Display name.
 	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// The new leveling factor as a decimal string.
+	// Leveling factor as a decimal string.
 	LevelingFactor *string `json:"leveling_factor,omitempty" nullable:"false"`
-	// The new allowances as a decimal string.
+	// Allowances as a decimal string.
 	Allowances *string `json:"allowances,omitempty" nullable:"false"`
-	// The new scanning station ID.
+	// Scanning station ID.
 	ScanningStationID *string `json:"scanning_station_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
 }
 

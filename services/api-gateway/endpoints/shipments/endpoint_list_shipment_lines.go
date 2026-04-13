@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListShipmentLinesRequest is the request to list lines for a shipment.
+// Request to list lines for a shipment.
 type ListShipmentLinesRequest struct {
-	// The ID of the shipment to list lines for.
+	// Shipment ID.
 	ShipmentID string `path:"shipment_id" validate:"required"`
 	apiresource.PaginationRequest
 }

@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// DeleteMachineRequest is the request to delete a machine.
+// Request to delete a machine.
 type DeleteMachineRequest struct {
-	// The ID of the machine to delete.
+	// Machine ID.
 	MachineID string `path:"id" validate:"required"`
 }
 

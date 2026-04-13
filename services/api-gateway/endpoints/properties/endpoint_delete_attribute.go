@@ -9,11 +9,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// DeleteAttributeRequest is the request to delete an attribute.
+// Request to delete an attribute.
 type DeleteAttributeRequest struct {
-	// The ID of the property.
+	// Property ID.
 	PropertyID string `path:"property_id" validate:"required"`
-	// The ID of the attribute to delete.
+	// Attribute ID.
 	AttributeID string `path:"id" validate:"required"`
 }
 

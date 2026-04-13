@@ -14,7 +14,7 @@ type EnsureBillingCustomerEndpoint struct{}
 func (e *EnsureBillingCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*apiresource.EmptyResource, *apiresource.EnsureBillingCustomerResponse] {
 	return &apiendpoint.APIEndpoint[*apiresource.EmptyResource, *apiresource.EnsureBillingCustomerResponse]{
 		Title:             "Ensure Billing Customer",
-		Description:       "Ensures a Stripe billing customer exists for the account, creating one if it does not already exist.",
+		Description:       "Ensures a Stripe billing customer exists for the account.",
 		Method:            http.MethodPut,
 		Route:             "/v1/billing/accounts",
 		ContentType:       "application/json",

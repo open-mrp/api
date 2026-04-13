@@ -9,11 +9,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// DeleteTerritoryRequest is the request to delete a territory.
+// Request to delete a territory.
 type DeleteTerritoryRequest struct {
-	// The ID of the account that owns the territory.
+	// Account ID.
 	AccountID string `path:"account_id" validate:"required"`
-	// The ID of the territory to delete.
+	// Territory ID.
 	TerritoryID string `path:"id" validate:"required"`
 }
 
@@ -22,7 +22,7 @@ type DeleteTerritoryEndpoint struct{}
 func (e *DeleteTerritoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteTerritoryRequest, *apiresource.EmptyResource] {
 	return &apiendpoint.APIEndpoint[*DeleteTerritoryRequest, *apiresource.EmptyResource]{
 		Title:             "Delete Territory",
-		Description:       "Deletes a territory from the specified account.",
+		Description:       "Deletes a territory.",
 		Method:            http.MethodDelete,
 		Route:             "/v1/sales/accounts/{account_id}/territories/{id}",
 		ContentType:       "application/json",

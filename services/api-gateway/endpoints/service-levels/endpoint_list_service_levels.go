@@ -9,10 +9,10 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListServiceLevelsRequest is the request to list service levels.
+// Request to list service levels.
 type ListServiceLevelsRequest struct {
 	apiresource.PaginationRequest
-	// The ID of the carrier whose service levels to list.
+	// Carrier ID.
 	CarrierID string `path:"carrier_id" validate:"required"`
 }
 

@@ -10,9 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// CloseBatchRequest is the request to close a batch.
+// Request to close a batch.
 type CloseBatchRequest struct {
-	// The ID of the batch to close.
+	// Batch ID.
 	BatchID string `json:"batch_id" validate:"required"`
 }
 

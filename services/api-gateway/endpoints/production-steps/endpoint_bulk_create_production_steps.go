@@ -10,51 +10,51 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// BulkCreateConsumptionInput represents a consumption input resolved by SKU.
+// Consumption input resolved by SKU.
 type BulkCreateConsumptionInput struct {
-	// The item SKU for the consumed material.
+	// SKU of the consumed material.
 	SKU string `json:"sku" validate:"required"`
-	// The consumption quantity measure.
+	// Consumption quantity measure.
 	Measure float64 `json:"measure" validate:"required,gt=0"`
-	// Optional instructions for this consumption.
+	// Instructions for this consumption.
 	Instructions *string `json:"instructions,omitempty"`
 }
 
-// BulkCreateProductionOutputInput represents a production output input resolved by SKU.
+// Production output input resolved by SKU.
 type BulkCreateProductionOutputInput struct {
-	// The item SKU for the produced item.
+	// SKU of the produced item.
 	SKU string `json:"sku" validate:"required"`
-	// The production quantity measure.
+	// Production quantity measure.
 	Measure float64 `json:"measure" validate:"required,gt=0"`
 }
 
-// BulkCreateProductionStepInput represents a single production step to create.
+// Production step input for bulk creation.
 type BulkCreateProductionStepInput struct {
-	// The name of the production step.
+	// Display name.
 	Name string `json:"name" validate:"required"`
-	// The consumptions for this step.
+	// Consumptions.
 	Consumptions []BulkCreateConsumptionInput `json:"consumptions"`
-	// The production outputs for this step. At least one is required.
+	// Production outputs. At least one is required.
 	Productions []BulkCreateProductionOutputInput `json:"productions" validate:"required,min=1"`
-	// The labor rate (dollars per hour).
+	// Labor rate in dollars per hour.
 	LaborRate float64 `json:"labor_rate" validate:"required,gt=0"`
-	// The labor time value.
+	// Labor time value.
 	LaborTime float64 `json:"labor_time" validate:"required,gt=0"`
-	// The unit abbreviation for labor time (default: "hr"). Must be one of: hr, minute, second, day.
+	// Labor time unit abbreviation (default: "hr"). One of: hr, minute, second, day.
 	LaborTimeUnit *string `json:"labor_time_unit,omitempty"`
-	// The overhead rate (dollars per hour).
+	// Overhead rate in dollars per hour.
 	OverheadRate float64 `json:"overhead_rate" validate:"required,gt=0"`
-	// The allowances factor (default: 0).
+	// Allowances factor (default: 0).
 	Allowances *float64 `json:"allowances,omitempty"`
-	// The leveling factor (default: 0).
+	// Leveling factor (default: 0).
 	LevelingFactor *float64 `json:"leveling_factor,omitempty"`
-	// The scanning station name to associate (resolved by name).
+	// Scanning station name, resolved by name.
 	Station *string `json:"station,omitempty"`
 }
 
-// BulkCreateProductionStepsRequest is the request to create multiple production steps.
+// Request to bulk create production steps.
 type BulkCreateProductionStepsRequest struct {
-	// The production steps to create.
+	// Production steps to create.
 	Steps []BulkCreateProductionStepInput `json:"steps" validate:"required"`
 }
 
@@ -90,7 +90,7 @@ type BulkCreateProductionStepsEndpoint struct{}
 func (e *BulkCreateProductionStepsEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkCreateProductionStepsRequest, *apiresource.BulkCreateProductionStepsResponse] {
 	return &apiendpoint.APIEndpoint[*BulkCreateProductionStepsRequest, *apiresource.BulkCreateProductionStepsResponse]{
 		Title:             "Bulk Create Production Steps",
-		Description:       "Creates multiple production steps in a single bulk operation.",
+		Description:       "Creates multiple production steps in a single request.",
 		Method:            http.MethodPost,
 		Route:             "/v1/operations/production-steps/actions/bulk-create",
 		ContentType:       "application/json",

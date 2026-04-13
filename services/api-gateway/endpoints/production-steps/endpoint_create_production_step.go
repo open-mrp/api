@@ -10,65 +10,65 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// CreateProductionStepRequest is the request to create a new production step.
+// Request to create a production step.
 type CreateProductionStepRequest struct {
-	// The name of the production step.
+	// Display name.
 	Name string `json:"name" validate:"required,max=255"`
-	// Optional notes about the production step.
+	// Notes.
 	Notes *string `json:"notes,omitempty"`
-	// The leveling factor as a decimal string.
+	// Leveling factor as a decimal string.
 	LevelingFactor string `json:"leveling_factor" validate:"required"`
-	// The allowances as a decimal string.
+	// Allowances as a decimal string.
 	Allowances string `json:"allowances" validate:"required"`
-	// The scanning station ID.
+	// Scanning station ID.
 	ScanningStationID *string `json:"scanning_station_id,omitempty" validate:"omitempty,max=191"`
-	// The department ID.
+	// Department ID.
 	DepartmentID *string `json:"department_id,omitempty" validate:"omitempty,max=191"`
-	// The labor rate configuration.
+	// Labor rate configuration.
 	LaborRate CreateRateInput `json:"labor_rate" validate:"required"`
-	// The labor time configuration.
+	// Labor time configuration.
 	LaborTime CreateRateInput `json:"labor_time" validate:"required"`
-	// The overhead rate configuration.
+	// Overhead rate configuration.
 	OverheadRate CreateRateInput `json:"overhead_rate" validate:"required"`
-	// The production output configuration.
+	// Production output configuration.
 	Production CreateProductionInput `json:"production" validate:"required"`
-	// The consumptions for this step.
+	// Consumptions.
 	Consumptions []CreateConsumptionInput `json:"consumptions"`
 }
 
-// CreateRateInput holds the input for creating a rate.
+// Rate configuration input.
 type CreateRateInput struct {
-	// The rate value as a decimal string.
+	// Value as a decimal string.
 	Value string `json:"value" validate:"required"`
-	// The numerator unit ID.
+	// Numerator unit ID.
 	NumeratorUnitID string `json:"numerator_unit_id" validate:"required,max=191"`
-	// The denominator unit ID.
+	// Denominator unit ID.
 	DenominatorUnitID string `json:"denominator_unit_id" validate:"required,max=191"`
 }
 
-// CreateProductionInput holds the input for creating a production output.
+// Production output input.
 type CreateProductionInput struct {
-	// The item ID to produce.
+	// Item ID.
 	ItemID string `json:"item_id" validate:"required,max=191"`
-	// The quantity value as a decimal string.
+	// Quantity value as a decimal string.
 	QuantityValue string `json:"quantity_value" validate:"required"`
-	// The quantity unit ID.
+	// Quantity unit ID.
 	QuantityUnitID string `json:"quantity_unit_id" validate:"required,max=191"`
 }
 
-// CreateConsumptionInput holds the input for creating a consumption within a step.
+// Consumption input for a production step.
 type CreateConsumptionInput struct {
-	// The item ID being consumed.
+	// Item ID.
 	ItemID string `json:"item_id" validate:"required,max=191"`
-	// The quantity value as a decimal string.
+	// Quantity value as a decimal string.
 	QuantityValue string `json:"quantity_value" validate:"required"`
-	// The quantity unit ID.
+	// Quantity unit ID.
 	QuantityUnitID string `json:"quantity_unit_id" validate:"required,max=191"`
-	// The waste quantity value as a decimal string.
+	// Waste quantity value as a decimal string.
 	WasteQuantityValue string `json:"waste_quantity_value" validate:"required"`
-	// The waste quantity unit ID.
+	// Waste quantity unit ID.
 	WasteQuantityUnitID string `json:"waste_quantity_unit_id" validate:"required,max=191"`
-	// Optional instructions for how this material is consumed.
+	// Instructions for how this material is consumed.
 	Instructions *string `json:"instructions,omitempty"`
 }
 
@@ -118,7 +118,7 @@ type CreateProductionStepEndpoint struct{}
 func (e *CreateProductionStepEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateProductionStepRequest, *apiresource.ProductionStep] {
 	return &apiendpoint.APIEndpoint[*CreateProductionStepRequest, *apiresource.ProductionStep]{
 		Title:             "Create Production Step",
-		Description:       "Creates a new production step with production output, rates, and consumptions.",
+		Description:       "Creates a production step with production output, rates, and consumptions.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/production-steps",

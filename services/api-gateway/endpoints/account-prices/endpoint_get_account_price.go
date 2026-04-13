@@ -10,9 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetAccountPriceRequest is the request to retrieve a single account price.
+// Request to retrieve an account price.
 type GetAccountPriceRequest struct {
-	// The ID of the account price to retrieve.
+	// Account price ID.
 	AccountPriceID string `path:"id" validate:"required"`
 }
 
@@ -21,7 +21,7 @@ type GetAccountPriceEndpoint struct{}
 func (e *GetAccountPriceEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetAccountPriceRequest, *apiresource.AccountPrice] {
 	return &apiendpoint.APIEndpoint[*GetAccountPriceRequest, *apiresource.AccountPrice]{
 		Title:             "Get Account Price",
-		Description:       "Returns a single account price by its ID.",
+		Description:       "Returns an account price by ID.",
 		Method:            http.MethodGet,
 		Route:             "/v1/sales/account-prices/{id}",
 		ContentType:       "application/json",

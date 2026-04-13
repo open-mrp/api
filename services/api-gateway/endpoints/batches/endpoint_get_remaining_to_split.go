@@ -10,11 +10,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetRemainingQuantityToSplitRequest is the request to get the remaining quantity available to split from batches.
+// Request to get the remaining quantity available to split from batches.
 type GetRemainingQuantityToSplitRequest struct {
-	// The IDs of the batches to check remaining quantities for.
+	// Batch IDs to check remaining quantities for.
 	BatchIDs []string `json:"batch_ids" validate:"required"`
-	// The ID of the production step to check against.
+	// Production step ID to check against.
 	ProductionStepID string `json:"production_step_id" validate:"required"`
 }
 

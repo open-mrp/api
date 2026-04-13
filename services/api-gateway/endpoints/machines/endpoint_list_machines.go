@@ -9,7 +9,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListMachinesRequest is the request to list machines with optional filters.
+// Request to list machines.
 type ListMachinesRequest struct {
 	apiresource.PaginationRequest
 }

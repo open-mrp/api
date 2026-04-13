@@ -8,47 +8,47 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-// UnitGroup represents a unit group resource with base unit and associated units.
+// UnitGroup is a unit group resource.
 type UnitGroup struct {
-	// The unique identifier for the unit group.
+	// Unit group ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=unit_group"`
-	// The display name of the unit group.
+	// Display name.
 	Name string `json:"name" validate:"required"`
-	// Notes about the unit group.
+	// Notes.
 	Notes *string `json:"notes"`
-	// The unit type.
+	// Unit type.
 	Type constants.UnitType `json:"type" validate:"required"`
-	// The base unit for this group.
+	// Base unit.
 	BaseUnit *Unit `json:"base_unit" expandable:"true"`
-	// The associated units in this group.
+	// Associated units.
 	AssociatedUnits *List[UnitGroupUnit] `json:"associated_units" expandable:"true"`
-	// The owner of this resource.
+	// Owner.
 	Owner *Owner `json:"owner" expandable:"true"`
-	// When this unit group was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// When this unit group was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
-// UnitGroupUnit represents an associated unit within a unit group.
+// UnitGroupUnit is an associated unit within a unit group.
 type UnitGroupUnit struct {
-	// The unique identifier for the unit group unit.
+	// Unit group unit ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=unit_group_unit"`
-	// The unit. Expandable.
+	// Unit.
 	Unit *Unit `json:"unit" expandable:"true"`
-	// The discount percentage for this associated unit.
+	// Discount percentage.
 	DiscountPercentage float64 `json:"discount_percentage"`
-	// The fixed discount amount for this associated unit.
+	// Fixed discount amount.
 	DiscountFixed float64 `json:"discount_fixed"`
-	// Whether this associated unit is visible in the customer portal.
+	// Customer portal visibility.
 	CustomerPortalVisibility constants.CustomerPortalVisibility `json:"customer_portal_visibility" validate:"required,enum"`
-	// When this associated unit was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// When this associated unit was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 

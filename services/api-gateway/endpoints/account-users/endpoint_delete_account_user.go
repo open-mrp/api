@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// DeleteAccountUserRequest is the request to delete an account user.
+// Request to delete an account user.
 type DeleteAccountUserRequest struct {
-	// The ID of the account user to delete.
+	// Account user ID.
 	AccountUserID string `path:"id" validate:"required"`
 }
 

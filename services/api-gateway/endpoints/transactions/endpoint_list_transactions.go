@@ -9,7 +9,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListTransactionsRequest is the request to list transactions.
+// Request to list transactions.
 type ListTransactionsRequest struct {
 	apiresource.PaginationRequest
 	// Filter by allocation status (allocated, unallocated, partially_allocated).

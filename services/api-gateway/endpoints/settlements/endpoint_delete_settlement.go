@@ -11,7 +11,7 @@ import (
 
 // DeleteSettlementRequest is the request to delete a settlement.
 type DeleteSettlementRequest struct {
-	// The ID of the settlement to delete.
+	// Settlement ID.
 	SettlementID string `path:"id" validate:"required"`
 }
 
@@ -20,7 +20,7 @@ type DeleteSettlementEndpoint struct{}
 func (e *DeleteSettlementEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteSettlementRequest, *apiresource.Settlement] {
 	return &apiendpoint.APIEndpoint[*DeleteSettlementRequest, *apiresource.Settlement]{
 		Title:             "Delete Settlement",
-		Description:       "Deletes a settlement, removing its allocations and reverting payment statuses on affected invoices and transactions.",
+		Description:       "Deletes a settlement, removing allocations and reverting payment statuses on affected invoices and transactions.",
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
 		Route:             "/v1/finance/settlements/{id}",

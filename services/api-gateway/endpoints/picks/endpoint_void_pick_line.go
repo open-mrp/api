@@ -9,11 +9,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// VoidPickLineRequest is the request to void a single pick line.
+// VoidPickLineRequest is the request to void a pick line.
 type VoidPickLineRequest struct {
-	// The ID of the pick.
+	// Pick ID.
 	PickID string `path:"pickId" validate:"required"`
-	// The ID of the pick line to void.
+	// Pick line ID.
 	PickLineID string `path:"id" validate:"required"`
 }
 
@@ -22,7 +22,7 @@ type VoidPickLineEndpoint struct{}
 func (e *VoidPickLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*VoidPickLineRequest, *apiresource.PickLineDetail] {
 	return &apiendpoint.APIEndpoint[*VoidPickLineRequest, *apiresource.PickLineDetail]{
 		Title:             "Void Pick Line",
-		Description:       "Voids a single pick line.",
+		Description:       "Voids a pick line.",
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/picks/{pickId}/lines/{id}/actions/void",

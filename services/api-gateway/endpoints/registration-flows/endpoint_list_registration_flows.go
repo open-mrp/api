@@ -9,7 +9,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListRegistrationFlowsRequest is the request to list registration flows with optional filters.
+// Request to list registration flows.
 type ListRegistrationFlowsRequest struct {
 	apiresource.PaginationRequest
 }

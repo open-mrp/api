@@ -11,13 +11,13 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// The request to update a registration session
+// Request to update a registration session.
 type UpdateSessionRequest struct {
-	// The session ID.
+	// Session ID.
 	SessionID string `json:"-" path:"session_id" validate:"required"`
-	// The step to advance the session to.
+	// Step to advance the session to.
 	Step *constants.RegistrationStep `json:"step,omitempty" nullable:"false"`
-	// The session data to merge into the existing session data.
+	// Session data to merge into the existing session.
 	SessionData *UpdateSessionDataRequest `json:"session_data,omitempty" nullable:"false"`
 }
 
@@ -33,7 +33,7 @@ func (*UpdateSessionRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateSessionRequest)
 }
 
-// UpdateSessionDataRequest holds the mutable form data fields for updating a session
+// Mutable form data for a session update.
 type UpdateSessionDataRequest struct {
 	// Display name for the user.
 	UserName *string `json:"user_name,omitempty" nullable:"false" validate:"omitempty,max=255"`

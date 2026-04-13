@@ -8,27 +8,27 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-// SupplierDetail represents a full supplier record returned by the API.
+// SupplierDetail is the full supplier resource.
 type SupplierDetail struct {
-	// The unique identifier for the supplier.
+	// Supplier ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=supplier"`
-	// The display name of the supplier.
+	// Display name.
 	Name string `json:"name" validate:"required"`
-	// The supplier number.
+	// Supplier number.
 	Number string `json:"number" validate:"required"`
-	// Notes about the supplier.
+	// Supplier notes.
 	Note *string `json:"note"`
-	// The default billing address.
+	// Default billing address.
 	BillToAddress *Address `json:"bill_to_address" expandable:"true"`
-	// The default shipping address.
+	// Default shipping address.
 	ShipToAddress *Address `json:"ship_to_address" expandable:"true"`
-	// The number of materials associated with this supplier.
+	// Number of associated materials.
 	MaterialCount int64 `json:"material_count"`
-	// When this supplier was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// When this supplier was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
@@ -49,19 +49,19 @@ func (*SupplierDetail) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleSupplierDetail)
 }
 
-// SupplierSummary represents a lightweight supplier record for list results.
+// SupplierSummary is the lightweight supplier resource for list results.
 type SupplierSummary struct {
-	// The unique identifier for the supplier.
+	// Supplier ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=supplier_summary"`
-	// The display name of the supplier.
+	// Display name.
 	Name string `json:"name" validate:"required"`
-	// The supplier number.
+	// Supplier number.
 	Number string `json:"number" validate:"required"`
-	// The number of materials associated with this supplier.
+	// Number of associated materials.
 	MaterialCount int64 `json:"material_count"`
-	// When this supplier was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 }
 

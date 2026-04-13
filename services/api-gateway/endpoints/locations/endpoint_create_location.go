@@ -11,15 +11,15 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// CreateLocationRequest is the request to create a new location.
+// Request to create a location.
 type CreateLocationRequest struct {
-	// The display name of the location.
+	// Display name.
 	Name string `json:"name" validate:"required,max=255"`
-	// The code of the location type.
+	// Location type code.
 	TypeCode constants.LocationTypeCode `json:"type" validate:"required"`
-	// The ID of the parent location. Null for top-level locations.
+	// Parent location ID. Null for top-level locations.
 	ParentID *string `json:"parent_id,omitempty" validate:"omitempty,max=191"`
-	// IDs of existing locations to attach as children of this location.
+	// IDs of child locations to attach.
 	ChildIDs *[]string `json:"child_ids,omitempty"`
 }
 
@@ -37,7 +37,7 @@ type CreateLocationEndpoint struct{}
 func (e *CreateLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateLocationRequest, *apiresource.Location] {
 	return &apiendpoint.APIEndpoint[*CreateLocationRequest, *apiresource.Location]{
 		Title:             "Create Location",
-		Description:       "Creates a new location for the caller's account.",
+		Description:       "Creates a location for the caller's account.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/locations",

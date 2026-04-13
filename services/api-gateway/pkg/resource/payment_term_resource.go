@@ -11,21 +11,21 @@ import (
 const SamplePaymentTermID = "pytm_01jm4r6700f8nwq3v5hx2d9ktp"
 const SamplePaymentTermName = "Net 30"
 
-// PaymentTerm represents an account-owned or default payment term.
+// Payment term resource.
 type PaymentTerm struct {
-	// The unique identifier for the payment term.
+	// Payment term ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=payment_term"`
-	// The display name of the payment term.
+	// Display name.
 	Name string `json:"name" validate:"required"`
-	// The status of the payment term.
+	// Payment term status.
 	Status constants.PaymentTermStatus `json:"status" validate:"required,enum=active|inactive"`
-	// The owner of this resource.
+	// Owner of this resource.
 	Owner *Owner `json:"owner" expandable:"true"`
-	// When this payment term was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// When this payment term was last updated.
+	// Last-updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 

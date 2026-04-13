@@ -11,19 +11,19 @@ import (
 const SamplePermissionID = "perm_01jm4r6700f8nwq3v5hx2d9ktp"
 const SamplePermissionGroupID = "pg_01jm4r6700f8nwq3v5hx2d9ktq"
 
-// Permission represents a single permission within a permission group.
+// Permission within a permission group.
 type Permission struct {
-	// The unique identifier for the permission.
+	// Permission ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=permission"`
-	// The unique code for this permission.
+	// Permission code.
 	Code string `json:"code" validate:"required"`
-	// The display name.
+	// Display name.
 	Name string `json:"name" validate:"required"`
-	// An optional description of what this permission controls.
+	// Description of what this permission controls.
 	Description *string `json:"description"`
-	// The code of the permission group this permission belongs to.
+	// Permission group code.
 	PermissionGroupCode string `json:"group" validate:"required"`
 	// When the permission was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -46,21 +46,21 @@ func (*Permission) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SamplePermission)
 }
 
-// PermissionGroup represents a grouping of related permissions.
+// Grouping of related permissions.
 type PermissionGroup struct {
-	// The unique identifier for the permission group.
+	// Permission group ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=permission_group"`
-	// The unique code for this permission group.
+	// Permission group code.
 	Code string `json:"code" validate:"required"`
-	// The display name.
+	// Display name.
 	Name string `json:"name" validate:"required"`
-	// An optional description.
+	// Description.
 	Description *string `json:"description"`
-	// The permissions belonging to this group.
+	// Permissions in this group.
 	Permissions *List[Permission] `json:"permissions"`
-	// The owner of this resource.
+	// Owner of this resource.
 	Owner *Owner `json:"owner" expandable:"true"`
 	// When the permission group was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

@@ -10,9 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetRoleRequest is the request to retrieve a single role by ID.
+// GetRoleRequest is a request to retrieve a role by ID.
 type GetRoleRequest struct {
-	// The ID of the role to retrieve.
+	// Role ID.
 	RoleID string `path:"id" validate:"required"`
 }
 
@@ -21,7 +21,7 @@ type GetRoleEndpoint struct{}
 func (e *GetRoleEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetRoleRequest, *apiresource.Role] {
 	return &apiendpoint.APIEndpoint[*GetRoleRequest, *apiresource.Role]{
 		Title:             "Get Role",
-		Description:       "Returns a single role by its ID, including its structured permissions.",
+		Description:       "Returns a role by ID, including its structured permissions.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/roles/{id}",

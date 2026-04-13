@@ -10,11 +10,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// The request to request a password reset
+// Request for a password reset.
 type RequestPasswordResetRequest struct {
-	// The username or email of the account to reset.
+	// Username or email of the account to reset.
 	Identifier string `json:"identifier" validate:"required,identifier"`
-	// The account slug, used to redirect the user back to the original account login portal after password reset.
+	// Account slug for redirecting to the original login portal after password reset.
 	AccountSlug *string `json:"account_slug,omitempty"`
 }
 
@@ -31,7 +31,7 @@ type RequestPasswordResetEndpoint struct{}
 func (e *RequestPasswordResetEndpoint) Materialize() *apiendpoint.APIEndpoint[*RequestPasswordResetRequest, *apiresource.EmptyResource] {
 	return &apiendpoint.APIEndpoint[*RequestPasswordResetRequest, *apiresource.EmptyResource]{
 		Title:             "Request Password Reset",
-		Description:       "Sends a password reset email to the user with a link to reset their password.",
+		Description:       "Sends a password reset email to the user.",
 		Method:            http.MethodPost,
 		Route:             "/v1/auth/passwords/actions/request-reset",
 		ContentType:       "application/json",

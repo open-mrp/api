@@ -9,7 +9,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListVolumeDiscountsRequest is the request to list volume discounts.
+// Request to list volume discounts.
 type ListVolumeDiscountsRequest struct {
 	apiresource.PaginationRequest
 }

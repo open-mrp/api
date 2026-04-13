@@ -10,9 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetCustomerRequest is the request to retrieve a single customer by ID.
+// Request to retrieve a customer by ID.
 type GetCustomerRequest struct {
-	// The ID of the customer to retrieve.
+	// Customer ID.
 	CustomerID string `path:"id" validate:"required"`
 }
 
@@ -21,7 +21,7 @@ type GetCustomerEndpoint struct{}
 func (e *GetCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetCustomerRequest, *apiresource.Customer] {
 	return &apiendpoint.APIEndpoint[*GetCustomerRequest, *apiresource.Customer]{
 		Title:             "Get Customer",
-		Description:       "Returns a single customer by ID.",
+		Description:       "Returns a customer by ID.",
 		Method:            http.MethodGet,
 		Route:             "/v1/sales/customers/{id}",
 		ContentType:       "application/json",

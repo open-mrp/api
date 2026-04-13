@@ -10,7 +10,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListAdjustmentTypesRequest is the request to list adjustment types.
+// Request to list adjustment types.
 type ListAdjustmentTypesRequest struct {
 	apiresource.PaginationRequest
 }

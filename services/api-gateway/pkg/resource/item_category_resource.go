@@ -13,27 +13,27 @@ const SampleItemCategoryName = "Electronics"
 const SampleUnitGroupID = "ug_01jm4r6700f8nwq3v5hx2d9ktp"
 const SampleUnitGroupName = "Weight"
 
-// ItemCategory represents a full item category resource.
+// ItemCategory resource.
 type ItemCategory struct {
-	// The unique identifier for the item category.
+	// Item category ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=item_category"`
-	// The display name of the item category.
+	// Display name.
 	Name string `json:"name" validate:"required"`
-	// Notes about the item category.
+	// Notes.
 	Notes *string `json:"notes"`
-	// The type of item category.
+	// Item category type.
 	Type constants.ItemCategoryType `json:"type" validate:"required"`
-	// The owner of this resource.
+	// Owner.
 	Owner *Owner `json:"owner" expandable:"true"`
-	// The properties associated with this item category.
+	// Properties associated with this item category.
 	Properties *List[Property] `json:"properties" expandable:"true"`
-	// The unit group associated with this item category.
+	// Unit group associated with this item category.
 	UnitGroup *UnitGroup `json:"unit_group" expandable:"true"`
-	// The timestamp when the item category was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The timestamp when the item category was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 

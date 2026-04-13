@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ResubmitEDIInvoiceRequest is the request to resubmit an invoice via EDI.
+// Request to resubmit an invoice via EDI.
 type ResubmitEDIInvoiceRequest struct {
-	// The ID of the invoice to resubmit.
+	// Invoice ID.
 	InvoiceID string `json:"invoice_id" validate:"required"`
 }
 
@@ -28,7 +28,7 @@ type ResubmitEDIInvoiceEndpoint struct{}
 func (e *ResubmitEDIInvoiceEndpoint) Materialize() *apiendpoint.APIEndpoint[*ResubmitEDIInvoiceRequest, *apiresource.MessageResource] {
 	return &apiendpoint.APIEndpoint[*ResubmitEDIInvoiceRequest, *apiresource.MessageResource]{
 		Title:             "Resubmit EDI Invoice",
-		Description:       "Resubmits an invoice via EDI. Requires the invoice to exist and EDI to be enabled on the account.",
+		Description:       "Resubmits an invoice via EDI. Fails if the invoice does not exist or EDI is not enabled on the account.",
 		Method:            http.MethodPost,
 		Route:             "/v1/operations/edi/actions/resubmit-invoice",
 		ContentType:       "application/json",

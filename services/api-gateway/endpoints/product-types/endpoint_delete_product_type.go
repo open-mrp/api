@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// DeleteProductTypeRequest is the request to delete a product type.
+// Request to delete a product type.
 type DeleteProductTypeRequest struct {
-	// The ID of the product type to delete.
+	// Product type ID.
 	ProductTypeID string `path:"id" validate:"required"`
 }
 

@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// The request to get a registration session
+// Request to get a registration session.
 type GetSessionRequest struct {
-	// The session ID.
+	// Session ID.
 	SessionID string `json:"-" path:"session_id" validate:"required"`
 }
 
@@ -20,7 +20,7 @@ type GetSessionEndpoint struct{}
 func (e *GetSessionEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetSessionRequest, *apiresource.RegistrationSession] {
 	return &apiendpoint.APIEndpoint[*GetSessionRequest, *apiresource.RegistrationSession]{
 		Title:             "Get Registration Session",
-		Description:       "Returns the current state of a registration session, including its step and associated user and account details.",
+		Description:       "Returns a registration session by ID, including its current step and associated user and account details.",
 		Method:            http.MethodGet,
 		Route:             "/v1/auth/registration-sessions/{session_id}",
 		ContentType:       "application/json",

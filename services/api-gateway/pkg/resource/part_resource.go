@@ -11,33 +11,33 @@ import (
 const SamplePartID = "it_02kn5s7811g9qwce7cizr4e0mq"
 const SamplePartSKU = "BRG-6204-2RS"
 
-// Part represents a part (an item specialization).
+// Part resource.
 type Part struct {
-	// The unique identifier for the part (item ID).
+	// Part ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=part"`
-	// The stock keeping unit code.
+	// SKU.
 	SKU string `json:"sku" validate:"required"`
-	// A description of the part.
+	// Description.
 	Description *string `json:"description"`
-	// Additional notes about the part.
+	// Notes.
 	Notes *string `json:"notes"`
-	// The item category.
+	// Item category.
 	Category *ItemCategory `json:"category" expandable:"true"`
-	// The unit value rate for this part.
+	// Unit value rate.
 	UnitValue *Rate `json:"unit_value" expandable:"true"`
-	// The unit cost rate for this part.
+	// Unit cost rate.
 	UnitCost *Rate `json:"unit_cost" expandable:"true"`
-	// The burn rate for this part.
+	// Burn rate.
 	BurnRate *Rate `json:"burn_rate" expandable:"true"`
-	// The attributes assigned to this part.
+	// Attributes.
 	Attributes *List[Attribute] `json:"attributes"`
 	// Whether the part has unsaved changes.
 	IsDirty bool `json:"is_dirty"`
-	// The timestamp when the part was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The timestamp when the part was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 

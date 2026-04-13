@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// DeletePaymentTermRequest is the request to delete a payment term.
+// Request to delete a payment term.
 type DeletePaymentTermRequest struct {
-	// The ID of the payment term to delete.
+	// Payment term ID.
 	PaymentTermID string `path:"id" validate:"required"`
 }
 

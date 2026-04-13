@@ -11,7 +11,7 @@ import (
 
 // PickAllLinesRequest is the request to mark all lines on a pick as picked.
 type PickAllLinesRequest struct {
-	// The ID of the pick.
+	// Pick ID.
 	PickID string `path:"id" validate:"required"`
 }
 

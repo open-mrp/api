@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// DeleteProductLineRequest is the request to delete a product line.
+// Request to delete a product line.
 type DeleteProductLineRequest struct {
-	// The ID of the product line to delete.
+	// Product line ID.
 	ProductLineID string `path:"id" validate:"required"`
 }
 

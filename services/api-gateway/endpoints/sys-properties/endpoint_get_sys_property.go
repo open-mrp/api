@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetSysPropertyRequest is the request to retrieve a single system property by ID.
+// Request to retrieve a system property by ID.
 type GetSysPropertyRequest struct {
-	// The ID of the system property to retrieve.
+	// System property ID.
 	SysPropertyID string `path:"id" validate:"required"`
 }
 
@@ -20,7 +20,7 @@ type GetSysPropertyEndpoint struct{}
 func (e *GetSysPropertyEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetSysPropertyRequest, *apiresource.SysProperty] {
 	return &apiendpoint.APIEndpoint[*GetSysPropertyRequest, *apiresource.SysProperty]{
 		Title:             "Get System Property",
-		Description:       "Returns a single system property by its ID.",
+		Description:       "Returns a system property by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/core/sys-properties/{id}",

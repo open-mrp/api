@@ -13,19 +13,19 @@ const SampleAgentRunID = "agrn_01jm4r6700f8nwq3v5hx2d9ktp"
 const SampleAgentActionID = "agax_01jm4r6700f8nwq3v5hx2d9ktp"
 const SampleAgentRunStepID = "agrnev_01jm4r6700f8nwq3v5hx2d9ktp"
 
-// AgentRun represents an execution instance of an agent.
+// Agent run resource.
 type AgentRun struct {
-	// The unique identifier for the agent run.
+	// Agent run ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=agent_run"`
-	// The current status of this run.
+	// Current run status.
 	Status constants.AgentRunStatus `json:"status" validate:"required"`
-	// How this run was triggered.
+	// Trigger type.
 	TriggerType constants.AgentTriggerType `json:"trigger_type" validate:"required"`
-	// The input provided to the agent.
+	// Input provided to the agent.
 	Input json.RawMessage `json:"input"`
-	// The output produced by the agent.
+	// Output produced by the agent.
 	Output json.RawMessage `json:"output"`
 	// Error message if the run failed.
 	ErrorMessage *string `json:"error_message"`
@@ -39,37 +39,37 @@ type AgentRun struct {
 	TotalInputTokens *int64 `json:"total_input_tokens"`
 	// Total output tokens consumed.
 	TotalOutputTokens *int64 `json:"total_output_tokens"`
-	// The actor that triggered this run. Null for scheduled or event-triggered runs.
+	// Actor that triggered this run. Null for scheduled or event-triggered runs.
 	TriggeredBy *Actor `json:"triggered_by"`
 	// When this run was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// When this run was last updated.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
-	// The actions performed during this run.
+	// Actions performed during this run.
 	Actions *List[AgentAction] `json:"actions" expandable:"true"`
-	// The full agent definition for this run.
+	// Full agent definition for this run.
 	Definition *AgentDefinition `json:"definition" expandable:"true"`
-	// The timeline steps for this run.
+	// Timeline steps for this run.
 	Steps *List[AgentRunStep] `json:"steps" expandable:"true"`
 }
 
-// AgentRunStep represents a single step in the agent run timeline.
+// Agent run step resource.
 type AgentRunStep struct {
-	// The unique identifier for the step.
+	// Agent run step ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=agent_run_step"`
-	// The type of step.
+	// Step type.
 	StepType string `json:"step_type" validate:"required"`
-	// A short title for the step.
+	// Short title for the step.
 	Title string `json:"title" validate:"required"`
-	// The content/details of the step.
+	// Step content.
 	Content *string `json:"content"`
-	// The sequence number of the step.
+	// Sequence number.
 	Sequence int32 `json:"sequence"`
 	// Duration in milliseconds.
 	DurationMs *int32 `json:"duration_ms"`
-	// The actor who produced this event.
+	// Actor who produced this event.
 	Actor *Actor `json:"actor"`
 	// Metadata for the step.
 	Metadata json.RawMessage `json:"metadata"`

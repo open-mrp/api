@@ -9,7 +9,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListAllocationEntriesRequest is the request to list transaction allocation entries.
+// Request to list transaction allocation entries.
 type ListAllocationEntriesRequest struct {
 	apiresource.PaginationRequest
 	// Filter by transaction type code (e.g. "payment", "credit").

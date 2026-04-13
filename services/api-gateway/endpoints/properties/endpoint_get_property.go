@@ -10,9 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetPropertyRequest is the request to retrieve a single property.
+// Request to retrieve a property.
 type GetPropertyRequest struct {
-	// The ID of the property to retrieve.
+	// Property ID.
 	PropertyID string `path:"id" validate:"required"`
 }
 
@@ -21,7 +21,7 @@ type GetPropertyEndpoint struct{}
 func (e *GetPropertyEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetPropertyRequest, *apiresource.Property] {
 	return &apiendpoint.APIEndpoint[*GetPropertyRequest, *apiresource.Property]{
 		Title:             "Get Property",
-		Description:       "Returns a single property by its ID.",
+		Description:       "Returns a property by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/properties/{id}",

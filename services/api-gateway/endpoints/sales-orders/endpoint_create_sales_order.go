@@ -12,33 +12,33 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// CreateSalesOrderRequest is the request to create a new sales order.
+// Request to create a sales order.
 type CreateSalesOrderRequest struct {
-	// The customer account ID.
+	// Buyer account ID.
 	BuyerAccountID string `json:"buyer_account_id" validate:"required,max=191"`
-	// The customer purchase order number.
+	// Customer purchase order number.
 	CustomerPONumber *string `json:"customer_po_number,omitempty" validate:"omitempty,max=255"`
-	// A note for the order.
+	// Order note.
 	Note *string `json:"note,omitempty"`
-	// The carrier ID.
+	// Carrier ID.
 	CarrierID *string `json:"carrier_id,omitempty" validate:"omitempty,max=191"`
-	// The service level ID.
+	// Service level ID.
 	ServiceLevelID *string `json:"service_level_id,omitempty" validate:"omitempty,max=191"`
-	// The carrier billing type.
+	// Carrier billing type.
 	CarrierBillingType *string `json:"carrier_billing_type,omitempty" validate:"omitempty,max=255"`
-	// The carrier billing account number.
+	// Carrier billing account number.
 	CarrierBillingAccount *string `json:"carrier_billing_account,omitempty" validate:"omitempty,max=255"`
-	// The priority code.
+	// Priority code.
 	PriorityCode string `json:"priority_code" validate:"required,max=255"`
-	// The sales rep ID.
+	// Sales rep ID.
 	SalesRepID *string `json:"sales_rep_id,omitempty" validate:"omitempty,max=191"`
-	// The shipping term ID.
+	// Shipping term ID.
 	ShippingTermID *string `json:"shipping_term_id,omitempty" validate:"omitempty,max=191"`
-	// The sales order type code.
+	// Sales order type code.
 	SalesOrderTypeCode string `json:"sales_order_type_code" validate:"required,max=255"`
-	// The payment term ID.
+	// Payment term ID.
 	PaymentTermID *string `json:"payment_term_id,omitempty" validate:"omitempty,max=191"`
-	// The order discount ID.
+	// Order discount ID.
 	OrderDiscountID *string `json:"order_discount_id,omitempty" validate:"omitempty,max=191"`
 	// Bill-to address name.
 	BillToName *string `json:"bill_to_name,omitempty" validate:"omitempty,max=255"`
@@ -68,14 +68,14 @@ type CreateSalesOrderRequest struct {
 	ShipToPostalCode *string `json:"ship_to_postal_code,omitempty" validate:"omitempty,max=255"`
 	// Ship-to country.
 	ShipToCountry *string `json:"ship_to_country,omitempty" validate:"omitempty,max=2"`
-	// The order lines to create.
+	// Order lines to create.
 	Lines []CreateSalesOrderLineInput `json:"lines"`
 }
 
-// CreateSalesOrderLineInput represents a line item in a create sales order request.
+// Line item input for a create sales order request.
 type CreateSalesOrderLineInput struct {
 	apirequest.OrderLineInput
-	// The EDI line item ID.
+	// EDI line item ID.
 	EdiLineItemID *string `json:"edi_line_item_id,omitempty" validate:"omitempty,max=191"`
 }
 
@@ -125,7 +125,7 @@ type CreateSalesOrderEndpoint struct{}
 func (e *CreateSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateSalesOrderRequest, *apiresource.SalesOrderDetail] {
 	return &apiendpoint.APIEndpoint[*CreateSalesOrderRequest, *apiresource.SalesOrderDetail]{
 		Title:             "Create Sales Order",
-		Description:       "Creates a new sales order.",
+		Description:       "Creates a sales order.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/sales-orders",

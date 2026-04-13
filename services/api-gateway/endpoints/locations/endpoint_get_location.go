@@ -10,9 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetLocationRequest is the request to retrieve a single location.
+// Request to get a location.
 type GetLocationRequest struct {
-	// The ID of the location to retrieve.
+	// Location ID.
 	LocationID string `path:"id" validate:"required"`
 }
 
@@ -21,7 +21,7 @@ type GetLocationEndpoint struct{}
 func (e *GetLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetLocationRequest, *apiresource.Location] {
 	return &apiendpoint.APIEndpoint[*GetLocationRequest, *apiresource.Location]{
 		Title:             "Get Location",
-		Description:       "Returns a single location by its ID.",
+		Description:       "Returns a location by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/locations/{id}",

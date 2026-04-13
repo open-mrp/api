@@ -11,19 +11,19 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpsertSalesTargetRequest is the request to create or update a sales target.
+// Request to create or update a sales target.
 type UpsertSalesTargetRequest struct {
-	// The user ID (sales rep) for the target.
+	// Sales rep user ID.
 	SalesRepID string `path:"id" validate:"required"`
-	// The sales target ID to create or update.
+	// Sales target ID.
 	TargetID string `path:"target_id" validate:"required"`
-	// The start date for the sales target.
+	// Start date.
 	StartDate time.Time `json:"start_date"`
-	// The end date for the sales target.
+	// End date.
 	EndDate time.Time `json:"end_date"`
-	// The target amount value (decimal string).
+	// Target amount value (decimal string).
 	AmountValue string `json:"amount_value"`
-	// The unit ID for the target amount.
+	// Amount unit ID.
 	AmountUnitID string `json:"amount_unit_id"`
 }
 

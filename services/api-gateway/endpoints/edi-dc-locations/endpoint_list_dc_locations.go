@@ -9,7 +9,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListDCLocationsRequest is the request to list DC locations with optional search.
+// Request to list DC locations.
 type ListDCLocationsRequest struct {
 	apiresource.PaginationRequest
 }

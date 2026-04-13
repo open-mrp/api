@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// SetupBillingRequest is the request to set up billing for a registration session.
+// Request to set up billing for a registration session.
 type SetupBillingRequest struct {
-	// The session ID.
+	// Session ID.
 	SessionID string `json:"-" path:"session_id" validate:"required"`
 }
 

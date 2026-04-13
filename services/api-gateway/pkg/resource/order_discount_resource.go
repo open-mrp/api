@@ -10,27 +10,27 @@ import (
 
 const SampleOrderDiscountID = "ords_01jm4r6700f8nwq3v5hx2d9ktp"
 
-// OrderDiscount represents an order discount.
+// Order discount resource.
 type OrderDiscount struct {
-	// The unique identifier for the order discount.
+	// Order discount ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=order_discount"`
-	// The human-readable name for the discount.
+	// Display name.
 	Name string `json:"name" validate:"required"`
-	// The unique code for this discount.
+	// Discount code.
 	Code string `json:"code" validate:"required"`
-	// The percentage value of the discount as a decimal string.
+	// Percentage value as a decimal string.
 	Percentage string `json:"percentage" validate:"required" format:"decimal"`
-	// The fixed amount of the discount as a decimal string.
+	// Fixed amount as a decimal string.
 	Amount string `json:"amount" validate:"required" format:"decimal"`
-	// The type of discount: "percentage" or "amount".
+	// Discount type: "percentage" or "amount".
 	DiscountType constants.OrderDiscountType `json:"discount_type" validate:"required"`
-	// The number of orders using this discount.
+	// Number of orders using this discount.
 	OrderCount int32 `json:"order_count" validate:"required"`
-	// When this discount was created.
+	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// When this discount was last updated.
+	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 

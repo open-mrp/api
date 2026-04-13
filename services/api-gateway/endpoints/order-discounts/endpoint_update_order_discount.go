@@ -10,19 +10,19 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpdateOrderDiscountRequest is the request to partially update an order discount.
+// Request to partially update an order discount.
 type UpdateOrderDiscountRequest struct {
-	// The ID of the order discount to update.
+	// Order discount ID.
 	OrderDiscountID string `path:"id" validate:"required"`
-	// The display name of the discount.
+	// Display name.
 	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// The unique code for this discount.
+	// Discount code.
 	Code *string `json:"code,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// The percentage value of the discount as a decimal string.
+	// Percentage value as a decimal string.
 	Percentage *string `json:"percentage,omitempty" nullable:"false" format:"decimal"`
-	// The fixed amount of the discount as a decimal string.
+	// Fixed amount as a decimal string.
 	Amount *string `json:"amount,omitempty" nullable:"false" format:"decimal"`
-	// The type of discount: "percentage" or "amount".
+	// Discount type: "percentage" or "amount".
 	DiscountType *string `json:"discount_type,omitempty" nullable:"false" validate:"omitempty,max=255"`
 }
 

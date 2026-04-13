@@ -1,10 +1,10 @@
 package apiresource
 
-// CheckDuplicateResult represents the result of a duplicate check action.
+// Result of a duplicate check.
 type CheckDuplicateResult struct {
 	// Whether the record number is a duplicate.
 	IsDuplicate bool `json:"is_duplicate" validate:"required"`
-	// A human-readable message if the record is a duplicate.
+	// Human-readable message if the record is a duplicate.
 	Message *string `json:"message"`
 }
 

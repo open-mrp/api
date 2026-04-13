@@ -10,9 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetMachineRequest is the request to retrieve a single machine.
+// Request to get a machine.
 type GetMachineRequest struct {
-	// The ID of the machine to retrieve.
+	// Machine ID.
 	MachineID string `path:"id" validate:"required"`
 }
 
@@ -21,7 +21,7 @@ type GetMachineEndpoint struct{}
 func (e *GetMachineEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetMachineRequest, *apiresource.Machine] {
 	return &apiendpoint.APIEndpoint[*GetMachineRequest, *apiresource.Machine]{
 		Title:             "Get Machine",
-		Description:       "Returns a single machine by its ID.",
+		Description:       "Returns a machine by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/machines/{id}",

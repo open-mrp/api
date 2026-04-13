@@ -10,11 +10,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// InitializeBatchRequest is the request to initialize a new batch at a scanning station.
+// Request to initialize a batch at a scanning station.
 type InitializeBatchRequest struct {
-	// The ID of the batch to initialize.
+	// Batch ID.
 	BatchID string `json:"batch_id" validate:"required"`
-	// The ID of the scanning station where the batch is being initialized.
+	// Scanning station ID.
 	ScanningStationID string `json:"scanning_station_id" validate:"required"`
 }
 

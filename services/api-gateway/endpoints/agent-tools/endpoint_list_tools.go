@@ -18,7 +18,7 @@ type ListToolsEndpoint struct{}
 func (e *ListToolsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListToolsRequest, *apiresource.List[apiresource.AvailableTool]] {
 	return &apiendpoint.APIEndpoint[*ListToolsRequest, *apiresource.List[apiresource.AvailableTool]]{
 		Title:             "List Tools",
-		Description:       "Returns all available platform tools that can be assigned to agents.",
+		Description:       "Returns a paginated list of tools that can be assigned to agents.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/ai/tools",

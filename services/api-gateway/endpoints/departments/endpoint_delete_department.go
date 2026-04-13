@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// DeleteDepartmentRequest is the request to delete a department.
+// Request to delete a department.
 type DeleteDepartmentRequest struct {
-	// The ID of the department to delete.
+	// Department ID.
 	DepartmentID string `path:"id" validate:"required"`
 }
 

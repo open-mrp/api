@@ -10,11 +10,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// CreateCustomerProductLineAccessRequest is the request to create product line access for a customer.
+// Request to create product line access for a customer.
 type CreateCustomerProductLineAccessRequest struct {
-	// The ID of the customer.
+	// Customer ID.
 	CustomerID string `json:"customer_id" validate:"required,max=191"`
-	// The IDs of the product lines to grant access to.
+	// Product line IDs to grant access to.
 	ProductLineIDs []string `json:"product_line_ids" validate:"required"`
 }
 

@@ -9,7 +9,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListLocationTypesRequest is the request to list location types.
+// Request to list location types.
 type ListLocationTypesRequest struct {
 	apiresource.PaginationRequest
 }
@@ -19,7 +19,7 @@ type ListLocationTypesEndpoint struct{}
 func (e *ListLocationTypesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListLocationTypesRequest, *apiresource.List[apiresource.LocationType]] {
 	return &apiendpoint.APIEndpoint[*ListLocationTypesRequest, *apiresource.List[apiresource.LocationType]]{
 		Title:             "List Location Types",
-		Description:       "Returns a paginated list of all location types.",
+		Description:       "Returns a paginated list of location types.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/location-types",

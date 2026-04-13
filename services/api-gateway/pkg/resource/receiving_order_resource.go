@@ -11,27 +11,27 @@ import (
 const SampleReceivingOrderID = "rcor_01jm4r6700f8nwq3v5hx2d9ktp"
 const SampleReceivingOrderLineID = "rcorln_01jm4r6700f8nwq3v5hx2d9ktp"
 
-// ReceivingOrderSummary represents a receiving order in list views.
+// Receiving order summary for list views.
 type ReceivingOrderSummary struct {
-	// The unique identifier for the receiving order.
+	// Receiving order ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=receiving_order"`
-	// The receiving order number.
+	// Receiving order number.
 	Number string `json:"number" validate:"required"`
-	// The purchase order associated with this receiving order.
+	// Purchase order associated with this receiving order.
 	PurchaseOrder *SalesOrder `json:"purchase_order" validate:"required"`
-	// The supplier associated with this receiving order.
+	// Supplier associated with this receiving order.
 	Supplier *Account `json:"supplier"`
-	// The number of lines in this receiving order.
+	// Number of lines in this receiving order.
 	LineCount int32 `json:"line_count"`
-	// The completion percentage of this receiving order.
+	// Completion percentage of this receiving order.
 	CompletionPercentage float64 `json:"completion_percentage"`
-	// The timestamp when the receiving order was completed.
+	// Timestamp when the receiving order was completed.
 	CompletedAt *time.Time `json:"completed_at"`
-	// The timestamp when the receiving order was created.
+	// Timestamp when the receiving order was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The timestamp when the receiving order was last updated.
+	// Timestamp when the receiving order was last updated.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
@@ -50,27 +50,27 @@ func (*ReceivingOrderSummary) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleReceivingOrderSummary)
 }
 
-// ReceivingOrder represents a full receiving order with lines.
+// Receiving order with lines.
 type ReceivingOrder struct {
-	// The unique identifier for the receiving order.
+	// Receiving order ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=receiving_order"`
-	// The receiving order number.
+	// Receiving order number.
 	Number string `json:"number" validate:"required"`
-	// The purchase order associated with this receiving order.
+	// Purchase order associated with this receiving order.
 	PurchaseOrder *SalesOrder `json:"purchase_order" validate:"required"`
-	// The supplier associated with this receiving order.
+	// Supplier associated with this receiving order.
 	Supplier *Account `json:"supplier"`
-	// A note on the receiving order.
+	// Note on the receiving order.
 	Note *string `json:"note"`
-	// The line items in this receiving order.
+	// Line items in this receiving order.
 	Lines *List[ReceivingOrderLine] `json:"lines"`
-	// The timestamp when the receiving order was completed.
+	// Timestamp when the receiving order was completed.
 	CompletedAt *time.Time `json:"completed_at"`
-	// The timestamp when the receiving order was created.
+	// Timestamp when the receiving order was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The timestamp when the receiving order was last updated.
+	// Timestamp when the receiving order was last updated.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
@@ -88,23 +88,23 @@ func (*ReceivingOrder) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleReceivingOrder)
 }
 
-// ReceivingOrderLine represents a line item in a receiving order.
+// Line item in a receiving order.
 type ReceivingOrderLine struct {
-	// The unique identifier for the receiving order line.
+	// Receiving order line ID.
 	ID string `json:"id" validate:"required"`
-	// The resource type identifier.
+	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=receiving_order_line"`
-	// The quantity received.
+	// Quantity received.
 	Quantity *Quantity `json:"quantity" validate:"required"`
-	// The rejected quantity.
+	// Rejected quantity.
 	RejectedQuantity *Quantity `json:"rejected_quantity"`
-	// The order line associated with this receiving order line.
+	// Order line associated with this receiving order line.
 	OrderLine *SalesOrderLineDetail `json:"order_line" validate:"required"`
-	// The timestamp when the line was stocked.
+	// Timestamp when the line was stocked.
 	StockedAt *time.Time `json:"stocked_at"`
-	// The timestamp when the line was created.
+	// Timestamp when the line was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// The timestamp when the line was last updated.
+	// Timestamp when the line was last updated.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 

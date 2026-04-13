@@ -11,21 +11,21 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpdateUnitRequest is the request to partially update a unit.
+// Request to partially update a unit.
 type UpdateUnitRequest struct {
-	// The ID of the unit to update.
+	// Unit ID.
 	UnitID string `path:"id" validate:"required"`
-	// The display name of the unit.
+	// Display name of the unit.
 	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// The short abbreviation for the unit.
+	// Short abbreviation for the unit.
 	Abbreviation *string `json:"abbreviation,omitempty" nullable:"false" validate:"omitempty,max=191"`
-	// The conversion ratio numerator, as a decimal string.
+	// Conversion ratio numerator, as a decimal string.
 	RatioNumerator *string `json:"ratio_numerator,omitempty" nullable:"false" format:"decimal"`
-	// The conversion ratio denominator, as a decimal string.
+	// Conversion ratio denominator, as a decimal string.
 	RatioDenominator *string `json:"ratio_denominator,omitempty" nullable:"false" format:"decimal"`
-	// The conversion offset numerator, as a decimal string.
+	// Conversion offset numerator, as a decimal string.
 	OffsetNumerator *string `json:"offset_numerator,omitempty" nullable:"false" format:"decimal"`
-	// The conversion offset denominator, as a decimal string.
+	// Conversion offset denominator, as a decimal string.
 	OffsetDenominator *string `json:"offset_denominator,omitempty" nullable:"false" format:"decimal"`
 }
 

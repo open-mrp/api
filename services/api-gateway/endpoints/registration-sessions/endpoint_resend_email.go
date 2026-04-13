@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// The request to resend the verification email
+// Request to resend the verification email.
 type ResendEmailRequest struct {
-	// The session ID (from path).
+	// Session ID.
 	SessionID string `json:"-" path:"session_id" validate:"required"`
 }
 

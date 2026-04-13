@@ -11,7 +11,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListRequestLogsRequest is the request to list request logs with filters.
+// ListRequestLogsRequest is a request to list request logs.
 type ListRequestLogsRequest struct {
 	apiresource.PaginationRequest
 	// Filter: start of date range for occurred_at.
@@ -24,7 +24,7 @@ type ListRequestLogsRequest struct {
 	StatusCode *int32 `query:"status_code"`
 	// Filter: API error code.
 	ErrorCode *string `query:"error_code"`
-	// Filter: actor's home account ID.
+	// Filter: actor home account ID.
 	AccountID *string `query:"account_id"`
 	// Filter: actor ID.
 	ActorID *string `query:"actor_id"`
@@ -41,7 +41,7 @@ type ListRequestLogsEndpoint struct{}
 func (e *ListRequestLogsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListRequestLogsRequest, *apiresource.List[apiresource.RequestLog]] {
 	return &apiendpoint.APIEndpoint[*ListRequestLogsRequest, *apiresource.List[apiresource.RequestLog]]{
 		Title:             "List Request Logs",
-		Description:       "Returns a paginated, filterable list of request logs for the target account.",
+		Description:       "Returns a paginated list of request logs.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/core/request-logs",

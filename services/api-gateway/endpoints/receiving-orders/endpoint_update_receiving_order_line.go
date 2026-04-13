@@ -10,13 +10,13 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpdateReceivingOrderLineRequest is the request to update a receiving order line's quantity.
+// Request to update a receiving order line's quantity.
 type UpdateReceivingOrderLineRequest struct {
-	// The ID of the receiving order.
+	// Receiving order ID.
 	ReceivingOrderID string `path:"receivingOrderId" validate:"required"`
-	// The ID of the receiving order line to update.
+	// Receiving order line ID.
 	LineID string `path:"id" validate:"required"`
-	// The quantity value to set for this line.
+	// Quantity value to set for this line.
 	QuantityValue *string `json:"quantity_value,omitempty" nullable:"false"`
 }
 

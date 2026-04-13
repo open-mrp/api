@@ -10,9 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetShippingCaseRequest is the request to retrieve a single shipping case by ID.
+// Request to retrieve a shipping case by ID.
 type GetShippingCaseRequest struct {
-	// The ID of the shipping case to retrieve.
+	// Shipping case ID.
 	ShippingCaseID string `path:"id" validate:"required"`
 }
 
@@ -21,7 +21,7 @@ type GetShippingCaseEndpoint struct{}
 func (e *GetShippingCaseEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetShippingCaseRequest, *apiresource.ShippingCase] {
 	return &apiendpoint.APIEndpoint[*GetShippingCaseRequest, *apiresource.ShippingCase]{
 		Title:             "Get Shipping Case",
-		Description:       "Returns a single shipping case by its ID.",
+		Description:       "Returns a shipping case by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/shipping-cases/{id}",

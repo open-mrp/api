@@ -11,17 +11,17 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// UpdateUnitGroupRequest is the request to partially update a unit group.
+// UpdateUnitGroupRequest is a request to partially update a unit group.
 type UpdateUnitGroupRequest struct {
-	// The ID of the unit group to update.
+	// Unit group ID.
 	UnitGroupID string `path:"id" validate:"required"`
-	// The display name of the unit group.
+	// Display name.
 	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// Optional notes about the unit group. Set to null to clear.
+	// Notes. Set to null to clear.
 	Notes *string `json:"notes,omitempty" nullable:"true"`
-	// The base unit ID.
+	// Base unit ID.
 	BaseUnitID *string `json:"base_unit_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
-	// If provided, upserts associated units. Existing associated units not in the list are preserved.
+	// Upserts associated units when provided. Existing units not in the list are preserved.
 	AssociatedUnits *[]CreateUnitGroupUnitParam `json:"associated_units,omitempty" nullable:"false"`
 }
 

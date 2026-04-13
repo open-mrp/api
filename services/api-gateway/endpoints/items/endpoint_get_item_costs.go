@@ -9,9 +9,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetItemCostsRequest is the request to retrieve costs for an item.
+// GetItemCostsRequest is the request to get an item's cost breakdown.
 type GetItemCostsRequest struct {
-	// The ID of the item to retrieve costs for.
+	// Item ID.
 	ItemID string `path:"id" validate:"required"`
 }
 

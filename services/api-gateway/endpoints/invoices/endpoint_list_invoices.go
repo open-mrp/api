@@ -9,7 +9,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListInvoicesRequest is the request to list invoices.
+// Request to list invoices.
 type ListInvoicesRequest struct {
 	apiresource.PaginationRequest
 	// Filter by status: all, paid, unpaid, or overpaid.

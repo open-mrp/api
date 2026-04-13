@@ -10,11 +10,11 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetConsumptionRequest is the request to retrieve a single consumption.
+// Request to retrieve a consumption.
 type GetConsumptionRequest struct {
-	// The ID of the production step.
+	// Production step ID.
 	ProductionStepID string `path:"production_step_id" validate:"required"`
-	// The ID of the consumption to retrieve.
+	// Consumption ID.
 	ConsumptionID string `path:"id" validate:"required"`
 }
 
@@ -23,7 +23,7 @@ type GetConsumptionEndpoint struct{}
 func (e *GetConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetConsumptionRequest, *apiresource.Consumption] {
 	return &apiendpoint.APIEndpoint[*GetConsumptionRequest, *apiresource.Consumption]{
 		Title:             "Get Consumption",
-		Description:       "Returns a single consumption by its ID within a production step.",
+		Description:       "Returns a consumption by ID within a production step.",
 		Method:            http.MethodGet,
 		Route:             "/v1/operations/production-steps/{production_step_id}/consumptions/{id}",
 		ContentType:       "application/json",

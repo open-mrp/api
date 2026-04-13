@@ -12,17 +12,17 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// CreateShippingTermRequest is the request to create a new shipping term.
+// Request to create a shipping term.
 type CreateShippingTermRequest struct {
-	// The display name of the shipping term.
+	// Display name.
 	Name string `json:"name" validate:"required,max=255"`
-	// The shipping term type.
+	// Shipping term type.
 	Type constants.ShippingTermType `json:"type" validate:"required"`
-	// The flat rate for this shipping term.
+	// Flat rate for this shipping term.
 	FlatRate *apirequest.QuantityInput `json:"flat_rate,omitempty"`
-	// The minimum order value for free shipping under this term.
+	// Minimum order value for free shipping.
 	MinimumOrderValue *apirequest.QuantityInput `json:"minimum_order_value,omitempty"`
-	// The service level IDs that qualify for free shipping.
+	// Service level IDs that qualify for free shipping.
 	FreeShippingServiceLevelIDs []string `json:"free_shipping_service_level_ids,omitempty"`
 }
 
@@ -41,7 +41,7 @@ type CreateShippingTermEndpoint struct{}
 func (e *CreateShippingTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateShippingTermRequest, *apiresource.ShippingTerm] {
 	return &apiendpoint.APIEndpoint[*CreateShippingTermRequest, *apiresource.ShippingTerm]{
 		Title:             "Create Shipping Term",
-		Description:       "Creates a new account-owned shipping term.",
+		Description:       "Creates an account-owned shipping term.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/shipping-terms",

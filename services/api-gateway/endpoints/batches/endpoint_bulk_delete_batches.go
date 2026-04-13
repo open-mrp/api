@@ -10,9 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// DeleteManyBatchesRequest is the request to delete multiple batches at once.
+// Request to delete multiple batches.
 type DeleteManyBatchesRequest struct {
-	// The IDs of the batches to delete.
+	// Batch IDs to delete.
 	BatchIDs []string `json:"batch_ids" validate:"required"`
 }
 
@@ -29,7 +29,7 @@ type BulkDeleteBatchesEndpoint struct{}
 func (e *BulkDeleteBatchesEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteManyBatchesRequest, *apiresource.EmptyResource] {
 	return &apiendpoint.APIEndpoint[*DeleteManyBatchesRequest, *apiresource.EmptyResource]{
 		Title:             "Bulk Delete Batches",
-		Description:       "Deletes multiple batches in a single operation.",
+		Description:       "Deletes multiple batches.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/batches/actions/bulk-delete",

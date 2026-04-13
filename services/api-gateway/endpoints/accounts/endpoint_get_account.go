@@ -10,9 +10,9 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// GetAccountRequest is the request to retrieve a full account by ID.
+// Request to retrieve an account by ID.
 type GetAccountRequest struct {
-	// The ID of the account to retrieve.
+	// Account ID.
 	AccountID string `path:"id" validate:"required"`
 }
 

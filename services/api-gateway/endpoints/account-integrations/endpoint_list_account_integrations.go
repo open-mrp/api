@@ -9,7 +9,7 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-// ListAccountIntegrationsRequest is the request to list account integrations.
+// Request to list account integrations.
 type ListAccountIntegrationsRequest struct {
 	apiresource.PaginationRequest
 }

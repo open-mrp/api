@@ -12,13 +12,13 @@ import (
 
 // UpdateSettlementRequest is the request to update a settlement.
 type UpdateSettlementRequest struct {
-	// The ID of the settlement to update.
+	// Settlement ID.
 	SettlementID string `path:"id" validate:"required"`
-	// The new settlement number.
+	// Settlement number.
 	Number *string `json:"number" nullable:"false" validate:"omitempty,max=255"`
-	// The new note for this settlement.
+	// Note for this settlement.
 	Note *string `json:"note" nullable:"false"`
-	// The ID of the responsible user for this settlement.
+	// Responsible user ID.
 	ResponsibleUserID *string `json:"responsible_user_id" nullable:"false" validate:"omitempty,max=191"`
 }
 

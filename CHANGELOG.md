@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.1](https://github.com/Augno/api/compare/v0.12.0...v0.12.1) (2026-04-13)
+
+
+### Bug Fixes
+
+* bug in generation of openapi spec due to name collision ([#190](https://github.com/Augno/api/issues/190)) ([85cde4b](https://github.com/Augno/api/commit/85cde4b1940b635c92d6e05075040b524e9b0e0d))
+
 ## [0.12.0](https://github.com/Augno/api/compare/v0.11.2...v0.12.0) (2026-04-13)
 
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.0](https://github.com/Augno/api/compare/v0.11.2...v0.12.0) (2026-04-13)
+
+
+### Features
+
+* make account status endpoints publicly available ([#188](https://github.com/Augno/api/issues/188)) ([6d1c44b](https://github.com/Augno/api/commit/6d1c44b3157c6e00a3724f327e155d4e3b8e0d51))
+
 ## [0.11.2](https://github.com/Augno/api/compare/v0.11.1...v0.11.2) (2026-04-13)
 
 

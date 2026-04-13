@@ -31,7 +31,7 @@ type AnalyzeOpenBatchesEndpoint struct{}
 
 func (e *AnalyzeOpenBatchesEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeOpenBatchesRequest, *apiresource.List[apiresource.OpenBatchSummary]] {
 	return &apiendpoint.APIEndpoint[*AnalyzeOpenBatchesRequest, *apiresource.List[apiresource.OpenBatchSummary]]{
-		Title:             "Analyze Open Batches",
+		Title:             "Get Open Batch Summaries",
 		Description:       "Returns aggregated summaries of open batches, optionally filtered by item IDs or product line IDs.",
 		Method:            http.MethodPut,
 		ContentType:       "application/json",

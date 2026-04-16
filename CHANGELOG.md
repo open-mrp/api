@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.4](https://github.com/Augno/api/compare/v0.13.3...v0.13.4) (2026-04-16)
+
+
+### Bug Fixes
+
+* make some more endpoints skipped in the request logs ([#201](https://github.com/Augno/api/issues/201)) ([678f165](https://github.com/Augno/api/commit/678f16569658512e056ce5da7763aa206b14f604))
+
 ## [0.13.3](https://github.com/Augno/api/compare/v0.13.2...v0.13.3) (2026-04-16)
 
 

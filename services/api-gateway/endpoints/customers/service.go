@@ -8,6 +8,7 @@ import (
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
@@ -89,7 +90,7 @@ func derefStringSlice(p *[]string) []string {
 }
 
 type CustomerSvc interface {
-	ListCustomers(ctx context.Context, req *ListCustomersRequest) (*apiresource.List[apiresource.CustomerSummary], *apierror.APIError)
+	ListCustomers(ctx context.Context, req *ListCustomersRequest) (*apiresource.List[apiresource.Customer], *apierror.APIError)
 	GetCustomer(ctx context.Context, req *GetCustomerRequest) (*apiresource.Customer, *apierror.APIError)
 	CreateCustomer(ctx context.Context, req *CreateCustomerRequest) (*apiresource.Customer, *apierror.APIError)
 	DeleteCustomer(ctx context.Context, req *DeleteCustomerRequest) (*apiresource.EmptyResource, *apierror.APIError)
@@ -126,7 +127,7 @@ func NewCustomerSvc(config *CustomerSvcConfig) CustomerSvc {
 	}
 }
 
-func (m *customerSvcImpl) ListCustomers(ctx context.Context, req *ListCustomersRequest) (*apiresource.List[apiresource.CustomerSummary], *apierror.APIError) {
+func (m *customerSvcImpl) ListCustomers(ctx context.Context, req *ListCustomersRequest) (*apiresource.List[apiresource.Customer], *apierror.APIError) {
 	pbReq := &pb.ListCustomersRequest{
 		Cursor:                req.Cursor,
 		Limit:                 req.Limit,
@@ -145,6 +146,7 @@ func (m *customerSvcImpl) ListCustomers(ctx context.Context, req *ListCustomersR
 		City:                  req.City,
 		State:                 req.State,
 		PostalCode:            req.PostalCode,
+		Includes:              appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	if req.StartDate != nil {

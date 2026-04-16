@@ -17,6 +17,59 @@ func tenancyRoleToProto(r *domain.TenancyRole) *pb.TenancyRoleProto {
 		Id:           r.ID,
 		Name:         r.Name,
 		RoleTypeCode: r.RoleTypeCode,
+		Permissions:  r.Permissions,
+		CreatedAt:    timestamppb.New(r.CreatedAt),
+		UpdatedAt:    timestamppb.New(r.UpdatedAt),
+	}
+}
+
+func tenancyAccountPlanToProto(p *domain.TenancyAccountPlan) *pb.TenancyAccountPlanProto {
+	if p == nil {
+		return nil
+	}
+
+	limits := make([]*pb.TenancyAccountPlanLimitProto, 0, len(p.Limits))
+	for key, value := range p.Limits {
+		entry := &pb.TenancyAccountPlanLimitProto{Key: key}
+		if value != nil {
+			v := *value
+			entry.Value = &v
+		}
+		limits = append(limits, entry)
+	}
+
+	features := make(map[string]bool, len(p.Features))
+	for key, enabled := range p.Features {
+		features[key] = enabled
+	}
+
+	proto := &pb.TenancyAccountPlanProto{
+		TypeId:       p.TypeID,
+		Name:         p.Name,
+		PlanTypeCode: p.PlanTypeCode,
+		Version:      p.Version,
+		PricePerSeat: p.PricePerSeat,
+		Limits:       limits,
+		Features:     features,
+	}
+	if p.PricePerMonth != nil {
+		proto.PricePerMonth = p.PricePerMonth
+	}
+	if p.SeatMinimum != nil {
+		proto.SeatMinimum = p.SeatMinimum
+	}
+	return proto
+}
+
+func tenancyPendingRegistrationToProto(pr *domain.TenancyPendingRegistration) *pb.TenancyPendingRegistrationProto {
+	if pr == nil {
+		return nil
+	}
+	return &pb.TenancyPendingRegistrationProto{
+		SessionId: pr.SessionID,
+		PlanCode:  pr.PlanCode,
+		Step:      pr.Step,
+		CreatedAt: timestamppb.New(pr.CreatedAt),
 	}
 }
 
@@ -25,12 +78,14 @@ func tenancyCurrentAccountToProto(ca *domain.TenancyCurrentAccount) *pb.TenancyC
 		return nil
 	}
 	proto := &pb.TenancyCurrentAccountProto{
-		Id:               ca.ID,
-		Name:             ca.Name,
-		Type:             ca.Type,
-		OnboardingStatus: ca.OnboardingStatus,
-		PlanCode:         ca.PlanCode,
-		Role:             tenancyRoleToProto(ca.Role),
+		Id:                       ca.ID,
+		Name:                     ca.Name,
+		Type:                     ca.Type,
+		OnboardingStatus:         ca.OnboardingStatus,
+		PlanCode:                 ca.PlanCode,
+		Role:                     tenancyRoleToProto(ca.Role),
+		InternalStripeCustomerId: ca.InternalStripeCustomerID,
+		AccountPlan:              tenancyAccountPlanToProto(ca.AccountPlan),
 	}
 	if ca.Slug != nil {
 		proto.Slug = ca.Slug
@@ -69,9 +124,10 @@ func tenancyToProto(t *domain.Tenancy) *pb.GetTenancyResponse {
 	}
 
 	resp := &pb.GetTenancyResponse{
-		HasTenancy:     t.HasTenancy,
-		CurrentAccount: tenancyCurrentAccountToProto(t.CurrentAccount),
-		OwnerAccount:   tenancyOwnerAccountToProto(t.OwnerAccount),
+		HasTenancy:          t.HasTenancy,
+		CurrentAccount:      tenancyCurrentAccountToProto(t.CurrentAccount),
+		OwnerAccount:        tenancyOwnerAccountToProto(t.OwnerAccount),
+		PendingRegistration: tenancyPendingRegistrationToProto(t.PendingRegistration),
 	}
 
 	if t.Sandboxes != nil {

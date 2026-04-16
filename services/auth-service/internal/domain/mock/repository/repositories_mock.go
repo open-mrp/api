@@ -510,6 +510,21 @@ func (mr *MockRegistrationSessionRepoMockRecorder) GetByTypeID(ctx, typeID any) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByTypeID", reflect.TypeOf((*MockRegistrationSessionRepo)(nil).GetByTypeID), ctx, typeID)
 }
 
+// GetIncompleteByUserID mocks base method.
+func (m *MockRegistrationSessionRepo) GetIncompleteByUserID(ctx context.Context, userID string) (*domain.RegistrationSession, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetIncompleteByUserID", ctx, userID)
+	ret0, _ := ret[0].(*domain.RegistrationSession)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetIncompleteByUserID indicates an expected call of GetIncompleteByUserID.
+func (mr *MockRegistrationSessionRepoMockRecorder) GetIncompleteByUserID(ctx, userID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIncompleteByUserID", reflect.TypeOf((*MockRegistrationSessionRepo)(nil).GetIncompleteByUserID), ctx, userID)
+}
+
 // ListByUserID mocks base method.
 func (m *MockRegistrationSessionRepo) ListByUserID(ctx context.Context, userID string, cursor *string, limit int32) ([]*domain.RegistrationSession, pagination.PageInfo, *apierror.APIError) {
 	m.ctrl.T.Helper()

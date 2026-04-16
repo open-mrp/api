@@ -333,6 +333,21 @@ func (mr *MockRegistrationSessionSvcMockRecorder) CreateUserForSession(ctx, inpu
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateUserForSession", reflect.TypeOf((*MockRegistrationSessionSvc)(nil).CreateUserForSession), ctx, input)
 }
 
+// GetIncompleteByUserID mocks base method.
+func (m *MockRegistrationSessionSvc) GetIncompleteByUserID(ctx context.Context, userID string) (*domain.RegistrationSession, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetIncompleteByUserID", ctx, userID)
+	ret0, _ := ret[0].(*domain.RegistrationSession)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetIncompleteByUserID indicates an expected call of GetIncompleteByUserID.
+func (mr *MockRegistrationSessionSvcMockRecorder) GetIncompleteByUserID(ctx, userID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIncompleteByUserID", reflect.TypeOf((*MockRegistrationSessionSvc)(nil).GetIncompleteByUserID), ctx, userID)
+}
+
 // GetSession mocks base method.
 func (m *MockRegistrationSessionSvc) GetSession(ctx context.Context, sessionID string) (*domain.RegistrationSession, *apierror.APIError) {
 	m.ctrl.T.Helper()

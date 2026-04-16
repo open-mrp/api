@@ -145,6 +145,21 @@ func (r *registrationSessionRepoImpl) GetByToken(ctx context.Context, token stri
 	return mapRegistrationSession(row), nil
 }
 
+func (r *registrationSessionRepoImpl) GetIncompleteByUserID(ctx context.Context, userID string) (*domain.RegistrationSession, *apierror.APIError) {
+	ctx, span := registrationSessionRepoTracer.Start(ctx, "repository.registration_session.get_incomplete_by_user_id")
+	defer span.End()
+
+	row, err := r.queries.GetIncompleteRegistrationSessionByUserID(ctx, gosql.NullString{String: userID, Valid: true})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		if apierror.IsNotFound(apiErr) {
+			return nil, nil
+		}
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	return mapRegistrationSession(row), nil
+}
+
 func (r *registrationSessionRepoImpl) GetByID(ctx context.Context, id int64) (*domain.RegistrationSession, *apierror.APIError) {
 	ctx, span := registrationSessionRepoTracer.Start(ctx, "repository.registration_session.get_by_id")
 	defer span.End()

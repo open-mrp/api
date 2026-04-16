@@ -73,6 +73,10 @@ type RegistrationSessionRepo interface {
 	// Returns a not-found error if none exists.
 	GetByID(ctx context.Context, id int64) (*RegistrationSession, *apierror.APIError)
 
+	// GetIncompleteByUserID returns the most recent incomplete registration
+	// session for the given user, or (nil, nil) if none exists.
+	GetIncompleteByUserID(ctx context.Context, userID string) (*RegistrationSession, *apierror.APIError)
+
 	// Create persists a new registration session and returns the database-assigned ID.
 	Create(ctx context.Context, session *RegistrationSession) (int64, *apierror.APIError)
 

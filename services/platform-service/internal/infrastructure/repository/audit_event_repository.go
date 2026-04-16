@@ -139,7 +139,8 @@ func (r *auditEventRepoImpl) List(ctx context.Context, targetAccountID string, f
 		cur = &decoded
 	}
 
-	resourceTypeFilter := buildExactStringFilter(filter.ResourceType)
+	includeResourceTypeFilter := len(filter.ResourceTypes) > 0
+	resourceTypes := ensureStringSlice(filter.ResourceTypes)
 	resourceIDFilter := buildExactStringFilter(filter.ResourceID)
 	actorIDFilter := buildExactStringFilter(filter.ActorID)
 	actionFilter := buildExactStringFilter(filter.Action)
@@ -163,19 +164,20 @@ func (r *auditEventRepoImpl) List(ctx context.Context, targetAccountID string, f
 		}
 
 		rows, err := r.db.ListAuditEventsForward(ctx, sqlc.ListAuditEventsForwardParams{
-			IncludeChanges:     includeChanges,
-			IncludeMetadata:    includeMetadata,
-			TargetAccountID:    targetAccountID,
-			ResourceTypeFilter: resourceTypeFilter,
-			ResourceIDFilter:   resourceIDFilter,
-			ActorIDFilter:      actorIDFilter,
-			ActionFilter:       actionFilter,
-			StartDate:          startDate,
-			EndDate:            endDate,
-			SearchQuery:        searchQuery,
-			CursorOccurredAt:   cursorOccurredAt,
-			CursorID:           cursorID,
-			Limit:              limit + 1,
+			IncludeChanges:            includeChanges,
+			IncludeMetadata:           includeMetadata,
+			TargetAccountID:           targetAccountID,
+			IncludeResourceTypeFilter: includeResourceTypeFilter,
+			ResourceTypes:             resourceTypes,
+			ResourceIDFilter:          resourceIDFilter,
+			ActorIDFilter:             actorIDFilter,
+			ActionFilter:              actionFilter,
+			StartDate:                 startDate,
+			EndDate:                   endDate,
+			SearchQuery:               searchQuery,
+			CursorOccurredAt:          cursorOccurredAt,
+			CursorID:                  cursorID,
+			Limit:                     limit + 1,
 		})
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to query audit events."))
@@ -192,19 +194,20 @@ func (r *auditEventRepoImpl) List(ctx context.Context, targetAccountID string, f
 
 	// Backward direction: query order ASC and BuildPageString will reverse.
 	rows, err := r.db.ListAuditEventsBackward(ctx, sqlc.ListAuditEventsBackwardParams{
-		IncludeChanges:     includeChanges,
-		IncludeMetadata:    includeMetadata,
-		TargetAccountID:    targetAccountID,
-		ResourceTypeFilter: resourceTypeFilter,
-		ResourceIDFilter:   resourceIDFilter,
-		ActorIDFilter:      actorIDFilter,
-		ActionFilter:       actionFilter,
-		StartDate:          startDate,
-		EndDate:            endDate,
-		SearchQuery:        searchQuery,
-		CursorOccurredAt:   cur.OccurredAt,
-		CursorID:           cur.ID,
-		Limit:              limit + 1,
+		IncludeChanges:            includeChanges,
+		IncludeMetadata:           includeMetadata,
+		TargetAccountID:           targetAccountID,
+		IncludeResourceTypeFilter: includeResourceTypeFilter,
+		ResourceTypes:             resourceTypes,
+		ResourceIDFilter:          resourceIDFilter,
+		ActorIDFilter:             actorIDFilter,
+		ActionFilter:              actionFilter,
+		StartDate:                 startDate,
+		EndDate:                   endDate,
+		SearchQuery:               searchQuery,
+		CursorOccurredAt:          cur.OccurredAt,
+		CursorID:                  cur.ID,
+		Limit:                     limit + 1,
 	})
 	if err != nil {
 		return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to query audit events."))
@@ -314,6 +317,13 @@ func buildExactStringFilter(val *string) string {
 		return ""
 	}
 	return *val
+}
+
+func ensureStringSlice(vals []string) []string {
+	if len(vals) == 0 {
+		return []string{""}
+	}
+	return vals
 }
 
 func interfaceToBytes(v interface{}) []byte {

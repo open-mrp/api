@@ -18,17 +18,14 @@ type ListAuditEventsRequest struct {
 	StartDate *time.Time `query:"start_date"`
 	// End of date range for occurred_at.
 	EndDate *time.Time `query:"end_date"`
-
-	// Resource type of the audited entity.
-	ResourceType *constants.ObjectType `query:"resource_type"`
+	// Resource types of the audited entity. Repeat the query parameter to filter by multiple types.
+	ResourceTypes []constants.ObjectType `query:"resource_types"`
 	// Audited resource ID.
 	ResourceID *string `query:"resource_id"`
-
 	// Actor ID.
 	ActorID *string `query:"actor_id"`
 	// Audit action.
 	Action *constants.AuditAction `query:"action"`
-
 	// Actor home account ID.
 	AccountID *string `query:"account_id"`
 }

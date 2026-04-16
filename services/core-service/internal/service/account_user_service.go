@@ -3,12 +3,14 @@ package service
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/services/core-service/internal/domain"
 	"github.com/augno/api/services/core-service/internal/event"
 	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/audit"
+	s3client "github.com/augno/api/shared/cloud/s3"
 	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/crypto"
 	apierror "github.com/augno/api/shared/errors"
@@ -26,6 +28,8 @@ type accountUserSvcImpl struct {
 	txManager             TransactionManager
 	notificationPublisher domain.NotificationPublisher
 	billingPublisher      domain.BillingPublisher
+	s3Client              s3client.ObjectStore
+	userPhotosBucket      string
 }
 
 type AccountUserSvcConfig struct {
@@ -34,6 +38,9 @@ type AccountUserSvcConfig struct {
 	TxManager             TransactionManager
 	NotificationPublisher domain.NotificationPublisher
 	BillingPublisher      domain.BillingPublisher
+	S3Client              s3client.ObjectStore
+	UserPhotosBucket      string
+	PlatformMode          constants.PlatformMode
 }
 
 func (c *AccountUserSvcConfig) validate() error {
@@ -52,6 +59,12 @@ func (c *AccountUserSvcConfig) validate() error {
 	if c.BillingPublisher == nil {
 		return fmt.Errorf("account user service: billing publisher is required")
 	}
+	if c.S3Client == nil {
+		return fmt.Errorf("account user service: s3 client is required")
+	}
+	if !c.PlatformMode.IsTest() && c.UserPhotosBucket == "" {
+		return fmt.Errorf("account user service: user photos bucket is required")
+	}
 	return nil
 }
 
@@ -66,6 +79,8 @@ func NewAccountUserSvc(config *AccountUserSvcConfig) domain.AccountUserSvc {
 		txManager:             config.TxManager,
 		notificationPublisher: config.NotificationPublisher,
 		billingPublisher:      config.BillingPublisher,
+		s3Client:              config.S3Client,
+		userPhotosBucket:      config.UserPhotosBucket,
 	}
 }
 
@@ -81,9 +96,30 @@ func (s *accountUserSvcImpl) withTx(ctx context.Context, fn func(context.Context
 			txManager:             s.txManager,
 			notificationPublisher: s.notificationPublisher,
 			billingPublisher:      s.billingPublisher,
+			s3Client:              s.s3Client,
+			userPhotosBucket:      s.userPhotosBucket,
 		}
 		return fn(txCtx, txSvc)
 	})
+}
+
+// resolveImageURL returns a presigned GET URL for the user's avatar, or nil if
+// the object does not exist or cannot be signed. Mirrors the Express behavior
+// at dashboard/apps/api/src/repositories/user.repo.ts:87-97 — the user-photos
+// bucket is private and SSE-S3-encrypted, so clients cannot fetch directly
+// without a short-lived signed URL. Returning nil on any error ensures a
+// missing avatar never breaks the account-user response.
+func (s *accountUserSvcImpl) resolveImageURL(ctx context.Context, accountID, userID string) *string {
+	key := accountID + "/" + userID + ".png"
+	exists, err := s.s3Client.FileExists(ctx, s.userPhotosBucket, key)
+	if err != nil || !exists {
+		return nil
+	}
+	url, err := s.s3Client.GetPresignedURL(ctx, s.userPhotosBucket, key, time.Hour)
+	if err != nil {
+		return nil
+	}
+	return &url
 }
 
 // ListAccountUsers returns a paginated list of account users.
@@ -116,7 +152,14 @@ func (s *accountUserSvcImpl) ListAccountUsers(ctx context.Context, params domain
 
 	params.AccountID = identity.Target.AccountID
 
-	return s.repos.NewAccountUserRepo().List(ctx, params)
+	result, apiErr := s.repos.NewAccountUserRepo().List(ctx, params)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	for _, item := range result.Items {
+		item.ImageURL = s.resolveImageURL(ctx, params.AccountID, item.UserID)
+	}
+	return result, nil
 }
 
 // GetAccountUser returns a single account user by account_user ID.
@@ -147,7 +190,12 @@ func (s *accountUserSvcImpl) GetAccountUser(ctx context.Context, accountUserID s
 		}
 	}
 
-	return s.repos.NewAccountUserRepo().GetDetailByAccountAndID(ctx, identity.Target.AccountID, accountUserID)
+	detail, apiErr := s.repos.NewAccountUserRepo().GetDetailByAccountAndID(ctx, identity.Target.AccountID, accountUserID)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	detail.ImageURL = s.resolveImageURL(ctx, identity.Target.AccountID, detail.UserID)
+	return detail, nil
 }
 
 // CreateAccountUser creates a new account user with idempotency support.
@@ -223,6 +271,9 @@ func (s *accountUserSvcImpl) CreateAccountUser(ctx context.Context, params domai
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
+		if cached.Data != nil {
+			cached.Data.ImageURL = s.resolveImageURL(ctx, params.AccountID, cached.Data.UserID)
+		}
 		return cached.Data, cached.Error
 
 	case domain.RecoveryPointStarted:
@@ -245,13 +296,21 @@ func (s *accountUserSvcImpl) CreateAccountUser(ctx context.Context, params domai
 				params.RoleID = &scannerRole.ID
 			}
 
-			// Resolve sales rep role if requested.
-			if params.IsSalesRep && params.RoleID == nil {
-				salesRepRole, apiErr := txRoleRepo.FindByTypeCode(txCtx, string(constants.RoleTypeCodeSalesRep), params.AccountID)
+			// Sales-rep inference (mirrors Express): when the caller provides a role whose
+			// type is sales_rep, normalize to the canonical sales-rep role for the account.
+			// Skipped on the scanner path because the role has already been forced above.
+			if !isScanningStation && params.RoleID != nil {
+				providedRole, apiErr := txRoleRepo.Get(txCtx, *params.RoleID, params.AccountID)
 				if apiErr != nil {
 					return apiErr
 				}
-				params.RoleID = &salesRepRole.ID
+				if providedRole.RoleTypeCode == string(constants.RoleTypeCodeSalesRep) {
+					salesRepRole, apiErr := txRoleRepo.FindByTypeCode(txCtx, string(constants.RoleTypeCodeSalesRep), params.AccountID)
+					if apiErr != nil {
+						return apiErr
+					}
+					params.RoleID = &salesRepRole.ID
+				}
 			}
 
 			// Try to find existing user by email or username.
@@ -340,28 +399,26 @@ func (s *accountUserSvcImpl) CreateAccountUser(ctx context.Context, params domai
 			}
 
 			// Create notification preferences for external target users.
-			if identity.IsExternalTarget() {
+			if identity.IsExternalTarget() && len(params.NotificationPreferences) > 0 {
+				for _, pref := range params.NotificationPreferences {
+					if !constants.AccountRelationNotificationType(pref.NotificationTypeCode).IsValid() {
+						return apierror.NewValidationError(fmt.Sprintf("Invalid notification type code: %s", pref.NotificationTypeCode))
+					}
+				}
 				txRelationRepo := txSvc.repos.NewAccountRelationRepo()
 				relationID, apiErr := txRelationRepo.FindRelationByOwnerAndCounterparty(txCtx, *identity.ActorAccountID(), params.AccountID)
 				if apiErr != nil {
 					return apiErr
 				}
-				var notifTypes []string
-				if params.ReceivesOrderAcknowledgements {
-					notifTypes = append(notifTypes, string(constants.AccountRelationNotificationTypeOrderAcknowledgement))
-				}
-				if params.ReceivesInvoiceNotifications {
-					notifTypes = append(notifTypes, string(constants.AccountRelationNotificationTypeInvoice))
-				}
-				if params.ReceivesPurchaseOrderSubmissionNotifications {
-					notifTypes = append(notifTypes, string(constants.AccountRelationNotificationTypePurchaseOrderSubmission))
-				}
-				for _, notifType := range notifTypes {
+				for _, pref := range params.NotificationPreferences {
+					if !pref.Enabled {
+						continue
+					}
 					prefID, apiErr := id.GenID(id.AccountRelationNotificationPreferenceIDPrefix, nil)
 					if apiErr != nil {
 						return apiErr
 					}
-					if apiErr := txRelationRepo.CreateNotificationPreference(txCtx, prefID, relationID, accountUserID, notifType); apiErr != nil {
+					if apiErr := txRelationRepo.CreateNotificationPreference(txCtx, prefID, relationID, accountUserID, pref.NotificationTypeCode); apiErr != nil {
 						return apiErr
 					}
 				}
@@ -437,6 +494,9 @@ func (s *accountUserSvcImpl) CreateAccountUser(ctx context.Context, params domai
 			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
 		}
 
+		if result != nil {
+			result.ImageURL = s.resolveImageURL(ctx, params.AccountID, result.UserID)
+		}
 		return result, nil
 
 	default:
@@ -494,9 +554,24 @@ func (s *accountUserSvcImpl) UpdateAccountUser(ctx context.Context, params domai
 		if err != nil {
 			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
+		if cached.Data != nil {
+			cached.Data.ImageURL = s.resolveImageURL(ctx, params.AccountID, cached.Data.UserID)
+		}
 		return cached.Data, cached.Error
 
 	case domain.RecoveryPointStarted:
+		// Validate notification preferences (if any) before opening the transaction.
+		if params.NotificationPreferences != nil {
+			if !identity.IsExternalTarget() {
+				return nil, tracing.Trace(span, apierror.NewValidationError("Notification preferences can only be updated for external (cross-account) users."))
+			}
+			for _, pref := range params.NotificationPreferences {
+				if !constants.AccountRelationNotificationType(pref.NotificationTypeCode).IsValid() {
+					return nil, tracing.Trace(span, apierror.NewValidationError(fmt.Sprintf("Invalid notification type code: %s", pref.NotificationTypeCode)))
+				}
+			}
+		}
+
 		var result *domain.AccountUserDetail
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *accountUserSvcImpl) *apierror.APIError {
 			txAccountUserRepo := txSvc.repos.NewAccountUserRepo()
@@ -553,6 +628,38 @@ func (s *accountUserSvcImpl) UpdateAccountUser(ctx context.Context, params domai
 				return apiErr
 			}
 
+			// Apply notification preference toggles (external targets only).
+			if params.NotificationPreferences != nil {
+				txRelationRepo := txSvc.repos.NewAccountRelationRepo()
+				relationID, apiErr := txRelationRepo.FindRelationByOwnerAndCounterparty(txCtx, *identity.ActorAccountID(), params.AccountID)
+				if apiErr != nil {
+					return apiErr
+				}
+				existingPrefs, apiErr := txRelationRepo.ListNotificationPreferences(txCtx, relationID, params.AccountUserID)
+				if apiErr != nil {
+					return apiErr
+				}
+				existingSet := make(map[string]bool, len(existingPrefs))
+				for _, p := range existingPrefs {
+					existingSet[p.NotificationTypeCode] = true
+				}
+				for _, pref := range params.NotificationPreferences {
+					if pref.Enabled && !existingSet[pref.NotificationTypeCode] {
+						prefID, apiErr := id.GenID(id.AccountRelationNotificationPreferenceIDPrefix, nil)
+						if apiErr != nil {
+							return apiErr
+						}
+						if apiErr := txRelationRepo.CreateNotificationPreference(txCtx, prefID, relationID, params.AccountUserID, pref.NotificationTypeCode); apiErr != nil {
+							return apiErr
+						}
+					} else if !pref.Enabled && existingSet[pref.NotificationTypeCode] {
+						if apiErr := txRelationRepo.DeleteNotificationPreference(txCtx, relationID, params.AccountUserID, pref.NotificationTypeCode); apiErr != nil {
+							return apiErr
+						}
+					}
+				}
+			}
+
 			detail, apiErr := txAccountUserRepo.GetDetailByAccountAndID(txCtx, params.AccountID, params.AccountUserID)
 			if apiErr != nil {
 				return apiErr
@@ -577,6 +684,9 @@ func (s *accountUserSvcImpl) UpdateAccountUser(ctx context.Context, params domai
 			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
 		}
 
+		if result != nil {
+			result.ImageURL = s.resolveImageURL(ctx, params.AccountID, result.UserID)
+		}
 		return result, nil
 
 	default:
@@ -584,20 +694,32 @@ func (s *accountUserSvcImpl) UpdateAccountUser(ctx context.Context, params domai
 	}
 }
 
-// DeleteAccountUser soft-deletes an account user.
-func (s *accountUserSvcImpl) DeleteAccountUser(ctx context.Context, accountUserID string) *apierror.APIError {
-	ctx, span := accountUserSvcTracer.Start(ctx, "service.account_user.delete")
+// UpdateAccountUserStatus transitions an account user to the given target status.
+// Consolidates lock (active→disabled), unlock (disabled→active), restore (removed→active),
+// and delete (→removed). Idempotent: calling with the current status is a no-op.
+func (s *accountUserSvcImpl) UpdateAccountUserStatus(ctx context.Context, accountUserID string, targetStatus constants.AccountUserStatus) *apierror.APIError {
+	ctx, span := accountUserSvcTracer.Start(ctx, "service.account_user.update_status")
 	defer span.End()
+
+	if !targetStatus.IsValid() {
+		return tracing.Trace(span, apierror.NewValidationError(fmt.Sprintf("Invalid status: %s", targetStatus)))
+	}
 
 	identity, ok := appctx.GetIdentityFromContext(ctx)
 	if !ok || identity == nil {
 		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
 	}
 
-	if apiErr := identity.CheckIsAssignedActor(); apiErr != nil {
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
-	if apiErr := checkAccountUserWritePermission(identity, types.ActionDelete); apiErr != nil {
+
+	// Removal uses the delete permission; other transitions use update.
+	requiredAction := types.ActionUpdate
+	if targetStatus == constants.AccountUserStatusRemoved {
+		requiredAction = types.ActionDelete
+	}
+	if apiErr := checkAccountUserWritePermission(identity, requiredAction); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
 
@@ -614,7 +736,18 @@ func (s *accountUserSvcImpl) DeleteAccountUser(ctx context.Context, accountUserI
 		}
 	}
 
-	// Fetch detail before deletion for audit diff.
+	// Caller must not be disabled when performing status transitions.
+	if identity.IsUser() {
+		callerDetail, apiErr := s.repos.NewAccountUserRepo().GetDetail(ctx, accountID, identity.Actor.ID)
+		if apiErr != nil {
+			return tracing.Trace(span, apiErr)
+		}
+		if callerDetail.StatusCode == constants.AccountUserStatusDisabled {
+			return tracing.Trace(span, apierror.NewAuthorizationError("Your account is locked. You cannot perform this action."))
+		}
+	}
+
+	// Resolve current state. Handle "already removed" like the old delete handler did.
 	accountUser, apiErr := s.repos.NewAccountUserRepo().GetDetailByAccountAndID(ctx, accountID, accountUserID)
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
@@ -623,30 +756,79 @@ func (s *accountUserSvcImpl) DeleteAccountUser(ctx context.Context, accountUserI
 				return tracing.Trace(span, deletedCheckErr)
 			}
 			if wasDeleted {
-				return tracing.Trace(
-					span,
-					apierror.NewAlreadyDeletedError("This account user has already been deleted and can no longer be modified."),
-				)
+				return tracing.Trace(span, apierror.NewAlreadyDeletedError("This account user has already been deleted and can no longer be modified."))
 			}
 		}
 		return tracing.Trace(span, apiErr)
 	}
 
+	// Idempotent no-op when already in the target state.
+	if accountUser.StatusCode == targetStatus {
+		return nil
+	}
+
+	// Validate transition-specific rules.
+	switch targetStatus {
+	case constants.AccountUserStatusDisabled:
+		if accountUser.StatusCode == constants.AccountUserStatusRemoved {
+			return tracing.Trace(span, apierror.NewValidationError("Cannot lock a removed user. Restore the user first."))
+		}
+		if identity.IsUser() && identity.Actor != nil && identity.Actor.ID == accountUser.UserID {
+			return tracing.Trace(span, apierror.NewValidationError("You cannot lock your own account."))
+		}
+		if accountUser.RoleTypeCode != nil && *accountUser.RoleTypeCode == string(constants.RoleTypeCodeAdmin) {
+			return tracing.Trace(span, apierror.NewValidationError("Admin users cannot be locked."))
+		}
+	case constants.AccountUserStatusActive:
+		// Reactivating (from disabled or removed) consumes a seat.
+		if apiErr := s.checkSeatLimit(ctx, accountID); apiErr != nil {
+			return apiErr
+		}
+	case constants.AccountUserStatusRemoved:
+		// Nothing extra: any non-removed user may be removed.
+	}
+
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *accountUserSvcImpl) *apierror.APIError {
 		txCtx = event.WithRepos(txCtx, txSvc.repos)
+		txAccountUserRepo := txSvc.repos.NewAccountUserRepo()
 
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeAccountUser, accountUser.ID, accountUser); apiErr != nil {
-			return apiErr
+		// Removal performs a soft-delete and records the deleted snapshot.
+		if targetStatus == constants.AccountUserStatusRemoved {
+			if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeAccountUser, accountUser.ID, accountUser); apiErr != nil {
+				return apiErr
+			}
+			if apiErr := txAccountUserRepo.SoftDelete(txCtx, accountUserID); apiErr != nil {
+				return apiErr
+			}
+		} else {
+			if apiErr := txAccountUserRepo.UpdateStatus(txCtx, accountUserID, targetStatus); apiErr != nil {
+				return apiErr
+			}
+			// Locking revokes outstanding refresh tokens.
+			if targetStatus == constants.AccountUserStatusDisabled {
+				if apiErr := txAccountUserRepo.RevokeRefreshTokensByUserID(txCtx, accountUser.UserID); apiErr != nil {
+					return apiErr
+				}
+			}
 		}
 
-		if apiErr := txSvc.repos.NewAccountUserRepo().SoftDelete(txCtx, accountUserID); apiErr != nil {
-			return apiErr
+		auditAction := constants.AuditActionUpdate
+		var updated *domain.AccountUserDetail
+		if targetStatus == constants.AccountUserStatusRemoved {
+			auditAction = constants.AuditActionDelete
+			updated = nil
+		} else {
+			next, apiErr := txAccountUserRepo.GetDetailByAccountAndID(txCtx, accountID, accountUserID)
+			if apiErr != nil {
+				return apiErr
+			}
+			updated = next
 		}
 
-		changes := audit.ComputeChanges(accountUser, (*domain.AccountUserDetail)(nil))
+		changes := audit.ComputeChanges(accountUser, updated)
 		if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 			ServiceName:  domain.ServiceName,
-			Action:       constants.AuditActionDelete,
+			Action:       auditAction,
 			ResourceType: constants.ObjectTypeAccountUser,
 			ResourceID:   accountUser.ID,
 			Changes:      changes,
@@ -657,7 +839,6 @@ func (s *accountUserSvcImpl) DeleteAccountUser(ctx context.Context, accountUserI
 		if apiErr := txSvc.billingPublisher.PublishReportSeatChange(txCtx, accountID); apiErr != nil {
 			return apiErr
 		}
-
 		return txSvc.billingPublisher.PublishSyncSeats(txCtx, accountID)
 	})
 
@@ -668,273 +849,7 @@ func (s *accountUserSvcImpl) DeleteAccountUser(ctx context.Context, accountUserI
 	return nil
 }
 
-// LockAccountUser disables an account user and revokes their refresh tokens.
-func (s *accountUserSvcImpl) LockAccountUser(ctx context.Context, accountUserID string) *apierror.APIError {
-	ctx, span := accountUserSvcTracer.Start(ctx, "service.account_user.lock")
-	defer span.End()
-
-	identity, ok := appctx.GetIdentityFromContext(ctx)
-	if !ok || identity == nil {
-		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
-	}
-
-	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
-	if apiErr := identity.CheckHasPermission(types.PermissionDomainTeamUsers, types.ActionUpdate); apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
-
-	accountID := identity.Target.AccountID
-
-	// Verify the caller is not disabled (only applies to user-based callers).
-	if identity.IsUser() {
-		callerDetail, apiErr := s.repos.NewAccountUserRepo().GetDetail(ctx, accountID, identity.Actor.ID)
-		if apiErr != nil {
-			return tracing.Trace(span, apiErr)
-		}
-		if callerDetail.StatusCode == constants.AccountUserStatusDisabled {
-			return tracing.Trace(span, apierror.NewAuthorizationError("Your account is locked. You cannot lock other users."))
-		}
-	}
-
-	// Verify the target user exists and check their current status.
-	accountUser, apiErr := s.repos.NewAccountUserRepo().GetDetailByAccountAndID(ctx, accountID, accountUserID)
-	if apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
-
-	// Cannot lock yourself (only applies to user-based callers, not API keys).
-	if identity.IsUser() && identity.Actor != nil && identity.Actor.ID == accountUser.UserID {
-		return tracing.Trace(span, apierror.NewValidationError("You cannot lock your own account."))
-	}
-
-	// Cannot lock removed users.
-	if accountUser.StatusCode == constants.AccountUserStatusRemoved {
-		return tracing.Trace(span, apierror.NewValidationError("Cannot lock a removed user. Restore the user first."))
-	}
-
-	// Cannot lock already disabled users.
-	if accountUser.StatusCode == constants.AccountUserStatusDisabled {
-		return tracing.Trace(span, apierror.NewValidationError("User is already locked."))
-	}
-
-	// Cannot lock admin users.
-	if accountUser.RoleTypeCode != nil && *accountUser.RoleTypeCode == string(constants.RoleTypeCodeAdmin) {
-		return tracing.Trace(span, apierror.NewValidationError("Admin users cannot be locked."))
-	}
-
-	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *accountUserSvcImpl) *apierror.APIError {
-		txCtx = event.WithRepos(txCtx, txSvc.repos)
-		txAccountUserRepo := txSvc.repos.NewAccountUserRepo()
-
-		if apiErr := txAccountUserRepo.UpdateStatus(txCtx, accountUserID, constants.AccountUserStatusDisabled); apiErr != nil {
-			return apiErr
-		}
-
-		if apiErr := txAccountUserRepo.RevokeRefreshTokensByUserID(txCtx, accountUser.UserID); apiErr != nil {
-			return apiErr
-		}
-
-		updated, apiErr := txAccountUserRepo.GetDetailByAccountAndID(txCtx, accountID, accountUserID)
-		if apiErr != nil {
-			return apiErr
-		}
-
-		changes := audit.ComputeChanges(accountUser, updated)
-		if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-			ServiceName:  domain.ServiceName,
-			Action:       constants.AuditActionUpdate,
-			ResourceType: constants.ObjectTypeAccountUser,
-			ResourceID:   updated.ID,
-			Changes:      changes,
-		}); apiErr != nil {
-			return apiErr
-		}
-
-		if apiErr := txSvc.billingPublisher.PublishReportSeatChange(txCtx, accountID); apiErr != nil {
-			return apiErr
-		}
-
-		return txSvc.billingPublisher.PublishSyncSeats(txCtx, accountID)
-	})
-
-	if apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
-
-	return nil
-}
-
-// UnlockAccountUser re-enables a disabled account user.
-func (s *accountUserSvcImpl) UnlockAccountUser(ctx context.Context, accountUserID string) *apierror.APIError {
-	ctx, span := accountUserSvcTracer.Start(ctx, "service.account_user.unlock")
-	defer span.End()
-
-	identity, ok := appctx.GetIdentityFromContext(ctx)
-	if !ok || identity == nil {
-		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
-	}
-
-	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
-	if apiErr := identity.CheckHasPermission(types.PermissionDomainTeamUsers, types.ActionUpdate); apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
-
-	accountID := identity.Target.AccountID
-
-	// Verify the caller is not disabled (only applies to user-based callers).
-	if identity.IsUser() {
-		callerDetail, apiErr := s.repos.NewAccountUserRepo().GetDetail(ctx, accountID, identity.Actor.ID)
-		if apiErr != nil {
-			return tracing.Trace(span, apiErr)
-		}
-		if callerDetail.StatusCode == constants.AccountUserStatusDisabled {
-			return tracing.Trace(span, apierror.NewAuthorizationError("Your account is locked. You cannot perform this action."))
-		}
-	}
-
-	accountUser, apiErr := s.repos.NewAccountUserRepo().GetDetailByAccountAndID(ctx, accountID, accountUserID)
-	if apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
-
-	if accountUser.StatusCode == constants.AccountUserStatusRemoved {
-		return tracing.Trace(span, apierror.NewValidationError("Cannot unlock a removed user. Restore them first."))
-	}
-
-	if accountUser.StatusCode == constants.AccountUserStatusActive {
-		return tracing.Trace(span, apierror.NewValidationError("User is already active."))
-	}
-
-	// Check seat limits before unlocking.
-	if apiErr := s.checkSeatLimit(ctx, accountID); apiErr != nil {
-		return apiErr
-	}
-
-	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *accountUserSvcImpl) *apierror.APIError {
-		txCtx = event.WithRepos(txCtx, txSvc.repos)
-		txAccountUserRepo := txSvc.repos.NewAccountUserRepo()
-
-		if apiErr := txAccountUserRepo.UpdateStatus(txCtx, accountUserID, constants.AccountUserStatusActive); apiErr != nil {
-			return apiErr
-		}
-
-		updated, apiErr := txAccountUserRepo.GetDetailByAccountAndID(txCtx, accountID, accountUserID)
-		if apiErr != nil {
-			return apiErr
-		}
-
-		changes := audit.ComputeChanges(accountUser, updated)
-		if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-			ServiceName:  domain.ServiceName,
-			Action:       constants.AuditActionUpdate,
-			ResourceType: constants.ObjectTypeAccountUser,
-			ResourceID:   updated.ID,
-			Changes:      changes,
-		}); apiErr != nil {
-			return apiErr
-		}
-
-		if apiErr := txSvc.billingPublisher.PublishReportSeatChange(txCtx, accountID); apiErr != nil {
-			return apiErr
-		}
-
-		return txSvc.billingPublisher.PublishSyncSeats(txCtx, accountID)
-	})
-
-	if apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
-
-	return nil
-}
-
-// RestoreAccountUser restores a soft-deleted account user.
-func (s *accountUserSvcImpl) RestoreAccountUser(ctx context.Context, accountUserID string) *apierror.APIError {
-	ctx, span := accountUserSvcTracer.Start(ctx, "service.account_user.restore")
-	defer span.End()
-
-	identity, ok := appctx.GetIdentityFromContext(ctx)
-	if !ok || identity == nil {
-		return tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
-	}
-
-	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
-	if apiErr := identity.CheckHasPermission(types.PermissionDomainTeamUsers, types.ActionUpdate); apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
-
-	accountID := identity.Target.AccountID
-
-	// Verify the caller is not disabled (only applies to user-based callers).
-	if identity.IsUser() {
-		callerDetail, apiErr := s.repos.NewAccountUserRepo().GetDetail(ctx, accountID, identity.Actor.ID)
-		if apiErr != nil {
-			return tracing.Trace(span, apiErr)
-		}
-		if callerDetail.StatusCode == constants.AccountUserStatusDisabled {
-			return tracing.Trace(span, apierror.NewAuthorizationError("Your account is locked. You cannot perform this action."))
-		}
-	}
-
-	accountUser, apiErr := s.repos.NewAccountUserRepo().GetDetailByAccountAndID(ctx, accountID, accountUserID)
-	if apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
-
-	if accountUser.StatusCode != constants.AccountUserStatusRemoved {
-		return tracing.Trace(span, apierror.NewValidationError("User is not in removed status."))
-	}
-
-	// Check seat limits before restoring.
-	if apiErr := s.checkSeatLimit(ctx, accountID); apiErr != nil {
-		return apiErr
-	}
-
-	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *accountUserSvcImpl) *apierror.APIError {
-		txCtx = event.WithRepos(txCtx, txSvc.repos)
-		txAccountUserRepo := txSvc.repos.NewAccountUserRepo()
-
-		if apiErr := txAccountUserRepo.UpdateStatus(txCtx, accountUserID, constants.AccountUserStatusActive); apiErr != nil {
-			return apiErr
-		}
-
-		updated, apiErr := txAccountUserRepo.GetDetailByAccountAndID(txCtx, accountID, accountUserID)
-		if apiErr != nil {
-			return apiErr
-		}
-
-		changes := audit.ComputeChanges(accountUser, updated)
-		if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-			ServiceName:  domain.ServiceName,
-			Action:       constants.AuditActionUpdate,
-			ResourceType: constants.ObjectTypeAccountUser,
-			ResourceID:   updated.ID,
-			Changes:      changes,
-		}); apiErr != nil {
-			return apiErr
-		}
-
-		if apiErr := txSvc.billingPublisher.PublishReportSeatChange(txCtx, accountID); apiErr != nil {
-			return apiErr
-		}
-
-		return txSvc.billingPublisher.PublishSyncSeats(txCtx, accountID)
-	})
-
-	if apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
-
-	return nil
-}
-
-// UpdateAccountUserPassword updates the password for an account user after verifying the requester's password.
+// UpdateAccountUserPassword updates the password for a scanner-role account user after verifying the requester's password.
 func (s *accountUserSvcImpl) UpdateAccountUserPassword(ctx context.Context, accountUserID, requesterPassword, newPassword string) *apierror.APIError {
 	ctx, span := accountUserSvcTracer.Start(ctx, "service.account_user.update_password")
 	defer span.End()
@@ -946,6 +861,12 @@ func (s *accountUserSvcImpl) UpdateAccountUserPassword(ctx context.Context, acco
 
 	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
 		return tracing.Trace(span, apiErr)
+	}
+	// Scanner-password rotation verifies the caller's own password, which only
+	// exists for user identities (session auth). API keys and other actor types
+	// have no password to verify against.
+	if !identity.IsUser() {
+		return tracing.Trace(span, apierror.NewAuthorizationError("Scanner password updates require session authentication."))
 	}
 	if apiErr := identity.CheckHasPermission(types.PermissionDomainTeamUsers, types.ActionUpdate); apiErr != nil {
 		return tracing.Trace(span, apiErr)
@@ -973,6 +894,11 @@ func (s *accountUserSvcImpl) UpdateAccountUserPassword(ctx context.Context, acco
 	targetAccountUser, apiErr := s.repos.NewAccountUserRepo().GetDetailByAccountAndID(ctx, identity.Target.AccountID, accountUserID)
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
+	}
+
+	// Passwords may only be rotated for scanner-role (scanning station) users.
+	if targetAccountUser.RoleTypeCode == nil || *targetAccountUser.RoleTypeCode != string(constants.RoleTypeCodeScanner) {
+		return tracing.Trace(span, apierror.NewValidationError("Password updates are only supported for scanner-role users."))
 	}
 
 	// Hash the new password.
@@ -1003,124 +929,6 @@ func (s *accountUserSvcImpl) UpdateAccountUserPassword(ctx context.Context, acco
 	}
 
 	return nil
-}
-
-// UpdateNotificationPreferences updates notification preferences for an account user.
-// This is a PUT endpoint — idempotent by design, no idempotency key needed.
-func (s *accountUserSvcImpl) UpdateNotificationPreferences(ctx context.Context, params domain.UpdateNotificationPreferencesParams) (*domain.AccountUserDetail, *apierror.APIError) {
-	ctx, span := accountUserSvcTracer.Start(ctx, "service.account_user.update_notification_preferences")
-	defer span.End()
-
-	identity, ok := appctx.GetIdentityFromContext(ctx)
-	if !ok || identity == nil {
-		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
-	}
-
-	if apiErr := identity.CheckIsAssignedActor(); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-	if !identity.IsInternalActor() {
-		return nil, tracing.Trace(span, apierror.NewAuthorizationError("You must be an internal actor to manage notification preferences."))
-	}
-
-	if !identity.IsTargetAccountSet() {
-		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
-	}
-
-	// Notification preferences are only valid for external targets (cross-account).
-	if !identity.IsExternalTarget() {
-		return nil, tracing.Trace(span, apierror.NewValidationError("Notification preferences can only be updated for external (cross-account) users."))
-	}
-
-	// Resolve the account user to check self-edit and get the join record.
-	accountUserRepo := s.repos.NewAccountUserRepo()
-	accountUser, apiErr := accountUserRepo.GetDetailByAccountAndID(ctx, identity.Target.AccountID, params.AccountUserID)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	// Only require customers:update permission when modifying another user's preferences.
-	// Self-updates are allowed without the permission check.
-	if identity.Actor.ID != accountUser.UserID {
-		if apiErr := identity.CheckHasPermission(types.PermissionDomainCustomers, types.ActionUpdate); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-	}
-
-	meds := s.mediators()
-	if apiErr := meds.EditAccess.CheckEditAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	// Find the account relation between actor and target accounts.
-	relationRepo := s.repos.NewAccountRelationRepo()
-	relationID, apiErr := relationRepo.FindRelationByOwnerAndCounterparty(ctx, *identity.ActorAccountID(), identity.Target.AccountID)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	// List existing notification preferences for this relation + user.
-	existingPrefs, apiErr := relationRepo.ListNotificationPreferences(ctx, relationID, accountUser.ID)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	existingSet := make(map[string]bool, len(existingPrefs))
-	for _, p := range existingPrefs {
-		existingSet[p.NotificationTypeCode] = true
-	}
-
-	// Validate notification type codes before entering the transaction.
-	for _, pref := range params.Preferences {
-		if !constants.AccountRelationNotificationType(pref.NotificationTypeCode).IsValid() {
-			return nil, tracing.Trace(span, apierror.NewValidationError(fmt.Sprintf("Invalid notification type code: %s", pref.NotificationTypeCode)))
-		}
-	}
-
-	var result *domain.AccountUserDetail
-	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *accountUserSvcImpl) *apierror.APIError {
-		txRelationRepo := txSvc.repos.NewAccountRelationRepo()
-		txAccountUserRepo := txSvc.repos.NewAccountUserRepo()
-
-		for _, pref := range params.Preferences {
-			if pref.Enabled && !existingSet[pref.NotificationTypeCode] {
-				prefID, apiErr := id.GenID(id.AccountRelationNotificationPreferenceIDPrefix, nil)
-				if apiErr != nil {
-					return apiErr
-				}
-				if apiErr := txRelationRepo.CreateNotificationPreference(txCtx, prefID, relationID, accountUser.ID, pref.NotificationTypeCode); apiErr != nil {
-					return apiErr
-				}
-			} else if !pref.Enabled && existingSet[pref.NotificationTypeCode] {
-				if apiErr := txRelationRepo.DeleteNotificationPreference(txCtx, relationID, accountUser.ID, pref.NotificationTypeCode); apiErr != nil {
-					return apiErr
-				}
-			}
-		}
-
-		detail, apiErr := txAccountUserRepo.GetDetailByAccountAndID(txCtx, identity.Target.AccountID, params.AccountUserID)
-		if apiErr != nil {
-			return apiErr
-		}
-		result = detail
-
-		if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-			ServiceName:  domain.ServiceName,
-			Action:       constants.AuditActionUpdate,
-			ResourceType: constants.ObjectTypeAccountUser,
-			ResourceID:   accountUser.ID,
-		}); apiErr != nil {
-			return apiErr
-		}
-
-		return nil
-	})
-
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	return result, nil
 }
 
 // checkSeatLimit checks whether the account has room for another active user.

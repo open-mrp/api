@@ -23,6 +23,8 @@ type UpdateServiceLevelRequest struct {
 	Code *string `json:"code,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// Customer portal visibility.
 	CustomerPortalVisibility *constants.CustomerPortalVisibility `json:"customer_portal_visibility,omitempty" nullable:"false"`
+	// Whether this is the tenant's preferred default service level for the carrier.
+	IsDefault *bool `json:"is_default,omitempty" nullable:"false"`
 }
 
 var sampleUpdateServiceLevelName = "Express Shipping"

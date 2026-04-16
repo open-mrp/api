@@ -300,6 +300,12 @@ func (s *serviceLevelSvcImpl) UpdateServiceLevel(ctx context.Context, params dom
 				}
 			}
 
+			if params.IsDefault != nil && *params.IsDefault {
+				if apiErr := serviceLevelRepo.ClearDefaultsForCarrier(txCtx, params.AccountID, params.CarrierID); apiErr != nil {
+					return apiErr
+				}
+			}
+
 			updated, apiErr := serviceLevelRepo.Update(txCtx, params)
 			if apiErr != nil {
 				return apiErr

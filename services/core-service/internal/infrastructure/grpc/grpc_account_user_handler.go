@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/augno/api/services/core-service/internal/domain"
+	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/contracts"
 	pb "github.com/augno/api/shared/proto/core"
 
@@ -68,16 +69,13 @@ func (h *gRPCHandler) CreateAccountUser(ctx context.Context, req *pb.CreateAccou
 	defer finalizeIdempotency()
 
 	detail, apiErr := h.accountUserSvc.CreateAccountUser(ctx, domain.CreateAccountUserParams{
-		Name:                          req.Name,
-		Email:                         req.Email,
-		Username:                      req.Username,
-		Password:                      req.Password,
-		RoleID:                        req.RoleId,
-		DepartmentID:                  req.DepartmentId,
-		IsSalesRep:                    req.IsSalesRep != nil && *req.IsSalesRep,
-		ReceivesOrderAcknowledgements: req.ReceivesOrderAcknowledgements,
-		ReceivesInvoiceNotifications:  req.ReceivesInvoiceNotifications,
-		ReceivesPurchaseOrderSubmissionNotifications: req.ReceivesPurchaseOrderSubmissionNotifications,
+		Name:                    req.Name,
+		Email:                   req.Email,
+		Username:                req.Username,
+		Password:                req.Password,
+		RoleID:                  req.RoleId,
+		DepartmentID:            req.DepartmentId,
+		NotificationPreferences: notificationPrefsToDomain(req.NotificationPreferences),
 	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
@@ -96,13 +94,23 @@ func (h *gRPCHandler) UpdateAccountUser(ctx context.Context, req *pb.UpdateAccou
 	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
 	defer finalizeIdempotency()
 
+	// A nil slice ("no change") is distinguished from an explicit empty list,
+	// but proto3 repeated fields collapse both to an empty slice in the generated
+	// code. We treat any non-nil slice with at least one item as an update; callers
+	// that want "no change" simply omit the field.
+	var prefs []domain.NotificationPreferenceItem
+	if len(req.NotificationPreferences) > 0 {
+		prefs = notificationPrefsToDomain(req.NotificationPreferences)
+	}
+
 	detail, apiErr := h.accountUserSvc.UpdateAccountUser(ctx, domain.UpdateAccountUserParams{
-		AccountUserID: req.AccountUserId,
-		Name:          req.Name,
-		Email:         req.Email,
-		Username:      req.Username,
-		RoleID:        req.RoleId,
-		DepartmentID:  req.DepartmentId,
+		AccountUserID:           req.AccountUserId,
+		Name:                    req.Name,
+		Email:                   req.Email,
+		Username:                req.Username,
+		RoleID:                  req.RoleId,
+		DepartmentID:            req.DepartmentId,
+		NotificationPreferences: prefs,
 	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
@@ -113,51 +121,12 @@ func (h *gRPCHandler) UpdateAccountUser(ctx context.Context, req *pb.UpdateAccou
 	}, nil
 }
 
-func (h *gRPCHandler) DeleteAccountUser(ctx context.Context, req *pb.DeleteAccountUserRequest) (*emptypb.Empty, error) {
+func (h *gRPCHandler) UpdateAccountUserStatus(ctx context.Context, req *pb.UpdateAccountUserStatusRequest) (*emptypb.Empty, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	apiErr := h.accountUserSvc.DeleteAccountUser(ctx, req.AccountUserId)
-	if apiErr != nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
-	}
-
-	return &emptypb.Empty{}, nil
-}
-
-func (h *gRPCHandler) LockAccountUser(ctx context.Context, req *pb.LockAccountUserRequest) (*emptypb.Empty, error) {
-	if req == nil {
-		return nil, contracts.NewMissingGRPCRequestDataError()
-	}
-
-	apiErr := h.accountUserSvc.LockAccountUser(ctx, req.AccountUserId)
-	if apiErr != nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
-	}
-
-	return &emptypb.Empty{}, nil
-}
-
-func (h *gRPCHandler) UnlockAccountUser(ctx context.Context, req *pb.UnlockAccountUserRequest) (*emptypb.Empty, error) {
-	if req == nil {
-		return nil, contracts.NewMissingGRPCRequestDataError()
-	}
-
-	apiErr := h.accountUserSvc.UnlockAccountUser(ctx, req.AccountUserId)
-	if apiErr != nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
-	}
-
-	return &emptypb.Empty{}, nil
-}
-
-func (h *gRPCHandler) RestoreAccountUser(ctx context.Context, req *pb.RestoreAccountUserRequest) (*emptypb.Empty, error) {
-	if req == nil {
-		return nil, contracts.NewMissingGRPCRequestDataError()
-	}
-
-	apiErr := h.accountUserSvc.RestoreAccountUser(ctx, req.AccountUserId)
+	apiErr := h.accountUserSvc.UpdateAccountUserStatus(ctx, req.AccountUserId, constants.AccountUserStatus(req.StatusCode))
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
@@ -178,30 +147,15 @@ func (h *gRPCHandler) UpdateAccountUserPassword(ctx context.Context, req *pb.Upd
 	return &emptypb.Empty{}, nil
 }
 
-func (h *gRPCHandler) UpdateNotificationPreferences(ctx context.Context, req *pb.UpdateNotificationPreferencesRequest) (*pb.UpdateNotificationPreferencesResponse, error) {
-	if req == nil {
-		return nil, contracts.NewMissingGRPCRequestDataError()
-	}
-
-	prefs := make([]domain.UpdateNotificationPreferenceItem, len(req.Preferences))
-	for i, p := range req.Preferences {
-		prefs[i] = domain.UpdateNotificationPreferenceItem{
+func notificationPrefsToDomain(in []*pb.NotificationPreferenceItem) []domain.NotificationPreferenceItem {
+	out := make([]domain.NotificationPreferenceItem, len(in))
+	for i, p := range in {
+		out[i] = domain.NotificationPreferenceItem{
 			NotificationTypeCode: p.NotificationTypeCode,
 			Enabled:              p.Enabled,
 		}
 	}
-
-	detail, apiErr := h.accountUserSvc.UpdateNotificationPreferences(ctx, domain.UpdateNotificationPreferencesParams{
-		AccountUserID: req.AccountUserId,
-		Preferences:   prefs,
-	})
-	if apiErr != nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
-	}
-
-	return &pb.UpdateNotificationPreferencesResponse{
-		AccountUser: accountUserDetailToProto(detail),
-	}, nil
+	return out
 }
 
 func accountUserDetailToProto(d *domain.AccountUserDetail) *pb.AccountUserDetail {

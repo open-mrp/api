@@ -16,6 +16,7 @@ type ListCustomerAccountsRequest struct {
 	apiresource.PaginationRequest
 }
 
+// TODO: stop returning CustomerAccountSummary; return the full CustomerAccount apiresource and use proper includes values to control expansion.
 type ListCustomerAccountsEndpoint struct{}
 
 func (e *ListCustomerAccountsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListCustomerAccountsRequest, *apiresource.List[apiresource.CustomerAccountSummary]] {

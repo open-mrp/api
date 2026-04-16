@@ -19,6 +19,7 @@ import (
 
 type AuditEventSvc interface {
 	ListAuditEvents(ctx context.Context, req *ListAuditEventsRequest) (*apiresource.List[apiresource.AuditEvent], *apierror.APIError)
+	ListAuditEventResourceTypes(ctx context.Context, req *ListAuditEventResourceTypesRequest) (*apiresource.List[constants.ObjectType], *apierror.APIError)
 	GetAuditEvent(ctx context.Context, req *GetAuditEventRequest) (*apiresource.AuditEvent, *apierror.APIError)
 }
 
@@ -66,15 +67,15 @@ func (m *auditEventSvcImpl) ListAuditEvents(ctx context.Context, req *ListAuditE
 	}
 
 	pbReq := &pb.ListAuditEventsRequest{
-		ResourceType: stringPtrFromObjectType(req.ResourceType),
-		ResourceId:   req.ResourceID,
-		ActorId:      req.ActorID,
-		Action:       stringPtrFromAction(req.Action),
-		AccountId:    req.AccountID,
-		Query:        req.Query,
-		Cursor:       req.Cursor,
-		Limit:        req.Limit,
-		Includes:     appctx.GetRequestedIncludeKeys(ctx),
+		ResourceTypes: stringsFromObjectTypes(req.ResourceTypes),
+		ResourceId:    req.ResourceID,
+		ActorId:       req.ActorID,
+		Action:        stringPtrFromAction(req.Action),
+		AccountId:     req.AccountID,
+		Query:         req.Query,
+		Cursor:        req.Cursor,
+		Limit:         req.Limit,
+		Includes:      appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	if req.StartDate != nil && !req.StartDate.IsZero() {
@@ -93,6 +94,19 @@ func (m *auditEventSvcImpl) ListAuditEvents(ctx context.Context, req *ListAuditE
 	}
 
 	return AuditEventListPresenter(resp), nil
+}
+
+func (m *auditEventSvcImpl) ListAuditEventResourceTypes(ctx context.Context, _ *ListAuditEventResourceTypesRequest) (*apiresource.List[constants.ObjectType], *apierror.APIError) {
+	if apiErr := requireInternalAdmin(ctx); apiErr != nil {
+		return nil, apiErr
+	}
+
+	values := constants.ObjectType("").EnumValues()
+	types := make([]constants.ObjectType, len(values))
+	for i, v := range values {
+		types[i] = constants.ObjectType(v)
+	}
+	return apiresource.NewList(types, apiresource.PageInfo{}), nil
 }
 
 func (m *auditEventSvcImpl) GetAuditEvent(ctx context.Context, req *GetAuditEventRequest) (*apiresource.AuditEvent, *apierror.APIError) {
@@ -116,12 +130,15 @@ func (m *auditEventSvcImpl) GetAuditEvent(ctx context.Context, req *GetAuditEven
 	return AuditEventPresenter(resp.AuditEvent), nil
 }
 
-func stringPtrFromObjectType(ot *constants.ObjectType) *string {
-	if ot == nil {
+func stringsFromObjectTypes(ots []constants.ObjectType) []string {
+	if len(ots) == 0 {
 		return nil
 	}
-	s := string(*ot)
-	return &s
+	out := make([]string, len(ots))
+	for i, ot := range ots {
+		out[i] = string(ot)
+	}
+	return out
 }
 
 func stringPtrFromAction(a *constants.AuditAction) *string {

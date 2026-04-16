@@ -26,12 +26,18 @@ type ListRequestLogsRequest struct {
 	ErrorCode *string `query:"error_code"`
 	// Filter: actor home account ID.
 	AccountID *string `query:"account_id"`
-	// Filter: actor ID.
-	ActorID *string `query:"actor_id"`
+	// Filter: actor IDs (repeatable).
+	ActorIDs []string `query:"actor_id"`
 	// Filter: actor type ("user" or "api_key").
 	ActorType *string `query:"actor_type"`
 	// Filter: actor name (partial or exact match).
 	ActorName *string `query:"actor_name"`
+	// Filter: normalized route templates (repeatable, exact match).
+	NormalizedRoutes []string `query:"normalized_route"`
+	// Filter: request hosts (repeatable, exact match).
+	Hosts []string `query:"host"`
+	// Filter: minimum latency in microseconds.
+	MinLatencyUs *int64 `query:"min_latency_us"`
 	// When true, string filters use exact match instead of partial (LIKE).
 	ExactMatch *bool `query:"exact_match"`
 }

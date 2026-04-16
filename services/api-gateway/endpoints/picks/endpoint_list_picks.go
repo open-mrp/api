@@ -20,6 +20,7 @@ type ListPicksRequest struct {
 	EndDate          *string  `query:"end_date"`
 }
 
+// TODO: stop returning PickSummary; return the full Pick apiresource and use proper includes values to control expansion.
 type ListPicksEndpoint struct{}
 
 func (e *ListPicksEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPicksRequest, *apiresource.List[apiresource.PickSummary]] {

@@ -107,20 +107,23 @@ type RequestLogActor struct {
 }
 
 type ListRequestLogsFilter struct {
-	Query          *string
-	StartDate      *time.Time
-	EndDate        *time.Time
-	Method         *string
-	StatusCode     *int32
-	ErrorCode      *string
-	AccountID      *string
-	ActorID        *string
-	ActorType      *string
-	ActorName      *string
-	ExactMatch     bool
-	PublicEndpoint *bool
-	Cursor         *string
-	Limit          int32
+	Query            *string
+	StartDate        *time.Time
+	EndDate          *time.Time
+	Method           *string
+	StatusCode       *int32
+	ErrorCode        *string
+	AccountID        *string
+	ActorIDs         []string
+	ActorType        *string
+	ActorName        *string
+	NormalizedRoutes []string
+	Hosts            []string
+	MinLatencyUs     *int64
+	ExactMatch       bool
+	PublicEndpoint   *bool
+	Cursor           *string
+	Limit            int32
 }
 
 type ListRequestLogsResult struct {
@@ -192,16 +195,16 @@ type AuditEventRead struct {
 }
 
 type ListAuditEventsFilter struct {
-	StartDate    *time.Time
-	EndDate      *time.Time
-	ResourceType *string
-	ResourceID   *string
-	ActorID      *string
-	Action       *string
-	AccountID    *string
-	Query        *string
-	Cursor       *string
-	Limit        int32
+	StartDate     *time.Time
+	EndDate       *time.Time
+	ResourceTypes []string
+	ResourceID    *string
+	ActorID       *string
+	Action        *string
+	AccountID     *string
+	Query         *string
+	Cursor        *string
+	Limit         int32
 }
 
 type ListAuditEventsResult struct {

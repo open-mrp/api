@@ -119,14 +119,14 @@ func (h *auditHandler) ListAuditEvents(ctx context.Context, req *pb.ListAuditEve
 	}
 
 	filter := &domain.ListAuditEventsFilter{
-		ResourceType: req.ResourceType,
-		ResourceID:   req.ResourceId,
-		ActorID:      req.ActorId,
-		Action:       req.Action,
-		AccountID:    req.AccountId,
-		Query:        req.Query,
-		Cursor:       req.Cursor,
-		Limit:        req.Limit,
+		ResourceTypes: req.ResourceTypes,
+		ResourceID:    req.ResourceId,
+		ActorID:       req.ActorId,
+		Action:        req.Action,
+		AccountID:     req.AccountId,
+		Query:         req.Query,
+		Cursor:        req.Cursor,
+		Limit:         req.Limit,
 	}
 
 	if req.StartDate != nil {

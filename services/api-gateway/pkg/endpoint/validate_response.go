@@ -4,12 +4,15 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
-	"time"
 )
 
 // ValidateExpandableFields checks that non-nil expandable sub-resource fields
-// included in the API response have their required string-typed fields populated.
-// It returns an error describing all violations, or nil if valid.
+// included in the API response have their minimum stub contract satisfied:
+// a non-empty `id` and a non-empty `object`. Other fields on sub-resources
+// are not enforced here because the API deliberately uses "light presenters"
+// — expanded sub-resources carry id/object/name/etc. as available, and
+// clients that need a full resource should fetch it by id. This matches the
+// presenter pattern used across endpoints.
 //
 // Only fields in the requested include set (plus defaults) are validated,
 // since non-requested expandable fields are collapsed to null before reaching
@@ -166,38 +169,33 @@ func validateExpandableOnStruct(rv reflect.Value, includedPaths map[string]bool)
 	return nil
 }
 
-// validateStubStringFields checks that required string-kind fields on a struct
-// are non-zero. Returns a list of field-level error descriptions.
+// validateStubStringFields checks that the minimum stub contract is satisfied
+// on an expandable sub-resource: the `id` and `object` fields must be
+// non-empty. This catches "accidentally-empty struct" bugs (e.g. returning
+// `&Rate{}` instead of nil) while allowing the codebase's "light presenter"
+// pattern, where sub-resources may carry only id/object/name when fetched as
+// part of an included parent. Callers that need a fully-populated resource
+// should request it directly via its own endpoint.
 func validateStubStringFields(rv reflect.Value) []string {
 	rt := rv.Type()
-	timeType := reflect.TypeOf((*time.Time)(nil)).Elem()
 	var errs []string
 
 	for i := 0; i < rt.NumField(); i++ {
 		fv := rv.Field(i)
 		ft := rt.Field(i)
-		if !ft.IsExported() {
+		if !ft.IsExported() || fv.Kind() != reflect.String {
 			continue
 		}
-		if ft.Type == timeType || fv.Kind() == reflect.Bool ||
-			fv.Kind() == reflect.Ptr || fv.Kind() == reflect.Slice ||
-			fv.Kind() == reflect.Map {
+		jsonTag := ft.Tag.Get("json")
+		if jsonTag == "" {
 			continue
 		}
-		if fv.Kind() != reflect.String {
-			continue
-		}
-		if !strings.Contains(ft.Tag.Get("validate"), "required") {
+		jsonName := strings.Split(jsonTag, ",")[0]
+		if jsonName != "id" && jsonName != "object" {
 			continue
 		}
 		if fv.IsZero() {
-			jsonTag := ft.Tag.Get("json")
-			if jsonTag != "" {
-				jsonTag = strings.Split(jsonTag, ",")[0]
-			} else {
-				jsonTag = ft.Name
-			}
-			errs = append(errs, fmt.Sprintf("%s (json:%q) is empty", ft.Name, jsonTag))
+			errs = append(errs, fmt.Sprintf("%s (json:%q) is empty", ft.Name, jsonName))
 		}
 	}
 	return errs

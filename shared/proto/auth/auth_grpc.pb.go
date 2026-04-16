@@ -27,31 +27,32 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AuthService_ValidateCredential_FullMethodName         = "/auth.AuthService/ValidateCredential"
-	AuthService_Login_FullMethodName                      = "/auth.AuthService/Login"
-	AuthService_Register_FullMethodName                   = "/auth.AuthService/Register"
-	AuthService_RefreshToken_FullMethodName               = "/auth.AuthService/RefreshToken"
-	AuthService_RequestPasswordReset_FullMethodName       = "/auth.AuthService/RequestPasswordReset"
-	AuthService_ResetPassword_FullMethodName              = "/auth.AuthService/ResetPassword"
-	AuthService_RevokeRefreshToken_FullMethodName         = "/auth.AuthService/RevokeRefreshToken"
-	AuthService_UpdatePassword_FullMethodName             = "/auth.AuthService/UpdatePassword"
-	AuthService_CreateAPIKey_FullMethodName               = "/auth.AuthService/CreateAPIKey"
-	AuthService_RotateAPIKey_FullMethodName               = "/auth.AuthService/RotateAPIKey"
-	AuthService_RevokeAPIKey_FullMethodName               = "/auth.AuthService/RevokeAPIKey"
-	AuthService_ListAPIKeys_FullMethodName                = "/auth.AuthService/ListAPIKeys"
-	AuthService_GetAPIKey_FullMethodName                  = "/auth.AuthService/GetAPIKey"
-	AuthService_GetOrCreateDocAPIKey_FullMethodName       = "/auth.AuthService/GetOrCreateDocAPIKey"
-	AuthService_CreateRegistrationSession_FullMethodName  = "/auth.AuthService/CreateRegistrationSession"
-	AuthService_ResendVerificationEmail_FullMethodName    = "/auth.AuthService/ResendVerificationEmail"
-	AuthService_VerifyRegistrationToken_FullMethodName    = "/auth.AuthService/VerifyRegistrationToken"
-	AuthService_GetRegistrationSession_FullMethodName     = "/auth.AuthService/GetRegistrationSession"
-	AuthService_CreateUserForRegistration_FullMethodName  = "/auth.AuthService/CreateUserForRegistration"
-	AuthService_UpdateRegistrationSession_FullMethodName  = "/auth.AuthService/UpdateRegistrationSession"
-	AuthService_ListRegistrationSessions_FullMethodName   = "/auth.AuthService/ListRegistrationSessions"
-	AuthService_SetupRegistrationBilling_FullMethodName   = "/auth.AuthService/SetupRegistrationBilling"
-	AuthService_ConfirmRegistrationPayment_FullMethodName = "/auth.AuthService/ConfirmRegistrationPayment"
-	AuthService_CompleteRegistration_FullMethodName       = "/auth.AuthService/CompleteRegistration"
-	AuthService_MagicLogin_FullMethodName                 = "/auth.AuthService/MagicLogin"
+	AuthService_ValidateCredential_FullMethodName               = "/auth.AuthService/ValidateCredential"
+	AuthService_Login_FullMethodName                            = "/auth.AuthService/Login"
+	AuthService_Register_FullMethodName                         = "/auth.AuthService/Register"
+	AuthService_RefreshToken_FullMethodName                     = "/auth.AuthService/RefreshToken"
+	AuthService_RequestPasswordReset_FullMethodName             = "/auth.AuthService/RequestPasswordReset"
+	AuthService_ResetPassword_FullMethodName                    = "/auth.AuthService/ResetPassword"
+	AuthService_RevokeRefreshToken_FullMethodName               = "/auth.AuthService/RevokeRefreshToken"
+	AuthService_UpdatePassword_FullMethodName                   = "/auth.AuthService/UpdatePassword"
+	AuthService_CreateAPIKey_FullMethodName                     = "/auth.AuthService/CreateAPIKey"
+	AuthService_RotateAPIKey_FullMethodName                     = "/auth.AuthService/RotateAPIKey"
+	AuthService_RevokeAPIKey_FullMethodName                     = "/auth.AuthService/RevokeAPIKey"
+	AuthService_ListAPIKeys_FullMethodName                      = "/auth.AuthService/ListAPIKeys"
+	AuthService_GetAPIKey_FullMethodName                        = "/auth.AuthService/GetAPIKey"
+	AuthService_GetOrCreateDocAPIKey_FullMethodName             = "/auth.AuthService/GetOrCreateDocAPIKey"
+	AuthService_CreateRegistrationSession_FullMethodName        = "/auth.AuthService/CreateRegistrationSession"
+	AuthService_ResendVerificationEmail_FullMethodName          = "/auth.AuthService/ResendVerificationEmail"
+	AuthService_VerifyRegistrationToken_FullMethodName          = "/auth.AuthService/VerifyRegistrationToken"
+	AuthService_GetRegistrationSession_FullMethodName           = "/auth.AuthService/GetRegistrationSession"
+	AuthService_CreateUserForRegistration_FullMethodName        = "/auth.AuthService/CreateUserForRegistration"
+	AuthService_UpdateRegistrationSession_FullMethodName        = "/auth.AuthService/UpdateRegistrationSession"
+	AuthService_ListRegistrationSessions_FullMethodName         = "/auth.AuthService/ListRegistrationSessions"
+	AuthService_SetupRegistrationBilling_FullMethodName         = "/auth.AuthService/SetupRegistrationBilling"
+	AuthService_ConfirmRegistrationPayment_FullMethodName       = "/auth.AuthService/ConfirmRegistrationPayment"
+	AuthService_CompleteRegistration_FullMethodName             = "/auth.AuthService/CompleteRegistration"
+	AuthService_MagicLogin_FullMethodName                       = "/auth.AuthService/MagicLogin"
+	AuthService_GetIncompleteRegistrationSession_FullMethodName = "/auth.AuthService/GetIncompleteRegistrationSession"
 )
 
 // AuthServiceClient is the client API for AuthService service.
@@ -109,6 +110,8 @@ type AuthServiceClient interface {
 	CompleteRegistration(ctx context.Context, in *CompleteRegistrationRequest, opts ...grpc.CallOption) (*CompleteRegistrationResponse, error)
 	// Exchanges a magic-login token (from the "already registered" email) for a token pair.
 	MagicLogin(ctx context.Context, in *MagicLoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
+	// Returns the caller's most recent incomplete registration session, or no session if none exists.
+	GetIncompleteRegistrationSession(ctx context.Context, in *GetIncompleteRegistrationSessionRequest, opts ...grpc.CallOption) (*GetIncompleteRegistrationSessionResponse, error)
 }
 
 type authServiceClient struct {
@@ -369,6 +372,16 @@ func (c *authServiceClient) MagicLogin(ctx context.Context, in *MagicLoginReques
 	return out, nil
 }
 
+func (c *authServiceClient) GetIncompleteRegistrationSession(ctx context.Context, in *GetIncompleteRegistrationSessionRequest, opts ...grpc.CallOption) (*GetIncompleteRegistrationSessionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetIncompleteRegistrationSessionResponse)
+	err := c.cc.Invoke(ctx, AuthService_GetIncompleteRegistrationSession_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AuthServiceServer is the server API for AuthService service.
 // All implementations must embed UnimplementedAuthServiceServer
 // for forward compatibility.
@@ -424,6 +437,8 @@ type AuthServiceServer interface {
 	CompleteRegistration(context.Context, *CompleteRegistrationRequest) (*CompleteRegistrationResponse, error)
 	// Exchanges a magic-login token (from the "already registered" email) for a token pair.
 	MagicLogin(context.Context, *MagicLoginRequest) (*LoginResponse, error)
+	// Returns the caller's most recent incomplete registration session, or no session if none exists.
+	GetIncompleteRegistrationSession(context.Context, *GetIncompleteRegistrationSessionRequest) (*GetIncompleteRegistrationSessionResponse, error)
 	mustEmbedUnimplementedAuthServiceServer()
 }
 
@@ -508,6 +523,9 @@ func (UnimplementedAuthServiceServer) CompleteRegistration(context.Context, *Com
 }
 func (UnimplementedAuthServiceServer) MagicLogin(context.Context, *MagicLoginRequest) (*LoginResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method MagicLogin not implemented")
+}
+func (UnimplementedAuthServiceServer) GetIncompleteRegistrationSession(context.Context, *GetIncompleteRegistrationSessionRequest) (*GetIncompleteRegistrationSessionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetIncompleteRegistrationSession not implemented")
 }
 func (UnimplementedAuthServiceServer) mustEmbedUnimplementedAuthServiceServer() {}
 func (UnimplementedAuthServiceServer) testEmbeddedByValue()                     {}
@@ -980,6 +998,24 @@ func _AuthService_MagicLogin_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthService_GetIncompleteRegistrationSession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetIncompleteRegistrationSessionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).GetIncompleteRegistrationSession(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_GetIncompleteRegistrationSession_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).GetIncompleteRegistrationSession(ctx, req.(*GetIncompleteRegistrationSessionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AuthService_ServiceDesc is the grpc.ServiceDesc for AuthService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1086,6 +1122,10 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "MagicLogin",
 			Handler:    _AuthService_MagicLogin_Handler,
+		},
+		{
+			MethodName: "GetIncompleteRegistrationSession",
+			Handler:    _AuthService_GetIncompleteRegistrationSession_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

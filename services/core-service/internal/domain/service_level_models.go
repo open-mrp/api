@@ -49,4 +49,5 @@ type UpdateServiceLevelParams struct {
 	Name            *string
 	Code            *string
 	IsPortalEnabled *bool
+	IsDefault       *bool
 }

@@ -19,7 +19,6 @@ func AccountUserPresenter(au *pb.AccountUserDetail) apiresource.AccountUser {
 		Email:      au.Email,
 		Username:   au.Username,
 		ImageURL:   au.ImageUrl,
-		IsVerified: au.EmailVerified,
 		Status:     constants.AccountUserStatus(au.StatusCode),
 		LastUsedAt: grpcutil.TimestampToTimePtr(au.LastUsedAt),
 		CreatedAt:  grpcutil.TimestampToTime(au.CreatedAt),

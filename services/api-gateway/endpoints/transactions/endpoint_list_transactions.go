@@ -30,6 +30,7 @@ type ListTransactionsRequest struct {
 	EndDate *string `query:"end_date"`
 }
 
+// TODO: stop returning TransactionSummary; return the full Transaction apiresource and use proper includes values to control expansion.
 type ListTransactionsEndpoint struct{}
 
 func (e *ListTransactionsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListTransactionsRequest, *apiresource.List[apiresource.TransactionSummary]] {

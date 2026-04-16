@@ -128,9 +128,6 @@ func (r *requestLogRepoImpl) FindByID(ctx context.Context, id, targetAccountID s
 func (r *requestLogRepoImpl) List(ctx context.Context, targetAccountID string, filter *domain.ListRequestLogsFilter, includes []string) (*domain.ListRequestLogsResult, *apierror.APIError) {
 	ctx, span := requestLogRepoTracer.Start(ctx, "repository.request_log.list")
 	defer span.End()
-	includeQueryJSON := includeJSONFieldParam(includes, "query_json")
-	includeRequestBody := includeJSONFieldParam(includes, "request_body_json")
-	includeResponseBody := includeJSONFieldParam(includes, "response_body_json")
 
 	limit := filter.Limit
 	if limit <= 0 {
@@ -140,187 +137,49 @@ func (r *requestLogRepoImpl) List(ctx context.Context, targetAccountID string, f
 		limit = 1000
 	}
 
-	useEnriched := needsEnrichedQuery(includes, filter)
+	mode := pickQueryMode(includes, filter)
 
-	var queryFilter, queryPathFilter string
-	var queryErrorMsgFilter sql.NullString
-	if filter.Query != nil && *filter.Query != "" {
-		queryFilter = *filter.Query
-		likeVal := "%" + *filter.Query + "%"
-		queryPathFilter = likeVal
-		queryErrorMsgFilter = sql.NullString{String: likeVal, Valid: true}
-	}
-	methodFilter := buildStringFilter(filter.Method, filter.ExactMatch)
-	errorCodeFilter := buildStringFilter(filter.ErrorCode, filter.ExactMatch)
-	actorNameFilter := buildStringFilter(filter.ActorName, filter.ExactMatch)
+	includeQueryJSON := anyIncludeRequested(includes, "query_json")
+	includeRequestBody := anyIncludeRequested(includes, "request_body_json")
+	includeResponseBody := anyIncludeRequested(includes, "response_body_json")
 
+	var cur *pagination.StringCursor
 	var cursorDir *pagination.Direction
-
+	dir := pagination.DirectionForward
 	if filter.Cursor != nil {
-		cur, err := pagination.DecodeStringCursor(*filter.Cursor)
+		decoded, err := pagination.DecodeStringCursor(*filter.Cursor)
 		if err != nil {
 			return nil, apierror.NewValidationError("Invalid pagination cursor.")
 		}
-		cursorDir = &cur.Direction
-
-		if cur.Direction == pagination.DirectionBackward {
-			if useEnriched {
-				rows, err := r.db.ListRequestLogsBackward(ctx, sqlc.ListRequestLogsBackwardParams{
-					IncludeQueryJson:        includeQueryJSON,
-					IncludeRequestBodyJson:  includeRequestBody,
-					IncludeResponseBodyJson: includeResponseBody,
-					TargetAccountID:         db.NullString(targetAccountID),
-					QueryFilter:             queryFilter,
-					QueryPathFilter:         queryPathFilter,
-					QueryErrorMsgFilter:     queryErrorMsgFilter,
-					StartDate:               nullTimePtr(filter.StartDate),
-					EndDate:                 nullTimePtr(filter.EndDate),
-					MethodFilter:            methodFilter,
-					StatusCode:              nullInt32Ptr(filter.StatusCode),
-					ErrorCodeFilter:         nullStringVal(errorCodeFilter),
-					AccountIDFilter:         nullStringPtrVal(filter.AccountID),
-					ActorIDFilter:           nullStringPtrVal(filter.ActorID),
-					ActorTypeFilter:         nullStringPtrVal(filter.ActorType),
-					ActorNameFilter:         nullStringVal(actorNameFilter),
-					PublicEndpoint:          nullBoolPtr(filter.PublicEndpoint),
-					CursorOccurredAt:        cur.OccurredAt,
-					CursorID:                cur.ID,
-					Limit:                   limit + 1,
-				})
-				if err != nil {
-					return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to query request logs."))
-				}
-				results := make([]*domain.RequestLogRead, len(rows))
-				for i := range rows {
-					results[i] = mapBackwardRowToRequestLogRead(&rows[i])
-					applyRequestedJSONIncludes(results[i], includes)
-				}
-				paged, pageInfo := pagination.BuildPageString(results, limit, cursorDir, requestLogOccurredAt, requestLogID)
-				return &domain.ListRequestLogsResult{RequestLogs: paged, PageInfo: pageInfo}, nil
-			}
-			rows, err := r.db.ListRequestLogsBaseBackward(ctx, sqlc.ListRequestLogsBaseBackwardParams{
-				IncludeQueryJson:        includeQueryJSON,
-				IncludeRequestBodyJson:  includeRequestBody,
-				IncludeResponseBodyJson: includeResponseBody,
-				TargetAccountID:         db.NullString(targetAccountID),
-				QueryFilter:             queryFilter,
-				QueryPathFilter:         queryPathFilter,
-				QueryErrorMsgFilter:     queryErrorMsgFilter,
-				StartDate:               nullTimePtr(filter.StartDate),
-				EndDate:                 nullTimePtr(filter.EndDate),
-				MethodFilter:            methodFilter,
-				StatusCode:              nullInt32Ptr(filter.StatusCode),
-				ErrorCodeFilter:         nullStringVal(errorCodeFilter),
-				AccountIDFilter:         nullStringPtrVal(filter.AccountID),
-				ActorIDFilter:           nullStringPtrVal(filter.ActorID),
-				ActorTypeFilter:         nullStringPtrVal(filter.ActorType),
-				PublicEndpoint:          nullBoolPtr(filter.PublicEndpoint),
-				CursorOccurredAt:        cur.OccurredAt,
-				CursorID:                cur.ID,
-				Limit:                   limit + 1,
-			})
-			if err != nil {
-				return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to query request logs."))
-			}
-			results := make([]*domain.RequestLogRead, len(rows))
-			for i := range rows {
-				results[i] = mapBaseListBackwardRowToRequestLogRead(&rows[i])
-				applyRequestedJSONIncludes(results[i], includes)
-			}
-			paged, pageInfo := pagination.BuildPageString(results, limit, cursorDir, requestLogOccurredAt, requestLogID)
-			return &domain.ListRequestLogsResult{RequestLogs: paged, PageInfo: pageInfo}, nil
-		}
+		cur = &decoded
+		cursorDir = &decoded.Direction
+		dir = decoded.Direction
 	}
 
-	// Forward (default: first page or forward cursor)
-	if useEnriched {
-		rows, err := r.db.ListRequestLogsForward(ctx, sqlc.ListRequestLogsForwardParams{
-			IncludeQueryJson:        includeQueryJSON,
-			IncludeRequestBodyJson:  includeRequestBody,
-			IncludeResponseBodyJson: includeResponseBody,
-			TargetAccountID:         db.NullString(targetAccountID),
-			QueryFilter:             queryFilter,
-			QueryPathFilter:         queryPathFilter,
-			QueryErrorMsgFilter:     queryErrorMsgFilter,
-			StartDate:               nullTimePtr(filter.StartDate),
-			EndDate:                 nullTimePtr(filter.EndDate),
-			MethodFilter:            methodFilter,
-			StatusCode:              nullInt32Ptr(filter.StatusCode),
-			ErrorCodeFilter:         nullStringVal(errorCodeFilter),
-			AccountIDFilter:         nullStringPtrVal(filter.AccountID),
-			ActorIDFilter:           nullStringPtrVal(filter.ActorID),
-			ActorTypeFilter:         nullStringPtrVal(filter.ActorType),
-			ActorNameFilter:         nullStringVal(actorNameFilter),
-			PublicEndpoint:          nullBoolPtr(filter.PublicEndpoint),
-			CursorOccurredAt: func() sql.NullTime {
-				if filter.Cursor == nil {
-					return sql.NullTime{}
-				}
-				cur, _ := pagination.DecodeStringCursor(*filter.Cursor)
-				return sql.NullTime{Time: cur.OccurredAt, Valid: true}
-			}(),
-			CursorID: func() sql.NullString {
-				if filter.Cursor == nil {
-					return sql.NullString{}
-				}
-				cur, _ := pagination.DecodeStringCursor(*filter.Cursor)
-				return sql.NullString{String: cur.ID, Valid: true}
-			}(),
-			Limit: limit + 1,
-		})
-		if err != nil {
-			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to query request logs."))
-		}
-		results := make([]*domain.RequestLogRead, len(rows))
-		for i := range rows {
-			results[i] = mapForwardRowToRequestLogRead(&rows[i])
-			applyRequestedJSONIncludes(results[i], includes)
-		}
-		paged, pageInfo := pagination.BuildPageString(results, limit, cursorDir, requestLogOccurredAt, requestLogID)
-		return &domain.ListRequestLogsResult{RequestLogs: paged, PageInfo: pageInfo}, nil
-	}
+	rawSQL, args := buildListQuery(mode, dir, targetAccountID, filter,
+		includeQueryJSON, includeRequestBody, includeResponseBody, cur, limit+1)
 
-	rows, err := r.db.ListRequestLogsBaseForward(ctx, sqlc.ListRequestLogsBaseForwardParams{
-		IncludeQueryJson:        includeQueryJSON,
-		IncludeRequestBodyJson:  includeRequestBody,
-		IncludeResponseBodyJson: includeResponseBody,
-		TargetAccountID:         db.NullString(targetAccountID),
-		QueryFilter:             queryFilter,
-		QueryPathFilter:         queryPathFilter,
-		QueryErrorMsgFilter:     queryErrorMsgFilter,
-		StartDate:               nullTimePtr(filter.StartDate),
-		EndDate:                 nullTimePtr(filter.EndDate),
-		MethodFilter:            methodFilter,
-		StatusCode:              nullInt32Ptr(filter.StatusCode),
-		ErrorCodeFilter:         nullStringVal(errorCodeFilter),
-		AccountIDFilter:         nullStringPtrVal(filter.AccountID),
-		ActorIDFilter:           nullStringPtrVal(filter.ActorID),
-		ActorTypeFilter:         nullStringPtrVal(filter.ActorType),
-		PublicEndpoint:          nullBoolPtr(filter.PublicEndpoint),
-		CursorOccurredAt: func() sql.NullTime {
-			if filter.Cursor == nil {
-				return sql.NullTime{}
-			}
-			cur, _ := pagination.DecodeStringCursor(*filter.Cursor)
-			return sql.NullTime{Time: cur.OccurredAt, Valid: true}
-		}(),
-		CursorID: func() sql.NullString {
-			if filter.Cursor == nil {
-				return sql.NullString{}
-			}
-			cur, _ := pagination.DecodeStringCursor(*filter.Cursor)
-			return sql.NullString{String: cur.ID, Valid: true}
-		}(),
-		Limit: limit + 1,
-	})
+	rows, err := r.db.DB().QueryContext(ctx, rawSQL, args...)
 	if err != nil {
 		return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to query request logs."))
 	}
+	defer rows.Close()
 
-	results := make([]*domain.RequestLogRead, len(rows))
-	for i := range rows {
-		results[i] = mapBaseListForwardRowToRequestLogRead(&rows[i])
-		applyRequestedJSONIncludes(results[i], includes)
+	var results []*domain.RequestLogRead
+	switch mode {
+	case queryModeActor:
+		results, err = scanActorListRows(rows)
+	case queryModeFull:
+		results, err = scanFullListRows(rows)
+	default:
+		results, err = scanBaseListRows(rows)
+	}
+	if err != nil {
+		return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to scan request logs."))
+	}
+
+	for _, read := range results {
+		applyRequestedJSONIncludes(read, includes)
 	}
 
 	paged, pageInfo := pagination.BuildPageString(results, limit, cursorDir, requestLogOccurredAt, requestLogID)
@@ -372,13 +231,27 @@ func needsEnrichedFindByID(includes []string) bool {
 	return anyIncludeRequested(includes, "account", "actor", "actor.role")
 }
 
-// needsEnrichedQuery returns true when the list query must use the full JOINs
-// (either because sub-object data is requested, or because filters need actor columns).
-func needsEnrichedQuery(includes []string, filter *domain.ListRequestLogsFilter) bool {
-	if anyIncludeRequested(includes, "account", "actor", "actor.role") {
-		return true
+type queryMode int
+
+const (
+	queryModeBase queryMode = iota
+	queryModeActor
+	queryModeFull
+)
+
+// pickQueryMode picks the cheapest list query variant that satisfies the requested
+// includes and filters. queryModeBase has no joins; queryModeActor joins user+api_key
+// only; queryModeFull joins all related tables.
+func pickQueryMode(includes []string, filter *domain.ListRequestLogsFilter) queryMode {
+	// actor_name filtering references joined user/api_key columns, so it must
+	// use the full JOIN query path.
+	if anyIncludeRequested(includes, "account", "actor.role") || (filter.ActorName != nil && *filter.ActorName != "") {
+		return queryModeFull
 	}
-	return filter.ActorName != nil && *filter.ActorName != ""
+	if anyIncludeRequested(includes, "actor") {
+		return queryModeActor
+	}
+	return queryModeBase
 }
 
 func requestLogOccurredAt(rl *domain.RequestLogRead) time.Time { return rl.OccurredAt }
@@ -394,31 +267,6 @@ func buildStringFilter(val *string, exactMatch bool) string {
 	return "%" + *val + "%"
 }
 
-func nullTimePtr(t *time.Time) sql.NullTime {
-	if t == nil {
-		return sql.NullTime{}
-	}
-	return sql.NullTime{Time: *t, Valid: true}
-}
-
-func nullInt32Ptr(v *int32) sql.NullInt32 {
-	if v == nil {
-		return sql.NullInt32{}
-	}
-	return sql.NullInt32{Int32: *v, Valid: true}
-}
-
-func nullStringVal(s string) sql.NullString {
-	return sql.NullString{String: s, Valid: true}
-}
-
-func nullStringPtrVal(s *string) sql.NullString {
-	if s == nil {
-		return sql.NullString{String: "", Valid: true}
-	}
-	return sql.NullString{String: *s, Valid: true}
-}
-
 func nullStringPtrEmptyAsNull(s *string) sql.NullString {
 	if s == nil || *s == "" {
 		return sql.NullString{}
@@ -426,11 +274,19 @@ func nullStringPtrEmptyAsNull(s *string) sql.NullString {
 	return sql.NullString{String: *s, Valid: true}
 }
 
-func nullBoolPtr(b *bool) sql.NullBool {
-	if b == nil {
-		return sql.NullBool{}
+func buildMinimalActor(actorID sql.NullString, identityType sql.NullString) *domain.RequestLogActor {
+	id := db.StringFromNullString(actorID)
+	identType := db.StringFromNullString(identityType)
+	if id == nil || identType == nil {
+		return nil
 	}
-	return sql.NullBool{Bool: *b, Valid: true}
+	switch *identType {
+	case "user":
+		return &domain.RequestLogActor{ID: *id, ActorType: constants.ActorTypeUser}
+	case "api_key":
+		return &domain.RequestLogActor{ID: *id, ActorType: constants.ActorTypeAPIKey}
+	}
+	return nil
 }
 
 func anyToStringPtr(v any) *string {
@@ -528,111 +384,7 @@ func mapRowToRequestLogRead(row *sqlc.FindRequestLogByIDRow) *domain.RequestLogR
 	return rl
 }
 
-func mapForwardRowToRequestLogRead(row *sqlc.ListRequestLogsForwardRow) *domain.RequestLogRead {
-	return mapRowToRequestLogRead(&sqlc.FindRequestLogByIDRow{
-		ID: row.ID, Method: row.Method, Host: row.Host, Path: row.Path,
-		NormalizedRoute: row.NormalizedRoute, QueryJson: row.QueryJson,
-		StatusCode: row.StatusCode, LatencyUs: row.LatencyUs,
-		ApiVersion: row.ApiVersion, ActorID: row.ActorID,
-		ActorType: row.ActorType, IdentityType: row.IdentityType,
-		ClientIpString: row.ClientIpString, UserAgent: row.UserAgent,
-		Referrer: row.Referrer, ErrorCode: row.ErrorCode,
-		ErrorMessage: row.ErrorMessage, OccurredAt: row.OccurredAt,
-		CreatedAt: row.CreatedAt, IdempotencyKeyID: row.IdempotencyKeyID,
-		RequestBodyJson: row.RequestBodyJson, ResponseBodyJson: row.ResponseBodyJson,
-		UserEmail: row.UserEmail, UserName: row.UserName,
-		ApiKeyTypeID: row.ApiKeyTypeID, ApiKeyRedactedValue: row.ApiKeyRedactedValue,
-		ApiKeyName: row.ApiKeyName, UserRoleID: row.UserRoleID,
-		UserRoleName: row.UserRoleName, UserRoleTypeCode: row.UserRoleTypeCode,
-		ApiKeyRoleID: row.ApiKeyRoleID, ApiKeyRoleName: row.ApiKeyRoleName,
-		ApiKeyRoleTypeCode: row.ApiKeyRoleTypeCode,
-		TargetAccountID:    row.TargetAccountID,
-		AccountName:        row.AccountName, IdempotencyKey: row.IdempotencyKey,
-	})
-}
-
-func mapBackwardRowToRequestLogRead(row *sqlc.ListRequestLogsBackwardRow) *domain.RequestLogRead {
-	return mapRowToRequestLogRead(&sqlc.FindRequestLogByIDRow{
-		ID: row.ID, Method: row.Method, Host: row.Host, Path: row.Path,
-		NormalizedRoute: row.NormalizedRoute, QueryJson: row.QueryJson,
-		StatusCode: row.StatusCode, LatencyUs: row.LatencyUs,
-		ApiVersion: row.ApiVersion, ActorID: row.ActorID,
-		ActorType: row.ActorType, IdentityType: row.IdentityType,
-		ClientIpString: row.ClientIpString, UserAgent: row.UserAgent,
-		Referrer: row.Referrer, ErrorCode: row.ErrorCode,
-		ErrorMessage: row.ErrorMessage, OccurredAt: row.OccurredAt,
-		CreatedAt: row.CreatedAt, IdempotencyKeyID: row.IdempotencyKeyID,
-		RequestBodyJson: row.RequestBodyJson, ResponseBodyJson: row.ResponseBodyJson,
-		UserEmail: row.UserEmail, UserName: row.UserName,
-		ApiKeyTypeID: row.ApiKeyTypeID, ApiKeyRedactedValue: row.ApiKeyRedactedValue,
-		ApiKeyName: row.ApiKeyName, UserRoleID: row.UserRoleID,
-		UserRoleName: row.UserRoleName, UserRoleTypeCode: row.UserRoleTypeCode,
-		ApiKeyRoleID: row.ApiKeyRoleID, ApiKeyRoleName: row.ApiKeyRoleName,
-		ApiKeyRoleTypeCode: row.ApiKeyRoleTypeCode,
-		TargetAccountID:    row.TargetAccountID,
-		AccountName:        row.AccountName, IdempotencyKey: row.IdempotencyKey,
-	})
-}
-
 func mapBaseRowToRequestLogRead(row *sqlc.FindRequestLogBaseByIDRow) *domain.RequestLogRead {
-	rl := &domain.RequestLogRead{
-		ID:              row.ID,
-		Method:          row.Method,
-		Host:            row.Host,
-		Path:            row.Path,
-		NormalizedRoute: row.NormalizedRoute,
-		StatusCode:      row.StatusCode,
-		LatencyUs:       row.LatencyUs,
-		OccurredAt:      row.OccurredAt,
-		CreatedAt:       row.CreatedAt,
-		APIVersion:      db.StringFromNullString(row.ApiVersion),
-		IdentityType:    db.StringFromNullString(row.IdentityType),
-		ClientIP:        db.StringFromNullString(row.ClientIpString),
-		UserAgent:       db.StringFromNullString(row.UserAgent),
-		Referrer:        nonEmptyStringPtr(db.StringFromNullString(row.Referrer)),
-		ErrorCode:       db.StringFromNullString(row.ErrorCode),
-		ErrorMessage:    db.StringFromNullString(row.ErrorMessage),
-		AccountID:       db.StringFromNullString(row.TargetAccountID),
-		IdempotencyKey:  db.StringFromNullString(row.IdempotencyKey),
-	}
-
-	rl.QueryJSON = anyToStringPtr(row.QueryJson)
-	rl.BodyJSON = anyToStringPtr(row.RequestBodyJson)
-	rl.ResponseJSON = anyToStringPtr(row.ResponseBodyJson)
-
-	return rl
-}
-
-func mapBaseListForwardRowToRequestLogRead(row *sqlc.ListRequestLogsBaseForwardRow) *domain.RequestLogRead {
-	rl := &domain.RequestLogRead{
-		ID:              row.ID,
-		Method:          row.Method,
-		Host:            row.Host,
-		Path:            row.Path,
-		NormalizedRoute: row.NormalizedRoute,
-		StatusCode:      row.StatusCode,
-		LatencyUs:       row.LatencyUs,
-		OccurredAt:      row.OccurredAt,
-		CreatedAt:       row.CreatedAt,
-		APIVersion:      db.StringFromNullString(row.ApiVersion),
-		IdentityType:    db.StringFromNullString(row.IdentityType),
-		ClientIP:        db.StringFromNullString(row.ClientIpString),
-		UserAgent:       db.StringFromNullString(row.UserAgent),
-		Referrer:        nonEmptyStringPtr(db.StringFromNullString(row.Referrer)),
-		ErrorCode:       db.StringFromNullString(row.ErrorCode),
-		ErrorMessage:    db.StringFromNullString(row.ErrorMessage),
-		AccountID:       db.StringFromNullString(row.TargetAccountID),
-		IdempotencyKey:  db.StringFromNullString(row.IdempotencyKey),
-	}
-
-	rl.QueryJSON = anyToStringPtr(row.QueryJson)
-	rl.BodyJSON = anyToStringPtr(row.RequestBodyJson)
-	rl.ResponseJSON = anyToStringPtr(row.ResponseBodyJson)
-
-	return rl
-}
-
-func mapBaseListBackwardRowToRequestLogRead(row *sqlc.ListRequestLogsBaseBackwardRow) *domain.RequestLogRead {
 	rl := &domain.RequestLogRead{
 		ID:              row.ID,
 		Method:          row.Method,

@@ -216,23 +216,11 @@ service CoreService {
   // Partially updates an account user.
   rpc UpdateAccountUser(UpdateAccountUserRequest) returns (UpdateAccountUserResponse);
 
-  // Soft-deletes an account user.
-  rpc DeleteAccountUser(DeleteAccountUserRequest) returns (google.protobuf.Empty);
+  // Transitions an account user to the target status (active, disabled, or removed).
+  rpc UpdateAccountUserStatus(UpdateAccountUserStatusRequest) returns (google.protobuf.Empty);
 
-  // Disables an account user and revokes their refresh tokens.
-  rpc LockAccountUser(LockAccountUserRequest) returns (google.protobuf.Empty);
-
-  // Re-enables a disabled account user.
-  rpc UnlockAccountUser(UnlockAccountUserRequest) returns (google.protobuf.Empty);
-
-  // Restores a soft-deleted account user.
-  rpc RestoreAccountUser(RestoreAccountUserRequest) returns (google.protobuf.Empty);
-
-  // Updates the password for an account user.
+  // Updates the password for an account user (scanner-role targets only).
   rpc UpdateAccountUserPassword(UpdateAccountUserPasswordRequest) returns (google.protobuf.Empty);
-
-  // Updates notification preferences for an account user.
-  rpc UpdateNotificationPreferences(UpdateNotificationPreferencesRequest) returns (UpdateNotificationPreferencesResponse);
 
   // Returns a paginated list of sales targets for an account user.
   rpc ListSalesTargets(ListSalesTargetsRequest) returns (ListSalesTargetsResponse);

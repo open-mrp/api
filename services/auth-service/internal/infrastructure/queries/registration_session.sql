@@ -76,6 +76,17 @@ WHERE id = ?;
 DELETE FROM registration_session
 WHERE id = ?;
 
+-- name: GetIncompleteRegistrationSessionByUserID :one
+SELECT id, type_id, email, plan_code, step, verification_token, is_email_verified,
+       is_existing_user, user_id, account_id, stripe_customer_id,
+       stripe_checkout_session_id, stripe_subscription_id, payment_completed, session_data,
+       completed_at, created_at, updated_at
+FROM registration_session
+WHERE user_id = ?
+  AND completed_at IS NULL
+ORDER BY created_at DESC
+LIMIT 1;
+
 -- name: ListRegistrationSessionsByUserIDForward :many
 SELECT id, type_id, email, plan_code, step, verification_token, is_email_verified,
        is_existing_user, user_id, account_id, stripe_customer_id,

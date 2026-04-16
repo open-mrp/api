@@ -88,10 +88,13 @@ To add/modify schema:
 
 When working on e2e tests, do not let production bugs slip through by relaxing assertions, skipping failures, or only noting broken behavior in comments on production code. End-to-end tests exist to exercise the real stack and expose defects in production code; when a test reveals a problem, fix the underlying issue until the e2e suite passes (or correct the test if its expectations were wrong).
 
+**Never skip 5xx errors.** If an endpoint returns a 500 (or any 5xx) in an e2e run, that is a production bug — fix the root cause in the service, repository, or gRPC layer. Do not add `t.Skip("backend 500 ...")`, `if status >= 500 { ... }` guards, `skipIfBackend500` helpers, retries that hide the error, or TODO comments that leave the failure latent. The test must either pass against a healthy backend or fail loudly until the backend is fixed.
+
 **Avoid bandaid fixes.** Prefer root-cause fixes in the correct layer (repository SQL and sqlc queries, domain/service logic, gRPC contracts, gateway mapping) even when that means touching many files or packages. Do not paper over microservice or data-layer bugs with shortcuts at the edge.
 
 Examples of what to avoid:
 
+- **Skipping 5xx / internal errors** — always root-cause them (see above).
 - **In-memory filtering or sorting** when the database should do the work (add or fix `queries/*.sql`, repository methods, and indexes as needed instead of loading large pages and filtering in Go).
 - **Fixing only the API gateway** when the bug belongs in core-service (or another service)—drill down and fix ownership, permissions, validation, and persistence where they live.
 - **Retries, sleeps, or inflated timeouts** to mask flakes, races, or ordering issues—fix idempotency, transactions, or the actual race.

@@ -371,6 +371,25 @@ message TenancyRoleProto {
   string id = 1;
   string name = 2;
   string role_type_code = 3;
+  repeated string permissions = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+message TenancyAccountPlanLimitProto {
+  string key = 1;
+  // Absent means unlimited.
+  optional int32 value = 2;
+}
+message TenancyAccountPlanProto {
+  string type_id = 1;
+  string name = 2;
+  string plan_type_code = 3;
+  int32 version = 4;
+  double price_per_seat = 5;
+  optional double price_per_month = 6;
+  optional int32 seat_minimum = 7;
+  repeated TenancyAccountPlanLimitProto limits = 8;
+  map<string, bool> features = 9;
 }
 message TenancyCurrentAccountProto {
   string id = 1;
@@ -380,6 +399,8 @@ message TenancyCurrentAccountProto {
   string onboarding_status = 5;
   string plan_code = 6;
   optional TenancyRoleProto role = 7;
+  optional string internal_stripe_customer_id = 8;
+  optional TenancyAccountPlanProto account_plan = 9;
 }
 message TenancyAccountSummaryProto {
   string id = 1;
@@ -389,6 +410,12 @@ message TenancyOtherAccountProto {
   string id = 1;
   string name = 2;
   string type = 3;
+}
+message TenancyPendingRegistrationProto {
+  string session_id = 1;
+  string plan_code = 2;
+  string step = 3;
+  google.protobuf.Timestamp created_at = 4;
 }
 message GetTenancyRequest {
   string user_id = 1;
@@ -404,6 +431,7 @@ message GetTenancyResponse {
   optional TenancyAccountSummaryProto owner_account = 3;
   repeated TenancyAccountSummaryProto sandboxes = 4;
   repeated TenancyOtherAccountProto other_accounts = 5;
+  optional TenancyPendingRegistrationProto pending_registration = 6;
 }
 message GetCurrentUserRequest {
   string user_id = 1;

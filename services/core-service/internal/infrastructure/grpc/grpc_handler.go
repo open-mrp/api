@@ -238,6 +238,10 @@ func RegisterUserService(server *grpc.Server, userSvc domain.UserSvc) {
 	handler.userSvc = userSvc
 }
 
+func RegisterTenancyService(server *grpc.Server, tenancySvc domain.TenancySvc) {
+	handler.tenancySvc = tenancySvc
+}
+
 func RegisterUtilsService(server *grpc.Server, utilsSvc domain.UtilsSvc) {
 	handler.utilsSvc = utilsSvc
 }

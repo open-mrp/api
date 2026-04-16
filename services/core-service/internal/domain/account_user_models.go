@@ -47,17 +47,14 @@ type ListAccountUsersResult struct {
 
 // CreateAccountUserParams are the parameters for creating an account user.
 type CreateAccountUserParams struct {
-	AccountID                                    string
-	Name                                         *string
-	Email                                        *string
-	Username                                     *string
-	Password                                     *string // #nosec G117 -- domain model field, not a hardcoded credential
-	RoleID                                       *string
-	DepartmentID                                 *string
-	IsSalesRep                                   bool
-	ReceivesOrderAcknowledgements                bool
-	ReceivesInvoiceNotifications                 bool
-	ReceivesPurchaseOrderSubmissionNotifications bool
+	AccountID               string
+	Name                    *string
+	Email                   *string
+	Username                *string
+	Password                *string // #nosec G117 -- domain model field, not a hardcoded credential
+	RoleID                  *string
+	DepartmentID            *string
+	NotificationPreferences []NotificationPreferenceItem
 }
 
 // NotificationPreference represents a stored notification preference.
@@ -66,25 +63,22 @@ type NotificationPreference struct {
 	NotificationTypeCode string
 }
 
-// UpdateNotificationPreferenceItem represents a single preference toggle.
-type UpdateNotificationPreferenceItem struct {
+// NotificationPreferenceItem represents a single preference toggle.
+type NotificationPreferenceItem struct {
 	NotificationTypeCode string
 	Enabled              bool
 }
 
-// UpdateNotificationPreferencesParams are the parameters for updating notification preferences.
-type UpdateNotificationPreferencesParams struct {
-	AccountUserID string
-	Preferences   []UpdateNotificationPreferenceItem
-}
-
 // UpdateAccountUserParams are the parameters for updating an account user.
+// NotificationPreferences: nil means "do not touch"; a non-nil (possibly empty)
+// slice applies the provided toggles.
 type UpdateAccountUserParams struct {
-	AccountID     string
-	AccountUserID string
-	Name          *string
-	Email         *string
-	Username      *string
-	RoleID        *string
-	DepartmentID  *string
+	AccountID               string
+	AccountUserID           string
+	Name                    *string
+	Email                   *string
+	Username                *string
+	RoleID                  *string
+	DepartmentID            *string
+	NotificationPreferences []NotificationPreferenceItem
 }

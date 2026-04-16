@@ -19,7 +19,7 @@ type CreateScanningStationRequest struct {
 	Notes *string `json:"notes,omitempty" nullable:"false"`
 	// Scanning station type.
 	Type constants.ScanningStationType `json:"type" validate:"required"`
-	// Whether material check is required.
+	// Whether material check is required. If `true`, the operator at this station must manually verify the material before proceeding.
 	MaterialCheckRequired bool `json:"material_check_required"`
 	// Department ID.
 	DepartmentID string `json:"department_id" validate:"required,max=191"`

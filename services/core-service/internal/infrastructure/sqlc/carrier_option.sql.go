@@ -453,6 +453,7 @@ UPDATE carrier_option SET
     name = COALESCE(?, name),
     code = COALESCE(?, code),
     is_portal_enabled = COALESCE(?, is_portal_enabled),
+    is_default = COALESCE(?, is_default),
     updated_at = NOW(3)
 WHERE id = ?
 AND account_id = ?
@@ -462,6 +463,7 @@ type UpdateCarrierOptionParams struct {
 	Name            sql.NullString
 	Code            sql.NullString
 	IsPortalEnabled sql.NullBool
+	IsDefault       sql.NullBool
 	ID              string
 	AccountID       sql.NullString
 }
@@ -471,6 +473,7 @@ func (q *Queries) UpdateCarrierOption(ctx context.Context, arg UpdateCarrierOpti
 		arg.Name,
 		arg.Code,
 		arg.IsPortalEnabled,
+		arg.IsDefault,
 		arg.ID,
 		arg.AccountID,
 	)

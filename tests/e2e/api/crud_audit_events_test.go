@@ -3,6 +3,7 @@
 package api_test
 
 import (
+	"encoding/json"
 	"net/url"
 	"testing"
 
@@ -10,7 +11,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const auditEventsPath = "/v1/core/audit-events"
+const (
+	auditEventsPath             = "/v1/core/audit-events"
+	auditEventResourceTypesPath = "/v1/core/audit-events/resource-types"
+)
 
 func TestAuditEvents_List(t *testing.T) {
 	t.Parallel()
@@ -40,6 +44,61 @@ func TestAuditEvents_FilterByAction(t *testing.T) {
 	require.NoError(t, err)
 	for _, item := range list.Data {
 		assert.Equal(t, "create", DataItemField(item, "action"))
+	}
+}
+
+func TestAuditEvents_FilterBySingleResourceType(t *testing.T) {
+	t.Parallel()
+	list, _, err := apiClient.GetList(auditEventsPath, url.Values{
+		"resource_types": {"user"},
+		"limit":          {"25"},
+	})
+	require.NoError(t, err)
+	for _, item := range list.Data {
+		assert.Equal(t, "user", DataItemField(item, "resource_type"))
+	}
+}
+
+func TestAuditEvents_FilterByMultipleResourceTypes(t *testing.T) {
+	t.Parallel()
+	allowed := map[string]struct{}{"user": {}, "account": {}}
+	list, _, err := apiClient.GetList(auditEventsPath, url.Values{
+		"resource_types": {"user", "account"},
+		"limit":          {"50"},
+	})
+	require.NoError(t, err)
+	for _, item := range list.Data {
+		got := DataItemField(item, "resource_type")
+		_, ok := allowed[got]
+		assert.True(t, ok, "resource_type %q not in {user, account}", got)
+	}
+}
+
+func TestAuditEvents_FilterByResourceTypeNoMatch(t *testing.T) {
+	t.Parallel()
+	list, _, err := apiClient.GetList(auditEventsPath, url.Values{
+		"resource_types": {"zzz_definitely_not_a_real_resource_type"},
+	})
+	require.NoError(t, err)
+	assertEmptyListData(t, list.Data)
+}
+
+func TestAuditEventResourceTypes_List(t *testing.T) {
+	t.Parallel()
+	list, _, err := apiClient.GetList(auditEventResourceTypesPath, nil)
+	require.NoError(t, err)
+	assert.Equal(t, "list", list.Object)
+	assert.Greater(t, len(list.Data), 50, "resource type enum should be substantial")
+
+	values := make(map[string]struct{}, len(list.Data))
+	for _, item := range list.Data {
+		var v string
+		require.NoError(t, json.Unmarshal(item, &v))
+		values[v] = struct{}{}
+	}
+	for _, expected := range []string{"audit_event", "user", "account", "sales_order"} {
+		_, ok := values[expected]
+		assert.True(t, ok, "expected resource type %q to be present", expected)
 	}
 }
 

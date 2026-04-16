@@ -221,6 +221,7 @@ type AccountRelation struct {
 	CarrierBillingType       sql.NullString
 	CarrierBillingAccount    sql.NullString
 	HubspotCompanyID         sql.NullString
+	CreditLimitID            sql.NullString
 }
 
 type AccountRelationNotificationPreference struct {

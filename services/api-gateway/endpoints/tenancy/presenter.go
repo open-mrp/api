@@ -7,6 +7,55 @@ import (
 	pb "github.com/augno/api/shared/proto/core"
 )
 
+func tenancyAccountPlanPresenter(p *pb.TenancyAccountPlanProto) *apiresource.TenancyAccountPlan {
+	if p == nil {
+		return nil
+	}
+
+	limits := make(map[string]*int32, len(p.Limits))
+	for _, entry := range p.Limits {
+		if entry == nil {
+			continue
+		}
+		if entry.Value != nil {
+			v := *entry.Value
+			limits[entry.Key] = &v
+		} else {
+			limits[entry.Key] = nil
+		}
+	}
+
+	features := make(map[string]bool, len(p.Features))
+	for key, enabled := range p.Features {
+		features[key] = enabled
+	}
+
+	return &apiresource.TenancyAccountPlan{
+		TypeID:        p.TypeId,
+		Object:        constants.ObjectTypeAccountPlan,
+		Name:          p.Name,
+		PlanTypeCode:  p.PlanTypeCode,
+		Version:       p.Version,
+		PricePerSeat:  p.PricePerSeat,
+		PricePerMonth: p.PricePerMonth,
+		SeatMinimum:   p.SeatMinimum,
+		Limits:        limits,
+		Features:      features,
+	}
+}
+
+func tenancyPendingRegistrationPresenter(pr *pb.TenancyPendingRegistrationProto) *apiresource.TenancyPendingRegistration {
+	if pr == nil {
+		return nil
+	}
+	return &apiresource.TenancyPendingRegistration{
+		SessionID: pr.SessionId,
+		PlanCode:  pr.PlanCode,
+		Step:      pr.Step,
+		CreatedAt: grpcutil.TimestampToTime(pr.CreatedAt),
+	}
+}
+
 func TenancyPresenter(resp *pb.GetTenancyResponse) *apiresource.Tenancy {
 	if resp == nil {
 		return &apiresource.Tenancy{
@@ -17,29 +66,37 @@ func TenancyPresenter(resp *pb.GetTenancyResponse) *apiresource.Tenancy {
 	}
 
 	result := &apiresource.Tenancy{
-		Object:        constants.ObjectTypeTenancy,
-		Sandboxes:     make([]apiresource.TenancySandboxAccount, 0, len(resp.Sandboxes)),
-		OtherAccounts: make([]apiresource.TenancyOtherAccount, 0, len(resp.OtherAccounts)),
+		Object:              constants.ObjectTypeTenancy,
+		Sandboxes:           make([]apiresource.TenancySandboxAccount, 0, len(resp.Sandboxes)),
+		OtherAccounts:       make([]apiresource.TenancyOtherAccount, 0, len(resp.OtherAccounts)),
+		PendingRegistration: tenancyPendingRegistrationPresenter(resp.PendingRegistration),
 	}
 
 	if resp.CurrentAccount != nil {
 		ca := &apiresource.TenancyCurrentAccount{
-			ID:               resp.CurrentAccount.Id,
-			Object:           constants.ObjectTypeAccount,
-			Name:             resp.CurrentAccount.Name,
-			Type:             resp.CurrentAccount.Type,
-			OnboardingStatus: resp.CurrentAccount.OnboardingStatus,
-			Plan:             resp.CurrentAccount.PlanCode,
-			Slug:             resp.CurrentAccount.Slug,
+			ID:                       resp.CurrentAccount.Id,
+			Object:                   constants.ObjectTypeAccount,
+			Name:                     resp.CurrentAccount.Name,
+			Type:                     resp.CurrentAccount.Type,
+			OnboardingStatus:         resp.CurrentAccount.OnboardingStatus,
+			Plan:                     resp.CurrentAccount.PlanCode,
+			Slug:                     resp.CurrentAccount.Slug,
+			InternalStripeCustomerID: resp.CurrentAccount.InternalStripeCustomerId,
+			AccountPlan:              tenancyAccountPlanPresenter(resp.CurrentAccount.AccountPlan),
 		}
 
 		if resp.CurrentAccount.Role != nil {
+			accountID := resp.CurrentAccount.Id
+			permissions := resp.CurrentAccount.Role.Permissions
 			ca.Role = &apiresource.Role{
-				ID:       resp.CurrentAccount.Role.Id,
-				Object:   constants.ObjectTypeRole,
-				Name:     resp.CurrentAccount.Role.Name,
-				TypeCode: constants.RoleTypeCode(resp.CurrentAccount.Role.RoleTypeCode),
-				Owner:    apiresource.SystemOwner(),
+				ID:          resp.CurrentAccount.Role.Id,
+				Object:      constants.ObjectTypeRole,
+				Name:        resp.CurrentAccount.Role.Name,
+				TypeCode:    constants.RoleTypeCode(resp.CurrentAccount.Role.RoleTypeCode),
+				Owner:       apiresource.NewOwner(&accountID),
+				Permissions: &permissions,
+				CreatedAt:   grpcutil.TimestampToTime(resp.CurrentAccount.Role.CreatedAt),
+				UpdatedAt:   grpcutil.TimestampToTime(resp.CurrentAccount.Role.UpdatedAt),
 			}
 		}
 

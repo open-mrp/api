@@ -225,6 +225,10 @@ type RegistrationSessionSvc interface {
 	// Authorization:
 	//   - Requires a user identity in context matching the session's user.
 	CompleteRegistration(ctx context.Context, sessionID string) (*CompleteRegistrationOutput, *apierror.APIError)
+
+	// GetIncompleteByUserID returns the most recent incomplete registration
+	// session for the given user, or (nil, nil) if none exists.
+	GetIncompleteByUserID(ctx context.Context, userID string) (*RegistrationSession, *apierror.APIError)
 }
 
 // CompleteRegistrationOutput holds the IDs of the newly created accounts.

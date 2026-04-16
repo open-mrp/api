@@ -619,6 +619,24 @@ func (r *rabbitMQ) setupExchangesAndQueues() error {
 		return err
 	}
 
+	// Billing sync seats command queue (handled by billing-service)
+	if err := r.declareAndBindQueue(
+		BillingCmdSyncSeatsQueue,
+		[]string{string(contracts.BillingCmdSyncSeats)},
+		ApplicationExchange,
+	); err != nil {
+		return err
+	}
+
+	// Billing report seat change command queue (handled by billing-service)
+	if err := r.declareAndBindQueue(
+		BillingCmdReportSeatChangeQueue,
+		[]string{string(contracts.BillingCmdReportSeatChange)},
+		ApplicationExchange,
+	); err != nil {
+		return err
+	}
+
 	// Agent command queue: execute run (handled by agent-service)
 	if err := r.declareAndBindQueue(
 		AgentCmdExecuteRunQueue,

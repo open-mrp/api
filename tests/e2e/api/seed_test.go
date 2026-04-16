@@ -75,6 +75,7 @@ const (
 	// Auth
 	SeedAdminRoleID    = "rl_mtg88e6u6fbu"
 	SeedSalesRepRoleID = "rl_hh6mrlkv08n8"
+	SeedScannerRoleID  = "rl_scanner"
 	SeedAPIKeyID       = "apky_pajbskcck3cabxajdh8h8"
 	SeedAccountUserID  = "acus_s83fjhyfmqen"
 
@@ -82,6 +83,11 @@ const (
 	SeedPriorityID   = "pi_01seednormal0000000000"
 	SeedPriorityCode = "normal"
 	SeedPriorityName = "Normal"
+
+	// Account Statuses (seeded in 0001_static_types.sql)
+	SeedAccountStatusID   = "acss_01seednormal000000"
+	SeedAccountStatusCode = "normal"
+	SeedAccountStatusName = "Normal"
 
 	// Sandboxes
 	SeedSandboxAccountID = "ac_sandbox_01k0a5smf9ekb8rqg12555zjqb"

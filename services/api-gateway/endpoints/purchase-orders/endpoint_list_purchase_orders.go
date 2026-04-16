@@ -24,6 +24,7 @@ type ListPurchaseOrdersRequest struct {
 	EndDate *string `query:"end_date"`
 }
 
+// TODO: stop returning PurchaseOrderSummary; return the full PurchaseOrder apiresource and use proper includes values to control expansion.
 type ListPurchaseOrdersEndpoint struct{}
 
 func (e *ListPurchaseOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPurchaseOrdersRequest, *apiresource.List[apiresource.PurchaseOrderSummary]] {

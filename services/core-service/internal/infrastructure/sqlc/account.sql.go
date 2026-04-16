@@ -513,6 +513,74 @@ func (q *Queries) HasActiveBillingPlan(ctx context.Context, id string) (bool, er
 	return has_plan, err
 }
 
+const listAccountPlanFeatures = `-- name: ListAccountPlanFeatures :many
+SELECT ` + "`" + `key` + "`" + `, enabled
+FROM account_plan_feature
+WHERE account_plan_id = ?
+`
+
+type ListAccountPlanFeaturesRow struct {
+	Key     string
+	Enabled bool
+}
+
+func (q *Queries) ListAccountPlanFeatures(ctx context.Context, accountPlanID string) ([]ListAccountPlanFeaturesRow, error) {
+	rows, err := q.db.QueryContext(ctx, listAccountPlanFeatures, accountPlanID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListAccountPlanFeaturesRow
+	for rows.Next() {
+		var i ListAccountPlanFeaturesRow
+		if err := rows.Scan(&i.Key, &i.Enabled); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAccountPlanLimits = `-- name: ListAccountPlanLimits :many
+SELECT ` + "`" + `key` + "`" + `, value
+FROM account_plan_limit
+WHERE account_plan_id = ?
+`
+
+type ListAccountPlanLimitsRow struct {
+	Key   string
+	Value sql.NullInt32
+}
+
+func (q *Queries) ListAccountPlanLimits(ctx context.Context, accountPlanID string) ([]ListAccountPlanLimitsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listAccountPlanLimits, accountPlanID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListAccountPlanLimitsRow
+	for rows.Next() {
+		var i ListAccountPlanLimitsRow
+		if err := rows.Scan(&i.Key, &i.Value); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateAccountBranding = `-- name: UpdateAccountBranding :execresult
 UPDATE account_branding SET
     support_email = COALESCE(?, support_email),

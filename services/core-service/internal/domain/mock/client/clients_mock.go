@@ -18,6 +18,45 @@ import (
 	gomock "go.uber.org/mock/gomock"
 )
 
+// MockCoreAuthClient is a mock of CoreAuthClient interface.
+type MockCoreAuthClient struct {
+	ctrl     *gomock.Controller
+	recorder *MockCoreAuthClientMockRecorder
+	isgomock struct{}
+}
+
+// MockCoreAuthClientMockRecorder is the mock recorder for MockCoreAuthClient.
+type MockCoreAuthClientMockRecorder struct {
+	mock *MockCoreAuthClient
+}
+
+// NewMockCoreAuthClient creates a new mock instance.
+func NewMockCoreAuthClient(ctrl *gomock.Controller) *MockCoreAuthClient {
+	mock := &MockCoreAuthClient{ctrl: ctrl}
+	mock.recorder = &MockCoreAuthClientMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockCoreAuthClient) EXPECT() *MockCoreAuthClientMockRecorder {
+	return m.recorder
+}
+
+// GetIncompleteRegistrationSession mocks base method.
+func (m *MockCoreAuthClient) GetIncompleteRegistrationSession(ctx context.Context, userID string) (*domain.IncompleteRegistrationSession, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetIncompleteRegistrationSession", ctx, userID)
+	ret0, _ := ret[0].(*domain.IncompleteRegistrationSession)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetIncompleteRegistrationSession indicates an expected call of GetIncompleteRegistrationSession.
+func (mr *MockCoreAuthClientMockRecorder) GetIncompleteRegistrationSession(ctx, userID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIncompleteRegistrationSession", reflect.TypeOf((*MockCoreAuthClient)(nil).GetIncompleteRegistrationSession), ctx, userID)
+}
+
 // MockShippoClient is a mock of ShippoClient interface.
 type MockShippoClient struct {
 	ctrl     *gomock.Controller

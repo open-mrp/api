@@ -24,6 +24,8 @@ type UpdateAccountUserRequest struct {
 	RoleID *string `json:"role_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
 	// Department ID.
 	DepartmentID *string `json:"department_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
+	// Notification preferences to toggle (external targets only).
+	Preferences []NotificationPreferenceItem `json:"preferences,omitempty"`
 }
 
 var sampleUpdateAccountUserName = apiresource.SampleUserName
@@ -51,7 +53,7 @@ func (e *UpdateAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upda
 		Request:           &UpdateAccountUserRequest{},
 		Response:          &apiresource.AccountUser{},
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateAccountUserRequest) (*apiresource.AccountUser, *apierror.APIError) {
 			return svc.(AccountUserSvc).UpdateAccountUser

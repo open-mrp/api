@@ -167,7 +167,7 @@ func TestAccountUsers_CreateAndGet(t *testing.T) {
 	expectAuditEvent(t, id, "account_user", "create")
 
 	// Cleanup
-	apiClient.Delete(accountUsersPath + "/" + id)
+	removeAccountUser(id)
 }
 
 func TestAccountUsers_CreateAndUpdateAllFields(t *testing.T) {
@@ -181,7 +181,6 @@ func TestAccountUsers_CreateAndUpdateAllFields(t *testing.T) {
 		"email":         email,
 		"role_id":       SeedAdminRoleID,
 		"department_id": SeedDepartmentID,
-		"is_sales_rep":  true,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, createResp.StatusCode, createResp.Body)
@@ -190,13 +189,14 @@ func TestAccountUsers_CreateAndUpdateAllFields(t *testing.T) {
 	id := jsonField(got, "id")
 	require.NotEmpty(t, id)
 	assertCreatedLocation(t, createResp.Header, id)
-	defer apiClient.Delete(accountUsersPath + "/" + id)
+	defer removeAccountUser(id)
 
 	assert.Equal(t, "account_user", jsonField(got, "object"))
 	assert.Equal(t, name, jsonField(got, "name"))
 	assert.Equal(t, email, jsonField(got, "email"))
 	assert.NotEmpty(t, jsonField(got, "status"))
-	assert.Equal(t, "false", jsonField(got, "is_verified"))
+	_, hasIsVerified := got["is_verified"]
+	assert.False(t, hasIsVerified, "is_verified should not be exposed on the resource")
 	assertNilField(t, got, "image_url")
 	assertNilField(t, got, "last_used_at")
 	assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
@@ -284,10 +284,10 @@ func TestAccountUsers_Update(t *testing.T) {
 	expectAuditEvent(t, id, "account_user", "update")
 
 	// Cleanup
-	apiClient.Delete(accountUsersPath + "/" + id)
+	removeAccountUser(id)
 }
 
-func TestAccountUsers_Delete(t *testing.T) {
+func TestAccountUsers_Remove(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-acuser-del")
 	email := name + "@e2e-test.augno.com"
@@ -301,7 +301,7 @@ func TestAccountUsers_Delete(t *testing.T) {
 	requireStatus(t, 201, createStatus, createBody)
 	id := jsonField(parseJSON(createBody), "id")
 
-	delStatus, delBody, err := apiClient.Delete(accountUsersPath + "/" + id)
+	delStatus, delBody, err := apiClient.Put(accountUsersPath+"/"+id+"/status", map[string]any{"status": "removed"})
 	require.NoError(t, err)
 	requireStatus(t, 200, delStatus, delBody)
 
@@ -309,7 +309,7 @@ func TestAccountUsers_Delete(t *testing.T) {
 	getStatus, _, err := apiClient.GetListRaw(accountUsersPath+"/"+id, nil)
 	require.NoError(t, err)
 	assert.True(t, getStatus == 200 || getStatus == 404,
-		"Deleted user should return 200 (with removed status) or 404, got %d", getStatus)
+		"Removed user should return 200 (with removed status) or 404, got %d", getStatus)
 
 	// Audit
 	expectAuditEvent(t, id, "account_user", "create")
@@ -331,8 +331,8 @@ func TestAccountUsers_LockAndUnlock(t *testing.T) {
 	requireStatus(t, 201, createStatus, createBody)
 	id := jsonField(parseJSON(createBody), "id")
 
-	// Lock
-	lockStatus, lockBody, err := apiClient.Post(accountUsersPath+"/"+id+"/lock", nil, newIdempotencyKey())
+	// Lock via status=disabled
+	lockStatus, lockBody, err := apiClient.Put(accountUsersPath+"/"+id+"/status", map[string]any{"status": "disabled"})
 	require.NoError(t, err)
 	requireStatus(t, 200, lockStatus, lockBody)
 
@@ -342,8 +342,13 @@ func TestAccountUsers_LockAndUnlock(t *testing.T) {
 	requireStatus(t, 200, getStatus, getBody)
 	assert.Equal(t, "disabled", jsonField(parseJSON(getBody), "status"))
 
-	// Unlock
-	unlockStatus, unlockBody, err := apiClient.Post(accountUsersPath+"/"+id+"/unlock", nil, newIdempotencyKey())
+	// Re-applying status=disabled is an idempotent no-op.
+	idemStatus, idemBody, err := apiClient.Put(accountUsersPath+"/"+id+"/status", map[string]any{"status": "disabled"})
+	require.NoError(t, err)
+	requireStatus(t, 200, idemStatus, idemBody)
+
+	// Unlock via status=active
+	unlockStatus, unlockBody, err := apiClient.Put(accountUsersPath+"/"+id+"/status", map[string]any{"status": "active"})
 	require.NoError(t, err)
 	requireStatus(t, 200, unlockStatus, unlockBody)
 
@@ -358,10 +363,10 @@ func TestAccountUsers_LockAndUnlock(t *testing.T) {
 	expectAuditEvent(t, id, "account_user", "update")
 
 	// Cleanup
-	apiClient.Delete(accountUsersPath + "/" + id)
+	removeAccountUser(id)
 }
 
-func TestAccountUsers_DeleteAndRestore(t *testing.T) {
+func TestAccountUsers_RemoveAndRestore(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-acuser-rest")
 	email := name + "@e2e-test.augno.com"
@@ -375,13 +380,13 @@ func TestAccountUsers_DeleteAndRestore(t *testing.T) {
 	requireStatus(t, 201, createStatus, createBody)
 	id := jsonField(parseJSON(createBody), "id")
 
-	// Delete
-	delStatus, delBody, err := apiClient.Delete(accountUsersPath + "/" + id)
+	// Remove via status=removed
+	delStatus, delBody, err := apiClient.Put(accountUsersPath+"/"+id+"/status", map[string]any{"status": "removed"})
 	require.NoError(t, err)
 	requireStatus(t, 200, delStatus, delBody)
 
-	// Restore
-	restoreStatus, restoreBody, err := apiClient.Post(accountUsersPath+"/"+id+"/restore", nil, newIdempotencyKey())
+	// Restore via status=active
+	restoreStatus, restoreBody, err := apiClient.Put(accountUsersPath+"/"+id+"/status", map[string]any{"status": "active"})
 	require.NoError(t, err)
 	requireStatus(t, 200, restoreStatus, restoreBody)
 
@@ -399,7 +404,15 @@ func TestAccountUsers_DeleteAndRestore(t *testing.T) {
 	expectAuditEvent(t, id, "account_user", "update") // restore emits update
 
 	// Cleanup
-	apiClient.Delete(accountUsersPath + "/" + id)
+	removeAccountUser(id)
+}
+
+func TestAccountUsers_StatusInvalidTransition(t *testing.T) {
+	t.Parallel()
+	// An unknown status value must be rejected.
+	status, _, err := apiClient.Put(accountUsersPath+"/"+SeedAccountUserID+"/status", map[string]any{"status": "bogus"})
+	require.NoError(t, err)
+	assert.Equal(t, 400, status, "invalid status value should return 400")
 }
 
 func TestAccountUsers_Idempotent(t *testing.T) {
@@ -426,7 +439,7 @@ func TestAccountUsers_Idempotent(t *testing.T) {
 	requireStatus(t, 201, status2, body2)
 	assert.Equal(t, id1, jsonField(parseJSON(body2), "id"))
 
-	apiClient.Delete(accountUsersPath + "/" + id1)
+	removeAccountUser(id1)
 }
 
 func TestAccountUsers_ListIncludeRemoved(t *testing.T) {
@@ -434,7 +447,7 @@ func TestAccountUsers_ListIncludeRemoved(t *testing.T) {
 	name := uniqueName("e2e-acuser-rem")
 	email := name + "@e2e-test.augno.com"
 
-	// Create and delete a user
+	// Create and remove a user
 	createStatus, createBody, err := apiClient.Post(accountUsersPath, map[string]any{
 		"name":    name,
 		"email":   email,
@@ -444,9 +457,9 @@ func TestAccountUsers_ListIncludeRemoved(t *testing.T) {
 	requireStatus(t, 201, createStatus, createBody)
 	id := jsonField(parseJSON(createBody), "id")
 
-	apiClient.Delete(accountUsersPath + "/" + id)
+	removeAccountUser(id)
 
-	// List with include_removed should find the deleted user
+	// List with include_removed should find the removed user
 	list, _, err := apiClient.GetList(accountUsersPath, url.Values{"include_removed": {"true"}})
 	require.NoError(t, err)
 
@@ -458,6 +471,152 @@ func TestAccountUsers_ListIncludeRemoved(t *testing.T) {
 		}
 	}
 	assert.True(t, found, "Removed user should appear when include_removed=true")
+}
+
+// removeAccountUser is a test helper that soft-deletes a user via PUT /status.
+func removeAccountUser(id string) {
+	_, _, _ = apiClient.Put(accountUsersPath+"/"+id+"/status", map[string]any{"status": "removed"})
+}
+
+// --- Scanner creation ---
+
+func TestAccountUsers_CreateScannerWithPassword(t *testing.T) {
+	t.Parallel()
+	username := uniqueName("e2e-scn-user")
+
+	status, body, err := apiClient.Post(accountUsersPath, map[string]any{
+		"username": username,
+		"password": "ScannerPass123!",
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, status, body)
+
+	got := parseJSON(body)
+	id := jsonField(got, "id")
+	require.NotEmpty(t, id)
+	defer removeAccountUser(id)
+
+	assert.Equal(t, username, jsonField(got, "username"))
+	assertNilField(t, got, "email")
+}
+
+func TestAccountUsers_CreateScannerMissingPasswordFails(t *testing.T) {
+	t.Parallel()
+	username := uniqueName("e2e-scn-nopw")
+
+	status, _, err := apiClient.Post(accountUsersPath, map[string]any{
+		"username": username,
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	assert.Equal(t, 400, status, "scanner users (username-only) must provide a password")
+}
+
+func TestAccountUsers_CreateNonScannerWithPasswordFails(t *testing.T) {
+	t.Parallel()
+	name := uniqueName("e2e-acu-nopw")
+	email := name + "@e2e-test.augno.com"
+
+	status, _, err := apiClient.Post(accountUsersPath, map[string]any{
+		"name":     name,
+		"email":    email,
+		"role_id":  SeedAdminRoleID,
+		"password": "SomePassword123!",
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	assert.Equal(t, 400, status, "non-scanner users cannot set a password directly")
+}
+
+// --- Status transitions ---
+
+func TestAccountUsers_StatusNoopIsIdempotent(t *testing.T) {
+	t.Parallel()
+	name := uniqueName("e2e-acu-noop")
+	email := name + "@e2e-test.augno.com"
+
+	createStatus, createBody, err := apiClient.Post(accountUsersPath, map[string]any{
+		"name":    name,
+		"email":   email,
+		"role_id": SeedSalesRepRoleID,
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, createStatus, createBody)
+	id := jsonField(parseJSON(createBody), "id")
+	defer removeAccountUser(id)
+
+	// User is already active; putting status=active must be a no-op.
+	status, body, err := apiClient.Put(accountUsersPath+"/"+id+"/status", map[string]any{"status": "active"})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	// Status must still be active.
+	_, getBody, err := apiClient.GetListRaw(accountUsersPath+"/"+id, nil)
+	require.NoError(t, err)
+	assert.Equal(t, "active", jsonField(parseJSON(getBody), "status"))
+}
+
+func TestAccountUsers_StatusLockAdminFails(t *testing.T) {
+	t.Parallel()
+	// The seeded admin account user cannot be transitioned to disabled.
+	status, _, err := apiClient.Put(accountUsersPath+"/"+SeedAccountUserID+"/status", map[string]any{"status": "disabled"})
+	require.NoError(t, err)
+	assert.Equal(t, 400, status, "admin users cannot be locked")
+}
+
+func TestAccountUsers_StatusLockAfterRemoveFails(t *testing.T) {
+	t.Parallel()
+	name := uniqueName("e2e-acu-lock-rm")
+	email := name + "@e2e-test.augno.com"
+
+	createStatus, createBody, err := apiClient.Post(accountUsersPath, map[string]any{
+		"name":    name,
+		"email":   email,
+		"role_id": SeedSalesRepRoleID,
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, createStatus, createBody)
+	id := jsonField(parseJSON(createBody), "id")
+
+	// Remove first.
+	rmStatus, rmBody, err := apiClient.Put(accountUsersPath+"/"+id+"/status", map[string]any{"status": "removed"})
+	require.NoError(t, err)
+	requireStatus(t, 200, rmStatus, rmBody)
+
+	// Attempting to lock a removed user must fail.
+	lockStatus, _, err := apiClient.Put(accountUsersPath+"/"+id+"/status", map[string]any{"status": "disabled"})
+	require.NoError(t, err)
+	assert.Equal(t, 400, lockStatus, "removed users cannot be locked")
+}
+
+func TestAccountUsers_StatusRejectsMissingField(t *testing.T) {
+	t.Parallel()
+	status, _, err := apiClient.Put(accountUsersPath+"/"+SeedAccountUserID+"/status", map[string]any{})
+	require.NoError(t, err)
+	assert.Equal(t, 400, status, "missing status field should return 400")
+}
+
+// --- Scanner password endpoint ---
+//
+// The scanner-password endpoint (POST /v1/auth/scanner-passwords) lives under
+// the auth group with session-based middleware, and requires a requester
+// password. The e2e harness authenticates with an API key (no password), so
+// the endpoint cannot be fully exercised here. A schema-level happy-path test
+// is sufficient at the e2e layer; the behavioral guards (scanner-role only,
+// requester-password verification) are covered by unit tests in the core
+// service and the auth middleware tests.
+
+func TestAuth_ScannerPasswordsEndpointRegistered(t *testing.T) {
+	t.Parallel()
+	// Sending the request without a session should be rejected at the auth
+	// layer with 401/403, proving the route is wired up without requiring a
+	// full session-auth setup in e2e.
+	status, _, err := apiClient.Post("/v1/auth/scanner-passwords", map[string]any{
+		"account_user_id":    SeedAccountUserID,
+		"requester_password": "irrelevant-Password1!",
+		"new_password":       "irrelevant-NewPassword1!",
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	assert.Contains(t, []int{400, 401, 403}, status,
+		"scanner-passwords route should be reachable; got %d", status)
 }
 
 // ──────────────────────────────────────────────
@@ -482,13 +641,14 @@ func TestAccountUsers_OmittedFields(t *testing.T) {
 		got := parseJSON(body)
 		id := jsonField(got, "id")
 		require.NotEmpty(t, id)
-		defer apiClient.Delete(accountUsersPath + "/" + id)
+		defer removeAccountUser(id)
 
 		assert.Equal(t, "account_user", jsonField(got, "object"))
 		assert.Equal(t, name, jsonField(got, "name"))
 		assert.Equal(t, email, jsonField(got, "email"))
 		assert.NotEmpty(t, jsonField(got, "status"))
-		assert.Equal(t, "false", jsonField(got, "is_verified"))
+		_, hasIsVerified := got["is_verified"]
+		assert.False(t, hasIsVerified, "is_verified should not be exposed on the resource")
 		assertNilField(t, got, "image_url")
 		assertNilField(t, got, "last_used_at")
 		assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
@@ -509,7 +669,6 @@ func TestAccountUsers_OmittedFields(t *testing.T) {
 			"email":         email,
 			"role_id":       SeedAdminRoleID,
 			"department_id": SeedDepartmentID,
-			"is_sales_rep":  true,
 		}, newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 201, createStatus, createBody)
@@ -517,7 +676,7 @@ func TestAccountUsers_OmittedFields(t *testing.T) {
 		created := parseJSON(createBody)
 		id := jsonField(created, "id")
 		require.NotEmpty(t, id)
-		defer apiClient.Delete(accountUsersPath + "/" + id)
+		defer removeAccountUser(id)
 		origCreatedAt := jsonField(created, "created_at")
 
 		// Update ONLY name

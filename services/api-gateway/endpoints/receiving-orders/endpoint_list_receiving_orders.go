@@ -24,6 +24,7 @@ type ListReceivingOrdersRequest struct {
 	EndDate *string `query:"end_date"`
 }
 
+// TODO: stop returning ReceivingOrderSummary; return the full ReceivingOrder apiresource and use proper includes values to control expansion.
 type ListReceivingOrdersEndpoint struct{}
 
 func (e *ListReceivingOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListReceivingOrdersRequest, *apiresource.List[apiresource.ReceivingOrderSummary]] {

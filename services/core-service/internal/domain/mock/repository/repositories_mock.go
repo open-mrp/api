@@ -343,6 +343,36 @@ func (mr *MockAccountRepoMockRecorder) HasActiveBillingPlan(ctx, accountID any) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasActiveBillingPlan", reflect.TypeOf((*MockAccountRepo)(nil).HasActiveBillingPlan), ctx, accountID)
 }
 
+// ListPlanFeatures mocks base method.
+func (m *MockAccountRepo) ListPlanFeatures(ctx context.Context, accountPlanID string) (map[string]bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListPlanFeatures", ctx, accountPlanID)
+	ret0, _ := ret[0].(map[string]bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListPlanFeatures indicates an expected call of ListPlanFeatures.
+func (mr *MockAccountRepoMockRecorder) ListPlanFeatures(ctx, accountPlanID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPlanFeatures", reflect.TypeOf((*MockAccountRepo)(nil).ListPlanFeatures), ctx, accountPlanID)
+}
+
+// ListPlanLimits mocks base method.
+func (m *MockAccountRepo) ListPlanLimits(ctx context.Context, accountPlanID string) (map[string]*int32, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListPlanLimits", ctx, accountPlanID)
+	ret0, _ := ret[0].(map[string]*int32)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListPlanLimits indicates an expected call of ListPlanLimits.
+func (mr *MockAccountRepoMockRecorder) ListPlanLimits(ctx, accountPlanID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPlanLimits", reflect.TypeOf((*MockAccountRepo)(nil).ListPlanLimits), ctx, accountPlanID)
+}
+
 // UpdateAgentSpendingCap mocks base method.
 func (m *MockAccountRepo) UpdateAgentSpendingCap(ctx context.Context, accountID string, capCents *int64) *apierror.APIError {
 	m.ctrl.T.Helper()

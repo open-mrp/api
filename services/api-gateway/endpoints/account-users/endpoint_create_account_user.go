@@ -19,20 +19,14 @@ type CreateAccountUserRequest struct {
 	Email *string `json:"email" validate:"omitnil,custom_email,max=255"`
 	// Username.
 	Username *string `json:"username" validate:"omitempty,max=255"`
-	// Password.
+	// Password (only valid for scanner-role users backing a scanning station).
 	Password *string `json:"password"` // #nosec G117 -- API request field for user password input
 	// Role ID. Expandable.
 	RoleID *string `json:"role_id,omitempty" validate:"omitempty,max=191"`
 	// Department ID. Expandable.
 	DepartmentID *string `json:"department_id,omitempty" validate:"omitempty,max=191"`
-	// Whether the user is a sales representative.
-	IsSalesRep *bool `json:"is_sales_rep,omitempty"`
-	// Whether the user receives order acknowledgement notifications.
-	ReceivesOrderAcknowledgements bool `json:"receives_order_acknowledgements"`
-	// Whether the user receives invoice notifications.
-	ReceivesInvoiceNotifications bool `json:"receives_invoice_notifications"`
-	// Whether the user receives purchase order submission notifications.
-	ReceivesPurchaseOrderSubmissionNotifications bool `json:"receives_purchase_order_submission_notifications"`
+	// Notification preferences to create for the new user (external targets only).
+	Preferences []NotificationPreferenceItem `json:"preferences,omitempty"`
 }
 
 var sampleCreateAccountUserName = apiresource.SampleUserName
@@ -40,15 +34,15 @@ var sampleCreateAccountUserEmail = apiresource.SampleUserEmail
 var sampleCreateAccountUserUsername = apiresource.SampleUserUsername
 var sampleCreateAccountUserPassword = apiresource.SampleUserPassword
 var sampleCreateAccountUserRoleID = apiresource.SampleRoleID
-var sampleCreateAccountUserIsSalesRep = false
 var sampleCreateAccountUserRequest = &CreateAccountUserRequest{
-	Name:                          &sampleCreateAccountUserName,
-	Email:                         &sampleCreateAccountUserEmail,
-	Username:                      &sampleCreateAccountUserUsername,
-	Password:                      &sampleCreateAccountUserPassword,
-	RoleID:                        &sampleCreateAccountUserRoleID,
-	IsSalesRep:                    &sampleCreateAccountUserIsSalesRep,
-	ReceivesOrderAcknowledgements: true,
+	Name:     &sampleCreateAccountUserName,
+	Email:    &sampleCreateAccountUserEmail,
+	Username: &sampleCreateAccountUserUsername,
+	Password: &sampleCreateAccountUserPassword,
+	RoleID:   &sampleCreateAccountUserRoleID,
+	Preferences: []NotificationPreferenceItem{
+		{NotificationTypeCode: constants.AccountRelationNotificationTypeOrderAcknowledgement, Enabled: true},
+	},
 }
 
 func (*CreateAccountUserRequest) SchemaExample() any {
@@ -67,7 +61,7 @@ func (e *CreateAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*Crea
 		Request:           &CreateAccountUserRequest{},
 		Response:          &apiresource.AccountUser{},
 		SuccessStatusCode: http.StatusCreated,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
 		Extras: apiendpoint.APIEndpointExtras{
 			ShieldRequestBody: true,

@@ -28,18 +28,6 @@ func optStringToFreightPolicy(s *string) *constants.FreightPolicy {
 	return &v
 }
 
-func customerSummaryToProto(cs *domain.CustomerSummary) *pb.CustomerSummaryProto {
-	return &pb.CustomerSummaryProto{
-		Id:                cs.ID,
-		Name:              cs.Name,
-		Number:            cs.Number,
-		Email:             cs.Email,
-		CustomerTypeGroup: cs.CustomerTypeGroup,
-		Status:            string(cs.Status),
-		CreatedAt:         timestamppb.New(cs.CreatedAt),
-	}
-}
-
 func customerAddressToProto(addr *domain.CustomerAddress) *pb.CustomerAddressProto {
 	if addr == nil {
 		return nil
@@ -249,15 +237,16 @@ func (h *gRPCHandler) ListCustomers(ctx context.Context, req *pb.ListCustomersRe
 	params.FreightPolicyCodes = req.FreightStatusCodes
 	params.CarrierIDs = req.CarrierIds
 	params.ServiceLevelIDs = req.ServiceLevelIds
+	params.Includes = req.Includes
 
 	result, apiErr := h.customerSvc.ListCustomers(ctx, params)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
-	customers := make([]*pb.CustomerSummaryProto, len(result.Items))
+	customers := make([]*pb.CustomerProto, len(result.Items))
 	for i, c := range result.Items {
-		customers[i] = customerSummaryToProto(c)
+		customers[i] = customerToProto(c)
 	}
 
 	return &pb.ListCustomersResponse{

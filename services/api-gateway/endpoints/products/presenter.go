@@ -15,8 +15,12 @@ func ProductPresenter(proto *pb.ProductFullInfo) apiresource.Product {
 		return apiresource.Product{}
 	}
 
+	// The public identifier for a Product is its item_id: every URL handler
+	// (Get/Update/Delete/ChangeProductLine) treats the `{id}` path parameter
+	// as the item id when calling the core service. Returning the item_id here
+	// keeps list and single-GET responses consistent and routable.
 	result := apiresource.Product{
-		ID:            proto.Id,
+		ID:            proto.ItemId,
 		Object:        constants.ObjectTypeProduct,
 		IsPortalReady: proto.IsPortalReady,
 		CreatedAt:     grpcutil.TimestampToTime(proto.CreatedAt),

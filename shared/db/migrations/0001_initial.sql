@@ -462,7 +462,7 @@ CREATE TABLE `account_plan` (
   KEY `account_plan_plan_type_code_idx` (`plan_type_code`),
   KEY `account_plan_plan_type_code_effective_at_idx` (`plan_type_code`,`effective_at`),
   FULLTEXT KEY `account_plan_name_idx` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=53 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=59 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -481,7 +481,7 @@ CREATE TABLE `account_plan_feature` (
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (`id`),
   UNIQUE KEY `account_plan_feature_account_plan_id_key_key` (`account_plan_id`,`key`)
-) ENGINE=InnoDB AUTO_INCREMENT=157 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=175 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -500,7 +500,7 @@ CREATE TABLE `account_plan_limit` (
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (`id`),
   UNIQUE KEY `account_plan_limit_account_plan_id_key_key` (`account_plan_id`,`key`)
-) ENGINE=InnoDB AUTO_INCREMENT=209 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=233 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -619,7 +619,7 @@ CREATE TABLE `account_relation` (
   `carrier_billing_type` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `carrier_billing_account` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `hubspot_company_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `credit_limit_id` varchar(191) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `credit_limit_id` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `account_relation_owner_account_id_counterparty_account_id_ac_key` (`owner_account_id`,`counterparty_account_id`,`account_relation_role_code`),
   UNIQUE KEY `account_relation_credit_limit_id_key` (`credit_limit_id`),
@@ -881,7 +881,7 @@ CREATE TABLE `api_key` (
   KEY `api_key_owner_account_id_idx` (`owner_account_id`),
   KEY `api_key_role_id_idx` (`role_id`),
   FULLTEXT KEY `api_key_name_idx` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=29 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=33 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -941,7 +941,7 @@ CREATE TABLE `audit_event` (
   KEY `audit_event_occurred_at_idx` (`occurred_at`),
   KEY `audit_event_action_idx` (`action`),
   KEY `audit_event_account_idx` (`account_id`,`occurred_at` DESC,`type_id` DESC)
-) ENGINE=InnoDB AUTO_INCREMENT=49 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=51 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2680,6 +2680,7 @@ CREATE TABLE `request_log` (
   KEY `request_log_normalized_route_idx` (`normalized_route`),
   KEY `request_log_idempotency_key_id_idx` (`idempotency_key_id`),
   KEY `request_log_target_account_id_occurred_at_id_idx` (`target_account_id`,`occurred_at` DESC,`id` DESC),
+  KEY `request_log_target_account_id_identity_type_occurred_at_id_idx` (`target_account_id`,`identity_type`,`occurred_at` DESC,`id` DESC),
   FULLTEXT KEY `request_log_method_host_path_normalized_route_user_agent_ref_idx` (`method`,`host`,`path`,`normalized_route`,`user_agent`,`referrer`,`error_code`,`error_message`,`internal_error_message`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -2901,7 +2902,7 @@ CREATE TABLE `sandbox_account` (
   UNIQUE KEY `sandbox_account_account_id_key` (`account_id`),
   KEY `sandbox_account_owner_account_id_idx` (`owner_account_id`),
   KEY `sandbox_account_account_id_idx` (`account_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -3633,7 +3634,7 @@ CREATE TABLE `user` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-04-09 12:50:00
+-- Dump completed on 2026-04-15 16:12:23
 
 -- +goose Down
 

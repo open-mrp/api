@@ -93,17 +93,20 @@ message GetAccountUserRequest {
 message GetAccountUserResponse {
   AccountUserDetail account_user = 1;
 }
+message NotificationPreferenceItem {
+  string notification_type_code = 1;
+  bool enabled = 2;
+}
 message CreateAccountUserRequest {
+  reserved 7;
+  reserved "is_sales_rep";
   optional string name = 1;
   optional string email = 2;
   optional string username = 3;
   optional string password = 4;
   optional string role_id = 5;
   optional string department_id = 6;
-  optional bool is_sales_rep = 7;
-  bool receives_order_acknowledgements = 8;
-  bool receives_invoice_notifications = 9;
-  bool receives_purchase_order_submission_notifications = 10;
+  repeated NotificationPreferenceItem notification_preferences = 8;
 }
 message CreateAccountUserResponse {
   AccountUserDetail account_user = 1;
@@ -115,37 +118,21 @@ message UpdateAccountUserRequest {
   optional string username = 4;
   optional string role_id = 5;
   optional string department_id = 6;
+  // When non-empty, replaces the toggle state of the listed preferences.
+  repeated NotificationPreferenceItem notification_preferences = 7;
 }
 message UpdateAccountUserResponse {
   AccountUserDetail account_user = 1;
 }
-message DeleteAccountUserRequest {
+message UpdateAccountUserStatusRequest {
   string account_user_id = 1;
-}
-message LockAccountUserRequest {
-  string account_user_id = 1;
-}
-message UnlockAccountUserRequest {
-  string account_user_id = 1;
-}
-message RestoreAccountUserRequest {
-  string account_user_id = 1;
+  // Target status_code: "active", "disabled", or "removed".
+  string status_code = 2;
 }
 message UpdateAccountUserPasswordRequest {
   string account_user_id = 1;
   string requester_password = 2;
   string new_password = 3;
-}
-message UpdateNotificationPreferenceItem {
-  string notification_type_code = 1;
-  bool enabled = 2;
-}
-message UpdateNotificationPreferencesRequest {
-  string account_user_id = 1;
-  repeated UpdateNotificationPreferenceItem preferences = 2;
-}
-message UpdateNotificationPreferencesResponse {
-  AccountUserDetail account_user = 1;
 }
 message SalesTargetProto {
   string id = 1;

@@ -111,26 +111,6 @@ type CustomerNotificationPreferences struct {
 	AcceptsInvoiceEmails bool `json:"accepts_invoice_emails"`
 }
 
-// Lightweight customer representation for list responses.
-type CustomerSummary struct {
-	// Customer ID.
-	ID string `json:"id" validate:"required"`
-	// Resource type identifier.
-	Object constants.ObjectType `json:"object" validate:"required,enum=customer_summary"`
-	// Display name.
-	Name string `json:"name" validate:"required"`
-	// Customer number.
-	Number string `json:"number" validate:"required"`
-	// Email address.
-	Email *string `json:"email"`
-	// Customer type group name.
-	CustomerTypeGroup *string `json:"customer_type_group"`
-	// Account status code.
-	Status constants.AccountStatusCode `json:"status" validate:"required"`
-	// Creation timestamp.
-	CreatedAt time.Time `json:"created_at" validate:"required"`
-}
-
 // --- Sample data ---
 
 var sampleCustomerEmail = "orders@acme.com"
@@ -188,24 +168,6 @@ var SampleCustomer = &Customer{
 
 func (*Customer) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleCustomer)
-}
-
-var sampleCustomerSummaryEmail = "orders@acme.com"
-var sampleCustomerTypeGroupName = "Wholesale Customers"
-
-var SampleCustomerSummary = &CustomerSummary{
-	ID:                SampleCustomerID,
-	Object:            constants.ObjectTypeCustomerSummary,
-	Name:              SampleCustomerName,
-	Number:            SampleCustomerNumber,
-	Email:             &sampleCustomerSummaryEmail,
-	CustomerTypeGroup: &sampleCustomerTypeGroupName,
-	Status:            constants.AccountStatusCodeNormal,
-	CreatedAt:         timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-}
-
-func (*CustomerSummary) SchemaExample() any {
-	return apiexample.ValidateAndMarshalToMap(SampleCustomerSummary)
 }
 
 // Product frequently ordered by a customer.

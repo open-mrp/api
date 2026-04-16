@@ -84,6 +84,7 @@ services:
       INTEGRATION_ENCRYPTION_KEY: "4815cd74058e6ce82216c9b89dac44dbd171371243342f96fa7a6d8c81c1a491"
       INTEGRATION_ENCRYPTION_KEY_ID: dev-key-1
       FRONTEND_URL: http://localhost:4200
+      AUTH_SERVICE_URL: auth-service:9092
     depends_on:
       mysql-e2e:
         condition: service_healthy

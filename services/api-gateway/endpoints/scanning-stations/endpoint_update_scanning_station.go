@@ -23,7 +23,7 @@ type UpdateScanningStationRequest struct {
 	LabelSizeCode *constants.LabelSizeCode `json:"label_size,omitempty" nullable:"false"`
 	// Label type code.
 	LabelTypeCode *constants.LabelTypeCode `json:"label_type,omitempty" nullable:"false"`
-	// Whether material check is required.
+	// Whether material check is required. If `true`, the operator at this station must manually verify the material before proceeding.
 	MaterialCheckRequired *bool `json:"material_check_required,omitempty" nullable:"false"`
 }
 

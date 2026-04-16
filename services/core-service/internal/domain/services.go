@@ -254,26 +254,14 @@ type AccountUserSvc interface {
 	// CreateAccountUser creates a new account user.
 	CreateAccountUser(ctx context.Context, params CreateAccountUserParams) (*AccountUserDetail, *apierror.APIError)
 
-	// UpdateAccountUser partially updates an account user.
+	// UpdateAccountUser partially updates an account user, optionally including notification preferences.
 	UpdateAccountUser(ctx context.Context, params UpdateAccountUserParams) (*AccountUserDetail, *apierror.APIError)
 
-	// DeleteAccountUser soft-deletes an account user.
-	DeleteAccountUser(ctx context.Context, accountUserID string) *apierror.APIError
+	// UpdateAccountUserStatus transitions an account user to the given target status.
+	UpdateAccountUserStatus(ctx context.Context, accountUserID string, targetStatus constants.AccountUserStatus) *apierror.APIError
 
-	// LockAccountUser disables an account user and revokes their refresh tokens.
-	LockAccountUser(ctx context.Context, accountUserID string) *apierror.APIError
-
-	// UnlockAccountUser re-enables a disabled account user.
-	UnlockAccountUser(ctx context.Context, accountUserID string) *apierror.APIError
-
-	// RestoreAccountUser restores a soft-deleted account user.
-	RestoreAccountUser(ctx context.Context, accountUserID string) *apierror.APIError
-
-	// UpdateAccountUserPassword updates the password for an account user.
+	// UpdateAccountUserPassword updates the password for a scanner-role account user.
 	UpdateAccountUserPassword(ctx context.Context, accountUserID, requesterPassword, newPassword string) *apierror.APIError
-
-	// UpdateNotificationPreferences updates notification preferences for an account user.
-	UpdateNotificationPreferences(ctx context.Context, params UpdateNotificationPreferencesParams) (*AccountUserDetail, *apierror.APIError)
 }
 
 type SalesTargetSvc interface {

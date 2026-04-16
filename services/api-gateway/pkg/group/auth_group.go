@@ -15,11 +15,15 @@ type AuthEndpointGroup struct {
 
 type AuthEndpointGroupConfig struct {
 	AuthClient *grpcclient.AuthServiceClient
+	CoreClient *grpcclient.CoreServiceClient
 }
 
 func (c *AuthEndpointGroupConfig) validate() error {
 	if c.AuthClient == nil {
 		return fmt.Errorf("auth endpoint group: auth client is required")
+	}
+	if c.CoreClient == nil {
+		return fmt.Errorf("auth endpoint group: core client is required")
 	}
 	return nil
 }
@@ -31,6 +35,7 @@ func (*AuthEndpointGroup) Materialize(config *AuthEndpointGroupConfig) *AuthEndp
 
 	authController := authep.NewAuthSvc(&authep.AuthSvcConfig{
 		AuthClient: config.AuthClient.Client,
+		CoreClient: config.CoreClient.Client,
 	})
 
 	authMw := middleware.AuthMiddleware(&middleware.AuthMiddlewareConfig{
@@ -50,6 +55,7 @@ func (*AuthEndpointGroup) Materialize(config *AuthEndpointGroupConfig) *AuthEndp
 	resetPasswordEndpoint := (&authep.ResetPasswordEndpoint{}).Materialize().WithService(inner, authController)
 	revokeRefreshTokenEndpoint := (&authep.RevokeRefreshTokenEndpoint{}).Materialize().WithMiddleware(authMw).WithService(inner, authController)
 	updatePasswordEndpoint := (&authep.UpdatePasswordEndpoint{}).Materialize().WithMiddleware(authMw).WithService(inner, authController)
+	updateScannerPasswordEndpoint := (&authep.UpdateScannerPasswordEndpoint{}).Materialize().WithMiddleware(authMw).WithService(inner, authController)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		loginEndpoint,
@@ -60,6 +66,7 @@ func (*AuthEndpointGroup) Materialize(config *AuthEndpointGroupConfig) *AuthEndp
 		resetPasswordEndpoint,
 		revokeRefreshTokenEndpoint,
 		updatePasswordEndpoint,
+		updateScannerPasswordEndpoint,
 	}
 
 	return &AuthEndpointGroup{inner}

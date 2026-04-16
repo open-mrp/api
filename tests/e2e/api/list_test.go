@@ -93,7 +93,8 @@ func TestListEndpoints_SearchNonsense(t *testing.T) {
 // objectFieldExcludedPaths are endpoints whose items don't have an "object" field.
 // These represent real production issues that should be tracked separately.
 var objectFieldExcludedPaths = map[string]bool{
-	"list-inventories": true, // inventories resource missing object field
+	"list-inventories":                true, // inventories resource missing object field
+	"list-audit-event-resource-types": true, // returns plain enum string values, not resource objects
 }
 
 func TestListEndpoints_ItemObjectField(t *testing.T) {

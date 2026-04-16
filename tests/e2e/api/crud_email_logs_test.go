@@ -101,3 +101,13 @@ func TestEmailLogs_GetByID_NotFound(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 404, getStatus)
 }
+
+func TestEmailLogs_SentByNullWithoutInclude(t *testing.T) {
+	t.Parallel()
+	getStatus, getBody, err := apiClient.GetListRaw(emailLogsPath+"/"+SeedEmailLogID1, nil)
+	require.NoError(t, err)
+	requireStatus(t, 200, getStatus, getBody)
+
+	got := parseJSON(getBody)
+	assert.Nil(t, got["sent_by"], "sent_by should be null without ?include=sent_by")
+}

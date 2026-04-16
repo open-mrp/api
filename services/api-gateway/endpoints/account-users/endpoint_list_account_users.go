@@ -31,7 +31,7 @@ func (e *ListAccountUsersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListA
 		Request:           &ListAccountUsersRequest{},
 		Response:          &apiresource.List[apiresource.AccountUser]{},
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListAccountUsersRequest) (*apiresource.List[apiresource.AccountUser], *apierror.APIError) {
 			return svc.(AccountUserSvc).ListAccountUsers

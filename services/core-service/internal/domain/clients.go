@@ -2,9 +2,26 @@ package domain
 
 import (
 	"context"
+	"time"
 
 	apierror "github.com/augno/api/shared/errors"
 )
+
+// IncompleteRegistrationSession is the subset of a pending registration session
+// returned to the tenancy response.
+type IncompleteRegistrationSession struct {
+	SessionID string
+	PlanCode  string
+	Step      string
+	CreatedAt time.Time
+}
+
+// CoreAuthClient is the core-service's client for calling into auth-service.
+type CoreAuthClient interface {
+	// GetIncompleteRegistrationSession returns the user's most recent incomplete
+	// registration session, or (nil, nil) if none exists.
+	GetIncompleteRegistrationSession(ctx context.Context, userID string) (*IncompleteRegistrationSession, *apierror.APIError)
+}
 
 // ShippoCarrierAccount represents a carrier account registered with Shippo.
 type ShippoCarrierAccount struct {

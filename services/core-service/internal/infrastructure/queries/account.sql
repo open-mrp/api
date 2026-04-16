@@ -167,6 +167,16 @@ SELECT EXISTS(
     WHERE a.id = ? AND ab.account_plan_id IS NOT NULL
 ) AS has_plan;
 
+-- name: ListAccountPlanLimits :many
+SELECT `key`, value
+FROM account_plan_limit
+WHERE account_plan_id = ?;
+
+-- name: ListAccountPlanFeatures :many
+SELECT `key`, enabled
+FROM account_plan_feature
+WHERE account_plan_id = ?;
+
 -- name: GetAccountNameByID :one
 SELECT name FROM account WHERE id = ?;
 

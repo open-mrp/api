@@ -50,20 +50,42 @@ type ListCustomersRequest struct {
 
 type ListCustomersEndpoint struct{}
 
-func (e *ListCustomersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListCustomersRequest, *apiresource.List[apiresource.CustomerSummary]] {
-	return &apiendpoint.APIEndpoint[*ListCustomersRequest, *apiresource.List[apiresource.CustomerSummary]]{
+func (e *ListCustomersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListCustomersRequest, *apiresource.List[apiresource.Customer]] {
+	return &apiendpoint.APIEndpoint[*ListCustomersRequest, *apiresource.List[apiresource.Customer]]{
 		Title:             "List Customers",
 		Description:       "Returns a paginated list of customers for the current account.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/customers",
 		Request:           &ListCustomersRequest{},
-		Response:          &apiresource.List[apiresource.CustomerSummary]{},
+		Response:          &apiresource.List[apiresource.Customer]{},
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
-		ServiceHandler: func(svc any) func(ctx context.Context, req *ListCustomersRequest) (*apiresource.List[apiresource.CustomerSummary], *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *ListCustomersRequest) (*apiresource.List[apiresource.Customer], *apierror.APIError) {
 			return svc.(CustomerSvc).ListCustomers
 		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeCustomer,
+			Fields: []string{
+				"bill_to_address",
+				"ship_to_address",
+				"type",
+				"parent_account",
+				"freight_preferences.carrier",
+				"freight_preferences.service_level",
+				"defaults.payment_term",
+				"defaults.shipping_term",
+				"defaults.sales_rep",
+				"defaults.priority",
+				"contact_info",
+				"freight_preferences",
+				"defaults",
+				"notification_preferences",
+				"price_groups",
+				"child_accounts",
+				"credit_limit",
+			},
+		}),
 	}
 }

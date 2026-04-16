@@ -88,6 +88,9 @@ service AuthService {
 
   // Exchanges a magic-login token (from the "already registered" email) for a token pair.
   rpc MagicLogin(MagicLoginRequest) returns (LoginResponse);
+
+  // Returns the caller's most recent incomplete registration session, or no session if none exists.
+  rpc GetIncompleteRegistrationSession(GetIncompleteRegistrationSessionRequest) returns (GetIncompleteRegistrationSessionResponse);
 }
 
 message CompleteRegistrationRequest {
@@ -417,6 +420,21 @@ message ConfirmRegistrationPaymentRequest {
 message ConfirmRegistrationPaymentResponse {
   string status = 1;
   optional string payment_method_id = 2;
+}
+
+message GetIncompleteRegistrationSessionRequest {
+  string user_id = 1;
+}
+
+message GetIncompleteRegistrationSessionResponse {
+  optional IncompleteRegistrationSessionProto session = 1;
+}
+
+message IncompleteRegistrationSessionProto {
+  string session_id = 1;
+  string plan_code = 2;
+  string step = 3;
+  google.protobuf.Timestamp created_at = 4;
 }
 
 message SetupRegistrationBillingResponse {

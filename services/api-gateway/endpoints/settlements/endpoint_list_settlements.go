@@ -22,6 +22,7 @@ type ListSettlementsRequest struct {
 	EndDate *string `query:"end_date"`
 }
 
+// TODO: stop returning SettlementSummary; return the full Settlement apiresource and use proper includes values to control expansion.
 type ListSettlementsEndpoint struct{}
 
 func (e *ListSettlementsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSettlementsRequest, *apiresource.List[apiresource.SettlementSummary]] {

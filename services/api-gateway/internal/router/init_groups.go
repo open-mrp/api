@@ -765,6 +765,7 @@ func (r *router) InitAuthEndpointGroups(config AuthRouterConfig) {
 	// Auth
 	authGroup := (&httpgroup.AuthEndpointGroup{}).Materialize(&httpgroup.AuthEndpointGroupConfig{
 		AuthClient: config.AuthClient,
+		CoreClient: config.CoreClient,
 	})
 	if authGroup != nil {
 		registry.RegisterGroup(authGroup.APIEndpointGroup)

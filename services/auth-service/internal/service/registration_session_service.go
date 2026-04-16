@@ -170,6 +170,19 @@ func (s *registrationSessionSvcImpl) CreateSession(ctx context.Context, input do
 	}
 }
 
+// GetIncompleteByUserID returns the most recent incomplete registration session
+// for the given user, or (nil, nil) if none exists.
+func (s *registrationSessionSvcImpl) GetIncompleteByUserID(ctx context.Context, userID string) (*domain.RegistrationSession, *apierror.APIError) {
+	ctx, span := registrationSessionSvcTracer.Start(ctx, "service.registration_session.get_incomplete_by_user_id")
+	defer span.End()
+
+	session, apiErr := s.repos.NewRegistrationSessionRepo().GetIncompleteByUserID(ctx, userID)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return session, nil
+}
+
 // GetSession returns the registration session for the given type ID.
 //
 // 1. Look up the session by its type ID in the repository.

@@ -87,17 +87,20 @@ func (m *requestLogSvcImpl) ListRequestLogs(ctx context.Context, req *ListReques
 	requestedIncludes := expandedRequestLogIncludeKeys(appctx.GetRequestedIncludeKeys(ctx))
 
 	pbReq := &pb.ListRequestLogsRequest{
-		Query:      req.Query,
-		Method:     req.Method,
-		ErrorCode:  req.ErrorCode,
-		AccountId:  req.AccountID,
-		ActorId:    req.ActorID,
-		ActorType:  req.ActorType,
-		ActorName:  req.ActorName,
-		ExactMatch: req.ExactMatch,
-		Cursor:     req.Cursor,
-		Limit:      req.Limit,
-		Includes:   requestedIncludes,
+		Query:            req.Query,
+		Method:           req.Method,
+		ErrorCode:        req.ErrorCode,
+		AccountId:        req.AccountID,
+		ActorIds:         req.ActorIDs,
+		ActorType:        req.ActorType,
+		ActorName:        req.ActorName,
+		NormalizedRoutes: req.NormalizedRoutes,
+		Hosts:            req.Hosts,
+		MinLatencyUs:     req.MinLatencyUs,
+		ExactMatch:       req.ExactMatch,
+		Cursor:           req.Cursor,
+		Limit:            req.Limit,
+		Includes:         requestedIncludes,
 	}
 
 	if req.StartDate != nil && !req.StartDate.IsZero() {

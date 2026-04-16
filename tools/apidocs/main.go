@@ -105,6 +105,7 @@ func main() {
 		*(&httpgroup.HealthEndpointGroup{}).Materialize(httpgroup.HealthEndpointGroupConfig{}).APIEndpointGroup,
 		*(&httpgroup.AuthEndpointGroup{}).Materialize(&httpgroup.AuthEndpointGroupConfig{
 			AuthClient: authClient,
+			CoreClient: coreClient,
 		}).APIEndpointGroup,
 		*(&httpgroup.APIKeysEndpointGroup{}).Materialize(&httpgroup.APIKeysEndpointGroupConfig{
 			AuthClient: authClient,

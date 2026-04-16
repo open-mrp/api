@@ -1275,20 +1275,6 @@ func (mr *MockAccountUserSvcMockRecorder) CreateAccountUser(ctx, params any) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAccountUser", reflect.TypeOf((*MockAccountUserSvc)(nil).CreateAccountUser), ctx, params)
 }
 
-// DeleteAccountUser mocks base method.
-func (m *MockAccountUserSvc) DeleteAccountUser(ctx context.Context, accountUserID string) *apierror.APIError {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteAccountUser", ctx, accountUserID)
-	ret0, _ := ret[0].(*apierror.APIError)
-	return ret0
-}
-
-// DeleteAccountUser indicates an expected call of DeleteAccountUser.
-func (mr *MockAccountUserSvcMockRecorder) DeleteAccountUser(ctx, accountUserID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAccountUser", reflect.TypeOf((*MockAccountUserSvc)(nil).DeleteAccountUser), ctx, accountUserID)
-}
-
 // GetAccountUser mocks base method.
 func (m *MockAccountUserSvc) GetAccountUser(ctx context.Context, accountUserID string) (*domain.AccountUserDetail, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -1317,48 +1303,6 @@ func (m *MockAccountUserSvc) ListAccountUsers(ctx context.Context, params domain
 func (mr *MockAccountUserSvcMockRecorder) ListAccountUsers(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAccountUsers", reflect.TypeOf((*MockAccountUserSvc)(nil).ListAccountUsers), ctx, params)
-}
-
-// LockAccountUser mocks base method.
-func (m *MockAccountUserSvc) LockAccountUser(ctx context.Context, accountUserID string) *apierror.APIError {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "LockAccountUser", ctx, accountUserID)
-	ret0, _ := ret[0].(*apierror.APIError)
-	return ret0
-}
-
-// LockAccountUser indicates an expected call of LockAccountUser.
-func (mr *MockAccountUserSvcMockRecorder) LockAccountUser(ctx, accountUserID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LockAccountUser", reflect.TypeOf((*MockAccountUserSvc)(nil).LockAccountUser), ctx, accountUserID)
-}
-
-// RestoreAccountUser mocks base method.
-func (m *MockAccountUserSvc) RestoreAccountUser(ctx context.Context, accountUserID string) *apierror.APIError {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RestoreAccountUser", ctx, accountUserID)
-	ret0, _ := ret[0].(*apierror.APIError)
-	return ret0
-}
-
-// RestoreAccountUser indicates an expected call of RestoreAccountUser.
-func (mr *MockAccountUserSvcMockRecorder) RestoreAccountUser(ctx, accountUserID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RestoreAccountUser", reflect.TypeOf((*MockAccountUserSvc)(nil).RestoreAccountUser), ctx, accountUserID)
-}
-
-// UnlockAccountUser mocks base method.
-func (m *MockAccountUserSvc) UnlockAccountUser(ctx context.Context, accountUserID string) *apierror.APIError {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UnlockAccountUser", ctx, accountUserID)
-	ret0, _ := ret[0].(*apierror.APIError)
-	return ret0
-}
-
-// UnlockAccountUser indicates an expected call of UnlockAccountUser.
-func (mr *MockAccountUserSvcMockRecorder) UnlockAccountUser(ctx, accountUserID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnlockAccountUser", reflect.TypeOf((*MockAccountUserSvc)(nil).UnlockAccountUser), ctx, accountUserID)
 }
 
 // UpdateAccountUser mocks base method.
@@ -1390,19 +1334,18 @@ func (mr *MockAccountUserSvcMockRecorder) UpdateAccountUserPassword(ctx, account
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAccountUserPassword", reflect.TypeOf((*MockAccountUserSvc)(nil).UpdateAccountUserPassword), ctx, accountUserID, requesterPassword, newPassword)
 }
 
-// UpdateNotificationPreferences mocks base method.
-func (m *MockAccountUserSvc) UpdateNotificationPreferences(ctx context.Context, params domain.UpdateNotificationPreferencesParams) (*domain.AccountUserDetail, *apierror.APIError) {
+// UpdateAccountUserStatus mocks base method.
+func (m *MockAccountUserSvc) UpdateAccountUserStatus(ctx context.Context, accountUserID string, targetStatus constants.AccountUserStatus) *apierror.APIError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateNotificationPreferences", ctx, params)
-	ret0, _ := ret[0].(*domain.AccountUserDetail)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
+	ret := m.ctrl.Call(m, "UpdateAccountUserStatus", ctx, accountUserID, targetStatus)
+	ret0, _ := ret[0].(*apierror.APIError)
+	return ret0
 }
 
-// UpdateNotificationPreferences indicates an expected call of UpdateNotificationPreferences.
-func (mr *MockAccountUserSvcMockRecorder) UpdateNotificationPreferences(ctx, params any) *gomock.Call {
+// UpdateAccountUserStatus indicates an expected call of UpdateAccountUserStatus.
+func (mr *MockAccountUserSvcMockRecorder) UpdateAccountUserStatus(ctx, accountUserID, targetStatus any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateNotificationPreferences", reflect.TypeOf((*MockAccountUserSvc)(nil).UpdateNotificationPreferences), ctx, params)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAccountUserStatus", reflect.TypeOf((*MockAccountUserSvc)(nil).UpdateAccountUserStatus), ctx, accountUserID, targetStatus)
 }
 
 // MockSalesTargetSvc is a mock of SalesTargetSvc interface.

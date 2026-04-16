@@ -278,7 +278,17 @@ SELECT
     au.role_id,
     r.name AS role_name,
     r.role_type_code,
-    sa.owner_account_id
+    r.created_at AS role_created_at,
+    r.updated_at AS role_updated_at,
+    sa.owner_account_id,
+    ab.internal_stripe_customer_id,
+    ap.type_id AS plan_type_id,
+    ap.name AS plan_name,
+    ap.plan_type_code AS plan_plan_type_code,
+    ap.version AS plan_version,
+    ap.price_per_seat AS plan_price_per_seat,
+    ap.price_per_month AS plan_price_per_month,
+    ap.seat_minimum AS plan_seat_minimum
 FROM account_user au
 JOIN account a ON au.account_id = a.id
 LEFT JOIN role r ON au.role_id = r.id
@@ -289,18 +299,28 @@ WHERE au.user_id = ?
 `
 
 type FindTenancyAccountsByUserIDRow struct {
-	AccountID             string
-	AccountName           string
-	AccountTypeCode       string
-	OnboardingStatusCode  string
-	PlanCode              string
-	AccountUserID         string
-	AccountUserStatusCode string
-	LastUsedAt            sql.NullTime
-	RoleID                sql.NullString
-	RoleName              sql.NullString
-	RoleTypeCode          sql.NullString
-	OwnerAccountID        sql.NullString
+	AccountID                string
+	AccountName              string
+	AccountTypeCode          string
+	OnboardingStatusCode     string
+	PlanCode                 string
+	AccountUserID            string
+	AccountUserStatusCode    string
+	LastUsedAt               sql.NullTime
+	RoleID                   sql.NullString
+	RoleName                 sql.NullString
+	RoleTypeCode             sql.NullString
+	RoleCreatedAt            sql.NullTime
+	RoleUpdatedAt            sql.NullTime
+	OwnerAccountID           sql.NullString
+	InternalStripeCustomerID sql.NullString
+	PlanTypeID               sql.NullString
+	PlanName                 sql.NullString
+	PlanPlanTypeCode         sql.NullString
+	PlanVersion              sql.NullInt32
+	PlanPricePerSeat         sql.NullString
+	PlanPricePerMonth        sql.NullString
+	PlanSeatMinimum          sql.NullInt32
 }
 
 func (q *Queries) FindTenancyAccountsByUserID(ctx context.Context, userID string) ([]FindTenancyAccountsByUserIDRow, error) {
@@ -324,7 +344,17 @@ func (q *Queries) FindTenancyAccountsByUserID(ctx context.Context, userID string
 			&i.RoleID,
 			&i.RoleName,
 			&i.RoleTypeCode,
+			&i.RoleCreatedAt,
+			&i.RoleUpdatedAt,
 			&i.OwnerAccountID,
+			&i.InternalStripeCustomerID,
+			&i.PlanTypeID,
+			&i.PlanName,
+			&i.PlanPlanTypeCode,
+			&i.PlanVersion,
+			&i.PlanPricePerSeat,
+			&i.PlanPricePerMonth,
+			&i.PlanSeatMinimum,
 		); err != nil {
 			return nil, err
 		}

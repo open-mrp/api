@@ -20,12 +20,15 @@ type tenancySvcImpl struct {
 	accountRepo         domain.AccountRepo
 	userRepo            domain.UserRepo
 	sandboxAccountRepo  domain.SandboxAccountRepo
+	rolePermissionRepo  domain.RolePermissionRepo
+	authClient          domain.CoreAuthClient
 	s3Client            s3client.ObjectStore
 	userPhotosBucket    string
 }
 
 type TenancySvcConfig struct {
 	RepoFactory      domain.RepoFactory
+	AuthClient       domain.CoreAuthClient
 	S3Client         s3client.ObjectStore
 	UserPhotosBucket string
 }
@@ -33,6 +36,9 @@ type TenancySvcConfig struct {
 func (c *TenancySvcConfig) validate() error {
 	if c.RepoFactory == nil {
 		return fmt.Errorf("tenancy service: repo factory is required")
+	}
+	if c.AuthClient == nil {
+		return fmt.Errorf("tenancy service: auth client is required")
 	}
 	if c.S3Client == nil {
 		return fmt.Errorf("tenancy service: s3 client is required")
@@ -51,6 +57,8 @@ func NewTenancySvc(config *TenancySvcConfig) domain.TenancySvc {
 		accountRepo:         config.RepoFactory.NewAccountRepo(),
 		userRepo:            config.RepoFactory.NewUserRepo(),
 		sandboxAccountRepo:  config.RepoFactory.NewSandboxAccountRepo(),
+		rolePermissionRepo:  config.RepoFactory.NewRolePermissionRepo(),
+		authClient:          config.AuthClient,
 		s3Client:            config.S3Client,
 		userPhotosBucket:    config.UserPhotosBucket,
 	}
@@ -98,11 +106,19 @@ func (s *tenancySvcImpl) GetTenancy(ctx context.Context, userID string, targetAc
 		currentAccount = &sorted[0]
 	}
 
-	if currentAccount == nil {
-		return &domain.Tenancy{HasTenancy: false}, nil
+	pendingRegistration, apiErr := s.loadPendingRegistration(ctx, userID)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return s.buildTenancyResponse(ctx, currentAccount, accounts)
+	if currentAccount == nil {
+		return &domain.Tenancy{
+			HasTenancy:          false,
+			PendingRegistration: pendingRegistration,
+		}, nil
+	}
+
+	return s.buildTenancyResponse(ctx, currentAccount, accounts, pendingRegistration)
 }
 
 func (s *tenancySvcImpl) SwitchAccount(ctx context.Context, userID, accountID string) (*domain.Tenancy, *apierror.APIError) {
@@ -154,7 +170,12 @@ func (s *tenancySvcImpl) SwitchAccount(ctx context.Context, userID, accountID st
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return s.buildTenancyResponse(ctx, targetAccount, accounts)
+	pendingRegistration, apiErr := s.loadPendingRegistration(ctx, userID)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	return s.buildTenancyResponse(ctx, targetAccount, accounts, pendingRegistration)
 }
 
 func (s *tenancySvcImpl) GetCurrentUser(ctx context.Context, userID string, targetAccountID *string) (*domain.UserRecord, *apierror.APIError) {
@@ -195,13 +216,69 @@ func (s *tenancySvcImpl) ListCustomerAccountsForUser(ctx context.Context, userID
 	return accounts, nil
 }
 
-func (s *tenancySvcImpl) buildTenancyResponse(ctx context.Context, currentAccount *domain.TenancyAccount, activeAccounts []domain.TenancyAccount) (*domain.Tenancy, *apierror.APIError) {
+func (s *tenancySvcImpl) loadPendingRegistration(ctx context.Context, userID string) (*domain.TenancyPendingRegistration, *apierror.APIError) {
+	session, apiErr := s.authClient.GetIncompleteRegistrationSession(ctx, userID)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	if session == nil {
+		return nil, nil
+	}
+	return &domain.TenancyPendingRegistration{
+		SessionID: session.SessionID,
+		PlanCode:  session.PlanCode,
+		Step:      session.Step,
+		CreatedAt: session.CreatedAt,
+	}, nil
+}
+
+func (s *tenancySvcImpl) buildTenancyResponse(ctx context.Context, currentAccount *domain.TenancyAccount, activeAccounts []domain.TenancyAccount, pendingRegistration *domain.TenancyPendingRegistration) (*domain.Tenancy, *apierror.APIError) {
 	var role *domain.TenancyRole
 	if currentAccount.RoleID != nil {
 		role = &domain.TenancyRole{
 			ID:           *currentAccount.RoleID,
 			Name:         derefStr(currentAccount.RoleName),
 			RoleTypeCode: derefStr(currentAccount.RoleTypeCode),
+		}
+		if currentAccount.RoleCreatedAt != nil {
+			role.CreatedAt = *currentAccount.RoleCreatedAt
+		}
+		if currentAccount.RoleUpdatedAt != nil {
+			role.UpdatedAt = *currentAccount.RoleUpdatedAt
+		}
+
+		permMap, apiErr := s.rolePermissionRepo.FindByRoleID(ctx, *currentAccount.RoleID)
+		if apiErr != nil {
+			return nil, apiErr
+		}
+		permissions := make([]string, 0, len(permMap))
+		for code := range permMap {
+			permissions = append(permissions, code)
+		}
+		sort.Strings(permissions)
+		role.Permissions = permissions
+	}
+
+	var accountPlan *domain.TenancyAccountPlan
+	if currentAccount.Plan != nil {
+		limits, apiErr := s.accountRepo.ListPlanLimits(ctx, currentAccount.Plan.TypeID)
+		if apiErr != nil {
+			return nil, apiErr
+		}
+		features, apiErr := s.accountRepo.ListPlanFeatures(ctx, currentAccount.Plan.TypeID)
+		if apiErr != nil {
+			return nil, apiErr
+		}
+		accountPlan = &domain.TenancyAccountPlan{
+			TypeID:        currentAccount.Plan.TypeID,
+			Name:          currentAccount.Plan.Name,
+			PlanTypeCode:  currentAccount.Plan.PlanTypeCode,
+			Version:       currentAccount.Plan.Version,
+			PricePerSeat:  currentAccount.Plan.PricePerSeat,
+			PricePerMonth: currentAccount.Plan.PricePerMonth,
+			SeatMinimum:   currentAccount.Plan.SeatMinimum,
+			Limits:        limits,
+			Features:      features,
 		}
 	}
 
@@ -278,17 +355,20 @@ func (s *tenancySvcImpl) buildTenancyResponse(ctx context.Context, currentAccoun
 	return &domain.Tenancy{
 		HasTenancy: true,
 		CurrentAccount: &domain.TenancyCurrentAccount{
-			ID:               currentAccount.AccountID,
-			Name:             currentAccount.AccountName,
-			Type:             currentAccount.AccountTypeCode,
-			OnboardingStatus: currentAccount.OnboardingStatusCode,
-			PlanCode:         currentAccount.PlanCode,
-			Slug:             slug,
-			Role:             role,
+			ID:                       currentAccount.AccountID,
+			Name:                     currentAccount.AccountName,
+			Type:                     currentAccount.AccountTypeCode,
+			OnboardingStatus:         currentAccount.OnboardingStatusCode,
+			PlanCode:                 currentAccount.PlanCode,
+			Slug:                     slug,
+			Role:                     role,
+			InternalStripeCustomerID: currentAccount.InternalStripeCustomerID,
+			AccountPlan:              accountPlan,
 		},
-		Sandboxes:     sandboxes,
-		OwnerAccount:  ownerAccount,
-		OtherAccounts: otherAccounts,
+		Sandboxes:           sandboxes,
+		OwnerAccount:        ownerAccount,
+		OtherAccounts:       otherAccounts,
+		PendingRegistration: pendingRegistration,
 	}, nil
 }
 

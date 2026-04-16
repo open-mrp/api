@@ -16,14 +16,27 @@ func lightRatePresenter(r *pb.RateInfo) *apiresource.Rate {
 		Object: constants.ObjectTypeRate,
 		Value:  r.Value,
 		NumeratorUnit: &apiresource.Unit{
-			ID:     r.NumeratorUnitId,
-			Object: constants.ObjectTypeUnit,
+			ID:           r.NumeratorUnitId,
+			Object:       constants.ObjectTypeUnit,
+			Name:         r.NumeratorUnitName,
+			Abbreviation: r.NumeratorUnitAbbreviation,
+			Type:         constants.UnitType(r.NumeratorUnitType),
 		},
 		DenominatorUnit: &apiresource.Unit{
-			ID:     r.DenominatorUnitId,
-			Object: constants.ObjectTypeUnit,
+			ID:           r.DenominatorUnitId,
+			Object:       constants.ObjectTypeUnit,
+			Name:         r.DenominatorUnitName,
+			Abbreviation: r.DenominatorUnitAbbreviation,
+			Type:         constants.UnitType(r.DenominatorUnitType),
 		},
-		DisplayValue: "",
+		DisplayValue: apiresource.FormatRateDisplayValue(
+			r.Value,
+			r.NumeratorUnitAbbreviation,
+			r.NumeratorUnitType,
+			r.DenominatorUnitAbbreviation,
+		),
+		CreatedAt: grpcutil.TimestampToTime(r.CreatedAt),
+		UpdatedAt: grpcutil.TimestampToTime(r.UpdatedAt),
 	}
 }
 
@@ -32,10 +45,13 @@ func lightItemCategoryPresenter(c *pb.ItemCategoryInfo) *apiresource.ItemCategor
 		return nil
 	}
 	return &apiresource.ItemCategory{
-		ID:     c.Id,
-		Object: constants.ObjectTypeItemCategory,
-		Name:   c.Name,
-		Owner:  apiresource.NewOwner(c.AccountId),
+		ID:        c.Id,
+		Object:    constants.ObjectTypeItemCategory,
+		Name:      c.Name,
+		Type:      constants.ItemCategoryType(c.ItemCategoryTypeCode),
+		Owner:     apiresource.NewOwner(c.AccountId),
+		CreatedAt: grpcutil.TimestampToTime(c.CreatedAt),
+		UpdatedAt: grpcutil.TimestampToTime(c.UpdatedAt),
 	}
 }
 

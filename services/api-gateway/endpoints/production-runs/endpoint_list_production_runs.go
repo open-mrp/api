@@ -24,6 +24,7 @@ type ListProductionRunsRequest struct {
 	EndDate *string `query:"end_date"`
 }
 
+// TODO: stop returning ProductionRunSummary; return the full ProductionRun apiresource and use proper includes values to control expansion.
 type ListProductionRunsEndpoint struct{}
 
 func (e *ListProductionRunsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListProductionRunsRequest, *apiresource.List[apiresource.ProductionRunSummary]] {

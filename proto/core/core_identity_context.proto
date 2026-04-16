@@ -407,15 +407,6 @@ message CustomerProto {
   google.protobuf.Timestamp updated_at = 28;
   optional CustomerCreditLimitProto credit_limit = 29;
 }
-message CustomerSummaryProto {
-  string id = 1;
-  string name = 2;
-  string number = 3;
-  optional string email = 4;
-  optional string customer_type_group = 5;
-  string status = 6;
-  google.protobuf.Timestamp created_at = 7;
-}
 message CustomerCarrierProto {
   string id = 1;
   string name = 2;
@@ -503,9 +494,10 @@ message ListCustomersRequest {
   optional string postal_code = 17;
   optional google.protobuf.Timestamp start_date = 18;
   optional google.protobuf.Timestamp end_date = 19;
+  repeated string includes = 20;
 }
 message ListCustomersResponse {
-  repeated CustomerSummaryProto customers = 1;
+  repeated CustomerProto customers = 1;
   PageInfo page_info = 2;
 }
 message GetCustomerRequest {

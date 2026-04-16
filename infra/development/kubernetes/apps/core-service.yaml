@@ -1,121 +1,126 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-    name: core-service
+  name: core-service
 spec:
-    replicas: 1
-    selector:
-        matchLabels:
-            app: core-service
-    template:
-        metadata:
-            labels:
-                app: core-service
-        spec:
-            containers:
-                - name: core-service
-                  image: augno-api/core-service
-                  ports:
-                      - containerPort: 9092
-                  resources:
-                      requests:
-                          memory: "64Mi"
-                          cpu: "100m"
-                      limits:
-                          memory: "128Mi"
-                          cpu: "200m"
-                  env:
-                      - name: OTEL_ENVIRONMENT
-                        valueFrom:
-                            configMapKeyRef:
-                                key: PLATFORM
-                                name: app-config
-                      - name: OTEL_EXPORTER_OTLP_ENDPOINT
-                        value: http://otel-collector:4318
-                      - name: OTEL_EXPORTER_OTLP_PROTOCOL
-                        value: http
-                      - name: OTEL_EXPORTER_OTLP_INSECURE
-                        value: "true"
-                      - name: DB_URL
-                        valueFrom:
-                            secretKeyRef:
-                                name: database-credentials
-                                key: core-service-uri
-                      - name: RABBITMQ_URI
-                        valueFrom:
-                            secretKeyRef:
-                                name: rabbitmq-credentials
-                                key: uri
-                      - name: PLATFORM
-                        valueFrom:
-                            configMapKeyRef:
-                                key: PLATFORM
-                                name: app-config
-                      - name: CURSOR_HMAC_KEY
-                        valueFrom:
-                            secretKeyRef:
-                                name: cursor-hmac-key
-                                key: key
-                      - name: GOOGLE_MAPS_API_KEY
-                        valueFrom:
-                            secretKeyRef:
-                                name: google-maps-credentials
-                                key: api-key
-                      - name: INTEGRATION_ENCRYPTION_KEY
-                        valueFrom:
-                            secretKeyRef:
-                                name: integration-credentials
-                                key: encryption-key
-                      - name: INTEGRATION_ENCRYPTION_KEY_ID
-                        valueFrom:
-                            secretKeyRef:
-                                name: integration-credentials
-                                key: encryption-key-id
-                      - name: AWS_REGION
-                        valueFrom:
-                            configMapKeyRef:
-                                key: AWS_REGION
-                                name: app-config
-                      - name: ACCOUNT_PHOTOS_BUCKET
-                        valueFrom:
-                            configMapKeyRef:
-                                key: ACCOUNT_PHOTOS_BUCKET
-                                name: app-config
-                      - name: USER_PHOTOS_BUCKET
-                        valueFrom:
-                            configMapKeyRef:
-                                key: USER_PHOTOS_BUCKET
-                                name: app-config
-                      - name: SHIPPING_LABELS_BUCKET
-                        valueFrom:
-                            configMapKeyRef:
-                                key: SHIPPING_LABELS_BUCKET
-                                name: app-config
-                      - name: AWS_ACCESS_KEY_ID
-                        valueFrom:
-                            secretKeyRef:
-                                name: aws-credentials
-                                key: access-key-id
-                      - name: AWS_SECRET_ACCESS_KEY
-                        valueFrom:
-                            secretKeyRef:
-                                name: aws-credentials
-                                key: secret-access-key
-                      - name: FRONTEND_URL
-                        valueFrom:
-                            configMapKeyRef:
-                                key: FRONTEND_URL
-                                name: app-config
+  replicas: 1
+  selector:
+    matchLabels:
+      app: core-service
+  template:
+    metadata:
+      labels:
+        app: core-service
+    spec:
+      containers:
+        - name: core-service
+          image: augno-api/core-service
+          ports:
+            - containerPort: 9092
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "100m"
+            limits:
+              memory: "128Mi"
+              cpu: "200m"
+          env:
+            - name: OTEL_ENVIRONMENT
+              valueFrom:
+                configMapKeyRef:
+                  key: PLATFORM
+                  name: app-config
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://otel-collector:4318
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: http
+            - name: OTEL_EXPORTER_OTLP_INSECURE
+              value: "true"
+            - name: AUTH_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: AUTH_SERVICE_URL
+                  name: app-config
+            - name: DB_URL
+              valueFrom:
+                secretKeyRef:
+                  name: database-credentials
+                  key: core-service-uri
+            - name: RABBITMQ_URI
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-credentials
+                  key: uri
+            - name: PLATFORM
+              valueFrom:
+                configMapKeyRef:
+                  key: PLATFORM
+                  name: app-config
+            - name: CURSOR_HMAC_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: cursor-hmac-key
+                  key: key
+            - name: GOOGLE_MAPS_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: google-maps-credentials
+                  key: api-key
+            - name: INTEGRATION_ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: integration-credentials
+                  key: encryption-key
+            - name: INTEGRATION_ENCRYPTION_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: integration-credentials
+                  key: encryption-key-id
+            - name: AWS_REGION
+              valueFrom:
+                configMapKeyRef:
+                  key: AWS_REGION
+                  name: app-config
+            - name: ACCOUNT_PHOTOS_BUCKET
+              valueFrom:
+                configMapKeyRef:
+                  key: ACCOUNT_PHOTOS_BUCKET
+                  name: app-config
+            - name: USER_PHOTOS_BUCKET
+              valueFrom:
+                configMapKeyRef:
+                  key: USER_PHOTOS_BUCKET
+                  name: app-config
+            - name: SHIPPING_LABELS_BUCKET
+              valueFrom:
+                configMapKeyRef:
+                  key: SHIPPING_LABELS_BUCKET
+                  name: app-config
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials
+                  key: access-key-id
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials
+                  key: secret-access-key
+            - name: FRONTEND_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: FRONTEND_URL
+                  name: app-config
 ---
 apiVersion: v1
 kind: Service
 metadata:
-    name: core-service
+  name: core-service
 spec:
-    selector:
-        app: core-service
-    ports:
-        - port: 9092
-          name: grpc
-          targetPort: 9092
-    type: ClusterIP
+  selector:
+    app: core-service
+  ports:
+    - port: 9092
+      name: grpc
+      targetPort: 9092
+  type: ClusterIP

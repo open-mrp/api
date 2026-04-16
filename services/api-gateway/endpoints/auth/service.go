@@ -12,6 +12,7 @@ import (
 	"github.com/augno/api/shared/appctx"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/auth"
+	corepb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -30,14 +31,17 @@ type AuthSvc interface {
 	ResetPassword(ctx context.Context, req *ResetPasswordRequest) (*apiresource.EmptyResource, *apierror.APIError)
 	RevokeRefreshToken(ctx context.Context, req *RevokeRefreshTokenRequest) (*apiresource.EmptyResource, *apierror.APIError)
 	UpdatePassword(ctx context.Context, req *UpdatePasswordRequest) (*apiresource.EmptyResource, *apierror.APIError)
+	UpdateScannerPassword(ctx context.Context, req *UpdateScannerPasswordRequest) (*apiresource.EmptyResource, *apierror.APIError)
 }
 
 type AuthSvcConfig struct {
 	AuthClient pb.AuthServiceClient
+	CoreClient corepb.CoreServiceClient
 }
 
 type authSvcImpl struct {
 	authClient pb.AuthServiceClient
+	coreClient corepb.CoreServiceClient
 }
 
 var authSvcTracer = tracing.GetTracer("api-gateway.endpoints.auth.service")
@@ -45,6 +49,9 @@ var authSvcTracer = tracing.GetTracer("api-gateway.endpoints.auth.service")
 func (c *AuthSvcConfig) validate() error {
 	if c.AuthClient == nil {
 		return fmt.Errorf("auth endpoint service: auth client is required")
+	}
+	if c.CoreClient == nil {
+		return fmt.Errorf("auth endpoint service: core client is required")
 	}
 	return nil
 }
@@ -56,6 +63,7 @@ func NewAuthSvc(config *AuthSvcConfig) AuthSvc {
 
 	return &authSvcImpl{
 		authClient: config.AuthClient,
+		coreClient: config.CoreClient,
 	}
 }
 
@@ -191,6 +199,23 @@ func (m *authSvcImpl) UpdatePassword(ctx context.Context, req *UpdatePasswordReq
 			return m.authClient.UpdatePassword(ctx, &pb.UpdatePasswordRequest{
 				OldPassword: req.OldPassword,
 				NewPassword: req.NewPassword,
+			}, opts...)
+		}, grpcutil.WithTimeout(grpcutil.PasswordOperationTimeout))
+
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return &apiresource.EmptyResource{}, nil
+}
+
+func (m *authSvcImpl) UpdateScannerPassword(ctx context.Context, req *UpdateScannerPasswordRequest) (*apiresource.EmptyResource, *apierror.APIError) {
+	_, apiErr := grpcutil.CallRPC(ctx, authSvcTracer, "service.auth.update_scanner_password", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+			return m.coreClient.UpdateAccountUserPassword(ctx, &corepb.UpdateAccountUserPasswordRequest{
+				AccountUserId:     req.AccountUserID,
+				RequesterPassword: req.RequesterPassword,
+				NewPassword:       req.NewPassword,
 			}, opts...)
 		}, grpcutil.WithTimeout(grpcutil.PasswordOperationTimeout))
 

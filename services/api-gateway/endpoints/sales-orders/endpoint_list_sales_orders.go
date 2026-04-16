@@ -32,6 +32,7 @@ type ListSalesOrdersRequest struct {
 	ExcludeInternalOrders bool `query:"exclude_internal_orders"`
 }
 
+// TODO: stop returning SalesOrderSummary; return the full SalesOrder apiresource and use proper includes values to control expansion.
 type ListSalesOrdersEndpoint struct{}
 
 func (e *ListSalesOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSalesOrdersRequest, *apiresource.List[apiresource.SalesOrderSummary]] {

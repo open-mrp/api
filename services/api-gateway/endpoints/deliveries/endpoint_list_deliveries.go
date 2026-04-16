@@ -24,6 +24,7 @@ type ListDeliveriesRequest struct {
 	EndDate *string `query:"end_date"`
 }
 
+// TODO: stop returning DeliverySummary; return the full Delivery apiresource and use proper includes values to control expansion.
 type ListDeliveriesEndpoint struct{}
 
 func (e *ListDeliveriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListDeliveriesRequest, *apiresource.List[apiresource.DeliverySummary]] {

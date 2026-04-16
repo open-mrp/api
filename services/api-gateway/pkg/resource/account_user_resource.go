@@ -22,8 +22,6 @@ type AccountUser struct {
 	Username *string `json:"username"`
 	// Profile image URL.
 	ImageURL *string `json:"image_url"`
-	// Whether the user's email is verified.
-	IsVerified bool `json:"is_verified" validate:"required"`
 	// Account user status.
 	Status constants.AccountUserStatus `json:"status" validate:"required"`
 	// Assigned role.
@@ -44,15 +42,14 @@ var sampleAccountUserName = "John Doe"
 var sampleAccountUserEmail = "john@augno.com"
 
 var SampleAccountUser = &AccountUser{
-	ID:         SampleAccountUserID,
-	Object:     constants.ObjectTypeAccountUser,
-	Name:       &sampleAccountUserName,
-	Email:      &sampleAccountUserEmail,
-	IsVerified: true,
-	Status:     constants.AccountUserStatusActive,
-	Role:       SampleRole,
-	CreatedAt:  timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt:  timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	ID:        SampleAccountUserID,
+	Object:    constants.ObjectTypeAccountUser,
+	Name:      &sampleAccountUserName,
+	Email:     &sampleAccountUserEmail,
+	Status:    constants.AccountUserStatusActive,
+	Role:      SampleRole,
+	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*AccountUser) SchemaExample() any {

@@ -28,7 +28,7 @@ func (e *GetAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetAcco
 		Request:           &GetAccountUserRequest{},
 		Response:          &apiresource.AccountUser{},
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetAccountUserRequest) (*apiresource.AccountUser, *apierror.APIError) {
 			return svc.(AccountUserSvc).GetAccountUser

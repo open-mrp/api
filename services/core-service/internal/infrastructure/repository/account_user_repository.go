@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"strconv"
 	"time"
 
 	"github.com/augno/api/services/core-service/internal/domain"
@@ -512,22 +513,58 @@ func (r *accountUserRepoImpl) FindTenancyAccountsByUserID(ctx context.Context, u
 	accounts := make([]domain.TenancyAccount, len(rows))
 	for i, row := range rows {
 		accounts[i] = domain.TenancyAccount{
-			AccountID:             row.AccountID,
-			AccountName:           row.AccountName,
-			AccountTypeCode:       row.AccountTypeCode,
-			OnboardingStatusCode:  row.OnboardingStatusCode,
-			PlanCode:              row.PlanCode,
-			AccountUserID:         row.AccountUserID,
-			AccountUserStatusCode: row.AccountUserStatusCode,
-			LastUsedAt:            db.TimeFromNullTime(row.LastUsedAt),
-			RoleID:                db.StringFromNullString(row.RoleID),
-			RoleName:              db.StringFromNullString(row.RoleName),
-			RoleTypeCode:          db.StringFromNullString(row.RoleTypeCode),
-			OwnerAccountID:        db.StringFromNullString(row.OwnerAccountID),
+			AccountID:                row.AccountID,
+			AccountName:              row.AccountName,
+			AccountTypeCode:          row.AccountTypeCode,
+			OnboardingStatusCode:     row.OnboardingStatusCode,
+			PlanCode:                 row.PlanCode,
+			AccountUserID:            row.AccountUserID,
+			AccountUserStatusCode:    row.AccountUserStatusCode,
+			LastUsedAt:               db.TimeFromNullTime(row.LastUsedAt),
+			RoleID:                   db.StringFromNullString(row.RoleID),
+			RoleName:                 db.StringFromNullString(row.RoleName),
+			RoleTypeCode:             db.StringFromNullString(row.RoleTypeCode),
+			RoleCreatedAt:            db.TimeFromNullTime(row.RoleCreatedAt),
+			RoleUpdatedAt:            db.TimeFromNullTime(row.RoleUpdatedAt),
+			OwnerAccountID:           db.StringFromNullString(row.OwnerAccountID),
+			InternalStripeCustomerID: db.StringFromNullString(row.InternalStripeCustomerID),
+			Plan:                     buildTenancyAccountPlanSummary(row),
 		}
 	}
 
 	return accounts, nil
+}
+
+func buildTenancyAccountPlanSummary(row sqlc.FindTenancyAccountsByUserIDRow) *domain.TenancyAccountPlanSummary {
+	if !row.PlanTypeID.Valid {
+		return nil
+	}
+
+	plan := &domain.TenancyAccountPlanSummary{
+		TypeID:       row.PlanTypeID.String,
+		Name:         row.PlanName.String,
+		PlanTypeCode: row.PlanPlanTypeCode.String,
+		Version:      row.PlanVersion.Int32,
+	}
+
+	if row.PlanPricePerSeat.Valid {
+		if v, err := strconv.ParseFloat(row.PlanPricePerSeat.String, 64); err == nil {
+			plan.PricePerSeat = v
+		}
+	}
+
+	if row.PlanPricePerMonth.Valid {
+		if v, err := strconv.ParseFloat(row.PlanPricePerMonth.String, 64); err == nil {
+			plan.PricePerMonth = &v
+		}
+	}
+
+	if row.PlanSeatMinimum.Valid {
+		min := row.PlanSeatMinimum.Int32
+		plan.SeatMinimum = &min
+	}
+
+	return plan
 }
 
 func (r *accountUserRepoImpl) MarkUsedByAccountAndUser(ctx context.Context, accountID, userID string) *apierror.APIError {

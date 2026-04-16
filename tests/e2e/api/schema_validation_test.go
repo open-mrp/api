@@ -54,6 +54,12 @@ func TestSchemaValidation_ListEndpoints_ItemFieldsMatchSpec(t *testing.T) {
 				return
 			}
 
+			// Primitive item schemas (e.g. string enums) have no fields to validate;
+			// the test is vacuously satisfied.
+			if isPrimitiveSchema(itemSchema) {
+				return
+			}
+
 			specFields := spec.CollectSchemaFields(itemSchema)
 			if len(specFields) == 0 {
 				t.Skipf("No fields defined in schema for %s", ep.Path)
@@ -98,6 +104,16 @@ func TestSchemaValidation_ListEndpoints_ItemFieldsMatchSpec(t *testing.T) {
 			}
 		})
 	}
+}
+
+// isPrimitiveSchema reports whether the schema describes a primitive value
+// (string/number/boolean/integer) rather than an object with fields.
+func isPrimitiveSchema(schema *openAPISchema) bool {
+	switch schema.Type {
+	case "string", "number", "integer", "boolean":
+		return true
+	}
+	return false
 }
 
 // findListItemSchema resolves the item schema from a list response schema.

@@ -1,6 +1,8 @@
 package apiresource
 
 import (
+	"time"
+
 	"github.com/augno/api/shared/constants"
 )
 
@@ -16,6 +18,8 @@ type Tenancy struct {
 	OwnerAccount *TenancyOwnerAccount `json:"owner_account"`
 	// Other accounts the user has access to.
 	OtherAccounts []TenancyOtherAccount `json:"other_accounts" validate:"required"`
+	// In-progress registration session, if one exists.
+	PendingRegistration *TenancyPendingRegistration `json:"pending_registration"`
 }
 
 // Account the user is currently operating in.
@@ -36,6 +40,47 @@ type TenancyCurrentAccount struct {
 	Slug *string `json:"slug"`
 	// Role in this account.
 	Role *Role `json:"role"`
+	// Internal Stripe customer ID for this account.
+	InternalStripeCustomerID *string `json:"internal_stripe_customer_id"`
+	// Full plan details for this account, including limits and features.
+	AccountPlan *TenancyAccountPlan `json:"account_plan"`
+}
+
+// TenancyAccountPlan is the resolved plan for the current account.
+type TenancyAccountPlan struct {
+	// Plan type ID.
+	TypeID string `json:"type_id" validate:"required"`
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=account_plan"`
+	// Display name.
+	Name string `json:"name" validate:"required"`
+	// Plan type code.
+	PlanTypeCode string `json:"plan_type_code" validate:"required"`
+	// Plan version.
+	Version int32 `json:"version"`
+	// Price per seat per month.
+	PricePerSeat float64 `json:"price_per_seat"`
+	// Flat monthly price, if applicable.
+	PricePerMonth *float64 `json:"price_per_month"`
+	// Minimum seats required for this plan.
+	SeatMinimum *int32 `json:"seat_minimum"`
+	// Resource limits; null value means unlimited.
+	Limits map[string]*int32 `json:"limits"`
+	// Feature flags.
+	Features map[string]bool `json:"features"`
+}
+
+// TenancyPendingRegistration represents an in-progress registration session
+// for the authenticated user.
+type TenancyPendingRegistration struct {
+	// Registration session ID.
+	SessionID string `json:"session_id" validate:"required"`
+	// Plan code selected during registration.
+	PlanCode string `json:"plan_code" validate:"required"`
+	// Current step in the registration flow.
+	Step string `json:"step" validate:"required"`
+	// Session creation timestamp.
+	CreatedAt time.Time `json:"created_at" validate:"required"`
 }
 
 // Sandbox account available to the user.

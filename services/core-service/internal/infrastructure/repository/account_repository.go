@@ -503,3 +503,40 @@ func (r *accountRepoImpl) GetByStripeCustomerID(ctx context.Context, stripeCusto
 
 	return row.ID, row.PlanCode, nil
 }
+
+func (r *accountRepoImpl) ListPlanLimits(ctx context.Context, accountPlanID string) (map[string]*int32, *apierror.APIError) {
+	ctx, span := accountRepoTracer.Start(ctx, "repository.account.list_plan_limits")
+	defer span.End()
+
+	rows, err := r.queries.ListAccountPlanLimits(ctx, accountPlanID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	limits := make(map[string]*int32, len(rows))
+	for _, row := range rows {
+		if row.Value.Valid {
+			v := row.Value.Int32
+			limits[row.Key] = &v
+		} else {
+			limits[row.Key] = nil
+		}
+	}
+	return limits, nil
+}
+
+func (r *accountRepoImpl) ListPlanFeatures(ctx context.Context, accountPlanID string) (map[string]bool, *apierror.APIError) {
+	ctx, span := accountRepoTracer.Start(ctx, "repository.account.list_plan_features")
+	defer span.End()
+
+	rows, err := r.queries.ListAccountPlanFeatures(ctx, accountPlanID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	features := make(map[string]bool, len(rows))
+	for _, row := range rows {
+		features[row.Key] = row.Enabled
+	}
+	return features, nil
+}

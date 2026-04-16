@@ -142,3 +142,48 @@ func TestSandboxes_CreateValidation_EmptyName(t *testing.T) {
 	assert.True(t, status == 400 || status == 422,
 		"Empty name should return 400 or 422, got %d: %s", status, string(body))
 }
+
+// ──────────────────────────────────────────────
+// Sandbox — Include Tests
+// ──────────────────────────────────────────────
+
+func TestSandboxes_OwnerAccountNullWithoutInclude(t *testing.T) {
+	t.Parallel()
+	createStatus, createBody, err := apiClient.Post(sandboxesPath, map[string]any{
+		"name": uniqueName("e2e-sb-no-inc"),
+		"mode": "blank",
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, createStatus, createBody)
+	id := jsonField(parseJSON(createBody), "id")
+	defer apiClient.Delete(sandboxesPath + "/" + id)
+
+	getStatus, getBody, err := apiClient.GetListRaw(sandboxesPath+"/"+id, nil)
+	require.NoError(t, err)
+	requireStatus(t, 200, getStatus, getBody)
+
+	got := parseJSON(getBody)
+	assert.Nil(t, got["owner_account"], "owner_account should be null without ?include=owner_account")
+}
+
+func TestSandboxes_IncludeOwnerAccount(t *testing.T) {
+	t.Parallel()
+	createStatus, createBody, err := apiClient.Post(sandboxesPath, map[string]any{
+		"name": uniqueName("e2e-sb-inc"),
+		"mode": "blank",
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, createStatus, createBody)
+	id := jsonField(parseJSON(createBody), "id")
+	defer apiClient.Delete(sandboxesPath + "/" + id)
+
+	getStatus, getBody, err := apiClient.GetListRaw(sandboxesPath+"/"+id, url.Values{"include": {"owner_account"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, getStatus, getBody)
+
+	got := parseJSON(getBody)
+	owner := jsonObject(got, "owner_account")
+	require.NotNil(t, owner, "owner_account should be present with ?include=owner_account")
+	assert.Equal(t, "account", jsonField(owner, "object"))
+	assert.NotEmpty(t, jsonField(owner, "id"))
+}

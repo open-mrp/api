@@ -357,18 +357,20 @@ func BindFromQuery(u *url.URL, dst any) error {
 		if key == "" {
 			return nil
 		}
-		val := q.Get(key)
-		if val == "" {
-			if d, ok := f.tag.Lookup("default"); ok {
-				val = d
-			} else {
-				return nil
-			}
-		}
+		// Slice fields accept both ?key=a&key=b and ?key[]=a&key[]=b. The OpenAPI
+		// generator emits the bracketed form for array params, so SDK clients send
+		// that shape even when the Go tag is the bare key.
 		if f.value.Kind() == reflect.Slice && f.value.Type().Elem().Kind() == reflect.String {
-			values := q[key]
-			if len(values) == 0 && val != "" {
-				values = strings.Split(val, ",")
+			values := append([]string{}, q[key]...)
+			values = append(values, q[key+"[]"]...)
+			if len(values) == 0 {
+				if d, ok := f.tag.Lookup("default"); ok && d != "" {
+					values = strings.Split(d, ",")
+				} else {
+					return nil
+				}
+			} else if len(values) == 1 && strings.Contains(values[0], ",") {
+				values = strings.Split(values[0], ",")
 			}
 			elemType := f.value.Type().Elem()
 			slice := reflect.MakeSlice(f.value.Type(), len(values), len(values))
@@ -377,6 +379,14 @@ func BindFromQuery(u *url.URL, dst any) error {
 			}
 			f.value.Set(slice)
 			return nil
+		}
+		val := q.Get(key)
+		if val == "" {
+			if d, ok := f.tag.Lookup("default"); ok {
+				val = d
+			} else {
+				return nil
+			}
 		}
 		if err := setFromString(f.value, val, f.tag); err != nil {
 			return apierror.NewParameterInvalidError(fmt.Sprintf("Invalid value for query parameter '%s': %v", key, err), key)

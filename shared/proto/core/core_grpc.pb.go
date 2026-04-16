@@ -92,12 +92,8 @@ const (
 	CoreService_GetAccountUser_FullMethodName                          = "/core.CoreService/GetAccountUser"
 	CoreService_CreateAccountUser_FullMethodName                       = "/core.CoreService/CreateAccountUser"
 	CoreService_UpdateAccountUser_FullMethodName                       = "/core.CoreService/UpdateAccountUser"
-	CoreService_DeleteAccountUser_FullMethodName                       = "/core.CoreService/DeleteAccountUser"
-	CoreService_LockAccountUser_FullMethodName                         = "/core.CoreService/LockAccountUser"
-	CoreService_UnlockAccountUser_FullMethodName                       = "/core.CoreService/UnlockAccountUser"
-	CoreService_RestoreAccountUser_FullMethodName                      = "/core.CoreService/RestoreAccountUser"
+	CoreService_UpdateAccountUserStatus_FullMethodName                 = "/core.CoreService/UpdateAccountUserStatus"
 	CoreService_UpdateAccountUserPassword_FullMethodName               = "/core.CoreService/UpdateAccountUserPassword"
-	CoreService_UpdateNotificationPreferences_FullMethodName           = "/core.CoreService/UpdateNotificationPreferences"
 	CoreService_ListSalesTargets_FullMethodName                        = "/core.CoreService/ListSalesTargets"
 	CoreService_CreateSalesTarget_FullMethodName                       = "/core.CoreService/CreateSalesTarget"
 	CoreService_UpsertSalesTarget_FullMethodName                       = "/core.CoreService/UpsertSalesTarget"
@@ -487,18 +483,10 @@ type CoreServiceClient interface {
 	CreateAccountUser(ctx context.Context, in *CreateAccountUserRequest, opts ...grpc.CallOption) (*CreateAccountUserResponse, error)
 	// Partially updates an account user.
 	UpdateAccountUser(ctx context.Context, in *UpdateAccountUserRequest, opts ...grpc.CallOption) (*UpdateAccountUserResponse, error)
-	// Soft-deletes an account user.
-	DeleteAccountUser(ctx context.Context, in *DeleteAccountUserRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	// Disables an account user and revokes their refresh tokens.
-	LockAccountUser(ctx context.Context, in *LockAccountUserRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	// Re-enables a disabled account user.
-	UnlockAccountUser(ctx context.Context, in *UnlockAccountUserRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	// Restores a soft-deleted account user.
-	RestoreAccountUser(ctx context.Context, in *RestoreAccountUserRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	// Updates the password for an account user.
+	// Transitions an account user to the target status (active, disabled, or removed).
+	UpdateAccountUserStatus(ctx context.Context, in *UpdateAccountUserStatusRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Updates the password for an account user (scanner-role targets only).
 	UpdateAccountUserPassword(ctx context.Context, in *UpdateAccountUserPasswordRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	// Updates notification preferences for an account user.
-	UpdateNotificationPreferences(ctx context.Context, in *UpdateNotificationPreferencesRequest, opts ...grpc.CallOption) (*UpdateNotificationPreferencesResponse, error)
 	// Returns a paginated list of sales targets for an account user.
 	ListSalesTargets(ctx context.Context, in *ListSalesTargetsRequest, opts ...grpc.CallOption) (*ListSalesTargetsResponse, error)
 	// Creates a new sales target for an account user.
@@ -1528,40 +1516,10 @@ func (c *coreServiceClient) UpdateAccountUser(ctx context.Context, in *UpdateAcc
 	return out, nil
 }
 
-func (c *coreServiceClient) DeleteAccountUser(ctx context.Context, in *DeleteAccountUserRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (c *coreServiceClient) UpdateAccountUserStatus(ctx context.Context, in *UpdateAccountUserStatusRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, CoreService_DeleteAccountUser_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *coreServiceClient) LockAccountUser(ctx context.Context, in *LockAccountUserRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, CoreService_LockAccountUser_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *coreServiceClient) UnlockAccountUser(ctx context.Context, in *UnlockAccountUserRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, CoreService_UnlockAccountUser_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *coreServiceClient) RestoreAccountUser(ctx context.Context, in *RestoreAccountUserRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, CoreService_RestoreAccountUser_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, CoreService_UpdateAccountUserStatus_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1572,16 +1530,6 @@ func (c *coreServiceClient) UpdateAccountUserPassword(ctx context.Context, in *U
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, CoreService_UpdateAccountUserPassword_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *coreServiceClient) UpdateNotificationPreferences(ctx context.Context, in *UpdateNotificationPreferencesRequest, opts ...grpc.CallOption) (*UpdateNotificationPreferencesResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UpdateNotificationPreferencesResponse)
-	err := c.cc.Invoke(ctx, CoreService_UpdateNotificationPreferences_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -4252,18 +4200,10 @@ type CoreServiceServer interface {
 	CreateAccountUser(context.Context, *CreateAccountUserRequest) (*CreateAccountUserResponse, error)
 	// Partially updates an account user.
 	UpdateAccountUser(context.Context, *UpdateAccountUserRequest) (*UpdateAccountUserResponse, error)
-	// Soft-deletes an account user.
-	DeleteAccountUser(context.Context, *DeleteAccountUserRequest) (*emptypb.Empty, error)
-	// Disables an account user and revokes their refresh tokens.
-	LockAccountUser(context.Context, *LockAccountUserRequest) (*emptypb.Empty, error)
-	// Re-enables a disabled account user.
-	UnlockAccountUser(context.Context, *UnlockAccountUserRequest) (*emptypb.Empty, error)
-	// Restores a soft-deleted account user.
-	RestoreAccountUser(context.Context, *RestoreAccountUserRequest) (*emptypb.Empty, error)
-	// Updates the password for an account user.
+	// Transitions an account user to the target status (active, disabled, or removed).
+	UpdateAccountUserStatus(context.Context, *UpdateAccountUserStatusRequest) (*emptypb.Empty, error)
+	// Updates the password for an account user (scanner-role targets only).
 	UpdateAccountUserPassword(context.Context, *UpdateAccountUserPasswordRequest) (*emptypb.Empty, error)
-	// Updates notification preferences for an account user.
-	UpdateNotificationPreferences(context.Context, *UpdateNotificationPreferencesRequest) (*UpdateNotificationPreferencesResponse, error)
 	// Returns a paginated list of sales targets for an account user.
 	ListSalesTargets(context.Context, *ListSalesTargetsRequest) (*ListSalesTargetsResponse, error)
 	// Creates a new sales target for an account user.
@@ -4838,23 +4778,11 @@ func (UnimplementedCoreServiceServer) CreateAccountUser(context.Context, *Create
 func (UnimplementedCoreServiceServer) UpdateAccountUser(context.Context, *UpdateAccountUserRequest) (*UpdateAccountUserResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateAccountUser not implemented")
 }
-func (UnimplementedCoreServiceServer) DeleteAccountUser(context.Context, *DeleteAccountUserRequest) (*emptypb.Empty, error) {
-	return nil, status.Error(codes.Unimplemented, "method DeleteAccountUser not implemented")
-}
-func (UnimplementedCoreServiceServer) LockAccountUser(context.Context, *LockAccountUserRequest) (*emptypb.Empty, error) {
-	return nil, status.Error(codes.Unimplemented, "method LockAccountUser not implemented")
-}
-func (UnimplementedCoreServiceServer) UnlockAccountUser(context.Context, *UnlockAccountUserRequest) (*emptypb.Empty, error) {
-	return nil, status.Error(codes.Unimplemented, "method UnlockAccountUser not implemented")
-}
-func (UnimplementedCoreServiceServer) RestoreAccountUser(context.Context, *RestoreAccountUserRequest) (*emptypb.Empty, error) {
-	return nil, status.Error(codes.Unimplemented, "method RestoreAccountUser not implemented")
+func (UnimplementedCoreServiceServer) UpdateAccountUserStatus(context.Context, *UpdateAccountUserStatusRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateAccountUserStatus not implemented")
 }
 func (UnimplementedCoreServiceServer) UpdateAccountUserPassword(context.Context, *UpdateAccountUserPasswordRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateAccountUserPassword not implemented")
-}
-func (UnimplementedCoreServiceServer) UpdateNotificationPreferences(context.Context, *UpdateNotificationPreferencesRequest) (*UpdateNotificationPreferencesResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method UpdateNotificationPreferences not implemented")
 }
 func (UnimplementedCoreServiceServer) ListSalesTargets(context.Context, *ListSalesTargetsRequest) (*ListSalesTargetsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListSalesTargets not implemented")
@@ -6806,74 +6734,20 @@ func _CoreService_UpdateAccountUser_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
-func _CoreService_DeleteAccountUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DeleteAccountUserRequest)
+func _CoreService_UpdateAccountUserStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateAccountUserStatusRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(CoreServiceServer).DeleteAccountUser(ctx, in)
+		return srv.(CoreServiceServer).UpdateAccountUserStatus(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: CoreService_DeleteAccountUser_FullMethodName,
+		FullMethod: CoreService_UpdateAccountUserStatus_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CoreServiceServer).DeleteAccountUser(ctx, req.(*DeleteAccountUserRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _CoreService_LockAccountUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(LockAccountUserRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CoreServiceServer).LockAccountUser(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: CoreService_LockAccountUser_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CoreServiceServer).LockAccountUser(ctx, req.(*LockAccountUserRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _CoreService_UnlockAccountUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UnlockAccountUserRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CoreServiceServer).UnlockAccountUser(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: CoreService_UnlockAccountUser_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CoreServiceServer).UnlockAccountUser(ctx, req.(*UnlockAccountUserRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _CoreService_RestoreAccountUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RestoreAccountUserRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CoreServiceServer).RestoreAccountUser(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: CoreService_RestoreAccountUser_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CoreServiceServer).RestoreAccountUser(ctx, req.(*RestoreAccountUserRequest))
+		return srv.(CoreServiceServer).UpdateAccountUserStatus(ctx, req.(*UpdateAccountUserStatusRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -6892,24 +6766,6 @@ func _CoreService_UpdateAccountUserPassword_Handler(srv interface{}, ctx context
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(CoreServiceServer).UpdateAccountUserPassword(ctx, req.(*UpdateAccountUserPasswordRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _CoreService_UpdateNotificationPreferences_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateNotificationPreferencesRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CoreServiceServer).UpdateNotificationPreferences(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: CoreService_UpdateNotificationPreferences_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CoreServiceServer).UpdateNotificationPreferences(ctx, req.(*UpdateNotificationPreferencesRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -11736,28 +11592,12 @@ var CoreService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _CoreService_UpdateAccountUser_Handler,
 		},
 		{
-			MethodName: "DeleteAccountUser",
-			Handler:    _CoreService_DeleteAccountUser_Handler,
-		},
-		{
-			MethodName: "LockAccountUser",
-			Handler:    _CoreService_LockAccountUser_Handler,
-		},
-		{
-			MethodName: "UnlockAccountUser",
-			Handler:    _CoreService_UnlockAccountUser_Handler,
-		},
-		{
-			MethodName: "RestoreAccountUser",
-			Handler:    _CoreService_RestoreAccountUser_Handler,
+			MethodName: "UpdateAccountUserStatus",
+			Handler:    _CoreService_UpdateAccountUserStatus_Handler,
 		},
 		{
 			MethodName: "UpdateAccountUserPassword",
 			Handler:    _CoreService_UpdateAccountUserPassword_Handler,
-		},
-		{
-			MethodName: "UpdateNotificationPreferences",
-			Handler:    _CoreService_UpdateNotificationPreferences_Handler,
 		},
 		{
 			MethodName: "ListSalesTargets",

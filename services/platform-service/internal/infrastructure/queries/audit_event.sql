@@ -53,7 +53,7 @@ LEFT JOIN `user` u ON ae.actor_id = u.id AND ae.identity_type = 'user'
 LEFT JOIN api_key ak ON ae.actor_id = ak.type_id AND ae.identity_type = 'api_key'
 LEFT JOIN idempotency_key ik ON ae.idempotency_key_id = ik.type_id
 WHERE ae.account_id = sqlc.arg('target_account_id')
-AND (sqlc.arg('resource_type_filter') = '' OR ae.resource_type = sqlc.arg('resource_type_filter'))
+AND (sqlc.arg('include_resource_type_filter') = false OR ae.resource_type IN (sqlc.slice('resource_types')))
 AND (sqlc.arg('resource_id_filter') = '' OR ae.resource_id = sqlc.arg('resource_id_filter'))
 AND (sqlc.arg('actor_id_filter') = '' OR ae.actor_id = sqlc.arg('actor_id_filter'))
 AND (sqlc.arg('action_filter') = '' OR ae.action = sqlc.arg('action_filter'))
@@ -99,7 +99,7 @@ LEFT JOIN `user` u ON ae.actor_id = u.id AND ae.identity_type = 'user'
 LEFT JOIN api_key ak ON ae.actor_id = ak.type_id AND ae.identity_type = 'api_key'
 LEFT JOIN idempotency_key ik ON ae.idempotency_key_id = ik.type_id
 WHERE ae.account_id = sqlc.arg('target_account_id')
-AND (sqlc.arg('resource_type_filter') = '' OR ae.resource_type = sqlc.arg('resource_type_filter'))
+AND (sqlc.arg('include_resource_type_filter') = false OR ae.resource_type IN (sqlc.slice('resource_types')))
 AND (sqlc.arg('resource_id_filter') = '' OR ae.resource_id = sqlc.arg('resource_id_filter'))
 AND (sqlc.arg('actor_id_filter') = '' OR ae.actor_id = sqlc.arg('actor_id_filter'))
 AND (sqlc.arg('action_filter') = '' OR ae.action = sqlc.arg('action_filter'))

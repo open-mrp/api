@@ -374,3 +374,24 @@ INSERT IGNORE INTO account (id, name, account_type_code, onboarding_status_code,
 
 INSERT IGNORE INTO account_relation (id, owner_account_id, counterparty_account_id, account_relation_role_code, external_number, parent_account_relation_id, is_edi_enabled, priority_code, account_status_code, commission_status_code, freight_status_code, shipping_term_id, payment_term_id, account_group_id, created_at, updated_at) VALUES
     ('acre_01seedchild_rel002', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01seedchild_acct0002', 'customer', 'CHILD-002', 'acre_01seedhouseacct0000', 0, 'normal', 'normal', 'commission_applied', 'billed_freight', 'prepaid_billed', 'pytm_01seednet3000000', 'acgp_01k0a413mjeth8pe1g70t0thax', NOW(), NOW());
+
+-- ============================================================
+-- PURCHASE ORDERS (e2e include coverage)
+-- ============================================================
+-- A purchase_order is a sales_order row with sales_order_type_code = 'purchase_order',
+-- where seller_account_id is the supplier account. The seeded supplier relation is
+-- acre_01seedsupplier0000 (owner=ac_01k0a5smf9ekb8rqg12555zjqa, counterparty=ac_01seedsupplier_acct0).
+
+INSERT IGNORE INTO sales_order (id, number, sales_order_status_code, sales_order_type_code, priority_code, carrier_id, billing_address_id, shipping_address_id, buyer_account_id, seller_account_id, owner_account_id, payment_term_id, shipping_term_id, issued_at, created_at, updated_at) VALUES
+    ('or_01seedpurchord1_000', 'PO-001', 'issued', 'purchase_order', 'normal', 'delivery', 'ad_01k09wnac0e1ar211e0sy0ba4g', 'ad_01k09wnpvrea0awz7vem2j8j7g', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01seedsupplier_acct0', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'pytm_01seednet3000000', 'prepaid_billed', DATE_SUB(NOW(), INTERVAL 2 DAY), NOW(), NOW());
+
+INSERT IGNORE INTO quantity (id, value, unit_id, created_at, updated_at) VALUES
+    ('qu_01seedpoln1_qty00000', 50, 'un_01seedpair000000000', NOW(), NOW());
+
+INSERT IGNORE INTO rate (id, value, numerator_unit_id, denominator_unit_id, created_at, updated_at) VALUES
+    ('rt_01seedpoln1_price000', '5.00', 'dollar', 'un_01seedpair000000000', NOW(), NOW()),
+    ('rt_01seedpoln1_cost0000', '4.00', 'dollar', 'un_01seedpair000000000', NOW(), NOW());
+
+INSERT IGNORE INTO sales_order_line (id, product_sku, product_description, product_id, item_id, sales_order_id, quantity_id, unit_price_id, unit_cost_id, created_at, updated_at) VALUES
+    ('orln_01seedpoln1_000000', 'YRN-001', 'Small white yarn for PO', NULL, 'it_01seedyrn1item00000', 'or_01seedpurchord1_000', 'qu_01seedpoln1_qty00000', 'rt_01seedpoln1_price000', 'rt_01seedpoln1_cost0000', NOW(), NOW());
+

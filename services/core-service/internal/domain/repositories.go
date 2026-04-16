@@ -38,6 +38,8 @@ type AccountRepo interface {
 	ExistsPortalSlug(ctx context.Context, slug, excludeAccountID string) (bool, *apierror.APIError)
 	UpdateBrandingLogoURL(ctx context.Context, accountID, logoURL string) *apierror.APIError
 	GetBrandingLogoKey(ctx context.Context, accountID string) (*string, *apierror.APIError)
+	ListPlanLimits(ctx context.Context, accountPlanID string) (map[string]*int32, *apierror.APIError)
+	ListPlanFeatures(ctx context.Context, accountPlanID string) (map[string]bool, *apierror.APIError)
 }
 
 type AccountUserRepo interface {

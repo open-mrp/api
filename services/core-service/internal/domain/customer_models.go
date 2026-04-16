@@ -92,17 +92,6 @@ type CustomerAccountGroup struct {
 	Name string
 }
 
-// CustomerSummary is a lightweight customer record for list results.
-type CustomerSummary struct {
-	ID                string
-	Name              string
-	Number            string
-	Email             *string
-	CustomerTypeGroup *string
-	Status            constants.AccountStatusCode
-	CreatedAt         time.Time
-}
-
 // ListCustomersParams holds the parameters for listing customers.
 type ListCustomersParams struct {
 	AccountID             string
@@ -125,11 +114,12 @@ type ListCustomersParams struct {
 	PostalCode            *string
 	StartDate             *time.Time
 	EndDate               *time.Time
+	Includes              []string
 }
 
 // ListCustomersResult holds the result of listing customers.
 type ListCustomersResult struct {
-	Items    []*CustomerSummary
+	Items    []*Customer
 	PageInfo pagination.PageInfo
 }
 

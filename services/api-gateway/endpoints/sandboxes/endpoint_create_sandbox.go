@@ -15,8 +15,8 @@ import (
 type CreateSandboxRequest struct {
 	// Display name.
 	Name string `json:"name" validate:"required,max=255"`
-	// Controls whether the sandbox is blank or seeded with tutorial data. Defaults to blank.
-	Mode *constants.SandboxMode `json:"mode,omitempty" validate:"omitempty"`
+	// Controls whether the sandbox is blank or seeded with sample data.
+	Mode *constants.SandboxMode `json:"mode,omitempty" validate:"omitempty" default:"blank"`
 }
 
 var sampleSandboxMode = constants.SandboxModeBlank

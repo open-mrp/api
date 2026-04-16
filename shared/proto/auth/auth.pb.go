@@ -3066,6 +3066,162 @@ func (x *ConfirmRegistrationPaymentResponse) GetPaymentMethodId() string {
 	return ""
 }
 
+type GetIncompleteRegistrationSessionRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetIncompleteRegistrationSessionRequest) Reset() {
+	*x = GetIncompleteRegistrationSessionRequest{}
+	mi := &file_auth_auth_proto_msgTypes[48]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetIncompleteRegistrationSessionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetIncompleteRegistrationSessionRequest) ProtoMessage() {}
+
+func (x *GetIncompleteRegistrationSessionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_auth_proto_msgTypes[48]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetIncompleteRegistrationSessionRequest.ProtoReflect.Descriptor instead.
+func (*GetIncompleteRegistrationSessionRequest) Descriptor() ([]byte, []int) {
+	return file_auth_auth_proto_rawDescGZIP(), []int{48}
+}
+
+func (x *GetIncompleteRegistrationSessionRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+type GetIncompleteRegistrationSessionResponse struct {
+	state         protoimpl.MessageState              `protogen:"open.v1"`
+	Session       *IncompleteRegistrationSessionProto `protobuf:"bytes,1,opt,name=session,proto3,oneof" json:"session,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetIncompleteRegistrationSessionResponse) Reset() {
+	*x = GetIncompleteRegistrationSessionResponse{}
+	mi := &file_auth_auth_proto_msgTypes[49]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetIncompleteRegistrationSessionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetIncompleteRegistrationSessionResponse) ProtoMessage() {}
+
+func (x *GetIncompleteRegistrationSessionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_auth_proto_msgTypes[49]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetIncompleteRegistrationSessionResponse.ProtoReflect.Descriptor instead.
+func (*GetIncompleteRegistrationSessionResponse) Descriptor() ([]byte, []int) {
+	return file_auth_auth_proto_rawDescGZIP(), []int{49}
+}
+
+func (x *GetIncompleteRegistrationSessionResponse) GetSession() *IncompleteRegistrationSessionProto {
+	if x != nil {
+		return x.Session
+	}
+	return nil
+}
+
+type IncompleteRegistrationSessionProto struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	PlanCode      string                 `protobuf:"bytes,2,opt,name=plan_code,json=planCode,proto3" json:"plan_code,omitempty"`
+	Step          string                 `protobuf:"bytes,3,opt,name=step,proto3" json:"step,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *IncompleteRegistrationSessionProto) Reset() {
+	*x = IncompleteRegistrationSessionProto{}
+	mi := &file_auth_auth_proto_msgTypes[50]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *IncompleteRegistrationSessionProto) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*IncompleteRegistrationSessionProto) ProtoMessage() {}
+
+func (x *IncompleteRegistrationSessionProto) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_auth_proto_msgTypes[50]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use IncompleteRegistrationSessionProto.ProtoReflect.Descriptor instead.
+func (*IncompleteRegistrationSessionProto) Descriptor() ([]byte, []int) {
+	return file_auth_auth_proto_rawDescGZIP(), []int{50}
+}
+
+func (x *IncompleteRegistrationSessionProto) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+func (x *IncompleteRegistrationSessionProto) GetPlanCode() string {
+	if x != nil {
+		return x.PlanCode
+	}
+	return ""
+}
+
+func (x *IncompleteRegistrationSessionProto) GetStep() string {
+	if x != nil {
+		return x.Step
+	}
+	return ""
+}
+
+func (x *IncompleteRegistrationSessionProto) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
 type SetupRegistrationBillingResponse struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	StripeCustomerId string                 `protobuf:"bytes,1,opt,name=stripe_customer_id,json=stripeCustomerId,proto3" json:"stripe_customer_id,omitempty"`
@@ -3081,7 +3237,7 @@ type SetupRegistrationBillingResponse struct {
 
 func (x *SetupRegistrationBillingResponse) Reset() {
 	*x = SetupRegistrationBillingResponse{}
-	mi := &file_auth_auth_proto_msgTypes[48]
+	mi := &file_auth_auth_proto_msgTypes[51]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3093,7 +3249,7 @@ func (x *SetupRegistrationBillingResponse) String() string {
 func (*SetupRegistrationBillingResponse) ProtoMessage() {}
 
 func (x *SetupRegistrationBillingResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_auth_proto_msgTypes[48]
+	mi := &file_auth_auth_proto_msgTypes[51]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3106,7 +3262,7 @@ func (x *SetupRegistrationBillingResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetupRegistrationBillingResponse.ProtoReflect.Descriptor instead.
 func (*SetupRegistrationBillingResponse) Descriptor() ([]byte, []int) {
-	return file_auth_auth_proto_rawDescGZIP(), []int{48}
+	return file_auth_auth_proto_rawDescGZIP(), []int{51}
 }
 
 func (x *SetupRegistrationBillingResponse) GetStripeCustomerId() string {
@@ -3433,7 +3589,20 @@ const file_auth_auth_proto_rawDesc = "" +
 	"\"ConfirmRegistrationPaymentResponse\x12\x16\n" +
 	"\x06status\x18\x01 \x01(\tR\x06status\x12/\n" +
 	"\x11payment_method_id\x18\x02 \x01(\tH\x00R\x0fpaymentMethodId\x88\x01\x01B\x14\n" +
-	"\x12_payment_method_id\"\xfa\x01\n" +
+	"\x12_payment_method_id\"B\n" +
+	"'GetIncompleteRegistrationSessionRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\"\x7f\n" +
+	"(GetIncompleteRegistrationSessionResponse\x12G\n" +
+	"\asession\x18\x01 \x01(\v2(.auth.IncompleteRegistrationSessionProtoH\x00R\asession\x88\x01\x01B\n" +
+	"\n" +
+	"\b_session\"\xaf\x01\n" +
+	"\"IncompleteRegistrationSessionProto\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x1b\n" +
+	"\tplan_code\x18\x02 \x01(\tR\bplanCode\x12\x12\n" +
+	"\x04step\x18\x03 \x01(\tR\x04step\x129\n" +
+	"\n" +
+	"created_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\xfa\x01\n" +
 	" SetupRegistrationBillingResponse\x12,\n" +
 	"\x12stripe_customer_id\x18\x01 \x01(\tR\x10stripeCustomerId\x12,\n" +
 	"\x12billing_profile_id\x18\x02 \x01(\tR\x10billingProfileId\x12,\n" +
@@ -3455,7 +3624,7 @@ const file_auth_auth_proto_rawDesc = "" +
 	"\vAccountMode\x12\x1c\n" +
 	"\x18ACCOUNT_MODE_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17ACCOUNT_MODE_PRODUCTION\x10\x01\x12\x18\n" +
-	"\x14ACCOUNT_MODE_SANDBOX\x10\x022\xa5\x10\n" +
+	"\x14ACCOUNT_MODE_SANDBOX\x10\x022\xa9\x11\n" +
 	"\vAuthService\x126\n" +
 	"\x12ValidateCredential\x12\x10.auth.Credential\x1a\x0e.auth.Identity\x120\n" +
 	"\x05Login\x12\x12.auth.LoginRequest\x1a\x13.auth.LoginResponse\x126\n" +
@@ -3482,7 +3651,8 @@ const file_auth_auth_proto_rawDesc = "" +
 	"\x1aConfirmRegistrationPayment\x12'.auth.ConfirmRegistrationPaymentRequest\x1a(.auth.ConfirmRegistrationPaymentResponse\x12]\n" +
 	"\x14CompleteRegistration\x12!.auth.CompleteRegistrationRequest\x1a\".auth.CompleteRegistrationResponse\x12:\n" +
 	"\n" +
-	"MagicLogin\x12\x17.auth.MagicLoginRequest\x1a\x13.auth.LoginResponseB\x18Z\x16shared/proto/auth;authb\x06proto3"
+	"MagicLogin\x12\x17.auth.MagicLoginRequest\x1a\x13.auth.LoginResponse\x12\x81\x01\n" +
+	" GetIncompleteRegistrationSession\x12-.auth.GetIncompleteRegistrationSessionRequest\x1a..auth.GetIncompleteRegistrationSessionResponseB\x18Z\x16shared/proto/auth;authb\x06proto3"
 
 var (
 	file_auth_auth_proto_rawDescOnce sync.Once
@@ -3497,153 +3667,160 @@ func file_auth_auth_proto_rawDescGZIP() []byte {
 }
 
 var file_auth_auth_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_auth_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 50)
+var file_auth_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 53)
 var file_auth_auth_proto_goTypes = []any{
-	(IdentityActorType)(0),                     // 0: auth.IdentityActorType
-	(IdentityRelationType)(0),                  // 1: auth.IdentityRelationType
-	(AccountMode)(0),                           // 2: auth.AccountMode
-	(*CompleteRegistrationRequest)(nil),        // 3: auth.CompleteRegistrationRequest
-	(*CompleteRegistrationResponse)(nil),       // 4: auth.CompleteRegistrationResponse
-	(*LoginRequest)(nil),                       // 5: auth.LoginRequest
-	(*LoginResponse)(nil),                      // 6: auth.LoginResponse
-	(*User)(nil),                               // 7: auth.User
-	(*Credential)(nil),                         // 8: auth.Credential
-	(*Identity)(nil),                           // 9: auth.Identity
-	(*IdentityTarget)(nil),                     // 10: auth.IdentityTarget
-	(*IdentityActor)(nil),                      // 11: auth.IdentityActor
-	(*RegisterRequest)(nil),                    // 12: auth.RegisterRequest
-	(*MagicLoginRequest)(nil),                  // 13: auth.MagicLoginRequest
-	(*RefreshTokenRequest)(nil),                // 14: auth.RefreshTokenRequest
-	(*RefreshTokenResponse)(nil),               // 15: auth.RefreshTokenResponse
-	(*RequestPasswordResetRequest)(nil),        // 16: auth.RequestPasswordResetRequest
-	(*ResetPasswordRequest)(nil),               // 17: auth.ResetPasswordRequest
-	(*RevokeRefreshTokenRequest)(nil),          // 18: auth.RevokeRefreshTokenRequest
-	(*UpdatePasswordRequest)(nil),              // 19: auth.UpdatePasswordRequest
-	(*CreateAPIKeyRequest)(nil),                // 20: auth.CreateAPIKeyRequest
-	(*CreateAPIKeyResponse)(nil),               // 21: auth.CreateAPIKeyResponse
-	(*RotateAPIKeyRequest)(nil),                // 22: auth.RotateAPIKeyRequest
-	(*RotateAPIKeyResponse)(nil),               // 23: auth.RotateAPIKeyResponse
-	(*RevokeAPIKeyRequest)(nil),                // 24: auth.RevokeAPIKeyRequest
-	(*ListAPIKeysRequest)(nil),                 // 25: auth.ListAPIKeysRequest
-	(*PageInfo)(nil),                           // 26: auth.PageInfo
-	(*ListAPIKeysResponse)(nil),                // 27: auth.ListAPIKeysResponse
-	(*GetAPIKeyRequest)(nil),                   // 28: auth.GetAPIKeyRequest
-	(*GetAPIKeyResponse)(nil),                  // 29: auth.GetAPIKeyResponse
-	(*APIKeyInfo)(nil),                         // 30: auth.APIKeyInfo
-	(*GetOrCreateDocAPIKeyRequest)(nil),        // 31: auth.GetOrCreateDocAPIKeyRequest
-	(*GetOrCreateDocAPIKeyResponse)(nil),       // 32: auth.GetOrCreateDocAPIKeyResponse
-	(*CreateRegistrationSessionRequest)(nil),   // 33: auth.CreateRegistrationSessionRequest
-	(*CreateRegistrationSessionResponse)(nil),  // 34: auth.CreateRegistrationSessionResponse
-	(*ResendVerificationEmailRequest)(nil),     // 35: auth.ResendVerificationEmailRequest
-	(*RegistrationSessionData)(nil),            // 36: auth.RegistrationSessionData
-	(*RegistrationSessionInfo)(nil),            // 37: auth.RegistrationSessionInfo
-	(*VerifyRegistrationTokenRequest)(nil),     // 38: auth.VerifyRegistrationTokenRequest
-	(*VerifyRegistrationTokenResponse)(nil),    // 39: auth.VerifyRegistrationTokenResponse
-	(*GetRegistrationSessionRequest)(nil),      // 40: auth.GetRegistrationSessionRequest
-	(*GetRegistrationSessionResponse)(nil),     // 41: auth.GetRegistrationSessionResponse
-	(*CreateUserForRegistrationRequest)(nil),   // 42: auth.CreateUserForRegistrationRequest
-	(*CreateUserForRegistrationResponse)(nil),  // 43: auth.CreateUserForRegistrationResponse
-	(*UpdateRegistrationSessionRequest)(nil),   // 44: auth.UpdateRegistrationSessionRequest
-	(*UpdateRegistrationSessionResponse)(nil),  // 45: auth.UpdateRegistrationSessionResponse
-	(*ListRegistrationSessionsRequest)(nil),    // 46: auth.ListRegistrationSessionsRequest
-	(*ListRegistrationSessionsResponse)(nil),   // 47: auth.ListRegistrationSessionsResponse
-	(*SetupRegistrationBillingRequest)(nil),    // 48: auth.SetupRegistrationBillingRequest
-	(*ConfirmRegistrationPaymentRequest)(nil),  // 49: auth.ConfirmRegistrationPaymentRequest
-	(*ConfirmRegistrationPaymentResponse)(nil), // 50: auth.ConfirmRegistrationPaymentResponse
-	(*SetupRegistrationBillingResponse)(nil),   // 51: auth.SetupRegistrationBillingResponse
-	nil,                                        // 52: auth.IdentityActor.PermissionsEntry
-	(*timestamppb.Timestamp)(nil),              // 53: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),                      // 54: google.protobuf.Empty
+	(IdentityActorType)(0),                           // 0: auth.IdentityActorType
+	(IdentityRelationType)(0),                        // 1: auth.IdentityRelationType
+	(AccountMode)(0),                                 // 2: auth.AccountMode
+	(*CompleteRegistrationRequest)(nil),              // 3: auth.CompleteRegistrationRequest
+	(*CompleteRegistrationResponse)(nil),             // 4: auth.CompleteRegistrationResponse
+	(*LoginRequest)(nil),                             // 5: auth.LoginRequest
+	(*LoginResponse)(nil),                            // 6: auth.LoginResponse
+	(*User)(nil),                                     // 7: auth.User
+	(*Credential)(nil),                               // 8: auth.Credential
+	(*Identity)(nil),                                 // 9: auth.Identity
+	(*IdentityTarget)(nil),                           // 10: auth.IdentityTarget
+	(*IdentityActor)(nil),                            // 11: auth.IdentityActor
+	(*RegisterRequest)(nil),                          // 12: auth.RegisterRequest
+	(*MagicLoginRequest)(nil),                        // 13: auth.MagicLoginRequest
+	(*RefreshTokenRequest)(nil),                      // 14: auth.RefreshTokenRequest
+	(*RefreshTokenResponse)(nil),                     // 15: auth.RefreshTokenResponse
+	(*RequestPasswordResetRequest)(nil),              // 16: auth.RequestPasswordResetRequest
+	(*ResetPasswordRequest)(nil),                     // 17: auth.ResetPasswordRequest
+	(*RevokeRefreshTokenRequest)(nil),                // 18: auth.RevokeRefreshTokenRequest
+	(*UpdatePasswordRequest)(nil),                    // 19: auth.UpdatePasswordRequest
+	(*CreateAPIKeyRequest)(nil),                      // 20: auth.CreateAPIKeyRequest
+	(*CreateAPIKeyResponse)(nil),                     // 21: auth.CreateAPIKeyResponse
+	(*RotateAPIKeyRequest)(nil),                      // 22: auth.RotateAPIKeyRequest
+	(*RotateAPIKeyResponse)(nil),                     // 23: auth.RotateAPIKeyResponse
+	(*RevokeAPIKeyRequest)(nil),                      // 24: auth.RevokeAPIKeyRequest
+	(*ListAPIKeysRequest)(nil),                       // 25: auth.ListAPIKeysRequest
+	(*PageInfo)(nil),                                 // 26: auth.PageInfo
+	(*ListAPIKeysResponse)(nil),                      // 27: auth.ListAPIKeysResponse
+	(*GetAPIKeyRequest)(nil),                         // 28: auth.GetAPIKeyRequest
+	(*GetAPIKeyResponse)(nil),                        // 29: auth.GetAPIKeyResponse
+	(*APIKeyInfo)(nil),                               // 30: auth.APIKeyInfo
+	(*GetOrCreateDocAPIKeyRequest)(nil),              // 31: auth.GetOrCreateDocAPIKeyRequest
+	(*GetOrCreateDocAPIKeyResponse)(nil),             // 32: auth.GetOrCreateDocAPIKeyResponse
+	(*CreateRegistrationSessionRequest)(nil),         // 33: auth.CreateRegistrationSessionRequest
+	(*CreateRegistrationSessionResponse)(nil),        // 34: auth.CreateRegistrationSessionResponse
+	(*ResendVerificationEmailRequest)(nil),           // 35: auth.ResendVerificationEmailRequest
+	(*RegistrationSessionData)(nil),                  // 36: auth.RegistrationSessionData
+	(*RegistrationSessionInfo)(nil),                  // 37: auth.RegistrationSessionInfo
+	(*VerifyRegistrationTokenRequest)(nil),           // 38: auth.VerifyRegistrationTokenRequest
+	(*VerifyRegistrationTokenResponse)(nil),          // 39: auth.VerifyRegistrationTokenResponse
+	(*GetRegistrationSessionRequest)(nil),            // 40: auth.GetRegistrationSessionRequest
+	(*GetRegistrationSessionResponse)(nil),           // 41: auth.GetRegistrationSessionResponse
+	(*CreateUserForRegistrationRequest)(nil),         // 42: auth.CreateUserForRegistrationRequest
+	(*CreateUserForRegistrationResponse)(nil),        // 43: auth.CreateUserForRegistrationResponse
+	(*UpdateRegistrationSessionRequest)(nil),         // 44: auth.UpdateRegistrationSessionRequest
+	(*UpdateRegistrationSessionResponse)(nil),        // 45: auth.UpdateRegistrationSessionResponse
+	(*ListRegistrationSessionsRequest)(nil),          // 46: auth.ListRegistrationSessionsRequest
+	(*ListRegistrationSessionsResponse)(nil),         // 47: auth.ListRegistrationSessionsResponse
+	(*SetupRegistrationBillingRequest)(nil),          // 48: auth.SetupRegistrationBillingRequest
+	(*ConfirmRegistrationPaymentRequest)(nil),        // 49: auth.ConfirmRegistrationPaymentRequest
+	(*ConfirmRegistrationPaymentResponse)(nil),       // 50: auth.ConfirmRegistrationPaymentResponse
+	(*GetIncompleteRegistrationSessionRequest)(nil),  // 51: auth.GetIncompleteRegistrationSessionRequest
+	(*GetIncompleteRegistrationSessionResponse)(nil), // 52: auth.GetIncompleteRegistrationSessionResponse
+	(*IncompleteRegistrationSessionProto)(nil),       // 53: auth.IncompleteRegistrationSessionProto
+	(*SetupRegistrationBillingResponse)(nil),         // 54: auth.SetupRegistrationBillingResponse
+	nil,                                              // 55: auth.IdentityActor.PermissionsEntry
+	(*timestamppb.Timestamp)(nil),                    // 56: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),                            // 57: google.protobuf.Empty
 }
 var file_auth_auth_proto_depIdxs = []int32{
 	7,  // 0: auth.LoginResponse.user:type_name -> auth.User
-	53, // 1: auth.User.email_verified:type_name -> google.protobuf.Timestamp
-	53, // 2: auth.User.created_at:type_name -> google.protobuf.Timestamp
-	53, // 3: auth.User.updated_at:type_name -> google.protobuf.Timestamp
+	56, // 1: auth.User.email_verified:type_name -> google.protobuf.Timestamp
+	56, // 2: auth.User.created_at:type_name -> google.protobuf.Timestamp
+	56, // 3: auth.User.updated_at:type_name -> google.protobuf.Timestamp
 	0,  // 4: auth.Identity.type:type_name -> auth.IdentityActorType
 	11, // 5: auth.Identity.actor:type_name -> auth.IdentityActor
 	2,  // 6: auth.Identity.account_mode:type_name -> auth.AccountMode
 	10, // 7: auth.Identity.target:type_name -> auth.IdentityTarget
 	1,  // 8: auth.IdentityActor.relation_type:type_name -> auth.IdentityRelationType
-	52, // 9: auth.IdentityActor.permissions:type_name -> auth.IdentityActor.PermissionsEntry
-	53, // 10: auth.CreateAPIKeyRequest.expires_at:type_name -> google.protobuf.Timestamp
+	55, // 9: auth.IdentityActor.permissions:type_name -> auth.IdentityActor.PermissionsEntry
+	56, // 10: auth.CreateAPIKeyRequest.expires_at:type_name -> google.protobuf.Timestamp
 	30, // 11: auth.CreateAPIKeyResponse.api_key:type_name -> auth.APIKeyInfo
-	53, // 12: auth.RotateAPIKeyRequest.expires_at:type_name -> google.protobuf.Timestamp
+	56, // 12: auth.RotateAPIKeyRequest.expires_at:type_name -> google.protobuf.Timestamp
 	30, // 13: auth.RotateAPIKeyResponse.api_key:type_name -> auth.APIKeyInfo
 	30, // 14: auth.ListAPIKeysResponse.api_keys:type_name -> auth.APIKeyInfo
 	26, // 15: auth.ListAPIKeysResponse.page_info:type_name -> auth.PageInfo
 	30, // 16: auth.GetAPIKeyResponse.api_key:type_name -> auth.APIKeyInfo
-	53, // 17: auth.APIKeyInfo.created_at:type_name -> google.protobuf.Timestamp
-	53, // 18: auth.APIKeyInfo.updated_at:type_name -> google.protobuf.Timestamp
-	53, // 19: auth.APIKeyInfo.last_used_at:type_name -> google.protobuf.Timestamp
-	53, // 20: auth.APIKeyInfo.expires_at:type_name -> google.protobuf.Timestamp
-	53, // 21: auth.APIKeyInfo.revoked_at:type_name -> google.protobuf.Timestamp
+	56, // 17: auth.APIKeyInfo.created_at:type_name -> google.protobuf.Timestamp
+	56, // 18: auth.APIKeyInfo.updated_at:type_name -> google.protobuf.Timestamp
+	56, // 19: auth.APIKeyInfo.last_used_at:type_name -> google.protobuf.Timestamp
+	56, // 20: auth.APIKeyInfo.expires_at:type_name -> google.protobuf.Timestamp
+	56, // 21: auth.APIKeyInfo.revoked_at:type_name -> google.protobuf.Timestamp
 	30, // 22: auth.GetOrCreateDocAPIKeyResponse.api_key:type_name -> auth.APIKeyInfo
 	36, // 23: auth.RegistrationSessionInfo.session_data:type_name -> auth.RegistrationSessionData
-	53, // 24: auth.RegistrationSessionInfo.completed_at:type_name -> google.protobuf.Timestamp
-	53, // 25: auth.RegistrationSessionInfo.created_at:type_name -> google.protobuf.Timestamp
-	53, // 26: auth.RegistrationSessionInfo.updated_at:type_name -> google.protobuf.Timestamp
+	56, // 24: auth.RegistrationSessionInfo.completed_at:type_name -> google.protobuf.Timestamp
+	56, // 25: auth.RegistrationSessionInfo.created_at:type_name -> google.protobuf.Timestamp
+	56, // 26: auth.RegistrationSessionInfo.updated_at:type_name -> google.protobuf.Timestamp
 	37, // 27: auth.VerifyRegistrationTokenResponse.session:type_name -> auth.RegistrationSessionInfo
 	37, // 28: auth.GetRegistrationSessionResponse.session:type_name -> auth.RegistrationSessionInfo
 	36, // 29: auth.UpdateRegistrationSessionRequest.session_data:type_name -> auth.RegistrationSessionData
 	37, // 30: auth.UpdateRegistrationSessionResponse.session:type_name -> auth.RegistrationSessionInfo
 	37, // 31: auth.ListRegistrationSessionsResponse.sessions:type_name -> auth.RegistrationSessionInfo
 	26, // 32: auth.ListRegistrationSessionsResponse.page_info:type_name -> auth.PageInfo
-	8,  // 33: auth.AuthService.ValidateCredential:input_type -> auth.Credential
-	5,  // 34: auth.AuthService.Login:input_type -> auth.LoginRequest
-	12, // 35: auth.AuthService.Register:input_type -> auth.RegisterRequest
-	14, // 36: auth.AuthService.RefreshToken:input_type -> auth.RefreshTokenRequest
-	16, // 37: auth.AuthService.RequestPasswordReset:input_type -> auth.RequestPasswordResetRequest
-	17, // 38: auth.AuthService.ResetPassword:input_type -> auth.ResetPasswordRequest
-	18, // 39: auth.AuthService.RevokeRefreshToken:input_type -> auth.RevokeRefreshTokenRequest
-	19, // 40: auth.AuthService.UpdatePassword:input_type -> auth.UpdatePasswordRequest
-	20, // 41: auth.AuthService.CreateAPIKey:input_type -> auth.CreateAPIKeyRequest
-	22, // 42: auth.AuthService.RotateAPIKey:input_type -> auth.RotateAPIKeyRequest
-	24, // 43: auth.AuthService.RevokeAPIKey:input_type -> auth.RevokeAPIKeyRequest
-	25, // 44: auth.AuthService.ListAPIKeys:input_type -> auth.ListAPIKeysRequest
-	28, // 45: auth.AuthService.GetAPIKey:input_type -> auth.GetAPIKeyRequest
-	31, // 46: auth.AuthService.GetOrCreateDocAPIKey:input_type -> auth.GetOrCreateDocAPIKeyRequest
-	33, // 47: auth.AuthService.CreateRegistrationSession:input_type -> auth.CreateRegistrationSessionRequest
-	35, // 48: auth.AuthService.ResendVerificationEmail:input_type -> auth.ResendVerificationEmailRequest
-	38, // 49: auth.AuthService.VerifyRegistrationToken:input_type -> auth.VerifyRegistrationTokenRequest
-	40, // 50: auth.AuthService.GetRegistrationSession:input_type -> auth.GetRegistrationSessionRequest
-	42, // 51: auth.AuthService.CreateUserForRegistration:input_type -> auth.CreateUserForRegistrationRequest
-	44, // 52: auth.AuthService.UpdateRegistrationSession:input_type -> auth.UpdateRegistrationSessionRequest
-	46, // 53: auth.AuthService.ListRegistrationSessions:input_type -> auth.ListRegistrationSessionsRequest
-	48, // 54: auth.AuthService.SetupRegistrationBilling:input_type -> auth.SetupRegistrationBillingRequest
-	49, // 55: auth.AuthService.ConfirmRegistrationPayment:input_type -> auth.ConfirmRegistrationPaymentRequest
-	3,  // 56: auth.AuthService.CompleteRegistration:input_type -> auth.CompleteRegistrationRequest
-	13, // 57: auth.AuthService.MagicLogin:input_type -> auth.MagicLoginRequest
-	9,  // 58: auth.AuthService.ValidateCredential:output_type -> auth.Identity
-	6,  // 59: auth.AuthService.Login:output_type -> auth.LoginResponse
-	6,  // 60: auth.AuthService.Register:output_type -> auth.LoginResponse
-	15, // 61: auth.AuthService.RefreshToken:output_type -> auth.RefreshTokenResponse
-	54, // 62: auth.AuthService.RequestPasswordReset:output_type -> google.protobuf.Empty
-	6,  // 63: auth.AuthService.ResetPassword:output_type -> auth.LoginResponse
-	54, // 64: auth.AuthService.RevokeRefreshToken:output_type -> google.protobuf.Empty
-	54, // 65: auth.AuthService.UpdatePassword:output_type -> google.protobuf.Empty
-	21, // 66: auth.AuthService.CreateAPIKey:output_type -> auth.CreateAPIKeyResponse
-	23, // 67: auth.AuthService.RotateAPIKey:output_type -> auth.RotateAPIKeyResponse
-	54, // 68: auth.AuthService.RevokeAPIKey:output_type -> google.protobuf.Empty
-	27, // 69: auth.AuthService.ListAPIKeys:output_type -> auth.ListAPIKeysResponse
-	29, // 70: auth.AuthService.GetAPIKey:output_type -> auth.GetAPIKeyResponse
-	32, // 71: auth.AuthService.GetOrCreateDocAPIKey:output_type -> auth.GetOrCreateDocAPIKeyResponse
-	34, // 72: auth.AuthService.CreateRegistrationSession:output_type -> auth.CreateRegistrationSessionResponse
-	54, // 73: auth.AuthService.ResendVerificationEmail:output_type -> google.protobuf.Empty
-	39, // 74: auth.AuthService.VerifyRegistrationToken:output_type -> auth.VerifyRegistrationTokenResponse
-	41, // 75: auth.AuthService.GetRegistrationSession:output_type -> auth.GetRegistrationSessionResponse
-	43, // 76: auth.AuthService.CreateUserForRegistration:output_type -> auth.CreateUserForRegistrationResponse
-	45, // 77: auth.AuthService.UpdateRegistrationSession:output_type -> auth.UpdateRegistrationSessionResponse
-	47, // 78: auth.AuthService.ListRegistrationSessions:output_type -> auth.ListRegistrationSessionsResponse
-	51, // 79: auth.AuthService.SetupRegistrationBilling:output_type -> auth.SetupRegistrationBillingResponse
-	50, // 80: auth.AuthService.ConfirmRegistrationPayment:output_type -> auth.ConfirmRegistrationPaymentResponse
-	4,  // 81: auth.AuthService.CompleteRegistration:output_type -> auth.CompleteRegistrationResponse
-	6,  // 82: auth.AuthService.MagicLogin:output_type -> auth.LoginResponse
-	58, // [58:83] is the sub-list for method output_type
-	33, // [33:58] is the sub-list for method input_type
-	33, // [33:33] is the sub-list for extension type_name
-	33, // [33:33] is the sub-list for extension extendee
-	0,  // [0:33] is the sub-list for field type_name
+	53, // 33: auth.GetIncompleteRegistrationSessionResponse.session:type_name -> auth.IncompleteRegistrationSessionProto
+	56, // 34: auth.IncompleteRegistrationSessionProto.created_at:type_name -> google.protobuf.Timestamp
+	8,  // 35: auth.AuthService.ValidateCredential:input_type -> auth.Credential
+	5,  // 36: auth.AuthService.Login:input_type -> auth.LoginRequest
+	12, // 37: auth.AuthService.Register:input_type -> auth.RegisterRequest
+	14, // 38: auth.AuthService.RefreshToken:input_type -> auth.RefreshTokenRequest
+	16, // 39: auth.AuthService.RequestPasswordReset:input_type -> auth.RequestPasswordResetRequest
+	17, // 40: auth.AuthService.ResetPassword:input_type -> auth.ResetPasswordRequest
+	18, // 41: auth.AuthService.RevokeRefreshToken:input_type -> auth.RevokeRefreshTokenRequest
+	19, // 42: auth.AuthService.UpdatePassword:input_type -> auth.UpdatePasswordRequest
+	20, // 43: auth.AuthService.CreateAPIKey:input_type -> auth.CreateAPIKeyRequest
+	22, // 44: auth.AuthService.RotateAPIKey:input_type -> auth.RotateAPIKeyRequest
+	24, // 45: auth.AuthService.RevokeAPIKey:input_type -> auth.RevokeAPIKeyRequest
+	25, // 46: auth.AuthService.ListAPIKeys:input_type -> auth.ListAPIKeysRequest
+	28, // 47: auth.AuthService.GetAPIKey:input_type -> auth.GetAPIKeyRequest
+	31, // 48: auth.AuthService.GetOrCreateDocAPIKey:input_type -> auth.GetOrCreateDocAPIKeyRequest
+	33, // 49: auth.AuthService.CreateRegistrationSession:input_type -> auth.CreateRegistrationSessionRequest
+	35, // 50: auth.AuthService.ResendVerificationEmail:input_type -> auth.ResendVerificationEmailRequest
+	38, // 51: auth.AuthService.VerifyRegistrationToken:input_type -> auth.VerifyRegistrationTokenRequest
+	40, // 52: auth.AuthService.GetRegistrationSession:input_type -> auth.GetRegistrationSessionRequest
+	42, // 53: auth.AuthService.CreateUserForRegistration:input_type -> auth.CreateUserForRegistrationRequest
+	44, // 54: auth.AuthService.UpdateRegistrationSession:input_type -> auth.UpdateRegistrationSessionRequest
+	46, // 55: auth.AuthService.ListRegistrationSessions:input_type -> auth.ListRegistrationSessionsRequest
+	48, // 56: auth.AuthService.SetupRegistrationBilling:input_type -> auth.SetupRegistrationBillingRequest
+	49, // 57: auth.AuthService.ConfirmRegistrationPayment:input_type -> auth.ConfirmRegistrationPaymentRequest
+	3,  // 58: auth.AuthService.CompleteRegistration:input_type -> auth.CompleteRegistrationRequest
+	13, // 59: auth.AuthService.MagicLogin:input_type -> auth.MagicLoginRequest
+	51, // 60: auth.AuthService.GetIncompleteRegistrationSession:input_type -> auth.GetIncompleteRegistrationSessionRequest
+	9,  // 61: auth.AuthService.ValidateCredential:output_type -> auth.Identity
+	6,  // 62: auth.AuthService.Login:output_type -> auth.LoginResponse
+	6,  // 63: auth.AuthService.Register:output_type -> auth.LoginResponse
+	15, // 64: auth.AuthService.RefreshToken:output_type -> auth.RefreshTokenResponse
+	57, // 65: auth.AuthService.RequestPasswordReset:output_type -> google.protobuf.Empty
+	6,  // 66: auth.AuthService.ResetPassword:output_type -> auth.LoginResponse
+	57, // 67: auth.AuthService.RevokeRefreshToken:output_type -> google.protobuf.Empty
+	57, // 68: auth.AuthService.UpdatePassword:output_type -> google.protobuf.Empty
+	21, // 69: auth.AuthService.CreateAPIKey:output_type -> auth.CreateAPIKeyResponse
+	23, // 70: auth.AuthService.RotateAPIKey:output_type -> auth.RotateAPIKeyResponse
+	57, // 71: auth.AuthService.RevokeAPIKey:output_type -> google.protobuf.Empty
+	27, // 72: auth.AuthService.ListAPIKeys:output_type -> auth.ListAPIKeysResponse
+	29, // 73: auth.AuthService.GetAPIKey:output_type -> auth.GetAPIKeyResponse
+	32, // 74: auth.AuthService.GetOrCreateDocAPIKey:output_type -> auth.GetOrCreateDocAPIKeyResponse
+	34, // 75: auth.AuthService.CreateRegistrationSession:output_type -> auth.CreateRegistrationSessionResponse
+	57, // 76: auth.AuthService.ResendVerificationEmail:output_type -> google.protobuf.Empty
+	39, // 77: auth.AuthService.VerifyRegistrationToken:output_type -> auth.VerifyRegistrationTokenResponse
+	41, // 78: auth.AuthService.GetRegistrationSession:output_type -> auth.GetRegistrationSessionResponse
+	43, // 79: auth.AuthService.CreateUserForRegistration:output_type -> auth.CreateUserForRegistrationResponse
+	45, // 80: auth.AuthService.UpdateRegistrationSession:output_type -> auth.UpdateRegistrationSessionResponse
+	47, // 81: auth.AuthService.ListRegistrationSessions:output_type -> auth.ListRegistrationSessionsResponse
+	54, // 82: auth.AuthService.SetupRegistrationBilling:output_type -> auth.SetupRegistrationBillingResponse
+	50, // 83: auth.AuthService.ConfirmRegistrationPayment:output_type -> auth.ConfirmRegistrationPaymentResponse
+	4,  // 84: auth.AuthService.CompleteRegistration:output_type -> auth.CompleteRegistrationResponse
+	6,  // 85: auth.AuthService.MagicLogin:output_type -> auth.LoginResponse
+	52, // 86: auth.AuthService.GetIncompleteRegistrationSession:output_type -> auth.GetIncompleteRegistrationSessionResponse
+	61, // [61:87] is the sub-list for method output_type
+	35, // [35:61] is the sub-list for method input_type
+	35, // [35:35] is the sub-list for extension type_name
+	35, // [35:35] is the sub-list for extension extendee
+	0,  // [0:35] is the sub-list for field type_name
 }
 
 func init() { file_auth_auth_proto_init() }
@@ -3668,13 +3845,14 @@ func file_auth_auth_proto_init() {
 	file_auth_auth_proto_msgTypes[41].OneofWrappers = []any{}
 	file_auth_auth_proto_msgTypes[43].OneofWrappers = []any{}
 	file_auth_auth_proto_msgTypes[47].OneofWrappers = []any{}
+	file_auth_auth_proto_msgTypes[49].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_auth_auth_proto_rawDesc), len(file_auth_auth_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   50,
+			NumMessages:   53,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

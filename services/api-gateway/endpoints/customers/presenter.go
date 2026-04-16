@@ -239,31 +239,14 @@ func customerAddressPresenter(a *pb.CustomerAddressProto) *apiresource.Address {
 	}
 }
 
-func CustomerSummaryPresenter(cs *pb.CustomerSummaryProto) apiresource.CustomerSummary {
-	if cs == nil {
-		return apiresource.CustomerSummary{}
-	}
-
-	return apiresource.CustomerSummary{
-		ID:                cs.Id,
-		Object:            constants.ObjectTypeCustomerSummary,
-		Name:              cs.Name,
-		Number:            cs.Number,
-		Email:             cs.Email,
-		CustomerTypeGroup: cs.CustomerTypeGroup,
-		Status:            constants.AccountStatusCode(cs.Status),
-		CreatedAt:         grpcutil.TimestampToTime(cs.CreatedAt),
-	}
-}
-
-func CustomerListPresenter(resp *pb.ListCustomersResponse) *apiresource.List[apiresource.CustomerSummary] {
+func CustomerListPresenter(resp *pb.ListCustomersResponse) *apiresource.List[apiresource.Customer] {
 	if resp == nil {
-		return apiresource.NewList[apiresource.CustomerSummary](nil, apiresource.PageInfo{})
+		return apiresource.NewList[apiresource.Customer](nil, apiresource.PageInfo{})
 	}
 
-	items := make([]apiresource.CustomerSummary, len(resp.Customers))
-	for i, cs := range resp.Customers {
-		items[i] = CustomerSummaryPresenter(cs)
+	items := make([]apiresource.Customer, len(resp.Customers))
+	for i, c := range resp.Customers {
+		items[i] = CustomerPresenter(c)
 	}
 
 	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(resp.PageInfo))

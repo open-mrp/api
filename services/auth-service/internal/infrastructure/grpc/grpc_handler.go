@@ -11,6 +11,7 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type gRPCHandler struct {
@@ -387,6 +388,28 @@ func (h *gRPCHandler) CreateUserForRegistration(ctx context.Context, req *pb.Cre
 		AccessToken:  result.AccessToken,
 		RefreshToken: result.RefreshToken,
 	}, nil
+}
+
+func (h *gRPCHandler) GetIncompleteRegistrationSession(ctx context.Context, req *pb.GetIncompleteRegistrationSessionRequest) (*pb.GetIncompleteRegistrationSessionResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	session, apiErr := h.registrationSessionSvc.GetIncompleteByUserID(ctx, req.UserId)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	resp := &pb.GetIncompleteRegistrationSessionResponse{}
+	if session != nil {
+		resp.Session = &pb.IncompleteRegistrationSessionProto{
+			SessionId: session.TypeID,
+			PlanCode:  session.PlanCode,
+			Step:      string(session.Step),
+			CreatedAt: timestamppb.New(session.CreatedAt),
+		}
+	}
+	return resp, nil
 }
 
 func (h *gRPCHandler) GetRegistrationSession(ctx context.Context, req *pb.GetRegistrationSessionRequest) (*pb.GetRegistrationSessionResponse, error) {

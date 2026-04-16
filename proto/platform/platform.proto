@@ -206,7 +206,7 @@ message ListRequestLogsRequest {
   optional int32 status_code = 4;
   optional string error_code = 5;
   optional string account_id = 6;
-  optional string actor_id = 7;
+  repeated string actor_ids = 7;
   optional string actor_type = 8;
   optional string actor_name = 9;
   optional bool exact_match = 10;
@@ -214,6 +214,9 @@ message ListRequestLogsRequest {
   int32 limit = 12;
   optional string query = 13;
   repeated string includes = 14;
+  repeated string normalized_routes = 15;
+  repeated string hosts = 16;
+  optional int64 min_latency_us = 17;
 }
 
 message ListRequestLogsResponse {
@@ -279,7 +282,7 @@ message CreateAuditEventResponse {
 message ListAuditEventsRequest {
   optional google.protobuf.Timestamp start_date = 1;
   optional google.protobuf.Timestamp end_date = 2;
-  optional string resource_type = 3;
+  repeated string resource_types = 3;
   optional string resource_id = 4;
   optional string actor_id = 5;
   optional string action = 6;

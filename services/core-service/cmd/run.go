@@ -90,6 +90,16 @@ func Run(
 	repoFactory := repository.NewRepoFactory(queries)
 	txManager := service.NewTransactionManager(db, queries)
 
+	// Connect to auth-service lazily (no WaitForReady) to avoid a startup deadlock:
+	// auth-service waits for core-service to be ready, so core-service cannot
+	// block on auth-service here. The gRPC client dials in the background and
+	// reconnects on demand; the first tenancy call will establish the connection.
+	authClient, err := grpc.NewCoreAuthClient(cfg.AuthServiceURL)
+	if err != nil {
+		return err
+	}
+	defer authClient.Close()
+
 	mediatorFactory := mediator.NewMediatorFactory()
 	accountSvc := service.NewAccountSvc(&service.AccountSvcConfig{
 		RepoFactory:         repoFactory,
@@ -176,6 +186,9 @@ func Run(
 		TxManager:             txManager,
 		NotificationPublisher: notificationPublisher,
 		BillingPublisher:      billingPublisher,
+		S3Client:              s3Store,
+		UserPhotosBucket:      cfg.UserPhotosBucket,
+		PlatformMode:          cfg.PlatformMode,
 	})
 	accountPriceSvc := service.NewAccountPriceSvc(&service.AccountPriceSvcConfig{
 		Repos:           repoFactory,
@@ -622,6 +635,14 @@ func Run(
 	grpc.RegisterTerritoryService(srv, territorySvc)
 	grpc.RegisterShippingService(srv, shipmentSvc, shipmentLineSvc)
 	grpc.RegisterAccountService(srv, accountSvc, sandboxSvc, accountStatusSvc)
+
+	tenancySvc := service.NewTenancySvc(&service.TenancySvcConfig{
+		RepoFactory:      repoFactory,
+		AuthClient:       authClient,
+		S3Client:         s3Store,
+		UserPhotosBucket: cfg.UserPhotosBucket,
+	})
+	grpc.RegisterTenancyService(srv, tenancySvc)
 
 	logger.Info("Core service started", "port", cfg.Port)
 

@@ -40,11 +40,15 @@ func (*AuditEventsEndpointGroup) Materialize(config *AuditEventsEndpointGroupCon
 	}
 
 	listEndpoint := (&auditeventep.ListAuditEventsEndpoint{}).Materialize().WithService(inner, auditEventSvc)
+	listResourceTypesEndpoint := (&auditeventep.ListAuditEventResourceTypesEndpoint{}).Materialize().WithService(inner, auditEventSvc)
 	getEndpoint := (&auditeventep.GetAuditEventEndpoint{}).Materialize().WithService(inner, auditEventSvc)
 
+	// Order matters: the router's catch-all picks the LAST matching route, so
+	// the static /resource-types path must be registered after the /{id} wildcard.
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listEndpoint,
 		getEndpoint,
+		listResourceTypesEndpoint,
 	}
 
 	return &AuditEventsEndpointGroup{inner}

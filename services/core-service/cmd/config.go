@@ -30,6 +30,7 @@ const (
 	envUserPhotosBucket           = "USER_PHOTOS_BUCKET"
 	envShippingLabelsBucket       = "SHIPPING_LABELS_BUCKET"
 	envFrontendURL                = "FRONTEND_URL"
+	envAuthServiceURL             = "AUTH_SERVICE_URL"
 )
 
 // config represents the configuration for the core service.
@@ -72,6 +73,9 @@ type config struct {
 
 	// FrontendURL (required) is the base URL of the frontend application, used for checkout return URLs.
 	FrontendURL string
+
+	// AuthServiceURL (required) is the gRPC address of auth-service.
+	AuthServiceURL string
 }
 
 // withDefaults sets the default values for the configuration.
@@ -104,6 +108,7 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 		UserPhotosBucket:           env.GetEnv(envUserPhotosBucket, getenv),
 		ShippingLabelsBucket:       env.GetEnv(envShippingLabelsBucket, getenv),
 		FrontendURL:                env.GetEnv(envFrontendURL, getenv),
+		AuthServiceURL:             env.GetEnv(envAuthServiceURL, getenv),
 	}
 }
 
@@ -136,6 +141,9 @@ func (c *config) validate() error {
 	}
 	if c.FrontendURL == "" {
 		return fmt.Errorf("core-service: FRONTEND_URL is required")
+	}
+	if c.AuthServiceURL == "" {
+		return fmt.Errorf("core-service: AUTH_SERVICE_URL is required")
 	}
 
 	if !c.PlatformMode.IsTest() {

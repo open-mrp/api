@@ -19,12 +19,7 @@ type AccountUserSvc interface {
 	GetAccountUser(ctx context.Context, req *GetAccountUserRequest) (*apiresource.AccountUser, *apierror.APIError)
 	CreateAccountUser(ctx context.Context, req *CreateAccountUserRequest) (*apiresource.AccountUser, *apierror.APIError)
 	UpdateAccountUser(ctx context.Context, req *UpdateAccountUserRequest) (*apiresource.AccountUser, *apierror.APIError)
-	DeleteAccountUser(ctx context.Context, req *DeleteAccountUserRequest) (*apiresource.EmptyResource, *apierror.APIError)
-	LockAccountUser(ctx context.Context, req *LockAccountUserRequest) (*apiresource.EmptyResource, *apierror.APIError)
-	UnlockAccountUser(ctx context.Context, req *UnlockAccountUserRequest) (*apiresource.EmptyResource, *apierror.APIError)
-	RestoreAccountUser(ctx context.Context, req *RestoreAccountUserRequest) (*apiresource.EmptyResource, *apierror.APIError)
-	UpdateAccountUserPassword(ctx context.Context, req *UpdateAccountUserPasswordRequest) (*apiresource.EmptyResource, *apierror.APIError)
-	UpdateNotificationPreferences(ctx context.Context, req *UpdateNotificationPreferencesRequest) (*apiresource.AccountUser, *apierror.APIError)
+	UpdateAccountUserStatus(ctx context.Context, req *UpdateAccountUserStatusRequest) (*apiresource.EmptyResource, *apierror.APIError)
 }
 
 type AccountUserSvcConfig struct {
@@ -88,16 +83,13 @@ func (m *accountUserSvcImpl) GetAccountUser(ctx context.Context, req *GetAccount
 
 func (m *accountUserSvcImpl) CreateAccountUser(ctx context.Context, req *CreateAccountUserRequest) (*apiresource.AccountUser, *apierror.APIError) {
 	pbReq := &pb.CreateAccountUserRequest{
-		Name:                          req.Name,
-		Email:                         req.Email,
-		Username:                      req.Username,
-		Password:                      req.Password,
-		RoleId:                        req.RoleID,
-		DepartmentId:                  req.DepartmentID,
-		IsSalesRep:                    req.IsSalesRep,
-		ReceivesOrderAcknowledgements: req.ReceivesOrderAcknowledgements,
-		ReceivesInvoiceNotifications:  req.ReceivesInvoiceNotifications,
-		ReceivesPurchaseOrderSubmissionNotifications: req.ReceivesPurchaseOrderSubmissionNotifications,
+		Name:                    req.Name,
+		Email:                   req.Email,
+		Username:                req.Username,
+		Password:                req.Password,
+		RoleId:                  req.RoleID,
+		DepartmentId:            req.DepartmentID,
+		NotificationPreferences: toProtoNotificationPrefs(req.Preferences),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, accountUserSvcTracer, "service.account_users.create", domain.ServiceName,
@@ -114,12 +106,13 @@ func (m *accountUserSvcImpl) CreateAccountUser(ctx context.Context, req *CreateA
 
 func (m *accountUserSvcImpl) UpdateAccountUser(ctx context.Context, req *UpdateAccountUserRequest) (*apiresource.AccountUser, *apierror.APIError) {
 	pbReq := &pb.UpdateAccountUserRequest{
-		AccountUserId: req.AccountUserID,
-		Name:          req.Name,
-		Email:         req.Email,
-		Username:      req.Username,
-		RoleId:        req.RoleID,
-		DepartmentId:  req.DepartmentID,
+		AccountUserId:           req.AccountUserID,
+		Name:                    req.Name,
+		Email:                   req.Email,
+		Username:                req.Username,
+		RoleId:                  req.RoleID,
+		DepartmentId:            req.DepartmentID,
+		NotificationPreferences: toProtoNotificationPrefs(req.Preferences),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, accountUserSvcTracer, "service.account_users.update", domain.ServiceName,
@@ -134,12 +127,15 @@ func (m *accountUserSvcImpl) UpdateAccountUser(ctx context.Context, req *UpdateA
 	return &result, nil
 }
 
-func (m *accountUserSvcImpl) DeleteAccountUser(ctx context.Context, req *DeleteAccountUserRequest) (*apiresource.EmptyResource, *apierror.APIError) {
-	pbReq := &pb.DeleteAccountUserRequest{AccountUserId: req.AccountUserID}
+func (m *accountUserSvcImpl) UpdateAccountUserStatus(ctx context.Context, req *UpdateAccountUserStatusRequest) (*apiresource.EmptyResource, *apierror.APIError) {
+	pbReq := &pb.UpdateAccountUserStatusRequest{
+		AccountUserId: req.AccountUserID,
+		StatusCode:    string(req.Status),
+	}
 
-	_, apiErr := grpcutil.CallRPC(ctx, accountUserSvcTracer, "service.account_users.delete", domain.ServiceName,
+	_, apiErr := grpcutil.CallRPC(ctx, accountUserSvcTracer, "service.account_users.update_status", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-			return m.coreClient.DeleteAccountUser(ctx, pbReq, opts...)
+			return m.coreClient.UpdateAccountUserStatus(ctx, pbReq, opts...)
 		})
 	if apiErr != nil {
 		return nil, apiErr
@@ -148,88 +144,16 @@ func (m *accountUserSvcImpl) DeleteAccountUser(ctx context.Context, req *DeleteA
 	return &apiresource.EmptyResource{}, nil
 }
 
-func (m *accountUserSvcImpl) LockAccountUser(ctx context.Context, req *LockAccountUserRequest) (*apiresource.EmptyResource, *apierror.APIError) {
-	pbReq := &pb.LockAccountUserRequest{AccountUserId: req.AccountUserID}
-
-	_, apiErr := grpcutil.CallRPC(ctx, accountUserSvcTracer, "service.account_users.lock", domain.ServiceName,
-		func(ctx context.Context, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-			return m.coreClient.LockAccountUser(ctx, pbReq, opts...)
-		})
-	if apiErr != nil {
-		return nil, apiErr
+func toProtoNotificationPrefs(in []NotificationPreferenceItem) []*pb.NotificationPreferenceItem {
+	if len(in) == 0 {
+		return nil
 	}
-
-	return &apiresource.EmptyResource{}, nil
-}
-
-func (m *accountUserSvcImpl) UnlockAccountUser(ctx context.Context, req *UnlockAccountUserRequest) (*apiresource.EmptyResource, *apierror.APIError) {
-	pbReq := &pb.UnlockAccountUserRequest{AccountUserId: req.AccountUserID}
-
-	_, apiErr := grpcutil.CallRPC(ctx, accountUserSvcTracer, "service.account_users.unlock", domain.ServiceName,
-		func(ctx context.Context, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-			return m.coreClient.UnlockAccountUser(ctx, pbReq, opts...)
-		})
-	if apiErr != nil {
-		return nil, apiErr
-	}
-
-	return &apiresource.EmptyResource{}, nil
-}
-
-func (m *accountUserSvcImpl) RestoreAccountUser(ctx context.Context, req *RestoreAccountUserRequest) (*apiresource.EmptyResource, *apierror.APIError) {
-	pbReq := &pb.RestoreAccountUserRequest{AccountUserId: req.AccountUserID}
-
-	_, apiErr := grpcutil.CallRPC(ctx, accountUserSvcTracer, "service.account_users.restore", domain.ServiceName,
-		func(ctx context.Context, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-			return m.coreClient.RestoreAccountUser(ctx, pbReq, opts...)
-		})
-	if apiErr != nil {
-		return nil, apiErr
-	}
-
-	return &apiresource.EmptyResource{}, nil
-}
-
-func (m *accountUserSvcImpl) UpdateAccountUserPassword(ctx context.Context, req *UpdateAccountUserPasswordRequest) (*apiresource.EmptyResource, *apierror.APIError) {
-	pbReq := &pb.UpdateAccountUserPasswordRequest{
-		AccountUserId:     req.AccountUserID,
-		RequesterPassword: req.RequesterPassword,
-		NewPassword:       req.NewPassword,
-	}
-
-	_, apiErr := grpcutil.CallRPC(ctx, accountUserSvcTracer, "service.account_users.update_password", domain.ServiceName,
-		func(ctx context.Context, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-			return m.coreClient.UpdateAccountUserPassword(ctx, pbReq, opts...)
-		})
-	if apiErr != nil {
-		return nil, apiErr
-	}
-
-	return &apiresource.EmptyResource{}, nil
-}
-
-func (m *accountUserSvcImpl) UpdateNotificationPreferences(ctx context.Context, req *UpdateNotificationPreferencesRequest) (*apiresource.AccountUser, *apierror.APIError) {
-	prefs := make([]*pb.UpdateNotificationPreferenceItem, len(req.Preferences))
-	for i, p := range req.Preferences {
-		prefs[i] = &pb.UpdateNotificationPreferenceItem{
-			NotificationTypeCode: p.NotificationTypeCode,
+	out := make([]*pb.NotificationPreferenceItem, len(in))
+	for i, p := range in {
+		out[i] = &pb.NotificationPreferenceItem{
+			NotificationTypeCode: string(p.NotificationTypeCode),
 			Enabled:              p.Enabled,
 		}
 	}
-
-	pbReq := &pb.UpdateNotificationPreferencesRequest{
-		AccountUserId: req.AccountUserID,
-		Preferences:   prefs,
-	}
-
-	resp, apiErr := grpcutil.CallRPC(ctx, accountUserSvcTracer, "service.account_users.update_notification_preferences", domain.ServiceName,
-		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateNotificationPreferencesResponse, error) {
-			return m.coreClient.UpdateNotificationPreferences(ctx, pbReq, opts...)
-		})
-	if apiErr != nil {
-		return nil, apiErr
-	}
-
-	result := AccountUserPresenter(resp.AccountUser)
-	return &result, nil
+	return out
 }

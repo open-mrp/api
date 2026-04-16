@@ -117,3 +117,33 @@ func TestPermissionGroups_Pagination(t *testing.T) {
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(page1.Data), 1)
 }
+
+// ──────────────────────────────────────────────
+// PermissionGroup — Owner Include Tests
+// ──────────────────────────────────────────────
+
+func TestPermissionGroups_OwnerNullWithoutInclude(t *testing.T) {
+	t.Parallel()
+	list, _, err := apiClient.GetList(permissionGroupsPath, nil)
+	require.NoError(t, err)
+	require.GreaterOrEqual(t, len(list.Data), 1)
+
+	for _, item := range list.Data {
+		m := parseJSON(item)
+		assert.Nil(t, m["owner"], "owner should be null without ?include=owner")
+	}
+}
+
+func TestPermissionGroups_IncludeOwner(t *testing.T) {
+	t.Parallel()
+	list, _, err := apiClient.GetList(permissionGroupsPath, url.Values{"include": {"owner"}})
+	require.NoError(t, err)
+	require.GreaterOrEqual(t, len(list.Data), 1)
+
+	first := parseJSON(list.Data[0])
+	owner := jsonObject(first, "owner")
+	require.NotNil(t, owner, "owner should be present with ?include=owner")
+	assert.Equal(t, "owner", jsonField(owner, "object"))
+	ownerType := jsonField(owner, "type")
+	assert.Contains(t, []string{"system", "account"}, ownerType)
+}

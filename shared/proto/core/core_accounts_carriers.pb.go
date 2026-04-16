@@ -3638,6 +3638,7 @@ type UpdateServiceLevelRequest struct {
 	Name            *string                `protobuf:"bytes,3,opt,name=name,proto3,oneof" json:"name,omitempty"`
 	Code            *string                `protobuf:"bytes,4,opt,name=code,proto3,oneof" json:"code,omitempty"`
 	IsPortalEnabled *bool                  `protobuf:"varint,5,opt,name=is_portal_enabled,json=isPortalEnabled,proto3,oneof" json:"is_portal_enabled,omitempty"`
+	IsDefault       *bool                  `protobuf:"varint,6,opt,name=is_default,json=isDefault,proto3,oneof" json:"is_default,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -3703,6 +3704,13 @@ func (x *UpdateServiceLevelRequest) GetCode() string {
 func (x *UpdateServiceLevelRequest) GetIsPortalEnabled() bool {
 	if x != nil && x.IsPortalEnabled != nil {
 		return *x.IsPortalEnabled
+	}
+	return false
+}
+
+func (x *UpdateServiceLevelRequest) GetIsDefault() bool {
+	if x != nil && x.IsDefault != nil {
+		return *x.IsDefault
 	}
 	return false
 }
@@ -5048,18 +5056,20 @@ const file_core_core_accounts_carriers_proto_rawDesc = "" +
 	"is_default\x18\x06 \x01(\bR\tisDefaultB\x16\n" +
 	"\x14_service_level_token\"Y\n" +
 	"\x1aCreateServiceLevelResponse\x12;\n" +
-	"\rservice_level\x18\x01 \x01(\v2\x16.core.ServiceLevelInfoR\fserviceLevel\"\xe7\x01\n" +
+	"\rservice_level\x18\x01 \x01(\v2\x16.core.ServiceLevelInfoR\fserviceLevel\"\x88\x02\n" +
 	"\x19UpdateServiceLevelRequest\x12\x1d\n" +
 	"\n" +
 	"carrier_id\x18\x01 \x01(\tR\tcarrierId\x12\x0e\n" +
 	"\x02id\x18\x02 \x01(\tR\x02id\x12\x17\n" +
 	"\x04name\x18\x03 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x17\n" +
 	"\x04code\x18\x04 \x01(\tH\x01R\x04code\x88\x01\x01\x12/\n" +
-	"\x11is_portal_enabled\x18\x05 \x01(\bH\x02R\x0fisPortalEnabled\x88\x01\x01B\a\n" +
+	"\x11is_portal_enabled\x18\x05 \x01(\bH\x02R\x0fisPortalEnabled\x88\x01\x01\x12\"\n" +
+	"\n" +
+	"is_default\x18\x06 \x01(\bH\x03R\tisDefault\x88\x01\x01B\a\n" +
 	"\x05_nameB\a\n" +
 	"\x05_codeB\x14\n" +
-	"\x12_is_portal_enabledJ\x04\b\x06\x10\aR\n" +
-	"is_default\"Y\n" +
+	"\x12_is_portal_enabledB\r\n" +
+	"\v_is_default\"Y\n" +
 	"\x1aUpdateServiceLevelResponse\x12;\n" +
 	"\rservice_level\x18\x01 \x01(\v2\x16.core.ServiceLevelInfoR\fserviceLevel\"J\n" +
 	"\x19DeleteServiceLevelRequest\x12\x1d\n" +

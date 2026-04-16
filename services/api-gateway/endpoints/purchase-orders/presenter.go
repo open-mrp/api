@@ -186,21 +186,22 @@ func PurchaseOrderDetailPresenter(info *pb.PurchaseOrderInfo) apiresource.Purcha
 		}
 	}
 
-	// Contacts
-	if len(info.Contacts) > 0 {
-		contactItems := make([]apiresource.EmailContact, len(info.Contacts))
-		for i, c := range info.Contacts {
-			contactItems[i] = apiresource.EmailContact{
-				ID:     c.Id,
-				Object: constants.ObjectTypeEmailContact,
-				AccountUser: &apiresource.AccountUser{
-					ID:     c.AccountUserId,
-					Object: constants.ObjectTypeAccountUser,
-				},
-			}
+	// Contacts — always set the expandable list field so that the CollapseUnexpanded
+	// transform can emit `{"object":"list", "data":[]}` when ?include=contacts is
+	// requested on a PO that has no contacts. Returning nil here makes the client
+	// unable to distinguish "no contacts" from "not included".
+	contactItems := make([]apiresource.EmailContact, len(info.Contacts))
+	for i, c := range info.Contacts {
+		contactItems[i] = apiresource.EmailContact{
+			ID:     c.Id,
+			Object: constants.ObjectTypeEmailContact,
+			AccountUser: &apiresource.AccountUser{
+				ID:     c.AccountUserId,
+				Object: constants.ObjectTypeAccountUser,
+			},
 		}
-		d.Contacts = apiresource.NewList(contactItems, apiresource.PageInfo{})
 	}
+	d.Contacts = apiresource.NewList(contactItems, apiresource.PageInfo{})
 
 	// Timestamps
 	if info.IssuedAt != nil {

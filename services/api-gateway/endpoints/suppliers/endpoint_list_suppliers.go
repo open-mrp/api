@@ -21,6 +21,7 @@ type ListSuppliersRequest struct {
 	EndDate *time.Time `query:"end_date"`
 }
 
+// TODO: stop returning SupplierSummary; return the full Supplier apiresource and use proper includes values to control expansion.
 type ListSuppliersEndpoint struct{}
 
 func (e *ListSuppliersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSuppliersRequest, *apiresource.List[apiresource.SupplierSummary]] {

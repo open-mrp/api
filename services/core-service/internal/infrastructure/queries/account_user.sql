@@ -268,7 +268,17 @@ SELECT
     au.role_id,
     r.name AS role_name,
     r.role_type_code,
-    sa.owner_account_id
+    r.created_at AS role_created_at,
+    r.updated_at AS role_updated_at,
+    sa.owner_account_id,
+    ab.internal_stripe_customer_id,
+    ap.type_id AS plan_type_id,
+    ap.name AS plan_name,
+    ap.plan_type_code AS plan_plan_type_code,
+    ap.version AS plan_version,
+    ap.price_per_seat AS plan_price_per_seat,
+    ap.price_per_month AS plan_price_per_month,
+    ap.seat_minimum AS plan_seat_minimum
 FROM account_user au
 JOIN account a ON au.account_id = a.id
 LEFT JOIN role r ON au.role_id = r.id
@@ -276,6 +286,7 @@ LEFT JOIN account_billing ab ON a.account_billing_id = ab.id
 LEFT JOIN account_plan ap ON ab.account_plan_id = ap.type_id
 LEFT JOIN sandbox_account sa ON sa.account_id = a.id
 WHERE au.user_id = ?;
+
 
 -- name: MarkUsedByAccountAndUser :exec
 UPDATE account_user

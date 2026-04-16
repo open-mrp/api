@@ -15,7 +15,7 @@ import (
 type CreateItemCategoryRequest struct {
 	// Display name.
 	Name string `json:"name" validate:"required,max=255"`
-	// Item category type (material_category or product_category).
+	// Item category type. Material categories are used to group materials, while product categories are used to group products and parts.
 	Type constants.ItemCategoryType `json:"type" validate:"required"`
 	// Unit group ID.
 	UnitGroupID string `json:"unit_group_id" validate:"required,max=191"`

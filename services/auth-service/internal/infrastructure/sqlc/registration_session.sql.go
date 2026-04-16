@@ -69,6 +69,44 @@ func (q *Queries) DeleteRegistrationSession(ctx context.Context, id int64) error
 	return err
 }
 
+const getIncompleteRegistrationSessionByUserID = `-- name: GetIncompleteRegistrationSessionByUserID :one
+SELECT id, type_id, email, plan_code, step, verification_token, is_email_verified,
+       is_existing_user, user_id, account_id, stripe_customer_id,
+       stripe_checkout_session_id, stripe_subscription_id, payment_completed, session_data,
+       completed_at, created_at, updated_at
+FROM registration_session
+WHERE user_id = ?
+  AND completed_at IS NULL
+ORDER BY created_at DESC
+LIMIT 1
+`
+
+func (q *Queries) GetIncompleteRegistrationSessionByUserID(ctx context.Context, userID sql.NullString) (RegistrationSession, error) {
+	row := q.db.QueryRowContext(ctx, getIncompleteRegistrationSessionByUserID, userID)
+	var i RegistrationSession
+	err := row.Scan(
+		&i.ID,
+		&i.TypeID,
+		&i.Email,
+		&i.PlanCode,
+		&i.Step,
+		&i.VerificationToken,
+		&i.IsEmailVerified,
+		&i.IsExistingUser,
+		&i.UserID,
+		&i.AccountID,
+		&i.StripeCustomerID,
+		&i.StripeCheckoutSessionID,
+		&i.StripeSubscriptionID,
+		&i.PaymentCompleted,
+		&i.SessionData,
+		&i.CompletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getRegistrationSessionByEmail = `-- name: GetRegistrationSessionByEmail :one
 SELECT id, type_id, email, plan_code, step, verification_token, is_email_verified,
        is_existing_user, user_id, account_id, stripe_customer_id,

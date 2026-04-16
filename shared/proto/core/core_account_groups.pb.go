@@ -1013,25 +1013,74 @@ func (x *GetAccountUserResponse) GetAccountUser() *AccountUserDetail {
 	return nil
 }
 
+type NotificationPreferenceItem struct {
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	NotificationTypeCode string                 `protobuf:"bytes,1,opt,name=notification_type_code,json=notificationTypeCode,proto3" json:"notification_type_code,omitempty"`
+	Enabled              bool                   `protobuf:"varint,2,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
+}
+
+func (x *NotificationPreferenceItem) Reset() {
+	*x = NotificationPreferenceItem{}
+	mi := &file_core_core_account_groups_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NotificationPreferenceItem) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NotificationPreferenceItem) ProtoMessage() {}
+
+func (x *NotificationPreferenceItem) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_account_groups_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NotificationPreferenceItem.ProtoReflect.Descriptor instead.
+func (*NotificationPreferenceItem) Descriptor() ([]byte, []int) {
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *NotificationPreferenceItem) GetNotificationTypeCode() string {
+	if x != nil {
+		return x.NotificationTypeCode
+	}
+	return ""
+}
+
+func (x *NotificationPreferenceItem) GetEnabled() bool {
+	if x != nil {
+		return x.Enabled
+	}
+	return false
+}
+
 type CreateAccountUserRequest struct {
-	state                                        protoimpl.MessageState `protogen:"open.v1"`
-	Name                                         *string                `protobuf:"bytes,1,opt,name=name,proto3,oneof" json:"name,omitempty"`
-	Email                                        *string                `protobuf:"bytes,2,opt,name=email,proto3,oneof" json:"email,omitempty"`
-	Username                                     *string                `protobuf:"bytes,3,opt,name=username,proto3,oneof" json:"username,omitempty"`
-	Password                                     *string                `protobuf:"bytes,4,opt,name=password,proto3,oneof" json:"password,omitempty"`
-	RoleId                                       *string                `protobuf:"bytes,5,opt,name=role_id,json=roleId,proto3,oneof" json:"role_id,omitempty"`
-	DepartmentId                                 *string                `protobuf:"bytes,6,opt,name=department_id,json=departmentId,proto3,oneof" json:"department_id,omitempty"`
-	IsSalesRep                                   *bool                  `protobuf:"varint,7,opt,name=is_sales_rep,json=isSalesRep,proto3,oneof" json:"is_sales_rep,omitempty"`
-	ReceivesOrderAcknowledgements                bool                   `protobuf:"varint,8,opt,name=receives_order_acknowledgements,json=receivesOrderAcknowledgements,proto3" json:"receives_order_acknowledgements,omitempty"`
-	ReceivesInvoiceNotifications                 bool                   `protobuf:"varint,9,opt,name=receives_invoice_notifications,json=receivesInvoiceNotifications,proto3" json:"receives_invoice_notifications,omitempty"`
-	ReceivesPurchaseOrderSubmissionNotifications bool                   `protobuf:"varint,10,opt,name=receives_purchase_order_submission_notifications,json=receivesPurchaseOrderSubmissionNotifications,proto3" json:"receives_purchase_order_submission_notifications,omitempty"`
-	unknownFields                                protoimpl.UnknownFields
-	sizeCache                                    protoimpl.SizeCache
+	state                   protoimpl.MessageState        `protogen:"open.v1"`
+	Name                    *string                       `protobuf:"bytes,1,opt,name=name,proto3,oneof" json:"name,omitempty"`
+	Email                   *string                       `protobuf:"bytes,2,opt,name=email,proto3,oneof" json:"email,omitempty"`
+	Username                *string                       `protobuf:"bytes,3,opt,name=username,proto3,oneof" json:"username,omitempty"`
+	Password                *string                       `protobuf:"bytes,4,opt,name=password,proto3,oneof" json:"password,omitempty"`
+	RoleId                  *string                       `protobuf:"bytes,5,opt,name=role_id,json=roleId,proto3,oneof" json:"role_id,omitempty"`
+	DepartmentId            *string                       `protobuf:"bytes,6,opt,name=department_id,json=departmentId,proto3,oneof" json:"department_id,omitempty"`
+	NotificationPreferences []*NotificationPreferenceItem `protobuf:"bytes,8,rep,name=notification_preferences,json=notificationPreferences,proto3" json:"notification_preferences,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
 }
 
 func (x *CreateAccountUserRequest) Reset() {
 	*x = CreateAccountUserRequest{}
-	mi := &file_core_core_account_groups_proto_msgTypes[15]
+	mi := &file_core_core_account_groups_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1043,7 +1092,7 @@ func (x *CreateAccountUserRequest) String() string {
 func (*CreateAccountUserRequest) ProtoMessage() {}
 
 func (x *CreateAccountUserRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[15]
+	mi := &file_core_core_account_groups_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1056,7 +1105,7 @@ func (x *CreateAccountUserRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateAccountUserRequest.ProtoReflect.Descriptor instead.
 func (*CreateAccountUserRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{15}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *CreateAccountUserRequest) GetName() string {
@@ -1101,32 +1150,11 @@ func (x *CreateAccountUserRequest) GetDepartmentId() string {
 	return ""
 }
 
-func (x *CreateAccountUserRequest) GetIsSalesRep() bool {
-	if x != nil && x.IsSalesRep != nil {
-		return *x.IsSalesRep
-	}
-	return false
-}
-
-func (x *CreateAccountUserRequest) GetReceivesOrderAcknowledgements() bool {
+func (x *CreateAccountUserRequest) GetNotificationPreferences() []*NotificationPreferenceItem {
 	if x != nil {
-		return x.ReceivesOrderAcknowledgements
+		return x.NotificationPreferences
 	}
-	return false
-}
-
-func (x *CreateAccountUserRequest) GetReceivesInvoiceNotifications() bool {
-	if x != nil {
-		return x.ReceivesInvoiceNotifications
-	}
-	return false
-}
-
-func (x *CreateAccountUserRequest) GetReceivesPurchaseOrderSubmissionNotifications() bool {
-	if x != nil {
-		return x.ReceivesPurchaseOrderSubmissionNotifications
-	}
-	return false
+	return nil
 }
 
 type CreateAccountUserResponse struct {
@@ -1138,7 +1166,7 @@ type CreateAccountUserResponse struct {
 
 func (x *CreateAccountUserResponse) Reset() {
 	*x = CreateAccountUserResponse{}
-	mi := &file_core_core_account_groups_proto_msgTypes[16]
+	mi := &file_core_core_account_groups_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1150,7 +1178,7 @@ func (x *CreateAccountUserResponse) String() string {
 func (*CreateAccountUserResponse) ProtoMessage() {}
 
 func (x *CreateAccountUserResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[16]
+	mi := &file_core_core_account_groups_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1163,7 +1191,7 @@ func (x *CreateAccountUserResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateAccountUserResponse.ProtoReflect.Descriptor instead.
 func (*CreateAccountUserResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{16}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *CreateAccountUserResponse) GetAccountUser() *AccountUserDetail {
@@ -1181,13 +1209,15 @@ type UpdateAccountUserRequest struct {
 	Username      *string                `protobuf:"bytes,4,opt,name=username,proto3,oneof" json:"username,omitempty"`
 	RoleId        *string                `protobuf:"bytes,5,opt,name=role_id,json=roleId,proto3,oneof" json:"role_id,omitempty"`
 	DepartmentId  *string                `protobuf:"bytes,6,opt,name=department_id,json=departmentId,proto3,oneof" json:"department_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// When non-empty, replaces the toggle state of the listed preferences.
+	NotificationPreferences []*NotificationPreferenceItem `protobuf:"bytes,7,rep,name=notification_preferences,json=notificationPreferences,proto3" json:"notification_preferences,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
 }
 
 func (x *UpdateAccountUserRequest) Reset() {
 	*x = UpdateAccountUserRequest{}
-	mi := &file_core_core_account_groups_proto_msgTypes[17]
+	mi := &file_core_core_account_groups_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1199,7 +1229,7 @@ func (x *UpdateAccountUserRequest) String() string {
 func (*UpdateAccountUserRequest) ProtoMessage() {}
 
 func (x *UpdateAccountUserRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[17]
+	mi := &file_core_core_account_groups_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1212,7 +1242,7 @@ func (x *UpdateAccountUserRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateAccountUserRequest.ProtoReflect.Descriptor instead.
 func (*UpdateAccountUserRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{17}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *UpdateAccountUserRequest) GetAccountUserId() string {
@@ -1257,6 +1287,13 @@ func (x *UpdateAccountUserRequest) GetDepartmentId() string {
 	return ""
 }
 
+func (x *UpdateAccountUserRequest) GetNotificationPreferences() []*NotificationPreferenceItem {
+	if x != nil {
+		return x.NotificationPreferences
+	}
+	return nil
+}
+
 type UpdateAccountUserResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	AccountUser   *AccountUserDetail     `protobuf:"bytes,1,opt,name=account_user,json=accountUser,proto3" json:"account_user,omitempty"`
@@ -1266,7 +1303,7 @@ type UpdateAccountUserResponse struct {
 
 func (x *UpdateAccountUserResponse) Reset() {
 	*x = UpdateAccountUserResponse{}
-	mi := &file_core_core_account_groups_proto_msgTypes[18]
+	mi := &file_core_core_account_groups_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1278,7 +1315,7 @@ func (x *UpdateAccountUserResponse) String() string {
 func (*UpdateAccountUserResponse) ProtoMessage() {}
 
 func (x *UpdateAccountUserResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[18]
+	mi := &file_core_core_account_groups_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1291,7 +1328,7 @@ func (x *UpdateAccountUserResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateAccountUserResponse.ProtoReflect.Descriptor instead.
 func (*UpdateAccountUserResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{18}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *UpdateAccountUserResponse) GetAccountUser() *AccountUserDetail {
@@ -1301,71 +1338,29 @@ func (x *UpdateAccountUserResponse) GetAccountUser() *AccountUserDetail {
 	return nil
 }
 
-type DeleteAccountUserRequest struct {
+type UpdateAccountUserStatusRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	AccountUserId string                 `protobuf:"bytes,1,opt,name=account_user_id,json=accountUserId,proto3" json:"account_user_id,omitempty"`
+	// Target status_code: "active", "disabled", or "removed".
+	StatusCode    string `protobuf:"bytes,2,opt,name=status_code,json=statusCode,proto3" json:"status_code,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *DeleteAccountUserRequest) Reset() {
-	*x = DeleteAccountUserRequest{}
-	mi := &file_core_core_account_groups_proto_msgTypes[19]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *DeleteAccountUserRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DeleteAccountUserRequest) ProtoMessage() {}
-
-func (x *DeleteAccountUserRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[19]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use DeleteAccountUserRequest.ProtoReflect.Descriptor instead.
-func (*DeleteAccountUserRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{19}
-}
-
-func (x *DeleteAccountUserRequest) GetAccountUserId() string {
-	if x != nil {
-		return x.AccountUserId
-	}
-	return ""
-}
-
-type LockAccountUserRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	AccountUserId string                 `protobuf:"bytes,1,opt,name=account_user_id,json=accountUserId,proto3" json:"account_user_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *LockAccountUserRequest) Reset() {
-	*x = LockAccountUserRequest{}
+func (x *UpdateAccountUserStatusRequest) Reset() {
+	*x = UpdateAccountUserStatusRequest{}
 	mi := &file_core_core_account_groups_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *LockAccountUserRequest) String() string {
+func (x *UpdateAccountUserStatusRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*LockAccountUserRequest) ProtoMessage() {}
+func (*UpdateAccountUserStatusRequest) ProtoMessage() {}
 
-func (x *LockAccountUserRequest) ProtoReflect() protoreflect.Message {
+func (x *UpdateAccountUserStatusRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_core_core_account_groups_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1377,102 +1372,21 @@ func (x *LockAccountUserRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use LockAccountUserRequest.ProtoReflect.Descriptor instead.
-func (*LockAccountUserRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use UpdateAccountUserStatusRequest.ProtoReflect.Descriptor instead.
+func (*UpdateAccountUserStatusRequest) Descriptor() ([]byte, []int) {
 	return file_core_core_account_groups_proto_rawDescGZIP(), []int{20}
 }
 
-func (x *LockAccountUserRequest) GetAccountUserId() string {
+func (x *UpdateAccountUserStatusRequest) GetAccountUserId() string {
 	if x != nil {
 		return x.AccountUserId
 	}
 	return ""
 }
 
-type UnlockAccountUserRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	AccountUserId string                 `protobuf:"bytes,1,opt,name=account_user_id,json=accountUserId,proto3" json:"account_user_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *UnlockAccountUserRequest) Reset() {
-	*x = UnlockAccountUserRequest{}
-	mi := &file_core_core_account_groups_proto_msgTypes[21]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *UnlockAccountUserRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*UnlockAccountUserRequest) ProtoMessage() {}
-
-func (x *UnlockAccountUserRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[21]
+func (x *UpdateAccountUserStatusRequest) GetStatusCode() string {
 	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use UnlockAccountUserRequest.ProtoReflect.Descriptor instead.
-func (*UnlockAccountUserRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{21}
-}
-
-func (x *UnlockAccountUserRequest) GetAccountUserId() string {
-	if x != nil {
-		return x.AccountUserId
-	}
-	return ""
-}
-
-type RestoreAccountUserRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	AccountUserId string                 `protobuf:"bytes,1,opt,name=account_user_id,json=accountUserId,proto3" json:"account_user_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *RestoreAccountUserRequest) Reset() {
-	*x = RestoreAccountUserRequest{}
-	mi := &file_core_core_account_groups_proto_msgTypes[22]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *RestoreAccountUserRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*RestoreAccountUserRequest) ProtoMessage() {}
-
-func (x *RestoreAccountUserRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[22]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use RestoreAccountUserRequest.ProtoReflect.Descriptor instead.
-func (*RestoreAccountUserRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{22}
-}
-
-func (x *RestoreAccountUserRequest) GetAccountUserId() string {
-	if x != nil {
-		return x.AccountUserId
+		return x.StatusCode
 	}
 	return ""
 }
@@ -1488,7 +1402,7 @@ type UpdateAccountUserPasswordRequest struct {
 
 func (x *UpdateAccountUserPasswordRequest) Reset() {
 	*x = UpdateAccountUserPasswordRequest{}
-	mi := &file_core_core_account_groups_proto_msgTypes[23]
+	mi := &file_core_core_account_groups_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1500,7 +1414,7 @@ func (x *UpdateAccountUserPasswordRequest) String() string {
 func (*UpdateAccountUserPasswordRequest) ProtoMessage() {}
 
 func (x *UpdateAccountUserPasswordRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[23]
+	mi := &file_core_core_account_groups_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1513,7 +1427,7 @@ func (x *UpdateAccountUserPasswordRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateAccountUserPasswordRequest.ProtoReflect.Descriptor instead.
 func (*UpdateAccountUserPasswordRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{23}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *UpdateAccountUserPasswordRequest) GetAccountUserId() string {
@@ -1537,154 +1451,6 @@ func (x *UpdateAccountUserPasswordRequest) GetNewPassword() string {
 	return ""
 }
 
-type UpdateNotificationPreferenceItem struct {
-	state                protoimpl.MessageState `protogen:"open.v1"`
-	NotificationTypeCode string                 `protobuf:"bytes,1,opt,name=notification_type_code,json=notificationTypeCode,proto3" json:"notification_type_code,omitempty"`
-	Enabled              bool                   `protobuf:"varint,2,opt,name=enabled,proto3" json:"enabled,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
-}
-
-func (x *UpdateNotificationPreferenceItem) Reset() {
-	*x = UpdateNotificationPreferenceItem{}
-	mi := &file_core_core_account_groups_proto_msgTypes[24]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *UpdateNotificationPreferenceItem) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*UpdateNotificationPreferenceItem) ProtoMessage() {}
-
-func (x *UpdateNotificationPreferenceItem) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[24]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use UpdateNotificationPreferenceItem.ProtoReflect.Descriptor instead.
-func (*UpdateNotificationPreferenceItem) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{24}
-}
-
-func (x *UpdateNotificationPreferenceItem) GetNotificationTypeCode() string {
-	if x != nil {
-		return x.NotificationTypeCode
-	}
-	return ""
-}
-
-func (x *UpdateNotificationPreferenceItem) GetEnabled() bool {
-	if x != nil {
-		return x.Enabled
-	}
-	return false
-}
-
-type UpdateNotificationPreferencesRequest struct {
-	state         protoimpl.MessageState              `protogen:"open.v1"`
-	AccountUserId string                              `protobuf:"bytes,1,opt,name=account_user_id,json=accountUserId,proto3" json:"account_user_id,omitempty"`
-	Preferences   []*UpdateNotificationPreferenceItem `protobuf:"bytes,2,rep,name=preferences,proto3" json:"preferences,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *UpdateNotificationPreferencesRequest) Reset() {
-	*x = UpdateNotificationPreferencesRequest{}
-	mi := &file_core_core_account_groups_proto_msgTypes[25]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *UpdateNotificationPreferencesRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*UpdateNotificationPreferencesRequest) ProtoMessage() {}
-
-func (x *UpdateNotificationPreferencesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[25]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use UpdateNotificationPreferencesRequest.ProtoReflect.Descriptor instead.
-func (*UpdateNotificationPreferencesRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{25}
-}
-
-func (x *UpdateNotificationPreferencesRequest) GetAccountUserId() string {
-	if x != nil {
-		return x.AccountUserId
-	}
-	return ""
-}
-
-func (x *UpdateNotificationPreferencesRequest) GetPreferences() []*UpdateNotificationPreferenceItem {
-	if x != nil {
-		return x.Preferences
-	}
-	return nil
-}
-
-type UpdateNotificationPreferencesResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	AccountUser   *AccountUserDetail     `protobuf:"bytes,1,opt,name=account_user,json=accountUser,proto3" json:"account_user,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *UpdateNotificationPreferencesResponse) Reset() {
-	*x = UpdateNotificationPreferencesResponse{}
-	mi := &file_core_core_account_groups_proto_msgTypes[26]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *UpdateNotificationPreferencesResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*UpdateNotificationPreferencesResponse) ProtoMessage() {}
-
-func (x *UpdateNotificationPreferencesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[26]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use UpdateNotificationPreferencesResponse.ProtoReflect.Descriptor instead.
-func (*UpdateNotificationPreferencesResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{26}
-}
-
-func (x *UpdateNotificationPreferencesResponse) GetAccountUser() *AccountUserDetail {
-	if x != nil {
-		return x.AccountUser
-	}
-	return nil
-}
-
 type SalesTargetProto struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -1703,7 +1469,7 @@ type SalesTargetProto struct {
 
 func (x *SalesTargetProto) Reset() {
 	*x = SalesTargetProto{}
-	mi := &file_core_core_account_groups_proto_msgTypes[27]
+	mi := &file_core_core_account_groups_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1715,7 +1481,7 @@ func (x *SalesTargetProto) String() string {
 func (*SalesTargetProto) ProtoMessage() {}
 
 func (x *SalesTargetProto) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[27]
+	mi := &file_core_core_account_groups_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1728,7 +1494,7 @@ func (x *SalesTargetProto) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SalesTargetProto.ProtoReflect.Descriptor instead.
 func (*SalesTargetProto) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{27}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *SalesTargetProto) GetId() string {
@@ -1813,7 +1579,7 @@ type ListSalesTargetsRequest struct {
 
 func (x *ListSalesTargetsRequest) Reset() {
 	*x = ListSalesTargetsRequest{}
-	mi := &file_core_core_account_groups_proto_msgTypes[28]
+	mi := &file_core_core_account_groups_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1825,7 +1591,7 @@ func (x *ListSalesTargetsRequest) String() string {
 func (*ListSalesTargetsRequest) ProtoMessage() {}
 
 func (x *ListSalesTargetsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[28]
+	mi := &file_core_core_account_groups_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1838,7 +1604,7 @@ func (x *ListSalesTargetsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSalesTargetsRequest.ProtoReflect.Descriptor instead.
 func (*ListSalesTargetsRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{28}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *ListSalesTargetsRequest) GetSalesRepId() string {
@@ -1879,7 +1645,7 @@ type ListSalesTargetsResponse struct {
 
 func (x *ListSalesTargetsResponse) Reset() {
 	*x = ListSalesTargetsResponse{}
-	mi := &file_core_core_account_groups_proto_msgTypes[29]
+	mi := &file_core_core_account_groups_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1891,7 +1657,7 @@ func (x *ListSalesTargetsResponse) String() string {
 func (*ListSalesTargetsResponse) ProtoMessage() {}
 
 func (x *ListSalesTargetsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[29]
+	mi := &file_core_core_account_groups_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1904,7 +1670,7 @@ func (x *ListSalesTargetsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSalesTargetsResponse.ProtoReflect.Descriptor instead.
 func (*ListSalesTargetsResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{29}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *ListSalesTargetsResponse) GetSalesTargets() []*SalesTargetProto {
@@ -1934,7 +1700,7 @@ type CreateSalesTargetRequest struct {
 
 func (x *CreateSalesTargetRequest) Reset() {
 	*x = CreateSalesTargetRequest{}
-	mi := &file_core_core_account_groups_proto_msgTypes[30]
+	mi := &file_core_core_account_groups_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1946,7 +1712,7 @@ func (x *CreateSalesTargetRequest) String() string {
 func (*CreateSalesTargetRequest) ProtoMessage() {}
 
 func (x *CreateSalesTargetRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[30]
+	mi := &file_core_core_account_groups_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1959,7 +1725,7 @@ func (x *CreateSalesTargetRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateSalesTargetRequest.ProtoReflect.Descriptor instead.
 func (*CreateSalesTargetRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{30}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *CreateSalesTargetRequest) GetSalesRepId() string {
@@ -2006,7 +1772,7 @@ type CreateSalesTargetResponse struct {
 
 func (x *CreateSalesTargetResponse) Reset() {
 	*x = CreateSalesTargetResponse{}
-	mi := &file_core_core_account_groups_proto_msgTypes[31]
+	mi := &file_core_core_account_groups_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2018,7 +1784,7 @@ func (x *CreateSalesTargetResponse) String() string {
 func (*CreateSalesTargetResponse) ProtoMessage() {}
 
 func (x *CreateSalesTargetResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[31]
+	mi := &file_core_core_account_groups_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2031,7 +1797,7 @@ func (x *CreateSalesTargetResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateSalesTargetResponse.ProtoReflect.Descriptor instead.
 func (*CreateSalesTargetResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{31}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *CreateSalesTargetResponse) GetSalesTarget() *SalesTargetProto {
@@ -2055,7 +1821,7 @@ type UpsertSalesTargetRequest struct {
 
 func (x *UpsertSalesTargetRequest) Reset() {
 	*x = UpsertSalesTargetRequest{}
-	mi := &file_core_core_account_groups_proto_msgTypes[32]
+	mi := &file_core_core_account_groups_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2067,7 +1833,7 @@ func (x *UpsertSalesTargetRequest) String() string {
 func (*UpsertSalesTargetRequest) ProtoMessage() {}
 
 func (x *UpsertSalesTargetRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[32]
+	mi := &file_core_core_account_groups_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2080,7 +1846,7 @@ func (x *UpsertSalesTargetRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpsertSalesTargetRequest.ProtoReflect.Descriptor instead.
 func (*UpsertSalesTargetRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{32}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *UpsertSalesTargetRequest) GetTargetId() string {
@@ -2134,7 +1900,7 @@ type UpsertSalesTargetResponse struct {
 
 func (x *UpsertSalesTargetResponse) Reset() {
 	*x = UpsertSalesTargetResponse{}
-	mi := &file_core_core_account_groups_proto_msgTypes[33]
+	mi := &file_core_core_account_groups_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2146,7 +1912,7 @@ func (x *UpsertSalesTargetResponse) String() string {
 func (*UpsertSalesTargetResponse) ProtoMessage() {}
 
 func (x *UpsertSalesTargetResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[33]
+	mi := &file_core_core_account_groups_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2159,7 +1925,7 @@ func (x *UpsertSalesTargetResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpsertSalesTargetResponse.ProtoReflect.Descriptor instead.
 func (*UpsertSalesTargetResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{33}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *UpsertSalesTargetResponse) GetSalesTarget() *SalesTargetProto {
@@ -2185,7 +1951,7 @@ type AccountPriceInfo struct {
 
 func (x *AccountPriceInfo) Reset() {
 	*x = AccountPriceInfo{}
-	mi := &file_core_core_account_groups_proto_msgTypes[34]
+	mi := &file_core_core_account_groups_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2197,7 +1963,7 @@ func (x *AccountPriceInfo) String() string {
 func (*AccountPriceInfo) ProtoMessage() {}
 
 func (x *AccountPriceInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[34]
+	mi := &file_core_core_account_groups_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2210,7 +1976,7 @@ func (x *AccountPriceInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AccountPriceInfo.ProtoReflect.Descriptor instead.
 func (*AccountPriceInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{34}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *AccountPriceInfo) GetId() string {
@@ -2279,7 +2045,7 @@ type AccountPriceRecipientInfo struct {
 
 func (x *AccountPriceRecipientInfo) Reset() {
 	*x = AccountPriceRecipientInfo{}
-	mi := &file_core_core_account_groups_proto_msgTypes[35]
+	mi := &file_core_core_account_groups_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2291,7 +2057,7 @@ func (x *AccountPriceRecipientInfo) String() string {
 func (*AccountPriceRecipientInfo) ProtoMessage() {}
 
 func (x *AccountPriceRecipientInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[35]
+	mi := &file_core_core_account_groups_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2304,7 +2070,7 @@ func (x *AccountPriceRecipientInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AccountPriceRecipientInfo.ProtoReflect.Descriptor instead.
 func (*AccountPriceRecipientInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{35}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *AccountPriceRecipientInfo) GetId() string {
@@ -2331,7 +2097,7 @@ type AccountPriceProductLineInfo struct {
 
 func (x *AccountPriceProductLineInfo) Reset() {
 	*x = AccountPriceProductLineInfo{}
-	mi := &file_core_core_account_groups_proto_msgTypes[36]
+	mi := &file_core_core_account_groups_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2343,7 +2109,7 @@ func (x *AccountPriceProductLineInfo) String() string {
 func (*AccountPriceProductLineInfo) ProtoMessage() {}
 
 func (x *AccountPriceProductLineInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[36]
+	mi := &file_core_core_account_groups_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2356,7 +2122,7 @@ func (x *AccountPriceProductLineInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AccountPriceProductLineInfo.ProtoReflect.Descriptor instead.
 func (*AccountPriceProductLineInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{36}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *AccountPriceProductLineInfo) GetId() string {
@@ -2385,7 +2151,7 @@ type AccountPriceRateInfo struct {
 
 func (x *AccountPriceRateInfo) Reset() {
 	*x = AccountPriceRateInfo{}
-	mi := &file_core_core_account_groups_proto_msgTypes[37]
+	mi := &file_core_core_account_groups_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2397,7 +2163,7 @@ func (x *AccountPriceRateInfo) String() string {
 func (*AccountPriceRateInfo) ProtoMessage() {}
 
 func (x *AccountPriceRateInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[37]
+	mi := &file_core_core_account_groups_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2410,7 +2176,7 @@ func (x *AccountPriceRateInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AccountPriceRateInfo.ProtoReflect.Descriptor instead.
 func (*AccountPriceRateInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{37}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *AccountPriceRateInfo) GetId() string {
@@ -2453,7 +2219,7 @@ type AccountPriceUnitInfo struct {
 
 func (x *AccountPriceUnitInfo) Reset() {
 	*x = AccountPriceUnitInfo{}
-	mi := &file_core_core_account_groups_proto_msgTypes[38]
+	mi := &file_core_core_account_groups_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2465,7 +2231,7 @@ func (x *AccountPriceUnitInfo) String() string {
 func (*AccountPriceUnitInfo) ProtoMessage() {}
 
 func (x *AccountPriceUnitInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[38]
+	mi := &file_core_core_account_groups_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2478,7 +2244,7 @@ func (x *AccountPriceUnitInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AccountPriceUnitInfo.ProtoReflect.Descriptor instead.
 func (*AccountPriceUnitInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{38}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *AccountPriceUnitInfo) GetId() string {
@@ -2519,7 +2285,7 @@ type AccountPriceCategoryInfo struct {
 
 func (x *AccountPriceCategoryInfo) Reset() {
 	*x = AccountPriceCategoryInfo{}
-	mi := &file_core_core_account_groups_proto_msgTypes[39]
+	mi := &file_core_core_account_groups_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2531,7 +2297,7 @@ func (x *AccountPriceCategoryInfo) String() string {
 func (*AccountPriceCategoryInfo) ProtoMessage() {}
 
 func (x *AccountPriceCategoryInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[39]
+	mi := &file_core_core_account_groups_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2544,7 +2310,7 @@ func (x *AccountPriceCategoryInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AccountPriceCategoryInfo.ProtoReflect.Descriptor instead.
 func (*AccountPriceCategoryInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{39}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *AccountPriceCategoryInfo) GetId() string {
@@ -2571,7 +2337,7 @@ type AccountPriceAttributeInfo struct {
 
 func (x *AccountPriceAttributeInfo) Reset() {
 	*x = AccountPriceAttributeInfo{}
-	mi := &file_core_core_account_groups_proto_msgTypes[40]
+	mi := &file_core_core_account_groups_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2583,7 +2349,7 @@ func (x *AccountPriceAttributeInfo) String() string {
 func (*AccountPriceAttributeInfo) ProtoMessage() {}
 
 func (x *AccountPriceAttributeInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[40]
+	mi := &file_core_core_account_groups_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2596,7 +2362,7 @@ func (x *AccountPriceAttributeInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AccountPriceAttributeInfo.ProtoReflect.Descriptor instead.
 func (*AccountPriceAttributeInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{40}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *AccountPriceAttributeInfo) GetId() string {
@@ -2625,7 +2391,7 @@ type ListAccountPricesRequest struct {
 
 func (x *ListAccountPricesRequest) Reset() {
 	*x = ListAccountPricesRequest{}
-	mi := &file_core_core_account_groups_proto_msgTypes[41]
+	mi := &file_core_core_account_groups_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2637,7 +2403,7 @@ func (x *ListAccountPricesRequest) String() string {
 func (*ListAccountPricesRequest) ProtoMessage() {}
 
 func (x *ListAccountPricesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[41]
+	mi := &file_core_core_account_groups_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2650,7 +2416,7 @@ func (x *ListAccountPricesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAccountPricesRequest.ProtoReflect.Descriptor instead.
 func (*ListAccountPricesRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{41}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *ListAccountPricesRequest) GetCursor() string {
@@ -2691,7 +2457,7 @@ type ListAccountPricesResponse struct {
 
 func (x *ListAccountPricesResponse) Reset() {
 	*x = ListAccountPricesResponse{}
-	mi := &file_core_core_account_groups_proto_msgTypes[42]
+	mi := &file_core_core_account_groups_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2703,7 +2469,7 @@ func (x *ListAccountPricesResponse) String() string {
 func (*ListAccountPricesResponse) ProtoMessage() {}
 
 func (x *ListAccountPricesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[42]
+	mi := &file_core_core_account_groups_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2716,7 +2482,7 @@ func (x *ListAccountPricesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAccountPricesResponse.ProtoReflect.Descriptor instead.
 func (*ListAccountPricesResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{42}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *ListAccountPricesResponse) GetAccountPrices() []*AccountPriceInfo {
@@ -2742,7 +2508,7 @@ type GetAccountPriceRequest struct {
 
 func (x *GetAccountPriceRequest) Reset() {
 	*x = GetAccountPriceRequest{}
-	mi := &file_core_core_account_groups_proto_msgTypes[43]
+	mi := &file_core_core_account_groups_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2754,7 +2520,7 @@ func (x *GetAccountPriceRequest) String() string {
 func (*GetAccountPriceRequest) ProtoMessage() {}
 
 func (x *GetAccountPriceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[43]
+	mi := &file_core_core_account_groups_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2767,7 +2533,7 @@ func (x *GetAccountPriceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAccountPriceRequest.ProtoReflect.Descriptor instead.
 func (*GetAccountPriceRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{43}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *GetAccountPriceRequest) GetId() string {
@@ -2786,7 +2552,7 @@ type GetAccountPriceResponse struct {
 
 func (x *GetAccountPriceResponse) Reset() {
 	*x = GetAccountPriceResponse{}
-	mi := &file_core_core_account_groups_proto_msgTypes[44]
+	mi := &file_core_core_account_groups_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2798,7 +2564,7 @@ func (x *GetAccountPriceResponse) String() string {
 func (*GetAccountPriceResponse) ProtoMessage() {}
 
 func (x *GetAccountPriceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[44]
+	mi := &file_core_core_account_groups_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2811,7 +2577,7 @@ func (x *GetAccountPriceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAccountPriceResponse.ProtoReflect.Descriptor instead.
 func (*GetAccountPriceResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{44}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *GetAccountPriceResponse) GetAccountPrice() *AccountPriceInfo {
@@ -2836,7 +2602,7 @@ type CreateAccountPriceRequest struct {
 
 func (x *CreateAccountPriceRequest) Reset() {
 	*x = CreateAccountPriceRequest{}
-	mi := &file_core_core_account_groups_proto_msgTypes[45]
+	mi := &file_core_core_account_groups_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2848,7 +2614,7 @@ func (x *CreateAccountPriceRequest) String() string {
 func (*CreateAccountPriceRequest) ProtoMessage() {}
 
 func (x *CreateAccountPriceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[45]
+	mi := &file_core_core_account_groups_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2861,7 +2627,7 @@ func (x *CreateAccountPriceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateAccountPriceRequest.ProtoReflect.Descriptor instead.
 func (*CreateAccountPriceRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{45}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *CreateAccountPriceRequest) GetRecipientAccountId() string {
@@ -2922,7 +2688,7 @@ type CreateAccountPriceResponse struct {
 
 func (x *CreateAccountPriceResponse) Reset() {
 	*x = CreateAccountPriceResponse{}
-	mi := &file_core_core_account_groups_proto_msgTypes[46]
+	mi := &file_core_core_account_groups_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2934,7 +2700,7 @@ func (x *CreateAccountPriceResponse) String() string {
 func (*CreateAccountPriceResponse) ProtoMessage() {}
 
 func (x *CreateAccountPriceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[46]
+	mi := &file_core_core_account_groups_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2947,7 +2713,7 @@ func (x *CreateAccountPriceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateAccountPriceResponse.ProtoReflect.Descriptor instead.
 func (*CreateAccountPriceResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{46}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *CreateAccountPriceResponse) GetAccountPrice() *AccountPriceInfo {
@@ -2975,7 +2741,7 @@ type UpdateAccountPriceRequest struct {
 
 func (x *UpdateAccountPriceRequest) Reset() {
 	*x = UpdateAccountPriceRequest{}
-	mi := &file_core_core_account_groups_proto_msgTypes[47]
+	mi := &file_core_core_account_groups_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2987,7 +2753,7 @@ func (x *UpdateAccountPriceRequest) String() string {
 func (*UpdateAccountPriceRequest) ProtoMessage() {}
 
 func (x *UpdateAccountPriceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[47]
+	mi := &file_core_core_account_groups_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3000,7 +2766,7 @@ func (x *UpdateAccountPriceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateAccountPriceRequest.ProtoReflect.Descriptor instead.
 func (*UpdateAccountPriceRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{47}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *UpdateAccountPriceRequest) GetId() string {
@@ -3068,7 +2834,7 @@ type AccountPriceIDList struct {
 
 func (x *AccountPriceIDList) Reset() {
 	*x = AccountPriceIDList{}
-	mi := &file_core_core_account_groups_proto_msgTypes[48]
+	mi := &file_core_core_account_groups_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3080,7 +2846,7 @@ func (x *AccountPriceIDList) String() string {
 func (*AccountPriceIDList) ProtoMessage() {}
 
 func (x *AccountPriceIDList) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[48]
+	mi := &file_core_core_account_groups_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3093,7 +2859,7 @@ func (x *AccountPriceIDList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AccountPriceIDList.ProtoReflect.Descriptor instead.
 func (*AccountPriceIDList) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{48}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *AccountPriceIDList) GetIds() []string {
@@ -3112,7 +2878,7 @@ type UpdateAccountPriceResponse struct {
 
 func (x *UpdateAccountPriceResponse) Reset() {
 	*x = UpdateAccountPriceResponse{}
-	mi := &file_core_core_account_groups_proto_msgTypes[49]
+	mi := &file_core_core_account_groups_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3124,7 +2890,7 @@ func (x *UpdateAccountPriceResponse) String() string {
 func (*UpdateAccountPriceResponse) ProtoMessage() {}
 
 func (x *UpdateAccountPriceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[49]
+	mi := &file_core_core_account_groups_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3137,7 +2903,7 @@ func (x *UpdateAccountPriceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateAccountPriceResponse.ProtoReflect.Descriptor instead.
 func (*UpdateAccountPriceResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{49}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *UpdateAccountPriceResponse) GetAccountPrice() *AccountPriceInfo {
@@ -3156,7 +2922,7 @@ type DeleteAccountPriceRequest struct {
 
 func (x *DeleteAccountPriceRequest) Reset() {
 	*x = DeleteAccountPriceRequest{}
-	mi := &file_core_core_account_groups_proto_msgTypes[50]
+	mi := &file_core_core_account_groups_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3168,7 +2934,7 @@ func (x *DeleteAccountPriceRequest) String() string {
 func (*DeleteAccountPriceRequest) ProtoMessage() {}
 
 func (x *DeleteAccountPriceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[50]
+	mi := &file_core_core_account_groups_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3181,7 +2947,7 @@ func (x *DeleteAccountPriceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteAccountPriceRequest.ProtoReflect.Descriptor instead.
 func (*DeleteAccountPriceRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{50}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{45}
 }
 
 func (x *DeleteAccountPriceRequest) GetId() string {
@@ -3204,7 +2970,7 @@ type AccountGroupProductLineAccessInfo struct {
 
 func (x *AccountGroupProductLineAccessInfo) Reset() {
 	*x = AccountGroupProductLineAccessInfo{}
-	mi := &file_core_core_account_groups_proto_msgTypes[51]
+	mi := &file_core_core_account_groups_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3216,7 +2982,7 @@ func (x *AccountGroupProductLineAccessInfo) String() string {
 func (*AccountGroupProductLineAccessInfo) ProtoMessage() {}
 
 func (x *AccountGroupProductLineAccessInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[51]
+	mi := &file_core_core_account_groups_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3229,7 +2995,7 @@ func (x *AccountGroupProductLineAccessInfo) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use AccountGroupProductLineAccessInfo.ProtoReflect.Descriptor instead.
 func (*AccountGroupProductLineAccessInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{51}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *AccountGroupProductLineAccessInfo) GetAccountGroupId() string {
@@ -3277,7 +3043,7 @@ type ProductLineAccessInfo struct {
 
 func (x *ProductLineAccessInfo) Reset() {
 	*x = ProductLineAccessInfo{}
-	mi := &file_core_core_account_groups_proto_msgTypes[52]
+	mi := &file_core_core_account_groups_proto_msgTypes[47]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3289,7 +3055,7 @@ func (x *ProductLineAccessInfo) String() string {
 func (*ProductLineAccessInfo) ProtoMessage() {}
 
 func (x *ProductLineAccessInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[52]
+	mi := &file_core_core_account_groups_proto_msgTypes[47]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3302,7 +3068,7 @@ func (x *ProductLineAccessInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProductLineAccessInfo.ProtoReflect.Descriptor instead.
 func (*ProductLineAccessInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{52}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{47}
 }
 
 func (x *ProductLineAccessInfo) GetId() string {
@@ -3330,7 +3096,7 @@ type ListAccountGroupProductLineAccessRequest struct {
 
 func (x *ListAccountGroupProductLineAccessRequest) Reset() {
 	*x = ListAccountGroupProductLineAccessRequest{}
-	mi := &file_core_core_account_groups_proto_msgTypes[53]
+	mi := &file_core_core_account_groups_proto_msgTypes[48]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3342,7 +3108,7 @@ func (x *ListAccountGroupProductLineAccessRequest) String() string {
 func (*ListAccountGroupProductLineAccessRequest) ProtoMessage() {}
 
 func (x *ListAccountGroupProductLineAccessRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[53]
+	mi := &file_core_core_account_groups_proto_msgTypes[48]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3355,7 +3121,7 @@ func (x *ListAccountGroupProductLineAccessRequest) ProtoReflect() protoreflect.M
 
 // Deprecated: Use ListAccountGroupProductLineAccessRequest.ProtoReflect.Descriptor instead.
 func (*ListAccountGroupProductLineAccessRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{53}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{48}
 }
 
 func (x *ListAccountGroupProductLineAccessRequest) GetCursor() string {
@@ -3389,7 +3155,7 @@ type ListAccountGroupProductLineAccessResponse struct {
 
 func (x *ListAccountGroupProductLineAccessResponse) Reset() {
 	*x = ListAccountGroupProductLineAccessResponse{}
-	mi := &file_core_core_account_groups_proto_msgTypes[54]
+	mi := &file_core_core_account_groups_proto_msgTypes[49]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3401,7 +3167,7 @@ func (x *ListAccountGroupProductLineAccessResponse) String() string {
 func (*ListAccountGroupProductLineAccessResponse) ProtoMessage() {}
 
 func (x *ListAccountGroupProductLineAccessResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[54]
+	mi := &file_core_core_account_groups_proto_msgTypes[49]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3414,7 +3180,7 @@ func (x *ListAccountGroupProductLineAccessResponse) ProtoReflect() protoreflect.
 
 // Deprecated: Use ListAccountGroupProductLineAccessResponse.ProtoReflect.Descriptor instead.
 func (*ListAccountGroupProductLineAccessResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{54}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{49}
 }
 
 func (x *ListAccountGroupProductLineAccessResponse) GetItems() []*AccountGroupProductLineAccessInfo {
@@ -3440,7 +3206,7 @@ type GetAccountGroupProductLineAccessRequest struct {
 
 func (x *GetAccountGroupProductLineAccessRequest) Reset() {
 	*x = GetAccountGroupProductLineAccessRequest{}
-	mi := &file_core_core_account_groups_proto_msgTypes[55]
+	mi := &file_core_core_account_groups_proto_msgTypes[50]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3452,7 +3218,7 @@ func (x *GetAccountGroupProductLineAccessRequest) String() string {
 func (*GetAccountGroupProductLineAccessRequest) ProtoMessage() {}
 
 func (x *GetAccountGroupProductLineAccessRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[55]
+	mi := &file_core_core_account_groups_proto_msgTypes[50]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3465,7 +3231,7 @@ func (x *GetAccountGroupProductLineAccessRequest) ProtoReflect() protoreflect.Me
 
 // Deprecated: Use GetAccountGroupProductLineAccessRequest.ProtoReflect.Descriptor instead.
 func (*GetAccountGroupProductLineAccessRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{55}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{50}
 }
 
 func (x *GetAccountGroupProductLineAccessRequest) GetAccountGroupId() string {
@@ -3484,7 +3250,7 @@ type GetAccountGroupProductLineAccessResponse struct {
 
 func (x *GetAccountGroupProductLineAccessResponse) Reset() {
 	*x = GetAccountGroupProductLineAccessResponse{}
-	mi := &file_core_core_account_groups_proto_msgTypes[56]
+	mi := &file_core_core_account_groups_proto_msgTypes[51]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3496,7 +3262,7 @@ func (x *GetAccountGroupProductLineAccessResponse) String() string {
 func (*GetAccountGroupProductLineAccessResponse) ProtoMessage() {}
 
 func (x *GetAccountGroupProductLineAccessResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[56]
+	mi := &file_core_core_account_groups_proto_msgTypes[51]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3509,7 +3275,7 @@ func (x *GetAccountGroupProductLineAccessResponse) ProtoReflect() protoreflect.M
 
 // Deprecated: Use GetAccountGroupProductLineAccessResponse.ProtoReflect.Descriptor instead.
 func (*GetAccountGroupProductLineAccessResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{56}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{51}
 }
 
 func (x *GetAccountGroupProductLineAccessResponse) GetItem() *AccountGroupProductLineAccessInfo {
@@ -3529,7 +3295,7 @@ type CreateAccountGroupProductLineAccessRequest struct {
 
 func (x *CreateAccountGroupProductLineAccessRequest) Reset() {
 	*x = CreateAccountGroupProductLineAccessRequest{}
-	mi := &file_core_core_account_groups_proto_msgTypes[57]
+	mi := &file_core_core_account_groups_proto_msgTypes[52]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3541,7 +3307,7 @@ func (x *CreateAccountGroupProductLineAccessRequest) String() string {
 func (*CreateAccountGroupProductLineAccessRequest) ProtoMessage() {}
 
 func (x *CreateAccountGroupProductLineAccessRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[57]
+	mi := &file_core_core_account_groups_proto_msgTypes[52]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3554,7 +3320,7 @@ func (x *CreateAccountGroupProductLineAccessRequest) ProtoReflect() protoreflect
 
 // Deprecated: Use CreateAccountGroupProductLineAccessRequest.ProtoReflect.Descriptor instead.
 func (*CreateAccountGroupProductLineAccessRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{57}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{52}
 }
 
 func (x *CreateAccountGroupProductLineAccessRequest) GetAccountGroupId() string {
@@ -3580,7 +3346,7 @@ type CreateAccountGroupProductLineAccessResponse struct {
 
 func (x *CreateAccountGroupProductLineAccessResponse) Reset() {
 	*x = CreateAccountGroupProductLineAccessResponse{}
-	mi := &file_core_core_account_groups_proto_msgTypes[58]
+	mi := &file_core_core_account_groups_proto_msgTypes[53]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3592,7 +3358,7 @@ func (x *CreateAccountGroupProductLineAccessResponse) String() string {
 func (*CreateAccountGroupProductLineAccessResponse) ProtoMessage() {}
 
 func (x *CreateAccountGroupProductLineAccessResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[58]
+	mi := &file_core_core_account_groups_proto_msgTypes[53]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3605,7 +3371,7 @@ func (x *CreateAccountGroupProductLineAccessResponse) ProtoReflect() protoreflec
 
 // Deprecated: Use CreateAccountGroupProductLineAccessResponse.ProtoReflect.Descriptor instead.
 func (*CreateAccountGroupProductLineAccessResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{58}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{53}
 }
 
 func (x *CreateAccountGroupProductLineAccessResponse) GetItem() *AccountGroupProductLineAccessInfo {
@@ -3625,7 +3391,7 @@ type UpdateAccountGroupProductLineAccessRequest struct {
 
 func (x *UpdateAccountGroupProductLineAccessRequest) Reset() {
 	*x = UpdateAccountGroupProductLineAccessRequest{}
-	mi := &file_core_core_account_groups_proto_msgTypes[59]
+	mi := &file_core_core_account_groups_proto_msgTypes[54]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3637,7 +3403,7 @@ func (x *UpdateAccountGroupProductLineAccessRequest) String() string {
 func (*UpdateAccountGroupProductLineAccessRequest) ProtoMessage() {}
 
 func (x *UpdateAccountGroupProductLineAccessRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[59]
+	mi := &file_core_core_account_groups_proto_msgTypes[54]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3650,7 +3416,7 @@ func (x *UpdateAccountGroupProductLineAccessRequest) ProtoReflect() protoreflect
 
 // Deprecated: Use UpdateAccountGroupProductLineAccessRequest.ProtoReflect.Descriptor instead.
 func (*UpdateAccountGroupProductLineAccessRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{59}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{54}
 }
 
 func (x *UpdateAccountGroupProductLineAccessRequest) GetAccountGroupId() string {
@@ -3676,7 +3442,7 @@ type UpdateAccountGroupProductLineAccessResponse struct {
 
 func (x *UpdateAccountGroupProductLineAccessResponse) Reset() {
 	*x = UpdateAccountGroupProductLineAccessResponse{}
-	mi := &file_core_core_account_groups_proto_msgTypes[60]
+	mi := &file_core_core_account_groups_proto_msgTypes[55]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3688,7 +3454,7 @@ func (x *UpdateAccountGroupProductLineAccessResponse) String() string {
 func (*UpdateAccountGroupProductLineAccessResponse) ProtoMessage() {}
 
 func (x *UpdateAccountGroupProductLineAccessResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[60]
+	mi := &file_core_core_account_groups_proto_msgTypes[55]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3701,7 +3467,7 @@ func (x *UpdateAccountGroupProductLineAccessResponse) ProtoReflect() protoreflec
 
 // Deprecated: Use UpdateAccountGroupProductLineAccessResponse.ProtoReflect.Descriptor instead.
 func (*UpdateAccountGroupProductLineAccessResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{60}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{55}
 }
 
 func (x *UpdateAccountGroupProductLineAccessResponse) GetItem() *AccountGroupProductLineAccessInfo {
@@ -3720,7 +3486,7 @@ type DeleteAccountGroupProductLineAccessRequest struct {
 
 func (x *DeleteAccountGroupProductLineAccessRequest) Reset() {
 	*x = DeleteAccountGroupProductLineAccessRequest{}
-	mi := &file_core_core_account_groups_proto_msgTypes[61]
+	mi := &file_core_core_account_groups_proto_msgTypes[56]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3732,7 +3498,7 @@ func (x *DeleteAccountGroupProductLineAccessRequest) String() string {
 func (*DeleteAccountGroupProductLineAccessRequest) ProtoMessage() {}
 
 func (x *DeleteAccountGroupProductLineAccessRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[61]
+	mi := &file_core_core_account_groups_proto_msgTypes[56]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3745,7 +3511,7 @@ func (x *DeleteAccountGroupProductLineAccessRequest) ProtoReflect() protoreflect
 
 // Deprecated: Use DeleteAccountGroupProductLineAccessRequest.ProtoReflect.Descriptor instead.
 func (*DeleteAccountGroupProductLineAccessRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{61}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{56}
 }
 
 func (x *DeleteAccountGroupProductLineAccessRequest) GetAccountGroupId() string {
@@ -3769,7 +3535,7 @@ type CustomerProductLineAccessInfo struct {
 
 func (x *CustomerProductLineAccessInfo) Reset() {
 	*x = CustomerProductLineAccessInfo{}
-	mi := &file_core_core_account_groups_proto_msgTypes[62]
+	mi := &file_core_core_account_groups_proto_msgTypes[57]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3781,7 +3547,7 @@ func (x *CustomerProductLineAccessInfo) String() string {
 func (*CustomerProductLineAccessInfo) ProtoMessage() {}
 
 func (x *CustomerProductLineAccessInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[62]
+	mi := &file_core_core_account_groups_proto_msgTypes[57]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3794,7 +3560,7 @@ func (x *CustomerProductLineAccessInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CustomerProductLineAccessInfo.ProtoReflect.Descriptor instead.
 func (*CustomerProductLineAccessInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{62}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{57}
 }
 
 func (x *CustomerProductLineAccessInfo) GetCustomerId() string {
@@ -3850,7 +3616,7 @@ type ListCustomerProductLineAccessRequest struct {
 
 func (x *ListCustomerProductLineAccessRequest) Reset() {
 	*x = ListCustomerProductLineAccessRequest{}
-	mi := &file_core_core_account_groups_proto_msgTypes[63]
+	mi := &file_core_core_account_groups_proto_msgTypes[58]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3862,7 +3628,7 @@ func (x *ListCustomerProductLineAccessRequest) String() string {
 func (*ListCustomerProductLineAccessRequest) ProtoMessage() {}
 
 func (x *ListCustomerProductLineAccessRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[63]
+	mi := &file_core_core_account_groups_proto_msgTypes[58]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3875,7 +3641,7 @@ func (x *ListCustomerProductLineAccessRequest) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use ListCustomerProductLineAccessRequest.ProtoReflect.Descriptor instead.
 func (*ListCustomerProductLineAccessRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{63}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{58}
 }
 
 func (x *ListCustomerProductLineAccessRequest) GetCursor() string {
@@ -3909,7 +3675,7 @@ type ListCustomerProductLineAccessResponse struct {
 
 func (x *ListCustomerProductLineAccessResponse) Reset() {
 	*x = ListCustomerProductLineAccessResponse{}
-	mi := &file_core_core_account_groups_proto_msgTypes[64]
+	mi := &file_core_core_account_groups_proto_msgTypes[59]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3921,7 +3687,7 @@ func (x *ListCustomerProductLineAccessResponse) String() string {
 func (*ListCustomerProductLineAccessResponse) ProtoMessage() {}
 
 func (x *ListCustomerProductLineAccessResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[64]
+	mi := &file_core_core_account_groups_proto_msgTypes[59]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3934,7 +3700,7 @@ func (x *ListCustomerProductLineAccessResponse) ProtoReflect() protoreflect.Mess
 
 // Deprecated: Use ListCustomerProductLineAccessResponse.ProtoReflect.Descriptor instead.
 func (*ListCustomerProductLineAccessResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{64}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{59}
 }
 
 func (x *ListCustomerProductLineAccessResponse) GetItems() []*CustomerProductLineAccessInfo {
@@ -3960,7 +3726,7 @@ type GetCustomerProductLineAccessRequest struct {
 
 func (x *GetCustomerProductLineAccessRequest) Reset() {
 	*x = GetCustomerProductLineAccessRequest{}
-	mi := &file_core_core_account_groups_proto_msgTypes[65]
+	mi := &file_core_core_account_groups_proto_msgTypes[60]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3972,7 +3738,7 @@ func (x *GetCustomerProductLineAccessRequest) String() string {
 func (*GetCustomerProductLineAccessRequest) ProtoMessage() {}
 
 func (x *GetCustomerProductLineAccessRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[65]
+	mi := &file_core_core_account_groups_proto_msgTypes[60]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3985,7 +3751,7 @@ func (x *GetCustomerProductLineAccessRequest) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use GetCustomerProductLineAccessRequest.ProtoReflect.Descriptor instead.
 func (*GetCustomerProductLineAccessRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{65}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{60}
 }
 
 func (x *GetCustomerProductLineAccessRequest) GetCustomerId() string {
@@ -4004,7 +3770,7 @@ type GetCustomerProductLineAccessResponse struct {
 
 func (x *GetCustomerProductLineAccessResponse) Reset() {
 	*x = GetCustomerProductLineAccessResponse{}
-	mi := &file_core_core_account_groups_proto_msgTypes[66]
+	mi := &file_core_core_account_groups_proto_msgTypes[61]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4016,7 +3782,7 @@ func (x *GetCustomerProductLineAccessResponse) String() string {
 func (*GetCustomerProductLineAccessResponse) ProtoMessage() {}
 
 func (x *GetCustomerProductLineAccessResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[66]
+	mi := &file_core_core_account_groups_proto_msgTypes[61]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4029,7 +3795,7 @@ func (x *GetCustomerProductLineAccessResponse) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use GetCustomerProductLineAccessResponse.ProtoReflect.Descriptor instead.
 func (*GetCustomerProductLineAccessResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{66}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{61}
 }
 
 func (x *GetCustomerProductLineAccessResponse) GetItem() *CustomerProductLineAccessInfo {
@@ -4049,7 +3815,7 @@ type CreateCustomerProductLineAccessRequest struct {
 
 func (x *CreateCustomerProductLineAccessRequest) Reset() {
 	*x = CreateCustomerProductLineAccessRequest{}
-	mi := &file_core_core_account_groups_proto_msgTypes[67]
+	mi := &file_core_core_account_groups_proto_msgTypes[62]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4061,7 +3827,7 @@ func (x *CreateCustomerProductLineAccessRequest) String() string {
 func (*CreateCustomerProductLineAccessRequest) ProtoMessage() {}
 
 func (x *CreateCustomerProductLineAccessRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[67]
+	mi := &file_core_core_account_groups_proto_msgTypes[62]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4074,7 +3840,7 @@ func (x *CreateCustomerProductLineAccessRequest) ProtoReflect() protoreflect.Mes
 
 // Deprecated: Use CreateCustomerProductLineAccessRequest.ProtoReflect.Descriptor instead.
 func (*CreateCustomerProductLineAccessRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{67}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{62}
 }
 
 func (x *CreateCustomerProductLineAccessRequest) GetCustomerId() string {
@@ -4100,7 +3866,7 @@ type CreateCustomerProductLineAccessResponse struct {
 
 func (x *CreateCustomerProductLineAccessResponse) Reset() {
 	*x = CreateCustomerProductLineAccessResponse{}
-	mi := &file_core_core_account_groups_proto_msgTypes[68]
+	mi := &file_core_core_account_groups_proto_msgTypes[63]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4112,7 +3878,7 @@ func (x *CreateCustomerProductLineAccessResponse) String() string {
 func (*CreateCustomerProductLineAccessResponse) ProtoMessage() {}
 
 func (x *CreateCustomerProductLineAccessResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[68]
+	mi := &file_core_core_account_groups_proto_msgTypes[63]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4125,7 +3891,7 @@ func (x *CreateCustomerProductLineAccessResponse) ProtoReflect() protoreflect.Me
 
 // Deprecated: Use CreateCustomerProductLineAccessResponse.ProtoReflect.Descriptor instead.
 func (*CreateCustomerProductLineAccessResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{68}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{63}
 }
 
 func (x *CreateCustomerProductLineAccessResponse) GetItem() *CustomerProductLineAccessInfo {
@@ -4145,7 +3911,7 @@ type UpdateCustomerProductLineAccessRequest struct {
 
 func (x *UpdateCustomerProductLineAccessRequest) Reset() {
 	*x = UpdateCustomerProductLineAccessRequest{}
-	mi := &file_core_core_account_groups_proto_msgTypes[69]
+	mi := &file_core_core_account_groups_proto_msgTypes[64]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4157,7 +3923,7 @@ func (x *UpdateCustomerProductLineAccessRequest) String() string {
 func (*UpdateCustomerProductLineAccessRequest) ProtoMessage() {}
 
 func (x *UpdateCustomerProductLineAccessRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[69]
+	mi := &file_core_core_account_groups_proto_msgTypes[64]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4170,7 +3936,7 @@ func (x *UpdateCustomerProductLineAccessRequest) ProtoReflect() protoreflect.Mes
 
 // Deprecated: Use UpdateCustomerProductLineAccessRequest.ProtoReflect.Descriptor instead.
 func (*UpdateCustomerProductLineAccessRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{69}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{64}
 }
 
 func (x *UpdateCustomerProductLineAccessRequest) GetCustomerId() string {
@@ -4196,7 +3962,7 @@ type UpdateCustomerProductLineAccessResponse struct {
 
 func (x *UpdateCustomerProductLineAccessResponse) Reset() {
 	*x = UpdateCustomerProductLineAccessResponse{}
-	mi := &file_core_core_account_groups_proto_msgTypes[70]
+	mi := &file_core_core_account_groups_proto_msgTypes[65]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4208,7 +3974,7 @@ func (x *UpdateCustomerProductLineAccessResponse) String() string {
 func (*UpdateCustomerProductLineAccessResponse) ProtoMessage() {}
 
 func (x *UpdateCustomerProductLineAccessResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[70]
+	mi := &file_core_core_account_groups_proto_msgTypes[65]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4221,7 +3987,7 @@ func (x *UpdateCustomerProductLineAccessResponse) ProtoReflect() protoreflect.Me
 
 // Deprecated: Use UpdateCustomerProductLineAccessResponse.ProtoReflect.Descriptor instead.
 func (*UpdateCustomerProductLineAccessResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{70}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{65}
 }
 
 func (x *UpdateCustomerProductLineAccessResponse) GetItem() *CustomerProductLineAccessInfo {
@@ -4240,7 +4006,7 @@ type DeleteCustomerProductLineAccessRequest struct {
 
 func (x *DeleteCustomerProductLineAccessRequest) Reset() {
 	*x = DeleteCustomerProductLineAccessRequest{}
-	mi := &file_core_core_account_groups_proto_msgTypes[71]
+	mi := &file_core_core_account_groups_proto_msgTypes[66]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4252,7 +4018,7 @@ func (x *DeleteCustomerProductLineAccessRequest) String() string {
 func (*DeleteCustomerProductLineAccessRequest) ProtoMessage() {}
 
 func (x *DeleteCustomerProductLineAccessRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[71]
+	mi := &file_core_core_account_groups_proto_msgTypes[66]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4265,7 +4031,7 @@ func (x *DeleteCustomerProductLineAccessRequest) ProtoReflect() protoreflect.Mes
 
 // Deprecated: Use DeleteCustomerProductLineAccessRequest.ProtoReflect.Descriptor instead.
 func (*DeleteCustomerProductLineAccessRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{71}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{66}
 }
 
 func (x *DeleteCustomerProductLineAccessRequest) GetCustomerId() string {
@@ -4289,7 +4055,7 @@ type AccountIntegrationInfo struct {
 
 func (x *AccountIntegrationInfo) Reset() {
 	*x = AccountIntegrationInfo{}
-	mi := &file_core_core_account_groups_proto_msgTypes[72]
+	mi := &file_core_core_account_groups_proto_msgTypes[67]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4301,7 +4067,7 @@ func (x *AccountIntegrationInfo) String() string {
 func (*AccountIntegrationInfo) ProtoMessage() {}
 
 func (x *AccountIntegrationInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[72]
+	mi := &file_core_core_account_groups_proto_msgTypes[67]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4314,7 +4080,7 @@ func (x *AccountIntegrationInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AccountIntegrationInfo.ProtoReflect.Descriptor instead.
 func (*AccountIntegrationInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{72}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{67}
 }
 
 func (x *AccountIntegrationInfo) GetId() string {
@@ -4370,7 +4136,7 @@ type ListAccountIntegrationsRequest struct {
 
 func (x *ListAccountIntegrationsRequest) Reset() {
 	*x = ListAccountIntegrationsRequest{}
-	mi := &file_core_core_account_groups_proto_msgTypes[73]
+	mi := &file_core_core_account_groups_proto_msgTypes[68]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4382,7 +4148,7 @@ func (x *ListAccountIntegrationsRequest) String() string {
 func (*ListAccountIntegrationsRequest) ProtoMessage() {}
 
 func (x *ListAccountIntegrationsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[73]
+	mi := &file_core_core_account_groups_proto_msgTypes[68]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4395,7 +4161,7 @@ func (x *ListAccountIntegrationsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAccountIntegrationsRequest.ProtoReflect.Descriptor instead.
 func (*ListAccountIntegrationsRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{73}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{68}
 }
 
 func (x *ListAccountIntegrationsRequest) GetCursor() string {
@@ -4429,7 +4195,7 @@ type ListAccountIntegrationsResponse struct {
 
 func (x *ListAccountIntegrationsResponse) Reset() {
 	*x = ListAccountIntegrationsResponse{}
-	mi := &file_core_core_account_groups_proto_msgTypes[74]
+	mi := &file_core_core_account_groups_proto_msgTypes[69]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4441,7 +4207,7 @@ func (x *ListAccountIntegrationsResponse) String() string {
 func (*ListAccountIntegrationsResponse) ProtoMessage() {}
 
 func (x *ListAccountIntegrationsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[74]
+	mi := &file_core_core_account_groups_proto_msgTypes[69]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4454,7 +4220,7 @@ func (x *ListAccountIntegrationsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAccountIntegrationsResponse.ProtoReflect.Descriptor instead.
 func (*ListAccountIntegrationsResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{74}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{69}
 }
 
 func (x *ListAccountIntegrationsResponse) GetAccountIntegrations() []*AccountIntegrationInfo {
@@ -4483,7 +4249,7 @@ type CreateAccountIntegrationRequest struct {
 
 func (x *CreateAccountIntegrationRequest) Reset() {
 	*x = CreateAccountIntegrationRequest{}
-	mi := &file_core_core_account_groups_proto_msgTypes[75]
+	mi := &file_core_core_account_groups_proto_msgTypes[70]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4495,7 +4261,7 @@ func (x *CreateAccountIntegrationRequest) String() string {
 func (*CreateAccountIntegrationRequest) ProtoMessage() {}
 
 func (x *CreateAccountIntegrationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[75]
+	mi := &file_core_core_account_groups_proto_msgTypes[70]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4508,7 +4274,7 @@ func (x *CreateAccountIntegrationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateAccountIntegrationRequest.ProtoReflect.Descriptor instead.
 func (*CreateAccountIntegrationRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{75}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{70}
 }
 
 func (x *CreateAccountIntegrationRequest) GetName() string {
@@ -4541,7 +4307,7 @@ type CreateAccountIntegrationResponse struct {
 
 func (x *CreateAccountIntegrationResponse) Reset() {
 	*x = CreateAccountIntegrationResponse{}
-	mi := &file_core_core_account_groups_proto_msgTypes[76]
+	mi := &file_core_core_account_groups_proto_msgTypes[71]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4553,7 +4319,7 @@ func (x *CreateAccountIntegrationResponse) String() string {
 func (*CreateAccountIntegrationResponse) ProtoMessage() {}
 
 func (x *CreateAccountIntegrationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[76]
+	mi := &file_core_core_account_groups_proto_msgTypes[71]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4566,7 +4332,7 @@ func (x *CreateAccountIntegrationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateAccountIntegrationResponse.ProtoReflect.Descriptor instead.
 func (*CreateAccountIntegrationResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{76}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{71}
 }
 
 func (x *CreateAccountIntegrationResponse) GetAccountIntegration() *AccountIntegrationInfo {
@@ -4587,7 +4353,7 @@ type UpdateAccountIntegrationRequest struct {
 
 func (x *UpdateAccountIntegrationRequest) Reset() {
 	*x = UpdateAccountIntegrationRequest{}
-	mi := &file_core_core_account_groups_proto_msgTypes[77]
+	mi := &file_core_core_account_groups_proto_msgTypes[72]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4599,7 +4365,7 @@ func (x *UpdateAccountIntegrationRequest) String() string {
 func (*UpdateAccountIntegrationRequest) ProtoMessage() {}
 
 func (x *UpdateAccountIntegrationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[77]
+	mi := &file_core_core_account_groups_proto_msgTypes[72]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4612,7 +4378,7 @@ func (x *UpdateAccountIntegrationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateAccountIntegrationRequest.ProtoReflect.Descriptor instead.
 func (*UpdateAccountIntegrationRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{77}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{72}
 }
 
 func (x *UpdateAccountIntegrationRequest) GetId() string {
@@ -4645,7 +4411,7 @@ type UpdateAccountIntegrationResponse struct {
 
 func (x *UpdateAccountIntegrationResponse) Reset() {
 	*x = UpdateAccountIntegrationResponse{}
-	mi := &file_core_core_account_groups_proto_msgTypes[78]
+	mi := &file_core_core_account_groups_proto_msgTypes[73]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4657,7 +4423,7 @@ func (x *UpdateAccountIntegrationResponse) String() string {
 func (*UpdateAccountIntegrationResponse) ProtoMessage() {}
 
 func (x *UpdateAccountIntegrationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[78]
+	mi := &file_core_core_account_groups_proto_msgTypes[73]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4670,7 +4436,7 @@ func (x *UpdateAccountIntegrationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateAccountIntegrationResponse.ProtoReflect.Descriptor instead.
 func (*UpdateAccountIntegrationResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{78}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{73}
 }
 
 func (x *UpdateAccountIntegrationResponse) GetAccountIntegration() *AccountIntegrationInfo {
@@ -4689,7 +4455,7 @@ type DeleteAccountIntegrationRequest struct {
 
 func (x *DeleteAccountIntegrationRequest) Reset() {
 	*x = DeleteAccountIntegrationRequest{}
-	mi := &file_core_core_account_groups_proto_msgTypes[79]
+	mi := &file_core_core_account_groups_proto_msgTypes[74]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4701,7 +4467,7 @@ func (x *DeleteAccountIntegrationRequest) String() string {
 func (*DeleteAccountIntegrationRequest) ProtoMessage() {}
 
 func (x *DeleteAccountIntegrationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[79]
+	mi := &file_core_core_account_groups_proto_msgTypes[74]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4714,7 +4480,7 @@ func (x *DeleteAccountIntegrationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteAccountIntegrationRequest.ProtoReflect.Descriptor instead.
 func (*DeleteAccountIntegrationRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{79}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{74}
 }
 
 func (x *DeleteAccountIntegrationRequest) GetId() string {
@@ -4733,7 +4499,7 @@ type DeleteAccountIntegrationResponse struct {
 
 func (x *DeleteAccountIntegrationResponse) Reset() {
 	*x = DeleteAccountIntegrationResponse{}
-	mi := &file_core_core_account_groups_proto_msgTypes[80]
+	mi := &file_core_core_account_groups_proto_msgTypes[75]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4745,7 +4511,7 @@ func (x *DeleteAccountIntegrationResponse) String() string {
 func (*DeleteAccountIntegrationResponse) ProtoMessage() {}
 
 func (x *DeleteAccountIntegrationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[80]
+	mi := &file_core_core_account_groups_proto_msgTypes[75]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4758,7 +4524,7 @@ func (x *DeleteAccountIntegrationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteAccountIntegrationResponse.ProtoReflect.Descriptor instead.
 func (*DeleteAccountIntegrationResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{80}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{75}
 }
 
 func (x *DeleteAccountIntegrationResponse) GetAccountIntegration() *AccountIntegrationInfo {
@@ -4776,7 +4542,7 @@ type GetStripePublishableKeyRequest struct {
 
 func (x *GetStripePublishableKeyRequest) Reset() {
 	*x = GetStripePublishableKeyRequest{}
-	mi := &file_core_core_account_groups_proto_msgTypes[81]
+	mi := &file_core_core_account_groups_proto_msgTypes[76]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4788,7 +4554,7 @@ func (x *GetStripePublishableKeyRequest) String() string {
 func (*GetStripePublishableKeyRequest) ProtoMessage() {}
 
 func (x *GetStripePublishableKeyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[81]
+	mi := &file_core_core_account_groups_proto_msgTypes[76]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4801,7 +4567,7 @@ func (x *GetStripePublishableKeyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetStripePublishableKeyRequest.ProtoReflect.Descriptor instead.
 func (*GetStripePublishableKeyRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{81}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{76}
 }
 
 type GetStripePublishableKeyResponse struct {
@@ -4813,7 +4579,7 @@ type GetStripePublishableKeyResponse struct {
 
 func (x *GetStripePublishableKeyResponse) Reset() {
 	*x = GetStripePublishableKeyResponse{}
-	mi := &file_core_core_account_groups_proto_msgTypes[82]
+	mi := &file_core_core_account_groups_proto_msgTypes[77]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4825,7 +4591,7 @@ func (x *GetStripePublishableKeyResponse) String() string {
 func (*GetStripePublishableKeyResponse) ProtoMessage() {}
 
 func (x *GetStripePublishableKeyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[82]
+	mi := &file_core_core_account_groups_proto_msgTypes[77]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4838,7 +4604,7 @@ func (x *GetStripePublishableKeyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetStripePublishableKeyResponse.ProtoReflect.Descriptor instead.
 func (*GetStripePublishableKeyResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{82}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{77}
 }
 
 func (x *GetStripePublishableKeyResponse) GetPublishableKey() string {
@@ -4856,7 +4622,7 @@ type GetStripeStatusRequest struct {
 
 func (x *GetStripeStatusRequest) Reset() {
 	*x = GetStripeStatusRequest{}
-	mi := &file_core_core_account_groups_proto_msgTypes[83]
+	mi := &file_core_core_account_groups_proto_msgTypes[78]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4868,7 +4634,7 @@ func (x *GetStripeStatusRequest) String() string {
 func (*GetStripeStatusRequest) ProtoMessage() {}
 
 func (x *GetStripeStatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_account_groups_proto_msgTypes[83]
+	mi := &file_core_core_account_groups_proto_msgTypes[78]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4881,7 +4647,7 @@ func (x *GetStripeStatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetStripeStatusRequest.ProtoReflect.Descriptor instead.
 func (*GetStripeStatusRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_account_groups_proto_rawDescGZIP(), []int{83}
+	return file_core_core_account_groups_proto_rawDescGZIP(), []int{78}
 }
 
 var File_core_core_account_groups_proto protoreflect.FileDescriptor
@@ -4994,37 +4760,35 @@ const file_core_core_account_groups_proto_rawDesc = "" +
 	"\x15GetAccountUserRequest\x12&\n" +
 	"\x0faccount_user_id\x18\x01 \x01(\tR\raccountUserId\"T\n" +
 	"\x16GetAccountUserResponse\x12:\n" +
-	"\faccount_user\x18\x01 \x01(\v2\x17.core.AccountUserDetailR\vaccountUser\"\xd1\x04\n" +
+	"\faccount_user\x18\x01 \x01(\v2\x17.core.AccountUserDetailR\vaccountUser\"l\n" +
+	"\x1aNotificationPreferenceItem\x124\n" +
+	"\x16notification_type_code\x18\x01 \x01(\tR\x14notificationTypeCode\x12\x18\n" +
+	"\aenabled\x18\x02 \x01(\bR\aenabled\"\x94\x03\n" +
 	"\x18CreateAccountUserRequest\x12\x17\n" +
 	"\x04name\x18\x01 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x19\n" +
 	"\x05email\x18\x02 \x01(\tH\x01R\x05email\x88\x01\x01\x12\x1f\n" +
 	"\busername\x18\x03 \x01(\tH\x02R\busername\x88\x01\x01\x12\x1f\n" +
 	"\bpassword\x18\x04 \x01(\tH\x03R\bpassword\x88\x01\x01\x12\x1c\n" +
 	"\arole_id\x18\x05 \x01(\tH\x04R\x06roleId\x88\x01\x01\x12(\n" +
-	"\rdepartment_id\x18\x06 \x01(\tH\x05R\fdepartmentId\x88\x01\x01\x12%\n" +
-	"\fis_sales_rep\x18\a \x01(\bH\x06R\n" +
-	"isSalesRep\x88\x01\x01\x12F\n" +
-	"\x1freceives_order_acknowledgements\x18\b \x01(\bR\x1dreceivesOrderAcknowledgements\x12D\n" +
-	"\x1ereceives_invoice_notifications\x18\t \x01(\bR\x1creceivesInvoiceNotifications\x12f\n" +
-	"0receives_purchase_order_submission_notifications\x18\n" +
-	" \x01(\bR,receivesPurchaseOrderSubmissionNotificationsB\a\n" +
+	"\rdepartment_id\x18\x06 \x01(\tH\x05R\fdepartmentId\x88\x01\x01\x12[\n" +
+	"\x18notification_preferences\x18\b \x03(\v2 .core.NotificationPreferenceItemR\x17notificationPreferencesB\a\n" +
 	"\x05_nameB\b\n" +
 	"\x06_emailB\v\n" +
 	"\t_usernameB\v\n" +
 	"\t_passwordB\n" +
 	"\n" +
 	"\b_role_idB\x10\n" +
-	"\x0e_department_idB\x0f\n" +
-	"\r_is_sales_rep\"W\n" +
+	"\x0e_department_idJ\x04\b\a\x10\bR\fis_sales_rep\"W\n" +
 	"\x19CreateAccountUserResponse\x12:\n" +
-	"\faccount_user\x18\x01 \x01(\v2\x17.core.AccountUserDetailR\vaccountUser\"\x9d\x02\n" +
+	"\faccount_user\x18\x01 \x01(\v2\x17.core.AccountUserDetailR\vaccountUser\"\xfa\x02\n" +
 	"\x18UpdateAccountUserRequest\x12&\n" +
 	"\x0faccount_user_id\x18\x01 \x01(\tR\raccountUserId\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x19\n" +
 	"\x05email\x18\x03 \x01(\tH\x01R\x05email\x88\x01\x01\x12\x1f\n" +
 	"\busername\x18\x04 \x01(\tH\x02R\busername\x88\x01\x01\x12\x1c\n" +
 	"\arole_id\x18\x05 \x01(\tH\x03R\x06roleId\x88\x01\x01\x12(\n" +
-	"\rdepartment_id\x18\x06 \x01(\tH\x04R\fdepartmentId\x88\x01\x01B\a\n" +
+	"\rdepartment_id\x18\x06 \x01(\tH\x04R\fdepartmentId\x88\x01\x01\x12[\n" +
+	"\x18notification_preferences\x18\a \x03(\v2 .core.NotificationPreferenceItemR\x17notificationPreferencesB\a\n" +
 	"\x05_nameB\b\n" +
 	"\x06_emailB\v\n" +
 	"\t_usernameB\n" +
@@ -5032,27 +4796,15 @@ const file_core_core_account_groups_proto_rawDesc = "" +
 	"\b_role_idB\x10\n" +
 	"\x0e_department_id\"W\n" +
 	"\x19UpdateAccountUserResponse\x12:\n" +
-	"\faccount_user\x18\x01 \x01(\v2\x17.core.AccountUserDetailR\vaccountUser\"B\n" +
-	"\x18DeleteAccountUserRequest\x12&\n" +
-	"\x0faccount_user_id\x18\x01 \x01(\tR\raccountUserId\"@\n" +
-	"\x16LockAccountUserRequest\x12&\n" +
-	"\x0faccount_user_id\x18\x01 \x01(\tR\raccountUserId\"B\n" +
-	"\x18UnlockAccountUserRequest\x12&\n" +
-	"\x0faccount_user_id\x18\x01 \x01(\tR\raccountUserId\"C\n" +
-	"\x19RestoreAccountUserRequest\x12&\n" +
-	"\x0faccount_user_id\x18\x01 \x01(\tR\raccountUserId\"\x9c\x01\n" +
+	"\faccount_user\x18\x01 \x01(\v2\x17.core.AccountUserDetailR\vaccountUser\"i\n" +
+	"\x1eUpdateAccountUserStatusRequest\x12&\n" +
+	"\x0faccount_user_id\x18\x01 \x01(\tR\raccountUserId\x12\x1f\n" +
+	"\vstatus_code\x18\x02 \x01(\tR\n" +
+	"statusCode\"\x9c\x01\n" +
 	" UpdateAccountUserPasswordRequest\x12&\n" +
 	"\x0faccount_user_id\x18\x01 \x01(\tR\raccountUserId\x12-\n" +
 	"\x12requester_password\x18\x02 \x01(\tR\x11requesterPassword\x12!\n" +
-	"\fnew_password\x18\x03 \x01(\tR\vnewPassword\"r\n" +
-	" UpdateNotificationPreferenceItem\x124\n" +
-	"\x16notification_type_code\x18\x01 \x01(\tR\x14notificationTypeCode\x12\x18\n" +
-	"\aenabled\x18\x02 \x01(\bR\aenabled\"\x98\x01\n" +
-	"$UpdateNotificationPreferencesRequest\x12&\n" +
-	"\x0faccount_user_id\x18\x01 \x01(\tR\raccountUserId\x12H\n" +
-	"\vpreferences\x18\x02 \x03(\v2&.core.UpdateNotificationPreferenceItemR\vpreferences\"c\n" +
-	"%UpdateNotificationPreferencesResponse\x12:\n" +
-	"\faccount_user\x18\x01 \x01(\v2\x17.core.AccountUserDetailR\vaccountUser\"\xc1\x02\n" +
+	"\fnew_password\x18\x03 \x01(\tR\vnewPassword\"\xc1\x02\n" +
 	"\x10SalesTargetProto\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -5316,7 +5068,7 @@ func file_core_core_account_groups_proto_rawDescGZIP() []byte {
 	return file_core_core_account_groups_proto_rawDescData
 }
 
-var file_core_core_account_groups_proto_msgTypes = make([]protoimpl.MessageInfo, 84)
+var file_core_core_account_groups_proto_msgTypes = make([]protoimpl.MessageInfo, 79)
 var file_core_core_account_groups_proto_goTypes = []any{
 	(*AccountGroupInfo)(nil),                            // 0: core.AccountGroupInfo
 	(*ListAccountGroupsRequest)(nil),                    // 1: core.ListAccountGroupsRequest
@@ -5333,138 +5085,133 @@ var file_core_core_account_groups_proto_goTypes = []any{
 	(*ListAccountUsersResponse)(nil),                    // 12: core.ListAccountUsersResponse
 	(*GetAccountUserRequest)(nil),                       // 13: core.GetAccountUserRequest
 	(*GetAccountUserResponse)(nil),                      // 14: core.GetAccountUserResponse
-	(*CreateAccountUserRequest)(nil),                    // 15: core.CreateAccountUserRequest
-	(*CreateAccountUserResponse)(nil),                   // 16: core.CreateAccountUserResponse
-	(*UpdateAccountUserRequest)(nil),                    // 17: core.UpdateAccountUserRequest
-	(*UpdateAccountUserResponse)(nil),                   // 18: core.UpdateAccountUserResponse
-	(*DeleteAccountUserRequest)(nil),                    // 19: core.DeleteAccountUserRequest
-	(*LockAccountUserRequest)(nil),                      // 20: core.LockAccountUserRequest
-	(*UnlockAccountUserRequest)(nil),                    // 21: core.UnlockAccountUserRequest
-	(*RestoreAccountUserRequest)(nil),                   // 22: core.RestoreAccountUserRequest
-	(*UpdateAccountUserPasswordRequest)(nil),            // 23: core.UpdateAccountUserPasswordRequest
-	(*UpdateNotificationPreferenceItem)(nil),            // 24: core.UpdateNotificationPreferenceItem
-	(*UpdateNotificationPreferencesRequest)(nil),        // 25: core.UpdateNotificationPreferencesRequest
-	(*UpdateNotificationPreferencesResponse)(nil),       // 26: core.UpdateNotificationPreferencesResponse
-	(*SalesTargetProto)(nil),                            // 27: core.SalesTargetProto
-	(*ListSalesTargetsRequest)(nil),                     // 28: core.ListSalesTargetsRequest
-	(*ListSalesTargetsResponse)(nil),                    // 29: core.ListSalesTargetsResponse
-	(*CreateSalesTargetRequest)(nil),                    // 30: core.CreateSalesTargetRequest
-	(*CreateSalesTargetResponse)(nil),                   // 31: core.CreateSalesTargetResponse
-	(*UpsertSalesTargetRequest)(nil),                    // 32: core.UpsertSalesTargetRequest
-	(*UpsertSalesTargetResponse)(nil),                   // 33: core.UpsertSalesTargetResponse
-	(*AccountPriceInfo)(nil),                            // 34: core.AccountPriceInfo
-	(*AccountPriceRecipientInfo)(nil),                   // 35: core.AccountPriceRecipientInfo
-	(*AccountPriceProductLineInfo)(nil),                 // 36: core.AccountPriceProductLineInfo
-	(*AccountPriceRateInfo)(nil),                        // 37: core.AccountPriceRateInfo
-	(*AccountPriceUnitInfo)(nil),                        // 38: core.AccountPriceUnitInfo
-	(*AccountPriceCategoryInfo)(nil),                    // 39: core.AccountPriceCategoryInfo
-	(*AccountPriceAttributeInfo)(nil),                   // 40: core.AccountPriceAttributeInfo
-	(*ListAccountPricesRequest)(nil),                    // 41: core.ListAccountPricesRequest
-	(*ListAccountPricesResponse)(nil),                   // 42: core.ListAccountPricesResponse
-	(*GetAccountPriceRequest)(nil),                      // 43: core.GetAccountPriceRequest
-	(*GetAccountPriceResponse)(nil),                     // 44: core.GetAccountPriceResponse
-	(*CreateAccountPriceRequest)(nil),                   // 45: core.CreateAccountPriceRequest
-	(*CreateAccountPriceResponse)(nil),                  // 46: core.CreateAccountPriceResponse
-	(*UpdateAccountPriceRequest)(nil),                   // 47: core.UpdateAccountPriceRequest
-	(*AccountPriceIDList)(nil),                          // 48: core.AccountPriceIDList
-	(*UpdateAccountPriceResponse)(nil),                  // 49: core.UpdateAccountPriceResponse
-	(*DeleteAccountPriceRequest)(nil),                   // 50: core.DeleteAccountPriceRequest
-	(*AccountGroupProductLineAccessInfo)(nil),           // 51: core.AccountGroupProductLineAccessInfo
-	(*ProductLineAccessInfo)(nil),                       // 52: core.ProductLineAccessInfo
-	(*ListAccountGroupProductLineAccessRequest)(nil),    // 53: core.ListAccountGroupProductLineAccessRequest
-	(*ListAccountGroupProductLineAccessResponse)(nil),   // 54: core.ListAccountGroupProductLineAccessResponse
-	(*GetAccountGroupProductLineAccessRequest)(nil),     // 55: core.GetAccountGroupProductLineAccessRequest
-	(*GetAccountGroupProductLineAccessResponse)(nil),    // 56: core.GetAccountGroupProductLineAccessResponse
-	(*CreateAccountGroupProductLineAccessRequest)(nil),  // 57: core.CreateAccountGroupProductLineAccessRequest
-	(*CreateAccountGroupProductLineAccessResponse)(nil), // 58: core.CreateAccountGroupProductLineAccessResponse
-	(*UpdateAccountGroupProductLineAccessRequest)(nil),  // 59: core.UpdateAccountGroupProductLineAccessRequest
-	(*UpdateAccountGroupProductLineAccessResponse)(nil), // 60: core.UpdateAccountGroupProductLineAccessResponse
-	(*DeleteAccountGroupProductLineAccessRequest)(nil),  // 61: core.DeleteAccountGroupProductLineAccessRequest
-	(*CustomerProductLineAccessInfo)(nil),               // 62: core.CustomerProductLineAccessInfo
-	(*ListCustomerProductLineAccessRequest)(nil),        // 63: core.ListCustomerProductLineAccessRequest
-	(*ListCustomerProductLineAccessResponse)(nil),       // 64: core.ListCustomerProductLineAccessResponse
-	(*GetCustomerProductLineAccessRequest)(nil),         // 65: core.GetCustomerProductLineAccessRequest
-	(*GetCustomerProductLineAccessResponse)(nil),        // 66: core.GetCustomerProductLineAccessResponse
-	(*CreateCustomerProductLineAccessRequest)(nil),      // 67: core.CreateCustomerProductLineAccessRequest
-	(*CreateCustomerProductLineAccessResponse)(nil),     // 68: core.CreateCustomerProductLineAccessResponse
-	(*UpdateCustomerProductLineAccessRequest)(nil),      // 69: core.UpdateCustomerProductLineAccessRequest
-	(*UpdateCustomerProductLineAccessResponse)(nil),     // 70: core.UpdateCustomerProductLineAccessResponse
-	(*DeleteCustomerProductLineAccessRequest)(nil),      // 71: core.DeleteCustomerProductLineAccessRequest
-	(*AccountIntegrationInfo)(nil),                      // 72: core.AccountIntegrationInfo
-	(*ListAccountIntegrationsRequest)(nil),              // 73: core.ListAccountIntegrationsRequest
-	(*ListAccountIntegrationsResponse)(nil),             // 74: core.ListAccountIntegrationsResponse
-	(*CreateAccountIntegrationRequest)(nil),             // 75: core.CreateAccountIntegrationRequest
-	(*CreateAccountIntegrationResponse)(nil),            // 76: core.CreateAccountIntegrationResponse
-	(*UpdateAccountIntegrationRequest)(nil),             // 77: core.UpdateAccountIntegrationRequest
-	(*UpdateAccountIntegrationResponse)(nil),            // 78: core.UpdateAccountIntegrationResponse
-	(*DeleteAccountIntegrationRequest)(nil),             // 79: core.DeleteAccountIntegrationRequest
-	(*DeleteAccountIntegrationResponse)(nil),            // 80: core.DeleteAccountIntegrationResponse
-	(*GetStripePublishableKeyRequest)(nil),              // 81: core.GetStripePublishableKeyRequest
-	(*GetStripePublishableKeyResponse)(nil),             // 82: core.GetStripePublishableKeyResponse
-	(*GetStripeStatusRequest)(nil),                      // 83: core.GetStripeStatusRequest
-	(*timestamppb.Timestamp)(nil),                       // 84: google.protobuf.Timestamp
-	(*PageInfo)(nil),                                    // 85: core.PageInfo
+	(*NotificationPreferenceItem)(nil),                  // 15: core.NotificationPreferenceItem
+	(*CreateAccountUserRequest)(nil),                    // 16: core.CreateAccountUserRequest
+	(*CreateAccountUserResponse)(nil),                   // 17: core.CreateAccountUserResponse
+	(*UpdateAccountUserRequest)(nil),                    // 18: core.UpdateAccountUserRequest
+	(*UpdateAccountUserResponse)(nil),                   // 19: core.UpdateAccountUserResponse
+	(*UpdateAccountUserStatusRequest)(nil),              // 20: core.UpdateAccountUserStatusRequest
+	(*UpdateAccountUserPasswordRequest)(nil),            // 21: core.UpdateAccountUserPasswordRequest
+	(*SalesTargetProto)(nil),                            // 22: core.SalesTargetProto
+	(*ListSalesTargetsRequest)(nil),                     // 23: core.ListSalesTargetsRequest
+	(*ListSalesTargetsResponse)(nil),                    // 24: core.ListSalesTargetsResponse
+	(*CreateSalesTargetRequest)(nil),                    // 25: core.CreateSalesTargetRequest
+	(*CreateSalesTargetResponse)(nil),                   // 26: core.CreateSalesTargetResponse
+	(*UpsertSalesTargetRequest)(nil),                    // 27: core.UpsertSalesTargetRequest
+	(*UpsertSalesTargetResponse)(nil),                   // 28: core.UpsertSalesTargetResponse
+	(*AccountPriceInfo)(nil),                            // 29: core.AccountPriceInfo
+	(*AccountPriceRecipientInfo)(nil),                   // 30: core.AccountPriceRecipientInfo
+	(*AccountPriceProductLineInfo)(nil),                 // 31: core.AccountPriceProductLineInfo
+	(*AccountPriceRateInfo)(nil),                        // 32: core.AccountPriceRateInfo
+	(*AccountPriceUnitInfo)(nil),                        // 33: core.AccountPriceUnitInfo
+	(*AccountPriceCategoryInfo)(nil),                    // 34: core.AccountPriceCategoryInfo
+	(*AccountPriceAttributeInfo)(nil),                   // 35: core.AccountPriceAttributeInfo
+	(*ListAccountPricesRequest)(nil),                    // 36: core.ListAccountPricesRequest
+	(*ListAccountPricesResponse)(nil),                   // 37: core.ListAccountPricesResponse
+	(*GetAccountPriceRequest)(nil),                      // 38: core.GetAccountPriceRequest
+	(*GetAccountPriceResponse)(nil),                     // 39: core.GetAccountPriceResponse
+	(*CreateAccountPriceRequest)(nil),                   // 40: core.CreateAccountPriceRequest
+	(*CreateAccountPriceResponse)(nil),                  // 41: core.CreateAccountPriceResponse
+	(*UpdateAccountPriceRequest)(nil),                   // 42: core.UpdateAccountPriceRequest
+	(*AccountPriceIDList)(nil),                          // 43: core.AccountPriceIDList
+	(*UpdateAccountPriceResponse)(nil),                  // 44: core.UpdateAccountPriceResponse
+	(*DeleteAccountPriceRequest)(nil),                   // 45: core.DeleteAccountPriceRequest
+	(*AccountGroupProductLineAccessInfo)(nil),           // 46: core.AccountGroupProductLineAccessInfo
+	(*ProductLineAccessInfo)(nil),                       // 47: core.ProductLineAccessInfo
+	(*ListAccountGroupProductLineAccessRequest)(nil),    // 48: core.ListAccountGroupProductLineAccessRequest
+	(*ListAccountGroupProductLineAccessResponse)(nil),   // 49: core.ListAccountGroupProductLineAccessResponse
+	(*GetAccountGroupProductLineAccessRequest)(nil),     // 50: core.GetAccountGroupProductLineAccessRequest
+	(*GetAccountGroupProductLineAccessResponse)(nil),    // 51: core.GetAccountGroupProductLineAccessResponse
+	(*CreateAccountGroupProductLineAccessRequest)(nil),  // 52: core.CreateAccountGroupProductLineAccessRequest
+	(*CreateAccountGroupProductLineAccessResponse)(nil), // 53: core.CreateAccountGroupProductLineAccessResponse
+	(*UpdateAccountGroupProductLineAccessRequest)(nil),  // 54: core.UpdateAccountGroupProductLineAccessRequest
+	(*UpdateAccountGroupProductLineAccessResponse)(nil), // 55: core.UpdateAccountGroupProductLineAccessResponse
+	(*DeleteAccountGroupProductLineAccessRequest)(nil),  // 56: core.DeleteAccountGroupProductLineAccessRequest
+	(*CustomerProductLineAccessInfo)(nil),               // 57: core.CustomerProductLineAccessInfo
+	(*ListCustomerProductLineAccessRequest)(nil),        // 58: core.ListCustomerProductLineAccessRequest
+	(*ListCustomerProductLineAccessResponse)(nil),       // 59: core.ListCustomerProductLineAccessResponse
+	(*GetCustomerProductLineAccessRequest)(nil),         // 60: core.GetCustomerProductLineAccessRequest
+	(*GetCustomerProductLineAccessResponse)(nil),        // 61: core.GetCustomerProductLineAccessResponse
+	(*CreateCustomerProductLineAccessRequest)(nil),      // 62: core.CreateCustomerProductLineAccessRequest
+	(*CreateCustomerProductLineAccessResponse)(nil),     // 63: core.CreateCustomerProductLineAccessResponse
+	(*UpdateCustomerProductLineAccessRequest)(nil),      // 64: core.UpdateCustomerProductLineAccessRequest
+	(*UpdateCustomerProductLineAccessResponse)(nil),     // 65: core.UpdateCustomerProductLineAccessResponse
+	(*DeleteCustomerProductLineAccessRequest)(nil),      // 66: core.DeleteCustomerProductLineAccessRequest
+	(*AccountIntegrationInfo)(nil),                      // 67: core.AccountIntegrationInfo
+	(*ListAccountIntegrationsRequest)(nil),              // 68: core.ListAccountIntegrationsRequest
+	(*ListAccountIntegrationsResponse)(nil),             // 69: core.ListAccountIntegrationsResponse
+	(*CreateAccountIntegrationRequest)(nil),             // 70: core.CreateAccountIntegrationRequest
+	(*CreateAccountIntegrationResponse)(nil),            // 71: core.CreateAccountIntegrationResponse
+	(*UpdateAccountIntegrationRequest)(nil),             // 72: core.UpdateAccountIntegrationRequest
+	(*UpdateAccountIntegrationResponse)(nil),            // 73: core.UpdateAccountIntegrationResponse
+	(*DeleteAccountIntegrationRequest)(nil),             // 74: core.DeleteAccountIntegrationRequest
+	(*DeleteAccountIntegrationResponse)(nil),            // 75: core.DeleteAccountIntegrationResponse
+	(*GetStripePublishableKeyRequest)(nil),              // 76: core.GetStripePublishableKeyRequest
+	(*GetStripePublishableKeyResponse)(nil),             // 77: core.GetStripePublishableKeyResponse
+	(*GetStripeStatusRequest)(nil),                      // 78: core.GetStripeStatusRequest
+	(*timestamppb.Timestamp)(nil),                       // 79: google.protobuf.Timestamp
+	(*PageInfo)(nil),                                    // 80: core.PageInfo
 }
 var file_core_core_account_groups_proto_depIdxs = []int32{
-	84, // 0: core.AccountGroupInfo.created_at:type_name -> google.protobuf.Timestamp
-	84, // 1: core.AccountGroupInfo.updated_at:type_name -> google.protobuf.Timestamp
+	79, // 0: core.AccountGroupInfo.created_at:type_name -> google.protobuf.Timestamp
+	79, // 1: core.AccountGroupInfo.updated_at:type_name -> google.protobuf.Timestamp
 	0,  // 2: core.ListAccountGroupsResponse.account_groups:type_name -> core.AccountGroupInfo
-	85, // 3: core.ListAccountGroupsResponse.page_info:type_name -> core.PageInfo
+	80, // 3: core.ListAccountGroupsResponse.page_info:type_name -> core.PageInfo
 	0,  // 4: core.GetAccountGroupResponse.account_group:type_name -> core.AccountGroupInfo
 	0,  // 5: core.CreateAccountGroupResponse.account_group:type_name -> core.AccountGroupInfo
 	0,  // 6: core.UpdateAccountGroupResponse.account_group:type_name -> core.AccountGroupInfo
-	84, // 7: core.AccountUserDetail.last_used_at:type_name -> google.protobuf.Timestamp
-	84, // 8: core.AccountUserDetail.created_at:type_name -> google.protobuf.Timestamp
-	84, // 9: core.AccountUserDetail.updated_at:type_name -> google.protobuf.Timestamp
+	79, // 7: core.AccountUserDetail.last_used_at:type_name -> google.protobuf.Timestamp
+	79, // 8: core.AccountUserDetail.created_at:type_name -> google.protobuf.Timestamp
+	79, // 9: core.AccountUserDetail.updated_at:type_name -> google.protobuf.Timestamp
 	10, // 10: core.ListAccountUsersResponse.account_users:type_name -> core.AccountUserDetail
-	85, // 11: core.ListAccountUsersResponse.page_info:type_name -> core.PageInfo
+	80, // 11: core.ListAccountUsersResponse.page_info:type_name -> core.PageInfo
 	10, // 12: core.GetAccountUserResponse.account_user:type_name -> core.AccountUserDetail
-	10, // 13: core.CreateAccountUserResponse.account_user:type_name -> core.AccountUserDetail
-	10, // 14: core.UpdateAccountUserResponse.account_user:type_name -> core.AccountUserDetail
-	24, // 15: core.UpdateNotificationPreferencesRequest.preferences:type_name -> core.UpdateNotificationPreferenceItem
-	10, // 16: core.UpdateNotificationPreferencesResponse.account_user:type_name -> core.AccountUserDetail
-	27, // 17: core.ListSalesTargetsResponse.sales_targets:type_name -> core.SalesTargetProto
-	27, // 18: core.CreateSalesTargetResponse.sales_target:type_name -> core.SalesTargetProto
-	27, // 19: core.UpsertSalesTargetResponse.sales_target:type_name -> core.SalesTargetProto
-	35, // 20: core.AccountPriceInfo.recipient_account:type_name -> core.AccountPriceRecipientInfo
-	36, // 21: core.AccountPriceInfo.product_line:type_name -> core.AccountPriceProductLineInfo
-	37, // 22: core.AccountPriceInfo.rate:type_name -> core.AccountPriceRateInfo
-	39, // 23: core.AccountPriceInfo.categories:type_name -> core.AccountPriceCategoryInfo
-	40, // 24: core.AccountPriceInfo.attributes:type_name -> core.AccountPriceAttributeInfo
-	84, // 25: core.AccountPriceInfo.created_at:type_name -> google.protobuf.Timestamp
-	84, // 26: core.AccountPriceInfo.updated_at:type_name -> google.protobuf.Timestamp
-	38, // 27: core.AccountPriceRateInfo.numerator_unit:type_name -> core.AccountPriceUnitInfo
-	38, // 28: core.AccountPriceRateInfo.denominator_unit:type_name -> core.AccountPriceUnitInfo
-	34, // 29: core.ListAccountPricesResponse.account_prices:type_name -> core.AccountPriceInfo
-	85, // 30: core.ListAccountPricesResponse.page_info:type_name -> core.PageInfo
-	34, // 31: core.GetAccountPriceResponse.account_price:type_name -> core.AccountPriceInfo
-	34, // 32: core.CreateAccountPriceResponse.account_price:type_name -> core.AccountPriceInfo
-	48, // 33: core.UpdateAccountPriceRequest.category_ids:type_name -> core.AccountPriceIDList
-	48, // 34: core.UpdateAccountPriceRequest.attribute_ids:type_name -> core.AccountPriceIDList
-	34, // 35: core.UpdateAccountPriceResponse.account_price:type_name -> core.AccountPriceInfo
-	52, // 36: core.AccountGroupProductLineAccessInfo.product_lines:type_name -> core.ProductLineAccessInfo
-	84, // 37: core.AccountGroupProductLineAccessInfo.created_at:type_name -> google.protobuf.Timestamp
-	84, // 38: core.AccountGroupProductLineAccessInfo.updated_at:type_name -> google.protobuf.Timestamp
-	51, // 39: core.ListAccountGroupProductLineAccessResponse.items:type_name -> core.AccountGroupProductLineAccessInfo
-	85, // 40: core.ListAccountGroupProductLineAccessResponse.page_info:type_name -> core.PageInfo
-	51, // 41: core.GetAccountGroupProductLineAccessResponse.item:type_name -> core.AccountGroupProductLineAccessInfo
-	51, // 42: core.CreateAccountGroupProductLineAccessResponse.item:type_name -> core.AccountGroupProductLineAccessInfo
-	51, // 43: core.UpdateAccountGroupProductLineAccessResponse.item:type_name -> core.AccountGroupProductLineAccessInfo
-	52, // 44: core.CustomerProductLineAccessInfo.product_lines:type_name -> core.ProductLineAccessInfo
-	84, // 45: core.CustomerProductLineAccessInfo.created_at:type_name -> google.protobuf.Timestamp
-	84, // 46: core.CustomerProductLineAccessInfo.updated_at:type_name -> google.protobuf.Timestamp
-	62, // 47: core.ListCustomerProductLineAccessResponse.items:type_name -> core.CustomerProductLineAccessInfo
-	85, // 48: core.ListCustomerProductLineAccessResponse.page_info:type_name -> core.PageInfo
-	62, // 49: core.GetCustomerProductLineAccessResponse.item:type_name -> core.CustomerProductLineAccessInfo
-	62, // 50: core.CreateCustomerProductLineAccessResponse.item:type_name -> core.CustomerProductLineAccessInfo
-	62, // 51: core.UpdateCustomerProductLineAccessResponse.item:type_name -> core.CustomerProductLineAccessInfo
-	84, // 52: core.AccountIntegrationInfo.created_at:type_name -> google.protobuf.Timestamp
-	84, // 53: core.AccountIntegrationInfo.updated_at:type_name -> google.protobuf.Timestamp
-	72, // 54: core.ListAccountIntegrationsResponse.account_integrations:type_name -> core.AccountIntegrationInfo
-	85, // 55: core.ListAccountIntegrationsResponse.page_info:type_name -> core.PageInfo
-	72, // 56: core.CreateAccountIntegrationResponse.account_integration:type_name -> core.AccountIntegrationInfo
-	72, // 57: core.UpdateAccountIntegrationResponse.account_integration:type_name -> core.AccountIntegrationInfo
-	72, // 58: core.DeleteAccountIntegrationResponse.account_integration:type_name -> core.AccountIntegrationInfo
+	15, // 13: core.CreateAccountUserRequest.notification_preferences:type_name -> core.NotificationPreferenceItem
+	10, // 14: core.CreateAccountUserResponse.account_user:type_name -> core.AccountUserDetail
+	15, // 15: core.UpdateAccountUserRequest.notification_preferences:type_name -> core.NotificationPreferenceItem
+	10, // 16: core.UpdateAccountUserResponse.account_user:type_name -> core.AccountUserDetail
+	22, // 17: core.ListSalesTargetsResponse.sales_targets:type_name -> core.SalesTargetProto
+	22, // 18: core.CreateSalesTargetResponse.sales_target:type_name -> core.SalesTargetProto
+	22, // 19: core.UpsertSalesTargetResponse.sales_target:type_name -> core.SalesTargetProto
+	30, // 20: core.AccountPriceInfo.recipient_account:type_name -> core.AccountPriceRecipientInfo
+	31, // 21: core.AccountPriceInfo.product_line:type_name -> core.AccountPriceProductLineInfo
+	32, // 22: core.AccountPriceInfo.rate:type_name -> core.AccountPriceRateInfo
+	34, // 23: core.AccountPriceInfo.categories:type_name -> core.AccountPriceCategoryInfo
+	35, // 24: core.AccountPriceInfo.attributes:type_name -> core.AccountPriceAttributeInfo
+	79, // 25: core.AccountPriceInfo.created_at:type_name -> google.protobuf.Timestamp
+	79, // 26: core.AccountPriceInfo.updated_at:type_name -> google.protobuf.Timestamp
+	33, // 27: core.AccountPriceRateInfo.numerator_unit:type_name -> core.AccountPriceUnitInfo
+	33, // 28: core.AccountPriceRateInfo.denominator_unit:type_name -> core.AccountPriceUnitInfo
+	29, // 29: core.ListAccountPricesResponse.account_prices:type_name -> core.AccountPriceInfo
+	80, // 30: core.ListAccountPricesResponse.page_info:type_name -> core.PageInfo
+	29, // 31: core.GetAccountPriceResponse.account_price:type_name -> core.AccountPriceInfo
+	29, // 32: core.CreateAccountPriceResponse.account_price:type_name -> core.AccountPriceInfo
+	43, // 33: core.UpdateAccountPriceRequest.category_ids:type_name -> core.AccountPriceIDList
+	43, // 34: core.UpdateAccountPriceRequest.attribute_ids:type_name -> core.AccountPriceIDList
+	29, // 35: core.UpdateAccountPriceResponse.account_price:type_name -> core.AccountPriceInfo
+	47, // 36: core.AccountGroupProductLineAccessInfo.product_lines:type_name -> core.ProductLineAccessInfo
+	79, // 37: core.AccountGroupProductLineAccessInfo.created_at:type_name -> google.protobuf.Timestamp
+	79, // 38: core.AccountGroupProductLineAccessInfo.updated_at:type_name -> google.protobuf.Timestamp
+	46, // 39: core.ListAccountGroupProductLineAccessResponse.items:type_name -> core.AccountGroupProductLineAccessInfo
+	80, // 40: core.ListAccountGroupProductLineAccessResponse.page_info:type_name -> core.PageInfo
+	46, // 41: core.GetAccountGroupProductLineAccessResponse.item:type_name -> core.AccountGroupProductLineAccessInfo
+	46, // 42: core.CreateAccountGroupProductLineAccessResponse.item:type_name -> core.AccountGroupProductLineAccessInfo
+	46, // 43: core.UpdateAccountGroupProductLineAccessResponse.item:type_name -> core.AccountGroupProductLineAccessInfo
+	47, // 44: core.CustomerProductLineAccessInfo.product_lines:type_name -> core.ProductLineAccessInfo
+	79, // 45: core.CustomerProductLineAccessInfo.created_at:type_name -> google.protobuf.Timestamp
+	79, // 46: core.CustomerProductLineAccessInfo.updated_at:type_name -> google.protobuf.Timestamp
+	57, // 47: core.ListCustomerProductLineAccessResponse.items:type_name -> core.CustomerProductLineAccessInfo
+	80, // 48: core.ListCustomerProductLineAccessResponse.page_info:type_name -> core.PageInfo
+	57, // 49: core.GetCustomerProductLineAccessResponse.item:type_name -> core.CustomerProductLineAccessInfo
+	57, // 50: core.CreateCustomerProductLineAccessResponse.item:type_name -> core.CustomerProductLineAccessInfo
+	57, // 51: core.UpdateCustomerProductLineAccessResponse.item:type_name -> core.CustomerProductLineAccessInfo
+	79, // 52: core.AccountIntegrationInfo.created_at:type_name -> google.protobuf.Timestamp
+	79, // 53: core.AccountIntegrationInfo.updated_at:type_name -> google.protobuf.Timestamp
+	67, // 54: core.ListAccountIntegrationsResponse.account_integrations:type_name -> core.AccountIntegrationInfo
+	80, // 55: core.ListAccountIntegrationsResponse.page_info:type_name -> core.PageInfo
+	67, // 56: core.CreateAccountIntegrationResponse.account_integration:type_name -> core.AccountIntegrationInfo
+	67, // 57: core.UpdateAccountIntegrationResponse.account_integration:type_name -> core.AccountIntegrationInfo
+	67, // 58: core.DeleteAccountIntegrationResponse.account_integration:type_name -> core.AccountIntegrationInfo
 	59, // [59:59] is the sub-list for method output_type
 	59, // [59:59] is the sub-list for method input_type
 	59, // [59:59] is the sub-list for extension type_name
@@ -5484,22 +5231,22 @@ func file_core_core_account_groups_proto_init() {
 	file_core_core_account_groups_proto_msgTypes[7].OneofWrappers = []any{}
 	file_core_core_account_groups_proto_msgTypes[10].OneofWrappers = []any{}
 	file_core_core_account_groups_proto_msgTypes[11].OneofWrappers = []any{}
-	file_core_core_account_groups_proto_msgTypes[15].OneofWrappers = []any{}
-	file_core_core_account_groups_proto_msgTypes[17].OneofWrappers = []any{}
-	file_core_core_account_groups_proto_msgTypes[28].OneofWrappers = []any{}
-	file_core_core_account_groups_proto_msgTypes[41].OneofWrappers = []any{}
-	file_core_core_account_groups_proto_msgTypes[47].OneofWrappers = []any{}
-	file_core_core_account_groups_proto_msgTypes[53].OneofWrappers = []any{}
-	file_core_core_account_groups_proto_msgTypes[63].OneofWrappers = []any{}
-	file_core_core_account_groups_proto_msgTypes[73].OneofWrappers = []any{}
-	file_core_core_account_groups_proto_msgTypes[77].OneofWrappers = []any{}
+	file_core_core_account_groups_proto_msgTypes[16].OneofWrappers = []any{}
+	file_core_core_account_groups_proto_msgTypes[18].OneofWrappers = []any{}
+	file_core_core_account_groups_proto_msgTypes[23].OneofWrappers = []any{}
+	file_core_core_account_groups_proto_msgTypes[36].OneofWrappers = []any{}
+	file_core_core_account_groups_proto_msgTypes[42].OneofWrappers = []any{}
+	file_core_core_account_groups_proto_msgTypes[48].OneofWrappers = []any{}
+	file_core_core_account_groups_proto_msgTypes[58].OneofWrappers = []any{}
+	file_core_core_account_groups_proto_msgTypes[68].OneofWrappers = []any{}
+	file_core_core_account_groups_proto_msgTypes[72].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_core_core_account_groups_proto_rawDesc), len(file_core_core_account_groups_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   84,
+			NumMessages:   79,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

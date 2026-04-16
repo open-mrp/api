@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"strings"
 	"time"
 
 	"github.com/augno/api/shared/db"
@@ -220,7 +221,7 @@ LEFT JOIN ` + "`" + `user` + "`" + ` u ON ae.actor_id = u.id AND ae.identity_typ
 LEFT JOIN api_key ak ON ae.actor_id = ak.type_id AND ae.identity_type = 'api_key'
 LEFT JOIN idempotency_key ik ON ae.idempotency_key_id = ik.type_id
 WHERE ae.account_id = ?
-AND (? = '' OR ae.resource_type = ?)
+AND (? = false OR ae.resource_type IN (/*SLICE:resource_types*/?))
 AND (? = '' OR ae.resource_id = ?)
 AND (? = '' OR ae.actor_id = ?)
 AND (? = '' OR ae.action = ?)
@@ -240,19 +241,20 @@ LIMIT ?
 `
 
 type ListAuditEventsBackwardParams struct {
-	IncludeChanges     db.NullableRawMessage
-	IncludeMetadata    db.NullableRawMessage
-	TargetAccountID    string
-	ResourceTypeFilter string
-	ResourceIDFilter   string
-	ActorIDFilter      string
-	ActionFilter       string
-	StartDate          sql.NullTime
-	EndDate            sql.NullTime
-	SearchQuery        sql.NullString
-	CursorOccurredAt   time.Time
-	CursorID           string
-	Limit              int32
+	IncludeChanges            db.NullableRawMessage
+	IncludeMetadata           db.NullableRawMessage
+	TargetAccountID           string
+	IncludeResourceTypeFilter interface{}
+	ResourceTypes             []string
+	ResourceIDFilter          string
+	ActorIDFilter             string
+	ActionFilter              string
+	StartDate                 sql.NullTime
+	EndDate                   sql.NullTime
+	SearchQuery               sql.NullString
+	CursorOccurredAt          time.Time
+	CursorID                  string
+	Limit                     int32
 }
 
 type ListAuditEventsBackwardRow struct {
@@ -280,30 +282,38 @@ type ListAuditEventsBackwardRow struct {
 }
 
 func (q *Queries) ListAuditEventsBackward(ctx context.Context, arg ListAuditEventsBackwardParams) ([]ListAuditEventsBackwardRow, error) {
-	rows, err := q.db.QueryContext(ctx, listAuditEventsBackward,
-		arg.IncludeChanges,
-		arg.IncludeMetadata,
-		arg.TargetAccountID,
-		arg.ResourceTypeFilter,
-		arg.ResourceTypeFilter,
-		arg.ResourceIDFilter,
-		arg.ResourceIDFilter,
-		arg.ActorIDFilter,
-		arg.ActorIDFilter,
-		arg.ActionFilter,
-		arg.ActionFilter,
-		arg.StartDate,
-		arg.StartDate,
-		arg.EndDate,
-		arg.EndDate,
-		arg.SearchQuery,
-		arg.SearchQuery,
-		arg.SearchQuery,
-		arg.CursorOccurredAt,
-		arg.CursorOccurredAt,
-		arg.CursorID,
-		arg.Limit,
-	)
+	query := listAuditEventsBackward
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.IncludeChanges)
+	queryParams = append(queryParams, arg.IncludeMetadata)
+	queryParams = append(queryParams, arg.TargetAccountID)
+	queryParams = append(queryParams, arg.IncludeResourceTypeFilter)
+	if len(arg.ResourceTypes) > 0 {
+		for _, v := range arg.ResourceTypes {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:resource_types*/?", strings.Repeat(",?", len(arg.ResourceTypes))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:resource_types*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.ResourceIDFilter)
+	queryParams = append(queryParams, arg.ResourceIDFilter)
+	queryParams = append(queryParams, arg.ActorIDFilter)
+	queryParams = append(queryParams, arg.ActorIDFilter)
+	queryParams = append(queryParams, arg.ActionFilter)
+	queryParams = append(queryParams, arg.ActionFilter)
+	queryParams = append(queryParams, arg.StartDate)
+	queryParams = append(queryParams, arg.StartDate)
+	queryParams = append(queryParams, arg.EndDate)
+	queryParams = append(queryParams, arg.EndDate)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.CursorOccurredAt)
+	queryParams = append(queryParams, arg.CursorOccurredAt)
+	queryParams = append(queryParams, arg.CursorID)
+	queryParams = append(queryParams, arg.Limit)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -374,7 +384,7 @@ LEFT JOIN ` + "`" + `user` + "`" + ` u ON ae.actor_id = u.id AND ae.identity_typ
 LEFT JOIN api_key ak ON ae.actor_id = ak.type_id AND ae.identity_type = 'api_key'
 LEFT JOIN idempotency_key ik ON ae.idempotency_key_id = ik.type_id
 WHERE ae.account_id = ?
-AND (? = '' OR ae.resource_type = ?)
+AND (? = false OR ae.resource_type IN (/*SLICE:resource_types*/?))
 AND (? = '' OR ae.resource_id = ?)
 AND (? = '' OR ae.actor_id = ?)
 AND (? = '' OR ae.action = ?)
@@ -395,19 +405,20 @@ LIMIT ?
 `
 
 type ListAuditEventsForwardParams struct {
-	IncludeChanges     db.NullableRawMessage
-	IncludeMetadata    db.NullableRawMessage
-	TargetAccountID    string
-	ResourceTypeFilter string
-	ResourceIDFilter   string
-	ActorIDFilter      string
-	ActionFilter       string
-	StartDate          sql.NullTime
-	EndDate            sql.NullTime
-	SearchQuery        sql.NullString
-	CursorOccurredAt   sql.NullTime
-	CursorID           sql.NullString
-	Limit              int32
+	IncludeChanges            db.NullableRawMessage
+	IncludeMetadata           db.NullableRawMessage
+	TargetAccountID           string
+	IncludeResourceTypeFilter interface{}
+	ResourceTypes             []string
+	ResourceIDFilter          string
+	ActorIDFilter             string
+	ActionFilter              string
+	StartDate                 sql.NullTime
+	EndDate                   sql.NullTime
+	SearchQuery               sql.NullString
+	CursorOccurredAt          sql.NullTime
+	CursorID                  sql.NullString
+	Limit                     int32
 }
 
 type ListAuditEventsForwardRow struct {
@@ -435,31 +446,39 @@ type ListAuditEventsForwardRow struct {
 }
 
 func (q *Queries) ListAuditEventsForward(ctx context.Context, arg ListAuditEventsForwardParams) ([]ListAuditEventsForwardRow, error) {
-	rows, err := q.db.QueryContext(ctx, listAuditEventsForward,
-		arg.IncludeChanges,
-		arg.IncludeMetadata,
-		arg.TargetAccountID,
-		arg.ResourceTypeFilter,
-		arg.ResourceTypeFilter,
-		arg.ResourceIDFilter,
-		arg.ResourceIDFilter,
-		arg.ActorIDFilter,
-		arg.ActorIDFilter,
-		arg.ActionFilter,
-		arg.ActionFilter,
-		arg.StartDate,
-		arg.StartDate,
-		arg.EndDate,
-		arg.EndDate,
-		arg.SearchQuery,
-		arg.SearchQuery,
-		arg.SearchQuery,
-		arg.CursorOccurredAt,
-		arg.CursorOccurredAt,
-		arg.CursorOccurredAt,
-		arg.CursorID,
-		arg.Limit,
-	)
+	query := listAuditEventsForward
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.IncludeChanges)
+	queryParams = append(queryParams, arg.IncludeMetadata)
+	queryParams = append(queryParams, arg.TargetAccountID)
+	queryParams = append(queryParams, arg.IncludeResourceTypeFilter)
+	if len(arg.ResourceTypes) > 0 {
+		for _, v := range arg.ResourceTypes {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:resource_types*/?", strings.Repeat(",?", len(arg.ResourceTypes))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:resource_types*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.ResourceIDFilter)
+	queryParams = append(queryParams, arg.ResourceIDFilter)
+	queryParams = append(queryParams, arg.ActorIDFilter)
+	queryParams = append(queryParams, arg.ActorIDFilter)
+	queryParams = append(queryParams, arg.ActionFilter)
+	queryParams = append(queryParams, arg.ActionFilter)
+	queryParams = append(queryParams, arg.StartDate)
+	queryParams = append(queryParams, arg.StartDate)
+	queryParams = append(queryParams, arg.EndDate)
+	queryParams = append(queryParams, arg.EndDate)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.CursorOccurredAt)
+	queryParams = append(queryParams, arg.CursorOccurredAt)
+	queryParams = append(queryParams, arg.CursorOccurredAt)
+	queryParams = append(queryParams, arg.CursorID)
+	queryParams = append(queryParams, arg.Limit)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.2](https://github.com/Augno/api/compare/v0.13.1...v0.13.2) (2026-04-16)
+
+
+### Bug Fixes
+
+* add ignored routes for request logs ([#197](https://github.com/Augno/api/issues/197)) ([7c464c3](https://github.com/Augno/api/commit/7c464c30c79e081947c8b1cdfb866e9cccfadd5e))
+
 ## [0.13.1](https://github.com/Augno/api/compare/v0.13.0...v0.13.1) (2026-04-16)
 
 

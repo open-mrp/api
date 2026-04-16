@@ -200,7 +200,7 @@ func TestLoggingMiddleware_PublicEndpoint_ExcludedRoute(t *testing.T) {
 
 	router := &stubRouteMatcher{
 		routes: []any{
-			map[string]any{"Method": "GET", "Path": "/v1/me", "PathPattern": nil, "Public": true},
+			map[string]any{"Method": "GET", "Path": "/v1/identity/me", "PathPattern": nil, "Public": true},
 		},
 	}
 
@@ -208,7 +208,7 @@ func TestLoggingMiddleware_PublicEndpoint_ExcludedRoute(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}, saver, router)
 
-	req := httptest.NewRequest(http.MethodGet, "/v1/me", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/identity/me", nil)
 	rr := httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
 
@@ -216,7 +216,7 @@ func TestLoggingMiddleware_PublicEndpoint_ExcludedRoute(t *testing.T) {
 		t.Fatal("Expected request log to be saved")
 	}
 	if saver.savedRL.PublicEndpoint {
-		t.Error("Expected PublicEndpoint to be false for excluded route /v1/me")
+		t.Error("Expected PublicEndpoint to be false for excluded route /v1/identity/me")
 	}
 }
 

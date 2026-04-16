@@ -278,6 +278,146 @@ func (suite *PasswordMedTestSuite) TestValidatePasswordResetToken_UserNotFound()
 	suite.Equal(apierror.ErrorCodeInvalidCredentials, apiErr.Code)
 }
 
+func (suite *PasswordMedTestSuite) TestValidate_Success() {
+	ctx := context.Background()
+	userID := testutil.EntityIDUser
+	plainPassword := "correct-horse-battery-staple"
+	hashedPassword, err := password.HashPassword(ctx, plainPassword)
+	suite.Require().Nil(err)
+
+	identifier := "user@example.com"
+	user := &types.User{
+		ID:             userID,
+		Email:          stringPtr(identifier),
+		HashedPassword: &hashedPassword,
+		CreatedAt:      time.Now(),
+		UpdatedAt:      time.Now(),
+	}
+
+	suite.userRepo.EXPECT().
+		Find(gomock.Any(), identifier).
+		Return(user, nil).
+		Times(1)
+
+	result, apiErr := suite.passwordMed.Validate(ctx, identifier, plainPassword)
+
+	suite.Nil(apiErr)
+	suite.NotNil(result)
+	suite.Equal(userID, result.ID)
+}
+
+func (suite *PasswordMedTestSuite) TestValidate_UserNotFound() {
+	ctx := context.Background()
+	identifier := "missing@example.com"
+
+	suite.userRepo.EXPECT().
+		Find(gomock.Any(), identifier).
+		Return(nil, apierror.NewResourceNotFoundError("User not found")).
+		Times(1)
+
+	result, apiErr := suite.passwordMed.Validate(ctx, identifier, "anything")
+
+	suite.Nil(result)
+	suite.NotNil(apiErr)
+	suite.Equal(apierror.ErrorCodeInvalidCredentials, apiErr.Code)
+}
+
+func (suite *PasswordMedTestSuite) TestValidate_NoHashedPassword_WithEmail_SendsResetEmail() {
+	ctx := context.Background()
+	userID := testutil.EntityIDUser
+	identifier := "user@example.com"
+
+	user := &types.User{
+		ID:             userID,
+		Email:          stringPtr(identifier),
+		HashedPassword: nil,
+		CreatedAt:      time.Now(),
+		UpdatedAt:      time.Now(),
+	}
+
+	suite.userRepo.EXPECT().
+		Find(gomock.Any(), identifier).
+		Return(user, nil).
+		Times(1)
+
+	suite.notificationPublisher.EXPECT().
+		PublishSendEmail(
+			gomock.Any(),
+			gomock.Any(),
+		).
+		DoAndReturn(func(ctx context.Context, data messaging.EmailSendData) *apierror.APIError {
+			suite.Equal([]string{identifier}, data.To)
+			suite.Equal("Password Reset Request", data.Subject)
+			suite.Equal(constants.EmailTemplatePasswordReset, data.TemplateID)
+			suite.Equal(&userID, data.SentByID)
+			suite.NotNil(data.Params["ResetLink"])
+			return nil
+		}).
+		Times(1)
+
+	result, apiErr := suite.passwordMed.Validate(ctx, identifier, "anything")
+
+	suite.Nil(result)
+	suite.NotNil(apiErr)
+	suite.Equal(apierror.ErrorTypeInvalidRequest, apiErr.Type)
+	suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code)
+}
+
+func (suite *PasswordMedTestSuite) TestValidate_NoHashedPassword_WithoutEmail_NoEmailSent() {
+	ctx := context.Background()
+	userID := testutil.EntityIDUser
+	identifier := userID
+
+	user := &types.User{
+		ID:             userID,
+		Email:          nil,
+		HashedPassword: nil,
+		CreatedAt:      time.Now(),
+		UpdatedAt:      time.Now(),
+	}
+
+	suite.userRepo.EXPECT().
+		Find(gomock.Any(), identifier).
+		Return(user, nil).
+		Times(1)
+
+	// No PublishSendEmail expectation: strict controller will fail if called.
+
+	result, apiErr := suite.passwordMed.Validate(ctx, identifier, "anything")
+
+	suite.Nil(result)
+	suite.NotNil(apiErr)
+	suite.Equal(apierror.ErrorTypeInvalidRequest, apiErr.Type)
+	suite.Equal(apierror.ErrorCodeValidationFailed, apiErr.Code)
+}
+
+func (suite *PasswordMedTestSuite) TestValidate_PasswordMismatch() {
+	ctx := context.Background()
+	userID := testutil.EntityIDUser
+	hashedPassword, err := password.HashPassword(ctx, "correct-password")
+	suite.Require().Nil(err)
+
+	identifier := "user@example.com"
+	user := &types.User{
+		ID:             userID,
+		Email:          stringPtr(identifier),
+		HashedPassword: &hashedPassword,
+		CreatedAt:      time.Now(),
+		UpdatedAt:      time.Now(),
+	}
+
+	suite.userRepo.EXPECT().
+		Find(gomock.Any(), identifier).
+		Return(user, nil).
+		Times(1)
+
+	result, apiErr := suite.passwordMed.Validate(ctx, identifier, "wrong-password")
+
+	suite.Nil(result)
+	suite.NotNil(apiErr)
+	suite.Equal(apierror.ErrorCodeInvalidCredentials, apiErr.Code)
+}
+
 // Helper function
 func stringPtr(s string) *string {
 	return &s

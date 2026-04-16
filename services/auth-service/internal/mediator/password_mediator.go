@@ -69,10 +69,11 @@ func NewPasswordMed(config *PasswordMedConfig) domain.PasswordMed {
 
 // Validate validates the identifier/password combination and returns the associated user.
 //
-// 1. Look up the user by identifier (email or user ID).
-// 2. Verify the user has a stored password hash.
-// 3. Compare the provided password against the stored hash.
-// 4. Return the user if the password matches; return an authentication error otherwise.
+//  1. Look up the user by identifier (email or user ID).
+//  2. If the user has no stored password hash, send a password reset email (when an
+//     email is on file) and return a validation error prompting the user to reset.
+//  3. Compare the provided password against the stored hash.
+//  4. Return the user if the password matches; return an authentication error otherwise.
 func (s *passwordMedImpl) Validate(ctx context.Context, identifier, password string) (*types.User, *apierror.APIError) {
 	ctx, span := passwordMedTracer.Start(ctx, "mediator.password.validate")
 	defer span.End()
@@ -88,7 +89,12 @@ func (s *passwordMedImpl) Validate(ctx context.Context, identifier, password str
 	}
 
 	if user.HashedPassword == nil {
-		return nil, tracing.Trace(span, apierror.NewInvariantViolationError(fmt.Sprintf("user %s has no hashed password", user.ID)))
+		if user.Email != nil {
+			if err := s.sendPasswordResetEmail(ctx, user, nil); err != nil {
+				return nil, tracing.Trace(span, err)
+			}
+		}
+		return nil, tracing.Trace(span, apierror.NewValidationError("You need to reset your password. We've sent a password reset email."))
 	}
 
 	match, err := pwdutil.CompareHashAndPassword(ctx, *user.HashedPassword, password)
@@ -215,6 +221,16 @@ func (s *passwordMedImpl) RequestReset(ctx context.Context, identifier string, a
 		return nil
 	}
 
+	return s.sendPasswordResetEmail(ctx, user, accountSlug)
+}
+
+// sendPasswordResetEmail mints a short-lived password reset JWT (15 minutes),
+// builds a reset link optionally scoped to an account slug, and publishes the
+// password reset email via the outbox. Caller must ensure user.Email is non-nil.
+func (s *passwordMedImpl) sendPasswordResetEmail(ctx context.Context, user *types.User, accountSlug *string) *apierror.APIError {
+	ctx, span := passwordMedTracer.Start(ctx, "mediator.password.send_password_reset_email")
+	defer span.End()
+
 	resetToken, err := tokenutil.EncodeJWT(ctx, s.jwtSecret, user.ID, 15*time.Minute, tokenutil.JWTTypePasswordReset)
 	if err != nil {
 		return tracing.Trace(span, apierror.NewInternalError(err, "Failed to generate password reset token."))
@@ -227,7 +243,6 @@ func (s *passwordMedImpl) RequestReset(ctx context.Context, identifier string, a
 		resetLink = fmt.Sprintf("%s%s?t=%s", s.frontendURL, constants.DashboardPathResetPassword, resetToken)
 	}
 
-	// Pass repos via context for the outbox publisher
 	publishCtx := event.WithRepos(ctx, s.repos)
 	s.notificationPublisher.PublishSendEmail(
 		publishCtx,

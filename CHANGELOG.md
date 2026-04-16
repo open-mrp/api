@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.3](https://github.com/Augno/api/compare/v0.13.2...v0.13.3) (2026-04-16)
+
+
+### Bug Fixes
+
+* improve error handling on edge cases where a user doesn't have a password ([#199](https://github.com/Augno/api/issues/199)) ([33d30a5](https://github.com/Augno/api/commit/33d30a587ca694b3636f039a4c91e343db0c26d1))
+
 ## [0.13.2](https://github.com/Augno/api/compare/v0.13.1...v0.13.2) (2026-04-16)
 
 

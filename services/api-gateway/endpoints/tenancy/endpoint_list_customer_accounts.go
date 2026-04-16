@@ -34,5 +34,8 @@ func (e *ListCustomerAccountsEndpoint) Materialize() *apiendpoint.APIEndpoint[*L
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListCustomerAccountsRequest) (*apiresource.List[apiresource.CustomerAccountSummary], *apierror.APIError) {
 			return svc.(TenancySvc).ListCustomerAccounts
 		},
+		Extras: apiendpoint.APIEndpointExtras{
+			SkipRequestLogging: true,
+		},
 	}
 }

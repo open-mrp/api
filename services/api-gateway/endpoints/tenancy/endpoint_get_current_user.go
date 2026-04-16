@@ -29,5 +29,8 @@ func (e *GetCurrentUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetCurr
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetCurrentUserRequest) (*apiresource.User, *apierror.APIError) {
 			return svc.(TenancySvc).GetCurrentUser
 		},
+		Extras: apiendpoint.APIEndpointExtras{
+			SkipRequestLogging: true,
+		},
 	}
 }

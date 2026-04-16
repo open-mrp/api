@@ -17,17 +17,6 @@ import (
 
 var loggingMiddlewareTracer = tracing.GetTracer("api-gateway.logging_middleware")
 
-// excludedRoutes are normalized route patterns that should be marked as non-public
-// regardless of the endpoint's Public flag. These are automation or internal-only
-// routes that should not appear in the customer-facing request log listing.
-var excludedRoutes = map[string]struct{}{
-	"/v1/identity/me":                             {},
-	"/v1/tenancy/me/tenancy":                      {},
-	"/v1/auth/refresh-tokens":                     {},
-	"/v1/core/request-logs":                       {},
-	"/v1/auth/api-keys/actions/fetch-doc-api-key": {},
-}
-
 type RouteMatcher interface {
 	GetRoutes() []any
 }
@@ -96,9 +85,6 @@ func LoggingMiddleware(logger *log.Logger, next http.HandlerFunc, saver saver, r
 				normalizedRoute = match.template
 				publicEndpoint = match.isPublic
 			}
-		}
-		if _, excluded := excludedRoutes[normalizedRoute]; excluded {
-			publicEndpoint = false
 		}
 
 		// Capture API version from header for logging

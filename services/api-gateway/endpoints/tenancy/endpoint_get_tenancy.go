@@ -29,5 +29,8 @@ func (e *GetTenancyEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetTenancyR
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetTenancyRequest) (*apiresource.Tenancy, *apierror.APIError) {
 			return svc.(TenancySvc).GetTenancy
 		},
+		Extras: apiendpoint.APIEndpointExtras{
+			SkipRequestLogging: true,
+		},
 	}
 }

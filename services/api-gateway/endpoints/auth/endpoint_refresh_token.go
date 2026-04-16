@@ -40,5 +40,8 @@ func (e *RefreshTokenEndpoint) Materialize() *apiendpoint.APIEndpoint[*RefreshTo
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RefreshTokenRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(AuthSvc).RefreshToken
 		},
+		Extras: apiendpoint.APIEndpointExtras{
+			SkipRequestLogging: true,
+		},
 	}
 }

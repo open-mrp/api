@@ -40,5 +40,8 @@ func (e *RevokeRefreshTokenEndpoint) Materialize() *apiendpoint.APIEndpoint[*Rev
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RevokeRefreshTokenRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(AuthSvc).RevokeRefreshToken
 		},
+		Extras: apiendpoint.APIEndpointExtras{
+			SkipRequestLogging: true,
+		},
 	}
 }

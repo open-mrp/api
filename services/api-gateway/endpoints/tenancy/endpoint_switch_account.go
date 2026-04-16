@@ -41,5 +41,8 @@ func (e *SwitchAccountEndpoint) Materialize() *apiendpoint.APIEndpoint[*SwitchAc
 		ServiceHandler: func(svc any) func(ctx context.Context, req *SwitchAccountRequest) (*apiresource.Tenancy, *apierror.APIError) {
 			return svc.(TenancySvc).SwitchAccount
 		},
+		Extras: apiendpoint.APIEndpointExtras{
+			SkipRequestLogging: true,
+		},
 	}
 }

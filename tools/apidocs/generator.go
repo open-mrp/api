@@ -1119,20 +1119,30 @@ func getFieldDoc(structType reflect.Type, field reflect.StructField, docReader *
 
 // flattenStructFields returns all fields of a struct type, recursively expanding
 // anonymous (embedded) struct fields so that promoted fields are included directly.
+// Each returned field's Index is rewritten to be the full path from t, so downstream
+// helpers (e.g. getFieldDoc) can resolve the declaring type of promoted fields.
 func flattenStructFields(t reflect.Type) []reflect.StructField {
+	return flattenStructFieldsWithPrefix(t, nil)
+}
+
+func flattenStructFieldsWithPrefix(t reflect.Type, prefix []int) []reflect.StructField {
 	var fields []reflect.StructField
 	for i := 0; i < t.NumField(); i++ {
 		f := t.Field(i)
+		idx := make([]int, 0, len(prefix)+1)
+		idx = append(idx, prefix...)
+		idx = append(idx, i)
 		if f.Anonymous {
 			embedded := f.Type
 			if embedded.Kind() == reflect.Pointer {
 				embedded = embedded.Elem()
 			}
 			if embedded.Kind() == reflect.Struct {
-				fields = append(fields, flattenStructFields(embedded)...)
+				fields = append(fields, flattenStructFieldsWithPrefix(embedded, idx)...)
 				continue
 			}
 		}
+		f.Index = idx
 		fields = append(fields, f)
 	}
 	return fields

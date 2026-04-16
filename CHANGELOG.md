@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.0](https://github.com/Augno/api/compare/v0.12.1...v0.13.0) (2026-04-16)
+
+
+### Features
+
+* adding account user endpoints to the public release ([#192](https://github.com/Augno/api/issues/192)) ([d64c99b](https://github.com/Augno/api/commit/d64c99b504510cce05280ec3d3e7b7d1c89befdc))
+
 ## [0.12.1](https://github.com/Augno/api/compare/v0.12.0...v0.12.1) (2026-04-13)
 
 

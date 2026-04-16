@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.1](https://github.com/Augno/api/compare/v0.13.0...v0.13.1) (2026-04-16)
+
+
+### Bug Fixes
+
+* bug in our openapi spec generation ([#194](https://github.com/Augno/api/issues/194)) ([513c363](https://github.com/Augno/api/commit/513c363c7701a8fe316e43c8845a6fc3917ade60))
+
 ## [0.13.0](https://github.com/Augno/api/compare/v0.12.1...v0.13.0) (2026-04-16)
 
 

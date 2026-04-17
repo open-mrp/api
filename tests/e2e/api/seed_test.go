@@ -98,6 +98,8 @@ const (
 	SeedShippingTermID       = "prepaid_billed"
 	SeedCarrierID            = "delivery"
 	SeedServiceLevelID       = "crop_01seedground000000"
+	SeedSystemCarrierID      = "syscar_01seedsysdefault"
+	SeedSystemServiceLevelID = "crop_01seedsysground000"
 
 	// System
 	SeedSysPropertyID = "sypp_01seedtxnumber000"

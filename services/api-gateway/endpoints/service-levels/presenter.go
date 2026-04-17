@@ -7,7 +7,7 @@ import (
 	pb "github.com/augno/api/shared/proto/core"
 )
 
-func ServiceLevelPresenter(o *pb.ServiceLevelInfo) apiresource.ServiceLevel {
+func ServiceLevelPresenter(o *pb.ServiceLevelInfo, ownerAccount *apiresource.Account) apiresource.ServiceLevel {
 	if o == nil {
 		return apiresource.ServiceLevel{}
 	}
@@ -24,19 +24,20 @@ func ServiceLevelPresenter(o *pb.ServiceLevelInfo) apiresource.ServiceLevel {
 		ServiceLevelToken:        constants.ServiceLevelCode(o.Code),
 		CustomerPortalVisibility: visibility,
 		IsDefault:                o.IsDefault,
+		Owner:                    apiresource.NewOwnerWithAccount(o.AccountId, ownerAccount),
 		CreatedAt:                grpcutil.TimestampToTime(o.CreatedAt),
 		UpdatedAt:                grpcutil.TimestampToTime(o.UpdatedAt),
 	}
 }
 
-func ServiceLevelListPresenter(resp *pb.ListServiceLevelsResponse) *apiresource.List[apiresource.ServiceLevel] {
+func ServiceLevelListPresenter(resp *pb.ListServiceLevelsResponse, ownerAccount *apiresource.Account) *apiresource.List[apiresource.ServiceLevel] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.ServiceLevel](nil, apiresource.PageInfo{})
 	}
 
 	serviceLevels := make([]apiresource.ServiceLevel, len(resp.ServiceLevels))
 	for i, o := range resp.ServiceLevels {
-		serviceLevels[i] = ServiceLevelPresenter(o)
+		serviceLevels[i] = ServiceLevelPresenter(o, ownerAccount)
 	}
 
 	return apiresource.NewList(serviceLevels, grpcutil.MapProtoPageInfo(resp.PageInfo))

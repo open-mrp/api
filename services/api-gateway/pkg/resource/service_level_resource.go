@@ -25,6 +25,8 @@ type ServiceLevel struct {
 	CustomerPortalVisibility constants.CustomerPortalVisibility `json:"customer_portal_visibility" validate:"required,enum"`
 	// Default service level for the carrier.
 	IsDefault bool `json:"is_default"`
+	// Owner.
+	Owner *Owner `json:"owner" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last updated timestamp.
@@ -37,6 +39,7 @@ var SampleServiceLevel = &ServiceLevel{
 	Name:                     SampleServiceLevelName,
 	ServiceLevelToken:        "fedex_ground",
 	CustomerPortalVisibility: constants.CustomerPortalVisibilityVisible,
+	Owner:                    SampleOwnerAccount,
 	CreatedAt:                timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:                timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }

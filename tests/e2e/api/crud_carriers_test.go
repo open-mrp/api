@@ -400,3 +400,19 @@ func TestCarriers_CreateDuplicateNameFails(t *testing.T) {
 
 	apiClient.Delete(carriersPath + "/" + id)
 }
+
+func TestCarriers_SystemOwned_UpdateForbidden(t *testing.T) {
+	t.Parallel()
+	status, body, err := apiClient.Patch(carriersPath+"/"+SeedSystemCarrierID, map[string]any{
+		"name": uniqueName("e2e-sys-upd-attempt"),
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	assert.Equal(t, 403, status, "System-owned carrier update should return 403, got %d: %s", status, string(body))
+}
+
+func TestCarriers_SystemOwned_DeleteForbidden(t *testing.T) {
+	t.Parallel()
+	status, body, err := apiClient.Delete(carriersPath + "/" + SeedSystemCarrierID)
+	require.NoError(t, err)
+	assert.Equal(t, 403, status, "System-owned carrier delete should return 403, got %d: %s", status, string(body))
+}

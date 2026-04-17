@@ -48,10 +48,14 @@ func (e *UpdateServiceLevelEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upd
 		Request:           &UpdateServiceLevelRequest{},
 		Response:          &apiresource.ServiceLevel{},
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateServiceLevelRequest) (*apiresource.ServiceLevel, *apierror.APIError) {
 			return svc.(ServiceLevelSvc).UpdateServiceLevel
 		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeServiceLevel,
+			Fields:     []string{"owner", "owner.account"},
+		}),
 	}
 }

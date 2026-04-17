@@ -75,7 +75,7 @@ func (*OAuthResponse) SchemaExample() any {
 type OAuthStatusResponse struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=oauth_status_response"`
-	// OAuth connection status. Either "connected" or "disconnected".
+	// OAuth connection status. One of "connected", "authorization_pending", or "disconnected".
 	Status string `json:"status" validate:"required"`
 }
 

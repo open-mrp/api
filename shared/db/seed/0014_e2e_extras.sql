@@ -137,6 +137,13 @@ INSERT IGNORE INTO carrier_option (id, code, name, carrier_id, account_id, creat
     ('crop_01seedground000000', 'ground', 'Ground Shipping', 'delivery', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW()),
     ('crop_01seedexpress00000', 'express', 'Express Shipping', 'delivery', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
 
+-- System-owned (account_id = NULL) carrier + service level for write-guard e2e coverage.
+INSERT IGNORE INTO carrier (id, code, name, account_id, created_at, updated_at) VALUES
+    ('syscar_01seedsysdefault', 'delivery', 'System Default Delivery', NULL, NOW(), NOW());
+
+INSERT IGNORE INTO carrier_option (id, code, name, carrier_id, account_id, created_at, updated_at) VALUES
+    ('crop_01seedsysground000', 'ground', 'System Ground', 'syscar_01seedsysdefault', NULL, NOW(), NOW());
+
 -- ============================================================
 -- RECEIVING ORDERS (2 rows for pagination)
 -- ============================================================

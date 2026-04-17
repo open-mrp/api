@@ -134,7 +134,7 @@ func (q *Queries) GetAccountIntegration(ctx context.Context, arg GetAccountInteg
 
 const getAccountIntegrationCredentials = `-- name: GetAccountIntegrationCredentials :one
 SELECT
-    account_integration.credentials,
+    account_integration.credentials_v2,
     account_integration.is_active
 FROM account_integration
 WHERE account_integration.account_id = ?
@@ -147,14 +147,14 @@ type GetAccountIntegrationCredentialsParams struct {
 }
 
 type GetAccountIntegrationCredentialsRow struct {
-	Credentials string
-	IsActive    bool
+	CredentialsV2 sql.NullString
+	IsActive      bool
 }
 
 func (q *Queries) GetAccountIntegrationCredentials(ctx context.Context, arg GetAccountIntegrationCredentialsParams) (GetAccountIntegrationCredentialsRow, error) {
 	row := q.db.QueryRowContext(ctx, getAccountIntegrationCredentials, arg.AccountID, arg.IntegrationCode)
 	var i GetAccountIntegrationCredentialsRow
-	err := row.Scan(&i.Credentials, &i.IsActive)
+	err := row.Scan(&i.CredentialsV2, &i.IsActive)
 	return i, err
 }
 
@@ -164,7 +164,7 @@ INSERT INTO account_integration (
     account_id,
     integration_code,
     name,
-    credentials,
+    credentials_v2,
     is_active,
     created_at,
     updated_at
@@ -185,7 +185,7 @@ type InsertAccountIntegrationParams struct {
 	AccountID       string
 	IntegrationCode string
 	Name            string
-	Credentials     string
+	CredentialsV2   sql.NullString
 }
 
 func (q *Queries) InsertAccountIntegration(ctx context.Context, arg InsertAccountIntegrationParams) error {
@@ -194,7 +194,7 @@ func (q *Queries) InsertAccountIntegration(ctx context.Context, arg InsertAccoun
 		arg.AccountID,
 		arg.IntegrationCode,
 		arg.Name,
-		arg.Credentials,
+		arg.CredentialsV2,
 	)
 	return err
 }
@@ -389,23 +389,23 @@ func (q *Queries) UpdateAccountIntegration(ctx context.Context, arg UpdateAccoun
 const updateAccountIntegrationCredentials = `-- name: UpdateAccountIntegrationCredentials :execresult
 UPDATE account_integration SET
     name = ?,
-    credentials = ?,
+    credentials_v2 = ?,
     updated_at = NOW(3)
 WHERE id = ?
 AND account_id = ?
 `
 
 type UpdateAccountIntegrationCredentialsParams struct {
-	Name        string
-	Credentials string
-	ID          string
-	AccountID   string
+	Name          string
+	CredentialsV2 sql.NullString
+	ID            string
+	AccountID     string
 }
 
 func (q *Queries) UpdateAccountIntegrationCredentials(ctx context.Context, arg UpdateAccountIntegrationCredentialsParams) (sql.Result, error) {
 	return q.db.ExecContext(ctx, updateAccountIntegrationCredentials,
 		arg.Name,
-		arg.Credentials,
+		arg.CredentialsV2,
 		arg.ID,
 		arg.AccountID,
 	)

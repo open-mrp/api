@@ -189,7 +189,7 @@ func (r *accountIntegrationRepoImpl) Create(ctx context.Context, id string, para
 		AccountID:       params.AccountID,
 		IntegrationCode: string(params.IntegrationCode),
 		Name:            params.Name,
-		Credentials:     encryptedCredentials,
+		CredentialsV2:   sql.NullString{String: encryptedCredentials, Valid: true},
 	})
 	if err != nil {
 		return nil, tracing.Trace(span, db.MapSQLError(err))
@@ -203,10 +203,10 @@ func (r *accountIntegrationRepoImpl) UpdateCredentials(ctx context.Context, acco
 	defer span.End()
 
 	result, err := r.queries.UpdateAccountIntegrationCredentials(ctx, sqlc.UpdateAccountIntegrationCredentialsParams{
-		ID:          id,
-		AccountID:   accountID,
-		Name:        name,
-		Credentials: encryptedCredentials,
+		ID:            id,
+		AccountID:     accountID,
+		Name:          name,
+		CredentialsV2: sql.NullString{String: encryptedCredentials, Valid: true},
 	})
 	if err != nil {
 		return nil, tracing.Trace(span, db.MapSQLError(err))
@@ -298,7 +298,11 @@ func (r *accountIntegrationRepoImpl) GetEncryptedCredentials(ctx context.Context
 		return "", false, tracing.Trace(span, db.MapSQLError(err))
 	}
 
-	return row.Credentials, row.IsActive, nil
+	if !row.CredentialsV2.Valid {
+		return "", false, tracing.Trace(span, apierror.NewInternalError(nil, "Integration credentials not migrated to envelope format."))
+	}
+
+	return row.CredentialsV2.String, row.IsActive, nil
 }
 
 func (r *accountIntegrationRepoImpl) HasIntegration(ctx context.Context, accountID string, code constants.IntegrationCode) (bool, *apierror.APIError) {

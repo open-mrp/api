@@ -6,6 +6,7 @@ import (
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
+	ownerutil "github.com/augno/api/services/api-gateway/internal/owner"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
@@ -67,7 +68,15 @@ func (m *serviceLevelSvcImpl) ListServiceLevels(ctx context.Context, req *ListSe
 		return nil, apiErr
 	}
 
-	return ServiceLevelListPresenter(resp), nil
+	var ownerAccount *apiresource.Account
+	for _, sl := range resp.ServiceLevels {
+		if sl.AccountId != nil {
+			ownerAccount = ownerutil.ResolveOwnerAccount(ctx, m.coreClient, sl.AccountId)
+			break
+		}
+	}
+
+	return ServiceLevelListPresenter(resp, ownerAccount), nil
 }
 
 func (m *serviceLevelSvcImpl) GetServiceLevel(ctx context.Context, req *GetServiceLevelRequest) (*apiresource.ServiceLevel, *apierror.APIError) {
@@ -85,7 +94,8 @@ func (m *serviceLevelSvcImpl) GetServiceLevel(ctx context.Context, req *GetServi
 		return nil, apiErr
 	}
 
-	result := ServiceLevelPresenter(resp.ServiceLevel)
+	ownerAccount := ownerutil.ResolveOwnerAccount(ctx, m.coreClient, resp.ServiceLevel.AccountId)
+	result := ServiceLevelPresenter(resp.ServiceLevel, ownerAccount)
 	return &result, nil
 }
 
@@ -112,7 +122,8 @@ func (m *serviceLevelSvcImpl) CreateServiceLevel(ctx context.Context, req *Creat
 		return nil, apiErr
 	}
 
-	result := ServiceLevelPresenter(resp.ServiceLevel)
+	ownerAccount := ownerutil.ResolveOwnerAccount(ctx, m.coreClient, resp.ServiceLevel.AccountId)
+	result := ServiceLevelPresenter(resp.ServiceLevel, ownerAccount)
 	return &result, nil
 }
 
@@ -141,7 +152,8 @@ func (m *serviceLevelSvcImpl) UpdateServiceLevel(ctx context.Context, req *Updat
 		return nil, apiErr
 	}
 
-	result := ServiceLevelPresenter(resp.ServiceLevel)
+	ownerAccount := ownerutil.ResolveOwnerAccount(ctx, m.coreClient, resp.ServiceLevel.AccountId)
+	result := ServiceLevelPresenter(resp.ServiceLevel, ownerAccount)
 	return &result, nil
 }
 

@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -29,10 +30,14 @@ func (e *GetServiceLevelEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetSer
 		Request:           &GetServiceLevelRequest{},
 		Response:          &apiresource.ServiceLevel{},
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetServiceLevelRequest) (*apiresource.ServiceLevel, *apierror.APIError) {
 			return svc.(ServiceLevelSvc).GetServiceLevel
 		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeServiceLevel,
+			Fields:     []string{"owner", "owner.account"},
+		}),
 	}
 }

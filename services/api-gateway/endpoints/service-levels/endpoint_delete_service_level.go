@@ -29,7 +29,7 @@ func (e *DeleteServiceLevelEndpoint) Materialize() *apiendpoint.APIEndpoint[*Del
 		Request:           &DeleteServiceLevelRequest{},
 		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteServiceLevelRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(ServiceLevelSvc).DeleteServiceLevel

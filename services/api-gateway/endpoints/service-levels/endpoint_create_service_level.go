@@ -47,10 +47,14 @@ func (e *CreateServiceLevelEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cre
 		Request:           &CreateServiceLevelRequest{},
 		Response:          &apiresource.ServiceLevel{},
 		SuccessStatusCode: http.StatusCreated,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateServiceLevelRequest) (*apiresource.ServiceLevel, *apierror.APIError) {
 			return svc.(ServiceLevelSvc).CreateServiceLevel
 		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeServiceLevel,
+			Fields:     []string{"owner", "owner.account"},
+		}),
 	}
 }

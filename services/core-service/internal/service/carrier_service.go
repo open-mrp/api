@@ -402,6 +402,13 @@ func (s *carrierSvcImpl) UpdateCarrier(ctx context.Context, params domain.Update
 				return apiErr
 			}
 
+			if old.AccountID == nil {
+				return apierror.NewAuthorizationError("System-owned carriers cannot be updated.")
+			}
+			if *old.AccountID != params.AccountID {
+				return apierror.NewAuthorizationError("This carrier is owned by another account and cannot be updated.")
+			}
+
 			if params.Name != nil {
 				exists, apiErr := txRepo.ExistsByName(txCtx, params.AccountID, *params.Name, &params.CarrierID)
 				if apiErr != nil {
@@ -474,6 +481,13 @@ func (s *carrierSvcImpl) DeleteCarrier(ctx context.Context, carrierID string) *a
 			}
 		}
 		return tracing.Trace(span, apiErr)
+	}
+
+	if carrier.AccountID == nil {
+		return tracing.Trace(span, apierror.NewAuthorizationError("System-owned carriers cannot be deleted."))
+	}
+	if *carrier.AccountID != accountID {
+		return tracing.Trace(span, apierror.NewAuthorizationError("This carrier is owned by another account and cannot be deleted."))
 	}
 
 	// Deactivate on Shippo if applicable
@@ -626,7 +640,7 @@ func (s *carrierSvcImpl) GetOAuthStatus(ctx context.Context, carrierID string) (
 	}
 
 	if account.IsShippoAccount {
-		return "disconnected", nil
+		return "authorization_pending", nil
 	}
 
 	return "connected", nil

@@ -289,6 +289,13 @@ func (s *serviceLevelSvcImpl) UpdateServiceLevel(ctx context.Context, params dom
 				return apiErr
 			}
 
+			if existing.AccountID == nil {
+				return apierror.NewAuthorizationError("System-owned service levels cannot be updated.")
+			}
+			if *existing.AccountID != params.AccountID {
+				return apierror.NewAuthorizationError("This service level is owned by another account and cannot be updated.")
+			}
+
 			// Check code uniqueness if code is being changed
 			if params.Code != nil {
 				exists, apiErr := serviceLevelRepo.ExistsByCodeInCarrier(txCtx, params.CarrierID, *params.Code, &params.ServiceLevelID)
@@ -381,8 +388,11 @@ func (s *serviceLevelSvcImpl) DeleteServiceLevel(ctx context.Context, carrierID,
 		}
 		return tracing.Trace(span, apiErr)
 	}
-	if existing.IsDefault {
-		return tracing.Trace(span, apierror.NewValidationError("Default service levels cannot be deleted."))
+	if existing.AccountID == nil {
+		return tracing.Trace(span, apierror.NewAuthorizationError("System-owned service levels cannot be deleted."))
+	}
+	if *existing.AccountID != accountID {
+		return tracing.Trace(span, apierror.NewAuthorizationError("This service level is owned by another account and cannot be deleted."))
 	}
 
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *serviceLevelSvcImpl) *apierror.APIError {

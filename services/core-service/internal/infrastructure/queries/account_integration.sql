@@ -75,7 +75,7 @@ INSERT INTO account_integration (
     account_id,
     integration_code,
     name,
-    credentials,
+    credentials_v2,
     is_active,
     created_at,
     updated_at
@@ -84,7 +84,7 @@ INSERT INTO account_integration (
     sqlc.arg('account_id'),
     sqlc.arg('integration_code'),
     sqlc.arg('name'),
-    sqlc.arg('credentials'),
+    sqlc.arg('credentials_v2'),
     1,
     NOW(3),
     NOW(3)
@@ -93,7 +93,7 @@ INSERT INTO account_integration (
 -- name: UpdateAccountIntegrationCredentials :execresult
 UPDATE account_integration SET
     name = sqlc.arg('name'),
-    credentials = sqlc.arg('credentials'),
+    credentials_v2 = sqlc.arg('credentials_v2'),
     updated_at = NOW(3)
 WHERE id = sqlc.arg('id')
 AND account_id = sqlc.arg('account_id');
@@ -113,7 +113,7 @@ AND account_id = sqlc.arg('account_id');
 
 -- name: GetAccountIntegrationCredentials :one
 SELECT
-    account_integration.credentials,
+    account_integration.credentials_v2,
     account_integration.is_active
 FROM account_integration
 WHERE account_integration.account_id = sqlc.arg('account_id')

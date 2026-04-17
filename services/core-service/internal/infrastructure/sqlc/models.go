@@ -107,6 +107,7 @@ type AccountIntegration struct {
 	IsActive        bool
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
+	CredentialsV2   sql.NullString
 }
 
 type AccountInventorySetting struct {

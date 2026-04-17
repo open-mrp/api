@@ -16,7 +16,7 @@ func CarrierPresenter(c *pb.CarrierInfo, ownerAccount *apiresource.Account) apir
 	if c.ServiceLevels != nil {
 		items := make([]apiresource.ServiceLevel, len(c.ServiceLevels))
 		for i, o := range c.ServiceLevels {
-			items[i] = ServiceLevelPresenter(o)
+			items[i] = ServiceLevelPresenter(o, ownerAccount)
 		}
 		serviceLevels = apiresource.NewList(items, apiresource.PageInfo{})
 	}
@@ -45,7 +45,7 @@ func CarrierPresenter(c *pb.CarrierInfo, ownerAccount *apiresource.Account) apir
 	return carrier
 }
 
-func ServiceLevelPresenter(o *pb.ServiceLevelInfo) apiresource.ServiceLevel {
+func ServiceLevelPresenter(o *pb.ServiceLevelInfo, ownerAccount *apiresource.Account) apiresource.ServiceLevel {
 	if o == nil {
 		return apiresource.ServiceLevel{}
 	}
@@ -62,6 +62,7 @@ func ServiceLevelPresenter(o *pb.ServiceLevelInfo) apiresource.ServiceLevel {
 		ServiceLevelToken:        constants.ServiceLevelCode(o.Code),
 		CustomerPortalVisibility: visibility,
 		IsDefault:                o.IsDefault,
+		Owner:                    apiresource.NewOwnerWithAccount(o.AccountId, ownerAccount),
 		CreatedAt:                grpcutil.TimestampToTime(o.CreatedAt),
 		UpdatedAt:                grpcutil.TimestampToTime(o.UpdatedAt),
 	}

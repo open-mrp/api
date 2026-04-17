@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.0](https://github.com/Augno/api/compare/v0.13.4...v0.14.0) (2026-04-17)
+
+
+### Features
+
+* publish carrier/service level endpoints ([#203](https://github.com/Augno/api/issues/203)) ([99251a6](https://github.com/Augno/api/commit/99251a669031b9facabb97c53a83bf62b00a352e))
+
 ## [0.13.4](https://github.com/Augno/api/compare/v0.13.3...v0.13.4) (2026-04-16)
 
 

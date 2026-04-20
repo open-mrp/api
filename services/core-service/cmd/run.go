@@ -23,6 +23,7 @@ import (
 	s3client "github.com/augno/api/shared/cloud/s3"
 	"github.com/augno/api/shared/contracts"
 	"github.com/augno/api/shared/db"
+	"github.com/augno/api/shared/lease"
 	"github.com/augno/api/shared/messaging"
 	"github.com/augno/api/shared/pagination"
 	"github.com/augno/api/shared/tracing"
@@ -66,8 +67,10 @@ func Run(
 
 	queries := sqlc.New(db)
 
+	leaseSvc := lease.New(repository.NewLeaseRepo(queries))
+
 	outboxEnqueuerRepo := repository.NewOutboxEnqueuerRepo(db, queries)
-	enqueuer, err := messaging.NewEnqueuer(&messaging.EnqueuerConfig{ServiceName: domain.ServiceName, PlatformMode: cfg.PlatformMode}, outboxEnqueuerRepo, rabbitmq)
+	enqueuer, err := messaging.NewEnqueuer(&messaging.EnqueuerConfig{ServiceName: domain.ServiceName, PlatformMode: cfg.PlatformMode}, outboxEnqueuerRepo, rabbitmq, leaseSvc)
 	if err != nil {
 		return err
 	}
@@ -572,7 +575,7 @@ func Run(
 
 	inboxRepo := repository.NewInboxRepo(queries)
 	inboxPurgerRepo := repository.NewInboxPurgerRepo(queries)
-	inboxPurger, err := messaging.NewInboxPurger(&messaging.InboxPurgerConfig{}, inboxPurgerRepo)
+	inboxPurger, err := messaging.NewInboxPurger(&messaging.InboxPurgerConfig{ServiceName: domain.ServiceName}, inboxPurgerRepo, leaseSvc)
 	if err != nil {
 		return err
 	}

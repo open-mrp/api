@@ -246,6 +246,13 @@ type ServiceIdempotencyKey struct {
 	ExpiresAt      pgtype.Timestamptz
 }
 
+type TaskLease struct {
+	Name       string
+	Holder     string
+	AcquiredAt pgtype.Timestamptz
+	ExpiresAt  pgtype.Timestamptz
+}
+
 type ToolDefinition struct {
 	ID                  string
 	DisplayName         string

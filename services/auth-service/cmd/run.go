@@ -15,6 +15,7 @@ import (
 	"github.com/augno/api/services/auth-service/internal/service"
 	"github.com/augno/api/shared/contracts"
 	"github.com/augno/api/shared/db"
+	"github.com/augno/api/shared/lease"
 	"github.com/augno/api/shared/messaging"
 	"github.com/augno/api/shared/pagination"
 	"github.com/augno/api/shared/tracing"
@@ -58,8 +59,10 @@ func Run(
 
 	queries := sqlc.New(db)
 
+	leaseSvc := lease.New(repository.NewLeaseRepo(queries))
+
 	outboxRepo := repository.NewOutboxEnqueuerRepo(db, queries)
-	enqueuer, err := messaging.NewEnqueuer(&messaging.EnqueuerConfig{ServiceName: domain.ServiceName, PlatformMode: cfg.PlatformMode}, outboxRepo, rabbitmq)
+	enqueuer, err := messaging.NewEnqueuer(&messaging.EnqueuerConfig{ServiceName: domain.ServiceName, PlatformMode: cfg.PlatformMode}, outboxRepo, rabbitmq, leaseSvc)
 	if err != nil {
 		return err
 	}

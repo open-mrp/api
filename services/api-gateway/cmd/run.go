@@ -20,6 +20,7 @@ import (
 	"github.com/augno/api/services/api-gateway/internal/router"
 	"github.com/augno/api/services/api-gateway/internal/ws"
 	"github.com/augno/api/shared/db"
+	"github.com/augno/api/shared/lease"
 	"github.com/augno/api/shared/messaging"
 	"github.com/augno/api/shared/tracing"
 )
@@ -80,9 +81,11 @@ func Run(
 	// Initialize the SQLC queries.
 	queries := sqlc.New(dbPool)
 
+	leaseSvc := lease.New(repository.NewLeaseRepo(queries))
+
 	// Initialize the outbox enqueuer.
 	outboxEnqueuerRepo := repository.NewOutboxEnqueuerRepo(dbPool, queries)
-	enqueuer, err := messaging.NewEnqueuer(&messaging.EnqueuerConfig{ServiceName: domain.ServiceName, PlatformMode: cfg.PlatformMode}, outboxEnqueuerRepo, rabbitmq)
+	enqueuer, err := messaging.NewEnqueuer(&messaging.EnqueuerConfig{ServiceName: domain.ServiceName, PlatformMode: cfg.PlatformMode}, outboxEnqueuerRepo, rabbitmq, leaseSvc)
 	if err != nil {
 		return err
 	}

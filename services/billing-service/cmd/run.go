@@ -19,6 +19,7 @@ import (
 	"github.com/augno/api/services/billing-service/internal/service"
 	"github.com/augno/api/shared/contracts"
 	"github.com/augno/api/shared/db"
+	"github.com/augno/api/shared/lease"
 	"github.com/augno/api/shared/messaging"
 	"github.com/augno/api/shared/pagination"
 	"github.com/augno/api/shared/tracing"
@@ -62,8 +63,10 @@ func Run(
 
 	queries := sqlc.New(dbpool)
 
+	leaseSvc := lease.New(repository.NewLeaseRepo(queries))
+
 	outboxRepo := repository.NewOutboxEnqueuerRepo(dbpool, queries)
-	enqueuer, err := messaging.NewEnqueuer(&messaging.EnqueuerConfig{ServiceName: domain.ServiceName, PlatformMode: cfg.PlatformMode}, outboxRepo, rabbitmq)
+	enqueuer, err := messaging.NewEnqueuer(&messaging.EnqueuerConfig{ServiceName: domain.ServiceName, PlatformMode: cfg.PlatformMode}, outboxRepo, rabbitmq, leaseSvc)
 	if err != nil {
 		return err
 	}
@@ -125,7 +128,7 @@ func Run(
 
 	inboxRepo := repository.NewInboxRepo(queries)
 	inboxPurgerRepo := repository.NewInboxPurgerRepo(queries)
-	inboxPurger, err := messaging.NewInboxPurger(&messaging.InboxPurgerConfig{}, inboxPurgerRepo)
+	inboxPurger, err := messaging.NewInboxPurger(&messaging.InboxPurgerConfig{ServiceName: domain.ServiceName}, inboxPurgerRepo, leaseSvc)
 	if err != nil {
 		return err
 	}

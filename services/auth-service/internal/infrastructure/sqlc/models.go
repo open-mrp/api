@@ -103,10 +103,11 @@ type AccountIntegration struct {
 	AccountID       string
 	IntegrationCode string
 	Name            string
-	Credentials     string
+	Credentials     sql.NullString
 	IsActive        bool
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
+	CredentialsV2   sql.NullString
 }
 
 type AccountInventorySetting struct {
@@ -1541,6 +1542,13 @@ type Target struct {
 	CreatedAt  time.Time
 	AmountID   string
 	UpdatedAt  time.Time
+}
+
+type TaskLease struct {
+	Name       string
+	Holder     string
+	AcquiredAt time.Time
+	ExpiresAt  time.Time
 }
 
 type Territory struct {

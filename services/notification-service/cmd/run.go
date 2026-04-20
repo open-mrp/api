@@ -17,6 +17,7 @@ import (
 	"github.com/augno/api/services/notification-service/internal/service"
 	"github.com/augno/api/shared/contracts"
 	"github.com/augno/api/shared/db"
+	"github.com/augno/api/shared/lease"
 	"github.com/augno/api/shared/messaging"
 	"github.com/augno/api/shared/tracing"
 )
@@ -63,6 +64,8 @@ func Run(
 
 	queries := sqlc.New(db)
 
+	leaseSvc := lease.New(repository.NewLeaseRepo(queries))
+
 	templateRenderer, apiErr := email.NewTemplateRenderer()
 	if apiErr != nil {
 		return apiErr
@@ -76,7 +79,7 @@ func Run(
 
 	inboxRepo := repository.NewInboxRepo(queries)
 	inboxPurgerRepo := repository.NewInboxPurgerRepo(queries)
-	inboxPurger, err := messaging.NewInboxPurger(&messaging.InboxPurgerConfig{}, inboxPurgerRepo)
+	inboxPurger, err := messaging.NewInboxPurger(&messaging.InboxPurgerConfig{ServiceName: domain.ServiceName}, inboxPurgerRepo, leaseSvc)
 	if err != nil {
 		return err
 	}

@@ -13,6 +13,7 @@ import (
 	"github.com/augno/api/services/agent-service/internal/infrastructure/sqlc"
 	"github.com/augno/api/shared/contracts"
 	"github.com/augno/api/shared/id"
+	"github.com/augno/api/shared/lease"
 	"github.com/augno/api/shared/messaging"
 	"github.com/augno/api/shared/tracing"
 	"github.com/robfig/cron/v3"
@@ -20,11 +21,17 @@ import (
 
 var schedulerTracer = tracing.GetTracer("agent-service.scheduler")
 
+const (
+	schedulerLeaseName = "agent-scheduler"
+	schedulerLeaseTTL  = 90 * time.Second
+)
+
 type SchedulerConfig struct {
 	Repos        domain.RepoFactory
 	OutboxRepo   messaging.OutboxRepo
 	PollInterval time.Duration
 	PlanGate     PlanGate
+	Lease        *lease.Lease
 }
 
 type schedulerSvc struct {
@@ -32,6 +39,7 @@ type schedulerSvc struct {
 	outboxRepo   messaging.OutboxRepo
 	pollInterval time.Duration
 	planGate     PlanGate
+	lease        *lease.Lease
 	stopCh       chan struct{}
 	wg           sync.WaitGroup
 }
@@ -43,6 +51,9 @@ func NewSchedulerSvc(config *SchedulerConfig) domain.SchedulerSvc {
 	if config.OutboxRepo == nil {
 		panic(fmt.Errorf("scheduler service: outbox repo is required"))
 	}
+	if config.Lease == nil {
+		panic(fmt.Errorf("scheduler service: lease is required"))
+	}
 
 	interval := config.PollInterval
 	if interval == 0 {
@@ -53,6 +64,7 @@ func NewSchedulerSvc(config *SchedulerConfig) domain.SchedulerSvc {
 		outboxRepo:   config.OutboxRepo,
 		pollInterval: interval,
 		planGate:     config.PlanGate,
+		lease:        config.Lease,
 		stopCh:       make(chan struct{}),
 	}
 }
@@ -83,7 +95,10 @@ func (s *schedulerSvc) pollLoop(ctx context.Context) {
 		case <-s.stopCh:
 			return
 		case <-ticker.C:
-			s.checkSchedules(ctx)
+			_ = s.lease.WithLease(ctx, schedulerLeaseName, schedulerLeaseTTL, func(leaseCtx context.Context) error {
+				s.checkSchedules(leaseCtx)
+				return nil
+			})
 		}
 	}
 }

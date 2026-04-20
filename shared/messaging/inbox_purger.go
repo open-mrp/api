@@ -9,10 +9,15 @@ import (
 	"time"
 
 	"github.com/augno/api/shared/appctx"
+	"github.com/augno/api/shared/lease"
 )
 
 // InboxPurgerConfig holds the configuration for the inbox purger worker.
 type InboxPurgerConfig struct {
+	// ServiceName (required) identifies which service owns this purger. It's
+	// included in the lease name so each service scopes its purger independently.
+	ServiceName string
+
 	// RetentionHours (optional; default: 168 i.e. 7 days) is how long processed inbox
 	// records are kept before the purge loop deletes them.
 	RetentionHours int
@@ -24,6 +29,10 @@ type InboxPurgerConfig struct {
 	// BatchSize (optional; default: 1000) is the maximum number of processed inbox
 	// records to delete in a single SQL DELETE statement.
 	BatchSize int32
+
+	// LeaseTTL (optional; default: 5m) bounds how long the purger holds its lease
+	// before a crashed holder's claim expires.
+	LeaseTTL time.Duration
 }
 
 // WithDefaults fills zero-value fields with production defaults and returns the config.
@@ -33,13 +42,18 @@ func (c *InboxPurgerConfig) WithDefaults() *InboxPurgerConfig {
 	}
 
 	return &InboxPurgerConfig{
+		ServiceName:    c.ServiceName,
 		RetentionHours: cmp.Or(c.RetentionHours, 168), // 7 days
 		PurgeInterval:  cmp.Or(c.PurgeInterval, 1*time.Hour),
 		BatchSize:      int32(cmp.Or(int(c.BatchSize), 1000)), // #nosec G115 - small config value
+		LeaseTTL:       cmp.Or(c.LeaseTTL, 5*time.Minute),
 	}
 }
 
 func (c *InboxPurgerConfig) validate() error {
+	if c.ServiceName == "" {
+		return fmt.Errorf("inbox purger: service name is required")
+	}
 	if c.RetentionHours <= 0 {
 		return fmt.Errorf("inbox purger: retention hours must be positive")
 	}
@@ -57,24 +71,31 @@ func (c *InboxPurgerConfig) validate() error {
 // message_inbox table from growing unboundedly while preserving recent records
 // for debugging and deduplication.
 type InboxPurger struct {
-	config InboxPurgerConfig
-	repo   InboxPurgerRepo
+	config    InboxPurgerConfig
+	repo      InboxPurgerRepo
+	lease     *lease.Lease
+	leaseName string
 
 	ctx    context.Context
 	cancel context.CancelFunc
 	wg     sync.WaitGroup
 }
 
-// NewInboxPurger creates a new inbox purger. Pass a config with desired settings;
-// zero-value fields are filled with production defaults.
-func NewInboxPurger(config *InboxPurgerConfig, repo InboxPurgerRepo) (*InboxPurger, error) {
+// NewInboxPurger creates a new inbox purger. A non-nil lease is required so that
+// only one pod per service deletes processed inbox rows each tick.
+func NewInboxPurger(config *InboxPurgerConfig, repo InboxPurgerRepo, l *lease.Lease) (*InboxPurger, error) {
 	config = config.WithDefaults()
 	if err := config.validate(); err != nil {
 		return nil, err
 	}
+	if l == nil {
+		return nil, fmt.Errorf("inbox purger: lease is required")
+	}
 	return &InboxPurger{
-		config: *config,
-		repo:   repo,
+		config:    *config,
+		repo:      repo,
+		lease:     l,
+		leaseName: "inbox-purger-" + config.ServiceName,
 	}, nil
 }
 
@@ -117,13 +138,16 @@ func (p *InboxPurger) purgeLoop() {
 		case <-p.ctx.Done():
 			return
 		case <-ticker.C:
-			p.purgeProcessed()
+			_ = p.lease.WithLease(p.ctx, p.leaseName, p.config.LeaseTTL, func(ctx context.Context) error {
+				p.purgeProcessed(ctx)
+				return nil
+			})
 		}
 	}
 }
 
-func (p *InboxPurger) purgeProcessed() {
-	count, err := p.repo.PurgeProcessed(p.ctx, p.config.RetentionHours, p.config.BatchSize)
+func (p *InboxPurger) purgeProcessed(ctx context.Context) {
+	count, err := p.repo.PurgeProcessed(ctx, p.config.RetentionHours, p.config.BatchSize)
 	if err != nil {
 		slog.Error("Failed to purge processed inbox messages", "error", err)
 		return

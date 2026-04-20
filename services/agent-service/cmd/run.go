@@ -21,6 +21,7 @@ import (
 	"github.com/augno/api/services/agent-service/internal/mediator"
 	"github.com/augno/api/services/agent-service/internal/service"
 	"github.com/augno/api/shared/contracts"
+	"github.com/augno/api/shared/lease"
 	"github.com/augno/api/shared/messaging"
 	"github.com/augno/api/shared/pagination"
 	"github.com/augno/api/shared/tracing"
@@ -64,12 +65,14 @@ func Run(
 
 	queries := sqlc.New(pgpool)
 
+	leaseSvc := lease.New(repository.NewLeaseRepo(queries))
+
 	outboxRepo := repository.NewOutboxEnqueuerRepo(pgpool, queries)
 	enqueuer, err := messaging.NewEnqueuer(&messaging.EnqueuerConfig{
 		ServiceName:  domain.ServiceName,
 		PlatformMode: cfg.PlatformMode,
 		PollInterval: 1 * time.Second,
-	}, outboxRepo, rabbitmq)
+	}, outboxRepo, rabbitmq, leaseSvc)
 	if err != nil {
 		return err
 	}
@@ -79,7 +82,7 @@ func Run(
 	defer enqueuer.Stop()
 
 	inboxPurgerRepo := repository.NewInboxPurgerRepo(queries)
-	inboxPurger, err := messaging.NewInboxPurger(&messaging.InboxPurgerConfig{}, inboxPurgerRepo)
+	inboxPurger, err := messaging.NewInboxPurger(&messaging.InboxPurgerConfig{ServiceName: domain.ServiceName}, inboxPurgerRepo, leaseSvc)
 	if err != nil {
 		return err
 	}
@@ -164,6 +167,7 @@ func Run(
 		Repos:      repoFactory,
 		OutboxRepo: repoFactory.NewOutboxRepo(),
 		PlanGate:   planGate,
+		Lease:      leaseSvc,
 	})
 	if err := scheduler.Start(ctx); err != nil {
 		return err

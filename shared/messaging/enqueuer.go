@@ -10,6 +10,7 @@ import (
 
 	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
+	"github.com/augno/api/shared/lease"
 	"github.com/augno/api/shared/retry"
 )
 
@@ -57,6 +58,11 @@ type EnqueuerConfig struct {
 	// PurgeInterval (optional; default: 1h) controls how frequently the enqueuer runs
 	// its purge loop to delete old published messages.
 	PurgeInterval time.Duration
+
+	// PurgeLeaseTTL (optional; default: 5m) bounds how long the purge loop holds its
+	// distributed lease. The lease ensures only one pod per service performs the bulk
+	// DELETE of published messages each tick.
+	PurgeLeaseTTL time.Duration
 }
 
 // WithDefaults fills zero-value fields with production defaults and returns the config.
@@ -100,6 +106,9 @@ func (c *EnqueuerConfig) WithDefaults() *EnqueuerConfig {
 	if c.PurgeInterval == 0 {
 		c.PurgeInterval = 1 * time.Hour
 	}
+	if c.PurgeLeaseTTL == 0 {
+		c.PurgeLeaseTTL = 5 * time.Minute
+	}
 	return c
 }
 
@@ -123,9 +132,11 @@ func (c *EnqueuerConfig) validate() error {
 // operations (via appctx.WithNoTrace) to avoid cluttering the trace backend with
 // high-volume background traffic.
 type Enqueuer struct {
-	config EnqueuerConfig
-	repo   OutboxEnqueuerRepo
-	broker MessageBroker
+	config         EnqueuerConfig
+	repo           OutboxEnqueuerRepo
+	broker         MessageBroker
+	lease          *lease.Lease
+	purgeLeaseName string
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -134,15 +145,25 @@ type Enqueuer struct {
 
 // NewEnqueuer creates a new outbox enqueuer. Pass a config with at least
 // ServiceName set; zero-value fields are filled with production defaults.
-func NewEnqueuer(config *EnqueuerConfig, repo OutboxEnqueuerRepo, broker MessageBroker) (*Enqueuer, error) {
+//
+// The poll and cleanup loops continue to run on every pod — they coordinate
+// through per-message optimistic locking, and running them in parallel increases
+// publishing throughput and cross-pod recovery of stuck locks. The purge loop is
+// wrapped in a distributed lease so only one pod per service deletes old rows.
+func NewEnqueuer(config *EnqueuerConfig, repo OutboxEnqueuerRepo, broker MessageBroker, l *lease.Lease) (*Enqueuer, error) {
 	config = config.WithDefaults()
 	if err := config.validate(); err != nil {
 		return nil, err
 	}
+	if l == nil {
+		return nil, fmt.Errorf("enqueuer: lease is required")
+	}
 	return &Enqueuer{
-		config: *config,
-		repo:   repo,
-		broker: broker,
+		config:         *config,
+		repo:           repo,
+		broker:         broker,
+		lease:          l,
+		purgeLeaseName: "outbox-purge-" + config.ServiceName,
 	}, nil
 }
 
@@ -292,7 +313,8 @@ func (e *Enqueuer) cleanupExpiredLocks() {
 }
 
 // purgeLoop ticks at PurgeInterval and deletes published outbox messages older than
-// RetentionHours. It exits when the enqueuer's context is cancelled.
+// RetentionHours. Each tick acquires a distributed lease so only one pod per service
+// runs the DELETE — all other pods skip silently. Exits on context cancellation.
 func (e *Enqueuer) purgeLoop() {
 	defer e.wg.Done()
 
@@ -304,7 +326,10 @@ func (e *Enqueuer) purgeLoop() {
 		case <-e.ctx.Done():
 			return
 		case <-ticker.C:
-			e.purgePublished()
+			_ = e.lease.WithLease(e.ctx, e.purgeLeaseName, e.config.PurgeLeaseTTL, func(ctx context.Context) error {
+				e.purgePublished(ctx)
+				return nil
+			})
 		}
 	}
 }
@@ -313,8 +338,8 @@ func (e *Enqueuer) purgeLoop() {
 // retention period. This keeps the outbox table from growing unboundedly while still
 // preserving recent records for debugging and audit. Failed messages are intentionally
 // kept indefinitely for investigation.
-func (e *Enqueuer) purgePublished() {
-	count, err := e.repo.PurgePublished(e.ctx, e.config.RetentionHours, 1000)
+func (e *Enqueuer) purgePublished(ctx context.Context) {
+	count, err := e.repo.PurgePublished(ctx, e.config.RetentionHours, 1000)
 	if err != nil {
 		slog.Error("Failed to purge published outbox messages", "error", err)
 		return

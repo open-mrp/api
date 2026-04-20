@@ -7,8 +7,23 @@ import (
 	"testing"
 	"time"
 
+	"github.com/augno/api/shared/lease"
 	"github.com/stretchr/testify/require"
 )
+
+// alwaysGrantLeaseRepo satisfies lease.Repo and always grants, never loses, the lease.
+// Used by tests that want to exercise the cleanup/purge body without standing up a DB.
+type alwaysGrantLeaseRepo struct{}
+
+func (alwaysGrantLeaseRepo) Acquire(context.Context, string, string, time.Duration) (bool, error) {
+	return true, nil
+}
+func (alwaysGrantLeaseRepo) Renew(context.Context, string, string, time.Duration) (bool, error) {
+	return true, nil
+}
+func (alwaysGrantLeaseRepo) Release(context.Context, string, string) error { return nil }
+
+func testLease() *lease.Lease { return lease.NewWithHolder(alwaysGrantLeaseRepo{}, "test-holder") }
 
 type mockCleanupRepo struct {
 	mu                 sync.Mutex
@@ -87,7 +102,7 @@ func TestCleanupWorkerStartStop(t *testing.T) {
 		Interval:         time.Hour,
 		BatchSize:        100,
 		MaxBatchesPerRun: 10,
-	}, repo)
+	}, repo, testLease())
 	require.NoError(t, err)
 
 	err = worker.Start(context.Background())
@@ -130,7 +145,7 @@ func TestCleanupWorkerDeletesBatches(t *testing.T) {
 		Interval:         time.Hour,
 		BatchSize:        100,
 		MaxBatchesPerRun: 10,
-	}, repo)
+	}, repo, testLease())
 	require.NoError(t, err)
 
 	err = worker.Start(context.Background())
@@ -167,7 +182,7 @@ func TestCleanupWorkerRespectsMaxBatches(t *testing.T) {
 		Interval:         time.Hour,
 		BatchSize:        100,
 		MaxBatchesPerRun: 5, // Limit to 5 batches
-	}, repo)
+	}, repo, testLease())
 	require.NoError(t, err)
 
 	err = worker.Start(context.Background())
@@ -202,7 +217,7 @@ func TestCleanupWorkerHandlesErrors(t *testing.T) {
 		Interval:         time.Hour,
 		BatchSize:        100,
 		MaxBatchesPerRun: 10,
-	}, repo)
+	}, repo, testLease())
 	require.NoError(t, err)
 
 	err = worker.Start(context.Background())

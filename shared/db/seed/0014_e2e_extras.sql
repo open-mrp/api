@@ -274,9 +274,9 @@ UPDATE invoice SET is_paid_in_full = 1 WHERE id = 'iv_01seedsecondinvoice0' AND 
 -- ACCOUNT INTEGRATIONS (2 rows for pagination)
 -- ============================================================
 
-INSERT IGNORE INTO account_integration (id, account_id, integration_code, name, credentials, is_active, created_at, updated_at) VALUES
-    ('acin_01seedintegration1', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'shippo', 'Shippo Integration', '{"api_key":"test_key_1"}', 1, NOW(), NOW()),
-    ('acin_01seedintegration2', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'quickbooks', 'QuickBooks Integration', '{"api_key":"test_key_2"}', 1, NOW(), NOW());
+INSERT IGNORE INTO account_integration (id, account_id, integration_code, name, credentials_v2, is_active, created_at, updated_at) VALUES
+    ('acin_01seedintegration1', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'shippo', 'Shippo Integration', 'seed-placeholder-credentials', 1, NOW(), NOW()),
+    ('acin_01seedintegration2', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'quickbooks', 'QuickBooks Integration', 'seed-placeholder-credentials', 1, NOW(), NOW());
 
 -- ============================================================
 -- AUDIT EVENTS (2 rows so audit event tests don't skip)

@@ -25,6 +25,23 @@ func AgentAlertPresenter(a *pb.AgentAlertInfo) apiresource.AgentAlert {
 		UpdatedAt: timeutil.TimestampToTime(a.UpdatedAt),
 	}
 
+	// Attach stub Run and Action resources when the alert carries the
+	// corresponding IDs. These stubs satisfy `?include=run` /
+	// `?include=action`; the collapse middleware nulls them when not
+	// requested.
+	if a.AgentRunId != "" {
+		alert.Run = &apiresource.AgentRun{
+			ID:     a.AgentRunId,
+			Object: constants.ObjectTypeAgentRun,
+		}
+	}
+	if a.AgentActionId != "" {
+		alert.Action = &apiresource.AgentAction{
+			ID:     a.AgentActionId,
+			Object: constants.ObjectTypeAgentAction,
+		}
+	}
+
 	if a.AcknowledgedAt != "" {
 		t := timeutil.TimestampToTime(a.AcknowledgedAt)
 		alert.AcknowledgedAt = &t

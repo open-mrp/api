@@ -5,6 +5,14 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: "Testing123!"
       MYSQL_DATABASE: augno
+    # Long-running e2e stacks accumulate thousands of rows in message_outbox
+    # and request_log. The outbox poller's `ORDER BY next_run_at LIMIT N` under
+    # an UPDATE resorts to filesort, which exceeds the 256K default
+    # sort_buffer_size and breaks outbox delivery (audit events, etc.).
+    # Bumping both sort and the connection cap keeps long sessions stable.
+    command:
+      - --sort-buffer-size=8M
+      - --max-connections=500
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-pTesting123!"]
       interval: 5s

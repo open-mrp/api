@@ -91,7 +91,28 @@ func (s *itemCategorySvcImpl) ListItemCategories(ctx context.Context, params dom
 
 	params.AccountID = identity.Target.AccountID
 
-	return s.repos.NewItemCategoryRepo().List(ctx, params)
+	repo := s.repos.NewItemCategoryRepo()
+
+	result, apiErr := repo.List(ctx, params)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	for _, category := range result.ItemCategories {
+		properties, apiErr := repo.GetProperties(ctx, category.ID)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		category.Properties = properties
+
+		unitGroup, apiErr := repo.GetUnitGroup(ctx, category.UnitGroupID)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		category.UnitGroup = unitGroup
+	}
+
+	return result, nil
 }
 
 func (s *itemCategorySvcImpl) GetItemCategory(ctx context.Context, itemCategoryID string) (*domain.ItemCategoryFull, *apierror.APIError) {

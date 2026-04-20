@@ -17,7 +17,13 @@ func quantityPresenter(q *pb.QuantityInfo) *apiresource.Quantity {
 		Object:       constants.ObjectTypeQuantity,
 		Value:        norm,
 		DisplayValue: apiresource.FormatDisplayValue(norm, q.UnitAbbreviation, q.UnitType),
-		Unit:         nil, // Populated via include expansion
+		Unit: &apiresource.Unit{
+			ID:           q.UnitId,
+			Object:       constants.ObjectTypeUnit,
+			Name:         q.UnitName,
+			Abbreviation: q.UnitAbbreviation,
+			Type:         constants.UnitType(q.UnitType),
+		},
 	}
 }
 

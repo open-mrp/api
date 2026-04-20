@@ -8,6 +8,7 @@ import (
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
@@ -96,7 +97,7 @@ func (m *transactionSvcImpl) ListTransactions(ctx context.Context, req *ListTran
 func (m *transactionSvcImpl) GetTransaction(ctx context.Context, req *GetTransactionRequest) (*apiresource.TransactionDetail, *apierror.APIError) {
 	pbReq := &pb.GetTransactionRequest{
 		Id:       req.TransactionID,
-		Includes: req.Includes,
+		Includes: appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, transactionSvcTracer, "service.transactions.get", domain.ServiceName,

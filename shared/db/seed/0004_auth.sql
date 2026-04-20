@@ -161,10 +161,12 @@ INSERT IGNORE INTO user (id, name, username, email, hashed_password, email_verif
     ('us_1wjfmmbwg8l7', 'John Doe', 'jdoe', 'dane@augno.com', @password_hash, NOW(), NOW(), NOW()),
     ('us_6p7460uuwibz', 'Sarah Martinez', 'smartinez', 'smartinez@augno.com', @password_hash, NOW(), NOW(), NOW());
 
--- Account-user associations
-INSERT IGNORE INTO account_user (id, user_id, role_id, account_id, last_used_at, created_at, updated_at) VALUES
-    ('acus_s83fjhyfmqen', 'us_1wjfmmbwg8l7', 'rl_mtg88e6u6fbu', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW(), NOW()),
-    ('acus_ubdx4zebgl6p', 'us_6p7460uuwibz', 'rl_hh6mrlkv08n8', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW(), NOW());
+-- Account-user associations. The admin account-user (SeedAccountUserID) is
+-- pinned to the Knitting department so `?include=department` resolves on the
+-- seeded account_user GET/LIST responses.
+INSERT IGNORE INTO account_user (id, user_id, role_id, account_id, department_id, last_used_at, created_at, updated_at) VALUES
+    ('acus_s83fjhyfmqen', 'us_1wjfmmbwg8l7', 'rl_mtg88e6u6fbu', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'dp_01k0a5r01yfx3sj1vy9qgv3dc0', NOW(), NOW(), NOW()),
+    ('acus_ubdx4zebgl6p', 'us_6p7460uuwibz', 'rl_hh6mrlkv08n8', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'dp_01k0a5r01yfx3sj1vy9qgv3dc0', NOW(), NOW(), NOW());
 
 -- API keys
 -- HMAC computed as: createHmac('sha256', 'pepper').update(secret).digest()

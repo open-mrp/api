@@ -282,9 +282,16 @@ INSERT IGNORE INTO account_integration (id, account_id, integration_code, name, 
 -- AUDIT EVENTS (2 rows so audit event tests don't skip)
 -- ============================================================
 
-INSERT IGNORE INTO audit_event (type_id, actor_id, actor_type, identity_type, account_id, action, resource_type, resource_id, changes, service_name, occurred_at, created_at) VALUES
-    ('adev_01seedauditevent01', 'us_1wjfmmbwg8l7', 'user', 'internal', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'create', 'unit', 'un_01seedpair000000000', '{"name":{"before":null,"after":"Pair"}}', 'core-service', DATE_SUB(NOW(), INTERVAL 1 HOUR), NOW()),
-    ('adev_01seedauditevent02', 'us_1wjfmmbwg8l7', 'user', 'internal', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'update', 'property', 'pp_01k0a7ntn1ez6aw8x850femxeh', '{"name":{"before":"Colour","after":"Color"}}', 'core-service', NOW(), NOW());
+-- `changes` is stored as a JSON array of FieldChange records (see
+-- shared/audit/types.go). Using the list form so the presenter's
+-- AuditFieldChangesPresenter populates the nested list include.
+-- The metadata-carrying event uses a far-future occurred_at so it stays at the
+-- top of list-audit-events ordering (events are sorted by occurred_at DESC
+-- and other e2e runs generate hundreds of newer events that would otherwise
+-- push this one off the default page).
+INSERT IGNORE INTO audit_event (type_id, actor_id, actor_type, identity_type, account_id, action, resource_type, resource_id, changes, metadata, service_name, occurred_at, created_at) VALUES
+    ('adev_01seedauditevent01', 'us_1wjfmmbwg8l7', 'user', 'internal', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'create', 'unit', 'un_01seedpair000000000', '[{"field":"name","old_value":null,"new_value":"Pair"}]', NULL, 'core-service', DATE_SUB(NOW(), INTERVAL 1 HOUR), NOW()),
+    ('adev_01seedauditevent02', 'us_1wjfmmbwg8l7', 'user', 'internal', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'update', 'property', 'pp_01k0a7ntn1ez6aw8x850femxeh', '[{"field":"name","old_value":"Colour","new_value":"Color"}]', '{"seed":true,"note":"manual e2e seed"}', 'core-service', DATE_ADD(NOW(), INTERVAL 10 YEAR), DATE_ADD(NOW(), INTERVAL 10 YEAR));
 
 -- ============================================================
 -- EMAIL LOGS (2 rows for pagination)
@@ -401,4 +408,141 @@ INSERT IGNORE INTO rate (id, value, numerator_unit_id, denominator_unit_id, crea
 
 INSERT IGNORE INTO sales_order_line (id, product_sku, product_description, product_id, item_id, sales_order_id, quantity_id, unit_price_id, unit_cost_id, created_at, updated_at) VALUES
     ('orln_01seedpoln1_000000', 'YRN-001', 'Small white yarn for PO', NULL, 'it_01seedyrn1item00000', 'or_01seedpurchord1_000', 'qu_01seedpoln1_qty00000', 'rt_01seedpoln1_price000', 'rt_01seedpoln1_cost0000', NOW(), NOW());
+
+-- ============================================================
+-- CUSTOMER RICH LINKS (seed-gap fill for `?include=` coverage)
+-- ============================================================
+-- Populates freight preferences service level, credit limit, price-group
+-- assignment, parent account, and child accounts on the SeedCustomer
+-- account_relation (acre_01seedcustomer00000) so its GET/LIST responses
+-- expose every declared include with real data.
+
+-- Credit-limit quantity (dollar amount).
+INSERT IGNORE INTO quantity (id, value, unit_id, created_at, updated_at) VALUES
+    ('qu_01seedcustcredit000', 5000, 'dollar', NOW(), NOW());
+
+UPDATE account_relation
+   SET default_carrier_option_id = 'crop_01seedground000000',
+       credit_limit_id            = 'qu_01seedcustcredit000',
+       parent_account_relation_id = 'acre_01seedhouseacct0000',
+       default_sales_rep_id       = 'acus_ubdx4zebgl6p'
+ WHERE id = 'acre_01seedcustomer00000';
+
+-- Price-group assignment (reuses the seeded DME account_group).
+INSERT IGNORE INTO account_relation_price_group (id, account_relation_id, account_group_id, created_at, updated_at) VALUES
+    ('acrepg_01seedcustomer00', 'acre_01seedcustomer00000', 'acgp_01k0a413mjeth8pe1g70t0thax', NOW(), NOW());
+
+-- Child customer accounts rooted at SeedCustomer (distinct from the HOUSE
+-- children in the block above; gives `?include=child_accounts` a non-empty
+-- list when the caller targets SeedCustomerAccountID).
+INSERT IGNORE INTO account (id, name, account_type_code, onboarding_status_code, account_plan_id, created_at, updated_at) VALUES
+    ('ac_01seedcustchild00001', 'GMS East Division', 'company', 'unclaimed', 'acpl_01seed000free00plan000000', NOW(), NOW()),
+    ('ac_01seedcustchild00002', 'GMS West Division', 'company', 'unclaimed', 'acpl_01seed000free00plan000000', NOW(), NOW());
+
+INSERT IGNORE INTO account_relation (id, owner_account_id, counterparty_account_id, account_relation_role_code, external_number, parent_account_relation_id, is_edi_enabled, priority_code, account_status_code, commission_status_code, freight_status_code, shipping_term_id, payment_term_id, account_group_id, created_at, updated_at) VALUES
+    ('acre_01seedcustchildr01', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01seedcustchild00001', 'customer', 'GMS-CHILD-001', 'acre_01seedcustomer00000', 0, 'normal', 'normal', 'commission_applied', 'billed_freight', 'prepaid_billed', 'pytm_01seednet3000000', 'acgp_01k0a413mjeth8pe1g70t0thax', NOW(), NOW()),
+    ('acre_01seedcustchildr02', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01seedcustchild00002', 'customer', 'GMS-CHILD-002', 'acre_01seedcustomer00000', 0, 'normal', 'normal', 'commission_applied', 'billed_freight', 'prepaid_billed', 'pytm_01seednet3000000', 'acgp_01k0a413mjeth8pe1g70t0thax', NOW(), NOW());
+
+-- ============================================================
+-- SUPPLIER DEFAULT ADDRESSES
+-- ============================================================
+-- The seeded supplier account_relation had no default_billing_address_id or
+-- default_shipping_address_id, so `?include=bill_to_address` and
+-- `ship_to_address` returned null stubs. Reuse the supplier's existing address.
+
+UPDATE account_relation
+   SET default_billing_address_id  = 'ad_01seedsupplieraddr00',
+       default_shipping_address_id = 'ad_01seedsupplieraddr00'
+ WHERE id = 'acre_01seedsupplier0000';
+
+-- ============================================================
+-- LOCATION PARENT
+-- ============================================================
+-- Seeds a campus that owns SeedLocationID (the Main Building) so
+-- `?include=parent` on the seeded location resolves to a populated stub.
+
+INSERT IGNORE INTO storage_location (id, account_id, storage_location_type_code, name, created_at, updated_at) VALUES
+    ('sglc_01seedcampus00000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'building', 'Augno Campus', NOW(), NOW());
+
+UPDATE storage_location SET parent_id = 'sglc_01seedcampus00000'
+    WHERE id = 'sglc_01seedbuilding0000' AND parent_id IS NULL;
+
+-- ============================================================
+-- ACCOUNT-OWNED SHIPPING TERM (for list-shipping-terms include coverage)
+-- ============================================================
+-- 'prepaid_billed' is system-owned and has no flat_rate / minimum_order /
+-- free_shipping_rule. Seed an account-owned term with all of them so the
+-- list includes at least one row where every declared include resolves.
+
+INSERT IGNORE INTO quantity (id, value, unit_id, created_at, updated_at) VALUES
+    ('qu_01seedshipflatrate0', 12.00, 'dollar', NOW(), NOW()),
+    ('qu_01seedshipminorder', 100.00, 'dollar', NOW(), NOW()),
+    ('qu_01seedshipflatpaid', 5.00, 'dollar', NOW(), NOW()),
+    ('qu_01seedshipminpaid0', 50.00, 'dollar', NOW(), NOW());
+
+INSERT IGNORE INTO shipping_term (id, name, is_freight_exempt, is_carrier_rate, account_id, flat_rate_id, minimum_order_id, created_at, updated_at) VALUES
+    ('shtm_01seedcustflat000', 'Custom Flat Rate', 0, 0, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'qu_01seedshipflatrate0', 'qu_01seedshipminorder', NOW(), NOW());
+
+INSERT IGNORE INTO shipping_term_free_shipping_rule (id, shipping_term_id, carrier_option_id, created_at) VALUES
+    ('shtmfsr_01seedcustom00', 'shtm_01seedcustflat000', 'crop_01seedground000000', NOW()),
+    ('shtmfsr_01seedprepaid0', 'prepaid_billed', 'crop_01seedground000000', NOW());
+
+-- Back-fill SeedShippingTermID ('prepaid_billed') with flat_rate and
+-- minimum_order so `get-shipping-term/{flat_rate.unit,minimum_order_value.unit}`
+-- resolve on the GET path too.
+UPDATE shipping_term
+   SET flat_rate_id     = 'qu_01seedshipflatpaid',
+       minimum_order_id = 'qu_01seedshipminpaid0'
+ WHERE id = 'prepaid_billed' AND flat_rate_id IS NULL;
+
+-- ============================================================
+-- ACCOUNT PRICE ATTRIBUTES & CATEGORIES
+-- ============================================================
+-- Seeds association rows for SeedAccountPriceID so `?include=attributes`
+-- and `?include=categories` both resolve to populated lists.
+
+INSERT IGNORE INTO account_price_attribute (id, account_price_id, attribute_id, created_at, updated_at) VALUES
+    ('acprattr_01seedaccpric', 'acpr_01seedaccprice0000', 'at_01seedbeige00000000', NOW(), NOW());
+
+INSERT IGNORE INTO account_price_item_category (id, account_price_id, item_category_id, created_at, updated_at) VALUES
+    ('acprcat_01seedaccprice', 'acpr_01seedaccprice0000', 'itcg_01seedsocks000000', NOW(), NOW());
+
+-- ============================================================
+-- VOLUME / QUANTITY DISCOUNT ASSOCIATIONS
+-- ============================================================
+-- Seeds associations for SeedVolumeDiscountID (quds_01seedvoldiscount0):
+-- attributes, categories, customer_groups, product_lines, acceptable_units.
+
+INSERT IGNORE INTO _item_categories_quantity_discounts (A, B) VALUES
+    ('itcg_01seedsocks000000', 'quds_01seedvoldiscount0');
+
+INSERT IGNORE INTO _product_lines_quantity_discounts (A, B) VALUES
+    ('pdln_01k0a735ype5e8nrhv1n5dhq1q', 'quds_01seedvoldiscount0');
+
+-- A = attribute_id, B = quantity_discount_id (see GetVolumeDiscountAttributes query).
+INSERT IGNORE INTO _quantity_discounts_attributes (A, B) VALUES
+    ('at_01seedbeige00000000', 'quds_01seedvoldiscount0');
+
+INSERT IGNORE INTO _quantity_discounts_units (A, B) VALUES
+    ('quds_01seedvoldiscount0', 'un_01seedpair000000000');
+
+INSERT IGNORE INTO account_group_quantity_discount (id, account_group_id, quantity_discount_id, created_at, updated_at) VALUES
+    ('acgpqds_01seedcustgrp0', 'acgp_01k0a413mjeth8pe1g70t0thax', 'quds_01seedvoldiscount0', NOW(), NOW());
+
+-- ============================================================
+-- INVENTORY CHANGE LOG: responsible_user + scanning_station
+-- ============================================================
+-- Back-fill two seeded inventory_change_log rows with responsible_user_id /
+-- scanning_station_id so `?include=responsible_user` and
+-- `?include=responsible_scanning_station` resolve for at least one list item.
+
+UPDATE inventory_change_log
+   SET responsible_user_id = 'us_1wjfmmbwg8l7'
+ WHERE id = 'ivcl_01seedwss000000000'
+   AND responsible_user_id IS NULL;
+
+UPDATE inventory_change_log
+   SET scanning_station_id = 'sgsn_01k0a8201zegarjfsjaw5n7yfv'
+ WHERE id = 'ivcl_01seedwls000000000'
+   AND scanning_station_id IS NULL;
 

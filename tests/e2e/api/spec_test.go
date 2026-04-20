@@ -114,8 +114,9 @@ type openAPIMediaType struct {
 }
 
 type openAPIParam struct {
-	Name string `json:"name"`
-	In   string `json:"in"`
+	Name   string         `json:"name"`
+	In     string         `json:"in"`
+	Schema *openAPISchema `json:"schema,omitempty"`
 }
 
 // fullOpenAPISpec holds the fully-parsed spec for schema validation.

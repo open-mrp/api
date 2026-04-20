@@ -100,7 +100,22 @@ func (s *productLineSvcImpl) ListProductLines(ctx context.Context, params domain
 
 	params.AccountID = identity.Target.AccountID
 
-	return s.repos.NewProductLineRepo().List(ctx, params)
+	repo := s.repos.NewProductLineRepo()
+
+	result, apiErr := repo.List(ctx, params)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	for _, pl := range result.ProductLines {
+		unitGroup, apiErr := repo.GetUnitGroup(ctx, pl.UnitGroupID)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		pl.UnitGroup = unitGroup
+	}
+
+	return result, nil
 }
 
 func (s *productLineSvcImpl) GetProductLine(ctx context.Context, productLineID string) (*domain.ProductLineFull, *apierror.APIError) {

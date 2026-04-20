@@ -100,7 +100,22 @@ func (s *unitGroupSvcImpl) ListUnitGroups(ctx context.Context, params domain.Lis
 
 	params.AccountID = identity.Target.AccountID
 
-	return s.repos.NewUnitGroupRepo().List(ctx, params)
+	repo := s.repos.NewUnitGroupRepo()
+
+	result, apiErr := repo.List(ctx, params)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	for _, ug := range result.UnitGroups {
+		conversions, apiErr := repo.ListUnits(ctx, ug.ID)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		ug.UnitConversions = conversions
+	}
+
+	return result, nil
 }
 
 func (s *unitGroupSvcImpl) GetUnitGroup(ctx context.Context, unitGroupID string) (*domain.UnitGroupFull, *apierror.APIError) {

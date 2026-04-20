@@ -7,6 +7,7 @@ import (
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/appctx"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
@@ -86,7 +87,7 @@ func (m *settlementSvcImpl) ListSettlements(ctx context.Context, req *ListSettle
 func (m *settlementSvcImpl) GetSettlement(ctx context.Context, req *GetSettlementRequest) (*apiresource.Settlement, *apierror.APIError) {
 	pbReq := &pb.GetSettlementRequest{
 		Id:       req.SettlementID,
-		Includes: req.Includes,
+		Includes: appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, settlementSvcTracer, "service.settlements.get", domain.ServiceName,

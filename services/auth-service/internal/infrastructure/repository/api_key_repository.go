@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	gosql "database/sql"
+	"strings"
 	"time"
 
 	"github.com/augno/api/services/auth-service/internal/apikey"
@@ -225,14 +226,16 @@ func (r *apiKeyRepoImpl) List(ctx context.Context, input domain.APIKeyListRepoIn
 func apiKeyCreatedAt(k *apikey.APIKey) time.Time { return k.CreatedAt }
 func apiKeyID(k *apikey.APIKey) int64            { return k.ID }
 
-// includesContains returns true when the given key is in the includes list.
-// When includes is nil (no include param), returns false — no enriched data is needed.
+// includesContains returns true when the given key is in the includes list,
+// or when any include is a nested path rooted at that key (e.g. "role.permissions"
+// implies "role"). When includes is nil (no include param), returns false.
 func includesContains(includes []string, key string) bool {
 	if includes == nil {
 		return false
 	}
+	prefix := key + "."
 	for _, v := range includes {
-		if v == key {
+		if v == key || strings.HasPrefix(v, prefix) {
 			return true
 		}
 	}

@@ -7,6 +7,7 @@ import (
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/appctx"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
@@ -89,7 +90,7 @@ func (m *invoiceSvcImpl) ListInvoices(ctx context.Context, req *ListInvoicesRequ
 func (m *invoiceSvcImpl) GetInvoice(ctx context.Context, req *GetInvoiceRequest) (*apiresource.Invoice, *apierror.APIError) {
 	pbReq := &pb.GetInvoiceRequest{
 		Id:       req.InvoiceID,
-		Includes: req.Includes,
+		Includes: appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, invoiceSvcTracer, "service.invoices.get", domain.ServiceName,

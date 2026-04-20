@@ -26,8 +26,8 @@ INSERT IGNORE INTO quantity (id, value, unit_id, created_at, updated_at) VALUES
     ('qu_01seedtx_amount0000', 428.50, 'dollar', NOW(), NOW()),
     ('qu_01seedtxal_amount00', 428.50, 'dollar', NOW(), NOW());
 
-INSERT IGNORE INTO transaction (id, number, customer_account_id, amount_id, transaction_type_code, is_fully_allocated, account_id, created_at, updated_at) VALUES
-    ('tx_01seedtransaction00', 'TXN-001', 'ac_01k09wm2fgevdsc344gpbcj30f', 'qu_01seedtx_amount0000', 'payment', 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
+INSERT IGNORE INTO transaction (id, number, customer_account_id, amount_id, transaction_type_code, is_fully_allocated, responsible_user_id, account_id, created_at, updated_at) VALUES
+    ('tx_01seedtransaction00', 'TXN-001', 'ac_01k09wm2fgevdsc344gpbcj30f', 'qu_01seedtx_amount0000', 'payment', 1, 'us_1wjfmmbwg8l7', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
 
 -- ============================================================
 -- TRANSACTION ALLOCATIONS
@@ -54,6 +54,9 @@ INSERT IGNORE INTO invoice (id, number, sales_order_id, billing_address_id, acco
 -- Invoice for packed order (ORD-002)
 INSERT IGNORE INTO invoice (id, number, sales_order_id, billing_address_id, account_id, created_at, updated_at) VALUES
     ('iv_01seedinvoice003000', 'INV-003', 'or_01k0a8bs2ye3f9p8sj0m4dfmwe', 'ad_01k09wnac0e1ar211e0sy0ba4g', 'ac_01k0a5smf9ekb8rqg12555zjqa', DATE_SUB(NOW(), INTERVAL 1 DAY), DATE_SUB(NOW(), INTERVAL 1 DAY));
+
+-- Link SHP-001 (SeedShipmentID) to INV-003 so `?include=invoice` resolves.
+UPDATE shipment SET invoice_id = 'iv_01seedinvoice003000' WHERE id = 'sh_01k0a87w33emw8pmkz1mf86cg1' AND invoice_id IS NULL;
 
 -- Invoice line quantities for INV-002
 INSERT IGNORE INTO quantity (id, value, unit_id, created_at, updated_at) VALUES

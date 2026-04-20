@@ -1,6 +1,8 @@
 package apikeyep
 
 import (
+	"sort"
+
 	"github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -31,6 +33,14 @@ func APIKeyPresenter(key *pb.APIKeyInfo, permissions map[string]bool) apiresourc
 			Name:     *key.RoleName,
 			TypeCode: constants.RoleTypeCode(*key.RoleTypeCode),
 			Owner:    apiresource.SystemOwner(),
+		}
+		if permissions != nil {
+			perms := make([]string, 0, len(permissions))
+			for p := range permissions {
+				perms = append(perms, p)
+			}
+			sort.Strings(perms)
+			res.Role.Permissions = &perms
 		}
 	}
 

@@ -2,6 +2,7 @@ package agentep
 
 import (
 	"encoding/json"
+	"sort"
 
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
@@ -57,6 +58,14 @@ func AgentDefinitionPresenter(a *pb.AgentDefinitionInfo, roleInfo *resolvedRole)
 			Name:     roleInfo.Name,
 			TypeCode: constants.RoleTypeCode(roleInfo.RoleTypeCode),
 			Owner:    apiresource.SystemOwner(),
+		}
+		if roleInfo.Permissions != nil {
+			perms := make([]string, 0, len(roleInfo.Permissions))
+			for p := range roleInfo.Permissions {
+				perms = append(perms, p)
+			}
+			sort.Strings(perms)
+			role.Permissions = &perms
 		}
 	}
 

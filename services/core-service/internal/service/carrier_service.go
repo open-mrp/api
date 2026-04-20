@@ -145,7 +145,22 @@ func (s *carrierSvcImpl) ListCarriers(ctx context.Context, params domain.ListCar
 
 	params.AccountID = identity.Target.AccountID
 
-	return s.repos.NewCarrierRepo().List(ctx, params)
+	carrierRepo := s.repos.NewCarrierRepo()
+
+	result, apiErr := carrierRepo.List(ctx, params)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	for _, carrier := range result.Carriers {
+		options, apiErr := carrierRepo.ListOptionsByCarrierID(ctx, identity.Target.AccountID, carrier.ID)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		carrier.ServiceLevels = options
+	}
+
+	return result, nil
 }
 
 func (s *carrierSvcImpl) GetCarrier(ctx context.Context, carrierID string) (*domain.Carrier, *apierror.APIError) {

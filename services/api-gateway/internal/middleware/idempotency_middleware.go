@@ -38,6 +38,14 @@ var idempotencyMiddlewareTracer = tracing.GetTracer("api-gateway.idempotency_mid
 
 const maxIdempotencyResponseSize = 1024 * 64
 
+// idempotencyStoreTimeout bounds the synchronous gRPC call that persists the
+// response body and releases the idempotency lock. It must be long enough to
+// survive parallel-request load because a timeout here abandons the SetResponse
+// in flight, leaving the row locked until lock_expires_at (5 minutes by
+// default). Duplicate requests in that window observe the key as still
+// "in progress" and the client has no retryable signal.
+const idempotencyStoreTimeout = 30 * time.Second
+
 // responseRecorder buffers the downstream handler's response so the
 // idempotency record can be persisted synchronously before the client
 // receives the response. Without buffering, a client could receive its
@@ -422,7 +430,7 @@ func storeIdempotencyResponse(
 		return
 	}
 
-	rpcCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	rpcCtx, cancel := context.WithTimeout(ctx, idempotencyStoreTimeout)
 	defer cancel()
 
 	_, err := client.Client.SetIdempotencyKeyResponse(rpcCtx, &pb.SetIdempotencyKeyResponseRequest{

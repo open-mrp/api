@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/augno/api/services/agent-service/internal/domain"
@@ -12,6 +13,7 @@ import (
 	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/contracts"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/id"
 	"github.com/augno/api/shared/messaging"
 	pb "github.com/augno/api/shared/proto/agent"
 	"github.com/augno/api/shared/safeconv"
@@ -717,16 +719,23 @@ func (h *agentHandler) ListRuns(ctx context.Context, req *pb.ListRunsRequest) (*
 		runs = runs[:limit]
 	}
 
-	includeSet := make(map[string]bool, len(req.Includes))
-	for _, inc := range req.Includes {
-		includeSet[inc] = true
+	// Treat `foo.bar` requests as implying `foo` — the parent resource must be
+	// attached for the nested include to survive the api-gateway's collapse.
+	includedRoot := func(key string) bool {
+		prefix := key + "."
+		for _, inc := range req.Includes {
+			if inc == key || strings.HasPrefix(inc, prefix) {
+				return true
+			}
+		}
+		return false
 	}
 
 	pbRuns := make([]*pb.AgentRunInfo, len(runs))
 	for i := range runs {
 		pbRuns[i] = sqlcRunToProto(&runs[i])
 
-		if includeSet["actions"] {
+		if includedRoot("actions") {
 			actionRepo := h.repos.NewAgentActionRepo()
 			actions, actionsErr := actionRepo.ListByRun(ctx, runs[i].ID)
 			if actionsErr == nil {
@@ -738,14 +747,18 @@ func (h *agentHandler) ListRuns(ctx context.Context, req *pb.ListRunsRequest) (*
 			}
 		}
 
-		if includeSet["definition"] {
-			defResult, defErr := h.agentDefSvc.GetAgentDefinition(ctx, runs[i].AgentDefinitionID, nil)
+		if includedRoot("definition") {
+			// Pass the client's requested nested includes (e.g. "tools",
+			// "role", "config") so buildResultForAccount loads the matching
+			// sub-resources onto the returned definition.
+			defIncludes := nestedIncludes(req.Includes, "definition")
+			defResult, defErr := h.agentDefSvc.GetAgentDefinition(ctx, runs[i].AgentDefinitionID, defIncludes)
 			if defErr == nil {
 				pbRuns[i].Definition = domainToProtoAgentDefinition(defResult)
 			}
 		}
 
-		if includeSet["steps"] {
+		if includedRoot("steps") {
 			eventRepo := h.repos.NewAgentRunEventRepo()
 			events, eventsErr := eventRepo.ListByRunID(ctx, runs[i].ID)
 			if eventsErr == nil {
@@ -916,6 +929,12 @@ func (h *agentHandler) ListAgentMemories(ctx context.Context, req *pb.ListAgentM
 	if req.GetQuery() != "" {
 		filterQuery = true
 		search = pgtype.Text{String: req.GetQuery(), Valid: true}
+	}
+
+	if req.Cursor != nil && *req.Cursor != "" {
+		if !strings.HasPrefix(*req.Cursor, string(id.AgentMemoryIDPrefix)+"_") {
+			return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewParameterInvalidError("Invalid pagination cursor.", "cursor"))
+		}
 	}
 
 	params := sqlc.ListAgentMemoriesByAccountCursorParams{
@@ -1332,6 +1351,20 @@ func (h *agentHandler) AcknowledgeAgentAlert(ctx context.Context, req *pb.Acknow
 	}
 
 	return &pb.AcknowledgeAgentAlertResponse{Alert: domainAlertToProto(result)}, nil
+}
+
+// nestedIncludes filters an includes slice to the sub-paths under a parent
+// key, stripped of the parent prefix. For includes=["definition.role","config"]
+// and parent="definition" it returns ["role"]. Returns nil when nothing matches.
+func nestedIncludes(includes []string, parent string) []string {
+	prefix := parent + "."
+	var out []string
+	for _, inc := range includes {
+		if strings.HasPrefix(inc, prefix) {
+			out = append(out, strings.TrimPrefix(inc, prefix))
+		}
+	}
+	return out
 }
 
 func parseTimestamp(s string) (time.Time, error) {

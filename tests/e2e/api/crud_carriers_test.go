@@ -260,8 +260,74 @@ func TestCarriers_IncludeServiceLevels(t *testing.T) {
 	sl := jsonObject(got, "service_levels")
 	require.NotNil(t, sl, "service_levels field should be present with ?include=service_levels")
 	assert.Equal(t, "list", jsonField(sl, "object"))
-	_, hasData := sl["data"].([]any)
-	assert.True(t, hasData, "service_levels.data should be an array")
+	data, hasData := sl["data"].([]any)
+	require.True(t, hasData, "service_levels.data should be an array")
+	require.GreaterOrEqual(t, len(data), 2, "seeded carrier %q should expose at least 2 service levels", SeedCarrierID)
+
+	for i, raw := range data {
+		item, ok := raw.(map[string]any)
+		require.True(t, ok, "service_levels.data[%d] should be an object", i)
+		assert.NotEmpty(t, jsonField(item, "id"), "service_levels.data[%d].id must be set", i)
+		assert.Equal(t, "service_level", jsonField(item, "object"), "service_levels.data[%d].object", i)
+		assert.NotEmpty(t, jsonField(item, "name"), "service_levels.data[%d].name must be set", i)
+	}
+}
+
+func TestCarriers_ListIncludeServiceLevels(t *testing.T) {
+	t.Parallel()
+	status, body, err := apiClient.GetListRaw(carriersPath, url.Values{"include": {"service_levels"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	got := parseJSON(body)
+	items, ok := got["data"].([]any)
+	require.True(t, ok, "list response should have a data array")
+
+	var seeded map[string]any
+	for _, raw := range items {
+		item, ok := raw.(map[string]any)
+		if !ok {
+			continue
+		}
+		if jsonField(item, "id") == SeedCarrierID {
+			seeded = item
+			break
+		}
+	}
+	require.NotNil(t, seeded, "seeded carrier %q should appear in the list", SeedCarrierID)
+
+	sl := jsonObject(seeded, "service_levels")
+	require.NotNil(t, sl, "service_levels should be present on list items with ?include=service_levels")
+	assert.Equal(t, "list", jsonField(sl, "object"))
+	data, hasData := sl["data"].([]any)
+	require.True(t, hasData, "service_levels.data should be an array")
+	require.GreaterOrEqual(t, len(data), 2, "seeded carrier %q should expose at least 2 service levels via list include", SeedCarrierID)
+
+	for i, raw := range data {
+		item, ok := raw.(map[string]any)
+		require.True(t, ok, "service_levels.data[%d] should be an object", i)
+		assert.NotEmpty(t, jsonField(item, "id"), "service_levels.data[%d].id must be set", i)
+		assert.Equal(t, "service_level", jsonField(item, "object"))
+		assert.NotEmpty(t, jsonField(item, "name"))
+	}
+}
+
+func TestCarriers_ListServiceLevelsNullWithoutInclude(t *testing.T) {
+	t.Parallel()
+	status, body, err := apiClient.GetListRaw(carriersPath, nil)
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	got := parseJSON(body)
+	items, ok := got["data"].([]any)
+	require.True(t, ok, "list response should have a data array")
+	require.NotEmpty(t, items, "list should contain at least one carrier")
+
+	for i, raw := range items {
+		item, ok := raw.(map[string]any)
+		require.True(t, ok, "data[%d] should be an object", i)
+		assert.Nil(t, item["service_levels"], "data[%d].service_levels should be null without ?include=service_levels", i)
+	}
 }
 
 func TestCarriers_UpdateOnlyName(t *testing.T) {

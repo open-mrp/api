@@ -25,7 +25,13 @@ func InventoryChangeLogPresenter(icl *pb.InventoryChangeLogInfo) apiresource.Inv
 				icl.QuantityUnitAbbreviation,
 				icl.QuantityUnitType,
 			),
-			Unit: nil, // Populated via include expansion
+			Unit: &apiresource.Unit{
+				ID:           icl.QuantityUnitId,
+				Object:       constants.ObjectTypeUnit,
+				Name:         icl.QuantityUnitName,
+				Abbreviation: icl.QuantityUnitAbbreviation,
+				Type:         constants.UnitType(icl.QuantityUnitType),
+			},
 		},
 		Item: &apiresource.Item{
 			ID:     icl.ItemId,

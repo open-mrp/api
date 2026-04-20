@@ -47,10 +47,21 @@ func AgentRunPresenter(r *pb.AgentRunInfo) apiresource.AgentRun {
 	}
 
 	if r.Definition != nil {
+		// Nested `definition.config` / `definition.tools` includes ride on the
+		// AgentDefinitionPresenter output (config is unmarshaled from the
+		// definition's config_json, tools from its Tools proto slice).
 		def := agentep.AgentDefinitionPresenter(r.Definition, nil)
-		def.Config = nil
-		def.Tools = nil
-		def.Role = nil
+		// `definition.role` — the AgentDefinitionPresenter only builds Role
+		// when a resolvedRole is passed, which requires the core-service
+		// client this package doesn't carry. Build a minimum-stub Role from
+		// the proto's role_id so the nested include materializes.
+		if r.Definition.RoleId != "" {
+			def.Role = &apiresource.Role{
+				ID:     r.Definition.RoleId,
+				Object: constants.ObjectTypeRole,
+				Owner:  apiresource.SystemOwner(),
+			}
+		}
 		run.Definition = &def
 	}
 

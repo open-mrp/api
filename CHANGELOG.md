@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.1](https://github.com/Augno/api/compare/v0.14.0...v0.14.1) (2026-04-20)
+
+
+### Bug Fixes
+
+* duplicate task management in pods ([#205](https://github.com/Augno/api/issues/205)) ([4e33ed8](https://github.com/Augno/api/commit/4e33ed86e0eda139df500f265f83eb162efe4bb2))
+
 ## [0.14.0](https://github.com/Augno/api/compare/v0.13.4...v0.14.0) (2026-04-17)
 
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.2](https://github.com/Augno/api/compare/v0.14.1...v0.14.2) (2026-04-20)
+
+
+### Bug Fixes
+
+* bug in our carrier queries failing to include service levels on request ([#207](https://github.com/Augno/api/issues/207)) ([6e6ad1b](https://github.com/Augno/api/commit/6e6ad1b3669edfdcbfd48588f0152348318dbdbe))
+
 ## [0.14.1](https://github.com/Augno/api/compare/v0.14.0...v0.14.1) (2026-04-20)
 
 

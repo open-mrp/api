@@ -10,14 +10,13 @@
 package core
 
 import (
-	reflect "reflect"
-	sync "sync"
-	unsafe "unsafe"
-
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
+	reflect "reflect"
+	sync "sync"
+	unsafe "unsafe"
 )
 
 const (
@@ -2380,9 +2379,13 @@ type CreateSalesOrderRequest struct {
 	ShipToPostalCode   *string `protobuf:"bytes,26,opt,name=ship_to_postal_code,json=shipToPostalCode,proto3,oneof" json:"ship_to_postal_code,omitempty"`
 	ShipToCountry      *string `protobuf:"bytes,27,opt,name=ship_to_country,json=shipToCountry,proto3,oneof" json:"ship_to_country,omitempty"`
 	// Lines to create with the order
-	Lines         []*CreateSalesOrderLineInput `protobuf:"bytes,28,rep,name=lines,proto3" json:"lines,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Lines []*CreateSalesOrderLineInput `protobuf:"bytes,28,rep,name=lines,proto3" json:"lines,omitempty"`
+	// Email contact recipients for order acknowledgement emails
+	AcknowledgementEmailContacts []*SalesOrderEmailContactInput `protobuf:"bytes,29,rep,name=acknowledgement_email_contacts,json=acknowledgementEmailContacts,proto3" json:"acknowledgement_email_contacts,omitempty"`
+	// Email contact recipients for invoice emails
+	InvoiceEmailContacts []*SalesOrderEmailContactInput `protobuf:"bytes,30,rep,name=invoice_email_contacts,json=invoiceEmailContacts,proto3" json:"invoice_email_contacts,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *CreateSalesOrderRequest) Reset() {
@@ -2611,6 +2614,64 @@ func (x *CreateSalesOrderRequest) GetLines() []*CreateSalesOrderLineInput {
 	return nil
 }
 
+func (x *CreateSalesOrderRequest) GetAcknowledgementEmailContacts() []*SalesOrderEmailContactInput {
+	if x != nil {
+		return x.AcknowledgementEmailContacts
+	}
+	return nil
+}
+
+func (x *CreateSalesOrderRequest) GetInvoiceEmailContacts() []*SalesOrderEmailContactInput {
+	if x != nil {
+		return x.InvoiceEmailContacts
+	}
+	return nil
+}
+
+type SalesOrderEmailContactInput struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	AccountUserId string                 `protobuf:"bytes,1,opt,name=account_user_id,json=accountUserId,proto3" json:"account_user_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SalesOrderEmailContactInput) Reset() {
+	*x = SalesOrderEmailContactInput{}
+	mi := &file_core_core_sales_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SalesOrderEmailContactInput) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SalesOrderEmailContactInput) ProtoMessage() {}
+
+func (x *SalesOrderEmailContactInput) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_sales_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SalesOrderEmailContactInput.ProtoReflect.Descriptor instead.
+func (*SalesOrderEmailContactInput) Descriptor() ([]byte, []int) {
+	return file_core_core_sales_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *SalesOrderEmailContactInput) GetAccountUserId() string {
+	if x != nil {
+		return x.AccountUserId
+	}
+	return ""
+}
+
 type CreateSalesOrderLineInput struct {
 	state                      protoimpl.MessageState `protogen:"open.v1"`
 	ProductId                  string                 `protobuf:"bytes,1,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
@@ -2632,7 +2693,7 @@ type CreateSalesOrderLineInput struct {
 
 func (x *CreateSalesOrderLineInput) Reset() {
 	*x = CreateSalesOrderLineInput{}
-	mi := &file_core_core_sales_proto_msgTypes[24]
+	mi := &file_core_core_sales_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2644,7 +2705,7 @@ func (x *CreateSalesOrderLineInput) String() string {
 func (*CreateSalesOrderLineInput) ProtoMessage() {}
 
 func (x *CreateSalesOrderLineInput) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_sales_proto_msgTypes[24]
+	mi := &file_core_core_sales_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2657,7 +2718,7 @@ func (x *CreateSalesOrderLineInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateSalesOrderLineInput.ProtoReflect.Descriptor instead.
 func (*CreateSalesOrderLineInput) Descriptor() ([]byte, []int) {
-	return file_core_core_sales_proto_rawDescGZIP(), []int{24}
+	return file_core_core_sales_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *CreateSalesOrderLineInput) GetProductId() string {
@@ -2760,7 +2821,7 @@ type CreateSalesOrderResponse struct {
 
 func (x *CreateSalesOrderResponse) Reset() {
 	*x = CreateSalesOrderResponse{}
-	mi := &file_core_core_sales_proto_msgTypes[25]
+	mi := &file_core_core_sales_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2772,7 +2833,7 @@ func (x *CreateSalesOrderResponse) String() string {
 func (*CreateSalesOrderResponse) ProtoMessage() {}
 
 func (x *CreateSalesOrderResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_sales_proto_msgTypes[25]
+	mi := &file_core_core_sales_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2785,7 +2846,7 @@ func (x *CreateSalesOrderResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateSalesOrderResponse.ProtoReflect.Descriptor instead.
 func (*CreateSalesOrderResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_sales_proto_rawDescGZIP(), []int{25}
+	return file_core_core_sales_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *CreateSalesOrderResponse) GetSalesOrder() *SalesOrderInfo {
@@ -2830,13 +2891,19 @@ type UpdateSalesOrderRequest struct {
 	IsAcknowledgmentSent *bool                  `protobuf:"varint,28,opt,name=is_acknowledgment_sent,json=isAcknowledgmentSent,proto3,oneof" json:"is_acknowledgment_sent,omitempty"`
 	PromisedAt           *timestamppb.Timestamp `protobuf:"bytes,29,opt,name=promised_at,json=promisedAt,proto3,oneof" json:"promised_at,omitempty"`
 	CustomerId           *string                `protobuf:"bytes,30,opt,name=customer_id,json=customerId,proto3,oneof" json:"customer_id,omitempty"`
+	// When set, replaces the acknowledgement email contacts on the order.
+	// An empty list clears all acknowledgement contacts; nil/unset leaves existing contacts untouched.
+	AcknowledgementEmailContacts *SalesOrderEmailContactList `protobuf:"bytes,31,opt,name=acknowledgement_email_contacts,json=acknowledgementEmailContacts,proto3,oneof" json:"acknowledgement_email_contacts,omitempty"`
+	// When set, replaces the invoice email contacts on the order.
+	// An empty list clears all invoice contacts; nil/unset leaves existing contacts untouched.
+	InvoiceEmailContacts *SalesOrderEmailContactList `protobuf:"bytes,32,opt,name=invoice_email_contacts,json=invoiceEmailContacts,proto3,oneof" json:"invoice_email_contacts,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
 
 func (x *UpdateSalesOrderRequest) Reset() {
 	*x = UpdateSalesOrderRequest{}
-	mi := &file_core_core_sales_proto_msgTypes[26]
+	mi := &file_core_core_sales_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2848,7 +2915,7 @@ func (x *UpdateSalesOrderRequest) String() string {
 func (*UpdateSalesOrderRequest) ProtoMessage() {}
 
 func (x *UpdateSalesOrderRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_sales_proto_msgTypes[26]
+	mi := &file_core_core_sales_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2861,7 +2928,7 @@ func (x *UpdateSalesOrderRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateSalesOrderRequest.ProtoReflect.Descriptor instead.
 func (*UpdateSalesOrderRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_sales_proto_rawDescGZIP(), []int{26}
+	return file_core_core_sales_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *UpdateSalesOrderRequest) GetId() string {
@@ -3074,6 +3141,64 @@ func (x *UpdateSalesOrderRequest) GetCustomerId() string {
 	return ""
 }
 
+func (x *UpdateSalesOrderRequest) GetAcknowledgementEmailContacts() *SalesOrderEmailContactList {
+	if x != nil {
+		return x.AcknowledgementEmailContacts
+	}
+	return nil
+}
+
+func (x *UpdateSalesOrderRequest) GetInvoiceEmailContacts() *SalesOrderEmailContactList {
+	if x != nil {
+		return x.InvoiceEmailContacts
+	}
+	return nil
+}
+
+type SalesOrderEmailContactList struct {
+	state         protoimpl.MessageState         `protogen:"open.v1"`
+	Contacts      []*SalesOrderEmailContactInput `protobuf:"bytes,1,rep,name=contacts,proto3" json:"contacts,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SalesOrderEmailContactList) Reset() {
+	*x = SalesOrderEmailContactList{}
+	mi := &file_core_core_sales_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SalesOrderEmailContactList) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SalesOrderEmailContactList) ProtoMessage() {}
+
+func (x *SalesOrderEmailContactList) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_sales_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SalesOrderEmailContactList.ProtoReflect.Descriptor instead.
+func (*SalesOrderEmailContactList) Descriptor() ([]byte, []int) {
+	return file_core_core_sales_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *SalesOrderEmailContactList) GetContacts() []*SalesOrderEmailContactInput {
+	if x != nil {
+		return x.Contacts
+	}
+	return nil
+}
+
 type UpdateSalesOrderResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	SalesOrder    *SalesOrderInfo        `protobuf:"bytes,1,opt,name=sales_order,json=salesOrder,proto3" json:"sales_order,omitempty"`
@@ -3083,7 +3208,7 @@ type UpdateSalesOrderResponse struct {
 
 func (x *UpdateSalesOrderResponse) Reset() {
 	*x = UpdateSalesOrderResponse{}
-	mi := &file_core_core_sales_proto_msgTypes[27]
+	mi := &file_core_core_sales_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3095,7 +3220,7 @@ func (x *UpdateSalesOrderResponse) String() string {
 func (*UpdateSalesOrderResponse) ProtoMessage() {}
 
 func (x *UpdateSalesOrderResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_sales_proto_msgTypes[27]
+	mi := &file_core_core_sales_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3108,7 +3233,7 @@ func (x *UpdateSalesOrderResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateSalesOrderResponse.ProtoReflect.Descriptor instead.
 func (*UpdateSalesOrderResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_sales_proto_rawDescGZIP(), []int{27}
+	return file_core_core_sales_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *UpdateSalesOrderResponse) GetSalesOrder() *SalesOrderInfo {
@@ -3127,7 +3252,7 @@ type DeleteSalesOrderRequest struct {
 
 func (x *DeleteSalesOrderRequest) Reset() {
 	*x = DeleteSalesOrderRequest{}
-	mi := &file_core_core_sales_proto_msgTypes[28]
+	mi := &file_core_core_sales_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3139,7 +3264,7 @@ func (x *DeleteSalesOrderRequest) String() string {
 func (*DeleteSalesOrderRequest) ProtoMessage() {}
 
 func (x *DeleteSalesOrderRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_sales_proto_msgTypes[28]
+	mi := &file_core_core_sales_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3152,7 +3277,7 @@ func (x *DeleteSalesOrderRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteSalesOrderRequest.ProtoReflect.Descriptor instead.
 func (*DeleteSalesOrderRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_sales_proto_rawDescGZIP(), []int{28}
+	return file_core_core_sales_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *DeleteSalesOrderRequest) GetId() string {
@@ -3171,7 +3296,7 @@ type BulkDeleteSalesOrdersRequest struct {
 
 func (x *BulkDeleteSalesOrdersRequest) Reset() {
 	*x = BulkDeleteSalesOrdersRequest{}
-	mi := &file_core_core_sales_proto_msgTypes[29]
+	mi := &file_core_core_sales_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3183,7 +3308,7 @@ func (x *BulkDeleteSalesOrdersRequest) String() string {
 func (*BulkDeleteSalesOrdersRequest) ProtoMessage() {}
 
 func (x *BulkDeleteSalesOrdersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_sales_proto_msgTypes[29]
+	mi := &file_core_core_sales_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3196,7 +3321,7 @@ func (x *BulkDeleteSalesOrdersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BulkDeleteSalesOrdersRequest.ProtoReflect.Descriptor instead.
 func (*BulkDeleteSalesOrdersRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_sales_proto_rawDescGZIP(), []int{29}
+	return file_core_core_sales_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *BulkDeleteSalesOrdersRequest) GetIds() []string {
@@ -3217,7 +3342,7 @@ type ChangeSalesOrderStatusRequest struct {
 
 func (x *ChangeSalesOrderStatusRequest) Reset() {
 	*x = ChangeSalesOrderStatusRequest{}
-	mi := &file_core_core_sales_proto_msgTypes[30]
+	mi := &file_core_core_sales_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3229,7 +3354,7 @@ func (x *ChangeSalesOrderStatusRequest) String() string {
 func (*ChangeSalesOrderStatusRequest) ProtoMessage() {}
 
 func (x *ChangeSalesOrderStatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_sales_proto_msgTypes[30]
+	mi := &file_core_core_sales_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3242,7 +3367,7 @@ func (x *ChangeSalesOrderStatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChangeSalesOrderStatusRequest.ProtoReflect.Descriptor instead.
 func (*ChangeSalesOrderStatusRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_sales_proto_rawDescGZIP(), []int{30}
+	return file_core_core_sales_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *ChangeSalesOrderStatusRequest) GetId() string {
@@ -3275,7 +3400,7 @@ type ChangeSalesOrderStatusResponse struct {
 
 func (x *ChangeSalesOrderStatusResponse) Reset() {
 	*x = ChangeSalesOrderStatusResponse{}
-	mi := &file_core_core_sales_proto_msgTypes[31]
+	mi := &file_core_core_sales_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3287,7 +3412,7 @@ func (x *ChangeSalesOrderStatusResponse) String() string {
 func (*ChangeSalesOrderStatusResponse) ProtoMessage() {}
 
 func (x *ChangeSalesOrderStatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_sales_proto_msgTypes[31]
+	mi := &file_core_core_sales_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3300,7 +3425,7 @@ func (x *ChangeSalesOrderStatusResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChangeSalesOrderStatusResponse.ProtoReflect.Descriptor instead.
 func (*ChangeSalesOrderStatusResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_sales_proto_rawDescGZIP(), []int{31}
+	return file_core_core_sales_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *ChangeSalesOrderStatusResponse) GetSalesOrder() *SalesOrderInfo {
@@ -3322,7 +3447,7 @@ type CheckoutSalesOrderRequest struct {
 
 func (x *CheckoutSalesOrderRequest) Reset() {
 	*x = CheckoutSalesOrderRequest{}
-	mi := &file_core_core_sales_proto_msgTypes[32]
+	mi := &file_core_core_sales_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3334,7 +3459,7 @@ func (x *CheckoutSalesOrderRequest) String() string {
 func (*CheckoutSalesOrderRequest) ProtoMessage() {}
 
 func (x *CheckoutSalesOrderRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_sales_proto_msgTypes[32]
+	mi := &file_core_core_sales_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3347,7 +3472,7 @@ func (x *CheckoutSalesOrderRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CheckoutSalesOrderRequest.ProtoReflect.Descriptor instead.
 func (*CheckoutSalesOrderRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_sales_proto_rawDescGZIP(), []int{32}
+	return file_core_core_sales_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *CheckoutSalesOrderRequest) GetId() string {
@@ -3387,7 +3512,7 @@ type CheckoutSalesOrderResponse struct {
 
 func (x *CheckoutSalesOrderResponse) Reset() {
 	*x = CheckoutSalesOrderResponse{}
-	mi := &file_core_core_sales_proto_msgTypes[33]
+	mi := &file_core_core_sales_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3399,7 +3524,7 @@ func (x *CheckoutSalesOrderResponse) String() string {
 func (*CheckoutSalesOrderResponse) ProtoMessage() {}
 
 func (x *CheckoutSalesOrderResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_sales_proto_msgTypes[33]
+	mi := &file_core_core_sales_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3412,7 +3537,7 @@ func (x *CheckoutSalesOrderResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CheckoutSalesOrderResponse.ProtoReflect.Descriptor instead.
 func (*CheckoutSalesOrderResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_sales_proto_rawDescGZIP(), []int{33}
+	return file_core_core_sales_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *CheckoutSalesOrderResponse) GetCheckoutUrl() string {
@@ -3431,7 +3556,7 @@ type CreateSalesOrderProductionRunRequest struct {
 
 func (x *CreateSalesOrderProductionRunRequest) Reset() {
 	*x = CreateSalesOrderProductionRunRequest{}
-	mi := &file_core_core_sales_proto_msgTypes[34]
+	mi := &file_core_core_sales_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3443,7 +3568,7 @@ func (x *CreateSalesOrderProductionRunRequest) String() string {
 func (*CreateSalesOrderProductionRunRequest) ProtoMessage() {}
 
 func (x *CreateSalesOrderProductionRunRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_sales_proto_msgTypes[34]
+	mi := &file_core_core_sales_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3456,7 +3581,7 @@ func (x *CreateSalesOrderProductionRunRequest) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use CreateSalesOrderProductionRunRequest.ProtoReflect.Descriptor instead.
 func (*CreateSalesOrderProductionRunRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_sales_proto_rawDescGZIP(), []int{34}
+	return file_core_core_sales_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *CreateSalesOrderProductionRunRequest) GetId() string {
@@ -3475,7 +3600,7 @@ type CreateSalesOrderProductionRunResponse struct {
 
 func (x *CreateSalesOrderProductionRunResponse) Reset() {
 	*x = CreateSalesOrderProductionRunResponse{}
-	mi := &file_core_core_sales_proto_msgTypes[35]
+	mi := &file_core_core_sales_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3487,7 +3612,7 @@ func (x *CreateSalesOrderProductionRunResponse) String() string {
 func (*CreateSalesOrderProductionRunResponse) ProtoMessage() {}
 
 func (x *CreateSalesOrderProductionRunResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_sales_proto_msgTypes[35]
+	mi := &file_core_core_sales_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3500,7 +3625,7 @@ func (x *CreateSalesOrderProductionRunResponse) ProtoReflect() protoreflect.Mess
 
 // Deprecated: Use CreateSalesOrderProductionRunResponse.ProtoReflect.Descriptor instead.
 func (*CreateSalesOrderProductionRunResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_sales_proto_rawDescGZIP(), []int{35}
+	return file_core_core_sales_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *CreateSalesOrderProductionRunResponse) GetProductionRunId() string {
@@ -3532,7 +3657,7 @@ type CreateSalesOrderLineRequest struct {
 
 func (x *CreateSalesOrderLineRequest) Reset() {
 	*x = CreateSalesOrderLineRequest{}
-	mi := &file_core_core_sales_proto_msgTypes[36]
+	mi := &file_core_core_sales_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3544,7 +3669,7 @@ func (x *CreateSalesOrderLineRequest) String() string {
 func (*CreateSalesOrderLineRequest) ProtoMessage() {}
 
 func (x *CreateSalesOrderLineRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_sales_proto_msgTypes[36]
+	mi := &file_core_core_sales_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3557,7 +3682,7 @@ func (x *CreateSalesOrderLineRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateSalesOrderLineRequest.ProtoReflect.Descriptor instead.
 func (*CreateSalesOrderLineRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_sales_proto_rawDescGZIP(), []int{36}
+	return file_core_core_sales_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *CreateSalesOrderLineRequest) GetSalesOrderId() string {
@@ -3667,7 +3792,7 @@ type CreateSalesOrderLineResponse struct {
 
 func (x *CreateSalesOrderLineResponse) Reset() {
 	*x = CreateSalesOrderLineResponse{}
-	mi := &file_core_core_sales_proto_msgTypes[37]
+	mi := &file_core_core_sales_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3679,7 +3804,7 @@ func (x *CreateSalesOrderLineResponse) String() string {
 func (*CreateSalesOrderLineResponse) ProtoMessage() {}
 
 func (x *CreateSalesOrderLineResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_sales_proto_msgTypes[37]
+	mi := &file_core_core_sales_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3692,7 +3817,7 @@ func (x *CreateSalesOrderLineResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateSalesOrderLineResponse.ProtoReflect.Descriptor instead.
 func (*CreateSalesOrderLineResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_sales_proto_rawDescGZIP(), []int{37}
+	return file_core_core_sales_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *CreateSalesOrderLineResponse) GetSalesOrderLine() *SalesOrderLineInfo {
@@ -3725,7 +3850,7 @@ type UpdateSalesOrderLineRequest struct {
 
 func (x *UpdateSalesOrderLineRequest) Reset() {
 	*x = UpdateSalesOrderLineRequest{}
-	mi := &file_core_core_sales_proto_msgTypes[38]
+	mi := &file_core_core_sales_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3737,7 +3862,7 @@ func (x *UpdateSalesOrderLineRequest) String() string {
 func (*UpdateSalesOrderLineRequest) ProtoMessage() {}
 
 func (x *UpdateSalesOrderLineRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_sales_proto_msgTypes[38]
+	mi := &file_core_core_sales_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3750,7 +3875,7 @@ func (x *UpdateSalesOrderLineRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateSalesOrderLineRequest.ProtoReflect.Descriptor instead.
 func (*UpdateSalesOrderLineRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_sales_proto_rawDescGZIP(), []int{38}
+	return file_core_core_sales_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *UpdateSalesOrderLineRequest) GetSalesOrderId() string {
@@ -3867,7 +3992,7 @@ type UpdateSalesOrderLineResponse struct {
 
 func (x *UpdateSalesOrderLineResponse) Reset() {
 	*x = UpdateSalesOrderLineResponse{}
-	mi := &file_core_core_sales_proto_msgTypes[39]
+	mi := &file_core_core_sales_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3879,7 +4004,7 @@ func (x *UpdateSalesOrderLineResponse) String() string {
 func (*UpdateSalesOrderLineResponse) ProtoMessage() {}
 
 func (x *UpdateSalesOrderLineResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_sales_proto_msgTypes[39]
+	mi := &file_core_core_sales_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3892,7 +4017,7 @@ func (x *UpdateSalesOrderLineResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateSalesOrderLineResponse.ProtoReflect.Descriptor instead.
 func (*UpdateSalesOrderLineResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_sales_proto_rawDescGZIP(), []int{39}
+	return file_core_core_sales_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *UpdateSalesOrderLineResponse) GetSalesOrderLine() *SalesOrderLineInfo {
@@ -3912,7 +4037,7 @@ type DeleteSalesOrderLineRequest struct {
 
 func (x *DeleteSalesOrderLineRequest) Reset() {
 	*x = DeleteSalesOrderLineRequest{}
-	mi := &file_core_core_sales_proto_msgTypes[40]
+	mi := &file_core_core_sales_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3924,7 +4049,7 @@ func (x *DeleteSalesOrderLineRequest) String() string {
 func (*DeleteSalesOrderLineRequest) ProtoMessage() {}
 
 func (x *DeleteSalesOrderLineRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_sales_proto_msgTypes[40]
+	mi := &file_core_core_sales_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3937,7 +4062,7 @@ func (x *DeleteSalesOrderLineRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteSalesOrderLineRequest.ProtoReflect.Descriptor instead.
 func (*DeleteSalesOrderLineRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_sales_proto_rawDescGZIP(), []int{40}
+	return file_core_core_sales_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *DeleteSalesOrderLineRequest) GetSalesOrderId() string {
@@ -3969,7 +4094,7 @@ type VolumeDiscountTierInfo struct {
 
 func (x *VolumeDiscountTierInfo) Reset() {
 	*x = VolumeDiscountTierInfo{}
-	mi := &file_core_core_sales_proto_msgTypes[41]
+	mi := &file_core_core_sales_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3981,7 +4106,7 @@ func (x *VolumeDiscountTierInfo) String() string {
 func (*VolumeDiscountTierInfo) ProtoMessage() {}
 
 func (x *VolumeDiscountTierInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_sales_proto_msgTypes[41]
+	mi := &file_core_core_sales_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3994,7 +4119,7 @@ func (x *VolumeDiscountTierInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VolumeDiscountTierInfo.ProtoReflect.Descriptor instead.
 func (*VolumeDiscountTierInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_sales_proto_rawDescGZIP(), []int{41}
+	return file_core_core_sales_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *VolumeDiscountTierInfo) GetId() string {
@@ -4057,7 +4182,7 @@ type VolumeDiscountCustomerGroupInfo struct {
 
 func (x *VolumeDiscountCustomerGroupInfo) Reset() {
 	*x = VolumeDiscountCustomerGroupInfo{}
-	mi := &file_core_core_sales_proto_msgTypes[42]
+	mi := &file_core_core_sales_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4069,7 +4194,7 @@ func (x *VolumeDiscountCustomerGroupInfo) String() string {
 func (*VolumeDiscountCustomerGroupInfo) ProtoMessage() {}
 
 func (x *VolumeDiscountCustomerGroupInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_sales_proto_msgTypes[42]
+	mi := &file_core_core_sales_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4082,7 +4207,7 @@ func (x *VolumeDiscountCustomerGroupInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VolumeDiscountCustomerGroupInfo.ProtoReflect.Descriptor instead.
 func (*VolumeDiscountCustomerGroupInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_sales_proto_rawDescGZIP(), []int{42}
+	return file_core_core_sales_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *VolumeDiscountCustomerGroupInfo) GetId() string {
@@ -4116,7 +4241,7 @@ type VolumeDiscountProductLineInfo struct {
 
 func (x *VolumeDiscountProductLineInfo) Reset() {
 	*x = VolumeDiscountProductLineInfo{}
-	mi := &file_core_core_sales_proto_msgTypes[43]
+	mi := &file_core_core_sales_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4128,7 +4253,7 @@ func (x *VolumeDiscountProductLineInfo) String() string {
 func (*VolumeDiscountProductLineInfo) ProtoMessage() {}
 
 func (x *VolumeDiscountProductLineInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_sales_proto_msgTypes[43]
+	mi := &file_core_core_sales_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4141,7 +4266,7 @@ func (x *VolumeDiscountProductLineInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VolumeDiscountProductLineInfo.ProtoReflect.Descriptor instead.
 func (*VolumeDiscountProductLineInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_sales_proto_rawDescGZIP(), []int{43}
+	return file_core_core_sales_proto_rawDescGZIP(), []int{45}
 }
 
 func (x *VolumeDiscountProductLineInfo) GetId() string {
@@ -4168,7 +4293,7 @@ type VolumeDiscountCategoryInfo struct {
 
 func (x *VolumeDiscountCategoryInfo) Reset() {
 	*x = VolumeDiscountCategoryInfo{}
-	mi := &file_core_core_sales_proto_msgTypes[44]
+	mi := &file_core_core_sales_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4180,7 +4305,7 @@ func (x *VolumeDiscountCategoryInfo) String() string {
 func (*VolumeDiscountCategoryInfo) ProtoMessage() {}
 
 func (x *VolumeDiscountCategoryInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_sales_proto_msgTypes[44]
+	mi := &file_core_core_sales_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4193,7 +4318,7 @@ func (x *VolumeDiscountCategoryInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VolumeDiscountCategoryInfo.ProtoReflect.Descriptor instead.
 func (*VolumeDiscountCategoryInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_sales_proto_rawDescGZIP(), []int{44}
+	return file_core_core_sales_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *VolumeDiscountCategoryInfo) GetId() string {
@@ -4220,7 +4345,7 @@ type VolumeDiscountAttributeInfo struct {
 
 func (x *VolumeDiscountAttributeInfo) Reset() {
 	*x = VolumeDiscountAttributeInfo{}
-	mi := &file_core_core_sales_proto_msgTypes[45]
+	mi := &file_core_core_sales_proto_msgTypes[47]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4232,7 +4357,7 @@ func (x *VolumeDiscountAttributeInfo) String() string {
 func (*VolumeDiscountAttributeInfo) ProtoMessage() {}
 
 func (x *VolumeDiscountAttributeInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_sales_proto_msgTypes[45]
+	mi := &file_core_core_sales_proto_msgTypes[47]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4245,7 +4370,7 @@ func (x *VolumeDiscountAttributeInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VolumeDiscountAttributeInfo.ProtoReflect.Descriptor instead.
 func (*VolumeDiscountAttributeInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_sales_proto_rawDescGZIP(), []int{45}
+	return file_core_core_sales_proto_rawDescGZIP(), []int{47}
 }
 
 func (x *VolumeDiscountAttributeInfo) GetId() string {
@@ -4273,7 +4398,7 @@ type VolumeDiscountUnitInfo struct {
 
 func (x *VolumeDiscountUnitInfo) Reset() {
 	*x = VolumeDiscountUnitInfo{}
-	mi := &file_core_core_sales_proto_msgTypes[46]
+	mi := &file_core_core_sales_proto_msgTypes[48]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4285,7 +4410,7 @@ func (x *VolumeDiscountUnitInfo) String() string {
 func (*VolumeDiscountUnitInfo) ProtoMessage() {}
 
 func (x *VolumeDiscountUnitInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_sales_proto_msgTypes[46]
+	mi := &file_core_core_sales_proto_msgTypes[48]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4298,7 +4423,7 @@ func (x *VolumeDiscountUnitInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VolumeDiscountUnitInfo.ProtoReflect.Descriptor instead.
 func (*VolumeDiscountUnitInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_sales_proto_rawDescGZIP(), []int{46}
+	return file_core_core_sales_proto_rawDescGZIP(), []int{48}
 }
 
 func (x *VolumeDiscountUnitInfo) GetId() string {
@@ -4340,7 +4465,7 @@ type VolumeDiscountInfo struct {
 
 func (x *VolumeDiscountInfo) Reset() {
 	*x = VolumeDiscountInfo{}
-	mi := &file_core_core_sales_proto_msgTypes[47]
+	mi := &file_core_core_sales_proto_msgTypes[49]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4352,7 +4477,7 @@ func (x *VolumeDiscountInfo) String() string {
 func (*VolumeDiscountInfo) ProtoMessage() {}
 
 func (x *VolumeDiscountInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_sales_proto_msgTypes[47]
+	mi := &file_core_core_sales_proto_msgTypes[49]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4365,7 +4490,7 @@ func (x *VolumeDiscountInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VolumeDiscountInfo.ProtoReflect.Descriptor instead.
 func (*VolumeDiscountInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_sales_proto_rawDescGZIP(), []int{47}
+	return file_core_core_sales_proto_rawDescGZIP(), []int{49}
 }
 
 func (x *VolumeDiscountInfo) GetId() string {
@@ -4451,7 +4576,7 @@ type ListVolumeDiscountsRequest struct {
 
 func (x *ListVolumeDiscountsRequest) Reset() {
 	*x = ListVolumeDiscountsRequest{}
-	mi := &file_core_core_sales_proto_msgTypes[48]
+	mi := &file_core_core_sales_proto_msgTypes[50]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4463,7 +4588,7 @@ func (x *ListVolumeDiscountsRequest) String() string {
 func (*ListVolumeDiscountsRequest) ProtoMessage() {}
 
 func (x *ListVolumeDiscountsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_sales_proto_msgTypes[48]
+	mi := &file_core_core_sales_proto_msgTypes[50]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4476,7 +4601,7 @@ func (x *ListVolumeDiscountsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListVolumeDiscountsRequest.ProtoReflect.Descriptor instead.
 func (*ListVolumeDiscountsRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_sales_proto_rawDescGZIP(), []int{48}
+	return file_core_core_sales_proto_rawDescGZIP(), []int{50}
 }
 
 func (x *ListVolumeDiscountsRequest) GetCursor() string {
@@ -4517,7 +4642,7 @@ type ListVolumeDiscountsResponse struct {
 
 func (x *ListVolumeDiscountsResponse) Reset() {
 	*x = ListVolumeDiscountsResponse{}
-	mi := &file_core_core_sales_proto_msgTypes[49]
+	mi := &file_core_core_sales_proto_msgTypes[51]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4529,7 +4654,7 @@ func (x *ListVolumeDiscountsResponse) String() string {
 func (*ListVolumeDiscountsResponse) ProtoMessage() {}
 
 func (x *ListVolumeDiscountsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_sales_proto_msgTypes[49]
+	mi := &file_core_core_sales_proto_msgTypes[51]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4542,7 +4667,7 @@ func (x *ListVolumeDiscountsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListVolumeDiscountsResponse.ProtoReflect.Descriptor instead.
 func (*ListVolumeDiscountsResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_sales_proto_rawDescGZIP(), []int{49}
+	return file_core_core_sales_proto_rawDescGZIP(), []int{51}
 }
 
 func (x *ListVolumeDiscountsResponse) GetVolumeDiscounts() []*VolumeDiscountInfo {
@@ -4570,7 +4695,7 @@ type GetVolumeDiscountRequest struct {
 
 func (x *GetVolumeDiscountRequest) Reset() {
 	*x = GetVolumeDiscountRequest{}
-	mi := &file_core_core_sales_proto_msgTypes[50]
+	mi := &file_core_core_sales_proto_msgTypes[52]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4582,7 +4707,7 @@ func (x *GetVolumeDiscountRequest) String() string {
 func (*GetVolumeDiscountRequest) ProtoMessage() {}
 
 func (x *GetVolumeDiscountRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_sales_proto_msgTypes[50]
+	mi := &file_core_core_sales_proto_msgTypes[52]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4595,7 +4720,7 @@ func (x *GetVolumeDiscountRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetVolumeDiscountRequest.ProtoReflect.Descriptor instead.
 func (*GetVolumeDiscountRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_sales_proto_rawDescGZIP(), []int{50}
+	return file_core_core_sales_proto_rawDescGZIP(), []int{52}
 }
 
 func (x *GetVolumeDiscountRequest) GetId() string {
@@ -4621,7 +4746,7 @@ type GetVolumeDiscountResponse struct {
 
 func (x *GetVolumeDiscountResponse) Reset() {
 	*x = GetVolumeDiscountResponse{}
-	mi := &file_core_core_sales_proto_msgTypes[51]
+	mi := &file_core_core_sales_proto_msgTypes[53]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4633,7 +4758,7 @@ func (x *GetVolumeDiscountResponse) String() string {
 func (*GetVolumeDiscountResponse) ProtoMessage() {}
 
 func (x *GetVolumeDiscountResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_sales_proto_msgTypes[51]
+	mi := &file_core_core_sales_proto_msgTypes[53]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4646,7 +4771,7 @@ func (x *GetVolumeDiscountResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetVolumeDiscountResponse.ProtoReflect.Descriptor instead.
 func (*GetVolumeDiscountResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_sales_proto_rawDescGZIP(), []int{51}
+	return file_core_core_sales_proto_rawDescGZIP(), []int{53}
 }
 
 func (x *GetVolumeDiscountResponse) GetVolumeDiscount() *VolumeDiscountInfo {
@@ -4668,7 +4793,7 @@ type CreateVolumeDiscountTierInput struct {
 
 func (x *CreateVolumeDiscountTierInput) Reset() {
 	*x = CreateVolumeDiscountTierInput{}
-	mi := &file_core_core_sales_proto_msgTypes[52]
+	mi := &file_core_core_sales_proto_msgTypes[54]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4680,7 +4805,7 @@ func (x *CreateVolumeDiscountTierInput) String() string {
 func (*CreateVolumeDiscountTierInput) ProtoMessage() {}
 
 func (x *CreateVolumeDiscountTierInput) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_sales_proto_msgTypes[52]
+	mi := &file_core_core_sales_proto_msgTypes[54]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4693,7 +4818,7 @@ func (x *CreateVolumeDiscountTierInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateVolumeDiscountTierInput.ProtoReflect.Descriptor instead.
 func (*CreateVolumeDiscountTierInput) Descriptor() ([]byte, []int) {
-	return file_core_core_sales_proto_rawDescGZIP(), []int{52}
+	return file_core_core_sales_proto_rawDescGZIP(), []int{54}
 }
 
 func (x *CreateVolumeDiscountTierInput) GetName() string {
@@ -4739,7 +4864,7 @@ type CreateVolumeDiscountRequest struct {
 
 func (x *CreateVolumeDiscountRequest) Reset() {
 	*x = CreateVolumeDiscountRequest{}
-	mi := &file_core_core_sales_proto_msgTypes[53]
+	mi := &file_core_core_sales_proto_msgTypes[55]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4751,7 +4876,7 @@ func (x *CreateVolumeDiscountRequest) String() string {
 func (*CreateVolumeDiscountRequest) ProtoMessage() {}
 
 func (x *CreateVolumeDiscountRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_sales_proto_msgTypes[53]
+	mi := &file_core_core_sales_proto_msgTypes[55]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4764,7 +4889,7 @@ func (x *CreateVolumeDiscountRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateVolumeDiscountRequest.ProtoReflect.Descriptor instead.
 func (*CreateVolumeDiscountRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_sales_proto_rawDescGZIP(), []int{53}
+	return file_core_core_sales_proto_rawDescGZIP(), []int{55}
 }
 
 func (x *CreateVolumeDiscountRequest) GetName() string {
@@ -4825,7 +4950,7 @@ type CreateVolumeDiscountResponse struct {
 
 func (x *CreateVolumeDiscountResponse) Reset() {
 	*x = CreateVolumeDiscountResponse{}
-	mi := &file_core_core_sales_proto_msgTypes[54]
+	mi := &file_core_core_sales_proto_msgTypes[56]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4837,7 +4962,7 @@ func (x *CreateVolumeDiscountResponse) String() string {
 func (*CreateVolumeDiscountResponse) ProtoMessage() {}
 
 func (x *CreateVolumeDiscountResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_sales_proto_msgTypes[54]
+	mi := &file_core_core_sales_proto_msgTypes[56]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4850,7 +4975,7 @@ func (x *CreateVolumeDiscountResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateVolumeDiscountResponse.ProtoReflect.Descriptor instead.
 func (*CreateVolumeDiscountResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_sales_proto_rawDescGZIP(), []int{54}
+	return file_core_core_sales_proto_rawDescGZIP(), []int{56}
 }
 
 func (x *CreateVolumeDiscountResponse) GetVolumeDiscount() *VolumeDiscountInfo {
@@ -4873,7 +4998,7 @@ type UpdateVolumeDiscountTierInput struct {
 
 func (x *UpdateVolumeDiscountTierInput) Reset() {
 	*x = UpdateVolumeDiscountTierInput{}
-	mi := &file_core_core_sales_proto_msgTypes[55]
+	mi := &file_core_core_sales_proto_msgTypes[57]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4885,7 +5010,7 @@ func (x *UpdateVolumeDiscountTierInput) String() string {
 func (*UpdateVolumeDiscountTierInput) ProtoMessage() {}
 
 func (x *UpdateVolumeDiscountTierInput) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_sales_proto_msgTypes[55]
+	mi := &file_core_core_sales_proto_msgTypes[57]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4898,7 +5023,7 @@ func (x *UpdateVolumeDiscountTierInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateVolumeDiscountTierInput.ProtoReflect.Descriptor instead.
 func (*UpdateVolumeDiscountTierInput) Descriptor() ([]byte, []int) {
-	return file_core_core_sales_proto_rawDescGZIP(), []int{55}
+	return file_core_core_sales_proto_rawDescGZIP(), []int{57}
 }
 
 func (x *UpdateVolumeDiscountTierInput) GetId() string {
@@ -4958,7 +5083,7 @@ type UpdateVolumeDiscountRequest struct {
 
 func (x *UpdateVolumeDiscountRequest) Reset() {
 	*x = UpdateVolumeDiscountRequest{}
-	mi := &file_core_core_sales_proto_msgTypes[56]
+	mi := &file_core_core_sales_proto_msgTypes[58]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4970,7 +5095,7 @@ func (x *UpdateVolumeDiscountRequest) String() string {
 func (*UpdateVolumeDiscountRequest) ProtoMessage() {}
 
 func (x *UpdateVolumeDiscountRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_sales_proto_msgTypes[56]
+	mi := &file_core_core_sales_proto_msgTypes[58]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4983,7 +5108,7 @@ func (x *UpdateVolumeDiscountRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateVolumeDiscountRequest.ProtoReflect.Descriptor instead.
 func (*UpdateVolumeDiscountRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_sales_proto_rawDescGZIP(), []int{56}
+	return file_core_core_sales_proto_rawDescGZIP(), []int{58}
 }
 
 func (x *UpdateVolumeDiscountRequest) GetId() string {
@@ -5093,7 +5218,7 @@ type UpdateVolumeDiscountResponse struct {
 
 func (x *UpdateVolumeDiscountResponse) Reset() {
 	*x = UpdateVolumeDiscountResponse{}
-	mi := &file_core_core_sales_proto_msgTypes[57]
+	mi := &file_core_core_sales_proto_msgTypes[59]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5105,7 +5230,7 @@ func (x *UpdateVolumeDiscountResponse) String() string {
 func (*UpdateVolumeDiscountResponse) ProtoMessage() {}
 
 func (x *UpdateVolumeDiscountResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_sales_proto_msgTypes[57]
+	mi := &file_core_core_sales_proto_msgTypes[59]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5118,7 +5243,7 @@ func (x *UpdateVolumeDiscountResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateVolumeDiscountResponse.ProtoReflect.Descriptor instead.
 func (*UpdateVolumeDiscountResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_sales_proto_rawDescGZIP(), []int{57}
+	return file_core_core_sales_proto_rawDescGZIP(), []int{59}
 }
 
 func (x *UpdateVolumeDiscountResponse) GetVolumeDiscount() *VolumeDiscountInfo {
@@ -5137,7 +5262,7 @@ type DeleteVolumeDiscountRequest struct {
 
 func (x *DeleteVolumeDiscountRequest) Reset() {
 	*x = DeleteVolumeDiscountRequest{}
-	mi := &file_core_core_sales_proto_msgTypes[58]
+	mi := &file_core_core_sales_proto_msgTypes[60]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5149,7 +5274,7 @@ func (x *DeleteVolumeDiscountRequest) String() string {
 func (*DeleteVolumeDiscountRequest) ProtoMessage() {}
 
 func (x *DeleteVolumeDiscountRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_sales_proto_msgTypes[58]
+	mi := &file_core_core_sales_proto_msgTypes[60]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5162,7 +5287,7 @@ func (x *DeleteVolumeDiscountRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteVolumeDiscountRequest.ProtoReflect.Descriptor instead.
 func (*DeleteVolumeDiscountRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_sales_proto_rawDescGZIP(), []int{58}
+	return file_core_core_sales_proto_rawDescGZIP(), []int{60}
 }
 
 func (x *DeleteVolumeDiscountRequest) GetId() string {
@@ -5184,7 +5309,7 @@ type CreateCustomerCheckoutSessionRequest struct {
 
 func (x *CreateCustomerCheckoutSessionRequest) Reset() {
 	*x = CreateCustomerCheckoutSessionRequest{}
-	mi := &file_core_core_sales_proto_msgTypes[59]
+	mi := &file_core_core_sales_proto_msgTypes[61]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5196,7 +5321,7 @@ func (x *CreateCustomerCheckoutSessionRequest) String() string {
 func (*CreateCustomerCheckoutSessionRequest) ProtoMessage() {}
 
 func (x *CreateCustomerCheckoutSessionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_sales_proto_msgTypes[59]
+	mi := &file_core_core_sales_proto_msgTypes[61]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5209,7 +5334,7 @@ func (x *CreateCustomerCheckoutSessionRequest) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use CreateCustomerCheckoutSessionRequest.ProtoReflect.Descriptor instead.
 func (*CreateCustomerCheckoutSessionRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_sales_proto_rawDescGZIP(), []int{59}
+	return file_core_core_sales_proto_rawDescGZIP(), []int{61}
 }
 
 func (x *CreateCustomerCheckoutSessionRequest) GetOrderId() string {
@@ -5249,7 +5374,7 @@ type CreateCustomerCheckoutSessionResponse struct {
 
 func (x *CreateCustomerCheckoutSessionResponse) Reset() {
 	*x = CreateCustomerCheckoutSessionResponse{}
-	mi := &file_core_core_sales_proto_msgTypes[60]
+	mi := &file_core_core_sales_proto_msgTypes[62]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5261,7 +5386,7 @@ func (x *CreateCustomerCheckoutSessionResponse) String() string {
 func (*CreateCustomerCheckoutSessionResponse) ProtoMessage() {}
 
 func (x *CreateCustomerCheckoutSessionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_sales_proto_msgTypes[60]
+	mi := &file_core_core_sales_proto_msgTypes[62]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5274,7 +5399,7 @@ func (x *CreateCustomerCheckoutSessionResponse) ProtoReflect() protoreflect.Mess
 
 // Deprecated: Use CreateCustomerCheckoutSessionResponse.ProtoReflect.Descriptor instead.
 func (*CreateCustomerCheckoutSessionResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_sales_proto_rawDescGZIP(), []int{60}
+	return file_core_core_sales_proto_rawDescGZIP(), []int{62}
 }
 
 func (x *CreateCustomerCheckoutSessionResponse) GetClientSecret() string {
@@ -5631,7 +5756,7 @@ const file_core_core_sales_proto_rawDesc = "" +
 	"\x11_buyer_account_id\"N\n" +
 	"\x15GetSalesOrderResponse\x125\n" +
 	"\vsales_order\x18\x01 \x01(\v2\x14.core.SalesOrderInfoR\n" +
-	"salesOrder\"\xae\x0e\n" +
+	"salesOrder\"\xf0\x0f\n" +
 	"\x17CreateSalesOrderRequest\x12(\n" +
 	"\x10buyer_account_id\x18\x01 \x01(\tR\x0ebuyerAccountId\x121\n" +
 	"\x12customer_po_number\x18\x02 \x01(\tH\x00R\x10customerPoNumber\x88\x01\x01\x12\x17\n" +
@@ -5666,7 +5791,9 @@ const file_core_core_sales_proto_rawDesc = "" +
 	"\rship_to_state\x18\x19 \x01(\tH\x15R\vshipToState\x88\x01\x01\x122\n" +
 	"\x13ship_to_postal_code\x18\x1a \x01(\tH\x16R\x10shipToPostalCode\x88\x01\x01\x12+\n" +
 	"\x0fship_to_country\x18\x1b \x01(\tH\x17R\rshipToCountry\x88\x01\x01\x125\n" +
-	"\x05lines\x18\x1c \x03(\v2\x1f.core.CreateSalesOrderLineInputR\x05linesB\x15\n" +
+	"\x05lines\x18\x1c \x03(\v2\x1f.core.CreateSalesOrderLineInputR\x05lines\x12g\n" +
+	"\x1eacknowledgement_email_contacts\x18\x1d \x03(\v2!.core.SalesOrderEmailContactInputR\x1cacknowledgementEmailContacts\x12W\n" +
+	"\x16invoice_email_contacts\x18\x1e \x03(\v2!.core.SalesOrderEmailContactInputR\x14invoiceEmailContactsB\x15\n" +
 	"\x13_customer_po_numberB\a\n" +
 	"\x05_noteB\r\n" +
 	"\v_carrier_idB\x13\n" +
@@ -5690,7 +5817,9 @@ const file_core_core_sales_proto_rawDesc = "" +
 	"\x11_ship_to_localityB\x10\n" +
 	"\x0e_ship_to_stateB\x16\n" +
 	"\x14_ship_to_postal_codeB\x12\n" +
-	"\x10_ship_to_country\"\xa2\x06\n" +
+	"\x10_ship_to_country\"E\n" +
+	"\x1bSalesOrderEmailContactInput\x12&\n" +
+	"\x0faccount_user_id\x18\x01 \x01(\tR\raccountUserId\"\xa2\x06\n" +
 	"\x19CreateSalesOrderLineInput\x12\x1d\n" +
 	"\n" +
 	"product_id\x18\x01 \x01(\tR\tproductId\x12\x1c\n" +
@@ -5717,7 +5846,7 @@ const file_core_core_sales_proto_rawDesc = "" +
 	"\x11_edi_line_item_id\"Q\n" +
 	"\x18CreateSalesOrderResponse\x125\n" +
 	"\vsales_order\x18\x01 \x01(\v2\x14.core.SalesOrderInfoR\n" +
-	"salesOrder\"\xc7\x0f\n" +
+	"salesOrder\"\xcf\x11\n" +
 	"\x17UpdateSalesOrderRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x121\n" +
 	"\x12customer_po_number\x18\x02 \x01(\tH\x00R\x10customerPoNumber\x88\x01\x01\x12\x17\n" +
@@ -5756,7 +5885,9 @@ const file_core_core_sales_proto_rawDesc = "" +
 	"\vpromised_at\x18\x1d \x01(\v2\x1a.google.protobuf.TimestampH\x1bR\n" +
 	"promisedAt\x88\x01\x01\x12$\n" +
 	"\vcustomer_id\x18\x1e \x01(\tH\x1cR\n" +
-	"customerId\x88\x01\x01B\x15\n" +
+	"customerId\x88\x01\x01\x12k\n" +
+	"\x1eacknowledgement_email_contacts\x18\x1f \x01(\v2 .core.SalesOrderEmailContactListH\x1dR\x1cacknowledgementEmailContacts\x88\x01\x01\x12[\n" +
+	"\x16invoice_email_contacts\x18  \x01(\v2 .core.SalesOrderEmailContactListH\x1eR\x14invoiceEmailContacts\x88\x01\x01B\x15\n" +
 	"\x13_customer_po_numberB\a\n" +
 	"\x05_noteB\r\n" +
 	"\v_carrier_idB\x13\n" +
@@ -5785,7 +5916,11 @@ const file_core_core_sales_proto_rawDesc = "" +
 	"\a_numberB\x19\n" +
 	"\x17_is_acknowledgment_sentB\x0e\n" +
 	"\f_promised_atB\x0e\n" +
-	"\f_customer_id\"Q\n" +
+	"\f_customer_idB!\n" +
+	"\x1f_acknowledgement_email_contactsB\x19\n" +
+	"\x17_invoice_email_contacts\"[\n" +
+	"\x1aSalesOrderEmailContactList\x12=\n" +
+	"\bcontacts\x18\x01 \x03(\v2!.core.SalesOrderEmailContactInputR\bcontacts\"Q\n" +
 	"\x18UpdateSalesOrderResponse\x125\n" +
 	"\vsales_order\x18\x01 \x01(\v2\x14.core.SalesOrderInfoR\n" +
 	"salesOrder\")\n" +
@@ -6042,7 +6177,7 @@ func file_core_core_sales_proto_rawDescGZIP() []byte {
 	return file_core_core_sales_proto_rawDescData
 }
 
-var file_core_core_sales_proto_msgTypes = make([]protoimpl.MessageInfo, 61)
+var file_core_core_sales_proto_msgTypes = make([]protoimpl.MessageInfo, 63)
 var file_core_core_sales_proto_goTypes = []any{
 	(*OrderDiscountInfo)(nil),                     // 0: core.OrderDiscountInfo
 	(*SalesOrderStatusInfo)(nil),                  // 1: core.SalesOrderStatusInfo
@@ -6068,158 +6203,165 @@ var file_core_core_sales_proto_goTypes = []any{
 	(*GetSalesOrderRequest)(nil),                  // 21: core.GetSalesOrderRequest
 	(*GetSalesOrderResponse)(nil),                 // 22: core.GetSalesOrderResponse
 	(*CreateSalesOrderRequest)(nil),               // 23: core.CreateSalesOrderRequest
-	(*CreateSalesOrderLineInput)(nil),             // 24: core.CreateSalesOrderLineInput
-	(*CreateSalesOrderResponse)(nil),              // 25: core.CreateSalesOrderResponse
-	(*UpdateSalesOrderRequest)(nil),               // 26: core.UpdateSalesOrderRequest
-	(*UpdateSalesOrderResponse)(nil),              // 27: core.UpdateSalesOrderResponse
-	(*DeleteSalesOrderRequest)(nil),               // 28: core.DeleteSalesOrderRequest
-	(*BulkDeleteSalesOrdersRequest)(nil),          // 29: core.BulkDeleteSalesOrdersRequest
-	(*ChangeSalesOrderStatusRequest)(nil),         // 30: core.ChangeSalesOrderStatusRequest
-	(*ChangeSalesOrderStatusResponse)(nil),        // 31: core.ChangeSalesOrderStatusResponse
-	(*CheckoutSalesOrderRequest)(nil),             // 32: core.CheckoutSalesOrderRequest
-	(*CheckoutSalesOrderResponse)(nil),            // 33: core.CheckoutSalesOrderResponse
-	(*CreateSalesOrderProductionRunRequest)(nil),  // 34: core.CreateSalesOrderProductionRunRequest
-	(*CreateSalesOrderProductionRunResponse)(nil), // 35: core.CreateSalesOrderProductionRunResponse
-	(*CreateSalesOrderLineRequest)(nil),           // 36: core.CreateSalesOrderLineRequest
-	(*CreateSalesOrderLineResponse)(nil),          // 37: core.CreateSalesOrderLineResponse
-	(*UpdateSalesOrderLineRequest)(nil),           // 38: core.UpdateSalesOrderLineRequest
-	(*UpdateSalesOrderLineResponse)(nil),          // 39: core.UpdateSalesOrderLineResponse
-	(*DeleteSalesOrderLineRequest)(nil),           // 40: core.DeleteSalesOrderLineRequest
-	(*VolumeDiscountTierInfo)(nil),                // 41: core.VolumeDiscountTierInfo
-	(*VolumeDiscountCustomerGroupInfo)(nil),       // 42: core.VolumeDiscountCustomerGroupInfo
-	(*VolumeDiscountProductLineInfo)(nil),         // 43: core.VolumeDiscountProductLineInfo
-	(*VolumeDiscountCategoryInfo)(nil),            // 44: core.VolumeDiscountCategoryInfo
-	(*VolumeDiscountAttributeInfo)(nil),           // 45: core.VolumeDiscountAttributeInfo
-	(*VolumeDiscountUnitInfo)(nil),                // 46: core.VolumeDiscountUnitInfo
-	(*VolumeDiscountInfo)(nil),                    // 47: core.VolumeDiscountInfo
-	(*ListVolumeDiscountsRequest)(nil),            // 48: core.ListVolumeDiscountsRequest
-	(*ListVolumeDiscountsResponse)(nil),           // 49: core.ListVolumeDiscountsResponse
-	(*GetVolumeDiscountRequest)(nil),              // 50: core.GetVolumeDiscountRequest
-	(*GetVolumeDiscountResponse)(nil),             // 51: core.GetVolumeDiscountResponse
-	(*CreateVolumeDiscountTierInput)(nil),         // 52: core.CreateVolumeDiscountTierInput
-	(*CreateVolumeDiscountRequest)(nil),           // 53: core.CreateVolumeDiscountRequest
-	(*CreateVolumeDiscountResponse)(nil),          // 54: core.CreateVolumeDiscountResponse
-	(*UpdateVolumeDiscountTierInput)(nil),         // 55: core.UpdateVolumeDiscountTierInput
-	(*UpdateVolumeDiscountRequest)(nil),           // 56: core.UpdateVolumeDiscountRequest
-	(*UpdateVolumeDiscountResponse)(nil),          // 57: core.UpdateVolumeDiscountResponse
-	(*DeleteVolumeDiscountRequest)(nil),           // 58: core.DeleteVolumeDiscountRequest
-	(*CreateCustomerCheckoutSessionRequest)(nil),  // 59: core.CreateCustomerCheckoutSessionRequest
-	(*CreateCustomerCheckoutSessionResponse)(nil), // 60: core.CreateCustomerCheckoutSessionResponse
-	(*timestamppb.Timestamp)(nil),                 // 61: google.protobuf.Timestamp
-	(*PageInfo)(nil),                              // 62: core.PageInfo
-	(*emptypb.Empty)(nil),                         // 63: google.protobuf.Empty
+	(*SalesOrderEmailContactInput)(nil),           // 24: core.SalesOrderEmailContactInput
+	(*CreateSalesOrderLineInput)(nil),             // 25: core.CreateSalesOrderLineInput
+	(*CreateSalesOrderResponse)(nil),              // 26: core.CreateSalesOrderResponse
+	(*UpdateSalesOrderRequest)(nil),               // 27: core.UpdateSalesOrderRequest
+	(*SalesOrderEmailContactList)(nil),            // 28: core.SalesOrderEmailContactList
+	(*UpdateSalesOrderResponse)(nil),              // 29: core.UpdateSalesOrderResponse
+	(*DeleteSalesOrderRequest)(nil),               // 30: core.DeleteSalesOrderRequest
+	(*BulkDeleteSalesOrdersRequest)(nil),          // 31: core.BulkDeleteSalesOrdersRequest
+	(*ChangeSalesOrderStatusRequest)(nil),         // 32: core.ChangeSalesOrderStatusRequest
+	(*ChangeSalesOrderStatusResponse)(nil),        // 33: core.ChangeSalesOrderStatusResponse
+	(*CheckoutSalesOrderRequest)(nil),             // 34: core.CheckoutSalesOrderRequest
+	(*CheckoutSalesOrderResponse)(nil),            // 35: core.CheckoutSalesOrderResponse
+	(*CreateSalesOrderProductionRunRequest)(nil),  // 36: core.CreateSalesOrderProductionRunRequest
+	(*CreateSalesOrderProductionRunResponse)(nil), // 37: core.CreateSalesOrderProductionRunResponse
+	(*CreateSalesOrderLineRequest)(nil),           // 38: core.CreateSalesOrderLineRequest
+	(*CreateSalesOrderLineResponse)(nil),          // 39: core.CreateSalesOrderLineResponse
+	(*UpdateSalesOrderLineRequest)(nil),           // 40: core.UpdateSalesOrderLineRequest
+	(*UpdateSalesOrderLineResponse)(nil),          // 41: core.UpdateSalesOrderLineResponse
+	(*DeleteSalesOrderLineRequest)(nil),           // 42: core.DeleteSalesOrderLineRequest
+	(*VolumeDiscountTierInfo)(nil),                // 43: core.VolumeDiscountTierInfo
+	(*VolumeDiscountCustomerGroupInfo)(nil),       // 44: core.VolumeDiscountCustomerGroupInfo
+	(*VolumeDiscountProductLineInfo)(nil),         // 45: core.VolumeDiscountProductLineInfo
+	(*VolumeDiscountCategoryInfo)(nil),            // 46: core.VolumeDiscountCategoryInfo
+	(*VolumeDiscountAttributeInfo)(nil),           // 47: core.VolumeDiscountAttributeInfo
+	(*VolumeDiscountUnitInfo)(nil),                // 48: core.VolumeDiscountUnitInfo
+	(*VolumeDiscountInfo)(nil),                    // 49: core.VolumeDiscountInfo
+	(*ListVolumeDiscountsRequest)(nil),            // 50: core.ListVolumeDiscountsRequest
+	(*ListVolumeDiscountsResponse)(nil),           // 51: core.ListVolumeDiscountsResponse
+	(*GetVolumeDiscountRequest)(nil),              // 52: core.GetVolumeDiscountRequest
+	(*GetVolumeDiscountResponse)(nil),             // 53: core.GetVolumeDiscountResponse
+	(*CreateVolumeDiscountTierInput)(nil),         // 54: core.CreateVolumeDiscountTierInput
+	(*CreateVolumeDiscountRequest)(nil),           // 55: core.CreateVolumeDiscountRequest
+	(*CreateVolumeDiscountResponse)(nil),          // 56: core.CreateVolumeDiscountResponse
+	(*UpdateVolumeDiscountTierInput)(nil),         // 57: core.UpdateVolumeDiscountTierInput
+	(*UpdateVolumeDiscountRequest)(nil),           // 58: core.UpdateVolumeDiscountRequest
+	(*UpdateVolumeDiscountResponse)(nil),          // 59: core.UpdateVolumeDiscountResponse
+	(*DeleteVolumeDiscountRequest)(nil),           // 60: core.DeleteVolumeDiscountRequest
+	(*CreateCustomerCheckoutSessionRequest)(nil),  // 61: core.CreateCustomerCheckoutSessionRequest
+	(*CreateCustomerCheckoutSessionResponse)(nil), // 62: core.CreateCustomerCheckoutSessionResponse
+	(*timestamppb.Timestamp)(nil),                 // 63: google.protobuf.Timestamp
+	(*PageInfo)(nil),                              // 64: core.PageInfo
+	(*emptypb.Empty)(nil),                         // 65: google.protobuf.Empty
 }
 var file_core_core_sales_proto_depIdxs = []int32{
-	61, // 0: core.OrderDiscountInfo.created_at:type_name -> google.protobuf.Timestamp
-	61, // 1: core.OrderDiscountInfo.updated_at:type_name -> google.protobuf.Timestamp
-	61, // 2: core.SalesOrderStatusInfo.created_at:type_name -> google.protobuf.Timestamp
-	61, // 3: core.SalesOrderStatusInfo.updated_at:type_name -> google.protobuf.Timestamp
+	63, // 0: core.OrderDiscountInfo.created_at:type_name -> google.protobuf.Timestamp
+	63, // 1: core.OrderDiscountInfo.updated_at:type_name -> google.protobuf.Timestamp
+	63, // 2: core.SalesOrderStatusInfo.created_at:type_name -> google.protobuf.Timestamp
+	63, // 3: core.SalesOrderStatusInfo.updated_at:type_name -> google.protobuf.Timestamp
 	0,  // 4: core.ListOrderDiscountsResponse.order_discounts:type_name -> core.OrderDiscountInfo
-	62, // 5: core.ListOrderDiscountsResponse.page_info:type_name -> core.PageInfo
+	64, // 5: core.ListOrderDiscountsResponse.page_info:type_name -> core.PageInfo
 	0,  // 6: core.GetOrderDiscountResponse.order_discount:type_name -> core.OrderDiscountInfo
 	0,  // 7: core.CreateOrderDiscountResponse.order_discount:type_name -> core.OrderDiscountInfo
 	0,  // 8: core.UpdateOrderDiscountResponse.order_discount:type_name -> core.OrderDiscountInfo
 	0,  // 9: core.DeleteOrderDiscountResponse.order_discount:type_name -> core.OrderDiscountInfo
 	0,  // 10: core.FindOrderDiscountByCodeResponse.order_discount:type_name -> core.OrderDiscountInfo
 	1,  // 11: core.ListSalesOrderStatusesResponse.sales_order_statuses:type_name -> core.SalesOrderStatusInfo
-	62, // 12: core.ListSalesOrderStatusesResponse.page_info:type_name -> core.PageInfo
-	61, // 13: core.SalesOrderSummaryInfo.issued_at:type_name -> google.protobuf.Timestamp
-	61, // 14: core.SalesOrderSummaryInfo.completed_at:type_name -> google.protobuf.Timestamp
-	61, // 15: core.SalesOrderSummaryInfo.created_at:type_name -> google.protobuf.Timestamp
-	61, // 16: core.SalesOrderSummaryInfo.updated_at:type_name -> google.protobuf.Timestamp
+	64, // 12: core.ListSalesOrderStatusesResponse.page_info:type_name -> core.PageInfo
+	63, // 13: core.SalesOrderSummaryInfo.issued_at:type_name -> google.protobuf.Timestamp
+	63, // 14: core.SalesOrderSummaryInfo.completed_at:type_name -> google.protobuf.Timestamp
+	63, // 15: core.SalesOrderSummaryInfo.created_at:type_name -> google.protobuf.Timestamp
+	63, // 16: core.SalesOrderSummaryInfo.updated_at:type_name -> google.protobuf.Timestamp
 	18, // 17: core.SalesOrderInfo.lines:type_name -> core.SalesOrderLineInfo
-	61, // 18: core.SalesOrderInfo.issued_at:type_name -> google.protobuf.Timestamp
-	61, // 19: core.SalesOrderInfo.completed_at:type_name -> google.protobuf.Timestamp
-	61, // 20: core.SalesOrderInfo.first_ship_at:type_name -> google.protobuf.Timestamp
-	61, // 21: core.SalesOrderInfo.expired_at:type_name -> google.protobuf.Timestamp
-	61, // 22: core.SalesOrderInfo.promised_at:type_name -> google.protobuf.Timestamp
-	61, // 23: core.SalesOrderInfo.created_at:type_name -> google.protobuf.Timestamp
-	61, // 24: core.SalesOrderInfo.updated_at:type_name -> google.protobuf.Timestamp
-	61, // 25: core.SalesOrderLineInfo.completed_at:type_name -> google.protobuf.Timestamp
-	61, // 26: core.SalesOrderLineInfo.created_at:type_name -> google.protobuf.Timestamp
-	61, // 27: core.SalesOrderLineInfo.updated_at:type_name -> google.protobuf.Timestamp
+	63, // 18: core.SalesOrderInfo.issued_at:type_name -> google.protobuf.Timestamp
+	63, // 19: core.SalesOrderInfo.completed_at:type_name -> google.protobuf.Timestamp
+	63, // 20: core.SalesOrderInfo.first_ship_at:type_name -> google.protobuf.Timestamp
+	63, // 21: core.SalesOrderInfo.expired_at:type_name -> google.protobuf.Timestamp
+	63, // 22: core.SalesOrderInfo.promised_at:type_name -> google.protobuf.Timestamp
+	63, // 23: core.SalesOrderInfo.created_at:type_name -> google.protobuf.Timestamp
+	63, // 24: core.SalesOrderInfo.updated_at:type_name -> google.protobuf.Timestamp
+	63, // 25: core.SalesOrderLineInfo.completed_at:type_name -> google.protobuf.Timestamp
+	63, // 26: core.SalesOrderLineInfo.created_at:type_name -> google.protobuf.Timestamp
+	63, // 27: core.SalesOrderLineInfo.updated_at:type_name -> google.protobuf.Timestamp
 	16, // 28: core.ListSalesOrdersResponse.sales_orders:type_name -> core.SalesOrderSummaryInfo
-	62, // 29: core.ListSalesOrdersResponse.page_info:type_name -> core.PageInfo
+	64, // 29: core.ListSalesOrdersResponse.page_info:type_name -> core.PageInfo
 	17, // 30: core.GetSalesOrderResponse.sales_order:type_name -> core.SalesOrderInfo
-	24, // 31: core.CreateSalesOrderRequest.lines:type_name -> core.CreateSalesOrderLineInput
-	17, // 32: core.CreateSalesOrderResponse.sales_order:type_name -> core.SalesOrderInfo
-	61, // 33: core.UpdateSalesOrderRequest.promised_at:type_name -> google.protobuf.Timestamp
-	17, // 34: core.UpdateSalesOrderResponse.sales_order:type_name -> core.SalesOrderInfo
-	17, // 35: core.ChangeSalesOrderStatusResponse.sales_order:type_name -> core.SalesOrderInfo
-	18, // 36: core.CreateSalesOrderLineResponse.sales_order_line:type_name -> core.SalesOrderLineInfo
-	18, // 37: core.UpdateSalesOrderLineResponse.sales_order_line:type_name -> core.SalesOrderLineInfo
-	61, // 38: core.VolumeDiscountTierInfo.created_at:type_name -> google.protobuf.Timestamp
-	61, // 39: core.VolumeDiscountTierInfo.updated_at:type_name -> google.protobuf.Timestamp
-	41, // 40: core.VolumeDiscountInfo.tiers:type_name -> core.VolumeDiscountTierInfo
-	42, // 41: core.VolumeDiscountInfo.customer_groups:type_name -> core.VolumeDiscountCustomerGroupInfo
-	43, // 42: core.VolumeDiscountInfo.product_lines:type_name -> core.VolumeDiscountProductLineInfo
-	44, // 43: core.VolumeDiscountInfo.categories:type_name -> core.VolumeDiscountCategoryInfo
-	45, // 44: core.VolumeDiscountInfo.attributes:type_name -> core.VolumeDiscountAttributeInfo
-	46, // 45: core.VolumeDiscountInfo.acceptable_units:type_name -> core.VolumeDiscountUnitInfo
-	61, // 46: core.VolumeDiscountInfo.created_at:type_name -> google.protobuf.Timestamp
-	61, // 47: core.VolumeDiscountInfo.updated_at:type_name -> google.protobuf.Timestamp
-	47, // 48: core.ListVolumeDiscountsResponse.volume_discounts:type_name -> core.VolumeDiscountInfo
-	62, // 49: core.ListVolumeDiscountsResponse.page_info:type_name -> core.PageInfo
-	47, // 50: core.GetVolumeDiscountResponse.volume_discount:type_name -> core.VolumeDiscountInfo
-	52, // 51: core.CreateVolumeDiscountRequest.tiers:type_name -> core.CreateVolumeDiscountTierInput
-	47, // 52: core.CreateVolumeDiscountResponse.volume_discount:type_name -> core.VolumeDiscountInfo
-	55, // 53: core.UpdateVolumeDiscountRequest.tiers:type_name -> core.UpdateVolumeDiscountTierInput
-	47, // 54: core.UpdateVolumeDiscountResponse.volume_discount:type_name -> core.VolumeDiscountInfo
-	2,  // 55: core.CoreSalesService.ListOrderDiscounts:input_type -> core.ListOrderDiscountsRequest
-	4,  // 56: core.CoreSalesService.GetOrderDiscount:input_type -> core.GetOrderDiscountRequest
-	6,  // 57: core.CoreSalesService.CreateOrderDiscount:input_type -> core.CreateOrderDiscountRequest
-	8,  // 58: core.CoreSalesService.UpdateOrderDiscount:input_type -> core.UpdateOrderDiscountRequest
-	10, // 59: core.CoreSalesService.DeleteOrderDiscount:input_type -> core.DeleteOrderDiscountRequest
-	12, // 60: core.CoreSalesService.FindOrderDiscountByCode:input_type -> core.FindOrderDiscountByCodeRequest
-	14, // 61: core.CoreSalesService.ListSalesOrderStatuses:input_type -> core.ListSalesOrderStatusesRequest
-	19, // 62: core.CoreSalesService.ListSalesOrders:input_type -> core.ListSalesOrdersRequest
-	21, // 63: core.CoreSalesService.GetSalesOrder:input_type -> core.GetSalesOrderRequest
-	23, // 64: core.CoreSalesService.CreateSalesOrder:input_type -> core.CreateSalesOrderRequest
-	26, // 65: core.CoreSalesService.UpdateSalesOrder:input_type -> core.UpdateSalesOrderRequest
-	28, // 66: core.CoreSalesService.DeleteSalesOrder:input_type -> core.DeleteSalesOrderRequest
-	29, // 67: core.CoreSalesService.BulkDeleteSalesOrders:input_type -> core.BulkDeleteSalesOrdersRequest
-	30, // 68: core.CoreSalesService.ChangeSalesOrderStatus:input_type -> core.ChangeSalesOrderStatusRequest
-	32, // 69: core.CoreSalesService.CheckoutSalesOrder:input_type -> core.CheckoutSalesOrderRequest
-	34, // 70: core.CoreSalesService.CreateSalesOrderProductionRun:input_type -> core.CreateSalesOrderProductionRunRequest
-	36, // 71: core.CoreSalesService.CreateSalesOrderLine:input_type -> core.CreateSalesOrderLineRequest
-	48, // 72: core.CoreSalesService.ListVolumeDiscounts:input_type -> core.ListVolumeDiscountsRequest
-	50, // 73: core.CoreSalesService.GetVolumeDiscount:input_type -> core.GetVolumeDiscountRequest
-	53, // 74: core.CoreSalesService.CreateVolumeDiscount:input_type -> core.CreateVolumeDiscountRequest
-	56, // 75: core.CoreSalesService.UpdateVolumeDiscount:input_type -> core.UpdateVolumeDiscountRequest
-	58, // 76: core.CoreSalesService.DeleteVolumeDiscount:input_type -> core.DeleteVolumeDiscountRequest
-	38, // 77: core.CoreSalesService.UpdateSalesOrderLine:input_type -> core.UpdateSalesOrderLineRequest
-	40, // 78: core.CoreSalesService.DeleteSalesOrderLine:input_type -> core.DeleteSalesOrderLineRequest
-	59, // 79: core.CoreSalesService.CreateCustomerCheckoutSession:input_type -> core.CreateCustomerCheckoutSessionRequest
-	3,  // 80: core.CoreSalesService.ListOrderDiscounts:output_type -> core.ListOrderDiscountsResponse
-	5,  // 81: core.CoreSalesService.GetOrderDiscount:output_type -> core.GetOrderDiscountResponse
-	7,  // 82: core.CoreSalesService.CreateOrderDiscount:output_type -> core.CreateOrderDiscountResponse
-	9,  // 83: core.CoreSalesService.UpdateOrderDiscount:output_type -> core.UpdateOrderDiscountResponse
-	11, // 84: core.CoreSalesService.DeleteOrderDiscount:output_type -> core.DeleteOrderDiscountResponse
-	13, // 85: core.CoreSalesService.FindOrderDiscountByCode:output_type -> core.FindOrderDiscountByCodeResponse
-	15, // 86: core.CoreSalesService.ListSalesOrderStatuses:output_type -> core.ListSalesOrderStatusesResponse
-	20, // 87: core.CoreSalesService.ListSalesOrders:output_type -> core.ListSalesOrdersResponse
-	22, // 88: core.CoreSalesService.GetSalesOrder:output_type -> core.GetSalesOrderResponse
-	25, // 89: core.CoreSalesService.CreateSalesOrder:output_type -> core.CreateSalesOrderResponse
-	27, // 90: core.CoreSalesService.UpdateSalesOrder:output_type -> core.UpdateSalesOrderResponse
-	63, // 91: core.CoreSalesService.DeleteSalesOrder:output_type -> google.protobuf.Empty
-	63, // 92: core.CoreSalesService.BulkDeleteSalesOrders:output_type -> google.protobuf.Empty
-	31, // 93: core.CoreSalesService.ChangeSalesOrderStatus:output_type -> core.ChangeSalesOrderStatusResponse
-	33, // 94: core.CoreSalesService.CheckoutSalesOrder:output_type -> core.CheckoutSalesOrderResponse
-	35, // 95: core.CoreSalesService.CreateSalesOrderProductionRun:output_type -> core.CreateSalesOrderProductionRunResponse
-	37, // 96: core.CoreSalesService.CreateSalesOrderLine:output_type -> core.CreateSalesOrderLineResponse
-	49, // 97: core.CoreSalesService.ListVolumeDiscounts:output_type -> core.ListVolumeDiscountsResponse
-	51, // 98: core.CoreSalesService.GetVolumeDiscount:output_type -> core.GetVolumeDiscountResponse
-	54, // 99: core.CoreSalesService.CreateVolumeDiscount:output_type -> core.CreateVolumeDiscountResponse
-	57, // 100: core.CoreSalesService.UpdateVolumeDiscount:output_type -> core.UpdateVolumeDiscountResponse
-	63, // 101: core.CoreSalesService.DeleteVolumeDiscount:output_type -> google.protobuf.Empty
-	39, // 102: core.CoreSalesService.UpdateSalesOrderLine:output_type -> core.UpdateSalesOrderLineResponse
-	63, // 103: core.CoreSalesService.DeleteSalesOrderLine:output_type -> google.protobuf.Empty
-	60, // 104: core.CoreSalesService.CreateCustomerCheckoutSession:output_type -> core.CreateCustomerCheckoutSessionResponse
-	80, // [80:105] is the sub-list for method output_type
-	55, // [55:80] is the sub-list for method input_type
-	55, // [55:55] is the sub-list for extension type_name
-	55, // [55:55] is the sub-list for extension extendee
-	0,  // [0:55] is the sub-list for field type_name
+	25, // 31: core.CreateSalesOrderRequest.lines:type_name -> core.CreateSalesOrderLineInput
+	24, // 32: core.CreateSalesOrderRequest.acknowledgement_email_contacts:type_name -> core.SalesOrderEmailContactInput
+	24, // 33: core.CreateSalesOrderRequest.invoice_email_contacts:type_name -> core.SalesOrderEmailContactInput
+	17, // 34: core.CreateSalesOrderResponse.sales_order:type_name -> core.SalesOrderInfo
+	63, // 35: core.UpdateSalesOrderRequest.promised_at:type_name -> google.protobuf.Timestamp
+	28, // 36: core.UpdateSalesOrderRequest.acknowledgement_email_contacts:type_name -> core.SalesOrderEmailContactList
+	28, // 37: core.UpdateSalesOrderRequest.invoice_email_contacts:type_name -> core.SalesOrderEmailContactList
+	24, // 38: core.SalesOrderEmailContactList.contacts:type_name -> core.SalesOrderEmailContactInput
+	17, // 39: core.UpdateSalesOrderResponse.sales_order:type_name -> core.SalesOrderInfo
+	17, // 40: core.ChangeSalesOrderStatusResponse.sales_order:type_name -> core.SalesOrderInfo
+	18, // 41: core.CreateSalesOrderLineResponse.sales_order_line:type_name -> core.SalesOrderLineInfo
+	18, // 42: core.UpdateSalesOrderLineResponse.sales_order_line:type_name -> core.SalesOrderLineInfo
+	63, // 43: core.VolumeDiscountTierInfo.created_at:type_name -> google.protobuf.Timestamp
+	63, // 44: core.VolumeDiscountTierInfo.updated_at:type_name -> google.protobuf.Timestamp
+	43, // 45: core.VolumeDiscountInfo.tiers:type_name -> core.VolumeDiscountTierInfo
+	44, // 46: core.VolumeDiscountInfo.customer_groups:type_name -> core.VolumeDiscountCustomerGroupInfo
+	45, // 47: core.VolumeDiscountInfo.product_lines:type_name -> core.VolumeDiscountProductLineInfo
+	46, // 48: core.VolumeDiscountInfo.categories:type_name -> core.VolumeDiscountCategoryInfo
+	47, // 49: core.VolumeDiscountInfo.attributes:type_name -> core.VolumeDiscountAttributeInfo
+	48, // 50: core.VolumeDiscountInfo.acceptable_units:type_name -> core.VolumeDiscountUnitInfo
+	63, // 51: core.VolumeDiscountInfo.created_at:type_name -> google.protobuf.Timestamp
+	63, // 52: core.VolumeDiscountInfo.updated_at:type_name -> google.protobuf.Timestamp
+	49, // 53: core.ListVolumeDiscountsResponse.volume_discounts:type_name -> core.VolumeDiscountInfo
+	64, // 54: core.ListVolumeDiscountsResponse.page_info:type_name -> core.PageInfo
+	49, // 55: core.GetVolumeDiscountResponse.volume_discount:type_name -> core.VolumeDiscountInfo
+	54, // 56: core.CreateVolumeDiscountRequest.tiers:type_name -> core.CreateVolumeDiscountTierInput
+	49, // 57: core.CreateVolumeDiscountResponse.volume_discount:type_name -> core.VolumeDiscountInfo
+	57, // 58: core.UpdateVolumeDiscountRequest.tiers:type_name -> core.UpdateVolumeDiscountTierInput
+	49, // 59: core.UpdateVolumeDiscountResponse.volume_discount:type_name -> core.VolumeDiscountInfo
+	2,  // 60: core.CoreSalesService.ListOrderDiscounts:input_type -> core.ListOrderDiscountsRequest
+	4,  // 61: core.CoreSalesService.GetOrderDiscount:input_type -> core.GetOrderDiscountRequest
+	6,  // 62: core.CoreSalesService.CreateOrderDiscount:input_type -> core.CreateOrderDiscountRequest
+	8,  // 63: core.CoreSalesService.UpdateOrderDiscount:input_type -> core.UpdateOrderDiscountRequest
+	10, // 64: core.CoreSalesService.DeleteOrderDiscount:input_type -> core.DeleteOrderDiscountRequest
+	12, // 65: core.CoreSalesService.FindOrderDiscountByCode:input_type -> core.FindOrderDiscountByCodeRequest
+	14, // 66: core.CoreSalesService.ListSalesOrderStatuses:input_type -> core.ListSalesOrderStatusesRequest
+	19, // 67: core.CoreSalesService.ListSalesOrders:input_type -> core.ListSalesOrdersRequest
+	21, // 68: core.CoreSalesService.GetSalesOrder:input_type -> core.GetSalesOrderRequest
+	23, // 69: core.CoreSalesService.CreateSalesOrder:input_type -> core.CreateSalesOrderRequest
+	27, // 70: core.CoreSalesService.UpdateSalesOrder:input_type -> core.UpdateSalesOrderRequest
+	30, // 71: core.CoreSalesService.DeleteSalesOrder:input_type -> core.DeleteSalesOrderRequest
+	31, // 72: core.CoreSalesService.BulkDeleteSalesOrders:input_type -> core.BulkDeleteSalesOrdersRequest
+	32, // 73: core.CoreSalesService.ChangeSalesOrderStatus:input_type -> core.ChangeSalesOrderStatusRequest
+	34, // 74: core.CoreSalesService.CheckoutSalesOrder:input_type -> core.CheckoutSalesOrderRequest
+	36, // 75: core.CoreSalesService.CreateSalesOrderProductionRun:input_type -> core.CreateSalesOrderProductionRunRequest
+	38, // 76: core.CoreSalesService.CreateSalesOrderLine:input_type -> core.CreateSalesOrderLineRequest
+	50, // 77: core.CoreSalesService.ListVolumeDiscounts:input_type -> core.ListVolumeDiscountsRequest
+	52, // 78: core.CoreSalesService.GetVolumeDiscount:input_type -> core.GetVolumeDiscountRequest
+	55, // 79: core.CoreSalesService.CreateVolumeDiscount:input_type -> core.CreateVolumeDiscountRequest
+	58, // 80: core.CoreSalesService.UpdateVolumeDiscount:input_type -> core.UpdateVolumeDiscountRequest
+	60, // 81: core.CoreSalesService.DeleteVolumeDiscount:input_type -> core.DeleteVolumeDiscountRequest
+	40, // 82: core.CoreSalesService.UpdateSalesOrderLine:input_type -> core.UpdateSalesOrderLineRequest
+	42, // 83: core.CoreSalesService.DeleteSalesOrderLine:input_type -> core.DeleteSalesOrderLineRequest
+	61, // 84: core.CoreSalesService.CreateCustomerCheckoutSession:input_type -> core.CreateCustomerCheckoutSessionRequest
+	3,  // 85: core.CoreSalesService.ListOrderDiscounts:output_type -> core.ListOrderDiscountsResponse
+	5,  // 86: core.CoreSalesService.GetOrderDiscount:output_type -> core.GetOrderDiscountResponse
+	7,  // 87: core.CoreSalesService.CreateOrderDiscount:output_type -> core.CreateOrderDiscountResponse
+	9,  // 88: core.CoreSalesService.UpdateOrderDiscount:output_type -> core.UpdateOrderDiscountResponse
+	11, // 89: core.CoreSalesService.DeleteOrderDiscount:output_type -> core.DeleteOrderDiscountResponse
+	13, // 90: core.CoreSalesService.FindOrderDiscountByCode:output_type -> core.FindOrderDiscountByCodeResponse
+	15, // 91: core.CoreSalesService.ListSalesOrderStatuses:output_type -> core.ListSalesOrderStatusesResponse
+	20, // 92: core.CoreSalesService.ListSalesOrders:output_type -> core.ListSalesOrdersResponse
+	22, // 93: core.CoreSalesService.GetSalesOrder:output_type -> core.GetSalesOrderResponse
+	26, // 94: core.CoreSalesService.CreateSalesOrder:output_type -> core.CreateSalesOrderResponse
+	29, // 95: core.CoreSalesService.UpdateSalesOrder:output_type -> core.UpdateSalesOrderResponse
+	65, // 96: core.CoreSalesService.DeleteSalesOrder:output_type -> google.protobuf.Empty
+	65, // 97: core.CoreSalesService.BulkDeleteSalesOrders:output_type -> google.protobuf.Empty
+	33, // 98: core.CoreSalesService.ChangeSalesOrderStatus:output_type -> core.ChangeSalesOrderStatusResponse
+	35, // 99: core.CoreSalesService.CheckoutSalesOrder:output_type -> core.CheckoutSalesOrderResponse
+	37, // 100: core.CoreSalesService.CreateSalesOrderProductionRun:output_type -> core.CreateSalesOrderProductionRunResponse
+	39, // 101: core.CoreSalesService.CreateSalesOrderLine:output_type -> core.CreateSalesOrderLineResponse
+	51, // 102: core.CoreSalesService.ListVolumeDiscounts:output_type -> core.ListVolumeDiscountsResponse
+	53, // 103: core.CoreSalesService.GetVolumeDiscount:output_type -> core.GetVolumeDiscountResponse
+	56, // 104: core.CoreSalesService.CreateVolumeDiscount:output_type -> core.CreateVolumeDiscountResponse
+	59, // 105: core.CoreSalesService.UpdateVolumeDiscount:output_type -> core.UpdateVolumeDiscountResponse
+	65, // 106: core.CoreSalesService.DeleteVolumeDiscount:output_type -> google.protobuf.Empty
+	41, // 107: core.CoreSalesService.UpdateSalesOrderLine:output_type -> core.UpdateSalesOrderLineResponse
+	65, // 108: core.CoreSalesService.DeleteSalesOrderLine:output_type -> google.protobuf.Empty
+	62, // 109: core.CoreSalesService.CreateCustomerCheckoutSession:output_type -> core.CreateCustomerCheckoutSessionResponse
+	85, // [85:110] is the sub-list for method output_type
+	60, // [60:85] is the sub-list for method input_type
+	60, // [60:60] is the sub-list for extension type_name
+	60, // [60:60] is the sub-list for extension extendee
+	0,  // [0:60] is the sub-list for field type_name
 }
 
 func init() { file_core_core_sales_proto_init() }
@@ -6239,25 +6381,25 @@ func file_core_core_sales_proto_init() {
 	file_core_core_sales_proto_msgTypes[19].OneofWrappers = []any{}
 	file_core_core_sales_proto_msgTypes[21].OneofWrappers = []any{}
 	file_core_core_sales_proto_msgTypes[23].OneofWrappers = []any{}
-	file_core_core_sales_proto_msgTypes[24].OneofWrappers = []any{}
-	file_core_core_sales_proto_msgTypes[26].OneofWrappers = []any{}
-	file_core_core_sales_proto_msgTypes[32].OneofWrappers = []any{}
-	file_core_core_sales_proto_msgTypes[36].OneofWrappers = []any{}
+	file_core_core_sales_proto_msgTypes[25].OneofWrappers = []any{}
+	file_core_core_sales_proto_msgTypes[27].OneofWrappers = []any{}
+	file_core_core_sales_proto_msgTypes[34].OneofWrappers = []any{}
 	file_core_core_sales_proto_msgTypes[38].OneofWrappers = []any{}
-	file_core_core_sales_proto_msgTypes[41].OneofWrappers = []any{}
-	file_core_core_sales_proto_msgTypes[48].OneofWrappers = []any{}
+	file_core_core_sales_proto_msgTypes[40].OneofWrappers = []any{}
+	file_core_core_sales_proto_msgTypes[43].OneofWrappers = []any{}
 	file_core_core_sales_proto_msgTypes[50].OneofWrappers = []any{}
 	file_core_core_sales_proto_msgTypes[52].OneofWrappers = []any{}
-	file_core_core_sales_proto_msgTypes[55].OneofWrappers = []any{}
-	file_core_core_sales_proto_msgTypes[56].OneofWrappers = []any{}
-	file_core_core_sales_proto_msgTypes[59].OneofWrappers = []any{}
+	file_core_core_sales_proto_msgTypes[54].OneofWrappers = []any{}
+	file_core_core_sales_proto_msgTypes[57].OneofWrappers = []any{}
+	file_core_core_sales_proto_msgTypes[58].OneofWrappers = []any{}
+	file_core_core_sales_proto_msgTypes[61].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_core_core_sales_proto_rawDesc), len(file_core_core_sales_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   61,
+			NumMessages:   63,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

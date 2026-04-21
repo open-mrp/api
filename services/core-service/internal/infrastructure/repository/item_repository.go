@@ -772,6 +772,39 @@ func (r *itemRepoImpl) GetCategoryBaseUnitID(ctx context.Context, categoryID str
 	return baseUnitID, nil
 }
 
+func (r *itemRepoImpl) FindBySKU(ctx context.Context, accountID, sku string) (*string, *string, *apierror.APIError) {
+	ctx, span := itemRepoTracer.Start(ctx, "repository.item.find_by_sku")
+	defer span.End()
+
+	row, err := r.queries.FindItemBySKU(ctx, sqlc.FindItemBySKUParams{
+		Sku:       sku,
+		AccountID: accountID,
+	})
+	if err != nil {
+		if apiErr := db.MapSQLError(err); apierror.IsNotFound(apiErr) {
+			return nil, nil, nil
+		} else if apiErr != nil {
+			return nil, nil, tracing.Trace(span, apiErr)
+		}
+	}
+	return &row.ID, &row.UnitValueID, nil
+}
+
+func (r *itemRepoImpl) UpdateRateValue(ctx context.Context, rateID, value string) *apierror.APIError {
+	ctx, span := itemRepoTracer.Start(ctx, "repository.item.update_rate_value")
+	defer span.End()
+
+	valueStr := gosql.NullString{String: value, Valid: true}
+	_, err := r.queries.UpdateRateByID(ctx, sqlc.UpdateRateByIDParams{
+		ID:    rateID,
+		Value: valueStr,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	return nil
+}
+
 func (r *itemRepoImpl) FetchItemsBySKU(ctx context.Context, accountID string, skus []string) ([]domain.ItemSKUInfo, *apierror.APIError) {
 	ctx, span := itemRepoTracer.Start(ctx, "repository.item.fetch_items_by_sku")
 	defer span.End()

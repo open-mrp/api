@@ -160,3 +160,21 @@ SELECT EXISTS(
     WHERE id = sqlc.arg('id')
     AND account_id = sqlc.arg('account_id')
 ) AS `exists`;
+
+-- name: FindSalesRepByZipcode :one
+SELECT t.sales_rep_id
+FROM territory t
+WHERE t.account_id = sqlc.arg('account_id')
+AND (
+    (t.start_zipcode <= sqlc.arg('zipcode') AND t.end_zipcode >= sqlc.arg('zipcode'))
+    OR (t.start_zipcode = sqlc.arg('zipcode') AND t.end_zipcode IS NULL)
+)
+LIMIT 1;
+
+-- name: FindSalesRepByState :one
+SELECT t.sales_rep_id
+FROM territory t
+WHERE t.account_id = sqlc.arg('account_id')
+AND t.state = sqlc.arg('state')
+AND t.start_zipcode IS NULL
+LIMIT 1;

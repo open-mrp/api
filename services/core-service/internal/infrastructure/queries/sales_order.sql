@@ -612,6 +612,15 @@ DELETE FROM order_payment_intent WHERE sales_order_id = sqlc.arg('sales_order_id
 -- name: DeleteOrderEmailContacts :exec
 DELETE FROM order_email_contact WHERE sales_order_id = sqlc.arg('sales_order_id');
 
+-- name: CreateSalesOrderEmailContact :exec
+INSERT INTO order_email_contact (id, sales_order_id, account_user_id, notification_type_code, created_at, updated_at)
+VALUES (sqlc.arg('id'), sqlc.arg('sales_order_id'), sqlc.arg('account_user_id'), sqlc.arg('notification_type_code'), NOW(3), NOW(3));
+
+-- name: DeleteSalesOrderEmailContactsByOrderAndType :exec
+DELETE FROM order_email_contact
+WHERE sales_order_id = sqlc.arg('sales_order_id')
+AND notification_type_code = sqlc.arg('notification_type_code');
+
 -- name: DeleteReservedInventoryIssuesBySalesOrder :exec
 DELETE FROM inventory_issue
 WHERE order_id = sqlc.arg('sales_order_id')

@@ -194,6 +194,14 @@ type CreateSalesOrderParams struct {
 	ShipToPostalCode      *string
 	ShipToCountry         *string
 	Lines                 []CreateSalesOrderLineInput
+	// Email contact recipients to write into order_email_contact on create.
+	AcknowledgementEmailContacts []SalesOrderEmailContactInput
+	InvoiceEmailContacts         []SalesOrderEmailContactInput
+}
+
+// SalesOrderEmailContactInput represents a single recipient to wire to a sales order.
+type SalesOrderEmailContactInput struct {
+	AccountUserID string
 }
 
 // CreateSalesOrderLineInput represents a line to create with a new sales order.
@@ -248,6 +256,12 @@ type UpdateSalesOrderParams struct {
 	ShipToState           *string
 	ShipToPostalCode      *string
 	ShipToCountry         *string
+	// When non-nil, replaces the acknowledgement email contacts on the order.
+	// Empty slice clears all contacts; nil leaves existing contacts untouched.
+	AcknowledgementEmailContacts *[]SalesOrderEmailContactInput
+	// When non-nil, replaces the invoice email contacts on the order.
+	// Empty slice clears all contacts; nil leaves existing contacts untouched.
+	InvoiceEmailContacts *[]SalesOrderEmailContactInput
 }
 
 // DeleteSalesOrderParams holds the parameters for deleting a sales order.

@@ -240,6 +240,34 @@ func (q *Queries) FetchItemsBySKU(ctx context.Context, arg FetchItemsBySKUParams
 	return items, nil
 }
 
+const findItemBySKU = `-- name: FindItemBySKU :one
+SELECT id, unit_value_id
+FROM item
+WHERE sku = ?
+AND account_id = ?
+AND deleted_at IS NULL
+LIMIT 1
+`
+
+type FindItemBySKUParams struct {
+	Sku       string
+	AccountID string
+}
+
+type FindItemBySKURow struct {
+	ID          string
+	UnitValueID string
+}
+
+// Used by bulk upsert paths: returns the existing item's ID and its unit_value rate ID
+// so the caller can update the price in place rather than creating a duplicate.
+func (q *Queries) FindItemBySKU(ctx context.Context, arg FindItemBySKUParams) (FindItemBySKURow, error) {
+	row := q.db.QueryRowContext(ctx, findItemBySKU, arg.Sku, arg.AccountID)
+	var i FindItemBySKURow
+	err := row.Scan(&i.ID, &i.UnitValueID)
+	return i, err
+}
+
 const getCategoryBaseUnitID = `-- name: GetCategoryBaseUnitID :one
 SELECT
   ugu.unit_id AS base_unit_id

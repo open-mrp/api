@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -184,6 +186,12 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 
 	params.AccountID = identity.Target.AccountID
 
+	// Enforce the account's invoice-count plan limit before creating the order
+	// (matches Dashboard's canCreateInvoice guard). Sandboxes are exempt.
+	if apiErr := s.checkInvoicePlanLimit(ctx, params.AccountID); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
 	meds := s.mediators()
 
 	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, identity)
@@ -311,6 +319,13 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 				return apiErr
 			}
 
+			// Auto-assign sales rep when caller didn't supply one, matching Dashboard behavior:
+			// prefer the customer's default sales rep, then zipcode territory, then state territory.
+			salesRepID := params.SalesRepID
+			if salesRepID == nil {
+				salesRepID = txSvc.resolveSalesRepID(txCtx, params.AccountID, params.BuyerAccountID, params.ShipToState, params.ShipToPostalCode)
+			}
+
 			// Create the order
 			// SellerAccountID and OwnerAccountID default to the target account
 			// (the account creating the order), matching Dashboard behavior.
@@ -330,7 +345,7 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 				CarrierBillingType:    params.CarrierBillingType,
 				CarrierBillingAccount: params.CarrierBillingAccount,
 				PriorityCode:          params.PriorityCode,
-				SalesRepID:            params.SalesRepID,
+				SalesRepID:            salesRepID,
 				ShippingTermID:        params.ShippingTermID,
 				SalesOrderTypeCode:    params.SalesOrderTypeCode,
 				PaymentTermID:         params.PaymentTermID,
@@ -339,6 +354,14 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 
 			_, apiErr = txOrderRepo.Create(txCtx, orderID, createParams)
 			if apiErr != nil {
+				return apiErr
+			}
+
+			// Create email contacts (matches Dashboard behavior)
+			if apiErr := createOrderEmailContacts(txCtx, txOrderRepo, orderID, params.AcknowledgementEmailContacts, string(constants.AccountRelationNotificationTypeOrderAcknowledgement)); apiErr != nil {
+				return apiErr
+			}
+			if apiErr := createOrderEmailContacts(txCtx, txOrderRepo, orderID, params.InvoiceEmailContacts, string(constants.AccountRelationNotificationTypeInvoice)); apiErr != nil {
 				return apiErr
 			}
 
@@ -369,6 +392,22 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 
 				_, apiErr = txLineRepo.Create(txCtx, lineID, lineParams)
 				if apiErr != nil {
+					return apiErr
+				}
+			}
+
+			// Synthesize a shipping line (matches Dashboard, which always attaches one).
+			// NOTE: rate is currently fixed at 0 — real rate estimation via the carrier's
+			// Shippo connection is a separate enhancement; the line is still emitted so
+			// downstream consumers that expect a shipping row keep working.
+			if apiErr := txSvc.synthesizeShippingLine(txCtx, orderID, params); apiErr != nil {
+				return apiErr
+			}
+
+			// Synthesize a discount line when an order-level discount was supplied
+			// (matches Dashboard: emits a negative-price line against the account's credit product).
+			if params.OrderDiscountID != nil {
+				if apiErr := txSvc.synthesizeDiscountLine(txCtx, orderID, params); apiErr != nil {
 					return apiErr
 				}
 			}
@@ -560,6 +599,18 @@ func (s *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, params domain.
 				return apiErr
 			}
 			result = updated
+
+			// Replace email contacts when the caller supplied lists (nil = leave alone)
+			if params.AcknowledgementEmailContacts != nil {
+				if apiErr := replaceOrderEmailContacts(txCtx, txRepo, params.SalesOrderID, *params.AcknowledgementEmailContacts, string(constants.AccountRelationNotificationTypeOrderAcknowledgement)); apiErr != nil {
+					return apiErr
+				}
+			}
+			if params.InvoiceEmailContacts != nil {
+				if apiErr := replaceOrderEmailContacts(txCtx, txRepo, params.SalesOrderID, *params.InvoiceEmailContacts, string(constants.AccountRelationNotificationTypeInvoice)); apiErr != nil {
+					return apiErr
+				}
+			}
 
 			changes := audit.ComputeChanges(existing, updated)
 
@@ -967,6 +1018,14 @@ func (s *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, params d
 		return nil, tracing.Trace(span, apiErr)
 	}
 
+	// On successful issue transition, optionally send acknowledgement email
+	// to the contacts on the order (matching Dashboard behavior).
+	if params.StatusChange == "issue" && params.SendEmail {
+		if apiErr := s.sendOrderAcknowledgementEmail(ctx, params.AccountID, params.SalesOrderID, order.Number); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+	}
+
 	// Re-fetch the updated order
 	updatedOrder, apiErr := repo.Get(ctx, params.AccountID, params.SalesOrderID)
 	if apiErr != nil {
@@ -974,6 +1033,305 @@ func (s *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, params d
 	}
 
 	return updatedOrder, nil
+}
+
+// sendOrderAcknowledgementEmail publishes the order-acknowledgement email to the
+// contacts configured for the order and marks the order as acknowledged. No-ops
+// if there are no recipients or the notification publisher is not configured.
+func (s *salesOrderSvcImpl) sendOrderAcknowledgementEmail(ctx context.Context, accountID, salesOrderID, orderNumber string) *apierror.APIError {
+	if s.notificationPublisher == nil {
+		return nil
+	}
+
+	recipients, apiErr := s.repos.NewSalesOrderRepo().GetAcknowledgementRecipients(ctx, salesOrderID)
+	if apiErr != nil {
+		return apiErr
+	}
+	if len(recipients) == 0 {
+		return nil
+	}
+
+	accountName, apiErr := s.repos.NewAccountRepo().GetName(ctx, accountID)
+	if apiErr != nil {
+		return apiErr
+	}
+
+	emailData := messaging.EmailSendData{
+		To:         recipients,
+		Subject:    fmt.Sprintf("Sales Order %s", orderNumber),
+		TemplateID: constants.EmailTemplateOrderAcknowledgement,
+		Params: map[string]any{
+			"order_number": orderNumber,
+			"account_name": accountName,
+		},
+		AccountID: &accountID,
+	}
+
+	return s.withTx(ctx, func(txCtx context.Context, txSvc *salesOrderSvcImpl) *apierror.APIError {
+		if apiErr := s.notificationPublisher.PublishSendEmail(txCtx, emailData); apiErr != nil {
+			return apiErr
+		}
+		return txSvc.repos.NewSalesOrderRepo().MarkAcknowledgementSent(txCtx, accountID, salesOrderID)
+	})
+}
+
+// checkInvoicePlanLimit enforces the account's per-billing-period invoice plan
+// limit before allowing a new sales order (which will typically generate an invoice).
+// Sandbox accounts and accounts with no configured limit are exempt.
+// Returns a validation error when the current count meets or exceeds the limit.
+func (s *salesOrderSvcImpl) checkInvoicePlanLimit(ctx context.Context, accountID string) *apierror.APIError {
+	accountRepo := s.repos.NewAccountRepo()
+
+	// Sandbox accounts are exempt.
+	accountCtx, apiErr := accountRepo.GetAccountContext(ctx, accountID)
+	if apiErr != nil {
+		return apiErr
+	}
+	if accountCtx != nil && accountCtx.IsSandbox {
+		return nil
+	}
+
+	planID, periodEnd, apiErr := accountRepo.GetPlanIDAndPeriodEnd(ctx, accountID)
+	if apiErr != nil {
+		return apiErr
+	}
+	if planID == nil {
+		return nil
+	}
+
+	limits, apiErr := accountRepo.ListPlanLimits(ctx, *planID)
+	if apiErr != nil {
+		return apiErr
+	}
+	maxInvoices, ok := limits["invoices_maximum"]
+	if !ok || maxInvoices == nil {
+		// Unlimited / not configured → nothing to enforce.
+		return nil
+	}
+
+	// Derive the billing-period start the same way billing-service does:
+	// (period end - 1 month) when subscribed, else start of the current calendar month UTC.
+	var periodStart time.Time
+	if periodEnd != nil {
+		periodStart = periodEnd.AddDate(0, -1, 0)
+	} else {
+		now := time.Now().UTC()
+		periodStart = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+	}
+
+	count, apiErr := s.repos.NewInvoiceRepo().CountSince(ctx, accountID, periodStart)
+	if apiErr != nil {
+		return apiErr
+	}
+
+	if count >= int64(*maxInvoices) {
+		return apierror.NewValidationError(fmt.Sprintf("Your plan allows a maximum of %d invoices per billing period.", *maxInvoices))
+	}
+
+	return nil
+}
+
+// synthesizeShippingLine emits a shipping order line using the account's
+// "shipping" system product, matching Dashboard behavior where every sales
+// order carries a dedicated shipping line. The unit price is left at 0 here;
+// rate estimation via the carrier API is a separate enhancement.
+// No-ops cleanly if the account has no shipping system product configured.
+func (s *salesOrderSvcImpl) synthesizeShippingLine(ctx context.Context, orderID string, params domain.CreateSalesOrderParams) *apierror.APIError {
+	shippingProduct, apiErr := s.repos.NewProductRepo().GetSystemProduct(ctx, params.AccountID, "shipping")
+	if apiErr != nil {
+		return apiErr
+	}
+	if shippingProduct == nil {
+		return nil
+	}
+
+	currencyUnitID, apiErr := s.repos.NewUnitRepo().GetCurrencyBaseUnitID(ctx)
+	if apiErr != nil {
+		return apiErr
+	}
+
+	lineID, apiErr := id.GenID(id.OrderLineIDPrefix, nil)
+	if apiErr != nil {
+		return apiErr
+	}
+
+	_, apiErr = s.repos.NewSalesOrderLineRepo().Create(ctx, lineID, domain.CreateSalesOrderLineParams{
+		SalesOrderID:               orderID,
+		AccountID:                  params.AccountID,
+		ProductID:                  shippingProduct.ProductID,
+		ProductSKU:                 shippingProduct.ProductSKU,
+		QuantityValue:              "1",
+		QuantityUnitID:             shippingProduct.QuantityUnitID,
+		UnitPriceValue:             "0",
+		UnitPriceNumeratorUnitID:   currencyUnitID,
+		UnitPriceDenominatorUnitID: shippingProduct.QuantityUnitID,
+	})
+	return apiErr
+}
+
+// synthesizeDiscountLine emits a negative-price order line against the account's
+// credit product to realize an order-level discount, matching Dashboard behavior.
+// No-ops if the discount, credit product, or currency base unit cannot be resolved
+// (a missing credit product should not fail the create; the discount amount will just
+// not appear as a line item).
+func (s *salesOrderSvcImpl) synthesizeDiscountLine(ctx context.Context, orderID string, params domain.CreateSalesOrderParams) *apierror.APIError {
+	if params.OrderDiscountID == nil {
+		return nil
+	}
+
+	discount, apiErr := s.repos.NewOrderDiscountRepo().Get(ctx, domain.GetOrderDiscountParams{
+		AccountID:       params.AccountID,
+		OrderDiscountID: *params.OrderDiscountID,
+	})
+	if apiErr != nil {
+		if apierror.IsNotFound(apiErr) {
+			return nil
+		}
+		return apiErr
+	}
+
+	// Compute total ordered from the input lines (qty * unit_price) and the discount amount.
+	total := decimal.Zero
+	for _, l := range params.Lines {
+		qty, err := decimal.NewFromString(l.QuantityValue)
+		if err != nil {
+			continue
+		}
+		price, err := decimal.NewFromString(l.UnitPriceValue)
+		if err != nil {
+			continue
+		}
+		total = total.Add(qty.Mul(price))
+	}
+
+	discountAmount := computeDiscountAmount(discount, total)
+	if discountAmount.IsZero() {
+		return nil
+	}
+
+	creditProduct, apiErr := s.repos.NewProductRepo().GetSystemProduct(ctx, params.AccountID, "credit")
+	if apiErr != nil {
+		return apiErr
+	}
+	if creditProduct == nil {
+		// No credit product configured for this account; skip rather than fail.
+		return nil
+	}
+
+	currencyUnitID, apiErr := s.repos.NewUnitRepo().GetCurrencyBaseUnitID(ctx)
+	if apiErr != nil {
+		return apiErr
+	}
+
+	lineID, apiErr := id.GenID(id.OrderLineIDPrefix, nil)
+	if apiErr != nil {
+		return apiErr
+	}
+
+	negAmount := discountAmount.Neg().String()
+
+	_, apiErr = s.repos.NewSalesOrderLineRepo().Create(ctx, lineID, domain.CreateSalesOrderLineParams{
+		SalesOrderID:               orderID,
+		AccountID:                  params.AccountID,
+		ProductID:                  creditProduct.ProductID,
+		ProductSKU:                 creditProduct.ProductSKU,
+		QuantityValue:              "1",
+		QuantityUnitID:             creditProduct.QuantityUnitID,
+		UnitPriceValue:             negAmount,
+		UnitPriceNumeratorUnitID:   currencyUnitID,
+		UnitPriceDenominatorUnitID: creditProduct.QuantityUnitID,
+	})
+	return apiErr
+}
+
+// computeDiscountAmount returns the discount amount given an order-level discount
+// and the pre-discount total. Caps at totalOrdered and rounds to nearest cent.
+func computeDiscountAmount(discount *domain.OrderDiscount, total decimal.Decimal) decimal.Decimal {
+	if discount == nil {
+		return decimal.Zero
+	}
+	var amount decimal.Decimal
+	switch discount.DiscountTypeCode {
+	case string(constants.OrderDiscountTypePercentage):
+		pct, err := decimal.NewFromString(discount.Percentage)
+		if err != nil {
+			return decimal.Zero
+		}
+		amount = pct.Mul(total)
+	case string(constants.OrderDiscountTypeAmount):
+		val, err := decimal.NewFromString(discount.Amount)
+		if err != nil {
+			return decimal.Zero
+		}
+		amount = val
+	default:
+		return decimal.Zero
+	}
+
+	if amount.GreaterThan(total) {
+		amount = total
+	}
+	if amount.IsNegative() {
+		return decimal.Zero
+	}
+	return amount.Round(2)
+}
+
+// resolveSalesRepID auto-assigns a sales rep when the caller omits one.
+// Resolution order (matches Dashboard): customer default → zipcode territory → state territory → none.
+// Returns nil when no match is found; any lookup error is swallowed (rep stays unset rather than failing the order).
+func (s *salesOrderSvcImpl) resolveSalesRepID(ctx context.Context, accountID, buyerAccountID string, shipToState, shipToPostalCode *string) *string {
+	// 1. Customer default sales rep.
+	if customer, apiErr := s.repos.NewCustomerRepo().Get(ctx, accountID, buyerAccountID, nil); apiErr == nil && customer != nil && customer.DefaultSalesRepID != nil {
+		return customer.DefaultSalesRepID
+	}
+
+	territoryRepo := s.repos.NewTerritoryRepo()
+
+	// 2. Zipcode territory lookup.
+	if shipToPostalCode != nil && *shipToPostalCode != "" {
+		base := *shipToPostalCode
+		if idx := strings.Index(base, "-"); idx >= 0 {
+			base = base[:idx]
+		}
+		if zip, err := strconv.Atoi(base); err == nil {
+			if rep, apiErr := territoryRepo.FindSalesRepByZipcode(ctx, accountID, int32(zip)); apiErr == nil && rep != nil {
+				return rep
+			}
+		}
+	}
+
+	// 3. State-only territory lookup.
+	if shipToState != nil && *shipToState != "" {
+		if rep, apiErr := territoryRepo.FindSalesRepByState(ctx, accountID, *shipToState); apiErr == nil && rep != nil {
+			return rep
+		}
+	}
+
+	return nil
+}
+
+// createOrderEmailContacts writes order_email_contact rows for the given contacts + notification type.
+func createOrderEmailContacts(ctx context.Context, repo domain.SalesOrderRepo, salesOrderID string, contacts []domain.SalesOrderEmailContactInput, notificationTypeCode string) *apierror.APIError {
+	for _, c := range contacts {
+		contactID, apiErr := id.GenID(id.OrderEmailIDPrefix, nil)
+		if apiErr != nil {
+			return apiErr
+		}
+		if apiErr := repo.CreateEmailContact(ctx, contactID, salesOrderID, c.AccountUserID, notificationTypeCode); apiErr != nil {
+			return apiErr
+		}
+	}
+	return nil
+}
+
+// replaceOrderEmailContacts clears existing rows for the given notification type
+// and inserts fresh rows for the supplied contacts. Matches Dashboard's delete-and-recreate behavior on update.
+func replaceOrderEmailContacts(ctx context.Context, repo domain.SalesOrderRepo, salesOrderID string, contacts []domain.SalesOrderEmailContactInput, notificationTypeCode string) *apierror.APIError {
+	if apiErr := repo.DeleteEmailContactsByOrderAndType(ctx, salesOrderID, notificationTypeCode); apiErr != nil {
+		return apiErr
+	}
+	return createOrderEmailContacts(ctx, repo, salesOrderID, contacts, notificationTypeCode)
 }
 
 func (s *salesOrderSvcImpl) CheckoutSalesOrder(ctx context.Context, params domain.CheckoutSalesOrderParams) (*domain.CheckoutSalesOrderResult, *apierror.APIError) {

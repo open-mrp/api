@@ -385,6 +385,27 @@ func (q *Queries) GetAccountPlanCode(ctx context.Context, id string) (string, er
 	return plan_code, err
 }
 
+const getAccountPlanIDAndPeriodEnd = `-- name: GetAccountPlanIDAndPeriodEnd :one
+SELECT ab.account_plan_id, ab.subscription_current_period_end
+FROM account a
+JOIN account_billing ab ON a.account_billing_id = ab.id
+WHERE a.id = ?
+`
+
+type GetAccountPlanIDAndPeriodEndRow struct {
+	AccountPlanID                string
+	SubscriptionCurrentPeriodEnd sql.NullTime
+}
+
+// Returns the account's current plan id (used with ListAccountPlanLimits) and
+// subscription period end (used to derive the billing period start for usage limits).
+func (q *Queries) GetAccountPlanIDAndPeriodEnd(ctx context.Context, id string) (GetAccountPlanIDAndPeriodEndRow, error) {
+	row := q.db.QueryRowContext(ctx, getAccountPlanIDAndPeriodEnd, id)
+	var i GetAccountPlanIDAndPeriodEndRow
+	err := row.Scan(&i.AccountPlanID, &i.SubscriptionCurrentPeriodEnd)
+	return i, err
+}
+
 const getAccountPlanTypeIDByCode = `-- name: GetAccountPlanTypeIDByCode :one
 SELECT type_id FROM account_plan
 WHERE plan_type_code = ?

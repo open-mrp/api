@@ -26,7 +26,7 @@ Look for `Using index` in the `Extra` column:
 
 ```sql
 EXPLAIN SELECT user_id, status, total FROM orders WHERE user_id = 42;
--- Extra: Using index ✓
+-- Extra: Using index (covering — no table lookup needed)
 ```
 
 If you see `Using index condition` instead, the index is helping but not covering — you may need to add selected columns to the index.

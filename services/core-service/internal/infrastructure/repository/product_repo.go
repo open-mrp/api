@@ -510,6 +510,28 @@ func (r *productRepoImpl) ListByAccount(ctx context.Context, accountID string) (
 	return products, nil
 }
 
+func (r *productRepoImpl) GetSystemProduct(ctx context.Context, accountID, productTypeCode string) (*domain.SystemProductInfo, *apierror.APIError) {
+	ctx, span := productRepoTracer.Start(ctx, "repository.product.get_system_product")
+	defer span.End()
+
+	row, err := r.queries.GetAccountSystemProduct(ctx, sqlc.GetAccountSystemProductParams{
+		ProductTypeCode: productTypeCode,
+		AccountID:       accountID,
+	})
+	if err != nil {
+		if apiErr := db.MapSQLError(err); apierror.IsNotFound(apiErr) {
+			return nil, nil
+		} else if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+	}
+	return &domain.SystemProductInfo{
+		ProductID:      row.ProductID,
+		ProductSKU:     row.ProductSku,
+		QuantityUnitID: row.QuantityUnitID,
+	}, nil
+}
+
 func (r *productRepoImpl) List(ctx context.Context, params domain.ListProductsFullParams) (*domain.ListProductsFullResult, *apierror.APIError) {
 	ctx, span := productRepoTracer.Start(ctx, "repository.product.list")
 	defer span.End()

@@ -504,6 +504,30 @@ func (r *accountRepoImpl) GetByStripeCustomerID(ctx context.Context, stripeCusto
 	return row.ID, row.PlanCode, nil
 }
 
+func (r *accountRepoImpl) GetPlanIDAndPeriodEnd(ctx context.Context, accountID string) (*string, *time.Time, *apierror.APIError) {
+	ctx, span := accountRepoTracer.Start(ctx, "repository.account.get_plan_id_and_period_end")
+	defer span.End()
+
+	row, err := r.queries.GetAccountPlanIDAndPeriodEnd(ctx, accountID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, nil, tracing.Trace(span, apiErr)
+	}
+
+	var planID *string
+	if row.AccountPlanID != "" {
+		v := row.AccountPlanID
+		planID = &v
+	}
+
+	var periodEnd *time.Time
+	if row.SubscriptionCurrentPeriodEnd.Valid {
+		t := row.SubscriptionCurrentPeriodEnd.Time
+		periodEnd = &t
+	}
+
+	return planID, periodEnd, nil
+}
+
 func (r *accountRepoImpl) ListPlanLimits(ctx context.Context, accountPlanID string) (map[string]*int32, *apierror.APIError) {
 	ctx, span := accountRepoTracer.Start(ctx, "repository.account.list_plan_limits")
 	defer span.End()

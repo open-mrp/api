@@ -153,6 +153,23 @@ func (q *Queries) FindUnitsByAbbreviations(ctx context.Context, accountID sql.Nu
 	return items, nil
 }
 
+const getCurrencyBaseUnit = `-- name: GetCurrencyBaseUnit :one
+SELECT id
+FROM unit
+WHERE unit_dimension_code = 'currency'
+AND is_base_unit = TRUE
+AND account_id IS NULL
+LIMIT 1
+`
+
+// Returns the global currency base unit ID (used as the numerator unit for price rates).
+func (q *Queries) GetCurrencyBaseUnit(ctx context.Context) (string, error) {
+	row := q.db.QueryRowContext(ctx, getCurrencyBaseUnit)
+	var id string
+	err := row.Scan(&id)
+	return id, err
+}
+
 const getUnit = `-- name: GetUnit :one
 SELECT
     unit.id,

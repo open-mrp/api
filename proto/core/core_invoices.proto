@@ -312,6 +312,12 @@ message CreateProductRequest {
   string category_id = 6;
   bool is_portal_ready = 7;
   optional string unit_price = 8;
+  // Initial unit cost. Defaults to "0" when omitted.
+  optional string unit_cost = 9;
+  // Initial burn rate (waste/scrap). Defaults to "0" when omitted.
+  optional string burn_rate = 10;
+  // Attribute IDs to connect to the item at creation time.
+  repeated string attribute_ids = 11;
 }
 message CreateProductResponse {
   ProductFullInfo product = 1;

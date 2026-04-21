@@ -309,18 +309,27 @@ func (s *productSvcImpl) CreateProduct(ctx context.Context, params domain.Create
 				return apiErr
 			}
 
-			// Insert rates for item (unit_value, unit_cost, burn_rate).
+			// Insert rates for item (unit_value, unit_cost, burn_rate). Caller-supplied
+			// values default to "0" when omitted, matching Dashboard behavior.
 			unitPriceValue := "0"
 			if params.UnitPrice != nil {
 				unitPriceValue = *params.UnitPrice
 			}
+			unitCostValue := "0"
+			if params.UnitCost != nil {
+				unitCostValue = *params.UnitCost
+			}
+			burnRateValue := "0"
+			if params.BurnRate != nil {
+				burnRateValue = *params.BurnRate
+			}
 			if apiErr := txProductRepo.InsertRate(txCtx, unitValueRateID, unitPriceValue, baseUnitID, baseUnitID); apiErr != nil {
 				return apiErr
 			}
-			if apiErr := txProductRepo.InsertRate(txCtx, unitCostRateID, "0", baseUnitID, baseUnitID); apiErr != nil {
+			if apiErr := txProductRepo.InsertRate(txCtx, unitCostRateID, unitCostValue, baseUnitID, baseUnitID); apiErr != nil {
 				return apiErr
 			}
-			if apiErr := txProductRepo.InsertRate(txCtx, burnRateRateID, "0", baseUnitID, baseUnitID); apiErr != nil {
+			if apiErr := txProductRepo.InsertRate(txCtx, burnRateRateID, burnRateValue, baseUnitID, baseUnitID); apiErr != nil {
 				return apiErr
 			}
 
@@ -335,6 +344,20 @@ func (s *productSvcImpl) CreateProduct(ctx context.Context, params domain.Create
 				return apiErr
 			}
 			result = created
+
+			// Link caller-supplied attributes to the new item (matches Dashboard behavior).
+			for _, attrID := range params.AttributeIDs {
+				if attrID == "" {
+					continue
+				}
+				if apiErr := txItemRepo.AddAttribute(txCtx, domain.AddItemAttributeParams{
+					AccountID:   params.AccountID,
+					ItemID:      itemID,
+					AttributeID: attrID,
+				}); apiErr != nil {
+					return apiErr
+				}
+			}
 
 			// Initialize inventory tracking with zero-quantity log and change log.
 			txInvMutRepo := txSvc.repos.NewInventoryMutationRepo()

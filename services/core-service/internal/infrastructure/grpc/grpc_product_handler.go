@@ -129,6 +129,15 @@ func (h *gRPCHandler) CreateProduct(ctx context.Context, req *pb.CreateProductRe
 	if req.UnitPrice != nil {
 		params.UnitPrice = req.UnitPrice
 	}
+	if req.UnitCost != nil {
+		params.UnitCost = req.UnitCost
+	}
+	if req.BurnRate != nil {
+		params.BurnRate = req.BurnRate
+	}
+	if len(req.AttributeIds) > 0 {
+		params.AttributeIDs = req.AttributeIds
+	}
 
 	product, apiErr := h.productSvc.CreateProduct(ctx, params)
 	if apiErr != nil {

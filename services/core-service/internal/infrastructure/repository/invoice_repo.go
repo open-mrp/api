@@ -64,6 +64,20 @@ func decimalToString(v interface{}) string {
 	}
 }
 
+func (r *invoiceRepoImpl) CountSince(ctx context.Context, accountID string, since time.Time) (int64, *apierror.APIError) {
+	ctx, span := invoiceRepoTracer.Start(ctx, "repository.invoice.count_since")
+	defer span.End()
+
+	count, err := r.queries.CountInvoicesByAccountSince(ctx, sqlc.CountInvoicesByAccountSinceParams{
+		AccountID: accountID,
+		Since:     since,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return 0, tracing.Trace(span, apiErr)
+	}
+	return count, nil
+}
+
 func (r *invoiceRepoImpl) List(ctx context.Context, params domain.ListInvoicesParams) (*domain.ListInvoicesResult, *apierror.APIError) {
 	ctx, span := invoiceRepoTracer.Start(ctx, "repository.invoice.list")
 	defer span.End()

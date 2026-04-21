@@ -79,9 +79,38 @@ INSERT IGNORE INTO account_address (id, account_id, address_id, created_at, upda
     ('acad_01seedsupplier1addr', 'ac_01seedsupplier_acct0', 'ad_01seedsupplieraddr00', NOW(), NOW()),
     ('acad_01seedsupplier2addr', 'ac_01seedsupplier_acct1', 'ad_01seedsupplier2addr0', NOW(), NOW());
 
-INSERT IGNORE INTO account_relation (id, owner_account_id, counterparty_account_id, account_relation_role_code, external_number, is_edi_enabled, priority_code, created_at, updated_at) VALUES
-    ('acre_01seedsupplier0000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01seedsupplier_acct0', 'supplier', 'SUP-001', 0, 'normal', NOW(), NOW()),
-    ('acre_01seedsupplier0001', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01seedsupplier_acct1', 'supplier', 'SUP-002', 0, 'normal', NOW(), NOW());
+INSERT IGNORE INTO account_relation (id, owner_account_id, counterparty_account_id, account_relation_role_code, external_number, is_edi_enabled, priority_code, default_billing_address_id, default_shipping_address_id, created_at, updated_at) VALUES
+    ('acre_01seedsupplier0000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01seedsupplier_acct0', 'supplier', 'SUP-001', 0, 'normal', 'ad_01seedsupplieraddr00', 'ad_01seedsupplieraddr00', NOW(), NOW()),
+    ('acre_01seedsupplier0001', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01seedsupplier_acct1', 'supplier', 'SUP-002', 0, 'normal', 'ad_01seedsupplier2addr0', 'ad_01seedsupplier2addr0', NOW(), NOW());
+
+-- Set default billing/shipping addresses on supplier accounts themselves so the
+-- Supplier adapter (which falls back to account defaults when the relation lacks them)
+-- always resolves to a concrete address.
+UPDATE account SET
+    default_billing_address_id  = 'ad_01seedsupplieraddr00',
+    default_shipping_address_id = 'ad_01seedsupplieraddr00'
+WHERE id = 'ac_01seedsupplier_acct0'
+    AND default_billing_address_id IS NULL;
+
+UPDATE account SET
+    default_billing_address_id  = 'ad_01seedsupplier2addr0',
+    default_shipping_address_id = 'ad_01seedsupplier2addr0'
+WHERE id = 'ac_01seedsupplier_acct1'
+    AND default_billing_address_id IS NULL;
+
+-- Backfill supplier account_relation defaults for DBs that were seeded before the
+-- INSERTs above included these columns (INSERT IGNORE would skip the pre-existing rows).
+UPDATE account_relation
+   SET default_billing_address_id  = 'ad_01seedsupplieraddr00',
+       default_shipping_address_id = 'ad_01seedsupplieraddr00'
+ WHERE id = 'acre_01seedsupplier0000'
+   AND (default_billing_address_id IS NULL OR default_shipping_address_id IS NULL);
+
+UPDATE account_relation
+   SET default_billing_address_id  = 'ad_01seedsupplier2addr0',
+       default_shipping_address_id = 'ad_01seedsupplier2addr0'
+ WHERE id = 'acre_01seedsupplier0001'
+   AND (default_billing_address_id IS NULL OR default_shipping_address_id IS NULL);
 
 -- Supplier materials (supplier_account_id is the counterparty account, not the relation ID)
 INSERT IGNORE INTO supplier_material (id, material_id, supplier_account_id, supplier_part_number, supplier_description, is_active, owner_account_id, created_at, updated_at) VALUES
@@ -442,18 +471,6 @@ INSERT IGNORE INTO account (id, name, account_type_code, onboarding_status_code,
 INSERT IGNORE INTO account_relation (id, owner_account_id, counterparty_account_id, account_relation_role_code, external_number, parent_account_relation_id, is_edi_enabled, priority_code, account_status_code, commission_status_code, freight_status_code, shipping_term_id, payment_term_id, account_group_id, created_at, updated_at) VALUES
     ('acre_01seedcustchildr01', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01seedcustchild00001', 'customer', 'GMS-CHILD-001', 'acre_01seedcustomer00000', 0, 'normal', 'normal', 'commission_applied', 'billed_freight', 'prepaid_billed', 'pytm_01seednet3000000', 'acgp_01k0a413mjeth8pe1g70t0thax', NOW(), NOW()),
     ('acre_01seedcustchildr02', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01seedcustchild00002', 'customer', 'GMS-CHILD-002', 'acre_01seedcustomer00000', 0, 'normal', 'normal', 'commission_applied', 'billed_freight', 'prepaid_billed', 'pytm_01seednet3000000', 'acgp_01k0a413mjeth8pe1g70t0thax', NOW(), NOW());
-
--- ============================================================
--- SUPPLIER DEFAULT ADDRESSES
--- ============================================================
--- The seeded supplier account_relation had no default_billing_address_id or
--- default_shipping_address_id, so `?include=bill_to_address` and
--- `ship_to_address` returned null stubs. Reuse the supplier's existing address.
-
-UPDATE account_relation
-   SET default_billing_address_id  = 'ad_01seedsupplieraddr00',
-       default_shipping_address_id = 'ad_01seedsupplieraddr00'
- WHERE id = 'acre_01seedsupplier0000';
 
 -- ============================================================
 -- LOCATION PARENT

@@ -72,8 +72,16 @@ func buildSalesOrderListFilters(params domain.ListSalesOrdersParams) (
 	includeCustomerGroupFilter bool, customerGroupIDs []gosql.NullString,
 	includeSalesRepFilter bool, salesRepIDs []gosql.NullString,
 ) {
-	includeStatusFilter = len(params.StatusCodes) > 0
-	statusCodes = params.StatusCodes
+	// 'all' is a wildcard meaning "no status filter" (matching Dashboard behavior)
+	statusCodes = make([]string, 0, len(params.StatusCodes))
+	for _, code := range params.StatusCodes {
+		if code == "all" {
+			statusCodes = statusCodes[:0]
+			break
+		}
+		statusCodes = append(statusCodes, code)
+	}
+	includeStatusFilter = len(statusCodes) > 0
 	if len(statusCodes) == 0 {
 		statusCodes = []string{""}
 	}
@@ -1056,6 +1064,38 @@ func (r *salesOrderRepoImpl) MarkAcknowledgementSent(ctx context.Context, accoun
 	err := r.queries.MarkAcknowledgementSent(ctx, sqlc.MarkAcknowledgementSentParams{
 		ID:        salesOrderID,
 		AccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	return nil
+}
+
+func (r *salesOrderRepoImpl) CreateEmailContact(ctx context.Context, id, salesOrderID, accountUserID, notificationTypeCode string) *apierror.APIError {
+	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.create_email_contact")
+	defer span.End()
+
+	err := r.queries.CreateSalesOrderEmailContact(ctx, sqlc.CreateSalesOrderEmailContactParams{
+		ID:                   id,
+		SalesOrderID:         salesOrderID,
+		AccountUserID:        accountUserID,
+		NotificationTypeCode: notificationTypeCode,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
+	return nil
+}
+
+func (r *salesOrderRepoImpl) DeleteEmailContactsByOrderAndType(ctx context.Context, salesOrderID, notificationTypeCode string) *apierror.APIError {
+	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.delete_email_contacts_by_order_and_type")
+	defer span.End()
+
+	err := r.queries.DeleteSalesOrderEmailContactsByOrderAndType(ctx, sqlc.DeleteSalesOrderEmailContactsByOrderAndTypeParams{
+		SalesOrderID:         salesOrderID,
+		NotificationTypeCode: notificationTypeCode,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return tracing.Trace(span, apiErr)

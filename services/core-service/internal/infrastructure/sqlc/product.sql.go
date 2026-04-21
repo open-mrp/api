@@ -282,6 +282,40 @@ func (q *Queries) FindProductsBySKUs(ctx context.Context, arg FindProductsBySKUs
 	return items, nil
 }
 
+const getAccountSystemProduct = `-- name: GetAccountSystemProduct :one
+SELECT
+    p.id AS product_id,
+    i.sku AS product_sku,
+    ug.base_unit_id AS quantity_unit_id
+FROM product p
+JOIN item i ON i.id = p.item_id
+JOIN item_category ic ON ic.id = i.item_category_id
+JOIN unit_group ug ON ug.id = ic.unit_group_id
+WHERE p.product_type_code = ?
+AND i.account_id = ?
+LIMIT 1
+`
+
+type GetAccountSystemProductParams struct {
+	ProductTypeCode string
+	AccountID       string
+}
+
+type GetAccountSystemProductRow struct {
+	ProductID      string
+	ProductSku     string
+	QuantityUnitID string
+}
+
+// Fetches the account's system product (e.g. credit, shipping) along with
+// the base unit of its item category, for use when synthesizing order lines.
+func (q *Queries) GetAccountSystemProduct(ctx context.Context, arg GetAccountSystemProductParams) (GetAccountSystemProductRow, error) {
+	row := q.db.QueryRowContext(ctx, getAccountSystemProduct, arg.ProductTypeCode, arg.AccountID)
+	var i GetAccountSystemProductRow
+	err := row.Scan(&i.ProductID, &i.ProductSku, &i.QuantityUnitID)
+	return i, err
+}
+
 const getProductByItemID = `-- name: GetProductByItemID :one
 SELECT
     p.id,

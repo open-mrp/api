@@ -12,6 +12,26 @@ import (
 	"time"
 )
 
+const countInvoicesByAccountSince = `-- name: CountInvoicesByAccountSince :one
+SELECT COUNT(*) AS cnt FROM invoice
+WHERE account_id = ?
+AND created_at >= ?
+`
+
+type CountInvoicesByAccountSinceParams struct {
+	AccountID string
+	Since     time.Time
+}
+
+// Returns the count of invoices created for this account at or after the given
+// timestamp. Used to enforce the per-billing-period invoice plan limit.
+func (q *Queries) CountInvoicesByAccountSince(ctx context.Context, arg CountInvoicesByAccountSinceParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countInvoicesByAccountSince, arg.AccountID, arg.Since)
+	var cnt int64
+	err := row.Scan(&cnt)
+	return cnt, err
+}
+
 const deleteInvoice = `-- name: DeleteInvoice :exec
 DELETE FROM invoice
 WHERE id = ?

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"strings"
 
 	"github.com/shopspring/decimal"
 
@@ -435,6 +436,14 @@ func (s *itemSvcImpl) GetItemTrends(ctx context.Context, itemID string, trendTyp
 	}
 	if apiErr := identity.CheckHasPermission(types.PermissionDomainItems, types.ActionRead); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
+	}
+
+	// Reject unknown trend types — matches Dashboard's guard rail.
+	if !constants.ItemTrendType(trendType).IsValid() {
+		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam(
+			"Unsupported trend type. Supported values: "+strings.Join(constants.ItemTrendType("").EnumValues(), ", "),
+			"trend_type",
+		))
 	}
 
 	return s.repos.NewItemRepo().GetTrends(ctx, identity.Target.AccountID, itemID, trendType)
@@ -1167,6 +1176,86 @@ func (s *itemSvcImpl) BulkCreateItems(ctx context.Context, params domain.BulkCre
 	}
 }
 
+// bulkUpsertExistingItem updates an existing item in place during a bulk-create
+// operation, matching Dashboard's updateExistingProduct behavior: writes the new
+// description, product_line_id, category_id, and unit_value rate rather than
+// erroring on duplicate SKU.
+func (s *itemSvcImpl) bulkUpsertExistingItem(ctx context.Context, accountID, itemID, unitValueRateID string, input domain.BulkCreateItemInput) *apierror.APIError {
+	return s.withTx(ctx, func(txCtx context.Context, txSvc *itemSvcImpl) *apierror.APIError {
+		txItemRepo := txSvc.repos.NewItemRepo()
+
+		// Description / notes / sku are handled via the generic item update.
+		updateDesc := input.Description != nil
+		if apiErr := txItemRepo.Update(txCtx, domain.UpdateItemParams{
+			AccountID:         accountID,
+			ItemID:            itemID,
+			Description:       input.Description,
+			UpdateDescription: updateDesc,
+		}); apiErr != nil {
+			return apiErr
+		}
+
+		// Move the item between categories when the input supplies a new category,
+		// keeping rate units consistent with the new category's base unit.
+		if input.ItemCategoryID != "" {
+			if apiErr := txItemRepo.ChangeCategory(txCtx, domain.ChangeItemCategoryParams{
+				AccountID:  accountID,
+				ItemID:     itemID,
+				CategoryID: input.ItemCategoryID,
+			}); apiErr != nil {
+				return apiErr
+			}
+			baseUnitID, apiErr := txItemRepo.GetCategoryBaseUnitID(txCtx, input.ItemCategoryID)
+			if apiErr != nil {
+				return apiErr
+			}
+			if apiErr := txItemRepo.UpdateRateUnits(txCtx, accountID, itemID, baseUnitID); apiErr != nil {
+				return apiErr
+			}
+		}
+
+		// Move the product to the new product line when supplied. Only applies to
+		// product-type bulk uploads; materials/parts don't have a product line.
+		if input.ProductLineID != nil && *input.ProductLineID != "" {
+			if _, apiErr := txSvc.repos.NewProductRepo().ChangeProductLine(txCtx, domain.ChangeProductProductLineParams{
+				AccountID:     accountID,
+				ItemID:        itemID,
+				ProductLineID: *input.ProductLineID,
+			}); apiErr != nil {
+				// Non-product items don't have a product-line row; ignore not-found here.
+				if !apierror.IsNotFound(apiErr) {
+					return apiErr
+				}
+			}
+		}
+
+		// Note: bulk input currently doesn't carry a unit price, so there's nothing
+		// to write into the unit_value rate. unitValueRateID is accepted on the
+		// signature so callers can add a price field later without changing the
+		// repo surface.
+		_ = unitValueRateID
+
+		// Replace attributes when supplied: clears existing, then re-adds from input.
+		// Matches Dashboard's updateExistingProduct attribute handling.
+		if len(input.AttributeIDs) > 0 {
+			for _, attrID := range input.AttributeIDs {
+				if attrID == "" {
+					continue
+				}
+				if apiErr := txItemRepo.AddAttribute(txCtx, domain.AddItemAttributeParams{
+					AccountID:   accountID,
+					ItemID:      itemID,
+					AttributeID: attrID,
+				}); apiErr != nil {
+					return apiErr
+				}
+			}
+		}
+
+		return nil
+	})
+}
+
 // bulkCreateSingleItem creates a single item within a bulk operation.
 // Errors are captured in the result rather than propagated.
 func (s *itemSvcImpl) bulkCreateSingleItem(ctx context.Context, accountID, itemType string, input domain.BulkCreateItemInput) domain.BulkCreateItemResult {
@@ -1174,13 +1263,17 @@ func (s *itemSvcImpl) bulkCreateSingleItem(ctx context.Context, accountID, itemT
 		return domain.BulkCreateItemResult{SKU: sku, Success: false, Error: &msg}
 	}
 
-	// Check SKU uniqueness.
-	exists, apiErr := s.repos.NewItemRepo().CheckSKUExists(ctx, accountID, input.SKU, "")
+	// When the SKU already exists in the account, upsert the existing item's
+	// description + unit_value rather than failing (matches Dashboard's bulk behavior).
+	existingItemID, existingRateID, apiErr := s.repos.NewItemRepo().FindBySKU(ctx, accountID, input.SKU)
 	if apiErr != nil {
-		return errResult(input.SKU, "Failed to check SKU uniqueness.")
+		return errResult(input.SKU, "Failed to look up existing SKU.")
 	}
-	if exists {
-		return errResult(input.SKU, "An item with this SKU already exists.")
+	if existingItemID != nil && existingRateID != nil {
+		if apiErr := s.bulkUpsertExistingItem(ctx, accountID, *existingItemID, *existingRateID, input); apiErr != nil {
+			return errResult(input.SKU, apiErr.PublicMessage)
+		}
+		return domain.BulkCreateItemResult{SKU: input.SKU, Success: true, ItemID: existingItemID}
 	}
 
 	// Get base unit for rates from category.
@@ -1247,7 +1340,8 @@ func (s *itemSvcImpl) bulkCreateProduct(ctx context.Context, accountID, itemID, 
 			return apiErr
 		}
 
-		// Insert item.
+		// Insert item. Default IsPortalReady=true to match Dashboard's bulk-create behavior
+		// (customer-facing by default; clients can toggle off after import if needed).
 		params := domain.CreateProductParams{
 			AccountID:       accountID,
 			ItemID:          itemID,
@@ -1259,7 +1353,7 @@ func (s *itemSvcImpl) bulkCreateProduct(ctx context.Context, accountID, itemID, 
 			ProductTypeCode: "sale",
 			ProductLineID:   input.ProductLineID,
 			CategoryID:      input.ItemCategoryID,
-			IsPortalReady:   false,
+			IsPortalReady:   true,
 		}
 		if apiErr := txProductRepo.InsertItem(txCtx, itemID, params); apiErr != nil {
 			return apiErr
@@ -1267,6 +1361,26 @@ func (s *itemSvcImpl) bulkCreateProduct(ctx context.Context, accountID, itemID, 
 
 		// Insert product record.
 		if _, apiErr := txProductRepo.Create(txCtx, productID, itemID, params); apiErr != nil {
+			return apiErr
+		}
+
+		// Initialize inventory tracking to match the regular CreateProduct path.
+		txInvMutRepo := txSvc.repos.NewInventoryMutationRepo()
+		if apiErr := txInvMutRepo.CreateInventoryLog(txCtx, domain.CreateInventoryLogParams{
+			AccountID: accountID,
+			ItemID:    itemID,
+			Measure:   decimal.Zero,
+			UnitID:    baseUnitID,
+		}); apiErr != nil {
+			return apiErr
+		}
+		if apiErr := txInvMutRepo.CreateInventoryChangeLog(txCtx, domain.CreateInventoryChangeLogParams{
+			AccountID:  accountID,
+			ItemID:     itemID,
+			Measure:    decimal.Zero,
+			UnitID:     baseUnitID,
+			ActionType: "user_action",
+		}); apiErr != nil {
 			return apiErr
 		}
 

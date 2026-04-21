@@ -208,7 +208,7 @@ main() {
   for service in "${services[@]}"; do
     local mock_dir="${ROOT_DIR}/services/${service}/internal/domain/mock"
     if [[ -d "${mock_dir}" ]]; then
-      echo "  ✓ ${service}"
+      echo "  OK: ${service}"
     fi
   done
 }

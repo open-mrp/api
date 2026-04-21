@@ -559,3 +559,10 @@ WHERE invoice_id = sqlc.arg('invoice_id');
 DELETE FROM invoice
 WHERE id = sqlc.arg('id')
 AND account_id = sqlc.arg('account_id');
+
+-- name: CountInvoicesByAccountSince :one
+-- Returns the count of invoices created for this account at or after the given
+-- timestamp. Used to enforce the per-billing-period invoice plan limit.
+SELECT COUNT(*) AS cnt FROM invoice
+WHERE account_id = sqlc.arg('account_id')
+AND created_at >= sqlc.arg('since');

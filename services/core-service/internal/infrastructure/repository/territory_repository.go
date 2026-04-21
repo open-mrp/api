@@ -314,3 +314,37 @@ func (r *territoryRepoImpl) IsInAccount(ctx context.Context, accountID, territor
 	}
 	return exists, nil
 }
+
+func (r *territoryRepoImpl) FindSalesRepByZipcode(ctx context.Context, accountID string, zipcode int32) (*string, *apierror.APIError) {
+	ctx, span := territoryRepoTracer.Start(ctx, "repository.territory.find_sales_rep_by_zipcode")
+	defer span.End()
+
+	salesRepID, err := r.queries.FindSalesRepByZipcode(ctx, sqlc.FindSalesRepByZipcodeParams{
+		AccountID: accountID,
+		Zipcode:   gosql.NullInt32{Int32: zipcode, Valid: true},
+	})
+	if err != nil {
+		if apierror.IsNotFound(db.MapSQLError(err)) {
+			return nil, nil
+		}
+		return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to look up sales rep by zipcode."))
+	}
+	return &salesRepID, nil
+}
+
+func (r *territoryRepoImpl) FindSalesRepByState(ctx context.Context, accountID, state string) (*string, *apierror.APIError) {
+	ctx, span := territoryRepoTracer.Start(ctx, "repository.territory.find_sales_rep_by_state")
+	defer span.End()
+
+	salesRepID, err := r.queries.FindSalesRepByState(ctx, sqlc.FindSalesRepByStateParams{
+		AccountID: accountID,
+		State:     state,
+	})
+	if err != nil {
+		if apierror.IsNotFound(db.MapSQLError(err)) {
+			return nil, nil
+		}
+		return nil, tracing.Trace(span, apierror.NewInternalError(err, "Failed to look up sales rep by state."))
+	}
+	return &salesRepID, nil
+}

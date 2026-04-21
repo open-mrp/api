@@ -553,6 +553,8 @@ func (h *salesGRPCHandler) CreateSalesOrder(ctx context.Context, req *pb.CreateS
 		ShipToPostalCode:      req.ShipToPostalCode,
 		ShipToCountry:         req.ShipToCountry,
 		Lines:                 lines,
+		AcknowledgementEmailContacts: protoToEmailContactInputs(req.AcknowledgementEmailContacts),
+		InvoiceEmailContacts:         protoToEmailContactInputs(req.InvoiceEmailContacts),
 	}
 
 	order, apiErr := h.salesOrderSvc.CreateSalesOrder(ctx, params)
@@ -608,6 +610,15 @@ func (h *salesGRPCHandler) UpdateSalesOrder(ctx context.Context, req *pb.UpdateS
 	if req.PromisedAt != nil {
 		t := req.PromisedAt.AsTime()
 		params.PromisedAt = &t
+	}
+
+	if list := req.AcknowledgementEmailContacts; list != nil {
+		contacts := protoToEmailContactInputs(list.Contacts)
+		params.AcknowledgementEmailContacts = &contacts
+	}
+	if list := req.InvoiceEmailContacts; list != nil {
+		contacts := protoToEmailContactInputs(list.Contacts)
+		params.InvoiceEmailContacts = &contacts
 	}
 
 	order, apiErr := h.salesOrderSvc.UpdateSalesOrder(ctx, params)
@@ -822,4 +833,16 @@ func (h *salesGRPCHandler) CreateCustomerCheckoutSession(ctx context.Context, re
 	return &pb.CreateCustomerCheckoutSessionResponse{
 		ClientSecret: result.ClientSecret,
 	}, nil
+}
+
+// protoToEmailContactInputs maps proto contact inputs to the domain layer.
+func protoToEmailContactInputs(in []*pb.SalesOrderEmailContactInput) []domain.SalesOrderEmailContactInput {
+	if len(in) == 0 {
+		return nil
+	}
+	out := make([]domain.SalesOrderEmailContactInput, len(in))
+	for i, c := range in {
+		out[i] = domain.SalesOrderEmailContactInput{AccountUserID: c.AccountUserId}
+	}
+	return out
 }

@@ -192,6 +192,28 @@ func (q *Queries) CreateSalesOrder(ctx context.Context, arg CreateSalesOrderPara
 	return err
 }
 
+const createSalesOrderEmailContact = `-- name: CreateSalesOrderEmailContact :exec
+INSERT INTO order_email_contact (id, sales_order_id, account_user_id, notification_type_code, created_at, updated_at)
+VALUES (?, ?, ?, ?, NOW(3), NOW(3))
+`
+
+type CreateSalesOrderEmailContactParams struct {
+	ID                   string
+	SalesOrderID         string
+	AccountUserID        string
+	NotificationTypeCode string
+}
+
+func (q *Queries) CreateSalesOrderEmailContact(ctx context.Context, arg CreateSalesOrderEmailContactParams) error {
+	_, err := q.db.ExecContext(ctx, createSalesOrderEmailContact,
+		arg.ID,
+		arg.SalesOrderID,
+		arg.AccountUserID,
+		arg.NotificationTypeCode,
+	)
+	return err
+}
+
 const deleteInventoryAllocationsByReservedSalesOrderIssues = `-- name: DeleteInventoryAllocationsByReservedSalesOrderIssues :exec
 DELETE ia FROM inventory_allocation ia
 JOIN inventory_issue ii ON ii.id = ia.inventory_issue_id
@@ -324,6 +346,22 @@ type DeleteSalesOrderParams struct {
 
 func (q *Queries) DeleteSalesOrder(ctx context.Context, arg DeleteSalesOrderParams) error {
 	_, err := q.db.ExecContext(ctx, deleteSalesOrder, arg.ID, arg.AccountID)
+	return err
+}
+
+const deleteSalesOrderEmailContactsByOrderAndType = `-- name: DeleteSalesOrderEmailContactsByOrderAndType :exec
+DELETE FROM order_email_contact
+WHERE sales_order_id = ?
+AND notification_type_code = ?
+`
+
+type DeleteSalesOrderEmailContactsByOrderAndTypeParams struct {
+	SalesOrderID         string
+	NotificationTypeCode string
+}
+
+func (q *Queries) DeleteSalesOrderEmailContactsByOrderAndType(ctx context.Context, arg DeleteSalesOrderEmailContactsByOrderAndTypeParams) error {
+	_, err := q.db.ExecContext(ctx, deleteSalesOrderEmailContactsByOrderAndType, arg.SalesOrderID, arg.NotificationTypeCode)
 	return err
 }
 

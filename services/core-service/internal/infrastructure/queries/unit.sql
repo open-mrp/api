@@ -172,3 +172,12 @@ SELECT
     unit.updated_at
 FROM unit
 WHERE (unit.account_id = sqlc.arg('account_id') OR unit.account_id IS NULL);
+
+-- name: GetCurrencyBaseUnit :one
+-- Returns the global currency base unit ID (used as the numerator unit for price rates).
+SELECT id
+FROM unit
+WHERE unit_dimension_code = 'currency'
+AND is_base_unit = TRUE
+AND account_id IS NULL
+LIMIT 1;

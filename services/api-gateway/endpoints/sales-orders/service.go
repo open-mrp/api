@@ -14,6 +14,27 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
+// toSalesOrderEmailContactInputs converts the endpoint input slice to proto messages.
+func toSalesOrderEmailContactInputs(inputs []SalesOrderEmailContactInput) []*pb.SalesOrderEmailContactInput {
+	if len(inputs) == 0 {
+		return nil
+	}
+	out := make([]*pb.SalesOrderEmailContactInput, len(inputs))
+	for i, c := range inputs {
+		out[i] = &pb.SalesOrderEmailContactInput{AccountUserId: c.AccountUserID}
+	}
+	return out
+}
+
+// toSalesOrderEmailContactList wraps an optional contact list for update requests.
+// nil → leave existing contacts untouched; non-nil (even empty) → replace existing contacts.
+func toSalesOrderEmailContactList(inputs *[]SalesOrderEmailContactInput) *pb.SalesOrderEmailContactList {
+	if inputs == nil {
+		return nil
+	}
+	return &pb.SalesOrderEmailContactList{Contacts: toSalesOrderEmailContactInputs(*inputs)}
+}
+
 type SalesOrderSvc interface {
 	ListSalesOrders(ctx context.Context, req *ListSalesOrdersRequest) (*apiresource.List[apiresource.SalesOrderSummary], *apierror.APIError)
 	GetSalesOrder(ctx context.Context, req *GetSalesOrderRequest) (*apiresource.SalesOrderDetail, *apierror.APIError)
@@ -152,6 +173,8 @@ func (m *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, req *CreateSal
 		ShipToPostalCode:      req.ShipToPostalCode,
 		ShipToCountry:         req.ShipToCountry,
 		Lines:                 lines,
+		AcknowledgementEmailContacts: toSalesOrderEmailContactInputs(req.AcknowledgementEmailContacts),
+		InvoiceEmailContacts:         toSalesOrderEmailContactInputs(req.InvoiceEmailContacts),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, salesOrderEpSvcTracer, "service.sales_orders.create", domain.ServiceName,
@@ -194,6 +217,8 @@ func (m *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, req *UpdateSal
 		ShipToState:           req.ShipToState,
 		ShipToPostalCode:      req.ShipToPostalCode,
 		ShipToCountry:         req.ShipToCountry,
+		AcknowledgementEmailContacts: toSalesOrderEmailContactList(req.AcknowledgementEmailContacts),
+		InvoiceEmailContacts:         toSalesOrderEmailContactList(req.InvoiceEmailContacts),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, salesOrderEpSvcTracer, "service.sales_orders.update", domain.ServiceName,

@@ -208,6 +208,17 @@ func (r *unitRepoImpl) List(ctx context.Context, params domain.ListUnitsParams) 
 	return &domain.ListUnitsResult{Units: result, PageInfo: pageInfo}, nil
 }
 
+func (r *unitRepoImpl) GetCurrencyBaseUnitID(ctx context.Context) (string, *apierror.APIError) {
+	ctx, span := unitRepoTracer.Start(ctx, "repository.unit.get_currency_base_unit_id")
+	defer span.End()
+
+	id, err := r.queries.GetCurrencyBaseUnit(ctx)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return "", tracing.Trace(span, apiErr)
+	}
+	return id, nil
+}
+
 func (r *unitRepoImpl) Get(ctx context.Context, params domain.GetUnitParams) (*domain.Unit, *apierror.APIError) {
 	ctx, span := unitRepoTracer.Start(ctx, "repository.unit.get")
 	defer span.End()

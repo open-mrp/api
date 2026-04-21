@@ -402,6 +402,14 @@ message CreateSalesOrderRequest {
   optional string ship_to_country = 27;
   // Lines to create with the order
   repeated CreateSalesOrderLineInput lines = 28;
+  // Email contact recipients for order acknowledgement emails
+  repeated SalesOrderEmailContactInput acknowledgement_email_contacts = 29;
+  // Email contact recipients for invoice emails
+  repeated SalesOrderEmailContactInput invoice_email_contacts = 30;
+}
+
+message SalesOrderEmailContactInput {
+  string account_user_id = 1;
 }
 
 message CreateSalesOrderLineInput {
@@ -458,6 +466,16 @@ message UpdateSalesOrderRequest {
   optional bool is_acknowledgment_sent = 28;
   optional google.protobuf.Timestamp promised_at = 29;
   optional string customer_id = 30;
+  // When set, replaces the acknowledgement email contacts on the order.
+  // An empty list clears all acknowledgement contacts; nil/unset leaves existing contacts untouched.
+  optional SalesOrderEmailContactList acknowledgement_email_contacts = 31;
+  // When set, replaces the invoice email contacts on the order.
+  // An empty list clears all invoice contacts; nil/unset leaves existing contacts untouched.
+  optional SalesOrderEmailContactList invoice_email_contacts = 32;
+}
+
+message SalesOrderEmailContactList {
+  repeated SalesOrderEmailContactInput contacts = 1;
 }
 
 message UpdateSalesOrderResponse {

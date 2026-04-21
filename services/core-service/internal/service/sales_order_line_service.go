@@ -385,6 +385,7 @@ func (s *salesOrderLineSvcImpl) DeleteSalesOrderLine(ctx context.Context, params
 	params.AccountID = identity.Target.AccountID
 
 	lineRepo := s.repos.NewSalesOrderLineRepo()
+	orderRepo := s.repos.NewSalesOrderRepo()
 
 	// Validate line belongs to order and account owns the order
 	isInOrder, apiErr := lineRepo.IsInOrder(ctx, params.SalesOrderLineID, params.SalesOrderID, params.AccountID)
@@ -393,6 +394,24 @@ func (s *salesOrderLineSvcImpl) DeleteSalesOrderLine(ctx context.Context, params
 	}
 	if !isInOrder {
 		return tracing.Trace(span, apierror.NewResourceNotFoundError("Sales order line not found in this order."))
+	}
+
+	// Block deletion of lines from fulfilled/completed orders
+	order, apiErr := orderRepo.Get(ctx, params.AccountID, params.SalesOrderID)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	if order.SalesOrderStatusCode == string(constants.SalesOrderStatusCodeFulfilled) || order.CompletedAt != nil {
+		return tracing.Trace(span, apierror.NewResourceConflictError("Cannot delete lines from a fulfilled order."))
+	}
+
+	// Block deletion if this line has already been shipped against
+	hasShipped, apiErr := lineRepo.HasShippedAgainstOrderLine(ctx, params.SalesOrderLineID)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	if hasShipped {
+		return tracing.Trace(span, apierror.NewResourceConflictError("Cannot delete a line item that has been shipped against."))
 	}
 
 	salesOrderLine, apiErr := lineRepo.Get(ctx, params.SalesOrderLineID)

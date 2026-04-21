@@ -98,6 +98,14 @@ SELECT COALESCE(MAX(line_item_number), 0) + 1 AS next_number
 FROM sales_order_line
 WHERE sales_order_id = sqlc.arg('sales_order_id');
 
+-- name: HasShippedAgainstOrderLine :one
+SELECT EXISTS(
+    SELECT 1 FROM shipment_line sl
+    JOIN shipment s ON s.id = sl.shipment_id
+    WHERE sl.sales_order_line_id = sqlc.arg('sales_order_line_id')
+    AND s.shipped_at IS NOT NULL
+) AS has_shipped;
+
 -- name: DeletePickLinesBySalesOrderLine :exec
 DELETE FROM pick_line WHERE sales_order_line_id = sqlc.arg('sales_order_line_id');
 

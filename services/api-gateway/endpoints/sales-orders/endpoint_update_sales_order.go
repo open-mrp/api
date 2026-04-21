@@ -74,6 +74,12 @@ type UpdateSalesOrderRequest struct {
 	PromisedAt *time.Time `json:"promised_at,omitempty" nullable:"false"`
 	// Customer ID.
 	CustomerID *string `json:"customer_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
+	// When set, replaces acknowledgement email contacts on the order.
+	// An empty list clears all contacts; omitted leaves existing contacts untouched.
+	AcknowledgementEmailContacts *[]SalesOrderEmailContactInput `json:"acknowledgement_email_contacts,omitempty" nullable:"false"`
+	// When set, replaces invoice email contacts on the order.
+	// An empty list clears all contacts; omitted leaves existing contacts untouched.
+	InvoiceEmailContacts *[]SalesOrderEmailContactInput `json:"invoice_email_contacts,omitempty" nullable:"false"`
 }
 
 var sampleUpdateSONote = "Updated shipping instructions"

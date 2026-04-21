@@ -30,9 +30,9 @@ CREATE INDEX idx_orders_tenant_status_created ON orders (tenant_id, status, crea
 
 ```sql
 -- Index: (status, created_at)
-ORDER BY status ASC, created_at ASC   -- ✓ matches (optimal)
-ORDER BY status DESC, created_at DESC -- ✓ full reverse OK (reverse scan)
-ORDER BY status ASC, created_at DESC  -- ⚠️ mixed directions (may use filesort)
+ORDER BY status ASC, created_at ASC   -- OK: matches (optimal)
+ORDER BY status DESC, created_at DESC -- OK: full reverse (reverse scan)
+ORDER BY status ASC, created_at DESC  -- WARNING: mixed directions (may use filesort)
 
 -- MySQL 8.0+: descending index components
 CREATE INDEX idx_orders_status_created ON orders (status ASC, created_at DESC);

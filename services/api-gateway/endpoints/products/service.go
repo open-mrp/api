@@ -109,6 +109,9 @@ func (m *productSvcImpl) CreateProduct(ctx context.Context, req *CreateProductRe
 		CategoryId:      req.CategoryID,
 		IsPortalReady:   req.IsPortalReady,
 		UnitPrice:       req.UnitPrice,
+		UnitCost:        req.UnitCost,
+		BurnRate:        req.BurnRate,
+		AttributeIds:    req.AttributeIDs,
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, productSvcTracer, "service.products.create", domain.ServiceName,

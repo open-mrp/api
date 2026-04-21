@@ -47,6 +47,14 @@ LEFT JOIN account_billing owner_ab ON owner.account_billing_id = owner_ab.id
 LEFT JOIN account_plan owner_ap ON owner_ab.account_plan_id = owner_ap.type_id
 WHERE a.id = ?;
 
+-- name: GetAccountPlanIDAndPeriodEnd :one
+-- Returns the account's current plan id (used with ListAccountPlanLimits) and
+-- subscription period end (used to derive the billing period start for usage limits).
+SELECT ab.account_plan_id, ab.subscription_current_period_end
+FROM account a
+JOIN account_billing ab ON a.account_billing_id = ab.id
+WHERE a.id = ?;
+
 -- name: GetAccountPlanTypeIDByCode :one
 SELECT type_id FROM account_plan
 WHERE plan_type_code = ?

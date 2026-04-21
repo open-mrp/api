@@ -452,6 +452,16 @@ SELECT EXISTS(
   AND deleted_at IS NULL
 ) AS sku_exists;
 
+-- name: FindItemBySKU :one
+-- Used by bulk upsert paths: returns the existing item's ID and its unit_value rate ID
+-- so the caller can update the price in place rather than creating a duplicate.
+SELECT id, unit_value_id
+FROM item
+WHERE sku = sqlc.arg('sku')
+AND account_id = sqlc.arg('account_id')
+AND deleted_at IS NULL
+LIMIT 1;
+
 -- name: AddItemAttribute :exec
 INSERT INTO _item_attributes (A, B) VALUES (sqlc.arg('attribute_id'), sqlc.arg('item_id'))
 ON DUPLICATE KEY UPDATE A = A;

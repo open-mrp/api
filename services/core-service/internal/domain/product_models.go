@@ -64,6 +64,12 @@ type CreateProductParams struct {
 	CategoryID      string
 	IsPortalReady   bool
 	UnitPrice       *string
+	// UnitCost and BurnRate are initial rate values written into the unit_cost and
+	// burn_rate Rate records alongside UnitPrice (unit_value). Defaults to "0" when nil.
+	UnitCost *string
+	BurnRate *string
+	// AttributeIDs are connected to the new item at creation time.
+	AttributeIDs []string
 }
 
 // UpdateProductParams holds parameters for partially updating a product.

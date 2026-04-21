@@ -288,6 +288,18 @@ func (r *salesOrderLineRepoImpl) GetNextLineItemNumber(ctx context.Context, sale
 	return nextNumber, nil
 }
 
+func (r *salesOrderLineRepoImpl) HasShippedAgainstOrderLine(ctx context.Context, salesOrderLineID string) (bool, *apierror.APIError) {
+	ctx, span := salesOrderLineRepoTracer.Start(ctx, "repository.sales_order_line.has_shipped_against_order_line")
+	defer span.End()
+
+	hasShipped, err := r.queries.HasShippedAgainstOrderLine(ctx, salesOrderLineID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return false, tracing.Trace(span, apiErr)
+	}
+
+	return hasShipped, nil
+}
+
 func (r *salesOrderLineRepoImpl) DeleteCascade(ctx context.Context, salesOrderLineID string) *apierror.APIError {
 	ctx, span := salesOrderLineRepoTracer.Start(ctx, "repository.sales_order_line.delete_cascade")
 	defer span.End()

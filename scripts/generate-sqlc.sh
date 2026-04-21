@@ -28,7 +28,7 @@ generate_sqlc() {
   fi
 
   (cd "${dir}" && sqlc generate) >> "${log_file}" 2>&1
-  echo "  ✓ ${name}" >> "${log_file}"
+  echo "  OK: ${name}" >> "${log_file}"
 }
 
 main() {

@@ -205,6 +205,8 @@ type BulkCreateItemInput struct {
 	Description    *string
 	ItemCategoryID string
 	ProductLineID  *string
+	// AttributeIDs are connected to the new (or existing upserted) item in the same tx.
+	AttributeIDs []string
 }
 
 // BulkCreateItemResult represents the result of creating a single item in a bulk operation.

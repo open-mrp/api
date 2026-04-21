@@ -6,6 +6,21 @@ JOIN rate r ON r.id = i.unit_value_id
 WHERE i.account_id = ? AND p.product_type_code = 'sale' AND i.sku LIKE ?
 LIMIT 20;
 
+-- name: GetAccountSystemProduct :one
+-- Fetches the account's system product (e.g. credit, shipping) along with
+-- the base unit of its item category, for use when synthesizing order lines.
+SELECT
+    p.id AS product_id,
+    i.sku AS product_sku,
+    ug.base_unit_id AS quantity_unit_id
+FROM product p
+JOIN item i ON i.id = p.item_id
+JOIN item_category ic ON ic.id = i.item_category_id
+JOIN unit_group ug ON ug.id = ic.unit_group_id
+WHERE p.product_type_code = sqlc.arg('product_type_code')
+AND i.account_id = sqlc.arg('account_id')
+LIMIT 1;
+
 -- name: ListProductsByAccount :many
 SELECT p.id as product_id, i.id as item_id, i.sku, i.description, r.value as unit_price
 FROM product p

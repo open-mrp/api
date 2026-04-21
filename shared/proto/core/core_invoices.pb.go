@@ -9,13 +9,12 @@
 package core
 
 import (
-	reflect "reflect"
-	sync "sync"
-	unsafe "unsafe"
-
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
+	reflect "reflect"
+	sync "sync"
+	unsafe "unsafe"
 )
 
 const (
@@ -3387,8 +3386,14 @@ type CreateProductRequest struct {
 	CategoryId      string                 `protobuf:"bytes,6,opt,name=category_id,json=categoryId,proto3" json:"category_id,omitempty"`
 	IsPortalReady   bool                   `protobuf:"varint,7,opt,name=is_portal_ready,json=isPortalReady,proto3" json:"is_portal_ready,omitempty"`
 	UnitPrice       *string                `protobuf:"bytes,8,opt,name=unit_price,json=unitPrice,proto3,oneof" json:"unit_price,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// Initial unit cost. Defaults to "0" when omitted.
+	UnitCost *string `protobuf:"bytes,9,opt,name=unit_cost,json=unitCost,proto3,oneof" json:"unit_cost,omitempty"`
+	// Initial burn rate (waste/scrap). Defaults to "0" when omitted.
+	BurnRate *string `protobuf:"bytes,10,opt,name=burn_rate,json=burnRate,proto3,oneof" json:"burn_rate,omitempty"`
+	// Attribute IDs to connect to the item at creation time.
+	AttributeIds  []string `protobuf:"bytes,11,rep,name=attribute_ids,json=attributeIds,proto3" json:"attribute_ids,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CreateProductRequest) Reset() {
@@ -3475,6 +3480,27 @@ func (x *CreateProductRequest) GetUnitPrice() string {
 		return *x.UnitPrice
 	}
 	return ""
+}
+
+func (x *CreateProductRequest) GetUnitCost() string {
+	if x != nil && x.UnitCost != nil {
+		return *x.UnitCost
+	}
+	return ""
+}
+
+func (x *CreateProductRequest) GetBurnRate() string {
+	if x != nil && x.BurnRate != nil {
+		return *x.BurnRate
+	}
+	return ""
+}
+
+func (x *CreateProductRequest) GetAttributeIds() []string {
+	if x != nil {
+		return x.AttributeIds
+	}
+	return nil
 }
 
 type CreateProductResponse struct {
@@ -5011,7 +5037,7 @@ const file_core_core_invoices_proto_rawDesc = "" +
 	"\x11GetProductRequest\x12\x17\n" +
 	"\aitem_id\x18\x01 \x01(\tR\x06itemId\"E\n" +
 	"\x12GetProductResponse\x12/\n" +
-	"\aproduct\x18\x01 \x01(\v2\x15.core.ProductFullInfoR\aproduct\"\xed\x02\n" +
+	"\aproduct\x18\x01 \x01(\v2\x15.core.ProductFullInfoR\aproduct\"\xf2\x03\n" +
 	"\x14CreateProductRequest\x12\x10\n" +
 	"\x03sku\x18\x01 \x01(\tR\x03sku\x12%\n" +
 	"\vdescription\x18\x02 \x01(\tH\x00R\vdescription\x88\x01\x01\x12\x19\n" +
@@ -5022,11 +5048,19 @@ const file_core_core_invoices_proto_rawDesc = "" +
 	"categoryId\x12&\n" +
 	"\x0fis_portal_ready\x18\a \x01(\bR\risPortalReady\x12\"\n" +
 	"\n" +
-	"unit_price\x18\b \x01(\tH\x03R\tunitPrice\x88\x01\x01B\x0e\n" +
+	"unit_price\x18\b \x01(\tH\x03R\tunitPrice\x88\x01\x01\x12 \n" +
+	"\tunit_cost\x18\t \x01(\tH\x04R\bunitCost\x88\x01\x01\x12 \n" +
+	"\tburn_rate\x18\n" +
+	" \x01(\tH\x05R\bburnRate\x88\x01\x01\x12#\n" +
+	"\rattribute_ids\x18\v \x03(\tR\fattributeIdsB\x0e\n" +
 	"\f_descriptionB\b\n" +
 	"\x06_notesB\x12\n" +
 	"\x10_product_line_idB\r\n" +
-	"\v_unit_price\"H\n" +
+	"\v_unit_priceB\f\n" +
+	"\n" +
+	"_unit_costB\f\n" +
+	"\n" +
+	"_burn_rate\"H\n" +
 	"\x15CreateProductResponse\x12/\n" +
 	"\aproduct\x18\x01 \x01(\v2\x15.core.ProductFullInfoR\aproduct\"\xbd\x02\n" +
 	"\x14UpdateProductRequest\x12\x17\n" +

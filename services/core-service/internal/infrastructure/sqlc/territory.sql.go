@@ -47,6 +47,55 @@ func (q *Queries) DeleteTerritory(ctx context.Context, arg DeleteTerritoryParams
 	return err
 }
 
+const findSalesRepByState = `-- name: FindSalesRepByState :one
+SELECT t.sales_rep_id
+FROM territory t
+WHERE t.account_id = ?
+AND t.state = ?
+AND t.start_zipcode IS NULL
+LIMIT 1
+`
+
+type FindSalesRepByStateParams struct {
+	AccountID string
+	State     string
+}
+
+func (q *Queries) FindSalesRepByState(ctx context.Context, arg FindSalesRepByStateParams) (string, error) {
+	row := q.db.QueryRowContext(ctx, findSalesRepByState, arg.AccountID, arg.State)
+	var sales_rep_id string
+	err := row.Scan(&sales_rep_id)
+	return sales_rep_id, err
+}
+
+const findSalesRepByZipcode = `-- name: FindSalesRepByZipcode :one
+SELECT t.sales_rep_id
+FROM territory t
+WHERE t.account_id = ?
+AND (
+    (t.start_zipcode <= ? AND t.end_zipcode >= ?)
+    OR (t.start_zipcode = ? AND t.end_zipcode IS NULL)
+)
+LIMIT 1
+`
+
+type FindSalesRepByZipcodeParams struct {
+	AccountID string
+	Zipcode   sql.NullInt32
+}
+
+func (q *Queries) FindSalesRepByZipcode(ctx context.Context, arg FindSalesRepByZipcodeParams) (string, error) {
+	row := q.db.QueryRowContext(ctx, findSalesRepByZipcode,
+		arg.AccountID,
+		arg.Zipcode,
+		arg.Zipcode,
+		arg.Zipcode,
+	)
+	var sales_rep_id string
+	err := row.Scan(&sales_rep_id)
+	return sales_rep_id, err
+}
+
 const getTerritory = `-- name: GetTerritory :one
 SELECT
     t.id,

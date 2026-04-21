@@ -158,6 +158,8 @@ func TestInputValidation_ExtremelyLongString_Rejected(t *testing.T) {
 
 func TestInputValidation_UnicodeString(t *testing.T) {
 	t.Parallel()
+	// Mixes 3-byte CJK and a 4-byte supplementary-plane code point so the test
+	// exercises the full UTF-8 range, not just ASCII or the BMP.
 	name := uniqueName("e2e-val") + " 日本語テスト 🏭"
 	status, body, err := apiClient.Post(customersPath, map[string]any{
 		"name": name,

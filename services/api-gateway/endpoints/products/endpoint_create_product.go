@@ -26,8 +26,14 @@ type CreateProductRequest struct {
 	CategoryID string `json:"category_id" validate:"required,max=191"`
 	// Whether visible on the customer portal.
 	IsPortalReady bool `json:"is_portal_ready"`
-	// Unit price.
+	// Unit price (written into the unit_value rate). Defaults to "0".
 	UnitPrice *string `json:"unit_price"`
+	// Initial unit cost (written into the unit_cost rate). Defaults to "0".
+	UnitCost *string `json:"unit_cost"`
+	// Initial burn rate (written into the burn_rate rate). Defaults to "0".
+	BurnRate *string `json:"burn_rate"`
+	// Attribute IDs to connect to the product at creation time.
+	AttributeIDs []string `json:"attribute_ids,omitempty"`
 }
 
 var sampleCreateProductRequest = &CreateProductRequest{

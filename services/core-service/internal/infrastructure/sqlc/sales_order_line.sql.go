@@ -279,6 +279,22 @@ func (q *Queries) GetSalesOrderLine(ctx context.Context, salesOrderLineID string
 	return i, err
 }
 
+const hasShippedAgainstOrderLine = `-- name: HasShippedAgainstOrderLine :one
+SELECT EXISTS(
+    SELECT 1 FROM shipment_line sl
+    JOIN shipment s ON s.id = sl.shipment_id
+    WHERE sl.sales_order_line_id = ?
+    AND s.shipped_at IS NOT NULL
+) AS has_shipped
+`
+
+func (q *Queries) HasShippedAgainstOrderLine(ctx context.Context, salesOrderLineID string) (bool, error) {
+	row := q.db.QueryRowContext(ctx, hasShippedAgainstOrderLine, salesOrderLineID)
+	var has_shipped bool
+	err := row.Scan(&has_shipped)
+	return has_shipped, err
+}
+
 const isLineInOrder = `-- name: IsLineInOrder :one
 SELECT EXISTS(
     SELECT 1 FROM sales_order_line sol

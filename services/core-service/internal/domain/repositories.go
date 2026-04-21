@@ -15,6 +15,9 @@ type AccountRepo interface {
 	Create(ctx context.Context, id, name string, accountTypeCode AccountType, planCode constants.PlanCode) *apierror.APIError
 	GetPlanCode(ctx context.Context, id string) (constants.PlanCode, *apierror.APIError)
 	GetAccountContext(ctx context.Context, accountID string) (*AccountContext, *apierror.APIError)
+	// GetPlanIDAndPeriodEnd returns the account's active plan id (for limit lookups)
+	// and current subscription period end (for deriving billing-period start).
+	GetPlanIDAndPeriodEnd(ctx context.Context, accountID string) (planID *string, periodEnd *time.Time, apiErr *apierror.APIError)
 	Delete(ctx context.Context, id string) *apierror.APIError
 	GetPlanTypeIDByCode(ctx context.Context, planCode string) (string, *apierror.APIError)
 	UpdateSubscription(ctx context.Context, accountID string, status *string, planCode string, accountPlanID *string, stripeSubID *string, periodEnd *time.Time, stripeCustomerID *string, billingProfileID *string, billingCadenceID *string, pricingPlanSubscriptionID *string, servicingStatus *string, collectionStatus *string) *apierror.APIError
@@ -105,9 +108,21 @@ type AccountRelationRepo interface {
 	FindCustomerAccountsByVendorAndUser(ctx context.Context, vendorAccountID, userID string) ([]CustomerAccountSummary, *apierror.APIError)
 }
 
+// SystemProductInfo holds the minimal info needed to synthesize an order line
+// using one of the account's built-in system products (credit, shipping).
+type SystemProductInfo struct {
+	ProductID      string
+	ProductSKU     string
+	QuantityUnitID string
+}
+
 type ProductRepo interface {
 	SearchBySKU(ctx context.Context, accountID, query string) ([]ProductInfo, *apierror.APIError)
 	ListByAccount(ctx context.Context, accountID string) ([]ProductInfo, *apierror.APIError)
+	// GetSystemProduct fetches the account's built-in product matching the
+	// given product_type_code (e.g. "credit", "shipping") along with the base
+	// unit of its item category. Returns nil if no such product exists.
+	GetSystemProduct(ctx context.Context, accountID, productTypeCode string) (*SystemProductInfo, *apierror.APIError)
 
 	List(ctx context.Context, params ListProductsFullParams) (*ListProductsFullResult, *apierror.APIError)
 	Get(ctx context.Context, params GetProductFullParams) (*ProductFull, *apierror.APIError)
@@ -139,6 +154,12 @@ type ItemRepo interface {
 	UpdateConsumptionProductionQuantityUnits(ctx context.Context, accountID, itemID, newUnitID string) *apierror.APIError
 	GetCategoryBaseUnitID(ctx context.Context, categoryID string) (string, *apierror.APIError)
 	FetchItemsBySKU(ctx context.Context, accountID string, skus []string) ([]ItemSKUInfo, *apierror.APIError)
+	// FindBySKU returns the existing item's ID and its unit_value rate ID for the
+	// given SKU within the account. Returns (nil, nil, nil) when no match exists.
+	// Used by bulk upsert flows.
+	FindBySKU(ctx context.Context, accountID, sku string) (itemID *string, unitValueRateID *string, apiErr *apierror.APIError)
+	// UpdateRateValue updates a rate's numeric value in place.
+	UpdateRateValue(ctx context.Context, rateID, value string) *apierror.APIError
 }
 
 type RolePermissionRepo interface {
@@ -194,6 +215,9 @@ type RegistrationRepo interface {
 type UnitRepo interface {
 	List(ctx context.Context, params ListUnitsParams) (*ListUnitsResult, *apierror.APIError)
 	Get(ctx context.Context, params GetUnitParams) (*Unit, *apierror.APIError)
+	// GetCurrencyBaseUnitID returns the global currency base unit ID used as the
+	// numerator unit when building monetary price rates.
+	GetCurrencyBaseUnitID(ctx context.Context) (string, *apierror.APIError)
 	Create(ctx context.Context, id string, params CreateUnitParams) (*Unit, *apierror.APIError)
 	Update(ctx context.Context, params UpdateUnitParams) (*Unit, *apierror.APIError)
 	Delete(ctx context.Context, params DeleteUnitParams) *apierror.APIError
@@ -791,6 +815,8 @@ type SalesOrderRepo interface {
 	DeleteReservedInventoryIssues(ctx context.Context, accountID, salesOrderID string) *apierror.APIError
 	GetAcknowledgementRecipients(ctx context.Context, salesOrderID string) ([]string, *apierror.APIError)
 	MarkAcknowledgementSent(ctx context.Context, accountID, salesOrderID string) *apierror.APIError
+	CreateEmailContact(ctx context.Context, id, salesOrderID, accountUserID, notificationTypeCode string) *apierror.APIError
+	DeleteEmailContactsByOrderAndType(ctx context.Context, salesOrderID, notificationTypeCode string) *apierror.APIError
 	NoteFirstShipAt(ctx context.Context, accountID, salesOrderID string) *apierror.APIError
 	MarkUnfulfilled(ctx context.Context, accountID, salesOrderID string) *apierror.APIError
 }
@@ -803,6 +829,7 @@ type SalesOrderLineRepo interface {
 	Delete(ctx context.Context, salesOrderLineID string) *apierror.APIError
 	IsInOrder(ctx context.Context, salesOrderLineID, salesOrderID, accountID string) (bool, *apierror.APIError)
 	GetNextLineItemNumber(ctx context.Context, salesOrderID string) (int32, *apierror.APIError)
+	HasShippedAgainstOrderLine(ctx context.Context, salesOrderLineID string) (bool, *apierror.APIError)
 	DeleteCascade(ctx context.Context, salesOrderLineID string) *apierror.APIError
 	CreateQuantity(ctx context.Context, quantityID, value, unitID string) *apierror.APIError
 }
@@ -899,6 +926,7 @@ type PermissionGroupRepo interface {
 type InvoiceRepo interface {
 	List(ctx context.Context, params ListInvoicesParams) (*ListInvoicesResult, *apierror.APIError)
 	Get(ctx context.Context, params GetInvoiceParams) (*Invoice, *apierror.APIError)
+	CountSince(ctx context.Context, accountID string, since time.Time) (int64, *apierror.APIError)
 	GetLines(ctx context.Context, invoiceID string) ([]*InvoiceLine, *apierror.APIError)
 	GetAllocations(ctx context.Context, invoiceID string) ([]*InvoiceAllocation, *apierror.APIError)
 	Update(ctx context.Context, params UpdateInvoiceParams) (*InvoiceSummary, *apierror.APIError)
@@ -1165,4 +1193,10 @@ type TerritoryRepo interface {
 	Update(ctx context.Context, params UpdateTerritoryParams) (*Territory, *apierror.APIError)
 	Delete(ctx context.Context, params DeleteTerritoryParams) *apierror.APIError
 	IsInAccount(ctx context.Context, accountID, territoryID string) (bool, *apierror.APIError)
+	// FindSalesRepByZipcode returns the sales_rep (account_user) ID for the
+	// territory whose zipcode range includes the given zipcode, if any.
+	FindSalesRepByZipcode(ctx context.Context, accountID string, zipcode int32) (*string, *apierror.APIError)
+	// FindSalesRepByState returns the sales_rep (account_user) ID for the
+	// state-only territory matching the given state, if any.
+	FindSalesRepByState(ctx context.Context, accountID, state string) (*string, *apierror.APIError)
 }

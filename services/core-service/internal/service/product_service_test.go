@@ -1,0 +1,1237 @@
+package service
+
+import (
+	"context"
+	"encoding/json"
+	"testing"
+
+	"github.com/augno/api/services/auth-service/pkg/types"
+	"github.com/augno/api/services/core-service/internal/domain"
+	factorymock "github.com/augno/api/services/core-service/internal/domain/mock/factory"
+	mediatormock "github.com/augno/api/services/core-service/internal/domain/mock/mediator"
+	repositorymock "github.com/augno/api/services/core-service/internal/domain/mock/repository"
+	"github.com/augno/api/shared/appctx"
+	"github.com/augno/api/shared/constants"
+	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/messaging"
+	"github.com/augno/api/shared/pagination"
+
+	"github.com/stretchr/testify/suite"
+	"go.uber.org/mock/gomock"
+)
+
+// --- Local test stubs (matches pattern in unit_service_test.go) ---
+
+type productStubOutboxRepo struct{}
+
+func (s *productStubOutboxRepo) Create(_ context.Context, _ messaging.OutboxMessageInput) (int64, error) {
+	return 0, nil
+}
+
+type productStubTxManager struct {
+	factory domain.RepoFactory
+}
+
+func (m *productStubTxManager) WithTx(ctx context.Context, fn func(context.Context, domain.RepoFactory) *apierror.APIError) *apierror.APIError {
+	return fn(ctx, m.factory)
+}
+
+// --- Suite ---
+
+type ProductSvcTestSuite struct {
+	suite.Suite
+	ctrl                *gomock.Controller
+	productSvc          domain.ProductSvc
+	productRepo         *repositorymock.MockProductRepo
+	itemRepo            *repositorymock.MockItemRepo
+	inventoryMutRepo    *repositorymock.MockInventoryMutationRepo
+	productLineRepo     *repositorymock.MockProductLineRepo
+	deletedRecordRepo   *repositorymock.MockDeletedRecordRepo
+	accountRelationRepo *repositorymock.MockAccountRelationRepo
+	repoFactory         *factorymock.MockRepoFactory
+	mediatorFactory     *factorymock.MockMediatorFactory
+	idempotencyMed      *mediatormock.MockIdempotencyMed
+	readAccessMed       *mediatormock.MockReadAccessMed
+}
+
+func (s *ProductSvcTestSuite) SetupSuite() {
+	s.ctrl = gomock.NewController(s.T())
+
+	s.productRepo = repositorymock.NewMockProductRepo(s.ctrl)
+	s.itemRepo = repositorymock.NewMockItemRepo(s.ctrl)
+	s.inventoryMutRepo = repositorymock.NewMockInventoryMutationRepo(s.ctrl)
+	s.productLineRepo = repositorymock.NewMockProductLineRepo(s.ctrl)
+	s.deletedRecordRepo = repositorymock.NewMockDeletedRecordRepo(s.ctrl)
+	s.accountRelationRepo = repositorymock.NewMockAccountRelationRepo(s.ctrl)
+
+	s.repoFactory = factorymock.NewMockRepoFactory(s.ctrl)
+	s.repoFactory.EXPECT().NewProductRepo().Return(s.productRepo).AnyTimes()
+	s.repoFactory.EXPECT().NewItemRepo().Return(s.itemRepo).AnyTimes()
+	s.repoFactory.EXPECT().NewInventoryMutationRepo().Return(s.inventoryMutRepo).AnyTimes()
+	s.repoFactory.EXPECT().NewProductLineRepo().Return(s.productLineRepo).AnyTimes()
+	s.repoFactory.EXPECT().NewDeletedRecordRepo().Return(s.deletedRecordRepo).AnyTimes()
+	s.repoFactory.EXPECT().NewAccountRelationRepo().Return(s.accountRelationRepo).AnyTimes()
+	s.repoFactory.EXPECT().NewOutboxRepo().Return(&productStubOutboxRepo{}).AnyTimes()
+
+	s.idempotencyMed = mediatormock.NewMockIdempotencyMed(s.ctrl)
+	s.readAccessMed = mediatormock.NewMockReadAccessMed(s.ctrl)
+	s.mediatorFactory = factorymock.NewMockMediatorFactory(s.ctrl)
+	s.mediatorFactory.EXPECT().Build(gomock.Any()).Return(domain.Mediators{
+		Idempotency: s.idempotencyMed,
+		ReadAccess:  s.readAccessMed,
+	}).AnyTimes()
+
+	s.productSvc = NewProductSvc(&ProductSvcConfig{
+		Repos:           s.repoFactory,
+		MediatorFactory: s.mediatorFactory,
+		TxManager:       &productStubTxManager{factory: s.repoFactory},
+	})
+}
+
+func (s *ProductSvcTestSuite) TearDownSuite() {
+	s.ctrl.Finish()
+}
+
+func TestProductSvcTestSuite(t *testing.T) {
+	t.Parallel()
+	suite.Run(t, new(ProductSvcTestSuite))
+}
+
+// --- Identity context builders ---
+
+// internalProductIdentityCtx returns a ctx with an internal admin actor
+// targeting the given account. Admins bypass per-permission checks, which
+// keeps non-permission tests focused on business logic.
+func internalProductIdentityCtx(accountID string) context.Context {
+	adminCode := string(constants.RoleTypeCodeAdmin)
+	return appctx.WithIdentity(context.Background(), &types.Identity{
+		Type:   types.IdentityActorTypeUser,
+		Target: &types.IdentityTarget{AccountID: accountID},
+		Actor: &types.IdentityActor{
+			RelationType: types.IdentityRelationTypeInternal,
+			ID:           "usr_test123",
+			AccountID:    &accountID,
+			RoleTypeCode: &adminCode,
+			Permissions: map[string]bool{
+				"items:read":     true,
+				"items:create":   true,
+				"items:update":   true,
+				"items:delete":   true,
+				"customers:read": true,
+				"suppliers:read": true,
+			},
+		},
+	})
+}
+
+// readOnlyProductIdentityCtx returns an internal non-admin actor with only
+// items:read (no create/update/delete). Used to assert permission gating.
+func readOnlyProductIdentityCtx(accountID string) context.Context {
+	customCode := string(constants.RoleTypeCodeCustom)
+	return appctx.WithIdentity(context.Background(), &types.Identity{
+		Type:   types.IdentityActorTypeUser,
+		Target: &types.IdentityTarget{AccountID: accountID},
+		Actor: &types.IdentityActor{
+			RelationType: types.IdentityRelationTypeInternal,
+			ID:           "usr_test123",
+			AccountID:    &accountID,
+			RoleTypeCode: &customCode,
+			Permissions: map[string]bool{
+				"items:read": true,
+			},
+		},
+	})
+}
+
+// customerProductIdentityCtx returns a customer actor whose account differs
+// from the target (external customer viewing an owner's catalog).
+func customerProductIdentityCtx(customerAccountID, targetAccountID string) context.Context {
+	customCode := string(constants.RoleTypeCodeCustom)
+	return appctx.WithIdentity(context.Background(), &types.Identity{
+		Type:   types.IdentityActorTypeUser,
+		Target: &types.IdentityTarget{AccountID: targetAccountID},
+		Actor: &types.IdentityActor{
+			RelationType: types.IdentityRelationTypeCustomer,
+			ID:           "usr_cust123",
+			AccountID:    &customerAccountID,
+			RoleTypeCode: &customCode,
+			Permissions:  map[string]bool{},
+		},
+	})
+}
+
+func productIdempotencyCtx(ctx context.Context) context.Context {
+	ctx = appctx.WithIdempotencyKey(ctx, "test-idempotency-key")
+	ctx = appctx.WithHandler(ctx, "/core.CoreService/TestHandler")
+	ctx = appctx.WithIdempotencyResponseMetadata(ctx, &appctx.IdempotencyResponseMetadata{})
+	return ctx
+}
+
+// --- Idempotency helpers ---
+
+func (s *ProductSvcTestSuite) expectIdempotencyStarted() {
+	s.idempotencyMed.EXPECT().
+		UpsertIdempotencyKey(gomock.Any(), gomock.Any()).
+		Return(&domain.IdempotencyKey{
+			TypeID:        "idk_test",
+			RecoveryPoint: string(domain.RecoveryPointStarted),
+		}, nil).
+		Times(1)
+}
+
+func (s *ProductSvcTestSuite) expectIdempotencyFinishedWithProduct(product *domain.ProductFull) {
+	body, err := json.Marshal(product)
+	s.Require().NoError(err)
+	code := 200
+	s.idempotencyMed.EXPECT().
+		UpsertIdempotencyKey(gomock.Any(), gomock.Any()).
+		Return(&domain.IdempotencyKey{
+			TypeID:        "idk_test",
+			RecoveryPoint: string(domain.RecoveryPointFinished),
+			ResponseCode:  &code,
+			ResponseBody:  body,
+		}, nil).
+		Times(1)
+}
+
+func (s *ProductSvcTestSuite) expectCacheSuccess() {
+	s.idempotencyMed.EXPECT().
+		CacheSuccessResponse(gomock.Any(), "idk_test", gomock.Any()).
+		Return(nil).
+		Times(1)
+}
+
+func (s *ProductSvcTestSuite) expectCacheError() {
+	s.idempotencyMed.EXPECT().
+		CacheErrorResponse(gomock.Any(), "idk_test", gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ string, apiErr *apierror.APIError) *apierror.APIError {
+			return apiErr
+		}).
+		Times(1)
+}
+
+func strPtr(s string) *string { return &s }
+
+// =============================================================================
+// CreateProduct
+// =============================================================================
+
+func (s *ProductSvcTestSuite) createdProduct(itemID string) *domain.ProductFull {
+	return &domain.ProductFull{
+		ID:              "prod_created",
+		ItemID:          itemID,
+		ProductTypeCode: "sale",
+		IsPortalReady:   true,
+		Item:            &domain.Item{ID: itemID, SKU: "SKU-NEW"},
+		ProductType:     &domain.ProductType{Code: "sale", Name: "Sale"},
+	}
+}
+
+func (s *ProductSvcTestSuite) TestCreateProduct_Success() {
+	ctx := productIdempotencyCtx(internalProductIdentityCtx("ac_test123"))
+
+	s.expectIdempotencyStarted()
+	s.itemRepo.EXPECT().
+		CheckSKUExists(gomock.Any(), "ac_test123", "SKU-NEW", "").
+		Return(false, nil).
+		Times(1)
+	s.itemRepo.EXPECT().
+		GetCategoryBaseUnitID(gomock.Any(), "cat_123").
+		Return("un_base", nil).
+		Times(1)
+
+	// All three rates are created with the base unit for both numerator and denominator.
+	s.productRepo.EXPECT().
+		InsertRate(gomock.Any(), gomock.Any(), "1.50", "un_base", "un_base").
+		Return(nil).
+		Times(1)
+	s.productRepo.EXPECT().
+		InsertRate(gomock.Any(), gomock.Any(), "0.75", "un_base", "un_base").
+		Return(nil).
+		Times(1)
+	s.productRepo.EXPECT().
+		InsertRate(gomock.Any(), gomock.Any(), "0.10", "un_base", "un_base").
+		Return(nil).
+		Times(1)
+
+	s.productRepo.EXPECT().
+		InsertItem(gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, itemID string, params domain.CreateProductParams) *apierror.APIError {
+			s.Equal("ac_test123", params.AccountID)
+			s.Equal("SKU-NEW", params.SKU)
+			s.Equal("cat_123", params.CategoryID)
+			s.NotEmpty(itemID)
+			return nil
+		}).
+		Times(1)
+
+	s.productRepo.EXPECT().
+		Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, productID, itemID string, params domain.CreateProductParams) (*domain.ProductFull, *apierror.APIError) {
+			return s.createdProduct(itemID), nil
+		}).
+		Times(1)
+
+	// Two attributes supplied → two AddAttribute calls, in order.
+	s.itemRepo.EXPECT().
+		AddAttribute(gomock.Any(), gomock.AssignableToTypeOf(domain.AddItemAttributeParams{})).
+		DoAndReturn(func(_ context.Context, params domain.AddItemAttributeParams) *apierror.APIError {
+			s.Equal("ac_test123", params.AccountID)
+			s.Equal("attr_red", params.AttributeID)
+			return nil
+		}).
+		Times(1)
+	s.itemRepo.EXPECT().
+		AddAttribute(gomock.Any(), gomock.AssignableToTypeOf(domain.AddItemAttributeParams{})).
+		DoAndReturn(func(_ context.Context, params domain.AddItemAttributeParams) *apierror.APIError {
+			s.Equal("attr_large", params.AttributeID)
+			return nil
+		}).
+		Times(1)
+
+	s.inventoryMutRepo.EXPECT().
+		CreateInventoryLog(gomock.Any(), gomock.AssignableToTypeOf(domain.CreateInventoryLogParams{})).
+		DoAndReturn(func(_ context.Context, params domain.CreateInventoryLogParams) *apierror.APIError {
+			s.Equal("ac_test123", params.AccountID)
+			s.Equal("un_base", params.UnitID)
+			s.True(params.Measure.IsZero())
+			return nil
+		}).
+		Times(1)
+	s.inventoryMutRepo.EXPECT().
+		CreateInventoryChangeLog(gomock.Any(), gomock.AssignableToTypeOf(domain.CreateInventoryChangeLogParams{})).
+		DoAndReturn(func(_ context.Context, params domain.CreateInventoryChangeLogParams) *apierror.APIError {
+			s.Equal("user_action", params.ActionType)
+			s.True(params.Measure.IsZero())
+			return nil
+		}).
+		Times(1)
+
+	s.expectCacheSuccess()
+
+	result, err := s.productSvc.CreateProduct(ctx, domain.CreateProductParams{
+		SKU:             "SKU-NEW",
+		ProductTypeCode: "sale",
+		CategoryID:      "cat_123",
+		IsPortalReady:   true,
+		UnitPrice:       strPtr("1.50"),
+		UnitCost:        strPtr("0.75"),
+		BurnRate:        strPtr("0.10"),
+		AttributeIDs:    []string{"attr_red", "attr_large"},
+	})
+
+	s.Nil(err)
+	s.NotNil(result)
+	s.Equal("SKU-NEW", result.Item.SKU)
+}
+
+func (s *ProductSvcTestSuite) TestCreateProduct_DefaultsRatesToZero() {
+	ctx := productIdempotencyCtx(internalProductIdentityCtx("ac_test123"))
+
+	s.expectIdempotencyStarted()
+	s.itemRepo.EXPECT().CheckSKUExists(gomock.Any(), "ac_test123", "SKU-X", "").Return(false, nil).Times(1)
+	s.itemRepo.EXPECT().GetCategoryBaseUnitID(gomock.Any(), "cat_123").Return("un_base", nil).Times(1)
+
+	// All three rates must be created with "0" when caller omits them.
+	s.productRepo.EXPECT().InsertRate(gomock.Any(), gomock.Any(), "0", "un_base", "un_base").Return(nil).Times(3)
+
+	s.productRepo.EXPECT().InsertItem(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
+	s.productRepo.EXPECT().
+		Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, _, itemID string, _ domain.CreateProductParams) (*domain.ProductFull, *apierror.APIError) {
+			return s.createdProduct(itemID), nil
+		}).
+		Times(1)
+	s.inventoryMutRepo.EXPECT().CreateInventoryLog(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+	s.inventoryMutRepo.EXPECT().CreateInventoryChangeLog(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+	s.expectCacheSuccess()
+
+	result, err := s.productSvc.CreateProduct(ctx, domain.CreateProductParams{
+		SKU:             "SKU-X",
+		ProductTypeCode: "sale",
+		CategoryID:      "cat_123",
+	})
+
+	s.Nil(err)
+	s.NotNil(result)
+}
+
+func (s *ProductSvcTestSuite) TestCreateProduct_DuplicateSKU_Conflict() {
+	ctx := productIdempotencyCtx(internalProductIdentityCtx("ac_test123"))
+
+	s.expectIdempotencyStarted()
+	s.itemRepo.EXPECT().
+		CheckSKUExists(gomock.Any(), "ac_test123", "SKU-DUPE", "").
+		Return(true, nil).
+		Times(1)
+	// No GetCategoryBaseUnitID / InsertRate / InsertItem / Create / AddAttribute /
+	// CreateInventoryLog / CreateInventoryChangeLog expected — tx must short-circuit.
+	s.expectCacheError()
+
+	result, err := s.productSvc.CreateProduct(ctx, domain.CreateProductParams{
+		SKU:             "SKU-DUPE",
+		ProductTypeCode: "sale",
+		CategoryID:      "cat_123",
+	})
+
+	s.Nil(result)
+	s.NotNil(err)
+	s.Equal(apierror.ErrorCodeResourceConflict, err.Code)
+	s.Equal("sku", err.Param)
+}
+
+func (s *ProductSvcTestSuite) TestCreateProduct_SkipsBlankAttributeIDs() {
+	ctx := productIdempotencyCtx(internalProductIdentityCtx("ac_test123"))
+
+	s.expectIdempotencyStarted()
+	s.itemRepo.EXPECT().CheckSKUExists(gomock.Any(), "ac_test123", "SKU-A", "").Return(false, nil).Times(1)
+	s.itemRepo.EXPECT().GetCategoryBaseUnitID(gomock.Any(), "cat_123").Return("un_base", nil).Times(1)
+	s.productRepo.EXPECT().InsertRate(gomock.Any(), gomock.Any(), gomock.Any(), "un_base", "un_base").Return(nil).Times(3)
+	s.productRepo.EXPECT().InsertItem(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
+	s.productRepo.EXPECT().
+		Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, _, itemID string, _ domain.CreateProductParams) (*domain.ProductFull, *apierror.APIError) {
+			return s.createdProduct(itemID), nil
+		}).
+		Times(1)
+
+	// Only the single non-blank attribute should be linked.
+	s.itemRepo.EXPECT().
+		AddAttribute(gomock.Any(), gomock.AssignableToTypeOf(domain.AddItemAttributeParams{})).
+		DoAndReturn(func(_ context.Context, params domain.AddItemAttributeParams) *apierror.APIError {
+			s.Equal("attr_only", params.AttributeID)
+			return nil
+		}).
+		Times(1)
+
+	s.inventoryMutRepo.EXPECT().CreateInventoryLog(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+	s.inventoryMutRepo.EXPECT().CreateInventoryChangeLog(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+	s.expectCacheSuccess()
+
+	result, err := s.productSvc.CreateProduct(ctx, domain.CreateProductParams{
+		SKU:             "SKU-A",
+		ProductTypeCode: "sale",
+		CategoryID:      "cat_123",
+		AttributeIDs:    []string{"", "attr_only", ""},
+	})
+
+	s.Nil(err)
+	s.NotNil(result)
+}
+
+func (s *ProductSvcTestSuite) TestCreateProduct_MissingIdentity() {
+	result, err := s.productSvc.CreateProduct(context.Background(), domain.CreateProductParams{})
+
+	s.Nil(result)
+	s.NotNil(err)
+	s.Equal(apierror.ErrorCodeInternalError, err.Code)
+}
+
+func (s *ProductSvcTestSuite) TestCreateProduct_NotInternalActor_Forbidden() {
+	ctx := customerProductIdentityCtx("ac_customer", "ac_owner")
+
+	result, err := s.productSvc.CreateProduct(ctx, domain.CreateProductParams{
+		SKU:             "SKU-NEW",
+		ProductTypeCode: "sale",
+		CategoryID:      "cat_123",
+	})
+
+	s.Nil(result)
+	s.NotNil(err)
+	s.Equal(apierror.ErrorCodeInsufficientPerms, err.Code)
+}
+
+func (s *ProductSvcTestSuite) TestCreateProduct_MissingItemsCreatePermission_Forbidden() {
+	ctx := readOnlyProductIdentityCtx("ac_test123")
+
+	result, err := s.productSvc.CreateProduct(ctx, domain.CreateProductParams{
+		SKU:             "SKU-NEW",
+		ProductTypeCode: "sale",
+		CategoryID:      "cat_123",
+	})
+
+	s.Nil(result)
+	s.NotNil(err)
+	s.Equal(apierror.ErrorCodeInsufficientPerms, err.Code)
+}
+
+func (s *ProductSvcTestSuite) TestCreateProduct_IdempotencyReplay_ReturnsCached() {
+	ctx := productIdempotencyCtx(internalProductIdentityCtx("ac_test123"))
+
+	cached := &domain.ProductFull{ID: "prod_cached", ItemID: "it_cached"}
+	s.expectIdempotencyFinishedWithProduct(cached)
+
+	// No repo calls expected — replay returns cached body.
+	result, err := s.productSvc.CreateProduct(ctx, domain.CreateProductParams{
+		SKU:             "SKU-WHATEVER",
+		ProductTypeCode: "sale",
+		CategoryID:      "cat_123",
+	})
+
+	s.Nil(err)
+	s.NotNil(result)
+	s.Equal("prod_cached", result.ID)
+}
+
+func (s *ProductSvcTestSuite) TestCreateProduct_ErrorPath_CachesError() {
+	ctx := productIdempotencyCtx(internalProductIdentityCtx("ac_test123"))
+
+	s.expectIdempotencyStarted()
+	s.itemRepo.EXPECT().
+		CheckSKUExists(gomock.Any(), "ac_test123", "SKU-E", "").
+		Return(false, apierror.NewInternalError(nil, "db down")).
+		Times(1)
+	s.expectCacheError()
+
+	result, err := s.productSvc.CreateProduct(ctx, domain.CreateProductParams{
+		SKU:             "SKU-E",
+		ProductTypeCode: "sale",
+		CategoryID:      "cat_123",
+	})
+
+	s.Nil(result)
+	s.NotNil(err)
+	s.Equal(apierror.ErrorCodeInternalError, err.Code)
+}
+
+// =============================================================================
+// UpdateProduct
+// =============================================================================
+
+func (s *ProductSvcTestSuite) existingProduct(itemID, sku string) *domain.ProductFull {
+	return &domain.ProductFull{
+		ID:              "prod_existing",
+		ItemID:          itemID,
+		ProductTypeCode: "sale",
+		IsPortalReady:   true,
+		Item:            &domain.Item{ID: itemID, SKU: sku},
+	}
+}
+
+func (s *ProductSvcTestSuite) TestUpdateProduct_PartialUpdate_OnlyTouchesProvidedFields() {
+	ctx := productIdempotencyCtx(internalProductIdentityCtx("ac_test123"))
+
+	s.expectIdempotencyStarted()
+	s.productRepo.EXPECT().
+		Get(gomock.Any(), domain.GetProductFullParams{AccountID: "ac_test123", ItemID: "it_1"}).
+		Return(s.existingProduct("it_1", "OLD-SKU"), nil).
+		Times(1)
+
+	// SKU not changing → no CheckSKUExists call expected.
+	s.productRepo.EXPECT().
+		Update(gomock.Any(), gomock.AssignableToTypeOf(domain.UpdateProductParams{})).
+		DoAndReturn(func(_ context.Context, params domain.UpdateProductParams) (*domain.ProductFull, *apierror.APIError) {
+			s.Nil(params.SKU)
+			s.Nil(params.Description)
+			s.False(params.UpdateDescription)
+			s.Nil(params.Notes)
+			s.False(params.UpdateNotes)
+			s.NotNil(params.IsPortalReady)
+			s.False(*params.IsPortalReady)
+			return s.existingProduct("it_1", "OLD-SKU"), nil
+		}).
+		Times(1)
+	s.expectCacheSuccess()
+
+	falseVal := false
+	result, err := s.productSvc.UpdateProduct(ctx, domain.UpdateProductParams{
+		ItemID:        "it_1",
+		IsPortalReady: &falseVal,
+	})
+
+	s.Nil(err)
+	s.NotNil(result)
+}
+
+func (s *ProductSvcTestSuite) TestUpdateProduct_SKUChange_ChecksUniquenessExcludingSelf() {
+	ctx := productIdempotencyCtx(internalProductIdentityCtx("ac_test123"))
+
+	s.expectIdempotencyStarted()
+	s.productRepo.EXPECT().
+		Get(gomock.Any(), gomock.Any()).
+		Return(s.existingProduct("it_1", "OLD"), nil).
+		Times(1)
+	// Uniqueness check must exclude the current itemID.
+	s.itemRepo.EXPECT().
+		CheckSKUExists(gomock.Any(), "ac_test123", "NEW-SKU", "it_1").
+		Return(false, nil).
+		Times(1)
+	s.productRepo.EXPECT().
+		Update(gomock.Any(), gomock.Any()).
+		Return(s.existingProduct("it_1", "NEW-SKU"), nil).
+		Times(1)
+	s.expectCacheSuccess()
+
+	result, err := s.productSvc.UpdateProduct(ctx, domain.UpdateProductParams{
+		ItemID: "it_1",
+		SKU:    strPtr("NEW-SKU"),
+	})
+
+	s.Nil(err)
+	s.NotNil(result)
+}
+
+func (s *ProductSvcTestSuite) TestUpdateProduct_DuplicateSKU_Conflict() {
+	ctx := productIdempotencyCtx(internalProductIdentityCtx("ac_test123"))
+
+	s.expectIdempotencyStarted()
+	s.productRepo.EXPECT().
+		Get(gomock.Any(), gomock.Any()).
+		Return(s.existingProduct("it_1", "OLD"), nil).
+		Times(1)
+	s.itemRepo.EXPECT().
+		CheckSKUExists(gomock.Any(), "ac_test123", "TAKEN", "it_1").
+		Return(true, nil).
+		Times(1)
+	// No Update expected — conflict must short-circuit.
+	s.expectCacheError()
+
+	result, err := s.productSvc.UpdateProduct(ctx, domain.UpdateProductParams{
+		ItemID: "it_1",
+		SKU:    strPtr("TAKEN"),
+	})
+
+	s.Nil(result)
+	s.NotNil(err)
+	s.Equal(apierror.ErrorCodeResourceConflict, err.Code)
+	s.Equal("sku", err.Param)
+}
+
+func (s *ProductSvcTestSuite) TestUpdateProduct_UpdateDescriptionFlagSemantics_ExplicitNull() {
+	ctx := productIdempotencyCtx(internalProductIdentityCtx("ac_test123"))
+
+	s.expectIdempotencyStarted()
+	s.productRepo.EXPECT().
+		Get(gomock.Any(), gomock.Any()).
+		Return(s.existingProduct("it_1", "OLD"), nil).
+		Times(1)
+	s.productRepo.EXPECT().
+		Update(gomock.Any(), gomock.AssignableToTypeOf(domain.UpdateProductParams{})).
+		DoAndReturn(func(_ context.Context, params domain.UpdateProductParams) (*domain.ProductFull, *apierror.APIError) {
+			// UpdateDescription=true + nil ptr means "set to NULL"
+			s.True(params.UpdateDescription)
+			s.Nil(params.Description)
+			// Notes was omitted → flag false
+			s.False(params.UpdateNotes)
+			s.Nil(params.Notes)
+			return s.existingProduct("it_1", "OLD"), nil
+		}).
+		Times(1)
+	s.expectCacheSuccess()
+
+	result, err := s.productSvc.UpdateProduct(ctx, domain.UpdateProductParams{
+		ItemID:            "it_1",
+		Description:       nil,
+		UpdateDescription: true,
+	})
+
+	s.Nil(err)
+	s.NotNil(result)
+}
+
+func (s *ProductSvcTestSuite) TestUpdateProduct_MissingIdentity() {
+	result, err := s.productSvc.UpdateProduct(context.Background(), domain.UpdateProductParams{ItemID: "it_1"})
+
+	s.Nil(result)
+	s.NotNil(err)
+	s.Equal(apierror.ErrorCodeInternalError, err.Code)
+}
+
+func (s *ProductSvcTestSuite) TestUpdateProduct_NotInternalActor_Forbidden() {
+	ctx := customerProductIdentityCtx("ac_customer", "ac_owner")
+
+	result, err := s.productSvc.UpdateProduct(ctx, domain.UpdateProductParams{ItemID: "it_1"})
+
+	s.Nil(result)
+	s.NotNil(err)
+	s.Equal(apierror.ErrorCodeInsufficientPerms, err.Code)
+}
+
+func (s *ProductSvcTestSuite) TestUpdateProduct_MissingItemsUpdatePermission_Forbidden() {
+	ctx := readOnlyProductIdentityCtx("ac_test123")
+
+	result, err := s.productSvc.UpdateProduct(ctx, domain.UpdateProductParams{ItemID: "it_1"})
+
+	s.Nil(result)
+	s.NotNil(err)
+	s.Equal(apierror.ErrorCodeInsufficientPerms, err.Code)
+}
+
+func (s *ProductSvcTestSuite) TestUpdateProduct_NotFound() {
+	ctx := productIdempotencyCtx(internalProductIdentityCtx("ac_test123"))
+
+	s.expectIdempotencyStarted()
+	s.productRepo.EXPECT().
+		Get(gomock.Any(), gomock.Any()).
+		Return(nil, apierror.NewResourceNotFoundError("Product not found.")).
+		Times(1)
+	s.expectCacheError()
+
+	result, err := s.productSvc.UpdateProduct(ctx, domain.UpdateProductParams{
+		ItemID: "it_missing",
+		SKU:    strPtr("X"),
+	})
+
+	s.Nil(result)
+	s.NotNil(err)
+	s.Equal(apierror.ErrorCodeResourceNotFound, err.Code)
+}
+
+func (s *ProductSvcTestSuite) TestUpdateProduct_IdempotencyReplay_ReturnsCached() {
+	ctx := productIdempotencyCtx(internalProductIdentityCtx("ac_test123"))
+
+	cached := &domain.ProductFull{ID: "prod_cached", ItemID: "it_cached"}
+	s.expectIdempotencyFinishedWithProduct(cached)
+
+	result, err := s.productSvc.UpdateProduct(ctx, domain.UpdateProductParams{
+		ItemID: "it_cached",
+		SKU:    strPtr("NEVER"),
+	})
+
+	s.Nil(err)
+	s.NotNil(result)
+	s.Equal("prod_cached", result.ID)
+}
+
+// =============================================================================
+// DeleteProduct
+// =============================================================================
+
+func (s *ProductSvcTestSuite) TestDeleteProduct_Success_SoftDeletes() {
+	ctx := internalProductIdentityCtx("ac_test123")
+
+	existing := s.existingProduct("it_1", "SKU-DEL")
+	s.productRepo.EXPECT().
+		Get(gomock.Any(), domain.GetProductFullParams{AccountID: "ac_test123", ItemID: "it_1"}).
+		Return(existing, nil).
+		Times(1)
+
+	// Order matters: deleted_record snapshot before soft-delete so the snapshot
+	// captures pre-delete state.
+	gomock.InOrder(
+		s.deletedRecordRepo.EXPECT().
+			Create(gomock.Any(), constants.DeletedRecordResourceTypeProduct, "it_1", existing).
+			Return(nil).
+			Times(1),
+		s.productRepo.EXPECT().
+			SoftDelete(gomock.Any(), domain.DeleteProductParams{AccountID: "ac_test123", ItemID: "it_1"}).
+			Return(nil).
+			Times(1),
+	)
+
+	result, err := s.productSvc.DeleteProduct(ctx, domain.DeleteProductParams{ItemID: "it_1"})
+
+	s.Nil(err)
+	s.NotNil(result)
+	s.Equal("it_1", result.ItemID)
+}
+
+func (s *ProductSvcTestSuite) TestDeleteProduct_AlreadyDeleted_Returns410() {
+	ctx := internalProductIdentityCtx("ac_test123")
+
+	s.productRepo.EXPECT().
+		Get(gomock.Any(), gomock.Any()).
+		Return(nil, apierror.NewResourceNotFoundError("Product not found.")).
+		Times(1)
+	s.deletedRecordRepo.EXPECT().
+		Exists(gomock.Any(), constants.DeletedRecordResourceTypeProduct, "it_gone").
+		Return(true, nil).
+		Times(1)
+	// No SoftDelete expected.
+
+	result, err := s.productSvc.DeleteProduct(ctx, domain.DeleteProductParams{ItemID: "it_gone"})
+
+	s.Nil(result)
+	s.NotNil(err)
+	s.Equal(apierror.ErrorCodeResourceGone, err.Code)
+}
+
+func (s *ProductSvcTestSuite) TestDeleteProduct_GenuinelyNotFound_Returns404() {
+	ctx := internalProductIdentityCtx("ac_test123")
+
+	s.productRepo.EXPECT().
+		Get(gomock.Any(), gomock.Any()).
+		Return(nil, apierror.NewResourceNotFoundError("Product not found.")).
+		Times(1)
+	s.deletedRecordRepo.EXPECT().
+		Exists(gomock.Any(), constants.DeletedRecordResourceTypeProduct, "it_missing").
+		Return(false, nil).
+		Times(1)
+
+	result, err := s.productSvc.DeleteProduct(ctx, domain.DeleteProductParams{ItemID: "it_missing"})
+
+	s.Nil(result)
+	s.NotNil(err)
+	s.Equal(apierror.ErrorCodeResourceNotFound, err.Code)
+}
+
+func (s *ProductSvcTestSuite) TestDeleteProduct_NotInternalActor_Forbidden() {
+	ctx := customerProductIdentityCtx("ac_customer", "ac_owner")
+
+	result, err := s.productSvc.DeleteProduct(ctx, domain.DeleteProductParams{ItemID: "it_1"})
+
+	s.Nil(result)
+	s.NotNil(err)
+	s.Equal(apierror.ErrorCodeInsufficientPerms, err.Code)
+}
+
+func (s *ProductSvcTestSuite) TestDeleteProduct_MissingItemsDeletePermission_Forbidden() {
+	ctx := readOnlyProductIdentityCtx("ac_test123")
+
+	result, err := s.productSvc.DeleteProduct(ctx, domain.DeleteProductParams{ItemID: "it_1"})
+
+	s.Nil(result)
+	s.NotNil(err)
+	s.Equal(apierror.ErrorCodeInsufficientPerms, err.Code)
+}
+
+func (s *ProductSvcTestSuite) TestDeleteProduct_DeletedRecordCreateFails_RollsBack() {
+	ctx := internalProductIdentityCtx("ac_test123")
+
+	existing := s.existingProduct("it_1", "SKU-DEL")
+	s.productRepo.EXPECT().
+		Get(gomock.Any(), gomock.Any()).
+		Return(existing, nil).
+		Times(1)
+	s.deletedRecordRepo.EXPECT().
+		Create(gomock.Any(), constants.DeletedRecordResourceTypeProduct, "it_1", gomock.Any()).
+		Return(apierror.NewInternalError(nil, "db down")).
+		Times(1)
+	// SoftDelete must not be called when the snapshot insert fails.
+
+	result, err := s.productSvc.DeleteProduct(ctx, domain.DeleteProductParams{ItemID: "it_1"})
+
+	s.Nil(result)
+	s.NotNil(err)
+	s.Equal(apierror.ErrorCodeInternalError, err.Code)
+}
+
+// =============================================================================
+// ChangeProductProductLine
+// =============================================================================
+
+func (s *ProductSvcTestSuite) TestChangeProductLine_Success() {
+	ctx := productIdempotencyCtx(internalProductIdentityCtx("ac_test123"))
+
+	old := s.existingProduct("it_1", "SKU-1")
+	oldLineID := "pl_old"
+	old.ProductLineID = &oldLineID
+
+	s.expectIdempotencyStarted()
+	s.productRepo.EXPECT().
+		Get(gomock.Any(), domain.GetProductFullParams{AccountID: "ac_test123", ItemID: "it_1"}).
+		Return(old, nil).
+		Times(1)
+	s.productRepo.EXPECT().
+		ChangeProductLine(gomock.Any(), gomock.AssignableToTypeOf(domain.ChangeProductProductLineParams{})).
+		DoAndReturn(func(_ context.Context, params domain.ChangeProductProductLineParams) (*domain.ProductFull, *apierror.APIError) {
+			s.Equal("ac_test123", params.AccountID)
+			s.Equal("it_1", params.ItemID)
+			s.Equal("pl_new", params.ProductLineID)
+			newLineID := "pl_new"
+			updated := s.existingProduct("it_1", "SKU-1")
+			updated.ProductLineID = &newLineID
+			return updated, nil
+		}).
+		Times(1)
+	s.expectCacheSuccess()
+
+	result, err := s.productSvc.ChangeProductProductLine(ctx, domain.ChangeProductProductLineParams{
+		ItemID:        "it_1",
+		ProductLineID: "pl_new",
+	})
+
+	s.Nil(err)
+	s.NotNil(result)
+	s.Equal("pl_new", *result.ProductLineID)
+}
+
+func (s *ProductSvcTestSuite) TestChangeProductLine_NotFound() {
+	ctx := productIdempotencyCtx(internalProductIdentityCtx("ac_test123"))
+
+	s.expectIdempotencyStarted()
+	s.productRepo.EXPECT().
+		Get(gomock.Any(), gomock.Any()).
+		Return(nil, apierror.NewResourceNotFoundError("Product not found.")).
+		Times(1)
+	// ChangeProductLine must not be called.
+
+	result, err := s.productSvc.ChangeProductProductLine(ctx, domain.ChangeProductProductLineParams{
+		ItemID:        "it_missing",
+		ProductLineID: "pl_new",
+	})
+
+	s.Nil(result)
+	s.NotNil(err)
+	s.Equal(apierror.ErrorCodeResourceNotFound, err.Code)
+}
+
+func (s *ProductSvcTestSuite) TestChangeProductLine_NotInternalActor_Forbidden() {
+	ctx := customerProductIdentityCtx("ac_customer", "ac_owner")
+
+	result, err := s.productSvc.ChangeProductProductLine(ctx, domain.ChangeProductProductLineParams{
+		ItemID:        "it_1",
+		ProductLineID: "pl_new",
+	})
+
+	s.Nil(result)
+	s.NotNil(err)
+	s.Equal(apierror.ErrorCodeInsufficientPerms, err.Code)
+}
+
+func (s *ProductSvcTestSuite) TestChangeProductLine_MissingPermission_Forbidden() {
+	ctx := readOnlyProductIdentityCtx("ac_test123")
+
+	result, err := s.productSvc.ChangeProductProductLine(ctx, domain.ChangeProductProductLineParams{
+		ItemID:        "it_1",
+		ProductLineID: "pl_new",
+	})
+
+	s.Nil(result)
+	s.NotNil(err)
+	s.Equal(apierror.ErrorCodeInsufficientPerms, err.Code)
+}
+
+func (s *ProductSvcTestSuite) TestChangeProductLine_IdempotencyReplay_ReturnsCached() {
+	ctx := productIdempotencyCtx(internalProductIdentityCtx("ac_test123"))
+
+	cached := &domain.ProductFull{ID: "prod_cached", ItemID: "it_cached"}
+	s.expectIdempotencyFinishedWithProduct(cached)
+
+	result, err := s.productSvc.ChangeProductProductLine(ctx, domain.ChangeProductProductLineParams{
+		ItemID:        "it_cached",
+		ProductLineID: "pl_new",
+	})
+
+	s.Nil(err)
+	s.NotNil(result)
+	s.Equal("prod_cached", result.ID)
+}
+
+func (s *ProductSvcTestSuite) TestChangeProductLine_ProductLineCrossAccount_Rejected() {
+	// Express allowed binding a product to any productLineID without account
+	// scoping — a security gap. Go's repo scopes the UPDATE by account_id, so
+	// a cross-account target line surfaces as a repo-level not-found. This test
+	// locks that behavior in at the service boundary.
+	ctx := productIdempotencyCtx(internalProductIdentityCtx("ac_test123"))
+
+	s.expectIdempotencyStarted()
+	s.productRepo.EXPECT().
+		Get(gomock.Any(), gomock.Any()).
+		Return(s.existingProduct("it_1", "SKU-1"), nil).
+		Times(1)
+	s.productRepo.EXPECT().
+		ChangeProductLine(gomock.Any(), gomock.Any()).
+		Return(nil, apierror.NewResourceNotFoundError("Product not found.")).
+		Times(1)
+	s.expectCacheError()
+
+	result, err := s.productSvc.ChangeProductProductLine(ctx, domain.ChangeProductProductLineParams{
+		ItemID:        "it_1",
+		ProductLineID: "pl_from_other_account",
+	})
+
+	s.Nil(result)
+	s.NotNil(err)
+	s.Equal(apierror.ErrorCodeResourceNotFound, err.Code)
+}
+
+// =============================================================================
+// ListProductsFull
+// =============================================================================
+
+func (s *ProductSvcTestSuite) TestListProductsFull_InternalActor_PassesParamsThrough() {
+	ctx := internalProductIdentityCtx("ac_test123")
+
+	customerIDs := []string{"ac_a", "ac_b"}
+	portalReady := false
+	s.productRepo.EXPECT().
+		List(gomock.Any(), gomock.AssignableToTypeOf(domain.ListProductsFullParams{})).
+		DoAndReturn(func(_ context.Context, params domain.ListProductsFullParams) (*domain.ListProductsFullResult, *apierror.APIError) {
+			s.Equal("ac_test123", params.AccountID)
+			s.Equal(customerIDs, params.CustomerIDs)
+			s.NotNil(params.IsPortalReady)
+			s.False(*params.IsPortalReady)
+			return &domain.ListProductsFullResult{
+				Products: []*domain.ProductFull{},
+				PageInfo: pagination.PageInfo{},
+			}, nil
+		}).
+		Times(1)
+
+	result, err := s.productSvc.ListProductsFull(ctx, domain.ListProductsFullParams{
+		Limit:         10,
+		CustomerIDs:   customerIDs,
+		IsPortalReady: &portalReady,
+	})
+
+	s.Nil(err)
+	s.NotNil(result)
+}
+
+func (s *ProductSvcTestSuite) TestListProductsFull_CustomerActor_OverridesCustomerIDsAndPortalReady() {
+	ctx := customerProductIdentityCtx("ac_customer", "ac_owner")
+
+	// External target → ReadAccess check must fire.
+	s.readAccessMed.EXPECT().
+		CheckReadAccess(gomock.Any(), "ac_customer", "ac_owner").
+		Return(nil).
+		Times(1)
+
+	s.productRepo.EXPECT().
+		List(gomock.Any(), gomock.AssignableToTypeOf(domain.ListProductsFullParams{})).
+		DoAndReturn(func(_ context.Context, params domain.ListProductsFullParams) (*domain.ListProductsFullResult, *apierror.APIError) {
+			// Caller's attempt to pass other customer IDs / portal=false must be
+			// overridden so a customer can't widen their own scope.
+			s.Equal([]string{"ac_customer"}, params.CustomerIDs)
+			s.NotNil(params.IsPortalReady)
+			s.True(*params.IsPortalReady)
+			s.Equal("ac_owner", params.AccountID)
+			return &domain.ListProductsFullResult{
+				Products: []*domain.ProductFull{},
+				PageInfo: pagination.PageInfo{},
+			}, nil
+		}).
+		Times(1)
+
+	callerPortalReady := false
+	result, err := s.productSvc.ListProductsFull(ctx, domain.ListProductsFullParams{
+		Limit:         10,
+		CustomerIDs:   []string{"ac_other_customer"}, // must be overridden
+		IsPortalReady: &callerPortalReady,            // must be overridden to true
+	})
+
+	s.Nil(err)
+	s.NotNil(result)
+}
+
+func (s *ProductSvcTestSuite) TestListProductsFull_MissingIdentity() {
+	result, err := s.productSvc.ListProductsFull(context.Background(), domain.ListProductsFullParams{})
+
+	s.Nil(result)
+	s.NotNil(err)
+	s.Equal(apierror.ErrorCodeInternalError, err.Code)
+}
+
+func (s *ProductSvcTestSuite) TestListProductsFull_MissingTargetAccount_AuthError() {
+	// Internal actor with no target account → AuthenticationError.
+	adminCode := string(constants.RoleTypeCodeAdmin)
+	accountID := "ac_actor"
+	ctx := appctx.WithIdentity(context.Background(), &types.Identity{
+		Type: types.IdentityActorTypeUser,
+		Actor: &types.IdentityActor{
+			RelationType: types.IdentityRelationTypeInternal,
+			ID:           "usr_1",
+			AccountID:    &accountID,
+			RoleTypeCode: &adminCode,
+			Permissions:  map[string]bool{"items:read": true},
+		},
+	})
+
+	result, err := s.productSvc.ListProductsFull(ctx, domain.ListProductsFullParams{})
+
+	s.Nil(result)
+	s.NotNil(err)
+	s.Equal(apierror.ErrorCodeInvalidCredentials, err.Code)
+}
+
+func (s *ProductSvcTestSuite) TestListProductsFull_ExternalTarget_ReadAccessDenied() {
+	ctx := customerProductIdentityCtx("ac_customer", "ac_owner")
+
+	s.readAccessMed.EXPECT().
+		CheckReadAccess(gomock.Any(), "ac_customer", "ac_owner").
+		Return(apierror.NewAuthorizationError("no access")).
+		Times(1)
+
+	result, err := s.productSvc.ListProductsFull(ctx, domain.ListProductsFullParams{})
+
+	s.Nil(result)
+	s.NotNil(err)
+	s.Equal(apierror.ErrorCodeInsufficientPerms, err.Code)
+}
+
+func (s *ProductSvcTestSuite) TestListProductsFull_AttachesAttributesAndUnitGroup() {
+	ctx := internalProductIdentityCtx("ac_test123")
+
+	product := &domain.ProductFull{
+		ID:     "prod_1",
+		ItemID: "it_1",
+		Item:   &domain.Item{ID: "it_1"},
+		ProductLine: &domain.ProductLineFull{
+			ID:          "pl_1",
+			UnitGroupID: "ug_1",
+		},
+	}
+	s.productRepo.EXPECT().
+		List(gomock.Any(), gomock.Any()).
+		Return(&domain.ListProductsFullResult{Products: []*domain.ProductFull{product}}, nil).
+		Times(1)
+
+	attrs := []*domain.ItemAttribute{{ID: "attr_1", Value: "Red"}}
+	s.itemRepo.EXPECT().
+		Get(gomock.Any(), domain.GetItemParams{AccountID: "ac_test123", ItemID: "it_1"}).
+		Return(&domain.Item{ID: "it_1", Attributes: attrs}, nil).
+		Times(1)
+	s.productLineRepo.EXPECT().
+		GetUnitGroup(gomock.Any(), "ug_1").
+		Return(&domain.ProductLineUnitGroup{ID: "ug_1", Name: "Mass"}, nil).
+		Times(1)
+
+	result, err := s.productSvc.ListProductsFull(ctx, domain.ListProductsFullParams{Limit: 10})
+
+	s.Nil(err)
+	s.NotNil(result)
+	s.Len(result.Products, 1)
+	s.Equal(attrs, result.Products[0].Item.Attributes)
+	s.NotNil(result.Products[0].ProductLine.UnitGroup)
+	s.Equal("Mass", result.Products[0].ProductLine.UnitGroup.Name)
+}
+
+// =============================================================================
+// GetProduct
+// =============================================================================
+
+func (s *ProductSvcTestSuite) TestGetProduct_Success_WithIncludes() {
+	ctx := internalProductIdentityCtx("ac_test123")
+
+	product := &domain.ProductFull{
+		ID:     "prod_1",
+		ItemID: "it_1",
+		Item:   &domain.Item{ID: "it_1", SKU: "SKU-1"},
+	}
+	s.productRepo.EXPECT().
+		Get(gomock.Any(), domain.GetProductFullParams{AccountID: "ac_test123", ItemID: "it_1"}).
+		Return(product, nil).
+		Times(1)
+	s.itemRepo.EXPECT().
+		Get(gomock.Any(), domain.GetItemParams{AccountID: "ac_test123", ItemID: "it_1"}).
+		Return(&domain.Item{ID: "it_1", Attributes: []*domain.ItemAttribute{{ID: "attr_1"}}}, nil).
+		Times(1)
+	// No ProductLine on product → GetUnitGroup must NOT be called.
+
+	result, err := s.productSvc.GetProduct(ctx, domain.GetProductFullParams{ItemID: "it_1"})
+
+	s.Nil(err)
+	s.NotNil(result)
+	s.Len(result.Item.Attributes, 1)
+}
+
+func (s *ProductSvcTestSuite) TestGetProduct_MissingTargetAccount_AuthError() {
+	adminCode := string(constants.RoleTypeCodeAdmin)
+	accountID := "ac_actor"
+	ctx := appctx.WithIdentity(context.Background(), &types.Identity{
+		Type: types.IdentityActorTypeUser,
+		Actor: &types.IdentityActor{
+			RelationType: types.IdentityRelationTypeInternal,
+			ID:           "usr_1",
+			AccountID:    &accountID,
+			RoleTypeCode: &adminCode,
+			Permissions:  map[string]bool{"items:read": true},
+		},
+	})
+
+	result, err := s.productSvc.GetProduct(ctx, domain.GetProductFullParams{ItemID: "it_1"})
+
+	s.Nil(result)
+	s.NotNil(err)
+	s.Equal(apierror.ErrorCodeInvalidCredentials, err.Code)
+}
+
+func (s *ProductSvcTestSuite) TestGetProduct_ExternalTarget_ChecksReadAccess() {
+	ctx := customerProductIdentityCtx("ac_customer", "ac_owner")
+
+	s.readAccessMed.EXPECT().
+		CheckReadAccess(gomock.Any(), "ac_customer", "ac_owner").
+		Return(apierror.NewAuthorizationError("no access")).
+		Times(1)
+
+	result, err := s.productSvc.GetProduct(ctx, domain.GetProductFullParams{ItemID: "it_1"})
+
+	s.Nil(result)
+	s.NotNil(err)
+	s.Equal(apierror.ErrorCodeInsufficientPerms, err.Code)
+}
+
+func (s *ProductSvcTestSuite) TestGetProduct_NotFound() {
+	ctx := internalProductIdentityCtx("ac_test123")
+
+	s.productRepo.EXPECT().
+		Get(gomock.Any(), gomock.Any()).
+		Return(nil, apierror.NewResourceNotFoundError("Product not found.")).
+		Times(1)
+
+	result, err := s.productSvc.GetProduct(ctx, domain.GetProductFullParams{ItemID: "it_missing"})
+
+	s.Nil(result)
+	s.NotNil(err)
+	s.Equal(apierror.ErrorCodeResourceNotFound, err.Code)
+}
+
+// =============================================================================
+// ValidateProducts
+// =============================================================================
+
+func (s *ProductSvcTestSuite) TestValidateProducts_Success_PreservesKeys() {
+	ctx := internalProductIdentityCtx("ac_test123")
+
+	input := map[string]string{"rowA": "SKU-1", "rowB": "SKU-2"}
+	s.productRepo.EXPECT().
+		ValidateProducts(gomock.Any(), gomock.AssignableToTypeOf(domain.ValidateProductsParams{})).
+		DoAndReturn(func(_ context.Context, params domain.ValidateProductsParams) (*domain.ValidateProductsResult, *apierror.APIError) {
+			// Service must forward SKUs unchanged (case preservation; repo handles case-insensitive match).
+			s.Equal("ac_test123", params.AccountID)
+			s.Equal("SKU-1", params.ProductsMap["rowA"])
+			s.Equal("SKU-2", params.ProductsMap["rowB"])
+			return &domain.ValidateProductsResult{
+				Products: map[string]*domain.ProductFull{
+					"rowA": {ID: "prod_1", Item: &domain.Item{SKU: "SKU-1"}},
+					// rowB missing on purpose to cover the "partial match" contract.
+				},
+			}, nil
+		}).
+		Times(1)
+
+	result, err := s.productSvc.ValidateProducts(ctx, domain.ValidateProductsParams{ProductsMap: input})
+
+	s.Nil(err)
+	s.NotNil(result)
+	s.Len(result.Products, 1)
+	s.NotNil(result.Products["rowA"])
+	s.Nil(result.Products["rowB"])
+}
+
+func (s *ProductSvcTestSuite) TestValidateProducts_MissingTargetAccount_AuthError() {
+	adminCode := string(constants.RoleTypeCodeAdmin)
+	accountID := "ac_actor"
+	ctx := appctx.WithIdentity(context.Background(), &types.Identity{
+		Type: types.IdentityActorTypeUser,
+		Actor: &types.IdentityActor{
+			RelationType: types.IdentityRelationTypeInternal,
+			ID:           "usr_1",
+			AccountID:    &accountID,
+			RoleTypeCode: &adminCode,
+			Permissions:  map[string]bool{"items:read": true},
+		},
+	})
+
+	result, err := s.productSvc.ValidateProducts(ctx, domain.ValidateProductsParams{})
+
+	s.Nil(result)
+	s.NotNil(err)
+	s.Equal(apierror.ErrorCodeInvalidCredentials, err.Code)
+}
+
+func (s *ProductSvcTestSuite) TestValidateProducts_ExternalTarget_ChecksReadAccess() {
+	ctx := customerProductIdentityCtx("ac_customer", "ac_owner")
+
+	s.readAccessMed.EXPECT().
+		CheckReadAccess(gomock.Any(), "ac_customer", "ac_owner").
+		Return(apierror.NewAuthorizationError("no access")).
+		Times(1)
+
+	result, err := s.productSvc.ValidateProducts(ctx, domain.ValidateProductsParams{})
+
+	s.Nil(result)
+	s.NotNil(err)
+	s.Equal(apierror.ErrorCodeInsufficientPerms, err.Code)
+}

@@ -70,6 +70,10 @@ type CreateSalesOrderRequest struct {
 	ShipToCountry *string `json:"ship_to_country,omitempty" validate:"omitempty,max=2"`
 	// Order lines to create.
 	Lines []CreateSalesOrderLineInput `json:"lines"`
+	// Account users who should receive order acknowledgement emails.
+	AcknowledgementEmailContacts []SalesOrderEmailContactInput `json:"acknowledgement_email_contacts,omitempty"`
+	// Account users who should receive invoice emails.
+	InvoiceEmailContacts []SalesOrderEmailContactInput `json:"invoice_email_contacts,omitempty"`
 }
 
 // Line item input for a create sales order request.
@@ -77,6 +81,12 @@ type CreateSalesOrderLineInput struct {
 	apirequest.OrderLineInput
 	// EDI line item ID.
 	EdiLineItemID *string `json:"edi_line_item_id,omitempty" validate:"omitempty,max=191"`
+}
+
+// SalesOrderEmailContactInput represents an account user subscribed to a sales-order email notification type.
+type SalesOrderEmailContactInput struct {
+	// Account user ID to receive the notification.
+	AccountUserID string `json:"account_user_id" validate:"required,max=191"`
 }
 
 var sampleCreateSONote = "Rush order for trade show"

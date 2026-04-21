@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.3](https://github.com/Augno/api/compare/v0.14.2...v0.14.3) (2026-04-21)
+
+
+### Bug Fixes
+
+* e2e tests that were failing ([#209](https://github.com/Augno/api/issues/209)) ([6d26d3b](https://github.com/Augno/api/commit/6d26d3b8c35d404209c800c97c097fd24e7c3e95))
+
 ## [0.14.2](https://github.com/Augno/api/compare/v0.14.1...v0.14.2) (2026-04-20)
 
 

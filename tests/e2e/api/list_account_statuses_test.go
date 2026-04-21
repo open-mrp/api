@@ -268,25 +268,3 @@ func TestListAccountStatuses_IncludeOwner(t *testing.T) {
 	ownerType := jsonField(owner, "type")
 	assert.Contains(t, []string{"system", "account"}, ownerType)
 }
-
-func TestListAccountStatuses_IncludeOwnerAccount(t *testing.T) {
-	t.Parallel()
-	list, _, err := apiClient.GetList(accountStatusesPath, url.Values{"include": {"owner,owner.account"}})
-	require.NoError(t, err)
-	require.GreaterOrEqual(t, len(list.Data), 1)
-
-	for _, item := range list.Data {
-		m := parseJSON(item)
-		owner := jsonObject(m, "owner")
-		if owner == nil {
-			continue
-		}
-		if jsonField(owner, "type") == "account" {
-			acc := jsonObject(owner, "account")
-			require.NotNil(t, acc, "owner.account should be present when owner.type=account and ?include=owner.account")
-			assert.Equal(t, "account", jsonField(acc, "object"))
-			return
-		}
-	}
-	t.Log("No account-owned account_status found to verify owner.account nesting; test passes trivially")
-}

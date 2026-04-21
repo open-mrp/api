@@ -182,6 +182,23 @@ func CustomerPresenter(c *pb.CustomerProto) apiresource.Customer {
 		}
 	}
 
+	// Child accounts
+	var childAccounts *apiresource.List[apiresource.Customer]
+	if len(c.ChildAccounts) > 0 {
+		items := make([]apiresource.Customer, len(c.ChildAccounts))
+		for i, child := range c.ChildAccounts {
+			items[i] = apiresource.Customer{
+				ID:               child.Id,
+				Object:           constants.ObjectTypeCustomer,
+				Name:             child.Name,
+				Number:           child.Number,
+				Status:           constants.AccountStatusCodeNormal,
+				CommissionPolicy: constants.CommissionPolicyApplied,
+			}
+		}
+		childAccounts = apiresource.NewList(items, apiresource.PageInfo{})
+	}
+
 	return apiresource.Customer{
 		ID:                      c.Id,
 		Object:                  constants.ObjectTypeCustomer,
@@ -202,6 +219,7 @@ func CustomerPresenter(c *pb.CustomerProto) apiresource.Customer {
 		Type:                    typeGroup,
 		PriceGroups:             apiresource.NewList(priceGroups, apiresource.PageInfo{}),
 		ParentAccount:           parentAccount,
+		ChildAccounts:           childAccounts,
 		CreatedAt:               grpcutil.TimestampToTime(c.CreatedAt),
 		UpdatedAt:               grpcutil.TimestampToTime(c.UpdatedAt),
 	}

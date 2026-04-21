@@ -543,6 +543,6 @@ UPDATE inventory_change_log
 
 UPDATE inventory_change_log
    SET scanning_station_id = 'sgsn_01k0a8201zegarjfsjaw5n7yfv'
- WHERE id = 'ivcl_01seedwls000000000'
+ WHERE id IN ('ivcl_01seedwss000000000', 'ivcl_01seedwls000000000')
    AND scanning_station_id IS NULL;
 

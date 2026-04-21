@@ -83,3 +83,15 @@ INNER JOIN account a ON a.id = ar.counterparty_account_id
 LEFT JOIN account_branding ab ON ab.owner_account_id = ar.counterparty_account_id
 WHERE ar.owner_account_id = sqlc.arg('owner_account_id')
   AND ar.counterparty_account_id = sqlc.arg('counterparty_account_id');
+
+-- name: ListChildAccountsByParentRelationIDs :many
+SELECT
+    ar.parent_account_relation_id AS parent_relation_id,
+    ar.counterparty_account_id AS account_id,
+    a.name AS account_name,
+    ar.external_number
+FROM account_relation ar
+INNER JOIN account a ON a.id = ar.counterparty_account_id
+WHERE ar.owner_account_id = sqlc.arg('owner_account_id')
+  AND ar.parent_account_relation_id IN (sqlc.slice('parent_relation_ids'))
+ORDER BY ar.parent_account_relation_id, ar.created_at ASC, ar.id ASC;

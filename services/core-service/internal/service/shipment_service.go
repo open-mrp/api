@@ -723,7 +723,7 @@ func (s *shipmentSvcImpl) EstimateRate(ctx context.Context, params domain.Estima
 	// Check customer-level freight exemptions and shipping term logic.
 	if params.CustomerID != nil {
 		customerRepo := s.repos.NewCustomerRepo()
-		customer, apiErr := customerRepo.Get(ctx, params.AccountID, *params.CustomerID)
+		customer, apiErr := customerRepo.Get(ctx, params.AccountID, *params.CustomerID, nil)
 		if apiErr != nil {
 			return 0, tracing.Trace(span, apiErr)
 		}
@@ -885,7 +885,7 @@ func (s *shipmentSvcImpl) RateShop(ctx context.Context, params domain.RateShopPa
 	if params.CustomerID != nil {
 		customerRepo := s.repos.NewCustomerRepo()
 		var apiErr *apierror.APIError
-		customer, apiErr = customerRepo.Get(ctx, params.AccountID, *params.CustomerID)
+		customer, apiErr = customerRepo.Get(ctx, params.AccountID, *params.CustomerID, nil)
 		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}

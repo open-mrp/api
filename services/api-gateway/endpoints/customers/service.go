@@ -170,7 +170,8 @@ func (m *customerSvcImpl) ListCustomers(ctx context.Context, req *ListCustomersR
 
 func (m *customerSvcImpl) GetCustomer(ctx context.Context, req *GetCustomerRequest) (*apiresource.Customer, *apierror.APIError) {
 	pbReq := &pb.GetCustomerRequest{
-		Id: req.CustomerID,
+		Id:       req.CustomerID,
+		Includes: appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, customerSvcTracer, "service.customers.get", domain.ServiceName,

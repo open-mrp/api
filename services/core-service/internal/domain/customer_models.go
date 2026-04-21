@@ -59,8 +59,17 @@ type Customer struct {
 	ParentAccountID               *string                `audit:"parent_account_id"`
 	ParentAccountName             *string
 	ParentAccountNumber           *string
+	ChildAccounts                 []CustomerChildAccount
 	CreatedAt                     time.Time
 	UpdatedAt                     time.Time
+}
+
+// CustomerChildAccount is the lightweight stub returned when
+// `?include=child_accounts` is requested on a customer resource.
+type CustomerChildAccount struct {
+	ID     string
+	Name   string
+	Number string
 }
 
 // CustomerAddress represents a customer's address with geolocation.

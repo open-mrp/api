@@ -406,6 +406,7 @@ message CustomerProto {
   google.protobuf.Timestamp created_at = 27;
   google.protobuf.Timestamp updated_at = 28;
   optional CustomerCreditLimitProto credit_limit = 29;
+  repeated CustomerLightCustomerProto child_accounts = 30;
 }
 message CustomerCarrierProto {
   string id = 1;
@@ -502,6 +503,7 @@ message ListCustomersResponse {
 }
 message GetCustomerRequest {
   string id = 1;
+  repeated string includes = 2;
 }
 message GetCustomerResponse {
   CustomerProto customer = 1;

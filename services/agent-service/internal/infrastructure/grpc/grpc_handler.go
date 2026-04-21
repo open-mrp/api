@@ -640,7 +640,7 @@ func (h *agentHandler) GetRun(ctx context.Context, req *pb.GetRunRequest) (*pb.G
 	}
 
 	if includeSet["definition"] {
-		defResult, defErr := h.agentDefSvc.GetAgentDefinition(ctx, run.AgentDefinitionID, nil)
+		defResult, defErr := h.agentDefSvc.GetAgentDefinition(ctx, run.AgentDefinitionID, nestedIncludes(req.Includes, "definition"))
 		if defErr == nil {
 			pbRun.Definition = domainToProtoAgentDefinition(defResult)
 		}

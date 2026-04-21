@@ -18,12 +18,22 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- Agent definition tools — attaches two system tools to the custom agent so
--- `?include=tools` returns a populated list on the GET/LIST responses.
+-- `?include=tools` returns a populated list on the GET/LIST responses. Also
+-- attaches one tool to orderbot0 so get-run?include=definition.tools resolves
+-- against SeedAgentRunID (run #1, which targets orderbot0).
 INSERT INTO agent_definition_tool (id, agent_definition_id, tool_definition_id, config, sort_order, require_review)
 VALUES
     ('agdtl_01seede2e_tool001', 'agdf_01seede2e_custom00', 'tdef_01k0b1seed0savememory0000', '{}', 0, false),
-    ('agdtl_01seede2e_tool002', 'agdf_01seede2e_custom00', 'tdef_01k0b1seed0createalert000', '{}', 1, false)
+    ('agdtl_01seede2e_tool002', 'agdf_01seede2e_custom00', 'tdef_01k0b1seed0createalert000', '{}', 1, false),
+    ('agdtl_01seede2e_tool003', 'agdf_01seede2e_orderbot0', 'tdef_01k0b1seed0createalert000', '{}', 0, false)
 ON CONFLICT (id) DO NOTHING;
+
+-- orderbot0 is a system definition but still needs a role_id so
+-- `get-run/{id}?include=definition.role` resolves against SeedAgentRunID.
+UPDATE agent_definition
+   SET role_id = 'rl_mtg88e6u6fbu'
+ WHERE id = 'agdf_01seede2e_orderbot0'
+   AND role_id IS NULL;
 
 -- Agent configs (account-scoped instances of the definitions)
 INSERT INTO agent_config (id, account_id, agent_definition_id, is_enabled, config)
@@ -49,10 +59,20 @@ VALUES
     ('agrn_01seede2e_run00003', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'agdf_01seede2e_custom00', NULL,                     'completed', 'manual', '{"prompt":"Custom agent trigger"}', '{"result":"Custom agent completed"}',          now() - interval '15 minutes', now() - interval '14 minutes', 30000, 300, 100, 'us_1wjfmmbwg8l7', 'internal', 'Admin User', '["save_memory","create_alert"]')
 ON CONFLICT (id) DO NOTHING;
 
--- Agent action for run #3 so `list-runs/actions` and `list-agent-alerts/action` resolve.
+-- Agent actions. Run #3 exercises `list-runs/actions` and the alert→action
+-- link. Run #1 carries one action + step events so `get-run/actions` and
+-- `get-run/steps` resolve against the SeedAgentRunID GET target.
 INSERT INTO agent_action (id, account_id, agent_run_id, tool_slug, status_code, label, description, input, output, requires_review)
 VALUES
-    ('agac_01seede2e_action01', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'agrn_01seede2e_run00003', 'save_memory', 'completed', 'Remembered preference', 'Saved the customer''s preferred shipping method.', '{"category":"preference"}', '{"ok":true}', false)
+    ('agac_01seede2e_action01', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'agrn_01seede2e_run00003', 'save_memory', 'completed', 'Remembered preference', 'Saved the customer''s preferred shipping method.', '{"category":"preference"}', '{"ok":true}', false),
+    ('agac_01seede2e_action02', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'agrn_01seede2e_run00001', 'create_alert', 'completed', 'Order queued', 'Queued ORD-001 for downstream fulfillment.', '{"order_id":"ORD-001"}', '{"ok":true}', false)
+ON CONFLICT (id) DO NOTHING;
+
+-- Agent run events (timeline steps) for run #1 so `get-run/steps` resolves.
+INSERT INTO agent_run_event (id, agent_run_id, account_id, step_type, title, content, sequence, duration_ms, agent_action_id, metadata, actor_type, actor_name)
+VALUES
+    ('agev_01seede2e_event001', 'agrn_01seede2e_run00001', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'message',   'User prompt received', 'Process order ORD-001',                    1, 20,    NULL,                     '{}', 'internal', 'Admin User'),
+    ('agev_01seede2e_event002', 'agrn_01seede2e_run00001', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'tool_call', 'Queued order for fulfillment', 'create_alert invoked with ORD-001', 2, 30000, 'agac_01seede2e_action02', '{}', 'internal', 'Admin User')
 ON CONFLICT (id) DO NOTHING;
 
 -- Agent alerts — first alert stays linked to run 1 only; second alert references

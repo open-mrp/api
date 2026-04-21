@@ -7179,18 +7179,18 @@ func (mr *MockCustomerRepoMockRecorder) ExistsByNumber(ctx, ownerAccountID, numb
 }
 
 // Get mocks base method.
-func (m *MockCustomerRepo) Get(ctx context.Context, ownerAccountID, customerAccountID string) (*domain.Customer, *apierror.APIError) {
+func (m *MockCustomerRepo) Get(ctx context.Context, ownerAccountID, customerAccountID string, includes []string) (*domain.Customer, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", ctx, ownerAccountID, customerAccountID)
+	ret := m.ctrl.Call(m, "Get", ctx, ownerAccountID, customerAccountID, includes)
 	ret0, _ := ret[0].(*domain.Customer)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockCustomerRepoMockRecorder) Get(ctx, ownerAccountID, customerAccountID any) *gomock.Call {
+func (mr *MockCustomerRepoMockRecorder) Get(ctx, ownerAccountID, customerAccountID, includes any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockCustomerRepo)(nil).Get), ctx, ownerAccountID, customerAccountID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockCustomerRepo)(nil).Get), ctx, ownerAccountID, customerAccountID, includes)
 }
 
 // GetAccountAddressIDs mocks base method.

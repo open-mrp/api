@@ -3549,18 +3549,18 @@ func (mr *MockCustomerSvcMockRecorder) DeleteCustomer(ctx, params any) *gomock.C
 }
 
 // GetCustomer mocks base method.
-func (m *MockCustomerSvc) GetCustomer(ctx context.Context, customerAccountID string) (*domain.Customer, *apierror.APIError) {
+func (m *MockCustomerSvc) GetCustomer(ctx context.Context, customerAccountID string, includes []string) (*domain.Customer, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetCustomer", ctx, customerAccountID)
+	ret := m.ctrl.Call(m, "GetCustomer", ctx, customerAccountID, includes)
 	ret0, _ := ret[0].(*domain.Customer)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // GetCustomer indicates an expected call of GetCustomer.
-func (mr *MockCustomerSvcMockRecorder) GetCustomer(ctx, customerAccountID any) *gomock.Call {
+func (mr *MockCustomerSvcMockRecorder) GetCustomer(ctx, customerAccountID, includes any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCustomer", reflect.TypeOf((*MockCustomerSvc)(nil).GetCustomer), ctx, customerAccountID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCustomer", reflect.TypeOf((*MockCustomerSvc)(nil).GetCustomer), ctx, customerAccountID, includes)
 }
 
 // GetFrequentlyOrderedProducts mocks base method.

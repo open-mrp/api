@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"strings"
 	"time"
 )
 
@@ -161,6 +162,70 @@ func (q *Queries) ListChildAccountsBackward(ctx context.Context, arg ListChildAc
 			&i.Email,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listChildAccountsByParentRelationIDs = `-- name: ListChildAccountsByParentRelationIDs :many
+SELECT
+    ar.parent_account_relation_id AS parent_relation_id,
+    ar.counterparty_account_id AS account_id,
+    a.name AS account_name,
+    ar.external_number
+FROM account_relation ar
+INNER JOIN account a ON a.id = ar.counterparty_account_id
+WHERE ar.owner_account_id = ?
+  AND ar.parent_account_relation_id IN (/*SLICE:parent_relation_ids*/?)
+ORDER BY ar.parent_account_relation_id, ar.created_at ASC, ar.id ASC
+`
+
+type ListChildAccountsByParentRelationIDsParams struct {
+	OwnerAccountID    string
+	ParentRelationIds []sql.NullString
+}
+
+type ListChildAccountsByParentRelationIDsRow struct {
+	ParentRelationID sql.NullString
+	AccountID        string
+	AccountName      string
+	ExternalNumber   string
+}
+
+func (q *Queries) ListChildAccountsByParentRelationIDs(ctx context.Context, arg ListChildAccountsByParentRelationIDsParams) ([]ListChildAccountsByParentRelationIDsRow, error) {
+	query := listChildAccountsByParentRelationIDs
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.OwnerAccountID)
+	if len(arg.ParentRelationIds) > 0 {
+		for _, v := range arg.ParentRelationIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:parent_relation_ids*/?", strings.Repeat(",?", len(arg.ParentRelationIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:parent_relation_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListChildAccountsByParentRelationIDsRow
+	for rows.Next() {
+		var i ListChildAccountsByParentRelationIDsRow
+		if err := rows.Scan(
+			&i.ParentRelationID,
+			&i.AccountID,
+			&i.AccountName,
+			&i.ExternalNumber,
 		); err != nil {
 			return nil, err
 		}

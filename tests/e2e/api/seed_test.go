@@ -91,11 +91,13 @@ const (
 
 	// Sandboxes
 	SeedSandboxAccountID = "ac_sandbox_01k0a5smf9ekb8rqg12555zjqb"
+	SeedSandboxID        = "sbac_01seedsandbox000000" // sandbox_account.type_id, used by GET /v1/core/sandboxes/{id}
 
 	// Payment/Shipping
 	SeedPaymentTermID        = "pytm_01seednet3000000"
 	SeedDefaultPaymentTermID = "pytm_01seeddefault00000"
 	SeedShippingTermID       = "prepaid_billed"
+	SeedCustomShippingTermID = "shtm_01seedcustflat000" // account-owned, seeded in 0014_e2e_extras.sql
 	SeedCarrierID            = "delivery"
 	SeedServiceLevelID       = "crop_01seedground000000"
 	SeedSystemCarrierID      = "syscar_01seedsysdefault"
@@ -143,6 +145,12 @@ const (
 	SeedCustomAgentDefinitionID = "agdf_01seede2e_custom00"
 	SeedAgentConfigID           = "agcf_01seede2e_ordercfg0"
 	SeedAgentMemoryID           = "agmm_01seede2e_memory01"
+	SeedAgentRunID              = "agrn_01seede2e_run00001" // run #1 has agent_definition + config (needed for include=definition.config)
+	SeedAgentAlertID            = "agal_01seede2e_alert002" // alert #2 has agent_run_id + agent_action_id populated
+
+	// Audit / Observability (seeded in 0014_e2e_extras.sql)
+	SeedAuditEventID         = "adev_01seedauditevent02" // event #2 has metadata populated
+	SeedInventoryChangeLogID = "ivcl_01seedwss000000000" // seeded in 0007_items.sql, enriched in 0014_e2e_extras.sql
 
 	// Tenant B (seeded in 0015_tenant_b_e2e.sql) — used for tenant isolation tests
 	SeedTenantBAccountID = "ac_tenant2_e2e_isolati"
@@ -205,7 +213,7 @@ var pathSpecificIDSeeds = map[string]string{
 	"/v1/finance/transactions/":                                          SeedTransactionID,
 	"/v1/identity/account-users/":                                        SeedAccountUserID,
 	"/v1/identity/accounts/":                                             SeedAccountID,
-	"/v1/identity/roles/":                                                SeedAdminRoleID,
+	"/v1/identity/roles/":                                                SeedSalesRepRoleID, // account-owned so owner.account include populates
 	"/v1/identity/users/":                                                SeedUserID,
 	"/v1/operations/carriers/{carrier_id}/service-levels/":               SeedServiceLevelID,
 	"/v1/operations/carriers/":                                           SeedCarrierID,
@@ -224,7 +232,7 @@ var pathSpecificIDSeeds = map[string]string{
 	"/v1/operations/shipments/{shipment_id}/lines/":                      SeedShipmentLineID,
 	"/v1/operations/shipments/":                                          SeedShipmentID,
 	"/v1/operations/shipping-cases/":                                     SeedShippingCaseID,
-	"/v1/operations/shipping-terms/":                                     SeedShippingTermID,
+	"/v1/operations/shipping-terms/":                                     SeedCustomShippingTermID, // account-owned so owner.account include populates
 	"/v1/operations/locations/":                                          SeedLocationID,
 	"/v1/sales/account-groups/":                                          SeedCustomerGroupID,
 	"/v1/sales/account-prices/":                                          SeedAccountPriceID,
@@ -235,13 +243,20 @@ var pathSpecificIDSeeds = map[string]string{
 	"/v1/sales/sales-orders/":                                            SeedSalesOrderID,
 	"/v1/sales/volume-discounts/":                                        SeedVolumeDiscountID,
 
-	"/v1/ai/agents/":       SeedCustomAgentDefinitionID,
-	"/v1/ai/memories/":     SeedAgentMemoryID,
-	"/v1/core/email-logs/": SeedEmailLogID1,
+	"/v1/ai/agents/":                        SeedCustomAgentDefinitionID,
+	"/v1/ai/alerts/":                        SeedAgentAlertID,
+	"/v1/ai/memories/":                      SeedAgentMemoryID,
+	"/v1/ai/runs/":                          SeedAgentRunID,
+	"/v1/auth/api-keys/":                    SeedAPIKeyID,
+	"/v1/core/audit-events/":                SeedAuditEventID,
+	"/v1/core/email-logs/":                  SeedEmailLogID1,
+	"/v1/core/sandboxes/":                   SeedSandboxID,
+	"/v1/operations/inventory-change-logs/": SeedInventoryChangeLogID,
 	"/v1/operations/receiving-orders/{receivingOrderId}/lines/": SeedReceivingOrderLineID,
 	"/v1/operations/receiving-orders/":                          SeedReceivingOrderID,
 	"/v1/operations/suppliers/{supplier_id}/materials/":         SeedMaterialItemID,
 	"/v1/operations/suppliers/":                                 SeedSupplierAccountID,
+	"/v1/sales/account-statuses/":                               SeedAccountStatusID,
 	"/v1/sales/accounts/{account_id}/territories/":              SeedTerritoryID,
 	"/v1/sales/accounts/":                                       SeedCustomerAccountID,
 	"/v1/sales/customers/":                                      SeedCustomerAccountID,

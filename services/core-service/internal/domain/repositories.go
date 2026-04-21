@@ -612,7 +612,7 @@ type ProductionFlowRepo interface {
 
 type CustomerRepo interface {
 	List(ctx context.Context, params ListCustomersParams) (*ListCustomersResult, *apierror.APIError)
-	Get(ctx context.Context, ownerAccountID, customerAccountID string) (*Customer, *apierror.APIError)
+	Get(ctx context.Context, ownerAccountID, customerAccountID string, includes []string) (*Customer, *apierror.APIError)
 	Create(ctx context.Context, accountID, relationID, brandingID string, params CreateCustomerParams, customerNumber string) (*Customer, *apierror.APIError)
 	Update(ctx context.Context, relationID string, params UpdateCustomerParams) *apierror.APIError
 	UpdateName(ctx context.Context, customerAccountID, name string) *apierror.APIError

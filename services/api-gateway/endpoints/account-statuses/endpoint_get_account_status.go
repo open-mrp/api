@@ -35,7 +35,7 @@ func (e *GetAccountStatusEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetAc
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeAccountStatus,
-			Fields:     []string{"owner", "owner.account"},
+			Fields:     []string{"owner"},
 		}),
 	}
 }

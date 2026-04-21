@@ -99,7 +99,7 @@ func (s *customerSvcImpl) ListCustomers(ctx context.Context, params domain.ListC
 }
 
 // GetCustomer retrieves a single customer by account ID. Supports both internal and customer actors.
-func (s *customerSvcImpl) GetCustomer(ctx context.Context, customerAccountID string) (*domain.Customer, *apierror.APIError) {
+func (s *customerSvcImpl) GetCustomer(ctx context.Context, customerAccountID string, includes []string) (*domain.Customer, *apierror.APIError) {
 	ctx, span := customerSvcTracer.Start(ctx, "service.customer.get")
 	defer span.End()
 
@@ -134,7 +134,7 @@ func (s *customerSvcImpl) GetCustomer(ctx context.Context, customerAccountID str
 
 	ownerAccountID := identity.Target.AccountID
 
-	customer, apiErr := s.repos.NewCustomerRepo().Get(ctx, ownerAccountID, customerAccountID)
+	customer, apiErr := s.repos.NewCustomerRepo().Get(ctx, ownerAccountID, customerAccountID, includes)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -317,7 +317,7 @@ func (s *customerSvcImpl) CreateCustomer(ctx context.Context, params domain.Crea
 			}
 
 			// Re-fetch customer to include price groups and full data.
-			result, apiErr = txCustomerRepo.Get(txCtx, params.OwnerAccountID, accountID)
+			result, apiErr = txCustomerRepo.Get(txCtx, params.OwnerAccountID, accountID, nil)
 			if apiErr != nil {
 				return apiErr
 			}
@@ -387,7 +387,7 @@ func (s *customerSvcImpl) UpdateCustomer(ctx context.Context, params domain.Upda
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *customerSvcImpl) *apierror.APIError {
 			txCustomerRepo := txSvc.repos.NewCustomerRepo()
 
-			old, apiErr := txCustomerRepo.Get(txCtx, params.OwnerAccountID, params.CustomerAccountID)
+			old, apiErr := txCustomerRepo.Get(txCtx, params.OwnerAccountID, params.CustomerAccountID, nil)
 			if apiErr != nil {
 				return apiErr
 			}
@@ -548,7 +548,7 @@ func (s *customerSvcImpl) UpdateCustomer(ctx context.Context, params domain.Upda
 			}
 
 			// Re-fetch customer to include all updated data.
-			result, apiErr = txCustomerRepo.Get(txCtx, params.OwnerAccountID, params.CustomerAccountID)
+			result, apiErr = txCustomerRepo.Get(txCtx, params.OwnerAccountID, params.CustomerAccountID, nil)
 			if apiErr != nil {
 				return apiErr
 			}
@@ -601,7 +601,7 @@ func (s *customerSvcImpl) DeleteCustomer(ctx context.Context, params domain.Dele
 	repo := s.repos.NewCustomerRepo()
 
 	// Fetch the customer before deleting for audit trail.
-	customer, apiErr := repo.Get(ctx, params.OwnerAccountID, params.CustomerAccountID)
+	customer, apiErr := repo.Get(ctx, params.OwnerAccountID, params.CustomerAccountID, nil)
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeCustomer, params.CustomerAccountID)
@@ -672,7 +672,7 @@ func (s *customerSvcImpl) BulkDeleteCustomers(ctx context.Context, params domain
 	customerRepo := s.repos.NewCustomerRepo()
 	customers := make([]*domain.Customer, 0, len(params.CustomerIDs))
 	for _, customerID := range params.CustomerIDs {
-		customer, apiErr := customerRepo.Get(ctx, params.OwnerAccountID, customerID)
+		customer, apiErr := customerRepo.Get(ctx, params.OwnerAccountID, customerID, nil)
 		if apiErr != nil {
 			return tracing.Trace(span, apiErr)
 		}
@@ -808,13 +808,13 @@ func (s *customerSvcImpl) MergeCustomers(ctx context.Context, params domain.Merg
 
 	// Verify all customers exist by fetching the target and sources.
 	customerRepo := s.repos.NewCustomerRepo()
-	targetOld, apiErr := customerRepo.Get(ctx, params.OwnerAccountID, params.TargetCustomerID)
+	targetOld, apiErr := customerRepo.Get(ctx, params.OwnerAccountID, params.TargetCustomerID, nil)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 	sourceCustomers := make([]*domain.Customer, 0, len(params.SourceCustomerIDs))
 	for _, sourceID := range params.SourceCustomerIDs {
-		source, apiErr := customerRepo.Get(ctx, params.OwnerAccountID, sourceID)
+		source, apiErr := customerRepo.Get(ctx, params.OwnerAccountID, sourceID, nil)
 		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
@@ -1030,7 +1030,7 @@ func (s *customerSvcImpl) MergeCustomers(ctx context.Context, params domain.Merg
 			}
 
 			// Phase 9: Fetch the merged target customer.
-			result, apiErr = txCustomerRepo.Get(txCtx, params.OwnerAccountID, params.TargetCustomerID)
+			result, apiErr = txCustomerRepo.Get(txCtx, params.OwnerAccountID, params.TargetCustomerID, nil)
 			if apiErr != nil {
 				return apiErr
 			}

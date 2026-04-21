@@ -384,7 +384,7 @@ func (r *customerRepoImpl) List(ctx context.Context, params domain.ListCustomers
 				items[i] = mapListCustomerBackwardRow(row)
 				relationIDs[i] = row.RelationID
 			}
-			if apiErr := r.stitchListCustomerIncludes(ctx, items, relationIDs, params.Includes); apiErr != nil {
+			if apiErr := r.stitchListCustomerIncludes(ctx, params.AccountID, items, relationIDs, params.Includes); apiErr != nil {
 				return nil, tracing.Trace(span, apiErr)
 			}
 			result, pageInfo := pagination.BuildPageString(items, params.Limit, cursorDir, customerCreatedAt, customerID)
@@ -434,7 +434,7 @@ func (r *customerRepoImpl) List(ctx context.Context, params domain.ListCustomers
 			items[i] = mapListCustomerForwardRow(row)
 			relationIDs[i] = row.RelationID
 		}
-		if apiErr := r.stitchListCustomerIncludes(ctx, items, relationIDs, params.Includes); apiErr != nil {
+		if apiErr := r.stitchListCustomerIncludes(ctx, params.AccountID, items, relationIDs, params.Includes); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
 		result, pageInfo := pagination.BuildPageString(items, params.Limit, cursorDir, customerCreatedAt, customerID)
@@ -483,7 +483,7 @@ func (r *customerRepoImpl) List(ctx context.Context, params domain.ListCustomers
 		items[i] = mapListCustomerForwardRow(row)
 		relationIDs[i] = row.RelationID
 	}
-	if apiErr := r.stitchListCustomerIncludes(ctx, items, relationIDs, params.Includes); apiErr != nil {
+	if apiErr := r.stitchListCustomerIncludes(ctx, params.AccountID, items, relationIDs, params.Includes); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 	result, pageInfo := pagination.BuildPageString(items, params.Limit, cursorDir, customerCreatedAt, customerID)
@@ -494,21 +494,24 @@ func (r *customerRepoImpl) List(ctx context.Context, params domain.ListCustomers
 // into the list items when the corresponding include keys were requested. Skipping them keeps the
 // list path from paying for unused round-trips — the apiresource layer will collapse those fields
 // to null for clients that didn't ask for them.
-func (r *customerRepoImpl) stitchListCustomerIncludes(ctx context.Context, items []*domain.Customer, relationIDs []string, includes []string) *apierror.APIError {
+func (r *customerRepoImpl) stitchListCustomerIncludes(ctx context.Context, ownerAccountID string, items []*domain.Customer, relationIDs []string, includes []string) *apierror.APIError {
 	if len(items) == 0 {
 		return nil
 	}
 	wantPriceGroups := false
 	wantNotifPrefs := false
+	wantChildAccounts := false
 	for _, inc := range includes {
 		switch inc {
 		case "price_groups":
 			wantPriceGroups = true
 		case "notification_preferences":
 			wantNotifPrefs = true
+		case "child_accounts":
+			wantChildAccounts = true
 		}
 	}
-	if !wantPriceGroups && !wantNotifPrefs {
+	if !wantPriceGroups && !wantNotifPrefs && !wantChildAccounts {
 		return nil
 	}
 	byRelationID := make(map[string]*domain.Customer, len(items))
@@ -542,10 +545,21 @@ func (r *customerRepoImpl) stitchListCustomerIncludes(ctx context.Context, items
 			}
 		}
 	}
+	if wantChildAccounts {
+		byParent, apiErr := r.fetchChildAccountsByRelationIDs(ctx, ownerAccountID, relationIDs)
+		if apiErr != nil {
+			return apiErr
+		}
+		for rid, children := range byParent {
+			if c, ok := byRelationID[rid]; ok {
+				c.ChildAccounts = children
+			}
+		}
+	}
 	return nil
 }
 
-func (r *customerRepoImpl) Get(ctx context.Context, ownerAccountID, customerAccountID string) (*domain.Customer, *apierror.APIError) {
+func (r *customerRepoImpl) Get(ctx context.Context, ownerAccountID, customerAccountID string, includes []string) (*domain.Customer, *apierror.APIError) {
 	ctx, span := customerRepoTracer.Start(ctx, "repository.customer.get")
 	defer span.End()
 
@@ -680,7 +694,57 @@ func (r *customerRepoImpl) Get(ctx context.Context, ownerAccountID, customerAcco
 		UpdatedAt:                     row.UpdatedAt,
 	}
 
+	if wantsInclude(includes, "child_accounts") {
+		childrenByRelation, apiErr := r.fetchChildAccountsByRelationIDs(ctx, ownerAccountID, []string{row.RelationID})
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		customer.ChildAccounts = childrenByRelation[row.RelationID]
+	}
+
 	return customer, nil
+}
+
+// wantsInclude returns true if the include key is present in the include list.
+func wantsInclude(includes []string, key string) bool {
+	for _, inc := range includes {
+		if inc == key {
+			return true
+		}
+	}
+	return false
+}
+
+// fetchChildAccountsByRelationIDs batches a single SQL query to fetch direct
+// children for every parent relation ID in parentRelationIDs, grouped by
+// parent relation ID.
+func (r *customerRepoImpl) fetchChildAccountsByRelationIDs(ctx context.Context, ownerAccountID string, parentRelationIDs []string) (map[string][]domain.CustomerChildAccount, *apierror.APIError) {
+	if len(parentRelationIDs) == 0 {
+		return nil, nil
+	}
+	nullIDs := make([]gosql.NullString, len(parentRelationIDs))
+	for i, id := range parentRelationIDs {
+		nullIDs[i] = gosql.NullString{String: id, Valid: true}
+	}
+	rows, err := r.queries.ListChildAccountsByParentRelationIDs(ctx, sqlc.ListChildAccountsByParentRelationIDsParams{
+		OwnerAccountID:    ownerAccountID,
+		ParentRelationIds: nullIDs,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, apiErr
+	}
+	byParent := make(map[string][]domain.CustomerChildAccount, len(parentRelationIDs))
+	for _, row := range rows {
+		if !row.ParentRelationID.Valid {
+			continue
+		}
+		byParent[row.ParentRelationID.String] = append(byParent[row.ParentRelationID.String], domain.CustomerChildAccount{
+			ID:     row.AccountID,
+			Name:   row.AccountName,
+			Number: row.ExternalNumber,
+		})
+	}
+	return byParent, nil
 }
 
 func buildCustomerAddress(
@@ -807,7 +871,7 @@ func (r *customerRepoImpl) Create(ctx context.Context, accountID, relationID, br
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return r.Get(ctx, params.OwnerAccountID, accountID)
+	return r.Get(ctx, params.OwnerAccountID, accountID, nil)
 }
 
 func (r *customerRepoImpl) Update(ctx context.Context, relationID string, params domain.UpdateCustomerParams) *apierror.APIError {

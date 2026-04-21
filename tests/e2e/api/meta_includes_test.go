@@ -80,31 +80,7 @@ func optOutKey(operationID, include string) string {
 //	seed-gap: nested resource isn't in the seed data; add it.
 //	bug:      backend doesn't attach the nested resource when requested.
 //	schema:   the relationship isn't representable in the current schema.
-var includesOptOut = map[string]string{
-	// ── owner.account on system-only catalogs ─────────────────────────────
-	// These enum-like types are only seeded as system-owned (account_id NULL).
-	// seed-gap: add an account-owned row (if the schema permits) so at least
-	// one list item exposes owner.account.
-	// System-owned enum-ish tables have no account_id column at all — the
-	// owner.account include is structurally always null for these resources.
-	// These opt-outs are permanent unless the IncludeConfig drops owner.account
-	// from these endpoints.
-	optOutKey("list-account-statuses", "owner.account"):     "schema: account_status has no account_id column (always system-owned)",
-	optOutKey("list-adjustment-types", "owner.account"):     "schema: adjustment_type has no account_id column (always system-owned)",
-	optOutKey("list-permission-groups", "owner.account"):    "schema: permission_group has no account_id column (always system-owned)",
-	optOutKey("list-priorities", "owner.account"):           "schema: priority has no account_id column (always system-owned)",
-	optOutKey("list-sales-order-statuses", "owner.account"): "schema: sales_order_status has no account_id column (always system-owned)",
-	optOutKey("get-priority", "owner.account"):              "schema: priority has no account_id column (always system-owned)",
-	optOutKey("get-role", "owner.account"):                  "seed-gap: SeedAdminRoleID is system-owned; an account-owned role exists but isn't exposed via GET",
-	optOutKey("get-shipping-term", "owner.account"):         "seed-gap: SeedShippingTermID ('prepaid_billed') is system-owned",
-
-	// ── customer.child_accounts ───────────────────────────────────────────
-	// Requires proto/presenter work: CustomerProto has no `child_accounts`
-	// field, so even with children seeded the response returns null.
-	optOutKey("get-customer", "child_accounts"):   "bug: CustomerProto carries no child_accounts field; presenter always returns null",
-	optOutKey("list-customers", "child_accounts"): "bug: CustomerProto carries no child_accounts field; presenter always returns null",
-
-}
+var includesOptOut = map[string]string{}
 
 // assertIncludePopulated navigates the response to the JSON path described by
 // the include key and asserts that the value is present and non-empty.
@@ -248,6 +224,22 @@ func (e *IncludeGetEndpoint) ResolvePath() (string, bool) {
 	return adapter.ResolvePath()
 }
 
+// excludedIncludePaths lists path prefixes skipped by the includes coverage
+// test because the standard e2e API key can't exercise them (internal-admin-
+// only endpoints, etc.). Mirrors the pattern of excludedPaginationPaths.
+var excludedIncludePaths = []string{
+	"/v1/core/request-logs", // requires internal admin role
+}
+
+func isExcludedFromIncludes(path string) bool {
+	for _, prefix := range excludedIncludePaths {
+		if strings.HasPrefix(path, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
 // loadIncludeGetEndpoints parses the full OpenAPI spec and returns every GET
 // endpoint whose include[] query parameter declares an enum. Endpoints matched
 // by excludedPaths are dropped because they can't be exercised by e2e tests.
@@ -259,7 +251,7 @@ func loadIncludeGetEndpoints() ([]IncludeGetEndpoint, error) {
 
 	var out []IncludeGetEndpoint
 	for path, methods := range spec.Paths {
-		if isExcludedPath(path) {
+		if isExcludedPath(path) || isExcludedFromIncludes(path) {
 			continue
 		}
 		op, ok := methods["get"]

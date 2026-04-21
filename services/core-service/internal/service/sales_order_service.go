@@ -1224,7 +1224,7 @@ func (s *salesOrderSvcImpl) CreateCustomerCheckoutSession(ctx context.Context, p
 			}
 
 			// Get customer details
-			customer, apiErr := customerRepo.Get(ctx, targetAccountID, customerAccountID)
+			customer, apiErr := customerRepo.Get(ctx, targetAccountID, customerAccountID, nil)
 			if apiErr != nil {
 				return nil, tracing.Trace(span, apiErr)
 			}

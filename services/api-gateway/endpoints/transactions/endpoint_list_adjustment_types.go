@@ -34,7 +34,7 @@ func (e *ListAdjustmentTypesEndpoint) Materialize() *apiendpoint.APIEndpoint[*Li
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeAdjustmentType,
-			Fields:     []string{"owner", "owner.account"},
+			Fields:     []string{"owner"},
 		}),
 	}
 }

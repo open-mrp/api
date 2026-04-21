@@ -188,6 +188,17 @@ func customerToProto(c *domain.Customer) *pb.CustomerProto {
 		}
 	}
 
+	if len(c.ChildAccounts) > 0 {
+		p.ChildAccounts = make([]*pb.CustomerLightCustomerProto, len(c.ChildAccounts))
+		for i, child := range c.ChildAccounts {
+			p.ChildAccounts[i] = &pb.CustomerLightCustomerProto{
+				Id:     child.ID,
+				Name:   child.Name,
+				Number: child.Number,
+			}
+		}
+	}
+
 	return p
 }
 
@@ -265,7 +276,7 @@ func (h *gRPCHandler) GetCustomer(ctx context.Context, req *pb.GetCustomerReques
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	customer, apiErr := h.customerSvc.GetCustomer(ctx, req.Id)
+	customer, apiErr := h.customerSvc.GetCustomer(ctx, req.Id, req.Includes)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}

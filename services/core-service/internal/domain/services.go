@@ -692,7 +692,7 @@ type CustomerSvc interface {
 	ListCustomers(ctx context.Context, params ListCustomersParams) (*ListCustomersResult, *apierror.APIError)
 
 	// GetCustomer returns a single customer by account ID. Supports customer actor access.
-	GetCustomer(ctx context.Context, customerAccountID string) (*Customer, *apierror.APIError)
+	GetCustomer(ctx context.Context, customerAccountID string, includes []string) (*Customer, *apierror.APIError)
 
 	// CreateCustomer creates a new customer account.
 	CreateCustomer(ctx context.Context, params CreateCustomerParams) (*Customer, *apierror.APIError)

@@ -4217,36 +4217,37 @@ func (x *CustomerInfo) GetUserName() string {
 }
 
 type CustomerProto struct {
-	state                 protoimpl.MessageState       `protogen:"open.v1"`
-	Id                    string                       `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name                  string                       `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Number                string                       `protobuf:"bytes,3,opt,name=number,proto3" json:"number,omitempty"`
-	Status                string                       `protobuf:"bytes,4,opt,name=status,proto3" json:"status,omitempty"`
-	IsEdiEnabled          bool                         `protobuf:"varint,5,opt,name=is_edi_enabled,json=isEdiEnabled,proto3" json:"is_edi_enabled,omitempty"`
-	IsParentAccount       bool                         `protobuf:"varint,6,opt,name=is_parent_account,json=isParentAccount,proto3" json:"is_parent_account,omitempty"`
-	CommissionPolicy      string                       `protobuf:"bytes,7,opt,name=commission_policy,json=commissionPolicy,proto3" json:"commission_policy,omitempty"`
-	FreightPolicy         string                       `protobuf:"bytes,8,opt,name=freight_policy,json=freightPolicy,proto3" json:"freight_policy,omitempty"`
-	Note                  *string                      `protobuf:"bytes,9,opt,name=note,proto3,oneof" json:"note,omitempty"`
-	Email                 *string                      `protobuf:"bytes,10,opt,name=email,proto3,oneof" json:"email,omitempty"`
-	Phone                 *string                      `protobuf:"bytes,11,opt,name=phone,proto3,oneof" json:"phone,omitempty"`
-	Url                   *string                      `protobuf:"bytes,12,opt,name=url,proto3,oneof" json:"url,omitempty"`
-	CarrierBillingType    *string                      `protobuf:"bytes,13,opt,name=carrier_billing_type,json=carrierBillingType,proto3,oneof" json:"carrier_billing_type,omitempty"`
-	CarrierBillingAccount *string                      `protobuf:"bytes,14,opt,name=carrier_billing_account,json=carrierBillingAccount,proto3,oneof" json:"carrier_billing_account,omitempty"`
-	AcceptsInvoiceEmails  bool                         `protobuf:"varint,15,opt,name=accepts_invoice_emails,json=acceptsInvoiceEmails,proto3" json:"accepts_invoice_emails,omitempty"`
-	DefaultCarrier        *CustomerCarrierProto        `protobuf:"bytes,16,opt,name=default_carrier,json=defaultCarrier,proto3,oneof" json:"default_carrier,omitempty"`
-	DefaultServiceLevel   *CustomerServiceLevelProto   `protobuf:"bytes,17,opt,name=default_service_level,json=defaultServiceLevel,proto3,oneof" json:"default_service_level,omitempty"`
-	DefaultPaymentTerm    *CustomerPaymentTermProto    `protobuf:"bytes,18,opt,name=default_payment_term,json=defaultPaymentTerm,proto3,oneof" json:"default_payment_term,omitempty"`
-	DefaultShippingTerm   *CustomerShippingTermProto   `protobuf:"bytes,19,opt,name=default_shipping_term,json=defaultShippingTerm,proto3,oneof" json:"default_shipping_term,omitempty"`
-	DefaultPriority       *CustomerPriorityProto       `protobuf:"bytes,20,opt,name=default_priority,json=defaultPriority,proto3,oneof" json:"default_priority,omitempty"`
-	DefaultSalesRep       *CustomerUserProto           `protobuf:"bytes,21,opt,name=default_sales_rep,json=defaultSalesRep,proto3,oneof" json:"default_sales_rep,omitempty"`
-	BillToAddress         *CustomerAddressProto        `protobuf:"bytes,22,opt,name=bill_to_address,json=billToAddress,proto3,oneof" json:"bill_to_address,omitempty"`
-	ShipToAddress         *CustomerAddressProto        `protobuf:"bytes,23,opt,name=ship_to_address,json=shipToAddress,proto3,oneof" json:"ship_to_address,omitempty"`
-	TypeGroup             *CustomerAccountGroupProto   `protobuf:"bytes,24,opt,name=type_group,json=typeGroup,proto3,oneof" json:"type_group,omitempty"`
-	PriceGroups           []*CustomerAccountGroupProto `protobuf:"bytes,25,rep,name=price_groups,json=priceGroups,proto3" json:"price_groups,omitempty"`
-	ParentAccount         *CustomerLightCustomerProto  `protobuf:"bytes,26,opt,name=parent_account,json=parentAccount,proto3,oneof" json:"parent_account,omitempty"`
-	CreatedAt             *timestamppb.Timestamp       `protobuf:"bytes,27,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt             *timestamppb.Timestamp       `protobuf:"bytes,28,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	CreditLimit           *CustomerCreditLimitProto    `protobuf:"bytes,29,opt,name=credit_limit,json=creditLimit,proto3,oneof" json:"credit_limit,omitempty"`
+	state                 protoimpl.MessageState        `protogen:"open.v1"`
+	Id                    string                        `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name                  string                        `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Number                string                        `protobuf:"bytes,3,opt,name=number,proto3" json:"number,omitempty"`
+	Status                string                        `protobuf:"bytes,4,opt,name=status,proto3" json:"status,omitempty"`
+	IsEdiEnabled          bool                          `protobuf:"varint,5,opt,name=is_edi_enabled,json=isEdiEnabled,proto3" json:"is_edi_enabled,omitempty"`
+	IsParentAccount       bool                          `protobuf:"varint,6,opt,name=is_parent_account,json=isParentAccount,proto3" json:"is_parent_account,omitempty"`
+	CommissionPolicy      string                        `protobuf:"bytes,7,opt,name=commission_policy,json=commissionPolicy,proto3" json:"commission_policy,omitempty"`
+	FreightPolicy         string                        `protobuf:"bytes,8,opt,name=freight_policy,json=freightPolicy,proto3" json:"freight_policy,omitempty"`
+	Note                  *string                       `protobuf:"bytes,9,opt,name=note,proto3,oneof" json:"note,omitempty"`
+	Email                 *string                       `protobuf:"bytes,10,opt,name=email,proto3,oneof" json:"email,omitempty"`
+	Phone                 *string                       `protobuf:"bytes,11,opt,name=phone,proto3,oneof" json:"phone,omitempty"`
+	Url                   *string                       `protobuf:"bytes,12,opt,name=url,proto3,oneof" json:"url,omitempty"`
+	CarrierBillingType    *string                       `protobuf:"bytes,13,opt,name=carrier_billing_type,json=carrierBillingType,proto3,oneof" json:"carrier_billing_type,omitempty"`
+	CarrierBillingAccount *string                       `protobuf:"bytes,14,opt,name=carrier_billing_account,json=carrierBillingAccount,proto3,oneof" json:"carrier_billing_account,omitempty"`
+	AcceptsInvoiceEmails  bool                          `protobuf:"varint,15,opt,name=accepts_invoice_emails,json=acceptsInvoiceEmails,proto3" json:"accepts_invoice_emails,omitempty"`
+	DefaultCarrier        *CustomerCarrierProto         `protobuf:"bytes,16,opt,name=default_carrier,json=defaultCarrier,proto3,oneof" json:"default_carrier,omitempty"`
+	DefaultServiceLevel   *CustomerServiceLevelProto    `protobuf:"bytes,17,opt,name=default_service_level,json=defaultServiceLevel,proto3,oneof" json:"default_service_level,omitempty"`
+	DefaultPaymentTerm    *CustomerPaymentTermProto     `protobuf:"bytes,18,opt,name=default_payment_term,json=defaultPaymentTerm,proto3,oneof" json:"default_payment_term,omitempty"`
+	DefaultShippingTerm   *CustomerShippingTermProto    `protobuf:"bytes,19,opt,name=default_shipping_term,json=defaultShippingTerm,proto3,oneof" json:"default_shipping_term,omitempty"`
+	DefaultPriority       *CustomerPriorityProto        `protobuf:"bytes,20,opt,name=default_priority,json=defaultPriority,proto3,oneof" json:"default_priority,omitempty"`
+	DefaultSalesRep       *CustomerUserProto            `protobuf:"bytes,21,opt,name=default_sales_rep,json=defaultSalesRep,proto3,oneof" json:"default_sales_rep,omitempty"`
+	BillToAddress         *CustomerAddressProto         `protobuf:"bytes,22,opt,name=bill_to_address,json=billToAddress,proto3,oneof" json:"bill_to_address,omitempty"`
+	ShipToAddress         *CustomerAddressProto         `protobuf:"bytes,23,opt,name=ship_to_address,json=shipToAddress,proto3,oneof" json:"ship_to_address,omitempty"`
+	TypeGroup             *CustomerAccountGroupProto    `protobuf:"bytes,24,opt,name=type_group,json=typeGroup,proto3,oneof" json:"type_group,omitempty"`
+	PriceGroups           []*CustomerAccountGroupProto  `protobuf:"bytes,25,rep,name=price_groups,json=priceGroups,proto3" json:"price_groups,omitempty"`
+	ParentAccount         *CustomerLightCustomerProto   `protobuf:"bytes,26,opt,name=parent_account,json=parentAccount,proto3,oneof" json:"parent_account,omitempty"`
+	CreatedAt             *timestamppb.Timestamp        `protobuf:"bytes,27,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt             *timestamppb.Timestamp        `protobuf:"bytes,28,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	CreditLimit           *CustomerCreditLimitProto     `protobuf:"bytes,29,opt,name=credit_limit,json=creditLimit,proto3,oneof" json:"credit_limit,omitempty"`
+	ChildAccounts         []*CustomerLightCustomerProto `protobuf:"bytes,30,rep,name=child_accounts,json=childAccounts,proto3" json:"child_accounts,omitempty"`
 	unknownFields         protoimpl.UnknownFields
 	sizeCache             protoimpl.SizeCache
 }
@@ -4480,6 +4481,13 @@ func (x *CustomerProto) GetUpdatedAt() *timestamppb.Timestamp {
 func (x *CustomerProto) GetCreditLimit() *CustomerCreditLimitProto {
 	if x != nil {
 		return x.CreditLimit
+	}
+	return nil
+}
+
+func (x *CustomerProto) GetChildAccounts() []*CustomerLightCustomerProto {
+	if x != nil {
+		return x.ChildAccounts
 	}
 	return nil
 }
@@ -5491,6 +5499,7 @@ func (x *ListCustomersResponse) GetPageInfo() *PageInfo {
 type GetCustomerRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Includes      []string               `protobuf:"bytes,2,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -5530,6 +5539,13 @@ func (x *GetCustomerRequest) GetId() string {
 		return x.Id
 	}
 	return ""
+}
+
+func (x *GetCustomerRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
 }
 
 type GetCustomerResponse struct {
@@ -9290,7 +9306,7 @@ const file_core_core_identity_context_proto_rawDesc = "" +
 	"\trole_code\x18\x04 \x01(\tR\broleCode\x12\x14\n" +
 	"\x05alias\x18\x05 \x01(\tR\x05alias\x12\x14\n" +
 	"\x05email\x18\x06 \x01(\tR\x05email\x12\x1b\n" +
-	"\tuser_name\x18\a \x01(\tR\buserName\"\xed\x0e\n" +
+	"\tuser_name\x18\a \x01(\tR\buserName\"\xb6\x0f\n" +
 	"\rCustomerProto\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x16\n" +
@@ -9325,7 +9341,8 @@ const file_core_core_identity_context_proto_rawDesc = "" +
 	"created_at\x18\x1b \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\x1c \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12F\n" +
-	"\fcredit_limit\x18\x1d \x01(\v2\x1e.core.CustomerCreditLimitProtoH\x10R\vcreditLimit\x88\x01\x01B\a\n" +
+	"\fcredit_limit\x18\x1d \x01(\v2\x1e.core.CustomerCreditLimitProtoH\x10R\vcreditLimit\x88\x01\x01\x12G\n" +
+	"\x0echild_accounts\x18\x1e \x03(\v2 .core.CustomerLightCustomerProtoR\rchildAccountsB\a\n" +
 	"\x05_noteB\b\n" +
 	"\x06_emailB\b\n" +
 	"\x06_phoneB\x06\n" +
@@ -9447,9 +9464,10 @@ const file_core_core_identity_context_proto_rawDesc = "" +
 	"\t_end_date\"w\n" +
 	"\x15ListCustomersResponse\x121\n" +
 	"\tcustomers\x18\x01 \x03(\v2\x13.core.CustomerProtoR\tcustomers\x12+\n" +
-	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"$\n" +
+	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"@\n" +
 	"\x12GetCustomerRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"F\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
+	"\bincludes\x18\x02 \x03(\tR\bincludes\"F\n" +
 	"\x13GetCustomerResponse\x12/\n" +
 	"\bcustomer\x18\x01 \x01(\v2\x13.core.CustomerProtoR\bcustomer\"\xb5\x03\n" +
 	"\x1aCreateCustomerAddressInput\x12\x12\n" +
@@ -10066,74 +10084,75 @@ var file_core_core_identity_context_proto_depIdxs = []int32{
 	125, // 51: core.CustomerProto.created_at:type_name -> google.protobuf.Timestamp
 	125, // 52: core.CustomerProto.updated_at:type_name -> google.protobuf.Timestamp
 	81,  // 53: core.CustomerProto.credit_limit:type_name -> core.CustomerCreditLimitProto
-	79,  // 54: core.CustomerAddressProto.geolocation:type_name -> core.CustomerGeolocationProto
-	125, // 55: core.CustomerAddressProto.created_at:type_name -> google.protobuf.Timestamp
-	125, // 56: core.CustomerAddressProto.updated_at:type_name -> google.protobuf.Timestamp
-	125, // 57: core.ListCustomersRequest.start_date:type_name -> google.protobuf.Timestamp
-	125, // 58: core.ListCustomersRequest.end_date:type_name -> google.protobuf.Timestamp
-	70,  // 59: core.ListCustomersResponse.customers:type_name -> core.CustomerProto
-	38,  // 60: core.ListCustomersResponse.page_info:type_name -> core.PageInfo
-	70,  // 61: core.GetCustomerResponse.customer:type_name -> core.CustomerProto
-	86,  // 62: core.CreateCustomerRequest.bill_to_address:type_name -> core.CreateCustomerAddressInput
-	86,  // 63: core.CreateCustomerRequest.ship_to_address:type_name -> core.CreateCustomerAddressInput
-	70,  // 64: core.CreateCustomerResponse.customer:type_name -> core.CustomerProto
-	70,  // 65: core.UpdateCustomerResponse.customer:type_name -> core.CustomerProto
-	93,  // 66: core.GetFrequentlyOrderedProductsResponse.products:type_name -> core.FrequentlyOrderedProductProto
-	70,  // 67: core.MergeCustomersResponse.customer:type_name -> core.CustomerProto
-	125, // 68: core.AnalyzeSalesRequest.start_date:type_name -> google.protobuf.Timestamp
-	125, // 69: core.AnalyzeSalesRequest.end_date:type_name -> google.protobuf.Timestamp
-	125, // 70: core.SalesEntryProto.issued_at:type_name -> google.protobuf.Timestamp
-	125, // 71: core.SalesEntryProto.customer_created_at:type_name -> google.protobuf.Timestamp
-	125, // 72: core.SalesEntryProto.completed_at:type_name -> google.protobuf.Timestamp
-	125, // 73: core.SalesEntryProto.first_ship_at:type_name -> google.protobuf.Timestamp
-	125, // 74: core.SalesEntryProto.promised_at:type_name -> google.protobuf.Timestamp
-	125, // 75: core.SalesEntryProto.invoiced_at:type_name -> google.protobuf.Timestamp
-	99,  // 76: core.AnalyzeSalesResponse.entries:type_name -> core.SalesEntryProto
-	125, // 77: core.AnalyzeProductionCostsRequest.start_date:type_name -> google.protobuf.Timestamp
-	125, // 78: core.AnalyzeProductionCostsRequest.end_date:type_name -> google.protobuf.Timestamp
-	103, // 79: core.BaseQuantity.unit:type_name -> core.BaseQuantityUnitProto
-	104, // 80: core.CostBreakdown.total:type_name -> core.BaseQuantity
-	104, // 81: core.CostBreakdown.labor:type_name -> core.BaseQuantity
-	104, // 82: core.CostBreakdown.materials:type_name -> core.BaseQuantity
-	104, // 83: core.CostBreakdown.overhead:type_name -> core.BaseQuantity
-	104, // 84: core.CostBreakdown.time:type_name -> core.BaseQuantity
-	104, // 85: core.CostBreakdown.quantity:type_name -> core.BaseQuantity
-	102, // 86: core.ProductionCostEntryProto.department:type_name -> core.BasicInfoProto
-	102, // 87: core.ProductionCostEntryProto.category:type_name -> core.BasicInfoProto
-	105, // 88: core.ProductionCostEntryProto.total_costs:type_name -> core.CostBreakdown
-	105, // 89: core.ProductionCostEntryProto.productive_costs:type_name -> core.CostBreakdown
-	105, // 90: core.ProductionCostEntryProto.waste_costs:type_name -> core.CostBreakdown
-	105, // 91: core.ProductionCostEntryProto.seconds_costs:type_name -> core.CostBreakdown
-	106, // 92: core.AnalyzeProductionCostsResponse.items:type_name -> core.ProductionCostEntryProto
-	125, // 93: core.AnalyzeDeliveriesRequest.start_date:type_name -> google.protobuf.Timestamp
-	125, // 94: core.AnalyzeDeliveriesRequest.end_date:type_name -> google.protobuf.Timestamp
-	110, // 95: core.ChartDataPointProto.data:type_name -> core.CoordinateProto
-	111, // 96: core.DeliveryChartDataProto.on_time_delivery:type_name -> core.ChartDataPointProto
-	111, // 97: core.DeliveryChartDataProto.average_delivery_time:type_name -> core.ChartDataPointProto
-	111, // 98: core.DeliveryChartDataProto.average_first_shipment_time:type_name -> core.ChartDataPointProto
-	109, // 99: core.AnalyzeDeliveriesResponse.statistics:type_name -> core.DeliveryStatisticsProto
-	112, // 100: core.AnalyzeDeliveriesResponse.chart_data:type_name -> core.DeliveryChartDataProto
-	125, // 101: core.AnalyzeManufacturingRequest.start_date:type_name -> google.protobuf.Timestamp
-	125, // 102: core.AnalyzeManufacturingRequest.end_date:type_name -> google.protobuf.Timestamp
-	125, // 103: core.AnalyzeManufacturingBatchRequest.start_date:type_name -> google.protobuf.Timestamp
-	125, // 104: core.AnalyzeManufacturingBatchRequest.end_date:type_name -> google.protobuf.Timestamp
-	125, // 105: core.AnalyzeManufacturingBatchRequest.comparison_start_date:type_name -> google.protobuf.Timestamp
-	125, // 106: core.AnalyzeManufacturingBatchRequest.comparison_end_date:type_name -> google.protobuf.Timestamp
-	116, // 107: core.AnalyzeManufacturingBatchResponse.current:type_name -> core.ManufacturingMetricsProto
-	116, // 108: core.AnalyzeManufacturingBatchResponse.comparison:type_name -> core.ManufacturingMetricsProto
-	125, // 109: core.AnalyzeOrdersRequest.start_date:type_name -> google.protobuf.Timestamp
-	125, // 110: core.AnalyzeOrdersRequest.end_date:type_name -> google.protobuf.Timestamp
-	125, // 111: core.OrderEntryProto.issued_at:type_name -> google.protobuf.Timestamp
-	125, // 112: core.OrderEntryProto.customer_created_at:type_name -> google.protobuf.Timestamp
-	125, // 113: core.OrderEntryProto.completed_at:type_name -> google.protobuf.Timestamp
-	125, // 114: core.OrderEntryProto.first_ship_at:type_name -> google.protobuf.Timestamp
-	125, // 115: core.OrderEntryProto.promised_at:type_name -> google.protobuf.Timestamp
-	120, // 116: core.AnalyzeOrdersResponse.entries:type_name -> core.OrderEntryProto
-	117, // [117:117] is the sub-list for method output_type
-	117, // [117:117] is the sub-list for method input_type
-	117, // [117:117] is the sub-list for extension type_name
-	117, // [117:117] is the sub-list for extension extendee
-	0,   // [0:117] is the sub-list for field type_name
+	80,  // 54: core.CustomerProto.child_accounts:type_name -> core.CustomerLightCustomerProto
+	79,  // 55: core.CustomerAddressProto.geolocation:type_name -> core.CustomerGeolocationProto
+	125, // 56: core.CustomerAddressProto.created_at:type_name -> google.protobuf.Timestamp
+	125, // 57: core.CustomerAddressProto.updated_at:type_name -> google.protobuf.Timestamp
+	125, // 58: core.ListCustomersRequest.start_date:type_name -> google.protobuf.Timestamp
+	125, // 59: core.ListCustomersRequest.end_date:type_name -> google.protobuf.Timestamp
+	70,  // 60: core.ListCustomersResponse.customers:type_name -> core.CustomerProto
+	38,  // 61: core.ListCustomersResponse.page_info:type_name -> core.PageInfo
+	70,  // 62: core.GetCustomerResponse.customer:type_name -> core.CustomerProto
+	86,  // 63: core.CreateCustomerRequest.bill_to_address:type_name -> core.CreateCustomerAddressInput
+	86,  // 64: core.CreateCustomerRequest.ship_to_address:type_name -> core.CreateCustomerAddressInput
+	70,  // 65: core.CreateCustomerResponse.customer:type_name -> core.CustomerProto
+	70,  // 66: core.UpdateCustomerResponse.customer:type_name -> core.CustomerProto
+	93,  // 67: core.GetFrequentlyOrderedProductsResponse.products:type_name -> core.FrequentlyOrderedProductProto
+	70,  // 68: core.MergeCustomersResponse.customer:type_name -> core.CustomerProto
+	125, // 69: core.AnalyzeSalesRequest.start_date:type_name -> google.protobuf.Timestamp
+	125, // 70: core.AnalyzeSalesRequest.end_date:type_name -> google.protobuf.Timestamp
+	125, // 71: core.SalesEntryProto.issued_at:type_name -> google.protobuf.Timestamp
+	125, // 72: core.SalesEntryProto.customer_created_at:type_name -> google.protobuf.Timestamp
+	125, // 73: core.SalesEntryProto.completed_at:type_name -> google.protobuf.Timestamp
+	125, // 74: core.SalesEntryProto.first_ship_at:type_name -> google.protobuf.Timestamp
+	125, // 75: core.SalesEntryProto.promised_at:type_name -> google.protobuf.Timestamp
+	125, // 76: core.SalesEntryProto.invoiced_at:type_name -> google.protobuf.Timestamp
+	99,  // 77: core.AnalyzeSalesResponse.entries:type_name -> core.SalesEntryProto
+	125, // 78: core.AnalyzeProductionCostsRequest.start_date:type_name -> google.protobuf.Timestamp
+	125, // 79: core.AnalyzeProductionCostsRequest.end_date:type_name -> google.protobuf.Timestamp
+	103, // 80: core.BaseQuantity.unit:type_name -> core.BaseQuantityUnitProto
+	104, // 81: core.CostBreakdown.total:type_name -> core.BaseQuantity
+	104, // 82: core.CostBreakdown.labor:type_name -> core.BaseQuantity
+	104, // 83: core.CostBreakdown.materials:type_name -> core.BaseQuantity
+	104, // 84: core.CostBreakdown.overhead:type_name -> core.BaseQuantity
+	104, // 85: core.CostBreakdown.time:type_name -> core.BaseQuantity
+	104, // 86: core.CostBreakdown.quantity:type_name -> core.BaseQuantity
+	102, // 87: core.ProductionCostEntryProto.department:type_name -> core.BasicInfoProto
+	102, // 88: core.ProductionCostEntryProto.category:type_name -> core.BasicInfoProto
+	105, // 89: core.ProductionCostEntryProto.total_costs:type_name -> core.CostBreakdown
+	105, // 90: core.ProductionCostEntryProto.productive_costs:type_name -> core.CostBreakdown
+	105, // 91: core.ProductionCostEntryProto.waste_costs:type_name -> core.CostBreakdown
+	105, // 92: core.ProductionCostEntryProto.seconds_costs:type_name -> core.CostBreakdown
+	106, // 93: core.AnalyzeProductionCostsResponse.items:type_name -> core.ProductionCostEntryProto
+	125, // 94: core.AnalyzeDeliveriesRequest.start_date:type_name -> google.protobuf.Timestamp
+	125, // 95: core.AnalyzeDeliveriesRequest.end_date:type_name -> google.protobuf.Timestamp
+	110, // 96: core.ChartDataPointProto.data:type_name -> core.CoordinateProto
+	111, // 97: core.DeliveryChartDataProto.on_time_delivery:type_name -> core.ChartDataPointProto
+	111, // 98: core.DeliveryChartDataProto.average_delivery_time:type_name -> core.ChartDataPointProto
+	111, // 99: core.DeliveryChartDataProto.average_first_shipment_time:type_name -> core.ChartDataPointProto
+	109, // 100: core.AnalyzeDeliveriesResponse.statistics:type_name -> core.DeliveryStatisticsProto
+	112, // 101: core.AnalyzeDeliveriesResponse.chart_data:type_name -> core.DeliveryChartDataProto
+	125, // 102: core.AnalyzeManufacturingRequest.start_date:type_name -> google.protobuf.Timestamp
+	125, // 103: core.AnalyzeManufacturingRequest.end_date:type_name -> google.protobuf.Timestamp
+	125, // 104: core.AnalyzeManufacturingBatchRequest.start_date:type_name -> google.protobuf.Timestamp
+	125, // 105: core.AnalyzeManufacturingBatchRequest.end_date:type_name -> google.protobuf.Timestamp
+	125, // 106: core.AnalyzeManufacturingBatchRequest.comparison_start_date:type_name -> google.protobuf.Timestamp
+	125, // 107: core.AnalyzeManufacturingBatchRequest.comparison_end_date:type_name -> google.protobuf.Timestamp
+	116, // 108: core.AnalyzeManufacturingBatchResponse.current:type_name -> core.ManufacturingMetricsProto
+	116, // 109: core.AnalyzeManufacturingBatchResponse.comparison:type_name -> core.ManufacturingMetricsProto
+	125, // 110: core.AnalyzeOrdersRequest.start_date:type_name -> google.protobuf.Timestamp
+	125, // 111: core.AnalyzeOrdersRequest.end_date:type_name -> google.protobuf.Timestamp
+	125, // 112: core.OrderEntryProto.issued_at:type_name -> google.protobuf.Timestamp
+	125, // 113: core.OrderEntryProto.customer_created_at:type_name -> google.protobuf.Timestamp
+	125, // 114: core.OrderEntryProto.completed_at:type_name -> google.protobuf.Timestamp
+	125, // 115: core.OrderEntryProto.first_ship_at:type_name -> google.protobuf.Timestamp
+	125, // 116: core.OrderEntryProto.promised_at:type_name -> google.protobuf.Timestamp
+	120, // 117: core.AnalyzeOrdersResponse.entries:type_name -> core.OrderEntryProto
+	118, // [118:118] is the sub-list for method output_type
+	118, // [118:118] is the sub-list for method input_type
+	118, // [118:118] is the sub-list for extension type_name
+	118, // [118:118] is the sub-list for extension extendee
+	0,   // [0:118] is the sub-list for field type_name
 }
 
 func init() { file_core_core_identity_context_proto_init() }

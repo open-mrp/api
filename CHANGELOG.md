@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.4](https://github.com/Augno/api/compare/v0.14.3...v0.14.4) (2026-04-21)
+
+
+### Bug Fixes
+
+* business logic of products and sales orders ([#211](https://github.com/Augno/api/issues/211)) ([f05cf87](https://github.com/Augno/api/commit/f05cf8774b02fb85e35a1413b53720ec51a97c0a))
+
 ## [0.14.3](https://github.com/Augno/api/compare/v0.14.2...v0.14.3) (2026-04-21)
 
 

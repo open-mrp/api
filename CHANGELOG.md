@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.0](https://github.com/Augno/api/compare/v0.14.4...v0.15.0) (2026-04-27)
+
+
+### Features
+
+* addresses can be filtered by drop ship status ([#213](https://github.com/Augno/api/issues/213)) ([cac21c3](https://github.com/Augno/api/commit/cac21c32413543484a85dc70b21762bfa94615e6))
+
 ## [0.14.4](https://github.com/Augno/api/compare/v0.14.3...v0.14.4) (2026-04-21)
 
 

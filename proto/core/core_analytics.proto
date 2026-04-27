@@ -295,6 +295,7 @@ message ListAddressesRequest {
   optional string cursor = 1;
   int32 limit = 2;
   optional string query = 3;
+  optional bool drop_ship = 4;
 }
 message ListAddressesResponse {
   repeated AddressInfo addresses = 1;

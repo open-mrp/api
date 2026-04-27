@@ -200,8 +200,8 @@ func (suite *SalesOrderLineSvcTestSuite) TestCreateSalesOrderLine_RoundsUnitPric
 	suite.expectIdempotencyStarted()
 
 	params := baseCreateLineParams()
-	params.UnitPriceValue = "1.234"          // rounds to 1.23
-	cost := "2.1899999"                      // rounds to 2.19
+	params.UnitPriceValue = "1.234" // rounds to 1.23
+	cost := "2.1899999"             // rounds to 2.19
 	params.UnitCostValue = &cost
 	numID := "un_usd"
 	denID := "un_ea"

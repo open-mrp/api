@@ -63,6 +63,7 @@ validate-openapi-specs: ## Validate OpenAPI specifications with vacuum
 
 sqlc: ## Generate code from SQL queries using sqlc. Usage: make sqlc [services]
 	@$(SQLC_SCRIPT) $(ARGS)
+	@$(MAKE) fmt
 
 proto: ## Generate Go protobuf bindings
 	protoc \
@@ -70,6 +71,7 @@ proto: ## Generate Go protobuf bindings
 		--go_out=$(GO_OUT) \
 		--go-grpc_out=$(GO_OUT) \
 		$(PROTO_SRC)
+	@$(MAKE) fmt
 
 buf-lint: ## Run buf lint (requires: make install-tools, buf.work.yaml at repo root, GOPATH/bin on PATH)
 	@command -v buf >/dev/null || (echo "buf not found. Run: make install-tools  (ensure go env GOPATH bin is on PATH)" && exit 1)

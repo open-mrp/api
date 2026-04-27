@@ -1553,9 +1553,10 @@ func (h *gRPCHandler) ListAddresses(ctx context.Context, req *pb.ListAddressesRe
 	}
 
 	params := domain.ListAddressesParams{
-		Cursor: req.Cursor,
-		Limit:  req.Limit,
-		Query:  req.Query,
+		Cursor:   req.Cursor,
+		Limit:    req.Limit,
+		Query:    req.Query,
+		DropShip: req.DropShip,
 	}
 
 	result, apiErr := h.addressSvc.ListAddresses(ctx, params)

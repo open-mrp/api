@@ -52,9 +52,10 @@ func NewAddressSvc(config *AddressSvcConfig) AddressSvc {
 
 func (m *addressSvcImpl) ListAddresses(ctx context.Context, req *ListAddressesRequest) (*apiresource.List[apiresource.Address], *apierror.APIError) {
 	pbReq := &pb.ListAddressesRequest{
-		Cursor: req.Cursor,
-		Limit:  req.Limit,
-		Query:  req.Query,
+		Cursor:   req.Cursor,
+		Limit:    req.Limit,
+		Query:    req.Query,
+		DropShip: req.DropShip,
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, addressSvcTracer, "service.addresses.list", domain.ServiceName,

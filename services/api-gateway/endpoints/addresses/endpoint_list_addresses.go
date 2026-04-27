@@ -12,6 +12,7 @@ import (
 // Request to list addresses.
 type ListAddressesRequest struct {
 	apiresource.PaginationRequest
+	DropShip *bool `query:"drop_ship"`
 }
 
 type ListAddressesEndpoint struct{}

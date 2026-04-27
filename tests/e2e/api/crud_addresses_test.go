@@ -250,6 +250,79 @@ func TestAddresses_ListSearchNoResults(t *testing.T) {
 	assertEmptyListData(t, list.Data)
 }
 
+// createAddressForFilterTest creates an address with the given drop_ship flag and
+// returns its name (which is unique enough to find in a filtered list result).
+func createAddressForFilterTest(t *testing.T, isDropShip bool) string {
+	t.Helper()
+	name := uniqueName("e2e-addr-ds")
+	resp, err := apiClient.PostFull(addressesPath, map[string]any{
+		"name":         name,
+		"is_drop_ship": isDropShip,
+		"country":      "US",
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, resp.StatusCode, resp.Body)
+	return name
+}
+
+func TestAddresses_ListFilterDropShipTrue(t *testing.T) {
+	t.Parallel()
+	dropShipName := createAddressForFilterTest(t, true)
+
+	list, _, err := apiClient.GetList(addressesPath, url.Values{
+		"drop_ship": {"true"},
+		"q":         {dropShipName},
+	})
+	require.NoError(t, err)
+	require.GreaterOrEqual(t, len(list.Data), 1, "should find the drop-ship address we just created")
+	for _, item := range list.Data {
+		parsed := parseJSON(item)
+		assert.Equal(t, "true", jsonField(parsed, "is_drop_ship"), "every result must have is_drop_ship=true")
+	}
+}
+
+func TestAddresses_ListFilterDropShipFalse(t *testing.T) {
+	t.Parallel()
+	nonDropShipName := createAddressForFilterTest(t, false)
+
+	list, _, err := apiClient.GetList(addressesPath, url.Values{
+		"drop_ship": {"false"},
+		"q":         {nonDropShipName},
+	})
+	require.NoError(t, err)
+	require.GreaterOrEqual(t, len(list.Data), 1, "should find the non-drop-ship address we just created")
+	for _, item := range list.Data {
+		parsed := parseJSON(item)
+		assert.Equal(t, "false", jsonField(parsed, "is_drop_ship"), "every result must have is_drop_ship=false")
+	}
+}
+
+func TestAddresses_ListFilterDropShipNarrowsResults(t *testing.T) {
+	t.Parallel()
+	dropShipName := createAddressForFilterTest(t, true)
+	nonDropShipName := createAddressForFilterTest(t, false)
+
+	// Filtering by drop_ship=true should return the drop-ship one but NOT the non-drop-ship one.
+	dsList, _, err := apiClient.GetList(addressesPath, url.Values{"drop_ship": {"true"}})
+	require.NoError(t, err)
+	dsNames := make(map[string]bool, len(dsList.Data))
+	for _, item := range dsList.Data {
+		dsNames[DataItemField(item, "name")] = true
+	}
+	assert.True(t, dsNames[dropShipName], "drop_ship=true should include the drop-ship address")
+	assert.False(t, dsNames[nonDropShipName], "drop_ship=true should NOT include the non-drop-ship address")
+
+	// Filtering by drop_ship=false should return the non-drop-ship one but NOT the drop-ship one.
+	nonDsList, _, err := apiClient.GetList(addressesPath, url.Values{"drop_ship": {"false"}})
+	require.NoError(t, err)
+	nonDsNames := make(map[string]bool, len(nonDsList.Data))
+	for _, item := range nonDsList.Data {
+		nonDsNames[DataItemField(item, "name")] = true
+	}
+	assert.True(t, nonDsNames[nonDropShipName], "drop_ship=false should include the non-drop-ship address")
+	assert.False(t, nonDsNames[dropShipName], "drop_ship=false should NOT include the drop-ship address")
+}
+
 func TestAddresses_CreateIdempotent(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-idem-addr")

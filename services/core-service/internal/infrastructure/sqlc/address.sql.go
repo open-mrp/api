@@ -364,6 +364,10 @@ AND (
     OR g.country LIKE ?
 )
 AND (
+    ? IS NULL
+    OR a.is_drop_ship = ?
+)
+AND (
     a.created_at > ?
     OR (a.created_at = ? AND a.id > ?)
 )
@@ -374,6 +378,7 @@ LIMIT ?
 type ListAddressesBackwardParams struct {
 	AccountID       string
 	SearchQuery     sql.NullString
+	DropShip        sql.NullBool
 	CursorCreatedAt time.Time
 	CursorID        string
 	Limit           int32
@@ -410,6 +415,8 @@ func (q *Queries) ListAddressesBackward(ctx context.Context, arg ListAddressesBa
 		arg.SearchQuery,
 		arg.SearchQuery,
 		arg.SearchQuery,
+		arg.DropShip,
+		arg.DropShip,
 		arg.CursorCreatedAt,
 		arg.CursorCreatedAt,
 		arg.CursorID,
@@ -489,6 +496,10 @@ AND (
 )
 AND (
     ? IS NULL
+    OR a.is_drop_ship = ?
+)
+AND (
+    ? IS NULL
     OR a.created_at < ?
     OR (a.created_at = ? AND a.id < ?)
 )
@@ -499,6 +510,7 @@ LIMIT ?
 type ListAddressesForwardParams struct {
 	AccountID       string
 	SearchQuery     sql.NullString
+	DropShip        sql.NullBool
 	CursorCreatedAt sql.NullTime
 	CursorID        sql.NullString
 	Limit           int32
@@ -535,6 +547,8 @@ func (q *Queries) ListAddressesForward(ctx context.Context, arg ListAddressesFor
 		arg.SearchQuery,
 		arg.SearchQuery,
 		arg.SearchQuery,
+		arg.DropShip,
+		arg.DropShip,
 		arg.CursorCreatedAt,
 		arg.CursorCreatedAt,
 		arg.CursorCreatedAt,

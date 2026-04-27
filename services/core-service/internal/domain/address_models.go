@@ -38,6 +38,7 @@ type ListAddressesParams struct {
 	Cursor    *string
 	Limit     int32
 	Query     *string
+	DropShip  *bool
 }
 
 // ListAddressesResult contains the result of listing addresses.

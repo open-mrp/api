@@ -147,7 +147,7 @@ type GetAccountIntegrationCredentialsParams struct {
 }
 
 type GetAccountIntegrationCredentialsRow struct {
-	CredentialsV2 sql.NullString
+	CredentialsV2 string
 	IsActive      bool
 }
 
@@ -185,7 +185,7 @@ type InsertAccountIntegrationParams struct {
 	AccountID       string
 	IntegrationCode string
 	Name            string
-	CredentialsV2   sql.NullString
+	CredentialsV2   string
 }
 
 func (q *Queries) InsertAccountIntegration(ctx context.Context, arg InsertAccountIntegrationParams) error {
@@ -397,7 +397,7 @@ AND account_id = ?
 
 type UpdateAccountIntegrationCredentialsParams struct {
 	Name          string
-	CredentialsV2 sql.NullString
+	CredentialsV2 string
 	ID            string
 	AccountID     string
 }

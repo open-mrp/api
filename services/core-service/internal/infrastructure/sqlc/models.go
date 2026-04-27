@@ -103,11 +103,10 @@ type AccountIntegration struct {
 	AccountID       string
 	IntegrationCode string
 	Name            string
-	Credentials     sql.NullString
+	CredentialsV2   string
 	IsActive        bool
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
-	CredentialsV2   sql.NullString
 }
 
 type AccountInventorySetting struct {
@@ -134,11 +133,11 @@ type AccountPlan struct {
 	IsHighlighted        bool
 	ButtonText           string
 	IncludesPreviousPlan sql.NullString
+	IsPubliclyVisible    bool
 	EffectiveAt          time.Time
 	ExpiresAt            sql.NullTime
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
-	IsPubliclyVisible    bool
 }
 
 type AccountPlanFeature struct {
@@ -202,6 +201,7 @@ type AccountRelation struct {
 	IsEdiEnabled             bool
 	StripeCustomerID         sql.NullString
 	StripeEmail              sql.NullString
+	HubspotCompanyID         sql.NullString
 	Notes                    sql.NullString
 	UpdatedAt                time.Time
 	CreatedAt                time.Time
@@ -221,7 +221,6 @@ type AccountRelation struct {
 	ShippingTermID           sql.NullString
 	CarrierBillingType       sql.NullString
 	CarrierBillingAccount    sql.NullString
-	HubspotCompanyID         sql.NullString
 	CreditLimitID            sql.NullString
 }
 
@@ -537,6 +536,7 @@ type EdiRun struct {
 	CreatedAt    time.Time
 	HasSucceeded bool
 	UpdatedAt    time.Time
+	Failures     json.RawMessage
 }
 
 type EmailLog struct {
@@ -1654,8 +1654,8 @@ type UnitGroupUnit struct {
 	UnitGroupID        string
 	UnitID             string
 	DiscountPercentage string
-	IsVisible          bool
 	DiscountFixed      string
+	IsVisible          bool
 }
 
 type UnitType struct {

@@ -3335,6 +3335,7 @@ type ListAddressesRequest struct {
 	Cursor        *string                `protobuf:"bytes,1,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
 	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
 	Query         *string                `protobuf:"bytes,3,opt,name=query,proto3,oneof" json:"query,omitempty"`
+	DropShip      *bool                  `protobuf:"varint,4,opt,name=drop_ship,json=dropShip,proto3,oneof" json:"drop_ship,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3388,6 +3389,13 @@ func (x *ListAddressesRequest) GetQuery() string {
 		return *x.Query
 	}
 	return ""
+}
+
+func (x *ListAddressesRequest) GetDropShip() bool {
+	if x != nil && x.DropShip != nil {
+		return *x.DropShip
+	}
+	return false
 }
 
 type ListAddressesResponse struct {
@@ -4897,13 +4905,16 @@ const file_core_core_analytics_proto_rawDesc = "" +
 	"\x11GetAddressRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"A\n" +
 	"\x12GetAddressResponse\x12+\n" +
-	"\aaddress\x18\x01 \x01(\v2\x11.core.AddressInfoR\aaddress\"y\n" +
+	"\aaddress\x18\x01 \x01(\v2\x11.core.AddressInfoR\aaddress\"\xa9\x01\n" +
 	"\x14ListAddressesRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x19\n" +
-	"\x05query\x18\x03 \x01(\tH\x01R\x05query\x88\x01\x01B\t\n" +
+	"\x05query\x18\x03 \x01(\tH\x01R\x05query\x88\x01\x01\x12 \n" +
+	"\tdrop_ship\x18\x04 \x01(\bH\x02R\bdropShip\x88\x01\x01B\t\n" +
 	"\a_cursorB\b\n" +
-	"\x06_query\"u\n" +
+	"\x06_queryB\f\n" +
+	"\n" +
+	"_drop_ship\"u\n" +
 	"\x15ListAddressesResponse\x12/\n" +
 	"\taddresses\x18\x01 \x03(\v2\x11.core.AddressInfoR\taddresses\x12+\n" +
 	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"\xaf\x03\n" +

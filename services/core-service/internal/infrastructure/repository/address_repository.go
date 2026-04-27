@@ -126,6 +126,10 @@ func (r *addressRepoImpl) List(ctx context.Context, params domain.ListAddressesP
 	defer span.End()
 
 	searchQuery := buildAddressSearchParams(params.Query)
+	dropShip := gosql.NullBool{}
+	if params.DropShip != nil {
+		dropShip = gosql.NullBool{Bool: *params.DropShip, Valid: true}
+	}
 	var cursorDir *pagination.Direction
 
 	if params.Cursor != nil {
@@ -139,6 +143,7 @@ func (r *addressRepoImpl) List(ctx context.Context, params domain.ListAddressesP
 			rows, err := r.queries.ListAddressesBackward(ctx, sqlc.ListAddressesBackwardParams{
 				AccountID:       params.AccountID,
 				SearchQuery:     searchQuery,
+				DropShip:        dropShip,
 				CursorCreatedAt: cur.OccurredAt,
 				CursorID:        cur.ID,
 				Limit:           params.Limit + 1,
@@ -158,6 +163,7 @@ func (r *addressRepoImpl) List(ctx context.Context, params domain.ListAddressesP
 		rows, err := r.queries.ListAddressesForward(ctx, sqlc.ListAddressesForwardParams{
 			AccountID:       params.AccountID,
 			SearchQuery:     searchQuery,
+			DropShip:        dropShip,
 			CursorCreatedAt: gosql.NullTime{Time: cur.OccurredAt, Valid: true},
 			CursorID:        gosql.NullString{String: cur.ID, Valid: true},
 			Limit:           params.Limit + 1,
@@ -177,6 +183,7 @@ func (r *addressRepoImpl) List(ctx context.Context, params domain.ListAddressesP
 	rows, err := r.queries.ListAddressesForward(ctx, sqlc.ListAddressesForwardParams{
 		AccountID:   params.AccountID,
 		SearchQuery: searchQuery,
+		DropShip:    dropShip,
 		Limit:       params.Limit + 1,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {

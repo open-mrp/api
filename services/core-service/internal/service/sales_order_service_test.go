@@ -33,24 +33,24 @@ type SalesOrderSvcTestSuite struct {
 	svc domain.SalesOrderSvc
 
 	// Repos (everything the service touches).
-	accountRepo            *repositorymock.MockAccountRepo
-	accountUserRepo        *repositorymock.MockAccountUserRepo
-	accountIntegrationRepo *repositorymock.MockAccountIntegrationRepo
-	addressRepo            *repositorymock.MockAddressRepo
-	batchRepo              *repositorymock.MockBatchRepo
-	customerRepo           *repositorymock.MockCustomerRepo
-	deletedRecordRepo      *repositorymock.MockDeletedRecordRepo
-	invoiceRepo            *repositorymock.MockInvoiceRepo
+	accountRepo              *repositorymock.MockAccountRepo
+	accountUserRepo          *repositorymock.MockAccountUserRepo
+	accountIntegrationRepo   *repositorymock.MockAccountIntegrationRepo
+	addressRepo              *repositorymock.MockAddressRepo
+	batchRepo                *repositorymock.MockBatchRepo
+	customerRepo             *repositorymock.MockCustomerRepo
+	deletedRecordRepo        *repositorymock.MockDeletedRecordRepo
+	invoiceRepo              *repositorymock.MockInvoiceRepo
 	inventoryReservationRepo *repositorymock.MockInventoryReservationRepo
-	materialDemandRepo     *repositorymock.MockMaterialDemandRepo
-	orderDiscountRepo      *repositorymock.MockOrderDiscountRepo
-	orderRepo              *repositorymock.MockSalesOrderRepo
-	lineRepo               *repositorymock.MockSalesOrderLineRepo
-	pickRepo               *repositorymock.MockPickRepo
-	productRepo            *repositorymock.MockProductRepo
-	productionRunQueryRepo *repositorymock.MockProductionRunQueryRepo
-	territoryRepo          *repositorymock.MockTerritoryRepo
-	unitRepo               *repositorymock.MockUnitRepo
+	materialDemandRepo       *repositorymock.MockMaterialDemandRepo
+	orderDiscountRepo        *repositorymock.MockOrderDiscountRepo
+	orderRepo                *repositorymock.MockSalesOrderRepo
+	lineRepo                 *repositorymock.MockSalesOrderLineRepo
+	pickRepo                 *repositorymock.MockPickRepo
+	productRepo              *repositorymock.MockProductRepo
+	productionRunQueryRepo   *repositorymock.MockProductionRunQueryRepo
+	territoryRepo            *repositorymock.MockTerritoryRepo
+	unitRepo                 *repositorymock.MockUnitRepo
 
 	// Collaborators.
 	checkoutFactory *clientmock.MockStripeCheckoutClientFactory
@@ -62,7 +62,7 @@ type SalesOrderSvcTestSuite struct {
 	mediatorFactory *factorymock.MockMediatorFactory
 	idempotencyMed  *mediatormock.MockIdempotencyMed
 
-	ctrl         *gomock.Controller
+	ctrl          *gomock.Controller
 	encryptionKey []byte
 }
 
@@ -158,10 +158,10 @@ func salesOrderInternalCtx(accountID string) context.Context {
 			AccountID:    &accountID,
 			RoleTypeCode: &adminCode,
 			Permissions: map[string]bool{
-				"sales_orders:read":   true,
-				"sales_orders:create": true,
-				"sales_orders:update": true,
-				"sales_orders:delete": true,
+				"sales_orders:read":      true,
+				"sales_orders:create":    true,
+				"sales_orders:update":    true,
+				"sales_orders:delete":    true,
 				"production_runs:create": true,
 			},
 		},

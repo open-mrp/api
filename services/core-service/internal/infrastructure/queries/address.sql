@@ -32,6 +32,10 @@ AND (
     OR g.country LIKE sqlc.narg('search_query')
 )
 AND (
+    sqlc.narg('drop_ship') IS NULL
+    OR a.is_drop_ship = sqlc.narg('drop_ship')
+)
+AND (
     sqlc.narg('cursor_created_at') IS NULL
     OR a.created_at < sqlc.narg('cursor_created_at')
     OR (a.created_at = sqlc.narg('cursor_created_at') AND a.id < sqlc.narg('cursor_id'))
@@ -71,6 +75,10 @@ AND (
     OR g.state LIKE sqlc.narg('search_query')
     OR g.postal_code LIKE sqlc.narg('search_query')
     OR g.country LIKE sqlc.narg('search_query')
+)
+AND (
+    sqlc.narg('drop_ship') IS NULL
+    OR a.is_drop_ship = sqlc.narg('drop_ship')
 )
 AND (
     a.created_at > sqlc.arg('cursor_created_at')

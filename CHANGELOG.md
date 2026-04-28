@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.3](https://github.com/Augno/api/compare/v0.15.2...v0.15.3) (2026-04-28)
+
+
+### Bug Fixes
+
+* update actor identifier references in request and audit log messages ([#220](https://github.com/Augno/api/issues/220)) ([a09add3](https://github.com/Augno/api/commit/a09add3c78cccf98cf8a3e958f91cc40a963b899))
+
 ## [0.15.2](https://github.com/Augno/api/compare/v0.15.1...v0.15.2) (2026-04-28)
 
 

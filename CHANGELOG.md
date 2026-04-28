@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.2](https://github.com/Augno/api/compare/v0.15.1...v0.15.2) (2026-04-28)
+
+
+### Bug Fixes
+
+* audit events and request logs filters ([#217](https://github.com/Augno/api/issues/217)) ([a141e33](https://github.com/Augno/api/commit/a141e338a4bf31cf9cf10ddb4a6d74d508941e83))
+
 ## [0.15.1](https://github.com/Augno/api/compare/v0.15.0...v0.15.1) (2026-04-28)
 
 

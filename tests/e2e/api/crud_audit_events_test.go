@@ -5,6 +5,7 @@ package api_test
 import (
 	"encoding/json"
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -29,6 +30,15 @@ func TestAuditEvents_ListSearchByResourceType(t *testing.T) {
 	list, _, err := apiClient.GetList(auditEventsPath, url.Values{"q": {"unit"}})
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(list.Data), 1, "Search for 'unit' should return at least 1 result")
+
+	for _, item := range list.Data {
+		m := parseJSON(item)
+		resourceType := jsonField(m, "resource_type")
+		assert.True(t,
+			strings.Contains(strings.ToLower(resourceType), "unit"),
+			"Search result resource_type %q should contain 'unit'", resourceType,
+		)
+	}
 }
 
 func TestAuditEvents_ListSearchNoResults(t *testing.T) {
@@ -254,7 +264,7 @@ func TestAuditEvents_FilterByMultipleActorIDs(t *testing.T) {
 	}
 
 	filtered, _, err := apiClient.GetList(auditEventsPath, url.Values{
-		"actor_ids": {actorID, "u_zzzzzzzzzzzzzzzz"},
+		"actor_ids": {actorID, "actu_zzzzzzzzzzzzzzzz"},
 		"include":   {"actor"},
 		"limit":     {"25"},
 	})
@@ -272,7 +282,7 @@ func TestAuditEvents_FilterByMultipleActorIDs(t *testing.T) {
 func TestAuditEvents_FilterByActorIDsImpossible(t *testing.T) {
 	t.Parallel()
 	list, _, err := apiClient.GetList(auditEventsPath, url.Values{
-		"actor_ids": {"u_zzzzzzzzzzzzzzzz", "ak_zzzzzzzzzzzzzzzz"},
+		"actor_ids": {"actu_zzzzzzzzzzzzzzzz", "ak_zzzzzzzzzzzzzzzz"},
 	})
 	require.NoError(t, err)
 	assertEmptyListData(t, list.Data, "Filtering by impossible actor_ids should return no results")

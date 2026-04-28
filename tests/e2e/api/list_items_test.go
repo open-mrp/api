@@ -68,6 +68,12 @@ func TestListItems_FilterByTypeCode(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(list.Data), 1, "Filter by type_code=product should return at least 1 result")
+
+	for _, item := range list.Data {
+		m := parseJSON(item)
+		assert.Equal(t, "product", jsonField(m, "type"),
+			"All results should have type=product")
+	}
 }
 
 func TestListItems_FilterByCategory_NoResults(t *testing.T) {

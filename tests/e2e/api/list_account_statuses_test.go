@@ -148,6 +148,14 @@ func TestListAccountStatuses_SearchCaseInsensitive(t *testing.T) {
 	list, _, err := apiClient.GetList(accountStatusesPath, url.Values{"q": {"preferred"}})
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(list.Data), 1, "Case-insensitive search for 'preferred' should return at least 1 result")
+
+	for _, item := range list.Data {
+		name := DataItemField(item, "name")
+		assert.True(t,
+			strings.Contains(strings.ToLower(name), "preferred"),
+			"Search result %q should contain 'preferred'", name,
+		)
+	}
 }
 
 func TestListAccountStatuses_SearchNoResults(t *testing.T) {

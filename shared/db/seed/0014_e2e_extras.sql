@@ -335,13 +335,16 @@ INSERT IGNORE INTO email_recipient (id, email, email_log_id, created_at, updated
     ('emrp_01seedemailrcpt2_0', 'warehouse@example.com', 'emlog_01seedemaillog2_0', NOW(), NOW());
 
 -- ============================================================
--- REQUEST LOGS (2 rows for pagination)
+-- REQUEST LOGS (4 rows — 3 for pagination, 1 with an error_code for filter tests)
 -- ============================================================
 
 INSERT IGNORE INTO request_log (id, method, host, path, normalized_route, status_code, latency_us, public_endpoint, account_id, target_account_id, actor_id, actor_type, identity_type, occurred_at, created_at) VALUES
     ('rqlog_01seedreqlog1_000', 'GET', 'api.augno.com', '/v1/catalog/items', '/v1/catalog/items', 200, 15000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', DATE_SUB(NOW(), INTERVAL 1 HOUR), NOW()),
     ('rqlog_01seedreqlog2_000', 'POST', 'api.augno.com', '/v1/catalog/units', '/v1/catalog/units', 201, 25000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', NOW(), NOW()),
     ('rqlog_01seedreqlog3_000', 'GET', 'api.augno.com', '/v1/catalog/items', '/v1/catalog/items', 200, 12000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'apky_pajbskcck3cabxajdh8h8', 'api_key', 'api_key', DATE_SUB(NOW(), INTERVAL 30 MINUTE), NOW());
+
+INSERT IGNORE INTO request_log (id, method, host, path, normalized_route, status_code, latency_us, public_endpoint, account_id, target_account_id, actor_id, actor_type, identity_type, error_code, error_message, occurred_at, created_at) VALUES
+    ('rqlog_01seedreqlog4_000', 'POST', 'api.augno.com', '/v1/catalog/units', '/v1/catalog/units', 422, 9000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', 'validation_failed', 'Name is required.', DATE_SUB(NOW(), INTERVAL 2 HOUR), NOW());
 
 -- ============================================================
 -- ADDRESSES linked to OWNER ACCOUNT (for /v1/sales/addresses pagination)

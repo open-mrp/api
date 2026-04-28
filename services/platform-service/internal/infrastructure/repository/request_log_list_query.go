@@ -26,7 +26,7 @@ var requestLogRLBaseColumns = []string{
 	"rl.status_code",
 	"rl.latency_us",
 	"rl.api_version",
-	"rl.actor_id",
+	"COALESCE(au.id, rl.actor_id) AS actor_id",
 	"rl.actor_type",
 	"rl.identity_type",
 	"rl.client_ip_string",
@@ -92,11 +92,18 @@ func buildListQuery(
 		// Base mode still pulls idempotency_key via a LEFT JOIN; that join is
 		// indexed and cheap.
 		inner.WriteString(", ik.idempotency_key")
-		inner.WriteString(" FROM request_log rl LEFT JOIN idempotency_key ik ON rl.idempotency_key_id = ik.type_id")
+		inner.WriteString(
+			" FROM request_log rl" +
+				" LEFT JOIN account_user au ON au.user_id = rl.actor_id AND au.account_id = rl.target_account_id AND rl.identity_type = 'user'" +
+				" LEFT JOIN idempotency_key ik ON rl.idempotency_key_id = ik.type_id",
+		)
 	case queryModeActor:
 		// Actor mode selects only the rl.* columns inside the derived table.
 		// The outer query joins user + api_key to the already-LIMIT'd set.
-		inner.WriteString(" FROM request_log rl")
+		inner.WriteString(
+			" FROM request_log rl" +
+				" LEFT JOIN account_user au ON au.user_id = rl.actor_id AND au.account_id = rl.target_account_id AND rl.identity_type = 'user'",
+		)
 	}
 
 	// WHERE — only emit predicates the caller supplied.
@@ -149,7 +156,7 @@ func buildListQuery(
 		}
 	}
 	if len(f.ActorIDs) > 0 {
-		inner.WriteString(" AND rl.actor_id IN (")
+		inner.WriteString(" AND COALESCE(au.id, rl.actor_id) IN (")
 		inner.WriteString(placeholders(len(f.ActorIDs)))
 		inner.WriteString(")")
 		for _, id := range f.ActorIDs {
@@ -231,7 +238,8 @@ func buildListQuery(
 	outer.WriteString(inner.String())
 	outer.WriteString(
 		") rl" +
-			" LEFT JOIN `user` u ON rl.actor_id = u.id AND rl.identity_type = 'user'" +
+			" LEFT JOIN account_user au ON au.id = rl.actor_id AND au.account_id = rl.target_account_id AND rl.identity_type = 'user'" +
+			" LEFT JOIN `user` u ON au.user_id = u.id AND rl.identity_type = 'user'" +
 			" LEFT JOIN api_key ak ON rl.actor_id = ak.type_id AND rl.identity_type = 'api_key'",
 	)
 	if dir == pagination.DirectionBackward {

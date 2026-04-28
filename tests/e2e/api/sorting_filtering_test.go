@@ -5,6 +5,7 @@ package api_test
 import (
 	"encoding/json"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -92,8 +93,12 @@ func TestSortingFiltering_SearchMatchesExpected(t *testing.T) {
 	for _, item := range list.Data {
 		if DataItemField(item, "id") == id {
 			found = true
-			break
 		}
+		name := DataItemField(item, "name")
+		assert.True(t,
+			strings.Contains(strings.ToLower(name), strings.ToLower(distinctName)),
+			"Search result %q should contain search term %q", name, distinctName,
+		)
 	}
 	assert.True(t, found, "Created customer should appear in search results for its name")
 }
@@ -162,23 +167,28 @@ func TestSortingFiltering_APIKeyStatusFilter(t *testing.T) {
 	revokedID := jsonField(jsonObject(created, "api_key_info"), "id")
 	apiClient.Delete(apiKeysPath + "/" + revokedID)
 
-	// Active filter should not include revoked key.
+	// Active filter should not include revoked key, and all returned keys must be active (revoked_at is null).
 	activeList, _, err := apiClient.GetList(apiKeysPath, url.Values{"statuses": {"active"}})
 	require.NoError(t, err)
 	for _, item := range activeList.Data {
+		m := parseJSON(item)
 		assert.NotEqual(t, revokedID, DataItemField(item, "id"),
 			"Revoked key should not appear in active-filtered list")
+		assert.Empty(t, jsonField(m, "revoked_at"),
+			"Active-filtered key %q should have no revoked_at", DataItemField(item, "id"))
 	}
 
-	// Revoked filter should include it.
+	// Revoked filter should include the key, and all returned keys must be revoked (revoked_at is non-null).
 	revokedList, _, err := apiClient.GetList(apiKeysPath, url.Values{"statuses": {"revoked"}})
 	require.NoError(t, err)
 	found := false
 	for _, item := range revokedList.Data {
+		m := parseJSON(item)
 		if DataItemField(item, "id") == revokedID {
 			found = true
-			break
 		}
+		assert.NotEmpty(t, jsonField(m, "revoked_at"),
+			"Revoked-filtered key %q should have a non-null revoked_at", DataItemField(item, "id"))
 	}
 	assert.True(t, found, "Revoked key should appear in revoked-filtered list")
 }
@@ -196,24 +206,29 @@ func TestSortingFiltering_CustomerStatusFilter(t *testing.T) {
 	created := createAndCleanup(t, customersPath, statusPayload)
 	id := jsonField(created, "id")
 
-	// Filter by hold_shipment — should include it.
+	// Filter by hold_shipment — should include the created customer, and all results must share that status.
 	list, _, err := apiClient.GetList(customersPath, url.Values{"status_codes": {"hold_shipment"}})
 	require.NoError(t, err)
 
 	found := false
 	for _, item := range list.Data {
+		m := parseJSON(item)
 		if DataItemField(item, "id") == id {
 			found = true
-			break
 		}
+		assert.Equal(t, "hold_shipment", jsonField(m, "status"),
+			"All hold_shipment-filtered results should have status=hold_shipment")
 	}
 	assert.True(t, found, "Customer with hold_shipment status should appear when filtering by that status")
 
-	// Filter by normal — should NOT include it.
+	// Filter by normal — should NOT include the hold_shipment customer, and all results must be normal.
 	normalList, _, err := apiClient.GetList(customersPath, url.Values{"status_codes": {"normal"}})
 	require.NoError(t, err)
 	for _, item := range normalList.Data {
+		m := parseJSON(item)
 		assert.NotEqual(t, id, DataItemField(item, "id"),
 			"Customer with hold_shipment status should not appear when filtering by normal")
+		assert.Equal(t, "normal", jsonField(m, "status"),
+			"All normal-filtered results should have status=normal")
 	}
 }

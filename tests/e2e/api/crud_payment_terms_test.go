@@ -4,6 +4,7 @@ package api_test
 
 import (
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -86,6 +87,14 @@ func TestPaymentTerms_ListSearchByName(t *testing.T) {
 	list, _, err := apiClient.GetList(paymentTermsPath, url.Values{"q": {"Net"}})
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(list.Data), 1, "Search for 'Net' should return at least 1 result")
+
+	for _, item := range list.Data {
+		name := DataItemField(item, "name")
+		assert.True(t,
+			strings.Contains(strings.ToLower(name), "net"),
+			"Search result %q should contain 'net'", name,
+		)
+	}
 }
 
 func TestPaymentTerms_ListSearchNoResults(t *testing.T) {

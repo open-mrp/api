@@ -431,13 +431,20 @@ func walkStruct(dst any, fn func(fieldInfo) error) error {
 			continue
 		}
 		if sf.Type.Kind() == reflect.Ptr && sf.Type.Elem().Kind() == reflect.Struct {
-			if fv.IsNil() {
+			// If the field carries a binding tag it is a scalar value type
+			// (e.g. *time.Time) that fn knows how to allocate and parse. Pass
+			// it directly to fn instead of trying to recurse into it (which
+			// would silently skip nil pointers and drop the filter value).
+			hasBindingTag := sf.Tag.Get("query") != "" || sf.Tag.Get("path") != "" || sf.Tag.Get("header") != ""
+			if !hasBindingTag {
+				if fv.IsNil() {
+					continue
+				}
+				if err := walkStruct(fv.Interface(), fn); err != nil {
+					return err
+				}
 				continue
 			}
-			if err := walkStruct(fv.Interface(), fn); err != nil {
-				return err
-			}
-			continue
 		}
 
 		if err := fn(fieldInfo{value: fv, tag: sf.Tag}); err != nil {

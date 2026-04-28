@@ -4,6 +4,7 @@ package api_test
 
 import (
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -42,6 +43,14 @@ func TestPermissionGroups_ListSearchByName(t *testing.T) {
 	list, _, err := apiClient.GetList(permissionGroupsPath, url.Values{"q": {"Admin"}})
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(list.Data), 1, "Search for 'Admin' should return at least 1 result")
+
+	for _, item := range list.Data {
+		name := DataItemField(item, "name")
+		assert.True(t,
+			strings.Contains(strings.ToLower(name), "admin"),
+			"Search result %q should contain 'admin'", name,
+		)
+	}
 }
 
 func TestPermissionGroups_ListSearchNoResults(t *testing.T) {

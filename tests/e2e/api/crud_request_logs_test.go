@@ -4,6 +4,8 @@ package api_test
 
 import (
 	"net/url"
+	"sort"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -221,7 +223,7 @@ func TestRequestLogs_ListFilterByActorIDSingle(t *testing.T) {
 func TestRequestLogs_ListFilterByActorIDsImpossible(t *testing.T) {
 	t.Parallel()
 	list, _, err := apiClient.GetList(requestLogsPath, url.Values{
-		"actor_ids": {"u_zzzzzzzzzzzzzzzz", "ak_zzzzzzzzzzzzzzzz"},
+		"actor_ids": {"actu_zzzzzzzzzzzzzzzz", "ak_zzzzzzzzzzzzzzzz"},
 	})
 	if err != nil {
 		t.Skip("Request logs endpoint not accessible")
@@ -404,7 +406,7 @@ func TestRequestLogs_ListFilterByMultipleActorIDs(t *testing.T) {
 	}
 
 	filtered, _, err := apiClient.GetList(requestLogsPath, url.Values{
-		"actor_ids": {actorID, "u_zzzzzzzzzzzzzzzz"},
+		"actor_ids": {actorID, "actu_zzzzzzzzzzzzzzzz"},
 		"include":   {"actor"},
 		"limit":     {"10"},
 	})
@@ -677,6 +679,113 @@ func TestRequestLogs_ListIncludeAccount(t *testing.T) {
 		assert.NotEmpty(t, jsonField(account, "id"))
 		assert.Equal(t, "account", jsonField(account, "object"))
 	}
+}
+
+func TestRequestLogs_ListFilterByErrorCodeExcludesNonMatching(t *testing.T) {
+	t.Parallel()
+	list, _, err := apiClient.GetList(requestLogsPath, url.Values{"limit": {"50"}})
+	if err != nil || len(list.Data) == 0 {
+		t.Skip("No request logs available to discover error codes")
+		return
+	}
+	var errorCode string
+	for _, item := range list.Data {
+		m := parseJSON(item)
+		if ec := jsonField(m, "error_code"); ec != "" {
+			errorCode = ec
+			break
+		}
+	}
+	if errorCode == "" {
+		t.Skip("No request logs with an error_code available")
+		return
+	}
+
+	filtered, _, err := apiClient.GetList(requestLogsPath, url.Values{
+		"error_codes": {errorCode},
+		"limit":       {"200"},
+	})
+	require.NoError(t, err)
+	require.NotEmpty(t, filtered.Data, "Filtering by a known error_code should return at least one log")
+
+	for _, item := range filtered.Data {
+		m := parseJSON(item)
+		assert.Equal(t, errorCode, jsonField(m, "error_code"), "All results should match the filtered error_code")
+	}
+}
+
+func TestRequestLogs_ListFilterByMinLatencyVerifiesThreshold(t *testing.T) {
+	t.Parallel()
+	list, _, err := apiClient.GetList(requestLogsPath, url.Values{"limit": {"25"}})
+	if err != nil || len(list.Data) == 0 {
+		t.Skip("No request logs available")
+		return
+	}
+
+	var latencies []float64
+	for _, item := range list.Data {
+		m := parseJSON(item)
+		latStr := jsonField(m, "latency_us")
+		if latStr == "" {
+			continue
+		}
+		lat, parseErr := strconv.ParseFloat(latStr, 64)
+		if parseErr != nil {
+			continue
+		}
+		latencies = append(latencies, lat)
+	}
+	if len(latencies) == 0 {
+		t.Skip("Could not determine latency values from recent logs")
+		return
+	}
+	sort.Float64s(latencies)
+	threshold := int64(latencies[len(latencies)/2])
+	if threshold == 0 {
+		t.Skip("Median latency is 0; cannot perform a meaningful threshold check")
+		return
+	}
+
+	filtered, _, err := apiClient.GetList(requestLogsPath, url.Values{
+		"min_latency_us": {strconv.FormatInt(threshold, 10)},
+		"limit":          {"25"},
+	})
+	require.NoError(t, err)
+
+	for _, item := range filtered.Data {
+		m := parseJSON(item)
+		latStr := jsonField(m, "latency_us")
+		require.NotEmpty(t, latStr, "latency_us should be present on each log")
+		lat, parseErr := strconv.ParseFloat(latStr, 64)
+		require.NoError(t, parseErr)
+		assert.GreaterOrEqual(t, int64(lat), threshold, "All results should have latency_us >= %d", threshold)
+	}
+}
+
+func TestRequestLogs_ListFilterByStartDateExcludesAll(t *testing.T) {
+	t.Parallel()
+	list, _, err := apiClient.GetList(requestLogsPath, url.Values{
+		"start_date": {"2099-01-01T00:00:00Z"},
+		"limit":      {"5"},
+	})
+	if err != nil {
+		t.Skip("Request logs endpoint not accessible")
+		return
+	}
+	assertEmptyListData(t, list.Data, "start_date far in the future should exclude all logs")
+}
+
+func TestRequestLogs_ListFilterByEndDateExcludesAll(t *testing.T) {
+	t.Parallel()
+	list, _, err := apiClient.GetList(requestLogsPath, url.Values{
+		"end_date": {"2000-01-01T00:00:00Z"},
+		"limit":    {"5"},
+	})
+	if err != nil {
+		t.Skip("Request logs endpoint not accessible")
+		return
+	}
+	assertEmptyListData(t, list.Data, "end_date far in the past should exclude all logs")
 }
 
 func TestRequestLogs_ListIncludeActor(t *testing.T) {

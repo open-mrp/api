@@ -35,13 +35,15 @@ func parseJSON(body []byte) map[string]any {
 	return m
 }
 
-// jsonField extracts a string field from a parsed JSON map.
+// jsonField extracts a string field from a parsed JSON map. Returns "" for
+// missing keys and for JSON null values so callers can distinguish "no value"
+// from a real value with a simple emptiness check.
 func jsonField(m map[string]any, key string) string {
 	if m == nil {
 		return ""
 	}
 	v, ok := m[key]
-	if !ok {
+	if !ok || v == nil {
 		return ""
 	}
 	switch val := v.(type) {

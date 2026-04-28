@@ -4,6 +4,7 @@ package api_test
 
 import (
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -30,9 +31,24 @@ func TestListProducts_FilterByProductLine(t *testing.T) {
 
 func TestListProducts_SearchBySKU(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(productsPath, url.Values{"q": {"SCK"}})
+	// The product itself has no top-level SKU; the search matches on item.sku or
+	// item.description. Use include=item so we can assert on the matched field.
+	list, _, err := apiClient.GetList(productsPath, url.Values{"q": {"SCK"}, "include": {"item"}})
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(list.Data), 1, "Search for 'SCK' should return at least 1 result")
+
+	for _, item := range list.Data {
+		m := parseJSON(item)
+		itemObj := jsonObject(m, "item")
+		require.NotNil(t, itemObj, "item should be present with ?include=item")
+		sku := strings.ToUpper(jsonField(itemObj, "sku"))
+		desc := strings.ToLower(jsonField(itemObj, "description"))
+		assert.True(t,
+			strings.Contains(sku, "SCK") || strings.Contains(desc, "sck"),
+			"Search result (sku=%q, description=%q) should match 'SCK' in item.sku or item.description",
+			jsonField(itemObj, "sku"), jsonField(itemObj, "description"),
+		)
+	}
 }
 
 func TestListProducts_SearchNoResults(t *testing.T) {

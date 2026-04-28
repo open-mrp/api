@@ -26,7 +26,7 @@ type ListRequestLogsRequest struct {
 	ErrorCodes []apierror.ErrorCode `query:"error_codes"`
 	// Actor home account IDs.
 	AccountIDs []string `query:"account_ids"`
-	// Actor identifier. `user.id` when `identity_type`=`user`, or an `api_key.id` when `identity_type`=`api_key`.
+	// Actor identifier. `account_user.id` when `identity_type`=`user`, or an `api_key.id` when `identity_type`=`api_key`.
 	ActorIDs []string `query:"actor_ids"`
 	// Actor types.
 	ActorTypes []constants.ActorType `query:"actor_types"`

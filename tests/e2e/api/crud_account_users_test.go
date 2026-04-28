@@ -4,6 +4,7 @@ package api_test
 
 import (
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -56,9 +57,23 @@ func TestAccountUsers_ListPagination(t *testing.T) {
 
 func TestAccountUsers_ListFilterByRoleType(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(accountUsersPath, url.Values{"role_type": {"admin"}})
+	adminList, _, err := apiClient.GetList(accountUsersPath, url.Values{"role_type": {"admin"}})
 	require.NoError(t, err)
-	assert.GreaterOrEqual(t, len(list.Data), 1, "Should have at least 1 admin user")
+	require.GreaterOrEqual(t, len(adminList.Data), 1, "Should have at least 1 admin user")
+
+	adminIDs := make(map[string]bool, len(adminList.Data))
+	for _, item := range adminList.Data {
+		adminIDs[DataItemField(item, "id")] = true
+	}
+
+	// Users returned for a different role_type must not overlap with the admin set.
+	scannerList, _, err := apiClient.GetList(accountUsersPath, url.Values{"role_type": {"scanner"}})
+	require.NoError(t, err)
+	for _, item := range scannerList.Data {
+		id := DataItemField(item, "id")
+		assert.False(t, adminIDs[id],
+			"User %q appears in both admin and scanner role-type filter results", id)
+	}
 }
 
 func TestAccountUsers_ListSearchByName(t *testing.T) {
@@ -75,6 +90,15 @@ func TestAccountUsers_ListSearchByName(t *testing.T) {
 	list, _, err := apiClient.GetList(accountUsersPath, url.Values{"q": {name}})
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(list.Data), 1, "Search by name should return at least 1 result")
+
+	lowerName := strings.ToLower(name)
+	for _, item := range list.Data {
+		n := DataItemField(item, "name")
+		assert.True(t,
+			strings.Contains(strings.ToLower(n), lowerName),
+			"Search result %q should contain %q", n, name,
+		)
+	}
 }
 
 func TestAccountUsers_ListSearchNoResults(t *testing.T) {

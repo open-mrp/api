@@ -217,7 +217,7 @@ func TestStateTransition_AccountGroupType_FilterByType(t *testing.T) {
 	})
 	id := jsonField(created, "id")
 
-	// Verify it appears when filtering by type_group.
+	// Verify it appears when filtering by type_group, and that all returned items share that type.
 	list, _, err := apiClient.GetList("/v1/sales/account-groups", url.Values{"type": {"type_group"}})
 	require.NoError(t, err)
 
@@ -225,8 +225,9 @@ func TestStateTransition_AccountGroupType_FilterByType(t *testing.T) {
 	for _, item := range list.Data {
 		if DataItemField(item, "id") == id {
 			found = true
-			break
 		}
+		assert.Equal(t, "type_group", DataItemField(item, "type"),
+			"All type_group-filtered results should have type=type_group")
 	}
 	assert.True(t, found, "Account group should appear when filtering by its type")
 }

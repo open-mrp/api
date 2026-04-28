@@ -1,6 +1,6 @@
 -- name: FindAuditEventByID :one
 SELECT ae.type_id,
-       ae.actor_id,
+       COALESCE(au.id, ae.actor_id) AS actor_id,
        ae.actor_type,
        ae.identity_type,
        ae.account_id,
@@ -23,12 +23,13 @@ SELECT ae.type_id,
 FROM audit_event ae
 LEFT JOIN `user` u ON ae.actor_id = u.id AND ae.identity_type = 'user'
 LEFT JOIN api_key ak ON ae.actor_id = ak.type_id AND ae.identity_type = 'api_key'
+LEFT JOIN account_user au ON au.user_id = ae.actor_id AND au.account_id = ae.account_id AND ae.identity_type = 'user'
 LEFT JOIN idempotency_key ik ON ae.idempotency_key_id = ik.type_id
 WHERE ae.type_id = ? AND ae.account_id = ?;
 
 -- name: ListAuditEventsForward :many
 SELECT ae.type_id,
-       ae.actor_id,
+       COALESCE(au.id, ae.actor_id) AS actor_id,
        ae.actor_type,
        ae.identity_type,
        ae.account_id,
@@ -51,6 +52,7 @@ SELECT ae.type_id,
 FROM audit_event ae
 LEFT JOIN `user` u ON ae.actor_id = u.id AND ae.identity_type = 'user'
 LEFT JOIN api_key ak ON ae.actor_id = ak.type_id AND ae.identity_type = 'api_key'
+LEFT JOIN account_user au ON au.user_id = ae.actor_id AND au.account_id = ae.account_id AND ae.identity_type = 'user'
 LEFT JOIN idempotency_key ik ON ae.idempotency_key_id = ik.type_id
 WHERE ae.account_id = sqlc.arg('target_account_id')
 AND (sqlc.arg('include_resource_type_filter') = false OR ae.resource_type IN (sqlc.slice('resource_types')))
@@ -74,7 +76,7 @@ LIMIT ?;
 
 -- name: ListAuditEventsBackward :many
 SELECT ae.type_id,
-       ae.actor_id,
+       COALESCE(au.id, ae.actor_id) AS actor_id,
        ae.actor_type,
        ae.identity_type,
        ae.account_id,
@@ -97,6 +99,7 @@ SELECT ae.type_id,
 FROM audit_event ae
 LEFT JOIN `user` u ON ae.actor_id = u.id AND ae.identity_type = 'user'
 LEFT JOIN api_key ak ON ae.actor_id = ak.type_id AND ae.identity_type = 'api_key'
+LEFT JOIN account_user au ON au.user_id = ae.actor_id AND au.account_id = ae.account_id AND ae.identity_type = 'user'
 LEFT JOIN idempotency_key ik ON ae.idempotency_key_id = ik.type_id
 WHERE ae.account_id = sqlc.arg('target_account_id')
 AND (sqlc.arg('include_resource_type_filter') = false OR ae.resource_type IN (sqlc.slice('resource_types')))

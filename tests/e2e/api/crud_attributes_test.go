@@ -4,6 +4,7 @@ package api_test
 
 import (
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -122,6 +123,14 @@ func TestAttributes_ListSearchByValue(t *testing.T) {
 	list, _, err := apiClient.GetList(attributesPath(SeedPropertyID), url.Values{"q": {"Beige"}})
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(list.Data), 1, "Search for 'Beige' should return at least 1 result")
+
+	for _, item := range list.Data {
+		value := DataItemField(item, "value")
+		assert.True(t,
+			strings.Contains(strings.ToLower(value), "beige"),
+			"Search result %q should contain 'beige'", value,
+		)
+	}
 }
 
 func TestAttributes_ListSearchNoResults(t *testing.T) {

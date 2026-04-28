@@ -4,6 +4,7 @@ package api_test
 
 import (
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -211,6 +212,14 @@ func TestAccountGroups_List(t *testing.T) {
 		list, _, err := apiClient.GetList(accountGroupsPath, url.Values{"q": {"DME"}})
 		require.NoError(t, err)
 		assert.GreaterOrEqual(t, len(list.Data), 1, "Search for 'DME' should return at least 1 result")
+
+		for _, item := range list.Data {
+			name := DataItemField(item, "name")
+			assert.True(t,
+				strings.Contains(strings.ToLower(name), "dme"),
+				"Search result %q should contain 'dme'", name,
+			)
+		}
 	})
 
 	t.Run("SearchNoResults", func(t *testing.T) {
@@ -224,7 +233,12 @@ func TestAccountGroups_List(t *testing.T) {
 		t.Parallel()
 		list, _, err := apiClient.GetList(accountGroupsPath, url.Values{"type": {"type_group"}})
 		require.NoError(t, err)
-		assert.NotEmpty(t, list.Data)
+		require.NotEmpty(t, list.Data)
+
+		for _, item := range list.Data {
+			assert.Equal(t, "type_group", DataItemField(item, "type"),
+				"All results should have type=type_group")
+		}
 	})
 }
 

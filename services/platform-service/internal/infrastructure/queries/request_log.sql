@@ -1,7 +1,7 @@
 -- name: FindRequestLogByID :one
 SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route,
        COALESCE(CASE WHEN sqlc.arg('include_query_json') THEN rl.query_json ELSE NULL END, '') AS query_json,
-       rl.status_code, rl.latency_us, rl.api_version, rl.actor_id,
+       rl.status_code, rl.latency_us, rl.api_version, COALESCE(au.id, rl.actor_id) AS actor_id,
        rl.actor_type, rl.identity_type, rl.client_ip_string, rl.user_agent,
        rl.referrer, rl.error_code, rl.error_message, rl.occurred_at, rl.created_at,
        rl.idempotency_key_id,
@@ -35,7 +35,7 @@ WHERE rl.id = ? AND rl.target_account_id = ?;
 -- name: FindRequestLogBaseByID :one
 SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route,
        COALESCE(CASE WHEN sqlc.arg('include_query_json') THEN rl.query_json ELSE NULL END, '') AS query_json,
-       rl.status_code, rl.latency_us, rl.api_version, rl.actor_id,
+       rl.status_code, rl.latency_us, rl.api_version, COALESCE(au.id, rl.actor_id) AS actor_id,
        rl.actor_type, rl.identity_type, rl.client_ip_string, rl.user_agent,
        rl.referrer, rl.error_code, rl.error_message, rl.occurred_at, rl.created_at,
        rl.idempotency_key_id,
@@ -44,6 +44,8 @@ SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route,
        rl.target_account_id,
        ik.idempotency_key
 FROM request_log rl
+LEFT JOIN account_user au ON au.user_id = rl.actor_id
+  AND au.account_id = rl.target_account_id AND rl.identity_type = 'user'
 LEFT JOIN idempotency_key ik ON rl.idempotency_key_id = ik.type_id
 WHERE rl.id = ? AND rl.target_account_id = ?;
 

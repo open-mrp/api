@@ -22,7 +22,7 @@ type ListAuditEventsRequest struct {
 	ResourceTypes []constants.ObjectType `query:"resource_types"`
 	// Audited resource IDs.
 	ResourceIDs []string `query:"resource_ids"`
-	// Actor identifier. `user.id` when `identity_type`=`user`, or an `api_key.id` when `identity_type`=`api_key`.
+	// Actor identifier. `account_user.id` when `identity_type`=`user`, or an `api_key.id` when `identity_type`=`api_key`.
 	ActorIDs []string `query:"actor_ids"`
 	// Audit actions.
 	Actions []constants.AuditAction `query:"actions"`

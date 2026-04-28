@@ -141,6 +141,64 @@ const (
 	ErrorCodeAPIVersionTooOld ErrorCode = "api_version_too_old"
 )
 
+// IsValid reports whether the ErrorCode is a recognized value.
+func (c ErrorCode) IsValid() bool {
+	switch c {
+	case ErrorCodeExpiredToken, ErrorCodeExpiredAPIKey, ErrorCodeRevokedAPIKey,
+		ErrorCodeInvalidCredentials, ErrorCodeInsufficientPerms, ErrorCodePaymentRequired,
+		ErrorCodeValidationFailed, ErrorCodeMissingField, ErrorCodeInvalidFormat,
+		ErrorCodeMethodNotAllowed, ErrorCodeResourceNotFound, ErrorCodeResourceExists,
+		ErrorCodeResourceConflict, ErrorCodeResourceGone, ErrorCodeIdempotencyInProgress,
+		ErrorCodeLimitExceeded, ErrorCodeRegistrationClosed, ErrorCodeRateLimitExceeded,
+		ErrorCodeParameterMissing, ErrorCodeParameterInvalid, ErrorCodeParameterUnknown,
+		ErrorCodeParametersExclusive, ErrorCodeInternalError, ErrorCodeSvcUnavailable,
+		ErrorCodeExternalSvcError, ErrorCodeTimeout, ErrorCodeConnectionError,
+		ErrorCodeRequestTimeout, ErrorCodeClientClosedRequest,
+		ErrorCodeAPIVersionRequired, ErrorCodeAPIVersionInvalid, ErrorCodeAPIVersionTooOld:
+		return true
+	default:
+		return false
+	}
+}
+
+// EnumValues returns all valid ErrorCode values for use in schema generation.
+func (c ErrorCode) EnumValues() []string {
+	return []string{
+		string(ErrorCodeExpiredToken),
+		string(ErrorCodeExpiredAPIKey),
+		string(ErrorCodeRevokedAPIKey),
+		string(ErrorCodeInvalidCredentials),
+		string(ErrorCodeInsufficientPerms),
+		string(ErrorCodePaymentRequired),
+		string(ErrorCodeValidationFailed),
+		string(ErrorCodeMissingField),
+		string(ErrorCodeInvalidFormat),
+		string(ErrorCodeMethodNotAllowed),
+		string(ErrorCodeResourceNotFound),
+		string(ErrorCodeResourceExists),
+		string(ErrorCodeResourceConflict),
+		string(ErrorCodeResourceGone),
+		string(ErrorCodeIdempotencyInProgress),
+		string(ErrorCodeLimitExceeded),
+		string(ErrorCodeRegistrationClosed),
+		string(ErrorCodeRateLimitExceeded),
+		string(ErrorCodeParameterMissing),
+		string(ErrorCodeParameterInvalid),
+		string(ErrorCodeParameterUnknown),
+		string(ErrorCodeParametersExclusive),
+		string(ErrorCodeInternalError),
+		string(ErrorCodeSvcUnavailable),
+		string(ErrorCodeExternalSvcError),
+		string(ErrorCodeTimeout),
+		string(ErrorCodeConnectionError),
+		string(ErrorCodeRequestTimeout),
+		string(ErrorCodeClientClosedRequest),
+		string(ErrorCodeAPIVersionRequired),
+		string(ErrorCodeAPIVersionInvalid),
+		string(ErrorCodeAPIVersionTooOld),
+	}
+}
+
 // ErrorType categorizes errors into broad classes for client-side handling.
 //   - ErrorTypeAPI: server-side failures (5xx-class), safe to retry if transient.
 //   - ErrorTypeIdempotency: idempotency key conflicts (concurrent or mismatched requests).
@@ -157,6 +215,25 @@ const (
 	// Generally not retryable — the client must fix the request before resending.
 	ErrorTypeInvalidRequest ErrorType = "invalid_request_error"
 )
+
+// IsValid reports whether the ErrorType is a recognized value.
+func (t ErrorType) IsValid() bool {
+	switch t {
+	case ErrorTypeAPI, ErrorTypeIdempotency, ErrorTypeInvalidRequest:
+		return true
+	default:
+		return false
+	}
+}
+
+// EnumValues returns all valid ErrorType values for use in schema generation.
+func (t ErrorType) EnumValues() []string {
+	return []string{
+		string(ErrorTypeAPI),
+		string(ErrorTypeIdempotency),
+		string(ErrorTypeInvalidRequest),
+	}
+}
 
 // IsTransientError returns true if the error code and type combination represents a
 // temporary condition that may resolve on retry. The error type provides context that

@@ -4,6 +4,7 @@ package api_test
 
 import (
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -88,6 +89,17 @@ func TestUnits_ListSearchByName(t *testing.T) {
 	list, _, err := apiClient.GetList(unitsPath, url.Values{"q": {"Pair"}})
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(list.Data), 1, "Search for 'Pair' should return at least 1 result")
+
+	for _, item := range list.Data {
+		m := parseJSON(item)
+		name := strings.ToLower(jsonField(m, "name"))
+		abbr := strings.ToLower(jsonField(m, "abbreviation"))
+		assert.True(t,
+			strings.Contains(name, "pair") || strings.Contains(abbr, "pair"),
+			"Search result (name=%q, abbreviation=%q) should contain 'pair'",
+			jsonField(m, "name"), jsonField(m, "abbreviation"),
+		)
+	}
 }
 
 func TestUnits_ListSearchByAbbreviation(t *testing.T) {
@@ -95,6 +107,17 @@ func TestUnits_ListSearchByAbbreviation(t *testing.T) {
 	list, _, err := apiClient.GetList(unitsPath, url.Values{"q": {"pr"}})
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(list.Data), 1, "Search for 'pr' should return at least 1 result")
+
+	for _, item := range list.Data {
+		m := parseJSON(item)
+		name := strings.ToLower(jsonField(m, "name"))
+		abbr := strings.ToLower(jsonField(m, "abbreviation"))
+		assert.True(t,
+			strings.Contains(name, "pr") || strings.Contains(abbr, "pr"),
+			"Search result (name=%q, abbreviation=%q) should contain 'pr'",
+			jsonField(m, "name"), jsonField(m, "abbreviation"),
+		)
+	}
 }
 
 func TestUnits_ListSearchNoResults(t *testing.T) {

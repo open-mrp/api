@@ -89,11 +89,11 @@ func TestBuildListQuery_ActorModeWrapsInDerivedTableWithUserAndApiKeyJoins(t *te
 
 	mustContain(t, sql, " FROM (")
 	mustContain(t, sql, ") rl")
-	mustContain(t, sql, "LEFT JOIN `user` u ON rl.actor_id = u.id AND rl.identity_type = 'user'")
+	mustContain(t, sql, "LEFT JOIN account_user au ON au.id = rl.actor_id AND au.account_id = rl.target_account_id AND rl.identity_type = 'user'")
+	mustContain(t, sql, "LEFT JOIN `user` u ON au.user_id = u.id AND rl.identity_type = 'user'")
 	mustContain(t, sql, "LEFT JOIN api_key ak ON rl.actor_id = ak.type_id AND rl.identity_type = 'api_key'")
 
 	forbidden := []string{
-		"LEFT JOIN account_user au",
 		"LEFT JOIN role r_user",
 		"LEFT JOIN account a",
 	}
@@ -131,7 +131,7 @@ func TestBuildListQuery_SliceFiltersExpandToMatchingPlaceholderCounts(t *testing
 	f.StatusCodes = []int32{200, 404, 500}
 	f.ErrorCodes = []string{"not_found"}
 	f.AccountIDs = []string{"acct_a", "acct_b"}
-	f.ActorIDs = []string{"u_1", "u_2", "u_3"}
+	f.ActorIDs = []string{"actu_1", "actu_2", "actu_3"}
 	f.ActorTypes = []string{"user"}
 	f.NormalizedRoutes = []string{"/a", "/b"}
 	f.Hosts = []string{"api.example.com"}
@@ -142,7 +142,7 @@ func TestBuildListQuery_SliceFiltersExpandToMatchingPlaceholderCounts(t *testing
 	mustContain(t, sql, "rl.status_code IN (?, ?, ?)")
 	mustContain(t, sql, "rl.error_code IN (?)")
 	mustContain(t, sql, "rl.account_id IN (?, ?)")
-	mustContain(t, sql, "rl.actor_id IN (?, ?, ?)")
+	mustContain(t, sql, "COALESCE(au.id, rl.actor_id) IN (?, ?, ?)")
 	mustContain(t, sql, "rl.identity_type IN (?)")
 	mustContain(t, sql, "rl.normalized_route IN (?, ?)")
 	mustContain(t, sql, "rl.host IN (?)")

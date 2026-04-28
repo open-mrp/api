@@ -4,6 +4,7 @@ package api_test
 
 import (
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -183,6 +184,23 @@ func TestScanningStations_ListSearch(t *testing.T) {
 	list, _, err := apiClient.GetList(scanningStationsPath, url.Values{"q": {"Knitting"}})
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(list.Data), 1, "search for 'Knitting' should return at least 1 result")
+
+	// The search matches on station name OR department name. Department is always
+	// included in the list response by default, so we can verify both fields.
+	for _, item := range list.Data {
+		m := parseJSON(item)
+		stationName := strings.ToLower(jsonField(m, "name"))
+		dept := jsonObject(m, "department")
+		deptName := ""
+		if dept != nil {
+			deptName = strings.ToLower(jsonField(dept, "name"))
+		}
+		assert.True(t,
+			strings.Contains(stationName, "knitting") || strings.Contains(deptName, "knitting"),
+			"Search result (station=%q, department=%q) should match 'knitting' in name or department",
+			jsonField(m, "name"), jsonField(dept, "name"),
+		)
+	}
 }
 
 func TestScanningStations_ListSearchNoResults(t *testing.T) {

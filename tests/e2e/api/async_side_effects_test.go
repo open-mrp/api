@@ -105,7 +105,7 @@ func expectRequestLog(t *testing.T, method, statusCode, path string) {
 		list, _, err := apiClient.GetList(requestLogsPath, url.Values{
 			"methods":      {method},
 			"status_codes": {statusCode},
-			"limit":       {"100"},
+			"limit":        {"100"},
 		})
 		if err != nil {
 			return err

@@ -206,6 +206,7 @@ message ListRequestLogsRequest {
   repeated int32 status_codes = 4;
   repeated string error_codes = 5;
   repeated string account_ids = 6;
+  // account_user.id when identity_type=user, or api_key.id when identity_type=api_key.
   repeated string actor_ids = 7;
   repeated string actor_types = 8;
   reserved 9;
@@ -286,6 +287,7 @@ message ListAuditEventsRequest {
   optional google.protobuf.Timestamp end_date = 2;
   repeated string resource_types = 3;
   repeated string resource_ids = 4;
+  // account_user.id when identity_type=user, or api_key.id when identity_type=api_key.
   repeated string actor_ids = 5;
   repeated string actions = 6;
   reserved 7;

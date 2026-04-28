@@ -262,17 +262,16 @@ func nullStringPtrEmptyAsNull(s *string) sql.NullString {
 	return sql.NullString{String: *s, Valid: true}
 }
 
-func buildMinimalActor(actorID sql.NullString, identityType sql.NullString) *domain.RequestLogActor {
-	id := db.StringFromNullString(actorID)
+func buildMinimalActor(actorID string, identityType sql.NullString) *domain.RequestLogActor {
 	identType := db.StringFromNullString(identityType)
-	if id == nil || identType == nil {
+	if actorID == "" || identType == nil {
 		return nil
 	}
 	switch *identType {
 	case "user":
-		return &domain.RequestLogActor{ID: *id, ActorType: constants.ActorTypeUser}
+		return &domain.RequestLogActor{ID: actorID, ActorType: constants.ActorTypeUser}
 	case "api_key":
-		return &domain.RequestLogActor{ID: *id, ActorType: constants.ActorTypeAPIKey}
+		return &domain.RequestLogActor{ID: actorID, ActorType: constants.ActorTypeAPIKey}
 	}
 	return nil
 }
@@ -339,12 +338,12 @@ func mapRowToRequestLogRead(row *sqlc.FindRequestLogByIDRow) *domain.RequestLogR
 	rl.ResponseJSON = anyToStringPtr(row.ResponseBodyJson)
 
 	identType := db.StringFromNullString(row.IdentityType)
-	actorID := db.StringFromNullString(row.ActorID)
-	if identType != nil && actorID != nil {
+	actorID := row.ActorID
+	if identType != nil && actorID != "" {
 		switch *identType {
 		case "user":
 			rl.Actor = &domain.RequestLogActor{
-				ID:           *actorID,
+				ID:           actorID,
 				ActorType:    constants.ActorTypeUser,
 				Name:         db.StringFromNullString(row.UserName),
 				Email:        db.StringFromNullString(row.UserEmail),
@@ -353,7 +352,7 @@ func mapRowToRequestLogRead(row *sqlc.FindRequestLogByIDRow) *domain.RequestLogR
 				RoleTypeCode: db.StringFromNullString(row.UserRoleTypeCode),
 			}
 		case "api_key":
-			id := *actorID
+			id := actorID
 			if typeID := db.StringFromNullString(row.ApiKeyTypeID); typeID != nil {
 				id = *typeID
 			}

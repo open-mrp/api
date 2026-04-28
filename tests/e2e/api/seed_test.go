@@ -151,6 +151,7 @@ const (
 	// Audit / Observability (seeded in 0014_e2e_extras.sql)
 	SeedAuditEventID         = "adev_01seedauditevent02" // event #2 has metadata populated
 	SeedInventoryChangeLogID = "ivcl_01seedwss000000000" // seeded in 0007_items.sql, enriched in 0014_e2e_extras.sql
+	SeedRequestLogErrorID    = "rqlog_01seedreqlog4_000" // has error_code=validation_failed for filter tests
 
 	// Tenant B (seeded in 0015_tenant_b_e2e.sql) — used for tenant isolation tests
 	SeedTenantBAccountID = "ac_tenant2_e2e_isolati"

@@ -150,6 +150,14 @@ func TestListPriorities_SearchCaseInsensitive(t *testing.T) {
 	list, _, err := apiClient.GetList(prioritiesPath, url.Values{"q": {"high"}})
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(list.Data), 1, "Case-insensitive search for 'high' should return at least 1 result")
+
+	for _, item := range list.Data {
+		name := DataItemField(item, "name")
+		assert.True(t,
+			strings.Contains(strings.ToLower(name), "high"),
+			"Search result %q should contain 'high'", name,
+		)
+	}
 }
 
 func TestListPriorities_SearchNoResults(t *testing.T) {

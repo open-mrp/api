@@ -4,6 +4,7 @@ package api_test
 
 import (
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -50,7 +51,7 @@ func TestRoles_ListResponseShape(t *testing.T) {
 
 func TestRoles_ListFilterByRoleType(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(rolesPath, url.Values{"role_type": {"admin"}})
+	list, _, err := apiClient.GetList(rolesPath, url.Values{"role_types": {"admin"}})
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(list.Data), 1, "Should have at least 1 admin role")
 
@@ -71,6 +72,14 @@ func TestRoles_ListSearchByName(t *testing.T) {
 	list, _, err := apiClient.GetList(rolesPath, url.Values{"q": {"Admin"}})
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(list.Data), 1, "Search for 'Admin' should return at least 1 result")
+
+	for _, item := range list.Data {
+		name := DataItemField(item, "name")
+		assert.True(t,
+			strings.Contains(strings.ToLower(name), "admin"),
+			"Search result %q should contain 'admin'", name,
+		)
+	}
 }
 
 func TestRoles_ListSearchNoResults(t *testing.T) {

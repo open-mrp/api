@@ -150,30 +150,25 @@ func (s *LoggingHandlerTestSuite) TestListRequestLogs_Success() {
 func (s *LoggingHandlerTestSuite) TestListRequestLogs_WithAllFilters() {
 	startDate := timestamppb.Now()
 	endDate := timestamppb.Now()
-	statusCode := int32(500)
-	exactMatch := true
 
 	s.loggingSvc.EXPECT().
 		ListRequestLogs(gomock.Any(), gomock.Any(), gomock.Any()).
 		DoAndReturn(func(_ context.Context, filter *domain.ListRequestLogsFilter, _ []string) (*domain.ListRequestLogsResult, *apierror.APIError) {
 			s.NotNil(filter.StartDate)
 			s.NotNil(filter.EndDate)
-			s.NotNil(filter.StatusCode)
-			s.Equal(int32(500), *filter.StatusCode)
-			s.True(filter.ExactMatch)
+			s.Equal([]string{"POST", "PUT"}, filter.Methods)
+			s.Equal([]int32{500, 502}, filter.StatusCodes)
 			return &domain.ListRequestLogsResult{}, nil
 		}).Times(1)
 
 	query := "test"
-	method := "POST"
 	_, err := s.handler.ListRequestLogs(context.Background(), &pb.ListRequestLogsRequest{
-		Query:      &query,
-		Method:     &method,
-		StatusCode: &statusCode,
-		StartDate:  startDate,
-		EndDate:    endDate,
-		ExactMatch: &exactMatch,
-		Limit:      25,
+		Query:       &query,
+		Methods:     []string{"POST", "PUT"},
+		StatusCodes: []int32{500, 502},
+		StartDate:   startDate,
+		EndDate:     endDate,
+		Limit:       25,
 	})
 	s.NoError(err)
 }

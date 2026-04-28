@@ -116,21 +116,37 @@ func buildListQuery(
 		inner.WriteString(" AND rl.occurred_at <= ?")
 		args = append(args, *f.EndDate)
 	}
-	if m := buildStringFilter(f.Method, f.ExactMatch); m != "" {
-		inner.WriteString(" AND rl.method LIKE ?")
-		args = append(args, m)
+	if len(f.Methods) > 0 {
+		inner.WriteString(" AND rl.method IN (")
+		inner.WriteString(placeholders(len(f.Methods)))
+		inner.WriteString(")")
+		for _, m := range f.Methods {
+			args = append(args, m)
+		}
 	}
-	if f.StatusCode != nil {
-		inner.WriteString(" AND rl.status_code = ?")
-		args = append(args, *f.StatusCode)
+	if len(f.StatusCodes) > 0 {
+		inner.WriteString(" AND rl.status_code IN (")
+		inner.WriteString(placeholders(len(f.StatusCodes)))
+		inner.WriteString(")")
+		for _, sc := range f.StatusCodes {
+			args = append(args, sc)
+		}
 	}
-	if ec := buildStringFilter(f.ErrorCode, f.ExactMatch); ec != "" {
-		inner.WriteString(" AND rl.error_code LIKE ?")
-		args = append(args, ec)
+	if len(f.ErrorCodes) > 0 {
+		inner.WriteString(" AND rl.error_code IN (")
+		inner.WriteString(placeholders(len(f.ErrorCodes)))
+		inner.WriteString(")")
+		for _, ec := range f.ErrorCodes {
+			args = append(args, ec)
+		}
 	}
-	if f.AccountID != nil && *f.AccountID != "" {
-		inner.WriteString(" AND rl.account_id = ?")
-		args = append(args, *f.AccountID)
+	if len(f.AccountIDs) > 0 {
+		inner.WriteString(" AND rl.account_id IN (")
+		inner.WriteString(placeholders(len(f.AccountIDs)))
+		inner.WriteString(")")
+		for _, id := range f.AccountIDs {
+			args = append(args, id)
+		}
 	}
 	if len(f.ActorIDs) > 0 {
 		inner.WriteString(" AND rl.actor_id IN (")
@@ -140,9 +156,13 @@ func buildListQuery(
 			args = append(args, id)
 		}
 	}
-	if f.ActorType != nil && *f.ActorType != "" {
-		inner.WriteString(" AND rl.identity_type = ?")
-		args = append(args, *f.ActorType)
+	if len(f.ActorTypes) > 0 {
+		inner.WriteString(" AND rl.identity_type IN (")
+		inner.WriteString(placeholders(len(f.ActorTypes)))
+		inner.WriteString(")")
+		for _, t := range f.ActorTypes {
+			args = append(args, t)
+		}
 	}
 	if len(f.NormalizedRoutes) > 0 {
 		inner.WriteString(" AND rl.normalized_route IN (")
@@ -167,13 +187,6 @@ func buildListQuery(
 	if f.PublicEndpoint != nil {
 		inner.WriteString(" AND rl.public_endpoint = ?")
 		args = append(args, *f.PublicEndpoint)
-	}
-	// actor_name filters over joined columns, so only applies in full mode.
-	if mode == queryModeFull {
-		if an := buildStringFilter(f.ActorName, f.ExactMatch); an != "" {
-			inner.WriteString(" AND (u.name LIKE ? OR ak.name LIKE ?)")
-			args = append(args, an, an)
-		}
 	}
 
 	// Cursor predicate — matches the direction semantics used by the previous

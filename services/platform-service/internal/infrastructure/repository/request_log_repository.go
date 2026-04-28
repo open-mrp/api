@@ -240,12 +240,10 @@ const (
 )
 
 // pickQueryMode picks the cheapest list query variant that satisfies the requested
-// includes and filters. queryModeBase has no joins; queryModeActor joins user+api_key
+// includes. queryModeBase has no joins; queryModeActor joins user+api_key
 // only; queryModeFull joins all related tables.
-func pickQueryMode(includes []string, filter *domain.ListRequestLogsFilter) queryMode {
-	// actor_name filtering references joined user/api_key columns, so it must
-	// use the full JOIN query path.
-	if anyIncludeRequested(includes, "account", "actor.role") || (filter.ActorName != nil && *filter.ActorName != "") {
+func pickQueryMode(includes []string, _ *domain.ListRequestLogsFilter) queryMode {
+	if anyIncludeRequested(includes, "account", "actor.role") {
 		return queryModeFull
 	}
 	if anyIncludeRequested(includes, "actor") {
@@ -256,16 +254,6 @@ func pickQueryMode(includes []string, filter *domain.ListRequestLogsFilter) quer
 
 func requestLogOccurredAt(rl *domain.RequestLogRead) time.Time { return rl.OccurredAt }
 func requestLogID(rl *domain.RequestLogRead) string            { return rl.ID }
-
-func buildStringFilter(val *string, exactMatch bool) string {
-	if val == nil || *val == "" {
-		return ""
-	}
-	if exactMatch {
-		return *val
-	}
-	return "%" + *val + "%"
-}
 
 func nullStringPtrEmptyAsNull(s *string) sql.NullString {
 	if s == nil || *s == "" {

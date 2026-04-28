@@ -141,9 +141,12 @@ func (r *auditEventRepoImpl) List(ctx context.Context, targetAccountID string, f
 
 	includeResourceTypeFilter := len(filter.ResourceTypes) > 0
 	resourceTypes := ensureStringSlice(filter.ResourceTypes)
-	resourceIDFilter := buildExactStringFilter(filter.ResourceID)
-	actorIDFilter := buildExactStringFilter(filter.ActorID)
-	actionFilter := buildExactStringFilter(filter.Action)
+	includeResourceIDFilter := len(filter.ResourceIDs) > 0
+	resourceIDs := ensureStringSlice(filter.ResourceIDs)
+	includeActorIDFilter := len(filter.ActorIDs) > 0
+	actorIDs := ensureStringSlice(filter.ActorIDs)
+	includeActionFilter := len(filter.Actions) > 0
+	actions := ensureStringSlice(filter.Actions)
 
 	searchQuery := sql.NullString{}
 	if filter.Query != nil && *filter.Query != "" {
@@ -169,9 +172,12 @@ func (r *auditEventRepoImpl) List(ctx context.Context, targetAccountID string, f
 			TargetAccountID:           targetAccountID,
 			IncludeResourceTypeFilter: includeResourceTypeFilter,
 			ResourceTypes:             resourceTypes,
-			ResourceIDFilter:          resourceIDFilter,
-			ActorIDFilter:             actorIDFilter,
-			ActionFilter:              actionFilter,
+			IncludeResourceIDFilter:   includeResourceIDFilter,
+			ResourceIds:               resourceIDs,
+			IncludeActorIDFilter:      includeActorIDFilter,
+			ActorIds:                  actorIDs,
+			IncludeActionFilter:       includeActionFilter,
+			Actions:                   actions,
 			StartDate:                 startDate,
 			EndDate:                   endDate,
 			SearchQuery:               searchQuery,
@@ -199,9 +205,12 @@ func (r *auditEventRepoImpl) List(ctx context.Context, targetAccountID string, f
 		TargetAccountID:           targetAccountID,
 		IncludeResourceTypeFilter: includeResourceTypeFilter,
 		ResourceTypes:             resourceTypes,
-		ResourceIDFilter:          resourceIDFilter,
-		ActorIDFilter:             actorIDFilter,
-		ActionFilter:              actionFilter,
+		IncludeResourceIDFilter:   includeResourceIDFilter,
+		ResourceIds:               resourceIDs,
+		IncludeActorIDFilter:      includeActorIDFilter,
+		ActorIds:                  actorIDs,
+		IncludeActionFilter:       includeActionFilter,
+		Actions:                   actions,
 		StartDate:                 startDate,
 		EndDate:                   endDate,
 		SearchQuery:               searchQuery,
@@ -310,13 +319,6 @@ func mapAuditEventBaseRow(
 		Actor:          actor,
 		IdempotencyKey: db.StringFromNullString(idempotencyKey),
 	}
-}
-
-func buildExactStringFilter(val *string) string {
-	if val == nil || *val == "" {
-		return ""
-	}
-	return *val
 }
 
 func ensureStringSlice(vals []string) []string {

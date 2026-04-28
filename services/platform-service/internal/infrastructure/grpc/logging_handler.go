@@ -90,12 +90,12 @@ func (h *loggingHandler) ListRequestLogs(ctx context.Context, req *pb.ListReques
 
 	filter := &domain.ListRequestLogsFilter{
 		Query:            req.Query,
-		Method:           req.Method,
-		ErrorCode:        req.ErrorCode,
-		AccountID:        req.AccountId,
+		Methods:          req.Methods,
+		StatusCodes:      req.StatusCodes,
+		ErrorCodes:       req.ErrorCodes,
+		AccountIDs:       req.AccountIds,
 		ActorIDs:         req.ActorIds,
-		ActorType:        req.ActorType,
-		ActorName:        req.ActorName,
+		ActorTypes:       req.ActorTypes,
 		NormalizedRoutes: req.NormalizedRoutes,
 		Hosts:            req.Hosts,
 		MinLatencyUs:     req.MinLatencyUs,
@@ -110,12 +110,6 @@ func (h *loggingHandler) ListRequestLogs(ctx context.Context, req *pb.ListReques
 	if req.EndDate != nil {
 		t := req.EndDate.AsTime()
 		filter.EndDate = &t
-	}
-	if req.StatusCode != nil {
-		filter.StatusCode = req.StatusCode
-	}
-	if req.ExactMatch != nil {
-		filter.ExactMatch = *req.ExactMatch
 	}
 
 	result, apiErr := h.loggingSvc.ListRequestLogs(ctx, filter, req.Includes)

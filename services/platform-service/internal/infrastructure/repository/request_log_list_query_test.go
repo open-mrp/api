@@ -9,8 +9,6 @@ import (
 	"github.com/augno/api/shared/pagination"
 )
 
-func strPtr(s string) *string { return &s }
-
 // emptyFilter represents the no-filter case — only target_account_id, cursor,
 // ORDER BY, and LIMIT should appear in the generated SQL.
 func emptyFilter() *domain.ListRequestLogsFilter {
@@ -24,11 +22,11 @@ func TestBuildListQuery_NoFiltersEmitsOnlyBaselinePredicates(t *testing.T) {
 	mustContain(t, sql, "ORDER BY rl.occurred_at DESC, rl.id DESC LIMIT ?")
 
 	forbidden := []string{
-		"rl.identity_type =",
-		"rl.method LIKE",
-		"rl.status_code =",
-		"rl.error_code LIKE",
-		"rl.account_id =",
+		"rl.identity_type IN",
+		"rl.method IN",
+		"rl.status_code IN",
+		"rl.error_code IN",
+		"rl.account_id IN",
 		"rl.actor_id IN",
 		"rl.normalized_route IN",
 		"rl.host IN",
@@ -36,8 +34,6 @@ func TestBuildListQuery_NoFiltersEmitsOnlyBaselinePredicates(t *testing.T) {
 		"rl.public_endpoint =",
 		"rl.occurred_at >=",
 		"rl.occurred_at <=",
-		"u.name LIKE",
-		"ak.name LIKE",
 	}
 	for _, f := range forbidden {
 		if strings.Contains(sql, f) {
@@ -46,20 +42,15 @@ func TestBuildListQuery_NoFiltersEmitsOnlyBaselinePredicates(t *testing.T) {
 	}
 }
 
-func TestBuildListQuery_ActorTypeEmitsSinglePredicateNoSentinelOR(t *testing.T) {
+func TestBuildListQuery_ActorTypesEmitsInPredicate(t *testing.T) {
 	f := emptyFilter()
-	f.ActorType = strPtr("user")
+	f.ActorTypes = []string{"user", "api_key"}
 
 	sql, args := buildListQuery(queryModeBase, pagination.DirectionForward, "acc_1", f, false, false, false, nil, 101)
 
-	if n := strings.Count(sql, "rl.identity_type = ?"); n != 1 {
-		t.Fatalf("expected exactly one identity_type predicate, got %d; SQL:\n%s", n, sql)
-	}
-	if strings.Contains(sql, "OR rl.identity_type") || strings.Contains(sql, "identity_type = ?' OR") {
-		t.Errorf("identity_type predicate leaked a sentinel-OR wrapper; SQL:\n%s", sql)
-	}
-	if !containsArg(args, "user") {
-		t.Errorf("expected 'user' in args; got %#v", args)
+	mustContain(t, sql, "rl.identity_type IN (?, ?)")
+	if !containsArg(args, "user") || !containsArg(args, "api_key") {
+		t.Errorf("expected 'user' and 'api_key' in args; got %#v", args)
 	}
 }
 
@@ -134,35 +125,32 @@ func TestBuildListQuery_FullModeInlinesAllJoinsWithoutDerivedTable(t *testing.T)
 	}
 }
 
-func TestBuildListQuery_ActorNameFilterSkippedOutsideFullMode(t *testing.T) {
-	f := emptyFilter()
-	f.ActorName = strPtr("alice")
-
-	for _, mode := range []queryMode{queryModeBase, queryModeActor} {
-		sql, _ := buildListQuery(mode, pagination.DirectionForward, "acc_1", f, false, false, false, nil, 101)
-		if strings.Contains(sql, "u.name LIKE") || strings.Contains(sql, "ak.name LIKE") {
-			t.Errorf("mode %d leaked actor_name predicate into non-full mode; SQL:\n%s", mode, sql)
-		}
-	}
-	sql, _ := buildListQuery(queryModeFull, pagination.DirectionForward, "acc_1", f, false, false, false, nil, 101)
-	mustContain(t, sql, "u.name LIKE ? OR ak.name LIKE ?")
-}
-
 func TestBuildListQuery_SliceFiltersExpandToMatchingPlaceholderCounts(t *testing.T) {
 	f := emptyFilter()
+	f.Methods = []string{"GET", "POST"}
+	f.StatusCodes = []int32{200, 404, 500}
+	f.ErrorCodes = []string{"not_found"}
+	f.AccountIDs = []string{"acct_a", "acct_b"}
 	f.ActorIDs = []string{"u_1", "u_2", "u_3"}
+	f.ActorTypes = []string{"user"}
 	f.NormalizedRoutes = []string{"/a", "/b"}
 	f.Hosts = []string{"api.example.com"}
 
 	sql, args := buildListQuery(queryModeBase, pagination.DirectionForward, "acc_1", f, false, false, false, nil, 101)
 
+	mustContain(t, sql, "rl.method IN (?, ?)")
+	mustContain(t, sql, "rl.status_code IN (?, ?, ?)")
+	mustContain(t, sql, "rl.error_code IN (?)")
+	mustContain(t, sql, "rl.account_id IN (?, ?)")
 	mustContain(t, sql, "rl.actor_id IN (?, ?, ?)")
+	mustContain(t, sql, "rl.identity_type IN (?)")
 	mustContain(t, sql, "rl.normalized_route IN (?, ?)")
 	mustContain(t, sql, "rl.host IN (?)")
 
 	// 3 JSON-include booleans (query/request/response) + target_account_id +
-	// 3 actor ids + 2 routes + 1 host + limit = 11
-	want := 3 + 1 + 3 + 2 + 1 + 1
+	// 2 methods + 3 status codes + 1 error code + 2 account ids +
+	// 3 actor ids + 1 actor type + 2 routes + 1 host + limit = 20
+	want := 3 + 1 + 2 + 3 + 1 + 2 + 3 + 1 + 2 + 1 + 1
 	if len(args) != want {
 		t.Errorf("unexpected arg count: got %d, want %d; args=%#v", len(args), want, args)
 	}

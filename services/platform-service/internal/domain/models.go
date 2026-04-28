@@ -110,17 +110,15 @@ type ListRequestLogsFilter struct {
 	Query            *string
 	StartDate        *time.Time
 	EndDate          *time.Time
-	Method           *string
-	StatusCode       *int32
-	ErrorCode        *string
-	AccountID        *string
+	Methods          []string
+	StatusCodes      []int32
+	ErrorCodes       []string
+	AccountIDs       []string
 	ActorIDs         []string
-	ActorType        *string
-	ActorName        *string
+	ActorTypes       []string
 	NormalizedRoutes []string
 	Hosts            []string
 	MinLatencyUs     *int64
-	ExactMatch       bool
 	PublicEndpoint   *bool
 	Cursor           *string
 	Limit            int32
@@ -198,10 +196,9 @@ type ListAuditEventsFilter struct {
 	StartDate     *time.Time
 	EndDate       *time.Time
 	ResourceTypes []string
-	ResourceID    *string
-	ActorID       *string
-	Action        *string
-	AccountID     *string
+	ResourceIDs   []string
+	ActorIDs      []string
+	Actions       []string
 	Query         *string
 	Cursor        *string
 	Limit         int32

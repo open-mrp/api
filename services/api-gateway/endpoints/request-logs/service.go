@@ -88,16 +88,15 @@ func (m *requestLogSvcImpl) ListRequestLogs(ctx context.Context, req *ListReques
 
 	pbReq := &pb.ListRequestLogsRequest{
 		Query:            req.Query,
-		Method:           req.Method,
-		ErrorCode:        req.ErrorCode,
-		AccountId:        req.AccountID,
+		Methods:          req.Methods,
+		StatusCodes:      req.StatusCodes,
+		ErrorCodes:       req.ErrorCodes,
+		AccountIds:       req.AccountIDs,
 		ActorIds:         req.ActorIDs,
-		ActorType:        req.ActorType,
-		ActorName:        req.ActorName,
+		ActorTypes:       req.ActorTypes,
 		NormalizedRoutes: req.NormalizedRoutes,
 		Hosts:            req.Hosts,
 		MinLatencyUs:     req.MinLatencyUs,
-		ExactMatch:       req.ExactMatch,
 		Cursor:           req.Cursor,
 		Limit:            req.Limit,
 		Includes:         requestedIncludes,
@@ -108,9 +107,6 @@ func (m *requestLogSvcImpl) ListRequestLogs(ctx context.Context, req *ListReques
 	}
 	if req.EndDate != nil && !req.EndDate.IsZero() {
 		pbReq.EndDate = timestamppb.New(*req.EndDate)
-	}
-	if req.StatusCode != nil {
-		pbReq.StatusCode = req.StatusCode
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, requestLogSvcTracer, "service.request_logs.list", domain.ServiceName,

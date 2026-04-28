@@ -360,7 +360,7 @@ func BindFromQuery(u *url.URL, dst any) error {
 		// Slice fields accept both ?key=a&key=b and ?key[]=a&key[]=b. The OpenAPI
 		// generator emits the bracketed form for array params, so SDK clients send
 		// that shape even when the Go tag is the bare key.
-		if f.value.Kind() == reflect.Slice && f.value.Type().Elem().Kind() == reflect.String {
+		if f.value.Kind() == reflect.Slice {
 			values := append([]string{}, q[key]...)
 			values = append(values, q[key+"[]"]...)
 			if len(values) == 0 {
@@ -375,7 +375,13 @@ func BindFromQuery(u *url.URL, dst any) error {
 			elemType := f.value.Type().Elem()
 			slice := reflect.MakeSlice(f.value.Type(), len(values), len(values))
 			for i, v := range values {
-				slice.Index(i).Set(reflect.ValueOf(v).Convert(elemType))
+				if elemType.Kind() == reflect.String {
+					slice.Index(i).Set(reflect.ValueOf(v).Convert(elemType))
+					continue
+				}
+				if err := setFromString(slice.Index(i), v, f.tag); err != nil {
+					return apierror.NewParameterInvalidError(fmt.Sprintf("Invalid value for query parameter '%s': %v", key, err), key)
+				}
 			}
 			f.value.Set(slice)
 			return nil

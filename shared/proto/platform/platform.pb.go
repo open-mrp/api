@@ -1146,14 +1146,12 @@ type ListRequestLogsRequest struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	StartDate        *timestamppb.Timestamp `protobuf:"bytes,1,opt,name=start_date,json=startDate,proto3,oneof" json:"start_date,omitempty"`
 	EndDate          *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=end_date,json=endDate,proto3,oneof" json:"end_date,omitempty"`
-	Method           *string                `protobuf:"bytes,3,opt,name=method,proto3,oneof" json:"method,omitempty"`
-	StatusCode       *int32                 `protobuf:"varint,4,opt,name=status_code,json=statusCode,proto3,oneof" json:"status_code,omitempty"`
-	ErrorCode        *string                `protobuf:"bytes,5,opt,name=error_code,json=errorCode,proto3,oneof" json:"error_code,omitempty"`
-	AccountId        *string                `protobuf:"bytes,6,opt,name=account_id,json=accountId,proto3,oneof" json:"account_id,omitempty"`
+	Methods          []string               `protobuf:"bytes,3,rep,name=methods,proto3" json:"methods,omitempty"`
+	StatusCodes      []int32                `protobuf:"varint,4,rep,packed,name=status_codes,json=statusCodes,proto3" json:"status_codes,omitempty"`
+	ErrorCodes       []string               `protobuf:"bytes,5,rep,name=error_codes,json=errorCodes,proto3" json:"error_codes,omitempty"`
+	AccountIds       []string               `protobuf:"bytes,6,rep,name=account_ids,json=accountIds,proto3" json:"account_ids,omitempty"`
 	ActorIds         []string               `protobuf:"bytes,7,rep,name=actor_ids,json=actorIds,proto3" json:"actor_ids,omitempty"`
-	ActorType        *string                `protobuf:"bytes,8,opt,name=actor_type,json=actorType,proto3,oneof" json:"actor_type,omitempty"`
-	ActorName        *string                `protobuf:"bytes,9,opt,name=actor_name,json=actorName,proto3,oneof" json:"actor_name,omitempty"`
-	ExactMatch       *bool                  `protobuf:"varint,10,opt,name=exact_match,json=exactMatch,proto3,oneof" json:"exact_match,omitempty"`
+	ActorTypes       []string               `protobuf:"bytes,8,rep,name=actor_types,json=actorTypes,proto3" json:"actor_types,omitempty"`
 	Cursor           *string                `protobuf:"bytes,11,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
 	Limit            int32                  `protobuf:"varint,12,opt,name=limit,proto3" json:"limit,omitempty"`
 	Query            *string                `protobuf:"bytes,13,opt,name=query,proto3,oneof" json:"query,omitempty"`
@@ -1209,32 +1207,32 @@ func (x *ListRequestLogsRequest) GetEndDate() *timestamppb.Timestamp {
 	return nil
 }
 
-func (x *ListRequestLogsRequest) GetMethod() string {
-	if x != nil && x.Method != nil {
-		return *x.Method
+func (x *ListRequestLogsRequest) GetMethods() []string {
+	if x != nil {
+		return x.Methods
 	}
-	return ""
+	return nil
 }
 
-func (x *ListRequestLogsRequest) GetStatusCode() int32 {
-	if x != nil && x.StatusCode != nil {
-		return *x.StatusCode
+func (x *ListRequestLogsRequest) GetStatusCodes() []int32 {
+	if x != nil {
+		return x.StatusCodes
 	}
-	return 0
+	return nil
 }
 
-func (x *ListRequestLogsRequest) GetErrorCode() string {
-	if x != nil && x.ErrorCode != nil {
-		return *x.ErrorCode
+func (x *ListRequestLogsRequest) GetErrorCodes() []string {
+	if x != nil {
+		return x.ErrorCodes
 	}
-	return ""
+	return nil
 }
 
-func (x *ListRequestLogsRequest) GetAccountId() string {
-	if x != nil && x.AccountId != nil {
-		return *x.AccountId
+func (x *ListRequestLogsRequest) GetAccountIds() []string {
+	if x != nil {
+		return x.AccountIds
 	}
-	return ""
+	return nil
 }
 
 func (x *ListRequestLogsRequest) GetActorIds() []string {
@@ -1244,25 +1242,11 @@ func (x *ListRequestLogsRequest) GetActorIds() []string {
 	return nil
 }
 
-func (x *ListRequestLogsRequest) GetActorType() string {
-	if x != nil && x.ActorType != nil {
-		return *x.ActorType
+func (x *ListRequestLogsRequest) GetActorTypes() []string {
+	if x != nil {
+		return x.ActorTypes
 	}
-	return ""
-}
-
-func (x *ListRequestLogsRequest) GetActorName() string {
-	if x != nil && x.ActorName != nil {
-		return *x.ActorName
-	}
-	return ""
-}
-
-func (x *ListRequestLogsRequest) GetExactMatch() bool {
-	if x != nil && x.ExactMatch != nil {
-		return *x.ExactMatch
-	}
-	return false
+	return nil
 }
 
 func (x *ListRequestLogsRequest) GetCursor() string {
@@ -1876,10 +1860,9 @@ type ListAuditEventsRequest struct {
 	StartDate     *timestamppb.Timestamp `protobuf:"bytes,1,opt,name=start_date,json=startDate,proto3,oneof" json:"start_date,omitempty"`
 	EndDate       *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=end_date,json=endDate,proto3,oneof" json:"end_date,omitempty"`
 	ResourceTypes []string               `protobuf:"bytes,3,rep,name=resource_types,json=resourceTypes,proto3" json:"resource_types,omitempty"`
-	ResourceId    *string                `protobuf:"bytes,4,opt,name=resource_id,json=resourceId,proto3,oneof" json:"resource_id,omitempty"`
-	ActorId       *string                `protobuf:"bytes,5,opt,name=actor_id,json=actorId,proto3,oneof" json:"actor_id,omitempty"`
-	Action        *string                `protobuf:"bytes,6,opt,name=action,proto3,oneof" json:"action,omitempty"`
-	AccountId     *string                `protobuf:"bytes,7,opt,name=account_id,json=accountId,proto3,oneof" json:"account_id,omitempty"`
+	ResourceIds   []string               `protobuf:"bytes,4,rep,name=resource_ids,json=resourceIds,proto3" json:"resource_ids,omitempty"`
+	ActorIds      []string               `protobuf:"bytes,5,rep,name=actor_ids,json=actorIds,proto3" json:"actor_ids,omitempty"`
+	Actions       []string               `protobuf:"bytes,6,rep,name=actions,proto3" json:"actions,omitempty"`
 	Cursor        *string                `protobuf:"bytes,8,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
 	Limit         int32                  `protobuf:"varint,9,opt,name=limit,proto3" json:"limit,omitempty"`
 	Includes      []string               `protobuf:"bytes,10,rep,name=includes,proto3" json:"includes,omitempty"`
@@ -1939,32 +1922,25 @@ func (x *ListAuditEventsRequest) GetResourceTypes() []string {
 	return nil
 }
 
-func (x *ListAuditEventsRequest) GetResourceId() string {
-	if x != nil && x.ResourceId != nil {
-		return *x.ResourceId
+func (x *ListAuditEventsRequest) GetResourceIds() []string {
+	if x != nil {
+		return x.ResourceIds
 	}
-	return ""
+	return nil
 }
 
-func (x *ListAuditEventsRequest) GetActorId() string {
-	if x != nil && x.ActorId != nil {
-		return *x.ActorId
+func (x *ListAuditEventsRequest) GetActorIds() []string {
+	if x != nil {
+		return x.ActorIds
 	}
-	return ""
+	return nil
 }
 
-func (x *ListAuditEventsRequest) GetAction() string {
-	if x != nil && x.Action != nil {
-		return *x.Action
+func (x *ListAuditEventsRequest) GetActions() []string {
+	if x != nil {
+		return x.Actions
 	}
-	return ""
-}
-
-func (x *ListAuditEventsRequest) GetAccountId() string {
-	if x != nil && x.AccountId != nil {
-		return *x.AccountId
-	}
-	return ""
+	return nil
 }
 
 func (x *ListAuditEventsRequest) GetCursor() string {
@@ -2569,46 +2545,35 @@ const file_platform_platform_proto_rawDesc = "" +
 	"\rhas_next_page\x18\x03 \x01(\bR\vhasNextPage\x12\"\n" +
 	"\rhas_prev_page\x18\x04 \x01(\bR\vhasPrevPageB\x0e\n" +
 	"\f_next_cursorB\x0e\n" +
-	"\f_prev_cursor\"\xad\x06\n" +
+	"\f_prev_cursor\"\x92\x05\n" +
 	"\x16ListRequestLogsRequest\x12>\n" +
 	"\n" +
 	"start_date\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampH\x00R\tstartDate\x88\x01\x01\x12:\n" +
-	"\bend_date\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampH\x01R\aendDate\x88\x01\x01\x12\x1b\n" +
-	"\x06method\x18\x03 \x01(\tH\x02R\x06method\x88\x01\x01\x12$\n" +
-	"\vstatus_code\x18\x04 \x01(\x05H\x03R\n" +
-	"statusCode\x88\x01\x01\x12\"\n" +
-	"\n" +
-	"error_code\x18\x05 \x01(\tH\x04R\terrorCode\x88\x01\x01\x12\"\n" +
-	"\n" +
-	"account_id\x18\x06 \x01(\tH\x05R\taccountId\x88\x01\x01\x12\x1b\n" +
-	"\tactor_ids\x18\a \x03(\tR\bactorIds\x12\"\n" +
-	"\n" +
-	"actor_type\x18\b \x01(\tH\x06R\tactorType\x88\x01\x01\x12\"\n" +
-	"\n" +
-	"actor_name\x18\t \x01(\tH\aR\tactorName\x88\x01\x01\x12$\n" +
-	"\vexact_match\x18\n" +
-	" \x01(\bH\bR\n" +
-	"exactMatch\x88\x01\x01\x12\x1b\n" +
-	"\x06cursor\x18\v \x01(\tH\tR\x06cursor\x88\x01\x01\x12\x14\n" +
+	"\bend_date\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampH\x01R\aendDate\x88\x01\x01\x12\x18\n" +
+	"\amethods\x18\x03 \x03(\tR\amethods\x12!\n" +
+	"\fstatus_codes\x18\x04 \x03(\x05R\vstatusCodes\x12\x1f\n" +
+	"\verror_codes\x18\x05 \x03(\tR\n" +
+	"errorCodes\x12\x1f\n" +
+	"\vaccount_ids\x18\x06 \x03(\tR\n" +
+	"accountIds\x12\x1b\n" +
+	"\tactor_ids\x18\a \x03(\tR\bactorIds\x12\x1f\n" +
+	"\vactor_types\x18\b \x03(\tR\n" +
+	"actorTypes\x12\x1b\n" +
+	"\x06cursor\x18\v \x01(\tH\x02R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\f \x01(\x05R\x05limit\x12\x19\n" +
-	"\x05query\x18\r \x01(\tH\n" +
-	"R\x05query\x88\x01\x01\x12\x1a\n" +
+	"\x05query\x18\r \x01(\tH\x03R\x05query\x88\x01\x01\x12\x1a\n" +
 	"\bincludes\x18\x0e \x03(\tR\bincludes\x12+\n" +
 	"\x11normalized_routes\x18\x0f \x03(\tR\x10normalizedRoutes\x12\x14\n" +
 	"\x05hosts\x18\x10 \x03(\tR\x05hosts\x12)\n" +
-	"\x0emin_latency_us\x18\x11 \x01(\x03H\vR\fminLatencyUs\x88\x01\x01B\r\n" +
+	"\x0emin_latency_us\x18\x11 \x01(\x03H\x04R\fminLatencyUs\x88\x01\x01B\r\n" +
 	"\v_start_dateB\v\n" +
 	"\t_end_dateB\t\n" +
-	"\a_methodB\x0e\n" +
-	"\f_status_codeB\r\n" +
-	"\v_error_codeB\r\n" +
-	"\v_account_idB\r\n" +
-	"\v_actor_typeB\r\n" +
-	"\v_actor_nameB\x0e\n" +
-	"\f_exact_matchB\t\n" +
 	"\a_cursorB\b\n" +
 	"\x06_queryB\x11\n" +
-	"\x0f_min_latency_us\"\x87\x01\n" +
+	"\x0f_min_latency_usJ\x04\b\t\x10\n" +
+	"J\x04\b\n" +
+	"\x10\vR\n" +
+	"actor_nameR\vexact_match\"\x87\x01\n" +
 	"\x17ListRequestLogsResponse\x12;\n" +
 	"\frequest_logs\x18\x01 \x03(\v2\x18.platform.RequestLogInfoR\vrequestLogs\x12/\n" +
 	"\tpage_info\x18\x02 \x01(\v2\x12.platform.PageInfoR\bpageInfo\"B\n" +
@@ -2691,31 +2656,25 @@ const file_platform_platform_proto_rawDesc = "" +
 	"\vaudit_event\x18\x01 \x01(\v2\x18.platform.AuditEventInfoR\n" +
 	"auditEvent\"4\n" +
 	"\x18CreateAuditEventResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess\"\x94\x04\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\"\xc2\x03\n" +
 	"\x16ListAuditEventsRequest\x12>\n" +
 	"\n" +
 	"start_date\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampH\x00R\tstartDate\x88\x01\x01\x12:\n" +
 	"\bend_date\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampH\x01R\aendDate\x88\x01\x01\x12%\n" +
-	"\x0eresource_types\x18\x03 \x03(\tR\rresourceTypes\x12$\n" +
-	"\vresource_id\x18\x04 \x01(\tH\x02R\n" +
-	"resourceId\x88\x01\x01\x12\x1e\n" +
-	"\bactor_id\x18\x05 \x01(\tH\x03R\aactorId\x88\x01\x01\x12\x1b\n" +
-	"\x06action\x18\x06 \x01(\tH\x04R\x06action\x88\x01\x01\x12\"\n" +
-	"\n" +
-	"account_id\x18\a \x01(\tH\x05R\taccountId\x88\x01\x01\x12\x1b\n" +
-	"\x06cursor\x18\b \x01(\tH\x06R\x06cursor\x88\x01\x01\x12\x14\n" +
+	"\x0eresource_types\x18\x03 \x03(\tR\rresourceTypes\x12!\n" +
+	"\fresource_ids\x18\x04 \x03(\tR\vresourceIds\x12\x1b\n" +
+	"\tactor_ids\x18\x05 \x03(\tR\bactorIds\x12\x18\n" +
+	"\aactions\x18\x06 \x03(\tR\aactions\x12\x1b\n" +
+	"\x06cursor\x18\b \x01(\tH\x02R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\t \x01(\x05R\x05limit\x12\x1a\n" +
 	"\bincludes\x18\n" +
 	" \x03(\tR\bincludes\x12\x19\n" +
-	"\x05query\x18\v \x01(\tH\aR\x05query\x88\x01\x01B\r\n" +
+	"\x05query\x18\v \x01(\tH\x03R\x05query\x88\x01\x01B\r\n" +
 	"\v_start_dateB\v\n" +
-	"\t_end_dateB\x0e\n" +
-	"\f_resource_idB\v\n" +
-	"\t_actor_idB\t\n" +
-	"\a_actionB\r\n" +
-	"\v_account_idB\t\n" +
+	"\t_end_dateB\t\n" +
 	"\a_cursorB\b\n" +
-	"\x06_query\"\x87\x01\n" +
+	"\x06_queryJ\x04\b\a\x10\bR\n" +
+	"account_id\"\x87\x01\n" +
 	"\x17ListAuditEventsResponse\x12;\n" +
 	"\faudit_events\x18\x01 \x03(\v2\x18.platform.AuditEventInfoR\vauditEvents\x12/\n" +
 	"\tpage_info\x18\x02 \x01(\v2\x12.platform.PageInfoR\bpageInfo\"B\n" +

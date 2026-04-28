@@ -54,9 +54,9 @@ LEFT JOIN api_key ak ON ae.actor_id = ak.type_id AND ae.identity_type = 'api_key
 LEFT JOIN idempotency_key ik ON ae.idempotency_key_id = ik.type_id
 WHERE ae.account_id = sqlc.arg('target_account_id')
 AND (sqlc.arg('include_resource_type_filter') = false OR ae.resource_type IN (sqlc.slice('resource_types')))
-AND (sqlc.arg('resource_id_filter') = '' OR ae.resource_id = sqlc.arg('resource_id_filter'))
-AND (sqlc.arg('actor_id_filter') = '' OR ae.actor_id = sqlc.arg('actor_id_filter'))
-AND (sqlc.arg('action_filter') = '' OR ae.action = sqlc.arg('action_filter'))
+AND (sqlc.arg('include_resource_id_filter') = false OR ae.resource_id IN (sqlc.slice('resource_ids')))
+AND (sqlc.arg('include_actor_id_filter') = false OR ae.actor_id IN (sqlc.slice('actor_ids')))
+AND (sqlc.arg('include_action_filter') = false OR ae.action IN (sqlc.slice('actions')))
 AND (sqlc.narg('start_date') IS NULL OR ae.occurred_at >= sqlc.narg('start_date'))
 AND (sqlc.narg('end_date') IS NULL OR ae.occurred_at <= sqlc.narg('end_date'))
 AND (
@@ -100,9 +100,9 @@ LEFT JOIN api_key ak ON ae.actor_id = ak.type_id AND ae.identity_type = 'api_key
 LEFT JOIN idempotency_key ik ON ae.idempotency_key_id = ik.type_id
 WHERE ae.account_id = sqlc.arg('target_account_id')
 AND (sqlc.arg('include_resource_type_filter') = false OR ae.resource_type IN (sqlc.slice('resource_types')))
-AND (sqlc.arg('resource_id_filter') = '' OR ae.resource_id = sqlc.arg('resource_id_filter'))
-AND (sqlc.arg('actor_id_filter') = '' OR ae.actor_id = sqlc.arg('actor_id_filter'))
-AND (sqlc.arg('action_filter') = '' OR ae.action = sqlc.arg('action_filter'))
+AND (sqlc.arg('include_resource_id_filter') = false OR ae.resource_id IN (sqlc.slice('resource_ids')))
+AND (sqlc.arg('include_actor_id_filter') = false OR ae.actor_id IN (sqlc.slice('actor_ids')))
+AND (sqlc.arg('include_action_filter') = false OR ae.action IN (sqlc.slice('actions')))
 AND (sqlc.narg('start_date') IS NULL OR ae.occurred_at >= sqlc.narg('start_date'))
 AND (sqlc.narg('end_date') IS NULL OR ae.occurred_at <= sqlc.narg('end_date'))
 AND (

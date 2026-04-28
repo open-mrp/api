@@ -68,10 +68,9 @@ func (m *auditEventSvcImpl) ListAuditEvents(ctx context.Context, req *ListAuditE
 
 	pbReq := &pb.ListAuditEventsRequest{
 		ResourceTypes: stringsFromObjectTypes(req.ResourceTypes),
-		ResourceId:    req.ResourceID,
-		ActorId:       req.ActorID,
-		Action:        stringPtrFromAction(req.Action),
-		AccountId:     req.AccountID,
+		ResourceIds:   req.ResourceIDs,
+		ActorIds:      req.ActorIDs,
+		Actions:       stringsFromActions(req.Actions),
 		Query:         req.Query,
 		Cursor:        req.Cursor,
 		Limit:         req.Limit,
@@ -141,10 +140,13 @@ func stringsFromObjectTypes(ots []constants.ObjectType) []string {
 	return out
 }
 
-func stringPtrFromAction(a *constants.AuditAction) *string {
-	if a == nil {
+func stringsFromActions(actions []constants.AuditAction) []string {
+	if len(actions) == 0 {
 		return nil
 	}
-	s := string(*a)
-	return &s
+	out := make([]string, len(actions))
+	for i, a := range actions {
+		out[i] = string(a)
+	}
+	return out
 }

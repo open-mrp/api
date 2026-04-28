@@ -222,9 +222,9 @@ LEFT JOIN api_key ak ON ae.actor_id = ak.type_id AND ae.identity_type = 'api_key
 LEFT JOIN idempotency_key ik ON ae.idempotency_key_id = ik.type_id
 WHERE ae.account_id = ?
 AND (? = false OR ae.resource_type IN (/*SLICE:resource_types*/?))
-AND (? = '' OR ae.resource_id = ?)
-AND (? = '' OR ae.actor_id = ?)
-AND (? = '' OR ae.action = ?)
+AND (? = false OR ae.resource_id IN (/*SLICE:resource_ids*/?))
+AND (? = false OR ae.actor_id IN (/*SLICE:actor_ids*/?))
+AND (? = false OR ae.action IN (/*SLICE:actions*/?))
 AND (? IS NULL OR ae.occurred_at >= ?)
 AND (? IS NULL OR ae.occurred_at <= ?)
 AND (
@@ -246,9 +246,12 @@ type ListAuditEventsBackwardParams struct {
 	TargetAccountID           string
 	IncludeResourceTypeFilter interface{}
 	ResourceTypes             []string
-	ResourceIDFilter          string
-	ActorIDFilter             string
-	ActionFilter              string
+	IncludeResourceIDFilter   interface{}
+	ResourceIds               []string
+	IncludeActorIDFilter      interface{}
+	ActorIds                  []string
+	IncludeActionFilter       interface{}
+	Actions                   []string
 	StartDate                 sql.NullTime
 	EndDate                   sql.NullTime
 	SearchQuery               sql.NullString
@@ -296,12 +299,33 @@ func (q *Queries) ListAuditEventsBackward(ctx context.Context, arg ListAuditEven
 	} else {
 		query = strings.Replace(query, "/*SLICE:resource_types*/?", "NULL", 1)
 	}
-	queryParams = append(queryParams, arg.ResourceIDFilter)
-	queryParams = append(queryParams, arg.ResourceIDFilter)
-	queryParams = append(queryParams, arg.ActorIDFilter)
-	queryParams = append(queryParams, arg.ActorIDFilter)
-	queryParams = append(queryParams, arg.ActionFilter)
-	queryParams = append(queryParams, arg.ActionFilter)
+	queryParams = append(queryParams, arg.IncludeResourceIDFilter)
+	if len(arg.ResourceIds) > 0 {
+		for _, v := range arg.ResourceIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:resource_ids*/?", strings.Repeat(",?", len(arg.ResourceIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:resource_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.IncludeActorIDFilter)
+	if len(arg.ActorIds) > 0 {
+		for _, v := range arg.ActorIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:actor_ids*/?", strings.Repeat(",?", len(arg.ActorIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:actor_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.IncludeActionFilter)
+	if len(arg.Actions) > 0 {
+		for _, v := range arg.Actions {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:actions*/?", strings.Repeat(",?", len(arg.Actions))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:actions*/?", "NULL", 1)
+	}
 	queryParams = append(queryParams, arg.StartDate)
 	queryParams = append(queryParams, arg.StartDate)
 	queryParams = append(queryParams, arg.EndDate)
@@ -385,9 +409,9 @@ LEFT JOIN api_key ak ON ae.actor_id = ak.type_id AND ae.identity_type = 'api_key
 LEFT JOIN idempotency_key ik ON ae.idempotency_key_id = ik.type_id
 WHERE ae.account_id = ?
 AND (? = false OR ae.resource_type IN (/*SLICE:resource_types*/?))
-AND (? = '' OR ae.resource_id = ?)
-AND (? = '' OR ae.actor_id = ?)
-AND (? = '' OR ae.action = ?)
+AND (? = false OR ae.resource_id IN (/*SLICE:resource_ids*/?))
+AND (? = false OR ae.actor_id IN (/*SLICE:actor_ids*/?))
+AND (? = false OR ae.action IN (/*SLICE:actions*/?))
 AND (? IS NULL OR ae.occurred_at >= ?)
 AND (? IS NULL OR ae.occurred_at <= ?)
 AND (
@@ -410,9 +434,12 @@ type ListAuditEventsForwardParams struct {
 	TargetAccountID           string
 	IncludeResourceTypeFilter interface{}
 	ResourceTypes             []string
-	ResourceIDFilter          string
-	ActorIDFilter             string
-	ActionFilter              string
+	IncludeResourceIDFilter   interface{}
+	ResourceIds               []string
+	IncludeActorIDFilter      interface{}
+	ActorIds                  []string
+	IncludeActionFilter       interface{}
+	Actions                   []string
 	StartDate                 sql.NullTime
 	EndDate                   sql.NullTime
 	SearchQuery               sql.NullString
@@ -460,12 +487,33 @@ func (q *Queries) ListAuditEventsForward(ctx context.Context, arg ListAuditEvent
 	} else {
 		query = strings.Replace(query, "/*SLICE:resource_types*/?", "NULL", 1)
 	}
-	queryParams = append(queryParams, arg.ResourceIDFilter)
-	queryParams = append(queryParams, arg.ResourceIDFilter)
-	queryParams = append(queryParams, arg.ActorIDFilter)
-	queryParams = append(queryParams, arg.ActorIDFilter)
-	queryParams = append(queryParams, arg.ActionFilter)
-	queryParams = append(queryParams, arg.ActionFilter)
+	queryParams = append(queryParams, arg.IncludeResourceIDFilter)
+	if len(arg.ResourceIds) > 0 {
+		for _, v := range arg.ResourceIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:resource_ids*/?", strings.Repeat(",?", len(arg.ResourceIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:resource_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.IncludeActorIDFilter)
+	if len(arg.ActorIds) > 0 {
+		for _, v := range arg.ActorIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:actor_ids*/?", strings.Repeat(",?", len(arg.ActorIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:actor_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.IncludeActionFilter)
+	if len(arg.Actions) > 0 {
+		for _, v := range arg.Actions {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:actions*/?", strings.Repeat(",?", len(arg.Actions))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:actions*/?", "NULL", 1)
+	}
 	queryParams = append(queryParams, arg.StartDate)
 	queryParams = append(queryParams, arg.StartDate)
 	queryParams = append(queryParams, arg.EndDate)

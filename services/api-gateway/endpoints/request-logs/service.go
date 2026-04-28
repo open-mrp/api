@@ -86,14 +86,29 @@ func (m *requestLogSvcImpl) ListRequestLogs(ctx context.Context, req *ListReques
 
 	requestedIncludes := expandedRequestLogIncludeKeys(appctx.GetRequestedIncludeKeys(ctx))
 
+	methods := make([]string, len(req.Methods))
+	for i, m := range req.Methods {
+		methods[i] = string(m)
+	}
+
+	errorCodes := make([]string, len(req.ErrorCodes))
+	for i, ec := range req.ErrorCodes {
+		errorCodes[i] = string(ec)
+	}
+
+	actorTypes := make([]string, len(req.ActorTypes))
+	for i, at := range req.ActorTypes {
+		actorTypes[i] = string(at)
+	}
+
 	pbReq := &pb.ListRequestLogsRequest{
 		Query:            req.Query,
-		Methods:          req.Methods,
+		Methods:          methods,
 		StatusCodes:      req.StatusCodes,
-		ErrorCodes:       req.ErrorCodes,
+		ErrorCodes:       errorCodes,
 		AccountIds:       req.AccountIDs,
 		ActorIds:         req.ActorIDs,
-		ActorTypes:       req.ActorTypes,
+		ActorTypes:       actorTypes,
 		NormalizedRoutes: req.NormalizedRoutes,
 		Hosts:            req.Hosts,
 		MinLatencyUs:     req.MinLatencyUs,

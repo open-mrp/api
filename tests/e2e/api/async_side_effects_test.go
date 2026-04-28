@@ -20,9 +20,9 @@ func expectAuditEvent(t *testing.T, resourceID, resourceType, action string) {
 	t.Helper()
 	eventually(t, 30*time.Second, 1*time.Second, func() error {
 		list, _, err := apiClient.GetList(auditEventsPath, url.Values{
-			"resource_id":   {resourceID},
-			"resource_type": {resourceType},
-			"action":        {action},
+			"resource_ids":   {resourceID},
+			"resource_types": {resourceType},
+			"actions":        {action},
 		})
 		if err != nil {
 			return err
@@ -42,11 +42,11 @@ func expectAuditEventWithChanges(t *testing.T, resourceID, resourceType, action 
 	var matched map[string]any
 	eventually(t, 30*time.Second, 1*time.Second, func() error {
 		status, body, err := apiClient.GetListRaw(auditEventsPath, url.Values{
-			"resource_id":   {resourceID},
-			"resource_type": {resourceType},
-			"action":        {action},
-			"include":       {"changes"},
-			"limit":         {"25"},
+			"resource_ids":   {resourceID},
+			"resource_types": {resourceType},
+			"actions":        {action},
+			"include":        {"changes"},
+			"limit":          {"25"},
 		})
 		if err != nil {
 			return err
@@ -103,8 +103,8 @@ func expectRequestLog(t *testing.T, method, statusCode, path string) {
 	t.Helper()
 	eventually(t, 30*time.Second, 1*time.Second, func() error {
 		list, _, err := apiClient.GetList(requestLogsPath, url.Values{
-			"method":      {method},
-			"status_code": {statusCode},
+			"methods":      {method},
+			"status_codes": {statusCode},
 			"limit":       {"100"},
 		})
 		if err != nil {

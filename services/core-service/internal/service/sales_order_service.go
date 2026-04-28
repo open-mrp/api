@@ -1294,7 +1294,7 @@ func (s *salesOrderSvcImpl) resolveSalesRepID(ctx context.Context, accountID, bu
 		if idx := strings.Index(base, "-"); idx >= 0 {
 			base = base[:idx]
 		}
-		if zip, err := strconv.Atoi(base); err == nil {
+		if zip, err := strconv.ParseInt(base, 10, 32); err == nil && zip >= 0 {
 			if rep, apiErr := territoryRepo.FindSalesRepByZipcode(ctx, accountID, int32(zip)); apiErr == nil && rep != nil {
 				return rep
 			}

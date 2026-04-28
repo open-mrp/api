@@ -14,29 +14,27 @@ import (
 // ListRequestLogsRequest is a request to list request logs.
 type ListRequestLogsRequest struct {
 	apiresource.PaginationRequest
-	// Filter: start of date range for occurred_at.
+	// Start of date range for occurred_at.
 	StartDate *time.Time `query:"start_date"`
-	// Filter: end of date range for occurred_at.
+	// End of date range for occurred_at.
 	EndDate *time.Time `query:"end_date"`
-	// Filter: HTTP methods (repeatable, exact match).
-	Methods []string `query:"method"`
-	// Filter: HTTP status codes (repeatable, exact match).
-	StatusCodes []int32 `query:"status_code"`
-	// Filter: API error codes (repeatable, exact match).
-	ErrorCodes []string `query:"error_code"`
-	// Filter: actor home account IDs (repeatable, exact match).
-	AccountIDs []string `query:"account_id"`
-	// Filter: actor IDs (repeatable, exact match). Each value is a user.id when
-	// identity_type=user, or an api_key.type_id when identity_type=api_key —
-	// not an account_user.id.
-	ActorIDs []string `query:"actor_id"`
-	// Filter: actor types (repeatable, exact match — "user" or "api_key").
-	ActorTypes []string `query:"actor_type"`
-	// Filter: normalized route templates (repeatable, exact match).
-	NormalizedRoutes []string `query:"normalized_route"`
-	// Filter: request hosts (repeatable, exact match).
-	Hosts []string `query:"host"`
-	// Filter: minimum latency in microseconds.
+	// HTTP methods.
+	Methods []constants.HTTPMethod `query:"methods"`
+	// HTTP status codes.
+	StatusCodes []int32 `query:"status_codes"`
+	// API error codes.
+	ErrorCodes []apierror.ErrorCode `query:"error_codes"`
+	// Actor home account IDs.
+	AccountIDs []string `query:"account_ids"`
+	// Actor identifier. `user.id` when `identity_type`=`user`, or an `api_key.id` when `identity_type`=`api_key`.
+	ActorIDs []string `query:"actor_ids"`
+	// Actor types.
+	ActorTypes []constants.ActorType `query:"actor_types"`
+	// Normalized route templates.
+	NormalizedRoutes []string `query:"normalized_routes"`
+	// Request hosts.
+	Hosts []string `query:"hosts"`
+	// Minimum latency in microseconds.
 	MinLatencyUs *int64 `query:"min_latency_us"`
 }
 

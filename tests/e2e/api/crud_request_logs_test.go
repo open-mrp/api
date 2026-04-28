@@ -124,7 +124,7 @@ func TestRequestLogs_ListPagination(t *testing.T) {
 
 func TestRequestLogs_ListFilterByMethod(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(requestLogsPath, url.Values{"method": {"GET"}, "limit": {"10"}})
+	list, _, err := apiClient.GetList(requestLogsPath, url.Values{"methods": {"GET"}, "limit": {"10"}})
 	if err != nil {
 		t.Skip("Request logs endpoint not accessible")
 		return
@@ -138,7 +138,7 @@ func TestRequestLogs_ListFilterByMethod(t *testing.T) {
 
 func TestRequestLogs_ListFilterByStatusCode(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(requestLogsPath, url.Values{"status_code": {"200"}, "limit": {"10"}})
+	list, _, err := apiClient.GetList(requestLogsPath, url.Values{"status_codes": {"200"}, "limit": {"10"}})
 	if err != nil {
 		t.Skip("Request logs endpoint not accessible")
 		return
@@ -152,18 +152,87 @@ func TestRequestLogs_ListFilterByStatusCode(t *testing.T) {
 
 func TestRequestLogs_ListFilterByActorType(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(requestLogsPath, url.Values{"actor_type": {"api_key"}, "limit": {"10"}})
+	list, _, err := apiClient.GetList(requestLogsPath, url.Values{"actor_types": {"api_key"}, "limit": {"10"}})
 	if err != nil {
 		t.Skip("Request logs endpoint not accessible")
 		return
 	}
 	// Our test harness authenticates with an API key, so we should find results.
-	assert.GreaterOrEqual(t, len(list.Data), 1, "Should find at least 1 log with actor_type=api_key")
+	require.GreaterOrEqual(t, len(list.Data), 1, "Should find at least 1 log with actor_type=api_key")
+	for _, item := range list.Data {
+		m := parseJSON(item)
+		assert.Equal(t, "api_key", jsonField(m, "identity_type"), "All returned logs should have identity_type=api_key")
+	}
+}
+
+func TestRequestLogs_ListFilterByActorTypeImpossible(t *testing.T) {
+	t.Parallel()
+	list, _, err := apiClient.GetList(requestLogsPath, url.Values{"actor_types": {"zzz_no_such_type"}})
+	if err != nil {
+		t.Skip("Request logs endpoint not accessible")
+		return
+	}
+	assertEmptyListData(t, list.Data, "Filtering by impossible actor_type should return no results")
+}
+
+func TestRequestLogs_ListFilterByActorIDSingle(t *testing.T) {
+	t.Parallel()
+	list, _, err := apiClient.GetList(requestLogsPath, url.Values{
+		"include": {"actor"},
+		"limit":   {"10"},
+	})
+	if err != nil || len(list.Data) == 0 {
+		t.Skip("No request logs available to discover actor IDs")
+		return
+	}
+	var actorID string
+	for _, item := range list.Data {
+		m := parseJSON(item)
+		actor := jsonObject(m, "actor")
+		if actor == nil {
+			continue
+		}
+		actorID = jsonField(actor, "id")
+		if actorID != "" {
+			break
+		}
+	}
+	if actorID == "" {
+		t.Skip("No request logs with an actor ID available")
+		return
+	}
+
+	filtered, _, err := apiClient.GetList(requestLogsPath, url.Values{
+		"actor_ids": {actorID},
+		"include":   {"actor"},
+		"limit":     {"10"},
+	})
+	require.NoError(t, err)
+	require.NotEmpty(t, filtered.Data, "Filtering by a known actor_id should return at least one log")
+
+	for _, item := range filtered.Data {
+		m := parseJSON(item)
+		actor := jsonObject(m, "actor")
+		require.NotNil(t, actor, "actor should be present with ?include=actor")
+		assert.Equal(t, actorID, jsonField(actor, "id"), "All results should match the filtered actor_id")
+	}
+}
+
+func TestRequestLogs_ListFilterByActorIDsImpossible(t *testing.T) {
+	t.Parallel()
+	list, _, err := apiClient.GetList(requestLogsPath, url.Values{
+		"actor_ids": {"u_zzzzzzzzzzzzzzzz", "ak_zzzzzzzzzzzzzzzz"},
+	})
+	if err != nil {
+		t.Skip("Request logs endpoint not accessible")
+		return
+	}
+	assertEmptyListData(t, list.Data, "Filtering by impossible actor_ids should return no results")
 }
 
 func TestRequestLogs_ListFilterNoResults(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(requestLogsPath, url.Values{"method": {"ZZZZ"}})
+	list, _, err := apiClient.GetList(requestLogsPath, url.Values{"methods": {"ZZZZ"}})
 	if err != nil {
 		t.Skip("Request logs endpoint not accessible")
 		return
@@ -211,8 +280,8 @@ func TestRequestLogs_ListFilterByMultipleMethods(t *testing.T) {
 	}
 
 	list, _, err := apiClient.GetList(requestLogsPath, url.Values{
-		"method": methods,
-		"limit":  {"25"},
+		"methods": methods,
+		"limit":   {"25"},
 	})
 	require.NoError(t, err)
 	require.NotEmpty(t, list.Data, "Filter by %v should return results", methods)
@@ -234,8 +303,8 @@ func TestRequestLogs_ListFilterByMultipleStatusCodes(t *testing.T) {
 	}
 
 	list, _, err := apiClient.GetList(requestLogsPath, url.Values{
-		"status_code": codes,
-		"limit":       {"25"},
+		"status_codes": codes,
+		"limit":        {"25"},
 	})
 	require.NoError(t, err)
 	require.NotEmpty(t, list.Data, "Filter by status_codes %v should return results", codes)
@@ -251,7 +320,7 @@ func TestRequestLogs_ListFilterByMultipleStatusCodes(t *testing.T) {
 func TestRequestLogs_ListFilterByMultipleStatusCodesAllImpossible(t *testing.T) {
 	t.Parallel()
 	list, _, err := apiClient.GetList(requestLogsPath, url.Values{
-		"status_code": {"998", "999"},
+		"status_codes": {"998", "999"},
 	})
 	require.NoError(t, err)
 	assertEmptyListData(t, list.Data, "Filter by impossible status codes should return no results")
@@ -260,8 +329,8 @@ func TestRequestLogs_ListFilterByMultipleStatusCodesAllImpossible(t *testing.T) 
 func TestRequestLogs_ListFilterByMultipleActorTypes(t *testing.T) {
 	t.Parallel()
 	list, _, err := apiClient.GetList(requestLogsPath, url.Values{
-		"actor_type": {"user", "api_key"},
-		"limit":      {"25"},
+		"actor_types": {"user", "api_key"},
+		"limit":       {"25"},
 	})
 	require.NoError(t, err)
 
@@ -292,9 +361,9 @@ func TestRequestLogs_ListFilterByMultipleAccountIDs(t *testing.T) {
 
 	// Filter by [real, impossible] — every result should still be the real one.
 	filtered, _, err := apiClient.GetList(requestLogsPath, url.Values{
-		"account_id": {accountID, "acct_zzzzzzzzzzzzzzzz"},
-		"include":    {"account"},
-		"limit":      {"10"},
+		"account_ids": {accountID, "acct_zzzzzzzzzzzzzzzz"},
+		"include":     {"account"},
+		"limit":       {"10"},
 	})
 	require.NoError(t, err)
 
@@ -335,9 +404,9 @@ func TestRequestLogs_ListFilterByMultipleActorIDs(t *testing.T) {
 	}
 
 	filtered, _, err := apiClient.GetList(requestLogsPath, url.Values{
-		"actor_id": {actorID, "u_zzzzzzzzzzzzzzzz"},
-		"include":  {"actor"},
-		"limit":    {"10"},
+		"actor_ids": {actorID, "u_zzzzzzzzzzzzzzzz"},
+		"include":   {"actor"},
+		"limit":     {"10"},
 	})
 	require.NoError(t, err)
 	require.NotEmpty(t, filtered.Data, "Filtering by a known actor ID should match at least one log")
@@ -359,8 +428,8 @@ func TestRequestLogs_ListFilterByMultipleNormalizedRoutes(t *testing.T) {
 	}
 
 	list, _, err := apiClient.GetList(requestLogsPath, url.Values{
-		"normalized_route": routes,
-		"limit":            {"25"},
+		"normalized_routes": routes,
+		"limit":             {"25"},
 	})
 	require.NoError(t, err)
 	require.NotEmpty(t, list.Data, "Filter by normalized_routes %v should return results", routes)
@@ -382,7 +451,7 @@ func TestRequestLogs_ListFilterByMultipleHosts(t *testing.T) {
 	}
 
 	list, _, err := apiClient.GetList(requestLogsPath, url.Values{
-		"host":  {hosts[0], "no-such-host.example.invalid"},
+		"hosts": {hosts[0], "no-such-host.example.invalid"},
 		"limit": {"25"},
 	})
 	require.NoError(t, err)
@@ -397,10 +466,65 @@ func TestRequestLogs_ListFilterByMultipleHosts(t *testing.T) {
 func TestRequestLogs_ListFilterByMultipleErrorCodesAllImpossible(t *testing.T) {
 	t.Parallel()
 	list, _, err := apiClient.GetList(requestLogsPath, url.Values{
-		"error_code": {"zzz_no_match_a", "zzz_no_match_b"},
+		"error_codes": {"zzz_no_match_a", "zzz_no_match_b"},
 	})
 	require.NoError(t, err)
 	assertEmptyListData(t, list.Data, "Filter by impossible error codes should return no results")
+}
+
+func TestRequestLogs_ListFilterByNormalizedRoutesImpossible(t *testing.T) {
+	t.Parallel()
+	list, _, err := apiClient.GetList(requestLogsPath, url.Values{
+		"normalized_routes": {"/zzz/no/such/route"},
+	})
+	if err != nil {
+		t.Skip("Request logs endpoint not accessible")
+		return
+	}
+	assertEmptyListData(t, list.Data, "Filtering by impossible normalized_route should return no results")
+}
+
+func TestRequestLogs_ListFilterByHostsImpossible(t *testing.T) {
+	t.Parallel()
+	list, _, err := apiClient.GetList(requestLogsPath, url.Values{
+		"hosts": {"https://zzz-no-such-host.invalid"},
+	})
+	if err != nil {
+		t.Skip("Request logs endpoint not accessible")
+		return
+	}
+	assertEmptyListData(t, list.Data, "Filtering by impossible host should return no results")
+}
+
+func TestRequestLogs_ListFilterByMinLatency(t *testing.T) {
+	t.Parallel()
+	// A latency of 0 should not exclude any logs.
+	zero := int64(0)
+	_ = zero
+	list, _, err := apiClient.GetList(requestLogsPath, url.Values{
+		"min_latency_us": {"0"},
+		"limit":          {"5"},
+	})
+	if err != nil {
+		t.Skip("Request logs endpoint not accessible")
+		return
+	}
+	// Any log should satisfy latency >= 0.
+	for _, item := range list.Data {
+		m := parseJSON(item)
+		latency := jsonField(m, "latency_us")
+		assert.NotEmpty(t, latency, "latency_us should be present on each log")
+	}
+
+	// A very large latency threshold should return no results.
+	list2, _, err := apiClient.GetList(requestLogsPath, url.Values{
+		"min_latency_us": {"9999999999999"},
+	})
+	if err != nil {
+		t.Skip("Request logs endpoint not accessible")
+		return
+	}
+	assertEmptyListData(t, list2.Data, "Filtering by extremely high min_latency_us should return no results")
 }
 
 // Removed-filter regression: actor_name and exact_match are no longer

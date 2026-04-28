@@ -11,7 +11,7 @@ jobs:
     outputs:
       go: ${{ steps.filter.outputs.go }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: dorny/paths-filter@v3
         id: filter
         with:
@@ -31,7 +31,7 @@ jobs:
     env:
       CGO_ENABLED: 0
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -52,7 +52,7 @@ jobs:
     env:
       CGO_ENABLED: 0
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -63,7 +63,7 @@ jobs:
           cache-dependency-path: go.sum
 
       - name: Cache gosec
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         id: cache-gosec
         with:
           path: ~/go/bin/gosec
@@ -96,7 +96,7 @@ jobs:
     env:
       CGO_ENABLED: 0
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -107,7 +107,7 @@ jobs:
           cache-dependency-path: go.sum
 
       - name: Cache staticcheck
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         id: cache-staticcheck
         with:
           path: ~/go/bin/staticcheck
@@ -137,7 +137,7 @@ jobs:
     env:
       CGO_ENABLED: 0
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -167,7 +167,7 @@ jobs:
     env:
       GOTOOLCHAIN: local
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -176,7 +176,7 @@ jobs:
           cache-dependency-path: go.sum
 
       - name: Cache Go build/test results
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cache/go-build
           key: ${{ runner.os }}-go-test-${{ hashFiles('**/*.go', 'go.sum') }}

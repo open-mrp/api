@@ -18,16 +18,14 @@ type ListAuditEventsRequest struct {
 	StartDate *time.Time `query:"start_date"`
 	// End of date range for occurred_at.
 	EndDate *time.Time `query:"end_date"`
-	// Resource types of the audited entity (repeatable, exact match).
+	// Resource types of the audited entity.
 	ResourceTypes []constants.ObjectType `query:"resource_types"`
-	// Audited resource IDs (repeatable, exact match).
-	ResourceIDs []string `query:"resource_id"`
-	// Actor IDs (repeatable, exact match). Each value is a user.id when
-	// identity_type=user, or an api_key.type_id when identity_type=api_key —
-	// not an account_user.id.
-	ActorIDs []string `query:"actor_id"`
-	// Audit actions (repeatable, exact match).
-	Actions []constants.AuditAction `query:"action"`
+	// Audited resource IDs.
+	ResourceIDs []string `query:"resource_ids"`
+	// Actor identifier. `user.id` when `identity_type`=`user`, or an `api_key.id` when `identity_type`=`api_key`.
+	ActorIDs []string `query:"actor_ids"`
+	// Audit actions.
+	Actions []constants.AuditAction `query:"actions"`
 }
 
 type ListAuditEventsEndpoint struct{}

@@ -14,11 +14,11 @@ import (
 type ListAgentsRequest struct {
 	apiresource.PaginationRequest
 	// Filter by account-level status. Defaults to "active".
-	Status []constants.AgentAccountStatus `query:"status" default:"active"`
+	Status []constants.AgentAccountStatus `query:"statuses" default:"active"`
 	// Filter by definition type (e.g. "system", "custom").
-	DefinitionType []string `query:"definition_type"`
+	DefinitionType []string `query:"definition_types"`
 	// Filter by trigger type (e.g. "manual", "scheduled", "event").
-	TriggerType []string `query:"trigger_type"`
+	TriggerType []string `query:"trigger_types"`
 }
 
 type ListAgentsEndpoint struct{}

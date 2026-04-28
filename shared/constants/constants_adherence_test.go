@@ -105,6 +105,7 @@ func parseEnumTypes(t *testing.T) []enumTypeInfo {
 // reflection-based method calls.
 var typeRegistry = map[string]any{
 	"ActorType":                       ActorType(""),
+	"HTTPMethod":                      HTTPMethod(""),
 	"CommissionPolicy":                CommissionPolicy(""),
 	"AccountRelationNotificationType": AccountRelationNotificationType(""),
 	"FreightPolicy":                   FreightPolicy(""),

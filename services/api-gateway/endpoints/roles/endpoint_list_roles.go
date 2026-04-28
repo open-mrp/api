@@ -14,7 +14,7 @@ import (
 type ListRolesRequest struct {
 	apiresource.PaginationRequest
 	// Filter by role type code(s).
-	RoleType []string `query:"role_type"`
+	RoleType []string `query:"role_types"`
 }
 
 type ListRolesEndpoint struct{}

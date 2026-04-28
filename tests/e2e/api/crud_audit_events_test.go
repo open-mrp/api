@@ -40,7 +40,7 @@ func TestAuditEvents_ListSearchNoResults(t *testing.T) {
 
 func TestAuditEvents_FilterByAction(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(auditEventsPath, url.Values{"action": {"create"}, "limit": {"5"}})
+	list, _, err := apiClient.GetList(auditEventsPath, url.Values{"actions": {"create"}, "limit": {"5"}})
 	require.NoError(t, err)
 	for _, item := range list.Data {
 		assert.Equal(t, "create", DataItemField(item, "action"))
@@ -123,8 +123,8 @@ func TestAuditEvents_FilterByMultipleActions(t *testing.T) {
 	}
 
 	list, _, err := apiClient.GetList(auditEventsPath, url.Values{
-		"action": actions,
-		"limit":  {"50"},
+		"actions": actions,
+		"limit":   {"50"},
 	})
 	require.NoError(t, err)
 	require.NotEmpty(t, list.Data, "Filter by actions %v should return results", actions)
@@ -139,10 +139,31 @@ func TestAuditEvents_FilterByMultipleActions(t *testing.T) {
 func TestAuditEvents_FilterByMultipleActionsAllImpossible(t *testing.T) {
 	t.Parallel()
 	list, _, err := apiClient.GetList(auditEventsPath, url.Values{
-		"action": {"zzz_no_match_a", "zzz_no_match_b"},
+		"actions": {"zzz_no_match_a", "zzz_no_match_b"},
 	})
 	require.NoError(t, err)
 	assertEmptyListData(t, list.Data, "Filter by impossible actions should return no results")
+}
+
+func TestAuditEvents_FilterBySingleResourceID(t *testing.T) {
+	t.Parallel()
+	ids := discoverDistinctAuditValues(t, "resource_id", 1)
+	if len(ids) == 0 {
+		t.Skip("No resource_ids available in recent audit events")
+		return
+	}
+	resourceID := ids[0]
+
+	list, _, err := apiClient.GetList(auditEventsPath, url.Values{
+		"resource_ids": {resourceID},
+		"limit":        {"25"},
+	})
+	require.NoError(t, err)
+	require.NotEmpty(t, list.Data, "Filtering by resource_id %q should return at least one event", resourceID)
+
+	for _, item := range list.Data {
+		assert.Equal(t, resourceID, DataItemField(item, "resource_id"), "All results should match the filtered resource_id")
+	}
 }
 
 func TestAuditEvents_FilterByMultipleResourceIDs(t *testing.T) {
@@ -154,8 +175,8 @@ func TestAuditEvents_FilterByMultipleResourceIDs(t *testing.T) {
 	}
 
 	list, _, err := apiClient.GetList(auditEventsPath, url.Values{
-		"resource_id": ids,
-		"limit":       {"25"},
+		"resource_ids": ids,
+		"limit":        {"25"},
 	})
 	require.NoError(t, err)
 	require.NotEmpty(t, list.Data, "Filter by resource_ids %v should return results", ids)
@@ -167,39 +188,75 @@ func TestAuditEvents_FilterByMultipleResourceIDs(t *testing.T) {
 	}
 }
 
-func TestAuditEvents_FilterByMultipleActorIDs(t *testing.T) {
+func TestAuditEvents_FilterByResourceIDsImpossible(t *testing.T) {
 	t.Parallel()
-	// Discover an actor.id from recent events with ?include=actor.
+	list, _, err := apiClient.GetList(auditEventsPath, url.Values{
+		"resource_ids": {"zzz_no_such_resource_id"},
+	})
+	require.NoError(t, err)
+	assertEmptyListData(t, list.Data, "Filtering by impossible resource_id should return no results")
+}
+
+// discoverAuditActorID fetches recent events with ?include=actor and returns
+// the first actor ID found, or empty string if none.
+func discoverAuditActorID(t *testing.T) string {
+	t.Helper()
 	list, _, err := apiClient.GetList(auditEventsPath, url.Values{
 		"include": {"actor"},
 		"limit":   {"10"},
 	})
-	require.NoError(t, err)
-	if len(list.Data) == 0 {
-		t.Skip("No audit events available to discover actor IDs")
-		return
+	if err != nil || len(list.Data) == 0 {
+		return ""
 	}
-	var actorID string
 	for _, item := range list.Data {
 		m := parseJSON(item)
 		actor := jsonObject(m, "actor")
 		if actor == nil {
 			continue
 		}
-		actorID = jsonField(actor, "id")
-		if actorID != "" {
-			break
+		if id := jsonField(actor, "id"); id != "" {
+			return id
 		}
 	}
+	return ""
+}
+
+func TestAuditEvents_FilterByActorIDSingle(t *testing.T) {
+	t.Parallel()
+	actorID := discoverAuditActorID(t)
 	if actorID == "" {
 		t.Skip("No audit events with an actor ID available")
 		return
 	}
 
 	filtered, _, err := apiClient.GetList(auditEventsPath, url.Values{
-		"actor_id": {actorID, "u_zzzzzzzzzzzzzzzz"},
-		"include":  {"actor"},
-		"limit":    {"25"},
+		"actor_ids": {actorID},
+		"include":   {"actor"},
+		"limit":     {"25"},
+	})
+	require.NoError(t, err)
+	require.NotEmpty(t, filtered.Data, "Filtering by a known actor_id should return at least one event")
+
+	for _, item := range filtered.Data {
+		m := parseJSON(item)
+		actor := jsonObject(m, "actor")
+		require.NotNil(t, actor, "actor should be present with ?include=actor")
+		assert.Equal(t, actorID, jsonField(actor, "id"), "All results should match the filtered actor_id")
+	}
+}
+
+func TestAuditEvents_FilterByMultipleActorIDs(t *testing.T) {
+	t.Parallel()
+	actorID := discoverAuditActorID(t)
+	if actorID == "" {
+		t.Skip("No audit events with an actor ID available")
+		return
+	}
+
+	filtered, _, err := apiClient.GetList(auditEventsPath, url.Values{
+		"actor_ids": {actorID, "u_zzzzzzzzzzzzzzzz"},
+		"include":   {"actor"},
+		"limit":     {"25"},
 	})
 	require.NoError(t, err)
 	require.NotEmpty(t, filtered.Data, "Filtering by a known actor_id should match at least one event")
@@ -210,6 +267,15 @@ func TestAuditEvents_FilterByMultipleActorIDs(t *testing.T) {
 		require.NotNil(t, actor)
 		assert.Equal(t, actorID, jsonField(actor, "id"))
 	}
+}
+
+func TestAuditEvents_FilterByActorIDsImpossible(t *testing.T) {
+	t.Parallel()
+	list, _, err := apiClient.GetList(auditEventsPath, url.Values{
+		"actor_ids": {"u_zzzzzzzzzzzzzzzz", "ak_zzzzzzzzzzzzzzzz"},
+	})
+	require.NoError(t, err)
+	assertEmptyListData(t, list.Data, "Filtering by impossible actor_ids should return no results")
 }
 
 // account_id was a dead filter (never reached SQL) and has been removed.

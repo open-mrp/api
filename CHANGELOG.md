@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.4](https://github.com/Augno/api/compare/v0.15.3...v0.15.4) (2026-04-29)
+
+
+### Bug Fixes
+
+* error with request logs and s3 objects ([#222](https://github.com/Augno/api/issues/222)) ([d088a71](https://github.com/Augno/api/commit/d088a7196c98a34c3fbd2b5646a3d2b9ce0330df))
+
 ## [0.15.3](https://github.com/Augno/api/compare/v0.15.2...v0.15.3) (2026-04-28)
 
 

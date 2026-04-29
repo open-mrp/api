@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.5](https://github.com/Augno/api/compare/v0.15.4...v0.15.5) (2026-04-29)
+
+
+### Bug Fixes
+
+* reject empty strings on patch requests ([#224](https://github.com/Augno/api/issues/224)) ([05aa9eb](https://github.com/Augno/api/commit/05aa9eb26c991e93a933dfb59d26c8207f09a6ea))
+
 ## [0.15.4](https://github.com/Augno/api/compare/v0.15.3...v0.15.4) (2026-04-29)
 
 

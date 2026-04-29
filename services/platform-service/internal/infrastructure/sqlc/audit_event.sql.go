@@ -102,7 +102,7 @@ func (q *Queries) DeleteExpiredAuditEvents(ctx context.Context, limit int32) (sq
 
 const findAuditEventByID = `-- name: FindAuditEventByID :one
 SELECT ae.type_id,
-       COALESCE(au.id, ae.actor_id) AS actor_id,
+       COALESCE(au.id, ae.actor_id, '') AS actor_id,
        ae.actor_type,
        ae.identity_type,
        ae.account_id,
@@ -197,7 +197,7 @@ func (q *Queries) FindAuditEventByID(ctx context.Context, arg FindAuditEventByID
 
 const listAuditEventsBackward = `-- name: ListAuditEventsBackward :many
 SELECT ae.type_id,
-       COALESCE(au.id, ae.actor_id) AS actor_id,
+       COALESCE(au.id, ae.actor_id, '') AS actor_id,
        ae.actor_type,
        ae.identity_type,
        ae.account_id,
@@ -385,7 +385,7 @@ func (q *Queries) ListAuditEventsBackward(ctx context.Context, arg ListAuditEven
 
 const listAuditEventsForward = `-- name: ListAuditEventsForward :many
 SELECT ae.type_id,
-       COALESCE(au.id, ae.actor_id) AS actor_id,
+       COALESCE(au.id, ae.actor_id, '') AS actor_id,
        ae.actor_type,
        ae.identity_type,
        ae.account_id,

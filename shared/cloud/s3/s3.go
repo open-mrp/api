@@ -108,10 +108,14 @@ func (c *Client) FileExists(ctx context.Context, bucket, key string) (bool, *api
 		if errors.As(err, &notFound) {
 			return false, nil
 		}
-		// S3 HeadObject returns a 404 status code as a smithy HTTP response error
+		// S3 HeadObject returns a 404 as a smithy HTTP response error.
+		// It returns 403 instead of 404 when the caller lacks s3:ListBucket
+		// permission, so treat both as "not found".
 		var respErr interface{ HTTPStatusCode() int }
-		if errors.As(err, &respErr) && respErr.HTTPStatusCode() == 404 {
-			return false, nil
+		if errors.As(err, &respErr) {
+			if code := respErr.HTTPStatusCode(); code == 404 || code == 403 {
+				return false, nil
+			}
 		}
 		return false, tracing.Trace(span, apierror.NewInternalError(err, "Failed to check S3 file existence."))
 	}

@@ -1,6 +1,6 @@
 -- name: FindAuditEventByID :one
 SELECT ae.type_id,
-       COALESCE(au.id, ae.actor_id) AS actor_id,
+       COALESCE(au.id, ae.actor_id, '') AS actor_id,
        ae.actor_type,
        ae.identity_type,
        ae.account_id,
@@ -29,7 +29,7 @@ WHERE ae.type_id = ? AND ae.account_id = ?;
 
 -- name: ListAuditEventsForward :many
 SELECT ae.type_id,
-       COALESCE(au.id, ae.actor_id) AS actor_id,
+       COALESCE(au.id, ae.actor_id, '') AS actor_id,
        ae.actor_type,
        ae.identity_type,
        ae.account_id,
@@ -76,7 +76,7 @@ LIMIT ?;
 
 -- name: ListAuditEventsBackward :many
 SELECT ae.type_id,
-       COALESCE(au.id, ae.actor_id) AS actor_id,
+       COALESCE(au.id, ae.actor_id, '') AS actor_id,
        ae.actor_type,
        ae.identity_type,
        ae.account_id,

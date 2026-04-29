@@ -26,7 +26,7 @@ var requestLogRLBaseColumns = []string{
 	"rl.status_code",
 	"rl.latency_us",
 	"rl.api_version",
-	"COALESCE(au.id, rl.actor_id) AS actor_id",
+	"COALESCE(au.id, rl.actor_id, '') AS actor_id",
 	"rl.actor_type",
 	"rl.identity_type",
 	"rl.client_ip_string",

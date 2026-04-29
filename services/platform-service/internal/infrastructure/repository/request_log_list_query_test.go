@@ -42,6 +42,18 @@ func TestBuildListQuery_NoFiltersEmitsOnlyBaselinePredicates(t *testing.T) {
 	}
 }
 
+// Regression: the scan target for actor_id is a non-nullable string, so the
+// SELECT must coalesce to ” rather than letting NULL propagate. NULL
+// happens when rl.actor_id is NULL (e.g. unauthenticated request) and the
+// account_user join fails to match — the un-defaulted COALESCE returns NULL
+// and crashes rows.Scan with "converting NULL to string is unsupported".
+func TestBuildListQuery_ActorIDSelectCoalescesToEmptyString(t *testing.T) {
+	for _, mode := range []queryMode{queryModeBase, queryModeActor, queryModeFull} {
+		sql, _ := buildListQuery(mode, pagination.DirectionForward, "acc_1", emptyFilter(), false, false, false, nil, 101)
+		mustContain(t, sql, "COALESCE(au.id, rl.actor_id, '') AS actor_id")
+	}
+}
+
 func TestBuildListQuery_ActorTypesEmitsInPredicate(t *testing.T) {
 	f := emptyFilter()
 	f.ActorTypes = []string{"user", "api_key"}

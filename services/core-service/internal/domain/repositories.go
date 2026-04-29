@@ -218,6 +218,10 @@ type UnitRepo interface {
 	// GetCurrencyBaseUnitID returns the global currency base unit ID used as the
 	// numerator unit when building monetary price rates.
 	GetCurrencyBaseUnitID(ctx context.Context) (string, *apierror.APIError)
+	// GetDimensionCodes returns a unit-id → unit_dimension_code map for the given
+	// IDs. Used to enforce unit-type constraints (e.g., currency-only numerator
+	// on cost rates) before persisting rate rows.
+	GetDimensionCodes(ctx context.Context, ids []string) (map[string]string, *apierror.APIError)
 	Create(ctx context.Context, id string, params CreateUnitParams) (*Unit, *apierror.APIError)
 	Update(ctx context.Context, params UpdateUnitParams) (*Unit, *apierror.APIError)
 	Delete(ctx context.Context, params DeleteUnitParams) *apierror.APIError
@@ -766,9 +770,11 @@ type VolumeDiscountRepo interface {
 
 type MaterialRepo interface {
 	List(ctx context.Context, params ListMaterialsParams) (*ListMaterialsResult, *apierror.APIError)
+	GetByID(ctx context.Context, accountID, materialID string) (*Material, *apierror.APIError)
 	GetByItemID(ctx context.Context, accountID, itemID string) (*Material, *apierror.APIError)
 	Create(ctx context.Context, id string, params CreateMaterialParams) *apierror.APIError
 	Update(ctx context.Context, params UpdateMaterialParams) *apierror.APIError
+	DeleteByID(ctx context.Context, accountID, materialID string) *apierror.APIError
 	DeleteByItemID(ctx context.Context, accountID, itemID string) *apierror.APIError
 	InsertQuantity(ctx context.Context, id, value, unitID string) *apierror.APIError
 	UpdateQuantity(ctx context.Context, id, value, unitID string) *apierror.APIError
@@ -779,7 +785,7 @@ type MaterialRepo interface {
 
 type SupplierMaterialRepo interface {
 	List(ctx context.Context, params ListSupplierMaterialsParams) (*ListSupplierMaterialsResult, *apierror.APIError)
-	GetBySupplierAndItemID(ctx context.Context, ownerAccountID, supplierAccountID, itemID string) (*SupplierMaterial, *apierror.APIError)
+	GetBySupplierAndMaterialID(ctx context.Context, ownerAccountID, supplierAccountID, materialID string) (*SupplierMaterial, *apierror.APIError)
 	Create(ctx context.Context, id string, params CreateSupplierMaterialParams) (*SupplierMaterial, *apierror.APIError)
 	Update(ctx context.Context, params UpdateSupplierMaterialParams) (*SupplierMaterial, *apierror.APIError)
 	Delete(ctx context.Context, params DeleteSupplierMaterialParams) (*SupplierMaterial, *apierror.APIError)
@@ -916,7 +922,7 @@ type PartRepo interface {
 	ExistsBySKU(ctx context.Context, accountID, sku string, excludeItemID *string) (bool, *apierror.APIError)
 	InsertRate(ctx context.Context, id, value, numeratorUnitID, denominatorUnitID string) *apierror.APIError
 	InsertItem(ctx context.Context, itemID string, params CreatePartParams, unitValueID, burnRateID, unitCostID string) *apierror.APIError
-	TouchUpdatedAt(ctx context.Context, itemID string) *apierror.APIError
+	TouchUpdatedAt(ctx context.Context, partID string) *apierror.APIError
 }
 
 type PermissionGroupRepo interface {

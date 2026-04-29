@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -20,8 +21,8 @@ type UpdateProductRequest struct {
 	Description *string `json:"description,omitempty" nullable:"false"`
 	// Notes.
 	Notes *string `json:"notes,omitempty" nullable:"false"`
-	// Whether visible on the customer portal.
-	IsPortalReady *bool `json:"is_portal_ready,omitempty" nullable:"false"`
+	// Whether visible in the customer portal.
+	PortalVisibility *constants.CustomerPortalVisibility `json:"portal_visibility,omitempty" nullable:"false"`
 }
 
 var sampleUpdateProductSKU = "SKU-002"

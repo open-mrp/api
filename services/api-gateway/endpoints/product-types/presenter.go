@@ -16,7 +16,7 @@ func ProductTypePresenter(pt *pb.ProductTypeInfo) apiresource.ProductType {
 		ID:        pt.Id,
 		Object:    constants.ObjectTypeProductType,
 		Name:      pt.Name,
-		Code:      pt.Code,
+		Code:      constants.ProductTypeCode(pt.Code),
 		CreatedAt: grpcutil.TimestampToTime(pt.CreatedAt),
 		UpdatedAt: grpcutil.TimestampToTime(pt.UpdatedAt),
 	}

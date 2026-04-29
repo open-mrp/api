@@ -6,6 +6,7 @@ import (
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
+	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
@@ -13,6 +14,17 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
+
+func rateInputToProto(r *apirequest.RateInput) *pb.CreateRateInput {
+	if r == nil {
+		return nil
+	}
+	return &pb.CreateRateInput{
+		Value:             r.Value,
+		NumeratorUnitId:   r.NumeratorUnitID,
+		DenominatorUnitId: r.DenominatorUnitID,
+	}
+}
 
 type PartSvc interface {
 	ListParts(ctx context.Context, req *ListPartsRequest) (*apiresource.List[apiresource.Part], *apierror.APIError)
@@ -79,7 +91,7 @@ func (m *partSvcImpl) ListParts(ctx context.Context, req *ListPartsRequest) (*ap
 
 func (m *partSvcImpl) GetPart(ctx context.Context, req *GetPartRequest) (*apiresource.Part, *apierror.APIError) {
 	pbReq := &pb.GetPartRequest{
-		ItemId: req.ItemID,
+		Id: req.ItemID,
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, partSvcTracer, "service.parts.get", domain.ServiceName,
@@ -97,9 +109,14 @@ func (m *partSvcImpl) GetPart(ctx context.Context, req *GetPartRequest) (*apires
 
 func (m *partSvcImpl) CreatePart(ctx context.Context, req *CreatePartRequest) (*apiresource.Part, *apierror.APIError) {
 	pbReq := &pb.CreatePartRequest{
-		Sku:         req.SKU,
-		Description: req.Description,
-		CategoryId:  req.CategoryID,
+		Sku:          req.SKU,
+		Description:  req.Description,
+		Notes:        req.Notes,
+		CategoryId:   req.CategoryID,
+		UnitPrice:    rateInputToProto(req.UnitPrice),
+		UnitCost:     rateInputToProto(req.UnitCost),
+		BurnRate:     rateInputToProto(req.BurnRate),
+		AttributeIds: req.AttributeIDs,
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, partSvcTracer, "service.parts.create", domain.ServiceName,
@@ -117,8 +134,8 @@ func (m *partSvcImpl) CreatePart(ctx context.Context, req *CreatePartRequest) (*
 
 func (m *partSvcImpl) UpdatePart(ctx context.Context, req *UpdatePartRequest) (*apiresource.Part, *apierror.APIError) {
 	pbReq := &pb.UpdatePartRequest{
-		ItemId: req.ItemID,
-		Sku:    req.SKU,
+		Id:  req.ItemID,
+		Sku: req.SKU,
 	}
 
 	if req.Description != nil {
@@ -146,7 +163,7 @@ func (m *partSvcImpl) UpdatePart(ctx context.Context, req *UpdatePartRequest) (*
 
 func (m *partSvcImpl) DeletePart(ctx context.Context, req *DeletePartRequest) (*apiresource.Part, *apierror.APIError) {
 	pbReq := &pb.DeletePartRequest{
-		ItemId: req.ItemID,
+		Id: req.ItemID,
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, partSvcTracer, "service.parts.delete", domain.ServiceName,

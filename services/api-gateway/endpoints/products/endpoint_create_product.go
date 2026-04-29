@@ -6,7 +6,9 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
+	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -19,19 +21,20 @@ type CreateProductRequest struct {
 	// Notes.
 	Notes *string `json:"notes"`
 	// Product type code (e.g. sale, sample).
-	ProductTypeCode string `json:"type" validate:"required,max=255"`
+	ProductTypeCode constants.ProductTypeCode `json:"type" validate:"required"`
 	// Product line ID.
 	ProductLineID *string `json:"product_line_id" validate:"omitempty,max=191"`
 	// Category ID.
 	CategoryID string `json:"category_id" validate:"required,max=191"`
-	// Whether visible on the customer portal.
-	IsPortalReady bool `json:"is_portal_ready"`
-	// Unit price (written into the unit_value rate). Defaults to "0".
-	UnitPrice *string `json:"unit_price"`
-	// Initial unit cost (written into the unit_cost rate). Defaults to "0".
-	UnitCost *string `json:"unit_cost"`
-	// Initial burn rate (written into the burn_rate rate). Defaults to "0".
-	BurnRate *string `json:"burn_rate"`
+	// Whether visible in the customer portal.
+	PortalVisibility *constants.CustomerPortalVisibility `json:"portal_visibility,omitempty" default:"hidden" nullable:"false"`
+	// Initial unit price. When set, numerator must be a currency unit and
+	// denominator must not be.
+	UnitPrice *apirequest.RateInput `json:"unit_price,omitempty"`
+	// Initial unit cost. Same currency rule as unit_price.
+	UnitCost *apirequest.RateInput `json:"unit_cost,omitempty"`
+	// Initial burn rate (waste / scrap). No currency requirement.
+	BurnRate *apirequest.RateInput `json:"burn_rate,omitempty"`
 	// Attribute IDs to connect to the product at creation time.
 	AttributeIDs []string `json:"attribute_ids,omitempty"`
 }
@@ -40,7 +43,6 @@ var sampleCreateProductRequest = &CreateProductRequest{
 	SKU:             apiresource.SampleItemSKU,
 	ProductTypeCode: apiresource.SampleProductTypeCode,
 	CategoryID:      apiresource.SampleItemCategoryID,
-	IsPortalReady:   true,
 }
 
 func (*CreateProductRequest) SchemaExample() any {

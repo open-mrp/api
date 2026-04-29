@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
+	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
@@ -17,8 +18,19 @@ type CreatePartRequest struct {
 	SKU string `json:"sku" validate:"required,max=255"`
 	// Description.
 	Description *string `json:"description"`
+	// Notes.
+	Notes *string `json:"notes,omitempty"`
 	// Category ID.
 	CategoryID string `json:"category_id" validate:"required,max=191"`
+	// Initial unit price. When set, numerator must be a currency unit and
+	// denominator must not be.
+	UnitPrice *apirequest.RateInput `json:"unit_price,omitempty"`
+	// Initial unit cost. Same currency rule as unit_price.
+	UnitCost *apirequest.RateInput `json:"unit_cost,omitempty"`
+	// Initial burn rate (waste / scrap). No currency requirement.
+	BurnRate *apirequest.RateInput `json:"burn_rate,omitempty"`
+	// Attribute IDs to connect to the part at creation time.
+	AttributeIDs []string `json:"attribute_ids,omitempty"`
 }
 
 var sampleCreatePartDescription = "Deep groove ball bearing, 20x47x14mm"
@@ -54,7 +66,7 @@ func (e *CreatePartEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreatePartR
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypePart,
-			Fields:     []string{"category", "unit_value", "unit_cost", "burn_rate"},
+			Fields:     []string{"item", "item.category", "item.unit_value", "item.unit_cost", "item.burn_rate", "item.attributes"},
 		}),
 	}
 }

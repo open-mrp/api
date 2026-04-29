@@ -34,7 +34,7 @@ func buildProductionRunSearchParams(query *string) (numberQuery gosql.NullString
 	if query == nil || *query == "" {
 		return gosql.NullString{}, gosql.NullString{}
 	}
-	return gosql.NullString{String: "%" + *query + "%", Valid: true},
+	return gosql.NullString{String: "%" + db.EscapeLike(*query) + "%", Valid: true},
 		gosql.NullString{String: *query + "%", Valid: true}
 }
 

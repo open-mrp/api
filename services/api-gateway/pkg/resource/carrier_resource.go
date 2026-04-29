@@ -24,7 +24,7 @@ type Carrier struct {
 	// Account number.
 	AccountNumber *string `json:"account_number"`
 	// Customer portal visibility.
-	CustomerPortalVisibility constants.CustomerPortalVisibility `json:"customer_portal_visibility" validate:"required,enum"`
+	CustomerPortalVisibility constants.CustomerPortalVisibility `json:"customer_portal_visibility" validate:"required"`
 	// Owner.
 	Owner *Owner `json:"owner" expandable:"true"`
 	// Service levels.

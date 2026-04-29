@@ -101,7 +101,7 @@ func (r *sandboxAccountRepoImpl) List(ctx context.Context, ownerAccountID string
 
 	searchQuery := gosql.NullString{}
 	if query != nil && *query != "" {
-		searchQuery = gosql.NullString{String: "%" + *query + "%", Valid: true}
+		searchQuery = gosql.NullString{String: "%" + db.EscapeLike(*query) + "%", Valid: true}
 	}
 
 	if includesContains(includes, "owner_account") {

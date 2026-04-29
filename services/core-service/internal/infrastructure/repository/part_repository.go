@@ -255,7 +255,7 @@ func (r *partRepoImpl) Create(ctx context.Context, partID, itemID string, params
 
 	return r.Get(ctx, domain.GetPartParams{
 		AccountID: params.AccountID,
-		ItemID:    itemID,
+		PartID:    partID,
 	})
 }
 
@@ -264,7 +264,7 @@ func (r *partRepoImpl) Get(ctx context.Context, params domain.GetPartParams) (*d
 	defer span.End()
 
 	row, err := r.queries.GetPart(ctx, sqlc.GetPartParams{
-		ItemID:    params.ItemID,
+		PartID:    params.PartID,
 		AccountID: params.AccountID,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
@@ -411,7 +411,7 @@ func (r *partRepoImpl) Delete(ctx context.Context, params domain.DeletePartParam
 	defer span.End()
 
 	err := r.queries.SoftDeletePart(ctx, sqlc.SoftDeletePartParams{
-		ItemID:    params.ItemID,
+		PartID:    params.PartID,
 		AccountID: params.AccountID,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
@@ -459,11 +459,11 @@ func (r *partRepoImpl) InsertRate(ctx context.Context, id, value, numeratorUnitI
 	return nil
 }
 
-func (r *partRepoImpl) TouchUpdatedAt(ctx context.Context, itemID string) *apierror.APIError {
+func (r *partRepoImpl) TouchUpdatedAt(ctx context.Context, partID string) *apierror.APIError {
 	ctx, span := partRepoTracer.Start(ctx, "repository.part.touch_updated_at")
 	defer span.End()
 
-	err := r.queries.TouchPartUpdatedAt(ctx, itemID)
+	err := r.queries.TouchPartUpdatedAt(ctx, partID)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
@@ -479,11 +479,16 @@ func (r *partRepoImpl) InsertItem(ctx context.Context, itemID string, params dom
 	if params.Description != nil {
 		description = gosql.NullString{String: *params.Description, Valid: true}
 	}
+	notes := gosql.NullString{}
+	if params.Notes != nil {
+		notes = gosql.NullString{String: *params.Notes, Valid: true}
+	}
 
 	err := r.queries.InsertItemForPart(ctx, sqlc.InsertItemForPartParams{
 		ID:             itemID,
 		Sku:            params.SKU,
 		Description:    description,
+		Notes:          notes,
 		UnitValueID:    unitValueID,
 		BurnRateID:     burnRateID,
 		AccountID:      params.AccountID,

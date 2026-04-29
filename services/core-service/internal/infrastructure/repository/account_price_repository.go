@@ -131,7 +131,7 @@ func buildAccountPriceSearchParams(query *string) gosql.NullString {
 	if query == nil || *query == "" {
 		return gosql.NullString{}
 	}
-	return gosql.NullString{String: "%" + *query + "%", Valid: true}
+	return gosql.NullString{String: "%" + db.EscapeLike(*query) + "%", Valid: true}
 }
 
 func (r *accountPriceRepoImpl) List(ctx context.Context, params domain.ListAccountPricesParams) (*domain.ListAccountPricesResult, *apierror.APIError) {

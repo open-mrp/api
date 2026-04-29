@@ -171,7 +171,7 @@ WHERE sm.supplier_account_id = sqlc.arg('supplier_account_id')
 ORDER BY sm.created_at ASC, sm.id ASC
 LIMIT ?;
 
--- name: GetSupplierMaterialBySupplierAndItemID :one
+-- name: GetSupplierMaterialBySupplierAndMaterialID :one
 SELECT
     sm.id,
     sm.material_id,
@@ -241,7 +241,7 @@ JOIN rate rv ON rv.id = i.unit_value_id
 JOIN rate rc ON rc.id = i.unit_cost_id
 JOIN rate rb ON rb.id = i.burn_rate_id
 WHERE sm.supplier_account_id = sqlc.arg('supplier_account_id')
-  AND m.item_id = sqlc.arg('item_id')
+  AND sm.material_id = sqlc.arg('material_id')
   AND sm.owner_account_id = sqlc.arg('owner_account_id')
   AND i.deleted_at IS NULL;
 

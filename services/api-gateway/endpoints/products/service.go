@@ -6,13 +6,26 @@ import (
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
+	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
+
+func rateInputToProto(r *apirequest.RateInput) *pb.CreateRateInput {
+	if r == nil {
+		return nil
+	}
+	return &pb.CreateRateInput{
+		Value:             r.Value,
+		NumeratorUnitId:   r.NumeratorUnitID,
+		DenominatorUnitId: r.DenominatorUnitID,
+	}
+}
 
 type ProductSvc interface {
 	ListProducts(ctx context.Context, req *ListProductsRequest) (*apiresource.List[apiresource.Product], *apierror.APIError)
@@ -83,7 +96,7 @@ func (m *productSvcImpl) ListProducts(ctx context.Context, req *ListProductsRequ
 
 func (m *productSvcImpl) GetProduct(ctx context.Context, req *GetProductRequest) (*apiresource.Product, *apierror.APIError) {
 	pbReq := &pb.GetProductRequest{
-		ItemId: req.ProductID,
+		Id: req.ProductID,
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, productSvcTracer, "service.products.get", domain.ServiceName,
@@ -100,17 +113,22 @@ func (m *productSvcImpl) GetProduct(ctx context.Context, req *GetProductRequest)
 }
 
 func (m *productSvcImpl) CreateProduct(ctx context.Context, req *CreateProductRequest) (*apiresource.Product, *apierror.APIError) {
+	isPortalReady := false
+	if req.PortalVisibility != nil {
+		isPortalReady = *req.PortalVisibility == constants.CustomerPortalVisibilityVisible
+	}
+
 	pbReq := &pb.CreateProductRequest{
 		Sku:             req.SKU,
 		Description:     req.Description,
 		Notes:           req.Notes,
-		ProductTypeCode: req.ProductTypeCode,
+		ProductTypeCode: string(req.ProductTypeCode),
 		ProductLineId:   req.ProductLineID,
 		CategoryId:      req.CategoryID,
-		IsPortalReady:   req.IsPortalReady,
-		UnitPrice:       req.UnitPrice,
-		UnitCost:        req.UnitCost,
-		BurnRate:        req.BurnRate,
+		IsPortalReady:   isPortalReady,
+		UnitPrice:       rateInputToProto(req.UnitPrice),
+		UnitCost:        rateInputToProto(req.UnitCost),
+		BurnRate:        rateInputToProto(req.BurnRate),
 		AttributeIds:    req.AttributeIDs,
 	}
 
@@ -128,14 +146,20 @@ func (m *productSvcImpl) CreateProduct(ctx context.Context, req *CreateProductRe
 }
 
 func (m *productSvcImpl) UpdateProduct(ctx context.Context, req *UpdateProductRequest) (*apiresource.Product, *apierror.APIError) {
+	var isPortalReady *bool
+	if req.PortalVisibility != nil {
+		v := *req.PortalVisibility == constants.CustomerPortalVisibilityVisible
+		isPortalReady = &v
+	}
+
 	pbReq := &pb.UpdateProductRequest{
-		ItemId:            req.ProductID,
+		Id:                req.ProductID,
 		Sku:               req.SKU,
 		Description:       req.Description,
 		UpdateDescription: req.Description != nil,
 		Notes:             req.Notes,
 		UpdateNotes:       req.Notes != nil,
-		IsPortalReady:     req.IsPortalReady,
+		IsPortalReady:     isPortalReady,
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, productSvcTracer, "service.products.update", domain.ServiceName,
@@ -153,7 +177,7 @@ func (m *productSvcImpl) UpdateProduct(ctx context.Context, req *UpdateProductRe
 
 func (m *productSvcImpl) DeleteProduct(ctx context.Context, req *DeleteProductRequest) (*apiresource.Product, *apierror.APIError) {
 	pbReq := &pb.DeleteProductRequest{
-		ItemId: req.ProductID,
+		Id: req.ProductID,
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, productSvcTracer, "service.products.delete", domain.ServiceName,
@@ -171,7 +195,7 @@ func (m *productSvcImpl) DeleteProduct(ctx context.Context, req *DeleteProductRe
 
 func (m *productSvcImpl) ChangeProductProductLine(ctx context.Context, req *ChangeProductProductLineRequest) (*apiresource.Product, *apierror.APIError) {
 	pbReq := &pb.ChangeProductProductLineRequest{
-		ItemId:        req.ProductID,
+		Id:            req.ProductID,
 		ProductLineId: req.ProductLineID,
 	}
 

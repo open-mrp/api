@@ -7,7 +7,21 @@ INSERT INTO item (
     id, sku, description, notes, unit_value_id, burn_rate_id,
     account_id, item_type_code, unit_cost_id, item_category_id, is_dirty,
     created_at, updated_at
-) VALUES (?, ?, ?, NULL, ?, ?, ?, 'part', ?, ?, false, NOW(3), NOW(3));
+) VALUES (
+    sqlc.arg('id'),
+    sqlc.arg('sku'),
+    sqlc.narg('description'),
+    sqlc.narg('notes'),
+    sqlc.arg('unit_value_id'),
+    sqlc.arg('burn_rate_id'),
+    sqlc.arg('account_id'),
+    'part',
+    sqlc.arg('unit_cost_id'),
+    sqlc.arg('item_category_id'),
+    false,
+    NOW(3),
+    NOW(3)
+);
 
 -- name: InsertRateForPart :exec
 INSERT INTO rate (
@@ -60,7 +74,7 @@ JOIN item_category ic ON ic.id = i.item_category_id
 JOIN rate rv ON rv.id = i.unit_value_id
 JOIN rate rc ON rc.id = i.unit_cost_id
 JOIN rate rb ON rb.id = i.burn_rate_id
-WHERE i.id = sqlc.arg('item_id')
+WHERE p.id = sqlc.arg('part_id')
 AND i.account_id = sqlc.arg('account_id')
 AND i.deleted_at IS NULL;
 
@@ -235,14 +249,16 @@ ORDER BY i.created_at ASC, i.id ASC
 LIMIT ?;
 
 -- name: SoftDeletePart :exec
-UPDATE item SET deleted_at = NOW(3), updated_at = NOW(3)
-WHERE id = sqlc.arg('item_id')
-AND account_id = sqlc.arg('account_id')
-AND deleted_at IS NULL;
+UPDATE item i
+JOIN part p ON p.item_id = i.id
+SET i.deleted_at = NOW(3), i.updated_at = NOW(3)
+WHERE p.id = sqlc.arg('part_id')
+AND i.account_id = sqlc.arg('account_id')
+AND i.deleted_at IS NULL;
 
 -- name: TouchPartUpdatedAt :exec
 UPDATE part SET updated_at = NOW(3)
-WHERE item_id = sqlc.arg('item_id');
+WHERE id = sqlc.arg('part_id');
 
 -- name: CheckPartSKUExists :one
 SELECT EXISTS(

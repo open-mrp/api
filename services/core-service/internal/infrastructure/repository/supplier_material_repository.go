@@ -68,7 +68,7 @@ func mapSupplierMaterialBackwardRow(row sqlc.ListSupplierMaterialsBackwardRow) *
 	)
 }
 
-func mapSupplierMaterialGetRow(row sqlc.GetSupplierMaterialBySupplierAndItemIDRow) *domain.SupplierMaterial {
+func mapSupplierMaterialGetRow(row sqlc.GetSupplierMaterialBySupplierAndMaterialIDRow) *domain.SupplierMaterial {
 	return mapSupplierMaterialFromRow(
 		row.ID, row.MaterialID, row.SupplierAccountID, row.SupplierPartNumber,
 		row.SupplierDescription, row.IsActive, row.OwnerAccountID, row.CreatedAt, row.UpdatedAt,
@@ -289,13 +289,13 @@ func (r *supplierMaterialRepoImpl) List(ctx context.Context, params domain.ListS
 	return &domain.ListSupplierMaterialsResult{SupplierMaterials: result, PageInfo: pageInfo}, nil
 }
 
-func (r *supplierMaterialRepoImpl) GetBySupplierAndItemID(ctx context.Context, ownerAccountID, supplierAccountID, itemID string) (*domain.SupplierMaterial, *apierror.APIError) {
-	ctx, span := supplierMaterialRepoTracer.Start(ctx, "repository.supplier_material.get_by_supplier_and_item_id")
+func (r *supplierMaterialRepoImpl) GetBySupplierAndMaterialID(ctx context.Context, ownerAccountID, supplierAccountID, materialID string) (*domain.SupplierMaterial, *apierror.APIError) {
+	ctx, span := supplierMaterialRepoTracer.Start(ctx, "repository.supplier_material.get_by_supplier_and_material_id")
 	defer span.End()
 
-	row, err := r.queries.GetSupplierMaterialBySupplierAndItemID(ctx, sqlc.GetSupplierMaterialBySupplierAndItemIDParams{
+	row, err := r.queries.GetSupplierMaterialBySupplierAndMaterialID(ctx, sqlc.GetSupplierMaterialBySupplierAndMaterialIDParams{
 		SupplierAccountID: supplierAccountID,
-		ItemID:            itemID,
+		MaterialID:        materialID,
 		OwnerAccountID:    ownerAccountID,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
@@ -322,13 +322,7 @@ func (r *supplierMaterialRepoImpl) Create(ctx context.Context, id string, params
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	// Look up item_id from material_id so we can re-fetch the full record.
-	itemID, err := r.queries.GetItemIDByMaterialID(ctx, params.MaterialID)
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	return r.GetBySupplierAndItemID(ctx, params.OwnerAccountID, params.SupplierAccountID, itemID)
+	return r.GetBySupplierAndMaterialID(ctx, params.OwnerAccountID, params.SupplierAccountID, params.MaterialID)
 }
 
 func (r *supplierMaterialRepoImpl) Update(ctx context.Context, params domain.UpdateSupplierMaterialParams) (*domain.SupplierMaterial, *apierror.APIError) {
@@ -336,7 +330,7 @@ func (r *supplierMaterialRepoImpl) Update(ctx context.Context, params domain.Upd
 	defer span.End()
 
 	// Look up the existing supplier material to get the sm.ID for the update query.
-	existing, apiErr := r.GetBySupplierAndItemID(ctx, params.OwnerAccountID, params.SupplierAccountID, params.ItemID)
+	existing, apiErr := r.GetBySupplierAndMaterialID(ctx, params.OwnerAccountID, params.SupplierAccountID, params.MaterialID)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -366,7 +360,7 @@ func (r *supplierMaterialRepoImpl) Update(ctx context.Context, params domain.Upd
 		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Supplier material not found."))
 	}
 
-	return r.GetBySupplierAndItemID(ctx, params.OwnerAccountID, params.SupplierAccountID, params.ItemID)
+	return r.GetBySupplierAndMaterialID(ctx, params.OwnerAccountID, params.SupplierAccountID, params.MaterialID)
 }
 
 func (r *supplierMaterialRepoImpl) Delete(ctx context.Context, params domain.DeleteSupplierMaterialParams) (*domain.SupplierMaterial, *apierror.APIError) {
@@ -374,7 +368,7 @@ func (r *supplierMaterialRepoImpl) Delete(ctx context.Context, params domain.Del
 	defer span.End()
 
 	// Fetch the full record before deleting so we can return it.
-	existing, apiErr := r.GetBySupplierAndItemID(ctx, params.OwnerAccountID, params.SupplierAccountID, params.ItemID)
+	existing, apiErr := r.GetBySupplierAndMaterialID(ctx, params.OwnerAccountID, params.SupplierAccountID, params.MaterialID)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}

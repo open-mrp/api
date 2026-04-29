@@ -21,7 +21,7 @@ type ProductType struct {
 	// Display name.
 	Name string `json:"name" validate:"required"`
 	// Unique code.
-	Code string `json:"code" validate:"required"`
+	Code constants.ProductTypeCode `json:"code" validate:"required"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last updated timestamp.

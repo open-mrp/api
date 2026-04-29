@@ -12,24 +12,29 @@ import (
 	"time"
 )
 
-const changeProductLineByItemID = `-- name: ChangeProductLineByItemID :execresult
+const changeProductLineByID = `-- name: ChangeProductLineByID :execresult
 UPDATE product SET
     product_line_id = ?,
     updated_at = NOW(3)
-WHERE item_id = ?
+WHERE (product.id = ? OR product.item_id = ?)
 AND item_id IN (
     SELECT id FROM item WHERE account_id = ? AND deleted_at IS NULL
 )
 `
 
-type ChangeProductLineByItemIDParams struct {
+type ChangeProductLineByIDParams struct {
 	ProductLineID sql.NullString
-	ItemID        string
+	ID            string
 	AccountID     string
 }
 
-func (q *Queries) ChangeProductLineByItemID(ctx context.Context, arg ChangeProductLineByItemIDParams) (sql.Result, error) {
-	return q.db.ExecContext(ctx, changeProductLineByItemID, arg.ProductLineID, arg.ItemID, arg.AccountID)
+func (q *Queries) ChangeProductLineByID(ctx context.Context, arg ChangeProductLineByIDParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, changeProductLineByID,
+		arg.ProductLineID,
+		arg.ID,
+		arg.ID,
+		arg.AccountID,
+	)
 }
 
 const checkProductSKUExists = `-- name: CheckProductSKUExists :one
@@ -316,7 +321,7 @@ func (q *Queries) GetAccountSystemProduct(ctx context.Context, arg GetAccountSys
 	return i, err
 }
 
-const getProductByItemID = `-- name: GetProductByItemID :one
+const getProductByID = `-- name: GetProductByID :one
 SELECT
     p.id,
     p.product_type_code,
@@ -381,17 +386,17 @@ JOIN rate rc ON rc.id = i.unit_cost_id
 JOIN rate rb ON rb.id = i.burn_rate_id
 LEFT JOIN product_line pl ON pl.id = p.product_line_id
 JOIN product_type pt ON pt.code = p.product_type_code
-WHERE p.item_id = ?
+WHERE p.id = ?
 AND i.account_id = ?
 AND i.deleted_at IS NULL
 `
 
-type GetProductByItemIDParams struct {
-	ItemID    string
+type GetProductByIDParams struct {
+	ID        string
 	AccountID string
 }
 
-type GetProductByItemIDRow struct {
+type GetProductByIDRow struct {
 	ID                            string
 	ProductTypeCode               string
 	IsPortalReady                 bool
@@ -449,9 +454,9 @@ type GetProductByItemIDRow struct {
 	ProductTypeUpdatedAt          time.Time
 }
 
-func (q *Queries) GetProductByItemID(ctx context.Context, arg GetProductByItemIDParams) (GetProductByItemIDRow, error) {
-	row := q.db.QueryRowContext(ctx, getProductByItemID, arg.ItemID, arg.AccountID)
-	var i GetProductByItemIDRow
+func (q *Queries) GetProductByID(ctx context.Context, arg GetProductByIDParams) (GetProductByIDRow, error) {
+	row := q.db.QueryRowContext(ctx, getProductByID, arg.ID, arg.AccountID)
+	var i GetProductByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.ProductTypeCode,
@@ -1507,28 +1512,29 @@ func (q *Queries) SearchProductsBySKU(ctx context.Context, arg SearchProductsByS
 	return items, nil
 }
 
-const softDeleteProductByItemID = `-- name: SoftDeleteProductByItemID :execresult
-UPDATE item SET
-    deleted_at = NOW(3)
-WHERE id = ?
-AND account_id = ?
-AND deleted_at IS NULL
+const softDeleteProductByID = `-- name: SoftDeleteProductByID :execresult
+UPDATE item i
+JOIN product p ON p.item_id = i.id
+SET i.deleted_at = NOW(3)
+WHERE p.id = ?
+AND i.account_id = ?
+AND i.deleted_at IS NULL
 `
 
-type SoftDeleteProductByItemIDParams struct {
+type SoftDeleteProductByIDParams struct {
 	ID        string
 	AccountID string
 }
 
-func (q *Queries) SoftDeleteProductByItemID(ctx context.Context, arg SoftDeleteProductByItemIDParams) (sql.Result, error) {
-	return q.db.ExecContext(ctx, softDeleteProductByItemID, arg.ID, arg.AccountID)
+func (q *Queries) SoftDeleteProductByID(ctx context.Context, arg SoftDeleteProductByIDParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, softDeleteProductByID, arg.ID, arg.AccountID)
 }
 
 const updateProductFields = `-- name: UpdateProductFields :execresult
 UPDATE product SET
     is_portal_ready = COALESCE(?, is_portal_ready),
     updated_at = NOW(3)
-WHERE item_id = ?
+WHERE product.id = ?
 AND item_id IN (
     SELECT id FROM item WHERE account_id = ? AND deleted_at IS NULL
 )
@@ -1536,10 +1542,10 @@ AND item_id IN (
 
 type UpdateProductFieldsParams struct {
 	IsPortalReady sql.NullBool
-	ItemID        string
+	ID            string
 	AccountID     string
 }
 
 func (q *Queries) UpdateProductFields(ctx context.Context, arg UpdateProductFieldsParams) (sql.Result, error) {
-	return q.db.ExecContext(ctx, updateProductFields, arg.IsPortalReady, arg.ItemID, arg.AccountID)
+	return q.db.ExecContext(ctx, updateProductFields, arg.IsPortalReady, arg.ID, arg.AccountID)
 }

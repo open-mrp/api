@@ -53,7 +53,7 @@ func (e *UpdatePartEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdatePartR
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypePart,
-			Fields:     []string{"category", "unit_value", "unit_cost", "burn_rate"},
+			Fields:     []string{"item", "item.category", "item.unit_value", "item.unit_cost", "item.burn_rate", "item.attributes"},
 		}),
 	}
 }

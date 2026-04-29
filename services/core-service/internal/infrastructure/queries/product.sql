@@ -306,7 +306,7 @@ AND (
 ORDER BY p.created_at ASC, p.id ASC
 LIMIT ?;
 
--- name: GetProductByItemID :one
+-- name: GetProductByID :one
 SELECT
     p.id,
     p.product_type_code,
@@ -371,7 +371,7 @@ JOIN rate rc ON rc.id = i.unit_cost_id
 JOIN rate rb ON rb.id = i.burn_rate_id
 LEFT JOIN product_line pl ON pl.id = p.product_line_id
 JOIN product_type pt ON pt.code = p.product_type_code
-WHERE p.item_id = sqlc.arg('item_id')
+WHERE p.id = sqlc.arg('id')
 AND i.account_id = sqlc.arg('account_id')
 AND i.deleted_at IS NULL;
 
@@ -398,23 +398,24 @@ INSERT INTO product (
 UPDATE product SET
     is_portal_ready = COALESCE(sqlc.narg('is_portal_ready'), is_portal_ready),
     updated_at = NOW(3)
-WHERE item_id = sqlc.arg('item_id')
+WHERE product.id = sqlc.arg('id')
 AND item_id IN (
     SELECT id FROM item WHERE account_id = sqlc.arg('account_id') AND deleted_at IS NULL
 );
 
--- name: SoftDeleteProductByItemID :execresult
-UPDATE item SET
-    deleted_at = NOW(3)
-WHERE id = sqlc.arg('id')
-AND account_id = sqlc.arg('account_id')
-AND deleted_at IS NULL;
+-- name: SoftDeleteProductByID :execresult
+UPDATE item i
+JOIN product p ON p.item_id = i.id
+SET i.deleted_at = NOW(3)
+WHERE p.id = sqlc.arg('id')
+AND i.account_id = sqlc.arg('account_id')
+AND i.deleted_at IS NULL;
 
--- name: ChangeProductLineByItemID :execresult
+-- name: ChangeProductLineByID :execresult
 UPDATE product SET
     product_line_id = sqlc.arg('product_line_id'),
     updated_at = NOW(3)
-WHERE item_id = sqlc.arg('item_id')
+WHERE (product.id = sqlc.arg('id') OR product.item_id = sqlc.arg('id'))
 AND item_id IN (
     SELECT id FROM item WHERE account_id = sqlc.arg('account_id') AND deleted_at IS NULL
 );

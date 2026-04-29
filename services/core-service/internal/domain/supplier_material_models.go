@@ -47,7 +47,7 @@ type CreateSupplierMaterialParams struct {
 type UpdateSupplierMaterialParams struct {
 	OwnerAccountID      string
 	SupplierAccountID   string
-	ItemID              string
+	MaterialID          string
 	SupplierPartNumber  *string
 	SupplierDescription *string
 	UpdateDescription   bool
@@ -57,5 +57,5 @@ type UpdateSupplierMaterialParams struct {
 type DeleteSupplierMaterialParams struct {
 	OwnerAccountID    string
 	SupplierAccountID string
-	ItemID            string
+	MaterialID        string
 }

@@ -46,7 +46,7 @@ type ListProductsFullResult struct {
 // GetProductFullParams holds parameters for retrieving a single product.
 type GetProductFullParams struct {
 	AccountID string
-	ItemID    string
+	ProductID string
 }
 
 // CreateProductParams holds parameters for creating a new product.
@@ -63,11 +63,14 @@ type CreateProductParams struct {
 	ProductLineID   *string
 	CategoryID      string
 	IsPortalReady   bool
-	UnitPrice       *string
-	// UnitCost and BurnRate are initial rate values written into the unit_cost and
-	// burn_rate Rate records alongside UnitPrice (unit_value). Defaults to "0" when nil.
-	UnitCost *string
-	BurnRate *string
+	// UnitPrice / UnitCost / BurnRate are initial rate values written into the
+	// unit_value, unit_cost, and burn_rate Rate records. When nil the rate is
+	// initialized to "0" against the category's base unit on both sides. When
+	// set, UnitPrice and UnitCost additionally enforce the
+	// currency-numerator / non-currency-denominator rule (BurnRate does not).
+	UnitPrice *CreateRateParams
+	UnitCost  *CreateRateParams
+	BurnRate  *CreateRateParams
 	// AttributeIDs are connected to the new item at creation time.
 	AttributeIDs []string
 }
@@ -75,7 +78,7 @@ type CreateProductParams struct {
 // UpdateProductParams holds parameters for partially updating a product.
 type UpdateProductParams struct {
 	AccountID         string
-	ItemID            string
+	ProductID         string
 	SKU               *string
 	Description       *string
 	UpdateDescription bool
@@ -87,13 +90,13 @@ type UpdateProductParams struct {
 // DeleteProductParams holds parameters for soft-deleting a product.
 type DeleteProductParams struct {
 	AccountID string
-	ItemID    string
+	ProductID string
 }
 
 // ChangeProductProductLineParams holds parameters for changing a product's product line.
 type ChangeProductProductLineParams struct {
 	AccountID     string
-	ItemID        string
+	ProductID     string
 	ProductLineID string
 }
 

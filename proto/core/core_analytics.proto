@@ -236,6 +236,11 @@ message QuantityInput {
   string value = 1;
   string unit_id = 2;
 }
+message CreateRateInput {
+  string value = 1;
+  string numerator_unit_id = 2;
+  string denominator_unit_id = 3;
+}
 message CreateShippingTermRequest {
   string name = 1;
   string type = 2;

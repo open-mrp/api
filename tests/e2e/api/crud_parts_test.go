@@ -28,7 +28,8 @@ func firstPartID(t *testing.T) string {
 // Part — Include Tests
 // ──────────────────────────────────────────────
 //
-// Part GET endpoint whitelists: category, unit_value, unit_cost, burn_rate.
+// Part GET endpoint whitelists item and its nested sub-resources:
+// item.category, item.unit_value, item.unit_cost, item.burn_rate.
 
 func TestParts_ExpandableFieldsNullWithoutInclude(t *testing.T) {
 	t.Parallel()
@@ -39,23 +40,37 @@ func TestParts_ExpandableFieldsNullWithoutInclude(t *testing.T) {
 	requireStatus(t, 200, status, body)
 
 	got := parseJSON(body)
-	assert.Nil(t, got["category"], "category should be null without ?include=category")
-	assert.Nil(t, got["unit_value"], "unit_value should be null without ?include=unit_value")
-	assert.Nil(t, got["unit_cost"], "unit_cost should be null without ?include=unit_cost")
-	assert.Nil(t, got["burn_rate"], "burn_rate should be null without ?include=burn_rate")
+	assert.Nil(t, got["item"], "item should be null without ?include=item")
+}
+
+func TestParts_IncludeItem(t *testing.T) {
+	t.Parallel()
+	id := firstPartID(t)
+
+	status, body, err := apiClient.GetListRaw(partsPath+"/"+id, url.Values{"include": {"item"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	got := parseJSON(body)
+	item := jsonObject(got, "item")
+	require.NotNil(t, item, "item should be present with ?include=item")
+	assert.Equal(t, "item", jsonField(item, "object"))
+	assert.NotEmpty(t, jsonField(item, "id"))
 }
 
 func TestParts_IncludeCategory(t *testing.T) {
 	t.Parallel()
 	id := firstPartID(t)
 
-	status, body, err := apiClient.GetListRaw(partsPath+"/"+id, url.Values{"include": {"category"}})
+	status, body, err := apiClient.GetListRaw(partsPath+"/"+id, url.Values{"include": {"item.category"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
 	got := parseJSON(body)
-	cat := jsonObject(got, "category")
-	require.NotNil(t, cat, "category should be present with ?include=category")
+	item := jsonObject(got, "item")
+	require.NotNil(t, item, "item should be present with ?include=item.category")
+	cat := jsonObject(item, "category")
+	require.NotNil(t, cat, "item.category should be present with ?include=item.category")
 	assert.Equal(t, "item_category", jsonField(cat, "object"))
 	assert.NotEmpty(t, jsonField(cat, "id"))
 }
@@ -64,14 +79,16 @@ func TestParts_IncludeUnitValue(t *testing.T) {
 	t.Parallel()
 	id := firstPartID(t)
 
-	status, body, err := apiClient.GetListRaw(partsPath+"/"+id, url.Values{"include": {"unit_value"}})
+	status, body, err := apiClient.GetListRaw(partsPath+"/"+id, url.Values{"include": {"item.unit_value"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
 	got := parseJSON(body)
-	_, ok := got["unit_value"]
-	assert.True(t, ok, "unit_value key should be present with ?include=unit_value")
-	if uv := jsonObject(got, "unit_value"); uv != nil {
+	item := jsonObject(got, "item")
+	require.NotNil(t, item, "item should be present with ?include=item.unit_value")
+	_, ok := item["unit_value"]
+	assert.True(t, ok, "item.unit_value key should be present with ?include=item.unit_value")
+	if uv := jsonObject(item, "unit_value"); uv != nil {
 		assert.Equal(t, "rate", jsonField(uv, "object"))
 	}
 }
@@ -80,14 +97,16 @@ func TestParts_IncludeUnitCost(t *testing.T) {
 	t.Parallel()
 	id := firstPartID(t)
 
-	status, body, err := apiClient.GetListRaw(partsPath+"/"+id, url.Values{"include": {"unit_cost"}})
+	status, body, err := apiClient.GetListRaw(partsPath+"/"+id, url.Values{"include": {"item.unit_cost"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
 	got := parseJSON(body)
-	_, ok := got["unit_cost"]
-	assert.True(t, ok, "unit_cost key should be present with ?include=unit_cost")
-	if uc := jsonObject(got, "unit_cost"); uc != nil {
+	item := jsonObject(got, "item")
+	require.NotNil(t, item, "item should be present with ?include=item.unit_cost")
+	_, ok := item["unit_cost"]
+	assert.True(t, ok, "item.unit_cost key should be present with ?include=item.unit_cost")
+	if uc := jsonObject(item, "unit_cost"); uc != nil {
 		assert.Equal(t, "rate", jsonField(uc, "object"))
 	}
 }
@@ -96,14 +115,16 @@ func TestParts_IncludeBurnRate(t *testing.T) {
 	t.Parallel()
 	id := firstPartID(t)
 
-	status, body, err := apiClient.GetListRaw(partsPath+"/"+id, url.Values{"include": {"burn_rate"}})
+	status, body, err := apiClient.GetListRaw(partsPath+"/"+id, url.Values{"include": {"item.burn_rate"}})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
 	got := parseJSON(body)
-	_, ok := got["burn_rate"]
-	assert.True(t, ok, "burn_rate key should be present with ?include=burn_rate")
-	if br := jsonObject(got, "burn_rate"); br != nil {
+	item := jsonObject(got, "item")
+	require.NotNil(t, item, "item should be present with ?include=item.burn_rate")
+	_, ok := item["burn_rate"]
+	assert.True(t, ok, "item.burn_rate key should be present with ?include=item.burn_rate")
+	if br := jsonObject(item, "burn_rate"); br != nil {
 		assert.Equal(t, "rate", jsonField(br, "object"))
 	}
 }

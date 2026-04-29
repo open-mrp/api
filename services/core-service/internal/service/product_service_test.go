@@ -48,6 +48,7 @@ type ProductSvcTestSuite struct {
 	productLineRepo     *repositorymock.MockProductLineRepo
 	deletedRecordRepo   *repositorymock.MockDeletedRecordRepo
 	accountRelationRepo *repositorymock.MockAccountRelationRepo
+	unitRepo            *repositorymock.MockUnitRepo
 	repoFactory         *factorymock.MockRepoFactory
 	mediatorFactory     *factorymock.MockMediatorFactory
 	idempotencyMed      *mediatormock.MockIdempotencyMed
@@ -63,6 +64,7 @@ func (s *ProductSvcTestSuite) SetupSuite() {
 	s.productLineRepo = repositorymock.NewMockProductLineRepo(s.ctrl)
 	s.deletedRecordRepo = repositorymock.NewMockDeletedRecordRepo(s.ctrl)
 	s.accountRelationRepo = repositorymock.NewMockAccountRelationRepo(s.ctrl)
+	s.unitRepo = repositorymock.NewMockUnitRepo(s.ctrl)
 
 	s.repoFactory = factorymock.NewMockRepoFactory(s.ctrl)
 	s.repoFactory.EXPECT().NewProductRepo().Return(s.productRepo).AnyTimes()
@@ -71,6 +73,7 @@ func (s *ProductSvcTestSuite) SetupSuite() {
 	s.repoFactory.EXPECT().NewProductLineRepo().Return(s.productLineRepo).AnyTimes()
 	s.repoFactory.EXPECT().NewDeletedRecordRepo().Return(s.deletedRecordRepo).AnyTimes()
 	s.repoFactory.EXPECT().NewAccountRelationRepo().Return(s.accountRelationRepo).AnyTimes()
+	s.repoFactory.EXPECT().NewUnitRepo().Return(s.unitRepo).AnyTimes()
 	s.repoFactory.EXPECT().NewOutboxRepo().Return(&productStubOutboxRepo{}).AnyTimes()
 
 	s.idempotencyMed = mediatormock.NewMockIdempotencyMed(s.ctrl)
@@ -240,17 +243,24 @@ func (s *ProductSvcTestSuite) TestCreateProduct_Success() {
 		Return("un_base", nil).
 		Times(1)
 
-	// All three rates are created with the base unit for both numerator and denominator.
+	// unit_price and unit_cost validate their numerator/denominator dimensions.
+	s.unitRepo.EXPECT().
+		GetDimensionCodes(gomock.Any(), gomock.Any()).
+		Return(map[string]string{"un_usd": "currency", "un_each": "discrete"}, nil).
+		Times(2)
+
+	// Caller-supplied rate inputs flow through to InsertRate verbatim. burn_rate
+	// has no currency requirement so it can use any unit IDs.
 	s.productRepo.EXPECT().
-		InsertRate(gomock.Any(), gomock.Any(), "1.50", "un_base", "un_base").
+		InsertRate(gomock.Any(), gomock.Any(), "1.50", "un_usd", "un_each").
 		Return(nil).
 		Times(1)
 	s.productRepo.EXPECT().
-		InsertRate(gomock.Any(), gomock.Any(), "0.75", "un_base", "un_base").
+		InsertRate(gomock.Any(), gomock.Any(), "0.75", "un_usd", "un_each").
 		Return(nil).
 		Times(1)
 	s.productRepo.EXPECT().
-		InsertRate(gomock.Any(), gomock.Any(), "0.10", "un_base", "un_base").
+		InsertRate(gomock.Any(), gomock.Any(), "0.10", "un_each", "un_each").
 		Return(nil).
 		Times(1)
 
@@ -314,9 +324,9 @@ func (s *ProductSvcTestSuite) TestCreateProduct_Success() {
 		ProductTypeCode: "sale",
 		CategoryID:      "cat_123",
 		IsPortalReady:   true,
-		UnitPrice:       strPtr("1.50"),
-		UnitCost:        strPtr("0.75"),
-		BurnRate:        strPtr("0.10"),
+		UnitPrice:       &domain.CreateRateParams{Value: "1.50", NumeratorUnitID: "un_usd", DenominatorUnitID: "un_each"},
+		UnitCost:        &domain.CreateRateParams{Value: "0.75", NumeratorUnitID: "un_usd", DenominatorUnitID: "un_each"},
+		BurnRate:        &domain.CreateRateParams{Value: "0.10", NumeratorUnitID: "un_each", DenominatorUnitID: "un_each"},
 		AttributeIDs:    []string{"attr_red", "attr_large"},
 	})
 
@@ -419,6 +429,72 @@ func (s *ProductSvcTestSuite) TestCreateProduct_SkipsBlankAttributeIDs() {
 	s.NotNil(result)
 }
 
+func (s *ProductSvcTestSuite) TestCreateProduct_RejectsNonCurrencyNumeratorOnUnitCost() {
+	ctx := productIdempotencyCtx(internalProductIdentityCtx("ac_test123"))
+
+	s.expectIdempotencyStarted()
+	s.itemRepo.EXPECT().CheckSKUExists(gomock.Any(), "ac_test123", "SKU-X", "").Return(false, nil).Times(1)
+	s.itemRepo.EXPECT().GetCategoryBaseUnitID(gomock.Any(), "cat_123").Return("un_base", nil).Times(1)
+
+	// unit_price validates first and passes.
+	s.unitRepo.EXPECT().
+		GetDimensionCodes(gomock.Any(), gomock.Any()).
+		Return(map[string]string{"un_usd": "currency", "un_each": "discrete"}, nil).
+		Times(1)
+	// unit_price insert succeeds, then unit_cost validation rejects the bad numerator.
+	s.productRepo.EXPECT().
+		InsertRate(gomock.Any(), gomock.Any(), "1.00", "un_usd", "un_each").
+		Return(nil).
+		Times(1)
+	// unit_cost validation: numerator un_each is non-currency → reject.
+	s.unitRepo.EXPECT().
+		GetDimensionCodes(gomock.Any(), gomock.Any()).
+		Return(map[string]string{"un_each": "discrete"}, nil).
+		Times(1)
+	// No further inserts after validation fails.
+	s.expectCacheError()
+
+	result, err := s.productSvc.CreateProduct(ctx, domain.CreateProductParams{
+		SKU:             "SKU-X",
+		ProductTypeCode: "sale",
+		CategoryID:      "cat_123",
+		UnitPrice:       &domain.CreateRateParams{Value: "1.00", NumeratorUnitID: "un_usd", DenominatorUnitID: "un_each"},
+		UnitCost:        &domain.CreateRateParams{Value: "0.50", NumeratorUnitID: "un_each", DenominatorUnitID: "un_each"},
+	})
+
+	s.Nil(result)
+	s.NotNil(err)
+	s.Equal(apierror.ErrorCodeValidationFailed, err.Code)
+	s.Equal("unit_cost.numerator_unit_id", err.Param)
+}
+
+func (s *ProductSvcTestSuite) TestCreateProduct_RejectsCurrencyDenominatorOnUnitPrice() {
+	ctx := productIdempotencyCtx(internalProductIdentityCtx("ac_test123"))
+
+	s.expectIdempotencyStarted()
+	s.itemRepo.EXPECT().CheckSKUExists(gomock.Any(), "ac_test123", "SKU-Y", "").Return(false, nil).Times(1)
+	s.itemRepo.EXPECT().GetCategoryBaseUnitID(gomock.Any(), "cat_123").Return("un_base", nil).Times(1)
+
+	// unit_price validation: denominator un_usd is currency → reject. No InsertRate called.
+	s.unitRepo.EXPECT().
+		GetDimensionCodes(gomock.Any(), gomock.Any()).
+		Return(map[string]string{"un_usd": "currency"}, nil).
+		Times(1)
+	s.expectCacheError()
+
+	result, err := s.productSvc.CreateProduct(ctx, domain.CreateProductParams{
+		SKU:             "SKU-Y",
+		ProductTypeCode: "sale",
+		CategoryID:      "cat_123",
+		UnitPrice:       &domain.CreateRateParams{Value: "1.00", NumeratorUnitID: "un_usd", DenominatorUnitID: "un_usd"},
+	})
+
+	s.Nil(result)
+	s.NotNil(err)
+	s.Equal(apierror.ErrorCodeValidationFailed, err.Code)
+	s.Equal("unit_price.denominator_unit_id", err.Param)
+}
+
 func (s *ProductSvcTestSuite) TestCreateProduct_MissingIdentity() {
 	result, err := s.productSvc.CreateProduct(context.Background(), domain.CreateProductParams{})
 
@@ -513,7 +589,7 @@ func (s *ProductSvcTestSuite) TestUpdateProduct_PartialUpdate_OnlyTouchesProvide
 
 	s.expectIdempotencyStarted()
 	s.productRepo.EXPECT().
-		Get(gomock.Any(), domain.GetProductFullParams{AccountID: "ac_test123", ItemID: "it_1"}).
+		Get(gomock.Any(), domain.GetProductFullParams{AccountID: "ac_test123", ProductID: "it_1"}).
 		Return(s.existingProduct("it_1", "OLD-SKU"), nil).
 		Times(1)
 
@@ -535,7 +611,7 @@ func (s *ProductSvcTestSuite) TestUpdateProduct_PartialUpdate_OnlyTouchesProvide
 
 	falseVal := false
 	result, err := s.productSvc.UpdateProduct(ctx, domain.UpdateProductParams{
-		ItemID:        "it_1",
+		ProductID:     "it_1",
 		IsPortalReady: &falseVal,
 	})
 
@@ -563,8 +639,8 @@ func (s *ProductSvcTestSuite) TestUpdateProduct_SKUChange_ChecksUniquenessExclud
 	s.expectCacheSuccess()
 
 	result, err := s.productSvc.UpdateProduct(ctx, domain.UpdateProductParams{
-		ItemID: "it_1",
-		SKU:    strPtr("NEW-SKU"),
+		ProductID: "it_1",
+		SKU:       strPtr("NEW-SKU"),
 	})
 
 	s.Nil(err)
@@ -587,8 +663,8 @@ func (s *ProductSvcTestSuite) TestUpdateProduct_DuplicateSKU_Conflict() {
 	s.expectCacheError()
 
 	result, err := s.productSvc.UpdateProduct(ctx, domain.UpdateProductParams{
-		ItemID: "it_1",
-		SKU:    strPtr("TAKEN"),
+		ProductID: "it_1",
+		SKU:       strPtr("TAKEN"),
 	})
 
 	s.Nil(result)
@@ -620,7 +696,7 @@ func (s *ProductSvcTestSuite) TestUpdateProduct_UpdateDescriptionFlagSemantics_E
 	s.expectCacheSuccess()
 
 	result, err := s.productSvc.UpdateProduct(ctx, domain.UpdateProductParams{
-		ItemID:            "it_1",
+		ProductID:         "it_1",
 		Description:       nil,
 		UpdateDescription: true,
 	})
@@ -630,7 +706,7 @@ func (s *ProductSvcTestSuite) TestUpdateProduct_UpdateDescriptionFlagSemantics_E
 }
 
 func (s *ProductSvcTestSuite) TestUpdateProduct_MissingIdentity() {
-	result, err := s.productSvc.UpdateProduct(context.Background(), domain.UpdateProductParams{ItemID: "it_1"})
+	result, err := s.productSvc.UpdateProduct(context.Background(), domain.UpdateProductParams{ProductID: "it_1"})
 
 	s.Nil(result)
 	s.NotNil(err)
@@ -640,7 +716,7 @@ func (s *ProductSvcTestSuite) TestUpdateProduct_MissingIdentity() {
 func (s *ProductSvcTestSuite) TestUpdateProduct_NotInternalActor_Forbidden() {
 	ctx := customerProductIdentityCtx("ac_customer", "ac_owner")
 
-	result, err := s.productSvc.UpdateProduct(ctx, domain.UpdateProductParams{ItemID: "it_1"})
+	result, err := s.productSvc.UpdateProduct(ctx, domain.UpdateProductParams{ProductID: "it_1"})
 
 	s.Nil(result)
 	s.NotNil(err)
@@ -650,7 +726,7 @@ func (s *ProductSvcTestSuite) TestUpdateProduct_NotInternalActor_Forbidden() {
 func (s *ProductSvcTestSuite) TestUpdateProduct_MissingItemsUpdatePermission_Forbidden() {
 	ctx := readOnlyProductIdentityCtx("ac_test123")
 
-	result, err := s.productSvc.UpdateProduct(ctx, domain.UpdateProductParams{ItemID: "it_1"})
+	result, err := s.productSvc.UpdateProduct(ctx, domain.UpdateProductParams{ProductID: "it_1"})
 
 	s.Nil(result)
 	s.NotNil(err)
@@ -668,8 +744,8 @@ func (s *ProductSvcTestSuite) TestUpdateProduct_NotFound() {
 	s.expectCacheError()
 
 	result, err := s.productSvc.UpdateProduct(ctx, domain.UpdateProductParams{
-		ItemID: "it_missing",
-		SKU:    strPtr("X"),
+		ProductID: "it_missing",
+		SKU:       strPtr("X"),
 	})
 
 	s.Nil(result)
@@ -684,8 +760,8 @@ func (s *ProductSvcTestSuite) TestUpdateProduct_IdempotencyReplay_ReturnsCached(
 	s.expectIdempotencyFinishedWithProduct(cached)
 
 	result, err := s.productSvc.UpdateProduct(ctx, domain.UpdateProductParams{
-		ItemID: "it_cached",
-		SKU:    strPtr("NEVER"),
+		ProductID: "it_cached",
+		SKU:       strPtr("NEVER"),
 	})
 
 	s.Nil(err)
@@ -702,7 +778,7 @@ func (s *ProductSvcTestSuite) TestDeleteProduct_Success_SoftDeletes() {
 
 	existing := s.existingProduct("it_1", "SKU-DEL")
 	s.productRepo.EXPECT().
-		Get(gomock.Any(), domain.GetProductFullParams{AccountID: "ac_test123", ItemID: "it_1"}).
+		Get(gomock.Any(), domain.GetProductFullParams{AccountID: "ac_test123", ProductID: "it_1"}).
 		Return(existing, nil).
 		Times(1)
 
@@ -714,12 +790,12 @@ func (s *ProductSvcTestSuite) TestDeleteProduct_Success_SoftDeletes() {
 			Return(nil).
 			Times(1),
 		s.productRepo.EXPECT().
-			SoftDelete(gomock.Any(), domain.DeleteProductParams{AccountID: "ac_test123", ItemID: "it_1"}).
+			SoftDelete(gomock.Any(), domain.DeleteProductParams{AccountID: "ac_test123", ProductID: "it_1"}).
 			Return(nil).
 			Times(1),
 	)
 
-	result, err := s.productSvc.DeleteProduct(ctx, domain.DeleteProductParams{ItemID: "it_1"})
+	result, err := s.productSvc.DeleteProduct(ctx, domain.DeleteProductParams{ProductID: "it_1"})
 
 	s.Nil(err)
 	s.NotNil(result)
@@ -737,9 +813,9 @@ func (s *ProductSvcTestSuite) TestDeleteProduct_AlreadyDeleted_Returns410() {
 		Exists(gomock.Any(), constants.DeletedRecordResourceTypeProduct, "it_gone").
 		Return(true, nil).
 		Times(1)
-	// No SoftDelete expected.
+		// No SoftDelete expected.
 
-	result, err := s.productSvc.DeleteProduct(ctx, domain.DeleteProductParams{ItemID: "it_gone"})
+	result, err := s.productSvc.DeleteProduct(ctx, domain.DeleteProductParams{ProductID: "it_gone"})
 
 	s.Nil(result)
 	s.NotNil(err)
@@ -758,7 +834,7 @@ func (s *ProductSvcTestSuite) TestDeleteProduct_GenuinelyNotFound_Returns404() {
 		Return(false, nil).
 		Times(1)
 
-	result, err := s.productSvc.DeleteProduct(ctx, domain.DeleteProductParams{ItemID: "it_missing"})
+	result, err := s.productSvc.DeleteProduct(ctx, domain.DeleteProductParams{ProductID: "it_missing"})
 
 	s.Nil(result)
 	s.NotNil(err)
@@ -768,7 +844,7 @@ func (s *ProductSvcTestSuite) TestDeleteProduct_GenuinelyNotFound_Returns404() {
 func (s *ProductSvcTestSuite) TestDeleteProduct_NotInternalActor_Forbidden() {
 	ctx := customerProductIdentityCtx("ac_customer", "ac_owner")
 
-	result, err := s.productSvc.DeleteProduct(ctx, domain.DeleteProductParams{ItemID: "it_1"})
+	result, err := s.productSvc.DeleteProduct(ctx, domain.DeleteProductParams{ProductID: "it_1"})
 
 	s.Nil(result)
 	s.NotNil(err)
@@ -778,7 +854,7 @@ func (s *ProductSvcTestSuite) TestDeleteProduct_NotInternalActor_Forbidden() {
 func (s *ProductSvcTestSuite) TestDeleteProduct_MissingItemsDeletePermission_Forbidden() {
 	ctx := readOnlyProductIdentityCtx("ac_test123")
 
-	result, err := s.productSvc.DeleteProduct(ctx, domain.DeleteProductParams{ItemID: "it_1"})
+	result, err := s.productSvc.DeleteProduct(ctx, domain.DeleteProductParams{ProductID: "it_1"})
 
 	s.Nil(result)
 	s.NotNil(err)
@@ -797,9 +873,9 @@ func (s *ProductSvcTestSuite) TestDeleteProduct_DeletedRecordCreateFails_RollsBa
 		Create(gomock.Any(), constants.DeletedRecordResourceTypeProduct, "it_1", gomock.Any()).
 		Return(apierror.NewInternalError(nil, "db down")).
 		Times(1)
-	// SoftDelete must not be called when the snapshot insert fails.
+		// SoftDelete must not be called when the snapshot insert fails.
 
-	result, err := s.productSvc.DeleteProduct(ctx, domain.DeleteProductParams{ItemID: "it_1"})
+	result, err := s.productSvc.DeleteProduct(ctx, domain.DeleteProductParams{ProductID: "it_1"})
 
 	s.Nil(result)
 	s.NotNil(err)
@@ -819,14 +895,14 @@ func (s *ProductSvcTestSuite) TestChangeProductLine_Success() {
 
 	s.expectIdempotencyStarted()
 	s.productRepo.EXPECT().
-		Get(gomock.Any(), domain.GetProductFullParams{AccountID: "ac_test123", ItemID: "it_1"}).
+		Get(gomock.Any(), domain.GetProductFullParams{AccountID: "ac_test123", ProductID: "it_1"}).
 		Return(old, nil).
 		Times(1)
 	s.productRepo.EXPECT().
 		ChangeProductLine(gomock.Any(), gomock.AssignableToTypeOf(domain.ChangeProductProductLineParams{})).
 		DoAndReturn(func(_ context.Context, params domain.ChangeProductProductLineParams) (*domain.ProductFull, *apierror.APIError) {
 			s.Equal("ac_test123", params.AccountID)
-			s.Equal("it_1", params.ItemID)
+			s.Equal("it_1", params.ProductID)
 			s.Equal("pl_new", params.ProductLineID)
 			newLineID := "pl_new"
 			updated := s.existingProduct("it_1", "SKU-1")
@@ -837,7 +913,7 @@ func (s *ProductSvcTestSuite) TestChangeProductLine_Success() {
 	s.expectCacheSuccess()
 
 	result, err := s.productSvc.ChangeProductProductLine(ctx, domain.ChangeProductProductLineParams{
-		ItemID:        "it_1",
+		ProductID:     "it_1",
 		ProductLineID: "pl_new",
 	})
 
@@ -857,7 +933,7 @@ func (s *ProductSvcTestSuite) TestChangeProductLine_NotFound() {
 	// ChangeProductLine must not be called.
 
 	result, err := s.productSvc.ChangeProductProductLine(ctx, domain.ChangeProductProductLineParams{
-		ItemID:        "it_missing",
+		ProductID:     "it_missing",
 		ProductLineID: "pl_new",
 	})
 
@@ -870,7 +946,7 @@ func (s *ProductSvcTestSuite) TestChangeProductLine_NotInternalActor_Forbidden()
 	ctx := customerProductIdentityCtx("ac_customer", "ac_owner")
 
 	result, err := s.productSvc.ChangeProductProductLine(ctx, domain.ChangeProductProductLineParams{
-		ItemID:        "it_1",
+		ProductID:     "it_1",
 		ProductLineID: "pl_new",
 	})
 
@@ -883,7 +959,7 @@ func (s *ProductSvcTestSuite) TestChangeProductLine_MissingPermission_Forbidden(
 	ctx := readOnlyProductIdentityCtx("ac_test123")
 
 	result, err := s.productSvc.ChangeProductProductLine(ctx, domain.ChangeProductProductLineParams{
-		ItemID:        "it_1",
+		ProductID:     "it_1",
 		ProductLineID: "pl_new",
 	})
 
@@ -899,7 +975,7 @@ func (s *ProductSvcTestSuite) TestChangeProductLine_IdempotencyReplay_ReturnsCac
 	s.expectIdempotencyFinishedWithProduct(cached)
 
 	result, err := s.productSvc.ChangeProductProductLine(ctx, domain.ChangeProductProductLineParams{
-		ItemID:        "it_cached",
+		ProductID:     "it_cached",
 		ProductLineID: "pl_new",
 	})
 
@@ -927,7 +1003,7 @@ func (s *ProductSvcTestSuite) TestChangeProductLine_ProductLineCrossAccount_Reje
 	s.expectCacheError()
 
 	result, err := s.productSvc.ChangeProductProductLine(ctx, domain.ChangeProductProductLineParams{
-		ItemID:        "it_1",
+		ProductID:     "it_1",
 		ProductLineID: "pl_from_other_account",
 	})
 
@@ -1100,16 +1176,16 @@ func (s *ProductSvcTestSuite) TestGetProduct_Success_WithIncludes() {
 		Item:   &domain.Item{ID: "it_1", SKU: "SKU-1"},
 	}
 	s.productRepo.EXPECT().
-		Get(gomock.Any(), domain.GetProductFullParams{AccountID: "ac_test123", ItemID: "it_1"}).
+		Get(gomock.Any(), domain.GetProductFullParams{AccountID: "ac_test123", ProductID: "it_1"}).
 		Return(product, nil).
 		Times(1)
 	s.itemRepo.EXPECT().
 		Get(gomock.Any(), domain.GetItemParams{AccountID: "ac_test123", ItemID: "it_1"}).
 		Return(&domain.Item{ID: "it_1", Attributes: []*domain.ItemAttribute{{ID: "attr_1"}}}, nil).
 		Times(1)
-	// No ProductLine on product → GetUnitGroup must NOT be called.
+		// No ProductLine on product → GetUnitGroup must NOT be called.
 
-	result, err := s.productSvc.GetProduct(ctx, domain.GetProductFullParams{ItemID: "it_1"})
+	result, err := s.productSvc.GetProduct(ctx, domain.GetProductFullParams{ProductID: "it_1"})
 
 	s.Nil(err)
 	s.NotNil(result)
@@ -1130,7 +1206,7 @@ func (s *ProductSvcTestSuite) TestGetProduct_MissingTargetAccount_AuthError() {
 		},
 	})
 
-	result, err := s.productSvc.GetProduct(ctx, domain.GetProductFullParams{ItemID: "it_1"})
+	result, err := s.productSvc.GetProduct(ctx, domain.GetProductFullParams{ProductID: "it_1"})
 
 	s.Nil(result)
 	s.NotNil(err)
@@ -1145,7 +1221,7 @@ func (s *ProductSvcTestSuite) TestGetProduct_ExternalTarget_ChecksReadAccess() {
 		Return(apierror.NewAuthorizationError("no access")).
 		Times(1)
 
-	result, err := s.productSvc.GetProduct(ctx, domain.GetProductFullParams{ItemID: "it_1"})
+	result, err := s.productSvc.GetProduct(ctx, domain.GetProductFullParams{ProductID: "it_1"})
 
 	s.Nil(result)
 	s.NotNil(err)
@@ -1160,7 +1236,7 @@ func (s *ProductSvcTestSuite) TestGetProduct_NotFound() {
 		Return(nil, apierror.NewResourceNotFoundError("Product not found.")).
 		Times(1)
 
-	result, err := s.productSvc.GetProduct(ctx, domain.GetProductFullParams{ItemID: "it_missing"})
+	result, err := s.productSvc.GetProduct(ctx, domain.GetProductFullParams{ProductID: "it_missing"})
 
 	s.Nil(result)
 	s.NotNil(err)

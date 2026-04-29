@@ -31,7 +31,7 @@ func buildShippingTermSearchParams(query *string) gosql.NullString {
 	if query == nil || *query == "" {
 		return gosql.NullString{}
 	}
-	return gosql.NullString{String: "%" + *query + "%", Valid: true}
+	return gosql.NullString{String: "%" + db.EscapeLike(*query) + "%", Valid: true}
 }
 
 // shippingTermTypeFromBooleans maps DB booleans to the domain ShippingTermType.

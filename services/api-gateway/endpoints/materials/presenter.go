@@ -30,12 +30,8 @@ func MaterialPresenter(m *pb.MaterialInfo) apiresource.Material {
 		i := itemep.ItemPresenter(m.Item)
 		item = &i
 	}
-	// The public identifier for a Material is its item_id: every URL handler
-	// (Get/Update/Delete) maps the `{id}` path parameter to the item id when
-	// calling the core service. Returning the item_id here keeps list and
-	// single-GET responses consistent and routable.
 	return apiresource.Material{
-		ID:         m.ItemId,
+		ID:         m.Id,
 		Object:     constants.ObjectTypeMaterial,
 		Item:       item,
 		OrderPoint: materialQuantityInfoPresenter(m.OrderPoint),
@@ -65,8 +61,6 @@ func SupplierMaterialPresenter(sm *pb.SupplierMaterialInfo) apiresource.Supplier
 	if sm.Material != nil {
 		m := MaterialPresenter(sm.Material)
 		material = &m
-		// MaterialPresenter already normalizes Material.ID to item_id, which is
-		// the identifier the supplier-material GET handler expects as `{id}`.
 		itemID = m.ID
 	}
 	return apiresource.SupplierMaterial{

@@ -182,6 +182,84 @@ func mapMaterialBackwardRow(row sqlc.ListMaterialsBackwardRow) *domain.Material 
 	}
 }
 
+func mapGetMaterialByIDRow(row sqlc.GetMaterialByIDRow) *domain.Material {
+	var description *string
+	if row.ItemDescription.Valid {
+		description = &row.ItemDescription.String
+	}
+	var notes *string
+	if row.ItemNotes.Valid {
+		notes = &row.ItemNotes.String
+	}
+
+	return &domain.Material{
+		ID:     row.ID,
+		ItemID: row.ItemID,
+		Item: &domain.Item{
+			ID:             row.ItemID,
+			SKU:            row.Sku,
+			Description:    description,
+			Notes:          notes,
+			ItemTypeCode:   row.ItemTypeCode,
+			ItemCategoryID: row.ItemCategoryID,
+			CategoryName:   row.CategoryName,
+			UnitValueID:    row.UnitValueID,
+			UnitCostID:     row.UnitCostID,
+			BurnRateID:     row.BurnRateID,
+			AccountID:      row.AccountID,
+			IsDirty:        row.IsDirty,
+			CreatedAt:      row.ItemCreatedAt,
+			UpdatedAt:      row.ItemUpdatedAt,
+			UnitValue: &domain.Rate{
+				ID:                row.UnitValueRateID,
+				Value:             row.UnitValueRateValue,
+				NumeratorUnitID:   row.UnitValueNumeratorUnitID,
+				DenominatorUnitID: row.UnitValueDenominatorUnitID,
+				CreatedAt:         row.UnitValueCreatedAt,
+				UpdatedAt:         row.UnitValueUpdatedAt,
+			},
+			UnitCost: &domain.Rate{
+				ID:                row.UnitCostRateID,
+				Value:             row.UnitCostRateValue,
+				NumeratorUnitID:   row.UnitCostNumeratorUnitID,
+				DenominatorUnitID: row.UnitCostDenominatorUnitID,
+				CreatedAt:         row.UnitCostCreatedAt,
+				UpdatedAt:         row.UnitCostUpdatedAt,
+			},
+			BurnRate: &domain.Rate{
+				ID:                row.BurnRateIDJoined,
+				Value:             row.BurnRateValue,
+				NumeratorUnitID:   row.BurnRateNumeratorUnitID,
+				DenominatorUnitID: row.BurnRateDenominatorUnitID,
+				CreatedAt:         row.BurnRateCreatedAt,
+				UpdatedAt:         row.BurnRateUpdatedAt,
+			},
+			Category: &domain.ItemCategory{
+				ID:                   row.ItemCategoryID,
+				Name:                 row.CategoryName,
+				ItemCategoryTypeCode: row.ItemCategoryTypeCode,
+				UnitGroupID:          row.CategoryUnitGroupID,
+			},
+		},
+		OrderPoint: &domain.Quantity{
+			ID:               row.OrderPointID,
+			Value:            row.OrderPointValue,
+			UnitID:           row.OrderPointUnitID,
+			UnitAbbreviation: row.OrderPointUnitAbbreviation,
+			UnitType:         row.OrderPointUnitType,
+		},
+		LeadTime: &domain.Quantity{
+			ID:               row.LeadTimeID,
+			Value:            row.LeadTimeValue,
+			UnitID:           row.LeadTimeUnitID,
+			UnitAbbreviation: row.LeadTimeUnitAbbreviation,
+			UnitType:         row.LeadTimeUnitType,
+		},
+		CreatedAt: row.CreatedAt,
+		UpdatedAt: row.UpdatedAt,
+	}
+}
+
 func mapGetMaterialByItemIDRow(row sqlc.GetMaterialByItemIDRow) *domain.Material {
 	var description *string
 	if row.ItemDescription.Valid {
@@ -390,6 +468,29 @@ func (r *materialRepoImpl) loadItemAttributes(ctx context.Context, item *domain.
 	return nil
 }
 
+func (r *materialRepoImpl) GetByID(ctx context.Context, accountID, materialID string) (*domain.Material, *apierror.APIError) {
+	ctx, span := materialRepoTracer.Start(ctx, "repository.material.get_by_id")
+	defer span.End()
+
+	row, err := r.queries.GetMaterialByID(ctx, sqlc.GetMaterialByIDParams{
+		ID:        materialID,
+		AccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	material := mapGetMaterialByIDRow(row)
+
+	if material.Item != nil {
+		if apiErr := r.loadItemAttributes(ctx, material.Item); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+	}
+
+	return material, nil
+}
+
 func (r *materialRepoImpl) GetByItemID(ctx context.Context, accountID, itemID string) (*domain.Material, *apierror.APIError) {
 	ctx, span := materialRepoTracer.Start(ctx, "repository.material.get_by_item_id")
 	defer span.End()
@@ -403,13 +504,11 @@ func (r *materialRepoImpl) GetByItemID(ctx context.Context, accountID, itemID st
 	}
 
 	material := mapGetMaterialByItemIDRow(row)
-
 	if material.Item != nil {
 		if apiErr := r.loadItemAttributes(ctx, material.Item); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
 	}
-
 	return material, nil
 }
 
@@ -434,8 +533,7 @@ func (r *materialRepoImpl) Update(ctx context.Context, params domain.UpdateMater
 	ctx, span := materialRepoTracer.Start(ctx, "repository.material.update")
 	defer span.End()
 
-	// Look up the material by item ID to get the material's own ID.
-	existing, apiErr := r.GetByItemID(ctx, params.AccountID, params.ItemID)
+	existing, apiErr := r.GetByID(ctx, params.AccountID, params.MaterialID)
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
@@ -448,12 +546,12 @@ func (r *materialRepoImpl) Update(ctx context.Context, params domain.UpdateMater
 	return nil
 }
 
-func (r *materialRepoImpl) DeleteByItemID(ctx context.Context, accountID, itemID string) *apierror.APIError {
-	ctx, span := materialRepoTracer.Start(ctx, "repository.material.delete_by_item_id")
+func (r *materialRepoImpl) DeleteByID(ctx context.Context, accountID, materialID string) *apierror.APIError {
+	ctx, span := materialRepoTracer.Start(ctx, "repository.material.delete_by_id")
 	defer span.End()
 
-	result, err := r.queries.DeleteMaterialByItemID(ctx, sqlc.DeleteMaterialByItemIDParams{
-		ID:        itemID,
+	result, err := r.queries.DeleteMaterialByID(ctx, sqlc.DeleteMaterialByIDParams{
+		ID:        materialID,
 		AccountID: accountID,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
@@ -469,6 +567,14 @@ func (r *materialRepoImpl) DeleteByItemID(ctx context.Context, accountID, itemID
 	}
 
 	return nil
+}
+
+func (r *materialRepoImpl) DeleteByItemID(ctx context.Context, accountID, itemID string) *apierror.APIError {
+	material, apiErr := r.GetByItemID(ctx, accountID, itemID)
+	if apiErr != nil {
+		return apiErr
+	}
+	return r.DeleteByID(ctx, accountID, material.ID)
 }
 
 func (r *materialRepoImpl) InsertQuantity(ctx context.Context, id, value, unitID string) *apierror.APIError {
@@ -547,16 +653,21 @@ func (r *materialRepoImpl) UpdateItem(ctx context.Context, params domain.UpdateM
 	ctx, span := materialRepoTracer.Start(ctx, "repository.material.update_item")
 	defer span.End()
 
+	existing, apiErr := r.GetByID(ctx, params.AccountID, params.MaterialID)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+
 	_, err := r.queries.MaterialUpdateItem(ctx, sqlc.MaterialUpdateItemParams{
 		Sku:               toNullString(params.SKU),
 		UpdateDescription: params.UpdateDescription,
 		Description:       toNullString(params.Description),
 		UpdateNotes:       params.UpdateNotes,
 		Notes:             toNullString(params.Notes),
-		ID:                params.ItemID,
+		ID:                existing.ItemID,
 		AccountID:         params.AccountID,
 	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
+	if apiErr = db.MapSQLError(err); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
 

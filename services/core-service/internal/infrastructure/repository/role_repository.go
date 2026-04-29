@@ -46,7 +46,11 @@ func buildRoleSearchQuery(query *string) gosql.NullString {
 	if query == nil || *query == "" {
 		return gosql.NullString{}
 	}
-	return gosql.NullString{String: *query + "*", Valid: true}
+	sanitized := db.SanitizeFulltextBoolean(*query)
+	if sanitized == "" {
+		return gosql.NullString{}
+	}
+	return gosql.NullString{String: sanitized + "*", Valid: true}
 }
 
 func (r *roleRepoImpl) GetByID(ctx context.Context, roleID string) (*domain.RoleInfo, *apierror.APIError) {

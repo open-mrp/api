@@ -112,12 +112,12 @@ func (s *materialSvcImpl) ListMaterials(ctx context.Context, params domain.ListM
 	return s.repos.NewMaterialRepo().List(ctx, params)
 }
 
-// GetMaterial retrieves a single material by item ID, scoped to the caller's account.
+// GetMaterial retrieves a single material by material ID, scoped to the caller's account.
 //
 // 1. Extract and validate the caller's identity, actor type, and items:read permission.
 // 2. Require the Augno-Account header.
 // 3. Fetch the material from the repository by account ID and item ID.
-func (s *materialSvcImpl) GetMaterial(ctx context.Context, itemID string) (*domain.Material, *apierror.APIError) {
+func (s *materialSvcImpl) GetMaterial(ctx context.Context, materialID string) (*domain.Material, *apierror.APIError) {
 	ctx, span := materialSvcTracer.Start(ctx, "service.material.get")
 	defer span.End()
 
@@ -144,7 +144,7 @@ func (s *materialSvcImpl) GetMaterial(ctx context.Context, itemID string) (*doma
 		}
 	}
 
-	return s.repos.NewMaterialRepo().GetByItemID(ctx, identity.Target.AccountID, itemID)
+	return s.repos.NewMaterialRepo().GetByID(ctx, identity.Target.AccountID, materialID)
 }
 
 // CreateMaterial creates a new material with its associated item, rates, and quantities, with idempotency support.
@@ -261,20 +261,64 @@ func (s *materialSvcImpl) CreateMaterial(ctx context.Context, params domain.Crea
 				return apiErr
 			}
 
-			// Insert rates for item (unit_value, unit_cost, burn_rate).
-			if apiErr := txMaterialRepo.InsertRate(txCtx, unitValueRateID, "0", baseUnitID, baseUnitID); apiErr != nil {
+			// Insert rates for item (unit_value, unit_cost, burn_rate). Caller-supplied
+			// inputs override the defaults; unit_price and unit_cost additionally enforce
+			// the currency-numerator / non-currency-denominator rule.
+			txUnitRepo := txSvc.repos.NewUnitRepo()
+
+			unitValueValue, unitValueNum, unitValueDen := "0", baseUnitID, baseUnitID
+			if params.UnitPrice != nil {
+				if apiErr := ValidateCostRateUnits(txCtx, txUnitRepo, params.UnitPrice.NumeratorUnitID, params.UnitPrice.DenominatorUnitID, "unit_price"); apiErr != nil {
+					return apiErr
+				}
+				unitValueValue = params.UnitPrice.Value
+				unitValueNum = params.UnitPrice.NumeratorUnitID
+				unitValueDen = params.UnitPrice.DenominatorUnitID
+			}
+			if apiErr := txMaterialRepo.InsertRate(txCtx, unitValueRateID, unitValueValue, unitValueNum, unitValueDen); apiErr != nil {
 				return apiErr
 			}
-			if apiErr := txMaterialRepo.InsertRate(txCtx, unitCostRateID, "0", baseUnitID, baseUnitID); apiErr != nil {
+
+			unitCostValue, unitCostNum, unitCostDen := "0", baseUnitID, baseUnitID
+			if params.UnitCost != nil {
+				if apiErr := ValidateCostRateUnits(txCtx, txUnitRepo, params.UnitCost.NumeratorUnitID, params.UnitCost.DenominatorUnitID, "unit_cost"); apiErr != nil {
+					return apiErr
+				}
+				unitCostValue = params.UnitCost.Value
+				unitCostNum = params.UnitCost.NumeratorUnitID
+				unitCostDen = params.UnitCost.DenominatorUnitID
+			}
+			if apiErr := txMaterialRepo.InsertRate(txCtx, unitCostRateID, unitCostValue, unitCostNum, unitCostDen); apiErr != nil {
 				return apiErr
 			}
-			if apiErr := txMaterialRepo.InsertRate(txCtx, burnRateRateID, "0", baseUnitID, baseUnitID); apiErr != nil {
+
+			burnValue, burnNum, burnDen := "0", baseUnitID, baseUnitID
+			if params.BurnRate != nil {
+				burnValue = params.BurnRate.Value
+				burnNum = params.BurnRate.NumeratorUnitID
+				burnDen = params.BurnRate.DenominatorUnitID
+			}
+			if apiErr := txMaterialRepo.InsertRate(txCtx, burnRateRateID, burnValue, burnNum, burnDen); apiErr != nil {
 				return apiErr
 			}
 
 			// Insert item.
 			if apiErr := txMaterialRepo.InsertItem(txCtx, itemID, params); apiErr != nil {
 				return apiErr
+			}
+
+			// Link caller-supplied attributes to the new item (matches Dashboard behavior).
+			for _, attrID := range params.AttributeIDs {
+				if attrID == "" {
+					continue
+				}
+				if apiErr := txItemRepo.AddAttribute(txCtx, domain.AddItemAttributeParams{
+					AccountID:   params.AccountID,
+					ItemID:      itemID,
+					AttributeID: attrID,
+				}); apiErr != nil {
+					return apiErr
+				}
 			}
 
 			// Insert order point quantity.
@@ -328,7 +372,7 @@ func (s *materialSvcImpl) CreateMaterial(ctx context.Context, params domain.Crea
 			}
 
 			// Fetch fresh material for response.
-			created, apiErr := txMaterialRepo.GetByItemID(txCtx, params.AccountID, itemID)
+			created, apiErr := txMaterialRepo.GetByID(txCtx, params.AccountID, materialID)
 			if apiErr != nil {
 				return apiErr
 			}
@@ -418,14 +462,14 @@ func (s *materialSvcImpl) UpdateMaterial(ctx context.Context, params domain.Upda
 			txItemRepo := txSvc.repos.NewItemRepo()
 
 			// Verify the material exists.
-			existing, apiErr := txMaterialRepo.GetByItemID(txCtx, params.AccountID, params.ItemID)
+			existing, apiErr := txMaterialRepo.GetByID(txCtx, params.AccountID, params.MaterialID)
 			if apiErr != nil {
 				return apiErr
 			}
 
 			// Check SKU uniqueness if being updated, excluding the current item.
 			if params.SKU != nil {
-				exists, apiErr := txItemRepo.CheckSKUExists(txCtx, params.AccountID, *params.SKU, params.ItemID)
+				exists, apiErr := txItemRepo.CheckSKUExists(txCtx, params.AccountID, *params.SKU, existing.ItemID)
 				if apiErr != nil {
 					return apiErr
 				}
@@ -459,7 +503,7 @@ func (s *materialSvcImpl) UpdateMaterial(ctx context.Context, params domain.Upda
 			}
 
 			// Fetch fresh material for response.
-			updated, apiErr := txMaterialRepo.GetByItemID(txCtx, params.AccountID, params.ItemID)
+			updated, apiErr := txMaterialRepo.GetByID(txCtx, params.AccountID, params.MaterialID)
 			if apiErr != nil {
 				return apiErr
 			}
@@ -491,13 +535,13 @@ func (s *materialSvcImpl) UpdateMaterial(ctx context.Context, params domain.Upda
 	}
 }
 
-// DeleteMaterial soft-deletes a material by its item ID, scoped to the caller's account.
+// DeleteMaterial soft-deletes a material by its material ID, scoped to the caller's account.
 //
 // 1. Extract and validate the caller's identity, actor type, and materials:delete permission.
 // 2. Fetch the material to verify it exists.
 // 3. Within a transaction, soft-delete the material.
 // 4. Return the material as it was before deletion.
-func (s *materialSvcImpl) DeleteMaterial(ctx context.Context, itemID string) (*domain.Material, *apierror.APIError) {
+func (s *materialSvcImpl) DeleteMaterial(ctx context.Context, materialID string) (*domain.Material, *apierror.APIError) {
 	ctx, span := materialSvcTracer.Start(ctx, "service.material.delete")
 	defer span.End()
 
@@ -527,10 +571,10 @@ func (s *materialSvcImpl) DeleteMaterial(ctx context.Context, itemID string) (*d
 	accountID := identity.Target.AccountID
 
 	// Fetch existing material before deletion.
-	material, apiErr := s.repos.NewMaterialRepo().GetByItemID(ctx, accountID, itemID)
+	material, apiErr := s.repos.NewMaterialRepo().GetByID(ctx, accountID, materialID)
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeMaterial, itemID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeMaterial, materialID)
 			if deletedCheckErr != nil {
 				return nil, tracing.Trace(span, deletedCheckErr)
 			}
@@ -546,11 +590,11 @@ func (s *materialSvcImpl) DeleteMaterial(ctx context.Context, itemID string) (*d
 
 	// Soft-delete within a transaction.
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *materialSvcImpl) *apierror.APIError {
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeMaterial, material.ItemID, material); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeMaterial, material.ID, material); apiErr != nil {
 			return apiErr
 		}
 
-		if apiErr := txSvc.repos.NewMaterialRepo().DeleteByItemID(txCtx, accountID, itemID); apiErr != nil {
+		if apiErr := txSvc.repos.NewMaterialRepo().DeleteByID(txCtx, accountID, materialID); apiErr != nil {
 			return apiErr
 		}
 

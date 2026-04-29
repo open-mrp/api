@@ -106,7 +106,7 @@ func (s *partSvcImpl) ListParts(ctx context.Context, params domain.ListPartsPara
 	return s.repos.NewPartRepo().List(ctx, params)
 }
 
-func (s *partSvcImpl) GetPart(ctx context.Context, itemID string) (*domain.Part, *apierror.APIError) {
+func (s *partSvcImpl) GetPart(ctx context.Context, partID string) (*domain.Part, *apierror.APIError) {
 	ctx, span := partSvcTracer.Start(ctx, "service.part.get")
 	defer span.End()
 
@@ -135,7 +135,7 @@ func (s *partSvcImpl) GetPart(ctx context.Context, itemID string) (*domain.Part,
 
 	return s.repos.NewPartRepo().Get(ctx, domain.GetPartParams{
 		AccountID: identity.Target.AccountID,
-		ItemID:    itemID,
+		PartID:    partID,
 	})
 }
 
@@ -229,14 +229,44 @@ func (s *partSvcImpl) CreatePart(ctx context.Context, params domain.CreatePartPa
 				return apiErr
 			}
 
-			// Insert rates for item (unit_value, unit_cost, burn_rate).
-			if apiErr := txPartRepo.InsertRate(txCtx, unitValueRateID, "0", baseUnitID, baseUnitID); apiErr != nil {
+			// Insert rates for item (unit_value, unit_cost, burn_rate). Caller-supplied
+			// inputs override the defaults; unit_price and unit_cost additionally enforce
+			// the currency-numerator / non-currency-denominator rule.
+			txUnitRepo := txSvc.repos.NewUnitRepo()
+
+			unitValueValue, unitValueNum, unitValueDen := "0", baseUnitID, baseUnitID
+			if params.UnitPrice != nil {
+				if apiErr := ValidateCostRateUnits(txCtx, txUnitRepo, params.UnitPrice.NumeratorUnitID, params.UnitPrice.DenominatorUnitID, "unit_price"); apiErr != nil {
+					return apiErr
+				}
+				unitValueValue = params.UnitPrice.Value
+				unitValueNum = params.UnitPrice.NumeratorUnitID
+				unitValueDen = params.UnitPrice.DenominatorUnitID
+			}
+			if apiErr := txPartRepo.InsertRate(txCtx, unitValueRateID, unitValueValue, unitValueNum, unitValueDen); apiErr != nil {
 				return apiErr
 			}
-			if apiErr := txPartRepo.InsertRate(txCtx, unitCostRateID, "0", baseUnitID, baseUnitID); apiErr != nil {
+
+			unitCostValue, unitCostNum, unitCostDen := "0", baseUnitID, baseUnitID
+			if params.UnitCost != nil {
+				if apiErr := ValidateCostRateUnits(txCtx, txUnitRepo, params.UnitCost.NumeratorUnitID, params.UnitCost.DenominatorUnitID, "unit_cost"); apiErr != nil {
+					return apiErr
+				}
+				unitCostValue = params.UnitCost.Value
+				unitCostNum = params.UnitCost.NumeratorUnitID
+				unitCostDen = params.UnitCost.DenominatorUnitID
+			}
+			if apiErr := txPartRepo.InsertRate(txCtx, unitCostRateID, unitCostValue, unitCostNum, unitCostDen); apiErr != nil {
 				return apiErr
 			}
-			if apiErr := txPartRepo.InsertRate(txCtx, burnRateRateID, "0", baseUnitID, baseUnitID); apiErr != nil {
+
+			burnValue, burnNum, burnDen := "0", baseUnitID, baseUnitID
+			if params.BurnRate != nil {
+				burnValue = params.BurnRate.Value
+				burnNum = params.BurnRate.NumeratorUnitID
+				burnDen = params.BurnRate.DenominatorUnitID
+			}
+			if apiErr := txPartRepo.InsertRate(txCtx, burnRateRateID, burnValue, burnNum, burnDen); apiErr != nil {
 				return apiErr
 			}
 
@@ -251,6 +281,20 @@ func (s *partSvcImpl) CreatePart(ctx context.Context, params domain.CreatePartPa
 				return apiErr
 			}
 			result = created
+
+			// Link caller-supplied attributes to the new item (matches Dashboard behavior).
+			for _, attrID := range params.AttributeIDs {
+				if attrID == "" {
+					continue
+				}
+				if apiErr := txItemRepo.AddAttribute(txCtx, domain.AddItemAttributeParams{
+					AccountID:   params.AccountID,
+					ItemID:      itemID,
+					AttributeID: attrID,
+				}); apiErr != nil {
+					return apiErr
+				}
+			}
 
 			changes := audit.ComputeChanges(nil, created.Item)
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
@@ -351,14 +395,15 @@ func (s *partSvcImpl) UpdatePart(ctx context.Context, params domain.UpdatePartPa
 			txItemRepo := txSvc.repos.NewItemRepo()
 
 			// Fetch the part before update for audit diff.
-			old, apiErr := txPartRepo.Get(txCtx, domain.GetPartParams{AccountID: params.AccountID, ItemID: params.ItemID})
+			old, apiErr := txPartRepo.Get(txCtx, domain.GetPartParams{AccountID: params.AccountID, PartID: params.PartID})
 			if apiErr != nil {
 				return apiErr
 			}
 
 			// Check SKU uniqueness if being updated, excluding the current item.
 			if params.SKU != nil {
-				exists, apiErr := txPartRepo.ExistsBySKU(txCtx, params.AccountID, *params.SKU, &params.ItemID)
+				excludeItemID := old.ItemID
+				exists, apiErr := txPartRepo.ExistsBySKU(txCtx, params.AccountID, *params.SKU, &excludeItemID)
 				if apiErr != nil {
 					return apiErr
 				}
@@ -368,17 +413,25 @@ func (s *partSvcImpl) UpdatePart(ctx context.Context, params domain.UpdatePartPa
 			}
 
 			// Update item fields (sku, description, notes).
-			if apiErr := txItemRepo.Update(txCtx, domain.UpdateItemParams(params)); apiErr != nil {
+			if apiErr := txItemRepo.Update(txCtx, domain.UpdateItemParams{
+				AccountID:         params.AccountID,
+				ItemID:            old.ItemID,
+				SKU:               params.SKU,
+				Description:       params.Description,
+				UpdateDescription: params.UpdateDescription,
+				Notes:             params.Notes,
+				UpdateNotes:       params.UpdateNotes,
+			}); apiErr != nil {
 				return apiErr
 			}
 
 			// Touch part updated_at to match dashboard behavior.
-			if apiErr := txPartRepo.TouchUpdatedAt(txCtx, params.ItemID); apiErr != nil {
+			if apiErr := txPartRepo.TouchUpdatedAt(txCtx, params.PartID); apiErr != nil {
 				return apiErr
 			}
 
 			// Fetch fresh part for response.
-			updated, apiErr := txPartRepo.Get(txCtx, domain.GetPartParams{AccountID: params.AccountID, ItemID: params.ItemID})
+			updated, apiErr := txPartRepo.Get(txCtx, domain.GetPartParams{AccountID: params.AccountID, PartID: params.PartID})
 			if apiErr != nil {
 				return apiErr
 			}
@@ -409,7 +462,7 @@ func (s *partSvcImpl) UpdatePart(ctx context.Context, params domain.UpdatePartPa
 	}
 }
 
-func (s *partSvcImpl) DeletePart(ctx context.Context, itemID string) (*domain.Part, *apierror.APIError) {
+func (s *partSvcImpl) DeletePart(ctx context.Context, partID string) (*domain.Part, *apierror.APIError) {
 	ctx, span := partSvcTracer.Start(ctx, "service.part.delete")
 	defer span.End()
 
@@ -439,10 +492,10 @@ func (s *partSvcImpl) DeletePart(ctx context.Context, itemID string) (*domain.Pa
 	accountID := identity.Target.AccountID
 
 	// Fetch existing part before deletion.
-	part, apiErr := s.repos.NewPartRepo().Get(ctx, domain.GetPartParams{AccountID: accountID, ItemID: itemID})
+	part, apiErr := s.repos.NewPartRepo().Get(ctx, domain.GetPartParams{AccountID: accountID, PartID: partID})
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypePart, itemID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypePart, partID)
 			if deletedCheckErr != nil {
 				return nil, tracing.Trace(span, deletedCheckErr)
 			}
@@ -461,7 +514,7 @@ func (s *partSvcImpl) DeletePart(ctx context.Context, itemID string) (*domain.Pa
 
 		if apiErr := txSvc.repos.NewPartRepo().Delete(txCtx, domain.DeletePartParams{
 			AccountID: accountID,
-			ItemID:    itemID,
+			PartID:    partID,
 		}); apiErr != nil {
 			return apiErr
 		}

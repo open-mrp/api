@@ -221,7 +221,7 @@ func buildICLSearchQuery(query *string) gosql.NullString {
 	if query == nil || *query == "" {
 		return gosql.NullString{}
 	}
-	return gosql.NullString{String: "%" + *query + "%", Valid: true}
+	return gosql.NullString{String: "%" + db.EscapeLike(*query) + "%", Valid: true}
 }
 
 func (r *inventoryChangeLogRepoImpl) List(ctx context.Context, params domain.ListInventoryChangeLogsParams) (*domain.ListInventoryChangeLogsResult, *apierror.APIError) {

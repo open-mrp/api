@@ -101,7 +101,7 @@ func buildTerritorySearchParams(query *string) (gosql.NullString, gosql.NullInt6
 		return gosql.NullString{}, gosql.NullInt64{}
 	}
 
-	searchQuery := gosql.NullString{String: "%" + *query + "%", Valid: true}
+	searchQuery := gosql.NullString{String: "%" + db.EscapeLike(*query) + "%", Valid: true}
 	zipcodeQuery := parseZipcodeQuery(*query)
 
 	return searchQuery, zipcodeQuery

@@ -504,4 +504,6 @@ INSERT IGNORE INTO _item_attributes (A, B) VALUES
     ('at_01seedbeige00000000', 'it_01k0a7100aef2997gw0t7nxd9d'),
     -- Beige Large Sock: large, beige
     ('at_01seedlarge00000000', 'it_01k0a7100ae85v16mmxx5gx2w3'),
-    ('at_01seedbeige00000000', 'it_01k0a7100ae85v16mmxx5gx2w3');
+    ('at_01seedbeige00000000', 'it_01k0a7100ae85v16mmxx5gx2w3'),
+    -- Seeded part fixture: large
+    ('at_01seedlarge00000000', 'it_01seedlknitem000000');

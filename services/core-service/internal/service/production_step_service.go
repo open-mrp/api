@@ -177,6 +177,16 @@ func (s *productionStepSvcImpl) CreateProductionStep(ctx context.Context, params
 		var result *domain.ProductionStep
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *productionStepSvcImpl) *apierror.APIError {
 			txRepo := txSvc.repos.NewProductionStepRepo()
+			txUnitRepo := txSvc.repos.NewUnitRepo()
+
+			// Validate cost-typed rates: numerator must be currency, denominator must
+			// not. labor_time is a time-per-unit rate (not money), so it's exempt.
+			if apiErr := ValidateCostRateUnits(txCtx, txUnitRepo, params.LaborRate.NumeratorUnitID, params.LaborRate.DenominatorUnitID, "labor_rate"); apiErr != nil {
+				return apiErr
+			}
+			if apiErr := ValidateCostRateUnits(txCtx, txUnitRepo, params.OverheadRate.NumeratorUnitID, params.OverheadRate.DenominatorUnitID, "overhead_rate"); apiErr != nil {
+				return apiErr
+			}
 
 			// Insert rates.
 			if apiErr := txRepo.InsertRate(txCtx, laborRateID, params.LaborRate); apiErr != nil {

@@ -37,7 +37,7 @@ func (e *ChangeItemCategoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cha
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeItem,
-			Fields:     []string{"category", "unit_value", "unit_cost", "burn_rate"},
+			Fields:     []string{"category", "unit_value", "unit_cost", "burn_rate", "attributes"},
 		}),
 	}
 }

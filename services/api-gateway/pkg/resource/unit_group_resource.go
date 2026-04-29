@@ -45,7 +45,7 @@ type UnitGroupUnit struct {
 	// Fixed discount amount.
 	DiscountFixed float64 `json:"discount_fixed"`
 	// Customer portal visibility.
-	CustomerPortalVisibility constants.CustomerPortalVisibility `json:"customer_portal_visibility" validate:"required,enum"`
+	CustomerPortalVisibility constants.CustomerPortalVisibility `json:"customer_portal_visibility" validate:"required"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last updated timestamp.

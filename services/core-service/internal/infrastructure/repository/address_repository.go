@@ -118,7 +118,7 @@ func buildAddressSearchParams(query *string) gosql.NullString {
 	if query == nil || *query == "" {
 		return gosql.NullString{}
 	}
-	return gosql.NullString{String: "%" + *query + "%", Valid: true}
+	return gosql.NullString{String: "%" + db.EscapeLike(*query) + "%", Valid: true}
 }
 
 func (r *addressRepoImpl) List(ctx context.Context, params domain.ListAddressesParams) (*domain.ListAddressesResult, *apierror.APIError) {

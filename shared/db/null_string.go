@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"strings"
 )
 
 func NullString(s string) sql.NullString {
@@ -20,7 +21,7 @@ func NullStringLikePtr(s *string) sql.NullString {
 	if s == nil || *s == "" {
 		return sql.NullString{String: "", Valid: false}
 	}
-	return sql.NullString{String: "%" + *s + "%", Valid: true}
+	return sql.NullString{String: "%" + EscapeLike(*s) + "%", Valid: true}
 }
 
 // NullStringFulltextPtr returns a NullString formatted for MySQL FULLTEXT
@@ -30,7 +31,30 @@ func NullStringFulltextPtr(s *string) sql.NullString {
 	if s == nil || *s == "" {
 		return sql.NullString{String: "", Valid: false}
 	}
-	return sql.NullString{String: *s + "*", Valid: true}
+	sanitized := SanitizeFulltextBoolean(*s)
+	if sanitized == "" {
+		return sql.NullString{String: "", Valid: false}
+	}
+	return sql.NullString{String: sanitized + "*", Valid: true}
+}
+
+// EscapeLike escapes MySQL LIKE metacharacters in user-provided search terms.
+func EscapeLike(s string) string {
+	s = strings.ReplaceAll(s, `\`, `\\`)
+	s = strings.ReplaceAll(s, `%`, `\%`)
+	s = strings.ReplaceAll(s, `_`, `\_`)
+	return s
+}
+
+// SanitizeFulltextBoolean strips MySQL BOOLEAN MODE operators from user input.
+func SanitizeFulltextBoolean(s string) string {
+	return strings.Map(func(r rune) rune {
+		switch r {
+		case '+', '-', '>', '<', '(', ')', '~', '*', '"', '@':
+			return -1
+		}
+		return r
+	}, s)
 }
 
 // innoDBMinTokenSize is the default minimum word length for InnoDB FULLTEXT
@@ -72,8 +96,12 @@ func NewFulltextSearch(s *string) FulltextSearch {
 		return FulltextSearch{}
 	}
 	if len(*s) < innoDBMinTokenSize {
+		sanitized := EscapeLike(*s)
+		if sanitized == "" {
+			return FulltextSearch{}
+		}
 		return FulltextSearch{
-			Like: sql.NullString{String: "%" + *s + "%", Valid: true},
+			Like: sql.NullString{String: "%" + sanitized + "%", Valid: true},
 		}
 	}
 	ft := NullStringFulltextPtr(s)

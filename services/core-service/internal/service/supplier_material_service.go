@@ -99,13 +99,13 @@ func (s *supplierMaterialSvcImpl) ListSupplierMaterials(ctx context.Context, par
 	return s.repos.NewSupplierMaterialRepo().List(ctx, params)
 }
 
-// GetSupplierMaterial retrieves a single supplier material by supplier account ID and item ID,
+// GetSupplierMaterial retrieves a single supplier material by supplier account ID and material ID,
 // scoped to the caller's account.
 //
 // 1. Extract and validate the caller's identity, actor type, and suppliers:read permission.
 // 2. Require the Augno-Account header.
-// 3. Fetch the supplier material from the repository by owner account ID, supplier account ID, and item ID.
-func (s *supplierMaterialSvcImpl) GetSupplierMaterial(ctx context.Context, supplierAccountID, itemID string) (*domain.SupplierMaterial, *apierror.APIError) {
+// 3. Fetch the supplier material from the repository by owner account ID, supplier account ID, and material ID.
+func (s *supplierMaterialSvcImpl) GetSupplierMaterial(ctx context.Context, supplierAccountID, materialID string) (*domain.SupplierMaterial, *apierror.APIError) {
 	ctx, span := supplierMaterialSvcTracer.Start(ctx, "service.supplier_material.get")
 	defer span.End()
 
@@ -121,7 +121,7 @@ func (s *supplierMaterialSvcImpl) GetSupplierMaterial(ctx context.Context, suppl
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return s.repos.NewSupplierMaterialRepo().GetBySupplierAndItemID(ctx, identity.Target.AccountID, supplierAccountID, itemID)
+	return s.repos.NewSupplierMaterialRepo().GetBySupplierAndMaterialID(ctx, identity.Target.AccountID, supplierAccountID, materialID)
 }
 
 // CreateSupplierMaterial creates a new supplier material association, with idempotency support.
@@ -259,7 +259,7 @@ func (s *supplierMaterialSvcImpl) UpdateSupplierMaterial(ctx context.Context, pa
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *supplierMaterialSvcImpl) *apierror.APIError {
 			txRepo := txSvc.repos.NewSupplierMaterialRepo()
 
-			old, apiErr := txRepo.GetBySupplierAndItemID(txCtx, params.OwnerAccountID, params.SupplierAccountID, params.ItemID)
+			old, apiErr := txRepo.GetBySupplierAndMaterialID(txCtx, params.OwnerAccountID, params.SupplierAccountID, params.MaterialID)
 			if apiErr != nil {
 				return apiErr
 			}
@@ -296,7 +296,7 @@ func (s *supplierMaterialSvcImpl) UpdateSupplierMaterial(ctx context.Context, pa
 	}
 }
 
-// DeleteSupplierMaterial deletes a supplier material association by supplier and item ID,
+// DeleteSupplierMaterial deletes a supplier material association by supplier and material ID,
 // scoped to the caller's account.
 //
 // 1. Extract and validate the caller's identity, actor type, and suppliers:update permission.
@@ -320,7 +320,7 @@ func (s *supplierMaterialSvcImpl) DeleteSupplierMaterial(ctx context.Context, pa
 
 	params.OwnerAccountID = identity.Target.AccountID
 
-	entity, apiErr := s.repos.NewSupplierMaterialRepo().GetBySupplierAndItemID(ctx, params.OwnerAccountID, params.SupplierAccountID, params.ItemID)
+	entity, apiErr := s.repos.NewSupplierMaterialRepo().GetBySupplierAndMaterialID(ctx, params.OwnerAccountID, params.SupplierAccountID, params.MaterialID)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}

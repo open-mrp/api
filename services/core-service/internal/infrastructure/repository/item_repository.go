@@ -207,7 +207,7 @@ func buildItemSearchParams(query *string) (gosql.NullString, gosql.NullString) {
 	if query == nil || *query == "" {
 		return gosql.NullString{}, gosql.NullString{}
 	}
-	return gosql.NullString{String: "%" + *query + "%", Valid: true}, gosql.NullString{String: *query, Valid: true}
+	return gosql.NullString{String: "%" + db.EscapeLike(*query) + "%", Valid: true}, gosql.NullString{String: *query, Valid: true}
 }
 
 func (r *itemRepoImpl) List(ctx context.Context, params domain.ListItemsParams) (*domain.ListItemsResult, *apierror.APIError) {

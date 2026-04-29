@@ -47,11 +47,15 @@ type CreateMaterialParams struct {
 	CategoryID      string
 	OrderPoint      *QuantityInput
 	LeadTime        *QuantityInput
+	UnitPrice       *CreateRateParams
+	UnitCost        *CreateRateParams
+	BurnRate        *CreateRateParams
+	AttributeIDs    []string
 }
 
 type UpdateMaterialParams struct {
 	AccountID         string
-	ItemID            string
+	MaterialID        string
 	SKU               *string
 	Description       *string
 	UpdateDescription bool
@@ -62,6 +66,6 @@ type UpdateMaterialParams struct {
 }
 
 type DeleteMaterialParams struct {
-	AccountID string
-	ItemID    string
+	AccountID  string
+	MaterialID string
 }

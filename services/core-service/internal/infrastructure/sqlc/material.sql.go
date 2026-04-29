@@ -47,21 +47,196 @@ func (q *Queries) CreateMaterial(ctx context.Context, arg CreateMaterialParams) 
 	return err
 }
 
-const deleteMaterialByItemID = `-- name: DeleteMaterialByItemID :execresult
-UPDATE item SET
-    deleted_at = NOW(3)
-WHERE id = ?
-AND account_id = ?
-AND deleted_at IS NULL
+const deleteMaterialByID = `-- name: DeleteMaterialByID :execresult
+UPDATE item i
+JOIN material m ON m.item_id = i.id
+SET i.deleted_at = NOW(3)
+WHERE m.id = ?
+AND i.account_id = ?
+AND i.deleted_at IS NULL
 `
 
-type DeleteMaterialByItemIDParams struct {
+type DeleteMaterialByIDParams struct {
 	ID        string
 	AccountID string
 }
 
-func (q *Queries) DeleteMaterialByItemID(ctx context.Context, arg DeleteMaterialByItemIDParams) (sql.Result, error) {
-	return q.db.ExecContext(ctx, deleteMaterialByItemID, arg.ID, arg.AccountID)
+func (q *Queries) DeleteMaterialByID(ctx context.Context, arg DeleteMaterialByIDParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, deleteMaterialByID, arg.ID, arg.AccountID)
+}
+
+const getMaterialByID = `-- name: GetMaterialByID :one
+SELECT
+    m.id,
+    m.item_id,
+    m.order_point_id,
+    m.lead_time_id,
+    m.created_at,
+    m.updated_at,
+    i.sku,
+    i.description AS item_description,
+    i.notes AS item_notes,
+    i.item_type_code,
+    i.item_category_id,
+    i.unit_value_id,
+    i.unit_cost_id,
+    i.burn_rate_id,
+    i.account_id,
+    i.is_dirty,
+    i.created_at AS item_created_at,
+    i.updated_at AS item_updated_at,
+    ic.name AS category_name,
+    ic.item_category_type_code,
+    ic.unit_group_id AS category_unit_group_id,
+    op.value AS order_point_value,
+    op.unit_id AS order_point_unit_id,
+    op_u.abbreviation AS order_point_unit_abbreviation,
+    op_u.unit_dimension_code AS order_point_unit_type,
+    lt.value AS lead_time_value,
+    lt.unit_id AS lead_time_unit_id,
+    lt_u.abbreviation AS lead_time_unit_abbreviation,
+    lt_u.unit_dimension_code AS lead_time_unit_type,
+    rv.id AS unit_value_rate_id,
+    rv.value AS unit_value_rate_value,
+    rv.numerator_unit_id AS unit_value_numerator_unit_id,
+    rv.denominator_unit_id AS unit_value_denominator_unit_id,
+    rv.created_at AS unit_value_created_at,
+    rv.updated_at AS unit_value_updated_at,
+    rc.id AS unit_cost_rate_id,
+    rc.value AS unit_cost_rate_value,
+    rc.numerator_unit_id AS unit_cost_numerator_unit_id,
+    rc.denominator_unit_id AS unit_cost_denominator_unit_id,
+    rc.created_at AS unit_cost_created_at,
+    rc.updated_at AS unit_cost_updated_at,
+    rb.id AS burn_rate_id_joined,
+    rb.value AS burn_rate_value,
+    rb.numerator_unit_id AS burn_rate_numerator_unit_id,
+    rb.denominator_unit_id AS burn_rate_denominator_unit_id,
+    rb.created_at AS burn_rate_created_at,
+    rb.updated_at AS burn_rate_updated_at
+FROM material m
+JOIN item i ON i.id = m.item_id
+JOIN item_category ic ON ic.id = i.item_category_id
+JOIN quantity op ON op.id = m.order_point_id
+JOIN unit op_u ON op_u.id = op.unit_id
+JOIN quantity lt ON lt.id = m.lead_time_id
+JOIN unit lt_u ON lt_u.id = lt.unit_id
+JOIN rate rv ON rv.id = i.unit_value_id
+JOIN rate rc ON rc.id = i.unit_cost_id
+JOIN rate rb ON rb.id = i.burn_rate_id
+WHERE m.id = ?
+AND i.account_id = ?
+AND i.deleted_at IS NULL
+`
+
+type GetMaterialByIDParams struct {
+	ID        string
+	AccountID string
+}
+
+type GetMaterialByIDRow struct {
+	ID                         string
+	ItemID                     string
+	OrderPointID               string
+	LeadTimeID                 string
+	CreatedAt                  time.Time
+	UpdatedAt                  time.Time
+	Sku                        string
+	ItemDescription            sql.NullString
+	ItemNotes                  sql.NullString
+	ItemTypeCode               string
+	ItemCategoryID             string
+	UnitValueID                string
+	UnitCostID                 string
+	BurnRateID                 string
+	AccountID                  string
+	IsDirty                    bool
+	ItemCreatedAt              time.Time
+	ItemUpdatedAt              time.Time
+	CategoryName               string
+	ItemCategoryTypeCode       string
+	CategoryUnitGroupID        string
+	OrderPointValue            string
+	OrderPointUnitID           string
+	OrderPointUnitAbbreviation string
+	OrderPointUnitType         string
+	LeadTimeValue              string
+	LeadTimeUnitID             string
+	LeadTimeUnitAbbreviation   string
+	LeadTimeUnitType           string
+	UnitValueRateID            string
+	UnitValueRateValue         string
+	UnitValueNumeratorUnitID   string
+	UnitValueDenominatorUnitID string
+	UnitValueCreatedAt         time.Time
+	UnitValueUpdatedAt         time.Time
+	UnitCostRateID             string
+	UnitCostRateValue          string
+	UnitCostNumeratorUnitID    string
+	UnitCostDenominatorUnitID  string
+	UnitCostCreatedAt          time.Time
+	UnitCostUpdatedAt          time.Time
+	BurnRateIDJoined           string
+	BurnRateValue              string
+	BurnRateNumeratorUnitID    string
+	BurnRateDenominatorUnitID  string
+	BurnRateCreatedAt          time.Time
+	BurnRateUpdatedAt          time.Time
+}
+
+func (q *Queries) GetMaterialByID(ctx context.Context, arg GetMaterialByIDParams) (GetMaterialByIDRow, error) {
+	row := q.db.QueryRowContext(ctx, getMaterialByID, arg.ID, arg.AccountID)
+	var i GetMaterialByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.ItemID,
+		&i.OrderPointID,
+		&i.LeadTimeID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Sku,
+		&i.ItemDescription,
+		&i.ItemNotes,
+		&i.ItemTypeCode,
+		&i.ItemCategoryID,
+		&i.UnitValueID,
+		&i.UnitCostID,
+		&i.BurnRateID,
+		&i.AccountID,
+		&i.IsDirty,
+		&i.ItemCreatedAt,
+		&i.ItemUpdatedAt,
+		&i.CategoryName,
+		&i.ItemCategoryTypeCode,
+		&i.CategoryUnitGroupID,
+		&i.OrderPointValue,
+		&i.OrderPointUnitID,
+		&i.OrderPointUnitAbbreviation,
+		&i.OrderPointUnitType,
+		&i.LeadTimeValue,
+		&i.LeadTimeUnitID,
+		&i.LeadTimeUnitAbbreviation,
+		&i.LeadTimeUnitType,
+		&i.UnitValueRateID,
+		&i.UnitValueRateValue,
+		&i.UnitValueNumeratorUnitID,
+		&i.UnitValueDenominatorUnitID,
+		&i.UnitValueCreatedAt,
+		&i.UnitValueUpdatedAt,
+		&i.UnitCostRateID,
+		&i.UnitCostRateValue,
+		&i.UnitCostNumeratorUnitID,
+		&i.UnitCostDenominatorUnitID,
+		&i.UnitCostCreatedAt,
+		&i.UnitCostUpdatedAt,
+		&i.BurnRateIDJoined,
+		&i.BurnRateValue,
+		&i.BurnRateNumeratorUnitID,
+		&i.BurnRateDenominatorUnitID,
+		&i.BurnRateCreatedAt,
+		&i.BurnRateUpdatedAt,
+	)
+	return i, err
 }
 
 const getMaterialByItemID = `-- name: GetMaterialByItemID :one

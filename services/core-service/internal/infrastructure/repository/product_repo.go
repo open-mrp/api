@@ -32,7 +32,7 @@ func buildProductSearchParams(query *string) gosql.NullString {
 	if query == nil || *query == "" {
 		return gosql.NullString{}
 	}
-	return gosql.NullString{String: "%" + *query + "%", Valid: true}
+	return gosql.NullString{String: "%" + db.EscapeLike(*query) + "%", Valid: true}
 }
 
 func mapProductFullForwardRow(row sqlc.ListProductsFullForwardRow) *domain.ProductFull {
@@ -249,7 +249,7 @@ func mapProductFullBackwardRow(row sqlc.ListProductsFullBackwardRow) *domain.Pro
 	return product
 }
 
-func mapProductFullGetRow(row sqlc.GetProductByItemIDRow) *domain.ProductFull {
+func mapProductFullGetRow(row sqlc.GetProductByIDRow) *domain.ProductFull {
 	var description *string
 	if row.ItemDescription.Valid {
 		description = &row.ItemDescription.String
@@ -672,8 +672,8 @@ func (r *productRepoImpl) Get(ctx context.Context, params domain.GetProductFullP
 	ctx, span := productRepoTracer.Start(ctx, "repository.product.get")
 	defer span.End()
 
-	row, err := r.queries.GetProductByItemID(ctx, sqlc.GetProductByItemIDParams{
-		ItemID:    params.ItemID,
+	row, err := r.queries.GetProductByID(ctx, sqlc.GetProductByIDParams{
+		ID:        params.ProductID,
 		AccountID: params.AccountID,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
@@ -698,12 +698,20 @@ func (r *productRepoImpl) Create(ctx context.Context, productID, itemID string, 
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return r.Get(ctx, domain.GetProductFullParams{AccountID: params.AccountID, ItemID: itemID})
+	return r.Get(ctx, domain.GetProductFullParams{AccountID: params.AccountID, ProductID: productID})
 }
 
 func (r *productRepoImpl) Update(ctx context.Context, params domain.UpdateProductParams) (*domain.ProductFull, *apierror.APIError) {
 	ctx, span := productRepoTracer.Start(ctx, "repository.product.update")
 	defer span.End()
+
+	existing, apiErr := r.Get(ctx, domain.GetProductFullParams{
+		AccountID: params.AccountID,
+		ProductID: params.ProductID,
+	})
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
 
 	_, err := r.queries.ProductUpdateItem(ctx, sqlc.ProductUpdateItemParams{
 		Sku:               toNullString(params.SKU),
@@ -711,31 +719,31 @@ func (r *productRepoImpl) Update(ctx context.Context, params domain.UpdateProduc
 		Description:       toNullString(params.Description),
 		UpdateNotes:       params.UpdateNotes,
 		Notes:             toNullString(params.Notes),
-		ID:                params.ItemID,
+		ID:                existing.ItemID,
 		AccountID:         params.AccountID,
 	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
+	if apiErr = db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
 	_, err = r.queries.UpdateProductFields(ctx, sqlc.UpdateProductFieldsParams{
 		IsPortalReady: toNullBool(params.IsPortalReady),
-		ItemID:        params.ItemID,
+		ID:            params.ProductID,
 		AccountID:     params.AccountID,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return r.Get(ctx, domain.GetProductFullParams{AccountID: params.AccountID, ItemID: params.ItemID})
+	return r.Get(ctx, domain.GetProductFullParams{AccountID: params.AccountID, ProductID: params.ProductID})
 }
 
 func (r *productRepoImpl) SoftDelete(ctx context.Context, params domain.DeleteProductParams) *apierror.APIError {
 	ctx, span := productRepoTracer.Start(ctx, "repository.product.soft_delete")
 	defer span.End()
 
-	result, err := r.queries.SoftDeleteProductByItemID(ctx, sqlc.SoftDeleteProductByItemIDParams{
-		ID:        params.ItemID,
+	result, err := r.queries.SoftDeleteProductByID(ctx, sqlc.SoftDeleteProductByIDParams{
+		ID:        params.ProductID,
 		AccountID: params.AccountID,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
@@ -757,9 +765,9 @@ func (r *productRepoImpl) ChangeProductLine(ctx context.Context, params domain.C
 	ctx, span := productRepoTracer.Start(ctx, "repository.product.change_product_line")
 	defer span.End()
 
-	result, err := r.queries.ChangeProductLineByItemID(ctx, sqlc.ChangeProductLineByItemIDParams{
+	result, err := r.queries.ChangeProductLineByID(ctx, sqlc.ChangeProductLineByIDParams{
 		ProductLineID: gosql.NullString{String: params.ProductLineID, Valid: true},
-		ItemID:        params.ItemID,
+		ID:            params.ProductID,
 		AccountID:     params.AccountID,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
@@ -774,7 +782,7 @@ func (r *productRepoImpl) ChangeProductLine(ctx context.Context, params domain.C
 		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Product not found."))
 	}
 
-	return r.Get(ctx, domain.GetProductFullParams{AccountID: params.AccountID, ItemID: params.ItemID})
+	return r.Get(ctx, domain.GetProductFullParams{AccountID: params.AccountID, ProductID: params.ProductID})
 }
 
 func (r *productRepoImpl) ValidateProducts(ctx context.Context, params domain.ValidateProductsParams) (*domain.ValidateProductsResult, *apierror.APIError) {

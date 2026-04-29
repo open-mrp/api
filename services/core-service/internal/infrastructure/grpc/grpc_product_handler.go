@@ -91,7 +91,7 @@ func (h *gRPCHandler) GetProduct(ctx context.Context, req *pb.GetProductRequest)
 	}
 
 	params := domain.GetProductFullParams{
-		ItemID: req.ItemId,
+		ProductID: req.Id,
 	}
 
 	product, apiErr := h.productSvc.GetProduct(ctx, params)
@@ -126,15 +126,9 @@ func (h *gRPCHandler) CreateProduct(ctx context.Context, req *pb.CreateProductRe
 	if req.Notes != nil {
 		params.Notes = req.Notes
 	}
-	if req.UnitPrice != nil {
-		params.UnitPrice = req.UnitPrice
-	}
-	if req.UnitCost != nil {
-		params.UnitCost = req.UnitCost
-	}
-	if req.BurnRate != nil {
-		params.BurnRate = req.BurnRate
-	}
+	params.UnitPrice = protoToCreateRateInput(req.UnitPrice)
+	params.UnitCost = protoToCreateRateInput(req.UnitCost)
+	params.BurnRate = protoToCreateRateInput(req.BurnRate)
 	if len(req.AttributeIds) > 0 {
 		params.AttributeIDs = req.AttributeIds
 	}
@@ -158,7 +152,7 @@ func (h *gRPCHandler) UpdateProduct(ctx context.Context, req *pb.UpdateProductRe
 	defer finalizeIdempotency()
 
 	params := domain.UpdateProductParams{
-		ItemID:            req.ItemId,
+		ProductID:         req.Id,
 		SKU:               req.Sku,
 		Description:       req.Description,
 		UpdateDescription: req.UpdateDescription,
@@ -183,7 +177,7 @@ func (h *gRPCHandler) DeleteProduct(ctx context.Context, req *pb.DeleteProductRe
 	}
 
 	params := domain.DeleteProductParams{
-		ItemID: req.ItemId,
+		ProductID: req.Id,
 	}
 
 	product, apiErr := h.productSvc.DeleteProduct(ctx, params)
@@ -205,7 +199,7 @@ func (h *gRPCHandler) ChangeProductProductLine(ctx context.Context, req *pb.Chan
 	defer finalizeIdempotency()
 
 	params := domain.ChangeProductProductLineParams{
-		ItemID:        req.ItemId,
+		ProductID:     req.Id,
 		ProductLineID: req.ProductLineId,
 	}
 

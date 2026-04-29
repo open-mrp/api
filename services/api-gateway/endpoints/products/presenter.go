@@ -3,7 +3,6 @@ package productep
 import (
 	itemep "github.com/augno/api/services/api-gateway/endpoints/items"
 	productlineep "github.com/augno/api/services/api-gateway/endpoints/product-lines"
-	producttypeep "github.com/augno/api/services/api-gateway/endpoints/product-types"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -15,16 +14,17 @@ func ProductPresenter(proto *pb.ProductFullInfo) apiresource.Product {
 		return apiresource.Product{}
 	}
 
-	// The public identifier for a Product is its item_id: every URL handler
-	// (Get/Update/Delete/ChangeProductLine) treats the `{id}` path parameter
-	// as the item id when calling the core service. Returning the item_id here
-	// keeps list and single-GET responses consistent and routable.
 	result := apiresource.Product{
-		ID:            proto.ItemId,
-		Object:        constants.ObjectTypeProduct,
-		IsPortalReady: proto.IsPortalReady,
-		CreatedAt:     grpcutil.TimestampToTime(proto.CreatedAt),
-		UpdatedAt:     grpcutil.TimestampToTime(proto.UpdatedAt),
+		ID:        proto.Id,
+		Object:    constants.ObjectTypeProduct,
+		Type:      constants.ProductTypeCode(proto.GetProductTypeCode()),
+		CreatedAt: grpcutil.TimestampToTime(proto.CreatedAt),
+		UpdatedAt: grpcutil.TimestampToTime(proto.UpdatedAt),
+	}
+	if proto.GetIsPortalReady() {
+		result.PortalVisibility = constants.CustomerPortalVisibilityVisible
+	} else {
+		result.PortalVisibility = constants.CustomerPortalVisibilityHidden
 	}
 
 	if proto.Item != nil {
@@ -35,11 +35,6 @@ func ProductPresenter(proto *pb.ProductFullInfo) apiresource.Product {
 	if proto.ProductLine != nil {
 		pl := productlineep.ProductLinePresenter(proto.ProductLine, nil)
 		result.ProductLine = &pl
-	}
-
-	if proto.ProductType != nil {
-		pt := producttypeep.ProductTypePresenter(proto.ProductType)
-		result.ProductType = &pt
 	}
 
 	return result

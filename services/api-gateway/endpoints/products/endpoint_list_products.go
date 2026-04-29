@@ -49,7 +49,7 @@ func (e *ListProductsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListProdu
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeProduct,
-			Fields:     []string{"product_type", "product_line", "product_line.unit_group", "item", "item.category", "item.unit_value", "item.unit_cost", "item.burn_rate", "item.attributes"},
+			Fields:     []string{"product_line", "product_line.unit_group", "item", "item.category", "item.unit_value", "item.unit_cost", "item.burn_rate", "item.attributes"},
 		}),
 	}
 }

@@ -56,6 +56,27 @@ func NormalizeMonetaryQuantityValue(value string) string {
 	return normalizeDecimalString(value, true)
 }
 
+// NormalizeRateValue returns a canonical decimal string for API rate values.
+// It trims database fixed-point padding while preserving at least two
+// fractional digits when the source value is fractional.
+func NormalizeRateValue(value string) string {
+	normalized := normalizeDecimalString(value, false)
+	if !strings.Contains(value, ".") {
+		return normalized
+	}
+	parts := strings.SplitN(normalized, ".", 2)
+	if len(parts) == 1 {
+		return normalized + ".00"
+	}
+	if len(parts[1]) == 0 {
+		return normalized + "00"
+	}
+	if len(parts[1]) == 1 {
+		return normalized + "0"
+	}
+	return normalized
+}
+
 // FormatDisplayValue formats a decimal value string with a unit abbreviation.
 // For currency units, the abbreviation is placed before the value (e.g. "$1,234.56").
 // For other units, the abbreviation is placed after the value (e.g. "100 kg").

@@ -16,15 +16,20 @@ type Part struct {
 }
 
 type CreatePartParams struct {
-	AccountID   string
-	SKU         string
-	Description *string
-	CategoryID  string
+	AccountID    string
+	SKU          string
+	Description  *string
+	Notes        *string
+	CategoryID   string
+	UnitPrice    *CreateRateParams
+	UnitCost     *CreateRateParams
+	BurnRate     *CreateRateParams
+	AttributeIDs []string
 }
 
 type UpdatePartParams struct {
 	AccountID         string
-	ItemID            string
+	PartID            string
 	SKU               *string
 	Description       *string
 	UpdateDescription bool
@@ -34,12 +39,12 @@ type UpdatePartParams struct {
 
 type DeletePartParams struct {
 	AccountID string
-	ItemID    string
+	PartID    string
 }
 
 type GetPartParams struct {
 	AccountID string
-	ItemID    string
+	PartID    string
 }
 
 type ListPartsParams struct {

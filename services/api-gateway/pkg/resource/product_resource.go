@@ -8,7 +8,7 @@ import (
 	"github.com/augno/api/shared/timeutil"
 )
 
-const SampleProductID = "pr_01jm4r6700f8nwq3v5hx2d9ktp"
+const SampleProductID = "pd_01jm4r6700f8nwq3v5hx2d9ktp"
 
 // Product with expandable item, product line, and product type.
 type Product struct {
@@ -16,10 +16,10 @@ type Product struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=product"`
-	// Whether visible on the customer portal.
-	IsPortalReady bool `json:"is_portal_ready"`
-	// Product type.
-	ProductType *ProductType `json:"product_type" expandable:"true"`
+	// Product type code.
+	Type constants.ProductTypeCode `json:"type" validate:"required"`
+	// Product portal visibility.
+	PortalVisibility constants.CustomerPortalVisibility `json:"portal_visibility" validate:"required"`
 	// Product line.
 	ProductLine *ProductLine `json:"product_line" expandable:"true"`
 	// Item.
@@ -31,14 +31,14 @@ type Product struct {
 }
 
 var SampleProduct = &Product{
-	ID:            SampleProductID,
-	Object:        constants.ObjectTypeProduct,
-	IsPortalReady: true,
-	ProductType:   SampleProductType,
-	ProductLine:   SampleProductLine,
-	Item:          SampleItem,
-	CreatedAt:     timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt:     timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	ID:               SampleProductID,
+	Object:           constants.ObjectTypeProduct,
+	Type:             SampleProductTypeCode,
+	PortalVisibility: constants.CustomerPortalVisibilityVisible,
+	ProductLine:      SampleProductLine,
+	Item:             SampleItem,
+	CreatedAt:        timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:        timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*Product) SchemaExample() any {

@@ -1143,22 +1143,23 @@ func (x *PageInfo) GetHasPrevPage() bool {
 }
 
 type ListRequestLogsRequest struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	StartDate        *timestamppb.Timestamp `protobuf:"bytes,1,opt,name=start_date,json=startDate,proto3,oneof" json:"start_date,omitempty"`
-	EndDate          *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=end_date,json=endDate,proto3,oneof" json:"end_date,omitempty"`
-	Methods          []string               `protobuf:"bytes,3,rep,name=methods,proto3" json:"methods,omitempty"`
-	StatusCodes      []int32                `protobuf:"varint,4,rep,packed,name=status_codes,json=statusCodes,proto3" json:"status_codes,omitempty"`
-	ErrorCodes       []string               `protobuf:"bytes,5,rep,name=error_codes,json=errorCodes,proto3" json:"error_codes,omitempty"`
-	AccountIds       []string               `protobuf:"bytes,6,rep,name=account_ids,json=accountIds,proto3" json:"account_ids,omitempty"`
-	ActorIds         []string               `protobuf:"bytes,7,rep,name=actor_ids,json=actorIds,proto3" json:"actor_ids,omitempty"`
-	ActorTypes       []string               `protobuf:"bytes,8,rep,name=actor_types,json=actorTypes,proto3" json:"actor_types,omitempty"`
-	Cursor           *string                `protobuf:"bytes,11,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
-	Limit            int32                  `protobuf:"varint,12,opt,name=limit,proto3" json:"limit,omitempty"`
-	Query            *string                `protobuf:"bytes,13,opt,name=query,proto3,oneof" json:"query,omitempty"`
-	Includes         []string               `protobuf:"bytes,14,rep,name=includes,proto3" json:"includes,omitempty"`
-	NormalizedRoutes []string               `protobuf:"bytes,15,rep,name=normalized_routes,json=normalizedRoutes,proto3" json:"normalized_routes,omitempty"`
-	Hosts            []string               `protobuf:"bytes,16,rep,name=hosts,proto3" json:"hosts,omitempty"`
-	MinLatencyUs     *int64                 `protobuf:"varint,17,opt,name=min_latency_us,json=minLatencyUs,proto3,oneof" json:"min_latency_us,omitempty"`
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	StartDate   *timestamppb.Timestamp `protobuf:"bytes,1,opt,name=start_date,json=startDate,proto3,oneof" json:"start_date,omitempty"`
+	EndDate     *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=end_date,json=endDate,proto3,oneof" json:"end_date,omitempty"`
+	Methods     []string               `protobuf:"bytes,3,rep,name=methods,proto3" json:"methods,omitempty"`
+	StatusCodes []int32                `protobuf:"varint,4,rep,packed,name=status_codes,json=statusCodes,proto3" json:"status_codes,omitempty"`
+	ErrorCodes  []string               `protobuf:"bytes,5,rep,name=error_codes,json=errorCodes,proto3" json:"error_codes,omitempty"`
+	AccountIds  []string               `protobuf:"bytes,6,rep,name=account_ids,json=accountIds,proto3" json:"account_ids,omitempty"`
+	// account_user.id when identity_type=user, or api_key.id when identity_type=api_key.
+	ActorIds         []string `protobuf:"bytes,7,rep,name=actor_ids,json=actorIds,proto3" json:"actor_ids,omitempty"`
+	ActorTypes       []string `protobuf:"bytes,8,rep,name=actor_types,json=actorTypes,proto3" json:"actor_types,omitempty"`
+	Cursor           *string  `protobuf:"bytes,11,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
+	Limit            int32    `protobuf:"varint,12,opt,name=limit,proto3" json:"limit,omitempty"`
+	Query            *string  `protobuf:"bytes,13,opt,name=query,proto3,oneof" json:"query,omitempty"`
+	Includes         []string `protobuf:"bytes,14,rep,name=includes,proto3" json:"includes,omitempty"`
+	NormalizedRoutes []string `protobuf:"bytes,15,rep,name=normalized_routes,json=normalizedRoutes,proto3" json:"normalized_routes,omitempty"`
+	Hosts            []string `protobuf:"bytes,16,rep,name=hosts,proto3" json:"hosts,omitempty"`
+	MinLatencyUs     *int64   `protobuf:"varint,17,opt,name=min_latency_us,json=minLatencyUs,proto3,oneof" json:"min_latency_us,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -1861,12 +1862,13 @@ type ListAuditEventsRequest struct {
 	EndDate       *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=end_date,json=endDate,proto3,oneof" json:"end_date,omitempty"`
 	ResourceTypes []string               `protobuf:"bytes,3,rep,name=resource_types,json=resourceTypes,proto3" json:"resource_types,omitempty"`
 	ResourceIds   []string               `protobuf:"bytes,4,rep,name=resource_ids,json=resourceIds,proto3" json:"resource_ids,omitempty"`
-	ActorIds      []string               `protobuf:"bytes,5,rep,name=actor_ids,json=actorIds,proto3" json:"actor_ids,omitempty"`
-	Actions       []string               `protobuf:"bytes,6,rep,name=actions,proto3" json:"actions,omitempty"`
-	Cursor        *string                `protobuf:"bytes,8,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
-	Limit         int32                  `protobuf:"varint,9,opt,name=limit,proto3" json:"limit,omitempty"`
-	Includes      []string               `protobuf:"bytes,10,rep,name=includes,proto3" json:"includes,omitempty"`
-	Query         *string                `protobuf:"bytes,11,opt,name=query,proto3,oneof" json:"query,omitempty"`
+	// account_user.id when identity_type=user, or api_key.id when identity_type=api_key.
+	ActorIds      []string `protobuf:"bytes,5,rep,name=actor_ids,json=actorIds,proto3" json:"actor_ids,omitempty"`
+	Actions       []string `protobuf:"bytes,6,rep,name=actions,proto3" json:"actions,omitempty"`
+	Cursor        *string  `protobuf:"bytes,8,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
+	Limit         int32    `protobuf:"varint,9,opt,name=limit,proto3" json:"limit,omitempty"`
+	Includes      []string `protobuf:"bytes,10,rep,name=includes,proto3" json:"includes,omitempty"`
+	Query         *string  `protobuf:"bytes,11,opt,name=query,proto3,oneof" json:"query,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

@@ -44,7 +44,7 @@ type CreateCustomerRequest struct {
 	DefaultShippingTermID string `json:"default_shipping_term_id" validate:"required,max=191"`
 	// Default priority code.
 	DefaultPriorityCode *constants.PriorityCode `json:"default_priority,omitempty" default:"normal" nullable:"false"`
-	// Default sales rep user ID.
+	// The ID of the account user to assign as the default sales rep.
 	DefaultSalesRepUserID *string `json:"default_sales_rep_user_id,omitempty" validate:"omitempty,max=191" nullable:"false"`
 	// Price group IDs.
 	CustomerPriceGroupIDs []string `json:"customer_price_group_ids,omitempty" nullable:"false"`

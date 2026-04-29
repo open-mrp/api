@@ -19,6 +19,20 @@ func protoToQuantityInput(q *pb.QuantityInput) *domain.QuantityInput {
 	}
 }
 
+// protoToCreateRateInput converts an optional CreateRateInput proto into the
+// domain CreateRateParams shape. Returns nil when the proto is nil so callers
+// can fall back to default-rate behavior in service layer.
+func protoToCreateRateInput(r *pb.CreateRateInput) *domain.CreateRateParams {
+	if r == nil {
+		return nil
+	}
+	return &domain.CreateRateParams{
+		Value:             r.Value,
+		NumeratorUnitID:   r.NumeratorUnitId,
+		DenominatorUnitID: r.DenominatorUnitId,
+	}
+}
+
 func materialToProto(m *domain.Material) *pb.MaterialInfo {
 	if m == nil {
 		return nil
@@ -102,7 +116,7 @@ func (h *gRPCHandler) GetMaterial(ctx context.Context, req *pb.GetMaterialReques
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	material, apiErr := h.materialSvc.GetMaterial(ctx, req.ItemId)
+	material, apiErr := h.materialSvc.GetMaterial(ctx, req.Id)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
@@ -121,10 +135,14 @@ func (h *gRPCHandler) CreateMaterial(ctx context.Context, req *pb.CreateMaterial
 	defer finalizeIdempotency()
 
 	params := domain.CreateMaterialParams{
-		SKU:        req.Sku,
-		CategoryID: req.CategoryId,
-		OrderPoint: protoToQuantityInput(req.OrderPoint),
-		LeadTime:   protoToQuantityInput(req.LeadTime),
+		SKU:          req.Sku,
+		CategoryID:   req.CategoryId,
+		OrderPoint:   protoToQuantityInput(req.OrderPoint),
+		LeadTime:     protoToQuantityInput(req.LeadTime),
+		UnitPrice:    protoToCreateRateInput(req.UnitPrice),
+		UnitCost:     protoToCreateRateInput(req.UnitCost),
+		BurnRate:     protoToCreateRateInput(req.BurnRate),
+		AttributeIDs: req.AttributeIds,
 	}
 
 	if req.Description != nil {
@@ -153,7 +171,7 @@ func (h *gRPCHandler) UpdateMaterial(ctx context.Context, req *pb.UpdateMaterial
 	defer finalizeIdempotency()
 
 	params := domain.UpdateMaterialParams{
-		ItemID:            req.ItemId,
+		MaterialID:        req.Id,
 		SKU:               req.Sku,
 		Description:       req.Description,
 		UpdateDescription: req.UpdateDescription,
@@ -178,7 +196,7 @@ func (h *gRPCHandler) DeleteMaterial(ctx context.Context, req *pb.DeleteMaterial
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	material, apiErr := h.materialSvc.DeleteMaterial(ctx, req.ItemId)
+	material, apiErr := h.materialSvc.DeleteMaterial(ctx, req.Id)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
@@ -228,7 +246,7 @@ func (h *gRPCHandler) GetSupplierMaterial(ctx context.Context, req *pb.GetSuppli
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	sm, apiErr := h.supplierMaterialSvc.GetSupplierMaterial(ctx, req.SupplierAccountId, req.ItemId)
+	sm, apiErr := h.supplierMaterialSvc.GetSupplierMaterial(ctx, req.SupplierAccountId, req.MaterialId)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
@@ -277,7 +295,7 @@ func (h *gRPCHandler) UpdateSupplierMaterial(ctx context.Context, req *pb.Update
 
 	params := domain.UpdateSupplierMaterialParams{
 		SupplierAccountID:   req.SupplierAccountId,
-		ItemID:              req.ItemId,
+		MaterialID:          req.MaterialId,
 		SupplierPartNumber:  req.SupplierPartNumber,
 		SupplierDescription: req.SupplierDescription,
 		UpdateDescription:   req.UpdateDescription,
@@ -301,7 +319,7 @@ func (h *gRPCHandler) DeleteSupplierMaterial(ctx context.Context, req *pb.Delete
 
 	params := domain.DeleteSupplierMaterialParams{
 		SupplierAccountID: req.SupplierAccountId,
-		ItemID:            req.ItemId,
+		MaterialID:        req.MaterialId,
 	}
 
 	sm, apiErr := h.supplierMaterialSvc.DeleteSupplierMaterial(ctx, params)

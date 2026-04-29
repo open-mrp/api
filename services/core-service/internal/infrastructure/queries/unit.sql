@@ -181,3 +181,10 @@ WHERE unit_dimension_code = 'currency'
 AND is_base_unit = TRUE
 AND account_id IS NULL
 LIMIT 1;
+
+-- name: GetUnitDimensionCodes :many
+-- Returns (id, unit_dimension_code) pairs for the given unit IDs. Used to
+-- validate the unit type on each side of a rate at write time.
+SELECT id, unit_dimension_code
+FROM unit
+WHERE id IN (sqlc.slice('ids'));

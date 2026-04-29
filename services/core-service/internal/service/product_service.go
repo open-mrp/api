@@ -310,26 +310,43 @@ func (s *productSvcImpl) CreateProduct(ctx context.Context, params domain.Create
 			}
 
 			// Insert rates for item (unit_value, unit_cost, burn_rate). Caller-supplied
-			// values default to "0" when omitted, matching Dashboard behavior.
-			unitPriceValue := "0"
+			// inputs override the defaults; unit_price and unit_cost additionally enforce
+			// the currency-numerator / non-currency-denominator rule.
+			txUnitRepo := txSvc.repos.NewUnitRepo()
+
+			unitPriceValue, unitPriceNum, unitPriceDen := "0", baseUnitID, baseUnitID
 			if params.UnitPrice != nil {
-				unitPriceValue = *params.UnitPrice
+				if apiErr := ValidateCostRateUnits(txCtx, txUnitRepo, params.UnitPrice.NumeratorUnitID, params.UnitPrice.DenominatorUnitID, "unit_price"); apiErr != nil {
+					return apiErr
+				}
+				unitPriceValue = params.UnitPrice.Value
+				unitPriceNum = params.UnitPrice.NumeratorUnitID
+				unitPriceDen = params.UnitPrice.DenominatorUnitID
 			}
-			unitCostValue := "0"
+			if apiErr := txProductRepo.InsertRate(txCtx, unitValueRateID, unitPriceValue, unitPriceNum, unitPriceDen); apiErr != nil {
+				return apiErr
+			}
+
+			unitCostValue, unitCostNum, unitCostDen := "0", baseUnitID, baseUnitID
 			if params.UnitCost != nil {
-				unitCostValue = *params.UnitCost
+				if apiErr := ValidateCostRateUnits(txCtx, txUnitRepo, params.UnitCost.NumeratorUnitID, params.UnitCost.DenominatorUnitID, "unit_cost"); apiErr != nil {
+					return apiErr
+				}
+				unitCostValue = params.UnitCost.Value
+				unitCostNum = params.UnitCost.NumeratorUnitID
+				unitCostDen = params.UnitCost.DenominatorUnitID
 			}
-			burnRateValue := "0"
+			if apiErr := txProductRepo.InsertRate(txCtx, unitCostRateID, unitCostValue, unitCostNum, unitCostDen); apiErr != nil {
+				return apiErr
+			}
+
+			burnValue, burnNum, burnDen := "0", baseUnitID, baseUnitID
 			if params.BurnRate != nil {
-				burnRateValue = *params.BurnRate
+				burnValue = params.BurnRate.Value
+				burnNum = params.BurnRate.NumeratorUnitID
+				burnDen = params.BurnRate.DenominatorUnitID
 			}
-			if apiErr := txProductRepo.InsertRate(txCtx, unitValueRateID, unitPriceValue, baseUnitID, baseUnitID); apiErr != nil {
-				return apiErr
-			}
-			if apiErr := txProductRepo.InsertRate(txCtx, unitCostRateID, unitCostValue, baseUnitID, baseUnitID); apiErr != nil {
-				return apiErr
-			}
-			if apiErr := txProductRepo.InsertRate(txCtx, burnRateRateID, burnRateValue, baseUnitID, baseUnitID); apiErr != nil {
+			if apiErr := txProductRepo.InsertRate(txCtx, burnRateRateID, burnValue, burnNum, burnDen); apiErr != nil {
 				return apiErr
 			}
 
@@ -451,7 +468,7 @@ func (s *productSvcImpl) UpdateProduct(ctx context.Context, params domain.Update
 			// Fetch existing product before mutation for audit diff.
 			old, apiErr := txProductRepo.Get(txCtx, domain.GetProductFullParams{
 				AccountID: params.AccountID,
-				ItemID:    params.ItemID,
+				ProductID: params.ProductID,
 			})
 			if apiErr != nil {
 				return apiErr
@@ -459,7 +476,7 @@ func (s *productSvcImpl) UpdateProduct(ctx context.Context, params domain.Update
 
 			// Check SKU uniqueness if being updated.
 			if params.SKU != nil {
-				exists, apiErr := txItemRepo.CheckSKUExists(txCtx, params.AccountID, *params.SKU, params.ItemID)
+				exists, apiErr := txItemRepo.CheckSKUExists(txCtx, params.AccountID, *params.SKU, old.ItemID)
 				if apiErr != nil {
 					return apiErr
 				}
@@ -501,7 +518,7 @@ func (s *productSvcImpl) UpdateProduct(ctx context.Context, params domain.Update
 	}
 }
 
-// DeleteProduct soft-deletes a product by its item ID.
+// DeleteProduct soft-deletes a product by its product ID.
 func (s *productSvcImpl) DeleteProduct(ctx context.Context, params domain.DeleteProductParams) (*domain.ProductFull, *apierror.APIError) {
 	ctx, span := productSvcTracer.Start(ctx, "service.product.delete")
 	defer span.End()
@@ -524,7 +541,7 @@ func (s *productSvcImpl) DeleteProduct(ctx context.Context, params domain.Delete
 	product, apiErr := s.repos.NewProductRepo().Get(ctx, domain.GetProductFullParams(params))
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
-			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeProduct, params.ItemID)
+			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeProduct, params.ProductID)
 			if deletedCheckErr != nil {
 				return nil, tracing.Trace(span, deletedCheckErr)
 			}
@@ -537,7 +554,7 @@ func (s *productSvcImpl) DeleteProduct(ctx context.Context, params domain.Delete
 
 	// Soft-delete within a transaction.
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *productSvcImpl) *apierror.APIError {
-		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeProduct, product.ItemID, product); apiErr != nil {
+		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeProduct, params.ProductID, product); apiErr != nil {
 			return apiErr
 		}
 
@@ -606,7 +623,7 @@ func (s *productSvcImpl) ChangeProductProductLine(ctx context.Context, params do
 
 		old, apiErr := txProductRepo.Get(ctx, domain.GetProductFullParams{
 			AccountID: params.AccountID,
-			ItemID:    params.ItemID,
+			ProductID: params.ProductID,
 		})
 		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)

@@ -33,7 +33,11 @@ func buildSettlementSearchQuery(query *string) gosql.NullString {
 	if query == nil || *query == "" {
 		return gosql.NullString{}
 	}
-	term := *query + "*"
+	sanitized := db.SanitizeFulltextBoolean(*query)
+	if sanitized == "" {
+		return gosql.NullString{}
+	}
+	term := sanitized + "*"
 	return gosql.NullString{String: term, Valid: true}
 }
 

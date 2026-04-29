@@ -22,7 +22,7 @@ type ServiceLevel struct {
 	// Service level token.
 	ServiceLevelToken constants.ServiceLevelCode `json:"service_level_token" validate:"required"`
 	// Customer portal visibility.
-	CustomerPortalVisibility constants.CustomerPortalVisibility `json:"customer_portal_visibility" validate:"required,enum"`
+	CustomerPortalVisibility constants.CustomerPortalVisibility `json:"customer_portal_visibility" validate:"required"`
 	// Default service level for the carrier.
 	IsDefault bool `json:"is_default"`
 	// Owner.

@@ -31,7 +31,7 @@ func buildDeliverySearchParams(query *string) gosql.NullString {
 	if query == nil || *query == "" {
 		return gosql.NullString{}
 	}
-	return gosql.NullString{String: "%" + *query + "%", Valid: true}
+	return gosql.NullString{String: "%" + db.EscapeLike(*query) + "%", Valid: true}
 }
 
 func (r *deliveryRepoImpl) List(ctx context.Context, params domain.ListDeliveriesParams) (*domain.ListDeliveriesResult, *apierror.APIError) {

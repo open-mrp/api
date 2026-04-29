@@ -29,6 +29,7 @@ func TestItems_ExpandableFieldsNullWithoutInclude(t *testing.T) {
 	assert.Nil(t, got["unit_value"], "unit_value should be null without ?include=unit_value")
 	assert.Nil(t, got["unit_cost"], "unit_cost should be null without ?include=unit_cost")
 	assert.Nil(t, got["burn_rate"], "burn_rate should be null without ?include=burn_rate")
+	assert.Nil(t, got["attributes"], "attributes should be null without ?include=attributes")
 
 	list, _, err := apiClient.GetList(itemsPath, nil)
 	require.NoError(t, err)
@@ -40,6 +41,7 @@ func TestItems_ExpandableFieldsNullWithoutInclude(t *testing.T) {
 		assert.Nil(t, m["unit_value"], "unit_value should be null on list items without ?include=unit_value")
 		assert.Nil(t, m["unit_cost"], "unit_cost should be null on list items without ?include=unit_cost")
 		assert.Nil(t, m["burn_rate"], "burn_rate should be null on list items without ?include=burn_rate")
+		assert.Nil(t, m["attributes"], "attributes should be null on list items without ?include=attributes")
 	}
 }
 
@@ -101,6 +103,19 @@ func TestItems_IncludeBurnRate(t *testing.T) {
 	}
 }
 
+func TestItems_IncludeAttributes(t *testing.T) {
+	t.Parallel()
+	status, body, err := apiClient.GetListRaw(itemsPath+"/"+SeedItemID, url.Values{"include": {"attributes"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	got := parseJSON(body)
+	attrs := jsonObject(got, "attributes")
+	require.NotNil(t, attrs, "attributes should be present with ?include=attributes")
+	_, ok := attrs["data"].([]any)
+	require.True(t, ok, "attributes should include a data array")
+}
+
 func TestItems_ListIncludeCategory(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.GetListRaw(itemsPath, url.Values{"include": {"category"}})
@@ -117,4 +132,23 @@ func TestItems_ListIncludeCategory(t *testing.T) {
 	cat := jsonObject(first, "category")
 	require.NotNil(t, cat, "category should be present on list items with ?include=category")
 	assert.Equal(t, "item_category", jsonField(cat, "object"))
+}
+
+func TestItems_ListIncludeAttributes(t *testing.T) {
+	t.Parallel()
+	status, body, err := apiClient.GetListRaw(itemsPath, url.Values{"include": {"attributes"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	got := parseJSON(body)
+	data, ok := got["data"].([]any)
+	require.True(t, ok, "response should have data array")
+	require.NotEmpty(t, data, "should have at least one item")
+
+	first, ok := data[0].(map[string]any)
+	require.True(t, ok)
+	attrs := jsonObject(first, "attributes")
+	require.NotNil(t, attrs, "attributes should be present on list items with ?include=attributes")
+	_, ok = attrs["data"].([]any)
+	require.True(t, ok, "attributes should include a data array")
 }

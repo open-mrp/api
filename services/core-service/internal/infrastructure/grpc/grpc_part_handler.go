@@ -32,9 +32,14 @@ func (h *gRPCHandler) CreatePart(ctx context.Context, req *pb.CreatePartRequest)
 	defer finalizeIdempotency()
 
 	params := domain.CreatePartParams{
-		SKU:         req.Sku,
-		Description: req.Description,
-		CategoryID:  req.CategoryId,
+		SKU:          req.Sku,
+		Description:  req.Description,
+		Notes:        req.Notes,
+		CategoryID:   req.CategoryId,
+		UnitPrice:    protoToCreateRateInput(req.UnitPrice),
+		UnitCost:     protoToCreateRateInput(req.UnitCost),
+		BurnRate:     protoToCreateRateInput(req.BurnRate),
+		AttributeIDs: req.AttributeIds,
 	}
 
 	part, apiErr := h.partSvc.CreatePart(ctx, params)
@@ -52,7 +57,7 @@ func (h *gRPCHandler) GetPart(ctx context.Context, req *pb.GetPartRequest) (*pb.
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	part, apiErr := h.partSvc.GetPart(ctx, req.ItemId)
+	part, apiErr := h.partSvc.GetPart(ctx, req.Id)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
@@ -114,7 +119,7 @@ func (h *gRPCHandler) UpdatePart(ctx context.Context, req *pb.UpdatePartRequest)
 	defer finalizeIdempotency()
 
 	params := domain.UpdatePartParams{
-		ItemID:            req.ItemId,
+		PartID:            req.Id,
 		SKU:               req.Sku,
 		Description:       req.Description,
 		UpdateDescription: req.UpdateDescription,
@@ -137,7 +142,7 @@ func (h *gRPCHandler) DeletePart(ctx context.Context, req *pb.DeletePartRequest)
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	part, apiErr := h.partSvc.DeletePart(ctx, req.ItemId)
+	part, apiErr := h.partSvc.DeletePart(ctx, req.Id)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}

@@ -683,7 +683,7 @@ func (x *ListMaterialsResponse) GetPageInfo() *PageInfo {
 
 type GetMaterialRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	ItemId        string                 `protobuf:"bytes,1,opt,name=item_id,json=itemId,proto3" json:"item_id,omitempty"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -718,9 +718,9 @@ func (*GetMaterialRequest) Descriptor() ([]byte, []int) {
 	return file_core_core_invoices_proto_rawDescGZIP(), []int{6}
 }
 
-func (x *GetMaterialRequest) GetItemId() string {
+func (x *GetMaterialRequest) GetId() string {
 	if x != nil {
-		return x.ItemId
+		return x.Id
 	}
 	return ""
 }
@@ -770,13 +770,23 @@ func (x *GetMaterialResponse) GetMaterial() *MaterialInfo {
 }
 
 type CreateMaterialRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Sku           string                 `protobuf:"bytes,1,opt,name=sku,proto3" json:"sku,omitempty"`
-	Description   *string                `protobuf:"bytes,2,opt,name=description,proto3,oneof" json:"description,omitempty"`
-	Notes         *string                `protobuf:"bytes,3,opt,name=notes,proto3,oneof" json:"notes,omitempty"`
-	CategoryId    string                 `protobuf:"bytes,4,opt,name=category_id,json=categoryId,proto3" json:"category_id,omitempty"`
-	OrderPoint    *QuantityInput         `protobuf:"bytes,5,opt,name=order_point,json=orderPoint,proto3,oneof" json:"order_point,omitempty"`
-	LeadTime      *QuantityInput         `protobuf:"bytes,6,opt,name=lead_time,json=leadTime,proto3,oneof" json:"lead_time,omitempty"`
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Sku         string                 `protobuf:"bytes,1,opt,name=sku,proto3" json:"sku,omitempty"`
+	Description *string                `protobuf:"bytes,2,opt,name=description,proto3,oneof" json:"description,omitempty"`
+	Notes       *string                `protobuf:"bytes,3,opt,name=notes,proto3,oneof" json:"notes,omitempty"`
+	CategoryId  string                 `protobuf:"bytes,4,opt,name=category_id,json=categoryId,proto3" json:"category_id,omitempty"`
+	OrderPoint  *QuantityInput         `protobuf:"bytes,5,opt,name=order_point,json=orderPoint,proto3,oneof" json:"order_point,omitempty"`
+	LeadTime    *QuantityInput         `protobuf:"bytes,6,opt,name=lead_time,json=leadTime,proto3,oneof" json:"lead_time,omitempty"`
+	// Initial unit price. When omitted the rate defaults to "0" against the
+	// category's base unit on both sides. When set, the numerator must be a
+	// currency unit and the denominator must not be.
+	UnitPrice *CreateRateInput `protobuf:"bytes,7,opt,name=unit_price,json=unitPrice,proto3,oneof" json:"unit_price,omitempty"`
+	// Initial unit cost. Same currency-vs-non-currency rule as unit_price.
+	UnitCost *CreateRateInput `protobuf:"bytes,8,opt,name=unit_cost,json=unitCost,proto3,oneof" json:"unit_cost,omitempty"`
+	// Initial burn rate (waste / scrap). No currency requirement.
+	BurnRate *CreateRateInput `protobuf:"bytes,9,opt,name=burn_rate,json=burnRate,proto3,oneof" json:"burn_rate,omitempty"`
+	// Attribute IDs to connect to the item at creation time.
+	AttributeIds  []string `protobuf:"bytes,10,rep,name=attribute_ids,json=attributeIds,proto3" json:"attribute_ids,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -853,6 +863,34 @@ func (x *CreateMaterialRequest) GetLeadTime() *QuantityInput {
 	return nil
 }
 
+func (x *CreateMaterialRequest) GetUnitPrice() *CreateRateInput {
+	if x != nil {
+		return x.UnitPrice
+	}
+	return nil
+}
+
+func (x *CreateMaterialRequest) GetUnitCost() *CreateRateInput {
+	if x != nil {
+		return x.UnitCost
+	}
+	return nil
+}
+
+func (x *CreateMaterialRequest) GetBurnRate() *CreateRateInput {
+	if x != nil {
+		return x.BurnRate
+	}
+	return nil
+}
+
+func (x *CreateMaterialRequest) GetAttributeIds() []string {
+	if x != nil {
+		return x.AttributeIds
+	}
+	return nil
+}
+
 type CreateMaterialResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Material      *MaterialInfo          `protobuf:"bytes,1,opt,name=material,proto3" json:"material,omitempty"`
@@ -899,7 +937,7 @@ func (x *CreateMaterialResponse) GetMaterial() *MaterialInfo {
 
 type UpdateMaterialRequest struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
-	ItemId            string                 `protobuf:"bytes,1,opt,name=item_id,json=itemId,proto3" json:"item_id,omitempty"`
+	Id                string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Sku               *string                `protobuf:"bytes,2,opt,name=sku,proto3,oneof" json:"sku,omitempty"`
 	Description       *string                `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"`
 	UpdateDescription bool                   `protobuf:"varint,4,opt,name=update_description,json=updateDescription,proto3" json:"update_description,omitempty"`
@@ -941,9 +979,9 @@ func (*UpdateMaterialRequest) Descriptor() ([]byte, []int) {
 	return file_core_core_invoices_proto_rawDescGZIP(), []int{10}
 }
 
-func (x *UpdateMaterialRequest) GetItemId() string {
+func (x *UpdateMaterialRequest) GetId() string {
 	if x != nil {
-		return x.ItemId
+		return x.Id
 	}
 	return ""
 }
@@ -1043,7 +1081,7 @@ func (x *UpdateMaterialResponse) GetMaterial() *MaterialInfo {
 
 type DeleteMaterialRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	ItemId        string                 `protobuf:"bytes,1,opt,name=item_id,json=itemId,proto3" json:"item_id,omitempty"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1078,9 +1116,9 @@ func (*DeleteMaterialRequest) Descriptor() ([]byte, []int) {
 	return file_core_core_invoices_proto_rawDescGZIP(), []int{12}
 }
 
-func (x *DeleteMaterialRequest) GetItemId() string {
+func (x *DeleteMaterialRequest) GetId() string {
 	if x != nil {
-		return x.ItemId
+		return x.Id
 	}
 	return ""
 }
@@ -1368,7 +1406,7 @@ func (x *ListSupplierMaterialsResponse) GetPageInfo() *PageInfo {
 type GetSupplierMaterialRequest struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
 	SupplierAccountId string                 `protobuf:"bytes,1,opt,name=supplier_account_id,json=supplierAccountId,proto3" json:"supplier_account_id,omitempty"`
-	ItemId            string                 `protobuf:"bytes,2,opt,name=item_id,json=itemId,proto3" json:"item_id,omitempty"`
+	MaterialId        string                 `protobuf:"bytes,2,opt,name=material_id,json=materialId,proto3" json:"material_id,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -1410,9 +1448,9 @@ func (x *GetSupplierMaterialRequest) GetSupplierAccountId() string {
 	return ""
 }
 
-func (x *GetSupplierMaterialRequest) GetItemId() string {
+func (x *GetSupplierMaterialRequest) GetMaterialId() string {
 	if x != nil {
-		return x.ItemId
+		return x.MaterialId
 	}
 	return ""
 }
@@ -1584,7 +1622,7 @@ func (x *CreateSupplierMaterialResponse) GetSupplierMaterial() *SupplierMaterial
 type UpdateSupplierMaterialRequest struct {
 	state               protoimpl.MessageState `protogen:"open.v1"`
 	SupplierAccountId   string                 `protobuf:"bytes,1,opt,name=supplier_account_id,json=supplierAccountId,proto3" json:"supplier_account_id,omitempty"`
-	ItemId              string                 `protobuf:"bytes,2,opt,name=item_id,json=itemId,proto3" json:"item_id,omitempty"`
+	MaterialId          string                 `protobuf:"bytes,2,opt,name=material_id,json=materialId,proto3" json:"material_id,omitempty"`
 	SupplierPartNumber  *string                `protobuf:"bytes,3,opt,name=supplier_part_number,json=supplierPartNumber,proto3,oneof" json:"supplier_part_number,omitempty"`
 	SupplierDescription *string                `protobuf:"bytes,4,opt,name=supplier_description,json=supplierDescription,proto3,oneof" json:"supplier_description,omitempty"`
 	UpdateDescription   bool                   `protobuf:"varint,5,opt,name=update_description,json=updateDescription,proto3" json:"update_description,omitempty"`
@@ -1630,9 +1668,9 @@ func (x *UpdateSupplierMaterialRequest) GetSupplierAccountId() string {
 	return ""
 }
 
-func (x *UpdateSupplierMaterialRequest) GetItemId() string {
+func (x *UpdateSupplierMaterialRequest) GetMaterialId() string {
 	if x != nil {
-		return x.ItemId
+		return x.MaterialId
 	}
 	return ""
 }
@@ -1712,7 +1750,7 @@ func (x *UpdateSupplierMaterialResponse) GetSupplierMaterial() *SupplierMaterial
 type DeleteSupplierMaterialRequest struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
 	SupplierAccountId string                 `protobuf:"bytes,1,opt,name=supplier_account_id,json=supplierAccountId,proto3" json:"supplier_account_id,omitempty"`
-	ItemId            string                 `protobuf:"bytes,2,opt,name=item_id,json=itemId,proto3" json:"item_id,omitempty"`
+	MaterialId        string                 `protobuf:"bytes,2,opt,name=material_id,json=materialId,proto3" json:"material_id,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -1754,9 +1792,9 @@ func (x *DeleteSupplierMaterialRequest) GetSupplierAccountId() string {
 	return ""
 }
 
-func (x *DeleteSupplierMaterialRequest) GetItemId() string {
+func (x *DeleteSupplierMaterialRequest) GetMaterialId() string {
 	if x != nil {
-		return x.ItemId
+		return x.MaterialId
 	}
 	return ""
 }
@@ -2027,7 +2065,7 @@ func (x *ListPartsResponse) GetPageInfo() *PageInfo {
 
 type GetPartRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	ItemId        string                 `protobuf:"bytes,1,opt,name=item_id,json=itemId,proto3" json:"item_id,omitempty"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2062,9 +2100,9 @@ func (*GetPartRequest) Descriptor() ([]byte, []int) {
 	return file_core_core_invoices_proto_rawDescGZIP(), []int{28}
 }
 
-func (x *GetPartRequest) GetItemId() string {
+func (x *GetPartRequest) GetId() string {
 	if x != nil {
-		return x.ItemId
+		return x.Id
 	}
 	return ""
 }
@@ -2114,10 +2152,21 @@ func (x *GetPartResponse) GetPart() *PartInfo {
 }
 
 type CreatePartRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Sku           string                 `protobuf:"bytes,1,opt,name=sku,proto3" json:"sku,omitempty"`
-	Description   *string                `protobuf:"bytes,2,opt,name=description,proto3,oneof" json:"description,omitempty"`
-	CategoryId    string                 `protobuf:"bytes,3,opt,name=category_id,json=categoryId,proto3" json:"category_id,omitempty"`
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Sku         string                 `protobuf:"bytes,1,opt,name=sku,proto3" json:"sku,omitempty"`
+	Description *string                `protobuf:"bytes,2,opt,name=description,proto3,oneof" json:"description,omitempty"`
+	CategoryId  string                 `protobuf:"bytes,3,opt,name=category_id,json=categoryId,proto3" json:"category_id,omitempty"`
+	Notes       *string                `protobuf:"bytes,4,opt,name=notes,proto3,oneof" json:"notes,omitempty"`
+	// Initial unit price. When omitted the rate defaults to "0" against the
+	// category's base unit on both sides. When set, the numerator must be a
+	// currency unit and the denominator must not be.
+	UnitPrice *CreateRateInput `protobuf:"bytes,5,opt,name=unit_price,json=unitPrice,proto3,oneof" json:"unit_price,omitempty"`
+	// Initial unit cost. Same currency-vs-non-currency rule as unit_price.
+	UnitCost *CreateRateInput `protobuf:"bytes,6,opt,name=unit_cost,json=unitCost,proto3,oneof" json:"unit_cost,omitempty"`
+	// Initial burn rate (waste / scrap). No currency requirement.
+	BurnRate *CreateRateInput `protobuf:"bytes,7,opt,name=burn_rate,json=burnRate,proto3,oneof" json:"burn_rate,omitempty"`
+	// Attribute IDs to connect to the item at creation time.
+	AttributeIds  []string `protobuf:"bytes,8,rep,name=attribute_ids,json=attributeIds,proto3" json:"attribute_ids,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2173,6 +2222,41 @@ func (x *CreatePartRequest) GetCategoryId() string {
 	return ""
 }
 
+func (x *CreatePartRequest) GetNotes() string {
+	if x != nil && x.Notes != nil {
+		return *x.Notes
+	}
+	return ""
+}
+
+func (x *CreatePartRequest) GetUnitPrice() *CreateRateInput {
+	if x != nil {
+		return x.UnitPrice
+	}
+	return nil
+}
+
+func (x *CreatePartRequest) GetUnitCost() *CreateRateInput {
+	if x != nil {
+		return x.UnitCost
+	}
+	return nil
+}
+
+func (x *CreatePartRequest) GetBurnRate() *CreateRateInput {
+	if x != nil {
+		return x.BurnRate
+	}
+	return nil
+}
+
+func (x *CreatePartRequest) GetAttributeIds() []string {
+	if x != nil {
+		return x.AttributeIds
+	}
+	return nil
+}
+
 type CreatePartResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Part          *PartInfo              `protobuf:"bytes,1,opt,name=part,proto3" json:"part,omitempty"`
@@ -2219,7 +2303,7 @@ func (x *CreatePartResponse) GetPart() *PartInfo {
 
 type UpdatePartRequest struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
-	ItemId            string                 `protobuf:"bytes,1,opt,name=item_id,json=itemId,proto3" json:"item_id,omitempty"`
+	Id                string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Sku               *string                `protobuf:"bytes,2,opt,name=sku,proto3,oneof" json:"sku,omitempty"`
 	Description       *string                `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"`
 	UpdateDescription bool                   `protobuf:"varint,4,opt,name=update_description,json=updateDescription,proto3" json:"update_description,omitempty"`
@@ -2259,9 +2343,9 @@ func (*UpdatePartRequest) Descriptor() ([]byte, []int) {
 	return file_core_core_invoices_proto_rawDescGZIP(), []int{32}
 }
 
-func (x *UpdatePartRequest) GetItemId() string {
+func (x *UpdatePartRequest) GetId() string {
 	if x != nil {
-		return x.ItemId
+		return x.Id
 	}
 	return ""
 }
@@ -2347,7 +2431,7 @@ func (x *UpdatePartResponse) GetPart() *PartInfo {
 
 type DeletePartRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	ItemId        string                 `protobuf:"bytes,1,opt,name=item_id,json=itemId,proto3" json:"item_id,omitempty"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2382,9 +2466,9 @@ func (*DeletePartRequest) Descriptor() ([]byte, []int) {
 	return file_core_core_invoices_proto_rawDescGZIP(), []int{34}
 }
 
-func (x *DeletePartRequest) GetItemId() string {
+func (x *DeletePartRequest) GetId() string {
 	if x != nil {
-		return x.ItemId
+		return x.Id
 	}
 	return ""
 }
@@ -3291,7 +3375,7 @@ func (x *ListProductsFullResponse) GetPageInfo() *PageInfo {
 
 type GetProductRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	ItemId        string                 `protobuf:"bytes,1,opt,name=item_id,json=itemId,proto3" json:"item_id,omitempty"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3326,9 +3410,9 @@ func (*GetProductRequest) Descriptor() ([]byte, []int) {
 	return file_core_core_invoices_proto_rawDescGZIP(), []int{48}
 }
 
-func (x *GetProductRequest) GetItemId() string {
+func (x *GetProductRequest) GetId() string {
 	if x != nil {
-		return x.ItemId
+		return x.Id
 	}
 	return ""
 }
@@ -3386,11 +3470,14 @@ type CreateProductRequest struct {
 	ProductLineId   *string                `protobuf:"bytes,5,opt,name=product_line_id,json=productLineId,proto3,oneof" json:"product_line_id,omitempty"`
 	CategoryId      string                 `protobuf:"bytes,6,opt,name=category_id,json=categoryId,proto3" json:"category_id,omitempty"`
 	IsPortalReady   bool                   `protobuf:"varint,7,opt,name=is_portal_ready,json=isPortalReady,proto3" json:"is_portal_ready,omitempty"`
-	UnitPrice       *string                `protobuf:"bytes,8,opt,name=unit_price,json=unitPrice,proto3,oneof" json:"unit_price,omitempty"`
-	// Initial unit cost. Defaults to "0" when omitted.
-	UnitCost *string `protobuf:"bytes,9,opt,name=unit_cost,json=unitCost,proto3,oneof" json:"unit_cost,omitempty"`
-	// Initial burn rate (waste/scrap). Defaults to "0" when omitted.
-	BurnRate *string `protobuf:"bytes,10,opt,name=burn_rate,json=burnRate,proto3,oneof" json:"burn_rate,omitempty"`
+	// Initial unit price. When omitted the rate defaults to "0" against the
+	// category's base unit on both sides. When set, the numerator must be a
+	// currency unit and the denominator must not be.
+	UnitPrice *CreateRateInput `protobuf:"bytes,8,opt,name=unit_price,json=unitPrice,proto3,oneof" json:"unit_price,omitempty"`
+	// Initial unit cost. Same currency-vs-non-currency rule as unit_price.
+	UnitCost *CreateRateInput `protobuf:"bytes,9,opt,name=unit_cost,json=unitCost,proto3,oneof" json:"unit_cost,omitempty"`
+	// Initial burn rate (waste / scrap). No currency requirement.
+	BurnRate *CreateRateInput `protobuf:"bytes,10,opt,name=burn_rate,json=burnRate,proto3,oneof" json:"burn_rate,omitempty"`
 	// Attribute IDs to connect to the item at creation time.
 	AttributeIds  []string `protobuf:"bytes,11,rep,name=attribute_ids,json=attributeIds,proto3" json:"attribute_ids,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -3476,25 +3563,25 @@ func (x *CreateProductRequest) GetIsPortalReady() bool {
 	return false
 }
 
-func (x *CreateProductRequest) GetUnitPrice() string {
-	if x != nil && x.UnitPrice != nil {
-		return *x.UnitPrice
+func (x *CreateProductRequest) GetUnitPrice() *CreateRateInput {
+	if x != nil {
+		return x.UnitPrice
 	}
-	return ""
+	return nil
 }
 
-func (x *CreateProductRequest) GetUnitCost() string {
-	if x != nil && x.UnitCost != nil {
-		return *x.UnitCost
+func (x *CreateProductRequest) GetUnitCost() *CreateRateInput {
+	if x != nil {
+		return x.UnitCost
 	}
-	return ""
+	return nil
 }
 
-func (x *CreateProductRequest) GetBurnRate() string {
-	if x != nil && x.BurnRate != nil {
-		return *x.BurnRate
+func (x *CreateProductRequest) GetBurnRate() *CreateRateInput {
+	if x != nil {
+		return x.BurnRate
 	}
-	return ""
+	return nil
 }
 
 func (x *CreateProductRequest) GetAttributeIds() []string {
@@ -3550,7 +3637,7 @@ func (x *CreateProductResponse) GetProduct() *ProductFullInfo {
 
 type UpdateProductRequest struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
-	ItemId            string                 `protobuf:"bytes,1,opt,name=item_id,json=itemId,proto3" json:"item_id,omitempty"`
+	Id                string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Sku               *string                `protobuf:"bytes,2,opt,name=sku,proto3,oneof" json:"sku,omitempty"`
 	Description       *string                `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"`
 	UpdateDescription bool                   `protobuf:"varint,4,opt,name=update_description,json=updateDescription,proto3" json:"update_description,omitempty"`
@@ -3591,9 +3678,9 @@ func (*UpdateProductRequest) Descriptor() ([]byte, []int) {
 	return file_core_core_invoices_proto_rawDescGZIP(), []int{52}
 }
 
-func (x *UpdateProductRequest) GetItemId() string {
+func (x *UpdateProductRequest) GetId() string {
 	if x != nil {
-		return x.ItemId
+		return x.Id
 	}
 	return ""
 }
@@ -3686,7 +3773,7 @@ func (x *UpdateProductResponse) GetProduct() *ProductFullInfo {
 
 type DeleteProductRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	ItemId        string                 `protobuf:"bytes,1,opt,name=item_id,json=itemId,proto3" json:"item_id,omitempty"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3721,9 +3808,9 @@ func (*DeleteProductRequest) Descriptor() ([]byte, []int) {
 	return file_core_core_invoices_proto_rawDescGZIP(), []int{54}
 }
 
-func (x *DeleteProductRequest) GetItemId() string {
+func (x *DeleteProductRequest) GetId() string {
 	if x != nil {
-		return x.ItemId
+		return x.Id
 	}
 	return ""
 }
@@ -3774,7 +3861,7 @@ func (x *DeleteProductResponse) GetProduct() *ProductFullInfo {
 
 type ChangeProductProductLineRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	ItemId        string                 `protobuf:"bytes,1,opt,name=item_id,json=itemId,proto3" json:"item_id,omitempty"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	ProductLineId string                 `protobuf:"bytes,2,opt,name=product_line_id,json=productLineId,proto3" json:"product_line_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -3810,9 +3897,9 @@ func (*ChangeProductProductLineRequest) Descriptor() ([]byte, []int) {
 	return file_core_core_invoices_proto_rawDescGZIP(), []int{56}
 }
 
-func (x *ChangeProductProductLineRequest) GetItemId() string {
+func (x *ChangeProductProductLineRequest) GetId() string {
 	if x != nil {
-		return x.ItemId
+		return x.Id
 	}
 	return ""
 }
@@ -4787,11 +4874,11 @@ const file_core_core_invoices_proto_rawDesc = "" +
 	"\t_end_date\"v\n" +
 	"\x15ListMaterialsResponse\x120\n" +
 	"\tmaterials\x18\x01 \x03(\v2\x12.core.MaterialInfoR\tmaterials\x12+\n" +
-	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"-\n" +
-	"\x12GetMaterialRequest\x12\x17\n" +
-	"\aitem_id\x18\x01 \x01(\tR\x06itemId\"E\n" +
+	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"$\n" +
+	"\x12GetMaterialRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"E\n" +
 	"\x13GetMaterialResponse\x12.\n" +
-	"\bmaterial\x18\x01 \x01(\v2\x12.core.MaterialInfoR\bmaterial\"\xb6\x02\n" +
+	"\bmaterial\x18\x01 \x01(\v2\x12.core.MaterialInfoR\bmaterial\"\xb3\x04\n" +
 	"\x15CreateMaterialRequest\x12\x10\n" +
 	"\x03sku\x18\x01 \x01(\tR\x03sku\x12%\n" +
 	"\vdescription\x18\x02 \x01(\tH\x00R\vdescription\x88\x01\x01\x12\x19\n" +
@@ -4800,16 +4887,27 @@ const file_core_core_invoices_proto_rawDesc = "" +
 	"categoryId\x129\n" +
 	"\vorder_point\x18\x05 \x01(\v2\x13.core.QuantityInputH\x02R\n" +
 	"orderPoint\x88\x01\x01\x125\n" +
-	"\tlead_time\x18\x06 \x01(\v2\x13.core.QuantityInputH\x03R\bleadTime\x88\x01\x01B\x0e\n" +
+	"\tlead_time\x18\x06 \x01(\v2\x13.core.QuantityInputH\x03R\bleadTime\x88\x01\x01\x129\n" +
+	"\n" +
+	"unit_price\x18\a \x01(\v2\x15.core.CreateRateInputH\x04R\tunitPrice\x88\x01\x01\x127\n" +
+	"\tunit_cost\x18\b \x01(\v2\x15.core.CreateRateInputH\x05R\bunitCost\x88\x01\x01\x127\n" +
+	"\tburn_rate\x18\t \x01(\v2\x15.core.CreateRateInputH\x06R\bburnRate\x88\x01\x01\x12#\n" +
+	"\rattribute_ids\x18\n" +
+	" \x03(\tR\fattributeIdsB\x0e\n" +
 	"\f_descriptionB\b\n" +
 	"\x06_notesB\x0e\n" +
 	"\f_order_pointB\f\n" +
 	"\n" +
-	"_lead_time\"H\n" +
+	"_lead_timeB\r\n" +
+	"\v_unit_priceB\f\n" +
+	"\n" +
+	"_unit_costB\f\n" +
+	"\n" +
+	"_burn_rate\"H\n" +
 	"\x16CreateMaterialResponse\x12.\n" +
-	"\bmaterial\x18\x01 \x01(\v2\x12.core.MaterialInfoR\bmaterial\"\x8d\x03\n" +
-	"\x15UpdateMaterialRequest\x12\x17\n" +
-	"\aitem_id\x18\x01 \x01(\tR\x06itemId\x12\x15\n" +
+	"\bmaterial\x18\x01 \x01(\v2\x12.core.MaterialInfoR\bmaterial\"\x84\x03\n" +
+	"\x15UpdateMaterialRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x15\n" +
 	"\x03sku\x18\x02 \x01(\tH\x00R\x03sku\x88\x01\x01\x12%\n" +
 	"\vdescription\x18\x03 \x01(\tH\x01R\vdescription\x88\x01\x01\x12-\n" +
 	"\x12update_description\x18\x04 \x01(\bR\x11updateDescription\x12\x19\n" +
@@ -4825,9 +4923,9 @@ const file_core_core_invoices_proto_rawDesc = "" +
 	"\n" +
 	"_lead_time\"H\n" +
 	"\x16UpdateMaterialResponse\x12.\n" +
-	"\bmaterial\x18\x01 \x01(\v2\x12.core.MaterialInfoR\bmaterial\"0\n" +
-	"\x15DeleteMaterialRequest\x12\x17\n" +
-	"\aitem_id\x18\x01 \x01(\tR\x06itemId\"H\n" +
+	"\bmaterial\x18\x01 \x01(\v2\x12.core.MaterialInfoR\bmaterial\"'\n" +
+	"\x15DeleteMaterialRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"H\n" +
 	"\x16DeleteMaterialResponse\x12.\n" +
 	"\bmaterial\x18\x01 \x01(\v2\x12.core.MaterialInfoR\bmaterial\"\xe7\x03\n" +
 	"\x14SupplierMaterialInfo\x12\x0e\n" +
@@ -4855,10 +4953,11 @@ const file_core_core_invoices_proto_rawDesc = "" +
 	"\x06_query\"\x97\x01\n" +
 	"\x1dListSupplierMaterialsResponse\x12I\n" +
 	"\x12supplier_materials\x18\x01 \x03(\v2\x1a.core.SupplierMaterialInfoR\x11supplierMaterials\x12+\n" +
-	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"e\n" +
+	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"m\n" +
 	"\x1aGetSupplierMaterialRequest\x12.\n" +
-	"\x13supplier_account_id\x18\x01 \x01(\tR\x11supplierAccountId\x12\x17\n" +
-	"\aitem_id\x18\x02 \x01(\tR\x06itemId\"f\n" +
+	"\x13supplier_account_id\x18\x01 \x01(\tR\x11supplierAccountId\x12\x1f\n" +
+	"\vmaterial_id\x18\x02 \x01(\tR\n" +
+	"materialId\"f\n" +
 	"\x1bGetSupplierMaterialResponse\x12G\n" +
 	"\x11supplier_material\x18\x01 \x01(\v2\x1a.core.SupplierMaterialInfoR\x10supplierMaterial\"\x90\x02\n" +
 	"\x1dCreateSupplierMaterialRequest\x12.\n" +
@@ -4870,10 +4969,11 @@ const file_core_core_invoices_proto_rawDesc = "" +
 	"\tis_active\x18\x05 \x01(\bR\bisActiveB\x17\n" +
 	"\x15_supplier_description\"i\n" +
 	"\x1eCreateSupplierMaterialResponse\x12G\n" +
-	"\x11supplier_material\x18\x01 \x01(\v2\x1a.core.SupplierMaterialInfoR\x10supplierMaterial\"\xe8\x02\n" +
+	"\x11supplier_material\x18\x01 \x01(\v2\x1a.core.SupplierMaterialInfoR\x10supplierMaterial\"\xf0\x02\n" +
 	"\x1dUpdateSupplierMaterialRequest\x12.\n" +
-	"\x13supplier_account_id\x18\x01 \x01(\tR\x11supplierAccountId\x12\x17\n" +
-	"\aitem_id\x18\x02 \x01(\tR\x06itemId\x125\n" +
+	"\x13supplier_account_id\x18\x01 \x01(\tR\x11supplierAccountId\x12\x1f\n" +
+	"\vmaterial_id\x18\x02 \x01(\tR\n" +
+	"materialId\x125\n" +
 	"\x14supplier_part_number\x18\x03 \x01(\tH\x00R\x12supplierPartNumber\x88\x01\x01\x126\n" +
 	"\x14supplier_description\x18\x04 \x01(\tH\x01R\x13supplierDescription\x88\x01\x01\x12-\n" +
 	"\x12update_description\x18\x05 \x01(\bR\x11updateDescription\x12 \n" +
@@ -4883,10 +4983,11 @@ const file_core_core_invoices_proto_rawDesc = "" +
 	"\n" +
 	"_is_active\"i\n" +
 	"\x1eUpdateSupplierMaterialResponse\x12G\n" +
-	"\x11supplier_material\x18\x01 \x01(\v2\x1a.core.SupplierMaterialInfoR\x10supplierMaterial\"h\n" +
+	"\x11supplier_material\x18\x01 \x01(\v2\x1a.core.SupplierMaterialInfoR\x10supplierMaterial\"p\n" +
 	"\x1dDeleteSupplierMaterialRequest\x12.\n" +
-	"\x13supplier_account_id\x18\x01 \x01(\tR\x11supplierAccountId\x12\x17\n" +
-	"\aitem_id\x18\x02 \x01(\tR\x06itemId\"i\n" +
+	"\x13supplier_account_id\x18\x01 \x01(\tR\x11supplierAccountId\x12\x1f\n" +
+	"\vmaterial_id\x18\x02 \x01(\tR\n" +
+	"materialId\"i\n" +
 	"\x1eDeleteSupplierMaterialResponse\x12G\n" +
 	"\x11supplier_material\x18\x01 \x01(\v2\x1a.core.SupplierMaterialInfoR\x10supplierMaterial\"\xcd\x01\n" +
 	"\bPartInfo\x12\x0e\n" +
@@ -4912,21 +5013,33 @@ const file_core_core_invoices_proto_rawDesc = "" +
 	"\t_end_date\"f\n" +
 	"\x11ListPartsResponse\x12$\n" +
 	"\x05parts\x18\x01 \x03(\v2\x0e.core.PartInfoR\x05parts\x12+\n" +
-	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\")\n" +
-	"\x0eGetPartRequest\x12\x17\n" +
-	"\aitem_id\x18\x01 \x01(\tR\x06itemId\"5\n" +
+	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\" \n" +
+	"\x0eGetPartRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"5\n" +
 	"\x0fGetPartResponse\x12\"\n" +
-	"\x04part\x18\x01 \x01(\v2\x0e.core.PartInfoR\x04part\"}\n" +
+	"\x04part\x18\x01 \x01(\v2\x0e.core.PartInfoR\x04part\"\x9f\x03\n" +
 	"\x11CreatePartRequest\x12\x10\n" +
 	"\x03sku\x18\x01 \x01(\tR\x03sku\x12%\n" +
 	"\vdescription\x18\x02 \x01(\tH\x00R\vdescription\x88\x01\x01\x12\x1f\n" +
 	"\vcategory_id\x18\x03 \x01(\tR\n" +
-	"categoryIdB\x0e\n" +
-	"\f_description\"8\n" +
+	"categoryId\x12\x19\n" +
+	"\x05notes\x18\x04 \x01(\tH\x01R\x05notes\x88\x01\x01\x129\n" +
+	"\n" +
+	"unit_price\x18\x05 \x01(\v2\x15.core.CreateRateInputH\x02R\tunitPrice\x88\x01\x01\x127\n" +
+	"\tunit_cost\x18\x06 \x01(\v2\x15.core.CreateRateInputH\x03R\bunitCost\x88\x01\x01\x127\n" +
+	"\tburn_rate\x18\a \x01(\v2\x15.core.CreateRateInputH\x04R\bburnRate\x88\x01\x01\x12#\n" +
+	"\rattribute_ids\x18\b \x03(\tR\fattributeIdsB\x0e\n" +
+	"\f_descriptionB\b\n" +
+	"\x06_notesB\r\n" +
+	"\v_unit_priceB\f\n" +
+	"\n" +
+	"_unit_costB\f\n" +
+	"\n" +
+	"_burn_rate\"8\n" +
 	"\x12CreatePartResponse\x12\"\n" +
-	"\x04part\x18\x01 \x01(\v2\x0e.core.PartInfoR\x04part\"\xf9\x01\n" +
-	"\x11UpdatePartRequest\x12\x17\n" +
-	"\aitem_id\x18\x01 \x01(\tR\x06itemId\x12\x15\n" +
+	"\x04part\x18\x01 \x01(\v2\x0e.core.PartInfoR\x04part\"\xf0\x01\n" +
+	"\x11UpdatePartRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x15\n" +
 	"\x03sku\x18\x02 \x01(\tH\x00R\x03sku\x88\x01\x01\x12%\n" +
 	"\vdescription\x18\x03 \x01(\tH\x01R\vdescription\x88\x01\x01\x12-\n" +
 	"\x12update_description\x18\x04 \x01(\bR\x11updateDescription\x12\x19\n" +
@@ -4936,9 +5049,9 @@ const file_core_core_invoices_proto_rawDesc = "" +
 	"\f_descriptionB\b\n" +
 	"\x06_notes\"8\n" +
 	"\x12UpdatePartResponse\x12\"\n" +
-	"\x04part\x18\x01 \x01(\v2\x0e.core.PartInfoR\x04part\",\n" +
-	"\x11DeletePartRequest\x12\x17\n" +
-	"\aitem_id\x18\x01 \x01(\tR\x06itemId\"8\n" +
+	"\x04part\x18\x01 \x01(\v2\x0e.core.PartInfoR\x04part\"#\n" +
+	"\x11DeletePartRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"8\n" +
 	"\x12DeletePartResponse\x12\"\n" +
 	"\x04part\x18\x01 \x01(\v2\x0e.core.PartInfoR\x04part\"\xa9\x02\n" +
 	"\x0ePermissionInfo\x12\x0e\n" +
@@ -5034,11 +5147,11 @@ const file_core_core_invoices_proto_rawDesc = "" +
 	"\x10_is_portal_ready\"z\n" +
 	"\x18ListProductsFullResponse\x121\n" +
 	"\bproducts\x18\x01 \x03(\v2\x15.core.ProductFullInfoR\bproducts\x12+\n" +
-	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\",\n" +
-	"\x11GetProductRequest\x12\x17\n" +
-	"\aitem_id\x18\x01 \x01(\tR\x06itemId\"E\n" +
+	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"#\n" +
+	"\x11GetProductRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"E\n" +
 	"\x12GetProductResponse\x12/\n" +
-	"\aproduct\x18\x01 \x01(\v2\x15.core.ProductFullInfoR\aproduct\"\xf2\x03\n" +
+	"\aproduct\x18\x01 \x01(\v2\x15.core.ProductFullInfoR\aproduct\"\xb7\x04\n" +
 	"\x14CreateProductRequest\x12\x10\n" +
 	"\x03sku\x18\x01 \x01(\tR\x03sku\x12%\n" +
 	"\vdescription\x18\x02 \x01(\tH\x00R\vdescription\x88\x01\x01\x12\x19\n" +
@@ -5047,12 +5160,12 @@ const file_core_core_invoices_proto_rawDesc = "" +
 	"\x0fproduct_line_id\x18\x05 \x01(\tH\x02R\rproductLineId\x88\x01\x01\x12\x1f\n" +
 	"\vcategory_id\x18\x06 \x01(\tR\n" +
 	"categoryId\x12&\n" +
-	"\x0fis_portal_ready\x18\a \x01(\bR\risPortalReady\x12\"\n" +
+	"\x0fis_portal_ready\x18\a \x01(\bR\risPortalReady\x129\n" +
 	"\n" +
-	"unit_price\x18\b \x01(\tH\x03R\tunitPrice\x88\x01\x01\x12 \n" +
-	"\tunit_cost\x18\t \x01(\tH\x04R\bunitCost\x88\x01\x01\x12 \n" +
+	"unit_price\x18\b \x01(\v2\x15.core.CreateRateInputH\x03R\tunitPrice\x88\x01\x01\x127\n" +
+	"\tunit_cost\x18\t \x01(\v2\x15.core.CreateRateInputH\x04R\bunitCost\x88\x01\x01\x127\n" +
 	"\tburn_rate\x18\n" +
-	" \x01(\tH\x05R\bburnRate\x88\x01\x01\x12#\n" +
+	" \x01(\v2\x15.core.CreateRateInputH\x05R\bburnRate\x88\x01\x01\x12#\n" +
 	"\rattribute_ids\x18\v \x03(\tR\fattributeIdsB\x0e\n" +
 	"\f_descriptionB\b\n" +
 	"\x06_notesB\x12\n" +
@@ -5063,9 +5176,9 @@ const file_core_core_invoices_proto_rawDesc = "" +
 	"\n" +
 	"_burn_rate\"H\n" +
 	"\x15CreateProductResponse\x12/\n" +
-	"\aproduct\x18\x01 \x01(\v2\x15.core.ProductFullInfoR\aproduct\"\xbd\x02\n" +
-	"\x14UpdateProductRequest\x12\x17\n" +
-	"\aitem_id\x18\x01 \x01(\tR\x06itemId\x12\x15\n" +
+	"\aproduct\x18\x01 \x01(\v2\x15.core.ProductFullInfoR\aproduct\"\xb4\x02\n" +
+	"\x14UpdateProductRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x15\n" +
 	"\x03sku\x18\x02 \x01(\tH\x00R\x03sku\x88\x01\x01\x12%\n" +
 	"\vdescription\x18\x03 \x01(\tH\x01R\vdescription\x88\x01\x01\x12-\n" +
 	"\x12update_description\x18\x04 \x01(\bR\x11updateDescription\x12\x19\n" +
@@ -5077,13 +5190,13 @@ const file_core_core_invoices_proto_rawDesc = "" +
 	"\x06_notesB\x12\n" +
 	"\x10_is_portal_ready\"H\n" +
 	"\x15UpdateProductResponse\x12/\n" +
-	"\aproduct\x18\x01 \x01(\v2\x15.core.ProductFullInfoR\aproduct\"/\n" +
-	"\x14DeleteProductRequest\x12\x17\n" +
-	"\aitem_id\x18\x01 \x01(\tR\x06itemId\"H\n" +
+	"\aproduct\x18\x01 \x01(\v2\x15.core.ProductFullInfoR\aproduct\"&\n" +
+	"\x14DeleteProductRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"H\n" +
 	"\x15DeleteProductResponse\x12/\n" +
-	"\aproduct\x18\x01 \x01(\v2\x15.core.ProductFullInfoR\aproduct\"b\n" +
-	"\x1fChangeProductProductLineRequest\x12\x17\n" +
-	"\aitem_id\x18\x01 \x01(\tR\x06itemId\x12&\n" +
+	"\aproduct\x18\x01 \x01(\v2\x15.core.ProductFullInfoR\aproduct\"Y\n" +
+	"\x1fChangeProductProductLineRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12&\n" +
 	"\x0fproduct_line_id\x18\x02 \x01(\tR\rproductLineId\"S\n" +
 	" ChangeProductProductLineResponse\x12/\n" +
 	"\aproduct\x18\x01 \x01(\v2\x15.core.ProductFullInfoR\aproduct\"\xac\x01\n" +
@@ -5260,7 +5373,8 @@ var file_core_core_invoices_proto_goTypes = []any{
 	(*QuantityInfo)(nil),                     // 76: core.QuantityInfo
 	(*PageInfo)(nil),                         // 77: core.PageInfo
 	(*QuantityInput)(nil),                    // 78: core.QuantityInput
-	(*ItemCategoryUnitGroupInfo)(nil),        // 79: core.ItemCategoryUnitGroupInfo
+	(*CreateRateInput)(nil),                  // 79: core.CreateRateInput
+	(*ItemCategoryUnitGroupInfo)(nil),        // 80: core.ItemCategoryUnitGroupInfo
 }
 var file_core_core_invoices_proto_depIdxs = []int32{
 	74, // 0: core.InvoiceLineInfo.created_at:type_name -> google.protobuf.Timestamp
@@ -5282,75 +5396,84 @@ var file_core_core_invoices_proto_depIdxs = []int32{
 	3,  // 16: core.GetMaterialResponse.material:type_name -> core.MaterialInfo
 	78, // 17: core.CreateMaterialRequest.order_point:type_name -> core.QuantityInput
 	78, // 18: core.CreateMaterialRequest.lead_time:type_name -> core.QuantityInput
-	3,  // 19: core.CreateMaterialResponse.material:type_name -> core.MaterialInfo
-	78, // 20: core.UpdateMaterialRequest.order_point:type_name -> core.QuantityInput
-	78, // 21: core.UpdateMaterialRequest.lead_time:type_name -> core.QuantityInput
-	3,  // 22: core.UpdateMaterialResponse.material:type_name -> core.MaterialInfo
-	3,  // 23: core.DeleteMaterialResponse.material:type_name -> core.MaterialInfo
-	74, // 24: core.SupplierMaterialInfo.created_at:type_name -> google.protobuf.Timestamp
-	74, // 25: core.SupplierMaterialInfo.updated_at:type_name -> google.protobuf.Timestamp
-	3,  // 26: core.SupplierMaterialInfo.material:type_name -> core.MaterialInfo
-	14, // 27: core.ListSupplierMaterialsResponse.supplier_materials:type_name -> core.SupplierMaterialInfo
-	77, // 28: core.ListSupplierMaterialsResponse.page_info:type_name -> core.PageInfo
-	14, // 29: core.GetSupplierMaterialResponse.supplier_material:type_name -> core.SupplierMaterialInfo
-	14, // 30: core.CreateSupplierMaterialResponse.supplier_material:type_name -> core.SupplierMaterialInfo
-	14, // 31: core.UpdateSupplierMaterialResponse.supplier_material:type_name -> core.SupplierMaterialInfo
-	14, // 32: core.DeleteSupplierMaterialResponse.supplier_material:type_name -> core.SupplierMaterialInfo
-	75, // 33: core.PartInfo.item:type_name -> core.ItemInfo
-	74, // 34: core.PartInfo.created_at:type_name -> google.protobuf.Timestamp
-	74, // 35: core.PartInfo.updated_at:type_name -> google.protobuf.Timestamp
-	74, // 36: core.ListPartsRequest.start_date:type_name -> google.protobuf.Timestamp
-	74, // 37: core.ListPartsRequest.end_date:type_name -> google.protobuf.Timestamp
-	25, // 38: core.ListPartsResponse.parts:type_name -> core.PartInfo
-	77, // 39: core.ListPartsResponse.page_info:type_name -> core.PageInfo
-	25, // 40: core.GetPartResponse.part:type_name -> core.PartInfo
-	25, // 41: core.CreatePartResponse.part:type_name -> core.PartInfo
-	25, // 42: core.UpdatePartResponse.part:type_name -> core.PartInfo
-	25, // 43: core.DeletePartResponse.part:type_name -> core.PartInfo
-	74, // 44: core.PermissionInfo.created_at:type_name -> google.protobuf.Timestamp
-	74, // 45: core.PermissionInfo.updated_at:type_name -> google.protobuf.Timestamp
-	36, // 46: core.PermissionGroupInfo.permissions:type_name -> core.PermissionInfo
-	74, // 47: core.PermissionGroupInfo.created_at:type_name -> google.protobuf.Timestamp
-	74, // 48: core.PermissionGroupInfo.updated_at:type_name -> google.protobuf.Timestamp
-	37, // 49: core.ListPermissionGroupsResponse.permission_groups:type_name -> core.PermissionGroupInfo
-	77, // 50: core.ListPermissionGroupsResponse.page_info:type_name -> core.PageInfo
-	74, // 51: core.PriorityInfo.created_at:type_name -> google.protobuf.Timestamp
-	74, // 52: core.PriorityInfo.updated_at:type_name -> google.protobuf.Timestamp
-	40, // 53: core.ListPrioritiesResponse.priorities:type_name -> core.PriorityInfo
-	77, // 54: core.ListPrioritiesResponse.page_info:type_name -> core.PageInfo
-	40, // 55: core.GetPriorityResponse.priority:type_name -> core.PriorityInfo
-	74, // 56: core.ProductFullInfo.created_at:type_name -> google.protobuf.Timestamp
-	74, // 57: core.ProductFullInfo.updated_at:type_name -> google.protobuf.Timestamp
-	75, // 58: core.ProductFullInfo.item:type_name -> core.ItemInfo
-	60, // 59: core.ProductFullInfo.product_line:type_name -> core.ProductLineInfo
-	70, // 60: core.ProductFullInfo.product_type:type_name -> core.ProductTypeInfo
-	74, // 61: core.ListProductsFullRequest.start_date:type_name -> google.protobuf.Timestamp
-	74, // 62: core.ListProductsFullRequest.end_date:type_name -> google.protobuf.Timestamp
-	45, // 63: core.ListProductsFullResponse.products:type_name -> core.ProductFullInfo
-	77, // 64: core.ListProductsFullResponse.page_info:type_name -> core.PageInfo
-	45, // 65: core.GetProductResponse.product:type_name -> core.ProductFullInfo
-	45, // 66: core.CreateProductResponse.product:type_name -> core.ProductFullInfo
-	45, // 67: core.UpdateProductResponse.product:type_name -> core.ProductFullInfo
-	45, // 68: core.DeleteProductResponse.product:type_name -> core.ProductFullInfo
-	45, // 69: core.ChangeProductProductLineResponse.product:type_name -> core.ProductFullInfo
-	72, // 70: core.ValidateProductsRequest.products_map:type_name -> core.ValidateProductsRequest.ProductsMapEntry
-	73, // 71: core.ValidateProductsResponse.products:type_name -> core.ValidateProductsResponse.ProductsEntry
-	74, // 72: core.ProductLineInfo.created_at:type_name -> google.protobuf.Timestamp
-	74, // 73: core.ProductLineInfo.updated_at:type_name -> google.protobuf.Timestamp
-	79, // 74: core.ProductLineInfo.unit_group:type_name -> core.ItemCategoryUnitGroupInfo
-	60, // 75: core.ListProductLinesResponse.product_lines:type_name -> core.ProductLineInfo
-	77, // 76: core.ListProductLinesResponse.page_info:type_name -> core.PageInfo
-	60, // 77: core.GetProductLineResponse.product_line:type_name -> core.ProductLineInfo
-	60, // 78: core.CreateProductLineResponse.product_line:type_name -> core.ProductLineInfo
-	60, // 79: core.UpdateProductLineResponse.product_line:type_name -> core.ProductLineInfo
-	74, // 80: core.ProductTypeInfo.created_at:type_name -> google.protobuf.Timestamp
-	74, // 81: core.ProductTypeInfo.updated_at:type_name -> google.protobuf.Timestamp
-	45, // 82: core.ValidateProductsResponse.ProductsEntry.value:type_name -> core.ProductFullInfo
-	83, // [83:83] is the sub-list for method output_type
-	83, // [83:83] is the sub-list for method input_type
-	83, // [83:83] is the sub-list for extension type_name
-	83, // [83:83] is the sub-list for extension extendee
-	0,  // [0:83] is the sub-list for field type_name
+	79, // 19: core.CreateMaterialRequest.unit_price:type_name -> core.CreateRateInput
+	79, // 20: core.CreateMaterialRequest.unit_cost:type_name -> core.CreateRateInput
+	79, // 21: core.CreateMaterialRequest.burn_rate:type_name -> core.CreateRateInput
+	3,  // 22: core.CreateMaterialResponse.material:type_name -> core.MaterialInfo
+	78, // 23: core.UpdateMaterialRequest.order_point:type_name -> core.QuantityInput
+	78, // 24: core.UpdateMaterialRequest.lead_time:type_name -> core.QuantityInput
+	3,  // 25: core.UpdateMaterialResponse.material:type_name -> core.MaterialInfo
+	3,  // 26: core.DeleteMaterialResponse.material:type_name -> core.MaterialInfo
+	74, // 27: core.SupplierMaterialInfo.created_at:type_name -> google.protobuf.Timestamp
+	74, // 28: core.SupplierMaterialInfo.updated_at:type_name -> google.protobuf.Timestamp
+	3,  // 29: core.SupplierMaterialInfo.material:type_name -> core.MaterialInfo
+	14, // 30: core.ListSupplierMaterialsResponse.supplier_materials:type_name -> core.SupplierMaterialInfo
+	77, // 31: core.ListSupplierMaterialsResponse.page_info:type_name -> core.PageInfo
+	14, // 32: core.GetSupplierMaterialResponse.supplier_material:type_name -> core.SupplierMaterialInfo
+	14, // 33: core.CreateSupplierMaterialResponse.supplier_material:type_name -> core.SupplierMaterialInfo
+	14, // 34: core.UpdateSupplierMaterialResponse.supplier_material:type_name -> core.SupplierMaterialInfo
+	14, // 35: core.DeleteSupplierMaterialResponse.supplier_material:type_name -> core.SupplierMaterialInfo
+	75, // 36: core.PartInfo.item:type_name -> core.ItemInfo
+	74, // 37: core.PartInfo.created_at:type_name -> google.protobuf.Timestamp
+	74, // 38: core.PartInfo.updated_at:type_name -> google.protobuf.Timestamp
+	74, // 39: core.ListPartsRequest.start_date:type_name -> google.protobuf.Timestamp
+	74, // 40: core.ListPartsRequest.end_date:type_name -> google.protobuf.Timestamp
+	25, // 41: core.ListPartsResponse.parts:type_name -> core.PartInfo
+	77, // 42: core.ListPartsResponse.page_info:type_name -> core.PageInfo
+	25, // 43: core.GetPartResponse.part:type_name -> core.PartInfo
+	79, // 44: core.CreatePartRequest.unit_price:type_name -> core.CreateRateInput
+	79, // 45: core.CreatePartRequest.unit_cost:type_name -> core.CreateRateInput
+	79, // 46: core.CreatePartRequest.burn_rate:type_name -> core.CreateRateInput
+	25, // 47: core.CreatePartResponse.part:type_name -> core.PartInfo
+	25, // 48: core.UpdatePartResponse.part:type_name -> core.PartInfo
+	25, // 49: core.DeletePartResponse.part:type_name -> core.PartInfo
+	74, // 50: core.PermissionInfo.created_at:type_name -> google.protobuf.Timestamp
+	74, // 51: core.PermissionInfo.updated_at:type_name -> google.protobuf.Timestamp
+	36, // 52: core.PermissionGroupInfo.permissions:type_name -> core.PermissionInfo
+	74, // 53: core.PermissionGroupInfo.created_at:type_name -> google.protobuf.Timestamp
+	74, // 54: core.PermissionGroupInfo.updated_at:type_name -> google.protobuf.Timestamp
+	37, // 55: core.ListPermissionGroupsResponse.permission_groups:type_name -> core.PermissionGroupInfo
+	77, // 56: core.ListPermissionGroupsResponse.page_info:type_name -> core.PageInfo
+	74, // 57: core.PriorityInfo.created_at:type_name -> google.protobuf.Timestamp
+	74, // 58: core.PriorityInfo.updated_at:type_name -> google.protobuf.Timestamp
+	40, // 59: core.ListPrioritiesResponse.priorities:type_name -> core.PriorityInfo
+	77, // 60: core.ListPrioritiesResponse.page_info:type_name -> core.PageInfo
+	40, // 61: core.GetPriorityResponse.priority:type_name -> core.PriorityInfo
+	74, // 62: core.ProductFullInfo.created_at:type_name -> google.protobuf.Timestamp
+	74, // 63: core.ProductFullInfo.updated_at:type_name -> google.protobuf.Timestamp
+	75, // 64: core.ProductFullInfo.item:type_name -> core.ItemInfo
+	60, // 65: core.ProductFullInfo.product_line:type_name -> core.ProductLineInfo
+	70, // 66: core.ProductFullInfo.product_type:type_name -> core.ProductTypeInfo
+	74, // 67: core.ListProductsFullRequest.start_date:type_name -> google.protobuf.Timestamp
+	74, // 68: core.ListProductsFullRequest.end_date:type_name -> google.protobuf.Timestamp
+	45, // 69: core.ListProductsFullResponse.products:type_name -> core.ProductFullInfo
+	77, // 70: core.ListProductsFullResponse.page_info:type_name -> core.PageInfo
+	45, // 71: core.GetProductResponse.product:type_name -> core.ProductFullInfo
+	79, // 72: core.CreateProductRequest.unit_price:type_name -> core.CreateRateInput
+	79, // 73: core.CreateProductRequest.unit_cost:type_name -> core.CreateRateInput
+	79, // 74: core.CreateProductRequest.burn_rate:type_name -> core.CreateRateInput
+	45, // 75: core.CreateProductResponse.product:type_name -> core.ProductFullInfo
+	45, // 76: core.UpdateProductResponse.product:type_name -> core.ProductFullInfo
+	45, // 77: core.DeleteProductResponse.product:type_name -> core.ProductFullInfo
+	45, // 78: core.ChangeProductProductLineResponse.product:type_name -> core.ProductFullInfo
+	72, // 79: core.ValidateProductsRequest.products_map:type_name -> core.ValidateProductsRequest.ProductsMapEntry
+	73, // 80: core.ValidateProductsResponse.products:type_name -> core.ValidateProductsResponse.ProductsEntry
+	74, // 81: core.ProductLineInfo.created_at:type_name -> google.protobuf.Timestamp
+	74, // 82: core.ProductLineInfo.updated_at:type_name -> google.protobuf.Timestamp
+	80, // 83: core.ProductLineInfo.unit_group:type_name -> core.ItemCategoryUnitGroupInfo
+	60, // 84: core.ListProductLinesResponse.product_lines:type_name -> core.ProductLineInfo
+	77, // 85: core.ListProductLinesResponse.page_info:type_name -> core.PageInfo
+	60, // 86: core.GetProductLineResponse.product_line:type_name -> core.ProductLineInfo
+	60, // 87: core.CreateProductLineResponse.product_line:type_name -> core.ProductLineInfo
+	60, // 88: core.UpdateProductLineResponse.product_line:type_name -> core.ProductLineInfo
+	74, // 89: core.ProductTypeInfo.created_at:type_name -> google.protobuf.Timestamp
+	74, // 90: core.ProductTypeInfo.updated_at:type_name -> google.protobuf.Timestamp
+	45, // 91: core.ValidateProductsResponse.ProductsEntry.value:type_name -> core.ProductFullInfo
+	92, // [92:92] is the sub-list for method output_type
+	92, // [92:92] is the sub-list for method input_type
+	92, // [92:92] is the sub-list for extension type_name
+	92, // [92:92] is the sub-list for extension extendee
+	0,  // [0:92] is the sub-list for field type_name
 }
 
 func init() { file_core_core_invoices_proto_init() }

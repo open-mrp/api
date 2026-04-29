@@ -246,7 +246,7 @@ func (r *pricingPlanRepoImpl) ListPricingPlans(ctx context.Context, cursor *stri
 
 	searchQuery := gosql.NullString{}
 	if query != nil && *query != "" {
-		searchQuery = gosql.NullString{String: "%" + *query + "%", Valid: true}
+		searchQuery = gosql.NullString{String: "%" + db.EscapeLike(*query) + "%", Valid: true}
 	}
 
 	var cursorDir *pagination.Direction

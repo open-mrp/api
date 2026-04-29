@@ -11,11 +11,12 @@ func RatePresenter(r *pb.RateInfo) apiresource.Rate {
 	if r == nil {
 		return apiresource.Rate{}
 	}
+	normalizedValue := apiresource.NormalizeRateValue(r.Value)
 
 	return apiresource.Rate{
 		ID:     r.Id,
 		Object: constants.ObjectTypeRate,
-		Value:  r.Value,
+		Value:  normalizedValue,
 		NumeratorUnit: &apiresource.Unit{
 			ID:     r.NumeratorUnitId,
 			Object: constants.ObjectTypeUnit,
@@ -24,7 +25,7 @@ func RatePresenter(r *pb.RateInfo) apiresource.Rate {
 			ID:     r.DenominatorUnitId,
 			Object: constants.ObjectTypeUnit,
 		},
-		DisplayValue: apiresource.FormatRateDisplayValue(r.Value, r.NumeratorUnitAbbreviation, r.NumeratorUnitType, r.DenominatorUnitAbbreviation),
+		DisplayValue: apiresource.FormatRateDisplayValue(normalizedValue, r.NumeratorUnitAbbreviation, r.NumeratorUnitType, r.DenominatorUnitAbbreviation),
 		CreatedAt:    grpcutil.TimestampToTime(r.CreatedAt),
 		UpdatedAt:    grpcutil.TimestampToTime(r.UpdatedAt),
 	}

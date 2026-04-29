@@ -162,6 +162,7 @@ var typeRegistry = map[string]any{
 	"LocationTypeCode":                LocationTypeCode(""),
 	"LabelSizeCode":                   LabelSizeCode(""),
 	"LabelTypeCode":                   LabelTypeCode(""),
+	"ProductTypeCode":                 ProductTypeCode(""),
 }
 
 func TestAdherence_AllEnumTypesHaveIsValid(t *testing.T) {

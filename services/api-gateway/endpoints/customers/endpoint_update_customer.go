@@ -46,7 +46,7 @@ type UpdateCustomerRequest struct {
 	DefaultShippingTermID *string `json:"default_shipping_term_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
 	// Default priority code.
 	DefaultPriorityCode *constants.PriorityCode `json:"default_priority,omitempty" nullable:"false"`
-	// Default sales rep user ID.
+	// The ID of the account user to assign as the default sales rep.
 	DefaultSalesRepUserID *string `json:"default_sales_rep_user_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
 	// Bill-to address ID.
 	BillToAddressID *string `json:"bill_to_address_id,omitempty" nullable:"true" validate:"omitempty,max=191"`

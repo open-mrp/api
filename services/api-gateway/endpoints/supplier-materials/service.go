@@ -66,7 +66,7 @@ func (s *supplierMaterialSvcImpl) ListSupplierMaterials(ctx context.Context, req
 func (s *supplierMaterialSvcImpl) GetSupplierMaterial(ctx context.Context, req *GetSupplierMaterialRequest) (*apiresource.SupplierMaterial, *apierror.APIError) {
 	pbReq := &pb.GetSupplierMaterialRequest{
 		SupplierAccountId: req.SupplierID,
-		ItemId:            req.ItemID,
+		MaterialId:        req.MaterialID,
 	}
 	resp, apiErr := grpcutil.CallRPC(ctx, supplierMaterialSvcTracer, "service.supplier_materials.get", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetSupplierMaterialResponse, error) {
@@ -107,7 +107,7 @@ func (s *supplierMaterialSvcImpl) CreateSupplierMaterial(ctx context.Context, re
 func (s *supplierMaterialSvcImpl) UpdateSupplierMaterial(ctx context.Context, req *UpdateSupplierMaterialRequest) (*apiresource.SupplierMaterial, *apierror.APIError) {
 	pbReq := &pb.UpdateSupplierMaterialRequest{
 		SupplierAccountId:   req.SupplierID,
-		ItemId:              req.ItemID,
+		MaterialId:          req.MaterialID,
 		SupplierPartNumber:  req.SupplierPartNumber,
 		SupplierDescription: req.SupplierDescription,
 		UpdateDescription:   req.SupplierDescription != nil,
@@ -127,7 +127,7 @@ func (s *supplierMaterialSvcImpl) UpdateSupplierMaterial(ctx context.Context, re
 func (s *supplierMaterialSvcImpl) DeleteSupplierMaterial(ctx context.Context, req *DeleteSupplierMaterialRequest) (*apiresource.SupplierMaterial, *apierror.APIError) {
 	pbReq := &pb.DeleteSupplierMaterialRequest{
 		SupplierAccountId: req.SupplierID,
-		ItemId:            req.ItemID,
+		MaterialId:        req.MaterialID,
 	}
 	resp, apiErr := grpcutil.CallRPC(ctx, supplierMaterialSvcTracer, "service.supplier_materials.delete", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.DeleteSupplierMaterialResponse, error) {

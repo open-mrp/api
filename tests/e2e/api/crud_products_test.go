@@ -37,7 +37,6 @@ func TestProducts_ExpandableFieldsNullWithoutInclude(t *testing.T) {
 	requireStatus(t, 200, status, body)
 
 	got := parseJSON(body)
-	assert.Nil(t, got["product_type"], "product_type should be null without ?include=product_type")
 	assert.Nil(t, got["product_line"], "product_line should be null without ?include=product_line")
 	assert.Nil(t, got["item"], "item should be null without ?include=item")
 
@@ -47,25 +46,9 @@ func TestProducts_ExpandableFieldsNullWithoutInclude(t *testing.T) {
 
 	for _, item := range list.Data {
 		m := parseJSON(item)
-		assert.Nil(t, m["product_type"], "product_type should be null on list items without ?include=product_type")
 		assert.Nil(t, m["product_line"], "product_line should be null on list items without ?include=product_line")
 		assert.Nil(t, m["item"], "item should be null on list items without ?include=item")
 	}
-}
-
-func TestProducts_IncludeProductType(t *testing.T) {
-	t.Parallel()
-	id := firstProductID(t)
-
-	status, body, err := apiClient.GetListRaw(productsPath+"/"+id, url.Values{"include": {"product_type"}})
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-
-	got := parseJSON(body)
-	pt := jsonObject(got, "product_type")
-	require.NotNil(t, pt, "product_type should be present with ?include=product_type")
-	assert.Equal(t, "product_type", jsonField(pt, "object"))
-	assert.NotEmpty(t, jsonField(pt, "id"))
 }
 
 func TestProducts_IncludeProductLine(t *testing.T) {

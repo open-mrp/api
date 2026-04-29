@@ -227,6 +227,7 @@ func init() {
 	RegisterIncludes(&ObjectIncludes{
 		ObjectType: constants.ObjectTypePart,
 		Fields: []IncludeFieldDef{
+			{Key: "item", ObjectType: constants.ObjectTypeItem},
 			{Key: "category", ObjectType: constants.ObjectTypeItemCategory},
 			{Key: "attributes", ObjectType: constants.ObjectTypeAttribute},
 			{Key: "unit_value", ObjectType: constants.ObjectTypeRate},

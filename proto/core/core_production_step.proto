@@ -128,12 +128,6 @@ message CreateProductionStepRequest {
   repeated CreateStepConsumptionInput consumptions = 11;
 }
 
-message CreateRateInput {
-  string value = 1;
-  string numerator_unit_id = 2;
-  string denominator_unit_id = 3;
-}
-
 message CreateProductionInput {
   string item_id = 1;
   string quantity_value = 2;

@@ -11,10 +11,11 @@ func lightRatePresenter(r *pb.RateInfo) *apiresource.Rate {
 	if r == nil {
 		return nil
 	}
+	normalizedValue := apiresource.NormalizeRateValue(r.Value)
 	return &apiresource.Rate{
 		ID:     r.Id,
 		Object: constants.ObjectTypeRate,
-		Value:  r.Value,
+		Value:  normalizedValue,
 		NumeratorUnit: &apiresource.Unit{
 			ID:           r.NumeratorUnitId,
 			Object:       constants.ObjectTypeUnit,
@@ -30,7 +31,7 @@ func lightRatePresenter(r *pb.RateInfo) *apiresource.Rate {
 			Type:         constants.UnitType(r.DenominatorUnitType),
 		},
 		DisplayValue: apiresource.FormatRateDisplayValue(
-			r.Value,
+			normalizedValue,
 			r.NumeratorUnitAbbreviation,
 			r.NumeratorUnitType,
 			r.DenominatorUnitAbbreviation,
@@ -87,20 +88,17 @@ func ItemPresenter(i *pb.ItemInfo) apiresource.Item {
 		UnitValue:    lightRatePresenter(i.UnitValue),
 		UnitCost:     lightRatePresenter(i.UnitCost),
 		BurnRate:     lightRatePresenter(i.BurnRate),
-		IsDirty:      i.IsDirty,
 		CreatedAt:    grpcutil.TimestampToTime(i.CreatedAt),
 		UpdatedAt:    grpcutil.TimestampToTime(i.UpdatedAt),
 	}
 
-	if i.Attributes != nil {
-		attrs := make([]apiresource.Attribute, len(i.Attributes))
-		for j, a := range i.Attributes {
-			if p := lightAttributePresenter(a); p != nil {
-				attrs[j] = *p
-			}
+	attrs := make([]apiresource.Attribute, len(i.Attributes))
+	for j, a := range i.Attributes {
+		if p := lightAttributePresenter(a); p != nil {
+			attrs[j] = *p
 		}
-		item.Attributes = apiresource.NewList(attrs, apiresource.PageInfo{})
 	}
+	item.Attributes = apiresource.NewList(attrs, apiresource.PageInfo{})
 
 	return item
 }

@@ -1007,8 +1007,8 @@ type SupplierMaterialSvc interface {
 	// ListSupplierMaterials returns a paginated list of supplier materials.
 	ListSupplierMaterials(ctx context.Context, params ListSupplierMaterialsParams) (*ListSupplierMaterialsResult, *apierror.APIError)
 
-	// GetSupplierMaterial returns a single supplier material by supplier and item ID.
-	GetSupplierMaterial(ctx context.Context, supplierAccountID, itemID string) (*SupplierMaterial, *apierror.APIError)
+	// GetSupplierMaterial returns a single supplier material by supplier and material ID.
+	GetSupplierMaterial(ctx context.Context, supplierAccountID, materialID string) (*SupplierMaterial, *apierror.APIError)
 
 	// CreateSupplierMaterial creates a new supplier material association.
 	CreateSupplierMaterial(ctx context.Context, params CreateSupplierMaterialParams) (*SupplierMaterial, *apierror.APIError)

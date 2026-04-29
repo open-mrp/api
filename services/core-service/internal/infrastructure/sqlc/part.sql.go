@@ -80,13 +80,13 @@ JOIN item_category ic ON ic.id = i.item_category_id
 JOIN rate rv ON rv.id = i.unit_value_id
 JOIN rate rc ON rc.id = i.unit_cost_id
 JOIN rate rb ON rb.id = i.burn_rate_id
-WHERE i.id = ?
+WHERE p.id = ?
 AND i.account_id = ?
 AND i.deleted_at IS NULL
 `
 
 type GetPartParams struct {
-	ItemID    string
+	PartID    string
 	AccountID string
 }
 
@@ -131,7 +131,7 @@ type GetPartRow struct {
 }
 
 func (q *Queries) GetPart(ctx context.Context, arg GetPartParams) (GetPartRow, error) {
-	row := q.db.QueryRowContext(ctx, getPart, arg.ItemID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, getPart, arg.PartID, arg.AccountID)
 	var i GetPartRow
 	err := row.Scan(
 		&i.PartID,
@@ -229,13 +229,28 @@ INSERT INTO item (
     id, sku, description, notes, unit_value_id, burn_rate_id,
     account_id, item_type_code, unit_cost_id, item_category_id, is_dirty,
     created_at, updated_at
-) VALUES (?, ?, ?, NULL, ?, ?, ?, 'part', ?, ?, false, NOW(3), NOW(3))
+) VALUES (
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
+    'part',
+    ?,
+    ?,
+    false,
+    NOW(3),
+    NOW(3)
+)
 `
 
 type InsertItemForPartParams struct {
 	ID             string
 	Sku            string
 	Description    sql.NullString
+	Notes          sql.NullString
 	UnitValueID    string
 	BurnRateID     string
 	AccountID      string
@@ -248,6 +263,7 @@ func (q *Queries) InsertItemForPart(ctx context.Context, arg InsertItemForPartPa
 		arg.ID,
 		arg.Sku,
 		arg.Description,
+		arg.Notes,
 		arg.UnitValueID,
 		arg.BurnRateID,
 		arg.AccountID,
@@ -753,28 +769,30 @@ func (q *Queries) ListPartsForward(ctx context.Context, arg ListPartsForwardPara
 }
 
 const softDeletePart = `-- name: SoftDeletePart :exec
-UPDATE item SET deleted_at = NOW(3), updated_at = NOW(3)
-WHERE id = ?
-AND account_id = ?
-AND deleted_at IS NULL
+UPDATE item i
+JOIN part p ON p.item_id = i.id
+SET i.deleted_at = NOW(3), i.updated_at = NOW(3)
+WHERE p.id = ?
+AND i.account_id = ?
+AND i.deleted_at IS NULL
 `
 
 type SoftDeletePartParams struct {
-	ItemID    string
+	PartID    string
 	AccountID string
 }
 
 func (q *Queries) SoftDeletePart(ctx context.Context, arg SoftDeletePartParams) error {
-	_, err := q.db.ExecContext(ctx, softDeletePart, arg.ItemID, arg.AccountID)
+	_, err := q.db.ExecContext(ctx, softDeletePart, arg.PartID, arg.AccountID)
 	return err
 }
 
 const touchPartUpdatedAt = `-- name: TouchPartUpdatedAt :exec
 UPDATE part SET updated_at = NOW(3)
-WHERE item_id = ?
+WHERE id = ?
 `
 
-func (q *Queries) TouchPartUpdatedAt(ctx context.Context, itemID string) error {
-	_, err := q.db.ExecContext(ctx, touchPartUpdatedAt, itemID)
+func (q *Queries) TouchPartUpdatedAt(ctx context.Context, partID string) error {
+	_, err := q.db.ExecContext(ctx, touchPartUpdatedAt, partID)
 	return err
 }

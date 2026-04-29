@@ -115,7 +115,7 @@ func (q *Queries) GetMaterialIDByItemID(ctx context.Context, arg GetMaterialIDBy
 	return id, err
 }
 
-const getSupplierMaterialBySupplierAndItemID = `-- name: GetSupplierMaterialBySupplierAndItemID :one
+const getSupplierMaterialBySupplierAndMaterialID = `-- name: GetSupplierMaterialBySupplierAndMaterialID :one
 SELECT
     sm.id,
     sm.material_id,
@@ -185,18 +185,18 @@ JOIN rate rv ON rv.id = i.unit_value_id
 JOIN rate rc ON rc.id = i.unit_cost_id
 JOIN rate rb ON rb.id = i.burn_rate_id
 WHERE sm.supplier_account_id = ?
-  AND m.item_id = ?
+  AND sm.material_id = ?
   AND sm.owner_account_id = ?
   AND i.deleted_at IS NULL
 `
 
-type GetSupplierMaterialBySupplierAndItemIDParams struct {
+type GetSupplierMaterialBySupplierAndMaterialIDParams struct {
 	SupplierAccountID string
-	ItemID            string
+	MaterialID        string
 	OwnerAccountID    string
 }
 
-type GetSupplierMaterialBySupplierAndItemIDRow struct {
+type GetSupplierMaterialBySupplierAndMaterialIDRow struct {
 	ID                         string
 	MaterialID                 string
 	SupplierAccountID          string
@@ -255,9 +255,9 @@ type GetSupplierMaterialBySupplierAndItemIDRow struct {
 	BurnRateUpdatedAt          time.Time
 }
 
-func (q *Queries) GetSupplierMaterialBySupplierAndItemID(ctx context.Context, arg GetSupplierMaterialBySupplierAndItemIDParams) (GetSupplierMaterialBySupplierAndItemIDRow, error) {
-	row := q.db.QueryRowContext(ctx, getSupplierMaterialBySupplierAndItemID, arg.SupplierAccountID, arg.ItemID, arg.OwnerAccountID)
-	var i GetSupplierMaterialBySupplierAndItemIDRow
+func (q *Queries) GetSupplierMaterialBySupplierAndMaterialID(ctx context.Context, arg GetSupplierMaterialBySupplierAndMaterialIDParams) (GetSupplierMaterialBySupplierAndMaterialIDRow, error) {
+	row := q.db.QueryRowContext(ctx, getSupplierMaterialBySupplierAndMaterialID, arg.SupplierAccountID, arg.MaterialID, arg.OwnerAccountID)
+	var i GetSupplierMaterialBySupplierAndMaterialIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.MaterialID,

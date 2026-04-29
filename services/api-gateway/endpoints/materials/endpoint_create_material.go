@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
+	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	apierror "github.com/augno/api/shared/errors"
 )
@@ -32,6 +33,15 @@ type CreateMaterialRequest struct {
 	OrderPoint *QuantityInputRequest `json:"order_point,omitempty"`
 	// Lead time quantity.
 	LeadTime *QuantityInputRequest `json:"lead_time,omitempty"`
+	// Initial unit price. When set, numerator must be a currency unit and
+	// denominator must not be.
+	UnitPrice *apirequest.RateInput `json:"unit_price,omitempty"`
+	// Initial unit cost. Same currency rule as unit_price.
+	UnitCost *apirequest.RateInput `json:"unit_cost,omitempty"`
+	// Initial burn rate (waste / scrap). No currency requirement.
+	BurnRate *apirequest.RateInput `json:"burn_rate,omitempty"`
+	// Attribute IDs to connect to the material at creation time.
+	AttributeIDs []string `json:"attribute_ids,omitempty"`
 }
 
 var sampleCreateMaterialRequest = &CreateMaterialRequest{

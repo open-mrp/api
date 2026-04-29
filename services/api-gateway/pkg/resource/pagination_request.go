@@ -8,5 +8,5 @@ type PaginationRequest struct {
 	// Maximum number of results per page (default: 100, max: 1000).
 	Limit int32 `query:"limit" default:"100" validate:"min=1,max=1000"`
 	// Search query used to filter results.
-	Query *string `query:"q"`
+	Query *string `query:"q" validate:"omitempty,max=500"`
 }

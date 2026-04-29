@@ -15,7 +15,7 @@ type UpdateSupplierMaterialRequest struct {
 	// Supplier ID.
 	SupplierID string `path:"supplier_id" validate:"required"`
 	// Supplier material ID.
-	ItemID string `path:"id" validate:"required"`
+	MaterialID string `path:"id" validate:"required"`
 	// Supplier part number for this material.
 	SupplierPartNumber *string `json:"supplier_part_number,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// Supplier description for this material.

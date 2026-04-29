@@ -788,66 +788,6 @@ func (x *CreateProductionStepRequest) GetConsumptions() []*CreateStepConsumption
 	return nil
 }
 
-type CreateRateInput struct {
-	state             protoimpl.MessageState `protogen:"open.v1"`
-	Value             string                 `protobuf:"bytes,1,opt,name=value,proto3" json:"value,omitempty"`
-	NumeratorUnitId   string                 `protobuf:"bytes,2,opt,name=numerator_unit_id,json=numeratorUnitId,proto3" json:"numerator_unit_id,omitempty"`
-	DenominatorUnitId string                 `protobuf:"bytes,3,opt,name=denominator_unit_id,json=denominatorUnitId,proto3" json:"denominator_unit_id,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
-}
-
-func (x *CreateRateInput) Reset() {
-	*x = CreateRateInput{}
-	mi := &file_core_core_production_step_proto_msgTypes[8]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *CreateRateInput) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*CreateRateInput) ProtoMessage() {}
-
-func (x *CreateRateInput) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_step_proto_msgTypes[8]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use CreateRateInput.ProtoReflect.Descriptor instead.
-func (*CreateRateInput) Descriptor() ([]byte, []int) {
-	return file_core_core_production_step_proto_rawDescGZIP(), []int{8}
-}
-
-func (x *CreateRateInput) GetValue() string {
-	if x != nil {
-		return x.Value
-	}
-	return ""
-}
-
-func (x *CreateRateInput) GetNumeratorUnitId() string {
-	if x != nil {
-		return x.NumeratorUnitId
-	}
-	return ""
-}
-
-func (x *CreateRateInput) GetDenominatorUnitId() string {
-	if x != nil {
-		return x.DenominatorUnitId
-	}
-	return ""
-}
-
 type CreateProductionInput struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	ItemId         string                 `protobuf:"bytes,1,opt,name=item_id,json=itemId,proto3" json:"item_id,omitempty"`
@@ -859,7 +799,7 @@ type CreateProductionInput struct {
 
 func (x *CreateProductionInput) Reset() {
 	*x = CreateProductionInput{}
-	mi := &file_core_core_production_step_proto_msgTypes[9]
+	mi := &file_core_core_production_step_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -871,7 +811,7 @@ func (x *CreateProductionInput) String() string {
 func (*CreateProductionInput) ProtoMessage() {}
 
 func (x *CreateProductionInput) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_step_proto_msgTypes[9]
+	mi := &file_core_core_production_step_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -884,7 +824,7 @@ func (x *CreateProductionInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateProductionInput.ProtoReflect.Descriptor instead.
 func (*CreateProductionInput) Descriptor() ([]byte, []int) {
-	return file_core_core_production_step_proto_rawDescGZIP(), []int{9}
+	return file_core_core_production_step_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *CreateProductionInput) GetItemId() string {
@@ -922,7 +862,7 @@ type CreateStepConsumptionInput struct {
 
 func (x *CreateStepConsumptionInput) Reset() {
 	*x = CreateStepConsumptionInput{}
-	mi := &file_core_core_production_step_proto_msgTypes[10]
+	mi := &file_core_core_production_step_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -934,7 +874,7 @@ func (x *CreateStepConsumptionInput) String() string {
 func (*CreateStepConsumptionInput) ProtoMessage() {}
 
 func (x *CreateStepConsumptionInput) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_step_proto_msgTypes[10]
+	mi := &file_core_core_production_step_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -947,7 +887,7 @@ func (x *CreateStepConsumptionInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateStepConsumptionInput.ProtoReflect.Descriptor instead.
 func (*CreateStepConsumptionInput) Descriptor() ([]byte, []int) {
-	return file_core_core_production_step_proto_rawDescGZIP(), []int{10}
+	return file_core_core_production_step_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *CreateStepConsumptionInput) GetItemId() string {
@@ -1001,7 +941,7 @@ type CreateProductionStepResponse struct {
 
 func (x *CreateProductionStepResponse) Reset() {
 	*x = CreateProductionStepResponse{}
-	mi := &file_core_core_production_step_proto_msgTypes[11]
+	mi := &file_core_core_production_step_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1013,7 +953,7 @@ func (x *CreateProductionStepResponse) String() string {
 func (*CreateProductionStepResponse) ProtoMessage() {}
 
 func (x *CreateProductionStepResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_step_proto_msgTypes[11]
+	mi := &file_core_core_production_step_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1026,7 +966,7 @@ func (x *CreateProductionStepResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateProductionStepResponse.ProtoReflect.Descriptor instead.
 func (*CreateProductionStepResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_production_step_proto_rawDescGZIP(), []int{11}
+	return file_core_core_production_step_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *CreateProductionStepResponse) GetProductionStep() *ProductionStepInfo {
@@ -1049,7 +989,7 @@ type UpdateProductionStepRequest struct {
 
 func (x *UpdateProductionStepRequest) Reset() {
 	*x = UpdateProductionStepRequest{}
-	mi := &file_core_core_production_step_proto_msgTypes[12]
+	mi := &file_core_core_production_step_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1061,7 +1001,7 @@ func (x *UpdateProductionStepRequest) String() string {
 func (*UpdateProductionStepRequest) ProtoMessage() {}
 
 func (x *UpdateProductionStepRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_step_proto_msgTypes[12]
+	mi := &file_core_core_production_step_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1074,7 +1014,7 @@ func (x *UpdateProductionStepRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateProductionStepRequest.ProtoReflect.Descriptor instead.
 func (*UpdateProductionStepRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_step_proto_rawDescGZIP(), []int{12}
+	return file_core_core_production_step_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *UpdateProductionStepRequest) GetId() string {
@@ -1121,7 +1061,7 @@ type UpdateProductionStepResponse struct {
 
 func (x *UpdateProductionStepResponse) Reset() {
 	*x = UpdateProductionStepResponse{}
-	mi := &file_core_core_production_step_proto_msgTypes[13]
+	mi := &file_core_core_production_step_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1133,7 +1073,7 @@ func (x *UpdateProductionStepResponse) String() string {
 func (*UpdateProductionStepResponse) ProtoMessage() {}
 
 func (x *UpdateProductionStepResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_step_proto_msgTypes[13]
+	mi := &file_core_core_production_step_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1146,7 +1086,7 @@ func (x *UpdateProductionStepResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateProductionStepResponse.ProtoReflect.Descriptor instead.
 func (*UpdateProductionStepResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_production_step_proto_rawDescGZIP(), []int{13}
+	return file_core_core_production_step_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *UpdateProductionStepResponse) GetProductionStep() *ProductionStepInfo {
@@ -1165,7 +1105,7 @@ type DeleteProductionStepRequest struct {
 
 func (x *DeleteProductionStepRequest) Reset() {
 	*x = DeleteProductionStepRequest{}
-	mi := &file_core_core_production_step_proto_msgTypes[14]
+	mi := &file_core_core_production_step_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1177,7 +1117,7 @@ func (x *DeleteProductionStepRequest) String() string {
 func (*DeleteProductionStepRequest) ProtoMessage() {}
 
 func (x *DeleteProductionStepRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_step_proto_msgTypes[14]
+	mi := &file_core_core_production_step_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1190,7 +1130,7 @@ func (x *DeleteProductionStepRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteProductionStepRequest.ProtoReflect.Descriptor instead.
 func (*DeleteProductionStepRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_step_proto_rawDescGZIP(), []int{14}
+	return file_core_core_production_step_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *DeleteProductionStepRequest) GetId() string {
@@ -1208,7 +1148,7 @@ type DeleteProductionStepResponse struct {
 
 func (x *DeleteProductionStepResponse) Reset() {
 	*x = DeleteProductionStepResponse{}
-	mi := &file_core_core_production_step_proto_msgTypes[15]
+	mi := &file_core_core_production_step_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1220,7 +1160,7 @@ func (x *DeleteProductionStepResponse) String() string {
 func (*DeleteProductionStepResponse) ProtoMessage() {}
 
 func (x *DeleteProductionStepResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_step_proto_msgTypes[15]
+	mi := &file_core_core_production_step_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1233,7 +1173,7 @@ func (x *DeleteProductionStepResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteProductionStepResponse.ProtoReflect.Descriptor instead.
 func (*DeleteProductionStepResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_production_step_proto_rawDescGZIP(), []int{15}
+	return file_core_core_production_step_proto_rawDescGZIP(), []int{14}
 }
 
 type GetProductionRequest struct {
@@ -1246,7 +1186,7 @@ type GetProductionRequest struct {
 
 func (x *GetProductionRequest) Reset() {
 	*x = GetProductionRequest{}
-	mi := &file_core_core_production_step_proto_msgTypes[16]
+	mi := &file_core_core_production_step_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1258,7 +1198,7 @@ func (x *GetProductionRequest) String() string {
 func (*GetProductionRequest) ProtoMessage() {}
 
 func (x *GetProductionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_step_proto_msgTypes[16]
+	mi := &file_core_core_production_step_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1271,7 +1211,7 @@ func (x *GetProductionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetProductionRequest.ProtoReflect.Descriptor instead.
 func (*GetProductionRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_step_proto_rawDescGZIP(), []int{16}
+	return file_core_core_production_step_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *GetProductionRequest) GetProductionStepId() string {
@@ -1297,7 +1237,7 @@ type GetProductionResponse struct {
 
 func (x *GetProductionResponse) Reset() {
 	*x = GetProductionResponse{}
-	mi := &file_core_core_production_step_proto_msgTypes[17]
+	mi := &file_core_core_production_step_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1309,7 +1249,7 @@ func (x *GetProductionResponse) String() string {
 func (*GetProductionResponse) ProtoMessage() {}
 
 func (x *GetProductionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_step_proto_msgTypes[17]
+	mi := &file_core_core_production_step_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1322,7 +1262,7 @@ func (x *GetProductionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetProductionResponse.ProtoReflect.Descriptor instead.
 func (*GetProductionResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_production_step_proto_rawDescGZIP(), []int{17}
+	return file_core_core_production_step_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *GetProductionResponse) GetProduction() *ProductionInfo {
@@ -1345,7 +1285,7 @@ type UpdateProductionRequest struct {
 
 func (x *UpdateProductionRequest) Reset() {
 	*x = UpdateProductionRequest{}
-	mi := &file_core_core_production_step_proto_msgTypes[18]
+	mi := &file_core_core_production_step_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1357,7 +1297,7 @@ func (x *UpdateProductionRequest) String() string {
 func (*UpdateProductionRequest) ProtoMessage() {}
 
 func (x *UpdateProductionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_step_proto_msgTypes[18]
+	mi := &file_core_core_production_step_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1370,7 +1310,7 @@ func (x *UpdateProductionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateProductionRequest.ProtoReflect.Descriptor instead.
 func (*UpdateProductionRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_step_proto_rawDescGZIP(), []int{18}
+	return file_core_core_production_step_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *UpdateProductionRequest) GetProductionStepId() string {
@@ -1417,7 +1357,7 @@ type UpdateProductionResponse struct {
 
 func (x *UpdateProductionResponse) Reset() {
 	*x = UpdateProductionResponse{}
-	mi := &file_core_core_production_step_proto_msgTypes[19]
+	mi := &file_core_core_production_step_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1429,7 +1369,7 @@ func (x *UpdateProductionResponse) String() string {
 func (*UpdateProductionResponse) ProtoMessage() {}
 
 func (x *UpdateProductionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_step_proto_msgTypes[19]
+	mi := &file_core_core_production_step_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1442,7 +1382,7 @@ func (x *UpdateProductionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateProductionResponse.ProtoReflect.Descriptor instead.
 func (*UpdateProductionResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_production_step_proto_rawDescGZIP(), []int{19}
+	return file_core_core_production_step_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *UpdateProductionResponse) GetProduction() *ProductionInfo {
@@ -1463,7 +1403,7 @@ type BulkCreateConsumptionInput struct {
 
 func (x *BulkCreateConsumptionInput) Reset() {
 	*x = BulkCreateConsumptionInput{}
-	mi := &file_core_core_production_step_proto_msgTypes[20]
+	mi := &file_core_core_production_step_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1475,7 +1415,7 @@ func (x *BulkCreateConsumptionInput) String() string {
 func (*BulkCreateConsumptionInput) ProtoMessage() {}
 
 func (x *BulkCreateConsumptionInput) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_step_proto_msgTypes[20]
+	mi := &file_core_core_production_step_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1488,7 +1428,7 @@ func (x *BulkCreateConsumptionInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BulkCreateConsumptionInput.ProtoReflect.Descriptor instead.
 func (*BulkCreateConsumptionInput) Descriptor() ([]byte, []int) {
-	return file_core_core_production_step_proto_rawDescGZIP(), []int{20}
+	return file_core_core_production_step_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *BulkCreateConsumptionInput) GetSku() string {
@@ -1522,7 +1462,7 @@ type BulkCreateProductionInput struct {
 
 func (x *BulkCreateProductionInput) Reset() {
 	*x = BulkCreateProductionInput{}
-	mi := &file_core_core_production_step_proto_msgTypes[21]
+	mi := &file_core_core_production_step_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1534,7 +1474,7 @@ func (x *BulkCreateProductionInput) String() string {
 func (*BulkCreateProductionInput) ProtoMessage() {}
 
 func (x *BulkCreateProductionInput) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_step_proto_msgTypes[21]
+	mi := &file_core_core_production_step_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1547,7 +1487,7 @@ func (x *BulkCreateProductionInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BulkCreateProductionInput.ProtoReflect.Descriptor instead.
 func (*BulkCreateProductionInput) Descriptor() ([]byte, []int) {
-	return file_core_core_production_step_proto_rawDescGZIP(), []int{21}
+	return file_core_core_production_step_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *BulkCreateProductionInput) GetSku() string {
@@ -1582,7 +1522,7 @@ type BulkCreateProductionStepInput struct {
 
 func (x *BulkCreateProductionStepInput) Reset() {
 	*x = BulkCreateProductionStepInput{}
-	mi := &file_core_core_production_step_proto_msgTypes[22]
+	mi := &file_core_core_production_step_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1594,7 +1534,7 @@ func (x *BulkCreateProductionStepInput) String() string {
 func (*BulkCreateProductionStepInput) ProtoMessage() {}
 
 func (x *BulkCreateProductionStepInput) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_step_proto_msgTypes[22]
+	mi := &file_core_core_production_step_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1607,7 +1547,7 @@ func (x *BulkCreateProductionStepInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BulkCreateProductionStepInput.ProtoReflect.Descriptor instead.
 func (*BulkCreateProductionStepInput) Descriptor() ([]byte, []int) {
-	return file_core_core_production_step_proto_rawDescGZIP(), []int{22}
+	return file_core_core_production_step_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *BulkCreateProductionStepInput) GetName() string {
@@ -1689,7 +1629,7 @@ type BulkCreateProductionStepsRequest struct {
 
 func (x *BulkCreateProductionStepsRequest) Reset() {
 	*x = BulkCreateProductionStepsRequest{}
-	mi := &file_core_core_production_step_proto_msgTypes[23]
+	mi := &file_core_core_production_step_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1701,7 +1641,7 @@ func (x *BulkCreateProductionStepsRequest) String() string {
 func (*BulkCreateProductionStepsRequest) ProtoMessage() {}
 
 func (x *BulkCreateProductionStepsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_step_proto_msgTypes[23]
+	mi := &file_core_core_production_step_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1714,7 +1654,7 @@ func (x *BulkCreateProductionStepsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BulkCreateProductionStepsRequest.ProtoReflect.Descriptor instead.
 func (*BulkCreateProductionStepsRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_production_step_proto_rawDescGZIP(), []int{23}
+	return file_core_core_production_step_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *BulkCreateProductionStepsRequest) GetSteps() []*BulkCreateProductionStepInput {
@@ -1738,7 +1678,7 @@ type BulkCreateProductionStepResult struct {
 
 func (x *BulkCreateProductionStepResult) Reset() {
 	*x = BulkCreateProductionStepResult{}
-	mi := &file_core_core_production_step_proto_msgTypes[24]
+	mi := &file_core_core_production_step_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1750,7 +1690,7 @@ func (x *BulkCreateProductionStepResult) String() string {
 func (*BulkCreateProductionStepResult) ProtoMessage() {}
 
 func (x *BulkCreateProductionStepResult) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_step_proto_msgTypes[24]
+	mi := &file_core_core_production_step_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1763,7 +1703,7 @@ func (x *BulkCreateProductionStepResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BulkCreateProductionStepResult.ProtoReflect.Descriptor instead.
 func (*BulkCreateProductionStepResult) Descriptor() ([]byte, []int) {
-	return file_core_core_production_step_proto_rawDescGZIP(), []int{24}
+	return file_core_core_production_step_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *BulkCreateProductionStepResult) GetName() string {
@@ -1810,7 +1750,7 @@ type BulkCreateProductionStepsResponse struct {
 
 func (x *BulkCreateProductionStepsResponse) Reset() {
 	*x = BulkCreateProductionStepsResponse{}
-	mi := &file_core_core_production_step_proto_msgTypes[25]
+	mi := &file_core_core_production_step_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1822,7 +1762,7 @@ func (x *BulkCreateProductionStepsResponse) String() string {
 func (*BulkCreateProductionStepsResponse) ProtoMessage() {}
 
 func (x *BulkCreateProductionStepsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_production_step_proto_msgTypes[25]
+	mi := &file_core_core_production_step_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1835,7 +1775,7 @@ func (x *BulkCreateProductionStepsResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use BulkCreateProductionStepsResponse.ProtoReflect.Descriptor instead.
 func (*BulkCreateProductionStepsResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_production_step_proto_rawDescGZIP(), []int{25}
+	return file_core_core_production_step_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *BulkCreateProductionStepsResponse) GetResults() []*BulkCreateProductionStepResult {
@@ -1947,11 +1887,7 @@ const file_core_core_production_step_proto_rawDesc = "" +
 	"\fconsumptions\x18\v \x03(\v2 .core.CreateStepConsumptionInputR\fconsumptionsB\b\n" +
 	"\x06_notesB\x16\n" +
 	"\x14_scanning_station_idB\x10\n" +
-	"\x0e_department_id\"\x83\x01\n" +
-	"\x0fCreateRateInput\x12\x14\n" +
-	"\x05value\x18\x01 \x01(\tR\x05value\x12*\n" +
-	"\x11numerator_unit_id\x18\x02 \x01(\tR\x0fnumeratorUnitId\x12.\n" +
-	"\x13denominator_unit_id\x18\x03 \x01(\tR\x11denominatorUnitId\"\x81\x01\n" +
+	"\x0e_department_id\"\x81\x01\n" +
 	"\x15CreateProductionInput\x12\x17\n" +
 	"\aitem_id\x18\x01 \x01(\tR\x06itemId\x12%\n" +
 	"\x0equantity_value\x18\x02 \x01(\tR\rquantityValue\x12(\n" +
@@ -2067,7 +2003,7 @@ func file_core_core_production_step_proto_rawDescGZIP() []byte {
 	return file_core_core_production_step_proto_rawDescData
 }
 
-var file_core_core_production_step_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
+var file_core_core_production_step_proto_msgTypes = make([]protoimpl.MessageInfo, 25)
 var file_core_core_production_step_proto_goTypes = []any{
 	(*ProductionStepInfo)(nil),                // 0: core.ProductionStepInfo
 	(*ProductionStepRateInfo)(nil),            // 1: core.ProductionStepRateInfo
@@ -2077,81 +2013,81 @@ var file_core_core_production_step_proto_goTypes = []any{
 	(*GetProductionStepRequest)(nil),          // 5: core.GetProductionStepRequest
 	(*GetProductionStepResponse)(nil),         // 6: core.GetProductionStepResponse
 	(*CreateProductionStepRequest)(nil),       // 7: core.CreateProductionStepRequest
-	(*CreateRateInput)(nil),                   // 8: core.CreateRateInput
-	(*CreateProductionInput)(nil),             // 9: core.CreateProductionInput
-	(*CreateStepConsumptionInput)(nil),        // 10: core.CreateStepConsumptionInput
-	(*CreateProductionStepResponse)(nil),      // 11: core.CreateProductionStepResponse
-	(*UpdateProductionStepRequest)(nil),       // 12: core.UpdateProductionStepRequest
-	(*UpdateProductionStepResponse)(nil),      // 13: core.UpdateProductionStepResponse
-	(*DeleteProductionStepRequest)(nil),       // 14: core.DeleteProductionStepRequest
-	(*DeleteProductionStepResponse)(nil),      // 15: core.DeleteProductionStepResponse
-	(*GetProductionRequest)(nil),              // 16: core.GetProductionRequest
-	(*GetProductionResponse)(nil),             // 17: core.GetProductionResponse
-	(*UpdateProductionRequest)(nil),           // 18: core.UpdateProductionRequest
-	(*UpdateProductionResponse)(nil),          // 19: core.UpdateProductionResponse
-	(*BulkCreateConsumptionInput)(nil),        // 20: core.BulkCreateConsumptionInput
-	(*BulkCreateProductionInput)(nil),         // 21: core.BulkCreateProductionInput
-	(*BulkCreateProductionStepInput)(nil),     // 22: core.BulkCreateProductionStepInput
-	(*BulkCreateProductionStepsRequest)(nil),  // 23: core.BulkCreateProductionStepsRequest
-	(*BulkCreateProductionStepResult)(nil),    // 24: core.BulkCreateProductionStepResult
-	(*BulkCreateProductionStepsResponse)(nil), // 25: core.BulkCreateProductionStepsResponse
-	(*ConsumptionInfo)(nil),                   // 26: core.ConsumptionInfo
-	(*LightMachineInfo)(nil),                  // 27: core.LightMachineInfo
-	(*LightScanningStationInfo)(nil),          // 28: core.LightScanningStationInfo
-	(*LightProductionStepInfo)(nil),           // 29: core.LightProductionStepInfo
-	(*timestamppb.Timestamp)(nil),             // 30: google.protobuf.Timestamp
-	(*QuantityInfo)(nil),                      // 31: core.QuantityInfo
-	(*PageInfo)(nil),                          // 32: core.PageInfo
+	(*CreateProductionInput)(nil),             // 8: core.CreateProductionInput
+	(*CreateStepConsumptionInput)(nil),        // 9: core.CreateStepConsumptionInput
+	(*CreateProductionStepResponse)(nil),      // 10: core.CreateProductionStepResponse
+	(*UpdateProductionStepRequest)(nil),       // 11: core.UpdateProductionStepRequest
+	(*UpdateProductionStepResponse)(nil),      // 12: core.UpdateProductionStepResponse
+	(*DeleteProductionStepRequest)(nil),       // 13: core.DeleteProductionStepRequest
+	(*DeleteProductionStepResponse)(nil),      // 14: core.DeleteProductionStepResponse
+	(*GetProductionRequest)(nil),              // 15: core.GetProductionRequest
+	(*GetProductionResponse)(nil),             // 16: core.GetProductionResponse
+	(*UpdateProductionRequest)(nil),           // 17: core.UpdateProductionRequest
+	(*UpdateProductionResponse)(nil),          // 18: core.UpdateProductionResponse
+	(*BulkCreateConsumptionInput)(nil),        // 19: core.BulkCreateConsumptionInput
+	(*BulkCreateProductionInput)(nil),         // 20: core.BulkCreateProductionInput
+	(*BulkCreateProductionStepInput)(nil),     // 21: core.BulkCreateProductionStepInput
+	(*BulkCreateProductionStepsRequest)(nil),  // 22: core.BulkCreateProductionStepsRequest
+	(*BulkCreateProductionStepResult)(nil),    // 23: core.BulkCreateProductionStepResult
+	(*BulkCreateProductionStepsResponse)(nil), // 24: core.BulkCreateProductionStepsResponse
+	(*ConsumptionInfo)(nil),                   // 25: core.ConsumptionInfo
+	(*LightMachineInfo)(nil),                  // 26: core.LightMachineInfo
+	(*LightScanningStationInfo)(nil),          // 27: core.LightScanningStationInfo
+	(*LightProductionStepInfo)(nil),           // 28: core.LightProductionStepInfo
+	(*timestamppb.Timestamp)(nil),             // 29: google.protobuf.Timestamp
+	(*QuantityInfo)(nil),                      // 30: core.QuantityInfo
+	(*PageInfo)(nil),                          // 31: core.PageInfo
+	(*CreateRateInput)(nil),                   // 32: core.CreateRateInput
 }
 var file_core_core_production_step_proto_depIdxs = []int32{
 	1,  // 0: core.ProductionStepInfo.labor_rate:type_name -> core.ProductionStepRateInfo
 	1,  // 1: core.ProductionStepInfo.labor_time:type_name -> core.ProductionStepRateInfo
 	1,  // 2: core.ProductionStepInfo.overhead_rate:type_name -> core.ProductionStepRateInfo
 	2,  // 3: core.ProductionStepInfo.production:type_name -> core.ProductionInfo
-	26, // 4: core.ProductionStepInfo.consumptions:type_name -> core.ConsumptionInfo
-	27, // 5: core.ProductionStepInfo.machines:type_name -> core.LightMachineInfo
-	28, // 6: core.ProductionStepInfo.scanning_station:type_name -> core.LightScanningStationInfo
-	29, // 7: core.ProductionStepInfo.in_steps:type_name -> core.LightProductionStepInfo
-	29, // 8: core.ProductionStepInfo.out_steps:type_name -> core.LightProductionStepInfo
-	30, // 9: core.ProductionStepInfo.created_at:type_name -> google.protobuf.Timestamp
-	30, // 10: core.ProductionStepInfo.updated_at:type_name -> google.protobuf.Timestamp
-	31, // 11: core.ProductionInfo.quantity:type_name -> core.QuantityInfo
-	30, // 12: core.ProductionInfo.created_at:type_name -> google.protobuf.Timestamp
-	30, // 13: core.ProductionInfo.updated_at:type_name -> google.protobuf.Timestamp
-	30, // 14: core.ListProductionStepsRequest.start_date:type_name -> google.protobuf.Timestamp
-	30, // 15: core.ListProductionStepsRequest.end_date:type_name -> google.protobuf.Timestamp
+	25, // 4: core.ProductionStepInfo.consumptions:type_name -> core.ConsumptionInfo
+	26, // 5: core.ProductionStepInfo.machines:type_name -> core.LightMachineInfo
+	27, // 6: core.ProductionStepInfo.scanning_station:type_name -> core.LightScanningStationInfo
+	28, // 7: core.ProductionStepInfo.in_steps:type_name -> core.LightProductionStepInfo
+	28, // 8: core.ProductionStepInfo.out_steps:type_name -> core.LightProductionStepInfo
+	29, // 9: core.ProductionStepInfo.created_at:type_name -> google.protobuf.Timestamp
+	29, // 10: core.ProductionStepInfo.updated_at:type_name -> google.protobuf.Timestamp
+	30, // 11: core.ProductionInfo.quantity:type_name -> core.QuantityInfo
+	29, // 12: core.ProductionInfo.created_at:type_name -> google.protobuf.Timestamp
+	29, // 13: core.ProductionInfo.updated_at:type_name -> google.protobuf.Timestamp
+	29, // 14: core.ListProductionStepsRequest.start_date:type_name -> google.protobuf.Timestamp
+	29, // 15: core.ListProductionStepsRequest.end_date:type_name -> google.protobuf.Timestamp
 	0,  // 16: core.ListProductionStepsResponse.production_steps:type_name -> core.ProductionStepInfo
-	32, // 17: core.ListProductionStepsResponse.page_info:type_name -> core.PageInfo
+	31, // 17: core.ListProductionStepsResponse.page_info:type_name -> core.PageInfo
 	0,  // 18: core.GetProductionStepResponse.production_step:type_name -> core.ProductionStepInfo
-	8,  // 19: core.CreateProductionStepRequest.labor_rate:type_name -> core.CreateRateInput
-	8,  // 20: core.CreateProductionStepRequest.labor_time:type_name -> core.CreateRateInput
-	8,  // 21: core.CreateProductionStepRequest.overhead_rate:type_name -> core.CreateRateInput
-	9,  // 22: core.CreateProductionStepRequest.production:type_name -> core.CreateProductionInput
-	10, // 23: core.CreateProductionStepRequest.consumptions:type_name -> core.CreateStepConsumptionInput
+	32, // 19: core.CreateProductionStepRequest.labor_rate:type_name -> core.CreateRateInput
+	32, // 20: core.CreateProductionStepRequest.labor_time:type_name -> core.CreateRateInput
+	32, // 21: core.CreateProductionStepRequest.overhead_rate:type_name -> core.CreateRateInput
+	8,  // 22: core.CreateProductionStepRequest.production:type_name -> core.CreateProductionInput
+	9,  // 23: core.CreateProductionStepRequest.consumptions:type_name -> core.CreateStepConsumptionInput
 	0,  // 24: core.CreateProductionStepResponse.production_step:type_name -> core.ProductionStepInfo
 	0,  // 25: core.UpdateProductionStepResponse.production_step:type_name -> core.ProductionStepInfo
 	2,  // 26: core.GetProductionResponse.production:type_name -> core.ProductionInfo
 	2,  // 27: core.UpdateProductionResponse.production:type_name -> core.ProductionInfo
-	20, // 28: core.BulkCreateProductionStepInput.consumptions:type_name -> core.BulkCreateConsumptionInput
-	21, // 29: core.BulkCreateProductionStepInput.productions:type_name -> core.BulkCreateProductionInput
-	22, // 30: core.BulkCreateProductionStepsRequest.steps:type_name -> core.BulkCreateProductionStepInput
-	24, // 31: core.BulkCreateProductionStepsResponse.results:type_name -> core.BulkCreateProductionStepResult
+	19, // 28: core.BulkCreateProductionStepInput.consumptions:type_name -> core.BulkCreateConsumptionInput
+	20, // 29: core.BulkCreateProductionStepInput.productions:type_name -> core.BulkCreateProductionInput
+	21, // 30: core.BulkCreateProductionStepsRequest.steps:type_name -> core.BulkCreateProductionStepInput
+	23, // 31: core.BulkCreateProductionStepsResponse.results:type_name -> core.BulkCreateProductionStepResult
 	3,  // 32: core.CoreProductionStepService.ListProductionSteps:input_type -> core.ListProductionStepsRequest
 	5,  // 33: core.CoreProductionStepService.GetProductionStep:input_type -> core.GetProductionStepRequest
 	7,  // 34: core.CoreProductionStepService.CreateProductionStep:input_type -> core.CreateProductionStepRequest
-	12, // 35: core.CoreProductionStepService.UpdateProductionStep:input_type -> core.UpdateProductionStepRequest
-	14, // 36: core.CoreProductionStepService.DeleteProductionStep:input_type -> core.DeleteProductionStepRequest
-	16, // 37: core.CoreProductionStepService.GetProduction:input_type -> core.GetProductionRequest
-	18, // 38: core.CoreProductionStepService.UpdateProduction:input_type -> core.UpdateProductionRequest
-	23, // 39: core.CoreProductionStepService.BulkCreateProductionSteps:input_type -> core.BulkCreateProductionStepsRequest
+	11, // 35: core.CoreProductionStepService.UpdateProductionStep:input_type -> core.UpdateProductionStepRequest
+	13, // 36: core.CoreProductionStepService.DeleteProductionStep:input_type -> core.DeleteProductionStepRequest
+	15, // 37: core.CoreProductionStepService.GetProduction:input_type -> core.GetProductionRequest
+	17, // 38: core.CoreProductionStepService.UpdateProduction:input_type -> core.UpdateProductionRequest
+	22, // 39: core.CoreProductionStepService.BulkCreateProductionSteps:input_type -> core.BulkCreateProductionStepsRequest
 	4,  // 40: core.CoreProductionStepService.ListProductionSteps:output_type -> core.ListProductionStepsResponse
 	6,  // 41: core.CoreProductionStepService.GetProductionStep:output_type -> core.GetProductionStepResponse
-	11, // 42: core.CoreProductionStepService.CreateProductionStep:output_type -> core.CreateProductionStepResponse
-	13, // 43: core.CoreProductionStepService.UpdateProductionStep:output_type -> core.UpdateProductionStepResponse
-	15, // 44: core.CoreProductionStepService.DeleteProductionStep:output_type -> core.DeleteProductionStepResponse
-	17, // 45: core.CoreProductionStepService.GetProduction:output_type -> core.GetProductionResponse
-	19, // 46: core.CoreProductionStepService.UpdateProduction:output_type -> core.UpdateProductionResponse
-	25, // 47: core.CoreProductionStepService.BulkCreateProductionSteps:output_type -> core.BulkCreateProductionStepsResponse
+	10, // 42: core.CoreProductionStepService.CreateProductionStep:output_type -> core.CreateProductionStepResponse
+	12, // 43: core.CoreProductionStepService.UpdateProductionStep:output_type -> core.UpdateProductionStepResponse
+	14, // 44: core.CoreProductionStepService.DeleteProductionStep:output_type -> core.DeleteProductionStepResponse
+	16, // 45: core.CoreProductionStepService.GetProduction:output_type -> core.GetProductionResponse
+	18, // 46: core.CoreProductionStepService.UpdateProduction:output_type -> core.UpdateProductionResponse
+	24, // 47: core.CoreProductionStepService.BulkCreateProductionSteps:output_type -> core.BulkCreateProductionStepsResponse
 	40, // [40:48] is the sub-list for method output_type
 	32, // [32:40] is the sub-list for method input_type
 	32, // [32:32] is the sub-list for extension type_name
@@ -2169,19 +2105,19 @@ func file_core_core_production_step_proto_init() {
 	file_core_core_production_step_proto_msgTypes[2].OneofWrappers = []any{}
 	file_core_core_production_step_proto_msgTypes[3].OneofWrappers = []any{}
 	file_core_core_production_step_proto_msgTypes[7].OneofWrappers = []any{}
-	file_core_core_production_step_proto_msgTypes[10].OneofWrappers = []any{}
-	file_core_core_production_step_proto_msgTypes[12].OneofWrappers = []any{}
-	file_core_core_production_step_proto_msgTypes[18].OneofWrappers = []any{}
-	file_core_core_production_step_proto_msgTypes[20].OneofWrappers = []any{}
-	file_core_core_production_step_proto_msgTypes[22].OneofWrappers = []any{}
-	file_core_core_production_step_proto_msgTypes[24].OneofWrappers = []any{}
+	file_core_core_production_step_proto_msgTypes[9].OneofWrappers = []any{}
+	file_core_core_production_step_proto_msgTypes[11].OneofWrappers = []any{}
+	file_core_core_production_step_proto_msgTypes[17].OneofWrappers = []any{}
+	file_core_core_production_step_proto_msgTypes[19].OneofWrappers = []any{}
+	file_core_core_production_step_proto_msgTypes[21].OneofWrappers = []any{}
+	file_core_core_production_step_proto_msgTypes[23].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_core_core_production_step_proto_rawDesc), len(file_core_core_production_step_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   26,
+			NumMessages:   25,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

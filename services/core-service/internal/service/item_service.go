@@ -470,11 +470,21 @@ func (s *itemSvcImpl) ExportItems(ctx context.Context) (*domain.ExportItemsResul
 }
 
 // loadItemAttributes is a helper to load attributes for an item from a repo instance.
-func loadItemAttributes(_ context.Context, _ domain.ItemRepo, _ *domain.Item) *apierror.APIError {
-	// The Get method already loads attributes; this is for list results.
-	// Attributes are loaded in the repository's loadItemAttributes method when using Get.
-	// For list results, we skip attributes loading to optimize performance.
-	// If needed, individual attribute loading can be done via Get.
+func loadItemAttributes(ctx context.Context, repo domain.ItemRepo, item *domain.Item) *apierror.APIError {
+	if item == nil {
+		return nil
+	}
+
+	enriched, apiErr := repo.Get(ctx, domain.GetItemParams{
+		AccountID: item.AccountID,
+		ItemID:    item.ID,
+	})
+	if apiErr != nil {
+		return apiErr
+	}
+	if enriched != nil {
+		item.Attributes = enriched.Attributes
+	}
 	return nil
 }
 
@@ -1219,7 +1229,7 @@ func (s *itemSvcImpl) bulkUpsertExistingItem(ctx context.Context, accountID, ite
 		if input.ProductLineID != nil && *input.ProductLineID != "" {
 			if _, apiErr := txSvc.repos.NewProductRepo().ChangeProductLine(txCtx, domain.ChangeProductProductLineParams{
 				AccountID:     accountID,
-				ItemID:        itemID,
+				ProductID:     itemID,
 				ProductLineID: *input.ProductLineID,
 			}); apiErr != nil {
 				// Non-product items don't have a product-line row; ignore not-found here.

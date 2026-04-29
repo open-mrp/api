@@ -34,9 +34,7 @@ type Item struct {
 	// Burn rate.
 	BurnRate *Rate `json:"burn_rate" expandable:"true"`
 	// Attributes assigned to this item.
-	Attributes *List[Attribute] `json:"attributes"`
-	// Whether the item has unsaved changes.
-	IsDirty bool `json:"is_dirty"`
+	Attributes *List[Attribute] `json:"attributes" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last updated timestamp.
@@ -57,7 +55,6 @@ var SampleItem = &Item{
 	UnitCost:     SampleRate,
 	BurnRate:     SampleRate,
 	Attributes:   NewList([]Attribute{*SampleAttribute}, PageInfo{}),
-	IsDirty:      false,
 	CreatedAt:    timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:    timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }

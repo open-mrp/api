@@ -48,6 +48,33 @@ func TestRejectExplicitJSONNulls_allowsNullForUntaggedField(t *testing.T) {
 	}
 }
 
+func TestRejectExplicitJSONNulls_rejectsEmptyStringForNullableFalse(t *testing.T) {
+	t.Parallel()
+	body := []byte(`{"name": ""}`)
+	var req patchNullableFalse
+	if err := RejectExplicitJSONNulls(body, &req); err == nil {
+		t.Fatal("expected error for name: empty string")
+	}
+}
+
+func TestRejectExplicitJSONNulls_rejectsWhitespaceOnlyForNullableFalse(t *testing.T) {
+	t.Parallel()
+	body := []byte(`{"name": "   "}`)
+	var req patchNullableFalse
+	if err := RejectExplicitJSONNulls(body, &req); err == nil {
+		t.Fatal("expected error for name: whitespace-only string")
+	}
+}
+
+func TestRejectExplicitJSONNulls_allowsBlankForUntaggedField(t *testing.T) {
+	t.Parallel()
+	body := []byte(`{"description": ""}`)
+	var req patchNullableFalse
+	if err := RejectExplicitJSONNulls(body, &req); err != nil {
+		t.Fatalf("unexpected error for untagged blank field: %v", err)
+	}
+}
+
 func TestRejectExplicitJSONNulls_commissionPolicyNull(t *testing.T) {
 	t.Parallel()
 	body := []byte(`{"commission_policy": null}`)

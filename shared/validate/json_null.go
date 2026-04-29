@@ -11,9 +11,9 @@ import (
 )
 
 // RejectExplicitJSONNulls returns an invalid_format API error when the JSON body
-// contains an explicit null for any pointer field tagged nullable:"false".
-// Absent keys are allowed (PATCH semantics). It only inspects top-level object keys;
-// nested objects are not walked.
+// contains an explicit null or a blank string for any pointer field tagged
+// nullable:"false". Absent keys are allowed (PATCH semantics). It only inspects
+// top-level object keys; nested objects are not walked.
 //
 // Tag nullable:"false" is shared with the OpenAPI generator; keep it in sync.
 func RejectExplicitJSONNulls(body []byte, v any) *apierror.APIError {
@@ -82,6 +82,9 @@ func rejectExplicitNullsInStruct(rv reflect.Value, rt reflect.Type, raw map[stri
 		}
 		if parsed == nil {
 			return apierror.NewInvalidFormatError(fmt.Sprintf("Field '%s' cannot be null.", jsonName), jsonName)
+		}
+		if str, ok := parsed.(string); ok && strings.TrimSpace(str) == "" {
+			return apierror.NewInvalidFormatError(fmt.Sprintf("Field '%s' must not be blank.", jsonName), jsonName)
 		}
 	}
 	return nil

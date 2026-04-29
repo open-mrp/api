@@ -248,6 +248,24 @@ func TestCarriers_CreateValidation_EmptyName(t *testing.T) {
 		"Empty name should return 400 or 422, got %d: %s", status, string(body))
 }
 
+func TestCarriers_UpdateValidation_EmptyName(t *testing.T) {
+	t.Parallel()
+	name := uniqueName("e2e-carr-blank")
+	createStatus, createBody, err := apiClient.Post(carriersPath, map[string]any{
+		"name": name,
+		"code": "will_call",
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, createStatus, createBody)
+	id := jsonField(parseJSON(createBody), "id")
+	defer apiClient.Delete(carriersPath + "/" + id)
+
+	status, body, err := apiClient.Patch(carriersPath+"/"+id, map[string]any{"name": ""}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 400, status, body)
+	requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
+}
+
 func TestCarriers_IncludeOwner(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.GetListRaw(carriersPath+"/"+SeedCarrierID, url.Values{"include": {"owner"}})

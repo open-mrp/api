@@ -591,6 +591,36 @@ func TestRoles_CreateValidation_EmptyName(t *testing.T) {
 		"Empty name should return 400 or 422, got %d: %s", status, string(body))
 }
 
+func TestRoles_UpdateValidation_EmptyName(t *testing.T) {
+	t.Parallel()
+	name := uniqueName("e2e-role-blank")
+	createStatus, createBody, err := apiClient.Post(rolesPath, map[string]any{"name": name}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, createStatus, createBody)
+	id := jsonField(parseJSON(createBody), "id")
+	defer apiClient.Delete(rolesPath + "/" + id)
+
+	status, body, err := apiClient.Patch(rolesPath+"/"+id, map[string]any{"name": ""}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 400, status, body)
+	requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
+}
+
+func TestRoles_UpdateValidation_WhitespaceOnlyName(t *testing.T) {
+	t.Parallel()
+	name := uniqueName("e2e-role-ws")
+	createStatus, createBody, err := apiClient.Post(rolesPath, map[string]any{"name": name}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, createStatus, createBody)
+	id := jsonField(parseJSON(createBody), "id")
+	defer apiClient.Delete(rolesPath + "/" + id)
+
+	status, body, err := apiClient.Patch(rolesPath+"/"+id, map[string]any{"name": "   "}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 400, status, body)
+	requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
+}
+
 func TestRoles_GetNotFound_ErrorShape(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.GetListRaw(rolesPath+"/rl_000000000000", nil)

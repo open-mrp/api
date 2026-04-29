@@ -514,6 +514,21 @@ func TestCustomers_CreateValidation_MissingName_ErrorShape(t *testing.T) {
 	assertErrorParam(t, errObj, "name")
 }
 
+func TestCustomers_UpdateValidation_EmptyName(t *testing.T) {
+	t.Parallel()
+	name := uniqueName("e2e-cust-blank")
+	createStatus, createBody, err := apiClient.Post(customersPath, validCustomerBody(name), newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, createStatus, createBody)
+	id := jsonField(parseJSON(createBody), "id")
+	defer apiClient.Delete(customersPath + "/" + id)
+
+	status, body, err := apiClient.Patch(customersPath+"/"+id, map[string]any{"name": ""}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 400, status, body)
+	requireErrorResponse(t, body, "invalid_format", "invalid_request_error")
+}
+
 func TestCustomers_GetNotFound_ErrorShape(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.GetListRaw(customersPath+"/ac_000000000000000000000000", nil)

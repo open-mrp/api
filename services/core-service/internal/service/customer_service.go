@@ -203,17 +203,17 @@ func (s *customerSvcImpl) CreateCustomer(ctx context.Context, params domain.Crea
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *customerSvcImpl) *apierror.APIError {
 			txCustomerRepo := txSvc.repos.NewCustomerRepo()
 
-		// Validate that the sales rep account user ID belongs to this account.
-		if params.DefaultSalesRepUserID != nil {
-			txAccountUserRepo := txSvc.repos.NewAccountUserRepo()
-			_, apiErr := txAccountUserRepo.GetDetailByAccountAndID(txCtx, params.OwnerAccountID, *params.DefaultSalesRepUserID)
-			if apiErr != nil {
-				if apiErr.Code != apierror.ErrorCodeResourceNotFound {
-					return apiErr
+			// Validate that the sales rep account user ID belongs to this account.
+			if params.DefaultSalesRepUserID != nil {
+				txAccountUserRepo := txSvc.repos.NewAccountUserRepo()
+				_, apiErr := txAccountUserRepo.GetDetailByAccountAndID(txCtx, params.OwnerAccountID, *params.DefaultSalesRepUserID)
+				if apiErr != nil {
+					if apiErr.Code != apierror.ErrorCodeResourceNotFound {
+						return apiErr
+					}
+					return apierror.NewResourceNotFoundError("No sales rep found with the provided ID.").WithParam("defaults.sales_rep_user_id")
 				}
-				return apierror.NewResourceNotFoundError("No sales rep found with the provided ID.").WithParam("defaults.sales_rep_user_id")
 			}
-		}
 
 			// Generate or auto-assign customer number.
 			var customerNumber string
@@ -390,18 +390,18 @@ func (s *customerSvcImpl) UpdateCustomer(ctx context.Context, params domain.Upda
 				return apiErr
 			}
 
-		// Validate that the sales rep account user ID belongs to this account.
-		// ptr("") means clear, nil means not provided, ptr("value") means update.
-		if params.DefaultSalesRepUserID != nil && *params.DefaultSalesRepUserID != "" {
-			txAccountUserRepo := txSvc.repos.NewAccountUserRepo()
-			_, apiErr := txAccountUserRepo.GetDetailByAccountAndID(txCtx, params.OwnerAccountID, *params.DefaultSalesRepUserID)
-			if apiErr != nil {
-				if apiErr.Code != apierror.ErrorCodeResourceNotFound {
-					return apiErr
+			// Validate that the sales rep account user ID belongs to this account.
+			// ptr("") means clear, nil means not provided, ptr("value") means update.
+			if params.DefaultSalesRepUserID != nil && *params.DefaultSalesRepUserID != "" {
+				txAccountUserRepo := txSvc.repos.NewAccountUserRepo()
+				_, apiErr := txAccountUserRepo.GetDetailByAccountAndID(txCtx, params.OwnerAccountID, *params.DefaultSalesRepUserID)
+				if apiErr != nil {
+					if apiErr.Code != apierror.ErrorCodeResourceNotFound {
+						return apiErr
+					}
+					return apierror.NewResourceNotFoundError("No sales rep found with the provided ID.").WithParam("defaults.sales_rep_user_id")
 				}
-				return apierror.NewResourceNotFoundError("No sales rep found with the provided ID.").WithParam("defaults.sales_rep_user_id")
 			}
-		}
 
 			// Backfill unchanged nullable fields with existing values.
 			// Since the SQL uses direct assignment (no COALESCE) for these fields,

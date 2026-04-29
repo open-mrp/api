@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.6](https://github.com/Augno/api/compare/v0.15.5...v0.15.6) (2026-04-29)
+
+
+### Bug Fixes
+
+* updates to our items endpoints ([#226](https://github.com/Augno/api/issues/226)) ([4100ad6](https://github.com/Augno/api/commit/4100ad66cf5ed0043543a8342ce1ac84c3ccee73))
+
 ## [0.15.5](https://github.com/Augno/api/compare/v0.15.4...v0.15.5) (2026-04-29)
 
 

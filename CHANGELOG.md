@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.16.0](https://github.com/Augno/api/compare/v0.15.6...v0.16.0) (2026-05-13)
+
+
+### Features
+
+* adding items endpoints to public api ([#232](https://github.com/Augno/api/issues/232)) ([6d81ba6](https://github.com/Augno/api/commit/6d81ba698ce14a61770006743b3ece94796f925a))
+
+
+### Bug Fixes
+
+* adding new col to tx for funds settlement date ([#229](https://github.com/Augno/api/issues/229)) ([59094b9](https://github.com/Augno/api/commit/59094b9146cab0e7cebde3967a085c6d993b9556))
+
 ## [0.15.6](https://github.com/Augno/api/compare/v0.15.5...v0.15.6) (2026-04-29)
 
 

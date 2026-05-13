@@ -5,7 +5,9 @@ import (
 	"fmt"
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
+	"github.com/augno/api/services/api-gateway/internal/export"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
+	httptransport "github.com/augno/api/services/api-gateway/internal/http"
 	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/appctx"
@@ -33,6 +35,7 @@ type PartSvc interface {
 	CreatePart(ctx context.Context, req *CreatePartRequest) (*apiresource.Part, *apierror.APIError)
 	UpdatePart(ctx context.Context, req *UpdatePartRequest) (*apiresource.Part, *apierror.APIError)
 	DeletePart(ctx context.Context, req *DeletePartRequest) (*apiresource.Part, *apierror.APIError)
+	ExportParts(ctx context.Context, req *ExportPartsRequest) (*httptransport.FileDownload, *apierror.APIError)
 }
 
 type PartSvcConfig struct {
@@ -182,4 +185,58 @@ func (m *partSvcImpl) DeletePart(ctx context.Context, req *DeletePartRequest) (*
 
 	result := PartPresenter(resp.Part)
 	return &result, nil
+}
+
+func (m *partSvcImpl) ExportParts(ctx context.Context, req *ExportPartsRequest) (*httptransport.FileDownload, *apierror.APIError) {
+	const pageSize = int32(500)
+
+	pbReq := &pb.ListPartsRequest{
+		Limit:        pageSize,
+		Query:        req.Query,
+		CategoryIds:  req.CategoryIDs,
+		AttributeIds: req.AttributeIDs,
+		Includes: []string{
+			"item",
+			"item.category",
+			"item.category.properties",
+			"item.unit_value",
+			"item.unit_cost",
+			"item.attributes",
+		},
+	}
+	if req.StartDate != nil {
+		pbReq.StartDate = timestamppb.New(*req.StartDate)
+	}
+	if req.EndDate != nil {
+		pbReq.EndDate = timestamppb.New(*req.EndDate)
+	}
+
+	var allParts []apiresource.Part
+	for {
+		resp, apiErr := grpcutil.CallRPC(ctx, partSvcTracer, "service.parts.export.page", domain.ServiceName,
+			func(ctx context.Context, opts ...grpc.CallOption) (*pb.ListPartsResponse, error) {
+				return m.coreClient.ListParts(ctx, pbReq, opts...)
+			})
+		if apiErr != nil {
+			return nil, apiErr
+		}
+		for _, p := range resp.Parts {
+			allParts = append(allParts, PartPresenter(p))
+		}
+		if !resp.PageInfo.HasNextPage {
+			break
+		}
+		pbReq.Cursor = resp.PageInfo.NextCursor
+	}
+
+	body, err := export.PartsToExcel(allParts)
+	if err != nil {
+		return nil, apierror.NewInternalError(err, "Failed to build export file.")
+	}
+
+	return &httptransport.FileDownload{
+		ContentType: export.ExcelContentType,
+		Filename:    "parts.xlsx",
+		Body:        body,
+	}, nil
 }

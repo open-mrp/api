@@ -44,6 +44,7 @@ func (*MaterialsEndpointGroup) Materialize(config *MaterialsEndpointGroupConfig)
 	createMaterialEndpoint := (&materialep.CreateMaterialEndpoint{}).Materialize().WithService(inner, materialSvc)
 	updateMaterialEndpoint := (&materialep.UpdateMaterialEndpoint{}).Materialize().WithService(inner, materialSvc)
 	deleteMaterialEndpoint := (&materialep.DeleteMaterialEndpoint{}).Materialize().WithService(inner, materialSvc)
+	exportMaterialsEndpoint := (&materialep.ExportMaterialsEndpoint{}).Materialize().WithService(inner, materialSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listMaterialsEndpoint,
@@ -51,6 +52,7 @@ func (*MaterialsEndpointGroup) Materialize(config *MaterialsEndpointGroupConfig)
 		createMaterialEndpoint,
 		updateMaterialEndpoint,
 		deleteMaterialEndpoint,
+		exportMaterialsEndpoint,
 	}
 
 	return &MaterialsEndpointGroup{inner}

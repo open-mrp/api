@@ -46,6 +46,7 @@ func (*ProductsEndpointGroup) Materialize(config *ProductsEndpointGroupConfig) *
 	deleteEndpoint := (&productep.DeleteProductEndpoint{}).Materialize().WithService(inner, productSvc)
 	changeProductLineEndpoint := (&productep.ChangeProductProductLineEndpoint{}).Materialize().WithService(inner, productSvc)
 	validateEndpoint := (&productep.ValidateProductsEndpoint{}).Materialize().WithService(inner, productSvc)
+	exportEndpoint := (&productep.ExportProductsEndpoint{}).Materialize().WithService(inner, productSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listEndpoint,
@@ -55,6 +56,7 @@ func (*ProductsEndpointGroup) Materialize(config *ProductsEndpointGroupConfig) *
 		deleteEndpoint,
 		changeProductLineEndpoint,
 		validateEndpoint,
+		exportEndpoint,
 	}
 
 	return &ProductsEndpointGroup{inner}

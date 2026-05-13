@@ -5,7 +5,9 @@ import (
 	"fmt"
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
+	"github.com/augno/api/services/api-gateway/internal/export"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
+	httptransport "github.com/augno/api/services/api-gateway/internal/http"
 	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/appctx"
@@ -36,6 +38,7 @@ type ProductSvc interface {
 	DeleteProduct(ctx context.Context, req *DeleteProductRequest) (*apiresource.Product, *apierror.APIError)
 	ChangeProductProductLine(ctx context.Context, req *ChangeProductProductLineRequest) (*apiresource.Product, *apierror.APIError)
 	ValidateProducts(ctx context.Context, req *ValidateProductsRequest) (*apiresource.ValidateProductsResponse, *apierror.APIError)
+	ExportProducts(ctx context.Context, req *ExportProductsRequest) (*httptransport.FileDownload, *apierror.APIError)
 }
 
 type ProductSvcConfig struct {
@@ -258,4 +261,61 @@ func (m *productSvcImpl) ValidateProducts(ctx context.Context, req *ValidateProd
 	}
 
 	return ValidateProductsPresenter(resp), nil
+}
+
+func (m *productSvcImpl) ExportProducts(ctx context.Context, req *ExportProductsRequest) (*httptransport.FileDownload, *apierror.APIError) {
+	const pageSize = int32(500)
+
+	pbReq := &pb.ListProductsFullRequest{
+		Limit:          pageSize,
+		Query:          req.Query,
+		CustomerIds:    req.CustomerIDs,
+		ProductLineIds: req.ProductLineIDs,
+		CategoryIds:    req.CategoryIDs,
+		AttributeIds:   req.AttributeIDs,
+		Includes: []string{
+			"product_line",
+			"item",
+			"item.category",
+			"item.category.properties",
+			"item.unit_value",
+			"item.unit_cost",
+			"item.attributes",
+		},
+	}
+	if req.StartDate != nil {
+		pbReq.StartDate = timestamppb.New(*req.StartDate)
+	}
+	if req.EndDate != nil {
+		pbReq.EndDate = timestamppb.New(*req.EndDate)
+	}
+
+	var allProducts []apiresource.Product
+	for {
+		resp, apiErr := grpcutil.CallRPC(ctx, productSvcTracer, "service.products.export.page", domain.ServiceName,
+			func(ctx context.Context, opts ...grpc.CallOption) (*pb.ListProductsFullResponse, error) {
+				return m.coreClient.ListProductsFull(ctx, pbReq, opts...)
+			})
+		if apiErr != nil {
+			return nil, apiErr
+		}
+		for _, p := range resp.Products {
+			allProducts = append(allProducts, ProductPresenter(p))
+		}
+		if !resp.PageInfo.HasNextPage {
+			break
+		}
+		pbReq.Cursor = resp.PageInfo.NextCursor
+	}
+
+	body, err := export.ProductsToExcel(allProducts)
+	if err != nil {
+		return nil, apierror.NewInternalError(err, "Failed to build export file.")
+	}
+
+	return &httptransport.FileDownload{
+		ContentType: export.ExcelContentType,
+		Filename:    "products.xlsx",
+		Body:        body,
+	}, nil
 }

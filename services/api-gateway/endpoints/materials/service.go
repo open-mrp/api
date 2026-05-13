@@ -5,7 +5,9 @@ import (
 	"fmt"
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
+	"github.com/augno/api/services/api-gateway/internal/export"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
+	httptransport "github.com/augno/api/services/api-gateway/internal/http"
 	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/appctx"
@@ -33,6 +35,7 @@ type MaterialSvc interface {
 	CreateMaterial(ctx context.Context, req *CreateMaterialRequest) (*apiresource.Material, *apierror.APIError)
 	UpdateMaterial(ctx context.Context, req *UpdateMaterialRequest) (*apiresource.Material, *apierror.APIError)
 	DeleteMaterial(ctx context.Context, req *DeleteMaterialRequest) (*apiresource.Material, *apierror.APIError)
+	ExportMaterials(ctx context.Context, req *ExportMaterialsRequest) (*httptransport.FileDownload, *apierror.APIError)
 }
 
 type MaterialSvcConfig struct {
@@ -168,4 +171,58 @@ func (m *materialSvcImpl) DeleteMaterial(ctx context.Context, req *DeleteMateria
 	}
 	result := MaterialPresenter(resp.Material)
 	return &result, nil
+}
+
+func (m *materialSvcImpl) ExportMaterials(ctx context.Context, req *ExportMaterialsRequest) (*httptransport.FileDownload, *apierror.APIError) {
+	const pageSize = int32(500)
+
+	pbReq := &pb.ListMaterialsRequest{
+		Limit:        pageSize,
+		Query:        req.Query,
+		CategoryIds:  req.CategoryIDs,
+		AttributeIds: req.AttributeIDs,
+		Includes: []string{
+			"item",
+			"item.category",
+			"item.category.properties",
+			"item.unit_value",
+			"item.unit_cost",
+			"item.attributes",
+		},
+	}
+	if req.StartDate != nil {
+		pbReq.StartDate = timestamppb.New(*req.StartDate)
+	}
+	if req.EndDate != nil {
+		pbReq.EndDate = timestamppb.New(*req.EndDate)
+	}
+
+	var allMaterials []apiresource.Material
+	for {
+		resp, apiErr := grpcutil.CallRPC(ctx, materialSvcTracer, "service.materials.export.page", domain.ServiceName,
+			func(ctx context.Context, opts ...grpc.CallOption) (*pb.ListMaterialsResponse, error) {
+				return m.coreClient.ListMaterials(ctx, pbReq, opts...)
+			})
+		if apiErr != nil {
+			return nil, apiErr
+		}
+		for _, mat := range resp.Materials {
+			allMaterials = append(allMaterials, MaterialPresenter(mat))
+		}
+		if !resp.PageInfo.HasNextPage {
+			break
+		}
+		pbReq.Cursor = resp.PageInfo.NextCursor
+	}
+
+	body, err := export.MaterialsToExcel(allMaterials)
+	if err != nil {
+		return nil, apierror.NewInternalError(err, "Failed to build export file.")
+	}
+
+	return &httptransport.FileDownload{
+		ContentType: export.ExcelContentType,
+		Filename:    "materials.xlsx",
+		Body:        body,
+	}, nil
 }

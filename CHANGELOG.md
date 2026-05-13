@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.0](https://github.com/Augno/api/compare/v0.16.0...v0.17.0) (2026-05-13)
+
+
+### Features
+
+* export items in bulk ([#233](https://github.com/Augno/api/issues/233)) ([8bb7843](https://github.com/Augno/api/commit/8bb78436715eee0899d1950f652c43491bd4b096))
+
 ## [0.16.0](https://github.com/Augno/api/compare/v0.15.6...v0.16.0) (2026-05-13)
 
 

@@ -368,7 +368,7 @@ func (s *locationSvcImpl) DeleteLocation(ctx context.Context, params domain.Dele
 	repo := s.repos.NewLocationRepo()
 
 	// Verify location is in account and fetch for audit
-	location, apiErr := repo.Get(ctx, domain.GetLocationParams(params))
+	location, apiErr := repo.Get(ctx, domain.GetLocationParams{AccountID: params.AccountID, LocationID: params.LocationID})
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeLocation, params.LocationID)

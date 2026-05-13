@@ -51,9 +51,6 @@ type IncludesParams struct {
 	// Supports dot-notation (e.g., "actor.role") for nested includes.
 	// REQUIRED — the function panics if empty.
 	Fields []string
-	// DefaultFields lists include keys that are always expanded, even when the
-	// client does not send an include parameter. Each key must also appear in Fields.
-	DefaultFields []string
 	// PathPrefix prepends a JSON path prefix for wrapper types
 	// (e.g., "api_key_info" when the APIKey is nested inside CreatedAPIKey).
 	PathPrefix string
@@ -93,18 +90,7 @@ func IncludesFor(p IncludesParams) *IncludeConfig {
 		fields = append(fields, field)
 	}
 
-	// Validate that all default fields are in the allowed set.
-	allowedKeys := make(map[string]bool, len(p.Fields))
-	for _, k := range p.Fields {
-		allowedKeys[k] = true
-	}
-	for _, dk := range p.DefaultFields {
-		if !allowedKeys[dk] {
-			panic(fmt.Sprintf("include_registry: default field %q not in Fields for %s", dk, p.ObjectType))
-		}
-	}
-
-	return &IncludeConfig{Fields: fields, DefaultFields: p.DefaultFields}
+	return &IncludeConfig{Fields: fields}
 }
 
 // walkFields recursively builds the full set of resolvable include fields.

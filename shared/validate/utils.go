@@ -3,14 +3,17 @@
 // human-readable error formatting that maps directly to the API's error response
 // contract ([apierror.APIError] with a Param field).
 //
-// Three custom validator tags are registered at init time:
+// Five custom validator tags are registered at init time:
 //
-//   - "password":     8–72 characters, at least one lowercase letter, one uppercase
+//   - "password":          8–72 characters, at least one lowercase letter, one uppercase
 //     letter, one digit, and one special character.
-//   - "identifier":   accepts either a valid email address or a username (3–50
-//     alphanumeric/underscore characters).
-//   - "custom_email": stricter email validation than the built-in "email" tag,
+//   - "username":          3–255 characters, alphanumeric (upper and lower), underscores,
+//     and hyphens only ([a-zA-Z0-9_-]).
+//   - "identifier":        accepts either a valid email address or a username (3–50
+//     characters, alphanumeric, underscores, and hyphens).
+//   - "custom_email":      stricter email validation than the built-in "email" tag,
 //     enforcing RFC length limits, TLD format, and no consecutive dots.
+//   - "nonzero_decimal":   the field, parsed as a decimal string, must not equal zero.
 //
 // All custom tags treat empty strings as valid — combine with "required" when the
 // field must be present.
@@ -29,6 +32,7 @@ import (
 
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/go-playground/validator/v10"
+	"github.com/shopspring/decimal"
 )
 
 var (
@@ -58,8 +62,10 @@ var validate = validator.New()
 
 func init() {
 	_ = validate.RegisterValidation("password", validatePassword)
+	_ = validate.RegisterValidation("username", validateUsername)
 	_ = validate.RegisterValidation("identifier", validateUsernameOrEmail)
 	_ = validate.RegisterValidation("custom_email", validateCustomEmail)
+	_ = validate.RegisterValidation("nonzero_decimal", validateNonzeroDecimal)
 }
 
 // validatePassword implements the "password" struct tag. A valid password is 8–72
@@ -86,14 +92,30 @@ func validatePassword(fl validator.FieldLevel) bool {
 	return true
 }
 
-// usernameRegex matches strings containing only ASCII alphanumeric characters and
-// underscores. Used by validateUsernameOrEmail for the username branch.
-var usernameRegex = regexp.MustCompile(`^[a-zA-Z0-9_]+$`)
+// usernameOnlyRegex matches strings containing only ASCII alphanumeric characters,
+// underscores, and hyphens. Used by validateUsername and validateUsernameOrEmail.
+var usernameOnlyRegex = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
+
+// validateUsername implements the "username" struct tag. A valid username is 3–255
+// runes long and contains only ASCII alphanumeric characters (upper and lower case),
+// underscores, and hyphens. Empty strings pass (combine with "required" to enforce
+// presence).
+func validateUsername(fl validator.FieldLevel) bool {
+	value := fl.Field().String()
+	if value == "" {
+		return true
+	}
+	usernameLen := len([]rune(value))
+	if usernameLen < 3 || usernameLen > 255 {
+		return false
+	}
+	return usernameOnlyRegex.MatchString(value)
+}
 
 // validateUsernameOrEmail implements the "identifier" struct tag. If the value
 // contains an "@" it is validated as an email via isValidEmail. Otherwise it is
-// treated as a username: 3–50 runes, alphanumeric and underscores only. Empty
-// strings pass (combine with "required" to enforce presence).
+// treated as a username: 3–50 runes, alphanumeric, underscores, and hyphens only.
+// Empty strings pass (combine with "required" to enforce presence).
 func validateUsernameOrEmail(fl validator.FieldLevel) bool {
 	value := fl.Field().String()
 	if value == "" {
@@ -108,7 +130,7 @@ func validateUsernameOrEmail(fl validator.FieldLevel) bool {
 	if usernameLen < 3 || usernameLen > 50 {
 		return false
 	}
-	return usernameRegex.MatchString(value)
+	return usernameOnlyRegex.MatchString(value)
 }
 
 // isValidEmail performs multi-step email validation that is stricter than the
@@ -168,6 +190,29 @@ func validateCustomEmail(fl validator.FieldLevel) bool {
 		return true
 	}
 	return isValidEmail(email)
+}
+
+// validateNonzeroDecimal implements the "nonzero_decimal" struct tag. It parses the
+// field value as a decimal string and returns false if the parsed value equals zero.
+// Empty strings pass — combine with "required" to enforce presence. Supports both
+// string and *string fields.
+func validateNonzeroDecimal(fl validator.FieldLevel) bool {
+	field := fl.Field()
+	if field.Kind() == reflect.Pointer {
+		if field.IsNil() {
+			return true
+		}
+		field = field.Elem()
+	}
+	s := field.String()
+	if s == "" {
+		return true
+	}
+	d, err := decimal.NewFromString(s)
+	if err != nil {
+		return false
+	}
+	return !d.IsZero()
 }
 
 // Validate runs all struct-tag validations on v and returns a user-facing
@@ -235,7 +280,7 @@ func newFieldError(tag string, metadata fieldMetadata, message string) *apierror
 			return apierror.NewMissingFieldError(message, metadata.name)
 		}
 		return apierror.NewParameterMissingError(message, metadata.name)
-	case "email", "custom_email", "password", "identifier", "len":
+	case "email", "custom_email", "password", "username", "identifier", "len":
 		if isBodyField {
 			return apierror.NewInvalidFormatError(message, metadata.name)
 		}
@@ -283,10 +328,14 @@ func formatFieldError(fieldErr validator.FieldError, structValue any) string {
 		return fmt.Sprintf("%s '%s' validation failed.", source, fieldName)
 	case "password":
 		return fmt.Sprintf("%s '%s' must be 8-72 characters and contain at least one lowercase letter, one uppercase letter, one number, and one special character.", source, fieldName)
+	case "username":
+		return fmt.Sprintf("%s '%s' must be 3-255 characters and contain only letters, numbers, underscores, and hyphens.", source, fieldName)
 	case "identifier":
-		return fmt.Sprintf("%s '%s' must be a valid email address or username (3-50 characters, alphanumeric and underscores only).", source, fieldName)
+		return fmt.Sprintf("%s '%s' must be a valid email address or username (3-50 characters, alphanumeric, underscores, and hyphens only).", source, fieldName)
 	case "custom_email":
 		return fmt.Sprintf("%s '%s' must be a valid email address.", source, fieldName)
+	case "nonzero_decimal":
+		return fmt.Sprintf("%s '%s' must not be zero.", source, fieldName)
 	default:
 		return fmt.Sprintf("%s '%s' is invalid (%s).", source, fieldName, fieldErr.Tag())
 	}
@@ -364,7 +413,7 @@ func getFieldMetadata(fieldErr validator.FieldError, structValue any) fieldMetad
 	}
 
 	rv := reflect.ValueOf(structValue)
-	if rv.Kind() == reflect.Ptr {
+	if rv.Kind() == reflect.Pointer {
 		rv = rv.Elem()
 	}
 

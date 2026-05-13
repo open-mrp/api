@@ -207,11 +207,27 @@ func (s *productSvcImpl) attachProductIncludes(ctx context.Context, product *dom
 		item, apiErr := s.repos.NewItemRepo().Get(ctx, domain.GetItemParams{
 			AccountID: accountID,
 			ItemID:    product.Item.ID,
+			Includes:  []string{"attributes"},
 		})
 		if apiErr != nil {
-			return apiErr
+			// The item was concurrently soft-deleted between the list/get query
+			// and this enrichment call. Skip enrichment rather than surfacing a
+			// spurious 404 to the caller.
+			if !apierror.IsNotFound(apiErr) {
+				return apiErr
+			}
+		} else {
+			product.Item.Attributes = item.Attributes
+			if item.UnitValue != nil {
+				product.Item.UnitValue = item.UnitValue
+			}
+			if item.UnitCost != nil {
+				product.Item.UnitCost = item.UnitCost
+			}
+			if item.BurnRate != nil {
+				product.Item.BurnRate = item.BurnRate
+			}
 		}
-		product.Item.Attributes = item.Attributes
 	}
 
 	if product.ProductLine != nil && product.ProductLine.UnitGroupID != "" {
@@ -485,6 +501,20 @@ func (s *productSvcImpl) UpdateProduct(ctx context.Context, params domain.Update
 				}
 			}
 
+			txUnitRepo := txSvc.repos.NewUnitRepo()
+
+			if params.UnitPrice != nil {
+				if apiErr := ValidateCostRateUnits(txCtx, txUnitRepo, params.UnitPrice.NumeratorUnitID, params.UnitPrice.DenominatorUnitID, "unit_price"); apiErr != nil {
+					return apiErr
+				}
+				if old.Item == nil || old.Item.UnitValueID == "" {
+					return apierror.NewInvariantViolationError("Product item or unit value rate is missing.")
+				}
+				if apiErr := txItemRepo.UpdateRate(txCtx, old.Item.UnitValueID, *params.UnitPrice); apiErr != nil {
+					return apiErr
+				}
+			}
+
 			// Update product + item fields.
 			updated, apiErr := txProductRepo.Update(txCtx, params)
 			if apiErr != nil {
@@ -538,7 +568,7 @@ func (s *productSvcImpl) DeleteProduct(ctx context.Context, params domain.Delete
 	params.AccountID = identity.Target.AccountID
 
 	// Fetch existing product before deletion.
-	product, apiErr := s.repos.NewProductRepo().Get(ctx, domain.GetProductFullParams(params))
+	product, apiErr := s.repos.NewProductRepo().Get(ctx, domain.GetProductFullParams{AccountID: params.AccountID, ProductID: params.ProductID})
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeProduct, params.ProductID)

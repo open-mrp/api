@@ -7,6 +7,7 @@ import (
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/appctx"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
@@ -16,7 +17,7 @@ import (
 
 type MachineSvc interface {
 	ListMachines(ctx context.Context, req *ListMachinesRequest) (*apiresource.List[apiresource.Machine], *apierror.APIError)
-	GetMachine(ctx context.Context, req *GetMachineRequest) (*apiresource.Machine, *apierror.APIError)
+	GetMachine(ctx context.Context, req *RetrieveMachineRequest) (*apiresource.Machine, *apierror.APIError)
 	CreateMachine(ctx context.Context, req *CreateMachineRequest) (*apiresource.Machine, *apierror.APIError)
 	UpdateMachine(ctx context.Context, req *UpdateMachineRequest) (*apiresource.Machine, *apierror.APIError)
 	DeleteMachine(ctx context.Context, req *DeleteMachineRequest) (*apiresource.EmptyResource, *apierror.APIError)
@@ -51,9 +52,10 @@ func NewMachineSvc(config *MachineSvcConfig) MachineSvc {
 
 func (m *machineSvcImpl) ListMachines(ctx context.Context, req *ListMachinesRequest) (*apiresource.List[apiresource.Machine], *apierror.APIError) {
 	pbReq := &pb.ListMachinesRequest{
-		Cursor: req.Cursor,
-		Limit:  req.Limit,
-		Query:  req.Query,
+		Cursor:   req.Cursor,
+		Limit:    req.Limit,
+		Query:    req.Query,
+		Includes: appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, machineSvcTracer, "service.machines.list", domain.ServiceName,
@@ -68,9 +70,10 @@ func (m *machineSvcImpl) ListMachines(ctx context.Context, req *ListMachinesRequ
 	return MachineListPresenter(resp), nil
 }
 
-func (m *machineSvcImpl) GetMachine(ctx context.Context, req *GetMachineRequest) (*apiresource.Machine, *apierror.APIError) {
+func (m *machineSvcImpl) GetMachine(ctx context.Context, req *RetrieveMachineRequest) (*apiresource.Machine, *apierror.APIError) {
 	pbReq := &pb.GetMachineRequest{
-		Id: req.MachineID,
+		Id:       req.MachineID,
+		Includes: appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, machineSvcTracer, "service.machines.get", domain.ServiceName,
@@ -92,6 +95,7 @@ func (m *machineSvcImpl) CreateMachine(ctx context.Context, req *CreateMachineRe
 		SerialNumber: req.SerialNumber,
 		Notes:        req.Notes,
 		DepartmentId: req.DepartmentID,
+		Includes:     appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, machineSvcTracer, "service.machines.create", domain.ServiceName,
@@ -113,6 +117,7 @@ func (m *machineSvcImpl) UpdateMachine(ctx context.Context, req *UpdateMachineRe
 		Name:         req.Name,
 		SerialNumber: req.SerialNumber,
 		Notes:        req.Notes,
+		Includes:     appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, machineSvcTracer, "service.machines.update", domain.ServiceName,

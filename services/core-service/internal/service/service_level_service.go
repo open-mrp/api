@@ -184,7 +184,7 @@ func (s *serviceLevelSvcImpl) CreateServiceLevel(ctx context.Context, params dom
 		var result *domain.ServiceLevel
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *serviceLevelSvcImpl) *apierror.APIError {
 			// Validate carrier exists
-			_, apiErr := txSvc.repos.NewCarrierRepo().Get(txCtx, params.AccountID, params.CarrierID)
+			_, apiErr := txSvc.repos.NewCarrierRepo().Get(txCtx, domain.GetCarrierParams{AccountID: params.AccountID, CarrierID: params.CarrierID})
 			if apiErr != nil {
 				return apiErr
 			}

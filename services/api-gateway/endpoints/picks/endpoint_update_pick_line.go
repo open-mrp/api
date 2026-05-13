@@ -13,7 +13,7 @@ import (
 // UpdatePickLineRequest is the request to update a pick line's quantity.
 type UpdatePickLineRequest struct {
 	// Pick ID.
-	PickID string `path:"pickId" validate:"required"`
+	PickID string `path:"pick_id" validate:"required"`
 	// Pick line ID.
 	PickLineID string `path:"id" validate:"required"`
 	// Quantity value to set for this line.
@@ -36,7 +36,7 @@ func (e *UpdatePickLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateP
 		Title:             "Update Pick Line",
 		Description:       "Partially updates a pick line's quantity value.",
 		Method:            http.MethodPatch,
-		Route:             "/v1/operations/picks/{pickId}/lines/{id}",
+		Route:             "/v1/operations/picks/{pick_id}/lines/{id}",
 		ContentType:       "application/json",
 		Request:           &UpdatePickLineRequest{},
 		Response:          &apiresource.PickLineDetail{},

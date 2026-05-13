@@ -101,6 +101,7 @@ type UpdatePickParams struct {
 	PickID     string
 	Number     *string
 	FinishedAt **time.Time // double pointer: nil = not provided, *nil = set to null
+	Includes   []string
 }
 
 // UpdatePickLineParams holds the parameters for updating a pick line's quantity.

@@ -12,7 +12,7 @@ import (
 // Request to receive a receiving order line.
 type ReceiveReceivingOrderLineRequest struct {
 	// Receiving order ID.
-	ReceivingOrderID string `path:"receivingOrderId" validate:"required"`
+	ReceivingOrderID string `path:"receiving_order_id" validate:"required"`
 	// Receiving order line ID.
 	LineID string `path:"id" validate:"required"`
 }
@@ -25,7 +25,7 @@ func (e *ReceiveReceivingOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoi
 		Description:       "Marks a receiving order line as received.",
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
-		Route:             "/v1/operations/receiving-orders/{receivingOrderId}/lines/{id}/actions/receive",
+		Route:             "/v1/operations/receiving-orders/{receiving_order_id}/lines/{id}/actions/receive",
 		Request:           &ReceiveReceivingOrderLineRequest{},
 		Response:          &apiresource.ReceivingOrderLine{},
 		SuccessStatusCode: http.StatusOK,

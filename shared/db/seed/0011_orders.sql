@@ -149,11 +149,11 @@ UPDATE pick_line SET packed_at = DATE_SUB(NOW(), INTERVAL 4 DAY) WHERE id IN ('p
 -- `?include=service_level` and `?include=shipped_by` both return populated stubs
 -- on the seeded row. Invoice is linked post-hoc in 0013_finance.sql (INV-003).
 INSERT IGNORE INTO shipment (id, number, sales_order_id, carrier_id, carrier_option_id, shipping_address_id, shipment_status_code, shipped_by_id, account_id, created_at, updated_at) VALUES
-    ('sh_01k0a87w33emw8pmkz1mf86cg1', 'SHP-001', 'or_01k0a8bs2ye3f9p8sj0m4dfmwe', 'delivery', 'crop_01seedground000000', 'ad_01k09wnpvrea0awz7vem2j8j7g', 'packed', 'us_1wjfmmbwg8l7', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
+    ('sh_01k0a87w33emw8pmkz1mf86cg1', 'SHP-001', 'or_01k0a8bs2ye3f9p8sj0m4dfmwe', 'delivery', 'crop_01seedground000000', 'ad_01k09wnpvrea0awz7vem2j8j7g', 'packed', 'acus_s83fjhyfmqen', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
 
 -- Fulfilled shipment (status: shipped)
 INSERT IGNORE INTO shipment (id, number, sales_order_id, carrier_id, shipping_address_id, shipment_status_code, shipped_at, shipped_by_id, master_tracking_number, account_id, created_at, updated_at) VALUES
-    ('sh_01k0a87w33fw0shhsahaa0yq6r', 'SHP-002', 'or_01k0a8bs2yf909wjkd7ecd6x4z', 'will_call', 'ad_01k09wnpvrea0awz7vem2j8j7g', 'shipped', DATE_SUB(NOW(), INTERVAL 2 DAY), 'us_1wjfmmbwg8l7', '1234567890', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
+    ('sh_01k0a87w33fw0shhsahaa0yq6r', 'SHP-002', 'or_01k0a8bs2yf909wjkd7ecd6x4z', 'will_call', 'ad_01k09wnpvrea0awz7vem2j8j7g', 'shipped', DATE_SUB(NOW(), INTERVAL 2 DAY), 'acus_s83fjhyfmqen', '1234567890', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
 
 -- Shipping cases — quantities for freight weight/amount
 INSERT IGNORE INTO quantity (id, value, unit_id, created_at, updated_at) VALUES
@@ -205,3 +205,12 @@ INSERT IGNORE INTO order_discount (id, name, code, percentage, value, discount_t
 -- `?include=order_discount` resolves.
 UPDATE sales_order SET order_discount_id = 'ords_01seedpct10discount'
     WHERE id = 'or_01k0a8bs2yejxbsvqhrx4drkq1' AND order_discount_id IS NULL;
+
+-- Backfill include-critical references for SeedSalesOrderID when the row already
+-- exists from an older seed run (INSERT IGNORE keeps stale values).
+UPDATE sales_order
+SET
+    payment_term_id = COALESCE(payment_term_id, 'pytm_01seednet3000000'),
+    shipping_term_id = COALESCE(shipping_term_id, 'prepaid_billed'),
+    carrier_option_id = COALESCE(carrier_option_id, 'crop_01seedground000000')
+WHERE id = 'or_01k0a8bs2yejxbsvqhrx4drkq1';

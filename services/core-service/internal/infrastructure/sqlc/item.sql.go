@@ -353,29 +353,94 @@ SELECT
     ic.name AS category_name,
     ic.item_category_type_code,
     ic.unit_group_id AS category_unit_group_id,
+    cat_ug.name AS category_unit_group_name,
+    cat_ug.unit_type_code AS category_unit_group_type,
+    cat_ug.created_at AS category_unit_group_created_at,
+    cat_ug.updated_at AS category_unit_group_updated_at,
     rv.id AS unit_value_rate_id,
     rv.value AS unit_value_rate_value,
     rv.numerator_unit_id AS unit_value_numerator_unit_id,
+    nvu.name AS unit_value_numerator_unit_name,
+    nvu.abbreviation AS unit_value_numerator_unit_abbreviation,
+    nvu.unit_dimension_code AS unit_value_numerator_unit_type,
+    nvu.ratio_numerator AS unit_value_numerator_unit_ratio_numerator,
+    nvu.ratio_denominator AS unit_value_numerator_unit_ratio_denominator,
+    nvu.offset_numerator AS unit_value_numerator_unit_offset_numerator,
+    nvu.offset_denominator AS unit_value_numerator_unit_offset_denominator,
+    nvu.created_at AS unit_value_numerator_unit_created_at,
+    nvu.updated_at AS unit_value_numerator_unit_updated_at,
     rv.denominator_unit_id AS unit_value_denominator_unit_id,
+    dvu.name AS unit_value_denominator_unit_name,
+    dvu.abbreviation AS unit_value_denominator_unit_abbreviation,
+    dvu.unit_dimension_code AS unit_value_denominator_unit_type,
+    dvu.ratio_numerator AS unit_value_denominator_unit_ratio_numerator,
+    dvu.ratio_denominator AS unit_value_denominator_unit_ratio_denominator,
+    dvu.offset_numerator AS unit_value_denominator_unit_offset_numerator,
+    dvu.offset_denominator AS unit_value_denominator_unit_offset_denominator,
+    dvu.created_at AS unit_value_denominator_unit_created_at,
+    dvu.updated_at AS unit_value_denominator_unit_updated_at,
     rv.created_at AS unit_value_created_at,
     rv.updated_at AS unit_value_updated_at,
     rc.id AS unit_cost_rate_id,
     rc.value AS unit_cost_rate_value,
     rc.numerator_unit_id AS unit_cost_numerator_unit_id,
+    ncu.name AS unit_cost_numerator_unit_name,
+    ncu.abbreviation AS unit_cost_numerator_unit_abbreviation,
+    ncu.unit_dimension_code AS unit_cost_numerator_unit_type,
+    ncu.ratio_numerator AS unit_cost_numerator_unit_ratio_numerator,
+    ncu.ratio_denominator AS unit_cost_numerator_unit_ratio_denominator,
+    ncu.offset_numerator AS unit_cost_numerator_unit_offset_numerator,
+    ncu.offset_denominator AS unit_cost_numerator_unit_offset_denominator,
+    ncu.created_at AS unit_cost_numerator_unit_created_at,
+    ncu.updated_at AS unit_cost_numerator_unit_updated_at,
     rc.denominator_unit_id AS unit_cost_denominator_unit_id,
+    dcu.name AS unit_cost_denominator_unit_name,
+    dcu.abbreviation AS unit_cost_denominator_unit_abbreviation,
+    dcu.unit_dimension_code AS unit_cost_denominator_unit_type,
+    dcu.ratio_numerator AS unit_cost_denominator_unit_ratio_numerator,
+    dcu.ratio_denominator AS unit_cost_denominator_unit_ratio_denominator,
+    dcu.offset_numerator AS unit_cost_denominator_unit_offset_numerator,
+    dcu.offset_denominator AS unit_cost_denominator_unit_offset_denominator,
+    dcu.created_at AS unit_cost_denominator_unit_created_at,
+    dcu.updated_at AS unit_cost_denominator_unit_updated_at,
     rc.created_at AS unit_cost_created_at,
     rc.updated_at AS unit_cost_updated_at,
     rb.id AS burn_rate_id_joined,
     rb.value AS burn_rate_value,
     rb.numerator_unit_id AS burn_rate_numerator_unit_id,
+    nbr.name AS burn_rate_numerator_unit_name,
+    nbr.abbreviation AS burn_rate_numerator_unit_abbreviation,
+    nbr.unit_dimension_code AS burn_rate_numerator_unit_type,
+    nbr.ratio_numerator AS burn_rate_numerator_unit_ratio_numerator,
+    nbr.ratio_denominator AS burn_rate_numerator_unit_ratio_denominator,
+    nbr.offset_numerator AS burn_rate_numerator_unit_offset_numerator,
+    nbr.offset_denominator AS burn_rate_numerator_unit_offset_denominator,
+    nbr.created_at AS burn_rate_numerator_unit_created_at,
+    nbr.updated_at AS burn_rate_numerator_unit_updated_at,
     rb.denominator_unit_id AS burn_rate_denominator_unit_id,
+    dbr.name AS burn_rate_denominator_unit_name,
+    dbr.abbreviation AS burn_rate_denominator_unit_abbreviation,
+    dbr.unit_dimension_code AS burn_rate_denominator_unit_type,
+    dbr.ratio_numerator AS burn_rate_denominator_unit_ratio_numerator,
+    dbr.ratio_denominator AS burn_rate_denominator_unit_ratio_denominator,
+    dbr.offset_numerator AS burn_rate_denominator_unit_offset_numerator,
+    dbr.offset_denominator AS burn_rate_denominator_unit_offset_denominator,
+    dbr.created_at AS burn_rate_denominator_unit_created_at,
+    dbr.updated_at AS burn_rate_denominator_unit_updated_at,
     rb.created_at AS burn_rate_created_at,
     rb.updated_at AS burn_rate_updated_at
 FROM item i
 JOIN item_category ic ON ic.id = i.item_category_id
+JOIN unit_group cat_ug ON cat_ug.id = ic.unit_group_id
 JOIN rate rv ON rv.id = i.unit_value_id
+JOIN unit nvu ON nvu.id = rv.numerator_unit_id
+JOIN unit dvu ON dvu.id = rv.denominator_unit_id
 JOIN rate rc ON rc.id = i.unit_cost_id
+JOIN unit ncu ON ncu.id = rc.numerator_unit_id
+JOIN unit dcu ON dcu.id = rc.denominator_unit_id
 JOIN rate rb ON rb.id = i.burn_rate_id
+JOIN unit nbr ON nbr.id = rb.numerator_unit_id
+JOIN unit dbr ON dbr.id = rb.denominator_unit_id
 WHERE i.id = ?
 AND i.account_id = ?
 AND i.deleted_at IS NULL
@@ -387,41 +452,99 @@ type GetItemParams struct {
 }
 
 type GetItemRow struct {
-	ID                         string
-	Sku                        string
-	Description                sql.NullString
-	Notes                      sql.NullString
-	ItemTypeCode               string
-	ItemCategoryID             string
-	UnitValueID                string
-	UnitCostID                 string
-	BurnRateID                 string
-	AccountID                  string
-	IsDirty                    bool
-	CreatedAt                  time.Time
-	UpdatedAt                  time.Time
-	DeletedAt                  sql.NullTime
-	CategoryName               string
-	ItemCategoryTypeCode       string
-	CategoryUnitGroupID        string
-	UnitValueRateID            string
-	UnitValueRateValue         string
-	UnitValueNumeratorUnitID   string
-	UnitValueDenominatorUnitID string
-	UnitValueCreatedAt         time.Time
-	UnitValueUpdatedAt         time.Time
-	UnitCostRateID             string
-	UnitCostRateValue          string
-	UnitCostNumeratorUnitID    string
-	UnitCostDenominatorUnitID  string
-	UnitCostCreatedAt          time.Time
-	UnitCostUpdatedAt          time.Time
-	BurnRateIDJoined           string
-	BurnRateValue              string
-	BurnRateNumeratorUnitID    string
-	BurnRateDenominatorUnitID  string
-	BurnRateCreatedAt          time.Time
-	BurnRateUpdatedAt          time.Time
+	ID                                        string
+	Sku                                       string
+	Description                               sql.NullString
+	Notes                                     sql.NullString
+	ItemTypeCode                              string
+	ItemCategoryID                            string
+	UnitValueID                               string
+	UnitCostID                                string
+	BurnRateID                                string
+	AccountID                                 string
+	IsDirty                                   bool
+	CreatedAt                                 time.Time
+	UpdatedAt                                 time.Time
+	DeletedAt                                 sql.NullTime
+	CategoryName                              string
+	ItemCategoryTypeCode                      string
+	CategoryUnitGroupID                       string
+	CategoryUnitGroupName                     string
+	CategoryUnitGroupType                     string
+	CategoryUnitGroupCreatedAt                time.Time
+	CategoryUnitGroupUpdatedAt                time.Time
+	UnitValueRateID                           string
+	UnitValueRateValue                        string
+	UnitValueNumeratorUnitID                  string
+	UnitValueNumeratorUnitName                string
+	UnitValueNumeratorUnitAbbreviation        string
+	UnitValueNumeratorUnitType                string
+	UnitValueNumeratorUnitRatioNumerator      string
+	UnitValueNumeratorUnitRatioDenominator    string
+	UnitValueNumeratorUnitOffsetNumerator     string
+	UnitValueNumeratorUnitOffsetDenominator   string
+	UnitValueNumeratorUnitCreatedAt           time.Time
+	UnitValueNumeratorUnitUpdatedAt           time.Time
+	UnitValueDenominatorUnitID                string
+	UnitValueDenominatorUnitName              string
+	UnitValueDenominatorUnitAbbreviation      string
+	UnitValueDenominatorUnitType              string
+	UnitValueDenominatorUnitRatioNumerator    string
+	UnitValueDenominatorUnitRatioDenominator  string
+	UnitValueDenominatorUnitOffsetNumerator   string
+	UnitValueDenominatorUnitOffsetDenominator string
+	UnitValueDenominatorUnitCreatedAt         time.Time
+	UnitValueDenominatorUnitUpdatedAt         time.Time
+	UnitValueCreatedAt                        time.Time
+	UnitValueUpdatedAt                        time.Time
+	UnitCostRateID                            string
+	UnitCostRateValue                         string
+	UnitCostNumeratorUnitID                   string
+	UnitCostNumeratorUnitName                 string
+	UnitCostNumeratorUnitAbbreviation         string
+	UnitCostNumeratorUnitType                 string
+	UnitCostNumeratorUnitRatioNumerator       string
+	UnitCostNumeratorUnitRatioDenominator     string
+	UnitCostNumeratorUnitOffsetNumerator      string
+	UnitCostNumeratorUnitOffsetDenominator    string
+	UnitCostNumeratorUnitCreatedAt            time.Time
+	UnitCostNumeratorUnitUpdatedAt            time.Time
+	UnitCostDenominatorUnitID                 string
+	UnitCostDenominatorUnitName               string
+	UnitCostDenominatorUnitAbbreviation       string
+	UnitCostDenominatorUnitType               string
+	UnitCostDenominatorUnitRatioNumerator     string
+	UnitCostDenominatorUnitRatioDenominator   string
+	UnitCostDenominatorUnitOffsetNumerator    string
+	UnitCostDenominatorUnitOffsetDenominator  string
+	UnitCostDenominatorUnitCreatedAt          time.Time
+	UnitCostDenominatorUnitUpdatedAt          time.Time
+	UnitCostCreatedAt                         time.Time
+	UnitCostUpdatedAt                         time.Time
+	BurnRateIDJoined                          string
+	BurnRateValue                             string
+	BurnRateNumeratorUnitID                   string
+	BurnRateNumeratorUnitName                 string
+	BurnRateNumeratorUnitAbbreviation         string
+	BurnRateNumeratorUnitType                 string
+	BurnRateNumeratorUnitRatioNumerator       string
+	BurnRateNumeratorUnitRatioDenominator     string
+	BurnRateNumeratorUnitOffsetNumerator      string
+	BurnRateNumeratorUnitOffsetDenominator    string
+	BurnRateNumeratorUnitCreatedAt            time.Time
+	BurnRateNumeratorUnitUpdatedAt            time.Time
+	BurnRateDenominatorUnitID                 string
+	BurnRateDenominatorUnitName               string
+	BurnRateDenominatorUnitAbbreviation       string
+	BurnRateDenominatorUnitType               string
+	BurnRateDenominatorUnitRatioNumerator     string
+	BurnRateDenominatorUnitRatioDenominator   string
+	BurnRateDenominatorUnitOffsetNumerator    string
+	BurnRateDenominatorUnitOffsetDenominator  string
+	BurnRateDenominatorUnitCreatedAt          time.Time
+	BurnRateDenominatorUnitUpdatedAt          time.Time
+	BurnRateCreatedAt                         time.Time
+	BurnRateUpdatedAt                         time.Time
 }
 
 func (q *Queries) GetItem(ctx context.Context, arg GetItemParams) (GetItemRow, error) {
@@ -445,22 +568,80 @@ func (q *Queries) GetItem(ctx context.Context, arg GetItemParams) (GetItemRow, e
 		&i.CategoryName,
 		&i.ItemCategoryTypeCode,
 		&i.CategoryUnitGroupID,
+		&i.CategoryUnitGroupName,
+		&i.CategoryUnitGroupType,
+		&i.CategoryUnitGroupCreatedAt,
+		&i.CategoryUnitGroupUpdatedAt,
 		&i.UnitValueRateID,
 		&i.UnitValueRateValue,
 		&i.UnitValueNumeratorUnitID,
+		&i.UnitValueNumeratorUnitName,
+		&i.UnitValueNumeratorUnitAbbreviation,
+		&i.UnitValueNumeratorUnitType,
+		&i.UnitValueNumeratorUnitRatioNumerator,
+		&i.UnitValueNumeratorUnitRatioDenominator,
+		&i.UnitValueNumeratorUnitOffsetNumerator,
+		&i.UnitValueNumeratorUnitOffsetDenominator,
+		&i.UnitValueNumeratorUnitCreatedAt,
+		&i.UnitValueNumeratorUnitUpdatedAt,
 		&i.UnitValueDenominatorUnitID,
+		&i.UnitValueDenominatorUnitName,
+		&i.UnitValueDenominatorUnitAbbreviation,
+		&i.UnitValueDenominatorUnitType,
+		&i.UnitValueDenominatorUnitRatioNumerator,
+		&i.UnitValueDenominatorUnitRatioDenominator,
+		&i.UnitValueDenominatorUnitOffsetNumerator,
+		&i.UnitValueDenominatorUnitOffsetDenominator,
+		&i.UnitValueDenominatorUnitCreatedAt,
+		&i.UnitValueDenominatorUnitUpdatedAt,
 		&i.UnitValueCreatedAt,
 		&i.UnitValueUpdatedAt,
 		&i.UnitCostRateID,
 		&i.UnitCostRateValue,
 		&i.UnitCostNumeratorUnitID,
+		&i.UnitCostNumeratorUnitName,
+		&i.UnitCostNumeratorUnitAbbreviation,
+		&i.UnitCostNumeratorUnitType,
+		&i.UnitCostNumeratorUnitRatioNumerator,
+		&i.UnitCostNumeratorUnitRatioDenominator,
+		&i.UnitCostNumeratorUnitOffsetNumerator,
+		&i.UnitCostNumeratorUnitOffsetDenominator,
+		&i.UnitCostNumeratorUnitCreatedAt,
+		&i.UnitCostNumeratorUnitUpdatedAt,
 		&i.UnitCostDenominatorUnitID,
+		&i.UnitCostDenominatorUnitName,
+		&i.UnitCostDenominatorUnitAbbreviation,
+		&i.UnitCostDenominatorUnitType,
+		&i.UnitCostDenominatorUnitRatioNumerator,
+		&i.UnitCostDenominatorUnitRatioDenominator,
+		&i.UnitCostDenominatorUnitOffsetNumerator,
+		&i.UnitCostDenominatorUnitOffsetDenominator,
+		&i.UnitCostDenominatorUnitCreatedAt,
+		&i.UnitCostDenominatorUnitUpdatedAt,
 		&i.UnitCostCreatedAt,
 		&i.UnitCostUpdatedAt,
 		&i.BurnRateIDJoined,
 		&i.BurnRateValue,
 		&i.BurnRateNumeratorUnitID,
+		&i.BurnRateNumeratorUnitName,
+		&i.BurnRateNumeratorUnitAbbreviation,
+		&i.BurnRateNumeratorUnitType,
+		&i.BurnRateNumeratorUnitRatioNumerator,
+		&i.BurnRateNumeratorUnitRatioDenominator,
+		&i.BurnRateNumeratorUnitOffsetNumerator,
+		&i.BurnRateNumeratorUnitOffsetDenominator,
+		&i.BurnRateNumeratorUnitCreatedAt,
+		&i.BurnRateNumeratorUnitUpdatedAt,
 		&i.BurnRateDenominatorUnitID,
+		&i.BurnRateDenominatorUnitName,
+		&i.BurnRateDenominatorUnitAbbreviation,
+		&i.BurnRateDenominatorUnitType,
+		&i.BurnRateDenominatorUnitRatioNumerator,
+		&i.BurnRateDenominatorUnitRatioDenominator,
+		&i.BurnRateDenominatorUnitOffsetNumerator,
+		&i.BurnRateDenominatorUnitOffsetDenominator,
+		&i.BurnRateDenominatorUnitCreatedAt,
+		&i.BurnRateDenominatorUnitUpdatedAt,
 		&i.BurnRateCreatedAt,
 		&i.BurnRateUpdatedAt,
 	)
@@ -472,7 +653,10 @@ SELECT
     a.id,
     a.text,
     a.color_code,
-    a.property_id
+    a.property_id,
+    a.` + "`" + `order` + "`" + `,
+    a.created_at,
+    a.updated_at
 FROM _item_attributes ia
 JOIN attribute a ON a.id = ia.A
 WHERE ia.B = ?
@@ -483,6 +667,9 @@ type GetItemAttributesRow struct {
 	Text       string
 	ColorCode  string
 	PropertyID string
+	Order      int32
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
 }
 
 func (q *Queries) GetItemAttributes(ctx context.Context, itemID string) ([]GetItemAttributesRow, error) {
@@ -499,6 +686,9 @@ func (q *Queries) GetItemAttributes(ctx context.Context, itemID string) ([]GetIt
 			&i.Text,
 			&i.ColorCode,
 			&i.PropertyID,
+			&i.Order,
+			&i.CreatedAt,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -513,15 +703,100 @@ func (q *Queries) GetItemAttributes(ctx context.Context, itemID string) ([]GetIt
 	return items, nil
 }
 
+const getItemBase = `-- name: GetItemBase :one
+SELECT
+    i.id,
+    i.sku,
+    i.description,
+    i.notes,
+    i.item_type_code,
+    i.item_category_id,
+    i.unit_value_id,
+    i.unit_cost_id,
+    i.burn_rate_id,
+    i.account_id,
+    i.is_dirty,
+    i.created_at,
+    i.updated_at,
+    i.deleted_at,
+    ic.name AS category_name,
+    ic.item_category_type_code,
+    ic.unit_group_id AS category_unit_group_id,
+    ic.created_at AS category_created_at,
+    ic.updated_at AS category_updated_at
+FROM item i
+JOIN item_category ic ON ic.id = i.item_category_id
+WHERE i.id = ?
+AND i.account_id = ?
+AND i.deleted_at IS NULL
+`
+
+type GetItemBaseParams struct {
+	ID        string
+	AccountID string
+}
+
+type GetItemBaseRow struct {
+	ID                   string
+	Sku                  string
+	Description          sql.NullString
+	Notes                sql.NullString
+	ItemTypeCode         string
+	ItemCategoryID       string
+	UnitValueID          string
+	UnitCostID           string
+	BurnRateID           string
+	AccountID            string
+	IsDirty              bool
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+	DeletedAt            sql.NullTime
+	CategoryName         string
+	ItemCategoryTypeCode string
+	CategoryUnitGroupID  string
+	CategoryCreatedAt    time.Time
+	CategoryUpdatedAt    time.Time
+}
+
+func (q *Queries) GetItemBase(ctx context.Context, arg GetItemBaseParams) (GetItemBaseRow, error) {
+	row := q.db.QueryRowContext(ctx, getItemBase, arg.ID, arg.AccountID)
+	var i GetItemBaseRow
+	err := row.Scan(
+		&i.ID,
+		&i.Sku,
+		&i.Description,
+		&i.Notes,
+		&i.ItemTypeCode,
+		&i.ItemCategoryID,
+		&i.UnitValueID,
+		&i.UnitCostID,
+		&i.BurnRateID,
+		&i.AccountID,
+		&i.IsDirty,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.CategoryName,
+		&i.ItemCategoryTypeCode,
+		&i.CategoryUnitGroupID,
+		&i.CategoryCreatedAt,
+		&i.CategoryUpdatedAt,
+	)
+	return i, err
+}
+
 const getItemInventory = `-- name: GetItemInventory :one
 SELECT
     COALESCE(receipt_totals.on_hand, 0) AS on_hand,
     COALESCE(issue_totals.reserved, 0) AS reserved,
     COALESCE(issue_totals.short, 0) AS short,
     CAST(COALESCE(receipt_totals.on_hand, 0) - COALESCE(issue_totals.reserved, 0) - COALESCE(issue_totals.short, 0) AS DECIMAL(65,30)) AS available_to_promise,
-    COALESCE(rv.denominator_unit_id, '') AS unit_id
+    COALESCE(rv.denominator_unit_id, '') AS unit_id,
+    COALESCE(dvu.abbreviation, '') AS unit_abbreviation,
+    COALESCE(dvu.unit_dimension_code, '') AS unit_type
 FROM item i
 JOIN rate rv ON rv.id = i.unit_value_id
+LEFT JOIN unit dvu ON dvu.id = rv.denominator_unit_id
 LEFT JOIN (
     SELECT
         ir.item_id,
@@ -573,6 +848,8 @@ type GetItemInventoryRow struct {
 	Short              interface{}
 	AvailableToPromise string
 	UnitID             string
+	UnitAbbreviation   string
+	UnitType           string
 }
 
 func (q *Queries) GetItemInventory(ctx context.Context, arg GetItemInventoryParams) (GetItemInventoryRow, error) {
@@ -592,6 +869,8 @@ func (q *Queries) GetItemInventory(ctx context.Context, arg GetItemInventoryPara
 		&i.Short,
 		&i.AvailableToPromise,
 		&i.UnitID,
+		&i.UnitAbbreviation,
+		&i.UnitType,
 	)
 	return i, err
 }
@@ -660,29 +939,94 @@ SELECT
     ic.name AS category_name,
     ic.item_category_type_code,
     ic.unit_group_id AS category_unit_group_id,
+    cat_ug.name AS category_unit_group_name,
+    cat_ug.unit_type_code AS category_unit_group_type,
+    cat_ug.created_at AS category_unit_group_created_at,
+    cat_ug.updated_at AS category_unit_group_updated_at,
     rv.id AS unit_value_rate_id,
     rv.value AS unit_value_rate_value,
     rv.numerator_unit_id AS unit_value_numerator_unit_id,
+    nvu.name AS unit_value_numerator_unit_name,
+    nvu.abbreviation AS unit_value_numerator_unit_abbreviation,
+    nvu.unit_dimension_code AS unit_value_numerator_unit_type,
+    nvu.ratio_numerator AS unit_value_numerator_unit_ratio_numerator,
+    nvu.ratio_denominator AS unit_value_numerator_unit_ratio_denominator,
+    nvu.offset_numerator AS unit_value_numerator_unit_offset_numerator,
+    nvu.offset_denominator AS unit_value_numerator_unit_offset_denominator,
+    nvu.created_at AS unit_value_numerator_unit_created_at,
+    nvu.updated_at AS unit_value_numerator_unit_updated_at,
     rv.denominator_unit_id AS unit_value_denominator_unit_id,
+    dvu.name AS unit_value_denominator_unit_name,
+    dvu.abbreviation AS unit_value_denominator_unit_abbreviation,
+    dvu.unit_dimension_code AS unit_value_denominator_unit_type,
+    dvu.ratio_numerator AS unit_value_denominator_unit_ratio_numerator,
+    dvu.ratio_denominator AS unit_value_denominator_unit_ratio_denominator,
+    dvu.offset_numerator AS unit_value_denominator_unit_offset_numerator,
+    dvu.offset_denominator AS unit_value_denominator_unit_offset_denominator,
+    dvu.created_at AS unit_value_denominator_unit_created_at,
+    dvu.updated_at AS unit_value_denominator_unit_updated_at,
     rv.created_at AS unit_value_created_at,
     rv.updated_at AS unit_value_updated_at,
     rc.id AS unit_cost_rate_id,
     rc.value AS unit_cost_rate_value,
     rc.numerator_unit_id AS unit_cost_numerator_unit_id,
+    ncu.name AS unit_cost_numerator_unit_name,
+    ncu.abbreviation AS unit_cost_numerator_unit_abbreviation,
+    ncu.unit_dimension_code AS unit_cost_numerator_unit_type,
+    ncu.ratio_numerator AS unit_cost_numerator_unit_ratio_numerator,
+    ncu.ratio_denominator AS unit_cost_numerator_unit_ratio_denominator,
+    ncu.offset_numerator AS unit_cost_numerator_unit_offset_numerator,
+    ncu.offset_denominator AS unit_cost_numerator_unit_offset_denominator,
+    ncu.created_at AS unit_cost_numerator_unit_created_at,
+    ncu.updated_at AS unit_cost_numerator_unit_updated_at,
     rc.denominator_unit_id AS unit_cost_denominator_unit_id,
+    dcu.name AS unit_cost_denominator_unit_name,
+    dcu.abbreviation AS unit_cost_denominator_unit_abbreviation,
+    dcu.unit_dimension_code AS unit_cost_denominator_unit_type,
+    dcu.ratio_numerator AS unit_cost_denominator_unit_ratio_numerator,
+    dcu.ratio_denominator AS unit_cost_denominator_unit_ratio_denominator,
+    dcu.offset_numerator AS unit_cost_denominator_unit_offset_numerator,
+    dcu.offset_denominator AS unit_cost_denominator_unit_offset_denominator,
+    dcu.created_at AS unit_cost_denominator_unit_created_at,
+    dcu.updated_at AS unit_cost_denominator_unit_updated_at,
     rc.created_at AS unit_cost_created_at,
     rc.updated_at AS unit_cost_updated_at,
     rb.id AS burn_rate_id_joined,
     rb.value AS burn_rate_value,
     rb.numerator_unit_id AS burn_rate_numerator_unit_id,
+    nbr.name AS burn_rate_numerator_unit_name,
+    nbr.abbreviation AS burn_rate_numerator_unit_abbreviation,
+    nbr.unit_dimension_code AS burn_rate_numerator_unit_type,
+    nbr.ratio_numerator AS burn_rate_numerator_unit_ratio_numerator,
+    nbr.ratio_denominator AS burn_rate_numerator_unit_ratio_denominator,
+    nbr.offset_numerator AS burn_rate_numerator_unit_offset_numerator,
+    nbr.offset_denominator AS burn_rate_numerator_unit_offset_denominator,
+    nbr.created_at AS burn_rate_numerator_unit_created_at,
+    nbr.updated_at AS burn_rate_numerator_unit_updated_at,
     rb.denominator_unit_id AS burn_rate_denominator_unit_id,
+    dbr.name AS burn_rate_denominator_unit_name,
+    dbr.abbreviation AS burn_rate_denominator_unit_abbreviation,
+    dbr.unit_dimension_code AS burn_rate_denominator_unit_type,
+    dbr.ratio_numerator AS burn_rate_denominator_unit_ratio_numerator,
+    dbr.ratio_denominator AS burn_rate_denominator_unit_ratio_denominator,
+    dbr.offset_numerator AS burn_rate_denominator_unit_offset_numerator,
+    dbr.offset_denominator AS burn_rate_denominator_unit_offset_denominator,
+    dbr.created_at AS burn_rate_denominator_unit_created_at,
+    dbr.updated_at AS burn_rate_denominator_unit_updated_at,
     rb.created_at AS burn_rate_created_at,
     rb.updated_at AS burn_rate_updated_at
 FROM item i
 JOIN item_category ic ON ic.id = i.item_category_id
+JOIN unit_group cat_ug ON cat_ug.id = ic.unit_group_id
 JOIN rate rv ON rv.id = i.unit_value_id
+JOIN unit nvu ON nvu.id = rv.numerator_unit_id
+JOIN unit dvu ON dvu.id = rv.denominator_unit_id
 JOIN rate rc ON rc.id = i.unit_cost_id
+JOIN unit ncu ON ncu.id = rc.numerator_unit_id
+JOIN unit dcu ON dcu.id = rc.denominator_unit_id
 JOIN rate rb ON rb.id = i.burn_rate_id
+JOIN unit nbr ON nbr.id = rb.numerator_unit_id
+JOIN unit dbr ON dbr.id = rb.denominator_unit_id
 WHERE i.account_id = ?
 AND i.deleted_at IS NULL
 AND (
@@ -779,41 +1123,99 @@ type ListItemsBackwardParams struct {
 }
 
 type ListItemsBackwardRow struct {
-	ID                         string
-	Sku                        string
-	Description                sql.NullString
-	Notes                      sql.NullString
-	ItemTypeCode               string
-	ItemCategoryID             string
-	UnitValueID                string
-	UnitCostID                 string
-	BurnRateID                 string
-	AccountID                  string
-	IsDirty                    bool
-	CreatedAt                  time.Time
-	UpdatedAt                  time.Time
-	DeletedAt                  sql.NullTime
-	CategoryName               string
-	ItemCategoryTypeCode       string
-	CategoryUnitGroupID        string
-	UnitValueRateID            string
-	UnitValueRateValue         string
-	UnitValueNumeratorUnitID   string
-	UnitValueDenominatorUnitID string
-	UnitValueCreatedAt         time.Time
-	UnitValueUpdatedAt         time.Time
-	UnitCostRateID             string
-	UnitCostRateValue          string
-	UnitCostNumeratorUnitID    string
-	UnitCostDenominatorUnitID  string
-	UnitCostCreatedAt          time.Time
-	UnitCostUpdatedAt          time.Time
-	BurnRateIDJoined           string
-	BurnRateValue              string
-	BurnRateNumeratorUnitID    string
-	BurnRateDenominatorUnitID  string
-	BurnRateCreatedAt          time.Time
-	BurnRateUpdatedAt          time.Time
+	ID                                        string
+	Sku                                       string
+	Description                               sql.NullString
+	Notes                                     sql.NullString
+	ItemTypeCode                              string
+	ItemCategoryID                            string
+	UnitValueID                               string
+	UnitCostID                                string
+	BurnRateID                                string
+	AccountID                                 string
+	IsDirty                                   bool
+	CreatedAt                                 time.Time
+	UpdatedAt                                 time.Time
+	DeletedAt                                 sql.NullTime
+	CategoryName                              string
+	ItemCategoryTypeCode                      string
+	CategoryUnitGroupID                       string
+	CategoryUnitGroupName                     string
+	CategoryUnitGroupType                     string
+	CategoryUnitGroupCreatedAt                time.Time
+	CategoryUnitGroupUpdatedAt                time.Time
+	UnitValueRateID                           string
+	UnitValueRateValue                        string
+	UnitValueNumeratorUnitID                  string
+	UnitValueNumeratorUnitName                string
+	UnitValueNumeratorUnitAbbreviation        string
+	UnitValueNumeratorUnitType                string
+	UnitValueNumeratorUnitRatioNumerator      string
+	UnitValueNumeratorUnitRatioDenominator    string
+	UnitValueNumeratorUnitOffsetNumerator     string
+	UnitValueNumeratorUnitOffsetDenominator   string
+	UnitValueNumeratorUnitCreatedAt           time.Time
+	UnitValueNumeratorUnitUpdatedAt           time.Time
+	UnitValueDenominatorUnitID                string
+	UnitValueDenominatorUnitName              string
+	UnitValueDenominatorUnitAbbreviation      string
+	UnitValueDenominatorUnitType              string
+	UnitValueDenominatorUnitRatioNumerator    string
+	UnitValueDenominatorUnitRatioDenominator  string
+	UnitValueDenominatorUnitOffsetNumerator   string
+	UnitValueDenominatorUnitOffsetDenominator string
+	UnitValueDenominatorUnitCreatedAt         time.Time
+	UnitValueDenominatorUnitUpdatedAt         time.Time
+	UnitValueCreatedAt                        time.Time
+	UnitValueUpdatedAt                        time.Time
+	UnitCostRateID                            string
+	UnitCostRateValue                         string
+	UnitCostNumeratorUnitID                   string
+	UnitCostNumeratorUnitName                 string
+	UnitCostNumeratorUnitAbbreviation         string
+	UnitCostNumeratorUnitType                 string
+	UnitCostNumeratorUnitRatioNumerator       string
+	UnitCostNumeratorUnitRatioDenominator     string
+	UnitCostNumeratorUnitOffsetNumerator      string
+	UnitCostNumeratorUnitOffsetDenominator    string
+	UnitCostNumeratorUnitCreatedAt            time.Time
+	UnitCostNumeratorUnitUpdatedAt            time.Time
+	UnitCostDenominatorUnitID                 string
+	UnitCostDenominatorUnitName               string
+	UnitCostDenominatorUnitAbbreviation       string
+	UnitCostDenominatorUnitType               string
+	UnitCostDenominatorUnitRatioNumerator     string
+	UnitCostDenominatorUnitRatioDenominator   string
+	UnitCostDenominatorUnitOffsetNumerator    string
+	UnitCostDenominatorUnitOffsetDenominator  string
+	UnitCostDenominatorUnitCreatedAt          time.Time
+	UnitCostDenominatorUnitUpdatedAt          time.Time
+	UnitCostCreatedAt                         time.Time
+	UnitCostUpdatedAt                         time.Time
+	BurnRateIDJoined                          string
+	BurnRateValue                             string
+	BurnRateNumeratorUnitID                   string
+	BurnRateNumeratorUnitName                 string
+	BurnRateNumeratorUnitAbbreviation         string
+	BurnRateNumeratorUnitType                 string
+	BurnRateNumeratorUnitRatioNumerator       string
+	BurnRateNumeratorUnitRatioDenominator     string
+	BurnRateNumeratorUnitOffsetNumerator      string
+	BurnRateNumeratorUnitOffsetDenominator    string
+	BurnRateNumeratorUnitCreatedAt            time.Time
+	BurnRateNumeratorUnitUpdatedAt            time.Time
+	BurnRateDenominatorUnitID                 string
+	BurnRateDenominatorUnitName               string
+	BurnRateDenominatorUnitAbbreviation       string
+	BurnRateDenominatorUnitType               string
+	BurnRateDenominatorUnitRatioNumerator     string
+	BurnRateDenominatorUnitRatioDenominator   string
+	BurnRateDenominatorUnitOffsetNumerator    string
+	BurnRateDenominatorUnitOffsetDenominator  string
+	BurnRateDenominatorUnitCreatedAt          time.Time
+	BurnRateDenominatorUnitUpdatedAt          time.Time
+	BurnRateCreatedAt                         time.Time
+	BurnRateUpdatedAt                         time.Time
 }
 
 func (q *Queries) ListItemsBackward(ctx context.Context, arg ListItemsBackwardParams) ([]ListItemsBackwardRow, error) {
@@ -892,24 +1294,380 @@ func (q *Queries) ListItemsBackward(ctx context.Context, arg ListItemsBackwardPa
 			&i.CategoryName,
 			&i.ItemCategoryTypeCode,
 			&i.CategoryUnitGroupID,
+			&i.CategoryUnitGroupName,
+			&i.CategoryUnitGroupType,
+			&i.CategoryUnitGroupCreatedAt,
+			&i.CategoryUnitGroupUpdatedAt,
 			&i.UnitValueRateID,
 			&i.UnitValueRateValue,
 			&i.UnitValueNumeratorUnitID,
+			&i.UnitValueNumeratorUnitName,
+			&i.UnitValueNumeratorUnitAbbreviation,
+			&i.UnitValueNumeratorUnitType,
+			&i.UnitValueNumeratorUnitRatioNumerator,
+			&i.UnitValueNumeratorUnitRatioDenominator,
+			&i.UnitValueNumeratorUnitOffsetNumerator,
+			&i.UnitValueNumeratorUnitOffsetDenominator,
+			&i.UnitValueNumeratorUnitCreatedAt,
+			&i.UnitValueNumeratorUnitUpdatedAt,
 			&i.UnitValueDenominatorUnitID,
+			&i.UnitValueDenominatorUnitName,
+			&i.UnitValueDenominatorUnitAbbreviation,
+			&i.UnitValueDenominatorUnitType,
+			&i.UnitValueDenominatorUnitRatioNumerator,
+			&i.UnitValueDenominatorUnitRatioDenominator,
+			&i.UnitValueDenominatorUnitOffsetNumerator,
+			&i.UnitValueDenominatorUnitOffsetDenominator,
+			&i.UnitValueDenominatorUnitCreatedAt,
+			&i.UnitValueDenominatorUnitUpdatedAt,
 			&i.UnitValueCreatedAt,
 			&i.UnitValueUpdatedAt,
 			&i.UnitCostRateID,
 			&i.UnitCostRateValue,
 			&i.UnitCostNumeratorUnitID,
+			&i.UnitCostNumeratorUnitName,
+			&i.UnitCostNumeratorUnitAbbreviation,
+			&i.UnitCostNumeratorUnitType,
+			&i.UnitCostNumeratorUnitRatioNumerator,
+			&i.UnitCostNumeratorUnitRatioDenominator,
+			&i.UnitCostNumeratorUnitOffsetNumerator,
+			&i.UnitCostNumeratorUnitOffsetDenominator,
+			&i.UnitCostNumeratorUnitCreatedAt,
+			&i.UnitCostNumeratorUnitUpdatedAt,
 			&i.UnitCostDenominatorUnitID,
+			&i.UnitCostDenominatorUnitName,
+			&i.UnitCostDenominatorUnitAbbreviation,
+			&i.UnitCostDenominatorUnitType,
+			&i.UnitCostDenominatorUnitRatioNumerator,
+			&i.UnitCostDenominatorUnitRatioDenominator,
+			&i.UnitCostDenominatorUnitOffsetNumerator,
+			&i.UnitCostDenominatorUnitOffsetDenominator,
+			&i.UnitCostDenominatorUnitCreatedAt,
+			&i.UnitCostDenominatorUnitUpdatedAt,
 			&i.UnitCostCreatedAt,
 			&i.UnitCostUpdatedAt,
 			&i.BurnRateIDJoined,
 			&i.BurnRateValue,
 			&i.BurnRateNumeratorUnitID,
+			&i.BurnRateNumeratorUnitName,
+			&i.BurnRateNumeratorUnitAbbreviation,
+			&i.BurnRateNumeratorUnitType,
+			&i.BurnRateNumeratorUnitRatioNumerator,
+			&i.BurnRateNumeratorUnitRatioDenominator,
+			&i.BurnRateNumeratorUnitOffsetNumerator,
+			&i.BurnRateNumeratorUnitOffsetDenominator,
+			&i.BurnRateNumeratorUnitCreatedAt,
+			&i.BurnRateNumeratorUnitUpdatedAt,
 			&i.BurnRateDenominatorUnitID,
+			&i.BurnRateDenominatorUnitName,
+			&i.BurnRateDenominatorUnitAbbreviation,
+			&i.BurnRateDenominatorUnitType,
+			&i.BurnRateDenominatorUnitRatioNumerator,
+			&i.BurnRateDenominatorUnitRatioDenominator,
+			&i.BurnRateDenominatorUnitOffsetNumerator,
+			&i.BurnRateDenominatorUnitOffsetDenominator,
+			&i.BurnRateDenominatorUnitCreatedAt,
+			&i.BurnRateDenominatorUnitUpdatedAt,
 			&i.BurnRateCreatedAt,
 			&i.BurnRateUpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listItemsBackwardBase = `-- name: ListItemsBackwardBase :many
+SELECT
+    i.id,
+    i.sku,
+    i.description,
+    i.notes,
+    i.item_type_code,
+    i.item_category_id,
+    i.unit_value_id,
+    i.unit_cost_id,
+    i.burn_rate_id,
+    i.account_id,
+    i.is_dirty,
+    i.created_at,
+    i.updated_at,
+    i.deleted_at,
+    ic.name AS category_name,
+    ic.item_category_type_code,
+    ic.unit_group_id AS category_unit_group_id,
+    ic.created_at AS category_created_at,
+    ic.updated_at AS category_updated_at
+FROM item i
+JOIN item_category ic ON ic.id = i.item_category_id
+WHERE i.account_id = ?
+AND i.deleted_at IS NULL
+AND (
+    ? = false
+    OR i.item_type_code IN (/*SLICE:item_type_codes*/?)
+)
+AND (
+    ? = false
+    OR i.item_category_id IN (/*SLICE:category_ids*/?)
+)
+AND (
+    ? = false
+    OR EXISTS (
+        SELECT 1 FROM _item_attributes ia
+        WHERE ia.B = i.id
+        AND ia.A IN (/*SLICE:attribute_ids*/?)
+    )
+)
+AND (
+    ? IS NULL
+    OR EXISTS (
+        SELECT 1 FROM material m
+        JOIN supplier_material sm ON sm.material_id = m.id
+        WHERE m.item_id = i.id
+        AND sm.supplier_account_id = ?
+        AND sm.owner_account_id = ?
+    )
+)
+AND (
+    ? IS NULL
+    OR i.created_at >= ?
+)
+AND (
+    ? IS NULL
+    OR i.created_at <= ?
+)
+AND (
+    ? IS NULL
+    OR (
+        ? = true AND (
+            i.sku = ?
+            OR i.description LIKE ?
+        )
+    )
+    OR (
+        ? = false AND (
+            i.sku LIKE ?
+            OR i.description LIKE ?
+        )
+    )
+)
+AND (
+    NOT EXISTS (SELECT 1 FROM product p WHERE p.item_id = i.id)
+    OR EXISTS (SELECT 1 FROM product p WHERE p.item_id = i.id AND p.product_type_code = 'sale')
+)
+AND (
+    ? = false
+    OR EXISTS (
+        SELECT 1 FROM production prd
+        WHERE prd.item_id = i.id
+        AND prd.production_step_id IS NOT NULL
+        AND NOT EXISTS (
+            SELECT 1 FROM _parent_child_production_steps pcps
+            WHERE pcps.B = prd.production_step_id
+        )
+    )
+)
+AND (
+    ? = false
+    OR EXISTS (
+        SELECT 1 FROM product p2
+        WHERE p2.item_id = i.id
+        AND p2.product_line_id IN (/*SLICE:product_line_ids*/?)
+    )
+)
+AND (
+    ? = false
+    OR EXISTS (
+        SELECT 1 FROM product p2
+        WHERE p2.item_id = i.id
+        AND p2.product_line_id IS NOT NULL
+        AND EXISTS (
+            SELECT 1 FROM account_relation ar
+            WHERE ar.owner_account_id = ?
+            AND ar.counterparty_account_id IN (/*SLICE:customer_ids*/?)
+            AND ar.account_relation_role_code = 'customer'
+            AND (
+                EXISTS (
+                    SELECT 1 FROM account_relation_product_line arpl
+                    WHERE arpl.account_relation_id = ar.id
+                    AND arpl.product_line_id = p2.product_line_id
+                )
+                OR (
+                    ar.account_group_id IS NOT NULL
+                    AND EXISTS (
+                        SELECT 1 FROM account_group_product_line agpl
+                        WHERE agpl.account_group_id = ar.account_group_id
+                        AND agpl.product_line_id = p2.product_line_id
+                    )
+                )
+                OR EXISTS (
+                    SELECT 1 FROM account_relation_price_group arpg
+                    JOIN account_group_product_line agpl ON agpl.account_group_id = arpg.account_group_id
+                    WHERE arpg.account_relation_id = ar.id
+                    AND agpl.product_line_id = p2.product_line_id
+                )
+            )
+        )
+    )
+)
+AND (
+    i.created_at > ?
+    OR (i.created_at = ? AND i.id > ?)
+)
+ORDER BY i.created_at ASC, i.id ASC
+LIMIT ?
+`
+
+type ListItemsBackwardBaseParams struct {
+	AccountID                string
+	IncludeTypeFilter        interface{}
+	ItemTypeCodes            []string
+	IncludeCategoryFilter    interface{}
+	CategoryIds              []string
+	IncludeAttributeFilter   interface{}
+	AttributeIds             []string
+	SupplierID               sql.NullString
+	StartDate                sql.NullTime
+	EndDate                  sql.NullTime
+	SearchQuery              sql.NullString
+	IsExactMatch             interface{}
+	SearchExact              sql.NullString
+	OnlyInitialSubassemblies interface{}
+	IncludeProductLineFilter interface{}
+	ProductLineIds           []sql.NullString
+	IncludeCustomerFilter    interface{}
+	CustomerIds              []string
+	CursorCreatedAt          time.Time
+	CursorID                 string
+	Limit                    int32
+}
+
+type ListItemsBackwardBaseRow struct {
+	ID                   string
+	Sku                  string
+	Description          sql.NullString
+	Notes                sql.NullString
+	ItemTypeCode         string
+	ItemCategoryID       string
+	UnitValueID          string
+	UnitCostID           string
+	BurnRateID           string
+	AccountID            string
+	IsDirty              bool
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+	DeletedAt            sql.NullTime
+	CategoryName         string
+	ItemCategoryTypeCode string
+	CategoryUnitGroupID  string
+	CategoryCreatedAt    time.Time
+	CategoryUpdatedAt    time.Time
+}
+
+func (q *Queries) ListItemsBackwardBase(ctx context.Context, arg ListItemsBackwardBaseParams) ([]ListItemsBackwardBaseRow, error) {
+	query := listItemsBackwardBase
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.IncludeTypeFilter)
+	if len(arg.ItemTypeCodes) > 0 {
+		for _, v := range arg.ItemTypeCodes {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:item_type_codes*/?", strings.Repeat(",?", len(arg.ItemTypeCodes))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:item_type_codes*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.IncludeCategoryFilter)
+	if len(arg.CategoryIds) > 0 {
+		for _, v := range arg.CategoryIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:category_ids*/?", strings.Repeat(",?", len(arg.CategoryIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:category_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.IncludeAttributeFilter)
+	if len(arg.AttributeIds) > 0 {
+		for _, v := range arg.AttributeIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:attribute_ids*/?", strings.Repeat(",?", len(arg.AttributeIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:attribute_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.SupplierID)
+	queryParams = append(queryParams, arg.SupplierID)
+	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.StartDate)
+	queryParams = append(queryParams, arg.StartDate)
+	queryParams = append(queryParams, arg.EndDate)
+	queryParams = append(queryParams, arg.EndDate)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.IsExactMatch)
+	queryParams = append(queryParams, arg.SearchExact)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.IsExactMatch)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.OnlyInitialSubassemblies)
+	queryParams = append(queryParams, arg.IncludeProductLineFilter)
+	if len(arg.ProductLineIds) > 0 {
+		for _, v := range arg.ProductLineIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:product_line_ids*/?", strings.Repeat(",?", len(arg.ProductLineIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:product_line_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.IncludeCustomerFilter)
+	queryParams = append(queryParams, arg.AccountID)
+	if len(arg.CustomerIds) > 0 {
+		for _, v := range arg.CustomerIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:customer_ids*/?", strings.Repeat(",?", len(arg.CustomerIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:customer_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.CursorCreatedAt)
+	queryParams = append(queryParams, arg.CursorCreatedAt)
+	queryParams = append(queryParams, arg.CursorID)
+	queryParams = append(queryParams, arg.Limit)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListItemsBackwardBaseRow
+	for rows.Next() {
+		var i ListItemsBackwardBaseRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Sku,
+			&i.Description,
+			&i.Notes,
+			&i.ItemTypeCode,
+			&i.ItemCategoryID,
+			&i.UnitValueID,
+			&i.UnitCostID,
+			&i.BurnRateID,
+			&i.AccountID,
+			&i.IsDirty,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+			&i.CategoryName,
+			&i.ItemCategoryTypeCode,
+			&i.CategoryUnitGroupID,
+			&i.CategoryCreatedAt,
+			&i.CategoryUpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -943,29 +1701,94 @@ SELECT
     ic.name AS category_name,
     ic.item_category_type_code,
     ic.unit_group_id AS category_unit_group_id,
+    cat_ug.name AS category_unit_group_name,
+    cat_ug.unit_type_code AS category_unit_group_type,
+    cat_ug.created_at AS category_unit_group_created_at,
+    cat_ug.updated_at AS category_unit_group_updated_at,
     rv.id AS unit_value_rate_id,
     rv.value AS unit_value_rate_value,
     rv.numerator_unit_id AS unit_value_numerator_unit_id,
+    nvu.name AS unit_value_numerator_unit_name,
+    nvu.abbreviation AS unit_value_numerator_unit_abbreviation,
+    nvu.unit_dimension_code AS unit_value_numerator_unit_type,
+    nvu.ratio_numerator AS unit_value_numerator_unit_ratio_numerator,
+    nvu.ratio_denominator AS unit_value_numerator_unit_ratio_denominator,
+    nvu.offset_numerator AS unit_value_numerator_unit_offset_numerator,
+    nvu.offset_denominator AS unit_value_numerator_unit_offset_denominator,
+    nvu.created_at AS unit_value_numerator_unit_created_at,
+    nvu.updated_at AS unit_value_numerator_unit_updated_at,
     rv.denominator_unit_id AS unit_value_denominator_unit_id,
+    dvu.name AS unit_value_denominator_unit_name,
+    dvu.abbreviation AS unit_value_denominator_unit_abbreviation,
+    dvu.unit_dimension_code AS unit_value_denominator_unit_type,
+    dvu.ratio_numerator AS unit_value_denominator_unit_ratio_numerator,
+    dvu.ratio_denominator AS unit_value_denominator_unit_ratio_denominator,
+    dvu.offset_numerator AS unit_value_denominator_unit_offset_numerator,
+    dvu.offset_denominator AS unit_value_denominator_unit_offset_denominator,
+    dvu.created_at AS unit_value_denominator_unit_created_at,
+    dvu.updated_at AS unit_value_denominator_unit_updated_at,
     rv.created_at AS unit_value_created_at,
     rv.updated_at AS unit_value_updated_at,
     rc.id AS unit_cost_rate_id,
     rc.value AS unit_cost_rate_value,
     rc.numerator_unit_id AS unit_cost_numerator_unit_id,
+    ncu.name AS unit_cost_numerator_unit_name,
+    ncu.abbreviation AS unit_cost_numerator_unit_abbreviation,
+    ncu.unit_dimension_code AS unit_cost_numerator_unit_type,
+    ncu.ratio_numerator AS unit_cost_numerator_unit_ratio_numerator,
+    ncu.ratio_denominator AS unit_cost_numerator_unit_ratio_denominator,
+    ncu.offset_numerator AS unit_cost_numerator_unit_offset_numerator,
+    ncu.offset_denominator AS unit_cost_numerator_unit_offset_denominator,
+    ncu.created_at AS unit_cost_numerator_unit_created_at,
+    ncu.updated_at AS unit_cost_numerator_unit_updated_at,
     rc.denominator_unit_id AS unit_cost_denominator_unit_id,
+    dcu.name AS unit_cost_denominator_unit_name,
+    dcu.abbreviation AS unit_cost_denominator_unit_abbreviation,
+    dcu.unit_dimension_code AS unit_cost_denominator_unit_type,
+    dcu.ratio_numerator AS unit_cost_denominator_unit_ratio_numerator,
+    dcu.ratio_denominator AS unit_cost_denominator_unit_ratio_denominator,
+    dcu.offset_numerator AS unit_cost_denominator_unit_offset_numerator,
+    dcu.offset_denominator AS unit_cost_denominator_unit_offset_denominator,
+    dcu.created_at AS unit_cost_denominator_unit_created_at,
+    dcu.updated_at AS unit_cost_denominator_unit_updated_at,
     rc.created_at AS unit_cost_created_at,
     rc.updated_at AS unit_cost_updated_at,
     rb.id AS burn_rate_id_joined,
     rb.value AS burn_rate_value,
     rb.numerator_unit_id AS burn_rate_numerator_unit_id,
+    nbr.name AS burn_rate_numerator_unit_name,
+    nbr.abbreviation AS burn_rate_numerator_unit_abbreviation,
+    nbr.unit_dimension_code AS burn_rate_numerator_unit_type,
+    nbr.ratio_numerator AS burn_rate_numerator_unit_ratio_numerator,
+    nbr.ratio_denominator AS burn_rate_numerator_unit_ratio_denominator,
+    nbr.offset_numerator AS burn_rate_numerator_unit_offset_numerator,
+    nbr.offset_denominator AS burn_rate_numerator_unit_offset_denominator,
+    nbr.created_at AS burn_rate_numerator_unit_created_at,
+    nbr.updated_at AS burn_rate_numerator_unit_updated_at,
     rb.denominator_unit_id AS burn_rate_denominator_unit_id,
+    dbr.name AS burn_rate_denominator_unit_name,
+    dbr.abbreviation AS burn_rate_denominator_unit_abbreviation,
+    dbr.unit_dimension_code AS burn_rate_denominator_unit_type,
+    dbr.ratio_numerator AS burn_rate_denominator_unit_ratio_numerator,
+    dbr.ratio_denominator AS burn_rate_denominator_unit_ratio_denominator,
+    dbr.offset_numerator AS burn_rate_denominator_unit_offset_numerator,
+    dbr.offset_denominator AS burn_rate_denominator_unit_offset_denominator,
+    dbr.created_at AS burn_rate_denominator_unit_created_at,
+    dbr.updated_at AS burn_rate_denominator_unit_updated_at,
     rb.created_at AS burn_rate_created_at,
     rb.updated_at AS burn_rate_updated_at
 FROM item i
 JOIN item_category ic ON ic.id = i.item_category_id
+JOIN unit_group cat_ug ON cat_ug.id = ic.unit_group_id
 JOIN rate rv ON rv.id = i.unit_value_id
+JOIN unit nvu ON nvu.id = rv.numerator_unit_id
+JOIN unit dvu ON dvu.id = rv.denominator_unit_id
 JOIN rate rc ON rc.id = i.unit_cost_id
+JOIN unit ncu ON ncu.id = rc.numerator_unit_id
+JOIN unit dcu ON dcu.id = rc.denominator_unit_id
 JOIN rate rb ON rb.id = i.burn_rate_id
+JOIN unit nbr ON nbr.id = rb.numerator_unit_id
+JOIN unit dbr ON dbr.id = rb.denominator_unit_id
 WHERE i.account_id = ?
 AND i.deleted_at IS NULL
 AND (
@@ -1063,41 +1886,99 @@ type ListItemsForwardParams struct {
 }
 
 type ListItemsForwardRow struct {
-	ID                         string
-	Sku                        string
-	Description                sql.NullString
-	Notes                      sql.NullString
-	ItemTypeCode               string
-	ItemCategoryID             string
-	UnitValueID                string
-	UnitCostID                 string
-	BurnRateID                 string
-	AccountID                  string
-	IsDirty                    bool
-	CreatedAt                  time.Time
-	UpdatedAt                  time.Time
-	DeletedAt                  sql.NullTime
-	CategoryName               string
-	ItemCategoryTypeCode       string
-	CategoryUnitGroupID        string
-	UnitValueRateID            string
-	UnitValueRateValue         string
-	UnitValueNumeratorUnitID   string
-	UnitValueDenominatorUnitID string
-	UnitValueCreatedAt         time.Time
-	UnitValueUpdatedAt         time.Time
-	UnitCostRateID             string
-	UnitCostRateValue          string
-	UnitCostNumeratorUnitID    string
-	UnitCostDenominatorUnitID  string
-	UnitCostCreatedAt          time.Time
-	UnitCostUpdatedAt          time.Time
-	BurnRateIDJoined           string
-	BurnRateValue              string
-	BurnRateNumeratorUnitID    string
-	BurnRateDenominatorUnitID  string
-	BurnRateCreatedAt          time.Time
-	BurnRateUpdatedAt          time.Time
+	ID                                        string
+	Sku                                       string
+	Description                               sql.NullString
+	Notes                                     sql.NullString
+	ItemTypeCode                              string
+	ItemCategoryID                            string
+	UnitValueID                               string
+	UnitCostID                                string
+	BurnRateID                                string
+	AccountID                                 string
+	IsDirty                                   bool
+	CreatedAt                                 time.Time
+	UpdatedAt                                 time.Time
+	DeletedAt                                 sql.NullTime
+	CategoryName                              string
+	ItemCategoryTypeCode                      string
+	CategoryUnitGroupID                       string
+	CategoryUnitGroupName                     string
+	CategoryUnitGroupType                     string
+	CategoryUnitGroupCreatedAt                time.Time
+	CategoryUnitGroupUpdatedAt                time.Time
+	UnitValueRateID                           string
+	UnitValueRateValue                        string
+	UnitValueNumeratorUnitID                  string
+	UnitValueNumeratorUnitName                string
+	UnitValueNumeratorUnitAbbreviation        string
+	UnitValueNumeratorUnitType                string
+	UnitValueNumeratorUnitRatioNumerator      string
+	UnitValueNumeratorUnitRatioDenominator    string
+	UnitValueNumeratorUnitOffsetNumerator     string
+	UnitValueNumeratorUnitOffsetDenominator   string
+	UnitValueNumeratorUnitCreatedAt           time.Time
+	UnitValueNumeratorUnitUpdatedAt           time.Time
+	UnitValueDenominatorUnitID                string
+	UnitValueDenominatorUnitName              string
+	UnitValueDenominatorUnitAbbreviation      string
+	UnitValueDenominatorUnitType              string
+	UnitValueDenominatorUnitRatioNumerator    string
+	UnitValueDenominatorUnitRatioDenominator  string
+	UnitValueDenominatorUnitOffsetNumerator   string
+	UnitValueDenominatorUnitOffsetDenominator string
+	UnitValueDenominatorUnitCreatedAt         time.Time
+	UnitValueDenominatorUnitUpdatedAt         time.Time
+	UnitValueCreatedAt                        time.Time
+	UnitValueUpdatedAt                        time.Time
+	UnitCostRateID                            string
+	UnitCostRateValue                         string
+	UnitCostNumeratorUnitID                   string
+	UnitCostNumeratorUnitName                 string
+	UnitCostNumeratorUnitAbbreviation         string
+	UnitCostNumeratorUnitType                 string
+	UnitCostNumeratorUnitRatioNumerator       string
+	UnitCostNumeratorUnitRatioDenominator     string
+	UnitCostNumeratorUnitOffsetNumerator      string
+	UnitCostNumeratorUnitOffsetDenominator    string
+	UnitCostNumeratorUnitCreatedAt            time.Time
+	UnitCostNumeratorUnitUpdatedAt            time.Time
+	UnitCostDenominatorUnitID                 string
+	UnitCostDenominatorUnitName               string
+	UnitCostDenominatorUnitAbbreviation       string
+	UnitCostDenominatorUnitType               string
+	UnitCostDenominatorUnitRatioNumerator     string
+	UnitCostDenominatorUnitRatioDenominator   string
+	UnitCostDenominatorUnitOffsetNumerator    string
+	UnitCostDenominatorUnitOffsetDenominator  string
+	UnitCostDenominatorUnitCreatedAt          time.Time
+	UnitCostDenominatorUnitUpdatedAt          time.Time
+	UnitCostCreatedAt                         time.Time
+	UnitCostUpdatedAt                         time.Time
+	BurnRateIDJoined                          string
+	BurnRateValue                             string
+	BurnRateNumeratorUnitID                   string
+	BurnRateNumeratorUnitName                 string
+	BurnRateNumeratorUnitAbbreviation         string
+	BurnRateNumeratorUnitType                 string
+	BurnRateNumeratorUnitRatioNumerator       string
+	BurnRateNumeratorUnitRatioDenominator     string
+	BurnRateNumeratorUnitOffsetNumerator      string
+	BurnRateNumeratorUnitOffsetDenominator    string
+	BurnRateNumeratorUnitCreatedAt            time.Time
+	BurnRateNumeratorUnitUpdatedAt            time.Time
+	BurnRateDenominatorUnitID                 string
+	BurnRateDenominatorUnitName               string
+	BurnRateDenominatorUnitAbbreviation       string
+	BurnRateDenominatorUnitType               string
+	BurnRateDenominatorUnitRatioNumerator     string
+	BurnRateDenominatorUnitRatioDenominator   string
+	BurnRateDenominatorUnitOffsetNumerator    string
+	BurnRateDenominatorUnitOffsetDenominator  string
+	BurnRateDenominatorUnitCreatedAt          time.Time
+	BurnRateDenominatorUnitUpdatedAt          time.Time
+	BurnRateCreatedAt                         time.Time
+	BurnRateUpdatedAt                         time.Time
 }
 
 func (q *Queries) ListItemsForward(ctx context.Context, arg ListItemsForwardParams) ([]ListItemsForwardRow, error) {
@@ -1177,24 +2058,382 @@ func (q *Queries) ListItemsForward(ctx context.Context, arg ListItemsForwardPara
 			&i.CategoryName,
 			&i.ItemCategoryTypeCode,
 			&i.CategoryUnitGroupID,
+			&i.CategoryUnitGroupName,
+			&i.CategoryUnitGroupType,
+			&i.CategoryUnitGroupCreatedAt,
+			&i.CategoryUnitGroupUpdatedAt,
 			&i.UnitValueRateID,
 			&i.UnitValueRateValue,
 			&i.UnitValueNumeratorUnitID,
+			&i.UnitValueNumeratorUnitName,
+			&i.UnitValueNumeratorUnitAbbreviation,
+			&i.UnitValueNumeratorUnitType,
+			&i.UnitValueNumeratorUnitRatioNumerator,
+			&i.UnitValueNumeratorUnitRatioDenominator,
+			&i.UnitValueNumeratorUnitOffsetNumerator,
+			&i.UnitValueNumeratorUnitOffsetDenominator,
+			&i.UnitValueNumeratorUnitCreatedAt,
+			&i.UnitValueNumeratorUnitUpdatedAt,
 			&i.UnitValueDenominatorUnitID,
+			&i.UnitValueDenominatorUnitName,
+			&i.UnitValueDenominatorUnitAbbreviation,
+			&i.UnitValueDenominatorUnitType,
+			&i.UnitValueDenominatorUnitRatioNumerator,
+			&i.UnitValueDenominatorUnitRatioDenominator,
+			&i.UnitValueDenominatorUnitOffsetNumerator,
+			&i.UnitValueDenominatorUnitOffsetDenominator,
+			&i.UnitValueDenominatorUnitCreatedAt,
+			&i.UnitValueDenominatorUnitUpdatedAt,
 			&i.UnitValueCreatedAt,
 			&i.UnitValueUpdatedAt,
 			&i.UnitCostRateID,
 			&i.UnitCostRateValue,
 			&i.UnitCostNumeratorUnitID,
+			&i.UnitCostNumeratorUnitName,
+			&i.UnitCostNumeratorUnitAbbreviation,
+			&i.UnitCostNumeratorUnitType,
+			&i.UnitCostNumeratorUnitRatioNumerator,
+			&i.UnitCostNumeratorUnitRatioDenominator,
+			&i.UnitCostNumeratorUnitOffsetNumerator,
+			&i.UnitCostNumeratorUnitOffsetDenominator,
+			&i.UnitCostNumeratorUnitCreatedAt,
+			&i.UnitCostNumeratorUnitUpdatedAt,
 			&i.UnitCostDenominatorUnitID,
+			&i.UnitCostDenominatorUnitName,
+			&i.UnitCostDenominatorUnitAbbreviation,
+			&i.UnitCostDenominatorUnitType,
+			&i.UnitCostDenominatorUnitRatioNumerator,
+			&i.UnitCostDenominatorUnitRatioDenominator,
+			&i.UnitCostDenominatorUnitOffsetNumerator,
+			&i.UnitCostDenominatorUnitOffsetDenominator,
+			&i.UnitCostDenominatorUnitCreatedAt,
+			&i.UnitCostDenominatorUnitUpdatedAt,
 			&i.UnitCostCreatedAt,
 			&i.UnitCostUpdatedAt,
 			&i.BurnRateIDJoined,
 			&i.BurnRateValue,
 			&i.BurnRateNumeratorUnitID,
+			&i.BurnRateNumeratorUnitName,
+			&i.BurnRateNumeratorUnitAbbreviation,
+			&i.BurnRateNumeratorUnitType,
+			&i.BurnRateNumeratorUnitRatioNumerator,
+			&i.BurnRateNumeratorUnitRatioDenominator,
+			&i.BurnRateNumeratorUnitOffsetNumerator,
+			&i.BurnRateNumeratorUnitOffsetDenominator,
+			&i.BurnRateNumeratorUnitCreatedAt,
+			&i.BurnRateNumeratorUnitUpdatedAt,
 			&i.BurnRateDenominatorUnitID,
+			&i.BurnRateDenominatorUnitName,
+			&i.BurnRateDenominatorUnitAbbreviation,
+			&i.BurnRateDenominatorUnitType,
+			&i.BurnRateDenominatorUnitRatioNumerator,
+			&i.BurnRateDenominatorUnitRatioDenominator,
+			&i.BurnRateDenominatorUnitOffsetNumerator,
+			&i.BurnRateDenominatorUnitOffsetDenominator,
+			&i.BurnRateDenominatorUnitCreatedAt,
+			&i.BurnRateDenominatorUnitUpdatedAt,
 			&i.BurnRateCreatedAt,
 			&i.BurnRateUpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listItemsForwardBase = `-- name: ListItemsForwardBase :many
+SELECT
+    i.id,
+    i.sku,
+    i.description,
+    i.notes,
+    i.item_type_code,
+    i.item_category_id,
+    i.unit_value_id,
+    i.unit_cost_id,
+    i.burn_rate_id,
+    i.account_id,
+    i.is_dirty,
+    i.created_at,
+    i.updated_at,
+    i.deleted_at,
+    ic.name AS category_name,
+    ic.item_category_type_code,
+    ic.unit_group_id AS category_unit_group_id,
+    ic.created_at AS category_created_at,
+    ic.updated_at AS category_updated_at
+FROM item i
+JOIN item_category ic ON ic.id = i.item_category_id
+WHERE i.account_id = ?
+AND i.deleted_at IS NULL
+AND (
+    ? = false
+    OR i.item_type_code IN (/*SLICE:item_type_codes*/?)
+)
+AND (
+    ? = false
+    OR i.item_category_id IN (/*SLICE:category_ids*/?)
+)
+AND (
+    ? = false
+    OR EXISTS (
+        SELECT 1 FROM _item_attributes ia
+        WHERE ia.B = i.id
+        AND ia.A IN (/*SLICE:attribute_ids*/?)
+    )
+)
+AND (
+    ? IS NULL
+    OR EXISTS (
+        SELECT 1 FROM material m
+        JOIN supplier_material sm ON sm.material_id = m.id
+        WHERE m.item_id = i.id
+        AND sm.supplier_account_id = ?
+        AND sm.owner_account_id = ?
+    )
+)
+AND (
+    ? IS NULL
+    OR i.created_at >= ?
+)
+AND (
+    ? IS NULL
+    OR i.created_at <= ?
+)
+AND (
+    ? IS NULL
+    OR (
+        ? = true AND (
+            i.sku = ?
+            OR i.description LIKE ?
+        )
+    )
+    OR (
+        ? = false AND (
+            i.sku LIKE ?
+            OR i.description LIKE ?
+        )
+    )
+)
+AND (
+    NOT EXISTS (SELECT 1 FROM product p WHERE p.item_id = i.id)
+    OR EXISTS (SELECT 1 FROM product p WHERE p.item_id = i.id AND p.product_type_code = 'sale')
+)
+AND (
+    ? = false
+    OR EXISTS (
+        SELECT 1 FROM production prd
+        WHERE prd.item_id = i.id
+        AND prd.production_step_id IS NOT NULL
+        AND NOT EXISTS (
+            SELECT 1 FROM _parent_child_production_steps pcps
+            WHERE pcps.B = prd.production_step_id
+        )
+    )
+)
+AND (
+    ? = false
+    OR EXISTS (
+        SELECT 1 FROM product p2
+        WHERE p2.item_id = i.id
+        AND p2.product_line_id IN (/*SLICE:product_line_ids*/?)
+    )
+)
+AND (
+    ? = false
+    OR EXISTS (
+        SELECT 1 FROM product p2
+        WHERE p2.item_id = i.id
+        AND p2.product_line_id IS NOT NULL
+        AND EXISTS (
+            SELECT 1 FROM account_relation ar
+            WHERE ar.owner_account_id = ?
+            AND ar.counterparty_account_id IN (/*SLICE:customer_ids*/?)
+            AND ar.account_relation_role_code = 'customer'
+            AND (
+                EXISTS (
+                    SELECT 1 FROM account_relation_product_line arpl
+                    WHERE arpl.account_relation_id = ar.id
+                    AND arpl.product_line_id = p2.product_line_id
+                )
+                OR (
+                    ar.account_group_id IS NOT NULL
+                    AND EXISTS (
+                        SELECT 1 FROM account_group_product_line agpl
+                        WHERE agpl.account_group_id = ar.account_group_id
+                        AND agpl.product_line_id = p2.product_line_id
+                    )
+                )
+                OR EXISTS (
+                    SELECT 1 FROM account_relation_price_group arpg
+                    JOIN account_group_product_line agpl ON agpl.account_group_id = arpg.account_group_id
+                    WHERE arpg.account_relation_id = ar.id
+                    AND agpl.product_line_id = p2.product_line_id
+                )
+            )
+        )
+    )
+)
+AND (
+    ? IS NULL
+    OR i.created_at < ?
+    OR (i.created_at = ? AND i.id < ?)
+)
+ORDER BY i.created_at DESC, i.id DESC
+LIMIT ?
+`
+
+type ListItemsForwardBaseParams struct {
+	AccountID                string
+	IncludeTypeFilter        interface{}
+	ItemTypeCodes            []string
+	IncludeCategoryFilter    interface{}
+	CategoryIds              []string
+	IncludeAttributeFilter   interface{}
+	AttributeIds             []string
+	SupplierID               sql.NullString
+	StartDate                sql.NullTime
+	EndDate                  sql.NullTime
+	SearchQuery              sql.NullString
+	IsExactMatch             interface{}
+	SearchExact              sql.NullString
+	OnlyInitialSubassemblies interface{}
+	IncludeProductLineFilter interface{}
+	ProductLineIds           []sql.NullString
+	IncludeCustomerFilter    interface{}
+	CustomerIds              []string
+	CursorCreatedAt          sql.NullTime
+	CursorID                 sql.NullString
+	Limit                    int32
+}
+
+type ListItemsForwardBaseRow struct {
+	ID                   string
+	Sku                  string
+	Description          sql.NullString
+	Notes                sql.NullString
+	ItemTypeCode         string
+	ItemCategoryID       string
+	UnitValueID          string
+	UnitCostID           string
+	BurnRateID           string
+	AccountID            string
+	IsDirty              bool
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+	DeletedAt            sql.NullTime
+	CategoryName         string
+	ItemCategoryTypeCode string
+	CategoryUnitGroupID  string
+	CategoryCreatedAt    time.Time
+	CategoryUpdatedAt    time.Time
+}
+
+func (q *Queries) ListItemsForwardBase(ctx context.Context, arg ListItemsForwardBaseParams) ([]ListItemsForwardBaseRow, error) {
+	query := listItemsForwardBase
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.IncludeTypeFilter)
+	if len(arg.ItemTypeCodes) > 0 {
+		for _, v := range arg.ItemTypeCodes {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:item_type_codes*/?", strings.Repeat(",?", len(arg.ItemTypeCodes))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:item_type_codes*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.IncludeCategoryFilter)
+	if len(arg.CategoryIds) > 0 {
+		for _, v := range arg.CategoryIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:category_ids*/?", strings.Repeat(",?", len(arg.CategoryIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:category_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.IncludeAttributeFilter)
+	if len(arg.AttributeIds) > 0 {
+		for _, v := range arg.AttributeIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:attribute_ids*/?", strings.Repeat(",?", len(arg.AttributeIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:attribute_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.SupplierID)
+	queryParams = append(queryParams, arg.SupplierID)
+	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.StartDate)
+	queryParams = append(queryParams, arg.StartDate)
+	queryParams = append(queryParams, arg.EndDate)
+	queryParams = append(queryParams, arg.EndDate)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.IsExactMatch)
+	queryParams = append(queryParams, arg.SearchExact)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.IsExactMatch)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.OnlyInitialSubassemblies)
+	queryParams = append(queryParams, arg.IncludeProductLineFilter)
+	if len(arg.ProductLineIds) > 0 {
+		for _, v := range arg.ProductLineIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:product_line_ids*/?", strings.Repeat(",?", len(arg.ProductLineIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:product_line_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.IncludeCustomerFilter)
+	queryParams = append(queryParams, arg.AccountID)
+	if len(arg.CustomerIds) > 0 {
+		for _, v := range arg.CustomerIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:customer_ids*/?", strings.Repeat(",?", len(arg.CustomerIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:customer_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.CursorCreatedAt)
+	queryParams = append(queryParams, arg.CursorCreatedAt)
+	queryParams = append(queryParams, arg.CursorCreatedAt)
+	queryParams = append(queryParams, arg.CursorID)
+	queryParams = append(queryParams, arg.Limit)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListItemsForwardBaseRow
+	for rows.Next() {
+		var i ListItemsForwardBaseRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Sku,
+			&i.Description,
+			&i.Notes,
+			&i.ItemTypeCode,
+			&i.ItemCategoryID,
+			&i.UnitValueID,
+			&i.UnitCostID,
+			&i.BurnRateID,
+			&i.AccountID,
+			&i.IsDirty,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+			&i.CategoryName,
+			&i.ItemCategoryTypeCode,
+			&i.CategoryUnitGroupID,
+			&i.CategoryCreatedAt,
+			&i.CategoryUpdatedAt,
 		); err != nil {
 			return nil, err
 		}

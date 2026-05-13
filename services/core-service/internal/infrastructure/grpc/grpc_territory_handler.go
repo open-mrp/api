@@ -34,18 +34,44 @@ func territoryToProto(t *domain.Territory) *pb.TerritoryInfo {
 	}
 
 	if t.SalesRep != nil {
-		info.SalesRep = &pb.TerritoryAccountUserInfo{
+		sr := &pb.TerritoryAccountUserInfo{
 			Id:    t.SalesRep.ID,
 			Name:  t.SalesRep.Name,
 			Email: t.SalesRep.Email,
 		}
+		if t.SalesRep.Status != nil {
+			s := string(*t.SalesRep.Status)
+			sr.Status = &s
+		}
+		if t.SalesRep.CreatedAt != nil {
+			sr.CreatedAt = timestamppb.New(*t.SalesRep.CreatedAt)
+		}
+		if t.SalesRep.UpdatedAt != nil {
+			sr.UpdatedAt = timestamppb.New(*t.SalesRep.UpdatedAt)
+		}
+		info.SalesRep = sr
 	}
 
 	if t.ProductLine != nil {
-		info.ProductLine = &pb.TerritoryProductLineInfo{
+		pl := &pb.TerritoryProductLineInfo{
 			Id:   t.ProductLine.ID,
 			Name: t.ProductLine.Name,
 		}
+		if t.ProductLine.CommissionPolicy != nil {
+			isCommissionExempt := t.ProductLine.CommissionPolicy.ToBool()
+			pl.IsCommissionExempt = &isCommissionExempt
+		}
+		if t.ProductLine.FreightPolicy != nil {
+			isFreightExempt := t.ProductLine.FreightPolicy.ToBool()
+			pl.IsFreightExempt = &isFreightExempt
+		}
+		if t.ProductLine.CreatedAt != nil {
+			pl.CreatedAt = timestamppb.New(*t.ProductLine.CreatedAt)
+		}
+		if t.ProductLine.UpdatedAt != nil {
+			pl.UpdatedAt = timestamppb.New(*t.ProductLine.UpdatedAt)
+		}
+		info.ProductLine = pl
 	}
 
 	return info
@@ -61,6 +87,7 @@ func (h *gRPCHandler) ListTerritories(ctx context.Context, req *pb.ListTerritori
 		Cursor:    req.Cursor,
 		Limit:     req.Limit,
 		Query:     req.Query,
+		Includes:  req.Includes,
 	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
@@ -90,6 +117,7 @@ func (h *gRPCHandler) GetTerritory(ctx context.Context, req *pb.GetTerritoryRequ
 	territory, apiErr := h.territorySvc.GetTerritory(ctx, domain.GetTerritoryParams{
 		AccountID:   req.AccountId,
 		TerritoryID: req.Id,
+		Includes:    req.Includes,
 	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
@@ -115,6 +143,7 @@ func (h *gRPCHandler) CreateTerritory(ctx context.Context, req *pb.CreateTerrito
 		EndZipcode:    req.EndZipcode,
 		SalesRepID:    req.SalesRepId,
 		ProductLineID: req.ProductLineId,
+		Includes:      req.Includes,
 	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
@@ -144,6 +173,7 @@ func (h *gRPCHandler) UpdateTerritory(ctx context.Context, req *pb.UpdateTerrito
 		ClearProductLine:  req.ClearProductLine,
 		ClearStartZipcode: req.ClearStartZipcode,
 		ClearEndZipcode:   req.ClearEndZipcode,
+		Includes:          req.Includes,
 	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)

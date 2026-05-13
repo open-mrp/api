@@ -100,25 +100,10 @@ func (s *unitGroupSvcImpl) ListUnitGroups(ctx context.Context, params domain.Lis
 
 	params.AccountID = identity.Target.AccountID
 
-	repo := s.repos.NewUnitGroupRepo()
-
-	result, apiErr := repo.List(ctx, params)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	for _, ug := range result.UnitGroups {
-		conversions, apiErr := repo.ListUnits(ctx, ug.ID)
-		if apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		ug.UnitConversions = conversions
-	}
-
-	return result, nil
+	return s.repos.NewUnitGroupRepo().List(ctx, params)
 }
 
-func (s *unitGroupSvcImpl) GetUnitGroup(ctx context.Context, unitGroupID string) (*domain.UnitGroupFull, *apierror.APIError) {
+func (s *unitGroupSvcImpl) GetUnitGroup(ctx context.Context, params domain.GetUnitGroupParams) (*domain.UnitGroupFull, *apierror.APIError) {
 	ctx, span := unitGroupSvcTracer.Start(ctx, "service.unit_group.get")
 	defer span.End()
 
@@ -143,10 +128,8 @@ func (s *unitGroupSvcImpl) GetUnitGroup(ctx context.Context, unitGroupID string)
 		return nil, tracing.Trace(span, apierror.NewAuthorizationError("You do not have access to this resource."))
 	}
 
-	return s.repos.NewUnitGroupRepo().Get(ctx, domain.GetUnitGroupParams{
-		AccountID:   identity.Target.AccountID,
-		UnitGroupID: unitGroupID,
-	})
+	params.AccountID = identity.Target.AccountID
+	return s.repos.NewUnitGroupRepo().Get(ctx, params)
 }
 
 func (s *unitGroupSvcImpl) CreateUnitGroup(ctx context.Context, params domain.CreateUnitGroupParams) (*domain.UnitGroupFull, *apierror.APIError) {
@@ -233,6 +216,7 @@ func (s *unitGroupSvcImpl) CreateUnitGroup(ctx context.Context, params domain.Cr
 			created, apiErr := txRepo.Get(txCtx, domain.GetUnitGroupParams{
 				AccountID:   params.AccountID,
 				UnitGroupID: unitGroupID,
+				Includes:    params.Includes,
 			})
 			if apiErr != nil {
 				return apiErr
@@ -361,6 +345,7 @@ func (s *unitGroupSvcImpl) UpdateUnitGroup(ctx context.Context, params domain.Up
 				updated, apiErr = txRepo.Get(txCtx, domain.GetUnitGroupParams{
 					AccountID:   params.AccountID,
 					UnitGroupID: params.UnitGroupID,
+					Includes:    params.Includes,
 				})
 				if apiErr != nil {
 					return apiErr
@@ -492,75 +477,92 @@ func (s *unitGroupSvcImpl) UpsertUnitGroupUnit(ctx context.Context, params domai
 
 	params.AccountID = identity.Target.AccountID
 
-	// Generate an ID if one was not provided (create vs update).
-	if params.UnitGroupUnitID == "" {
-		genID, apiErr := id.GenID(id.UnitGroupsUnitsIDPrefix, nil)
-		if apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-		params.UnitGroupUnitID = genID
-	}
+	meds := s.mediators()
 
-	// Verify unit group exists and is owned by the account
-	existing, apiErr := s.repos.NewUnitGroupRepo().Get(ctx, domain.GetUnitGroupParams{
-		AccountID:   params.AccountID,
-		UnitGroupID: params.UnitGroupID,
-	})
+	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, identity)
 	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-	if existing.AccountID == nil {
-		return nil, tracing.Trace(span, apierror.NewValidationError("System unit groups cannot be modified."))
+		return nil, apiErr
 	}
 
-	// For updates on an existing record, fetch current values and merge so the
-	// upsert INSERT clause has all required columns populated.
-	isUpdate := params.UnitID == "" || params.DiscountPercentage == "" || params.DiscountFixed == ""
-	if isUpdate {
-		for _, uc := range existing.UnitConversions {
-			if uc.ID == params.UnitGroupUnitID {
-				if params.UnitID == "" {
-					params.UnitID = uc.UnitID
+	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
+	case domain.RecoveryPointFinished:
+		cached, err := idempotency.UnmarshalCachedResponse[domain.UnitGroupUnit](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		if err != nil {
+			return nil, tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
+		}
+		return cached.Data, cached.Error
+
+	case domain.RecoveryPointStarted:
+		var result *domain.UnitGroupUnit
+		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *unitGroupSvcImpl) *apierror.APIError {
+			work := params
+			if work.UnitGroupUnitID == "" {
+				genID, apiErr := id.GenID(id.UnitGroupsUnitsIDPrefix, nil)
+				if apiErr != nil {
+					return apiErr
 				}
-				if params.DiscountPercentage == "" {
-					params.DiscountPercentage = uc.DiscountPercentage
-				}
-				if params.DiscountFixed == "" {
-					params.DiscountFixed = uc.DiscountFixed
-				}
-				break
+				work.UnitGroupUnitID = genID
 			}
-		}
-	}
 
-	// Validate unit type matches (only when unit_id is being set/changed).
-	if params.UnitID != "" {
-		unit, apiErr := s.repos.NewUnitQueryRepo().Find(ctx, params.AccountID, params.UnitID)
+			txRepo := txSvc.repos.NewUnitGroupRepo()
+
+			existing, apiErr := txRepo.Get(txCtx, domain.GetUnitGroupParams{
+				AccountID:   work.AccountID,
+				UnitGroupID: work.UnitGroupID,
+			})
+			if apiErr != nil {
+				return apiErr
+			}
+			if existing.AccountID == nil {
+				return apierror.NewValidationError("System unit groups cannot be modified.")
+			}
+
+			isUpdate := work.UnitID == "" || work.DiscountPercentage == "" || work.DiscountFixed == ""
+			if isUpdate {
+				for _, uc := range existing.UnitConversions {
+					if uc.ID == work.UnitGroupUnitID {
+						if work.UnitID == "" {
+							work.UnitID = uc.UnitID
+						}
+						if work.DiscountPercentage == "" {
+							work.DiscountPercentage = uc.DiscountPercentage
+						}
+						if work.DiscountFixed == "" {
+							work.DiscountFixed = uc.DiscountFixed
+						}
+						break
+					}
+				}
+			}
+
+			if work.UnitID != "" {
+				unit, apiErr := txSvc.repos.NewUnitQueryRepo().Find(txCtx, work.AccountID, work.UnitID)
+				if apiErr != nil {
+					return apiErr
+				}
+				if unit.Type != existing.Type {
+					return apierror.NewValidationErrorWithParam("Unit type does not match the unit group type.", "unit_id")
+				}
+			}
+
+			upserted, apiErr := txRepo.UpsertUnitGroupUnit(txCtx, work.UnitGroupUnitID, work)
+			if apiErr != nil {
+				return apiErr
+			}
+			result = upserted
+
+			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
+		})
+
 		if apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
+			return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
 		}
-		if unit.Type != existing.Type {
-			return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("Unit type does not match the unit group type.", "unit_id"))
-		}
+
+		return result, nil
+
+	default:
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Unexpected recovery point: "+idempotencyKey.RecoveryPoint))
 	}
-
-	var result *domain.UnitGroupUnit
-	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *unitGroupSvcImpl) *apierror.APIError {
-		txRepo := txSvc.repos.NewUnitGroupRepo()
-
-		upserted, apiErr := txRepo.UpsertUnitGroupUnit(txCtx, params.UnitGroupUnitID, params)
-		if apiErr != nil {
-			return apiErr
-		}
-		result = upserted
-		return nil
-	})
-
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	return result, nil
 }
 
 func (s *unitGroupSvcImpl) DeleteUnitGroupUnit(ctx context.Context, params domain.DeleteUnitGroupUnitParams) *apierror.APIError {
@@ -647,7 +649,7 @@ func (s *unitGroupSvcImpl) DeleteUnitGroupUnit(ctx context.Context, params domai
 	return nil
 }
 
-func (s *unitGroupSvcImpl) ListUnitGroupUnits(ctx context.Context, unitGroupID string) ([]*domain.UnitGroupUnit, *apierror.APIError) {
+func (s *unitGroupSvcImpl) ListUnitGroupUnits(ctx context.Context, unitGroupID string, incs []string) ([]*domain.UnitGroupUnit, *apierror.APIError) {
 	ctx, span := unitGroupSvcTracer.Start(ctx, "service.unit_group.list_units")
 	defer span.End()
 
@@ -681,7 +683,7 @@ func (s *unitGroupSvcImpl) ListUnitGroupUnits(ctx context.Context, unitGroupID s
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return s.repos.NewUnitGroupRepo().ListUnits(ctx, unitGroupID)
+	return s.repos.NewUnitGroupRepo().ListUnits(ctx, unitGroupID, incs)
 }
 
 func (s *unitGroupSvcImpl) GetUnitGroupUnit(ctx context.Context, params domain.GetUnitGroupUnitParams) (*domain.UnitGroupUnit, *apierror.APIError) {

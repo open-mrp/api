@@ -36,8 +36,12 @@ func TransactionDetailPresenter(d *pb.TransactionInfo) apiresource.TransactionDe
 
 	if d.CustomerId != nil {
 		customer := &apiresource.Customer{
-			ID:     *d.CustomerId,
-			Object: constants.ObjectTypeCustomer,
+			ID:               *d.CustomerId,
+			Object:           constants.ObjectTypeCustomer,
+			EDIStatus:        constants.EDIStatusDisabled,
+			RelationshipType: constants.CustomerRelationshipTypeStandalone,
+			CreatedAt:        grpcutil.TimestampToTime(d.CustomerCreatedAt),
+			UpdatedAt:        grpcutil.TimestampToTime(d.CustomerUpdatedAt),
 		}
 		if d.CustomerName != nil {
 			customer.Name = *d.CustomerName
@@ -45,15 +49,33 @@ func TransactionDetailPresenter(d *pb.TransactionInfo) apiresource.TransactionDe
 		if d.CustomerNumber != nil {
 			customer.Number = *d.CustomerNumber
 		}
+		if d.CustomerStatus != nil {
+			customer.Status = constants.AccountStatusCode(*d.CustomerStatus)
+		} else {
+			customer.Status = constants.AccountStatusCodeNormal
+		}
+		if d.CustomerCommissionPolicy != nil {
+			customer.CommissionPolicy = constants.CommissionPolicy(*d.CustomerCommissionPolicy)
+		} else {
+			customer.CommissionPolicy = constants.CommissionPolicyApplied
+		}
 		tx.Customer = customer
 	}
 
 	if d.ResponsibleUserId != nil {
-		tx.ResponsibleUser = &apiresource.AccountUser{
-			ID:     *d.ResponsibleUserId,
-			Object: constants.ObjectTypeAccountUser,
-			Name:   d.ResponsibleUserName,
+		user := &apiresource.AccountUser{
+			ID:        *d.ResponsibleUserId,
+			Object:    constants.ObjectTypeAccountUser,
+			Name:      d.ResponsibleUserName,
+			CreatedAt: grpcutil.TimestampToTime(d.ResponsibleUserCreatedAt),
+			UpdatedAt: grpcutil.TimestampToTime(d.ResponsibleUserUpdatedAt),
 		}
+		if d.ResponsibleUserStatus != nil {
+			user.Status = constants.AccountUserStatus(*d.ResponsibleUserStatus)
+		} else {
+			user.Status = constants.AccountUserStatusActive
+		}
+		tx.ResponsibleUser = user
 	}
 
 	tx.Note = d.Note
@@ -130,14 +152,28 @@ func TransactionSummaryPresenter(d *pb.TransactionSummaryInfo) apiresource.Trans
 
 	if d.CustomerId != nil {
 		customer := &apiresource.Customer{
-			ID:     *d.CustomerId,
-			Object: constants.ObjectTypeCustomer,
+			ID:               *d.CustomerId,
+			Object:           constants.ObjectTypeCustomer,
+			EDIStatus:        constants.EDIStatusDisabled,
+			RelationshipType: constants.CustomerRelationshipTypeStandalone,
+			CreatedAt:        grpcutil.TimestampToTime(d.CustomerCreatedAt),
+			UpdatedAt:        grpcutil.TimestampToTime(d.CustomerUpdatedAt),
 		}
 		if d.CustomerName != nil {
 			customer.Name = *d.CustomerName
 		}
 		if d.CustomerNumber != nil {
 			customer.Number = *d.CustomerNumber
+		}
+		if d.CustomerStatus != nil {
+			customer.Status = constants.AccountStatusCode(*d.CustomerStatus)
+		} else {
+			customer.Status = constants.AccountStatusCodeNormal
+		}
+		if d.CustomerCommissionPolicy != nil {
+			customer.CommissionPolicy = constants.CommissionPolicy(*d.CustomerCommissionPolicy)
+		} else {
+			customer.CommissionPolicy = constants.CommissionPolicyApplied
 		}
 		ts.Customer = customer
 	}

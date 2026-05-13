@@ -1982,6 +1982,7 @@ CREATE TABLE `message_outbox` (
   UNIQUE KEY `message_outbox_message_id_key` (`message_id`),
   KEY `message_outbox_status_next_run_at_idx` (`status`,`next_run_at`),
   KEY `message_outbox_lock_expires_at_idx` (`lock_expires_at`),
+  KEY `message_outbox_status_published_at_idx` (`status`,`published_at`,`id`),
   KEY `message_outbox_request_id_idx` (`request_id`),
   KEY `message_outbox_parent_message_id_idx` (`parent_message_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=139 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

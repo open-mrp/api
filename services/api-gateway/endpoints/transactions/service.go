@@ -19,7 +19,7 @@ import (
 
 type TransactionSvc interface {
 	ListTransactions(ctx context.Context, req *ListTransactionsRequest) (*apiresource.List[apiresource.TransactionSummary], *apierror.APIError)
-	GetTransaction(ctx context.Context, req *GetTransactionRequest) (*apiresource.TransactionDetail, *apierror.APIError)
+	GetTransaction(ctx context.Context, req *RetrieveTransactionRequest) (*apiresource.TransactionDetail, *apierror.APIError)
 	CreateTransaction(ctx context.Context, req *CreateTransactionRequest) (*apiresource.TransactionDetail, *apierror.APIError)
 	UpdateTransaction(ctx context.Context, req *UpdateTransactionRequest) (*apiresource.TransactionDetail, *apierror.APIError)
 	DeleteTransaction(ctx context.Context, req *DeleteTransactionRequest) (*apiresource.TransactionDetail, *apierror.APIError)
@@ -94,7 +94,7 @@ func (m *transactionSvcImpl) ListTransactions(ctx context.Context, req *ListTran
 	return TransactionListPresenter(resp), nil
 }
 
-func (m *transactionSvcImpl) GetTransaction(ctx context.Context, req *GetTransactionRequest) (*apiresource.TransactionDetail, *apierror.APIError) {
+func (m *transactionSvcImpl) GetTransaction(ctx context.Context, req *RetrieveTransactionRequest) (*apiresource.TransactionDetail, *apierror.APIError) {
 	pbReq := &pb.GetTransactionRequest{
 		Id:       req.TransactionID,
 		Includes: appctx.GetRequestedIncludeKeys(ctx),

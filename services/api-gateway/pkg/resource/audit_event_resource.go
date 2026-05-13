@@ -42,21 +42,18 @@ type AuditEvent struct {
 	ResourceType constants.ObjectType `json:"resource_type" validate:"required"`
 	// Audited resource ID.
 	ResourceID string `json:"resource_id" validate:"required"`
-
 	// Actor who performed the mutation.
 	Actor *Actor `json:"actor" expandable:"true"`
 	// Field-level changes recorded for this event.
 	Changes *List[AuditFieldChange] `json:"changes" expandable:"true"`
 	// Arbitrary JSON metadata for the mutation (e.g. reason, source, tags).
 	Metadata json.RawMessage `json:"metadata"`
-
 	// Originating HTTP request ID.
 	RequestID *string `json:"request_id"`
 	// Idempotency key of the originating request.
 	IdempotencyKey *string `json:"idempotency_key"`
 	// Originating client IP address.
 	SourceIP *string `json:"source_ip"`
-
 	// When the audited mutation occurred.
 	OccurredAt time.Time `json:"occurred_at" validate:"required"`
 	// When the audit event record was created.

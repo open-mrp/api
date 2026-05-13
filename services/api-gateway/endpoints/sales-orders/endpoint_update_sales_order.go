@@ -21,9 +21,9 @@ type UpdateSalesOrderRequest struct {
 	// Order note.
 	Note *string `json:"note,omitempty" nullable:"false"`
 	// Carrier ID.
-	CarrierID *string `json:"carrier_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
+	CarrierID *string `json:"carrier_id,omitempty" nullable:"true" validate:"omitempty"`
 	// Service level ID.
-	ServiceLevelID *string `json:"service_level_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
+	ServiceLevelID *string `json:"service_level_id,omitempty" nullable:"true" validate:"omitempty"`
 	// Carrier billing type.
 	CarrierBillingType *string `json:"carrier_billing_type,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// Carrier billing account number.
@@ -31,13 +31,13 @@ type UpdateSalesOrderRequest struct {
 	// Priority code.
 	PriorityCode *string `json:"priority_code,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// Sales rep ID.
-	SalesRepID *string `json:"sales_rep_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
+	SalesRepID *string `json:"sales_rep_id,omitempty" nullable:"true" validate:"omitempty"`
 	// Shipping term ID.
-	ShippingTermID *string `json:"shipping_term_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
+	ShippingTermID *string `json:"shipping_term_id,omitempty" nullable:"true" validate:"omitempty"`
 	// Payment term ID.
-	PaymentTermID *string `json:"payment_term_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
+	PaymentTermID *string `json:"payment_term_id,omitempty" nullable:"true" validate:"omitempty"`
 	// Order discount ID.
-	OrderDiscountID *string `json:"order_discount_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
+	OrderDiscountID *string `json:"order_discount_id,omitempty" nullable:"true" validate:"omitempty"`
 	// Bill-to address name.
 	BillToName *string `json:"bill_to_name,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// Bill-to street line 1.
@@ -73,7 +73,7 @@ type UpdateSalesOrderRequest struct {
 	// Promised delivery date.
 	PromisedAt *time.Time `json:"promised_at,omitempty" nullable:"false"`
 	// Customer ID.
-	CustomerID *string `json:"customer_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
+	CustomerID *string `json:"customer_id,omitempty" nullable:"true" validate:"omitempty"`
 	// When set, replaces acknowledgement email contacts on the order.
 	// An empty list clears all contacts; omitted leaves existing contacts untouched.
 	AcknowledgementEmailContacts *[]SalesOrderEmailContactInput `json:"acknowledgement_email_contacts,omitempty" nullable:"false"`

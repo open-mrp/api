@@ -14,9 +14,9 @@ import (
 // CreateUnitGroupUnitRequest is a request to create an associated unit within a unit group.
 type CreateUnitGroupUnitRequest struct {
 	// Unit group ID.
-	UnitGroupID string `path:"unitGroupId" validate:"required"`
+	UnitGroupID string `path:"unit_group_id" validate:"required"`
 	// Unit ID.
-	UnitID string `json:"unit_id" validate:"required,max=191"`
+	UnitID string `json:"unit_id" validate:"required"`
 	// Discount percentage.
 	DiscountPercentage *float64 `json:"discount_percentage,omitempty" default:"1" nullable:"false"`
 	// Fixed discount amount.
@@ -46,7 +46,7 @@ func (e *CreateUnitGroupUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cr
 		Title:             "Create Unit Group Associated Unit",
 		Description:       "Creates an associated unit within a unit group.",
 		Method:            http.MethodPost,
-		Route:             "/v1/catalog/unit-groups/{unitGroupId}/units",
+		Route:             "/v1/catalog/unit-groups/{unit_group_id}/units",
 		ContentType:       "application/json",
 		Request:           &CreateUnitGroupUnitRequest{},
 		Response:          &apiresource.UnitGroupUnit{},

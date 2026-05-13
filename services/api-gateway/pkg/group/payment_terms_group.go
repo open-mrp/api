@@ -40,7 +40,7 @@ func (*PaymentTermsEndpointGroup) Materialize(config *PaymentTermsEndpointGroupC
 	}
 
 	listPaymentTermsEndpoint := (&paymenttermep.ListPaymentTermsEndpoint{}).Materialize().WithService(inner, paymentTermSvc)
-	getPaymentTermEndpoint := (&paymenttermep.GetPaymentTermEndpoint{}).Materialize().WithService(inner, paymentTermSvc)
+	getPaymentTermEndpoint := (&paymenttermep.RetrievePaymentTermEndpoint{}).Materialize().WithService(inner, paymentTermSvc)
 	createPaymentTermEndpoint := (&paymenttermep.CreatePaymentTermEndpoint{}).Materialize().WithService(inner, paymentTermSvc)
 	updatePaymentTermEndpoint := (&paymenttermep.UpdatePaymentTermEndpoint{}).Materialize().WithService(inner, paymentTermSvc)
 	deletePaymentTermEndpoint := (&paymenttermep.DeletePaymentTermEndpoint{}).Materialize().WithService(inner, paymentTermSvc)

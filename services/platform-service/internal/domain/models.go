@@ -70,29 +70,31 @@ type IdempotencyKey struct {
 // RequestLogRead is the enriched read model for request logs, including
 // resolved actor details, account name, and idempotency key value.
 type RequestLogRead struct {
-	ID              string
-	Method          string
-	Host            string
-	Path            string
-	NormalizedRoute string
-	QueryJSON       *string
-	StatusCode      int32
-	LatencyUs       int64
-	APIVersion      *string
-	IdentityType    *string
-	ClientIP        *string
-	UserAgent       *string
-	Referrer        *string
-	ErrorCode       *string
-	ErrorMessage    *string
-	OccurredAt      time.Time
-	CreatedAt       time.Time
-	AccountID       *string
-	AccountName     *string
-	Actor           *RequestLogActor
-	IdempotencyKey  *string
-	BodyJSON        *string
-	ResponseJSON    *string
+	ID               string
+	Method           string
+	Host             string
+	Path             string
+	NormalizedRoute  string
+	QueryJSON        *string
+	StatusCode       int32
+	LatencyUs        int64
+	APIVersion       *string
+	IdentityType     *string
+	ClientIP         *string
+	UserAgent        *string
+	Referrer         *string
+	ErrorCode        *string
+	ErrorMessage     *string
+	OccurredAt       time.Time
+	CreatedAt        time.Time
+	AccountID        *string
+	AccountName      *string
+	AccountCreatedAt *time.Time
+	AccountUpdatedAt *time.Time
+	Actor            *RequestLogActor
+	IdempotencyKey   *string
+	BodyJSON         *string
+	ResponseJSON     *string
 }
 
 type RequestLogActor struct {
@@ -103,7 +105,7 @@ type RequestLogActor struct {
 	RedactedValue *string
 	RoleID        *string
 	RoleName      *string
-	RoleTypeCode  *string
+	RoleType      *string
 }
 
 type ListRequestLogsFilter struct {
@@ -120,6 +122,7 @@ type ListRequestLogsFilter struct {
 	Hosts            []string
 	MinLatencyUs     *int64
 	PublicEndpoint   *bool
+	IdempotencyKey   *string
 	Cursor           *string
 	Limit            int32
 }

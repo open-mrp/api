@@ -78,7 +78,7 @@ type UnitGroupSvc interface {
 
 	// GetUnitGroup returns a single unit group by ID with its unit conversions.
 	// Supports both internal and customer (cross-account) access.
-	GetUnitGroup(ctx context.Context, unitGroupID string) (*UnitGroupFull, *apierror.APIError)
+	GetUnitGroup(ctx context.Context, params GetUnitGroupParams) (*UnitGroupFull, *apierror.APIError)
 
 	// CreateUnitGroup creates a new account-owned unit group with optional
 	// unit conversions. Idempotent via idempotency keys.
@@ -101,7 +101,7 @@ type UnitGroupSvc interface {
 	DeleteUnitGroupUnit(ctx context.Context, params DeleteUnitGroupUnitParams) *apierror.APIError
 
 	// ListUnitGroupUnits returns all unit conversions for a unit group.
-	ListUnitGroupUnits(ctx context.Context, unitGroupID string) ([]*UnitGroupUnit, *apierror.APIError)
+	ListUnitGroupUnits(ctx context.Context, unitGroupID string, includes []string) ([]*UnitGroupUnit, *apierror.APIError)
 
 	// GetUnitGroupUnit returns a single unit conversion by ID.
 	GetUnitGroupUnit(ctx context.Context, params GetUnitGroupUnitParams) (*UnitGroupUnit, *apierror.APIError)
@@ -135,7 +135,7 @@ type ShippingTermSvc interface {
 
 	// GetShippingTerm returns a single shipping term by ID. The shipping term must
 	// belong to the caller's account or be a default (global) shipping term.
-	GetShippingTerm(ctx context.Context, shippingTermID string) (*ShippingTerm, *apierror.APIError)
+	GetShippingTerm(ctx context.Context, params GetShippingTermParams) (*ShippingTerm, *apierror.APIError)
 
 	// CreateShippingTerm creates a new account-owned shipping term.
 	CreateShippingTerm(ctx context.Context, params CreateShippingTermParams) (*ShippingTerm, *apierror.APIError)
@@ -249,13 +249,13 @@ type AccountUserSvc interface {
 	ListAccountUsers(ctx context.Context, params ListAccountUsersParams) (*ListAccountUsersResult, *apierror.APIError)
 
 	// GetAccountUser returns a single account user by account_user ID.
-	GetAccountUser(ctx context.Context, accountUserID string) (*AccountUserDetail, *apierror.APIError)
+	GetAccountUser(ctx context.Context, accountUserID string, includes []string) (*AccountUserDetail, *apierror.APIError)
 
 	// CreateAccountUser creates a new account user.
 	CreateAccountUser(ctx context.Context, params CreateAccountUserParams) (*AccountUserDetail, *apierror.APIError)
 
 	// UpdateAccountUser partially updates an account user, optionally including notification preferences.
-	UpdateAccountUser(ctx context.Context, params UpdateAccountUserParams) (*AccountUserDetail, *apierror.APIError)
+	UpdateAccountUser(ctx context.Context, params UpdateAccountUserParams, includes []string) (*AccountUserDetail, *apierror.APIError)
 
 	// UpdateAccountUserStatus transitions an account user to the given target status.
 	UpdateAccountUserStatus(ctx context.Context, accountUserID string, targetStatus constants.AccountUserStatus) *apierror.APIError
@@ -359,7 +359,7 @@ type CarrierSvc interface {
 	ListCarriers(ctx context.Context, params ListCarriersParams) (*ListCarriersResult, *apierror.APIError)
 
 	// GetCarrier returns a single carrier by ID.
-	GetCarrier(ctx context.Context, carrierID string) (*Carrier, *apierror.APIError)
+	GetCarrier(ctx context.Context, params GetCarrierParams) (*Carrier, *apierror.APIError)
 
 	// CreateCarrier creates a new carrier, optionally registering with Shippo.
 	CreateCarrier(ctx context.Context, params CreateCarrierParams) (*Carrier, *apierror.APIError)
@@ -430,7 +430,7 @@ type ItemSvc interface {
 	ListItems(ctx context.Context, params ListItemsParams) (*ListItemsResult, *apierror.APIError)
 
 	// GetItem returns a single item by ID within the caller's account.
-	GetItem(ctx context.Context, itemID string) (*Item, *apierror.APIError)
+	GetItem(ctx context.Context, itemID string, includes []string) (*Item, *apierror.APIError)
 
 	// GetItemInventory returns inventory quantities (on-hand, reserved, ATP, short) for an item.
 	GetItemInventory(ctx context.Context, itemID string) (*ItemInventory, *apierror.APIError)
@@ -448,13 +448,13 @@ type ItemSvc interface {
 	UpdateItem(ctx context.Context, params UpdateItemParams) (*Item, *apierror.APIError)
 
 	// AddItemAttribute adds an attribute to an item.
-	AddItemAttribute(ctx context.Context, itemID, attributeID string) (*Item, *apierror.APIError)
+	AddItemAttribute(ctx context.Context, itemID, attributeID string, includes []string) (*Item, *apierror.APIError)
 
 	// RemoveItemAttribute removes an attribute from an item.
-	RemoveItemAttribute(ctx context.Context, itemID, attributeID string) (*Item, *apierror.APIError)
+	RemoveItemAttribute(ctx context.Context, itemID, attributeID string, includes []string) (*Item, *apierror.APIError)
 
 	// ChangeItemCategory changes the category of an item and updates rate units.
-	ChangeItemCategory(ctx context.Context, itemID, categoryID string) (*Item, *apierror.APIError)
+	ChangeItemCategory(ctx context.Context, itemID, categoryID string, includes []string) (*Item, *apierror.APIError)
 
 	// UpdateItemInventory adjusts or reconciles inventory for an item.
 	UpdateItemInventory(ctx context.Context, params UpdateItemInventoryParams) *apierror.APIError
@@ -627,7 +627,7 @@ type ItemCategorySvc interface {
 	ListItemCategories(ctx context.Context, params ListItemCategoriesParams) (*ListItemCategoriesResult, *apierror.APIError)
 
 	// GetItemCategory returns a single item category by ID.
-	GetItemCategory(ctx context.Context, itemCategoryID string) (*ItemCategoryFull, *apierror.APIError)
+	GetItemCategory(ctx context.Context, params GetItemCategoryParams) (*ItemCategoryFull, *apierror.APIError)
 
 	// CreateItemCategory creates a new item category.
 	CreateItemCategory(ctx context.Context, params CreateItemCategoryParams) (*ItemCategoryFull, *apierror.APIError)
@@ -653,7 +653,7 @@ type ProductLineSvc interface {
 	ListProductLines(ctx context.Context, params ListProductLinesParams) (*ListProductLinesResult, *apierror.APIError)
 
 	// GetProductLine returns a single product line by ID.
-	GetProductLine(ctx context.Context, productLineID string) (*ProductLineFull, *apierror.APIError)
+	GetProductLine(ctx context.Context, params GetProductLineParams) (*ProductLineFull, *apierror.APIError)
 
 	// CreateProductLine creates a new product line.
 	CreateProductLine(ctx context.Context, params CreateProductLineParams) (*ProductLineFull, *apierror.APIError)
@@ -973,8 +973,8 @@ type PartSvc interface {
 	// CreatePart creates a new part with its associated item and rates.
 	CreatePart(ctx context.Context, params CreatePartParams) (*Part, *apierror.APIError)
 
-	// GetPart returns a single part by item ID.
-	GetPart(ctx context.Context, itemID string) (*Part, *apierror.APIError)
+	// GetPart returns a single part by ID.
+	GetPart(ctx context.Context, params GetPartParams) (*Part, *apierror.APIError)
 
 	// ListParts returns a paginated list of parts for the caller's account.
 	ListParts(ctx context.Context, params ListPartsParams) (*ListPartsResult, *apierror.APIError)
@@ -990,8 +990,8 @@ type MaterialSvc interface {
 	// ListMaterials returns a paginated list of materials for the caller's account.
 	ListMaterials(ctx context.Context, params ListMaterialsParams) (*ListMaterialsResult, *apierror.APIError)
 
-	// GetMaterial returns a single material by item ID.
-	GetMaterial(ctx context.Context, itemID string) (*Material, *apierror.APIError)
+	// GetMaterial returns a single material by ID.
+	GetMaterial(ctx context.Context, params GetMaterialParams) (*Material, *apierror.APIError)
 
 	// CreateMaterial creates a new material.
 	CreateMaterial(ctx context.Context, params CreateMaterialParams) (*Material, *apierror.APIError)
@@ -1207,7 +1207,7 @@ type RegistrationFlowSvc interface {
 
 type ScanningStationSvc interface {
 	ListScanningStations(ctx context.Context, params ListScanningStationsParams) (*ListScanningStationsResult, *apierror.APIError)
-	GetScanningStation(ctx context.Context, scanningStationID string) (*ScanningStation, *apierror.APIError)
+	GetScanningStation(ctx context.Context, params GetScanningStationParams) (*ScanningStation, *apierror.APIError)
 	CreateScanningStation(ctx context.Context, params CreateScanningStationParams) (*ScanningStation, *apierror.APIError)
 	UpdateScanningStation(ctx context.Context, params UpdateScanningStationParams) (*ScanningStation, *apierror.APIError)
 	DeleteScanningStation(ctx context.Context, scanningStationID string) *apierror.APIError
@@ -1226,7 +1226,7 @@ type LocationSvc interface {
 
 type SupplierSvc interface {
 	ListSuppliers(ctx context.Context, params ListSuppliersParams) (*ListSuppliersResult, *apierror.APIError)
-	GetSupplier(ctx context.Context, supplierID string) (*Supplier, *apierror.APIError)
+	GetSupplier(ctx context.Context, params GetSupplierParams) (*Supplier, *apierror.APIError)
 	CreateSupplier(ctx context.Context, params CreateSupplierParams) (*Supplier, *apierror.APIError)
 	UpdateSupplier(ctx context.Context, params UpdateSupplierParams) (*Supplier, *apierror.APIError)
 	DeleteSupplier(ctx context.Context, params DeleteSupplierParams) (*Supplier, *apierror.APIError)
@@ -1284,7 +1284,7 @@ type ShipmentLineSvc interface {
 
 type RoleSvc interface {
 	ListRoles(ctx context.Context, params ListRolesParams) (*ListRolesResult, *apierror.APIError)
-	GetRole(ctx context.Context, roleID string) (*RoleWithPermissions, *apierror.APIError)
+	GetRole(ctx context.Context, roleID string, incs []string) (*RoleWithPermissions, *apierror.APIError)
 	CreateRole(ctx context.Context, params CreateRoleParams) (*RoleWithPermissions, *apierror.APIError)
 	UpdateRole(ctx context.Context, params UpdateRoleParams) (*RoleWithPermissions, *apierror.APIError)
 	DeleteRole(ctx context.Context, roleID string) *apierror.APIError

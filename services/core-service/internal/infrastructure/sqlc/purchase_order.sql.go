@@ -220,6 +220,9 @@ SELECT
     pr.id AS priority_id,
     -- Bill-to address
     bill_addr.name AS bill_to_name,
+    bill_addr.is_drop_ship AS bill_to_is_drop_ship,
+    bill_addr.created_at AS bill_to_created_at,
+    bill_addr.updated_at AS bill_to_updated_at,
     bill_geo.street_line_1 AS bill_to_street_line_1,
     bill_geo.street_line_2 AS bill_to_street_line_2,
     bill_geo.locality AS bill_to_locality,
@@ -230,6 +233,9 @@ SELECT
     bill_addr.email AS bill_to_email,
     -- Ship-to address
     ship_addr.name AS ship_to_name,
+    ship_addr.is_drop_ship AS ship_to_is_drop_ship,
+    ship_addr.created_at AS ship_to_created_at,
+    ship_addr.updated_at AS ship_to_updated_at,
     ship_geo.street_line_1 AS ship_to_street_line_1,
     ship_geo.street_line_2 AS ship_to_street_line_2,
     ship_geo.locality AS ship_to_locality,
@@ -241,16 +247,24 @@ SELECT
     -- Carrier
     cr.name AS carrier_name,
     cr.is_portal_enabled AS carrier_is_portal_enabled,
+    cr.created_at AS carrier_created_at,
+    cr.updated_at AS carrier_updated_at,
     co.name AS carrier_option_name,
     co.is_portal_enabled AS service_level_is_portal_enabled,
     co.service_level_token AS service_level_token,
+    co.created_at AS service_level_created_at,
+    co.updated_at AS service_level_updated_at,
     -- Payment term
     pt.name AS payment_term_name,
     pt.is_active AS payment_term_is_active,
+    pt.created_at AS payment_term_created_at,
+    pt.updated_at AS payment_term_updated_at,
     -- Shipping term
     st.name AS shipping_term_name,
     st.is_freight_exempt AS shipping_term_is_freight_exempt,
     st.is_carrier_rate AS shipping_term_is_carrier_rate,
+    st.created_at AS shipping_term_created_at,
+    st.updated_at AS shipping_term_updated_at,
     -- Receiving order
     ro.id AS receiving_order_id
 FROM sales_order so
@@ -310,6 +324,9 @@ type GetPurchaseOrderRow struct {
 	PriorityName                string
 	PriorityID                  string
 	BillToName                  sql.NullString
+	BillToIsDropShip            sql.NullBool
+	BillToCreatedAt             sql.NullTime
+	BillToUpdatedAt             sql.NullTime
 	BillToStreetLine1           sql.NullString
 	BillToStreetLine2           sql.NullString
 	BillToLocality              sql.NullString
@@ -319,6 +336,9 @@ type GetPurchaseOrderRow struct {
 	BillToPhone                 sql.NullString
 	BillToEmail                 sql.NullString
 	ShipToName                  sql.NullString
+	ShipToIsDropShip            sql.NullBool
+	ShipToCreatedAt             sql.NullTime
+	ShipToUpdatedAt             sql.NullTime
 	ShipToStreetLine1           sql.NullString
 	ShipToStreetLine2           sql.NullString
 	ShipToLocality              sql.NullString
@@ -329,14 +349,22 @@ type GetPurchaseOrderRow struct {
 	ShipToEmail                 sql.NullString
 	CarrierName                 sql.NullString
 	CarrierIsPortalEnabled      sql.NullBool
+	CarrierCreatedAt            sql.NullTime
+	CarrierUpdatedAt            sql.NullTime
 	CarrierOptionName           sql.NullString
 	ServiceLevelIsPortalEnabled sql.NullBool
 	ServiceLevelToken           sql.NullString
+	ServiceLevelCreatedAt       sql.NullTime
+	ServiceLevelUpdatedAt       sql.NullTime
 	PaymentTermName             sql.NullString
 	PaymentTermIsActive         sql.NullBool
+	PaymentTermCreatedAt        sql.NullTime
+	PaymentTermUpdatedAt        sql.NullTime
 	ShippingTermName            sql.NullString
 	ShippingTermIsFreightExempt sql.NullBool
 	ShippingTermIsCarrierRate   sql.NullBool
+	ShippingTermCreatedAt       sql.NullTime
+	ShippingTermUpdatedAt       sql.NullTime
 	ReceivingOrderID            sql.NullString
 }
 
@@ -374,6 +402,9 @@ func (q *Queries) GetPurchaseOrder(ctx context.Context, arg GetPurchaseOrderPara
 		&i.PriorityName,
 		&i.PriorityID,
 		&i.BillToName,
+		&i.BillToIsDropShip,
+		&i.BillToCreatedAt,
+		&i.BillToUpdatedAt,
 		&i.BillToStreetLine1,
 		&i.BillToStreetLine2,
 		&i.BillToLocality,
@@ -383,6 +414,9 @@ func (q *Queries) GetPurchaseOrder(ctx context.Context, arg GetPurchaseOrderPara
 		&i.BillToPhone,
 		&i.BillToEmail,
 		&i.ShipToName,
+		&i.ShipToIsDropShip,
+		&i.ShipToCreatedAt,
+		&i.ShipToUpdatedAt,
 		&i.ShipToStreetLine1,
 		&i.ShipToStreetLine2,
 		&i.ShipToLocality,
@@ -393,14 +427,22 @@ func (q *Queries) GetPurchaseOrder(ctx context.Context, arg GetPurchaseOrderPara
 		&i.ShipToEmail,
 		&i.CarrierName,
 		&i.CarrierIsPortalEnabled,
+		&i.CarrierCreatedAt,
+		&i.CarrierUpdatedAt,
 		&i.CarrierOptionName,
 		&i.ServiceLevelIsPortalEnabled,
 		&i.ServiceLevelToken,
+		&i.ServiceLevelCreatedAt,
+		&i.ServiceLevelUpdatedAt,
 		&i.PaymentTermName,
 		&i.PaymentTermIsActive,
+		&i.PaymentTermCreatedAt,
+		&i.PaymentTermUpdatedAt,
 		&i.ShippingTermName,
 		&i.ShippingTermIsFreightExempt,
 		&i.ShippingTermIsCarrierRate,
+		&i.ShippingTermCreatedAt,
+		&i.ShippingTermUpdatedAt,
 		&i.ReceivingOrderID,
 	)
 	return i, err

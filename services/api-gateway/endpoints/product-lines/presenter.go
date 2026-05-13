@@ -27,10 +27,12 @@ func ProductLinePresenter(pl *pb.ProductLineInfo, ownerAccount *apiresource.Acco
 
 	if pl.UnitGroup != nil {
 		result.UnitGroup = &apiresource.UnitGroup{
-			ID:     pl.UnitGroup.Id,
-			Object: constants.ObjectTypeUnitGroup,
-			Name:   pl.UnitGroup.Name,
-			Type:   constants.UnitType(pl.UnitGroup.Type),
+			ID:        pl.UnitGroup.Id,
+			Object:    constants.ObjectTypeUnitGroup,
+			Name:      pl.UnitGroup.Name,
+			Type:      constants.UnitType(pl.UnitGroup.Type),
+			CreatedAt: grpcutil.TimestampToTime(pl.UnitGroup.CreatedAt),
+			UpdatedAt: grpcutil.TimestampToTime(pl.UnitGroup.UpdatedAt),
 		}
 	}
 

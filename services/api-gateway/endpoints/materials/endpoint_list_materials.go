@@ -32,18 +32,18 @@ func (e *ListMaterialsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListMate
 		Description:       "Returns a paginated list of materials.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
-		Route:             "/v1/operations/materials",
+		Route:             "/v1/catalog/materials",
 		Request:           &ListMaterialsRequest{},
 		Response:          &apiresource.List[apiresource.Material]{},
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListMaterialsRequest) (*apiresource.List[apiresource.Material], *apierror.APIError) {
 			return svc.(MaterialSvc).ListMaterials
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeMaterial,
-			Fields:     []string{"item", "item.category", "item.unit_value", "item.unit_cost", "item.burn_rate"},
+			Fields:     []string{"item", "item.category", "item.category.properties", "item.category.unit_group", "item.unit_value", "item.unit_cost", "item.burn_rate", "item.attributes"},
 		}),
 	}
 }

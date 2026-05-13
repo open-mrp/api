@@ -1,0 +1,41 @@
+package edidclocationep
+
+import (
+	"context"
+	"net/http"
+
+	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
+	apierror "github.com/augno/api/shared/errors"
+)
+
+// Request to retrieve a DC location.
+type RetrieveDCLocationRequest struct {
+	// DC location ID.
+	DCLocationID string `path:"id" validate:"required"`
+}
+
+type RetrieveDCLocationEndpoint struct{}
+
+func (e *RetrieveDCLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveDCLocationRequest, *apiresource.DCLocation] {
+	return &apiendpoint.APIEndpoint[*RetrieveDCLocationRequest, *apiresource.DCLocation]{
+		Title:             "Retrieve DC Location",
+		Description:       "Returns a DC location by ID.",
+		Method:            http.MethodGet,
+		ContentType:       "application/json",
+		Route:             "/v1/operations/dc-locations/{id}",
+		Request:           &RetrieveDCLocationRequest{},
+		Response:          &apiresource.DCLocation{},
+		SuccessStatusCode: http.StatusOK,
+		Public:            false,
+		Preview:           true,
+		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveDCLocationRequest) (*apiresource.DCLocation, *apierror.APIError) {
+			return svc.(EDIDCLocationSvc).GetDCLocation
+		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeDCLocation,
+			Fields:     []string{"customer"},
+		}),
+	}
+}

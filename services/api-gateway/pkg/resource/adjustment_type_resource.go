@@ -14,7 +14,7 @@ const SampleAdjustmentTypeCode = string(constants.AdjustmentTypeDiscount)
 
 // Adjustment type resource.
 type AdjustmentType struct {
-	// Adjustment type ID.
+	// Adjustment ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=adjustment_type"`

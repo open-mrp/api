@@ -15,7 +15,7 @@ import (
 
 type EDIRunSvc interface {
 	ListEDIRuns(ctx context.Context, req *ListEDIRunsRequest) (*apiresource.List[apiresource.EDIRun], *apierror.APIError)
-	GetEDIRun(ctx context.Context, req *GetEDIRunRequest) (*apiresource.EDIRun, *apierror.APIError)
+	GetEDIRun(ctx context.Context, req *RetrieveEDIRunRequest) (*apiresource.EDIRun, *apierror.APIError)
 }
 
 type EDIRunSvcConfig struct {
@@ -67,7 +67,7 @@ func (m *ediRunSvcImpl) ListEDIRuns(ctx context.Context, req *ListEDIRunsRequest
 	return EDIRunListPresenter(resp), nil
 }
 
-func (m *ediRunSvcImpl) GetEDIRun(ctx context.Context, req *GetEDIRunRequest) (*apiresource.EDIRun, *apierror.APIError) {
+func (m *ediRunSvcImpl) GetEDIRun(ctx context.Context, req *RetrieveEDIRunRequest) (*apiresource.EDIRun, *apierror.APIError) {
 	pbReq := &pb.GetEDIRunRequest{
 		Id: req.EDIRunID,
 	}

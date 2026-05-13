@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	gosql "database/sql"
+	"slices"
 	"time"
 
 	"github.com/augno/api/services/core-service/internal/domain"
@@ -25,240 +26,6 @@ func NewMaterialRepo(queries *sqlc.Queries) domain.MaterialRepo {
 
 func materialCreatedAt(m *domain.Material) time.Time { return m.CreatedAt }
 func materialID(m *domain.Material) string           { return m.ID }
-
-func mapMaterialForwardRow(row sqlc.ListMaterialsForwardRow) *domain.Material {
-	var description *string
-	if row.ItemDescription.Valid {
-		description = &row.ItemDescription.String
-	}
-	var notes *string
-	if row.ItemNotes.Valid {
-		notes = &row.ItemNotes.String
-	}
-
-	return &domain.Material{
-		ID:     row.ID,
-		ItemID: row.ItemID,
-		Item: &domain.Item{
-			ID:             row.ItemID,
-			SKU:            row.Sku,
-			Description:    description,
-			Notes:          notes,
-			ItemTypeCode:   row.ItemTypeCode,
-			ItemCategoryID: row.ItemCategoryID,
-			CategoryName:   row.CategoryName,
-			UnitValueID:    row.UnitValueID,
-			UnitCostID:     row.UnitCostID,
-			BurnRateID:     row.BurnRateID,
-			AccountID:      row.AccountID,
-			IsDirty:        row.IsDirty,
-			CreatedAt:      row.ItemCreatedAt,
-			UpdatedAt:      row.ItemUpdatedAt,
-			UnitValue: &domain.Rate{
-				ID:                row.UnitValueRateID,
-				Value:             row.UnitValueRateValue,
-				NumeratorUnitID:   row.UnitValueNumeratorUnitID,
-				DenominatorUnitID: row.UnitValueDenominatorUnitID,
-				CreatedAt:         row.UnitValueCreatedAt,
-				UpdatedAt:         row.UnitValueUpdatedAt,
-			},
-			UnitCost: &domain.Rate{
-				ID:                row.UnitCostRateID,
-				Value:             row.UnitCostRateValue,
-				NumeratorUnitID:   row.UnitCostNumeratorUnitID,
-				DenominatorUnitID: row.UnitCostDenominatorUnitID,
-				CreatedAt:         row.UnitCostCreatedAt,
-				UpdatedAt:         row.UnitCostUpdatedAt,
-			},
-			BurnRate: &domain.Rate{
-				ID:                row.BurnRateIDJoined,
-				Value:             row.BurnRateValue,
-				NumeratorUnitID:   row.BurnRateNumeratorUnitID,
-				DenominatorUnitID: row.BurnRateDenominatorUnitID,
-				CreatedAt:         row.BurnRateCreatedAt,
-				UpdatedAt:         row.BurnRateUpdatedAt,
-			},
-			Category: &domain.ItemCategory{
-				ID:                   row.ItemCategoryID,
-				Name:                 row.CategoryName,
-				ItemCategoryTypeCode: row.ItemCategoryTypeCode,
-				UnitGroupID:          row.CategoryUnitGroupID,
-			},
-		},
-		OrderPoint: &domain.Quantity{
-			ID:               row.OrderPointID,
-			Value:            row.OrderPointValue,
-			UnitID:           row.OrderPointUnitID,
-			UnitAbbreviation: row.OrderPointUnitAbbreviation,
-			UnitType:         row.OrderPointUnitType,
-		},
-		LeadTime: &domain.Quantity{
-			ID:               row.LeadTimeID,
-			Value:            row.LeadTimeValue,
-			UnitID:           row.LeadTimeUnitID,
-			UnitAbbreviation: row.LeadTimeUnitAbbreviation,
-			UnitType:         row.LeadTimeUnitType,
-		},
-		CreatedAt: row.CreatedAt,
-		UpdatedAt: row.UpdatedAt,
-	}
-}
-
-func mapMaterialBackwardRow(row sqlc.ListMaterialsBackwardRow) *domain.Material {
-	var description *string
-	if row.ItemDescription.Valid {
-		description = &row.ItemDescription.String
-	}
-	var notes *string
-	if row.ItemNotes.Valid {
-		notes = &row.ItemNotes.String
-	}
-
-	return &domain.Material{
-		ID:     row.ID,
-		ItemID: row.ItemID,
-		Item: &domain.Item{
-			ID:             row.ItemID,
-			SKU:            row.Sku,
-			Description:    description,
-			Notes:          notes,
-			ItemTypeCode:   row.ItemTypeCode,
-			ItemCategoryID: row.ItemCategoryID,
-			CategoryName:   row.CategoryName,
-			UnitValueID:    row.UnitValueID,
-			UnitCostID:     row.UnitCostID,
-			BurnRateID:     row.BurnRateID,
-			AccountID:      row.AccountID,
-			IsDirty:        row.IsDirty,
-			CreatedAt:      row.ItemCreatedAt,
-			UpdatedAt:      row.ItemUpdatedAt,
-			UnitValue: &domain.Rate{
-				ID:                row.UnitValueRateID,
-				Value:             row.UnitValueRateValue,
-				NumeratorUnitID:   row.UnitValueNumeratorUnitID,
-				DenominatorUnitID: row.UnitValueDenominatorUnitID,
-				CreatedAt:         row.UnitValueCreatedAt,
-				UpdatedAt:         row.UnitValueUpdatedAt,
-			},
-			UnitCost: &domain.Rate{
-				ID:                row.UnitCostRateID,
-				Value:             row.UnitCostRateValue,
-				NumeratorUnitID:   row.UnitCostNumeratorUnitID,
-				DenominatorUnitID: row.UnitCostDenominatorUnitID,
-				CreatedAt:         row.UnitCostCreatedAt,
-				UpdatedAt:         row.UnitCostUpdatedAt,
-			},
-			BurnRate: &domain.Rate{
-				ID:                row.BurnRateIDJoined,
-				Value:             row.BurnRateValue,
-				NumeratorUnitID:   row.BurnRateNumeratorUnitID,
-				DenominatorUnitID: row.BurnRateDenominatorUnitID,
-				CreatedAt:         row.BurnRateCreatedAt,
-				UpdatedAt:         row.BurnRateUpdatedAt,
-			},
-			Category: &domain.ItemCategory{
-				ID:                   row.ItemCategoryID,
-				Name:                 row.CategoryName,
-				ItemCategoryTypeCode: row.ItemCategoryTypeCode,
-				UnitGroupID:          row.CategoryUnitGroupID,
-			},
-		},
-		OrderPoint: &domain.Quantity{
-			ID:               row.OrderPointID,
-			Value:            row.OrderPointValue,
-			UnitID:           row.OrderPointUnitID,
-			UnitAbbreviation: row.OrderPointUnitAbbreviation,
-			UnitType:         row.OrderPointUnitType,
-		},
-		LeadTime: &domain.Quantity{
-			ID:               row.LeadTimeID,
-			Value:            row.LeadTimeValue,
-			UnitID:           row.LeadTimeUnitID,
-			UnitAbbreviation: row.LeadTimeUnitAbbreviation,
-			UnitType:         row.LeadTimeUnitType,
-		},
-		CreatedAt: row.CreatedAt,
-		UpdatedAt: row.UpdatedAt,
-	}
-}
-
-func mapGetMaterialByIDRow(row sqlc.GetMaterialByIDRow) *domain.Material {
-	var description *string
-	if row.ItemDescription.Valid {
-		description = &row.ItemDescription.String
-	}
-	var notes *string
-	if row.ItemNotes.Valid {
-		notes = &row.ItemNotes.String
-	}
-
-	return &domain.Material{
-		ID:     row.ID,
-		ItemID: row.ItemID,
-		Item: &domain.Item{
-			ID:             row.ItemID,
-			SKU:            row.Sku,
-			Description:    description,
-			Notes:          notes,
-			ItemTypeCode:   row.ItemTypeCode,
-			ItemCategoryID: row.ItemCategoryID,
-			CategoryName:   row.CategoryName,
-			UnitValueID:    row.UnitValueID,
-			UnitCostID:     row.UnitCostID,
-			BurnRateID:     row.BurnRateID,
-			AccountID:      row.AccountID,
-			IsDirty:        row.IsDirty,
-			CreatedAt:      row.ItemCreatedAt,
-			UpdatedAt:      row.ItemUpdatedAt,
-			UnitValue: &domain.Rate{
-				ID:                row.UnitValueRateID,
-				Value:             row.UnitValueRateValue,
-				NumeratorUnitID:   row.UnitValueNumeratorUnitID,
-				DenominatorUnitID: row.UnitValueDenominatorUnitID,
-				CreatedAt:         row.UnitValueCreatedAt,
-				UpdatedAt:         row.UnitValueUpdatedAt,
-			},
-			UnitCost: &domain.Rate{
-				ID:                row.UnitCostRateID,
-				Value:             row.UnitCostRateValue,
-				NumeratorUnitID:   row.UnitCostNumeratorUnitID,
-				DenominatorUnitID: row.UnitCostDenominatorUnitID,
-				CreatedAt:         row.UnitCostCreatedAt,
-				UpdatedAt:         row.UnitCostUpdatedAt,
-			},
-			BurnRate: &domain.Rate{
-				ID:                row.BurnRateIDJoined,
-				Value:             row.BurnRateValue,
-				NumeratorUnitID:   row.BurnRateNumeratorUnitID,
-				DenominatorUnitID: row.BurnRateDenominatorUnitID,
-				CreatedAt:         row.BurnRateCreatedAt,
-				UpdatedAt:         row.BurnRateUpdatedAt,
-			},
-			Category: &domain.ItemCategory{
-				ID:                   row.ItemCategoryID,
-				Name:                 row.CategoryName,
-				ItemCategoryTypeCode: row.ItemCategoryTypeCode,
-				UnitGroupID:          row.CategoryUnitGroupID,
-			},
-		},
-		OrderPoint: &domain.Quantity{
-			ID:               row.OrderPointID,
-			Value:            row.OrderPointValue,
-			UnitID:           row.OrderPointUnitID,
-			UnitAbbreviation: row.OrderPointUnitAbbreviation,
-			UnitType:         row.OrderPointUnitType,
-		},
-		LeadTime: &domain.Quantity{
-			ID:               row.LeadTimeID,
-			Value:            row.LeadTimeValue,
-			UnitID:           row.LeadTimeUnitID,
-			UnitAbbreviation: row.LeadTimeUnitAbbreviation,
-			UnitType:         row.LeadTimeUnitType,
-		},
-		CreatedAt: row.CreatedAt,
-		UpdatedAt: row.UpdatedAt,
-	}
-}
 
 func mapGetMaterialByItemIDRow(row sqlc.GetMaterialByItemIDRow) *domain.Material {
 	var description *string
@@ -317,6 +84,10 @@ func mapGetMaterialByItemIDRow(row sqlc.GetMaterialByItemIDRow) *domain.Material
 				Name:                 row.CategoryName,
 				ItemCategoryTypeCode: row.ItemCategoryTypeCode,
 				UnitGroupID:          row.CategoryUnitGroupID,
+				UnitGroupName:        row.CategoryUnitGroupName,
+				UnitGroupTypeCode:    row.CategoryUnitGroupType,
+				UnitGroupCreatedAt:   row.CategoryUnitGroupCreatedAt,
+				UnitGroupUpdatedAt:   row.CategoryUnitGroupUpdatedAt,
 			},
 		},
 		OrderPoint: &domain.Quantity{
@@ -336,6 +107,133 @@ func mapGetMaterialByItemIDRow(row sqlc.GetMaterialByItemIDRow) *domain.Material
 		CreatedAt: row.CreatedAt,
 		UpdatedAt: row.UpdatedAt,
 	}
+}
+
+func mapMaterialBaseItem(itemID, sku string, description, notes gosql.NullString, itemTypeCode, itemCategoryID, categoryName, itemCategoryTypeCode, categoryUnitGroupID, unitValueID, unitCostID, burnRateID, accountID string, isDirty bool, itemCreatedAt, itemUpdatedAt, categoryCreatedAt, categoryUpdatedAt time.Time) *domain.Item {
+	var descPtr *string
+	if description.Valid {
+		descPtr = &description.String
+	}
+	var notesPtr *string
+	if notes.Valid {
+		notesPtr = &notes.String
+	}
+	return &domain.Item{
+		ID:             itemID,
+		SKU:            sku,
+		Description:    descPtr,
+		Notes:          notesPtr,
+		ItemTypeCode:   itemTypeCode,
+		ItemCategoryID: itemCategoryID,
+		CategoryName:   categoryName,
+		UnitValueID:    unitValueID,
+		UnitCostID:     unitCostID,
+		BurnRateID:     burnRateID,
+		AccountID:      accountID,
+		IsDirty:        isDirty,
+		CreatedAt:      itemCreatedAt,
+		UpdatedAt:      itemUpdatedAt,
+		Category: &domain.ItemCategory{
+			ID:                   itemCategoryID,
+			Name:                 categoryName,
+			ItemCategoryTypeCode: itemCategoryTypeCode,
+			UnitGroupID:          categoryUnitGroupID,
+			CreatedAt:            categoryCreatedAt,
+			UpdatedAt:            categoryUpdatedAt,
+		},
+	}
+}
+
+func mapMaterialForwardBaseRow(row sqlc.ListMaterialsForwardBaseRow) *domain.Material {
+	return &domain.Material{
+		ID:     row.ID,
+		ItemID: row.ItemID,
+		Item:   mapMaterialBaseItem(row.ItemID, row.Sku, row.ItemDescription, row.ItemNotes, row.ItemTypeCode, row.ItemCategoryID, row.CategoryName, row.ItemCategoryTypeCode, row.CategoryUnitGroupID, row.UnitValueID, row.UnitCostID, row.BurnRateID, row.AccountID, row.IsDirty, row.ItemCreatedAt, row.ItemUpdatedAt, row.CategoryCreatedAt, row.CategoryUpdatedAt),
+		OrderPoint: &domain.Quantity{
+			ID:               row.OrderPointID,
+			Value:            row.OrderPointValue,
+			UnitID:           row.OrderPointUnitID,
+			UnitAbbreviation: row.OrderPointUnitAbbreviation,
+			UnitType:         row.OrderPointUnitType,
+		},
+		LeadTime: &domain.Quantity{
+			ID:               row.LeadTimeID,
+			Value:            row.LeadTimeValue,
+			UnitID:           row.LeadTimeUnitID,
+			UnitAbbreviation: row.LeadTimeUnitAbbreviation,
+			UnitType:         row.LeadTimeUnitType,
+		},
+		CreatedAt: row.CreatedAt,
+		UpdatedAt: row.UpdatedAt,
+	}
+}
+
+func mapMaterialBackwardBaseRow(row sqlc.ListMaterialsBackwardBaseRow) *domain.Material {
+	return &domain.Material{
+		ID:     row.ID,
+		ItemID: row.ItemID,
+		Item:   mapMaterialBaseItem(row.ItemID, row.Sku, row.ItemDescription, row.ItemNotes, row.ItemTypeCode, row.ItemCategoryID, row.CategoryName, row.ItemCategoryTypeCode, row.CategoryUnitGroupID, row.UnitValueID, row.UnitCostID, row.BurnRateID, row.AccountID, row.IsDirty, row.ItemCreatedAt, row.ItemUpdatedAt, row.CategoryCreatedAt, row.CategoryUpdatedAt),
+		OrderPoint: &domain.Quantity{
+			ID:               row.OrderPointID,
+			Value:            row.OrderPointValue,
+			UnitID:           row.OrderPointUnitID,
+			UnitAbbreviation: row.OrderPointUnitAbbreviation,
+			UnitType:         row.OrderPointUnitType,
+		},
+		LeadTime: &domain.Quantity{
+			ID:               row.LeadTimeID,
+			Value:            row.LeadTimeValue,
+			UnitID:           row.LeadTimeUnitID,
+			UnitAbbreviation: row.LeadTimeUnitAbbreviation,
+			UnitType:         row.LeadTimeUnitType,
+		},
+		CreatedAt: row.CreatedAt,
+		UpdatedAt: row.UpdatedAt,
+	}
+}
+
+func mapMaterialGetByIDBaseRow(row sqlc.GetMaterialByIDBaseRow) *domain.Material {
+	return &domain.Material{
+		ID:     row.ID,
+		ItemID: row.ItemID,
+		Item:   mapMaterialBaseItem(row.ItemID, row.Sku, row.ItemDescription, row.ItemNotes, row.ItemTypeCode, row.ItemCategoryID, row.CategoryName, row.ItemCategoryTypeCode, row.CategoryUnitGroupID, row.UnitValueID, row.UnitCostID, row.BurnRateID, row.AccountID, row.IsDirty, row.ItemCreatedAt, row.ItemUpdatedAt, row.CategoryCreatedAt, row.CategoryUpdatedAt),
+		OrderPoint: &domain.Quantity{
+			ID:               row.OrderPointID,
+			Value:            row.OrderPointValue,
+			UnitID:           row.OrderPointUnitID,
+			UnitAbbreviation: row.OrderPointUnitAbbreviation,
+			UnitType:         row.OrderPointUnitType,
+		},
+		LeadTime: &domain.Quantity{
+			ID:               row.LeadTimeID,
+			Value:            row.LeadTimeValue,
+			UnitID:           row.LeadTimeUnitID,
+			UnitAbbreviation: row.LeadTimeUnitAbbreviation,
+			UnitType:         row.LeadTimeUnitType,
+		},
+		CreatedAt: row.CreatedAt,
+		UpdatedAt: row.UpdatedAt,
+	}
+}
+
+func applyMaterialStitches(ctx context.Context, queries *sqlc.Queries, materials []*domain.Material, incs []string) *apierror.APIError {
+	items := itemsFromMaterials(materials)
+	itemIncs := extractItemIncludes(incs)
+	if apiErr := stitchItemRates(ctx, queries, items, itemIncs); apiErr != nil {
+		return apiErr
+	}
+	if apiErr := stitchItemCategoryUnitGroups(ctx, queries, items, itemIncs); apiErr != nil {
+		return apiErr
+	}
+	if apiErr := stitchItemAttributes(ctx, queries, items, itemIncs); apiErr != nil {
+		return apiErr
+	}
+	if slices.Contains(itemIncs, "category.properties") {
+		if apiErr := enrichItemCategoryProperties(ctx, queries, items); apiErr != nil {
+			return apiErr
+		}
+	}
+	return nil
 }
 
 func (r *materialRepoImpl) List(ctx context.Context, params domain.ListMaterialsParams) (*domain.ListMaterialsResult, *apierror.APIError) {
@@ -373,7 +271,7 @@ func (r *materialRepoImpl) List(ctx context.Context, params domain.ListMaterials
 		cursorDir = &cur.Direction
 
 		if cur.Direction == pagination.DirectionBackward {
-			rows, err := r.queries.ListMaterialsBackward(ctx, sqlc.ListMaterialsBackwardParams{
+			rows, err := r.queries.ListMaterialsBackwardBase(ctx, sqlc.ListMaterialsBackwardBaseParams{
 				AccountID:              params.AccountID,
 				SearchQuery:            searchQuery,
 				IncludeCategoryFilter:  includeCategoryFilter,
@@ -391,14 +289,17 @@ func (r *materialRepoImpl) List(ctx context.Context, params domain.ListMaterials
 			}
 			materials := make([]*domain.Material, len(rows))
 			for i, row := range rows {
-				materials[i] = mapMaterialBackwardRow(row)
+				materials[i] = mapMaterialBackwardBaseRow(row)
 			}
 			result, pageInfo := pagination.BuildPageString(materials, params.Limit, cursorDir, materialCreatedAt, materialID)
+			if apiErr := applyMaterialStitches(ctx, r.queries, result, params.Includes); apiErr != nil {
+				return nil, tracing.Trace(span, apiErr)
+			}
 			return &domain.ListMaterialsResult{Materials: result, PageInfo: pageInfo}, nil
 		}
 
 		// Forward
-		rows, err := r.queries.ListMaterialsForward(ctx, sqlc.ListMaterialsForwardParams{
+		rows, err := r.queries.ListMaterialsForwardBase(ctx, sqlc.ListMaterialsForwardBaseParams{
 			AccountID:              params.AccountID,
 			SearchQuery:            searchQuery,
 			IncludeCategoryFilter:  includeCategoryFilter,
@@ -416,14 +317,17 @@ func (r *materialRepoImpl) List(ctx context.Context, params domain.ListMaterials
 		}
 		materials := make([]*domain.Material, len(rows))
 		for i, row := range rows {
-			materials[i] = mapMaterialForwardRow(row)
+			materials[i] = mapMaterialForwardBaseRow(row)
 		}
 		result, pageInfo := pagination.BuildPageString(materials, params.Limit, cursorDir, materialCreatedAt, materialID)
+		if apiErr := applyMaterialStitches(ctx, r.queries, result, params.Includes); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
 		return &domain.ListMaterialsResult{Materials: result, PageInfo: pageInfo}, nil
 	}
 
 	// No cursor — first page
-	rows, err := r.queries.ListMaterialsForward(ctx, sqlc.ListMaterialsForwardParams{
+	rows, err := r.queries.ListMaterialsForwardBase(ctx, sqlc.ListMaterialsForwardBaseParams{
 		AccountID:              params.AccountID,
 		SearchQuery:            searchQuery,
 		IncludeCategoryFilter:  includeCategoryFilter,
@@ -440,52 +344,31 @@ func (r *materialRepoImpl) List(ctx context.Context, params domain.ListMaterials
 
 	materials := make([]*domain.Material, len(rows))
 	for i, row := range rows {
-		materials[i] = mapMaterialForwardRow(row)
+		materials[i] = mapMaterialForwardBaseRow(row)
 	}
 	result, pageInfo := pagination.BuildPageString(materials, params.Limit, cursorDir, materialCreatedAt, materialID)
+	if apiErr := applyMaterialStitches(ctx, r.queries, result, params.Includes); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
 	return &domain.ListMaterialsResult{Materials: result, PageInfo: pageInfo}, nil
 }
 
-func (r *materialRepoImpl) loadItemAttributes(ctx context.Context, item *domain.Item) *apierror.APIError {
-	rows, err := r.queries.GetItemAttributes(ctx, item.ID)
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return apiErr
-	}
-	attrs := make([]*domain.ItemAttribute, len(rows))
-	for i, row := range rows {
-		var colorCode *string
-		if row.ColorCode != "" {
-			colorCode = &row.ColorCode
-		}
-		attrs[i] = &domain.ItemAttribute{
-			ID:         row.ID,
-			Value:      row.Text,
-			ColorCode:  colorCode,
-			PropertyID: row.PropertyID,
-		}
-	}
-	item.Attributes = attrs
-	return nil
-}
-
-func (r *materialRepoImpl) GetByID(ctx context.Context, accountID, materialID string) (*domain.Material, *apierror.APIError) {
+func (r *materialRepoImpl) GetByID(ctx context.Context, params domain.GetMaterialParams) (*domain.Material, *apierror.APIError) {
 	ctx, span := materialRepoTracer.Start(ctx, "repository.material.get_by_id")
 	defer span.End()
 
-	row, err := r.queries.GetMaterialByID(ctx, sqlc.GetMaterialByIDParams{
-		ID:        materialID,
-		AccountID: accountID,
+	row, err := r.queries.GetMaterialByIDBase(ctx, sqlc.GetMaterialByIDBaseParams{
+		ID:        params.MaterialID,
+		AccountID: params.AccountID,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	material := mapGetMaterialByIDRow(row)
+	material := mapMaterialGetByIDBaseRow(row)
 
-	if material.Item != nil {
-		if apiErr := r.loadItemAttributes(ctx, material.Item); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
+	if apiErr := applyMaterialStitches(ctx, r.queries, []*domain.Material{material}, params.Includes); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
 
 	return material, nil
@@ -504,11 +387,6 @@ func (r *materialRepoImpl) GetByItemID(ctx context.Context, accountID, itemID st
 	}
 
 	material := mapGetMaterialByItemIDRow(row)
-	if material.Item != nil {
-		if apiErr := r.loadItemAttributes(ctx, material.Item); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-	}
 	return material, nil
 }
 
@@ -533,7 +411,7 @@ func (r *materialRepoImpl) Update(ctx context.Context, params domain.UpdateMater
 	ctx, span := materialRepoTracer.Start(ctx, "repository.material.update")
 	defer span.End()
 
-	existing, apiErr := r.GetByID(ctx, params.AccountID, params.MaterialID)
+	existing, apiErr := r.GetByID(ctx, domain.GetMaterialParams{AccountID: params.AccountID, MaterialID: params.MaterialID})
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
@@ -653,7 +531,7 @@ func (r *materialRepoImpl) UpdateItem(ctx context.Context, params domain.UpdateM
 	ctx, span := materialRepoTracer.Start(ctx, "repository.material.update_item")
 	defer span.End()
 
-	existing, apiErr := r.GetByID(ctx, params.AccountID, params.MaterialID)
+	existing, apiErr := r.GetByID(ctx, domain.GetMaterialParams{AccountID: params.AccountID, MaterialID: params.MaterialID})
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}

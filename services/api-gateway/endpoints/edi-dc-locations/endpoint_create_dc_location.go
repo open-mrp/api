@@ -13,7 +13,7 @@ import (
 // Request to create a DC location.
 type CreateDCLocationRequest struct {
 	// Customer account ID.
-	CustomerID string `json:"customer_id" validate:"required,max=191"`
+	CustomerID string `json:"customer_id" validate:"required"`
 	// Location description.
 	Location string `json:"location" validate:"required,max=255"`
 }

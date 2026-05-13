@@ -114,6 +114,17 @@ func IsDeadlock(err error) bool {
 	return errors.As(err, &pgErr) && (pgErr.Code == "40P01" || pgErr.Code == "40001")
 }
 
+// IsRetryableLockConflict reports whether err is a transient database lock
+// conflict that is safe to retry around a small, idempotent database operation.
+func IsRetryableLockConflict(err error) bool {
+	var mysqlErr *mysql.MySQLError
+	if errors.As(err, &mysqlErr) {
+		return mysqlErr.Number == 1205 || mysqlErr.Number == 1213
+	}
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && (pgErr.Code == "40P01" || pgErr.Code == "40001")
+}
+
 // IsDuplicateEntry reports whether err is a MySQL 1062 (duplicate entry) error.
 func IsDuplicateEntry(err error) bool {
 	var mysqlErr *mysql.MySQLError

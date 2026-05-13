@@ -16,7 +16,7 @@ import (
 
 type ProductTypeSvc interface {
 	ListProductTypes(ctx context.Context, req *ListProductTypesRequest) (*apiresource.List[apiresource.ProductType], *apierror.APIError)
-	GetProductType(ctx context.Context, req *GetProductTypeRequest) (*apiresource.ProductType, *apierror.APIError)
+	GetProductType(ctx context.Context, req *RetrieveProductTypeRequest) (*apiresource.ProductType, *apierror.APIError)
 	CreateProductType(ctx context.Context, req *CreateProductTypeRequest) (*apiresource.ProductType, *apierror.APIError)
 	UpdateProductType(ctx context.Context, req *UpdateProductTypeRequest) (*apiresource.ProductType, *apierror.APIError)
 	DeleteProductType(ctx context.Context, req *DeleteProductTypeRequest) (*apiresource.EmptyResource, *apierror.APIError)
@@ -68,7 +68,7 @@ func (m *productTypeSvcImpl) ListProductTypes(ctx context.Context, req *ListProd
 	return ProductTypeListPresenter(resp), nil
 }
 
-func (m *productTypeSvcImpl) GetProductType(ctx context.Context, req *GetProductTypeRequest) (*apiresource.ProductType, *apierror.APIError) {
+func (m *productTypeSvcImpl) GetProductType(ctx context.Context, req *RetrieveProductTypeRequest) (*apiresource.ProductType, *apierror.APIError) {
 	pbReq := &pb.GetProductTypeRequest{
 		Identifier: req.ProductTypeID,
 	}

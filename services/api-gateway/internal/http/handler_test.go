@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 
 	"github.com/augno/api/shared/appctx"
@@ -167,6 +168,78 @@ func TestBindFromQuery(t *testing.T) {
 			t.Error("expected error for invalid int, got nil")
 		}
 	})
+}
+
+func TestRejectUnknownQueryParams(t *testing.T) {
+	t.Parallel()
+
+	type listReq struct {
+		Cursor *string `query:"cursor"`
+		Limit  int32   `query:"limit" default:"100"`
+	}
+
+	t.Run("allows declared keys only", func(t *testing.T) {
+		u := mustParseURL(t, "/items?cursor=c1&limit=10")
+		dst := &listReq{}
+		if err := BindFromQuery(u, dst); err != nil {
+			t.Fatalf("BindFromQuery: %v", err)
+		}
+		if apiErr := RejectUnknownQueryParams(u, dst, false); apiErr != nil {
+			t.Fatalf("expected nil, got %v", apiErr)
+		}
+	})
+
+	t.Run("rejects undeclared key", func(t *testing.T) {
+		u := mustParseURL(t, "/items?cursor=c1&unexpected=1")
+		dst := &listReq{}
+		if err := BindFromQuery(u, dst); err != nil {
+			t.Fatalf("BindFromQuery: %v", err)
+		}
+		apiErr := RejectUnknownQueryParams(u, dst, false)
+		if apiErr == nil {
+			t.Fatal("expected error")
+		}
+		if apiErr.Code != apierror.ErrorCodeParameterUnknown {
+			t.Fatalf("expected parameter_unknown, got %s", apiErr.Code)
+		}
+		if apiErr.Param != "unexpected" {
+			t.Fatalf("expected param unexpected, got %q", apiErr.Param)
+		}
+	})
+
+	t.Run("allowInclude permits include and include bracket form", func(t *testing.T) {
+		u := mustParseURL(t, "/items?include=role&include[]=department")
+		dst := &listReq{}
+		if err := BindFromQuery(u, dst); err != nil {
+			t.Fatalf("BindFromQuery: %v", err)
+		}
+		if apiErr := RejectUnknownQueryParams(u, dst, true); apiErr != nil {
+			t.Fatalf("expected nil, got %v", apiErr)
+		}
+	})
+
+	t.Run("slice field allows bracket query key", func(t *testing.T) {
+		type withSlice struct {
+			Tags []string `query:"tags"`
+		}
+		u := mustParseURL(t, "/x?tags[]=a&tags[]=b")
+		dst := &withSlice{}
+		if err := BindFromQuery(u, dst); err != nil {
+			t.Fatalf("BindFromQuery: %v", err)
+		}
+		if apiErr := RejectUnknownQueryParams(u, dst, false); apiErr != nil {
+			t.Fatalf("expected nil, got %v", apiErr)
+		}
+	})
+}
+
+func mustParseURL(t *testing.T, raw string) *url.URL {
+	t.Helper()
+	u, err := url.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse URL: %v", err)
+	}
+	return u
 }
 
 func TestDecodeJSONInto(t *testing.T) {

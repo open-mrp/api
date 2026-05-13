@@ -22,7 +22,7 @@ func machineToProto(m *domain.Machine) *pb.MachineInfo {
 		return nil
 	}
 
-	return &pb.MachineInfo{
+	info := &pb.MachineInfo{
 		Id:             m.ID,
 		Name:           m.Name,
 		SerialNumber:   m.SerialNumber,
@@ -32,6 +32,13 @@ func machineToProto(m *domain.Machine) *pb.MachineInfo {
 		CreatedAt:      timestamppb.New(m.CreatedAt),
 		UpdatedAt:      timestamppb.New(m.UpdatedAt),
 	}
+	if m.DepartmentCreatedAt != nil {
+		info.DepartmentCreatedAt = timestamppb.New(*m.DepartmentCreatedAt)
+	}
+	if m.DepartmentUpdatedAt != nil {
+		info.DepartmentUpdatedAt = timestamppb.New(*m.DepartmentUpdatedAt)
+	}
+	return info
 }
 
 func (h *fulfillmentGRPCHandler) ListMachines(ctx context.Context, req *pb.ListMachinesRequest) (*pb.ListMachinesResponse, error) {

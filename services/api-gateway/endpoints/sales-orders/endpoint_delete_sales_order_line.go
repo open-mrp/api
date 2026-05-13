@@ -14,7 +14,7 @@ type DeleteSalesOrderLineRequest struct {
 	// Sales order ID.
 	SalesOrderID string `path:"id" validate:"required"`
 	// Sales order line ID.
-	SalesOrderLineID string `path:"lineId" validate:"required"`
+	SalesOrderLineID string `path:"line_id" validate:"required"`
 }
 
 type DeleteSalesOrderLineEndpoint struct{}
@@ -25,7 +25,7 @@ func (e *DeleteSalesOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*D
 		Description:       "Deletes a sales order line and related records.",
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
-		Route:             "/v1/sales/sales-orders/{id}/lines/{lineId}",
+		Route:             "/v1/sales/sales-orders/{id}/lines/{line_id}",
 		Request:           &DeleteSalesOrderLineRequest{},
 		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusOK,

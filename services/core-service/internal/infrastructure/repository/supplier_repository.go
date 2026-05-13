@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	gosql "database/sql"
+	"slices"
 	"time"
 
 	"github.com/augno/api/services/core-service/internal/domain"
@@ -148,20 +149,20 @@ func (r *supplierRepoImpl) List(ctx context.Context, params domain.ListSuppliers
 	return &domain.ListSuppliersResult{Items: result, PageInfo: pageInfo}, nil
 }
 
-func (r *supplierRepoImpl) Get(ctx context.Context, ownerAccountID, supplierAccountID string) (*domain.Supplier, *apierror.APIError) {
+func (r *supplierRepoImpl) Get(ctx context.Context, params domain.GetSupplierParams) (*domain.Supplier, *apierror.APIError) {
 	ctx, span := supplierRepoTracer.Start(ctx, "repository.supplier.get")
 	defer span.End()
 
 	row, err := r.queries.GetSupplier(ctx, sqlc.GetSupplierParams{
-		OwnerAccountID:        ownerAccountID,
-		CounterpartyAccountID: supplierAccountID,
+		OwnerAccountID:        params.OwnerAccountID,
+		CounterpartyAccountID: params.SupplierID,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
 	var billToAddress *domain.CustomerAddress
-	if row.DefaultBillingAddressID.Valid {
+	if slices.Contains(params.Includes, "bill_to_address") && row.DefaultBillingAddressID.Valid {
 		billToAddress = buildCustomerAddress(
 			row.DefaultBillingAddressID.String,
 			row.DefaultBillingAddressName.String,
@@ -181,7 +182,7 @@ func (r *supplierRepoImpl) Get(ctx context.Context, ownerAccountID, supplierAcco
 	}
 
 	var shipToAddress *domain.CustomerAddress
-	if row.DefaultShippingAddressID.Valid {
+	if slices.Contains(params.Includes, "ship_to_address") && row.DefaultShippingAddressID.Valid {
 		shipToAddress = buildCustomerAddress(
 			row.DefaultShippingAddressID.String,
 			row.DefaultShippingAddressName.String,
@@ -256,7 +257,7 @@ func (r *supplierRepoImpl) Create(ctx context.Context, accountID, relationID str
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return r.Get(ctx, params.OwnerAccountID, accountID)
+	return r.Get(ctx, domain.GetSupplierParams{OwnerAccountID: params.OwnerAccountID, SupplierID: accountID, Includes: params.Includes})
 }
 
 func (r *supplierRepoImpl) Update(ctx context.Context, params domain.UpdateSupplierParams) (*domain.Supplier, *apierror.APIError) {
@@ -306,14 +307,15 @@ func (r *supplierRepoImpl) Update(ctx context.Context, params domain.UpdateSuppl
 		}
 	}
 
-	return r.Get(ctx, params.OwnerAccountID, params.SupplierID)
+	return r.Get(ctx, domain.GetSupplierParams{OwnerAccountID: params.OwnerAccountID, SupplierID: params.SupplierID, Includes: params.Includes})
 }
 
 func (r *supplierRepoImpl) Delete(ctx context.Context, ownerAccountID, supplierAccountID string) (*domain.Supplier, *apierror.APIError) {
 	ctx, span := supplierRepoTracer.Start(ctx, "repository.supplier.delete")
 	defer span.End()
 
-	supplier, apiErr := r.Get(ctx, ownerAccountID, supplierAccountID)
+	// Fetch with all sub-resources for audit trail.
+	supplier, apiErr := r.Get(ctx, domain.GetSupplierParams{OwnerAccountID: ownerAccountID, SupplierID: supplierAccountID, Includes: []string{"bill_to_address", "ship_to_address"}})
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}

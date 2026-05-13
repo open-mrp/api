@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
+	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
@@ -18,11 +19,13 @@ type UpdateProductRequest struct {
 	// SKU.
 	SKU *string `json:"sku,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// Description.
-	Description *string `json:"description,omitempty" nullable:"false"`
+	Description *string `json:"description,omitempty" nullable:"true"`
 	// Notes.
-	Notes *string `json:"notes,omitempty" nullable:"false"`
+	Notes *string `json:"notes,omitempty" nullable:"true"`
 	// Whether visible in the customer portal.
 	PortalVisibility *constants.CustomerPortalVisibility `json:"portal_visibility,omitempty" nullable:"false"`
+	// Updated unit price. Numerator must be a currency unit; denominator must not be.
+	UnitPrice *apirequest.RateInput `json:"unit_price,omitempty"`
 }
 
 var sampleUpdateProductSKU = "SKU-002"
@@ -47,10 +50,14 @@ func (e *UpdateProductEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdatePr
 		Request:           &UpdateProductRequest{},
 		Response:          &apiresource.Product{},
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateProductRequest) (*apiresource.Product, *apierror.APIError) {
 			return svc.(ProductSvc).UpdateProduct
 		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeProduct,
+			Fields:     []string{"product_line", "product_line.unit_group", "item", "item.category", "item.category.properties", "item.category.unit_group", "item.unit_value", "item.unit_cost", "item.burn_rate", "item.attributes"},
+		}),
 	}
 }

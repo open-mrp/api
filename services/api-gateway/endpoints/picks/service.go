@@ -6,6 +6,7 @@ import (
 
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/appctx"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
@@ -18,7 +19,7 @@ var pickEpSvcTracer = tracing.GetTracer("api-gateway.endpoints.picks.service")
 
 type PickSvc interface {
 	ListPicks(ctx context.Context, req *ListPicksRequest) (*apiresource.List[apiresource.PickSummary], *apierror.APIError)
-	GetPick(ctx context.Context, req *GetPickRequest) (*apiresource.PickDetail, *apierror.APIError)
+	GetPick(ctx context.Context, req *RetrievePickRequest) (*apiresource.PickDetail, *apierror.APIError)
 	UpdatePick(ctx context.Context, req *UpdatePickRequest) (*apiresource.PickDetail, *apierror.APIError)
 	PickAllLines(ctx context.Context, req *PickAllLinesRequest) (*apiresource.PickDetail, *apierror.APIError)
 	VoidPick(ctx context.Context, req *VoidPickRequest) (*apiresource.PickDetail, *apierror.APIError)
@@ -94,7 +95,7 @@ func (m *pickSvcImpl) ListPicks(ctx context.Context, req *ListPicksRequest) (*ap
 	return PickListPresenter(resp), nil
 }
 
-func (m *pickSvcImpl) GetPick(ctx context.Context, req *GetPickRequest) (*apiresource.PickDetail, *apierror.APIError) {
+func (m *pickSvcImpl) GetPick(ctx context.Context, req *RetrievePickRequest) (*apiresource.PickDetail, *apierror.APIError) {
 	pbReq := &pb.GetPickRequest{Id: req.PickID, Includes: req.Includes}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, pickEpSvcTracer, "service.picks.get", domain.ServiceName,
@@ -110,7 +111,7 @@ func (m *pickSvcImpl) GetPick(ctx context.Context, req *GetPickRequest) (*apires
 }
 
 func (m *pickSvcImpl) UpdatePick(ctx context.Context, req *UpdatePickRequest) (*apiresource.PickDetail, *apierror.APIError) {
-	pbReq := &pb.UpdatePickRequest{Id: req.PickID}
+	pbReq := &pb.UpdatePickRequest{Id: req.PickID, Includes: appctx.GetRequestedIncludeKeys(ctx)}
 	if req.Number != nil {
 		pbReq.Number = req.Number
 	}

@@ -15,6 +15,7 @@ type AgentRunsEndpointGroup struct {
 
 type AgentRunsEndpointGroupConfig struct {
 	AgentClient *grpcclient.AgentServiceClient
+	CoreClient  *grpcclient.CoreServiceClient
 }
 
 func (c *AgentRunsEndpointGroupConfig) validate() error {
@@ -29,9 +30,13 @@ func (*AgentRunsEndpointGroup) Materialize(config *AgentRunsEndpointGroupConfig)
 		panic(err)
 	}
 
-	runSvc := agentrunep.NewAgentRunSvc(&agentrunep.AgentRunSvcConfig{
+	runSvcCfg := &agentrunep.AgentRunSvcConfig{
 		AgentClient: config.AgentClient.Client,
-	})
+	}
+	if config.CoreClient != nil {
+		runSvcCfg.CoreClient = config.CoreClient.Client
+	}
+	runSvc := agentrunep.NewAgentRunSvc(runSvcCfg)
 
 	inner := &apiendpoint.APIEndpointGroup{
 		Title:        "Agent Runs",
@@ -41,7 +46,7 @@ func (*AgentRunsEndpointGroup) Materialize(config *AgentRunsEndpointGroupConfig)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		(&agentrunep.ListRunsEndpoint{}).Materialize().WithService(inner, runSvc),
-		(&agentrunep.GetRunEndpoint{}).Materialize().WithService(inner, runSvc),
+		(&agentrunep.RetrieveRunEndpoint{}).Materialize().WithService(inner, runSvc),
 		(&agentrunep.TriggerRunEndpoint{}).Materialize().WithService(inner, runSvc),
 		(&agentrunep.CancelRunEndpoint{}).Materialize().WithService(inner, runSvc),
 		(&agentrunep.ContinueRunEndpoint{}).Materialize().WithService(inner, runSvc),

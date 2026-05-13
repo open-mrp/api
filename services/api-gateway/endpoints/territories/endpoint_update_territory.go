@@ -24,9 +24,9 @@ type UpdateTerritoryRequest struct {
 	// End of ZIP code range (501-99999).
 	EndZipcode *int32 `json:"end_zipcode,omitempty" nullable:"false"`
 	// Sales rep (account user) ID.
-	SalesRepID *string `json:"sales_rep_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
+	SalesRepID *string `json:"sales_rep_id,omitempty" nullable:"false" validate:"omitempty"`
 	// Product line ID.
-	ProductLineID *string `json:"product_line_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
+	ProductLineID *string `json:"product_line_id,omitempty" nullable:"false" validate:"omitempty"`
 	// Set to true to remove the product line.
 	ClearProductLine *bool `json:"clear_product_line,omitempty" nullable:"false"`
 	// Set to true to remove the start ZIP code.

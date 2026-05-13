@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"slices"
 	"strconv"
 	"time"
 
@@ -46,7 +47,7 @@ func (r *accountUserRepoImpl) FindByAccountAndUserID(ctx context.Context, userID
 		UserID:       row.UserID,
 		DepartmentID: db.StringFromNullString(row.DepartmentID),
 		RoleID:       db.StringFromNullString(row.RoleID),
-		RoleTypeCode: db.StringFromNullString(row.RoleTypeCode),
+		RoleType:     db.StringFromNullString(row.RoleTypeCode),
 		AccountID:    row.AccountID,
 		LastUsedAt:   db.TimeFromNullTime(row.LastUsedAt),
 		CreatedAt:    row.CreatedAt,
@@ -66,12 +67,12 @@ func (r *accountUserRepoImpl) FindAffiliationsByUserID(ctx context.Context, user
 	affiliations := make([]domain.AccountAffiliation, len(rows))
 	for i, row := range rows {
 		affiliations[i] = domain.AccountAffiliation{
-			AccountID:    row.AccountID,
-			AccountName:  row.AccountName,
-			RoleID:       row.RoleID,
-			RoleName:     row.RoleName,
-			RoleTypeCode: row.RoleTypeCode,
-			LastUsedAt:   db.TimeFromNullTime(row.LastUsedAt),
+			AccountID:   row.AccountID,
+			AccountName: row.AccountName,
+			RoleID:      row.RoleID,
+			RoleName:    row.RoleName,
+			RoleType:    row.RoleTypeCode,
+			LastUsedAt:  db.TimeFromNullTime(row.LastUsedAt),
 		}
 	}
 
@@ -165,6 +166,21 @@ func (r *accountUserRepoImpl) CountActive(ctx context.Context, accountID string)
 	return count, nil
 }
 
+func (r *accountUserRepoImpl) CountByRoleID(ctx context.Context, accountID, roleID string) (int64, *apierror.APIError) {
+	ctx, span := accountUserRepoTracer.Start(ctx, "repository.account_user.count_by_role_id")
+	defer span.End()
+
+	count, err := r.queries.CountAccountUsersByRoleID(ctx, sqlc.CountAccountUsersByRoleIDParams{
+		RoleID:    db.NullString(roleID),
+		AccountID: accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return 0, tracing.Trace(span, apiErr)
+	}
+
+	return count, nil
+}
+
 func (r *accountUserRepoImpl) ReactivateUsers(ctx context.Context, accountID string, limit int32) (int64, *apierror.APIError) {
 	ctx, span := accountUserRepoTracer.Start(ctx, "repository.account_user.reactivate_users")
 	defer span.End()
@@ -199,7 +215,7 @@ func (r *accountUserRepoImpl) List(ctx context.Context, params domain.ListAccoun
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	base := sqlc.ListAccountUsersForwardParams{
+	base := sqlc.ListAccountUsersForwardBaseParams{
 		AccountID:      params.AccountID,
 		IncludeRemoved: params.IncludeRemoved,
 		RoleType:       db.NullStringPtr(params.RoleType),
@@ -221,7 +237,7 @@ func (r *accountUserRepoImpl) List(ctx context.Context, params domain.ListAccoun
 		cursorDir = &cur.Direction
 
 		if cur.Direction == pagination.DirectionBackward {
-			brows, err := r.queries.ListAccountUsersBackward(ctx, sqlc.ListAccountUsersBackwardParams{
+			brows, err := r.queries.ListAccountUsersBackwardBase(ctx, sqlc.ListAccountUsersBackwardBaseParams{
 				AccountID:       base.AccountID,
 				IncludeRemoved:  base.IncludeRemoved,
 				RoleType:        base.RoleType,
@@ -237,11 +253,11 @@ func (r *accountUserRepoImpl) List(ctx context.Context, params domain.ListAccoun
 			}
 			details := make([]*domain.AccountUserDetail, len(brows))
 			for i := range brows {
-				details[i] = mapAccountUserDetailBackwardRow(brows[i])
+				details[i] = mapAccountUserBaseBackwardRow(brows[i])
 			}
 			items, pageInfo = pagination.BuildPageString(details, params.Limit, cursorDir, accountUserDetailCreatedAt, accountUserDetailID)
 		} else {
-			frows, err := r.queries.ListAccountUsersForward(ctx, sqlc.ListAccountUsersForwardParams{
+			frows, err := r.queries.ListAccountUsersForwardBase(ctx, sqlc.ListAccountUsersForwardBaseParams{
 				AccountID:       base.AccountID,
 				IncludeRemoved:  base.IncludeRemoved,
 				RoleType:        base.RoleType,
@@ -257,20 +273,24 @@ func (r *accountUserRepoImpl) List(ctx context.Context, params domain.ListAccoun
 			}
 			details := make([]*domain.AccountUserDetail, len(frows))
 			for i := range frows {
-				details[i] = mapAccountUserDetailRow(frows[i])
+				details[i] = mapAccountUserBaseForwardRow(frows[i])
 			}
 			items, pageInfo = pagination.BuildPageString(details, params.Limit, cursorDir, accountUserDetailCreatedAt, accountUserDetailID)
 		}
 	} else {
-		frows, err := r.queries.ListAccountUsersForward(ctx, base)
+		frows, err := r.queries.ListAccountUsersForwardBase(ctx, base)
 		if apiErr := db.MapSQLError(err); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
 		details := make([]*domain.AccountUserDetail, len(frows))
 		for i := range frows {
-			details[i] = mapAccountUserDetailRow(frows[i])
+			details[i] = mapAccountUserBaseForwardRow(frows[i])
 		}
 		items, pageInfo = pagination.BuildPageString(details, params.Limit, cursorDir, accountUserDetailCreatedAt, accountUserDetailID)
+	}
+
+	if apiErr := r.stitchAccountUsers(ctx, items, params.Includes); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
 
 	return &domain.ListAccountUsersResult{
@@ -293,8 +313,62 @@ func accountUserQueryLike(query *string) interface{} {
 func accountUserDetailCreatedAt(d *domain.AccountUserDetail) time.Time { return d.CreatedAt }
 func accountUserDetailID(d *domain.AccountUserDetail) string           { return d.ID }
 
-func mapAccountUserDetailBackwardRow(row sqlc.ListAccountUsersBackwardRow) *domain.AccountUserDetail {
+func mapAccountUserBaseForwardRow(row sqlc.ListAccountUsersForwardBaseRow) *domain.AccountUserDetail {
 	return &domain.AccountUserDetail{
+		ID:            row.ID,
+		UserID:        row.UserID,
+		Name:          db.StringFromNullString(row.Name),
+		Email:         db.StringFromNullString(row.Email),
+		Username:      db.StringFromNullString(row.Username),
+		ImageURL:      db.StringFromNullString(row.ImageUrl),
+		EmailVerified: row.EmailVerified.Valid,
+		RoleID:        db.StringFromNullString(row.RoleID),
+		DepartmentID:  db.StringFromNullString(row.DepartmentID),
+		StatusCode:    constants.AccountUserStatus(row.StatusCode),
+		LastUsedAt:    db.TimeFromNullTime(row.LastUsedAt),
+		CreatedAt:     row.CreatedAt,
+		UpdatedAt:     row.UpdatedAt,
+	}
+}
+
+func mapAccountUserBaseBackwardRow(row sqlc.ListAccountUsersBackwardBaseRow) *domain.AccountUserDetail {
+	return &domain.AccountUserDetail{
+		ID:            row.ID,
+		UserID:        row.UserID,
+		Name:          db.StringFromNullString(row.Name),
+		Email:         db.StringFromNullString(row.Email),
+		Username:      db.StringFromNullString(row.Username),
+		ImageURL:      db.StringFromNullString(row.ImageUrl),
+		EmailVerified: row.EmailVerified.Valid,
+		RoleID:        db.StringFromNullString(row.RoleID),
+		DepartmentID:  db.StringFromNullString(row.DepartmentID),
+		StatusCode:    constants.AccountUserStatus(row.StatusCode),
+		LastUsedAt:    db.TimeFromNullTime(row.LastUsedAt),
+		CreatedAt:     row.CreatedAt,
+		UpdatedAt:     row.UpdatedAt,
+	}
+}
+
+func mapAccountUserBaseDetailRow(row sqlc.GetAccountUserDetailBaseRow) *domain.AccountUserDetail {
+	return &domain.AccountUserDetail{
+		ID:            row.ID,
+		UserID:        row.UserID,
+		Name:          db.StringFromNullString(row.Name),
+		Email:         db.StringFromNullString(row.Email),
+		Username:      db.StringFromNullString(row.Username),
+		ImageURL:      db.StringFromNullString(row.ImageUrl),
+		EmailVerified: row.EmailVerified.Valid,
+		RoleID:        db.StringFromNullString(row.RoleID),
+		DepartmentID:  db.StringFromNullString(row.DepartmentID),
+		StatusCode:    constants.AccountUserStatus(row.StatusCode),
+		LastUsedAt:    db.TimeFromNullTime(row.LastUsedAt),
+		CreatedAt:     row.CreatedAt,
+		UpdatedAt:     row.UpdatedAt,
+	}
+}
+
+func mapAccountUserBaseByIDRow(row sqlc.GetAccountUserDetailBaseByIDRow) *domain.AccountUserDetail {
+	detail := &domain.AccountUserDetail{
 		ID:             row.ID,
 		UserID:         row.UserID,
 		Name:           db.StringFromNullString(row.Name),
@@ -303,8 +377,6 @@ func mapAccountUserDetailBackwardRow(row sqlc.ListAccountUsersBackwardRow) *doma
 		ImageURL:       db.StringFromNullString(row.ImageUrl),
 		EmailVerified:  row.EmailVerified.Valid,
 		RoleID:         db.StringFromNullString(row.RoleID),
-		RoleName:       db.StringFromNullString(row.RoleName),
-		RoleTypeCode:   db.StringFromNullString(row.RoleTypeCode),
 		DepartmentID:   db.StringFromNullString(row.DepartmentID),
 		DepartmentName: db.StringFromNullString(row.DepartmentName),
 		StatusCode:     constants.AccountUserStatus(row.StatusCode),
@@ -312,13 +384,21 @@ func mapAccountUserDetailBackwardRow(row sqlc.ListAccountUsersBackwardRow) *doma
 		CreatedAt:      row.CreatedAt,
 		UpdatedAt:      row.UpdatedAt,
 	}
+	detail.RoleType = db.StringFromNullString(row.RoleTypeCode)
+	if row.DepartmentCreatedAt.Valid {
+		detail.DepartmentCreatedAt = &row.DepartmentCreatedAt.Time
+	}
+	if row.DepartmentUpdatedAt.Valid {
+		detail.DepartmentUpdatedAt = &row.DepartmentUpdatedAt.Time
+	}
+	return detail
 }
 
-func (r *accountUserRepoImpl) GetDetail(ctx context.Context, accountID, userID string) (*domain.AccountUserDetail, *apierror.APIError) {
+func (r *accountUserRepoImpl) GetDetail(ctx context.Context, accountID, userID string, includes []string) (*domain.AccountUserDetail, *apierror.APIError) {
 	ctx, span := accountUserRepoTracer.Start(ctx, "repository.account_user.get_detail")
 	defer span.End()
 
-	row, err := r.queries.GetAccountUserDetail(ctx, sqlc.GetAccountUserDetailParams{
+	row, err := r.queries.GetAccountUserDetailBase(ctx, sqlc.GetAccountUserDetailBaseParams{
 		AccountID: accountID,
 		UserID:    userID,
 	})
@@ -326,14 +406,18 @@ func (r *accountUserRepoImpl) GetDetail(ctx context.Context, accountID, userID s
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return mapAccountUserDetailFromGetRow(row), nil
+	detail := mapAccountUserBaseDetailRow(row)
+	if apiErr := r.stitchAccountUsers(ctx, []*domain.AccountUserDetail{detail}, includes); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return detail, nil
 }
 
-func (r *accountUserRepoImpl) GetDetailByAccountAndID(ctx context.Context, accountID, accountUserID string) (*domain.AccountUserDetail, *apierror.APIError) {
+func (r *accountUserRepoImpl) GetDetailByAccountAndID(ctx context.Context, accountID, accountUserID string, includes []string) (*domain.AccountUserDetail, *apierror.APIError) {
 	ctx, span := accountUserRepoTracer.Start(ctx, "repository.account_user.get_detail_by_account_and_id")
 	defer span.End()
 
-	row, err := r.queries.GetAccountUserDetailByAccountAndID(ctx, sqlc.GetAccountUserDetailByAccountAndIDParams{
+	row, err := r.queries.GetAccountUserDetailBaseByID(ctx, sqlc.GetAccountUserDetailBaseByIDParams{
 		AccountID: accountID,
 		ID:        accountUserID,
 	})
@@ -341,7 +425,11 @@ func (r *accountUserRepoImpl) GetDetailByAccountAndID(ctx context.Context, accou
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return mapAccountUserDetailFromGetByIDRow(row), nil
+	detail := mapAccountUserBaseByIDRow(row)
+	if apiErr := r.stitchAccountUsers(ctx, []*domain.AccountUserDetail{detail}, includes); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return detail, nil
 }
 
 func (r *accountUserRepoImpl) Create(ctx context.Context, id, accountID, userID string, roleID, departmentID *string) *apierror.APIError {
@@ -438,67 +526,68 @@ func (r *accountUserRepoImpl) FindFirstAccountIDByUserID(ctx context.Context, us
 	return accountID, nil
 }
 
-func mapAccountUserDetailRow(row sqlc.ListAccountUsersForwardRow) *domain.AccountUserDetail {
-	return &domain.AccountUserDetail{
-		ID:             row.ID,
-		UserID:         row.UserID,
-		Name:           db.StringFromNullString(row.Name),
-		Email:          db.StringFromNullString(row.Email),
-		Username:       db.StringFromNullString(row.Username),
-		ImageURL:       db.StringFromNullString(row.ImageUrl),
-		EmailVerified:  row.EmailVerified.Valid,
-		RoleID:         db.StringFromNullString(row.RoleID),
-		RoleName:       db.StringFromNullString(row.RoleName),
-		RoleTypeCode:   db.StringFromNullString(row.RoleTypeCode),
-		DepartmentID:   db.StringFromNullString(row.DepartmentID),
-		DepartmentName: db.StringFromNullString(row.DepartmentName),
-		StatusCode:     constants.AccountUserStatus(row.StatusCode),
-		LastUsedAt:     db.TimeFromNullTime(row.LastUsedAt),
-		CreatedAt:      row.CreatedAt,
-		UpdatedAt:      row.UpdatedAt,
+func (r *accountUserRepoImpl) stitchAccountUsers(ctx context.Context, items []*domain.AccountUserDetail, incs []string) *apierror.APIError {
+	if len(items) == 0 {
+		return nil
 	}
-}
 
-func mapAccountUserDetailFromGetRow(row sqlc.GetAccountUserDetailRow) *domain.AccountUserDetail {
-	return &domain.AccountUserDetail{
-		ID:             row.ID,
-		UserID:         row.UserID,
-		Name:           db.StringFromNullString(row.Name),
-		Email:          db.StringFromNullString(row.Email),
-		Username:       db.StringFromNullString(row.Username),
-		ImageURL:       db.StringFromNullString(row.ImageUrl),
-		EmailVerified:  row.EmailVerified.Valid,
-		RoleID:         db.StringFromNullString(row.RoleID),
-		RoleName:       db.StringFromNullString(row.RoleName),
-		RoleTypeCode:   db.StringFromNullString(row.RoleTypeCode),
-		DepartmentID:   db.StringFromNullString(row.DepartmentID),
-		DepartmentName: db.StringFromNullString(row.DepartmentName),
-		StatusCode:     constants.AccountUserStatus(row.StatusCode),
-		LastUsedAt:     db.TimeFromNullTime(row.LastUsedAt),
-		CreatedAt:      row.CreatedAt,
-		UpdatedAt:      row.UpdatedAt,
+	if slices.Contains(incs, "role") {
+		roleIDs := make([]string, 0, len(items))
+		for _, au := range items {
+			if au.RoleID != nil {
+				roleIDs = append(roleIDs, *au.RoleID)
+			}
+		}
+		if len(roleIDs) > 0 {
+			rows, err := r.queries.GetRolesByIDs(ctx, roleIDs)
+			if apiErr := db.MapSQLError(err); apiErr != nil {
+				return apiErr
+			}
+			roleMap := make(map[string]sqlc.GetRolesByIDsRow, len(rows))
+			for _, row := range rows {
+				roleMap[row.ID] = row
+			}
+			for _, au := range items {
+				if au.RoleID != nil {
+					if role, ok := roleMap[*au.RoleID]; ok {
+						au.RoleName = &role.Name
+						typeCode := role.RoleTypeCode
+						au.RoleType = &typeCode
+					}
+				}
+			}
+		}
 	}
-}
 
-func mapAccountUserDetailFromGetByIDRow(row sqlc.GetAccountUserDetailByAccountAndIDRow) *domain.AccountUserDetail {
-	return &domain.AccountUserDetail{
-		ID:             row.ID,
-		UserID:         row.UserID,
-		Name:           db.StringFromNullString(row.Name),
-		Email:          db.StringFromNullString(row.Email),
-		Username:       db.StringFromNullString(row.Username),
-		ImageURL:       db.StringFromNullString(row.ImageUrl),
-		EmailVerified:  row.EmailVerified.Valid,
-		RoleID:         db.StringFromNullString(row.RoleID),
-		RoleName:       db.StringFromNullString(row.RoleName),
-		RoleTypeCode:   db.StringFromNullString(row.RoleTypeCode),
-		DepartmentID:   db.StringFromNullString(row.DepartmentID),
-		DepartmentName: db.StringFromNullString(row.DepartmentName),
-		StatusCode:     constants.AccountUserStatus(row.StatusCode),
-		LastUsedAt:     db.TimeFromNullTime(row.LastUsedAt),
-		CreatedAt:      row.CreatedAt,
-		UpdatedAt:      row.UpdatedAt,
+	if slices.Contains(incs, "department") {
+		deptIDs := make([]string, 0, len(items))
+		for _, au := range items {
+			if au.DepartmentID != nil {
+				deptIDs = append(deptIDs, *au.DepartmentID)
+			}
+		}
+		if len(deptIDs) > 0 {
+			rows, err := r.queries.GetDepartmentsByIDs(ctx, deptIDs)
+			if apiErr := db.MapSQLError(err); apiErr != nil {
+				return apiErr
+			}
+			deptMap := make(map[string]sqlc.GetDepartmentsByIDsRow, len(rows))
+			for _, row := range rows {
+				deptMap[row.ID] = row
+			}
+			for _, au := range items {
+				if au.DepartmentID != nil {
+					if dept, ok := deptMap[*au.DepartmentID]; ok {
+						au.DepartmentName = &dept.Name
+						au.DepartmentCreatedAt = &dept.CreatedAt
+						au.DepartmentUpdatedAt = &dept.UpdatedAt
+					}
+				}
+			}
+		}
 	}
+
+	return nil
 }
 
 func (r *accountUserRepoImpl) FindTenancyAccountsByUserID(ctx context.Context, userID string) ([]domain.TenancyAccount, *apierror.APIError) {
@@ -523,7 +612,7 @@ func (r *accountUserRepoImpl) FindTenancyAccountsByUserID(ctx context.Context, u
 			LastUsedAt:               db.TimeFromNullTime(row.LastUsedAt),
 			RoleID:                   db.StringFromNullString(row.RoleID),
 			RoleName:                 db.StringFromNullString(row.RoleName),
-			RoleTypeCode:             db.StringFromNullString(row.RoleTypeCode),
+			RoleType:                 db.StringFromNullString(row.RoleTypeCode),
 			RoleCreatedAt:            db.TimeFromNullTime(row.RoleCreatedAt),
 			RoleUpdatedAt:            db.TimeFromNullTime(row.RoleUpdatedAt),
 			OwnerAccountID:           db.StringFromNullString(row.OwnerAccountID),

@@ -1,3 +1,6 @@
+-- name: GetDepartmentsByIDs :many
+SELECT id, name, created_at, updated_at FROM department WHERE id IN (sqlc.slice('ids'));
+
 -- name: ListDepartmentsForward :many
 SELECT
     d.id,
@@ -5,6 +8,7 @@ SELECT
     d.notes,
     d.location_id,
     sl.name AS location_name,
+    sl.storage_location_type_code AS location_type_code,
     d.account_id,
     d.created_at,
     d.updated_at
@@ -30,6 +34,7 @@ SELECT
     d.notes,
     d.location_id,
     sl.name AS location_name,
+    sl.storage_location_type_code AS location_type_code,
     d.account_id,
     d.created_at,
     d.updated_at
@@ -54,6 +59,7 @@ SELECT
     d.notes,
     d.location_id,
     sl.name AS location_name,
+    sl.storage_location_type_code AS location_type_code,
     d.account_id,
     d.created_at,
     d.updated_at
@@ -101,14 +107,14 @@ WHERE name = ? AND account_id = ?
 AND (sqlc.narg('exclude_id') IS NULL OR id != sqlc.narg('exclude_id'));
 
 -- name: ListScanningStationsByDepartmentID :many
-SELECT id, name
+SELECT id, name, scanning_station_type_code, created_at, updated_at
 FROM scanning_station
 WHERE department_id = sqlc.arg('department_id')
 AND account_id = sqlc.arg('account_id')
 ORDER BY name ASC;
 
 -- name: ListMachinesByDepartmentID :many
-SELECT m.id, m.name
+SELECT m.id, m.name, m.serial_number, m.created_at, m.updated_at
 FROM machine m
 JOIN department d ON d.id = m.department_id
 WHERE m.department_id = sqlc.arg('department_id')

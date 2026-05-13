@@ -1,6 +1,8 @@
 package shippingtermep
 
 import (
+	servicelevelep "github.com/augno/api/services/api-gateway/endpoints/service-levels"
+	unitep "github.com/augno/api/services/api-gateway/endpoints/units"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -12,18 +14,25 @@ func quantityPresenter(q *pb.QuantityInfo) *apiresource.Quantity {
 		return nil
 	}
 	norm := apiresource.NormalizeMonetaryQuantityValue(q.Value)
-	return &apiresource.Quantity{
-		ID:           q.Id,
-		Object:       constants.ObjectTypeQuantity,
-		Value:        norm,
-		DisplayValue: apiresource.FormatDisplayValue(norm, q.UnitAbbreviation, q.UnitType),
-		Unit: &apiresource.Unit{
+	var unit *apiresource.Unit
+	if ud := q.GetUnitDetail(); ud != nil {
+		u := unitep.UnitPresenter(ud, nil)
+		unit = &u
+	} else {
+		unit = &apiresource.Unit{
 			ID:           q.UnitId,
 			Object:       constants.ObjectTypeUnit,
 			Name:         q.UnitName,
 			Abbreviation: q.UnitAbbreviation,
 			Type:         constants.UnitType(q.UnitType),
-		},
+		}
+	}
+	return &apiresource.Quantity{
+		ID:           q.Id,
+		Object:       constants.ObjectTypeQuantity,
+		Value:        norm,
+		DisplayValue: apiresource.FormatDisplayValue(norm, q.UnitAbbreviation, q.UnitType),
+		Unit:         unit,
 	}
 }
 
@@ -32,12 +41,10 @@ func ShippingTermPresenter(st *pb.ShippingTermInfo, ownerAccount *apiresource.Ac
 		return apiresource.ShippingTerm{}
 	}
 
-	freeShippingServiceLevels := make([]apiresource.ServiceLevel, len(st.FreeShippingServiceLevelIds))
-	for i, id := range st.FreeShippingServiceLevelIds {
-		freeShippingServiceLevels[i] = apiresource.ServiceLevel{
-			ID:     id,
-			Object: constants.ObjectTypeServiceLevel,
-		}
+	levels := st.GetFreeShippingServiceLevels()
+	freeShippingServiceLevels := make([]apiresource.ServiceLevel, len(levels))
+	for i, sl := range levels {
+		freeShippingServiceLevels[i] = servicelevelep.ServiceLevelPresenter(sl, nil)
 	}
 
 	return apiresource.ShippingTerm{

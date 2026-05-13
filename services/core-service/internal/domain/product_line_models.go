@@ -48,6 +48,8 @@ type ProductLineUnitGroup struct {
 	Name       string
 	BaseUnitID string
 	Type       string
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
 }
 
 type ListProductLinesParams struct {
@@ -55,6 +57,7 @@ type ListProductLinesParams struct {
 	Cursor    *string
 	Limit     int32
 	Query     *string
+	Includes  []string
 }
 
 type ListProductLinesResult struct {
@@ -65,6 +68,7 @@ type ListProductLinesResult struct {
 type GetProductLineParams struct {
 	AccountID     string
 	ProductLineID string
+	Includes      []string
 }
 
 type CreateProductLineParams struct {
@@ -73,6 +77,7 @@ type CreateProductLineParams struct {
 	UnitGroupID      string
 	CommissionPolicy constants.CommissionPolicy
 	FreightPolicy    constants.FreightPolicy
+	Includes         []string
 }
 
 type UpdateProductLineParams struct {
@@ -82,6 +87,7 @@ type UpdateProductLineParams struct {
 	CommissionPolicy *constants.CommissionPolicy
 	FreightPolicy    *constants.FreightPolicy
 	UnitGroupID      *string
+	Includes         []string
 }
 
 type DeleteProductLineParams struct {

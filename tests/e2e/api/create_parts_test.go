@@ -177,3 +177,43 @@ func TestParts_Create_LinksAttributes(t *testing.T) {
 	}
 	assert.True(t, found, "expected linked attribute %s in item.attributes", SeedAttributeID)
 }
+
+func TestParts_Create_MissingSKU(t *testing.T) {
+	t.Parallel()
+
+	status, respBody, err := apiClient.Post(partsPath, map[string]any{
+		"category_id": SeedItemCategoryID,
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 400, status, respBody)
+
+	errObj := requireErrorResponse(t, respBody, "missing_field", "invalid_request_error")
+	assertErrorParam(t, errObj, "sku")
+}
+
+func TestParts_Create_EmptySKU(t *testing.T) {
+	t.Parallel()
+
+	status, respBody, err := apiClient.Post(partsPath, map[string]any{
+		"sku":         "",
+		"category_id": SeedItemCategoryID,
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 400, status, respBody)
+
+	errObj := requireErrorResponse(t, respBody, "missing_field", "invalid_request_error")
+	assertErrorParam(t, errObj, "sku")
+}
+
+func TestParts_Create_MissingCategoryID(t *testing.T) {
+	t.Parallel()
+
+	status, respBody, err := apiClient.Post(partsPath, map[string]any{
+		"sku": uniqueName("e2e-part-no-cat"),
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 400, status, respBody)
+
+	errObj := requireErrorResponse(t, respBody, "missing_field", "invalid_request_error")
+	assertErrorParam(t, errObj, "category_id")
+}

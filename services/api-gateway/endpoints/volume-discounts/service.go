@@ -7,6 +7,7 @@ import (
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/appctx"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
@@ -16,7 +17,7 @@ import (
 
 type VolumeDiscountSvc interface {
 	ListVolumeDiscounts(ctx context.Context, req *ListVolumeDiscountsRequest) (*apiresource.List[apiresource.VolumeDiscount], *apierror.APIError)
-	GetVolumeDiscount(ctx context.Context, req *GetVolumeDiscountRequest) (*apiresource.VolumeDiscount, *apierror.APIError)
+	GetVolumeDiscount(ctx context.Context, req *RetrieveVolumeDiscountRequest) (*apiresource.VolumeDiscount, *apierror.APIError)
 	CreateVolumeDiscount(ctx context.Context, req *CreateVolumeDiscountRequest) (*apiresource.VolumeDiscount, *apierror.APIError)
 	UpdateVolumeDiscount(ctx context.Context, req *UpdateVolumeDiscountRequest) (*apiresource.VolumeDiscount, *apierror.APIError)
 	DeleteVolumeDiscount(ctx context.Context, req *DeleteVolumeDiscountRequest) (*apiresource.EmptyResource, *apierror.APIError)
@@ -51,9 +52,10 @@ func NewVolumeDiscountSvc(config *VolumeDiscountSvcConfig) VolumeDiscountSvc {
 
 func (m *volumeDiscountSvcImpl) ListVolumeDiscounts(ctx context.Context, req *ListVolumeDiscountsRequest) (*apiresource.List[apiresource.VolumeDiscount], *apierror.APIError) {
 	pbReq := &pb.ListVolumeDiscountsRequest{
-		Cursor: req.Cursor,
-		Limit:  req.Limit,
-		Query:  req.Query,
+		Cursor:   req.Cursor,
+		Limit:    req.Limit,
+		Query:    req.Query,
+		Includes: appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, volumeDiscountSvcTracer, "service.volume_discounts.list", domain.ServiceName,
@@ -68,9 +70,10 @@ func (m *volumeDiscountSvcImpl) ListVolumeDiscounts(ctx context.Context, req *Li
 	return VolumeDiscountListPresenter(resp), nil
 }
 
-func (m *volumeDiscountSvcImpl) GetVolumeDiscount(ctx context.Context, req *GetVolumeDiscountRequest) (*apiresource.VolumeDiscount, *apierror.APIError) {
+func (m *volumeDiscountSvcImpl) GetVolumeDiscount(ctx context.Context, req *RetrieveVolumeDiscountRequest) (*apiresource.VolumeDiscount, *apierror.APIError) {
 	pbReq := &pb.GetVolumeDiscountRequest{
-		Id: req.VolumeDiscountID,
+		Id:       req.VolumeDiscountID,
+		Includes: appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, volumeDiscountSvcTracer, "service.volume_discounts.get", domain.ServiceName,
@@ -105,6 +108,7 @@ func (m *volumeDiscountSvcImpl) CreateVolumeDiscount(ctx context.Context, req *C
 		CategoryIds:      req.CategoryIDs,
 		AttributeIds:     req.AttributeIDs,
 		UnitIds:          req.UnitIDs,
+		Includes:         appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, volumeDiscountSvcTracer, "service.volume_discounts.create", domain.ServiceName,
@@ -147,6 +151,7 @@ func (m *volumeDiscountSvcImpl) UpdateVolumeDiscount(ctx context.Context, req *U
 		HasCategories:     req.HasCategories,
 		HasAttributes:     req.HasAttributes,
 		HasUnits:          req.HasUnits,
+		Includes:          appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, volumeDiscountSvcTracer, "service.volume_discounts.update", domain.ServiceName,

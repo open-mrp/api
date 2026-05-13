@@ -910,10 +910,10 @@ func (mr *MockAgentAlertRepoMockRecorder) Acknowledge(ctx, params any) *gomock.C
 }
 
 // GetByID mocks base method.
-func (m *MockAgentAlertRepo) GetByID(ctx context.Context, id string) (*sqlc.AgentAlert, *apierror.APIError) {
+func (m *MockAgentAlertRepo) GetByID(ctx context.Context, id string) (*sqlc.GetAgentAlertByIDRow, *apierror.APIError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetByID", ctx, id)
-	ret0, _ := ret[0].(*sqlc.AgentAlert)
+	ret0, _ := ret[0].(*sqlc.GetAgentAlertByIDRow)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
@@ -954,10 +954,10 @@ func (mr *MockAgentAlertRepoMockRecorder) ListByAccount(ctx, accountID, limit an
 }
 
 // ListByAccountCursor mocks base method.
-func (m *MockAgentAlertRepo) ListByAccountCursor(ctx context.Context, params sqlc.ListAgentAlertsByAccountCursorParams) ([]sqlc.AgentAlert, *apierror.APIError) {
+func (m *MockAgentAlertRepo) ListByAccountCursor(ctx context.Context, params sqlc.ListAgentAlertsByAccountCursorParams) ([]sqlc.ListAgentAlertsByAccountCursorRow, *apierror.APIError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListByAccountCursor", ctx, params)
-	ret0, _ := ret[0].([]sqlc.AgentAlert)
+	ret0, _ := ret[0].([]sqlc.ListAgentAlertsByAccountCursorRow)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }

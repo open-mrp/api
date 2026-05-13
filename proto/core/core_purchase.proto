@@ -6,6 +6,7 @@ package core;
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/empty.proto";
 import "core/core.proto";
+import "core/core_receiving.proto";
 
 option go_package = "shared/proto/core;core";
 
@@ -135,6 +136,22 @@ message PurchaseOrderInfo {
   optional string shipping_term_type = 55;
   optional string priority_id = 56;
   optional string service_level_token = 57;
+  optional google.protobuf.Timestamp service_level_created_at = 58;
+  optional google.protobuf.Timestamp service_level_updated_at = 59;
+  optional google.protobuf.Timestamp carrier_created_at = 60;
+  optional google.protobuf.Timestamp carrier_updated_at = 61;
+  optional google.protobuf.Timestamp payment_term_created_at = 62;
+  optional google.protobuf.Timestamp payment_term_updated_at = 63;
+  optional google.protobuf.Timestamp shipping_term_created_at = 64;
+  optional google.protobuf.Timestamp shipping_term_updated_at = 65;
+  optional string bill_to_address_type = 66;
+  optional google.protobuf.Timestamp bill_to_address_created_at = 67;
+  optional google.protobuf.Timestamp bill_to_address_updated_at = 68;
+  optional string ship_to_address_type = 69;
+  optional google.protobuf.Timestamp ship_to_address_created_at = 70;
+  optional google.protobuf.Timestamp ship_to_address_updated_at = 71;
+  // Full receiving order (populated when included)
+  optional ReceivingOrderInfo receiving_order = 72;
 }
 
 // PurchaseOrderLineInfo represents a purchase order line.
@@ -239,6 +256,7 @@ message CreatePurchaseOrderRequest {
   repeated string contact_account_user_ids = 25;
   // Promised date
   optional string promised_at = 26;
+  repeated string includes = 27;
 }
 
 message CreatePurchaseOrderLineInput {
@@ -270,6 +288,7 @@ message UpdatePurchaseOrderRequest {
   optional string promised_at = 7;
   // Email contacts (replaces existing)
   repeated string contact_account_user_ids = 8;
+  repeated string includes = 9;
 }
 
 message UpdatePurchaseOrderResponse {
@@ -288,6 +307,7 @@ message ChangePurchaseOrderStatusRequest {
   string id = 1;
   string status_change = 2;
   bool send_email = 3;
+  repeated string includes = 4;
 }
 
 message ChangePurchaseOrderStatusResponse {

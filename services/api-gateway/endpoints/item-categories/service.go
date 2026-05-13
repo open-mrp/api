@@ -8,6 +8,7 @@ import (
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	ownerutil "github.com/augno/api/services/api-gateway/internal/owner"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/appctx"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
@@ -17,7 +18,7 @@ import (
 
 type ItemCategorySvc interface {
 	ListItemCategories(ctx context.Context, req *ListItemCategoriesRequest) (*apiresource.List[apiresource.ItemCategory], *apierror.APIError)
-	GetItemCategory(ctx context.Context, req *GetItemCategoryRequest) (*apiresource.ItemCategory, *apierror.APIError)
+	GetItemCategory(ctx context.Context, req *RetrieveItemCategoryRequest) (*apiresource.ItemCategory, *apierror.APIError)
 	CreateItemCategory(ctx context.Context, req *CreateItemCategoryRequest) (*apiresource.ItemCategory, *apierror.APIError)
 	UpdateItemCategory(ctx context.Context, req *UpdateItemCategoryRequest) (*apiresource.ItemCategory, *apierror.APIError)
 	DeleteItemCategory(ctx context.Context, req *DeleteItemCategoryRequest) (*apiresource.EmptyResource, *apierror.APIError)
@@ -55,10 +56,11 @@ func NewItemCategorySvc(config *ItemCategorySvcConfig) ItemCategorySvc {
 
 func (m *itemCategorySvcImpl) ListItemCategories(ctx context.Context, req *ListItemCategoriesRequest) (*apiresource.List[apiresource.ItemCategory], *apierror.APIError) {
 	pbReq := &pb.ListItemCategoriesRequest{
-		Cursor: req.Cursor,
-		Limit:  req.Limit,
-		Query:  req.Query,
-		Type:   req.Type.StringPtr(),
+		Cursor:   req.Cursor,
+		Limit:    req.Limit,
+		Query:    req.Query,
+		Type:     req.Type.StringPtr(),
+		Includes: appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, itemCategorySvcTracer, "service.item-categories.list", domain.ServiceName,
@@ -81,9 +83,10 @@ func (m *itemCategorySvcImpl) ListItemCategories(ctx context.Context, req *ListI
 	return ItemCategoryListPresenter(resp, ownerAccount), nil
 }
 
-func (m *itemCategorySvcImpl) GetItemCategory(ctx context.Context, req *GetItemCategoryRequest) (*apiresource.ItemCategory, *apierror.APIError) {
+func (m *itemCategorySvcImpl) GetItemCategory(ctx context.Context, req *RetrieveItemCategoryRequest) (*apiresource.ItemCategory, *apierror.APIError) {
 	pbReq := &pb.GetItemCategoryRequest{
-		Id: req.ItemCategoryID,
+		Id:       req.ItemCategoryID,
+		Includes: appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, itemCategorySvcTracer, "service.item-categories.get", domain.ServiceName,
@@ -105,6 +108,7 @@ func (m *itemCategorySvcImpl) CreateItemCategory(ctx context.Context, req *Creat
 		Name:        req.Name,
 		Type:        string(req.Type),
 		UnitGroupId: req.UnitGroupID,
+		Includes:    appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, itemCategorySvcTracer, "service.item-categories.create", domain.ServiceName,
@@ -123,9 +127,10 @@ func (m *itemCategorySvcImpl) CreateItemCategory(ctx context.Context, req *Creat
 
 func (m *itemCategorySvcImpl) UpdateItemCategory(ctx context.Context, req *UpdateItemCategoryRequest) (*apiresource.ItemCategory, *apierror.APIError) {
 	pbReq := &pb.UpdateItemCategoryRequest{
-		Id:    req.ItemCategoryID,
-		Name:  req.Name,
-		Notes: req.Notes,
+		Id:       req.ItemCategoryID,
+		Name:     req.Name,
+		Notes:    req.Notes,
+		Includes: appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, itemCategorySvcTracer, "service.item-categories.update", domain.ServiceName,

@@ -22,9 +22,9 @@ type UpdateShipmentRequest struct {
 	// Master tracking number.
 	MasterTrackingNumber *string `json:"master_tracking_number,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// Carrier ID.
-	CarrierID *string `json:"carrier_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
+	CarrierID *string `json:"carrier_id,omitempty" nullable:"false" validate:"omitempty"`
 	// Service level ID.
-	ServiceLevelID *string `json:"service_level_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
+	ServiceLevelID *string `json:"service_level_id,omitempty" nullable:"true" validate:"omitempty"`
 }
 
 var sampleUpdateNote = "Updated shipping note"

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/augno/api/services/core-service/internal/domain"
+	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/contracts"
 	pb "github.com/augno/api/shared/proto/core"
 
@@ -31,43 +32,80 @@ func volumeDiscountToProto(d *domain.VolumeDiscount) *pb.VolumeDiscountInfo {
 
 	customerGroups := make([]*pb.VolumeDiscountCustomerGroupInfo, len(d.CustomerGroups))
 	for i, cg := range d.CustomerGroups {
+		cgCommissionPolicy := cg.CommissionPolicy
+		cgFreightPolicy := cg.FreightPolicy
+		cgType := cg.Type
+		cgCreatedAt := timestamppb.New(cg.CreatedAt)
+		cgUpdatedAt := timestamppb.New(cg.UpdatedAt)
 		customerGroups[i] = &pb.VolumeDiscountCustomerGroupInfo{
-			Id:             cg.ID,
-			AccountGroupId: cg.AccountGroupID,
-			Name:           cg.Name,
+			Id:               cg.ID,
+			AccountGroupId:   cg.AccountGroupID,
+			Name:             cg.Name,
+			CommissionPolicy: &cgCommissionPolicy,
+			FreightPolicy:    &cgFreightPolicy,
+			Type:             &cgType,
+			CreatedAt:        cgCreatedAt,
+			UpdatedAt:        cgUpdatedAt,
 		}
 	}
 
 	productLines := make([]*pb.VolumeDiscountProductLineInfo, len(d.ProductLines))
 	for i, pl := range d.ProductLines {
+		plCommissionPolicy := string(constants.CommissionPolicyFromBool(pl.IsCommissionExempt))
+		plFreightPolicy := string(constants.FreightPolicyFromBool(pl.IsFreightExempt))
+		plCreatedAt := timestamppb.New(pl.CreatedAt)
+		plUpdatedAt := timestamppb.New(pl.UpdatedAt)
 		productLines[i] = &pb.VolumeDiscountProductLineInfo{
-			Id:   pl.ID,
-			Name: pl.Name,
+			Id:               pl.ID,
+			Name:             pl.Name,
+			CommissionPolicy: &plCommissionPolicy,
+			FreightPolicy:    &plFreightPolicy,
+			CreatedAt:        plCreatedAt,
+			UpdatedAt:        plUpdatedAt,
 		}
 	}
 
 	categories := make([]*pb.VolumeDiscountCategoryInfo, len(d.Categories))
 	for i, cat := range d.Categories {
+		catType := cat.Type
+		catCreatedAt := timestamppb.New(cat.CreatedAt)
+		catUpdatedAt := timestamppb.New(cat.UpdatedAt)
 		categories[i] = &pb.VolumeDiscountCategoryInfo{
-			Id:   cat.ID,
-			Name: cat.Name,
+			Id:        cat.ID,
+			Name:      cat.Name,
+			Type:      &catType,
+			CreatedAt: catCreatedAt,
+			UpdatedAt: catUpdatedAt,
 		}
 	}
 
 	attributes := make([]*pb.VolumeDiscountAttributeInfo, len(d.Attributes))
 	for i, attr := range d.Attributes {
+		attrColorCode := attr.ColorCode
+		attrCreatedAt := timestamppb.New(attr.CreatedAt)
+		attrUpdatedAt := timestamppb.New(attr.UpdatedAt)
 		attributes[i] = &pb.VolumeDiscountAttributeInfo{
-			Id:   attr.ID,
-			Name: attr.Name,
+			Id:        attr.ID,
+			Name:      attr.Name,
+			ColorCode: &attrColorCode,
+			CreatedAt: attrCreatedAt,
+			UpdatedAt: attrUpdatedAt,
 		}
 	}
 
 	units := make([]*pb.VolumeDiscountUnitInfo, len(d.AcceptableUnits))
 	for i, u := range d.AcceptableUnits {
 		units[i] = &pb.VolumeDiscountUnitInfo{
-			Id:           u.ID,
-			Name:         u.Name,
-			Abbreviation: u.Abbreviation,
+			Id:                u.ID,
+			Name:              u.Name,
+			Abbreviation:      u.Abbreviation,
+			Type:              u.Type,
+			RatioNumerator:    u.RatioNumerator,
+			RatioDenominator:  u.RatioDenominator,
+			OffsetNumerator:   u.OffsetNumerator,
+			OffsetDenominator: u.OffsetDenominator,
+			CreatedAt:         timestamppb.New(u.CreatedAt),
+			UpdatedAt:         timestamppb.New(u.UpdatedAt),
 		}
 	}
 
@@ -95,6 +133,7 @@ func (h *salesGRPCHandler) ListVolumeDiscounts(ctx context.Context, req *pb.List
 		Limit:             req.Limit,
 		Query:             req.Query,
 		CustomerAccountID: req.CustomerAccountId,
+		Includes:          req.Includes,
 	}
 
 	result, apiErr := h.volumeDiscountSvc.ListVolumeDiscounts(ctx, params)
@@ -126,6 +165,7 @@ func (h *salesGRPCHandler) GetVolumeDiscount(ctx context.Context, req *pb.GetVol
 	params := domain.GetVolumeDiscountParams{
 		VolumeDiscountID:  req.Id,
 		CustomerAccountID: req.CustomerAccountId,
+		Includes:          req.Includes,
 	}
 
 	discount, apiErr := h.volumeDiscountSvc.GetVolumeDiscount(ctx, params)
@@ -171,6 +211,7 @@ func (h *salesGRPCHandler) CreateVolumeDiscount(ctx context.Context, req *pb.Cre
 		CategoryIDs:    req.CategoryIds,
 		AttributeIDs:   req.AttributeIds,
 		UnitIDs:        req.UnitIds,
+		Includes:       req.Includes,
 	}
 
 	discount, apiErr := h.volumeDiscountSvc.CreateVolumeDiscount(ctx, params)
@@ -224,6 +265,7 @@ func (h *salesGRPCHandler) UpdateVolumeDiscount(ctx context.Context, req *pb.Upd
 		HasCategories:     req.HasCategories,
 		HasAttributes:     req.HasAttributes,
 		HasUnits:          req.HasUnits,
+		Includes:          req.Includes,
 	}
 
 	discount, apiErr := h.volumeDiscountSvc.UpdateVolumeDiscount(ctx, params)

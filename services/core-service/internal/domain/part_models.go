@@ -25,6 +25,7 @@ type CreatePartParams struct {
 	UnitCost     *CreateRateParams
 	BurnRate     *CreateRateParams
 	AttributeIDs []string
+	Includes     []string
 }
 
 type UpdatePartParams struct {
@@ -35,6 +36,7 @@ type UpdatePartParams struct {
 	UpdateDescription bool
 	Notes             *string
 	UpdateNotes       bool
+	Includes          []string
 }
 
 type DeletePartParams struct {
@@ -45,6 +47,7 @@ type DeletePartParams struct {
 type GetPartParams struct {
 	AccountID string
 	PartID    string
+	Includes  []string
 }
 
 type ListPartsParams struct {
@@ -56,6 +59,7 @@ type ListPartsParams struct {
 	AttributeIDs []string
 	StartDate    *time.Time
 	EndDate      *time.Time
+	Includes     []string
 }
 
 type ListPartsResult struct {

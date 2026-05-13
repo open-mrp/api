@@ -33,20 +33,42 @@ func CustomerPresenter(c *pb.CustomerProto) apiresource.Customer {
 			if c.DefaultCarrier.IsPortalEnabled {
 				carrierVisibility = constants.CustomerPortalVisibilityVisible
 			}
-			fp.Carrier = &apiresource.Carrier{
+			carrier := &apiresource.Carrier{
 				ID:                       c.DefaultCarrier.Id,
 				Object:                   constants.ObjectTypeCarrier,
 				Name:                     c.DefaultCarrier.Name,
 				CustomerPortalVisibility: carrierVisibility,
 			}
+			if c.DefaultCarrier.CreatedAt != nil {
+				carrier.CreatedAt = c.DefaultCarrier.CreatedAt.AsTime()
+			}
+			if c.DefaultCarrier.UpdatedAt != nil {
+				carrier.UpdatedAt = c.DefaultCarrier.UpdatedAt.AsTime()
+			}
+			fp.Carrier = carrier
 		}
 
 		if c.DefaultServiceLevel != nil {
-			fp.ServiceLevel = &apiresource.ServiceLevel{
+			sl := &apiresource.ServiceLevel{
 				ID:     c.DefaultServiceLevel.Id,
 				Object: constants.ObjectTypeServiceLevel,
 				Name:   c.DefaultServiceLevel.Name,
 			}
+			if c.DefaultServiceLevel.ServiceLevelToken != nil {
+				sl.ServiceLevelToken = constants.ServiceLevelCode(*c.DefaultServiceLevel.ServiceLevelToken)
+			}
+			if c.DefaultServiceLevel.IsPortalEnabled != nil && *c.DefaultServiceLevel.IsPortalEnabled {
+				sl.CustomerPortalVisibility = constants.CustomerPortalVisibilityVisible
+			} else {
+				sl.CustomerPortalVisibility = constants.CustomerPortalVisibilityHidden
+			}
+			if c.DefaultServiceLevel.CreatedAt != nil {
+				sl.CreatedAt = c.DefaultServiceLevel.CreatedAt.AsTime()
+			}
+			if c.DefaultServiceLevel.UpdatedAt != nil {
+				sl.UpdatedAt = c.DefaultServiceLevel.UpdatedAt.AsTime()
+			}
+			fp.ServiceLevel = sl
 		}
 
 		if c.CarrierBillingType != nil {
@@ -69,21 +91,35 @@ func CustomerPresenter(c *pb.CustomerProto) apiresource.Customer {
 			if c.DefaultPaymentTerm.IsActive {
 				ptStatus = constants.PaymentTermStatusActive
 			}
-			d.PaymentTerm = &apiresource.PaymentTerm{
+			pt := &apiresource.PaymentTerm{
 				ID:     c.DefaultPaymentTerm.Id,
 				Object: constants.ObjectTypePaymentTerm,
 				Name:   c.DefaultPaymentTerm.Name,
 				Status: ptStatus,
 			}
+			if c.DefaultPaymentTerm.CreatedAt != nil {
+				pt.CreatedAt = c.DefaultPaymentTerm.CreatedAt.AsTime()
+			}
+			if c.DefaultPaymentTerm.UpdatedAt != nil {
+				pt.UpdatedAt = c.DefaultPaymentTerm.UpdatedAt.AsTime()
+			}
+			d.PaymentTerm = pt
 		}
 
 		if c.DefaultShippingTerm != nil {
-			d.ShippingTerm = &apiresource.ShippingTerm{
+			st := &apiresource.ShippingTerm{
 				ID:     c.DefaultShippingTerm.Id,
 				Object: constants.ObjectTypeShippingTerm,
 				Name:   c.DefaultShippingTerm.Name,
 				Type:   constants.ShippingTermType(c.DefaultShippingTerm.Type),
 			}
+			if c.DefaultShippingTerm.CreatedAt != nil {
+				st.CreatedAt = c.DefaultShippingTerm.CreatedAt.AsTime()
+			}
+			if c.DefaultShippingTerm.UpdatedAt != nil {
+				st.UpdatedAt = c.DefaultShippingTerm.UpdatedAt.AsTime()
+			}
+			d.ShippingTerm = st
 		}
 
 		if c.DefaultPriority != nil {
@@ -96,11 +132,21 @@ func CustomerPresenter(c *pb.CustomerProto) apiresource.Customer {
 		}
 
 		if c.DefaultSalesRep != nil {
-			d.SalesRep = &apiresource.User{
+			sr := &apiresource.AccountUser{
 				ID:     c.DefaultSalesRep.Id,
-				Object: constants.ObjectTypeUser,
+				Object: constants.ObjectTypeAccountUser,
 				Name:   c.DefaultSalesRep.Name,
 			}
+			if c.DefaultSalesRep.Status != nil {
+				sr.Status = constants.AccountUserStatus(*c.DefaultSalesRep.Status)
+			}
+			if c.DefaultSalesRep.CreatedAt != nil {
+				sr.CreatedAt = c.DefaultSalesRep.CreatedAt.AsTime()
+			}
+			if c.DefaultSalesRep.UpdatedAt != nil {
+				sr.UpdatedAt = c.DefaultSalesRep.UpdatedAt.AsTime()
+			}
+			d.SalesRep = sr
 		}
 
 		defaults = d
@@ -146,7 +192,7 @@ func CustomerPresenter(c *pb.CustomerProto) apiresource.Customer {
 	// Type group
 	var typeGroup *apiresource.AccountGroup
 	if c.TypeGroup != nil {
-		typeGroup = &apiresource.AccountGroup{
+		tg := &apiresource.AccountGroup{
 			ID:               c.TypeGroup.Id,
 			Object:           constants.ObjectTypeAccountGroup,
 			Name:             c.TypeGroup.Name,
@@ -154,32 +200,55 @@ func CustomerPresenter(c *pb.CustomerProto) apiresource.Customer {
 			FreightPolicy:    constants.FreightPolicy(c.TypeGroup.FreightPolicy),
 			Type:             constants.AccountGroupType(c.TypeGroup.Type),
 		}
+		if c.TypeGroup.CreatedAt != nil {
+			tg.CreatedAt = c.TypeGroup.CreatedAt.AsTime()
+		}
+		if c.TypeGroup.UpdatedAt != nil {
+			tg.UpdatedAt = c.TypeGroup.UpdatedAt.AsTime()
+		}
+		typeGroup = tg
 	}
 
 	// Price groups
 	var priceGroups []apiresource.AccountGroup
 	for _, pg := range c.PriceGroups {
-		priceGroups = append(priceGroups, apiresource.AccountGroup{
+		item := apiresource.AccountGroup{
 			ID:               pg.Id,
 			Object:           constants.ObjectTypeAccountGroup,
 			Name:             pg.Name,
 			CommissionPolicy: constants.CommissionPolicy(pg.CommissionPolicy),
 			FreightPolicy:    constants.FreightPolicy(pg.FreightPolicy),
 			Type:             constants.AccountGroupType(pg.Type),
-		})
+		}
+		if pg.CreatedAt != nil {
+			item.CreatedAt = pg.CreatedAt.AsTime()
+		}
+		if pg.UpdatedAt != nil {
+			item.UpdatedAt = pg.UpdatedAt.AsTime()
+		}
+		priceGroups = append(priceGroups, item)
 	}
 
 	// Parent account
 	var parentAccount *apiresource.Customer
 	if c.ParentAccount != nil {
-		parentAccount = &apiresource.Customer{
+		pa := &apiresource.Customer{
 			ID:               c.ParentAccount.Id,
 			Object:           constants.ObjectTypeCustomer,
 			Name:             c.ParentAccount.Name,
 			Number:           c.ParentAccount.Number,
 			Status:           constants.AccountStatusCodeNormal,
+			EDIStatus:        constants.EDIStatusDisabled,
+			RelationshipType: constants.CustomerRelationshipTypeParent,
 			CommissionPolicy: constants.CommissionPolicyApplied,
 		}
+		if c.ParentAccount.CreatedAt != nil {
+			pa.CreatedAt = c.ParentAccount.CreatedAt.AsTime()
+		}
+		if c.ParentAccount.UpdatedAt != nil {
+			pa.UpdatedAt = c.ParentAccount.UpdatedAt.AsTime()
+		}
+		parentAccount = pa
 	}
 
 	// Child accounts
@@ -187,14 +256,23 @@ func CustomerPresenter(c *pb.CustomerProto) apiresource.Customer {
 	if len(c.ChildAccounts) > 0 {
 		items := make([]apiresource.Customer, len(c.ChildAccounts))
 		for i, child := range c.ChildAccounts {
-			items[i] = apiresource.Customer{
+			ca := apiresource.Customer{
 				ID:               child.Id,
 				Object:           constants.ObjectTypeCustomer,
 				Name:             child.Name,
 				Number:           child.Number,
 				Status:           constants.AccountStatusCodeNormal,
+				EDIStatus:        constants.EDIStatusDisabled,
+				RelationshipType: constants.CustomerRelationshipTypeChild,
 				CommissionPolicy: constants.CommissionPolicyApplied,
 			}
+			if child.CreatedAt != nil {
+				ca.CreatedAt = child.CreatedAt.AsTime()
+			}
+			if child.UpdatedAt != nil {
+				ca.UpdatedAt = child.UpdatedAt.AsTime()
+			}
+			items[i] = ca
 		}
 		childAccounts = apiresource.NewList(items, apiresource.PageInfo{})
 	}
@@ -205,8 +283,8 @@ func CustomerPresenter(c *pb.CustomerProto) apiresource.Customer {
 		Name:                    c.Name,
 		Number:                  c.Number,
 		Status:                  constants.AccountStatusCode(c.Status),
-		IsEdiEnabled:            c.IsEdiEnabled,
-		IsParentAccount:         c.IsParentAccount,
+		EDIStatus:               ediStatusFromBool(c.IsEdiEnabled),
+		RelationshipType:        customerRelationshipType(c.IsParentAccount, parentAccount),
 		CommissionPolicy:        constants.CommissionPolicy(c.CommissionPolicy),
 		Note:                    c.Note,
 		CreditLimit:             creditLimit,
@@ -250,11 +328,35 @@ func customerAddressPresenter(a *pb.CustomerAddressProto) *apiresource.Address {
 		Name:        a.Name,
 		Phone:       a.Phone,
 		Email:       a.Email,
-		IsDropShip:  a.IsDropShip,
+		Type:        addressTypeFromDropShip(a.IsDropShip),
 		Geolocation: geolocation,
 		CreatedAt:   grpcutil.TimestampToTime(a.CreatedAt),
 		UpdatedAt:   grpcutil.TimestampToTime(a.UpdatedAt),
 	}
+}
+
+func ediStatusFromBool(enabled bool) constants.EDIStatus {
+	if enabled {
+		return constants.EDIStatusEnabled
+	}
+	return constants.EDIStatusDisabled
+}
+
+func customerRelationshipType(isParent bool, parentAccount *apiresource.Customer) constants.CustomerRelationshipType {
+	if isParent {
+		return constants.CustomerRelationshipTypeParent
+	}
+	if parentAccount != nil {
+		return constants.CustomerRelationshipTypeChild
+	}
+	return constants.CustomerRelationshipTypeStandalone
+}
+
+func addressTypeFromDropShip(isDropShip bool) constants.AddressType {
+	if isDropShip {
+		return constants.AddressTypeDropShip
+	}
+	return constants.AddressTypeStandard
 }
 
 func CustomerListPresenter(resp *pb.ListCustomersResponse) *apiresource.List[apiresource.Customer] {

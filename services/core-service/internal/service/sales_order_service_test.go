@@ -148,7 +148,7 @@ func TestSalesOrderSvcTestSuite(t *testing.T) {
 // --- Helpers ---
 
 func salesOrderInternalCtx(accountID string) context.Context {
-	adminCode := string(constants.RoleTypeCodeAdmin)
+	adminCode := string(constants.RoleTypeAdmin)
 	return appctx.WithIdentity(context.Background(), &types.Identity{
 		Type:   types.IdentityActorTypeUser,
 		Target: &types.IdentityTarget{AccountID: accountID},
@@ -156,7 +156,7 @@ func salesOrderInternalCtx(accountID string) context.Context {
 			RelationType: types.IdentityRelationTypeInternal,
 			ID:           "usr_test123",
 			AccountID:    &accountID,
-			RoleTypeCode: &adminCode,
+			RoleType:     &adminCode,
 			Permissions: map[string]bool{
 				"sales_orders:read":      true,
 				"sales_orders:create":    true,
@@ -263,7 +263,7 @@ func (suite *SalesOrderSvcTestSuite) TestListSalesOrders_CustomerActorScopedToOw
 }
 
 func (suite *SalesOrderSvcTestSuite) TestListSalesOrders_InternalActorRequiresReadPermission() {
-	customCode := string(constants.RoleTypeCodeCustom)
+	customCode := string(constants.RoleTypeCustom)
 	ctx := appctx.WithIdentity(context.Background(), &types.Identity{
 		Type:   types.IdentityActorTypeUser,
 		Target: &types.IdentityTarget{AccountID: "ac_test"},
@@ -271,7 +271,7 @@ func (suite *SalesOrderSvcTestSuite) TestListSalesOrders_InternalActorRequiresRe
 			RelationType: types.IdentityRelationTypeInternal,
 			ID:           "usr",
 			AccountID:    ptr("ac_test"),
-			RoleTypeCode: &customCode,
+			RoleType:     &customCode,
 			Permissions:  map[string]bool{},
 		},
 	})

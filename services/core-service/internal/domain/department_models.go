@@ -6,21 +6,33 @@ import (
 	"github.com/augno/api/shared/pagination"
 )
 
-// LightRef is a lightweight reference with an ID and Name, used for sub-resource lists
-// (e.g., scanning stations, machines attached to a department).
-type LightRef struct {
-	ID   string
-	Name string
+// DepartmentScanningStation is a scanning station sub-resource attached to a department.
+type DepartmentScanningStation struct {
+	ID        string
+	Name      string
+	Type      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+// DepartmentMachine is a machine sub-resource attached to a department.
+type DepartmentMachine struct {
+	ID           string
+	Name         string
+	SerialNumber string
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
 }
 
 type Department struct {
 	ID               string
-	Name             string     `audit:"name"`
-	Notes            *string    `audit:"notes"`
-	LocationID       *string    `audit:"location_id"`
-	LocationName     *string    `audit:"location_name"`
-	ScanningStations []LightRef `audit:"scanning_stations"`
-	Machines         []LightRef `audit:"machines"`
+	Name             string                      `audit:"name"`
+	Notes            *string                     `audit:"notes"`
+	LocationID       *string                     `audit:"location_id"`
+	LocationName     *string                     `audit:"location_name"`
+	LocationTypeCode *string                     `audit:"location_type_code"`
+	ScanningStations []DepartmentScanningStation `audit:"scanning_stations"`
+	Machines         []DepartmentMachine         `audit:"machines"`
 	AccountID        string
 	CreatedAt        time.Time
 	UpdatedAt        time.Time

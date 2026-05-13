@@ -11,7 +11,7 @@ type IdentityActor struct {
 	Name         *string
 	AccountID    *string
 	RoleID       *string
-	RoleTypeCode *string
+	RoleType     *string
 	Permissions  map[string]bool
 }
 
@@ -35,22 +35,22 @@ func (i *Identity) IsActorSet() bool {
 
 // IsRoleSet checks that the identity has a valid actor and a valid role
 func (i *Identity) IsRoleSet() bool {
-	return i.IsActorSet() && i.Actor.RoleTypeCode != nil && *i.Actor.RoleTypeCode != ""
+	return i.IsActorSet() && i.Actor.RoleType != nil && *i.Actor.RoleType != ""
 }
 
 // IsAdmin checks that the identity is authenticated, has a valid actor, a valid role, and is of type admin
 func (i *Identity) IsAdmin() bool {
-	return i.IsRoleSet() && *i.Actor.RoleTypeCode == string(constants.RoleTypeCodeAdmin)
+	return i.IsRoleSet() && *i.Actor.RoleType == string(constants.RoleTypeAdmin)
 }
 
 // IsScanner checks that the identity is authenticated, has a valid actor, a valid role, and is of type scanner
 func (i *Identity) IsScanner() bool {
-	return i.IsRoleSet() && *i.Actor.RoleTypeCode == string(constants.RoleTypeCodeScanner)
+	return i.IsRoleSet() && *i.Actor.RoleType == string(constants.RoleTypeScanner)
 }
 
 // IsSalesRep checks that the identity is authenticated, has a valid actor, a valid role, and is of type sales rep
 func (i *Identity) IsSalesRep() bool {
-	return i.IsRoleSet() && *i.Actor.RoleTypeCode == string(constants.RoleTypeCodeSalesRep)
+	return i.IsRoleSet() && *i.Actor.RoleType == string(constants.RoleTypeSalesRep)
 }
 
 // IsSandbox checks that the target account is a sandbox
@@ -155,7 +155,7 @@ func (i *Identity) ToProto() *pb.Identity {
 			Name:         i.Actor.Name,
 			AccountId:    i.Actor.AccountID,
 			RoleId:       i.Actor.RoleID,
-			RoleTypeCode: i.Actor.RoleTypeCode,
+			RoleTypeCode: i.Actor.RoleType,
 			Permissions:  i.Actor.Permissions,
 		}
 	}
@@ -234,7 +234,7 @@ func IdentityFromProto(pbIdentity *pb.Identity) *Identity {
 			Name:         pbIdentity.Actor.Name,
 			AccountID:    pbIdentity.Actor.AccountId,
 			RoleID:       pbIdentity.Actor.RoleId,
-			RoleTypeCode: pbIdentity.Actor.RoleTypeCode,
+			RoleType:     pbIdentity.Actor.RoleTypeCode,
 			Permissions:  pbIdentity.Actor.Permissions,
 		}
 	}

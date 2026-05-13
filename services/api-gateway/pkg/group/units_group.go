@@ -40,7 +40,7 @@ func (*UnitsEndpointGroup) Materialize(config *UnitsEndpointGroupConfig) *UnitsE
 	}
 
 	listUnitsEndpoint := (&unitep.ListUnitsEndpoint{}).Materialize().WithService(inner, unitSvc)
-	getUnitEndpoint := (&unitep.GetUnitEndpoint{}).Materialize().WithService(inner, unitSvc)
+	getUnitEndpoint := (&unitep.RetrieveUnitEndpoint{}).Materialize().WithService(inner, unitSvc)
 	createUnitEndpoint := (&unitep.CreateUnitEndpoint{}).Materialize().WithService(inner, unitSvc)
 	updateUnitEndpoint := (&unitep.UpdateUnitEndpoint{}).Materialize().WithService(inner, unitSvc)
 	deleteUnitEndpoint := (&unitep.DeleteUnitEndpoint{}).Materialize().WithService(inner, unitSvc)

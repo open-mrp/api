@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	gosql "database/sql"
+	"slices"
 	"strings"
 	"time"
 
@@ -33,327 +34,6 @@ func buildProductSearchParams(query *string) gosql.NullString {
 		return gosql.NullString{}
 	}
 	return gosql.NullString{String: "%" + db.EscapeLike(*query) + "%", Valid: true}
-}
-
-func mapProductFullForwardRow(row sqlc.ListProductsFullForwardRow) *domain.ProductFull {
-	var description *string
-	if row.ItemDescription.Valid {
-		description = &row.ItemDescription.String
-	}
-	var notes *string
-	if row.ItemNotes.Valid {
-		notes = &row.ItemNotes.String
-	}
-	var productLineID *string
-	if row.ProductLineID.Valid {
-		productLineID = &row.ProductLineID.String
-	}
-
-	product := &domain.ProductFull{
-		ID:              row.ID,
-		ProductTypeCode: row.ProductTypeCode,
-		IsPortalReady:   row.IsPortalReady,
-		ProductLineID:   productLineID,
-		ItemID:          row.ItemID,
-		CreatedAt:       row.CreatedAt,
-		UpdatedAt:       row.UpdatedAt,
-		Item: &domain.Item{
-			ID:             row.ItemID,
-			SKU:            row.Sku,
-			Description:    description,
-			Notes:          notes,
-			ItemTypeCode:   row.ItemTypeCode,
-			ItemCategoryID: row.ItemCategoryID,
-			CategoryName:   row.CategoryName,
-			UnitValueID:    row.UnitValueID,
-			UnitCostID:     row.UnitCostID,
-			BurnRateID:     row.BurnRateID,
-			AccountID:      row.AccountID,
-			IsDirty:        row.IsDirty,
-			CreatedAt:      row.ItemCreatedAt,
-			UpdatedAt:      row.ItemUpdatedAt,
-			UnitValue: &domain.Rate{
-				ID:                row.UnitValueRateID,
-				Value:             row.UnitValueRateValue,
-				NumeratorUnitID:   row.UnitValueNumeratorUnitID,
-				DenominatorUnitID: row.UnitValueDenominatorUnitID,
-				CreatedAt:         row.UnitValueCreatedAt,
-				UpdatedAt:         row.UnitValueUpdatedAt,
-			},
-			UnitCost: &domain.Rate{
-				ID:                row.UnitCostRateID,
-				Value:             row.UnitCostRateValue,
-				NumeratorUnitID:   row.UnitCostNumeratorUnitID,
-				DenominatorUnitID: row.UnitCostDenominatorUnitID,
-				CreatedAt:         row.UnitCostCreatedAt,
-				UpdatedAt:         row.UnitCostUpdatedAt,
-			},
-			BurnRate: &domain.Rate{
-				ID:                row.BurnRateIDJoined,
-				Value:             row.BurnRateValue,
-				NumeratorUnitID:   row.BurnRateNumeratorUnitID,
-				DenominatorUnitID: row.BurnRateDenominatorUnitID,
-				CreatedAt:         row.BurnRateCreatedAt,
-				UpdatedAt:         row.BurnRateUpdatedAt,
-			},
-			Category: &domain.ItemCategory{
-				ID:                   row.ItemCategoryID,
-				Name:                 row.CategoryName,
-				ItemCategoryTypeCode: row.ItemCategoryTypeCode,
-				UnitGroupID:          row.CategoryUnitGroupID,
-			},
-		},
-		ProductType: &domain.ProductType{
-			ID:        row.ProductTypeID,
-			Name:      row.ProductTypeName,
-			Code:      row.ProductTypeCodeJoined,
-			CreatedAt: row.ProductTypeCreatedAt,
-			UpdatedAt: row.ProductTypeUpdatedAt,
-		},
-	}
-
-	if row.ProductLineIDJoined.Valid {
-		var plDescription *string
-		if row.ProductLineDescription.Valid {
-			plDescription = &row.ProductLineDescription.String
-		}
-		var plNotes *string
-		if row.ProductLineNotes.Valid {
-			plNotes = &row.ProductLineNotes.String
-		}
-		var plAccountID *string
-		if row.ProductLineAccountID.Valid {
-			plAccountID = &row.ProductLineAccountID.String
-		}
-		product.ProductLine = &domain.ProductLineFull{
-			ID:               row.ProductLineIDJoined.String,
-			Name:             row.ProductLineName.String,
-			Description:      plDescription,
-			Notes:            plNotes,
-			CommissionPolicy: constants.CommissionPolicyFromBool(row.ProductLineIsCommissionExempt.Bool),
-			FreightPolicy:    constants.FreightPolicyFromBool(row.ProductLineIsFreightExempt.Bool),
-			UnitGroupID:      row.ProductLineUnitGroupID.String,
-			AccountID:        plAccountID,
-			CreatedAt:        row.ProductLineCreatedAt.Time,
-			UpdatedAt:        row.ProductLineUpdatedAt.Time,
-		}
-	}
-
-	return product
-}
-
-func mapProductFullBackwardRow(row sqlc.ListProductsFullBackwardRow) *domain.ProductFull {
-	var description *string
-	if row.ItemDescription.Valid {
-		description = &row.ItemDescription.String
-	}
-	var notes *string
-	if row.ItemNotes.Valid {
-		notes = &row.ItemNotes.String
-	}
-	var productLineID *string
-	if row.ProductLineID.Valid {
-		productLineID = &row.ProductLineID.String
-	}
-
-	product := &domain.ProductFull{
-		ID:              row.ID,
-		ProductTypeCode: row.ProductTypeCode,
-		IsPortalReady:   row.IsPortalReady,
-		ProductLineID:   productLineID,
-		ItemID:          row.ItemID,
-		CreatedAt:       row.CreatedAt,
-		UpdatedAt:       row.UpdatedAt,
-		Item: &domain.Item{
-			ID:             row.ItemID,
-			SKU:            row.Sku,
-			Description:    description,
-			Notes:          notes,
-			ItemTypeCode:   row.ItemTypeCode,
-			ItemCategoryID: row.ItemCategoryID,
-			CategoryName:   row.CategoryName,
-			UnitValueID:    row.UnitValueID,
-			UnitCostID:     row.UnitCostID,
-			BurnRateID:     row.BurnRateID,
-			AccountID:      row.AccountID,
-			IsDirty:        row.IsDirty,
-			CreatedAt:      row.ItemCreatedAt,
-			UpdatedAt:      row.ItemUpdatedAt,
-			UnitValue: &domain.Rate{
-				ID:                row.UnitValueRateID,
-				Value:             row.UnitValueRateValue,
-				NumeratorUnitID:   row.UnitValueNumeratorUnitID,
-				DenominatorUnitID: row.UnitValueDenominatorUnitID,
-				CreatedAt:         row.UnitValueCreatedAt,
-				UpdatedAt:         row.UnitValueUpdatedAt,
-			},
-			UnitCost: &domain.Rate{
-				ID:                row.UnitCostRateID,
-				Value:             row.UnitCostRateValue,
-				NumeratorUnitID:   row.UnitCostNumeratorUnitID,
-				DenominatorUnitID: row.UnitCostDenominatorUnitID,
-				CreatedAt:         row.UnitCostCreatedAt,
-				UpdatedAt:         row.UnitCostUpdatedAt,
-			},
-			BurnRate: &domain.Rate{
-				ID:                row.BurnRateIDJoined,
-				Value:             row.BurnRateValue,
-				NumeratorUnitID:   row.BurnRateNumeratorUnitID,
-				DenominatorUnitID: row.BurnRateDenominatorUnitID,
-				CreatedAt:         row.BurnRateCreatedAt,
-				UpdatedAt:         row.BurnRateUpdatedAt,
-			},
-			Category: &domain.ItemCategory{
-				ID:                   row.ItemCategoryID,
-				Name:                 row.CategoryName,
-				ItemCategoryTypeCode: row.ItemCategoryTypeCode,
-				UnitGroupID:          row.CategoryUnitGroupID,
-			},
-		},
-		ProductType: &domain.ProductType{
-			ID:        row.ProductTypeID,
-			Name:      row.ProductTypeName,
-			Code:      row.ProductTypeCodeJoined,
-			CreatedAt: row.ProductTypeCreatedAt,
-			UpdatedAt: row.ProductTypeUpdatedAt,
-		},
-	}
-
-	if row.ProductLineIDJoined.Valid {
-		var plDescription *string
-		if row.ProductLineDescription.Valid {
-			plDescription = &row.ProductLineDescription.String
-		}
-		var plNotes *string
-		if row.ProductLineNotes.Valid {
-			plNotes = &row.ProductLineNotes.String
-		}
-		var plAccountID *string
-		if row.ProductLineAccountID.Valid {
-			plAccountID = &row.ProductLineAccountID.String
-		}
-		product.ProductLine = &domain.ProductLineFull{
-			ID:               row.ProductLineIDJoined.String,
-			Name:             row.ProductLineName.String,
-			Description:      plDescription,
-			Notes:            plNotes,
-			CommissionPolicy: constants.CommissionPolicyFromBool(row.ProductLineIsCommissionExempt.Bool),
-			FreightPolicy:    constants.FreightPolicyFromBool(row.ProductLineIsFreightExempt.Bool),
-			UnitGroupID:      row.ProductLineUnitGroupID.String,
-			AccountID:        plAccountID,
-			CreatedAt:        row.ProductLineCreatedAt.Time,
-			UpdatedAt:        row.ProductLineUpdatedAt.Time,
-		}
-	}
-
-	return product
-}
-
-func mapProductFullGetRow(row sqlc.GetProductByIDRow) *domain.ProductFull {
-	var description *string
-	if row.ItemDescription.Valid {
-		description = &row.ItemDescription.String
-	}
-	var notes *string
-	if row.ItemNotes.Valid {
-		notes = &row.ItemNotes.String
-	}
-	var productLineID *string
-	if row.ProductLineID.Valid {
-		productLineID = &row.ProductLineID.String
-	}
-
-	product := &domain.ProductFull{
-		ID:              row.ID,
-		ProductTypeCode: row.ProductTypeCode,
-		IsPortalReady:   row.IsPortalReady,
-		ProductLineID:   productLineID,
-		ItemID:          row.ItemID,
-		CreatedAt:       row.CreatedAt,
-		UpdatedAt:       row.UpdatedAt,
-		Item: &domain.Item{
-			ID:             row.ItemID,
-			SKU:            row.Sku,
-			Description:    description,
-			Notes:          notes,
-			ItemTypeCode:   row.ItemTypeCode,
-			ItemCategoryID: row.ItemCategoryID,
-			CategoryName:   row.CategoryName,
-			UnitValueID:    row.UnitValueID,
-			UnitCostID:     row.UnitCostID,
-			BurnRateID:     row.BurnRateID,
-			AccountID:      row.AccountID,
-			IsDirty:        row.IsDirty,
-			CreatedAt:      row.ItemCreatedAt,
-			UpdatedAt:      row.ItemUpdatedAt,
-			UnitValue: &domain.Rate{
-				ID:                row.UnitValueRateID,
-				Value:             row.UnitValueRateValue,
-				NumeratorUnitID:   row.UnitValueNumeratorUnitID,
-				DenominatorUnitID: row.UnitValueDenominatorUnitID,
-				CreatedAt:         row.UnitValueCreatedAt,
-				UpdatedAt:         row.UnitValueUpdatedAt,
-			},
-			UnitCost: &domain.Rate{
-				ID:                row.UnitCostRateID,
-				Value:             row.UnitCostRateValue,
-				NumeratorUnitID:   row.UnitCostNumeratorUnitID,
-				DenominatorUnitID: row.UnitCostDenominatorUnitID,
-				CreatedAt:         row.UnitCostCreatedAt,
-				UpdatedAt:         row.UnitCostUpdatedAt,
-			},
-			BurnRate: &domain.Rate{
-				ID:                row.BurnRateIDJoined,
-				Value:             row.BurnRateValue,
-				NumeratorUnitID:   row.BurnRateNumeratorUnitID,
-				DenominatorUnitID: row.BurnRateDenominatorUnitID,
-				CreatedAt:         row.BurnRateCreatedAt,
-				UpdatedAt:         row.BurnRateUpdatedAt,
-			},
-			Category: &domain.ItemCategory{
-				ID:                   row.ItemCategoryID,
-				Name:                 row.CategoryName,
-				ItemCategoryTypeCode: row.ItemCategoryTypeCode,
-				UnitGroupID:          row.CategoryUnitGroupID,
-			},
-		},
-		ProductType: &domain.ProductType{
-			ID:        row.ProductTypeID,
-			Name:      row.ProductTypeName,
-			Code:      row.ProductTypeCodeJoined,
-			CreatedAt: row.ProductTypeCreatedAt,
-			UpdatedAt: row.ProductTypeUpdatedAt,
-		},
-	}
-
-	if row.ProductLineIDJoined.Valid {
-		var plDescription *string
-		if row.ProductLineDescription.Valid {
-			plDescription = &row.ProductLineDescription.String
-		}
-		var plNotes *string
-		if row.ProductLineNotes.Valid {
-			plNotes = &row.ProductLineNotes.String
-		}
-		var plAccountID *string
-		if row.ProductLineAccountID.Valid {
-			plAccountID = &row.ProductLineAccountID.String
-		}
-		product.ProductLine = &domain.ProductLineFull{
-			ID:               row.ProductLineIDJoined.String,
-			Name:             row.ProductLineName.String,
-			Description:      plDescription,
-			Notes:            plNotes,
-			CommissionPolicy: constants.CommissionPolicyFromBool(row.ProductLineIsCommissionExempt.Bool),
-			FreightPolicy:    constants.FreightPolicyFromBool(row.ProductLineIsFreightExempt.Bool),
-			UnitGroupID:      row.ProductLineUnitGroupID.String,
-			AccountID:        plAccountID,
-			CreatedAt:        row.ProductLineCreatedAt.Time,
-			UpdatedAt:        row.ProductLineUpdatedAt.Time,
-		}
-	}
-
-	return product
 }
 
 func mapProductFullFindRow(row sqlc.FindProductsBySKUsRow) *domain.ProductFull {
@@ -394,34 +74,94 @@ func mapProductFullFindRow(row sqlc.FindProductsBySKUsRow) *domain.ProductFull {
 			CreatedAt:      row.ItemCreatedAt,
 			UpdatedAt:      row.ItemUpdatedAt,
 			UnitValue: &domain.Rate{
-				ID:                row.UnitValueRateID,
-				Value:             row.UnitValueRateValue,
-				NumeratorUnitID:   row.UnitValueNumeratorUnitID,
-				DenominatorUnitID: row.UnitValueDenominatorUnitID,
-				CreatedAt:         row.UnitValueCreatedAt,
-				UpdatedAt:         row.UnitValueUpdatedAt,
+				ID:                               row.UnitValueRateID,
+				Value:                            row.UnitValueRateValue,
+				NumeratorUnitID:                  row.UnitValueNumeratorUnitID,
+				NumeratorUnitName:                row.UnitValueNumeratorUnitName,
+				NumeratorUnitAbbreviation:        row.UnitValueNumeratorUnitAbbreviation,
+				NumeratorUnitType:                row.UnitValueNumeratorUnitType,
+				NumeratorUnitRatioNumerator:      row.UnitValueNumeratorUnitRatioNumerator,
+				NumeratorUnitRatioDenominator:    row.UnitValueNumeratorUnitRatioDenominator,
+				NumeratorUnitOffsetNumerator:     row.UnitValueNumeratorUnitOffsetNumerator,
+				NumeratorUnitOffsetDenominator:   row.UnitValueNumeratorUnitOffsetDenominator,
+				NumeratorUnitCreatedAt:           row.UnitValueNumeratorUnitCreatedAt,
+				NumeratorUnitUpdatedAt:           row.UnitValueNumeratorUnitUpdatedAt,
+				DenominatorUnitID:                row.UnitValueDenominatorUnitID,
+				DenominatorUnitName:              row.UnitValueDenominatorUnitName,
+				DenominatorUnitAbbreviation:      row.UnitValueDenominatorUnitAbbreviation,
+				DenominatorUnitType:              row.UnitValueDenominatorUnitType,
+				DenominatorUnitRatioNumerator:    row.UnitValueDenominatorUnitRatioNumerator,
+				DenominatorUnitRatioDenominator:  row.UnitValueDenominatorUnitRatioDenominator,
+				DenominatorUnitOffsetNumerator:   row.UnitValueDenominatorUnitOffsetNumerator,
+				DenominatorUnitOffsetDenominator: row.UnitValueDenominatorUnitOffsetDenominator,
+				DenominatorUnitCreatedAt:         row.UnitValueDenominatorUnitCreatedAt,
+				DenominatorUnitUpdatedAt:         row.UnitValueDenominatorUnitUpdatedAt,
+				CreatedAt:                        row.UnitValueCreatedAt,
+				UpdatedAt:                        row.UnitValueUpdatedAt,
 			},
 			UnitCost: &domain.Rate{
-				ID:                row.UnitCostRateID,
-				Value:             row.UnitCostRateValue,
-				NumeratorUnitID:   row.UnitCostNumeratorUnitID,
-				DenominatorUnitID: row.UnitCostDenominatorUnitID,
-				CreatedAt:         row.UnitCostCreatedAt,
-				UpdatedAt:         row.UnitCostUpdatedAt,
+				ID:                               row.UnitCostRateID,
+				Value:                            row.UnitCostRateValue,
+				NumeratorUnitID:                  row.UnitCostNumeratorUnitID,
+				NumeratorUnitName:                row.UnitCostNumeratorUnitName,
+				NumeratorUnitAbbreviation:        row.UnitCostNumeratorUnitAbbreviation,
+				NumeratorUnitType:                row.UnitCostNumeratorUnitType,
+				NumeratorUnitRatioNumerator:      row.UnitCostNumeratorUnitRatioNumerator,
+				NumeratorUnitRatioDenominator:    row.UnitCostNumeratorUnitRatioDenominator,
+				NumeratorUnitOffsetNumerator:     row.UnitCostNumeratorUnitOffsetNumerator,
+				NumeratorUnitOffsetDenominator:   row.UnitCostNumeratorUnitOffsetDenominator,
+				NumeratorUnitCreatedAt:           row.UnitCostNumeratorUnitCreatedAt,
+				NumeratorUnitUpdatedAt:           row.UnitCostNumeratorUnitUpdatedAt,
+				DenominatorUnitID:                row.UnitCostDenominatorUnitID,
+				DenominatorUnitName:              row.UnitCostDenominatorUnitName,
+				DenominatorUnitAbbreviation:      row.UnitCostDenominatorUnitAbbreviation,
+				DenominatorUnitType:              row.UnitCostDenominatorUnitType,
+				DenominatorUnitRatioNumerator:    row.UnitCostDenominatorUnitRatioNumerator,
+				DenominatorUnitRatioDenominator:  row.UnitCostDenominatorUnitRatioDenominator,
+				DenominatorUnitOffsetNumerator:   row.UnitCostDenominatorUnitOffsetNumerator,
+				DenominatorUnitOffsetDenominator: row.UnitCostDenominatorUnitOffsetDenominator,
+				DenominatorUnitCreatedAt:         row.UnitCostDenominatorUnitCreatedAt,
+				DenominatorUnitUpdatedAt:         row.UnitCostDenominatorUnitUpdatedAt,
+				CreatedAt:                        row.UnitCostCreatedAt,
+				UpdatedAt:                        row.UnitCostUpdatedAt,
 			},
 			BurnRate: &domain.Rate{
-				ID:                row.BurnRateIDJoined,
-				Value:             row.BurnRateValue,
-				NumeratorUnitID:   row.BurnRateNumeratorUnitID,
-				DenominatorUnitID: row.BurnRateDenominatorUnitID,
-				CreatedAt:         row.BurnRateCreatedAt,
-				UpdatedAt:         row.BurnRateUpdatedAt,
+				ID:                               row.BurnRateIDJoined,
+				Value:                            row.BurnRateValue,
+				NumeratorUnitID:                  row.BurnRateNumeratorUnitID,
+				NumeratorUnitName:                row.BurnRateNumeratorUnitName,
+				NumeratorUnitAbbreviation:        row.BurnRateNumeratorUnitAbbreviation,
+				NumeratorUnitType:                row.BurnRateNumeratorUnitType,
+				NumeratorUnitRatioNumerator:      row.BurnRateNumeratorUnitRatioNumerator,
+				NumeratorUnitRatioDenominator:    row.BurnRateNumeratorUnitRatioDenominator,
+				NumeratorUnitOffsetNumerator:     row.BurnRateNumeratorUnitOffsetNumerator,
+				NumeratorUnitOffsetDenominator:   row.BurnRateNumeratorUnitOffsetDenominator,
+				NumeratorUnitCreatedAt:           row.BurnRateNumeratorUnitCreatedAt,
+				NumeratorUnitUpdatedAt:           row.BurnRateNumeratorUnitUpdatedAt,
+				DenominatorUnitID:                row.BurnRateDenominatorUnitID,
+				DenominatorUnitName:              row.BurnRateDenominatorUnitName,
+				DenominatorUnitAbbreviation:      row.BurnRateDenominatorUnitAbbreviation,
+				DenominatorUnitType:              row.BurnRateDenominatorUnitType,
+				DenominatorUnitRatioNumerator:    row.BurnRateDenominatorUnitRatioNumerator,
+				DenominatorUnitRatioDenominator:  row.BurnRateDenominatorUnitRatioDenominator,
+				DenominatorUnitOffsetNumerator:   row.BurnRateDenominatorUnitOffsetNumerator,
+				DenominatorUnitOffsetDenominator: row.BurnRateDenominatorUnitOffsetDenominator,
+				DenominatorUnitCreatedAt:         row.BurnRateDenominatorUnitCreatedAt,
+				DenominatorUnitUpdatedAt:         row.BurnRateDenominatorUnitUpdatedAt,
+				CreatedAt:                        row.BurnRateCreatedAt,
+				UpdatedAt:                        row.BurnRateUpdatedAt,
 			},
 			Category: &domain.ItemCategory{
 				ID:                   row.ItemCategoryID,
 				Name:                 row.CategoryName,
 				ItemCategoryTypeCode: row.ItemCategoryTypeCode,
 				UnitGroupID:          row.CategoryUnitGroupID,
+				CreatedAt:            row.CategoryCreatedAt,
+				UpdatedAt:            row.CategoryUpdatedAt,
+				UnitGroupName:        row.CategoryUnitGroupName,
+				UnitGroupTypeCode:    row.CategoryUnitGroupType,
+				UnitGroupCreatedAt:   row.CategoryUnitGroupCreatedAt,
+				UnitGroupUpdatedAt:   row.CategoryUnitGroupUpdatedAt,
 			},
 		},
 		ProductType: &domain.ProductType{
@@ -532,6 +272,193 @@ func (r *productRepoImpl) GetSystemProduct(ctx context.Context, accountID, produ
 	}, nil
 }
 
+func mapProductBaseItem(itemID, sku string, description, notes gosql.NullString, itemTypeCode, itemCategoryID, categoryName, itemCategoryTypeCode, categoryUnitGroupID, unitValueID, unitCostID, burnRateID, accountID string, isDirty bool, itemCreatedAt, itemUpdatedAt, categoryCreatedAt, categoryUpdatedAt time.Time) *domain.Item {
+	var descPtr *string
+	if description.Valid {
+		descPtr = &description.String
+	}
+	var notesPtr *string
+	if notes.Valid {
+		notesPtr = &notes.String
+	}
+	return &domain.Item{
+		ID:             itemID,
+		SKU:            sku,
+		Description:    descPtr,
+		Notes:          notesPtr,
+		ItemTypeCode:   itemTypeCode,
+		ItemCategoryID: itemCategoryID,
+		CategoryName:   categoryName,
+		UnitValueID:    unitValueID,
+		UnitCostID:     unitCostID,
+		BurnRateID:     burnRateID,
+		AccountID:      accountID,
+		IsDirty:        isDirty,
+		CreatedAt:      itemCreatedAt,
+		UpdatedAt:      itemUpdatedAt,
+		Category: &domain.ItemCategory{
+			ID:                   itemCategoryID,
+			Name:                 categoryName,
+			ItemCategoryTypeCode: itemCategoryTypeCode,
+			UnitGroupID:          categoryUnitGroupID,
+			CreatedAt:            categoryCreatedAt,
+			UpdatedAt:            categoryUpdatedAt,
+		},
+	}
+}
+
+func mapProductBaseProductType(ptID, ptName, ptCode string, ptCreatedAt, ptUpdatedAt time.Time) *domain.ProductType {
+	return &domain.ProductType{
+		ID:        ptID,
+		Name:      ptName,
+		Code:      ptCode,
+		CreatedAt: ptCreatedAt,
+		UpdatedAt: ptUpdatedAt,
+	}
+}
+
+func mapProductForwardBaseRow(row sqlc.ListProductsFullForwardBaseRow) *domain.ProductFull {
+	var productLineID *string
+	if row.ProductLineID.Valid {
+		productLineID = &row.ProductLineID.String
+	}
+	return &domain.ProductFull{
+		ID:              row.ID,
+		ProductTypeCode: row.ProductTypeCode,
+		IsPortalReady:   row.IsPortalReady,
+		ProductLineID:   productLineID,
+		ItemID:          row.ItemID,
+		CreatedAt:       row.CreatedAt,
+		UpdatedAt:       row.UpdatedAt,
+		Item:            mapProductBaseItem(row.ItemID, row.Sku, row.ItemDescription, row.ItemNotes, row.ItemTypeCode, row.ItemCategoryID, row.CategoryName, row.ItemCategoryTypeCode, row.CategoryUnitGroupID, row.UnitValueID, row.UnitCostID, row.BurnRateID, row.AccountID, row.IsDirty, row.ItemCreatedAt, row.ItemUpdatedAt, row.CategoryCreatedAt, row.CategoryUpdatedAt),
+		ProductType:     mapProductBaseProductType(row.ProductTypeID, row.ProductTypeName, row.ProductTypeCodeJoined, row.ProductTypeCreatedAt, row.ProductTypeUpdatedAt),
+	}
+}
+
+func mapProductBackwardBaseRow(row sqlc.ListProductsFullBackwardBaseRow) *domain.ProductFull {
+	var productLineID *string
+	if row.ProductLineID.Valid {
+		productLineID = &row.ProductLineID.String
+	}
+	return &domain.ProductFull{
+		ID:              row.ID,
+		ProductTypeCode: row.ProductTypeCode,
+		IsPortalReady:   row.IsPortalReady,
+		ProductLineID:   productLineID,
+		ItemID:          row.ItemID,
+		CreatedAt:       row.CreatedAt,
+		UpdatedAt:       row.UpdatedAt,
+		Item:            mapProductBaseItem(row.ItemID, row.Sku, row.ItemDescription, row.ItemNotes, row.ItemTypeCode, row.ItemCategoryID, row.CategoryName, row.ItemCategoryTypeCode, row.CategoryUnitGroupID, row.UnitValueID, row.UnitCostID, row.BurnRateID, row.AccountID, row.IsDirty, row.ItemCreatedAt, row.ItemUpdatedAt, row.CategoryCreatedAt, row.CategoryUpdatedAt),
+		ProductType:     mapProductBaseProductType(row.ProductTypeID, row.ProductTypeName, row.ProductTypeCodeJoined, row.ProductTypeCreatedAt, row.ProductTypeUpdatedAt),
+	}
+}
+
+func mapProductGetBaseRow(row sqlc.GetProductByIDBaseRow) *domain.ProductFull {
+	var productLineID *string
+	if row.ProductLineID.Valid {
+		productLineID = &row.ProductLineID.String
+	}
+	return &domain.ProductFull{
+		ID:              row.ID,
+		ProductTypeCode: row.ProductTypeCode,
+		IsPortalReady:   row.IsPortalReady,
+		ProductLineID:   productLineID,
+		ItemID:          row.ItemID,
+		CreatedAt:       row.CreatedAt,
+		UpdatedAt:       row.UpdatedAt,
+		Item:            mapProductBaseItem(row.ItemID, row.Sku, row.ItemDescription, row.ItemNotes, row.ItemTypeCode, row.ItemCategoryID, row.CategoryName, row.ItemCategoryTypeCode, row.CategoryUnitGroupID, row.UnitValueID, row.UnitCostID, row.BurnRateID, row.AccountID, row.IsDirty, row.ItemCreatedAt, row.ItemUpdatedAt, row.CategoryCreatedAt, row.CategoryUpdatedAt),
+		ProductType:     mapProductBaseProductType(row.ProductTypeID, row.ProductTypeName, row.ProductTypeCodeJoined, row.ProductTypeCreatedAt, row.ProductTypeUpdatedAt),
+	}
+}
+
+func stitchProductLines(ctx context.Context, queries *sqlc.Queries, products []*domain.ProductFull, incs []string) *apierror.APIError {
+	if !slices.Contains(incs, "product_line") {
+		return nil
+	}
+
+	seen := make(map[string]struct{})
+	var plIDs []string
+	for _, p := range products {
+		if p.ProductLineID == nil {
+			continue
+		}
+		if _, ok := seen[*p.ProductLineID]; !ok {
+			seen[*p.ProductLineID] = struct{}{}
+			plIDs = append(plIDs, *p.ProductLineID)
+		}
+	}
+	if len(plIDs) == 0 {
+		return nil
+	}
+
+	rows, err := queries.GetProductLinesByIDs(ctx, plIDs)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return apiErr
+	}
+	plMap := make(map[string]sqlc.GetProductLinesByIDsRow, len(rows))
+	for _, row := range rows {
+		plMap[row.ID] = row
+	}
+
+	for _, p := range products {
+		if p.ProductLineID == nil {
+			continue
+		}
+		row, ok := plMap[*p.ProductLineID]
+		if !ok {
+			continue
+		}
+		var plDescription *string
+		if row.Description.Valid {
+			plDescription = &row.Description.String
+		}
+		var plNotes *string
+		if row.Notes.Valid {
+			plNotes = &row.Notes.String
+		}
+		var plAccountID *string
+		if row.AccountID.Valid {
+			plAccountID = &row.AccountID.String
+		}
+		p.ProductLine = &domain.ProductLineFull{
+			ID:               row.ID,
+			Name:             row.Name,
+			Description:      plDescription,
+			Notes:            plNotes,
+			CommissionPolicy: constants.CommissionPolicyFromBool(row.IsCommissionExempt),
+			FreightPolicy:    constants.FreightPolicyFromBool(row.IsFreightExempt),
+			UnitGroupID:      row.UnitGroupID,
+			AccountID:        plAccountID,
+			CreatedAt:        row.CreatedAt,
+			UpdatedAt:        row.UpdatedAt,
+		}
+	}
+	return nil
+}
+
+func applyProductStitches(ctx context.Context, queries *sqlc.Queries, products []*domain.ProductFull, incs []string) *apierror.APIError {
+	items := itemsFromProductFulls(products)
+	itemIncs := extractItemIncludes(incs)
+	if apiErr := stitchItemRates(ctx, queries, items, itemIncs); apiErr != nil {
+		return apiErr
+	}
+	if apiErr := stitchItemCategoryUnitGroups(ctx, queries, items, itemIncs); apiErr != nil {
+		return apiErr
+	}
+	if apiErr := stitchItemAttributes(ctx, queries, items, itemIncs); apiErr != nil {
+		return apiErr
+	}
+	if slices.Contains(itemIncs, "category.properties") {
+		if apiErr := enrichItemCategoryProperties(ctx, queries, items); apiErr != nil {
+			return apiErr
+		}
+	}
+	if apiErr := stitchProductLines(ctx, queries, products, incs); apiErr != nil {
+		return apiErr
+	}
+	return nil
+}
+
 func (r *productRepoImpl) List(ctx context.Context, params domain.ListProductsFullParams) (*domain.ListProductsFullResult, *apierror.APIError) {
 	ctx, span := productRepoTracer.Start(ctx, "repository.product.list")
 	defer span.End()
@@ -580,7 +507,7 @@ func (r *productRepoImpl) List(ctx context.Context, params domain.ListProductsFu
 		cursorDir = &cur.Direction
 
 		if cur.Direction == pagination.DirectionBackward {
-			rows, err := r.queries.ListProductsFullBackward(ctx, sqlc.ListProductsFullBackwardParams{
+			rows, err := r.queries.ListProductsFullBackwardBase(ctx, sqlc.ListProductsFullBackwardBaseParams{
 				AccountID:                params.AccountID,
 				SearchQuery:              searchQuery,
 				IncludeProductLineFilter: includeProductLineFilter,
@@ -603,14 +530,17 @@ func (r *productRepoImpl) List(ctx context.Context, params domain.ListProductsFu
 			}
 			items := make([]*domain.ProductFull, len(rows))
 			for i, row := range rows {
-				items[i] = mapProductFullBackwardRow(row)
+				items[i] = mapProductBackwardBaseRow(row)
 			}
 			result, pageInfo := pagination.BuildPageString(items, params.Limit, cursorDir, productFullCreatedAt, productFullID)
+			if apiErr := applyProductStitches(ctx, r.queries, result, params.Includes); apiErr != nil {
+				return nil, tracing.Trace(span, apiErr)
+			}
 			return &domain.ListProductsFullResult{Products: result, PageInfo: pageInfo}, nil
 		}
 
 		// Forward with cursor
-		rows, err := r.queries.ListProductsFullForward(ctx, sqlc.ListProductsFullForwardParams{
+		rows, err := r.queries.ListProductsFullForwardBase(ctx, sqlc.ListProductsFullForwardBaseParams{
 			AccountID:                params.AccountID,
 			SearchQuery:              searchQuery,
 			IncludeProductLineFilter: includeProductLineFilter,
@@ -633,14 +563,17 @@ func (r *productRepoImpl) List(ctx context.Context, params domain.ListProductsFu
 		}
 		items := make([]*domain.ProductFull, len(rows))
 		for i, row := range rows {
-			items[i] = mapProductFullForwardRow(row)
+			items[i] = mapProductForwardBaseRow(row)
 		}
 		result, pageInfo := pagination.BuildPageString(items, params.Limit, cursorDir, productFullCreatedAt, productFullID)
+		if apiErr := applyProductStitches(ctx, r.queries, result, params.Includes); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
 		return &domain.ListProductsFullResult{Products: result, PageInfo: pageInfo}, nil
 	}
 
 	// No cursor — first page
-	rows, err := r.queries.ListProductsFullForward(ctx, sqlc.ListProductsFullForwardParams{
+	rows, err := r.queries.ListProductsFullForwardBase(ctx, sqlc.ListProductsFullForwardBaseParams{
 		AccountID:                params.AccountID,
 		SearchQuery:              searchQuery,
 		IncludeProductLineFilter: includeProductLineFilter,
@@ -662,9 +595,12 @@ func (r *productRepoImpl) List(ctx context.Context, params domain.ListProductsFu
 
 	items := make([]*domain.ProductFull, len(rows))
 	for i, row := range rows {
-		items[i] = mapProductFullForwardRow(row)
+		items[i] = mapProductForwardBaseRow(row)
 	}
 	result, pageInfo := pagination.BuildPageString(items, params.Limit, cursorDir, productFullCreatedAt, productFullID)
+	if apiErr := applyProductStitches(ctx, r.queries, result, params.Includes); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
 	return &domain.ListProductsFullResult{Products: result, PageInfo: pageInfo}, nil
 }
 
@@ -672,7 +608,7 @@ func (r *productRepoImpl) Get(ctx context.Context, params domain.GetProductFullP
 	ctx, span := productRepoTracer.Start(ctx, "repository.product.get")
 	defer span.End()
 
-	row, err := r.queries.GetProductByID(ctx, sqlc.GetProductByIDParams{
+	row, err := r.queries.GetProductByIDBase(ctx, sqlc.GetProductByIDBaseParams{
 		ID:        params.ProductID,
 		AccountID: params.AccountID,
 	})
@@ -680,7 +616,11 @@ func (r *productRepoImpl) Get(ctx context.Context, params domain.GetProductFullP
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return mapProductFullGetRow(row), nil
+	p := mapProductGetBaseRow(row)
+	if apiErr := applyProductStitches(ctx, r.queries, []*domain.ProductFull{p}, params.Includes); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	return p, nil
 }
 
 func (r *productRepoImpl) Create(ctx context.Context, productID, itemID string, params domain.CreateProductParams) (*domain.ProductFull, *apierror.APIError) {
@@ -698,7 +638,7 @@ func (r *productRepoImpl) Create(ctx context.Context, productID, itemID string, 
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return r.Get(ctx, domain.GetProductFullParams{AccountID: params.AccountID, ProductID: productID})
+	return r.Get(ctx, domain.GetProductFullParams{AccountID: params.AccountID, ProductID: productID, Includes: params.Includes})
 }
 
 func (r *productRepoImpl) Update(ctx context.Context, params domain.UpdateProductParams) (*domain.ProductFull, *apierror.APIError) {
@@ -735,7 +675,7 @@ func (r *productRepoImpl) Update(ctx context.Context, params domain.UpdateProduc
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return r.Get(ctx, domain.GetProductFullParams{AccountID: params.AccountID, ProductID: params.ProductID})
+	return r.Get(ctx, domain.GetProductFullParams{AccountID: params.AccountID, ProductID: params.ProductID, Includes: params.Includes})
 }
 
 func (r *productRepoImpl) SoftDelete(ctx context.Context, params domain.DeleteProductParams) *apierror.APIError {
@@ -782,7 +722,7 @@ func (r *productRepoImpl) ChangeProductLine(ctx context.Context, params domain.C
 		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Product not found."))
 	}
 
-	return r.Get(ctx, domain.GetProductFullParams{AccountID: params.AccountID, ProductID: params.ProductID})
+	return r.Get(ctx, domain.GetProductFullParams{AccountID: params.AccountID, ProductID: params.ProductID, Includes: params.Includes})
 }
 
 func (r *productRepoImpl) ValidateProducts(ctx context.Context, params domain.ValidateProductsParams) (*domain.ValidateProductsResult, *apierror.APIError) {

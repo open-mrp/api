@@ -289,17 +289,15 @@ func TestAuditEvents_FilterByActorIDsImpossible(t *testing.T) {
 }
 
 // account_id was a dead filter (never reached SQL) and has been removed.
-// The binder ignores unknown query params, so requests that include it must
-// succeed (200) without affecting the result set.
-func TestAuditEvents_ListIgnoresRemovedAccountIDFilter(t *testing.T) {
+// Unknown query params are explicitly rejected with 400.
+func TestAuditEvents_ListRejectsRemovedAccountIDFilter(t *testing.T) {
 	t.Parallel()
 	statusCode, body, err := apiClient.GetListRaw(auditEventsPath, url.Values{
 		"account_id": {"acct_anything"},
 		"limit":      {"5"},
 	})
 	require.NoError(t, err)
-	skipOnNonClientError(t, auditEventsPath, statusCode)
-	requireStatus(t, 200, statusCode, body)
+	requireStatus(t, 400, statusCode, body)
 }
 
 func TestAuditEventResourceTypes_List(t *testing.T) {

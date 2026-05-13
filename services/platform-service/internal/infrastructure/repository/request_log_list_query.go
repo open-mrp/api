@@ -76,7 +76,7 @@ func buildListQuery(
 				"ak.type_id AS api_key_type_id, ak.redacted_value AS api_key_redacted_value, ak.name AS api_key_name, " +
 				"au.role_id AS user_role_id, r_user.name AS user_role_name, r_user.role_type_code AS user_role_type_code, " +
 				"r_key.id AS api_key_role_id, r_key.name AS api_key_role_name, r_key.role_type_code AS api_key_role_type_code, " +
-				"a.name AS account_name, ik.idempotency_key",
+				"a.name AS account_name, a.created_at AS account_created_at, a.updated_at AS account_updated_at, ik.idempotency_key",
 		)
 		inner.WriteString(
 			" FROM request_log rl" +
@@ -195,6 +195,12 @@ func buildListQuery(
 		inner.WriteString(" AND rl.public_endpoint = ?")
 		args = append(args, *f.PublicEndpoint)
 	}
+	if f.IdempotencyKey != nil && *f.IdempotencyKey != "" {
+		inner.WriteString(
+			" AND EXISTS (SELECT 1 FROM idempotency_key ik2 WHERE ik2.type_id = rl.idempotency_key_id AND ik2.idempotency_key = ?)",
+		)
+		args = append(args, *f.IdempotencyKey)
+	}
 
 	// Cursor predicate — matches the direction semantics used by the previous
 	// sqlc queries: forward pages older (DESC), backward pages newer (ASC).
@@ -306,7 +312,7 @@ func scanFullListRows(rows *sql.Rows) ([]*domain.RequestLogRead, error) {
 			&r.ApiKeyTypeID, &r.ApiKeyRedactedValue, &r.ApiKeyName,
 			&r.UserRoleID, &r.UserRoleName, &r.UserRoleTypeCode,
 			&r.ApiKeyRoleID, &r.ApiKeyRoleName, &r.ApiKeyRoleTypeCode,
-			&r.AccountName, &r.IdempotencyKey,
+			&r.AccountName, &r.AccountCreatedAt, &r.AccountUpdatedAt, &r.IdempotencyKey,
 		); err != nil {
 			return nil, err
 		}

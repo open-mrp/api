@@ -16,7 +16,7 @@ import (
 
 type CustomerProductLineAccessSvc interface {
 	ListCustomerProductLineAccess(ctx context.Context, req *ListCustomerProductLineAccessRequest) (*apiresource.List[apiresource.CustomerProductLineAccess], *apierror.APIError)
-	GetCustomerProductLineAccess(ctx context.Context, req *GetCustomerProductLineAccessRequest) (*apiresource.CustomerProductLineAccess, *apierror.APIError)
+	GetCustomerProductLineAccess(ctx context.Context, req *RetrieveCustomerProductLineAccessRequest) (*apiresource.CustomerProductLineAccess, *apierror.APIError)
 	CreateCustomerProductLineAccess(ctx context.Context, req *CreateCustomerProductLineAccessRequest) (*apiresource.CustomerProductLineAccess, *apierror.APIError)
 	UpdateCustomerProductLineAccess(ctx context.Context, req *UpdateCustomerProductLineAccessRequest) (*apiresource.CustomerProductLineAccess, *apierror.APIError)
 	DeleteCustomerProductLineAccess(ctx context.Context, req *DeleteCustomerProductLineAccessRequest) (*apiresource.EmptyResource, *apierror.APIError)
@@ -68,7 +68,7 @@ func (m *customerProductLineAccessSvcImpl) ListCustomerProductLineAccess(ctx con
 	return CustomerProductLineAccessListPresenter(resp), nil
 }
 
-func (m *customerProductLineAccessSvcImpl) GetCustomerProductLineAccess(ctx context.Context, req *GetCustomerProductLineAccessRequest) (*apiresource.CustomerProductLineAccess, *apierror.APIError) {
+func (m *customerProductLineAccessSvcImpl) GetCustomerProductLineAccess(ctx context.Context, req *RetrieveCustomerProductLineAccessRequest) (*apiresource.CustomerProductLineAccess, *apierror.APIError) {
 	pbReq := &pb.GetCustomerProductLineAccessRequest{
 		CustomerId: req.CustomerID,
 	}

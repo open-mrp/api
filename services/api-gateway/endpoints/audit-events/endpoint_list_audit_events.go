@@ -14,17 +14,17 @@ import (
 // Request to list audit events.
 type ListAuditEventsRequest struct {
 	apiresource.PaginationRequest
-	// Start of date range for occurred_at.
+	// Restricts results to audit events on or after this timestamp.
 	StartDate *time.Time `query:"start_date"`
-	// End of date range for occurred_at.
+	// Restricts results to audit events on or before this timestamp.
 	EndDate *time.Time `query:"end_date"`
-	// Resource types of the audited entity.
+	// Filter by the resource type of the audited entity.
 	ResourceTypes []constants.ObjectType `query:"resource_types"`
-	// Audited resource IDs.
+	// Filter by the audited resource IDs.
 	ResourceIDs []string `query:"resource_ids"`
-	// Actor identifier. `account_user.id` when `identity_type`=`user`, or an `api_key.id` when `identity_type`=`api_key`.
+	// Filter by the actor identifier. `account_user.id` when `identity_type`=`user`, or an `api_key.id` when `identity_type`=`api_key`.
 	ActorIDs []string `query:"actor_ids"`
-	// Audit actions.
+	// Filter by the audit actions.
 	Actions []constants.AuditAction `query:"actions"`
 }
 

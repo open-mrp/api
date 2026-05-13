@@ -40,7 +40,7 @@ func (*ShippingTermsEndpointGroup) Materialize(config *ShippingTermsEndpointGrou
 	}
 
 	listShippingTermsEndpoint := (&shippingtermep.ListShippingTermsEndpoint{}).Materialize().WithService(inner, shippingTermSvc)
-	getShippingTermEndpoint := (&shippingtermep.GetShippingTermEndpoint{}).Materialize().WithService(inner, shippingTermSvc)
+	getShippingTermEndpoint := (&shippingtermep.RetrieveShippingTermEndpoint{}).Materialize().WithService(inner, shippingTermSvc)
 	createShippingTermEndpoint := (&shippingtermep.CreateShippingTermEndpoint{}).Materialize().WithService(inner, shippingTermSvc)
 	updateShippingTermEndpoint := (&shippingtermep.UpdateShippingTermEndpoint{}).Materialize().WithService(inner, shippingTermSvc)
 	deleteShippingTermEndpoint := (&shippingtermep.DeleteShippingTermEndpoint{}).Materialize().WithService(inner, shippingTermSvc)

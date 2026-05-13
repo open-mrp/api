@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -417,6 +418,15 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 			if apiErr != nil {
 				return apiErr
 			}
+
+			if slices.Contains(params.Includes, "lines") {
+				lines, apiErr := txOrderRepo.GetLines(txCtx, orderID)
+				if apiErr != nil {
+					return apiErr
+				}
+				order.Lines = lines
+			}
+
 			result = order
 
 			changes := audit.ComputeChanges(nil, result)
@@ -610,6 +620,14 @@ func (s *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, params domain.
 				if apiErr := replaceOrderEmailContacts(txCtx, txRepo, params.SalesOrderID, *params.InvoiceEmailContacts, string(constants.AccountRelationNotificationTypeInvoice)); apiErr != nil {
 					return apiErr
 				}
+			}
+
+			if slices.Contains(params.Includes, "lines") {
+				lines, apiErr := txRepo.GetLines(txCtx, params.SalesOrderID)
+				if apiErr != nil {
+					return apiErr
+				}
+				result.Lines = lines
 			}
 
 			changes := audit.ComputeChanges(existing, updated)
@@ -1030,6 +1048,14 @@ func (s *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, params d
 	updatedOrder, apiErr := repo.Get(ctx, params.AccountID, params.SalesOrderID)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
+	}
+
+	if slices.Contains(params.Includes, "lines") {
+		lines, apiErr := repo.GetLines(ctx, params.SalesOrderID)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		updatedOrder.Lines = lines
 	}
 
 	return updatedOrder, nil

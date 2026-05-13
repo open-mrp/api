@@ -307,11 +307,80 @@ func salesOrderToProto(o *domain.SalesOrder) *pb.SalesOrderInfo {
 	if o.ServiceLevelToken != nil {
 		info.ServiceLevelToken = o.ServiceLevelToken
 	}
+	if o.ServiceLevelCreatedAt != nil {
+		info.ServiceLevelCreatedAt = timestamppb.New(*o.ServiceLevelCreatedAt)
+	}
+	if o.ServiceLevelUpdatedAt != nil {
+		info.ServiceLevelUpdatedAt = timestamppb.New(*o.ServiceLevelUpdatedAt)
+	}
 	if o.CustomerStatusCode != nil {
 		info.CustomerStatusCode = o.CustomerStatusCode
 	}
 	if o.CustomerCommissionPolicy != nil {
 		info.CustomerCommissionPolicy = o.CustomerCommissionPolicy
+	}
+	if o.CustomerCreatedAt != nil {
+		info.CustomerCreatedAt = timestamppb.New(*o.CustomerCreatedAt)
+	}
+	if o.CustomerUpdatedAt != nil {
+		info.CustomerUpdatedAt = timestamppb.New(*o.CustomerUpdatedAt)
+	}
+	if o.BillToIsDropShip != nil {
+		info.BillToIsDropShip = o.BillToIsDropShip
+	}
+	if o.BillToGeolocationID != nil {
+		info.BillToGeolocationId = o.BillToGeolocationID
+	}
+	if o.BillToCreatedAt != nil {
+		info.BillToCreatedAt = timestamppb.New(*o.BillToCreatedAt)
+	}
+	if o.BillToUpdatedAt != nil {
+		info.BillToUpdatedAt = timestamppb.New(*o.BillToUpdatedAt)
+	}
+	if o.ShipToIsDropShip != nil {
+		info.ShipToIsDropShip = o.ShipToIsDropShip
+	}
+	if o.ShipToGeolocationID != nil {
+		info.ShipToGeolocationId = o.ShipToGeolocationID
+	}
+	if o.ShipToCreatedAt != nil {
+		info.ShipToCreatedAt = timestamppb.New(*o.ShipToCreatedAt)
+	}
+	if o.ShipToUpdatedAt != nil {
+		info.ShipToUpdatedAt = timestamppb.New(*o.ShipToUpdatedAt)
+	}
+	if o.PaymentTermCreatedAt != nil {
+		info.PaymentTermCreatedAt = timestamppb.New(*o.PaymentTermCreatedAt)
+	}
+	if o.PaymentTermUpdatedAt != nil {
+		info.PaymentTermUpdatedAt = timestamppb.New(*o.PaymentTermUpdatedAt)
+	}
+	if o.ShippingTermCreatedAt != nil {
+		info.ShippingTermCreatedAt = timestamppb.New(*o.ShippingTermCreatedAt)
+	}
+	if o.ShippingTermUpdatedAt != nil {
+		info.ShippingTermUpdatedAt = timestamppb.New(*o.ShippingTermUpdatedAt)
+	}
+	if o.OrderDiscountCode != nil {
+		info.OrderDiscountCode = o.OrderDiscountCode
+	}
+	if o.OrderDiscountPercentage != nil {
+		info.OrderDiscountPercentage = o.OrderDiscountPercentage
+	}
+	if o.OrderDiscountAmount != nil {
+		info.OrderDiscountAmount = o.OrderDiscountAmount
+	}
+	if o.OrderDiscountDiscountType != nil {
+		info.OrderDiscountDiscountType = o.OrderDiscountDiscountType
+	}
+	if o.OrderDiscountOrderCount != nil {
+		info.OrderDiscountOrderCount = o.OrderDiscountOrderCount
+	}
+	if o.OrderDiscountCreatedAt != nil {
+		info.OrderDiscountCreatedAt = timestamppb.New(*o.OrderDiscountCreatedAt)
+	}
+	if o.OrderDiscountUpdatedAt != nil {
+		info.OrderDiscountUpdatedAt = timestamppb.New(*o.OrderDiscountUpdatedAt)
 	}
 
 	if o.IssuedAt != nil {
@@ -332,6 +401,12 @@ func salesOrderToProto(o *domain.SalesOrder) *pb.SalesOrderInfo {
 
 	if o.CarrierIsPortalEnabled != nil {
 		info.CarrierIsPortalEnabled = o.CarrierIsPortalEnabled
+	}
+	if o.CarrierCreatedAt != nil {
+		info.CarrierCreatedAt = timestamppb.New(*o.CarrierCreatedAt)
+	}
+	if o.CarrierUpdatedAt != nil {
+		info.CarrierUpdatedAt = timestamppb.New(*o.CarrierUpdatedAt)
 	}
 	if o.ServiceLevelIsPortalEnabled != nil {
 		info.ServiceLevelIsPortalEnabled = o.ServiceLevelIsPortalEnabled
@@ -555,6 +630,7 @@ func (h *salesGRPCHandler) CreateSalesOrder(ctx context.Context, req *pb.CreateS
 		Lines:                        lines,
 		AcknowledgementEmailContacts: protoToEmailContactInputs(req.AcknowledgementEmailContacts),
 		InvoiceEmailContacts:         protoToEmailContactInputs(req.InvoiceEmailContacts),
+		Includes:                     req.Includes,
 	}
 
 	order, apiErr := h.salesOrderSvc.CreateSalesOrder(ctx, params)
@@ -605,6 +681,7 @@ func (h *salesGRPCHandler) UpdateSalesOrder(ctx context.Context, req *pb.UpdateS
 		ShipToState:           req.ShipToState,
 		ShipToPostalCode:      req.ShipToPostalCode,
 		ShipToCountry:         req.ShipToCountry,
+		Includes:              req.Includes,
 	}
 
 	if req.PromisedAt != nil {
@@ -670,6 +747,7 @@ func (h *salesGRPCHandler) ChangeSalesOrderStatus(ctx context.Context, req *pb.C
 		SalesOrderID: req.Id,
 		StatusChange: req.StatusChange,
 		SendEmail:    req.SendEmail,
+		Includes:     req.Includes,
 	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)

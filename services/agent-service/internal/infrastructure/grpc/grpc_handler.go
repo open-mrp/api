@@ -1144,30 +1144,6 @@ func (h *agentHandler) DeleteAgentMemory(ctx context.Context, req *pb.DeleteAgen
 	return &pb.DeleteAgentMemoryResponse{Success: true}, nil
 }
 
-func sqlcAlertToProto(a *sqlc.AgentAlert) *pb.AgentAlertInfo {
-	var metadataStr string
-	if a.Metadata != nil {
-		metadataStr = string(a.Metadata)
-	}
-	return &pb.AgentAlertInfo{
-		Id:                      a.ID,
-		AccountId:               a.AccountID,
-		AgentRunId:              formatPgText(a.AgentRunID),
-		AgentActionId:           formatPgText(a.AgentActionID),
-		SeverityCode:            a.SeverityCode,
-		StatusCode:              a.StatusCode,
-		Title:                   a.Title,
-		Message:                 formatPgText(a.Message),
-		MetadataJson:            metadataStr,
-		AcknowledgedAt:          formatPgTimestamp(a.AcknowledgedAt),
-		AcknowledgedBy:          formatPgText(a.AcknowledgedByActorID),
-		AcknowledgedByActorType: formatPgText(a.AcknowledgedByActorType),
-		AcknowledgedByActorName: formatPgText(a.AcknowledgedByActorName),
-		CreatedAt:               formatPgTimestamp(a.CreatedAt),
-		UpdatedAt:               formatPgTimestamp(a.UpdatedAt),
-	}
-}
-
 func domainMemoryToProto(m *domain.AgentMemoryInfo) *pb.AgentMemoryInfo {
 	return &pb.AgentMemoryInfo{
 		Id:           m.ID,
@@ -1185,7 +1161,7 @@ func domainMemoryToProto(m *domain.AgentMemoryInfo) *pb.AgentMemoryInfo {
 }
 
 func domainAlertToProto(a *domain.AgentAlertInfo) *pb.AgentAlertInfo {
-	return &pb.AgentAlertInfo{
+	info := &pb.AgentAlertInfo{
 		Id:                      a.ID,
 		AccountId:               a.AccountID,
 		AgentRunId:              a.AgentRunID,
@@ -1202,6 +1178,137 @@ func domainAlertToProto(a *domain.AgentAlertInfo) *pb.AgentAlertInfo {
 		CreatedAt:               a.CreatedAt,
 		UpdatedAt:               a.UpdatedAt,
 	}
+	if a.RunStatusCode != "" {
+		info.RunStatusCode = &a.RunStatusCode
+	}
+	if a.RunTriggerType != "" {
+		info.RunTriggerType = &a.RunTriggerType
+	}
+	if a.RunCreatedAt != "" {
+		info.RunCreatedAt = &a.RunCreatedAt
+	}
+	if a.RunUpdatedAt != "" {
+		info.RunUpdatedAt = &a.RunUpdatedAt
+	}
+	if a.ActionToolSlug != "" {
+		info.ActionToolSlug = &a.ActionToolSlug
+	}
+	if a.ActionStatusCode != "" {
+		info.ActionStatusCode = &a.ActionStatusCode
+	}
+	if a.ActionCreatedAt != "" {
+		info.ActionCreatedAt = &a.ActionCreatedAt
+	}
+	if a.ActionUpdatedAt != "" {
+		info.ActionUpdatedAt = &a.ActionUpdatedAt
+	}
+	return info
+}
+
+func sqlcGetAlertRowToProto(a *sqlc.GetAgentAlertByIDRow) *pb.AgentAlertInfo {
+	var metadataStr string
+	if a.Metadata != nil {
+		metadataStr = string(a.Metadata)
+	}
+	info := &pb.AgentAlertInfo{
+		Id:                      a.ID,
+		AccountId:               a.AccountID,
+		AgentRunId:              formatPgText(a.AgentRunID),
+		AgentActionId:           formatPgText(a.AgentActionID),
+		SeverityCode:            a.SeverityCode,
+		StatusCode:              a.StatusCode,
+		Title:                   a.Title,
+		Message:                 formatPgText(a.Message),
+		MetadataJson:            metadataStr,
+		AcknowledgedAt:          formatPgTimestamp(a.AcknowledgedAt),
+		AcknowledgedBy:          formatPgText(a.AcknowledgedByActorID),
+		AcknowledgedByActorType: formatPgText(a.AcknowledgedByActorType),
+		AcknowledgedByActorName: formatPgText(a.AcknowledgedByActorName),
+		CreatedAt:               formatPgTimestamp(a.CreatedAt),
+		UpdatedAt:               formatPgTimestamp(a.UpdatedAt),
+	}
+	if a.RunStatusCode.Valid && a.RunStatusCode.String != "" {
+		info.RunStatusCode = &a.RunStatusCode.String
+	}
+	if a.RunTriggerType.Valid && a.RunTriggerType.String != "" {
+		info.RunTriggerType = &a.RunTriggerType.String
+	}
+	if a.RunCreatedAt.Valid {
+		s := a.RunCreatedAt.Time.Format("2006-01-02T15:04:05.000Z")
+		info.RunCreatedAt = &s
+	}
+	if a.RunUpdatedAt.Valid {
+		s := a.RunUpdatedAt.Time.Format("2006-01-02T15:04:05.000Z")
+		info.RunUpdatedAt = &s
+	}
+	if a.ActionToolSlug.Valid && a.ActionToolSlug.String != "" {
+		info.ActionToolSlug = &a.ActionToolSlug.String
+	}
+	if a.ActionStatusCode.Valid && a.ActionStatusCode.String != "" {
+		info.ActionStatusCode = &a.ActionStatusCode.String
+	}
+	if a.ActionCreatedAt.Valid {
+		s := a.ActionCreatedAt.Time.Format("2006-01-02T15:04:05.000Z")
+		info.ActionCreatedAt = &s
+	}
+	if a.ActionUpdatedAt.Valid {
+		s := a.ActionUpdatedAt.Time.Format("2006-01-02T15:04:05.000Z")
+		info.ActionUpdatedAt = &s
+	}
+	return info
+}
+
+func sqlcListAlertRowToProto(a *sqlc.ListAgentAlertsByAccountCursorRow) *pb.AgentAlertInfo {
+	var metadataStr string
+	if a.Metadata != nil {
+		metadataStr = string(a.Metadata)
+	}
+	info := &pb.AgentAlertInfo{
+		Id:                      a.ID,
+		AccountId:               a.AccountID,
+		AgentRunId:              formatPgText(a.AgentRunID),
+		AgentActionId:           formatPgText(a.AgentActionID),
+		SeverityCode:            a.SeverityCode,
+		StatusCode:              a.StatusCode,
+		Title:                   a.Title,
+		Message:                 formatPgText(a.Message),
+		MetadataJson:            metadataStr,
+		AcknowledgedAt:          formatPgTimestamp(a.AcknowledgedAt),
+		AcknowledgedBy:          formatPgText(a.AcknowledgedByActorID),
+		AcknowledgedByActorType: formatPgText(a.AcknowledgedByActorType),
+		AcknowledgedByActorName: formatPgText(a.AcknowledgedByActorName),
+		CreatedAt:               formatPgTimestamp(a.CreatedAt),
+		UpdatedAt:               formatPgTimestamp(a.UpdatedAt),
+	}
+	if a.RunStatusCode.Valid && a.RunStatusCode.String != "" {
+		info.RunStatusCode = &a.RunStatusCode.String
+	}
+	if a.RunTriggerType.Valid && a.RunTriggerType.String != "" {
+		info.RunTriggerType = &a.RunTriggerType.String
+	}
+	if a.RunCreatedAt.Valid {
+		s := a.RunCreatedAt.Time.Format("2006-01-02T15:04:05.000Z")
+		info.RunCreatedAt = &s
+	}
+	if a.RunUpdatedAt.Valid {
+		s := a.RunUpdatedAt.Time.Format("2006-01-02T15:04:05.000Z")
+		info.RunUpdatedAt = &s
+	}
+	if a.ActionToolSlug.Valid && a.ActionToolSlug.String != "" {
+		info.ActionToolSlug = &a.ActionToolSlug.String
+	}
+	if a.ActionStatusCode.Valid && a.ActionStatusCode.String != "" {
+		info.ActionStatusCode = &a.ActionStatusCode.String
+	}
+	if a.ActionCreatedAt.Valid {
+		s := a.ActionCreatedAt.Time.Format("2006-01-02T15:04:05.000Z")
+		info.ActionCreatedAt = &s
+	}
+	if a.ActionUpdatedAt.Valid {
+		s := a.ActionUpdatedAt.Time.Format("2006-01-02T15:04:05.000Z")
+		info.ActionUpdatedAt = &s
+	}
+	return info
 }
 
 func (h *agentHandler) ListAgentAlerts(ctx context.Context, req *pb.ListAgentAlertsRequest) (*pb.ListAgentAlertsResponse, error) {
@@ -1271,7 +1378,7 @@ func (h *agentHandler) ListAgentAlerts(ctx context.Context, req *pb.ListAgentAle
 
 	pbAlerts := make([]*pb.AgentAlertInfo, len(rows))
 	for i := range rows {
-		pbAlerts[i] = sqlcAlertToProto(&rows[i])
+		pbAlerts[i] = sqlcListAlertRowToProto(&rows[i])
 	}
 
 	var nextCursor *string
@@ -1322,7 +1429,7 @@ func (h *agentHandler) GetAgentAlert(ctx context.Context, req *pb.GetAgentAlertR
 		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewResourceNotFoundError("Agent alert not found."))
 	}
 
-	return &pb.GetAgentAlertResponse{Alert: sqlcAlertToProto(alert)}, nil
+	return &pb.GetAgentAlertResponse{Alert: sqlcGetAlertRowToProto(alert)}, nil
 }
 
 func (h *agentHandler) AcknowledgeAgentAlert(ctx context.Context, req *pb.AcknowledgeAgentAlertRequest) (*pb.AcknowledgeAgentAlertResponse, error) {

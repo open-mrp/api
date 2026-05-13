@@ -300,7 +300,7 @@ func (s *userMedImpl) ValidateCredential(ctx context.Context, authToken string, 
 		// Strip actor permissions since they don't apply to the owner's account.
 		identity.Actor.RelationType = actorType
 		identity.Actor.RoleID = nil
-		identity.Actor.RoleTypeCode = nil
+		identity.Actor.RoleType = nil
 		identity.Actor.Permissions = map[string]bool{}
 		identity.Target.AccountID = *targetAccountID
 		identity.Target.RelationType = &accountRelation.AccountRelationRoleCode

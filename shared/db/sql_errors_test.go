@@ -194,6 +194,35 @@ func TestIsDuplicateEntry_Postgres(t *testing.T) {
 	})
 }
 
+func TestIsRetryableLockConflict(t *testing.T) {
+	t.Parallel()
+
+	t.Run("returns true for MySQL lock wait timeout", func(t *testing.T) {
+		err := &mysql.MySQLError{Number: 1205, Message: "Lock wait timeout"}
+		assert.True(t, IsRetryableLockConflict(err))
+	})
+
+	t.Run("returns true for MySQL deadlock", func(t *testing.T) {
+		err := &mysql.MySQLError{Number: 1213, Message: "Deadlock found"}
+		assert.True(t, IsRetryableLockConflict(err))
+	})
+
+	t.Run("returns true for Postgres serialization failure", func(t *testing.T) {
+		err := &pgconn.PgError{Code: "40001"}
+		assert.True(t, IsRetryableLockConflict(err))
+	})
+
+	t.Run("returns true for Postgres deadlock", func(t *testing.T) {
+		err := &pgconn.PgError{Code: "40P01"}
+		assert.True(t, IsRetryableLockConflict(err))
+	})
+
+	t.Run("returns false for non-lock errors", func(t *testing.T) {
+		err := &mysql.MySQLError{Number: 1062, Message: "Duplicate entry"}
+		assert.False(t, IsRetryableLockConflict(err))
+	})
+}
+
 func TestIsDuplicateEntry(t *testing.T) {
 	t.Parallel()
 	t.Run("returns true for 1062", func(t *testing.T) {

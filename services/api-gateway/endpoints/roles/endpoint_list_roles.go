@@ -13,8 +13,8 @@ import (
 // ListRolesRequest is a request to list roles.
 type ListRolesRequest struct {
 	apiresource.PaginationRequest
-	// Filter by role type code(s).
-	RoleType []string `query:"role_types"`
+	// Filter by role types.
+	RoleType []constants.RoleType `query:"types"`
 }
 
 type ListRolesEndpoint struct{}

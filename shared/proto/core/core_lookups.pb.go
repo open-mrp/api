@@ -2032,6 +2032,7 @@ type ListUnitGroupsRequest struct {
 	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
 	Query         *string                `protobuf:"bytes,3,opt,name=query,proto3,oneof" json:"query,omitempty"`
 	Type          *string                `protobuf:"bytes,4,opt,name=type,proto3,oneof" json:"type,omitempty"`
+	Includes      []string               `protobuf:"bytes,5,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2094,6 +2095,13 @@ func (x *ListUnitGroupsRequest) GetType() string {
 	return ""
 }
 
+func (x *ListUnitGroupsRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
+}
+
 type ListUnitGroupsResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	UnitGroups    []*UnitGroupInfo       `protobuf:"bytes,1,rep,name=unit_groups,json=unitGroups,proto3" json:"unit_groups,omitempty"`
@@ -2149,6 +2157,7 @@ func (x *ListUnitGroupsResponse) GetPageInfo() *PageInfo {
 type GetUnitGroupRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Includes      []string               `protobuf:"bytes,2,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2188,6 +2197,13 @@ func (x *GetUnitGroupRequest) GetId() string {
 		return x.Id
 	}
 	return ""
+}
+
+func (x *GetUnitGroupRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
 }
 
 type GetUnitGroupResponse struct {
@@ -2309,6 +2325,7 @@ type CreateUnitGroupRequest struct {
 	Type            string                      `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"`
 	BaseUnitId      string                      `protobuf:"bytes,4,opt,name=base_unit_id,json=baseUnitId,proto3" json:"base_unit_id,omitempty"`
 	UnitConversions []*CreateUnitGroupUnitParam `protobuf:"bytes,5,rep,name=unit_conversions,json=unitConversions,proto3" json:"unit_conversions,omitempty"`
+	Includes        []string                    `protobuf:"bytes,6,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -2378,6 +2395,13 @@ func (x *CreateUnitGroupRequest) GetUnitConversions() []*CreateUnitGroupUnitPara
 	return nil
 }
 
+func (x *CreateUnitGroupRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
+}
+
 type CreateUnitGroupResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	UnitGroup     *UnitGroupInfo         `protobuf:"bytes,1,opt,name=unit_group,json=unitGroup,proto3" json:"unit_group,omitempty"`
@@ -2431,6 +2455,7 @@ type UpdateUnitGroupRequest struct {
 	BaseUnitId            *string                     `protobuf:"bytes,5,opt,name=base_unit_id,json=baseUnitId,proto3,oneof" json:"base_unit_id,omitempty"`
 	UnitConversions       []*CreateUnitGroupUnitParam `protobuf:"bytes,6,rep,name=unit_conversions,json=unitConversions,proto3" json:"unit_conversions,omitempty"`
 	UpdateUnitConversions bool                        `protobuf:"varint,7,opt,name=update_unit_conversions,json=updateUnitConversions,proto3" json:"update_unit_conversions,omitempty"`
+	Includes              []string                    `protobuf:"bytes,8,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields         protoimpl.UnknownFields
 	sizeCache             protoimpl.SizeCache
 }
@@ -2512,6 +2537,13 @@ func (x *UpdateUnitGroupRequest) GetUpdateUnitConversions() bool {
 		return x.UpdateUnitConversions
 	}
 	return false
+}
+
+func (x *UpdateUnitGroupRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
 }
 
 type UpdateUnitGroupResponse struct {
@@ -2610,6 +2642,7 @@ type UpsertUnitGroupUnitRequest struct {
 	DiscountPercentage string                 `protobuf:"bytes,4,opt,name=discount_percentage,json=discountPercentage,proto3" json:"discount_percentage,omitempty"`
 	IsVisible          bool                   `protobuf:"varint,5,opt,name=is_visible,json=isVisible,proto3" json:"is_visible,omitempty"`
 	DiscountFixed      string                 `protobuf:"bytes,6,opt,name=discount_fixed,json=discountFixed,proto3" json:"discount_fixed,omitempty"`
+	Includes           []string               `protobuf:"bytes,7,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -2684,6 +2717,13 @@ func (x *UpsertUnitGroupUnitRequest) GetDiscountFixed() string {
 		return x.DiscountFixed
 	}
 	return ""
+}
+
+func (x *UpsertUnitGroupUnitRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
 }
 
 type UpsertUnitGroupUnitResponse struct {
@@ -2785,6 +2825,7 @@ func (x *DeleteUnitGroupUnitRequest) GetUnitGroupUnitId() string {
 type ListUnitGroupUnitsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	UnitGroupId   string                 `protobuf:"bytes,1,opt,name=unit_group_id,json=unitGroupId,proto3" json:"unit_group_id,omitempty"`
+	Includes      []string               `protobuf:"bytes,2,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2824,6 +2865,13 @@ func (x *ListUnitGroupUnitsRequest) GetUnitGroupId() string {
 		return x.UnitGroupId
 	}
 	return ""
+}
+
+func (x *ListUnitGroupUnitsRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
 }
 
 type ListUnitGroupUnitsResponse struct {
@@ -2874,6 +2922,7 @@ type GetUnitGroupUnitRequest struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	UnitGroupId     string                 `protobuf:"bytes,1,opt,name=unit_group_id,json=unitGroupId,proto3" json:"unit_group_id,omitempty"`
 	UnitGroupUnitId string                 `protobuf:"bytes,2,opt,name=unit_group_unit_id,json=unitGroupUnitId,proto3" json:"unit_group_unit_id,omitempty"`
+	Includes        []string               `protobuf:"bytes,3,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -2920,6 +2969,13 @@ func (x *GetUnitGroupUnitRequest) GetUnitGroupUnitId() string {
 		return x.UnitGroupUnitId
 	}
 	return ""
+}
+
+func (x *GetUnitGroupUnitRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
 }
 
 type GetUnitGroupUnitResponse struct {
@@ -3055,36 +3111,43 @@ func (x *ValidateUnitsResponse) GetUnits() map[string]*UnitInfo {
 }
 
 type TransactionInfo struct {
-	state                  protoimpl.MessageState       `protogen:"open.v1"`
-	Id                     string                       `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Number                 string                       `protobuf:"bytes,2,opt,name=number,proto3" json:"number,omitempty"`
-	AmountId               string                       `protobuf:"bytes,3,opt,name=amount_id,json=amountId,proto3" json:"amount_id,omitempty"`
-	AmountValue            string                       `protobuf:"bytes,4,opt,name=amount_value,json=amountValue,proto3" json:"amount_value,omitempty"`
-	AmountUnitId           string                       `protobuf:"bytes,5,opt,name=amount_unit_id,json=amountUnitId,proto3" json:"amount_unit_id,omitempty"`
-	AmountUnitAbbreviation string                       `protobuf:"bytes,6,opt,name=amount_unit_abbreviation,json=amountUnitAbbreviation,proto3" json:"amount_unit_abbreviation,omitempty"`
-	CustomerId             *string                      `protobuf:"bytes,7,opt,name=customer_id,json=customerId,proto3,oneof" json:"customer_id,omitempty"`
-	CustomerName           *string                      `protobuf:"bytes,8,opt,name=customer_name,json=customerName,proto3,oneof" json:"customer_name,omitempty"`
-	CustomerNumber         *string                      `protobuf:"bytes,9,opt,name=customer_number,json=customerNumber,proto3,oneof" json:"customer_number,omitempty"`
-	ResponsibleUserId      *string                      `protobuf:"bytes,10,opt,name=responsible_user_id,json=responsibleUserId,proto3,oneof" json:"responsible_user_id,omitempty"`
-	ResponsibleUserName    *string                      `protobuf:"bytes,11,opt,name=responsible_user_name,json=responsibleUserName,proto3,oneof" json:"responsible_user_name,omitempty"`
-	Note                   *string                      `protobuf:"bytes,12,opt,name=note,proto3,oneof" json:"note,omitempty"`
-	TransactionTypeCode    string                       `protobuf:"bytes,13,opt,name=transaction_type_code,json=transactionTypeCode,proto3" json:"transaction_type_code,omitempty"`
-	TransactionTypeName    string                       `protobuf:"bytes,14,opt,name=transaction_type_name,json=transactionTypeName,proto3" json:"transaction_type_name,omitempty"`
-	TransactionTypeId      string                       `protobuf:"bytes,15,opt,name=transaction_type_id,json=transactionTypeId,proto3" json:"transaction_type_id,omitempty"`
-	TransactionMethodCode  *string                      `protobuf:"bytes,16,opt,name=transaction_method_code,json=transactionMethodCode,proto3,oneof" json:"transaction_method_code,omitempty"`
-	TransactionMethodName  *string                      `protobuf:"bytes,17,opt,name=transaction_method_name,json=transactionMethodName,proto3,oneof" json:"transaction_method_name,omitempty"`
-	TransactionMethodId    *string                      `protobuf:"bytes,18,opt,name=transaction_method_id,json=transactionMethodId,proto3,oneof" json:"transaction_method_id,omitempty"`
-	AdjustmentTypeCode     *string                      `protobuf:"bytes,19,opt,name=adjustment_type_code,json=adjustmentTypeCode,proto3,oneof" json:"adjustment_type_code,omitempty"`
-	AdjustmentTypeName     *string                      `protobuf:"bytes,20,opt,name=adjustment_type_name,json=adjustmentTypeName,proto3,oneof" json:"adjustment_type_name,omitempty"`
-	AdjustmentTypeId       *string                      `protobuf:"bytes,21,opt,name=adjustment_type_id,json=adjustmentTypeId,proto3,oneof" json:"adjustment_type_id,omitempty"`
-	IsFullyAllocated       bool                         `protobuf:"varint,22,opt,name=is_fully_allocated,json=isFullyAllocated,proto3" json:"is_fully_allocated,omitempty"`
-	StripePaymentId        *string                      `protobuf:"bytes,23,opt,name=stripe_payment_id,json=stripePaymentId,proto3,oneof" json:"stripe_payment_id,omitempty"`
-	AllocationCount        int32                        `protobuf:"varint,24,opt,name=allocation_count,json=allocationCount,proto3" json:"allocation_count,omitempty"`
-	Allocations            []*TransactionAllocationInfo `protobuf:"bytes,25,rep,name=allocations,proto3" json:"allocations,omitempty"`
-	CreatedAt              *timestamppb.Timestamp       `protobuf:"bytes,26,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt              *timestamppb.Timestamp       `protobuf:"bytes,27,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields          protoimpl.UnknownFields
-	sizeCache              protoimpl.SizeCache
+	state                    protoimpl.MessageState       `protogen:"open.v1"`
+	Id                       string                       `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Number                   string                       `protobuf:"bytes,2,opt,name=number,proto3" json:"number,omitempty"`
+	AmountId                 string                       `protobuf:"bytes,3,opt,name=amount_id,json=amountId,proto3" json:"amount_id,omitempty"`
+	AmountValue              string                       `protobuf:"bytes,4,opt,name=amount_value,json=amountValue,proto3" json:"amount_value,omitempty"`
+	AmountUnitId             string                       `protobuf:"bytes,5,opt,name=amount_unit_id,json=amountUnitId,proto3" json:"amount_unit_id,omitempty"`
+	AmountUnitAbbreviation   string                       `protobuf:"bytes,6,opt,name=amount_unit_abbreviation,json=amountUnitAbbreviation,proto3" json:"amount_unit_abbreviation,omitempty"`
+	CustomerId               *string                      `protobuf:"bytes,7,opt,name=customer_id,json=customerId,proto3,oneof" json:"customer_id,omitempty"`
+	CustomerName             *string                      `protobuf:"bytes,8,opt,name=customer_name,json=customerName,proto3,oneof" json:"customer_name,omitempty"`
+	CustomerNumber           *string                      `protobuf:"bytes,9,opt,name=customer_number,json=customerNumber,proto3,oneof" json:"customer_number,omitempty"`
+	ResponsibleUserId        *string                      `protobuf:"bytes,10,opt,name=responsible_user_id,json=responsibleUserId,proto3,oneof" json:"responsible_user_id,omitempty"`
+	ResponsibleUserName      *string                      `protobuf:"bytes,11,opt,name=responsible_user_name,json=responsibleUserName,proto3,oneof" json:"responsible_user_name,omitempty"`
+	Note                     *string                      `protobuf:"bytes,12,opt,name=note,proto3,oneof" json:"note,omitempty"`
+	TransactionTypeCode      string                       `protobuf:"bytes,13,opt,name=transaction_type_code,json=transactionTypeCode,proto3" json:"transaction_type_code,omitempty"`
+	TransactionTypeName      string                       `protobuf:"bytes,14,opt,name=transaction_type_name,json=transactionTypeName,proto3" json:"transaction_type_name,omitempty"`
+	TransactionTypeId        string                       `protobuf:"bytes,15,opt,name=transaction_type_id,json=transactionTypeId,proto3" json:"transaction_type_id,omitempty"`
+	TransactionMethodCode    *string                      `protobuf:"bytes,16,opt,name=transaction_method_code,json=transactionMethodCode,proto3,oneof" json:"transaction_method_code,omitempty"`
+	TransactionMethodName    *string                      `protobuf:"bytes,17,opt,name=transaction_method_name,json=transactionMethodName,proto3,oneof" json:"transaction_method_name,omitempty"`
+	TransactionMethodId      *string                      `protobuf:"bytes,18,opt,name=transaction_method_id,json=transactionMethodId,proto3,oneof" json:"transaction_method_id,omitempty"`
+	AdjustmentTypeCode       *string                      `protobuf:"bytes,19,opt,name=adjustment_type_code,json=adjustmentTypeCode,proto3,oneof" json:"adjustment_type_code,omitempty"`
+	AdjustmentTypeName       *string                      `protobuf:"bytes,20,opt,name=adjustment_type_name,json=adjustmentTypeName,proto3,oneof" json:"adjustment_type_name,omitempty"`
+	AdjustmentTypeId         *string                      `protobuf:"bytes,21,opt,name=adjustment_type_id,json=adjustmentTypeId,proto3,oneof" json:"adjustment_type_id,omitempty"`
+	IsFullyAllocated         bool                         `protobuf:"varint,22,opt,name=is_fully_allocated,json=isFullyAllocated,proto3" json:"is_fully_allocated,omitempty"`
+	StripePaymentId          *string                      `protobuf:"bytes,23,opt,name=stripe_payment_id,json=stripePaymentId,proto3,oneof" json:"stripe_payment_id,omitempty"`
+	AllocationCount          int32                        `protobuf:"varint,24,opt,name=allocation_count,json=allocationCount,proto3" json:"allocation_count,omitempty"`
+	Allocations              []*TransactionAllocationInfo `protobuf:"bytes,25,rep,name=allocations,proto3" json:"allocations,omitempty"`
+	CreatedAt                *timestamppb.Timestamp       `protobuf:"bytes,26,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt                *timestamppb.Timestamp       `protobuf:"bytes,27,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	CustomerStatus           *string                      `protobuf:"bytes,29,opt,name=customer_status,json=customerStatus,proto3,oneof" json:"customer_status,omitempty"`
+	CustomerCommissionPolicy *string                      `protobuf:"bytes,30,opt,name=customer_commission_policy,json=customerCommissionPolicy,proto3,oneof" json:"customer_commission_policy,omitempty"`
+	CustomerCreatedAt        *timestamppb.Timestamp       `protobuf:"bytes,31,opt,name=customer_created_at,json=customerCreatedAt,proto3,oneof" json:"customer_created_at,omitempty"`
+	CustomerUpdatedAt        *timestamppb.Timestamp       `protobuf:"bytes,32,opt,name=customer_updated_at,json=customerUpdatedAt,proto3,oneof" json:"customer_updated_at,omitempty"`
+	ResponsibleUserStatus    *string                      `protobuf:"bytes,33,opt,name=responsible_user_status,json=responsibleUserStatus,proto3,oneof" json:"responsible_user_status,omitempty"`
+	ResponsibleUserCreatedAt *timestamppb.Timestamp       `protobuf:"bytes,34,opt,name=responsible_user_created_at,json=responsibleUserCreatedAt,proto3,oneof" json:"responsible_user_created_at,omitempty"`
+	ResponsibleUserUpdatedAt *timestamppb.Timestamp       `protobuf:"bytes,35,opt,name=responsible_user_updated_at,json=responsibleUserUpdatedAt,proto3,oneof" json:"responsible_user_updated_at,omitempty"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
 }
 
 func (x *TransactionInfo) Reset() {
@@ -3306,32 +3369,85 @@ func (x *TransactionInfo) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *TransactionInfo) GetCustomerStatus() string {
+	if x != nil && x.CustomerStatus != nil {
+		return *x.CustomerStatus
+	}
+	return ""
+}
+
+func (x *TransactionInfo) GetCustomerCommissionPolicy() string {
+	if x != nil && x.CustomerCommissionPolicy != nil {
+		return *x.CustomerCommissionPolicy
+	}
+	return ""
+}
+
+func (x *TransactionInfo) GetCustomerCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CustomerCreatedAt
+	}
+	return nil
+}
+
+func (x *TransactionInfo) GetCustomerUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CustomerUpdatedAt
+	}
+	return nil
+}
+
+func (x *TransactionInfo) GetResponsibleUserStatus() string {
+	if x != nil && x.ResponsibleUserStatus != nil {
+		return *x.ResponsibleUserStatus
+	}
+	return ""
+}
+
+func (x *TransactionInfo) GetResponsibleUserCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ResponsibleUserCreatedAt
+	}
+	return nil
+}
+
+func (x *TransactionInfo) GetResponsibleUserUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ResponsibleUserUpdatedAt
+	}
+	return nil
+}
+
 type TransactionSummaryInfo struct {
-	state                  protoimpl.MessageState `protogen:"open.v1"`
-	Id                     string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Number                 string                 `protobuf:"bytes,2,opt,name=number,proto3" json:"number,omitempty"`
-	AmountId               string                 `protobuf:"bytes,3,opt,name=amount_id,json=amountId,proto3" json:"amount_id,omitempty"`
-	AmountValue            string                 `protobuf:"bytes,4,opt,name=amount_value,json=amountValue,proto3" json:"amount_value,omitempty"`
-	AmountUnitId           string                 `protobuf:"bytes,5,opt,name=amount_unit_id,json=amountUnitId,proto3" json:"amount_unit_id,omitempty"`
-	AmountUnitAbbreviation string                 `protobuf:"bytes,6,opt,name=amount_unit_abbreviation,json=amountUnitAbbreviation,proto3" json:"amount_unit_abbreviation,omitempty"`
-	CustomerId             *string                `protobuf:"bytes,7,opt,name=customer_id,json=customerId,proto3,oneof" json:"customer_id,omitempty"`
-	CustomerName           *string                `protobuf:"bytes,8,opt,name=customer_name,json=customerName,proto3,oneof" json:"customer_name,omitempty"`
-	CustomerNumber         *string                `protobuf:"bytes,9,opt,name=customer_number,json=customerNumber,proto3,oneof" json:"customer_number,omitempty"`
-	TransactionTypeCode    string                 `protobuf:"bytes,10,opt,name=transaction_type_code,json=transactionTypeCode,proto3" json:"transaction_type_code,omitempty"`
-	TransactionTypeName    string                 `protobuf:"bytes,11,opt,name=transaction_type_name,json=transactionTypeName,proto3" json:"transaction_type_name,omitempty"`
-	TransactionTypeId      string                 `protobuf:"bytes,12,opt,name=transaction_type_id,json=transactionTypeId,proto3" json:"transaction_type_id,omitempty"`
-	TransactionMethodCode  *string                `protobuf:"bytes,13,opt,name=transaction_method_code,json=transactionMethodCode,proto3,oneof" json:"transaction_method_code,omitempty"`
-	TransactionMethodName  *string                `protobuf:"bytes,14,opt,name=transaction_method_name,json=transactionMethodName,proto3,oneof" json:"transaction_method_name,omitempty"`
-	TransactionMethodId    *string                `protobuf:"bytes,15,opt,name=transaction_method_id,json=transactionMethodId,proto3,oneof" json:"transaction_method_id,omitempty"`
-	AdjustmentTypeCode     *string                `protobuf:"bytes,16,opt,name=adjustment_type_code,json=adjustmentTypeCode,proto3,oneof" json:"adjustment_type_code,omitempty"`
-	AdjustmentTypeName     *string                `protobuf:"bytes,17,opt,name=adjustment_type_name,json=adjustmentTypeName,proto3,oneof" json:"adjustment_type_name,omitempty"`
-	AdjustmentTypeId       *string                `protobuf:"bytes,18,opt,name=adjustment_type_id,json=adjustmentTypeId,proto3,oneof" json:"adjustment_type_id,omitempty"`
-	IsFullyAllocated       bool                   `protobuf:"varint,19,opt,name=is_fully_allocated,json=isFullyAllocated,proto3" json:"is_fully_allocated,omitempty"`
-	AllocationCount        int32                  `protobuf:"varint,20,opt,name=allocation_count,json=allocationCount,proto3" json:"allocation_count,omitempty"`
-	CreatedAt              *timestamppb.Timestamp `protobuf:"bytes,21,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt              *timestamppb.Timestamp `protobuf:"bytes,22,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields          protoimpl.UnknownFields
-	sizeCache              protoimpl.SizeCache
+	state                    protoimpl.MessageState `protogen:"open.v1"`
+	Id                       string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Number                   string                 `protobuf:"bytes,2,opt,name=number,proto3" json:"number,omitempty"`
+	AmountId                 string                 `protobuf:"bytes,3,opt,name=amount_id,json=amountId,proto3" json:"amount_id,omitempty"`
+	AmountValue              string                 `protobuf:"bytes,4,opt,name=amount_value,json=amountValue,proto3" json:"amount_value,omitempty"`
+	AmountUnitId             string                 `protobuf:"bytes,5,opt,name=amount_unit_id,json=amountUnitId,proto3" json:"amount_unit_id,omitempty"`
+	AmountUnitAbbreviation   string                 `protobuf:"bytes,6,opt,name=amount_unit_abbreviation,json=amountUnitAbbreviation,proto3" json:"amount_unit_abbreviation,omitempty"`
+	CustomerId               *string                `protobuf:"bytes,7,opt,name=customer_id,json=customerId,proto3,oneof" json:"customer_id,omitempty"`
+	CustomerName             *string                `protobuf:"bytes,8,opt,name=customer_name,json=customerName,proto3,oneof" json:"customer_name,omitempty"`
+	CustomerNumber           *string                `protobuf:"bytes,9,opt,name=customer_number,json=customerNumber,proto3,oneof" json:"customer_number,omitempty"`
+	TransactionTypeCode      string                 `protobuf:"bytes,10,opt,name=transaction_type_code,json=transactionTypeCode,proto3" json:"transaction_type_code,omitempty"`
+	TransactionTypeName      string                 `protobuf:"bytes,11,opt,name=transaction_type_name,json=transactionTypeName,proto3" json:"transaction_type_name,omitempty"`
+	TransactionTypeId        string                 `protobuf:"bytes,12,opt,name=transaction_type_id,json=transactionTypeId,proto3" json:"transaction_type_id,omitempty"`
+	TransactionMethodCode    *string                `protobuf:"bytes,13,opt,name=transaction_method_code,json=transactionMethodCode,proto3,oneof" json:"transaction_method_code,omitempty"`
+	TransactionMethodName    *string                `protobuf:"bytes,14,opt,name=transaction_method_name,json=transactionMethodName,proto3,oneof" json:"transaction_method_name,omitempty"`
+	TransactionMethodId      *string                `protobuf:"bytes,15,opt,name=transaction_method_id,json=transactionMethodId,proto3,oneof" json:"transaction_method_id,omitempty"`
+	AdjustmentTypeCode       *string                `protobuf:"bytes,16,opt,name=adjustment_type_code,json=adjustmentTypeCode,proto3,oneof" json:"adjustment_type_code,omitempty"`
+	AdjustmentTypeName       *string                `protobuf:"bytes,17,opt,name=adjustment_type_name,json=adjustmentTypeName,proto3,oneof" json:"adjustment_type_name,omitempty"`
+	AdjustmentTypeId         *string                `protobuf:"bytes,18,opt,name=adjustment_type_id,json=adjustmentTypeId,proto3,oneof" json:"adjustment_type_id,omitempty"`
+	IsFullyAllocated         bool                   `protobuf:"varint,19,opt,name=is_fully_allocated,json=isFullyAllocated,proto3" json:"is_fully_allocated,omitempty"`
+	AllocationCount          int32                  `protobuf:"varint,20,opt,name=allocation_count,json=allocationCount,proto3" json:"allocation_count,omitempty"`
+	CreatedAt                *timestamppb.Timestamp `protobuf:"bytes,21,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt                *timestamppb.Timestamp `protobuf:"bytes,22,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	CustomerStatus           *string                `protobuf:"bytes,24,opt,name=customer_status,json=customerStatus,proto3,oneof" json:"customer_status,omitempty"`
+	CustomerCommissionPolicy *string                `protobuf:"bytes,25,opt,name=customer_commission_policy,json=customerCommissionPolicy,proto3,oneof" json:"customer_commission_policy,omitempty"`
+	CustomerCreatedAt        *timestamppb.Timestamp `protobuf:"bytes,26,opt,name=customer_created_at,json=customerCreatedAt,proto3,oneof" json:"customer_created_at,omitempty"`
+	CustomerUpdatedAt        *timestamppb.Timestamp `protobuf:"bytes,27,opt,name=customer_updated_at,json=customerUpdatedAt,proto3,oneof" json:"customer_updated_at,omitempty"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
 }
 
 func (x *TransactionSummaryInfo) Reset() {
@@ -3514,6 +3630,34 @@ func (x *TransactionSummaryInfo) GetCreatedAt() *timestamppb.Timestamp {
 func (x *TransactionSummaryInfo) GetUpdatedAt() *timestamppb.Timestamp {
 	if x != nil {
 		return x.UpdatedAt
+	}
+	return nil
+}
+
+func (x *TransactionSummaryInfo) GetCustomerStatus() string {
+	if x != nil && x.CustomerStatus != nil {
+		return *x.CustomerStatus
+	}
+	return ""
+}
+
+func (x *TransactionSummaryInfo) GetCustomerCommissionPolicy() string {
+	if x != nil && x.CustomerCommissionPolicy != nil {
+		return *x.CustomerCommissionPolicy
+	}
+	return ""
+}
+
+func (x *TransactionSummaryInfo) GetCustomerCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CustomerCreatedAt
+	}
+	return nil
+}
+
+func (x *TransactionSummaryInfo) GetCustomerUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CustomerUpdatedAt
 	}
 	return nil
 }
@@ -9471,21 +9615,23 @@ const file_core_core_lookups_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12%\n" +
 	"\x0ediscount_fixed\x18\b \x01(\tR\rdiscountFixed\x12\"\n" +
-	"\x04unit\x18\t \x01(\v2\x0e.core.UnitInfoR\x04unit\"\x9c\x01\n" +
+	"\x04unit\x18\t \x01(\v2\x0e.core.UnitInfoR\x04unit\"\xb8\x01\n" +
 	"\x15ListUnitGroupsRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x19\n" +
 	"\x05query\x18\x03 \x01(\tH\x01R\x05query\x88\x01\x01\x12\x17\n" +
-	"\x04type\x18\x04 \x01(\tH\x02R\x04type\x88\x01\x01B\t\n" +
+	"\x04type\x18\x04 \x01(\tH\x02R\x04type\x88\x01\x01\x12\x1a\n" +
+	"\bincludes\x18\x05 \x03(\tR\bincludesB\t\n" +
 	"\a_cursorB\b\n" +
 	"\x06_queryB\a\n" +
 	"\x05_type\"{\n" +
 	"\x16ListUnitGroupsResponse\x124\n" +
 	"\vunit_groups\x18\x01 \x03(\v2\x13.core.UnitGroupInfoR\n" +
 	"unitGroups\x12+\n" +
-	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"%\n" +
+	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"A\n" +
 	"\x13GetUnitGroupRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"J\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
+	"\bincludes\x18\x02 \x03(\tR\bincludes\"J\n" +
 	"\x14GetUnitGroupResponse\x122\n" +
 	"\n" +
 	"unit_group\x18\x01 \x01(\v2\x13.core.UnitGroupInfoR\tunitGroup\"\xaa\x01\n" +
@@ -9494,18 +9640,19 @@ const file_core_core_lookups_proto_rawDesc = "" +
 	"\x13discount_percentage\x18\x02 \x01(\tR\x12discountPercentage\x12\x1d\n" +
 	"\n" +
 	"is_visible\x18\x03 \x01(\bR\tisVisible\x12%\n" +
-	"\x0ediscount_fixed\x18\x04 \x01(\tR\rdiscountFixed\"\xd2\x01\n" +
+	"\x0ediscount_fixed\x18\x04 \x01(\tR\rdiscountFixed\"\xee\x01\n" +
 	"\x16CreateUnitGroupRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x19\n" +
 	"\x05notes\x18\x02 \x01(\tH\x00R\x05notes\x88\x01\x01\x12\x12\n" +
 	"\x04type\x18\x03 \x01(\tR\x04type\x12 \n" +
 	"\fbase_unit_id\x18\x04 \x01(\tR\n" +
 	"baseUnitId\x12I\n" +
-	"\x10unit_conversions\x18\x05 \x03(\v2\x1e.core.CreateUnitGroupUnitParamR\x0funitConversionsB\b\n" +
+	"\x10unit_conversions\x18\x05 \x03(\v2\x1e.core.CreateUnitGroupUnitParamR\x0funitConversions\x12\x1a\n" +
+	"\bincludes\x18\x06 \x03(\tR\bincludesB\b\n" +
 	"\x06_notes\"M\n" +
 	"\x17CreateUnitGroupResponse\x122\n" +
 	"\n" +
-	"unit_group\x18\x01 \x01(\v2\x13.core.UnitGroupInfoR\tunitGroup\"\xcd\x02\n" +
+	"unit_group\x18\x01 \x01(\v2\x13.core.UnitGroupInfoR\tunitGroup\"\xe9\x02\n" +
 	"\x16UpdateUnitGroupRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x19\n" +
@@ -9514,7 +9661,8 @@ const file_core_core_lookups_proto_rawDesc = "" +
 	"\fbase_unit_id\x18\x05 \x01(\tH\x02R\n" +
 	"baseUnitId\x88\x01\x01\x12I\n" +
 	"\x10unit_conversions\x18\x06 \x03(\v2\x1e.core.CreateUnitGroupUnitParamR\x0funitConversions\x126\n" +
-	"\x17update_unit_conversions\x18\a \x01(\bR\x15updateUnitConversionsB\a\n" +
+	"\x17update_unit_conversions\x18\a \x01(\bR\x15updateUnitConversions\x12\x1a\n" +
+	"\bincludes\x18\b \x03(\tR\bincludesB\a\n" +
 	"\x05_nameB\b\n" +
 	"\x06_notesB\x0f\n" +
 	"\r_base_unit_id\"M\n" +
@@ -9522,7 +9670,7 @@ const file_core_core_lookups_proto_rawDesc = "" +
 	"\n" +
 	"unit_group\x18\x01 \x01(\v2\x13.core.UnitGroupInfoR\tunitGroup\"(\n" +
 	"\x16DeleteUnitGroupRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"\xfd\x01\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\x99\x02\n" +
 	"\x1aUpsertUnitGroupUnitRequest\x12\"\n" +
 	"\runit_group_id\x18\x01 \x01(\tR\vunitGroupId\x12+\n" +
 	"\x12unit_group_unit_id\x18\x02 \x01(\tR\x0funitGroupUnitId\x12\x17\n" +
@@ -9530,19 +9678,22 @@ const file_core_core_lookups_proto_rawDesc = "" +
 	"\x13discount_percentage\x18\x04 \x01(\tR\x12discountPercentage\x12\x1d\n" +
 	"\n" +
 	"is_visible\x18\x05 \x01(\bR\tisVisible\x12%\n" +
-	"\x0ediscount_fixed\x18\x06 \x01(\tR\rdiscountFixed\"^\n" +
+	"\x0ediscount_fixed\x18\x06 \x01(\tR\rdiscountFixed\x12\x1a\n" +
+	"\bincludes\x18\a \x03(\tR\bincludes\"^\n" +
 	"\x1bUpsertUnitGroupUnitResponse\x12?\n" +
 	"\x0funit_group_unit\x18\x01 \x01(\v2\x17.core.UnitGroupUnitInfoR\runitGroupUnit\"m\n" +
 	"\x1aDeleteUnitGroupUnitRequest\x12\"\n" +
 	"\runit_group_id\x18\x01 \x01(\tR\vunitGroupId\x12+\n" +
-	"\x12unit_group_unit_id\x18\x02 \x01(\tR\x0funitGroupUnitId\"?\n" +
+	"\x12unit_group_unit_id\x18\x02 \x01(\tR\x0funitGroupUnitId\"[\n" +
 	"\x19ListUnitGroupUnitsRequest\x12\"\n" +
-	"\runit_group_id\x18\x01 \x01(\tR\vunitGroupId\"_\n" +
+	"\runit_group_id\x18\x01 \x01(\tR\vunitGroupId\x12\x1a\n" +
+	"\bincludes\x18\x02 \x03(\tR\bincludes\"_\n" +
 	"\x1aListUnitGroupUnitsResponse\x12A\n" +
-	"\x10unit_group_units\x18\x01 \x03(\v2\x17.core.UnitGroupUnitInfoR\x0eunitGroupUnits\"j\n" +
+	"\x10unit_group_units\x18\x01 \x03(\v2\x17.core.UnitGroupUnitInfoR\x0eunitGroupUnits\"\x86\x01\n" +
 	"\x17GetUnitGroupUnitRequest\x12\"\n" +
 	"\runit_group_id\x18\x01 \x01(\tR\vunitGroupId\x12+\n" +
-	"\x12unit_group_unit_id\x18\x02 \x01(\tR\x0funitGroupUnitId\"[\n" +
+	"\x12unit_group_unit_id\x18\x02 \x01(\tR\x0funitGroupUnitId\x12\x1a\n" +
+	"\bincludes\x18\x03 \x03(\tR\bincludes\"[\n" +
 	"\x18GetUnitGroupUnitResponse\x12?\n" +
 	"\x0funit_group_unit\x18\x01 \x01(\v2\x17.core.UnitGroupUnitInfoR\runitGroupUnit\"\x96\x01\n" +
 	"\x14ValidateUnitsRequest\x12B\n" +
@@ -9555,7 +9706,7 @@ const file_core_core_lookups_proto_rawDesc = "" +
 	"\n" +
 	"UnitsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12$\n" +
-	"\x05value\x18\x02 \x01(\v2\x0e.core.UnitInfoR\x05value:\x028\x01\"\xb5\f\n" +
+	"\x05value\x18\x02 \x01(\v2\x0e.core.UnitInfoR\x05value:\x028\x01\"\x84\x12\n" +
 	"\x0fTransactionInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x12\x1b\n" +
@@ -9588,7 +9739,14 @@ const file_core_core_lookups_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x1a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\x1b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\x0e\n" +
+	"updated_at\x18\x1b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12,\n" +
+	"\x0fcustomer_status\x18\x1d \x01(\tH\rR\x0ecustomerStatus\x88\x01\x01\x12A\n" +
+	"\x1acustomer_commission_policy\x18\x1e \x01(\tH\x0eR\x18customerCommissionPolicy\x88\x01\x01\x12O\n" +
+	"\x13customer_created_at\x18\x1f \x01(\v2\x1a.google.protobuf.TimestampH\x0fR\x11customerCreatedAt\x88\x01\x01\x12O\n" +
+	"\x13customer_updated_at\x18  \x01(\v2\x1a.google.protobuf.TimestampH\x10R\x11customerUpdatedAt\x88\x01\x01\x12;\n" +
+	"\x17responsible_user_status\x18! \x01(\tH\x11R\x15responsibleUserStatus\x88\x01\x01\x12^\n" +
+	"\x1bresponsible_user_created_at\x18\" \x01(\v2\x1a.google.protobuf.TimestampH\x12R\x18responsibleUserCreatedAt\x88\x01\x01\x12^\n" +
+	"\x1bresponsible_user_updated_at\x18# \x01(\v2\x1a.google.protobuf.TimestampH\x13R\x18responsibleUserUpdatedAt\x88\x01\x01B\x0e\n" +
 	"\f_customer_idB\x10\n" +
 	"\x0e_customer_nameB\x12\n" +
 	"\x10_customer_numberB\x16\n" +
@@ -9601,7 +9759,14 @@ const file_core_core_lookups_proto_rawDesc = "" +
 	"\x15_adjustment_type_codeB\x17\n" +
 	"\x15_adjustment_type_nameB\x15\n" +
 	"\x13_adjustment_type_idB\x14\n" +
-	"\x12_stripe_payment_idJ\x04\b\x1c\x10\x1d\"\xf0\t\n" +
+	"\x12_stripe_payment_idB\x12\n" +
+	"\x10_customer_statusB\x1d\n" +
+	"\x1b_customer_commission_policyB\x16\n" +
+	"\x14_customer_created_atB\x16\n" +
+	"\x14_customer_updated_atB\x1a\n" +
+	"\x18_responsible_user_statusB\x1e\n" +
+	"\x1c_responsible_user_created_atB\x1e\n" +
+	"\x1c_responsible_user_updated_atJ\x04\b\x1c\x10\x1d\"\xe6\f\n" +
 	"\x16TransactionSummaryInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x12\x1b\n" +
@@ -9628,7 +9793,12 @@ const file_core_core_lookups_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x15 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\x16 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\x0e\n" +
+	"updated_at\x18\x16 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12,\n" +
+	"\x0fcustomer_status\x18\x18 \x01(\tH\tR\x0ecustomerStatus\x88\x01\x01\x12A\n" +
+	"\x1acustomer_commission_policy\x18\x19 \x01(\tH\n" +
+	"R\x18customerCommissionPolicy\x88\x01\x01\x12O\n" +
+	"\x13customer_created_at\x18\x1a \x01(\v2\x1a.google.protobuf.TimestampH\vR\x11customerCreatedAt\x88\x01\x01\x12O\n" +
+	"\x13customer_updated_at\x18\x1b \x01(\v2\x1a.google.protobuf.TimestampH\fR\x11customerUpdatedAt\x88\x01\x01B\x0e\n" +
 	"\f_customer_idB\x10\n" +
 	"\x0e_customer_nameB\x12\n" +
 	"\x10_customer_numberB\x1a\n" +
@@ -9637,7 +9807,11 @@ const file_core_core_lookups_proto_rawDesc = "" +
 	"\x16_transaction_method_idB\x17\n" +
 	"\x15_adjustment_type_codeB\x17\n" +
 	"\x15_adjustment_type_nameB\x15\n" +
-	"\x13_adjustment_type_idJ\x04\b\x17\x10\x18\"\x8c\x05\n" +
+	"\x13_adjustment_type_idB\x12\n" +
+	"\x10_customer_statusB\x1d\n" +
+	"\x1b_customer_commission_policyB\x16\n" +
+	"\x14_customer_created_atB\x16\n" +
+	"\x14_customer_updated_atJ\x04\b\x17\x10\x18\"\x8c\x05\n" +
 	"\x19TransactionAllocationInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tamount_id\x18\x02 \x01(\tR\bamountId\x12!\n" +
@@ -10410,88 +10584,94 @@ var file_core_core_lookups_proto_depIdxs = []int32{
 	53,  // 45: core.TransactionInfo.allocations:type_name -> core.TransactionAllocationInfo
 	153, // 46: core.TransactionInfo.created_at:type_name -> google.protobuf.Timestamp
 	153, // 47: core.TransactionInfo.updated_at:type_name -> google.protobuf.Timestamp
-	153, // 48: core.TransactionSummaryInfo.created_at:type_name -> google.protobuf.Timestamp
-	153, // 49: core.TransactionSummaryInfo.updated_at:type_name -> google.protobuf.Timestamp
-	153, // 50: core.TransactionAllocationInfo.created_at:type_name -> google.protobuf.Timestamp
-	153, // 51: core.TransactionAllocationInfo.updated_at:type_name -> google.protobuf.Timestamp
-	153, // 52: core.ListTransactionsRequest.start_date:type_name -> google.protobuf.Timestamp
-	153, // 53: core.ListTransactionsRequest.end_date:type_name -> google.protobuf.Timestamp
-	52,  // 54: core.ListTransactionsResponse.transactions:type_name -> core.TransactionSummaryInfo
-	150, // 55: core.ListTransactionsResponse.page_info:type_name -> core.PageInfo
-	51,  // 56: core.GetTransactionResponse.transaction:type_name -> core.TransactionInfo
-	51,  // 57: core.CreateTransactionResponse.transaction:type_name -> core.TransactionInfo
-	51,  // 58: core.UpdateTransactionResponse.transaction:type_name -> core.TransactionInfo
-	51,  // 59: core.DeleteTransactionResponse.transaction:type_name -> core.TransactionInfo
-	51,  // 60: core.ListAccountTransactionsResponse.transactions:type_name -> core.TransactionInfo
-	150, // 61: core.ListAccountTransactionsResponse.page_info:type_name -> core.PageInfo
-	153, // 62: core.ListSettlementsRequest.start_date:type_name -> google.protobuf.Timestamp
-	153, // 63: core.ListSettlementsRequest.end_date:type_name -> google.protobuf.Timestamp
-	78,  // 64: core.ListSettlementsResponse.settlements:type_name -> core.SettlementSummaryInfo
-	150, // 65: core.ListSettlementsResponse.page_info:type_name -> core.PageInfo
-	77,  // 66: core.GetSettlementResponse.settlement:type_name -> core.SettlementInfo
-	71,  // 67: core.CreateSettlementRequest.allocations:type_name -> core.CreateSettlementAllocationParam
-	77,  // 68: core.CreateSettlementResponse.settlement:type_name -> core.SettlementInfo
-	77,  // 69: core.UpdateSettlementResponse.settlement:type_name -> core.SettlementInfo
-	77,  // 70: core.DeleteSettlementResponse.settlement:type_name -> core.SettlementInfo
-	53,  // 71: core.SettlementInfo.allocations:type_name -> core.TransactionAllocationInfo
-	153, // 72: core.SettlementInfo.created_at:type_name -> google.protobuf.Timestamp
-	153, // 73: core.SettlementInfo.updated_at:type_name -> google.protobuf.Timestamp
-	153, // 74: core.SettlementSummaryInfo.created_at:type_name -> google.protobuf.Timestamp
-	153, // 75: core.SettlementSummaryInfo.updated_at:type_name -> google.protobuf.Timestamp
-	153, // 76: core.ListAllocationEntriesRequest.start_date:type_name -> google.protobuf.Timestamp
-	153, // 77: core.ListAllocationEntriesRequest.end_date:type_name -> google.protobuf.Timestamp
-	81,  // 78: core.ListAllocationEntriesResponse.entries:type_name -> core.AllocationEntryInfo
-	150, // 79: core.ListAllocationEntriesResponse.page_info:type_name -> core.PageInfo
-	153, // 80: core.AllocationEntryInfo.created_at:type_name -> google.protobuf.Timestamp
-	53,  // 81: core.UpdateTransactionAllocationResponse.allocation:type_name -> core.TransactionAllocationInfo
-	153, // 82: core.ListOpenCreditsRequest.start_date:type_name -> google.protobuf.Timestamp
-	153, // 83: core.ListOpenCreditsRequest.end_date:type_name -> google.protobuf.Timestamp
-	88,  // 84: core.ListOpenCreditsResponse.entries:type_name -> core.OpenCreditEntryInfo
-	150, // 85: core.ListOpenCreditsResponse.page_info:type_name -> core.PageInfo
-	89,  // 86: core.OpenCreditEntryInfo.invoice_allocations:type_name -> core.OpenCreditInvoiceAllocationInfo
-	153, // 87: core.OpenCreditEntryInfo.created_at:type_name -> google.protobuf.Timestamp
-	153, // 88: core.UserInfo.email_verified_at:type_name -> google.protobuf.Timestamp
-	153, // 89: core.UserInfo.created_at:type_name -> google.protobuf.Timestamp
-	153, // 90: core.UserInfo.updated_at:type_name -> google.protobuf.Timestamp
-	90,  // 91: core.GetUserResponse.user:type_name -> core.UserInfo
-	153, // 92: core.UpdateUserRequest.email_verified_at:type_name -> google.protobuf.Timestamp
-	90,  // 93: core.UpdateUserResponse.user:type_name -> core.UserInfo
-	0,   // 94: core.CheckDuplicateRequest.type:type_name -> core.DuplicateCheckType
-	1,   // 95: core.EmailRecordRequest.type:type_name -> core.EmailRecordType
-	109, // 96: core.ListCatalogProductLinesResponse.product_lines:type_name -> core.CatalogProductLineProto
-	150, // 97: core.ListCatalogProductLinesResponse.page_info:type_name -> core.PageInfo
-	112, // 98: core.ListCatalogProductsResponse.categories:type_name -> core.CatalogCategoryProto
-	150, // 99: core.ListCatalogProductsResponse.page_info:type_name -> core.PageInfo
-	113, // 100: core.CatalogCategoryProto.products:type_name -> core.CatalogProductProto
-	114, // 101: core.CatalogCategoryProto.properties:type_name -> core.CatalogPropertyProto
-	115, // 102: core.CatalogProductProto.attributes:type_name -> core.CatalogAttributeProto
-	153, // 103: core.DCLocationProto.created_at:type_name -> google.protobuf.Timestamp
-	153, // 104: core.DCLocationProto.updated_at:type_name -> google.protobuf.Timestamp
-	120, // 105: core.ListDCLocationsResponse.dc_locations:type_name -> core.DCLocationProto
-	150, // 106: core.ListDCLocationsResponse.page_info:type_name -> core.PageInfo
-	120, // 107: core.GetDCLocationResponse.dc_location:type_name -> core.DCLocationProto
-	120, // 108: core.CreateDCLocationResponse.dc_location:type_name -> core.DCLocationProto
-	120, // 109: core.UpdateDCLocationResponse.dc_location:type_name -> core.DCLocationProto
-	153, // 110: core.EDIRunProto.completed_at:type_name -> google.protobuf.Timestamp
-	153, // 111: core.EDIRunProto.created_at:type_name -> google.protobuf.Timestamp
-	153, // 112: core.EDIRunProto.updated_at:type_name -> google.protobuf.Timestamp
-	130, // 113: core.ListEDIRunsResponse.edi_runs:type_name -> core.EDIRunProto
-	150, // 114: core.ListEDIRunsResponse.page_info:type_name -> core.PageInfo
-	130, // 115: core.GetEDIRunResponse.edi_run:type_name -> core.EDIRunProto
-	155, // 116: core.InventoryItemProto.item:type_name -> core.ItemInfo
-	136, // 117: core.ListInventoriesResponse.items:type_name -> core.InventoryItemProto
-	150, // 118: core.ListInventoriesResponse.page_info:type_name -> core.PageInfo
-	139, // 119: core.AnalyzeWeeksOfSalesResponse.items:type_name -> core.WeeksOfSalesItemProto
-	141, // 120: core.BulkReconcileItemsRequest.data:type_name -> core.BulkReconcileItemInput
-	143, // 121: core.BulkReconcileItemsResponse.reconciled_items:type_name -> core.ReconciledItemProto
-	144, // 122: core.BulkReconcileItemsResponse.skipped_items:type_name -> core.SkippedItemProto
-	145, // 123: core.BulkReconcileItemsResponse.errors:type_name -> core.ReconcileErrorProto
-	154, // 124: core.ValidateUnitsResponse.UnitsEntry.value:type_name -> core.UnitInfo
-	125, // [125:125] is the sub-list for method output_type
-	125, // [125:125] is the sub-list for method input_type
-	125, // [125:125] is the sub-list for extension type_name
-	125, // [125:125] is the sub-list for extension extendee
-	0,   // [0:125] is the sub-list for field type_name
+	153, // 48: core.TransactionInfo.customer_created_at:type_name -> google.protobuf.Timestamp
+	153, // 49: core.TransactionInfo.customer_updated_at:type_name -> google.protobuf.Timestamp
+	153, // 50: core.TransactionInfo.responsible_user_created_at:type_name -> google.protobuf.Timestamp
+	153, // 51: core.TransactionInfo.responsible_user_updated_at:type_name -> google.protobuf.Timestamp
+	153, // 52: core.TransactionSummaryInfo.created_at:type_name -> google.protobuf.Timestamp
+	153, // 53: core.TransactionSummaryInfo.updated_at:type_name -> google.protobuf.Timestamp
+	153, // 54: core.TransactionSummaryInfo.customer_created_at:type_name -> google.protobuf.Timestamp
+	153, // 55: core.TransactionSummaryInfo.customer_updated_at:type_name -> google.protobuf.Timestamp
+	153, // 56: core.TransactionAllocationInfo.created_at:type_name -> google.protobuf.Timestamp
+	153, // 57: core.TransactionAllocationInfo.updated_at:type_name -> google.protobuf.Timestamp
+	153, // 58: core.ListTransactionsRequest.start_date:type_name -> google.protobuf.Timestamp
+	153, // 59: core.ListTransactionsRequest.end_date:type_name -> google.protobuf.Timestamp
+	52,  // 60: core.ListTransactionsResponse.transactions:type_name -> core.TransactionSummaryInfo
+	150, // 61: core.ListTransactionsResponse.page_info:type_name -> core.PageInfo
+	51,  // 62: core.GetTransactionResponse.transaction:type_name -> core.TransactionInfo
+	51,  // 63: core.CreateTransactionResponse.transaction:type_name -> core.TransactionInfo
+	51,  // 64: core.UpdateTransactionResponse.transaction:type_name -> core.TransactionInfo
+	51,  // 65: core.DeleteTransactionResponse.transaction:type_name -> core.TransactionInfo
+	51,  // 66: core.ListAccountTransactionsResponse.transactions:type_name -> core.TransactionInfo
+	150, // 67: core.ListAccountTransactionsResponse.page_info:type_name -> core.PageInfo
+	153, // 68: core.ListSettlementsRequest.start_date:type_name -> google.protobuf.Timestamp
+	153, // 69: core.ListSettlementsRequest.end_date:type_name -> google.protobuf.Timestamp
+	78,  // 70: core.ListSettlementsResponse.settlements:type_name -> core.SettlementSummaryInfo
+	150, // 71: core.ListSettlementsResponse.page_info:type_name -> core.PageInfo
+	77,  // 72: core.GetSettlementResponse.settlement:type_name -> core.SettlementInfo
+	71,  // 73: core.CreateSettlementRequest.allocations:type_name -> core.CreateSettlementAllocationParam
+	77,  // 74: core.CreateSettlementResponse.settlement:type_name -> core.SettlementInfo
+	77,  // 75: core.UpdateSettlementResponse.settlement:type_name -> core.SettlementInfo
+	77,  // 76: core.DeleteSettlementResponse.settlement:type_name -> core.SettlementInfo
+	53,  // 77: core.SettlementInfo.allocations:type_name -> core.TransactionAllocationInfo
+	153, // 78: core.SettlementInfo.created_at:type_name -> google.protobuf.Timestamp
+	153, // 79: core.SettlementInfo.updated_at:type_name -> google.protobuf.Timestamp
+	153, // 80: core.SettlementSummaryInfo.created_at:type_name -> google.protobuf.Timestamp
+	153, // 81: core.SettlementSummaryInfo.updated_at:type_name -> google.protobuf.Timestamp
+	153, // 82: core.ListAllocationEntriesRequest.start_date:type_name -> google.protobuf.Timestamp
+	153, // 83: core.ListAllocationEntriesRequest.end_date:type_name -> google.protobuf.Timestamp
+	81,  // 84: core.ListAllocationEntriesResponse.entries:type_name -> core.AllocationEntryInfo
+	150, // 85: core.ListAllocationEntriesResponse.page_info:type_name -> core.PageInfo
+	153, // 86: core.AllocationEntryInfo.created_at:type_name -> google.protobuf.Timestamp
+	53,  // 87: core.UpdateTransactionAllocationResponse.allocation:type_name -> core.TransactionAllocationInfo
+	153, // 88: core.ListOpenCreditsRequest.start_date:type_name -> google.protobuf.Timestamp
+	153, // 89: core.ListOpenCreditsRequest.end_date:type_name -> google.protobuf.Timestamp
+	88,  // 90: core.ListOpenCreditsResponse.entries:type_name -> core.OpenCreditEntryInfo
+	150, // 91: core.ListOpenCreditsResponse.page_info:type_name -> core.PageInfo
+	89,  // 92: core.OpenCreditEntryInfo.invoice_allocations:type_name -> core.OpenCreditInvoiceAllocationInfo
+	153, // 93: core.OpenCreditEntryInfo.created_at:type_name -> google.protobuf.Timestamp
+	153, // 94: core.UserInfo.email_verified_at:type_name -> google.protobuf.Timestamp
+	153, // 95: core.UserInfo.created_at:type_name -> google.protobuf.Timestamp
+	153, // 96: core.UserInfo.updated_at:type_name -> google.protobuf.Timestamp
+	90,  // 97: core.GetUserResponse.user:type_name -> core.UserInfo
+	153, // 98: core.UpdateUserRequest.email_verified_at:type_name -> google.protobuf.Timestamp
+	90,  // 99: core.UpdateUserResponse.user:type_name -> core.UserInfo
+	0,   // 100: core.CheckDuplicateRequest.type:type_name -> core.DuplicateCheckType
+	1,   // 101: core.EmailRecordRequest.type:type_name -> core.EmailRecordType
+	109, // 102: core.ListCatalogProductLinesResponse.product_lines:type_name -> core.CatalogProductLineProto
+	150, // 103: core.ListCatalogProductLinesResponse.page_info:type_name -> core.PageInfo
+	112, // 104: core.ListCatalogProductsResponse.categories:type_name -> core.CatalogCategoryProto
+	150, // 105: core.ListCatalogProductsResponse.page_info:type_name -> core.PageInfo
+	113, // 106: core.CatalogCategoryProto.products:type_name -> core.CatalogProductProto
+	114, // 107: core.CatalogCategoryProto.properties:type_name -> core.CatalogPropertyProto
+	115, // 108: core.CatalogProductProto.attributes:type_name -> core.CatalogAttributeProto
+	153, // 109: core.DCLocationProto.created_at:type_name -> google.protobuf.Timestamp
+	153, // 110: core.DCLocationProto.updated_at:type_name -> google.protobuf.Timestamp
+	120, // 111: core.ListDCLocationsResponse.dc_locations:type_name -> core.DCLocationProto
+	150, // 112: core.ListDCLocationsResponse.page_info:type_name -> core.PageInfo
+	120, // 113: core.GetDCLocationResponse.dc_location:type_name -> core.DCLocationProto
+	120, // 114: core.CreateDCLocationResponse.dc_location:type_name -> core.DCLocationProto
+	120, // 115: core.UpdateDCLocationResponse.dc_location:type_name -> core.DCLocationProto
+	153, // 116: core.EDIRunProto.completed_at:type_name -> google.protobuf.Timestamp
+	153, // 117: core.EDIRunProto.created_at:type_name -> google.protobuf.Timestamp
+	153, // 118: core.EDIRunProto.updated_at:type_name -> google.protobuf.Timestamp
+	130, // 119: core.ListEDIRunsResponse.edi_runs:type_name -> core.EDIRunProto
+	150, // 120: core.ListEDIRunsResponse.page_info:type_name -> core.PageInfo
+	130, // 121: core.GetEDIRunResponse.edi_run:type_name -> core.EDIRunProto
+	155, // 122: core.InventoryItemProto.item:type_name -> core.ItemInfo
+	136, // 123: core.ListInventoriesResponse.items:type_name -> core.InventoryItemProto
+	150, // 124: core.ListInventoriesResponse.page_info:type_name -> core.PageInfo
+	139, // 125: core.AnalyzeWeeksOfSalesResponse.items:type_name -> core.WeeksOfSalesItemProto
+	141, // 126: core.BulkReconcileItemsRequest.data:type_name -> core.BulkReconcileItemInput
+	143, // 127: core.BulkReconcileItemsResponse.reconciled_items:type_name -> core.ReconciledItemProto
+	144, // 128: core.BulkReconcileItemsResponse.skipped_items:type_name -> core.SkippedItemProto
+	145, // 129: core.BulkReconcileItemsResponse.errors:type_name -> core.ReconcileErrorProto
+	154, // 130: core.ValidateUnitsResponse.UnitsEntry.value:type_name -> core.UnitInfo
+	131, // [131:131] is the sub-list for method output_type
+	131, // [131:131] is the sub-list for method input_type
+	131, // [131:131] is the sub-list for extension type_name
+	131, // [131:131] is the sub-list for extension extendee
+	0,   // [0:131] is the sub-list for field type_name
 }
 
 func init() { file_core_core_lookups_proto_init() }

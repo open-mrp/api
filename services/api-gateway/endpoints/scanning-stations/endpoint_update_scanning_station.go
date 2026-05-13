@@ -23,8 +23,8 @@ type UpdateScanningStationRequest struct {
 	LabelSizeCode *constants.LabelSizeCode `json:"label_size,omitempty" nullable:"false"`
 	// Label type code.
 	LabelTypeCode *constants.LabelTypeCode `json:"label_type,omitempty" nullable:"false"`
-	// Whether material check is required. If `true`, the operator at this station must manually verify the material before proceeding.
-	MaterialCheckRequired *bool `json:"material_check_required,omitempty" nullable:"false"`
+	// Operator requirement behavior for this station.
+	OperatorRequirement *constants.OperatorRequirement `json:"operator_requirement,omitempty" nullable:"false"`
 }
 
 var sampleUpdateScanningStationName = "Station B"
@@ -54,9 +54,8 @@ func (e *UpdateScanningStationEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 			return svc.(ScanningStationSvc).UpdateScanningStation
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType:    constants.ObjectTypeScanningStation,
-			Fields:        []string{"department", "production_steps"},
-			DefaultFields: []string{"department"},
+			ObjectType: constants.ObjectTypeScanningStation,
+			Fields:     []string{"department", "production_steps"},
 		}),
 	}
 }

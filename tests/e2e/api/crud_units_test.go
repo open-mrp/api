@@ -35,12 +35,18 @@ func TestUnits_List(t *testing.T) {
 
 func TestUnits_ListResponseShape(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(unitsPath, nil)
+	status, body, err := apiClient.GetListRaw(unitsPath, nil)
 	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+	AssertResponseBodyValid(t, body)
 
-	for _, item := range list.Data {
-		m := parseJSON(item)
-		require.NotNil(t, m)
+	list := parseJSON(body)
+	data, ok := list["data"].([]any)
+	require.True(t, ok, "units list data should be an array")
+
+	for _, item := range data {
+		m, ok := item.(map[string]any)
+		require.True(t, ok, "unit list item should be an object")
 		assert.Equal(t, "unit", jsonField(m, "object"))
 		assert.NotEmpty(t, jsonField(m, "id"))
 		assert.NotEmpty(t, jsonField(m, "name"))

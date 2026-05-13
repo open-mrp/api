@@ -24,25 +24,40 @@ SELECT
     c.id AS default_carrier_id,
     c.name AS default_carrier_name,
     c.is_portal_enabled AS default_carrier_is_portal_enabled,
+    c.created_at AS default_carrier_created_at,
+    c.updated_at AS default_carrier_updated_at,
     co.id AS default_carrier_option_id,
     co.name AS default_carrier_option_name,
+    co.service_level_token AS default_carrier_option_service_level_token,
+    co.is_portal_enabled AS default_carrier_option_is_portal_enabled,
+    co.created_at AS default_carrier_option_created_at,
+    co.updated_at AS default_carrier_option_updated_at,
     pt.id AS payment_term_id,
     pt.name AS payment_term_name,
     pt.is_active AS payment_term_is_active,
+    pt.created_at AS payment_term_created_at,
+    pt.updated_at AS payment_term_updated_at,
     st.id AS shipping_term_id,
     st.name AS shipping_term_name,
     st.is_freight_exempt AS shipping_term_is_freight_exempt,
     st.is_carrier_rate AS shipping_term_is_carrier_rate,
+    st.created_at AS shipping_term_created_at,
+    st.updated_at AS shipping_term_updated_at,
     p.id AS priority_id,
     p.code AS priority_code,
     p.name AS priority_name,
     sr.id AS default_sales_rep_id,
     sru.name AS default_sales_rep_name,
+    sr.status_code AS default_sales_rep_status_code,
+    sr.created_at AS default_sales_rep_created_at,
+    sr.updated_at AS default_sales_rep_updated_at,
     tg.id AS type_group_id,
     tg.name AS type_group_name,
     tg.commission_status_code AS type_group_commission_status_code,
     tg.freight_status_code AS type_group_freight_status_code,
     tg.account_group_type_code AS type_group_type_code,
+    tg.created_at AS type_group_created_at,
+    tg.updated_at AS type_group_updated_at,
     ba.id AS default_billing_address_id,
     ba.name AS default_billing_address_name,
     ba.phone AS default_billing_address_phone,
@@ -71,6 +86,8 @@ SELECT
     sg.country AS default_shipping_country,
     sa.created_at AS default_shipping_address_created_at,
     sa.updated_at AS default_shipping_address_updated_at,
+    par.created_at AS parent_account_created_at,
+    par.updated_at AS parent_account_updated_at,
     clq.id AS credit_limit_id,
     clq.value AS credit_limit_value,
     clu.id AS credit_limit_unit_id,
@@ -154,7 +171,14 @@ WHERE ar.owner_account_id = sqlc.arg('owner_account_id')
   )
   AND (
     sqlc.arg('include_parent_account_filter') = false
-    OR EXISTS (SELECT 1 FROM account_relation car WHERE car.parent_account_relation_id = ar.id)
+    OR (
+      sqlc.arg('parent_account_filter_value') = true
+      AND EXISTS (SELECT 1 FROM account_relation car WHERE car.parent_account_relation_id = ar.id)
+    )
+    OR (
+      sqlc.arg('parent_account_filter_value') = false
+      AND NOT EXISTS (SELECT 1 FROM account_relation car WHERE car.parent_account_relation_id = ar.id)
+    )
   )
   AND (
     (sqlc.narg('city') IS NULL AND sqlc.narg('state') IS NULL AND sqlc.narg('postal_code') IS NULL)
@@ -204,25 +228,40 @@ SELECT
     c.id AS default_carrier_id,
     c.name AS default_carrier_name,
     c.is_portal_enabled AS default_carrier_is_portal_enabled,
+    c.created_at AS default_carrier_created_at,
+    c.updated_at AS default_carrier_updated_at,
     co.id AS default_carrier_option_id,
     co.name AS default_carrier_option_name,
+    co.service_level_token AS default_carrier_option_service_level_token,
+    co.is_portal_enabled AS default_carrier_option_is_portal_enabled,
+    co.created_at AS default_carrier_option_created_at,
+    co.updated_at AS default_carrier_option_updated_at,
     pt.id AS payment_term_id,
     pt.name AS payment_term_name,
     pt.is_active AS payment_term_is_active,
+    pt.created_at AS payment_term_created_at,
+    pt.updated_at AS payment_term_updated_at,
     st.id AS shipping_term_id,
     st.name AS shipping_term_name,
     st.is_freight_exempt AS shipping_term_is_freight_exempt,
     st.is_carrier_rate AS shipping_term_is_carrier_rate,
+    st.created_at AS shipping_term_created_at,
+    st.updated_at AS shipping_term_updated_at,
     p.id AS priority_id,
     p.code AS priority_code,
     p.name AS priority_name,
     sr.id AS default_sales_rep_id,
     sru.name AS default_sales_rep_name,
+    sr.status_code AS default_sales_rep_status_code,
+    sr.created_at AS default_sales_rep_created_at,
+    sr.updated_at AS default_sales_rep_updated_at,
     tg.id AS type_group_id,
     tg.name AS type_group_name,
     tg.commission_status_code AS type_group_commission_status_code,
     tg.freight_status_code AS type_group_freight_status_code,
     tg.account_group_type_code AS type_group_type_code,
+    tg.created_at AS type_group_created_at,
+    tg.updated_at AS type_group_updated_at,
     ba.id AS default_billing_address_id,
     ba.name AS default_billing_address_name,
     ba.phone AS default_billing_address_phone,
@@ -251,6 +290,8 @@ SELECT
     sg.country AS default_shipping_country,
     sa.created_at AS default_shipping_address_created_at,
     sa.updated_at AS default_shipping_address_updated_at,
+    par.created_at AS parent_account_created_at,
+    par.updated_at AS parent_account_updated_at,
     clq.id AS credit_limit_id,
     clq.value AS credit_limit_value,
     clu.id AS credit_limit_unit_id,
@@ -334,7 +375,14 @@ WHERE ar.owner_account_id = sqlc.arg('owner_account_id')
   )
   AND (
     sqlc.arg('include_parent_account_filter') = false
-    OR EXISTS (SELECT 1 FROM account_relation car WHERE car.parent_account_relation_id = ar.id)
+    OR (
+      sqlc.arg('parent_account_filter_value') = true
+      AND EXISTS (SELECT 1 FROM account_relation car WHERE car.parent_account_relation_id = ar.id)
+    )
+    OR (
+      sqlc.arg('parent_account_filter_value') = false
+      AND NOT EXISTS (SELECT 1 FROM account_relation car WHERE car.parent_account_relation_id = ar.id)
+    )
   )
   AND (
     (sqlc.narg('city') IS NULL AND sqlc.narg('state') IS NULL AND sqlc.narg('postal_code') IS NULL)
@@ -361,7 +409,12 @@ LIMIT ?;
 SELECT
     arpg.account_relation_id,
     ag.id,
-    ag.name
+    ag.name,
+    ag.commission_status_code,
+    ag.freight_status_code,
+    ag.account_group_type_code,
+    ag.created_at,
+    ag.updated_at
 FROM account_relation_price_group arpg
 INNER JOIN account_group ag ON ag.id = arpg.account_group_id
 WHERE arpg.account_relation_id IN (sqlc.slice('relation_ids'));
@@ -434,7 +487,14 @@ WHERE ar.owner_account_id = sqlc.arg('owner_account_id')
   )
   AND (
     sqlc.arg('include_parent_account_filter') = false
-    OR EXISTS (SELECT 1 FROM account_relation car WHERE car.parent_account_relation_id = ar.id)
+    OR (
+      sqlc.arg('parent_account_filter_value') = true
+      AND EXISTS (SELECT 1 FROM account_relation car WHERE car.parent_account_relation_id = ar.id)
+    )
+    OR (
+      sqlc.arg('parent_account_filter_value') = false
+      AND NOT EXISTS (SELECT 1 FROM account_relation car WHERE car.parent_account_relation_id = ar.id)
+    )
   )
   AND (
     (sqlc.narg('city') IS NULL AND sqlc.narg('state') IS NULL AND sqlc.narg('postal_code') IS NULL)
@@ -476,26 +536,43 @@ SELECT
     c.id AS default_carrier_id,
     c.name AS default_carrier_name,
     c.is_portal_enabled AS default_carrier_is_portal_enabled,
+    c.created_at AS default_carrier_created_at,
+    c.updated_at AS default_carrier_updated_at,
     co.id AS default_carrier_option_id,
     co.name AS default_carrier_option_name,
+    co.service_level_token AS default_carrier_option_service_level_token,
+    co.is_portal_enabled AS default_carrier_option_is_portal_enabled,
+    co.created_at AS default_carrier_option_created_at,
+    co.updated_at AS default_carrier_option_updated_at,
     pt.id AS payment_term_id,
     pt.name AS payment_term_name,
     pt.is_active AS payment_term_is_active,
+    pt.created_at AS payment_term_created_at,
+    pt.updated_at AS payment_term_updated_at,
     st.id AS shipping_term_id,
     st.name AS shipping_term_name,
     st.is_freight_exempt AS shipping_term_is_freight_exempt,
     st.is_carrier_rate AS shipping_term_is_carrier_rate,
+    st.created_at AS shipping_term_created_at,
+    st.updated_at AS shipping_term_updated_at,
     p.id AS priority_id,
     p.code AS priority_code,
     p.name AS priority_name,
     sr.id AS default_sales_rep_id,
     sru.name AS default_sales_rep_name,
+    sr.status_code AS default_sales_rep_status_code,
+    sr.created_at AS default_sales_rep_created_at,
+    sr.updated_at AS default_sales_rep_updated_at,
     tg.id AS type_group_id,
     tg.name AS type_group_name,
     tg.commission_status_code AS type_group_commission_status_code,
     tg.freight_status_code AS type_group_freight_status_code,
     tg.account_group_type_code AS type_group_type_code,
+    tg.created_at AS type_group_created_at,
+    tg.updated_at AS type_group_updated_at,
     par.external_number AS parent_account_number,
+    par.created_at AS parent_account_created_at,
+    par.updated_at AS parent_account_updated_at,
     ba.id AS default_billing_address_id,
     ba.name AS default_billing_address_name,
     ba.phone AS default_billing_address_phone,
@@ -558,7 +635,12 @@ WHERE ar.owner_account_id = sqlc.arg('owner_account_id')
 -- name: GetCustomerPriceGroups :many
 SELECT
     ag.id,
-    ag.name
+    ag.name,
+    ag.commission_status_code,
+    ag.freight_status_code,
+    ag.account_group_type_code,
+    ag.created_at,
+    ag.updated_at
 FROM account_relation_price_group arpg
 INNER JOIN account_group ag ON ag.id = arpg.account_group_id
 WHERE arpg.account_relation_id = sqlc.arg('account_relation_id');

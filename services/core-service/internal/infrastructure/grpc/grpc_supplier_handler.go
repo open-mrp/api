@@ -95,7 +95,10 @@ func (h *gRPCHandler) GetSupplier(ctx context.Context, req *pb.GetSupplierReques
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	supplier, apiErr := h.supplierSvc.GetSupplier(ctx, req.Id)
+	supplier, apiErr := h.supplierSvc.GetSupplier(ctx, domain.GetSupplierParams{
+		SupplierID: req.Id,
+		Includes:   req.Includes,
+	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
@@ -114,9 +117,10 @@ func (h *gRPCHandler) CreateSupplier(ctx context.Context, req *pb.CreateSupplier
 	defer finalizeIdempotency()
 
 	params := domain.CreateSupplierParams{
-		Name:   req.Name,
-		Number: req.Number,
-		Note:   req.Note,
+		Name:     req.Name,
+		Number:   req.Number,
+		Note:     req.Note,
+		Includes: req.Includes,
 	}
 
 	if req.BillToAddress != nil {
@@ -153,6 +157,7 @@ func (h *gRPCHandler) UpdateSupplier(ctx context.Context, req *pb.UpdateSupplier
 		UpdateNote:      req.UpdateNote,
 		BillToAddressID: req.BillToAddressId,
 		ShipToAddressID: req.ShipToAddressId,
+		Includes:        req.Includes,
 	}
 
 	supplier, apiErr := h.supplierSvc.UpdateSupplier(ctx, params)

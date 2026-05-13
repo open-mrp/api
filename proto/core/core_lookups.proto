@@ -177,6 +177,7 @@ message ListUnitGroupsRequest {
   int32 limit = 2;
   optional string query = 3;
   optional string type = 4;
+  repeated string includes = 5;
 }
 message ListUnitGroupsResponse {
   repeated UnitGroupInfo unit_groups = 1;
@@ -184,6 +185,7 @@ message ListUnitGroupsResponse {
 }
 message GetUnitGroupRequest {
   string id = 1;
+  repeated string includes = 2;
 }
 message GetUnitGroupResponse {
   UnitGroupInfo unit_group = 1;
@@ -200,6 +202,7 @@ message CreateUnitGroupRequest {
   string type = 3;
   string base_unit_id = 4;
   repeated CreateUnitGroupUnitParam unit_conversions = 5;
+  repeated string includes = 6;
 }
 message CreateUnitGroupResponse {
   UnitGroupInfo unit_group = 1;
@@ -212,6 +215,7 @@ message UpdateUnitGroupRequest {
   optional string base_unit_id = 5;
   repeated CreateUnitGroupUnitParam unit_conversions = 6;
   bool update_unit_conversions = 7;
+  repeated string includes = 8;
 }
 message UpdateUnitGroupResponse {
   UnitGroupInfo unit_group = 1;
@@ -226,6 +230,7 @@ message UpsertUnitGroupUnitRequest {
   string discount_percentage = 4;
   bool is_visible = 5;
   string discount_fixed = 6;
+  repeated string includes = 7;
 }
 message UpsertUnitGroupUnitResponse {
   UnitGroupUnitInfo unit_group_unit = 1;
@@ -236,6 +241,7 @@ message DeleteUnitGroupUnitRequest {
 }
 message ListUnitGroupUnitsRequest {
   string unit_group_id = 1;
+  repeated string includes = 2;
 }
 message ListUnitGroupUnitsResponse {
   repeated UnitGroupUnitInfo unit_group_units = 1;
@@ -243,6 +249,7 @@ message ListUnitGroupUnitsResponse {
 message GetUnitGroupUnitRequest {
   string unit_group_id = 1;
   string unit_group_unit_id = 2;
+  repeated string includes = 3;
 }
 message GetUnitGroupUnitResponse {
   UnitGroupUnitInfo unit_group_unit = 1;
@@ -282,6 +289,13 @@ message TransactionInfo {
   repeated TransactionAllocationInfo allocations = 25;
   google.protobuf.Timestamp created_at = 26;
   google.protobuf.Timestamp updated_at = 27;
+  optional string customer_status = 29;
+  optional string customer_commission_policy = 30;
+  optional google.protobuf.Timestamp customer_created_at = 31;
+  optional google.protobuf.Timestamp customer_updated_at = 32;
+  optional string responsible_user_status = 33;
+  optional google.protobuf.Timestamp responsible_user_created_at = 34;
+  optional google.protobuf.Timestamp responsible_user_updated_at = 35;
 }
 message TransactionSummaryInfo {
   string id = 1;
@@ -307,6 +321,10 @@ message TransactionSummaryInfo {
   int32 allocation_count = 20;
   google.protobuf.Timestamp created_at = 21;
   google.protobuf.Timestamp updated_at = 22;
+  optional string customer_status = 24;
+  optional string customer_commission_policy = 25;
+  optional google.protobuf.Timestamp customer_created_at = 26;
+  optional google.protobuf.Timestamp customer_updated_at = 27;
 }
 message TransactionAllocationInfo {
   string id = 1;

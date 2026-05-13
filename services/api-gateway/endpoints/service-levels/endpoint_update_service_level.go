@@ -21,9 +21,9 @@ type UpdateServiceLevelRequest struct {
 	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// Service level code.
 	Code *string `json:"code,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// Customer portal visibility.
+	// Whether this service level will be available for customers to select in the customer portal.
 	CustomerPortalVisibility *constants.CustomerPortalVisibility `json:"customer_portal_visibility,omitempty" nullable:"false"`
-	// Whether this is the tenant's preferred default service level for the carrier.
+	// Default service levels are the default-selected service level for that carrier.
 	IsDefault *bool `json:"is_default,omitempty" nullable:"false"`
 }
 
@@ -41,7 +41,7 @@ type UpdateServiceLevelEndpoint struct{}
 func (e *UpdateServiceLevelEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateServiceLevelRequest, *apiresource.ServiceLevel] {
 	return &apiendpoint.APIEndpoint[*UpdateServiceLevelRequest, *apiresource.ServiceLevel]{
 		Title:             "Update Service Level",
-		Description:       "Partially updates a service level's name, code, and portal visibility.",
+		Description:       "Partially updates a service level.",
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/carriers/{carrier_id}/service-levels/{id}",

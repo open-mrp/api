@@ -26,12 +26,18 @@ func departmentToProto(d *domain.Department) *pb.DepartmentInfo {
 	if d.LocationName != nil {
 		info.LocationName = d.LocationName
 	}
+	if d.LocationTypeCode != nil {
+		info.LocationTypeCode = d.LocationTypeCode
+	}
 
 	stations := make([]*pb.LightScanningStationInfo, len(d.ScanningStations))
 	for i, s := range d.ScanningStations {
 		stations[i] = &pb.LightScanningStationInfo{
-			Id:   s.ID,
-			Name: s.Name,
+			Id:        s.ID,
+			Name:      s.Name,
+			Type:      s.Type,
+			CreatedAt: timestamppb.New(s.CreatedAt),
+			UpdatedAt: timestamppb.New(s.UpdatedAt),
 		}
 	}
 	info.ScanningStations = stations
@@ -39,8 +45,11 @@ func departmentToProto(d *domain.Department) *pb.DepartmentInfo {
 	machines := make([]*pb.LightMachineInfo, len(d.Machines))
 	for i, m := range d.Machines {
 		machines[i] = &pb.LightMachineInfo{
-			Id:   m.ID,
-			Name: m.Name,
+			Id:           m.ID,
+			Name:         m.Name,
+			SerialNumber: m.SerialNumber,
+			CreatedAt:    timestamppb.New(m.CreatedAt),
+			UpdatedAt:    timestamppb.New(m.UpdatedAt),
 		}
 	}
 	info.Machines = machines

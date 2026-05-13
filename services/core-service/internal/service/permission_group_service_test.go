@@ -46,7 +46,7 @@ func TestPermissionGroupSvcTestSuite(t *testing.T) {
 }
 
 func permissionGroupInternalIdentityCtx() context.Context {
-	adminCode := string(constants.RoleTypeCodeAdmin)
+	adminCode := string(constants.RoleTypeAdmin)
 	targetAccountID := "acct_test"
 	return appctx.WithIdentity(context.Background(), &types.Identity{
 		Type:   types.IdentityActorTypeUser,
@@ -55,7 +55,7 @@ func permissionGroupInternalIdentityCtx() context.Context {
 			RelationType: types.IdentityRelationTypeInternal,
 			ID:           "usr_test123",
 			AccountID:    &targetAccountID,
-			RoleTypeCode: &adminCode,
+			RoleType:     &adminCode,
 			Permissions: map[string]bool{
 				"permissions:read": true,
 			},
@@ -125,13 +125,13 @@ func (suite *PermissionGroupSvcTestSuite) TestListPermissionGroups_RequiresInter
 
 func (suite *PermissionGroupSvcTestSuite) TestListPermissionGroups_RequiresPermission() {
 	// Internal actor with custom role, without permissions:read
-	customCode := string(constants.RoleTypeCodeCustom)
+	customCode := string(constants.RoleTypeCustom)
 	ctx := appctx.WithIdentity(context.Background(), &types.Identity{
 		Type: types.IdentityActorTypeUser,
 		Actor: &types.IdentityActor{
 			RelationType: types.IdentityRelationTypeInternal,
 			ID:           "usr_test123",
-			RoleTypeCode: &customCode,
+			RoleType:     &customCode,
 			Permissions:  map[string]bool{},
 		},
 	})

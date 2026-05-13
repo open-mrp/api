@@ -14,7 +14,7 @@ const SampleProductTypeCode = "sale"
 
 // ProductType resource.
 type ProductType struct {
-	// Product type ID.
+	// Product ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=product_type"`

@@ -12,7 +12,7 @@ import (
 
 // Request to partially update a product type.
 type UpdateProductTypeRequest struct {
-	// Product type ID.
+	// Product ID.
 	ProductTypeID string `path:"id" validate:"required"`
 	// Display name.
 	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`

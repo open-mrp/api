@@ -41,12 +41,12 @@ func (e *UpdatePartEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdatePartR
 		Title:             "Update Part",
 		Description:       "Partially updates a part. Fields not provided retain their current values.",
 		Method:            http.MethodPatch,
-		Route:             "/v1/operations/parts/{id}",
+		Route:             "/v1/catalog/parts/{id}",
 		ContentType:       "application/json",
 		Request:           &UpdatePartRequest{},
 		Response:          &apiresource.Part{},
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdatePartRequest) (*apiresource.Part, *apierror.APIError) {
 			return svc.(PartSvc).UpdatePart

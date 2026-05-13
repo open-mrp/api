@@ -71,7 +71,7 @@ func ValidateResourceStruct(t *testing.T, name string, resource any) {
 	}
 
 	rv := reflect.ValueOf(resource)
-	if rv.Kind() == reflect.Ptr {
+	if rv.Kind() == reflect.Pointer {
 		rv = rv.Elem()
 	}
 	if rv.Kind() != reflect.Struct {
@@ -86,7 +86,7 @@ func ValidateResourceStruct(t *testing.T, name string, resource any) {
 		}
 
 		switch fv.Kind() {
-		case reflect.Ptr:
+		case reflect.Pointer:
 			// Expandable pointer fields are deliberately partial sub-resource
 			// references (ID + object only) until the caller requests expansion.
 			// Skip recursive validation for these fields.
@@ -156,7 +156,7 @@ func hasJSONTags(t reflect.Type) bool {
 // "Sandbox.OwnerAccount.".
 func collectExpandableNamespaces(resource any) map[string]bool {
 	rv := reflect.ValueOf(resource)
-	if rv.Kind() == reflect.Ptr {
+	if rv.Kind() == reflect.Pointer {
 		rv = rv.Elem()
 	}
 	if rv.Kind() != reflect.Struct {
@@ -203,7 +203,7 @@ func ValidateExpandableStubs(t *testing.T, name string, resource any) {
 		return
 	}
 	rv := reflect.ValueOf(resource)
-	if rv.Kind() == reflect.Ptr {
+	if rv.Kind() == reflect.Pointer {
 		rv = rv.Elem()
 	}
 	if rv.Kind() != reflect.Struct {
@@ -217,7 +217,7 @@ func ValidateExpandableStubs(t *testing.T, name string, resource any) {
 			continue
 		}
 		switch fv.Kind() {
-		case reflect.Ptr:
+		case reflect.Pointer:
 			if fv.IsNil() || fv.Elem().Kind() != reflect.Struct {
 				continue
 			}
@@ -225,7 +225,7 @@ func ValidateExpandableStubs(t *testing.T, name string, resource any) {
 		case reflect.Slice:
 			for j := 0; j < fv.Len(); j++ {
 				elem := fv.Index(j)
-				if elem.Kind() == reflect.Ptr {
+				if elem.Kind() == reflect.Pointer {
 					if elem.IsNil() {
 						continue
 					}
@@ -253,7 +253,7 @@ func validateStubFields(t *testing.T, path string, rv reflect.Value) {
 		}
 		// Skip types that are legitimately zero on stubs.
 		if ft.Type == timeType || fv.Kind() == reflect.Bool ||
-			fv.Kind() == reflect.Ptr || fv.Kind() == reflect.Slice ||
+			fv.Kind() == reflect.Pointer || fv.Kind() == reflect.Slice ||
 			fv.Kind() == reflect.Map {
 			continue
 		}
@@ -288,7 +288,7 @@ func resolveJSONNameFromType(rt reflect.Type, fieldName string) string {
 
 func resolveJSONName(resource any, fieldName string) string {
 	rv := reflect.ValueOf(resource)
-	if rv.Kind() == reflect.Ptr {
+	if rv.Kind() == reflect.Pointer {
 		rv = rv.Elem()
 	}
 	rt := rv.Type()

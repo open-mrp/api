@@ -16,7 +16,7 @@ import (
 
 type DeliverySvc interface {
 	ListDeliveries(ctx context.Context, req *ListDeliveriesRequest) (*apiresource.List[apiresource.DeliverySummary], *apierror.APIError)
-	GetDelivery(ctx context.Context, req *GetDeliveryRequest) (*apiresource.Delivery, *apierror.APIError)
+	GetDelivery(ctx context.Context, req *RetrieveDeliveryRequest) (*apiresource.Delivery, *apierror.APIError)
 }
 
 type DeliverySvcConfig struct {
@@ -81,7 +81,7 @@ func (m *deliverySvcImpl) ListDeliveries(ctx context.Context, req *ListDeliverie
 	return DeliveryListPresenter(resp), nil
 }
 
-func (m *deliverySvcImpl) GetDelivery(ctx context.Context, req *GetDeliveryRequest) (*apiresource.Delivery, *apierror.APIError) {
+func (m *deliverySvcImpl) GetDelivery(ctx context.Context, req *RetrieveDeliveryRequest) (*apiresource.Delivery, *apierror.APIError) {
 	pbReq := &pb.GetDeliveryRequest{
 		Id: req.DeliveryID,
 	}

@@ -34,11 +34,18 @@ func AddressPresenter(a *pb.AddressInfo) apiresource.Address {
 		Name:        a.Name,
 		Phone:       a.Phone,
 		Email:       a.Email,
-		IsDropShip:  a.IsDropShip,
+		Type:        addressTypeFromDropShip(a.IsDropShip),
 		Geolocation: GeolocationPresenter(a.Geolocation),
 		CreatedAt:   grpcutil.TimestampToTime(a.CreatedAt),
 		UpdatedAt:   grpcutil.TimestampToTime(a.UpdatedAt),
 	}
+}
+
+func addressTypeFromDropShip(isDropShip bool) constants.AddressType {
+	if isDropShip {
+		return constants.AddressTypeDropShip
+	}
+	return constants.AddressTypeStandard
 }
 
 func AddressListPresenter(resp *pb.ListAddressesResponse) *apiresource.List[apiresource.Address] {

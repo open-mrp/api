@@ -19,7 +19,7 @@ type CreateMachineRequest struct {
 	// Notes.
 	Notes *string `json:"notes,omitempty"`
 	// Department ID.
-	DepartmentID string `json:"department_id" validate:"required,max=191"`
+	DepartmentID string `json:"department_id" validate:"required"`
 }
 
 var sampleCreateMachineRequest = &CreateMachineRequest{

@@ -18,7 +18,7 @@ const SampleLocationTypeName = "Building"
 
 // LocationType resource.
 type LocationType struct {
-	// Location type ID.
+	// Location ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=location_type"`

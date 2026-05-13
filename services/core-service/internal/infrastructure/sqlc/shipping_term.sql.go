@@ -59,13 +59,35 @@ SELECT
     fr.id AS flat_rate_quantity_id,
     fr.value AS flat_rate_value,
     fr.unit_id AS flat_rate_unit_id,
+    fr.created_at AS flat_rate_quantity_created_at,
+    fr.updated_at AS flat_rate_quantity_updated_at,
+    fr_u.name AS flat_rate_unit_name,
     fr_u.abbreviation AS flat_rate_unit_abbreviation,
     fr_u.unit_dimension_code AS flat_rate_unit_type,
+    fr_u.ratio_numerator AS flat_rate_unit_ratio_numerator,
+    fr_u.ratio_denominator AS flat_rate_unit_ratio_denominator,
+    fr_u.offset_numerator AS flat_rate_unit_offset_numerator,
+    fr_u.offset_denominator AS flat_rate_unit_offset_denominator,
+    fr_u.is_base_unit AS flat_rate_unit_is_base_unit,
+    fr_u.account_id AS flat_rate_unit_account_id,
+    fr_u.created_at AS flat_rate_unit_created_at,
+    fr_u.updated_at AS flat_rate_unit_updated_at,
     mo.id AS minimum_order_quantity_id,
     mo.value AS minimum_order_value,
     mo.unit_id AS minimum_order_unit_id,
+    mo.created_at AS minimum_order_quantity_created_at,
+    mo.updated_at AS minimum_order_quantity_updated_at,
+    mo_u.name AS minimum_order_unit_name,
     mo_u.abbreviation AS minimum_order_unit_abbreviation,
-    mo_u.unit_dimension_code AS minimum_order_unit_type
+    mo_u.unit_dimension_code AS minimum_order_unit_type,
+    mo_u.ratio_numerator AS minimum_order_unit_ratio_numerator,
+    mo_u.ratio_denominator AS minimum_order_unit_ratio_denominator,
+    mo_u.offset_numerator AS minimum_order_unit_offset_numerator,
+    mo_u.offset_denominator AS minimum_order_unit_offset_denominator,
+    mo_u.is_base_unit AS minimum_order_unit_is_base_unit,
+    mo_u.account_id AS minimum_order_unit_account_id,
+    mo_u.created_at AS minimum_order_unit_created_at,
+    mo_u.updated_at AS minimum_order_unit_updated_at
 FROM shipping_term st
 LEFT JOIN quantity fr ON st.flat_rate_id = fr.id
 LEFT JOIN unit fr_u ON fr.unit_id = fr_u.id
@@ -81,25 +103,47 @@ type GetShippingTermParams struct {
 }
 
 type GetShippingTermRow struct {
-	ID                           string
-	Name                         string
-	IsFreightExempt              bool
-	IsCarrierRate                bool
-	AccountID                    sql.NullString
-	FlatRateID                   sql.NullString
-	MinimumOrderID               sql.NullString
-	CreatedAt                    time.Time
-	UpdatedAt                    time.Time
-	FlatRateQuantityID           sql.NullString
-	FlatRateValue                sql.NullString
-	FlatRateUnitID               sql.NullString
-	FlatRateUnitAbbreviation     sql.NullString
-	FlatRateUnitType             sql.NullString
-	MinimumOrderQuantityID       sql.NullString
-	MinimumOrderValue            sql.NullString
-	MinimumOrderUnitID           sql.NullString
-	MinimumOrderUnitAbbreviation sql.NullString
-	MinimumOrderUnitType         sql.NullString
+	ID                                string
+	Name                              string
+	IsFreightExempt                   bool
+	IsCarrierRate                     bool
+	AccountID                         sql.NullString
+	FlatRateID                        sql.NullString
+	MinimumOrderID                    sql.NullString
+	CreatedAt                         time.Time
+	UpdatedAt                         time.Time
+	FlatRateQuantityID                sql.NullString
+	FlatRateValue                     sql.NullString
+	FlatRateUnitID                    sql.NullString
+	FlatRateQuantityCreatedAt         sql.NullTime
+	FlatRateQuantityUpdatedAt         sql.NullTime
+	FlatRateUnitName                  sql.NullString
+	FlatRateUnitAbbreviation          sql.NullString
+	FlatRateUnitType                  sql.NullString
+	FlatRateUnitRatioNumerator        sql.NullString
+	FlatRateUnitRatioDenominator      sql.NullString
+	FlatRateUnitOffsetNumerator       sql.NullString
+	FlatRateUnitOffsetDenominator     sql.NullString
+	FlatRateUnitIsBaseUnit            sql.NullBool
+	FlatRateUnitAccountID             sql.NullString
+	FlatRateUnitCreatedAt             sql.NullTime
+	FlatRateUnitUpdatedAt             sql.NullTime
+	MinimumOrderQuantityID            sql.NullString
+	MinimumOrderValue                 sql.NullString
+	MinimumOrderUnitID                sql.NullString
+	MinimumOrderQuantityCreatedAt     sql.NullTime
+	MinimumOrderQuantityUpdatedAt     sql.NullTime
+	MinimumOrderUnitName              sql.NullString
+	MinimumOrderUnitAbbreviation      sql.NullString
+	MinimumOrderUnitType              sql.NullString
+	MinimumOrderUnitRatioNumerator    sql.NullString
+	MinimumOrderUnitRatioDenominator  sql.NullString
+	MinimumOrderUnitOffsetNumerator   sql.NullString
+	MinimumOrderUnitOffsetDenominator sql.NullString
+	MinimumOrderUnitIsBaseUnit        sql.NullBool
+	MinimumOrderUnitAccountID         sql.NullString
+	MinimumOrderUnitCreatedAt         sql.NullTime
+	MinimumOrderUnitUpdatedAt         sql.NullTime
 }
 
 func (q *Queries) GetShippingTerm(ctx context.Context, arg GetShippingTermParams) (GetShippingTermRow, error) {
@@ -118,13 +162,35 @@ func (q *Queries) GetShippingTerm(ctx context.Context, arg GetShippingTermParams
 		&i.FlatRateQuantityID,
 		&i.FlatRateValue,
 		&i.FlatRateUnitID,
+		&i.FlatRateQuantityCreatedAt,
+		&i.FlatRateQuantityUpdatedAt,
+		&i.FlatRateUnitName,
 		&i.FlatRateUnitAbbreviation,
 		&i.FlatRateUnitType,
+		&i.FlatRateUnitRatioNumerator,
+		&i.FlatRateUnitRatioDenominator,
+		&i.FlatRateUnitOffsetNumerator,
+		&i.FlatRateUnitOffsetDenominator,
+		&i.FlatRateUnitIsBaseUnit,
+		&i.FlatRateUnitAccountID,
+		&i.FlatRateUnitCreatedAt,
+		&i.FlatRateUnitUpdatedAt,
 		&i.MinimumOrderQuantityID,
 		&i.MinimumOrderValue,
 		&i.MinimumOrderUnitID,
+		&i.MinimumOrderQuantityCreatedAt,
+		&i.MinimumOrderQuantityUpdatedAt,
+		&i.MinimumOrderUnitName,
 		&i.MinimumOrderUnitAbbreviation,
 		&i.MinimumOrderUnitType,
+		&i.MinimumOrderUnitRatioNumerator,
+		&i.MinimumOrderUnitRatioDenominator,
+		&i.MinimumOrderUnitOffsetNumerator,
+		&i.MinimumOrderUnitOffsetDenominator,
+		&i.MinimumOrderUnitIsBaseUnit,
+		&i.MinimumOrderUnitAccountID,
+		&i.MinimumOrderUnitCreatedAt,
+		&i.MinimumOrderUnitUpdatedAt,
 	)
 	return i, err
 }
@@ -228,27 +294,45 @@ func (q *Queries) InsertShippingTerm(ctx context.Context, arg InsertShippingTerm
 	return err
 }
 
-const listFreeShippingRulesByShippingTermID = `-- name: ListFreeShippingRulesByShippingTermID :many
-SELECT id, carrier_option_id
-FROM shipping_term_free_shipping_rule
-WHERE shipping_term_id = ?
+const listFreeShippingCarrierOptionsByShippingTermID = `-- name: ListFreeShippingCarrierOptionsByShippingTermID :many
+SELECT
+    co.id,
+    co.code,
+    co.name,
+    co.service_level_token,
+    co.is_portal_enabled,
+    co.is_default,
+    co.carrier_id,
+    co.account_id,
+    co.created_at,
+    co.updated_at
+FROM shipping_term_free_shipping_rule stfsr
+INNER JOIN carrier_option co ON co.id = stfsr.carrier_option_id
+WHERE stfsr.shipping_term_id = ?
+ORDER BY co.name ASC
 `
 
-type ListFreeShippingRulesByShippingTermIDRow struct {
-	ID              string
-	CarrierOptionID string
-}
-
-func (q *Queries) ListFreeShippingRulesByShippingTermID(ctx context.Context, shippingTermID string) ([]ListFreeShippingRulesByShippingTermIDRow, error) {
-	rows, err := q.db.QueryContext(ctx, listFreeShippingRulesByShippingTermID, shippingTermID)
+func (q *Queries) ListFreeShippingCarrierOptionsByShippingTermID(ctx context.Context, shippingTermID string) ([]CarrierOption, error) {
+	rows, err := q.db.QueryContext(ctx, listFreeShippingCarrierOptionsByShippingTermID, shippingTermID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListFreeShippingRulesByShippingTermIDRow
+	var items []CarrierOption
 	for rows.Next() {
-		var i ListFreeShippingRulesByShippingTermIDRow
-		if err := rows.Scan(&i.ID, &i.CarrierOptionID); err != nil {
+		var i CarrierOption
+		if err := rows.Scan(
+			&i.ID,
+			&i.Code,
+			&i.Name,
+			&i.ServiceLevelToken,
+			&i.IsPortalEnabled,
+			&i.IsDefault,
+			&i.CarrierID,
+			&i.AccountID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -276,13 +360,35 @@ SELECT
     fr.id AS flat_rate_quantity_id,
     fr.value AS flat_rate_value,
     fr.unit_id AS flat_rate_unit_id,
+    fr.created_at AS flat_rate_quantity_created_at,
+    fr.updated_at AS flat_rate_quantity_updated_at,
+    fr_u.name AS flat_rate_unit_name,
     fr_u.abbreviation AS flat_rate_unit_abbreviation,
     fr_u.unit_dimension_code AS flat_rate_unit_type,
+    fr_u.ratio_numerator AS flat_rate_unit_ratio_numerator,
+    fr_u.ratio_denominator AS flat_rate_unit_ratio_denominator,
+    fr_u.offset_numerator AS flat_rate_unit_offset_numerator,
+    fr_u.offset_denominator AS flat_rate_unit_offset_denominator,
+    fr_u.is_base_unit AS flat_rate_unit_is_base_unit,
+    fr_u.account_id AS flat_rate_unit_account_id,
+    fr_u.created_at AS flat_rate_unit_created_at,
+    fr_u.updated_at AS flat_rate_unit_updated_at,
     mo.id AS minimum_order_quantity_id,
     mo.value AS minimum_order_value,
     mo.unit_id AS minimum_order_unit_id,
+    mo.created_at AS minimum_order_quantity_created_at,
+    mo.updated_at AS minimum_order_quantity_updated_at,
+    mo_u.name AS minimum_order_unit_name,
     mo_u.abbreviation AS minimum_order_unit_abbreviation,
-    mo_u.unit_dimension_code AS minimum_order_unit_type
+    mo_u.unit_dimension_code AS minimum_order_unit_type,
+    mo_u.ratio_numerator AS minimum_order_unit_ratio_numerator,
+    mo_u.ratio_denominator AS minimum_order_unit_ratio_denominator,
+    mo_u.offset_numerator AS minimum_order_unit_offset_numerator,
+    mo_u.offset_denominator AS minimum_order_unit_offset_denominator,
+    mo_u.is_base_unit AS minimum_order_unit_is_base_unit,
+    mo_u.account_id AS minimum_order_unit_account_id,
+    mo_u.created_at AS minimum_order_unit_created_at,
+    mo_u.updated_at AS minimum_order_unit_updated_at
 FROM shipping_term st
 LEFT JOIN quantity fr ON st.flat_rate_id = fr.id
 LEFT JOIN unit fr_u ON fr.unit_id = fr_u.id
@@ -310,25 +416,47 @@ type ListShippingTermsBackwardParams struct {
 }
 
 type ListShippingTermsBackwardRow struct {
-	ID                           string
-	Name                         string
-	IsFreightExempt              bool
-	IsCarrierRate                bool
-	AccountID                    sql.NullString
-	FlatRateID                   sql.NullString
-	MinimumOrderID               sql.NullString
-	CreatedAt                    time.Time
-	UpdatedAt                    time.Time
-	FlatRateQuantityID           sql.NullString
-	FlatRateValue                sql.NullString
-	FlatRateUnitID               sql.NullString
-	FlatRateUnitAbbreviation     sql.NullString
-	FlatRateUnitType             sql.NullString
-	MinimumOrderQuantityID       sql.NullString
-	MinimumOrderValue            sql.NullString
-	MinimumOrderUnitID           sql.NullString
-	MinimumOrderUnitAbbreviation sql.NullString
-	MinimumOrderUnitType         sql.NullString
+	ID                                string
+	Name                              string
+	IsFreightExempt                   bool
+	IsCarrierRate                     bool
+	AccountID                         sql.NullString
+	FlatRateID                        sql.NullString
+	MinimumOrderID                    sql.NullString
+	CreatedAt                         time.Time
+	UpdatedAt                         time.Time
+	FlatRateQuantityID                sql.NullString
+	FlatRateValue                     sql.NullString
+	FlatRateUnitID                    sql.NullString
+	FlatRateQuantityCreatedAt         sql.NullTime
+	FlatRateQuantityUpdatedAt         sql.NullTime
+	FlatRateUnitName                  sql.NullString
+	FlatRateUnitAbbreviation          sql.NullString
+	FlatRateUnitType                  sql.NullString
+	FlatRateUnitRatioNumerator        sql.NullString
+	FlatRateUnitRatioDenominator      sql.NullString
+	FlatRateUnitOffsetNumerator       sql.NullString
+	FlatRateUnitOffsetDenominator     sql.NullString
+	FlatRateUnitIsBaseUnit            sql.NullBool
+	FlatRateUnitAccountID             sql.NullString
+	FlatRateUnitCreatedAt             sql.NullTime
+	FlatRateUnitUpdatedAt             sql.NullTime
+	MinimumOrderQuantityID            sql.NullString
+	MinimumOrderValue                 sql.NullString
+	MinimumOrderUnitID                sql.NullString
+	MinimumOrderQuantityCreatedAt     sql.NullTime
+	MinimumOrderQuantityUpdatedAt     sql.NullTime
+	MinimumOrderUnitName              sql.NullString
+	MinimumOrderUnitAbbreviation      sql.NullString
+	MinimumOrderUnitType              sql.NullString
+	MinimumOrderUnitRatioNumerator    sql.NullString
+	MinimumOrderUnitRatioDenominator  sql.NullString
+	MinimumOrderUnitOffsetNumerator   sql.NullString
+	MinimumOrderUnitOffsetDenominator sql.NullString
+	MinimumOrderUnitIsBaseUnit        sql.NullBool
+	MinimumOrderUnitAccountID         sql.NullString
+	MinimumOrderUnitCreatedAt         sql.NullTime
+	MinimumOrderUnitUpdatedAt         sql.NullTime
 }
 
 func (q *Queries) ListShippingTermsBackward(ctx context.Context, arg ListShippingTermsBackwardParams) ([]ListShippingTermsBackwardRow, error) {
@@ -361,13 +489,35 @@ func (q *Queries) ListShippingTermsBackward(ctx context.Context, arg ListShippin
 			&i.FlatRateQuantityID,
 			&i.FlatRateValue,
 			&i.FlatRateUnitID,
+			&i.FlatRateQuantityCreatedAt,
+			&i.FlatRateQuantityUpdatedAt,
+			&i.FlatRateUnitName,
 			&i.FlatRateUnitAbbreviation,
 			&i.FlatRateUnitType,
+			&i.FlatRateUnitRatioNumerator,
+			&i.FlatRateUnitRatioDenominator,
+			&i.FlatRateUnitOffsetNumerator,
+			&i.FlatRateUnitOffsetDenominator,
+			&i.FlatRateUnitIsBaseUnit,
+			&i.FlatRateUnitAccountID,
+			&i.FlatRateUnitCreatedAt,
+			&i.FlatRateUnitUpdatedAt,
 			&i.MinimumOrderQuantityID,
 			&i.MinimumOrderValue,
 			&i.MinimumOrderUnitID,
+			&i.MinimumOrderQuantityCreatedAt,
+			&i.MinimumOrderQuantityUpdatedAt,
+			&i.MinimumOrderUnitName,
 			&i.MinimumOrderUnitAbbreviation,
 			&i.MinimumOrderUnitType,
+			&i.MinimumOrderUnitRatioNumerator,
+			&i.MinimumOrderUnitRatioDenominator,
+			&i.MinimumOrderUnitOffsetNumerator,
+			&i.MinimumOrderUnitOffsetDenominator,
+			&i.MinimumOrderUnitIsBaseUnit,
+			&i.MinimumOrderUnitAccountID,
+			&i.MinimumOrderUnitCreatedAt,
+			&i.MinimumOrderUnitUpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -396,13 +546,35 @@ SELECT
     fr.id AS flat_rate_quantity_id,
     fr.value AS flat_rate_value,
     fr.unit_id AS flat_rate_unit_id,
+    fr.created_at AS flat_rate_quantity_created_at,
+    fr.updated_at AS flat_rate_quantity_updated_at,
+    fr_u.name AS flat_rate_unit_name,
     fr_u.abbreviation AS flat_rate_unit_abbreviation,
     fr_u.unit_dimension_code AS flat_rate_unit_type,
+    fr_u.ratio_numerator AS flat_rate_unit_ratio_numerator,
+    fr_u.ratio_denominator AS flat_rate_unit_ratio_denominator,
+    fr_u.offset_numerator AS flat_rate_unit_offset_numerator,
+    fr_u.offset_denominator AS flat_rate_unit_offset_denominator,
+    fr_u.is_base_unit AS flat_rate_unit_is_base_unit,
+    fr_u.account_id AS flat_rate_unit_account_id,
+    fr_u.created_at AS flat_rate_unit_created_at,
+    fr_u.updated_at AS flat_rate_unit_updated_at,
     mo.id AS minimum_order_quantity_id,
     mo.value AS minimum_order_value,
     mo.unit_id AS minimum_order_unit_id,
+    mo.created_at AS minimum_order_quantity_created_at,
+    mo.updated_at AS minimum_order_quantity_updated_at,
+    mo_u.name AS minimum_order_unit_name,
     mo_u.abbreviation AS minimum_order_unit_abbreviation,
-    mo_u.unit_dimension_code AS minimum_order_unit_type
+    mo_u.unit_dimension_code AS minimum_order_unit_type,
+    mo_u.ratio_numerator AS minimum_order_unit_ratio_numerator,
+    mo_u.ratio_denominator AS minimum_order_unit_ratio_denominator,
+    mo_u.offset_numerator AS minimum_order_unit_offset_numerator,
+    mo_u.offset_denominator AS minimum_order_unit_offset_denominator,
+    mo_u.is_base_unit AS minimum_order_unit_is_base_unit,
+    mo_u.account_id AS minimum_order_unit_account_id,
+    mo_u.created_at AS minimum_order_unit_created_at,
+    mo_u.updated_at AS minimum_order_unit_updated_at
 FROM shipping_term st
 LEFT JOIN quantity fr ON st.flat_rate_id = fr.id
 LEFT JOIN unit fr_u ON fr.unit_id = fr_u.id
@@ -431,25 +603,47 @@ type ListShippingTermsForwardParams struct {
 }
 
 type ListShippingTermsForwardRow struct {
-	ID                           string
-	Name                         string
-	IsFreightExempt              bool
-	IsCarrierRate                bool
-	AccountID                    sql.NullString
-	FlatRateID                   sql.NullString
-	MinimumOrderID               sql.NullString
-	CreatedAt                    time.Time
-	UpdatedAt                    time.Time
-	FlatRateQuantityID           sql.NullString
-	FlatRateValue                sql.NullString
-	FlatRateUnitID               sql.NullString
-	FlatRateUnitAbbreviation     sql.NullString
-	FlatRateUnitType             sql.NullString
-	MinimumOrderQuantityID       sql.NullString
-	MinimumOrderValue            sql.NullString
-	MinimumOrderUnitID           sql.NullString
-	MinimumOrderUnitAbbreviation sql.NullString
-	MinimumOrderUnitType         sql.NullString
+	ID                                string
+	Name                              string
+	IsFreightExempt                   bool
+	IsCarrierRate                     bool
+	AccountID                         sql.NullString
+	FlatRateID                        sql.NullString
+	MinimumOrderID                    sql.NullString
+	CreatedAt                         time.Time
+	UpdatedAt                         time.Time
+	FlatRateQuantityID                sql.NullString
+	FlatRateValue                     sql.NullString
+	FlatRateUnitID                    sql.NullString
+	FlatRateQuantityCreatedAt         sql.NullTime
+	FlatRateQuantityUpdatedAt         sql.NullTime
+	FlatRateUnitName                  sql.NullString
+	FlatRateUnitAbbreviation          sql.NullString
+	FlatRateUnitType                  sql.NullString
+	FlatRateUnitRatioNumerator        sql.NullString
+	FlatRateUnitRatioDenominator      sql.NullString
+	FlatRateUnitOffsetNumerator       sql.NullString
+	FlatRateUnitOffsetDenominator     sql.NullString
+	FlatRateUnitIsBaseUnit            sql.NullBool
+	FlatRateUnitAccountID             sql.NullString
+	FlatRateUnitCreatedAt             sql.NullTime
+	FlatRateUnitUpdatedAt             sql.NullTime
+	MinimumOrderQuantityID            sql.NullString
+	MinimumOrderValue                 sql.NullString
+	MinimumOrderUnitID                sql.NullString
+	MinimumOrderQuantityCreatedAt     sql.NullTime
+	MinimumOrderQuantityUpdatedAt     sql.NullTime
+	MinimumOrderUnitName              sql.NullString
+	MinimumOrderUnitAbbreviation      sql.NullString
+	MinimumOrderUnitType              sql.NullString
+	MinimumOrderUnitRatioNumerator    sql.NullString
+	MinimumOrderUnitRatioDenominator  sql.NullString
+	MinimumOrderUnitOffsetNumerator   sql.NullString
+	MinimumOrderUnitOffsetDenominator sql.NullString
+	MinimumOrderUnitIsBaseUnit        sql.NullBool
+	MinimumOrderUnitAccountID         sql.NullString
+	MinimumOrderUnitCreatedAt         sql.NullTime
+	MinimumOrderUnitUpdatedAt         sql.NullTime
 }
 
 func (q *Queries) ListShippingTermsForward(ctx context.Context, arg ListShippingTermsForwardParams) ([]ListShippingTermsForwardRow, error) {
@@ -483,13 +677,35 @@ func (q *Queries) ListShippingTermsForward(ctx context.Context, arg ListShipping
 			&i.FlatRateQuantityID,
 			&i.FlatRateValue,
 			&i.FlatRateUnitID,
+			&i.FlatRateQuantityCreatedAt,
+			&i.FlatRateQuantityUpdatedAt,
+			&i.FlatRateUnitName,
 			&i.FlatRateUnitAbbreviation,
 			&i.FlatRateUnitType,
+			&i.FlatRateUnitRatioNumerator,
+			&i.FlatRateUnitRatioDenominator,
+			&i.FlatRateUnitOffsetNumerator,
+			&i.FlatRateUnitOffsetDenominator,
+			&i.FlatRateUnitIsBaseUnit,
+			&i.FlatRateUnitAccountID,
+			&i.FlatRateUnitCreatedAt,
+			&i.FlatRateUnitUpdatedAt,
 			&i.MinimumOrderQuantityID,
 			&i.MinimumOrderValue,
 			&i.MinimumOrderUnitID,
+			&i.MinimumOrderQuantityCreatedAt,
+			&i.MinimumOrderQuantityUpdatedAt,
+			&i.MinimumOrderUnitName,
 			&i.MinimumOrderUnitAbbreviation,
 			&i.MinimumOrderUnitType,
+			&i.MinimumOrderUnitRatioNumerator,
+			&i.MinimumOrderUnitRatioDenominator,
+			&i.MinimumOrderUnitOffsetNumerator,
+			&i.MinimumOrderUnitOffsetDenominator,
+			&i.MinimumOrderUnitIsBaseUnit,
+			&i.MinimumOrderUnitAccountID,
+			&i.MinimumOrderUnitCreatedAt,
+			&i.MinimumOrderUnitUpdatedAt,
 		); err != nil {
 			return nil, err
 		}

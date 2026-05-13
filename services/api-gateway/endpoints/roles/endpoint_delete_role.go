@@ -20,7 +20,7 @@ type DeleteRoleEndpoint struct{}
 func (e *DeleteRoleEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteRoleRequest, *apiresource.EmptyResource] {
 	return &apiendpoint.APIEndpoint[*DeleteRoleRequest, *apiresource.EmptyResource]{
 		Title:             "Delete Role",
-		Description:       "Deletes an account-owned role and its associated permissions. Global roles cannot be deleted.",
+		Description:       "Deletes a role and its associated permissions. Global roles cannot be deleted.",
 		Method:            http.MethodDelete,
 		Route:             "/v1/identity/roles/{id}",
 		ContentType:       "application/json",

@@ -15,7 +15,7 @@ import (
 
 type AgentAlertSvc interface {
 	ListAlerts(ctx context.Context, req *ListAlertsRequest) (*apiresource.List[apiresource.AgentAlert], *apierror.APIError)
-	GetAlert(ctx context.Context, req *GetAlertRequest) (*apiresource.AgentAlert, *apierror.APIError)
+	GetAlert(ctx context.Context, req *RetrieveAlertRequest) (*apiresource.AgentAlert, *apierror.APIError)
 	AcknowledgeAlert(ctx context.Context, req *AcknowledgeAlertRequest) (*apiresource.AgentAlert, *apierror.APIError)
 }
 
@@ -71,7 +71,7 @@ func (m *agentAlertSvcImpl) ListAlerts(ctx context.Context, req *ListAlertsReque
 	return AgentAlertListPresenter(resp), nil
 }
 
-func (m *agentAlertSvcImpl) GetAlert(ctx context.Context, req *GetAlertRequest) (*apiresource.AgentAlert, *apierror.APIError) {
+func (m *agentAlertSvcImpl) GetAlert(ctx context.Context, req *RetrieveAlertRequest) (*apiresource.AgentAlert, *apierror.APIError) {
 	pbReq := &pb.GetAgentAlertRequest{
 		Id: req.AlertID,
 	}

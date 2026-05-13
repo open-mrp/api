@@ -261,13 +261,13 @@ func (s *LoggingHandlerTestSuite) TestRequestLogToProto_WithActor() {
 		OccurredAt: time.Now().UTC(),
 		CreatedAt:  time.Now().UTC(),
 		Actor: &domain.RequestLogActor{
-			ID:           "usr_1",
-			ActorType:    constants.ActorTypeUser,
-			Name:         &name,
-			Email:        &email,
-			RoleID:       &roleID,
-			RoleName:     &roleName,
-			RoleTypeCode: &roleTypeCode,
+			ID:        "usr_1",
+			ActorType: constants.ActorTypeUser,
+			Name:      &name,
+			Email:     &email,
+			RoleID:    &roleID,
+			RoleName:  &roleName,
+			RoleType:  &roleTypeCode,
 		},
 	}
 

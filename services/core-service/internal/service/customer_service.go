@@ -204,14 +204,14 @@ func (s *customerSvcImpl) CreateCustomer(ctx context.Context, params domain.Crea
 			txCustomerRepo := txSvc.repos.NewCustomerRepo()
 
 			// Validate that the sales rep account user ID belongs to this account.
-			if params.DefaultSalesRepUserID != nil {
+			if params.DefaultSalesRepID != nil {
 				txAccountUserRepo := txSvc.repos.NewAccountUserRepo()
-				_, apiErr := txAccountUserRepo.GetDetailByAccountAndID(txCtx, params.OwnerAccountID, *params.DefaultSalesRepUserID)
+				_, apiErr := txAccountUserRepo.GetDetailByAccountAndID(txCtx, params.OwnerAccountID, *params.DefaultSalesRepID, nil)
 				if apiErr != nil {
 					if apiErr.Code != apierror.ErrorCodeResourceNotFound {
 						return apiErr
 					}
-					return apierror.NewResourceNotFoundError("No sales rep found with the provided ID.").WithParam("defaults.sales_rep_user_id")
+					return apierror.NewResourceNotFoundError("No sales rep found with the provided ID.").WithParam("default_sales_rep_id")
 				}
 			}
 
@@ -314,8 +314,8 @@ func (s *customerSvcImpl) CreateCustomer(ctx context.Context, params domain.Crea
 				}
 			}
 
-			// Re-fetch customer to include price groups and full data.
-			result, apiErr = txCustomerRepo.Get(txCtx, params.OwnerAccountID, accountID, nil)
+			// Re-fetch customer to include price groups and full data for audit and response.
+			result, apiErr = txCustomerRepo.Get(txCtx, params.OwnerAccountID, accountID, customerAuditIncludes(params.Includes))
 			if apiErr != nil {
 				return apiErr
 			}
@@ -385,21 +385,21 @@ func (s *customerSvcImpl) UpdateCustomer(ctx context.Context, params domain.Upda
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *customerSvcImpl) *apierror.APIError {
 			txCustomerRepo := txSvc.repos.NewCustomerRepo()
 
-			old, apiErr := txCustomerRepo.Get(txCtx, params.OwnerAccountID, params.CustomerAccountID, nil)
+			old, apiErr := txCustomerRepo.Get(txCtx, params.OwnerAccountID, params.CustomerAccountID, []string{"price_groups", "notification_preferences", "bill_to_address", "ship_to_address"})
 			if apiErr != nil {
 				return apiErr
 			}
 
 			// Validate that the sales rep account user ID belongs to this account.
 			// ptr("") means clear, nil means not provided, ptr("value") means update.
-			if params.DefaultSalesRepUserID != nil && *params.DefaultSalesRepUserID != "" {
+			if params.DefaultSalesRepID != nil && *params.DefaultSalesRepID != "" {
 				txAccountUserRepo := txSvc.repos.NewAccountUserRepo()
-				_, apiErr := txAccountUserRepo.GetDetailByAccountAndID(txCtx, params.OwnerAccountID, *params.DefaultSalesRepUserID)
+				_, apiErr := txAccountUserRepo.GetDetailByAccountAndID(txCtx, params.OwnerAccountID, *params.DefaultSalesRepID, nil)
 				if apiErr != nil {
 					if apiErr.Code != apierror.ErrorCodeResourceNotFound {
 						return apiErr
 					}
-					return apierror.NewResourceNotFoundError("No sales rep found with the provided ID.").WithParam("defaults.sales_rep_user_id")
+					return apierror.NewResourceNotFoundError("No sales rep found with the provided ID.").WithParam("default_sales_rep_id")
 				}
 			}
 
@@ -418,8 +418,8 @@ func (s *customerSvcImpl) UpdateCustomer(ctx context.Context, params domain.Upda
 			if params.DefaultShippingTermID == nil {
 				params.DefaultShippingTermID = old.DefaultShippingTermID
 			}
-			if params.DefaultSalesRepUserID == nil {
-				params.DefaultSalesRepUserID = old.DefaultSalesRepID
+			if params.DefaultSalesRepID == nil {
+				params.DefaultSalesRepID = old.DefaultSalesRepID
 			}
 			if params.CustomerTypeGroupID == nil {
 				params.CustomerTypeGroupID = old.TypeGroupID
@@ -430,11 +430,11 @@ func (s *customerSvcImpl) UpdateCustomer(ctx context.Context, params domain.Upda
 			if params.CarrierBillingAccount == nil {
 				params.CarrierBillingAccount = old.CarrierBillingAccount
 			}
-			if params.BillToAddressID == nil && old.BillToAddress != nil {
-				params.BillToAddressID = &old.BillToAddress.ID
+			if params.BillToAddressID == nil && old.BillToAddressID != nil {
+				params.BillToAddressID = old.BillToAddressID
 			}
-			if params.ShipToAddressID == nil && old.ShipToAddress != nil {
-				params.ShipToAddressID = &old.ShipToAddress.ID
+			if params.ShipToAddressID == nil && old.ShipToAddressID != nil {
+				params.ShipToAddressID = old.ShipToAddressID
 			}
 
 			// Handle credit limit quantity lifecycle.
@@ -543,8 +543,8 @@ func (s *customerSvcImpl) UpdateCustomer(ctx context.Context, params domain.Upda
 				}
 			}
 
-			// Re-fetch customer to include all updated data.
-			result, apiErr = txCustomerRepo.Get(txCtx, params.OwnerAccountID, params.CustomerAccountID, nil)
+			// Re-fetch customer to include all updated data for audit and response.
+			result, apiErr = txCustomerRepo.Get(txCtx, params.OwnerAccountID, params.CustomerAccountID, customerAuditIncludes(params.Includes))
 			if apiErr != nil {
 				return apiErr
 			}
@@ -597,7 +597,7 @@ func (s *customerSvcImpl) DeleteCustomer(ctx context.Context, params domain.Dele
 	repo := s.repos.NewCustomerRepo()
 
 	// Fetch the customer before deleting for audit trail.
-	customer, apiErr := repo.Get(ctx, params.OwnerAccountID, params.CustomerAccountID, nil)
+	customer, apiErr := repo.Get(ctx, params.OwnerAccountID, params.CustomerAccountID, []string{"price_groups", "notification_preferences"})
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeCustomer, params.CustomerAccountID)
@@ -668,7 +668,7 @@ func (s *customerSvcImpl) BulkDeleteCustomers(ctx context.Context, params domain
 	customerRepo := s.repos.NewCustomerRepo()
 	customers := make([]*domain.Customer, 0, len(params.CustomerIDs))
 	for _, customerID := range params.CustomerIDs {
-		customer, apiErr := customerRepo.Get(ctx, params.OwnerAccountID, customerID, nil)
+		customer, apiErr := customerRepo.Get(ctx, params.OwnerAccountID, customerID, []string{"price_groups", "notification_preferences"})
 		if apiErr != nil {
 			return tracing.Trace(span, apiErr)
 		}
@@ -804,13 +804,13 @@ func (s *customerSvcImpl) MergeCustomers(ctx context.Context, params domain.Merg
 
 	// Verify all customers exist by fetching the target and sources.
 	customerRepo := s.repos.NewCustomerRepo()
-	targetOld, apiErr := customerRepo.Get(ctx, params.OwnerAccountID, params.TargetCustomerID, nil)
+	targetOld, apiErr := customerRepo.Get(ctx, params.OwnerAccountID, params.TargetCustomerID, []string{"price_groups", "notification_preferences"})
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 	sourceCustomers := make([]*domain.Customer, 0, len(params.SourceCustomerIDs))
 	for _, sourceID := range params.SourceCustomerIDs {
-		source, apiErr := customerRepo.Get(ctx, params.OwnerAccountID, sourceID, nil)
+		source, apiErr := customerRepo.Get(ctx, params.OwnerAccountID, sourceID, []string{"price_groups", "notification_preferences"})
 		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
@@ -1025,8 +1025,8 @@ func (s *customerSvcImpl) MergeCustomers(ctx context.Context, params domain.Merg
 				return apiErr
 			}
 
-			// Phase 9: Fetch the merged target customer.
-			result, apiErr = txCustomerRepo.Get(txCtx, params.OwnerAccountID, params.TargetCustomerID, nil)
+			// Phase 9: Fetch the merged target customer for audit and response.
+			result, apiErr = txCustomerRepo.Get(txCtx, params.OwnerAccountID, params.TargetCustomerID, customerAuditIncludes(params.Includes))
 			if apiErr != nil {
 				return apiErr
 			}
@@ -1130,4 +1130,18 @@ func optStrEqual(a, b *string) bool {
 		return false
 	}
 	return *a == *b
+}
+
+// customerAuditIncludes merges user-requested includes with the includes required
+// for correct audit change tracking (price_groups and notification_preferences).
+func customerAuditIncludes(userIncludes []string) []string {
+	auditRequired := []string{"price_groups", "notification_preferences"}
+	merged := make([]string, len(auditRequired))
+	copy(merged, auditRequired)
+	for _, inc := range userIncludes {
+		if !slices.Contains(merged, inc) {
+			merged = append(merged, inc)
+		}
+	}
+	return merged
 }

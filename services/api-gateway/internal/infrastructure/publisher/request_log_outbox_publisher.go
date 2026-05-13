@@ -96,7 +96,11 @@ func (p *requestLogOutboxPublisher) Create(ctx context.Context, rl *appctx.Reque
 	// Save to outbox asynchronously - don't block the HTTP response
 	// No tracing here since this runs after the request completes
 	go func() {
-		if _, err := p.outboxRepo.Create(context.Background(), input); err != nil {
+		err := messaging.WithOutboxDBLockRetry(context.Background(), messaging.OutboxDBRetryConfig(p.platformMode), "request_log_outbox.create", func() error {
+			_, err := p.outboxRepo.Create(context.Background(), input)
+			return err
+		})
+		if err != nil {
 			slog.Error("Failed to save request log to outbox", "error", err, "request_id", rl.ID)
 		}
 
@@ -164,7 +168,11 @@ func (p *requestLogOutboxPublisher) publishErrorAlert(rl *appctx.RequestLog) {
 		Payload:     emailMsg,
 	}
 
-	if _, err := p.outboxRepo.Create(context.Background(), emailInput); err != nil {
+	err = messaging.WithOutboxDBLockRetry(context.Background(), messaging.OutboxDBRetryConfig(p.platformMode), "request_log_outbox.error_alert.create", func() error {
+		_, err := p.outboxRepo.Create(context.Background(), emailInput)
+		return err
+	})
+	if err != nil {
 		slog.Error("Failed to save error alert email to outbox", "error", err, "request_id", rl.ID)
 	}
 }

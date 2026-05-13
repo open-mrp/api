@@ -48,7 +48,7 @@ func (e *UpdateItemCategoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upd
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeItemCategory,
-			Fields:     []string{"owner", "owner.account", "properties", "unit_group"},
+			Fields:     []string{"owner", "owner.account", "properties", "unit_group", "unit_group.base_unit", "unit_group.associated_units", "unit_group.associated_units.unit"},
 		}),
 	}
 }

@@ -15,11 +15,11 @@ type UpdatePurchaseOrderLineRequest struct {
 	// Purchase order ID.
 	PurchaseOrderID string `path:"id" validate:"required"`
 	// Purchase order line ID.
-	PurchaseOrderLineID string `path:"lineId" validate:"required"`
+	PurchaseOrderLineID string `path:"line_id" validate:"required"`
 	// Product ID.
-	ProductID *string `json:"product_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
+	ProductID *string `json:"product_id,omitempty" nullable:"true" validate:"omitempty"`
 	// Item ID.
-	ItemID *string `json:"item_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
+	ItemID *string `json:"item_id,omitempty" nullable:"true" validate:"omitempty"`
 	// Product SKU.
 	ProductSKU *string `json:"product_sku,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// Product description.
@@ -27,19 +27,19 @@ type UpdatePurchaseOrderLineRequest struct {
 	// Quantity value.
 	QuantityValue *string `json:"quantity_value,omitempty" nullable:"false" format:"decimal"`
 	// Quantity unit ID.
-	QuantityUnitID *string `json:"quantity_unit_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
+	QuantityUnitID *string `json:"quantity_unit_id,omitempty" nullable:"false" validate:"omitempty"`
 	// Unit price value.
 	UnitPriceValue *string `json:"unit_price_value,omitempty" nullable:"false" format:"decimal"`
 	// Unit price numerator unit ID.
-	UnitPriceNumeratorUnitID *string `json:"unit_price_numerator_unit_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
+	UnitPriceNumeratorUnitID *string `json:"unit_price_numerator_unit_id,omitempty" nullable:"false" validate:"omitempty"`
 	// Unit price denominator unit ID.
-	UnitPriceDenominatorUnitID *string `json:"unit_price_denominator_unit_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
+	UnitPriceDenominatorUnitID *string `json:"unit_price_denominator_unit_id,omitempty" nullable:"false" validate:"omitempty"`
 	// Unit cost value.
 	UnitCostValue *string `json:"unit_cost_value,omitempty" nullable:"false" format:"decimal"`
 	// Unit cost numerator unit ID.
-	UnitCostNumeratorUnitID *string `json:"unit_cost_numerator_unit_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
+	UnitCostNumeratorUnitID *string `json:"unit_cost_numerator_unit_id,omitempty" nullable:"false" validate:"omitempty"`
 	// Unit cost denominator unit ID.
-	UnitCostDenominatorUnitID *string `json:"unit_cost_denominator_unit_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
+	UnitCostDenominatorUnitID *string `json:"unit_cost_denominator_unit_id,omitempty" nullable:"false" validate:"omitempty"`
 }
 
 var sampleUpdatePOLineProductID = apiresource.SampleProductID
@@ -65,7 +65,7 @@ func (e *UpdatePurchaseOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint
 		Description:       "Partially updates a purchase order line item.",
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
-		Route:             "/v1/operations/purchase-orders/{id}/lines/{lineId}",
+		Route:             "/v1/operations/purchase-orders/{id}/lines/{line_id}",
 		Request:           &UpdatePurchaseOrderLineRequest{},
 		Response:          &apiresource.PurchaseOrderLineDetail{},
 		SuccessStatusCode: http.StatusOK,

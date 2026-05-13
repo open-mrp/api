@@ -17,10 +17,6 @@ type IncludeField struct {
 // the include query parameter.
 type IncludeConfig struct {
 	Fields []IncludeField
-	// DefaultFields lists include keys that are always expanded, even when the
-	// client does not send an include parameter. When the client explicitly
-	// requests includes, defaults are merged in automatically.
-	DefaultFields []string
 }
 
 // AllowedKeys returns the set of valid include parameter values.
@@ -30,18 +26,6 @@ func (c *IncludeConfig) AllowedKeys() []string {
 		keys[i] = f.Key
 	}
 	return keys
-}
-
-// DefaultFieldSet returns the set of default include keys as a map.
-func (c *IncludeConfig) DefaultFieldSet() map[string]bool {
-	if len(c.DefaultFields) == 0 {
-		return nil
-	}
-	m := make(map[string]bool, len(c.DefaultFields))
-	for _, k := range c.DefaultFields {
-		m[k] = true
-	}
-	return m
 }
 
 // FieldsByKey returns a map from client-facing key to IncludeField.

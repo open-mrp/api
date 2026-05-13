@@ -81,9 +81,9 @@ type AgentMemoryRepo interface {
 
 type AgentAlertRepo interface {
 	Insert(ctx context.Context, params sqlc.InsertAgentAlertParams) *apierror.APIError
-	GetByID(ctx context.Context, id string) (*sqlc.AgentAlert, *apierror.APIError)
+	GetByID(ctx context.Context, id string) (*sqlc.GetAgentAlertByIDRow, *apierror.APIError)
 	ListByAccount(ctx context.Context, accountID string, limit int32) ([]sqlc.AgentAlert, *apierror.APIError)
-	ListByAccountCursor(ctx context.Context, params sqlc.ListAgentAlertsByAccountCursorParams) ([]sqlc.AgentAlert, *apierror.APIError)
+	ListByAccountCursor(ctx context.Context, params sqlc.ListAgentAlertsByAccountCursorParams) ([]sqlc.ListAgentAlertsByAccountCursorRow, *apierror.APIError)
 	Acknowledge(ctx context.Context, params sqlc.AcknowledgeAgentAlertParams) *apierror.APIError
 }
 

@@ -8,6 +8,7 @@ import (
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/appctx"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
@@ -28,7 +29,7 @@ func rateInputToProto(r *apirequest.RateInput) *pb.CreateRateInput {
 
 type MaterialSvc interface {
 	ListMaterials(ctx context.Context, req *ListMaterialsRequest) (*apiresource.List[apiresource.Material], *apierror.APIError)
-	GetMaterial(ctx context.Context, req *GetMaterialRequest) (*apiresource.Material, *apierror.APIError)
+	GetMaterial(ctx context.Context, req *RetrieveMaterialRequest) (*apiresource.Material, *apierror.APIError)
 	CreateMaterial(ctx context.Context, req *CreateMaterialRequest) (*apiresource.Material, *apierror.APIError)
 	UpdateMaterial(ctx context.Context, req *UpdateMaterialRequest) (*apiresource.Material, *apierror.APIError)
 	DeleteMaterial(ctx context.Context, req *DeleteMaterialRequest) (*apiresource.Material, *apierror.APIError)
@@ -65,6 +66,7 @@ func (m *materialSvcImpl) ListMaterials(ctx context.Context, req *ListMaterialsR
 		Query:        req.Query,
 		CategoryIds:  req.CategoryIDs,
 		AttributeIds: req.AttributeIDs,
+		Includes:     appctx.GetRequestedIncludeKeys(ctx),
 	}
 	if req.StartDate != nil {
 		pbReq.StartDate = timestamppb.New(*req.StartDate)
@@ -83,8 +85,8 @@ func (m *materialSvcImpl) ListMaterials(ctx context.Context, req *ListMaterialsR
 	return MaterialListPresenter(resp), nil
 }
 
-func (m *materialSvcImpl) GetMaterial(ctx context.Context, req *GetMaterialRequest) (*apiresource.Material, *apierror.APIError) {
-	pbReq := &pb.GetMaterialRequest{Id: req.ItemID}
+func (m *materialSvcImpl) GetMaterial(ctx context.Context, req *RetrieveMaterialRequest) (*apiresource.Material, *apierror.APIError) {
+	pbReq := &pb.GetMaterialRequest{Id: req.ItemID, Includes: appctx.GetRequestedIncludeKeys(ctx)}
 	resp, apiErr := grpcutil.CallRPC(ctx, materialSvcTracer, "service.materials.get", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetMaterialResponse, error) {
 			return m.coreClient.GetMaterial(ctx, pbReq, opts...)
@@ -106,6 +108,7 @@ func (m *materialSvcImpl) CreateMaterial(ctx context.Context, req *CreateMateria
 		UnitCost:     rateInputToProto(req.UnitCost),
 		BurnRate:     rateInputToProto(req.BurnRate),
 		AttributeIds: req.AttributeIDs,
+		Includes:     appctx.GetRequestedIncludeKeys(ctx),
 	}
 	if req.OrderPoint != nil {
 		pbReq.OrderPoint = &pb.QuantityInput{Value: req.OrderPoint.Value, UnitId: req.OrderPoint.UnitID}
@@ -133,6 +136,8 @@ func (m *materialSvcImpl) UpdateMaterial(ctx context.Context, req *UpdateMateria
 		UpdateDescription: req.Description != nil,
 		Notes:             req.Notes,
 		UpdateNotes:       req.Notes != nil,
+		UnitCost:          rateInputToProto(req.UnitCost),
+		Includes:          appctx.GetRequestedIncludeKeys(ctx),
 	}
 	if req.OrderPoint != nil {
 		pbReq.OrderPoint = &pb.QuantityInput{Value: req.OrderPoint.Value, UnitId: req.OrderPoint.UnitID}

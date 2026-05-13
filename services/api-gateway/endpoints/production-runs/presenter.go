@@ -19,11 +19,13 @@ func ProductionRunSummaryPresenter(info *pb.ProductionRunSummaryInfo) apiresourc
 	}
 
 	if info.ResponsibleUserId != "" {
-		name := info.ResponsibleUserName
 		s.ResponsibleUser = &apiresource.AccountUser{
-			ID:     info.ResponsibleUserId,
-			Object: constants.ObjectTypeAccountUser,
-			Name:   name,
+			ID:        info.ResponsibleUserId,
+			Object:    constants.ObjectTypeAccountUser,
+			Name:      info.ResponsibleUserName,
+			Status:    constants.AccountUserStatus(info.GetResponsibleUserStatusCode()),
+			CreatedAt: grpcutil.TimestampToTime(info.ResponsibleUserCreatedAt),
+			UpdatedAt: grpcutil.TimestampToTime(info.ResponsibleUserUpdatedAt),
 		}
 	}
 
@@ -44,11 +46,13 @@ func ProductionRunDetailPresenter(info *pb.ProductionRunInfo) apiresource.Produc
 	}
 
 	if info.ResponsibleUserId != "" {
-		name := info.ResponsibleUserName
 		d.ResponsibleUser = &apiresource.AccountUser{
-			ID:     info.ResponsibleUserId,
-			Object: constants.ObjectTypeAccountUser,
-			Name:   name,
+			ID:        info.ResponsibleUserId,
+			Object:    constants.ObjectTypeAccountUser,
+			Name:      info.ResponsibleUserName,
+			Status:    constants.AccountUserStatus(info.GetResponsibleUserStatusCode()),
+			CreatedAt: grpcutil.TimestampToTime(info.ResponsibleUserCreatedAt),
+			UpdatedAt: grpcutil.TimestampToTime(info.ResponsibleUserUpdatedAt),
 		}
 	}
 

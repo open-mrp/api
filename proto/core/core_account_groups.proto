@@ -74,6 +74,8 @@ message AccountUserDetail {
   optional google.protobuf.Timestamp last_used_at = 14;
   google.protobuf.Timestamp created_at = 15;
   google.protobuf.Timestamp updated_at = 16;
+  optional google.protobuf.Timestamp department_created_at = 17;
+  optional google.protobuf.Timestamp department_updated_at = 18;
 }
 message ListAccountUsersRequest {
   optional string cursor = 1;
@@ -81,6 +83,7 @@ message ListAccountUsersRequest {
   optional string query = 3;
   optional string role_type = 4;
   bool include_removed = 5;
+  repeated string includes = 6;
 }
 message ListAccountUsersResponse {
   repeated AccountUserDetail account_users = 1;
@@ -89,6 +92,7 @@ message ListAccountUsersResponse {
 }
 message GetAccountUserRequest {
   string account_user_id = 1;
+  repeated string includes = 2;
 }
 message GetAccountUserResponse {
   AccountUserDetail account_user = 1;
@@ -120,6 +124,9 @@ message UpdateAccountUserRequest {
   optional string department_id = 6;
   // When non-empty, replaces the toggle state of the listed preferences.
   repeated NotificationPreferenceItem notification_preferences = 7;
+  repeated string includes = 8;
+  bool clear_role_id = 9;
+  bool clear_department_id = 10;
 }
 message UpdateAccountUserResponse {
   AccountUserDetail account_user = 1;
@@ -190,30 +197,55 @@ message AccountPriceInfo {
 message AccountPriceRecipientInfo {
   string id = 1;
   string name = 2;
+  string number = 3;
+  string status = 4;
+  bool is_edi_enabled = 5;
+  string commission_policy = 6;
+  string relationship_type = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
 }
 message AccountPriceProductLineInfo {
   string id = 1;
   string name = 2;
+  string commission_policy = 3;
+  string freight_policy = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
 }
 message AccountPriceRateInfo {
   string id = 1;
   string value = 2;
   AccountPriceUnitInfo numerator_unit = 3;
   AccountPriceUnitInfo denominator_unit = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
 }
 message AccountPriceUnitInfo {
   string id = 1;
   string name = 2;
   string abbreviation = 3;
   string type = 4;
+  string ratio_numerator = 5;
+  string ratio_denominator = 6;
+  string offset_numerator = 7;
+  string offset_denominator = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
 }
 message AccountPriceCategoryInfo {
   string id = 1;
   string name = 2;
+  string type = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp updated_at = 5;
 }
 message AccountPriceAttributeInfo {
   string id = 1;
   string value = 2;
+  string color_code = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp updated_at = 5;
 }
 message ListAccountPricesRequest {
   optional string cursor = 1;

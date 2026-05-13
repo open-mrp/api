@@ -17,7 +17,7 @@ import (
 
 type PaymentTermSvc interface {
 	ListPaymentTerms(ctx context.Context, req *ListPaymentTermsRequest) (*apiresource.List[apiresource.PaymentTerm], *apierror.APIError)
-	GetPaymentTerm(ctx context.Context, req *GetPaymentTermRequest) (*apiresource.PaymentTerm, *apierror.APIError)
+	GetPaymentTerm(ctx context.Context, req *RetrievePaymentTermRequest) (*apiresource.PaymentTerm, *apierror.APIError)
 	CreatePaymentTerm(ctx context.Context, req *CreatePaymentTermRequest) (*apiresource.PaymentTerm, *apierror.APIError)
 	UpdatePaymentTerm(ctx context.Context, req *UpdatePaymentTermRequest) (*apiresource.PaymentTerm, *apierror.APIError)
 	DeletePaymentTerm(ctx context.Context, req *DeletePaymentTermRequest) (*apiresource.EmptyResource, *apierror.APIError)
@@ -77,7 +77,7 @@ func (m *paymentTermSvcImpl) ListPaymentTerms(ctx context.Context, req *ListPaym
 	return PaymentTermListPresenter(resp, ownerAccount), nil
 }
 
-func (m *paymentTermSvcImpl) GetPaymentTerm(ctx context.Context, req *GetPaymentTermRequest) (*apiresource.PaymentTerm, *apierror.APIError) {
+func (m *paymentTermSvcImpl) GetPaymentTerm(ctx context.Context, req *RetrievePaymentTermRequest) (*apiresource.PaymentTerm, *apierror.APIError) {
 	pbReq := &pb.GetPaymentTermRequest{
 		Id: req.PaymentTermID,
 	}

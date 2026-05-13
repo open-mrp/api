@@ -31,6 +31,15 @@ func productionRunToProto(pr *domain.ProductionRun) *pb.ProductionRunInfo {
 	if pr.ResponsibleUserName != nil {
 		info.ResponsibleUserName = pr.ResponsibleUserName
 	}
+	if pr.ResponsibleUserStatusCode != nil {
+		info.ResponsibleUserStatusCode = pr.ResponsibleUserStatusCode
+	}
+	if pr.ResponsibleUserCreatedAt != nil {
+		info.ResponsibleUserCreatedAt = timestamppb.New(*pr.ResponsibleUserCreatedAt)
+	}
+	if pr.ResponsibleUserUpdatedAt != nil {
+		info.ResponsibleUserUpdatedAt = timestamppb.New(*pr.ResponsibleUserUpdatedAt)
+	}
 	if pr.StartedAt != nil {
 		info.StartedAt = timestamppb.New(*pr.StartedAt)
 	}
@@ -51,6 +60,15 @@ func productionRunSummaryToProto(pr *domain.ProductionRunSummary) *pb.Production
 	}
 	if pr.ResponsibleUserName != nil {
 		info.ResponsibleUserName = pr.ResponsibleUserName
+	}
+	if pr.ResponsibleUserStatusCode != nil {
+		info.ResponsibleUserStatusCode = pr.ResponsibleUserStatusCode
+	}
+	if pr.ResponsibleUserCreatedAt != nil {
+		info.ResponsibleUserCreatedAt = timestamppb.New(*pr.ResponsibleUserCreatedAt)
+	}
+	if pr.ResponsibleUserUpdatedAt != nil {
+		info.ResponsibleUserUpdatedAt = timestamppb.New(*pr.ResponsibleUserUpdatedAt)
 	}
 	if pr.StartedAt != nil {
 		info.StartedAt = timestamppb.New(*pr.StartedAt)

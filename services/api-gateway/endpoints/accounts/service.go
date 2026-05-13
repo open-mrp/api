@@ -14,8 +14,8 @@ import (
 )
 
 type AccountSvc interface {
-	GetAccount(ctx context.Context, req *GetAccountRequest) (*apiresource.Account, *apierror.APIError)
-	GetAccountBySlug(ctx context.Context, req *GetAccountBySlugRequest) (*apiresource.PublicAccount, *apierror.APIError)
+	GetAccount(ctx context.Context, req *RetrieveAccountRequest) (*apiresource.Account, *apierror.APIError)
+	GetAccountBySlug(ctx context.Context, req *RetrieveAccountBySlugRequest) (*apiresource.PublicAccount, *apierror.APIError)
 	UpdateAccount(ctx context.Context, req *UpdateAccountRequest) (*apiresource.Account, *apierror.APIError)
 	UploadAccountPhoto(ctx context.Context, req *UploadAccountPhotoRequest) (*apiresource.AccountPhotoUploadResult, *apierror.APIError)
 	GetAccountLogoURL(ctx context.Context, req *GetAccountLogoURLRequest) (*apiresource.AccountLogoURL, *apierror.APIError)
@@ -48,7 +48,7 @@ func NewAccountSvc(config *AccountSvcConfig) AccountSvc {
 	}
 }
 
-func (m *accountSvcImpl) GetAccount(ctx context.Context, req *GetAccountRequest) (*apiresource.Account, *apierror.APIError) {
+func (m *accountSvcImpl) GetAccount(ctx context.Context, req *RetrieveAccountRequest) (*apiresource.Account, *apierror.APIError) {
 	pbReq := &pb.GetAccountRequest{
 		Id: req.AccountID,
 	}
@@ -66,7 +66,7 @@ func (m *accountSvcImpl) GetAccount(ctx context.Context, req *GetAccountRequest)
 	return &result, nil
 }
 
-func (m *accountSvcImpl) GetAccountBySlug(ctx context.Context, req *GetAccountBySlugRequest) (*apiresource.PublicAccount, *apierror.APIError) {
+func (m *accountSvcImpl) GetAccountBySlug(ctx context.Context, req *RetrieveAccountBySlugRequest) (*apiresource.PublicAccount, *apierror.APIError) {
 	pbReq := &pb.GetAccountBySlugRequest{
 		Slug: req.Slug,
 	}

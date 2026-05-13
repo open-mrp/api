@@ -23,7 +23,7 @@ func TestAddresses_CRUD(t *testing.T) {
 		"name":          name,
 		"phone":         phone,
 		"email":         email,
-		"is_drop_ship":  true,
+		"type":          "drop_ship",
 		"street_line_1": "100 Test Ave",
 		"street_line_2": "Suite 200",
 		"locality":      "Denver",
@@ -42,7 +42,7 @@ func TestAddresses_CRUD(t *testing.T) {
 	assert.Equal(t, name, jsonField(created, "name"))
 	assert.Equal(t, phone, jsonField(created, "phone"))
 	assert.Equal(t, email, jsonField(created, "email"))
-	assert.Equal(t, "true", jsonField(created, "is_drop_ship"))
+	assert.Equal(t, "drop_ship", jsonField(created, "type"))
 	assert.NotEmpty(t, jsonField(created, "created_at"))
 	assert.NotEmpty(t, jsonField(created, "updated_at"))
 
@@ -100,7 +100,7 @@ func TestAddresses_CreateAndUpdateAllFields(t *testing.T) {
 		"name":          name,
 		"phone":         "555-000-1234",
 		"email":         email,
-		"is_drop_ship":  true,
+		"type":          "drop_ship",
 		"street_line_1": "100 Create Ave",
 		"street_line_2": "Suite 200",
 		"locality":      "Denver",
@@ -121,7 +121,7 @@ func TestAddresses_CreateAndUpdateAllFields(t *testing.T) {
 	assert.Equal(t, name, jsonField(got, "name"))
 	assert.Equal(t, "555-000-1234", jsonField(got, "phone"))
 	assert.Equal(t, email, jsonField(got, "email"))
-	assert.Equal(t, "true", jsonField(got, "is_drop_ship"))
+	assert.Equal(t, "drop_ship", jsonField(got, "type"))
 	assert.NotEmpty(t, jsonField(got, "created_at"))
 	assert.NotEmpty(t, jsonField(got, "updated_at"))
 
@@ -143,7 +143,7 @@ func TestAddresses_CreateAndUpdateAllFields(t *testing.T) {
 		"name":          updatedName,
 		"phone":         "555-999-8888",
 		"email":         updatedEmail,
-		"is_drop_ship":  false,
+		"type":          "standard",
 		"street_line_1": "200 Update Blvd",
 		"street_line_2": "Floor 3",
 		"locality":      "Seattle",
@@ -158,7 +158,7 @@ func TestAddresses_CreateAndUpdateAllFields(t *testing.T) {
 	assert.Equal(t, updatedName, jsonField(updated, "name"))
 	assert.Equal(t, "555-999-8888", jsonField(updated, "phone"))
 	assert.Equal(t, updatedEmail, jsonField(updated, "email"))
-	assert.Equal(t, "false", jsonField(updated, "is_drop_ship"))
+	assert.Equal(t, "standard", jsonField(updated, "type"))
 
 	updGeo := jsonObject(updated, "geolocation")
 	require.NotNil(t, updGeo, "geolocation should be present after update")
@@ -252,13 +252,13 @@ func TestAddresses_ListSearchNoResults(t *testing.T) {
 
 // createAddressForFilterTest creates an address with the given drop_ship flag and
 // returns its name (which is unique enough to find in a filtered list result).
-func createAddressForFilterTest(t *testing.T, isDropShip bool) string {
+func createAddressForFilterTest(t *testing.T, addressType string) string {
 	t.Helper()
 	name := uniqueName("e2e-addr-ds")
 	resp, err := apiClient.PostFull(addressesPath, map[string]any{
-		"name":         name,
-		"is_drop_ship": isDropShip,
-		"country":      "US",
+		"name":    name,
+		"type":    addressType,
+		"country": "US",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, resp.StatusCode, resp.Body)
@@ -267,60 +267,60 @@ func createAddressForFilterTest(t *testing.T, isDropShip bool) string {
 
 func TestAddresses_ListFilterDropShipTrue(t *testing.T) {
 	t.Parallel()
-	dropShipName := createAddressForFilterTest(t, true)
+	dropShipName := createAddressForFilterTest(t, "drop_ship")
 
 	list, _, err := apiClient.GetList(addressesPath, url.Values{
-		"drop_ship": {"true"},
-		"q":         {dropShipName},
+		"type": {"drop_ship"},
+		"q":    {dropShipName},
 	})
 	require.NoError(t, err)
 	require.GreaterOrEqual(t, len(list.Data), 1, "should find the drop-ship address we just created")
 	for _, item := range list.Data {
 		parsed := parseJSON(item)
-		assert.Equal(t, "true", jsonField(parsed, "is_drop_ship"), "every result must have is_drop_ship=true")
+		assert.Equal(t, "drop_ship", jsonField(parsed, "type"), "every result must have type=drop_ship")
 	}
 }
 
 func TestAddresses_ListFilterDropShipFalse(t *testing.T) {
 	t.Parallel()
-	nonDropShipName := createAddressForFilterTest(t, false)
+	nonDropShipName := createAddressForFilterTest(t, "standard")
 
 	list, _, err := apiClient.GetList(addressesPath, url.Values{
-		"drop_ship": {"false"},
-		"q":         {nonDropShipName},
+		"type": {"standard"},
+		"q":    {nonDropShipName},
 	})
 	require.NoError(t, err)
 	require.GreaterOrEqual(t, len(list.Data), 1, "should find the non-drop-ship address we just created")
 	for _, item := range list.Data {
 		parsed := parseJSON(item)
-		assert.Equal(t, "false", jsonField(parsed, "is_drop_ship"), "every result must have is_drop_ship=false")
+		assert.Equal(t, "standard", jsonField(parsed, "type"), "every result must have type=standard")
 	}
 }
 
 func TestAddresses_ListFilterDropShipNarrowsResults(t *testing.T) {
 	t.Parallel()
-	dropShipName := createAddressForFilterTest(t, true)
-	nonDropShipName := createAddressForFilterTest(t, false)
+	dropShipName := createAddressForFilterTest(t, "drop_ship")
+	nonDropShipName := createAddressForFilterTest(t, "standard")
 
-	// Filtering by drop_ship=true should return the drop-ship one but NOT the non-drop-ship one.
-	dsList, _, err := apiClient.GetList(addressesPath, url.Values{"drop_ship": {"true"}})
+	// Filtering by type=drop_ship should return the drop-ship one but NOT the standard one.
+	dsList, _, err := apiClient.GetList(addressesPath, url.Values{"type": {"drop_ship"}})
 	require.NoError(t, err)
 	dsNames := make(map[string]bool, len(dsList.Data))
 	for _, item := range dsList.Data {
 		dsNames[DataItemField(item, "name")] = true
 	}
-	assert.True(t, dsNames[dropShipName], "drop_ship=true should include the drop-ship address")
-	assert.False(t, dsNames[nonDropShipName], "drop_ship=true should NOT include the non-drop-ship address")
+	assert.True(t, dsNames[dropShipName], "type=drop_ship should include the drop-ship address")
+	assert.False(t, dsNames[nonDropShipName], "type=drop_ship should NOT include the standard address")
 
-	// Filtering by drop_ship=false should return the non-drop-ship one but NOT the drop-ship one.
-	nonDsList, _, err := apiClient.GetList(addressesPath, url.Values{"drop_ship": {"false"}})
+	// Filtering by type=standard should return the standard one but NOT the drop-ship one.
+	nonDsList, _, err := apiClient.GetList(addressesPath, url.Values{"type": {"standard"}})
 	require.NoError(t, err)
 	nonDsNames := make(map[string]bool, len(nonDsList.Data))
 	for _, item := range nonDsList.Data {
 		nonDsNames[DataItemField(item, "name")] = true
 	}
-	assert.True(t, nonDsNames[nonDropShipName], "drop_ship=false should include the non-drop-ship address")
-	assert.False(t, nonDsNames[dropShipName], "drop_ship=false should NOT include the drop-ship address")
+	assert.True(t, nonDsNames[nonDropShipName], "type=standard should include the standard address")
+	assert.False(t, nonDsNames[dropShipName], "type=standard should NOT include the drop-ship address")
 }
 
 func TestAddresses_CreateIdempotent(t *testing.T) {

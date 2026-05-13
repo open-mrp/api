@@ -13,10 +13,12 @@ func InvoiceSummaryPresenter(d *pb.InvoiceSummaryInfo) apiresource.InvoiceSummar
 	}
 
 	customer := &apiresource.Customer{
-		ID:     d.CustomerId,
-		Object: constants.ObjectTypeCustomer,
-		Name:   d.CustomerName,
-		Number: d.CustomerNumber,
+		ID:               d.CustomerId,
+		Object:           constants.ObjectTypeCustomer,
+		Name:             d.CustomerName,
+		Number:           d.CustomerNumber,
+		EDIStatus:        constants.EDIStatusDisabled,
+		RelationshipType: constants.CustomerRelationshipTypeStandalone,
 	}
 	if d.CustomerStatusCode != nil {
 		customer.Status = constants.AccountStatusCode(*d.CustomerStatusCode)
@@ -224,10 +226,12 @@ func InvoiceForPaymentPresenter(d *pb.InvoiceForPaymentInfo) apiresource.Invoice
 		Number:     d.Number,
 		CustomerPO: d.CustomerPo,
 		Customer: &apiresource.Customer{
-			ID:     d.CustomerId,
-			Object: constants.ObjectTypeCustomer,
-			Name:   d.CustomerName,
-			Number: d.CustomerNumber,
+			ID:               d.CustomerId,
+			Object:           constants.ObjectTypeCustomer,
+			Name:             d.CustomerName,
+			Number:           d.CustomerNumber,
+			EDIStatus:        constants.EDIStatusDisabled,
+			RelationshipType: constants.CustomerRelationshipTypeStandalone,
 		},
 		IsParentAccount: d.IsParentAccount,
 		IsPrepaid:       d.IsPrepaid,
@@ -249,6 +253,7 @@ func InvoiceForPaymentPresenter(d *pb.InvoiceForPaymentInfo) apiresource.Invoice
 		addr := &apiresource.Address{
 			ID:     *d.BillingAddressId,
 			Object: constants.ObjectTypeAddress,
+			Type:   constants.AddressTypeStandard,
 		}
 		if d.BillingAddressName != nil {
 			addr.Name = *d.BillingAddressName
@@ -289,6 +294,7 @@ func invoiceBillingAddressPresenter(id string, name, line1, line2, city, state, 
 	addr := &apiresource.Address{
 		ID:     id,
 		Object: constants.ObjectTypeAddress,
+		Type:   constants.AddressTypeStandard,
 		Geolocation: &apiresource.Geolocation{
 			StreetLine1: line1,
 			StreetLine2: line2,

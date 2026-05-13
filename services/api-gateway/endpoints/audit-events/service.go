@@ -20,7 +20,7 @@ import (
 type AuditEventSvc interface {
 	ListAuditEvents(ctx context.Context, req *ListAuditEventsRequest) (*apiresource.List[apiresource.AuditEvent], *apierror.APIError)
 	ListAuditEventResourceTypes(ctx context.Context, req *ListAuditEventResourceTypesRequest) (*apiresource.List[constants.ObjectType], *apierror.APIError)
-	GetAuditEvent(ctx context.Context, req *GetAuditEventRequest) (*apiresource.AuditEvent, *apierror.APIError)
+	GetAuditEvent(ctx context.Context, req *RetrieveAuditEventRequest) (*apiresource.AuditEvent, *apierror.APIError)
 }
 
 type AuditEventSvcConfig struct {
@@ -108,7 +108,7 @@ func (m *auditEventSvcImpl) ListAuditEventResourceTypes(ctx context.Context, _ *
 	return apiresource.NewList(types, apiresource.PageInfo{}), nil
 }
 
-func (m *auditEventSvcImpl) GetAuditEvent(ctx context.Context, req *GetAuditEventRequest) (*apiresource.AuditEvent, *apierror.APIError) {
+func (m *auditEventSvcImpl) GetAuditEvent(ctx context.Context, req *RetrieveAuditEventRequest) (*apiresource.AuditEvent, *apierror.APIError) {
 	if apiErr := requireInternalAdmin(ctx); apiErr != nil {
 		return nil, apiErr
 	}

@@ -17,7 +17,7 @@ type Role struct {
 	// Display name.
 	Name string `json:"name" validate:"required"`
 	// Role type code.
-	TypeCode constants.RoleTypeCode `json:"type" validate:"required"`
+	TypeCode constants.RoleType `json:"type" validate:"required"`
 	// Owner of this resource.
 	Owner *Owner `json:"owner" expandable:"true"`
 	// Permissions in `{domain}:{action}` format.
@@ -37,7 +37,7 @@ var SampleRole = &Role{
 	ID:          SampleRoleID,
 	Name:        SampleRoleName,
 	Object:      constants.ObjectTypeRole,
-	TypeCode:    constants.RoleTypeCodeAdmin,
+	TypeCode:    constants.RoleTypeAdmin,
 	Owner:       SampleOwnerAccount,
 	Permissions: &SampleRolePermissions,
 	CreatedAt:   timeutil.TimestampToTime(sampleCreatedAtTimestamp),

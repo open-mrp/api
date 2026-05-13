@@ -15,7 +15,7 @@ type CreateSupplierMaterialRequest struct {
 	// Supplier ID.
 	SupplierID string `path:"supplier_id" validate:"required"`
 	// Material ID.
-	MaterialID string `json:"material_id" validate:"required,max=191"`
+	MaterialID string `json:"material_id" validate:"required"`
 	// Supplier part number for this material.
 	SupplierPartNumber string `json:"supplier_part_number" validate:"required,max=255"`
 	// Supplier description for this material.

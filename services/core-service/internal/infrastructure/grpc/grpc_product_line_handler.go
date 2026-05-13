@@ -45,6 +45,8 @@ func productLineFullToProto(pl *domain.ProductLineFull) *pb.ProductLineInfo {
 			Name:       pl.UnitGroup.Name,
 			BaseUnitId: pl.UnitGroup.BaseUnitID,
 			Type:       pl.UnitGroup.Type,
+			CreatedAt:  timestamppb.New(pl.UnitGroup.CreatedAt),
+			UpdatedAt:  timestamppb.New(pl.UnitGroup.UpdatedAt),
 		}
 	}
 
@@ -57,9 +59,10 @@ func (h *gRPCHandler) ListProductLines(ctx context.Context, req *pb.ListProductL
 	}
 
 	params := domain.ListProductLinesParams{
-		Cursor: req.Cursor,
-		Limit:  req.Limit,
-		Query:  req.Query,
+		Cursor:   req.Cursor,
+		Limit:    req.Limit,
+		Query:    req.Query,
+		Includes: req.Includes,
 	}
 
 	result, apiErr := h.productLineSvc.ListProductLines(ctx, params)
@@ -88,7 +91,10 @@ func (h *gRPCHandler) GetProductLine(ctx context.Context, req *pb.GetProductLine
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	productLine, apiErr := h.productLineSvc.GetProductLine(ctx, req.Id)
+	productLine, apiErr := h.productLineSvc.GetProductLine(ctx, domain.GetProductLineParams{
+		ProductLineID: req.Id,
+		Includes:      req.Includes,
+	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
@@ -111,6 +117,7 @@ func (h *gRPCHandler) CreateProductLine(ctx context.Context, req *pb.CreateProdu
 		UnitGroupID:      req.UnitGroupId,
 		CommissionPolicy: constants.CommissionPolicy(req.CommissionPolicy),
 		FreightPolicy:    constants.FreightPolicy(req.FreightPolicy),
+		Includes:         req.Includes,
 	}
 
 	productLine, apiErr := h.productLineSvc.CreateProductLine(ctx, params)
@@ -135,6 +142,7 @@ func (h *gRPCHandler) UpdateProductLine(ctx context.Context, req *pb.UpdateProdu
 		ProductLineID: req.Id,
 		Name:          req.Name,
 		UnitGroupID:   req.UnitGroupId,
+		Includes:      req.Includes,
 	}
 	if req.CommissionPolicy != nil {
 		cp := constants.CommissionPolicy(*req.CommissionPolicy)

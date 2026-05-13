@@ -40,7 +40,7 @@ func (*DeliveriesEndpointGroup) Materialize(config *DeliveriesEndpointGroupConfi
 	}
 
 	listDeliveriesEndpoint := (&deliveryep.ListDeliveriesEndpoint{}).Materialize().WithService(inner, deliverySvc)
-	getDeliveryEndpoint := (&deliveryep.GetDeliveryEndpoint{}).Materialize().WithService(inner, deliverySvc)
+	getDeliveryEndpoint := (&deliveryep.RetrieveDeliveryEndpoint{}).Materialize().WithService(inner, deliverySvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listDeliveriesEndpoint,

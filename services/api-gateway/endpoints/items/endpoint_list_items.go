@@ -26,10 +26,14 @@ type ListItemsRequest struct {
 	StartDate *time.Time `query:"start_date"`
 	// Filter items created on or before this date.
 	EndDate *time.Time `query:"end_date"`
-	// When true, search query must match exactly rather than partial match.
-	IsExactMatch bool `query:"is_exact_match"`
-	// When true, only return items that are initial subassemblies.
-	OnlyInitialSubassemblies bool `query:"only_initial_subassemblies"`
+	// How the search query is matched against items (default: partial).
+	MatchMode *constants.ItemMatchMode `query:"match_mode" default:"partial"`
+	// Which subassemblies to include when listing (default: all).
+	SubassemblyFilter *constants.SubassemblyFilter `query:"subassembly_filter" default:"all"`
+	// Filter by product line IDs (only items whose product belongs to one of these lines).
+	ProductLineIDs []string `query:"product_line_ids"`
+	// Filter by customer account IDs (only items whose product line is accessible to any of these customers).
+	CustomerIDs []string `query:"customer_ids"`
 }
 
 type ListItemsEndpoint struct{}
@@ -44,14 +48,14 @@ func (e *ListItemsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListItemsReq
 		Request:           &ListItemsRequest{},
 		Response:          &apiresource.List[apiresource.Item]{},
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListItemsRequest) (*apiresource.List[apiresource.Item], *apierror.APIError) {
 			return svc.(ItemSvc).ListItems
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeItem,
-			Fields:     []string{"category", "unit_value", "unit_cost", "burn_rate", "attributes"},
+			Fields:     []string{"category", "unit_value", "unit_cost", "burn_rate", "attributes", "category.unit_group", "category.properties", "category.unit_group.base_unit", "category.unit_group.associated_units", "category.unit_group.associated_units.unit"},
 		}),
 	}
 }

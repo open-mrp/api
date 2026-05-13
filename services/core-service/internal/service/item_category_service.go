@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/services/core-service/internal/domain"
@@ -73,6 +74,27 @@ func (s *itemCategorySvcImpl) withTx(ctx context.Context, fn func(context.Contex
 	})
 }
 
+func loadItemCategoryFullTx(ctx context.Context, txRepo domain.ItemCategoryRepo, accountID, itemCategoryID string) (*domain.ItemCategoryFull, *apierror.APIError) {
+	full, apiErr := txRepo.Get(ctx, domain.GetItemCategoryParams{
+		AccountID:      accountID,
+		ItemCategoryID: itemCategoryID,
+	})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	props, apiErr := txRepo.GetProperties(ctx, itemCategoryID)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	full.Properties = props
+	ug, apiErr := txRepo.GetUnitGroup(ctx, full.UnitGroupID, nil)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	full.UnitGroup = ug
+	return full, nil
+}
+
 func (s *itemCategorySvcImpl) ListItemCategories(ctx context.Context, params domain.ListItemCategoriesParams) (*domain.ListItemCategoriesResult, *apierror.APIError) {
 	ctx, span := itemCategorySvcTracer.Start(ctx, "service.item_category.list")
 	defer span.End()
@@ -99,23 +121,27 @@ func (s *itemCategorySvcImpl) ListItemCategories(ctx context.Context, params dom
 	}
 
 	for _, category := range result.ItemCategories {
-		properties, apiErr := repo.GetProperties(ctx, category.ID)
-		if apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
+		if slices.Contains(params.Includes, "properties") {
+			properties, apiErr := repo.GetProperties(ctx, category.ID)
+			if apiErr != nil {
+				return nil, tracing.Trace(span, apiErr)
+			}
+			category.Properties = properties
 		}
-		category.Properties = properties
 
-		unitGroup, apiErr := repo.GetUnitGroup(ctx, category.UnitGroupID)
-		if apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
+		if slices.Contains(params.Includes, "unit_group") {
+			unitGroup, apiErr := repo.GetUnitGroup(ctx, category.UnitGroupID, params.Includes)
+			if apiErr != nil {
+				return nil, tracing.Trace(span, apiErr)
+			}
+			category.UnitGroup = unitGroup
 		}
-		category.UnitGroup = unitGroup
 	}
 
 	return result, nil
 }
 
-func (s *itemCategorySvcImpl) GetItemCategory(ctx context.Context, itemCategoryID string) (*domain.ItemCategoryFull, *apierror.APIError) {
+func (s *itemCategorySvcImpl) GetItemCategory(ctx context.Context, params domain.GetItemCategoryParams) (*domain.ItemCategoryFull, *apierror.APIError) {
 	ctx, span := itemCategorySvcTracer.Start(ctx, "service.item_category.get")
 	defer span.End()
 
@@ -131,27 +157,30 @@ func (s *itemCategorySvcImpl) GetItemCategory(ctx context.Context, itemCategoryI
 		return nil, tracing.Trace(span, apiErr)
 	}
 
+	params.AccountID = identity.Target.AccountID
+
 	repo := s.repos.NewItemCategoryRepo()
 
-	category, apiErr := repo.Get(ctx, domain.GetItemCategoryParams{
-		AccountID:      identity.Target.AccountID,
-		ItemCategoryID: itemCategoryID,
-	})
+	category, apiErr := repo.Get(ctx, params)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	properties, apiErr := repo.GetProperties(ctx, itemCategoryID)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+	if slices.Contains(params.Includes, "properties") {
+		properties, apiErr := repo.GetProperties(ctx, params.ItemCategoryID)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		category.Properties = properties
 	}
-	category.Properties = properties
 
-	unitGroup, apiErr := repo.GetUnitGroup(ctx, category.UnitGroupID)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+	if slices.Contains(params.Includes, "unit_group") {
+		unitGroup, apiErr := repo.GetUnitGroup(ctx, category.UnitGroupID, params.Includes)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		category.UnitGroup = unitGroup
 	}
-	category.UnitGroup = unitGroup
 
 	return category, nil
 }
@@ -204,11 +233,13 @@ func (s *itemCategorySvcImpl) CreateItemCategory(ctx context.Context, params dom
 				return apiErr
 			}
 
-			unitGroup, apiErr := txRepo.GetUnitGroup(txCtx, created.UnitGroupID)
-			if apiErr != nil {
-				return apiErr
+			if slices.Contains(params.Includes, "unit_group") {
+				unitGroup, apiErr := txRepo.GetUnitGroup(txCtx, created.UnitGroupID, params.Includes)
+				if apiErr != nil {
+					return apiErr
+				}
+				created.UnitGroup = unitGroup
 			}
-			created.UnitGroup = unitGroup
 
 			result = created
 
@@ -293,11 +324,13 @@ func (s *itemCategorySvcImpl) UpdateItemCategory(ctx context.Context, params dom
 				return apiErr
 			}
 
-			unitGroup, apiErr := txRepo.GetUnitGroup(txCtx, updated.UnitGroupID)
-			if apiErr != nil {
-				return apiErr
+			if slices.Contains(params.Includes, "unit_group") {
+				unitGroup, apiErr := txRepo.GetUnitGroup(txCtx, updated.UnitGroupID, params.Includes)
+				if apiErr != nil {
+					return apiErr
+				}
+				updated.UnitGroup = unitGroup
 			}
-			updated.UnitGroup = unitGroup
 
 			result = updated
 
@@ -458,6 +491,11 @@ func (s *itemCategorySvcImpl) AddItemCategoryProperty(ctx context.Context, param
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *itemCategorySvcImpl) *apierror.APIError {
 			txRepo := txSvc.repos.NewItemCategoryRepo()
 
+			oldFull, apiErr := loadItemCategoryFullTx(txCtx, txRepo, params.AccountID, params.ItemCategoryID)
+			if apiErr != nil {
+				return apiErr
+			}
+
 			property, apiErr := txSvc.repos.NewPropertyRepo().Get(txCtx, domain.GetPropertyParams{
 				PropertyID: params.PropertyID,
 				AccountID:  params.AccountID,
@@ -475,6 +513,22 @@ func (s *itemCategorySvcImpl) AddItemCategoryProperty(ctx context.Context, param
 			}
 
 			if apiErr := txRepo.AddProperty(txCtx, params); apiErr != nil {
+				return apiErr
+			}
+
+			newFull, apiErr := loadItemCategoryFullTx(txCtx, txRepo, params.AccountID, params.ItemCategoryID)
+			if apiErr != nil {
+				return apiErr
+			}
+
+			changes := audit.ComputeChanges(oldFull, newFull)
+			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+				ServiceName:  domain.ServiceName,
+				Action:       constants.AuditActionUpdate,
+				ResourceType: constants.ObjectTypeItemCategory,
+				ResourceID:   params.ItemCategoryID,
+				Changes:      changes,
+			}); apiErr != nil {
 				return apiErr
 			}
 
@@ -550,7 +604,28 @@ func (s *itemCategorySvcImpl) RemoveItemCategoryProperty(ctx context.Context, pa
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *itemCategorySvcImpl) *apierror.APIError {
 			txRepo := txSvc.repos.NewItemCategoryRepo()
 
+			oldFull, apiErr := loadItemCategoryFullTx(txCtx, txRepo, params.AccountID, params.ItemCategoryID)
+			if apiErr != nil {
+				return apiErr
+			}
+
 			if apiErr := txRepo.RemoveProperty(txCtx, params); apiErr != nil {
+				return apiErr
+			}
+
+			newFull, apiErr := loadItemCategoryFullTx(txCtx, txRepo, params.AccountID, params.ItemCategoryID)
+			if apiErr != nil {
+				return apiErr
+			}
+
+			changes := audit.ComputeChanges(oldFull, newFull)
+			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+				ServiceName:  domain.ServiceName,
+				Action:       constants.AuditActionUpdate,
+				ResourceType: constants.ObjectTypeItemCategory,
+				ResourceID:   params.ItemCategoryID,
+				Changes:      changes,
+			}); apiErr != nil {
 				return apiErr
 			}
 
@@ -652,7 +727,28 @@ func (s *itemCategorySvcImpl) ChangeItemCategoryUnitGroup(ctx context.Context, p
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *itemCategorySvcImpl) *apierror.APIError {
 			txRepo := txSvc.repos.NewItemCategoryRepo()
 
+			oldFull, apiErr := loadItemCategoryFullTx(txCtx, txRepo, params.AccountID, params.ItemCategoryID)
+			if apiErr != nil {
+				return apiErr
+			}
+
 			if apiErr := txRepo.ChangeUnitGroup(txCtx, params); apiErr != nil {
+				return apiErr
+			}
+
+			newFull, apiErr := loadItemCategoryFullTx(txCtx, txRepo, params.AccountID, params.ItemCategoryID)
+			if apiErr != nil {
+				return apiErr
+			}
+
+			changes := audit.ComputeChanges(oldFull, newFull)
+			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+				ServiceName:  domain.ServiceName,
+				Action:       constants.AuditActionUpdate,
+				ResourceType: constants.ObjectTypeItemCategory,
+				ResourceID:   params.ItemCategoryID,
+				Changes:      changes,
+			}); apiErr != nil {
 				return apiErr
 			}
 

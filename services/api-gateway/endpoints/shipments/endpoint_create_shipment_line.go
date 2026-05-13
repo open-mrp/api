@@ -15,11 +15,11 @@ type CreateShipmentLineRequest struct {
 	// Shipment ID.
 	ShipmentID string `path:"shipment_id" validate:"required"`
 	// Sales order line ID.
-	SalesOrderLineID string `json:"sales_order_line_id" validate:"required,max=191"`
+	SalesOrderLineID string `json:"sales_order_line_id" validate:"required"`
 	// Quantity value.
 	QuantityValue string `json:"quantity_value" validate:"required"`
 	// Quantity unit ID.
-	QuantityUnitID string `json:"quantity_unit_id" validate:"required,max=191"`
+	QuantityUnitID string `json:"quantity_unit_id" validate:"required"`
 }
 
 var sampleCreateShipmentLineRequest = &CreateShipmentLineRequest{

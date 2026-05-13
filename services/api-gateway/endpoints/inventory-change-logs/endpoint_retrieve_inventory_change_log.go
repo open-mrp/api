@@ -1,0 +1,41 @@
+package inventorychangelogep
+
+import (
+	"context"
+	"net/http"
+
+	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
+	apierror "github.com/augno/api/shared/errors"
+)
+
+// RetrieveInventoryChangeLogRequest is the request to retrieve an inventory change log by ID.
+type RetrieveInventoryChangeLogRequest struct {
+	// Inventory change log ID.
+	InventoryChangeLogID string `path:"id" validate:"required"`
+}
+
+type RetrieveInventoryChangeLogEndpoint struct{}
+
+func (e *RetrieveInventoryChangeLogEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveInventoryChangeLogRequest, *apiresource.InventoryChangeLog] {
+	return &apiendpoint.APIEndpoint[*RetrieveInventoryChangeLogRequest, *apiresource.InventoryChangeLog]{
+		Title:             "Retrieve Inventory Change Log",
+		Description:       "Returns an inventory change log by ID.",
+		Method:            http.MethodGet,
+		ContentType:       "application/json",
+		Route:             "/v1/operations/inventory-change-logs/{id}",
+		Request:           &RetrieveInventoryChangeLogRequest{},
+		Response:          &apiresource.InventoryChangeLog{},
+		SuccessStatusCode: http.StatusOK,
+		Public:            false,
+		Preview:           true,
+		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveInventoryChangeLogRequest) (*apiresource.InventoryChangeLog, *apierror.APIError) {
+			return svc.(InventoryChangeLogSvc).GetInventoryChangeLog
+		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeInventoryChangeLog,
+			Fields:     []string{"item", "quantity", "quantity.unit", "responsible_user", "responsible_scanning_station"},
+		}),
+	}
+}

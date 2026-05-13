@@ -9,6 +9,8 @@ import (
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	httptransport "github.com/augno/api/services/api-gateway/internal/http"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/appctx"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
@@ -18,12 +20,11 @@ import (
 
 type ItemSvc interface {
 	ListItems(ctx context.Context, req *ListItemsRequest) (*apiresource.List[apiresource.Item], *apierror.APIError)
-	GetItem(ctx context.Context, req *GetItemRequest) (*apiresource.Item, *apierror.APIError)
-	GetItemInventory(ctx context.Context, req *GetItemInventoryRequest) (*apiresource.ItemInventory, *apierror.APIError)
+	GetItem(ctx context.Context, req *RetrieveItemRequest) (*apiresource.Item, *apierror.APIError)
+	GetItemInventory(ctx context.Context, req *RetrieveItemInventoryRequest) (*apiresource.ItemInventory, *apierror.APIError)
 	GetItemCosts(ctx context.Context, req *GetItemCostsRequest) (*apiresource.ItemCosts, *apierror.APIError)
 	GetItemTrends(ctx context.Context, req *GetItemTrendsRequest) (*apiresource.ItemTrends, *apierror.APIError)
 	ExportItems(ctx context.Context, req *ExportItemsRequest) (*httptransport.FileDownload, *apierror.APIError)
-	UpdateItem(ctx context.Context, req *UpdateItemRequest) (*apiresource.Item, *apierror.APIError)
 	AddItemAttribute(ctx context.Context, req *AddItemAttributeRequest) (*apiresource.Item, *apierror.APIError)
 	RemoveItemAttribute(ctx context.Context, req *RemoveItemAttributeRequest) (*apiresource.Item, *apierror.APIError)
 	ChangeItemCategory(ctx context.Context, req *ChangeItemCategoryRequest) (*apiresource.Item, *apierror.APIError)
@@ -60,6 +61,10 @@ func NewItemSvc(config *ItemSvcConfig) ItemSvc {
 }
 
 func (m *itemSvcImpl) ListItems(ctx context.Context, req *ListItemsRequest) (*apiresource.List[apiresource.Item], *apierror.APIError) {
+	isExactMatch := req.MatchMode != nil && *req.MatchMode == constants.ItemMatchModeExact
+	onlyInitialSubassemblies := req.SubassemblyFilter != nil &&
+		*req.SubassemblyFilter == constants.SubassemblyFilterInitialOnly
+
 	pbReq := &pb.ListItemsRequest{
 		Cursor:                   req.Cursor,
 		Limit:                    req.Limit,
@@ -68,8 +73,11 @@ func (m *itemSvcImpl) ListItems(ctx context.Context, req *ListItemsRequest) (*ap
 		CategoryIds:              req.CategoryIDs,
 		AttributeIds:             req.AttributeIDs,
 		SupplierId:               req.SupplierID,
-		IsExactMatch:             req.IsExactMatch,
-		OnlyInitialSubassemblies: req.OnlyInitialSubassemblies,
+		IsExactMatch:             isExactMatch,
+		OnlyInitialSubassemblies: onlyInitialSubassemblies,
+		Includes:                 appctx.GetRequestedIncludeKeys(ctx),
+		ProductLineIds:           req.ProductLineIDs,
+		CustomerIds:              req.CustomerIDs,
 	}
 
 	if req.StartDate != nil {
@@ -91,9 +99,10 @@ func (m *itemSvcImpl) ListItems(ctx context.Context, req *ListItemsRequest) (*ap
 	return ItemListPresenter(resp), nil
 }
 
-func (m *itemSvcImpl) GetItem(ctx context.Context, req *GetItemRequest) (*apiresource.Item, *apierror.APIError) {
+func (m *itemSvcImpl) GetItem(ctx context.Context, req *RetrieveItemRequest) (*apiresource.Item, *apierror.APIError) {
 	pbReq := &pb.GetItemRequest{
-		Id: req.ItemID,
+		Id:       req.ItemID,
+		Includes: appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, itemSvcTracer, "service.items.get", domain.ServiceName,
@@ -109,7 +118,7 @@ func (m *itemSvcImpl) GetItem(ctx context.Context, req *GetItemRequest) (*apires
 	return &result, nil
 }
 
-func (m *itemSvcImpl) GetItemInventory(ctx context.Context, req *GetItemInventoryRequest) (*apiresource.ItemInventory, *apierror.APIError) {
+func (m *itemSvcImpl) GetItemInventory(ctx context.Context, req *RetrieveItemInventoryRequest) (*apiresource.ItemInventory, *apierror.APIError) {
 	pbReq := &pb.GetItemInventoryRequest{
 		Id: req.ItemID,
 	}
@@ -185,39 +194,11 @@ func (m *itemSvcImpl) ExportItems(ctx context.Context, req *ExportItemsRequest) 
 	}, nil
 }
 
-func (m *itemSvcImpl) UpdateItem(ctx context.Context, req *UpdateItemRequest) (*apiresource.Item, *apierror.APIError) {
-	pbReq := &pb.UpdateItemRequest{
-		Id:  req.ItemID,
-		Sku: req.SKU,
-	}
-
-	if req.Description != nil {
-		pbReq.UpdateDescription = true
-		pbReq.Description = req.Description
-	}
-
-	if req.Notes != nil {
-		pbReq.UpdateNotes = true
-		pbReq.Notes = req.Notes
-	}
-
-	resp, apiErr := grpcutil.CallRPC(ctx, itemSvcTracer, "service.items.update", domain.ServiceName,
-		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateItemResponse, error) {
-			return m.coreClient.UpdateItem(ctx, pbReq, opts...)
-		})
-
-	if apiErr != nil {
-		return nil, apiErr
-	}
-
-	result := ItemPresenter(resp.Item)
-	return &result, nil
-}
-
 func (m *itemSvcImpl) AddItemAttribute(ctx context.Context, req *AddItemAttributeRequest) (*apiresource.Item, *apierror.APIError) {
 	pbReq := &pb.AddItemAttributeRequest{
 		ItemId:      req.ItemID,
 		AttributeId: req.AttributeID,
+		Includes:    appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, itemSvcTracer, "service.items.add_attribute", domain.ServiceName,
@@ -237,6 +218,7 @@ func (m *itemSvcImpl) RemoveItemAttribute(ctx context.Context, req *RemoveItemAt
 	pbReq := &pb.RemoveItemAttributeRequest{
 		ItemId:      req.ItemID,
 		AttributeId: req.AttributeID,
+		Includes:    appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, itemSvcTracer, "service.items.remove_attribute", domain.ServiceName,
@@ -256,6 +238,7 @@ func (m *itemSvcImpl) ChangeItemCategory(ctx context.Context, req *ChangeItemCat
 	pbReq := &pb.ChangeItemCategoryRequest{
 		ItemId:     req.ItemID,
 		CategoryId: req.CategoryID,
+		Includes:   appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, itemSvcTracer, "service.items.change_category", domain.ServiceName,
@@ -272,10 +255,16 @@ func (m *itemSvcImpl) ChangeItemCategory(ctx context.Context, req *ChangeItemCat
 }
 
 func (m *itemSvcImpl) UpdateItemInventory(ctx context.Context, req *UpdateItemInventoryRequest) (*apiresource.EmptyResource, *apierror.APIError) {
+	var reconcile *bool
+	if req.Operation != nil {
+		v := *req.Operation == constants.InventoryUpdateOperationReconcile
+		reconcile = &v
+	}
+
 	pbReq := &pb.UpdateItemInventoryRequest{
 		ItemId:         req.ItemID,
 		QuantityChange: req.QuantityChange,
-		Reconcile:      req.Reconcile,
+		Reconcile:      reconcile,
 		CustomerId:     req.CustomerID,
 		LocationId:     req.LocationID,
 		LotNumber:      req.LotNumber,
@@ -321,11 +310,15 @@ func (m *itemSvcImpl) BulkCreateItems(ctx context.Context, req *BulkCreateItemsR
 
 	results := make([]apiresource.BulkCreateItemResult, len(resp.Results))
 	for i, r := range resp.Results {
+		status := "failed"
+		if r.Success {
+			status = "created"
+		}
 		results[i] = apiresource.BulkCreateItemResult{
-			SKU:     r.Sku,
-			Success: r.Success,
-			Error:   r.Error,
-			ItemID:  r.ItemId,
+			SKU:    r.Sku,
+			Status: status,
+			Error:  r.Error,
+			ItemID: r.ItemId,
 		}
 	}
 

@@ -30,17 +30,24 @@ func AccountUserPresenter(au *pb.AccountUserDetail) apiresource.AccountUser {
 			ID:       *au.RoleId,
 			Object:   constants.ObjectTypeRole,
 			Name:     deref(au.RoleName),
-			TypeCode: constants.RoleTypeCode(deref(au.RoleTypeCode)),
+			TypeCode: constants.RoleType(deref(au.RoleTypeCode)),
 			Owner:    apiresource.SystemOwner(),
 		}
 	}
 
 	if au.DepartmentId != nil {
-		result.Department = &apiresource.Department{
+		dept := &apiresource.Department{
 			ID:     *au.DepartmentId,
 			Object: constants.ObjectTypeDepartment,
 			Name:   deref(au.DepartmentName),
 		}
+		if au.DepartmentCreatedAt != nil {
+			dept.CreatedAt = au.DepartmentCreatedAt.AsTime()
+		}
+		if au.DepartmentUpdatedAt != nil {
+			dept.UpdatedAt = au.DepartmentUpdatedAt.AsTime()
+		}
+		result.Department = dept
 	}
 
 	return result

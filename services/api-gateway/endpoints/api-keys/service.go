@@ -18,7 +18,7 @@ import (
 )
 
 type APIKeySvc interface {
-	GetAPIKey(ctx context.Context, req *GetAPIKeyRequest) (*apiresource.APIKey, *apierror.APIError)
+	GetAPIKey(ctx context.Context, req *RetrieveAPIKeyRequest) (*apiresource.APIKey, *apierror.APIError)
 	CreateAPIKey(ctx context.Context, req *CreateAPIKeyRequest) (*apiresource.CreatedAPIKey, *apierror.APIError)
 	RotateAPIKey(ctx context.Context, req *RotateAPIKeyRequest) (*apiresource.CreatedAPIKey, *apierror.APIError)
 	RevokeAPIKey(ctx context.Context, req *RevokeAPIKeyRequest) (*apiresource.EmptyResource, *apierror.APIError)
@@ -70,7 +70,7 @@ func (m *apiKeySvcImpl) resolveRolePermissions(ctx context.Context, roleID *stri
 	return resp.Permissions
 }
 
-func (m *apiKeySvcImpl) GetAPIKey(ctx context.Context, req *GetAPIKeyRequest) (*apiresource.APIKey, *apierror.APIError) {
+func (m *apiKeySvcImpl) GetAPIKey(ctx context.Context, req *RetrieveAPIKeyRequest) (*apiresource.APIKey, *apierror.APIError) {
 	resp, apiErr := grpcutil.CallRPC(ctx, apiKeySvcTracer, "service.api_keys.get", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetAPIKeyResponse, error) {
 			return m.authClient.GetAPIKey(ctx, &pb.GetAPIKeyRequest{

@@ -24,7 +24,7 @@ func unmarshalConfig(configJSON string) *apiresource.AgentDefinitionConfig {
 	return &cfg
 }
 
-func AgentDefinitionPresenter(a *pb.AgentDefinitionInfo, roleInfo *resolvedRole) apiresource.AgentDefinition {
+func AgentDefinitionPresenter(a *pb.AgentDefinitionInfo, roleInfo *ResolvedRole) apiresource.AgentDefinition {
 	if a == nil {
 		return apiresource.AgentDefinition{}
 	}
@@ -56,7 +56,7 @@ func AgentDefinitionPresenter(a *pb.AgentDefinitionInfo, roleInfo *resolvedRole)
 			ID:       a.RoleId,
 			Object:   constants.ObjectTypeRole,
 			Name:     roleInfo.Name,
-			TypeCode: constants.RoleTypeCode(roleInfo.RoleTypeCode),
+			TypeCode: constants.RoleType(roleInfo.RoleType),
 			Owner:    apiresource.SystemOwner(),
 		}
 		if roleInfo.Permissions != nil {
@@ -93,14 +93,14 @@ func AgentDefinitionPresenter(a *pb.AgentDefinitionInfo, roleInfo *resolvedRole)
 	}
 }
 
-func AgentDefinitionListPresenter(resp *pb.ListAgentDefinitionsResponse, roleResolver func(roleID string) *resolvedRole) *apiresource.List[apiresource.AgentDefinition] {
+func AgentDefinitionListPresenter(resp *pb.ListAgentDefinitionsResponse, roleResolver func(roleID string) *ResolvedRole) *apiresource.List[apiresource.AgentDefinition] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.AgentDefinition](nil, apiresource.PageInfo{})
 	}
 
 	agents := make([]apiresource.AgentDefinition, len(resp.Agents))
 	for i, a := range resp.Agents {
-		var roleInfo *resolvedRole
+		var roleInfo *ResolvedRole
 		if roleResolver != nil {
 			roleInfo = roleResolver(a.RoleId)
 		}

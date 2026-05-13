@@ -222,4 +222,16 @@ type AgentAlertInfo struct {
 	AcknowledgedByActorName string
 	CreatedAt               string
 	UpdatedAt               string
+
+	// Joined run fields
+	RunStatusCode  string
+	RunTriggerType string
+	RunCreatedAt   string
+	RunUpdatedAt   string
+
+	// Joined action fields
+	ActionToolSlug   string
+	ActionStatusCode string
+	ActionCreatedAt  string
+	ActionUpdatedAt  string
 }

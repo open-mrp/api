@@ -29,19 +29,23 @@ func shipmentID(s *domain.ShipmentSummary) string           { return s.ID }
 
 func mapShipmentForwardRow(row sqlc.ListShipmentsForwardRow) *domain.ShipmentSummary {
 	s := &domain.ShipmentSummary{
-		ID:               row.ID,
-		Number:           row.Number,
-		StatusCode:       row.StatusCode,
-		StatusName:       row.StatusName,
-		SalesOrderID:     row.SalesOrderID,
-		SalesOrderNumber: row.SalesOrderNumber,
-		CustomerID:       row.CustomerID,
-		CustomerName:     row.CustomerName,
-		CustomerNumber:   row.CustomerNumber,
-		CarrierID:        row.CarrierID,
-		CarrierName:      row.CarrierName,
-		CreatedAt:        row.CreatedAt,
-		UpdatedAt:        row.UpdatedAt,
+		ID:                  row.ID,
+		Number:              row.Number,
+		StatusCode:          row.StatusCode,
+		StatusName:          row.StatusName,
+		SalesOrderID:        row.SalesOrderID,
+		SalesOrderNumber:    row.SalesOrderNumber,
+		SalesOrderCreatedAt: row.SalesOrderCreatedAt,
+		SalesOrderUpdatedAt: row.SalesOrderUpdatedAt,
+		CustomerID:          row.CustomerID,
+		CustomerName:        row.CustomerName,
+		CustomerNumber:      row.CustomerNumber,
+		CustomerCreatedAt:   row.CustomerCreatedAt,
+		CustomerUpdatedAt:   row.CustomerUpdatedAt,
+		CarrierID:           row.CarrierID,
+		CarrierName:         row.CarrierName,
+		CreatedAt:           row.CreatedAt,
+		UpdatedAt:           row.UpdatedAt,
 	}
 	if row.BillOfLading.Valid {
 		s.BillOfLading = &row.BillOfLading.String
@@ -72,19 +76,23 @@ func mapShipmentForwardRow(row sqlc.ListShipmentsForwardRow) *domain.ShipmentSum
 
 func mapShipmentBackwardRow(row sqlc.ListShipmentsBackwardRow) *domain.ShipmentSummary {
 	s := &domain.ShipmentSummary{
-		ID:               row.ID,
-		Number:           row.Number,
-		StatusCode:       row.StatusCode,
-		StatusName:       row.StatusName,
-		SalesOrderID:     row.SalesOrderID,
-		SalesOrderNumber: row.SalesOrderNumber,
-		CustomerID:       row.CustomerID,
-		CustomerName:     row.CustomerName,
-		CustomerNumber:   row.CustomerNumber,
-		CarrierID:        row.CarrierID,
-		CarrierName:      row.CarrierName,
-		CreatedAt:        row.CreatedAt,
-		UpdatedAt:        row.UpdatedAt,
+		ID:                  row.ID,
+		Number:              row.Number,
+		StatusCode:          row.StatusCode,
+		StatusName:          row.StatusName,
+		SalesOrderID:        row.SalesOrderID,
+		SalesOrderNumber:    row.SalesOrderNumber,
+		SalesOrderCreatedAt: row.SalesOrderCreatedAt,
+		SalesOrderUpdatedAt: row.SalesOrderUpdatedAt,
+		CustomerID:          row.CustomerID,
+		CustomerName:        row.CustomerName,
+		CustomerNumber:      row.CustomerNumber,
+		CustomerCreatedAt:   row.CustomerCreatedAt,
+		CustomerUpdatedAt:   row.CustomerUpdatedAt,
+		CarrierID:           row.CarrierID,
+		CarrierName:         row.CarrierName,
+		CreatedAt:           row.CreatedAt,
+		UpdatedAt:           row.UpdatedAt,
 	}
 	if row.BillOfLading.Valid {
 		s.BillOfLading = &row.BillOfLading.String
@@ -303,6 +311,10 @@ func (r *shipmentRepoImpl) Get(ctx context.Context, params domain.GetShipmentPar
 	}
 	carrierPortal := row.CarrierIsPortalEnabled
 	shipment.CarrierIsPortalEnabled = &carrierPortal
+	carrierCreatedAt := row.CarrierCreatedAt
+	shipment.CarrierCreatedAt = &carrierCreatedAt
+	carrierUpdatedAt := row.CarrierUpdatedAt
+	shipment.CarrierUpdatedAt = &carrierUpdatedAt
 	if row.CarrierOptionID.Valid {
 		shipment.ServiceLevelID = &row.CarrierOptionID.String
 	}
@@ -310,6 +322,8 @@ func (r *shipmentRepoImpl) Get(ctx context.Context, params domain.GetShipmentPar
 		shipment.ServiceLevelName = &row.CarrierOptionName.String
 	}
 	shipment.ServiceLevelIsPortalEnabled = nullBoolPtr(row.ServiceLevelIsPortalEnabled)
+	shipment.ServiceLevelCreatedAt = nullTimePtr(row.ServiceLevelCreatedAt)
+	shipment.ServiceLevelUpdatedAt = nullTimePtr(row.ServiceLevelUpdatedAt)
 	if row.ShippingAddressName.Valid {
 		shipment.ShippingAddressName = &row.ShippingAddressName.String
 	}
@@ -338,6 +352,20 @@ func (r *shipmentRepoImpl) Get(ctx context.Context, params domain.GetShipmentPar
 	if row.BillingAddressZip.Valid {
 		shipment.BillingAddressZip = &row.BillingAddressZip.String
 	}
+
+	shipment.CustomerCreatedAt = row.CustomerCreatedAt
+	shipment.CustomerUpdatedAt = row.CustomerUpdatedAt
+	shipment.SalesOrderCreatedAt = row.SalesOrderCreatedAt
+	shipment.SalesOrderUpdatedAt = row.SalesOrderUpdatedAt
+	shipment.ShippingAddressCreatedAt = nullTimePtr(row.ShippingAddressCreatedAt)
+	shipment.ShippingAddressUpdatedAt = nullTimePtr(row.ShippingAddressUpdatedAt)
+	shipment.ShippedByStatusCode = nullStringToPtr(row.ShippedByStatusCode)
+	shipment.ShippedByCreatedAt = nullTimePtr(row.ShippedByCreatedAt)
+	shipment.ShippedByUpdatedAt = nullTimePtr(row.ShippedByUpdatedAt)
+	shipment.InvoiceCreatedAt = nullTimePtr(row.InvoiceCreatedAt)
+	shipment.InvoiceUpdatedAt = nullTimePtr(row.InvoiceUpdatedAt)
+	shipment.PickCreatedAt = nullTimePtr(row.PickCreatedAt)
+	shipment.PickUpdatedAt = nullTimePtr(row.PickUpdatedAt)
 
 	return shipment, nil
 }

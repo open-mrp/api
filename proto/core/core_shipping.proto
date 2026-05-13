@@ -76,6 +76,10 @@ message ShipmentSummaryInfo {
   optional string service_level_token = 22;
   optional string customer_status_code = 23;
   optional string customer_commission_policy = 24;
+  optional google.protobuf.Timestamp customer_created_at = 25;
+  optional google.protobuf.Timestamp customer_updated_at = 26;
+  optional google.protobuf.Timestamp sales_order_created_at = 27;
+  optional google.protobuf.Timestamp sales_order_updated_at = 28;
 }
 
 // ShipmentInfo represents a full shipment resource.
@@ -120,6 +124,29 @@ message ShipmentInfo {
   optional string customer_status_code = 38;
   optional string customer_commission_policy = 39;
   optional string pick_number = 40;
+  optional google.protobuf.Timestamp service_level_created_at = 41;
+  optional google.protobuf.Timestamp service_level_updated_at = 42;
+  optional google.protobuf.Timestamp carrier_created_at = 43;
+  optional google.protobuf.Timestamp carrier_updated_at = 44;
+  // Customer timestamps
+  optional google.protobuf.Timestamp customer_created_at = 45;
+  optional google.protobuf.Timestamp customer_updated_at = 46;
+  // Sales order timestamps
+  optional google.protobuf.Timestamp sales_order_created_at = 47;
+  optional google.protobuf.Timestamp sales_order_updated_at = 48;
+  // Shipping address timestamps
+  optional google.protobuf.Timestamp shipping_address_created_at = 49;
+  optional google.protobuf.Timestamp shipping_address_updated_at = 50;
+  // Shipped by details
+  optional string shipped_by_status = 51;
+  optional google.protobuf.Timestamp shipped_by_created_at = 52;
+  optional google.protobuf.Timestamp shipped_by_updated_at = 53;
+  // Invoice timestamps
+  optional google.protobuf.Timestamp invoice_created_at = 54;
+  optional google.protobuf.Timestamp invoice_updated_at = 55;
+  // Pick timestamps
+  optional google.protobuf.Timestamp pick_created_at = 56;
+  optional google.protobuf.Timestamp pick_updated_at = 57;
 }
 
 // ShipmentLineInfo represents a shipment line resource.
@@ -164,6 +191,8 @@ message ShippingCaseDetailInfo {
   google.protobuf.Timestamp created_at = 21;
   google.protobuf.Timestamp updated_at = 22;
   optional bool carrier_is_portal_enabled = 23;
+  optional google.protobuf.Timestamp carrier_created_at = 24;
+  optional google.protobuf.Timestamp carrier_updated_at = 25;
 }
 
 // ParcelInfo represents a package for rate estimation.
@@ -236,6 +265,7 @@ message UpdateShipmentRequest {
   optional string master_tracking_number = 4;
   optional string carrier_id = 5;
   optional string service_level_id = 6;
+  repeated string includes = 7;
 }
 
 message UpdateShipmentResponse {
@@ -251,6 +281,7 @@ message DeleteShipmentRequest {
 message ShipShipmentRequest {
   string id = 1;
   bool email_customer = 2;
+  repeated string includes = 3;
 }
 
 message ShipShipmentResponse {

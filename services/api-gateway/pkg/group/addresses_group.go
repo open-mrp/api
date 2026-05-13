@@ -40,7 +40,7 @@ func (*AddressesEndpointGroup) Materialize(config *AddressesEndpointGroupConfig)
 	}
 
 	listAddressesEndpoint := (&addressep.ListAddressesEndpoint{}).Materialize().WithService(inner, addressSvc)
-	getAddressEndpoint := (&addressep.GetAddressEndpoint{}).Materialize().WithService(inner, addressSvc)
+	getAddressEndpoint := (&addressep.RetrieveAddressEndpoint{}).Materialize().WithService(inner, addressSvc)
 	createAddressEndpoint := (&addressep.CreateAddressEndpoint{}).Materialize().WithService(inner, addressSvc)
 	updateAddressEndpoint := (&addressep.UpdateAddressEndpoint{}).Materialize().WithService(inner, addressSvc)
 	deleteAddressEndpoint := (&addressep.DeleteAddressEndpoint{}).Materialize().WithService(inner, addressSvc)

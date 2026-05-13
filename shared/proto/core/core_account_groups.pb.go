@@ -626,25 +626,27 @@ func (x *DeleteAccountGroupRequest) GetId() string {
 }
 
 type AccountUserDetail struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	UserId         string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	Name           *string                `protobuf:"bytes,3,opt,name=name,proto3,oneof" json:"name,omitempty"`
-	Email          *string                `protobuf:"bytes,4,opt,name=email,proto3,oneof" json:"email,omitempty"`
-	Username       *string                `protobuf:"bytes,5,opt,name=username,proto3,oneof" json:"username,omitempty"`
-	ImageUrl       *string                `protobuf:"bytes,6,opt,name=image_url,json=imageUrl,proto3,oneof" json:"image_url,omitempty"`
-	EmailVerified  bool                   `protobuf:"varint,7,opt,name=email_verified,json=emailVerified,proto3" json:"email_verified,omitempty"`
-	RoleId         *string                `protobuf:"bytes,8,opt,name=role_id,json=roleId,proto3,oneof" json:"role_id,omitempty"`
-	RoleName       *string                `protobuf:"bytes,9,opt,name=role_name,json=roleName,proto3,oneof" json:"role_name,omitempty"`
-	RoleTypeCode   *string                `protobuf:"bytes,10,opt,name=role_type_code,json=roleTypeCode,proto3,oneof" json:"role_type_code,omitempty"`
-	DepartmentId   *string                `protobuf:"bytes,11,opt,name=department_id,json=departmentId,proto3,oneof" json:"department_id,omitempty"`
-	DepartmentName *string                `protobuf:"bytes,12,opt,name=department_name,json=departmentName,proto3,oneof" json:"department_name,omitempty"`
-	StatusCode     string                 `protobuf:"bytes,13,opt,name=status_code,json=statusCode,proto3" json:"status_code,omitempty"`
-	LastUsedAt     *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=last_used_at,json=lastUsedAt,proto3,oneof" json:"last_used_at,omitempty"`
-	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,15,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt      *timestamppb.Timestamp `protobuf:"bytes,16,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	Id                  string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	UserId              string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Name                *string                `protobuf:"bytes,3,opt,name=name,proto3,oneof" json:"name,omitempty"`
+	Email               *string                `protobuf:"bytes,4,opt,name=email,proto3,oneof" json:"email,omitempty"`
+	Username            *string                `protobuf:"bytes,5,opt,name=username,proto3,oneof" json:"username,omitempty"`
+	ImageUrl            *string                `protobuf:"bytes,6,opt,name=image_url,json=imageUrl,proto3,oneof" json:"image_url,omitempty"`
+	EmailVerified       bool                   `protobuf:"varint,7,opt,name=email_verified,json=emailVerified,proto3" json:"email_verified,omitempty"`
+	RoleId              *string                `protobuf:"bytes,8,opt,name=role_id,json=roleId,proto3,oneof" json:"role_id,omitempty"`
+	RoleName            *string                `protobuf:"bytes,9,opt,name=role_name,json=roleName,proto3,oneof" json:"role_name,omitempty"`
+	RoleTypeCode        *string                `protobuf:"bytes,10,opt,name=role_type_code,json=roleTypeCode,proto3,oneof" json:"role_type_code,omitempty"`
+	DepartmentId        *string                `protobuf:"bytes,11,opt,name=department_id,json=departmentId,proto3,oneof" json:"department_id,omitempty"`
+	DepartmentName      *string                `protobuf:"bytes,12,opt,name=department_name,json=departmentName,proto3,oneof" json:"department_name,omitempty"`
+	StatusCode          string                 `protobuf:"bytes,13,opt,name=status_code,json=statusCode,proto3" json:"status_code,omitempty"`
+	LastUsedAt          *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=last_used_at,json=lastUsedAt,proto3,oneof" json:"last_used_at,omitempty"`
+	CreatedAt           *timestamppb.Timestamp `protobuf:"bytes,15,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt           *timestamppb.Timestamp `protobuf:"bytes,16,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	DepartmentCreatedAt *timestamppb.Timestamp `protobuf:"bytes,17,opt,name=department_created_at,json=departmentCreatedAt,proto3,oneof" json:"department_created_at,omitempty"`
+	DepartmentUpdatedAt *timestamppb.Timestamp `protobuf:"bytes,18,opt,name=department_updated_at,json=departmentUpdatedAt,proto3,oneof" json:"department_updated_at,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *AccountUserDetail) Reset() {
@@ -789,6 +791,20 @@ func (x *AccountUserDetail) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *AccountUserDetail) GetDepartmentCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.DepartmentCreatedAt
+	}
+	return nil
+}
+
+func (x *AccountUserDetail) GetDepartmentUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.DepartmentUpdatedAt
+	}
+	return nil
+}
+
 type ListAccountUsersRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	Cursor         *string                `protobuf:"bytes,1,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
@@ -796,6 +812,7 @@ type ListAccountUsersRequest struct {
 	Query          *string                `protobuf:"bytes,3,opt,name=query,proto3,oneof" json:"query,omitempty"`
 	RoleType       *string                `protobuf:"bytes,4,opt,name=role_type,json=roleType,proto3,oneof" json:"role_type,omitempty"`
 	IncludeRemoved bool                   `protobuf:"varint,5,opt,name=include_removed,json=includeRemoved,proto3" json:"include_removed,omitempty"`
+	Includes       []string               `protobuf:"bytes,6,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -865,6 +882,13 @@ func (x *ListAccountUsersRequest) GetIncludeRemoved() bool {
 	return false
 }
 
+func (x *ListAccountUsersRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
+}
+
 type ListAccountUsersResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	AccountUsers  []*AccountUserDetail   `protobuf:"bytes,1,rep,name=account_users,json=accountUsers,proto3" json:"account_users,omitempty"`
@@ -928,6 +952,7 @@ func (x *ListAccountUsersResponse) GetTotalCount() int64 {
 type GetAccountUserRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	AccountUserId string                 `protobuf:"bytes,1,opt,name=account_user_id,json=accountUserId,proto3" json:"account_user_id,omitempty"`
+	Includes      []string               `protobuf:"bytes,2,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -967,6 +992,13 @@ func (x *GetAccountUserRequest) GetAccountUserId() string {
 		return x.AccountUserId
 	}
 	return ""
+}
+
+func (x *GetAccountUserRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
 }
 
 type GetAccountUserResponse struct {
@@ -1211,6 +1243,9 @@ type UpdateAccountUserRequest struct {
 	DepartmentId  *string                `protobuf:"bytes,6,opt,name=department_id,json=departmentId,proto3,oneof" json:"department_id,omitempty"`
 	// When non-empty, replaces the toggle state of the listed preferences.
 	NotificationPreferences []*NotificationPreferenceItem `protobuf:"bytes,7,rep,name=notification_preferences,json=notificationPreferences,proto3" json:"notification_preferences,omitempty"`
+	Includes                []string                      `protobuf:"bytes,8,rep,name=includes,proto3" json:"includes,omitempty"`
+	ClearRoleId             bool                          `protobuf:"varint,9,opt,name=clear_role_id,json=clearRoleId,proto3" json:"clear_role_id,omitempty"`
+	ClearDepartmentId       bool                          `protobuf:"varint,10,opt,name=clear_department_id,json=clearDepartmentId,proto3" json:"clear_department_id,omitempty"`
 	unknownFields           protoimpl.UnknownFields
 	sizeCache               protoimpl.SizeCache
 }
@@ -1292,6 +1327,27 @@ func (x *UpdateAccountUserRequest) GetNotificationPreferences() []*NotificationP
 		return x.NotificationPreferences
 	}
 	return nil
+}
+
+func (x *UpdateAccountUserRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
+}
+
+func (x *UpdateAccountUserRequest) GetClearRoleId() bool {
+	if x != nil {
+		return x.ClearRoleId
+	}
+	return false
+}
+
+func (x *UpdateAccountUserRequest) GetClearDepartmentId() bool {
+	if x != nil {
+		return x.ClearDepartmentId
+	}
+	return false
 }
 
 type UpdateAccountUserResponse struct {
@@ -2036,11 +2092,18 @@ func (x *AccountPriceInfo) GetUpdatedAt() *timestamppb.Timestamp {
 }
 
 type AccountPriceRecipientInfo struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Id               string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name             string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Number           string                 `protobuf:"bytes,3,opt,name=number,proto3" json:"number,omitempty"`
+	Status           string                 `protobuf:"bytes,4,opt,name=status,proto3" json:"status,omitempty"`
+	IsEdiEnabled     bool                   `protobuf:"varint,5,opt,name=is_edi_enabled,json=isEdiEnabled,proto3" json:"is_edi_enabled,omitempty"`
+	CommissionPolicy string                 `protobuf:"bytes,6,opt,name=commission_policy,json=commissionPolicy,proto3" json:"commission_policy,omitempty"`
+	RelationshipType string                 `protobuf:"bytes,7,opt,name=relationship_type,json=relationshipType,proto3" json:"relationship_type,omitempty"`
+	CreatedAt        *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt        *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *AccountPriceRecipientInfo) Reset() {
@@ -2087,12 +2150,65 @@ func (x *AccountPriceRecipientInfo) GetName() string {
 	return ""
 }
 
+func (x *AccountPriceRecipientInfo) GetNumber() string {
+	if x != nil {
+		return x.Number
+	}
+	return ""
+}
+
+func (x *AccountPriceRecipientInfo) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *AccountPriceRecipientInfo) GetIsEdiEnabled() bool {
+	if x != nil {
+		return x.IsEdiEnabled
+	}
+	return false
+}
+
+func (x *AccountPriceRecipientInfo) GetCommissionPolicy() string {
+	if x != nil {
+		return x.CommissionPolicy
+	}
+	return ""
+}
+
+func (x *AccountPriceRecipientInfo) GetRelationshipType() string {
+	if x != nil {
+		return x.RelationshipType
+	}
+	return ""
+}
+
+func (x *AccountPriceRecipientInfo) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *AccountPriceRecipientInfo) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
 type AccountPriceProductLineInfo struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Id               string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name             string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	CommissionPolicy string                 `protobuf:"bytes,3,opt,name=commission_policy,json=commissionPolicy,proto3" json:"commission_policy,omitempty"`
+	FreightPolicy    string                 `protobuf:"bytes,4,opt,name=freight_policy,json=freightPolicy,proto3" json:"freight_policy,omitempty"`
+	CreatedAt        *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt        *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *AccountPriceProductLineInfo) Reset() {
@@ -2139,12 +2255,42 @@ func (x *AccountPriceProductLineInfo) GetName() string {
 	return ""
 }
 
+func (x *AccountPriceProductLineInfo) GetCommissionPolicy() string {
+	if x != nil {
+		return x.CommissionPolicy
+	}
+	return ""
+}
+
+func (x *AccountPriceProductLineInfo) GetFreightPolicy() string {
+	if x != nil {
+		return x.FreightPolicy
+	}
+	return ""
+}
+
+func (x *AccountPriceProductLineInfo) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *AccountPriceProductLineInfo) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
 type AccountPriceRateInfo struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	Id              string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Value           string                 `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
 	NumeratorUnit   *AccountPriceUnitInfo  `protobuf:"bytes,3,opt,name=numerator_unit,json=numeratorUnit,proto3" json:"numerator_unit,omitempty"`
 	DenominatorUnit *AccountPriceUnitInfo  `protobuf:"bytes,4,opt,name=denominator_unit,json=denominatorUnit,proto3" json:"denominator_unit,omitempty"`
+	CreatedAt       *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt       *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -2207,14 +2353,34 @@ func (x *AccountPriceRateInfo) GetDenominatorUnit() *AccountPriceUnitInfo {
 	return nil
 }
 
+func (x *AccountPriceRateInfo) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *AccountPriceRateInfo) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
 type AccountPriceUnitInfo struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Abbreviation  string                 `protobuf:"bytes,3,opt,name=abbreviation,proto3" json:"abbreviation,omitempty"`
-	Type          string                 `protobuf:"bytes,4,opt,name=type,proto3" json:"type,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Id                string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name              string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Abbreviation      string                 `protobuf:"bytes,3,opt,name=abbreviation,proto3" json:"abbreviation,omitempty"`
+	Type              string                 `protobuf:"bytes,4,opt,name=type,proto3" json:"type,omitempty"`
+	RatioNumerator    string                 `protobuf:"bytes,5,opt,name=ratio_numerator,json=ratioNumerator,proto3" json:"ratio_numerator,omitempty"`
+	RatioDenominator  string                 `protobuf:"bytes,6,opt,name=ratio_denominator,json=ratioDenominator,proto3" json:"ratio_denominator,omitempty"`
+	OffsetNumerator   string                 `protobuf:"bytes,7,opt,name=offset_numerator,json=offsetNumerator,proto3" json:"offset_numerator,omitempty"`
+	OffsetDenominator string                 `protobuf:"bytes,8,opt,name=offset_denominator,json=offsetDenominator,proto3" json:"offset_denominator,omitempty"`
+	CreatedAt         *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt         *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *AccountPriceUnitInfo) Reset() {
@@ -2275,10 +2441,55 @@ func (x *AccountPriceUnitInfo) GetType() string {
 	return ""
 }
 
+func (x *AccountPriceUnitInfo) GetRatioNumerator() string {
+	if x != nil {
+		return x.RatioNumerator
+	}
+	return ""
+}
+
+func (x *AccountPriceUnitInfo) GetRatioDenominator() string {
+	if x != nil {
+		return x.RatioDenominator
+	}
+	return ""
+}
+
+func (x *AccountPriceUnitInfo) GetOffsetNumerator() string {
+	if x != nil {
+		return x.OffsetNumerator
+	}
+	return ""
+}
+
+func (x *AccountPriceUnitInfo) GetOffsetDenominator() string {
+	if x != nil {
+		return x.OffsetDenominator
+	}
+	return ""
+}
+
+func (x *AccountPriceUnitInfo) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *AccountPriceUnitInfo) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
 type AccountPriceCategoryInfo struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Type          string                 `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2327,10 +2538,34 @@ func (x *AccountPriceCategoryInfo) GetName() string {
 	return ""
 }
 
+func (x *AccountPriceCategoryInfo) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *AccountPriceCategoryInfo) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *AccountPriceCategoryInfo) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
 type AccountPriceAttributeInfo struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Value         string                 `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+	ColorCode     string                 `protobuf:"bytes,3,opt,name=color_code,json=colorCode,proto3" json:"color_code,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2377,6 +2612,27 @@ func (x *AccountPriceAttributeInfo) GetValue() string {
 		return x.Value
 	}
 	return ""
+}
+
+func (x *AccountPriceAttributeInfo) GetColorCode() string {
+	if x != nil {
+		return x.ColorCode
+	}
+	return ""
+}
+
+func (x *AccountPriceAttributeInfo) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *AccountPriceAttributeInfo) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
 }
 
 type ListAccountPricesRequest struct {
@@ -4706,7 +4962,7 @@ const file_core_core_account_groups_proto_rawDesc = "" +
 	"\x1aUpdateAccountGroupResponse\x12;\n" +
 	"\raccount_group\x18\x01 \x01(\v2\x16.core.AccountGroupInfoR\faccountGroup\"+\n" +
 	"\x19DeleteAccountGroupRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"\x89\x06\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\xe7\a\n" +
 	"\x11AccountUserDetail\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x17\n" +
@@ -4728,7 +4984,10 @@ const file_core_core_account_groups_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\x10 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\a\n" +
+	"updated_at\x18\x10 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12S\n" +
+	"\x15department_created_at\x18\x11 \x01(\v2\x1a.google.protobuf.TimestampH\n" +
+	"R\x13departmentCreatedAt\x88\x01\x01\x12S\n" +
+	"\x15department_updated_at\x18\x12 \x01(\v2\x1a.google.protobuf.TimestampH\vR\x13departmentUpdatedAt\x88\x01\x01B\a\n" +
 	"\x05_nameB\b\n" +
 	"\x06_emailB\v\n" +
 	"\t_usernameB\f\n" +
@@ -4741,13 +5000,16 @@ const file_core_core_account_groups_proto_rawDesc = "" +
 	"\x0f_role_type_codeB\x10\n" +
 	"\x0e_department_idB\x12\n" +
 	"\x10_department_nameB\x0f\n" +
-	"\r_last_used_at\"\xd5\x01\n" +
+	"\r_last_used_atB\x18\n" +
+	"\x16_department_created_atB\x18\n" +
+	"\x16_department_updated_at\"\xf1\x01\n" +
 	"\x17ListAccountUsersRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x19\n" +
 	"\x05query\x18\x03 \x01(\tH\x01R\x05query\x88\x01\x01\x12 \n" +
 	"\trole_type\x18\x04 \x01(\tH\x02R\broleType\x88\x01\x01\x12'\n" +
-	"\x0finclude_removed\x18\x05 \x01(\bR\x0eincludeRemovedB\t\n" +
+	"\x0finclude_removed\x18\x05 \x01(\bR\x0eincludeRemoved\x12\x1a\n" +
+	"\bincludes\x18\x06 \x03(\tR\bincludesB\t\n" +
 	"\a_cursorB\b\n" +
 	"\x06_queryB\f\n" +
 	"\n" +
@@ -4756,9 +5018,10 @@ const file_core_core_account_groups_proto_rawDesc = "" +
 	"\raccount_users\x18\x01 \x03(\v2\x17.core.AccountUserDetailR\faccountUsers\x12+\n" +
 	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\x12\x1f\n" +
 	"\vtotal_count\x18\x03 \x01(\x03R\n" +
-	"totalCount\"?\n" +
+	"totalCount\"[\n" +
 	"\x15GetAccountUserRequest\x12&\n" +
-	"\x0faccount_user_id\x18\x01 \x01(\tR\raccountUserId\"T\n" +
+	"\x0faccount_user_id\x18\x01 \x01(\tR\raccountUserId\x12\x1a\n" +
+	"\bincludes\x18\x02 \x03(\tR\bincludes\"T\n" +
 	"\x16GetAccountUserResponse\x12:\n" +
 	"\faccount_user\x18\x01 \x01(\v2\x17.core.AccountUserDetailR\vaccountUser\"l\n" +
 	"\x1aNotificationPreferenceItem\x124\n" +
@@ -4780,7 +5043,7 @@ const file_core_core_account_groups_proto_rawDesc = "" +
 	"\b_role_idB\x10\n" +
 	"\x0e_department_idJ\x04\b\a\x10\bR\fis_sales_rep\"W\n" +
 	"\x19CreateAccountUserResponse\x12:\n" +
-	"\faccount_user\x18\x01 \x01(\v2\x17.core.AccountUserDetailR\vaccountUser\"\xfa\x02\n" +
+	"\faccount_user\x18\x01 \x01(\v2\x17.core.AccountUserDetailR\vaccountUser\"\xea\x03\n" +
 	"\x18UpdateAccountUserRequest\x12&\n" +
 	"\x0faccount_user_id\x18\x01 \x01(\tR\raccountUserId\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x19\n" +
@@ -4788,7 +5051,11 @@ const file_core_core_account_groups_proto_rawDesc = "" +
 	"\busername\x18\x04 \x01(\tH\x02R\busername\x88\x01\x01\x12\x1c\n" +
 	"\arole_id\x18\x05 \x01(\tH\x03R\x06roleId\x88\x01\x01\x12(\n" +
 	"\rdepartment_id\x18\x06 \x01(\tH\x04R\fdepartmentId\x88\x01\x01\x12[\n" +
-	"\x18notification_preferences\x18\a \x03(\v2 .core.NotificationPreferenceItemR\x17notificationPreferencesB\a\n" +
+	"\x18notification_preferences\x18\a \x03(\v2 .core.NotificationPreferenceItemR\x17notificationPreferences\x12\x1a\n" +
+	"\bincludes\x18\b \x03(\tR\bincludes\x12\"\n" +
+	"\rclear_role_id\x18\t \x01(\bR\vclearRoleId\x12.\n" +
+	"\x13clear_department_id\x18\n" +
+	" \x01(\bR\x11clearDepartmentIdB\a\n" +
 	"\x05_nameB\b\n" +
 	"\x06_emailB\v\n" +
 	"\t_usernameB\n" +
@@ -4867,29 +5134,68 @@ const file_core_core_account_groups_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"?\n" +
+	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xe5\x02\n" +
 	"\x19AccountPriceRecipientInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\"A\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x16\n" +
+	"\x06number\x18\x03 \x01(\tR\x06number\x12\x16\n" +
+	"\x06status\x18\x04 \x01(\tR\x06status\x12$\n" +
+	"\x0eis_edi_enabled\x18\x05 \x01(\bR\fisEdiEnabled\x12+\n" +
+	"\x11commission_policy\x18\x06 \x01(\tR\x10commissionPolicy\x12+\n" +
+	"\x11relationship_type\x18\a \x01(\tR\x10relationshipType\x129\n" +
+	"\n" +
+	"created_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"\n" +
+	"updated_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\x8b\x02\n" +
 	"\x1bAccountPriceProductLineInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\"\xc6\x01\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12+\n" +
+	"\x11commission_policy\x18\x03 \x01(\tR\x10commissionPolicy\x12%\n" +
+	"\x0efreight_policy\x18\x04 \x01(\tR\rfreightPolicy\x129\n" +
+	"\n" +
+	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"\n" +
+	"updated_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xbc\x02\n" +
 	"\x14AccountPriceRateInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value\x12A\n" +
 	"\x0enumerator_unit\x18\x03 \x01(\v2\x1a.core.AccountPriceUnitInfoR\rnumeratorUnit\x12E\n" +
-	"\x10denominator_unit\x18\x04 \x01(\v2\x1a.core.AccountPriceUnitInfoR\x0fdenominatorUnit\"r\n" +
+	"\x10denominator_unit\x18\x04 \x01(\v2\x1a.core.AccountPriceUnitInfoR\x0fdenominatorUnit\x129\n" +
+	"\n" +
+	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"\n" +
+	"updated_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\x98\x03\n" +
 	"\x14AccountPriceUnitInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\"\n" +
 	"\fabbreviation\x18\x03 \x01(\tR\fabbreviation\x12\x12\n" +
-	"\x04type\x18\x04 \x01(\tR\x04type\">\n" +
+	"\x04type\x18\x04 \x01(\tR\x04type\x12'\n" +
+	"\x0fratio_numerator\x18\x05 \x01(\tR\x0eratioNumerator\x12+\n" +
+	"\x11ratio_denominator\x18\x06 \x01(\tR\x10ratioDenominator\x12)\n" +
+	"\x10offset_numerator\x18\a \x01(\tR\x0foffsetNumerator\x12-\n" +
+	"\x12offset_denominator\x18\b \x01(\tR\x11offsetDenominator\x129\n" +
+	"\n" +
+	"created_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"\n" +
+	"updated_at\x18\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xc8\x01\n" +
 	"\x18AccountPriceCategoryInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\"A\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
+	"\x04type\x18\x03 \x01(\tR\x04type\x129\n" +
+	"\n" +
+	"created_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"\n" +
+	"updated_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xd6\x01\n" +
 	"\x19AccountPriceAttributeInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value\"\xcd\x01\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value\x12\x1d\n" +
+	"\n" +
+	"color_code\x18\x03 \x01(\tR\tcolorCode\x129\n" +
+	"\n" +
+	"created_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"\n" +
+	"updated_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xcd\x01\n" +
 	"\x18ListAccountPricesRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x19\n" +
@@ -5163,60 +5469,74 @@ var file_core_core_account_groups_proto_depIdxs = []int32{
 	79, // 7: core.AccountUserDetail.last_used_at:type_name -> google.protobuf.Timestamp
 	79, // 8: core.AccountUserDetail.created_at:type_name -> google.protobuf.Timestamp
 	79, // 9: core.AccountUserDetail.updated_at:type_name -> google.protobuf.Timestamp
-	10, // 10: core.ListAccountUsersResponse.account_users:type_name -> core.AccountUserDetail
-	80, // 11: core.ListAccountUsersResponse.page_info:type_name -> core.PageInfo
-	10, // 12: core.GetAccountUserResponse.account_user:type_name -> core.AccountUserDetail
-	15, // 13: core.CreateAccountUserRequest.notification_preferences:type_name -> core.NotificationPreferenceItem
-	10, // 14: core.CreateAccountUserResponse.account_user:type_name -> core.AccountUserDetail
-	15, // 15: core.UpdateAccountUserRequest.notification_preferences:type_name -> core.NotificationPreferenceItem
-	10, // 16: core.UpdateAccountUserResponse.account_user:type_name -> core.AccountUserDetail
-	22, // 17: core.ListSalesTargetsResponse.sales_targets:type_name -> core.SalesTargetProto
-	22, // 18: core.CreateSalesTargetResponse.sales_target:type_name -> core.SalesTargetProto
-	22, // 19: core.UpsertSalesTargetResponse.sales_target:type_name -> core.SalesTargetProto
-	30, // 20: core.AccountPriceInfo.recipient_account:type_name -> core.AccountPriceRecipientInfo
-	31, // 21: core.AccountPriceInfo.product_line:type_name -> core.AccountPriceProductLineInfo
-	32, // 22: core.AccountPriceInfo.rate:type_name -> core.AccountPriceRateInfo
-	34, // 23: core.AccountPriceInfo.categories:type_name -> core.AccountPriceCategoryInfo
-	35, // 24: core.AccountPriceInfo.attributes:type_name -> core.AccountPriceAttributeInfo
-	79, // 25: core.AccountPriceInfo.created_at:type_name -> google.protobuf.Timestamp
-	79, // 26: core.AccountPriceInfo.updated_at:type_name -> google.protobuf.Timestamp
-	33, // 27: core.AccountPriceRateInfo.numerator_unit:type_name -> core.AccountPriceUnitInfo
-	33, // 28: core.AccountPriceRateInfo.denominator_unit:type_name -> core.AccountPriceUnitInfo
-	29, // 29: core.ListAccountPricesResponse.account_prices:type_name -> core.AccountPriceInfo
-	80, // 30: core.ListAccountPricesResponse.page_info:type_name -> core.PageInfo
-	29, // 31: core.GetAccountPriceResponse.account_price:type_name -> core.AccountPriceInfo
-	29, // 32: core.CreateAccountPriceResponse.account_price:type_name -> core.AccountPriceInfo
-	43, // 33: core.UpdateAccountPriceRequest.category_ids:type_name -> core.AccountPriceIDList
-	43, // 34: core.UpdateAccountPriceRequest.attribute_ids:type_name -> core.AccountPriceIDList
-	29, // 35: core.UpdateAccountPriceResponse.account_price:type_name -> core.AccountPriceInfo
-	47, // 36: core.AccountGroupProductLineAccessInfo.product_lines:type_name -> core.ProductLineAccessInfo
-	79, // 37: core.AccountGroupProductLineAccessInfo.created_at:type_name -> google.protobuf.Timestamp
-	79, // 38: core.AccountGroupProductLineAccessInfo.updated_at:type_name -> google.protobuf.Timestamp
-	46, // 39: core.ListAccountGroupProductLineAccessResponse.items:type_name -> core.AccountGroupProductLineAccessInfo
-	80, // 40: core.ListAccountGroupProductLineAccessResponse.page_info:type_name -> core.PageInfo
-	46, // 41: core.GetAccountGroupProductLineAccessResponse.item:type_name -> core.AccountGroupProductLineAccessInfo
-	46, // 42: core.CreateAccountGroupProductLineAccessResponse.item:type_name -> core.AccountGroupProductLineAccessInfo
-	46, // 43: core.UpdateAccountGroupProductLineAccessResponse.item:type_name -> core.AccountGroupProductLineAccessInfo
-	47, // 44: core.CustomerProductLineAccessInfo.product_lines:type_name -> core.ProductLineAccessInfo
-	79, // 45: core.CustomerProductLineAccessInfo.created_at:type_name -> google.protobuf.Timestamp
-	79, // 46: core.CustomerProductLineAccessInfo.updated_at:type_name -> google.protobuf.Timestamp
-	57, // 47: core.ListCustomerProductLineAccessResponse.items:type_name -> core.CustomerProductLineAccessInfo
-	80, // 48: core.ListCustomerProductLineAccessResponse.page_info:type_name -> core.PageInfo
-	57, // 49: core.GetCustomerProductLineAccessResponse.item:type_name -> core.CustomerProductLineAccessInfo
-	57, // 50: core.CreateCustomerProductLineAccessResponse.item:type_name -> core.CustomerProductLineAccessInfo
-	57, // 51: core.UpdateCustomerProductLineAccessResponse.item:type_name -> core.CustomerProductLineAccessInfo
-	79, // 52: core.AccountIntegrationInfo.created_at:type_name -> google.protobuf.Timestamp
-	79, // 53: core.AccountIntegrationInfo.updated_at:type_name -> google.protobuf.Timestamp
-	67, // 54: core.ListAccountIntegrationsResponse.account_integrations:type_name -> core.AccountIntegrationInfo
-	80, // 55: core.ListAccountIntegrationsResponse.page_info:type_name -> core.PageInfo
-	67, // 56: core.CreateAccountIntegrationResponse.account_integration:type_name -> core.AccountIntegrationInfo
-	67, // 57: core.UpdateAccountIntegrationResponse.account_integration:type_name -> core.AccountIntegrationInfo
-	67, // 58: core.DeleteAccountIntegrationResponse.account_integration:type_name -> core.AccountIntegrationInfo
-	59, // [59:59] is the sub-list for method output_type
-	59, // [59:59] is the sub-list for method input_type
-	59, // [59:59] is the sub-list for extension type_name
-	59, // [59:59] is the sub-list for extension extendee
-	0,  // [0:59] is the sub-list for field type_name
+	79, // 10: core.AccountUserDetail.department_created_at:type_name -> google.protobuf.Timestamp
+	79, // 11: core.AccountUserDetail.department_updated_at:type_name -> google.protobuf.Timestamp
+	10, // 12: core.ListAccountUsersResponse.account_users:type_name -> core.AccountUserDetail
+	80, // 13: core.ListAccountUsersResponse.page_info:type_name -> core.PageInfo
+	10, // 14: core.GetAccountUserResponse.account_user:type_name -> core.AccountUserDetail
+	15, // 15: core.CreateAccountUserRequest.notification_preferences:type_name -> core.NotificationPreferenceItem
+	10, // 16: core.CreateAccountUserResponse.account_user:type_name -> core.AccountUserDetail
+	15, // 17: core.UpdateAccountUserRequest.notification_preferences:type_name -> core.NotificationPreferenceItem
+	10, // 18: core.UpdateAccountUserResponse.account_user:type_name -> core.AccountUserDetail
+	22, // 19: core.ListSalesTargetsResponse.sales_targets:type_name -> core.SalesTargetProto
+	22, // 20: core.CreateSalesTargetResponse.sales_target:type_name -> core.SalesTargetProto
+	22, // 21: core.UpsertSalesTargetResponse.sales_target:type_name -> core.SalesTargetProto
+	30, // 22: core.AccountPriceInfo.recipient_account:type_name -> core.AccountPriceRecipientInfo
+	31, // 23: core.AccountPriceInfo.product_line:type_name -> core.AccountPriceProductLineInfo
+	32, // 24: core.AccountPriceInfo.rate:type_name -> core.AccountPriceRateInfo
+	34, // 25: core.AccountPriceInfo.categories:type_name -> core.AccountPriceCategoryInfo
+	35, // 26: core.AccountPriceInfo.attributes:type_name -> core.AccountPriceAttributeInfo
+	79, // 27: core.AccountPriceInfo.created_at:type_name -> google.protobuf.Timestamp
+	79, // 28: core.AccountPriceInfo.updated_at:type_name -> google.protobuf.Timestamp
+	79, // 29: core.AccountPriceRecipientInfo.created_at:type_name -> google.protobuf.Timestamp
+	79, // 30: core.AccountPriceRecipientInfo.updated_at:type_name -> google.protobuf.Timestamp
+	79, // 31: core.AccountPriceProductLineInfo.created_at:type_name -> google.protobuf.Timestamp
+	79, // 32: core.AccountPriceProductLineInfo.updated_at:type_name -> google.protobuf.Timestamp
+	33, // 33: core.AccountPriceRateInfo.numerator_unit:type_name -> core.AccountPriceUnitInfo
+	33, // 34: core.AccountPriceRateInfo.denominator_unit:type_name -> core.AccountPriceUnitInfo
+	79, // 35: core.AccountPriceRateInfo.created_at:type_name -> google.protobuf.Timestamp
+	79, // 36: core.AccountPriceRateInfo.updated_at:type_name -> google.protobuf.Timestamp
+	79, // 37: core.AccountPriceUnitInfo.created_at:type_name -> google.protobuf.Timestamp
+	79, // 38: core.AccountPriceUnitInfo.updated_at:type_name -> google.protobuf.Timestamp
+	79, // 39: core.AccountPriceCategoryInfo.created_at:type_name -> google.protobuf.Timestamp
+	79, // 40: core.AccountPriceCategoryInfo.updated_at:type_name -> google.protobuf.Timestamp
+	79, // 41: core.AccountPriceAttributeInfo.created_at:type_name -> google.protobuf.Timestamp
+	79, // 42: core.AccountPriceAttributeInfo.updated_at:type_name -> google.protobuf.Timestamp
+	29, // 43: core.ListAccountPricesResponse.account_prices:type_name -> core.AccountPriceInfo
+	80, // 44: core.ListAccountPricesResponse.page_info:type_name -> core.PageInfo
+	29, // 45: core.GetAccountPriceResponse.account_price:type_name -> core.AccountPriceInfo
+	29, // 46: core.CreateAccountPriceResponse.account_price:type_name -> core.AccountPriceInfo
+	43, // 47: core.UpdateAccountPriceRequest.category_ids:type_name -> core.AccountPriceIDList
+	43, // 48: core.UpdateAccountPriceRequest.attribute_ids:type_name -> core.AccountPriceIDList
+	29, // 49: core.UpdateAccountPriceResponse.account_price:type_name -> core.AccountPriceInfo
+	47, // 50: core.AccountGroupProductLineAccessInfo.product_lines:type_name -> core.ProductLineAccessInfo
+	79, // 51: core.AccountGroupProductLineAccessInfo.created_at:type_name -> google.protobuf.Timestamp
+	79, // 52: core.AccountGroupProductLineAccessInfo.updated_at:type_name -> google.protobuf.Timestamp
+	46, // 53: core.ListAccountGroupProductLineAccessResponse.items:type_name -> core.AccountGroupProductLineAccessInfo
+	80, // 54: core.ListAccountGroupProductLineAccessResponse.page_info:type_name -> core.PageInfo
+	46, // 55: core.GetAccountGroupProductLineAccessResponse.item:type_name -> core.AccountGroupProductLineAccessInfo
+	46, // 56: core.CreateAccountGroupProductLineAccessResponse.item:type_name -> core.AccountGroupProductLineAccessInfo
+	46, // 57: core.UpdateAccountGroupProductLineAccessResponse.item:type_name -> core.AccountGroupProductLineAccessInfo
+	47, // 58: core.CustomerProductLineAccessInfo.product_lines:type_name -> core.ProductLineAccessInfo
+	79, // 59: core.CustomerProductLineAccessInfo.created_at:type_name -> google.protobuf.Timestamp
+	79, // 60: core.CustomerProductLineAccessInfo.updated_at:type_name -> google.protobuf.Timestamp
+	57, // 61: core.ListCustomerProductLineAccessResponse.items:type_name -> core.CustomerProductLineAccessInfo
+	80, // 62: core.ListCustomerProductLineAccessResponse.page_info:type_name -> core.PageInfo
+	57, // 63: core.GetCustomerProductLineAccessResponse.item:type_name -> core.CustomerProductLineAccessInfo
+	57, // 64: core.CreateCustomerProductLineAccessResponse.item:type_name -> core.CustomerProductLineAccessInfo
+	57, // 65: core.UpdateCustomerProductLineAccessResponse.item:type_name -> core.CustomerProductLineAccessInfo
+	79, // 66: core.AccountIntegrationInfo.created_at:type_name -> google.protobuf.Timestamp
+	79, // 67: core.AccountIntegrationInfo.updated_at:type_name -> google.protobuf.Timestamp
+	67, // 68: core.ListAccountIntegrationsResponse.account_integrations:type_name -> core.AccountIntegrationInfo
+	80, // 69: core.ListAccountIntegrationsResponse.page_info:type_name -> core.PageInfo
+	67, // 70: core.CreateAccountIntegrationResponse.account_integration:type_name -> core.AccountIntegrationInfo
+	67, // 71: core.UpdateAccountIntegrationResponse.account_integration:type_name -> core.AccountIntegrationInfo
+	67, // 72: core.DeleteAccountIntegrationResponse.account_integration:type_name -> core.AccountIntegrationInfo
+	73, // [73:73] is the sub-list for method output_type
+	73, // [73:73] is the sub-list for method input_type
+	73, // [73:73] is the sub-list for extension type_name
+	73, // [73:73] is the sub-list for extension extendee
+	0,  // [0:73] is the sub-list for field type_name
 }
 
 func init() { file_core_core_account_groups_proto_init() }

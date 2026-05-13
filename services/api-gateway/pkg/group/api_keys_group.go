@@ -49,7 +49,7 @@ func (*APIKeysEndpointGroup) Materialize(config *APIKeysEndpointGroupConfig) *AP
 		ResourceType: &apiresource.APIKey{},
 	}
 
-	getAPIKeyEndpoint := (&apikeyep.GetAPIKeyEndpoint{}).Materialize().WithMiddleware(authMw).WithService(inner, apiKeySvc)
+	getAPIKeyEndpoint := (&apikeyep.RetrieveAPIKeyEndpoint{}).Materialize().WithMiddleware(authMw).WithService(inner, apiKeySvc)
 	listAPIKeysEndpoint := (&apikeyep.ListAPIKeysEndpoint{}).Materialize().WithMiddleware(authMw).WithService(inner, apiKeySvc)
 	createAPIKeyEndpoint := (&apikeyep.CreateAPIKeyEndpoint{}).Materialize().WithMiddleware(authMw).WithService(inner, apiKeySvc)
 	rotateAPIKeyEndpoint := (&apikeyep.RotateAPIKeyEndpoint{}).Materialize().WithMiddleware(authMw).WithService(inner, apiKeySvc)

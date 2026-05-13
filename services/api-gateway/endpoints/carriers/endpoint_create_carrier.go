@@ -19,14 +19,18 @@ type CreateCarrierRequest struct {
 	Code *constants.CarrierCode `json:"code"`
 	// Carrier account number. Required for UPS and USPS carriers.
 	AccountNumber *string `json:"account_number" validate:"omitempty,max=255"`
-	// Customer portal visibility.
+	// Whether this carrier will be available for customers to select in the customer portal.
 	CustomerPortalVisibility *constants.CustomerPortalVisibility `json:"customer_portal_visibility,omitempty" default:"visible" nullable:"false"`
 }
 
 var sampleCreateCarrierCode = constants.CarrierCodeFedEx
+var sampleCreateCarrierAccountNumber = "1234567890"
+var sampleCreateCarrierVisibility = constants.CustomerPortalVisibilityVisible
 var sampleCreateCarrierRequest = &CreateCarrierRequest{
-	Name: "FedEx",
-	Code: &sampleCreateCarrierCode,
+	Name:                     "FedEx",
+	Code:                     &sampleCreateCarrierCode,
+	AccountNumber:            &sampleCreateCarrierAccountNumber,
+	CustomerPortalVisibility: &sampleCreateCarrierVisibility,
 }
 
 func (*CreateCarrierRequest) SchemaExample() any {

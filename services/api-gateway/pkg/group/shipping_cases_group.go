@@ -39,7 +39,7 @@ func (*ShippingCasesEndpointGroup) Materialize(config *ShippingCasesEndpointGrou
 		ResourceType: &apiresource.ShippingCase{},
 	}
 
-	getShippingCaseEndpoint := (&shippingcaseep.GetShippingCaseEndpoint{}).Materialize().WithService(inner, shippingCaseSvc)
+	getShippingCaseEndpoint := (&shippingcaseep.RetrieveShippingCaseEndpoint{}).Materialize().WithService(inner, shippingCaseSvc)
 	updateShippingCaseEndpoint := (&shippingcaseep.UpdateShippingCaseEndpoint{}).Materialize().WithService(inner, shippingCaseSvc)
 	deleteShippingCaseEndpoint := (&shippingcaseep.DeleteShippingCaseEndpoint{}).Materialize().WithService(inner, shippingCaseSvc)
 	getShippingCaseLabelEndpoint := (&shippingcaseep.GetShippingCaseLabelEndpoint{}).Materialize().WithService(inner, shippingCaseSvc)

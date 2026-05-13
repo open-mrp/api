@@ -19,7 +19,7 @@ type UpdateShipmentLineRequest struct {
 	// Quantity value.
 	QuantityValue *string `json:"quantity_value,omitempty" nullable:"false"`
 	// Quantity unit ID.
-	QuantityUnitID *string `json:"quantity_unit_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
+	QuantityUnitID *string `json:"quantity_unit_id,omitempty" nullable:"false" validate:"omitempty"`
 }
 
 var sampleUpdateShipmentLineQuantityValue = "5.000000000000000000000000000000"

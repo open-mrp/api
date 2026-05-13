@@ -79,6 +79,7 @@ func (h *gRPCHandler) ListMaterials(ctx context.Context, req *pb.ListMaterialsRe
 		Query:        req.Query,
 		CategoryIDs:  req.CategoryIds,
 		AttributeIDs: req.AttributeIds,
+		Includes:     req.Includes,
 	}
 
 	if req.StartDate != nil {
@@ -116,7 +117,10 @@ func (h *gRPCHandler) GetMaterial(ctx context.Context, req *pb.GetMaterialReques
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	material, apiErr := h.materialSvc.GetMaterial(ctx, req.Id)
+	material, apiErr := h.materialSvc.GetMaterial(ctx, domain.GetMaterialParams{
+		MaterialID: req.Id,
+		Includes:   req.Includes,
+	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
@@ -143,6 +147,7 @@ func (h *gRPCHandler) CreateMaterial(ctx context.Context, req *pb.CreateMaterial
 		UnitCost:     protoToCreateRateInput(req.UnitCost),
 		BurnRate:     protoToCreateRateInput(req.BurnRate),
 		AttributeIDs: req.AttributeIds,
+		Includes:     req.Includes,
 	}
 
 	if req.Description != nil {
@@ -179,6 +184,8 @@ func (h *gRPCHandler) UpdateMaterial(ctx context.Context, req *pb.UpdateMaterial
 		UpdateNotes:       req.UpdateNotes,
 		OrderPoint:        protoToQuantityInput(req.OrderPoint),
 		LeadTime:          protoToQuantityInput(req.LeadTime),
+		UnitCost:          protoToCreateRateInput(req.UnitCost),
+		Includes:          req.Includes,
 	}
 
 	material, apiErr := h.materialSvc.UpdateMaterial(ctx, params)

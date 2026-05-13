@@ -40,7 +40,7 @@ func (*ServiceLevelsEndpointGroup) Materialize(config *ServiceLevelsEndpointGrou
 	}
 
 	listServiceLevelsEndpoint := (&servicelevelep.ListServiceLevelsEndpoint{}).Materialize().WithService(inner, serviceLevelSvc)
-	getServiceLevelEndpoint := (&servicelevelep.GetServiceLevelEndpoint{}).Materialize().WithService(inner, serviceLevelSvc)
+	getServiceLevelEndpoint := (&servicelevelep.RetrieveServiceLevelEndpoint{}).Materialize().WithService(inner, serviceLevelSvc)
 	createServiceLevelEndpoint := (&servicelevelep.CreateServiceLevelEndpoint{}).Materialize().WithService(inner, serviceLevelSvc)
 	updateServiceLevelEndpoint := (&servicelevelep.UpdateServiceLevelEndpoint{}).Materialize().WithService(inner, serviceLevelSvc)
 	deleteServiceLevelEndpoint := (&servicelevelep.DeleteServiceLevelEndpoint{}).Materialize().WithService(inner, serviceLevelSvc)

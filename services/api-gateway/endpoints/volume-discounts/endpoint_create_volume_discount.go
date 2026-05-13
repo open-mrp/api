@@ -19,7 +19,7 @@ type CreateVolumeDiscountTierInput struct {
 	// Quantity threshold as a decimal string.
 	Threshold string `json:"threshold" validate:"required" format:"decimal"`
 	// Parent tier ID for tier chaining.
-	ParentTierID *string `json:"parent_tier_id,omitempty" validate:"omitempty,max=191"`
+	ParentTierID *string `json:"parent_tier_id,omitempty" validate:"omitempty"`
 }
 
 // Request to create a volume discount.

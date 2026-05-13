@@ -23,9 +23,9 @@ type CreateProductRequest struct {
 	// Product type code (e.g. sale, sample).
 	ProductTypeCode constants.ProductTypeCode `json:"type" validate:"required"`
 	// Product line ID.
-	ProductLineID *string `json:"product_line_id" validate:"omitempty,max=191"`
+	ProductLineID *string `json:"product_line_id" validate:"omitempty"`
 	// Category ID.
-	CategoryID string `json:"category_id" validate:"required,max=191"`
+	CategoryID string `json:"category_id" validate:"required"`
 	// Whether visible in the customer portal.
 	PortalVisibility *constants.CustomerPortalVisibility `json:"portal_visibility,omitempty" default:"hidden" nullable:"false"`
 	// Initial unit price. When set, numerator must be a currency unit and
@@ -61,7 +61,7 @@ func (e *CreateProductEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreatePr
 		Request:           &CreateProductRequest{},
 		Response:          &apiresource.Product{},
 		SuccessStatusCode: http.StatusCreated,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateProductRequest) (*apiresource.Product, *apierror.APIError) {
 			return svc.(ProductSvc).CreateProduct

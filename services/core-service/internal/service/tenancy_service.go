@@ -236,9 +236,9 @@ func (s *tenancySvcImpl) buildTenancyResponse(ctx context.Context, currentAccoun
 	var role *domain.TenancyRole
 	if currentAccount.RoleID != nil {
 		role = &domain.TenancyRole{
-			ID:           *currentAccount.RoleID,
-			Name:         derefStr(currentAccount.RoleName),
-			RoleTypeCode: derefStr(currentAccount.RoleTypeCode),
+			ID:       *currentAccount.RoleID,
+			Name:     derefStr(currentAccount.RoleName),
+			RoleType: derefStr(currentAccount.RoleType),
 		}
 		if currentAccount.RoleCreatedAt != nil {
 			role.CreatedAt = *currentAccount.RoleCreatedAt
@@ -282,7 +282,7 @@ func (s *tenancySvcImpl) buildTenancyResponse(ctx context.Context, currentAccoun
 		}
 	}
 
-	isAdmin := currentAccount.RoleTypeCode != nil && *currentAccount.RoleTypeCode == "admin"
+	isAdmin := currentAccount.RoleType != nil && *currentAccount.RoleType == "admin"
 
 	var sandboxes []domain.TenancySandbox
 	var ownerAccount *domain.TenancyOwnerAccount

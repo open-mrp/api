@@ -290,6 +290,37 @@ message SalesOrderInfo {
   optional string service_level_token = 64;
   optional string customer_status_code = 65;
   optional string customer_commission_policy = 66;
+  optional google.protobuf.Timestamp service_level_created_at = 67;
+  optional google.protobuf.Timestamp service_level_updated_at = 68;
+  optional google.protobuf.Timestamp carrier_created_at = 69;
+  optional google.protobuf.Timestamp carrier_updated_at = 70;
+  // Customer timestamps
+  optional google.protobuf.Timestamp customer_created_at = 71;
+  optional google.protobuf.Timestamp customer_updated_at = 72;
+  // Bill-to address type and timestamps
+  optional bool bill_to_is_drop_ship = 73;
+  optional string bill_to_geolocation_id = 74;
+  optional google.protobuf.Timestamp bill_to_created_at = 75;
+  optional google.protobuf.Timestamp bill_to_updated_at = 76;
+  // Ship-to address type and timestamps
+  optional bool ship_to_is_drop_ship = 77;
+  optional string ship_to_geolocation_id = 78;
+  optional google.protobuf.Timestamp ship_to_created_at = 79;
+  optional google.protobuf.Timestamp ship_to_updated_at = 80;
+  // Order discount full data
+  optional string order_discount_code = 81;
+  optional string order_discount_percentage = 82;
+  optional string order_discount_amount = 83;
+  optional string order_discount_discount_type = 84;
+  optional int32 order_discount_order_count = 85;
+  optional google.protobuf.Timestamp order_discount_created_at = 86;
+  optional google.protobuf.Timestamp order_discount_updated_at = 87;
+  // Payment term timestamps
+  optional google.protobuf.Timestamp payment_term_created_at = 88;
+  optional google.protobuf.Timestamp payment_term_updated_at = 89;
+  // Shipping term timestamps
+  optional google.protobuf.Timestamp shipping_term_created_at = 90;
+  optional google.protobuf.Timestamp shipping_term_updated_at = 91;
 }
 
 // SalesOrderLineInfo represents a sales order line.
@@ -406,6 +437,7 @@ message CreateSalesOrderRequest {
   repeated SalesOrderEmailContactInput acknowledgement_email_contacts = 29;
   // Email contact recipients for invoice emails
   repeated SalesOrderEmailContactInput invoice_email_contacts = 30;
+  repeated string includes = 31;
 }
 
 message SalesOrderEmailContactInput {
@@ -472,6 +504,7 @@ message UpdateSalesOrderRequest {
   // When set, replaces the invoice email contacts on the order.
   // An empty list clears all invoice contacts; nil/unset leaves existing contacts untouched.
   optional SalesOrderEmailContactList invoice_email_contacts = 32;
+  repeated string includes = 33;
 }
 
 message SalesOrderEmailContactList {
@@ -494,6 +527,7 @@ message ChangeSalesOrderStatusRequest {
   string id = 1;
   string status_change = 2;
   bool send_email = 3;
+  repeated string includes = 4;
 }
 
 message ChangeSalesOrderStatusResponse {
@@ -583,27 +617,49 @@ message VolumeDiscountCustomerGroupInfo {
   string id = 1;
   string account_group_id = 2;
   string name = 3;
+  optional string commission_policy = 4;
+  optional string freight_policy = 5;
+  optional string type = 6;
+  optional google.protobuf.Timestamp created_at = 7;
+  optional google.protobuf.Timestamp updated_at = 8;
 }
 
 message VolumeDiscountProductLineInfo {
   string id = 1;
   string name = 2;
+  optional string commission_policy = 3;
+  optional string freight_policy = 4;
+  optional google.protobuf.Timestamp created_at = 5;
+  optional google.protobuf.Timestamp updated_at = 6;
 }
 
 message VolumeDiscountCategoryInfo {
   string id = 1;
   string name = 2;
+  optional string type = 3;
+  optional google.protobuf.Timestamp created_at = 4;
+  optional google.protobuf.Timestamp updated_at = 5;
 }
 
 message VolumeDiscountAttributeInfo {
   string id = 1;
   string name = 2;
+  optional string color_code = 3;
+  optional google.protobuf.Timestamp created_at = 4;
+  optional google.protobuf.Timestamp updated_at = 5;
 }
 
 message VolumeDiscountUnitInfo {
   string id = 1;
   string name = 2;
   string abbreviation = 3;
+  string type = 4;
+  string ratio_numerator = 5;
+  string ratio_denominator = 6;
+  string offset_numerator = 7;
+  string offset_denominator = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
 }
 
 message VolumeDiscountInfo {
@@ -625,6 +681,7 @@ message ListVolumeDiscountsRequest {
   optional string query = 3;
   // If set, filters for customer actor access.
   optional string customer_account_id = 4;
+  repeated string includes = 5;
 }
 
 message ListVolumeDiscountsResponse {
@@ -636,6 +693,7 @@ message GetVolumeDiscountRequest {
   string id = 1;
   // If set, filters for customer actor access.
   optional string customer_account_id = 2;
+  repeated string includes = 3;
 }
 
 message GetVolumeDiscountResponse {
@@ -657,6 +715,7 @@ message CreateVolumeDiscountRequest {
   repeated string category_ids = 5;
   repeated string attribute_ids = 6;
   repeated string unit_ids = 7;
+  repeated string includes = 8;
 }
 
 message CreateVolumeDiscountResponse {
@@ -686,6 +745,7 @@ message UpdateVolumeDiscountRequest {
   bool has_categories = 12;
   bool has_attributes = 13;
   bool has_units = 14;
+  repeated string includes = 15;
 }
 
 message UpdateVolumeDiscountResponse {

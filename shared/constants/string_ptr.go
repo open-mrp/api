@@ -50,7 +50,7 @@ func (s *SubscriptionStatus) StringPtr() *string {
 	return stringPtrEnum(s)
 }
 func (m *FreightPolicy) StringPtr() *string { return stringPtrEnum(m) }
-func (m *RoleTypeCode) StringPtr() *string  { return stringPtrEnum(m) }
+func (m *RoleType) StringPtr() *string      { return stringPtrEnum(m) }
 func (m *TransactionType) StringPtr() *string {
 	return stringPtrEnum(m)
 }
@@ -77,6 +77,7 @@ func (m *SalesOrderStatusCode) StringPtr() *string {
 func (m *SalesOrderStatusChange) StringPtr() *string {
 	return stringPtrEnum(m)
 }
+func (f *SubassemblyFilter) StringPtr() *string   { return stringPtrEnum(f) }
 func (m *OrderDiscountType) StringPtr() *string   { return stringPtrEnum(m) }
 func (m *SandboxMode) StringPtr() *string         { return stringPtrEnum(m) }
 func (m *ObjectType) StringPtr() *string          { return stringPtrEnum(m) }
@@ -92,11 +93,24 @@ func (m *AgentRunStatus) StringPtr() *string            { return stringPtrEnum(m
 func (m *DeliveryStatus) StringPtr() *string            { return stringPtrEnum(m) }
 func (m *ItemTypeCode) StringPtr() *string              { return stringPtrEnum(m) }
 func (m *InventoryActionType) StringPtr() *string       { return stringPtrEnum(m) }
+func (o *InventoryUpdateOperation) StringPtr() *string  { return stringPtrEnum(o) }
+func (m *ItemMatchMode) StringPtr() *string             { return stringPtrEnum(m) }
 func (m *PriorityCode) StringPtr() *string              { return stringPtrEnum(m) }
 func (s *PaymentTermStatus) StringPtr() *string         { return stringPtrEnum(s) }
+func (s *SupplierMaterialStatus) StringPtr() *string    { return stringPtrEnum(s) }
 func (m *OwnerType) StringPtr() *string                 { return stringPtrEnum(m) }
 func (m *CustomerPortalVisibility) StringPtr() *string  { return stringPtrEnum(m) }
 func (s *LocationTypeCode) StringPtr() *string          { return stringPtrEnum(s) }
 func (c *LabelSizeCode) StringPtr() *string             { return stringPtrEnum(c) }
 func (c *LabelTypeCode) StringPtr() *string             { return stringPtrEnum(c) }
 func (c *ServiceLevelCode) StringPtr() *string          { return stringPtrEnum(c) }
+func (o *OperatorRequirement) StringPtr() *string       { return stringPtrEnum(o) }
+func (m *AddressType) StringPtr() *string               { return stringPtrEnum(m) }
+func (m *AddressValidationStatus) StringPtr() *string   { return stringPtrEnum(m) }
+func (m *CustomerParentAccountStatus) StringPtr() *string {
+	return stringPtrEnum(m)
+}
+func (m *CustomerRelationshipType) StringPtr() *string { return stringPtrEnum(m) }
+func (m *EDIStatus) StringPtr() *string                { return stringPtrEnum(m) }
+func (m *EmailSendStatus) StringPtr() *string          { return stringPtrEnum(m) }
+func (m *RemovedResourceScope) StringPtr() *string     { return stringPtrEnum(m) }

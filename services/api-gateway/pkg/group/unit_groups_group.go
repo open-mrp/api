@@ -40,7 +40,7 @@ func (*UnitGroupsEndpointGroup) Materialize(config *UnitGroupsEndpointGroupConfi
 	}
 
 	listEndpoint := (&unitgroupep.ListUnitGroupsEndpoint{}).Materialize().WithService(inner, unitGroupSvc)
-	getEndpoint := (&unitgroupep.GetUnitGroupEndpoint{}).Materialize().WithService(inner, unitGroupSvc)
+	retrieveEndpoint := (&unitgroupep.RetrieveUnitGroupEndpoint{}).Materialize().WithService(inner, unitGroupSvc)
 	createEndpoint := (&unitgroupep.CreateUnitGroupEndpoint{}).Materialize().WithService(inner, unitGroupSvc)
 	updateEndpoint := (&unitgroupep.UpdateUnitGroupEndpoint{}).Materialize().WithService(inner, unitGroupSvc)
 	deleteEndpoint := (&unitgroupep.DeleteUnitGroupEndpoint{}).Materialize().WithService(inner, unitGroupSvc)
@@ -48,11 +48,11 @@ func (*UnitGroupsEndpointGroup) Materialize(config *UnitGroupsEndpointGroupConfi
 	updateUnitEndpoint := (&unitgroupep.UpdateUnitGroupUnitEndpoint{}).Materialize().WithService(inner, unitGroupSvc)
 	deleteUnitEndpoint := (&unitgroupep.DeleteUnitGroupUnitEndpoint{}).Materialize().WithService(inner, unitGroupSvc)
 	listUnitEndpoint := (&unitgroupep.ListUnitGroupUnitsEndpoint{}).Materialize().WithService(inner, unitGroupSvc)
-	getUnitEndpoint := (&unitgroupep.GetUnitGroupUnitEndpoint{}).Materialize().WithService(inner, unitGroupSvc)
+	getUnitEndpoint := (&unitgroupep.RetrieveUnitGroupUnitEndpoint{}).Materialize().WithService(inner, unitGroupSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listEndpoint,
-		getEndpoint,
+		retrieveEndpoint,
 		createEndpoint,
 		updateEndpoint,
 		deleteEndpoint,

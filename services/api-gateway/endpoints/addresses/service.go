@@ -8,6 +8,7 @@ import (
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
@@ -17,7 +18,7 @@ import (
 
 type AddressSvc interface {
 	ListAddresses(ctx context.Context, req *ListAddressesRequest) (*apiresource.List[apiresource.Address], *apierror.APIError)
-	GetAddress(ctx context.Context, req *GetAddressRequest) (*apiresource.Address, *apierror.APIError)
+	GetAddress(ctx context.Context, req *RetrieveAddressRequest) (*apiresource.Address, *apierror.APIError)
 	CreateAddress(ctx context.Context, req *apirequest.AddressInput) (*apiresource.Address, *apierror.APIError)
 	UpdateAddress(ctx context.Context, req *UpdateAddressRequest) (*apiresource.Address, *apierror.APIError)
 	DeleteAddress(ctx context.Context, req *DeleteAddressRequest) (*apiresource.EmptyResource, *apierror.APIError)
@@ -32,6 +33,18 @@ type addressSvcImpl struct {
 }
 
 var addressSvcTracer = tracing.GetTracer("api-gateway.endpoints.addresses.service")
+
+func addressTypeToDropShipPtr(t *constants.AddressType) *bool {
+	if t == nil {
+		return nil
+	}
+	v := *t == constants.AddressTypeDropShip
+	return &v
+}
+
+func addressTypeToDropShip(t *constants.AddressType) bool {
+	return t != nil && *t == constants.AddressTypeDropShip
+}
 
 func (c *AddressSvcConfig) validate() error {
 	if c.CoreClient == nil {
@@ -55,7 +68,7 @@ func (m *addressSvcImpl) ListAddresses(ctx context.Context, req *ListAddressesRe
 		Cursor:   req.Cursor,
 		Limit:    req.Limit,
 		Query:    req.Query,
-		DropShip: req.DropShip,
+		DropShip: addressTypeToDropShipPtr(req.Type),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, addressSvcTracer, "service.addresses.list", domain.ServiceName,
@@ -70,7 +83,7 @@ func (m *addressSvcImpl) ListAddresses(ctx context.Context, req *ListAddressesRe
 	return AddressListPresenter(resp), nil
 }
 
-func (m *addressSvcImpl) GetAddress(ctx context.Context, req *GetAddressRequest) (*apiresource.Address, *apierror.APIError) {
+func (m *addressSvcImpl) GetAddress(ctx context.Context, req *RetrieveAddressRequest) (*apiresource.Address, *apierror.APIError) {
 	pbReq := &pb.GetAddressRequest{
 		Id: req.AddressID,
 	}
@@ -93,7 +106,7 @@ func (m *addressSvcImpl) CreateAddress(ctx context.Context, req *apirequest.Addr
 		Name:         req.Name,
 		Phone:        req.Phone,
 		Email:        req.Email,
-		IsDropShip:   req.IsDropShip,
+		IsDropShip:   addressTypeToDropShip(req.Type),
 		StreetLine_1: req.StreetLine1,
 		StreetLine_2: req.StreetLine2,
 		Locality:     req.Locality,
@@ -121,7 +134,7 @@ func (m *addressSvcImpl) UpdateAddress(ctx context.Context, req *UpdateAddressRe
 		Name:         req.Name,
 		Phone:        req.Phone,
 		Email:        req.Email,
-		IsDropShip:   req.IsDropShip,
+		IsDropShip:   addressTypeToDropShipPtr(req.Type),
 		StreetLine_1: req.StreetLine1,
 		StreetLine_2: req.StreetLine2,
 		Locality:     req.Locality,

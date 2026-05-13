@@ -28,72 +28,162 @@ func accountPriceCreatedAt(ap *domain.AccountPrice) time.Time { return ap.Create
 func accountPriceID(ap *domain.AccountPrice) string           { return ap.ID }
 
 func mapForwardAccountPriceRow(row sqlc.ListAccountPricesForwardRow) *domain.AccountPrice {
-	return &domain.AccountPrice{
-		ID:                   row.ID,
-		OwnerAccountID:       row.OwnerAccountID,
-		RecipientAccountID:   row.RecipientAccountID,
-		RecipientAccountName: row.RecipientAccountName,
-		ProductLineID:        row.ProductLineID,
-		ProductLineName:      row.ProductLineName,
-		RateID:               row.RateID,
-		RateValue:            row.RateValue,
-		NumeratorUnitID:      row.NumeratorUnitID,
-		NumeratorUnitName:    row.NumeratorUnitName,
-		NumeratorUnitAbbr:    row.NumeratorUnitAbbreviation,
-		NumeratorUnitType:    row.NumeratorUnitType,
-		DenominatorUnitID:    row.DenominatorUnitID,
-		DenominatorUnitName:  row.DenominatorUnitName,
-		DenominatorUnitAbbr:  row.DenominatorUnitAbbreviation,
-		DenominatorUnitType:  row.DenominatorUnitType,
-		CreatedAt:            row.CreatedAt,
-		UpdatedAt:            row.UpdatedAt,
+	ap := &domain.AccountPrice{
+		ID:                               row.ID,
+		OwnerAccountID:                   row.OwnerAccountID,
+		RecipientAccountID:               row.RecipientAccountID,
+		RecipientAccountName:             row.RecipientAccountName,
+		RecipientAccountNumber:           row.RecipientAccountNumber,
+		RecipientAccountIsEdiEnabled:     row.RecipientAccountIsEdiEnabled,
+		RecipientAccountRelationshipType: row.RecipientAccountRelationshipType,
+		RecipientAccountCreatedAt:        row.RecipientAccountCreatedAt,
+		RecipientAccountUpdatedAt:        row.RecipientAccountUpdatedAt,
+		ProductLineID:                    row.ProductLineID,
+		ProductLineName:                  row.ProductLineName,
+		ProductLineIsCommissionExempt:    row.ProductLineIsCommissionExempt,
+		ProductLineIsFreightExempt:       row.ProductLineIsFreightExempt,
+		ProductLineCreatedAt:             row.ProductLineCreatedAt,
+		ProductLineUpdatedAt:             row.ProductLineUpdatedAt,
+		RateID:                           row.RateID,
+		RateValue:                        row.RateValue,
+		RateCreatedAt:                    row.RateCreatedAt,
+		RateUpdatedAt:                    row.RateUpdatedAt,
+		NumeratorUnitID:                  row.NumeratorUnitID,
+		NumeratorUnitName:                row.NumeratorUnitName,
+		NumeratorUnitAbbr:                row.NumeratorUnitAbbreviation,
+		NumeratorUnitType:                row.NumeratorUnitType,
+		NumeratorUnitRatioNumerator:      row.NumeratorUnitRatioNumerator,
+		NumeratorUnitRatioDenominator:    row.NumeratorUnitRatioDenominator,
+		NumeratorUnitOffsetNumerator:     row.NumeratorUnitOffsetNumerator,
+		NumeratorUnitOffsetDenominator:   row.NumeratorUnitOffsetDenominator,
+		NumeratorUnitCreatedAt:           row.NumeratorUnitCreatedAt,
+		NumeratorUnitUpdatedAt:           row.NumeratorUnitUpdatedAt,
+		DenominatorUnitID:                row.DenominatorUnitID,
+		DenominatorUnitName:              row.DenominatorUnitName,
+		DenominatorUnitAbbr:              row.DenominatorUnitAbbreviation,
+		DenominatorUnitType:              row.DenominatorUnitType,
+		DenominatorUnitRatioNumerator:    row.DenominatorUnitRatioNumerator,
+		DenominatorUnitRatioDenominator:  row.DenominatorUnitRatioDenominator,
+		DenominatorUnitOffsetNumerator:   row.DenominatorUnitOffsetNumerator,
+		DenominatorUnitOffsetDenominator: row.DenominatorUnitOffsetDenominator,
+		DenominatorUnitCreatedAt:         row.DenominatorUnitCreatedAt,
+		DenominatorUnitUpdatedAt:         row.DenominatorUnitUpdatedAt,
+		CreatedAt:                        row.CreatedAt,
+		UpdatedAt:                        row.UpdatedAt,
 	}
+	if row.RecipientAccountStatus.Valid {
+		ap.RecipientAccountStatus = row.RecipientAccountStatus.String
+	}
+	if row.RecipientAccountCommissionPolicy.Valid {
+		ap.RecipientAccountCommissionPolicy = row.RecipientAccountCommissionPolicy.String
+	}
+	return ap
 }
 
 func mapBackwardAccountPriceRow(row sqlc.ListAccountPricesBackwardRow) *domain.AccountPrice {
-	return &domain.AccountPrice{
-		ID:                   row.ID,
-		OwnerAccountID:       row.OwnerAccountID,
-		RecipientAccountID:   row.RecipientAccountID,
-		RecipientAccountName: row.RecipientAccountName,
-		ProductLineID:        row.ProductLineID,
-		ProductLineName:      row.ProductLineName,
-		RateID:               row.RateID,
-		RateValue:            row.RateValue,
-		NumeratorUnitID:      row.NumeratorUnitID,
-		NumeratorUnitName:    row.NumeratorUnitName,
-		NumeratorUnitAbbr:    row.NumeratorUnitAbbreviation,
-		NumeratorUnitType:    row.NumeratorUnitType,
-		DenominatorUnitID:    row.DenominatorUnitID,
-		DenominatorUnitName:  row.DenominatorUnitName,
-		DenominatorUnitAbbr:  row.DenominatorUnitAbbreviation,
-		DenominatorUnitType:  row.DenominatorUnitType,
-		CreatedAt:            row.CreatedAt,
-		UpdatedAt:            row.UpdatedAt,
+	ap := &domain.AccountPrice{
+		ID:                               row.ID,
+		OwnerAccountID:                   row.OwnerAccountID,
+		RecipientAccountID:               row.RecipientAccountID,
+		RecipientAccountName:             row.RecipientAccountName,
+		RecipientAccountNumber:           row.RecipientAccountNumber,
+		RecipientAccountIsEdiEnabled:     row.RecipientAccountIsEdiEnabled,
+		RecipientAccountRelationshipType: row.RecipientAccountRelationshipType,
+		RecipientAccountCreatedAt:        row.RecipientAccountCreatedAt,
+		RecipientAccountUpdatedAt:        row.RecipientAccountUpdatedAt,
+		ProductLineID:                    row.ProductLineID,
+		ProductLineName:                  row.ProductLineName,
+		ProductLineIsCommissionExempt:    row.ProductLineIsCommissionExempt,
+		ProductLineIsFreightExempt:       row.ProductLineIsFreightExempt,
+		ProductLineCreatedAt:             row.ProductLineCreatedAt,
+		ProductLineUpdatedAt:             row.ProductLineUpdatedAt,
+		RateID:                           row.RateID,
+		RateValue:                        row.RateValue,
+		RateCreatedAt:                    row.RateCreatedAt,
+		RateUpdatedAt:                    row.RateUpdatedAt,
+		NumeratorUnitID:                  row.NumeratorUnitID,
+		NumeratorUnitName:                row.NumeratorUnitName,
+		NumeratorUnitAbbr:                row.NumeratorUnitAbbreviation,
+		NumeratorUnitType:                row.NumeratorUnitType,
+		NumeratorUnitRatioNumerator:      row.NumeratorUnitRatioNumerator,
+		NumeratorUnitRatioDenominator:    row.NumeratorUnitRatioDenominator,
+		NumeratorUnitOffsetNumerator:     row.NumeratorUnitOffsetNumerator,
+		NumeratorUnitOffsetDenominator:   row.NumeratorUnitOffsetDenominator,
+		NumeratorUnitCreatedAt:           row.NumeratorUnitCreatedAt,
+		NumeratorUnitUpdatedAt:           row.NumeratorUnitUpdatedAt,
+		DenominatorUnitID:                row.DenominatorUnitID,
+		DenominatorUnitName:              row.DenominatorUnitName,
+		DenominatorUnitAbbr:              row.DenominatorUnitAbbreviation,
+		DenominatorUnitType:              row.DenominatorUnitType,
+		DenominatorUnitRatioNumerator:    row.DenominatorUnitRatioNumerator,
+		DenominatorUnitRatioDenominator:  row.DenominatorUnitRatioDenominator,
+		DenominatorUnitOffsetNumerator:   row.DenominatorUnitOffsetNumerator,
+		DenominatorUnitOffsetDenominator: row.DenominatorUnitOffsetDenominator,
+		DenominatorUnitCreatedAt:         row.DenominatorUnitCreatedAt,
+		DenominatorUnitUpdatedAt:         row.DenominatorUnitUpdatedAt,
+		CreatedAt:                        row.CreatedAt,
+		UpdatedAt:                        row.UpdatedAt,
 	}
+	if row.RecipientAccountStatus.Valid {
+		ap.RecipientAccountStatus = row.RecipientAccountStatus.String
+	}
+	if row.RecipientAccountCommissionPolicy.Valid {
+		ap.RecipientAccountCommissionPolicy = row.RecipientAccountCommissionPolicy.String
+	}
+	return ap
 }
 
 func mapGetAccountPriceRow(row sqlc.GetAccountPriceRow) *domain.AccountPrice {
-	return &domain.AccountPrice{
-		ID:                   row.ID,
-		OwnerAccountID:       row.OwnerAccountID,
-		RecipientAccountID:   row.RecipientAccountID,
-		RecipientAccountName: row.RecipientAccountName,
-		ProductLineID:        row.ProductLineID,
-		ProductLineName:      row.ProductLineName,
-		RateID:               row.RateID,
-		RateValue:            row.RateValue,
-		NumeratorUnitID:      row.NumeratorUnitID,
-		NumeratorUnitName:    row.NumeratorUnitName,
-		NumeratorUnitAbbr:    row.NumeratorUnitAbbreviation,
-		NumeratorUnitType:    row.NumeratorUnitType,
-		DenominatorUnitID:    row.DenominatorUnitID,
-		DenominatorUnitName:  row.DenominatorUnitName,
-		DenominatorUnitAbbr:  row.DenominatorUnitAbbreviation,
-		DenominatorUnitType:  row.DenominatorUnitType,
-		CreatedAt:            row.CreatedAt,
-		UpdatedAt:            row.UpdatedAt,
+	ap := &domain.AccountPrice{
+		ID:                               row.ID,
+		OwnerAccountID:                   row.OwnerAccountID,
+		RecipientAccountID:               row.RecipientAccountID,
+		RecipientAccountName:             row.RecipientAccountName,
+		RecipientAccountNumber:           row.RecipientAccountNumber,
+		RecipientAccountIsEdiEnabled:     row.RecipientAccountIsEdiEnabled,
+		RecipientAccountRelationshipType: row.RecipientAccountRelationshipType,
+		RecipientAccountCreatedAt:        row.RecipientAccountCreatedAt,
+		RecipientAccountUpdatedAt:        row.RecipientAccountUpdatedAt,
+		ProductLineID:                    row.ProductLineID,
+		ProductLineName:                  row.ProductLineName,
+		ProductLineIsCommissionExempt:    row.ProductLineIsCommissionExempt,
+		ProductLineIsFreightExempt:       row.ProductLineIsFreightExempt,
+		ProductLineCreatedAt:             row.ProductLineCreatedAt,
+		ProductLineUpdatedAt:             row.ProductLineUpdatedAt,
+		RateID:                           row.RateID,
+		RateValue:                        row.RateValue,
+		RateCreatedAt:                    row.RateCreatedAt,
+		RateUpdatedAt:                    row.RateUpdatedAt,
+		NumeratorUnitID:                  row.NumeratorUnitID,
+		NumeratorUnitName:                row.NumeratorUnitName,
+		NumeratorUnitAbbr:                row.NumeratorUnitAbbreviation,
+		NumeratorUnitType:                row.NumeratorUnitType,
+		NumeratorUnitRatioNumerator:      row.NumeratorUnitRatioNumerator,
+		NumeratorUnitRatioDenominator:    row.NumeratorUnitRatioDenominator,
+		NumeratorUnitOffsetNumerator:     row.NumeratorUnitOffsetNumerator,
+		NumeratorUnitOffsetDenominator:   row.NumeratorUnitOffsetDenominator,
+		NumeratorUnitCreatedAt:           row.NumeratorUnitCreatedAt,
+		NumeratorUnitUpdatedAt:           row.NumeratorUnitUpdatedAt,
+		DenominatorUnitID:                row.DenominatorUnitID,
+		DenominatorUnitName:              row.DenominatorUnitName,
+		DenominatorUnitAbbr:              row.DenominatorUnitAbbreviation,
+		DenominatorUnitType:              row.DenominatorUnitType,
+		DenominatorUnitRatioNumerator:    row.DenominatorUnitRatioNumerator,
+		DenominatorUnitRatioDenominator:  row.DenominatorUnitRatioDenominator,
+		DenominatorUnitOffsetNumerator:   row.DenominatorUnitOffsetNumerator,
+		DenominatorUnitOffsetDenominator: row.DenominatorUnitOffsetDenominator,
+		DenominatorUnitCreatedAt:         row.DenominatorUnitCreatedAt,
+		DenominatorUnitUpdatedAt:         row.DenominatorUnitUpdatedAt,
+		CreatedAt:                        row.CreatedAt,
+		UpdatedAt:                        row.UpdatedAt,
 	}
+	if row.RecipientAccountStatus.Valid {
+		ap.RecipientAccountStatus = row.RecipientAccountStatus.String
+	}
+	if row.RecipientAccountCommissionPolicy.Valid {
+		ap.RecipientAccountCommissionPolicy = row.RecipientAccountCommissionPolicy.String
+	}
+	return ap
 }
 
 func (r *accountPriceRepoImpl) fetchCategoriesAndAttributes(ctx context.Context, ap *domain.AccountPrice) *apierror.APIError {
@@ -103,7 +193,13 @@ func (r *accountPriceRepoImpl) fetchCategoriesAndAttributes(ctx context.Context,
 	}
 	cats := make([]domain.AccountPriceCategory, len(catRows))
 	for i, c := range catRows {
-		cats[i] = domain.AccountPriceCategory{ID: c.ID, Name: c.Name}
+		cats[i] = domain.AccountPriceCategory{
+			ID:        c.ID,
+			Name:      c.Name,
+			Type:      c.Type,
+			CreatedAt: c.CreatedAt,
+			UpdatedAt: c.UpdatedAt,
+		}
 	}
 	ap.Categories = cats
 
@@ -113,7 +209,13 @@ func (r *accountPriceRepoImpl) fetchCategoriesAndAttributes(ctx context.Context,
 	}
 	attrs := make([]domain.AccountPriceAttribute, len(attrRows))
 	for i, a := range attrRows {
-		attrs[i] = domain.AccountPriceAttribute{ID: a.ID, Value: a.Text}
+		attrs[i] = domain.AccountPriceAttribute{
+			ID:        a.ID,
+			Value:     a.Text,
+			ColorCode: a.ColorCode,
+			CreatedAt: a.CreatedAt,
+			UpdatedAt: a.UpdatedAt,
+		}
 	}
 	ap.Attributes = attrs
 

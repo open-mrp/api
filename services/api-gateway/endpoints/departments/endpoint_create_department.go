@@ -17,7 +17,7 @@ type CreateDepartmentRequest struct {
 	// Notes about the department.
 	Notes *string `json:"notes,omitempty"`
 	// Storage location ID.
-	LocationID *string `json:"location_id,omitempty" validate:"omitempty,max=191"`
+	LocationID *string `json:"location_id,omitempty" validate:"omitempty"`
 	// Scanning station IDs to connect.
 	ScanningStationIDs []string `json:"scanning_station_ids,omitempty"`
 	// Machine IDs to connect.

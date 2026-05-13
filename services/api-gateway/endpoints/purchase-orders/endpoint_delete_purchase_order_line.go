@@ -14,7 +14,7 @@ type DeletePurchaseOrderLineRequest struct {
 	// Purchase order ID.
 	PurchaseOrderID string `path:"id" validate:"required"`
 	// Purchase order line ID.
-	PurchaseOrderLineID string `path:"lineId" validate:"required"`
+	PurchaseOrderLineID string `path:"line_id" validate:"required"`
 }
 
 type DeletePurchaseOrderLineEndpoint struct{}
@@ -25,7 +25,7 @@ func (e *DeletePurchaseOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint
 		Description:       "Deletes a purchase order line item and its related records.",
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
-		Route:             "/v1/operations/purchase-orders/{id}/lines/{lineId}",
+		Route:             "/v1/operations/purchase-orders/{id}/lines/{line_id}",
 		Request:           &DeletePurchaseOrderLineRequest{},
 		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusOK,

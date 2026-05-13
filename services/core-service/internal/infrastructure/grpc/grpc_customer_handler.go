@@ -104,14 +104,33 @@ func customerToProto(c *domain.Customer) *pb.CustomerProto {
 		if c.DefaultCarrierIsPortalEnabled != nil {
 			carrier.IsPortalEnabled = *c.DefaultCarrierIsPortalEnabled
 		}
+		if c.DefaultCarrierCreatedAt != nil {
+			carrier.CreatedAt = timestamppb.New(*c.DefaultCarrierCreatedAt)
+		}
+		if c.DefaultCarrierUpdatedAt != nil {
+			carrier.UpdatedAt = timestamppb.New(*c.DefaultCarrierUpdatedAt)
+		}
 		p.DefaultCarrier = carrier
 	}
 
 	if c.DefaultServiceLevelID != nil {
-		p.DefaultServiceLevel = &pb.CustomerServiceLevelProto{
+		sl := &pb.CustomerServiceLevelProto{
 			Id:   *c.DefaultServiceLevelID,
 			Name: *c.DefaultServiceLevelName,
 		}
+		if c.DefaultServiceLevelToken != nil {
+			sl.ServiceLevelToken = c.DefaultServiceLevelToken
+		}
+		if c.DefaultServiceLevelIsPortalEnabled != nil {
+			sl.IsPortalEnabled = c.DefaultServiceLevelIsPortalEnabled
+		}
+		if c.DefaultServiceLevelCreatedAt != nil {
+			sl.CreatedAt = timestamppb.New(*c.DefaultServiceLevelCreatedAt)
+		}
+		if c.DefaultServiceLevelUpdatedAt != nil {
+			sl.UpdatedAt = timestamppb.New(*c.DefaultServiceLevelUpdatedAt)
+		}
+		p.DefaultServiceLevel = sl
 	}
 
 	if c.DefaultPaymentTermID != nil {
@@ -121,6 +140,12 @@ func customerToProto(c *domain.Customer) *pb.CustomerProto {
 		}
 		if c.DefaultPaymentTermIsActive != nil {
 			pt.IsActive = *c.DefaultPaymentTermIsActive
+		}
+		if c.DefaultPaymentTermCreatedAt != nil {
+			pt.CreatedAt = timestamppb.New(*c.DefaultPaymentTermCreatedAt)
+		}
+		if c.DefaultPaymentTermUpdatedAt != nil {
+			pt.UpdatedAt = timestamppb.New(*c.DefaultPaymentTermUpdatedAt)
 		}
 		p.DefaultPaymentTerm = pt
 	}
@@ -132,6 +157,12 @@ func customerToProto(c *domain.Customer) *pb.CustomerProto {
 		}
 		if c.DefaultShippingTermType != nil {
 			st.Type = string(*c.DefaultShippingTermType)
+		}
+		if c.DefaultShippingTermCreatedAt != nil {
+			st.CreatedAt = timestamppb.New(*c.DefaultShippingTermCreatedAt)
+		}
+		if c.DefaultShippingTermUpdatedAt != nil {
+			st.UpdatedAt = timestamppb.New(*c.DefaultShippingTermUpdatedAt)
 		}
 		p.DefaultShippingTerm = st
 	}
@@ -147,11 +178,22 @@ func customerToProto(c *domain.Customer) *pb.CustomerProto {
 		p.DefaultPriority = priority
 	}
 
-	if c.DefaultSalesRepID != nil {
-		p.DefaultSalesRep = &pb.CustomerUserProto{
+	if c.DefaultSalesRepID != nil && *c.DefaultSalesRepID != "" {
+		sr := &pb.CustomerUserProto{
 			Id:   *c.DefaultSalesRepID,
 			Name: c.DefaultSalesRepName,
 		}
+		if c.DefaultSalesRepStatus != nil {
+			s := string(*c.DefaultSalesRepStatus)
+			sr.Status = &s
+		}
+		if c.DefaultSalesRepCreatedAt != nil {
+			sr.CreatedAt = timestamppb.New(*c.DefaultSalesRepCreatedAt)
+		}
+		if c.DefaultSalesRepUpdatedAt != nil {
+			sr.UpdatedAt = timestamppb.New(*c.DefaultSalesRepUpdatedAt)
+		}
+		p.DefaultSalesRep = sr
 	}
 
 	if c.TypeGroupID != nil {
@@ -168,33 +210,53 @@ func customerToProto(c *domain.Customer) *pb.CustomerProto {
 		if c.TypeGroupType != nil {
 			tg.Type = string(*c.TypeGroupType)
 		}
+		if c.TypeGroupCreatedAt != nil {
+			tg.CreatedAt = timestamppb.New(*c.TypeGroupCreatedAt)
+		}
+		if c.TypeGroupUpdatedAt != nil {
+			tg.UpdatedAt = timestamppb.New(*c.TypeGroupUpdatedAt)
+		}
 		p.TypeGroup = tg
 	}
 
 	priceGroups := make([]*pb.CustomerAccountGroupProto, len(c.PriceGroups))
 	for i, pg := range c.PriceGroups {
 		priceGroups[i] = &pb.CustomerAccountGroupProto{
-			Id:   pg.ID,
-			Name: pg.Name,
+			Id:               pg.ID,
+			Name:             pg.Name,
+			CommissionPolicy: string(pg.CommissionPolicy),
+			FreightPolicy:    string(pg.FreightPolicy),
+			Type:             string(pg.Type),
+			CreatedAt:        timestamppb.New(pg.CreatedAt),
+			UpdatedAt:        timestamppb.New(pg.UpdatedAt),
 		}
 	}
 	p.PriceGroups = priceGroups
 
 	if c.ParentAccountID != nil {
-		p.ParentAccount = &pb.CustomerLightCustomerProto{
+		pa := &pb.CustomerLightCustomerProto{
 			Id:     *c.ParentAccountID,
 			Name:   *c.ParentAccountName,
 			Number: *c.ParentAccountNumber,
 		}
+		if c.ParentAccountCreatedAt != nil {
+			pa.CreatedAt = timestamppb.New(*c.ParentAccountCreatedAt)
+		}
+		if c.ParentAccountUpdatedAt != nil {
+			pa.UpdatedAt = timestamppb.New(*c.ParentAccountUpdatedAt)
+		}
+		p.ParentAccount = pa
 	}
 
 	if len(c.ChildAccounts) > 0 {
 		p.ChildAccounts = make([]*pb.CustomerLightCustomerProto, len(c.ChildAccounts))
 		for i, child := range c.ChildAccounts {
 			p.ChildAccounts[i] = &pb.CustomerLightCustomerProto{
-				Id:     child.ID,
-				Name:   child.Name,
-				Number: child.Number,
+				Id:        child.ID,
+				Name:      child.Name,
+				Number:    child.Number,
+				CreatedAt: timestamppb.New(child.CreatedAt),
+				UpdatedAt: timestamppb.New(child.UpdatedAt),
 			}
 		}
 	}
@@ -310,13 +372,14 @@ func (h *gRPCHandler) CreateCustomer(ctx context.Context, req *pb.CreateCustomer
 		DefaultPaymentTermID:  req.DefaultPaymentTermId,
 		DefaultShippingTermID: req.DefaultShippingTermId,
 		DefaultPriorityCode:   req.DefaultPriorityCode,
-		DefaultSalesRepUserID: req.DefaultSalesRepUserId,
+		DefaultSalesRepID:     req.DefaultSalesRepId,
 		CustomerPriceGroupIDs: req.CustomerPriceGroupIds,
 		CustomerTypeGroupID:   req.CustomerTypeGroupId,
 		CarrierBillingType:    req.CarrierBillingType,
 		CarrierBillingAccount: req.CarrierBillingAccount,
 		CreditLimitValue:      req.CreditLimitValue,
 		CreditLimitUnitID:     req.CreditLimitUnitId,
+		Includes:              req.Includes,
 	}
 
 	if req.BillToAddress != nil {
@@ -361,7 +424,7 @@ func (h *gRPCHandler) UpdateCustomer(ctx context.Context, req *pb.UpdateCustomer
 		DefaultPaymentTermID:     req.DefaultPaymentTermId,
 		DefaultShippingTermID:    req.DefaultShippingTermId,
 		DefaultPriorityCode:      req.DefaultPriorityCode,
-		DefaultSalesRepUserID:    req.DefaultSalesRepUserId,
+		DefaultSalesRepID:        req.DefaultSalesRepId,
 		BillToAddressID:          req.BillToAddressId,
 		ShipToAddressID:          req.ShipToAddressId,
 		CustomerPriceGroupIDs:    req.CustomerPriceGroupIds,
@@ -371,6 +434,7 @@ func (h *gRPCHandler) UpdateCustomer(ctx context.Context, req *pb.UpdateCustomer
 		CarrierBillingAccount:    req.CarrierBillingAccount,
 		CreditLimitValue:         req.CreditLimitValue,
 		CreditLimitUnitID:        req.CreditLimitUnitId,
+		Includes:                 req.Includes,
 	}
 
 	customer, apiErr := h.customerSvc.UpdateCustomer(ctx, params)
@@ -454,6 +518,7 @@ func (h *gRPCHandler) MergeCustomers(ctx context.Context, req *pb.MergeCustomers
 	customer, apiErr := h.customerSvc.MergeCustomers(ctx, domain.MergeCustomersParams{
 		TargetCustomerID:  req.TargetCustomerId,
 		SourceCustomerIDs: req.SourceCustomerIds,
+		Includes:          req.Includes,
 	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)

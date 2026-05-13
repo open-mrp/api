@@ -18,7 +18,7 @@ import (
 
 type InventoryChangeLogSvc interface {
 	ListInventoryChangeLogs(ctx context.Context, req *ListInventoryChangeLogsRequest) (*apiresource.List[apiresource.InventoryChangeLog], *apierror.APIError)
-	GetInventoryChangeLog(ctx context.Context, req *GetInventoryChangeLogRequest) (*apiresource.InventoryChangeLog, *apierror.APIError)
+	GetInventoryChangeLog(ctx context.Context, req *RetrieveInventoryChangeLogRequest) (*apiresource.InventoryChangeLog, *apierror.APIError)
 	ExportInventoryChangeLogs(ctx context.Context, req *ExportInventoryChangeLogsRequest) (*httptransport.FileDownload, *apierror.APIError)
 }
 
@@ -78,7 +78,7 @@ func (m *inventoryChangeLogSvcImpl) ListInventoryChangeLogs(ctx context.Context,
 	return InventoryChangeLogListPresenter(resp), nil
 }
 
-func (m *inventoryChangeLogSvcImpl) GetInventoryChangeLog(ctx context.Context, req *GetInventoryChangeLogRequest) (*apiresource.InventoryChangeLog, *apierror.APIError) {
+func (m *inventoryChangeLogSvcImpl) GetInventoryChangeLog(ctx context.Context, req *RetrieveInventoryChangeLogRequest) (*apiresource.InventoryChangeLog, *apierror.APIError) {
 	pbReq := &pb.GetInventoryChangeLogRequest{
 		Id: req.InventoryChangeLogID,
 	}

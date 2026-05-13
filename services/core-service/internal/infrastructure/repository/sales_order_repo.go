@@ -4,6 +4,7 @@ import (
 	"context"
 	gosql "database/sql"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -792,6 +793,8 @@ func mapGetSalesOrderRow(row sqlc.GetSalesOrderRow) *domain.SalesOrder {
 	}
 
 	so.BillToName = nullStringToPtr(row.BillToName)
+	so.BillToIsDropShip = nullBoolPtr(row.BillToIsDropShip)
+	so.BillToGeolocationID = nullStringToPtr(row.BillToGeolocationID)
 	so.BillToStreetLine1 = nullStringToPtr(row.BillToStreetLine1)
 	so.BillToStreetLine2 = nullStringToPtr(row.BillToStreetLine2)
 	so.BillToLocality = nullStringToPtr(row.BillToLocality)
@@ -800,7 +803,11 @@ func mapGetSalesOrderRow(row sqlc.GetSalesOrderRow) *domain.SalesOrder {
 	so.BillToCountry = nullStringToPtr(row.BillToCountry)
 	so.BillToPhone = nullStringToPtr(row.BillToPhone)
 	so.BillToEmail = nullStringToPtr(row.BillToEmail)
+	so.BillToCreatedAt = nullTimePtr(row.BillToCreatedAt)
+	so.BillToUpdatedAt = nullTimePtr(row.BillToUpdatedAt)
 	so.ShipToName = nullStringToPtr(row.ShipToName)
+	so.ShipToIsDropShip = nullBoolPtr(row.ShipToIsDropShip)
+	so.ShipToGeolocationID = nullStringToPtr(row.ShipToGeolocationID)
 	so.ShipToStreetLine1 = nullStringToPtr(row.ShipToStreetLine1)
 	so.ShipToStreetLine2 = nullStringToPtr(row.ShipToStreetLine2)
 	so.ShipToLocality = nullStringToPtr(row.ShipToLocality)
@@ -809,23 +816,52 @@ func mapGetSalesOrderRow(row sqlc.GetSalesOrderRow) *domain.SalesOrder {
 	so.ShipToCountry = nullStringToPtr(row.ShipToCountry)
 	so.ShipToPhone = nullStringToPtr(row.ShipToPhone)
 	so.ShipToEmail = nullStringToPtr(row.ShipToEmail)
+	so.ShipToCreatedAt = nullTimePtr(row.ShipToCreatedAt)
+	so.ShipToUpdatedAt = nullTimePtr(row.ShipToUpdatedAt)
+
+	so.CustomerCreatedAt = &row.CustomerCreatedAt
+	so.CustomerUpdatedAt = &row.CustomerUpdatedAt
 
 	so.CarrierName = nullStringToPtr(row.CarrierName)
 	so.CarrierIsPortalEnabled = nullBoolPtr(row.CarrierIsPortalEnabled)
+	so.CarrierCreatedAt = nullTimePtr(row.CarrierCreatedAt)
+	so.CarrierUpdatedAt = nullTimePtr(row.CarrierUpdatedAt)
 	so.ServiceLevelName = nullStringToPtr(row.CarrierOptionName)
 	so.ServiceLevelIsPortalEnabled = nullBoolPtr(row.ServiceLevelIsPortalEnabled)
+	so.ServiceLevelToken = nullStringToPtr(row.ServiceLevelToken)
+	so.ServiceLevelCreatedAt = nullTimePtr(row.ServiceLevelCreatedAt)
+	so.ServiceLevelUpdatedAt = nullTimePtr(row.ServiceLevelUpdatedAt)
 	so.SalesRepName = nullStringToPtr(row.SalesRepName)
 	so.PaymentTermName = nullStringToPtr(row.PaymentTermName)
 	so.PaymentTermIsActive = nullBoolPtr(row.PaymentTermIsActive)
+	so.PaymentTermCreatedAt = nullTimePtr(row.PaymentTermCreatedAt)
+	so.PaymentTermUpdatedAt = nullTimePtr(row.PaymentTermUpdatedAt)
 	so.ShippingTermName = nullStringToPtr(row.ShippingTermName)
 	so.ShippingTermIsFreightExempt = nullBoolPtr(row.ShippingTermIsFreightExempt)
 	so.ShippingTermIsCarrierRate = nullBoolPtr(row.ShippingTermIsCarrierRate)
+	so.ShippingTermCreatedAt = nullTimePtr(row.ShippingTermCreatedAt)
+	so.ShippingTermUpdatedAt = nullTimePtr(row.ShippingTermUpdatedAt)
 	so.OrderDiscountName = nullStringToPtr(row.OrderDiscountName)
+	so.OrderDiscountCode = nullStringToPtr(row.OrderDiscountCode)
+	if row.OrderDiscountPercentage.Valid {
+		s := strconv.FormatFloat(row.OrderDiscountPercentage.Float64, 'f', -1, 64)
+		so.OrderDiscountPercentage = &s
+	}
+	if row.OrderDiscountAmount.Valid {
+		s := strconv.FormatFloat(row.OrderDiscountAmount.Float64, 'f', -1, 64)
+		so.OrderDiscountAmount = &s
+	}
+	so.OrderDiscountDiscountType = nullStringToPtr(row.OrderDiscountDiscountType)
+	if row.OrderDiscountID.Valid {
+		cnt := safeconv.Int64ToInt32(row.OrderDiscountOrderCount)
+		so.OrderDiscountOrderCount = &cnt
+	}
+	so.OrderDiscountCreatedAt = nullTimePtr(row.OrderDiscountCreatedAt)
+	so.OrderDiscountUpdatedAt = nullTimePtr(row.OrderDiscountUpdatedAt)
 	so.PickID = nullStringToPtr(row.PickID)
 	so.PriorityID = &row.PriorityID
 	so.CustomerStatusCode = nullStringToPtr(row.CustomerStatusCode)
 	so.CustomerCommissionPolicy = nullStringToPtr(row.CustomerCommissionPolicy)
-	so.ServiceLevelToken = nullStringToPtr(row.ServiceLevelToken)
 
 	return so
 }
@@ -881,6 +917,8 @@ func mapGetSalesOrderForCustomerRow(row sqlc.GetSalesOrderForCustomerRow) *domai
 	}
 
 	so.BillToName = nullStringToPtr(row.BillToName)
+	so.BillToIsDropShip = nullBoolPtr(row.BillToIsDropShip)
+	so.BillToGeolocationID = nullStringToPtr(row.BillToGeolocationID)
 	so.BillToStreetLine1 = nullStringToPtr(row.BillToStreetLine1)
 	so.BillToStreetLine2 = nullStringToPtr(row.BillToStreetLine2)
 	so.BillToLocality = nullStringToPtr(row.BillToLocality)
@@ -889,7 +927,11 @@ func mapGetSalesOrderForCustomerRow(row sqlc.GetSalesOrderForCustomerRow) *domai
 	so.BillToCountry = nullStringToPtr(row.BillToCountry)
 	so.BillToPhone = nullStringToPtr(row.BillToPhone)
 	so.BillToEmail = nullStringToPtr(row.BillToEmail)
+	so.BillToCreatedAt = nullTimePtr(row.BillToCreatedAt)
+	so.BillToUpdatedAt = nullTimePtr(row.BillToUpdatedAt)
 	so.ShipToName = nullStringToPtr(row.ShipToName)
+	so.ShipToIsDropShip = nullBoolPtr(row.ShipToIsDropShip)
+	so.ShipToGeolocationID = nullStringToPtr(row.ShipToGeolocationID)
 	so.ShipToStreetLine1 = nullStringToPtr(row.ShipToStreetLine1)
 	so.ShipToStreetLine2 = nullStringToPtr(row.ShipToStreetLine2)
 	so.ShipToLocality = nullStringToPtr(row.ShipToLocality)
@@ -898,23 +940,52 @@ func mapGetSalesOrderForCustomerRow(row sqlc.GetSalesOrderForCustomerRow) *domai
 	so.ShipToCountry = nullStringToPtr(row.ShipToCountry)
 	so.ShipToPhone = nullStringToPtr(row.ShipToPhone)
 	so.ShipToEmail = nullStringToPtr(row.ShipToEmail)
+	so.ShipToCreatedAt = nullTimePtr(row.ShipToCreatedAt)
+	so.ShipToUpdatedAt = nullTimePtr(row.ShipToUpdatedAt)
+
+	so.CustomerCreatedAt = &row.CustomerCreatedAt
+	so.CustomerUpdatedAt = &row.CustomerUpdatedAt
 
 	so.CarrierName = nullStringToPtr(row.CarrierName)
 	so.CarrierIsPortalEnabled = nullBoolPtr(row.CarrierIsPortalEnabled)
+	so.CarrierCreatedAt = nullTimePtr(row.CarrierCreatedAt)
+	so.CarrierUpdatedAt = nullTimePtr(row.CarrierUpdatedAt)
 	so.ServiceLevelName = nullStringToPtr(row.CarrierOptionName)
 	so.ServiceLevelIsPortalEnabled = nullBoolPtr(row.ServiceLevelIsPortalEnabled)
+	so.ServiceLevelToken = nullStringToPtr(row.ServiceLevelToken)
+	so.ServiceLevelCreatedAt = nullTimePtr(row.ServiceLevelCreatedAt)
+	so.ServiceLevelUpdatedAt = nullTimePtr(row.ServiceLevelUpdatedAt)
 	so.SalesRepName = nullStringToPtr(row.SalesRepName)
 	so.PaymentTermName = nullStringToPtr(row.PaymentTermName)
 	so.PaymentTermIsActive = nullBoolPtr(row.PaymentTermIsActive)
+	so.PaymentTermCreatedAt = nullTimePtr(row.PaymentTermCreatedAt)
+	so.PaymentTermUpdatedAt = nullTimePtr(row.PaymentTermUpdatedAt)
 	so.ShippingTermName = nullStringToPtr(row.ShippingTermName)
 	so.ShippingTermIsFreightExempt = nullBoolPtr(row.ShippingTermIsFreightExempt)
 	so.ShippingTermIsCarrierRate = nullBoolPtr(row.ShippingTermIsCarrierRate)
+	so.ShippingTermCreatedAt = nullTimePtr(row.ShippingTermCreatedAt)
+	so.ShippingTermUpdatedAt = nullTimePtr(row.ShippingTermUpdatedAt)
 	so.OrderDiscountName = nullStringToPtr(row.OrderDiscountName)
+	so.OrderDiscountCode = nullStringToPtr(row.OrderDiscountCode)
+	if row.OrderDiscountPercentage.Valid {
+		s := strconv.FormatFloat(row.OrderDiscountPercentage.Float64, 'f', -1, 64)
+		so.OrderDiscountPercentage = &s
+	}
+	if row.OrderDiscountAmount.Valid {
+		s := strconv.FormatFloat(row.OrderDiscountAmount.Float64, 'f', -1, 64)
+		so.OrderDiscountAmount = &s
+	}
+	so.OrderDiscountDiscountType = nullStringToPtr(row.OrderDiscountDiscountType)
+	if row.OrderDiscountID.Valid {
+		cnt := safeconv.Int64ToInt32(row.OrderDiscountOrderCount)
+		so.OrderDiscountOrderCount = &cnt
+	}
+	so.OrderDiscountCreatedAt = nullTimePtr(row.OrderDiscountCreatedAt)
+	so.OrderDiscountUpdatedAt = nullTimePtr(row.OrderDiscountUpdatedAt)
 	so.PickID = nullStringToPtr(row.PickID)
 	so.PriorityID = &row.PriorityID
 	so.CustomerStatusCode = nullStringToPtr(row.CustomerStatusCode)
 	so.CustomerCommissionPolicy = nullStringToPtr(row.CustomerCommissionPolicy)
-	so.ServiceLevelToken = nullStringToPtr(row.ServiceLevelToken)
 
 	return so
 }

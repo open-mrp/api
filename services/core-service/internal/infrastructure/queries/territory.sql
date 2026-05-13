@@ -10,7 +10,14 @@ SELECT
     t.updated_at,
     u.name AS sales_rep_name,
     u.email AS sales_rep_email,
-    pl.name AS product_line_name
+    au.status_code AS sales_rep_status,
+    au.created_at AS sales_rep_created_at,
+    au.updated_at AS sales_rep_updated_at,
+    pl.name AS product_line_name,
+    pl.is_commission_exempt AS product_line_is_commission_exempt,
+    pl.is_freight_exempt AS product_line_is_freight_exempt,
+    pl.created_at AS product_line_created_at,
+    pl.updated_at AS product_line_updated_at
 FROM territory t
 JOIN account_user au ON au.id = t.sales_rep_id
 JOIN user u ON u.id = au.user_id
@@ -53,7 +60,14 @@ SELECT
     t.updated_at,
     u.name AS sales_rep_name,
     u.email AS sales_rep_email,
-    pl.name AS product_line_name
+    au.status_code AS sales_rep_status,
+    au.created_at AS sales_rep_created_at,
+    au.updated_at AS sales_rep_updated_at,
+    pl.name AS product_line_name,
+    pl.is_commission_exempt AS product_line_is_commission_exempt,
+    pl.is_freight_exempt AS product_line_is_freight_exempt,
+    pl.created_at AS product_line_created_at,
+    pl.updated_at AS product_line_updated_at
 FROM territory t
 JOIN account_user au ON au.id = t.sales_rep_id
 JOIN user u ON u.id = au.user_id
@@ -95,7 +109,14 @@ SELECT
     t.updated_at,
     u.name AS sales_rep_name,
     u.email AS sales_rep_email,
-    pl.name AS product_line_name
+    au.status_code AS sales_rep_status,
+    au.created_at AS sales_rep_created_at,
+    au.updated_at AS sales_rep_updated_at,
+    pl.name AS product_line_name,
+    pl.is_commission_exempt AS product_line_is_commission_exempt,
+    pl.is_freight_exempt AS product_line_is_freight_exempt,
+    pl.created_at AS product_line_created_at,
+    pl.updated_at AS product_line_updated_at
 FROM territory t
 JOIN account_user au ON au.id = t.sales_rep_id
 JOIN user u ON u.id = au.user_id

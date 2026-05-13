@@ -22,9 +22,11 @@ func SandboxPresenter(s *pb.SandboxInfo) apiresource.Sandbox {
 
 	if s.OwnerAccountId != nil && s.OwnerAccountName != nil {
 		result.OwnerAccount = &apiresource.Account{
-			ID:     *s.OwnerAccountId,
-			Object: constants.ObjectTypeAccount,
-			Name:   *s.OwnerAccountName,
+			ID:        *s.OwnerAccountId,
+			Object:    constants.ObjectTypeAccount,
+			Name:      *s.OwnerAccountName,
+			CreatedAt: grpcutil.TimestampToTime(s.OwnerAccountCreatedAt),
+			UpdatedAt: grpcutil.TimestampToTime(s.OwnerAccountUpdatedAt),
 		}
 	}
 

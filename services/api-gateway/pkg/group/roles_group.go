@@ -40,7 +40,7 @@ func (*RolesEndpointGroup) Materialize(config *RolesEndpointGroupConfig) *RolesE
 	}
 
 	listRolesEndpoint := (&roleep.ListRolesEndpoint{}).Materialize().WithService(inner, roleSvc)
-	getRoleEndpoint := (&roleep.GetRoleEndpoint{}).Materialize().WithService(inner, roleSvc)
+	getRoleEndpoint := (&roleep.RetrieveRoleEndpoint{}).Materialize().WithService(inner, roleSvc)
 	createRoleEndpoint := (&roleep.CreateRoleEndpoint{}).Materialize().WithService(inner, roleSvc)
 	updateRoleEndpoint := (&roleep.UpdateRoleEndpoint{}).Materialize().WithService(inner, roleSvc)
 	deleteRoleEndpoint := (&roleep.DeleteRoleEndpoint{}).Materialize().WithService(inner, roleSvc)

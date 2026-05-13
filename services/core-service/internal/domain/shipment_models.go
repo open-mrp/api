@@ -26,21 +26,38 @@ type Shipment struct {
 	CustomerNumber              string
 	CustomerStatusCode          *string
 	CustomerCommissionPolicy    *string
+	CustomerCreatedAt           time.Time
+	CustomerUpdatedAt           time.Time
 	CarrierID                   string `audit:"carrier_id"`
 	CarrierName                 string `audit:"carrier_name"`
 	CarrierIsPortalEnabled      *bool
+	CarrierCreatedAt            *time.Time
+	CarrierUpdatedAt            *time.Time
 	ServiceLevelID              *string `audit:"service_level_id"`
 	ServiceLevelName            *string `audit:"service_level_name"`
 	ServiceLevelToken           *string
 	ServiceLevelIsPortalEnabled *bool
+	ServiceLevelCreatedAt       *time.Time
+	ServiceLevelUpdatedAt       *time.Time
 	ShippingAddressID           string
 	ShippingAddressName         *string
+	ShippingAddressCreatedAt    *time.Time
+	ShippingAddressUpdatedAt    *time.Time
 	ShippedByID                 *string `audit:"shipped_by_id"`
 	ShippedByName               *string `audit:"shipped_by_name"`
+	ShippedByStatusCode         *string
+	ShippedByCreatedAt          *time.Time
+	ShippedByUpdatedAt          *time.Time
 	InvoiceID                   *string
 	InvoiceNumber               *string
+	InvoiceCreatedAt            *time.Time
+	InvoiceUpdatedAt            *time.Time
 	PickID                      *string
 	PickNumber                  *string
+	PickCreatedAt               *time.Time
+	PickUpdatedAt               *time.Time
+	SalesOrderCreatedAt         time.Time
+	SalesOrderUpdatedAt         time.Time
 	BillingAddressCountry       *string
 	BillingAddressZip           *string
 	AccountID                   string
@@ -64,11 +81,15 @@ type ShipmentSummary struct {
 	ShippedAt                   *time.Time
 	SalesOrderID                string
 	SalesOrderNumber            string
+	SalesOrderCreatedAt         time.Time
+	SalesOrderUpdatedAt         time.Time
 	CustomerID                  string
 	CustomerName                string
 	CustomerNumber              string
 	CustomerStatusCode          *string
 	CustomerCommissionPolicy    *string
+	CustomerCreatedAt           time.Time
+	CustomerUpdatedAt           time.Time
 	CarrierID                   string
 	CarrierName                 string
 	CarrierIsPortalEnabled      *bool
@@ -118,6 +139,7 @@ type UpdateShipmentParams struct {
 	MasterTrackingNumber *string
 	CarrierID            *string
 	ServiceLevelID       *string
+	Includes             []string
 }
 
 // DeleteShipmentParams holds the parameters for deleting a shipment.
@@ -131,6 +153,7 @@ type ShipShipmentParams struct {
 	AccountID     string
 	ShipmentID    string
 	EmailCustomer bool
+	Includes      []string
 }
 
 // VoidShipmentParams holds the parameters for voiding a shipment.

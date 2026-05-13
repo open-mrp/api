@@ -119,6 +119,49 @@ func (q *Queries) GetRoleByIDAndAccount(ctx context.Context, arg GetRoleByIDAndA
 	return i, err
 }
 
+const getRolesByIDs = `-- name: GetRolesByIDs :many
+SELECT id, name, role_type_code FROM role WHERE id IN (/*SLICE:ids*/?)
+`
+
+type GetRolesByIDsRow struct {
+	ID           string
+	Name         string
+	RoleTypeCode string
+}
+
+func (q *Queries) GetRolesByIDs(ctx context.Context, ids []string) ([]GetRolesByIDsRow, error) {
+	query := getRolesByIDs
+	var queryParams []interface{}
+	if len(ids) > 0 {
+		for _, v := range ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetRolesByIDsRow
+	for rows.Next() {
+		var i GetRolesByIDsRow
+		if err := rows.Scan(&i.ID, &i.Name, &i.RoleTypeCode); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const insertRole = `-- name: InsertRole :exec
 INSERT INTO role (id, name, role_type_code, account_id, created_at, updated_at)
 VALUES (?, ?, ?, ?, NOW(3), NOW(3))

@@ -29,8 +29,16 @@ message ShippingCaseInfo {
   optional string tracking_number = 4;
   optional google.protobuf.Timestamp shipped_at = 5;
   string shipment_id = 6;
+  optional string shipment_number = 38;
+  optional string shipment_status_code = 39;
+  optional string shipment_status_name = 40;
+  optional google.protobuf.Timestamp shipment_created_at = 41;
+  optional google.protobuf.Timestamp shipment_updated_at = 42;
   string carrier_id = 7;
   string carrier_name = 8;
+  optional bool carrier_is_portal_enabled = 23;
+  optional google.protobuf.Timestamp carrier_created_at = 24;
+  optional google.protobuf.Timestamp carrier_updated_at = 25;
   google.protobuf.Timestamp created_at = 9;
   google.protobuf.Timestamp updated_at = 10;
   // Freight amount quantity fields
@@ -40,6 +48,12 @@ message ShippingCaseInfo {
   string freight_amount_unit_name = 14;
   string freight_amount_unit_abbreviation = 15;
   string freight_amount_unit_type = 16;
+  string freight_amount_unit_ratio_numerator = 26;
+  string freight_amount_unit_ratio_denominator = 27;
+  string freight_amount_unit_offset_numerator = 28;
+  string freight_amount_unit_offset_denominator = 29;
+  google.protobuf.Timestamp freight_amount_unit_created_at = 30;
+  google.protobuf.Timestamp freight_amount_unit_updated_at = 31;
   // Freight weight quantity fields
   string freight_weight_id = 17;
   string freight_weight_value = 18;
@@ -47,6 +61,12 @@ message ShippingCaseInfo {
   string freight_weight_unit_name = 20;
   string freight_weight_unit_abbreviation = 21;
   string freight_weight_unit_type = 22;
+  string freight_weight_unit_ratio_numerator = 32;
+  string freight_weight_unit_ratio_denominator = 33;
+  string freight_weight_unit_offset_numerator = 34;
+  string freight_weight_unit_offset_denominator = 35;
+  google.protobuf.Timestamp freight_weight_unit_created_at = 36;
+  google.protobuf.Timestamp freight_weight_unit_updated_at = 37;
 }
 
 // Get shipping case

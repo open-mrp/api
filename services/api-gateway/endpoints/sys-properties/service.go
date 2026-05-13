@@ -15,7 +15,7 @@ import (
 
 type SysPropertySvc interface {
 	ListSysProperties(ctx context.Context, req *ListSysPropertiesRequest) (*apiresource.List[apiresource.SysProperty], *apierror.APIError)
-	GetSysProperty(ctx context.Context, req *GetSysPropertyRequest) (*apiresource.SysProperty, *apierror.APIError)
+	GetSysProperty(ctx context.Context, req *RetrieveSysPropertyRequest) (*apiresource.SysProperty, *apierror.APIError)
 	UpdateSysProperty(ctx context.Context, req *UpdateSysPropertyRequest) (*apiresource.SysProperty, *apierror.APIError)
 	GetLatestSysPropertyValue(ctx context.Context, req *GetLatestSysPropertyValueRequest) (*apiresource.SysPropertyValue, *apierror.APIError)
 }
@@ -65,7 +65,7 @@ func (m *sysPropertySvcImpl) ListSysProperties(ctx context.Context, req *ListSys
 	return SysPropertyListPresenter(resp), nil
 }
 
-func (m *sysPropertySvcImpl) GetSysProperty(ctx context.Context, req *GetSysPropertyRequest) (*apiresource.SysProperty, *apierror.APIError) {
+func (m *sysPropertySvcImpl) GetSysProperty(ctx context.Context, req *RetrieveSysPropertyRequest) (*apiresource.SysProperty, *apierror.APIError) {
 	pbReq := &pb.GetSysPropertyRequest{
 		Id: req.SysPropertyID,
 	}

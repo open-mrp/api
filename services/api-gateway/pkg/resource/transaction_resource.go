@@ -14,7 +14,7 @@ const SampleTransactionTypeID = "txtp_01jm4r6700f8nwq3v5hx2d9ktp"
 
 // Transaction type resource.
 type TransactionType struct {
-	// Transaction type ID.
+	// Transaction ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=transaction_type"`

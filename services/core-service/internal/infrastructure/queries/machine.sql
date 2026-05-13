@@ -6,6 +6,8 @@ SELECT
     m.notes,
     m.department_id,
     d.name AS department_name,
+    d.created_at AS department_created_at,
+    d.updated_at AS department_updated_at,
     m.production_step_id,
     m.created_at,
     m.updated_at
@@ -32,6 +34,8 @@ SELECT
     m.notes,
     m.department_id,
     d.name AS department_name,
+    d.created_at AS department_created_at,
+    d.updated_at AS department_updated_at,
     m.production_step_id,
     m.created_at,
     m.updated_at
@@ -57,6 +61,8 @@ SELECT
     m.notes,
     m.department_id,
     d.name AS department_name,
+    d.created_at AS department_created_at,
+    d.updated_at AS department_updated_at,
     m.production_step_id,
     m.created_at,
     m.updated_at

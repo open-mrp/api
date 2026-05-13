@@ -57,6 +57,7 @@ var SampleUnitGroup = &UnitGroup{
 	Object:    constants.ObjectTypeUnitGroup,
 	Name:      SampleUnitGroupName,
 	Type:      constants.UnitTypeMass,
+	BaseUnit:  SampleUnit,
 	Owner:     SampleOwnerSystem,
 	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),

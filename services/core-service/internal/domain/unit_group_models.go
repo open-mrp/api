@@ -38,6 +38,7 @@ type ListUnitGroupsParams struct {
 	Limit     int32
 	Query     *string
 	Type      *string
+	Includes  []string
 }
 
 type ListUnitGroupsResult struct {
@@ -48,6 +49,7 @@ type ListUnitGroupsResult struct {
 type GetUnitGroupParams struct {
 	AccountID   string
 	UnitGroupID string
+	Includes    []string
 }
 
 type CreateUnitGroupParams struct {
@@ -57,6 +59,7 @@ type CreateUnitGroupParams struct {
 	Type            string
 	BaseUnitID      string
 	UnitConversions []CreateUnitGroupUnitParams
+	Includes        []string
 }
 
 type CreateUnitGroupUnitParams struct {
@@ -73,6 +76,7 @@ type UpdateUnitGroupParams struct {
 	Notes           **string
 	BaseUnitID      *string
 	UnitConversions *[]CreateUnitGroupUnitParams
+	Includes        []string
 }
 
 type DeleteUnitGroupParams struct {
@@ -88,6 +92,7 @@ type UpsertUnitGroupUnitParams struct {
 	DiscountPercentage string
 	DiscountFixed      string
 	IsVisible          bool
+	Includes           []string
 }
 
 type DeleteUnitGroupUnitParams struct {
@@ -100,4 +105,5 @@ type GetUnitGroupUnitParams struct {
 	AccountID       string
 	UnitGroupID     string
 	UnitGroupUnitID string
+	Includes        []string
 }

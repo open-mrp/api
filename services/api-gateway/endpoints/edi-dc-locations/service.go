@@ -16,7 +16,7 @@ import (
 
 type EDIDCLocationSvc interface {
 	ListDCLocations(ctx context.Context, req *ListDCLocationsRequest) (*apiresource.List[apiresource.DCLocation], *apierror.APIError)
-	GetDCLocation(ctx context.Context, req *GetDCLocationRequest) (*apiresource.DCLocation, *apierror.APIError)
+	GetDCLocation(ctx context.Context, req *RetrieveDCLocationRequest) (*apiresource.DCLocation, *apierror.APIError)
 	CreateDCLocation(ctx context.Context, req *CreateDCLocationRequest) (*apiresource.DCLocation, *apierror.APIError)
 	UpdateDCLocation(ctx context.Context, req *UpdateDCLocationRequest) (*apiresource.DCLocation, *apierror.APIError)
 	DeleteDCLocation(ctx context.Context, req *DeleteDCLocationRequest) (*apiresource.EmptyResource, *apierror.APIError)
@@ -68,7 +68,7 @@ func (m *ediDCLocationSvcImpl) ListDCLocations(ctx context.Context, req *ListDCL
 	return DCLocationListPresenter(resp), nil
 }
 
-func (m *ediDCLocationSvcImpl) GetDCLocation(ctx context.Context, req *GetDCLocationRequest) (*apiresource.DCLocation, *apierror.APIError) {
+func (m *ediDCLocationSvcImpl) GetDCLocation(ctx context.Context, req *RetrieveDCLocationRequest) (*apiresource.DCLocation, *apierror.APIError) {
 	pbReq := &pb.GetDCLocationRequest{
 		Id: req.DCLocationID,
 	}

@@ -26,7 +26,7 @@ func RejectEmptyPatchBody(body []byte, v any) *apierror.APIError {
 	}
 
 	rv := reflect.ValueOf(v)
-	if rv.Kind() == reflect.Ptr {
+	if rv.Kind() == reflect.Pointer {
 		if rv.IsNil() {
 			return nil
 		}
@@ -63,7 +63,7 @@ func collectBodyFieldNamesFromType(rt reflect.Type, names map[string]bool) {
 
 		if sf.Anonymous {
 			t := sf.Type
-			if t.Kind() == reflect.Ptr {
+			if t.Kind() == reflect.Pointer {
 				t = t.Elem()
 			}
 			if t.Kind() == reflect.Struct {

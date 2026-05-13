@@ -638,6 +638,7 @@ func (r *router) InitEndpointGroups(config MainRouterConfig) {
 
 		agentRunsGroup := (&httpgroup.AgentRunsEndpointGroup{}).Materialize(&httpgroup.AgentRunsEndpointGroupConfig{
 			AgentClient: config.AgentClient,
+			CoreClient:  config.CoreClient,
 		})
 		if agentRunsGroup != nil {
 			registry.RegisterGroup(agentRunsGroup.APIEndpointGroup)

@@ -7,6 +7,7 @@ import (
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/appctx"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
@@ -14,7 +15,7 @@ import (
 )
 
 type ConsumptionSvc interface {
-	GetConsumption(ctx context.Context, req *GetConsumptionRequest) (*apiresource.Consumption, *apierror.APIError)
+	GetConsumption(ctx context.Context, req *RetrieveConsumptionRequest) (*apiresource.Consumption, *apierror.APIError)
 	CreateConsumption(ctx context.Context, req *CreateConsumptionRequest) (*apiresource.Consumption, *apierror.APIError)
 	UpdateConsumption(ctx context.Context, req *UpdateConsumptionRequest) (*apiresource.Consumption, *apierror.APIError)
 	DeleteConsumption(ctx context.Context, req *DeleteConsumptionRequest) (*apiresource.Consumption, *apierror.APIError)
@@ -47,10 +48,11 @@ func NewConsumptionSvc(config *ConsumptionSvcConfig) ConsumptionSvc {
 	}
 }
 
-func (m *consumptionSvcImpl) GetConsumption(ctx context.Context, req *GetConsumptionRequest) (*apiresource.Consumption, *apierror.APIError) {
+func (m *consumptionSvcImpl) GetConsumption(ctx context.Context, req *RetrieveConsumptionRequest) (*apiresource.Consumption, *apierror.APIError) {
 	pbReq := &pb.GetConsumptionRequest{
 		ProductionStepId: req.ProductionStepID,
 		Id:               req.ConsumptionID,
+		Includes:         appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, consumptionSvcTracer, "service.consumptions.get", domain.ServiceName,
@@ -75,6 +77,7 @@ func (m *consumptionSvcImpl) CreateConsumption(ctx context.Context, req *CreateC
 		WasteQuantityValue:  req.WasteQuantityValue,
 		WasteQuantityUnitId: req.WasteQuantityUnitID,
 		Instructions:        req.Instructions,
+		Includes:            appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, consumptionSvcTracer, "service.consumptions.create", domain.ServiceName,
@@ -100,6 +103,7 @@ func (m *consumptionSvcImpl) UpdateConsumption(ctx context.Context, req *UpdateC
 		WasteQuantityValue:  req.WasteQuantityValue,
 		WasteQuantityUnitId: req.WasteQuantityUnitID,
 		Instructions:        req.Instructions,
+		Includes:            appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, consumptionSvcTracer, "service.consumptions.update", domain.ServiceName,

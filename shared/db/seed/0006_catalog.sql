@@ -36,7 +36,15 @@ INSERT IGNORE INTO item_category (id, name, item_category_type_code, unit_group_
 -- _item_categories_properties: A = item_category id (alphabetically first: Category), B = property id (Property)
 INSERT IGNORE INTO _item_categories_properties (A, B) VALUES
     ('itcg_01seedsocks000000', 'pp_01k0a7ntn1ez6aw8x850femxeh'),
-    ('itcg_01seedsocks000000', 'pp_01k0a7ntn1egx9jjek42zsstrz');
+    ('itcg_01seedsocks000000', 'pp_01k0a7ntn1egx9jjek42zsstrz'),
+    ('itcg_01seedyarn0000000', 'pp_01k0a7ntn1ez6aw8x850femxeh'),
+    ('itcg_01seedyarn0000000', 'pp_01k0a7ntn1e5g90cp12w4b007v'),
+    ('itcg_01seedyarn0000000', 'pp_1gf7a8200f5e9x1xtfj7x5ra1'),
+    ('itcg_01seedyarn0000000', 'pp_01gf7a8200fkgvjzchrnmet5fy'),
+    ('itcg_01seeddye00000000', 'pp_01k0a7ntn1ez6aw8x850femxeh'),
+    ('itcg_01seedchemicals00', 'pp_01gf7a8200fkgvjzchrnmet5fy'),
+    ('itcg_01seedpackaging00', 'pp_01k0a7ntn1ez6aw8x850femxeh'),
+    ('itcg_01seedlabel000000', 'pp_01k0a7ntn1ez6aw8x850femxeh');
 
 -- Product lines
 INSERT IGNORE INTO product_line (id, name, unit_group_id, account_id, created_at, updated_at) VALUES

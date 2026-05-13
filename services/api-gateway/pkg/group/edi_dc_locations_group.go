@@ -40,14 +40,14 @@ func (*EDIDCLocationsEndpointGroup) Materialize(config *EDIDCLocationsEndpointGr
 	}
 
 	listEndpoint := (&edidclocationep.ListDCLocationsEndpoint{}).Materialize().WithService(inner, svc)
-	getEndpoint := (&edidclocationep.GetDCLocationEndpoint{}).Materialize().WithService(inner, svc)
+	retrieveEndpoint := (&edidclocationep.RetrieveDCLocationEndpoint{}).Materialize().WithService(inner, svc)
 	createEndpoint := (&edidclocationep.CreateDCLocationEndpoint{}).Materialize().WithService(inner, svc)
 	updateEndpoint := (&edidclocationep.UpdateDCLocationEndpoint{}).Materialize().WithService(inner, svc)
 	deleteEndpoint := (&edidclocationep.DeleteDCLocationEndpoint{}).Materialize().WithService(inner, svc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listEndpoint,
-		getEndpoint,
+		retrieveEndpoint,
 		createEndpoint,
 		updateEndpoint,
 		deleteEndpoint,

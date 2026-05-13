@@ -466,10 +466,7 @@ func (s *utilsSvcImpl) emailPurchaseOrder(ctx context.Context, span trace.Span, 
 	return nil
 }
 
-// RequestDemo logs a demo request. This is a public endpoint that does not
-// require authentication. Email sending will be wired later via the
-// notification service.
-// POST endpoint — uses idempotency keys.
+// RequestDemo is intentionally anonymous for public OpenAPI; POST uses idempotency keys.
 func (s *utilsSvcImpl) RequestDemo(ctx context.Context, params domain.RequestDemoParams) *apierror.APIError {
 	ctx, span := utilsSvcTracer.Start(ctx, "service.utils.request_demo")
 	defer span.End()

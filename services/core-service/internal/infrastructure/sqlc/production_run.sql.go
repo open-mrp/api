@@ -193,6 +193,9 @@ SELECT
     pr.number,
     pr.responsible_user_id,
     COALESCE(u.name, au.id, '') AS responsible_user_name,
+    au.status_code AS responsible_user_status_code,
+    au.created_at AS responsible_user_created_at,
+    au.updated_at AS responsible_user_updated_at,
     pr.account_id,
     pr.started_at,
     pr.completed_at,
@@ -214,16 +217,19 @@ type GetProductionRunParams struct {
 }
 
 type GetProductionRunRow struct {
-	ID                  string
-	Number              string
-	ResponsibleUserID   string
-	ResponsibleUserName string
-	AccountID           string
-	StartedAt           sql.NullTime
-	CompletedAt         sql.NullTime
-	CreatedAt           time.Time
-	UpdatedAt           time.Time
-	BatchCount          int64
+	ID                        string
+	Number                    string
+	ResponsibleUserID         string
+	ResponsibleUserName       string
+	ResponsibleUserStatusCode sql.NullString
+	ResponsibleUserCreatedAt  sql.NullTime
+	ResponsibleUserUpdatedAt  sql.NullTime
+	AccountID                 string
+	StartedAt                 sql.NullTime
+	CompletedAt               sql.NullTime
+	CreatedAt                 time.Time
+	UpdatedAt                 time.Time
+	BatchCount                int64
 }
 
 func (q *Queries) GetProductionRun(ctx context.Context, arg GetProductionRunParams) (GetProductionRunRow, error) {
@@ -234,6 +240,9 @@ func (q *Queries) GetProductionRun(ctx context.Context, arg GetProductionRunPara
 		&i.Number,
 		&i.ResponsibleUserID,
 		&i.ResponsibleUserName,
+		&i.ResponsibleUserStatusCode,
+		&i.ResponsibleUserCreatedAt,
+		&i.ResponsibleUserUpdatedAt,
 		&i.AccountID,
 		&i.StartedAt,
 		&i.CompletedAt,
@@ -290,6 +299,9 @@ SELECT
     pr.number,
     pr.responsible_user_id,
     COALESCE(u.name, au.id, '') AS responsible_user_name,
+    au.status_code AS responsible_user_status_code,
+    au.created_at AS responsible_user_created_at,
+    au.updated_at AS responsible_user_updated_at,
     pr.started_at,
     pr.completed_at,
     pr.created_at,
@@ -371,15 +383,18 @@ type ListProductionRunsBackwardParams struct {
 }
 
 type ListProductionRunsBackwardRow struct {
-	ID                  string
-	Number              string
-	ResponsibleUserID   string
-	ResponsibleUserName string
-	StartedAt           sql.NullTime
-	CompletedAt         sql.NullTime
-	CreatedAt           time.Time
-	UpdatedAt           time.Time
-	BatchCount          int64
+	ID                        string
+	Number                    string
+	ResponsibleUserID         string
+	ResponsibleUserName       string
+	ResponsibleUserStatusCode sql.NullString
+	ResponsibleUserCreatedAt  sql.NullTime
+	ResponsibleUserUpdatedAt  sql.NullTime
+	StartedAt                 sql.NullTime
+	CompletedAt               sql.NullTime
+	CreatedAt                 time.Time
+	UpdatedAt                 time.Time
+	BatchCount                int64
 }
 
 func (q *Queries) ListProductionRunsBackward(ctx context.Context, arg ListProductionRunsBackwardParams) ([]ListProductionRunsBackwardRow, error) {
@@ -432,6 +447,9 @@ func (q *Queries) ListProductionRunsBackward(ctx context.Context, arg ListProduc
 			&i.Number,
 			&i.ResponsibleUserID,
 			&i.ResponsibleUserName,
+			&i.ResponsibleUserStatusCode,
+			&i.ResponsibleUserCreatedAt,
+			&i.ResponsibleUserUpdatedAt,
 			&i.StartedAt,
 			&i.CompletedAt,
 			&i.CreatedAt,
@@ -457,6 +475,9 @@ SELECT
     pr.number,
     pr.responsible_user_id,
     COALESCE(u.name, au.id, '') AS responsible_user_name,
+    au.status_code AS responsible_user_status_code,
+    au.created_at AS responsible_user_created_at,
+    au.updated_at AS responsible_user_updated_at,
     pr.started_at,
     pr.completed_at,
     pr.created_at,
@@ -538,15 +559,18 @@ type ListProductionRunsForwardParams struct {
 }
 
 type ListProductionRunsForwardRow struct {
-	ID                  string
-	Number              string
-	ResponsibleUserID   string
-	ResponsibleUserName string
-	StartedAt           sql.NullTime
-	CompletedAt         sql.NullTime
-	CreatedAt           time.Time
-	UpdatedAt           time.Time
-	BatchCount          int64
+	ID                        string
+	Number                    string
+	ResponsibleUserID         string
+	ResponsibleUserName       string
+	ResponsibleUserStatusCode sql.NullString
+	ResponsibleUserCreatedAt  sql.NullTime
+	ResponsibleUserUpdatedAt  sql.NullTime
+	StartedAt                 sql.NullTime
+	CompletedAt               sql.NullTime
+	CreatedAt                 time.Time
+	UpdatedAt                 time.Time
+	BatchCount                int64
 }
 
 func (q *Queries) ListProductionRunsForward(ctx context.Context, arg ListProductionRunsForwardParams) ([]ListProductionRunsForwardRow, error) {
@@ -599,6 +623,9 @@ func (q *Queries) ListProductionRunsForward(ctx context.Context, arg ListProduct
 			&i.Number,
 			&i.ResponsibleUserID,
 			&i.ResponsibleUserName,
+			&i.ResponsibleUserStatusCode,
+			&i.ResponsibleUserCreatedAt,
+			&i.ResponsibleUserUpdatedAt,
 			&i.StartedAt,
 			&i.CompletedAt,
 			&i.CreatedAt,

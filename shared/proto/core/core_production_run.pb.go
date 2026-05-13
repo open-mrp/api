@@ -29,18 +29,21 @@ const (
 
 // ProductionRunInfo represents a full production run resource.
 type ProductionRunInfo struct {
-	state               protoimpl.MessageState `protogen:"open.v1"`
-	Id                  string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Number              string                 `protobuf:"bytes,2,opt,name=number,proto3" json:"number,omitempty"`
-	ResponsibleUserId   string                 `protobuf:"bytes,3,opt,name=responsible_user_id,json=responsibleUserId,proto3" json:"responsible_user_id,omitempty"`
-	ResponsibleUserName *string                `protobuf:"bytes,4,opt,name=responsible_user_name,json=responsibleUserName,proto3,oneof" json:"responsible_user_name,omitempty"`
-	BatchCount          int32                  `protobuf:"varint,5,opt,name=batch_count,json=batchCount,proto3" json:"batch_count,omitempty"`
-	StartedAt           *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=started_at,json=startedAt,proto3,oneof" json:"started_at,omitempty"`
-	CompletedAt         *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=completed_at,json=completedAt,proto3,oneof" json:"completed_at,omitempty"`
-	CreatedAt           *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt           *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	state                     protoimpl.MessageState `protogen:"open.v1"`
+	Id                        string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Number                    string                 `protobuf:"bytes,2,opt,name=number,proto3" json:"number,omitempty"`
+	ResponsibleUserId         string                 `protobuf:"bytes,3,opt,name=responsible_user_id,json=responsibleUserId,proto3" json:"responsible_user_id,omitempty"`
+	ResponsibleUserName       *string                `protobuf:"bytes,4,opt,name=responsible_user_name,json=responsibleUserName,proto3,oneof" json:"responsible_user_name,omitempty"`
+	BatchCount                int32                  `protobuf:"varint,5,opt,name=batch_count,json=batchCount,proto3" json:"batch_count,omitempty"`
+	StartedAt                 *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=started_at,json=startedAt,proto3,oneof" json:"started_at,omitempty"`
+	CompletedAt               *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=completed_at,json=completedAt,proto3,oneof" json:"completed_at,omitempty"`
+	CreatedAt                 *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt                 *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	ResponsibleUserStatusCode *string                `protobuf:"bytes,10,opt,name=responsible_user_status_code,json=responsibleUserStatusCode,proto3,oneof" json:"responsible_user_status_code,omitempty"`
+	ResponsibleUserCreatedAt  *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=responsible_user_created_at,json=responsibleUserCreatedAt,proto3,oneof" json:"responsible_user_created_at,omitempty"`
+	ResponsibleUserUpdatedAt  *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=responsible_user_updated_at,json=responsibleUserUpdatedAt,proto3,oneof" json:"responsible_user_updated_at,omitempty"`
+	unknownFields             protoimpl.UnknownFields
+	sizeCache                 protoimpl.SizeCache
 }
 
 func (x *ProductionRunInfo) Reset() {
@@ -136,20 +139,44 @@ func (x *ProductionRunInfo) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *ProductionRunInfo) GetResponsibleUserStatusCode() string {
+	if x != nil && x.ResponsibleUserStatusCode != nil {
+		return *x.ResponsibleUserStatusCode
+	}
+	return ""
+}
+
+func (x *ProductionRunInfo) GetResponsibleUserCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ResponsibleUserCreatedAt
+	}
+	return nil
+}
+
+func (x *ProductionRunInfo) GetResponsibleUserUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ResponsibleUserUpdatedAt
+	}
+	return nil
+}
+
 // ProductionRunSummaryInfo represents a production run for list views.
 type ProductionRunSummaryInfo struct {
-	state               protoimpl.MessageState `protogen:"open.v1"`
-	Id                  string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Number              string                 `protobuf:"bytes,2,opt,name=number,proto3" json:"number,omitempty"`
-	ResponsibleUserId   string                 `protobuf:"bytes,3,opt,name=responsible_user_id,json=responsibleUserId,proto3" json:"responsible_user_id,omitempty"`
-	ResponsibleUserName *string                `protobuf:"bytes,4,opt,name=responsible_user_name,json=responsibleUserName,proto3,oneof" json:"responsible_user_name,omitempty"`
-	BatchCount          int32                  `protobuf:"varint,5,opt,name=batch_count,json=batchCount,proto3" json:"batch_count,omitempty"`
-	StartedAt           *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=started_at,json=startedAt,proto3,oneof" json:"started_at,omitempty"`
-	CompletedAt         *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=completed_at,json=completedAt,proto3,oneof" json:"completed_at,omitempty"`
-	CreatedAt           *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt           *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	state                     protoimpl.MessageState `protogen:"open.v1"`
+	Id                        string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Number                    string                 `protobuf:"bytes,2,opt,name=number,proto3" json:"number,omitempty"`
+	ResponsibleUserId         string                 `protobuf:"bytes,3,opt,name=responsible_user_id,json=responsibleUserId,proto3" json:"responsible_user_id,omitempty"`
+	ResponsibleUserName       *string                `protobuf:"bytes,4,opt,name=responsible_user_name,json=responsibleUserName,proto3,oneof" json:"responsible_user_name,omitempty"`
+	BatchCount                int32                  `protobuf:"varint,5,opt,name=batch_count,json=batchCount,proto3" json:"batch_count,omitempty"`
+	StartedAt                 *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=started_at,json=startedAt,proto3,oneof" json:"started_at,omitempty"`
+	CompletedAt               *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=completed_at,json=completedAt,proto3,oneof" json:"completed_at,omitempty"`
+	CreatedAt                 *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt                 *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	ResponsibleUserStatusCode *string                `protobuf:"bytes,10,opt,name=responsible_user_status_code,json=responsibleUserStatusCode,proto3,oneof" json:"responsible_user_status_code,omitempty"`
+	ResponsibleUserCreatedAt  *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=responsible_user_created_at,json=responsibleUserCreatedAt,proto3,oneof" json:"responsible_user_created_at,omitempty"`
+	ResponsibleUserUpdatedAt  *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=responsible_user_updated_at,json=responsibleUserUpdatedAt,proto3,oneof" json:"responsible_user_updated_at,omitempty"`
+	unknownFields             protoimpl.UnknownFields
+	sizeCache                 protoimpl.SizeCache
 }
 
 func (x *ProductionRunSummaryInfo) Reset() {
@@ -241,6 +268,27 @@ func (x *ProductionRunSummaryInfo) GetCreatedAt() *timestamppb.Timestamp {
 func (x *ProductionRunSummaryInfo) GetUpdatedAt() *timestamppb.Timestamp {
 	if x != nil {
 		return x.UpdatedAt
+	}
+	return nil
+}
+
+func (x *ProductionRunSummaryInfo) GetResponsibleUserStatusCode() string {
+	if x != nil && x.ResponsibleUserStatusCode != nil {
+		return *x.ResponsibleUserStatusCode
+	}
+	return ""
+}
+
+func (x *ProductionRunSummaryInfo) GetResponsibleUserCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ResponsibleUserCreatedAt
+	}
+	return nil
+}
+
+func (x *ProductionRunSummaryInfo) GetResponsibleUserUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ResponsibleUserUpdatedAt
 	}
 	return nil
 }
@@ -1049,7 +1097,7 @@ var File_core_core_production_run_proto protoreflect.FileDescriptor
 
 const file_core_core_production_run_proto_rawDesc = "" +
 	"\n" +
-	"\x1ecore/core_production_run.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x0fcore/core.proto\"\xf9\x03\n" +
+	"\x1ecore/core_production_run.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x0fcore/core.proto\"\xe0\x06\n" +
 	"\x11ProductionRunInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x12.\n" +
@@ -1063,10 +1111,17 @@ const file_core_core_production_run_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\x18\n" +
+	"updated_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12D\n" +
+	"\x1cresponsible_user_status_code\x18\n" +
+	" \x01(\tH\x03R\x19responsibleUserStatusCode\x88\x01\x01\x12^\n" +
+	"\x1bresponsible_user_created_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampH\x04R\x18responsibleUserCreatedAt\x88\x01\x01\x12^\n" +
+	"\x1bresponsible_user_updated_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampH\x05R\x18responsibleUserUpdatedAt\x88\x01\x01B\x18\n" +
 	"\x16_responsible_user_nameB\r\n" +
 	"\v_started_atB\x0f\n" +
-	"\r_completed_at\"\x80\x04\n" +
+	"\r_completed_atB\x1f\n" +
+	"\x1d_responsible_user_status_codeB\x1e\n" +
+	"\x1c_responsible_user_created_atB\x1e\n" +
+	"\x1c_responsible_user_updated_at\"\xe7\x06\n" +
 	"\x18ProductionRunSummaryInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x12.\n" +
@@ -1080,10 +1135,17 @@ const file_core_core_production_run_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\x18\n" +
+	"updated_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12D\n" +
+	"\x1cresponsible_user_status_code\x18\n" +
+	" \x01(\tH\x03R\x19responsibleUserStatusCode\x88\x01\x01\x12^\n" +
+	"\x1bresponsible_user_created_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampH\x04R\x18responsibleUserCreatedAt\x88\x01\x01\x12^\n" +
+	"\x1bresponsible_user_updated_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampH\x05R\x18responsibleUserUpdatedAt\x88\x01\x01B\x18\n" +
 	"\x16_responsible_user_nameB\r\n" +
 	"\v_started_atB\x0f\n" +
-	"\r_completed_at\"\xc2\x02\n" +
+	"\r_completed_atB\x1f\n" +
+	"\x1d_responsible_user_status_codeB\x1e\n" +
+	"\x1c_responsible_user_created_atB\x1e\n" +
+	"\x1c_responsible_user_updated_at\"\xc2\x02\n" +
 	"\x19ListProductionRunsRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x19\n" +
@@ -1203,38 +1265,42 @@ var file_core_core_production_run_proto_depIdxs = []int32{
 	16, // 1: core.ProductionRunInfo.completed_at:type_name -> google.protobuf.Timestamp
 	16, // 2: core.ProductionRunInfo.created_at:type_name -> google.protobuf.Timestamp
 	16, // 3: core.ProductionRunInfo.updated_at:type_name -> google.protobuf.Timestamp
-	16, // 4: core.ProductionRunSummaryInfo.started_at:type_name -> google.protobuf.Timestamp
-	16, // 5: core.ProductionRunSummaryInfo.completed_at:type_name -> google.protobuf.Timestamp
-	16, // 6: core.ProductionRunSummaryInfo.created_at:type_name -> google.protobuf.Timestamp
-	16, // 7: core.ProductionRunSummaryInfo.updated_at:type_name -> google.protobuf.Timestamp
-	1,  // 8: core.ListProductionRunsResponse.production_runs:type_name -> core.ProductionRunSummaryInfo
-	17, // 9: core.ListProductionRunsResponse.page_info:type_name -> core.PageInfo
-	0,  // 10: core.GetProductionRunResponse.production_run:type_name -> core.ProductionRunInfo
-	0,  // 11: core.CreateProductionRunResponse.production_run:type_name -> core.ProductionRunInfo
-	0,  // 12: core.UpdateProductionRunResponse.production_run:type_name -> core.ProductionRunInfo
-	11, // 13: core.AddBatchesToProductionRunRequest.batches:type_name -> core.AddBatchInput
-	18, // 14: core.AddBatchesToProductionRunResponse.batches:type_name -> core.BaseBatchInfo
-	19, // 15: core.ListBatchesByProductionRunResponse.batches:type_name -> core.BatchInfo
-	17, // 16: core.ListBatchesByProductionRunResponse.page_info:type_name -> core.PageInfo
-	2,  // 17: core.CoreProductionRunService.ListProductionRuns:input_type -> core.ListProductionRunsRequest
-	4,  // 18: core.CoreProductionRunService.GetProductionRun:input_type -> core.GetProductionRunRequest
-	6,  // 19: core.CoreProductionRunService.CreateProductionRun:input_type -> core.CreateProductionRunRequest
-	8,  // 20: core.CoreProductionRunService.UpdateProductionRun:input_type -> core.UpdateProductionRunRequest
-	10, // 21: core.CoreProductionRunService.DeleteProductionRun:input_type -> core.DeleteProductionRunRequest
-	12, // 22: core.CoreProductionRunService.AddBatchesToProductionRun:input_type -> core.AddBatchesToProductionRunRequest
-	14, // 23: core.CoreProductionRunService.ListBatchesByProductionRun:input_type -> core.ListBatchesByProductionRunRequest
-	3,  // 24: core.CoreProductionRunService.ListProductionRuns:output_type -> core.ListProductionRunsResponse
-	5,  // 25: core.CoreProductionRunService.GetProductionRun:output_type -> core.GetProductionRunResponse
-	7,  // 26: core.CoreProductionRunService.CreateProductionRun:output_type -> core.CreateProductionRunResponse
-	9,  // 27: core.CoreProductionRunService.UpdateProductionRun:output_type -> core.UpdateProductionRunResponse
-	20, // 28: core.CoreProductionRunService.DeleteProductionRun:output_type -> google.protobuf.Empty
-	13, // 29: core.CoreProductionRunService.AddBatchesToProductionRun:output_type -> core.AddBatchesToProductionRunResponse
-	15, // 30: core.CoreProductionRunService.ListBatchesByProductionRun:output_type -> core.ListBatchesByProductionRunResponse
-	24, // [24:31] is the sub-list for method output_type
-	17, // [17:24] is the sub-list for method input_type
-	17, // [17:17] is the sub-list for extension type_name
-	17, // [17:17] is the sub-list for extension extendee
-	0,  // [0:17] is the sub-list for field type_name
+	16, // 4: core.ProductionRunInfo.responsible_user_created_at:type_name -> google.protobuf.Timestamp
+	16, // 5: core.ProductionRunInfo.responsible_user_updated_at:type_name -> google.protobuf.Timestamp
+	16, // 6: core.ProductionRunSummaryInfo.started_at:type_name -> google.protobuf.Timestamp
+	16, // 7: core.ProductionRunSummaryInfo.completed_at:type_name -> google.protobuf.Timestamp
+	16, // 8: core.ProductionRunSummaryInfo.created_at:type_name -> google.protobuf.Timestamp
+	16, // 9: core.ProductionRunSummaryInfo.updated_at:type_name -> google.protobuf.Timestamp
+	16, // 10: core.ProductionRunSummaryInfo.responsible_user_created_at:type_name -> google.protobuf.Timestamp
+	16, // 11: core.ProductionRunSummaryInfo.responsible_user_updated_at:type_name -> google.protobuf.Timestamp
+	1,  // 12: core.ListProductionRunsResponse.production_runs:type_name -> core.ProductionRunSummaryInfo
+	17, // 13: core.ListProductionRunsResponse.page_info:type_name -> core.PageInfo
+	0,  // 14: core.GetProductionRunResponse.production_run:type_name -> core.ProductionRunInfo
+	0,  // 15: core.CreateProductionRunResponse.production_run:type_name -> core.ProductionRunInfo
+	0,  // 16: core.UpdateProductionRunResponse.production_run:type_name -> core.ProductionRunInfo
+	11, // 17: core.AddBatchesToProductionRunRequest.batches:type_name -> core.AddBatchInput
+	18, // 18: core.AddBatchesToProductionRunResponse.batches:type_name -> core.BaseBatchInfo
+	19, // 19: core.ListBatchesByProductionRunResponse.batches:type_name -> core.BatchInfo
+	17, // 20: core.ListBatchesByProductionRunResponse.page_info:type_name -> core.PageInfo
+	2,  // 21: core.CoreProductionRunService.ListProductionRuns:input_type -> core.ListProductionRunsRequest
+	4,  // 22: core.CoreProductionRunService.GetProductionRun:input_type -> core.GetProductionRunRequest
+	6,  // 23: core.CoreProductionRunService.CreateProductionRun:input_type -> core.CreateProductionRunRequest
+	8,  // 24: core.CoreProductionRunService.UpdateProductionRun:input_type -> core.UpdateProductionRunRequest
+	10, // 25: core.CoreProductionRunService.DeleteProductionRun:input_type -> core.DeleteProductionRunRequest
+	12, // 26: core.CoreProductionRunService.AddBatchesToProductionRun:input_type -> core.AddBatchesToProductionRunRequest
+	14, // 27: core.CoreProductionRunService.ListBatchesByProductionRun:input_type -> core.ListBatchesByProductionRunRequest
+	3,  // 28: core.CoreProductionRunService.ListProductionRuns:output_type -> core.ListProductionRunsResponse
+	5,  // 29: core.CoreProductionRunService.GetProductionRun:output_type -> core.GetProductionRunResponse
+	7,  // 30: core.CoreProductionRunService.CreateProductionRun:output_type -> core.CreateProductionRunResponse
+	9,  // 31: core.CoreProductionRunService.UpdateProductionRun:output_type -> core.UpdateProductionRunResponse
+	20, // 32: core.CoreProductionRunService.DeleteProductionRun:output_type -> google.protobuf.Empty
+	13, // 33: core.CoreProductionRunService.AddBatchesToProductionRun:output_type -> core.AddBatchesToProductionRunResponse
+	15, // 34: core.CoreProductionRunService.ListBatchesByProductionRun:output_type -> core.ListBatchesByProductionRunResponse
+	28, // [28:35] is the sub-list for method output_type
+	21, // [21:28] is the sub-list for method input_type
+	21, // [21:21] is the sub-list for extension type_name
+	21, // [21:21] is the sub-list for extension extendee
+	0,  // [0:21] is the sub-list for field type_name
 }
 
 func init() { file_core_core_production_run_proto_init() }

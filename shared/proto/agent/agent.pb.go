@@ -1350,6 +1350,8 @@ type AgentDefinitionInfo struct {
 	UpdatedAt      string                     `protobuf:"bytes,12,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	RoleId         string                     `protobuf:"bytes,13,opt,name=role_id,json=roleId,proto3" json:"role_id,omitempty"`
 	AccountStatus  *AgentAccountStatusInfo    `protobuf:"bytes,14,opt,name=account_status,json=accountStatus,proto3" json:"account_status,omitempty"`
+	RoleName       *string                    `protobuf:"bytes,15,opt,name=role_name,json=roleName,proto3,oneof" json:"role_name,omitempty"`
+	RoleTypeCode   *string                    `protobuf:"bytes,16,opt,name=role_type_code,json=roleTypeCode,proto3,oneof" json:"role_type_code,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -1480,6 +1482,20 @@ func (x *AgentDefinitionInfo) GetAccountStatus() *AgentAccountStatusInfo {
 		return x.AccountStatus
 	}
 	return nil
+}
+
+func (x *AgentDefinitionInfo) GetRoleName() string {
+	if x != nil && x.RoleName != nil {
+		return *x.RoleName
+	}
+	return ""
+}
+
+func (x *AgentDefinitionInfo) GetRoleTypeCode() string {
+	if x != nil && x.RoleTypeCode != nil {
+		return *x.RoleTypeCode
+	}
+	return ""
 }
 
 type AgentDefinitionToolInfo struct {
@@ -3711,6 +3727,14 @@ type AgentAlertInfo struct {
 	UpdatedAt               string                 `protobuf:"bytes,13,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	AcknowledgedByActorType string                 `protobuf:"bytes,14,opt,name=acknowledged_by_actor_type,json=acknowledgedByActorType,proto3" json:"acknowledged_by_actor_type,omitempty"`
 	AcknowledgedByActorName string                 `protobuf:"bytes,15,opt,name=acknowledged_by_actor_name,json=acknowledgedByActorName,proto3" json:"acknowledged_by_actor_name,omitempty"`
+	RunStatusCode           *string                `protobuf:"bytes,16,opt,name=run_status_code,json=runStatusCode,proto3,oneof" json:"run_status_code,omitempty"`
+	RunTriggerType          *string                `protobuf:"bytes,17,opt,name=run_trigger_type,json=runTriggerType,proto3,oneof" json:"run_trigger_type,omitempty"`
+	RunCreatedAt            *string                `protobuf:"bytes,18,opt,name=run_created_at,json=runCreatedAt,proto3,oneof" json:"run_created_at,omitempty"`
+	RunUpdatedAt            *string                `protobuf:"bytes,19,opt,name=run_updated_at,json=runUpdatedAt,proto3,oneof" json:"run_updated_at,omitempty"`
+	ActionToolSlug          *string                `protobuf:"bytes,20,opt,name=action_tool_slug,json=actionToolSlug,proto3,oneof" json:"action_tool_slug,omitempty"`
+	ActionStatusCode        *string                `protobuf:"bytes,21,opt,name=action_status_code,json=actionStatusCode,proto3,oneof" json:"action_status_code,omitempty"`
+	ActionCreatedAt         *string                `protobuf:"bytes,22,opt,name=action_created_at,json=actionCreatedAt,proto3,oneof" json:"action_created_at,omitempty"`
+	ActionUpdatedAt         *string                `protobuf:"bytes,23,opt,name=action_updated_at,json=actionUpdatedAt,proto3,oneof" json:"action_updated_at,omitempty"`
 	unknownFields           protoimpl.UnknownFields
 	sizeCache               protoimpl.SizeCache
 }
@@ -3846,6 +3870,62 @@ func (x *AgentAlertInfo) GetAcknowledgedByActorType() string {
 func (x *AgentAlertInfo) GetAcknowledgedByActorName() string {
 	if x != nil {
 		return x.AcknowledgedByActorName
+	}
+	return ""
+}
+
+func (x *AgentAlertInfo) GetRunStatusCode() string {
+	if x != nil && x.RunStatusCode != nil {
+		return *x.RunStatusCode
+	}
+	return ""
+}
+
+func (x *AgentAlertInfo) GetRunTriggerType() string {
+	if x != nil && x.RunTriggerType != nil {
+		return *x.RunTriggerType
+	}
+	return ""
+}
+
+func (x *AgentAlertInfo) GetRunCreatedAt() string {
+	if x != nil && x.RunCreatedAt != nil {
+		return *x.RunCreatedAt
+	}
+	return ""
+}
+
+func (x *AgentAlertInfo) GetRunUpdatedAt() string {
+	if x != nil && x.RunUpdatedAt != nil {
+		return *x.RunUpdatedAt
+	}
+	return ""
+}
+
+func (x *AgentAlertInfo) GetActionToolSlug() string {
+	if x != nil && x.ActionToolSlug != nil {
+		return *x.ActionToolSlug
+	}
+	return ""
+}
+
+func (x *AgentAlertInfo) GetActionStatusCode() string {
+	if x != nil && x.ActionStatusCode != nil {
+		return *x.ActionStatusCode
+	}
+	return ""
+}
+
+func (x *AgentAlertInfo) GetActionCreatedAt() string {
+	if x != nil && x.ActionCreatedAt != nil {
+		return *x.ActionCreatedAt
+	}
+	return ""
+}
+
+func (x *AgentAlertInfo) GetActionUpdatedAt() string {
+	if x != nil && x.ActionUpdatedAt != nil {
+		return *x.ActionUpdatedAt
 	}
 	return ""
 }
@@ -4273,7 +4353,7 @@ const file_agent_agent_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x05 \x01(\tR\tcreatedAt\x12\x1d\n" +
 	"\n" +
-	"updated_at\x18\x06 \x01(\tR\tupdatedAt\"\xf5\x03\n" +
+	"updated_at\x18\x06 \x01(\tR\tupdatedAt\"\xe3\x04\n" +
 	"\x13AgentDefinitionInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
@@ -4293,7 +4373,12 @@ const file_agent_agent_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\f \x01(\tR\tupdatedAt\x12\x17\n" +
 	"\arole_id\x18\r \x01(\tR\x06roleId\x12D\n" +
-	"\x0eaccount_status\x18\x0e \x01(\v2\x1d.agent.AgentAccountStatusInfoR\raccountStatus\"\xa5\x03\n" +
+	"\x0eaccount_status\x18\x0e \x01(\v2\x1d.agent.AgentAccountStatusInfoR\raccountStatus\x12 \n" +
+	"\trole_name\x18\x0f \x01(\tH\x00R\broleName\x88\x01\x01\x12)\n" +
+	"\x0erole_type_code\x18\x10 \x01(\tH\x01R\froleTypeCode\x88\x01\x01B\f\n" +
+	"\n" +
+	"_role_nameB\x11\n" +
+	"\x0f_role_type_code\"\xa5\x03\n" +
 	"\x17AgentDefinitionToolInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\atool_id\x18\x02 \x01(\tR\x06toolId\x12!\n" +
@@ -4541,7 +4626,7 @@ const file_agent_agent_proto_rawDesc = "" +
 	"\x18DeleteAgentMemoryRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"5\n" +
 	"\x19DeleteAgentMemoryResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess\"\xae\x04\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\"\xcb\b\n" +
 	"\x0eAgentAlertInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -4563,7 +4648,23 @@ const file_agent_agent_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\r \x01(\tR\tupdatedAt\x12;\n" +
 	"\x1aacknowledged_by_actor_type\x18\x0e \x01(\tR\x17acknowledgedByActorType\x12;\n" +
-	"\x1aacknowledged_by_actor_name\x18\x0f \x01(\tR\x17acknowledgedByActorName\"\xc1\x01\n" +
+	"\x1aacknowledged_by_actor_name\x18\x0f \x01(\tR\x17acknowledgedByActorName\x12+\n" +
+	"\x0frun_status_code\x18\x10 \x01(\tH\x00R\rrunStatusCode\x88\x01\x01\x12-\n" +
+	"\x10run_trigger_type\x18\x11 \x01(\tH\x01R\x0erunTriggerType\x88\x01\x01\x12)\n" +
+	"\x0erun_created_at\x18\x12 \x01(\tH\x02R\frunCreatedAt\x88\x01\x01\x12)\n" +
+	"\x0erun_updated_at\x18\x13 \x01(\tH\x03R\frunUpdatedAt\x88\x01\x01\x12-\n" +
+	"\x10action_tool_slug\x18\x14 \x01(\tH\x04R\x0eactionToolSlug\x88\x01\x01\x121\n" +
+	"\x12action_status_code\x18\x15 \x01(\tH\x05R\x10actionStatusCode\x88\x01\x01\x12/\n" +
+	"\x11action_created_at\x18\x16 \x01(\tH\x06R\x0factionCreatedAt\x88\x01\x01\x12/\n" +
+	"\x11action_updated_at\x18\x17 \x01(\tH\aR\x0factionUpdatedAt\x88\x01\x01B\x12\n" +
+	"\x10_run_status_codeB\x13\n" +
+	"\x11_run_trigger_typeB\x11\n" +
+	"\x0f_run_created_atB\x11\n" +
+	"\x0f_run_updated_atB\x13\n" +
+	"\x11_action_tool_slugB\x15\n" +
+	"\x13_action_status_codeB\x14\n" +
+	"\x12_action_created_atB\x14\n" +
+	"\x12_action_updated_at\"\xc1\x01\n" +
 	"\x16ListAgentAlertsRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12#\n" +
@@ -4770,11 +4871,13 @@ func file_agent_agent_proto_init() {
 	file_agent_agent_proto_msgTypes[9].OneofWrappers = []any{}
 	file_agent_agent_proto_msgTypes[15].OneofWrappers = []any{}
 	file_agent_agent_proto_msgTypes[17].OneofWrappers = []any{}
+	file_agent_agent_proto_msgTypes[22].OneofWrappers = []any{}
 	file_agent_agent_proto_msgTypes[26].OneofWrappers = []any{}
 	file_agent_agent_proto_msgTypes[29].OneofWrappers = []any{}
 	file_agent_agent_proto_msgTypes[32].OneofWrappers = []any{}
 	file_agent_agent_proto_msgTypes[36].OneofWrappers = []any{}
 	file_agent_agent_proto_msgTypes[40].OneofWrappers = []any{}
+	file_agent_agent_proto_msgTypes[50].OneofWrappers = []any{}
 	file_agent_agent_proto_msgTypes[51].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{

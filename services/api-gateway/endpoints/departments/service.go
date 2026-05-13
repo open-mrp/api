@@ -16,7 +16,7 @@ import (
 
 type DepartmentSvc interface {
 	ListDepartments(ctx context.Context, req *ListDepartmentsRequest) (*apiresource.List[apiresource.Department], *apierror.APIError)
-	GetDepartment(ctx context.Context, req *GetDepartmentRequest) (*apiresource.Department, *apierror.APIError)
+	GetDepartment(ctx context.Context, req *RetrieveDepartmentRequest) (*apiresource.Department, *apierror.APIError)
 	CreateDepartment(ctx context.Context, req *CreateDepartmentRequest) (*apiresource.Department, *apierror.APIError)
 	UpdateDepartment(ctx context.Context, req *UpdateDepartmentRequest) (*apiresource.Department, *apierror.APIError)
 	DeleteDepartment(ctx context.Context, req *DeleteDepartmentRequest) (*apiresource.EmptyResource, *apierror.APIError)
@@ -68,7 +68,7 @@ func (m *departmentSvcImpl) ListDepartments(ctx context.Context, req *ListDepart
 	return DepartmentListPresenter(resp), nil
 }
 
-func (m *departmentSvcImpl) GetDepartment(ctx context.Context, req *GetDepartmentRequest) (*apiresource.Department, *apierror.APIError) {
+func (m *departmentSvcImpl) GetDepartment(ctx context.Context, req *RetrieveDepartmentRequest) (*apiresource.Department, *apierror.APIError) {
 	pbReq := &pb.GetDepartmentRequest{
 		Id: req.DepartmentID,
 	}

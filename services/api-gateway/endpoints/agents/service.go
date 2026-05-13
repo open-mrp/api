@@ -19,7 +19,7 @@ import (
 type AgentSvc interface {
 	CreateAgent(ctx context.Context, req *CreateAgentRequest) (*apiresource.AgentDefinition, *apierror.APIError)
 	ListAgents(ctx context.Context, req *ListAgentsRequest) (*apiresource.List[apiresource.AgentDefinition], *apierror.APIError)
-	GetAgent(ctx context.Context, req *GetAgentRequest) (*apiresource.AgentDefinition, *apierror.APIError)
+	GetAgent(ctx context.Context, req *RetrieveAgentRequest) (*apiresource.AgentDefinition, *apierror.APIError)
 	UpdateAgent(ctx context.Context, req *UpdateAgentRequest) (*apiresource.AgentDefinition, *apierror.APIError)
 	DeleteAgent(ctx context.Context, req *DeleteAgentRequest) (*apiresource.EmptyResource, *apierror.APIError)
 	UpdateAgentStatus(ctx context.Context, req *UpdateAgentStatusRequest) (*apiresource.AgentDefinition, *apierror.APIError)
@@ -58,7 +58,7 @@ func NewAgentSvc(config *AgentSvcConfig) AgentSvc {
 	}
 }
 
-func (m *agentSvcImpl) resolveRole(ctx context.Context, roleID string) *resolvedRole {
+func (m *agentSvcImpl) resolveRole(ctx context.Context, roleID string) *ResolvedRole {
 	if roleID == "" {
 		return nil
 	}
@@ -66,9 +66,9 @@ func (m *agentSvcImpl) resolveRole(ctx context.Context, roleID string) *resolved
 	if err != nil {
 		return nil
 	}
-	resolved := &resolvedRole{
-		Name:         resp.Name,
-		RoleTypeCode: resp.RoleTypeCode,
+	resolved := &ResolvedRole{
+		Name:     resp.Name,
+		RoleType: resp.RoleTypeCode,
 	}
 	if appctx.IsIncludeRequested(ctx, "role.permissions") {
 		permResp, permErr := m.coreClient.GetRolePermissions(ctx, &corepb.GetRolePermissionsRequest{RoleId: roleID})
@@ -79,10 +79,10 @@ func (m *agentSvcImpl) resolveRole(ctx context.Context, roleID string) *resolved
 	return resolved
 }
 
-type resolvedRole struct {
-	Name         string
-	RoleTypeCode string
-	Permissions  map[string]bool
+type ResolvedRole struct {
+	Name        string
+	RoleType    string
+	Permissions map[string]bool
 }
 
 func marshalConfig(cfg ConfigInput) (string, error) {
@@ -143,11 +143,21 @@ func (m *agentSvcImpl) ListAgents(ctx context.Context, req *ListAgentsRequest) (
 		statuses[i] = string(s)
 	}
 
+	definitionTypes := make([]string, len(req.DefinitionType))
+	for i, d := range req.DefinitionType {
+		definitionTypes[i] = string(d)
+	}
+
+	triggerTypes := make([]string, len(req.TriggerType))
+	for i, t := range req.TriggerType {
+		triggerTypes[i] = string(t)
+	}
+
 	pbReq := &pb.ListAgentDefinitionsRequest{
 		Includes:        appctx.GetRequestedIncludeKeys(ctx),
 		Statuses:        statuses,
-		DefinitionTypes: req.DefinitionType,
-		TriggerTypes:    req.TriggerType,
+		DefinitionTypes: definitionTypes,
+		TriggerTypes:    triggerTypes,
 		Cursor:          req.Cursor,
 		Limit:           req.Limit,
 		Query:           req.Query,
@@ -161,12 +171,12 @@ func (m *agentSvcImpl) ListAgents(ctx context.Context, req *ListAgentsRequest) (
 		return nil, rpcErr
 	}
 
-	return AgentDefinitionListPresenter(resp, func(roleID string) *resolvedRole {
+	return AgentDefinitionListPresenter(resp, func(roleID string) *ResolvedRole {
 		return m.resolveRole(ctx, roleID)
 	}), nil
 }
 
-func (m *agentSvcImpl) GetAgent(ctx context.Context, req *GetAgentRequest) (*apiresource.AgentDefinition, *apierror.APIError) {
+func (m *agentSvcImpl) GetAgent(ctx context.Context, req *RetrieveAgentRequest) (*apiresource.AgentDefinition, *apierror.APIError) {
 	pbReq := &pb.GetAgentDefinitionRequest{
 		AgentDefinitionId: req.AgentDefinitionID,
 		Includes:          appctx.GetRequestedIncludeKeys(ctx),
@@ -264,7 +274,7 @@ func (m *agentSvcImpl) UpdateAgentStatus(ctx context.Context, req *UpdateAgentSt
 		return nil, rpcErr
 	}
 
-	return m.GetAgent(ctx, &GetAgentRequest{AgentDefinitionID: req.AgentDefinitionID})
+	return m.GetAgent(ctx, &RetrieveAgentRequest{AgentDefinitionID: req.AgentDefinitionID})
 }
 
 func (m *agentSvcImpl) ListUsage(ctx context.Context, req *ListUsageRequest) (*apiresource.List[apiresource.AgentTokenUsage], *apierror.APIError) {

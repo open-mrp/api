@@ -168,6 +168,9 @@ SELECT
     pr.id AS priority_id,
     -- Bill-to address
     bill_addr.name AS bill_to_name,
+    bill_addr.is_drop_ship AS bill_to_is_drop_ship,
+    bill_addr.created_at AS bill_to_created_at,
+    bill_addr.updated_at AS bill_to_updated_at,
     bill_geo.street_line_1 AS bill_to_street_line_1,
     bill_geo.street_line_2 AS bill_to_street_line_2,
     bill_geo.locality AS bill_to_locality,
@@ -178,6 +181,9 @@ SELECT
     bill_addr.email AS bill_to_email,
     -- Ship-to address
     ship_addr.name AS ship_to_name,
+    ship_addr.is_drop_ship AS ship_to_is_drop_ship,
+    ship_addr.created_at AS ship_to_created_at,
+    ship_addr.updated_at AS ship_to_updated_at,
     ship_geo.street_line_1 AS ship_to_street_line_1,
     ship_geo.street_line_2 AS ship_to_street_line_2,
     ship_geo.locality AS ship_to_locality,
@@ -189,16 +195,24 @@ SELECT
     -- Carrier
     cr.name AS carrier_name,
     cr.is_portal_enabled AS carrier_is_portal_enabled,
+    cr.created_at AS carrier_created_at,
+    cr.updated_at AS carrier_updated_at,
     co.name AS carrier_option_name,
     co.is_portal_enabled AS service_level_is_portal_enabled,
     co.service_level_token AS service_level_token,
+    co.created_at AS service_level_created_at,
+    co.updated_at AS service_level_updated_at,
     -- Payment term
     pt.name AS payment_term_name,
     pt.is_active AS payment_term_is_active,
+    pt.created_at AS payment_term_created_at,
+    pt.updated_at AS payment_term_updated_at,
     -- Shipping term
     st.name AS shipping_term_name,
     st.is_freight_exempt AS shipping_term_is_freight_exempt,
     st.is_carrier_rate AS shipping_term_is_carrier_rate,
+    st.created_at AS shipping_term_created_at,
+    st.updated_at AS shipping_term_updated_at,
     -- Receiving order
     ro.id AS receiving_order_id
 FROM sales_order so

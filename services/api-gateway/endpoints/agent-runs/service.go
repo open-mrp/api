@@ -11,13 +11,14 @@ import (
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/agent"
+	corepb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
 	"google.golang.org/grpc"
 )
 
 type AgentRunSvc interface {
 	ListRuns(ctx context.Context, req *ListRunsRequest) (*apiresource.List[apiresource.AgentRun], *apierror.APIError)
-	GetRun(ctx context.Context, req *GetRunRequest) (*apiresource.AgentRun, *apierror.APIError)
+	GetRun(ctx context.Context, req *RetrieveRunRequest) (*apiresource.AgentRun, *apierror.APIError)
 	TriggerAgentRun(ctx context.Context, req *TriggerRunRequest) (*apiresource.AgentRun, *apierror.APIError)
 	CancelAgentRun(ctx context.Context, req *CancelRunRequest) (*apiresource.AgentRun, *apierror.APIError)
 	ContinueAgentRun(ctx context.Context, req *ContinueRunRequest) (*apiresource.AgentRun, *apierror.APIError)
@@ -25,10 +26,17 @@ type AgentRunSvc interface {
 
 type AgentRunSvcConfig struct {
 	AgentClient pb.AgentServiceClient
+	CoreClient  corepb.CoreServiceClient
+}
+
+type resolvedRole struct {
+	Name     string
+	RoleType string
 }
 
 type agentRunSvcImpl struct {
 	agentClient pb.AgentServiceClient
+	coreClient  corepb.CoreServiceClient
 }
 
 var runSvcTracer = tracing.GetTracer("api-gateway.endpoints.agent_runs.service")
@@ -46,6 +54,21 @@ func NewAgentRunSvc(config *AgentRunSvcConfig) AgentRunSvc {
 	}
 	return &agentRunSvcImpl{
 		agentClient: config.AgentClient,
+		coreClient:  config.CoreClient,
+	}
+}
+
+func (m *agentRunSvcImpl) resolveRole(ctx context.Context, roleID string) *resolvedRole {
+	if roleID == "" || m.coreClient == nil {
+		return nil
+	}
+	resp, err := m.coreClient.GetRoleInfo(ctx, &corepb.GetRoleInfoRequest{RoleId: roleID})
+	if err != nil {
+		return nil
+	}
+	return &resolvedRole{
+		Name:     resp.Name,
+		RoleType: resp.RoleTypeCode,
 	}
 }
 
@@ -73,10 +96,18 @@ func (m *agentRunSvcImpl) ListRuns(ctx context.Context, req *ListRunsRequest) (*
 		return nil, rpcErr
 	}
 
-	return AgentRunListPresenter(resp), nil
+	runs := make([]apiresource.AgentRun, len(resp.Runs))
+	for i, r := range resp.Runs {
+		var roleInfo *resolvedRole
+		if r.Definition != nil {
+			roleInfo = m.resolveRole(ctx, r.Definition.RoleId)
+		}
+		runs[i] = AgentRunPresenterWithRole(r, roleInfo)
+	}
+	return apiresource.NewList(runs, grpcutil.MapProtoPageInfo(resp.PageInfo)), nil
 }
 
-func (m *agentRunSvcImpl) GetRun(ctx context.Context, req *GetRunRequest) (*apiresource.AgentRun, *apierror.APIError) {
+func (m *agentRunSvcImpl) GetRun(ctx context.Context, req *RetrieveRunRequest) (*apiresource.AgentRun, *apierror.APIError) {
 	pbReq := &pb.GetRunRequest{
 		AgentRunId: req.AgentRunID,
 		Includes:   appctx.GetRequestedIncludeKeys(ctx),
@@ -90,7 +121,12 @@ func (m *agentRunSvcImpl) GetRun(ctx context.Context, req *GetRunRequest) (*apir
 		return nil, rpcErr
 	}
 
-	result := AgentRunPresenter(resp.Run)
+	var roleInfo *resolvedRole
+	if resp.Run != nil && resp.Run.Definition != nil {
+		roleInfo = m.resolveRole(ctx, resp.Run.Definition.RoleId)
+	}
+
+	result := AgentRunPresenterWithRole(resp.Run, roleInfo)
 	return &result, nil
 }
 
@@ -122,7 +158,7 @@ func (m *agentRunSvcImpl) TriggerAgentRun(ctx context.Context, req *TriggerRunRe
 		return nil, triggerErr
 	}
 
-	return m.GetRun(ctx, &GetRunRequest{AgentRunID: resp.AgentRunId})
+	return m.GetRun(ctx, &RetrieveRunRequest{AgentRunID: resp.AgentRunId})
 }
 
 func (m *agentRunSvcImpl) CancelAgentRun(ctx context.Context, req *CancelRunRequest) (*apiresource.AgentRun, *apierror.APIError) {
@@ -137,7 +173,7 @@ func (m *agentRunSvcImpl) CancelAgentRun(ctx context.Context, req *CancelRunRequ
 		return nil, rpcErr
 	}
 
-	return m.GetRun(ctx, &GetRunRequest{AgentRunID: req.AgentRunID})
+	return m.GetRun(ctx, &RetrieveRunRequest{AgentRunID: req.AgentRunID})
 }
 
 func (m *agentRunSvcImpl) ContinueAgentRun(ctx context.Context, req *ContinueRunRequest) (*apiresource.AgentRun, *apierror.APIError) {
@@ -155,5 +191,5 @@ func (m *agentRunSvcImpl) ContinueAgentRun(ctx context.Context, req *ContinueRun
 		return nil, rpcErr
 	}
 
-	return m.GetRun(ctx, &GetRunRequest{AgentRunID: req.AgentRunID})
+	return m.GetRun(ctx, &RetrieveRunRequest{AgentRunID: req.AgentRunID})
 }

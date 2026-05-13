@@ -94,7 +94,7 @@ func (s *shippingTermSvcImpl) ListShippingTerms(ctx context.Context, params doma
 	return s.repos.NewShippingTermRepo().List(ctx, params)
 }
 
-func (s *shippingTermSvcImpl) GetShippingTerm(ctx context.Context, shippingTermID string) (*domain.ShippingTerm, *apierror.APIError) {
+func (s *shippingTermSvcImpl) GetShippingTerm(ctx context.Context, params domain.GetShippingTermParams) (*domain.ShippingTerm, *apierror.APIError) {
 	ctx, span := shippingTermSvcTracer.Start(ctx, "service.shipping_term.get")
 	defer span.End()
 
@@ -110,10 +110,9 @@ func (s *shippingTermSvcImpl) GetShippingTerm(ctx context.Context, shippingTermI
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return s.repos.NewShippingTermRepo().Get(ctx, domain.GetShippingTermParams{
-		AccountID:      identity.Target.AccountID,
-		ShippingTermID: shippingTermID,
-	})
+	params.AccountID = identity.Target.AccountID
+
+	return s.repos.NewShippingTermRepo().Get(ctx, params)
 }
 
 func (s *shippingTermSvcImpl) CreateShippingTerm(ctx context.Context, params domain.CreateShippingTermParams) (*domain.ShippingTerm, *apierror.APIError) {
@@ -203,6 +202,7 @@ func (s *shippingTermSvcImpl) CreateShippingTerm(ctx context.Context, params dom
 			created, apiErr := txRepo.Get(txCtx, domain.GetShippingTermParams{
 				AccountID:      params.AccountID,
 				ShippingTermID: shippingTermID,
+				Includes:       params.Includes,
 			})
 			if apiErr != nil {
 				return apiErr
@@ -276,6 +276,7 @@ func (s *shippingTermSvcImpl) UpdateShippingTerm(ctx context.Context, params dom
 			shippingTerm, apiErr := txRepo.Get(txCtx, domain.GetShippingTermParams{
 				AccountID:      params.AccountID,
 				ShippingTermID: params.ShippingTermID,
+				Includes:       []string{"free_shipping_service_levels"},
 			})
 			if apiErr != nil {
 				return apiErr
@@ -361,6 +362,7 @@ func (s *shippingTermSvcImpl) UpdateShippingTerm(ctx context.Context, params dom
 			updated, apiErr := txRepo.Get(txCtx, domain.GetShippingTermParams{
 				AccountID:      params.AccountID,
 				ShippingTermID: params.ShippingTermID,
+				Includes:       params.Includes,
 			})
 			if apiErr != nil {
 				return apiErr
@@ -414,6 +416,7 @@ func (s *shippingTermSvcImpl) DeleteShippingTerm(ctx context.Context, shippingTe
 	shippingTerm, apiErr := s.repos.NewShippingTermRepo().Get(ctx, domain.GetShippingTermParams{
 		AccountID:      accountID,
 		ShippingTermID: shippingTermID,
+		Includes:       []string{"free_shipping_service_levels"},
 	})
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {

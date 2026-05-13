@@ -1160,8 +1160,10 @@ type ListRequestLogsRequest struct {
 	NormalizedRoutes []string `protobuf:"bytes,15,rep,name=normalized_routes,json=normalizedRoutes,proto3" json:"normalized_routes,omitempty"`
 	Hosts            []string `protobuf:"bytes,16,rep,name=hosts,proto3" json:"hosts,omitempty"`
 	MinLatencyUs     *int64   `protobuf:"varint,17,opt,name=min_latency_us,json=minLatencyUs,proto3,oneof" json:"min_latency_us,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// Filter by user-provided idempotency key string (matches idempotency_key.idempotency_key).
+	IdempotencyKey *string `protobuf:"bytes,18,opt,name=idempotency_key,json=idempotencyKey,proto3,oneof" json:"idempotency_key,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *ListRequestLogsRequest) Reset() {
@@ -1297,6 +1299,13 @@ func (x *ListRequestLogsRequest) GetMinLatencyUs() int64 {
 		return *x.MinLatencyUs
 	}
 	return 0
+}
+
+func (x *ListRequestLogsRequest) GetIdempotencyKey() string {
+	if x != nil && x.IdempotencyKey != nil {
+		return *x.IdempotencyKey
+	}
+	return ""
 }
 
 type ListRequestLogsResponse struct {
@@ -1448,32 +1457,34 @@ func (x *GetRequestLogResponse) GetRequestLog() *RequestLogInfo {
 }
 
 type RequestLogInfo struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	Id              string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Method          string                 `protobuf:"bytes,2,opt,name=method,proto3" json:"method,omitempty"`
-	Path            string                 `protobuf:"bytes,3,opt,name=path,proto3" json:"path,omitempty"`
-	Host            string                 `protobuf:"bytes,4,opt,name=host,proto3" json:"host,omitempty"`
-	NormalizedRoute string                 `protobuf:"bytes,5,opt,name=normalized_route,json=normalizedRoute,proto3" json:"normalized_route,omitempty"`
-	QueryJson       *string                `protobuf:"bytes,6,opt,name=query_json,json=queryJson,proto3,oneof" json:"query_json,omitempty"`
-	StatusCode      int32                  `protobuf:"varint,7,opt,name=status_code,json=statusCode,proto3" json:"status_code,omitempty"`
-	LatencyUs       int64                  `protobuf:"varint,8,opt,name=latency_us,json=latencyUs,proto3" json:"latency_us,omitempty"`
-	ApiVersion      *string                `protobuf:"bytes,9,opt,name=api_version,json=apiVersion,proto3,oneof" json:"api_version,omitempty"`
-	IdentityType    *string                `protobuf:"bytes,10,opt,name=identity_type,json=identityType,proto3,oneof" json:"identity_type,omitempty"`
-	ClientIp        *string                `protobuf:"bytes,11,opt,name=client_ip,json=clientIp,proto3,oneof" json:"client_ip,omitempty"`
-	UserAgent       *string                `protobuf:"bytes,12,opt,name=user_agent,json=userAgent,proto3,oneof" json:"user_agent,omitempty"`
-	Referrer        *string                `protobuf:"bytes,13,opt,name=referrer,proto3,oneof" json:"referrer,omitempty"`
-	ErrorCode       *string                `protobuf:"bytes,14,opt,name=error_code,json=errorCode,proto3,oneof" json:"error_code,omitempty"`
-	ErrorMessage    *string                `protobuf:"bytes,15,opt,name=error_message,json=errorMessage,proto3,oneof" json:"error_message,omitempty"`
-	OccurredAt      *timestamppb.Timestamp `protobuf:"bytes,16,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
-	CreatedAt       *timestamppb.Timestamp `protobuf:"bytes,17,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	AccountId       *string                `protobuf:"bytes,18,opt,name=account_id,json=accountId,proto3,oneof" json:"account_id,omitempty"`
-	AccountName     *string                `protobuf:"bytes,19,opt,name=account_name,json=accountName,proto3,oneof" json:"account_name,omitempty"`
-	Actor           *RequestLogActor       `protobuf:"bytes,20,opt,name=actor,proto3,oneof" json:"actor,omitempty"`
-	IdempotencyKey  *string                `protobuf:"bytes,21,opt,name=idempotency_key,json=idempotencyKey,proto3,oneof" json:"idempotency_key,omitempty"`
-	BodyJson        *string                `protobuf:"bytes,22,opt,name=body_json,json=bodyJson,proto3,oneof" json:"body_json,omitempty"`
-	ResponseJson    *string                `protobuf:"bytes,23,opt,name=response_json,json=responseJson,proto3,oneof" json:"response_json,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Id               string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Method           string                 `protobuf:"bytes,2,opt,name=method,proto3" json:"method,omitempty"`
+	Path             string                 `protobuf:"bytes,3,opt,name=path,proto3" json:"path,omitempty"`
+	Host             string                 `protobuf:"bytes,4,opt,name=host,proto3" json:"host,omitempty"`
+	NormalizedRoute  string                 `protobuf:"bytes,5,opt,name=normalized_route,json=normalizedRoute,proto3" json:"normalized_route,omitempty"`
+	QueryJson        *string                `protobuf:"bytes,6,opt,name=query_json,json=queryJson,proto3,oneof" json:"query_json,omitempty"`
+	StatusCode       int32                  `protobuf:"varint,7,opt,name=status_code,json=statusCode,proto3" json:"status_code,omitempty"`
+	LatencyUs        int64                  `protobuf:"varint,8,opt,name=latency_us,json=latencyUs,proto3" json:"latency_us,omitempty"`
+	ApiVersion       *string                `protobuf:"bytes,9,opt,name=api_version,json=apiVersion,proto3,oneof" json:"api_version,omitempty"`
+	IdentityType     *string                `protobuf:"bytes,10,opt,name=identity_type,json=identityType,proto3,oneof" json:"identity_type,omitempty"`
+	ClientIp         *string                `protobuf:"bytes,11,opt,name=client_ip,json=clientIp,proto3,oneof" json:"client_ip,omitempty"`
+	UserAgent        *string                `protobuf:"bytes,12,opt,name=user_agent,json=userAgent,proto3,oneof" json:"user_agent,omitempty"`
+	Referrer         *string                `protobuf:"bytes,13,opt,name=referrer,proto3,oneof" json:"referrer,omitempty"`
+	ErrorCode        *string                `protobuf:"bytes,14,opt,name=error_code,json=errorCode,proto3,oneof" json:"error_code,omitempty"`
+	ErrorMessage     *string                `protobuf:"bytes,15,opt,name=error_message,json=errorMessage,proto3,oneof" json:"error_message,omitempty"`
+	OccurredAt       *timestamppb.Timestamp `protobuf:"bytes,16,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
+	CreatedAt        *timestamppb.Timestamp `protobuf:"bytes,17,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	AccountId        *string                `protobuf:"bytes,18,opt,name=account_id,json=accountId,proto3,oneof" json:"account_id,omitempty"`
+	AccountName      *string                `protobuf:"bytes,19,opt,name=account_name,json=accountName,proto3,oneof" json:"account_name,omitempty"`
+	Actor            *RequestLogActor       `protobuf:"bytes,20,opt,name=actor,proto3,oneof" json:"actor,omitempty"`
+	IdempotencyKey   *string                `protobuf:"bytes,21,opt,name=idempotency_key,json=idempotencyKey,proto3,oneof" json:"idempotency_key,omitempty"`
+	BodyJson         *string                `protobuf:"bytes,22,opt,name=body_json,json=bodyJson,proto3,oneof" json:"body_json,omitempty"`
+	ResponseJson     *string                `protobuf:"bytes,23,opt,name=response_json,json=responseJson,proto3,oneof" json:"response_json,omitempty"`
+	AccountCreatedAt *timestamppb.Timestamp `protobuf:"bytes,24,opt,name=account_created_at,json=accountCreatedAt,proto3,oneof" json:"account_created_at,omitempty"`
+	AccountUpdatedAt *timestamppb.Timestamp `protobuf:"bytes,25,opt,name=account_updated_at,json=accountUpdatedAt,proto3,oneof" json:"account_updated_at,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *RequestLogInfo) Reset() {
@@ -1665,6 +1676,20 @@ func (x *RequestLogInfo) GetResponseJson() string {
 		return *x.ResponseJson
 	}
 	return ""
+}
+
+func (x *RequestLogInfo) GetAccountCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.AccountCreatedAt
+	}
+	return nil
+}
+
+func (x *RequestLogInfo) GetAccountUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.AccountUpdatedAt
+	}
+	return nil
 }
 
 // Fields are populated based on whether the actor is a user or API key.
@@ -2547,7 +2572,7 @@ const file_platform_platform_proto_rawDesc = "" +
 	"\rhas_next_page\x18\x03 \x01(\bR\vhasNextPage\x12\"\n" +
 	"\rhas_prev_page\x18\x04 \x01(\bR\vhasPrevPageB\x0e\n" +
 	"\f_next_cursorB\x0e\n" +
-	"\f_prev_cursor\"\x92\x05\n" +
+	"\f_prev_cursor\"\xd4\x05\n" +
 	"\x16ListRequestLogsRequest\x12>\n" +
 	"\n" +
 	"start_date\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampH\x00R\tstartDate\x88\x01\x01\x12:\n" +
@@ -2567,12 +2592,14 @@ const file_platform_platform_proto_rawDesc = "" +
 	"\bincludes\x18\x0e \x03(\tR\bincludes\x12+\n" +
 	"\x11normalized_routes\x18\x0f \x03(\tR\x10normalizedRoutes\x12\x14\n" +
 	"\x05hosts\x18\x10 \x03(\tR\x05hosts\x12)\n" +
-	"\x0emin_latency_us\x18\x11 \x01(\x03H\x04R\fminLatencyUs\x88\x01\x01B\r\n" +
+	"\x0emin_latency_us\x18\x11 \x01(\x03H\x04R\fminLatencyUs\x88\x01\x01\x12,\n" +
+	"\x0fidempotency_key\x18\x12 \x01(\tH\x05R\x0eidempotencyKey\x88\x01\x01B\r\n" +
 	"\v_start_dateB\v\n" +
 	"\t_end_dateB\t\n" +
 	"\a_cursorB\b\n" +
 	"\x06_queryB\x11\n" +
-	"\x0f_min_latency_usJ\x04\b\t\x10\n" +
+	"\x0f_min_latency_usB\x12\n" +
+	"\x10_idempotency_keyJ\x04\b\t\x10\n" +
 	"J\x04\b\n" +
 	"\x10\vR\n" +
 	"actor_nameR\vexact_match\"\x87\x01\n" +
@@ -2584,7 +2611,8 @@ const file_platform_platform_proto_rawDesc = "" +
 	"\bincludes\x18\x02 \x03(\tR\bincludes\"R\n" +
 	"\x15GetRequestLogResponse\x129\n" +
 	"\vrequest_log\x18\x01 \x01(\v2\x18.platform.RequestLogInfoR\n" +
-	"requestLog\"\xc2\b\n" +
+	"requestLog\"\x8e\n" +
+	"\n" +
 	"\x0eRequestLogInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06method\x18\x02 \x01(\tR\x06method\x12\x12\n" +
@@ -2619,7 +2647,9 @@ const file_platform_platform_proto_rawDesc = "" +
 	"R\x05actor\x88\x01\x01\x12,\n" +
 	"\x0fidempotency_key\x18\x15 \x01(\tH\vR\x0eidempotencyKey\x88\x01\x01\x12 \n" +
 	"\tbody_json\x18\x16 \x01(\tH\fR\bbodyJson\x88\x01\x01\x12(\n" +
-	"\rresponse_json\x18\x17 \x01(\tH\rR\fresponseJson\x88\x01\x01B\r\n" +
+	"\rresponse_json\x18\x17 \x01(\tH\rR\fresponseJson\x88\x01\x01\x12M\n" +
+	"\x12account_created_at\x18\x18 \x01(\v2\x1a.google.protobuf.TimestampH\x0eR\x10accountCreatedAt\x88\x01\x01\x12M\n" +
+	"\x12account_updated_at\x18\x19 \x01(\v2\x1a.google.protobuf.TimestampH\x0fR\x10accountUpdatedAt\x88\x01\x01B\r\n" +
 	"\v_query_jsonB\x0e\n" +
 	"\f_api_versionB\x10\n" +
 	"\x0e_identity_typeB\f\n" +
@@ -2635,7 +2665,9 @@ const file_platform_platform_proto_rawDesc = "" +
 	"\x10_idempotency_keyB\f\n" +
 	"\n" +
 	"_body_jsonB\x10\n" +
-	"\x0e_response_json\"\xde\x02\n" +
+	"\x0e_response_jsonB\x15\n" +
+	"\x13_account_created_atB\x15\n" +
+	"\x13_account_updated_at\"\xde\x02\n" +
 	"\x0fRequestLogActor\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -2810,43 +2842,45 @@ var file_platform_platform_proto_depIdxs = []int32{
 	30, // 9: platform.RequestLogInfo.occurred_at:type_name -> google.protobuf.Timestamp
 	30, // 10: platform.RequestLogInfo.created_at:type_name -> google.protobuf.Timestamp
 	20, // 11: platform.RequestLogInfo.actor:type_name -> platform.RequestLogActor
-	27, // 12: platform.CreateAuditEventRequest.audit_event:type_name -> platform.AuditEventInfo
-	30, // 13: platform.ListAuditEventsRequest.start_date:type_name -> google.protobuf.Timestamp
-	30, // 14: platform.ListAuditEventsRequest.end_date:type_name -> google.protobuf.Timestamp
-	27, // 15: platform.ListAuditEventsResponse.audit_events:type_name -> platform.AuditEventInfo
-	14, // 16: platform.ListAuditEventsResponse.page_info:type_name -> platform.PageInfo
-	27, // 17: platform.GetAuditEventResponse.audit_event:type_name -> platform.AuditEventInfo
-	28, // 18: platform.AuditEventInfo.actor:type_name -> platform.AuditActor
-	29, // 19: platform.AuditEventInfo.changes:type_name -> platform.AuditFieldChange
-	30, // 20: platform.AuditEventInfo.occurred_at:type_name -> google.protobuf.Timestamp
-	30, // 21: platform.AuditEventInfo.created_at:type_name -> google.protobuf.Timestamp
-	1,  // 22: platform.IdempotencyService.ProcessIdempotencyKey:input_type -> platform.ProcessIdempotencyKeyRequest
-	3,  // 23: platform.IdempotencyService.SetIdempotencyKeyResponse:input_type -> platform.SetIdempotencyKeyResponseRequest
-	5,  // 24: platform.IdempotencyService.ReleaseIdempotencyKey:input_type -> platform.ReleaseIdempotencyKeyRequest
-	7,  // 25: platform.IdempotencyService.AdvanceRecoveryPoint:input_type -> platform.AdvanceRecoveryPointRequest
-	9,  // 26: platform.IdempotencyService.GetRecoveryPoint:input_type -> platform.GetRecoveryPointRequest
-	12, // 27: platform.LoggingService.CreateRequestLog:input_type -> platform.CreateRequestLogRequest
-	15, // 28: platform.LoggingService.ListRequestLogs:input_type -> platform.ListRequestLogsRequest
-	17, // 29: platform.LoggingService.GetRequestLog:input_type -> platform.GetRequestLogRequest
-	21, // 30: platform.AuditService.CreateAuditEvent:input_type -> platform.CreateAuditEventRequest
-	23, // 31: platform.AuditService.ListAuditEvents:input_type -> platform.ListAuditEventsRequest
-	25, // 32: platform.AuditService.GetAuditEvent:input_type -> platform.GetAuditEventRequest
-	2,  // 33: platform.IdempotencyService.ProcessIdempotencyKey:output_type -> platform.ProcessIdempotencyKeyResponse
-	4,  // 34: platform.IdempotencyService.SetIdempotencyKeyResponse:output_type -> platform.SetIdempotencyKeyResponseResponse
-	6,  // 35: platform.IdempotencyService.ReleaseIdempotencyKey:output_type -> platform.ReleaseIdempotencyKeyResponse
-	8,  // 36: platform.IdempotencyService.AdvanceRecoveryPoint:output_type -> platform.AdvanceRecoveryPointResponse
-	10, // 37: platform.IdempotencyService.GetRecoveryPoint:output_type -> platform.GetRecoveryPointResponse
-	13, // 38: platform.LoggingService.CreateRequestLog:output_type -> platform.CreateRequestLogResponse
-	16, // 39: platform.LoggingService.ListRequestLogs:output_type -> platform.ListRequestLogsResponse
-	18, // 40: platform.LoggingService.GetRequestLog:output_type -> platform.GetRequestLogResponse
-	22, // 41: platform.AuditService.CreateAuditEvent:output_type -> platform.CreateAuditEventResponse
-	24, // 42: platform.AuditService.ListAuditEvents:output_type -> platform.ListAuditEventsResponse
-	26, // 43: platform.AuditService.GetAuditEvent:output_type -> platform.GetAuditEventResponse
-	33, // [33:44] is the sub-list for method output_type
-	22, // [22:33] is the sub-list for method input_type
-	22, // [22:22] is the sub-list for extension type_name
-	22, // [22:22] is the sub-list for extension extendee
-	0,  // [0:22] is the sub-list for field type_name
+	30, // 12: platform.RequestLogInfo.account_created_at:type_name -> google.protobuf.Timestamp
+	30, // 13: platform.RequestLogInfo.account_updated_at:type_name -> google.protobuf.Timestamp
+	27, // 14: platform.CreateAuditEventRequest.audit_event:type_name -> platform.AuditEventInfo
+	30, // 15: platform.ListAuditEventsRequest.start_date:type_name -> google.protobuf.Timestamp
+	30, // 16: platform.ListAuditEventsRequest.end_date:type_name -> google.protobuf.Timestamp
+	27, // 17: platform.ListAuditEventsResponse.audit_events:type_name -> platform.AuditEventInfo
+	14, // 18: platform.ListAuditEventsResponse.page_info:type_name -> platform.PageInfo
+	27, // 19: platform.GetAuditEventResponse.audit_event:type_name -> platform.AuditEventInfo
+	28, // 20: platform.AuditEventInfo.actor:type_name -> platform.AuditActor
+	29, // 21: platform.AuditEventInfo.changes:type_name -> platform.AuditFieldChange
+	30, // 22: platform.AuditEventInfo.occurred_at:type_name -> google.protobuf.Timestamp
+	30, // 23: platform.AuditEventInfo.created_at:type_name -> google.protobuf.Timestamp
+	1,  // 24: platform.IdempotencyService.ProcessIdempotencyKey:input_type -> platform.ProcessIdempotencyKeyRequest
+	3,  // 25: platform.IdempotencyService.SetIdempotencyKeyResponse:input_type -> platform.SetIdempotencyKeyResponseRequest
+	5,  // 26: platform.IdempotencyService.ReleaseIdempotencyKey:input_type -> platform.ReleaseIdempotencyKeyRequest
+	7,  // 27: platform.IdempotencyService.AdvanceRecoveryPoint:input_type -> platform.AdvanceRecoveryPointRequest
+	9,  // 28: platform.IdempotencyService.GetRecoveryPoint:input_type -> platform.GetRecoveryPointRequest
+	12, // 29: platform.LoggingService.CreateRequestLog:input_type -> platform.CreateRequestLogRequest
+	15, // 30: platform.LoggingService.ListRequestLogs:input_type -> platform.ListRequestLogsRequest
+	17, // 31: platform.LoggingService.GetRequestLog:input_type -> platform.GetRequestLogRequest
+	21, // 32: platform.AuditService.CreateAuditEvent:input_type -> platform.CreateAuditEventRequest
+	23, // 33: platform.AuditService.ListAuditEvents:input_type -> platform.ListAuditEventsRequest
+	25, // 34: platform.AuditService.GetAuditEvent:input_type -> platform.GetAuditEventRequest
+	2,  // 35: platform.IdempotencyService.ProcessIdempotencyKey:output_type -> platform.ProcessIdempotencyKeyResponse
+	4,  // 36: platform.IdempotencyService.SetIdempotencyKeyResponse:output_type -> platform.SetIdempotencyKeyResponseResponse
+	6,  // 37: platform.IdempotencyService.ReleaseIdempotencyKey:output_type -> platform.ReleaseIdempotencyKeyResponse
+	8,  // 38: platform.IdempotencyService.AdvanceRecoveryPoint:output_type -> platform.AdvanceRecoveryPointResponse
+	10, // 39: platform.IdempotencyService.GetRecoveryPoint:output_type -> platform.GetRecoveryPointResponse
+	13, // 40: platform.LoggingService.CreateRequestLog:output_type -> platform.CreateRequestLogResponse
+	16, // 41: platform.LoggingService.ListRequestLogs:output_type -> platform.ListRequestLogsResponse
+	18, // 42: platform.LoggingService.GetRequestLog:output_type -> platform.GetRequestLogResponse
+	22, // 43: platform.AuditService.CreateAuditEvent:output_type -> platform.CreateAuditEventResponse
+	24, // 44: platform.AuditService.ListAuditEvents:output_type -> platform.ListAuditEventsResponse
+	26, // 45: platform.AuditService.GetAuditEvent:output_type -> platform.GetAuditEventResponse
+	35, // [35:46] is the sub-list for method output_type
+	24, // [24:35] is the sub-list for method input_type
+	24, // [24:24] is the sub-list for extension type_name
+	24, // [24:24] is the sub-list for extension extendee
+	0,  // [0:24] is the sub-list for field type_name
 }
 
 func init() { file_platform_platform_proto_init() }

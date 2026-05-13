@@ -219,6 +219,8 @@ message AgentDefinitionInfo {
   string updated_at = 12;
   string role_id = 13;
   AgentAccountStatusInfo account_status = 14;
+  optional string role_name = 15;
+  optional string role_type_code = 16;
 }
 
 message AgentDefinitionToolInfo {
@@ -473,6 +475,14 @@ message AgentAlertInfo {
   string updated_at = 13;
   string acknowledged_by_actor_type = 14;
   string acknowledged_by_actor_name = 15;
+  optional string run_status_code = 16;
+  optional string run_trigger_type = 17;
+  optional string run_created_at = 18;
+  optional string run_updated_at = 19;
+  optional string action_tool_slug = 20;
+  optional string action_status_code = 21;
+  optional string action_created_at = 22;
+  optional string action_updated_at = 23;
 }
 
 message ListAgentAlertsRequest {

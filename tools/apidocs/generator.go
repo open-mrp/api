@@ -351,7 +351,7 @@ func generate(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOn
 	if publicOnly {
 		specType = "public"
 	}
-	log.Printf("OpenAPI spec generated in %s (%d %s endpoints)\n", outputPath, totalEndpoints, specType)
+	logInfof("OpenAPI spec generated in %s (%d %s endpoints)\n", outputPath, totalEndpoints, specType)
 }
 
 func getCleanTypeName(t reflect.Type) string {
@@ -523,11 +523,6 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 	typeDoc := docReader.GetTypeDoc(t)
 	description := typeDoc.Doc
 
-	if strings.HasPrefix(typeName, "List_") {
-		itemTypeName := strings.TrimPrefix(typeName, "List_")
-		description = fmt.Sprintf("A paginated list of %s resources", itemTypeName)
-	}
-
 	schema := Schema{
 		Type:        "object",
 		Properties:  make(map[string]Schema),
@@ -623,18 +618,9 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 			}
 		}
 
-		// Add Stainless pagination annotations and unique descriptions for List types
-		if strings.HasPrefix(typeName, "List_") {
-			itemTypeName := strings.TrimPrefix(typeName, "List_")
-			switch name {
-			case "data":
-				fieldSchema.XStainlessPaginationProperty = map[string]string{"purpose": "items"}
-				fieldSchema.Description = fmt.Sprintf("Array of %s resources in this page", itemTypeName)
-			case "page_info":
-				fieldSchema.Description = fmt.Sprintf("Pagination metadata for %s list", itemTypeName)
-			case "object":
-				fieldSchema.Description = fmt.Sprintf("Object type for %s list", itemTypeName)
-			}
+		// Add Stainless pagination annotations for List types
+		if strings.HasPrefix(typeName, "List_") && name == "data" {
+			fieldSchema.XStainlessPaginationProperty = map[string]string{"purpose": "items"}
 		}
 
 		if enumTag := f.Tag.Get("enum"); enumTag != "" {
@@ -713,6 +699,17 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 			// Go slice ([]byte), so without this check we'd render it as an array.
 			if fieldType.PkgPath() == "encoding/json" && fieldType.Name() == "RawMessage" {
 				fieldSchema.Type = "object"
+				// Absent values are nil RawMessage, which encode as JSON null.
+				if strings.TrimSpace(f.Tag.Get("nullable")) == "" {
+					fieldSchema.Nullable = true
+				}
+				const jsonValueHint = " Encoded as a JSON value (object, array, string, number, boolean, or null), not a JSON-encoded string."
+				desc := fieldSchema.Description
+				if desc == "" {
+					fieldSchema.Description = strings.TrimSpace("Arbitrary JSON." + jsonValueHint)
+				} else if !strings.Contains(desc, "JSON-encoded string") {
+					fieldSchema.Description = desc + jsonValueHint
+				}
 				break
 			}
 

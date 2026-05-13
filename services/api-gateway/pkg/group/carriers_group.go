@@ -40,7 +40,7 @@ func (*CarriersEndpointGroup) Materialize(config *CarriersEndpointGroupConfig) *
 	}
 
 	listCarriersEndpoint := (&carrierep.ListCarriersEndpoint{}).Materialize().WithService(inner, carrierSvc)
-	getCarrierEndpoint := (&carrierep.GetCarrierEndpoint{}).Materialize().WithService(inner, carrierSvc)
+	getCarrierEndpoint := (&carrierep.RetrieveCarrierEndpoint{}).Materialize().WithService(inner, carrierSvc)
 	createCarrierEndpoint := (&carrierep.CreateCarrierEndpoint{}).Materialize().WithService(inner, carrierSvc)
 	updateCarrierEndpoint := (&carrierep.UpdateCarrierEndpoint{}).Materialize().WithService(inner, carrierSvc)
 	deleteCarrierEndpoint := (&carrierep.DeleteCarrierEndpoint{}).Materialize().WithService(inner, carrierSvc)

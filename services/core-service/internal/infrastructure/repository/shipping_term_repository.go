@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	gosql "database/sql"
+	"slices"
 	"time"
 
 	"github.com/augno/api/services/core-service/internal/domain"
@@ -57,17 +58,231 @@ func shippingTermTypeToBooleans(t constants.ShippingTermType) (bool, bool) {
 	}
 }
 
-func mapShippingTermQuantity(id, value, unitID, unitAbbreviation, unitType gosql.NullString) *domain.Quantity {
-	if !id.Valid {
+type qtyJoinCols struct {
+	QtyID                 gosql.NullString
+	Value                 gosql.NullString
+	UnitID                gosql.NullString
+	QtyCreatedAt          gosql.NullTime
+	QtyUpdatedAt          gosql.NullTime
+	UnitName              gosql.NullString
+	UnitAbbreviation      gosql.NullString
+	UnitType              gosql.NullString
+	UnitRatioNumerator    gosql.NullString
+	UnitRatioDenominator  gosql.NullString
+	UnitOffsetNumerator   gosql.NullString
+	UnitOffsetDenominator gosql.NullString
+	UnitIsBaseUnit        gosql.NullBool
+	UnitAccountID         gosql.NullString
+	UnitCreatedAt         gosql.NullTime
+	UnitUpdatedAt         gosql.NullTime
+}
+
+func nullSQLString(ns gosql.NullString) string {
+	if ns.Valid {
+		return ns.String
+	}
+	return ""
+}
+
+func mapShippingTermQuantityFromCols(c qtyJoinCols) *domain.Quantity {
+	if !c.QtyID.Valid {
 		return nil
 	}
-	return &domain.Quantity{
-		ID:               id.String,
-		Value:            value.String,
-		UnitID:           unitID.String,
-		UnitAbbreviation: unitAbbreviation.String,
-		UnitType:         unitType.String,
+	q := &domain.Quantity{
+		ID:               c.QtyID.String,
+		Value:            c.Value.String,
+		UnitID:           c.UnitID.String,
+		UnitAbbreviation: c.UnitAbbreviation.String,
+		UnitType:         c.UnitType.String,
 	}
+	if c.QtyCreatedAt.Valid {
+		q.CreatedAt = c.QtyCreatedAt.Time
+	}
+	if c.QtyUpdatedAt.Valid {
+		q.UpdatedAt = c.QtyUpdatedAt.Time
+	}
+	if c.UnitName.Valid {
+		q.UnitName = c.UnitName.String
+	}
+	if c.UnitID.Valid && (c.UnitName.Valid || c.UnitCreatedAt.Valid) {
+		q.EmbeddedUnit = embeddedUnitFromQtyJoinCols(c)
+	}
+	return q
+}
+
+func embeddedUnitFromQtyJoinCols(c qtyJoinCols) *domain.Unit {
+	u := &domain.Unit{
+		ID:                c.UnitID.String,
+		Name:              nullSQLString(c.UnitName),
+		Abbreviation:      nullSQLString(c.UnitAbbreviation),
+		UnitDimensionCode: nullSQLString(c.UnitType),
+		RatioNumerator:    nullSQLString(c.UnitRatioNumerator),
+		RatioDenominator:  nullSQLString(c.UnitRatioDenominator),
+		OffsetNumerator:   nullSQLString(c.UnitOffsetNumerator),
+		OffsetDenominator: nullSQLString(c.UnitOffsetDenominator),
+	}
+	if c.UnitIsBaseUnit.Valid {
+		u.IsBaseUnit = c.UnitIsBaseUnit.Bool
+	}
+	if c.UnitAccountID.Valid {
+		a := c.UnitAccountID.String
+		u.AccountID = &a
+	}
+	if c.UnitCreatedAt.Valid {
+		u.CreatedAt = c.UnitCreatedAt.Time
+	}
+	if c.UnitUpdatedAt.Valid {
+		u.UpdatedAt = c.UnitUpdatedAt.Time
+	}
+	return u
+}
+
+func flatRateColsFromForwardRow(row sqlc.ListShippingTermsForwardRow) qtyJoinCols {
+	return qtyJoinCols{
+		QtyID:                 row.FlatRateQuantityID,
+		Value:                 row.FlatRateValue,
+		UnitID:                row.FlatRateUnitID,
+		QtyCreatedAt:          row.FlatRateQuantityCreatedAt,
+		QtyUpdatedAt:          row.FlatRateQuantityUpdatedAt,
+		UnitName:              row.FlatRateUnitName,
+		UnitAbbreviation:      row.FlatRateUnitAbbreviation,
+		UnitType:              row.FlatRateUnitType,
+		UnitRatioNumerator:    row.FlatRateUnitRatioNumerator,
+		UnitRatioDenominator:  row.FlatRateUnitRatioDenominator,
+		UnitOffsetNumerator:   row.FlatRateUnitOffsetNumerator,
+		UnitOffsetDenominator: row.FlatRateUnitOffsetDenominator,
+		UnitIsBaseUnit:        row.FlatRateUnitIsBaseUnit,
+		UnitAccountID:         row.FlatRateUnitAccountID,
+		UnitCreatedAt:         row.FlatRateUnitCreatedAt,
+		UnitUpdatedAt:         row.FlatRateUnitUpdatedAt,
+	}
+}
+
+func minimumOrderColsFromForwardRow(row sqlc.ListShippingTermsForwardRow) qtyJoinCols {
+	return qtyJoinCols{
+		QtyID:                 row.MinimumOrderQuantityID,
+		Value:                 row.MinimumOrderValue,
+		UnitID:                row.MinimumOrderUnitID,
+		QtyCreatedAt:          row.MinimumOrderQuantityCreatedAt,
+		QtyUpdatedAt:          row.MinimumOrderQuantityUpdatedAt,
+		UnitName:              row.MinimumOrderUnitName,
+		UnitAbbreviation:      row.MinimumOrderUnitAbbreviation,
+		UnitType:              row.MinimumOrderUnitType,
+		UnitRatioNumerator:    row.MinimumOrderUnitRatioNumerator,
+		UnitRatioDenominator:  row.MinimumOrderUnitRatioDenominator,
+		UnitOffsetNumerator:   row.MinimumOrderUnitOffsetNumerator,
+		UnitOffsetDenominator: row.MinimumOrderUnitOffsetDenominator,
+		UnitIsBaseUnit:        row.MinimumOrderUnitIsBaseUnit,
+		UnitAccountID:         row.MinimumOrderUnitAccountID,
+		UnitCreatedAt:         row.MinimumOrderUnitCreatedAt,
+		UnitUpdatedAt:         row.MinimumOrderUnitUpdatedAt,
+	}
+}
+
+func flatRateColsFromBackwardRow(row sqlc.ListShippingTermsBackwardRow) qtyJoinCols {
+	return qtyJoinCols{
+		QtyID:                 row.FlatRateQuantityID,
+		Value:                 row.FlatRateValue,
+		UnitID:                row.FlatRateUnitID,
+		QtyCreatedAt:          row.FlatRateQuantityCreatedAt,
+		QtyUpdatedAt:          row.FlatRateQuantityUpdatedAt,
+		UnitName:              row.FlatRateUnitName,
+		UnitAbbreviation:      row.FlatRateUnitAbbreviation,
+		UnitType:              row.FlatRateUnitType,
+		UnitRatioNumerator:    row.FlatRateUnitRatioNumerator,
+		UnitRatioDenominator:  row.FlatRateUnitRatioDenominator,
+		UnitOffsetNumerator:   row.FlatRateUnitOffsetNumerator,
+		UnitOffsetDenominator: row.FlatRateUnitOffsetDenominator,
+		UnitIsBaseUnit:        row.FlatRateUnitIsBaseUnit,
+		UnitAccountID:         row.FlatRateUnitAccountID,
+		UnitCreatedAt:         row.FlatRateUnitCreatedAt,
+		UnitUpdatedAt:         row.FlatRateUnitUpdatedAt,
+	}
+}
+
+func minimumOrderColsFromBackwardRow(row sqlc.ListShippingTermsBackwardRow) qtyJoinCols {
+	return qtyJoinCols{
+		QtyID:                 row.MinimumOrderQuantityID,
+		Value:                 row.MinimumOrderValue,
+		UnitID:                row.MinimumOrderUnitID,
+		QtyCreatedAt:          row.MinimumOrderQuantityCreatedAt,
+		QtyUpdatedAt:          row.MinimumOrderQuantityUpdatedAt,
+		UnitName:              row.MinimumOrderUnitName,
+		UnitAbbreviation:      row.MinimumOrderUnitAbbreviation,
+		UnitType:              row.MinimumOrderUnitType,
+		UnitRatioNumerator:    row.MinimumOrderUnitRatioNumerator,
+		UnitRatioDenominator:  row.MinimumOrderUnitRatioDenominator,
+		UnitOffsetNumerator:   row.MinimumOrderUnitOffsetNumerator,
+		UnitOffsetDenominator: row.MinimumOrderUnitOffsetDenominator,
+		UnitIsBaseUnit:        row.MinimumOrderUnitIsBaseUnit,
+		UnitAccountID:         row.MinimumOrderUnitAccountID,
+		UnitCreatedAt:         row.MinimumOrderUnitCreatedAt,
+		UnitUpdatedAt:         row.MinimumOrderUnitUpdatedAt,
+	}
+}
+
+func flatRateColsFromGetRow(row sqlc.GetShippingTermRow) qtyJoinCols {
+	return qtyJoinCols{
+		QtyID:                 row.FlatRateQuantityID,
+		Value:                 row.FlatRateValue,
+		UnitID:                row.FlatRateUnitID,
+		QtyCreatedAt:          row.FlatRateQuantityCreatedAt,
+		QtyUpdatedAt:          row.FlatRateQuantityUpdatedAt,
+		UnitName:              row.FlatRateUnitName,
+		UnitAbbreviation:      row.FlatRateUnitAbbreviation,
+		UnitType:              row.FlatRateUnitType,
+		UnitRatioNumerator:    row.FlatRateUnitRatioNumerator,
+		UnitRatioDenominator:  row.FlatRateUnitRatioDenominator,
+		UnitOffsetNumerator:   row.FlatRateUnitOffsetNumerator,
+		UnitOffsetDenominator: row.FlatRateUnitOffsetDenominator,
+		UnitIsBaseUnit:        row.FlatRateUnitIsBaseUnit,
+		UnitAccountID:         row.FlatRateUnitAccountID,
+		UnitCreatedAt:         row.FlatRateUnitCreatedAt,
+		UnitUpdatedAt:         row.FlatRateUnitUpdatedAt,
+	}
+}
+
+func minimumOrderColsFromGetRow(row sqlc.GetShippingTermRow) qtyJoinCols {
+	return qtyJoinCols{
+		QtyID:                 row.MinimumOrderQuantityID,
+		Value:                 row.MinimumOrderValue,
+		UnitID:                row.MinimumOrderUnitID,
+		QtyCreatedAt:          row.MinimumOrderQuantityCreatedAt,
+		QtyUpdatedAt:          row.MinimumOrderQuantityUpdatedAt,
+		UnitName:              row.MinimumOrderUnitName,
+		UnitAbbreviation:      row.MinimumOrderUnitAbbreviation,
+		UnitType:              row.MinimumOrderUnitType,
+		UnitRatioNumerator:    row.MinimumOrderUnitRatioNumerator,
+		UnitRatioDenominator:  row.MinimumOrderUnitRatioDenominator,
+		UnitOffsetNumerator:   row.MinimumOrderUnitOffsetNumerator,
+		UnitOffsetDenominator: row.MinimumOrderUnitOffsetDenominator,
+		UnitIsBaseUnit:        row.MinimumOrderUnitIsBaseUnit,
+		UnitAccountID:         row.MinimumOrderUnitAccountID,
+		UnitCreatedAt:         row.MinimumOrderUnitCreatedAt,
+		UnitUpdatedAt:         row.MinimumOrderUnitUpdatedAt,
+	}
+}
+
+func carrierOptionToDomainServiceLevel(co sqlc.CarrierOption) *domain.ServiceLevel {
+	sl := &domain.ServiceLevel{
+		ID:              co.ID,
+		Name:            co.Name,
+		Code:            co.Code,
+		IsPortalEnabled: co.IsPortalEnabled,
+		IsDefault:       co.IsDefault,
+		CarrierID:       co.CarrierID,
+		CreatedAt:       co.CreatedAt,
+		UpdatedAt:       co.UpdatedAt,
+	}
+	if co.ServiceLevelToken.Valid {
+		t := co.ServiceLevelToken.String
+		sl.ServiceLevelToken = &t
+	}
+	if co.AccountID.Valid {
+		a := co.AccountID.String
+		sl.AccountID = &a
+	}
+	return sl
 }
 
 func mapForwardShippingTermRow(row sqlc.ListShippingTermsForwardRow) *domain.ShippingTerm {
@@ -79,8 +294,8 @@ func mapForwardShippingTermRow(row sqlc.ListShippingTermsForwardRow) *domain.Shi
 		ID:                row.ID,
 		Name:              row.Name,
 		Type:              shippingTermTypeFromBooleans(row.IsFreightExempt, row.IsCarrierRate),
-		FlatRate:          mapShippingTermQuantity(row.FlatRateQuantityID, row.FlatRateValue, row.FlatRateUnitID, row.FlatRateUnitAbbreviation, row.FlatRateUnitType),
-		MinimumOrderValue: mapShippingTermQuantity(row.MinimumOrderQuantityID, row.MinimumOrderValue, row.MinimumOrderUnitID, row.MinimumOrderUnitAbbreviation, row.MinimumOrderUnitType),
+		FlatRate:          mapShippingTermQuantityFromCols(flatRateColsFromForwardRow(row)),
+		MinimumOrderValue: mapShippingTermQuantityFromCols(minimumOrderColsFromForwardRow(row)),
 		AccountID:         accountID,
 		CreatedAt:         row.CreatedAt,
 		UpdatedAt:         row.UpdatedAt,
@@ -96,8 +311,8 @@ func mapBackwardShippingTermRow(row sqlc.ListShippingTermsBackwardRow) *domain.S
 		ID:                row.ID,
 		Name:              row.Name,
 		Type:              shippingTermTypeFromBooleans(row.IsFreightExempt, row.IsCarrierRate),
-		FlatRate:          mapShippingTermQuantity(row.FlatRateQuantityID, row.FlatRateValue, row.FlatRateUnitID, row.FlatRateUnitAbbreviation, row.FlatRateUnitType),
-		MinimumOrderValue: mapShippingTermQuantity(row.MinimumOrderQuantityID, row.MinimumOrderValue, row.MinimumOrderUnitID, row.MinimumOrderUnitAbbreviation, row.MinimumOrderUnitType),
+		FlatRate:          mapShippingTermQuantityFromCols(flatRateColsFromBackwardRow(row)),
+		MinimumOrderValue: mapShippingTermQuantityFromCols(minimumOrderColsFromBackwardRow(row)),
 		AccountID:         accountID,
 		CreatedAt:         row.CreatedAt,
 		UpdatedAt:         row.UpdatedAt,
@@ -113,8 +328,8 @@ func mapGetShippingTermRow(row sqlc.GetShippingTermRow) *domain.ShippingTerm {
 		ID:                row.ID,
 		Name:              row.Name,
 		Type:              shippingTermTypeFromBooleans(row.IsFreightExempt, row.IsCarrierRate),
-		FlatRate:          mapShippingTermQuantity(row.FlatRateQuantityID, row.FlatRateValue, row.FlatRateUnitID, row.FlatRateUnitAbbreviation, row.FlatRateUnitType),
-		MinimumOrderValue: mapShippingTermQuantity(row.MinimumOrderQuantityID, row.MinimumOrderValue, row.MinimumOrderUnitID, row.MinimumOrderUnitAbbreviation, row.MinimumOrderUnitType),
+		FlatRate:          mapShippingTermQuantityFromCols(flatRateColsFromGetRow(row)),
+		MinimumOrderValue: mapShippingTermQuantityFromCols(minimumOrderColsFromGetRow(row)),
 		AccountID:         accountID,
 		CreatedAt:         row.CreatedAt,
 		UpdatedAt:         row.UpdatedAt,
@@ -122,15 +337,17 @@ func mapGetShippingTermRow(row sqlc.GetShippingTermRow) *domain.ShippingTerm {
 }
 
 func (r *shippingTermRepoImpl) loadFreeShippingRules(ctx context.Context, st *domain.ShippingTerm) *apierror.APIError {
-	rules, err := r.queries.ListFreeShippingRulesByShippingTermID(ctx, st.ID)
+	opts, err := r.queries.ListFreeShippingCarrierOptionsByShippingTermID(ctx, st.ID)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return apiErr
 	}
-	ids := make([]string, len(rules))
-	for i, rule := range rules {
-		ids[i] = rule.CarrierOptionID
+	st.FreeShippingServiceLevels = make([]*domain.ServiceLevel, len(opts))
+	st.FreeShippingServiceLevelIDs = make([]string, len(opts))
+	for i := range opts {
+		sl := carrierOptionToDomainServiceLevel(opts[i])
+		st.FreeShippingServiceLevels[i] = sl
+		st.FreeShippingServiceLevelIDs[i] = sl.ID
 	}
-	st.FreeShippingServiceLevelIDs = ids
 	return nil
 }
 
@@ -165,9 +382,11 @@ func (r *shippingTermRepoImpl) List(ctx context.Context, params domain.ListShipp
 			for i, row := range rows {
 				terms[i] = mapBackwardShippingTermRow(row)
 			}
-			for _, t := range terms {
-				if apiErr := r.loadFreeShippingRules(ctx, t); apiErr != nil {
-					return nil, tracing.Trace(span, apiErr)
+			if slices.Contains(params.Includes, "free_shipping_service_levels") {
+				for _, t := range terms {
+					if apiErr := r.loadFreeShippingRules(ctx, t); apiErr != nil {
+						return nil, tracing.Trace(span, apiErr)
+					}
 				}
 			}
 			result, pageInfo := pagination.BuildPageString(terms, params.Limit, cursorDir, shippingTermCreatedAt, shippingTermID)
@@ -189,9 +408,11 @@ func (r *shippingTermRepoImpl) List(ctx context.Context, params domain.ListShipp
 		for i, row := range rows {
 			terms[i] = mapForwardShippingTermRow(row)
 		}
-		for _, t := range terms {
-			if apiErr := r.loadFreeShippingRules(ctx, t); apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
+		if slices.Contains(params.Includes, "free_shipping_service_levels") {
+			for _, t := range terms {
+				if apiErr := r.loadFreeShippingRules(ctx, t); apiErr != nil {
+					return nil, tracing.Trace(span, apiErr)
+				}
 			}
 		}
 		result, pageInfo := pagination.BuildPageString(terms, params.Limit, cursorDir, shippingTermCreatedAt, shippingTermID)
@@ -212,9 +433,11 @@ func (r *shippingTermRepoImpl) List(ctx context.Context, params domain.ListShipp
 	for i, row := range rows {
 		terms[i] = mapForwardShippingTermRow(row)
 	}
-	for _, t := range terms {
-		if apiErr := r.loadFreeShippingRules(ctx, t); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
+	if slices.Contains(params.Includes, "free_shipping_service_levels") {
+		for _, t := range terms {
+			if apiErr := r.loadFreeShippingRules(ctx, t); apiErr != nil {
+				return nil, tracing.Trace(span, apiErr)
+			}
 		}
 	}
 	result, pageInfo := pagination.BuildPageString(terms, params.Limit, cursorDir, shippingTermCreatedAt, shippingTermID)
@@ -234,8 +457,10 @@ func (r *shippingTermRepoImpl) Get(ctx context.Context, params domain.GetShippin
 	}
 
 	st := mapGetShippingTermRow(row)
-	if apiErr := r.loadFreeShippingRules(ctx, st); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+	if slices.Contains(params.Includes, "free_shipping_service_levels") {
+		if apiErr := r.loadFreeShippingRules(ctx, st); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
 	}
 
 	return st, nil
@@ -264,7 +489,7 @@ func (r *shippingTermRepoImpl) Create(ctx context.Context, id string, params dom
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return r.Get(ctx, domain.GetShippingTermParams{AccountID: params.AccountID, ShippingTermID: id})
+	return r.Get(ctx, domain.GetShippingTermParams{AccountID: params.AccountID, ShippingTermID: id, Includes: params.Includes})
 }
 
 func (r *shippingTermRepoImpl) Update(ctx context.Context, params domain.UpdateShippingTermParams) (*domain.ShippingTerm, *apierror.APIError) {
@@ -303,7 +528,7 @@ func (r *shippingTermRepoImpl) Update(ctx context.Context, params domain.UpdateS
 		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Shipping term not found."))
 	}
 
-	return r.Get(ctx, domain.GetShippingTermParams{AccountID: params.AccountID, ShippingTermID: params.ShippingTermID})
+	return r.Get(ctx, domain.GetShippingTermParams{AccountID: params.AccountID, ShippingTermID: params.ShippingTermID, Includes: params.Includes})
 }
 
 func (r *shippingTermRepoImpl) Delete(ctx context.Context, params domain.DeleteShippingTermParams) *apierror.APIError {

@@ -18,9 +18,9 @@ type UpdateQuantityRequest struct {
 	// Decimal value.
 	Value *string `json:"value,omitempty" nullable:"false"`
 	// Unit ID.
-	UnitID *string `json:"unit_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
+	UnitID *string `json:"unit_id,omitempty" nullable:"false" validate:"omitempty"`
 	// Owner resource ID.
-	ObjectID *string `json:"object_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
+	ObjectID *string `json:"object_id,omitempty" nullable:"false" validate:"omitempty"`
 	// Owner resource type (e.g. "item", "production_step").
 	ObjectType *string `json:"object_type,omitempty" nullable:"false" validate:"omitempty,max=255"`
 }

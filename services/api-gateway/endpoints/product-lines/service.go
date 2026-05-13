@@ -8,6 +8,7 @@ import (
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	ownerutil "github.com/augno/api/services/api-gateway/internal/owner"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/appctx"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
@@ -17,7 +18,7 @@ import (
 
 type ProductLineSvc interface {
 	ListProductLines(ctx context.Context, req *ListProductLinesRequest) (*apiresource.List[apiresource.ProductLine], *apierror.APIError)
-	GetProductLine(ctx context.Context, req *GetProductLineRequest) (*apiresource.ProductLine, *apierror.APIError)
+	GetProductLine(ctx context.Context, req *RetrieveProductLineRequest) (*apiresource.ProductLine, *apierror.APIError)
 	CreateProductLine(ctx context.Context, req *CreateProductLineRequest) (*apiresource.ProductLine, *apierror.APIError)
 	UpdateProductLine(ctx context.Context, req *UpdateProductLineRequest) (*apiresource.ProductLine, *apierror.APIError)
 	DeleteProductLine(ctx context.Context, req *DeleteProductLineRequest) (*apiresource.EmptyResource, *apierror.APIError)
@@ -52,9 +53,10 @@ func NewProductLineSvc(config *ProductLineSvcConfig) ProductLineSvc {
 
 func (m *productLineSvcImpl) ListProductLines(ctx context.Context, req *ListProductLinesRequest) (*apiresource.List[apiresource.ProductLine], *apierror.APIError) {
 	pbReq := &pb.ListProductLinesRequest{
-		Cursor: req.Cursor,
-		Limit:  req.Limit,
-		Query:  req.Query,
+		Cursor:   req.Cursor,
+		Limit:    req.Limit,
+		Query:    req.Query,
+		Includes: appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, productLineSvcTracer, "service.product-lines.list", domain.ServiceName,
@@ -67,19 +69,22 @@ func (m *productLineSvcImpl) ListProductLines(ctx context.Context, req *ListProd
 	}
 
 	var ownerAccount *apiresource.Account
-	for _, pl := range resp.ProductLines {
-		if pl.AccountId != nil {
-			ownerAccount = ownerutil.ResolveOwnerAccount(ctx, m.coreClient, pl.AccountId)
-			break
+	if appctx.IsIncludeRequested(ctx, "owner") || appctx.IsIncludeRequested(ctx, "owner.account") {
+		for _, pl := range resp.ProductLines {
+			if pl.AccountId != nil {
+				ownerAccount = ownerutil.ResolveOwnerAccount(ctx, m.coreClient, pl.AccountId)
+				break
+			}
 		}
 	}
 
 	return ProductLineListPresenter(resp, ownerAccount), nil
 }
 
-func (m *productLineSvcImpl) GetProductLine(ctx context.Context, req *GetProductLineRequest) (*apiresource.ProductLine, *apierror.APIError) {
+func (m *productLineSvcImpl) GetProductLine(ctx context.Context, req *RetrieveProductLineRequest) (*apiresource.ProductLine, *apierror.APIError) {
 	pbReq := &pb.GetProductLineRequest{
-		Id: req.ProductLineID,
+		Id:       req.ProductLineID,
+		Includes: appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, productLineSvcTracer, "service.product-lines.get", domain.ServiceName,
@@ -91,7 +96,10 @@ func (m *productLineSvcImpl) GetProductLine(ctx context.Context, req *GetProduct
 		return nil, apiErr
 	}
 
-	ownerAccount := ownerutil.ResolveOwnerAccount(ctx, m.coreClient, resp.ProductLine.AccountId)
+	var ownerAccount *apiresource.Account
+	if appctx.IsIncludeRequested(ctx, "owner") || appctx.IsIncludeRequested(ctx, "owner.account") {
+		ownerAccount = ownerutil.ResolveOwnerAccount(ctx, m.coreClient, resp.ProductLine.AccountId)
+	}
 	result := ProductLinePresenter(resp.ProductLine, ownerAccount)
 	return &result, nil
 }
@@ -102,6 +110,7 @@ func (m *productLineSvcImpl) CreateProductLine(ctx context.Context, req *CreateP
 		UnitGroupId:      req.UnitGroupID,
 		CommissionPolicy: string(req.CommissionPolicy),
 		FreightPolicy:    string(req.FreightPolicy),
+		Includes:         appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, productLineSvcTracer, "service.product-lines.create", domain.ServiceName,
@@ -113,7 +122,10 @@ func (m *productLineSvcImpl) CreateProductLine(ctx context.Context, req *CreateP
 		return nil, apiErr
 	}
 
-	ownerAccount := ownerutil.ResolveOwnerAccount(ctx, m.coreClient, resp.ProductLine.AccountId)
+	var ownerAccount *apiresource.Account
+	if appctx.IsIncludeRequested(ctx, "owner") || appctx.IsIncludeRequested(ctx, "owner.account") {
+		ownerAccount = ownerutil.ResolveOwnerAccount(ctx, m.coreClient, resp.ProductLine.AccountId)
+	}
 	result := ProductLinePresenter(resp.ProductLine, ownerAccount)
 	return &result, nil
 }
@@ -123,6 +135,7 @@ func (m *productLineSvcImpl) UpdateProductLine(ctx context.Context, req *UpdateP
 		Id:          req.ProductLineID,
 		Name:        req.Name,
 		UnitGroupId: req.UnitGroupID,
+		Includes:    appctx.GetRequestedIncludeKeys(ctx),
 	}
 	if req.CommissionPolicy != nil {
 		s := string(*req.CommissionPolicy)
@@ -142,7 +155,10 @@ func (m *productLineSvcImpl) UpdateProductLine(ctx context.Context, req *UpdateP
 		return nil, apiErr
 	}
 
-	ownerAccount := ownerutil.ResolveOwnerAccount(ctx, m.coreClient, resp.ProductLine.AccountId)
+	var ownerAccount *apiresource.Account
+	if appctx.IsIncludeRequested(ctx, "owner") || appctx.IsIncludeRequested(ctx, "owner.account") {
+		ownerAccount = ownerutil.ResolveOwnerAccount(ctx, m.coreClient, resp.ProductLine.AccountId)
+	}
 	result := ProductLinePresenter(resp.ProductLine, ownerAccount)
 	return &result, nil
 }

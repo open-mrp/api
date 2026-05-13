@@ -42,13 +42,15 @@ func machBuildSearchParams(query *string) gosql.NullString {
 
 func mapMachineForwardRow(row sqlc.ListMachinesForwardRow) *domain.Machine {
 	m := &domain.Machine{
-		ID:             row.ID,
-		Name:           row.Name,
-		SerialNumber:   row.SerialNumber,
-		DepartmentID:   &row.DepartmentID,
-		DepartmentName: &row.DepartmentName,
-		CreatedAt:      row.CreatedAt,
-		UpdatedAt:      row.UpdatedAt,
+		ID:                  row.ID,
+		Name:                row.Name,
+		SerialNumber:        row.SerialNumber,
+		DepartmentID:        &row.DepartmentID,
+		DepartmentName:      &row.DepartmentName,
+		DepartmentCreatedAt: &row.DepartmentCreatedAt,
+		DepartmentUpdatedAt: &row.DepartmentUpdatedAt,
+		CreatedAt:           row.CreatedAt,
+		UpdatedAt:           row.UpdatedAt,
 	}
 	if row.Notes.Valid {
 		m.Notes = &row.Notes.String
@@ -61,13 +63,15 @@ func mapMachineForwardRow(row sqlc.ListMachinesForwardRow) *domain.Machine {
 
 func mapMachineBackwardRow(row sqlc.ListMachinesBackwardRow) *domain.Machine {
 	m := &domain.Machine{
-		ID:             row.ID,
-		Name:           row.Name,
-		SerialNumber:   row.SerialNumber,
-		DepartmentID:   &row.DepartmentID,
-		DepartmentName: &row.DepartmentName,
-		CreatedAt:      row.CreatedAt,
-		UpdatedAt:      row.UpdatedAt,
+		ID:                  row.ID,
+		Name:                row.Name,
+		SerialNumber:        row.SerialNumber,
+		DepartmentID:        &row.DepartmentID,
+		DepartmentName:      &row.DepartmentName,
+		DepartmentCreatedAt: &row.DepartmentCreatedAt,
+		DepartmentUpdatedAt: &row.DepartmentUpdatedAt,
+		CreatedAt:           row.CreatedAt,
+		UpdatedAt:           row.UpdatedAt,
 	}
 	if row.Notes.Valid {
 		m.Notes = &row.Notes.String
@@ -80,13 +84,15 @@ func mapMachineBackwardRow(row sqlc.ListMachinesBackwardRow) *domain.Machine {
 
 func mapGetMachineRow(row sqlc.GetMachineRow) *domain.Machine {
 	m := &domain.Machine{
-		ID:             row.ID,
-		Name:           row.Name,
-		SerialNumber:   row.SerialNumber,
-		DepartmentID:   &row.DepartmentID,
-		DepartmentName: &row.DepartmentName,
-		CreatedAt:      row.CreatedAt,
-		UpdatedAt:      row.UpdatedAt,
+		ID:                  row.ID,
+		Name:                row.Name,
+		SerialNumber:        row.SerialNumber,
+		DepartmentID:        &row.DepartmentID,
+		DepartmentName:      &row.DepartmentName,
+		DepartmentCreatedAt: &row.DepartmentCreatedAt,
+		DepartmentUpdatedAt: &row.DepartmentUpdatedAt,
+		CreatedAt:           row.CreatedAt,
+		UpdatedAt:           row.UpdatedAt,
 	}
 	if row.Notes.Valid {
 		m.Notes = &row.Notes.String

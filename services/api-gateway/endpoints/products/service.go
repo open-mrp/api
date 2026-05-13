@@ -8,6 +8,7 @@ import (
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
@@ -29,7 +30,7 @@ func rateInputToProto(r *apirequest.RateInput) *pb.CreateRateInput {
 
 type ProductSvc interface {
 	ListProducts(ctx context.Context, req *ListProductsRequest) (*apiresource.List[apiresource.Product], *apierror.APIError)
-	GetProduct(ctx context.Context, req *GetProductRequest) (*apiresource.Product, *apierror.APIError)
+	GetProduct(ctx context.Context, req *RetrieveProductRequest) (*apiresource.Product, *apierror.APIError)
 	CreateProduct(ctx context.Context, req *CreateProductRequest) (*apiresource.Product, *apierror.APIError)
 	UpdateProduct(ctx context.Context, req *UpdateProductRequest) (*apiresource.Product, *apierror.APIError)
 	DeleteProduct(ctx context.Context, req *DeleteProductRequest) (*apiresource.Product, *apierror.APIError)
@@ -46,6 +47,14 @@ type productSvcImpl struct {
 }
 
 var productSvcTracer = tracing.GetTracer("api-gateway.endpoints.products.service")
+
+func portalVisibilityToReadyPtr(v *constants.CustomerPortalVisibility) *bool {
+	if v == nil {
+		return nil
+	}
+	ready := *v == constants.CustomerPortalVisibilityVisible
+	return &ready
+}
 
 func (c *ProductSvcConfig) validate() error {
 	if c.CoreClient == nil {
@@ -73,7 +82,8 @@ func (m *productSvcImpl) ListProducts(ctx context.Context, req *ListProductsRequ
 		ProductLineIds: req.ProductLineIDs,
 		CategoryIds:    req.CategoryIDs,
 		AttributeIds:   req.AttributeIDs,
-		IsPortalReady:  req.IsPortalReady,
+		IsPortalReady:  portalVisibilityToReadyPtr(req.PortalVisibility),
+		Includes:       appctx.GetRequestedIncludeKeys(ctx),
 	}
 	if req.StartDate != nil {
 		pbReq.StartDate = timestamppb.New(*req.StartDate)
@@ -94,9 +104,10 @@ func (m *productSvcImpl) ListProducts(ctx context.Context, req *ListProductsRequ
 	return ProductListPresenter(resp), nil
 }
 
-func (m *productSvcImpl) GetProduct(ctx context.Context, req *GetProductRequest) (*apiresource.Product, *apierror.APIError) {
+func (m *productSvcImpl) GetProduct(ctx context.Context, req *RetrieveProductRequest) (*apiresource.Product, *apierror.APIError) {
 	pbReq := &pb.GetProductRequest{
-		Id: req.ProductID,
+		Id:       req.ProductID,
+		Includes: appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, productSvcTracer, "service.products.get", domain.ServiceName,
@@ -130,6 +141,7 @@ func (m *productSvcImpl) CreateProduct(ctx context.Context, req *CreateProductRe
 		UnitCost:        rateInputToProto(req.UnitCost),
 		BurnRate:        rateInputToProto(req.BurnRate),
 		AttributeIds:    req.AttributeIDs,
+		Includes:        appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, productSvcTracer, "service.products.create", domain.ServiceName,
@@ -152,14 +164,32 @@ func (m *productSvcImpl) UpdateProduct(ctx context.Context, req *UpdateProductRe
 		isPortalReady = &v
 	}
 
+	// ApplyExplicitNulls converts an explicit JSON null for a nullable:"true"
+	// *string field into &"" (pointer to empty string). The core service uses
+	// UpdateDescription/UpdateNotes=true with a nil pointer to clear the column,
+	// so we translate &"" → nil here before forwarding.
+	description := req.Description
+	updateDescription := description != nil
+	if description != nil && *description == "" {
+		description = nil
+	}
+
+	notes := req.Notes
+	updateNotes := notes != nil
+	if notes != nil && *notes == "" {
+		notes = nil
+	}
+
 	pbReq := &pb.UpdateProductRequest{
 		Id:                req.ProductID,
 		Sku:               req.SKU,
-		Description:       req.Description,
-		UpdateDescription: req.Description != nil,
-		Notes:             req.Notes,
-		UpdateNotes:       req.Notes != nil,
+		Description:       description,
+		UpdateDescription: updateDescription,
+		Notes:             notes,
+		UpdateNotes:       updateNotes,
 		IsPortalReady:     isPortalReady,
+		UnitPrice:         rateInputToProto(req.UnitPrice),
+		Includes:          appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, productSvcTracer, "service.products.update", domain.ServiceName,
@@ -197,6 +227,7 @@ func (m *productSvcImpl) ChangeProductProductLine(ctx context.Context, req *Chan
 	pbReq := &pb.ChangeProductProductLineRequest{
 		Id:            req.ProductID,
 		ProductLineId: req.ProductLineID,
+		Includes:      appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, productSvcTracer, "service.products.change-product-line", domain.ServiceName,

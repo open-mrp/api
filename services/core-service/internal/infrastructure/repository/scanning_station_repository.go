@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	gosql "database/sql"
+	"slices"
 	"time"
 
 	"github.com/augno/api/services/core-service/internal/domain"
@@ -34,16 +35,27 @@ func ssBuildSearchParams(query *string) gosql.NullString {
 	return gosql.NullString{String: "%" + db.EscapeLike(*query) + "%", Valid: true}
 }
 
+func boolToOperatorRequirement(v bool) constants.OperatorRequirement {
+	if v {
+		return constants.OperatorRequirementMaterialCheck
+	}
+	return constants.OperatorRequirementNone
+}
+
+func operatorRequirementToBool(r constants.OperatorRequirement) bool {
+	return r == constants.OperatorRequirementMaterialCheck
+}
+
 func mapScanningStationForwardRow(row sqlc.ListScanningStationsForwardRow) *domain.ScanningStation {
 	ss := &domain.ScanningStation{
-		ID:                    row.ID,
-		Name:                  row.Name,
-		Type:                  constants.ScanningStationType(row.ScanningStationTypeCode),
-		MaterialCheckRequired: row.MaterialCheckRequired,
-		DepartmentID:          row.DepartmentID,
-		AccountID:             row.AccountID,
-		CreatedAt:             row.CreatedAt,
-		UpdatedAt:             row.UpdatedAt,
+		ID:                  row.ID,
+		Name:                row.Name,
+		Type:                constants.ScanningStationType(row.ScanningStationTypeCode),
+		OperatorRequirement: boolToOperatorRequirement(row.MaterialCheckRequired),
+		DepartmentID:        row.DepartmentID,
+		AccountID:           row.AccountID,
+		CreatedAt:           row.CreatedAt,
+		UpdatedAt:           row.UpdatedAt,
 	}
 	if row.Notes.Valid {
 		ss.Notes = &row.Notes.String
@@ -56,20 +68,26 @@ func mapScanningStationForwardRow(row sqlc.ListScanningStationsForwardRow) *doma
 	}
 	if row.DepartmentName.Valid {
 		ss.DepartmentName = row.DepartmentName.String
+	}
+	if row.DepartmentCreatedAt.Valid {
+		ss.DepartmentCreatedAt = &row.DepartmentCreatedAt.Time
+	}
+	if row.DepartmentUpdatedAt.Valid {
+		ss.DepartmentUpdatedAt = &row.DepartmentUpdatedAt.Time
 	}
 	return ss
 }
 
 func mapScanningStationBackwardRow(row sqlc.ListScanningStationsBackwardRow) *domain.ScanningStation {
 	ss := &domain.ScanningStation{
-		ID:                    row.ID,
-		Name:                  row.Name,
-		Type:                  constants.ScanningStationType(row.ScanningStationTypeCode),
-		MaterialCheckRequired: row.MaterialCheckRequired,
-		DepartmentID:          row.DepartmentID,
-		AccountID:             row.AccountID,
-		CreatedAt:             row.CreatedAt,
-		UpdatedAt:             row.UpdatedAt,
+		ID:                  row.ID,
+		Name:                row.Name,
+		Type:                constants.ScanningStationType(row.ScanningStationTypeCode),
+		OperatorRequirement: boolToOperatorRequirement(row.MaterialCheckRequired),
+		DepartmentID:        row.DepartmentID,
+		AccountID:           row.AccountID,
+		CreatedAt:           row.CreatedAt,
+		UpdatedAt:           row.UpdatedAt,
 	}
 	if row.Notes.Valid {
 		ss.Notes = &row.Notes.String
@@ -82,6 +100,12 @@ func mapScanningStationBackwardRow(row sqlc.ListScanningStationsBackwardRow) *do
 	}
 	if row.DepartmentName.Valid {
 		ss.DepartmentName = row.DepartmentName.String
+	}
+	if row.DepartmentCreatedAt.Valid {
+		ss.DepartmentCreatedAt = &row.DepartmentCreatedAt.Time
+	}
+	if row.DepartmentUpdatedAt.Valid {
+		ss.DepartmentUpdatedAt = &row.DepartmentUpdatedAt.Time
 	}
 	return ss
 }
@@ -117,9 +141,11 @@ func (r *scanningStationRepoImpl) List(ctx context.Context, params domain.ListSc
 			}
 			result, pageInfo := pagination.BuildPageString(stations, params.Limit, cursorDir, ssCreatedAt, ssID)
 
-			for _, ss := range result {
-				if apiErr := r.attachSubResources(ctx, ss); apiErr != nil {
-					return nil, tracing.Trace(span, apiErr)
+			if slices.Contains(params.Includes, "production_steps") {
+				for _, ss := range result {
+					if apiErr := r.attachSubResources(ctx, ss); apiErr != nil {
+						return nil, tracing.Trace(span, apiErr)
+					}
 				}
 			}
 
@@ -142,9 +168,11 @@ func (r *scanningStationRepoImpl) List(ctx context.Context, params domain.ListSc
 		}
 		result, pageInfo := pagination.BuildPageString(stations, params.Limit, cursorDir, ssCreatedAt, ssID)
 
-		for _, ss := range result {
-			if apiErr := r.attachSubResources(ctx, ss); apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
+		if slices.Contains(params.Includes, "production_steps") {
+			for _, ss := range result {
+				if apiErr := r.attachSubResources(ctx, ss); apiErr != nil {
+					return nil, tracing.Trace(span, apiErr)
+				}
 			}
 		}
 
@@ -166,9 +194,11 @@ func (r *scanningStationRepoImpl) List(ctx context.Context, params domain.ListSc
 	}
 	result, pageInfo := pagination.BuildPageString(stations, params.Limit, cursorDir, ssCreatedAt, ssID)
 
-	for _, ss := range result {
-		if apiErr := r.attachSubResources(ctx, ss); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
+	if slices.Contains(params.Includes, "production_steps") {
+		for _, ss := range result {
+			if apiErr := r.attachSubResources(ctx, ss); apiErr != nil {
+				return nil, tracing.Trace(span, apiErr)
+			}
 		}
 	}
 
@@ -188,8 +218,10 @@ func (r *scanningStationRepoImpl) Get(ctx context.Context, params domain.GetScan
 	}
 
 	ss := mapGetScanningStationRow(row)
-	if apiErr := r.attachSubResources(ctx, ss); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+	if slices.Contains(params.Includes, "production_steps") {
+		if apiErr := r.attachSubResources(ctx, ss); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
 	}
 
 	return ss, nil
@@ -197,14 +229,14 @@ func (r *scanningStationRepoImpl) Get(ctx context.Context, params domain.GetScan
 
 func mapGetScanningStationRow(row sqlc.GetScanningStationRow) *domain.ScanningStation {
 	ss := &domain.ScanningStation{
-		ID:                    row.ID,
-		Name:                  row.Name,
-		Type:                  constants.ScanningStationType(row.ScanningStationTypeCode),
-		MaterialCheckRequired: row.MaterialCheckRequired,
-		DepartmentID:          row.DepartmentID,
-		AccountID:             row.AccountID,
-		CreatedAt:             row.CreatedAt,
-		UpdatedAt:             row.UpdatedAt,
+		ID:                  row.ID,
+		Name:                row.Name,
+		Type:                constants.ScanningStationType(row.ScanningStationTypeCode),
+		OperatorRequirement: boolToOperatorRequirement(row.MaterialCheckRequired),
+		DepartmentID:        row.DepartmentID,
+		AccountID:           row.AccountID,
+		CreatedAt:           row.CreatedAt,
+		UpdatedAt:           row.UpdatedAt,
 	}
 	if row.Notes.Valid {
 		ss.Notes = &row.Notes.String
@@ -218,6 +250,12 @@ func mapGetScanningStationRow(row sqlc.GetScanningStationRow) *domain.ScanningSt
 	if row.DepartmentName.Valid {
 		ss.DepartmentName = row.DepartmentName.String
 	}
+	if row.DepartmentCreatedAt.Valid {
+		ss.DepartmentCreatedAt = &row.DepartmentCreatedAt.Time
+	}
+	if row.DepartmentUpdatedAt.Valid {
+		ss.DepartmentUpdatedAt = &row.DepartmentUpdatedAt.Time
+	}
 	return ss
 }
 
@@ -229,9 +267,16 @@ func (r *scanningStationRepoImpl) attachSubResources(ctx context.Context, ss *do
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return apiErr
 	}
-	ss.ProductionSteps = make([]domain.LightRef, len(steps))
+	ss.ProductionSteps = make([]domain.ProductionStepRef, len(steps))
 	for i, s := range steps {
-		ss.ProductionSteps[i] = domain.LightRef{ID: s.ID, Name: s.Name}
+		ss.ProductionSteps[i] = domain.ProductionStepRef{
+			ID:             s.ID,
+			Name:           s.Name,
+			LevelingFactor: s.LevelingFactor,
+			Allowances:     s.Allowances,
+			CreatedAt:      s.CreatedAt,
+			UpdatedAt:      s.UpdatedAt,
+		}
 	}
 	return nil
 }
@@ -245,7 +290,7 @@ func (r *scanningStationRepoImpl) Create(ctx context.Context, id string, params 
 		Name:                    params.Name,
 		Notes:                   toNullString(params.Notes),
 		ScanningStationTypeCode: string(params.Type),
-		MaterialCheckRequired:   params.MaterialCheckRequired,
+		MaterialCheckRequired:   operatorRequirementToBool(params.OperatorRequirement),
 		DepartmentID:            params.DepartmentID,
 		AccountID:               params.AccountID,
 	})
@@ -253,7 +298,7 @@ func (r *scanningStationRepoImpl) Create(ctx context.Context, id string, params 
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return r.Get(ctx, domain.GetScanningStationParams{AccountID: params.AccountID, ScanningStationID: id})
+	return r.Get(ctx, domain.GetScanningStationParams{AccountID: params.AccountID, ScanningStationID: id, Includes: params.Includes})
 }
 
 func (r *scanningStationRepoImpl) Update(ctx context.Context, params domain.UpdateScanningStationParams) (*domain.ScanningStation, *apierror.APIError) {
@@ -261,13 +306,19 @@ func (r *scanningStationRepoImpl) Update(ctx context.Context, params domain.Upda
 	defer span.End()
 
 	result, err := r.queries.UpdateScanningStation(ctx, sqlc.UpdateScanningStationParams{
-		ID:                    params.ScanningStationID,
-		AccountID:             params.AccountID,
-		Name:                  toNullString(params.Name),
-		Notes:                 toNullString(params.Notes),
-		LabelSizeCode:         toNullString(params.LabelSizeCode),
-		LabelTypeCode:         toNullString(params.LabelTypeCode),
-		MaterialCheckRequired: toNullBool(params.MaterialCheckRequired),
+		ID:            params.ScanningStationID,
+		AccountID:     params.AccountID,
+		Name:          toNullString(params.Name),
+		Notes:         toNullString(params.Notes),
+		LabelSizeCode: toNullString(params.LabelSizeCode),
+		LabelTypeCode: toNullString(params.LabelTypeCode),
+		MaterialCheckRequired: toNullBool(func() *bool {
+			if params.OperatorRequirement == nil {
+				return nil
+			}
+			v := operatorRequirementToBool(*params.OperatorRequirement)
+			return &v
+		}()),
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -281,7 +332,7 @@ func (r *scanningStationRepoImpl) Update(ctx context.Context, params domain.Upda
 		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Scanning station not found."))
 	}
 
-	return r.Get(ctx, domain.GetScanningStationParams{AccountID: params.AccountID, ScanningStationID: params.ScanningStationID})
+	return r.Get(ctx, domain.GetScanningStationParams{AccountID: params.AccountID, ScanningStationID: params.ScanningStationID, Includes: params.Includes})
 }
 
 func (r *scanningStationRepoImpl) Delete(ctx context.Context, params domain.DeleteScanningStationParams) *apierror.APIError {

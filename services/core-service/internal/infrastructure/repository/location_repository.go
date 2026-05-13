@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	gosql "database/sql"
+	"slices"
 	"time"
 
 	"github.com/augno/api/services/core-service/internal/domain"
@@ -107,7 +108,10 @@ func (r *locationRepoImpl) fetchChildren(ctx context.Context, accountID, parentI
 	return children, nil
 }
 
-func (r *locationRepoImpl) populateChildren(ctx context.Context, accountID string, locations []*domain.Location) *apierror.APIError {
+func (r *locationRepoImpl) populateChildren(ctx context.Context, accountID string, locations []*domain.Location, incs []string) *apierror.APIError {
+	if !slices.Contains(incs, "children") {
+		return nil
+	}
 	for _, sl := range locations {
 		children, apiErr := r.fetchChildren(ctx, accountID, sl.ID)
 		if apiErr != nil {
@@ -148,7 +152,7 @@ func (r *locationRepoImpl) List(ctx context.Context, params domain.ListLocations
 				locations[i] = mapBackwardLocationRow(row)
 			}
 			result, pageInfo := pagination.BuildPageString(locations, params.Limit, cursorDir, locationCreatedAt, locationID)
-			if apiErr := r.populateChildren(ctx, params.AccountID, result); apiErr != nil {
+			if apiErr := r.populateChildren(ctx, params.AccountID, result, params.Includes); apiErr != nil {
 				return nil, tracing.Trace(span, apiErr)
 			}
 			return &domain.ListLocationsResult{Locations: result, PageInfo: pageInfo}, nil
@@ -169,7 +173,7 @@ func (r *locationRepoImpl) List(ctx context.Context, params domain.ListLocations
 			locations[i] = mapForwardLocationRow(row)
 		}
 		result, pageInfo := pagination.BuildPageString(locations, params.Limit, cursorDir, locationCreatedAt, locationID)
-		if apiErr := r.populateChildren(ctx, params.AccountID, result); apiErr != nil {
+		if apiErr := r.populateChildren(ctx, params.AccountID, result, params.Includes); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
 		return &domain.ListLocationsResult{Locations: result, PageInfo: pageInfo}, nil
@@ -189,7 +193,7 @@ func (r *locationRepoImpl) List(ctx context.Context, params domain.ListLocations
 		locations[i] = mapForwardLocationRow(row)
 	}
 	result, pageInfo := pagination.BuildPageString(locations, params.Limit, cursorDir, locationCreatedAt, locationID)
-	if apiErr := r.populateChildren(ctx, params.AccountID, result); apiErr != nil {
+	if apiErr := r.populateChildren(ctx, params.AccountID, result, params.Includes); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 	return &domain.ListLocationsResult{Locations: result, PageInfo: pageInfo}, nil
@@ -209,11 +213,13 @@ func (r *locationRepoImpl) Get(ctx context.Context, params domain.GetLocationPar
 
 	sl := mapGetLocationRow(row)
 
-	children, apiErr := r.fetchChildren(ctx, params.AccountID, sl.ID)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+	if slices.Contains(params.Includes, "children") {
+		children, apiErr := r.fetchChildren(ctx, params.AccountID, sl.ID)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		sl.Children = children
 	}
-	sl.Children = children
 
 	return sl, nil
 }
@@ -250,6 +256,7 @@ func (r *locationRepoImpl) Create(ctx context.Context, id string, params domain.
 	return r.Get(ctx, domain.GetLocationParams{
 		AccountID:  params.AccountID,
 		LocationID: id,
+		Includes:   params.Includes,
 	})
 }
 
@@ -304,6 +311,7 @@ func (r *locationRepoImpl) Update(ctx context.Context, params domain.UpdateLocat
 	return r.Get(ctx, domain.GetLocationParams{
 		AccountID:  params.AccountID,
 		LocationID: params.LocationID,
+		Includes:   params.Includes,
 	})
 }
 

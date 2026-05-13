@@ -223,6 +223,8 @@ SELECT
     ar.external_number AS customer_number,
     ar.account_status_code AS customer_status_code,
     ar.commission_status_code AS customer_commission_policy,
+    ar.created_at AS customer_created_at,
+    ar.updated_at AS customer_updated_at,
     -- Status
     sos.name AS status_name,
     -- Type
@@ -232,6 +234,8 @@ SELECT
     pr.id AS priority_id,
     -- Bill-to address
     bill_addr.name AS bill_to_name,
+    bill_addr.is_drop_ship AS bill_to_is_drop_ship,
+    bill_geo.id AS bill_to_geolocation_id,
     bill_geo.street_line_1 AS bill_to_street_line_1,
     bill_geo.street_line_2 AS bill_to_street_line_2,
     bill_geo.locality AS bill_to_locality,
@@ -240,8 +244,12 @@ SELECT
     bill_geo.country AS bill_to_country,
     bill_addr.phone AS bill_to_phone,
     bill_addr.email AS bill_to_email,
+    bill_addr.created_at AS bill_to_created_at,
+    bill_addr.updated_at AS bill_to_updated_at,
     -- Ship-to address
     ship_addr.name AS ship_to_name,
+    ship_addr.is_drop_ship AS ship_to_is_drop_ship,
+    ship_geo.id AS ship_to_geolocation_id,
     ship_geo.street_line_1 AS ship_to_street_line_1,
     ship_geo.street_line_2 AS ship_to_street_line_2,
     ship_geo.locality AS ship_to_locality,
@@ -250,23 +258,40 @@ SELECT
     ship_geo.country AS ship_to_country,
     ship_addr.phone AS ship_to_phone,
     ship_addr.email AS ship_to_email,
+    ship_addr.created_at AS ship_to_created_at,
+    ship_addr.updated_at AS ship_to_updated_at,
     -- Carrier
     cr.name AS carrier_name,
     cr.is_portal_enabled AS carrier_is_portal_enabled,
+    cr.created_at AS carrier_created_at,
+    cr.updated_at AS carrier_updated_at,
     co.name AS carrier_option_name,
     co.is_portal_enabled AS service_level_is_portal_enabled,
     co.service_level_token AS service_level_token,
+    co.created_at AS service_level_created_at,
+    co.updated_at AS service_level_updated_at,
     -- Sales rep
     sr_user.name AS sales_rep_name,
     -- Payment term
     pt.name AS payment_term_name,
     pt.is_active AS payment_term_is_active,
+    pt.created_at AS payment_term_created_at,
+    pt.updated_at AS payment_term_updated_at,
     -- Shipping term
     st.name AS shipping_term_name,
     st.is_freight_exempt AS shipping_term_is_freight_exempt,
     st.is_carrier_rate AS shipping_term_is_carrier_rate,
+    st.created_at AS shipping_term_created_at,
+    st.updated_at AS shipping_term_updated_at,
     -- Order discount
     od.name AS order_discount_name,
+    od.code AS order_discount_code,
+    od.percentage AS order_discount_percentage,
+    od.value AS order_discount_amount,
+    od.discount_type_code AS order_discount_discount_type,
+    (SELECT COUNT(*) FROM sales_order so2 WHERE so2.order_discount_id = od.id) AS order_discount_order_count,
+    od.created_at AS order_discount_created_at,
+    od.updated_at AS order_discount_updated_at,
     -- Pick
     pk.id AS pick_id
 FROM sales_order so
@@ -328,6 +353,8 @@ SELECT
     ar.external_number AS customer_number,
     ar.account_status_code AS customer_status_code,
     ar.commission_status_code AS customer_commission_policy,
+    ar.created_at AS customer_created_at,
+    ar.updated_at AS customer_updated_at,
     -- Status
     sos.name AS status_name,
     -- Type
@@ -337,6 +364,8 @@ SELECT
     pr.id AS priority_id,
     -- Bill-to address
     bill_addr.name AS bill_to_name,
+    bill_addr.is_drop_ship AS bill_to_is_drop_ship,
+    bill_geo.id AS bill_to_geolocation_id,
     bill_geo.street_line_1 AS bill_to_street_line_1,
     bill_geo.street_line_2 AS bill_to_street_line_2,
     bill_geo.locality AS bill_to_locality,
@@ -345,8 +374,12 @@ SELECT
     bill_geo.country AS bill_to_country,
     bill_addr.phone AS bill_to_phone,
     bill_addr.email AS bill_to_email,
+    bill_addr.created_at AS bill_to_created_at,
+    bill_addr.updated_at AS bill_to_updated_at,
     -- Ship-to address
     ship_addr.name AS ship_to_name,
+    ship_addr.is_drop_ship AS ship_to_is_drop_ship,
+    ship_geo.id AS ship_to_geolocation_id,
     ship_geo.street_line_1 AS ship_to_street_line_1,
     ship_geo.street_line_2 AS ship_to_street_line_2,
     ship_geo.locality AS ship_to_locality,
@@ -355,23 +388,40 @@ SELECT
     ship_geo.country AS ship_to_country,
     ship_addr.phone AS ship_to_phone,
     ship_addr.email AS ship_to_email,
+    ship_addr.created_at AS ship_to_created_at,
+    ship_addr.updated_at AS ship_to_updated_at,
     -- Carrier
     cr.name AS carrier_name,
     cr.is_portal_enabled AS carrier_is_portal_enabled,
+    cr.created_at AS carrier_created_at,
+    cr.updated_at AS carrier_updated_at,
     co.name AS carrier_option_name,
     co.is_portal_enabled AS service_level_is_portal_enabled,
     co.service_level_token AS service_level_token,
+    co.created_at AS service_level_created_at,
+    co.updated_at AS service_level_updated_at,
     -- Sales rep
     sr_user.name AS sales_rep_name,
     -- Payment term
     pt.name AS payment_term_name,
     pt.is_active AS payment_term_is_active,
+    pt.created_at AS payment_term_created_at,
+    pt.updated_at AS payment_term_updated_at,
     -- Shipping term
     st.name AS shipping_term_name,
     st.is_freight_exempt AS shipping_term_is_freight_exempt,
     st.is_carrier_rate AS shipping_term_is_carrier_rate,
+    st.created_at AS shipping_term_created_at,
+    st.updated_at AS shipping_term_updated_at,
     -- Order discount
     od.name AS order_discount_name,
+    od.code AS order_discount_code,
+    od.percentage AS order_discount_percentage,
+    od.value AS order_discount_amount,
+    od.discount_type_code AS order_discount_discount_type,
+    (SELECT COUNT(*) FROM sales_order so2 WHERE so2.order_discount_id = od.id) AS order_discount_order_count,
+    od.created_at AS order_discount_created_at,
+    od.updated_at AS order_discount_updated_at,
     -- Pick
     pk.id AS pick_id
 FROM sales_order so

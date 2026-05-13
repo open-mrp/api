@@ -19,9 +19,9 @@ type CreateServiceLevelRequest struct {
 	Name string `json:"name" validate:"required,max=255"`
 	// Service level code.
 	Code string `json:"code" validate:"required,max=255"`
-	// Customer portal visibility.
+	// Whether this service level will be available for customers to select in the customer portal.
 	CustomerPortalVisibility *constants.CustomerPortalVisibility `json:"customer_portal_visibility,omitempty" default:"visible" nullable:"false"`
-	// Default (system-synced) service level.
+	// Default service levels are the default-selected service level for that carrier.
 	IsDefault bool `json:"is_default"`
 }
 

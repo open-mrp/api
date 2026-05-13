@@ -21,7 +21,7 @@ type UpdateAttributeRequest struct {
 	Value *string `json:"value,omitempty" nullable:"false"`
 	// Color code.
 	ColorCode *constants.Color `json:"color,omitempty" nullable:"false"`
-	// Display order.
+	// Display order. Must be a positive integer.
 	SortOrder *int32 `json:"sort_order,omitempty" nullable:"false" validate:"omitempty,min=1"`
 }
 

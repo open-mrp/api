@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	gosql "database/sql"
+	"slices"
 	"time"
 
 	"github.com/augno/api/services/core-service/internal/domain"
@@ -338,14 +339,16 @@ func (r *itemCategoryRepoImpl) GetProperties(ctx context.Context, itemCategoryID
 	properties := make([]*domain.ItemCategoryProperty, len(rows))
 	for i, row := range rows {
 		properties[i] = &domain.ItemCategoryProperty{
-			ID:   row.ID,
-			Name: row.Name,
+			ID:        row.ID,
+			Name:      row.Name,
+			CreatedAt: row.CreatedAt,
+			UpdatedAt: row.UpdatedAt,
 		}
 	}
 	return properties, nil
 }
 
-func (r *itemCategoryRepoImpl) GetUnitGroup(ctx context.Context, unitGroupID string) (*domain.ItemCategoryUnitGroup, *apierror.APIError) {
+func (r *itemCategoryRepoImpl) GetUnitGroup(ctx context.Context, unitGroupID string, includes []string) (*domain.ItemCategoryUnitGroup, *apierror.APIError) {
 	ctx, span := itemCategoryRepoTracer.Start(ctx, "repository.item_category.get_unit_group")
 	defer span.End()
 
@@ -354,12 +357,39 @@ func (r *itemCategoryRepoImpl) GetUnitGroup(ctx context.Context, unitGroupID str
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return &domain.ItemCategoryUnitGroup{
+	ug := &domain.ItemCategoryUnitGroup{
 		ID:         row.ID,
 		Name:       row.Name,
 		BaseUnitID: row.BaseUnitID,
 		Type:       row.UnitTypeCode,
-	}, nil
+		CreatedAt:  row.CreatedAt,
+		UpdatedAt:  row.UpdatedAt,
+	}
+
+	if slices.Contains(includes, "unit_group.base_unit") && ug.BaseUnitID != "" {
+		unitRows, err := r.queries.GetUnitsByIDs(ctx, []string{ug.BaseUnitID})
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		if len(unitRows) > 0 {
+			lu := mapGetUnitsByIDsRowToLightUnit(unitRows[0])
+			ug.BaseUnit = &lu
+		}
+	}
+
+	if slices.Contains(includes, "unit_group.associated_units") {
+		ugUnitRows, err := r.queries.ListUnitGroupUnitsByUnitGroupIDs(ctx, []string{ug.ID})
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		units := make([]*domain.UnitGroupUnit, len(ugUnitRows))
+		for i, ugRow := range ugUnitRows {
+			units[i] = mapUnitGroupUnitsByUnitGroupIDsRow(ugRow)
+		}
+		ug.AssociatedUnits = units
+	}
+
+	return ug, nil
 }
 
 func (r *itemCategoryRepoImpl) PropertyExistsByNameInCategory(ctx context.Context, accountID, itemCategoryID, name string, excludePropertyID *string) (bool, *apierror.APIError) {

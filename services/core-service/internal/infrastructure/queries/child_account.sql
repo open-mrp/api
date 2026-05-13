@@ -89,7 +89,9 @@ SELECT
     ar.parent_account_relation_id AS parent_relation_id,
     ar.counterparty_account_id AS account_id,
     a.name AS account_name,
-    ar.external_number
+    ar.external_number,
+    a.created_at,
+    a.updated_at
 FROM account_relation ar
 INNER JOIN account a ON a.id = ar.counterparty_account_id
 WHERE ar.owner_account_id = sqlc.arg('owner_account_id')

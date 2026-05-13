@@ -25,7 +25,7 @@ type UpdateTransactionRequest struct {
 	// Adjustment type code.
 	AdjustmentTypeCode *string `json:"adjustment_type" nullable:"false" validate:"omitempty,max=255"`
 	// Responsible user ID.
-	ResponsibleUserID *string `json:"responsible_user_id" nullable:"false" validate:"omitempty,max=191"`
+	ResponsibleUserID *string `json:"responsible_user_id" nullable:"false" validate:"omitempty"`
 	// Set to true to clear the responsible user.
 	ClearResponsibleUser bool `json:"clear_responsible_user"`
 	// Set to true to clear the transaction method.

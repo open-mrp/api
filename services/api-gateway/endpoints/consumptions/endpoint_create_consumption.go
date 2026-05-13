@@ -16,15 +16,15 @@ type CreateConsumptionRequest struct {
 	// Production step ID.
 	ProductionStepID string `path:"production_step_id" validate:"required"`
 	// Item ID.
-	ItemID string `json:"item_id" validate:"required,max=191"`
+	ItemID string `json:"item_id" validate:"required"`
 	// Consumed quantity value.
 	QuantityValue string `json:"quantity_value" validate:"required"`
 	// Consumed quantity unit ID.
-	QuantityUnitID string `json:"quantity_unit_id" validate:"required,max=191"`
+	QuantityUnitID string `json:"quantity_unit_id" validate:"required"`
 	// Waste quantity value.
 	WasteQuantityValue string `json:"waste_quantity_value" validate:"required"`
 	// Waste quantity unit ID.
-	WasteQuantityUnitID string `json:"waste_quantity_unit_id" validate:"required,max=191"`
+	WasteQuantityUnitID string `json:"waste_quantity_unit_id" validate:"required"`
 	// Instructions for how this material is consumed.
 	Instructions *string `json:"instructions,omitempty"`
 }

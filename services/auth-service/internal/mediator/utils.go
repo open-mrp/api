@@ -12,7 +12,7 @@ func buildOwnedAPIKeyIdentity(apiKeyModel *apikey.APIKey, targetAccountID string
 }
 
 func buildOwnedAPIKeyIdentityWithRelation(apiKeyModel *apikey.APIKey, targetAccountID string, permissions map[string]bool, accountMode constants.AccountMode, subscriptionStatus *string, targetRelationType *types.IdentityRelationType) *types.Identity {
-	roleTypeCode := apiKeyModel.RoleTypeCode
+	roleTypeCode := apiKeyModel.RoleType
 
 	return &types.Identity{
 		Type: types.IdentityActorTypeAPIKey,
@@ -26,7 +26,7 @@ func buildOwnedAPIKeyIdentityWithRelation(apiKeyModel *apikey.APIKey, targetAcco
 			Name:         &apiKeyModel.Name,
 			AccountID:    &apiKeyModel.OwnerAccountID,
 			RoleID:       &apiKeyModel.RoleID,
-			RoleTypeCode: &roleTypeCode,
+			RoleType:     &roleTypeCode,
 			Permissions:  permissions,
 		},
 		AccountMode:        accountMode,
@@ -48,7 +48,7 @@ func buildRelatedAPIKeyIdentity(apiKeyModel *apikey.APIKey, accountRelation *dom
 			Name:         &apiKeyModel.Name,
 			AccountID:    &accountRelation.CounterpartyAccountID,
 			RoleID:       nil,
-			RoleTypeCode: nil,
+			RoleType:     nil,
 			Permissions:  map[string]bool{},
 		},
 		AccountMode:        accountMode,
@@ -65,7 +65,7 @@ func buildUnassignedUserIdentity(userModel *types.User) *types.Identity {
 			Name:         userModel.Name,
 			AccountID:    nil,
 			RoleID:       nil,
-			RoleTypeCode: nil,
+			RoleType:     nil,
 			Permissions:  map[string]bool{},
 		},
 		AccountMode: constants.AccountModeProduction,
@@ -82,7 +82,7 @@ func buildRelatedUserIdentity(userModel *types.User, accountRelation *domain.Aut
 			Name:         userModel.Name,
 			AccountID:    &accountRelation.CounterpartyAccountID,
 			RoleID:       nil,
-			RoleTypeCode: nil,
+			RoleType:     nil,
 			Permissions:  map[string]bool{},
 		},
 		AccountMode:        accountMode,
@@ -100,7 +100,7 @@ func buildAccountUserIdentity(userModel *types.User, access *domain.AccountUserA
 			Name:         userModel.Name,
 			AccountID:    &access.AccountID,
 			RoleID:       access.RoleID,
-			RoleTypeCode: access.RoleTypeCode,
+			RoleType:     access.RoleType,
 			Permissions:  access.Permissions,
 		},
 		AccountMode:        accountMode,

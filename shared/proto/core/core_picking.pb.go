@@ -797,6 +797,7 @@ type UpdatePickRequest struct {
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Number        *string                `protobuf:"bytes,2,opt,name=number,proto3,oneof" json:"number,omitempty"`
 	FinishedAt    *string                `protobuf:"bytes,3,opt,name=finished_at,json=finishedAt,proto3,oneof" json:"finished_at,omitempty"`
+	Includes      []string               `protobuf:"bytes,4,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -850,6 +851,13 @@ func (x *UpdatePickRequest) GetFinishedAt() string {
 		return *x.FinishedAt
 	}
 	return ""
+}
+
+func (x *UpdatePickRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
 }
 
 type UpdatePickResponse struct {
@@ -1692,12 +1700,13 @@ const file_core_core_picking_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\bincludes\x18\x02 \x03(\tR\bincludes\"5\n" +
 	"\x0fGetPickResponse\x12\"\n" +
-	"\x04pick\x18\x01 \x01(\v2\x0e.core.PickInfoR\x04pick\"\x81\x01\n" +
+	"\x04pick\x18\x01 \x01(\v2\x0e.core.PickInfoR\x04pick\"\x9d\x01\n" +
 	"\x11UpdatePickRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\x06number\x18\x02 \x01(\tH\x00R\x06number\x88\x01\x01\x12$\n" +
 	"\vfinished_at\x18\x03 \x01(\tH\x01R\n" +
-	"finishedAt\x88\x01\x01B\t\n" +
+	"finishedAt\x88\x01\x01\x12\x1a\n" +
+	"\bincludes\x18\x04 \x03(\tR\bincludesB\t\n" +
 	"\a_numberB\x0e\n" +
 	"\f_finished_at\"8\n" +
 	"\x12UpdatePickResponse\x12\"\n" +

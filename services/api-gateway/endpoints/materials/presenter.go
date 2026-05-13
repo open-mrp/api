@@ -12,8 +12,16 @@ func materialQuantityInfoPresenter(q *pb.QuantityInfo) *apiresource.QuantityInfo
 	if q == nil {
 		return nil
 	}
+	// Normalize first so we compare against the canonical form ("0") rather
+	// than the raw DB decimal string (e.g. "0.000000000000000000000000000000").
+	// A normalized value of "0" means the field was never set by the caller —
+	// the service unconditionally inserts a zero-value quantity row as a default.
+	normalized := apiresource.NormalizeQuantityValue(q.Value, q.UnitType)
+	if normalized == "0" {
+		return nil
+	}
 	return &apiresource.QuantityInfo{
-		Value: apiresource.NormalizeQuantityValue(q.Value, q.UnitType),
+		Value: normalized,
 		Unit: &apiresource.Unit{
 			ID:     q.UnitId,
 			Object: constants.ObjectTypeUnit,
@@ -69,9 +77,14 @@ func SupplierMaterialPresenter(sm *pb.SupplierMaterialInfo) apiresource.Supplier
 		Material:            material,
 		SupplierPartNumber:  sm.SupplierPartNumber,
 		SupplierDescription: sm.SupplierDescription,
-		IsActive:            sm.IsActive,
-		CreatedAt:           grpcutil.TimestampToTime(sm.CreatedAt),
-		UpdatedAt:           grpcutil.TimestampToTime(sm.UpdatedAt),
+		Status: func() constants.SupplierMaterialStatus {
+			if sm.IsActive {
+				return constants.SupplierMaterialStatusActive
+			}
+			return constants.SupplierMaterialStatusInactive
+		}(),
+		CreatedAt: grpcutil.TimestampToTime(sm.CreatedAt),
+		UpdatedAt: grpcutil.TimestampToTime(sm.UpdatedAt),
 	}
 }
 

@@ -53,6 +53,7 @@ func (h *gRPCHandler) ListProductsFull(ctx context.Context, req *pb.ListProducts
 		CategoryIDs:    req.CategoryIds,
 		AttributeIDs:   req.AttributeIds,
 		IsPortalReady:  req.IsPortalReady,
+		Includes:       req.Includes,
 	}
 
 	if req.StartDate != nil {
@@ -92,6 +93,7 @@ func (h *gRPCHandler) GetProduct(ctx context.Context, req *pb.GetProductRequest)
 
 	params := domain.GetProductFullParams{
 		ProductID: req.Id,
+		Includes:  req.Includes,
 	}
 
 	product, apiErr := h.productSvc.GetProduct(ctx, params)
@@ -118,6 +120,7 @@ func (h *gRPCHandler) CreateProduct(ctx context.Context, req *pb.CreateProductRe
 		ProductLineID:   req.ProductLineId,
 		CategoryID:      req.CategoryId,
 		IsPortalReady:   req.IsPortalReady,
+		Includes:        req.Includes,
 	}
 
 	if req.Description != nil {
@@ -159,6 +162,8 @@ func (h *gRPCHandler) UpdateProduct(ctx context.Context, req *pb.UpdateProductRe
 		Notes:             req.Notes,
 		UpdateNotes:       req.UpdateNotes,
 		IsPortalReady:     req.IsPortalReady,
+		UnitPrice:         protoToCreateRateInput(req.UnitPrice),
+		Includes:          req.Includes,
 	}
 
 	product, apiErr := h.productSvc.UpdateProduct(ctx, params)
@@ -201,6 +206,7 @@ func (h *gRPCHandler) ChangeProductProductLine(ctx context.Context, req *pb.Chan
 	params := domain.ChangeProductProductLineParams{
 		ProductID:     req.Id,
 		ProductLineID: req.ProductLineId,
+		Includes:      req.Includes,
 	}
 
 	product, apiErr := h.productSvc.ChangeProductProductLine(ctx, params)

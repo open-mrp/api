@@ -68,11 +68,14 @@ func Run(
 	leaseSvc := lease.New(repository.NewLeaseRepo(queries))
 
 	outboxRepo := repository.NewOutboxEnqueuerRepo(pgpool, queries)
-	enqueuer, err := messaging.NewEnqueuer(&messaging.EnqueuerConfig{
+	encCfg := &messaging.EnqueuerConfig{
 		ServiceName:  domain.ServiceName,
 		PlatformMode: cfg.PlatformMode,
-		PollInterval: 1 * time.Second,
-	}, outboxRepo, rabbitmq, leaseSvc)
+	}
+	if !cfg.PlatformMode.IsTest() {
+		encCfg.PollInterval = 1 * time.Second
+	}
+	enqueuer, err := messaging.NewEnqueuer(encCfg, outboxRepo, rabbitmq, leaseSvc)
 	if err != nil {
 		return err
 	}
@@ -82,7 +85,7 @@ func Run(
 	defer enqueuer.Stop()
 
 	inboxPurgerRepo := repository.NewInboxPurgerRepo(queries)
-	inboxPurger, err := messaging.NewInboxPurger(&messaging.InboxPurgerConfig{ServiceName: domain.ServiceName}, inboxPurgerRepo, leaseSvc)
+	inboxPurger, err := messaging.NewInboxPurger(&messaging.InboxPurgerConfig{ServiceName: domain.ServiceName, PlatformMode: cfg.PlatformMode}, inboxPurgerRepo, leaseSvc)
 	if err != nil {
 		return err
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	gosql "database/sql"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/augno/api/services/core-service/internal/domain"
@@ -92,6 +93,14 @@ func nullAccountGroupType(ns gosql.NullString) *constants.AccountGroupType {
 	return nil
 }
 
+func nullAccountUserStatus(ns gosql.NullString) *constants.AccountUserStatus {
+	if ns.Valid {
+		aus := constants.AccountUserStatus(ns.String)
+		return &aus
+	}
+	return nil
+}
+
 func mapListCustomerForwardRow(row sqlc.ListCustomersForwardRow) *domain.Customer {
 	var billToAddress *domain.CustomerAddress
 	if row.DefaultBillingAddressID.Valid {
@@ -132,56 +141,73 @@ func mapListCustomerForwardRow(row sqlc.ListCustomersForwardRow) *domain.Custome
 		)
 	}
 	return &domain.Customer{
-		ID:                            row.AccountID,
-		Name:                          row.AccountName,
-		Number:                        row.ExternalNumber,
-		Status:                        constants.AccountStatusCode(row.Status.String),
-		IsEdiEnabled:                  row.IsEdiEnabled,
-		IsParentAccount:               row.IsParentAccount,
-		CommissionPolicy:              constants.CommissionPolicy(row.CommissionStatusCode.String),
-		FreightPolicy:                 constants.FreightPolicy(row.FreightStatusCode.String),
-		Note:                          nullStringPtr(row.Notes),
-		Email:                         nullStringPtr(row.Email),
-		Phone:                         nullStringPtr(row.PhoneNumber),
-		URL:                           nullStringPtr(row.WebsiteUrl),
-		CarrierBillingType:            nullCarrierBillingType(row.CarrierBillingType),
-		CarrierBillingAccount:         nullStringPtr(row.CarrierBillingAccount),
-		CreditLimitID:                 nullStringPtr(row.CreditLimitID),
-		CreditLimitValue:              nullStringPtr(row.CreditLimitValue),
-		CreditLimitUnitID:             nullStringPtr(row.CreditLimitUnitID),
-		CreditLimitUnitAbbreviation:   nullStringPtr(row.CreditLimitUnitAbbreviation),
-		CreditLimitUnitName:           nullStringPtr(row.CreditLimitUnitName),
-		CreditLimitUnitType:           nullStringPtr(row.CreditLimitUnitType),
-		DefaultCarrierID:              nullStringPtr(row.DefaultCarrierID),
-		DefaultCarrierName:            nullStringPtr(row.DefaultCarrierName),
-		DefaultCarrierIsPortalEnabled: nullBoolPtr(row.DefaultCarrierIsPortalEnabled),
-		DefaultServiceLevelID:         nullStringPtr(row.DefaultCarrierOptionID),
-		DefaultServiceLevelName:       nullStringPtr(row.DefaultCarrierOptionName),
-		DefaultPaymentTermID:          nullStringPtr(row.PaymentTermID),
-		DefaultPaymentTermName:        nullStringPtr(row.PaymentTermName),
-		DefaultPaymentTermIsActive:    nullBoolPtr(row.PaymentTermIsActive),
-		DefaultShippingTermID:         nullStringPtr(row.ShippingTermID),
-		DefaultShippingTermName:       nullStringPtr(row.ShippingTermName),
-		DefaultShippingTermType:       nullShippingTermType(row.ShippingTermIsFreightExempt, row.ShippingTermIsCarrierRate),
-		DefaultPriorityID:             nullStringPtr(row.PriorityID),
-		DefaultPriorityCode:           nullPriorityCode(row.PriorityCode),
-		DefaultPriorityName:           nullStringPtr(row.PriorityName),
-		DefaultSalesRepID:             nullStringPtr(row.DefaultSalesRepID),
-		DefaultSalesRepName:           nullStringPtr(row.DefaultSalesRepName),
-		BillToAddressID:               nullStringPtr(row.DefaultBillingAddressID),
-		ShipToAddressID:               nullStringPtr(row.DefaultShippingAddressID),
-		BillToAddress:                 billToAddress,
-		ShipToAddress:                 shipToAddress,
-		TypeGroupID:                   nullStringPtr(row.TypeGroupID),
-		TypeGroupName:                 nullStringPtr(row.TypeGroupName),
-		TypeGroupCommissionPolicy:     nullCommissionPolicy(row.TypeGroupCommissionStatusCode),
-		TypeGroupFreightPolicy:        nullFreightPolicy(row.TypeGroupFreightStatusCode),
-		TypeGroupType:                 nullAccountGroupType(row.TypeGroupTypeCode),
-		ParentAccountID:               nullStringPtr(row.ParentAccountID),
-		ParentAccountName:             nullStringPtr(row.ParentAccountName),
-		ParentAccountNumber:           nullStringPtr(row.ParentAccountNumber),
-		CreatedAt:                     row.CreatedAt,
-		UpdatedAt:                     row.UpdatedAt,
+		ID:                                 row.AccountID,
+		Name:                               row.AccountName,
+		Number:                             row.ExternalNumber,
+		Status:                             constants.AccountStatusCode(row.Status.String),
+		IsEdiEnabled:                       row.IsEdiEnabled,
+		IsParentAccount:                    row.IsParentAccount,
+		CommissionPolicy:                   constants.CommissionPolicy(row.CommissionStatusCode.String),
+		FreightPolicy:                      constants.FreightPolicy(row.FreightStatusCode.String),
+		Note:                               nullStringPtr(row.Notes),
+		Email:                              nullStringPtr(row.Email),
+		Phone:                              nullStringPtr(row.PhoneNumber),
+		URL:                                nullStringPtr(row.WebsiteUrl),
+		CarrierBillingType:                 nullCarrierBillingType(row.CarrierBillingType),
+		CarrierBillingAccount:              nullStringPtr(row.CarrierBillingAccount),
+		CreditLimitID:                      nullStringPtr(row.CreditLimitID),
+		CreditLimitValue:                   nullStringPtr(row.CreditLimitValue),
+		CreditLimitUnitID:                  nullStringPtr(row.CreditLimitUnitID),
+		CreditLimitUnitAbbreviation:        nullStringPtr(row.CreditLimitUnitAbbreviation),
+		CreditLimitUnitName:                nullStringPtr(row.CreditLimitUnitName),
+		CreditLimitUnitType:                nullStringPtr(row.CreditLimitUnitType),
+		DefaultCarrierID:                   nullStringPtr(row.DefaultCarrierID),
+		DefaultCarrierName:                 nullStringPtr(row.DefaultCarrierName),
+		DefaultCarrierIsPortalEnabled:      nullBoolPtr(row.DefaultCarrierIsPortalEnabled),
+		DefaultCarrierCreatedAt:            nullTimePtr(row.DefaultCarrierCreatedAt),
+		DefaultCarrierUpdatedAt:            nullTimePtr(row.DefaultCarrierUpdatedAt),
+		DefaultServiceLevelID:              nullStringPtr(row.DefaultCarrierOptionID),
+		DefaultServiceLevelName:            nullStringPtr(row.DefaultCarrierOptionName),
+		DefaultServiceLevelToken:           nullStringPtr(row.DefaultCarrierOptionServiceLevelToken),
+		DefaultServiceLevelIsPortalEnabled: nullBoolPtr(row.DefaultCarrierOptionIsPortalEnabled),
+		DefaultServiceLevelCreatedAt:       nullTimePtr(row.DefaultCarrierOptionCreatedAt),
+		DefaultServiceLevelUpdatedAt:       nullTimePtr(row.DefaultCarrierOptionUpdatedAt),
+		DefaultPaymentTermID:               nullStringPtr(row.PaymentTermID),
+		DefaultPaymentTermName:             nullStringPtr(row.PaymentTermName),
+		DefaultPaymentTermIsActive:         nullBoolPtr(row.PaymentTermIsActive),
+		DefaultPaymentTermCreatedAt:        nullTimePtr(row.PaymentTermCreatedAt),
+		DefaultPaymentTermUpdatedAt:        nullTimePtr(row.PaymentTermUpdatedAt),
+		DefaultShippingTermID:              nullStringPtr(row.ShippingTermID),
+		DefaultShippingTermName:            nullStringPtr(row.ShippingTermName),
+		DefaultShippingTermType:            nullShippingTermType(row.ShippingTermIsFreightExempt, row.ShippingTermIsCarrierRate),
+		DefaultShippingTermCreatedAt:       nullTimePtr(row.ShippingTermCreatedAt),
+		DefaultShippingTermUpdatedAt:       nullTimePtr(row.ShippingTermUpdatedAt),
+		DefaultPriorityID:                  nullStringPtr(row.PriorityID),
+		DefaultPriorityCode:                nullPriorityCode(row.PriorityCode),
+		DefaultPriorityName:                nullStringPtr(row.PriorityName),
+		DefaultSalesRepID:                  nullStringPtr(row.DefaultSalesRepID),
+		DefaultSalesRepName:                nullStringPtr(row.DefaultSalesRepName),
+		DefaultSalesRepStatus:              nullAccountUserStatus(row.DefaultSalesRepStatusCode),
+		DefaultSalesRepCreatedAt:           nullTimePtr(row.DefaultSalesRepCreatedAt),
+		DefaultSalesRepUpdatedAt:           nullTimePtr(row.DefaultSalesRepUpdatedAt),
+		BillToAddressID:                    nullStringPtr(row.DefaultBillingAddressID),
+		ShipToAddressID:                    nullStringPtr(row.DefaultShippingAddressID),
+		BillToAddress:                      billToAddress,
+		ShipToAddress:                      shipToAddress,
+		TypeGroupID:                        nullStringPtr(row.TypeGroupID),
+		TypeGroupName:                      nullStringPtr(row.TypeGroupName),
+		TypeGroupCommissionPolicy:          nullCommissionPolicy(row.TypeGroupCommissionStatusCode),
+		TypeGroupFreightPolicy:             nullFreightPolicy(row.TypeGroupFreightStatusCode),
+		TypeGroupType:                      nullAccountGroupType(row.TypeGroupTypeCode),
+		TypeGroupCreatedAt:                 nullTimePtr(row.TypeGroupCreatedAt),
+		TypeGroupUpdatedAt:                 nullTimePtr(row.TypeGroupUpdatedAt),
+		ParentAccountID:                    nullStringPtr(row.ParentAccountID),
+		ParentAccountName:                  nullStringPtr(row.ParentAccountName),
+		ParentAccountNumber:                nullStringPtr(row.ParentAccountNumber),
+		ParentAccountCreatedAt:             nullTimePtr(row.ParentAccountCreatedAt),
+		ParentAccountUpdatedAt:             nullTimePtr(row.ParentAccountUpdatedAt),
+		CreatedAt:                          row.CreatedAt,
+		UpdatedAt:                          row.UpdatedAt,
 	}
 }
 
@@ -225,56 +251,73 @@ func mapListCustomerBackwardRow(row sqlc.ListCustomersBackwardRow) *domain.Custo
 		)
 	}
 	return &domain.Customer{
-		ID:                            row.AccountID,
-		Name:                          row.AccountName,
-		Number:                        row.ExternalNumber,
-		Status:                        constants.AccountStatusCode(row.Status.String),
-		IsEdiEnabled:                  row.IsEdiEnabled,
-		IsParentAccount:               row.IsParentAccount,
-		CommissionPolicy:              constants.CommissionPolicy(row.CommissionStatusCode.String),
-		FreightPolicy:                 constants.FreightPolicy(row.FreightStatusCode.String),
-		Note:                          nullStringPtr(row.Notes),
-		Email:                         nullStringPtr(row.Email),
-		Phone:                         nullStringPtr(row.PhoneNumber),
-		URL:                           nullStringPtr(row.WebsiteUrl),
-		CarrierBillingType:            nullCarrierBillingType(row.CarrierBillingType),
-		CarrierBillingAccount:         nullStringPtr(row.CarrierBillingAccount),
-		CreditLimitID:                 nullStringPtr(row.CreditLimitID),
-		CreditLimitValue:              nullStringPtr(row.CreditLimitValue),
-		CreditLimitUnitID:             nullStringPtr(row.CreditLimitUnitID),
-		CreditLimitUnitAbbreviation:   nullStringPtr(row.CreditLimitUnitAbbreviation),
-		CreditLimitUnitName:           nullStringPtr(row.CreditLimitUnitName),
-		CreditLimitUnitType:           nullStringPtr(row.CreditLimitUnitType),
-		DefaultCarrierID:              nullStringPtr(row.DefaultCarrierID),
-		DefaultCarrierName:            nullStringPtr(row.DefaultCarrierName),
-		DefaultCarrierIsPortalEnabled: nullBoolPtr(row.DefaultCarrierIsPortalEnabled),
-		DefaultServiceLevelID:         nullStringPtr(row.DefaultCarrierOptionID),
-		DefaultServiceLevelName:       nullStringPtr(row.DefaultCarrierOptionName),
-		DefaultPaymentTermID:          nullStringPtr(row.PaymentTermID),
-		DefaultPaymentTermName:        nullStringPtr(row.PaymentTermName),
-		DefaultPaymentTermIsActive:    nullBoolPtr(row.PaymentTermIsActive),
-		DefaultShippingTermID:         nullStringPtr(row.ShippingTermID),
-		DefaultShippingTermName:       nullStringPtr(row.ShippingTermName),
-		DefaultShippingTermType:       nullShippingTermType(row.ShippingTermIsFreightExempt, row.ShippingTermIsCarrierRate),
-		DefaultPriorityID:             nullStringPtr(row.PriorityID),
-		DefaultPriorityCode:           nullPriorityCode(row.PriorityCode),
-		DefaultPriorityName:           nullStringPtr(row.PriorityName),
-		DefaultSalesRepID:             nullStringPtr(row.DefaultSalesRepID),
-		DefaultSalesRepName:           nullStringPtr(row.DefaultSalesRepName),
-		BillToAddressID:               nullStringPtr(row.DefaultBillingAddressID),
-		ShipToAddressID:               nullStringPtr(row.DefaultShippingAddressID),
-		BillToAddress:                 billToAddress,
-		ShipToAddress:                 shipToAddress,
-		TypeGroupID:                   nullStringPtr(row.TypeGroupID),
-		TypeGroupName:                 nullStringPtr(row.TypeGroupName),
-		TypeGroupCommissionPolicy:     nullCommissionPolicy(row.TypeGroupCommissionStatusCode),
-		TypeGroupFreightPolicy:        nullFreightPolicy(row.TypeGroupFreightStatusCode),
-		TypeGroupType:                 nullAccountGroupType(row.TypeGroupTypeCode),
-		ParentAccountID:               nullStringPtr(row.ParentAccountID),
-		ParentAccountName:             nullStringPtr(row.ParentAccountName),
-		ParentAccountNumber:           nullStringPtr(row.ParentAccountNumber),
-		CreatedAt:                     row.CreatedAt,
-		UpdatedAt:                     row.UpdatedAt,
+		ID:                                 row.AccountID,
+		Name:                               row.AccountName,
+		Number:                             row.ExternalNumber,
+		Status:                             constants.AccountStatusCode(row.Status.String),
+		IsEdiEnabled:                       row.IsEdiEnabled,
+		IsParentAccount:                    row.IsParentAccount,
+		CommissionPolicy:                   constants.CommissionPolicy(row.CommissionStatusCode.String),
+		FreightPolicy:                      constants.FreightPolicy(row.FreightStatusCode.String),
+		Note:                               nullStringPtr(row.Notes),
+		Email:                              nullStringPtr(row.Email),
+		Phone:                              nullStringPtr(row.PhoneNumber),
+		URL:                                nullStringPtr(row.WebsiteUrl),
+		CarrierBillingType:                 nullCarrierBillingType(row.CarrierBillingType),
+		CarrierBillingAccount:              nullStringPtr(row.CarrierBillingAccount),
+		CreditLimitID:                      nullStringPtr(row.CreditLimitID),
+		CreditLimitValue:                   nullStringPtr(row.CreditLimitValue),
+		CreditLimitUnitID:                  nullStringPtr(row.CreditLimitUnitID),
+		CreditLimitUnitAbbreviation:        nullStringPtr(row.CreditLimitUnitAbbreviation),
+		CreditLimitUnitName:                nullStringPtr(row.CreditLimitUnitName),
+		CreditLimitUnitType:                nullStringPtr(row.CreditLimitUnitType),
+		DefaultCarrierID:                   nullStringPtr(row.DefaultCarrierID),
+		DefaultCarrierName:                 nullStringPtr(row.DefaultCarrierName),
+		DefaultCarrierIsPortalEnabled:      nullBoolPtr(row.DefaultCarrierIsPortalEnabled),
+		DefaultCarrierCreatedAt:            nullTimePtr(row.DefaultCarrierCreatedAt),
+		DefaultCarrierUpdatedAt:            nullTimePtr(row.DefaultCarrierUpdatedAt),
+		DefaultServiceLevelID:              nullStringPtr(row.DefaultCarrierOptionID),
+		DefaultServiceLevelName:            nullStringPtr(row.DefaultCarrierOptionName),
+		DefaultServiceLevelToken:           nullStringPtr(row.DefaultCarrierOptionServiceLevelToken),
+		DefaultServiceLevelIsPortalEnabled: nullBoolPtr(row.DefaultCarrierOptionIsPortalEnabled),
+		DefaultServiceLevelCreatedAt:       nullTimePtr(row.DefaultCarrierOptionCreatedAt),
+		DefaultServiceLevelUpdatedAt:       nullTimePtr(row.DefaultCarrierOptionUpdatedAt),
+		DefaultPaymentTermID:               nullStringPtr(row.PaymentTermID),
+		DefaultPaymentTermName:             nullStringPtr(row.PaymentTermName),
+		DefaultPaymentTermIsActive:         nullBoolPtr(row.PaymentTermIsActive),
+		DefaultPaymentTermCreatedAt:        nullTimePtr(row.PaymentTermCreatedAt),
+		DefaultPaymentTermUpdatedAt:        nullTimePtr(row.PaymentTermUpdatedAt),
+		DefaultShippingTermID:              nullStringPtr(row.ShippingTermID),
+		DefaultShippingTermName:            nullStringPtr(row.ShippingTermName),
+		DefaultShippingTermType:            nullShippingTermType(row.ShippingTermIsFreightExempt, row.ShippingTermIsCarrierRate),
+		DefaultShippingTermCreatedAt:       nullTimePtr(row.ShippingTermCreatedAt),
+		DefaultShippingTermUpdatedAt:       nullTimePtr(row.ShippingTermUpdatedAt),
+		DefaultPriorityID:                  nullStringPtr(row.PriorityID),
+		DefaultPriorityCode:                nullPriorityCode(row.PriorityCode),
+		DefaultPriorityName:                nullStringPtr(row.PriorityName),
+		DefaultSalesRepID:                  nullStringPtr(row.DefaultSalesRepID),
+		DefaultSalesRepName:                nullStringPtr(row.DefaultSalesRepName),
+		DefaultSalesRepStatus:              nullAccountUserStatus(row.DefaultSalesRepStatusCode),
+		DefaultSalesRepCreatedAt:           nullTimePtr(row.DefaultSalesRepCreatedAt),
+		DefaultSalesRepUpdatedAt:           nullTimePtr(row.DefaultSalesRepUpdatedAt),
+		BillToAddressID:                    nullStringPtr(row.DefaultBillingAddressID),
+		ShipToAddressID:                    nullStringPtr(row.DefaultShippingAddressID),
+		BillToAddress:                      billToAddress,
+		ShipToAddress:                      shipToAddress,
+		TypeGroupID:                        nullStringPtr(row.TypeGroupID),
+		TypeGroupName:                      nullStringPtr(row.TypeGroupName),
+		TypeGroupCommissionPolicy:          nullCommissionPolicy(row.TypeGroupCommissionStatusCode),
+		TypeGroupFreightPolicy:             nullFreightPolicy(row.TypeGroupFreightStatusCode),
+		TypeGroupType:                      nullAccountGroupType(row.TypeGroupTypeCode),
+		TypeGroupCreatedAt:                 nullTimePtr(row.TypeGroupCreatedAt),
+		TypeGroupUpdatedAt:                 nullTimePtr(row.TypeGroupUpdatedAt),
+		ParentAccountID:                    nullStringPtr(row.ParentAccountID),
+		ParentAccountName:                  nullStringPtr(row.ParentAccountName),
+		ParentAccountNumber:                nullStringPtr(row.ParentAccountNumber),
+		ParentAccountCreatedAt:             nullTimePtr(row.ParentAccountCreatedAt),
+		ParentAccountUpdatedAt:             nullTimePtr(row.ParentAccountUpdatedAt),
+		CreatedAt:                          row.CreatedAt,
+		UpdatedAt:                          row.UpdatedAt,
 	}
 }
 
@@ -330,7 +373,11 @@ func (r *customerRepoImpl) List(ctx context.Context, params domain.ListCustomers
 	includeFreightPolicyFilter := len(params.FreightPolicyCodes) > 0
 	includeCarrierFilter := len(params.CarrierIDs) > 0
 	includeServiceLevelFilter := len(params.ServiceLevelIDs) > 0
-	includeParentAccountFilter := params.IsParentAccount != nil && *params.IsParentAccount
+	includeParentAccountFilter := params.IsParentAccount != nil
+	parentAccountFilterValue := false
+	if params.IsParentAccount != nil {
+		parentAccountFilterValue = *params.IsParentAccount
+	}
 
 	var cursorDir *pagination.Direction
 
@@ -366,6 +413,7 @@ func (r *customerRepoImpl) List(ctx context.Context, params domain.ListCustomers
 				IncludeCarrierOptionFilter:    includeServiceLevelFilter,
 				CarrierOptionIds:              ensureNullStringSlice(params.ServiceLevelIDs),
 				IncludeParentAccountFilter:    includeParentAccountFilter,
+				ParentAccountFilterValue:      parentAccountFilterValue,
 				City:                          stringToNullString(params.City),
 				State:                         stringToNullString(params.State),
 				PostalCode:                    stringToNullString(params.PostalCode),
@@ -416,6 +464,7 @@ func (r *customerRepoImpl) List(ctx context.Context, params domain.ListCustomers
 			IncludeCarrierOptionFilter:    includeServiceLevelFilter,
 			CarrierOptionIds:              ensureNullStringSlice(params.ServiceLevelIDs),
 			IncludeParentAccountFilter:    includeParentAccountFilter,
+			ParentAccountFilterValue:      parentAccountFilterValue,
 			City:                          stringToNullString(params.City),
 			State:                         stringToNullString(params.State),
 			PostalCode:                    stringToNullString(params.PostalCode),
@@ -466,6 +515,7 @@ func (r *customerRepoImpl) List(ctx context.Context, params domain.ListCustomers
 		IncludeCarrierOptionFilter:    includeServiceLevelFilter,
 		CarrierOptionIds:              ensureNullStringSlice(params.ServiceLevelIDs),
 		IncludeParentAccountFilter:    includeParentAccountFilter,
+		ParentAccountFilterValue:      parentAccountFilterValue,
 		City:                          stringToNullString(params.City),
 		State:                         stringToNullString(params.State),
 		PostalCode:                    stringToNullString(params.PostalCode),
@@ -528,7 +578,15 @@ func (r *customerRepoImpl) stitchListCustomerIncludes(ctx context.Context, owner
 			if !ok {
 				continue
 			}
-			c.PriceGroups = append(c.PriceGroups, domain.CustomerAccountGroup{ID: row.ID, Name: row.Name})
+			c.PriceGroups = append(c.PriceGroups, domain.CustomerAccountGroup{
+				ID:               row.ID,
+				Name:             row.Name,
+				CommissionPolicy: constants.CommissionPolicy(row.CommissionStatusCode),
+				FreightPolicy:    constants.FreightPolicy(row.FreightStatusCode),
+				Type:             constants.AccountGroupType(row.AccountGroupTypeCode),
+				CreatedAt:        row.CreatedAt,
+				UpdatedAt:        row.UpdatedAt,
+			})
 		}
 	}
 	if wantNotifPrefs {
@@ -559,7 +617,7 @@ func (r *customerRepoImpl) stitchListCustomerIncludes(ctx context.Context, owner
 	return nil
 }
 
-func (r *customerRepoImpl) Get(ctx context.Context, ownerAccountID, customerAccountID string, includes []string) (*domain.Customer, *apierror.APIError) {
+func (r *customerRepoImpl) Get(ctx context.Context, ownerAccountID, customerAccountID string, incs []string) (*domain.Customer, *apierror.APIError) {
 	ctx, span := customerRepoTracer.Start(ctx, "repository.customer.get")
 	defer span.End()
 
@@ -571,35 +629,42 @@ func (r *customerRepoImpl) Get(ctx context.Context, ownerAccountID, customerAcco
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	// Fetch price groups for this customer.
-	priceGroupRows, err := r.queries.GetCustomerPriceGroups(ctx, row.RelationID)
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-	priceGroups := make([]domain.CustomerAccountGroup, len(priceGroupRows))
-	for i, pg := range priceGroupRows {
-		priceGroups[i] = domain.CustomerAccountGroup{
-			ID:   pg.ID,
-			Name: pg.Name,
+	var priceGroups []domain.CustomerAccountGroup
+	if slices.Contains(incs, "price_groups") {
+		priceGroupRows, err := r.queries.GetCustomerPriceGroups(ctx, row.RelationID)
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		priceGroups = make([]domain.CustomerAccountGroup, len(priceGroupRows))
+		for i, pg := range priceGroupRows {
+			priceGroups[i] = domain.CustomerAccountGroup{
+				ID:               pg.ID,
+				Name:             pg.Name,
+				CommissionPolicy: constants.CommissionPolicy(pg.CommissionStatusCode),
+				FreightPolicy:    constants.FreightPolicy(pg.FreightStatusCode),
+				Type:             constants.AccountGroupType(pg.AccountGroupTypeCode),
+				CreatedAt:        pg.CreatedAt,
+				UpdatedAt:        pg.UpdatedAt,
+			}
 		}
 	}
 
-	// Fetch notification preferences to determine accepts_invoice_emails.
-	notifRows, err := r.queries.GetCustomerNotificationPreferences(ctx, row.RelationID)
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
 	acceptsInvoiceEmails := false
-	for _, n := range notifRows {
-		if n.NotificationTypeCode == "invoice" {
-			acceptsInvoiceEmails = true
-			break
+	if slices.Contains(incs, "notification_preferences") {
+		notifRows, err := r.queries.GetCustomerNotificationPreferences(ctx, row.RelationID)
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		for _, n := range notifRows {
+			if n.NotificationTypeCode == "invoice" {
+				acceptsInvoiceEmails = true
+				break
+			}
 		}
 	}
 
-	// Build bill-to address if present.
 	var billToAddress *domain.CustomerAddress
-	if row.DefaultBillingAddressID.Valid {
+	if slices.Contains(incs, "bill_to_address") && row.DefaultBillingAddressID.Valid {
 		billToAddress = buildCustomerAddress(
 			row.DefaultBillingAddressID.String,
 			row.DefaultBillingAddressName.String,
@@ -618,9 +683,8 @@ func (r *customerRepoImpl) Get(ctx context.Context, ownerAccountID, customerAcco
 		)
 	}
 
-	// Build ship-to address if present.
 	var shipToAddress *domain.CustomerAddress
-	if row.DefaultShippingAddressID.Valid {
+	if slices.Contains(incs, "ship_to_address") && row.DefaultShippingAddressID.Valid {
 		shipToAddress = buildCustomerAddress(
 			row.DefaultShippingAddressID.String,
 			row.DefaultShippingAddressName.String,
@@ -640,61 +704,78 @@ func (r *customerRepoImpl) Get(ctx context.Context, ownerAccountID, customerAcco
 	}
 
 	customer := &domain.Customer{
-		ID:                            row.AccountID,
-		Name:                          row.AccountName,
-		Number:                        row.ExternalNumber,
-		Status:                        constants.AccountStatusCode(row.Status.String),
-		IsEdiEnabled:                  row.IsEdiEnabled,
-		IsParentAccount:               row.IsParentAccount,
-		CommissionPolicy:              constants.CommissionPolicy(row.CommissionStatusCode.String),
-		FreightPolicy:                 constants.FreightPolicy(row.FreightStatusCode.String),
-		Note:                          nullStringPtr(row.Notes),
-		Email:                         nullStringPtr(row.Email),
-		Phone:                         nullStringPtr(row.PhoneNumber),
-		URL:                           nullStringPtr(row.WebsiteUrl),
-		CarrierBillingType:            nullCarrierBillingType(row.CarrierBillingType),
-		CarrierBillingAccount:         nullStringPtr(row.CarrierBillingAccount),
-		CreditLimitID:                 nullStringPtr(row.CreditLimitID),
-		CreditLimitValue:              nullStringPtr(row.CreditLimitValue),
-		CreditLimitUnitID:             nullStringPtr(row.CreditLimitUnitID),
-		CreditLimitUnitAbbreviation:   nullStringPtr(row.CreditLimitUnitAbbreviation),
-		CreditLimitUnitName:           nullStringPtr(row.CreditLimitUnitName),
-		CreditLimitUnitType:           nullStringPtr(row.CreditLimitUnitType),
-		AcceptsInvoiceEmails:          acceptsInvoiceEmails,
-		DefaultCarrierID:              nullStringPtr(row.DefaultCarrierID),
-		DefaultCarrierName:            nullStringPtr(row.DefaultCarrierName),
-		DefaultCarrierIsPortalEnabled: nullBoolPtr(row.DefaultCarrierIsPortalEnabled),
-		DefaultServiceLevelID:         nullStringPtr(row.DefaultCarrierOptionID),
-		DefaultServiceLevelName:       nullStringPtr(row.DefaultCarrierOptionName),
-		DefaultPaymentTermID:          nullStringPtr(row.PaymentTermID),
-		DefaultPaymentTermName:        nullStringPtr(row.PaymentTermName),
-		DefaultPaymentTermIsActive:    nullBoolPtr(row.PaymentTermIsActive),
-		DefaultShippingTermID:         nullStringPtr(row.ShippingTermID),
-		DefaultShippingTermName:       nullStringPtr(row.ShippingTermName),
-		DefaultShippingTermType:       nullShippingTermType(row.ShippingTermIsFreightExempt, row.ShippingTermIsCarrierRate),
-		DefaultPriorityID:             nullStringPtr(row.PriorityID),
-		DefaultPriorityCode:           nullPriorityCode(row.PriorityCode),
-		DefaultPriorityName:           nullStringPtr(row.PriorityName),
-		DefaultSalesRepID:             nullStringPtr(row.DefaultSalesRepID),
-		DefaultSalesRepName:           nullStringPtr(row.DefaultSalesRepName),
-		BillToAddressID:               nullStringPtr(row.DefaultBillingAddressID),
-		ShipToAddressID:               nullStringPtr(row.DefaultShippingAddressID),
-		BillToAddress:                 billToAddress,
-		ShipToAddress:                 shipToAddress,
-		TypeGroupID:                   nullStringPtr(row.TypeGroupID),
-		TypeGroupName:                 nullStringPtr(row.TypeGroupName),
-		TypeGroupCommissionPolicy:     nullCommissionPolicy(row.TypeGroupCommissionStatusCode),
-		TypeGroupFreightPolicy:        nullFreightPolicy(row.TypeGroupFreightStatusCode),
-		TypeGroupType:                 nullAccountGroupType(row.TypeGroupTypeCode),
-		PriceGroups:                   priceGroups,
-		ParentAccountID:               nullStringPtr(row.ParentAccountID),
-		ParentAccountName:             nullStringPtr(row.ParentAccountName),
-		ParentAccountNumber:           nullStringPtr(row.ParentAccountNumber),
-		CreatedAt:                     row.CreatedAt,
-		UpdatedAt:                     row.UpdatedAt,
+		ID:                                 row.AccountID,
+		Name:                               row.AccountName,
+		Number:                             row.ExternalNumber,
+		Status:                             constants.AccountStatusCode(row.Status.String),
+		IsEdiEnabled:                       row.IsEdiEnabled,
+		IsParentAccount:                    row.IsParentAccount,
+		CommissionPolicy:                   constants.CommissionPolicy(row.CommissionStatusCode.String),
+		FreightPolicy:                      constants.FreightPolicy(row.FreightStatusCode.String),
+		Note:                               nullStringPtr(row.Notes),
+		Email:                              nullStringPtr(row.Email),
+		Phone:                              nullStringPtr(row.PhoneNumber),
+		URL:                                nullStringPtr(row.WebsiteUrl),
+		CarrierBillingType:                 nullCarrierBillingType(row.CarrierBillingType),
+		CarrierBillingAccount:              nullStringPtr(row.CarrierBillingAccount),
+		CreditLimitID:                      nullStringPtr(row.CreditLimitID),
+		CreditLimitValue:                   nullStringPtr(row.CreditLimitValue),
+		CreditLimitUnitID:                  nullStringPtr(row.CreditLimitUnitID),
+		CreditLimitUnitAbbreviation:        nullStringPtr(row.CreditLimitUnitAbbreviation),
+		CreditLimitUnitName:                nullStringPtr(row.CreditLimitUnitName),
+		CreditLimitUnitType:                nullStringPtr(row.CreditLimitUnitType),
+		AcceptsInvoiceEmails:               acceptsInvoiceEmails,
+		DefaultCarrierID:                   nullStringPtr(row.DefaultCarrierID),
+		DefaultCarrierName:                 nullStringPtr(row.DefaultCarrierName),
+		DefaultCarrierIsPortalEnabled:      nullBoolPtr(row.DefaultCarrierIsPortalEnabled),
+		DefaultCarrierCreatedAt:            nullTimePtr(row.DefaultCarrierCreatedAt),
+		DefaultCarrierUpdatedAt:            nullTimePtr(row.DefaultCarrierUpdatedAt),
+		DefaultServiceLevelID:              nullStringPtr(row.DefaultCarrierOptionID),
+		DefaultServiceLevelName:            nullStringPtr(row.DefaultCarrierOptionName),
+		DefaultServiceLevelToken:           nullStringPtr(row.DefaultCarrierOptionServiceLevelToken),
+		DefaultServiceLevelIsPortalEnabled: nullBoolPtr(row.DefaultCarrierOptionIsPortalEnabled),
+		DefaultServiceLevelCreatedAt:       nullTimePtr(row.DefaultCarrierOptionCreatedAt),
+		DefaultServiceLevelUpdatedAt:       nullTimePtr(row.DefaultCarrierOptionUpdatedAt),
+		DefaultPaymentTermID:               nullStringPtr(row.PaymentTermID),
+		DefaultPaymentTermName:             nullStringPtr(row.PaymentTermName),
+		DefaultPaymentTermIsActive:         nullBoolPtr(row.PaymentTermIsActive),
+		DefaultPaymentTermCreatedAt:        nullTimePtr(row.PaymentTermCreatedAt),
+		DefaultPaymentTermUpdatedAt:        nullTimePtr(row.PaymentTermUpdatedAt),
+		DefaultShippingTermID:              nullStringPtr(row.ShippingTermID),
+		DefaultShippingTermName:            nullStringPtr(row.ShippingTermName),
+		DefaultShippingTermType:            nullShippingTermType(row.ShippingTermIsFreightExempt, row.ShippingTermIsCarrierRate),
+		DefaultShippingTermCreatedAt:       nullTimePtr(row.ShippingTermCreatedAt),
+		DefaultShippingTermUpdatedAt:       nullTimePtr(row.ShippingTermUpdatedAt),
+		DefaultPriorityID:                  nullStringPtr(row.PriorityID),
+		DefaultPriorityCode:                nullPriorityCode(row.PriorityCode),
+		DefaultPriorityName:                nullStringPtr(row.PriorityName),
+		DefaultSalesRepID:                  nullStringPtr(row.DefaultSalesRepID),
+		DefaultSalesRepName:                nullStringPtr(row.DefaultSalesRepName),
+		DefaultSalesRepStatus:              nullAccountUserStatus(row.DefaultSalesRepStatusCode),
+		DefaultSalesRepCreatedAt:           nullTimePtr(row.DefaultSalesRepCreatedAt),
+		DefaultSalesRepUpdatedAt:           nullTimePtr(row.DefaultSalesRepUpdatedAt),
+		BillToAddressID:                    nullStringPtr(row.DefaultBillingAddressID),
+		ShipToAddressID:                    nullStringPtr(row.DefaultShippingAddressID),
+		BillToAddress:                      billToAddress,
+		ShipToAddress:                      shipToAddress,
+		TypeGroupID:                        nullStringPtr(row.TypeGroupID),
+		TypeGroupName:                      nullStringPtr(row.TypeGroupName),
+		TypeGroupCommissionPolicy:          nullCommissionPolicy(row.TypeGroupCommissionStatusCode),
+		TypeGroupFreightPolicy:             nullFreightPolicy(row.TypeGroupFreightStatusCode),
+		TypeGroupType:                      nullAccountGroupType(row.TypeGroupTypeCode),
+		TypeGroupCreatedAt:                 nullTimePtr(row.TypeGroupCreatedAt),
+		TypeGroupUpdatedAt:                 nullTimePtr(row.TypeGroupUpdatedAt),
+		PriceGroups:                        priceGroups,
+		ParentAccountID:                    nullStringPtr(row.ParentAccountID),
+		ParentAccountName:                  nullStringPtr(row.ParentAccountName),
+		ParentAccountNumber:                nullStringPtr(row.ParentAccountNumber),
+		ParentAccountCreatedAt:             nullTimePtr(row.ParentAccountCreatedAt),
+		ParentAccountUpdatedAt:             nullTimePtr(row.ParentAccountUpdatedAt),
+		CreatedAt:                          row.CreatedAt,
+		UpdatedAt:                          row.UpdatedAt,
 	}
 
-	if wantsInclude(includes, "child_accounts") {
+	if wantsInclude(incs, "child_accounts") {
 		childrenByRelation, apiErr := r.fetchChildAccountsByRelationIDs(ctx, ownerAccountID, []string{row.RelationID})
 		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
@@ -706,8 +787,8 @@ func (r *customerRepoImpl) Get(ctx context.Context, ownerAccountID, customerAcco
 }
 
 // wantsInclude returns true if the include key is present in the include list.
-func wantsInclude(includes []string, key string) bool {
-	for _, inc := range includes {
+func wantsInclude(incs []string, key string) bool {
+	for _, inc := range incs {
 		if inc == key {
 			return true
 		}
@@ -739,9 +820,11 @@ func (r *customerRepoImpl) fetchChildAccountsByRelationIDs(ctx context.Context, 
 			continue
 		}
 		byParent[row.ParentRelationID.String] = append(byParent[row.ParentRelationID.String], domain.CustomerChildAccount{
-			ID:     row.AccountID,
-			Name:   row.AccountName,
-			Number: row.ExternalNumber,
+			ID:        row.AccountID,
+			Name:      row.AccountName,
+			Number:    row.ExternalNumber,
+			CreatedAt: row.CreatedAt,
+			UpdatedAt: row.UpdatedAt,
 		})
 	}
 	return byParent, nil
@@ -855,7 +938,7 @@ func (r *customerRepoImpl) Create(ctx context.Context, accountID, relationID, br
 		FreightStatusCode:        gosql.NullString{String: freightStatus, Valid: true},
 		DefaultCarrierID:         toNullString(params.DefaultCarrierID),
 		DefaultCarrierOptionID:   toNullString(params.DefaultServiceLevelID),
-		DefaultSalesRepID:        toNullString(params.DefaultSalesRepUserID),
+		DefaultSalesRepID:        toNullString(params.DefaultSalesRepID),
 		AccountStatusCode:        gosql.NullString{String: statusCode, Valid: true},
 		PaymentTermID:            toNullString(params.DefaultPaymentTermID),
 		AccountGroupID:           toNullString(params.CustomerTypeGroupID),
@@ -905,7 +988,7 @@ func (r *customerRepoImpl) Update(ctx context.Context, relationID string, params
 		FreightStatusCode:        freightStatus,
 		DefaultCarrierID:         stringToNullString(params.DefaultCarrierID),
 		DefaultCarrierOptionID:   stringToNullString(params.DefaultServiceLevelID),
-		DefaultSalesRepID:        stringToNullString(params.DefaultSalesRepUserID),
+		DefaultSalesRepID:        stringToNullString(params.DefaultSalesRepID),
 		AccountStatusCode:        stringToNullString(params.StatusCode),
 		PaymentTermID:            stringToNullString(params.DefaultPaymentTermID),
 		AccountGroupID:           stringToNullString(params.CustomerTypeGroupID),

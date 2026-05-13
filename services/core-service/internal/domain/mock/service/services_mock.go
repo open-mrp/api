@@ -382,18 +382,18 @@ func (mr *MockUnitGroupSvcMockRecorder) DeleteUnitGroupUnit(ctx, params any) *go
 }
 
 // GetUnitGroup mocks base method.
-func (m *MockUnitGroupSvc) GetUnitGroup(ctx context.Context, unitGroupID string) (*domain.UnitGroupFull, *apierror.APIError) {
+func (m *MockUnitGroupSvc) GetUnitGroup(ctx context.Context, params domain.GetUnitGroupParams) (*domain.UnitGroupFull, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetUnitGroup", ctx, unitGroupID)
+	ret := m.ctrl.Call(m, "GetUnitGroup", ctx, params)
 	ret0, _ := ret[0].(*domain.UnitGroupFull)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // GetUnitGroup indicates an expected call of GetUnitGroup.
-func (mr *MockUnitGroupSvcMockRecorder) GetUnitGroup(ctx, unitGroupID any) *gomock.Call {
+func (mr *MockUnitGroupSvcMockRecorder) GetUnitGroup(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUnitGroup", reflect.TypeOf((*MockUnitGroupSvc)(nil).GetUnitGroup), ctx, unitGroupID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUnitGroup", reflect.TypeOf((*MockUnitGroupSvc)(nil).GetUnitGroup), ctx, params)
 }
 
 // GetUnitGroupUnit mocks base method.
@@ -412,18 +412,18 @@ func (mr *MockUnitGroupSvcMockRecorder) GetUnitGroupUnit(ctx, params any) *gomoc
 }
 
 // ListUnitGroupUnits mocks base method.
-func (m *MockUnitGroupSvc) ListUnitGroupUnits(ctx context.Context, unitGroupID string) ([]*domain.UnitGroupUnit, *apierror.APIError) {
+func (m *MockUnitGroupSvc) ListUnitGroupUnits(ctx context.Context, unitGroupID string, includes []string) ([]*domain.UnitGroupUnit, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListUnitGroupUnits", ctx, unitGroupID)
+	ret := m.ctrl.Call(m, "ListUnitGroupUnits", ctx, unitGroupID, includes)
 	ret0, _ := ret[0].([]*domain.UnitGroupUnit)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // ListUnitGroupUnits indicates an expected call of ListUnitGroupUnits.
-func (mr *MockUnitGroupSvcMockRecorder) ListUnitGroupUnits(ctx, unitGroupID any) *gomock.Call {
+func (mr *MockUnitGroupSvcMockRecorder) ListUnitGroupUnits(ctx, unitGroupID, includes any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListUnitGroupUnits", reflect.TypeOf((*MockUnitGroupSvc)(nil).ListUnitGroupUnits), ctx, unitGroupID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListUnitGroupUnits", reflect.TypeOf((*MockUnitGroupSvc)(nil).ListUnitGroupUnits), ctx, unitGroupID, includes)
 }
 
 // ListUnitGroups mocks base method.
@@ -623,18 +623,18 @@ func (mr *MockShippingTermSvcMockRecorder) DeleteShippingTerm(ctx, shippingTermI
 }
 
 // GetShippingTerm mocks base method.
-func (m *MockShippingTermSvc) GetShippingTerm(ctx context.Context, shippingTermID string) (*domain.ShippingTerm, *apierror.APIError) {
+func (m *MockShippingTermSvc) GetShippingTerm(ctx context.Context, params domain.GetShippingTermParams) (*domain.ShippingTerm, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetShippingTerm", ctx, shippingTermID)
+	ret := m.ctrl.Call(m, "GetShippingTerm", ctx, params)
 	ret0, _ := ret[0].(*domain.ShippingTerm)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // GetShippingTerm indicates an expected call of GetShippingTerm.
-func (mr *MockShippingTermSvcMockRecorder) GetShippingTerm(ctx, shippingTermID any) *gomock.Call {
+func (mr *MockShippingTermSvcMockRecorder) GetShippingTerm(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetShippingTerm", reflect.TypeOf((*MockShippingTermSvc)(nil).GetShippingTerm), ctx, shippingTermID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetShippingTerm", reflect.TypeOf((*MockShippingTermSvc)(nil).GetShippingTerm), ctx, params)
 }
 
 // ListShippingTerms mocks base method.
@@ -1276,18 +1276,18 @@ func (mr *MockAccountUserSvcMockRecorder) CreateAccountUser(ctx, params any) *go
 }
 
 // GetAccountUser mocks base method.
-func (m *MockAccountUserSvc) GetAccountUser(ctx context.Context, accountUserID string) (*domain.AccountUserDetail, *apierror.APIError) {
+func (m *MockAccountUserSvc) GetAccountUser(ctx context.Context, accountUserID string, includes []string) (*domain.AccountUserDetail, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetAccountUser", ctx, accountUserID)
+	ret := m.ctrl.Call(m, "GetAccountUser", ctx, accountUserID, includes)
 	ret0, _ := ret[0].(*domain.AccountUserDetail)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // GetAccountUser indicates an expected call of GetAccountUser.
-func (mr *MockAccountUserSvcMockRecorder) GetAccountUser(ctx, accountUserID any) *gomock.Call {
+func (mr *MockAccountUserSvcMockRecorder) GetAccountUser(ctx, accountUserID, includes any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAccountUser", reflect.TypeOf((*MockAccountUserSvc)(nil).GetAccountUser), ctx, accountUserID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAccountUser", reflect.TypeOf((*MockAccountUserSvc)(nil).GetAccountUser), ctx, accountUserID, includes)
 }
 
 // ListAccountUsers mocks base method.
@@ -1306,18 +1306,18 @@ func (mr *MockAccountUserSvcMockRecorder) ListAccountUsers(ctx, params any) *gom
 }
 
 // UpdateAccountUser mocks base method.
-func (m *MockAccountUserSvc) UpdateAccountUser(ctx context.Context, params domain.UpdateAccountUserParams) (*domain.AccountUserDetail, *apierror.APIError) {
+func (m *MockAccountUserSvc) UpdateAccountUser(ctx context.Context, params domain.UpdateAccountUserParams, includes []string) (*domain.AccountUserDetail, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateAccountUser", ctx, params)
+	ret := m.ctrl.Call(m, "UpdateAccountUser", ctx, params, includes)
 	ret0, _ := ret[0].(*domain.AccountUserDetail)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // UpdateAccountUser indicates an expected call of UpdateAccountUser.
-func (mr *MockAccountUserSvcMockRecorder) UpdateAccountUser(ctx, params any) *gomock.Call {
+func (mr *MockAccountUserSvcMockRecorder) UpdateAccountUser(ctx, params, includes any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAccountUser", reflect.TypeOf((*MockAccountUserSvc)(nil).UpdateAccountUser), ctx, params)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAccountUser", reflect.TypeOf((*MockAccountUserSvc)(nil).UpdateAccountUser), ctx, params, includes)
 }
 
 // UpdateAccountUserPassword mocks base method.
@@ -1918,18 +1918,18 @@ func (mr *MockCarrierSvcMockRecorder) DeleteCarrier(ctx, carrierID any) *gomock.
 }
 
 // GetCarrier mocks base method.
-func (m *MockCarrierSvc) GetCarrier(ctx context.Context, carrierID string) (*domain.Carrier, *apierror.APIError) {
+func (m *MockCarrierSvc) GetCarrier(ctx context.Context, params domain.GetCarrierParams) (*domain.Carrier, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetCarrier", ctx, carrierID)
+	ret := m.ctrl.Call(m, "GetCarrier", ctx, params)
 	ret0, _ := ret[0].(*domain.Carrier)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // GetCarrier indicates an expected call of GetCarrier.
-func (mr *MockCarrierSvcMockRecorder) GetCarrier(ctx, carrierID any) *gomock.Call {
+func (mr *MockCarrierSvcMockRecorder) GetCarrier(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCarrier", reflect.TypeOf((*MockCarrierSvc)(nil).GetCarrier), ctx, carrierID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCarrier", reflect.TypeOf((*MockCarrierSvc)(nil).GetCarrier), ctx, params)
 }
 
 // GetOAuthStatus mocks base method.
@@ -2304,18 +2304,18 @@ func (m *MockItemSvc) EXPECT() *MockItemSvcMockRecorder {
 }
 
 // AddItemAttribute mocks base method.
-func (m *MockItemSvc) AddItemAttribute(ctx context.Context, itemID, attributeID string) (*domain.Item, *apierror.APIError) {
+func (m *MockItemSvc) AddItemAttribute(ctx context.Context, itemID, attributeID string, includes []string) (*domain.Item, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddItemAttribute", ctx, itemID, attributeID)
+	ret := m.ctrl.Call(m, "AddItemAttribute", ctx, itemID, attributeID, includes)
 	ret0, _ := ret[0].(*domain.Item)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // AddItemAttribute indicates an expected call of AddItemAttribute.
-func (mr *MockItemSvcMockRecorder) AddItemAttribute(ctx, itemID, attributeID any) *gomock.Call {
+func (mr *MockItemSvcMockRecorder) AddItemAttribute(ctx, itemID, attributeID, includes any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddItemAttribute", reflect.TypeOf((*MockItemSvc)(nil).AddItemAttribute), ctx, itemID, attributeID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddItemAttribute", reflect.TypeOf((*MockItemSvc)(nil).AddItemAttribute), ctx, itemID, attributeID, includes)
 }
 
 // BulkCreateItems mocks base method.
@@ -2349,18 +2349,18 @@ func (mr *MockItemSvcMockRecorder) BulkReconcileItems(ctx, params any) *gomock.C
 }
 
 // ChangeItemCategory mocks base method.
-func (m *MockItemSvc) ChangeItemCategory(ctx context.Context, itemID, categoryID string) (*domain.Item, *apierror.APIError) {
+func (m *MockItemSvc) ChangeItemCategory(ctx context.Context, itemID, categoryID string, includes []string) (*domain.Item, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ChangeItemCategory", ctx, itemID, categoryID)
+	ret := m.ctrl.Call(m, "ChangeItemCategory", ctx, itemID, categoryID, includes)
 	ret0, _ := ret[0].(*domain.Item)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // ChangeItemCategory indicates an expected call of ChangeItemCategory.
-func (mr *MockItemSvcMockRecorder) ChangeItemCategory(ctx, itemID, categoryID any) *gomock.Call {
+func (mr *MockItemSvcMockRecorder) ChangeItemCategory(ctx, itemID, categoryID, includes any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangeItemCategory", reflect.TypeOf((*MockItemSvc)(nil).ChangeItemCategory), ctx, itemID, categoryID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangeItemCategory", reflect.TypeOf((*MockItemSvc)(nil).ChangeItemCategory), ctx, itemID, categoryID, includes)
 }
 
 // ExportItems mocks base method.
@@ -2379,18 +2379,18 @@ func (mr *MockItemSvcMockRecorder) ExportItems(ctx any) *gomock.Call {
 }
 
 // GetItem mocks base method.
-func (m *MockItemSvc) GetItem(ctx context.Context, itemID string) (*domain.Item, *apierror.APIError) {
+func (m *MockItemSvc) GetItem(ctx context.Context, itemID string, includes []string) (*domain.Item, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetItem", ctx, itemID)
+	ret := m.ctrl.Call(m, "GetItem", ctx, itemID, includes)
 	ret0, _ := ret[0].(*domain.Item)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // GetItem indicates an expected call of GetItem.
-func (mr *MockItemSvcMockRecorder) GetItem(ctx, itemID any) *gomock.Call {
+func (mr *MockItemSvcMockRecorder) GetItem(ctx, itemID, includes any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetItem", reflect.TypeOf((*MockItemSvc)(nil).GetItem), ctx, itemID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetItem", reflect.TypeOf((*MockItemSvc)(nil).GetItem), ctx, itemID, includes)
 }
 
 // GetItemCosts mocks base method.
@@ -2469,18 +2469,18 @@ func (mr *MockItemSvcMockRecorder) ListItems(ctx, params any) *gomock.Call {
 }
 
 // RemoveItemAttribute mocks base method.
-func (m *MockItemSvc) RemoveItemAttribute(ctx context.Context, itemID, attributeID string) (*domain.Item, *apierror.APIError) {
+func (m *MockItemSvc) RemoveItemAttribute(ctx context.Context, itemID, attributeID string, includes []string) (*domain.Item, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RemoveItemAttribute", ctx, itemID, attributeID)
+	ret := m.ctrl.Call(m, "RemoveItemAttribute", ctx, itemID, attributeID, includes)
 	ret0, _ := ret[0].(*domain.Item)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // RemoveItemAttribute indicates an expected call of RemoveItemAttribute.
-func (mr *MockItemSvcMockRecorder) RemoveItemAttribute(ctx, itemID, attributeID any) *gomock.Call {
+func (mr *MockItemSvcMockRecorder) RemoveItemAttribute(ctx, itemID, attributeID, includes any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveItemAttribute", reflect.TypeOf((*MockItemSvc)(nil).RemoveItemAttribute), ctx, itemID, attributeID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveItemAttribute", reflect.TypeOf((*MockItemSvc)(nil).RemoveItemAttribute), ctx, itemID, attributeID, includes)
 }
 
 // UpdateItem mocks base method.
@@ -3188,18 +3188,18 @@ func (mr *MockItemCategorySvcMockRecorder) DeleteItemCategory(ctx, itemCategoryI
 }
 
 // GetItemCategory mocks base method.
-func (m *MockItemCategorySvc) GetItemCategory(ctx context.Context, itemCategoryID string) (*domain.ItemCategoryFull, *apierror.APIError) {
+func (m *MockItemCategorySvc) GetItemCategory(ctx context.Context, params domain.GetItemCategoryParams) (*domain.ItemCategoryFull, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetItemCategory", ctx, itemCategoryID)
+	ret := m.ctrl.Call(m, "GetItemCategory", ctx, params)
 	ret0, _ := ret[0].(*domain.ItemCategoryFull)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // GetItemCategory indicates an expected call of GetItemCategory.
-func (mr *MockItemCategorySvcMockRecorder) GetItemCategory(ctx, itemCategoryID any) *gomock.Call {
+func (mr *MockItemCategorySvcMockRecorder) GetItemCategory(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetItemCategory", reflect.TypeOf((*MockItemCategorySvc)(nil).GetItemCategory), ctx, itemCategoryID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetItemCategory", reflect.TypeOf((*MockItemCategorySvc)(nil).GetItemCategory), ctx, params)
 }
 
 // ListItemCategories mocks base method.
@@ -3300,18 +3300,18 @@ func (mr *MockProductLineSvcMockRecorder) DeleteProductLine(ctx, productLineID a
 }
 
 // GetProductLine mocks base method.
-func (m *MockProductLineSvc) GetProductLine(ctx context.Context, productLineID string) (*domain.ProductLineFull, *apierror.APIError) {
+func (m *MockProductLineSvc) GetProductLine(ctx context.Context, params domain.GetProductLineParams) (*domain.ProductLineFull, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetProductLine", ctx, productLineID)
+	ret := m.ctrl.Call(m, "GetProductLine", ctx, params)
 	ret0, _ := ret[0].(*domain.ProductLineFull)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // GetProductLine indicates an expected call of GetProductLine.
-func (mr *MockProductLineSvcMockRecorder) GetProductLine(ctx, productLineID any) *gomock.Call {
+func (mr *MockProductLineSvcMockRecorder) GetProductLine(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProductLine", reflect.TypeOf((*MockProductLineSvc)(nil).GetProductLine), ctx, productLineID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProductLine", reflect.TypeOf((*MockProductLineSvc)(nil).GetProductLine), ctx, params)
 }
 
 // ListProductLines mocks base method.
@@ -5434,18 +5434,18 @@ func (mr *MockPartSvcMockRecorder) DeletePart(ctx, itemID any) *gomock.Call {
 }
 
 // GetPart mocks base method.
-func (m *MockPartSvc) GetPart(ctx context.Context, itemID string) (*domain.Part, *apierror.APIError) {
+func (m *MockPartSvc) GetPart(ctx context.Context, params domain.GetPartParams) (*domain.Part, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetPart", ctx, itemID)
+	ret := m.ctrl.Call(m, "GetPart", ctx, params)
 	ret0, _ := ret[0].(*domain.Part)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // GetPart indicates an expected call of GetPart.
-func (mr *MockPartSvcMockRecorder) GetPart(ctx, itemID any) *gomock.Call {
+func (mr *MockPartSvcMockRecorder) GetPart(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPart", reflect.TypeOf((*MockPartSvc)(nil).GetPart), ctx, itemID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPart", reflect.TypeOf((*MockPartSvc)(nil).GetPart), ctx, params)
 }
 
 // ListParts mocks base method.
@@ -5533,18 +5533,18 @@ func (mr *MockMaterialSvcMockRecorder) DeleteMaterial(ctx, itemID any) *gomock.C
 }
 
 // GetMaterial mocks base method.
-func (m *MockMaterialSvc) GetMaterial(ctx context.Context, itemID string) (*domain.Material, *apierror.APIError) {
+func (m *MockMaterialSvc) GetMaterial(ctx context.Context, params domain.GetMaterialParams) (*domain.Material, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetMaterial", ctx, itemID)
+	ret := m.ctrl.Call(m, "GetMaterial", ctx, params)
 	ret0, _ := ret[0].(*domain.Material)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // GetMaterial indicates an expected call of GetMaterial.
-func (mr *MockMaterialSvcMockRecorder) GetMaterial(ctx, itemID any) *gomock.Call {
+func (mr *MockMaterialSvcMockRecorder) GetMaterial(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMaterial", reflect.TypeOf((*MockMaterialSvc)(nil).GetMaterial), ctx, itemID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMaterial", reflect.TypeOf((*MockMaterialSvc)(nil).GetMaterial), ctx, params)
 }
 
 // ListMaterials mocks base method.
@@ -7014,18 +7014,18 @@ func (mr *MockScanningStationSvcMockRecorder) DeleteScanningStation(ctx, scannin
 }
 
 // GetScanningStation mocks base method.
-func (m *MockScanningStationSvc) GetScanningStation(ctx context.Context, scanningStationID string) (*domain.ScanningStation, *apierror.APIError) {
+func (m *MockScanningStationSvc) GetScanningStation(ctx context.Context, params domain.GetScanningStationParams) (*domain.ScanningStation, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetScanningStation", ctx, scanningStationID)
+	ret := m.ctrl.Call(m, "GetScanningStation", ctx, params)
 	ret0, _ := ret[0].(*domain.ScanningStation)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // GetScanningStation indicates an expected call of GetScanningStation.
-func (mr *MockScanningStationSvcMockRecorder) GetScanningStation(ctx, scanningStationID any) *gomock.Call {
+func (mr *MockScanningStationSvcMockRecorder) GetScanningStation(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetScanningStation", reflect.TypeOf((*MockScanningStationSvc)(nil).GetScanningStation), ctx, scanningStationID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetScanningStation", reflect.TypeOf((*MockScanningStationSvc)(nil).GetScanningStation), ctx, params)
 }
 
 // ListScanningStations mocks base method.
@@ -7255,18 +7255,18 @@ func (mr *MockSupplierSvcMockRecorder) DeleteSupplier(ctx, params any) *gomock.C
 }
 
 // GetSupplier mocks base method.
-func (m *MockSupplierSvc) GetSupplier(ctx context.Context, supplierID string) (*domain.Supplier, *apierror.APIError) {
+func (m *MockSupplierSvc) GetSupplier(ctx context.Context, params domain.GetSupplierParams) (*domain.Supplier, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSupplier", ctx, supplierID)
+	ret := m.ctrl.Call(m, "GetSupplier", ctx, params)
 	ret0, _ := ret[0].(*domain.Supplier)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // GetSupplier indicates an expected call of GetSupplier.
-func (mr *MockSupplierSvcMockRecorder) GetSupplier(ctx, supplierID any) *gomock.Call {
+func (mr *MockSupplierSvcMockRecorder) GetSupplier(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSupplier", reflect.TypeOf((*MockSupplierSvc)(nil).GetSupplier), ctx, supplierID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSupplier", reflect.TypeOf((*MockSupplierSvc)(nil).GetSupplier), ctx, params)
 }
 
 // ListSuppliers mocks base method.
@@ -7958,18 +7958,18 @@ func (mr *MockRoleSvcMockRecorder) DeleteRole(ctx, roleID any) *gomock.Call {
 }
 
 // GetRole mocks base method.
-func (m *MockRoleSvc) GetRole(ctx context.Context, roleID string) (*domain.RoleWithPermissions, *apierror.APIError) {
+func (m *MockRoleSvc) GetRole(ctx context.Context, roleID string, incs []string) (*domain.RoleWithPermissions, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetRole", ctx, roleID)
+	ret := m.ctrl.Call(m, "GetRole", ctx, roleID, incs)
 	ret0, _ := ret[0].(*domain.RoleWithPermissions)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // GetRole indicates an expected call of GetRole.
-func (mr *MockRoleSvcMockRecorder) GetRole(ctx, roleID any) *gomock.Call {
+func (mr *MockRoleSvcMockRecorder) GetRole(ctx, roleID, incs any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRole", reflect.TypeOf((*MockRoleSvc)(nil).GetRole), ctx, roleID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRole", reflect.TypeOf((*MockRoleSvc)(nil).GetRole), ctx, roleID, incs)
 }
 
 // ListRoles mocks base method.

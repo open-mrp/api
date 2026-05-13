@@ -34,6 +34,7 @@ type CreateConsumptionRequest struct {
 	WasteQuantityValue  string                 `protobuf:"bytes,5,opt,name=waste_quantity_value,json=wasteQuantityValue,proto3" json:"waste_quantity_value,omitempty"`
 	WasteQuantityUnitId string                 `protobuf:"bytes,6,opt,name=waste_quantity_unit_id,json=wasteQuantityUnitId,proto3" json:"waste_quantity_unit_id,omitempty"`
 	Instructions        *string                `protobuf:"bytes,7,opt,name=instructions,proto3,oneof" json:"instructions,omitempty"`
+	Includes            []string               `protobuf:"bytes,8,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -117,6 +118,13 @@ func (x *CreateConsumptionRequest) GetInstructions() string {
 	return ""
 }
 
+func (x *CreateConsumptionRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
+}
+
 type CreateConsumptionResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Consumption   *ConsumptionInfo       `protobuf:"bytes,1,opt,name=consumption,proto3" json:"consumption,omitempty"`
@@ -171,6 +179,7 @@ type UpdateConsumptionRequest struct {
 	WasteQuantityValue  *string                `protobuf:"bytes,6,opt,name=waste_quantity_value,json=wasteQuantityValue,proto3,oneof" json:"waste_quantity_value,omitempty"`
 	WasteQuantityUnitId *string                `protobuf:"bytes,7,opt,name=waste_quantity_unit_id,json=wasteQuantityUnitId,proto3,oneof" json:"waste_quantity_unit_id,omitempty"`
 	Instructions        *string                `protobuf:"bytes,8,opt,name=instructions,proto3,oneof" json:"instructions,omitempty"`
+	Includes            []string               `protobuf:"bytes,9,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -259,6 +268,13 @@ func (x *UpdateConsumptionRequest) GetInstructions() string {
 		return *x.Instructions
 	}
 	return ""
+}
+
+func (x *UpdateConsumptionRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
 }
 
 type UpdateConsumptionResponse struct {
@@ -1073,6 +1089,9 @@ type LightScanningStationInfo struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Type          string                 `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1121,12 +1140,37 @@ func (x *LightScanningStationInfo) GetName() string {
 	return ""
 }
 
+func (x *LightScanningStationInfo) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *LightScanningStationInfo) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *LightScanningStationInfo) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
 type LightProductionStepInfo struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name           string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	LevelingFactor *string                `protobuf:"bytes,3,opt,name=leveling_factor,json=levelingFactor,proto3,oneof" json:"leveling_factor,omitempty"`
+	Allowances     *string                `protobuf:"bytes,4,opt,name=allowances,proto3,oneof" json:"allowances,omitempty"`
+	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3,oneof" json:"created_at,omitempty"`
+	UpdatedAt      *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=updated_at,json=updatedAt,proto3,oneof" json:"updated_at,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *LightProductionStepInfo) Reset() {
@@ -1173,22 +1217,52 @@ func (x *LightProductionStepInfo) GetName() string {
 	return ""
 }
 
+func (x *LightProductionStepInfo) GetLevelingFactor() string {
+	if x != nil && x.LevelingFactor != nil {
+		return *x.LevelingFactor
+	}
+	return ""
+}
+
+func (x *LightProductionStepInfo) GetAllowances() string {
+	if x != nil && x.Allowances != nil {
+		return *x.Allowances
+	}
+	return ""
+}
+
+func (x *LightProductionStepInfo) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *LightProductionStepInfo) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
 type ScanningStationInfo struct {
-	state                 protoimpl.MessageState     `protogen:"open.v1"`
-	Id                    string                     `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name                  string                     `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Notes                 *string                    `protobuf:"bytes,3,opt,name=notes,proto3,oneof" json:"notes,omitempty"`
-	Type                  string                     `protobuf:"bytes,4,opt,name=type,proto3" json:"type,omitempty"`
-	LabelSizeCode         *string                    `protobuf:"bytes,5,opt,name=label_size_code,json=labelSizeCode,proto3,oneof" json:"label_size_code,omitempty"`
-	LabelTypeCode         *string                    `protobuf:"bytes,6,opt,name=label_type_code,json=labelTypeCode,proto3,oneof" json:"label_type_code,omitempty"`
-	MaterialCheckRequired bool                       `protobuf:"varint,7,opt,name=material_check_required,json=materialCheckRequired,proto3" json:"material_check_required,omitempty"`
-	DepartmentId          string                     `protobuf:"bytes,8,opt,name=department_id,json=departmentId,proto3" json:"department_id,omitempty"`
-	DepartmentName        string                     `protobuf:"bytes,9,opt,name=department_name,json=departmentName,proto3" json:"department_name,omitempty"`
-	ProductionSteps       []*LightProductionStepInfo `protobuf:"bytes,10,rep,name=production_steps,json=productionSteps,proto3" json:"production_steps,omitempty"`
-	CreatedAt             *timestamppb.Timestamp     `protobuf:"bytes,11,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt             *timestamppb.Timestamp     `protobuf:"bytes,12,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
+	state               protoimpl.MessageState     `protogen:"open.v1"`
+	Id                  string                     `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name                string                     `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Notes               *string                    `protobuf:"bytes,3,opt,name=notes,proto3,oneof" json:"notes,omitempty"`
+	Type                string                     `protobuf:"bytes,4,opt,name=type,proto3" json:"type,omitempty"`
+	LabelSizeCode       *string                    `protobuf:"bytes,5,opt,name=label_size_code,json=labelSizeCode,proto3,oneof" json:"label_size_code,omitempty"`
+	LabelTypeCode       *string                    `protobuf:"bytes,6,opt,name=label_type_code,json=labelTypeCode,proto3,oneof" json:"label_type_code,omitempty"`
+	OperatorRequirement string                     `protobuf:"bytes,7,opt,name=operator_requirement,json=operatorRequirement,proto3" json:"operator_requirement,omitempty"`
+	DepartmentId        string                     `protobuf:"bytes,8,opt,name=department_id,json=departmentId,proto3" json:"department_id,omitempty"`
+	DepartmentName      string                     `protobuf:"bytes,9,opt,name=department_name,json=departmentName,proto3" json:"department_name,omitempty"`
+	DepartmentCreatedAt *timestamppb.Timestamp     `protobuf:"bytes,13,opt,name=department_created_at,json=departmentCreatedAt,proto3,oneof" json:"department_created_at,omitempty"`
+	DepartmentUpdatedAt *timestamppb.Timestamp     `protobuf:"bytes,14,opt,name=department_updated_at,json=departmentUpdatedAt,proto3,oneof" json:"department_updated_at,omitempty"`
+	ProductionSteps     []*LightProductionStepInfo `protobuf:"bytes,10,rep,name=production_steps,json=productionSteps,proto3" json:"production_steps,omitempty"`
+	CreatedAt           *timestamppb.Timestamp     `protobuf:"bytes,11,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt           *timestamppb.Timestamp     `protobuf:"bytes,12,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *ScanningStationInfo) Reset() {
@@ -1263,11 +1337,11 @@ func (x *ScanningStationInfo) GetLabelTypeCode() string {
 	return ""
 }
 
-func (x *ScanningStationInfo) GetMaterialCheckRequired() bool {
+func (x *ScanningStationInfo) GetOperatorRequirement() string {
 	if x != nil {
-		return x.MaterialCheckRequired
+		return x.OperatorRequirement
 	}
-	return false
+	return ""
 }
 
 func (x *ScanningStationInfo) GetDepartmentId() string {
@@ -1282,6 +1356,20 @@ func (x *ScanningStationInfo) GetDepartmentName() string {
 		return x.DepartmentName
 	}
 	return ""
+}
+
+func (x *ScanningStationInfo) GetDepartmentCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.DepartmentCreatedAt
+	}
+	return nil
+}
+
+func (x *ScanningStationInfo) GetDepartmentUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.DepartmentUpdatedAt
+	}
+	return nil
 }
 
 func (x *ScanningStationInfo) GetProductionSteps() []*LightProductionStepInfo {
@@ -1310,6 +1398,7 @@ type ListScanningStationsRequest struct {
 	Cursor        *string                `protobuf:"bytes,1,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
 	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
 	Query         *string                `protobuf:"bytes,3,opt,name=query,proto3,oneof" json:"query,omitempty"`
+	Includes      []string               `protobuf:"bytes,4,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1363,6 +1452,13 @@ func (x *ListScanningStationsRequest) GetQuery() string {
 		return *x.Query
 	}
 	return ""
+}
+
+func (x *ListScanningStationsRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
 }
 
 type ListScanningStationsResponse struct {
@@ -1420,6 +1516,7 @@ func (x *ListScanningStationsResponse) GetPageInfo() *PageInfo {
 type GetScanningStationRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Includes      []string               `protobuf:"bytes,2,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1459,6 +1556,13 @@ func (x *GetScanningStationRequest) GetId() string {
 		return x.Id
 	}
 	return ""
+}
+
+func (x *GetScanningStationRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
 }
 
 type GetScanningStationResponse struct {
@@ -1506,16 +1610,17 @@ func (x *GetScanningStationResponse) GetScanningStation() *ScanningStationInfo {
 }
 
 type CreateScanningStationRequest struct {
-	state                 protoimpl.MessageState `protogen:"open.v1"`
-	Name                  string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Notes                 *string                `protobuf:"bytes,2,opt,name=notes,proto3,oneof" json:"notes,omitempty"`
-	Type                  string                 `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"`
-	MaterialCheckRequired bool                   `protobuf:"varint,4,opt,name=material_check_required,json=materialCheckRequired,proto3" json:"material_check_required,omitempty"`
-	DepartmentId          string                 `protobuf:"bytes,5,opt,name=department_id,json=departmentId,proto3" json:"department_id,omitempty"`
-	LabelSizeCode         *string                `protobuf:"bytes,6,opt,name=label_size_code,json=labelSizeCode,proto3,oneof" json:"label_size_code,omitempty"`
-	LabelTypeCode         *string                `protobuf:"bytes,7,opt,name=label_type_code,json=labelTypeCode,proto3,oneof" json:"label_type_code,omitempty"`
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	Name                string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Notes               *string                `protobuf:"bytes,2,opt,name=notes,proto3,oneof" json:"notes,omitempty"`
+	Type                string                 `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"`
+	OperatorRequirement string                 `protobuf:"bytes,4,opt,name=operator_requirement,json=operatorRequirement,proto3" json:"operator_requirement,omitempty"`
+	DepartmentId        string                 `protobuf:"bytes,5,opt,name=department_id,json=departmentId,proto3" json:"department_id,omitempty"`
+	LabelSizeCode       *string                `protobuf:"bytes,6,opt,name=label_size_code,json=labelSizeCode,proto3,oneof" json:"label_size_code,omitempty"`
+	LabelTypeCode       *string                `protobuf:"bytes,7,opt,name=label_type_code,json=labelTypeCode,proto3,oneof" json:"label_type_code,omitempty"`
+	Includes            []string               `protobuf:"bytes,8,rep,name=includes,proto3" json:"includes,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *CreateScanningStationRequest) Reset() {
@@ -1569,11 +1674,11 @@ func (x *CreateScanningStationRequest) GetType() string {
 	return ""
 }
 
-func (x *CreateScanningStationRequest) GetMaterialCheckRequired() bool {
+func (x *CreateScanningStationRequest) GetOperatorRequirement() string {
 	if x != nil {
-		return x.MaterialCheckRequired
+		return x.OperatorRequirement
 	}
-	return false
+	return ""
 }
 
 func (x *CreateScanningStationRequest) GetDepartmentId() string {
@@ -1595,6 +1700,13 @@ func (x *CreateScanningStationRequest) GetLabelTypeCode() string {
 		return *x.LabelTypeCode
 	}
 	return ""
+}
+
+func (x *CreateScanningStationRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
 }
 
 type CreateScanningStationResponse struct {
@@ -1642,15 +1754,16 @@ func (x *CreateScanningStationResponse) GetScanningStation() *ScanningStationInf
 }
 
 type UpdateScanningStationRequest struct {
-	state                 protoimpl.MessageState `protogen:"open.v1"`
-	Id                    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name                  *string                `protobuf:"bytes,2,opt,name=name,proto3,oneof" json:"name,omitempty"`
-	Notes                 *string                `protobuf:"bytes,3,opt,name=notes,proto3,oneof" json:"notes,omitempty"`
-	LabelSizeCode         *string                `protobuf:"bytes,4,opt,name=label_size_code,json=labelSizeCode,proto3,oneof" json:"label_size_code,omitempty"`
-	LabelTypeCode         *string                `protobuf:"bytes,5,opt,name=label_type_code,json=labelTypeCode,proto3,oneof" json:"label_type_code,omitempty"`
-	MaterialCheckRequired *bool                  `protobuf:"varint,6,opt,name=material_check_required,json=materialCheckRequired,proto3,oneof" json:"material_check_required,omitempty"`
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	Id                  string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name                *string                `protobuf:"bytes,2,opt,name=name,proto3,oneof" json:"name,omitempty"`
+	Notes               *string                `protobuf:"bytes,3,opt,name=notes,proto3,oneof" json:"notes,omitempty"`
+	LabelSizeCode       *string                `protobuf:"bytes,4,opt,name=label_size_code,json=labelSizeCode,proto3,oneof" json:"label_size_code,omitempty"`
+	LabelTypeCode       *string                `protobuf:"bytes,5,opt,name=label_type_code,json=labelTypeCode,proto3,oneof" json:"label_type_code,omitempty"`
+	OperatorRequirement *string                `protobuf:"bytes,6,opt,name=operator_requirement,json=operatorRequirement,proto3,oneof" json:"operator_requirement,omitempty"`
+	Includes            []string               `protobuf:"bytes,7,rep,name=includes,proto3" json:"includes,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *UpdateScanningStationRequest) Reset() {
@@ -1718,11 +1831,18 @@ func (x *UpdateScanningStationRequest) GetLabelTypeCode() string {
 	return ""
 }
 
-func (x *UpdateScanningStationRequest) GetMaterialCheckRequired() bool {
-	if x != nil && x.MaterialCheckRequired != nil {
-		return *x.MaterialCheckRequired
+func (x *UpdateScanningStationRequest) GetOperatorRequirement() string {
+	if x != nil && x.OperatorRequirement != nil {
+		return *x.OperatorRequirement
 	}
-	return false
+	return ""
+}
+
+func (x *UpdateScanningStationRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
 }
 
 type UpdateScanningStationResponse struct {
@@ -2114,6 +2234,7 @@ type ListLocationsRequest struct {
 	Cursor        *string                `protobuf:"bytes,1,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
 	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
 	Query         *string                `protobuf:"bytes,3,opt,name=query,proto3,oneof" json:"query,omitempty"`
+	Includes      []string               `protobuf:"bytes,4,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2167,6 +2288,13 @@ func (x *ListLocationsRequest) GetQuery() string {
 		return *x.Query
 	}
 	return ""
+}
+
+func (x *ListLocationsRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
 }
 
 type ListLocationsResponse struct {
@@ -2224,6 +2352,7 @@ func (x *ListLocationsResponse) GetPageInfo() *PageInfo {
 type GetLocationRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Includes      []string               `protobuf:"bytes,2,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2263,6 +2392,13 @@ func (x *GetLocationRequest) GetId() string {
 		return x.Id
 	}
 	return ""
+}
+
+func (x *GetLocationRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
 }
 
 type GetLocationResponse struct {
@@ -2315,6 +2451,7 @@ type CreateLocationRequest struct {
 	TypeCode      string                 `protobuf:"bytes,2,opt,name=type_code,json=typeCode,proto3" json:"type_code,omitempty"`
 	ParentId      *string                `protobuf:"bytes,3,opt,name=parent_id,json=parentId,proto3,oneof" json:"parent_id,omitempty"`
 	ChildIds      []string               `protobuf:"bytes,4,rep,name=child_ids,json=childIds,proto3" json:"child_ids,omitempty"`
+	Includes      []string               `protobuf:"bytes,5,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2377,6 +2514,13 @@ func (x *CreateLocationRequest) GetChildIds() []string {
 	return nil
 }
 
+func (x *CreateLocationRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
+}
+
 type CreateLocationResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Location      *LocationInfo          `protobuf:"bytes,1,opt,name=location,proto3" json:"location,omitempty"`
@@ -2429,6 +2573,7 @@ type UpdateLocationRequest struct {
 	ParentId       *string                `protobuf:"bytes,4,opt,name=parent_id,json=parentId,proto3,oneof" json:"parent_id,omitempty"`
 	ChildIds       []string               `protobuf:"bytes,6,rep,name=child_ids,json=childIds,proto3" json:"child_ids,omitempty"`
 	UpdateChildren bool                   `protobuf:"varint,7,opt,name=update_children,json=updateChildren,proto3" json:"update_children,omitempty"`
+	Includes       []string               `protobuf:"bytes,8,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -2503,6 +2648,13 @@ func (x *UpdateLocationRequest) GetUpdateChildren() bool {
 		return x.UpdateChildren
 	}
 	return false
+}
+
+func (x *UpdateLocationRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
 }
 
 type UpdateLocationResponse struct {
@@ -3101,6 +3253,7 @@ type ListSuppliersRequest struct {
 	StartDate     *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=start_date,json=startDate,proto3,oneof" json:"start_date,omitempty"`
 	EndDate       *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=end_date,json=endDate,proto3,oneof" json:"end_date,omitempty"`
 	ItemIds       []string               `protobuf:"bytes,6,rep,name=item_ids,json=itemIds,proto3" json:"item_ids,omitempty"`
+	Includes      []string               `protobuf:"bytes,7,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3177,6 +3330,13 @@ func (x *ListSuppliersRequest) GetItemIds() []string {
 	return nil
 }
 
+func (x *ListSuppliersRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
+}
+
 type ListSuppliersResponse struct {
 	state         protoimpl.MessageState  `protogen:"open.v1"`
 	Suppliers     []*SupplierSummaryProto `protobuf:"bytes,1,rep,name=suppliers,proto3" json:"suppliers,omitempty"`
@@ -3232,6 +3392,7 @@ func (x *ListSuppliersResponse) GetPageInfo() *PageInfo {
 type GetSupplierRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Includes      []string               `protobuf:"bytes,2,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3271,6 +3432,13 @@ func (x *GetSupplierRequest) GetId() string {
 		return x.Id
 	}
 	return ""
+}
+
+func (x *GetSupplierRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
 }
 
 type GetSupplierResponse struct {
@@ -3324,6 +3492,7 @@ type CreateSupplierRequest struct {
 	Note          *string                     `protobuf:"bytes,3,opt,name=note,proto3,oneof" json:"note,omitempty"`
 	BillToAddress *CreateSupplierAddressInput `protobuf:"bytes,4,opt,name=bill_to_address,json=billToAddress,proto3,oneof" json:"bill_to_address,omitempty"`
 	ShipToAddress *CreateSupplierAddressInput `protobuf:"bytes,5,opt,name=ship_to_address,json=shipToAddress,proto3,oneof" json:"ship_to_address,omitempty"`
+	Includes      []string                    `protobuf:"bytes,6,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3393,6 +3562,13 @@ func (x *CreateSupplierRequest) GetShipToAddress() *CreateSupplierAddressInput {
 	return nil
 }
 
+func (x *CreateSupplierRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
+}
+
 type CreateSupplierResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Supplier      *SupplierProto         `protobuf:"bytes,1,opt,name=supplier,proto3" json:"supplier,omitempty"`
@@ -3446,6 +3622,7 @@ type UpdateSupplierRequest struct {
 	UpdateNote      bool                   `protobuf:"varint,5,opt,name=update_note,json=updateNote,proto3" json:"update_note,omitempty"`
 	BillToAddressId *string                `protobuf:"bytes,6,opt,name=bill_to_address_id,json=billToAddressId,proto3,oneof" json:"bill_to_address_id,omitempty"`
 	ShipToAddressId *string                `protobuf:"bytes,7,opt,name=ship_to_address_id,json=shipToAddressId,proto3,oneof" json:"ship_to_address_id,omitempty"`
+	Includes        []string               `protobuf:"bytes,8,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -3527,6 +3704,13 @@ func (x *UpdateSupplierRequest) GetShipToAddressId() string {
 		return *x.ShipToAddressId
 	}
 	return ""
+}
+
+func (x *UpdateSupplierRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
 }
 
 type UpdateSupplierResponse struct {
@@ -4966,7 +5150,7 @@ var File_core_core_consumption_proto protoreflect.FileDescriptor
 
 const file_core_core_consumption_proto_rawDesc = "" +
 	"\n" +
-	"\x1bcore/core_consumption.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a core/core_identity_context.proto\x1a\x15core/core_items.proto\"\xd3\x02\n" +
+	"\x1bcore/core_consumption.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a core/core_identity_context.proto\x1a\x15core/core_items.proto\"\xef\x02\n" +
 	"\x18CreateConsumptionRequest\x12,\n" +
 	"\x12production_step_id\x18\x01 \x01(\tR\x10productionStepId\x12\x17\n" +
 	"\aitem_id\x18\x02 \x01(\tR\x06itemId\x12%\n" +
@@ -4974,10 +5158,11 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"\x10quantity_unit_id\x18\x04 \x01(\tR\x0equantityUnitId\x120\n" +
 	"\x14waste_quantity_value\x18\x05 \x01(\tR\x12wasteQuantityValue\x123\n" +
 	"\x16waste_quantity_unit_id\x18\x06 \x01(\tR\x13wasteQuantityUnitId\x12'\n" +
-	"\finstructions\x18\a \x01(\tH\x00R\finstructions\x88\x01\x01B\x0f\n" +
+	"\finstructions\x18\a \x01(\tH\x00R\finstructions\x88\x01\x01\x12\x1a\n" +
+	"\bincludes\x18\b \x03(\tR\bincludesB\x0f\n" +
 	"\r_instructions\"T\n" +
 	"\x19CreateConsumptionResponse\x127\n" +
-	"\vconsumption\x18\x01 \x01(\v2\x15.core.ConsumptionInfoR\vconsumption\"\xe4\x03\n" +
+	"\vconsumption\x18\x01 \x01(\v2\x15.core.ConsumptionInfoR\vconsumption\"\x80\x04\n" +
 	"\x18UpdateConsumptionRequest\x12,\n" +
 	"\x12production_step_id\x18\x01 \x01(\tR\x10productionStepId\x12\x0e\n" +
 	"\x02id\x18\x02 \x01(\tR\x02id\x12\x1c\n" +
@@ -4986,7 +5171,8 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"\x10quantity_unit_id\x18\x05 \x01(\tH\x02R\x0equantityUnitId\x88\x01\x01\x125\n" +
 	"\x14waste_quantity_value\x18\x06 \x01(\tH\x03R\x12wasteQuantityValue\x88\x01\x01\x128\n" +
 	"\x16waste_quantity_unit_id\x18\a \x01(\tH\x04R\x13wasteQuantityUnitId\x88\x01\x01\x12'\n" +
-	"\finstructions\x18\b \x01(\tH\x05R\finstructions\x88\x01\x01B\n" +
+	"\finstructions\x18\b \x01(\tH\x05R\finstructions\x88\x01\x01\x12\x1a\n" +
+	"\bincludes\x18\t \x03(\tR\bincludesB\n" +
 	"\n" +
 	"\b_item_idB\x11\n" +
 	"\x0f_quantity_valueB\x13\n" +
@@ -5101,23 +5287,42 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"\a_lot_idB\r\n" +
 	"\v_lot_numberB\x0e\n" +
 	"\f_accepted_atB\x0e\n" +
-	"\f_rejected_at\">\n" +
+	"\f_rejected_at\"\xc8\x01\n" +
 	"\x18LightScanningStationInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\"=\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
+	"\x04type\x18\x03 \x01(\tR\x04type\x129\n" +
+	"\n" +
+	"created_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"\n" +
+	"updated_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xd1\x02\n" +
 	"\x17LightProductionStepInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\"\xba\x04\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12,\n" +
+	"\x0fleveling_factor\x18\x03 \x01(\tH\x00R\x0elevelingFactor\x88\x01\x01\x12#\n" +
+	"\n" +
+	"allowances\x18\x04 \x01(\tH\x01R\n" +
+	"allowances\x88\x01\x01\x12>\n" +
+	"\n" +
+	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampH\x02R\tcreatedAt\x88\x01\x01\x12>\n" +
+	"\n" +
+	"updated_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampH\x03R\tupdatedAt\x88\x01\x01B\x12\n" +
+	"\x10_leveling_factorB\r\n" +
+	"\v_allowancesB\r\n" +
+	"\v_created_atB\r\n" +
+	"\v_updated_at\"\x93\x06\n" +
 	"\x13ScanningStationInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x19\n" +
 	"\x05notes\x18\x03 \x01(\tH\x00R\x05notes\x88\x01\x01\x12\x12\n" +
 	"\x04type\x18\x04 \x01(\tR\x04type\x12+\n" +
 	"\x0flabel_size_code\x18\x05 \x01(\tH\x01R\rlabelSizeCode\x88\x01\x01\x12+\n" +
-	"\x0flabel_type_code\x18\x06 \x01(\tH\x02R\rlabelTypeCode\x88\x01\x01\x126\n" +
-	"\x17material_check_required\x18\a \x01(\bR\x15materialCheckRequired\x12#\n" +
+	"\x0flabel_type_code\x18\x06 \x01(\tH\x02R\rlabelTypeCode\x88\x01\x01\x121\n" +
+	"\x14operator_requirement\x18\a \x01(\tR\x13operatorRequirement\x12#\n" +
 	"\rdepartment_id\x18\b \x01(\tR\fdepartmentId\x12'\n" +
-	"\x0fdepartment_name\x18\t \x01(\tR\x0edepartmentName\x12H\n" +
+	"\x0fdepartment_name\x18\t \x01(\tR\x0edepartmentName\x12S\n" +
+	"\x15department_created_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampH\x03R\x13departmentCreatedAt\x88\x01\x01\x12S\n" +
+	"\x15department_updated_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampH\x04R\x13departmentUpdatedAt\x88\x01\x01\x12H\n" +
 	"\x10production_steps\x18\n" +
 	" \x03(\v2\x1d.core.LightProductionStepInfoR\x0fproductionSteps\x129\n" +
 	"\n" +
@@ -5126,45 +5331,51 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"updated_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\b\n" +
 	"\x06_notesB\x12\n" +
 	"\x10_label_size_codeB\x12\n" +
-	"\x10_label_type_code\"\x80\x01\n" +
+	"\x10_label_type_codeB\x18\n" +
+	"\x16_department_created_atB\x18\n" +
+	"\x16_department_updated_at\"\x9c\x01\n" +
 	"\x1bListScanningStationsRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x19\n" +
-	"\x05query\x18\x03 \x01(\tH\x01R\x05query\x88\x01\x01B\t\n" +
+	"\x05query\x18\x03 \x01(\tH\x01R\x05query\x88\x01\x01\x12\x1a\n" +
+	"\bincludes\x18\x04 \x03(\tR\bincludesB\t\n" +
 	"\a_cursorB\b\n" +
 	"\x06_query\"\x93\x01\n" +
 	"\x1cListScanningStationsResponse\x12F\n" +
 	"\x11scanning_stations\x18\x01 \x03(\v2\x19.core.ScanningStationInfoR\x10scanningStations\x12+\n" +
-	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"+\n" +
+	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"G\n" +
 	"\x19GetScanningStationRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"b\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
+	"\bincludes\x18\x02 \x03(\tR\bincludes\"b\n" +
 	"\x1aGetScanningStationResponse\x12D\n" +
-	"\x10scanning_station\x18\x01 \x01(\v2\x19.core.ScanningStationInfoR\x0fscanningStation\"\xca\x02\n" +
+	"\x10scanning_station\x18\x01 \x01(\v2\x19.core.ScanningStationInfoR\x0fscanningStation\"\xe1\x02\n" +
 	"\x1cCreateScanningStationRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x19\n" +
 	"\x05notes\x18\x02 \x01(\tH\x00R\x05notes\x88\x01\x01\x12\x12\n" +
-	"\x04type\x18\x03 \x01(\tR\x04type\x126\n" +
-	"\x17material_check_required\x18\x04 \x01(\bR\x15materialCheckRequired\x12#\n" +
+	"\x04type\x18\x03 \x01(\tR\x04type\x121\n" +
+	"\x14operator_requirement\x18\x04 \x01(\tR\x13operatorRequirement\x12#\n" +
 	"\rdepartment_id\x18\x05 \x01(\tR\fdepartmentId\x12+\n" +
 	"\x0flabel_size_code\x18\x06 \x01(\tH\x01R\rlabelSizeCode\x88\x01\x01\x12+\n" +
-	"\x0flabel_type_code\x18\a \x01(\tH\x02R\rlabelTypeCode\x88\x01\x01B\b\n" +
+	"\x0flabel_type_code\x18\a \x01(\tH\x02R\rlabelTypeCode\x88\x01\x01\x12\x1a\n" +
+	"\bincludes\x18\b \x03(\tR\bincludesB\b\n" +
 	"\x06_notesB\x12\n" +
 	"\x10_label_size_codeB\x12\n" +
 	"\x10_label_type_code\"e\n" +
 	"\x1dCreateScanningStationResponse\x12D\n" +
-	"\x10scanning_station\x18\x01 \x01(\v2\x19.core.ScanningStationInfoR\x0fscanningStation\"\xd0\x02\n" +
+	"\x10scanning_station\x18\x01 \x01(\v2\x19.core.ScanningStationInfoR\x0fscanningStation\"\xe4\x02\n" +
 	"\x1cUpdateScanningStationRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x19\n" +
 	"\x05notes\x18\x03 \x01(\tH\x01R\x05notes\x88\x01\x01\x12+\n" +
 	"\x0flabel_size_code\x18\x04 \x01(\tH\x02R\rlabelSizeCode\x88\x01\x01\x12+\n" +
-	"\x0flabel_type_code\x18\x05 \x01(\tH\x03R\rlabelTypeCode\x88\x01\x01\x12;\n" +
-	"\x17material_check_required\x18\x06 \x01(\bH\x04R\x15materialCheckRequired\x88\x01\x01B\a\n" +
+	"\x0flabel_type_code\x18\x05 \x01(\tH\x03R\rlabelTypeCode\x88\x01\x01\x126\n" +
+	"\x14operator_requirement\x18\x06 \x01(\tH\x04R\x13operatorRequirement\x88\x01\x01\x12\x1a\n" +
+	"\bincludes\x18\a \x03(\tR\bincludesB\a\n" +
 	"\x05_nameB\b\n" +
 	"\x06_notesB\x12\n" +
 	"\x10_label_size_codeB\x12\n" +
-	"\x10_label_type_codeB\x1a\n" +
-	"\x18_material_check_required\"e\n" +
+	"\x10_label_type_codeB\x17\n" +
+	"\x15_operator_requirement\"e\n" +
 	"\x1dUpdateScanningStationResponse\x12D\n" +
 	"\x10scanning_station\x18\x01 \x01(\v2\x19.core.ScanningStationInfoR\x0fscanningStation\".\n" +
 	"\x1cDeleteScanningStationRequest\x12\x0e\n" +
@@ -5201,36 +5412,40 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"y\n" +
+	"updated_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\x95\x01\n" +
 	"\x14ListLocationsRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x19\n" +
-	"\x05query\x18\x03 \x01(\tH\x01R\x05query\x88\x01\x01B\t\n" +
+	"\x05query\x18\x03 \x01(\tH\x01R\x05query\x88\x01\x01\x12\x1a\n" +
+	"\bincludes\x18\x04 \x03(\tR\bincludesB\t\n" +
 	"\a_cursorB\b\n" +
 	"\x06_query\"v\n" +
 	"\x15ListLocationsResponse\x120\n" +
 	"\tlocations\x18\x01 \x03(\v2\x12.core.LocationInfoR\tlocations\x12+\n" +
-	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"$\n" +
+	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"@\n" +
 	"\x12GetLocationRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"E\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
+	"\bincludes\x18\x02 \x03(\tR\bincludes\"E\n" +
 	"\x13GetLocationResponse\x12.\n" +
-	"\blocation\x18\x01 \x01(\v2\x12.core.LocationInfoR\blocation\"\x95\x01\n" +
+	"\blocation\x18\x01 \x01(\v2\x12.core.LocationInfoR\blocation\"\xb1\x01\n" +
 	"\x15CreateLocationRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1b\n" +
 	"\ttype_code\x18\x02 \x01(\tR\btypeCode\x12 \n" +
 	"\tparent_id\x18\x03 \x01(\tH\x00R\bparentId\x88\x01\x01\x12\x1b\n" +
-	"\tchild_ids\x18\x04 \x03(\tR\bchildIdsB\f\n" +
+	"\tchild_ids\x18\x04 \x03(\tR\bchildIds\x12\x1a\n" +
+	"\bincludes\x18\x05 \x03(\tR\bincludesB\f\n" +
 	"\n" +
 	"_parent_id\"H\n" +
 	"\x16CreateLocationResponse\x12.\n" +
-	"\blocation\x18\x01 \x01(\v2\x12.core.LocationInfoR\blocation\"\xef\x01\n" +
+	"\blocation\x18\x01 \x01(\v2\x12.core.LocationInfoR\blocation\"\x8b\x02\n" +
 	"\x15UpdateLocationRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12 \n" +
 	"\ttype_code\x18\x03 \x01(\tH\x01R\btypeCode\x88\x01\x01\x12 \n" +
 	"\tparent_id\x18\x04 \x01(\tH\x02R\bparentId\x88\x01\x01\x12\x1b\n" +
 	"\tchild_ids\x18\x06 \x03(\tR\bchildIds\x12'\n" +
-	"\x0fupdate_children\x18\a \x01(\bR\x0eupdateChildrenB\a\n" +
+	"\x0fupdate_children\x18\a \x01(\bR\x0eupdateChildren\x12\x1a\n" +
+	"\bincludes\x18\b \x03(\tR\bincludesB\a\n" +
 	"\x05_nameB\f\n" +
 	"\n" +
 	"_type_codeB\f\n" +
@@ -5297,7 +5512,7 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"\x0e_street_line_2B\v\n" +
 	"\t_localityB\b\n" +
 	"\x06_stateB\x0e\n" +
-	"\f_postal_code\"\xac\x02\n" +
+	"\f_postal_code\"\xc8\x02\n" +
 	"\x14ListSuppliersRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x19\n" +
@@ -5305,29 +5520,32 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"\n" +
 	"start_date\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampH\x02R\tstartDate\x88\x01\x01\x12:\n" +
 	"\bend_date\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampH\x03R\aendDate\x88\x01\x01\x12\x19\n" +
-	"\bitem_ids\x18\x06 \x03(\tR\aitemIdsB\t\n" +
+	"\bitem_ids\x18\x06 \x03(\tR\aitemIds\x12\x1a\n" +
+	"\bincludes\x18\a \x03(\tR\bincludesB\t\n" +
 	"\a_cursorB\b\n" +
 	"\x06_queryB\r\n" +
 	"\v_start_dateB\v\n" +
 	"\t_end_date\"~\n" +
 	"\x15ListSuppliersResponse\x128\n" +
 	"\tsuppliers\x18\x01 \x03(\v2\x1a.core.SupplierSummaryProtoR\tsuppliers\x12+\n" +
-	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"$\n" +
+	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"@\n" +
 	"\x12GetSupplierRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"F\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
+	"\bincludes\x18\x02 \x03(\tR\bincludes\"F\n" +
 	"\x13GetSupplierResponse\x12/\n" +
-	"\bsupplier\x18\x01 \x01(\v2\x13.core.SupplierProtoR\bsupplier\"\xab\x02\n" +
+	"\bsupplier\x18\x01 \x01(\v2\x13.core.SupplierProtoR\bsupplier\"\xc7\x02\n" +
 	"\x15CreateSupplierRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x12\x17\n" +
 	"\x04note\x18\x03 \x01(\tH\x00R\x04note\x88\x01\x01\x12M\n" +
 	"\x0fbill_to_address\x18\x04 \x01(\v2 .core.CreateSupplierAddressInputH\x01R\rbillToAddress\x88\x01\x01\x12M\n" +
-	"\x0fship_to_address\x18\x05 \x01(\v2 .core.CreateSupplierAddressInputH\x02R\rshipToAddress\x88\x01\x01B\a\n" +
+	"\x0fship_to_address\x18\x05 \x01(\v2 .core.CreateSupplierAddressInputH\x02R\rshipToAddress\x88\x01\x01\x12\x1a\n" +
+	"\bincludes\x18\x06 \x03(\tR\bincludesB\a\n" +
 	"\x05_noteB\x12\n" +
 	"\x10_bill_to_addressB\x12\n" +
 	"\x10_ship_to_address\"I\n" +
 	"\x16CreateSupplierResponse\x12/\n" +
-	"\bsupplier\x18\x01 \x01(\v2\x13.core.SupplierProtoR\bsupplier\"\xc6\x02\n" +
+	"\bsupplier\x18\x01 \x01(\v2\x13.core.SupplierProtoR\bsupplier\"\xe2\x02\n" +
 	"\x15UpdateSupplierRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x1b\n" +
@@ -5336,7 +5554,8 @@ const file_core_core_consumption_proto_rawDesc = "" +
 	"\vupdate_note\x18\x05 \x01(\bR\n" +
 	"updateNote\x120\n" +
 	"\x12bill_to_address_id\x18\x06 \x01(\tH\x03R\x0fbillToAddressId\x88\x01\x01\x120\n" +
-	"\x12ship_to_address_id\x18\a \x01(\tH\x04R\x0fshipToAddressId\x88\x01\x01B\a\n" +
+	"\x12ship_to_address_id\x18\a \x01(\tH\x04R\x0fshipToAddressId\x88\x01\x01\x12\x1a\n" +
+	"\bincludes\x18\b \x03(\tR\bincludesB\a\n" +
 	"\x05_nameB\t\n" +
 	"\a_numberB\a\n" +
 	"\x05_noteB\x15\n" +
@@ -5583,65 +5802,71 @@ var file_core_core_consumption_proto_depIdxs = []int32{
 	78, // 18: core.DeliveryLineInfo.rejected_at:type_name -> google.protobuf.Timestamp
 	78, // 19: core.DeliveryLineInfo.created_at:type_name -> google.protobuf.Timestamp
 	78, // 20: core.DeliveryLineInfo.updated_at:type_name -> google.protobuf.Timestamp
-	14, // 21: core.ScanningStationInfo.production_steps:type_name -> core.LightProductionStepInfo
-	78, // 22: core.ScanningStationInfo.created_at:type_name -> google.protobuf.Timestamp
-	78, // 23: core.ScanningStationInfo.updated_at:type_name -> google.protobuf.Timestamp
-	15, // 24: core.ListScanningStationsResponse.scanning_stations:type_name -> core.ScanningStationInfo
-	79, // 25: core.ListScanningStationsResponse.page_info:type_name -> core.PageInfo
-	15, // 26: core.GetScanningStationResponse.scanning_station:type_name -> core.ScanningStationInfo
-	15, // 27: core.CreateScanningStationResponse.scanning_station:type_name -> core.ScanningStationInfo
-	15, // 28: core.UpdateScanningStationResponse.scanning_station:type_name -> core.ScanningStationInfo
-	26, // 29: core.LocationInfo.children:type_name -> core.LocationChildInfo
-	78, // 30: core.LocationInfo.created_at:type_name -> google.protobuf.Timestamp
-	78, // 31: core.LocationInfo.updated_at:type_name -> google.protobuf.Timestamp
-	78, // 32: core.LocationTypeInfo.created_at:type_name -> google.protobuf.Timestamp
-	78, // 33: core.LocationTypeInfo.updated_at:type_name -> google.protobuf.Timestamp
-	27, // 34: core.ListLocationsResponse.locations:type_name -> core.LocationInfo
-	79, // 35: core.ListLocationsResponse.page_info:type_name -> core.PageInfo
-	27, // 36: core.GetLocationResponse.location:type_name -> core.LocationInfo
-	27, // 37: core.CreateLocationResponse.location:type_name -> core.LocationInfo
-	27, // 38: core.UpdateLocationResponse.location:type_name -> core.LocationInfo
-	28, // 39: core.ListLocationTypesResponse.location_types:type_name -> core.LocationTypeInfo
-	79, // 40: core.ListLocationTypesResponse.page_info:type_name -> core.PageInfo
-	28, // 41: core.GetLocationTypeResponse.location_type:type_name -> core.LocationTypeInfo
-	78, // 42: core.SupplierSummaryProto.created_at:type_name -> google.protobuf.Timestamp
-	80, // 43: core.SupplierProto.bill_to_address:type_name -> core.CustomerAddressProto
-	80, // 44: core.SupplierProto.ship_to_address:type_name -> core.CustomerAddressProto
-	78, // 45: core.SupplierProto.created_at:type_name -> google.protobuf.Timestamp
-	78, // 46: core.SupplierProto.updated_at:type_name -> google.protobuf.Timestamp
-	78, // 47: core.ListSuppliersRequest.start_date:type_name -> google.protobuf.Timestamp
-	78, // 48: core.ListSuppliersRequest.end_date:type_name -> google.protobuf.Timestamp
-	42, // 49: core.ListSuppliersResponse.suppliers:type_name -> core.SupplierSummaryProto
-	79, // 50: core.ListSuppliersResponse.page_info:type_name -> core.PageInfo
-	43, // 51: core.GetSupplierResponse.supplier:type_name -> core.SupplierProto
-	44, // 52: core.CreateSupplierRequest.bill_to_address:type_name -> core.CreateSupplierAddressInput
-	44, // 53: core.CreateSupplierRequest.ship_to_address:type_name -> core.CreateSupplierAddressInput
-	43, // 54: core.CreateSupplierResponse.supplier:type_name -> core.SupplierProto
-	43, // 55: core.UpdateSupplierResponse.supplier:type_name -> core.SupplierProto
-	43, // 56: core.DeleteSupplierResponse.supplier:type_name -> core.SupplierProto
-	78, // 57: core.SysPropertyInfo.created_at:type_name -> google.protobuf.Timestamp
-	78, // 58: core.SysPropertyInfo.updated_at:type_name -> google.protobuf.Timestamp
-	56, // 59: core.ListSysPropertiesResponse.sys_properties:type_name -> core.SysPropertyInfo
-	79, // 60: core.ListSysPropertiesResponse.page_info:type_name -> core.PageInfo
-	56, // 61: core.GetSysPropertyResponse.sys_property:type_name -> core.SysPropertyInfo
-	56, // 62: core.UpdateSysPropertyResponse.sys_property:type_name -> core.SysPropertyInfo
-	78, // 63: core.TenancyRoleProto.created_at:type_name -> google.protobuf.Timestamp
-	78, // 64: core.TenancyRoleProto.updated_at:type_name -> google.protobuf.Timestamp
-	66, // 65: core.TenancyAccountPlanProto.limits:type_name -> core.TenancyAccountPlanLimitProto
-	76, // 66: core.TenancyAccountPlanProto.features:type_name -> core.TenancyAccountPlanProto.FeaturesEntry
-	65, // 67: core.TenancyCurrentAccountProto.role:type_name -> core.TenancyRoleProto
-	67, // 68: core.TenancyCurrentAccountProto.account_plan:type_name -> core.TenancyAccountPlanProto
-	78, // 69: core.TenancyPendingRegistrationProto.created_at:type_name -> google.protobuf.Timestamp
-	68, // 70: core.GetTenancyResponse.current_account:type_name -> core.TenancyCurrentAccountProto
-	69, // 71: core.GetTenancyResponse.owner_account:type_name -> core.TenancyAccountSummaryProto
-	69, // 72: core.GetTenancyResponse.sandboxes:type_name -> core.TenancyAccountSummaryProto
-	70, // 73: core.GetTenancyResponse.other_accounts:type_name -> core.TenancyOtherAccountProto
-	71, // 74: core.GetTenancyResponse.pending_registration:type_name -> core.TenancyPendingRegistrationProto
-	75, // [75:75] is the sub-list for method output_type
-	75, // [75:75] is the sub-list for method input_type
-	75, // [75:75] is the sub-list for extension type_name
-	75, // [75:75] is the sub-list for extension extendee
-	0,  // [0:75] is the sub-list for field type_name
+	78, // 21: core.LightScanningStationInfo.created_at:type_name -> google.protobuf.Timestamp
+	78, // 22: core.LightScanningStationInfo.updated_at:type_name -> google.protobuf.Timestamp
+	78, // 23: core.LightProductionStepInfo.created_at:type_name -> google.protobuf.Timestamp
+	78, // 24: core.LightProductionStepInfo.updated_at:type_name -> google.protobuf.Timestamp
+	78, // 25: core.ScanningStationInfo.department_created_at:type_name -> google.protobuf.Timestamp
+	78, // 26: core.ScanningStationInfo.department_updated_at:type_name -> google.protobuf.Timestamp
+	14, // 27: core.ScanningStationInfo.production_steps:type_name -> core.LightProductionStepInfo
+	78, // 28: core.ScanningStationInfo.created_at:type_name -> google.protobuf.Timestamp
+	78, // 29: core.ScanningStationInfo.updated_at:type_name -> google.protobuf.Timestamp
+	15, // 30: core.ListScanningStationsResponse.scanning_stations:type_name -> core.ScanningStationInfo
+	79, // 31: core.ListScanningStationsResponse.page_info:type_name -> core.PageInfo
+	15, // 32: core.GetScanningStationResponse.scanning_station:type_name -> core.ScanningStationInfo
+	15, // 33: core.CreateScanningStationResponse.scanning_station:type_name -> core.ScanningStationInfo
+	15, // 34: core.UpdateScanningStationResponse.scanning_station:type_name -> core.ScanningStationInfo
+	26, // 35: core.LocationInfo.children:type_name -> core.LocationChildInfo
+	78, // 36: core.LocationInfo.created_at:type_name -> google.protobuf.Timestamp
+	78, // 37: core.LocationInfo.updated_at:type_name -> google.protobuf.Timestamp
+	78, // 38: core.LocationTypeInfo.created_at:type_name -> google.protobuf.Timestamp
+	78, // 39: core.LocationTypeInfo.updated_at:type_name -> google.protobuf.Timestamp
+	27, // 40: core.ListLocationsResponse.locations:type_name -> core.LocationInfo
+	79, // 41: core.ListLocationsResponse.page_info:type_name -> core.PageInfo
+	27, // 42: core.GetLocationResponse.location:type_name -> core.LocationInfo
+	27, // 43: core.CreateLocationResponse.location:type_name -> core.LocationInfo
+	27, // 44: core.UpdateLocationResponse.location:type_name -> core.LocationInfo
+	28, // 45: core.ListLocationTypesResponse.location_types:type_name -> core.LocationTypeInfo
+	79, // 46: core.ListLocationTypesResponse.page_info:type_name -> core.PageInfo
+	28, // 47: core.GetLocationTypeResponse.location_type:type_name -> core.LocationTypeInfo
+	78, // 48: core.SupplierSummaryProto.created_at:type_name -> google.protobuf.Timestamp
+	80, // 49: core.SupplierProto.bill_to_address:type_name -> core.CustomerAddressProto
+	80, // 50: core.SupplierProto.ship_to_address:type_name -> core.CustomerAddressProto
+	78, // 51: core.SupplierProto.created_at:type_name -> google.protobuf.Timestamp
+	78, // 52: core.SupplierProto.updated_at:type_name -> google.protobuf.Timestamp
+	78, // 53: core.ListSuppliersRequest.start_date:type_name -> google.protobuf.Timestamp
+	78, // 54: core.ListSuppliersRequest.end_date:type_name -> google.protobuf.Timestamp
+	42, // 55: core.ListSuppliersResponse.suppliers:type_name -> core.SupplierSummaryProto
+	79, // 56: core.ListSuppliersResponse.page_info:type_name -> core.PageInfo
+	43, // 57: core.GetSupplierResponse.supplier:type_name -> core.SupplierProto
+	44, // 58: core.CreateSupplierRequest.bill_to_address:type_name -> core.CreateSupplierAddressInput
+	44, // 59: core.CreateSupplierRequest.ship_to_address:type_name -> core.CreateSupplierAddressInput
+	43, // 60: core.CreateSupplierResponse.supplier:type_name -> core.SupplierProto
+	43, // 61: core.UpdateSupplierResponse.supplier:type_name -> core.SupplierProto
+	43, // 62: core.DeleteSupplierResponse.supplier:type_name -> core.SupplierProto
+	78, // 63: core.SysPropertyInfo.created_at:type_name -> google.protobuf.Timestamp
+	78, // 64: core.SysPropertyInfo.updated_at:type_name -> google.protobuf.Timestamp
+	56, // 65: core.ListSysPropertiesResponse.sys_properties:type_name -> core.SysPropertyInfo
+	79, // 66: core.ListSysPropertiesResponse.page_info:type_name -> core.PageInfo
+	56, // 67: core.GetSysPropertyResponse.sys_property:type_name -> core.SysPropertyInfo
+	56, // 68: core.UpdateSysPropertyResponse.sys_property:type_name -> core.SysPropertyInfo
+	78, // 69: core.TenancyRoleProto.created_at:type_name -> google.protobuf.Timestamp
+	78, // 70: core.TenancyRoleProto.updated_at:type_name -> google.protobuf.Timestamp
+	66, // 71: core.TenancyAccountPlanProto.limits:type_name -> core.TenancyAccountPlanLimitProto
+	76, // 72: core.TenancyAccountPlanProto.features:type_name -> core.TenancyAccountPlanProto.FeaturesEntry
+	65, // 73: core.TenancyCurrentAccountProto.role:type_name -> core.TenancyRoleProto
+	67, // 74: core.TenancyCurrentAccountProto.account_plan:type_name -> core.TenancyAccountPlanProto
+	78, // 75: core.TenancyPendingRegistrationProto.created_at:type_name -> google.protobuf.Timestamp
+	68, // 76: core.GetTenancyResponse.current_account:type_name -> core.TenancyCurrentAccountProto
+	69, // 77: core.GetTenancyResponse.owner_account:type_name -> core.TenancyAccountSummaryProto
+	69, // 78: core.GetTenancyResponse.sandboxes:type_name -> core.TenancyAccountSummaryProto
+	70, // 79: core.GetTenancyResponse.other_accounts:type_name -> core.TenancyOtherAccountProto
+	71, // 80: core.GetTenancyResponse.pending_registration:type_name -> core.TenancyPendingRegistrationProto
+	81, // [81:81] is the sub-list for method output_type
+	81, // [81:81] is the sub-list for method input_type
+	81, // [81:81] is the sub-list for extension type_name
+	81, // [81:81] is the sub-list for extension extendee
+	0,  // [0:81] is the sub-list for field type_name
 }
 
 func init() { file_core_core_consumption_proto_init() }
@@ -5657,6 +5882,7 @@ func file_core_core_consumption_proto_init() {
 	file_core_core_consumption_proto_msgTypes[10].OneofWrappers = []any{}
 	file_core_core_consumption_proto_msgTypes[11].OneofWrappers = []any{}
 	file_core_core_consumption_proto_msgTypes[12].OneofWrappers = []any{}
+	file_core_core_consumption_proto_msgTypes[14].OneofWrappers = []any{}
 	file_core_core_consumption_proto_msgTypes[15].OneofWrappers = []any{}
 	file_core_core_consumption_proto_msgTypes[16].OneofWrappers = []any{}
 	file_core_core_consumption_proto_msgTypes[20].OneofWrappers = []any{}

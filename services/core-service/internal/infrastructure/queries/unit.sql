@@ -97,6 +97,23 @@ FROM unit
 WHERE unit.id = sqlc.arg('id')
 AND (unit.account_id = sqlc.arg('account_id') OR unit.account_id IS NULL);
 
+-- name: GetUnitsByIDs :many
+SELECT
+    unit.id,
+    unit.name,
+    unit.abbreviation,
+    unit.unit_dimension_code,
+    unit.ratio_numerator,
+    unit.ratio_denominator,
+    unit.offset_numerator,
+    unit.offset_denominator,
+    unit.is_base_unit,
+    unit.account_id,
+    unit.created_at,
+    unit.updated_at
+FROM unit
+WHERE unit.id IN (sqlc.slice('ids'));
+
 -- name: InsertUnit :exec
 INSERT INTO unit (
     id,

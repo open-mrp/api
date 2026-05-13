@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/augno/api/shared/appctx"
+	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/lease"
 )
 
@@ -17,6 +18,9 @@ type InboxPurgerConfig struct {
 	// ServiceName (required) identifies which service owns this purger. It's
 	// included in the lease name so each service scopes its purger independently.
 	ServiceName string
+
+	// PlatformMode (optional) When test, default PurgeInterval is shortened (see WithDefaults).
+	PlatformMode constants.PlatformMode
 
 	// RetentionHours (optional; default: 168 i.e. 7 days) is how long processed inbox
 	// records are kept before the purge loop deletes them.
@@ -41,10 +45,20 @@ func (c *InboxPurgerConfig) WithDefaults() *InboxPurgerConfig {
 		c = &InboxPurgerConfig{}
 	}
 
+	purgeInterval := c.PurgeInterval
+	if purgeInterval == 0 {
+		if c.PlatformMode.IsTest() {
+			purgeInterval = 1 * time.Minute
+		} else {
+			purgeInterval = 1 * time.Hour
+		}
+	}
+
 	return &InboxPurgerConfig{
 		ServiceName:    c.ServiceName,
+		PlatformMode:   c.PlatformMode,
 		RetentionHours: cmp.Or(c.RetentionHours, 168), // 7 days
-		PurgeInterval:  cmp.Or(c.PurgeInterval, 1*time.Hour),
+		PurgeInterval:  purgeInterval,
 		BatchSize:      int32(cmp.Or(int(c.BatchSize), 1000)), // #nosec G115 - small config value
 		LeaseTTL:       cmp.Or(c.LeaseTTL, 5*time.Minute),
 	}

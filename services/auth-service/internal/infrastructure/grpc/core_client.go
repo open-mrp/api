@@ -92,7 +92,7 @@ func (c *AuthCoreClient) GetUserAccountAccess(ctx context.Context, userID, accou
 		AccountUserID: resp.Access.AccountUserId,
 		AccountID:     resp.Access.AccountId,
 		RoleID:        resp.Access.RoleId,
-		RoleTypeCode:  resp.Access.RoleTypeCode,
+		RoleType:      resp.Access.RoleTypeCode,
 		Permissions:   resp.Access.Permissions,
 	}, true, nil
 }

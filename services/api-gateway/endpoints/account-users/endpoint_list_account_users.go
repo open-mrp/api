@@ -14,9 +14,9 @@ import (
 type ListAccountUsersRequest struct {
 	apiresource.PaginationRequest
 	// Filter by role type code.
-	RoleType *constants.RoleTypeCode `query:"role_type"`
-	// Whether to include removed account users.
-	IncludeRemoved bool `query:"include_removed"`
+	RoleType *constants.RoleType `query:"role_type"`
+	// Controls whether removed account users are included.
+	RemovedScope *constants.RemovedResourceScope `query:"removed_scope"`
 }
 
 type ListAccountUsersEndpoint struct{}
@@ -36,5 +36,9 @@ func (e *ListAccountUsersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListA
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListAccountUsersRequest) (*apiresource.List[apiresource.AccountUser], *apierror.APIError) {
 			return svc.(AccountUserSvc).ListAccountUsers
 		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeAccountUser,
+			Fields:     []string{"role", "department"},
+		}),
 	}
 }

@@ -312,5 +312,7 @@ func (r *productLineRepoImpl) GetUnitGroup(ctx context.Context, unitGroupID stri
 		Name:       row.Name,
 		BaseUnitID: row.BaseUnitID,
 		Type:       row.UnitTypeCode,
+		CreatedAt:  row.CreatedAt,
+		UpdatedAt:  row.UpdatedAt,
 	}, nil
 }

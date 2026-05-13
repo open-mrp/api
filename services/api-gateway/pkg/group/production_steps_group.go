@@ -40,17 +40,17 @@ func (*ProductionStepsEndpointGroup) Materialize(config *ProductionStepsEndpoint
 	}
 
 	listEndpoint := (&productionstepep.ListProductionStepsEndpoint{}).Materialize().WithService(inner, productionStepSvc)
-	getEndpoint := (&productionstepep.GetProductionStepEndpoint{}).Materialize().WithService(inner, productionStepSvc)
+	retrieveEndpoint := (&productionstepep.RetrieveProductionStepEndpoint{}).Materialize().WithService(inner, productionStepSvc)
 	createEndpoint := (&productionstepep.CreateProductionStepEndpoint{}).Materialize().WithService(inner, productionStepSvc)
 	updateEndpoint := (&productionstepep.UpdateProductionStepEndpoint{}).Materialize().WithService(inner, productionStepSvc)
 	deleteEndpoint := (&productionstepep.DeleteProductionStepEndpoint{}).Materialize().WithService(inner, productionStepSvc)
-	getProductionEndpoint := (&productionstepep.GetProductionEndpoint{}).Materialize().WithService(inner, productionStepSvc)
+	getProductionEndpoint := (&productionstepep.RetrieveProductionEndpoint{}).Materialize().WithService(inner, productionStepSvc)
 	updateProductionEndpoint := (&productionstepep.UpdateProductionEndpoint{}).Materialize().WithService(inner, productionStepSvc)
 	bulkCreateEndpoint := (&productionstepep.BulkCreateProductionStepsEndpoint{}).Materialize().WithService(inner, productionStepSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listEndpoint,
-		getEndpoint,
+		retrieveEndpoint,
 		createEndpoint,
 		updateEndpoint,
 		deleteEndpoint,

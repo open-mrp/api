@@ -21,7 +21,7 @@ func requestLogConfig() *IncludeConfig {
 			{Key: "account", ObjectType: constants.ObjectTypeAccount, JSONPaths: []string{"account"}},
 			{Key: "actor", ObjectType: constants.ObjectTypeUser, JSONPaths: []string{"actor"}},
 			{Key: "actor.role", ObjectType: constants.ObjectTypeRole, JSONPaths: []string{"actor.role"}},
-			{Key: "query_json", ObjectType: constants.ObjectTypeRequestLog, JSONPaths: []string{"query_json"}},
+			{Key: "query_params", ObjectType: constants.ObjectTypeRequestLog, JSONPaths: []string{"query_params"}},
 		},
 	}
 }
@@ -150,14 +150,14 @@ func TestCollapseUnexpanded_NestedPath_ActorOnly(t *testing.T) {
 func TestCollapseUnexpanded_ScalarFieldCollapsed(t *testing.T) {
 	t.Parallel()
 	data := map[string]any{
-		"id":         "rl_xxx",
-		"object":     "request_log",
-		"query_json": `{"limit":10}`,
+		"id":           "rl_xxx",
+		"object":       "request_log",
+		"query_params": `{"limit":10}`,
 	}
 
 	result := CollapseUnexpanded(data, requestLogConfig(), map[string]bool{})
 
-	assert.Nil(t, result["query_json"])
+	assert.Nil(t, result["query_params"])
 }
 
 func TestCollapseUnexpanded_NilSubObject(t *testing.T) {

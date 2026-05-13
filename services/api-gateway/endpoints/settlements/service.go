@@ -17,7 +17,7 @@ import (
 
 type SettlementSvc interface {
 	ListSettlements(ctx context.Context, req *ListSettlementsRequest) (*apiresource.List[apiresource.SettlementSummary], *apierror.APIError)
-	GetSettlement(ctx context.Context, req *GetSettlementRequest) (*apiresource.Settlement, *apierror.APIError)
+	GetSettlement(ctx context.Context, req *RetrieveSettlementRequest) (*apiresource.Settlement, *apierror.APIError)
 	CreateSettlement(ctx context.Context, req *CreateSettlementRequest) (*apiresource.Settlement, *apierror.APIError)
 	UpdateSettlement(ctx context.Context, req *UpdateSettlementRequest) (*apiresource.Settlement, *apierror.APIError)
 	DeleteSettlement(ctx context.Context, req *DeleteSettlementRequest) (*apiresource.Settlement, *apierror.APIError)
@@ -84,7 +84,7 @@ func (m *settlementSvcImpl) ListSettlements(ctx context.Context, req *ListSettle
 	return SettlementListPresenter(resp), nil
 }
 
-func (m *settlementSvcImpl) GetSettlement(ctx context.Context, req *GetSettlementRequest) (*apiresource.Settlement, *apierror.APIError) {
+func (m *settlementSvcImpl) GetSettlement(ctx context.Context, req *RetrieveSettlementRequest) (*apiresource.Settlement, *apierror.APIError) {
 	pbReq := &pb.GetSettlementRequest{
 		Id:       req.SettlementID,
 		Includes: appctx.GetRequestedIncludeKeys(ctx),

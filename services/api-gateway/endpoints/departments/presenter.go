@@ -26,10 +26,15 @@ func DepartmentPresenter(d *pb.DepartmentInfo) apiresource.Department {
 		if d.LocationName != nil {
 			locationName = *d.LocationName
 		}
+		var typeCode constants.LocationTypeCode
+		if d.LocationTypeCode != nil {
+			typeCode = constants.LocationTypeCode(*d.LocationTypeCode)
+		}
 		dept.Location = &apiresource.Location{
-			ID:     *d.LocationId,
-			Object: constants.ObjectTypeLocation,
-			Name:   locationName,
+			ID:       *d.LocationId,
+			Object:   constants.ObjectTypeLocation,
+			Name:     locationName,
+			TypeCode: typeCode,
 		}
 	}
 
@@ -37,9 +42,12 @@ func DepartmentPresenter(d *pb.DepartmentInfo) apiresource.Department {
 		stations := make([]apiresource.ScanningStation, len(d.ScanningStations))
 		for i, s := range d.ScanningStations {
 			stations[i] = apiresource.ScanningStation{
-				ID:     s.Id,
-				Object: constants.ObjectTypeScanningStation,
-				Name:   s.Name,
+				ID:        s.Id,
+				Object:    constants.ObjectTypeScanningStation,
+				Name:      s.Name,
+				Type:      constants.ScanningStationType(s.Type),
+				CreatedAt: grpcutil.TimestampToTime(s.CreatedAt),
+				UpdatedAt: grpcutil.TimestampToTime(s.UpdatedAt),
 			}
 		}
 		dept.ScanningStations = apiresource.NewList(stations, apiresource.PageInfo{})
@@ -49,9 +57,12 @@ func DepartmentPresenter(d *pb.DepartmentInfo) apiresource.Department {
 		machines := make([]apiresource.Machine, len(d.Machines))
 		for i, m := range d.Machines {
 			machines[i] = apiresource.Machine{
-				ID:     m.Id,
-				Object: constants.ObjectTypeMachine,
-				Name:   m.Name,
+				ID:           m.Id,
+				Object:       constants.ObjectTypeMachine,
+				Name:         m.Name,
+				SerialNumber: m.SerialNumber,
+				CreatedAt:    grpcutil.TimestampToTime(m.CreatedAt),
+				UpdatedAt:    grpcutil.TimestampToTime(m.UpdatedAt),
 			}
 		}
 		dept.Machines = apiresource.NewList(machines, apiresource.PageInfo{})

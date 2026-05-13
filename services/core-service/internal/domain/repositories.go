@@ -56,12 +56,13 @@ type AccountUserRepo interface {
 	CountActive(ctx context.Context, accountID string) (int64, *apierror.APIError)
 	ReactivateUsers(ctx context.Context, accountID string, limit int32) (int64, *apierror.APIError)
 	List(ctx context.Context, params ListAccountUsersParams) (*ListAccountUsersResult, *apierror.APIError)
-	GetDetail(ctx context.Context, accountID, userID string) (*AccountUserDetail, *apierror.APIError)
-	GetDetailByAccountAndID(ctx context.Context, accountID, accountUserID string) (*AccountUserDetail, *apierror.APIError)
+	GetDetail(ctx context.Context, accountID, userID string, includes []string) (*AccountUserDetail, *apierror.APIError)
+	GetDetailByAccountAndID(ctx context.Context, accountID, accountUserID string, includes []string) (*AccountUserDetail, *apierror.APIError)
 	Create(ctx context.Context, id, accountID, userID string, roleID, departmentID *string) *apierror.APIError
 	Update(ctx context.Context, accountUserID string, roleID, departmentID *string) *apierror.APIError
 	SoftDelete(ctx context.Context, accountUserID string) *apierror.APIError
 	UpdateStatus(ctx context.Context, accountUserID string, status constants.AccountUserStatus) *apierror.APIError
+	CountByRoleID(ctx context.Context, accountID, roleID string) (int64, *apierror.APIError)
 	RevokeRefreshTokensByUserID(ctx context.Context, userID string) *apierror.APIError
 	FindFirstAccountIDByUserID(ctx context.Context, userID string) (string, *apierror.APIError)
 	FindTenancyAccountsByUserID(ctx context.Context, userID string) ([]TenancyAccount, *apierror.APIError)
@@ -160,6 +161,12 @@ type ItemRepo interface {
 	FindBySKU(ctx context.Context, accountID, sku string) (itemID *string, unitValueRateID *string, apiErr *apierror.APIError)
 	// UpdateRateValue updates a rate's numeric value in place.
 	UpdateRateValue(ctx context.Context, rateID, value string) *apierror.APIError
+	// UpdateRate updates value and unit IDs on an existing rate row.
+	UpdateRate(ctx context.Context, rateID string, params CreateRateParams) *apierror.APIError
+	// ClearItemDirtyFlag sets is_dirty = 0 on an item (e.g. after manual unit cost edit).
+	ClearItemDirtyFlag(ctx context.Context, accountID, itemID string) *apierror.APIError
+	// LoadAttributes fetches the attributes for an item and populates item.Attributes.
+	LoadAttributes(ctx context.Context, item *Item) *apierror.APIError
 }
 
 type RolePermissionRepo interface {
@@ -240,7 +247,7 @@ type UnitGroupRepo interface {
 	UpsertUnitGroupUnit(ctx context.Context, id string, params UpsertUnitGroupUnitParams) (*UnitGroupUnit, *apierror.APIError)
 	DeleteUnitGroupUnit(ctx context.Context, params DeleteUnitGroupUnitParams) *apierror.APIError
 	DeleteAllUnitGroupUnits(ctx context.Context, accountID, unitGroupID string) *apierror.APIError
-	ListUnits(ctx context.Context, unitGroupID string) ([]*UnitGroupUnit, *apierror.APIError)
+	ListUnits(ctx context.Context, unitGroupID string, includes []string) ([]*UnitGroupUnit, *apierror.APIError)
 	GetUnit(ctx context.Context, params GetUnitGroupUnitParams) (*UnitGroupUnit, *apierror.APIError)
 }
 
@@ -389,7 +396,7 @@ type AttributeRepo interface {
 
 type CarrierRepo interface {
 	List(ctx context.Context, params ListCarriersParams) (*ListCarriersResult, *apierror.APIError)
-	Get(ctx context.Context, accountID, carrierID string) (*Carrier, *apierror.APIError)
+	Get(ctx context.Context, params GetCarrierParams) (*Carrier, *apierror.APIError)
 	Create(ctx context.Context, id string, params CreateCarrierParams) (*Carrier, *apierror.APIError)
 	Update(ctx context.Context, params UpdateCarrierParams) (*Carrier, *apierror.APIError)
 	SoftDelete(ctx context.Context, accountID, carrierID string) *apierror.APIError
@@ -517,7 +524,7 @@ type ItemCategoryRepo interface {
 	RemoveProperty(ctx context.Context, params RemoveItemCategoryPropertyParams) *apierror.APIError
 	ChangeUnitGroup(ctx context.Context, params ChangeItemCategoryUnitGroupParams) *apierror.APIError
 	GetProperties(ctx context.Context, itemCategoryID string) ([]*ItemCategoryProperty, *apierror.APIError)
-	GetUnitGroup(ctx context.Context, unitGroupID string) (*ItemCategoryUnitGroup, *apierror.APIError)
+	GetUnitGroup(ctx context.Context, unitGroupID string, includes []string) (*ItemCategoryUnitGroup, *apierror.APIError)
 	IsPropertyInAccount(ctx context.Context, accountID, propertyID string) (bool, *apierror.APIError)
 	PropertyExistsByNameInCategory(ctx context.Context, accountID, itemCategoryID, name string, excludePropertyID *string) (bool, *apierror.APIError)
 }
@@ -770,7 +777,7 @@ type VolumeDiscountRepo interface {
 
 type MaterialRepo interface {
 	List(ctx context.Context, params ListMaterialsParams) (*ListMaterialsResult, *apierror.APIError)
-	GetByID(ctx context.Context, accountID, materialID string) (*Material, *apierror.APIError)
+	GetByID(ctx context.Context, params GetMaterialParams) (*Material, *apierror.APIError)
 	GetByItemID(ctx context.Context, accountID, itemID string) (*Material, *apierror.APIError)
 	Create(ctx context.Context, id string, params CreateMaterialParams) *apierror.APIError
 	Update(ctx context.Context, params UpdateMaterialParams) *apierror.APIError
@@ -1174,7 +1181,7 @@ type StripeEventLogRepo interface {
 
 type SupplierRepo interface {
 	List(ctx context.Context, params ListSuppliersParams) (*ListSuppliersResult, *apierror.APIError)
-	Get(ctx context.Context, ownerAccountID, supplierAccountID string) (*Supplier, *apierror.APIError)
+	Get(ctx context.Context, params GetSupplierParams) (*Supplier, *apierror.APIError)
 	Create(ctx context.Context, accountID, relationID string, params CreateSupplierParams, billToAddressID, shipToAddressID *string) (*Supplier, *apierror.APIError)
 	Update(ctx context.Context, params UpdateSupplierParams) (*Supplier, *apierror.APIError)
 	Delete(ctx context.Context, ownerAccountID, supplierAccountID string) (*Supplier, *apierror.APIError)

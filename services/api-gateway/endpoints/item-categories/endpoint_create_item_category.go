@@ -18,7 +18,7 @@ type CreateItemCategoryRequest struct {
 	// Item category type. Material categories are used to group materials, while product categories are used to group products and parts.
 	Type constants.ItemCategoryType `json:"type" validate:"required"`
 	// Unit group ID.
-	UnitGroupID string `json:"unit_group_id" validate:"required,max=191"`
+	UnitGroupID string `json:"unit_group_id" validate:"required"`
 }
 
 var sampleCreateItemCategoryRequest = &CreateItemCategoryRequest{
@@ -53,7 +53,7 @@ func (e *CreateItemCategoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cre
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeItemCategory,
-			Fields:     []string{"owner", "owner.account", "properties", "unit_group"},
+			Fields:     []string{"owner", "owner.account", "properties", "unit_group", "unit_group.base_unit", "unit_group.associated_units", "unit_group.associated_units.unit"},
 		}),
 	}
 }

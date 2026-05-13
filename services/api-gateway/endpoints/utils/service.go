@@ -7,6 +7,7 @@ import (
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
@@ -140,6 +141,7 @@ func (m *utilsSvcImpl) RequestDemo(ctx context.Context, req *RequestDemoRequest)
 	}
 
 	return &apiresource.MessageResource{
+		Object:  constants.ObjectTypeMessage,
 		Message: resp.Message,
 	}, nil
 }
@@ -163,6 +165,7 @@ func (m *utilsSvcImpl) SubmitFeedback(ctx context.Context, req *SubmitFeedbackRe
 	}
 
 	return &apiresource.MessageResource{
+		Object:  constants.ObjectTypeMessage,
 		Message: resp.Message,
 	}, nil
 }

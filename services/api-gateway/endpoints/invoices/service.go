@@ -17,7 +17,7 @@ import (
 
 type InvoiceSvc interface {
 	ListInvoices(ctx context.Context, req *ListInvoicesRequest) (*apiresource.List[apiresource.InvoiceSummary], *apierror.APIError)
-	GetInvoice(ctx context.Context, req *GetInvoiceRequest) (*apiresource.Invoice, *apierror.APIError)
+	GetInvoice(ctx context.Context, req *RetrieveInvoiceRequest) (*apiresource.Invoice, *apierror.APIError)
 	UpdateInvoice(ctx context.Context, req *UpdateInvoiceRequest) (*apiresource.InvoiceSummary, *apierror.APIError)
 	ListCustomerInvoices(ctx context.Context, req *ListCustomerInvoicesRequest) (*apiresource.List[apiresource.InvoiceForPayment], *apierror.APIError)
 }
@@ -87,7 +87,7 @@ func (m *invoiceSvcImpl) ListInvoices(ctx context.Context, req *ListInvoicesRequ
 	return InvoiceListPresenter(resp), nil
 }
 
-func (m *invoiceSvcImpl) GetInvoice(ctx context.Context, req *GetInvoiceRequest) (*apiresource.Invoice, *apierror.APIError) {
+func (m *invoiceSvcImpl) GetInvoice(ctx context.Context, req *RetrieveInvoiceRequest) (*apiresource.Invoice, *apierror.APIError) {
 	pbReq := &pb.GetInvoiceRequest{
 		Id:       req.InvoiceID,
 		Includes: appctx.GetRequestedIncludeKeys(ctx),

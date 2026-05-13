@@ -40,7 +40,7 @@ func (*AccountStatusesEndpointGroup) Materialize(config *AccountStatusesEndpoint
 	}
 
 	listAccountStatusesEndpoint := (&accountstatusep.ListAccountStatusesEndpoint{}).Materialize().WithService(inner, accountStatusSvc)
-	getAccountStatusEndpoint := (&accountstatusep.GetAccountStatusEndpoint{}).Materialize().WithService(inner, accountStatusSvc)
+	getAccountStatusEndpoint := (&accountstatusep.RetrieveAccountStatusEndpoint{}).Materialize().WithService(inner, accountStatusSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listAccountStatusesEndpoint,

@@ -53,6 +53,10 @@ type ShipmentSummaryInfo struct {
 	ServiceLevelToken           *string                `protobuf:"bytes,22,opt,name=service_level_token,json=serviceLevelToken,proto3,oneof" json:"service_level_token,omitempty"`
 	CustomerStatusCode          *string                `protobuf:"bytes,23,opt,name=customer_status_code,json=customerStatusCode,proto3,oneof" json:"customer_status_code,omitempty"`
 	CustomerCommissionPolicy    *string                `protobuf:"bytes,24,opt,name=customer_commission_policy,json=customerCommissionPolicy,proto3,oneof" json:"customer_commission_policy,omitempty"`
+	CustomerCreatedAt           *timestamppb.Timestamp `protobuf:"bytes,25,opt,name=customer_created_at,json=customerCreatedAt,proto3,oneof" json:"customer_created_at,omitempty"`
+	CustomerUpdatedAt           *timestamppb.Timestamp `protobuf:"bytes,26,opt,name=customer_updated_at,json=customerUpdatedAt,proto3,oneof" json:"customer_updated_at,omitempty"`
+	SalesOrderCreatedAt         *timestamppb.Timestamp `protobuf:"bytes,27,opt,name=sales_order_created_at,json=salesOrderCreatedAt,proto3,oneof" json:"sales_order_created_at,omitempty"`
+	SalesOrderUpdatedAt         *timestamppb.Timestamp `protobuf:"bytes,28,opt,name=sales_order_updated_at,json=salesOrderUpdatedAt,proto3,oneof" json:"sales_order_updated_at,omitempty"`
 	unknownFields               protoimpl.UnknownFields
 	sizeCache                   protoimpl.SizeCache
 }
@@ -255,6 +259,34 @@ func (x *ShipmentSummaryInfo) GetCustomerCommissionPolicy() string {
 	return ""
 }
 
+func (x *ShipmentSummaryInfo) GetCustomerCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CustomerCreatedAt
+	}
+	return nil
+}
+
+func (x *ShipmentSummaryInfo) GetCustomerUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CustomerUpdatedAt
+	}
+	return nil
+}
+
+func (x *ShipmentSummaryInfo) GetSalesOrderCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.SalesOrderCreatedAt
+	}
+	return nil
+}
+
+func (x *ShipmentSummaryInfo) GetSalesOrderUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.SalesOrderUpdatedAt
+	}
+	return nil
+}
+
 // ShipmentInfo represents a full shipment resource.
 type ShipmentInfo struct {
 	state                       protoimpl.MessageState    `protogen:"open.v1"`
@@ -298,8 +330,31 @@ type ShipmentInfo struct {
 	CustomerStatusCode          *string                   `protobuf:"bytes,38,opt,name=customer_status_code,json=customerStatusCode,proto3,oneof" json:"customer_status_code,omitempty"`
 	CustomerCommissionPolicy    *string                   `protobuf:"bytes,39,opt,name=customer_commission_policy,json=customerCommissionPolicy,proto3,oneof" json:"customer_commission_policy,omitempty"`
 	PickNumber                  *string                   `protobuf:"bytes,40,opt,name=pick_number,json=pickNumber,proto3,oneof" json:"pick_number,omitempty"`
-	unknownFields               protoimpl.UnknownFields
-	sizeCache                   protoimpl.SizeCache
+	ServiceLevelCreatedAt       *timestamppb.Timestamp    `protobuf:"bytes,41,opt,name=service_level_created_at,json=serviceLevelCreatedAt,proto3,oneof" json:"service_level_created_at,omitempty"`
+	ServiceLevelUpdatedAt       *timestamppb.Timestamp    `protobuf:"bytes,42,opt,name=service_level_updated_at,json=serviceLevelUpdatedAt,proto3,oneof" json:"service_level_updated_at,omitempty"`
+	CarrierCreatedAt            *timestamppb.Timestamp    `protobuf:"bytes,43,opt,name=carrier_created_at,json=carrierCreatedAt,proto3,oneof" json:"carrier_created_at,omitempty"`
+	CarrierUpdatedAt            *timestamppb.Timestamp    `protobuf:"bytes,44,opt,name=carrier_updated_at,json=carrierUpdatedAt,proto3,oneof" json:"carrier_updated_at,omitempty"`
+	// Customer timestamps
+	CustomerCreatedAt *timestamppb.Timestamp `protobuf:"bytes,45,opt,name=customer_created_at,json=customerCreatedAt,proto3,oneof" json:"customer_created_at,omitempty"`
+	CustomerUpdatedAt *timestamppb.Timestamp `protobuf:"bytes,46,opt,name=customer_updated_at,json=customerUpdatedAt,proto3,oneof" json:"customer_updated_at,omitempty"`
+	// Sales order timestamps
+	SalesOrderCreatedAt *timestamppb.Timestamp `protobuf:"bytes,47,opt,name=sales_order_created_at,json=salesOrderCreatedAt,proto3,oneof" json:"sales_order_created_at,omitempty"`
+	SalesOrderUpdatedAt *timestamppb.Timestamp `protobuf:"bytes,48,opt,name=sales_order_updated_at,json=salesOrderUpdatedAt,proto3,oneof" json:"sales_order_updated_at,omitempty"`
+	// Shipping address timestamps
+	ShippingAddressCreatedAt *timestamppb.Timestamp `protobuf:"bytes,49,opt,name=shipping_address_created_at,json=shippingAddressCreatedAt,proto3,oneof" json:"shipping_address_created_at,omitempty"`
+	ShippingAddressUpdatedAt *timestamppb.Timestamp `protobuf:"bytes,50,opt,name=shipping_address_updated_at,json=shippingAddressUpdatedAt,proto3,oneof" json:"shipping_address_updated_at,omitempty"`
+	// Shipped by details
+	ShippedByStatus    *string                `protobuf:"bytes,51,opt,name=shipped_by_status,json=shippedByStatus,proto3,oneof" json:"shipped_by_status,omitempty"`
+	ShippedByCreatedAt *timestamppb.Timestamp `protobuf:"bytes,52,opt,name=shipped_by_created_at,json=shippedByCreatedAt,proto3,oneof" json:"shipped_by_created_at,omitempty"`
+	ShippedByUpdatedAt *timestamppb.Timestamp `protobuf:"bytes,53,opt,name=shipped_by_updated_at,json=shippedByUpdatedAt,proto3,oneof" json:"shipped_by_updated_at,omitempty"`
+	// Invoice timestamps
+	InvoiceCreatedAt *timestamppb.Timestamp `protobuf:"bytes,54,opt,name=invoice_created_at,json=invoiceCreatedAt,proto3,oneof" json:"invoice_created_at,omitempty"`
+	InvoiceUpdatedAt *timestamppb.Timestamp `protobuf:"bytes,55,opt,name=invoice_updated_at,json=invoiceUpdatedAt,proto3,oneof" json:"invoice_updated_at,omitempty"`
+	// Pick timestamps
+	PickCreatedAt *timestamppb.Timestamp `protobuf:"bytes,56,opt,name=pick_created_at,json=pickCreatedAt,proto3,oneof" json:"pick_created_at,omitempty"`
+	PickUpdatedAt *timestamppb.Timestamp `protobuf:"bytes,57,opt,name=pick_updated_at,json=pickUpdatedAt,proto3,oneof" json:"pick_updated_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ShipmentInfo) Reset() {
@@ -612,6 +667,125 @@ func (x *ShipmentInfo) GetPickNumber() string {
 	return ""
 }
 
+func (x *ShipmentInfo) GetServiceLevelCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ServiceLevelCreatedAt
+	}
+	return nil
+}
+
+func (x *ShipmentInfo) GetServiceLevelUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ServiceLevelUpdatedAt
+	}
+	return nil
+}
+
+func (x *ShipmentInfo) GetCarrierCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CarrierCreatedAt
+	}
+	return nil
+}
+
+func (x *ShipmentInfo) GetCarrierUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CarrierUpdatedAt
+	}
+	return nil
+}
+
+func (x *ShipmentInfo) GetCustomerCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CustomerCreatedAt
+	}
+	return nil
+}
+
+func (x *ShipmentInfo) GetCustomerUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CustomerUpdatedAt
+	}
+	return nil
+}
+
+func (x *ShipmentInfo) GetSalesOrderCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.SalesOrderCreatedAt
+	}
+	return nil
+}
+
+func (x *ShipmentInfo) GetSalesOrderUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.SalesOrderUpdatedAt
+	}
+	return nil
+}
+
+func (x *ShipmentInfo) GetShippingAddressCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ShippingAddressCreatedAt
+	}
+	return nil
+}
+
+func (x *ShipmentInfo) GetShippingAddressUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ShippingAddressUpdatedAt
+	}
+	return nil
+}
+
+func (x *ShipmentInfo) GetShippedByStatus() string {
+	if x != nil && x.ShippedByStatus != nil {
+		return *x.ShippedByStatus
+	}
+	return ""
+}
+
+func (x *ShipmentInfo) GetShippedByCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ShippedByCreatedAt
+	}
+	return nil
+}
+
+func (x *ShipmentInfo) GetShippedByUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ShippedByUpdatedAt
+	}
+	return nil
+}
+
+func (x *ShipmentInfo) GetInvoiceCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.InvoiceCreatedAt
+	}
+	return nil
+}
+
+func (x *ShipmentInfo) GetInvoiceUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.InvoiceUpdatedAt
+	}
+	return nil
+}
+
+func (x *ShipmentInfo) GetPickCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.PickCreatedAt
+	}
+	return nil
+}
+
+func (x *ShipmentInfo) GetPickUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.PickUpdatedAt
+	}
+	return nil
+}
+
 // ShipmentLineInfo represents a shipment line resource.
 type ShipmentLineInfo struct {
 	state                    protoimpl.MessageState `protogen:"open.v1"`
@@ -779,6 +953,8 @@ type ShippingCaseDetailInfo struct {
 	CreatedAt                     *timestamppb.Timestamp `protobuf:"bytes,21,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt                     *timestamppb.Timestamp `protobuf:"bytes,22,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	CarrierIsPortalEnabled        *bool                  `protobuf:"varint,23,opt,name=carrier_is_portal_enabled,json=carrierIsPortalEnabled,proto3,oneof" json:"carrier_is_portal_enabled,omitempty"`
+	CarrierCreatedAt              *timestamppb.Timestamp `protobuf:"bytes,24,opt,name=carrier_created_at,json=carrierCreatedAt,proto3,oneof" json:"carrier_created_at,omitempty"`
+	CarrierUpdatedAt              *timestamppb.Timestamp `protobuf:"bytes,25,opt,name=carrier_updated_at,json=carrierUpdatedAt,proto3,oneof" json:"carrier_updated_at,omitempty"`
 	unknownFields                 protoimpl.UnknownFields
 	sizeCache                     protoimpl.SizeCache
 }
@@ -972,6 +1148,20 @@ func (x *ShippingCaseDetailInfo) GetCarrierIsPortalEnabled() bool {
 		return *x.CarrierIsPortalEnabled
 	}
 	return false
+}
+
+func (x *ShippingCaseDetailInfo) GetCarrierCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CarrierCreatedAt
+	}
+	return nil
+}
+
+func (x *ShippingCaseDetailInfo) GetCarrierUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CarrierUpdatedAt
+	}
+	return nil
 }
 
 // ParcelInfo represents a package for rate estimation.
@@ -1528,6 +1718,7 @@ type UpdateShipmentRequest struct {
 	MasterTrackingNumber *string                `protobuf:"bytes,4,opt,name=master_tracking_number,json=masterTrackingNumber,proto3,oneof" json:"master_tracking_number,omitempty"`
 	CarrierId            *string                `protobuf:"bytes,5,opt,name=carrier_id,json=carrierId,proto3,oneof" json:"carrier_id,omitempty"`
 	ServiceLevelId       *string                `protobuf:"bytes,6,opt,name=service_level_id,json=serviceLevelId,proto3,oneof" json:"service_level_id,omitempty"`
+	Includes             []string               `protobuf:"bytes,7,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -1602,6 +1793,13 @@ func (x *UpdateShipmentRequest) GetServiceLevelId() string {
 		return *x.ServiceLevelId
 	}
 	return ""
+}
+
+func (x *UpdateShipmentRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
 }
 
 type UpdateShipmentResponse struct {
@@ -1698,6 +1896,7 @@ type ShipShipmentRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	EmailCustomer bool                   `protobuf:"varint,2,opt,name=email_customer,json=emailCustomer,proto3" json:"email_customer,omitempty"`
+	Includes      []string               `protobuf:"bytes,3,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1744,6 +1943,13 @@ func (x *ShipShipmentRequest) GetEmailCustomer() bool {
 		return x.EmailCustomer
 	}
 	return false
+}
+
+func (x *ShipShipmentRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
 }
 
 type ShipShipmentResponse struct {
@@ -2670,8 +2876,7 @@ var File_core_core_shipping_proto protoreflect.FileDescriptor
 
 const file_core_core_shipping_proto_rawDesc = "" +
 	"\n" +
-	"\x18core/core_shipping.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x0fcore/core.proto\"\xc5\n" +
-	"\n" +
+	"\x18core/core_shipping.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x0fcore/core.proto\"\xf9\r\n" +
 	"\x13ShipmentSummaryInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x12\x17\n" +
@@ -2704,7 +2909,12 @@ const file_core_core_shipping_proto_rawDesc = "" +
 	"\x1fservice_level_is_portal_enabled\x18\x15 \x01(\bH\x06R\x1bserviceLevelIsPortalEnabled\x88\x01\x01\x123\n" +
 	"\x13service_level_token\x18\x16 \x01(\tH\aR\x11serviceLevelToken\x88\x01\x01\x125\n" +
 	"\x14customer_status_code\x18\x17 \x01(\tH\bR\x12customerStatusCode\x88\x01\x01\x12A\n" +
-	"\x1acustomer_commission_policy\x18\x18 \x01(\tH\tR\x18customerCommissionPolicy\x88\x01\x01B\a\n" +
+	"\x1acustomer_commission_policy\x18\x18 \x01(\tH\tR\x18customerCommissionPolicy\x88\x01\x01\x12O\n" +
+	"\x13customer_created_at\x18\x19 \x01(\v2\x1a.google.protobuf.TimestampH\n" +
+	"R\x11customerCreatedAt\x88\x01\x01\x12O\n" +
+	"\x13customer_updated_at\x18\x1a \x01(\v2\x1a.google.protobuf.TimestampH\vR\x11customerUpdatedAt\x88\x01\x01\x12T\n" +
+	"\x16sales_order_created_at\x18\x1b \x01(\v2\x1a.google.protobuf.TimestampH\fR\x13salesOrderCreatedAt\x88\x01\x01\x12T\n" +
+	"\x16sales_order_updated_at\x18\x1c \x01(\v2\x1a.google.protobuf.TimestampH\rR\x13salesOrderUpdatedAt\x88\x01\x01B\a\n" +
 	"\x05_noteB\x11\n" +
 	"\x0f_bill_of_ladingB\x19\n" +
 	"\x17_master_tracking_numberB\x13\n" +
@@ -2714,7 +2924,11 @@ const file_core_core_shipping_proto_rawDesc = "" +
 	" _service_level_is_portal_enabledB\x16\n" +
 	"\x14_service_level_tokenB\x17\n" +
 	"\x15_customer_status_codeB\x1d\n" +
-	"\x1b_customer_commission_policy\"\xba\x12\n" +
+	"\x1b_customer_commission_policyB\x16\n" +
+	"\x14_customer_created_atB\x16\n" +
+	"\x14_customer_updated_atB\x19\n" +
+	"\x17_sales_order_created_atB\x19\n" +
+	"\x17_sales_order_updated_at\"\xd1 \n" +
 	"\fShipmentInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x12\x17\n" +
@@ -2767,7 +2981,24 @@ const file_core_core_shipping_proto_rawDesc = "" +
 	"\x14customer_status_code\x18& \x01(\tH\x13R\x12customerStatusCode\x88\x01\x01\x12A\n" +
 	"\x1acustomer_commission_policy\x18' \x01(\tH\x14R\x18customerCommissionPolicy\x88\x01\x01\x12$\n" +
 	"\vpick_number\x18( \x01(\tH\x15R\n" +
-	"pickNumber\x88\x01\x01B\a\n" +
+	"pickNumber\x88\x01\x01\x12X\n" +
+	"\x18service_level_created_at\x18) \x01(\v2\x1a.google.protobuf.TimestampH\x16R\x15serviceLevelCreatedAt\x88\x01\x01\x12X\n" +
+	"\x18service_level_updated_at\x18* \x01(\v2\x1a.google.protobuf.TimestampH\x17R\x15serviceLevelUpdatedAt\x88\x01\x01\x12M\n" +
+	"\x12carrier_created_at\x18+ \x01(\v2\x1a.google.protobuf.TimestampH\x18R\x10carrierCreatedAt\x88\x01\x01\x12M\n" +
+	"\x12carrier_updated_at\x18, \x01(\v2\x1a.google.protobuf.TimestampH\x19R\x10carrierUpdatedAt\x88\x01\x01\x12O\n" +
+	"\x13customer_created_at\x18- \x01(\v2\x1a.google.protobuf.TimestampH\x1aR\x11customerCreatedAt\x88\x01\x01\x12O\n" +
+	"\x13customer_updated_at\x18. \x01(\v2\x1a.google.protobuf.TimestampH\x1bR\x11customerUpdatedAt\x88\x01\x01\x12T\n" +
+	"\x16sales_order_created_at\x18/ \x01(\v2\x1a.google.protobuf.TimestampH\x1cR\x13salesOrderCreatedAt\x88\x01\x01\x12T\n" +
+	"\x16sales_order_updated_at\x180 \x01(\v2\x1a.google.protobuf.TimestampH\x1dR\x13salesOrderUpdatedAt\x88\x01\x01\x12^\n" +
+	"\x1bshipping_address_created_at\x181 \x01(\v2\x1a.google.protobuf.TimestampH\x1eR\x18shippingAddressCreatedAt\x88\x01\x01\x12^\n" +
+	"\x1bshipping_address_updated_at\x182 \x01(\v2\x1a.google.protobuf.TimestampH\x1fR\x18shippingAddressUpdatedAt\x88\x01\x01\x12/\n" +
+	"\x11shipped_by_status\x183 \x01(\tH R\x0fshippedByStatus\x88\x01\x01\x12R\n" +
+	"\x15shipped_by_created_at\x184 \x01(\v2\x1a.google.protobuf.TimestampH!R\x12shippedByCreatedAt\x88\x01\x01\x12R\n" +
+	"\x15shipped_by_updated_at\x185 \x01(\v2\x1a.google.protobuf.TimestampH\"R\x12shippedByUpdatedAt\x88\x01\x01\x12M\n" +
+	"\x12invoice_created_at\x186 \x01(\v2\x1a.google.protobuf.TimestampH#R\x10invoiceCreatedAt\x88\x01\x01\x12M\n" +
+	"\x12invoice_updated_at\x187 \x01(\v2\x1a.google.protobuf.TimestampH$R\x10invoiceUpdatedAt\x88\x01\x01\x12G\n" +
+	"\x0fpick_created_at\x188 \x01(\v2\x1a.google.protobuf.TimestampH%R\rpickCreatedAt\x88\x01\x01\x12G\n" +
+	"\x0fpick_updated_at\x189 \x01(\v2\x1a.google.protobuf.TimestampH&R\rpickUpdatedAt\x88\x01\x01B\a\n" +
 	"\x05_noteB\x11\n" +
 	"\x0f_bill_of_ladingB\x19\n" +
 	"\x17_master_tracking_numberB\x13\n" +
@@ -2790,7 +3021,24 @@ const file_core_core_shipping_proto_rawDesc = "" +
 	"\x14_service_level_tokenB\x17\n" +
 	"\x15_customer_status_codeB\x1d\n" +
 	"\x1b_customer_commission_policyB\x0e\n" +
-	"\f_pick_number\"\xf0\x04\n" +
+	"\f_pick_numberB\x1b\n" +
+	"\x19_service_level_created_atB\x1b\n" +
+	"\x19_service_level_updated_atB\x15\n" +
+	"\x13_carrier_created_atB\x15\n" +
+	"\x13_carrier_updated_atB\x16\n" +
+	"\x14_customer_created_atB\x16\n" +
+	"\x14_customer_updated_atB\x19\n" +
+	"\x17_sales_order_created_atB\x19\n" +
+	"\x17_sales_order_updated_atB\x1e\n" +
+	"\x1c_shipping_address_created_atB\x1e\n" +
+	"\x1c_shipping_address_updated_atB\x14\n" +
+	"\x12_shipped_by_statusB\x18\n" +
+	"\x16_shipped_by_created_atB\x18\n" +
+	"\x16_shipped_by_updated_atB\x15\n" +
+	"\x13_invoice_created_atB\x15\n" +
+	"\x13_invoice_updated_atB\x12\n" +
+	"\x10_pick_created_atB\x12\n" +
+	"\x10_pick_updated_at\"\xf0\x04\n" +
 	"\x10ShipmentLineInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
 	"\vshipment_id\x18\x02 \x01(\tR\n" +
@@ -2810,7 +3058,7 @@ const file_core_core_shipping_proto_rawDesc = "" +
 	"created_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\x19\n" +
-	"\x17_order_line_description\"\xdd\t\n" +
+	"\x17_order_line_description\"\xa9\v\n" +
 	"\x16ShippingCaseDetailInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x12\x17\n" +
@@ -2840,12 +3088,16 @@ const file_core_core_shipping_proto_rawDesc = "" +
 	"created_at\x18\x15 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\x16 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12>\n" +
-	"\x19carrier_is_portal_enabled\x18\x17 \x01(\bH\x04R\x16carrierIsPortalEnabled\x88\x01\x01B\a\n" +
+	"\x19carrier_is_portal_enabled\x18\x17 \x01(\bH\x04R\x16carrierIsPortalEnabled\x88\x01\x01\x12M\n" +
+	"\x12carrier_created_at\x18\x18 \x01(\v2\x1a.google.protobuf.TimestampH\x05R\x10carrierCreatedAt\x88\x01\x01\x12M\n" +
+	"\x12carrier_updated_at\x18\x19 \x01(\v2\x1a.google.protobuf.TimestampH\x06R\x10carrierUpdatedAt\x88\x01\x01B\a\n" +
 	"\x05_ssccB\x12\n" +
 	"\x10_tracking_numberB\x18\n" +
 	"\x16_shippo_transaction_idB\x15\n" +
 	"\x13_shipping_label_urlB\x1c\n" +
-	"\x1a_carrier_is_portal_enabled\"j\n" +
+	"\x1a_carrier_is_portal_enabledB\x15\n" +
+	"\x13_carrier_created_atB\x15\n" +
+	"\x13_carrier_updated_at\"j\n" +
 	"\n" +
 	"ParcelInfo\x12\x16\n" +
 	"\x06weight\x18\x01 \x01(\tR\x06weight\x12\x16\n" +
@@ -2905,7 +3157,7 @@ const file_core_core_shipping_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\bincludes\x18\x02 \x03(\tR\bincludes\"E\n" +
 	"\x13GetShipmentResponse\x12.\n" +
-	"\bshipment\x18\x01 \x01(\v2\x12.core.ShipmentInfoR\bshipment\"\xbe\x02\n" +
+	"\bshipment\x18\x01 \x01(\v2\x12.core.ShipmentInfoR\bshipment\"\xda\x02\n" +
 	"\x15UpdateShipmentRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04note\x18\x02 \x01(\tH\x00R\x04note\x88\x01\x01\x12\x1b\n" +
@@ -2913,7 +3165,8 @@ const file_core_core_shipping_proto_rawDesc = "" +
 	"\x16master_tracking_number\x18\x04 \x01(\tH\x02R\x14masterTrackingNumber\x88\x01\x01\x12\"\n" +
 	"\n" +
 	"carrier_id\x18\x05 \x01(\tH\x03R\tcarrierId\x88\x01\x01\x12-\n" +
-	"\x10service_level_id\x18\x06 \x01(\tH\x04R\x0eserviceLevelId\x88\x01\x01B\a\n" +
+	"\x10service_level_id\x18\x06 \x01(\tH\x04R\x0eserviceLevelId\x88\x01\x01\x12\x1a\n" +
+	"\bincludes\x18\a \x03(\tR\bincludesB\a\n" +
 	"\x05_noteB\t\n" +
 	"\a_numberB\x19\n" +
 	"\x17_master_tracking_numberB\r\n" +
@@ -2922,10 +3175,11 @@ const file_core_core_shipping_proto_rawDesc = "" +
 	"\x16UpdateShipmentResponse\x12.\n" +
 	"\bshipment\x18\x01 \x01(\v2\x12.core.ShipmentInfoR\bshipment\"'\n" +
 	"\x15DeleteShipmentRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"L\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"h\n" +
 	"\x13ShipShipmentRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12%\n" +
-	"\x0eemail_customer\x18\x02 \x01(\bR\remailCustomer\"F\n" +
+	"\x0eemail_customer\x18\x02 \x01(\bR\remailCustomer\x12\x1a\n" +
+	"\bincludes\x18\x03 \x03(\tR\bincludes\"F\n" +
 	"\x14ShipShipmentResponse\x12.\n" +
 	"\bshipment\x18\x01 \x01(\v2\x12.core.ShipmentInfoR\bshipment\"%\n" +
 	"\x13VoidShipmentRequest\x12\x0e\n" +
@@ -3073,65 +3327,87 @@ var file_core_core_shipping_proto_depIdxs = []int32{
 	31, // 0: core.ShipmentSummaryInfo.shipped_at:type_name -> google.protobuf.Timestamp
 	31, // 1: core.ShipmentSummaryInfo.created_at:type_name -> google.protobuf.Timestamp
 	31, // 2: core.ShipmentSummaryInfo.updated_at:type_name -> google.protobuf.Timestamp
-	31, // 3: core.ShipmentInfo.shipped_at:type_name -> google.protobuf.Timestamp
-	31, // 4: core.ShipmentInfo.created_at:type_name -> google.protobuf.Timestamp
-	31, // 5: core.ShipmentInfo.updated_at:type_name -> google.protobuf.Timestamp
-	2,  // 6: core.ShipmentInfo.lines:type_name -> core.ShipmentLineInfo
-	3,  // 7: core.ShipmentInfo.shipping_cases:type_name -> core.ShippingCaseDetailInfo
-	31, // 8: core.ShipmentLineInfo.created_at:type_name -> google.protobuf.Timestamp
-	31, // 9: core.ShipmentLineInfo.updated_at:type_name -> google.protobuf.Timestamp
-	31, // 10: core.ShippingCaseDetailInfo.shipped_at:type_name -> google.protobuf.Timestamp
-	31, // 11: core.ShippingCaseDetailInfo.created_at:type_name -> google.protobuf.Timestamp
-	31, // 12: core.ShippingCaseDetailInfo.updated_at:type_name -> google.protobuf.Timestamp
-	0,  // 13: core.ListShipmentsResponse.shipments:type_name -> core.ShipmentSummaryInfo
-	32, // 14: core.ListShipmentsResponse.page_info:type_name -> core.PageInfo
-	1,  // 15: core.GetShipmentResponse.shipment:type_name -> core.ShipmentInfo
-	1,  // 16: core.UpdateShipmentResponse.shipment:type_name -> core.ShipmentInfo
-	1,  // 17: core.ShipShipmentResponse.shipment:type_name -> core.ShipmentInfo
-	1,  // 18: core.VoidShipmentResponse.shipment:type_name -> core.ShipmentInfo
-	5,  // 19: core.EstimateRateRequest.from:type_name -> core.AddressInput
-	5,  // 20: core.EstimateRateRequest.to:type_name -> core.AddressInput
-	4,  // 21: core.EstimateRateRequest.parcels:type_name -> core.ParcelInfo
-	5,  // 22: core.RateShopRequest.from:type_name -> core.AddressInput
-	5,  // 23: core.RateShopRequest.to:type_name -> core.AddressInput
-	4,  // 24: core.RateShopRequest.parcels:type_name -> core.ParcelInfo
-	6,  // 25: core.RateShopResponse.options:type_name -> core.RateShopOptionInfo
-	2,  // 26: core.ListShipmentLinesResponse.shipment_lines:type_name -> core.ShipmentLineInfo
-	32, // 27: core.ListShipmentLinesResponse.page_info:type_name -> core.PageInfo
-	2,  // 28: core.GetShipmentLineResponse.shipment_line:type_name -> core.ShipmentLineInfo
-	2,  // 29: core.CreateShipmentLineResponse.shipment_line:type_name -> core.ShipmentLineInfo
-	2,  // 30: core.UpdateShipmentLineResponse.shipment_line:type_name -> core.ShipmentLineInfo
-	7,  // 31: core.CoreShippingService.ListShipments:input_type -> core.ListShipmentsRequest
-	9,  // 32: core.CoreShippingService.GetShipment:input_type -> core.GetShipmentRequest
-	11, // 33: core.CoreShippingService.UpdateShipment:input_type -> core.UpdateShipmentRequest
-	13, // 34: core.CoreShippingService.DeleteShipment:input_type -> core.DeleteShipmentRequest
-	14, // 35: core.CoreShippingService.ShipShipment:input_type -> core.ShipShipmentRequest
-	16, // 36: core.CoreShippingService.VoidShipment:input_type -> core.VoidShipmentRequest
-	18, // 37: core.CoreShippingService.EstimateRate:input_type -> core.EstimateRateRequest
-	20, // 38: core.CoreShippingService.RateShop:input_type -> core.RateShopRequest
-	22, // 39: core.CoreShippingService.ListShipmentLines:input_type -> core.ListShipmentLinesRequest
-	24, // 40: core.CoreShippingService.GetShipmentLine:input_type -> core.GetShipmentLineRequest
-	26, // 41: core.CoreShippingService.CreateShipmentLine:input_type -> core.CreateShipmentLineRequest
-	28, // 42: core.CoreShippingService.UpdateShipmentLine:input_type -> core.UpdateShipmentLineRequest
-	30, // 43: core.CoreShippingService.DeleteShipmentLine:input_type -> core.DeleteShipmentLineRequest
-	8,  // 44: core.CoreShippingService.ListShipments:output_type -> core.ListShipmentsResponse
-	10, // 45: core.CoreShippingService.GetShipment:output_type -> core.GetShipmentResponse
-	12, // 46: core.CoreShippingService.UpdateShipment:output_type -> core.UpdateShipmentResponse
-	33, // 47: core.CoreShippingService.DeleteShipment:output_type -> google.protobuf.Empty
-	15, // 48: core.CoreShippingService.ShipShipment:output_type -> core.ShipShipmentResponse
-	17, // 49: core.CoreShippingService.VoidShipment:output_type -> core.VoidShipmentResponse
-	19, // 50: core.CoreShippingService.EstimateRate:output_type -> core.EstimateRateResponse
-	21, // 51: core.CoreShippingService.RateShop:output_type -> core.RateShopResponse
-	23, // 52: core.CoreShippingService.ListShipmentLines:output_type -> core.ListShipmentLinesResponse
-	25, // 53: core.CoreShippingService.GetShipmentLine:output_type -> core.GetShipmentLineResponse
-	27, // 54: core.CoreShippingService.CreateShipmentLine:output_type -> core.CreateShipmentLineResponse
-	29, // 55: core.CoreShippingService.UpdateShipmentLine:output_type -> core.UpdateShipmentLineResponse
-	33, // 56: core.CoreShippingService.DeleteShipmentLine:output_type -> google.protobuf.Empty
-	44, // [44:57] is the sub-list for method output_type
-	31, // [31:44] is the sub-list for method input_type
-	31, // [31:31] is the sub-list for extension type_name
-	31, // [31:31] is the sub-list for extension extendee
-	0,  // [0:31] is the sub-list for field type_name
+	31, // 3: core.ShipmentSummaryInfo.customer_created_at:type_name -> google.protobuf.Timestamp
+	31, // 4: core.ShipmentSummaryInfo.customer_updated_at:type_name -> google.protobuf.Timestamp
+	31, // 5: core.ShipmentSummaryInfo.sales_order_created_at:type_name -> google.protobuf.Timestamp
+	31, // 6: core.ShipmentSummaryInfo.sales_order_updated_at:type_name -> google.protobuf.Timestamp
+	31, // 7: core.ShipmentInfo.shipped_at:type_name -> google.protobuf.Timestamp
+	31, // 8: core.ShipmentInfo.created_at:type_name -> google.protobuf.Timestamp
+	31, // 9: core.ShipmentInfo.updated_at:type_name -> google.protobuf.Timestamp
+	2,  // 10: core.ShipmentInfo.lines:type_name -> core.ShipmentLineInfo
+	3,  // 11: core.ShipmentInfo.shipping_cases:type_name -> core.ShippingCaseDetailInfo
+	31, // 12: core.ShipmentInfo.service_level_created_at:type_name -> google.protobuf.Timestamp
+	31, // 13: core.ShipmentInfo.service_level_updated_at:type_name -> google.protobuf.Timestamp
+	31, // 14: core.ShipmentInfo.carrier_created_at:type_name -> google.protobuf.Timestamp
+	31, // 15: core.ShipmentInfo.carrier_updated_at:type_name -> google.protobuf.Timestamp
+	31, // 16: core.ShipmentInfo.customer_created_at:type_name -> google.protobuf.Timestamp
+	31, // 17: core.ShipmentInfo.customer_updated_at:type_name -> google.protobuf.Timestamp
+	31, // 18: core.ShipmentInfo.sales_order_created_at:type_name -> google.protobuf.Timestamp
+	31, // 19: core.ShipmentInfo.sales_order_updated_at:type_name -> google.protobuf.Timestamp
+	31, // 20: core.ShipmentInfo.shipping_address_created_at:type_name -> google.protobuf.Timestamp
+	31, // 21: core.ShipmentInfo.shipping_address_updated_at:type_name -> google.protobuf.Timestamp
+	31, // 22: core.ShipmentInfo.shipped_by_created_at:type_name -> google.protobuf.Timestamp
+	31, // 23: core.ShipmentInfo.shipped_by_updated_at:type_name -> google.protobuf.Timestamp
+	31, // 24: core.ShipmentInfo.invoice_created_at:type_name -> google.protobuf.Timestamp
+	31, // 25: core.ShipmentInfo.invoice_updated_at:type_name -> google.protobuf.Timestamp
+	31, // 26: core.ShipmentInfo.pick_created_at:type_name -> google.protobuf.Timestamp
+	31, // 27: core.ShipmentInfo.pick_updated_at:type_name -> google.protobuf.Timestamp
+	31, // 28: core.ShipmentLineInfo.created_at:type_name -> google.protobuf.Timestamp
+	31, // 29: core.ShipmentLineInfo.updated_at:type_name -> google.protobuf.Timestamp
+	31, // 30: core.ShippingCaseDetailInfo.shipped_at:type_name -> google.protobuf.Timestamp
+	31, // 31: core.ShippingCaseDetailInfo.created_at:type_name -> google.protobuf.Timestamp
+	31, // 32: core.ShippingCaseDetailInfo.updated_at:type_name -> google.protobuf.Timestamp
+	31, // 33: core.ShippingCaseDetailInfo.carrier_created_at:type_name -> google.protobuf.Timestamp
+	31, // 34: core.ShippingCaseDetailInfo.carrier_updated_at:type_name -> google.protobuf.Timestamp
+	0,  // 35: core.ListShipmentsResponse.shipments:type_name -> core.ShipmentSummaryInfo
+	32, // 36: core.ListShipmentsResponse.page_info:type_name -> core.PageInfo
+	1,  // 37: core.GetShipmentResponse.shipment:type_name -> core.ShipmentInfo
+	1,  // 38: core.UpdateShipmentResponse.shipment:type_name -> core.ShipmentInfo
+	1,  // 39: core.ShipShipmentResponse.shipment:type_name -> core.ShipmentInfo
+	1,  // 40: core.VoidShipmentResponse.shipment:type_name -> core.ShipmentInfo
+	5,  // 41: core.EstimateRateRequest.from:type_name -> core.AddressInput
+	5,  // 42: core.EstimateRateRequest.to:type_name -> core.AddressInput
+	4,  // 43: core.EstimateRateRequest.parcels:type_name -> core.ParcelInfo
+	5,  // 44: core.RateShopRequest.from:type_name -> core.AddressInput
+	5,  // 45: core.RateShopRequest.to:type_name -> core.AddressInput
+	4,  // 46: core.RateShopRequest.parcels:type_name -> core.ParcelInfo
+	6,  // 47: core.RateShopResponse.options:type_name -> core.RateShopOptionInfo
+	2,  // 48: core.ListShipmentLinesResponse.shipment_lines:type_name -> core.ShipmentLineInfo
+	32, // 49: core.ListShipmentLinesResponse.page_info:type_name -> core.PageInfo
+	2,  // 50: core.GetShipmentLineResponse.shipment_line:type_name -> core.ShipmentLineInfo
+	2,  // 51: core.CreateShipmentLineResponse.shipment_line:type_name -> core.ShipmentLineInfo
+	2,  // 52: core.UpdateShipmentLineResponse.shipment_line:type_name -> core.ShipmentLineInfo
+	7,  // 53: core.CoreShippingService.ListShipments:input_type -> core.ListShipmentsRequest
+	9,  // 54: core.CoreShippingService.GetShipment:input_type -> core.GetShipmentRequest
+	11, // 55: core.CoreShippingService.UpdateShipment:input_type -> core.UpdateShipmentRequest
+	13, // 56: core.CoreShippingService.DeleteShipment:input_type -> core.DeleteShipmentRequest
+	14, // 57: core.CoreShippingService.ShipShipment:input_type -> core.ShipShipmentRequest
+	16, // 58: core.CoreShippingService.VoidShipment:input_type -> core.VoidShipmentRequest
+	18, // 59: core.CoreShippingService.EstimateRate:input_type -> core.EstimateRateRequest
+	20, // 60: core.CoreShippingService.RateShop:input_type -> core.RateShopRequest
+	22, // 61: core.CoreShippingService.ListShipmentLines:input_type -> core.ListShipmentLinesRequest
+	24, // 62: core.CoreShippingService.GetShipmentLine:input_type -> core.GetShipmentLineRequest
+	26, // 63: core.CoreShippingService.CreateShipmentLine:input_type -> core.CreateShipmentLineRequest
+	28, // 64: core.CoreShippingService.UpdateShipmentLine:input_type -> core.UpdateShipmentLineRequest
+	30, // 65: core.CoreShippingService.DeleteShipmentLine:input_type -> core.DeleteShipmentLineRequest
+	8,  // 66: core.CoreShippingService.ListShipments:output_type -> core.ListShipmentsResponse
+	10, // 67: core.CoreShippingService.GetShipment:output_type -> core.GetShipmentResponse
+	12, // 68: core.CoreShippingService.UpdateShipment:output_type -> core.UpdateShipmentResponse
+	33, // 69: core.CoreShippingService.DeleteShipment:output_type -> google.protobuf.Empty
+	15, // 70: core.CoreShippingService.ShipShipment:output_type -> core.ShipShipmentResponse
+	17, // 71: core.CoreShippingService.VoidShipment:output_type -> core.VoidShipmentResponse
+	19, // 72: core.CoreShippingService.EstimateRate:output_type -> core.EstimateRateResponse
+	21, // 73: core.CoreShippingService.RateShop:output_type -> core.RateShopResponse
+	23, // 74: core.CoreShippingService.ListShipmentLines:output_type -> core.ListShipmentLinesResponse
+	25, // 75: core.CoreShippingService.GetShipmentLine:output_type -> core.GetShipmentLineResponse
+	27, // 76: core.CoreShippingService.CreateShipmentLine:output_type -> core.CreateShipmentLineResponse
+	29, // 77: core.CoreShippingService.UpdateShipmentLine:output_type -> core.UpdateShipmentLineResponse
+	33, // 78: core.CoreShippingService.DeleteShipmentLine:output_type -> google.protobuf.Empty
+	66, // [66:79] is the sub-list for method output_type
+	53, // [53:66] is the sub-list for method input_type
+	53, // [53:53] is the sub-list for extension type_name
+	53, // [53:53] is the sub-list for extension extendee
+	0,  // [0:53] is the sub-list for field type_name
 }
 
 func init() { file_core_core_shipping_proto_init() }

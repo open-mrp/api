@@ -40,7 +40,7 @@ func (*ProductTypesEndpointGroup) Materialize(config *ProductTypesEndpointGroupC
 	}
 
 	listProductTypesEndpoint := (&producttypeep.ListProductTypesEndpoint{}).Materialize().WithService(inner, productTypeSvc)
-	getProductTypeEndpoint := (&producttypeep.GetProductTypeEndpoint{}).Materialize().WithService(inner, productTypeSvc)
+	getProductTypeEndpoint := (&producttypeep.RetrieveProductTypeEndpoint{}).Materialize().WithService(inner, productTypeSvc)
 	createProductTypeEndpoint := (&producttypeep.CreateProductTypeEndpoint{}).Materialize().WithService(inner, productTypeSvc)
 	updateProductTypeEndpoint := (&producttypeep.UpdateProductTypeEndpoint{}).Materialize().WithService(inner, productTypeSvc)
 	deleteProductTypeEndpoint := (&producttypeep.DeleteProductTypeEndpoint{}).Materialize().WithService(inner, productTypeSvc)

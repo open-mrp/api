@@ -4,19 +4,20 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"time"
 )
 
 // ValidateExpandableFields checks that non-nil expandable sub-resource fields
-// included in the API response have their minimum stub contract satisfied:
-// a non-empty `id` and a non-empty `object`. Other fields on sub-resources
-// are not enforced here because the API deliberately uses "light presenters"
-// — expanded sub-resources carry id/object/name/etc. as available, and
-// clients that need a full resource should fetch it by id. This matches the
-// presenter pattern used across endpoints.
+// included in the API response satisfy validate:"required" on each exported
+// string-kind and time.Time field (matching resourcetest.ValidateExpandableStubs).
+// Non-requested expandable fields are collapsed to null before the client sees
+// the response; fields left in the payload after an include must be complete.
 //
-// Only fields in the requested include set (plus defaults) are validated,
-// since non-requested expandable fields are collapsed to null before reaching
-// the client.
+// Nested include paths (e.g. flat_rate.unit) are validated by descending into
+// non-expandable wrapper structs (e.g. Quantity under flat_rate). List wrappers
+// (*List[T]) validate each element of Data.
+//
+// Only fields in the requested include set are validated.
 func ValidateExpandableFields(resource any, requested map[string]bool, config *IncludeConfig) error {
 	if config == nil || resource == nil {
 		return nil
@@ -29,7 +30,7 @@ func ValidateExpandableFields(resource any, requested map[string]bool, config *I
 	}
 
 	rv := reflect.ValueOf(resource)
-	if rv.Kind() == reflect.Ptr {
+	if rv.Kind() == reflect.Pointer {
 		rv = rv.Elem()
 	}
 	if rv.Kind() != reflect.Struct {
@@ -41,7 +42,7 @@ func ValidateExpandableFields(resource any, requested map[string]bool, config *I
 		var errs []string
 		for i := 0; i < dataField.Len(); i++ {
 			elem := dataField.Index(i)
-			if elem.Kind() == reflect.Ptr {
+			if elem.Kind() == reflect.Pointer {
 				if elem.IsNil() {
 					continue
 				}
@@ -60,6 +61,29 @@ func ValidateExpandableFields(resource any, requested map[string]bool, config *I
 	}
 
 	return validateExpandableOnStruct(rv, includedPaths)
+}
+
+func jsonFieldName(ft reflect.StructField) string {
+	tag := ft.Tag.Get("json")
+	if tag == "" || tag == "-" {
+		return ""
+	}
+	return strings.Split(tag, ",")[0]
+}
+
+// pathsNestedUnderPrefix returns included path keys with the prefix removed,
+// for continuing validation inside a nested JSON object.
+func pathsNestedUnderPrefix(includedPaths map[string]bool, prefix string) map[string]bool {
+	out := make(map[string]bool)
+	for p := range includedPaths {
+		if strings.HasPrefix(p, prefix) {
+			suffix := strings.TrimPrefix(p, prefix)
+			if suffix != "" {
+				out[suffix] = true
+			}
+		}
+	}
+	return out
 }
 
 // buildIncludedPaths returns the set of top-level JSON paths that will remain
@@ -88,16 +112,13 @@ func validateExpandableOnStruct(rv reflect.Value, includedPaths map[string]bool)
 			continue
 		}
 
-		// Get the JSON field name to check against included paths.
-		jsonName := ft.Tag.Get("json")
+		jsonName := jsonFieldName(ft)
 		if jsonName == "" {
 			continue
 		}
-		jsonName = strings.Split(jsonName, ",")[0]
 
 		if !includedPaths[jsonName] {
-			// Check for nested paths (e.g., "freight_preferences.carrier").
-			// If this field is a parent of a nested include, we need to walk into it.
+			// Nested includes under this expandable field (e.g. owner.account).
 			hasNestedInclude := false
 			for p := range includedPaths {
 				if strings.HasPrefix(p, jsonName+".") {
@@ -108,23 +129,15 @@ func validateExpandableOnStruct(rv reflect.Value, includedPaths map[string]bool)
 			if !hasNestedInclude {
 				continue
 			}
-			// Walk into this struct to find nested expandable fields.
 			fv := rv.Field(i)
-			if fv.Kind() == reflect.Ptr {
+			if fv.Kind() == reflect.Pointer {
 				if fv.IsNil() {
 					continue
 				}
 				fv = fv.Elem()
 			}
 			if fv.Kind() == reflect.Struct {
-				// Build sub-paths relative to this field.
-				subPaths := make(map[string]bool)
-				prefix := jsonName + "."
-				for p := range includedPaths {
-					if strings.HasPrefix(p, prefix) {
-						subPaths[strings.TrimPrefix(p, prefix)] = true
-					}
-				}
+				subPaths := pathsNestedUnderPrefix(includedPaths, jsonName+".")
 				if err := validateExpandableOnStruct(fv, subPaths); err != nil {
 					errs = append(errs, fmt.Sprintf("%s.%s", jsonName, err))
 				}
@@ -134,26 +147,28 @@ func validateExpandableOnStruct(rv reflect.Value, includedPaths map[string]bool)
 
 		fv := rv.Field(i)
 		switch fv.Kind() {
-		case reflect.Ptr:
+		case reflect.Pointer:
 			if fv.IsNil() || fv.Elem().Kind() != reflect.Struct {
 				continue
 			}
-			if fieldErrs := validateStubStringFields(fv.Elem()); len(fieldErrs) > 0 {
+			inner := fv.Elem()
+			if fieldErrs := validateIncludedExpandableStub(inner); len(fieldErrs) > 0 {
 				for _, e := range fieldErrs {
 					errs = append(errs, fmt.Sprintf("%s.%s", jsonName, e))
 				}
 			}
+			errs = append(errs, validateExpandableListDataElements(inner, jsonName)...)
 		case reflect.Slice:
 			for j := 0; j < fv.Len(); j++ {
 				elem := fv.Index(j)
-				if elem.Kind() == reflect.Ptr {
+				if elem.Kind() == reflect.Pointer {
 					if elem.IsNil() {
 						continue
 					}
 					elem = elem.Elem()
 				}
 				if elem.Kind() == reflect.Struct {
-					if fieldErrs := validateStubStringFields(elem); len(fieldErrs) > 0 {
+					if fieldErrs := validateIncludedExpandableStub(elem); len(fieldErrs) > 0 {
 						for _, e := range fieldErrs {
 							errs = append(errs, fmt.Sprintf("%s[%d].%s", jsonName, j, e))
 						}
@@ -163,39 +178,105 @@ func validateExpandableOnStruct(rv reflect.Value, includedPaths map[string]bool)
 		}
 	}
 
+	// Descend through non-expandable structs when includes target nested paths
+	// (e.g. flat_rate.unit → Quantity.unit).
+	for i := 0; i < rt.NumField(); i++ {
+		ft := rt.Field(i)
+		if !ft.IsExported() || ft.Tag.Get("expandable") == "true" {
+			continue
+		}
+		jsonName := jsonFieldName(ft)
+		if jsonName == "" {
+			continue
+		}
+		subPaths := pathsNestedUnderPrefix(includedPaths, jsonName+".")
+		if len(subPaths) == 0 {
+			continue
+		}
+		fv := rv.Field(i)
+		if fv.Kind() == reflect.Pointer {
+			if fv.IsNil() {
+				continue
+			}
+			fv = fv.Elem()
+		}
+		if fv.Kind() != reflect.Struct {
+			continue
+		}
+		if err := validateExpandableOnStruct(fv, subPaths); err != nil {
+			errs = append(errs, fmt.Sprintf("%s.%s", jsonName, err))
+		}
+	}
+
 	if len(errs) > 0 {
 		return fmt.Errorf("expandable field validation failed: %s", strings.Join(errs, "; "))
 	}
 	return nil
 }
 
-// validateStubStringFields checks that the minimum stub contract is satisfied
-// on an expandable sub-resource: the `id` and `object` fields must be
-// non-empty. This catches "accidentally-empty struct" bugs (e.g. returning
-// `&Rate{}` instead of nil) while allowing the codebase's "light presenter"
-// pattern, where sub-resources may carry only id/object/name when fetched as
-// part of an included parent. Callers that need a fully-populated resource
-// should request it directly via its own endpoint.
-func validateStubStringFields(rv reflect.Value) []string {
+var timeType = reflect.TypeOf((*time.Time)(nil)).Elem()
+
+// validateIncludedExpandableStub enforces validate:"required" on exported
+// string-kind and time.Time fields (aligned with resourcetest.validateStubFields).
+func validateIncludedExpandableStub(rv reflect.Value) []string {
 	rt := rv.Type()
 	var errs []string
 
 	for i := 0; i < rt.NumField(); i++ {
 		fv := rv.Field(i)
 		ft := rt.Field(i)
-		if !ft.IsExported() || fv.Kind() != reflect.String {
+		if !ft.IsExported() {
 			continue
 		}
-		jsonTag := ft.Tag.Get("json")
-		if jsonTag == "" {
+		validateTag := ft.Tag.Get("validate")
+		if !strings.Contains(validateTag, "required") {
 			continue
 		}
-		jsonName := strings.Split(jsonTag, ",")[0]
-		if jsonName != "id" && jsonName != "object" {
+		jsonName := jsonFieldName(ft)
+		if jsonName == "" {
 			continue
 		}
-		if fv.IsZero() {
-			errs = append(errs, fmt.Sprintf("%s (json:%q) is empty", ft.Name, jsonName))
+
+		switch {
+		case ft.Type == timeType:
+			if fv.IsZero() {
+				errs = append(errs, fmt.Sprintf("%s (json:%q) is zero time", ft.Name, jsonName))
+			}
+		case fv.Kind() == reflect.String:
+			if fv.IsZero() {
+				errs = append(errs, fmt.Sprintf("%s (json:%q) is empty", ft.Name, jsonName))
+			}
+		}
+	}
+	return errs
+}
+
+// validateExpandableListDataElements validates each element of List[T].Data when
+// the expandable field points at a list wrapper struct.
+func validateExpandableListDataElements(listStruct reflect.Value, jsonField string) []string {
+	rt := listStruct.Type()
+	dataField, ok := rt.FieldByName("Data")
+	if !ok || !dataField.IsExported() {
+		return nil
+	}
+	fv := listStruct.FieldByName("Data")
+	if fv.Kind() != reflect.Slice {
+		return nil
+	}
+	var errs []string
+	for j := 0; j < fv.Len(); j++ {
+		elem := fv.Index(j)
+		if elem.Kind() == reflect.Pointer {
+			if elem.IsNil() {
+				continue
+			}
+			elem = elem.Elem()
+		}
+		if elem.Kind() != reflect.Struct {
+			continue
+		}
+		for _, e := range validateIncludedExpandableStub(elem) {
+			errs = append(errs, fmt.Sprintf("%s.data[%d].%s", jsonField, j, e))
 		}
 	}
 	return errs

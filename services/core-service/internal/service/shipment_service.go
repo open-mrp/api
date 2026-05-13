@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"slices"
 	"sort"
 	"strconv"
 
@@ -201,6 +202,21 @@ func (s *shipmentSvcImpl) UpdateShipment(ctx context.Context, params domain.Upda
 				return apiErr
 			}
 			result = updated
+
+			if slices.Contains(params.Includes, "lines") {
+				lines, apiErr := txSvc.repos.NewShipmentLineRepo().ListByShipment(txCtx, params.ShipmentID)
+				if apiErr != nil {
+					return apiErr
+				}
+				result.Lines = lines
+			}
+			if slices.Contains(params.Includes, "shipping_cases") {
+				cases, apiErr := txSvc.repos.NewShippingCaseRepo().ListByShipment(txCtx, params.ShipmentID)
+				if apiErr != nil {
+					return apiErr
+				}
+				result.ShippingCases = cases
+			}
 
 			changes := audit.ComputeChanges(old, updated)
 
@@ -421,6 +437,21 @@ func (s *shipmentSvcImpl) ShipShipment(ctx context.Context, params domain.ShipSh
 			}
 			result = updated
 
+			if slices.Contains(params.Includes, "lines") {
+				lines, apiErr := txSvc.repos.NewShipmentLineRepo().ListByShipment(txCtx, params.ShipmentID)
+				if apiErr != nil {
+					return apiErr
+				}
+				result.Lines = lines
+			}
+			if slices.Contains(params.Includes, "shipping_cases") {
+				cases, apiErr := txSvc.repos.NewShippingCaseRepo().ListByShipment(txCtx, params.ShipmentID)
+				if apiErr != nil {
+					return apiErr
+				}
+				result.ShippingCases = cases
+			}
+
 			changes := audit.ComputeChanges(shipment, updated)
 
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
@@ -495,6 +526,21 @@ func (s *shipmentSvcImpl) ShipShipment(ctx context.Context, params domain.ShipSh
 				return apiErr
 			}
 			result = updated
+
+			if slices.Contains(params.Includes, "lines") {
+				lines, apiErr := txSvc.repos.NewShipmentLineRepo().ListByShipment(txCtx, params.ShipmentID)
+				if apiErr != nil {
+					return apiErr
+				}
+				result.Lines = lines
+			}
+			if slices.Contains(params.Includes, "shipping_cases") {
+				cases, apiErr := txSvc.repos.NewShippingCaseRepo().ListByShipment(txCtx, params.ShipmentID)
+				if apiErr != nil {
+					return apiErr
+				}
+				result.ShippingCases = cases
+			}
 
 			changes := audit.ComputeChanges(old, updated)
 
@@ -773,7 +819,7 @@ func (s *shipmentSvcImpl) EstimateRate(ctx context.Context, params domain.Estima
 
 	// Get carrier to find Shippo carrier account object ID.
 	carrierRepo := s.repos.NewCarrierRepo()
-	carrier, apiErr := carrierRepo.Get(ctx, params.AccountID, params.CarrierID)
+	carrier, apiErr := carrierRepo.Get(ctx, domain.GetCarrierParams{AccountID: params.AccountID, CarrierID: params.CarrierID})
 	if apiErr != nil {
 		return 0, tracing.Trace(span, apiErr)
 	}

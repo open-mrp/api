@@ -22,9 +22,9 @@ type UpdatePurchaseOrderRequest struct {
 	// Priority code.
 	PriorityCode *string `json:"priority_code,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// Billing address ID.
-	BillingAddressID *string `json:"billing_address_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
+	BillingAddressID *string `json:"billing_address_id,omitempty" nullable:"true" validate:"omitempty"`
 	// Shipping address ID.
-	ShippingAddressID *string `json:"shipping_address_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
+	ShippingAddressID *string `json:"shipping_address_id,omitempty" nullable:"true" validate:"omitempty"`
 	// Promised delivery date.
 	PromisedAt *string `json:"promised_at,omitempty" nullable:"false"`
 	// Account user IDs for email contacts. Replaces existing contacts.

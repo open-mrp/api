@@ -19,7 +19,10 @@ type ProductionRun struct {
 	UpdatedAt         time.Time
 
 	// Joined fields for reads
-	ResponsibleUserName *string
+	ResponsibleUserName       *string
+	ResponsibleUserStatusCode *string
+	ResponsibleUserCreatedAt  *time.Time
+	ResponsibleUserUpdatedAt  *time.Time
 }
 
 // ProductionRunSummary represents a production run for list views.
@@ -34,7 +37,10 @@ type ProductionRunSummary struct {
 	UpdatedAt         time.Time
 
 	// Joined fields
-	ResponsibleUserName *string
+	ResponsibleUserName       *string
+	ResponsibleUserStatusCode *string
+	ResponsibleUserCreatedAt  *time.Time
+	ResponsibleUserUpdatedAt  *time.Time
 }
 
 // ListProductionRunsParams holds the parameters for listing production runs.

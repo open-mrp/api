@@ -26,17 +26,25 @@ func InventoryChangeLogPresenter(icl *pb.InventoryChangeLogInfo) apiresource.Inv
 				icl.QuantityUnitType,
 			),
 			Unit: &apiresource.Unit{
-				ID:           icl.QuantityUnitId,
-				Object:       constants.ObjectTypeUnit,
-				Name:         icl.QuantityUnitName,
-				Abbreviation: icl.QuantityUnitAbbreviation,
-				Type:         constants.UnitType(icl.QuantityUnitType),
+				ID:                icl.QuantityUnitId,
+				Object:            constants.ObjectTypeUnit,
+				Name:              icl.QuantityUnitName,
+				Abbreviation:      icl.QuantityUnitAbbreviation,
+				Type:              constants.UnitType(icl.QuantityUnitType),
+				RatioNumerator:    icl.QuantityUnitRatioNumerator,
+				RatioDenominator:  icl.QuantityUnitRatioDenominator,
+				OffsetNumerator:   icl.QuantityUnitOffsetNumerator,
+				OffsetDenominator: icl.QuantityUnitOffsetDenominator,
+				CreatedAt:         grpcutil.TimestampToTime(icl.QuantityUnitCreatedAt),
+				UpdatedAt:         grpcutil.TimestampToTime(icl.QuantityUnitUpdatedAt),
 			},
 		},
 		Item: &apiresource.Item{
-			ID:     icl.ItemId,
-			Object: constants.ObjectTypeItem,
-			SKU:    icl.ItemSku,
+			ID:        icl.ItemId,
+			Object:    constants.ObjectTypeItem,
+			SKU:       icl.ItemSku,
+			CreatedAt: grpcutil.TimestampToTime(icl.ItemCreatedAt),
+			UpdatedAt: grpcutil.TimestampToTime(icl.ItemUpdatedAt),
 		},
 		CreatedAt: grpcutil.TimestampToTime(icl.CreatedAt),
 		UpdatedAt: grpcutil.TimestampToTime(icl.UpdatedAt),
@@ -47,11 +55,18 @@ func InventoryChangeLogPresenter(icl *pb.InventoryChangeLogInfo) apiresource.Inv
 	}
 
 	if icl.ResponsibleUserId != nil {
-		result.ResponsibleUser = &apiresource.User{
+		user := &apiresource.User{
 			ID:     *icl.ResponsibleUserId,
 			Object: constants.ObjectTypeUser,
 			Name:   icl.ResponsibleUserName,
 		}
+		if icl.ResponsibleUserCreatedAt != nil {
+			user.CreatedAt = icl.ResponsibleUserCreatedAt.AsTime()
+		}
+		if icl.ResponsibleUserUpdatedAt != nil {
+			user.UpdatedAt = icl.ResponsibleUserUpdatedAt.AsTime()
+		}
+		result.ResponsibleUser = user
 	}
 
 	if icl.ScanningStationId != nil {
@@ -59,14 +74,21 @@ func InventoryChangeLogPresenter(icl *pb.InventoryChangeLogInfo) apiresource.Inv
 		if icl.ScanningStationName != nil {
 			name = *icl.ScanningStationName
 		}
-		result.ResponsibleScanningStation = &apiresource.ScanningStation{
+		ss := &apiresource.ScanningStation{
 			ID:     *icl.ScanningStationId,
 			Object: constants.ObjectTypeScanningStation,
 			Name:   name,
 		}
 		if icl.ScanningStationType != nil {
-			result.ResponsibleScanningStation.Type = constants.ScanningStationType(*icl.ScanningStationType)
+			ss.Type = constants.ScanningStationType(*icl.ScanningStationType)
 		}
+		if icl.ScanningStationCreatedAt != nil {
+			ss.CreatedAt = icl.ScanningStationCreatedAt.AsTime()
+		}
+		if icl.ScanningStationUpdatedAt != nil {
+			ss.UpdatedAt = icl.ScanningStationUpdatedAt.AsTime()
+		}
+		result.ResponsibleScanningStation = ss
 	}
 
 	return result

@@ -41,6 +41,7 @@ type ListLocationsParams struct {
 	Cursor    *string
 	Limit     int32
 	Query     *string
+	Includes  []string
 }
 
 // ListLocationsResult contains the result of listing locations.
@@ -53,6 +54,7 @@ type ListLocationsResult struct {
 type GetLocationParams struct {
 	AccountID  string
 	LocationID string
+	Includes   []string
 }
 
 // CreateLocationParams contains the parameters for creating a location.
@@ -62,6 +64,7 @@ type CreateLocationParams struct {
 	TypeCode  string
 	ParentID  *string
 	ChildIDs  []string
+	Includes  []string
 }
 
 // UpdateLocationParams contains the parameters for updating a location.
@@ -73,6 +76,7 @@ type UpdateLocationParams struct {
 	ParentID       *string
 	ChildIDs       []string
 	UpdateChildren bool
+	Includes       []string
 }
 
 // DeleteLocationParams contains the parameters for deleting a location.

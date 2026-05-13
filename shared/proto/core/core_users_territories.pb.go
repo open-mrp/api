@@ -278,6 +278,9 @@ type TerritoryAccountUserInfo struct {
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Name          *string                `protobuf:"bytes,2,opt,name=name,proto3,oneof" json:"name,omitempty"`
 	Email         *string                `protobuf:"bytes,3,opt,name=email,proto3,oneof" json:"email,omitempty"`
+	Status        *string                `protobuf:"bytes,4,opt,name=status,proto3,oneof" json:"status,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3,oneof" json:"created_at,omitempty"`
+	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=updated_at,json=updatedAt,proto3,oneof" json:"updated_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -333,12 +336,37 @@ func (x *TerritoryAccountUserInfo) GetEmail() string {
 	return ""
 }
 
+func (x *TerritoryAccountUserInfo) GetStatus() string {
+	if x != nil && x.Status != nil {
+		return *x.Status
+	}
+	return ""
+}
+
+func (x *TerritoryAccountUserInfo) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *TerritoryAccountUserInfo) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
 type TerritoryProductLineInfo struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	Id                 string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name               string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	IsCommissionExempt *bool                  `protobuf:"varint,3,opt,name=is_commission_exempt,json=isCommissionExempt,proto3,oneof" json:"is_commission_exempt,omitempty"`
+	IsFreightExempt    *bool                  `protobuf:"varint,4,opt,name=is_freight_exempt,json=isFreightExempt,proto3,oneof" json:"is_freight_exempt,omitempty"`
+	CreatedAt          *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3,oneof" json:"created_at,omitempty"`
+	UpdatedAt          *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=updated_at,json=updatedAt,proto3,oneof" json:"updated_at,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *TerritoryProductLineInfo) Reset() {
@@ -383,6 +411,34 @@ func (x *TerritoryProductLineInfo) GetName() string {
 		return x.Name
 	}
 	return ""
+}
+
+func (x *TerritoryProductLineInfo) GetIsCommissionExempt() bool {
+	if x != nil && x.IsCommissionExempt != nil {
+		return *x.IsCommissionExempt
+	}
+	return false
+}
+
+func (x *TerritoryProductLineInfo) GetIsFreightExempt() bool {
+	if x != nil && x.IsFreightExempt != nil {
+		return *x.IsFreightExempt
+	}
+	return false
+}
+
+func (x *TerritoryProductLineInfo) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *TerritoryProductLineInfo) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
 }
 
 type TerritoryInfo struct {
@@ -491,6 +547,7 @@ type ListTerritoriesRequest struct {
 	Cursor        *string                `protobuf:"bytes,2,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
 	Limit         int32                  `protobuf:"varint,3,opt,name=limit,proto3" json:"limit,omitempty"`
 	Query         *string                `protobuf:"bytes,4,opt,name=query,proto3,oneof" json:"query,omitempty"`
+	Includes      []string               `protobuf:"bytes,5,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -553,6 +610,13 @@ func (x *ListTerritoriesRequest) GetQuery() string {
 	return ""
 }
 
+func (x *ListTerritoriesRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
+}
+
 type ListTerritoriesResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Territories   []*TerritoryInfo       `protobuf:"bytes,1,rep,name=territories,proto3" json:"territories,omitempty"`
@@ -609,6 +673,7 @@ type GetTerritoryRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	AccountId     string                 `protobuf:"bytes,1,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"`
 	Id            string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
+	Includes      []string               `protobuf:"bytes,3,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -655,6 +720,13 @@ func (x *GetTerritoryRequest) GetId() string {
 		return x.Id
 	}
 	return ""
+}
+
+func (x *GetTerritoryRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
 }
 
 type GetTerritoryResponse struct {
@@ -709,6 +781,7 @@ type CreateTerritoryRequest struct {
 	EndZipcode    *int32                 `protobuf:"varint,4,opt,name=end_zipcode,json=endZipcode,proto3,oneof" json:"end_zipcode,omitempty"`
 	SalesRepId    string                 `protobuf:"bytes,5,opt,name=sales_rep_id,json=salesRepId,proto3" json:"sales_rep_id,omitempty"`
 	ProductLineId *string                `protobuf:"bytes,6,opt,name=product_line_id,json=productLineId,proto3,oneof" json:"product_line_id,omitempty"`
+	Includes      []string               `protobuf:"bytes,7,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -785,6 +858,13 @@ func (x *CreateTerritoryRequest) GetProductLineId() string {
 	return ""
 }
 
+func (x *CreateTerritoryRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
+}
+
 type CreateTerritoryResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Territory     *TerritoryInfo         `protobuf:"bytes,1,opt,name=territory,proto3" json:"territory,omitempty"`
@@ -841,6 +921,7 @@ type UpdateTerritoryRequest struct {
 	ClearProductLine  bool                   `protobuf:"varint,8,opt,name=clear_product_line,json=clearProductLine,proto3" json:"clear_product_line,omitempty"`
 	ClearStartZipcode bool                   `protobuf:"varint,9,opt,name=clear_start_zipcode,json=clearStartZipcode,proto3" json:"clear_start_zipcode,omitempty"`
 	ClearEndZipcode   bool                   `protobuf:"varint,10,opt,name=clear_end_zipcode,json=clearEndZipcode,proto3" json:"clear_end_zipcode,omitempty"`
+	Includes          []string               `protobuf:"bytes,11,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -943,6 +1024,13 @@ func (x *UpdateTerritoryRequest) GetClearEndZipcode() bool {
 		return x.ClearEndZipcode
 	}
 	return false
+}
+
+func (x *UpdateTerritoryRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
 }
 
 type UpdateTerritoryResponse struct {
@@ -2020,6 +2108,7 @@ type DepartmentInfo struct {
 	Machines         []*LightMachineInfo         `protobuf:"bytes,7,rep,name=machines,proto3" json:"machines,omitempty"`
 	CreatedAt        *timestamppb.Timestamp      `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt        *timestamppb.Timestamp      `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	LocationTypeCode *string                     `protobuf:"bytes,10,opt,name=location_type_code,json=locationTypeCode,proto3,oneof" json:"location_type_code,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -2115,6 +2204,13 @@ func (x *DepartmentInfo) GetUpdatedAt() *timestamppb.Timestamp {
 		return x.UpdatedAt
 	}
 	return nil
+}
+
+func (x *DepartmentInfo) GetLocationTypeCode() string {
+	if x != nil && x.LocationTypeCode != nil {
+		return *x.LocationTypeCode
+	}
+	return ""
 }
 
 type ListDepartmentsRequest struct {
@@ -3004,27 +3100,39 @@ func (x *GetEmailLogResponse) GetEmailLog() *EmailLogInfo {
 }
 
 type InventoryChangeLogInfo struct {
-	state                    protoimpl.MessageState `protogen:"open.v1"`
-	Id                       string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	ItemId                   string                 `protobuf:"bytes,2,opt,name=item_id,json=itemId,proto3" json:"item_id,omitempty"`
-	ItemSku                  string                 `protobuf:"bytes,3,opt,name=item_sku,json=itemSku,proto3" json:"item_sku,omitempty"`
-	QuantityId               string                 `protobuf:"bytes,4,opt,name=quantity_id,json=quantityId,proto3" json:"quantity_id,omitempty"`
-	QuantityValue            string                 `protobuf:"bytes,5,opt,name=quantity_value,json=quantityValue,proto3" json:"quantity_value,omitempty"`
-	QuantityUnitId           string                 `protobuf:"bytes,6,opt,name=quantity_unit_id,json=quantityUnitId,proto3" json:"quantity_unit_id,omitempty"`
-	QuantityUnitName         string                 `protobuf:"bytes,7,opt,name=quantity_unit_name,json=quantityUnitName,proto3" json:"quantity_unit_name,omitempty"`
-	QuantityUnitAbbreviation string                 `protobuf:"bytes,8,opt,name=quantity_unit_abbreviation,json=quantityUnitAbbreviation,proto3" json:"quantity_unit_abbreviation,omitempty"`
-	QuantityUnitType         string                 `protobuf:"bytes,9,opt,name=quantity_unit_type,json=quantityUnitType,proto3" json:"quantity_unit_type,omitempty"`
-	ActionTypeCode           string                 `protobuf:"bytes,10,opt,name=action_type_code,json=actionTypeCode,proto3" json:"action_type_code,omitempty"`
-	ScanningStationId        *string                `protobuf:"bytes,11,opt,name=scanning_station_id,json=scanningStationId,proto3,oneof" json:"scanning_station_id,omitempty"`
-	ScanningStationName      *string                `protobuf:"bytes,12,opt,name=scanning_station_name,json=scanningStationName,proto3,oneof" json:"scanning_station_name,omitempty"`
-	ResponsibleUserId        *string                `protobuf:"bytes,13,opt,name=responsible_user_id,json=responsibleUserId,proto3,oneof" json:"responsible_user_id,omitempty"`
-	ResponsibleUserName      *string                `protobuf:"bytes,14,opt,name=responsible_user_name,json=responsibleUserName,proto3,oneof" json:"responsible_user_name,omitempty"`
-	CreatedAt                *timestamppb.Timestamp `protobuf:"bytes,15,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt                *timestamppb.Timestamp `protobuf:"bytes,16,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	ItemTypeCode             *string                `protobuf:"bytes,17,opt,name=item_type_code,json=itemTypeCode,proto3,oneof" json:"item_type_code,omitempty"`
-	ScanningStationType      *string                `protobuf:"bytes,18,opt,name=scanning_station_type,json=scanningStationType,proto3,oneof" json:"scanning_station_type,omitempty"`
-	unknownFields            protoimpl.UnknownFields
-	sizeCache                protoimpl.SizeCache
+	state                         protoimpl.MessageState `protogen:"open.v1"`
+	Id                            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	ItemId                        string                 `protobuf:"bytes,2,opt,name=item_id,json=itemId,proto3" json:"item_id,omitempty"`
+	ItemSku                       string                 `protobuf:"bytes,3,opt,name=item_sku,json=itemSku,proto3" json:"item_sku,omitempty"`
+	QuantityId                    string                 `protobuf:"bytes,4,opt,name=quantity_id,json=quantityId,proto3" json:"quantity_id,omitempty"`
+	QuantityValue                 string                 `protobuf:"bytes,5,opt,name=quantity_value,json=quantityValue,proto3" json:"quantity_value,omitempty"`
+	QuantityUnitId                string                 `protobuf:"bytes,6,opt,name=quantity_unit_id,json=quantityUnitId,proto3" json:"quantity_unit_id,omitempty"`
+	QuantityUnitName              string                 `protobuf:"bytes,7,opt,name=quantity_unit_name,json=quantityUnitName,proto3" json:"quantity_unit_name,omitempty"`
+	QuantityUnitAbbreviation      string                 `protobuf:"bytes,8,opt,name=quantity_unit_abbreviation,json=quantityUnitAbbreviation,proto3" json:"quantity_unit_abbreviation,omitempty"`
+	QuantityUnitType              string                 `protobuf:"bytes,9,opt,name=quantity_unit_type,json=quantityUnitType,proto3" json:"quantity_unit_type,omitempty"`
+	ActionTypeCode                string                 `protobuf:"bytes,10,opt,name=action_type_code,json=actionTypeCode,proto3" json:"action_type_code,omitempty"`
+	ScanningStationId             *string                `protobuf:"bytes,11,opt,name=scanning_station_id,json=scanningStationId,proto3,oneof" json:"scanning_station_id,omitempty"`
+	ScanningStationName           *string                `protobuf:"bytes,12,opt,name=scanning_station_name,json=scanningStationName,proto3,oneof" json:"scanning_station_name,omitempty"`
+	ResponsibleUserId             *string                `protobuf:"bytes,13,opt,name=responsible_user_id,json=responsibleUserId,proto3,oneof" json:"responsible_user_id,omitempty"`
+	ResponsibleUserName           *string                `protobuf:"bytes,14,opt,name=responsible_user_name,json=responsibleUserName,proto3,oneof" json:"responsible_user_name,omitempty"`
+	CreatedAt                     *timestamppb.Timestamp `protobuf:"bytes,15,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt                     *timestamppb.Timestamp `protobuf:"bytes,16,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	ItemTypeCode                  *string                `protobuf:"bytes,17,opt,name=item_type_code,json=itemTypeCode,proto3,oneof" json:"item_type_code,omitempty"`
+	ScanningStationType           *string                `protobuf:"bytes,18,opt,name=scanning_station_type,json=scanningStationType,proto3,oneof" json:"scanning_station_type,omitempty"`
+	ItemCreatedAt                 *timestamppb.Timestamp `protobuf:"bytes,19,opt,name=item_created_at,json=itemCreatedAt,proto3" json:"item_created_at,omitempty"`
+	ItemUpdatedAt                 *timestamppb.Timestamp `protobuf:"bytes,20,opt,name=item_updated_at,json=itemUpdatedAt,proto3" json:"item_updated_at,omitempty"`
+	QuantityUnitRatioNumerator    string                 `protobuf:"bytes,21,opt,name=quantity_unit_ratio_numerator,json=quantityUnitRatioNumerator,proto3" json:"quantity_unit_ratio_numerator,omitempty"`
+	QuantityUnitRatioDenominator  string                 `protobuf:"bytes,22,opt,name=quantity_unit_ratio_denominator,json=quantityUnitRatioDenominator,proto3" json:"quantity_unit_ratio_denominator,omitempty"`
+	QuantityUnitOffsetNumerator   string                 `protobuf:"bytes,23,opt,name=quantity_unit_offset_numerator,json=quantityUnitOffsetNumerator,proto3" json:"quantity_unit_offset_numerator,omitempty"`
+	QuantityUnitOffsetDenominator string                 `protobuf:"bytes,24,opt,name=quantity_unit_offset_denominator,json=quantityUnitOffsetDenominator,proto3" json:"quantity_unit_offset_denominator,omitempty"`
+	QuantityUnitCreatedAt         *timestamppb.Timestamp `protobuf:"bytes,25,opt,name=quantity_unit_created_at,json=quantityUnitCreatedAt,proto3" json:"quantity_unit_created_at,omitempty"`
+	QuantityUnitUpdatedAt         *timestamppb.Timestamp `protobuf:"bytes,26,opt,name=quantity_unit_updated_at,json=quantityUnitUpdatedAt,proto3" json:"quantity_unit_updated_at,omitempty"`
+	ScanningStationCreatedAt      *timestamppb.Timestamp `protobuf:"bytes,27,opt,name=scanning_station_created_at,json=scanningStationCreatedAt,proto3,oneof" json:"scanning_station_created_at,omitempty"`
+	ScanningStationUpdatedAt      *timestamppb.Timestamp `protobuf:"bytes,28,opt,name=scanning_station_updated_at,json=scanningStationUpdatedAt,proto3,oneof" json:"scanning_station_updated_at,omitempty"`
+	ResponsibleUserCreatedAt      *timestamppb.Timestamp `protobuf:"bytes,29,opt,name=responsible_user_created_at,json=responsibleUserCreatedAt,proto3,oneof" json:"responsible_user_created_at,omitempty"`
+	ResponsibleUserUpdatedAt      *timestamppb.Timestamp `protobuf:"bytes,30,opt,name=responsible_user_updated_at,json=responsibleUserUpdatedAt,proto3,oneof" json:"responsible_user_updated_at,omitempty"`
+	unknownFields                 protoimpl.UnknownFields
+	sizeCache                     protoimpl.SizeCache
 }
 
 func (x *InventoryChangeLogInfo) Reset() {
@@ -3181,6 +3289,90 @@ func (x *InventoryChangeLogInfo) GetScanningStationType() string {
 		return *x.ScanningStationType
 	}
 	return ""
+}
+
+func (x *InventoryChangeLogInfo) GetItemCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ItemCreatedAt
+	}
+	return nil
+}
+
+func (x *InventoryChangeLogInfo) GetItemUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ItemUpdatedAt
+	}
+	return nil
+}
+
+func (x *InventoryChangeLogInfo) GetQuantityUnitRatioNumerator() string {
+	if x != nil {
+		return x.QuantityUnitRatioNumerator
+	}
+	return ""
+}
+
+func (x *InventoryChangeLogInfo) GetQuantityUnitRatioDenominator() string {
+	if x != nil {
+		return x.QuantityUnitRatioDenominator
+	}
+	return ""
+}
+
+func (x *InventoryChangeLogInfo) GetQuantityUnitOffsetNumerator() string {
+	if x != nil {
+		return x.QuantityUnitOffsetNumerator
+	}
+	return ""
+}
+
+func (x *InventoryChangeLogInfo) GetQuantityUnitOffsetDenominator() string {
+	if x != nil {
+		return x.QuantityUnitOffsetDenominator
+	}
+	return ""
+}
+
+func (x *InventoryChangeLogInfo) GetQuantityUnitCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.QuantityUnitCreatedAt
+	}
+	return nil
+}
+
+func (x *InventoryChangeLogInfo) GetQuantityUnitUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.QuantityUnitUpdatedAt
+	}
+	return nil
+}
+
+func (x *InventoryChangeLogInfo) GetScanningStationCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ScanningStationCreatedAt
+	}
+	return nil
+}
+
+func (x *InventoryChangeLogInfo) GetScanningStationUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ScanningStationUpdatedAt
+	}
+	return nil
+}
+
+func (x *InventoryChangeLogInfo) GetResponsibleUserCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ResponsibleUserCreatedAt
+	}
+	return nil
+}
+
+func (x *InventoryChangeLogInfo) GetResponsibleUserUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ResponsibleUserUpdatedAt
+	}
+	return nil
 }
 
 type ListInventoryChangeLogsRequest struct {
@@ -4628,16 +4820,34 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12*\n" +
 	"\x11vendor_account_id\x18\x02 \x01(\tR\x0fvendorAccountId\"d\n" +
 	"#ListCustomerAccountsForUserResponse\x12=\n" +
-	"\baccounts\x18\x01 \x03(\v2!.core.CustomerAccountSummaryProtoR\baccounts\"q\n" +
+	"\baccounts\x18\x01 \x03(\v2!.core.CustomerAccountSummaryProtoR\baccounts\"\xb7\x02\n" +
 	"\x18TerritoryAccountUserInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x19\n" +
-	"\x05email\x18\x03 \x01(\tH\x01R\x05email\x88\x01\x01B\a\n" +
+	"\x05email\x18\x03 \x01(\tH\x01R\x05email\x88\x01\x01\x12\x1b\n" +
+	"\x06status\x18\x04 \x01(\tH\x02R\x06status\x88\x01\x01\x12>\n" +
+	"\n" +
+	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampH\x03R\tcreatedAt\x88\x01\x01\x12>\n" +
+	"\n" +
+	"updated_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampH\x04R\tupdatedAt\x88\x01\x01B\a\n" +
 	"\x05_nameB\b\n" +
-	"\x06_email\">\n" +
+	"\x06_emailB\t\n" +
+	"\a_statusB\r\n" +
+	"\v_created_atB\r\n" +
+	"\v_updated_at\"\xf3\x02\n" +
 	"\x18TerritoryProductLineInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\"\xc6\x03\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x125\n" +
+	"\x14is_commission_exempt\x18\x03 \x01(\bH\x00R\x12isCommissionExempt\x88\x01\x01\x12/\n" +
+	"\x11is_freight_exempt\x18\x04 \x01(\bH\x01R\x0fisFreightExempt\x88\x01\x01\x12>\n" +
+	"\n" +
+	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampH\x02R\tcreatedAt\x88\x01\x01\x12>\n" +
+	"\n" +
+	"updated_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampH\x03R\tupdatedAt\x88\x01\x01B\x17\n" +
+	"\x15_is_commission_exemptB\x14\n" +
+	"\x12_is_freight_exemptB\r\n" +
+	"\v_created_atB\r\n" +
+	"\v_updated_at\"\xc6\x03\n" +
 	"\rTerritoryInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05state\x18\x02 \x01(\tR\x05state\x12(\n" +
@@ -4654,24 +4864,26 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"\f_end_zipcodeB\f\n" +
 	"\n" +
 	"_sales_repB\x0f\n" +
-	"\r_product_line\"\x9a\x01\n" +
+	"\r_product_line\"\xb6\x01\n" +
 	"\x16ListTerritoriesRequest\x12\x1d\n" +
 	"\n" +
 	"account_id\x18\x01 \x01(\tR\taccountId\x12\x1b\n" +
 	"\x06cursor\x18\x02 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x03 \x01(\x05R\x05limit\x12\x19\n" +
-	"\x05query\x18\x04 \x01(\tH\x01R\x05query\x88\x01\x01B\t\n" +
+	"\x05query\x18\x04 \x01(\tH\x01R\x05query\x88\x01\x01\x12\x1a\n" +
+	"\bincludes\x18\x05 \x03(\tR\bincludesB\t\n" +
 	"\a_cursorB\b\n" +
 	"\x06_query\"}\n" +
 	"\x17ListTerritoriesResponse\x125\n" +
 	"\vterritories\x18\x01 \x03(\v2\x13.core.TerritoryInfoR\vterritories\x12+\n" +
-	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"D\n" +
+	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"`\n" +
 	"\x13GetTerritoryRequest\x12\x1d\n" +
 	"\n" +
 	"account_id\x18\x01 \x01(\tR\taccountId\x12\x0e\n" +
-	"\x02id\x18\x02 \x01(\tR\x02id\"I\n" +
+	"\x02id\x18\x02 \x01(\tR\x02id\x12\x1a\n" +
+	"\bincludes\x18\x03 \x03(\tR\bincludes\"I\n" +
 	"\x14GetTerritoryResponse\x121\n" +
-	"\tterritory\x18\x01 \x01(\v2\x13.core.TerritoryInfoR\tterritory\"\xa2\x02\n" +
+	"\tterritory\x18\x01 \x01(\v2\x13.core.TerritoryInfoR\tterritory\"\xbe\x02\n" +
 	"\x16CreateTerritoryRequest\x12\x1d\n" +
 	"\n" +
 	"account_id\x18\x01 \x01(\tR\taccountId\x12\x14\n" +
@@ -4681,12 +4893,13 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"endZipcode\x88\x01\x01\x12 \n" +
 	"\fsales_rep_id\x18\x05 \x01(\tR\n" +
 	"salesRepId\x12+\n" +
-	"\x0fproduct_line_id\x18\x06 \x01(\tH\x02R\rproductLineId\x88\x01\x01B\x10\n" +
+	"\x0fproduct_line_id\x18\x06 \x01(\tH\x02R\rproductLineId\x88\x01\x01\x12\x1a\n" +
+	"\bincludes\x18\a \x03(\tR\bincludesB\x10\n" +
 	"\x0e_start_zipcodeB\x0e\n" +
 	"\f_end_zipcodeB\x12\n" +
 	"\x10_product_line_id\"L\n" +
 	"\x17CreateTerritoryResponse\x121\n" +
-	"\tterritory\x18\x01 \x01(\v2\x13.core.TerritoryInfoR\tterritory\"\xe1\x03\n" +
+	"\tterritory\x18\x01 \x01(\v2\x13.core.TerritoryInfoR\tterritory\"\xfd\x03\n" +
 	"\x16UpdateTerritoryRequest\x12\x1d\n" +
 	"\n" +
 	"account_id\x18\x01 \x01(\tR\taccountId\x12\x0e\n" +
@@ -4701,7 +4914,8 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"\x12clear_product_line\x18\b \x01(\bR\x10clearProductLine\x12.\n" +
 	"\x13clear_start_zipcode\x18\t \x01(\bR\x11clearStartZipcode\x12*\n" +
 	"\x11clear_end_zipcode\x18\n" +
-	" \x01(\bR\x0fclearEndZipcodeB\b\n" +
+	" \x01(\bR\x0fclearEndZipcode\x12\x1a\n" +
+	"\bincludes\x18\v \x03(\tR\bincludesB\b\n" +
 	"\x06_stateB\x10\n" +
 	"\x0e_start_zipcodeB\x0e\n" +
 	"\f_end_zipcodeB\x0f\n" +
@@ -4793,7 +5007,7 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"\x10_payment_term_idB\n" +
 	"\n" +
 	"\b_address\"\x1a\n" +
-	"\x18RegisterCustomerResponse\"\xc2\x03\n" +
+	"\x18RegisterCustomerResponse\"\x8c\x04\n" +
 	"\x0eDepartmentInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x19\n" +
@@ -4806,10 +5020,13 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\b\n" +
+	"updated_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x121\n" +
+	"\x12location_type_code\x18\n" +
+	" \x01(\tH\x03R\x10locationTypeCode\x88\x01\x01B\b\n" +
 	"\x06_notesB\x0e\n" +
 	"\f_location_idB\x10\n" +
-	"\x0e_location_name\"{\n" +
+	"\x0e_location_nameB\x15\n" +
+	"\x13_location_type_code\"{\n" +
 	"\x16ListDepartmentsRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x19\n" +
@@ -4901,7 +5118,7 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\bincludes\x18\x02 \x03(\tR\bincludes\"F\n" +
 	"\x13GetEmailLogResponse\x12/\n" +
-	"\temail_log\x18\x01 \x01(\v2\x12.core.EmailLogInfoR\bemailLog\"\xd9\a\n" +
+	"\temail_log\x18\x01 \x01(\v2\x12.core.EmailLogInfoR\bemailLog\"\xa3\x10\n" +
 	"\x16InventoryChangeLogInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\aitem_id\x18\x02 \x01(\tR\x06itemId\x12\x19\n" +
@@ -4924,13 +5141,29 @@ const file_core_core_users_territories_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\x10 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12)\n" +
 	"\x0eitem_type_code\x18\x11 \x01(\tH\x04R\fitemTypeCode\x88\x01\x01\x127\n" +
-	"\x15scanning_station_type\x18\x12 \x01(\tH\x05R\x13scanningStationType\x88\x01\x01B\x16\n" +
+	"\x15scanning_station_type\x18\x12 \x01(\tH\x05R\x13scanningStationType\x88\x01\x01\x12B\n" +
+	"\x0fitem_created_at\x18\x13 \x01(\v2\x1a.google.protobuf.TimestampR\ritemCreatedAt\x12B\n" +
+	"\x0fitem_updated_at\x18\x14 \x01(\v2\x1a.google.protobuf.TimestampR\ritemUpdatedAt\x12A\n" +
+	"\x1dquantity_unit_ratio_numerator\x18\x15 \x01(\tR\x1aquantityUnitRatioNumerator\x12E\n" +
+	"\x1fquantity_unit_ratio_denominator\x18\x16 \x01(\tR\x1cquantityUnitRatioDenominator\x12C\n" +
+	"\x1equantity_unit_offset_numerator\x18\x17 \x01(\tR\x1bquantityUnitOffsetNumerator\x12G\n" +
+	" quantity_unit_offset_denominator\x18\x18 \x01(\tR\x1dquantityUnitOffsetDenominator\x12S\n" +
+	"\x18quantity_unit_created_at\x18\x19 \x01(\v2\x1a.google.protobuf.TimestampR\x15quantityUnitCreatedAt\x12S\n" +
+	"\x18quantity_unit_updated_at\x18\x1a \x01(\v2\x1a.google.protobuf.TimestampR\x15quantityUnitUpdatedAt\x12^\n" +
+	"\x1bscanning_station_created_at\x18\x1b \x01(\v2\x1a.google.protobuf.TimestampH\x06R\x18scanningStationCreatedAt\x88\x01\x01\x12^\n" +
+	"\x1bscanning_station_updated_at\x18\x1c \x01(\v2\x1a.google.protobuf.TimestampH\aR\x18scanningStationUpdatedAt\x88\x01\x01\x12^\n" +
+	"\x1bresponsible_user_created_at\x18\x1d \x01(\v2\x1a.google.protobuf.TimestampH\bR\x18responsibleUserCreatedAt\x88\x01\x01\x12^\n" +
+	"\x1bresponsible_user_updated_at\x18\x1e \x01(\v2\x1a.google.protobuf.TimestampH\tR\x18responsibleUserUpdatedAt\x88\x01\x01B\x16\n" +
 	"\x14_scanning_station_idB\x18\n" +
 	"\x16_scanning_station_nameB\x16\n" +
 	"\x14_responsible_user_idB\x18\n" +
 	"\x16_responsible_user_nameB\x11\n" +
 	"\x0f_item_type_codeB\x18\n" +
-	"\x16_scanning_station_type\"\x91\x03\n" +
+	"\x16_scanning_station_typeB\x1e\n" +
+	"\x1c_scanning_station_created_atB\x1e\n" +
+	"\x1c_scanning_station_updated_atB\x1e\n" +
+	"\x1c_responsible_user_created_atB\x1e\n" +
+	"\x1c_responsible_user_updated_at\"\x91\x03\n" +
 	"\x1eListInventoryChangeLogsRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x19\n" +
@@ -5201,71 +5434,83 @@ var file_core_core_users_territories_proto_depIdxs = []int32{
 	65, // 1: core.GetCurrentUserResponse.created_at:type_name -> google.protobuf.Timestamp
 	65, // 2: core.GetCurrentUserResponse.updated_at:type_name -> google.protobuf.Timestamp
 	1,  // 3: core.ListCustomerAccountsForUserResponse.accounts:type_name -> core.CustomerAccountSummaryProto
-	4,  // 4: core.TerritoryInfo.sales_rep:type_name -> core.TerritoryAccountUserInfo
-	5,  // 5: core.TerritoryInfo.product_line:type_name -> core.TerritoryProductLineInfo
-	65, // 6: core.TerritoryInfo.created_at:type_name -> google.protobuf.Timestamp
-	65, // 7: core.TerritoryInfo.updated_at:type_name -> google.protobuf.Timestamp
-	6,  // 8: core.ListTerritoriesResponse.territories:type_name -> core.TerritoryInfo
-	66, // 9: core.ListTerritoriesResponse.page_info:type_name -> core.PageInfo
-	6,  // 10: core.GetTerritoryResponse.territory:type_name -> core.TerritoryInfo
-	6,  // 11: core.CreateTerritoryResponse.territory:type_name -> core.TerritoryInfo
-	6,  // 12: core.UpdateTerritoryResponse.territory:type_name -> core.TerritoryInfo
-	16, // 13: core.RegistrationFlowInfo.customer_group_options:type_name -> core.RegistrationFlowOptionInfo
-	16, // 14: core.RegistrationFlowInfo.payment_term_options:type_name -> core.RegistrationFlowOptionInfo
-	16, // 15: core.RegistrationFlowInfo.shipping_term_options:type_name -> core.RegistrationFlowOptionInfo
-	65, // 16: core.RegistrationFlowInfo.created_at:type_name -> google.protobuf.Timestamp
-	65, // 17: core.RegistrationFlowInfo.updated_at:type_name -> google.protobuf.Timestamp
-	17, // 18: core.ListRegistrationFlowsResponse.registration_flows:type_name -> core.RegistrationFlowInfo
-	66, // 19: core.ListRegistrationFlowsResponse.page_info:type_name -> core.PageInfo
-	17, // 20: core.GetRegistrationFlowResponse.registration_flow:type_name -> core.RegistrationFlowInfo
-	17, // 21: core.CreateRegistrationFlowResponse.registration_flow:type_name -> core.RegistrationFlowInfo
-	17, // 22: core.UpdateRegistrationFlowResponse.registration_flow:type_name -> core.RegistrationFlowInfo
-	17, // 23: core.GetRegistrationFlowBySlugResponse.registration_flow:type_name -> core.RegistrationFlowInfo
-	29, // 24: core.RegisterCustomerRequest.address:type_name -> core.RegisterCustomerAddressInput
-	67, // 25: core.DepartmentInfo.scanning_stations:type_name -> core.LightScanningStationInfo
-	68, // 26: core.DepartmentInfo.machines:type_name -> core.LightMachineInfo
-	65, // 27: core.DepartmentInfo.created_at:type_name -> google.protobuf.Timestamp
-	65, // 28: core.DepartmentInfo.updated_at:type_name -> google.protobuf.Timestamp
-	32, // 29: core.ListDepartmentsResponse.departments:type_name -> core.DepartmentInfo
-	66, // 30: core.ListDepartmentsResponse.page_info:type_name -> core.PageInfo
-	32, // 31: core.GetDepartmentResponse.department:type_name -> core.DepartmentInfo
-	32, // 32: core.CreateDepartmentResponse.department:type_name -> core.DepartmentInfo
-	32, // 33: core.UpdateDepartmentResponse.department:type_name -> core.DepartmentInfo
-	42, // 34: core.EmailLogInfo.sent_by:type_name -> core.EmailLogActor
-	65, // 35: core.EmailLogInfo.created_at:type_name -> google.protobuf.Timestamp
-	65, // 36: core.EmailLogInfo.updated_at:type_name -> google.protobuf.Timestamp
-	43, // 37: core.ListEmailLogsResponse.email_logs:type_name -> core.EmailLogInfo
-	66, // 38: core.ListEmailLogsResponse.page_info:type_name -> core.PageInfo
-	43, // 39: core.GetEmailLogResponse.email_log:type_name -> core.EmailLogInfo
-	65, // 40: core.InventoryChangeLogInfo.created_at:type_name -> google.protobuf.Timestamp
-	65, // 41: core.InventoryChangeLogInfo.updated_at:type_name -> google.protobuf.Timestamp
-	65, // 42: core.ListInventoryChangeLogsRequest.start_date:type_name -> google.protobuf.Timestamp
-	65, // 43: core.ListInventoryChangeLogsRequest.end_date:type_name -> google.protobuf.Timestamp
-	48, // 44: core.ListInventoryChangeLogsResponse.inventory_change_logs:type_name -> core.InventoryChangeLogInfo
-	66, // 45: core.ListInventoryChangeLogsResponse.page_info:type_name -> core.PageInfo
-	48, // 46: core.GetInventoryChangeLogResponse.inventory_change_log:type_name -> core.InventoryChangeLogInfo
-	65, // 47: core.ExportInventoryChangeLogsRequest.start_date:type_name -> google.protobuf.Timestamp
-	65, // 48: core.ExportInventoryChangeLogsRequest.end_date:type_name -> google.protobuf.Timestamp
-	48, // 49: core.ExportInventoryChangeLogsResponse.inventory_change_logs:type_name -> core.InventoryChangeLogInfo
-	65, // 50: core.ListInvoicesRequest.start_date:type_name -> google.protobuf.Timestamp
-	65, // 51: core.ListInvoicesRequest.end_date:type_name -> google.protobuf.Timestamp
-	63, // 52: core.ListInvoicesResponse.invoices:type_name -> core.InvoiceSummaryInfo
-	66, // 53: core.ListInvoicesResponse.page_info:type_name -> core.PageInfo
-	64, // 54: core.GetInvoiceResponse.invoice:type_name -> core.InvoiceInfo
-	63, // 55: core.UpdateInvoiceResponse.invoice:type_name -> core.InvoiceSummaryInfo
-	69, // 56: core.ListCustomerInvoicesResponse.invoices:type_name -> core.InvoiceForPaymentInfo
-	66, // 57: core.ListCustomerInvoicesResponse.page_info:type_name -> core.PageInfo
-	65, // 58: core.InvoiceSummaryInfo.created_at:type_name -> google.protobuf.Timestamp
-	65, // 59: core.InvoiceSummaryInfo.updated_at:type_name -> google.protobuf.Timestamp
-	70, // 60: core.InvoiceInfo.lines:type_name -> core.InvoiceLineInfo
-	71, // 61: core.InvoiceInfo.allocations:type_name -> core.InvoiceAllocationInfo
-	65, // 62: core.InvoiceInfo.created_at:type_name -> google.protobuf.Timestamp
-	65, // 63: core.InvoiceInfo.updated_at:type_name -> google.protobuf.Timestamp
-	64, // [64:64] is the sub-list for method output_type
-	64, // [64:64] is the sub-list for method input_type
-	64, // [64:64] is the sub-list for extension type_name
-	64, // [64:64] is the sub-list for extension extendee
-	0,  // [0:64] is the sub-list for field type_name
+	65, // 4: core.TerritoryAccountUserInfo.created_at:type_name -> google.protobuf.Timestamp
+	65, // 5: core.TerritoryAccountUserInfo.updated_at:type_name -> google.protobuf.Timestamp
+	65, // 6: core.TerritoryProductLineInfo.created_at:type_name -> google.protobuf.Timestamp
+	65, // 7: core.TerritoryProductLineInfo.updated_at:type_name -> google.protobuf.Timestamp
+	4,  // 8: core.TerritoryInfo.sales_rep:type_name -> core.TerritoryAccountUserInfo
+	5,  // 9: core.TerritoryInfo.product_line:type_name -> core.TerritoryProductLineInfo
+	65, // 10: core.TerritoryInfo.created_at:type_name -> google.protobuf.Timestamp
+	65, // 11: core.TerritoryInfo.updated_at:type_name -> google.protobuf.Timestamp
+	6,  // 12: core.ListTerritoriesResponse.territories:type_name -> core.TerritoryInfo
+	66, // 13: core.ListTerritoriesResponse.page_info:type_name -> core.PageInfo
+	6,  // 14: core.GetTerritoryResponse.territory:type_name -> core.TerritoryInfo
+	6,  // 15: core.CreateTerritoryResponse.territory:type_name -> core.TerritoryInfo
+	6,  // 16: core.UpdateTerritoryResponse.territory:type_name -> core.TerritoryInfo
+	16, // 17: core.RegistrationFlowInfo.customer_group_options:type_name -> core.RegistrationFlowOptionInfo
+	16, // 18: core.RegistrationFlowInfo.payment_term_options:type_name -> core.RegistrationFlowOptionInfo
+	16, // 19: core.RegistrationFlowInfo.shipping_term_options:type_name -> core.RegistrationFlowOptionInfo
+	65, // 20: core.RegistrationFlowInfo.created_at:type_name -> google.protobuf.Timestamp
+	65, // 21: core.RegistrationFlowInfo.updated_at:type_name -> google.protobuf.Timestamp
+	17, // 22: core.ListRegistrationFlowsResponse.registration_flows:type_name -> core.RegistrationFlowInfo
+	66, // 23: core.ListRegistrationFlowsResponse.page_info:type_name -> core.PageInfo
+	17, // 24: core.GetRegistrationFlowResponse.registration_flow:type_name -> core.RegistrationFlowInfo
+	17, // 25: core.CreateRegistrationFlowResponse.registration_flow:type_name -> core.RegistrationFlowInfo
+	17, // 26: core.UpdateRegistrationFlowResponse.registration_flow:type_name -> core.RegistrationFlowInfo
+	17, // 27: core.GetRegistrationFlowBySlugResponse.registration_flow:type_name -> core.RegistrationFlowInfo
+	29, // 28: core.RegisterCustomerRequest.address:type_name -> core.RegisterCustomerAddressInput
+	67, // 29: core.DepartmentInfo.scanning_stations:type_name -> core.LightScanningStationInfo
+	68, // 30: core.DepartmentInfo.machines:type_name -> core.LightMachineInfo
+	65, // 31: core.DepartmentInfo.created_at:type_name -> google.protobuf.Timestamp
+	65, // 32: core.DepartmentInfo.updated_at:type_name -> google.protobuf.Timestamp
+	32, // 33: core.ListDepartmentsResponse.departments:type_name -> core.DepartmentInfo
+	66, // 34: core.ListDepartmentsResponse.page_info:type_name -> core.PageInfo
+	32, // 35: core.GetDepartmentResponse.department:type_name -> core.DepartmentInfo
+	32, // 36: core.CreateDepartmentResponse.department:type_name -> core.DepartmentInfo
+	32, // 37: core.UpdateDepartmentResponse.department:type_name -> core.DepartmentInfo
+	42, // 38: core.EmailLogInfo.sent_by:type_name -> core.EmailLogActor
+	65, // 39: core.EmailLogInfo.created_at:type_name -> google.protobuf.Timestamp
+	65, // 40: core.EmailLogInfo.updated_at:type_name -> google.protobuf.Timestamp
+	43, // 41: core.ListEmailLogsResponse.email_logs:type_name -> core.EmailLogInfo
+	66, // 42: core.ListEmailLogsResponse.page_info:type_name -> core.PageInfo
+	43, // 43: core.GetEmailLogResponse.email_log:type_name -> core.EmailLogInfo
+	65, // 44: core.InventoryChangeLogInfo.created_at:type_name -> google.protobuf.Timestamp
+	65, // 45: core.InventoryChangeLogInfo.updated_at:type_name -> google.protobuf.Timestamp
+	65, // 46: core.InventoryChangeLogInfo.item_created_at:type_name -> google.protobuf.Timestamp
+	65, // 47: core.InventoryChangeLogInfo.item_updated_at:type_name -> google.protobuf.Timestamp
+	65, // 48: core.InventoryChangeLogInfo.quantity_unit_created_at:type_name -> google.protobuf.Timestamp
+	65, // 49: core.InventoryChangeLogInfo.quantity_unit_updated_at:type_name -> google.protobuf.Timestamp
+	65, // 50: core.InventoryChangeLogInfo.scanning_station_created_at:type_name -> google.protobuf.Timestamp
+	65, // 51: core.InventoryChangeLogInfo.scanning_station_updated_at:type_name -> google.protobuf.Timestamp
+	65, // 52: core.InventoryChangeLogInfo.responsible_user_created_at:type_name -> google.protobuf.Timestamp
+	65, // 53: core.InventoryChangeLogInfo.responsible_user_updated_at:type_name -> google.protobuf.Timestamp
+	65, // 54: core.ListInventoryChangeLogsRequest.start_date:type_name -> google.protobuf.Timestamp
+	65, // 55: core.ListInventoryChangeLogsRequest.end_date:type_name -> google.protobuf.Timestamp
+	48, // 56: core.ListInventoryChangeLogsResponse.inventory_change_logs:type_name -> core.InventoryChangeLogInfo
+	66, // 57: core.ListInventoryChangeLogsResponse.page_info:type_name -> core.PageInfo
+	48, // 58: core.GetInventoryChangeLogResponse.inventory_change_log:type_name -> core.InventoryChangeLogInfo
+	65, // 59: core.ExportInventoryChangeLogsRequest.start_date:type_name -> google.protobuf.Timestamp
+	65, // 60: core.ExportInventoryChangeLogsRequest.end_date:type_name -> google.protobuf.Timestamp
+	48, // 61: core.ExportInventoryChangeLogsResponse.inventory_change_logs:type_name -> core.InventoryChangeLogInfo
+	65, // 62: core.ListInvoicesRequest.start_date:type_name -> google.protobuf.Timestamp
+	65, // 63: core.ListInvoicesRequest.end_date:type_name -> google.protobuf.Timestamp
+	63, // 64: core.ListInvoicesResponse.invoices:type_name -> core.InvoiceSummaryInfo
+	66, // 65: core.ListInvoicesResponse.page_info:type_name -> core.PageInfo
+	64, // 66: core.GetInvoiceResponse.invoice:type_name -> core.InvoiceInfo
+	63, // 67: core.UpdateInvoiceResponse.invoice:type_name -> core.InvoiceSummaryInfo
+	69, // 68: core.ListCustomerInvoicesResponse.invoices:type_name -> core.InvoiceForPaymentInfo
+	66, // 69: core.ListCustomerInvoicesResponse.page_info:type_name -> core.PageInfo
+	65, // 70: core.InvoiceSummaryInfo.created_at:type_name -> google.protobuf.Timestamp
+	65, // 71: core.InvoiceSummaryInfo.updated_at:type_name -> google.protobuf.Timestamp
+	70, // 72: core.InvoiceInfo.lines:type_name -> core.InvoiceLineInfo
+	71, // 73: core.InvoiceInfo.allocations:type_name -> core.InvoiceAllocationInfo
+	65, // 74: core.InvoiceInfo.created_at:type_name -> google.protobuf.Timestamp
+	65, // 75: core.InvoiceInfo.updated_at:type_name -> google.protobuf.Timestamp
+	76, // [76:76] is the sub-list for method output_type
+	76, // [76:76] is the sub-list for method input_type
+	76, // [76:76] is the sub-list for extension type_name
+	76, // [76:76] is the sub-list for extension extendee
+	0,  // [0:76] is the sub-list for field type_name
 }
 
 func init() { file_core_core_users_territories_proto_init() }
@@ -5279,6 +5524,7 @@ func file_core_core_users_territories_proto_init() {
 	file_core_core_invoices_proto_init()
 	file_core_core_users_territories_proto_msgTypes[0].OneofWrappers = []any{}
 	file_core_core_users_territories_proto_msgTypes[4].OneofWrappers = []any{}
+	file_core_core_users_territories_proto_msgTypes[5].OneofWrappers = []any{}
 	file_core_core_users_territories_proto_msgTypes[6].OneofWrappers = []any{}
 	file_core_core_users_territories_proto_msgTypes[7].OneofWrappers = []any{}
 	file_core_core_users_territories_proto_msgTypes[11].OneofWrappers = []any{}

@@ -40,7 +40,7 @@ func (*AccountPricesEndpointGroup) Materialize(config *AccountPricesEndpointGrou
 	}
 
 	listAccountPricesEndpoint := (&accountpriceep.ListAccountPricesEndpoint{}).Materialize().WithService(inner, accountPriceSvc)
-	getAccountPriceEndpoint := (&accountpriceep.GetAccountPriceEndpoint{}).Materialize().WithService(inner, accountPriceSvc)
+	getAccountPriceEndpoint := (&accountpriceep.RetrieveAccountPriceEndpoint{}).Materialize().WithService(inner, accountPriceSvc)
 	createAccountPriceEndpoint := (&accountpriceep.CreateAccountPriceEndpoint{}).Materialize().WithService(inner, accountPriceSvc)
 	updateAccountPriceEndpoint := (&accountpriceep.UpdateAccountPriceEndpoint{}).Materialize().WithService(inner, accountPriceSvc)
 	deleteAccountPriceEndpoint := (&accountpriceep.DeleteAccountPriceEndpoint{}).Materialize().WithService(inner, accountPriceSvc)

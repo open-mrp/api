@@ -4,6 +4,7 @@ syntax = "proto3";
 package core;
 
 import "google/protobuf/timestamp.proto";
+import "core/core_accounts_carriers.proto";
 import "core/core_identity_context.proto";
 option go_package = "shared/proto/core;core";
 
@@ -205,6 +206,7 @@ message QuantityInfo {
   google.protobuf.Timestamp created_at = 6;
   google.protobuf.Timestamp updated_at = 7;
   string unit_name = 8;
+  optional UnitInfo unit_detail = 9;
 }
 message ShippingTermInfo {
   string id = 1;
@@ -212,7 +214,7 @@ message ShippingTermInfo {
   string type = 3;
   optional QuantityInfo flat_rate = 4;
   optional QuantityInfo minimum_order_value = 5;
-  repeated string free_shipping_service_level_ids = 6;
+  repeated ServiceLevelInfo free_shipping_service_levels = 6;
   google.protobuf.Timestamp created_at = 7;
   google.protobuf.Timestamp updated_at = 8;
   optional string account_id = 9;
@@ -221,6 +223,7 @@ message ListShippingTermsRequest {
   optional string cursor = 1;
   int32 limit = 2;
   optional string query = 3;
+  repeated string includes = 4;
 }
 message ListShippingTermsResponse {
   repeated ShippingTermInfo shipping_terms = 1;
@@ -228,6 +231,7 @@ message ListShippingTermsResponse {
 }
 message GetShippingTermRequest {
   string id = 1;
+  repeated string includes = 2;
 }
 message GetShippingTermResponse {
   ShippingTermInfo shipping_term = 1;
@@ -247,6 +251,7 @@ message CreateShippingTermRequest {
   optional QuantityInput flat_rate = 3;
   optional QuantityInput minimum_order_value = 4;
   repeated string free_shipping_service_level_ids = 5;
+  repeated string includes = 6;
 }
 message CreateShippingTermResponse {
   ShippingTermInfo shipping_term = 1;
@@ -261,6 +266,7 @@ message UpdateShippingTermRequest {
   bool has_free_shipping_service_level_ids = 7;
   bool has_flat_rate = 8;
   bool has_minimum_order_value = 9;
+  repeated string includes = 10;
 }
 message UpdateShippingTermResponse {
   ShippingTermInfo shipping_term = 1;

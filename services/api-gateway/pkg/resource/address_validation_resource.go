@@ -65,8 +65,8 @@ type AddressDetailsResult struct {
 type ValidatedAddress struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=validated_address"`
-	// Whether the address is valid.
-	IsValid bool `json:"is_valid"`
+	// Address validation status.
+	Status constants.AddressValidationStatus `json:"status" validate:"required"`
 	// Formatted address from the validation service.
 	FormattedAddress *string `json:"formatted_address"`
 	// Standardized address components.
@@ -79,7 +79,7 @@ var sampleValidatedFormattedAddress = "123 Main St, Springfield, IL 62701, USA"
 
 var SampleValidatedAddress = &ValidatedAddress{
 	Object:           constants.ObjectTypeValidatedAddress,
-	IsValid:          true,
+	Status:           constants.AddressValidationStatusValid,
 	FormattedAddress: &sampleValidatedFormattedAddress,
 	Components: &AddressComponents{
 		Object:       constants.ObjectTypeAddressComponents,

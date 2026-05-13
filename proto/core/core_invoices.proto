@@ -71,6 +71,7 @@ message ListMaterialsRequest {
   repeated string attribute_ids = 5;
   optional google.protobuf.Timestamp start_date = 6;
   optional google.protobuf.Timestamp end_date = 7;
+  repeated string includes = 8;
 }
 message ListMaterialsResponse {
   repeated MaterialInfo materials = 1;
@@ -78,6 +79,7 @@ message ListMaterialsResponse {
 }
 message GetMaterialRequest {
   string id = 1;
+  repeated string includes = 2;
 }
 message GetMaterialResponse {
   MaterialInfo material = 1;
@@ -99,6 +101,7 @@ message CreateMaterialRequest {
   optional CreateRateInput burn_rate = 9;
   // Attribute IDs to connect to the item at creation time.
   repeated string attribute_ids = 10;
+  repeated string includes = 11;
 }
 message CreateMaterialResponse {
   MaterialInfo material = 1;
@@ -112,6 +115,9 @@ message UpdateMaterialRequest {
   bool update_notes = 6;
   optional QuantityInput order_point = 7;
   optional QuantityInput lead_time = 8;
+  // Updated unit cost. Same currency-vs-non-currency rule as on create.
+  optional CreateRateInput unit_cost = 9;
+  repeated string includes = 10;
 }
 message UpdateMaterialResponse {
   MaterialInfo material = 1;
@@ -194,6 +200,7 @@ message ListPartsRequest {
   repeated string attribute_ids = 5;
   optional google.protobuf.Timestamp start_date = 6;
   optional google.protobuf.Timestamp end_date = 7;
+  repeated string includes = 8;
 }
 message ListPartsResponse {
   repeated PartInfo parts = 1;
@@ -201,6 +208,7 @@ message ListPartsResponse {
 }
 message GetPartRequest {
   string id = 1;
+  repeated string includes = 2;
 }
 message GetPartResponse {
   PartInfo part = 1;
@@ -220,6 +228,7 @@ message CreatePartRequest {
   optional CreateRateInput burn_rate = 7;
   // Attribute IDs to connect to the item at creation time.
   repeated string attribute_ids = 8;
+  repeated string includes = 9;
 }
 message CreatePartResponse {
   PartInfo part = 1;
@@ -231,6 +240,7 @@ message UpdatePartRequest {
   bool update_description = 4;
   optional string notes = 5;
   bool update_notes = 6;
+  repeated string includes = 7;
 }
 message UpdatePartResponse {
   PartInfo part = 1;
@@ -313,6 +323,7 @@ message ListProductsFullRequest {
   optional google.protobuf.Timestamp start_date = 8;
   optional google.protobuf.Timestamp end_date = 9;
   optional bool is_portal_ready = 10;
+  repeated string includes = 11;
 }
 message ListProductsFullResponse {
   repeated ProductFullInfo products = 1;
@@ -320,6 +331,7 @@ message ListProductsFullResponse {
 }
 message GetProductRequest {
   string id = 1;
+  repeated string includes = 2;
 }
 message GetProductResponse {
   ProductFullInfo product = 1;
@@ -342,6 +354,7 @@ message CreateProductRequest {
   optional CreateRateInput burn_rate = 10;
   // Attribute IDs to connect to the item at creation time.
   repeated string attribute_ids = 11;
+  repeated string includes = 12;
 }
 message CreateProductResponse {
   ProductFullInfo product = 1;
@@ -354,6 +367,9 @@ message UpdateProductRequest {
   optional string notes = 5;
   bool update_notes = 6;
   optional bool is_portal_ready = 7;
+  // Updated unit price. Same currency-vs-non-currency rule as on create.
+  optional CreateRateInput unit_price = 8;
+  repeated string includes = 9;
 }
 message UpdateProductResponse {
   ProductFullInfo product = 1;
@@ -367,6 +383,7 @@ message DeleteProductResponse {
 message ChangeProductProductLineRequest {
   string id = 1;
   string product_line_id = 2;
+  repeated string includes = 3;
 }
 message ChangeProductProductLineResponse {
   ProductFullInfo product = 1;
@@ -394,6 +411,7 @@ message ListProductLinesRequest {
   optional string cursor = 1;
   int32 limit = 2;
   optional string query = 3;
+  repeated string includes = 4;
 }
 message ListProductLinesResponse {
   repeated ProductLineInfo product_lines = 1;
@@ -401,6 +419,7 @@ message ListProductLinesResponse {
 }
 message GetProductLineRequest {
   string id = 1;
+  repeated string includes = 2;
 }
 message GetProductLineResponse {
   ProductLineInfo product_line = 1;
@@ -410,6 +429,7 @@ message CreateProductLineRequest {
   string unit_group_id = 2;
   string commission_policy = 3;
   string freight_policy = 4;
+  repeated string includes = 5;
 }
 message CreateProductLineResponse {
   ProductLineInfo product_line = 1;
@@ -420,6 +440,7 @@ message UpdateProductLineRequest {
   optional string commission_policy = 3;
   optional string freight_policy = 4;
   optional string unit_group_id = 5;
+  repeated string includes = 6;
 }
 message UpdateProductLineResponse {
   ProductLineInfo product_line = 1;

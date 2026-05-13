@@ -33,9 +33,8 @@ func (e *ListScanningStationsEndpoint) Materialize() *apiendpoint.APIEndpoint[*L
 			return svc.(ScanningStationSvc).ListScanningStations
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType:    constants.ObjectTypeScanningStation,
-			Fields:        []string{"department", "production_steps"},
-			DefaultFields: []string{"department"},
+			ObjectType: constants.ObjectTypeScanningStation,
+			Fields:     []string{"department", "production_steps"},
 		}),
 	}
 }

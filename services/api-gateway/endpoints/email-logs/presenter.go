@@ -15,7 +15,7 @@ func EmailLogPresenter(el *pb.EmailLogInfo) apiresource.EmailLog {
 	result := apiresource.EmailLog{
 		ID:           el.Id,
 		Object:       constants.ObjectTypeEmailLog,
-		HasSent:      el.HasSent,
+		SendStatus:   emailSendStatus(el.HasSent),
 		Recipients:   el.Recipients,
 		Subject:      el.Subject,
 		Filename:     el.Filename,
@@ -38,6 +38,13 @@ func EmailLogPresenter(el *pb.EmailLogInfo) apiresource.EmailLog {
 	}
 
 	return result
+}
+
+func emailSendStatus(hasSent bool) constants.EmailSendStatus {
+	if hasSent {
+		return constants.EmailSendStatusSent
+	}
+	return constants.EmailSendStatusPending
 }
 
 func EmailLogListPresenter(resp *pb.ListEmailLogsResponse) *apiresource.List[apiresource.EmailLog] {

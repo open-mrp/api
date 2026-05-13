@@ -76,6 +76,10 @@ func mapSandboxWithOwnerForwardRow(row sqlc.ListSandboxAccountsWithOwnerForwardR
 	if row.OwnerAccountName != "" {
 		s.OwnerAccountName = &row.OwnerAccountName
 	}
+	if !row.OwnerAccountCreatedAt.IsZero() {
+		s.OwnerAccountCreatedAt = &row.OwnerAccountCreatedAt
+		s.OwnerAccountUpdatedAt = &row.OwnerAccountUpdatedAt
+	}
 	return s
 }
 
@@ -91,6 +95,10 @@ func mapSandboxWithOwnerBackwardRow(row sqlc.ListSandboxAccountsWithOwnerBackwar
 	}
 	if row.OwnerAccountName != "" {
 		s.OwnerAccountName = &row.OwnerAccountName
+	}
+	if !row.OwnerAccountCreatedAt.IsZero() {
+		s.OwnerAccountCreatedAt = &row.OwnerAccountCreatedAt
+		s.OwnerAccountUpdatedAt = &row.OwnerAccountUpdatedAt
 	}
 	return s
 }
@@ -293,6 +301,10 @@ func (r *sandboxAccountRepoImpl) FindByTypeID(ctx context.Context, typeID string
 		}
 		if row.OwnerAccountName != "" {
 			s.OwnerAccountName = &row.OwnerAccountName
+		}
+		if !row.OwnerAccountCreatedAt.IsZero() {
+			s.OwnerAccountCreatedAt = &row.OwnerAccountCreatedAt
+			s.OwnerAccountUpdatedAt = &row.OwnerAccountUpdatedAt
 		}
 		return s, nil
 	}

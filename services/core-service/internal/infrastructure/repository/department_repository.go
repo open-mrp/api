@@ -57,6 +57,9 @@ func mapDepartmentForwardRow(row sqlc.ListDepartmentsForwardRow) *domain.Departm
 	if row.LocationName.Valid {
 		dept.LocationName = &row.LocationName.String
 	}
+	if row.LocationTypeCode.Valid {
+		dept.LocationTypeCode = &row.LocationTypeCode.String
+	}
 	return dept
 }
 
@@ -76,6 +79,9 @@ func mapDepartmentBackwardRow(row sqlc.ListDepartmentsBackwardRow) *domain.Depar
 	}
 	if row.LocationName.Valid {
 		dept.LocationName = &row.LocationName.String
+	}
+	if row.LocationTypeCode.Valid {
+		dept.LocationTypeCode = &row.LocationTypeCode.String
 	}
 	return dept
 }
@@ -97,6 +103,9 @@ func mapGetDepartmentRow(row sqlc.GetDepartmentRow) *domain.Department {
 	if row.LocationName.Valid {
 		dept.LocationName = &row.LocationName.String
 	}
+	if row.LocationTypeCode.Valid {
+		dept.LocationTypeCode = &row.LocationTypeCode.String
+	}
 	return dept
 }
 
@@ -108,9 +117,15 @@ func (r *departmentRepoImpl) attachSubResources(ctx context.Context, dept *domai
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return apiErr
 	}
-	dept.ScanningStations = make([]domain.LightRef, len(stations))
+	dept.ScanningStations = make([]domain.DepartmentScanningStation, len(stations))
 	for i, s := range stations {
-		dept.ScanningStations[i] = domain.LightRef{ID: s.ID, Name: s.Name}
+		dept.ScanningStations[i] = domain.DepartmentScanningStation{
+			ID:        s.ID,
+			Name:      s.Name,
+			Type:      s.ScanningStationTypeCode,
+			CreatedAt: s.CreatedAt,
+			UpdatedAt: s.UpdatedAt,
+		}
 	}
 
 	machines, err := r.queries.ListMachinesByDepartmentID(ctx, sqlc.ListMachinesByDepartmentIDParams{
@@ -120,9 +135,15 @@ func (r *departmentRepoImpl) attachSubResources(ctx context.Context, dept *domai
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return apiErr
 	}
-	dept.Machines = make([]domain.LightRef, len(machines))
+	dept.Machines = make([]domain.DepartmentMachine, len(machines))
 	for i, m := range machines {
-		dept.Machines[i] = domain.LightRef{ID: m.ID, Name: m.Name}
+		dept.Machines[i] = domain.DepartmentMachine{
+			ID:           m.ID,
+			Name:         m.Name,
+			SerialNumber: m.SerialNumber,
+			CreatedAt:    m.CreatedAt,
+			UpdatedAt:    m.UpdatedAt,
+		}
 	}
 
 	return nil

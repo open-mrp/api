@@ -21,7 +21,7 @@ type CreatePartRequest struct {
 	// Notes.
 	Notes *string `json:"notes,omitempty"`
 	// Category ID.
-	CategoryID string `json:"category_id" validate:"required,max=191"`
+	CategoryID string `json:"category_id" validate:"required"`
 	// Initial unit price. When set, numerator must be a currency unit and
 	// denominator must not be.
 	UnitPrice *apirequest.RateInput `json:"unit_price,omitempty"`
@@ -51,18 +51,18 @@ func (e *CreatePartEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreatePartR
 		Title:             "Create Part",
 		Description:       "Creates a part with the specified SKU and category.",
 		Method:            http.MethodPost,
-		Route:             "/v1/operations/parts",
+		Route:             "/v1/catalog/parts",
 		ContentType:       "application/json",
 		Request:           &CreatePartRequest{},
 		Response:          &apiresource.Part{},
 		SuccessStatusCode: http.StatusCreated,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreatePartRequest) (*apiresource.Part, *apierror.APIError) {
 			return svc.(PartSvc).CreatePart
 		},
 		LocationFunc: func(resp *apiresource.Part) string {
-			return "/v1/operations/parts/" + resp.ID
+			return "/v1/catalog/parts/" + resp.ID
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypePart,

@@ -97,6 +97,8 @@ SELECT
     ss.material_check_required,
     ss.department_id,
     d.name AS department_name,
+    d.created_at AS department_created_at,
+    d.updated_at AS department_updated_at,
     ss.account_id,
     ss.created_at,
     ss.updated_at
@@ -121,6 +123,8 @@ type GetScanningStationRow struct {
 	MaterialCheckRequired   bool
 	DepartmentID            string
 	DepartmentName          sql.NullString
+	DepartmentCreatedAt     sql.NullTime
+	DepartmentUpdatedAt     sql.NullTime
 	AccountID               string
 	CreatedAt               time.Time
 	UpdatedAt               time.Time
@@ -139,6 +143,8 @@ func (q *Queries) GetScanningStation(ctx context.Context, arg GetScanningStation
 		&i.MaterialCheckRequired,
 		&i.DepartmentID,
 		&i.DepartmentName,
+		&i.DepartmentCreatedAt,
+		&i.DepartmentUpdatedAt,
 		&i.AccountID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -228,7 +234,7 @@ func (q *Queries) IsScanningStationInAccount(ctx context.Context, arg IsScanning
 }
 
 const listProductionStepsByScanningStationID = `-- name: ListProductionStepsByScanningStationID :many
-SELECT id, name
+SELECT id, name, leveling_factor, allowances, created_at, updated_at
 FROM production_step
 WHERE scanning_station_id = ?
 AND account_id = ?
@@ -241,8 +247,12 @@ type ListProductionStepsByScanningStationIDParams struct {
 }
 
 type ListProductionStepsByScanningStationIDRow struct {
-	ID   string
-	Name string
+	ID             string
+	Name           string
+	LevelingFactor string
+	Allowances     string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
 }
 
 func (q *Queries) ListProductionStepsByScanningStationID(ctx context.Context, arg ListProductionStepsByScanningStationIDParams) ([]ListProductionStepsByScanningStationIDRow, error) {
@@ -254,7 +264,14 @@ func (q *Queries) ListProductionStepsByScanningStationID(ctx context.Context, ar
 	var items []ListProductionStepsByScanningStationIDRow
 	for rows.Next() {
 		var i ListProductionStepsByScanningStationIDRow
-		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.LevelingFactor,
+			&i.Allowances,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -279,6 +296,8 @@ SELECT
     ss.material_check_required,
     ss.department_id,
     d.name AS department_name,
+    d.created_at AS department_created_at,
+    d.updated_at AS department_updated_at,
     ss.account_id,
     ss.created_at,
     ss.updated_at
@@ -288,7 +307,6 @@ WHERE ss.account_id = ?
 AND (
     ? IS NULL
     OR ss.name LIKE ?
-    OR d.name LIKE ?
 )
 AND (
     ss.created_at > ?
@@ -316,6 +334,8 @@ type ListScanningStationsBackwardRow struct {
 	MaterialCheckRequired   bool
 	DepartmentID            string
 	DepartmentName          sql.NullString
+	DepartmentCreatedAt     sql.NullTime
+	DepartmentUpdatedAt     sql.NullTime
 	AccountID               string
 	CreatedAt               time.Time
 	UpdatedAt               time.Time
@@ -324,7 +344,6 @@ type ListScanningStationsBackwardRow struct {
 func (q *Queries) ListScanningStationsBackward(ctx context.Context, arg ListScanningStationsBackwardParams) ([]ListScanningStationsBackwardRow, error) {
 	rows, err := q.db.QueryContext(ctx, listScanningStationsBackward,
 		arg.AccountID,
-		arg.SearchQuery,
 		arg.SearchQuery,
 		arg.SearchQuery,
 		arg.CursorCreatedAt,
@@ -349,6 +368,8 @@ func (q *Queries) ListScanningStationsBackward(ctx context.Context, arg ListScan
 			&i.MaterialCheckRequired,
 			&i.DepartmentID,
 			&i.DepartmentName,
+			&i.DepartmentCreatedAt,
+			&i.DepartmentUpdatedAt,
 			&i.AccountID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -377,6 +398,8 @@ SELECT
     ss.material_check_required,
     ss.department_id,
     d.name AS department_name,
+    d.created_at AS department_created_at,
+    d.updated_at AS department_updated_at,
     ss.account_id,
     ss.created_at,
     ss.updated_at
@@ -386,7 +409,6 @@ WHERE ss.account_id = ?
 AND (
     ? IS NULL
     OR ss.name LIKE ?
-    OR d.name LIKE ?
 )
 AND (
     ? IS NULL
@@ -415,6 +437,8 @@ type ListScanningStationsForwardRow struct {
 	MaterialCheckRequired   bool
 	DepartmentID            string
 	DepartmentName          sql.NullString
+	DepartmentCreatedAt     sql.NullTime
+	DepartmentUpdatedAt     sql.NullTime
 	AccountID               string
 	CreatedAt               time.Time
 	UpdatedAt               time.Time
@@ -423,7 +447,6 @@ type ListScanningStationsForwardRow struct {
 func (q *Queries) ListScanningStationsForward(ctx context.Context, arg ListScanningStationsForwardParams) ([]ListScanningStationsForwardRow, error) {
 	rows, err := q.db.QueryContext(ctx, listScanningStationsForward,
 		arg.AccountID,
-		arg.SearchQuery,
 		arg.SearchQuery,
 		arg.SearchQuery,
 		arg.CursorCreatedAt,
@@ -449,6 +472,8 @@ func (q *Queries) ListScanningStationsForward(ctx context.Context, arg ListScann
 			&i.MaterialCheckRequired,
 			&i.DepartmentID,
 			&i.DepartmentName,
+			&i.DepartmentCreatedAt,
+			&i.DepartmentUpdatedAt,
 			&i.AccountID,
 			&i.CreatedAt,
 			&i.UpdatedAt,

@@ -64,7 +64,9 @@ LIMIT ?;
 SELECT
     sandbox_account.*,
     account.name,
-    owner_account.name AS owner_account_name
+    owner_account.name AS owner_account_name,
+    owner_account.created_at AS owner_account_created_at,
+    owner_account.updated_at AS owner_account_updated_at
 FROM sandbox_account
 JOIN account ON sandbox_account.account_id = account.id
 LEFT JOIN account owner_account ON sandbox_account.owner_account_id = owner_account.id
@@ -74,7 +76,9 @@ WHERE sandbox_account.type_id = ?;
 SELECT
     sandbox_account.*,
     account.name,
-    owner_account.name AS owner_account_name
+    owner_account.name AS owner_account_name,
+    owner_account.created_at AS owner_account_created_at,
+    owner_account.updated_at AS owner_account_updated_at
 FROM sandbox_account
 JOIN account ON sandbox_account.account_id = account.id
 LEFT JOIN account owner_account ON sandbox_account.owner_account_id = owner_account.id
@@ -95,7 +99,9 @@ LIMIT ?;
 SELECT
     sandbox_account.*,
     account.name,
-    owner_account.name AS owner_account_name
+    owner_account.name AS owner_account_name,
+    owner_account.created_at AS owner_account_created_at,
+    owner_account.updated_at AS owner_account_updated_at
 FROM sandbox_account
 JOIN account ON sandbox_account.account_id = account.id
 LEFT JOIN account owner_account ON sandbox_account.owner_account_id = owner_account.id

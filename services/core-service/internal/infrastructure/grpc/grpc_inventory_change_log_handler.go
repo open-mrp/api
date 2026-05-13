@@ -15,22 +15,30 @@ func inventoryChangeLogToProto(icl *domain.InventoryChangeLog) *pb.InventoryChan
 	}
 
 	info := &pb.InventoryChangeLogInfo{
-		Id:                       icl.ID,
-		ItemId:                   icl.ItemID,
-		ItemSku:                  icl.ItemSKU,
-		QuantityId:               icl.QuantityID,
-		QuantityValue:            icl.QuantityValue,
-		QuantityUnitId:           icl.QuantityUnitID,
-		QuantityUnitName:         icl.QuantityUnitName,
-		QuantityUnitAbbreviation: icl.QuantityUnitAbbreviation,
-		QuantityUnitType:         icl.QuantityUnitType,
-		ActionTypeCode:           icl.ActionTypeCode,
-		ScanningStationId:        icl.ScanningStationID,
-		ScanningStationName:      icl.ScanningStationName,
-		ResponsibleUserId:        icl.ResponsibleUserID,
-		ResponsibleUserName:      icl.ResponsibleUserName,
-		CreatedAt:                timestamppb.New(icl.CreatedAt),
-		UpdatedAt:                timestamppb.New(icl.UpdatedAt),
+		Id:                            icl.ID,
+		ItemId:                        icl.ItemID,
+		ItemSku:                       icl.ItemSKU,
+		ItemCreatedAt:                 timestamppb.New(icl.ItemCreatedAt),
+		ItemUpdatedAt:                 timestamppb.New(icl.ItemUpdatedAt),
+		QuantityId:                    icl.QuantityID,
+		QuantityValue:                 icl.QuantityValue,
+		QuantityUnitId:                icl.QuantityUnitID,
+		QuantityUnitName:              icl.QuantityUnitName,
+		QuantityUnitAbbreviation:      icl.QuantityUnitAbbreviation,
+		QuantityUnitType:              icl.QuantityUnitType,
+		QuantityUnitRatioNumerator:    icl.QuantityUnitRatioNumerator,
+		QuantityUnitRatioDenominator:  icl.QuantityUnitRatioDenominator,
+		QuantityUnitOffsetNumerator:   icl.QuantityUnitOffsetNumerator,
+		QuantityUnitOffsetDenominator: icl.QuantityUnitOffsetDenominator,
+		QuantityUnitCreatedAt:         timestamppb.New(icl.QuantityUnitCreatedAt),
+		QuantityUnitUpdatedAt:         timestamppb.New(icl.QuantityUnitUpdatedAt),
+		ActionTypeCode:                icl.ActionTypeCode,
+		ScanningStationId:             icl.ScanningStationID,
+		ScanningStationName:           icl.ScanningStationName,
+		ResponsibleUserId:             icl.ResponsibleUserID,
+		ResponsibleUserName:           icl.ResponsibleUserName,
+		CreatedAt:                     timestamppb.New(icl.CreatedAt),
+		UpdatedAt:                     timestamppb.New(icl.UpdatedAt),
 	}
 
 	if icl.ItemTypeCode != nil {
@@ -38,6 +46,18 @@ func inventoryChangeLogToProto(icl *domain.InventoryChangeLog) *pb.InventoryChan
 	}
 	if icl.ScanningStationType != nil {
 		info.ScanningStationType = icl.ScanningStationType
+	}
+	if icl.ScanningStationCreatedAt != nil {
+		info.ScanningStationCreatedAt = timestamppb.New(*icl.ScanningStationCreatedAt)
+	}
+	if icl.ScanningStationUpdatedAt != nil {
+		info.ScanningStationUpdatedAt = timestamppb.New(*icl.ScanningStationUpdatedAt)
+	}
+	if icl.ResponsibleUserCreatedAt != nil {
+		info.ResponsibleUserCreatedAt = timestamppb.New(*icl.ResponsibleUserCreatedAt)
+	}
+	if icl.ResponsibleUserUpdatedAt != nil {
+		info.ResponsibleUserUpdatedAt = timestamppb.New(*icl.ResponsibleUserUpdatedAt)
 	}
 
 	return info

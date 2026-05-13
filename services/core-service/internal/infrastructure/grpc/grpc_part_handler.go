@@ -40,6 +40,7 @@ func (h *gRPCHandler) CreatePart(ctx context.Context, req *pb.CreatePartRequest)
 		UnitCost:     protoToCreateRateInput(req.UnitCost),
 		BurnRate:     protoToCreateRateInput(req.BurnRate),
 		AttributeIDs: req.AttributeIds,
+		Includes:     req.Includes,
 	}
 
 	part, apiErr := h.partSvc.CreatePart(ctx, params)
@@ -57,7 +58,10 @@ func (h *gRPCHandler) GetPart(ctx context.Context, req *pb.GetPartRequest) (*pb.
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	part, apiErr := h.partSvc.GetPart(ctx, req.Id)
+	part, apiErr := h.partSvc.GetPart(ctx, domain.GetPartParams{
+		PartID:   req.Id,
+		Includes: req.Includes,
+	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
@@ -78,6 +82,7 @@ func (h *gRPCHandler) ListParts(ctx context.Context, req *pb.ListPartsRequest) (
 		Query:        req.Query,
 		CategoryIDs:  req.CategoryIds,
 		AttributeIDs: req.AttributeIds,
+		Includes:     req.Includes,
 	}
 
 	if req.StartDate != nil {
@@ -125,6 +130,7 @@ func (h *gRPCHandler) UpdatePart(ctx context.Context, req *pb.UpdatePartRequest)
 		UpdateDescription: req.UpdateDescription,
 		Notes:             req.Notes,
 		UpdateNotes:       req.UpdateNotes,
+		Includes:          req.Includes,
 	}
 
 	part, apiErr := h.partSvc.UpdatePart(ctx, params)

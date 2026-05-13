@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/augno/api/services/auth-service/pkg/types"
@@ -136,6 +137,14 @@ func (s *purchaseOrderSvcImpl) GetPurchaseOrder(ctx context.Context, params doma
 				return nil, tracing.Trace(span, apiErr)
 			}
 			order.Contacts = contacts
+		case "receiving_order":
+			if order.ReceivingOrderID != nil {
+				receivingOrder, apiErr := s.repos.NewReceivingOrderRepo().Get(ctx, params.AccountID, *order.ReceivingOrderID)
+				if apiErr != nil {
+					return nil, tracing.Trace(span, apiErr)
+				}
+				order.ReceivingOrder = receivingOrder
+			}
 		}
 	}
 
@@ -355,6 +364,22 @@ func (s *purchaseOrderSvcImpl) CreatePurchaseOrder(ctx context.Context, params d
 			if apiErr != nil {
 				return apiErr
 			}
+
+			if slices.Contains(params.Includes, "lines") {
+				lines, apiErr := txOrderRepo.GetLines(txCtx, orderID)
+				if apiErr != nil {
+					return apiErr
+				}
+				order.Lines = lines
+			}
+			if slices.Contains(params.Includes, "contacts") {
+				contacts, apiErr := txOrderRepo.GetEmailContacts(txCtx, orderID)
+				if apiErr != nil {
+					return apiErr
+				}
+				order.Contacts = contacts
+			}
+
 			result = order
 
 			changes := audit.ComputeChanges(nil, result)
@@ -479,6 +504,22 @@ func (s *purchaseOrderSvcImpl) UpdatePurchaseOrder(ctx context.Context, params d
 			if apiErr != nil {
 				return apiErr
 			}
+
+			if slices.Contains(params.Includes, "lines") {
+				lines, apiErr := txRepo.GetLines(txCtx, params.PurchaseOrderID)
+				if apiErr != nil {
+					return apiErr
+				}
+				refetched.Lines = lines
+			}
+			if slices.Contains(params.Includes, "contacts") {
+				contacts, apiErr := txRepo.GetEmailContacts(txCtx, params.PurchaseOrderID)
+				if apiErr != nil {
+					return apiErr
+				}
+				refetched.Contacts = contacts
+			}
+
 			result = refetched
 			_ = updated
 
@@ -862,6 +903,21 @@ func (s *purchaseOrderSvcImpl) ChangePurchaseOrderStatus(ctx context.Context, pa
 	updatedOrder, apiErr := repo.Get(ctx, params.AccountID, params.PurchaseOrderID)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
+	}
+
+	if slices.Contains(params.Includes, "lines") {
+		lines, apiErr := repo.GetLines(ctx, params.PurchaseOrderID)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		updatedOrder.Lines = lines
+	}
+	if slices.Contains(params.Includes, "contacts") {
+		contacts, apiErr := repo.GetEmailContacts(ctx, params.PurchaseOrderID)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		updatedOrder.Contacts = contacts
 	}
 
 	return updatedOrder, nil

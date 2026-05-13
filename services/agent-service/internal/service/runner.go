@@ -218,7 +218,7 @@ func (s *runnerSvc) ExecuteRun(ctx context.Context, runID, configID, accountID, 
 	}
 
 	// Build agent identity
-	roleTypeCode := string(constants.RoleTypeCodeAgent)
+	roleTypeCode := string(constants.RoleTypeAgent)
 	agentIdentity := &types.Identity{
 		Type:        types.IdentityActorTypeAgent,
 		Target:      &types.IdentityTarget{AccountID: accountID},
@@ -229,7 +229,7 @@ func (s *runnerSvc) ExecuteRun(ctx context.Context, runID, configID, accountID, 
 			Name:         &def.Name,
 			AccountID:    &accountID,
 			RoleID:       roleID,
-			RoleTypeCode: &roleTypeCode,
+			RoleType:     &roleTypeCode,
 			Permissions:  permissions,
 		},
 	}
@@ -1057,7 +1057,7 @@ func (s *runnerSvc) ContinueRun(ctx context.Context, runID, accountID, message s
 	if err != nil {
 		return s.failRun(ctx, runRepo, runID, startTime, fmt.Sprintf("failed to resolve agent permissions: %s", err.Error()))
 	}
-	roleTypeCode := string(constants.RoleTypeCodeAgent)
+	roleTypeCode := string(constants.RoleTypeAgent)
 	agentIdentity := &types.Identity{
 		Type:        types.IdentityActorTypeAgent,
 		Target:      &types.IdentityTarget{AccountID: accountID},
@@ -1068,7 +1068,7 @@ func (s *runnerSvc) ContinueRun(ctx context.Context, runID, accountID, message s
 			Name:         &def.Name,
 			AccountID:    &accountID,
 			RoleID:       roleID,
-			RoleTypeCode: &roleTypeCode,
+			RoleType:     &roleTypeCode,
 			Permissions:  permissions,
 		},
 	}

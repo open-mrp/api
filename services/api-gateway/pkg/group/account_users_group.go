@@ -40,17 +40,21 @@ func (*AccountUsersEndpointGroup) Materialize(config *AccountUsersEndpointGroupC
 	}
 
 	listEndpoint := (&accountuserep.ListAccountUsersEndpoint{}).Materialize().WithService(inner, svc)
-	getEndpoint := (&accountuserep.GetAccountUserEndpoint{}).Materialize().WithService(inner, svc)
+	retrieveEndpoint := (&accountuserep.RetrieveAccountUserEndpoint{}).Materialize().WithService(inner, svc)
 	createEndpoint := (&accountuserep.CreateAccountUserEndpoint{}).Materialize().WithService(inner, svc)
 	updateEndpoint := (&accountuserep.UpdateAccountUserEndpoint{}).Materialize().WithService(inner, svc)
-	updateStatusEndpoint := (&accountuserep.UpdateAccountUserStatusEndpoint{}).Materialize().WithService(inner, svc)
+	activateEndpoint := (&accountuserep.ActivateAccountUserEndpoint{}).Materialize().WithService(inner, svc)
+	disableEndpoint := (&accountuserep.DisableAccountUserEndpoint{}).Materialize().WithService(inner, svc)
+	removeEndpoint := (&accountuserep.RemoveAccountUserEndpoint{}).Materialize().WithService(inner, svc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listEndpoint,
-		getEndpoint,
+		retrieveEndpoint,
 		createEndpoint,
 		updateEndpoint,
-		updateStatusEndpoint,
+		activateEndpoint,
+		disableEndpoint,
+		removeEndpoint,
 	}
 
 	return &AccountUsersEndpointGroup{inner}

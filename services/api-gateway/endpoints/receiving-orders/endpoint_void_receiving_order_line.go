@@ -12,7 +12,7 @@ import (
 // Request to void a receiving order line.
 type VoidReceivingOrderLineRequest struct {
 	// Receiving order ID.
-	ReceivingOrderID string `path:"receivingOrderId" validate:"required"`
+	ReceivingOrderID string `path:"receiving_order_id" validate:"required"`
 	// Receiving order line ID.
 	LineID string `path:"id" validate:"required"`
 }
@@ -25,7 +25,7 @@ func (e *VoidReceivingOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		Description:       "Voids a receiving order line.",
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
-		Route:             "/v1/operations/receiving-orders/{receivingOrderId}/lines/{id}/actions/void",
+		Route:             "/v1/operations/receiving-orders/{receiving_order_id}/lines/{id}/actions/void",
 		Request:           &VoidReceivingOrderLineRequest{},
 		Response:          &apiresource.ReceivingOrderLine{},
 		SuccessStatusCode: http.StatusOK,

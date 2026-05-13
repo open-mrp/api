@@ -75,7 +75,7 @@ func TestEmailLogs_GetByID(t *testing.T) {
 	got := parseJSON(getBody)
 	assert.Equal(t, SeedEmailLogID1, jsonField(got, "id"))
 	assert.Equal(t, "email_log", jsonField(got, "object"))
-	assert.Equal(t, "true", jsonField(got, "has_sent"))
+	assert.Equal(t, "sent", jsonField(got, "send_status"))
 	assert.NotEmpty(t, jsonField(got, "subject"))
 	assert.NotEmpty(t, jsonField(got, "created_at"))
 	assert.NotEmpty(t, jsonField(got, "updated_at"))

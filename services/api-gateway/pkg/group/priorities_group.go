@@ -40,7 +40,7 @@ func (*PrioritiesEndpointGroup) Materialize(config *PrioritiesEndpointGroupConfi
 	}
 
 	listPrioritiesEndpoint := (&priorityep.ListPrioritiesEndpoint{}).Materialize().WithService(inner, prioritySvc)
-	getPriorityEndpoint := (&priorityep.GetPriorityEndpoint{}).Materialize().WithService(inner, prioritySvc)
+	getPriorityEndpoint := (&priorityep.RetrievePriorityEndpoint{}).Materialize().WithService(inner, prioritySvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listPrioritiesEndpoint,

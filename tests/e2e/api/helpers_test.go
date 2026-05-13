@@ -16,6 +16,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// e2eAsyncWaitTimeout and e2eAsyncPollInterval tune polling for side-effects that flow
+// through outbox/RabbitMQ (audit events, request logs, etc.). Tests poll until the
+// condition holds or the timeout elapses, then fail with the last error — there is no
+// unconditional long sleep when the backend is already caught up.
+const (
+	e2eAsyncWaitTimeout  = 15 * time.Second
+	e2eAsyncPollInterval = 200 * time.Millisecond
+)
+
 // uniqueName generates a unique name for test resources.
 func uniqueName(prefix string) string {
 	return fmt.Sprintf("%s-%s", prefix, uuid.New().String()[:8])
@@ -287,11 +296,12 @@ func createAPIKeyAndCleanup(t *testing.T, name string) map[string]any {
 	return parsed
 }
 
-// eventually retries fn until it returns nil or the timeout expires.
-// fn should perform an assertion and return an error describing the failure.
+// eventually polls fn until it returns nil or timeout elapses. Each failure sleeps
+// interval before the next attempt. On deadline expiry it fails the test with the
+// last error from fn (use e2eAsyncWaitTimeout / e2eAsyncPollInterval for async pipelines).
 // Typical usage:
 //
-//	eventually(t, 10*time.Second, 500*time.Millisecond, func() error {
+//	eventually(t, e2eAsyncWaitTimeout, e2eAsyncPollInterval, func() error {
 //	    status, body, err := apiClient.Get(auditEventsPath, url.Values{"resource_id": {id}})
 //	    if err != nil { return err }
 //	    list := parseJSON(body)

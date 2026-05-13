@@ -48,7 +48,7 @@ type TenancyCurrentAccount struct {
 
 // TenancyAccountPlan is the resolved plan for the current account.
 type TenancyAccountPlan struct {
-	// Plan type ID.
+	// Plan ID.
 	TypeID string `json:"type_id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=account_plan"`

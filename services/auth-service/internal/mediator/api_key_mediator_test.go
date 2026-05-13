@@ -417,7 +417,7 @@ func (suite *APIKeyMedTestSuite) TestCreate_Success() {
 		FindByTypeID(gomock.Any(), gomock.Any(), gomock.Nil()).
 		DoAndReturn(func(ctx context.Context, typeID string, includes []string) (*apikey.APIKey, *apierror.APIError) {
 			createdKey.RoleName = "Admin"
-			createdKey.RoleTypeCode = "admin"
+			createdKey.RoleType = "admin"
 			return createdKey, nil
 		}).
 		Times(1)

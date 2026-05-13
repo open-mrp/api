@@ -26,7 +26,7 @@ func RejectExplicitJSONNulls(body []byte, v any) *apierror.APIError {
 		return nil
 	}
 	rv := reflect.ValueOf(v)
-	if rv.Kind() == reflect.Ptr {
+	if rv.Kind() == reflect.Pointer {
 		if rv.IsNil() {
 			return nil
 		}
@@ -51,7 +51,7 @@ func rejectExplicitNullsInStruct(rv reflect.Value, rt reflect.Type, raw map[stri
 				if apiErr := rejectExplicitNullsInStruct(rv.Field(i), sf.Type, raw); apiErr != nil {
 					return apiErr
 				}
-			case sf.Type.Kind() == reflect.Ptr && sf.Type.Elem().Kind() == reflect.Struct:
+			case sf.Type.Kind() == reflect.Pointer && sf.Type.Elem().Kind() == reflect.Struct:
 				fv := rv.Field(i)
 				if fv.IsNil() {
 					continue
@@ -104,7 +104,7 @@ func ApplyExplicitNulls(body []byte, v any) {
 		return
 	}
 	rv := reflect.ValueOf(v)
-	if rv.Kind() == reflect.Ptr {
+	if rv.Kind() == reflect.Pointer {
 		if rv.IsNil() {
 			return
 		}
@@ -127,7 +127,7 @@ func applyExplicitNullsInStruct(rv reflect.Value, rt reflect.Type, raw map[strin
 			switch {
 			case sf.Type.Kind() == reflect.Struct:
 				applyExplicitNullsInStruct(rv.Field(i), sf.Type, raw)
-			case sf.Type.Kind() == reflect.Ptr && sf.Type.Elem().Kind() == reflect.Struct:
+			case sf.Type.Kind() == reflect.Pointer && sf.Type.Elem().Kind() == reflect.Struct:
 				fv := rv.Field(i)
 				if fv.IsNil() {
 					continue
@@ -142,7 +142,7 @@ func applyExplicitNullsInStruct(rv reflect.Value, rt reflect.Type, raw map[strin
 		}
 
 		// Only handle *string fields.
-		if sf.Type.Kind() != reflect.Ptr || sf.Type.Elem().Kind() != reflect.String {
+		if sf.Type.Kind() != reflect.Pointer || sf.Type.Elem().Kind() != reflect.String {
 			continue
 		}
 
@@ -184,7 +184,7 @@ func ApplySlicePresenceFlags(body []byte, v any) {
 		return
 	}
 	rv := reflect.ValueOf(v)
-	if rv.Kind() == reflect.Ptr {
+	if rv.Kind() == reflect.Pointer {
 		if rv.IsNil() {
 			return
 		}

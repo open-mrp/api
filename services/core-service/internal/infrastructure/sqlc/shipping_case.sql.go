@@ -84,8 +84,16 @@ SELECT
     sc.shipping_label_url,
     sc.shipped_at,
     sc.shipment_id,
+    s.number AS shipment_number,
+    ss.code AS shipment_status_code,
+    ss.name AS shipment_status_name,
+    s.created_at AS shipment_created_at,
+    s.updated_at AS shipment_updated_at,
     sc.carrier_id,
     c.name AS carrier_name,
+    c.is_portal_enabled AS carrier_is_portal_enabled,
+    c.created_at AS carrier_created_at,
+    c.updated_at AS carrier_updated_at,
     sc.account_id,
     sc.created_at,
     sc.updated_at,
@@ -96,19 +104,33 @@ SELECT
     fau.name AS freight_amount_unit_name,
     fau.abbreviation AS freight_amount_unit_abbreviation,
     fau.unit_dimension_code AS freight_amount_unit_type,
+    fau.ratio_numerator AS freight_amount_unit_ratio_numerator,
+    fau.ratio_denominator AS freight_amount_unit_ratio_denominator,
+    fau.offset_numerator AS freight_amount_unit_offset_numerator,
+    fau.offset_denominator AS freight_amount_unit_offset_denominator,
+    fau.created_at AS freight_amount_unit_created_at,
+    fau.updated_at AS freight_amount_unit_updated_at,
     -- Freight weight
     fw.id AS freight_weight_id,
     fw.value AS freight_weight_value,
     fw.unit_id AS freight_weight_unit_id,
     fwu.name AS freight_weight_unit_name,
     fwu.abbreviation AS freight_weight_unit_abbreviation,
-    fwu.unit_dimension_code AS freight_weight_unit_type
+    fwu.unit_dimension_code AS freight_weight_unit_type,
+    fwu.ratio_numerator AS freight_weight_unit_ratio_numerator,
+    fwu.ratio_denominator AS freight_weight_unit_ratio_denominator,
+    fwu.offset_numerator AS freight_weight_unit_offset_numerator,
+    fwu.offset_denominator AS freight_weight_unit_offset_denominator,
+    fwu.created_at AS freight_weight_unit_created_at,
+    fwu.updated_at AS freight_weight_unit_updated_at
 FROM shipping_case sc
 JOIN quantity fa ON sc.freight_amount_id = fa.id
 JOIN unit fau ON fa.unit_id = fau.id
 JOIN quantity fw ON sc.freight_weight_id = fw.id
 JOIN unit fwu ON fw.unit_id = fwu.id
 JOIN carrier c ON sc.carrier_id = c.id
+JOIN shipment s ON s.id = sc.shipment_id
+JOIN shipment_status ss ON ss.code = s.shipment_status_code
 WHERE sc.id = ?
   AND sc.account_id = ?
 `
@@ -119,31 +141,51 @@ type GetShippingCaseParams struct {
 }
 
 type GetShippingCaseRow struct {
-	ID                            string
-	Number                        string
-	Sscc                          sql.NullString
-	TrackingNumber                sql.NullString
-	ShippoTransactionID           sql.NullString
-	ShippingLabelUrl              sql.NullString
-	ShippedAt                     sql.NullTime
-	ShipmentID                    string
-	CarrierID                     string
-	CarrierName                   string
-	AccountID                     string
-	CreatedAt                     time.Time
-	UpdatedAt                     time.Time
-	FreightAmountID               string
-	FreightAmountValue            string
-	FreightAmountUnitID           string
-	FreightAmountUnitName         string
-	FreightAmountUnitAbbreviation string
-	FreightAmountUnitType         string
-	FreightWeightID               string
-	FreightWeightValue            string
-	FreightWeightUnitID           string
-	FreightWeightUnitName         string
-	FreightWeightUnitAbbreviation string
-	FreightWeightUnitType         string
+	ID                                 string
+	Number                             string
+	Sscc                               sql.NullString
+	TrackingNumber                     sql.NullString
+	ShippoTransactionID                sql.NullString
+	ShippingLabelUrl                   sql.NullString
+	ShippedAt                          sql.NullTime
+	ShipmentID                         string
+	ShipmentNumber                     string
+	ShipmentStatusCode                 string
+	ShipmentStatusName                 string
+	ShipmentCreatedAt                  time.Time
+	ShipmentUpdatedAt                  time.Time
+	CarrierID                          string
+	CarrierName                        string
+	CarrierIsPortalEnabled             bool
+	CarrierCreatedAt                   time.Time
+	CarrierUpdatedAt                   time.Time
+	AccountID                          string
+	CreatedAt                          time.Time
+	UpdatedAt                          time.Time
+	FreightAmountID                    string
+	FreightAmountValue                 string
+	FreightAmountUnitID                string
+	FreightAmountUnitName              string
+	FreightAmountUnitAbbreviation      string
+	FreightAmountUnitType              string
+	FreightAmountUnitRatioNumerator    string
+	FreightAmountUnitRatioDenominator  string
+	FreightAmountUnitOffsetNumerator   string
+	FreightAmountUnitOffsetDenominator string
+	FreightAmountUnitCreatedAt         time.Time
+	FreightAmountUnitUpdatedAt         time.Time
+	FreightWeightID                    string
+	FreightWeightValue                 string
+	FreightWeightUnitID                string
+	FreightWeightUnitName              string
+	FreightWeightUnitAbbreviation      string
+	FreightWeightUnitType              string
+	FreightWeightUnitRatioNumerator    string
+	FreightWeightUnitRatioDenominator  string
+	FreightWeightUnitOffsetNumerator   string
+	FreightWeightUnitOffsetDenominator string
+	FreightWeightUnitCreatedAt         time.Time
+	FreightWeightUnitUpdatedAt         time.Time
 }
 
 func (q *Queries) GetShippingCase(ctx context.Context, arg GetShippingCaseParams) (GetShippingCaseRow, error) {
@@ -158,8 +200,16 @@ func (q *Queries) GetShippingCase(ctx context.Context, arg GetShippingCaseParams
 		&i.ShippingLabelUrl,
 		&i.ShippedAt,
 		&i.ShipmentID,
+		&i.ShipmentNumber,
+		&i.ShipmentStatusCode,
+		&i.ShipmentStatusName,
+		&i.ShipmentCreatedAt,
+		&i.ShipmentUpdatedAt,
 		&i.CarrierID,
 		&i.CarrierName,
+		&i.CarrierIsPortalEnabled,
+		&i.CarrierCreatedAt,
+		&i.CarrierUpdatedAt,
 		&i.AccountID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -169,12 +219,24 @@ func (q *Queries) GetShippingCase(ctx context.Context, arg GetShippingCaseParams
 		&i.FreightAmountUnitName,
 		&i.FreightAmountUnitAbbreviation,
 		&i.FreightAmountUnitType,
+		&i.FreightAmountUnitRatioNumerator,
+		&i.FreightAmountUnitRatioDenominator,
+		&i.FreightAmountUnitOffsetNumerator,
+		&i.FreightAmountUnitOffsetDenominator,
+		&i.FreightAmountUnitCreatedAt,
+		&i.FreightAmountUnitUpdatedAt,
 		&i.FreightWeightID,
 		&i.FreightWeightValue,
 		&i.FreightWeightUnitID,
 		&i.FreightWeightUnitName,
 		&i.FreightWeightUnitAbbreviation,
 		&i.FreightWeightUnitType,
+		&i.FreightWeightUnitRatioNumerator,
+		&i.FreightWeightUnitRatioDenominator,
+		&i.FreightWeightUnitOffsetNumerator,
+		&i.FreightWeightUnitOffsetDenominator,
+		&i.FreightWeightUnitCreatedAt,
+		&i.FreightWeightUnitUpdatedAt,
 	)
 	return i, err
 }
@@ -209,6 +271,9 @@ SELECT
     sc.shipment_id,
     sc.carrier_id,
     c.name AS carrier_name,
+    c.is_portal_enabled AS carrier_is_portal_enabled,
+    c.created_at AS carrier_created_at,
+    c.updated_at AS carrier_updated_at,
     sc.account_id,
     sc.created_at,
     sc.updated_at,
@@ -218,12 +283,24 @@ SELECT
     fau.name AS freight_amount_unit_name,
     fau.abbreviation AS freight_amount_unit_abbreviation,
     fau.unit_dimension_code AS freight_amount_unit_type,
+    fau.ratio_numerator AS freight_amount_unit_ratio_numerator,
+    fau.ratio_denominator AS freight_amount_unit_ratio_denominator,
+    fau.offset_numerator AS freight_amount_unit_offset_numerator,
+    fau.offset_denominator AS freight_amount_unit_offset_denominator,
+    fau.created_at AS freight_amount_unit_created_at,
+    fau.updated_at AS freight_amount_unit_updated_at,
     fw.id AS freight_weight_id,
     fw.value AS freight_weight_value,
     fw.unit_id AS freight_weight_unit_id,
     fwu.name AS freight_weight_unit_name,
     fwu.abbreviation AS freight_weight_unit_abbreviation,
-    fwu.unit_dimension_code AS freight_weight_unit_type
+    fwu.unit_dimension_code AS freight_weight_unit_type,
+    fwu.ratio_numerator AS freight_weight_unit_ratio_numerator,
+    fwu.ratio_denominator AS freight_weight_unit_ratio_denominator,
+    fwu.offset_numerator AS freight_weight_unit_offset_numerator,
+    fwu.offset_denominator AS freight_weight_unit_offset_denominator,
+    fwu.created_at AS freight_weight_unit_created_at,
+    fwu.updated_at AS freight_weight_unit_updated_at
 FROM shipping_case sc
 JOIN quantity fa ON sc.freight_amount_id = fa.id
 JOIN unit fau ON fa.unit_id = fau.id
@@ -234,31 +311,46 @@ WHERE sc.shipment_id = ?
 `
 
 type ListShippingCasesByShipmentRow struct {
-	ID                            string
-	Number                        string
-	Sscc                          sql.NullString
-	TrackingNumber                sql.NullString
-	ShippoTransactionID           sql.NullString
-	ShippingLabelUrl              sql.NullString
-	ShippedAt                     sql.NullTime
-	ShipmentID                    string
-	CarrierID                     string
-	CarrierName                   string
-	AccountID                     string
-	CreatedAt                     time.Time
-	UpdatedAt                     time.Time
-	FreightAmountID               string
-	FreightAmountValue            string
-	FreightAmountUnitID           string
-	FreightAmountUnitName         string
-	FreightAmountUnitAbbreviation string
-	FreightAmountUnitType         string
-	FreightWeightID               string
-	FreightWeightValue            string
-	FreightWeightUnitID           string
-	FreightWeightUnitName         string
-	FreightWeightUnitAbbreviation string
-	FreightWeightUnitType         string
+	ID                                 string
+	Number                             string
+	Sscc                               sql.NullString
+	TrackingNumber                     sql.NullString
+	ShippoTransactionID                sql.NullString
+	ShippingLabelUrl                   sql.NullString
+	ShippedAt                          sql.NullTime
+	ShipmentID                         string
+	CarrierID                          string
+	CarrierName                        string
+	CarrierIsPortalEnabled             bool
+	CarrierCreatedAt                   time.Time
+	CarrierUpdatedAt                   time.Time
+	AccountID                          string
+	CreatedAt                          time.Time
+	UpdatedAt                          time.Time
+	FreightAmountID                    string
+	FreightAmountValue                 string
+	FreightAmountUnitID                string
+	FreightAmountUnitName              string
+	FreightAmountUnitAbbreviation      string
+	FreightAmountUnitType              string
+	FreightAmountUnitRatioNumerator    string
+	FreightAmountUnitRatioDenominator  string
+	FreightAmountUnitOffsetNumerator   string
+	FreightAmountUnitOffsetDenominator string
+	FreightAmountUnitCreatedAt         time.Time
+	FreightAmountUnitUpdatedAt         time.Time
+	FreightWeightID                    string
+	FreightWeightValue                 string
+	FreightWeightUnitID                string
+	FreightWeightUnitName              string
+	FreightWeightUnitAbbreviation      string
+	FreightWeightUnitType              string
+	FreightWeightUnitRatioNumerator    string
+	FreightWeightUnitRatioDenominator  string
+	FreightWeightUnitOffsetNumerator   string
+	FreightWeightUnitOffsetDenominator string
+	FreightWeightUnitCreatedAt         time.Time
+	FreightWeightUnitUpdatedAt         time.Time
 }
 
 func (q *Queries) ListShippingCasesByShipment(ctx context.Context, shipmentID string) ([]ListShippingCasesByShipmentRow, error) {
@@ -281,6 +373,9 @@ func (q *Queries) ListShippingCasesByShipment(ctx context.Context, shipmentID st
 			&i.ShipmentID,
 			&i.CarrierID,
 			&i.CarrierName,
+			&i.CarrierIsPortalEnabled,
+			&i.CarrierCreatedAt,
+			&i.CarrierUpdatedAt,
 			&i.AccountID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -290,12 +385,24 @@ func (q *Queries) ListShippingCasesByShipment(ctx context.Context, shipmentID st
 			&i.FreightAmountUnitName,
 			&i.FreightAmountUnitAbbreviation,
 			&i.FreightAmountUnitType,
+			&i.FreightAmountUnitRatioNumerator,
+			&i.FreightAmountUnitRatioDenominator,
+			&i.FreightAmountUnitOffsetNumerator,
+			&i.FreightAmountUnitOffsetDenominator,
+			&i.FreightAmountUnitCreatedAt,
+			&i.FreightAmountUnitUpdatedAt,
 			&i.FreightWeightID,
 			&i.FreightWeightValue,
 			&i.FreightWeightUnitID,
 			&i.FreightWeightUnitName,
 			&i.FreightWeightUnitAbbreviation,
 			&i.FreightWeightUnitType,
+			&i.FreightWeightUnitRatioNumerator,
+			&i.FreightWeightUnitRatioDenominator,
+			&i.FreightWeightUnitOffsetNumerator,
+			&i.FreightWeightUnitOffsetDenominator,
+			&i.FreightWeightUnitCreatedAt,
+			&i.FreightWeightUnitUpdatedAt,
 		); err != nil {
 			return nil, err
 		}

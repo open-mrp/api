@@ -19,21 +19,26 @@ type CreateScanningStationRequest struct {
 	Notes *string `json:"notes,omitempty" nullable:"false"`
 	// Scanning station type.
 	Type constants.ScanningStationType `json:"type" validate:"required"`
-	// Whether material check is required. If `true`, the operator at this station must manually verify the material before proceeding.
-	MaterialCheckRequired bool `json:"material_check_required"`
+	// Operator requirement behavior for this station.
+	OperatorRequirement constants.OperatorRequirement `json:"operator_requirement" validate:"required"`
 	// Department ID.
-	DepartmentID string `json:"department_id" validate:"required,max=191"`
+	DepartmentID string `json:"department_id" validate:"required"`
 	// Label size code.
 	LabelSizeCode *constants.LabelSizeCode `json:"label_size,omitempty" nullable:"false"`
 	// Label type code.
 	LabelTypeCode *constants.LabelTypeCode `json:"label_type,omitempty" nullable:"false"`
 }
 
+var sampleLabelSizeCode = constants.LabelSizeCodeOneByOne
+var sampleLabelTypeCode = constants.LabelTypeCodeTag
+
 var sampleCreateScanningStationRequest = &CreateScanningStationRequest{
-	Name:                  apiresource.SampleScanningStationName,
-	Type:                  constants.ScanningStationTypeInitBatch,
-	MaterialCheckRequired: false,
-	DepartmentID:          apiresource.SampleDepartmentID,
+	Name:                apiresource.SampleScanningStationName,
+	Type:                constants.ScanningStationTypeInitBatch,
+	OperatorRequirement: constants.OperatorRequirementNone,
+	DepartmentID:        apiresource.SampleDepartmentID,
+	LabelSizeCode:       &sampleLabelSizeCode,
+	LabelTypeCode:       &sampleLabelTypeCode,
 }
 
 func (*CreateScanningStationRequest) SchemaExample() any {
@@ -61,9 +66,8 @@ func (e *CreateScanningStationEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 			return "/v1/operations/scanning-stations/" + resp.ID
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
-			ObjectType:    constants.ObjectTypeScanningStation,
-			Fields:        []string{"department", "production_steps"},
-			DefaultFields: []string{"department"},
+			ObjectType: constants.ObjectTypeScanningStation,
+			Fields:     []string{"department", "production_steps"},
 		}),
 	}
 }

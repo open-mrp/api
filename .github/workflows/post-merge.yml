@@ -220,8 +220,14 @@ jobs:
       - name: Add tools to PATH
         run: echo "/usr/local/bin/ci-tools" >> $GITHUB_PATH
 
+      - name: Select E2E tests
+        id: e2e_select
+        run: |
+          RUN_REGEX=$(./scripts/select-e2e-tests.sh "${{ github.event.before }}" "${{ github.sha }}")
+          echo "run_regex=${RUN_REGEX}" >> "$GITHUB_OUTPUT"
+
       - name: Run E2E tests
-        run: ./scripts/run-e2e-tests.sh 300s
+        run: ./scripts/run-e2e-tests.sh 300s "${{ steps.e2e_select.outputs.run_regex }}"
 
       - name: Tear down E2E stack
         if: always()

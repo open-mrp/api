@@ -15,7 +15,7 @@ import (
 
 type AgentMemorySvc interface {
 	ListMemories(ctx context.Context, req *ListMemoriesRequest) (*apiresource.List[apiresource.AgentMemory], *apierror.APIError)
-	GetMemory(ctx context.Context, req *GetMemoryRequest) (*apiresource.AgentMemory, *apierror.APIError)
+	GetMemory(ctx context.Context, req *RetrieveMemoryRequest) (*apiresource.AgentMemory, *apierror.APIError)
 	CreateMemory(ctx context.Context, req *CreateMemoryRequest) (*apiresource.AgentMemory, *apierror.APIError)
 	UpdateMemory(ctx context.Context, req *UpdateMemoryRequest) (*apiresource.AgentMemory, *apierror.APIError)
 	DeleteMemory(ctx context.Context, req *DeleteMemoryRequest) (*apiresource.EmptyResource, *apierror.APIError)
@@ -73,7 +73,7 @@ func (m *agentMemorySvcImpl) ListMemories(ctx context.Context, req *ListMemories
 	return AgentMemoryListPresenter(resp), nil
 }
 
-func (m *agentMemorySvcImpl) GetMemory(ctx context.Context, req *GetMemoryRequest) (*apiresource.AgentMemory, *apierror.APIError) {
+func (m *agentMemorySvcImpl) GetMemory(ctx context.Context, req *RetrieveMemoryRequest) (*apiresource.AgentMemory, *apierror.APIError) {
 	pbReq := &pb.GetAgentMemoryRequest{
 		Id: req.ID,
 	}

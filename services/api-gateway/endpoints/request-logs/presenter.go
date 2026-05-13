@@ -1,6 +1,7 @@
 package requestlogep
 
 import (
+	"encoding/json"
 	"slices"
 
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
@@ -21,11 +22,10 @@ func RequestLogPresenter(rl *pb.RequestLogInfo, permissions map[string]bool) api
 		Host:             rl.Host,
 		Path:             rl.Path,
 		NormalizedRoute:  rl.NormalizedRoute,
-		QueryJSON:        rl.QueryJson,
+		QueryJSON:        rawMessageFromOptionalString(rl.QueryJson),
 		StatusCode:       rl.StatusCode,
 		LatencyUs:        rl.LatencyUs,
 		APIVersion:       rl.ApiVersion,
-		IdentityType:     rl.IdentityType,
 		ClientIP:         rl.ClientIp,
 		UserAgent:        rl.UserAgent,
 		Referrer:         rl.Referrer,
@@ -34,8 +34,8 @@ func RequestLogPresenter(rl *pb.RequestLogInfo, permissions map[string]bool) api
 		OccurredAt:       grpcutil.TimestampToTime(rl.OccurredAt),
 		CreatedAt:        grpcutil.TimestampToTime(rl.CreatedAt),
 		IdempotencyKey:   rl.IdempotencyKey,
-		RequestBodyJSON:  rl.BodyJson,
-		ResponseBodyJSON: rl.ResponseJson,
+		RequestBodyJSON:  rawMessageFromOptionalString(rl.BodyJson),
+		ResponseBodyJSON: rawMessageFromOptionalString(rl.ResponseJson),
 	}
 
 	if rl.AccountId != nil && rl.AccountName != nil {
@@ -43,6 +43,12 @@ func RequestLogPresenter(rl *pb.RequestLogInfo, permissions map[string]bool) api
 			ID:     *rl.AccountId,
 			Object: constants.ObjectTypeAccount,
 			Name:   *rl.AccountName,
+		}
+		if rl.AccountCreatedAt != nil {
+			result.Account.CreatedAt = rl.AccountCreatedAt.AsTime()
+		}
+		if rl.AccountUpdatedAt != nil {
+			result.Account.UpdatedAt = rl.AccountUpdatedAt.AsTime()
 		}
 	}
 
@@ -63,7 +69,7 @@ func RequestLogPresenter(rl *pb.RequestLogInfo, permissions map[string]bool) api
 				ID:          *rl.Actor.RoleId,
 				Object:      constants.ObjectTypeRole,
 				Name:        *rl.Actor.RoleName,
-				TypeCode:    constants.RoleTypeCode(*rl.Actor.RoleTypeCode),
+				TypeCode:    constants.RoleType(*rl.Actor.RoleTypeCode),
 				Permissions: &rolePermissions,
 				Owner:       apiresource.SystemOwner(),
 			}
@@ -108,4 +114,11 @@ func RequestLogListPresenter(resp *pb.ListRequestLogsResponse, permResolver func
 	}
 
 	return apiresource.NewList(logs, grpcutil.MapProtoPageInfo(resp.PageInfo))
+}
+
+func rawMessageFromOptionalString(s *string) json.RawMessage {
+	if s == nil || *s == "" {
+		return nil
+	}
+	return json.RawMessage(*s)
 }

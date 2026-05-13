@@ -15,7 +15,7 @@ import (
 
 type PrioritySvc interface {
 	ListPriorities(ctx context.Context, req *ListPrioritiesRequest) (*apiresource.List[apiresource.Priority], *apierror.APIError)
-	GetPriority(ctx context.Context, req *GetPriorityRequest) (*apiresource.Priority, *apierror.APIError)
+	GetPriority(ctx context.Context, req *RetrievePriorityRequest) (*apiresource.Priority, *apierror.APIError)
 }
 
 type PrioritySvcConfig struct {
@@ -64,7 +64,7 @@ func (m *prioritySvcImpl) ListPriorities(ctx context.Context, req *ListPrioritie
 	return PriorityListPresenter(resp), nil
 }
 
-func (m *prioritySvcImpl) GetPriority(ctx context.Context, req *GetPriorityRequest) (*apiresource.Priority, *apierror.APIError) {
+func (m *prioritySvcImpl) GetPriority(ctx context.Context, req *RetrievePriorityRequest) (*apiresource.Priority, *apierror.APIError) {
 	pbReq := &pb.GetPriorityRequest{
 		Identifier: req.PriorityID,
 	}

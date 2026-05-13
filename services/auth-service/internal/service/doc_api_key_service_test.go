@@ -75,7 +75,7 @@ func (s *DocAPIKeySvcTestSuite) newAdminCtx() context.Context {
 			RelationType: types.IdentityRelationTypeInternal,
 			ID:           "usr_test123",
 			AccountID:    new(testSandboxAccountID),
-			RoleTypeCode: new("admin"),
+			RoleType:     new("admin"),
 		},
 	}
 	ctx := appctx.WithIdentity(context.Background(), identity)
@@ -198,7 +198,7 @@ func (s *DocAPIKeySvcTestSuite) TestGetOrCreateDocAPIKey_RequiresTargetAccount()
 			RelationType: types.IdentityRelationTypeInternal,
 			ID:           "usr_test123",
 			AccountID:    new(testSandboxAccountID),
-			RoleTypeCode: new("admin"),
+			RoleType:     new("admin"),
 		},
 	}
 	ctx := appctx.WithIdentity(context.Background(), identity)
@@ -218,7 +218,7 @@ func (s *DocAPIKeySvcTestSuite) TestGetOrCreateDocAPIKey_RejectsProductionAccoun
 			RelationType: types.IdentityRelationTypeInternal,
 			ID:           "usr_test123",
 			AccountID:    new(testOwnerAccountID),
-			RoleTypeCode: new("admin"),
+			RoleType:     new("admin"),
 		},
 	}
 	ctx := appctx.WithIdentity(context.Background(), identity)

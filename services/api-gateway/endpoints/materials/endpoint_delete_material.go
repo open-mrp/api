@@ -23,11 +23,11 @@ func (e *DeleteMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteM
 		Description:       "Deletes a material by ID.",
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
-		Route:             "/v1/operations/materials/{id}",
+		Route:             "/v1/catalog/materials/{id}",
 		Request:           &DeleteMaterialRequest{},
 		Response:          &apiresource.Material{},
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteMaterialRequest) (*apiresource.Material, *apierror.APIError) {
 			return svc.(MaterialSvc).DeleteMaterial

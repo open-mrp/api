@@ -117,7 +117,7 @@ func (s *materialSvcImpl) ListMaterials(ctx context.Context, params domain.ListM
 // 1. Extract and validate the caller's identity, actor type, and items:read permission.
 // 2. Require the Augno-Account header.
 // 3. Fetch the material from the repository by account ID and item ID.
-func (s *materialSvcImpl) GetMaterial(ctx context.Context, materialID string) (*domain.Material, *apierror.APIError) {
+func (s *materialSvcImpl) GetMaterial(ctx context.Context, params domain.GetMaterialParams) (*domain.Material, *apierror.APIError) {
 	ctx, span := materialSvcTracer.Start(ctx, "service.material.get")
 	defer span.End()
 
@@ -144,7 +144,11 @@ func (s *materialSvcImpl) GetMaterial(ctx context.Context, materialID string) (*
 		}
 	}
 
-	return s.repos.NewMaterialRepo().GetByID(ctx, identity.Target.AccountID, materialID)
+	return s.repos.NewMaterialRepo().GetByID(ctx, domain.GetMaterialParams{
+		AccountID:  identity.Target.AccountID,
+		MaterialID: params.MaterialID,
+		Includes:   params.Includes,
+	})
 }
 
 // CreateMaterial creates a new material with its associated item, rates, and quantities, with idempotency support.
@@ -372,7 +376,7 @@ func (s *materialSvcImpl) CreateMaterial(ctx context.Context, params domain.Crea
 			}
 
 			// Fetch fresh material for response.
-			created, apiErr := txMaterialRepo.GetByID(txCtx, params.AccountID, materialID)
+			created, apiErr := txMaterialRepo.GetByID(txCtx, domain.GetMaterialParams{AccountID: params.AccountID, MaterialID: materialID, Includes: params.Includes})
 			if apiErr != nil {
 				return apiErr
 			}
@@ -462,7 +466,7 @@ func (s *materialSvcImpl) UpdateMaterial(ctx context.Context, params domain.Upda
 			txItemRepo := txSvc.repos.NewItemRepo()
 
 			// Verify the material exists.
-			existing, apiErr := txMaterialRepo.GetByID(txCtx, params.AccountID, params.MaterialID)
+			existing, apiErr := txMaterialRepo.GetByID(txCtx, domain.GetMaterialParams{AccountID: params.AccountID, MaterialID: params.MaterialID})
 			if apiErr != nil {
 				return apiErr
 			}
@@ -475,6 +479,22 @@ func (s *materialSvcImpl) UpdateMaterial(ctx context.Context, params domain.Upda
 				}
 				if exists {
 					return apierror.NewConflictErrorWithParam("An item with this SKU already exists.", "sku")
+				}
+			}
+
+			if params.UnitCost != nil {
+				txUnitRepo := txSvc.repos.NewUnitRepo()
+				if apiErr := ValidateCostRateUnits(txCtx, txUnitRepo, params.UnitCost.NumeratorUnitID, params.UnitCost.DenominatorUnitID, "unit_cost"); apiErr != nil {
+					return apiErr
+				}
+				if existing.Item == nil || existing.Item.UnitCostID == "" {
+					return apierror.NewInvariantViolationError("Material item or unit cost rate is missing.")
+				}
+				if apiErr := txItemRepo.UpdateRate(txCtx, existing.Item.UnitCostID, *params.UnitCost); apiErr != nil {
+					return apiErr
+				}
+				if apiErr := txItemRepo.ClearItemDirtyFlag(txCtx, params.AccountID, existing.ItemID); apiErr != nil {
+					return apiErr
 				}
 			}
 
@@ -503,7 +523,7 @@ func (s *materialSvcImpl) UpdateMaterial(ctx context.Context, params domain.Upda
 			}
 
 			// Fetch fresh material for response.
-			updated, apiErr := txMaterialRepo.GetByID(txCtx, params.AccountID, params.MaterialID)
+			updated, apiErr := txMaterialRepo.GetByID(txCtx, domain.GetMaterialParams{AccountID: params.AccountID, MaterialID: params.MaterialID, Includes: params.Includes})
 			if apiErr != nil {
 				return apiErr
 			}
@@ -571,7 +591,7 @@ func (s *materialSvcImpl) DeleteMaterial(ctx context.Context, materialID string)
 	accountID := identity.Target.AccountID
 
 	// Fetch existing material before deletion.
-	material, apiErr := s.repos.NewMaterialRepo().GetByID(ctx, accountID, materialID)
+	material, apiErr := s.repos.NewMaterialRepo().GetByID(ctx, domain.GetMaterialParams{AccountID: accountID, MaterialID: materialID})
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeMaterial, materialID)

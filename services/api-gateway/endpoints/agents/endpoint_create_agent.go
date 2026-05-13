@@ -15,7 +15,7 @@ import (
 // Tool to attach to an agent definition.
 type ToolInput struct {
 	// Available tool ID.
-	ToolID string `json:"tool_id" validate:"required,max=191"`
+	ToolID string `json:"tool_id" validate:"required"`
 	// JSON configuration for this tool instance.
 	ConfigJSON string `json:"config_json,omitempty"`
 	// Display order among the agent's tools (lower values appear first).

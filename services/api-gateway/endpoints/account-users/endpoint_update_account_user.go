@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -14,17 +15,17 @@ import (
 type UpdateAccountUserRequest struct {
 	// Account user ID.
 	AccountUserID string `path:"id" validate:"required"`
-	// Display name.
+	// User display name.
 	Name *string `json:"name,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// Email address.
+	// User email address.
 	Email *string `json:"email,omitempty" nullable:"false" validate:"omitnil,custom_email,max=255"`
-	// Username.
-	Username *string `json:"username,omitempty" nullable:"false" validate:"omitempty,max=255"`
-	// Role ID.
-	RoleID *string `json:"role_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
-	// Department ID.
-	DepartmentID *string `json:"department_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
-	// Notification preferences to toggle (external targets only).
+	// Unique username (3–255 chars; letters, numbers, underscores, hyphens).
+	Username *string `json:"username,omitempty" nullable:"false" validate:"omitempty,username"`
+	// Role assigned to the user.
+	RoleID *string `json:"role_id,omitempty" nullable:"true" validate:"omitempty"`
+	// Department assigned to the user.
+	DepartmentID *string `json:"department_id,omitempty" nullable:"true" validate:"omitempty"`
+	// Notification preferences to update (external targets only).
 	Preferences []NotificationPreferenceItem `json:"preferences,omitempty"`
 }
 
@@ -58,5 +59,9 @@ func (e *UpdateAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upda
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateAccountUserRequest) (*apiresource.AccountUser, *apierror.APIError) {
 			return svc.(AccountUserSvc).UpdateAccountUser
 		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeAccountUser,
+			Fields:     []string{"role", "department"},
+		}),
 	}
 }

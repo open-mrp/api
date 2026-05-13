@@ -16,8 +16,8 @@ type EmailLog struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=email_log"`
-	// Whether the email was sent.
-	HasSent bool `json:"has_sent"`
+	// Email send status.
+	SendStatus constants.EmailSendStatus `json:"send_status" validate:"required"`
 	// Recipient email addresses.
 	Recipients []string `json:"recipients" validate:"required"`
 	// Email subject line.
@@ -26,8 +26,7 @@ type EmailLog struct {
 	Filename *string `json:"filename"`
 	// SES message ID returned by AWS.
 	SESMessageID *string `json:"ses_message_id"`
-	// Actor who sent the email. Null when the email was sent by the
-	// system, or when the caller did not request `include=sent_by`.
+	// Actor who sent the email. Null when the email was sent by the system.
 	SentBy *Actor `json:"sent_by" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
@@ -41,7 +40,7 @@ var sampleEmailLogFilename = "invoice_1001.pdf"
 var SampleEmailLog = &EmailLog{
 	ID:         SampleEmailLogID,
 	Object:     constants.ObjectTypeEmailLog,
-	HasSent:    true,
+	SendStatus: constants.EmailSendStatusSent,
 	Recipients: []string{"customer@example.com"},
 	Subject:    &sampleEmailLogSubject,
 	Filename:   &sampleEmailLogFilename,

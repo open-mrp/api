@@ -215,7 +215,8 @@ func (h *pickingGRPCHandler) UpdatePick(ctx context.Context, req *pb.UpdatePickR
 	defer finalizeIdempotency()
 
 	params := domain.UpdatePickParams{
-		PickID: req.Id,
+		PickID:   req.Id,
+		Includes: req.Includes,
 	}
 
 	if req.Number != nil {

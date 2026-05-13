@@ -17,7 +17,7 @@ import (
 
 type AccountGroupSvc interface {
 	ListAccountGroups(ctx context.Context, req *ListAccountGroupsRequest) (*apiresource.List[apiresource.AccountGroup], *apierror.APIError)
-	GetAccountGroup(ctx context.Context, req *GetAccountGroupRequest) (*apiresource.AccountGroup, *apierror.APIError)
+	GetAccountGroup(ctx context.Context, req *RetrieveAccountGroupRequest) (*apiresource.AccountGroup, *apierror.APIError)
 	CreateAccountGroup(ctx context.Context, req *CreateAccountGroupRequest) (*apiresource.AccountGroup, *apierror.APIError)
 	UpdateAccountGroup(ctx context.Context, req *UpdateAccountGroupRequest) (*apiresource.AccountGroup, *apierror.APIError)
 	DeleteAccountGroup(ctx context.Context, req *DeleteAccountGroupRequest) (*apiresource.EmptyResource, *apierror.APIError)
@@ -70,7 +70,7 @@ func (m *accountGroupSvcImpl) ListAccountGroups(ctx context.Context, req *ListAc
 	return AccountGroupListPresenter(resp), nil
 }
 
-func (m *accountGroupSvcImpl) GetAccountGroup(ctx context.Context, req *GetAccountGroupRequest) (*apiresource.AccountGroup, *apierror.APIError) {
+func (m *accountGroupSvcImpl) GetAccountGroup(ctx context.Context, req *RetrieveAccountGroupRequest) (*apiresource.AccountGroup, *apierror.APIError) {
 	pbReq := &pb.GetAccountGroupRequest{
 		Id: req.AccountGroupID,
 	}

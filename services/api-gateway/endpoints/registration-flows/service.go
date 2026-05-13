@@ -16,11 +16,11 @@ import (
 
 type RegistrationFlowSvc interface {
 	ListRegistrationFlows(ctx context.Context, req *ListRegistrationFlowsRequest) (*apiresource.List[apiresource.RegistrationFlow], *apierror.APIError)
-	GetRegistrationFlow(ctx context.Context, req *GetRegistrationFlowRequest) (*apiresource.RegistrationFlow, *apierror.APIError)
+	GetRegistrationFlow(ctx context.Context, req *RetrieveRegistrationFlowRequest) (*apiresource.RegistrationFlow, *apierror.APIError)
 	CreateRegistrationFlow(ctx context.Context, req *CreateRegistrationFlowRequest) (*apiresource.RegistrationFlow, *apierror.APIError)
 	UpdateRegistrationFlow(ctx context.Context, req *UpdateRegistrationFlowRequest) (*apiresource.RegistrationFlow, *apierror.APIError)
 	DeleteRegistrationFlow(ctx context.Context, req *DeleteRegistrationFlowRequest) (*apiresource.EmptyResource, *apierror.APIError)
-	GetRegistrationFlowBySlug(ctx context.Context, req *GetRegistrationFlowBySlugRequest) (*apiresource.RegistrationFlow, *apierror.APIError)
+	GetRegistrationFlowBySlug(ctx context.Context, req *RetrieveRegistrationFlowBySlugRequest) (*apiresource.RegistrationFlow, *apierror.APIError)
 	RegisterCustomer(ctx context.Context, req *RegisterCustomerRequest) (*apiresource.EmptyResource, *apierror.APIError)
 }
 
@@ -70,7 +70,7 @@ func (m *registrationFlowSvcImpl) ListRegistrationFlows(ctx context.Context, req
 	return RegistrationFlowListPresenter(resp), nil
 }
 
-func (m *registrationFlowSvcImpl) GetRegistrationFlow(ctx context.Context, req *GetRegistrationFlowRequest) (*apiresource.RegistrationFlow, *apierror.APIError) {
+func (m *registrationFlowSvcImpl) GetRegistrationFlow(ctx context.Context, req *RetrieveRegistrationFlowRequest) (*apiresource.RegistrationFlow, *apierror.APIError) {
 	pbReq := &pb.GetRegistrationFlowRequest{
 		Id: req.RegistrationFlowID,
 	}
@@ -151,7 +151,7 @@ func (m *registrationFlowSvcImpl) DeleteRegistrationFlow(ctx context.Context, re
 	return &apiresource.EmptyResource{}, nil
 }
 
-func (m *registrationFlowSvcImpl) GetRegistrationFlowBySlug(ctx context.Context, req *GetRegistrationFlowBySlugRequest) (*apiresource.RegistrationFlow, *apierror.APIError) {
+func (m *registrationFlowSvcImpl) GetRegistrationFlowBySlug(ctx context.Context, req *RetrieveRegistrationFlowBySlugRequest) (*apiresource.RegistrationFlow, *apierror.APIError) {
 	pbReq := &pb.GetRegistrationFlowBySlugRequest{
 		Slug: req.Slug,
 	}

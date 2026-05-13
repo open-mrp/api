@@ -325,7 +325,7 @@ func TestAccountUsers_Remove(t *testing.T) {
 	requireStatus(t, 201, createStatus, createBody)
 	id := jsonField(parseJSON(createBody), "id")
 
-	delStatus, delBody, err := apiClient.Put(accountUsersPath+"/"+id+"/status", map[string]any{"status": "removed"})
+	delStatus, delBody, err := apiClient.Put(accountUsersPath+"/"+id+"/actions/remove", nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, delStatus, delBody)
 
@@ -355,8 +355,8 @@ func TestAccountUsers_LockAndUnlock(t *testing.T) {
 	requireStatus(t, 201, createStatus, createBody)
 	id := jsonField(parseJSON(createBody), "id")
 
-	// Lock via status=disabled
-	lockStatus, lockBody, err := apiClient.Put(accountUsersPath+"/"+id+"/status", map[string]any{"status": "disabled"})
+	// Lock via disable action.
+	lockStatus, lockBody, err := apiClient.Put(accountUsersPath+"/"+id+"/actions/disable", nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, lockStatus, lockBody)
 
@@ -366,13 +366,13 @@ func TestAccountUsers_LockAndUnlock(t *testing.T) {
 	requireStatus(t, 200, getStatus, getBody)
 	assert.Equal(t, "disabled", jsonField(parseJSON(getBody), "status"))
 
-	// Re-applying status=disabled is an idempotent no-op.
-	idemStatus, idemBody, err := apiClient.Put(accountUsersPath+"/"+id+"/status", map[string]any{"status": "disabled"})
+	// Re-applying disable is an idempotent no-op.
+	idemStatus, idemBody, err := apiClient.Put(accountUsersPath+"/"+id+"/actions/disable", nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, idemStatus, idemBody)
 
-	// Unlock via status=active
-	unlockStatus, unlockBody, err := apiClient.Put(accountUsersPath+"/"+id+"/status", map[string]any{"status": "active"})
+	// Unlock via activate action.
+	unlockStatus, unlockBody, err := apiClient.Put(accountUsersPath+"/"+id+"/actions/activate", nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, unlockStatus, unlockBody)
 
@@ -404,13 +404,13 @@ func TestAccountUsers_RemoveAndRestore(t *testing.T) {
 	requireStatus(t, 201, createStatus, createBody)
 	id := jsonField(parseJSON(createBody), "id")
 
-	// Remove via status=removed
-	delStatus, delBody, err := apiClient.Put(accountUsersPath+"/"+id+"/status", map[string]any{"status": "removed"})
+	// Remove via remove action.
+	delStatus, delBody, err := apiClient.Put(accountUsersPath+"/"+id+"/actions/remove", nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, delStatus, delBody)
 
-	// Restore via status=active
-	restoreStatus, restoreBody, err := apiClient.Put(accountUsersPath+"/"+id+"/status", map[string]any{"status": "active"})
+	// Restore via activate action.
+	restoreStatus, restoreBody, err := apiClient.Put(accountUsersPath+"/"+id+"/actions/activate", nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, restoreStatus, restoreBody)
 
@@ -429,14 +429,6 @@ func TestAccountUsers_RemoveAndRestore(t *testing.T) {
 
 	// Cleanup
 	removeAccountUser(id)
-}
-
-func TestAccountUsers_StatusInvalidTransition(t *testing.T) {
-	t.Parallel()
-	// An unknown status value must be rejected.
-	status, _, err := apiClient.Put(accountUsersPath+"/"+SeedAccountUserID+"/status", map[string]any{"status": "bogus"})
-	require.NoError(t, err)
-	assert.Equal(t, 400, status, "invalid status value should return 400")
 }
 
 func TestAccountUsers_Idempotent(t *testing.T) {
@@ -483,8 +475,8 @@ func TestAccountUsers_ListIncludeRemoved(t *testing.T) {
 
 	removeAccountUser(id)
 
-	// List with include_removed should find the removed user
-	list, _, err := apiClient.GetList(accountUsersPath, url.Values{"include_removed": {"true"}})
+	// List with removed_scope=included should find the removed user
+	list, _, err := apiClient.GetList(accountUsersPath, url.Values{"removed_scope": {"included"}})
 	require.NoError(t, err)
 
 	found := false
@@ -494,12 +486,12 @@ func TestAccountUsers_ListIncludeRemoved(t *testing.T) {
 			break
 		}
 	}
-	assert.True(t, found, "Removed user should appear when include_removed=true")
+	assert.True(t, found, "Removed user should appear when removed_scope=included")
 }
 
-// removeAccountUser is a test helper that soft-deletes a user via PUT /status.
+// removeAccountUser is a test helper that soft-deletes a user via the remove action.
 func removeAccountUser(id string) {
-	_, _, _ = apiClient.Put(accountUsersPath+"/"+id+"/status", map[string]any{"status": "removed"})
+	_, _, _ = apiClient.Put(accountUsersPath+"/"+id+"/actions/remove", nil)
 }
 
 // --- Scanner creation ---
@@ -567,8 +559,8 @@ func TestAccountUsers_StatusNoopIsIdempotent(t *testing.T) {
 	id := jsonField(parseJSON(createBody), "id")
 	defer removeAccountUser(id)
 
-	// User is already active; putting status=active must be a no-op.
-	status, body, err := apiClient.Put(accountUsersPath+"/"+id+"/status", map[string]any{"status": "active"})
+	// User is already active; activate must be a no-op.
+	status, body, err := apiClient.Put(accountUsersPath+"/"+id+"/actions/activate", nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
@@ -580,8 +572,8 @@ func TestAccountUsers_StatusNoopIsIdempotent(t *testing.T) {
 
 func TestAccountUsers_StatusLockAdminFails(t *testing.T) {
 	t.Parallel()
-	// The seeded admin account user cannot be transitioned to disabled.
-	status, _, err := apiClient.Put(accountUsersPath+"/"+SeedAccountUserID+"/status", map[string]any{"status": "disabled"})
+	// The seeded admin account user cannot be disabled.
+	status, _, err := apiClient.Put(accountUsersPath+"/"+SeedAccountUserID+"/actions/disable", nil)
 	require.NoError(t, err)
 	assert.Equal(t, 400, status, "admin users cannot be locked")
 }
@@ -601,21 +593,14 @@ func TestAccountUsers_StatusLockAfterRemoveFails(t *testing.T) {
 	id := jsonField(parseJSON(createBody), "id")
 
 	// Remove first.
-	rmStatus, rmBody, err := apiClient.Put(accountUsersPath+"/"+id+"/status", map[string]any{"status": "removed"})
+	rmStatus, rmBody, err := apiClient.Put(accountUsersPath+"/"+id+"/actions/remove", nil)
 	require.NoError(t, err)
 	requireStatus(t, 200, rmStatus, rmBody)
 
 	// Attempting to lock a removed user must fail.
-	lockStatus, _, err := apiClient.Put(accountUsersPath+"/"+id+"/status", map[string]any{"status": "disabled"})
+	lockStatus, _, err := apiClient.Put(accountUsersPath+"/"+id+"/actions/disable", nil)
 	require.NoError(t, err)
 	assert.Equal(t, 400, lockStatus, "removed users cannot be locked")
-}
-
-func TestAccountUsers_StatusRejectsMissingField(t *testing.T) {
-	t.Parallel()
-	status, _, err := apiClient.Put(accountUsersPath+"/"+SeedAccountUserID+"/status", map[string]any{})
-	require.NoError(t, err)
-	assert.Equal(t, 400, status, "missing status field should return 400")
 }
 
 // --- Scanner password endpoint ---

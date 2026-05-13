@@ -24,11 +24,17 @@ func ShippingCasePresenter(sc *pb.ShippingCaseInfo) apiresource.ShippingCase {
 			Value:        sc.FreightAmountValue,
 			DisplayValue: apiresource.FormatDisplayValue(sc.FreightAmountValue, sc.FreightAmountUnitAbbreviation, sc.FreightAmountUnitType),
 			Unit: &apiresource.Unit{
-				ID:           sc.FreightAmountUnitId,
-				Object:       constants.ObjectTypeUnit,
-				Name:         sc.FreightAmountUnitName,
-				Abbreviation: sc.FreightAmountUnitAbbreviation,
-				Type:         constants.UnitType(sc.FreightAmountUnitType),
+				ID:                sc.FreightAmountUnitId,
+				Object:            constants.ObjectTypeUnit,
+				Name:              sc.FreightAmountUnitName,
+				Abbreviation:      sc.FreightAmountUnitAbbreviation,
+				Type:              constants.UnitType(sc.FreightAmountUnitType),
+				RatioNumerator:    sc.FreightAmountUnitRatioNumerator,
+				RatioDenominator:  sc.FreightAmountUnitRatioDenominator,
+				OffsetNumerator:   sc.FreightAmountUnitOffsetNumerator,
+				OffsetDenominator: sc.FreightAmountUnitOffsetDenominator,
+				CreatedAt:         grpcutil.TimestampToTime(sc.FreightAmountUnitCreatedAt),
+				UpdatedAt:         grpcutil.TimestampToTime(sc.FreightAmountUnitUpdatedAt),
 			},
 		},
 		FreightWeight: &apiresource.Quantity{
@@ -37,25 +43,51 @@ func ShippingCasePresenter(sc *pb.ShippingCaseInfo) apiresource.ShippingCase {
 			Value:        sc.FreightWeightValue,
 			DisplayValue: apiresource.FormatDisplayValue(sc.FreightWeightValue, sc.FreightWeightUnitAbbreviation, sc.FreightWeightUnitType),
 			Unit: &apiresource.Unit{
-				ID:           sc.FreightWeightUnitId,
-				Object:       constants.ObjectTypeUnit,
-				Name:         sc.FreightWeightUnitName,
-				Abbreviation: sc.FreightWeightUnitAbbreviation,
-				Type:         constants.UnitType(sc.FreightWeightUnitType),
+				ID:                sc.FreightWeightUnitId,
+				Object:            constants.ObjectTypeUnit,
+				Name:              sc.FreightWeightUnitName,
+				Abbreviation:      sc.FreightWeightUnitAbbreviation,
+				Type:              constants.UnitType(sc.FreightWeightUnitType),
+				RatioNumerator:    sc.FreightWeightUnitRatioNumerator,
+				RatioDenominator:  sc.FreightWeightUnitRatioDenominator,
+				OffsetNumerator:   sc.FreightWeightUnitOffsetNumerator,
+				OffsetDenominator: sc.FreightWeightUnitOffsetDenominator,
+				CreatedAt:         grpcutil.TimestampToTime(sc.FreightWeightUnitCreatedAt),
+				UpdatedAt:         grpcutil.TimestampToTime(sc.FreightWeightUnitUpdatedAt),
 			},
 		},
 		Shipment: &apiresource.ShipmentDetail{
 			ID:     sc.ShipmentId,
 			Object: constants.ObjectTypeShipment,
-		},
-		Carrier: &apiresource.Carrier{
-			ID:     sc.CarrierId,
-			Object: constants.ObjectTypeCarrier,
-			Name:   sc.CarrierName,
+			Number: sc.GetShipmentNumber(),
+			Status: apiresource.ShipmentStatus{
+				Code: sc.GetShipmentStatusCode(),
+				Name: sc.GetShipmentStatusName(),
+			},
+			CreatedAt: grpcutil.TimestampToTime(sc.ShipmentCreatedAt),
+			UpdatedAt: grpcutil.TimestampToTime(sc.ShipmentUpdatedAt),
 		},
 		CreatedAt: grpcutil.TimestampToTime(sc.CreatedAt),
 		UpdatedAt: grpcutil.TimestampToTime(sc.UpdatedAt),
 	}
+
+	carrier := &apiresource.Carrier{
+		ID:     sc.CarrierId,
+		Object: constants.ObjectTypeCarrier,
+		Name:   sc.CarrierName,
+	}
+	if sc.CarrierIsPortalEnabled != nil && *sc.CarrierIsPortalEnabled {
+		carrier.CustomerPortalVisibility = constants.CustomerPortalVisibilityVisible
+	} else {
+		carrier.CustomerPortalVisibility = constants.CustomerPortalVisibilityHidden
+	}
+	if sc.CarrierCreatedAt != nil {
+		carrier.CreatedAt = sc.CarrierCreatedAt.AsTime()
+	}
+	if sc.CarrierUpdatedAt != nil {
+		carrier.UpdatedAt = sc.CarrierUpdatedAt.AsTime()
+	}
+	result.Carrier = carrier
 
 	if sc.ShippedAt != nil {
 		t := grpcutil.TimestampToTime(sc.ShippedAt)

@@ -158,7 +158,9 @@ const findSandboxAccountWithOwnerByTypeID = `-- name: FindSandboxAccountWithOwne
 SELECT
     sandbox_account.id, sandbox_account.type_id, sandbox_account.created_at, sandbox_account.updated_at, sandbox_account.owner_account_id, sandbox_account.account_id,
     account.name,
-    owner_account.name AS owner_account_name
+    owner_account.name AS owner_account_name,
+    owner_account.created_at AS owner_account_created_at,
+    owner_account.updated_at AS owner_account_updated_at
 FROM sandbox_account
 JOIN account ON sandbox_account.account_id = account.id
 LEFT JOIN account owner_account ON sandbox_account.owner_account_id = owner_account.id
@@ -166,14 +168,16 @@ WHERE sandbox_account.type_id = ?
 `
 
 type FindSandboxAccountWithOwnerByTypeIDRow struct {
-	ID               int64
-	TypeID           string
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
-	OwnerAccountID   string
-	AccountID        string
-	Name             string
-	OwnerAccountName string
+	ID                    int64
+	TypeID                string
+	CreatedAt             time.Time
+	UpdatedAt             time.Time
+	OwnerAccountID        string
+	AccountID             string
+	Name                  string
+	OwnerAccountName      string
+	OwnerAccountCreatedAt time.Time
+	OwnerAccountUpdatedAt time.Time
 }
 
 func (q *Queries) FindSandboxAccountWithOwnerByTypeID(ctx context.Context, typeID string) (FindSandboxAccountWithOwnerByTypeIDRow, error) {
@@ -188,6 +192,8 @@ func (q *Queries) FindSandboxAccountWithOwnerByTypeID(ctx context.Context, typeI
 		&i.AccountID,
 		&i.Name,
 		&i.OwnerAccountName,
+		&i.OwnerAccountCreatedAt,
+		&i.OwnerAccountUpdatedAt,
 	)
 	return i, err
 }
@@ -350,7 +356,9 @@ const listSandboxAccountsWithOwnerBackward = `-- name: ListSandboxAccountsWithOw
 SELECT
     sandbox_account.id, sandbox_account.type_id, sandbox_account.created_at, sandbox_account.updated_at, sandbox_account.owner_account_id, sandbox_account.account_id,
     account.name,
-    owner_account.name AS owner_account_name
+    owner_account.name AS owner_account_name,
+    owner_account.created_at AS owner_account_created_at,
+    owner_account.updated_at AS owner_account_updated_at
 FROM sandbox_account
 JOIN account ON sandbox_account.account_id = account.id
 LEFT JOIN account owner_account ON sandbox_account.owner_account_id = owner_account.id
@@ -376,14 +384,16 @@ type ListSandboxAccountsWithOwnerBackwardParams struct {
 }
 
 type ListSandboxAccountsWithOwnerBackwardRow struct {
-	ID               int64
-	TypeID           string
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
-	OwnerAccountID   string
-	AccountID        string
-	Name             string
-	OwnerAccountName string
+	ID                    int64
+	TypeID                string
+	CreatedAt             time.Time
+	UpdatedAt             time.Time
+	OwnerAccountID        string
+	AccountID             string
+	Name                  string
+	OwnerAccountName      string
+	OwnerAccountCreatedAt time.Time
+	OwnerAccountUpdatedAt time.Time
 }
 
 func (q *Queries) ListSandboxAccountsWithOwnerBackward(ctx context.Context, arg ListSandboxAccountsWithOwnerBackwardParams) ([]ListSandboxAccountsWithOwnerBackwardRow, error) {
@@ -412,6 +422,8 @@ func (q *Queries) ListSandboxAccountsWithOwnerBackward(ctx context.Context, arg 
 			&i.AccountID,
 			&i.Name,
 			&i.OwnerAccountName,
+			&i.OwnerAccountCreatedAt,
+			&i.OwnerAccountUpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -430,7 +442,9 @@ const listSandboxAccountsWithOwnerForward = `-- name: ListSandboxAccountsWithOwn
 SELECT
     sandbox_account.id, sandbox_account.type_id, sandbox_account.created_at, sandbox_account.updated_at, sandbox_account.owner_account_id, sandbox_account.account_id,
     account.name,
-    owner_account.name AS owner_account_name
+    owner_account.name AS owner_account_name,
+    owner_account.created_at AS owner_account_created_at,
+    owner_account.updated_at AS owner_account_updated_at
 FROM sandbox_account
 JOIN account ON sandbox_account.account_id = account.id
 LEFT JOIN account owner_account ON sandbox_account.owner_account_id = owner_account.id
@@ -457,14 +471,16 @@ type ListSandboxAccountsWithOwnerForwardParams struct {
 }
 
 type ListSandboxAccountsWithOwnerForwardRow struct {
-	ID               int64
-	TypeID           string
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
-	OwnerAccountID   string
-	AccountID        string
-	Name             string
-	OwnerAccountName string
+	ID                    int64
+	TypeID                string
+	CreatedAt             time.Time
+	UpdatedAt             time.Time
+	OwnerAccountID        string
+	AccountID             string
+	Name                  string
+	OwnerAccountName      string
+	OwnerAccountCreatedAt time.Time
+	OwnerAccountUpdatedAt time.Time
 }
 
 func (q *Queries) ListSandboxAccountsWithOwnerForward(ctx context.Context, arg ListSandboxAccountsWithOwnerForwardParams) ([]ListSandboxAccountsWithOwnerForwardRow, error) {
@@ -494,6 +510,8 @@ func (q *Queries) ListSandboxAccountsWithOwnerForward(ctx context.Context, arg L
 			&i.AccountID,
 			&i.Name,
 			&i.OwnerAccountName,
+			&i.OwnerAccountCreatedAt,
+			&i.OwnerAccountUpdatedAt,
 		); err != nil {
 			return nil, err
 		}

@@ -2552,6 +2552,7 @@ type ListCarriersRequest struct {
 	Cursor        *string                `protobuf:"bytes,1,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
 	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
 	Query         *string                `protobuf:"bytes,3,opt,name=query,proto3,oneof" json:"query,omitempty"`
+	Includes      []string               `protobuf:"bytes,4,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2605,6 +2606,13 @@ func (x *ListCarriersRequest) GetQuery() string {
 		return *x.Query
 	}
 	return ""
+}
+
+func (x *ListCarriersRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
 }
 
 type ListCarriersResponse struct {
@@ -2662,6 +2670,7 @@ func (x *ListCarriersResponse) GetPageInfo() *PageInfo {
 type GetCarrierRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Includes      []string               `protobuf:"bytes,2,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2701,6 +2710,13 @@ func (x *GetCarrierRequest) GetId() string {
 		return x.Id
 	}
 	return ""
+}
+
+func (x *GetCarrierRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
 }
 
 type GetCarrierResponse struct {
@@ -2753,6 +2769,7 @@ type CreateCarrierRequest struct {
 	Code            *string                `protobuf:"bytes,2,opt,name=code,proto3,oneof" json:"code,omitempty"`
 	AccountNumber   *string                `protobuf:"bytes,3,opt,name=account_number,json=accountNumber,proto3,oneof" json:"account_number,omitempty"`
 	IsPortalEnabled bool                   `protobuf:"varint,4,opt,name=is_portal_enabled,json=isPortalEnabled,proto3" json:"is_portal_enabled,omitempty"`
+	Includes        []string               `protobuf:"bytes,5,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -2815,6 +2832,13 @@ func (x *CreateCarrierRequest) GetIsPortalEnabled() bool {
 	return false
 }
 
+func (x *CreateCarrierRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
+}
+
 type CreateCarrierResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Carrier       *CarrierInfo           `protobuf:"bytes,1,opt,name=carrier,proto3" json:"carrier,omitempty"`
@@ -2864,6 +2888,7 @@ type UpdateCarrierRequest struct {
 	Id              string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Name            *string                `protobuf:"bytes,2,opt,name=name,proto3,oneof" json:"name,omitempty"`
 	IsPortalEnabled *bool                  `protobuf:"varint,3,opt,name=is_portal_enabled,json=isPortalEnabled,proto3,oneof" json:"is_portal_enabled,omitempty"`
+	Includes        []string               `protobuf:"bytes,4,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -2917,6 +2942,13 @@ func (x *UpdateCarrierRequest) GetIsPortalEnabled() bool {
 		return *x.IsPortalEnabled
 	}
 	return false
+}
+
+func (x *UpdateCarrierRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
 }
 
 type UpdateCarrierResponse struct {
@@ -3812,21 +3844,33 @@ func (x *DeleteServiceLevelRequest) GetId() string {
 }
 
 type RateInfo struct {
-	state                       protoimpl.MessageState `protogen:"open.v1"`
-	Id                          string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Value                       string                 `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
-	NumeratorUnitId             string                 `protobuf:"bytes,3,opt,name=numerator_unit_id,json=numeratorUnitId,proto3" json:"numerator_unit_id,omitempty"`
-	DenominatorUnitId           string                 `protobuf:"bytes,4,opt,name=denominator_unit_id,json=denominatorUnitId,proto3" json:"denominator_unit_id,omitempty"`
-	CreatedAt                   *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt                   *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	NumeratorUnitName           string                 `protobuf:"bytes,7,opt,name=numerator_unit_name,json=numeratorUnitName,proto3" json:"numerator_unit_name,omitempty"`
-	NumeratorUnitAbbreviation   string                 `protobuf:"bytes,8,opt,name=numerator_unit_abbreviation,json=numeratorUnitAbbreviation,proto3" json:"numerator_unit_abbreviation,omitempty"`
-	NumeratorUnitType           string                 `protobuf:"bytes,9,opt,name=numerator_unit_type,json=numeratorUnitType,proto3" json:"numerator_unit_type,omitempty"`
-	DenominatorUnitName         string                 `protobuf:"bytes,10,opt,name=denominator_unit_name,json=denominatorUnitName,proto3" json:"denominator_unit_name,omitempty"`
-	DenominatorUnitAbbreviation string                 `protobuf:"bytes,11,opt,name=denominator_unit_abbreviation,json=denominatorUnitAbbreviation,proto3" json:"denominator_unit_abbreviation,omitempty"`
-	DenominatorUnitType         string                 `protobuf:"bytes,12,opt,name=denominator_unit_type,json=denominatorUnitType,proto3" json:"denominator_unit_type,omitempty"`
-	unknownFields               protoimpl.UnknownFields
-	sizeCache                   protoimpl.SizeCache
+	state                            protoimpl.MessageState `protogen:"open.v1"`
+	Id                               string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Value                            string                 `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+	NumeratorUnitId                  string                 `protobuf:"bytes,3,opt,name=numerator_unit_id,json=numeratorUnitId,proto3" json:"numerator_unit_id,omitempty"`
+	DenominatorUnitId                string                 `protobuf:"bytes,4,opt,name=denominator_unit_id,json=denominatorUnitId,proto3" json:"denominator_unit_id,omitempty"`
+	CreatedAt                        *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt                        *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	NumeratorUnitName                string                 `protobuf:"bytes,7,opt,name=numerator_unit_name,json=numeratorUnitName,proto3" json:"numerator_unit_name,omitempty"`
+	NumeratorUnitAbbreviation        string                 `protobuf:"bytes,8,opt,name=numerator_unit_abbreviation,json=numeratorUnitAbbreviation,proto3" json:"numerator_unit_abbreviation,omitempty"`
+	NumeratorUnitType                string                 `protobuf:"bytes,9,opt,name=numerator_unit_type,json=numeratorUnitType,proto3" json:"numerator_unit_type,omitempty"`
+	DenominatorUnitName              string                 `protobuf:"bytes,10,opt,name=denominator_unit_name,json=denominatorUnitName,proto3" json:"denominator_unit_name,omitempty"`
+	DenominatorUnitAbbreviation      string                 `protobuf:"bytes,11,opt,name=denominator_unit_abbreviation,json=denominatorUnitAbbreviation,proto3" json:"denominator_unit_abbreviation,omitempty"`
+	DenominatorUnitType              string                 `protobuf:"bytes,12,opt,name=denominator_unit_type,json=denominatorUnitType,proto3" json:"denominator_unit_type,omitempty"`
+	NumeratorUnitRatioNumerator      string                 `protobuf:"bytes,13,opt,name=numerator_unit_ratio_numerator,json=numeratorUnitRatioNumerator,proto3" json:"numerator_unit_ratio_numerator,omitempty"`
+	NumeratorUnitRatioDenominator    string                 `protobuf:"bytes,14,opt,name=numerator_unit_ratio_denominator,json=numeratorUnitRatioDenominator,proto3" json:"numerator_unit_ratio_denominator,omitempty"`
+	NumeratorUnitOffsetNumerator     string                 `protobuf:"bytes,15,opt,name=numerator_unit_offset_numerator,json=numeratorUnitOffsetNumerator,proto3" json:"numerator_unit_offset_numerator,omitempty"`
+	NumeratorUnitOffsetDenominator   string                 `protobuf:"bytes,16,opt,name=numerator_unit_offset_denominator,json=numeratorUnitOffsetDenominator,proto3" json:"numerator_unit_offset_denominator,omitempty"`
+	NumeratorUnitCreatedAt           *timestamppb.Timestamp `protobuf:"bytes,17,opt,name=numerator_unit_created_at,json=numeratorUnitCreatedAt,proto3" json:"numerator_unit_created_at,omitempty"`
+	NumeratorUnitUpdatedAt           *timestamppb.Timestamp `protobuf:"bytes,18,opt,name=numerator_unit_updated_at,json=numeratorUnitUpdatedAt,proto3" json:"numerator_unit_updated_at,omitempty"`
+	DenominatorUnitRatioNumerator    string                 `protobuf:"bytes,19,opt,name=denominator_unit_ratio_numerator,json=denominatorUnitRatioNumerator,proto3" json:"denominator_unit_ratio_numerator,omitempty"`
+	DenominatorUnitRatioDenominator  string                 `protobuf:"bytes,20,opt,name=denominator_unit_ratio_denominator,json=denominatorUnitRatioDenominator,proto3" json:"denominator_unit_ratio_denominator,omitempty"`
+	DenominatorUnitOffsetNumerator   string                 `protobuf:"bytes,21,opt,name=denominator_unit_offset_numerator,json=denominatorUnitOffsetNumerator,proto3" json:"denominator_unit_offset_numerator,omitempty"`
+	DenominatorUnitOffsetDenominator string                 `protobuf:"bytes,22,opt,name=denominator_unit_offset_denominator,json=denominatorUnitOffsetDenominator,proto3" json:"denominator_unit_offset_denominator,omitempty"`
+	DenominatorUnitCreatedAt         *timestamppb.Timestamp `protobuf:"bytes,23,opt,name=denominator_unit_created_at,json=denominatorUnitCreatedAt,proto3" json:"denominator_unit_created_at,omitempty"`
+	DenominatorUnitUpdatedAt         *timestamppb.Timestamp `protobuf:"bytes,24,opt,name=denominator_unit_updated_at,json=denominatorUnitUpdatedAt,proto3" json:"denominator_unit_updated_at,omitempty"`
+	unknownFields                    protoimpl.UnknownFields
+	sizeCache                        protoimpl.SizeCache
 }
 
 func (x *RateInfo) Reset() {
@@ -3941,6 +3985,90 @@ func (x *RateInfo) GetDenominatorUnitType() string {
 		return x.DenominatorUnitType
 	}
 	return ""
+}
+
+func (x *RateInfo) GetNumeratorUnitRatioNumerator() string {
+	if x != nil {
+		return x.NumeratorUnitRatioNumerator
+	}
+	return ""
+}
+
+func (x *RateInfo) GetNumeratorUnitRatioDenominator() string {
+	if x != nil {
+		return x.NumeratorUnitRatioDenominator
+	}
+	return ""
+}
+
+func (x *RateInfo) GetNumeratorUnitOffsetNumerator() string {
+	if x != nil {
+		return x.NumeratorUnitOffsetNumerator
+	}
+	return ""
+}
+
+func (x *RateInfo) GetNumeratorUnitOffsetDenominator() string {
+	if x != nil {
+		return x.NumeratorUnitOffsetDenominator
+	}
+	return ""
+}
+
+func (x *RateInfo) GetNumeratorUnitCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.NumeratorUnitCreatedAt
+	}
+	return nil
+}
+
+func (x *RateInfo) GetNumeratorUnitUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.NumeratorUnitUpdatedAt
+	}
+	return nil
+}
+
+func (x *RateInfo) GetDenominatorUnitRatioNumerator() string {
+	if x != nil {
+		return x.DenominatorUnitRatioNumerator
+	}
+	return ""
+}
+
+func (x *RateInfo) GetDenominatorUnitRatioDenominator() string {
+	if x != nil {
+		return x.DenominatorUnitRatioDenominator
+	}
+	return ""
+}
+
+func (x *RateInfo) GetDenominatorUnitOffsetNumerator() string {
+	if x != nil {
+		return x.DenominatorUnitOffsetNumerator
+	}
+	return ""
+}
+
+func (x *RateInfo) GetDenominatorUnitOffsetDenominator() string {
+	if x != nil {
+		return x.DenominatorUnitOffsetDenominator
+	}
+	return ""
+}
+
+func (x *RateInfo) GetDenominatorUnitCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.DenominatorUnitCreatedAt
+	}
+	return nil
+}
+
+func (x *RateInfo) GetDenominatorUnitUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.DenominatorUnitUpdatedAt
+	}
+	return nil
 }
 
 type ItemCategoryInfo struct {
@@ -4063,6 +4191,8 @@ type ItemCategoryPropertyInfo struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -4111,14 +4241,32 @@ func (x *ItemCategoryPropertyInfo) GetName() string {
 	return ""
 }
 
+func (x *ItemCategoryPropertyInfo) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *ItemCategoryPropertyInfo) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
 type ItemCategoryUnitGroupInfo struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	BaseUnitId    string                 `protobuf:"bytes,3,opt,name=base_unit_id,json=baseUnitId,proto3" json:"base_unit_id,omitempty"`
-	Type          string                 `protobuf:"bytes,4,opt,name=type,proto3" json:"type,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state           protoimpl.MessageState           `protogen:"open.v1"`
+	Id              string                           `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name            string                           `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	BaseUnitId      string                           `protobuf:"bytes,3,opt,name=base_unit_id,json=baseUnitId,proto3" json:"base_unit_id,omitempty"`
+	Type            string                           `protobuf:"bytes,4,opt,name=type,proto3" json:"type,omitempty"`
+	CreatedAt       *timestamppb.Timestamp           `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt       *timestamppb.Timestamp           `protobuf:"bytes,6,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	BaseUnit        *UnitInfo                        `protobuf:"bytes,7,opt,name=base_unit,json=baseUnit,proto3,oneof" json:"base_unit,omitempty"`
+	AssociatedUnits []*ItemCategoryUnitGroupUnitInfo `protobuf:"bytes,8,rep,name=associated_units,json=associatedUnits,proto3" json:"associated_units,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *ItemCategoryUnitGroupInfo) Reset() {
@@ -4179,6 +4327,142 @@ func (x *ItemCategoryUnitGroupInfo) GetType() string {
 	return ""
 }
 
+func (x *ItemCategoryUnitGroupInfo) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *ItemCategoryUnitGroupInfo) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
+func (x *ItemCategoryUnitGroupInfo) GetBaseUnit() *UnitInfo {
+	if x != nil {
+		return x.BaseUnit
+	}
+	return nil
+}
+
+func (x *ItemCategoryUnitGroupInfo) GetAssociatedUnits() []*ItemCategoryUnitGroupUnitInfo {
+	if x != nil {
+		return x.AssociatedUnits
+	}
+	return nil
+}
+
+type ItemCategoryUnitGroupUnitInfo struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	Id                 string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	UnitId             string                 `protobuf:"bytes,2,opt,name=unit_id,json=unitId,proto3" json:"unit_id,omitempty"`
+	UnitGroupId        string                 `protobuf:"bytes,3,opt,name=unit_group_id,json=unitGroupId,proto3" json:"unit_group_id,omitempty"`
+	DiscountPercentage string                 `protobuf:"bytes,4,opt,name=discount_percentage,json=discountPercentage,proto3" json:"discount_percentage,omitempty"`
+	IsVisible          bool                   `protobuf:"varint,5,opt,name=is_visible,json=isVisible,proto3" json:"is_visible,omitempty"`
+	CreatedAt          *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt          *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	DiscountFixed      string                 `protobuf:"bytes,8,opt,name=discount_fixed,json=discountFixed,proto3" json:"discount_fixed,omitempty"`
+	Unit               *UnitInfo              `protobuf:"bytes,9,opt,name=unit,proto3,oneof" json:"unit,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *ItemCategoryUnitGroupUnitInfo) Reset() {
+	*x = ItemCategoryUnitGroupUnitInfo{}
+	mi := &file_core_core_accounts_carriers_proto_msgTypes[68]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ItemCategoryUnitGroupUnitInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ItemCategoryUnitGroupUnitInfo) ProtoMessage() {}
+
+func (x *ItemCategoryUnitGroupUnitInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_core_core_accounts_carriers_proto_msgTypes[68]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ItemCategoryUnitGroupUnitInfo.ProtoReflect.Descriptor instead.
+func (*ItemCategoryUnitGroupUnitInfo) Descriptor() ([]byte, []int) {
+	return file_core_core_accounts_carriers_proto_rawDescGZIP(), []int{68}
+}
+
+func (x *ItemCategoryUnitGroupUnitInfo) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ItemCategoryUnitGroupUnitInfo) GetUnitId() string {
+	if x != nil {
+		return x.UnitId
+	}
+	return ""
+}
+
+func (x *ItemCategoryUnitGroupUnitInfo) GetUnitGroupId() string {
+	if x != nil {
+		return x.UnitGroupId
+	}
+	return ""
+}
+
+func (x *ItemCategoryUnitGroupUnitInfo) GetDiscountPercentage() string {
+	if x != nil {
+		return x.DiscountPercentage
+	}
+	return ""
+}
+
+func (x *ItemCategoryUnitGroupUnitInfo) GetIsVisible() bool {
+	if x != nil {
+		return x.IsVisible
+	}
+	return false
+}
+
+func (x *ItemCategoryUnitGroupUnitInfo) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *ItemCategoryUnitGroupUnitInfo) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
+func (x *ItemCategoryUnitGroupUnitInfo) GetDiscountFixed() string {
+	if x != nil {
+		return x.DiscountFixed
+	}
+	return ""
+}
+
+func (x *ItemCategoryUnitGroupUnitInfo) GetUnit() *UnitInfo {
+	if x != nil {
+		return x.Unit
+	}
+	return nil
+}
+
 type ItemAttributeInfo struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -4186,13 +4470,15 @@ type ItemAttributeInfo struct {
 	ColorCode     *string                `protobuf:"bytes,3,opt,name=color_code,json=colorCode,proto3,oneof" json:"color_code,omitempty"`
 	SortOrder     int32                  `protobuf:"varint,4,opt,name=sort_order,json=sortOrder,proto3" json:"sort_order,omitempty"`
 	PropertyId    string                 `protobuf:"bytes,5,opt,name=property_id,json=propertyId,proto3" json:"property_id,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ItemAttributeInfo) Reset() {
 	*x = ItemAttributeInfo{}
-	mi := &file_core_core_accounts_carriers_proto_msgTypes[68]
+	mi := &file_core_core_accounts_carriers_proto_msgTypes[69]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4204,7 +4490,7 @@ func (x *ItemAttributeInfo) String() string {
 func (*ItemAttributeInfo) ProtoMessage() {}
 
 func (x *ItemAttributeInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_accounts_carriers_proto_msgTypes[68]
+	mi := &file_core_core_accounts_carriers_proto_msgTypes[69]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4217,7 +4503,7 @@ func (x *ItemAttributeInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ItemAttributeInfo.ProtoReflect.Descriptor instead.
 func (*ItemAttributeInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_accounts_carriers_proto_rawDescGZIP(), []int{68}
+	return file_core_core_accounts_carriers_proto_rawDescGZIP(), []int{69}
 }
 
 func (x *ItemAttributeInfo) GetId() string {
@@ -4255,6 +4541,20 @@ func (x *ItemAttributeInfo) GetPropertyId() string {
 	return ""
 }
 
+func (x *ItemAttributeInfo) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *ItemAttributeInfo) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
 type ItemInfo struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -4277,7 +4577,7 @@ type ItemInfo struct {
 
 func (x *ItemInfo) Reset() {
 	*x = ItemInfo{}
-	mi := &file_core_core_accounts_carriers_proto_msgTypes[69]
+	mi := &file_core_core_accounts_carriers_proto_msgTypes[70]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4289,7 +4589,7 @@ func (x *ItemInfo) String() string {
 func (*ItemInfo) ProtoMessage() {}
 
 func (x *ItemInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_accounts_carriers_proto_msgTypes[69]
+	mi := &file_core_core_accounts_carriers_proto_msgTypes[70]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4302,7 +4602,7 @@ func (x *ItemInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ItemInfo.ProtoReflect.Descriptor instead.
 func (*ItemInfo) Descriptor() ([]byte, []int) {
-	return file_core_core_accounts_carriers_proto_rawDescGZIP(), []int{69}
+	return file_core_core_accounts_carriers_proto_rawDescGZIP(), []int{70}
 }
 
 func (x *ItemInfo) GetId() string {
@@ -4416,13 +4716,16 @@ type ListItemsRequest struct {
 	EndDate                  *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=end_date,json=endDate,proto3,oneof" json:"end_date,omitempty"`
 	IsExactMatch             bool                   `protobuf:"varint,10,opt,name=is_exact_match,json=isExactMatch,proto3" json:"is_exact_match,omitempty"`
 	OnlyInitialSubassemblies bool                   `protobuf:"varint,11,opt,name=only_initial_subassemblies,json=onlyInitialSubassemblies,proto3" json:"only_initial_subassemblies,omitempty"`
+	Includes                 []string               `protobuf:"bytes,12,rep,name=includes,proto3" json:"includes,omitempty"`
+	ProductLineIds           []string               `protobuf:"bytes,13,rep,name=product_line_ids,json=productLineIds,proto3" json:"product_line_ids,omitempty"`
+	CustomerIds              []string               `protobuf:"bytes,14,rep,name=customer_ids,json=customerIds,proto3" json:"customer_ids,omitempty"`
 	unknownFields            protoimpl.UnknownFields
 	sizeCache                protoimpl.SizeCache
 }
 
 func (x *ListItemsRequest) Reset() {
 	*x = ListItemsRequest{}
-	mi := &file_core_core_accounts_carriers_proto_msgTypes[70]
+	mi := &file_core_core_accounts_carriers_proto_msgTypes[71]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4434,7 +4737,7 @@ func (x *ListItemsRequest) String() string {
 func (*ListItemsRequest) ProtoMessage() {}
 
 func (x *ListItemsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_accounts_carriers_proto_msgTypes[70]
+	mi := &file_core_core_accounts_carriers_proto_msgTypes[71]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4447,7 +4750,7 @@ func (x *ListItemsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListItemsRequest.ProtoReflect.Descriptor instead.
 func (*ListItemsRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_accounts_carriers_proto_rawDescGZIP(), []int{70}
+	return file_core_core_accounts_carriers_proto_rawDescGZIP(), []int{71}
 }
 
 func (x *ListItemsRequest) GetCursor() string {
@@ -4527,6 +4830,27 @@ func (x *ListItemsRequest) GetOnlyInitialSubassemblies() bool {
 	return false
 }
 
+func (x *ListItemsRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
+}
+
+func (x *ListItemsRequest) GetProductLineIds() []string {
+	if x != nil {
+		return x.ProductLineIds
+	}
+	return nil
+}
+
+func (x *ListItemsRequest) GetCustomerIds() []string {
+	if x != nil {
+		return x.CustomerIds
+	}
+	return nil
+}
+
 type ListItemsResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Items         []*ItemInfo            `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
@@ -4537,7 +4861,7 @@ type ListItemsResponse struct {
 
 func (x *ListItemsResponse) Reset() {
 	*x = ListItemsResponse{}
-	mi := &file_core_core_accounts_carriers_proto_msgTypes[71]
+	mi := &file_core_core_accounts_carriers_proto_msgTypes[72]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4549,7 +4873,7 @@ func (x *ListItemsResponse) String() string {
 func (*ListItemsResponse) ProtoMessage() {}
 
 func (x *ListItemsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_accounts_carriers_proto_msgTypes[71]
+	mi := &file_core_core_accounts_carriers_proto_msgTypes[72]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4562,7 +4886,7 @@ func (x *ListItemsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListItemsResponse.ProtoReflect.Descriptor instead.
 func (*ListItemsResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_accounts_carriers_proto_rawDescGZIP(), []int{71}
+	return file_core_core_accounts_carriers_proto_rawDescGZIP(), []int{72}
 }
 
 func (x *ListItemsResponse) GetItems() []*ItemInfo {
@@ -4582,13 +4906,14 @@ func (x *ListItemsResponse) GetPageInfo() *PageInfo {
 type GetItemRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Includes      []string               `protobuf:"bytes,2,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetItemRequest) Reset() {
 	*x = GetItemRequest{}
-	mi := &file_core_core_accounts_carriers_proto_msgTypes[72]
+	mi := &file_core_core_accounts_carriers_proto_msgTypes[73]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4600,7 +4925,7 @@ func (x *GetItemRequest) String() string {
 func (*GetItemRequest) ProtoMessage() {}
 
 func (x *GetItemRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_accounts_carriers_proto_msgTypes[72]
+	mi := &file_core_core_accounts_carriers_proto_msgTypes[73]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4613,7 +4938,7 @@ func (x *GetItemRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetItemRequest.ProtoReflect.Descriptor instead.
 func (*GetItemRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_accounts_carriers_proto_rawDescGZIP(), []int{72}
+	return file_core_core_accounts_carriers_proto_rawDescGZIP(), []int{73}
 }
 
 func (x *GetItemRequest) GetId() string {
@@ -4621,6 +4946,13 @@ func (x *GetItemRequest) GetId() string {
 		return x.Id
 	}
 	return ""
+}
+
+func (x *GetItemRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
 }
 
 type GetItemResponse struct {
@@ -4632,7 +4964,7 @@ type GetItemResponse struct {
 
 func (x *GetItemResponse) Reset() {
 	*x = GetItemResponse{}
-	mi := &file_core_core_accounts_carriers_proto_msgTypes[73]
+	mi := &file_core_core_accounts_carriers_proto_msgTypes[74]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4644,7 +4976,7 @@ func (x *GetItemResponse) String() string {
 func (*GetItemResponse) ProtoMessage() {}
 
 func (x *GetItemResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_accounts_carriers_proto_msgTypes[73]
+	mi := &file_core_core_accounts_carriers_proto_msgTypes[74]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4657,7 +4989,7 @@ func (x *GetItemResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetItemResponse.ProtoReflect.Descriptor instead.
 func (*GetItemResponse) Descriptor() ([]byte, []int) {
-	return file_core_core_accounts_carriers_proto_rawDescGZIP(), []int{73}
+	return file_core_core_accounts_carriers_proto_rawDescGZIP(), []int{74}
 }
 
 func (x *GetItemResponse) GetItem() *ItemInfo {
@@ -4676,7 +5008,7 @@ type GetItemInventoryRequest struct {
 
 func (x *GetItemInventoryRequest) Reset() {
 	*x = GetItemInventoryRequest{}
-	mi := &file_core_core_accounts_carriers_proto_msgTypes[74]
+	mi := &file_core_core_accounts_carriers_proto_msgTypes[75]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4688,7 +5020,7 @@ func (x *GetItemInventoryRequest) String() string {
 func (*GetItemInventoryRequest) ProtoMessage() {}
 
 func (x *GetItemInventoryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_core_accounts_carriers_proto_msgTypes[74]
+	mi := &file_core_core_accounts_carriers_proto_msgTypes[75]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4701,7 +5033,7 @@ func (x *GetItemInventoryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetItemInventoryRequest.ProtoReflect.Descriptor instead.
 func (*GetItemInventoryRequest) Descriptor() ([]byte, []int) {
-	return file_core_core_accounts_carriers_proto_rawDescGZIP(), []int{74}
+	return file_core_core_accounts_carriers_proto_rawDescGZIP(), []int{75}
 }
 
 func (x *GetItemInventoryRequest) GetId() string {
@@ -4977,33 +5309,37 @@ const file_core_core_accounts_carriers_proto_rawDesc = "" +
 	"account_id\x18\n" +
 	" \x01(\tH\x01R\taccountId\x88\x01\x01B\x16\n" +
 	"\x14_service_level_tokenB\r\n" +
-	"\v_account_id\"x\n" +
+	"\v_account_id\"\x94\x01\n" +
 	"\x13ListCarriersRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x19\n" +
-	"\x05query\x18\x03 \x01(\tH\x01R\x05query\x88\x01\x01B\t\n" +
+	"\x05query\x18\x03 \x01(\tH\x01R\x05query\x88\x01\x01\x12\x1a\n" +
+	"\bincludes\x18\x04 \x03(\tR\bincludesB\t\n" +
 	"\a_cursorB\b\n" +
 	"\x06_query\"r\n" +
 	"\x14ListCarriersResponse\x12-\n" +
 	"\bcarriers\x18\x01 \x03(\v2\x11.core.CarrierInfoR\bcarriers\x12+\n" +
-	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"#\n" +
+	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"?\n" +
 	"\x11GetCarrierRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"A\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
+	"\bincludes\x18\x02 \x03(\tR\bincludes\"A\n" +
 	"\x12GetCarrierResponse\x12+\n" +
-	"\acarrier\x18\x01 \x01(\v2\x11.core.CarrierInfoR\acarrier\"\xb7\x01\n" +
+	"\acarrier\x18\x01 \x01(\v2\x11.core.CarrierInfoR\acarrier\"\xd3\x01\n" +
 	"\x14CreateCarrierRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x17\n" +
 	"\x04code\x18\x02 \x01(\tH\x00R\x04code\x88\x01\x01\x12*\n" +
 	"\x0eaccount_number\x18\x03 \x01(\tH\x01R\raccountNumber\x88\x01\x01\x12*\n" +
-	"\x11is_portal_enabled\x18\x04 \x01(\bR\x0fisPortalEnabledB\a\n" +
+	"\x11is_portal_enabled\x18\x04 \x01(\bR\x0fisPortalEnabled\x12\x1a\n" +
+	"\bincludes\x18\x05 \x03(\tR\bincludesB\a\n" +
 	"\x05_codeB\x11\n" +
 	"\x0f_account_number\"D\n" +
 	"\x15CreateCarrierResponse\x12+\n" +
-	"\acarrier\x18\x01 \x01(\v2\x11.core.CarrierInfoR\acarrier\"\x8f\x01\n" +
+	"\acarrier\x18\x01 \x01(\v2\x11.core.CarrierInfoR\acarrier\"\xab\x01\n" +
 	"\x14UpdateCarrierRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12/\n" +
-	"\x11is_portal_enabled\x18\x03 \x01(\bH\x01R\x0fisPortalEnabled\x88\x01\x01B\a\n" +
+	"\x11is_portal_enabled\x18\x03 \x01(\bH\x01R\x0fisPortalEnabled\x88\x01\x01\x12\x1a\n" +
+	"\bincludes\x18\x04 \x03(\tR\bincludesB\a\n" +
 	"\x05_nameB\x14\n" +
 	"\x12_is_portal_enabled\"D\n" +
 	"\x15UpdateCarrierResponse\x12+\n" +
@@ -5075,7 +5411,7 @@ const file_core_core_accounts_carriers_proto_rawDesc = "" +
 	"\x19DeleteServiceLevelRequest\x12\x1d\n" +
 	"\n" +
 	"carrier_id\x18\x01 \x01(\tR\tcarrierId\x12\x0e\n" +
-	"\x02id\x18\x02 \x01(\tR\x02id\"\xce\x04\n" +
+	"\x02id\x18\x02 \x01(\tR\x02id\"\x82\f\n" +
 	"\bRateInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value\x12*\n" +
@@ -5091,7 +5427,19 @@ const file_core_core_accounts_carriers_proto_rawDesc = "" +
 	"\x15denominator_unit_name\x18\n" +
 	" \x01(\tR\x13denominatorUnitName\x12B\n" +
 	"\x1ddenominator_unit_abbreviation\x18\v \x01(\tR\x1bdenominatorUnitAbbreviation\x122\n" +
-	"\x15denominator_unit_type\x18\f \x01(\tR\x13denominatorUnitType\"\xf3\x03\n" +
+	"\x15denominator_unit_type\x18\f \x01(\tR\x13denominatorUnitType\x12C\n" +
+	"\x1enumerator_unit_ratio_numerator\x18\r \x01(\tR\x1bnumeratorUnitRatioNumerator\x12G\n" +
+	" numerator_unit_ratio_denominator\x18\x0e \x01(\tR\x1dnumeratorUnitRatioDenominator\x12E\n" +
+	"\x1fnumerator_unit_offset_numerator\x18\x0f \x01(\tR\x1cnumeratorUnitOffsetNumerator\x12I\n" +
+	"!numerator_unit_offset_denominator\x18\x10 \x01(\tR\x1enumeratorUnitOffsetDenominator\x12U\n" +
+	"\x19numerator_unit_created_at\x18\x11 \x01(\v2\x1a.google.protobuf.TimestampR\x16numeratorUnitCreatedAt\x12U\n" +
+	"\x19numerator_unit_updated_at\x18\x12 \x01(\v2\x1a.google.protobuf.TimestampR\x16numeratorUnitUpdatedAt\x12G\n" +
+	" denominator_unit_ratio_numerator\x18\x13 \x01(\tR\x1ddenominatorUnitRatioNumerator\x12K\n" +
+	"\"denominator_unit_ratio_denominator\x18\x14 \x01(\tR\x1fdenominatorUnitRatioDenominator\x12I\n" +
+	"!denominator_unit_offset_numerator\x18\x15 \x01(\tR\x1edenominatorUnitOffsetNumerator\x12M\n" +
+	"#denominator_unit_offset_denominator\x18\x16 \x01(\tR denominatorUnitOffsetDenominator\x12Y\n" +
+	"\x1bdenominator_unit_created_at\x18\x17 \x01(\v2\x1a.google.protobuf.TimestampR\x18denominatorUnitCreatedAt\x12Y\n" +
+	"\x1bdenominator_unit_updated_at\x18\x18 \x01(\v2\x1a.google.protobuf.TimestampR\x18denominatorUnitUpdatedAt\"\xf3\x03\n" +
 	"\x10ItemCategoryInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x125\n" +
@@ -5112,16 +5460,42 @@ const file_core_core_accounts_carriers_proto_rawDesc = "" +
 	" \x01(\v2\x1f.core.ItemCategoryUnitGroupInfoH\x02R\tunitGroup\x88\x01\x01B\b\n" +
 	"\x06_notesB\r\n" +
 	"\v_account_idB\r\n" +
-	"\v_unit_group\">\n" +
+	"\v_unit_group\"\xb4\x01\n" +
 	"\x18ItemCategoryPropertyInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\"u\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x129\n" +
+	"\n" +
+	"created_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"\n" +
+	"updated_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xfb\x02\n" +
 	"\x19ItemCategoryUnitGroupInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
 	"\fbase_unit_id\x18\x03 \x01(\tR\n" +
 	"baseUnitId\x12\x12\n" +
-	"\x04type\x18\x04 \x01(\tR\x04type\"\xac\x01\n" +
+	"\x04type\x18\x04 \x01(\tR\x04type\x129\n" +
+	"\n" +
+	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"\n" +
+	"updated_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x120\n" +
+	"\tbase_unit\x18\a \x01(\v2\x0e.core.UnitInfoH\x00R\bbaseUnit\x88\x01\x01\x12N\n" +
+	"\x10associated_units\x18\b \x03(\v2#.core.ItemCategoryUnitGroupUnitInfoR\x0fassociatedUnitsB\f\n" +
+	"\n" +
+	"_base_unit\"\x8b\x03\n" +
+	"\x1dItemCategoryUnitGroupUnitInfo\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
+	"\aunit_id\x18\x02 \x01(\tR\x06unitId\x12\"\n" +
+	"\runit_group_id\x18\x03 \x01(\tR\vunitGroupId\x12/\n" +
+	"\x13discount_percentage\x18\x04 \x01(\tR\x12discountPercentage\x12\x1d\n" +
+	"\n" +
+	"is_visible\x18\x05 \x01(\bR\tisVisible\x129\n" +
+	"\n" +
+	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"\n" +
+	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12%\n" +
+	"\x0ediscount_fixed\x18\b \x01(\tR\rdiscountFixed\x12'\n" +
+	"\x04unit\x18\t \x01(\v2\x0e.core.UnitInfoH\x00R\x04unit\x88\x01\x01B\a\n" +
+	"\x05_unit\"\xa2\x02\n" +
 	"\x11ItemAttributeInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value\x12\"\n" +
@@ -5130,7 +5504,11 @@ const file_core_core_accounts_carriers_proto_rawDesc = "" +
 	"\n" +
 	"sort_order\x18\x04 \x01(\x05R\tsortOrder\x12\x1f\n" +
 	"\vproperty_id\x18\x05 \x01(\tR\n" +
-	"propertyIdB\r\n" +
+	"propertyId\x129\n" +
+	"\n" +
+	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"\n" +
+	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\r\n" +
 	"\v_color_code\"\xd4\x04\n" +
 	"\bItemInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x10\n" +
@@ -5155,7 +5533,7 @@ const file_core_core_accounts_carriers_proto_rawDesc = "" +
 	"attributes\x18\x0e \x03(\v2\x17.core.ItemAttributeInfoR\n" +
 	"attributesB\x0e\n" +
 	"\f_descriptionB\b\n" +
-	"\x06_notes\"\x85\x04\n" +
+	"\x06_notes\"\xee\x04\n" +
 	"\x10ListItemsRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x19\n" +
@@ -5170,7 +5548,10 @@ const file_core_core_accounts_carriers_proto_rawDesc = "" +
 	"\bend_date\x18\t \x01(\v2\x1a.google.protobuf.TimestampH\x04R\aendDate\x88\x01\x01\x12$\n" +
 	"\x0eis_exact_match\x18\n" +
 	" \x01(\bR\fisExactMatch\x12<\n" +
-	"\x1aonly_initial_subassemblies\x18\v \x01(\bR\x18onlyInitialSubassembliesB\t\n" +
+	"\x1aonly_initial_subassemblies\x18\v \x01(\bR\x18onlyInitialSubassemblies\x12\x1a\n" +
+	"\bincludes\x18\f \x03(\tR\bincludes\x12(\n" +
+	"\x10product_line_ids\x18\r \x03(\tR\x0eproductLineIds\x12!\n" +
+	"\fcustomer_ids\x18\x0e \x03(\tR\vcustomerIdsB\t\n" +
 	"\a_cursorB\b\n" +
 	"\x06_queryB\x0e\n" +
 	"\f_supplier_idB\r\n" +
@@ -5178,9 +5559,10 @@ const file_core_core_accounts_carriers_proto_rawDesc = "" +
 	"\t_end_date\"f\n" +
 	"\x11ListItemsResponse\x12$\n" +
 	"\x05items\x18\x01 \x03(\v2\x0e.core.ItemInfoR\x05items\x12+\n" +
-	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\" \n" +
+	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"<\n" +
 	"\x0eGetItemRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"5\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
+	"\bincludes\x18\x02 \x03(\tR\bincludes\"5\n" +
 	"\x0fGetItemResponse\x12\"\n" +
 	"\x04item\x18\x01 \x01(\v2\x0e.core.ItemInfoR\x04item\")\n" +
 	"\x17GetItemInventoryRequest\x12\x0e\n" +
@@ -5198,7 +5580,7 @@ func file_core_core_accounts_carriers_proto_rawDescGZIP() []byte {
 	return file_core_core_accounts_carriers_proto_rawDescData
 }
 
-var file_core_core_accounts_carriers_proto_msgTypes = make([]protoimpl.MessageInfo, 75)
+var file_core_core_accounts_carriers_proto_msgTypes = make([]protoimpl.MessageInfo, 76)
 var file_core_core_accounts_carriers_proto_goTypes = []any{
 	(*GetStripeStatusResponse)(nil),       // 0: core.GetStripeStatusResponse
 	(*AdjustmentTypeInfo)(nil),            // 1: core.AdjustmentTypeInfo
@@ -5268,87 +5650,104 @@ var file_core_core_accounts_carriers_proto_goTypes = []any{
 	(*ItemCategoryInfo)(nil),              // 65: core.ItemCategoryInfo
 	(*ItemCategoryPropertyInfo)(nil),      // 66: core.ItemCategoryPropertyInfo
 	(*ItemCategoryUnitGroupInfo)(nil),     // 67: core.ItemCategoryUnitGroupInfo
-	(*ItemAttributeInfo)(nil),             // 68: core.ItemAttributeInfo
-	(*ItemInfo)(nil),                      // 69: core.ItemInfo
-	(*ListItemsRequest)(nil),              // 70: core.ListItemsRequest
-	(*ListItemsResponse)(nil),             // 71: core.ListItemsResponse
-	(*GetItemRequest)(nil),                // 72: core.GetItemRequest
-	(*GetItemResponse)(nil),               // 73: core.GetItemResponse
-	(*GetItemInventoryRequest)(nil),       // 74: core.GetItemInventoryRequest
-	(*timestamppb.Timestamp)(nil),         // 75: google.protobuf.Timestamp
-	(*PageInfo)(nil),                      // 76: core.PageInfo
+	(*ItemCategoryUnitGroupUnitInfo)(nil), // 68: core.ItemCategoryUnitGroupUnitInfo
+	(*ItemAttributeInfo)(nil),             // 69: core.ItemAttributeInfo
+	(*ItemInfo)(nil),                      // 70: core.ItemInfo
+	(*ListItemsRequest)(nil),              // 71: core.ListItemsRequest
+	(*ListItemsResponse)(nil),             // 72: core.ListItemsResponse
+	(*GetItemRequest)(nil),                // 73: core.GetItemRequest
+	(*GetItemResponse)(nil),               // 74: core.GetItemResponse
+	(*GetItemInventoryRequest)(nil),       // 75: core.GetItemInventoryRequest
+	(*timestamppb.Timestamp)(nil),         // 76: google.protobuf.Timestamp
+	(*PageInfo)(nil),                      // 77: core.PageInfo
+	(*UnitInfo)(nil),                      // 78: core.UnitInfo
 }
 var file_core_core_accounts_carriers_proto_depIdxs = []int32{
-	75, // 0: core.AdjustmentTypeInfo.created_at:type_name -> google.protobuf.Timestamp
-	75, // 1: core.AdjustmentTypeInfo.updated_at:type_name -> google.protobuf.Timestamp
+	76, // 0: core.AdjustmentTypeInfo.created_at:type_name -> google.protobuf.Timestamp
+	76, // 1: core.AdjustmentTypeInfo.updated_at:type_name -> google.protobuf.Timestamp
 	1,  // 2: core.ListAdjustmentTypesResponse.adjustment_types:type_name -> core.AdjustmentTypeInfo
-	76, // 3: core.ListAdjustmentTypesResponse.page_info:type_name -> core.PageInfo
+	77, // 3: core.ListAdjustmentTypesResponse.page_info:type_name -> core.PageInfo
 	5,  // 4: core.AccountInfo.branding:type_name -> core.AccountBrandingInfo
 	6,  // 5: core.AccountInfo.portal:type_name -> core.AccountPortalInfo
-	75, // 6: core.AccountInfo.created_at:type_name -> google.protobuf.Timestamp
-	75, // 7: core.AccountInfo.updated_at:type_name -> google.protobuf.Timestamp
-	75, // 8: core.AccountBrandingInfo.created_at:type_name -> google.protobuf.Timestamp
-	75, // 9: core.AccountBrandingInfo.updated_at:type_name -> google.protobuf.Timestamp
-	75, // 10: core.AccountPortalInfo.created_at:type_name -> google.protobuf.Timestamp
-	75, // 11: core.AccountPortalInfo.updated_at:type_name -> google.protobuf.Timestamp
+	76, // 6: core.AccountInfo.created_at:type_name -> google.protobuf.Timestamp
+	76, // 7: core.AccountInfo.updated_at:type_name -> google.protobuf.Timestamp
+	76, // 8: core.AccountBrandingInfo.created_at:type_name -> google.protobuf.Timestamp
+	76, // 9: core.AccountBrandingInfo.updated_at:type_name -> google.protobuf.Timestamp
+	76, // 10: core.AccountPortalInfo.created_at:type_name -> google.protobuf.Timestamp
+	76, // 11: core.AccountPortalInfo.updated_at:type_name -> google.protobuf.Timestamp
 	4,  // 12: core.GetAccountResponse.account:type_name -> core.AccountInfo
 	7,  // 13: core.GetAccountBySlugResponse.account:type_name -> core.PublicAccountInfo
 	4,  // 14: core.UpdateAccountResponse.account:type_name -> core.AccountInfo
-	75, // 15: core.PropertyInfo.created_at:type_name -> google.protobuf.Timestamp
-	75, // 16: core.PropertyInfo.updated_at:type_name -> google.protobuf.Timestamp
+	76, // 15: core.PropertyInfo.created_at:type_name -> google.protobuf.Timestamp
+	76, // 16: core.PropertyInfo.updated_at:type_name -> google.protobuf.Timestamp
 	19, // 17: core.PropertyInfo.attributes:type_name -> core.AttributeInfo
-	75, // 18: core.AttributeInfo.created_at:type_name -> google.protobuf.Timestamp
-	75, // 19: core.AttributeInfo.updated_at:type_name -> google.protobuf.Timestamp
+	76, // 18: core.AttributeInfo.created_at:type_name -> google.protobuf.Timestamp
+	76, // 19: core.AttributeInfo.updated_at:type_name -> google.protobuf.Timestamp
 	18, // 20: core.ListPropertiesResponse.properties:type_name -> core.PropertyInfo
-	76, // 21: core.ListPropertiesResponse.page_info:type_name -> core.PageInfo
+	77, // 21: core.ListPropertiesResponse.page_info:type_name -> core.PageInfo
 	18, // 22: core.GetPropertyResponse.property:type_name -> core.PropertyInfo
 	18, // 23: core.CreatePropertyResponse.property:type_name -> core.PropertyInfo
 	18, // 24: core.UpdatePropertyResponse.property:type_name -> core.PropertyInfo
 	19, // 25: core.ListAttributesResponse.attributes:type_name -> core.AttributeInfo
-	76, // 26: core.ListAttributesResponse.page_info:type_name -> core.PageInfo
+	77, // 26: core.ListAttributesResponse.page_info:type_name -> core.PageInfo
 	19, // 27: core.GetAttributeResponse.attribute:type_name -> core.AttributeInfo
 	19, // 28: core.CreateAttributeResponse.attribute:type_name -> core.AttributeInfo
 	19, // 29: core.UpdateAttributeResponse.attribute:type_name -> core.AttributeInfo
-	75, // 30: core.CarrierInfo.created_at:type_name -> google.protobuf.Timestamp
-	75, // 31: core.CarrierInfo.updated_at:type_name -> google.protobuf.Timestamp
-	75, // 32: core.CarrierInfo.deleted_at:type_name -> google.protobuf.Timestamp
+	76, // 30: core.CarrierInfo.created_at:type_name -> google.protobuf.Timestamp
+	76, // 31: core.CarrierInfo.updated_at:type_name -> google.protobuf.Timestamp
+	76, // 32: core.CarrierInfo.deleted_at:type_name -> google.protobuf.Timestamp
 	39, // 33: core.CarrierInfo.service_levels:type_name -> core.ServiceLevelInfo
-	75, // 34: core.ServiceLevelInfo.created_at:type_name -> google.protobuf.Timestamp
-	75, // 35: core.ServiceLevelInfo.updated_at:type_name -> google.protobuf.Timestamp
+	76, // 34: core.ServiceLevelInfo.created_at:type_name -> google.protobuf.Timestamp
+	76, // 35: core.ServiceLevelInfo.updated_at:type_name -> google.protobuf.Timestamp
 	38, // 36: core.ListCarriersResponse.carriers:type_name -> core.CarrierInfo
-	76, // 37: core.ListCarriersResponse.page_info:type_name -> core.PageInfo
+	77, // 37: core.ListCarriersResponse.page_info:type_name -> core.PageInfo
 	38, // 38: core.GetCarrierResponse.carrier:type_name -> core.CarrierInfo
 	38, // 39: core.CreateCarrierResponse.carrier:type_name -> core.CarrierInfo
 	38, // 40: core.UpdateCarrierResponse.carrier:type_name -> core.CarrierInfo
 	38, // 41: core.SyncServiceLevelsResponse.carrier:type_name -> core.CarrierInfo
 	39, // 42: core.ListServiceLevelsResponse.service_levels:type_name -> core.ServiceLevelInfo
-	76, // 43: core.ListServiceLevelsResponse.page_info:type_name -> core.PageInfo
+	77, // 43: core.ListServiceLevelsResponse.page_info:type_name -> core.PageInfo
 	39, // 44: core.GetServiceLevelResponse.service_level:type_name -> core.ServiceLevelInfo
 	39, // 45: core.CreateServiceLevelResponse.service_level:type_name -> core.ServiceLevelInfo
 	39, // 46: core.UpdateServiceLevelResponse.service_level:type_name -> core.ServiceLevelInfo
-	75, // 47: core.RateInfo.created_at:type_name -> google.protobuf.Timestamp
-	75, // 48: core.RateInfo.updated_at:type_name -> google.protobuf.Timestamp
-	75, // 49: core.ItemCategoryInfo.created_at:type_name -> google.protobuf.Timestamp
-	75, // 50: core.ItemCategoryInfo.updated_at:type_name -> google.protobuf.Timestamp
-	66, // 51: core.ItemCategoryInfo.properties:type_name -> core.ItemCategoryPropertyInfo
-	67, // 52: core.ItemCategoryInfo.unit_group:type_name -> core.ItemCategoryUnitGroupInfo
-	65, // 53: core.ItemInfo.category:type_name -> core.ItemCategoryInfo
-	64, // 54: core.ItemInfo.unit_value:type_name -> core.RateInfo
-	64, // 55: core.ItemInfo.unit_cost:type_name -> core.RateInfo
-	64, // 56: core.ItemInfo.burn_rate:type_name -> core.RateInfo
-	75, // 57: core.ItemInfo.created_at:type_name -> google.protobuf.Timestamp
-	75, // 58: core.ItemInfo.updated_at:type_name -> google.protobuf.Timestamp
-	68, // 59: core.ItemInfo.attributes:type_name -> core.ItemAttributeInfo
-	75, // 60: core.ListItemsRequest.start_date:type_name -> google.protobuf.Timestamp
-	75, // 61: core.ListItemsRequest.end_date:type_name -> google.protobuf.Timestamp
-	69, // 62: core.ListItemsResponse.items:type_name -> core.ItemInfo
-	76, // 63: core.ListItemsResponse.page_info:type_name -> core.PageInfo
-	69, // 64: core.GetItemResponse.item:type_name -> core.ItemInfo
-	65, // [65:65] is the sub-list for method output_type
-	65, // [65:65] is the sub-list for method input_type
-	65, // [65:65] is the sub-list for extension type_name
-	65, // [65:65] is the sub-list for extension extendee
-	0,  // [0:65] is the sub-list for field type_name
+	76, // 47: core.RateInfo.created_at:type_name -> google.protobuf.Timestamp
+	76, // 48: core.RateInfo.updated_at:type_name -> google.protobuf.Timestamp
+	76, // 49: core.RateInfo.numerator_unit_created_at:type_name -> google.protobuf.Timestamp
+	76, // 50: core.RateInfo.numerator_unit_updated_at:type_name -> google.protobuf.Timestamp
+	76, // 51: core.RateInfo.denominator_unit_created_at:type_name -> google.protobuf.Timestamp
+	76, // 52: core.RateInfo.denominator_unit_updated_at:type_name -> google.protobuf.Timestamp
+	76, // 53: core.ItemCategoryInfo.created_at:type_name -> google.protobuf.Timestamp
+	76, // 54: core.ItemCategoryInfo.updated_at:type_name -> google.protobuf.Timestamp
+	66, // 55: core.ItemCategoryInfo.properties:type_name -> core.ItemCategoryPropertyInfo
+	67, // 56: core.ItemCategoryInfo.unit_group:type_name -> core.ItemCategoryUnitGroupInfo
+	76, // 57: core.ItemCategoryPropertyInfo.created_at:type_name -> google.protobuf.Timestamp
+	76, // 58: core.ItemCategoryPropertyInfo.updated_at:type_name -> google.protobuf.Timestamp
+	76, // 59: core.ItemCategoryUnitGroupInfo.created_at:type_name -> google.protobuf.Timestamp
+	76, // 60: core.ItemCategoryUnitGroupInfo.updated_at:type_name -> google.protobuf.Timestamp
+	78, // 61: core.ItemCategoryUnitGroupInfo.base_unit:type_name -> core.UnitInfo
+	68, // 62: core.ItemCategoryUnitGroupInfo.associated_units:type_name -> core.ItemCategoryUnitGroupUnitInfo
+	76, // 63: core.ItemCategoryUnitGroupUnitInfo.created_at:type_name -> google.protobuf.Timestamp
+	76, // 64: core.ItemCategoryUnitGroupUnitInfo.updated_at:type_name -> google.protobuf.Timestamp
+	78, // 65: core.ItemCategoryUnitGroupUnitInfo.unit:type_name -> core.UnitInfo
+	76, // 66: core.ItemAttributeInfo.created_at:type_name -> google.protobuf.Timestamp
+	76, // 67: core.ItemAttributeInfo.updated_at:type_name -> google.protobuf.Timestamp
+	65, // 68: core.ItemInfo.category:type_name -> core.ItemCategoryInfo
+	64, // 69: core.ItemInfo.unit_value:type_name -> core.RateInfo
+	64, // 70: core.ItemInfo.unit_cost:type_name -> core.RateInfo
+	64, // 71: core.ItemInfo.burn_rate:type_name -> core.RateInfo
+	76, // 72: core.ItemInfo.created_at:type_name -> google.protobuf.Timestamp
+	76, // 73: core.ItemInfo.updated_at:type_name -> google.protobuf.Timestamp
+	69, // 74: core.ItemInfo.attributes:type_name -> core.ItemAttributeInfo
+	76, // 75: core.ListItemsRequest.start_date:type_name -> google.protobuf.Timestamp
+	76, // 76: core.ListItemsRequest.end_date:type_name -> google.protobuf.Timestamp
+	70, // 77: core.ListItemsResponse.items:type_name -> core.ItemInfo
+	77, // 78: core.ListItemsResponse.page_info:type_name -> core.PageInfo
+	70, // 79: core.GetItemResponse.item:type_name -> core.ItemInfo
+	80, // [80:80] is the sub-list for method output_type
+	80, // [80:80] is the sub-list for method input_type
+	80, // [80:80] is the sub-list for extension type_name
+	80, // [80:80] is the sub-list for extension extendee
+	0,  // [0:80] is the sub-list for field type_name
 }
 
 func init() { file_core_core_accounts_carriers_proto_init() }
@@ -5377,16 +5776,18 @@ func file_core_core_accounts_carriers_proto_init() {
 	file_core_core_accounts_carriers_proto_msgTypes[59].OneofWrappers = []any{}
 	file_core_core_accounts_carriers_proto_msgTypes[61].OneofWrappers = []any{}
 	file_core_core_accounts_carriers_proto_msgTypes[65].OneofWrappers = []any{}
+	file_core_core_accounts_carriers_proto_msgTypes[67].OneofWrappers = []any{}
 	file_core_core_accounts_carriers_proto_msgTypes[68].OneofWrappers = []any{}
 	file_core_core_accounts_carriers_proto_msgTypes[69].OneofWrappers = []any{}
 	file_core_core_accounts_carriers_proto_msgTypes[70].OneofWrappers = []any{}
+	file_core_core_accounts_carriers_proto_msgTypes[71].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_core_core_accounts_carriers_proto_rawDesc), len(file_core_core_accounts_carriers_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   75,
+			NumMessages:   76,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

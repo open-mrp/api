@@ -49,6 +49,21 @@ AND (
 ORDER BY pl.created_at ASC, pl.id ASC
 LIMIT ?;
 
+-- name: GetProductLinesByIDs :many
+SELECT
+    pl.id,
+    pl.name,
+    pl.description,
+    pl.notes,
+    pl.is_commission_exempt,
+    pl.is_freight_exempt,
+    pl.unit_group_id,
+    pl.account_id,
+    pl.created_at,
+    pl.updated_at
+FROM product_line pl
+WHERE pl.id IN (sqlc.slice('ids'));
+
 -- name: GetProductLine :one
 SELECT
     pl.id,
@@ -111,6 +126,8 @@ SELECT
     ug.id,
     ug.name,
     ug.base_unit_id,
-    ug.unit_type_code
+    ug.unit_type_code,
+    ug.created_at,
+    ug.updated_at
 FROM unit_group ug
 WHERE ug.id = sqlc.arg('id');

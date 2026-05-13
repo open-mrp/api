@@ -40,7 +40,7 @@ func (*ProductionRunsEndpointGroup) Materialize(config *ProductionRunsEndpointGr
 	}
 
 	listEndpoint := (&productionrunep.ListProductionRunsEndpoint{}).Materialize().WithService(inner, svc)
-	getEndpoint := (&productionrunep.GetProductionRunEndpoint{}).Materialize().WithService(inner, svc)
+	retrieveEndpoint := (&productionrunep.RetrieveProductionRunEndpoint{}).Materialize().WithService(inner, svc)
 	createEndpoint := (&productionrunep.CreateProductionRunEndpoint{}).Materialize().WithService(inner, svc)
 	updateEndpoint := (&productionrunep.UpdateProductionRunEndpoint{}).Materialize().WithService(inner, svc)
 	deleteEndpoint := (&productionrunep.DeleteProductionRunEndpoint{}).Materialize().WithService(inner, svc)
@@ -49,7 +49,7 @@ func (*ProductionRunsEndpointGroup) Materialize(config *ProductionRunsEndpointGr
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listEndpoint,
-		getEndpoint,
+		retrieveEndpoint,
 		createEndpoint,
 		updateEndpoint,
 		deleteEndpoint,

@@ -14,11 +14,11 @@ import (
 // UpdateUnitGroupUnitRequest is a request to update an associated unit.
 type UpdateUnitGroupUnitRequest struct {
 	// Unit group ID.
-	UnitGroupID string `path:"unitGroupId" validate:"required"`
+	UnitGroupID string `path:"unit_group_id" validate:"required"`
 	// Unit group unit ID.
 	AssociatedUnitID string `path:"id" validate:"required"`
 	// Unit ID.
-	UnitID *string `json:"unit_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
+	UnitID *string `json:"unit_id,omitempty" nullable:"false" validate:"omitempty"`
 	// Discount percentage.
 	DiscountPercentage *float64 `json:"discount_percentage,omitempty" nullable:"false"`
 	// Fixed discount amount.
@@ -45,7 +45,7 @@ func (e *UpdateUnitGroupUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*Up
 		Title:             "Update Unit Group Associated Unit",
 		Description:       "Partially updates an associated unit within a unit group.",
 		Method:            http.MethodPatch,
-		Route:             "/v1/catalog/unit-groups/{unitGroupId}/units/{id}",
+		Route:             "/v1/catalog/unit-groups/{unit_group_id}/units/{id}",
 		ContentType:       "application/json",
 		Request:           &UpdateUnitGroupUnitRequest{},
 		Response:          &apiresource.UnitGroupUnit{},

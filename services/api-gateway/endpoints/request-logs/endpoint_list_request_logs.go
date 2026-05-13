@@ -14,28 +14,30 @@ import (
 // ListRequestLogsRequest is a request to list request logs.
 type ListRequestLogsRequest struct {
 	apiresource.PaginationRequest
-	// Start of date range for occurred_at.
+	// Restricts results to request logs on or after this timestamp.
 	StartDate *time.Time `query:"start_date"`
-	// End of date range for occurred_at.
+	// Restricts results to request logs on or before this timestamp.
 	EndDate *time.Time `query:"end_date"`
-	// HTTP methods.
+	// Filter by the HTTP method.
 	Methods []constants.HTTPMethod `query:"methods"`
-	// HTTP status codes.
+	// Filter by the HTTP status code.
 	StatusCodes []int32 `query:"status_codes"`
-	// API error codes.
+	// Filter by API error code.
 	ErrorCodes []apierror.ErrorCode `query:"error_codes"`
-	// Actor home account IDs.
+	// Filter by the account ID _targeted_ by the request. The actor may be operating on behalf of a separate account.
 	AccountIDs []string `query:"account_ids"`
-	// Actor identifier. `account_user.id` when `identity_type`=`user`, or an `api_key.id` when `identity_type`=`api_key`.
+	// Filter by the actor identifier. `account_user.id` when `identity_type`=`user`, or an `api_key.id` when `identity_type`=`api_key`.
 	ActorIDs []string `query:"actor_ids"`
-	// Actor types.
+	// Filter by the actor type.
 	ActorTypes []constants.ActorType `query:"actor_types"`
-	// Normalized route templates.
+	// Filter by the _normalized_ route template. For example `PATCH /v1/sales/customers/{id}` is the normalized route for a request route `PUT /v1/sales/customers/ac_...`.
 	NormalizedRoutes []string `query:"normalized_routes"`
-	// Request hosts.
+	// Filter by the request host. Typically, `api.augno.com`.
 	Hosts []string `query:"hosts"`
-	// Minimum latency in microseconds.
+	// Filter by the minimum latency in microseconds.
 	MinLatencyUs *int64 `query:"min_latency_us"`
+	// Filter by the user-provided idempotency key.
+	IdempotencyKey *string `query:"idempotency_key"`
 }
 
 type ListRequestLogsEndpoint struct{}

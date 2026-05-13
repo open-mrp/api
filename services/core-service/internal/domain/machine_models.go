@@ -7,15 +7,17 @@ import (
 )
 
 type Machine struct {
-	ID               string
-	Name             string  `audit:"name"`
-	SerialNumber     string  `audit:"serial_number"`
-	Notes            *string `audit:"notes"`
-	DepartmentID     *string
-	DepartmentName   *string `audit:"department_name"`
-	ProductionStepID *string `audit:"production_step_id"`
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
+	ID                  string
+	Name                string  `audit:"name"`
+	SerialNumber        string  `audit:"serial_number"`
+	Notes               *string `audit:"notes"`
+	DepartmentID        *string
+	DepartmentName      *string `audit:"department_name"`
+	DepartmentCreatedAt *time.Time
+	DepartmentUpdatedAt *time.Time
+	ProductionStepID    *string `audit:"production_step_id"`
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
 }
 
 type ListMachinesParams struct {

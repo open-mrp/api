@@ -21,7 +21,7 @@ type UpdateLocationRequest struct {
 	// Location type code.
 	TypeCode *constants.LocationTypeCode `json:"type,omitempty" nullable:"false"`
 	// Parent location ID. Send null to clear.
-	ParentID *string `json:"parent_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
+	ParentID *string `json:"parent_id,omitempty" nullable:"true" validate:"omitempty"`
 	// Child location IDs. Replaces all current children when provided. Send null to clear.
 	ChildIDs apirequest.NullableInput[[]string] `json:"child_ids,omitempty"`
 }

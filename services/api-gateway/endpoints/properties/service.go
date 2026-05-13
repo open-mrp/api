@@ -20,12 +20,12 @@ import (
 
 type PropertySvc interface {
 	ListProperties(ctx context.Context, req *ListPropertiesRequest) (*apiresource.List[apiresource.Property], *apierror.APIError)
-	GetProperty(ctx context.Context, req *GetPropertyRequest) (*apiresource.Property, *apierror.APIError)
+	GetProperty(ctx context.Context, req *RetrievePropertyRequest) (*apiresource.Property, *apierror.APIError)
 	CreateProperty(ctx context.Context, req *CreatePropertyRequest) (*apiresource.Property, *apierror.APIError)
 	UpdateProperty(ctx context.Context, req *UpdatePropertyRequest) (*apiresource.Property, *apierror.APIError)
 	DeleteProperty(ctx context.Context, req *DeletePropertyRequest) (*apiresource.EmptyResource, *apierror.APIError)
 	ListAttributes(ctx context.Context, req *ListAttributesRequest) (*apiresource.List[apiresource.Attribute], *apierror.APIError)
-	GetAttribute(ctx context.Context, req *GetAttributeRequest) (*apiresource.Attribute, *apierror.APIError)
+	GetAttribute(ctx context.Context, req *RetrieveAttributeRequest) (*apiresource.Attribute, *apierror.APIError)
 	CreateAttribute(ctx context.Context, req *CreateAttributeRequest) (*apiresource.Attribute, *apierror.APIError)
 	UpdateAttribute(ctx context.Context, req *UpdateAttributeRequest) (*apiresource.Attribute, *apierror.APIError)
 	DeleteAttribute(ctx context.Context, req *DeleteAttributeRequest) (*apiresource.EmptyResource, *apierror.APIError)
@@ -78,7 +78,7 @@ func (m *propertySvcImpl) ListProperties(ctx context.Context, req *ListPropertie
 	return PropertyListPresenter(resp, includes), nil
 }
 
-func (m *propertySvcImpl) GetProperty(ctx context.Context, req *GetPropertyRequest) (*apiresource.Property, *apierror.APIError) {
+func (m *propertySvcImpl) GetProperty(ctx context.Context, req *RetrievePropertyRequest) (*apiresource.Property, *apierror.APIError) {
 	pbReq := &pb.GetPropertyRequest{
 		Id:       req.PropertyID,
 		Includes: appctx.GetRequestedIncludeKeys(ctx),
@@ -185,7 +185,7 @@ func (m *propertySvcImpl) ListAttributes(ctx context.Context, req *ListAttribute
 	return AttributeListPresenter(resp), nil
 }
 
-func (m *propertySvcImpl) GetAttribute(ctx context.Context, req *GetAttributeRequest) (*apiresource.Attribute, *apierror.APIError) {
+func (m *propertySvcImpl) GetAttribute(ctx context.Context, req *RetrieveAttributeRequest) (*apiresource.Attribute, *apierror.APIError) {
 	pbReq := &pb.GetAttributeRequest{
 		PropertyId: req.PropertyID,
 		Id:         req.AttributeID,

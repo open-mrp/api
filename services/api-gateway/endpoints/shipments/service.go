@@ -9,6 +9,7 @@ import (
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/appctx"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
@@ -18,7 +19,7 @@ import (
 
 type ShipmentSvc interface {
 	ListShipments(ctx context.Context, req *ListShipmentsRequest) (*apiresource.List[apiresource.ShipmentSummary], *apierror.APIError)
-	GetShipment(ctx context.Context, req *GetShipmentRequest) (*apiresource.ShipmentDetail, *apierror.APIError)
+	GetShipment(ctx context.Context, req *RetrieveShipmentRequest) (*apiresource.ShipmentDetail, *apierror.APIError)
 	UpdateShipment(ctx context.Context, req *UpdateShipmentRequest) (*apiresource.ShipmentDetail, *apierror.APIError)
 	DeleteShipment(ctx context.Context, req *DeleteShipmentRequest) (*apiresource.EmptyResource, *apierror.APIError)
 	ShipShipment(ctx context.Context, req *ShipShipmentRequest) (*apiresource.ShipmentDetail, *apierror.APIError)
@@ -26,7 +27,7 @@ type ShipmentSvc interface {
 	EstimateRate(ctx context.Context, req *EstimateRateRequest) (*apiresource.EstimateRateResult, *apierror.APIError)
 	RateShop(ctx context.Context, req *RateShopRequest) (*apiresource.RateShopResult, *apierror.APIError)
 	ListShipmentLines(ctx context.Context, req *ListShipmentLinesRequest) (*apiresource.List[apiresource.ShipmentLine], *apierror.APIError)
-	GetShipmentLine(ctx context.Context, req *GetShipmentLineRequest) (*apiresource.ShipmentLine, *apierror.APIError)
+	GetShipmentLine(ctx context.Context, req *RetrieveShipmentLineRequest) (*apiresource.ShipmentLine, *apierror.APIError)
 	CreateShipmentLine(ctx context.Context, req *CreateShipmentLineRequest) (*apiresource.ShipmentLine, *apierror.APIError)
 	UpdateShipmentLine(ctx context.Context, req *UpdateShipmentLineRequest) (*apiresource.ShipmentLine, *apierror.APIError)
 	DeleteShipmentLine(ctx context.Context, req *DeleteShipmentLineRequest) (*apiresource.EmptyResource, *apierror.APIError)
@@ -86,7 +87,7 @@ func (m *shipmentSvcImpl) ListShipments(ctx context.Context, req *ListShipmentsR
 	return ShipmentListPresenter(resp), nil
 }
 
-func (m *shipmentSvcImpl) GetShipment(ctx context.Context, req *GetShipmentRequest) (*apiresource.ShipmentDetail, *apierror.APIError) {
+func (m *shipmentSvcImpl) GetShipment(ctx context.Context, req *RetrieveShipmentRequest) (*apiresource.ShipmentDetail, *apierror.APIError) {
 	pbReq := &pb.GetShipmentRequest{
 		Id:       req.ShipmentID,
 		Includes: req.Includes,
@@ -113,6 +114,7 @@ func (m *shipmentSvcImpl) UpdateShipment(ctx context.Context, req *UpdateShipmen
 		MasterTrackingNumber: req.MasterTrackingNumber,
 		CarrierId:            req.CarrierID,
 		ServiceLevelId:       req.ServiceLevelID,
+		Includes:             appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, shipmentSvcTracer, "service.shipments.update", domain.ServiceName,
@@ -149,6 +151,7 @@ func (m *shipmentSvcImpl) ShipShipment(ctx context.Context, req *ShipShipmentReq
 	pbReq := &pb.ShipShipmentRequest{
 		Id:            req.ShipmentID,
 		EmailCustomer: req.EmailCustomer,
+		Includes:      appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, shipmentSvcTracer, "service.shipments.ship", domain.ServiceName,
@@ -270,7 +273,7 @@ func (m *shipmentSvcImpl) ListShipmentLines(ctx context.Context, req *ListShipme
 	return ShipmentLineListPresenter(resp), nil
 }
 
-func (m *shipmentSvcImpl) GetShipmentLine(ctx context.Context, req *GetShipmentLineRequest) (*apiresource.ShipmentLine, *apierror.APIError) {
+func (m *shipmentSvcImpl) GetShipmentLine(ctx context.Context, req *RetrieveShipmentLineRequest) (*apiresource.ShipmentLine, *apierror.APIError) {
 	pbReq := &pb.GetShipmentLineRequest{
 		ShipmentId: req.ShipmentID,
 		Id:         req.ShipmentLineID,

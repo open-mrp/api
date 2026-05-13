@@ -58,7 +58,7 @@ type AccountBranding struct {
 	SupportEmail *string `json:"support_email"`
 	// Support phone number.
 	PhoneNumber *string `json:"phone_number"`
-	// Logo URL (S3 key).
+	// Logo URL.
 	LogoURL *string `json:"logo_url"`
 	// Facebook handle.
 	FacebookHandle *string `json:"facebook_handle"`

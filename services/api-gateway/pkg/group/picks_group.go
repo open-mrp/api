@@ -40,7 +40,7 @@ func (*PicksEndpointGroup) Materialize(config *PicksEndpointGroupConfig) *PicksE
 	}
 
 	listEndpoint := (&pickep.ListPicksEndpoint{}).Materialize().WithService(inner, svc)
-	getEndpoint := (&pickep.GetPickEndpoint{}).Materialize().WithService(inner, svc)
+	retrieveEndpoint := (&pickep.RetrievePickEndpoint{}).Materialize().WithService(inner, svc)
 	updateEndpoint := (&pickep.UpdatePickEndpoint{}).Materialize().WithService(inner, svc)
 	pickAllLinesEndpoint := (&pickep.PickAllLinesEndpoint{}).Materialize().WithService(inner, svc)
 	voidEndpoint := (&pickep.VoidPickEndpoint{}).Materialize().WithService(inner, svc)
@@ -52,7 +52,7 @@ func (*PicksEndpointGroup) Materialize(config *PicksEndpointGroupConfig) *PicksE
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listEndpoint,
-		getEndpoint,
+		retrieveEndpoint,
 		updateEndpoint,
 		pickAllLinesEndpoint,
 		voidEndpoint,

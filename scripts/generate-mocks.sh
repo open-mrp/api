@@ -108,9 +108,9 @@ run_jobs() {
           new_pids+=("${pid}")
         else
           if ! wait "${pid}"; then
-            ((failed++))
+            failed=$((failed + 1))
           else
-            ((completed++))
+            completed=$((completed + 1))
           fi
         fi
       done
@@ -131,9 +131,9 @@ run_jobs() {
   # Wait for remaining jobs
   for pid in "${pids[@]}"; do
     if ! wait "${pid}"; then
-      ((failed++))
+      failed=$((failed + 1))
     else
-      ((completed++))
+      completed=$((completed + 1))
     fi
   done
 

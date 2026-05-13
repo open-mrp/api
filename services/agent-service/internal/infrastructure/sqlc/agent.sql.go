@@ -135,12 +135,54 @@ func (q *Queries) GetAgentActionByID(ctx context.Context, id string) (AgentActio
 }
 
 const getAgentAlertByID = `-- name: GetAgentAlertByID :one
-SELECT id, account_id, agent_run_id, agent_action_id, severity_code, status_code, title, message, metadata, acknowledged_at, acknowledged_by_actor_id, acknowledged_by_actor_type, acknowledged_by_actor_name, created_at, updated_at FROM agent_alert WHERE id = $1
+SELECT
+    aa.id, aa.account_id, aa.agent_run_id, aa.agent_action_id,
+    aa.severity_code, aa.status_code, aa.title, aa.message, aa.metadata,
+    aa.acknowledged_at, aa.acknowledged_by_actor_id, aa.acknowledged_by_actor_type,
+    aa.acknowledged_by_actor_name, aa.created_at, aa.updated_at,
+    ar.status_code AS run_status_code,
+    ar.trigger_type AS run_trigger_type,
+    ar.created_at AS run_created_at,
+    ar.updated_at AS run_updated_at,
+    act.tool_slug AS action_tool_slug,
+    act.status_code AS action_status_code,
+    act.created_at AS action_created_at,
+    act.updated_at AS action_updated_at
+FROM agent_alert aa
+LEFT JOIN agent_run ar ON ar.id = aa.agent_run_id
+LEFT JOIN agent_action act ON act.id = aa.agent_action_id
+WHERE aa.id = $1
 `
 
-func (q *Queries) GetAgentAlertByID(ctx context.Context, id string) (AgentAlert, error) {
+type GetAgentAlertByIDRow struct {
+	ID                      string
+	AccountID               string
+	AgentRunID              pgtype.Text
+	AgentActionID           pgtype.Text
+	SeverityCode            string
+	StatusCode              string
+	Title                   string
+	Message                 pgtype.Text
+	Metadata                []byte
+	AcknowledgedAt          pgtype.Timestamptz
+	AcknowledgedByActorID   pgtype.Text
+	AcknowledgedByActorType pgtype.Text
+	AcknowledgedByActorName pgtype.Text
+	CreatedAt               pgtype.Timestamptz
+	UpdatedAt               pgtype.Timestamptz
+	RunStatusCode           pgtype.Text
+	RunTriggerType          pgtype.Text
+	RunCreatedAt            pgtype.Timestamptz
+	RunUpdatedAt            pgtype.Timestamptz
+	ActionToolSlug          pgtype.Text
+	ActionStatusCode        pgtype.Text
+	ActionCreatedAt         pgtype.Timestamptz
+	ActionUpdatedAt         pgtype.Timestamptz
+}
+
+func (q *Queries) GetAgentAlertByID(ctx context.Context, id string) (GetAgentAlertByIDRow, error) {
 	row := q.db.QueryRow(ctx, getAgentAlertByID, id)
-	var i AgentAlert
+	var i GetAgentAlertByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.AccountID,
@@ -157,6 +199,14 @@ func (q *Queries) GetAgentAlertByID(ctx context.Context, id string) (AgentAlert,
 		&i.AcknowledgedByActorName,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.RunStatusCode,
+		&i.RunTriggerType,
+		&i.RunCreatedAt,
+		&i.RunUpdatedAt,
+		&i.ActionToolSlug,
+		&i.ActionStatusCode,
+		&i.ActionCreatedAt,
+		&i.ActionUpdatedAt,
 	)
 	return i, err
 }
@@ -1002,7 +1052,22 @@ func (q *Queries) ListAgentAlertsByAccount(ctx context.Context, arg ListAgentAle
 }
 
 const listAgentAlertsByAccountCursor = `-- name: ListAgentAlertsByAccountCursor :many
-SELECT aa.id, aa.account_id, aa.agent_run_id, aa.agent_action_id, aa.severity_code, aa.status_code, aa.title, aa.message, aa.metadata, aa.acknowledged_at, aa.acknowledged_by_actor_id, aa.acknowledged_by_actor_type, aa.acknowledged_by_actor_name, aa.created_at, aa.updated_at FROM agent_alert aa
+SELECT
+    aa.id, aa.account_id, aa.agent_run_id, aa.agent_action_id,
+    aa.severity_code, aa.status_code, aa.title, aa.message, aa.metadata,
+    aa.acknowledged_at, aa.acknowledged_by_actor_id, aa.acknowledged_by_actor_type,
+    aa.acknowledged_by_actor_name, aa.created_at, aa.updated_at,
+    ar.status_code AS run_status_code,
+    ar.trigger_type AS run_trigger_type,
+    ar.created_at AS run_created_at,
+    ar.updated_at AS run_updated_at,
+    act.tool_slug AS action_tool_slug,
+    act.status_code AS action_status_code,
+    act.created_at AS action_created_at,
+    act.updated_at AS action_updated_at
+FROM agent_alert aa
+LEFT JOIN agent_run ar ON ar.id = aa.agent_run_id
+LEFT JOIN agent_action act ON act.id = aa.agent_action_id
 WHERE aa.account_id = $1
   AND ($2::boolean = false OR aa.severity_code = $3)
   AND ($4::boolean = false OR aa.status_code = $5)
@@ -1032,7 +1097,33 @@ type ListAgentAlertsByAccountCursorParams struct {
 	Lim            int32
 }
 
-func (q *Queries) ListAgentAlertsByAccountCursor(ctx context.Context, arg ListAgentAlertsByAccountCursorParams) ([]AgentAlert, error) {
+type ListAgentAlertsByAccountCursorRow struct {
+	ID                      string
+	AccountID               string
+	AgentRunID              pgtype.Text
+	AgentActionID           pgtype.Text
+	SeverityCode            string
+	StatusCode              string
+	Title                   string
+	Message                 pgtype.Text
+	Metadata                []byte
+	AcknowledgedAt          pgtype.Timestamptz
+	AcknowledgedByActorID   pgtype.Text
+	AcknowledgedByActorType pgtype.Text
+	AcknowledgedByActorName pgtype.Text
+	CreatedAt               pgtype.Timestamptz
+	UpdatedAt               pgtype.Timestamptz
+	RunStatusCode           pgtype.Text
+	RunTriggerType          pgtype.Text
+	RunCreatedAt            pgtype.Timestamptz
+	RunUpdatedAt            pgtype.Timestamptz
+	ActionToolSlug          pgtype.Text
+	ActionStatusCode        pgtype.Text
+	ActionCreatedAt         pgtype.Timestamptz
+	ActionUpdatedAt         pgtype.Timestamptz
+}
+
+func (q *Queries) ListAgentAlertsByAccountCursor(ctx context.Context, arg ListAgentAlertsByAccountCursorParams) ([]ListAgentAlertsByAccountCursorRow, error) {
 	rows, err := q.db.Query(ctx, listAgentAlertsByAccountCursor,
 		arg.AccountID,
 		arg.FilterSeverity,
@@ -1049,9 +1140,9 @@ func (q *Queries) ListAgentAlertsByAccountCursor(ctx context.Context, arg ListAg
 		return nil, err
 	}
 	defer rows.Close()
-	var items []AgentAlert
+	var items []ListAgentAlertsByAccountCursorRow
 	for rows.Next() {
-		var i AgentAlert
+		var i ListAgentAlertsByAccountCursorRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.AccountID,
@@ -1068,6 +1159,14 @@ func (q *Queries) ListAgentAlertsByAccountCursor(ctx context.Context, arg ListAg
 			&i.AcknowledgedByActorName,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.RunStatusCode,
+			&i.RunTriggerType,
+			&i.RunCreatedAt,
+			&i.RunUpdatedAt,
+			&i.ActionToolSlug,
+			&i.ActionStatusCode,
+			&i.ActionCreatedAt,
+			&i.ActionUpdatedAt,
 		); err != nil {
 			return nil, err
 		}

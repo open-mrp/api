@@ -16,11 +16,11 @@ import (
 
 type ProductionStepSvc interface {
 	ListProductionSteps(ctx context.Context, req *ListProductionStepsRequest) (*apiresource.List[apiresource.ProductionStep], *apierror.APIError)
-	GetProductionStep(ctx context.Context, req *GetProductionStepRequest) (*apiresource.ProductionStep, *apierror.APIError)
+	GetProductionStep(ctx context.Context, req *RetrieveProductionStepRequest) (*apiresource.ProductionStep, *apierror.APIError)
 	CreateProductionStep(ctx context.Context, req *CreateProductionStepRequest) (*apiresource.ProductionStep, *apierror.APIError)
 	UpdateProductionStep(ctx context.Context, req *UpdateProductionStepRequest) (*apiresource.ProductionStep, *apierror.APIError)
 	DeleteProductionStep(ctx context.Context, req *DeleteProductionStepRequest) (*apiresource.EmptyResource, *apierror.APIError)
-	GetProduction(ctx context.Context, req *GetProductionRequest) (*apiresource.ProductionOutput, *apierror.APIError)
+	GetProduction(ctx context.Context, req *RetrieveProductionRequest) (*apiresource.ProductionOutput, *apierror.APIError)
 	UpdateProduction(ctx context.Context, req *UpdateProductionRequest) (*apiresource.ProductionOutput, *apierror.APIError)
 	BulkCreateProductionSteps(ctx context.Context, req *BulkCreateProductionStepsRequest) (*apiresource.BulkCreateProductionStepsResponse, *apierror.APIError)
 }
@@ -82,7 +82,7 @@ func (m *productionStepSvcImpl) ListProductionSteps(ctx context.Context, req *Li
 	return ProductionStepListPresenter(resp), nil
 }
 
-func (m *productionStepSvcImpl) GetProductionStep(ctx context.Context, req *GetProductionStepRequest) (*apiresource.ProductionStep, *apierror.APIError) {
+func (m *productionStepSvcImpl) GetProductionStep(ctx context.Context, req *RetrieveProductionStepRequest) (*apiresource.ProductionStep, *apierror.APIError) {
 	pbReq := &pb.GetProductionStepRequest{
 		Id: req.ProductionStepID,
 	}
@@ -195,7 +195,7 @@ func (m *productionStepSvcImpl) DeleteProductionStep(ctx context.Context, req *D
 	return &apiresource.EmptyResource{}, nil
 }
 
-func (m *productionStepSvcImpl) GetProduction(ctx context.Context, req *GetProductionRequest) (*apiresource.ProductionOutput, *apierror.APIError) {
+func (m *productionStepSvcImpl) GetProduction(ctx context.Context, req *RetrieveProductionRequest) (*apiresource.ProductionOutput, *apierror.APIError) {
 	pbReq := &pb.GetProductionRequest{
 		ProductionStepId: req.ProductionStepID,
 		Id:               req.ProductionID,
@@ -295,9 +295,13 @@ func (m *productionStepSvcImpl) BulkCreateProductionSteps(ctx context.Context, r
 
 	results := make([]apiresource.BulkCreateProductionStepResult, len(resp.Results))
 	for i, r := range resp.Results {
+		status := "failed"
+		if r.Success {
+			status = "created"
+		}
 		results[i] = apiresource.BulkCreateProductionStepResult{
 			Name:             r.Name,
-			Success:          r.Success,
+			Status:           status,
 			Error:            r.Error,
 			ProductionStepID: r.ProductionStepId,
 			Action:           r.Action,

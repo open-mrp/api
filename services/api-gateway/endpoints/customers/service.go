@@ -82,6 +82,26 @@ func optFreightPolicyToStringPtr(p *constants.FreightPolicy) *string {
 	return &s
 }
 
+func ediStatusToBoolPtr(s *constants.EDIStatus) *bool {
+	if s == nil {
+		return nil
+	}
+	v := *s == constants.EDIStatusEnabled
+	return &v
+}
+
+func addressTypeToDropShip(t *constants.AddressType) bool {
+	return t != nil && *t == constants.AddressTypeDropShip
+}
+
+func parentAccountStatusToBoolPtr(status *constants.CustomerParentAccountStatus) *bool {
+	if status == nil {
+		return nil
+	}
+	v := *status == constants.CustomerParentAccountStatusParent
+	return &v
+}
+
 func derefStringSlice(p *[]string) []string {
 	if p == nil {
 		return nil
@@ -91,7 +111,7 @@ func derefStringSlice(p *[]string) []string {
 
 type CustomerSvc interface {
 	ListCustomers(ctx context.Context, req *ListCustomersRequest) (*apiresource.List[apiresource.Customer], *apierror.APIError)
-	GetCustomer(ctx context.Context, req *GetCustomerRequest) (*apiresource.Customer, *apierror.APIError)
+	GetCustomer(ctx context.Context, req *RetrieveCustomerRequest) (*apiresource.Customer, *apierror.APIError)
 	CreateCustomer(ctx context.Context, req *CreateCustomerRequest) (*apiresource.Customer, *apierror.APIError)
 	DeleteCustomer(ctx context.Context, req *DeleteCustomerRequest) (*apiresource.EmptyResource, *apierror.APIError)
 	BulkDeleteCustomers(ctx context.Context, req *BulkDeleteCustomersRequest) (*apiresource.EmptyResource, *apierror.APIError)
@@ -142,7 +162,7 @@ func (m *customerSvcImpl) ListCustomers(ctx context.Context, req *ListCustomersR
 		FreightStatusCodes:    freightPoliciesToStrings(req.FreightPolicyCodes),
 		CarrierIds:            req.CarrierIDs,
 		ServiceLevelIds:       req.ServiceLevelIDs,
-		IsParentAccount:       req.IsParentAccount,
+		IsParentAccount:       parentAccountStatusToBoolPtr(req.ParentAccountStatus),
 		City:                  req.City,
 		State:                 req.State,
 		PostalCode:            req.PostalCode,
@@ -168,7 +188,7 @@ func (m *customerSvcImpl) ListCustomers(ctx context.Context, req *ListCustomersR
 	return CustomerListPresenter(resp), nil
 }
 
-func (m *customerSvcImpl) GetCustomer(ctx context.Context, req *GetCustomerRequest) (*apiresource.Customer, *apierror.APIError) {
+func (m *customerSvcImpl) GetCustomer(ctx context.Context, req *RetrieveCustomerRequest) (*apiresource.Customer, *apierror.APIError) {
 	pbReq := &pb.GetCustomerRequest{
 		Id:       req.CustomerID,
 		Includes: appctx.GetRequestedIncludeKeys(ctx),
@@ -218,7 +238,7 @@ func (m *customerSvcImpl) CreateCustomer(ctx context.Context, req *CreateCustome
 		Phone:                 req.Phone,
 		Url:                   req.URL,
 		StatusCode:            &statusCodeStr,
-		IsEdiEnabled:          req.IsEdiEnabled,
+		IsEdiEnabled:          ediStatusToBoolPtr(req.EDIStatus),
 		CommissionPolicy:      &commissionPolicyStr,
 		FreightPolicy:         &freightPolicyStr,
 		DefaultCarrierId:      &req.DefaultCarrierID,
@@ -226,11 +246,12 @@ func (m *customerSvcImpl) CreateCustomer(ctx context.Context, req *CreateCustome
 		DefaultPaymentTermId:  &req.DefaultPaymentTermID,
 		DefaultShippingTermId: &req.DefaultShippingTermID,
 		DefaultPriorityCode:   &priorityCodeStr,
-		DefaultSalesRepUserId: req.DefaultSalesRepUserID,
+		DefaultSalesRepId:     req.DefaultSalesRepID,
 		CustomerPriceGroupIds: req.CustomerPriceGroupIDs,
 		CustomerTypeGroupId:   &req.CustomerTypeGroupID,
 		CarrierBillingType:    optCarrierBillingTypeToStringPtr(req.CarrierBillingType),
 		CarrierBillingAccount: req.CarrierBillingAccount,
+		Includes:              appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	if req.CreditLimit != nil {
@@ -332,6 +353,7 @@ func (m *customerSvcImpl) MergeCustomers(ctx context.Context, req *MergeCustomer
 	pbReq := &pb.MergeCustomersRequest{
 		TargetCustomerId:  req.CustomerID,
 		SourceCustomerIds: req.SourceCustomerIDs,
+		Includes:          appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, customerSvcTracer, "service.customers.merge", domain.ServiceName,
@@ -357,7 +379,7 @@ func (m *customerSvcImpl) UpdateCustomer(ctx context.Context, req *UpdateCustome
 		Phone:                    req.Phone,
 		Url:                      req.URL,
 		StatusCode:               optAccountStatusCodeToStringPtr(req.StatusCode),
-		IsEdiEnabled:             req.IsEdiEnabled,
+		IsEdiEnabled:             ediStatusToBoolPtr(req.EDIStatus),
 		CommissionPolicy:         optCommissionPolicyToStringPtr(req.CommissionPolicy),
 		FreightPolicy:            optFreightPolicyToStringPtr(req.FreightPolicy),
 		DefaultCarrierId:         req.DefaultCarrierID,
@@ -365,7 +387,7 @@ func (m *customerSvcImpl) UpdateCustomer(ctx context.Context, req *UpdateCustome
 		DefaultPaymentTermId:     req.DefaultPaymentTermID,
 		DefaultShippingTermId:    req.DefaultShippingTermID,
 		DefaultPriorityCode:      optPriorityCodeToStringPtr(req.DefaultPriorityCode),
-		DefaultSalesRepUserId:    req.DefaultSalesRepUserID,
+		DefaultSalesRepId:        req.DefaultSalesRepID,
 		BillToAddressId:          req.BillToAddressID,
 		ShipToAddressId:          req.ShipToAddressID,
 		CustomerPriceGroupIds:    derefStringSlice(req.CustomerPriceGroupIDs),
@@ -373,6 +395,7 @@ func (m *customerSvcImpl) UpdateCustomer(ctx context.Context, req *UpdateCustome
 		CarrierBillingType:       optCarrierBillingTypeToStringPtr(req.CarrierBillingType),
 		CarrierBillingAccount:    req.CarrierBillingAccount,
 		HasCustomerPriceGroupIds: req.CustomerPriceGroupIDs != nil,
+		Includes:                 appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	if req.CreditLimit.IsNull() {
@@ -404,7 +427,7 @@ func addressInputToCustomerProto(a *apirequest.AddressInput) *pb.CreateCustomerA
 		Name:         a.Name,
 		Phone:        a.Phone,
 		Email:        a.Email,
-		IsDropShip:   a.IsDropShip,
+		IsDropShip:   addressTypeToDropShip(a.Type),
 		StreetLine_1: a.StreetLine1,
 		StreetLine_2: a.StreetLine2,
 		Locality:     a.Locality,

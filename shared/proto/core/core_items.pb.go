@@ -589,6 +589,7 @@ type UpdateItemRequest struct {
 	UpdateDescription bool                   `protobuf:"varint,4,opt,name=update_description,json=updateDescription,proto3" json:"update_description,omitempty"`
 	Notes             *string                `protobuf:"bytes,5,opt,name=notes,proto3,oneof" json:"notes,omitempty"`
 	UpdateNotes       bool                   `protobuf:"varint,6,opt,name=update_notes,json=updateNotes,proto3" json:"update_notes,omitempty"`
+	Includes          []string               `protobuf:"bytes,7,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -665,6 +666,13 @@ func (x *UpdateItemRequest) GetUpdateNotes() bool {
 	return false
 }
 
+func (x *UpdateItemRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
+}
+
 type UpdateItemResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Item          *ItemInfo              `protobuf:"bytes,1,opt,name=item,proto3" json:"item,omitempty"`
@@ -713,6 +721,7 @@ type AddItemAttributeRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ItemId        string                 `protobuf:"bytes,1,opt,name=item_id,json=itemId,proto3" json:"item_id,omitempty"`
 	AttributeId   string                 `protobuf:"bytes,2,opt,name=attribute_id,json=attributeId,proto3" json:"attribute_id,omitempty"`
+	Includes      []string               `protobuf:"bytes,3,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -759,6 +768,13 @@ func (x *AddItemAttributeRequest) GetAttributeId() string {
 		return x.AttributeId
 	}
 	return ""
+}
+
+func (x *AddItemAttributeRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
 }
 
 type AddItemAttributeResponse struct {
@@ -809,6 +825,7 @@ type RemoveItemAttributeRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ItemId        string                 `protobuf:"bytes,1,opt,name=item_id,json=itemId,proto3" json:"item_id,omitempty"`
 	AttributeId   string                 `protobuf:"bytes,2,opt,name=attribute_id,json=attributeId,proto3" json:"attribute_id,omitempty"`
+	Includes      []string               `protobuf:"bytes,3,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -855,6 +872,13 @@ func (x *RemoveItemAttributeRequest) GetAttributeId() string {
 		return x.AttributeId
 	}
 	return ""
+}
+
+func (x *RemoveItemAttributeRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
 }
 
 type RemoveItemAttributeResponse struct {
@@ -905,6 +929,7 @@ type ChangeItemCategoryRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ItemId        string                 `protobuf:"bytes,1,opt,name=item_id,json=itemId,proto3" json:"item_id,omitempty"`
 	CategoryId    string                 `protobuf:"bytes,2,opt,name=category_id,json=categoryId,proto3" json:"category_id,omitempty"`
+	Includes      []string               `protobuf:"bytes,3,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -951,6 +976,13 @@ func (x *ChangeItemCategoryRequest) GetCategoryId() string {
 		return x.CategoryId
 	}
 	return ""
+}
+
+func (x *ChangeItemCategoryRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
 }
 
 type ChangeItemCategoryResponse struct {
@@ -2225,6 +2257,9 @@ type LightMachineInfo struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	SerialNumber  string                 `protobuf:"bytes,3,opt,name=serial_number,json=serialNumber,proto3" json:"serial_number,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2271,6 +2306,27 @@ func (x *LightMachineInfo) GetName() string {
 		return x.Name
 	}
 	return ""
+}
+
+func (x *LightMachineInfo) GetSerialNumber() string {
+	if x != nil {
+		return x.SerialNumber
+	}
+	return ""
+}
+
+func (x *LightMachineInfo) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *LightMachineInfo) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
 }
 
 type BatchFlowNodeInfo struct {
@@ -3923,6 +3979,7 @@ type ListItemCategoriesRequest struct {
 	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
 	Query         *string                `protobuf:"bytes,3,opt,name=query,proto3,oneof" json:"query,omitempty"`
 	Type          *string                `protobuf:"bytes,4,opt,name=type,proto3,oneof" json:"type,omitempty"`
+	Includes      []string               `protobuf:"bytes,5,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3985,6 +4042,13 @@ func (x *ListItemCategoriesRequest) GetType() string {
 	return ""
 }
 
+func (x *ListItemCategoriesRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
+}
+
 type ListItemCategoriesResponse struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	ItemCategories []*ItemCategoryInfo    `protobuf:"bytes,1,rep,name=item_categories,json=itemCategories,proto3" json:"item_categories,omitempty"`
@@ -4040,6 +4104,7 @@ func (x *ListItemCategoriesResponse) GetPageInfo() *PageInfo {
 type GetItemCategoryRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Includes      []string               `protobuf:"bytes,2,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -4079,6 +4144,13 @@ func (x *GetItemCategoryRequest) GetId() string {
 		return x.Id
 	}
 	return ""
+}
+
+func (x *GetItemCategoryRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
 }
 
 type GetItemCategoryResponse struct {
@@ -4130,6 +4202,7 @@ type CreateItemCategoryRequest struct {
 	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	Type          string                 `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
 	UnitGroupId   string                 `protobuf:"bytes,3,opt,name=unit_group_id,json=unitGroupId,proto3" json:"unit_group_id,omitempty"`
+	Includes      []string               `protobuf:"bytes,4,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -4185,6 +4258,13 @@ func (x *CreateItemCategoryRequest) GetUnitGroupId() string {
 	return ""
 }
 
+func (x *CreateItemCategoryRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
+}
+
 type CreateItemCategoryResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ItemCategory  *ItemCategoryInfo      `protobuf:"bytes,1,opt,name=item_category,json=itemCategory,proto3" json:"item_category,omitempty"`
@@ -4234,6 +4314,7 @@ type UpdateItemCategoryRequest struct {
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Name          *string                `protobuf:"bytes,2,opt,name=name,proto3,oneof" json:"name,omitempty"`
 	Notes         *string                `protobuf:"bytes,3,opt,name=notes,proto3,oneof" json:"notes,omitempty"`
+	Includes      []string               `protobuf:"bytes,4,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -4287,6 +4368,13 @@ func (x *UpdateItemCategoryRequest) GetNotes() string {
 		return *x.Notes
 	}
 	return ""
+}
+
+func (x *UpdateItemCategoryRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
 }
 
 type UpdateItemCategoryResponse struct {
@@ -4653,6 +4741,7 @@ type GetConsumptionRequest struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	ProductionStepId string                 `protobuf:"bytes,1,opt,name=production_step_id,json=productionStepId,proto3" json:"production_step_id,omitempty"`
 	Id               string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
+	Includes         []string               `protobuf:"bytes,3,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -4699,6 +4788,13 @@ func (x *GetConsumptionRequest) GetId() string {
 		return x.Id
 	}
 	return ""
+}
+
+func (x *GetConsumptionRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
 }
 
 type GetConsumptionResponse struct {
@@ -4796,33 +4892,37 @@ const file_core_core_items_proto_rawDesc = "" +
 	"\x06_notes\"W\n" +
 	"\x13ExportItemsResponse\x12*\n" +
 	"\x05items\x18\x01 \x03(\v2\x14.core.ExportItemInfoR\x05items\x12\x14\n" +
-	"\x05count\x18\x02 \x01(\x03R\x05count\"\xf0\x01\n" +
+	"\x05count\x18\x02 \x01(\x03R\x05count\"\x8c\x02\n" +
 	"\x11UpdateItemRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x15\n" +
 	"\x03sku\x18\x02 \x01(\tH\x00R\x03sku\x88\x01\x01\x12%\n" +
 	"\vdescription\x18\x03 \x01(\tH\x01R\vdescription\x88\x01\x01\x12-\n" +
 	"\x12update_description\x18\x04 \x01(\bR\x11updateDescription\x12\x19\n" +
 	"\x05notes\x18\x05 \x01(\tH\x02R\x05notes\x88\x01\x01\x12!\n" +
-	"\fupdate_notes\x18\x06 \x01(\bR\vupdateNotesB\x06\n" +
+	"\fupdate_notes\x18\x06 \x01(\bR\vupdateNotes\x12\x1a\n" +
+	"\bincludes\x18\a \x03(\tR\bincludesB\x06\n" +
 	"\x04_skuB\x0e\n" +
 	"\f_descriptionB\b\n" +
 	"\x06_notes\"8\n" +
 	"\x12UpdateItemResponse\x12\"\n" +
-	"\x04item\x18\x01 \x01(\v2\x0e.core.ItemInfoR\x04item\"U\n" +
+	"\x04item\x18\x01 \x01(\v2\x0e.core.ItemInfoR\x04item\"q\n" +
 	"\x17AddItemAttributeRequest\x12\x17\n" +
 	"\aitem_id\x18\x01 \x01(\tR\x06itemId\x12!\n" +
-	"\fattribute_id\x18\x02 \x01(\tR\vattributeId\">\n" +
+	"\fattribute_id\x18\x02 \x01(\tR\vattributeId\x12\x1a\n" +
+	"\bincludes\x18\x03 \x03(\tR\bincludes\">\n" +
 	"\x18AddItemAttributeResponse\x12\"\n" +
-	"\x04item\x18\x01 \x01(\v2\x0e.core.ItemInfoR\x04item\"X\n" +
+	"\x04item\x18\x01 \x01(\v2\x0e.core.ItemInfoR\x04item\"t\n" +
 	"\x1aRemoveItemAttributeRequest\x12\x17\n" +
 	"\aitem_id\x18\x01 \x01(\tR\x06itemId\x12!\n" +
-	"\fattribute_id\x18\x02 \x01(\tR\vattributeId\"A\n" +
+	"\fattribute_id\x18\x02 \x01(\tR\vattributeId\x12\x1a\n" +
+	"\bincludes\x18\x03 \x03(\tR\bincludes\"A\n" +
 	"\x1bRemoveItemAttributeResponse\x12\"\n" +
-	"\x04item\x18\x01 \x01(\v2\x0e.core.ItemInfoR\x04item\"U\n" +
+	"\x04item\x18\x01 \x01(\v2\x0e.core.ItemInfoR\x04item\"q\n" +
 	"\x19ChangeItemCategoryRequest\x12\x17\n" +
 	"\aitem_id\x18\x01 \x01(\tR\x06itemId\x12\x1f\n" +
 	"\vcategory_id\x18\x02 \x01(\tR\n" +
-	"categoryId\"@\n" +
+	"categoryId\x12\x1a\n" +
+	"\bincludes\x18\x03 \x03(\tR\bincludes\"@\n" +
 	"\x1aChangeItemCategoryResponse\x12\"\n" +
 	"\x04item\x18\x01 \x01(\v2\x0e.core.ItemInfoR\x04item\"\xf1\x02\n" +
 	"\x1aUpdateItemInventoryRequest\x12\x17\n" +
@@ -4984,10 +5084,15 @@ const file_core_core_items_proto_rawDesc = "" +
 	"\fBatchLotInfo\x12\x1d\n" +
 	"\n" +
 	"lot_number\x18\x01 \x01(\tR\tlotNumber\x12\x12\n" +
-	"\x04type\x18\x02 \x01(\tR\x04type\"6\n" +
+	"\x04type\x18\x02 \x01(\tR\x04type\"\xd1\x01\n" +
 	"\x10LightMachineInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\"\x8c\x01\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12#\n" +
+	"\rserial_number\x18\x03 \x01(\tR\fserialNumber\x129\n" +
+	"\n" +
+	"created_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"\n" +
+	"updated_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\x8c\x01\n" +
 	"\x11BatchFlowNodeInfo\x12%\n" +
 	"\x05batch\x18\x01 \x01(\v2\x0f.core.BatchInfoR\x05batch\x12&\n" +
 	"\x0finput_batch_ids\x18\x02 \x03(\tR\rinputBatchIds\x12(\n" +
@@ -5094,32 +5199,36 @@ const file_core_core_items_proto_rawDesc = "" +
 	"\x13DeleteBatchResponse\x12)\n" +
 	"\x05batch\x18\x01 \x01(\v2\x13.core.BaseBatchInfoR\x05batch\"7\n" +
 	"\x18DeleteManyBatchesRequest\x12\x1b\n" +
-	"\tbatch_ids\x18\x01 \x03(\tR\bbatchIds\"\xa0\x01\n" +
+	"\tbatch_ids\x18\x01 \x03(\tR\bbatchIds\"\xbc\x01\n" +
 	"\x19ListItemCategoriesRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x19\n" +
 	"\x05query\x18\x03 \x01(\tH\x01R\x05query\x88\x01\x01\x12\x17\n" +
-	"\x04type\x18\x04 \x01(\tH\x02R\x04type\x88\x01\x01B\t\n" +
+	"\x04type\x18\x04 \x01(\tH\x02R\x04type\x88\x01\x01\x12\x1a\n" +
+	"\bincludes\x18\x05 \x03(\tR\bincludesB\t\n" +
 	"\a_cursorB\b\n" +
 	"\x06_queryB\a\n" +
 	"\x05_type\"\x8a\x01\n" +
 	"\x1aListItemCategoriesResponse\x12?\n" +
 	"\x0fitem_categories\x18\x01 \x03(\v2\x16.core.ItemCategoryInfoR\x0eitemCategories\x12+\n" +
-	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"(\n" +
+	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"D\n" +
 	"\x16GetItemCategoryRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"V\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
+	"\bincludes\x18\x02 \x03(\tR\bincludes\"V\n" +
 	"\x17GetItemCategoryResponse\x12;\n" +
-	"\ritem_category\x18\x01 \x01(\v2\x16.core.ItemCategoryInfoR\fitemCategory\"g\n" +
+	"\ritem_category\x18\x01 \x01(\v2\x16.core.ItemCategoryInfoR\fitemCategory\"\x83\x01\n" +
 	"\x19CreateItemCategoryRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
 	"\x04type\x18\x02 \x01(\tR\x04type\x12\"\n" +
-	"\runit_group_id\x18\x03 \x01(\tR\vunitGroupId\"Y\n" +
+	"\runit_group_id\x18\x03 \x01(\tR\vunitGroupId\x12\x1a\n" +
+	"\bincludes\x18\x04 \x03(\tR\bincludes\"Y\n" +
 	"\x1aCreateItemCategoryResponse\x12;\n" +
-	"\ritem_category\x18\x01 \x01(\v2\x16.core.ItemCategoryInfoR\fitemCategory\"r\n" +
+	"\ritem_category\x18\x01 \x01(\v2\x16.core.ItemCategoryInfoR\fitemCategory\"\x8e\x01\n" +
 	"\x19UpdateItemCategoryRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x19\n" +
-	"\x05notes\x18\x03 \x01(\tH\x01R\x05notes\x88\x01\x01B\a\n" +
+	"\x05notes\x18\x03 \x01(\tH\x01R\x05notes\x88\x01\x01\x12\x1a\n" +
+	"\bincludes\x18\x04 \x03(\tR\bincludesB\a\n" +
 	"\x05_nameB\b\n" +
 	"\x06_notes\"Y\n" +
 	"\x1aUpdateItemCategoryResponse\x12;\n" +
@@ -5152,10 +5261,11 @@ const file_core_core_items_proto_rawDesc = "" +
 	"updated_at\x18\n" +
 	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\x13\n" +
 	"\x11_item_descriptionB\x0f\n" +
-	"\r_instructions\"U\n" +
+	"\r_instructions\"q\n" +
 	"\x15GetConsumptionRequest\x12,\n" +
 	"\x12production_step_id\x18\x01 \x01(\tR\x10productionStepId\x12\x0e\n" +
-	"\x02id\x18\x02 \x01(\tR\x02id\"Q\n" +
+	"\x02id\x18\x02 \x01(\tR\x02id\x12\x1a\n" +
+	"\bincludes\x18\x03 \x03(\tR\bincludes\"Q\n" +
 	"\x16GetConsumptionResponse\x127\n" +
 	"\vconsumption\x18\x01 \x01(\v2\x15.core.ConsumptionInfoR\vconsumptionB\x18Z\x16shared/proto/core;coreb\x06proto3"
 
@@ -5296,41 +5406,43 @@ var file_core_core_items_proto_depIdxs = []int32{
 	81, // 33: core.BatchInfo.created_at:type_name -> google.protobuf.Timestamp
 	81, // 34: core.BatchInfo.updated_at:type_name -> google.protobuf.Timestamp
 	32, // 35: core.BatchInfo.lots:type_name -> core.BatchLotInfo
-	31, // 36: core.BatchFlowNodeInfo.batch:type_name -> core.BatchInfo
-	37, // 37: core.OpenBatchSummaryInfo.item:type_name -> core.OpenBatchSummaryItemProto
-	38, // 38: core.OpenBatchSummaryInfo.scanning_station:type_name -> core.OpenBatchSummaryScanningStationProto
-	34, // 39: core.GetBatchFlowResponse.nodes:type_name -> core.BatchFlowNodeInfo
-	31, // 40: core.ListBatchesByScanningStationResponse.batches:type_name -> core.BatchInfo
-	83, // 41: core.ListBatchesByScanningStationResponse.page_info:type_name -> core.PageInfo
-	35, // 42: core.GetBatchPossibleNextStepsResponse.steps:type_name -> core.ScanningProductionStepInfoProto
-	39, // 43: core.AnalyzeOpenBatchesResponse.summaries:type_name -> core.OpenBatchSummaryInfo
-	30, // 44: core.InitializeBatchResponse.batch:type_name -> core.BaseBatchInfo
-	30, // 45: core.MoveBatchesResponse.batch:type_name -> core.BaseBatchInfo
-	30, // 46: core.MergeBatchesResponse.batch:type_name -> core.BaseBatchInfo
-	29, // 47: core.SplitBatchRequest.firsts:type_name -> core.BatchQuantityInfo
-	29, // 48: core.SplitBatchRequest.seconds:type_name -> core.BatchQuantityInfo
-	29, // 49: core.SplitBatchRequest.waste:type_name -> core.BatchQuantityInfo
-	30, // 50: core.SplitBatchResponse.batch:type_name -> core.BaseBatchInfo
-	29, // 51: core.GetRemainingQuantityToSplitResponse.quantity:type_name -> core.BatchQuantityInfo
-	29, // 52: core.GetScanningStationConsumptionRequest.split_quantity:type_name -> core.BatchQuantityInfo
-	36, // 53: core.GetScanningStationConsumptionResponse.consumptions:type_name -> core.ScanningConsumptionInfo
-	30, // 54: core.CloseBatchResponse.batch:type_name -> core.BaseBatchInfo
-	30, // 55: core.DeleteBatchResponse.batch:type_name -> core.BaseBatchInfo
-	84, // 56: core.ListItemCategoriesResponse.item_categories:type_name -> core.ItemCategoryInfo
-	83, // 57: core.ListItemCategoriesResponse.page_info:type_name -> core.PageInfo
-	84, // 58: core.GetItemCategoryResponse.item_category:type_name -> core.ItemCategoryInfo
-	84, // 59: core.CreateItemCategoryResponse.item_category:type_name -> core.ItemCategoryInfo
-	84, // 60: core.UpdateItemCategoryResponse.item_category:type_name -> core.ItemCategoryInfo
-	80, // 61: core.ConsumptionInfo.quantity:type_name -> core.QuantityInfo
-	80, // 62: core.ConsumptionInfo.waste_quantity:type_name -> core.QuantityInfo
-	81, // 63: core.ConsumptionInfo.created_at:type_name -> google.protobuf.Timestamp
-	81, // 64: core.ConsumptionInfo.updated_at:type_name -> google.protobuf.Timestamp
-	77, // 65: core.GetConsumptionResponse.consumption:type_name -> core.ConsumptionInfo
-	66, // [66:66] is the sub-list for method output_type
-	66, // [66:66] is the sub-list for method input_type
-	66, // [66:66] is the sub-list for extension type_name
-	66, // [66:66] is the sub-list for extension extendee
-	0,  // [0:66] is the sub-list for field type_name
+	81, // 36: core.LightMachineInfo.created_at:type_name -> google.protobuf.Timestamp
+	81, // 37: core.LightMachineInfo.updated_at:type_name -> google.protobuf.Timestamp
+	31, // 38: core.BatchFlowNodeInfo.batch:type_name -> core.BatchInfo
+	37, // 39: core.OpenBatchSummaryInfo.item:type_name -> core.OpenBatchSummaryItemProto
+	38, // 40: core.OpenBatchSummaryInfo.scanning_station:type_name -> core.OpenBatchSummaryScanningStationProto
+	34, // 41: core.GetBatchFlowResponse.nodes:type_name -> core.BatchFlowNodeInfo
+	31, // 42: core.ListBatchesByScanningStationResponse.batches:type_name -> core.BatchInfo
+	83, // 43: core.ListBatchesByScanningStationResponse.page_info:type_name -> core.PageInfo
+	35, // 44: core.GetBatchPossibleNextStepsResponse.steps:type_name -> core.ScanningProductionStepInfoProto
+	39, // 45: core.AnalyzeOpenBatchesResponse.summaries:type_name -> core.OpenBatchSummaryInfo
+	30, // 46: core.InitializeBatchResponse.batch:type_name -> core.BaseBatchInfo
+	30, // 47: core.MoveBatchesResponse.batch:type_name -> core.BaseBatchInfo
+	30, // 48: core.MergeBatchesResponse.batch:type_name -> core.BaseBatchInfo
+	29, // 49: core.SplitBatchRequest.firsts:type_name -> core.BatchQuantityInfo
+	29, // 50: core.SplitBatchRequest.seconds:type_name -> core.BatchQuantityInfo
+	29, // 51: core.SplitBatchRequest.waste:type_name -> core.BatchQuantityInfo
+	30, // 52: core.SplitBatchResponse.batch:type_name -> core.BaseBatchInfo
+	29, // 53: core.GetRemainingQuantityToSplitResponse.quantity:type_name -> core.BatchQuantityInfo
+	29, // 54: core.GetScanningStationConsumptionRequest.split_quantity:type_name -> core.BatchQuantityInfo
+	36, // 55: core.GetScanningStationConsumptionResponse.consumptions:type_name -> core.ScanningConsumptionInfo
+	30, // 56: core.CloseBatchResponse.batch:type_name -> core.BaseBatchInfo
+	30, // 57: core.DeleteBatchResponse.batch:type_name -> core.BaseBatchInfo
+	84, // 58: core.ListItemCategoriesResponse.item_categories:type_name -> core.ItemCategoryInfo
+	83, // 59: core.ListItemCategoriesResponse.page_info:type_name -> core.PageInfo
+	84, // 60: core.GetItemCategoryResponse.item_category:type_name -> core.ItemCategoryInfo
+	84, // 61: core.CreateItemCategoryResponse.item_category:type_name -> core.ItemCategoryInfo
+	84, // 62: core.UpdateItemCategoryResponse.item_category:type_name -> core.ItemCategoryInfo
+	80, // 63: core.ConsumptionInfo.quantity:type_name -> core.QuantityInfo
+	80, // 64: core.ConsumptionInfo.waste_quantity:type_name -> core.QuantityInfo
+	81, // 65: core.ConsumptionInfo.created_at:type_name -> google.protobuf.Timestamp
+	81, // 66: core.ConsumptionInfo.updated_at:type_name -> google.protobuf.Timestamp
+	77, // 67: core.GetConsumptionResponse.consumption:type_name -> core.ConsumptionInfo
+	68, // [68:68] is the sub-list for method output_type
+	68, // [68:68] is the sub-list for method input_type
+	68, // [68:68] is the sub-list for extension type_name
+	68, // [68:68] is the sub-list for extension extendee
+	0,  // [0:68] is the sub-list for field type_name
 }
 
 func init() { file_core_core_items_proto_init() }

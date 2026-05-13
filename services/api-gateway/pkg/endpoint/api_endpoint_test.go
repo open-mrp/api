@@ -107,6 +107,32 @@ func TestParseIncludeParams_SplitsCommaSeparatedIncludeArrayValues(t *testing.T)
 	}
 }
 
+func TestExecute_RejectsUnknownQueryParameter(t *testing.T) {
+	t.Parallel()
+	type getReq struct {
+		X string `query:"x"`
+	}
+	ep := &APIEndpoint[*getReq, *stubResponse]{
+		Method:            http.MethodGet,
+		Route:             "/v1/things",
+		SuccessStatusCode: http.StatusOK,
+		ServiceHandler: func(svc any) func(ctx context.Context, req *getReq) (*stubResponse, *apierror.APIError) {
+			return func(ctx context.Context, req *getReq) (*stubResponse, *apierror.APIError) {
+				return &stubResponse{ID: "th_1", Name: "ok"}, nil
+			}
+		},
+	}
+	ep.boundServiceHandler = ep.ServiceHandler(nil)
+
+	r := httptest.NewRequest(http.MethodGet, "/v1/things?x=a&not_allowed=1", nil)
+	w := httptest.NewRecorder()
+	ep.Execute(w, r)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d", http.StatusBadRequest, w.Code)
+	}
+}
+
 func TestParseIncludeParams_MergesIncludeAndIncludeArrayFormats(t *testing.T) {
 	t.Parallel()
 	ep := &APIEndpoint[*stubRequest, *stubResponse]{

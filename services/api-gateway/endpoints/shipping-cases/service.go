@@ -15,7 +15,7 @@ import (
 )
 
 type ShippingCaseSvc interface {
-	GetShippingCase(ctx context.Context, req *GetShippingCaseRequest) (*apiresource.ShippingCase, *apierror.APIError)
+	GetShippingCase(ctx context.Context, req *RetrieveShippingCaseRequest) (*apiresource.ShippingCase, *apierror.APIError)
 	UpdateShippingCase(ctx context.Context, req *UpdateShippingCaseRequest) (*apiresource.ShippingCase, *apierror.APIError)
 	DeleteShippingCase(ctx context.Context, req *DeleteShippingCaseRequest) (*apiresource.EmptyResource, *apierror.APIError)
 	GetShippingCaseLabel(ctx context.Context, req *GetShippingCaseLabelRequest) (*apiresource.ShippingCaseLabelURL, *apierror.APIError)
@@ -48,7 +48,7 @@ func NewShippingCaseSvc(config *ShippingCaseSvcConfig) ShippingCaseSvc {
 	}
 }
 
-func (m *shippingCaseSvcImpl) GetShippingCase(ctx context.Context, req *GetShippingCaseRequest) (*apiresource.ShippingCase, *apierror.APIError) {
+func (m *shippingCaseSvcImpl) GetShippingCase(ctx context.Context, req *RetrieveShippingCaseRequest) (*apiresource.ShippingCase, *apierror.APIError) {
 	pbReq := &pb.GetShippingCaseRequest{
 		Id: req.ShippingCaseID,
 	}

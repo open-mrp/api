@@ -266,7 +266,12 @@ AND id NOT IN (sqlc.slice('keep_ids'));
 SELECT
     agqd.id,
     agqd.account_group_id,
-    ag.name
+    ag.name,
+    ag.commission_status_code,
+    ag.freight_status_code,
+    ag.account_group_type_code,
+    ag.created_at,
+    ag.updated_at
 FROM account_group_quantity_discount agqd
 JOIN account_group ag ON ag.id = agqd.account_group_id
 WHERE agqd.quantity_discount_id = sqlc.arg('quantity_discount_id');
@@ -276,6 +281,11 @@ SELECT
     agqd.id,
     agqd.account_group_id,
     ag.name,
+    ag.commission_status_code,
+    ag.freight_status_code,
+    ag.account_group_type_code,
+    ag.created_at,
+    ag.updated_at,
     agqd.quantity_discount_id
 FROM account_group_quantity_discount agqd
 JOIN account_group ag ON ag.id = agqd.account_group_id
@@ -292,7 +302,11 @@ VALUES (sqlc.arg('id'), sqlc.arg('account_group_id'), sqlc.arg('quantity_discoun
 -- name: GetVolumeDiscountProductLines :many
 SELECT
     pl.id,
-    pl.name
+    pl.name,
+    pl.is_commission_exempt,
+    pl.is_freight_exempt,
+    pl.created_at,
+    pl.updated_at
 FROM `_product_lines_quantity_discounts` plqd
 JOIN product_line pl ON pl.id = plqd.A
 WHERE plqd.B = sqlc.arg('quantity_discount_id');
@@ -301,6 +315,10 @@ WHERE plqd.B = sqlc.arg('quantity_discount_id');
 SELECT
     pl.id,
     pl.name,
+    pl.is_commission_exempt,
+    pl.is_freight_exempt,
+    pl.created_at,
+    pl.updated_at,
     plqd.B AS quantity_discount_id
 FROM `_product_lines_quantity_discounts` plqd
 JOIN product_line pl ON pl.id = plqd.A
@@ -317,7 +335,10 @@ VALUES (sqlc.arg('product_line_id'), sqlc.arg('quantity_discount_id'));
 -- name: GetVolumeDiscountCategories :many
 SELECT
     ic.id,
-    ic.name
+    ic.name,
+    ic.item_category_type_code,
+    ic.created_at,
+    ic.updated_at
 FROM `_item_categories_quantity_discounts` icqd
 JOIN item_category ic ON ic.id = icqd.A
 WHERE icqd.B = sqlc.arg('quantity_discount_id');
@@ -326,6 +347,9 @@ WHERE icqd.B = sqlc.arg('quantity_discount_id');
 SELECT
     ic.id,
     ic.name,
+    ic.item_category_type_code,
+    ic.created_at,
+    ic.updated_at,
     icqd.B AS quantity_discount_id
 FROM `_item_categories_quantity_discounts` icqd
 JOIN item_category ic ON ic.id = icqd.A
@@ -342,7 +366,10 @@ VALUES (sqlc.arg('item_category_id'), sqlc.arg('quantity_discount_id'));
 -- name: GetVolumeDiscountAttributes :many
 SELECT
     a.id,
-    a.text AS name
+    a.text AS name,
+    a.color_code,
+    a.created_at,
+    a.updated_at
 FROM `_quantity_discounts_attributes` qda
 JOIN attribute a ON a.id = qda.A
 WHERE qda.B = sqlc.arg('quantity_discount_id');
@@ -351,6 +378,9 @@ WHERE qda.B = sqlc.arg('quantity_discount_id');
 SELECT
     a.id,
     a.text AS name,
+    a.color_code,
+    a.created_at,
+    a.updated_at,
     qda.B AS quantity_discount_id
 FROM `_quantity_discounts_attributes` qda
 JOIN attribute a ON a.id = qda.A
@@ -368,7 +398,14 @@ VALUES (sqlc.arg('attribute_id'), sqlc.arg('quantity_discount_id'));
 SELECT
     u.id,
     u.name,
-    u.abbreviation
+    u.abbreviation,
+    u.unit_dimension_code AS type,
+    u.ratio_numerator,
+    u.ratio_denominator,
+    u.offset_numerator,
+    u.offset_denominator,
+    u.created_at,
+    u.updated_at
 FROM `_quantity_discounts_units` qdu
 JOIN unit u ON u.id = qdu.B
 WHERE qdu.A = sqlc.arg('quantity_discount_id');
@@ -378,6 +415,13 @@ SELECT
     u.id,
     u.name,
     u.abbreviation,
+    u.unit_dimension_code AS type,
+    u.ratio_numerator,
+    u.ratio_denominator,
+    u.offset_numerator,
+    u.offset_denominator,
+    u.created_at,
+    u.updated_at,
     qdu.A AS quantity_discount_id
 FROM `_quantity_discounts_units` qdu
 JOIN unit u ON u.id = qdu.B

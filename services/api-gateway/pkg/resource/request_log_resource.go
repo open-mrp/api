@@ -1,6 +1,7 @@
 package apiresource
 
 import (
+	"encoding/json"
 	"time"
 
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
@@ -13,10 +14,9 @@ const SampleRequestLogHost = "https://api.augno.com"
 const SampleRequestLogPath = "/v1/core/sandboxes"
 const SampleRequestLogQueryJSON = `{"limit":10}`
 const SampleRequestLogAPIVersion = "2026-01-01"
-const SampleRequestLogIdentityType = "user"
 const SampleRequestLogClientIP = "198.51.100.7"
 const SampleRequestLogUserAgent = "Mozilla/5.0"
-const SampleRequestLogResponseBody = `{"object":"list","data":[...]}`
+const SampleRequestLogResponseBody = `{"object":"list","page_info":{"next_cursor":null,"prev_cursor":null,"has_next_page":false,"has_prev_page":false},"data":[]}`
 
 // RequestLog is an API request log entry.
 type RequestLog struct {
@@ -26,25 +26,23 @@ type RequestLog struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=request_log"`
 	// HTTP method.
 	Method string `json:"method" validate:"required"`
-	// Request host.
+	// Request host. Usually `api.augno.com`.
 	Host string `json:"host" validate:"required"`
-	// Request path.
+	// Non-normalized request path.
 	Path string `json:"path" validate:"required"`
-	// Normalized route pattern.
+	// _Normalized_ route template. For example `PATCH /v1/sales/customers/{id}` is the normalized route for a request route `PUT /v1/sales/customers/ac_...`.
 	NormalizedRoute string `json:"normalized_route" validate:"required"`
-	// Query parameters as JSON.
-	QueryJSON *string `json:"query_json" expandable:"true"`
+	// Query parameters.
+	QueryJSON json.RawMessage `json:"query_params" expandable:"true"`
 	// HTTP status code.
 	StatusCode int32 `json:"status_code" validate:"required"`
 	// Request latency in microseconds.
 	LatencyUs int64 `json:"latency_us" validate:"required"`
 	// API version used.
 	APIVersion *string `json:"api_version"`
-	// Caller identity type.
-	IdentityType *string `json:"identity_type"`
 	// Client IP address.
 	ClientIP *string `json:"client_ip"`
-	// User agent string.
+	// User agent.
 	UserAgent *string `json:"user_agent"`
 	// Referrer header.
 	Referrer *string `json:"referrer"`
@@ -56,16 +54,16 @@ type RequestLog struct {
 	OccurredAt time.Time `json:"occurred_at" validate:"required"`
 	// When the log entry was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
-	// Account targeted by the request.
+	// Account _targeted_ by the request.
 	Account *Account `json:"account" expandable:"true"`
-	// Actor details (user or API key).
+	// Actor who made the request.
 	Actor *Actor `json:"actor" expandable:"true"`
 	// User-provided idempotency key.
 	IdempotencyKey *string `json:"idempotency_key"`
-	// Request body as JSON.
-	RequestBodyJSON *string `json:"request_body_json" expandable:"true"`
-	// Response body as JSON.
-	ResponseBodyJSON *string `json:"response_body_json" expandable:"true"`
+	// Request body.
+	RequestBodyJSON json.RawMessage `json:"request_body" expandable:"true"`
+	// Response body.
+	ResponseBodyJSON json.RawMessage `json:"response_body" expandable:"true"`
 }
 
 var SampleRequestLogActor = &Actor{
@@ -84,18 +82,17 @@ var SampleRequestLog = &RequestLog{
 	Host:             SampleRequestLogHost,
 	Path:             SampleRequestLogPath,
 	NormalizedRoute:  SampleRequestLogPath,
-	QueryJSON:        new(SampleRequestLogQueryJSON),
+	QueryJSON:        json.RawMessage(SampleRequestLogQueryJSON),
 	StatusCode:       200,
 	LatencyUs:        12345,
 	APIVersion:       new(SampleRequestLogAPIVersion),
-	IdentityType:     new(SampleRequestLogIdentityType),
 	ClientIP:         new(SampleRequestLogClientIP),
 	UserAgent:        new(SampleRequestLogUserAgent),
 	OccurredAt:       timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	CreatedAt:        timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	Account:          SampleAccount,
 	Actor:            SampleRequestLogActor,
-	ResponseBodyJSON: new(SampleRequestLogResponseBody),
+	ResponseBodyJSON: json.RawMessage(SampleRequestLogResponseBody),
 }
 
 func (*RequestLog) SchemaExample() any {

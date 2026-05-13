@@ -12,7 +12,7 @@ type TenancyAccount struct {
 	PlanCode                 string
 	RoleID                   *string
 	RoleName                 *string
-	RoleTypeCode             *string
+	RoleType                 *string
 	RoleCreatedAt            *time.Time
 	RoleUpdatedAt            *time.Time
 	AccountUserID            string
@@ -76,12 +76,12 @@ type TenancyAccountPlan struct {
 
 // TenancyRole represents the user's role on the current account.
 type TenancyRole struct {
-	ID           string
-	Name         string
-	RoleTypeCode string
-	Permissions  []string
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID          string
+	Name        string
+	RoleType    string
+	Permissions []string
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
 // TenancyPendingRegistration represents an in-progress registration session

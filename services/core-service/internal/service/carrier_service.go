@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/services/core-service/internal/domain"
@@ -152,18 +153,20 @@ func (s *carrierSvcImpl) ListCarriers(ctx context.Context, params domain.ListCar
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	for _, carrier := range result.Carriers {
-		options, apiErr := carrierRepo.ListOptionsByCarrierID(ctx, identity.Target.AccountID, carrier.ID)
-		if apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
+	if slices.Contains(params.Includes, "service_levels") {
+		for _, carrier := range result.Carriers {
+			options, apiErr := carrierRepo.ListOptionsByCarrierID(ctx, identity.Target.AccountID, carrier.ID)
+			if apiErr != nil {
+				return nil, tracing.Trace(span, apiErr)
+			}
+			carrier.ServiceLevels = options
 		}
-		carrier.ServiceLevels = options
 	}
 
 	return result, nil
 }
 
-func (s *carrierSvcImpl) GetCarrier(ctx context.Context, carrierID string) (*domain.Carrier, *apierror.APIError) {
+func (s *carrierSvcImpl) GetCarrier(ctx context.Context, params domain.GetCarrierParams) (*domain.Carrier, *apierror.APIError) {
 	ctx, span := carrierSvcTracer.Start(ctx, "service.carrier.get")
 	defer span.End()
 
@@ -190,18 +193,22 @@ func (s *carrierSvcImpl) GetCarrier(ctx context.Context, carrierID string) (*dom
 		}
 	}
 
+	params.AccountID = identity.Target.AccountID
+
 	carrierRepo := s.repos.NewCarrierRepo()
 
-	carrier, apiErr := carrierRepo.Get(ctx, identity.Target.AccountID, carrierID)
+	carrier, apiErr := carrierRepo.Get(ctx, params)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	options, apiErr := carrierRepo.ListOptionsByCarrierID(ctx, identity.Target.AccountID, carrierID)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+	if slices.Contains(params.Includes, "service_levels") {
+		options, apiErr := carrierRepo.ListOptionsByCarrierID(ctx, identity.Target.AccountID, params.CarrierID)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		carrier.ServiceLevels = options
 	}
-	carrier.ServiceLevels = options
 
 	return carrier, nil
 }
@@ -412,7 +419,7 @@ func (s *carrierSvcImpl) UpdateCarrier(ctx context.Context, params domain.Update
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *carrierSvcImpl) *apierror.APIError {
 			txRepo := txSvc.repos.NewCarrierRepo()
 
-			old, apiErr := txRepo.Get(txCtx, params.AccountID, params.CarrierID)
+			old, apiErr := txRepo.Get(txCtx, domain.GetCarrierParams{AccountID: params.AccountID, CarrierID: params.CarrierID})
 			if apiErr != nil {
 				return apiErr
 			}
@@ -484,7 +491,7 @@ func (s *carrierSvcImpl) DeleteCarrier(ctx context.Context, carrierID string) *a
 
 	accountID := identity.Target.AccountID
 
-	carrier, apiErr := s.repos.NewCarrierRepo().Get(ctx, accountID, carrierID)
+	carrier, apiErr := s.repos.NewCarrierRepo().Get(ctx, domain.GetCarrierParams{AccountID: accountID, CarrierID: carrierID})
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeCarrier, carrierID)
@@ -587,7 +594,7 @@ func (s *carrierSvcImpl) InitiateOAuth(ctx context.Context, carrierID, redirectU
 		return "", tracing.Trace(span, apierror.NewValidationError("OAuth is not available in sandbox mode."))
 	}
 
-	carrier, apiErr := s.repos.NewCarrierRepo().Get(ctx, accountID, carrierID)
+	carrier, apiErr := s.repos.NewCarrierRepo().Get(ctx, domain.GetCarrierParams{AccountID: accountID, CarrierID: carrierID})
 	if apiErr != nil {
 		return "", tracing.Trace(span, apiErr)
 	}
@@ -635,7 +642,7 @@ func (s *carrierSvcImpl) GetOAuthStatus(ctx context.Context, carrierID string) (
 		return "disconnected", nil
 	}
 
-	carrier, apiErr := s.repos.NewCarrierRepo().Get(ctx, accountID, carrierID)
+	carrier, apiErr := s.repos.NewCarrierRepo().Get(ctx, domain.GetCarrierParams{AccountID: accountID, CarrierID: carrierID})
 	if apiErr != nil {
 		return "", tracing.Trace(span, apiErr)
 	}
@@ -687,7 +694,7 @@ func (s *carrierSvcImpl) SyncOptions(ctx context.Context, carrierID string) (*do
 		return nil, tracing.Trace(span, apierror.NewValidationError("Syncing options is not available in sandbox mode."))
 	}
 
-	carrier, apiErr := s.repos.NewCarrierRepo().Get(ctx, accountID, carrierID)
+	carrier, apiErr := s.repos.NewCarrierRepo().Get(ctx, domain.GetCarrierParams{AccountID: accountID, CarrierID: carrierID})
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -780,7 +787,7 @@ func (s *carrierSvcImpl) SyncOptions(ctx context.Context, carrierID string) (*do
 			}
 
 			// Re-fetch carrier with updated options inside the transaction
-			updatedCarrier, apiErr := txSvc.repos.NewCarrierRepo().Get(txCtx, accountID, carrierID)
+			updatedCarrier, apiErr := txSvc.repos.NewCarrierRepo().Get(txCtx, domain.GetCarrierParams{AccountID: accountID, CarrierID: carrierID})
 			if apiErr != nil {
 				return apiErr
 			}

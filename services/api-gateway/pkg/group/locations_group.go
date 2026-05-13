@@ -40,12 +40,12 @@ func (*LocationsEndpointGroup) Materialize(config *LocationsEndpointGroupConfig)
 	}
 
 	listLocationsEndpoint := (&locationep.ListLocationsEndpoint{}).Materialize().WithService(inner, locationSvc)
-	getLocationEndpoint := (&locationep.GetLocationEndpoint{}).Materialize().WithService(inner, locationSvc)
+	getLocationEndpoint := (&locationep.RetrieveLocationEndpoint{}).Materialize().WithService(inner, locationSvc)
 	createLocationEndpoint := (&locationep.CreateLocationEndpoint{}).Materialize().WithService(inner, locationSvc)
 	updateLocationEndpoint := (&locationep.UpdateLocationEndpoint{}).Materialize().WithService(inner, locationSvc)
 	deleteLocationEndpoint := (&locationep.DeleteLocationEndpoint{}).Materialize().WithService(inner, locationSvc)
 	listLocationTypesEndpoint := (&locationep.ListLocationTypesEndpoint{}).Materialize().WithService(inner, locationSvc)
-	getLocationTypeEndpoint := (&locationep.GetLocationTypeEndpoint{}).Materialize().WithService(inner, locationSvc)
+	getLocationTypeEndpoint := (&locationep.RetrieveLocationTypeEndpoint{}).Materialize().WithService(inner, locationSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listLocationsEndpoint,

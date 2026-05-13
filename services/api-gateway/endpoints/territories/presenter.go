@@ -11,23 +11,40 @@ func SalesRepPresenter(sr *pb.TerritoryAccountUserInfo) *apiresource.AccountUser
 	if sr == nil {
 		return nil
 	}
-	return &apiresource.AccountUser{
+	au := &apiresource.AccountUser{
 		ID:     sr.Id,
 		Object: constants.ObjectTypeAccountUser,
 		Name:   sr.Name,
 		Email:  sr.Email,
+		Status: constants.AccountUserStatus(sr.GetStatus()),
 	}
+	if sr.CreatedAt != nil {
+		au.CreatedAt = sr.CreatedAt.AsTime()
+	}
+	if sr.UpdatedAt != nil {
+		au.UpdatedAt = sr.UpdatedAt.AsTime()
+	}
+	return au
 }
 
 func ProductLinePresenter(pl *pb.TerritoryProductLineInfo) *apiresource.ProductLine {
 	if pl == nil {
 		return nil
 	}
-	return &apiresource.ProductLine{
-		ID:     pl.Id,
-		Object: constants.ObjectTypeProductLine,
-		Name:   pl.Name,
+	resource := &apiresource.ProductLine{
+		ID:               pl.Id,
+		Object:           constants.ObjectTypeProductLine,
+		Name:             pl.Name,
+		CommissionPolicy: constants.CommissionPolicyFromBool(pl.GetIsCommissionExempt()),
+		FreightPolicy:    constants.FreightPolicyFromBool(pl.GetIsFreightExempt()),
 	}
+	if pl.CreatedAt != nil {
+		resource.CreatedAt = pl.CreatedAt.AsTime()
+	}
+	if pl.UpdatedAt != nil {
+		resource.UpdatedAt = pl.UpdatedAt.AsTime()
+	}
+	return resource
 }
 
 func TerritoryPresenter(t *pb.TerritoryInfo) apiresource.Territory {

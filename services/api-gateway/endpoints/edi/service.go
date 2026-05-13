@@ -7,6 +7,7 @@ import (
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
@@ -58,6 +59,7 @@ func (m *ediSvcImpl) PullOrders(ctx context.Context, req *PullEDIOrdersRequest) 
 	}
 
 	return &apiresource.MessageResource{
+		Object:  constants.ObjectTypeMessage,
 		Message: resp.Message,
 	}, nil
 }
@@ -77,6 +79,7 @@ func (m *ediSvcImpl) ResubmitInvoice(ctx context.Context, req *ResubmitEDIInvoic
 	}
 
 	return &apiresource.MessageResource{
+		Object:  constants.ObjectTypeMessage,
 		Message: resp.Message,
 	}, nil
 }

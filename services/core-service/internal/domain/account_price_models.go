@@ -8,38 +8,69 @@ import (
 
 // AccountPrice represents a customer-specific price for a product line.
 type AccountPrice struct {
-	ID                   string
-	OwnerAccountID       string
-	RecipientAccountID   string `audit:"recipient_account_id"`
-	RecipientAccountName string `audit:"recipient_account_name"`
-	ProductLineID        string `audit:"product_line_id"`
-	ProductLineName      string `audit:"product_line_name"`
-	RateID               string
-	RateValue            string                  `audit:"rate_value"`
-	NumeratorUnitID      string                  `audit:"numerator_unit_id"`
-	NumeratorUnitName    string                  `audit:"numerator_unit_name"`
-	NumeratorUnitAbbr    string                  `audit:"numerator_unit_abbr"`
-	NumeratorUnitType    string                  `audit:"numerator_unit_type"`
-	DenominatorUnitID    string                  `audit:"denominator_unit_id"`
-	DenominatorUnitName  string                  `audit:"denominator_unit_name"`
-	DenominatorUnitAbbr  string                  `audit:"denominator_unit_abbr"`
-	DenominatorUnitType  string                  `audit:"denominator_unit_type"`
-	Categories           []AccountPriceCategory  `audit:"categories"`
-	Attributes           []AccountPriceAttribute `audit:"attributes"`
-	CreatedAt            time.Time
-	UpdatedAt            time.Time
+	ID                               string
+	OwnerAccountID                   string
+	RecipientAccountID               string `audit:"recipient_account_id"`
+	RecipientAccountName             string `audit:"recipient_account_name"`
+	RecipientAccountNumber           string
+	RecipientAccountStatus           string
+	RecipientAccountIsEdiEnabled     bool
+	RecipientAccountCommissionPolicy string
+	RecipientAccountRelationshipType string
+	RecipientAccountCreatedAt        time.Time
+	RecipientAccountUpdatedAt        time.Time
+	ProductLineID                    string `audit:"product_line_id"`
+	ProductLineName                  string `audit:"product_line_name"`
+	ProductLineIsCommissionExempt    bool
+	ProductLineIsFreightExempt       bool
+	ProductLineCreatedAt             time.Time
+	ProductLineUpdatedAt             time.Time
+	RateID                           string
+	RateValue                        string `audit:"rate_value"`
+	RateCreatedAt                    time.Time
+	RateUpdatedAt                    time.Time
+	NumeratorUnitID                  string `audit:"numerator_unit_id"`
+	NumeratorUnitName                string `audit:"numerator_unit_name"`
+	NumeratorUnitAbbr                string `audit:"numerator_unit_abbr"`
+	NumeratorUnitType                string `audit:"numerator_unit_type"`
+	NumeratorUnitRatioNumerator      string
+	NumeratorUnitRatioDenominator    string
+	NumeratorUnitOffsetNumerator     string
+	NumeratorUnitOffsetDenominator   string
+	NumeratorUnitCreatedAt           time.Time
+	NumeratorUnitUpdatedAt           time.Time
+	DenominatorUnitID                string `audit:"denominator_unit_id"`
+	DenominatorUnitName              string `audit:"denominator_unit_name"`
+	DenominatorUnitAbbr              string `audit:"denominator_unit_abbr"`
+	DenominatorUnitType              string `audit:"denominator_unit_type"`
+	DenominatorUnitRatioNumerator    string
+	DenominatorUnitRatioDenominator  string
+	DenominatorUnitOffsetNumerator   string
+	DenominatorUnitOffsetDenominator string
+	DenominatorUnitCreatedAt         time.Time
+	DenominatorUnitUpdatedAt         time.Time
+	Categories                       []AccountPriceCategory  `audit:"categories"`
+	Attributes                       []AccountPriceAttribute `audit:"attributes"`
+	CreatedAt                        time.Time
+	UpdatedAt                        time.Time
 }
 
 // AccountPriceCategory represents a category association on an account price.
 type AccountPriceCategory struct {
-	ID   string
-	Name string
+	ID        string
+	Name      string
+	Type      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 // AccountPriceAttribute represents an attribute association on an account price.
 type AccountPriceAttribute struct {
-	ID    string
-	Value string
+	ID        string
+	Value     string
+	ColorCode string
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 type ListAccountPricesParams struct {

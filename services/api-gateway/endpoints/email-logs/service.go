@@ -16,7 +16,7 @@ import (
 
 type EmailLogSvc interface {
 	ListEmailLogs(ctx context.Context, req *ListEmailLogsRequest) (*apiresource.List[apiresource.EmailLog], *apierror.APIError)
-	GetEmailLog(ctx context.Context, req *GetEmailLogRequest) (*apiresource.EmailLog, *apierror.APIError)
+	GetEmailLog(ctx context.Context, req *RetrieveEmailLogRequest) (*apiresource.EmailLog, *apierror.APIError)
 }
 
 type EmailLogSvcConfig struct {
@@ -66,7 +66,7 @@ func (m *emailLogSvcImpl) ListEmailLogs(ctx context.Context, req *ListEmailLogsR
 	return EmailLogListPresenter(resp), nil
 }
 
-func (m *emailLogSvcImpl) GetEmailLog(ctx context.Context, req *GetEmailLogRequest) (*apiresource.EmailLog, *apierror.APIError) {
+func (m *emailLogSvcImpl) GetEmailLog(ctx context.Context, req *RetrieveEmailLogRequest) (*apiresource.EmailLog, *apierror.APIError) {
 	pbReq := &pb.GetEmailLogRequest{
 		Id:       req.EmailLogID,
 		Includes: appctx.GetRequestedIncludeKeys(ctx),

@@ -27,11 +27,18 @@ func MachinePresenter(m *pb.MachineInfo) apiresource.Machine {
 		if m.DepartmentName != nil {
 			departmentName = *m.DepartmentName
 		}
-		machine.Department = &apiresource.Department{
+		dept := &apiresource.Department{
 			ID:     *m.DepartmentId,
 			Object: constants.ObjectTypeDepartment,
 			Name:   departmentName,
 		}
+		if m.DepartmentCreatedAt != nil {
+			dept.CreatedAt = m.DepartmentCreatedAt.AsTime()
+		}
+		if m.DepartmentUpdatedAt != nil {
+			dept.UpdatedAt = m.DepartmentUpdatedAt.AsTime()
+		}
+		machine.Department = dept
 	}
 
 	return machine

@@ -13,7 +13,7 @@ import (
 // Request to update a scanner-role account user's password.
 type UpdateScannerPasswordRequest struct {
 	// Target scanner account user ID.
-	AccountUserID string `json:"account_user_id" validate:"required,max=191"`
+	AccountUserID string `json:"account_user_id" validate:"required"`
 	// Requester's current password (the caller's own password, for verification).
 	RequesterPassword string `json:"requester_password" validate:"required,password,max=255"`
 	// New password to set for the scanner user.

@@ -261,7 +261,7 @@ func mapWithRoleRow(id int64, typeID, keyID string, name gosql.NullString, secre
 		OwnerAccountID: ownerAccountID,
 		RoleID:         roleID,
 		RoleName:       rn,
-		RoleTypeCode:   rtc,
+		RoleType:       rtc,
 		CreatedAt:      createdAt,
 		UpdatedAt:      updatedAt,
 		LastUsedAt:     db.TimeFromNullTime(lastUsedAt),

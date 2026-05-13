@@ -23,9 +23,9 @@ type UpdateSupplierRequest struct {
 	// Whether to update the note field. Allows clearing to null.
 	UpdateNote bool `json:"update_note"`
 	// Bill-to address ID.
-	BillToAddressID *string `json:"bill_to_address_id" nullable:"false" validate:"omitempty,max=191"`
+	BillToAddressID *string `json:"bill_to_address_id" nullable:"false" validate:"omitempty"`
 	// Ship-to address ID.
-	ShipToAddressID *string `json:"ship_to_address_id" nullable:"false" validate:"omitempty,max=191"`
+	ShipToAddressID *string `json:"ship_to_address_id" nullable:"false" validate:"omitempty"`
 }
 
 var sampleUpdateSupplierName = "Acme Supplies LLC"

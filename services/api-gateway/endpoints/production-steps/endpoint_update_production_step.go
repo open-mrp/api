@@ -21,7 +21,7 @@ type UpdateProductionStepRequest struct {
 	// Allowances as a decimal string.
 	Allowances *string `json:"allowances,omitempty" nullable:"false"`
 	// Scanning station ID.
-	ScanningStationID *string `json:"scanning_station_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
+	ScanningStationID *string `json:"scanning_station_id,omitempty" nullable:"false" validate:"omitempty"`
 }
 
 var sampleUpdateProductionStepName = "Assembly Step A"

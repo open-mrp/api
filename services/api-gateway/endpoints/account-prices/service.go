@@ -16,7 +16,7 @@ import (
 
 type AccountPriceSvc interface {
 	ListAccountPrices(ctx context.Context, req *ListAccountPricesRequest) (*apiresource.List[apiresource.AccountPrice], *apierror.APIError)
-	GetAccountPrice(ctx context.Context, req *GetAccountPriceRequest) (*apiresource.AccountPrice, *apierror.APIError)
+	GetAccountPrice(ctx context.Context, req *RetrieveAccountPriceRequest) (*apiresource.AccountPrice, *apierror.APIError)
 	CreateAccountPrice(ctx context.Context, req *CreateAccountPriceRequest) (*apiresource.AccountPrice, *apierror.APIError)
 	UpdateAccountPrice(ctx context.Context, req *UpdateAccountPriceRequest) (*apiresource.AccountPrice, *apierror.APIError)
 	DeleteAccountPrice(ctx context.Context, req *DeleteAccountPriceRequest) (*apiresource.EmptyResource, *apierror.APIError)
@@ -69,7 +69,7 @@ func (m *accountPriceSvcImpl) ListAccountPrices(ctx context.Context, req *ListAc
 	return AccountPriceListPresenter(resp), nil
 }
 
-func (m *accountPriceSvcImpl) GetAccountPrice(ctx context.Context, req *GetAccountPriceRequest) (*apiresource.AccountPrice, *apierror.APIError) {
+func (m *accountPriceSvcImpl) GetAccountPrice(ctx context.Context, req *RetrieveAccountPriceRequest) (*apiresource.AccountPrice, *apierror.APIError) {
 	pbReq := &pb.GetAccountPriceRequest{
 		Id: req.AccountPriceID,
 	}

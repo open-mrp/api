@@ -92,7 +92,7 @@ func TenancyPresenter(resp *pb.GetTenancyResponse) *apiresource.Tenancy {
 				ID:          resp.CurrentAccount.Role.Id,
 				Object:      constants.ObjectTypeRole,
 				Name:        resp.CurrentAccount.Role.Name,
-				TypeCode:    constants.RoleTypeCode(resp.CurrentAccount.Role.RoleTypeCode),
+				TypeCode:    constants.RoleType(resp.CurrentAccount.Role.RoleTypeCode),
 				Owner:       apiresource.NewOwner(&accountID),
 				Permissions: &permissions,
 				CreatedAt:   grpcutil.TimestampToTime(resp.CurrentAccount.Role.CreatedAt),

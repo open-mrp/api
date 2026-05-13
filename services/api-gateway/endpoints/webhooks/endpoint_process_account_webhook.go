@@ -16,7 +16,7 @@ type AccountStripeWebhookRequest struct {
 	// Stripe-Signature header value for payload verification.
 	Signature string `header:"Stripe-Signature"`
 	// Account ID from the URL path.
-	AccountID string `path:"accountID" validate:"required"`
+	AccountID string `path:"account_id" validate:"required"`
 }
 
 type ProcessAccountWebhookEndpoint struct{}
@@ -27,7 +27,7 @@ func (e *ProcessAccountWebhookEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		Description:       "Processes a Stripe webhook event for an account, verifying the signature using the account's credentials.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
-		Route:             "/v1/webhooks/stripe/{accountID}",
+		Route:             "/v1/webhooks/stripe/{account_id}",
 		Request:           &AccountStripeWebhookRequest{},
 		Response:          &apiresource.WebhookResponse{},
 		SuccessStatusCode: http.StatusOK,

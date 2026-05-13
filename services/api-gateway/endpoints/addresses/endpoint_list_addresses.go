@@ -6,13 +6,15 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
 
 // Request to list addresses.
 type ListAddressesRequest struct {
 	apiresource.PaginationRequest
-	DropShip *bool `query:"drop_ship"`
+	// Filter by address type.
+	Type *constants.AddressType `query:"type"`
 }
 
 type ListAddressesEndpoint struct{}

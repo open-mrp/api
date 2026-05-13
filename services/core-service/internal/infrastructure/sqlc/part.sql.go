@@ -35,7 +35,62 @@ func (q *Queries) CheckPartSKUExists(ctx context.Context, arg CheckPartSKUExists
 	return sku_exists, err
 }
 
-const getPart = `-- name: GetPart :one
+const getPartAttributes = `-- name: GetPartAttributes :many
+SELECT
+    a.id,
+    a.text,
+    a.color_code,
+    a.` + "`" + `order` + "`" + `,
+    a.property_id,
+    a.created_at,
+    a.updated_at
+FROM _item_attributes ia
+JOIN attribute a ON a.id = ia.A
+WHERE ia.B = ?
+`
+
+type GetPartAttributesRow struct {
+	ID         string
+	Text       string
+	ColorCode  string
+	Order      int32
+	PropertyID string
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+}
+
+func (q *Queries) GetPartAttributes(ctx context.Context, itemID string) ([]GetPartAttributesRow, error) {
+	rows, err := q.db.QueryContext(ctx, getPartAttributes, itemID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetPartAttributesRow
+	for rows.Next() {
+		var i GetPartAttributesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Text,
+			&i.ColorCode,
+			&i.Order,
+			&i.PropertyID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getPartBase = `-- name: GetPartBase :one
 SELECT
     p.id AS part_id,
     p.created_at AS part_created_at,
@@ -56,83 +111,48 @@ SELECT
     ic.name AS category_name,
     ic.item_category_type_code,
     ic.unit_group_id AS category_unit_group_id,
-    rv.id AS unit_value_rate_id,
-    rv.value AS unit_value_rate_value,
-    rv.numerator_unit_id AS unit_value_numerator_unit_id,
-    rv.denominator_unit_id AS unit_value_denominator_unit_id,
-    rv.created_at AS unit_value_created_at,
-    rv.updated_at AS unit_value_updated_at,
-    rc.id AS unit_cost_rate_id,
-    rc.value AS unit_cost_rate_value,
-    rc.numerator_unit_id AS unit_cost_numerator_unit_id,
-    rc.denominator_unit_id AS unit_cost_denominator_unit_id,
-    rc.created_at AS unit_cost_created_at,
-    rc.updated_at AS unit_cost_updated_at,
-    rb.id AS burn_rate_id_joined,
-    rb.value AS burn_rate_value,
-    rb.numerator_unit_id AS burn_rate_numerator_unit_id,
-    rb.denominator_unit_id AS burn_rate_denominator_unit_id,
-    rb.created_at AS burn_rate_created_at,
-    rb.updated_at AS burn_rate_updated_at
+    ic.created_at AS category_created_at,
+    ic.updated_at AS category_updated_at
 FROM part p
 JOIN item i ON i.id = p.item_id
 JOIN item_category ic ON ic.id = i.item_category_id
-JOIN rate rv ON rv.id = i.unit_value_id
-JOIN rate rc ON rc.id = i.unit_cost_id
-JOIN rate rb ON rb.id = i.burn_rate_id
 WHERE p.id = ?
 AND i.account_id = ?
 AND i.deleted_at IS NULL
 `
 
-type GetPartParams struct {
+type GetPartBaseParams struct {
 	PartID    string
 	AccountID string
 }
 
-type GetPartRow struct {
-	PartID                     string
-	PartCreatedAt              time.Time
-	PartUpdatedAt              time.Time
-	ID                         string
-	Sku                        string
-	Description                sql.NullString
-	Notes                      sql.NullString
-	ItemTypeCode               string
-	ItemCategoryID             string
-	UnitValueID                string
-	UnitCostID                 string
-	BurnRateID                 string
-	AccountID                  string
-	IsDirty                    bool
-	CreatedAt                  time.Time
-	UpdatedAt                  time.Time
-	CategoryName               string
-	ItemCategoryTypeCode       string
-	CategoryUnitGroupID        string
-	UnitValueRateID            string
-	UnitValueRateValue         string
-	UnitValueNumeratorUnitID   string
-	UnitValueDenominatorUnitID string
-	UnitValueCreatedAt         time.Time
-	UnitValueUpdatedAt         time.Time
-	UnitCostRateID             string
-	UnitCostRateValue          string
-	UnitCostNumeratorUnitID    string
-	UnitCostDenominatorUnitID  string
-	UnitCostCreatedAt          time.Time
-	UnitCostUpdatedAt          time.Time
-	BurnRateIDJoined           string
-	BurnRateValue              string
-	BurnRateNumeratorUnitID    string
-	BurnRateDenominatorUnitID  string
-	BurnRateCreatedAt          time.Time
-	BurnRateUpdatedAt          time.Time
+type GetPartBaseRow struct {
+	PartID               string
+	PartCreatedAt        time.Time
+	PartUpdatedAt        time.Time
+	ID                   string
+	Sku                  string
+	Description          sql.NullString
+	Notes                sql.NullString
+	ItemTypeCode         string
+	ItemCategoryID       string
+	UnitValueID          string
+	UnitCostID           string
+	BurnRateID           string
+	AccountID            string
+	IsDirty              bool
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+	CategoryName         string
+	ItemCategoryTypeCode string
+	CategoryUnitGroupID  string
+	CategoryCreatedAt    time.Time
+	CategoryUpdatedAt    time.Time
 }
 
-func (q *Queries) GetPart(ctx context.Context, arg GetPartParams) (GetPartRow, error) {
-	row := q.db.QueryRowContext(ctx, getPart, arg.PartID, arg.AccountID)
-	var i GetPartRow
+func (q *Queries) GetPartBase(ctx context.Context, arg GetPartBaseParams) (GetPartBaseRow, error) {
+	row := q.db.QueryRowContext(ctx, getPartBase, arg.PartID, arg.AccountID)
+	var i GetPartBaseRow
 	err := row.Scan(
 		&i.PartID,
 		&i.PartCreatedAt,
@@ -153,75 +173,10 @@ func (q *Queries) GetPart(ctx context.Context, arg GetPartParams) (GetPartRow, e
 		&i.CategoryName,
 		&i.ItemCategoryTypeCode,
 		&i.CategoryUnitGroupID,
-		&i.UnitValueRateID,
-		&i.UnitValueRateValue,
-		&i.UnitValueNumeratorUnitID,
-		&i.UnitValueDenominatorUnitID,
-		&i.UnitValueCreatedAt,
-		&i.UnitValueUpdatedAt,
-		&i.UnitCostRateID,
-		&i.UnitCostRateValue,
-		&i.UnitCostNumeratorUnitID,
-		&i.UnitCostDenominatorUnitID,
-		&i.UnitCostCreatedAt,
-		&i.UnitCostUpdatedAt,
-		&i.BurnRateIDJoined,
-		&i.BurnRateValue,
-		&i.BurnRateNumeratorUnitID,
-		&i.BurnRateDenominatorUnitID,
-		&i.BurnRateCreatedAt,
-		&i.BurnRateUpdatedAt,
+		&i.CategoryCreatedAt,
+		&i.CategoryUpdatedAt,
 	)
 	return i, err
-}
-
-const getPartAttributes = `-- name: GetPartAttributes :many
-SELECT
-    a.id,
-    a.text,
-    a.color_code,
-    a.` + "`" + `order` + "`" + `,
-    a.property_id
-FROM _item_attributes ia
-JOIN attribute a ON a.id = ia.A
-WHERE ia.B = ?
-`
-
-type GetPartAttributesRow struct {
-	ID         string
-	Text       string
-	ColorCode  string
-	Order      int32
-	PropertyID string
-}
-
-func (q *Queries) GetPartAttributes(ctx context.Context, itemID string) ([]GetPartAttributesRow, error) {
-	rows, err := q.db.QueryContext(ctx, getPartAttributes, itemID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetPartAttributesRow
-	for rows.Next() {
-		var i GetPartAttributesRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Text,
-			&i.ColorCode,
-			&i.Order,
-			&i.PropertyID,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const insertItemForPart = `-- name: InsertItemForPart :exec
@@ -312,7 +267,7 @@ func (q *Queries) InsertRateForPart(ctx context.Context, arg InsertRateForPartPa
 	return err
 }
 
-const listPartsBackward = `-- name: ListPartsBackward :many
+const listPartsBackwardBase = `-- name: ListPartsBackwardBase :many
 SELECT
     p.id AS part_id,
     p.created_at AS part_created_at,
@@ -333,30 +288,11 @@ SELECT
     ic.name AS category_name,
     ic.item_category_type_code,
     ic.unit_group_id AS category_unit_group_id,
-    rv.id AS unit_value_rate_id,
-    rv.value AS unit_value_rate_value,
-    rv.numerator_unit_id AS unit_value_numerator_unit_id,
-    rv.denominator_unit_id AS unit_value_denominator_unit_id,
-    rv.created_at AS unit_value_created_at,
-    rv.updated_at AS unit_value_updated_at,
-    rc.id AS unit_cost_rate_id,
-    rc.value AS unit_cost_rate_value,
-    rc.numerator_unit_id AS unit_cost_numerator_unit_id,
-    rc.denominator_unit_id AS unit_cost_denominator_unit_id,
-    rc.created_at AS unit_cost_created_at,
-    rc.updated_at AS unit_cost_updated_at,
-    rb.id AS burn_rate_id_joined,
-    rb.value AS burn_rate_value,
-    rb.numerator_unit_id AS burn_rate_numerator_unit_id,
-    rb.denominator_unit_id AS burn_rate_denominator_unit_id,
-    rb.created_at AS burn_rate_created_at,
-    rb.updated_at AS burn_rate_updated_at
+    ic.created_at AS category_created_at,
+    ic.updated_at AS category_updated_at
 FROM part p
 JOIN item i ON i.id = p.item_id
 JOIN item_category ic ON ic.id = i.item_category_id
-JOIN rate rv ON rv.id = i.unit_value_id
-JOIN rate rc ON rc.id = i.unit_cost_id
-JOIN rate rb ON rb.id = i.burn_rate_id
 WHERE i.account_id = ?
 AND i.deleted_at IS NULL
 AND (
@@ -392,7 +328,7 @@ ORDER BY i.created_at ASC, i.id ASC
 LIMIT ?
 `
 
-type ListPartsBackwardParams struct {
+type ListPartsBackwardBaseParams struct {
 	AccountID              string
 	IncludeCategoryFilter  interface{}
 	CategoryIds            []string
@@ -406,48 +342,32 @@ type ListPartsBackwardParams struct {
 	Limit                  int32
 }
 
-type ListPartsBackwardRow struct {
-	PartID                     string
-	PartCreatedAt              time.Time
-	PartUpdatedAt              time.Time
-	ID                         string
-	Sku                        string
-	Description                sql.NullString
-	Notes                      sql.NullString
-	ItemTypeCode               string
-	ItemCategoryID             string
-	UnitValueID                string
-	UnitCostID                 string
-	BurnRateID                 string
-	AccountID                  string
-	IsDirty                    bool
-	CreatedAt                  time.Time
-	UpdatedAt                  time.Time
-	CategoryName               string
-	ItemCategoryTypeCode       string
-	CategoryUnitGroupID        string
-	UnitValueRateID            string
-	UnitValueRateValue         string
-	UnitValueNumeratorUnitID   string
-	UnitValueDenominatorUnitID string
-	UnitValueCreatedAt         time.Time
-	UnitValueUpdatedAt         time.Time
-	UnitCostRateID             string
-	UnitCostRateValue          string
-	UnitCostNumeratorUnitID    string
-	UnitCostDenominatorUnitID  string
-	UnitCostCreatedAt          time.Time
-	UnitCostUpdatedAt          time.Time
-	BurnRateIDJoined           string
-	BurnRateValue              string
-	BurnRateNumeratorUnitID    string
-	BurnRateDenominatorUnitID  string
-	BurnRateCreatedAt          time.Time
-	BurnRateUpdatedAt          time.Time
+type ListPartsBackwardBaseRow struct {
+	PartID               string
+	PartCreatedAt        time.Time
+	PartUpdatedAt        time.Time
+	ID                   string
+	Sku                  string
+	Description          sql.NullString
+	Notes                sql.NullString
+	ItemTypeCode         string
+	ItemCategoryID       string
+	UnitValueID          string
+	UnitCostID           string
+	BurnRateID           string
+	AccountID            string
+	IsDirty              bool
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+	CategoryName         string
+	ItemCategoryTypeCode string
+	CategoryUnitGroupID  string
+	CategoryCreatedAt    time.Time
+	CategoryUpdatedAt    time.Time
 }
 
-func (q *Queries) ListPartsBackward(ctx context.Context, arg ListPartsBackwardParams) ([]ListPartsBackwardRow, error) {
-	query := listPartsBackward
+func (q *Queries) ListPartsBackwardBase(ctx context.Context, arg ListPartsBackwardBaseParams) ([]ListPartsBackwardBaseRow, error) {
+	query := listPartsBackwardBase
 	var queryParams []interface{}
 	queryParams = append(queryParams, arg.AccountID)
 	queryParams = append(queryParams, arg.IncludeCategoryFilter)
@@ -484,9 +404,9 @@ func (q *Queries) ListPartsBackward(ctx context.Context, arg ListPartsBackwardPa
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListPartsBackwardRow
+	var items []ListPartsBackwardBaseRow
 	for rows.Next() {
-		var i ListPartsBackwardRow
+		var i ListPartsBackwardBaseRow
 		if err := rows.Scan(
 			&i.PartID,
 			&i.PartCreatedAt,
@@ -507,24 +427,8 @@ func (q *Queries) ListPartsBackward(ctx context.Context, arg ListPartsBackwardPa
 			&i.CategoryName,
 			&i.ItemCategoryTypeCode,
 			&i.CategoryUnitGroupID,
-			&i.UnitValueRateID,
-			&i.UnitValueRateValue,
-			&i.UnitValueNumeratorUnitID,
-			&i.UnitValueDenominatorUnitID,
-			&i.UnitValueCreatedAt,
-			&i.UnitValueUpdatedAt,
-			&i.UnitCostRateID,
-			&i.UnitCostRateValue,
-			&i.UnitCostNumeratorUnitID,
-			&i.UnitCostDenominatorUnitID,
-			&i.UnitCostCreatedAt,
-			&i.UnitCostUpdatedAt,
-			&i.BurnRateIDJoined,
-			&i.BurnRateValue,
-			&i.BurnRateNumeratorUnitID,
-			&i.BurnRateDenominatorUnitID,
-			&i.BurnRateCreatedAt,
-			&i.BurnRateUpdatedAt,
+			&i.CategoryCreatedAt,
+			&i.CategoryUpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -539,7 +443,7 @@ func (q *Queries) ListPartsBackward(ctx context.Context, arg ListPartsBackwardPa
 	return items, nil
 }
 
-const listPartsForward = `-- name: ListPartsForward :many
+const listPartsForwardBase = `-- name: ListPartsForwardBase :many
 SELECT
     p.id AS part_id,
     p.created_at AS part_created_at,
@@ -560,30 +464,11 @@ SELECT
     ic.name AS category_name,
     ic.item_category_type_code,
     ic.unit_group_id AS category_unit_group_id,
-    rv.id AS unit_value_rate_id,
-    rv.value AS unit_value_rate_value,
-    rv.numerator_unit_id AS unit_value_numerator_unit_id,
-    rv.denominator_unit_id AS unit_value_denominator_unit_id,
-    rv.created_at AS unit_value_created_at,
-    rv.updated_at AS unit_value_updated_at,
-    rc.id AS unit_cost_rate_id,
-    rc.value AS unit_cost_rate_value,
-    rc.numerator_unit_id AS unit_cost_numerator_unit_id,
-    rc.denominator_unit_id AS unit_cost_denominator_unit_id,
-    rc.created_at AS unit_cost_created_at,
-    rc.updated_at AS unit_cost_updated_at,
-    rb.id AS burn_rate_id_joined,
-    rb.value AS burn_rate_value,
-    rb.numerator_unit_id AS burn_rate_numerator_unit_id,
-    rb.denominator_unit_id AS burn_rate_denominator_unit_id,
-    rb.created_at AS burn_rate_created_at,
-    rb.updated_at AS burn_rate_updated_at
+    ic.created_at AS category_created_at,
+    ic.updated_at AS category_updated_at
 FROM part p
 JOIN item i ON i.id = p.item_id
 JOIN item_category ic ON ic.id = i.item_category_id
-JOIN rate rv ON rv.id = i.unit_value_id
-JOIN rate rc ON rc.id = i.unit_cost_id
-JOIN rate rb ON rb.id = i.burn_rate_id
 WHERE i.account_id = ?
 AND i.deleted_at IS NULL
 AND (
@@ -620,7 +505,7 @@ ORDER BY i.created_at DESC, i.id DESC
 LIMIT ?
 `
 
-type ListPartsForwardParams struct {
+type ListPartsForwardBaseParams struct {
 	AccountID              string
 	IncludeCategoryFilter  interface{}
 	CategoryIds            []string
@@ -634,48 +519,32 @@ type ListPartsForwardParams struct {
 	Limit                  int32
 }
 
-type ListPartsForwardRow struct {
-	PartID                     string
-	PartCreatedAt              time.Time
-	PartUpdatedAt              time.Time
-	ID                         string
-	Sku                        string
-	Description                sql.NullString
-	Notes                      sql.NullString
-	ItemTypeCode               string
-	ItemCategoryID             string
-	UnitValueID                string
-	UnitCostID                 string
-	BurnRateID                 string
-	AccountID                  string
-	IsDirty                    bool
-	CreatedAt                  time.Time
-	UpdatedAt                  time.Time
-	CategoryName               string
-	ItemCategoryTypeCode       string
-	CategoryUnitGroupID        string
-	UnitValueRateID            string
-	UnitValueRateValue         string
-	UnitValueNumeratorUnitID   string
-	UnitValueDenominatorUnitID string
-	UnitValueCreatedAt         time.Time
-	UnitValueUpdatedAt         time.Time
-	UnitCostRateID             string
-	UnitCostRateValue          string
-	UnitCostNumeratorUnitID    string
-	UnitCostDenominatorUnitID  string
-	UnitCostCreatedAt          time.Time
-	UnitCostUpdatedAt          time.Time
-	BurnRateIDJoined           string
-	BurnRateValue              string
-	BurnRateNumeratorUnitID    string
-	BurnRateDenominatorUnitID  string
-	BurnRateCreatedAt          time.Time
-	BurnRateUpdatedAt          time.Time
+type ListPartsForwardBaseRow struct {
+	PartID               string
+	PartCreatedAt        time.Time
+	PartUpdatedAt        time.Time
+	ID                   string
+	Sku                  string
+	Description          sql.NullString
+	Notes                sql.NullString
+	ItemTypeCode         string
+	ItemCategoryID       string
+	UnitValueID          string
+	UnitCostID           string
+	BurnRateID           string
+	AccountID            string
+	IsDirty              bool
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+	CategoryName         string
+	ItemCategoryTypeCode string
+	CategoryUnitGroupID  string
+	CategoryCreatedAt    time.Time
+	CategoryUpdatedAt    time.Time
 }
 
-func (q *Queries) ListPartsForward(ctx context.Context, arg ListPartsForwardParams) ([]ListPartsForwardRow, error) {
-	query := listPartsForward
+func (q *Queries) ListPartsForwardBase(ctx context.Context, arg ListPartsForwardBaseParams) ([]ListPartsForwardBaseRow, error) {
+	query := listPartsForwardBase
 	var queryParams []interface{}
 	queryParams = append(queryParams, arg.AccountID)
 	queryParams = append(queryParams, arg.IncludeCategoryFilter)
@@ -713,9 +582,9 @@ func (q *Queries) ListPartsForward(ctx context.Context, arg ListPartsForwardPara
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListPartsForwardRow
+	var items []ListPartsForwardBaseRow
 	for rows.Next() {
-		var i ListPartsForwardRow
+		var i ListPartsForwardBaseRow
 		if err := rows.Scan(
 			&i.PartID,
 			&i.PartCreatedAt,
@@ -736,24 +605,8 @@ func (q *Queries) ListPartsForward(ctx context.Context, arg ListPartsForwardPara
 			&i.CategoryName,
 			&i.ItemCategoryTypeCode,
 			&i.CategoryUnitGroupID,
-			&i.UnitValueRateID,
-			&i.UnitValueRateValue,
-			&i.UnitValueNumeratorUnitID,
-			&i.UnitValueDenominatorUnitID,
-			&i.UnitValueCreatedAt,
-			&i.UnitValueUpdatedAt,
-			&i.UnitCostRateID,
-			&i.UnitCostRateValue,
-			&i.UnitCostNumeratorUnitID,
-			&i.UnitCostDenominatorUnitID,
-			&i.UnitCostCreatedAt,
-			&i.UnitCostUpdatedAt,
-			&i.BurnRateIDJoined,
-			&i.BurnRateValue,
-			&i.BurnRateNumeratorUnitID,
-			&i.BurnRateDenominatorUnitID,
-			&i.BurnRateCreatedAt,
-			&i.BurnRateUpdatedAt,
+			&i.CategoryCreatedAt,
+			&i.CategoryUpdatedAt,
 		); err != nil {
 			return nil, err
 		}

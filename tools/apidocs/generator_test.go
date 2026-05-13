@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
+	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 )
 
@@ -236,6 +237,9 @@ func TestGenerateSchema(t *testing.T) {
 	}
 	if rawField.Type != "object" {
 		t.Errorf("expected property 'raw' type 'object', got '%s'", rawField.Type)
+	}
+	if !rawField.Nullable {
+		t.Error("expected json.RawMessage field 'raw' to be nullable by default")
 	}
 
 	// If a documented example encodes `null`, we should mark the field nullable
@@ -496,5 +500,57 @@ func TestGenerateSchema_EnumTypeField(t *testing.T) {
 		if !found {
 			t.Errorf("expected enum value %q not found", val)
 		}
+	}
+}
+
+// listDocCommentItem is a minimal element type for apiresource.List[T] schema tests.
+type listDocCommentItem struct {
+	ID string `json:"id"`
+}
+
+func TestGenerateSchema_ListAndPageInfoUseDocComments(t *testing.T) {
+	t.Parallel()
+	reader := NewDocReader()
+	components := &Components{Schemas: make(map[string]Schema)}
+
+	listType := reflect.TypeOf(apiresource.List[listDocCommentItem]{})
+	listSchema := generateSchema(listType, components, reader, "/v1/example")
+
+	if want := "List represents a paginated list of resources."; listSchema.Description != want {
+		t.Errorf("List schema description = %q; want %q", listSchema.Description, want)
+	}
+
+	if got := listSchema.Properties["object"].Description; got != "Resource type identifier." {
+		t.Errorf("object description = %q; want %q", got, "Resource type identifier.")
+	}
+	if got := listSchema.Properties["page_info"].Description; got != "Pagination metadata." {
+		t.Errorf("page_info description = %q; want %q", got, "Pagination metadata.")
+	}
+	if got := listSchema.Properties["data"].Description; got != "Resources in this page." {
+		t.Errorf("data description = %q; want %q", got, "Resources in this page.")
+	}
+
+	if purpose := listSchema.Properties["data"].XStainlessPaginationProperty["purpose"]; purpose != "items" {
+		t.Errorf("data x-stainless-pagination-property purpose = %q; want items", purpose)
+	}
+
+	pageInfoSchema, ok := components.Schemas["PageInfo"]
+	if !ok {
+		t.Fatal("expected PageInfo in components.Schemas")
+	}
+	if want := "PageInfo contains cursor-based pagination metadata."; pageInfoSchema.Description != want {
+		t.Errorf("PageInfo schema description = %q; want %q", pageInfoSchema.Description, want)
+	}
+	if got := pageInfoSchema.Properties["next_cursor"].Description; got != "Cursor to fetch the next page, `null` if no more pages." {
+		t.Errorf("next_cursor description = %q", got)
+	}
+	if got := pageInfoSchema.Properties["prev_cursor"].Description; got != "Cursor to fetch the previous page, `null` if on the first page." {
+		t.Errorf("prev_cursor description = %q", got)
+	}
+	if got := pageInfoSchema.Properties["has_next_page"].Description; got != "Whether more results exist after this page." {
+		t.Errorf("has_next_page description = %q", got)
+	}
+	if got := pageInfoSchema.Properties["has_prev_page"].Description; got != "Whether results exist before this page." {
+		t.Errorf("has_prev_page description = %q", got)
 	}
 }

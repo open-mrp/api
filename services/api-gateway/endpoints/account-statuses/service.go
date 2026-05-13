@@ -15,7 +15,7 @@ import (
 
 type AccountStatusSvc interface {
 	ListAccountStatuses(ctx context.Context, req *ListAccountStatusesRequest) (*apiresource.List[apiresource.AccountStatus], *apierror.APIError)
-	GetAccountStatus(ctx context.Context, req *GetAccountStatusRequest) (*apiresource.AccountStatus, *apierror.APIError)
+	GetAccountStatus(ctx context.Context, req *RetrieveAccountStatusRequest) (*apiresource.AccountStatus, *apierror.APIError)
 }
 
 type AccountStatusSvcConfig struct {
@@ -64,7 +64,7 @@ func (m *accountStatusSvcImpl) ListAccountStatuses(ctx context.Context, req *Lis
 	return AccountStatusListPresenter(resp), nil
 }
 
-func (m *accountStatusSvcImpl) GetAccountStatus(ctx context.Context, req *GetAccountStatusRequest) (*apiresource.AccountStatus, *apierror.APIError) {
+func (m *accountStatusSvcImpl) GetAccountStatus(ctx context.Context, req *RetrieveAccountStatusRequest) (*apiresource.AccountStatus, *apierror.APIError) {
 	pbReq := &pb.GetAccountStatusRequest{
 		Identifier: req.AccountStatusID,
 	}

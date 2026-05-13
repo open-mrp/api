@@ -17,7 +17,7 @@ import (
 
 type UnitSvc interface {
 	ListUnits(ctx context.Context, req *ListUnitsRequest) (*apiresource.List[apiresource.Unit], *apierror.APIError)
-	GetUnit(ctx context.Context, req *GetUnitRequest) (*apiresource.Unit, *apierror.APIError)
+	GetUnit(ctx context.Context, req *RetrieveUnitRequest) (*apiresource.Unit, *apierror.APIError)
 	CreateUnit(ctx context.Context, req *CreateUnitRequest) (*apiresource.Unit, *apierror.APIError)
 	UpdateUnit(ctx context.Context, req *UpdateUnitRequest) (*apiresource.Unit, *apierror.APIError)
 	DeleteUnit(ctx context.Context, req *DeleteUnitRequest) (*apiresource.EmptyResource, *apierror.APIError)
@@ -86,7 +86,7 @@ func (m *unitSvcImpl) ListUnits(ctx context.Context, req *ListUnitsRequest) (*ap
 	return UnitListPresenter(resp, ownerAccount), nil
 }
 
-func (m *unitSvcImpl) GetUnit(ctx context.Context, req *GetUnitRequest) (*apiresource.Unit, *apierror.APIError) {
+func (m *unitSvcImpl) GetUnit(ctx context.Context, req *RetrieveUnitRequest) (*apiresource.Unit, *apierror.APIError) {
 	pbReq := &pb.GetUnitRequest{
 		Id: req.UnitID,
 	}

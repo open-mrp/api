@@ -25,11 +25,18 @@ type ListCarriersParams struct {
 	Cursor    *string
 	Limit     int32
 	Query     *string
+	Includes  []string
 }
 
 type ListCarriersResult struct {
 	Carriers []*Carrier
 	PageInfo pagination.PageInfo
+}
+
+type GetCarrierParams struct {
+	AccountID string
+	CarrierID string
+	Includes  []string
 }
 
 type CreateCarrierParams struct {
@@ -40,6 +47,7 @@ type CreateCarrierParams struct {
 	AccountNumber          *string
 	IsPortalEnabled        bool
 	ServiceLevels          []CreateServiceLevelParams
+	Includes               []string
 }
 
 type UpdateCarrierParams struct {
@@ -47,6 +55,7 @@ type UpdateCarrierParams struct {
 	CarrierID       string
 	Name            *string
 	IsPortalEnabled *bool
+	Includes        []string
 }
 
 type CreateCarrierResult struct {

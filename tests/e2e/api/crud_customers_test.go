@@ -84,8 +84,8 @@ func TestCustomers_CreateResponseShape(t *testing.T) {
 	assert.Equal(t, name, jsonField(got, "name"))
 	assert.NotEmpty(t, jsonField(got, "number"), "number should be auto-generated")
 	assert.Equal(t, "normal", jsonField(got, "status"))
-	assert.Equal(t, "false", jsonField(got, "is_edi_enabled"))
-	assert.Equal(t, "false", jsonField(got, "is_parent_account"))
+	assert.Equal(t, "disabled", jsonField(got, "edi_status"))
+	assert.Equal(t, "standalone", jsonField(got, "relationship_type"))
 	assert.Equal(t, "commission_exempt", jsonField(got, "commission_policy"))
 	assert.NotEmpty(t, jsonField(got, "created_at"))
 	assert.NotEmpty(t, jsonField(got, "updated_at"))
@@ -110,23 +110,23 @@ func TestCustomers_CreateWithAllFields(t *testing.T) {
 	t.Parallel()
 	name := uniqueName("e2e-cust-all")
 	createResp, err := apiClient.PostFull(customersPath, map[string]any{
-		"name":                      name,
-		"note":                      "Test customer note",
-		"email":                     name + "@e2e-test.augno.com",
-		"phone":                     "555-000-1234",
-		"url":                       "https://e2e.augno.com",
-		"status":                    "normal",
-		"is_edi_enabled":            true,
-		"commission_policy":         "commission_exempt",
-		"freight_policy":            "free_freight",
-		"default_carrier_id":        SeedCarrierID,
-		"default_payment_term_id":   SeedPaymentTermID,
-		"default_shipping_term_id":  SeedShippingTermID,
-		"default_priority":          SeedPriorityCode,
-		"default_sales_rep_user_id": SeedUserID,
-		"customer_type_group_id":    SeedCustomerGroupID,
-		"carrier_billing_type":      "third_party",
-		"carrier_billing_account":   "ACCT-12345",
+		"name":                     name,
+		"note":                     "Test customer note",
+		"email":                    name + "@e2e-test.augno.com",
+		"phone":                    "555-000-1234",
+		"url":                      "https://e2e.augno.com",
+		"status":                   "normal",
+		"edi_status":               "enabled",
+		"commission_policy":        "commission_exempt",
+		"freight_policy":           "free_freight",
+		"default_carrier_id":       SeedCarrierID,
+		"default_payment_term_id":  SeedPaymentTermID,
+		"default_shipping_term_id": SeedShippingTermID,
+		"default_priority":         SeedPriorityCode,
+		"default_sales_rep_id":     SeedAccountUserID,
+		"customer_type_group_id":   SeedCustomerGroupID,
+		"carrier_billing_type":     "third_party",
+		"carrier_billing_account":  "ACCT-12345",
 		"credit_limit": map[string]any{
 			"value":   "7500.00",
 			"unit_id": SeedUnitID,
@@ -151,8 +151,8 @@ func TestCustomers_CreateWithAllFields(t *testing.T) {
 	assert.Equal(t, name, jsonField(got, "name"))
 	assert.NotEmpty(t, jsonField(got, "number"), "number should be auto-generated")
 	assert.Equal(t, "normal", jsonField(got, "status"))
-	assert.Equal(t, "true", jsonField(got, "is_edi_enabled"))
-	assert.Equal(t, "false", jsonField(got, "is_parent_account"))
+	assert.Equal(t, "enabled", jsonField(got, "edi_status"))
+	assert.Equal(t, "standalone", jsonField(got, "relationship_type"))
 	assert.Equal(t, "commission_exempt", jsonField(got, "commission_policy"))
 	assert.Equal(t, "Test customer note", jsonField(got, "note"))
 	assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
@@ -172,23 +172,23 @@ func TestCustomers_CreateAndUpdateAllFields(t *testing.T) {
 	createResp, err := apiClient.PostFull(
 		customersPath+"?include="+includeStr,
 		map[string]any{
-			"name":                      name,
-			"note":                      "Create note",
-			"email":                     name + "@e2e-test.augno.com",
-			"phone":                     "555-000-1234",
-			"url":                       "https://create.e2e.augno.com",
-			"status":                    "normal",
-			"is_edi_enabled":            true,
-			"commission_policy":         "commission_exempt",
-			"freight_policy":            "free_freight",
-			"default_carrier_id":        SeedCarrierID,
-			"default_payment_term_id":   SeedPaymentTermID,
-			"default_shipping_term_id":  SeedShippingTermID,
-			"default_priority":          SeedPriorityCode,
-			"default_sales_rep_user_id": SeedUserID,
-			"customer_type_group_id":    SeedCustomerGroupID,
-			"carrier_billing_type":      "third_party",
-			"carrier_billing_account":   "ACCT-12345",
+			"name":                     name,
+			"note":                     "Create note",
+			"email":                    name + "@e2e-test.augno.com",
+			"phone":                    "555-000-1234",
+			"url":                      "https://create.e2e.augno.com",
+			"status":                   "normal",
+			"edi_status":               "enabled",
+			"commission_policy":        "commission_exempt",
+			"freight_policy":           "free_freight",
+			"default_carrier_id":       SeedCarrierID,
+			"default_payment_term_id":  SeedPaymentTermID,
+			"default_shipping_term_id": SeedShippingTermID,
+			"default_priority":         SeedPriorityCode,
+			"default_sales_rep_id":     SeedAccountUserID,
+			"customer_type_group_id":   SeedCustomerGroupID,
+			"carrier_billing_type":     "third_party",
+			"carrier_billing_account":  "ACCT-12345",
 			"credit_limit": map[string]any{
 				"value":   "10000.00",
 				"unit_id": SeedUnitID,
@@ -219,8 +219,8 @@ func TestCustomers_CreateAndUpdateAllFields(t *testing.T) {
 	assert.Equal(t, "Create note", jsonField(got, "note"))
 	assert.NotEmpty(t, jsonField(got, "number"))
 	assert.Equal(t, "normal", jsonField(got, "status"))
-	assert.Equal(t, "true", jsonField(got, "is_edi_enabled"))
-	assert.Equal(t, "false", jsonField(got, "is_parent_account"))
+	assert.Equal(t, "enabled", jsonField(got, "edi_status"))
+	assert.Equal(t, "standalone", jsonField(got, "relationship_type"))
 	assert.Equal(t, "commission_exempt", jsonField(got, "commission_policy"))
 	assert.NotEmpty(t, jsonField(got, "created_at"))
 	assert.NotEmpty(t, jsonField(got, "updated_at"))
@@ -253,6 +253,7 @@ func TestCustomers_CreateAndUpdateAllFields(t *testing.T) {
 	salesRep := jsonObject(defaults, "sales_rep")
 	require.NotNil(t, salesRep, "defaults.sales_rep must be set after create")
 	assert.Equal(t, SeedAccountUserID, jsonField(salesRep, "id"))
+	assert.Equal(t, "account_user", jsonField(salesRep, "object"))
 
 	// freight_preferences
 	fp := jsonObject(got, "freight_preferences")
@@ -306,7 +307,7 @@ func TestCustomers_CreateAndUpdateAllFields(t *testing.T) {
 			"email":                   updatedName + "@e2e-test.augno.com",
 			"phone":                   "555-999-8888",
 			"url":                     "https://update.e2e.augno.com",
-			"is_edi_enabled":          false,
+			"edi_status":              "disabled",
 			"commission_policy":       "commission_applied",
 			"freight_policy":          "billed_freight",
 			"default_payment_term_id": SeedDefaultPaymentTermID,
@@ -333,7 +334,7 @@ func TestCustomers_CreateAndUpdateAllFields(t *testing.T) {
 	assert.Equal(t, id, jsonField(updated, "id"), "ID must not change")
 	assert.Equal(t, updatedName, jsonField(updated, "name"))
 	assert.Equal(t, "Updated note", jsonField(updated, "note"))
-	assert.Equal(t, "false", jsonField(updated, "is_edi_enabled"))
+	assert.Equal(t, "disabled", jsonField(updated, "edi_status"))
 	assert.Equal(t, "commission_applied", jsonField(updated, "commission_policy"))
 
 	// Preserved top-level fields
@@ -366,6 +367,7 @@ func TestCustomers_CreateAndUpdateAllFields(t *testing.T) {
 	updSalesRep := jsonObject(updDefaults, "sales_rep")
 	require.NotNil(t, updSalesRep, "defaults.sales_rep should be preserved")
 	assert.Equal(t, SeedAccountUserID, jsonField(updSalesRep, "id"))
+	assert.Equal(t, "account_user", jsonField(updSalesRep, "object"))
 
 	// Updated freight_preferences
 	updFp := jsonObject(updated, "freight_preferences")
@@ -385,7 +387,7 @@ func TestCustomers_CreateAndUpdateAllFields(t *testing.T) {
 	assert.Equal(t, SeedCustomerGroupID, jsonField(updType, "id"))
 
 	// Preserved top-level fields
-	assert.Equal(t, "false", jsonField(updated, "is_parent_account"), "is_parent_account should be preserved")
+	assert.Equal(t, "standalone", jsonField(updated, "relationship_type"), "relationship_type should be preserved")
 	assert.NotEmpty(t, jsonField(updated, "number"), "number should be preserved")
 	assertValidTimestamp(t, jsonField(updated, "created_at"), "created_at")
 	assertValidTimestamp(t, jsonField(updated, "updated_at"), "updated_at")
@@ -408,12 +410,12 @@ func TestCustomers_CreateAndUpdateAllFields(t *testing.T) {
 	clearStatus, clearBody, err := apiClient.Patch(
 		customersPath+"/"+id+"?include="+includeStr,
 		map[string]any{
-			"note":                      nil,
-			"email":                     nil,
-			"phone":                     nil,
-			"url":                       nil,
-			"default_sales_rep_user_id": nil,
-			"credit_limit":              nil,
+			"note":                 nil,
+			"email":                nil,
+			"phone":                nil,
+			"url":                  nil,
+			"default_sales_rep_id": nil,
+			"credit_limit":         nil,
 		},
 		newIdempotencyKey(),
 	)
@@ -455,7 +457,7 @@ func TestCustomers_CreateAndUpdateAllFields(t *testing.T) {
 	assert.Equal(t, updatedName, jsonField(cleared, "name"), "name should be preserved")
 	assert.NotEmpty(t, jsonField(cleared, "number"), "number should be preserved")
 	assert.Equal(t, "normal", jsonField(cleared, "status"), "status should be preserved")
-	assert.Equal(t, "false", jsonField(cleared, "is_edi_enabled"), "is_edi_enabled should be preserved")
+	assert.Equal(t, "disabled", jsonField(cleared, "edi_status"), "edi_status should be preserved")
 	assert.Equal(t, "commission_applied", jsonField(cleared, "commission_policy"), "commission_policy should be preserved")
 
 	// ── Verify cleared state survives an unrelated update ──
@@ -666,7 +668,7 @@ func TestCustomers_UpdateMultipleFields(t *testing.T) {
 	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+id, map[string]any{
 		"note":              "multi-field update",
 		"phone":             "555-999-8888",
-		"is_edi_enabled":    true,
+		"edi_status":        "enabled",
 		"commission_policy": "commission_exempt",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
@@ -675,7 +677,7 @@ func TestCustomers_UpdateMultipleFields(t *testing.T) {
 	patched := parseJSON(patchBody)
 	assert.Equal(t, name, jsonField(patched, "name"), "name should be preserved")
 	assert.Equal(t, "multi-field update", jsonField(patched, "note"))
-	assert.Equal(t, "true", jsonField(patched, "is_edi_enabled"))
+	assert.Equal(t, "enabled", jsonField(patched, "edi_status"))
 	assert.Equal(t, "commission_exempt", jsonField(patched, "commission_policy"))
 
 	apiClient.Delete(customersPath + "/" + id)
@@ -1067,8 +1069,8 @@ func TestCustomers_OmittedFields(t *testing.T) {
 		assert.Equal(t, name, jsonField(got, "name"))
 		assert.NotEmpty(t, jsonField(got, "number"), "number should be auto-generated")
 		assert.Equal(t, "normal", jsonField(got, "status"))
-		assert.Equal(t, "false", jsonField(got, "is_edi_enabled"))
-		assert.Equal(t, "false", jsonField(got, "is_parent_account"))
+		assert.Equal(t, "disabled", jsonField(got, "edi_status"))
+		assert.Equal(t, "standalone", jsonField(got, "relationship_type"))
 		assert.Equal(t, "commission_exempt", jsonField(got, "commission_policy"))
 		assertNilField(t, got, "note")
 		assertValidTimestamp(t, jsonField(got, "created_at"), "created_at")
@@ -1125,11 +1127,11 @@ func TestCustomers_OmittedFields(t *testing.T) {
 		createPayload["email"] = name + "@e2e-test.augno.com"
 		createPayload["phone"] = "555-000-1234"
 		createPayload["url"] = "https://original.e2e.augno.com"
-		createPayload["is_edi_enabled"] = true
+		createPayload["edi_status"] = "enabled"
 		createPayload["commission_policy"] = "commission_exempt"
 		createPayload["freight_policy"] = "free_freight"
 		createPayload["default_priority"] = SeedPriorityCode
-		createPayload["default_sales_rep_user_id"] = SeedUserID
+		createPayload["default_sales_rep_id"] = SeedAccountUserID
 		createPayload["carrier_billing_type"] = "third_party"
 		createPayload["carrier_billing_account"] = "ACCT-ORIG"
 		createStatus, createBody, err := apiClient.Post(customersPath+"?include="+includeStr, createPayload, newIdempotencyKey())
@@ -1166,8 +1168,8 @@ func TestCustomers_OmittedFields(t *testing.T) {
 		assert.Equal(t, name, jsonField(got, "name"), "name should be preserved")
 		assert.Equal(t, origNumber, jsonField(got, "number"), "number should be preserved")
 		assert.Equal(t, "normal", jsonField(got, "status"), "status should be preserved")
-		assert.Equal(t, "true", jsonField(got, "is_edi_enabled"), "is_edi_enabled should be preserved")
-		assert.Equal(t, "false", jsonField(got, "is_parent_account"), "is_parent_account should be preserved")
+		assert.Equal(t, "enabled", jsonField(got, "edi_status"), "edi_status should be preserved")
+		assert.Equal(t, "standalone", jsonField(got, "relationship_type"), "relationship_type should be preserved")
 		assert.Equal(t, "commission_exempt", jsonField(got, "commission_policy"), "commission_policy should be preserved")
 		assert.Equal(t, origCreatedAt, jsonField(got, "created_at"), "created_at should not change")
 		assertValidTimestamp(t, jsonField(got, "updated_at"), "updated_at")
@@ -1194,6 +1196,7 @@ func TestCustomers_OmittedFields(t *testing.T) {
 		sr := jsonObject(defaults, "sales_rep")
 		require.NotNil(t, sr, "sales_rep should be preserved")
 		assert.Equal(t, SeedAccountUserID, jsonField(sr, "id"))
+		assert.Equal(t, "account_user", jsonField(sr, "object"))
 
 		// Preserved freight_preferences
 		fp := jsonObject(got, "freight_preferences")
@@ -1681,7 +1684,7 @@ func TestCustomers_ClearNullableDefaults(t *testing.T) {
 
 	// Create customer with all default fields set.
 	clrPayload := validCustomerBody(uniqueName("e2e-cust-clr"))
-	clrPayload["default_sales_rep_user_id"] = SeedUserID
+	clrPayload["default_sales_rep_id"] = SeedAccountUserID
 	cust := createAndCleanup(t, customersPath+includeQS, clrPayload)
 	custID := jsonField(cust, "id")
 
@@ -1700,7 +1703,7 @@ func TestCustomers_ClearNullableDefaults(t *testing.T) {
 	patchStatus, patchBody, err := apiClient.Patch(
 		customersPath+"/"+custID+includeQS,
 		map[string]any{
-			"default_sales_rep_user_id": nil,
+			"default_sales_rep_id": nil,
 		},
 		newIdempotencyKey(),
 	)

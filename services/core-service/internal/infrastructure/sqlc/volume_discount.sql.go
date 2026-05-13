@@ -181,15 +181,21 @@ func (q *Queries) GetVolumeDiscount(ctx context.Context, arg GetVolumeDiscountPa
 const getVolumeDiscountAttributes = `-- name: GetVolumeDiscountAttributes :many
 SELECT
     a.id,
-    a.text AS name
+    a.text AS name,
+    a.color_code,
+    a.created_at,
+    a.updated_at
 FROM ` + "`" + `_quantity_discounts_attributes` + "`" + ` qda
 JOIN attribute a ON a.id = qda.A
 WHERE qda.B = ?
 `
 
 type GetVolumeDiscountAttributesRow struct {
-	ID   string
-	Name string
+	ID        string
+	Name      string
+	ColorCode string
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 func (q *Queries) GetVolumeDiscountAttributes(ctx context.Context, quantityDiscountID string) ([]GetVolumeDiscountAttributesRow, error) {
@@ -201,7 +207,13 @@ func (q *Queries) GetVolumeDiscountAttributes(ctx context.Context, quantityDisco
 	var items []GetVolumeDiscountAttributesRow
 	for rows.Next() {
 		var i GetVolumeDiscountAttributesRow
-		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.ColorCode,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -219,6 +231,9 @@ const getVolumeDiscountAttributesByDiscountIDs = `-- name: GetVolumeDiscountAttr
 SELECT
     a.id,
     a.text AS name,
+    a.color_code,
+    a.created_at,
+    a.updated_at,
     qda.B AS quantity_discount_id
 FROM ` + "`" + `_quantity_discounts_attributes` + "`" + ` qda
 JOIN attribute a ON a.id = qda.A
@@ -228,6 +243,9 @@ WHERE qda.B IN (/*SLICE:quantity_discount_ids*/?)
 type GetVolumeDiscountAttributesByDiscountIDsRow struct {
 	ID                 string
 	Name               string
+	ColorCode          string
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
 	QuantityDiscountID string
 }
 
@@ -250,7 +268,14 @@ func (q *Queries) GetVolumeDiscountAttributesByDiscountIDs(ctx context.Context, 
 	var items []GetVolumeDiscountAttributesByDiscountIDsRow
 	for rows.Next() {
 		var i GetVolumeDiscountAttributesByDiscountIDsRow
-		if err := rows.Scan(&i.ID, &i.Name, &i.QuantityDiscountID); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.ColorCode,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.QuantityDiscountID,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -267,15 +292,21 @@ func (q *Queries) GetVolumeDiscountAttributesByDiscountIDs(ctx context.Context, 
 const getVolumeDiscountCategories = `-- name: GetVolumeDiscountCategories :many
 SELECT
     ic.id,
-    ic.name
+    ic.name,
+    ic.item_category_type_code,
+    ic.created_at,
+    ic.updated_at
 FROM ` + "`" + `_item_categories_quantity_discounts` + "`" + ` icqd
 JOIN item_category ic ON ic.id = icqd.A
 WHERE icqd.B = ?
 `
 
 type GetVolumeDiscountCategoriesRow struct {
-	ID   string
-	Name string
+	ID                   string
+	Name                 string
+	ItemCategoryTypeCode string
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
 }
 
 func (q *Queries) GetVolumeDiscountCategories(ctx context.Context, quantityDiscountID string) ([]GetVolumeDiscountCategoriesRow, error) {
@@ -287,7 +318,13 @@ func (q *Queries) GetVolumeDiscountCategories(ctx context.Context, quantityDisco
 	var items []GetVolumeDiscountCategoriesRow
 	for rows.Next() {
 		var i GetVolumeDiscountCategoriesRow
-		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.ItemCategoryTypeCode,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -305,6 +342,9 @@ const getVolumeDiscountCategoriesByDiscountIDs = `-- name: GetVolumeDiscountCate
 SELECT
     ic.id,
     ic.name,
+    ic.item_category_type_code,
+    ic.created_at,
+    ic.updated_at,
     icqd.B AS quantity_discount_id
 FROM ` + "`" + `_item_categories_quantity_discounts` + "`" + ` icqd
 JOIN item_category ic ON ic.id = icqd.A
@@ -312,9 +352,12 @@ WHERE icqd.B IN (/*SLICE:quantity_discount_ids*/?)
 `
 
 type GetVolumeDiscountCategoriesByDiscountIDsRow struct {
-	ID                 string
-	Name               string
-	QuantityDiscountID string
+	ID                   string
+	Name                 string
+	ItemCategoryTypeCode string
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+	QuantityDiscountID   string
 }
 
 func (q *Queries) GetVolumeDiscountCategoriesByDiscountIDs(ctx context.Context, quantityDiscountIds []string) ([]GetVolumeDiscountCategoriesByDiscountIDsRow, error) {
@@ -336,7 +379,14 @@ func (q *Queries) GetVolumeDiscountCategoriesByDiscountIDs(ctx context.Context, 
 	var items []GetVolumeDiscountCategoriesByDiscountIDsRow
 	for rows.Next() {
 		var i GetVolumeDiscountCategoriesByDiscountIDsRow
-		if err := rows.Scan(&i.ID, &i.Name, &i.QuantityDiscountID); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.ItemCategoryTypeCode,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.QuantityDiscountID,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -354,16 +404,26 @@ const getVolumeDiscountCustomerGroups = `-- name: GetVolumeDiscountCustomerGroup
 SELECT
     agqd.id,
     agqd.account_group_id,
-    ag.name
+    ag.name,
+    ag.commission_status_code,
+    ag.freight_status_code,
+    ag.account_group_type_code,
+    ag.created_at,
+    ag.updated_at
 FROM account_group_quantity_discount agqd
 JOIN account_group ag ON ag.id = agqd.account_group_id
 WHERE agqd.quantity_discount_id = ?
 `
 
 type GetVolumeDiscountCustomerGroupsRow struct {
-	ID             string
-	AccountGroupID string
-	Name           string
+	ID                   string
+	AccountGroupID       string
+	Name                 string
+	CommissionStatusCode string
+	FreightStatusCode    string
+	AccountGroupTypeCode string
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
 }
 
 func (q *Queries) GetVolumeDiscountCustomerGroups(ctx context.Context, quantityDiscountID string) ([]GetVolumeDiscountCustomerGroupsRow, error) {
@@ -375,7 +435,16 @@ func (q *Queries) GetVolumeDiscountCustomerGroups(ctx context.Context, quantityD
 	var items []GetVolumeDiscountCustomerGroupsRow
 	for rows.Next() {
 		var i GetVolumeDiscountCustomerGroupsRow
-		if err := rows.Scan(&i.ID, &i.AccountGroupID, &i.Name); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.AccountGroupID,
+			&i.Name,
+			&i.CommissionStatusCode,
+			&i.FreightStatusCode,
+			&i.AccountGroupTypeCode,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -394,6 +463,11 @@ SELECT
     agqd.id,
     agqd.account_group_id,
     ag.name,
+    ag.commission_status_code,
+    ag.freight_status_code,
+    ag.account_group_type_code,
+    ag.created_at,
+    ag.updated_at,
     agqd.quantity_discount_id
 FROM account_group_quantity_discount agqd
 JOIN account_group ag ON ag.id = agqd.account_group_id
@@ -401,10 +475,15 @@ WHERE agqd.quantity_discount_id IN (/*SLICE:quantity_discount_ids*/?)
 `
 
 type GetVolumeDiscountCustomerGroupsByDiscountIDsRow struct {
-	ID                 string
-	AccountGroupID     string
-	Name               string
-	QuantityDiscountID string
+	ID                   string
+	AccountGroupID       string
+	Name                 string
+	CommissionStatusCode string
+	FreightStatusCode    string
+	AccountGroupTypeCode string
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+	QuantityDiscountID   string
 }
 
 func (q *Queries) GetVolumeDiscountCustomerGroupsByDiscountIDs(ctx context.Context, quantityDiscountIds []string) ([]GetVolumeDiscountCustomerGroupsByDiscountIDsRow, error) {
@@ -430,6 +509,11 @@ func (q *Queries) GetVolumeDiscountCustomerGroupsByDiscountIDs(ctx context.Conte
 			&i.ID,
 			&i.AccountGroupID,
 			&i.Name,
+			&i.CommissionStatusCode,
+			&i.FreightStatusCode,
+			&i.AccountGroupTypeCode,
+			&i.CreatedAt,
+			&i.UpdatedAt,
 			&i.QuantityDiscountID,
 		); err != nil {
 			return nil, err
@@ -448,15 +532,23 @@ func (q *Queries) GetVolumeDiscountCustomerGroupsByDiscountIDs(ctx context.Conte
 const getVolumeDiscountProductLines = `-- name: GetVolumeDiscountProductLines :many
 SELECT
     pl.id,
-    pl.name
+    pl.name,
+    pl.is_commission_exempt,
+    pl.is_freight_exempt,
+    pl.created_at,
+    pl.updated_at
 FROM ` + "`" + `_product_lines_quantity_discounts` + "`" + ` plqd
 JOIN product_line pl ON pl.id = plqd.A
 WHERE plqd.B = ?
 `
 
 type GetVolumeDiscountProductLinesRow struct {
-	ID   string
-	Name string
+	ID                 string
+	Name               string
+	IsCommissionExempt bool
+	IsFreightExempt    bool
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
 }
 
 func (q *Queries) GetVolumeDiscountProductLines(ctx context.Context, quantityDiscountID string) ([]GetVolumeDiscountProductLinesRow, error) {
@@ -468,7 +560,14 @@ func (q *Queries) GetVolumeDiscountProductLines(ctx context.Context, quantityDis
 	var items []GetVolumeDiscountProductLinesRow
 	for rows.Next() {
 		var i GetVolumeDiscountProductLinesRow
-		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.IsCommissionExempt,
+			&i.IsFreightExempt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -486,6 +585,10 @@ const getVolumeDiscountProductLinesByDiscountIDs = `-- name: GetVolumeDiscountPr
 SELECT
     pl.id,
     pl.name,
+    pl.is_commission_exempt,
+    pl.is_freight_exempt,
+    pl.created_at,
+    pl.updated_at,
     plqd.B AS quantity_discount_id
 FROM ` + "`" + `_product_lines_quantity_discounts` + "`" + ` plqd
 JOIN product_line pl ON pl.id = plqd.A
@@ -495,6 +598,10 @@ WHERE plqd.B IN (/*SLICE:quantity_discount_ids*/?)
 type GetVolumeDiscountProductLinesByDiscountIDsRow struct {
 	ID                 string
 	Name               string
+	IsCommissionExempt bool
+	IsFreightExempt    bool
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
 	QuantityDiscountID string
 }
 
@@ -517,7 +624,15 @@ func (q *Queries) GetVolumeDiscountProductLinesByDiscountIDs(ctx context.Context
 	var items []GetVolumeDiscountProductLinesByDiscountIDsRow
 	for rows.Next() {
 		var i GetVolumeDiscountProductLinesByDiscountIDsRow
-		if err := rows.Scan(&i.ID, &i.Name, &i.QuantityDiscountID); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.IsCommissionExempt,
+			&i.IsFreightExempt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.QuantityDiscountID,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -658,16 +773,30 @@ const getVolumeDiscountUnits = `-- name: GetVolumeDiscountUnits :many
 SELECT
     u.id,
     u.name,
-    u.abbreviation
+    u.abbreviation,
+    u.unit_dimension_code AS type,
+    u.ratio_numerator,
+    u.ratio_denominator,
+    u.offset_numerator,
+    u.offset_denominator,
+    u.created_at,
+    u.updated_at
 FROM ` + "`" + `_quantity_discounts_units` + "`" + ` qdu
 JOIN unit u ON u.id = qdu.B
 WHERE qdu.A = ?
 `
 
 type GetVolumeDiscountUnitsRow struct {
-	ID           string
-	Name         string
-	Abbreviation string
+	ID                string
+	Name              string
+	Abbreviation      string
+	Type              string
+	RatioNumerator    string
+	RatioDenominator  string
+	OffsetNumerator   string
+	OffsetDenominator string
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
 }
 
 func (q *Queries) GetVolumeDiscountUnits(ctx context.Context, quantityDiscountID string) ([]GetVolumeDiscountUnitsRow, error) {
@@ -679,7 +808,18 @@ func (q *Queries) GetVolumeDiscountUnits(ctx context.Context, quantityDiscountID
 	var items []GetVolumeDiscountUnitsRow
 	for rows.Next() {
 		var i GetVolumeDiscountUnitsRow
-		if err := rows.Scan(&i.ID, &i.Name, &i.Abbreviation); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Abbreviation,
+			&i.Type,
+			&i.RatioNumerator,
+			&i.RatioDenominator,
+			&i.OffsetNumerator,
+			&i.OffsetDenominator,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -698,6 +838,13 @@ SELECT
     u.id,
     u.name,
     u.abbreviation,
+    u.unit_dimension_code AS type,
+    u.ratio_numerator,
+    u.ratio_denominator,
+    u.offset_numerator,
+    u.offset_denominator,
+    u.created_at,
+    u.updated_at,
     qdu.A AS quantity_discount_id
 FROM ` + "`" + `_quantity_discounts_units` + "`" + ` qdu
 JOIN unit u ON u.id = qdu.B
@@ -708,6 +855,13 @@ type GetVolumeDiscountUnitsByDiscountIDsRow struct {
 	ID                 string
 	Name               string
 	Abbreviation       string
+	Type               string
+	RatioNumerator     string
+	RatioDenominator   string
+	OffsetNumerator    string
+	OffsetDenominator  string
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
 	QuantityDiscountID string
 }
 
@@ -734,6 +888,13 @@ func (q *Queries) GetVolumeDiscountUnitsByDiscountIDs(ctx context.Context, quant
 			&i.ID,
 			&i.Name,
 			&i.Abbreviation,
+			&i.Type,
+			&i.RatioNumerator,
+			&i.RatioDenominator,
+			&i.OffsetNumerator,
+			&i.OffsetDenominator,
+			&i.CreatedAt,
+			&i.UpdatedAt,
 			&i.QuantityDiscountID,
 		); err != nil {
 			return nil, err

@@ -36,6 +36,7 @@ func NewAddressValidationSvc(config *AddressValidationSvcConfig) domain.AddressV
 	}
 }
 
+// Autocomplete calls Google Places without tenant identity checks; used from public OpenAPI for checkout-style flows where callers may be unauthenticated.
 func (s *addressValidationSvcImpl) Autocomplete(ctx context.Context, input string, sessionToken *string) ([]domain.AddressSuggestion, *apierror.APIError) {
 	ctx, span := addressValidationSvcTracer.Start(ctx, "service.address_validation.autocomplete")
 	defer span.End()
@@ -110,6 +111,7 @@ func (s *addressValidationSvcImpl) Autocomplete(ctx context.Context, input strin
 	return suggestions, nil
 }
 
+// GetPlaceDetails calls Google Places without tenant identity checks; pairs with Autocomplete for public address entry flows.
 func (s *addressValidationSvcImpl) GetPlaceDetails(ctx context.Context, placeID string, sessionToken *string) (*domain.AddressDetailsResult, *apierror.APIError) {
 	ctx, span := addressValidationSvcTracer.Start(ctx, "service.address_validation.place_details")
 	defer span.End()
@@ -156,6 +158,7 @@ func (s *addressValidationSvcImpl) GetPlaceDetails(ctx context.Context, placeID 
 	}, nil
 }
 
+// ValidateAddress calls Google Address Validation without tenant identity checks; exposed publicly alongside autocomplete/details.
 func (s *addressValidationSvcImpl) ValidateAddress(ctx context.Context, addressLine1 string, addressLine2 *string, city, state, postalCode, country string) (*domain.ValidatedAddress, *apierror.APIError) {
 	ctx, span := addressValidationSvcTracer.Start(ctx, "service.address_validation.validate")
 	defer span.End()

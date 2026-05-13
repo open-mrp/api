@@ -34,19 +34,31 @@ func itemCategoryFullToProto(ic *domain.ItemCategoryFull) *pb.ItemCategoryInfo {
 		info.Properties = make([]*pb.ItemCategoryPropertyInfo, len(ic.Properties))
 		for i, p := range ic.Properties {
 			info.Properties[i] = &pb.ItemCategoryPropertyInfo{
-				Id:   p.ID,
-				Name: p.Name,
+				Id:        p.ID,
+				Name:      p.Name,
+				CreatedAt: timestamppb.New(p.CreatedAt),
+				UpdatedAt: timestamppb.New(p.UpdatedAt),
 			}
 		}
 	}
 
 	if ic.UnitGroup != nil {
-		info.UnitGroup = &pb.ItemCategoryUnitGroupInfo{
+		ugInfo := &pb.ItemCategoryUnitGroupInfo{
 			Id:         ic.UnitGroup.ID,
 			Name:       ic.UnitGroup.Name,
 			BaseUnitId: ic.UnitGroup.BaseUnitID,
 			Type:       ic.UnitGroup.Type,
+			CreatedAt:  timestamppb.New(ic.UnitGroup.CreatedAt),
+			UpdatedAt:  timestamppb.New(ic.UnitGroup.UpdatedAt),
+			BaseUnit:   lightUnitToProto(ic.UnitGroup.BaseUnit),
 		}
+		if len(ic.UnitGroup.AssociatedUnits) > 0 {
+			ugInfo.AssociatedUnits = make([]*pb.ItemCategoryUnitGroupUnitInfo, len(ic.UnitGroup.AssociatedUnits))
+			for i, u := range ic.UnitGroup.AssociatedUnits {
+				ugInfo.AssociatedUnits[i] = itemCategoryUnitGroupUnitToProto(u)
+			}
+		}
+		info.UnitGroup = ugInfo
 	}
 
 	return info
@@ -58,10 +70,11 @@ func (h *gRPCHandler) ListItemCategories(ctx context.Context, req *pb.ListItemCa
 	}
 
 	params := domain.ListItemCategoriesParams{
-		Cursor: req.Cursor,
-		Limit:  req.Limit,
-		Query:  req.Query,
-		Type:   req.Type,
+		Cursor:   req.Cursor,
+		Limit:    req.Limit,
+		Query:    req.Query,
+		Type:     req.Type,
+		Includes: req.Includes,
 	}
 
 	result, apiErr := h.itemCategorySvc.ListItemCategories(ctx, params)
@@ -90,7 +103,10 @@ func (h *gRPCHandler) GetItemCategory(ctx context.Context, req *pb.GetItemCatego
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	itemCategory, apiErr := h.itemCategorySvc.GetItemCategory(ctx, req.Id)
+	itemCategory, apiErr := h.itemCategorySvc.GetItemCategory(ctx, domain.GetItemCategoryParams{
+		ItemCategoryID: req.Id,
+		Includes:       req.Includes,
+	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
@@ -112,6 +128,7 @@ func (h *gRPCHandler) CreateItemCategory(ctx context.Context, req *pb.CreateItem
 		Name:                 req.Name,
 		ItemCategoryTypeCode: req.Type,
 		UnitGroupID:          req.UnitGroupId,
+		Includes:             req.Includes,
 	}
 
 	itemCategory, apiErr := h.itemCategorySvc.CreateItemCategory(ctx, params)
@@ -136,6 +153,7 @@ func (h *gRPCHandler) UpdateItemCategory(ctx context.Context, req *pb.UpdateItem
 		ItemCategoryID: req.Id,
 		Name:           req.Name,
 		Notes:          req.Notes,
+		Includes:       req.Includes,
 	}
 
 	itemCategory, apiErr := h.itemCategorySvc.UpdateItemCategory(ctx, params)

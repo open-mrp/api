@@ -177,6 +177,15 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	if apiErr := httptransport.RejectUnknownQueryParams(r.URL, any(req), e.IncludeConfig != nil); apiErr != nil {
+		tracing.RecordControllerError(span, apiErr)
+		if span.IsRecording() {
+			span.SetAttributes(attribute.String(httptransport.AttrErrorType, "unknown_query_parameter"))
+		}
+		httptransport.RespondWithAPIError(ctx, w, apiErr)
+		return
+	}
+
 	// Parse and validate include parameters
 	requestedIncludes, apiErr := e.parseIncludeParams(r)
 	if apiErr != nil {
@@ -489,17 +498,6 @@ func (e *APIEndpoint[TReq, TResp]) parseIncludeParams(r *http.Request) (map[stri
 // respondWithIncludeTransform marshals the response to a generic map, applies
 // the include collapse transform, and writes the result as JSON.
 func (e *APIEndpoint[TReq, TResp]) respondWithIncludeTransform(ctx context.Context, w http.ResponseWriter, resp TResp, requested map[string]bool, opts ...httptransport.RespondOption) {
-	// Merge default includes into the requested set before validation.
-	if defaults := e.IncludeConfig.DefaultFieldSet(); len(defaults) > 0 {
-		if requested == nil {
-			requested = defaults
-		} else {
-			for k := range defaults {
-				requested[k] = true
-			}
-		}
-	}
-
 	// Validate that included expandable stubs have required fields populated.
 	// Returns 500 rather than serving invalid data to the client.
 	if err := ValidateExpandableFields(resp, requested, e.IncludeConfig); err != nil {

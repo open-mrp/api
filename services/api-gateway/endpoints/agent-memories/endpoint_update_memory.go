@@ -24,7 +24,7 @@ type UpdateMemoryRequest struct {
 	// Entity type this memory is scoped to (e.g. "customer", "product").
 	EntityType *string `json:"entity_type,omitempty" nullable:"true" validate:"omitempty,max=255"`
 	// Entity ID.
-	EntityID *string `json:"entity_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
+	EntityID *string `json:"entity_id,omitempty" nullable:"true" validate:"omitempty"`
 	// Importance score between 0 and 1.
 	Importance float64 `json:"importance,omitempty"`
 	// ISO 8601 expiration timestamp.

@@ -5,6 +5,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	pb "github.com/augno/api/shared/proto/core"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func PurchaseOrderSummaryPresenter(info *pb.PurchaseOrderSummaryInfo) apiresource.PurchaseOrderSummary {
@@ -98,18 +99,22 @@ func PurchaseOrderDetailPresenter(info *pb.PurchaseOrderInfo) apiresource.Purcha
 	// Bill-to address
 	if info.BillingAddressId != "" {
 		d.BillToAddress = buildAddressFromProto(
-			info.BillingAddressId, info.BillToName, info.BillToStreetLine_1, info.BillToStreetLine_2,
+			info.BillingAddressId, info.BillToAddressType,
+			info.BillToName, info.BillToStreetLine_1, info.BillToStreetLine_2,
 			info.BillToLocality, info.BillToState, info.BillToPostalCode, info.BillToCountry,
 			info.BillToPhone, info.BillToEmail,
+			info.BillToAddressCreatedAt, info.BillToAddressUpdatedAt,
 		)
 	}
 
 	// Ship-to address
 	if info.ShippingAddressId != "" {
 		d.ShipToAddress = buildAddressFromProto(
-			info.ShippingAddressId, info.ShipToName, info.ShipToStreetLine_1, info.ShipToStreetLine_2,
+			info.ShippingAddressId, info.ShipToAddressType,
+			info.ShipToName, info.ShipToStreetLine_1, info.ShipToStreetLine_2,
 			info.ShipToLocality, info.ShipToState, info.ShipToPostalCode, info.ShipToCountry,
 			info.ShipToPhone, info.ShipToEmail,
+			info.ShipToAddressCreatedAt, info.ShipToAddressUpdatedAt,
 		)
 	}
 
@@ -126,6 +131,12 @@ func PurchaseOrderDetailPresenter(info *pb.PurchaseOrderInfo) apiresource.Purcha
 			d.Carrier.CustomerPortalVisibility = constants.CustomerPortalVisibilityVisible
 		} else {
 			d.Carrier.CustomerPortalVisibility = constants.CustomerPortalVisibilityHidden
+		}
+		if info.CarrierCreatedAt != nil {
+			d.Carrier.CreatedAt = info.CarrierCreatedAt.AsTime()
+		}
+		if info.CarrierUpdatedAt != nil {
+			d.Carrier.UpdatedAt = info.CarrierUpdatedAt.AsTime()
 		}
 	}
 
@@ -146,6 +157,12 @@ func PurchaseOrderDetailPresenter(info *pb.PurchaseOrderInfo) apiresource.Purcha
 		if info.ServiceLevelToken != nil {
 			d.ServiceLevel.ServiceLevelToken = constants.ServiceLevelCode(*info.ServiceLevelToken)
 		}
+		if info.ServiceLevelCreatedAt != nil {
+			d.ServiceLevel.CreatedAt = info.ServiceLevelCreatedAt.AsTime()
+		}
+		if info.ServiceLevelUpdatedAt != nil {
+			d.ServiceLevel.UpdatedAt = info.ServiceLevelUpdatedAt.AsTime()
+		}
 	}
 
 	// Payment term
@@ -162,6 +179,12 @@ func PurchaseOrderDetailPresenter(info *pb.PurchaseOrderInfo) apiresource.Purcha
 		} else {
 			d.PaymentTerm.Status = constants.PaymentTermStatusInactive
 		}
+		if info.PaymentTermCreatedAt != nil {
+			d.PaymentTerm.CreatedAt = info.PaymentTermCreatedAt.AsTime()
+		}
+		if info.PaymentTermUpdatedAt != nil {
+			d.PaymentTerm.UpdatedAt = info.PaymentTermUpdatedAt.AsTime()
+		}
 	}
 
 	// Shipping term
@@ -176,6 +199,12 @@ func PurchaseOrderDetailPresenter(info *pb.PurchaseOrderInfo) apiresource.Purcha
 		if info.ShippingTermType != nil {
 			d.ShippingTerm.Type = constants.ShippingTermType(*info.ShippingTermType)
 		}
+		if info.ShippingTermCreatedAt != nil {
+			d.ShippingTerm.CreatedAt = info.ShippingTermCreatedAt.AsTime()
+		}
+		if info.ShippingTermUpdatedAt != nil {
+			d.ShippingTerm.UpdatedAt = info.ShippingTermUpdatedAt.AsTime()
+		}
 	}
 
 	// Receiving order
@@ -183,6 +212,22 @@ func PurchaseOrderDetailPresenter(info *pb.PurchaseOrderInfo) apiresource.Purcha
 		d.ReceivingOrder = &apiresource.ReceivingOrder{
 			ID:     *info.ReceivingOrderId,
 			Object: constants.ObjectTypeReceivingOrder,
+		}
+		if info.ReceivingOrder != nil {
+			ro := info.ReceivingOrder
+			d.ReceivingOrder.Number = ro.Number
+			d.ReceivingOrder.CreatedAt = grpcutil.TimestampToTime(ro.CreatedAt)
+			d.ReceivingOrder.UpdatedAt = grpcutil.TimestampToTime(ro.UpdatedAt)
+			d.ReceivingOrder.Note = ro.Note
+			if ro.CompletedAt != nil {
+				t := grpcutil.TimestampToTime(ro.CompletedAt)
+				d.ReceivingOrder.CompletedAt = &t
+			}
+			d.ReceivingOrder.PurchaseOrder = &apiresource.SalesOrder{
+				ID:     ro.PurchaseOrderId,
+				Object: constants.ObjectTypeSalesOrder,
+				Number: ro.PurchaseOrderNumber,
+			}
 		}
 	}
 
@@ -217,14 +262,12 @@ func PurchaseOrderDetailPresenter(info *pb.PurchaseOrderInfo) apiresource.Purcha
 		d.ScheduledAt = &t
 	}
 
-	// Lines
-	if len(info.Lines) > 0 {
-		lines := make([]apiresource.PurchaseOrderLineDetail, len(info.Lines))
-		for i, l := range info.Lines {
-			lines[i] = PurchaseOrderLineDetailPresenter(l)
-		}
-		d.Lines = apiresource.NewList(lines, apiresource.PageInfo{})
+	// Lines — always populate so include system can emit an empty list when requested.
+	lines := make([]apiresource.PurchaseOrderLineDetail, len(info.Lines))
+	for i, l := range info.Lines {
+		lines[i] = PurchaseOrderLineDetailPresenter(l)
 	}
+	d.Lines = apiresource.NewList(lines, apiresource.PageInfo{})
 
 	return d
 }
@@ -369,17 +412,31 @@ func PurchaseOrderListPresenter(resp *pb.ListPurchaseOrdersResponse) *apiresourc
 }
 
 func buildAddressFromProto(
-	id string, name, line1, line2, locality, state, postalCode, country, phone, email *string,
+	id string, addrType *string,
+	name, line1, line2, locality, state, postalCode, country, phone, email *string,
+	createdAt, updatedAt *timestamppb.Timestamp,
 ) *apiresource.Address {
 	addr := &apiresource.Address{
 		ID:     id,
 		Object: constants.ObjectTypeAddress,
+		Type:   constants.AddressTypeStandard,
 		Phone:  phone,
 		Email:  email,
 	}
 
+	if addrType != nil {
+		addr.Type = constants.AddressType(*addrType)
+	}
+
 	if name != nil {
 		addr.Name = *name
+	}
+
+	if createdAt != nil {
+		addr.CreatedAt = createdAt.AsTime()
+	}
+	if updatedAt != nil {
+		addr.UpdatedAt = updatedAt.AsTime()
 	}
 
 	countryStr := ""

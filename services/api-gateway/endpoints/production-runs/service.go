@@ -16,7 +16,7 @@ import (
 
 type ProductionRunSvc interface {
 	ListProductionRuns(ctx context.Context, req *ListProductionRunsRequest) (*apiresource.List[apiresource.ProductionRunSummary], *apierror.APIError)
-	GetProductionRun(ctx context.Context, req *GetProductionRunRequest) (*apiresource.ProductionRunDetail, *apierror.APIError)
+	GetProductionRun(ctx context.Context, req *RetrieveProductionRunRequest) (*apiresource.ProductionRunDetail, *apierror.APIError)
 	CreateProductionRun(ctx context.Context, req *CreateProductionRunRequest) (*apiresource.ProductionRunDetail, *apierror.APIError)
 	UpdateProductionRun(ctx context.Context, req *UpdateProductionRunRequest) (*apiresource.ProductionRunDetail, *apierror.APIError)
 	DeleteProductionRun(ctx context.Context, req *DeleteProductionRunRequest) (*apiresource.EmptyResource, *apierror.APIError)
@@ -75,7 +75,7 @@ func (m *productionRunSvcImpl) ListProductionRuns(ctx context.Context, req *List
 	return ProductionRunListPresenter(resp), nil
 }
 
-func (m *productionRunSvcImpl) GetProductionRun(ctx context.Context, req *GetProductionRunRequest) (*apiresource.ProductionRunDetail, *apierror.APIError) {
+func (m *productionRunSvcImpl) GetProductionRun(ctx context.Context, req *RetrieveProductionRunRequest) (*apiresource.ProductionRunDetail, *apierror.APIError) {
 	pbReq := &pb.GetProductionRunRequest{
 		Id: req.ProductionRunID,
 	}

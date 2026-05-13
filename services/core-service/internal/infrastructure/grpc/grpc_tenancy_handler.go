@@ -16,7 +16,7 @@ func tenancyRoleToProto(r *domain.TenancyRole) *pb.TenancyRoleProto {
 	return &pb.TenancyRoleProto{
 		Id:           r.ID,
 		Name:         r.Name,
-		RoleTypeCode: r.RoleTypeCode,
+		RoleTypeCode: r.RoleType,
 		Permissions:  r.Permissions,
 		CreatedAt:    timestamppb.New(r.CreatedAt),
 		UpdatedAt:    timestamppb.New(r.UpdatedAt),

@@ -8,6 +8,7 @@ import (
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/appctx"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
@@ -28,7 +29,7 @@ func rateInputToProto(r *apirequest.RateInput) *pb.CreateRateInput {
 
 type PartSvc interface {
 	ListParts(ctx context.Context, req *ListPartsRequest) (*apiresource.List[apiresource.Part], *apierror.APIError)
-	GetPart(ctx context.Context, req *GetPartRequest) (*apiresource.Part, *apierror.APIError)
+	GetPart(ctx context.Context, req *RetrievePartRequest) (*apiresource.Part, *apierror.APIError)
 	CreatePart(ctx context.Context, req *CreatePartRequest) (*apiresource.Part, *apierror.APIError)
 	UpdatePart(ctx context.Context, req *UpdatePartRequest) (*apiresource.Part, *apierror.APIError)
 	DeletePart(ctx context.Context, req *DeletePartRequest) (*apiresource.Part, *apierror.APIError)
@@ -68,6 +69,7 @@ func (m *partSvcImpl) ListParts(ctx context.Context, req *ListPartsRequest) (*ap
 		Query:        req.Query,
 		CategoryIds:  req.CategoryIDs,
 		AttributeIds: req.AttributeIDs,
+		Includes:     appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	if req.StartDate != nil {
@@ -89,9 +91,10 @@ func (m *partSvcImpl) ListParts(ctx context.Context, req *ListPartsRequest) (*ap
 	return PartListPresenter(resp), nil
 }
 
-func (m *partSvcImpl) GetPart(ctx context.Context, req *GetPartRequest) (*apiresource.Part, *apierror.APIError) {
+func (m *partSvcImpl) GetPart(ctx context.Context, req *RetrievePartRequest) (*apiresource.Part, *apierror.APIError) {
 	pbReq := &pb.GetPartRequest{
-		Id: req.ItemID,
+		Id:       req.ItemID,
+		Includes: appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, partSvcTracer, "service.parts.get", domain.ServiceName,
@@ -117,6 +120,7 @@ func (m *partSvcImpl) CreatePart(ctx context.Context, req *CreatePartRequest) (*
 		UnitCost:     rateInputToProto(req.UnitCost),
 		BurnRate:     rateInputToProto(req.BurnRate),
 		AttributeIds: req.AttributeIDs,
+		Includes:     appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, partSvcTracer, "service.parts.create", domain.ServiceName,
@@ -134,8 +138,9 @@ func (m *partSvcImpl) CreatePart(ctx context.Context, req *CreatePartRequest) (*
 
 func (m *partSvcImpl) UpdatePart(ctx context.Context, req *UpdatePartRequest) (*apiresource.Part, *apierror.APIError) {
 	pbReq := &pb.UpdatePartRequest{
-		Id:  req.ItemID,
-		Sku: req.SKU,
+		Id:       req.ItemID,
+		Sku:      req.SKU,
+		Includes: appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	if req.Description != nil {

@@ -75,7 +75,7 @@ func TestUnitSvcTestSuite(t *testing.T) {
 }
 
 func internalIdentityCtx(targetAccountID string) context.Context {
-	adminCode := string(constants.RoleTypeCodeAdmin)
+	adminCode := string(constants.RoleTypeAdmin)
 	return appctx.WithIdentity(context.Background(), &types.Identity{
 		Type:   types.IdentityActorTypeUser,
 		Target: &types.IdentityTarget{AccountID: targetAccountID},
@@ -83,7 +83,7 @@ func internalIdentityCtx(targetAccountID string) context.Context {
 			RelationType: types.IdentityRelationTypeInternal,
 			ID:           "usr_test123",
 			AccountID:    &targetAccountID,
-			RoleTypeCode: &adminCode,
+			RoleType:     &adminCode,
 			Permissions: map[string]bool{
 				"units:read":   true,
 				"units:create": true,
@@ -102,7 +102,7 @@ func idempotencyCtx(ctx context.Context) context.Context {
 }
 
 func readOnlyIdentityCtx(targetAccountID string) context.Context {
-	customCode := string(constants.RoleTypeCodeCustom)
+	customCode := string(constants.RoleTypeCustom)
 	return appctx.WithIdentity(context.Background(), &types.Identity{
 		Type:   types.IdentityActorTypeUser,
 		Target: &types.IdentityTarget{AccountID: targetAccountID},
@@ -110,7 +110,7 @@ func readOnlyIdentityCtx(targetAccountID string) context.Context {
 			RelationType: types.IdentityRelationTypeInternal,
 			ID:           "usr_test123",
 			AccountID:    &targetAccountID,
-			RoleTypeCode: &customCode,
+			RoleType:     &customCode,
 			Permissions: map[string]bool{
 				"units:read": true,
 			},
@@ -171,13 +171,13 @@ func (suite *UnitSvcTestSuite) TestGetUnit_MissingIdentity() {
 }
 
 func (suite *UnitSvcTestSuite) TestGetUnit_MissingTargetAccount() {
-	adminCode := string(constants.RoleTypeCodeAdmin)
+	adminCode := string(constants.RoleTypeAdmin)
 	ctx := appctx.WithIdentity(context.Background(), &types.Identity{
 		Type: types.IdentityActorTypeUser,
 		Actor: &types.IdentityActor{
 			RelationType: types.IdentityRelationTypeInternal,
 			ID:           "usr_test123",
-			RoleTypeCode: &adminCode,
+			RoleType:     &adminCode,
 			Permissions:  map[string]bool{"units:read": true},
 		},
 	})
@@ -190,14 +190,14 @@ func (suite *UnitSvcTestSuite) TestGetUnit_MissingTargetAccount() {
 }
 
 func (suite *UnitSvcTestSuite) TestGetUnit_InsufficientPermissions() {
-	customCode := string(constants.RoleTypeCodeCustom)
+	customCode := string(constants.RoleTypeCustom)
 	ctx := appctx.WithIdentity(context.Background(), &types.Identity{
 		Type:   types.IdentityActorTypeUser,
 		Target: &types.IdentityTarget{AccountID: "ac_test123"},
 		Actor: &types.IdentityActor{
 			RelationType: types.IdentityRelationTypeInternal,
 			ID:           "usr_test123",
-			RoleTypeCode: &customCode,
+			RoleType:     &customCode,
 			Permissions:  map[string]bool{},
 		},
 	})
@@ -573,14 +573,14 @@ func (suite *UnitSvcTestSuite) TestDeleteUnit_SystemUnitRejected() {
 }
 
 func (suite *UnitSvcTestSuite) TestDeleteUnit_ExternalActorRejected() {
-	supplierCode := string(constants.RoleTypeCodeAdmin)
+	supplierCode := string(constants.RoleTypeAdmin)
 	ctx := appctx.WithIdentity(context.Background(), &types.Identity{
 		Type:   types.IdentityActorTypeUser,
 		Target: &types.IdentityTarget{AccountID: "ac_test123"},
 		Actor: &types.IdentityActor{
 			RelationType: types.IdentityRelationTypeSupplier,
 			ID:           "usr_external",
-			RoleTypeCode: &supplierCode,
+			RoleType:     &supplierCode,
 			Permissions:  map[string]bool{"units:delete": true},
 		},
 	})

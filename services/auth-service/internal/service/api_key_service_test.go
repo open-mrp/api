@@ -74,7 +74,7 @@ func (s *APIKeySvcTestSuite) newAdminCtx() context.Context {
 			RelationType: types.IdentityRelationTypeInternal,
 			ID:           "usr_test123",
 			AccountID:    new(testOwnerAccountID),
-			RoleTypeCode: new("admin"),
+			RoleType:     new("admin"),
 		},
 	}
 	ctx := appctx.WithIdentity(context.Background(), identity)

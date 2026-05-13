@@ -14,25 +14,116 @@ func rateToProto(r *domain.Rate) *pb.RateInfo {
 		return nil
 	}
 	return &pb.RateInfo{
-		Id:                r.ID,
-		Value:             r.Value,
-		NumeratorUnitId:   r.NumeratorUnitID,
-		DenominatorUnitId: r.DenominatorUnitID,
-		CreatedAt:         timestamppb.New(r.CreatedAt),
-		UpdatedAt:         timestamppb.New(r.UpdatedAt),
+		Id:                               r.ID,
+		Value:                            r.Value,
+		NumeratorUnitId:                  r.NumeratorUnitID,
+		NumeratorUnitName:                r.NumeratorUnitName,
+		NumeratorUnitAbbreviation:        r.NumeratorUnitAbbreviation,
+		NumeratorUnitType:                r.NumeratorUnitType,
+		NumeratorUnitRatioNumerator:      r.NumeratorUnitRatioNumerator,
+		NumeratorUnitRatioDenominator:    r.NumeratorUnitRatioDenominator,
+		NumeratorUnitOffsetNumerator:     r.NumeratorUnitOffsetNumerator,
+		NumeratorUnitOffsetDenominator:   r.NumeratorUnitOffsetDenominator,
+		NumeratorUnitCreatedAt:           timestamppb.New(r.NumeratorUnitCreatedAt),
+		NumeratorUnitUpdatedAt:           timestamppb.New(r.NumeratorUnitUpdatedAt),
+		DenominatorUnitId:                r.DenominatorUnitID,
+		DenominatorUnitName:              r.DenominatorUnitName,
+		DenominatorUnitAbbreviation:      r.DenominatorUnitAbbreviation,
+		DenominatorUnitType:              r.DenominatorUnitType,
+		DenominatorUnitRatioNumerator:    r.DenominatorUnitRatioNumerator,
+		DenominatorUnitRatioDenominator:  r.DenominatorUnitRatioDenominator,
+		DenominatorUnitOffsetNumerator:   r.DenominatorUnitOffsetNumerator,
+		DenominatorUnitOffsetDenominator: r.DenominatorUnitOffsetDenominator,
+		DenominatorUnitCreatedAt:         timestamppb.New(r.DenominatorUnitCreatedAt),
+		DenominatorUnitUpdatedAt:         timestamppb.New(r.DenominatorUnitUpdatedAt),
+		CreatedAt:                        timestamppb.New(r.CreatedAt),
+		UpdatedAt:                        timestamppb.New(r.UpdatedAt),
 	}
+}
+
+func lightUnitToProto(u *domain.LightUnit) *pb.UnitInfo {
+	if u == nil {
+		return nil
+	}
+	return &pb.UnitInfo{
+		Id:                u.ID,
+		Name:              u.Name,
+		Abbreviation:      u.Abbreviation,
+		Type:              u.Type,
+		RatioNumerator:    u.RatioNumerator,
+		RatioDenominator:  u.RatioDenominator,
+		OffsetNumerator:   u.OffsetNumerator,
+		OffsetDenominator: u.OffsetDenominator,
+		IsBaseUnit:        u.IsBaseUnit,
+		IsInternal:        u.AccountID != nil,
+		AccountId:         u.AccountID,
+		CreatedAt:         timestamppb.New(u.CreatedAt),
+		UpdatedAt:         timestamppb.New(u.UpdatedAt),
+	}
+}
+
+func itemCategoryUnitGroupUnitToProto(u *domain.UnitGroupUnit) *pb.ItemCategoryUnitGroupUnitInfo {
+	if u == nil {
+		return nil
+	}
+	info := &pb.ItemCategoryUnitGroupUnitInfo{
+		Id:                 u.ID,
+		UnitId:             u.UnitID,
+		UnitGroupId:        u.UnitGroupID,
+		DiscountPercentage: u.DiscountPercentage,
+		DiscountFixed:      u.DiscountFixed,
+		IsVisible:          u.IsVisible,
+		CreatedAt:          timestamppb.New(u.CreatedAt),
+		UpdatedAt:          timestamppb.New(u.UpdatedAt),
+	}
+	if u.Unit.ID != "" {
+		info.Unit = lightUnitToProto(&u.Unit)
+	}
+	return info
 }
 
 func itemCategoryToProto(c *domain.ItemCategory) *pb.ItemCategoryInfo {
 	if c == nil {
 		return nil
 	}
-	return &pb.ItemCategoryInfo{
+	info := &pb.ItemCategoryInfo{
 		Id:                   c.ID,
 		Name:                 c.Name,
 		ItemCategoryTypeCode: c.ItemCategoryTypeCode,
 		UnitGroupId:          c.UnitGroupID,
+		CreatedAt:            timestamppb.New(c.CreatedAt),
+		UpdatedAt:            timestamppb.New(c.UpdatedAt),
 	}
+	if len(c.Properties) > 0 {
+		info.Properties = make([]*pb.ItemCategoryPropertyInfo, len(c.Properties))
+		for i, p := range c.Properties {
+			info.Properties[i] = &pb.ItemCategoryPropertyInfo{
+				Id:   p.ID,
+				Name: p.Name,
+			}
+		}
+	}
+	if c.UnitGroupID != "" {
+		ugInfo := &pb.ItemCategoryUnitGroupInfo{
+			Id:         c.UnitGroupID,
+			Name:       c.UnitGroupName,
+			BaseUnitId: c.UnitGroupBaseUnitID,
+			Type:       c.UnitGroupTypeCode,
+			CreatedAt:  timestamppb.New(c.UnitGroupCreatedAt),
+			UpdatedAt:  timestamppb.New(c.UnitGroupUpdatedAt),
+		}
+		if c.UnitGroupBaseUnit != nil {
+			ugInfo.BaseUnit = lightUnitToProto(c.UnitGroupBaseUnit)
+		}
+		if len(c.UnitGroupAssociatedUnits) > 0 {
+			ugInfo.AssociatedUnits = make([]*pb.ItemCategoryUnitGroupUnitInfo, len(c.UnitGroupAssociatedUnits))
+			for i, u := range c.UnitGroupAssociatedUnits {
+				ugInfo.AssociatedUnits[i] = itemCategoryUnitGroupUnitToProto(u)
+			}
+		}
+		info.UnitGroup = ugInfo
+	}
+	return info
 }
 
 func itemAttributeToProto(a *domain.ItemAttribute) *pb.ItemAttributeInfo {
@@ -45,6 +136,8 @@ func itemAttributeToProto(a *domain.ItemAttribute) *pb.ItemAttributeInfo {
 		ColorCode:  a.ColorCode,
 		SortOrder:  a.Order,
 		PropertyId: a.PropertyID,
+		CreatedAt:  timestamppb.New(a.CreatedAt),
+		UpdatedAt:  timestamppb.New(a.UpdatedAt),
 	}
 }
 
@@ -102,6 +195,9 @@ func (h *gRPCHandler) ListItems(ctx context.Context, req *pb.ListItemsRequest) (
 		SupplierID:               req.SupplierId,
 		IsExactMatch:             req.IsExactMatch,
 		OnlyInitialSubassemblies: req.OnlyInitialSubassemblies,
+		Includes:                 req.Includes,
+		ProductLineIDs:           req.ProductLineIds,
+		CustomerIDs:              req.CustomerIds,
 	}
 
 	if startDate != nil {
@@ -139,7 +235,7 @@ func (h *gRPCHandler) GetItem(ctx context.Context, req *pb.GetItemRequest) (*pb.
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	item, apiErr := h.itemSvc.GetItem(ctx, req.Id)
+	item, apiErr := h.itemSvc.GetItem(ctx, req.Id, req.Includes)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
@@ -160,10 +256,10 @@ func (h *gRPCHandler) GetItemInventory(ctx context.Context, req *pb.GetItemInven
 	}
 
 	return &pb.GetItemInventoryResponse{
-		OnHand:             &pb.QuantityInfo{Value: inv.OnHand, UnitId: inv.OnHandUnitID},
-		Reserved:           &pb.QuantityInfo{Value: inv.Reserved, UnitId: inv.ReservedUnitID},
-		AvailableToPromise: &pb.QuantityInfo{Value: inv.AvailableToPromise, UnitId: inv.ATPUnitID},
-		Short:              &pb.QuantityInfo{Value: inv.Short, UnitId: inv.ShortUnitID},
+		OnHand:             &pb.QuantityInfo{Value: inv.OnHand, UnitId: inv.OnHandUnitID, UnitAbbreviation: inv.UnitAbbreviation, UnitType: inv.UnitType},
+		Reserved:           &pb.QuantityInfo{Value: inv.Reserved, UnitId: inv.ReservedUnitID, UnitAbbreviation: inv.UnitAbbreviation, UnitType: inv.UnitType},
+		AvailableToPromise: &pb.QuantityInfo{Value: inv.AvailableToPromise, UnitId: inv.ATPUnitID, UnitAbbreviation: inv.UnitAbbreviation, UnitType: inv.UnitType},
+		Short:              &pb.QuantityInfo{Value: inv.Short, UnitId: inv.ShortUnitID, UnitAbbreviation: inv.UnitAbbreviation, UnitType: inv.UnitType},
 	}, nil
 }
 
@@ -275,7 +371,7 @@ func (h *gRPCHandler) AddItemAttribute(ctx context.Context, req *pb.AddItemAttri
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	item, apiErr := h.itemSvc.AddItemAttribute(ctx, req.ItemId, req.AttributeId)
+	item, apiErr := h.itemSvc.AddItemAttribute(ctx, req.ItemId, req.AttributeId, req.Includes)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
@@ -290,7 +386,7 @@ func (h *gRPCHandler) RemoveItemAttribute(ctx context.Context, req *pb.RemoveIte
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	item, apiErr := h.itemSvc.RemoveItemAttribute(ctx, req.ItemId, req.AttributeId)
+	item, apiErr := h.itemSvc.RemoveItemAttribute(ctx, req.ItemId, req.AttributeId, req.Includes)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
@@ -305,7 +401,7 @@ func (h *gRPCHandler) ChangeItemCategory(ctx context.Context, req *pb.ChangeItem
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	item, apiErr := h.itemSvc.ChangeItemCategory(ctx, req.ItemId, req.CategoryId)
+	item, apiErr := h.itemSvc.ChangeItemCategory(ctx, req.ItemId, req.CategoryId, req.Includes)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}

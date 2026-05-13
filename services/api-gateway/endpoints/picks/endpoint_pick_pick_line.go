@@ -12,7 +12,7 @@ import (
 // PickPickLineRequest is the request to mark a pick line as picked.
 type PickPickLineRequest struct {
 	// Pick ID.
-	PickID string `path:"pickId" validate:"required"`
+	PickID string `path:"pick_id" validate:"required"`
 	// Pick line ID.
 	PickLineID string `path:"id" validate:"required"`
 }
@@ -25,7 +25,7 @@ func (e *PickPickLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*PickPickL
 		Description:       "Marks a pick line as picked.",
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
-		Route:             "/v1/operations/picks/{pickId}/lines/{id}/actions/pick",
+		Route:             "/v1/operations/picks/{pick_id}/lines/{id}/actions/pick",
 		Request:           &PickPickLineRequest{},
 		Response:          &apiresource.PickLineDetail{},
 		SuccessStatusCode: http.StatusOK,

@@ -13,7 +13,7 @@ import (
 // Request to create a transaction.
 type CreateTransactionRequest struct {
 	// Customer ID.
-	CustomerID string `json:"customer_id" validate:"required,max=191"`
+	CustomerID string `json:"customer_id" validate:"required"`
 	// Transaction type code.
 	TransactionTypeCode string `json:"type" validate:"required,max=255"`
 	// Transaction amount as a decimal string.
@@ -23,7 +23,7 @@ type CreateTransactionRequest struct {
 	// Adjustment type code.
 	AdjustmentTypeCode *string `json:"adjustment_type" validate:"omitempty,max=255"`
 	// Responsible user ID.
-	ResponsibleUserID *string `json:"responsible_user_id" validate:"omitempty,max=191"`
+	ResponsibleUserID *string `json:"responsible_user_id" validate:"omitempty"`
 	// Note.
 	Note *string `json:"note"`
 }

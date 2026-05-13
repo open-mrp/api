@@ -29,7 +29,7 @@ func (e *ChangeProductProductLineEndpoint) Materialize() *apiendpoint.APIEndpoin
 		Request:           &ChangeProductProductLineRequest{},
 		Response:          &apiresource.Product{},
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ChangeProductProductLineRequest) (*apiresource.Product, *apierror.APIError) {
 			return svc.(ProductSvc).ChangeProductProductLine

@@ -18,7 +18,7 @@ type CreateProductionRunRequest struct {
 // Lightweight reference to a production run.
 type CreateProductionRunResponseRef struct {
 	// Production run ID.
-	ID string `json:"id" validate:"required,max=191"`
+	ID string `json:"id" validate:"required"`
 }
 
 // Result of creating a production run.

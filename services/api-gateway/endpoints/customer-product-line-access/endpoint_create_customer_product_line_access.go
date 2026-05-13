@@ -13,7 +13,7 @@ import (
 // Request to create product line access for a customer.
 type CreateCustomerProductLineAccessRequest struct {
 	// Customer ID.
-	CustomerID string `json:"customer_id" validate:"required,max=191"`
+	CustomerID string `json:"customer_id" validate:"required"`
 	// Product line IDs to grant access to.
 	ProductLineIDs []string `json:"product_line_ids" validate:"required"`
 }

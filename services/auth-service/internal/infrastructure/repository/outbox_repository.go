@@ -98,19 +98,33 @@ func (r *outboxEnqueuerRepoImpl) AcquireAndLock(ctx context.Context, lockOwner s
 
 	txQueries := r.queries.WithTx(tx)
 
-	// First, acquire the messages by updating them with a lock
-	err = txQueries.AcquireOutboxMessages(ctx, sqlc.AcquireOutboxMessagesParams{
-		LockOwner: db.NullString(lockOwner),
-		DATEADD:   lockDurationSeconds,
-		Limit:     int32(limit), // #nosec G115 - small config value
+	ids, err := txQueries.SelectOutboxMessageIDsForLock(ctx, int32(limit)) // #nosec G115 - small config value
+	if err != nil {
+		span.RecordError(err)
+		return nil, err
+	}
+	if len(ids) == 0 {
+		if err := tx.Commit(); err != nil {
+			span.RecordError(err)
+			return nil, err
+		}
+		return nil, nil
+	}
+
+	err = txQueries.LockOutboxMessagesByIDs(ctx, sqlc.LockOutboxMessagesByIDsParams{
+		LockOwner:           db.NullString(lockOwner),
+		LockDurationSeconds: lockDurationSeconds,
+		Ids:                 ids,
 	})
 	if err != nil {
 		span.RecordError(err)
 		return nil, err
 	}
 
-	// Then fetch the locked messages (same transaction ensures we see our own writes)
-	rows, err := txQueries.GetLockedOutboxMessages(ctx, db.NullString(lockOwner))
+	rows, err := txQueries.GetLockedOutboxMessagesByIDs(ctx, sqlc.GetLockedOutboxMessagesByIDsParams{
+		Ids:       ids,
+		LockOwner: db.NullString(lockOwner),
+	})
 	if err != nil {
 		span.RecordError(err)
 		return nil, err
@@ -192,7 +206,16 @@ func (r *outboxEnqueuerRepoImpl) CleanupExpiredLocks(ctx context.Context, limit 
 	ctx, span := tracing.StartSpan(ctx, outboxRepoTracer, "repository.outbox.cleanup_expired_locks")
 	defer span.End()
 
-	result, err := r.queries.CleanupExpiredOutboxLocks(ctx, limit)
+	ids, err := r.queries.SelectExpiredOutboxLockIDs(ctx, limit)
+	if err != nil {
+		span.RecordError(err)
+		return 0, err
+	}
+	if len(ids) == 0 {
+		return 0, nil
+	}
+
+	result, err := r.queries.CleanupExpiredOutboxLocksByIDs(ctx, ids)
 	if err != nil {
 		span.RecordError(err)
 		return 0, err
@@ -211,9 +234,21 @@ func (r *outboxEnqueuerRepoImpl) PurgePublished(ctx context.Context, retentionHo
 	ctx, span := tracing.StartSpan(ctx, outboxRepoTracer, "repository.outbox.purge_published")
 	defer span.End()
 
-	result, err := r.queries.PurgePublishedOutboxMessages(ctx, sqlc.PurgePublishedOutboxMessagesParams{
-		DATESUB: retentionHours,
-		Limit:   limit,
+	ids, err := r.queries.SelectPublishedOutboxMessageIDsForPurge(ctx, sqlc.SelectPublishedOutboxMessageIDsForPurgeParams{
+		RetentionHours: retentionHours,
+		Limit:          limit,
+	})
+	if err != nil {
+		span.RecordError(err)
+		return 0, err
+	}
+	if len(ids) == 0 {
+		return 0, nil
+	}
+
+	result, err := r.queries.PurgePublishedOutboxMessagesByIDs(ctx, sqlc.PurgePublishedOutboxMessagesByIDsParams{
+		Ids:            ids,
+		RetentionHours: retentionHours,
 	})
 	if err != nil {
 		span.RecordError(err)

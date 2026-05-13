@@ -108,7 +108,14 @@ SELECT
     t.updated_at,
     u.name AS sales_rep_name,
     u.email AS sales_rep_email,
-    pl.name AS product_line_name
+    au.status_code AS sales_rep_status,
+    au.created_at AS sales_rep_created_at,
+    au.updated_at AS sales_rep_updated_at,
+    pl.name AS product_line_name,
+    pl.is_commission_exempt AS product_line_is_commission_exempt,
+    pl.is_freight_exempt AS product_line_is_freight_exempt,
+    pl.created_at AS product_line_created_at,
+    pl.updated_at AS product_line_updated_at
 FROM territory t
 JOIN account_user au ON au.id = t.sales_rep_id
 JOIN user u ON u.id = au.user_id
@@ -123,17 +130,24 @@ type GetTerritoryParams struct {
 }
 
 type GetTerritoryRow struct {
-	ID              string
-	State           string
-	StartZipcode    sql.NullInt32
-	EndZipcode      sql.NullInt32
-	SalesRepID      string
-	ProductLineID   sql.NullString
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
-	SalesRepName    sql.NullString
-	SalesRepEmail   sql.NullString
-	ProductLineName sql.NullString
+	ID                            string
+	State                         string
+	StartZipcode                  sql.NullInt32
+	EndZipcode                    sql.NullInt32
+	SalesRepID                    string
+	ProductLineID                 sql.NullString
+	CreatedAt                     time.Time
+	UpdatedAt                     time.Time
+	SalesRepName                  sql.NullString
+	SalesRepEmail                 sql.NullString
+	SalesRepStatus                string
+	SalesRepCreatedAt             time.Time
+	SalesRepUpdatedAt             time.Time
+	ProductLineName               sql.NullString
+	ProductLineIsCommissionExempt sql.NullBool
+	ProductLineIsFreightExempt    sql.NullBool
+	ProductLineCreatedAt          sql.NullTime
+	ProductLineUpdatedAt          sql.NullTime
 }
 
 func (q *Queries) GetTerritory(ctx context.Context, arg GetTerritoryParams) (GetTerritoryRow, error) {
@@ -150,7 +164,14 @@ func (q *Queries) GetTerritory(ctx context.Context, arg GetTerritoryParams) (Get
 		&i.UpdatedAt,
 		&i.SalesRepName,
 		&i.SalesRepEmail,
+		&i.SalesRepStatus,
+		&i.SalesRepCreatedAt,
+		&i.SalesRepUpdatedAt,
 		&i.ProductLineName,
+		&i.ProductLineIsCommissionExempt,
+		&i.ProductLineIsFreightExempt,
+		&i.ProductLineCreatedAt,
+		&i.ProductLineUpdatedAt,
 	)
 	return i, err
 }
@@ -214,7 +235,14 @@ SELECT
     t.updated_at,
     u.name AS sales_rep_name,
     u.email AS sales_rep_email,
-    pl.name AS product_line_name
+    au.status_code AS sales_rep_status,
+    au.created_at AS sales_rep_created_at,
+    au.updated_at AS sales_rep_updated_at,
+    pl.name AS product_line_name,
+    pl.is_commission_exempt AS product_line_is_commission_exempt,
+    pl.is_freight_exempt AS product_line_is_freight_exempt,
+    pl.created_at AS product_line_created_at,
+    pl.updated_at AS product_line_updated_at
 FROM territory t
 JOIN account_user au ON au.id = t.sales_rep_id
 JOIN user u ON u.id = au.user_id
@@ -258,17 +286,24 @@ type ListTerritoriesBackwardParams struct {
 }
 
 type ListTerritoriesBackwardRow struct {
-	ID              string
-	State           string
-	StartZipcode    sql.NullInt32
-	EndZipcode      sql.NullInt32
-	SalesRepID      string
-	ProductLineID   sql.NullString
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
-	SalesRepName    sql.NullString
-	SalesRepEmail   sql.NullString
-	ProductLineName sql.NullString
+	ID                            string
+	State                         string
+	StartZipcode                  sql.NullInt32
+	EndZipcode                    sql.NullInt32
+	SalesRepID                    string
+	ProductLineID                 sql.NullString
+	CreatedAt                     time.Time
+	UpdatedAt                     time.Time
+	SalesRepName                  sql.NullString
+	SalesRepEmail                 sql.NullString
+	SalesRepStatus                string
+	SalesRepCreatedAt             time.Time
+	SalesRepUpdatedAt             time.Time
+	ProductLineName               sql.NullString
+	ProductLineIsCommissionExempt sql.NullBool
+	ProductLineIsFreightExempt    sql.NullBool
+	ProductLineCreatedAt          sql.NullTime
+	ProductLineUpdatedAt          sql.NullTime
 }
 
 func (q *Queries) ListTerritoriesBackward(ctx context.Context, arg ListTerritoriesBackwardParams) ([]ListTerritoriesBackwardRow, error) {
@@ -306,7 +341,14 @@ func (q *Queries) ListTerritoriesBackward(ctx context.Context, arg ListTerritori
 			&i.UpdatedAt,
 			&i.SalesRepName,
 			&i.SalesRepEmail,
+			&i.SalesRepStatus,
+			&i.SalesRepCreatedAt,
+			&i.SalesRepUpdatedAt,
 			&i.ProductLineName,
+			&i.ProductLineIsCommissionExempt,
+			&i.ProductLineIsFreightExempt,
+			&i.ProductLineCreatedAt,
+			&i.ProductLineUpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -333,7 +375,14 @@ SELECT
     t.updated_at,
     u.name AS sales_rep_name,
     u.email AS sales_rep_email,
-    pl.name AS product_line_name
+    au.status_code AS sales_rep_status,
+    au.created_at AS sales_rep_created_at,
+    au.updated_at AS sales_rep_updated_at,
+    pl.name AS product_line_name,
+    pl.is_commission_exempt AS product_line_is_commission_exempt,
+    pl.is_freight_exempt AS product_line_is_freight_exempt,
+    pl.created_at AS product_line_created_at,
+    pl.updated_at AS product_line_updated_at
 FROM territory t
 JOIN account_user au ON au.id = t.sales_rep_id
 JOIN user u ON u.id = au.user_id
@@ -378,17 +427,24 @@ type ListTerritoriesForwardParams struct {
 }
 
 type ListTerritoriesForwardRow struct {
-	ID              string
-	State           string
-	StartZipcode    sql.NullInt32
-	EndZipcode      sql.NullInt32
-	SalesRepID      string
-	ProductLineID   sql.NullString
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
-	SalesRepName    sql.NullString
-	SalesRepEmail   sql.NullString
-	ProductLineName sql.NullString
+	ID                            string
+	State                         string
+	StartZipcode                  sql.NullInt32
+	EndZipcode                    sql.NullInt32
+	SalesRepID                    string
+	ProductLineID                 sql.NullString
+	CreatedAt                     time.Time
+	UpdatedAt                     time.Time
+	SalesRepName                  sql.NullString
+	SalesRepEmail                 sql.NullString
+	SalesRepStatus                string
+	SalesRepCreatedAt             time.Time
+	SalesRepUpdatedAt             time.Time
+	ProductLineName               sql.NullString
+	ProductLineIsCommissionExempt sql.NullBool
+	ProductLineIsFreightExempt    sql.NullBool
+	ProductLineCreatedAt          sql.NullTime
+	ProductLineUpdatedAt          sql.NullTime
 }
 
 func (q *Queries) ListTerritoriesForward(ctx context.Context, arg ListTerritoriesForwardParams) ([]ListTerritoriesForwardRow, error) {
@@ -427,7 +483,14 @@ func (q *Queries) ListTerritoriesForward(ctx context.Context, arg ListTerritorie
 			&i.UpdatedAt,
 			&i.SalesRepName,
 			&i.SalesRepEmail,
+			&i.SalesRepStatus,
+			&i.SalesRepCreatedAt,
+			&i.SalesRepUpdatedAt,
 			&i.ProductLineName,
+			&i.ProductLineIsCommissionExempt,
+			&i.ProductLineIsFreightExempt,
+			&i.ProductLineCreatedAt,
+			&i.ProductLineUpdatedAt,
 		); err != nil {
 			return nil, err
 		}

@@ -9,67 +9,86 @@ import (
 
 // Customer represents a full customer record from the database.
 type Customer struct {
-	ID                            string
-	Name                          string                        `audit:"name"`
-	Number                        string                        `audit:"number"`
-	Status                        constants.AccountStatusCode   `audit:"status"`
-	IsEdiEnabled                  bool                          `audit:"is_edi_enabled"`
-	IsParentAccount               bool                          `audit:"is_parent_account"`
-	CommissionPolicy              constants.CommissionPolicy    `audit:"commission_policy"`
-	FreightPolicy                 constants.FreightPolicy       `audit:"freight_policy"`
-	Note                          *string                       `audit:"note"`
-	Email                         *string                       `audit:"email"`
-	Phone                         *string                       `audit:"phone"`
-	URL                           *string                       `audit:"url"`
-	CarrierBillingType            *constants.CarrierBillingType `audit:"carrier_billing_type"`
-	CarrierBillingAccount         *string                       `audit:"carrier_billing_account"`
-	CreditLimitID                 *string                       `audit:"credit_limit_id"`
-	CreditLimitValue              *string
-	CreditLimitUnitID             *string
-	CreditLimitUnitAbbreviation   *string
-	CreditLimitUnitName           *string
-	CreditLimitUnitType           *string
-	AcceptsInvoiceEmails          bool    `audit:"accepts_invoice_emails"`
-	DefaultCarrierID              *string `audit:"default_carrier_id"`
-	DefaultCarrierName            *string
-	DefaultCarrierIsPortalEnabled *bool
-	DefaultServiceLevelID         *string `audit:"default_service_level_id"`
-	DefaultServiceLevelName       *string
-	DefaultPaymentTermID          *string `audit:"default_payment_term_id"`
-	DefaultPaymentTermName        *string
-	DefaultPaymentTermIsActive    *bool
-	DefaultShippingTermID         *string `audit:"default_shipping_term_id"`
-	DefaultShippingTermName       *string
-	DefaultShippingTermType       *constants.ShippingTermType
-	DefaultPriorityID             *string
-	DefaultPriorityCode           *constants.PriorityCode `audit:"default_priority_code"`
-	DefaultPriorityName           *string
-	DefaultSalesRepID             *string `audit:"default_sales_rep_id"`
-	DefaultSalesRepName           *string
-	BillToAddressID               *string `audit:"bill_to_address_id"`
-	ShipToAddressID               *string `audit:"ship_to_address_id"`
-	BillToAddress                 *CustomerAddress
-	ShipToAddress                 *CustomerAddress
-	TypeGroupID                   *string `audit:"type_group_id"`
-	TypeGroupName                 *string
-	TypeGroupCommissionPolicy     *constants.CommissionPolicy
-	TypeGroupFreightPolicy        *constants.FreightPolicy
-	TypeGroupType                 *constants.AccountGroupType
-	PriceGroups                   []CustomerAccountGroup `audit:"price_groups"`
-	ParentAccountID               *string                `audit:"parent_account_id"`
-	ParentAccountName             *string
-	ParentAccountNumber           *string
-	ChildAccounts                 []CustomerChildAccount
-	CreatedAt                     time.Time
-	UpdatedAt                     time.Time
+	ID                                 string
+	Name                               string                        `audit:"name"`
+	Number                             string                        `audit:"number"`
+	Status                             constants.AccountStatusCode   `audit:"status"`
+	IsEdiEnabled                       bool                          `audit:"is_edi_enabled"`
+	IsParentAccount                    bool                          `audit:"is_parent_account"`
+	CommissionPolicy                   constants.CommissionPolicy    `audit:"commission_policy"`
+	FreightPolicy                      constants.FreightPolicy       `audit:"freight_policy"`
+	Note                               *string                       `audit:"note"`
+	Email                              *string                       `audit:"email"`
+	Phone                              *string                       `audit:"phone"`
+	URL                                *string                       `audit:"url"`
+	CarrierBillingType                 *constants.CarrierBillingType `audit:"carrier_billing_type"`
+	CarrierBillingAccount              *string                       `audit:"carrier_billing_account"`
+	CreditLimitID                      *string                       `audit:"credit_limit_id"`
+	CreditLimitValue                   *string
+	CreditLimitUnitID                  *string
+	CreditLimitUnitAbbreviation        *string
+	CreditLimitUnitName                *string
+	CreditLimitUnitType                *string
+	AcceptsInvoiceEmails               bool    `audit:"accepts_invoice_emails"`
+	DefaultCarrierID                   *string `audit:"default_carrier_id"`
+	DefaultCarrierName                 *string
+	DefaultCarrierIsPortalEnabled      *bool
+	DefaultCarrierCreatedAt            *time.Time
+	DefaultCarrierUpdatedAt            *time.Time
+	DefaultServiceLevelID              *string `audit:"default_service_level_id"`
+	DefaultServiceLevelName            *string
+	DefaultServiceLevelToken           *string
+	DefaultServiceLevelIsPortalEnabled *bool
+	DefaultServiceLevelCreatedAt       *time.Time
+	DefaultServiceLevelUpdatedAt       *time.Time
+	DefaultPaymentTermID               *string `audit:"default_payment_term_id"`
+	DefaultPaymentTermName             *string
+	DefaultPaymentTermIsActive         *bool
+	DefaultPaymentTermCreatedAt        *time.Time
+	DefaultPaymentTermUpdatedAt        *time.Time
+	DefaultShippingTermID              *string `audit:"default_shipping_term_id"`
+	DefaultShippingTermName            *string
+	DefaultShippingTermType            *constants.ShippingTermType
+	DefaultShippingTermCreatedAt       *time.Time
+	DefaultShippingTermUpdatedAt       *time.Time
+	DefaultPriorityID                  *string
+	DefaultPriorityCode                *constants.PriorityCode `audit:"default_priority_code"`
+	DefaultPriorityName                *string
+	DefaultSalesRepID                  *string `audit:"default_sales_rep_id"`
+	DefaultSalesRepName                *string
+	DefaultSalesRepStatus              *constants.AccountUserStatus
+	DefaultSalesRepCreatedAt           *time.Time
+	DefaultSalesRepUpdatedAt           *time.Time
+	BillToAddressID                    *string `audit:"bill_to_address_id"`
+	ShipToAddressID                    *string `audit:"ship_to_address_id"`
+	BillToAddress                      *CustomerAddress
+	ShipToAddress                      *CustomerAddress
+	TypeGroupID                        *string `audit:"type_group_id"`
+	TypeGroupName                      *string
+	TypeGroupCommissionPolicy          *constants.CommissionPolicy
+	TypeGroupFreightPolicy             *constants.FreightPolicy
+	TypeGroupType                      *constants.AccountGroupType
+	TypeGroupCreatedAt                 *time.Time
+	TypeGroupUpdatedAt                 *time.Time
+	PriceGroups                        []CustomerAccountGroup `audit:"price_groups"`
+	ParentAccountID                    *string                `audit:"parent_account_id"`
+	ParentAccountName                  *string
+	ParentAccountNumber                *string
+	ParentAccountCreatedAt             *time.Time
+	ParentAccountUpdatedAt             *time.Time
+	ChildAccounts                      []CustomerChildAccount
+	CreatedAt                          time.Time
+	UpdatedAt                          time.Time
 }
 
 // CustomerChildAccount is the lightweight stub returned when
 // `?include=child_accounts` is requested on a customer resource.
 type CustomerChildAccount struct {
-	ID     string
-	Name   string
-	Number string
+	ID        string
+	Name      string
+	Number    string
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 // CustomerAddress represents a customer's address with geolocation.
@@ -97,8 +116,13 @@ type CustomerGeolocation struct {
 
 // CustomerAccountGroup is a lightweight account group reference.
 type CustomerAccountGroup struct {
-	ID   string
-	Name string
+	ID               string
+	Name             string
+	CommissionPolicy constants.CommissionPolicy
+	FreightPolicy    constants.FreightPolicy
+	Type             constants.AccountGroupType
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
 }
 
 // ListCustomersParams holds the parameters for listing customers.
@@ -150,7 +174,7 @@ type CreateCustomerParams struct {
 	DefaultPaymentTermID  *string
 	DefaultShippingTermID *string
 	DefaultPriorityCode   *string
-	DefaultSalesRepUserID *string
+	DefaultSalesRepID     *string
 	BillToAddressID       *string
 	ShipToAddressID       *string
 	BillToAddress         *CreateAddressParams
@@ -162,6 +186,7 @@ type CreateCustomerParams struct {
 	CreditLimitValue      *string
 	CreditLimitUnitID     *string
 	CreditLimitID         *string
+	Includes              []string
 }
 
 // DeleteCustomerParams holds the parameters for deleting a customer.
@@ -181,6 +206,7 @@ type MergeCustomersParams struct {
 	OwnerAccountID    string
 	TargetCustomerID  string
 	SourceCustomerIDs []string
+	Includes          []string
 }
 
 // RelationPriceGroup is a lightweight reference to an account relation price group.
@@ -220,7 +246,7 @@ type UpdateCustomerParams struct {
 	DefaultPaymentTermID     *string
 	DefaultShippingTermID    *string
 	DefaultPriorityCode      *string
-	DefaultSalesRepUserID    *string
+	DefaultSalesRepID        *string
 	BillToAddressID          *string
 	ShipToAddressID          *string
 	CustomerPriceGroupIDs    []string
@@ -231,6 +257,7 @@ type UpdateCustomerParams struct {
 	CreditLimitValue         *string
 	CreditLimitUnitID        *string
 	CreditLimitID            *string
+	Includes                 []string
 }
 
 // FrequentlyOrderedProduct represents a product frequently ordered by a customer.

@@ -9,6 +9,7 @@ import (
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	ownerutil "github.com/augno/api/services/api-gateway/internal/owner"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
@@ -19,7 +20,7 @@ import (
 
 type UnitGroupSvc interface {
 	ListUnitGroups(ctx context.Context, req *ListUnitGroupsRequest) (*apiresource.List[apiresource.UnitGroup], *apierror.APIError)
-	GetUnitGroup(ctx context.Context, req *GetUnitGroupRequest) (*apiresource.UnitGroup, *apierror.APIError)
+	GetUnitGroup(ctx context.Context, req *RetrieveUnitGroupRequest) (*apiresource.UnitGroup, *apierror.APIError)
 	CreateUnitGroup(ctx context.Context, req *CreateUnitGroupRequest) (*apiresource.UnitGroup, *apierror.APIError)
 	UpdateUnitGroup(ctx context.Context, req *UpdateUnitGroupRequest) (*apiresource.UnitGroup, *apierror.APIError)
 	DeleteUnitGroup(ctx context.Context, req *DeleteUnitGroupRequest) (*apiresource.EmptyResource, *apierror.APIError)
@@ -27,7 +28,7 @@ type UnitGroupSvc interface {
 	UpdateUnitGroupUnit(ctx context.Context, req *UpdateUnitGroupUnitRequest) (*apiresource.UnitGroupUnit, *apierror.APIError)
 	DeleteUnitGroupUnit(ctx context.Context, req *DeleteUnitGroupUnitRequest) (*apiresource.EmptyResource, *apierror.APIError)
 	ListUnitGroupUnits(ctx context.Context, req *ListUnitGroupUnitsRequest) (*apiresource.List[apiresource.UnitGroupUnit], *apierror.APIError)
-	GetUnitGroupUnit(ctx context.Context, req *GetUnitGroupUnitRequest) (*apiresource.UnitGroupUnit, *apierror.APIError)
+	GetUnitGroupUnit(ctx context.Context, req *RetrieveUnitGroupUnitRequest) (*apiresource.UnitGroupUnit, *apierror.APIError)
 }
 
 type UnitGroupSvcConfig struct {
@@ -59,10 +60,11 @@ func NewUnitGroupSvc(config *UnitGroupSvcConfig) UnitGroupSvc {
 
 func (m *unitGroupSvcImpl) ListUnitGroups(ctx context.Context, req *ListUnitGroupsRequest) (*apiresource.List[apiresource.UnitGroup], *apierror.APIError) {
 	pbReq := &pb.ListUnitGroupsRequest{
-		Cursor: req.Cursor,
-		Limit:  req.Limit,
-		Query:  req.Query,
-		Type:   req.Type.StringPtr(),
+		Cursor:   req.Cursor,
+		Limit:    req.Limit,
+		Query:    req.Query,
+		Type:     req.Type.StringPtr(),
+		Includes: appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, unitGroupSvcTracer, "service.unit_groups.list", domain.ServiceName,
@@ -85,9 +87,10 @@ func (m *unitGroupSvcImpl) ListUnitGroups(ctx context.Context, req *ListUnitGrou
 	return UnitGroupListPresenter(resp, ownerAccount), nil
 }
 
-func (m *unitGroupSvcImpl) GetUnitGroup(ctx context.Context, req *GetUnitGroupRequest) (*apiresource.UnitGroup, *apierror.APIError) {
+func (m *unitGroupSvcImpl) GetUnitGroup(ctx context.Context, req *RetrieveUnitGroupRequest) (*apiresource.UnitGroup, *apierror.APIError) {
 	pbReq := &pb.GetUnitGroupRequest{
-		Id: req.UnitGroupID,
+		Id:       req.UnitGroupID,
+		Includes: appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, unitGroupSvcTracer, "service.unit_groups.get", domain.ServiceName,
@@ -133,6 +136,7 @@ func (m *unitGroupSvcImpl) CreateUnitGroup(ctx context.Context, req *CreateUnitG
 		Type:            string(req.Type),
 		BaseUnitId:      req.BaseUnitID,
 		UnitConversions: associatedUnits,
+		Includes:        appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, unitGroupSvcTracer, "service.unit_groups.create", domain.ServiceName,
@@ -154,6 +158,7 @@ func (m *unitGroupSvcImpl) UpdateUnitGroup(ctx context.Context, req *UpdateUnitG
 		Id:         req.UnitGroupID,
 		Name:       req.Name,
 		BaseUnitId: req.BaseUnitID,
+		Includes:   appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	if req.Notes != nil {
@@ -238,6 +243,7 @@ func (m *unitGroupSvcImpl) CreateUnitGroupUnit(ctx context.Context, req *CreateU
 		DiscountPercentage: discountPct,
 		DiscountFixed:      discountFixed,
 		IsVisible:          isVisible,
+		Includes:           appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, unitGroupSvcTracer, "service.unit_groups.create_unit", domain.ServiceName,
@@ -257,6 +263,7 @@ func (m *unitGroupSvcImpl) UpdateUnitGroupUnit(ctx context.Context, req *UpdateU
 	pbReq := &pb.UpsertUnitGroupUnitRequest{
 		UnitGroupId:     req.UnitGroupID,
 		UnitGroupUnitId: req.AssociatedUnitID,
+		Includes:        appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	if req.UnitID != nil {
@@ -306,6 +313,7 @@ func (m *unitGroupSvcImpl) DeleteUnitGroupUnit(ctx context.Context, req *DeleteU
 func (m *unitGroupSvcImpl) ListUnitGroupUnits(ctx context.Context, req *ListUnitGroupUnitsRequest) (*apiresource.List[apiresource.UnitGroupUnit], *apierror.APIError) {
 	pbReq := &pb.ListUnitGroupUnitsRequest{
 		UnitGroupId: req.UnitGroupID,
+		Includes:    appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, unitGroupSvcTracer, "service.unit_groups.list_units", domain.ServiceName,
@@ -320,10 +328,11 @@ func (m *unitGroupSvcImpl) ListUnitGroupUnits(ctx context.Context, req *ListUnit
 	return UnitGroupUnitListPresenter(resp), nil
 }
 
-func (m *unitGroupSvcImpl) GetUnitGroupUnit(ctx context.Context, req *GetUnitGroupUnitRequest) (*apiresource.UnitGroupUnit, *apierror.APIError) {
+func (m *unitGroupSvcImpl) GetUnitGroupUnit(ctx context.Context, req *RetrieveUnitGroupUnitRequest) (*apiresource.UnitGroupUnit, *apierror.APIError) {
 	pbReq := &pb.GetUnitGroupUnitRequest{
 		UnitGroupId:     req.UnitGroupID,
 		UnitGroupUnitId: req.UnitGroupUnitID,
+		Includes:        appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, unitGroupSvcTracer, "service.unit_groups.get_unit", domain.ServiceName,

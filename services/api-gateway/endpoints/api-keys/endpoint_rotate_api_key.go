@@ -15,7 +15,7 @@ import (
 type RotateAPIKeyRequest struct {
 	// API key ID to rotate.
 	APIKeyID string `path:"id" validate:"required"`
-	// Expiration time override.
+	// Expiration timestamp override. If omitted, the previous key's expiration is used.
 	ExpiresAt *time.Time `json:"expires_at,omitempty" nullable:"false"`
 }
 

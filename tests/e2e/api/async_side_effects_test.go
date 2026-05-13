@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/url"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -18,7 +17,7 @@ import (
 // given resource_id, resource_type, and action appears (or the timeout expires).
 func expectAuditEvent(t *testing.T, resourceID, resourceType, action string) {
 	t.Helper()
-	eventually(t, 30*time.Second, 1*time.Second, func() error {
+	eventually(t, e2eAsyncWaitTimeout, e2eAsyncPollInterval, func() error {
 		list, _, err := apiClient.GetList(auditEventsPath, url.Values{
 			"resource_ids":   {resourceID},
 			"resource_types": {resourceType},
@@ -40,7 +39,7 @@ func expectAuditEventWithChanges(t *testing.T, resourceID, resourceType, action 
 	t.Helper()
 
 	var matched map[string]any
-	eventually(t, 30*time.Second, 1*time.Second, func() error {
+	eventually(t, e2eAsyncWaitTimeout, e2eAsyncPollInterval, func() error {
 		status, body, err := apiClient.GetListRaw(auditEventsPath, url.Values{
 			"resource_ids":   {resourceID},
 			"resource_types": {resourceType},
@@ -96,12 +95,9 @@ func changeForField(changes []any, field string) (map[string]any, bool) {
 
 // expectRequestLog polls the request logs endpoint until a log matching the
 // given method, status code, and path appears (or the timeout expires).
-//
-// Request logs go through a longer pipeline than audit events (goroutine →
-// outbox → enqueuer poll → RabbitMQ → consumer), so we use a longer timeout.
 func expectRequestLog(t *testing.T, method, statusCode, path string) {
 	t.Helper()
-	eventually(t, 30*time.Second, 1*time.Second, func() error {
+	eventually(t, e2eAsyncWaitTimeout, e2eAsyncPollInterval, func() error {
 		list, _, err := apiClient.GetList(requestLogsPath, url.Values{
 			"methods":      {method},
 			"status_codes": {statusCode},
@@ -228,7 +224,7 @@ func TestCustomers_AuditEvents_UpdateAllFields(t *testing.T) {
 	body["carrier_billing_type"] = "sender"
 	body["carrier_billing_account"] = "ORIG-ACCT"
 	body["default_priority"] = SeedPriorityCode
-	body["default_sales_rep_user_id"] = SeedUserID
+	body["default_sales_rep_id"] = SeedAccountUserID
 
 	createStatus, createBody, err := apiClient.Post(customersPath, body, newIdempotencyKey())
 	require.NoError(t, err)
@@ -279,7 +275,7 @@ func TestCustomers_AuditEvents_UpdateAllFields(t *testing.T) {
 		"email":                   "audit-update@e2e.augno.com",
 		"phone":                   "555-AUDIT",
 		"url":                     "https://audit.e2e.augno.com",
-		"is_edi_enabled":          true,
+		"edi_status":              "enabled",
 		"commission_policy":       "commission_applied",
 		"freight_policy":          "free_freight",
 		"carrier_billing_type":    "third_party",
@@ -317,7 +313,7 @@ func TestCustomers_AuditEvents_UpdateAllFields(t *testing.T) {
 		assert.Equal(t, tc.value, jsonField(change, "new_value"), "%s new_value mismatch", tc.field)
 	}
 
-	// Verify boolean field change.
+	// Verify EDI status updates the underlying audited field.
 	ediChange, ok := changeForField(changes, "is_edi_enabled")
 	require.True(t, ok, "should include is_edi_enabled change")
 	assert.Equal(t, false, ediChange["old_value"], "is_edi_enabled old_value should be false")
@@ -376,7 +372,7 @@ func TestCustomers_AuditEvents_ClearAllNullableFields(t *testing.T) {
 	body["carrier_billing_type"] = "third_party"
 	body["carrier_billing_account"] = "CLR-ACCT"
 	body["default_priority"] = SeedPriorityCode
-	body["default_sales_rep_user_id"] = SeedUserID
+	body["default_sales_rep_id"] = SeedAccountUserID
 
 	createStatus, createBody, err := apiClient.Post(customersPath, body, newIdempotencyKey())
 	require.NoError(t, err)
@@ -402,17 +398,18 @@ func TestCustomers_AuditEvents_ClearAllNullableFields(t *testing.T) {
 	require.NotEmpty(t, origBillToID)
 	require.NotEmpty(t, origShipToID)
 	require.NotEmpty(t, origSalesRepID)
+	assert.Equal(t, SeedAccountUserID, origSalesRepID)
 
 	// Clear ALL nullable fields at once.
 	patchStatus, patchBody, err := apiClient.Patch(customersPath+"/"+id, map[string]any{
-		"note":                      nil,
-		"email":                     nil,
-		"phone":                     nil,
-		"url":                       nil,
-		"carrier_billing_account":   nil,
-		"default_sales_rep_user_id": nil,
-		"bill_to_address_id":        nil,
-		"ship_to_address_id":        nil,
+		"note":                    nil,
+		"email":                   nil,
+		"phone":                   nil,
+		"url":                     nil,
+		"carrier_billing_account": nil,
+		"default_sales_rep_id":    nil,
+		"bill_to_address_id":      nil,
+		"ship_to_address_id":      nil,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 200, patchStatus, patchBody)
@@ -438,7 +435,7 @@ func TestCustomers_AuditEvents_ClearAllNullableFields(t *testing.T) {
 		assert.Nil(t, change["new_value"], "%s new_value should be null", tc.field)
 	}
 
-	// Verify sales rep cleared (API field: default_sales_rep_user_id → audit field: default_sales_rep_id).
+	// Verify sales rep cleared (audit field matches account user id).
 	salesRepChange, ok := changeForField(changes, "default_sales_rep_id")
 	require.True(t, ok, "should include default_sales_rep_id change")
 	assert.Equal(t, origSalesRepID, jsonField(salesRepChange, "old_value"))
@@ -891,9 +888,10 @@ func TestSandboxes_RequestLogs(t *testing.T) {
 func TestScanningStations_AuditEvents(t *testing.T) {
 	t.Parallel()
 	created := createAndCleanup(t, scanningStationsPath, map[string]any{
-		"name":          uniqueName("e2e-station-audit"),
-		"type":          "init_batch",
-		"department_id": SeedDepartmentID,
+		"name":                 uniqueName("e2e-station-audit"),
+		"type":                 "init_batch",
+		"operator_requirement": "none",
+		"department_id":        SeedDepartmentID,
 	})
 	id := jsonField(created, "id")
 
@@ -911,9 +909,10 @@ func TestScanningStations_AuditEvents(t *testing.T) {
 func TestScanningStations_RequestLogs(t *testing.T) {
 	t.Parallel()
 	createAndCleanup(t, scanningStationsPath, map[string]any{
-		"name":          uniqueName("e2e-station-rlog"),
-		"type":          "init_batch",
-		"department_id": SeedDepartmentID,
+		"name":                 uniqueName("e2e-station-rlog"),
+		"type":                 "init_batch",
+		"operator_requirement": "none",
+		"department_id":        SeedDepartmentID,
 	})
 
 	expectRequestLog(t, "POST", "201", scanningStationsPath)

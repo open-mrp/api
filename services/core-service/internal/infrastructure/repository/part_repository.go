@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	gosql "database/sql"
+	"slices"
 	"time"
 
 	"github.com/augno/api/services/core-service/internal/domain"
@@ -26,218 +27,121 @@ func NewPartRepo(queries *sqlc.Queries) domain.PartRepo {
 func partItemCreatedAt(p *domain.Part) time.Time { return p.Item.CreatedAt }
 func partItemID(p *domain.Part) string           { return p.ItemID }
 
-func mapGetPartRow(row sqlc.GetPartRow) *domain.Part {
-	var description *string
-	if row.Description.Valid {
-		description = &row.Description.String
+func mapPartBaseItem(id, sku string, description, notes gosql.NullString, itemTypeCode, itemCategoryID, categoryName, itemCategoryTypeCode, categoryUnitGroupID, unitValueID, unitCostID, burnRateID, accountID string, isDirty bool, createdAt, updatedAt, categoryCreatedAt, categoryUpdatedAt time.Time) *domain.Item {
+	var descPtr *string
+	if description.Valid {
+		descPtr = &description.String
 	}
-	var notes *string
-	if row.Notes.Valid {
-		notes = &row.Notes.String
+	var notesPtr *string
+	if notes.Valid {
+		notesPtr = &notes.String
 	}
+	return &domain.Item{
+		ID:             id,
+		SKU:            sku,
+		Description:    descPtr,
+		Notes:          notesPtr,
+		ItemTypeCode:   itemTypeCode,
+		ItemCategoryID: itemCategoryID,
+		CategoryName:   categoryName,
+		UnitValueID:    unitValueID,
+		UnitCostID:     unitCostID,
+		BurnRateID:     burnRateID,
+		AccountID:      accountID,
+		IsDirty:        isDirty,
+		CreatedAt:      createdAt,
+		UpdatedAt:      updatedAt,
+		Category: &domain.ItemCategory{
+			ID:                   itemCategoryID,
+			Name:                 categoryName,
+			ItemCategoryTypeCode: itemCategoryTypeCode,
+			UnitGroupID:          categoryUnitGroupID,
+			CreatedAt:            categoryCreatedAt,
+			UpdatedAt:            categoryUpdatedAt,
+		},
+	}
+}
 
+func mapPartGetBaseRow(row sqlc.GetPartBaseRow) *domain.Part {
 	return &domain.Part{
 		ID:        row.PartID,
 		ItemID:    row.ID,
 		CreatedAt: row.PartCreatedAt,
 		UpdatedAt: row.PartUpdatedAt,
-		Item: &domain.Item{
-			ID:             row.ID,
-			SKU:            row.Sku,
-			Description:    description,
-			Notes:          notes,
-			ItemTypeCode:   row.ItemTypeCode,
-			ItemCategoryID: row.ItemCategoryID,
-			CategoryName:   row.CategoryName,
-			UnitValueID:    row.UnitValueID,
-			UnitCostID:     row.UnitCostID,
-			BurnRateID:     row.BurnRateID,
-			AccountID:      row.AccountID,
-			IsDirty:        row.IsDirty,
-			CreatedAt:      row.CreatedAt,
-			UpdatedAt:      row.UpdatedAt,
-			UnitValue: &domain.Rate{
-				ID:                row.UnitValueRateID,
-				Value:             row.UnitValueRateValue,
-				NumeratorUnitID:   row.UnitValueNumeratorUnitID,
-				DenominatorUnitID: row.UnitValueDenominatorUnitID,
-				CreatedAt:         row.UnitValueCreatedAt,
-				UpdatedAt:         row.UnitValueUpdatedAt,
-			},
-			UnitCost: &domain.Rate{
-				ID:                row.UnitCostRateID,
-				Value:             row.UnitCostRateValue,
-				NumeratorUnitID:   row.UnitCostNumeratorUnitID,
-				DenominatorUnitID: row.UnitCostDenominatorUnitID,
-				CreatedAt:         row.UnitCostCreatedAt,
-				UpdatedAt:         row.UnitCostUpdatedAt,
-			},
-			BurnRate: &domain.Rate{
-				ID:                row.BurnRateIDJoined,
-				Value:             row.BurnRateValue,
-				NumeratorUnitID:   row.BurnRateNumeratorUnitID,
-				DenominatorUnitID: row.BurnRateDenominatorUnitID,
-				CreatedAt:         row.BurnRateCreatedAt,
-				UpdatedAt:         row.BurnRateUpdatedAt,
-			},
-			Category: &domain.ItemCategory{
-				ID:                   row.ItemCategoryID,
-				Name:                 row.CategoryName,
-				ItemCategoryTypeCode: row.ItemCategoryTypeCode,
-				UnitGroupID:          row.CategoryUnitGroupID,
-			},
-		},
+		Item:      mapPartBaseItem(row.ID, row.Sku, row.Description, row.Notes, row.ItemTypeCode, row.ItemCategoryID, row.CategoryName, row.ItemCategoryTypeCode, row.CategoryUnitGroupID, row.UnitValueID, row.UnitCostID, row.BurnRateID, row.AccountID, row.IsDirty, row.CreatedAt, row.UpdatedAt, row.CategoryCreatedAt, row.CategoryUpdatedAt),
 	}
 }
 
-func mapPartForwardRow(row sqlc.ListPartsForwardRow) *domain.Part {
-	var description *string
-	if row.Description.Valid {
-		description = &row.Description.String
-	}
-	var notes *string
-	if row.Notes.Valid {
-		notes = &row.Notes.String
-	}
-
+func mapPartForwardBaseRow(row sqlc.ListPartsForwardBaseRow) *domain.Part {
 	return &domain.Part{
 		ID:        row.PartID,
 		ItemID:    row.ID,
 		CreatedAt: row.PartCreatedAt,
 		UpdatedAt: row.PartUpdatedAt,
-		Item: &domain.Item{
-			ID:             row.ID,
-			SKU:            row.Sku,
-			Description:    description,
-			Notes:          notes,
-			ItemTypeCode:   row.ItemTypeCode,
-			ItemCategoryID: row.ItemCategoryID,
-			CategoryName:   row.CategoryName,
-			UnitValueID:    row.UnitValueID,
-			UnitCostID:     row.UnitCostID,
-			BurnRateID:     row.BurnRateID,
-			AccountID:      row.AccountID,
-			IsDirty:        row.IsDirty,
-			CreatedAt:      row.CreatedAt,
-			UpdatedAt:      row.UpdatedAt,
-			UnitValue: &domain.Rate{
-				ID:                row.UnitValueRateID,
-				Value:             row.UnitValueRateValue,
-				NumeratorUnitID:   row.UnitValueNumeratorUnitID,
-				DenominatorUnitID: row.UnitValueDenominatorUnitID,
-				CreatedAt:         row.UnitValueCreatedAt,
-				UpdatedAt:         row.UnitValueUpdatedAt,
-			},
-			UnitCost: &domain.Rate{
-				ID:                row.UnitCostRateID,
-				Value:             row.UnitCostRateValue,
-				NumeratorUnitID:   row.UnitCostNumeratorUnitID,
-				DenominatorUnitID: row.UnitCostDenominatorUnitID,
-				CreatedAt:         row.UnitCostCreatedAt,
-				UpdatedAt:         row.UnitCostUpdatedAt,
-			},
-			BurnRate: &domain.Rate{
-				ID:                row.BurnRateIDJoined,
-				Value:             row.BurnRateValue,
-				NumeratorUnitID:   row.BurnRateNumeratorUnitID,
-				DenominatorUnitID: row.BurnRateDenominatorUnitID,
-				CreatedAt:         row.BurnRateCreatedAt,
-				UpdatedAt:         row.BurnRateUpdatedAt,
-			},
-			Category: &domain.ItemCategory{
-				ID:                   row.ItemCategoryID,
-				Name:                 row.CategoryName,
-				ItemCategoryTypeCode: row.ItemCategoryTypeCode,
-				UnitGroupID:          row.CategoryUnitGroupID,
-			},
-		},
+		Item:      mapPartBaseItem(row.ID, row.Sku, row.Description, row.Notes, row.ItemTypeCode, row.ItemCategoryID, row.CategoryName, row.ItemCategoryTypeCode, row.CategoryUnitGroupID, row.UnitValueID, row.UnitCostID, row.BurnRateID, row.AccountID, row.IsDirty, row.CreatedAt, row.UpdatedAt, row.CategoryCreatedAt, row.CategoryUpdatedAt),
 	}
 }
 
-func mapPartBackwardRow(row sqlc.ListPartsBackwardRow) *domain.Part {
-	var description *string
-	if row.Description.Valid {
-		description = &row.Description.String
-	}
-	var notes *string
-	if row.Notes.Valid {
-		notes = &row.Notes.String
-	}
-
+func mapPartBackwardBaseRow(row sqlc.ListPartsBackwardBaseRow) *domain.Part {
 	return &domain.Part{
 		ID:        row.PartID,
 		ItemID:    row.ID,
 		CreatedAt: row.PartCreatedAt,
 		UpdatedAt: row.PartUpdatedAt,
-		Item: &domain.Item{
-			ID:             row.ID,
-			SKU:            row.Sku,
-			Description:    description,
-			Notes:          notes,
-			ItemTypeCode:   row.ItemTypeCode,
-			ItemCategoryID: row.ItemCategoryID,
-			CategoryName:   row.CategoryName,
-			UnitValueID:    row.UnitValueID,
-			UnitCostID:     row.UnitCostID,
-			BurnRateID:     row.BurnRateID,
-			AccountID:      row.AccountID,
-			IsDirty:        row.IsDirty,
-			CreatedAt:      row.CreatedAt,
-			UpdatedAt:      row.UpdatedAt,
-			UnitValue: &domain.Rate{
-				ID:                row.UnitValueRateID,
-				Value:             row.UnitValueRateValue,
-				NumeratorUnitID:   row.UnitValueNumeratorUnitID,
-				DenominatorUnitID: row.UnitValueDenominatorUnitID,
-				CreatedAt:         row.UnitValueCreatedAt,
-				UpdatedAt:         row.UnitValueUpdatedAt,
-			},
-			UnitCost: &domain.Rate{
-				ID:                row.UnitCostRateID,
-				Value:             row.UnitCostRateValue,
-				NumeratorUnitID:   row.UnitCostNumeratorUnitID,
-				DenominatorUnitID: row.UnitCostDenominatorUnitID,
-				CreatedAt:         row.UnitCostCreatedAt,
-				UpdatedAt:         row.UnitCostUpdatedAt,
-			},
-			BurnRate: &domain.Rate{
-				ID:                row.BurnRateIDJoined,
-				Value:             row.BurnRateValue,
-				NumeratorUnitID:   row.BurnRateNumeratorUnitID,
-				DenominatorUnitID: row.BurnRateDenominatorUnitID,
-				CreatedAt:         row.BurnRateCreatedAt,
-				UpdatedAt:         row.BurnRateUpdatedAt,
-			},
-			Category: &domain.ItemCategory{
-				ID:                   row.ItemCategoryID,
-				Name:                 row.CategoryName,
-				ItemCategoryTypeCode: row.ItemCategoryTypeCode,
-				UnitGroupID:          row.CategoryUnitGroupID,
-			},
-		},
+		Item:      mapPartBaseItem(row.ID, row.Sku, row.Description, row.Notes, row.ItemTypeCode, row.ItemCategoryID, row.CategoryName, row.ItemCategoryTypeCode, row.CategoryUnitGroupID, row.UnitValueID, row.UnitCostID, row.BurnRateID, row.AccountID, row.IsDirty, row.CreatedAt, row.UpdatedAt, row.CategoryCreatedAt, row.CategoryUpdatedAt),
 	}
 }
 
-func (r *partRepoImpl) loadPartAttributes(ctx context.Context, part *domain.Part) *apierror.APIError {
-	rows, err := r.queries.GetPartAttributes(ctx, part.ItemID)
-	if apiErr := db.MapSQLError(err); apiErr != nil {
+func stitchPartAttributes(ctx context.Context, queries *sqlc.Queries, parts []*domain.Part, incs []string) *apierror.APIError {
+	if !slices.Contains(incs, "attributes") {
+		return nil
+	}
+	for _, part := range parts {
+		if part.Item == nil {
+			continue
+		}
+		rows, err := queries.GetPartAttributes(ctx, part.ItemID)
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return apiErr
+		}
+		attrs := make([]*domain.ItemAttribute, len(rows))
+		for i, row := range rows {
+			var colorCode *string
+			if row.ColorCode != "" {
+				colorCode = &row.ColorCode
+			}
+			attrs[i] = &domain.ItemAttribute{
+				ID:         row.ID,
+				Value:      row.Text,
+				ColorCode:  colorCode,
+				Order:      row.Order,
+				PropertyID: row.PropertyID,
+				CreatedAt:  row.CreatedAt,
+				UpdatedAt:  row.UpdatedAt,
+			}
+		}
+		part.Item.Attributes = attrs
+	}
+	return nil
+}
+
+func applyPartStitches(ctx context.Context, queries *sqlc.Queries, parts []*domain.Part, incs []string) *apierror.APIError {
+	items := itemsFromParts(parts)
+	itemIncs := extractItemIncludes(incs)
+	if apiErr := stitchItemRates(ctx, queries, items, itemIncs); apiErr != nil {
 		return apiErr
 	}
-	attrs := make([]*domain.ItemAttribute, len(rows))
-	for i, row := range rows {
-		var colorCode *string
-		if row.ColorCode != "" {
-			colorCode = &row.ColorCode
-		}
-		attrs[i] = &domain.ItemAttribute{
-			ID:         row.ID,
-			Value:      row.Text,
-			ColorCode:  colorCode,
-			Order:      row.Order,
-			PropertyID: row.PropertyID,
+	if apiErr := stitchItemCategoryUnitGroups(ctx, queries, items, itemIncs); apiErr != nil {
+		return apiErr
+	}
+	if apiErr := stitchPartAttributes(ctx, queries, parts, itemIncs); apiErr != nil {
+		return apiErr
+	}
+	if slices.Contains(itemIncs, "category.properties") {
+		if apiErr := enrichItemCategoryProperties(ctx, queries, items); apiErr != nil {
+			return apiErr
 		}
 	}
-	part.Item.Attributes = attrs
 	return nil
 }
 
@@ -256,6 +160,7 @@ func (r *partRepoImpl) Create(ctx context.Context, partID, itemID string, params
 	return r.Get(ctx, domain.GetPartParams{
 		AccountID: params.AccountID,
 		PartID:    partID,
+		Includes:  params.Includes,
 	})
 }
 
@@ -263,7 +168,7 @@ func (r *partRepoImpl) Get(ctx context.Context, params domain.GetPartParams) (*d
 	ctx, span := partRepoTracer.Start(ctx, "repository.part.get")
 	defer span.End()
 
-	row, err := r.queries.GetPart(ctx, sqlc.GetPartParams{
+	row, err := r.queries.GetPartBase(ctx, sqlc.GetPartBaseParams{
 		PartID:    params.PartID,
 		AccountID: params.AccountID,
 	})
@@ -271,9 +176,9 @@ func (r *partRepoImpl) Get(ctx context.Context, params domain.GetPartParams) (*d
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	part := mapGetPartRow(row)
+	part := mapPartGetBaseRow(row)
 
-	if apiErr := r.loadPartAttributes(ctx, part); apiErr != nil {
+	if apiErr := applyPartStitches(ctx, r.queries, []*domain.Part{part}, params.Includes); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
@@ -319,7 +224,7 @@ func (r *partRepoImpl) List(ctx context.Context, params domain.ListPartsParams) 
 		cursorDir = &cur.Direction
 
 		if cur.Direction == pagination.DirectionBackward {
-			rows, err := r.queries.ListPartsBackward(ctx, sqlc.ListPartsBackwardParams{
+			rows, err := r.queries.ListPartsBackwardBase(ctx, sqlc.ListPartsBackwardBaseParams{
 				AccountID:              params.AccountID,
 				IncludeCategoryFilter:  includeCategoryFilter,
 				CategoryIds:            categoryIDs,
@@ -337,19 +242,17 @@ func (r *partRepoImpl) List(ctx context.Context, params domain.ListPartsParams) 
 			}
 			parts := make([]*domain.Part, len(rows))
 			for i, row := range rows {
-				parts[i] = mapPartBackwardRow(row)
+				parts[i] = mapPartBackwardBaseRow(row)
 			}
 			result, pageInfo := pagination.BuildPageString(parts, params.Limit, cursorDir, partItemCreatedAt, partItemID)
-			for _, p := range result {
-				if apiErr := r.loadPartAttributes(ctx, p); apiErr != nil {
-					return nil, tracing.Trace(span, apiErr)
-				}
+			if apiErr := applyPartStitches(ctx, r.queries, result, params.Includes); apiErr != nil {
+				return nil, tracing.Trace(span, apiErr)
 			}
 			return &domain.ListPartsResult{Parts: result, PageInfo: pageInfo}, nil
 		}
 
 		// Forward with cursor
-		rows, err := r.queries.ListPartsForward(ctx, sqlc.ListPartsForwardParams{
+		rows, err := r.queries.ListPartsForwardBase(ctx, sqlc.ListPartsForwardBaseParams{
 			AccountID:              params.AccountID,
 			IncludeCategoryFilter:  includeCategoryFilter,
 			CategoryIds:            categoryIDs,
@@ -367,19 +270,17 @@ func (r *partRepoImpl) List(ctx context.Context, params domain.ListPartsParams) 
 		}
 		parts := make([]*domain.Part, len(rows))
 		for i, row := range rows {
-			parts[i] = mapPartForwardRow(row)
+			parts[i] = mapPartForwardBaseRow(row)
 		}
 		result, pageInfo := pagination.BuildPageString(parts, params.Limit, cursorDir, partItemCreatedAt, partItemID)
-		for _, p := range result {
-			if apiErr := r.loadPartAttributes(ctx, p); apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
-			}
+		if apiErr := applyPartStitches(ctx, r.queries, result, params.Includes); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
 		}
 		return &domain.ListPartsResult{Parts: result, PageInfo: pageInfo}, nil
 	}
 
 	// No cursor — first page
-	rows, err := r.queries.ListPartsForward(ctx, sqlc.ListPartsForwardParams{
+	rows, err := r.queries.ListPartsForwardBase(ctx, sqlc.ListPartsForwardBaseParams{
 		AccountID:              params.AccountID,
 		IncludeCategoryFilter:  includeCategoryFilter,
 		CategoryIds:            categoryIDs,
@@ -395,13 +296,11 @@ func (r *partRepoImpl) List(ctx context.Context, params domain.ListPartsParams) 
 	}
 	parts := make([]*domain.Part, len(rows))
 	for i, row := range rows {
-		parts[i] = mapPartForwardRow(row)
+		parts[i] = mapPartForwardBaseRow(row)
 	}
 	result, pageInfo := pagination.BuildPageString(parts, params.Limit, cursorDir, partItemCreatedAt, partItemID)
-	for _, p := range result {
-		if apiErr := r.loadPartAttributes(ctx, p); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
+	if apiErr := applyPartStitches(ctx, r.queries, result, params.Includes); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
 	}
 	return &domain.ListPartsResult{Parts: result, PageInfo: pageInfo}, nil
 }

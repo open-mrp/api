@@ -89,10 +89,14 @@ SELECT
     s.carrier_id,
     cr.name AS carrier_name,
     cr.is_portal_enabled AS carrier_is_portal_enabled,
+    cr.created_at AS carrier_created_at,
+    cr.updated_at AS carrier_updated_at,
     s.carrier_option_id,
     co.name AS carrier_option_name,
     co.is_portal_enabled AS service_level_is_portal_enabled,
     co.service_level_token AS service_level_token,
+    co.created_at AS service_level_created_at,
+    co.updated_at AS service_level_updated_at,
     s.shipping_address_id,
     addr.name AS shipping_address_name,
     s.shipped_by_id,
@@ -104,13 +108,26 @@ SELECT
     ar.external_number AS customer_number,
     ar.account_status_code AS customer_status_code,
     ar.commission_status_code AS customer_commission_policy,
+    ar.created_at AS customer_created_at,
+    ar.updated_at AS customer_updated_at,
     p.id AS pick_id,
     p.number AS pick_number,
+    p.created_at AS pick_created_at,
+    p.updated_at AS pick_updated_at,
     billing_geo.country AS billing_address_country,
     billing_geo.postal_code AS billing_address_zip,
     s.account_id,
     s.created_at,
-    s.updated_at
+    s.updated_at,
+    so.created_at AS sales_order_created_at,
+    so.updated_at AS sales_order_updated_at,
+    addr.created_at AS shipping_address_created_at,
+    addr.updated_at AS shipping_address_updated_at,
+    shipped_by_au.status_code AS shipped_by_status_code,
+    shipped_by_au.created_at AS shipped_by_created_at,
+    shipped_by_au.updated_at AS shipped_by_updated_at,
+    inv.created_at AS invoice_created_at,
+    inv.updated_at AS invoice_updated_at
 FROM shipment s
 JOIN shipment_status ss ON ss.code = s.shipment_status_code
 JOIN sales_order so ON so.id = s.sales_order_id
@@ -152,10 +169,14 @@ type GetShipmentRow struct {
 	CarrierID                   string
 	CarrierName                 string
 	CarrierIsPortalEnabled      bool
+	CarrierCreatedAt            time.Time
+	CarrierUpdatedAt            time.Time
 	CarrierOptionID             sql.NullString
 	CarrierOptionName           sql.NullString
 	ServiceLevelIsPortalEnabled sql.NullBool
 	ServiceLevelToken           sql.NullString
+	ServiceLevelCreatedAt       sql.NullTime
+	ServiceLevelUpdatedAt       sql.NullTime
 	ShippingAddressID           string
 	ShippingAddressName         sql.NullString
 	ShippedByID                 sql.NullString
@@ -167,13 +188,26 @@ type GetShipmentRow struct {
 	CustomerNumber              string
 	CustomerStatusCode          sql.NullString
 	CustomerCommissionPolicy    sql.NullString
+	CustomerCreatedAt           time.Time
+	CustomerUpdatedAt           time.Time
 	PickID                      sql.NullString
 	PickNumber                  sql.NullString
+	PickCreatedAt               sql.NullTime
+	PickUpdatedAt               sql.NullTime
 	BillingAddressCountry       sql.NullString
 	BillingAddressZip           sql.NullString
 	AccountID                   string
 	CreatedAt                   time.Time
 	UpdatedAt                   time.Time
+	SalesOrderCreatedAt         time.Time
+	SalesOrderUpdatedAt         time.Time
+	ShippingAddressCreatedAt    sql.NullTime
+	ShippingAddressUpdatedAt    sql.NullTime
+	ShippedByStatusCode         sql.NullString
+	ShippedByCreatedAt          sql.NullTime
+	ShippedByUpdatedAt          sql.NullTime
+	InvoiceCreatedAt            sql.NullTime
+	InvoiceUpdatedAt            sql.NullTime
 }
 
 func (q *Queries) GetShipment(ctx context.Context, arg GetShipmentParams) (GetShipmentRow, error) {
@@ -196,10 +230,14 @@ func (q *Queries) GetShipment(ctx context.Context, arg GetShipmentParams) (GetSh
 		&i.CarrierID,
 		&i.CarrierName,
 		&i.CarrierIsPortalEnabled,
+		&i.CarrierCreatedAt,
+		&i.CarrierUpdatedAt,
 		&i.CarrierOptionID,
 		&i.CarrierOptionName,
 		&i.ServiceLevelIsPortalEnabled,
 		&i.ServiceLevelToken,
+		&i.ServiceLevelCreatedAt,
+		&i.ServiceLevelUpdatedAt,
 		&i.ShippingAddressID,
 		&i.ShippingAddressName,
 		&i.ShippedByID,
@@ -211,13 +249,26 @@ func (q *Queries) GetShipment(ctx context.Context, arg GetShipmentParams) (GetSh
 		&i.CustomerNumber,
 		&i.CustomerStatusCode,
 		&i.CustomerCommissionPolicy,
+		&i.CustomerCreatedAt,
+		&i.CustomerUpdatedAt,
 		&i.PickID,
 		&i.PickNumber,
+		&i.PickCreatedAt,
+		&i.PickUpdatedAt,
 		&i.BillingAddressCountry,
 		&i.BillingAddressZip,
 		&i.AccountID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.SalesOrderCreatedAt,
+		&i.SalesOrderUpdatedAt,
+		&i.ShippingAddressCreatedAt,
+		&i.ShippingAddressUpdatedAt,
+		&i.ShippedByStatusCode,
+		&i.ShippedByCreatedAt,
+		&i.ShippedByUpdatedAt,
+		&i.InvoiceCreatedAt,
+		&i.InvoiceUpdatedAt,
 	)
 	return i, err
 }
@@ -246,6 +297,10 @@ SELECT
     ar.external_number AS customer_number,
     ar.account_status_code AS customer_status_code,
     ar.commission_status_code AS customer_commission_policy,
+    ar.created_at AS customer_created_at,
+    ar.updated_at AS customer_updated_at,
+    so.created_at AS sales_order_created_at,
+    so.updated_at AS sales_order_updated_at,
     s.created_at,
     s.updated_at
 FROM shipment s
@@ -362,6 +417,10 @@ type ListShipmentsBackwardRow struct {
 	CustomerNumber              string
 	CustomerStatusCode          sql.NullString
 	CustomerCommissionPolicy    sql.NullString
+	CustomerCreatedAt           time.Time
+	CustomerUpdatedAt           time.Time
+	SalesOrderCreatedAt         time.Time
+	SalesOrderUpdatedAt         time.Time
 	CreatedAt                   time.Time
 	UpdatedAt                   time.Time
 }
@@ -464,6 +523,10 @@ func (q *Queries) ListShipmentsBackward(ctx context.Context, arg ListShipmentsBa
 			&i.CustomerNumber,
 			&i.CustomerStatusCode,
 			&i.CustomerCommissionPolicy,
+			&i.CustomerCreatedAt,
+			&i.CustomerUpdatedAt,
+			&i.SalesOrderCreatedAt,
+			&i.SalesOrderUpdatedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -504,6 +567,10 @@ SELECT
     ar.external_number AS customer_number,
     ar.account_status_code AS customer_status_code,
     ar.commission_status_code AS customer_commission_policy,
+    ar.created_at AS customer_created_at,
+    ar.updated_at AS customer_updated_at,
+    so.created_at AS sales_order_created_at,
+    so.updated_at AS sales_order_updated_at,
     s.created_at,
     s.updated_at
 FROM shipment s
@@ -621,6 +688,10 @@ type ListShipmentsForwardRow struct {
 	CustomerNumber              string
 	CustomerStatusCode          sql.NullString
 	CustomerCommissionPolicy    sql.NullString
+	CustomerCreatedAt           time.Time
+	CustomerUpdatedAt           time.Time
+	SalesOrderCreatedAt         time.Time
+	SalesOrderUpdatedAt         time.Time
 	CreatedAt                   time.Time
 	UpdatedAt                   time.Time
 }
@@ -724,6 +795,10 @@ func (q *Queries) ListShipmentsForward(ctx context.Context, arg ListShipmentsFor
 			&i.CustomerNumber,
 			&i.CustomerStatusCode,
 			&i.CustomerCommissionPolicy,
+			&i.CustomerCreatedAt,
+			&i.CustomerUpdatedAt,
+			&i.SalesOrderCreatedAt,
+			&i.SalesOrderUpdatedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {

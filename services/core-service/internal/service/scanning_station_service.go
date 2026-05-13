@@ -94,7 +94,7 @@ func (s *scanningStationSvcImpl) ListScanningStations(ctx context.Context, param
 	return s.repos.NewScanningStationRepo().List(ctx, params)
 }
 
-func (s *scanningStationSvcImpl) GetScanningStation(ctx context.Context, scanningStationID string) (*domain.ScanningStation, *apierror.APIError) {
+func (s *scanningStationSvcImpl) GetScanningStation(ctx context.Context, params domain.GetScanningStationParams) (*domain.ScanningStation, *apierror.APIError) {
 	ctx, span := scanningStationSvcTracer.Start(ctx, "service.scanning_station.get")
 	defer span.End()
 
@@ -110,10 +110,9 @@ func (s *scanningStationSvcImpl) GetScanningStation(ctx context.Context, scannin
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return s.repos.NewScanningStationRepo().Get(ctx, domain.GetScanningStationParams{
-		AccountID:         identity.Target.AccountID,
-		ScanningStationID: scanningStationID,
-	})
+	params.AccountID = identity.Target.AccountID
+
+	return s.repos.NewScanningStationRepo().Get(ctx, params)
 }
 
 func (s *scanningStationSvcImpl) CreateScanningStation(ctx context.Context, params domain.CreateScanningStationParams) (*domain.ScanningStation, *apierror.APIError) {

@@ -31,30 +31,52 @@ type VolumeDiscountTier struct {
 }
 
 type VolumeDiscountCustomerGroup struct {
-	ID             string
-	AccountGroupID string
-	Name           string
+	ID               string
+	AccountGroupID   string
+	Name             string
+	CommissionPolicy string
+	FreightPolicy    string
+	Type             string
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
 }
 
 type VolumeDiscountProductLine struct {
-	ID   string
-	Name string
+	ID                 string
+	Name               string
+	IsCommissionExempt bool
+	IsFreightExempt    bool
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
 }
 
 type VolumeDiscountCategory struct {
-	ID   string
-	Name string
+	ID        string
+	Name      string
+	Type      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 type VolumeDiscountAttribute struct {
-	ID   string
-	Name string
+	ID        string
+	Name      string
+	ColorCode string
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 type VolumeDiscountUnit struct {
-	ID           string
-	Name         string
-	Abbreviation string
+	ID                string
+	Name              string
+	Abbreviation      string
+	Type              string
+	RatioNumerator    string
+	RatioDenominator  string
+	OffsetNumerator   string
+	OffsetDenominator string
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
 }
 
 type ListVolumeDiscountsParams struct {
@@ -63,6 +85,7 @@ type ListVolumeDiscountsParams struct {
 	Cursor            *string
 	Limit             int32
 	Query             *string
+	Includes          []string
 }
 
 type ListVolumeDiscountsResult struct {
@@ -74,6 +97,7 @@ type GetVolumeDiscountParams struct {
 	AccountID         string
 	VolumeDiscountID  string
 	CustomerAccountID *string
+	Includes          []string
 }
 
 type CreateVolumeDiscountTierParams struct {
@@ -98,6 +122,7 @@ type CreateVolumeDiscountParams struct {
 	CategoryIDs    []string
 	AttributeIDs   []string
 	UnitIDs        []string
+	Includes       []string
 }
 
 type UpdateVolumeDiscountTierParams struct {
@@ -130,6 +155,7 @@ type UpdateVolumeDiscountParams struct {
 	HasCategories     bool
 	HasAttributes     bool
 	HasUnits          bool
+	Includes          []string
 }
 
 type DeleteVolumeDiscountParams struct {

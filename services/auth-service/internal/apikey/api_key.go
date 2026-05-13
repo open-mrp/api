@@ -16,7 +16,7 @@ type APIKey struct {
 	OwnerAccountID string
 	RoleID         string `audit:"role_id"`
 	RoleName       string `audit:"role_name"`
-	RoleTypeCode   string `audit:"role_type_code"`
+	RoleType       string `audit:"role_type_code"`
 	RedactedValue  string `audit:"redacted_value"`
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
@@ -61,8 +61,8 @@ func (m *APIKey) ToProto() *pb.APIKeyInfo {
 	if m.RoleName != "" {
 		info.RoleName = &m.RoleName
 	}
-	if m.RoleTypeCode != "" {
-		info.RoleTypeCode = &m.RoleTypeCode
+	if m.RoleType != "" {
+		info.RoleTypeCode = &m.RoleType
 	}
 
 	if m.LastUsedAt != nil {

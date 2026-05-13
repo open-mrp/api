@@ -28,20 +28,28 @@ func iclID(icl *domain.InventoryChangeLog) string           { return icl.ID }
 
 func mapICLForwardRow(row sqlc.ListInventoryChangeLogsForwardRow) *domain.InventoryChangeLog {
 	icl := &domain.InventoryChangeLog{
-		ID:                       row.ID,
-		ItemID:                   row.ItemID,
-		ItemSKU:                  row.ItemSku,
-		ItemTypeCode:             &row.ItemTypeCode,
-		QuantityID:               row.QuantityID,
-		QuantityValue:            row.QuantityValue,
-		QuantityUnitID:           row.QuantityUnitID,
-		QuantityUnitName:         row.QuantityUnitName,
-		QuantityUnitAbbreviation: row.QuantityUnitAbbreviation,
-		QuantityUnitType:         row.QuantityUnitType,
-		ActionTypeCode:           row.ActionTypeCode,
-		AccountID:                row.AccountID,
-		CreatedAt:                row.CreatedAt,
-		UpdatedAt:                row.UpdatedAt,
+		ID:                            row.ID,
+		ItemID:                        row.ItemID,
+		ItemSKU:                       row.ItemSku,
+		ItemTypeCode:                  &row.ItemTypeCode,
+		ItemCreatedAt:                 row.ItemCreatedAt,
+		ItemUpdatedAt:                 row.ItemUpdatedAt,
+		QuantityID:                    row.QuantityID,
+		QuantityValue:                 row.QuantityValue,
+		QuantityUnitID:                row.QuantityUnitID,
+		QuantityUnitName:              row.QuantityUnitName,
+		QuantityUnitAbbreviation:      row.QuantityUnitAbbreviation,
+		QuantityUnitType:              row.QuantityUnitType,
+		QuantityUnitRatioNumerator:    row.QuantityUnitRatioNumerator,
+		QuantityUnitRatioDenominator:  row.QuantityUnitRatioDenominator,
+		QuantityUnitOffsetNumerator:   row.QuantityUnitOffsetNumerator,
+		QuantityUnitOffsetDenominator: row.QuantityUnitOffsetDenominator,
+		QuantityUnitCreatedAt:         row.QuantityUnitCreatedAt,
+		QuantityUnitUpdatedAt:         row.QuantityUnitUpdatedAt,
+		ActionTypeCode:                row.ActionTypeCode,
+		AccountID:                     row.AccountID,
+		CreatedAt:                     row.CreatedAt,
+		UpdatedAt:                     row.UpdatedAt,
 	}
 
 	if row.ScanningStationID.Valid {
@@ -53,11 +61,23 @@ func mapICLForwardRow(row sqlc.ListInventoryChangeLogsForwardRow) *domain.Invent
 	if row.ScanningStationType.Valid {
 		icl.ScanningStationType = &row.ScanningStationType.String
 	}
+	if row.ScanningStationCreatedAt.Valid {
+		icl.ScanningStationCreatedAt = &row.ScanningStationCreatedAt.Time
+	}
+	if row.ScanningStationUpdatedAt.Valid {
+		icl.ScanningStationUpdatedAt = &row.ScanningStationUpdatedAt.Time
+	}
 	if row.ResponsibleUserID.Valid {
 		icl.ResponsibleUserID = &row.ResponsibleUserID.String
 	}
 	if row.ResponsibleUserName.Valid {
 		icl.ResponsibleUserName = &row.ResponsibleUserName.String
+	}
+	if row.ResponsibleUserCreatedAt.Valid {
+		icl.ResponsibleUserCreatedAt = &row.ResponsibleUserCreatedAt.Time
+	}
+	if row.ResponsibleUserUpdatedAt.Valid {
+		icl.ResponsibleUserUpdatedAt = &row.ResponsibleUserUpdatedAt.Time
 	}
 
 	return icl
@@ -65,20 +85,28 @@ func mapICLForwardRow(row sqlc.ListInventoryChangeLogsForwardRow) *domain.Invent
 
 func mapICLBackwardRow(row sqlc.ListInventoryChangeLogsBackwardRow) *domain.InventoryChangeLog {
 	icl := &domain.InventoryChangeLog{
-		ID:                       row.ID,
-		ItemID:                   row.ItemID,
-		ItemSKU:                  row.ItemSku,
-		ItemTypeCode:             &row.ItemTypeCode,
-		QuantityID:               row.QuantityID,
-		QuantityValue:            row.QuantityValue,
-		QuantityUnitID:           row.QuantityUnitID,
-		QuantityUnitName:         row.QuantityUnitName,
-		QuantityUnitAbbreviation: row.QuantityUnitAbbreviation,
-		QuantityUnitType:         row.QuantityUnitType,
-		ActionTypeCode:           row.ActionTypeCode,
-		AccountID:                row.AccountID,
-		CreatedAt:                row.CreatedAt,
-		UpdatedAt:                row.UpdatedAt,
+		ID:                            row.ID,
+		ItemID:                        row.ItemID,
+		ItemSKU:                       row.ItemSku,
+		ItemTypeCode:                  &row.ItemTypeCode,
+		ItemCreatedAt:                 row.ItemCreatedAt,
+		ItemUpdatedAt:                 row.ItemUpdatedAt,
+		QuantityID:                    row.QuantityID,
+		QuantityValue:                 row.QuantityValue,
+		QuantityUnitID:                row.QuantityUnitID,
+		QuantityUnitName:              row.QuantityUnitName,
+		QuantityUnitAbbreviation:      row.QuantityUnitAbbreviation,
+		QuantityUnitType:              row.QuantityUnitType,
+		QuantityUnitRatioNumerator:    row.QuantityUnitRatioNumerator,
+		QuantityUnitRatioDenominator:  row.QuantityUnitRatioDenominator,
+		QuantityUnitOffsetNumerator:   row.QuantityUnitOffsetNumerator,
+		QuantityUnitOffsetDenominator: row.QuantityUnitOffsetDenominator,
+		QuantityUnitCreatedAt:         row.QuantityUnitCreatedAt,
+		QuantityUnitUpdatedAt:         row.QuantityUnitUpdatedAt,
+		ActionTypeCode:                row.ActionTypeCode,
+		AccountID:                     row.AccountID,
+		CreatedAt:                     row.CreatedAt,
+		UpdatedAt:                     row.UpdatedAt,
 	}
 
 	if row.ScanningStationID.Valid {
@@ -90,11 +118,23 @@ func mapICLBackwardRow(row sqlc.ListInventoryChangeLogsBackwardRow) *domain.Inve
 	if row.ScanningStationType.Valid {
 		icl.ScanningStationType = &row.ScanningStationType.String
 	}
+	if row.ScanningStationCreatedAt.Valid {
+		icl.ScanningStationCreatedAt = &row.ScanningStationCreatedAt.Time
+	}
+	if row.ScanningStationUpdatedAt.Valid {
+		icl.ScanningStationUpdatedAt = &row.ScanningStationUpdatedAt.Time
+	}
 	if row.ResponsibleUserID.Valid {
 		icl.ResponsibleUserID = &row.ResponsibleUserID.String
 	}
 	if row.ResponsibleUserName.Valid {
 		icl.ResponsibleUserName = &row.ResponsibleUserName.String
+	}
+	if row.ResponsibleUserCreatedAt.Valid {
+		icl.ResponsibleUserCreatedAt = &row.ResponsibleUserCreatedAt.Time
+	}
+	if row.ResponsibleUserUpdatedAt.Valid {
+		icl.ResponsibleUserUpdatedAt = &row.ResponsibleUserUpdatedAt.Time
 	}
 
 	return icl
@@ -102,20 +142,28 @@ func mapICLBackwardRow(row sqlc.ListInventoryChangeLogsBackwardRow) *domain.Inve
 
 func mapGetICLRow(row sqlc.GetInventoryChangeLogRow) *domain.InventoryChangeLog {
 	icl := &domain.InventoryChangeLog{
-		ID:                       row.ID,
-		ItemID:                   row.ItemID,
-		ItemSKU:                  row.ItemSku,
-		ItemTypeCode:             &row.ItemTypeCode,
-		QuantityID:               row.QuantityID,
-		QuantityValue:            row.QuantityValue,
-		QuantityUnitID:           row.QuantityUnitID,
-		QuantityUnitName:         row.QuantityUnitName,
-		QuantityUnitAbbreviation: row.QuantityUnitAbbreviation,
-		QuantityUnitType:         row.QuantityUnitType,
-		ActionTypeCode:           row.ActionTypeCode,
-		AccountID:                row.AccountID,
-		CreatedAt:                row.CreatedAt,
-		UpdatedAt:                row.UpdatedAt,
+		ID:                            row.ID,
+		ItemID:                        row.ItemID,
+		ItemSKU:                       row.ItemSku,
+		ItemTypeCode:                  &row.ItemTypeCode,
+		ItemCreatedAt:                 row.ItemCreatedAt,
+		ItemUpdatedAt:                 row.ItemUpdatedAt,
+		QuantityID:                    row.QuantityID,
+		QuantityValue:                 row.QuantityValue,
+		QuantityUnitID:                row.QuantityUnitID,
+		QuantityUnitName:              row.QuantityUnitName,
+		QuantityUnitAbbreviation:      row.QuantityUnitAbbreviation,
+		QuantityUnitType:              row.QuantityUnitType,
+		QuantityUnitRatioNumerator:    row.QuantityUnitRatioNumerator,
+		QuantityUnitRatioDenominator:  row.QuantityUnitRatioDenominator,
+		QuantityUnitOffsetNumerator:   row.QuantityUnitOffsetNumerator,
+		QuantityUnitOffsetDenominator: row.QuantityUnitOffsetDenominator,
+		QuantityUnitCreatedAt:         row.QuantityUnitCreatedAt,
+		QuantityUnitUpdatedAt:         row.QuantityUnitUpdatedAt,
+		ActionTypeCode:                row.ActionTypeCode,
+		AccountID:                     row.AccountID,
+		CreatedAt:                     row.CreatedAt,
+		UpdatedAt:                     row.UpdatedAt,
 	}
 
 	if row.ScanningStationID.Valid {
@@ -127,11 +175,23 @@ func mapGetICLRow(row sqlc.GetInventoryChangeLogRow) *domain.InventoryChangeLog 
 	if row.ScanningStationType.Valid {
 		icl.ScanningStationType = &row.ScanningStationType.String
 	}
+	if row.ScanningStationCreatedAt.Valid {
+		icl.ScanningStationCreatedAt = &row.ScanningStationCreatedAt.Time
+	}
+	if row.ScanningStationUpdatedAt.Valid {
+		icl.ScanningStationUpdatedAt = &row.ScanningStationUpdatedAt.Time
+	}
 	if row.ResponsibleUserID.Valid {
 		icl.ResponsibleUserID = &row.ResponsibleUserID.String
 	}
 	if row.ResponsibleUserName.Valid {
 		icl.ResponsibleUserName = &row.ResponsibleUserName.String
+	}
+	if row.ResponsibleUserCreatedAt.Valid {
+		icl.ResponsibleUserCreatedAt = &row.ResponsibleUserCreatedAt.Time
+	}
+	if row.ResponsibleUserUpdatedAt.Valid {
+		icl.ResponsibleUserUpdatedAt = &row.ResponsibleUserUpdatedAt.Time
 	}
 
 	return icl

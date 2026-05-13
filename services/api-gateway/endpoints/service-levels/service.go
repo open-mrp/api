@@ -18,7 +18,7 @@ import (
 
 type ServiceLevelSvc interface {
 	ListServiceLevels(ctx context.Context, req *ListServiceLevelsRequest) (*apiresource.List[apiresource.ServiceLevel], *apierror.APIError)
-	GetServiceLevel(ctx context.Context, req *GetServiceLevelRequest) (*apiresource.ServiceLevel, *apierror.APIError)
+	GetServiceLevel(ctx context.Context, req *RetrieveServiceLevelRequest) (*apiresource.ServiceLevel, *apierror.APIError)
 	CreateServiceLevel(ctx context.Context, req *CreateServiceLevelRequest) (*apiresource.ServiceLevel, *apierror.APIError)
 	UpdateServiceLevel(ctx context.Context, req *UpdateServiceLevelRequest) (*apiresource.ServiceLevel, *apierror.APIError)
 	DeleteServiceLevel(ctx context.Context, req *DeleteServiceLevelRequest) (*apiresource.EmptyResource, *apierror.APIError)
@@ -79,7 +79,7 @@ func (m *serviceLevelSvcImpl) ListServiceLevels(ctx context.Context, req *ListSe
 	return ServiceLevelListPresenter(resp, ownerAccount), nil
 }
 
-func (m *serviceLevelSvcImpl) GetServiceLevel(ctx context.Context, req *GetServiceLevelRequest) (*apiresource.ServiceLevel, *apierror.APIError) {
+func (m *serviceLevelSvcImpl) GetServiceLevel(ctx context.Context, req *RetrieveServiceLevelRequest) (*apiresource.ServiceLevel, *apierror.APIError) {
 	pbReq := &pb.GetServiceLevelRequest{
 		CarrierId: req.CarrierID,
 		Id:        req.ServiceLevelID,

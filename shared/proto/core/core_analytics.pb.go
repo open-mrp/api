@@ -2260,6 +2260,7 @@ type QuantityInfo struct {
 	CreatedAt        *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt        *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	UnitName         string                 `protobuf:"bytes,8,opt,name=unit_name,json=unitName,proto3" json:"unit_name,omitempty"`
+	UnitDetail       *UnitInfo              `protobuf:"bytes,9,opt,name=unit_detail,json=unitDetail,proto3,oneof" json:"unit_detail,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -2350,19 +2351,26 @@ func (x *QuantityInfo) GetUnitName() string {
 	return ""
 }
 
+func (x *QuantityInfo) GetUnitDetail() *UnitInfo {
+	if x != nil {
+		return x.UnitDetail
+	}
+	return nil
+}
+
 type ShippingTermInfo struct {
-	state                       protoimpl.MessageState `protogen:"open.v1"`
-	Id                          string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name                        string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Type                        string                 `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"`
-	FlatRate                    *QuantityInfo          `protobuf:"bytes,4,opt,name=flat_rate,json=flatRate,proto3,oneof" json:"flat_rate,omitempty"`
-	MinimumOrderValue           *QuantityInfo          `protobuf:"bytes,5,opt,name=minimum_order_value,json=minimumOrderValue,proto3,oneof" json:"minimum_order_value,omitempty"`
-	FreeShippingServiceLevelIds []string               `protobuf:"bytes,6,rep,name=free_shipping_service_level_ids,json=freeShippingServiceLevelIds,proto3" json:"free_shipping_service_level_ids,omitempty"`
-	CreatedAt                   *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt                   *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	AccountId                   *string                `protobuf:"bytes,9,opt,name=account_id,json=accountId,proto3,oneof" json:"account_id,omitempty"`
-	unknownFields               protoimpl.UnknownFields
-	sizeCache                   protoimpl.SizeCache
+	state                     protoimpl.MessageState `protogen:"open.v1"`
+	Id                        string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name                      string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Type                      string                 `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"`
+	FlatRate                  *QuantityInfo          `protobuf:"bytes,4,opt,name=flat_rate,json=flatRate,proto3,oneof" json:"flat_rate,omitempty"`
+	MinimumOrderValue         *QuantityInfo          `protobuf:"bytes,5,opt,name=minimum_order_value,json=minimumOrderValue,proto3,oneof" json:"minimum_order_value,omitempty"`
+	FreeShippingServiceLevels []*ServiceLevelInfo    `protobuf:"bytes,6,rep,name=free_shipping_service_levels,json=freeShippingServiceLevels,proto3" json:"free_shipping_service_levels,omitempty"`
+	CreatedAt                 *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt                 *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	AccountId                 *string                `protobuf:"bytes,9,opt,name=account_id,json=accountId,proto3,oneof" json:"account_id,omitempty"`
+	unknownFields             protoimpl.UnknownFields
+	sizeCache                 protoimpl.SizeCache
 }
 
 func (x *ShippingTermInfo) Reset() {
@@ -2430,9 +2438,9 @@ func (x *ShippingTermInfo) GetMinimumOrderValue() *QuantityInfo {
 	return nil
 }
 
-func (x *ShippingTermInfo) GetFreeShippingServiceLevelIds() []string {
+func (x *ShippingTermInfo) GetFreeShippingServiceLevels() []*ServiceLevelInfo {
 	if x != nil {
-		return x.FreeShippingServiceLevelIds
+		return x.FreeShippingServiceLevels
 	}
 	return nil
 }
@@ -2463,6 +2471,7 @@ type ListShippingTermsRequest struct {
 	Cursor        *string                `protobuf:"bytes,1,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
 	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
 	Query         *string                `protobuf:"bytes,3,opt,name=query,proto3,oneof" json:"query,omitempty"`
+	Includes      []string               `protobuf:"bytes,4,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2516,6 +2525,13 @@ func (x *ListShippingTermsRequest) GetQuery() string {
 		return *x.Query
 	}
 	return ""
+}
+
+func (x *ListShippingTermsRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
 }
 
 type ListShippingTermsResponse struct {
@@ -2573,6 +2589,7 @@ func (x *ListShippingTermsResponse) GetPageInfo() *PageInfo {
 type GetShippingTermRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Includes      []string               `protobuf:"bytes,2,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2612,6 +2629,13 @@ func (x *GetShippingTermRequest) GetId() string {
 		return x.Id
 	}
 	return ""
+}
+
+func (x *GetShippingTermRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
 }
 
 type GetShippingTermResponse struct {
@@ -2777,6 +2801,7 @@ type CreateShippingTermRequest struct {
 	FlatRate                    *QuantityInput         `protobuf:"bytes,3,opt,name=flat_rate,json=flatRate,proto3,oneof" json:"flat_rate,omitempty"`
 	MinimumOrderValue           *QuantityInput         `protobuf:"bytes,4,opt,name=minimum_order_value,json=minimumOrderValue,proto3,oneof" json:"minimum_order_value,omitempty"`
 	FreeShippingServiceLevelIds []string               `protobuf:"bytes,5,rep,name=free_shipping_service_level_ids,json=freeShippingServiceLevelIds,proto3" json:"free_shipping_service_level_ids,omitempty"`
+	Includes                    []string               `protobuf:"bytes,6,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields               protoimpl.UnknownFields
 	sizeCache                   protoimpl.SizeCache
 }
@@ -2846,6 +2871,13 @@ func (x *CreateShippingTermRequest) GetFreeShippingServiceLevelIds() []string {
 	return nil
 }
 
+func (x *CreateShippingTermRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
+}
+
 type CreateShippingTermResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ShippingTerm  *ShippingTermInfo      `protobuf:"bytes,1,opt,name=shipping_term,json=shippingTerm,proto3" json:"shipping_term,omitempty"`
@@ -2901,6 +2933,7 @@ type UpdateShippingTermRequest struct {
 	HasFreeShippingServiceLevelIds bool                   `protobuf:"varint,7,opt,name=has_free_shipping_service_level_ids,json=hasFreeShippingServiceLevelIds,proto3" json:"has_free_shipping_service_level_ids,omitempty"`
 	HasFlatRate                    bool                   `protobuf:"varint,8,opt,name=has_flat_rate,json=hasFlatRate,proto3" json:"has_flat_rate,omitempty"`
 	HasMinimumOrderValue           bool                   `protobuf:"varint,9,opt,name=has_minimum_order_value,json=hasMinimumOrderValue,proto3" json:"has_minimum_order_value,omitempty"`
+	Includes                       []string               `protobuf:"bytes,10,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields                  protoimpl.UnknownFields
 	sizeCache                      protoimpl.SizeCache
 }
@@ -2996,6 +3029,13 @@ func (x *UpdateShippingTermRequest) GetHasMinimumOrderValue() bool {
 		return x.HasMinimumOrderValue
 	}
 	return false
+}
+
+func (x *UpdateShippingTermRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
 }
 
 type UpdateShippingTermResponse struct {
@@ -4674,7 +4714,7 @@ var File_core_core_analytics_proto protoreflect.FileDescriptor
 
 const file_core_core_analytics_proto_rawDesc = "" +
 	"\n" +
-	"\x19core/core_analytics.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a core/core_identity_context.proto\"j\n" +
+	"\x19core/core_analytics.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a!core/core_accounts_carriers.proto\x1a core/core_identity_context.proto\"j\n" +
 	"\x12QuarterlyDataProto\x12\x0e\n" +
 	"\x02q1\x18\x01 \x01(\x01R\x02q1\x12\x0e\n" +
 	"\x02q2\x18\x02 \x01(\x01R\x02q2\x12\x0e\n" +
@@ -4851,7 +4891,7 @@ const file_core_core_analytics_proto_rawDesc = "" +
 	"\x19UpdatePaymentTermResponse\x128\n" +
 	"\fpayment_term\x18\x01 \x01(\v2\x15.core.PaymentTermInfoR\vpaymentTerm\"*\n" +
 	"\x18DeletePaymentTermRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"\xaa\x02\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\xf0\x02\n" +
 	"\fQuantityInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value\x12\x17\n" +
@@ -4862,14 +4902,17 @@ const file_core_core_analytics_proto_rawDesc = "" +
 	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x1b\n" +
-	"\tunit_name\x18\b \x01(\tR\bunitName\"\xde\x03\n" +
+	"\tunit_name\x18\b \x01(\tR\bunitName\x124\n" +
+	"\vunit_detail\x18\t \x01(\v2\x0e.core.UnitInfoH\x00R\n" +
+	"unitDetail\x88\x01\x01B\x0e\n" +
+	"\f_unit_detail\"\xf1\x03\n" +
 	"\x10ShippingTermInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
 	"\x04type\x18\x03 \x01(\tR\x04type\x124\n" +
 	"\tflat_rate\x18\x04 \x01(\v2\x12.core.QuantityInfoH\x00R\bflatRate\x88\x01\x01\x12G\n" +
-	"\x13minimum_order_value\x18\x05 \x01(\v2\x12.core.QuantityInfoH\x01R\x11minimumOrderValue\x88\x01\x01\x12D\n" +
-	"\x1ffree_shipping_service_level_ids\x18\x06 \x03(\tR\x1bfreeShippingServiceLevelIds\x129\n" +
+	"\x13minimum_order_value\x18\x05 \x01(\v2\x12.core.QuantityInfoH\x01R\x11minimumOrderValue\x88\x01\x01\x12W\n" +
+	"\x1cfree_shipping_service_levels\x18\x06 \x03(\v2\x16.core.ServiceLevelInfoR\x19freeShippingServiceLevels\x129\n" +
 	"\n" +
 	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
@@ -4879,18 +4922,20 @@ const file_core_core_analytics_proto_rawDesc = "" +
 	"\n" +
 	"_flat_rateB\x16\n" +
 	"\x14_minimum_order_valueB\r\n" +
-	"\v_account_id\"}\n" +
+	"\v_account_id\"\x99\x01\n" +
 	"\x18ListShippingTermsRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x19\n" +
-	"\x05query\x18\x03 \x01(\tH\x01R\x05query\x88\x01\x01B\t\n" +
+	"\x05query\x18\x03 \x01(\tH\x01R\x05query\x88\x01\x01\x12\x1a\n" +
+	"\bincludes\x18\x04 \x03(\tR\bincludesB\t\n" +
 	"\a_cursorB\b\n" +
 	"\x06_query\"\x87\x01\n" +
 	"\x19ListShippingTermsResponse\x12=\n" +
 	"\x0eshipping_terms\x18\x01 \x03(\v2\x16.core.ShippingTermInfoR\rshippingTerms\x12+\n" +
-	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"(\n" +
+	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"D\n" +
 	"\x16GetShippingTermRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"V\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
+	"\bincludes\x18\x02 \x03(\tR\bincludes\"V\n" +
 	"\x17GetShippingTermResponse\x12;\n" +
 	"\rshipping_term\x18\x01 \x01(\v2\x16.core.ShippingTermInfoR\fshippingTerm\">\n" +
 	"\rQuantityInput\x12\x14\n" +
@@ -4899,18 +4944,19 @@ const file_core_core_analytics_proto_rawDesc = "" +
 	"\x0fCreateRateInput\x12\x14\n" +
 	"\x05value\x18\x01 \x01(\tR\x05value\x12*\n" +
 	"\x11numerator_unit_id\x18\x02 \x01(\tR\x0fnumeratorUnitId\x12.\n" +
-	"\x13denominator_unit_id\x18\x03 \x01(\tR\x11denominatorUnitId\"\xb0\x02\n" +
+	"\x13denominator_unit_id\x18\x03 \x01(\tR\x11denominatorUnitId\"\xcc\x02\n" +
 	"\x19CreateShippingTermRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
 	"\x04type\x18\x02 \x01(\tR\x04type\x125\n" +
 	"\tflat_rate\x18\x03 \x01(\v2\x13.core.QuantityInputH\x00R\bflatRate\x88\x01\x01\x12H\n" +
 	"\x13minimum_order_value\x18\x04 \x01(\v2\x13.core.QuantityInputH\x01R\x11minimumOrderValue\x88\x01\x01\x12D\n" +
-	"\x1ffree_shipping_service_level_ids\x18\x05 \x03(\tR\x1bfreeShippingServiceLevelIdsB\f\n" +
+	"\x1ffree_shipping_service_level_ids\x18\x05 \x03(\tR\x1bfreeShippingServiceLevelIds\x12\x1a\n" +
+	"\bincludes\x18\x06 \x03(\tR\bincludesB\f\n" +
 	"\n" +
 	"_flat_rateB\x16\n" +
 	"\x14_minimum_order_value\"Y\n" +
 	"\x1aCreateShippingTermResponse\x12;\n" +
-	"\rshipping_term\x18\x01 \x01(\v2\x16.core.ShippingTermInfoR\fshippingTerm\"\x84\x04\n" +
+	"\rshipping_term\x18\x01 \x01(\v2\x16.core.ShippingTermInfoR\fshippingTerm\"\xa0\x04\n" +
 	"\x19UpdateShippingTermRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x17\n" +
@@ -4920,7 +4966,9 @@ const file_core_core_analytics_proto_rawDesc = "" +
 	"\x1ffree_shipping_service_level_ids\x18\x06 \x03(\tR\x1bfreeShippingServiceLevelIds\x12K\n" +
 	"#has_free_shipping_service_level_ids\x18\a \x01(\bR\x1ehasFreeShippingServiceLevelIds\x12\"\n" +
 	"\rhas_flat_rate\x18\b \x01(\bR\vhasFlatRate\x125\n" +
-	"\x17has_minimum_order_value\x18\t \x01(\bR\x14hasMinimumOrderValueB\a\n" +
+	"\x17has_minimum_order_value\x18\t \x01(\bR\x14hasMinimumOrderValue\x12\x1a\n" +
+	"\bincludes\x18\n" +
+	" \x03(\tR\bincludesB\a\n" +
 	"\x05_nameB\a\n" +
 	"\x05_typeB\f\n" +
 	"\n" +
@@ -5197,6 +5245,8 @@ var file_core_core_analytics_proto_goTypes = []any{
 	(*BasicInfoProto)(nil),                   // 75: core.BasicInfoProto
 	(*timestamppb.Timestamp)(nil),            // 76: google.protobuf.Timestamp
 	(*PageInfo)(nil),                         // 77: core.PageInfo
+	(*UnitInfo)(nil),                         // 78: core.UnitInfo
+	(*ServiceLevelInfo)(nil),                 // 79: core.ServiceLevelInfo
 }
 var file_core_core_analytics_proto_depIdxs = []int32{
 	73, // 0: core.AnalyzeQuarterlyOrdersResponse.data:type_name -> core.AnalyzeQuarterlyOrdersResponse.DataEntry
@@ -5247,41 +5297,43 @@ var file_core_core_analytics_proto_depIdxs = []int32{
 	26, // 45: core.UpdatePaymentTermResponse.payment_term:type_name -> core.PaymentTermInfo
 	76, // 46: core.QuantityInfo.created_at:type_name -> google.protobuf.Timestamp
 	76, // 47: core.QuantityInfo.updated_at:type_name -> google.protobuf.Timestamp
-	36, // 48: core.ShippingTermInfo.flat_rate:type_name -> core.QuantityInfo
-	36, // 49: core.ShippingTermInfo.minimum_order_value:type_name -> core.QuantityInfo
-	76, // 50: core.ShippingTermInfo.created_at:type_name -> google.protobuf.Timestamp
-	76, // 51: core.ShippingTermInfo.updated_at:type_name -> google.protobuf.Timestamp
-	37, // 52: core.ListShippingTermsResponse.shipping_terms:type_name -> core.ShippingTermInfo
-	77, // 53: core.ListShippingTermsResponse.page_info:type_name -> core.PageInfo
-	37, // 54: core.GetShippingTermResponse.shipping_term:type_name -> core.ShippingTermInfo
-	42, // 55: core.CreateShippingTermRequest.flat_rate:type_name -> core.QuantityInput
-	42, // 56: core.CreateShippingTermRequest.minimum_order_value:type_name -> core.QuantityInput
-	37, // 57: core.CreateShippingTermResponse.shipping_term:type_name -> core.ShippingTermInfo
-	42, // 58: core.UpdateShippingTermRequest.flat_rate:type_name -> core.QuantityInput
-	42, // 59: core.UpdateShippingTermRequest.minimum_order_value:type_name -> core.QuantityInput
-	37, // 60: core.UpdateShippingTermResponse.shipping_term:type_name -> core.ShippingTermInfo
-	49, // 61: core.AddressInfo.geolocation:type_name -> core.GeolocationInfo
-	76, // 62: core.AddressInfo.created_at:type_name -> google.protobuf.Timestamp
-	76, // 63: core.AddressInfo.updated_at:type_name -> google.protobuf.Timestamp
-	50, // 64: core.GetAddressResponse.address:type_name -> core.AddressInfo
-	50, // 65: core.ListAddressesResponse.addresses:type_name -> core.AddressInfo
-	77, // 66: core.ListAddressesResponse.page_info:type_name -> core.PageInfo
-	50, // 67: core.CreateAddressResponse.address:type_name -> core.AddressInfo
-	50, // 68: core.UpdateAddressResponse.address:type_name -> core.AddressInfo
-	61, // 69: core.AutocompleteAddressResponse.suggestions:type_name -> core.AddressSuggestion
-	64, // 70: core.GetAddressDetailsResponse.address:type_name -> core.AddressComponentsInfo
-	64, // 71: core.ValidateAddressResponse.components:type_name -> core.AddressComponentsInfo
-	76, // 72: core.AccountStatusInfo.created_at:type_name -> google.protobuf.Timestamp
-	76, // 73: core.AccountStatusInfo.updated_at:type_name -> google.protobuf.Timestamp
-	68, // 74: core.ListAccountStatusesResponse.account_statuses:type_name -> core.AccountStatusInfo
-	77, // 75: core.ListAccountStatusesResponse.page_info:type_name -> core.PageInfo
-	68, // 76: core.GetAccountStatusResponse.account_status:type_name -> core.AccountStatusInfo
-	0,  // 77: core.AnalyzeQuarterlyOrdersResponse.DataEntry.value:type_name -> core.QuarterlyDataProto
-	78, // [78:78] is the sub-list for method output_type
-	78, // [78:78] is the sub-list for method input_type
-	78, // [78:78] is the sub-list for extension type_name
-	78, // [78:78] is the sub-list for extension extendee
-	0,  // [0:78] is the sub-list for field type_name
+	78, // 48: core.QuantityInfo.unit_detail:type_name -> core.UnitInfo
+	36, // 49: core.ShippingTermInfo.flat_rate:type_name -> core.QuantityInfo
+	36, // 50: core.ShippingTermInfo.minimum_order_value:type_name -> core.QuantityInfo
+	79, // 51: core.ShippingTermInfo.free_shipping_service_levels:type_name -> core.ServiceLevelInfo
+	76, // 52: core.ShippingTermInfo.created_at:type_name -> google.protobuf.Timestamp
+	76, // 53: core.ShippingTermInfo.updated_at:type_name -> google.protobuf.Timestamp
+	37, // 54: core.ListShippingTermsResponse.shipping_terms:type_name -> core.ShippingTermInfo
+	77, // 55: core.ListShippingTermsResponse.page_info:type_name -> core.PageInfo
+	37, // 56: core.GetShippingTermResponse.shipping_term:type_name -> core.ShippingTermInfo
+	42, // 57: core.CreateShippingTermRequest.flat_rate:type_name -> core.QuantityInput
+	42, // 58: core.CreateShippingTermRequest.minimum_order_value:type_name -> core.QuantityInput
+	37, // 59: core.CreateShippingTermResponse.shipping_term:type_name -> core.ShippingTermInfo
+	42, // 60: core.UpdateShippingTermRequest.flat_rate:type_name -> core.QuantityInput
+	42, // 61: core.UpdateShippingTermRequest.minimum_order_value:type_name -> core.QuantityInput
+	37, // 62: core.UpdateShippingTermResponse.shipping_term:type_name -> core.ShippingTermInfo
+	49, // 63: core.AddressInfo.geolocation:type_name -> core.GeolocationInfo
+	76, // 64: core.AddressInfo.created_at:type_name -> google.protobuf.Timestamp
+	76, // 65: core.AddressInfo.updated_at:type_name -> google.protobuf.Timestamp
+	50, // 66: core.GetAddressResponse.address:type_name -> core.AddressInfo
+	50, // 67: core.ListAddressesResponse.addresses:type_name -> core.AddressInfo
+	77, // 68: core.ListAddressesResponse.page_info:type_name -> core.PageInfo
+	50, // 69: core.CreateAddressResponse.address:type_name -> core.AddressInfo
+	50, // 70: core.UpdateAddressResponse.address:type_name -> core.AddressInfo
+	61, // 71: core.AutocompleteAddressResponse.suggestions:type_name -> core.AddressSuggestion
+	64, // 72: core.GetAddressDetailsResponse.address:type_name -> core.AddressComponentsInfo
+	64, // 73: core.ValidateAddressResponse.components:type_name -> core.AddressComponentsInfo
+	76, // 74: core.AccountStatusInfo.created_at:type_name -> google.protobuf.Timestamp
+	76, // 75: core.AccountStatusInfo.updated_at:type_name -> google.protobuf.Timestamp
+	68, // 76: core.ListAccountStatusesResponse.account_statuses:type_name -> core.AccountStatusInfo
+	77, // 77: core.ListAccountStatusesResponse.page_info:type_name -> core.PageInfo
+	68, // 78: core.GetAccountStatusResponse.account_status:type_name -> core.AccountStatusInfo
+	0,  // 79: core.AnalyzeQuarterlyOrdersResponse.DataEntry.value:type_name -> core.QuarterlyDataProto
+	80, // [80:80] is the sub-list for method output_type
+	80, // [80:80] is the sub-list for method input_type
+	80, // [80:80] is the sub-list for extension type_name
+	80, // [80:80] is the sub-list for extension extendee
+	0,  // [0:80] is the sub-list for field type_name
 }
 
 func init() { file_core_core_analytics_proto_init() }
@@ -5289,11 +5341,13 @@ func file_core_core_analytics_proto_init() {
 	if File_core_core_analytics_proto != nil {
 		return
 	}
+	file_core_core_accounts_carriers_proto_init()
 	file_core_core_identity_context_proto_init()
 	file_core_core_analytics_proto_msgTypes[21].OneofWrappers = []any{}
 	file_core_core_analytics_proto_msgTypes[26].OneofWrappers = []any{}
 	file_core_core_analytics_proto_msgTypes[27].OneofWrappers = []any{}
 	file_core_core_analytics_proto_msgTypes[33].OneofWrappers = []any{}
+	file_core_core_analytics_proto_msgTypes[36].OneofWrappers = []any{}
 	file_core_core_analytics_proto_msgTypes[37].OneofWrappers = []any{}
 	file_core_core_analytics_proto_msgTypes[38].OneofWrappers = []any{}
 	file_core_core_analytics_proto_msgTypes[44].OneofWrappers = []any{}

@@ -22,17 +22,29 @@ SELECT
     i.id AS item_id,
     i.sku AS item_sku,
     i.item_type_code AS item_type_code,
+    i.created_at AS item_created_at,
+    i.updated_at AS item_updated_at,
     q.id AS quantity_id,
     q.value AS quantity_value,
     u.id AS quantity_unit_id,
     u.name AS quantity_unit_name,
     u.abbreviation AS quantity_unit_abbreviation,
     u.unit_dimension_code AS quantity_unit_type,
+    u.ratio_numerator AS quantity_unit_ratio_numerator,
+    u.ratio_denominator AS quantity_unit_ratio_denominator,
+    u.offset_numerator AS quantity_unit_offset_numerator,
+    u.offset_denominator AS quantity_unit_offset_denominator,
+    u.created_at AS quantity_unit_created_at,
+    u.updated_at AS quantity_unit_updated_at,
     icl.scanning_station_id,
     ss.name AS scanning_station_name,
     ss.scanning_station_type_code AS scanning_station_type,
+    ss.created_at AS scanning_station_created_at,
+    ss.updated_at AS scanning_station_updated_at,
     icl.responsible_user_id,
-    usr.name AS responsible_user_name
+    usr.name AS responsible_user_name,
+    usr.created_at AS responsible_user_created_at,
+    usr.updated_at AS responsible_user_updated_at
 FROM inventory_change_log icl
 JOIN item i ON i.id = icl.item_id
 JOIN quantity q ON q.id = icl.quantity_id
@@ -49,25 +61,37 @@ type GetInventoryChangeLogParams struct {
 }
 
 type GetInventoryChangeLogRow struct {
-	ID                       string
-	ActionTypeCode           string
-	AccountID                string
-	CreatedAt                time.Time
-	UpdatedAt                time.Time
-	ItemID                   string
-	ItemSku                  string
-	ItemTypeCode             string
-	QuantityID               string
-	QuantityValue            string
-	QuantityUnitID           string
-	QuantityUnitName         string
-	QuantityUnitAbbreviation string
-	QuantityUnitType         string
-	ScanningStationID        sql.NullString
-	ScanningStationName      sql.NullString
-	ScanningStationType      sql.NullString
-	ResponsibleUserID        sql.NullString
-	ResponsibleUserName      sql.NullString
+	ID                            string
+	ActionTypeCode                string
+	AccountID                     string
+	CreatedAt                     time.Time
+	UpdatedAt                     time.Time
+	ItemID                        string
+	ItemSku                       string
+	ItemTypeCode                  string
+	ItemCreatedAt                 time.Time
+	ItemUpdatedAt                 time.Time
+	QuantityID                    string
+	QuantityValue                 string
+	QuantityUnitID                string
+	QuantityUnitName              string
+	QuantityUnitAbbreviation      string
+	QuantityUnitType              string
+	QuantityUnitRatioNumerator    string
+	QuantityUnitRatioDenominator  string
+	QuantityUnitOffsetNumerator   string
+	QuantityUnitOffsetDenominator string
+	QuantityUnitCreatedAt         time.Time
+	QuantityUnitUpdatedAt         time.Time
+	ScanningStationID             sql.NullString
+	ScanningStationName           sql.NullString
+	ScanningStationType           sql.NullString
+	ScanningStationCreatedAt      sql.NullTime
+	ScanningStationUpdatedAt      sql.NullTime
+	ResponsibleUserID             sql.NullString
+	ResponsibleUserName           sql.NullString
+	ResponsibleUserCreatedAt      sql.NullTime
+	ResponsibleUserUpdatedAt      sql.NullTime
 }
 
 func (q *Queries) GetInventoryChangeLog(ctx context.Context, arg GetInventoryChangeLogParams) (GetInventoryChangeLogRow, error) {
@@ -82,17 +106,29 @@ func (q *Queries) GetInventoryChangeLog(ctx context.Context, arg GetInventoryCha
 		&i.ItemID,
 		&i.ItemSku,
 		&i.ItemTypeCode,
+		&i.ItemCreatedAt,
+		&i.ItemUpdatedAt,
 		&i.QuantityID,
 		&i.QuantityValue,
 		&i.QuantityUnitID,
 		&i.QuantityUnitName,
 		&i.QuantityUnitAbbreviation,
 		&i.QuantityUnitType,
+		&i.QuantityUnitRatioNumerator,
+		&i.QuantityUnitRatioDenominator,
+		&i.QuantityUnitOffsetNumerator,
+		&i.QuantityUnitOffsetDenominator,
+		&i.QuantityUnitCreatedAt,
+		&i.QuantityUnitUpdatedAt,
 		&i.ScanningStationID,
 		&i.ScanningStationName,
 		&i.ScanningStationType,
+		&i.ScanningStationCreatedAt,
+		&i.ScanningStationUpdatedAt,
 		&i.ResponsibleUserID,
 		&i.ResponsibleUserName,
+		&i.ResponsibleUserCreatedAt,
+		&i.ResponsibleUserUpdatedAt,
 	)
 	return i, err
 }
@@ -269,17 +305,29 @@ SELECT
     i.id AS item_id,
     i.sku AS item_sku,
     i.item_type_code AS item_type_code,
+    i.created_at AS item_created_at,
+    i.updated_at AS item_updated_at,
     q.id AS quantity_id,
     q.value AS quantity_value,
     u.id AS quantity_unit_id,
     u.name AS quantity_unit_name,
     u.abbreviation AS quantity_unit_abbreviation,
     u.unit_dimension_code AS quantity_unit_type,
+    u.ratio_numerator AS quantity_unit_ratio_numerator,
+    u.ratio_denominator AS quantity_unit_ratio_denominator,
+    u.offset_numerator AS quantity_unit_offset_numerator,
+    u.offset_denominator AS quantity_unit_offset_denominator,
+    u.created_at AS quantity_unit_created_at,
+    u.updated_at AS quantity_unit_updated_at,
     icl.scanning_station_id,
     ss.name AS scanning_station_name,
     ss.scanning_station_type_code AS scanning_station_type,
+    ss.created_at AS scanning_station_created_at,
+    ss.updated_at AS scanning_station_updated_at,
     icl.responsible_user_id,
-    usr.name AS responsible_user_name
+    usr.name AS responsible_user_name,
+    usr.created_at AS responsible_user_created_at,
+    usr.updated_at AS responsible_user_updated_at
 FROM inventory_change_log icl
 JOIN item i ON i.id = icl.item_id
 JOIN quantity q ON q.id = icl.quantity_id
@@ -338,25 +386,37 @@ type ListInventoryChangeLogsBackwardParams struct {
 }
 
 type ListInventoryChangeLogsBackwardRow struct {
-	ID                       string
-	ActionTypeCode           string
-	AccountID                string
-	CreatedAt                time.Time
-	UpdatedAt                time.Time
-	ItemID                   string
-	ItemSku                  string
-	ItemTypeCode             string
-	QuantityID               string
-	QuantityValue            string
-	QuantityUnitID           string
-	QuantityUnitName         string
-	QuantityUnitAbbreviation string
-	QuantityUnitType         string
-	ScanningStationID        sql.NullString
-	ScanningStationName      sql.NullString
-	ScanningStationType      sql.NullString
-	ResponsibleUserID        sql.NullString
-	ResponsibleUserName      sql.NullString
+	ID                            string
+	ActionTypeCode                string
+	AccountID                     string
+	CreatedAt                     time.Time
+	UpdatedAt                     time.Time
+	ItemID                        string
+	ItemSku                       string
+	ItemTypeCode                  string
+	ItemCreatedAt                 time.Time
+	ItemUpdatedAt                 time.Time
+	QuantityID                    string
+	QuantityValue                 string
+	QuantityUnitID                string
+	QuantityUnitName              string
+	QuantityUnitAbbreviation      string
+	QuantityUnitType              string
+	QuantityUnitRatioNumerator    string
+	QuantityUnitRatioDenominator  string
+	QuantityUnitOffsetNumerator   string
+	QuantityUnitOffsetDenominator string
+	QuantityUnitCreatedAt         time.Time
+	QuantityUnitUpdatedAt         time.Time
+	ScanningStationID             sql.NullString
+	ScanningStationName           sql.NullString
+	ScanningStationType           sql.NullString
+	ScanningStationCreatedAt      sql.NullTime
+	ScanningStationUpdatedAt      sql.NullTime
+	ResponsibleUserID             sql.NullString
+	ResponsibleUserName           sql.NullString
+	ResponsibleUserCreatedAt      sql.NullTime
+	ResponsibleUserUpdatedAt      sql.NullTime
 }
 
 func (q *Queries) ListInventoryChangeLogsBackward(ctx context.Context, arg ListInventoryChangeLogsBackwardParams) ([]ListInventoryChangeLogsBackwardRow, error) {
@@ -419,17 +479,29 @@ func (q *Queries) ListInventoryChangeLogsBackward(ctx context.Context, arg ListI
 			&i.ItemID,
 			&i.ItemSku,
 			&i.ItemTypeCode,
+			&i.ItemCreatedAt,
+			&i.ItemUpdatedAt,
 			&i.QuantityID,
 			&i.QuantityValue,
 			&i.QuantityUnitID,
 			&i.QuantityUnitName,
 			&i.QuantityUnitAbbreviation,
 			&i.QuantityUnitType,
+			&i.QuantityUnitRatioNumerator,
+			&i.QuantityUnitRatioDenominator,
+			&i.QuantityUnitOffsetNumerator,
+			&i.QuantityUnitOffsetDenominator,
+			&i.QuantityUnitCreatedAt,
+			&i.QuantityUnitUpdatedAt,
 			&i.ScanningStationID,
 			&i.ScanningStationName,
 			&i.ScanningStationType,
+			&i.ScanningStationCreatedAt,
+			&i.ScanningStationUpdatedAt,
 			&i.ResponsibleUserID,
 			&i.ResponsibleUserName,
+			&i.ResponsibleUserCreatedAt,
+			&i.ResponsibleUserUpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -454,17 +526,29 @@ SELECT
     i.id AS item_id,
     i.sku AS item_sku,
     i.item_type_code AS item_type_code,
+    i.created_at AS item_created_at,
+    i.updated_at AS item_updated_at,
     q.id AS quantity_id,
     q.value AS quantity_value,
     u.id AS quantity_unit_id,
     u.name AS quantity_unit_name,
     u.abbreviation AS quantity_unit_abbreviation,
     u.unit_dimension_code AS quantity_unit_type,
+    u.ratio_numerator AS quantity_unit_ratio_numerator,
+    u.ratio_denominator AS quantity_unit_ratio_denominator,
+    u.offset_numerator AS quantity_unit_offset_numerator,
+    u.offset_denominator AS quantity_unit_offset_denominator,
+    u.created_at AS quantity_unit_created_at,
+    u.updated_at AS quantity_unit_updated_at,
     icl.scanning_station_id,
     ss.name AS scanning_station_name,
     ss.scanning_station_type_code AS scanning_station_type,
+    ss.created_at AS scanning_station_created_at,
+    ss.updated_at AS scanning_station_updated_at,
     icl.responsible_user_id,
-    usr.name AS responsible_user_name
+    usr.name AS responsible_user_name,
+    usr.created_at AS responsible_user_created_at,
+    usr.updated_at AS responsible_user_updated_at
 FROM inventory_change_log icl
 JOIN item i ON i.id = icl.item_id
 JOIN quantity q ON q.id = icl.quantity_id
@@ -524,25 +608,37 @@ type ListInventoryChangeLogsForwardParams struct {
 }
 
 type ListInventoryChangeLogsForwardRow struct {
-	ID                       string
-	ActionTypeCode           string
-	AccountID                string
-	CreatedAt                time.Time
-	UpdatedAt                time.Time
-	ItemID                   string
-	ItemSku                  string
-	ItemTypeCode             string
-	QuantityID               string
-	QuantityValue            string
-	QuantityUnitID           string
-	QuantityUnitName         string
-	QuantityUnitAbbreviation string
-	QuantityUnitType         string
-	ScanningStationID        sql.NullString
-	ScanningStationName      sql.NullString
-	ScanningStationType      sql.NullString
-	ResponsibleUserID        sql.NullString
-	ResponsibleUserName      sql.NullString
+	ID                            string
+	ActionTypeCode                string
+	AccountID                     string
+	CreatedAt                     time.Time
+	UpdatedAt                     time.Time
+	ItemID                        string
+	ItemSku                       string
+	ItemTypeCode                  string
+	ItemCreatedAt                 time.Time
+	ItemUpdatedAt                 time.Time
+	QuantityID                    string
+	QuantityValue                 string
+	QuantityUnitID                string
+	QuantityUnitName              string
+	QuantityUnitAbbreviation      string
+	QuantityUnitType              string
+	QuantityUnitRatioNumerator    string
+	QuantityUnitRatioDenominator  string
+	QuantityUnitOffsetNumerator   string
+	QuantityUnitOffsetDenominator string
+	QuantityUnitCreatedAt         time.Time
+	QuantityUnitUpdatedAt         time.Time
+	ScanningStationID             sql.NullString
+	ScanningStationName           sql.NullString
+	ScanningStationType           sql.NullString
+	ScanningStationCreatedAt      sql.NullTime
+	ScanningStationUpdatedAt      sql.NullTime
+	ResponsibleUserID             sql.NullString
+	ResponsibleUserName           sql.NullString
+	ResponsibleUserCreatedAt      sql.NullTime
+	ResponsibleUserUpdatedAt      sql.NullTime
 }
 
 func (q *Queries) ListInventoryChangeLogsForward(ctx context.Context, arg ListInventoryChangeLogsForwardParams) ([]ListInventoryChangeLogsForwardRow, error) {
@@ -606,17 +702,29 @@ func (q *Queries) ListInventoryChangeLogsForward(ctx context.Context, arg ListIn
 			&i.ItemID,
 			&i.ItemSku,
 			&i.ItemTypeCode,
+			&i.ItemCreatedAt,
+			&i.ItemUpdatedAt,
 			&i.QuantityID,
 			&i.QuantityValue,
 			&i.QuantityUnitID,
 			&i.QuantityUnitName,
 			&i.QuantityUnitAbbreviation,
 			&i.QuantityUnitType,
+			&i.QuantityUnitRatioNumerator,
+			&i.QuantityUnitRatioDenominator,
+			&i.QuantityUnitOffsetNumerator,
+			&i.QuantityUnitOffsetDenominator,
+			&i.QuantityUnitCreatedAt,
+			&i.QuantityUnitUpdatedAt,
 			&i.ScanningStationID,
 			&i.ScanningStationName,
 			&i.ScanningStationType,
+			&i.ScanningStationCreatedAt,
+			&i.ScanningStationUpdatedAt,
 			&i.ResponsibleUserID,
 			&i.ResponsibleUserName,
+			&i.ResponsibleUserCreatedAt,
+			&i.ResponsibleUserUpdatedAt,
 		); err != nil {
 			return nil, err
 		}

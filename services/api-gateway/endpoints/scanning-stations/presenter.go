@@ -25,32 +25,47 @@ func ScanningStationPresenter(ss *pb.ScanningStationInfo) apiresource.ScanningSt
 	}
 
 	station := apiresource.ScanningStation{
-		ID:                    ss.Id,
-		Object:                constants.ObjectTypeScanningStation,
-		Name:                  ss.Name,
-		Notes:                 ss.Notes,
-		Type:                  constants.ScanningStationType(ss.Type),
-		LabelSizeCode:         labelSizeCode,
-		LabelTypeCode:         labelTypeCode,
-		MaterialCheckRequired: ss.MaterialCheckRequired,
-		CreatedAt:             grpcutil.TimestampToTime(ss.CreatedAt),
-		UpdatedAt:             grpcutil.TimestampToTime(ss.UpdatedAt),
+		ID:                  ss.Id,
+		Object:              constants.ObjectTypeScanningStation,
+		Name:                ss.Name,
+		Notes:               ss.Notes,
+		Type:                constants.ScanningStationType(ss.Type),
+		LabelSizeCode:       labelSizeCode,
+		LabelTypeCode:       labelTypeCode,
+		OperatorRequirement: constants.OperatorRequirement(ss.OperatorRequirement),
+		CreatedAt:           grpcutil.TimestampToTime(ss.CreatedAt),
+		UpdatedAt:           grpcutil.TimestampToTime(ss.UpdatedAt),
 	}
 
 	if ss.DepartmentId != "" {
-		station.Department = &apiresource.Department{
+		dept := &apiresource.Department{
 			ID:     ss.DepartmentId,
 			Object: constants.ObjectTypeDepartment,
 			Name:   ss.DepartmentName,
 		}
+		if ss.DepartmentCreatedAt != nil {
+			dept.CreatedAt = ss.DepartmentCreatedAt.AsTime()
+		}
+		if ss.DepartmentUpdatedAt != nil {
+			dept.UpdatedAt = ss.DepartmentUpdatedAt.AsTime()
+		}
+		station.Department = dept
 	}
 
 	steps := make([]apiresource.ProductionStep, len(ss.ProductionSteps))
 	for i, s := range ss.ProductionSteps {
 		steps[i] = apiresource.ProductionStep{
-			ID:     s.Id,
-			Object: constants.ObjectTypeProductionStep,
-			Name:   s.Name,
+			ID:             s.Id,
+			Object:         constants.ObjectTypeProductionStep,
+			Name:           s.Name,
+			LevelingFactor: s.GetLevelingFactor(),
+			Allowances:     s.GetAllowances(),
+		}
+		if s.CreatedAt != nil {
+			steps[i].CreatedAt = s.CreatedAt.AsTime()
+		}
+		if s.UpdatedAt != nil {
+			steps[i].UpdatedAt = s.UpdatedAt.AsTime()
 		}
 	}
 	station.ProductionSteps = apiresource.NewList(steps, apiresource.PageInfo{})

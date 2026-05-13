@@ -40,7 +40,7 @@ func (*SandboxesEndpointGroup) Materialize(config *SandboxesEndpointGroupConfig)
 	}
 
 	listSandboxesEndpoint := (&sandboxep.ListSandboxesEndpoint{}).Materialize().WithService(inner, sandboxSvc)
-	getSandboxEndpoint := (&sandboxep.GetSandboxEndpoint{}).Materialize().WithService(inner, sandboxSvc)
+	getSandboxEndpoint := (&sandboxep.RetrieveSandboxEndpoint{}).Materialize().WithService(inner, sandboxSvc)
 	createSandboxEndpoint := (&sandboxep.CreateSandboxEndpoint{}).Materialize().WithService(inner, sandboxSvc)
 	deleteSandboxEndpoint := (&sandboxep.DeleteSandboxEndpoint{}).Materialize().WithService(inner, sandboxSvc)
 

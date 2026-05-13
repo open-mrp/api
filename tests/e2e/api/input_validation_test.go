@@ -85,8 +85,8 @@ func TestInputValidation_WrongType_NumberForString(t *testing.T) {
 func TestInputValidation_WrongType_StringForBool(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.Post(customersPath, map[string]any{
-		"name":           uniqueName("e2e-val-boolstr"),
-		"is_edi_enabled": "yes",
+		"name":       uniqueName("e2e-val-boolstr"),
+		"edi_status": "yes",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	assert.NotEqual(t, 500, status,

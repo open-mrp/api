@@ -34,7 +34,7 @@ func TestAddressValidation_ValidAddress(t *testing.T) {
 
 	result := parseJSON(body)
 	assert.Equal(t, "validated_address", jsonField(result, "object"))
-	assert.Equal(t, "true", jsonField(result, "is_valid"))
+	assert.Equal(t, "valid", jsonField(result, "status"))
 	assert.NotEmpty(t, jsonField(result, "formatted_address"))
 
 	components := jsonObject(result, "components")
@@ -84,8 +84,8 @@ func TestAddressValidation_InvalidAddress(t *testing.T) {
 
 	result := parseJSON(body)
 	assert.Equal(t, "validated_address", jsonField(result, "object"))
-	isValid := jsonField(result, "is_valid")
-	if isValid == "true" {
+	validationStatus := jsonField(result, "status")
+	if validationStatus == "valid" {
 		msgs, ok := result["validation_messages"].([]any)
 		assert.True(t, ok && len(msgs) > 0,
 			"a clearly fake address should have validation messages if marked valid: %s", string(body))

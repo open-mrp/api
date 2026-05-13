@@ -8,59 +8,70 @@ import (
 
 // Transaction represents a full transaction with all related data.
 type Transaction struct {
-	ID                    string
-	Number                string `audit:"number"`
-	AmountID              string
-	AmountValue           string `audit:"amount_value"`
-	AmountUnitID          string
-	AmountUnitAbbr        string
-	CustomerID            *string `audit:"customer_id"`
-	CustomerName          *string
-	CustomerNumber        *string
-	ResponsibleUserID     *string `audit:"responsible_user_id"`
-	ResponsibleUserName   *string
-	Note                  *string `audit:"note"`
-	TransactionTypeCode   string  `audit:"transaction_type_code"`
-	TransactionTypeName   string
-	TransactionTypeID     string
-	TransactionMethodCode *string `audit:"transaction_method_code"`
-	TransactionMethodName *string
-	TransactionMethodID   *string
-	AdjustmentTypeCode    *string `audit:"adjustment_type_code"`
-	AdjustmentTypeName    *string
-	AdjustmentTypeID      *string
-	IsFullyAllocated      bool    `audit:"is_fully_allocated"`
-	StripePaymentID       *string `audit:"stripe_payment_id"`
-	AllocationCount       int32
-	Allocations           []*TransactionAllocation
-	CreatedAt             time.Time
-	UpdatedAt             time.Time
+	ID                        string
+	Number                    string `audit:"number"`
+	AmountID                  string
+	AmountValue               string `audit:"amount_value"`
+	AmountUnitID              string
+	AmountUnitAbbr            string
+	CustomerID                *string `audit:"customer_id"`
+	CustomerName              *string
+	CustomerNumber            *string
+	CustomerStatusCode        *string
+	CustomerCommissionPolicy  *string
+	CustomerCreatedAt         *time.Time
+	CustomerUpdatedAt         *time.Time
+	ResponsibleUserID         *string `audit:"responsible_user_id"`
+	ResponsibleUserName       *string
+	ResponsibleUserStatusCode *string
+	ResponsibleUserCreatedAt  *time.Time
+	ResponsibleUserUpdatedAt  *time.Time
+	Note                      *string `audit:"note"`
+	TransactionTypeCode       string  `audit:"transaction_type_code"`
+	TransactionTypeName       string
+	TransactionTypeID         string
+	TransactionMethodCode     *string `audit:"transaction_method_code"`
+	TransactionMethodName     *string
+	TransactionMethodID       *string
+	AdjustmentTypeCode        *string `audit:"adjustment_type_code"`
+	AdjustmentTypeName        *string
+	AdjustmentTypeID          *string
+	IsFullyAllocated          bool    `audit:"is_fully_allocated"`
+	StripePaymentID           *string `audit:"stripe_payment_id"`
+	AllocationCount           int32
+	Allocations               []*TransactionAllocation
+	CreatedAt                 time.Time
+	UpdatedAt                 time.Time
 }
 
 // TransactionSummary represents a lightweight transaction for list views.
 type TransactionSummary struct {
-	ID                    string
-	Number                string
-	AmountID              string
-	AmountValue           string
-	AmountUnitID          string
-	AmountUnitAbbr        string
-	CustomerID            *string
-	CustomerName          *string
-	CustomerNumber        *string
-	TransactionTypeCode   string
-	TransactionTypeName   string
-	TransactionTypeID     string
-	TransactionMethodCode *string
-	TransactionMethodName *string
-	TransactionMethodID   *string
-	AdjustmentTypeCode    *string
-	AdjustmentTypeName    *string
-	AdjustmentTypeID      *string
-	IsFullyAllocated      bool
-	AllocationCount       int32
-	CreatedAt             time.Time
-	UpdatedAt             time.Time
+	ID                       string
+	Number                   string
+	AmountID                 string
+	AmountValue              string
+	AmountUnitID             string
+	AmountUnitAbbr           string
+	CustomerID               *string
+	CustomerName             *string
+	CustomerNumber           *string
+	CustomerStatusCode       *string
+	CustomerCommissionPolicy *string
+	CustomerCreatedAt        *time.Time
+	CustomerUpdatedAt        *time.Time
+	TransactionTypeCode      string
+	TransactionTypeName      string
+	TransactionTypeID        string
+	TransactionMethodCode    *string
+	TransactionMethodName    *string
+	TransactionMethodID      *string
+	AdjustmentTypeCode       *string
+	AdjustmentTypeName       *string
+	AdjustmentTypeID         *string
+	IsFullyAllocated         bool
+	AllocationCount          int32
+	CreatedAt                time.Time
+	UpdatedAt                time.Time
 }
 
 // ListTransactionsParams holds parameters for listing transactions.

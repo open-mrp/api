@@ -268,6 +268,7 @@ SELECT rl.id, rl.method, rl.host, rl.path, rl.normalized_route,
        r_user.name AS user_role_name, r_user.role_type_code AS user_role_type_code,
        r_key.id AS api_key_role_id, r_key.name AS api_key_role_name, r_key.role_type_code AS api_key_role_type_code,
        rl.target_account_id, a.name AS account_name,
+       a.created_at AS account_created_at, a.updated_at AS account_updated_at,
        ik.idempotency_key
 FROM request_log rl
 LEFT JOIN ` + "`" + `user` + "`" + ` u ON rl.actor_id = u.id AND rl.identity_type = 'user'
@@ -325,6 +326,8 @@ type FindRequestLogByIDRow struct {
 	ApiKeyRoleTypeCode  sql.NullString
 	TargetAccountID     sql.NullString
 	AccountName         sql.NullString
+	AccountCreatedAt    sql.NullTime
+	AccountUpdatedAt    sql.NullTime
 	IdempotencyKey      sql.NullString
 }
 
@@ -373,6 +376,8 @@ func (q *Queries) FindRequestLogByID(ctx context.Context, arg FindRequestLogByID
 		&i.ApiKeyRoleTypeCode,
 		&i.TargetAccountID,
 		&i.AccountName,
+		&i.AccountCreatedAt,
+		&i.AccountUpdatedAt,
 		&i.IdempotencyKey,
 	)
 	return i, err

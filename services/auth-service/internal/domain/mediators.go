@@ -37,11 +37,11 @@ type DocAPIKeyMed interface {
 }
 
 type APIKeyAccountAccess struct {
-	APIKeyID     string
-	AccountID    string
-	RoleID       *string
-	RoleTypeCode *string
-	Permissions  map[string]bool
+	APIKeyID    string
+	AccountID   string
+	RoleID      *string
+	RoleType    *string
+	Permissions map[string]bool
 }
 
 type APIKeyCreateInput struct {

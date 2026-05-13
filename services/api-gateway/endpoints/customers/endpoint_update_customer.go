@@ -30,32 +30,32 @@ type UpdateCustomerRequest struct {
 	Phone *string `json:"phone,omitempty" validate:"omitempty,max=255" nullable:"true"`
 	// Website URL. Send null to clear.
 	URL *string `json:"url,omitempty" validate:"omitempty,max=255" nullable:"true"`
-	// Whether EDI is enabled.
-	IsEdiEnabled *bool `json:"is_edi_enabled,omitempty" nullable:"false"`
+	// EDI status.
+	EDIStatus *constants.EDIStatus `json:"edi_status,omitempty" nullable:"false"`
 	// Commission policy.
 	CommissionPolicy *constants.CommissionPolicy `json:"commission_policy,omitempty" nullable:"false"`
 	// Freight policy.
 	FreightPolicy *constants.FreightPolicy `json:"freight_policy,omitempty" nullable:"false"`
 	// Default carrier ID.
-	DefaultCarrierID *string `json:"default_carrier_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
+	DefaultCarrierID *string `json:"default_carrier_id,omitempty" nullable:"false" validate:"omitempty"`
 	// Default service level ID.
-	DefaultServiceLevelID *string `json:"default_service_level_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
+	DefaultServiceLevelID *string `json:"default_service_level_id,omitempty" nullable:"true" validate:"omitempty"`
 	// Default payment term ID.
-	DefaultPaymentTermID *string `json:"default_payment_term_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
+	DefaultPaymentTermID *string `json:"default_payment_term_id,omitempty" nullable:"false" validate:"omitempty"`
 	// Default shipping term ID.
-	DefaultShippingTermID *string `json:"default_shipping_term_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
+	DefaultShippingTermID *string `json:"default_shipping_term_id,omitempty" nullable:"false" validate:"omitempty"`
 	// Default priority code.
 	DefaultPriorityCode *constants.PriorityCode `json:"default_priority,omitempty" nullable:"false"`
 	// The ID of the account user to assign as the default sales rep.
-	DefaultSalesRepUserID *string `json:"default_sales_rep_user_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
+	DefaultSalesRepID *string `json:"default_sales_rep_id,omitempty" nullable:"true" validate:"omitempty"`
 	// Bill-to address ID.
-	BillToAddressID *string `json:"bill_to_address_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
+	BillToAddressID *string `json:"bill_to_address_id,omitempty" nullable:"true" validate:"omitempty"`
 	// Ship-to address ID.
-	ShipToAddressID *string `json:"ship_to_address_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
+	ShipToAddressID *string `json:"ship_to_address_id,omitempty" nullable:"true" validate:"omitempty"`
 	// Price group IDs. Replaces all existing price groups when provided.
 	CustomerPriceGroupIDs *[]string `json:"customer_price_group_ids,omitempty" nullable:"false"`
 	// Customer type group ID.
-	CustomerTypeGroupID *string `json:"customer_type_group_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
+	CustomerTypeGroupID *string `json:"customer_type_group_id,omitempty" nullable:"false" validate:"omitempty"`
 	// Carrier billing type.
 	CarrierBillingType *constants.CarrierBillingType `json:"carrier_billing_type,omitempty" nullable:"false"`
 	// Carrier billing account number.

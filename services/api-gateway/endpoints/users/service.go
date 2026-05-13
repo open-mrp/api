@@ -15,7 +15,7 @@ import (
 )
 
 type UserSvc interface {
-	GetUser(ctx context.Context, req *GetUserRequest) (*apiresource.User, *apierror.APIError)
+	GetUser(ctx context.Context, req *RetrieveUserRequest) (*apiresource.User, *apierror.APIError)
 	UpdateUser(ctx context.Context, req *UpdateUserRequest) (*apiresource.User, *apierror.APIError)
 	UploadUserPhoto(ctx context.Context, req *UploadUserPhotoRequest) (*apiresource.UserPhotoUploadResult, *apierror.APIError)
 	GetUserPhotoURL(ctx context.Context, req *GetUserPhotoURLRequest) (*apiresource.UserPhotoURL, *apierror.APIError)
@@ -48,7 +48,7 @@ func NewUserSvc(config *UserSvcConfig) UserSvc {
 	}
 }
 
-func (m *userSvcImpl) GetUser(ctx context.Context, req *GetUserRequest) (*apiresource.User, *apierror.APIError) {
+func (m *userSvcImpl) GetUser(ctx context.Context, req *RetrieveUserRequest) (*apiresource.User, *apierror.APIError) {
 	pbReq := &pb.GetUserRequest{
 		Id: req.UserID,
 	}

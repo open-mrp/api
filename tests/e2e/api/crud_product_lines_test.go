@@ -589,3 +589,83 @@ func TestProductLines_IncludeUnitGroup(t *testing.T) {
 	assert.NotEmpty(t, jsonField(unitGroup, "id"))
 	assert.NotEmpty(t, jsonField(unitGroup, "name"))
 }
+
+func TestProductLines_IncludeOwnerAccount(t *testing.T) {
+	t.Parallel()
+
+	// Create an account-owned product line so owner.account is always populated.
+	name := uniqueName("e2e-pdln-owneracct")
+	status, body, err := apiClient.Post(productLinesPath, map[string]any{
+		"name":              name,
+		"unit_group_id":     SeedUnitGroupID,
+		"commission_policy": "commission_exempt",
+		"freight_policy":    "billed_freight",
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, status, body)
+
+	id := jsonField(parseJSON(body), "id")
+	require.NotEmpty(t, id)
+	defer apiClient.Delete(productLinesPath + "/" + id)
+
+	getStatus, getBody, err := apiClient.GetListRaw(productLinesPath+"/"+id, url.Values{"include": {"owner.account"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, getStatus, getBody)
+
+	got := parseJSON(getBody)
+	owner := jsonObject(got, "owner")
+	require.NotNil(t, owner, "owner should be present with ?include=owner.account")
+	assert.Equal(t, "owner", jsonField(owner, "object"))
+	assert.Equal(t, "account", jsonField(owner, "type"))
+
+	account := jsonObject(owner, "account")
+	require.NotNil(t, account, "account should be present inside owner with ?include=owner.account")
+	assert.Equal(t, "account", jsonField(account, "object"))
+	assert.NotEmpty(t, jsonField(account, "id"))
+}
+
+func TestProductLines_ListIncludeOwner(t *testing.T) {
+	t.Parallel()
+	status, body, err := apiClient.GetListRaw(productLinesPath, url.Values{"include": {"owner"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	got := parseJSON(body)
+	data, ok := got["data"].([]any)
+	require.True(t, ok)
+	require.NotEmpty(t, data)
+
+	for _, raw := range data {
+		m, ok := raw.(map[string]any)
+		require.True(t, ok)
+		owner := jsonObject(m, "owner")
+		require.NotNil(t, owner, "owner should be present on each list item with ?include=owner")
+		assert.Equal(t, "owner", jsonField(owner, "object"))
+		ownerType := jsonField(owner, "type")
+		assert.Contains(t, []string{"system", "account"}, ownerType)
+	}
+}
+
+func TestProductLines_ListIncludeUnitGroup(t *testing.T) {
+	t.Parallel()
+	status, body, err := apiClient.GetListRaw(productLinesPath, url.Values{"include": {"unit_group"}})
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	got := parseJSON(body)
+	data, ok := got["data"].([]any)
+	require.True(t, ok)
+	require.NotEmpty(t, data)
+
+	found := false
+	for _, raw := range data {
+		m, ok := raw.(map[string]any)
+		require.True(t, ok)
+		if ug := jsonObject(m, "unit_group"); ug != nil {
+			assert.Equal(t, "unit_group", jsonField(ug, "object"))
+			assert.NotEmpty(t, jsonField(ug, "id"))
+			found = true
+		}
+	}
+	assert.True(t, found, "at least one list item should have a unit_group with ?include=unit_group")
+}

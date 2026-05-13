@@ -220,6 +220,8 @@ message ListRequestLogsRequest {
   repeated string normalized_routes = 15;
   repeated string hosts = 16;
   optional int64 min_latency_us = 17;
+  // Filter by user-provided idempotency key string (matches idempotency_key.idempotency_key).
+  optional string idempotency_key = 18;
 }
 
 message ListRequestLogsResponse {
@@ -260,6 +262,8 @@ message RequestLogInfo {
   optional string idempotency_key = 21;
   optional string body_json = 22;
   optional string response_json = 23;
+  optional google.protobuf.Timestamp account_created_at = 24;
+  optional google.protobuf.Timestamp account_updated_at = 25;
 }
 
 // Fields are populated based on whether the actor is a user or API key.

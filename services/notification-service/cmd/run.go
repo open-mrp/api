@@ -63,6 +63,7 @@ func Run(
 	defer rabbitmq.Close()
 
 	queries := sqlc.New(db)
+	repoFactory := repository.NewRepoFactory(queries)
 
 	leaseSvc := lease.New(repository.NewLeaseRepo(queries))
 
@@ -71,7 +72,7 @@ func Run(
 		return apiErr
 	}
 
-	notificationConfig, apiErr := new(service.NotificationSvcConfig).WithDefaults(queries, cfg.PlatformMode, cfg.AWSRegion, templateRenderer)
+	notificationConfig, apiErr := new(service.NotificationSvcConfig).WithDefaults(repoFactory, cfg.PlatformMode, cfg.AWSRegion, templateRenderer)
 	if apiErr != nil {
 		return apiErr
 	}
@@ -79,7 +80,7 @@ func Run(
 
 	inboxRepo := repository.NewInboxRepo(queries)
 	inboxPurgerRepo := repository.NewInboxPurgerRepo(queries)
-	inboxPurger, err := messaging.NewInboxPurger(&messaging.InboxPurgerConfig{ServiceName: domain.ServiceName}, inboxPurgerRepo, leaseSvc)
+	inboxPurger, err := messaging.NewInboxPurger(&messaging.InboxPurgerConfig{ServiceName: domain.ServiceName, PlatformMode: cfg.PlatformMode}, inboxPurgerRepo, leaseSvc)
 	if err != nil {
 		return err
 	}

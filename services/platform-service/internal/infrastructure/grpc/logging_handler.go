@@ -99,6 +99,7 @@ func (h *loggingHandler) ListRequestLogs(ctx context.Context, req *pb.ListReques
 		NormalizedRoutes: req.NormalizedRoutes,
 		Hosts:            req.Hosts,
 		MinLatencyUs:     req.MinLatencyUs,
+		IdempotencyKey:   req.IdempotencyKey,
 		Cursor:           req.Cursor,
 		Limit:            req.Limit,
 	}
@@ -174,6 +175,13 @@ func requestLogToProto(rl *domain.RequestLogRead) *pb.RequestLogInfo {
 		ResponseJson:    sanitizeUTF8Ptr(rl.ResponseJSON),
 	}
 
+	if rl.AccountCreatedAt != nil {
+		info.AccountCreatedAt = timestamppb.New(*rl.AccountCreatedAt)
+	}
+	if rl.AccountUpdatedAt != nil {
+		info.AccountUpdatedAt = timestamppb.New(*rl.AccountUpdatedAt)
+	}
+
 	if rl.Actor != nil {
 		info.Actor = &pb.RequestLogActor{
 			Id:            rl.Actor.ID,
@@ -183,7 +191,7 @@ func requestLogToProto(rl *domain.RequestLogRead) *pb.RequestLogInfo {
 			RedactedValue: rl.Actor.RedactedValue,
 			RoleId:        rl.Actor.RoleID,
 			RoleName:      rl.Actor.RoleName,
-			RoleTypeCode:  rl.Actor.RoleTypeCode,
+			RoleTypeCode:  rl.Actor.RoleType,
 		}
 	}
 

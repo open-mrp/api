@@ -13,7 +13,7 @@ import (
 // Request to update a receiving order line's quantity.
 type UpdateReceivingOrderLineRequest struct {
 	// Receiving order ID.
-	ReceivingOrderID string `path:"receivingOrderId" validate:"required"`
+	ReceivingOrderID string `path:"receiving_order_id" validate:"required"`
 	// Receiving order line ID.
 	LineID string `path:"id" validate:"required"`
 	// Quantity value to set for this line.
@@ -36,7 +36,7 @@ func (e *UpdateReceivingOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoin
 		Title:             "Update Receiving Order Line",
 		Description:       "Partially updates a receiving order line's quantity value.",
 		Method:            http.MethodPatch,
-		Route:             "/v1/operations/receiving-orders/{receivingOrderId}/lines/{id}",
+		Route:             "/v1/operations/receiving-orders/{receiving_order_id}/lines/{id}",
 		ContentType:       "application/json",
 		Request:           &UpdateReceivingOrderLineRequest{},
 		Response:          &apiresource.ReceivingOrderLine{},

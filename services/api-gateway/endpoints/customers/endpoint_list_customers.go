@@ -34,8 +34,8 @@ type ListCustomersRequest struct {
 	CarrierIDs []string `query:"carrier_ids"`
 	// Filter by service level IDs.
 	ServiceLevelIDs []string `query:"service_level_ids"`
-	// Filter by whether the customer is a parent account.
-	IsParentAccount *bool `query:"is_parent_account"`
+	// Filter by whether the customer has child accounts.
+	ParentAccountStatus *constants.CustomerParentAccountStatus `query:"parent_account_status"`
 	// Filter by city.
 	City *string `query:"city"`
 	// Filter by state.

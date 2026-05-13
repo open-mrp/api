@@ -23,11 +23,11 @@ func (e *DeletePartEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeletePartR
 		Description:       "Deletes a part. Sets the deleted_at timestamp rather than removing the record.",
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
-		Route:             "/v1/operations/parts/{id}",
+		Route:             "/v1/catalog/parts/{id}",
 		Request:           &DeletePartRequest{},
 		Response:          &apiresource.Part{},
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeletePartRequest) (*apiresource.Part, *apierror.APIError) {
 			return svc.(PartSvc).DeletePart

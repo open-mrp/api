@@ -3,6 +3,7 @@
 package api_test
 
 import (
+	"fmt"
 	"net/url"
 	"sort"
 	"strconv"
@@ -154,7 +155,11 @@ func TestRequestLogs_ListFilterByStatusCode(t *testing.T) {
 
 func TestRequestLogs_ListFilterByActorType(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(requestLogsPath, url.Values{"actor_types": {"api_key"}, "limit": {"10"}})
+	list, _, err := apiClient.GetList(requestLogsPath, url.Values{
+		"actor_types": {"api_key"},
+		"include":     {"actor"},
+		"limit":       {"10"},
+	})
 	if err != nil {
 		t.Skip("Request logs endpoint not accessible")
 		return
@@ -163,7 +168,9 @@ func TestRequestLogs_ListFilterByActorType(t *testing.T) {
 	require.GreaterOrEqual(t, len(list.Data), 1, "Should find at least 1 log with actor_type=api_key")
 	for _, item := range list.Data {
 		m := parseJSON(item)
-		assert.Equal(t, "api_key", jsonField(m, "identity_type"), "All returned logs should have identity_type=api_key")
+		actor := jsonObject(m, "actor")
+		require.NotNil(t, actor, "actor should be present with ?include=actor")
+		assert.Equal(t, "api_key", jsonField(actor, "type"), "All returned logs should have actor.type=api_key")
 	}
 }
 
@@ -230,6 +237,35 @@ func TestRequestLogs_ListFilterByActorIDsImpossible(t *testing.T) {
 		return
 	}
 	assertEmptyListData(t, list.Data, "Filtering by impossible actor_ids should return no results")
+}
+
+func TestRequestLogs_ListFilterByIdempotencyKey(t *testing.T) {
+	t.Parallel()
+	filtered, _, err := apiClient.GetList(requestLogsPath, url.Values{
+		"idempotency_key": {SeedRequestLogIdempotencyKey},
+		"limit":           {"10"},
+	})
+	if err != nil {
+		t.Skip("Request logs endpoint not accessible")
+		return
+	}
+	require.NotEmpty(t, filtered.Data, "Filtering by seeded idempotency key should return at least one log")
+	for _, item := range filtered.Data {
+		m := parseJSON(item)
+		assert.Equal(t, SeedRequestLogIdempotencyKey, jsonField(m, "idempotency_key"), "All results should match the filtered idempotency key")
+	}
+}
+
+func TestRequestLogs_ListFilterByIdempotencyKeyImpossible(t *testing.T) {
+	t.Parallel()
+	list, _, err := apiClient.GetList(requestLogsPath, url.Values{
+		"idempotency_key": {"zzzz-idempotency-key-does-not-exist-0001"},
+	})
+	if err != nil {
+		t.Skip("Request logs endpoint not accessible")
+		return
+	}
+	assertEmptyListData(t, list.Data, "Filtering by non-existent idempotency key should return no results")
 }
 
 func TestRequestLogs_ListFilterNoResults(t *testing.T) {
@@ -332,6 +368,7 @@ func TestRequestLogs_ListFilterByMultipleActorTypes(t *testing.T) {
 	t.Parallel()
 	list, _, err := apiClient.GetList(requestLogsPath, url.Values{
 		"actor_types": {"user", "api_key"},
+		"include":     {"actor"},
 		"limit":       {"25"},
 	})
 	require.NoError(t, err)
@@ -339,8 +376,10 @@ func TestRequestLogs_ListFilterByMultipleActorTypes(t *testing.T) {
 	allowed := map[string]bool{"user": true, "api_key": true}
 	for _, item := range list.Data {
 		m := parseJSON(item)
-		got := jsonField(m, "identity_type")
-		assert.True(t, allowed[got], "identity_type %q not in requested set", got)
+		actor := jsonObject(m, "actor")
+		require.NotNil(t, actor, "actor should be present with ?include=actor")
+		got := jsonField(actor, "type")
+		assert.True(t, allowed[got], "actor.type %q not in requested set", got)
 	}
 }
 
@@ -530,9 +569,8 @@ func TestRequestLogs_ListFilterByMinLatency(t *testing.T) {
 }
 
 // Removed-filter regression: actor_name and exact_match are no longer
-// supported. The binder ignores unknown query params, so requests that include
-// them must succeed (200) without affecting the result set.
-func TestRequestLogs_ListIgnoresRemovedFilters(t *testing.T) {
+// supported. Unknown query params are explicitly rejected with 400.
+func TestRequestLogs_ListRejectsRemovedFilters(t *testing.T) {
 	t.Parallel()
 	statusCode, body, err := apiClient.GetListRaw(requestLogsPath, url.Values{
 		"actor_name":  {"someone"},
@@ -540,8 +578,7 @@ func TestRequestLogs_ListIgnoresRemovedFilters(t *testing.T) {
 		"limit":       {"5"},
 	})
 	require.NoError(t, err)
-	skipOnNonClientError(t, requestLogsPath, statusCode)
-	requireStatus(t, 200, statusCode, body)
+	requireStatus(t, 400, statusCode, body)
 }
 
 // --- Get ---
@@ -595,9 +632,9 @@ func TestRequestLogs_ExpandableFieldsNullWithoutInclude(t *testing.T) {
 	got := parseJSON(body)
 	assert.Nil(t, got["account"], "account should be null without ?include=account")
 	assert.Nil(t, got["actor"], "actor should be null without ?include=actor")
-	assert.Nil(t, got["query_json"], "query_json should be null without ?include=query_json")
-	assert.Nil(t, got["request_body_json"], "request_body_json should be null without ?include=request_body_json")
-	assert.Nil(t, got["response_body_json"], "response_body_json should be null without ?include=response_body_json")
+	assert.Nil(t, got["query_params"], "query_params should be null without ?include=query_params")
+	assert.Nil(t, got["request_body"], "request_body should be null without ?include=request_body")
+	assert.Nil(t, got["response_body"], "response_body should be null without ?include=response_body")
 }
 
 func TestRequestLogs_IncludeAccount(t *testing.T) {
@@ -786,6 +823,82 @@ func TestRequestLogs_ListFilterByEndDateExcludesAll(t *testing.T) {
 		return
 	}
 	assertEmptyListData(t, list.Data, "end_date far in the past should exclude all logs")
+}
+
+func TestRequestLogs_IncludeQueryParams(t *testing.T) {
+	t.Parallel()
+	status, body, err := apiClient.GetListRaw(requestLogsPath+"/"+SeedRequestLogQueryParamsID, url.Values{"include": {"query_params"}})
+	require.NoError(t, err)
+	skipOnNonClientError(t, requestLogsPath, status)
+	requireStatus(t, 200, status, body)
+
+	got := parseJSON(body)
+	assert.Equal(t, SeedRequestLogQueryParamsID, jsonField(got, "id"))
+
+	qp := jsonObject(got, "query_params")
+	require.NotNil(t, qp, "query_params should be present with ?include=query_params")
+	assert.Equal(t, "10", jsonField(qp, "limit"), "query_params.limit should match seeded value")
+}
+
+func TestRequestLogs_CapturesPayloads(t *testing.T) {
+	t.Parallel()
+	name := uniqueName("e2e-rqlog")
+	idemKey := newIdempotencyKey()
+	path := itemCategoriesPath + "?include=unit_group"
+	createBody := map[string]any{
+		"name":          name,
+		"type":          "material_category",
+		"unit_group_id": SeedUnitGroupID,
+	}
+	status, respBody, err := apiClient.Post(path, createBody, idemKey)
+	require.NoError(t, err)
+	skipOnNonClientError(t, itemCategoriesPath, status)
+	requireStatus(t, 201, status, respBody)
+	created := parseJSON(respBody)
+	createdID := jsonField(created, "id")
+	require.NotEmpty(t, createdID)
+	t.Cleanup(func() { apiClient.Delete(itemCategoriesPath + "/" + createdID) })
+
+	var logID string
+	eventually(t, e2eAsyncWaitTimeout, e2eAsyncPollInterval, func() error {
+		list, _, err := apiClient.GetList(requestLogsPath, url.Values{
+			"idempotency_key": {idemKey},
+			"limit":           {"1"},
+		})
+		if err != nil {
+			return err
+		}
+		if len(list.Data) == 0 {
+			return fmt.Errorf("no request log yet for idempotency key %s", idemKey)
+		}
+		m := parseJSON(list.Data[0])
+		logID = jsonField(m, "id")
+		if logID == "" {
+			return fmt.Errorf("log item missing id")
+		}
+		return nil
+	})
+	require.NotEmpty(t, logID)
+
+	getStatus, getBody, err := apiClient.GetListRaw(requestLogsPath+"/"+logID, url.Values{
+		"include": {"request_body", "response_body", "query_params"},
+	})
+	require.NoError(t, err)
+	skipOnNonClientError(t, requestLogsPath, getStatus)
+	requireStatus(t, 200, getStatus, getBody)
+
+	got := parseJSON(getBody)
+	reqBody := jsonObject(got, "request_body")
+	require.NotNil(t, reqBody, "request_body should be present with ?include=request_body")
+	assert.Equal(t, name, jsonField(reqBody, "name"))
+
+	respObj := jsonObject(got, "response_body")
+	require.NotNil(t, respObj, "response_body should be present with ?include=response_body")
+	assert.Equal(t, "item_category", jsonField(respObj, "object"))
+
+	qp := jsonObject(got, "query_params")
+	require.NotNil(t, qp, "query_params should be present with ?include=query_params")
+	assert.Equal(t, "unit_group", jsonField(qp, "include"))
 }
 
 func TestRequestLogs_ListIncludeActor(t *testing.T) {

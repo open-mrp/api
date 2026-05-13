@@ -16,7 +16,7 @@ import (
 
 type AccountGroupProductLineAccessSvc interface {
 	ListAccountGroupProductLineAccess(ctx context.Context, req *ListAccountGroupProductLineAccessRequest) (*apiresource.List[apiresource.AccountGroupProductLineAccess], *apierror.APIError)
-	GetAccountGroupProductLineAccess(ctx context.Context, req *GetAccountGroupProductLineAccessRequest) (*apiresource.AccountGroupProductLineAccess, *apierror.APIError)
+	GetAccountGroupProductLineAccess(ctx context.Context, req *RetrieveAccountGroupProductLineAccessRequest) (*apiresource.AccountGroupProductLineAccess, *apierror.APIError)
 	CreateAccountGroupProductLineAccess(ctx context.Context, req *CreateAccountGroupProductLineAccessRequest) (*apiresource.AccountGroupProductLineAccess, *apierror.APIError)
 	UpdateAccountGroupProductLineAccess(ctx context.Context, req *UpdateAccountGroupProductLineAccessRequest) (*apiresource.AccountGroupProductLineAccess, *apierror.APIError)
 	DeleteAccountGroupProductLineAccess(ctx context.Context, req *DeleteAccountGroupProductLineAccessRequest) (*apiresource.EmptyResource, *apierror.APIError)
@@ -68,7 +68,7 @@ func (m *accountGroupProductLineAccessSvcImpl) ListAccountGroupProductLineAccess
 	return AccountGroupProductLineAccessListPresenter(resp), nil
 }
 
-func (m *accountGroupProductLineAccessSvcImpl) GetAccountGroupProductLineAccess(ctx context.Context, req *GetAccountGroupProductLineAccessRequest) (*apiresource.AccountGroupProductLineAccess, *apierror.APIError) {
+func (m *accountGroupProductLineAccessSvcImpl) GetAccountGroupProductLineAccess(ctx context.Context, req *RetrieveAccountGroupProductLineAccessRequest) (*apiresource.AccountGroupProductLineAccess, *apierror.APIError) {
 	pbReq := &pb.GetAccountGroupProductLineAccessRequest{
 		AccountGroupId: req.AccountGroupID,
 	}

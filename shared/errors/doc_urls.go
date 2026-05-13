@@ -4,46 +4,46 @@ const (
 	docsBaseURL = "https://docs.augno.com"
 
 	// Auth & authorization
-	docURLExpiredAPIKey      = docsBaseURL + "/api/errors#api-key-expired"
-	docURLRevokedAPIKey      = docsBaseURL + "/api/errors#api-key-revoked"
-	docURLInvalidCredentials = docsBaseURL + "/api/errors#invalid-credentials"
-	docURLInsufficientPerms  = docsBaseURL + "/api/errors#insufficient-permissions"
-	docURLPaymentRequired    = docsBaseURL + "/api/errors#payment-required"
+	docURLExpiredAPIKey      = docsBaseURL + "/api/errors#api_key_expired"
+	docURLRevokedAPIKey      = docsBaseURL + "/api/errors#api_key_revoked"
+	docURLInvalidCredentials = docsBaseURL + "/api/errors#invalid_credentials"
+	docURLInsufficientPerms  = docsBaseURL + "/api/errors#insufficient_permissions"
+	docURLPaymentRequired    = docsBaseURL + "/api/errors#payment_required"
 
 	// Validation
-	docURLValidationFailed = docsBaseURL + "/api/errors#validation-failed"
-	docURLMissingField     = docsBaseURL + "/api/errors#missing-field"
-	docURLInvalidFormat    = docsBaseURL + "/api/errors#invalid-format"
-	docURLMethodNotAllowed = docsBaseURL + "/api/errors#method-not-allowed"
+	docURLValidationFailed = docsBaseURL + "/api/errors#validation_failed"
+	docURLMissingField     = docsBaseURL + "/api/errors#missing_field"
+	docURLInvalidFormat    = docsBaseURL + "/api/errors#invalid_format"
+	docURLMethodNotAllowed = docsBaseURL + "/api/errors#method_not_allowed"
 
 	// Resources
-	docURLResourceNotFound = docsBaseURL + "/api/errors#resource-not-found"
-	docURLResourceConflict = docsBaseURL + "/api/errors#resource-conflict"
-	docURLResourceGone     = docsBaseURL + "/api/errors#resource-gone"
+	docURLResourceNotFound = docsBaseURL + "/api/errors#resource_not_found"
+	docURLResourceConflict = docsBaseURL + "/api/errors#resource_conflict"
+	docURLResourceGone     = docsBaseURL + "/api/errors#resource_gone"
 
 	// Idempotency
-	docURLIdempotencyInProgress = docsBaseURL + "/api/errors#idempotency-in-progress"
+	docURLIdempotencyInProgress = docsBaseURL + "/api/errors#idempotency_in_progress"
 
 	// Limits
-	docURLLimitExceeded      = docsBaseURL + "/api/errors#limit-exceeded"
-	docURLRegistrationClosed = docsBaseURL + "/api/errors#registration-closed"
+	docURLLimitExceeded      = docsBaseURL + "/api/errors#limit_exceeded"
+	docURLRegistrationClosed = docsBaseURL + "/api/errors#registration_closed"
 
 	// Rate limiting
-	docURLRateLimit = docsBaseURL + "/api/errors#rate-limit-exceeded"
+	docURLRateLimit = docsBaseURL + "/api/errors#rate_limit_exceeded"
 
 	// Parameters
-	docURLParameterMissing    = docsBaseURL + "/api/errors#parameter-missing"
-	docURLParameterInvalid    = docsBaseURL + "/api/errors#parameter-invalid"
-	docURLParameterUnknown    = docsBaseURL + "/api/errors#parameter-unknown"
-	docURLParametersExclusive = docsBaseURL + "/api/errors#parameters-exclusive"
+	docURLParameterMissing    = docsBaseURL + "/api/errors#parameter_missing"
+	docURLParameterInvalid    = docsBaseURL + "/api/errors#parameter_invalid"
+	docURLParameterUnknown    = docsBaseURL + "/api/errors#parameter_unknown"
+	docURLParametersExclusive = docsBaseURL + "/api/errors#parameters_exclusive"
 
 	// Server errors
-	docURLInternalError       = docsBaseURL + "/api/errors#internal-error"
-	docURLRequestTimeout      = docsBaseURL + "/api/errors#request-timeout"
-	docURLClientClosedRequest = docsBaseURL + "/api/errors#client-closed-request"
+	docURLInternalError       = docsBaseURL + "/api/errors#internal_error"
+	docURLRequestTimeout      = docsBaseURL + "/api/errors#request_timeout"
+	docURLClientClosedRequest = docsBaseURL + "/api/errors#client_closed_request"
 
 	// API version
-	docURLAPIVersionRequired = docsBaseURL + "/api/errors#api-version-required"
-	docURLAPIVersionInvalid  = docsBaseURL + "/api/errors#api-version-invalid"
-	docURLAPIVersionTooOld   = docsBaseURL + "/api/errors#api-version-too-old"
+	docURLAPIVersionRequired = docsBaseURL + "/api/errors#api_version_required"
+	docURLAPIVersionInvalid  = docsBaseURL + "/api/errors#api_version_invalid"
+	docURLAPIVersionTooOld   = docsBaseURL + "/api/errors#api_version_too_old"
 )

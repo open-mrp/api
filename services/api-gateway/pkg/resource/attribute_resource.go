@@ -23,6 +23,8 @@ type Attribute struct {
 	ColorCode constants.Color `json:"color" validate:"required"`
 	// Display order.
 	SortOrder int32 `json:"sort_order"`
+	// Property this attribute belongs to (set when the attribute is returned under item.attributes).
+	Property *Property `json:"property,omitempty"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last update timestamp.

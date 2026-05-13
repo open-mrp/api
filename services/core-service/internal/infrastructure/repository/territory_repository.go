@@ -3,12 +3,14 @@ package repository
 import (
 	"context"
 	gosql "database/sql"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/augno/api/services/core-service/internal/domain"
 	"github.com/augno/api/services/core-service/internal/infrastructure/sqlc"
+	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/db"
 	apierror "github.com/augno/api/shared/errors"
 	"github.com/augno/api/shared/pagination"
@@ -36,16 +38,19 @@ func mapTerritoryRow(
 	productLineID gosql.NullString,
 	createdAt, updatedAt time.Time,
 	salesRepName, salesRepEmail gosql.NullString,
+	salesRepStatus string,
+	salesRepCreatedAt, salesRepUpdatedAt time.Time,
 	productLineName gosql.NullString,
+	productLineIsCommissionExempt, productLineIsFreightExempt gosql.NullBool,
+	productLineCreatedAt, productLineUpdatedAt gosql.NullTime,
+	includes []string,
 ) *domain.Territory {
 	t := &domain.Territory{
-		ID:        id,
-		State:     state,
-		CreatedAt: createdAt,
-		UpdatedAt: updatedAt,
-		SalesRep: &domain.TerritorySalesRep{
-			ID: salesRepID,
-		},
+		ID:         id,
+		State:      state,
+		SalesRepID: salesRepID,
+		CreatedAt:  createdAt,
+		UpdatedAt:  updatedAt,
 	}
 
 	if startZipcode.Valid {
@@ -54,15 +59,39 @@ func mapTerritoryRow(
 	if endZipcode.Valid {
 		t.EndZipcode = &endZipcode.Int32
 	}
-	if salesRepName.Valid {
-		t.SalesRep.Name = &salesRepName.String
+
+	if slices.Contains(includes, "sales_rep") {
+		status := constants.AccountUserStatus(salesRepStatus)
+		t.SalesRep = &domain.TerritorySalesRep{
+			ID:        salesRepID,
+			Status:    &status,
+			CreatedAt: &salesRepCreatedAt,
+			UpdatedAt: &salesRepUpdatedAt,
+		}
+		if salesRepName.Valid {
+			t.SalesRep.Name = &salesRepName.String
+		}
+		if salesRepEmail.Valid {
+			t.SalesRep.Email = &salesRepEmail.String
+		}
 	}
-	if salesRepEmail.Valid {
-		t.SalesRep.Email = &salesRepEmail.String
-	}
-	if productLineID.Valid {
+
+	if slices.Contains(includes, "product_line") && productLineID.Valid {
+		commPolicy := constants.CommissionPolicyFromBool(productLineIsCommissionExempt.Bool)
+		freightPolicy := constants.FreightPolicyFromBool(productLineIsFreightExempt.Bool)
+		var plCreatedAt, plUpdatedAt time.Time
+		if productLineCreatedAt.Valid {
+			plCreatedAt = productLineCreatedAt.Time
+		}
+		if productLineUpdatedAt.Valid {
+			plUpdatedAt = productLineUpdatedAt.Time
+		}
 		t.ProductLine = &domain.TerritoryProductLine{
-			ID: productLineID.String,
+			ID:               productLineID.String,
+			CommissionPolicy: &commPolicy,
+			FreightPolicy:    &freightPolicy,
+			CreatedAt:        &plCreatedAt,
+			UpdatedAt:        &plUpdatedAt,
 		}
 		if productLineName.Valid {
 			t.ProductLine.Name = productLineName.String
@@ -72,27 +101,39 @@ func mapTerritoryRow(
 	return t
 }
 
-func mapForwardTerritoryRow(row sqlc.ListTerritoriesForwardRow) *domain.Territory {
+func mapForwardTerritoryRow(row sqlc.ListTerritoriesForwardRow, includes []string) *domain.Territory {
 	return mapTerritoryRow(
 		row.ID, row.State, row.StartZipcode, row.EndZipcode,
 		row.SalesRepID, row.ProductLineID, row.CreatedAt, row.UpdatedAt,
-		row.SalesRepName, row.SalesRepEmail, row.ProductLineName,
+		row.SalesRepName, row.SalesRepEmail,
+		row.SalesRepStatus, row.SalesRepCreatedAt, row.SalesRepUpdatedAt,
+		row.ProductLineName, row.ProductLineIsCommissionExempt, row.ProductLineIsFreightExempt,
+		row.ProductLineCreatedAt, row.ProductLineUpdatedAt,
+		includes,
 	)
 }
 
-func mapBackwardTerritoryRow(row sqlc.ListTerritoriesBackwardRow) *domain.Territory {
+func mapBackwardTerritoryRow(row sqlc.ListTerritoriesBackwardRow, includes []string) *domain.Territory {
 	return mapTerritoryRow(
 		row.ID, row.State, row.StartZipcode, row.EndZipcode,
 		row.SalesRepID, row.ProductLineID, row.CreatedAt, row.UpdatedAt,
-		row.SalesRepName, row.SalesRepEmail, row.ProductLineName,
+		row.SalesRepName, row.SalesRepEmail,
+		row.SalesRepStatus, row.SalesRepCreatedAt, row.SalesRepUpdatedAt,
+		row.ProductLineName, row.ProductLineIsCommissionExempt, row.ProductLineIsFreightExempt,
+		row.ProductLineCreatedAt, row.ProductLineUpdatedAt,
+		includes,
 	)
 }
 
-func mapGetTerritoryRow(row sqlc.GetTerritoryRow) *domain.Territory {
+func mapGetTerritoryRow(row sqlc.GetTerritoryRow, includes []string) *domain.Territory {
 	return mapTerritoryRow(
 		row.ID, row.State, row.StartZipcode, row.EndZipcode,
 		row.SalesRepID, row.ProductLineID, row.CreatedAt, row.UpdatedAt,
-		row.SalesRepName, row.SalesRepEmail, row.ProductLineName,
+		row.SalesRepName, row.SalesRepEmail,
+		row.SalesRepStatus, row.SalesRepCreatedAt, row.SalesRepUpdatedAt,
+		row.ProductLineName, row.ProductLineIsCommissionExempt, row.ProductLineIsFreightExempt,
+		row.ProductLineCreatedAt, row.ProductLineUpdatedAt,
+		includes,
 	)
 }
 
@@ -156,7 +197,7 @@ func (r *territoryRepoImpl) List(ctx context.Context, params domain.ListTerritor
 			}
 			territories := make([]*domain.Territory, len(rows))
 			for i, row := range rows {
-				territories[i] = mapBackwardTerritoryRow(row)
+				territories[i] = mapBackwardTerritoryRow(row, params.Includes)
 			}
 			result, pageInfo := pagination.BuildPageString(territories, params.Limit, cursorDir, territoryCreatedAt, territoryID)
 			return &domain.ListTerritoriesResult{Territories: result, PageInfo: pageInfo}, nil
@@ -179,7 +220,7 @@ func (r *territoryRepoImpl) List(ctx context.Context, params domain.ListTerritor
 		}
 		territories := make([]*domain.Territory, len(rows))
 		for i, row := range rows {
-			territories[i] = mapForwardTerritoryRow(row)
+			territories[i] = mapForwardTerritoryRow(row, params.Includes)
 		}
 		result, pageInfo := pagination.BuildPageString(territories, params.Limit, cursorDir, territoryCreatedAt, territoryID)
 		return &domain.ListTerritoriesResult{Territories: result, PageInfo: pageInfo}, nil
@@ -201,7 +242,7 @@ func (r *territoryRepoImpl) List(ctx context.Context, params domain.ListTerritor
 
 	territories := make([]*domain.Territory, len(rows))
 	for i, row := range rows {
-		territories[i] = mapForwardTerritoryRow(row)
+		territories[i] = mapForwardTerritoryRow(row, params.Includes)
 	}
 	result, pageInfo := pagination.BuildPageString(territories, params.Limit, cursorDir, territoryCreatedAt, territoryID)
 	return &domain.ListTerritoriesResult{Territories: result, PageInfo: pageInfo}, nil
@@ -219,7 +260,7 @@ func (r *territoryRepoImpl) Get(ctx context.Context, params domain.GetTerritoryP
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return mapGetTerritoryRow(row), nil
+	return mapGetTerritoryRow(row, params.Includes), nil
 }
 
 func (r *territoryRepoImpl) Create(ctx context.Context, territoryID string, params domain.CreateTerritoryParams) (*domain.Territory, *apierror.APIError) {
@@ -249,6 +290,7 @@ func (r *territoryRepoImpl) Create(ctx context.Context, territoryID string, para
 	return r.Get(ctx, domain.GetTerritoryParams{
 		AccountID:   params.AccountID,
 		TerritoryID: territoryID,
+		Includes:    params.Includes,
 	})
 }
 
@@ -282,6 +324,7 @@ func (r *territoryRepoImpl) Update(ctx context.Context, params domain.UpdateTerr
 	return r.Get(ctx, domain.GetTerritoryParams{
 		AccountID:   params.AccountID,
 		TerritoryID: params.TerritoryID,
+		Includes:    params.Includes,
 	})
 }
 

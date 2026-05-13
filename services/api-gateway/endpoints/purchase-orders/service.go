@@ -7,6 +7,7 @@ import (
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/appctx"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
@@ -16,7 +17,7 @@ import (
 
 type PurchaseOrderSvc interface {
 	ListPurchaseOrders(ctx context.Context, req *ListPurchaseOrdersRequest) (*apiresource.List[apiresource.PurchaseOrderSummary], *apierror.APIError)
-	GetPurchaseOrder(ctx context.Context, req *GetPurchaseOrderRequest) (*apiresource.PurchaseOrderDetail, *apierror.APIError)
+	GetPurchaseOrder(ctx context.Context, req *RetrievePurchaseOrderRequest) (*apiresource.PurchaseOrderDetail, *apierror.APIError)
 	CreatePurchaseOrder(ctx context.Context, req *CreatePurchaseOrderRequest) (*apiresource.PurchaseOrderDetail, *apierror.APIError)
 	UpdatePurchaseOrder(ctx context.Context, req *UpdatePurchaseOrderRequest) (*apiresource.PurchaseOrderDetail, *apierror.APIError)
 	DeletePurchaseOrder(ctx context.Context, req *DeletePurchaseOrderRequest) (*apiresource.EmptyResource, *apierror.APIError)
@@ -85,7 +86,7 @@ func (m *purchaseOrderSvcImpl) ListPurchaseOrders(ctx context.Context, req *List
 	return PurchaseOrderListPresenter(resp), nil
 }
 
-func (m *purchaseOrderSvcImpl) GetPurchaseOrder(ctx context.Context, req *GetPurchaseOrderRequest) (*apiresource.PurchaseOrderDetail, *apierror.APIError) {
+func (m *purchaseOrderSvcImpl) GetPurchaseOrder(ctx context.Context, req *RetrievePurchaseOrderRequest) (*apiresource.PurchaseOrderDetail, *apierror.APIError) {
 	pbReq := &pb.GetPurchaseOrderRequest{
 		Id:       req.PurchaseOrderID,
 		Includes: req.Includes,
@@ -150,6 +151,7 @@ func (m *purchaseOrderSvcImpl) CreatePurchaseOrder(ctx context.Context, req *Cre
 		Lines:                 lines,
 		ContactAccountUserIds: req.ContactAccountUserIDs,
 		PromisedAt:            req.PromisedAt,
+		Includes:              appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, purchaseOrderEpSvcTracer, "service.purchase_orders.create", domain.ServiceName,
@@ -174,6 +176,7 @@ func (m *purchaseOrderSvcImpl) UpdatePurchaseOrder(ctx context.Context, req *Upd
 		ShippingAddressId:     req.ShippingAddressID,
 		PromisedAt:            req.PromisedAt,
 		ContactAccountUserIds: req.ContactAccountUserIDs,
+		Includes:              appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, purchaseOrderEpSvcTracer, "service.purchase_orders.update", domain.ServiceName,
@@ -221,6 +224,7 @@ func (m *purchaseOrderSvcImpl) ChangePurchaseOrderStatus(ctx context.Context, re
 		Id:           req.PurchaseOrderID,
 		StatusChange: req.StatusChange,
 		SendEmail:    req.SendEmail,
+		Includes:     appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, purchaseOrderEpSvcTracer, "service.purchase_orders.change_status", domain.ServiceName,

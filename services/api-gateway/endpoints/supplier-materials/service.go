@@ -16,7 +16,7 @@ import (
 
 type SupplierMaterialSvc interface {
 	ListSupplierMaterials(ctx context.Context, req *ListSupplierMaterialsRequest) (*apiresource.List[apiresource.SupplierMaterial], *apierror.APIError)
-	GetSupplierMaterial(ctx context.Context, req *GetSupplierMaterialRequest) (*apiresource.SupplierMaterial, *apierror.APIError)
+	GetSupplierMaterial(ctx context.Context, req *RetrieveSupplierMaterialRequest) (*apiresource.SupplierMaterial, *apierror.APIError)
 	CreateSupplierMaterial(ctx context.Context, req *CreateSupplierMaterialRequest) (*apiresource.SupplierMaterial, *apierror.APIError)
 	UpdateSupplierMaterial(ctx context.Context, req *UpdateSupplierMaterialRequest) (*apiresource.SupplierMaterial, *apierror.APIError)
 	DeleteSupplierMaterial(ctx context.Context, req *DeleteSupplierMaterialRequest) (*apiresource.SupplierMaterial, *apierror.APIError)
@@ -63,7 +63,7 @@ func (s *supplierMaterialSvcImpl) ListSupplierMaterials(ctx context.Context, req
 	return materialep.SupplierMaterialListPresenter(resp), nil
 }
 
-func (s *supplierMaterialSvcImpl) GetSupplierMaterial(ctx context.Context, req *GetSupplierMaterialRequest) (*apiresource.SupplierMaterial, *apierror.APIError) {
+func (s *supplierMaterialSvcImpl) GetSupplierMaterial(ctx context.Context, req *RetrieveSupplierMaterialRequest) (*apiresource.SupplierMaterial, *apierror.APIError) {
 	pbReq := &pb.GetSupplierMaterialRequest{
 		SupplierAccountId: req.SupplierID,
 		MaterialId:        req.MaterialID,

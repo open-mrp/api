@@ -181,7 +181,9 @@ SELECT
     ar.parent_account_relation_id AS parent_relation_id,
     ar.counterparty_account_id AS account_id,
     a.name AS account_name,
-    ar.external_number
+    ar.external_number,
+    a.created_at,
+    a.updated_at
 FROM account_relation ar
 INNER JOIN account a ON a.id = ar.counterparty_account_id
 WHERE ar.owner_account_id = ?
@@ -199,6 +201,8 @@ type ListChildAccountsByParentRelationIDsRow struct {
 	AccountID        string
 	AccountName      string
 	ExternalNumber   string
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
 }
 
 func (q *Queries) ListChildAccountsByParentRelationIDs(ctx context.Context, arg ListChildAccountsByParentRelationIDsParams) ([]ListChildAccountsByParentRelationIDsRow, error) {
@@ -226,6 +230,8 @@ func (q *Queries) ListChildAccountsByParentRelationIDs(ctx context.Context, arg 
 			&i.AccountID,
 			&i.AccountName,
 			&i.ExternalNumber,
+			&i.CreatedAt,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}

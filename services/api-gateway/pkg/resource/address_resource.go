@@ -43,8 +43,8 @@ type Address struct {
 	Phone *string `json:"phone"`
 	// Email address associated with the address.
 	Email *string `json:"email"`
-	// Whether the address is a drop ship location.
-	IsDropShip bool `json:"is_drop_ship"`
+	// Address type.
+	Type constants.AddressType `json:"type" validate:"required"`
 	// Geolocation details for the address.
 	Geolocation *Geolocation `json:"geolocation" validate:"required"`
 	// Creation timestamp.
@@ -62,6 +62,7 @@ var SampleAddress = &Address{
 	ID:     SampleCRUDAddressID,
 	Object: constants.ObjectTypeAddress,
 	Name:   "Headquarters",
+	Type:   constants.AddressTypeStandard,
 	Geolocation: &Geolocation{
 		ID:          SampleGeolocationID,
 		Object:      constants.ObjectTypeGeolocation,

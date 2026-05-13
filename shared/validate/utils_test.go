@@ -208,9 +208,9 @@ func TestValidateIdentifierTag(t *testing.T) {
 			hasError:   true,
 		},
 		{
-			name:       "invalid username - contains hyphen",
+			name:       "valid username - with hyphen",
 			identifier: "john-doe",
-			hasError:   true,
+			hasError:   false,
 		},
 		{
 			name:       "invalid username - contains space",
@@ -486,6 +486,163 @@ func TestValidateIdentifierErrorMessage(t *testing.T) {
 	}
 
 	expectedMessage := "must be a valid email address or username"
+	if !strings.Contains(err.PublicMessage, expectedMessage) {
+		t.Errorf("expected error message to contain '%s', but got: %s", expectedMessage, err.PublicMessage)
+	}
+}
+
+type usernameTestStruct struct {
+	Username string `validate:"username"`
+}
+
+type requiredUsernameTestStruct struct {
+	Username string `validate:"required,username"`
+}
+
+func TestValidateUsernameTag(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		username string
+		hasError bool
+	}{
+		{
+			name:     "valid username - alphanumeric",
+			username: "user123",
+			hasError: false,
+		},
+		{
+			name:     "valid username - minimum length",
+			username: "abc",
+			hasError: false,
+		},
+		{
+			name:     "valid username - with underscore",
+			username: "john_doe",
+			hasError: false,
+		},
+		{
+			name:     "valid username - with hyphen",
+			username: "john-doe",
+			hasError: false,
+		},
+		{
+			name:     "valid username - uppercase",
+			username: "JohnDoe",
+			hasError: false,
+		},
+		{
+			name:     "valid username - mixed case with symbols",
+			username: "John_Doe-123",
+			hasError: false,
+		},
+		{
+			name:     "valid username - maximum length (255)",
+			username: strings.Repeat("a", 255),
+			hasError: false,
+		},
+		{
+			name:     "invalid username - too short (2 chars)",
+			username: "ab",
+			hasError: true,
+		},
+		{
+			name:     "invalid username - too long (256 chars)",
+			username: strings.Repeat("a", 256),
+			hasError: true,
+		},
+		{
+			name:     "invalid username - contains space",
+			username: "john doe",
+			hasError: true,
+		},
+		{
+			name:     "invalid username - contains at sign",
+			username: "john@doe",
+			hasError: true,
+		},
+		{
+			name:     "invalid username - contains dot",
+			username: "john.doe",
+			hasError: true,
+		},
+		{
+			name:     "invalid username - contains special characters",
+			username: "john!doe",
+			hasError: true,
+		},
+		{
+			name:     "empty username - passes because tag allows empty (use required)",
+			username: "",
+			hasError: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := &usernameTestStruct{Username: tt.username}
+			err := Validate(req)
+
+			if tt.hasError {
+				if err == nil {
+					t.Errorf("expected validation to fail for username: %s", tt.username)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("expected validation to pass for username: %s, but got error: %v", tt.username, err)
+				}
+			}
+		})
+	}
+}
+
+func TestValidateUsernameTagWithRequired(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		username string
+		hasError bool
+	}{
+		{
+			name:     "valid username",
+			username: "john_doe",
+			hasError: false,
+		},
+		{
+			name:     "empty username - fails because required",
+			username: "",
+			hasError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := &requiredUsernameTestStruct{Username: tt.username}
+			err := Validate(req)
+
+			if tt.hasError {
+				if err == nil {
+					t.Errorf("expected validation to fail for username: %s", tt.username)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("expected validation to pass for username: %s, but got error: %v", tt.username, err)
+				}
+			}
+		})
+	}
+}
+
+func TestValidateUsernameErrorMessage(t *testing.T) {
+	t.Parallel()
+	req := &usernameTestStruct{Username: "a b"}
+	err := Validate(req)
+
+	if err == nil {
+		t.Fatal("expected validation to fail")
+	}
+
+	expectedMessage := "must be 3-255 characters and contain only letters, numbers, underscores, and hyphens"
 	if !strings.Contains(err.PublicMessage, expectedMessage) {
 		t.Errorf("expected error message to contain '%s', but got: %s", expectedMessage, err.PublicMessage)
 	}

@@ -217,32 +217,48 @@ func transactionToProto(t *domain.Transaction) *pb.TransactionInfo {
 	}
 
 	info := &pb.TransactionInfo{
-		Id:                     t.ID,
-		Number:                 t.Number,
-		AmountId:               t.AmountID,
-		AmountValue:            t.AmountValue,
-		AmountUnitId:           t.AmountUnitID,
-		AmountUnitAbbreviation: t.AmountUnitAbbr,
-		CustomerId:             t.CustomerID,
-		CustomerName:           t.CustomerName,
-		CustomerNumber:         t.CustomerNumber,
-		ResponsibleUserId:      t.ResponsibleUserID,
-		ResponsibleUserName:    t.ResponsibleUserName,
-		Note:                   t.Note,
-		TransactionTypeCode:    t.TransactionTypeCode,
-		TransactionTypeName:    t.TransactionTypeName,
-		TransactionTypeId:      t.TransactionTypeID,
-		TransactionMethodCode:  t.TransactionMethodCode,
-		TransactionMethodName:  t.TransactionMethodName,
-		TransactionMethodId:    t.TransactionMethodID,
-		AdjustmentTypeCode:     t.AdjustmentTypeCode,
-		AdjustmentTypeName:     t.AdjustmentTypeName,
-		AdjustmentTypeId:       t.AdjustmentTypeID,
-		IsFullyAllocated:       t.IsFullyAllocated,
-		StripePaymentId:        t.StripePaymentID,
-		AllocationCount:        t.AllocationCount,
-		CreatedAt:              timestamppb.New(t.CreatedAt),
-		UpdatedAt:              timestamppb.New(t.UpdatedAt),
+		Id:                       t.ID,
+		Number:                   t.Number,
+		AmountId:                 t.AmountID,
+		AmountValue:              t.AmountValue,
+		AmountUnitId:             t.AmountUnitID,
+		AmountUnitAbbreviation:   t.AmountUnitAbbr,
+		CustomerId:               t.CustomerID,
+		CustomerName:             t.CustomerName,
+		CustomerNumber:           t.CustomerNumber,
+		CustomerStatus:           t.CustomerStatusCode,
+		CustomerCommissionPolicy: t.CustomerCommissionPolicy,
+		ResponsibleUserId:        t.ResponsibleUserID,
+		ResponsibleUserName:      t.ResponsibleUserName,
+		ResponsibleUserStatus:    t.ResponsibleUserStatusCode,
+		Note:                     t.Note,
+		TransactionTypeCode:      t.TransactionTypeCode,
+		TransactionTypeName:      t.TransactionTypeName,
+		TransactionTypeId:        t.TransactionTypeID,
+		TransactionMethodCode:    t.TransactionMethodCode,
+		TransactionMethodName:    t.TransactionMethodName,
+		TransactionMethodId:      t.TransactionMethodID,
+		AdjustmentTypeCode:       t.AdjustmentTypeCode,
+		AdjustmentTypeName:       t.AdjustmentTypeName,
+		AdjustmentTypeId:         t.AdjustmentTypeID,
+		IsFullyAllocated:         t.IsFullyAllocated,
+		StripePaymentId:          t.StripePaymentID,
+		AllocationCount:          t.AllocationCount,
+		CreatedAt:                timestamppb.New(t.CreatedAt),
+		UpdatedAt:                timestamppb.New(t.UpdatedAt),
+	}
+
+	if t.CustomerCreatedAt != nil {
+		info.CustomerCreatedAt = timestamppb.New(*t.CustomerCreatedAt)
+	}
+	if t.CustomerUpdatedAt != nil {
+		info.CustomerUpdatedAt = timestamppb.New(*t.CustomerUpdatedAt)
+	}
+	if t.ResponsibleUserCreatedAt != nil {
+		info.ResponsibleUserCreatedAt = timestamppb.New(*t.ResponsibleUserCreatedAt)
+	}
+	if t.ResponsibleUserUpdatedAt != nil {
+		info.ResponsibleUserUpdatedAt = timestamppb.New(*t.ResponsibleUserUpdatedAt)
 	}
 
 	if t.Allocations != nil {
@@ -261,28 +277,39 @@ func transactionSummaryToProto(t *domain.TransactionSummary) *pb.TransactionSumm
 		return nil
 	}
 
-	return &pb.TransactionSummaryInfo{
-		Id:                     t.ID,
-		Number:                 t.Number,
-		AmountId:               t.AmountID,
-		AmountValue:            t.AmountValue,
-		AmountUnitId:           t.AmountUnitID,
-		AmountUnitAbbreviation: t.AmountUnitAbbr,
-		CustomerId:             t.CustomerID,
-		CustomerName:           t.CustomerName,
-		CustomerNumber:         t.CustomerNumber,
-		TransactionTypeCode:    t.TransactionTypeCode,
-		TransactionTypeName:    t.TransactionTypeName,
-		TransactionTypeId:      t.TransactionTypeID,
-		TransactionMethodCode:  t.TransactionMethodCode,
-		TransactionMethodName:  t.TransactionMethodName,
-		TransactionMethodId:    t.TransactionMethodID,
-		AdjustmentTypeCode:     t.AdjustmentTypeCode,
-		AdjustmentTypeName:     t.AdjustmentTypeName,
-		AdjustmentTypeId:       t.AdjustmentTypeID,
-		IsFullyAllocated:       t.IsFullyAllocated,
-		AllocationCount:        t.AllocationCount,
-		CreatedAt:              timestamppb.New(t.CreatedAt),
-		UpdatedAt:              timestamppb.New(t.UpdatedAt),
+	info := &pb.TransactionSummaryInfo{
+		Id:                       t.ID,
+		Number:                   t.Number,
+		AmountId:                 t.AmountID,
+		AmountValue:              t.AmountValue,
+		AmountUnitId:             t.AmountUnitID,
+		AmountUnitAbbreviation:   t.AmountUnitAbbr,
+		CustomerId:               t.CustomerID,
+		CustomerName:             t.CustomerName,
+		CustomerNumber:           t.CustomerNumber,
+		CustomerStatus:           t.CustomerStatusCode,
+		CustomerCommissionPolicy: t.CustomerCommissionPolicy,
+		TransactionTypeCode:      t.TransactionTypeCode,
+		TransactionTypeName:      t.TransactionTypeName,
+		TransactionTypeId:        t.TransactionTypeID,
+		TransactionMethodCode:    t.TransactionMethodCode,
+		TransactionMethodName:    t.TransactionMethodName,
+		TransactionMethodId:      t.TransactionMethodID,
+		AdjustmentTypeCode:       t.AdjustmentTypeCode,
+		AdjustmentTypeName:       t.AdjustmentTypeName,
+		AdjustmentTypeId:         t.AdjustmentTypeID,
+		IsFullyAllocated:         t.IsFullyAllocated,
+		AllocationCount:          t.AllocationCount,
+		CreatedAt:                timestamppb.New(t.CreatedAt),
+		UpdatedAt:                timestamppb.New(t.UpdatedAt),
 	}
+
+	if t.CustomerCreatedAt != nil {
+		info.CustomerCreatedAt = timestamppb.New(*t.CustomerCreatedAt)
+	}
+	if t.CustomerUpdatedAt != nil {
+		info.CustomerUpdatedAt = timestamppb.New(*t.CustomerUpdatedAt)
+	}
+
+	return info
 }

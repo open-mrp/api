@@ -37,6 +37,14 @@ type ListSuppliersParams struct {
 	ItemIDs        []string
 	StartDate      *time.Time
 	EndDate        *time.Time
+	Includes       []string
+}
+
+// GetSupplierParams holds the parameters for retrieving a single supplier.
+type GetSupplierParams struct {
+	OwnerAccountID string
+	SupplierID     string
+	Includes       []string
 }
 
 // ListSuppliersResult holds the result of listing suppliers.
@@ -53,6 +61,7 @@ type CreateSupplierParams struct {
 	Note           *string
 	BillToAddress  *CreateAddressParams
 	ShipToAddress  *CreateAddressParams
+	Includes       []string
 }
 
 // UpdateSupplierParams holds the parameters for updating a supplier.
@@ -65,6 +74,7 @@ type UpdateSupplierParams struct {
 	UpdateNote      bool
 	BillToAddressID *string
 	ShipToAddressID *string
+	Includes        []string
 }
 
 // DeleteSupplierParams holds the parameters for deleting a supplier.

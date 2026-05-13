@@ -16,17 +16,17 @@ type CreateUnitRequest struct {
 	// Display name of the unit (e.g. "Gram").
 	Name string `json:"name" validate:"required,max=255"`
 	// Short abbreviation for the unit (e.g. "g").
-	Abbreviation string `json:"abbreviation" validate:"required,max=191"`
+	Abbreviation string `json:"abbreviation" validate:"required"`
 	// Unit dimension code.
 	Type constants.UnitType `json:"type" validate:"required"`
 	// Conversion ratio numerator relative to the base unit, as a decimal string.
 	RatioNumerator string `json:"ratio_numerator" validate:"required" format:"decimal"`
-	// Conversion ratio denominator relative to the base unit, as a decimal string.
-	RatioDenominator string `json:"ratio_denominator" validate:"required" format:"decimal"`
+	// Conversion ratio denominator relative to the base unit, as a decimal string. Must not be zero.
+	RatioDenominator string `json:"ratio_denominator" validate:"required,nonzero_decimal" format:"decimal"`
 	// Conversion offset numerator, as a decimal string.
 	OffsetNumerator string `json:"offset_numerator" validate:"required" format:"decimal"`
-	// Conversion offset denominator, as a decimal string.
-	OffsetDenominator string `json:"offset_denominator" validate:"required" format:"decimal"`
+	// Conversion offset denominator, as a decimal string. Must not be zero.
+	OffsetDenominator string `json:"offset_denominator" validate:"required,nonzero_decimal" format:"decimal"`
 }
 
 var sampleCreateUnitRequest = &CreateUnitRequest{

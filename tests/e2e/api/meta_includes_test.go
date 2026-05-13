@@ -143,6 +143,20 @@ func checkIncludePopulated(obj map[string]any, include string) error {
 		if !ok {
 			return fmt.Errorf("navigating %q: parent at segment %d is not an object", include, i)
 		}
+		// Transparently step into the first data item of a list wrapper encountered
+		// mid-path, so dot-paths like "associated_units.unit" can traverse through
+		// list-typed intermediate fields.
+		if objType, _ := curMap["object"].(string); objType == "list" {
+			data, _ := curMap["data"].([]any)
+			if len(data) == 0 {
+				return fmt.Errorf("include %q: list at segment %d has no items to navigate through", include, i)
+			}
+			firstItem, ok := data[0].(map[string]any)
+			if !ok {
+				return fmt.Errorf("include %q: first list item at segment %d is not an object", include, i)
+			}
+			curMap = firstItem
+		}
 		v, present := curMap[part]
 		if !present {
 			return fmt.Errorf("include %q: key %q missing from response", include, part)

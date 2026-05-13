@@ -77,10 +77,11 @@ func (h *gRPCHandler) ListUnitGroups(ctx context.Context, req *pb.ListUnitGroups
 	}
 
 	params := domain.ListUnitGroupsParams{
-		Cursor: req.Cursor,
-		Limit:  req.Limit,
-		Query:  req.Query,
-		Type:   req.Type,
+		Cursor:   req.Cursor,
+		Limit:    req.Limit,
+		Query:    req.Query,
+		Type:     req.Type,
+		Includes: req.Includes,
 	}
 
 	result, apiErr := h.unitGroupSvc.ListUnitGroups(ctx, params)
@@ -109,7 +110,10 @@ func (h *gRPCHandler) GetUnitGroup(ctx context.Context, req *pb.GetUnitGroupRequ
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	unitGroup, apiErr := h.unitGroupSvc.GetUnitGroup(ctx, req.Id)
+	unitGroup, apiErr := h.unitGroupSvc.GetUnitGroup(ctx, domain.GetUnitGroupParams{
+		UnitGroupID: req.Id,
+		Includes:    req.Includes,
+	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
@@ -143,6 +147,7 @@ func (h *gRPCHandler) CreateUnitGroup(ctx context.Context, req *pb.CreateUnitGro
 		Type:            req.Type,
 		BaseUnitID:      req.BaseUnitId,
 		UnitConversions: conversions,
+		Includes:        req.Includes,
 	}
 
 	unitGroup, apiErr := h.unitGroupSvc.CreateUnitGroup(ctx, params)
@@ -167,6 +172,7 @@ func (h *gRPCHandler) UpdateUnitGroup(ctx context.Context, req *pb.UpdateUnitGro
 		UnitGroupID: req.Id,
 		Name:        req.Name,
 		BaseUnitID:  req.BaseUnitId,
+		Includes:    req.Includes,
 	}
 
 	if req.UpdateNotes {
@@ -214,6 +220,9 @@ func (h *gRPCHandler) UpsertUnitGroupUnit(ctx context.Context, req *pb.UpsertUni
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
 	params := domain.UpsertUnitGroupUnitParams{
 		UnitGroupID:        req.UnitGroupId,
 		UnitGroupUnitID:    req.UnitGroupUnitId,
@@ -221,6 +230,7 @@ func (h *gRPCHandler) UpsertUnitGroupUnit(ctx context.Context, req *pb.UpsertUni
 		DiscountPercentage: req.DiscountPercentage,
 		DiscountFixed:      req.DiscountFixed,
 		IsVisible:          req.IsVisible,
+		Includes:           req.Includes,
 	}
 
 	result, apiErr := h.unitGroupSvc.UpsertUnitGroupUnit(ctx, params)
@@ -256,7 +266,7 @@ func (h *gRPCHandler) ListUnitGroupUnits(ctx context.Context, req *pb.ListUnitGr
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	units, apiErr := h.unitGroupSvc.ListUnitGroupUnits(ctx, req.UnitGroupId)
+	units, apiErr := h.unitGroupSvc.ListUnitGroupUnits(ctx, req.UnitGroupId, req.Includes)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
@@ -279,6 +289,7 @@ func (h *gRPCHandler) GetUnitGroupUnit(ctx context.Context, req *pb.GetUnitGroup
 	params := domain.GetUnitGroupUnitParams{
 		UnitGroupID:     req.UnitGroupId,
 		UnitGroupUnitID: req.UnitGroupUnitId,
+		Includes:        req.Includes,
 	}
 
 	result, apiErr := h.unitGroupSvc.GetUnitGroupUnit(ctx, params)

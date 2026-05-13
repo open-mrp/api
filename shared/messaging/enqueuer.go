@@ -20,9 +20,9 @@ type EnqueuerConfig struct {
 	// Used in log messages and to scope outbox queries to the owning service's messages.
 	ServiceName string
 
-	// PlatformMode (optional) is the platform mode. When set to "test", the default
-	// PollInterval is reduced from 30s to 1s so that e2e tests can verify async
-	// side-effects (audit logs, request logs, etc.) without long waits.
+	// PlatformMode (optional) is the platform mode. When set to "test", default
+	// intervals are minimized so e2e runs observe async side-effects quickly (see
+	// WithDefaults).
 	PlatformMode constants.PlatformMode
 
 	// LockOwner (optional; default: "{hostname}-{pid}") is a unique identifier for this
@@ -51,6 +51,10 @@ type EnqueuerConfig struct {
 	// defaults (1s base, 2x multiplier, 10s max, 10% jitter) when nil.
 	RetryBackoff *retry.Config
 
+	// DBRetryBackoff (optional) configures short retries for transient database lock
+	// conflicts while claiming or marking outbox rows.
+	DBRetryBackoff *retry.Config
+
 	// RetentionHours (optional; default: 168 i.e. 7 days) is how long published outbox
 	// messages are kept before the purge loop deletes them.
 	RetentionHours int
@@ -78,7 +82,7 @@ func (c *EnqueuerConfig) WithDefaults() *EnqueuerConfig {
 	}
 	if c.PollInterval == 0 {
 		if c.PlatformMode.IsTest() {
-			c.PollInterval = 1 * time.Second
+			c.PollInterval = 50 * time.Millisecond
 		} else {
 			c.PollInterval = 30 * time.Second
 		}
@@ -90,21 +94,41 @@ func (c *EnqueuerConfig) WithDefaults() *EnqueuerConfig {
 		c.LockDurationSeconds = 60
 	}
 	if c.CleanupInterval == 0 {
-		c.CleanupInterval = 30 * time.Second
+		if c.PlatformMode.IsTest() {
+			c.CleanupInterval = 500 * time.Millisecond
+		} else {
+			c.CleanupInterval = 30 * time.Second
+		}
 	}
 	if c.RetryBackoff == nil {
-		c.RetryBackoff = (&retry.Config{
-			InitialWait:    1 * time.Second,
-			Multiplier:     2.0,
-			MaxWait:        1 * time.Hour,
-			JitterFraction: 0.25,
-		}).WithDefaults()
+		if c.PlatformMode.IsTest() {
+			c.RetryBackoff = (&retry.Config{
+				InitialWait:    10 * time.Millisecond,
+				Multiplier:     2.0,
+				MaxWait:        2 * time.Second,
+				JitterFraction: 0.1,
+			}).WithDefaults()
+		} else {
+			c.RetryBackoff = (&retry.Config{
+				InitialWait:    1 * time.Second,
+				Multiplier:     2.0,
+				MaxWait:        1 * time.Hour,
+				JitterFraction: 0.25,
+			}).WithDefaults()
+		}
+	}
+	if c.DBRetryBackoff == nil {
+		c.DBRetryBackoff = OutboxDBRetryConfig(c.PlatformMode)
 	}
 	if c.RetentionHours == 0 {
 		c.RetentionHours = 168 // 7 days
 	}
 	if c.PurgeInterval == 0 {
-		c.PurgeInterval = 1 * time.Hour
+		if c.PlatformMode.IsTest() {
+			c.PurgeInterval = 5 * time.Minute
+		} else {
+			c.PurgeInterval = 1 * time.Hour
+		}
 	}
 	if c.PurgeLeaseTTL == 0 {
 		c.PurgeLeaseTTL = 5 * time.Minute
@@ -202,10 +226,15 @@ func (e *Enqueuer) Stop() {
 	slog.Info("Outbox enqueuer stopped", "service", e.config.ServiceName)
 }
 
-// pollLoop ticks at PollInterval and calls processBatch on each tick. It exits
-// when the enqueuer's context is cancelled.
+// pollLoop ticks at PollInterval and calls processBatch on each tick. In test
+// platform mode it also processes once immediately so the first outbox row is not
+// delayed by a full poll interval. Exits when the enqueuer's context is cancelled.
 func (e *Enqueuer) pollLoop() {
 	defer e.wg.Done()
+
+	if e.config.PlatformMode.IsTest() {
+		e.processBatch()
+	}
 
 	ticker := time.NewTicker(e.config.PollInterval)
 	defer ticker.Stop()
@@ -245,7 +274,12 @@ func (e *Enqueuer) cleanupLoop() {
 // outbox (MarkPublished). Failed messages have their attempt count incremented and
 // are scheduled for retry with exponential backoff (MarkFailed).
 func (e *Enqueuer) processBatch() {
-	messages, err := e.repo.AcquireAndLock(e.ctx, e.config.LockOwner, e.config.BatchSize, e.config.LockDurationSeconds)
+	var messages []*OutboxMessage
+	err := WithOutboxDBLockRetry(e.ctx, e.config.DBRetryBackoff, "outbox.acquire_and_lock", func() error {
+		var err error
+		messages, err = e.repo.AcquireAndLock(e.ctx, e.config.LockOwner, e.config.BatchSize, e.config.LockDurationSeconds)
+		return err
+	})
 	if err != nil {
 		slog.Error("Failed to acquire outbox messages", "error", err)
 		return
@@ -270,13 +304,19 @@ func (e *Enqueuer) processBatch() {
 				"error", err,
 				"retry_delay_secs", delaySecs,
 			)
-			if markErr := e.repo.MarkFailed(e.ctx, msg.ID, err.Error(), delaySecs); markErr != nil {
+			markErr := WithOutboxDBLockRetry(e.ctx, e.config.DBRetryBackoff, "outbox.mark_failed", func() error {
+				return e.repo.MarkFailed(e.ctx, msg.ID, err.Error(), delaySecs)
+			})
+			if markErr != nil {
 				slog.Error("Failed to mark message as failed", "id", msg.ID, "error", markErr)
 			}
 			continue
 		}
 
-		if err := e.repo.MarkPublished(e.ctx, msg.ID); err != nil {
+		err := WithOutboxDBLockRetry(e.ctx, e.config.DBRetryBackoff, "outbox.mark_published", func() error {
+			return e.repo.MarkPublished(e.ctx, msg.ID)
+		})
+		if err != nil {
 			slog.Error("Failed to mark message as published", "id", msg.ID, "error", err)
 		} else {
 			slog.Debug("Published outbox message",
@@ -301,7 +341,12 @@ func (e *Enqueuer) publishMessage(msg *OutboxMessage) error {
 // locking messages but before publishing them — the locks expire and the messages
 // become available for another enqueuer instance to pick up.
 func (e *Enqueuer) cleanupExpiredLocks() {
-	count, err := e.repo.CleanupExpiredLocks(e.ctx, 1000)
+	var count int64
+	err := WithOutboxDBLockRetry(e.ctx, e.config.DBRetryBackoff, "outbox.cleanup_expired_locks", func() error {
+		var err error
+		count, err = e.repo.CleanupExpiredLocks(e.ctx, 1000)
+		return err
+	})
 	if err != nil {
 		slog.Error("Failed to cleanup expired locks", "error", err)
 		return
@@ -339,7 +384,12 @@ func (e *Enqueuer) purgeLoop() {
 // preserving recent records for debugging and audit. Failed messages are intentionally
 // kept indefinitely for investigation.
 func (e *Enqueuer) purgePublished(ctx context.Context) {
-	count, err := e.repo.PurgePublished(ctx, e.config.RetentionHours, 1000)
+	var count int64
+	err := WithOutboxDBLockRetry(ctx, e.config.DBRetryBackoff, "outbox.purge_published", func() error {
+		var err error
+		count, err = e.repo.PurgePublished(ctx, e.config.RetentionHours, 1000)
+		return err
+	})
 	if err != nil {
 		slog.Error("Failed to purge published outbox messages", "error", err)
 		return

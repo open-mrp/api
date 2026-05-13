@@ -7,6 +7,7 @@ import (
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/appctx"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
@@ -16,7 +17,7 @@ import (
 
 type ScanningStationSvc interface {
 	ListScanningStations(ctx context.Context, req *ListScanningStationsRequest) (*apiresource.List[apiresource.ScanningStation], *apierror.APIError)
-	GetScanningStation(ctx context.Context, req *GetScanningStationRequest) (*apiresource.ScanningStation, *apierror.APIError)
+	GetScanningStation(ctx context.Context, req *RetrieveScanningStationRequest) (*apiresource.ScanningStation, *apierror.APIError)
 	CreateScanningStation(ctx context.Context, req *CreateScanningStationRequest) (*apiresource.ScanningStation, *apierror.APIError)
 	UpdateScanningStation(ctx context.Context, req *UpdateScanningStationRequest) (*apiresource.ScanningStation, *apierror.APIError)
 	DeleteScanningStation(ctx context.Context, req *DeleteScanningStationRequest) (*apiresource.EmptyResource, *apierror.APIError)
@@ -52,9 +53,10 @@ func NewScanningStationSvc(config *ScanningStationSvcConfig) ScanningStationSvc 
 
 func (m *scanningStationSvcImpl) ListScanningStations(ctx context.Context, req *ListScanningStationsRequest) (*apiresource.List[apiresource.ScanningStation], *apierror.APIError) {
 	pbReq := &pb.ListScanningStationsRequest{
-		Cursor: req.Cursor,
-		Limit:  req.Limit,
-		Query:  req.Query,
+		Cursor:   req.Cursor,
+		Limit:    req.Limit,
+		Query:    req.Query,
+		Includes: appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, scanningStationSvcTracer, "service.scanning_stations.list", domain.ServiceName,
@@ -69,9 +71,10 @@ func (m *scanningStationSvcImpl) ListScanningStations(ctx context.Context, req *
 	return ScanningStationListPresenter(resp), nil
 }
 
-func (m *scanningStationSvcImpl) GetScanningStation(ctx context.Context, req *GetScanningStationRequest) (*apiresource.ScanningStation, *apierror.APIError) {
+func (m *scanningStationSvcImpl) GetScanningStation(ctx context.Context, req *RetrieveScanningStationRequest) (*apiresource.ScanningStation, *apierror.APIError) {
 	pbReq := &pb.GetScanningStationRequest{
-		Id: req.ScanningStationID,
+		Id:       req.ScanningStationID,
+		Includes: appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, scanningStationSvcTracer, "service.scanning_stations.get", domain.ServiceName,
@@ -89,13 +92,14 @@ func (m *scanningStationSvcImpl) GetScanningStation(ctx context.Context, req *Ge
 
 func (m *scanningStationSvcImpl) CreateScanningStation(ctx context.Context, req *CreateScanningStationRequest) (*apiresource.ScanningStation, *apierror.APIError) {
 	pbReq := &pb.CreateScanningStationRequest{
-		Name:                  req.Name,
-		Notes:                 req.Notes,
-		Type:                  string(req.Type),
-		MaterialCheckRequired: req.MaterialCheckRequired,
-		DepartmentId:          req.DepartmentID,
-		LabelSizeCode:         req.LabelSizeCode.StringPtr(),
-		LabelTypeCode:         req.LabelTypeCode.StringPtr(),
+		Name:                req.Name,
+		Notes:               req.Notes,
+		Type:                string(req.Type),
+		OperatorRequirement: string(req.OperatorRequirement),
+		DepartmentId:        req.DepartmentID,
+		LabelSizeCode:       req.LabelSizeCode.StringPtr(),
+		LabelTypeCode:       req.LabelTypeCode.StringPtr(),
+		Includes:            appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, scanningStationSvcTracer, "service.scanning_stations.create", domain.ServiceName,
@@ -113,12 +117,19 @@ func (m *scanningStationSvcImpl) CreateScanningStation(ctx context.Context, req 
 
 func (m *scanningStationSvcImpl) UpdateScanningStation(ctx context.Context, req *UpdateScanningStationRequest) (*apiresource.ScanningStation, *apierror.APIError) {
 	pbReq := &pb.UpdateScanningStationRequest{
-		Id:                    req.ScanningStationID,
-		Name:                  req.Name,
-		Notes:                 req.Notes,
-		LabelSizeCode:         req.LabelSizeCode.StringPtr(),
-		LabelTypeCode:         req.LabelTypeCode.StringPtr(),
-		MaterialCheckRequired: req.MaterialCheckRequired,
+		Id:            req.ScanningStationID,
+		Name:          req.Name,
+		Notes:         req.Notes,
+		LabelSizeCode: req.LabelSizeCode.StringPtr(),
+		LabelTypeCode: req.LabelTypeCode.StringPtr(),
+		OperatorRequirement: func() *string {
+			if req.OperatorRequirement == nil {
+				return nil
+			}
+			v := string(*req.OperatorRequirement)
+			return &v
+		}(),
+		Includes: appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, scanningStationSvcTracer, "service.scanning_stations.update", domain.ServiceName,

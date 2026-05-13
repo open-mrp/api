@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strconv"
 
 	"github.com/augno/api/services/auth-service/pkg/types"
@@ -214,6 +215,14 @@ func (s *pickSvcImpl) UpdatePick(ctx context.Context, params domain.UpdatePickPa
 				return apiErr
 			}
 			result = pick
+
+			if slices.Contains(params.Includes, "lines") {
+				lines, apiErr := txRepo.GetLines(txCtx, params.PickID)
+				if apiErr != nil {
+					return apiErr
+				}
+				result.Lines = lines
+			}
 
 			changes := audit.ComputeChanges(old, result)
 

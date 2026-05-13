@@ -106,7 +106,7 @@ func TestProductSvcTestSuite(t *testing.T) {
 // targeting the given account. Admins bypass per-permission checks, which
 // keeps non-permission tests focused on business logic.
 func internalProductIdentityCtx(accountID string) context.Context {
-	adminCode := string(constants.RoleTypeCodeAdmin)
+	adminCode := string(constants.RoleTypeAdmin)
 	return appctx.WithIdentity(context.Background(), &types.Identity{
 		Type:   types.IdentityActorTypeUser,
 		Target: &types.IdentityTarget{AccountID: accountID},
@@ -114,7 +114,7 @@ func internalProductIdentityCtx(accountID string) context.Context {
 			RelationType: types.IdentityRelationTypeInternal,
 			ID:           "usr_test123",
 			AccountID:    &accountID,
-			RoleTypeCode: &adminCode,
+			RoleType:     &adminCode,
 			Permissions: map[string]bool{
 				"items:read":     true,
 				"items:create":   true,
@@ -130,7 +130,7 @@ func internalProductIdentityCtx(accountID string) context.Context {
 // readOnlyProductIdentityCtx returns an internal non-admin actor with only
 // items:read (no create/update/delete). Used to assert permission gating.
 func readOnlyProductIdentityCtx(accountID string) context.Context {
-	customCode := string(constants.RoleTypeCodeCustom)
+	customCode := string(constants.RoleTypeCustom)
 	return appctx.WithIdentity(context.Background(), &types.Identity{
 		Type:   types.IdentityActorTypeUser,
 		Target: &types.IdentityTarget{AccountID: accountID},
@@ -138,7 +138,7 @@ func readOnlyProductIdentityCtx(accountID string) context.Context {
 			RelationType: types.IdentityRelationTypeInternal,
 			ID:           "usr_test123",
 			AccountID:    &accountID,
-			RoleTypeCode: &customCode,
+			RoleType:     &customCode,
 			Permissions: map[string]bool{
 				"items:read": true,
 			},
@@ -149,7 +149,7 @@ func readOnlyProductIdentityCtx(accountID string) context.Context {
 // customerProductIdentityCtx returns a customer actor whose account differs
 // from the target (external customer viewing an owner's catalog).
 func customerProductIdentityCtx(customerAccountID, targetAccountID string) context.Context {
-	customCode := string(constants.RoleTypeCodeCustom)
+	customCode := string(constants.RoleTypeCustom)
 	return appctx.WithIdentity(context.Background(), &types.Identity{
 		Type:   types.IdentityActorTypeUser,
 		Target: &types.IdentityTarget{AccountID: targetAccountID},
@@ -157,7 +157,7 @@ func customerProductIdentityCtx(customerAccountID, targetAccountID string) conte
 			RelationType: types.IdentityRelationTypeCustomer,
 			ID:           "usr_cust123",
 			AccountID:    &customerAccountID,
-			RoleTypeCode: &customCode,
+			RoleType:     &customCode,
 			Permissions:  map[string]bool{},
 		},
 	})
@@ -584,6 +584,13 @@ func (s *ProductSvcTestSuite) existingProduct(itemID, sku string) *domain.Produc
 	}
 }
 
+func (s *ProductSvcTestSuite) existingProductWithRateIDs(itemID, sku string) *domain.ProductFull {
+	p := s.existingProduct(itemID, sku)
+	p.Item.UnitValueID = "rate_uv"
+	p.Item.BurnRateID = "rate_br"
+	return p
+}
+
 func (s *ProductSvcTestSuite) TestUpdateProduct_PartialUpdate_OnlyTouchesProvidedFields() {
 	ctx := productIdempotencyCtx(internalProductIdentityCtx("ac_test123"))
 
@@ -767,6 +774,41 @@ func (s *ProductSvcTestSuite) TestUpdateProduct_IdempotencyReplay_ReturnsCached(
 	s.Nil(err)
 	s.NotNil(result)
 	s.Equal("prod_cached", result.ID)
+}
+
+func (s *ProductSvcTestSuite) TestUpdateProduct_UnitPrice_UpdatesRate() {
+	ctx := productIdempotencyCtx(internalProductIdentityCtx("ac_test123"))
+
+	s.expectIdempotencyStarted()
+	s.productRepo.EXPECT().
+		Get(gomock.Any(), gomock.Any()).
+		Return(s.existingProductWithRateIDs("it_1", "SKU"), nil).
+		Times(1)
+
+	s.unitRepo.EXPECT().
+		GetDimensionCodes(gomock.Any(), gomock.Any()).
+		Return(map[string]string{"un_usd": "currency", "un_each": "discrete"}, nil).
+		Times(1)
+
+	rateParams := domain.CreateRateParams{Value: "9.99", NumeratorUnitID: "un_usd", DenominatorUnitID: "un_each"}
+	s.itemRepo.EXPECT().
+		UpdateRate(gomock.Any(), "rate_uv", rateParams).
+		Return(nil).
+		Times(1)
+
+	s.productRepo.EXPECT().
+		Update(gomock.Any(), gomock.AssignableToTypeOf(domain.UpdateProductParams{})).
+		Return(s.existingProductWithRateIDs("it_1", "SKU"), nil).
+		Times(1)
+	s.expectCacheSuccess()
+
+	result, err := s.productSvc.UpdateProduct(ctx, domain.UpdateProductParams{
+		ProductID: "it_1",
+		UnitPrice: &rateParams,
+	})
+
+	s.Nil(err)
+	s.NotNil(result)
 }
 
 // =============================================================================
@@ -1091,7 +1133,7 @@ func (s *ProductSvcTestSuite) TestListProductsFull_MissingIdentity() {
 
 func (s *ProductSvcTestSuite) TestListProductsFull_MissingTargetAccount_AuthError() {
 	// Internal actor with no target account → AuthenticationError.
-	adminCode := string(constants.RoleTypeCodeAdmin)
+	adminCode := string(constants.RoleTypeAdmin)
 	accountID := "ac_actor"
 	ctx := appctx.WithIdentity(context.Background(), &types.Identity{
 		Type: types.IdentityActorTypeUser,
@@ -1099,7 +1141,7 @@ func (s *ProductSvcTestSuite) TestListProductsFull_MissingTargetAccount_AuthErro
 			RelationType: types.IdentityRelationTypeInternal,
 			ID:           "usr_1",
 			AccountID:    &accountID,
-			RoleTypeCode: &adminCode,
+			RoleType:     &adminCode,
 			Permissions:  map[string]bool{"items:read": true},
 		},
 	})
@@ -1145,7 +1187,7 @@ func (s *ProductSvcTestSuite) TestListProductsFull_AttachesAttributesAndUnitGrou
 
 	attrs := []*domain.ItemAttribute{{ID: "attr_1", Value: "Red"}}
 	s.itemRepo.EXPECT().
-		Get(gomock.Any(), domain.GetItemParams{AccountID: "ac_test123", ItemID: "it_1"}).
+		Get(gomock.Any(), domain.GetItemParams{AccountID: "ac_test123", ItemID: "it_1", Includes: []string{"attributes"}}).
 		Return(&domain.Item{ID: "it_1", Attributes: attrs}, nil).
 		Times(1)
 	s.productLineRepo.EXPECT().
@@ -1180,7 +1222,7 @@ func (s *ProductSvcTestSuite) TestGetProduct_Success_WithIncludes() {
 		Return(product, nil).
 		Times(1)
 	s.itemRepo.EXPECT().
-		Get(gomock.Any(), domain.GetItemParams{AccountID: "ac_test123", ItemID: "it_1"}).
+		Get(gomock.Any(), domain.GetItemParams{AccountID: "ac_test123", ItemID: "it_1", Includes: []string{"attributes"}}).
 		Return(&domain.Item{ID: "it_1", Attributes: []*domain.ItemAttribute{{ID: "attr_1"}}}, nil).
 		Times(1)
 		// No ProductLine on product → GetUnitGroup must NOT be called.
@@ -1193,7 +1235,7 @@ func (s *ProductSvcTestSuite) TestGetProduct_Success_WithIncludes() {
 }
 
 func (s *ProductSvcTestSuite) TestGetProduct_MissingTargetAccount_AuthError() {
-	adminCode := string(constants.RoleTypeCodeAdmin)
+	adminCode := string(constants.RoleTypeAdmin)
 	accountID := "ac_actor"
 	ctx := appctx.WithIdentity(context.Background(), &types.Identity{
 		Type: types.IdentityActorTypeUser,
@@ -1201,7 +1243,7 @@ func (s *ProductSvcTestSuite) TestGetProduct_MissingTargetAccount_AuthError() {
 			RelationType: types.IdentityRelationTypeInternal,
 			ID:           "usr_1",
 			AccountID:    &accountID,
-			RoleTypeCode: &adminCode,
+			RoleType:     &adminCode,
 			Permissions:  map[string]bool{"items:read": true},
 		},
 	})
@@ -1277,7 +1319,7 @@ func (s *ProductSvcTestSuite) TestValidateProducts_Success_PreservesKeys() {
 }
 
 func (s *ProductSvcTestSuite) TestValidateProducts_MissingTargetAccount_AuthError() {
-	adminCode := string(constants.RoleTypeCodeAdmin)
+	adminCode := string(constants.RoleTypeAdmin)
 	accountID := "ac_actor"
 	ctx := appctx.WithIdentity(context.Background(), &types.Identity{
 		Type: types.IdentityActorTypeUser,
@@ -1285,7 +1327,7 @@ func (s *ProductSvcTestSuite) TestValidateProducts_MissingTargetAccount_AuthErro
 			RelationType: types.IdentityRelationTypeInternal,
 			ID:           "usr_1",
 			AccountID:    &accountID,
-			RoleTypeCode: &adminCode,
+			RoleType:     &adminCode,
 			Permissions:  map[string]bool{"items:read": true},
 		},
 	})

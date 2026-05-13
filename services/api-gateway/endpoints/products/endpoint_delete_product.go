@@ -27,7 +27,7 @@ func (e *DeleteProductEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeletePr
 		Request:           &DeleteProductRequest{},
 		Response:          &apiresource.Product{},
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteProductRequest) (*apiresource.Product, *apierror.APIError) {
 			return svc.(ProductSvc).DeleteProduct

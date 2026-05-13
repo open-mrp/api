@@ -26,7 +26,7 @@ var SampleAccountAffiliation = &AccountAffiliation{
 		ID:       SampleRoleID,
 		Object:   constants.ObjectTypeRole,
 		Name:     SampleRoleName,
-		TypeCode: constants.RoleTypeCodeAdmin,
+		TypeCode: constants.RoleTypeAdmin,
 	},
 }
 

@@ -26,8 +26,8 @@ type ListProductsRequest struct {
 	StartDate *time.Time `query:"start_date"`
 	// End of creation date range.
 	EndDate *time.Time `query:"end_date"`
-	// Filter by portal ready status.
-	IsPortalReady *bool `query:"is_portal_ready"`
+	// Filter by customer portal visibility.
+	PortalVisibility *constants.CustomerPortalVisibility `query:"portal_visibility"`
 }
 
 type ListProductsEndpoint struct{}
@@ -42,14 +42,14 @@ func (e *ListProductsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListProdu
 		Request:           &ListProductsRequest{},
 		Response:          &apiresource.List[apiresource.Product]{},
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListProductsRequest) (*apiresource.List[apiresource.Product], *apierror.APIError) {
 			return svc.(ProductSvc).ListProducts
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeProduct,
-			Fields:     []string{"product_line", "product_line.unit_group", "item", "item.category", "item.unit_value", "item.unit_cost", "item.burn_rate", "item.attributes"},
+			Fields:     []string{"product_line", "product_line.unit_group", "item", "item.category", "item.category.properties", "item.category.unit_group", "item.unit_value", "item.unit_cost", "item.burn_rate", "item.attributes"},
 		}),
 	}
 }

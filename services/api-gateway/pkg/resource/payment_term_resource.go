@@ -20,7 +20,7 @@ type PaymentTerm struct {
 	// Display name.
 	Name string `json:"name" validate:"required"`
 	// Payment term status.
-	Status constants.PaymentTermStatus `json:"status" validate:"required,enum=active|inactive"`
+	Status constants.PaymentTermStatus `json:"status" validate:"required"`
 	// Owner of this resource.
 	Owner *Owner `json:"owner" expandable:"true"`
 	// Creation timestamp.

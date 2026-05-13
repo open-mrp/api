@@ -11,21 +11,38 @@ import (
 	"time"
 )
 
+const countAccountUsersByRoleID = `-- name: CountAccountUsersByRoleID :one
+SELECT COUNT(*) AS cnt
+FROM account_user
+WHERE role_id = ? AND account_id = ? AND status_code != 'removed'
+`
+
+type CountAccountUsersByRoleIDParams struct {
+	RoleID    sql.NullString
+	AccountID string
+}
+
+func (q *Queries) CountAccountUsersByRoleID(ctx context.Context, arg CountAccountUsersByRoleIDParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countAccountUsersByRoleID, arg.RoleID, arg.AccountID)
+	var cnt int64
+	err := row.Scan(&cnt)
+	return cnt, err
+}
+
 const countAccountUsersFiltered = `-- name: CountAccountUsersFiltered :one
 SELECT COUNT(*) AS cnt
 FROM account_user au
 JOIN ` + "`" + `user` + "`" + ` u ON au.user_id = u.id
-LEFT JOIN role r ON au.role_id = r.id
-LEFT JOIN department d ON au.department_id = d.id
 WHERE au.account_id = ?
     AND (CASE WHEN ? = true THEN true ELSE au.status_code != 'removed' END)
-    AND (CASE WHEN ? IS NOT NULL THEN r.role_type_code = ? ELSE true END)
+    AND (
+        ? IS NULL
+        OR EXISTS (SELECT 1 FROM role r WHERE r.id = au.role_id AND r.role_type_code = ?)
+    )
     AND (? IS NULL OR (
         MATCH(u.name) AGAINST(? IN BOOLEAN MODE)
         OR u.username LIKE CONCAT('%', ?, '%')
         OR u.email LIKE CONCAT('%', ?, '%')
-        OR r.name LIKE CONCAT('%', ?, '%')
-        OR d.name LIKE CONCAT('%', ?, '%')
     ))
 `
 
@@ -46,8 +63,6 @@ func (q *Queries) CountAccountUsersFiltered(ctx context.Context, arg CountAccoun
 		arg.RoleType,
 		arg.Query,
 		arg.Query_2,
-		arg.QueryLike,
-		arg.QueryLike,
 		arg.QueryLike,
 		arg.QueryLike,
 	)
@@ -383,6 +398,8 @@ SELECT
     r.role_type_code,
     au.department_id,
     d.name AS department_name,
+    d.created_at AS department_created_at,
+    d.updated_at AS department_updated_at,
     au.status_code,
     au.last_used_at,
     au.created_at,
@@ -400,22 +417,24 @@ type GetAccountUserDetailParams struct {
 }
 
 type GetAccountUserDetailRow struct {
-	ID             string
-	UserID         string
-	Name           sql.NullString
-	Email          sql.NullString
-	Username       sql.NullString
-	ImageUrl       sql.NullString
-	EmailVerified  sql.NullTime
-	RoleID         sql.NullString
-	RoleName       sql.NullString
-	RoleTypeCode   sql.NullString
-	DepartmentID   sql.NullString
-	DepartmentName sql.NullString
-	StatusCode     string
-	LastUsedAt     sql.NullTime
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	ID                  string
+	UserID              string
+	Name                sql.NullString
+	Email               sql.NullString
+	Username            sql.NullString
+	ImageUrl            sql.NullString
+	EmailVerified       sql.NullTime
+	RoleID              sql.NullString
+	RoleName            sql.NullString
+	RoleTypeCode        sql.NullString
+	DepartmentID        sql.NullString
+	DepartmentName      sql.NullString
+	DepartmentCreatedAt sql.NullTime
+	DepartmentUpdatedAt sql.NullTime
+	StatusCode          string
+	LastUsedAt          sql.NullTime
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
 }
 
 func (q *Queries) GetAccountUserDetail(ctx context.Context, arg GetAccountUserDetailParams) (GetAccountUserDetailRow, error) {
@@ -434,6 +453,149 @@ func (q *Queries) GetAccountUserDetail(ctx context.Context, arg GetAccountUserDe
 		&i.RoleTypeCode,
 		&i.DepartmentID,
 		&i.DepartmentName,
+		&i.DepartmentCreatedAt,
+		&i.DepartmentUpdatedAt,
+		&i.StatusCode,
+		&i.LastUsedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getAccountUserDetailBase = `-- name: GetAccountUserDetailBase :one
+SELECT
+    au.id,
+    au.user_id,
+    u.name,
+    u.email,
+    u.username,
+    u.image_url,
+    u.email_verified,
+    au.role_id,
+    au.department_id,
+    au.status_code,
+    au.last_used_at,
+    au.created_at,
+    au.updated_at
+FROM account_user au
+JOIN ` + "`" + `user` + "`" + ` u ON au.user_id = u.id
+WHERE au.account_id = ?
+    AND au.user_id = ?
+    AND au.status_code != 'removed'
+`
+
+type GetAccountUserDetailBaseParams struct {
+	AccountID string
+	UserID    string
+}
+
+type GetAccountUserDetailBaseRow struct {
+	ID            string
+	UserID        string
+	Name          sql.NullString
+	Email         sql.NullString
+	Username      sql.NullString
+	ImageUrl      sql.NullString
+	EmailVerified sql.NullTime
+	RoleID        sql.NullString
+	DepartmentID  sql.NullString
+	StatusCode    string
+	LastUsedAt    sql.NullTime
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+}
+
+func (q *Queries) GetAccountUserDetailBase(ctx context.Context, arg GetAccountUserDetailBaseParams) (GetAccountUserDetailBaseRow, error) {
+	row := q.db.QueryRowContext(ctx, getAccountUserDetailBase, arg.AccountID, arg.UserID)
+	var i GetAccountUserDetailBaseRow
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Name,
+		&i.Email,
+		&i.Username,
+		&i.ImageUrl,
+		&i.EmailVerified,
+		&i.RoleID,
+		&i.DepartmentID,
+		&i.StatusCode,
+		&i.LastUsedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getAccountUserDetailBaseByID = `-- name: GetAccountUserDetailBaseByID :one
+SELECT
+    au.id,
+    au.user_id,
+    u.name,
+    u.email,
+    u.username,
+    u.image_url,
+    u.email_verified,
+    au.role_id,
+    r.role_type_code,
+    au.department_id,
+    d.name AS department_name,
+    d.created_at AS department_created_at,
+    d.updated_at AS department_updated_at,
+    au.status_code,
+    au.last_used_at,
+    au.created_at,
+    au.updated_at
+FROM account_user au
+JOIN ` + "`" + `user` + "`" + ` u ON au.user_id = u.id
+LEFT JOIN role r ON au.role_id = r.id
+LEFT JOIN department d ON au.department_id = d.id
+WHERE au.account_id = ?
+    AND au.id = ?
+`
+
+type GetAccountUserDetailBaseByIDParams struct {
+	AccountID string
+	ID        string
+}
+
+type GetAccountUserDetailBaseByIDRow struct {
+	ID                  string
+	UserID              string
+	Name                sql.NullString
+	Email               sql.NullString
+	Username            sql.NullString
+	ImageUrl            sql.NullString
+	EmailVerified       sql.NullTime
+	RoleID              sql.NullString
+	RoleTypeCode        sql.NullString
+	DepartmentID        sql.NullString
+	DepartmentName      sql.NullString
+	DepartmentCreatedAt sql.NullTime
+	DepartmentUpdatedAt sql.NullTime
+	StatusCode          string
+	LastUsedAt          sql.NullTime
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
+}
+
+func (q *Queries) GetAccountUserDetailBaseByID(ctx context.Context, arg GetAccountUserDetailBaseByIDParams) (GetAccountUserDetailBaseByIDRow, error) {
+	row := q.db.QueryRowContext(ctx, getAccountUserDetailBaseByID, arg.AccountID, arg.ID)
+	var i GetAccountUserDetailBaseByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Name,
+		&i.Email,
+		&i.Username,
+		&i.ImageUrl,
+		&i.EmailVerified,
+		&i.RoleID,
+		&i.RoleTypeCode,
+		&i.DepartmentID,
+		&i.DepartmentName,
+		&i.DepartmentCreatedAt,
+		&i.DepartmentUpdatedAt,
 		&i.StatusCode,
 		&i.LastUsedAt,
 		&i.CreatedAt,
@@ -456,6 +618,8 @@ SELECT
     r.role_type_code,
     au.department_id,
     d.name AS department_name,
+    d.created_at AS department_created_at,
+    d.updated_at AS department_updated_at,
     au.status_code,
     au.last_used_at,
     au.created_at,
@@ -473,22 +637,24 @@ type GetAccountUserDetailByAccountAndIDParams struct {
 }
 
 type GetAccountUserDetailByAccountAndIDRow struct {
-	ID             string
-	UserID         string
-	Name           sql.NullString
-	Email          sql.NullString
-	Username       sql.NullString
-	ImageUrl       sql.NullString
-	EmailVerified  sql.NullTime
-	RoleID         sql.NullString
-	RoleName       sql.NullString
-	RoleTypeCode   sql.NullString
-	DepartmentID   sql.NullString
-	DepartmentName sql.NullString
-	StatusCode     string
-	LastUsedAt     sql.NullTime
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	ID                  string
+	UserID              string
+	Name                sql.NullString
+	Email               sql.NullString
+	Username            sql.NullString
+	ImageUrl            sql.NullString
+	EmailVerified       sql.NullTime
+	RoleID              sql.NullString
+	RoleName            sql.NullString
+	RoleTypeCode        sql.NullString
+	DepartmentID        sql.NullString
+	DepartmentName      sql.NullString
+	DepartmentCreatedAt sql.NullTime
+	DepartmentUpdatedAt sql.NullTime
+	StatusCode          string
+	LastUsedAt          sql.NullTime
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
 }
 
 func (q *Queries) GetAccountUserDetailByAccountAndID(ctx context.Context, arg GetAccountUserDetailByAccountAndIDParams) (GetAccountUserDetailByAccountAndIDRow, error) {
@@ -507,6 +673,8 @@ func (q *Queries) GetAccountUserDetailByAccountAndID(ctx context.Context, arg Ge
 		&i.RoleTypeCode,
 		&i.DepartmentID,
 		&i.DepartmentName,
+		&i.DepartmentCreatedAt,
+		&i.DepartmentUpdatedAt,
 		&i.StatusCode,
 		&i.LastUsedAt,
 		&i.CreatedAt,
@@ -569,6 +737,8 @@ SELECT
     r.role_type_code,
     au.department_id,
     d.name AS department_name,
+    d.created_at AS department_created_at,
+    d.updated_at AS department_updated_at,
     au.status_code,
     au.last_used_at,
     au.created_at,
@@ -608,22 +778,24 @@ type ListAccountUsersBackwardParams struct {
 }
 
 type ListAccountUsersBackwardRow struct {
-	ID             string
-	UserID         string
-	Name           sql.NullString
-	Email          sql.NullString
-	Username       sql.NullString
-	ImageUrl       sql.NullString
-	EmailVerified  sql.NullTime
-	RoleID         sql.NullString
-	RoleName       sql.NullString
-	RoleTypeCode   sql.NullString
-	DepartmentID   sql.NullString
-	DepartmentName sql.NullString
-	StatusCode     string
-	LastUsedAt     sql.NullTime
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	ID                  string
+	UserID              string
+	Name                sql.NullString
+	Email               sql.NullString
+	Username            sql.NullString
+	ImageUrl            sql.NullString
+	EmailVerified       sql.NullTime
+	RoleID              sql.NullString
+	RoleName            sql.NullString
+	RoleTypeCode        sql.NullString
+	DepartmentID        sql.NullString
+	DepartmentName      sql.NullString
+	DepartmentCreatedAt sql.NullTime
+	DepartmentUpdatedAt sql.NullTime
+	StatusCode          string
+	LastUsedAt          sql.NullTime
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
 }
 
 func (q *Queries) ListAccountUsersBackward(ctx context.Context, arg ListAccountUsersBackwardParams) ([]ListAccountUsersBackwardRow, error) {
@@ -663,6 +835,122 @@ func (q *Queries) ListAccountUsersBackward(ctx context.Context, arg ListAccountU
 			&i.RoleTypeCode,
 			&i.DepartmentID,
 			&i.DepartmentName,
+			&i.DepartmentCreatedAt,
+			&i.DepartmentUpdatedAt,
+			&i.StatusCode,
+			&i.LastUsedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAccountUsersBackwardBase = `-- name: ListAccountUsersBackwardBase :many
+SELECT
+    au.id,
+    au.user_id,
+    u.name,
+    u.email,
+    u.username,
+    u.image_url,
+    u.email_verified,
+    au.role_id,
+    au.department_id,
+    au.status_code,
+    au.last_used_at,
+    au.created_at,
+    au.updated_at
+FROM account_user au
+JOIN ` + "`" + `user` + "`" + ` u ON au.user_id = u.id
+WHERE au.account_id = ?
+    AND (CASE WHEN ? = true THEN true ELSE au.status_code != 'removed' END)
+    AND (
+        ? IS NULL
+        OR EXISTS (SELECT 1 FROM role r WHERE r.id = au.role_id AND r.role_type_code = ?)
+    )
+    AND (? IS NULL OR (
+        MATCH(u.name) AGAINST(? IN BOOLEAN MODE)
+        OR u.username LIKE CONCAT('%', ?, '%')
+        OR u.email LIKE CONCAT('%', ?, '%')
+    ))
+    AND (
+        au.created_at > ?
+        OR (au.created_at = ? AND au.id > ?)
+    )
+ORDER BY au.created_at ASC, au.id ASC
+LIMIT ?
+`
+
+type ListAccountUsersBackwardBaseParams struct {
+	AccountID       string
+	IncludeRemoved  interface{}
+	RoleType        sql.NullString
+	Query           sql.NullString
+	Query_2         sql.NullString
+	QueryLike       interface{}
+	CursorCreatedAt time.Time
+	CursorID        string
+	Limit           int32
+}
+
+type ListAccountUsersBackwardBaseRow struct {
+	ID            string
+	UserID        string
+	Name          sql.NullString
+	Email         sql.NullString
+	Username      sql.NullString
+	ImageUrl      sql.NullString
+	EmailVerified sql.NullTime
+	RoleID        sql.NullString
+	DepartmentID  sql.NullString
+	StatusCode    string
+	LastUsedAt    sql.NullTime
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+}
+
+func (q *Queries) ListAccountUsersBackwardBase(ctx context.Context, arg ListAccountUsersBackwardBaseParams) ([]ListAccountUsersBackwardBaseRow, error) {
+	rows, err := q.db.QueryContext(ctx, listAccountUsersBackwardBase,
+		arg.AccountID,
+		arg.IncludeRemoved,
+		arg.RoleType,
+		arg.RoleType,
+		arg.Query,
+		arg.Query_2,
+		arg.QueryLike,
+		arg.QueryLike,
+		arg.CursorCreatedAt,
+		arg.CursorCreatedAt,
+		arg.CursorID,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListAccountUsersBackwardBaseRow
+	for rows.Next() {
+		var i ListAccountUsersBackwardBaseRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Name,
+			&i.Email,
+			&i.Username,
+			&i.ImageUrl,
+			&i.EmailVerified,
+			&i.RoleID,
+			&i.DepartmentID,
 			&i.StatusCode,
 			&i.LastUsedAt,
 			&i.CreatedAt,
@@ -695,6 +983,8 @@ SELECT
     r.role_type_code,
     au.department_id,
     d.name AS department_name,
+    d.created_at AS department_created_at,
+    d.updated_at AS department_updated_at,
     au.status_code,
     au.last_used_at,
     au.created_at,
@@ -735,22 +1025,24 @@ type ListAccountUsersForwardParams struct {
 }
 
 type ListAccountUsersForwardRow struct {
-	ID             string
-	UserID         string
-	Name           sql.NullString
-	Email          sql.NullString
-	Username       sql.NullString
-	ImageUrl       sql.NullString
-	EmailVerified  sql.NullTime
-	RoleID         sql.NullString
-	RoleName       sql.NullString
-	RoleTypeCode   sql.NullString
-	DepartmentID   sql.NullString
-	DepartmentName sql.NullString
-	StatusCode     string
-	LastUsedAt     sql.NullTime
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	ID                  string
+	UserID              string
+	Name                sql.NullString
+	Email               sql.NullString
+	Username            sql.NullString
+	ImageUrl            sql.NullString
+	EmailVerified       sql.NullTime
+	RoleID              sql.NullString
+	RoleName            sql.NullString
+	RoleTypeCode        sql.NullString
+	DepartmentID        sql.NullString
+	DepartmentName      sql.NullString
+	DepartmentCreatedAt sql.NullTime
+	DepartmentUpdatedAt sql.NullTime
+	StatusCode          string
+	LastUsedAt          sql.NullTime
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
 }
 
 func (q *Queries) ListAccountUsersForward(ctx context.Context, arg ListAccountUsersForwardParams) ([]ListAccountUsersForwardRow, error) {
@@ -791,6 +1083,124 @@ func (q *Queries) ListAccountUsersForward(ctx context.Context, arg ListAccountUs
 			&i.RoleTypeCode,
 			&i.DepartmentID,
 			&i.DepartmentName,
+			&i.DepartmentCreatedAt,
+			&i.DepartmentUpdatedAt,
+			&i.StatusCode,
+			&i.LastUsedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAccountUsersForwardBase = `-- name: ListAccountUsersForwardBase :many
+SELECT
+    au.id,
+    au.user_id,
+    u.name,
+    u.email,
+    u.username,
+    u.image_url,
+    u.email_verified,
+    au.role_id,
+    au.department_id,
+    au.status_code,
+    au.last_used_at,
+    au.created_at,
+    au.updated_at
+FROM account_user au
+JOIN ` + "`" + `user` + "`" + ` u ON au.user_id = u.id
+WHERE au.account_id = ?
+    AND (CASE WHEN ? = true THEN true ELSE au.status_code != 'removed' END)
+    AND (
+        ? IS NULL
+        OR EXISTS (SELECT 1 FROM role r WHERE r.id = au.role_id AND r.role_type_code = ?)
+    )
+    AND (? IS NULL OR (
+        MATCH(u.name) AGAINST(? IN BOOLEAN MODE)
+        OR u.username LIKE CONCAT('%', ?, '%')
+        OR u.email LIKE CONCAT('%', ?, '%')
+    ))
+    AND (
+        ? IS NULL
+        OR au.created_at < ?
+        OR (au.created_at = ? AND au.id < ?)
+    )
+ORDER BY au.created_at DESC, au.id DESC
+LIMIT ?
+`
+
+type ListAccountUsersForwardBaseParams struct {
+	AccountID       string
+	IncludeRemoved  interface{}
+	RoleType        sql.NullString
+	Query           sql.NullString
+	Query_2         sql.NullString
+	QueryLike       interface{}
+	CursorCreatedAt sql.NullTime
+	CursorID        sql.NullString
+	Limit           int32
+}
+
+type ListAccountUsersForwardBaseRow struct {
+	ID            string
+	UserID        string
+	Name          sql.NullString
+	Email         sql.NullString
+	Username      sql.NullString
+	ImageUrl      sql.NullString
+	EmailVerified sql.NullTime
+	RoleID        sql.NullString
+	DepartmentID  sql.NullString
+	StatusCode    string
+	LastUsedAt    sql.NullTime
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+}
+
+func (q *Queries) ListAccountUsersForwardBase(ctx context.Context, arg ListAccountUsersForwardBaseParams) ([]ListAccountUsersForwardBaseRow, error) {
+	rows, err := q.db.QueryContext(ctx, listAccountUsersForwardBase,
+		arg.AccountID,
+		arg.IncludeRemoved,
+		arg.RoleType,
+		arg.RoleType,
+		arg.Query,
+		arg.Query_2,
+		arg.QueryLike,
+		arg.QueryLike,
+		arg.CursorCreatedAt,
+		arg.CursorCreatedAt,
+		arg.CursorCreatedAt,
+		arg.CursorID,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListAccountUsersForwardBaseRow
+	for rows.Next() {
+		var i ListAccountUsersForwardBaseRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Name,
+			&i.Email,
+			&i.Username,
+			&i.ImageUrl,
+			&i.EmailVerified,
+			&i.RoleID,
+			&i.DepartmentID,
 			&i.StatusCode,
 			&i.LastUsedAt,
 			&i.CreatedAt,

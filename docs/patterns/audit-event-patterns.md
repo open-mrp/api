@@ -52,3 +52,28 @@ Do **not** rely on `json` tags for audit field names. Domain models are not guar
 ## Idempotency and retries
 
 Publish audit events inside the same idempotent phase as the mutation (e.g. `RecoveryPointStarted`). If the transaction rolls back, the outbox row rolls back with it. Cached idempotent success responses should not double-publish; the outbox write is part of the atomic phase that idempotency replays.
+
+## Public mutating HTTP endpoints (`api-gateway`)
+
+For `api-gateway` routes with `Public: true` and `POST` / `PATCH` / `PUT` / `DELETE`, the owning microservice must publish audit for **persisted** user-visible mutations in the same transaction as the mutation (same rules as above). Read-only `GET` handlers do not publish.
+
+**Checklist when adding or changing a public mutating route:** confirm the downstream service method wraps the mutation plus `audit.NewPublisher().Publish(..., txSvc.repos.NewOutboxRepo(), ...)` in one `WithTx` / idempotent phase.
+
+**Regenerate the current set of public mutating endpoint files** (from the repository root):
+
+```bash
+comm -12 \
+  <(grep -rl 'Public:[[:space:]]*true' services/api-gateway/endpoints \
+      --include='endpoint_*.go' | sort) \
+  <(grep -rlE 'Method:[[:space:]]*http\.Method(Post|Patch|Put|Delete)' \
+      services/api-gateway/endpoints --include='endpoint_*.go' | sort)
+```
+
+As of the latest review, those routes are grouped under api-gateway as: `account-groups`, `account-users`, `addresses`, `address-validation`, `api-keys`, `carriers`, `customers`, `item-categories`, `locations`, `payment-terms`, `product-lines`, `properties`, `roles`, `sandboxes`, `scanning-stations`, `service-levels`, `shipping-terms`, `unit-groups`, `units`, and `utils`. Almost all call into **core-service**; **api-keys** (create, revoke, rotate) call **auth-service**. Pay special attention to **junction and linkage mutations** (properties on categories, category unit groups, merges, etc.) so they do not skip audit while “primary” CRUD paths already publish.
+
+**Exceptions (no resource audit expected for the API resource model):**
+
+- `address-validation` validate action: does not persist domain state in core.
+- `utils` request-demo: marketing / lead capture, not a persisted API resource in the usual sense (product choice if a synthetic event is ever required).
+
+**Conformance spot-check (publish sites):** callers use each service’s `domain.ServiceName`; `ResourceID` is always a type-prefixed ID (e.g. account subscription updates on the account row use the account type ID, not internal keys); `EventData.Metadata` is rarely needed and should not repeat actor or target account—identity is already on the AMQP payload in `shared/audit/publisher.go`.

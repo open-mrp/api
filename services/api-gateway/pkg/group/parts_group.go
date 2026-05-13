@@ -40,7 +40,7 @@ func (*PartsEndpointGroup) Materialize(config *PartsEndpointGroupConfig) *PartsE
 	}
 
 	createPartEndpoint := (&partep.CreatePartEndpoint{}).Materialize().WithService(inner, partSvc)
-	getPartEndpoint := (&partep.GetPartEndpoint{}).Materialize().WithService(inner, partSvc)
+	getPartEndpoint := (&partep.RetrievePartEndpoint{}).Materialize().WithService(inner, partSvc)
 	listPartsEndpoint := (&partep.ListPartsEndpoint{}).Materialize().WithService(inner, partSvc)
 	updatePartEndpoint := (&partep.UpdatePartEndpoint{}).Materialize().WithService(inner, partSvc)
 	deletePartEndpoint := (&partep.DeletePartEndpoint{}).Materialize().WithService(inner, partSvc)

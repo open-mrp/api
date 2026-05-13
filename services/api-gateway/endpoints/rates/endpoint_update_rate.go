@@ -18,11 +18,11 @@ type UpdateRateRequest struct {
 	// Decimal value of the rate.
 	Value *string `json:"value,omitempty" nullable:"false"`
 	// Numerator unit ID.
-	NumeratorUnitID *string `json:"numerator_unit_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
+	NumeratorUnitID *string `json:"numerator_unit_id,omitempty" nullable:"false" validate:"omitempty"`
 	// Denominator unit ID.
-	DenominatorUnitID *string `json:"denominator_unit_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
+	DenominatorUnitID *string `json:"denominator_unit_id,omitempty" nullable:"false" validate:"omitempty"`
 	// Parent resource ID.
-	ObjectID *string `json:"object_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
+	ObjectID *string `json:"object_id,omitempty" nullable:"false" validate:"omitempty"`
 	// Parent resource type (e.g. "item", "production_step").
 	ObjectType *string `json:"object_type,omitempty" nullable:"false" validate:"omitempty,max=255"`
 }

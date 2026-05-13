@@ -14,15 +14,15 @@ import (
 // Request to create an account price.
 type CreateAccountPriceRequest struct {
 	// Recipient customer account ID.
-	RecipientAccountID string `json:"recipient_account_id" validate:"required,max=191"`
+	RecipientAccountID string `json:"recipient_account_id" validate:"required"`
 	// Product line ID.
-	ProductLineID string `json:"product_line_id" validate:"required,max=191"`
+	ProductLineID string `json:"product_line_id" validate:"required"`
 	// Rate value as a decimal string.
 	RateValue string `json:"rate_value" validate:"required"`
 	// Rate numerator unit ID.
-	RateNumeratorUnitID string `json:"rate_numerator_unit_id" validate:"required,max=191"`
+	RateNumeratorUnitID string `json:"rate_numerator_unit_id" validate:"required"`
 	// Rate denominator unit ID.
-	RateDenominatorUnitID string `json:"rate_denominator_unit_id" validate:"required,max=191"`
+	RateDenominatorUnitID string `json:"rate_denominator_unit_id" validate:"required"`
 	// Item category IDs to constrain this price to.
 	CategoryIDs []string `json:"category_ids"`
 	// Attribute IDs to constrain this price to.

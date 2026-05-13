@@ -208,13 +208,13 @@ func (r *carrierRepoImpl) List(ctx context.Context, params domain.ListCarriersPa
 	return &domain.ListCarriersResult{Carriers: result, PageInfo: pageInfo}, nil
 }
 
-func (r *carrierRepoImpl) Get(ctx context.Context, accountID, carrierID string) (*domain.Carrier, *apierror.APIError) {
+func (r *carrierRepoImpl) Get(ctx context.Context, params domain.GetCarrierParams) (*domain.Carrier, *apierror.APIError) {
 	ctx, span := carrierRepoTracer.Start(ctx, "repository.carrier.get")
 	defer span.End()
 
 	row, err := r.queries.GetCarrier(ctx, sqlc.GetCarrierParams{
-		ID:        carrierID,
-		AccountID: gosql.NullString{String: accountID, Valid: true},
+		ID:        params.CarrierID,
+		AccountID: gosql.NullString{String: params.AccountID, Valid: true},
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -240,7 +240,7 @@ func (r *carrierRepoImpl) Create(ctx context.Context, id string, params domain.C
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return r.Get(ctx, params.AccountID, id)
+	return r.Get(ctx, domain.GetCarrierParams{AccountID: params.AccountID, CarrierID: id, Includes: params.Includes})
 }
 
 func (r *carrierRepoImpl) Update(ctx context.Context, params domain.UpdateCarrierParams) (*domain.Carrier, *apierror.APIError) {
@@ -270,7 +270,7 @@ func (r *carrierRepoImpl) Update(ctx context.Context, params domain.UpdateCarrie
 		return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("Carrier not found."))
 	}
 
-	return r.Get(ctx, params.AccountID, params.CarrierID)
+	return r.Get(ctx, domain.GetCarrierParams{AccountID: params.AccountID, CarrierID: params.CarrierID, Includes: params.Includes})
 }
 
 func (r *carrierRepoImpl) SoftDelete(ctx context.Context, accountID, carrierID string) *apierror.APIError {

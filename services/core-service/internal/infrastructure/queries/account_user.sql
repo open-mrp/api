@@ -82,6 +82,77 @@ UPDATE account_user
 SET status_code = 'active', updated_at = NOW(3)
 WHERE account_id = ? AND user_id = ? AND status_code = 'disabled';
 
+-- name: ListAccountUsersForwardBase :many
+SELECT
+    au.id,
+    au.user_id,
+    u.name,
+    u.email,
+    u.username,
+    u.image_url,
+    u.email_verified,
+    au.role_id,
+    au.department_id,
+    au.status_code,
+    au.last_used_at,
+    au.created_at,
+    au.updated_at
+FROM account_user au
+JOIN `user` u ON au.user_id = u.id
+WHERE au.account_id = ?
+    AND (CASE WHEN sqlc.arg(include_removed) = true THEN true ELSE au.status_code != 'removed' END)
+    AND (
+        sqlc.narg(role_type) IS NULL
+        OR EXISTS (SELECT 1 FROM role r WHERE r.id = au.role_id AND r.role_type_code = sqlc.narg(role_type))
+    )
+    AND (sqlc.narg(query) IS NULL OR (
+        MATCH(u.name) AGAINST(sqlc.narg(query) IN BOOLEAN MODE)
+        OR u.username LIKE CONCAT('%', sqlc.narg(query_like), '%')
+        OR u.email LIKE CONCAT('%', sqlc.narg(query_like), '%')
+    ))
+    AND (
+        sqlc.narg(cursor_created_at) IS NULL
+        OR au.created_at < sqlc.narg(cursor_created_at)
+        OR (au.created_at = sqlc.narg(cursor_created_at) AND au.id < sqlc.narg(cursor_id))
+    )
+ORDER BY au.created_at DESC, au.id DESC
+LIMIT ?;
+
+-- name: ListAccountUsersBackwardBase :many
+SELECT
+    au.id,
+    au.user_id,
+    u.name,
+    u.email,
+    u.username,
+    u.image_url,
+    u.email_verified,
+    au.role_id,
+    au.department_id,
+    au.status_code,
+    au.last_used_at,
+    au.created_at,
+    au.updated_at
+FROM account_user au
+JOIN `user` u ON au.user_id = u.id
+WHERE au.account_id = ?
+    AND (CASE WHEN sqlc.arg(include_removed) = true THEN true ELSE au.status_code != 'removed' END)
+    AND (
+        sqlc.narg(role_type) IS NULL
+        OR EXISTS (SELECT 1 FROM role r WHERE r.id = au.role_id AND r.role_type_code = sqlc.narg(role_type))
+    )
+    AND (sqlc.narg(query) IS NULL OR (
+        MATCH(u.name) AGAINST(sqlc.narg(query) IN BOOLEAN MODE)
+        OR u.username LIKE CONCAT('%', sqlc.narg(query_like), '%')
+        OR u.email LIKE CONCAT('%', sqlc.narg(query_like), '%')
+    ))
+    AND (
+        au.created_at > sqlc.arg(cursor_created_at)
+        OR (au.created_at = sqlc.arg(cursor_created_at) AND au.id > sqlc.arg(cursor_id))
+    )
+ORDER BY au.created_at ASC, au.id ASC
+LIMIT ?;
+
 -- name: ListAccountUsersForward :many
 SELECT
     au.id,
@@ -96,6 +167,8 @@ SELECT
     r.role_type_code,
     au.department_id,
     d.name AS department_name,
+    d.created_at AS department_created_at,
+    d.updated_at AS department_updated_at,
     au.status_code,
     au.last_used_at,
     au.created_at,
@@ -136,6 +209,8 @@ SELECT
     r.role_type_code,
     au.department_id,
     d.name AS department_name,
+    d.created_at AS department_created_at,
+    d.updated_at AS department_updated_at,
     au.status_code,
     au.last_used_at,
     au.created_at,
@@ -165,18 +240,64 @@ LIMIT ?;
 SELECT COUNT(*) AS cnt
 FROM account_user au
 JOIN `user` u ON au.user_id = u.id
-LEFT JOIN role r ON au.role_id = r.id
-LEFT JOIN department d ON au.department_id = d.id
 WHERE au.account_id = ?
     AND (CASE WHEN sqlc.arg(include_removed) = true THEN true ELSE au.status_code != 'removed' END)
-    AND (CASE WHEN sqlc.narg(role_type) IS NOT NULL THEN r.role_type_code = sqlc.narg(role_type) ELSE true END)
+    AND (
+        sqlc.narg(role_type) IS NULL
+        OR EXISTS (SELECT 1 FROM role r WHERE r.id = au.role_id AND r.role_type_code = sqlc.narg(role_type))
+    )
     AND (sqlc.narg(query) IS NULL OR (
         MATCH(u.name) AGAINST(sqlc.narg(query) IN BOOLEAN MODE)
         OR u.username LIKE CONCAT('%', sqlc.narg(query_like), '%')
         OR u.email LIKE CONCAT('%', sqlc.narg(query_like), '%')
-        OR r.name LIKE CONCAT('%', sqlc.narg(query_like), '%')
-        OR d.name LIKE CONCAT('%', sqlc.narg(query_like), '%')
     ));
+
+-- name: GetAccountUserDetailBase :one
+SELECT
+    au.id,
+    au.user_id,
+    u.name,
+    u.email,
+    u.username,
+    u.image_url,
+    u.email_verified,
+    au.role_id,
+    au.department_id,
+    au.status_code,
+    au.last_used_at,
+    au.created_at,
+    au.updated_at
+FROM account_user au
+JOIN `user` u ON au.user_id = u.id
+WHERE au.account_id = ?
+    AND au.user_id = ?
+    AND au.status_code != 'removed';
+
+-- name: GetAccountUserDetailBaseByID :one
+SELECT
+    au.id,
+    au.user_id,
+    u.name,
+    u.email,
+    u.username,
+    u.image_url,
+    u.email_verified,
+    au.role_id,
+    r.role_type_code,
+    au.department_id,
+    d.name AS department_name,
+    d.created_at AS department_created_at,
+    d.updated_at AS department_updated_at,
+    au.status_code,
+    au.last_used_at,
+    au.created_at,
+    au.updated_at
+FROM account_user au
+JOIN `user` u ON au.user_id = u.id
+LEFT JOIN role r ON au.role_id = r.id
+LEFT JOIN department d ON au.department_id = d.id
+WHERE au.account_id = ?
+    AND au.id = ?;
 
 -- name: GetAccountUserDetail :one
 SELECT
@@ -192,6 +313,8 @@ SELECT
     r.role_type_code,
     au.department_id,
     d.name AS department_name,
+    d.created_at AS department_created_at,
+    d.updated_at AS department_updated_at,
     au.status_code,
     au.last_used_at,
     au.created_at,
@@ -216,6 +339,8 @@ SELECT
     r.role_type_code,
     au.department_id,
     d.name AS department_name,
+    d.created_at AS department_created_at,
+    d.updated_at AS department_updated_at,
     au.status_code,
     au.last_used_at,
     au.created_at,
@@ -292,4 +417,9 @@ WHERE au.user_id = ?;
 UPDATE account_user
 SET last_used_at = NOW(3), updated_at = NOW(3)
 WHERE account_id = ? AND user_id = ?;
+
+-- name: CountAccountUsersByRoleID :one
+SELECT COUNT(*) AS cnt
+FROM account_user
+WHERE role_id = ? AND account_id = ? AND status_code != 'removed';
 

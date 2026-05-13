@@ -41,41 +41,55 @@ type SalesOrder struct {
 	CreatedAt             time.Time
 	UpdatedAt             time.Time
 
-	// Joined fields for reads
+	// Joined customer details
 	CustomerName             string
 	CustomerNumber           string
 	CustomerStatusCode       *string
 	CustomerCommissionPolicy *string
+	CustomerCreatedAt        *time.Time
+	CustomerUpdatedAt        *time.Time
 	StatusName               string
 	TypeName                 string
 	PriorityName             string
 
 	// Joined address details
-	BillToName        *string
-	BillToStreetLine1 *string
-	BillToStreetLine2 *string
-	BillToLocality    *string
-	BillToState       *string
-	BillToPostalCode  *string
-	BillToCountry     *string
-	BillToPhone       *string
-	BillToEmail       *string
-	ShipToName        *string
-	ShipToStreetLine1 *string
-	ShipToStreetLine2 *string
-	ShipToLocality    *string
-	ShipToState       *string
-	ShipToPostalCode  *string
-	ShipToCountry     *string
-	ShipToPhone       *string
-	ShipToEmail       *string
+	BillToName          *string
+	BillToIsDropShip    *bool
+	BillToGeolocationID *string
+	BillToStreetLine1   *string
+	BillToStreetLine2   *string
+	BillToLocality      *string
+	BillToState         *string
+	BillToPostalCode    *string
+	BillToCountry       *string
+	BillToPhone         *string
+	BillToEmail         *string
+	BillToCreatedAt     *time.Time
+	BillToUpdatedAt     *time.Time
+	ShipToName          *string
+	ShipToIsDropShip    *bool
+	ShipToGeolocationID *string
+	ShipToStreetLine1   *string
+	ShipToStreetLine2   *string
+	ShipToLocality      *string
+	ShipToState         *string
+	ShipToPostalCode    *string
+	ShipToCountry       *string
+	ShipToPhone         *string
+	ShipToEmail         *string
+	ShipToCreatedAt     *time.Time
+	ShipToUpdatedAt     *time.Time
 
 	// Joined carrier details
 	CarrierName                 *string
 	CarrierIsPortalEnabled      *bool
+	CarrierCreatedAt            *time.Time
+	CarrierUpdatedAt            *time.Time
 	ServiceLevelName            *string
 	ServiceLevelToken           *string
 	ServiceLevelIsPortalEnabled *bool
+	ServiceLevelCreatedAt       *time.Time
+	ServiceLevelUpdatedAt       *time.Time
 
 	// Joined sales rep
 	SalesRepName *string
@@ -83,12 +97,23 @@ type SalesOrder struct {
 	// Joined payment/shipping term
 	PaymentTermName             *string
 	PaymentTermIsActive         *bool
+	PaymentTermCreatedAt        *time.Time
+	PaymentTermUpdatedAt        *time.Time
 	ShippingTermName            *string
 	ShippingTermIsFreightExempt *bool
 	ShippingTermIsCarrierRate   *bool
+	ShippingTermCreatedAt       *time.Time
+	ShippingTermUpdatedAt       *time.Time
 
 	// Joined order discount
-	OrderDiscountName *string
+	OrderDiscountName         *string
+	OrderDiscountCode         *string
+	OrderDiscountPercentage   *string
+	OrderDiscountAmount       *string
+	OrderDiscountDiscountType *string
+	OrderDiscountOrderCount   *int32
+	OrderDiscountCreatedAt    *time.Time
+	OrderDiscountUpdatedAt    *time.Time
 
 	// Joined priority
 	PriorityID *string
@@ -161,6 +186,7 @@ type GetSalesOrderParams struct {
 type CreateSalesOrderParams struct {
 	AccountID             string
 	BuyerAccountID        string
+	Includes              []string
 	SellerAccountID       string
 	OwnerAccountID        string
 	Number                string
@@ -225,6 +251,7 @@ type CreateSalesOrderLineInput struct {
 type UpdateSalesOrderParams struct {
 	SalesOrderID          string
 	AccountID             string
+	Includes              []string
 	Number                *string
 	BillingAddressID      *string
 	ShippingAddressID     *string
@@ -282,6 +309,7 @@ type ChangeSalesOrderStatusParams struct {
 	AccountID    string
 	StatusChange string
 	SendEmail    bool
+	Includes     []string
 }
 
 // CheckoutSalesOrderParams holds the parameters for checking out a sales order.

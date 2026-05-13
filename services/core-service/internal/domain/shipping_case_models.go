@@ -12,26 +12,46 @@ type ShippingCase struct {
 	ShippingLabelURL    *string
 	ShippedAt           *time.Time `audit:"shipped_at"`
 	// Freight amount quantity
-	FreightAmountID               string
-	FreightAmountValue            string `audit:"freight_amount_value"`
-	FreightAmountUnitID           string `audit:"freight_amount_unit_id"`
-	FreightAmountUnitName         string
-	FreightAmountUnitAbbreviation string
-	FreightAmountUnitType         string
+	FreightAmountID                    string
+	FreightAmountValue                 string `audit:"freight_amount_value"`
+	FreightAmountUnitID                string `audit:"freight_amount_unit_id"`
+	FreightAmountUnitName              string
+	FreightAmountUnitAbbreviation      string
+	FreightAmountUnitType              string
+	FreightAmountUnitRatioNumerator    string
+	FreightAmountUnitRatioDenominator  string
+	FreightAmountUnitOffsetNumerator   string
+	FreightAmountUnitOffsetDenominator string
+	FreightAmountUnitCreatedAt         time.Time
+	FreightAmountUnitUpdatedAt         time.Time
 	// Freight weight quantity
-	FreightWeightID               string
-	FreightWeightValue            string `audit:"freight_weight_value"`
-	FreightWeightUnitID           string `audit:"freight_weight_unit_id"`
-	FreightWeightUnitName         string
-	FreightWeightUnitAbbreviation string
-	FreightWeightUnitType         string
+	FreightWeightID                    string
+	FreightWeightValue                 string `audit:"freight_weight_value"`
+	FreightWeightUnitID                string `audit:"freight_weight_unit_id"`
+	FreightWeightUnitName              string
+	FreightWeightUnitAbbreviation      string
+	FreightWeightUnitType              string
+	FreightWeightUnitRatioNumerator    string
+	FreightWeightUnitRatioDenominator  string
+	FreightWeightUnitOffsetNumerator   string
+	FreightWeightUnitOffsetDenominator string
+	FreightWeightUnitCreatedAt         time.Time
+	FreightWeightUnitUpdatedAt         time.Time
 	// Relations
-	ShipmentID  string
-	CarrierID   string `audit:"carrier_id"`
-	CarrierName string
-	AccountID   string
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	ShipmentID             string
+	ShipmentNumber         string
+	ShipmentStatusCode     string
+	ShipmentStatusName     string
+	ShipmentCreatedAt      time.Time
+	ShipmentUpdatedAt      time.Time
+	CarrierID              string `audit:"carrier_id"`
+	CarrierName            string
+	CarrierIsPortalEnabled bool
+	CarrierCreatedAt       time.Time
+	CarrierUpdatedAt       time.Time
+	AccountID              string
+	CreatedAt              time.Time
+	UpdatedAt              time.Time
 }
 
 // UpdateShippingCaseParams holds the parameters for updating a shipping case.

@@ -23,6 +23,7 @@ func (h *gRPCHandler) ListAccountUsers(ctx context.Context, req *pb.ListAccountU
 		Query:          req.Query,
 		RoleType:       req.RoleType,
 		IncludeRemoved: req.IncludeRemoved,
+		Includes:       req.Includes,
 	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
@@ -50,7 +51,7 @@ func (h *gRPCHandler) GetAccountUser(ctx context.Context, req *pb.GetAccountUser
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	detail, apiErr := h.accountUserSvc.GetAccountUser(ctx, req.AccountUserId)
+	detail, apiErr := h.accountUserSvc.GetAccountUser(ctx, req.AccountUserId, req.Includes)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
@@ -109,9 +110,11 @@ func (h *gRPCHandler) UpdateAccountUser(ctx context.Context, req *pb.UpdateAccou
 		Email:                   req.Email,
 		Username:                req.Username,
 		RoleID:                  req.RoleId,
+		ClearRoleID:             req.ClearRoleId,
 		DepartmentID:            req.DepartmentId,
+		ClearDepartmentID:       req.ClearDepartmentId,
 		NotificationPreferences: prefs,
-	})
+	}, req.Includes)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
@@ -173,7 +176,7 @@ func accountUserDetailToProto(d *domain.AccountUserDetail) *pb.AccountUserDetail
 		EmailVerified:  d.EmailVerified,
 		RoleId:         d.RoleID,
 		RoleName:       d.RoleName,
-		RoleTypeCode:   d.RoleTypeCode,
+		RoleTypeCode:   d.RoleType,
 		DepartmentId:   d.DepartmentID,
 		DepartmentName: d.DepartmentName,
 		StatusCode:     string(d.StatusCode),
@@ -183,6 +186,12 @@ func accountUserDetailToProto(d *domain.AccountUserDetail) *pb.AccountUserDetail
 
 	if d.LastUsedAt != nil {
 		proto.LastUsedAt = timestamppb.New(*d.LastUsedAt)
+	}
+	if d.DepartmentCreatedAt != nil {
+		proto.DepartmentCreatedAt = timestamppb.New(*d.DepartmentCreatedAt)
+	}
+	if d.DepartmentUpdatedAt != nil {
+		proto.DepartmentUpdatedAt = timestamppb.New(*d.DepartmentUpdatedAt)
 	}
 
 	return proto

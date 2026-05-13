@@ -562,18 +562,33 @@ func mapGetPurchaseOrderRow(row sqlc.GetPurchaseOrderRow) *domain.PurchaseOrder 
 	po.ShipToPhone = nullStringToPtr(row.ShipToPhone)
 	po.ShipToEmail = nullStringToPtr(row.ShipToEmail)
 
+	po.BillToIsDropShip = nullBoolPtr(row.BillToIsDropShip)
+	po.BillToCreatedAt = nullTimePtr(row.BillToCreatedAt)
+	po.BillToUpdatedAt = nullTimePtr(row.BillToUpdatedAt)
+	po.ShipToIsDropShip = nullBoolPtr(row.ShipToIsDropShip)
+	po.ShipToCreatedAt = nullTimePtr(row.ShipToCreatedAt)
+	po.ShipToUpdatedAt = nullTimePtr(row.ShipToUpdatedAt)
+
 	po.CarrierName = nullStringToPtr(row.CarrierName)
 	po.CarrierIsPortalEnabled = nullBoolPtr(row.CarrierIsPortalEnabled)
+	po.CarrierCreatedAt = nullTimePtr(row.CarrierCreatedAt)
+	po.CarrierUpdatedAt = nullTimePtr(row.CarrierUpdatedAt)
 	po.ServiceLevelName = nullStringToPtr(row.CarrierOptionName)
 	po.ServiceLevelIsPortalEnabled = nullBoolPtr(row.ServiceLevelIsPortalEnabled)
+	po.ServiceLevelToken = nullStringToPtr(row.ServiceLevelToken)
+	po.ServiceLevelCreatedAt = nullTimePtr(row.ServiceLevelCreatedAt)
+	po.ServiceLevelUpdatedAt = nullTimePtr(row.ServiceLevelUpdatedAt)
 	po.PaymentTermName = nullStringToPtr(row.PaymentTermName)
 	po.PaymentTermIsActive = nullBoolPtr(row.PaymentTermIsActive)
+	po.PaymentTermCreatedAt = nullTimePtr(row.PaymentTermCreatedAt)
+	po.PaymentTermUpdatedAt = nullTimePtr(row.PaymentTermUpdatedAt)
 	po.ShippingTermName = nullStringToPtr(row.ShippingTermName)
 	po.ShippingTermIsFreightExempt = nullBoolPtr(row.ShippingTermIsFreightExempt)
 	po.ShippingTermIsCarrierRate = nullBoolPtr(row.ShippingTermIsCarrierRate)
+	po.ShippingTermCreatedAt = nullTimePtr(row.ShippingTermCreatedAt)
+	po.ShippingTermUpdatedAt = nullTimePtr(row.ShippingTermUpdatedAt)
 	po.ReceivingOrderID = nullStringToPtr(row.ReceivingOrderID)
 	po.PriorityID = &row.PriorityID
-	po.ServiceLevelToken = nullStringToPtr(row.ServiceLevelToken)
 
 	return po
 }

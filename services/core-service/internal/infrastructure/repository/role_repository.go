@@ -33,12 +33,12 @@ func mapRoleRow(row sqlc.Role) *domain.Role {
 		acctID = &row.AccountID.String
 	}
 	return &domain.Role{
-		ID:           row.ID,
-		Name:         row.Name,
-		RoleTypeCode: row.RoleTypeCode,
-		AccountID:    acctID,
-		CreatedAt:    row.CreatedAt,
-		UpdatedAt:    row.UpdatedAt,
+		ID:        row.ID,
+		Name:      row.Name,
+		RoleType:  row.RoleTypeCode,
+		AccountID: acctID,
+		CreatedAt: row.CreatedAt,
+		UpdatedAt: row.UpdatedAt,
 	}
 }
 
@@ -63,9 +63,9 @@ func (r *roleRepoImpl) GetByID(ctx context.Context, roleID string) (*domain.Role
 	}
 
 	return &domain.RoleInfo{
-		ID:           row.ID,
-		Name:         row.Name,
-		RoleTypeCode: row.RoleTypeCode,
+		ID:       row.ID,
+		Name:     row.Name,
+		RoleType: row.RoleTypeCode,
 	}, nil
 }
 
@@ -82,9 +82,9 @@ func (r *roleRepoImpl) FindByTypeCode(ctx context.Context, typeCode string, acco
 	}
 
 	return &domain.RoleInfo{
-		ID:           row.ID,
-		Name:         row.Name,
-		RoleTypeCode: row.RoleTypeCode,
+		ID:       row.ID,
+		Name:     row.Name,
+		RoleType: row.RoleTypeCode,
 	}, nil
 }
 
@@ -93,7 +93,7 @@ func (r *roleRepoImpl) List(ctx context.Context, params domain.ListRolesParams) 
 	defer span.End()
 
 	searchQuery := buildRoleSearchQuery(params.Query)
-	includeRoleTypeFilter := len(params.RoleTypeCodes) > 0
+	includeRoleTypeFilter := len(params.RoleTypes) > 0
 	var cursorDir *pagination.Direction
 
 	if params.Cursor != nil {
@@ -109,7 +109,7 @@ func (r *roleRepoImpl) List(ctx context.Context, params domain.ListRolesParams) 
 				SearchQuery:           searchQuery,
 				SearchQuery_2:         searchQuery,
 				IncludeRoleTypeFilter: includeRoleTypeFilter,
-				RoleTypeCodes:         params.RoleTypeCodes,
+				RoleTypeCodes:         params.RoleTypes,
 				CursorCreatedAt:       cur.OccurredAt,
 				CursorID:              cur.ID,
 				Limit:                 params.Limit + 1,
@@ -131,7 +131,7 @@ func (r *roleRepoImpl) List(ctx context.Context, params domain.ListRolesParams) 
 			SearchQuery:           searchQuery,
 			SearchQuery_2:         searchQuery,
 			IncludeRoleTypeFilter: includeRoleTypeFilter,
-			RoleTypeCodes:         params.RoleTypeCodes,
+			RoleTypeCodes:         params.RoleTypes,
 			CursorCreatedAt:       gosql.NullTime{Time: cur.OccurredAt, Valid: true},
 			CursorID:              gosql.NullString{String: cur.ID, Valid: true},
 			Limit:                 params.Limit + 1,
@@ -153,7 +153,7 @@ func (r *roleRepoImpl) List(ctx context.Context, params domain.ListRolesParams) 
 		SearchQuery:           searchQuery,
 		SearchQuery_2:         searchQuery,
 		IncludeRoleTypeFilter: includeRoleTypeFilter,
-		RoleTypeCodes:         params.RoleTypeCodes,
+		RoleTypeCodes:         params.RoleTypes,
 		Limit:                 params.Limit + 1,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
@@ -211,7 +211,7 @@ func (r *roleRepoImpl) Create(ctx context.Context, roleID string, params domain.
 	err := r.queries.InsertRole(ctx, sqlc.InsertRoleParams{
 		ID:           roleID,
 		Name:         params.Name,
-		RoleTypeCode: string(constants.RoleTypeCodeCustom),
+		RoleTypeCode: string(constants.RoleTypeCustom),
 		AccountID:    db.NullString(params.AccountID),
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {

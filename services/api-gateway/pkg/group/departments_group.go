@@ -40,7 +40,7 @@ func (*DepartmentsEndpointGroup) Materialize(config *DepartmentsEndpointGroupCon
 	}
 
 	listDepartmentsEndpoint := (&departmentep.ListDepartmentsEndpoint{}).Materialize().WithService(inner, departmentSvc)
-	getDepartmentEndpoint := (&departmentep.GetDepartmentEndpoint{}).Materialize().WithService(inner, departmentSvc)
+	getDepartmentEndpoint := (&departmentep.RetrieveDepartmentEndpoint{}).Materialize().WithService(inner, departmentSvc)
 	createDepartmentEndpoint := (&departmentep.CreateDepartmentEndpoint{}).Materialize().WithService(inner, departmentSvc)
 	updateDepartmentEndpoint := (&departmentep.UpdateDepartmentEndpoint{}).Materialize().WithService(inner, departmentSvc)
 	deleteDepartmentEndpoint := (&departmentep.DeleteDepartmentEndpoint{}).Materialize().WithService(inner, departmentSvc)

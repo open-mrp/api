@@ -40,7 +40,7 @@ func (*MachinesEndpointGroup) Materialize(config *MachinesEndpointGroupConfig) *
 	}
 
 	listMachinesEndpoint := (&machineep.ListMachinesEndpoint{}).Materialize().WithService(inner, machineSvc)
-	getMachineEndpoint := (&machineep.GetMachineEndpoint{}).Materialize().WithService(inner, machineSvc)
+	getMachineEndpoint := (&machineep.RetrieveMachineEndpoint{}).Materialize().WithService(inner, machineSvc)
 	createMachineEndpoint := (&machineep.CreateMachineEndpoint{}).Materialize().WithService(inner, machineSvc)
 	updateMachineEndpoint := (&machineep.UpdateMachineEndpoint{}).Materialize().WithService(inner, machineSvc)
 	deleteMachineEndpoint := (&machineep.DeleteMachineEndpoint{}).Materialize().WithService(inner, machineSvc)

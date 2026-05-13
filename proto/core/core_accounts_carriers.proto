@@ -228,6 +228,7 @@ message ListCarriersRequest {
   optional string cursor = 1;
   int32 limit = 2;
   optional string query = 3;
+  repeated string includes = 4;
 }
 message ListCarriersResponse {
   repeated CarrierInfo carriers = 1;
@@ -235,6 +236,7 @@ message ListCarriersResponse {
 }
 message GetCarrierRequest {
   string id = 1;
+  repeated string includes = 2;
 }
 message GetCarrierResponse {
   CarrierInfo carrier = 1;
@@ -244,6 +246,7 @@ message CreateCarrierRequest {
   optional string code = 2;
   optional string account_number = 3;
   bool is_portal_enabled = 4;
+  repeated string includes = 5;
 }
 message CreateCarrierResponse {
   CarrierInfo carrier = 1;
@@ -252,6 +255,7 @@ message UpdateCarrierRequest {
   string id = 1;
   optional string name = 2;
   optional bool is_portal_enabled = 3;
+  repeated string includes = 4;
 }
 message UpdateCarrierResponse {
   CarrierInfo carrier = 1;
@@ -335,6 +339,18 @@ message RateInfo {
   string denominator_unit_name = 10;
   string denominator_unit_abbreviation = 11;
   string denominator_unit_type = 12;
+  string numerator_unit_ratio_numerator = 13;
+  string numerator_unit_ratio_denominator = 14;
+  string numerator_unit_offset_numerator = 15;
+  string numerator_unit_offset_denominator = 16;
+  google.protobuf.Timestamp numerator_unit_created_at = 17;
+  google.protobuf.Timestamp numerator_unit_updated_at = 18;
+  string denominator_unit_ratio_numerator = 19;
+  string denominator_unit_ratio_denominator = 20;
+  string denominator_unit_offset_numerator = 21;
+  string denominator_unit_offset_denominator = 22;
+  google.protobuf.Timestamp denominator_unit_created_at = 23;
+  google.protobuf.Timestamp denominator_unit_updated_at = 24;
 }
 message ItemCategoryInfo {
   string id = 1;
@@ -351,12 +367,29 @@ message ItemCategoryInfo {
 message ItemCategoryPropertyInfo {
   string id = 1;
   string name = 2;
+  google.protobuf.Timestamp created_at = 3;
+  google.protobuf.Timestamp updated_at = 4;
 }
 message ItemCategoryUnitGroupInfo {
   string id = 1;
   string name = 2;
   string base_unit_id = 3;
   string type = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+  optional UnitInfo base_unit = 7;
+  repeated ItemCategoryUnitGroupUnitInfo associated_units = 8;
+}
+message ItemCategoryUnitGroupUnitInfo {
+  string id = 1;
+  string unit_id = 2;
+  string unit_group_id = 3;
+  string discount_percentage = 4;
+  bool is_visible = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+  string discount_fixed = 8;
+  optional UnitInfo unit = 9;
 }
 message ItemAttributeInfo {
   string id = 1;
@@ -364,6 +397,8 @@ message ItemAttributeInfo {
   optional string color_code = 3;
   int32 sort_order = 4;
   string property_id = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
 }
 message ItemInfo {
   string id = 1;
@@ -393,6 +428,9 @@ message ListItemsRequest {
   optional google.protobuf.Timestamp end_date = 9;
   bool is_exact_match = 10;
   bool only_initial_subassemblies = 11;
+  repeated string includes = 12;
+  repeated string product_line_ids = 13;
+  repeated string customer_ids = 14;
 }
 message ListItemsResponse {
   repeated ItemInfo items = 1;
@@ -400,6 +438,7 @@ message ListItemsResponse {
 }
 message GetItemRequest {
   string id = 1;
+  repeated string includes = 2;
 }
 message GetItemResponse {
   ItemInfo item = 1;

@@ -26,7 +26,7 @@ type TransformArgs struct {
 
 func applyTransforms(data any, transforms []Transform) any {
 	for _, t := range transforms {
-		log.Printf("Applying transform: %s (%s)", t.Command, t.Reason)
+		logInfof("Applying transform: %s (%s)", t.Command, t.Reason)
 		var err error
 		switch t.Command {
 		case "update":

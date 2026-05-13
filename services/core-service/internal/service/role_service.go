@@ -99,29 +99,29 @@ func (s *roleSvcImpl) ListRoles(ctx context.Context, params domain.ListRolesPara
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	// Batch-fetch permissions for all roles in the page.
-	roleIDs := make([]string, len(page.Roles))
-	for i, r := range page.Roles {
-		roleIDs[i] = r.ID
-	}
-
-	permsByRole, apiErr := s.repos.NewRolePermissionRepo().ListByRoleIDs(ctx, roleIDs)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
 	rolesWithPerms := make([]*domain.RoleWithPermissions, len(page.Roles))
 	for i, r := range page.Roles {
-		rolesWithPerms[i] = &domain.RoleWithPermissions{
-			Role:        *r,
-			Permissions: permsByRole[r.ID],
+		rolesWithPerms[i] = &domain.RoleWithPermissions{Role: *r}
+	}
+
+	if slices.Contains(params.Includes, "permissions") {
+		roleIDs := make([]string, len(page.Roles))
+		for i, r := range page.Roles {
+			roleIDs[i] = r.ID
+		}
+		permsByRole, apiErr := s.repos.NewRolePermissionRepo().ListByRoleIDs(ctx, roleIDs)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		for _, rwp := range rolesWithPerms {
+			rwp.Permissions = permsByRole[rwp.Role.ID]
 		}
 	}
 
 	return &domain.ListRolesResult{Roles: rolesWithPerms, PageInfo: page.PageInfo}, nil
 }
 
-func (s *roleSvcImpl) GetRole(ctx context.Context, roleID string) (*domain.RoleWithPermissions, *apierror.APIError) {
+func (s *roleSvcImpl) GetRole(ctx context.Context, roleID string, incs []string) (*domain.RoleWithPermissions, *apierror.APIError) {
 	ctx, span := roleSvcTracer.Start(ctx, "service.role.get")
 	defer span.End()
 
@@ -142,15 +142,17 @@ func (s *roleSvcImpl) GetRole(ctx context.Context, roleID string) (*domain.RoleW
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	permissions, apiErr := s.repos.NewRolePermissionRepo().ListByRoleID(ctx, roleID)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+	rwp := &domain.RoleWithPermissions{Role: *role}
+
+	if slices.Contains(incs, "permissions") {
+		permissions, apiErr := s.repos.NewRolePermissionRepo().ListByRoleID(ctx, roleID)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		rwp.Permissions = permissions
 	}
 
-	return &domain.RoleWithPermissions{
-		Role:        *role,
-		Permissions: permissions,
-	}, nil
+	return rwp, nil
 }
 
 func (s *roleSvcImpl) CreateRole(ctx context.Context, params domain.CreateRoleParams) (*domain.RoleWithPermissions, *apierror.APIError) {
@@ -424,6 +426,14 @@ func (s *roleSvcImpl) DeleteRole(ctx context.Context, roleID string) *apierror.A
 	}
 	if role.AccountID == nil {
 		return tracing.Trace(span, apierror.NewValidationError("Global roles cannot be deleted."))
+	}
+
+	assignedUserCount, apiErr := s.repos.NewAccountUserRepo().CountByRoleID(ctx, *role.AccountID, roleID)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	if assignedUserCount > 0 {
+		return tracing.Trace(span, apierror.NewResourceConflictError("This role cannot be deleted because it is assigned to one or more users."))
 	}
 
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *roleSvcImpl) *apierror.APIError {

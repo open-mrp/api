@@ -180,6 +180,15 @@ func mapForwardProductionRunRow(row sqlc.ListProductionRunsForwardRow) *domain.P
 	if row.ResponsibleUserName != "" {
 		s.ResponsibleUserName = &row.ResponsibleUserName
 	}
+	if row.ResponsibleUserStatusCode.Valid {
+		s.ResponsibleUserStatusCode = &row.ResponsibleUserStatusCode.String
+	}
+	if row.ResponsibleUserCreatedAt.Valid {
+		s.ResponsibleUserCreatedAt = &row.ResponsibleUserCreatedAt.Time
+	}
+	if row.ResponsibleUserUpdatedAt.Valid {
+		s.ResponsibleUserUpdatedAt = &row.ResponsibleUserUpdatedAt.Time
+	}
 	if row.StartedAt.Valid {
 		s.StartedAt = &row.StartedAt.Time
 	}
@@ -200,6 +209,15 @@ func mapBackwardProductionRunRow(row sqlc.ListProductionRunsBackwardRow) *domain
 	}
 	if row.ResponsibleUserName != "" {
 		s.ResponsibleUserName = &row.ResponsibleUserName
+	}
+	if row.ResponsibleUserStatusCode.Valid {
+		s.ResponsibleUserStatusCode = &row.ResponsibleUserStatusCode.String
+	}
+	if row.ResponsibleUserCreatedAt.Valid {
+		s.ResponsibleUserCreatedAt = &row.ResponsibleUserCreatedAt.Time
+	}
+	if row.ResponsibleUserUpdatedAt.Valid {
+		s.ResponsibleUserUpdatedAt = &row.ResponsibleUserUpdatedAt.Time
 	}
 	if row.StartedAt.Valid {
 		s.StartedAt = &row.StartedAt.Time
@@ -233,6 +251,15 @@ func (r *productionRunRepoImpl) Get(ctx context.Context, params domain.GetProduc
 	}
 	if row.ResponsibleUserName != "" {
 		run.ResponsibleUserName = &row.ResponsibleUserName
+	}
+	if row.ResponsibleUserStatusCode.Valid {
+		run.ResponsibleUserStatusCode = &row.ResponsibleUserStatusCode.String
+	}
+	if row.ResponsibleUserCreatedAt.Valid {
+		run.ResponsibleUserCreatedAt = &row.ResponsibleUserCreatedAt.Time
+	}
+	if row.ResponsibleUserUpdatedAt.Valid {
+		run.ResponsibleUserUpdatedAt = &row.ResponsibleUserUpdatedAt.Time
 	}
 	if row.StartedAt.Valid {
 		run.StartedAt = &row.StartedAt.Time

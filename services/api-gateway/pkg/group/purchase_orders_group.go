@@ -41,7 +41,7 @@ func (*PurchaseOrdersEndpointGroup) Materialize(config *PurchaseOrdersEndpointGr
 	}
 
 	listEndpoint := (&purchaseorderep.ListPurchaseOrdersEndpoint{}).Materialize().WithService(inner, svc)
-	getEndpoint := (&purchaseorderep.GetPurchaseOrderEndpoint{}).Materialize().WithService(inner, svc)
+	retrieveEndpoint := (&purchaseorderep.RetrievePurchaseOrderEndpoint{}).Materialize().WithService(inner, svc)
 	createEndpoint := (&purchaseorderep.CreatePurchaseOrderEndpoint{}).Materialize().WithService(inner, svc)
 	updateEndpoint := (&purchaseorderep.UpdatePurchaseOrderEndpoint{}).Materialize().WithService(inner, svc)
 	deleteEndpoint := (&purchaseorderep.DeletePurchaseOrderEndpoint{}).Materialize().WithService(inner, svc)
@@ -54,7 +54,7 @@ func (*PurchaseOrdersEndpointGroup) Materialize(config *PurchaseOrdersEndpointGr
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listEndpoint,
-		getEndpoint,
+		retrieveEndpoint,
 		createEndpoint,
 		updateEndpoint,
 		deleteEndpoint,

@@ -4,6 +4,8 @@ import (
 	"context"
 	gosql "database/sql"
 	"fmt"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -29,178 +31,418 @@ func NewItemRepo(queries *sqlc.Queries) domain.ItemRepo {
 func itemCreatedAt(i *domain.Item) time.Time { return i.CreatedAt }
 func itemID(i *domain.Item) string           { return i.ID }
 
-func mapItemForwardRow(row sqlc.ListItemsForwardRow) *domain.Item {
-	var description *string
-	if row.Description.Valid {
-		description = &row.Description.String
+// mapItemBaseRow maps a lightweight base query row (no rates, no unit group details).
+func mapItemBaseRow(id, sku string, description, notes gosql.NullString, itemTypeCode, itemCategoryID, categoryName, itemCategoryTypeCode, categoryUnitGroupID, unitValueID, unitCostID, burnRateID, accountID string, isDirty bool, createdAt, updatedAt, categoryCreatedAt, categoryUpdatedAt time.Time) *domain.Item {
+	var descPtr *string
+	if description.Valid {
+		descPtr = &description.String
 	}
-	var notes *string
-	if row.Notes.Valid {
-		notes = &row.Notes.String
+	var notesPtr *string
+	if notes.Valid {
+		notesPtr = &notes.String
 	}
 
 	return &domain.Item{
-		ID:             row.ID,
-		SKU:            row.Sku,
-		Description:    description,
-		Notes:          notes,
-		ItemTypeCode:   row.ItemTypeCode,
-		ItemCategoryID: row.ItemCategoryID,
-		CategoryName:   row.CategoryName,
-		UnitValueID:    row.UnitValueID,
-		UnitCostID:     row.UnitCostID,
-		BurnRateID:     row.BurnRateID,
-		AccountID:      row.AccountID,
-		IsDirty:        row.IsDirty,
-		CreatedAt:      row.CreatedAt,
-		UpdatedAt:      row.UpdatedAt,
-		UnitValue: &domain.Rate{
-			ID:                row.UnitValueRateID,
-			Value:             row.UnitValueRateValue,
-			NumeratorUnitID:   row.UnitValueNumeratorUnitID,
-			DenominatorUnitID: row.UnitValueDenominatorUnitID,
-			CreatedAt:         row.UnitValueCreatedAt,
-			UpdatedAt:         row.UnitValueUpdatedAt,
-		},
-		UnitCost: &domain.Rate{
-			ID:                row.UnitCostRateID,
-			Value:             row.UnitCostRateValue,
-			NumeratorUnitID:   row.UnitCostNumeratorUnitID,
-			DenominatorUnitID: row.UnitCostDenominatorUnitID,
-			CreatedAt:         row.UnitCostCreatedAt,
-			UpdatedAt:         row.UnitCostUpdatedAt,
-		},
-		BurnRate: &domain.Rate{
-			ID:                row.BurnRateIDJoined,
-			Value:             row.BurnRateValue,
-			NumeratorUnitID:   row.BurnRateNumeratorUnitID,
-			DenominatorUnitID: row.BurnRateDenominatorUnitID,
-			CreatedAt:         row.BurnRateCreatedAt,
-			UpdatedAt:         row.BurnRateUpdatedAt,
-		},
+		ID:             id,
+		SKU:            sku,
+		Description:    descPtr,
+		Notes:          notesPtr,
+		ItemTypeCode:   itemTypeCode,
+		ItemCategoryID: itemCategoryID,
+		CategoryName:   categoryName,
+		UnitValueID:    unitValueID,
+		UnitCostID:     unitCostID,
+		BurnRateID:     burnRateID,
+		AccountID:      accountID,
+		IsDirty:        isDirty,
+		CreatedAt:      createdAt,
+		UpdatedAt:      updatedAt,
 		Category: &domain.ItemCategory{
-			ID:                   row.ItemCategoryID,
-			Name:                 row.CategoryName,
-			ItemCategoryTypeCode: row.ItemCategoryTypeCode,
-			UnitGroupID:          row.CategoryUnitGroupID,
+			ID:                   itemCategoryID,
+			Name:                 categoryName,
+			ItemCategoryTypeCode: itemCategoryTypeCode,
+			UnitGroupID:          categoryUnitGroupID,
+			CreatedAt:            categoryCreatedAt,
+			UpdatedAt:            categoryUpdatedAt,
 		},
 	}
 }
 
-func mapItemBackwardRow(row sqlc.ListItemsBackwardRow) *domain.Item {
-	var description *string
-	if row.Description.Valid {
-		description = &row.Description.String
+func mapItemForwardBaseRow(row sqlc.ListItemsForwardBaseRow) *domain.Item {
+	return mapItemBaseRow(
+		row.ID, row.Sku, row.Description, row.Notes,
+		row.ItemTypeCode, row.ItemCategoryID, row.CategoryName, row.ItemCategoryTypeCode, row.CategoryUnitGroupID,
+		row.UnitValueID, row.UnitCostID, row.BurnRateID, row.AccountID,
+		row.IsDirty, row.CreatedAt, row.UpdatedAt, row.CategoryCreatedAt, row.CategoryUpdatedAt,
+	)
+}
+
+func mapItemBackwardBaseRow(row sqlc.ListItemsBackwardBaseRow) *domain.Item {
+	return mapItemBaseRow(
+		row.ID, row.Sku, row.Description, row.Notes,
+		row.ItemTypeCode, row.ItemCategoryID, row.CategoryName, row.ItemCategoryTypeCode, row.CategoryUnitGroupID,
+		row.UnitValueID, row.UnitCostID, row.BurnRateID, row.AccountID,
+		row.IsDirty, row.CreatedAt, row.UpdatedAt, row.CategoryCreatedAt, row.CategoryUpdatedAt,
+	)
+}
+
+func mapGetItemBaseRow(row sqlc.GetItemBaseRow) *domain.Item {
+	return mapItemBaseRow(
+		row.ID, row.Sku, row.Description, row.Notes,
+		row.ItemTypeCode, row.ItemCategoryID, row.CategoryName, row.ItemCategoryTypeCode, row.CategoryUnitGroupID,
+		row.UnitValueID, row.UnitCostID, row.BurnRateID, row.AccountID,
+		row.IsDirty, row.CreatedAt, row.UpdatedAt, row.CategoryCreatedAt, row.CategoryUpdatedAt,
+	)
+}
+
+func mapRateRow(row sqlc.GetRatesByIDsRow) *domain.Rate {
+	return &domain.Rate{
+		ID:                               row.ID,
+		Value:                            row.Value,
+		NumeratorUnitID:                  row.NumeratorUnitID,
+		NumeratorUnitName:                row.NumeratorUnitName,
+		NumeratorUnitAbbreviation:        row.NumeratorUnitAbbreviation,
+		NumeratorUnitType:                row.NumeratorUnitType,
+		NumeratorUnitRatioNumerator:      row.NumeratorUnitRatioNumerator,
+		NumeratorUnitRatioDenominator:    row.NumeratorUnitRatioDenominator,
+		NumeratorUnitOffsetNumerator:     row.NumeratorUnitOffsetNumerator,
+		NumeratorUnitOffsetDenominator:   row.NumeratorUnitOffsetDenominator,
+		NumeratorUnitCreatedAt:           row.NumeratorUnitCreatedAt,
+		NumeratorUnitUpdatedAt:           row.NumeratorUnitUpdatedAt,
+		DenominatorUnitID:                row.DenominatorUnitID,
+		DenominatorUnitName:              row.DenominatorUnitName,
+		DenominatorUnitAbbreviation:      row.DenominatorUnitAbbreviation,
+		DenominatorUnitType:              row.DenominatorUnitType,
+		DenominatorUnitRatioNumerator:    row.DenominatorUnitRatioNumerator,
+		DenominatorUnitRatioDenominator:  row.DenominatorUnitRatioDenominator,
+		DenominatorUnitOffsetNumerator:   row.DenominatorUnitOffsetNumerator,
+		DenominatorUnitOffsetDenominator: row.DenominatorUnitOffsetDenominator,
+		DenominatorUnitCreatedAt:         row.DenominatorUnitCreatedAt,
+		DenominatorUnitUpdatedAt:         row.DenominatorUnitUpdatedAt,
+		CreatedAt:                        row.CreatedAt,
+		UpdatedAt:                        row.UpdatedAt,
 	}
-	var notes *string
-	if row.Notes.Valid {
-		notes = &row.Notes.String
+}
+
+// extractItemIncludes strips an "item." prefix from each include key and returns
+// the resulting slice. This lets material/part/product stitch functions pass
+// includes like "item.burn_rate" to the shared item stitch helpers that expect
+// bare keys like "burn_rate".
+func extractItemIncludes(incs []string) []string {
+	const prefix = "item."
+	out := make([]string, 0, len(incs))
+	for _, inc := range incs {
+		if strings.HasPrefix(inc, prefix) {
+			out = append(out, strings.TrimPrefix(inc, prefix))
+		}
+	}
+	return out
+}
+
+// stitchItemRates fetches rates for the given items and attaches them when the
+// caller has requested at least one rate include (unit_value, unit_cost, burn_rate).
+func stitchItemRates(ctx context.Context, queries *sqlc.Queries, items []*domain.Item, incs []string) *apierror.APIError {
+	wantUnitValue := slices.Contains(incs, "unit_value")
+	wantUnitCost := slices.Contains(incs, "unit_cost")
+	wantBurnRate := slices.Contains(incs, "burn_rate")
+
+	if !wantUnitValue && !wantUnitCost && !wantBurnRate {
+		return nil
 	}
 
-	return &domain.Item{
-		ID:             row.ID,
-		SKU:            row.Sku,
-		Description:    description,
-		Notes:          notes,
-		ItemTypeCode:   row.ItemTypeCode,
-		ItemCategoryID: row.ItemCategoryID,
-		CategoryName:   row.CategoryName,
-		UnitValueID:    row.UnitValueID,
-		UnitCostID:     row.UnitCostID,
-		BurnRateID:     row.BurnRateID,
-		AccountID:      row.AccountID,
-		IsDirty:        row.IsDirty,
-		CreatedAt:      row.CreatedAt,
-		UpdatedAt:      row.UpdatedAt,
-		UnitValue: &domain.Rate{
-			ID:                row.UnitValueRateID,
-			Value:             row.UnitValueRateValue,
-			NumeratorUnitID:   row.UnitValueNumeratorUnitID,
-			DenominatorUnitID: row.UnitValueDenominatorUnitID,
-			CreatedAt:         row.UnitValueCreatedAt,
-			UpdatedAt:         row.UnitValueUpdatedAt,
-		},
-		UnitCost: &domain.Rate{
-			ID:                row.UnitCostRateID,
-			Value:             row.UnitCostRateValue,
-			NumeratorUnitID:   row.UnitCostNumeratorUnitID,
-			DenominatorUnitID: row.UnitCostDenominatorUnitID,
-			CreatedAt:         row.UnitCostCreatedAt,
-			UpdatedAt:         row.UnitCostUpdatedAt,
-		},
-		BurnRate: &domain.Rate{
-			ID:                row.BurnRateIDJoined,
-			Value:             row.BurnRateValue,
-			NumeratorUnitID:   row.BurnRateNumeratorUnitID,
-			DenominatorUnitID: row.BurnRateDenominatorUnitID,
-			CreatedAt:         row.BurnRateCreatedAt,
-			UpdatedAt:         row.BurnRateUpdatedAt,
-		},
-		Category: &domain.ItemCategory{
-			ID:                   row.ItemCategoryID,
-			Name:                 row.CategoryName,
-			ItemCategoryTypeCode: row.ItemCategoryTypeCode,
-			UnitGroupID:          row.CategoryUnitGroupID,
+	// Collect the rate IDs we need.
+	seen := make(map[string]struct{})
+	var rateIDs []string
+	for _, item := range items {
+		if wantUnitValue {
+			if _, ok := seen[item.UnitValueID]; !ok {
+				seen[item.UnitValueID] = struct{}{}
+				rateIDs = append(rateIDs, item.UnitValueID)
+			}
+		}
+		if wantUnitCost {
+			if _, ok := seen[item.UnitCostID]; !ok {
+				seen[item.UnitCostID] = struct{}{}
+				rateIDs = append(rateIDs, item.UnitCostID)
+			}
+		}
+		if wantBurnRate {
+			if _, ok := seen[item.BurnRateID]; !ok {
+				seen[item.BurnRateID] = struct{}{}
+				rateIDs = append(rateIDs, item.BurnRateID)
+			}
+		}
+	}
+
+	if len(rateIDs) == 0 {
+		return nil
+	}
+
+	rows, err := queries.GetRatesByIDs(ctx, rateIDs)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return apiErr
+	}
+	rateMap := make(map[string]*domain.Rate, len(rows))
+	for _, row := range rows {
+		rateMap[row.ID] = mapRateRow(row)
+	}
+
+	for _, item := range items {
+		if wantUnitValue {
+			item.UnitValue = rateMap[item.UnitValueID]
+		}
+		if wantUnitCost {
+			item.UnitCost = rateMap[item.UnitCostID]
+		}
+		if wantBurnRate {
+			item.BurnRate = rateMap[item.BurnRateID]
+		}
+	}
+	return nil
+}
+
+// wantsUnitGroup returns true when the includes contain "category.unit_group"
+// or any deeper path starting with "category.unit_group.".
+func wantsUnitGroup(incs []string) bool {
+	for _, inc := range incs {
+		if inc == "category.unit_group" || strings.HasPrefix(inc, "category.unit_group.") {
+			return true
+		}
+	}
+	return false
+}
+
+// stitchItemCategoryUnitGroups fetches unit group details and attaches them to
+// item categories when the caller has requested the category.unit_group include
+// or any sub-include under it.
+func stitchItemCategoryUnitGroups(ctx context.Context, queries *sqlc.Queries, items []*domain.Item, incs []string) *apierror.APIError {
+	if !wantsUnitGroup(incs) {
+		return nil
+	}
+
+	seen := make(map[string]struct{})
+	var ugIDs []string
+	for _, item := range items {
+		if item.Category == nil {
+			continue
+		}
+		if _, ok := seen[item.Category.UnitGroupID]; !ok {
+			seen[item.Category.UnitGroupID] = struct{}{}
+			ugIDs = append(ugIDs, item.Category.UnitGroupID)
+		}
+	}
+
+	if len(ugIDs) == 0 {
+		return nil
+	}
+
+	rows, err := queries.GetUnitGroupsByIDs(ctx, ugIDs)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return apiErr
+	}
+	ugMap := make(map[string]sqlc.GetUnitGroupsByIDsRow, len(rows))
+	for _, row := range rows {
+		ugMap[row.ID] = row
+	}
+
+	for _, item := range items {
+		if item.Category == nil {
+			continue
+		}
+		if ug, ok := ugMap[item.Category.UnitGroupID]; ok {
+			item.Category.UnitGroupName = ug.Name
+			item.Category.UnitGroupTypeCode = ug.UnitTypeCode
+			item.Category.UnitGroupBaseUnitID = ug.BaseUnitID
+			item.Category.UnitGroupCreatedAt = ug.CreatedAt
+			item.Category.UnitGroupUpdatedAt = ug.UpdatedAt
+		}
+	}
+
+	wantBaseUnit := slices.Contains(incs, "category.unit_group.base_unit")
+	wantAssocUnits := slices.Contains(incs, "category.unit_group.associated_units")
+
+	if wantBaseUnit {
+		if apiErr := stitchItemCategoryUnitGroupBaseUnits(ctx, queries, items); apiErr != nil {
+			return apiErr
+		}
+	}
+
+	if wantAssocUnits {
+		if apiErr := stitchItemCategoryAssociatedUnits(ctx, queries, items, incs); apiErr != nil {
+			return apiErr
+		}
+	}
+
+	return nil
+}
+
+// stitchItemCategoryUnitGroupBaseUnits batch-fetches the base unit for each
+// item's category unit group and populates UnitGroupBaseUnit.
+func stitchItemCategoryUnitGroupBaseUnits(ctx context.Context, queries *sqlc.Queries, items []*domain.Item) *apierror.APIError {
+	seen := make(map[string]struct{})
+	var baseUnitIDs []string
+	for _, item := range items {
+		if item.Category == nil || item.Category.UnitGroupBaseUnitID == "" {
+			continue
+		}
+		if _, ok := seen[item.Category.UnitGroupBaseUnitID]; !ok {
+			seen[item.Category.UnitGroupBaseUnitID] = struct{}{}
+			baseUnitIDs = append(baseUnitIDs, item.Category.UnitGroupBaseUnitID)
+		}
+	}
+	if len(baseUnitIDs) == 0 {
+		return nil
+	}
+
+	rows, err := queries.GetUnitsByIDs(ctx, baseUnitIDs)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return apiErr
+	}
+
+	unitMap := make(map[string]domain.LightUnit, len(rows))
+	for _, row := range rows {
+		lu := mapGetUnitsByIDsRowToLightUnit(row)
+		unitMap[lu.ID] = lu
+	}
+
+	for _, item := range items {
+		if item.Category == nil {
+			continue
+		}
+		if lu, ok := unitMap[item.Category.UnitGroupBaseUnitID]; ok {
+			item.Category.UnitGroupBaseUnit = &lu
+		}
+	}
+	return nil
+}
+
+// mapUnitGroupUnitsByUnitGroupIDsRow converts a sqlc row into a domain.UnitGroupUnit
+// with its Unit sub-resource already populated (the query already joins unit).
+func mapUnitGroupUnitsByUnitGroupIDsRow(row sqlc.ListUnitGroupUnitsByUnitGroupIDsRow) *domain.UnitGroupUnit {
+	var acctID *string
+	if row.UnitAccountID.Valid {
+		acctID = &row.UnitAccountID.String
+	}
+	return &domain.UnitGroupUnit{
+		ID:                 row.ID,
+		UnitID:             row.UnitID,
+		UnitGroupID:        row.UnitGroupID,
+		DiscountPercentage: row.DiscountPercentage,
+		DiscountFixed:      row.DiscountFixed,
+		IsVisible:          row.IsVisible,
+		CreatedAt:          row.CreatedAt,
+		UpdatedAt:          row.UpdatedAt,
+		Unit: domain.LightUnit{
+			ID:                row.UnitID,
+			Name:              row.UnitName,
+			Abbreviation:      row.UnitAbbreviation,
+			Type:              row.UnitType,
+			RatioNumerator:    row.UnitRatioNumerator,
+			RatioDenominator:  row.UnitRatioDenominator,
+			OffsetNumerator:   row.UnitOffsetNumerator,
+			OffsetDenominator: row.UnitOffsetDenominator,
+			IsBaseUnit:        row.UnitIsBaseUnit,
+			AccountID:         acctID,
+			CreatedAt:         row.UnitCreatedAt,
+			UpdatedAt:         row.UnitUpdatedAt,
 		},
 	}
 }
 
-func mapGetItemRow(row sqlc.GetItemRow) *domain.Item {
-	var description *string
-	if row.Description.Valid {
-		description = &row.Description.String
+// stitchItemCategoryAssociatedUnits batch-fetches unit group units for all
+// unique unit group IDs across the items and populates UnitGroupAssociatedUnits.
+func stitchItemCategoryAssociatedUnits(ctx context.Context, queries *sqlc.Queries, items []*domain.Item, incs []string) *apierror.APIError {
+	seen := make(map[string]struct{})
+	var ugIDs []string
+	for _, item := range items {
+		if item.Category == nil || item.Category.UnitGroupID == "" {
+			continue
+		}
+		if _, ok := seen[item.Category.UnitGroupID]; !ok {
+			seen[item.Category.UnitGroupID] = struct{}{}
+			ugIDs = append(ugIDs, item.Category.UnitGroupID)
+		}
 	}
-	var notes *string
-	if row.Notes.Valid {
-		notes = &row.Notes.String
+	if len(ugIDs) == 0 {
+		return nil
 	}
 
-	return &domain.Item{
-		ID:             row.ID,
-		SKU:            row.Sku,
-		Description:    description,
-		Notes:          notes,
-		ItemTypeCode:   row.ItemTypeCode,
-		ItemCategoryID: row.ItemCategoryID,
-		CategoryName:   row.CategoryName,
-		UnitValueID:    row.UnitValueID,
-		UnitCostID:     row.UnitCostID,
-		BurnRateID:     row.BurnRateID,
-		AccountID:      row.AccountID,
-		IsDirty:        row.IsDirty,
-		CreatedAt:      row.CreatedAt,
-		UpdatedAt:      row.UpdatedAt,
-		UnitValue: &domain.Rate{
-			ID:                row.UnitValueRateID,
-			Value:             row.UnitValueRateValue,
-			NumeratorUnitID:   row.UnitValueNumeratorUnitID,
-			DenominatorUnitID: row.UnitValueDenominatorUnitID,
-			CreatedAt:         row.UnitValueCreatedAt,
-			UpdatedAt:         row.UnitValueUpdatedAt,
-		},
-		UnitCost: &domain.Rate{
-			ID:                row.UnitCostRateID,
-			Value:             row.UnitCostRateValue,
-			NumeratorUnitID:   row.UnitCostNumeratorUnitID,
-			DenominatorUnitID: row.UnitCostDenominatorUnitID,
-			CreatedAt:         row.UnitCostCreatedAt,
-			UpdatedAt:         row.UnitCostUpdatedAt,
-		},
-		BurnRate: &domain.Rate{
-			ID:                row.BurnRateIDJoined,
-			Value:             row.BurnRateValue,
-			NumeratorUnitID:   row.BurnRateNumeratorUnitID,
-			DenominatorUnitID: row.BurnRateDenominatorUnitID,
-			CreatedAt:         row.BurnRateCreatedAt,
-			UpdatedAt:         row.BurnRateUpdatedAt,
-		},
-		Category: &domain.ItemCategory{
-			ID:                   row.ItemCategoryID,
-			Name:                 row.CategoryName,
-			ItemCategoryTypeCode: row.ItemCategoryTypeCode,
-			UnitGroupID:          row.CategoryUnitGroupID,
-		},
+	rows, err := queries.ListUnitGroupUnitsByUnitGroupIDs(ctx, ugIDs)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return apiErr
 	}
+
+	byUGID := make(map[string][]*domain.UnitGroupUnit)
+	for _, row := range rows {
+		ugu := mapUnitGroupUnitsByUnitGroupIDsRow(row)
+		byUGID[row.UnitGroupID] = append(byUGID[row.UnitGroupID], ugu)
+	}
+
+	for _, item := range items {
+		if item.Category == nil {
+			continue
+		}
+		item.Category.UnitGroupAssociatedUnits = byUGID[item.Category.UnitGroupID]
+	}
+	return nil
+}
+
+func loadItemAttributes(ctx context.Context, queries *sqlc.Queries, item *domain.Item) *apierror.APIError {
+	rows, err := queries.GetItemAttributes(ctx, item.ID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return apiErr
+	}
+	attrs := make([]*domain.ItemAttribute, len(rows))
+	for i, row := range rows {
+		var colorCode *string
+		if row.ColorCode != "" {
+			colorCode = &row.ColorCode
+		}
+		attrs[i] = &domain.ItemAttribute{
+			ID:         row.ID,
+			Value:      row.Text,
+			ColorCode:  colorCode,
+			Order:      row.Order,
+			PropertyID: row.PropertyID,
+			CreatedAt:  row.CreatedAt,
+			UpdatedAt:  row.UpdatedAt,
+		}
+	}
+	item.Attributes = attrs
+	return nil
+}
+
+// stitchItemAttributes loads attributes for each item when the caller has
+// requested the attributes include.
+func stitchItemAttributes(ctx context.Context, queries *sqlc.Queries, items []*domain.Item, incs []string) *apierror.APIError {
+	if !slices.Contains(incs, "attributes") {
+		return nil
+	}
+	for _, item := range items {
+		if apiErr := loadItemAttributes(ctx, queries, item); apiErr != nil {
+			return apiErr
+		}
+	}
+	return nil
+}
+
+// applyItemStitches runs all conditional stitch queries for the given includes.
+func applyItemStitches(ctx context.Context, queries *sqlc.Queries, items []*domain.Item, incs []string) *apierror.APIError {
+	if apiErr := stitchItemRates(ctx, queries, items, incs); apiErr != nil {
+		return apiErr
+	}
+	if apiErr := stitchItemCategoryUnitGroups(ctx, queries, items, incs); apiErr != nil {
+		return apiErr
+	}
+	if apiErr := stitchItemAttributes(ctx, queries, items, incs); apiErr != nil {
+		return apiErr
+	}
+	if slices.Contains(incs, "category.properties") {
+		if apiErr := enrichItemCategoryProperties(ctx, queries, items); apiErr != nil {
+			return apiErr
+		}
+	}
+	return nil
 }
 
 func buildItemSearchParams(query *string) (gosql.NullString, gosql.NullString) {
@@ -218,6 +460,8 @@ func (r *itemRepoImpl) List(ctx context.Context, params domain.ListItemsParams) 
 	includeTypeFilter := len(params.Types) > 0
 	includeCategoryFilter := len(params.CategoryIDs) > 0
 	includeAttributeFilter := len(params.AttributeIDs) > 0
+	includeProductLineFilter := len(params.ProductLineIDs) > 0
+	includeCustomerFilter := len(params.CustomerIDs) > 0
 
 	types := params.Types
 	if types == nil {
@@ -230,6 +474,15 @@ func (r *itemRepoImpl) List(ctx context.Context, params domain.ListItemsParams) 
 	attributeIDs := params.AttributeIDs
 	if attributeIDs == nil {
 		attributeIDs = []string{}
+	}
+	// product_line_ids column is nullable so sqlc generates []sql.NullString for this slice.
+	productLineIDs := make([]gosql.NullString, len(params.ProductLineIDs))
+	for i, id := range params.ProductLineIDs {
+		productLineIDs[i] = gosql.NullString{String: id, Valid: true}
+	}
+	customerIDs := params.CustomerIDs
+	if customerIDs == nil {
+		customerIDs = []string{}
 	}
 
 	var startDate, endDate gosql.NullTime
@@ -246,6 +499,7 @@ func (r *itemRepoImpl) List(ctx context.Context, params domain.ListItemsParams) 
 	}
 
 	var cursorDir *pagination.Direction
+	var items []*domain.Item
 
 	if params.Cursor != nil {
 		cur, err := pagination.DecodeStringCursor(*params.Cursor)
@@ -255,7 +509,7 @@ func (r *itemRepoImpl) List(ctx context.Context, params domain.ListItemsParams) 
 		cursorDir = &cur.Direction
 
 		if cur.Direction == pagination.DirectionBackward {
-			rows, err := r.queries.ListItemsBackward(ctx, sqlc.ListItemsBackwardParams{
+			rows, err := r.queries.ListItemsBackwardBase(ctx, sqlc.ListItemsBackwardBaseParams{
 				AccountID:                params.AccountID,
 				IncludeTypeFilter:        includeTypeFilter,
 				ItemTypeCodes:            types,
@@ -270,6 +524,10 @@ func (r *itemRepoImpl) List(ctx context.Context, params domain.ListItemsParams) 
 				SearchExact:              searchExact,
 				IsExactMatch:             params.IsExactMatch,
 				OnlyInitialSubassemblies: params.OnlyInitialSubassemblies,
+				IncludeProductLineFilter: includeProductLineFilter,
+				ProductLineIds:           productLineIDs,
+				IncludeCustomerFilter:    includeCustomerFilter,
+				CustomerIds:              customerIDs,
 				CursorCreatedAt:          cur.OccurredAt,
 				CursorID:                 cur.ID,
 				Limit:                    params.Limit + 1,
@@ -277,16 +535,46 @@ func (r *itemRepoImpl) List(ctx context.Context, params domain.ListItemsParams) 
 			if apiErr := db.MapSQLError(err); apiErr != nil {
 				return nil, tracing.Trace(span, apiErr)
 			}
-			items := make([]*domain.Item, len(rows))
+			items = make([]*domain.Item, len(rows))
 			for i, row := range rows {
-				items[i] = mapItemBackwardRow(row)
+				items[i] = mapItemBackwardBaseRow(row)
 			}
-			result, pageInfo := pagination.BuildPageString(items, params.Limit, cursorDir, itemCreatedAt, itemID)
-			return &domain.ListItemsResult{Items: result, PageInfo: pageInfo}, nil
+		} else {
+			// Forward with cursor
+			rows, err := r.queries.ListItemsForwardBase(ctx, sqlc.ListItemsForwardBaseParams{
+				AccountID:                params.AccountID,
+				IncludeTypeFilter:        includeTypeFilter,
+				ItemTypeCodes:            types,
+				IncludeCategoryFilter:    includeCategoryFilter,
+				CategoryIds:              categoryIDs,
+				IncludeAttributeFilter:   includeAttributeFilter,
+				AttributeIds:             attributeIDs,
+				SupplierID:               supplierID,
+				StartDate:                startDate,
+				EndDate:                  endDate,
+				SearchQuery:              searchQuery,
+				SearchExact:              searchExact,
+				IsExactMatch:             params.IsExactMatch,
+				OnlyInitialSubassemblies: params.OnlyInitialSubassemblies,
+				IncludeProductLineFilter: includeProductLineFilter,
+				ProductLineIds:           productLineIDs,
+				IncludeCustomerFilter:    includeCustomerFilter,
+				CustomerIds:              customerIDs,
+				CursorCreatedAt:          gosql.NullTime{Time: cur.OccurredAt, Valid: true},
+				CursorID:                 gosql.NullString{String: cur.ID, Valid: true},
+				Limit:                    params.Limit + 1,
+			})
+			if apiErr := db.MapSQLError(err); apiErr != nil {
+				return nil, tracing.Trace(span, apiErr)
+			}
+			items = make([]*domain.Item, len(rows))
+			for i, row := range rows {
+				items[i] = mapItemForwardBaseRow(row)
+			}
 		}
-
-		// Forward
-		rows, err := r.queries.ListItemsForward(ctx, sqlc.ListItemsForwardParams{
+	} else {
+		// No cursor — first page
+		rows, err := r.queries.ListItemsForwardBase(ctx, sqlc.ListItemsForwardBaseParams{
 			AccountID:                params.AccountID,
 			IncludeTypeFilter:        includeTypeFilter,
 			ItemTypeCodes:            types,
@@ -301,77 +589,39 @@ func (r *itemRepoImpl) List(ctx context.Context, params domain.ListItemsParams) 
 			SearchExact:              searchExact,
 			IsExactMatch:             params.IsExactMatch,
 			OnlyInitialSubassemblies: params.OnlyInitialSubassemblies,
-			CursorCreatedAt:          gosql.NullTime{Time: cur.OccurredAt, Valid: true},
-			CursorID:                 gosql.NullString{String: cur.ID, Valid: true},
+			IncludeProductLineFilter: includeProductLineFilter,
+			ProductLineIds:           productLineIDs,
+			IncludeCustomerFilter:    includeCustomerFilter,
+			CustomerIds:              customerIDs,
 			Limit:                    params.Limit + 1,
 		})
 		if apiErr := db.MapSQLError(err); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
-		items := make([]*domain.Item, len(rows))
+		items = make([]*domain.Item, len(rows))
 		for i, row := range rows {
-			items[i] = mapItemForwardRow(row)
+			items[i] = mapItemForwardBaseRow(row)
 		}
-		result, pageInfo := pagination.BuildPageString(items, params.Limit, cursorDir, itemCreatedAt, itemID)
-		return &domain.ListItemsResult{Items: result, PageInfo: pageInfo}, nil
 	}
 
-	// No cursor — first page
-	rows, err := r.queries.ListItemsForward(ctx, sqlc.ListItemsForwardParams{
-		AccountID:                params.AccountID,
-		IncludeTypeFilter:        includeTypeFilter,
-		ItemTypeCodes:            types,
-		IncludeCategoryFilter:    includeCategoryFilter,
-		CategoryIds:              categoryIDs,
-		IncludeAttributeFilter:   includeAttributeFilter,
-		AttributeIds:             attributeIDs,
-		SupplierID:               supplierID,
-		StartDate:                startDate,
-		EndDate:                  endDate,
-		SearchQuery:              searchQuery,
-		SearchExact:              searchExact,
-		IsExactMatch:             params.IsExactMatch,
-		OnlyInitialSubassemblies: params.OnlyInitialSubassemblies,
-		Limit:                    params.Limit + 1,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
+	result, pageInfo := pagination.BuildPageString(items, params.Limit, cursorDir, itemCreatedAt, itemID)
+
+	if apiErr := applyItemStitches(ctx, r.queries, result, params.Includes); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	items := make([]*domain.Item, len(rows))
-	for i, row := range rows {
-		items[i] = mapItemForwardRow(row)
-	}
-	result, pageInfo := pagination.BuildPageString(items, params.Limit, cursorDir, itemCreatedAt, itemID)
+
 	return &domain.ListItemsResult{Items: result, PageInfo: pageInfo}, nil
 }
 
-func (r *itemRepoImpl) loadItemAttributes(ctx context.Context, item *domain.Item) *apierror.APIError {
-	rows, err := r.queries.GetItemAttributes(ctx, item.ID)
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return apiErr
-	}
-	attrs := make([]*domain.ItemAttribute, len(rows))
-	for i, row := range rows {
-		var colorCode *string
-		if row.ColorCode != "" {
-			colorCode = &row.ColorCode
-		}
-		attrs[i] = &domain.ItemAttribute{
-			ID:         row.ID,
-			Value:      row.Text,
-			ColorCode:  colorCode,
-			PropertyID: row.PropertyID,
-		}
-	}
-	item.Attributes = attrs
-	return nil
+func (r *itemRepoImpl) LoadAttributes(ctx context.Context, item *domain.Item) *apierror.APIError {
+	return loadItemAttributes(ctx, r.queries, item)
 }
 
 func (r *itemRepoImpl) Get(ctx context.Context, params domain.GetItemParams) (*domain.Item, *apierror.APIError) {
 	ctx, span := itemRepoTracer.Start(ctx, "repository.item.get")
 	defer span.End()
 
-	row, err := r.queries.GetItem(ctx, sqlc.GetItemParams{
+	row, err := r.queries.GetItemBase(ctx, sqlc.GetItemBaseParams{
 		ID:        params.ItemID,
 		AccountID: params.AccountID,
 	})
@@ -379,9 +629,9 @@ func (r *itemRepoImpl) Get(ctx context.Context, params domain.GetItemParams) (*d
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	item := mapGetItemRow(row)
+	item := mapGetItemBaseRow(row)
 
-	if apiErr := r.loadItemAttributes(ctx, item); apiErr != nil {
+	if apiErr := applyItemStitches(ctx, r.queries, []*domain.Item{item}, params.Includes); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
@@ -409,6 +659,8 @@ func (r *itemRepoImpl) GetInventory(ctx context.Context, accountID, itemID strin
 		ATPUnitID:          row.UnitID,
 		Short:              formatDecimal(row.Short),
 		ShortUnitID:        row.UnitID,
+		UnitAbbreviation:   row.UnitAbbreviation,
+		UnitType:           row.UnitType,
 	}, nil
 }
 
@@ -798,6 +1050,36 @@ func (r *itemRepoImpl) UpdateRateValue(ctx context.Context, rateID, value string
 	_, err := r.queries.UpdateRateByID(ctx, sqlc.UpdateRateByIDParams{
 		ID:    rateID,
 		Value: valueStr,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	return nil
+}
+
+func (r *itemRepoImpl) UpdateRate(ctx context.Context, rateID string, params domain.CreateRateParams) *apierror.APIError {
+	ctx, span := itemRepoTracer.Start(ctx, "repository.item.update_rate")
+	defer span.End()
+
+	_, err := r.queries.UpdateRateByID(ctx, sqlc.UpdateRateByIDParams{
+		ID:                rateID,
+		Value:             gosql.NullString{String: params.Value, Valid: true},
+		NumeratorUnitID:   gosql.NullString{String: params.NumeratorUnitID, Valid: true},
+		DenominatorUnitID: gosql.NullString{String: params.DenominatorUnitID, Valid: true},
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	return nil
+}
+
+func (r *itemRepoImpl) ClearItemDirtyFlag(ctx context.Context, accountID, itemID string) *apierror.APIError {
+	ctx, span := itemRepoTracer.Start(ctx, "repository.item.clear_dirty_flag")
+	defer span.End()
+
+	err := r.queries.ClearItemDirtyFlag(ctx, sqlc.ClearItemDirtyFlagParams{
+		ItemID:    itemID,
+		AccountID: accountID,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return tracing.Trace(span, apiErr)

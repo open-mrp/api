@@ -263,8 +263,8 @@ func (s *territorySvcImpl) UpdateTerritory(ctx context.Context, params domain.Up
 			// Backfill unchanged nullable fields with existing values.
 			// Since the SQL uses direct assignment (no COALESCE) for these fields,
 			// we must provide the existing value when the field was not sent.
-			if params.SalesRepID == nil && old.SalesRep != nil {
-				params.SalesRepID = &old.SalesRep.ID
+			if params.SalesRepID == nil && old.SalesRepID != "" {
+				params.SalesRepID = &old.SalesRepID
 			}
 
 			updated, apiErr := txRepo.Update(txCtx, params)
@@ -317,7 +317,7 @@ func (s *territorySvcImpl) DeleteTerritory(ctx context.Context, params domain.De
 
 	params.AccountID = identity.Target.AccountID
 
-	territory, apiErr := s.repos.NewTerritoryRepo().Get(ctx, domain.GetTerritoryParams(params))
+	territory, apiErr := s.repos.NewTerritoryRepo().Get(ctx, domain.GetTerritoryParams{AccountID: params.AccountID, TerritoryID: params.TerritoryID})
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeTerritory, params.TerritoryID)

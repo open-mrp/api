@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/augno/api/services/core-service/internal/domain"
+	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/contracts"
 	pb "github.com/augno/api/shared/proto/core"
 
@@ -111,6 +112,12 @@ func purchaseOrderToProto(o *domain.PurchaseOrder) *pb.PurchaseOrderInfo {
 	if o.ServiceLevelToken != nil {
 		info.ServiceLevelToken = o.ServiceLevelToken
 	}
+	if o.ServiceLevelCreatedAt != nil {
+		info.ServiceLevelCreatedAt = timestamppb.New(*o.ServiceLevelCreatedAt)
+	}
+	if o.ServiceLevelUpdatedAt != nil {
+		info.ServiceLevelUpdatedAt = timestamppb.New(*o.ServiceLevelUpdatedAt)
+	}
 
 	if o.IssuedAt != nil {
 		info.IssuedAt = timestamppb.New(*o.IssuedAt)
@@ -124,6 +131,12 @@ func purchaseOrderToProto(o *domain.PurchaseOrder) *pb.PurchaseOrderInfo {
 
 	if o.CarrierIsPortalEnabled != nil {
 		info.CarrierIsPortalEnabled = o.CarrierIsPortalEnabled
+	}
+	if o.CarrierCreatedAt != nil {
+		info.CarrierCreatedAt = timestamppb.New(*o.CarrierCreatedAt)
+	}
+	if o.CarrierUpdatedAt != nil {
+		info.CarrierUpdatedAt = timestamppb.New(*o.CarrierUpdatedAt)
 	}
 	if o.ServiceLevelIsPortalEnabled != nil {
 		info.ServiceLevelIsPortalEnabled = o.ServiceLevelIsPortalEnabled
@@ -148,6 +161,47 @@ func purchaseOrderToProto(o *domain.PurchaseOrder) *pb.PurchaseOrderInfo {
 		info.PriorityId = o.PriorityID
 	}
 
+	if o.PaymentTermCreatedAt != nil {
+		info.PaymentTermCreatedAt = timestamppb.New(*o.PaymentTermCreatedAt)
+	}
+	if o.PaymentTermUpdatedAt != nil {
+		info.PaymentTermUpdatedAt = timestamppb.New(*o.PaymentTermUpdatedAt)
+	}
+	if o.ShippingTermCreatedAt != nil {
+		info.ShippingTermCreatedAt = timestamppb.New(*o.ShippingTermCreatedAt)
+	}
+	if o.ShippingTermUpdatedAt != nil {
+		info.ShippingTermUpdatedAt = timestamppb.New(*o.ShippingTermUpdatedAt)
+	}
+
+	if o.BillToIsDropShip != nil {
+		addrType := string(constants.AddressTypeStandard)
+		if *o.BillToIsDropShip {
+			addrType = string(constants.AddressTypeDropShip)
+		}
+		info.BillToAddressType = &addrType
+	}
+	if o.BillToCreatedAt != nil {
+		info.BillToAddressCreatedAt = timestamppb.New(*o.BillToCreatedAt)
+	}
+	if o.BillToUpdatedAt != nil {
+		info.BillToAddressUpdatedAt = timestamppb.New(*o.BillToUpdatedAt)
+	}
+
+	if o.ShipToIsDropShip != nil {
+		addrType := string(constants.AddressTypeStandard)
+		if *o.ShipToIsDropShip {
+			addrType = string(constants.AddressTypeDropShip)
+		}
+		info.ShipToAddressType = &addrType
+	}
+	if o.ShipToCreatedAt != nil {
+		info.ShipToAddressCreatedAt = timestamppb.New(*o.ShipToCreatedAt)
+	}
+	if o.ShipToUpdatedAt != nil {
+		info.ShipToAddressUpdatedAt = timestamppb.New(*o.ShipToUpdatedAt)
+	}
+
 	if o.Lines != nil {
 		lines := make([]*pb.PurchaseOrderLineInfo, len(o.Lines))
 		for i, l := range o.Lines {
@@ -162,6 +216,10 @@ func purchaseOrderToProto(o *domain.PurchaseOrder) *pb.PurchaseOrderInfo {
 			contacts[i] = emailContactToProto(c)
 		}
 		info.Contacts = contacts
+	}
+
+	if o.ReceivingOrder != nil {
+		info.ReceivingOrder = receivingOrderToProto(o.ReceivingOrder)
 	}
 
 	return info
@@ -327,6 +385,7 @@ func (h *purchaseGRPCHandler) CreatePurchaseOrder(ctx context.Context, req *pb.C
 		ShipToCountry:         req.ShipToCountry,
 		Lines:                 lines,
 		ContactAccountUserIDs: req.ContactAccountUserIds,
+		Includes:              req.Includes,
 	}
 
 	order, apiErr := h.purchaseOrderSvc.CreatePurchaseOrder(ctx, params)
@@ -356,6 +415,7 @@ func (h *purchaseGRPCHandler) UpdatePurchaseOrder(ctx context.Context, req *pb.U
 		ShippingAddressID:     req.ShippingAddressId,
 		PromisedAt:            req.PromisedAt,
 		ContactAccountUserIDs: req.ContactAccountUserIds,
+		Includes:              req.Includes,
 	}
 
 	order, apiErr := h.purchaseOrderSvc.UpdatePurchaseOrder(ctx, params)
@@ -407,6 +467,7 @@ func (h *purchaseGRPCHandler) ChangePurchaseOrderStatus(ctx context.Context, req
 		PurchaseOrderID: req.Id,
 		StatusChange:    req.StatusChange,
 		SendEmail:       req.SendEmail,
+		Includes:        req.Includes,
 	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)

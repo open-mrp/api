@@ -1,6 +1,8 @@
 package salesorderep
 
 import (
+	"time"
+
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -9,10 +11,12 @@ import (
 
 func SalesOrderSummaryPresenter(info *pb.SalesOrderSummaryInfo) apiresource.SalesOrderSummary {
 	customer := &apiresource.Customer{
-		ID:     info.CustomerId,
-		Object: constants.ObjectTypeCustomer,
-		Name:   info.CustomerName,
-		Number: info.CustomerNumber,
+		ID:               info.CustomerId,
+		Object:           constants.ObjectTypeCustomer,
+		Name:             info.CustomerName,
+		Number:           info.CustomerNumber,
+		EDIStatus:        constants.EDIStatusDisabled,
+		RelationshipType: constants.CustomerRelationshipTypeStandalone,
 	}
 	if info.CustomerStatusCode != nil {
 		customer.Status = constants.AccountStatusCode(*info.CustomerStatusCode)
@@ -99,16 +103,24 @@ func SalesOrderDetailPresenter(info *pb.SalesOrderInfo) apiresource.SalesOrderDe
 
 	// Customer
 	d.Customer = &apiresource.Customer{
-		ID:     info.CustomerId,
-		Object: constants.ObjectTypeCustomer,
-		Name:   info.CustomerName,
-		Number: info.CustomerNumber,
+		ID:               info.CustomerId,
+		Object:           constants.ObjectTypeCustomer,
+		Name:             info.CustomerName,
+		Number:           info.CustomerNumber,
+		EDIStatus:        constants.EDIStatusDisabled,
+		RelationshipType: constants.CustomerRelationshipTypeStandalone,
 	}
 	if info.CustomerStatusCode != nil {
 		d.Customer.Status = constants.AccountStatusCode(*info.CustomerStatusCode)
 	}
 	if info.CustomerCommissionPolicy != nil {
 		d.Customer.CommissionPolicy = constants.CommissionPolicy(*info.CustomerCommissionPolicy)
+	}
+	if info.CustomerCreatedAt != nil {
+		d.Customer.CreatedAt = info.CustomerCreatedAt.AsTime()
+	}
+	if info.CustomerUpdatedAt != nil {
+		d.Customer.UpdatedAt = info.CustomerUpdatedAt.AsTime()
 	}
 
 	// Bill-to address
@@ -117,6 +129,8 @@ func SalesOrderDetailPresenter(info *pb.SalesOrderInfo) apiresource.SalesOrderDe
 			info.BillingAddressId, info.BillToName, info.BillToStreetLine_1, info.BillToStreetLine_2,
 			info.BillToLocality, info.BillToState, info.BillToPostalCode, info.BillToCountry,
 			info.BillToPhone, info.BillToEmail,
+			info.BillToIsDropShip, info.BillToGeolocationId,
+			grpcutil.TimestampToTime(info.BillToCreatedAt), grpcutil.TimestampToTime(info.BillToUpdatedAt),
 		)
 	}
 
@@ -126,6 +140,8 @@ func SalesOrderDetailPresenter(info *pb.SalesOrderInfo) apiresource.SalesOrderDe
 			info.ShippingAddressId, info.ShipToName, info.ShipToStreetLine_1, info.ShipToStreetLine_2,
 			info.ShipToLocality, info.ShipToState, info.ShipToPostalCode, info.ShipToCountry,
 			info.ShipToPhone, info.ShipToEmail,
+			info.ShipToIsDropShip, info.ShipToGeolocationId,
+			grpcutil.TimestampToTime(info.ShipToCreatedAt), grpcutil.TimestampToTime(info.ShipToUpdatedAt),
 		)
 	}
 
@@ -142,6 +158,12 @@ func SalesOrderDetailPresenter(info *pb.SalesOrderInfo) apiresource.SalesOrderDe
 			d.Carrier.CustomerPortalVisibility = constants.CustomerPortalVisibilityVisible
 		} else {
 			d.Carrier.CustomerPortalVisibility = constants.CustomerPortalVisibilityHidden
+		}
+		if info.CarrierCreatedAt != nil {
+			d.Carrier.CreatedAt = info.CarrierCreatedAt.AsTime()
+		}
+		if info.CarrierUpdatedAt != nil {
+			d.Carrier.UpdatedAt = info.CarrierUpdatedAt.AsTime()
 		}
 	}
 
@@ -161,6 +183,12 @@ func SalesOrderDetailPresenter(info *pb.SalesOrderInfo) apiresource.SalesOrderDe
 		}
 		if info.ServiceLevelToken != nil {
 			d.ServiceLevel.ServiceLevelToken = constants.ServiceLevelCode(*info.ServiceLevelToken)
+		}
+		if info.ServiceLevelCreatedAt != nil {
+			d.ServiceLevel.CreatedAt = info.ServiceLevelCreatedAt.AsTime()
+		}
+		if info.ServiceLevelUpdatedAt != nil {
+			d.ServiceLevel.UpdatedAt = info.ServiceLevelUpdatedAt.AsTime()
 		}
 	}
 
@@ -188,6 +216,12 @@ func SalesOrderDetailPresenter(info *pb.SalesOrderInfo) apiresource.SalesOrderDe
 		} else {
 			d.PaymentTerm.Status = constants.PaymentTermStatusInactive
 		}
+		if info.PaymentTermCreatedAt != nil {
+			d.PaymentTerm.CreatedAt = info.PaymentTermCreatedAt.AsTime()
+		}
+		if info.PaymentTermUpdatedAt != nil {
+			d.PaymentTerm.UpdatedAt = info.PaymentTermUpdatedAt.AsTime()
+		}
 	}
 
 	// Shipping term
@@ -202,6 +236,12 @@ func SalesOrderDetailPresenter(info *pb.SalesOrderInfo) apiresource.SalesOrderDe
 		if info.ShippingTermType != nil {
 			d.ShippingTerm.Type = constants.ShippingTermType(*info.ShippingTermType)
 		}
+		if info.ShippingTermCreatedAt != nil {
+			d.ShippingTerm.CreatedAt = info.ShippingTermCreatedAt.AsTime()
+		}
+		if info.ShippingTermUpdatedAt != nil {
+			d.ShippingTerm.UpdatedAt = info.ShippingTermUpdatedAt.AsTime()
+		}
 	}
 
 	// Order discount
@@ -212,6 +252,27 @@ func SalesOrderDetailPresenter(info *pb.SalesOrderInfo) apiresource.SalesOrderDe
 		}
 		if info.OrderDiscountName != nil {
 			d.OrderDiscount.Name = *info.OrderDiscountName
+		}
+		if info.OrderDiscountCode != nil {
+			d.OrderDiscount.Code = *info.OrderDiscountCode
+		}
+		if info.OrderDiscountPercentage != nil {
+			d.OrderDiscount.Percentage = *info.OrderDiscountPercentage
+		}
+		if info.OrderDiscountAmount != nil {
+			d.OrderDiscount.Amount = *info.OrderDiscountAmount
+		}
+		if info.OrderDiscountDiscountType != nil {
+			d.OrderDiscount.DiscountType = constants.OrderDiscountType(*info.OrderDiscountDiscountType)
+		}
+		if info.OrderDiscountOrderCount != nil {
+			d.OrderDiscount.OrderCount = *info.OrderDiscountOrderCount
+		}
+		if info.OrderDiscountCreatedAt != nil {
+			d.OrderDiscount.CreatedAt = info.OrderDiscountCreatedAt.AsTime()
+		}
+		if info.OrderDiscountUpdatedAt != nil {
+			d.OrderDiscount.UpdatedAt = info.OrderDiscountUpdatedAt.AsTime()
 		}
 	}
 
@@ -406,16 +467,25 @@ func SalesOrderListPresenter(resp *pb.ListSalesOrdersResponse) *apiresource.List
 
 func buildAddressFromProto(
 	id string, name, line1, line2, locality, state, postalCode, country, phone, email *string,
+	isDropShip *bool, geolocationID *string,
+	createdAt time.Time, updatedAt time.Time,
 ) *apiresource.Address {
 	addr := &apiresource.Address{
-		ID:     id,
-		Object: constants.ObjectTypeAddress,
-		Phone:  phone,
-		Email:  email,
+		ID:        id,
+		Object:    constants.ObjectTypeAddress,
+		Phone:     phone,
+		Email:     email,
+		Type:      constants.AddressTypeStandard,
+		CreatedAt: createdAt,
+		UpdatedAt: updatedAt,
 	}
 
 	if name != nil {
 		addr.Name = *name
+	}
+
+	if isDropShip != nil && *isDropShip {
+		addr.Type = constants.AddressTypeDropShip
 	}
 
 	countryStr := ""
@@ -423,7 +493,7 @@ func buildAddressFromProto(
 		countryStr = *country
 	}
 
-	addr.Geolocation = &apiresource.Geolocation{
+	geo := &apiresource.Geolocation{
 		Object:      constants.ObjectTypeGeolocation,
 		StreetLine1: line1,
 		StreetLine2: line2,
@@ -432,6 +502,10 @@ func buildAddressFromProto(
 		PostalCode:  postalCode,
 		Country:     countryStr,
 	}
+	if geolocationID != nil {
+		geo.ID = *geolocationID
+	}
+	addr.Geolocation = geo
 
 	return addr
 }

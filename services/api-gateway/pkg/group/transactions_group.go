@@ -40,7 +40,7 @@ func (*TransactionsEndpointGroup) Materialize(config *TransactionsEndpointGroupC
 	}
 
 	listTransactionsEndpoint := (&transactionep.ListTransactionsEndpoint{}).Materialize().WithService(inner, transactionSvc)
-	getTransactionEndpoint := (&transactionep.GetTransactionEndpoint{}).Materialize().WithService(inner, transactionSvc)
+	getTransactionEndpoint := (&transactionep.RetrieveTransactionEndpoint{}).Materialize().WithService(inner, transactionSvc)
 	createTransactionEndpoint := (&transactionep.CreateTransactionEndpoint{}).Materialize().WithService(inner, transactionSvc)
 	updateTransactionEndpoint := (&transactionep.UpdateTransactionEndpoint{}).Materialize().WithService(inner, transactionSvc)
 	deleteTransactionEndpoint := (&transactionep.DeleteTransactionEndpoint{}).Materialize().WithService(inner, transactionSvc)

@@ -23,13 +23,13 @@ type ProductLine struct {
 	Description *string `json:"description"`
 	// Notes.
 	Notes *string `json:"notes"`
-	// Commission policy.
+	// Commission policy of products in this product line.
 	CommissionPolicy constants.CommissionPolicy `json:"commission_policy" validate:"required"`
-	// Freight policy.
+	// Freight policy for all items in this product line.
 	FreightPolicy constants.FreightPolicy `json:"freight_policy" validate:"required"`
-	// Owner.
+	// Owner of the product line.
 	Owner *Owner `json:"owner" expandable:"true"`
-	// Unit group.
+	// Unit group associated with this product line. This unit group dictates the available units that products in this product line may embody in your production process.
 	UnitGroup *UnitGroup `json:"unit_group" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

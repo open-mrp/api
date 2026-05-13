@@ -40,7 +40,7 @@ func (*ScanningStationsEndpointGroup) Materialize(config *ScanningStationsEndpoi
 	}
 
 	listEndpoint := (&scanningstationep.ListScanningStationsEndpoint{}).Materialize().WithService(inner, scanningStationSvc)
-	getEndpoint := (&scanningstationep.GetScanningStationEndpoint{}).Materialize().WithService(inner, scanningStationSvc)
+	retrieveEndpoint := (&scanningstationep.RetrieveScanningStationEndpoint{}).Materialize().WithService(inner, scanningStationSvc)
 	createEndpoint := (&scanningstationep.CreateScanningStationEndpoint{}).Materialize().WithService(inner, scanningStationSvc)
 	updateEndpoint := (&scanningstationep.UpdateScanningStationEndpoint{}).Materialize().WithService(inner, scanningStationSvc)
 	deleteEndpoint := (&scanningstationep.DeleteScanningStationEndpoint{}).Materialize().WithService(inner, scanningStationSvc)
@@ -48,7 +48,7 @@ func (*ScanningStationsEndpointGroup) Materialize(config *ScanningStationsEndpoi
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listEndpoint,
-		getEndpoint,
+		retrieveEndpoint,
 		createEndpoint,
 		updateEndpoint,
 		deleteEndpoint,

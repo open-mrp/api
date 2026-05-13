@@ -28,7 +28,7 @@ func (r *agentAlertRepoImpl) Insert(ctx context.Context, params sqlc.InsertAgent
 	return nil
 }
 
-func (r *agentAlertRepoImpl) GetByID(ctx context.Context, id string) (*sqlc.AgentAlert, *apierror.APIError) {
+func (r *agentAlertRepoImpl) GetByID(ctx context.Context, id string) (*sqlc.GetAgentAlertByIDRow, *apierror.APIError) {
 	ctx, span := tracing.StartSpan(ctx, alertRepoTracer, "repository.agent_alert.get_by_id")
 	defer span.End()
 	row, err := r.queries.GetAgentAlertByID(ctx, id)
@@ -51,7 +51,7 @@ func (r *agentAlertRepoImpl) ListByAccount(ctx context.Context, accountID string
 	return rows, nil
 }
 
-func (r *agentAlertRepoImpl) ListByAccountCursor(ctx context.Context, params sqlc.ListAgentAlertsByAccountCursorParams) ([]sqlc.AgentAlert, *apierror.APIError) {
+func (r *agentAlertRepoImpl) ListByAccountCursor(ctx context.Context, params sqlc.ListAgentAlertsByAccountCursorParams) ([]sqlc.ListAgentAlertsByAccountCursorRow, *apierror.APIError) {
 	ctx, span := tracing.StartSpan(ctx, alertRepoTracer, "repository.agent_alert.list_by_account_cursor")
 	defer span.End()
 	rows, err := r.queries.ListAgentAlertsByAccountCursor(ctx, params)

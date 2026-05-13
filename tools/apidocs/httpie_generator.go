@@ -158,7 +158,7 @@ func generateHTTPieWorkspace(groups []apiendpoint.APIEndpointGroup, outputPath s
 		log.Fatalf("Error writing HTTPie workspace to %s: %v", outputPath, err)
 	}
 
-	log.Printf("Generated HTTPie workspace at %s", outputPath)
+	logInfof("Generated HTTPie workspace at %s", outputPath)
 }
 
 func buildCollections(groups []apiendpoint.APIEndpointGroup) []HTTPieCollection {

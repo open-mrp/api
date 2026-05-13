@@ -65,7 +65,7 @@ func TestValidateCredential_APIKeyOwnedAccount(t *testing.T) {
 		Name:           "Key One",
 		OwnerAccountID: "acct-1",
 		RoleID:         "role-1",
-		RoleTypeCode:   "admin",
+		RoleType:       "admin",
 	}
 
 	parsedKey := &apikey.ParsedAPIKey{
@@ -145,7 +145,7 @@ func TestValidateCredential_APIKeyRelationMissing(t *testing.T) {
 		Name:           "Partner Key",
 		OwnerAccountID: "acct-owner",
 		RoleID:         "role-2",
-		RoleTypeCode:   "partner",
+		RoleType:       "partner",
 	}
 
 	parsedKey := &apikey.ParsedAPIKey{
@@ -226,7 +226,7 @@ func TestValidateCredential_UserAccountUserPath(t *testing.T) {
 		AccountUserID: "acu-1",
 		AccountID:     targetAccountID,
 		RoleID:        ptrString("role-99"),
-		RoleTypeCode:  ptrString("manager"),
+		RoleType:      ptrString("manager"),
 		Permissions:   map[string]bool{"perm:edit": true},
 	}, true, nil)
 	coreClient.EXPECT().MarkAccountUserUsed(gomock.Any(), "acu-1").Return(nil).AnyTimes()
@@ -252,8 +252,8 @@ func TestValidateCredential_UserAccountUserPath(t *testing.T) {
 	if identity.Actor.RoleID == nil || *identity.Actor.RoleID != "role-99" {
 		t.Fatalf("expected role role-99, got %+v", identity.Actor.RoleID)
 	}
-	if identity.Actor.RoleTypeCode == nil || *identity.Actor.RoleTypeCode != "manager" {
-		t.Fatalf("expected role type manager, got %+v", identity.Actor.RoleTypeCode)
+	if identity.Actor.RoleType == nil || *identity.Actor.RoleType != "manager" {
+		t.Fatalf("expected role type manager, got %+v", identity.Actor.RoleType)
 	}
 	if len(identity.Actor.Permissions) != 1 || !identity.Actor.Permissions["perm:edit"] {
 		t.Fatalf("expected permission perm:edit, got %+v", identity.Actor.Permissions)

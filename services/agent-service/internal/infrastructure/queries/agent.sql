@@ -204,13 +204,44 @@ INSERT INTO agent_alert (id, account_id, agent_run_id, agent_action_id, severity
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);
 
 -- name: GetAgentAlertByID :one
-SELECT * FROM agent_alert WHERE id = $1;
+SELECT
+    aa.id, aa.account_id, aa.agent_run_id, aa.agent_action_id,
+    aa.severity_code, aa.status_code, aa.title, aa.message, aa.metadata,
+    aa.acknowledged_at, aa.acknowledged_by_actor_id, aa.acknowledged_by_actor_type,
+    aa.acknowledged_by_actor_name, aa.created_at, aa.updated_at,
+    ar.status_code AS run_status_code,
+    ar.trigger_type AS run_trigger_type,
+    ar.created_at AS run_created_at,
+    ar.updated_at AS run_updated_at,
+    act.tool_slug AS action_tool_slug,
+    act.status_code AS action_status_code,
+    act.created_at AS action_created_at,
+    act.updated_at AS action_updated_at
+FROM agent_alert aa
+LEFT JOIN agent_run ar ON ar.id = aa.agent_run_id
+LEFT JOIN agent_action act ON act.id = aa.agent_action_id
+WHERE aa.id = $1;
 
 -- name: ListAgentAlertsByAccount :many
 SELECT * FROM agent_alert WHERE account_id = $1 ORDER BY created_at DESC LIMIT $2;
 
 -- name: ListAgentAlertsByAccountCursor :many
-SELECT aa.* FROM agent_alert aa
+SELECT
+    aa.id, aa.account_id, aa.agent_run_id, aa.agent_action_id,
+    aa.severity_code, aa.status_code, aa.title, aa.message, aa.metadata,
+    aa.acknowledged_at, aa.acknowledged_by_actor_id, aa.acknowledged_by_actor_type,
+    aa.acknowledged_by_actor_name, aa.created_at, aa.updated_at,
+    ar.status_code AS run_status_code,
+    ar.trigger_type AS run_trigger_type,
+    ar.created_at AS run_created_at,
+    ar.updated_at AS run_updated_at,
+    act.tool_slug AS action_tool_slug,
+    act.status_code AS action_status_code,
+    act.created_at AS action_created_at,
+    act.updated_at AS action_updated_at
+FROM agent_alert aa
+LEFT JOIN agent_run ar ON ar.id = aa.agent_run_id
+LEFT JOIN agent_action act ON act.id = aa.agent_action_id
 WHERE aa.account_id = @account_id
   AND (@filter_severity::boolean = false OR aa.severity_code = @severity_code)
   AND (@filter_status::boolean = false OR aa.status_code = @status_code)

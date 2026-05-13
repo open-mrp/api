@@ -12,7 +12,7 @@ import (
 // Request to create a customer checkout session.
 type CreateCheckoutSessionRequest struct {
 	// Sales order ID.
-	OrderID string `json:"order_id" validate:"required,max=191"`
+	OrderID string `json:"order_id" validate:"required"`
 	// Order number for display.
 	OrderNumber string `json:"order_number" validate:"required,max=255"`
 	// Order total in cents.

@@ -1,4 +1,4 @@
--- name: ListMaterialsForward :many
+-- name: ListMaterialsForwardBase :many
 SELECT
     m.id,
     m.item_id,
@@ -21,6 +21,8 @@ SELECT
     ic.name AS category_name,
     ic.item_category_type_code,
     ic.unit_group_id AS category_unit_group_id,
+    ic.created_at AS category_created_at,
+    ic.updated_at AS category_updated_at,
     op.value AS order_point_value,
     op.unit_id AS order_point_unit_id,
     op_u.abbreviation AS order_point_unit_abbreviation,
@@ -28,25 +30,7 @@ SELECT
     lt.value AS lead_time_value,
     lt.unit_id AS lead_time_unit_id,
     lt_u.abbreviation AS lead_time_unit_abbreviation,
-    lt_u.unit_dimension_code AS lead_time_unit_type,
-    rv.id AS unit_value_rate_id,
-    rv.value AS unit_value_rate_value,
-    rv.numerator_unit_id AS unit_value_numerator_unit_id,
-    rv.denominator_unit_id AS unit_value_denominator_unit_id,
-    rv.created_at AS unit_value_created_at,
-    rv.updated_at AS unit_value_updated_at,
-    rc.id AS unit_cost_rate_id,
-    rc.value AS unit_cost_rate_value,
-    rc.numerator_unit_id AS unit_cost_numerator_unit_id,
-    rc.denominator_unit_id AS unit_cost_denominator_unit_id,
-    rc.created_at AS unit_cost_created_at,
-    rc.updated_at AS unit_cost_updated_at,
-    rb.id AS burn_rate_id_joined,
-    rb.value AS burn_rate_value,
-    rb.numerator_unit_id AS burn_rate_numerator_unit_id,
-    rb.denominator_unit_id AS burn_rate_denominator_unit_id,
-    rb.created_at AS burn_rate_created_at,
-    rb.updated_at AS burn_rate_updated_at
+    lt_u.unit_dimension_code AS lead_time_unit_type
 FROM material m
 JOIN item i ON i.id = m.item_id
 JOIN item_category ic ON ic.id = i.item_category_id
@@ -54,9 +38,6 @@ JOIN quantity op ON op.id = m.order_point_id
 JOIN unit op_u ON op_u.id = op.unit_id
 JOIN quantity lt ON lt.id = m.lead_time_id
 JOIN unit lt_u ON lt_u.id = lt.unit_id
-JOIN rate rv ON rv.id = i.unit_value_id
-JOIN rate rc ON rc.id = i.unit_cost_id
-JOIN rate rb ON rb.id = i.burn_rate_id
 WHERE i.account_id = sqlc.arg('account_id')
 AND i.deleted_at IS NULL
 AND (
@@ -92,7 +73,7 @@ AND (
 ORDER BY m.created_at DESC, m.id DESC
 LIMIT ?;
 
--- name: ListMaterialsBackward :many
+-- name: ListMaterialsBackwardBase :many
 SELECT
     m.id,
     m.item_id,
@@ -115,6 +96,8 @@ SELECT
     ic.name AS category_name,
     ic.item_category_type_code,
     ic.unit_group_id AS category_unit_group_id,
+    ic.created_at AS category_created_at,
+    ic.updated_at AS category_updated_at,
     op.value AS order_point_value,
     op.unit_id AS order_point_unit_id,
     op_u.abbreviation AS order_point_unit_abbreviation,
@@ -122,25 +105,7 @@ SELECT
     lt.value AS lead_time_value,
     lt.unit_id AS lead_time_unit_id,
     lt_u.abbreviation AS lead_time_unit_abbreviation,
-    lt_u.unit_dimension_code AS lead_time_unit_type,
-    rv.id AS unit_value_rate_id,
-    rv.value AS unit_value_rate_value,
-    rv.numerator_unit_id AS unit_value_numerator_unit_id,
-    rv.denominator_unit_id AS unit_value_denominator_unit_id,
-    rv.created_at AS unit_value_created_at,
-    rv.updated_at AS unit_value_updated_at,
-    rc.id AS unit_cost_rate_id,
-    rc.value AS unit_cost_rate_value,
-    rc.numerator_unit_id AS unit_cost_numerator_unit_id,
-    rc.denominator_unit_id AS unit_cost_denominator_unit_id,
-    rc.created_at AS unit_cost_created_at,
-    rc.updated_at AS unit_cost_updated_at,
-    rb.id AS burn_rate_id_joined,
-    rb.value AS burn_rate_value,
-    rb.numerator_unit_id AS burn_rate_numerator_unit_id,
-    rb.denominator_unit_id AS burn_rate_denominator_unit_id,
-    rb.created_at AS burn_rate_created_at,
-    rb.updated_at AS burn_rate_updated_at
+    lt_u.unit_dimension_code AS lead_time_unit_type
 FROM material m
 JOIN item i ON i.id = m.item_id
 JOIN item_category ic ON ic.id = i.item_category_id
@@ -148,9 +113,6 @@ JOIN quantity op ON op.id = m.order_point_id
 JOIN unit op_u ON op_u.id = op.unit_id
 JOIN quantity lt ON lt.id = m.lead_time_id
 JOIN unit lt_u ON lt_u.id = lt.unit_id
-JOIN rate rv ON rv.id = i.unit_value_id
-JOIN rate rc ON rc.id = i.unit_cost_id
-JOIN rate rb ON rb.id = i.burn_rate_id
 WHERE i.account_id = sqlc.arg('account_id')
 AND i.deleted_at IS NULL
 AND (
@@ -185,7 +147,7 @@ AND (
 ORDER BY m.created_at ASC, m.id ASC
 LIMIT ?;
 
--- name: GetMaterialByID :one
+-- name: GetMaterialByIDBase :one
 SELECT
     m.id,
     m.item_id,
@@ -208,6 +170,8 @@ SELECT
     ic.name AS category_name,
     ic.item_category_type_code,
     ic.unit_group_id AS category_unit_group_id,
+    ic.created_at AS category_created_at,
+    ic.updated_at AS category_updated_at,
     op.value AS order_point_value,
     op.unit_id AS order_point_unit_id,
     op_u.abbreviation AS order_point_unit_abbreviation,
@@ -215,25 +179,7 @@ SELECT
     lt.value AS lead_time_value,
     lt.unit_id AS lead_time_unit_id,
     lt_u.abbreviation AS lead_time_unit_abbreviation,
-    lt_u.unit_dimension_code AS lead_time_unit_type,
-    rv.id AS unit_value_rate_id,
-    rv.value AS unit_value_rate_value,
-    rv.numerator_unit_id AS unit_value_numerator_unit_id,
-    rv.denominator_unit_id AS unit_value_denominator_unit_id,
-    rv.created_at AS unit_value_created_at,
-    rv.updated_at AS unit_value_updated_at,
-    rc.id AS unit_cost_rate_id,
-    rc.value AS unit_cost_rate_value,
-    rc.numerator_unit_id AS unit_cost_numerator_unit_id,
-    rc.denominator_unit_id AS unit_cost_denominator_unit_id,
-    rc.created_at AS unit_cost_created_at,
-    rc.updated_at AS unit_cost_updated_at,
-    rb.id AS burn_rate_id_joined,
-    rb.value AS burn_rate_value,
-    rb.numerator_unit_id AS burn_rate_numerator_unit_id,
-    rb.denominator_unit_id AS burn_rate_denominator_unit_id,
-    rb.created_at AS burn_rate_created_at,
-    rb.updated_at AS burn_rate_updated_at
+    lt_u.unit_dimension_code AS lead_time_unit_type
 FROM material m
 JOIN item i ON i.id = m.item_id
 JOIN item_category ic ON ic.id = i.item_category_id
@@ -241,9 +187,6 @@ JOIN quantity op ON op.id = m.order_point_id
 JOIN unit op_u ON op_u.id = op.unit_id
 JOIN quantity lt ON lt.id = m.lead_time_id
 JOIN unit lt_u ON lt_u.id = lt.unit_id
-JOIN rate rv ON rv.id = i.unit_value_id
-JOIN rate rc ON rc.id = i.unit_cost_id
-JOIN rate rb ON rb.id = i.burn_rate_id
 WHERE m.id = sqlc.arg('id')
 AND i.account_id = sqlc.arg('account_id')
 AND i.deleted_at IS NULL;
@@ -271,6 +214,10 @@ SELECT
     ic.name AS category_name,
     ic.item_category_type_code,
     ic.unit_group_id AS category_unit_group_id,
+    cat_ug.name AS category_unit_group_name,
+    cat_ug.unit_type_code AS category_unit_group_type,
+    cat_ug.created_at AS category_unit_group_created_at,
+    cat_ug.updated_at AS category_unit_group_updated_at,
     op.value AS order_point_value,
     op.unit_id AS order_point_unit_id,
     op_u.abbreviation AS order_point_unit_abbreviation,
@@ -300,6 +247,7 @@ SELECT
 FROM material m
 JOIN item i ON i.id = m.item_id
 JOIN item_category ic ON ic.id = i.item_category_id
+JOIN unit_group cat_ug ON cat_ug.id = ic.unit_group_id
 JOIN quantity op ON op.id = m.order_point_id
 JOIN unit op_u ON op_u.id = op.unit_id
 JOIN quantity lt ON lt.id = m.lead_time_id

@@ -20,11 +20,11 @@ type UpdateShippingCaseRequest struct {
 	// Freight amount value.
 	FreightAmountValue *string `json:"freight_amount_value" nullable:"false"`
 	// Freight amount unit ID.
-	FreightAmountUnitID *string `json:"freight_amount_unit_id" nullable:"false" validate:"omitempty,max=191"`
+	FreightAmountUnitID *string `json:"freight_amount_unit_id" nullable:"false" validate:"omitempty"`
 	// Freight weight value.
 	FreightWeightValue *string `json:"freight_weight_value" nullable:"false"`
 	// Freight weight unit ID.
-	FreightWeightUnitID *string `json:"freight_weight_unit_id" nullable:"false" validate:"omitempty,max=191"`
+	FreightWeightUnitID *string `json:"freight_weight_unit_id" nullable:"false" validate:"omitempty"`
 }
 
 var sampleTrackingNumber = "1Z999AA10123456784"

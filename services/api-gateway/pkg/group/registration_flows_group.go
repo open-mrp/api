@@ -40,11 +40,11 @@ func (*RegistrationFlowsEndpointGroup) Materialize(config *RegistrationFlowsEndp
 	}
 
 	listRegistrationFlowsEndpoint := (&registrationflowep.ListRegistrationFlowsEndpoint{}).Materialize().WithService(inner, registrationFlowSvc)
-	getRegistrationFlowEndpoint := (&registrationflowep.GetRegistrationFlowEndpoint{}).Materialize().WithService(inner, registrationFlowSvc)
+	getRegistrationFlowEndpoint := (&registrationflowep.RetrieveRegistrationFlowEndpoint{}).Materialize().WithService(inner, registrationFlowSvc)
 	createRegistrationFlowEndpoint := (&registrationflowep.CreateRegistrationFlowEndpoint{}).Materialize().WithService(inner, registrationFlowSvc)
 	updateRegistrationFlowEndpoint := (&registrationflowep.UpdateRegistrationFlowEndpoint{}).Materialize().WithService(inner, registrationFlowSvc)
 	deleteRegistrationFlowEndpoint := (&registrationflowep.DeleteRegistrationFlowEndpoint{}).Materialize().WithService(inner, registrationFlowSvc)
-	getRegistrationFlowBySlugEndpoint := (&registrationflowep.GetRegistrationFlowBySlugEndpoint{}).Materialize().WithService(inner, registrationFlowSvc)
+	getRegistrationFlowBySlugEndpoint := (&registrationflowep.RetrieveRegistrationFlowBySlugEndpoint{}).Materialize().WithService(inner, registrationFlowSvc)
 	registerCustomerEndpoint := (&registrationflowep.RegisterCustomerEndpoint{}).Materialize().WithService(inner, registrationFlowSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{

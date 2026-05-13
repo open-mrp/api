@@ -35,6 +35,7 @@ type ListProductsFullParams struct {
 	StartDate      *time.Time
 	EndDate        *time.Time
 	IsPortalReady  *bool
+	Includes       []string
 }
 
 // ListProductsFullResult contains a page of products plus pagination info.
@@ -47,6 +48,7 @@ type ListProductsFullResult struct {
 type GetProductFullParams struct {
 	AccountID string
 	ProductID string
+	Includes  []string
 }
 
 // CreateProductParams holds parameters for creating a new product.
@@ -73,6 +75,7 @@ type CreateProductParams struct {
 	BurnRate  *CreateRateParams
 	// AttributeIDs are connected to the new item at creation time.
 	AttributeIDs []string
+	Includes     []string
 }
 
 // UpdateProductParams holds parameters for partially updating a product.
@@ -85,6 +88,8 @@ type UpdateProductParams struct {
 	Notes             *string
 	UpdateNotes       bool
 	IsPortalReady     *bool
+	UnitPrice         *CreateRateParams
+	Includes          []string
 }
 
 // DeleteProductParams holds parameters for soft-deleting a product.
@@ -98,6 +103,7 @@ type ChangeProductProductLineParams struct {
 	AccountID     string
 	ProductID     string
 	ProductLineID string
+	Includes      []string
 }
 
 // ValidateProductsParams holds parameters for validating products by SKU.

@@ -15,13 +15,13 @@ import (
 // Request to create a purchase order.
 type CreatePurchaseOrderRequest struct {
 	// Supplier account ID.
-	SupplierAccountID string `json:"supplier_account_id" validate:"required,max=191"`
+	SupplierAccountID string `json:"supplier_account_id" validate:"required"`
 	// Order note.
 	Note *string `json:"note,omitempty"`
 	// Carrier ID.
-	CarrierID *string `json:"carrier_id,omitempty" validate:"omitempty,max=191"`
+	CarrierID *string `json:"carrier_id,omitempty" validate:"omitempty"`
 	// Service level ID.
-	ServiceLevelID *string `json:"service_level_id,omitempty" validate:"omitempty,max=191"`
+	ServiceLevelID *string `json:"service_level_id,omitempty" validate:"omitempty"`
 	// Carrier billing type.
 	CarrierBillingType *string `json:"carrier_billing_type,omitempty" validate:"omitempty,max=255"`
 	// Carrier billing account number.
@@ -29,9 +29,9 @@ type CreatePurchaseOrderRequest struct {
 	// Priority code.
 	PriorityCode string `json:"priority_code" validate:"required,max=255"`
 	// Shipping term ID.
-	ShippingTermID *string `json:"shipping_term_id,omitempty" validate:"omitempty,max=191"`
+	ShippingTermID *string `json:"shipping_term_id,omitempty" validate:"omitempty"`
 	// Payment term ID.
-	PaymentTermID *string `json:"payment_term_id,omitempty" validate:"omitempty,max=191"`
+	PaymentTermID *string `json:"payment_term_id,omitempty" validate:"omitempty"`
 	// Bill-to address name.
 	BillToName *string `json:"bill_to_name,omitempty" validate:"omitempty,max=255"`
 	// Bill-to street line 1.

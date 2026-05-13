@@ -23,7 +23,7 @@ type RegistrationSessionSvc interface {
 	CreateSession(ctx context.Context, req *CreateRegistrationSessionRequest) (*apiresource.CreateSessionResponse, *apierror.APIError)
 	ResendVerificationEmail(ctx context.Context, req *ResendEmailRequest) (*apiresource.EmptyResource, *apierror.APIError)
 	VerifyToken(ctx context.Context, req *VerifyTokenRequest) (*apiresource.RegistrationSession, *apierror.APIError)
-	GetSession(ctx context.Context, req *GetSessionRequest) (*apiresource.RegistrationSession, *apierror.APIError)
+	GetSession(ctx context.Context, req *RetrieveSessionRequest) (*apiresource.RegistrationSession, *apierror.APIError)
 	CreateUser(ctx context.Context, req *CreateUserRequest) (*apiresource.CreateUserResponse, *apierror.APIError)
 	UpdateSession(ctx context.Context, req *UpdateSessionRequest) (*apiresource.RegistrationSession, *apierror.APIError)
 	ListSessions(ctx context.Context, req *apiresource.PaginationRequest) (*apiresource.List[apiresource.RegistrationSession], *apierror.APIError)
@@ -93,7 +93,7 @@ func (m *registrationSessionSvcImpl) ResendVerificationEmail(ctx context.Context
 	return &apiresource.EmptyResource{}, nil
 }
 
-func (m *registrationSessionSvcImpl) GetSession(ctx context.Context, req *GetSessionRequest) (*apiresource.RegistrationSession, *apierror.APIError) {
+func (m *registrationSessionSvcImpl) GetSession(ctx context.Context, req *RetrieveSessionRequest) (*apiresource.RegistrationSession, *apierror.APIError) {
 	resp, apiErr := grpcutil.CallRPC(ctx, registrationSessionSvcTracer, "service.registration_sessions.get", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetRegistrationSessionResponse, error) {
 			return m.authClient.GetRegistrationSession(ctx, &pb.GetRegistrationSessionRequest{

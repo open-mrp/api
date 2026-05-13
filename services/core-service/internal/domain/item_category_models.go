@@ -36,14 +36,16 @@ type ItemCategoryFull struct {
 	UpdatedAt            time.Time
 
 	// Expandable sub-resources (populated via includes)
-	Properties []*ItemCategoryProperty
+	Properties []*ItemCategoryProperty `audit:"properties"`
 	UnitGroup  *ItemCategoryUnitGroup
 }
 
 // ItemCategoryProperty represents a property associated with an item category.
 type ItemCategoryProperty struct {
-	ID   string
-	Name string
+	ID        string
+	Name      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 // ItemCategoryUnitGroup represents the unit group associated with an item category.
@@ -52,6 +54,13 @@ type ItemCategoryUnitGroup struct {
 	Name       string
 	BaseUnitID string
 	Type       string
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+
+	// Populated when unit_group.base_unit is included.
+	BaseUnit *LightUnit
+	// Populated when unit_group.associated_units is included.
+	AssociatedUnits []*UnitGroupUnit
 }
 
 type ListItemCategoriesParams struct {
@@ -60,6 +69,7 @@ type ListItemCategoriesParams struct {
 	Limit     int32
 	Query     *string
 	Type      *string
+	Includes  []string
 }
 
 type ListItemCategoriesResult struct {
@@ -70,6 +80,7 @@ type ListItemCategoriesResult struct {
 type GetItemCategoryParams struct {
 	AccountID      string
 	ItemCategoryID string
+	Includes       []string
 }
 
 type CreateItemCategoryParams struct {
@@ -77,6 +88,7 @@ type CreateItemCategoryParams struct {
 	Name                 string
 	ItemCategoryTypeCode string
 	UnitGroupID          string
+	Includes             []string
 }
 
 type UpdateItemCategoryParams struct {
@@ -84,6 +96,7 @@ type UpdateItemCategoryParams struct {
 	ItemCategoryID string
 	Name           *string
 	Notes          *string
+	Includes       []string
 }
 
 type DeleteItemCategoryParams struct {

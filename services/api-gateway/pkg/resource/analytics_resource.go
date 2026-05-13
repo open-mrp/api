@@ -54,7 +54,7 @@ type SalesEntry struct {
 	ProductLineID *string `json:"product_line_id"`
 	// The product line name.
 	ProductLine *string `json:"product_line"`
-	// The product type ID.
+	// The product ID.
 	ProductTypeID string `json:"product_type_id" validate:"required"`
 	// The item ID.
 	ItemID string `json:"item_id" validate:"required"`
@@ -315,7 +315,7 @@ type OrderEntry struct {
 	ProductLineID *string `json:"product_line_id"`
 	// The product line name.
 	ProductLine *string `json:"product_line"`
-	// The product type ID.
+	// The product ID.
 	ProductTypeID string `json:"product_type_id" validate:"required"`
 	// The item ID.
 	ItemID string `json:"item_id" validate:"required"`

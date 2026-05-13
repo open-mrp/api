@@ -8,52 +8,57 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"strings"
 )
 
-const acquireOutboxMessages = `-- name: AcquireOutboxMessages :exec
-UPDATE message_outbox
-SET locked_at = NOW(3),
-    lock_owner = ?,
-    lock_expires_at = DATE_ADD(NOW(3), INTERVAL ? SECOND),
-    updated_at = NOW(3)
-WHERE status = 'pending'
-  AND next_run_at <= NOW(3)
-  AND (locked_at IS NULL OR lock_expires_at < NOW(3))
-  AND attempts < max_attempts
-ORDER BY next_run_at ASC
-LIMIT ?
-`
-
-type AcquireOutboxMessagesParams struct {
-	LockOwner sql.NullString
-	DATEADD   interface{}
-	Limit     int32
-}
-
-func (q *Queries) AcquireOutboxMessages(ctx context.Context, arg AcquireOutboxMessagesParams) error {
-	_, err := q.db.ExecContext(ctx, acquireOutboxMessages, arg.LockOwner, arg.DATEADD, arg.Limit)
-	return err
-}
-
-const cleanupExpiredOutboxLocks = `-- name: CleanupExpiredOutboxLocks :execresult
-UPDATE message_outbox
+const cleanupExpiredOutboxLocksByIDs = `-- name: CleanupExpiredOutboxLocksByIDs :execresult
+UPDATE message_outbox FORCE INDEX (PRIMARY)
 SET locked_at = NULL, lock_owner = NULL, lock_expires_at = NULL, updated_at = NOW(3)
-WHERE lock_expires_at < NOW(3)
-LIMIT ?
+WHERE id IN (/*SLICE:ids*/?)
+  AND lock_expires_at < NOW(3)
+ORDER BY id ASC
 `
 
-func (q *Queries) CleanupExpiredOutboxLocks(ctx context.Context, limit int32) (sql.Result, error) {
-	return q.db.ExecContext(ctx, cleanupExpiredOutboxLocks, limit)
+func (q *Queries) CleanupExpiredOutboxLocksByIDs(ctx context.Context, ids []int64) (sql.Result, error) {
+	query := cleanupExpiredOutboxLocksByIDs
+	var queryParams []interface{}
+	if len(ids) > 0 {
+		for _, v := range ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	return q.db.ExecContext(ctx, query, queryParams...)
 }
 
-const getLockedOutboxMessages = `-- name: GetLockedOutboxMessages :many
-SELECT id, message_id, service_name, message_type, destination, routing_key, headers, payload, status, attempts, max_attempts, next_run_at, locked_at, lock_owner, lock_expires_at, last_error, published_at, request_id, parent_message_id, created_at, updated_at FROM message_outbox
-WHERE lock_owner = ? AND lock_expires_at > NOW(3)
-ORDER BY next_run_at ASC
+const getLockedOutboxMessagesByIDs = `-- name: GetLockedOutboxMessagesByIDs :many
+SELECT id, message_id, service_name, message_type, destination, routing_key, headers, payload, status, attempts, max_attempts, next_run_at, locked_at, lock_owner, lock_expires_at, last_error, published_at, request_id, parent_message_id, created_at, updated_at FROM message_outbox FORCE INDEX (PRIMARY)
+WHERE id IN (/*SLICE:ids*/?)
+  AND lock_owner = ?
+  AND lock_expires_at > NOW(3)
+ORDER BY id ASC
 `
 
-func (q *Queries) GetLockedOutboxMessages(ctx context.Context, lockOwner sql.NullString) ([]MessageOutbox, error) {
-	rows, err := q.db.QueryContext(ctx, getLockedOutboxMessages, lockOwner)
+type GetLockedOutboxMessagesByIDsParams struct {
+	Ids       []int64
+	LockOwner sql.NullString
+}
+
+func (q *Queries) GetLockedOutboxMessagesByIDs(ctx context.Context, arg GetLockedOutboxMessagesByIDsParams) ([]MessageOutbox, error) {
+	query := getLockedOutboxMessagesByIDs
+	var queryParams []interface{}
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.LockOwner)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -97,6 +102,43 @@ func (q *Queries) GetLockedOutboxMessages(ctx context.Context, lockOwner sql.Nul
 	return items, nil
 }
 
+const lockOutboxMessagesByIDs = `-- name: LockOutboxMessagesByIDs :exec
+UPDATE message_outbox FORCE INDEX (PRIMARY)
+SET locked_at = NOW(3),
+    lock_owner = ?,
+    lock_expires_at = DATE_ADD(NOW(3), INTERVAL ? SECOND),
+    updated_at = NOW(3)
+WHERE id IN (/*SLICE:ids*/?)
+  AND status = 'pending'
+  AND next_run_at <= NOW(3)
+  AND (locked_at IS NULL OR lock_expires_at < NOW(3))
+  AND attempts < max_attempts
+ORDER BY id ASC
+`
+
+type LockOutboxMessagesByIDsParams struct {
+	LockOwner           sql.NullString
+	LockDurationSeconds interface{}
+	Ids                 []int64
+}
+
+func (q *Queries) LockOutboxMessagesByIDs(ctx context.Context, arg LockOutboxMessagesByIDsParams) error {
+	query := lockOutboxMessagesByIDs
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.LockOwner)
+	queryParams = append(queryParams, arg.LockDurationSeconds)
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	_, err := q.db.ExecContext(ctx, query, queryParams...)
+	return err
+}
+
 const markOutboxMessageFailed = `-- name: MarkOutboxMessageFailed :exec
 UPDATE message_outbox
 SET attempts = attempts + 1,
@@ -134,17 +176,128 @@ func (q *Queries) MarkOutboxMessagePublished(ctx context.Context, id int64) erro
 	return err
 }
 
-const purgePublishedOutboxMessages = `-- name: PurgePublishedOutboxMessages :execresult
+const purgePublishedOutboxMessagesByIDs = `-- name: PurgePublishedOutboxMessagesByIDs :execresult
 DELETE FROM message_outbox
-WHERE status = 'published' AND published_at < DATE_SUB(NOW(3), INTERVAL ? HOUR)
+WHERE id IN (/*SLICE:ids*/?)
+  AND status = 'published'
+  AND published_at < DATE_SUB(NOW(3), INTERVAL ? HOUR)
+ORDER BY id ASC
+`
+
+type PurgePublishedOutboxMessagesByIDsParams struct {
+	Ids            []int64
+	RetentionHours interface{}
+}
+
+func (q *Queries) PurgePublishedOutboxMessagesByIDs(ctx context.Context, arg PurgePublishedOutboxMessagesByIDsParams) (sql.Result, error) {
+	query := purgePublishedOutboxMessagesByIDs
+	var queryParams []interface{}
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.RetentionHours)
+	return q.db.ExecContext(ctx, query, queryParams...)
+}
+
+const selectExpiredOutboxLockIDs = `-- name: SelectExpiredOutboxLockIDs :many
+SELECT id FROM message_outbox
+WHERE lock_expires_at < NOW(3)
+ORDER BY id ASC
 LIMIT ?
 `
 
-type PurgePublishedOutboxMessagesParams struct {
-	DATESUB interface{}
-	Limit   int32
+func (q *Queries) SelectExpiredOutboxLockIDs(ctx context.Context, limit int32) ([]int64, error) {
+	rows, err := q.db.QueryContext(ctx, selectExpiredOutboxLockIDs, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
-func (q *Queries) PurgePublishedOutboxMessages(ctx context.Context, arg PurgePublishedOutboxMessagesParams) (sql.Result, error) {
-	return q.db.ExecContext(ctx, purgePublishedOutboxMessages, arg.DATESUB, arg.Limit)
+const selectOutboxMessageIDsForLock = `-- name: SelectOutboxMessageIDsForLock :many
+SELECT id FROM message_outbox
+WHERE status = 'pending'
+  AND next_run_at <= NOW(3)
+  AND (locked_at IS NULL OR lock_expires_at < NOW(3))
+  AND attempts < max_attempts
+ORDER BY next_run_at ASC, id ASC
+LIMIT ?
+`
+
+func (q *Queries) SelectOutboxMessageIDsForLock(ctx context.Context, limit int32) ([]int64, error) {
+	rows, err := q.db.QueryContext(ctx, selectOutboxMessageIDsForLock, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const selectPublishedOutboxMessageIDsForPurge = `-- name: SelectPublishedOutboxMessageIDsForPurge :many
+SELECT id FROM message_outbox
+WHERE status = 'published' AND published_at < DATE_SUB(NOW(3), INTERVAL ? HOUR)
+ORDER BY published_at ASC, id ASC
+LIMIT ?
+`
+
+type SelectPublishedOutboxMessageIDsForPurgeParams struct {
+	RetentionHours interface{}
+	Limit          int32
+}
+
+func (q *Queries) SelectPublishedOutboxMessageIDsForPurge(ctx context.Context, arg SelectPublishedOutboxMessageIDsForPurgeParams) ([]int64, error) {
+	rows, err := q.db.QueryContext(ctx, selectPublishedOutboxMessageIDsForPurge, arg.RetentionHours, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

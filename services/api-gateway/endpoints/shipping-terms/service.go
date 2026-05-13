@@ -8,6 +8,7 @@ import (
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	ownerutil "github.com/augno/api/services/api-gateway/internal/owner"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/appctx"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
@@ -17,7 +18,7 @@ import (
 
 type ShippingTermSvc interface {
 	ListShippingTerms(ctx context.Context, req *ListShippingTermsRequest) (*apiresource.List[apiresource.ShippingTerm], *apierror.APIError)
-	GetShippingTerm(ctx context.Context, req *GetShippingTermRequest) (*apiresource.ShippingTerm, *apierror.APIError)
+	GetShippingTerm(ctx context.Context, req *RetrieveShippingTermRequest) (*apiresource.ShippingTerm, *apierror.APIError)
 	CreateShippingTerm(ctx context.Context, req *CreateShippingTermRequest) (*apiresource.ShippingTerm, *apierror.APIError)
 	UpdateShippingTerm(ctx context.Context, req *UpdateShippingTermRequest) (*apiresource.ShippingTerm, *apierror.APIError)
 	DeleteShippingTerm(ctx context.Context, req *DeleteShippingTermRequest) (*apiresource.EmptyResource, *apierror.APIError)
@@ -52,9 +53,10 @@ func NewShippingTermSvc(config *ShippingTermSvcConfig) ShippingTermSvc {
 
 func (m *shippingTermSvcImpl) ListShippingTerms(ctx context.Context, req *ListShippingTermsRequest) (*apiresource.List[apiresource.ShippingTerm], *apierror.APIError) {
 	pbReq := &pb.ListShippingTermsRequest{
-		Cursor: req.Cursor,
-		Limit:  req.Limit,
-		Query:  req.Query,
+		Cursor:   req.Cursor,
+		Limit:    req.Limit,
+		Query:    req.Query,
+		Includes: appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, shippingTermSvcTracer, "service.shipping_terms.list", domain.ServiceName,
@@ -77,9 +79,10 @@ func (m *shippingTermSvcImpl) ListShippingTerms(ctx context.Context, req *ListSh
 	return ShippingTermListPresenter(resp, ownerAccount), nil
 }
 
-func (m *shippingTermSvcImpl) GetShippingTerm(ctx context.Context, req *GetShippingTermRequest) (*apiresource.ShippingTerm, *apierror.APIError) {
+func (m *shippingTermSvcImpl) GetShippingTerm(ctx context.Context, req *RetrieveShippingTermRequest) (*apiresource.ShippingTerm, *apierror.APIError) {
 	pbReq := &pb.GetShippingTermRequest{
-		Id: req.ShippingTermID,
+		Id:       req.ShippingTermID,
+		Includes: appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, shippingTermSvcTracer, "service.shipping_terms.get", domain.ServiceName,
@@ -101,6 +104,7 @@ func (m *shippingTermSvcImpl) CreateShippingTerm(ctx context.Context, req *Creat
 		Name:                        req.Name,
 		Type:                        string(req.Type),
 		FreeShippingServiceLevelIds: req.FreeShippingServiceLevelIDs,
+		Includes:                    appctx.GetRequestedIncludeKeys(ctx),
 	}
 	if req.FlatRate != nil {
 		pbReq.FlatRate = &pb.QuantityInput{
@@ -131,8 +135,9 @@ func (m *shippingTermSvcImpl) CreateShippingTerm(ctx context.Context, req *Creat
 
 func (m *shippingTermSvcImpl) UpdateShippingTerm(ctx context.Context, req *UpdateShippingTermRequest) (*apiresource.ShippingTerm, *apierror.APIError) {
 	pbReq := &pb.UpdateShippingTermRequest{
-		Id:   req.ShippingTermID,
-		Name: req.Name,
+		Id:       req.ShippingTermID,
+		Name:     req.Name,
+		Includes: appctx.GetRequestedIncludeKeys(ctx),
 	}
 	if req.Type != nil {
 		t := string(*req.Type)

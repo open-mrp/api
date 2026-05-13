@@ -28,46 +28,82 @@ func VolumeDiscountPresenter(d *pb.VolumeDiscountInfo) apiresource.VolumeDiscoun
 	customerGroups := make([]apiresource.AccountGroup, len(d.CustomerGroups))
 	for i, cg := range d.CustomerGroups {
 		customerGroups[i] = apiresource.AccountGroup{
-			ID:     cg.AccountGroupId,
-			Object: constants.ObjectTypeAccountGroup,
-			Name:   cg.Name,
+			ID:        cg.AccountGroupId,
+			Object:    constants.ObjectTypeAccountGroup,
+			Name:      cg.Name,
+			CreatedAt: grpcutil.TimestampToTime(cg.CreatedAt),
+			UpdatedAt: grpcutil.TimestampToTime(cg.UpdatedAt),
+		}
+		if cg.CommissionPolicy != nil {
+			customerGroups[i].CommissionPolicy = constants.CommissionPolicy(*cg.CommissionPolicy)
+		}
+		if cg.FreightPolicy != nil {
+			customerGroups[i].FreightPolicy = constants.FreightPolicy(*cg.FreightPolicy)
+		}
+		if cg.Type != nil {
+			customerGroups[i].Type = constants.AccountGroupType(*cg.Type)
 		}
 	}
 
 	productLines := make([]apiresource.ProductLine, len(d.ProductLines))
 	for i, pl := range d.ProductLines {
 		productLines[i] = apiresource.ProductLine{
-			ID:     pl.Id,
-			Object: constants.ObjectTypeProductLine,
-			Name:   pl.Name,
+			ID:        pl.Id,
+			Object:    constants.ObjectTypeProductLine,
+			Name:      pl.Name,
+			CreatedAt: grpcutil.TimestampToTime(pl.CreatedAt),
+			UpdatedAt: grpcutil.TimestampToTime(pl.UpdatedAt),
+		}
+		if pl.CommissionPolicy != nil {
+			productLines[i].CommissionPolicy = constants.CommissionPolicy(*pl.CommissionPolicy)
+		}
+		if pl.FreightPolicy != nil {
+			productLines[i].FreightPolicy = constants.FreightPolicy(*pl.FreightPolicy)
 		}
 	}
 
 	categories := make([]apiresource.ItemCategory, len(d.Categories))
 	for i, cat := range d.Categories {
 		categories[i] = apiresource.ItemCategory{
-			ID:     cat.Id,
-			Object: constants.ObjectTypeItemCategory,
-			Name:   cat.Name,
+			ID:        cat.Id,
+			Object:    constants.ObjectTypeItemCategory,
+			Name:      cat.Name,
+			CreatedAt: grpcutil.TimestampToTime(cat.CreatedAt),
+			UpdatedAt: grpcutil.TimestampToTime(cat.UpdatedAt),
+		}
+		if cat.Type != nil {
+			categories[i].Type = constants.ItemCategoryType(*cat.Type)
 		}
 	}
 
 	attributes := make([]apiresource.Attribute, len(d.Attributes))
 	for i, attr := range d.Attributes {
 		attributes[i] = apiresource.Attribute{
-			ID:     attr.Id,
-			Object: constants.ObjectTypeAttribute,
-			Value:  attr.Name,
+			ID:        attr.Id,
+			Object:    constants.ObjectTypeAttribute,
+			Value:     attr.Name,
+			CreatedAt: grpcutil.TimestampToTime(attr.CreatedAt),
+			UpdatedAt: grpcutil.TimestampToTime(attr.UpdatedAt),
+		}
+		if attr.ColorCode != nil {
+			attributes[i].ColorCode = constants.Color(*attr.ColorCode)
 		}
 	}
 
 	units := make([]apiresource.Unit, len(d.AcceptableUnits))
 	for i, u := range d.AcceptableUnits {
 		units[i] = apiresource.Unit{
-			ID:           u.Id,
-			Object:       constants.ObjectTypeUnit,
-			Name:         u.Name,
-			Abbreviation: u.Abbreviation,
+			ID:                u.Id,
+			Object:            constants.ObjectTypeUnit,
+			Name:              u.Name,
+			Abbreviation:      u.Abbreviation,
+			Type:              constants.UnitType(u.Type),
+			RatioNumerator:    u.RatioNumerator,
+			RatioDenominator:  u.RatioDenominator,
+			OffsetNumerator:   u.OffsetNumerator,
+			OffsetDenominator: u.OffsetDenominator,
+			CreatedAt:         grpcutil.TimestampToTime(u.CreatedAt),
+			UpdatedAt:         grpcutil.TimestampToTime(u.UpdatedAt),
 		}
 	}
 

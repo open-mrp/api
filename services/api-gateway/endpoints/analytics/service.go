@@ -205,8 +205,8 @@ func (m *analyticsSvcImpl) AnalyzeManufacturingBatch(ctx context.Context, req *A
 func (m *analyticsSvcImpl) AnalyzeOrders(ctx context.Context, req *AnalyzeOrdersRequest) (*apiresource.AnalyzeOrdersResponse, *apierror.APIError) {
 	// Determine if the caller is a sales rep from identity, matching dashboard behavior.
 	var isSalesRep bool
-	if identity, ok := appctx.GetIdentityFromContext(ctx); ok && identity != nil && identity.Actor != nil && identity.Actor.RoleTypeCode != nil {
-		isSalesRep = *identity.Actor.RoleTypeCode == string(constants.RoleTypeCodeSalesRep)
+	if identity, ok := appctx.GetIdentityFromContext(ctx); ok && identity != nil && identity.Actor != nil && identity.Actor.RoleType != nil {
+		isSalesRep = *identity.Actor.RoleType == string(constants.RoleTypeSalesRep)
 	}
 
 	pbReq := &pb.AnalyzeOrdersRequest{

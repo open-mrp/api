@@ -11,8 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const itemsPath = "/v1/catalog/items"
-
 func TestListItems_ReturnsSeededData(t *testing.T) {
 	t.Parallel()
 	list, _, err := apiClient.GetList(itemsPath, nil)
@@ -99,4 +97,124 @@ func TestListItems_SearchNoResults(t *testing.T) {
 	list, _, err := apiClient.GetList(itemsPath, url.Values{"q": {"zzzznotanitem99999"}})
 	require.NoError(t, err)
 	assertEmptyListData(t, list.Data, "Nonsense search should return empty data")
+}
+
+func TestListItems_Pagination(t *testing.T) {
+	t.Parallel()
+	page1, _, err := apiClient.GetList(itemsPath, url.Values{"limit": {"1"}})
+	require.NoError(t, err)
+	require.Len(t, page1.Data, 1)
+	require.True(t, page1.PageInfo.HasNextPage, "seeded catalog should have more than one item for pagination")
+	require.NotNil(t, page1.PageInfo.NextCursor)
+
+	page2, _, err := apiClient.GetList(itemsPath, url.Values{
+		"limit":  {"1"},
+		"cursor": {*page1.PageInfo.NextCursor},
+	})
+	require.NoError(t, err)
+	require.Len(t, page2.Data, 1)
+
+	id1 := DataItemField(page1.Data[0], "id")
+	id2 := DataItemField(page2.Data[0], "id")
+	assert.NotEqual(t, id1, id2, "cursor pages should return different items")
+}
+
+func TestListItems_FilterByProductLine(t *testing.T) {
+	t.Parallel()
+	list, _, err := apiClient.GetList(itemsPath, url.Values{
+		"product_line_ids": {SeedProductLineID},
+	})
+	require.NoError(t, err)
+	assert.GreaterOrEqual(t, len(list.Data), 1, "Filter by Socks product line should return at least 1 result")
+}
+
+func TestListItems_FilterByProductLine_NoResults(t *testing.T) {
+	t.Parallel()
+	list, _, err := apiClient.GetList(itemsPath, url.Values{
+		"product_line_ids": {"pdln_00000000000000000000000000"},
+	})
+	require.NoError(t, err)
+	assertEmptyListData(t, list.Data, "Nonsense product line filter should return empty data")
+}
+
+func TestListItems_FilterByCustomer(t *testing.T) {
+	t.Parallel()
+	list, _, err := apiClient.GetList(itemsPath, url.Values{
+		"customer_ids": {SeedCustomerAccountID},
+	})
+	require.NoError(t, err)
+	assert.GreaterOrEqual(t, len(list.Data), 1, "Filter by seeded customer should return at least 1 result (customer has Socks product line access)")
+}
+
+func TestListItems_FilterByCustomer_NoResults(t *testing.T) {
+	t.Parallel()
+	list, _, err := apiClient.GetList(itemsPath, url.Values{
+		"customer_ids": {"ac_00000000000000000000000000"},
+	})
+	require.NoError(t, err)
+	assertEmptyListData(t, list.Data, "Nonsense customer filter should return empty data")
+}
+
+func TestListItems_FilterByCategoryWithPagination(t *testing.T) {
+	t.Parallel()
+
+	// Page 1: limit=1 with category filter — verifies filters apply on first page.
+	page1, _, err := apiClient.GetList(itemsPath, url.Values{
+		"category_ids": {SeedItemCategoryID},
+		"limit":        {"1"},
+	})
+	require.NoError(t, err)
+	require.Len(t, page1.Data, 1, "First page with category filter should have exactly 1 item")
+
+	if !page1.PageInfo.HasNextPage || page1.PageInfo.NextCursor == nil {
+		// Only one item in the category — still confirms the filter worked.
+		return
+	}
+
+	// Page 2: same category filter with cursor — verifies filters persist across pages.
+	page2, _, err := apiClient.GetList(itemsPath, url.Values{
+		"category_ids": {SeedItemCategoryID},
+		"limit":        {"1"},
+		"cursor":       {*page1.PageInfo.NextCursor},
+	})
+	require.NoError(t, err)
+	require.Len(t, page2.Data, 1, "Second page with category filter should have exactly 1 item")
+
+	id1 := DataItemField(page1.Data[0], "id")
+	id2 := DataItemField(page2.Data[0], "id")
+	assert.NotEqual(t, id1, id2, "Cursor pages should return different items")
+}
+
+func TestListItems_SubassemblyFilterInitialOnly_ReturnsInitialPartsOnly(t *testing.T) {
+	t.Parallel()
+
+	// Collect every item returned by the filter across all cursor pages.
+	skus := map[string]struct{}{}
+	cursor := ""
+	for {
+		params := url.Values{
+			"types[]":            {"part"},
+			"subassembly_filter": {"initial_only"},
+			"limit":              {"500"},
+		}
+		if cursor != "" {
+			params.Set("cursor", cursor)
+		}
+		list, _, err := apiClient.GetList(itemsPath, params)
+		require.NoError(t, err)
+		for _, item := range list.Data {
+			skus[DataItemField(item, "sku")] = struct{}{}
+		}
+		if !list.PageInfo.HasNextPage || list.PageInfo.NextCursor == nil {
+			break
+		}
+		cursor = *list.PageInfo.NextCursor
+	}
+
+	// LKN and SKN are root-step items (Knit Large / Knit Small are at the start of their BOM chains).
+	assert.Contains(t, skus, SeedLknItemSKU, "LKN (Large Knitted Sock) must appear in initial_only results")
+	assert.Contains(t, skus, SeedSknItemSKU, "SKN (Small Knitted Sock) must appear in initial_only results")
+
+	// LSN is produced by Sew Large Sock, which is downstream of Knit Large Sock, so it must not appear.
+	assert.NotContains(t, skus, SeedLsnItemSKU, "LSN (Large Sewn Sock) must NOT appear: it is downstream of Knit Large Sock")
 }

@@ -3,28 +3,37 @@ package domain
 import (
 	"time"
 
+	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/pagination"
 )
 
 // TerritorySalesRep represents the sales rep sub-resource within a territory.
 type TerritorySalesRep struct {
-	ID    string
-	Name  *string
-	Email *string
+	ID        string
+	Name      *string
+	Email     *string
+	Status    *constants.AccountUserStatus
+	CreatedAt *time.Time
+	UpdatedAt *time.Time
 }
 
 // TerritoryProductLine represents the product line sub-resource within a territory.
 type TerritoryProductLine struct {
-	ID   string
-	Name string
+	ID               string
+	Name             string
+	CommissionPolicy *constants.CommissionPolicy
+	FreightPolicy    *constants.FreightPolicy
+	CreatedAt        *time.Time
+	UpdatedAt        *time.Time
 }
 
 // Territory represents a sales rep territory assignment.
 type Territory struct {
 	ID           string
-	State        string                `audit:"state"`
-	StartZipcode *int32                `audit:"start_zipcode"`
-	EndZipcode   *int32                `audit:"end_zipcode"`
+	State        string `audit:"state"`
+	StartZipcode *int32 `audit:"start_zipcode"`
+	EndZipcode   *int32 `audit:"end_zipcode"`
+	SalesRepID   string
 	SalesRep     *TerritorySalesRep    `audit:"sales_rep"`
 	ProductLine  *TerritoryProductLine `audit:"product_line"`
 	CreatedAt    time.Time
@@ -37,6 +46,7 @@ type ListTerritoriesParams struct {
 	Cursor    *string
 	Limit     int32
 	Query     *string
+	Includes  []string
 }
 
 // ListTerritoriesResult contains the result of listing territories.
@@ -49,6 +59,7 @@ type ListTerritoriesResult struct {
 type GetTerritoryParams struct {
 	AccountID   string
 	TerritoryID string
+	Includes    []string
 }
 
 // CreateTerritoryParams contains the parameters for creating a territory.
@@ -59,6 +70,7 @@ type CreateTerritoryParams struct {
 	EndZipcode    *int32
 	SalesRepID    string
 	ProductLineID *string
+	Includes      []string
 }
 
 // UpdateTerritoryParams contains the parameters for updating a territory.
@@ -73,6 +85,7 @@ type UpdateTerritoryParams struct {
 	ClearProductLine  bool
 	ClearStartZipcode bool
 	ClearEndZipcode   bool
+	Includes          []string
 }
 
 // DeleteTerritoryParams contains the parameters for deleting a territory.

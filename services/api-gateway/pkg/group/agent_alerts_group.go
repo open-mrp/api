@@ -41,7 +41,7 @@ func (*AgentAlertsEndpointGroup) Materialize(config *AgentAlertsEndpointGroupCon
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		(&agentalertep.ListAlertsEndpoint{}).Materialize().WithService(inner, alertSvc),
-		(&agentalertep.GetAlertEndpoint{}).Materialize().WithService(inner, alertSvc),
+		(&agentalertep.RetrieveAlertEndpoint{}).Materialize().WithService(inner, alertSvc),
 		(&agentalertep.AcknowledgeAlertEndpoint{}).Materialize().WithService(inner, alertSvc),
 	}
 

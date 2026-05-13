@@ -72,6 +72,10 @@ func shipmentSummaryToProto(s *domain.ShipmentSummary) *pb.ShipmentSummaryInfo {
 	if s.CustomerCommissionPolicy != nil {
 		info.CustomerCommissionPolicy = s.CustomerCommissionPolicy
 	}
+	info.CustomerCreatedAt = timestamppb.New(s.CustomerCreatedAt)
+	info.CustomerUpdatedAt = timestamppb.New(s.CustomerUpdatedAt)
+	info.SalesOrderCreatedAt = timestamppb.New(s.SalesOrderCreatedAt)
+	info.SalesOrderUpdatedAt = timestamppb.New(s.SalesOrderUpdatedAt)
 
 	return info
 }
@@ -113,6 +117,12 @@ func shipmentToProto(s *domain.Shipment) *pb.ShipmentInfo {
 	}
 	if s.CarrierIsPortalEnabled != nil {
 		info.CarrierIsPortalEnabled = s.CarrierIsPortalEnabled
+	}
+	if s.CarrierCreatedAt != nil {
+		info.CarrierCreatedAt = timestamppb.New(*s.CarrierCreatedAt)
+	}
+	if s.CarrierUpdatedAt != nil {
+		info.CarrierUpdatedAt = timestamppb.New(*s.CarrierUpdatedAt)
 	}
 	if s.ServiceLevelID != nil {
 		info.ServiceLevelId = s.ServiceLevelID
@@ -156,6 +166,12 @@ func shipmentToProto(s *domain.Shipment) *pb.ShipmentInfo {
 	if s.ServiceLevelToken != nil {
 		info.ServiceLevelToken = s.ServiceLevelToken
 	}
+	if s.ServiceLevelCreatedAt != nil {
+		info.ServiceLevelCreatedAt = timestamppb.New(*s.ServiceLevelCreatedAt)
+	}
+	if s.ServiceLevelUpdatedAt != nil {
+		info.ServiceLevelUpdatedAt = timestamppb.New(*s.ServiceLevelUpdatedAt)
+	}
 	if s.CustomerStatusCode != nil {
 		info.CustomerStatusCode = s.CustomerStatusCode
 	}
@@ -167,6 +183,37 @@ func shipmentToProto(s *domain.Shipment) *pb.ShipmentInfo {
 	}
 	if s.BillingAddressZip != nil {
 		info.BillingAddressZip = s.BillingAddressZip
+	}
+	info.CustomerCreatedAt = timestamppb.New(s.CustomerCreatedAt)
+	info.CustomerUpdatedAt = timestamppb.New(s.CustomerUpdatedAt)
+	info.SalesOrderCreatedAt = timestamppb.New(s.SalesOrderCreatedAt)
+	info.SalesOrderUpdatedAt = timestamppb.New(s.SalesOrderUpdatedAt)
+	if s.ShippingAddressCreatedAt != nil {
+		info.ShippingAddressCreatedAt = timestamppb.New(*s.ShippingAddressCreatedAt)
+	}
+	if s.ShippingAddressUpdatedAt != nil {
+		info.ShippingAddressUpdatedAt = timestamppb.New(*s.ShippingAddressUpdatedAt)
+	}
+	if s.ShippedByStatusCode != nil {
+		info.ShippedByStatus = s.ShippedByStatusCode
+	}
+	if s.ShippedByCreatedAt != nil {
+		info.ShippedByCreatedAt = timestamppb.New(*s.ShippedByCreatedAt)
+	}
+	if s.ShippedByUpdatedAt != nil {
+		info.ShippedByUpdatedAt = timestamppb.New(*s.ShippedByUpdatedAt)
+	}
+	if s.InvoiceCreatedAt != nil {
+		info.InvoiceCreatedAt = timestamppb.New(*s.InvoiceCreatedAt)
+	}
+	if s.InvoiceUpdatedAt != nil {
+		info.InvoiceUpdatedAt = timestamppb.New(*s.InvoiceUpdatedAt)
+	}
+	if s.PickCreatedAt != nil {
+		info.PickCreatedAt = timestamppb.New(*s.PickCreatedAt)
+	}
+	if s.PickUpdatedAt != nil {
+		info.PickUpdatedAt = timestamppb.New(*s.PickUpdatedAt)
 	}
 
 	if s.Lines != nil {
@@ -254,6 +301,14 @@ func shippingCaseDetailToProto(c *domain.ShippingCase) *pb.ShippingCaseDetailInf
 	}
 	if c.ShippedAt != nil {
 		info.ShippedAt = timestamppb.New(*c.ShippedAt)
+	}
+	portalEnabled := c.CarrierIsPortalEnabled
+	info.CarrierIsPortalEnabled = &portalEnabled
+	if !c.CarrierCreatedAt.IsZero() {
+		info.CarrierCreatedAt = timestamppb.New(c.CarrierCreatedAt)
+	}
+	if !c.CarrierUpdatedAt.IsZero() {
+		info.CarrierUpdatedAt = timestamppb.New(c.CarrierUpdatedAt)
 	}
 
 	return info
@@ -416,6 +471,7 @@ func (h *shippingGRPCHandler) UpdateShipment(ctx context.Context, req *pb.Update
 
 	params := domain.UpdateShipmentParams{
 		ShipmentID: req.Id,
+		Includes:   req.Includes,
 	}
 
 	if req.Note != nil {
@@ -474,6 +530,7 @@ func (h *shippingGRPCHandler) ShipShipment(ctx context.Context, req *pb.ShipShip
 	params := domain.ShipShipmentParams{
 		ShipmentID:    req.Id,
 		EmailCustomer: req.EmailCustomer,
+		Includes:      req.Includes,
 	}
 
 	shipment, apiErr := h.shipmentSvc.ShipShipment(ctx, params)

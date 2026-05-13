@@ -58,6 +58,7 @@ SELECT
     d.notes,
     d.location_id,
     sl.name AS location_name,
+    sl.storage_location_type_code AS location_type_code,
     d.account_id,
     d.created_at,
     d.updated_at
@@ -73,14 +74,15 @@ type GetDepartmentParams struct {
 }
 
 type GetDepartmentRow struct {
-	ID           string
-	Name         string
-	Notes        sql.NullString
-	LocationID   sql.NullString
-	LocationName sql.NullString
-	AccountID    string
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID               string
+	Name             string
+	Notes            sql.NullString
+	LocationID       sql.NullString
+	LocationName     sql.NullString
+	LocationTypeCode sql.NullString
+	AccountID        string
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
 }
 
 func (q *Queries) GetDepartment(ctx context.Context, arg GetDepartmentParams) (GetDepartmentRow, error) {
@@ -92,11 +94,61 @@ func (q *Queries) GetDepartment(ctx context.Context, arg GetDepartmentParams) (G
 		&i.Notes,
 		&i.LocationID,
 		&i.LocationName,
+		&i.LocationTypeCode,
 		&i.AccountID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const getDepartmentsByIDs = `-- name: GetDepartmentsByIDs :many
+SELECT id, name, created_at, updated_at FROM department WHERE id IN (/*SLICE:ids*/?)
+`
+
+type GetDepartmentsByIDsRow struct {
+	ID        string
+	Name      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+func (q *Queries) GetDepartmentsByIDs(ctx context.Context, ids []string) ([]GetDepartmentsByIDsRow, error) {
+	query := getDepartmentsByIDs
+	var queryParams []interface{}
+	if len(ids) > 0 {
+		for _, v := range ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetDepartmentsByIDsRow
+	for rows.Next() {
+		var i GetDepartmentsByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const insertDepartment = `-- name: InsertDepartment :exec
@@ -145,6 +197,7 @@ SELECT
     d.notes,
     d.location_id,
     sl.name AS location_name,
+    sl.storage_location_type_code AS location_type_code,
     d.account_id,
     d.created_at,
     d.updated_at
@@ -172,14 +225,15 @@ type ListDepartmentsBackwardParams struct {
 }
 
 type ListDepartmentsBackwardRow struct {
-	ID           string
-	Name         string
-	Notes        sql.NullString
-	LocationID   sql.NullString
-	LocationName sql.NullString
-	AccountID    string
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID               string
+	Name             string
+	Notes            sql.NullString
+	LocationID       sql.NullString
+	LocationName     sql.NullString
+	LocationTypeCode sql.NullString
+	AccountID        string
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
 }
 
 func (q *Queries) ListDepartmentsBackward(ctx context.Context, arg ListDepartmentsBackwardParams) ([]ListDepartmentsBackwardRow, error) {
@@ -205,6 +259,7 @@ func (q *Queries) ListDepartmentsBackward(ctx context.Context, arg ListDepartmen
 			&i.Notes,
 			&i.LocationID,
 			&i.LocationName,
+			&i.LocationTypeCode,
 			&i.AccountID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -229,6 +284,7 @@ SELECT
     d.notes,
     d.location_id,
     sl.name AS location_name,
+    sl.storage_location_type_code AS location_type_code,
     d.account_id,
     d.created_at,
     d.updated_at
@@ -257,14 +313,15 @@ type ListDepartmentsForwardParams struct {
 }
 
 type ListDepartmentsForwardRow struct {
-	ID           string
-	Name         string
-	Notes        sql.NullString
-	LocationID   sql.NullString
-	LocationName sql.NullString
-	AccountID    string
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID               string
+	Name             string
+	Notes            sql.NullString
+	LocationID       sql.NullString
+	LocationName     sql.NullString
+	LocationTypeCode sql.NullString
+	AccountID        string
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
 }
 
 func (q *Queries) ListDepartmentsForward(ctx context.Context, arg ListDepartmentsForwardParams) ([]ListDepartmentsForwardRow, error) {
@@ -291,6 +348,7 @@ func (q *Queries) ListDepartmentsForward(ctx context.Context, arg ListDepartment
 			&i.Notes,
 			&i.LocationID,
 			&i.LocationName,
+			&i.LocationTypeCode,
 			&i.AccountID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -309,7 +367,7 @@ func (q *Queries) ListDepartmentsForward(ctx context.Context, arg ListDepartment
 }
 
 const listMachinesByDepartmentID = `-- name: ListMachinesByDepartmentID :many
-SELECT m.id, m.name
+SELECT m.id, m.name, m.serial_number, m.created_at, m.updated_at
 FROM machine m
 JOIN department d ON d.id = m.department_id
 WHERE m.department_id = ?
@@ -323,8 +381,11 @@ type ListMachinesByDepartmentIDParams struct {
 }
 
 type ListMachinesByDepartmentIDRow struct {
-	ID   string
-	Name string
+	ID           string
+	Name         string
+	SerialNumber string
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
 }
 
 func (q *Queries) ListMachinesByDepartmentID(ctx context.Context, arg ListMachinesByDepartmentIDParams) ([]ListMachinesByDepartmentIDRow, error) {
@@ -336,7 +397,13 @@ func (q *Queries) ListMachinesByDepartmentID(ctx context.Context, arg ListMachin
 	var items []ListMachinesByDepartmentIDRow
 	for rows.Next() {
 		var i ListMachinesByDepartmentIDRow
-		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.SerialNumber,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -351,7 +418,7 @@ func (q *Queries) ListMachinesByDepartmentID(ctx context.Context, arg ListMachin
 }
 
 const listScanningStationsByDepartmentID = `-- name: ListScanningStationsByDepartmentID :many
-SELECT id, name
+SELECT id, name, scanning_station_type_code, created_at, updated_at
 FROM scanning_station
 WHERE department_id = ?
 AND account_id = ?
@@ -364,8 +431,11 @@ type ListScanningStationsByDepartmentIDParams struct {
 }
 
 type ListScanningStationsByDepartmentIDRow struct {
-	ID   string
-	Name string
+	ID                      string
+	Name                    string
+	ScanningStationTypeCode string
+	CreatedAt               time.Time
+	UpdatedAt               time.Time
 }
 
 func (q *Queries) ListScanningStationsByDepartmentID(ctx context.Context, arg ListScanningStationsByDepartmentIDParams) ([]ListScanningStationsByDepartmentIDRow, error) {
@@ -377,7 +447,13 @@ func (q *Queries) ListScanningStationsByDepartmentID(ctx context.Context, arg Li
 	var items []ListScanningStationsByDepartmentIDRow
 	for rows.Next() {
 		var i ListScanningStationsByDepartmentIDRow
-		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.ScanningStationTypeCode,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

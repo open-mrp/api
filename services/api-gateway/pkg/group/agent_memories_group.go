@@ -41,7 +41,7 @@ func (*AgentMemoriesEndpointGroup) Materialize(config *AgentMemoriesEndpointGrou
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		(&agentmemoryep.ListMemoriesEndpoint{}).Materialize().WithService(inner, memorySvc),
-		(&agentmemoryep.GetMemoryEndpoint{}).Materialize().WithService(inner, memorySvc),
+		(&agentmemoryep.RetrieveMemoryEndpoint{}).Materialize().WithService(inner, memorySvc),
 		(&agentmemoryep.CreateMemoryEndpoint{}).Materialize().WithService(inner, memorySvc),
 		(&agentmemoryep.UpdateMemoryEndpoint{}).Materialize().WithService(inner, memorySvc),
 		(&agentmemoryep.DeleteMemoryEndpoint{}).Materialize().WithService(inner, memorySvc),

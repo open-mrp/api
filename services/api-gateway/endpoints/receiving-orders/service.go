@@ -18,7 +18,7 @@ var receivingOrderSvcTracer = tracing.GetTracer("api-gateway.endpoints.receiving
 
 type ReceivingOrderSvc interface {
 	ListReceivingOrders(ctx context.Context, req *ListReceivingOrdersRequest) (*apiresource.List[apiresource.ReceivingOrderSummary], *apierror.APIError)
-	GetReceivingOrder(ctx context.Context, req *GetReceivingOrderRequest) (*apiresource.ReceivingOrder, *apierror.APIError)
+	GetReceivingOrder(ctx context.Context, req *RetrieveReceivingOrderRequest) (*apiresource.ReceivingOrder, *apierror.APIError)
 	StockReceivingOrder(ctx context.Context, req *StockReceivingOrderRequest) (*apiresource.ReceivingOrder, *apierror.APIError)
 	ReceiveReceivingOrder(ctx context.Context, req *ReceiveReceivingOrderRequest) (*apiresource.ReceivingOrder, *apierror.APIError)
 	VoidReceivingOrder(ctx context.Context, req *VoidReceivingOrderRequest) (*apiresource.ReceivingOrder, *apierror.APIError)
@@ -83,7 +83,7 @@ func (m *receivingOrderSvcImpl) ListReceivingOrders(ctx context.Context, req *Li
 	return ReceivingOrderListPresenter(resp), nil
 }
 
-func (m *receivingOrderSvcImpl) GetReceivingOrder(ctx context.Context, req *GetReceivingOrderRequest) (*apiresource.ReceivingOrder, *apierror.APIError) {
+func (m *receivingOrderSvcImpl) GetReceivingOrder(ctx context.Context, req *RetrieveReceivingOrderRequest) (*apiresource.ReceivingOrder, *apierror.APIError) {
 	pbReq := &pb.GetReceivingOrderRequest{
 		Id: req.ReceivingOrderID,
 	}

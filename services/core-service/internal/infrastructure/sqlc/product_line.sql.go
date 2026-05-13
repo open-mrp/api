@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"strings"
 	"time"
 )
 
@@ -103,12 +104,87 @@ func (q *Queries) GetProductLine(ctx context.Context, arg GetProductLineParams) 
 	return i, err
 }
 
+const getProductLinesByIDs = `-- name: GetProductLinesByIDs :many
+SELECT
+    pl.id,
+    pl.name,
+    pl.description,
+    pl.notes,
+    pl.is_commission_exempt,
+    pl.is_freight_exempt,
+    pl.unit_group_id,
+    pl.account_id,
+    pl.created_at,
+    pl.updated_at
+FROM product_line pl
+WHERE pl.id IN (/*SLICE:ids*/?)
+`
+
+type GetProductLinesByIDsRow struct {
+	ID                 string
+	Name               string
+	Description        sql.NullString
+	Notes              sql.NullString
+	IsCommissionExempt bool
+	IsFreightExempt    bool
+	UnitGroupID        string
+	AccountID          sql.NullString
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+}
+
+func (q *Queries) GetProductLinesByIDs(ctx context.Context, ids []string) ([]GetProductLinesByIDsRow, error) {
+	query := getProductLinesByIDs
+	var queryParams []interface{}
+	if len(ids) > 0 {
+		for _, v := range ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetProductLinesByIDsRow
+	for rows.Next() {
+		var i GetProductLinesByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Description,
+			&i.Notes,
+			&i.IsCommissionExempt,
+			&i.IsFreightExempt,
+			&i.UnitGroupID,
+			&i.AccountID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getUnitGroupForProductLine = `-- name: GetUnitGroupForProductLine :one
 SELECT
     ug.id,
     ug.name,
     ug.base_unit_id,
-    ug.unit_type_code
+    ug.unit_type_code,
+    ug.created_at,
+    ug.updated_at
 FROM unit_group ug
 WHERE ug.id = ?
 `
@@ -118,6 +194,8 @@ type GetUnitGroupForProductLineRow struct {
 	Name         string
 	BaseUnitID   string
 	UnitTypeCode string
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
 }
 
 func (q *Queries) GetUnitGroupForProductLine(ctx context.Context, id string) (GetUnitGroupForProductLineRow, error) {
@@ -128,6 +206,8 @@ func (q *Queries) GetUnitGroupForProductLine(ctx context.Context, id string) (Ge
 		&i.Name,
 		&i.BaseUnitID,
 		&i.UnitTypeCode,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }

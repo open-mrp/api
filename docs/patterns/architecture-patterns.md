@@ -104,6 +104,8 @@ Key rules:
 - Only **non-transient** errors are cached (transient errors allow the client to retry).
 - Success responses are cached **inside** the transaction so caching and business state are committed atomically.
 
+For RPCs backing **HTTP `POST` and `PATCH`** from the API gateway, gRPC handlers must also call `contracts.WithIdempotencyTracking` (see [`shared/contracts/idempotency_interceptor.go`](../../shared/contracts/idempotency_interceptor.go)) so client idempotency keys align with this service-layer pattern; repository-wide guidance lives in the root `AGENTS.md`.
+
 ### Construction
 
 Services use a config struct for dependency injection:

@@ -36,7 +36,7 @@ type CreateRoleEndpoint struct{}
 func (e *CreateRoleEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateRoleRequest, *apiresource.Role] {
 	return &apiendpoint.APIEndpoint[*CreateRoleRequest, *apiresource.Role]{
 		Title:             "Create Role",
-		Description:       "Creates a custom role with the specified permissions.",
+		Description:       "Creates a new role with the specified permissions.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/roles",

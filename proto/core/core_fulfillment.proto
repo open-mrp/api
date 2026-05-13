@@ -37,12 +37,15 @@ message MachineInfo {
   optional string department_name = 6;
   google.protobuf.Timestamp created_at = 7;
   google.protobuf.Timestamp updated_at = 8;
+  optional google.protobuf.Timestamp department_created_at = 9;
+  optional google.protobuf.Timestamp department_updated_at = 10;
 }
 
 message ListMachinesRequest {
   optional string cursor = 1;
   int32 limit = 2;
   optional string query = 3;
+  repeated string includes = 4;
 }
 
 message ListMachinesResponse {
@@ -52,6 +55,7 @@ message ListMachinesResponse {
 
 message GetMachineRequest {
   string id = 1;
+  repeated string includes = 2;
 }
 
 message GetMachineResponse {
@@ -63,6 +67,7 @@ message CreateMachineRequest {
   string serial_number = 2;
   optional string notes = 3;
   string department_id = 4;
+  repeated string includes = 5;
 }
 
 message CreateMachineResponse {
@@ -74,6 +79,7 @@ message UpdateMachineRequest {
   optional string name = 2;
   optional string serial_number = 3;
   optional string notes = 4;
+  repeated string includes = 5;
 }
 
 message UpdateMachineResponse {

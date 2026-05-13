@@ -1254,8 +1254,39 @@ type SalesOrderInfo struct {
 	ServiceLevelToken           *string                `protobuf:"bytes,64,opt,name=service_level_token,json=serviceLevelToken,proto3,oneof" json:"service_level_token,omitempty"`
 	CustomerStatusCode          *string                `protobuf:"bytes,65,opt,name=customer_status_code,json=customerStatusCode,proto3,oneof" json:"customer_status_code,omitempty"`
 	CustomerCommissionPolicy    *string                `protobuf:"bytes,66,opt,name=customer_commission_policy,json=customerCommissionPolicy,proto3,oneof" json:"customer_commission_policy,omitempty"`
-	unknownFields               protoimpl.UnknownFields
-	sizeCache                   protoimpl.SizeCache
+	ServiceLevelCreatedAt       *timestamppb.Timestamp `protobuf:"bytes,67,opt,name=service_level_created_at,json=serviceLevelCreatedAt,proto3,oneof" json:"service_level_created_at,omitempty"`
+	ServiceLevelUpdatedAt       *timestamppb.Timestamp `protobuf:"bytes,68,opt,name=service_level_updated_at,json=serviceLevelUpdatedAt,proto3,oneof" json:"service_level_updated_at,omitempty"`
+	CarrierCreatedAt            *timestamppb.Timestamp `protobuf:"bytes,69,opt,name=carrier_created_at,json=carrierCreatedAt,proto3,oneof" json:"carrier_created_at,omitempty"`
+	CarrierUpdatedAt            *timestamppb.Timestamp `protobuf:"bytes,70,opt,name=carrier_updated_at,json=carrierUpdatedAt,proto3,oneof" json:"carrier_updated_at,omitempty"`
+	// Customer timestamps
+	CustomerCreatedAt *timestamppb.Timestamp `protobuf:"bytes,71,opt,name=customer_created_at,json=customerCreatedAt,proto3,oneof" json:"customer_created_at,omitempty"`
+	CustomerUpdatedAt *timestamppb.Timestamp `protobuf:"bytes,72,opt,name=customer_updated_at,json=customerUpdatedAt,proto3,oneof" json:"customer_updated_at,omitempty"`
+	// Bill-to address type and timestamps
+	BillToIsDropShip    *bool                  `protobuf:"varint,73,opt,name=bill_to_is_drop_ship,json=billToIsDropShip,proto3,oneof" json:"bill_to_is_drop_ship,omitempty"`
+	BillToGeolocationId *string                `protobuf:"bytes,74,opt,name=bill_to_geolocation_id,json=billToGeolocationId,proto3,oneof" json:"bill_to_geolocation_id,omitempty"`
+	BillToCreatedAt     *timestamppb.Timestamp `protobuf:"bytes,75,opt,name=bill_to_created_at,json=billToCreatedAt,proto3,oneof" json:"bill_to_created_at,omitempty"`
+	BillToUpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,76,opt,name=bill_to_updated_at,json=billToUpdatedAt,proto3,oneof" json:"bill_to_updated_at,omitempty"`
+	// Ship-to address type and timestamps
+	ShipToIsDropShip    *bool                  `protobuf:"varint,77,opt,name=ship_to_is_drop_ship,json=shipToIsDropShip,proto3,oneof" json:"ship_to_is_drop_ship,omitempty"`
+	ShipToGeolocationId *string                `protobuf:"bytes,78,opt,name=ship_to_geolocation_id,json=shipToGeolocationId,proto3,oneof" json:"ship_to_geolocation_id,omitempty"`
+	ShipToCreatedAt     *timestamppb.Timestamp `protobuf:"bytes,79,opt,name=ship_to_created_at,json=shipToCreatedAt,proto3,oneof" json:"ship_to_created_at,omitempty"`
+	ShipToUpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,80,opt,name=ship_to_updated_at,json=shipToUpdatedAt,proto3,oneof" json:"ship_to_updated_at,omitempty"`
+	// Order discount full data
+	OrderDiscountCode         *string                `protobuf:"bytes,81,opt,name=order_discount_code,json=orderDiscountCode,proto3,oneof" json:"order_discount_code,omitempty"`
+	OrderDiscountPercentage   *string                `protobuf:"bytes,82,opt,name=order_discount_percentage,json=orderDiscountPercentage,proto3,oneof" json:"order_discount_percentage,omitempty"`
+	OrderDiscountAmount       *string                `protobuf:"bytes,83,opt,name=order_discount_amount,json=orderDiscountAmount,proto3,oneof" json:"order_discount_amount,omitempty"`
+	OrderDiscountDiscountType *string                `protobuf:"bytes,84,opt,name=order_discount_discount_type,json=orderDiscountDiscountType,proto3,oneof" json:"order_discount_discount_type,omitempty"`
+	OrderDiscountOrderCount   *int32                 `protobuf:"varint,85,opt,name=order_discount_order_count,json=orderDiscountOrderCount,proto3,oneof" json:"order_discount_order_count,omitempty"`
+	OrderDiscountCreatedAt    *timestamppb.Timestamp `protobuf:"bytes,86,opt,name=order_discount_created_at,json=orderDiscountCreatedAt,proto3,oneof" json:"order_discount_created_at,omitempty"`
+	OrderDiscountUpdatedAt    *timestamppb.Timestamp `protobuf:"bytes,87,opt,name=order_discount_updated_at,json=orderDiscountUpdatedAt,proto3,oneof" json:"order_discount_updated_at,omitempty"`
+	// Payment term timestamps
+	PaymentTermCreatedAt *timestamppb.Timestamp `protobuf:"bytes,88,opt,name=payment_term_created_at,json=paymentTermCreatedAt,proto3,oneof" json:"payment_term_created_at,omitempty"`
+	PaymentTermUpdatedAt *timestamppb.Timestamp `protobuf:"bytes,89,opt,name=payment_term_updated_at,json=paymentTermUpdatedAt,proto3,oneof" json:"payment_term_updated_at,omitempty"`
+	// Shipping term timestamps
+	ShippingTermCreatedAt *timestamppb.Timestamp `protobuf:"bytes,90,opt,name=shipping_term_created_at,json=shippingTermCreatedAt,proto3,oneof" json:"shipping_term_created_at,omitempty"`
+	ShippingTermUpdatedAt *timestamppb.Timestamp `protobuf:"bytes,91,opt,name=shipping_term_updated_at,json=shippingTermUpdatedAt,proto3,oneof" json:"shipping_term_updated_at,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *SalesOrderInfo) Reset() {
@@ -1748,6 +1779,181 @@ func (x *SalesOrderInfo) GetCustomerCommissionPolicy() string {
 		return *x.CustomerCommissionPolicy
 	}
 	return ""
+}
+
+func (x *SalesOrderInfo) GetServiceLevelCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ServiceLevelCreatedAt
+	}
+	return nil
+}
+
+func (x *SalesOrderInfo) GetServiceLevelUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ServiceLevelUpdatedAt
+	}
+	return nil
+}
+
+func (x *SalesOrderInfo) GetCarrierCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CarrierCreatedAt
+	}
+	return nil
+}
+
+func (x *SalesOrderInfo) GetCarrierUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CarrierUpdatedAt
+	}
+	return nil
+}
+
+func (x *SalesOrderInfo) GetCustomerCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CustomerCreatedAt
+	}
+	return nil
+}
+
+func (x *SalesOrderInfo) GetCustomerUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CustomerUpdatedAt
+	}
+	return nil
+}
+
+func (x *SalesOrderInfo) GetBillToIsDropShip() bool {
+	if x != nil && x.BillToIsDropShip != nil {
+		return *x.BillToIsDropShip
+	}
+	return false
+}
+
+func (x *SalesOrderInfo) GetBillToGeolocationId() string {
+	if x != nil && x.BillToGeolocationId != nil {
+		return *x.BillToGeolocationId
+	}
+	return ""
+}
+
+func (x *SalesOrderInfo) GetBillToCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.BillToCreatedAt
+	}
+	return nil
+}
+
+func (x *SalesOrderInfo) GetBillToUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.BillToUpdatedAt
+	}
+	return nil
+}
+
+func (x *SalesOrderInfo) GetShipToIsDropShip() bool {
+	if x != nil && x.ShipToIsDropShip != nil {
+		return *x.ShipToIsDropShip
+	}
+	return false
+}
+
+func (x *SalesOrderInfo) GetShipToGeolocationId() string {
+	if x != nil && x.ShipToGeolocationId != nil {
+		return *x.ShipToGeolocationId
+	}
+	return ""
+}
+
+func (x *SalesOrderInfo) GetShipToCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ShipToCreatedAt
+	}
+	return nil
+}
+
+func (x *SalesOrderInfo) GetShipToUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ShipToUpdatedAt
+	}
+	return nil
+}
+
+func (x *SalesOrderInfo) GetOrderDiscountCode() string {
+	if x != nil && x.OrderDiscountCode != nil {
+		return *x.OrderDiscountCode
+	}
+	return ""
+}
+
+func (x *SalesOrderInfo) GetOrderDiscountPercentage() string {
+	if x != nil && x.OrderDiscountPercentage != nil {
+		return *x.OrderDiscountPercentage
+	}
+	return ""
+}
+
+func (x *SalesOrderInfo) GetOrderDiscountAmount() string {
+	if x != nil && x.OrderDiscountAmount != nil {
+		return *x.OrderDiscountAmount
+	}
+	return ""
+}
+
+func (x *SalesOrderInfo) GetOrderDiscountDiscountType() string {
+	if x != nil && x.OrderDiscountDiscountType != nil {
+		return *x.OrderDiscountDiscountType
+	}
+	return ""
+}
+
+func (x *SalesOrderInfo) GetOrderDiscountOrderCount() int32 {
+	if x != nil && x.OrderDiscountOrderCount != nil {
+		return *x.OrderDiscountOrderCount
+	}
+	return 0
+}
+
+func (x *SalesOrderInfo) GetOrderDiscountCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.OrderDiscountCreatedAt
+	}
+	return nil
+}
+
+func (x *SalesOrderInfo) GetOrderDiscountUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.OrderDiscountUpdatedAt
+	}
+	return nil
+}
+
+func (x *SalesOrderInfo) GetPaymentTermCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.PaymentTermCreatedAt
+	}
+	return nil
+}
+
+func (x *SalesOrderInfo) GetPaymentTermUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.PaymentTermUpdatedAt
+	}
+	return nil
+}
+
+func (x *SalesOrderInfo) GetShippingTermCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ShippingTermCreatedAt
+	}
+	return nil
+}
+
+func (x *SalesOrderInfo) GetShippingTermUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ShippingTermUpdatedAt
+	}
+	return nil
 }
 
 // SalesOrderLineInfo represents a sales order line.
@@ -2385,6 +2591,7 @@ type CreateSalesOrderRequest struct {
 	AcknowledgementEmailContacts []*SalesOrderEmailContactInput `protobuf:"bytes,29,rep,name=acknowledgement_email_contacts,json=acknowledgementEmailContacts,proto3" json:"acknowledgement_email_contacts,omitempty"`
 	// Email contact recipients for invoice emails
 	InvoiceEmailContacts []*SalesOrderEmailContactInput `protobuf:"bytes,30,rep,name=invoice_email_contacts,json=invoiceEmailContacts,proto3" json:"invoice_email_contacts,omitempty"`
+	Includes             []string                       `protobuf:"bytes,31,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -2625,6 +2832,13 @@ func (x *CreateSalesOrderRequest) GetAcknowledgementEmailContacts() []*SalesOrde
 func (x *CreateSalesOrderRequest) GetInvoiceEmailContacts() []*SalesOrderEmailContactInput {
 	if x != nil {
 		return x.InvoiceEmailContacts
+	}
+	return nil
+}
+
+func (x *CreateSalesOrderRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
 	}
 	return nil
 }
@@ -2898,6 +3112,7 @@ type UpdateSalesOrderRequest struct {
 	// When set, replaces the invoice email contacts on the order.
 	// An empty list clears all invoice contacts; nil/unset leaves existing contacts untouched.
 	InvoiceEmailContacts *SalesOrderEmailContactList `protobuf:"bytes,32,opt,name=invoice_email_contacts,json=invoiceEmailContacts,proto3,oneof" json:"invoice_email_contacts,omitempty"`
+	Includes             []string                    `protobuf:"bytes,33,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -3156,6 +3371,13 @@ func (x *UpdateSalesOrderRequest) GetInvoiceEmailContacts() *SalesOrderEmailCont
 	return nil
 }
 
+func (x *UpdateSalesOrderRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
+}
+
 type SalesOrderEmailContactList struct {
 	state         protoimpl.MessageState         `protogen:"open.v1"`
 	Contacts      []*SalesOrderEmailContactInput `protobuf:"bytes,1,rep,name=contacts,proto3" json:"contacts,omitempty"`
@@ -3337,6 +3559,7 @@ type ChangeSalesOrderStatusRequest struct {
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	StatusChange  string                 `protobuf:"bytes,2,opt,name=status_change,json=statusChange,proto3" json:"status_change,omitempty"`
 	SendEmail     bool                   `protobuf:"varint,3,opt,name=send_email,json=sendEmail,proto3" json:"send_email,omitempty"`
+	Includes      []string               `protobuf:"bytes,4,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3390,6 +3613,13 @@ func (x *ChangeSalesOrderStatusRequest) GetSendEmail() bool {
 		return x.SendEmail
 	}
 	return false
+}
+
+func (x *ChangeSalesOrderStatusRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
 }
 
 type ChangeSalesOrderStatusResponse struct {
@@ -4173,12 +4403,17 @@ func (x *VolumeDiscountTierInfo) GetUpdatedAt() *timestamppb.Timestamp {
 }
 
 type VolumeDiscountCustomerGroupInfo struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	AccountGroupId string                 `protobuf:"bytes,2,opt,name=account_group_id,json=accountGroupId,proto3" json:"account_group_id,omitempty"`
-	Name           string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Id               string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	AccountGroupId   string                 `protobuf:"bytes,2,opt,name=account_group_id,json=accountGroupId,proto3" json:"account_group_id,omitempty"`
+	Name             string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	CommissionPolicy *string                `protobuf:"bytes,4,opt,name=commission_policy,json=commissionPolicy,proto3,oneof" json:"commission_policy,omitempty"`
+	FreightPolicy    *string                `protobuf:"bytes,5,opt,name=freight_policy,json=freightPolicy,proto3,oneof" json:"freight_policy,omitempty"`
+	Type             *string                `protobuf:"bytes,6,opt,name=type,proto3,oneof" json:"type,omitempty"`
+	CreatedAt        *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3,oneof" json:"created_at,omitempty"`
+	UpdatedAt        *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt,proto3,oneof" json:"updated_at,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *VolumeDiscountCustomerGroupInfo) Reset() {
@@ -4232,12 +4467,51 @@ func (x *VolumeDiscountCustomerGroupInfo) GetName() string {
 	return ""
 }
 
+func (x *VolumeDiscountCustomerGroupInfo) GetCommissionPolicy() string {
+	if x != nil && x.CommissionPolicy != nil {
+		return *x.CommissionPolicy
+	}
+	return ""
+}
+
+func (x *VolumeDiscountCustomerGroupInfo) GetFreightPolicy() string {
+	if x != nil && x.FreightPolicy != nil {
+		return *x.FreightPolicy
+	}
+	return ""
+}
+
+func (x *VolumeDiscountCustomerGroupInfo) GetType() string {
+	if x != nil && x.Type != nil {
+		return *x.Type
+	}
+	return ""
+}
+
+func (x *VolumeDiscountCustomerGroupInfo) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *VolumeDiscountCustomerGroupInfo) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
 type VolumeDiscountProductLineInfo struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Id               string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name             string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	CommissionPolicy *string                `protobuf:"bytes,3,opt,name=commission_policy,json=commissionPolicy,proto3,oneof" json:"commission_policy,omitempty"`
+	FreightPolicy    *string                `protobuf:"bytes,4,opt,name=freight_policy,json=freightPolicy,proto3,oneof" json:"freight_policy,omitempty"`
+	CreatedAt        *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3,oneof" json:"created_at,omitempty"`
+	UpdatedAt        *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=updated_at,json=updatedAt,proto3,oneof" json:"updated_at,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *VolumeDiscountProductLineInfo) Reset() {
@@ -4284,10 +4558,41 @@ func (x *VolumeDiscountProductLineInfo) GetName() string {
 	return ""
 }
 
+func (x *VolumeDiscountProductLineInfo) GetCommissionPolicy() string {
+	if x != nil && x.CommissionPolicy != nil {
+		return *x.CommissionPolicy
+	}
+	return ""
+}
+
+func (x *VolumeDiscountProductLineInfo) GetFreightPolicy() string {
+	if x != nil && x.FreightPolicy != nil {
+		return *x.FreightPolicy
+	}
+	return ""
+}
+
+func (x *VolumeDiscountProductLineInfo) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *VolumeDiscountProductLineInfo) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
 type VolumeDiscountCategoryInfo struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Type          *string                `protobuf:"bytes,3,opt,name=type,proto3,oneof" json:"type,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=created_at,json=createdAt,proto3,oneof" json:"created_at,omitempty"`
+	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=updated_at,json=updatedAt,proto3,oneof" json:"updated_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -4336,10 +4641,34 @@ func (x *VolumeDiscountCategoryInfo) GetName() string {
 	return ""
 }
 
+func (x *VolumeDiscountCategoryInfo) GetType() string {
+	if x != nil && x.Type != nil {
+		return *x.Type
+	}
+	return ""
+}
+
+func (x *VolumeDiscountCategoryInfo) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *VolumeDiscountCategoryInfo) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
 type VolumeDiscountAttributeInfo struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	ColorCode     *string                `protobuf:"bytes,3,opt,name=color_code,json=colorCode,proto3,oneof" json:"color_code,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=created_at,json=createdAt,proto3,oneof" json:"created_at,omitempty"`
+	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=updated_at,json=updatedAt,proto3,oneof" json:"updated_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -4388,13 +4717,41 @@ func (x *VolumeDiscountAttributeInfo) GetName() string {
 	return ""
 }
 
+func (x *VolumeDiscountAttributeInfo) GetColorCode() string {
+	if x != nil && x.ColorCode != nil {
+		return *x.ColorCode
+	}
+	return ""
+}
+
+func (x *VolumeDiscountAttributeInfo) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *VolumeDiscountAttributeInfo) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
 type VolumeDiscountUnitInfo struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Abbreviation  string                 `protobuf:"bytes,3,opt,name=abbreviation,proto3" json:"abbreviation,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Id                string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name              string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Abbreviation      string                 `protobuf:"bytes,3,opt,name=abbreviation,proto3" json:"abbreviation,omitempty"`
+	Type              string                 `protobuf:"bytes,4,opt,name=type,proto3" json:"type,omitempty"`
+	RatioNumerator    string                 `protobuf:"bytes,5,opt,name=ratio_numerator,json=ratioNumerator,proto3" json:"ratio_numerator,omitempty"`
+	RatioDenominator  string                 `protobuf:"bytes,6,opt,name=ratio_denominator,json=ratioDenominator,proto3" json:"ratio_denominator,omitempty"`
+	OffsetNumerator   string                 `protobuf:"bytes,7,opt,name=offset_numerator,json=offsetNumerator,proto3" json:"offset_numerator,omitempty"`
+	OffsetDenominator string                 `protobuf:"bytes,8,opt,name=offset_denominator,json=offsetDenominator,proto3" json:"offset_denominator,omitempty"`
+	CreatedAt         *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt         *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *VolumeDiscountUnitInfo) Reset() {
@@ -4446,6 +4803,55 @@ func (x *VolumeDiscountUnitInfo) GetAbbreviation() string {
 		return x.Abbreviation
 	}
 	return ""
+}
+
+func (x *VolumeDiscountUnitInfo) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *VolumeDiscountUnitInfo) GetRatioNumerator() string {
+	if x != nil {
+		return x.RatioNumerator
+	}
+	return ""
+}
+
+func (x *VolumeDiscountUnitInfo) GetRatioDenominator() string {
+	if x != nil {
+		return x.RatioDenominator
+	}
+	return ""
+}
+
+func (x *VolumeDiscountUnitInfo) GetOffsetNumerator() string {
+	if x != nil {
+		return x.OffsetNumerator
+	}
+	return ""
+}
+
+func (x *VolumeDiscountUnitInfo) GetOffsetDenominator() string {
+	if x != nil {
+		return x.OffsetDenominator
+	}
+	return ""
+}
+
+func (x *VolumeDiscountUnitInfo) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *VolumeDiscountUnitInfo) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
 }
 
 type VolumeDiscountInfo struct {
@@ -4570,7 +4976,8 @@ type ListVolumeDiscountsRequest struct {
 	Limit  int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
 	Query  *string                `protobuf:"bytes,3,opt,name=query,proto3,oneof" json:"query,omitempty"`
 	// If set, filters for customer actor access.
-	CustomerAccountId *string `protobuf:"bytes,4,opt,name=customer_account_id,json=customerAccountId,proto3,oneof" json:"customer_account_id,omitempty"`
+	CustomerAccountId *string  `protobuf:"bytes,4,opt,name=customer_account_id,json=customerAccountId,proto3,oneof" json:"customer_account_id,omitempty"`
+	Includes          []string `protobuf:"bytes,5,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -4633,6 +5040,13 @@ func (x *ListVolumeDiscountsRequest) GetCustomerAccountId() string {
 	return ""
 }
 
+func (x *ListVolumeDiscountsRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
+}
+
 type ListVolumeDiscountsResponse struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	VolumeDiscounts []*VolumeDiscountInfo  `protobuf:"bytes,1,rep,name=volume_discounts,json=volumeDiscounts,proto3" json:"volume_discounts,omitempty"`
@@ -4689,7 +5103,8 @@ type GetVolumeDiscountRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	// If set, filters for customer actor access.
-	CustomerAccountId *string `protobuf:"bytes,2,opt,name=customer_account_id,json=customerAccountId,proto3,oneof" json:"customer_account_id,omitempty"`
+	CustomerAccountId *string  `protobuf:"bytes,2,opt,name=customer_account_id,json=customerAccountId,proto3,oneof" json:"customer_account_id,omitempty"`
+	Includes          []string `protobuf:"bytes,3,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -4736,6 +5151,13 @@ func (x *GetVolumeDiscountRequest) GetCustomerAccountId() string {
 		return *x.CustomerAccountId
 	}
 	return ""
+}
+
+func (x *GetVolumeDiscountRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
 }
 
 type GetVolumeDiscountResponse struct {
@@ -4859,6 +5281,7 @@ type CreateVolumeDiscountRequest struct {
 	CategoryIds      []string                         `protobuf:"bytes,5,rep,name=category_ids,json=categoryIds,proto3" json:"category_ids,omitempty"`
 	AttributeIds     []string                         `protobuf:"bytes,6,rep,name=attribute_ids,json=attributeIds,proto3" json:"attribute_ids,omitempty"`
 	UnitIds          []string                         `protobuf:"bytes,7,rep,name=unit_ids,json=unitIds,proto3" json:"unit_ids,omitempty"`
+	Includes         []string                         `protobuf:"bytes,8,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -4938,6 +5361,13 @@ func (x *CreateVolumeDiscountRequest) GetAttributeIds() []string {
 func (x *CreateVolumeDiscountRequest) GetUnitIds() []string {
 	if x != nil {
 		return x.UnitIds
+	}
+	return nil
+}
+
+func (x *CreateVolumeDiscountRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
 	}
 	return nil
 }
@@ -5078,6 +5508,7 @@ type UpdateVolumeDiscountRequest struct {
 	HasCategories     bool                             `protobuf:"varint,12,opt,name=has_categories,json=hasCategories,proto3" json:"has_categories,omitempty"`
 	HasAttributes     bool                             `protobuf:"varint,13,opt,name=has_attributes,json=hasAttributes,proto3" json:"has_attributes,omitempty"`
 	HasUnits          bool                             `protobuf:"varint,14,opt,name=has_units,json=hasUnits,proto3" json:"has_units,omitempty"`
+	Includes          []string                         `protobuf:"bytes,15,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -5208,6 +5639,13 @@ func (x *UpdateVolumeDiscountRequest) GetHasUnits() bool {
 		return x.HasUnits
 	}
 	return false
+}
+
+func (x *UpdateVolumeDiscountRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
 }
 
 type UpdateVolumeDiscountResponse struct {
@@ -5536,7 +5974,7 @@ const file_core_core_sales_proto_rawDesc = "" +
 	"\r_completed_atB\x0e\n" +
 	"\f_priority_idB\x17\n" +
 	"\x15_customer_status_codeB\x1d\n" +
-	"\x1b_customer_commission_policy\"\xb9 \n" +
+	"\x1b_customer_commission_policy\"\xb04\n" +
 	"\x0eSalesOrderInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x121\n" +
@@ -5617,7 +6055,32 @@ const file_core_core_sales_proto_rawDesc = "" +
 	"priorityId\x88\x01\x01\x123\n" +
 	"\x13service_level_token\x18@ \x01(\tH.R\x11serviceLevelToken\x88\x01\x01\x125\n" +
 	"\x14customer_status_code\x18A \x01(\tH/R\x12customerStatusCode\x88\x01\x01\x12A\n" +
-	"\x1acustomer_commission_policy\x18B \x01(\tH0R\x18customerCommissionPolicy\x88\x01\x01B\x15\n" +
+	"\x1acustomer_commission_policy\x18B \x01(\tH0R\x18customerCommissionPolicy\x88\x01\x01\x12X\n" +
+	"\x18service_level_created_at\x18C \x01(\v2\x1a.google.protobuf.TimestampH1R\x15serviceLevelCreatedAt\x88\x01\x01\x12X\n" +
+	"\x18service_level_updated_at\x18D \x01(\v2\x1a.google.protobuf.TimestampH2R\x15serviceLevelUpdatedAt\x88\x01\x01\x12M\n" +
+	"\x12carrier_created_at\x18E \x01(\v2\x1a.google.protobuf.TimestampH3R\x10carrierCreatedAt\x88\x01\x01\x12M\n" +
+	"\x12carrier_updated_at\x18F \x01(\v2\x1a.google.protobuf.TimestampH4R\x10carrierUpdatedAt\x88\x01\x01\x12O\n" +
+	"\x13customer_created_at\x18G \x01(\v2\x1a.google.protobuf.TimestampH5R\x11customerCreatedAt\x88\x01\x01\x12O\n" +
+	"\x13customer_updated_at\x18H \x01(\v2\x1a.google.protobuf.TimestampH6R\x11customerUpdatedAt\x88\x01\x01\x123\n" +
+	"\x14bill_to_is_drop_ship\x18I \x01(\bH7R\x10billToIsDropShip\x88\x01\x01\x128\n" +
+	"\x16bill_to_geolocation_id\x18J \x01(\tH8R\x13billToGeolocationId\x88\x01\x01\x12L\n" +
+	"\x12bill_to_created_at\x18K \x01(\v2\x1a.google.protobuf.TimestampH9R\x0fbillToCreatedAt\x88\x01\x01\x12L\n" +
+	"\x12bill_to_updated_at\x18L \x01(\v2\x1a.google.protobuf.TimestampH:R\x0fbillToUpdatedAt\x88\x01\x01\x123\n" +
+	"\x14ship_to_is_drop_ship\x18M \x01(\bH;R\x10shipToIsDropShip\x88\x01\x01\x128\n" +
+	"\x16ship_to_geolocation_id\x18N \x01(\tH<R\x13shipToGeolocationId\x88\x01\x01\x12L\n" +
+	"\x12ship_to_created_at\x18O \x01(\v2\x1a.google.protobuf.TimestampH=R\x0fshipToCreatedAt\x88\x01\x01\x12L\n" +
+	"\x12ship_to_updated_at\x18P \x01(\v2\x1a.google.protobuf.TimestampH>R\x0fshipToUpdatedAt\x88\x01\x01\x123\n" +
+	"\x13order_discount_code\x18Q \x01(\tH?R\x11orderDiscountCode\x88\x01\x01\x12?\n" +
+	"\x19order_discount_percentage\x18R \x01(\tH@R\x17orderDiscountPercentage\x88\x01\x01\x127\n" +
+	"\x15order_discount_amount\x18S \x01(\tHAR\x13orderDiscountAmount\x88\x01\x01\x12D\n" +
+	"\x1corder_discount_discount_type\x18T \x01(\tHBR\x19orderDiscountDiscountType\x88\x01\x01\x12@\n" +
+	"\x1aorder_discount_order_count\x18U \x01(\x05HCR\x17orderDiscountOrderCount\x88\x01\x01\x12Z\n" +
+	"\x19order_discount_created_at\x18V \x01(\v2\x1a.google.protobuf.TimestampHDR\x16orderDiscountCreatedAt\x88\x01\x01\x12Z\n" +
+	"\x19order_discount_updated_at\x18W \x01(\v2\x1a.google.protobuf.TimestampHER\x16orderDiscountUpdatedAt\x88\x01\x01\x12V\n" +
+	"\x17payment_term_created_at\x18X \x01(\v2\x1a.google.protobuf.TimestampHFR\x14paymentTermCreatedAt\x88\x01\x01\x12V\n" +
+	"\x17payment_term_updated_at\x18Y \x01(\v2\x1a.google.protobuf.TimestampHGR\x14paymentTermUpdatedAt\x88\x01\x01\x12X\n" +
+	"\x18shipping_term_created_at\x18Z \x01(\v2\x1a.google.protobuf.TimestampHHR\x15shippingTermCreatedAt\x88\x01\x01\x12X\n" +
+	"\x18shipping_term_updated_at\x18[ \x01(\v2\x1a.google.protobuf.TimestampHIR\x15shippingTermUpdatedAt\x88\x01\x01B\x15\n" +
 	"\x13_customer_po_numberB\a\n" +
 	"\x05_noteB\x0f\n" +
 	"\r_bill_to_nameB\x18\n" +
@@ -5668,7 +6131,32 @@ const file_core_core_sales_proto_rawDesc = "" +
 	"\f_priority_idB\x16\n" +
 	"\x14_service_level_tokenB\x17\n" +
 	"\x15_customer_status_codeB\x1d\n" +
-	"\x1b_customer_commission_policy\"\xab\x10\n" +
+	"\x1b_customer_commission_policyB\x1b\n" +
+	"\x19_service_level_created_atB\x1b\n" +
+	"\x19_service_level_updated_atB\x15\n" +
+	"\x13_carrier_created_atB\x15\n" +
+	"\x13_carrier_updated_atB\x16\n" +
+	"\x14_customer_created_atB\x16\n" +
+	"\x14_customer_updated_atB\x17\n" +
+	"\x15_bill_to_is_drop_shipB\x19\n" +
+	"\x17_bill_to_geolocation_idB\x15\n" +
+	"\x13_bill_to_created_atB\x15\n" +
+	"\x13_bill_to_updated_atB\x17\n" +
+	"\x15_ship_to_is_drop_shipB\x19\n" +
+	"\x17_ship_to_geolocation_idB\x15\n" +
+	"\x13_ship_to_created_atB\x15\n" +
+	"\x13_ship_to_updated_atB\x16\n" +
+	"\x14_order_discount_codeB\x1c\n" +
+	"\x1a_order_discount_percentageB\x18\n" +
+	"\x16_order_discount_amountB\x1f\n" +
+	"\x1d_order_discount_discount_typeB\x1d\n" +
+	"\x1b_order_discount_order_countB\x1c\n" +
+	"\x1a_order_discount_created_atB\x1c\n" +
+	"\x1a_order_discount_updated_atB\x1a\n" +
+	"\x18_payment_term_created_atB\x1a\n" +
+	"\x18_payment_term_updated_atB\x1b\n" +
+	"\x19_shipping_term_created_atB\x1b\n" +
+	"\x19_shipping_term_updated_at\"\xab\x10\n" +
 	"\x12SalesOrderLineInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12(\n" +
 	"\x10line_item_number\x18\x02 \x01(\x05R\x0elineItemNumber\x12\x1f\n" +
@@ -5757,7 +6245,7 @@ const file_core_core_sales_proto_rawDesc = "" +
 	"\x11_buyer_account_id\"N\n" +
 	"\x15GetSalesOrderResponse\x125\n" +
 	"\vsales_order\x18\x01 \x01(\v2\x14.core.SalesOrderInfoR\n" +
-	"salesOrder\"\xf0\x0f\n" +
+	"salesOrder\"\x8c\x10\n" +
 	"\x17CreateSalesOrderRequest\x12(\n" +
 	"\x10buyer_account_id\x18\x01 \x01(\tR\x0ebuyerAccountId\x121\n" +
 	"\x12customer_po_number\x18\x02 \x01(\tH\x00R\x10customerPoNumber\x88\x01\x01\x12\x17\n" +
@@ -5794,7 +6282,8 @@ const file_core_core_sales_proto_rawDesc = "" +
 	"\x0fship_to_country\x18\x1b \x01(\tH\x17R\rshipToCountry\x88\x01\x01\x125\n" +
 	"\x05lines\x18\x1c \x03(\v2\x1f.core.CreateSalesOrderLineInputR\x05lines\x12g\n" +
 	"\x1eacknowledgement_email_contacts\x18\x1d \x03(\v2!.core.SalesOrderEmailContactInputR\x1cacknowledgementEmailContacts\x12W\n" +
-	"\x16invoice_email_contacts\x18\x1e \x03(\v2!.core.SalesOrderEmailContactInputR\x14invoiceEmailContactsB\x15\n" +
+	"\x16invoice_email_contacts\x18\x1e \x03(\v2!.core.SalesOrderEmailContactInputR\x14invoiceEmailContacts\x12\x1a\n" +
+	"\bincludes\x18\x1f \x03(\tR\bincludesB\x15\n" +
 	"\x13_customer_po_numberB\a\n" +
 	"\x05_noteB\r\n" +
 	"\v_carrier_idB\x13\n" +
@@ -5847,7 +6336,7 @@ const file_core_core_sales_proto_rawDesc = "" +
 	"\x11_edi_line_item_id\"Q\n" +
 	"\x18CreateSalesOrderResponse\x125\n" +
 	"\vsales_order\x18\x01 \x01(\v2\x14.core.SalesOrderInfoR\n" +
-	"salesOrder\"\xcf\x11\n" +
+	"salesOrder\"\xeb\x11\n" +
 	"\x17UpdateSalesOrderRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x121\n" +
 	"\x12customer_po_number\x18\x02 \x01(\tH\x00R\x10customerPoNumber\x88\x01\x01\x12\x17\n" +
@@ -5888,7 +6377,8 @@ const file_core_core_sales_proto_rawDesc = "" +
 	"\vcustomer_id\x18\x1e \x01(\tH\x1cR\n" +
 	"customerId\x88\x01\x01\x12k\n" +
 	"\x1eacknowledgement_email_contacts\x18\x1f \x01(\v2 .core.SalesOrderEmailContactListH\x1dR\x1cacknowledgementEmailContacts\x88\x01\x01\x12[\n" +
-	"\x16invoice_email_contacts\x18  \x01(\v2 .core.SalesOrderEmailContactListH\x1eR\x14invoiceEmailContacts\x88\x01\x01B\x15\n" +
+	"\x16invoice_email_contacts\x18  \x01(\v2 .core.SalesOrderEmailContactListH\x1eR\x14invoiceEmailContacts\x88\x01\x01\x12\x1a\n" +
+	"\bincludes\x18! \x03(\tR\bincludesB\x15\n" +
 	"\x13_customer_po_numberB\a\n" +
 	"\x05_noteB\r\n" +
 	"\v_carrier_idB\x13\n" +
@@ -5928,12 +6418,13 @@ const file_core_core_sales_proto_rawDesc = "" +
 	"\x17DeleteSalesOrderRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"0\n" +
 	"\x1cBulkDeleteSalesOrdersRequest\x12\x10\n" +
-	"\x03ids\x18\x01 \x03(\tR\x03ids\"s\n" +
+	"\x03ids\x18\x01 \x03(\tR\x03ids\"\x8f\x01\n" +
 	"\x1dChangeSalesOrderStatusRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12#\n" +
 	"\rstatus_change\x18\x02 \x01(\tR\fstatusChange\x12\x1d\n" +
 	"\n" +
-	"send_email\x18\x03 \x01(\bR\tsendEmail\"W\n" +
+	"send_email\x18\x03 \x01(\bR\tsendEmail\x12\x1a\n" +
+	"\bincludes\x18\x04 \x03(\tR\bincludes\"W\n" +
 	"\x1eChangeSalesOrderStatusResponse\x125\n" +
 	"\vsales_order\x18\x01 \x01(\v2\x14.core.SalesOrderInfoR\n" +
 	"salesOrder\"\xaa\x01\n" +
@@ -6028,24 +6519,73 @@ const file_core_core_sales_proto_rawDesc = "" +
 	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\x11\n" +
-	"\x0f_parent_tier_id\"o\n" +
+	"\x0f_parent_tier_id\"\xb6\x03\n" +
 	"\x1fVolumeDiscountCustomerGroupInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12(\n" +
 	"\x10account_group_id\x18\x02 \x01(\tR\x0eaccountGroupId\x12\x12\n" +
-	"\x04name\x18\x03 \x01(\tR\x04name\"C\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\x120\n" +
+	"\x11commission_policy\x18\x04 \x01(\tH\x00R\x10commissionPolicy\x88\x01\x01\x12*\n" +
+	"\x0efreight_policy\x18\x05 \x01(\tH\x01R\rfreightPolicy\x88\x01\x01\x12\x17\n" +
+	"\x04type\x18\x06 \x01(\tH\x02R\x04type\x88\x01\x01\x12>\n" +
+	"\n" +
+	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampH\x03R\tcreatedAt\x88\x01\x01\x12>\n" +
+	"\n" +
+	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampH\x04R\tupdatedAt\x88\x01\x01B\x14\n" +
+	"\x12_commission_policyB\x11\n" +
+	"\x0f_freight_policyB\a\n" +
+	"\x05_typeB\r\n" +
+	"\v_created_atB\r\n" +
+	"\v_updated_at\"\xe8\x02\n" +
 	"\x1dVolumeDiscountProductLineInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\"@\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x120\n" +
+	"\x11commission_policy\x18\x03 \x01(\tH\x00R\x10commissionPolicy\x88\x01\x01\x12*\n" +
+	"\x0efreight_policy\x18\x04 \x01(\tH\x01R\rfreightPolicy\x88\x01\x01\x12>\n" +
+	"\n" +
+	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampH\x02R\tcreatedAt\x88\x01\x01\x12>\n" +
+	"\n" +
+	"updated_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampH\x03R\tupdatedAt\x88\x01\x01B\x14\n" +
+	"\x12_commission_policyB\x11\n" +
+	"\x0f_freight_policyB\r\n" +
+	"\v_created_atB\r\n" +
+	"\v_updated_at\"\x80\x02\n" +
 	"\x1aVolumeDiscountCategoryInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\"A\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x17\n" +
+	"\x04type\x18\x03 \x01(\tH\x00R\x04type\x88\x01\x01\x12>\n" +
+	"\n" +
+	"created_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampH\x01R\tcreatedAt\x88\x01\x01\x12>\n" +
+	"\n" +
+	"updated_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampH\x02R\tupdatedAt\x88\x01\x01B\a\n" +
+	"\x05_typeB\r\n" +
+	"\v_created_atB\r\n" +
+	"\v_updated_at\"\x92\x02\n" +
 	"\x1bVolumeDiscountAttributeInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\"`\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\"\n" +
+	"\n" +
+	"color_code\x18\x03 \x01(\tH\x00R\tcolorCode\x88\x01\x01\x12>\n" +
+	"\n" +
+	"created_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampH\x01R\tcreatedAt\x88\x01\x01\x12>\n" +
+	"\n" +
+	"updated_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampH\x02R\tupdatedAt\x88\x01\x01B\r\n" +
+	"\v_color_codeB\r\n" +
+	"\v_created_atB\r\n" +
+	"\v_updated_at\"\x9a\x03\n" +
 	"\x16VolumeDiscountUnitInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\"\n" +
-	"\fabbreviation\x18\x03 \x01(\tR\fabbreviation\"\xca\x04\n" +
+	"\fabbreviation\x18\x03 \x01(\tR\fabbreviation\x12\x12\n" +
+	"\x04type\x18\x04 \x01(\tR\x04type\x12'\n" +
+	"\x0fratio_numerator\x18\x05 \x01(\tR\x0eratioNumerator\x12+\n" +
+	"\x11ratio_denominator\x18\x06 \x01(\tR\x10ratioDenominator\x12)\n" +
+	"\x10offset_numerator\x18\a \x01(\tR\x0foffsetNumerator\x12-\n" +
+	"\x12offset_denominator\x18\b \x01(\tR\x11offsetDenominator\x129\n" +
+	"\n" +
+	"created_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"\n" +
+	"updated_at\x18\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xca\x04\n" +
 	"\x12VolumeDiscountInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x122\n" +
@@ -6063,21 +6603,23 @@ const file_core_core_sales_proto_rawDesc = "" +
 	"created_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\n" +
-	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xcc\x01\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xe8\x01\n" +
 	"\x1aListVolumeDiscountsRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x19\n" +
 	"\x05query\x18\x03 \x01(\tH\x01R\x05query\x88\x01\x01\x123\n" +
-	"\x13customer_account_id\x18\x04 \x01(\tH\x02R\x11customerAccountId\x88\x01\x01B\t\n" +
+	"\x13customer_account_id\x18\x04 \x01(\tH\x02R\x11customerAccountId\x88\x01\x01\x12\x1a\n" +
+	"\bincludes\x18\x05 \x03(\tR\bincludesB\t\n" +
 	"\a_cursorB\b\n" +
 	"\x06_queryB\x16\n" +
 	"\x14_customer_account_id\"\x8f\x01\n" +
 	"\x1bListVolumeDiscountsResponse\x12C\n" +
 	"\x10volume_discounts\x18\x01 \x03(\v2\x18.core.VolumeDiscountInfoR\x0fvolumeDiscounts\x12+\n" +
-	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"w\n" +
+	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"\x93\x01\n" +
 	"\x18GetVolumeDiscountRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x123\n" +
-	"\x13customer_account_id\x18\x02 \x01(\tH\x00R\x11customerAccountId\x88\x01\x01B\x16\n" +
+	"\x13customer_account_id\x18\x02 \x01(\tH\x00R\x11customerAccountId\x88\x01\x01\x12\x1a\n" +
+	"\bincludes\x18\x03 \x03(\tR\bincludesB\x16\n" +
 	"\x14_customer_account_id\"^\n" +
 	"\x19GetVolumeDiscountResponse\x12A\n" +
 	"\x0fvolume_discount\x18\x01 \x01(\v2\x18.core.VolumeDiscountInfoR\x0evolumeDiscount\"\xc0\x01\n" +
@@ -6086,7 +6628,7 @@ const file_core_core_sales_proto_rawDesc = "" +
 	"\x13discount_percentage\x18\x02 \x01(\tR\x12discountPercentage\x12\x1c\n" +
 	"\tthreshold\x18\x03 \x01(\tR\tthreshold\x12)\n" +
 	"\x0eparent_tier_id\x18\x04 \x01(\tH\x00R\fparentTierId\x88\x01\x01B\x11\n" +
-	"\x0f_parent_tier_id\"\xa7\x02\n" +
+	"\x0f_parent_tier_id\"\xc3\x02\n" +
 	"\x1bCreateVolumeDiscountRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x129\n" +
 	"\x05tiers\x18\x02 \x03(\v2#.core.CreateVolumeDiscountTierInputR\x05tiers\x12,\n" +
@@ -6094,7 +6636,8 @@ const file_core_core_sales_proto_rawDesc = "" +
 	"\x10product_line_ids\x18\x04 \x03(\tR\x0eproductLineIds\x12!\n" +
 	"\fcategory_ids\x18\x05 \x03(\tR\vcategoryIds\x12#\n" +
 	"\rattribute_ids\x18\x06 \x03(\tR\fattributeIds\x12\x19\n" +
-	"\bunit_ids\x18\a \x03(\tR\aunitIds\"a\n" +
+	"\bunit_ids\x18\a \x03(\tR\aunitIds\x12\x1a\n" +
+	"\bincludes\x18\b \x03(\tR\bincludes\"a\n" +
 	"\x1cCreateVolumeDiscountResponse\x12A\n" +
 	"\x0fvolume_discount\x18\x01 \x01(\v2\x18.core.VolumeDiscountInfoR\x0evolumeDiscount\"\x9a\x02\n" +
 	"\x1dUpdateVolumeDiscountTierInput\x12\x13\n" +
@@ -6108,7 +6651,7 @@ const file_core_core_sales_proto_rawDesc = "" +
 	"\x14_discount_percentageB\f\n" +
 	"\n" +
 	"_thresholdB\x11\n" +
-	"\x0f_parent_tier_id\"\xa9\x04\n" +
+	"\x0f_parent_tier_id\"\xc5\x04\n" +
 	"\x1bUpdateVolumeDiscountRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x129\n" +
@@ -6124,7 +6667,8 @@ const file_core_core_sales_proto_rawDesc = "" +
 	"\x11has_product_lines\x18\v \x01(\bR\x0fhasProductLines\x12%\n" +
 	"\x0ehas_categories\x18\f \x01(\bR\rhasCategories\x12%\n" +
 	"\x0ehas_attributes\x18\r \x01(\bR\rhasAttributes\x12\x1b\n" +
-	"\thas_units\x18\x0e \x01(\bR\bhasUnitsB\a\n" +
+	"\thas_units\x18\x0e \x01(\bR\bhasUnits\x12\x1a\n" +
+	"\bincludes\x18\x0f \x03(\tR\bincludesB\a\n" +
 	"\x05_name\"a\n" +
 	"\x1cUpdateVolumeDiscountResponse\x12A\n" +
 	"\x0fvolume_discount\x18\x01 \x01(\v2\x18.core.VolumeDiscountInfoR\x0evolumeDiscount\"-\n" +
@@ -6248,121 +6792,147 @@ var file_core_core_sales_proto_goTypes = []any{
 	(*emptypb.Empty)(nil),                         // 65: google.protobuf.Empty
 }
 var file_core_core_sales_proto_depIdxs = []int32{
-	63, // 0: core.OrderDiscountInfo.created_at:type_name -> google.protobuf.Timestamp
-	63, // 1: core.OrderDiscountInfo.updated_at:type_name -> google.protobuf.Timestamp
-	63, // 2: core.SalesOrderStatusInfo.created_at:type_name -> google.protobuf.Timestamp
-	63, // 3: core.SalesOrderStatusInfo.updated_at:type_name -> google.protobuf.Timestamp
-	0,  // 4: core.ListOrderDiscountsResponse.order_discounts:type_name -> core.OrderDiscountInfo
-	64, // 5: core.ListOrderDiscountsResponse.page_info:type_name -> core.PageInfo
-	0,  // 6: core.GetOrderDiscountResponse.order_discount:type_name -> core.OrderDiscountInfo
-	0,  // 7: core.CreateOrderDiscountResponse.order_discount:type_name -> core.OrderDiscountInfo
-	0,  // 8: core.UpdateOrderDiscountResponse.order_discount:type_name -> core.OrderDiscountInfo
-	0,  // 9: core.DeleteOrderDiscountResponse.order_discount:type_name -> core.OrderDiscountInfo
-	0,  // 10: core.FindOrderDiscountByCodeResponse.order_discount:type_name -> core.OrderDiscountInfo
-	1,  // 11: core.ListSalesOrderStatusesResponse.sales_order_statuses:type_name -> core.SalesOrderStatusInfo
-	64, // 12: core.ListSalesOrderStatusesResponse.page_info:type_name -> core.PageInfo
-	63, // 13: core.SalesOrderSummaryInfo.issued_at:type_name -> google.protobuf.Timestamp
-	63, // 14: core.SalesOrderSummaryInfo.completed_at:type_name -> google.protobuf.Timestamp
-	63, // 15: core.SalesOrderSummaryInfo.created_at:type_name -> google.protobuf.Timestamp
-	63, // 16: core.SalesOrderSummaryInfo.updated_at:type_name -> google.protobuf.Timestamp
-	18, // 17: core.SalesOrderInfo.lines:type_name -> core.SalesOrderLineInfo
-	63, // 18: core.SalesOrderInfo.issued_at:type_name -> google.protobuf.Timestamp
-	63, // 19: core.SalesOrderInfo.completed_at:type_name -> google.protobuf.Timestamp
-	63, // 20: core.SalesOrderInfo.first_ship_at:type_name -> google.protobuf.Timestamp
-	63, // 21: core.SalesOrderInfo.expired_at:type_name -> google.protobuf.Timestamp
-	63, // 22: core.SalesOrderInfo.promised_at:type_name -> google.protobuf.Timestamp
-	63, // 23: core.SalesOrderInfo.created_at:type_name -> google.protobuf.Timestamp
-	63, // 24: core.SalesOrderInfo.updated_at:type_name -> google.protobuf.Timestamp
-	63, // 25: core.SalesOrderLineInfo.completed_at:type_name -> google.protobuf.Timestamp
-	63, // 26: core.SalesOrderLineInfo.created_at:type_name -> google.protobuf.Timestamp
-	63, // 27: core.SalesOrderLineInfo.updated_at:type_name -> google.protobuf.Timestamp
-	16, // 28: core.ListSalesOrdersResponse.sales_orders:type_name -> core.SalesOrderSummaryInfo
-	64, // 29: core.ListSalesOrdersResponse.page_info:type_name -> core.PageInfo
-	17, // 30: core.GetSalesOrderResponse.sales_order:type_name -> core.SalesOrderInfo
-	25, // 31: core.CreateSalesOrderRequest.lines:type_name -> core.CreateSalesOrderLineInput
-	24, // 32: core.CreateSalesOrderRequest.acknowledgement_email_contacts:type_name -> core.SalesOrderEmailContactInput
-	24, // 33: core.CreateSalesOrderRequest.invoice_email_contacts:type_name -> core.SalesOrderEmailContactInput
-	17, // 34: core.CreateSalesOrderResponse.sales_order:type_name -> core.SalesOrderInfo
-	63, // 35: core.UpdateSalesOrderRequest.promised_at:type_name -> google.protobuf.Timestamp
-	28, // 36: core.UpdateSalesOrderRequest.acknowledgement_email_contacts:type_name -> core.SalesOrderEmailContactList
-	28, // 37: core.UpdateSalesOrderRequest.invoice_email_contacts:type_name -> core.SalesOrderEmailContactList
-	24, // 38: core.SalesOrderEmailContactList.contacts:type_name -> core.SalesOrderEmailContactInput
-	17, // 39: core.UpdateSalesOrderResponse.sales_order:type_name -> core.SalesOrderInfo
-	17, // 40: core.ChangeSalesOrderStatusResponse.sales_order:type_name -> core.SalesOrderInfo
-	18, // 41: core.CreateSalesOrderLineResponse.sales_order_line:type_name -> core.SalesOrderLineInfo
-	18, // 42: core.UpdateSalesOrderLineResponse.sales_order_line:type_name -> core.SalesOrderLineInfo
-	63, // 43: core.VolumeDiscountTierInfo.created_at:type_name -> google.protobuf.Timestamp
-	63, // 44: core.VolumeDiscountTierInfo.updated_at:type_name -> google.protobuf.Timestamp
-	43, // 45: core.VolumeDiscountInfo.tiers:type_name -> core.VolumeDiscountTierInfo
-	44, // 46: core.VolumeDiscountInfo.customer_groups:type_name -> core.VolumeDiscountCustomerGroupInfo
-	45, // 47: core.VolumeDiscountInfo.product_lines:type_name -> core.VolumeDiscountProductLineInfo
-	46, // 48: core.VolumeDiscountInfo.categories:type_name -> core.VolumeDiscountCategoryInfo
-	47, // 49: core.VolumeDiscountInfo.attributes:type_name -> core.VolumeDiscountAttributeInfo
-	48, // 50: core.VolumeDiscountInfo.acceptable_units:type_name -> core.VolumeDiscountUnitInfo
-	63, // 51: core.VolumeDiscountInfo.created_at:type_name -> google.protobuf.Timestamp
-	63, // 52: core.VolumeDiscountInfo.updated_at:type_name -> google.protobuf.Timestamp
-	49, // 53: core.ListVolumeDiscountsResponse.volume_discounts:type_name -> core.VolumeDiscountInfo
-	64, // 54: core.ListVolumeDiscountsResponse.page_info:type_name -> core.PageInfo
-	49, // 55: core.GetVolumeDiscountResponse.volume_discount:type_name -> core.VolumeDiscountInfo
-	54, // 56: core.CreateVolumeDiscountRequest.tiers:type_name -> core.CreateVolumeDiscountTierInput
-	49, // 57: core.CreateVolumeDiscountResponse.volume_discount:type_name -> core.VolumeDiscountInfo
-	57, // 58: core.UpdateVolumeDiscountRequest.tiers:type_name -> core.UpdateVolumeDiscountTierInput
-	49, // 59: core.UpdateVolumeDiscountResponse.volume_discount:type_name -> core.VolumeDiscountInfo
-	2,  // 60: core.CoreSalesService.ListOrderDiscounts:input_type -> core.ListOrderDiscountsRequest
-	4,  // 61: core.CoreSalesService.GetOrderDiscount:input_type -> core.GetOrderDiscountRequest
-	6,  // 62: core.CoreSalesService.CreateOrderDiscount:input_type -> core.CreateOrderDiscountRequest
-	8,  // 63: core.CoreSalesService.UpdateOrderDiscount:input_type -> core.UpdateOrderDiscountRequest
-	10, // 64: core.CoreSalesService.DeleteOrderDiscount:input_type -> core.DeleteOrderDiscountRequest
-	12, // 65: core.CoreSalesService.FindOrderDiscountByCode:input_type -> core.FindOrderDiscountByCodeRequest
-	14, // 66: core.CoreSalesService.ListSalesOrderStatuses:input_type -> core.ListSalesOrderStatusesRequest
-	19, // 67: core.CoreSalesService.ListSalesOrders:input_type -> core.ListSalesOrdersRequest
-	21, // 68: core.CoreSalesService.GetSalesOrder:input_type -> core.GetSalesOrderRequest
-	23, // 69: core.CoreSalesService.CreateSalesOrder:input_type -> core.CreateSalesOrderRequest
-	27, // 70: core.CoreSalesService.UpdateSalesOrder:input_type -> core.UpdateSalesOrderRequest
-	30, // 71: core.CoreSalesService.DeleteSalesOrder:input_type -> core.DeleteSalesOrderRequest
-	31, // 72: core.CoreSalesService.BulkDeleteSalesOrders:input_type -> core.BulkDeleteSalesOrdersRequest
-	32, // 73: core.CoreSalesService.ChangeSalesOrderStatus:input_type -> core.ChangeSalesOrderStatusRequest
-	34, // 74: core.CoreSalesService.CheckoutSalesOrder:input_type -> core.CheckoutSalesOrderRequest
-	36, // 75: core.CoreSalesService.CreateSalesOrderProductionRun:input_type -> core.CreateSalesOrderProductionRunRequest
-	38, // 76: core.CoreSalesService.CreateSalesOrderLine:input_type -> core.CreateSalesOrderLineRequest
-	50, // 77: core.CoreSalesService.ListVolumeDiscounts:input_type -> core.ListVolumeDiscountsRequest
-	52, // 78: core.CoreSalesService.GetVolumeDiscount:input_type -> core.GetVolumeDiscountRequest
-	55, // 79: core.CoreSalesService.CreateVolumeDiscount:input_type -> core.CreateVolumeDiscountRequest
-	58, // 80: core.CoreSalesService.UpdateVolumeDiscount:input_type -> core.UpdateVolumeDiscountRequest
-	60, // 81: core.CoreSalesService.DeleteVolumeDiscount:input_type -> core.DeleteVolumeDiscountRequest
-	40, // 82: core.CoreSalesService.UpdateSalesOrderLine:input_type -> core.UpdateSalesOrderLineRequest
-	42, // 83: core.CoreSalesService.DeleteSalesOrderLine:input_type -> core.DeleteSalesOrderLineRequest
-	61, // 84: core.CoreSalesService.CreateCustomerCheckoutSession:input_type -> core.CreateCustomerCheckoutSessionRequest
-	3,  // 85: core.CoreSalesService.ListOrderDiscounts:output_type -> core.ListOrderDiscountsResponse
-	5,  // 86: core.CoreSalesService.GetOrderDiscount:output_type -> core.GetOrderDiscountResponse
-	7,  // 87: core.CoreSalesService.CreateOrderDiscount:output_type -> core.CreateOrderDiscountResponse
-	9,  // 88: core.CoreSalesService.UpdateOrderDiscount:output_type -> core.UpdateOrderDiscountResponse
-	11, // 89: core.CoreSalesService.DeleteOrderDiscount:output_type -> core.DeleteOrderDiscountResponse
-	13, // 90: core.CoreSalesService.FindOrderDiscountByCode:output_type -> core.FindOrderDiscountByCodeResponse
-	15, // 91: core.CoreSalesService.ListSalesOrderStatuses:output_type -> core.ListSalesOrderStatusesResponse
-	20, // 92: core.CoreSalesService.ListSalesOrders:output_type -> core.ListSalesOrdersResponse
-	22, // 93: core.CoreSalesService.GetSalesOrder:output_type -> core.GetSalesOrderResponse
-	26, // 94: core.CoreSalesService.CreateSalesOrder:output_type -> core.CreateSalesOrderResponse
-	29, // 95: core.CoreSalesService.UpdateSalesOrder:output_type -> core.UpdateSalesOrderResponse
-	65, // 96: core.CoreSalesService.DeleteSalesOrder:output_type -> google.protobuf.Empty
-	65, // 97: core.CoreSalesService.BulkDeleteSalesOrders:output_type -> google.protobuf.Empty
-	33, // 98: core.CoreSalesService.ChangeSalesOrderStatus:output_type -> core.ChangeSalesOrderStatusResponse
-	35, // 99: core.CoreSalesService.CheckoutSalesOrder:output_type -> core.CheckoutSalesOrderResponse
-	37, // 100: core.CoreSalesService.CreateSalesOrderProductionRun:output_type -> core.CreateSalesOrderProductionRunResponse
-	39, // 101: core.CoreSalesService.CreateSalesOrderLine:output_type -> core.CreateSalesOrderLineResponse
-	51, // 102: core.CoreSalesService.ListVolumeDiscounts:output_type -> core.ListVolumeDiscountsResponse
-	53, // 103: core.CoreSalesService.GetVolumeDiscount:output_type -> core.GetVolumeDiscountResponse
-	56, // 104: core.CoreSalesService.CreateVolumeDiscount:output_type -> core.CreateVolumeDiscountResponse
-	59, // 105: core.CoreSalesService.UpdateVolumeDiscount:output_type -> core.UpdateVolumeDiscountResponse
-	65, // 106: core.CoreSalesService.DeleteVolumeDiscount:output_type -> google.protobuf.Empty
-	41, // 107: core.CoreSalesService.UpdateSalesOrderLine:output_type -> core.UpdateSalesOrderLineResponse
-	65, // 108: core.CoreSalesService.DeleteSalesOrderLine:output_type -> google.protobuf.Empty
-	62, // 109: core.CoreSalesService.CreateCustomerCheckoutSession:output_type -> core.CreateCustomerCheckoutSessionResponse
-	85, // [85:110] is the sub-list for method output_type
-	60, // [60:85] is the sub-list for method input_type
-	60, // [60:60] is the sub-list for extension type_name
-	60, // [60:60] is the sub-list for extension extendee
-	0,  // [0:60] is the sub-list for field type_name
+	63,  // 0: core.OrderDiscountInfo.created_at:type_name -> google.protobuf.Timestamp
+	63,  // 1: core.OrderDiscountInfo.updated_at:type_name -> google.protobuf.Timestamp
+	63,  // 2: core.SalesOrderStatusInfo.created_at:type_name -> google.protobuf.Timestamp
+	63,  // 3: core.SalesOrderStatusInfo.updated_at:type_name -> google.protobuf.Timestamp
+	0,   // 4: core.ListOrderDiscountsResponse.order_discounts:type_name -> core.OrderDiscountInfo
+	64,  // 5: core.ListOrderDiscountsResponse.page_info:type_name -> core.PageInfo
+	0,   // 6: core.GetOrderDiscountResponse.order_discount:type_name -> core.OrderDiscountInfo
+	0,   // 7: core.CreateOrderDiscountResponse.order_discount:type_name -> core.OrderDiscountInfo
+	0,   // 8: core.UpdateOrderDiscountResponse.order_discount:type_name -> core.OrderDiscountInfo
+	0,   // 9: core.DeleteOrderDiscountResponse.order_discount:type_name -> core.OrderDiscountInfo
+	0,   // 10: core.FindOrderDiscountByCodeResponse.order_discount:type_name -> core.OrderDiscountInfo
+	1,   // 11: core.ListSalesOrderStatusesResponse.sales_order_statuses:type_name -> core.SalesOrderStatusInfo
+	64,  // 12: core.ListSalesOrderStatusesResponse.page_info:type_name -> core.PageInfo
+	63,  // 13: core.SalesOrderSummaryInfo.issued_at:type_name -> google.protobuf.Timestamp
+	63,  // 14: core.SalesOrderSummaryInfo.completed_at:type_name -> google.protobuf.Timestamp
+	63,  // 15: core.SalesOrderSummaryInfo.created_at:type_name -> google.protobuf.Timestamp
+	63,  // 16: core.SalesOrderSummaryInfo.updated_at:type_name -> google.protobuf.Timestamp
+	18,  // 17: core.SalesOrderInfo.lines:type_name -> core.SalesOrderLineInfo
+	63,  // 18: core.SalesOrderInfo.issued_at:type_name -> google.protobuf.Timestamp
+	63,  // 19: core.SalesOrderInfo.completed_at:type_name -> google.protobuf.Timestamp
+	63,  // 20: core.SalesOrderInfo.first_ship_at:type_name -> google.protobuf.Timestamp
+	63,  // 21: core.SalesOrderInfo.expired_at:type_name -> google.protobuf.Timestamp
+	63,  // 22: core.SalesOrderInfo.promised_at:type_name -> google.protobuf.Timestamp
+	63,  // 23: core.SalesOrderInfo.created_at:type_name -> google.protobuf.Timestamp
+	63,  // 24: core.SalesOrderInfo.updated_at:type_name -> google.protobuf.Timestamp
+	63,  // 25: core.SalesOrderInfo.service_level_created_at:type_name -> google.protobuf.Timestamp
+	63,  // 26: core.SalesOrderInfo.service_level_updated_at:type_name -> google.protobuf.Timestamp
+	63,  // 27: core.SalesOrderInfo.carrier_created_at:type_name -> google.protobuf.Timestamp
+	63,  // 28: core.SalesOrderInfo.carrier_updated_at:type_name -> google.protobuf.Timestamp
+	63,  // 29: core.SalesOrderInfo.customer_created_at:type_name -> google.protobuf.Timestamp
+	63,  // 30: core.SalesOrderInfo.customer_updated_at:type_name -> google.protobuf.Timestamp
+	63,  // 31: core.SalesOrderInfo.bill_to_created_at:type_name -> google.protobuf.Timestamp
+	63,  // 32: core.SalesOrderInfo.bill_to_updated_at:type_name -> google.protobuf.Timestamp
+	63,  // 33: core.SalesOrderInfo.ship_to_created_at:type_name -> google.protobuf.Timestamp
+	63,  // 34: core.SalesOrderInfo.ship_to_updated_at:type_name -> google.protobuf.Timestamp
+	63,  // 35: core.SalesOrderInfo.order_discount_created_at:type_name -> google.protobuf.Timestamp
+	63,  // 36: core.SalesOrderInfo.order_discount_updated_at:type_name -> google.protobuf.Timestamp
+	63,  // 37: core.SalesOrderInfo.payment_term_created_at:type_name -> google.protobuf.Timestamp
+	63,  // 38: core.SalesOrderInfo.payment_term_updated_at:type_name -> google.protobuf.Timestamp
+	63,  // 39: core.SalesOrderInfo.shipping_term_created_at:type_name -> google.protobuf.Timestamp
+	63,  // 40: core.SalesOrderInfo.shipping_term_updated_at:type_name -> google.protobuf.Timestamp
+	63,  // 41: core.SalesOrderLineInfo.completed_at:type_name -> google.protobuf.Timestamp
+	63,  // 42: core.SalesOrderLineInfo.created_at:type_name -> google.protobuf.Timestamp
+	63,  // 43: core.SalesOrderLineInfo.updated_at:type_name -> google.protobuf.Timestamp
+	16,  // 44: core.ListSalesOrdersResponse.sales_orders:type_name -> core.SalesOrderSummaryInfo
+	64,  // 45: core.ListSalesOrdersResponse.page_info:type_name -> core.PageInfo
+	17,  // 46: core.GetSalesOrderResponse.sales_order:type_name -> core.SalesOrderInfo
+	25,  // 47: core.CreateSalesOrderRequest.lines:type_name -> core.CreateSalesOrderLineInput
+	24,  // 48: core.CreateSalesOrderRequest.acknowledgement_email_contacts:type_name -> core.SalesOrderEmailContactInput
+	24,  // 49: core.CreateSalesOrderRequest.invoice_email_contacts:type_name -> core.SalesOrderEmailContactInput
+	17,  // 50: core.CreateSalesOrderResponse.sales_order:type_name -> core.SalesOrderInfo
+	63,  // 51: core.UpdateSalesOrderRequest.promised_at:type_name -> google.protobuf.Timestamp
+	28,  // 52: core.UpdateSalesOrderRequest.acknowledgement_email_contacts:type_name -> core.SalesOrderEmailContactList
+	28,  // 53: core.UpdateSalesOrderRequest.invoice_email_contacts:type_name -> core.SalesOrderEmailContactList
+	24,  // 54: core.SalesOrderEmailContactList.contacts:type_name -> core.SalesOrderEmailContactInput
+	17,  // 55: core.UpdateSalesOrderResponse.sales_order:type_name -> core.SalesOrderInfo
+	17,  // 56: core.ChangeSalesOrderStatusResponse.sales_order:type_name -> core.SalesOrderInfo
+	18,  // 57: core.CreateSalesOrderLineResponse.sales_order_line:type_name -> core.SalesOrderLineInfo
+	18,  // 58: core.UpdateSalesOrderLineResponse.sales_order_line:type_name -> core.SalesOrderLineInfo
+	63,  // 59: core.VolumeDiscountTierInfo.created_at:type_name -> google.protobuf.Timestamp
+	63,  // 60: core.VolumeDiscountTierInfo.updated_at:type_name -> google.protobuf.Timestamp
+	63,  // 61: core.VolumeDiscountCustomerGroupInfo.created_at:type_name -> google.protobuf.Timestamp
+	63,  // 62: core.VolumeDiscountCustomerGroupInfo.updated_at:type_name -> google.protobuf.Timestamp
+	63,  // 63: core.VolumeDiscountProductLineInfo.created_at:type_name -> google.protobuf.Timestamp
+	63,  // 64: core.VolumeDiscountProductLineInfo.updated_at:type_name -> google.protobuf.Timestamp
+	63,  // 65: core.VolumeDiscountCategoryInfo.created_at:type_name -> google.protobuf.Timestamp
+	63,  // 66: core.VolumeDiscountCategoryInfo.updated_at:type_name -> google.protobuf.Timestamp
+	63,  // 67: core.VolumeDiscountAttributeInfo.created_at:type_name -> google.protobuf.Timestamp
+	63,  // 68: core.VolumeDiscountAttributeInfo.updated_at:type_name -> google.protobuf.Timestamp
+	63,  // 69: core.VolumeDiscountUnitInfo.created_at:type_name -> google.protobuf.Timestamp
+	63,  // 70: core.VolumeDiscountUnitInfo.updated_at:type_name -> google.protobuf.Timestamp
+	43,  // 71: core.VolumeDiscountInfo.tiers:type_name -> core.VolumeDiscountTierInfo
+	44,  // 72: core.VolumeDiscountInfo.customer_groups:type_name -> core.VolumeDiscountCustomerGroupInfo
+	45,  // 73: core.VolumeDiscountInfo.product_lines:type_name -> core.VolumeDiscountProductLineInfo
+	46,  // 74: core.VolumeDiscountInfo.categories:type_name -> core.VolumeDiscountCategoryInfo
+	47,  // 75: core.VolumeDiscountInfo.attributes:type_name -> core.VolumeDiscountAttributeInfo
+	48,  // 76: core.VolumeDiscountInfo.acceptable_units:type_name -> core.VolumeDiscountUnitInfo
+	63,  // 77: core.VolumeDiscountInfo.created_at:type_name -> google.protobuf.Timestamp
+	63,  // 78: core.VolumeDiscountInfo.updated_at:type_name -> google.protobuf.Timestamp
+	49,  // 79: core.ListVolumeDiscountsResponse.volume_discounts:type_name -> core.VolumeDiscountInfo
+	64,  // 80: core.ListVolumeDiscountsResponse.page_info:type_name -> core.PageInfo
+	49,  // 81: core.GetVolumeDiscountResponse.volume_discount:type_name -> core.VolumeDiscountInfo
+	54,  // 82: core.CreateVolumeDiscountRequest.tiers:type_name -> core.CreateVolumeDiscountTierInput
+	49,  // 83: core.CreateVolumeDiscountResponse.volume_discount:type_name -> core.VolumeDiscountInfo
+	57,  // 84: core.UpdateVolumeDiscountRequest.tiers:type_name -> core.UpdateVolumeDiscountTierInput
+	49,  // 85: core.UpdateVolumeDiscountResponse.volume_discount:type_name -> core.VolumeDiscountInfo
+	2,   // 86: core.CoreSalesService.ListOrderDiscounts:input_type -> core.ListOrderDiscountsRequest
+	4,   // 87: core.CoreSalesService.GetOrderDiscount:input_type -> core.GetOrderDiscountRequest
+	6,   // 88: core.CoreSalesService.CreateOrderDiscount:input_type -> core.CreateOrderDiscountRequest
+	8,   // 89: core.CoreSalesService.UpdateOrderDiscount:input_type -> core.UpdateOrderDiscountRequest
+	10,  // 90: core.CoreSalesService.DeleteOrderDiscount:input_type -> core.DeleteOrderDiscountRequest
+	12,  // 91: core.CoreSalesService.FindOrderDiscountByCode:input_type -> core.FindOrderDiscountByCodeRequest
+	14,  // 92: core.CoreSalesService.ListSalesOrderStatuses:input_type -> core.ListSalesOrderStatusesRequest
+	19,  // 93: core.CoreSalesService.ListSalesOrders:input_type -> core.ListSalesOrdersRequest
+	21,  // 94: core.CoreSalesService.GetSalesOrder:input_type -> core.GetSalesOrderRequest
+	23,  // 95: core.CoreSalesService.CreateSalesOrder:input_type -> core.CreateSalesOrderRequest
+	27,  // 96: core.CoreSalesService.UpdateSalesOrder:input_type -> core.UpdateSalesOrderRequest
+	30,  // 97: core.CoreSalesService.DeleteSalesOrder:input_type -> core.DeleteSalesOrderRequest
+	31,  // 98: core.CoreSalesService.BulkDeleteSalesOrders:input_type -> core.BulkDeleteSalesOrdersRequest
+	32,  // 99: core.CoreSalesService.ChangeSalesOrderStatus:input_type -> core.ChangeSalesOrderStatusRequest
+	34,  // 100: core.CoreSalesService.CheckoutSalesOrder:input_type -> core.CheckoutSalesOrderRequest
+	36,  // 101: core.CoreSalesService.CreateSalesOrderProductionRun:input_type -> core.CreateSalesOrderProductionRunRequest
+	38,  // 102: core.CoreSalesService.CreateSalesOrderLine:input_type -> core.CreateSalesOrderLineRequest
+	50,  // 103: core.CoreSalesService.ListVolumeDiscounts:input_type -> core.ListVolumeDiscountsRequest
+	52,  // 104: core.CoreSalesService.GetVolumeDiscount:input_type -> core.GetVolumeDiscountRequest
+	55,  // 105: core.CoreSalesService.CreateVolumeDiscount:input_type -> core.CreateVolumeDiscountRequest
+	58,  // 106: core.CoreSalesService.UpdateVolumeDiscount:input_type -> core.UpdateVolumeDiscountRequest
+	60,  // 107: core.CoreSalesService.DeleteVolumeDiscount:input_type -> core.DeleteVolumeDiscountRequest
+	40,  // 108: core.CoreSalesService.UpdateSalesOrderLine:input_type -> core.UpdateSalesOrderLineRequest
+	42,  // 109: core.CoreSalesService.DeleteSalesOrderLine:input_type -> core.DeleteSalesOrderLineRequest
+	61,  // 110: core.CoreSalesService.CreateCustomerCheckoutSession:input_type -> core.CreateCustomerCheckoutSessionRequest
+	3,   // 111: core.CoreSalesService.ListOrderDiscounts:output_type -> core.ListOrderDiscountsResponse
+	5,   // 112: core.CoreSalesService.GetOrderDiscount:output_type -> core.GetOrderDiscountResponse
+	7,   // 113: core.CoreSalesService.CreateOrderDiscount:output_type -> core.CreateOrderDiscountResponse
+	9,   // 114: core.CoreSalesService.UpdateOrderDiscount:output_type -> core.UpdateOrderDiscountResponse
+	11,  // 115: core.CoreSalesService.DeleteOrderDiscount:output_type -> core.DeleteOrderDiscountResponse
+	13,  // 116: core.CoreSalesService.FindOrderDiscountByCode:output_type -> core.FindOrderDiscountByCodeResponse
+	15,  // 117: core.CoreSalesService.ListSalesOrderStatuses:output_type -> core.ListSalesOrderStatusesResponse
+	20,  // 118: core.CoreSalesService.ListSalesOrders:output_type -> core.ListSalesOrdersResponse
+	22,  // 119: core.CoreSalesService.GetSalesOrder:output_type -> core.GetSalesOrderResponse
+	26,  // 120: core.CoreSalesService.CreateSalesOrder:output_type -> core.CreateSalesOrderResponse
+	29,  // 121: core.CoreSalesService.UpdateSalesOrder:output_type -> core.UpdateSalesOrderResponse
+	65,  // 122: core.CoreSalesService.DeleteSalesOrder:output_type -> google.protobuf.Empty
+	65,  // 123: core.CoreSalesService.BulkDeleteSalesOrders:output_type -> google.protobuf.Empty
+	33,  // 124: core.CoreSalesService.ChangeSalesOrderStatus:output_type -> core.ChangeSalesOrderStatusResponse
+	35,  // 125: core.CoreSalesService.CheckoutSalesOrder:output_type -> core.CheckoutSalesOrderResponse
+	37,  // 126: core.CoreSalesService.CreateSalesOrderProductionRun:output_type -> core.CreateSalesOrderProductionRunResponse
+	39,  // 127: core.CoreSalesService.CreateSalesOrderLine:output_type -> core.CreateSalesOrderLineResponse
+	51,  // 128: core.CoreSalesService.ListVolumeDiscounts:output_type -> core.ListVolumeDiscountsResponse
+	53,  // 129: core.CoreSalesService.GetVolumeDiscount:output_type -> core.GetVolumeDiscountResponse
+	56,  // 130: core.CoreSalesService.CreateVolumeDiscount:output_type -> core.CreateVolumeDiscountResponse
+	59,  // 131: core.CoreSalesService.UpdateVolumeDiscount:output_type -> core.UpdateVolumeDiscountResponse
+	65,  // 132: core.CoreSalesService.DeleteVolumeDiscount:output_type -> google.protobuf.Empty
+	41,  // 133: core.CoreSalesService.UpdateSalesOrderLine:output_type -> core.UpdateSalesOrderLineResponse
+	65,  // 134: core.CoreSalesService.DeleteSalesOrderLine:output_type -> google.protobuf.Empty
+	62,  // 135: core.CoreSalesService.CreateCustomerCheckoutSession:output_type -> core.CreateCustomerCheckoutSessionResponse
+	111, // [111:136] is the sub-list for method output_type
+	86,  // [86:111] is the sub-list for method input_type
+	86,  // [86:86] is the sub-list for extension type_name
+	86,  // [86:86] is the sub-list for extension extendee
+	0,   // [0:86] is the sub-list for field type_name
 }
 
 func init() { file_core_core_sales_proto_init() }
@@ -6388,6 +6958,10 @@ func file_core_core_sales_proto_init() {
 	file_core_core_sales_proto_msgTypes[38].OneofWrappers = []any{}
 	file_core_core_sales_proto_msgTypes[40].OneofWrappers = []any{}
 	file_core_core_sales_proto_msgTypes[43].OneofWrappers = []any{}
+	file_core_core_sales_proto_msgTypes[44].OneofWrappers = []any{}
+	file_core_core_sales_proto_msgTypes[45].OneofWrappers = []any{}
+	file_core_core_sales_proto_msgTypes[46].OneofWrappers = []any{}
+	file_core_core_sales_proto_msgTypes[47].OneofWrappers = []any{}
 	file_core_core_sales_proto_msgTypes[50].OneofWrappers = []any{}
 	file_core_core_sales_proto_msgTypes[52].OneofWrappers = []any{}
 	file_core_core_sales_proto_msgTypes[54].OneofWrappers = []any{}

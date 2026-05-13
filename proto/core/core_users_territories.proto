@@ -35,10 +35,17 @@ message TerritoryAccountUserInfo {
   string id = 1;
   optional string name = 2;
   optional string email = 3;
+  optional string status = 4;
+  optional google.protobuf.Timestamp created_at = 5;
+  optional google.protobuf.Timestamp updated_at = 6;
 }
 message TerritoryProductLineInfo {
   string id = 1;
   string name = 2;
+  optional bool is_commission_exempt = 3;
+  optional bool is_freight_exempt = 4;
+  optional google.protobuf.Timestamp created_at = 5;
+  optional google.protobuf.Timestamp updated_at = 6;
 }
 message TerritoryInfo {
   string id = 1;
@@ -55,6 +62,7 @@ message ListTerritoriesRequest {
   optional string cursor = 2;
   int32 limit = 3;
   optional string query = 4;
+  repeated string includes = 5;
 }
 message ListTerritoriesResponse {
   repeated TerritoryInfo territories = 1;
@@ -63,6 +71,7 @@ message ListTerritoriesResponse {
 message GetTerritoryRequest {
   string account_id = 1;
   string id = 2;
+  repeated string includes = 3;
 }
 message GetTerritoryResponse {
   TerritoryInfo territory = 1;
@@ -74,6 +83,7 @@ message CreateTerritoryRequest {
   optional int32 end_zipcode = 4;
   string sales_rep_id = 5;
   optional string product_line_id = 6;
+  repeated string includes = 7;
 }
 message CreateTerritoryResponse {
   TerritoryInfo territory = 1;
@@ -89,6 +99,7 @@ message UpdateTerritoryRequest {
   bool clear_product_line = 8;
   bool clear_start_zipcode = 9;
   bool clear_end_zipcode = 10;
+  repeated string includes = 11;
 }
 message UpdateTerritoryResponse {
   TerritoryInfo territory = 1;
@@ -187,6 +198,7 @@ message DepartmentInfo {
   repeated LightMachineInfo machines = 7;
   google.protobuf.Timestamp created_at = 8;
   google.protobuf.Timestamp updated_at = 9;
+  optional string location_type_code = 10;
 }
 message ListDepartmentsRequest {
   optional string cursor = 1;
@@ -283,6 +295,18 @@ message InventoryChangeLogInfo {
   google.protobuf.Timestamp updated_at = 16;
   optional string item_type_code = 17;
   optional string scanning_station_type = 18;
+  google.protobuf.Timestamp item_created_at = 19;
+  google.protobuf.Timestamp item_updated_at = 20;
+  string quantity_unit_ratio_numerator = 21;
+  string quantity_unit_ratio_denominator = 22;
+  string quantity_unit_offset_numerator = 23;
+  string quantity_unit_offset_denominator = 24;
+  google.protobuf.Timestamp quantity_unit_created_at = 25;
+  google.protobuf.Timestamp quantity_unit_updated_at = 26;
+  optional google.protobuf.Timestamp scanning_station_created_at = 27;
+  optional google.protobuf.Timestamp scanning_station_updated_at = 28;
+  optional google.protobuf.Timestamp responsible_user_created_at = 29;
+  optional google.protobuf.Timestamp responsible_user_updated_at = 30;
 }
 message ListInventoryChangeLogsRequest {
   optional string cursor = 1;

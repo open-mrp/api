@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/services/core-service/internal/domain"
@@ -107,18 +108,20 @@ func (s *productLineSvcImpl) ListProductLines(ctx context.Context, params domain
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	for _, pl := range result.ProductLines {
-		unitGroup, apiErr := repo.GetUnitGroup(ctx, pl.UnitGroupID)
-		if apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
+	if slices.Contains(params.Includes, "unit_group") {
+		for _, pl := range result.ProductLines {
+			unitGroup, apiErr := repo.GetUnitGroup(ctx, pl.UnitGroupID)
+			if apiErr != nil {
+				return nil, tracing.Trace(span, apiErr)
+			}
+			pl.UnitGroup = unitGroup
 		}
-		pl.UnitGroup = unitGroup
 	}
 
 	return result, nil
 }
 
-func (s *productLineSvcImpl) GetProductLine(ctx context.Context, productLineID string) (*domain.ProductLineFull, *apierror.APIError) {
+func (s *productLineSvcImpl) GetProductLine(ctx context.Context, params domain.GetProductLineParams) (*domain.ProductLineFull, *apierror.APIError) {
 	ctx, span := productLineSvcTracer.Start(ctx, "service.product_line.get")
 	defer span.End()
 
@@ -143,21 +146,22 @@ func (s *productLineSvcImpl) GetProductLine(ctx context.Context, productLineID s
 		return nil, tracing.Trace(span, apierror.NewAuthorizationError("You do not have access to this resource."))
 	}
 
+	params.AccountID = identity.Target.AccountID
+
 	repo := s.repos.NewProductLineRepo()
 
-	productLine, apiErr := repo.Get(ctx, domain.GetProductLineParams{
-		AccountID:     identity.Target.AccountID,
-		ProductLineID: productLineID,
-	})
+	productLine, apiErr := repo.Get(ctx, params)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	unitGroup, apiErr := repo.GetUnitGroup(ctx, productLine.UnitGroupID)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+	if slices.Contains(params.Includes, "unit_group") {
+		unitGroup, apiErr := repo.GetUnitGroup(ctx, productLine.UnitGroupID)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		productLine.UnitGroup = unitGroup
 	}
-	productLine.UnitGroup = unitGroup
 
 	return productLine, nil
 }
@@ -218,11 +222,13 @@ func (s *productLineSvcImpl) CreateProductLine(ctx context.Context, params domai
 				return apiErr
 			}
 
-			unitGroup, apiErr := txRepo.GetUnitGroup(txCtx, created.UnitGroupID)
-			if apiErr != nil {
-				return apiErr
+			if slices.Contains(params.Includes, "unit_group") {
+				unitGroup, apiErr := txRepo.GetUnitGroup(txCtx, created.UnitGroupID)
+				if apiErr != nil {
+					return apiErr
+				}
+				created.UnitGroup = unitGroup
 			}
-			created.UnitGroup = unitGroup
 
 			result = created
 
@@ -317,11 +323,13 @@ func (s *productLineSvcImpl) UpdateProductLine(ctx context.Context, params domai
 				return apiErr
 			}
 
-			unitGroup, apiErr := txRepo.GetUnitGroup(txCtx, updated.UnitGroupID)
-			if apiErr != nil {
-				return apiErr
+			if slices.Contains(params.Includes, "unit_group") {
+				unitGroup, apiErr := txRepo.GetUnitGroup(txCtx, updated.UnitGroupID)
+				if apiErr != nil {
+					return apiErr
+				}
+				updated.UnitGroup = unitGroup
 			}
-			updated.UnitGroup = unitGroup
 
 			result = updated
 

@@ -25,11 +25,11 @@ type ItemCategory struct {
 	Notes *string `json:"notes"`
 	// Item category type.
 	Type constants.ItemCategoryType `json:"type" validate:"required"`
-	// Owner.
+	// Owner of the item category.
 	Owner *Owner `json:"owner" expandable:"true"`
 	// Properties associated with this item category.
 	Properties *List[Property] `json:"properties" expandable:"true"`
-	// Unit group associated with this item category.
+	// Unit group associated with this item category. This unit group dictates the available units that items in this category may embody in your production process.
 	UnitGroup *UnitGroup `json:"unit_group" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`

@@ -40,7 +40,7 @@ func (*ReceivingOrdersEndpointGroup) Materialize(config *ReceivingOrdersEndpoint
 	}
 
 	listEndpoint := (&receivingorderep.ListReceivingOrdersEndpoint{}).Materialize().WithService(inner, svc)
-	getEndpoint := (&receivingorderep.GetReceivingOrderEndpoint{}).Materialize().WithService(inner, svc)
+	retrieveEndpoint := (&receivingorderep.RetrieveReceivingOrderEndpoint{}).Materialize().WithService(inner, svc)
 	stockEndpoint := (&receivingorderep.StockReceivingOrderEndpoint{}).Materialize().WithService(inner, svc)
 	receiveEndpoint := (&receivingorderep.ReceiveReceivingOrderEndpoint{}).Materialize().WithService(inner, svc)
 	voidEndpoint := (&receivingorderep.VoidReceivingOrderEndpoint{}).Materialize().WithService(inner, svc)
@@ -50,7 +50,7 @@ func (*ReceivingOrdersEndpointGroup) Materialize(config *ReceivingOrdersEndpoint
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listEndpoint,
-		getEndpoint,
+		retrieveEndpoint,
 		stockEndpoint,
 		receiveEndpoint,
 		voidEndpoint,

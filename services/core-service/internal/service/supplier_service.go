@@ -94,7 +94,7 @@ func (s *supplierSvcImpl) ListSuppliers(ctx context.Context, params domain.ListS
 	return s.repos.NewSupplierRepo().List(ctx, params)
 }
 
-func (s *supplierSvcImpl) GetSupplier(ctx context.Context, supplierID string) (*domain.Supplier, *apierror.APIError) {
+func (s *supplierSvcImpl) GetSupplier(ctx context.Context, params domain.GetSupplierParams) (*domain.Supplier, *apierror.APIError) {
 	ctx, span := supplierSvcTracer.Start(ctx, "service.supplier.get")
 	defer span.End()
 
@@ -110,7 +110,7 @@ func (s *supplierSvcImpl) GetSupplier(ctx context.Context, supplierID string) (*
 	// Internal actors need suppliers:read permission.
 	// Supplier actors can view their own record.
 	if identity.IsSupplierUser() {
-		if identity.Actor.AccountID == nil || *identity.Actor.AccountID != supplierID {
+		if identity.Actor.AccountID == nil || *identity.Actor.AccountID != params.SupplierID {
 			return nil, tracing.Trace(span, apierror.NewAuthorizationError("You do not have access to this supplier."))
 		}
 	} else {
@@ -122,7 +122,8 @@ func (s *supplierSvcImpl) GetSupplier(ctx context.Context, supplierID string) (*
 		}
 	}
 
-	return s.repos.NewSupplierRepo().Get(ctx, identity.Target.AccountID, supplierID)
+	params.OwnerAccountID = identity.Target.AccountID
+	return s.repos.NewSupplierRepo().Get(ctx, params)
 }
 
 func (s *supplierSvcImpl) CreateSupplier(ctx context.Context, params domain.CreateSupplierParams) (*domain.Supplier, *apierror.APIError) {
@@ -287,7 +288,7 @@ func (s *supplierSvcImpl) UpdateSupplier(ctx context.Context, params domain.Upda
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *supplierSvcImpl) *apierror.APIError {
 			txSupplierRepo := txSvc.repos.NewSupplierRepo()
 
-			old, apiErr := txSupplierRepo.Get(txCtx, params.OwnerAccountID, params.SupplierID)
+			old, apiErr := txSupplierRepo.Get(txCtx, domain.GetSupplierParams{OwnerAccountID: params.OwnerAccountID, SupplierID: params.SupplierID, Includes: []string{"bill_to_address", "ship_to_address"}})
 			if apiErr != nil {
 				return apiErr
 			}
@@ -364,7 +365,7 @@ func (s *supplierSvcImpl) DeleteSupplier(ctx context.Context, params domain.Dele
 
 	params.OwnerAccountID = identity.Target.AccountID
 
-	supplier, apiErr := s.repos.NewSupplierRepo().Get(ctx, params.OwnerAccountID, params.SupplierID)
+	supplier, apiErr := s.repos.NewSupplierRepo().Get(ctx, domain.GetSupplierParams{OwnerAccountID: params.OwnerAccountID, SupplierID: params.SupplierID, Includes: []string{"bill_to_address", "ship_to_address"}})
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeSupplier, params.SupplierID)
@@ -434,7 +435,7 @@ func (s *supplierSvcImpl) BulkDeleteSuppliers(ctx context.Context, params domain
 	supplierRepo := s.repos.NewSupplierRepo()
 	suppliers := make([]*domain.Supplier, 0, len(params.SupplierIDs))
 	for _, supplierID := range params.SupplierIDs {
-		supplier, apiErr := supplierRepo.Get(ctx, params.OwnerAccountID, supplierID)
+		supplier, apiErr := supplierRepo.Get(ctx, domain.GetSupplierParams{OwnerAccountID: params.OwnerAccountID, SupplierID: supplierID, Includes: []string{"bill_to_address", "ship_to_address"}})
 		if apiErr != nil {
 			return tracing.Trace(span, apiErr)
 		}

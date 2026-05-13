@@ -1453,7 +1453,7 @@ func (s *agentDefSvcImpl) AcknowledgeAgentAlert(ctx context.Context, params doma
 			if getErr != nil {
 				return getErr
 			}
-			result = sqlcAlertToDomain(updated)
+			result = sqlcGetAlertRowToDomain(updated)
 
 			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, result)
 		})
@@ -1508,39 +1508,49 @@ func sqlcMemoryToDomain(m *sqlc.AgentMemory) *domain.AgentMemoryInfo {
 	}
 }
 
-func sqlcAlertToDomain(a *sqlc.AgentAlert) *domain.AgentAlertInfo {
+func alertPgText(t pgtype.Text) string {
+	if t.Valid {
+		return t.String
+	}
+	return ""
+}
+
+func alertPgTs(t pgtype.Timestamptz) string {
+	if t.Valid {
+		return t.Time.Format("2006-01-02T15:04:05.000Z")
+	}
+	return ""
+}
+
+func sqlcGetAlertRowToDomain(a *sqlc.GetAgentAlertByIDRow) *domain.AgentAlertInfo {
 	var metadataStr string
 	if a.Metadata != nil {
 		metadataStr = string(a.Metadata)
 	}
-	pgText := func(t pgtype.Text) string {
-		if t.Valid {
-			return t.String
-		}
-		return ""
-	}
-	pgTs := func(t pgtype.Timestamptz) string {
-		if t.Valid {
-			return t.Time.Format("2006-01-02T15:04:05.000Z")
-		}
-		return ""
-	}
 	return &domain.AgentAlertInfo{
 		ID:                      a.ID,
 		AccountID:               a.AccountID,
-		AgentRunID:              pgText(a.AgentRunID),
-		AgentActionID:           pgText(a.AgentActionID),
+		AgentRunID:              alertPgText(a.AgentRunID),
+		AgentActionID:           alertPgText(a.AgentActionID),
 		SeverityCode:            a.SeverityCode,
 		StatusCode:              a.StatusCode,
 		Title:                   a.Title,
-		Message:                 pgText(a.Message),
+		Message:                 alertPgText(a.Message),
 		Metadata:                metadataStr,
-		AcknowledgedAt:          pgTs(a.AcknowledgedAt),
-		AcknowledgedBy:          pgText(a.AcknowledgedByActorID),
-		AcknowledgedByActorType: pgText(a.AcknowledgedByActorType),
-		AcknowledgedByActorName: pgText(a.AcknowledgedByActorName),
-		CreatedAt:               pgTs(a.CreatedAt),
-		UpdatedAt:               pgTs(a.UpdatedAt),
+		AcknowledgedAt:          alertPgTs(a.AcknowledgedAt),
+		AcknowledgedBy:          alertPgText(a.AcknowledgedByActorID),
+		AcknowledgedByActorType: alertPgText(a.AcknowledgedByActorType),
+		AcknowledgedByActorName: alertPgText(a.AcknowledgedByActorName),
+		CreatedAt:               alertPgTs(a.CreatedAt),
+		UpdatedAt:               alertPgTs(a.UpdatedAt),
+		RunStatusCode:           alertPgText(a.RunStatusCode),
+		RunTriggerType:          alertPgText(a.RunTriggerType),
+		RunCreatedAt:            alertPgTs(a.RunCreatedAt),
+		RunUpdatedAt:            alertPgTs(a.RunUpdatedAt),
+		ActionToolSlug:          alertPgText(a.ActionToolSlug),
+		ActionStatusCode:        alertPgText(a.ActionStatusCode),
+		ActionCreatedAt:         alertPgTs(a.ActionCreatedAt),
+		ActionUpdatedAt:         alertPgTs(a.ActionUpdatedAt),
 	}
 }
 

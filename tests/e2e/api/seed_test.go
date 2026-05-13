@@ -36,6 +36,8 @@ const (
 	SeedPropertyName     = "Color"
 	SeedAttributeID      = "at_01seedbeige00000000"
 
+	itemsPath = "/v1/catalog/items"
+
 	// Units
 	SeedUnitID          = "un_01seedpair000000000"
 	SeedUnitGroupID     = "ungp_01k0a5ecy9edg9za40dnccw53n"
@@ -56,10 +58,16 @@ const (
 	SeedProductionStepID = "prs_01k0a51qxceydax5036pegvzzy"
 	SeedMaterialID       = "ml_01seedyrn1mat000000"
 	SeedMaterialItemID   = "it_01seedyrn1item00000"
-	SeedPartID           = "pt_01seedlknpart000000"
-	SeedPartItemID       = "it_01seedlknitem000000"
-	SeedConsumptionID    = "cp_01seedcons_kl_yarn1"
-	SeedProductionID     = "pn_01seedprod_knitlg00"
+	// item_category_id on SeedMaterialItemID (yarn materials in 0007_items.sql), not SeedItemCategoryID (socks).
+	SeedMaterialCategoryID = "itcg_01seedyarn0000000"
+	SeedPartID             = "pt_01seedlknpart000000"
+	SeedPartItemID         = "it_01seedlknitem000000"
+	SeedLknItemSKU         = "LKN" // Large Knitted Sock — initial subassembly (root step: Knit Large Sock)
+	SeedSknItemID          = "it_01seedsknitem000000"
+	SeedSknItemSKU         = "SKN" // Small Knitted Sock — initial subassembly (root step: Knit Small Sock)
+	SeedLsnItemSKU         = "LSN" // Large Sewn Sock — downstream part (produced by Sew Large Sock, which has Knit as parent)
+	SeedConsumptionID      = "cp_01seedcons_kl_yarn1"
+	SeedProductionID       = "pn_01seedprod_knitlg00"
 
 	// Orders
 	SeedSalesOrderID         = "or_01k0a8bs2yejxbsvqhrx4drkq1"
@@ -88,6 +96,9 @@ const (
 	SeedAccountStatusID   = "acss_01seednormal000000"
 	SeedAccountStatusCode = "normal"
 	SeedAccountStatusName = "Normal"
+
+	// Request logs (0014_e2e_extras.sql)
+	SeedRequestLogIdempotencyKey = "e2e-seed-idempotency-key-01"
 
 	// Sandboxes
 	SeedSandboxAccountID = "ac_sandbox_01k0a5smf9ekb8rqg12555zjqb"
@@ -149,9 +160,10 @@ const (
 	SeedAgentAlertID            = "agal_01seede2e_alert002" // alert #2 has agent_run_id + agent_action_id populated
 
 	// Audit / Observability (seeded in 0014_e2e_extras.sql)
-	SeedAuditEventID         = "adev_01seedauditevent02" // event #2 has metadata populated
-	SeedInventoryChangeLogID = "ivcl_01seedwss000000000" // seeded in 0007_items.sql, enriched in 0014_e2e_extras.sql
-	SeedRequestLogErrorID    = "rqlog_01seedreqlog4_000" // has error_code=validation_failed for filter tests
+	SeedAuditEventID            = "adev_01seedauditevent02" // event #2 has metadata populated
+	SeedInventoryChangeLogID    = "ivcl_01seedwss000000000" // seeded in 0007_items.sql, enriched in 0014_e2e_extras.sql
+	SeedRequestLogErrorID       = "rqlog_01seedreqlog4_000" // has error_code=validation_failed for filter tests
+	SeedRequestLogQueryParamsID = "rqlog_01seedreqlog5_000" // has query_json populated for include=query_params tests
 
 	// Tenant B (seeded in 0015_tenant_b_e2e.sql) — used for tenant isolation tests
 	SeedTenantBAccountID = "ac_tenant2_e2e_isolati"
@@ -165,7 +177,6 @@ var pathParamSeeds = map[string]string{
 	"product_line_id":    SeedProductLineID,
 	"item_category_id":   SeedItemCategoryID,
 	"unit_group_id":      SeedUnitGroupID,
-	"unitGroupId":        SeedUnitGroupID,
 	"department_id":      SeedDepartmentID,
 	"customer_id":        SeedCustomerAccountID,
 	"sales_order_id":     SeedSalesOrderID,
@@ -177,12 +188,11 @@ var pathParamSeeds = map[string]string{
 	"account_id":         SeedCustomerAccountID,
 	"carrier_id":         SeedCarrierID,
 	"production_step_id": SeedProductionStepID,
-	"pickId":             SeedPickID,
 	"supplier_id":        SeedSupplierAccountID,
 	"vendor_account_id":  SeedAccountID, // selling company's account for customer tenancy
 	"agent_id":           SeedAgentConfigID,
-	"lineId":             SeedSalesOrderLineID,
-	"receivingOrderId":   SeedReceivingOrderID,
+	"line_id":            SeedSalesOrderLineID,
+	"receiving_order_id": SeedReceivingOrderID,
 	// session_id is excluded from test discovery (excludedPaths in spec.go)
 }
 
@@ -203,7 +213,7 @@ var pathSpecificIDSeeds = map[string]string{
 	"/v1/catalog/products/":                                              SeedProductID,
 	"/v1/catalog/properties/{property_id}/attributes/":                   SeedAttributeID,
 	"/v1/catalog/properties/":                                            SeedPropertyID,
-	"/v1/catalog/unit-groups/{unitGroupId}/units/":                       SeedUnitGroupUnitID,
+	"/v1/catalog/unit-groups/{unit_group_id}/units/":                     SeedUnitGroupUnitID,
 	"/v1/catalog/unit-groups/":                                           SeedUnitGroupID,
 	"/v1/catalog/units/":                                                 SeedUnitID,
 	"/v1/core/sys-properties/":                                           SeedSysPropertyID,
@@ -221,9 +231,9 @@ var pathSpecificIDSeeds = map[string]string{
 	"/v1/operations/dc-locations/":                                       SeedDCLocationID,
 	"/v1/operations/departments/":                                        SeedDepartmentID,
 	"/v1/operations/machines/":                                           SeedMachineID,
-	"/v1/operations/materials/":                                          SeedMaterialID,
-	"/v1/operations/parts/":                                              SeedPartID,
-	"/v1/operations/picks/{pickId}/lines/":                               SeedPickLineID,
+	"/v1/catalog/materials/":                                             SeedMaterialID,
+	"/v1/catalog/parts/":                                                 SeedPartID,
+	"/v1/operations/picks/{pick_id}/lines/":                              SeedPickLineID,
 	"/v1/operations/picks/":                                              SeedPickID,
 	"/v1/operations/production-steps/{production_step_id}/consumptions/": SeedConsumptionID,
 	"/v1/operations/production-steps/{production_step_id}/productions/":  SeedProductionID,
@@ -253,14 +263,14 @@ var pathSpecificIDSeeds = map[string]string{
 	"/v1/core/email-logs/":                  SeedEmailLogID1,
 	"/v1/core/sandboxes/":                   SeedSandboxID,
 	"/v1/operations/inventory-change-logs/": SeedInventoryChangeLogID,
-	"/v1/operations/receiving-orders/{receivingOrderId}/lines/": SeedReceivingOrderLineID,
-	"/v1/operations/receiving-orders/":                          SeedReceivingOrderID,
-	"/v1/operations/suppliers/{supplier_id}/materials/":         SeedMaterialID,
-	"/v1/operations/suppliers/":                                 SeedSupplierAccountID,
-	"/v1/sales/account-statuses/":                               SeedAccountStatusID,
-	"/v1/sales/accounts/{account_id}/territories/":              SeedTerritoryID,
-	"/v1/sales/accounts/":                                       SeedCustomerAccountID,
-	"/v1/sales/customers/":                                      SeedCustomerAccountID,
+	"/v1/operations/receiving-orders/{receiving_order_id}/lines/": SeedReceivingOrderLineID,
+	"/v1/operations/receiving-orders/":                            SeedReceivingOrderID,
+	"/v1/operations/suppliers/{supplier_id}/materials/":           SeedMaterialID,
+	"/v1/operations/suppliers/":                                   SeedSupplierAccountID,
+	"/v1/sales/account-statuses/":                                 SeedAccountStatusID,
+	"/v1/sales/accounts/{account_id}/territories/":                SeedTerritoryID,
+	"/v1/sales/accounts/":                                         SeedCustomerAccountID,
+	"/v1/sales/customers/":                                        SeedCustomerAccountID,
 
 	// NOTE: purchase-orders, registration-sessions, and customer-accounts/tenancy
 	// are excluded from test discovery in spec.go (excludedPaths).
@@ -271,11 +281,11 @@ var pathSpecificIDSeeds = map[string]string{
 // data-driven nullable test (covered by per-resource tests instead).
 var nullableFieldSeeds = map[string]string{
 	// Customer defaults
-	"default_carrier_id":        SeedCarrierID,
-	"default_payment_term_id":   SeedPaymentTermID,
-	"default_shipping_term_id":  SeedShippingTermID,
-	"default_sales_rep_user_id": SeedUserID,
-	"customer_type_group_id":    SeedCustomerGroupID,
+	"default_carrier_id":       SeedCarrierID,
+	"default_payment_term_id":  SeedPaymentTermID,
+	"default_shipping_term_id": SeedShippingTermID,
+	"default_sales_rep_id":     SeedAccountUserID,
+	"customer_type_group_id":   SeedCustomerGroupID,
 
 	// Common reference IDs used across multiple endpoints
 	"carrier_id":          SeedCarrierID,

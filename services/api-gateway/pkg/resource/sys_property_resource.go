@@ -50,7 +50,7 @@ func (*SysProperty) SchemaExample() any {
 
 // System property type.
 type SysPropertyType struct {
-	// System property type ID.
+	// System property ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=sys_property_type"`

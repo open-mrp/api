@@ -40,11 +40,14 @@ func (*ItemsEndpointGroup) Materialize(config *ItemsEndpointGroupConfig) *ItemsE
 	}
 
 	listItemsEndpoint := (&itemep.ListItemsEndpoint{}).Materialize().WithService(inner, itemSvc)
-	getItemEndpoint := (&itemep.GetItemEndpoint{}).Materialize().WithService(inner, itemSvc)
-	getItemInventoryEndpoint := (&itemep.GetItemInventoryEndpoint{}).Materialize().WithService(inner, itemSvc)
+	getItemEndpoint := (&itemep.RetrieveItemEndpoint{}).Materialize().WithService(inner, itemSvc)
+	getItemInventoryEndpoint := (&itemep.RetrieveItemInventoryEndpoint{}).Materialize().WithService(inner, itemSvc)
 	getItemCostsEndpoint := (&itemep.GetItemCostsEndpoint{}).Materialize().WithService(inner, itemSvc)
 	getItemTrendsEndpoint := (&itemep.GetItemTrendsEndpoint{}).Materialize().WithService(inner, itemSvc)
 	exportItemsEndpoint := (&itemep.ExportItemsEndpoint{}).Materialize().WithService(inner, itemSvc)
+	addItemAttributeEndpoint := (&itemep.AddItemAttributeEndpoint{}).Materialize().WithService(inner, itemSvc)
+	removeItemAttributeEndpoint := (&itemep.RemoveItemAttributeEndpoint{}).Materialize().WithService(inner, itemSvc)
+	changeItemCategoryEndpoint := (&itemep.ChangeItemCategoryEndpoint{}).Materialize().WithService(inner, itemSvc)
 	updateItemInventoryEndpoint := (&itemep.UpdateItemInventoryEndpoint{}).Materialize().WithService(inner, itemSvc)
 	bulkCreateItemsEndpoint := (&itemep.BulkCreateItemsEndpoint{}).Materialize().WithService(inner, itemSvc)
 	bulkReconcileItemsEndpoint := (&itemep.BulkReconcileItemsEndpoint{}).Materialize().WithService(inner, itemSvc)
@@ -56,6 +59,9 @@ func (*ItemsEndpointGroup) Materialize(config *ItemsEndpointGroupConfig) *ItemsE
 		getItemCostsEndpoint,
 		getItemTrendsEndpoint,
 		exportItemsEndpoint,
+		addItemAttributeEndpoint,
+		removeItemAttributeEndpoint,
+		changeItemCategoryEndpoint,
 		updateItemInventoryEndpoint,
 		bulkCreateItemsEndpoint,
 		bulkReconcileItemsEndpoint,

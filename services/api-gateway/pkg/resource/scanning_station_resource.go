@@ -30,8 +30,8 @@ type ScanningStation struct {
 	LabelSizeCode *constants.LabelSizeCode `json:"label_size"`
 	// Label type code.
 	LabelTypeCode *constants.LabelTypeCode `json:"label_type"`
-	// Whether material check is required.
-	MaterialCheckRequired bool `json:"material_check_required"`
+	// Operator requirement behavior for this station.
+	OperatorRequirement constants.OperatorRequirement `json:"operator_requirement"`
 	// Department.
 	Department *Department `json:"department" expandable:"true"`
 	// Connected production steps.
@@ -43,15 +43,15 @@ type ScanningStation struct {
 }
 
 var SampleScanningStation = &ScanningStation{
-	ID:                    SampleScanningStationID,
-	Object:                constants.ObjectTypeScanningStation,
-	Name:                  SampleScanningStationName,
-	Type:                  constants.ScanningStationTypeInitBatch,
-	MaterialCheckRequired: false,
-	Department:            nil,
-	ProductionSteps:       nil,
-	CreatedAt:             timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt:             timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	ID:                  SampleScanningStationID,
+	Object:              constants.ObjectTypeScanningStation,
+	Name:                SampleScanningStationName,
+	Type:                constants.ScanningStationTypeInitBatch,
+	OperatorRequirement: constants.OperatorRequirementNone,
+	Department:          nil,
+	ProductionSteps:     nil,
+	CreatedAt:           timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:           timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*ScanningStation) SchemaExample() any {

@@ -64,9 +64,10 @@ func (h *gRPCHandler) ListLocations(ctx context.Context, req *pb.ListLocationsRe
 	}
 
 	params := domain.ListLocationsParams{
-		Cursor: req.Cursor,
-		Limit:  req.Limit,
-		Query:  req.Query,
+		Cursor:   req.Cursor,
+		Limit:    req.Limit,
+		Query:    req.Query,
+		Includes: req.Includes,
 	}
 
 	result, apiErr := h.locationSvc.ListLocations(ctx, params)
@@ -97,6 +98,7 @@ func (h *gRPCHandler) GetLocation(ctx context.Context, req *pb.GetLocationReques
 
 	sl, apiErr := h.locationSvc.GetLocation(ctx, domain.GetLocationParams{
 		LocationID: req.Id,
+		Includes:   req.Includes,
 	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
@@ -120,6 +122,7 @@ func (h *gRPCHandler) CreateLocation(ctx context.Context, req *pb.CreateLocation
 		TypeCode: req.TypeCode,
 		ParentID: req.ParentId,
 		ChildIDs: req.ChildIds,
+		Includes: req.Includes,
 	}
 
 	sl, apiErr := h.locationSvc.CreateLocation(ctx, params)
@@ -147,6 +150,7 @@ func (h *gRPCHandler) UpdateLocation(ctx context.Context, req *pb.UpdateLocation
 		ParentID:       req.ParentId,
 		ChildIDs:       req.ChildIds,
 		UpdateChildren: req.UpdateChildren,
+		Includes:       req.Includes,
 	}
 
 	sl, apiErr := h.locationSvc.UpdateLocation(ctx, params)

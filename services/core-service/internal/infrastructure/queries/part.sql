@@ -29,7 +29,7 @@ INSERT INTO rate (
     created_at, updated_at
 ) VALUES (?, ?, ?, ?, NOW(3), NOW(3));
 
--- name: GetPart :one
+-- name: GetPartBase :one
 SELECT
     p.id AS part_id,
     p.created_at AS part_created_at,
@@ -50,30 +50,11 @@ SELECT
     ic.name AS category_name,
     ic.item_category_type_code,
     ic.unit_group_id AS category_unit_group_id,
-    rv.id AS unit_value_rate_id,
-    rv.value AS unit_value_rate_value,
-    rv.numerator_unit_id AS unit_value_numerator_unit_id,
-    rv.denominator_unit_id AS unit_value_denominator_unit_id,
-    rv.created_at AS unit_value_created_at,
-    rv.updated_at AS unit_value_updated_at,
-    rc.id AS unit_cost_rate_id,
-    rc.value AS unit_cost_rate_value,
-    rc.numerator_unit_id AS unit_cost_numerator_unit_id,
-    rc.denominator_unit_id AS unit_cost_denominator_unit_id,
-    rc.created_at AS unit_cost_created_at,
-    rc.updated_at AS unit_cost_updated_at,
-    rb.id AS burn_rate_id_joined,
-    rb.value AS burn_rate_value,
-    rb.numerator_unit_id AS burn_rate_numerator_unit_id,
-    rb.denominator_unit_id AS burn_rate_denominator_unit_id,
-    rb.created_at AS burn_rate_created_at,
-    rb.updated_at AS burn_rate_updated_at
+    ic.created_at AS category_created_at,
+    ic.updated_at AS category_updated_at
 FROM part p
 JOIN item i ON i.id = p.item_id
 JOIN item_category ic ON ic.id = i.item_category_id
-JOIN rate rv ON rv.id = i.unit_value_id
-JOIN rate rc ON rc.id = i.unit_cost_id
-JOIN rate rb ON rb.id = i.burn_rate_id
 WHERE p.id = sqlc.arg('part_id')
 AND i.account_id = sqlc.arg('account_id')
 AND i.deleted_at IS NULL;
@@ -84,12 +65,14 @@ SELECT
     a.text,
     a.color_code,
     a.`order`,
-    a.property_id
+    a.property_id,
+    a.created_at,
+    a.updated_at
 FROM _item_attributes ia
 JOIN attribute a ON a.id = ia.A
 WHERE ia.B = sqlc.arg('item_id');
 
--- name: ListPartsForward :many
+-- name: ListPartsForwardBase :many
 SELECT
     p.id AS part_id,
     p.created_at AS part_created_at,
@@ -110,30 +93,11 @@ SELECT
     ic.name AS category_name,
     ic.item_category_type_code,
     ic.unit_group_id AS category_unit_group_id,
-    rv.id AS unit_value_rate_id,
-    rv.value AS unit_value_rate_value,
-    rv.numerator_unit_id AS unit_value_numerator_unit_id,
-    rv.denominator_unit_id AS unit_value_denominator_unit_id,
-    rv.created_at AS unit_value_created_at,
-    rv.updated_at AS unit_value_updated_at,
-    rc.id AS unit_cost_rate_id,
-    rc.value AS unit_cost_rate_value,
-    rc.numerator_unit_id AS unit_cost_numerator_unit_id,
-    rc.denominator_unit_id AS unit_cost_denominator_unit_id,
-    rc.created_at AS unit_cost_created_at,
-    rc.updated_at AS unit_cost_updated_at,
-    rb.id AS burn_rate_id_joined,
-    rb.value AS burn_rate_value,
-    rb.numerator_unit_id AS burn_rate_numerator_unit_id,
-    rb.denominator_unit_id AS burn_rate_denominator_unit_id,
-    rb.created_at AS burn_rate_created_at,
-    rb.updated_at AS burn_rate_updated_at
+    ic.created_at AS category_created_at,
+    ic.updated_at AS category_updated_at
 FROM part p
 JOIN item i ON i.id = p.item_id
 JOIN item_category ic ON ic.id = i.item_category_id
-JOIN rate rv ON rv.id = i.unit_value_id
-JOIN rate rc ON rc.id = i.unit_cost_id
-JOIN rate rb ON rb.id = i.burn_rate_id
 WHERE i.account_id = sqlc.arg('account_id')
 AND i.deleted_at IS NULL
 AND (
@@ -169,7 +133,7 @@ AND (
 ORDER BY i.created_at DESC, i.id DESC
 LIMIT ?;
 
--- name: ListPartsBackward :many
+-- name: ListPartsBackwardBase :many
 SELECT
     p.id AS part_id,
     p.created_at AS part_created_at,
@@ -190,30 +154,11 @@ SELECT
     ic.name AS category_name,
     ic.item_category_type_code,
     ic.unit_group_id AS category_unit_group_id,
-    rv.id AS unit_value_rate_id,
-    rv.value AS unit_value_rate_value,
-    rv.numerator_unit_id AS unit_value_numerator_unit_id,
-    rv.denominator_unit_id AS unit_value_denominator_unit_id,
-    rv.created_at AS unit_value_created_at,
-    rv.updated_at AS unit_value_updated_at,
-    rc.id AS unit_cost_rate_id,
-    rc.value AS unit_cost_rate_value,
-    rc.numerator_unit_id AS unit_cost_numerator_unit_id,
-    rc.denominator_unit_id AS unit_cost_denominator_unit_id,
-    rc.created_at AS unit_cost_created_at,
-    rc.updated_at AS unit_cost_updated_at,
-    rb.id AS burn_rate_id_joined,
-    rb.value AS burn_rate_value,
-    rb.numerator_unit_id AS burn_rate_numerator_unit_id,
-    rb.denominator_unit_id AS burn_rate_denominator_unit_id,
-    rb.created_at AS burn_rate_created_at,
-    rb.updated_at AS burn_rate_updated_at
+    ic.created_at AS category_created_at,
+    ic.updated_at AS category_updated_at
 FROM part p
 JOIN item i ON i.id = p.item_id
 JOIN item_category ic ON ic.id = i.item_category_id
-JOIN rate rv ON rv.id = i.unit_value_id
-JOIN rate rc ON rc.id = i.unit_cost_id
-JOIN rate rb ON rb.id = i.burn_rate_id
 WHERE i.account_id = sqlc.arg('account_id')
 AND i.deleted_at IS NULL
 AND (

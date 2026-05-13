@@ -20,13 +20,43 @@ cd "$REPO_ROOT"
 MYSQL_CONTAINER="augno-mysql-e2e"
 POSTGRES_CONTAINER="augno-postgres-e2e"
 
-MYSQL_CMD="mysql -uroot -pTesting123! --protocol=tcp augno"
-PSQL_CMD="psql -U augno -d augno_agents"
+MYSQL_CMD=(mysql -uroot -pTesting123! --protocol=tcp augno)
+PSQL_CMD=(psql -U augno -d augno_agents)
 
 # --- Helper: extract goose Up section from a migration file ---
 
 extract_up_sql() {
     sed -n '/^-- +goose Up$/,/^-- +goose Down$/{ /^-- +goose Up$/d; /^-- +goose Down$/d; p; }' "$1"
+}
+
+run_mysql_sql() {
+    local label="$1"
+    local log_file
+    log_file="$(mktemp)"
+
+    if ! docker exec -i "$MYSQL_CONTAINER" "${MYSQL_CMD[@]}" >"$log_file" 2>&1; then
+        error "$label failed."
+        sed 's/^/  /' "$log_file" >&2
+        rm -f "$log_file"
+        return 1
+    fi
+
+    rm -f "$log_file"
+}
+
+run_postgres_sql() {
+    local label="$1"
+    local log_file
+    log_file="$(mktemp)"
+
+    if ! docker exec -i "$POSTGRES_CONTAINER" "${PSQL_CMD[@]}" >"$log_file" 2>&1; then
+        error "$label failed."
+        sed 's/^/  /' "$log_file" >&2
+        rm -f "$log_file"
+        return 1
+    fi
+
+    rm -f "$log_file"
 }
 
 # --- Wait for containers ---
@@ -53,7 +83,7 @@ for migration_file in shared/db/migrations/*.sql; do
     filename="$(basename "$migration_file")"
     for i in $(seq 1 $MAX_RETRIES); do
         if extract_up_sql "$migration_file" \
-            | docker exec -i "$MYSQL_CONTAINER" $MYSQL_CMD 2>/dev/null; then
+            | docker exec -i "$MYSQL_CONTAINER" "${MYSQL_CMD[@]}" >/dev/null 2>&1; then
             break
         fi
         if [ "$i" -eq "$MAX_RETRIES" ]; then
@@ -79,12 +109,11 @@ for seed_file in shared/db/seed/*.sql; do
     fi
 
     filename="$(basename "$seed_file")"
-    info "Running $filename..."
 
     sed -e "s/@plan_code/'$PLAN_CODE'/g" \
         -e "s/@plan_id/'$PLAN_ID'/g" \
         "$seed_file" \
-        | docker exec -i "$MYSQL_CONTAINER" $MYSQL_CMD
+        | run_mysql_sql "MySQL seed $filename"
 done
 
 info "Core-service seed complete."
@@ -99,10 +128,9 @@ for migration_file in services/agent-service/db/migrations/*.sql; do
     fi
 
     filename="$(basename "$migration_file")"
-    info "Running $filename..."
 
     extract_up_sql "$migration_file" \
-        | docker exec -i "$POSTGRES_CONTAINER" $PSQL_CMD
+        | run_postgres_sql "PostgreSQL migration $filename"
 done
 
 info "Agent-service migration complete."
@@ -117,10 +145,9 @@ for seed_file in services/agent-service/db/seeds/*.sql; do
     fi
 
     filename="$(basename "$seed_file")"
-    info "Running $filename..."
 
     extract_up_sql "$seed_file" \
-        | docker exec -i "$POSTGRES_CONTAINER" $PSQL_CMD
+        | run_postgres_sql "PostgreSQL seed $filename"
 done
 
 info "Agent-service seed complete."

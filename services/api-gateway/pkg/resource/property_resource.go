@@ -17,7 +17,7 @@ type Property struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=property"`
-	// Name.
+	// Display name.
 	Name string `json:"name" validate:"required"`
 	// Attributes belonging to this property.
 	Attributes *List[Attribute] `json:"attributes" expandable:"true"`

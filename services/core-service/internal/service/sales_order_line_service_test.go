@@ -79,7 +79,7 @@ func TestSalesOrderLineSvcTestSuite(t *testing.T) {
 // accountID with all sales-orders permissions. Tests that need to vary the
 // actor construct their own identity inline.
 func salesOrderLineCtx(accountID string) context.Context {
-	adminCode := string(constants.RoleTypeCodeAdmin)
+	adminCode := string(constants.RoleTypeAdmin)
 	return appctx.WithIdentity(context.Background(), &types.Identity{
 		Type:   types.IdentityActorTypeUser,
 		Target: &types.IdentityTarget{AccountID: accountID},
@@ -87,7 +87,7 @@ func salesOrderLineCtx(accountID string) context.Context {
 			RelationType: types.IdentityRelationTypeInternal,
 			ID:           "usr_test123",
 			AccountID:    &accountID,
-			RoleTypeCode: &adminCode,
+			RoleType:     &adminCode,
 			Permissions: map[string]bool{
 				"sales_orders:read":   true,
 				"sales_orders:create": true,
@@ -326,7 +326,7 @@ func (suite *SalesOrderLineSvcTestSuite) TestCreateSalesOrderLine_MissingIdentit
 }
 
 func (suite *SalesOrderLineSvcTestSuite) TestCreateSalesOrderLine_InsufficientPermissions() {
-	customCode := string(constants.RoleTypeCodeCustom)
+	customCode := string(constants.RoleTypeCustom)
 	ctx := appctx.WithIdentity(context.Background(), &types.Identity{
 		Type:   types.IdentityActorTypeUser,
 		Target: &types.IdentityTarget{AccountID: "ac_test"},
@@ -334,7 +334,7 @@ func (suite *SalesOrderLineSvcTestSuite) TestCreateSalesOrderLine_InsufficientPe
 			RelationType: types.IdentityRelationTypeInternal,
 			ID:           "usr_ro",
 			AccountID:    ptr("ac_test"),
-			RoleTypeCode: &customCode,
+			RoleType:     &customCode,
 			Permissions:  map[string]bool{"sales_orders:read": true},
 		},
 	})
@@ -347,7 +347,7 @@ func (suite *SalesOrderLineSvcTestSuite) TestCreateSalesOrderLine_InsufficientPe
 func (suite *SalesOrderLineSvcTestSuite) TestCreateSalesOrderLine_ExternalTargetChecksEditAccess() {
 	// External target: actor belongs to a *different* account than the target.
 	// The service should route through the EditAccess mediator before touching the repos.
-	adminCode := string(constants.RoleTypeCodeAdmin)
+	adminCode := string(constants.RoleTypeAdmin)
 	actorAcct := "ac_actor"
 	targetAcct := "ac_target"
 	ctx := appctx.WithIdentity(context.Background(), &types.Identity{
@@ -357,7 +357,7 @@ func (suite *SalesOrderLineSvcTestSuite) TestCreateSalesOrderLine_ExternalTarget
 			RelationType: types.IdentityRelationTypeInternal,
 			ID:           "usr_ext",
 			AccountID:    &actorAcct,
-			RoleTypeCode: &adminCode,
+			RoleType:     &adminCode,
 			Permissions: map[string]bool{
 				"sales_orders:update": true,
 				"customers:update":    true,

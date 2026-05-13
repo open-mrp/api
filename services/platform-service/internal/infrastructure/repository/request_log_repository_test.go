@@ -68,8 +68,8 @@ func TestMapRowToRequestLogRead_UserActor(t *testing.T) {
 	if rl.Actor.RoleName == nil || *rl.Actor.RoleName != "Admin" {
 		t.Errorf("expected role name 'Admin', got %v", rl.Actor.RoleName)
 	}
-	if rl.Actor.RoleTypeCode == nil || *rl.Actor.RoleTypeCode != "admin" {
-		t.Errorf("expected role type code 'admin', got %v", rl.Actor.RoleTypeCode)
+	if rl.Actor.RoleType == nil || *rl.Actor.RoleType != "admin" {
+		t.Errorf("expected role type code 'admin', got %v", rl.Actor.RoleType)
 	}
 }
 

@@ -20,7 +20,7 @@ type UpdateUnitGroupRequest struct {
 	// Notes. Set to null to clear.
 	Notes *string `json:"notes,omitempty" nullable:"true"`
 	// Base unit ID.
-	BaseUnitID *string `json:"base_unit_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
+	BaseUnitID *string `json:"base_unit_id,omitempty" nullable:"false" validate:"omitempty"`
 	// Upserts associated units when provided. Existing units not in the list are preserved.
 	AssociatedUnits *[]CreateUnitGroupUnitParam `json:"associated_units,omitempty" nullable:"false"`
 }

@@ -40,7 +40,7 @@ func (*OrderDiscountsEndpointGroup) Materialize(config *OrderDiscountsEndpointGr
 	}
 
 	listEndpoint := (&orderdiscountep.ListOrderDiscountsEndpoint{}).Materialize().WithService(inner, svc)
-	getEndpoint := (&orderdiscountep.GetOrderDiscountEndpoint{}).Materialize().WithService(inner, svc)
+	retrieveEndpoint := (&orderdiscountep.RetrieveOrderDiscountEndpoint{}).Materialize().WithService(inner, svc)
 	createEndpoint := (&orderdiscountep.CreateOrderDiscountEndpoint{}).Materialize().WithService(inner, svc)
 	updateEndpoint := (&orderdiscountep.UpdateOrderDiscountEndpoint{}).Materialize().WithService(inner, svc)
 	deleteEndpoint := (&orderdiscountep.DeleteOrderDiscountEndpoint{}).Materialize().WithService(inner, svc)
@@ -48,7 +48,7 @@ func (*OrderDiscountsEndpointGroup) Materialize(config *OrderDiscountsEndpointGr
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listEndpoint,
-		getEndpoint,
+		retrieveEndpoint,
 		createEndpoint,
 		updateEndpoint,
 		deleteEndpoint,

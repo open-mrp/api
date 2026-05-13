@@ -25,10 +25,10 @@ type Customer struct {
 	Number string `json:"number" validate:"required"`
 	// Account status code.
 	Status constants.AccountStatusCode `json:"status" validate:"required"`
-	// Whether EDI is enabled.
-	IsEdiEnabled bool `json:"is_edi_enabled"`
-	// Whether this is a parent account.
-	IsParentAccount bool `json:"is_parent_account"`
+	// EDI status.
+	EDIStatus constants.EDIStatus `json:"edi_status" validate:"required"`
+	// Customer relationship type.
+	RelationshipType constants.CustomerRelationshipType `json:"relationship_type" validate:"required"`
 	// Commission policy.
 	CommissionPolicy constants.CommissionPolicy `json:"commission_policy" validate:"required"`
 	// Note.
@@ -100,7 +100,7 @@ type CustomerDefaults struct {
 	// Default priority.
 	Priority *Priority `json:"priority" expandable:"true"`
 	// Default sales rep.
-	SalesRep *User `json:"sales_rep" expandable:"true"`
+	SalesRep *AccountUser `json:"sales_rep" expandable:"true"`
 }
 
 // Customer notification settings.
@@ -126,8 +126,8 @@ var SampleCustomer = &Customer{
 	Name:             SampleCustomerName,
 	Number:           SampleCustomerNumber,
 	Status:           constants.AccountStatusCodeNormal,
-	IsEdiEnabled:     false,
-	IsParentAccount:  false,
+	EDIStatus:        constants.EDIStatusDisabled,
+	RelationshipType: constants.CustomerRelationshipTypeStandalone,
 	CommissionPolicy: constants.CommissionPolicyApplied,
 	Note:             &sampleCustomerNote,
 	CreditLimit:      SampleQuantity,
@@ -150,7 +150,7 @@ var SampleCustomer = &Customer{
 		PaymentTerm:  SamplePaymentTerm,
 		ShippingTerm: SampleShippingTerm,
 		Priority:     SamplePriority,
-		SalesRep:     SampleUser,
+		SalesRep:     SampleAccountUser,
 	},
 	NotificationPreferences: &CustomerNotificationPreferences{
 		Object:               constants.ObjectTypeCustomerNotificationPreferences,

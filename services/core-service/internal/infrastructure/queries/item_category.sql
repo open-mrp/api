@@ -116,10 +116,24 @@ AND account_id = sqlc.arg('account_id');
 -- name: ListItemCategoryProperties :many
 SELECT
     p.id,
-    p.name
+    p.name,
+    p.created_at,
+    p.updated_at
 FROM property p
 INNER JOIN _item_categories_properties icp ON icp.B = p.id
 WHERE icp.A = sqlc.arg('item_category_id');
+
+-- name: ListItemCategoryPropertiesForCategories :many
+SELECT
+    icp.A AS item_category_id,
+    p.id AS property_id,
+    p.name AS property_name,
+    p.created_at AS property_created_at,
+    p.updated_at AS property_updated_at
+FROM property p
+INNER JOIN _item_categories_properties icp ON icp.B = p.id
+WHERE icp.A IN (sqlc.slice('item_category_ids'))
+ORDER BY icp.A, p.name;
 
 -- name: CountUnitGroupVisibleToAccount :one
 SELECT COUNT(*) FROM unit_group
@@ -144,6 +158,8 @@ SELECT
     ug.id,
     ug.name,
     ug.base_unit_id,
-    ug.unit_type_code
+    ug.unit_type_code,
+    ug.created_at,
+    ug.updated_at
 FROM unit_group ug
 WHERE ug.id = sqlc.arg('id');

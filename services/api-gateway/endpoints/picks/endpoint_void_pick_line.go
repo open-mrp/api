@@ -12,7 +12,7 @@ import (
 // VoidPickLineRequest is the request to void a pick line.
 type VoidPickLineRequest struct {
 	// Pick ID.
-	PickID string `path:"pickId" validate:"required"`
+	PickID string `path:"pick_id" validate:"required"`
 	// Pick line ID.
 	PickLineID string `path:"id" validate:"required"`
 }
@@ -25,7 +25,7 @@ func (e *VoidPickLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*VoidPickL
 		Description:       "Voids a pick line.",
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
-		Route:             "/v1/operations/picks/{pickId}/lines/{id}/actions/void",
+		Route:             "/v1/operations/picks/{pick_id}/lines/{id}/actions/void",
 		Request:           &VoidPickLineRequest{},
 		Response:          &apiresource.PickLineDetail{},
 		SuccessStatusCode: http.StatusOK,

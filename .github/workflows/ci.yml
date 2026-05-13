@@ -186,5 +186,17 @@ jobs:
       - name: Download modules
         run: go mod download
 
+      - name: Select affected test packages
+        id: select
+        run: |
+          PKGS=$(./scripts/select-tests.sh origin/main)
+          echo "pkgs=${PKGS}" >> "$GITHUB_OUTPUT"
+
       - name: Run Tests
-        run: make test
+        if: steps.select.outputs.pkgs != ''
+        run: |
+          if [ "${{ steps.select.outputs.pkgs }}" = "./..." ]; then
+            make test
+          else
+            time go test ${{ steps.select.outputs.pkgs }}
+          fi

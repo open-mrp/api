@@ -116,6 +116,19 @@ func TestBuildListQuery_ActorModeWrapsInDerivedTableWithUserAndApiKeyJoins(t *te
 	}
 }
 
+func TestBuildListQuery_IdempotencyKeyUsesExistsOnLinkedRow(t *testing.T) {
+	f := emptyFilter()
+	key := "550e8400-e29b-41d4-a716-446655440000"
+	f.IdempotencyKey = &key
+
+	sql, args := buildListQuery(queryModeBase, pagination.DirectionForward, "acc_1", f, false, false, false, nil, 101)
+
+	mustContain(t, sql, "EXISTS (SELECT 1 FROM idempotency_key ik2 WHERE ik2.type_id = rl.idempotency_key_id AND ik2.idempotency_key = ?)")
+	if !containsArg(args, key) {
+		t.Errorf("expected idempotency key in args; got %#v", args)
+	}
+}
+
 func TestBuildListQuery_FullModeInlinesAllJoinsWithoutDerivedTable(t *testing.T) {
 	sql, _ := buildListQuery(queryModeFull, pagination.DirectionForward, "acc_1", emptyFilter(), false, false, false, nil, 101)
 
@@ -130,6 +143,8 @@ func TestBuildListQuery_FullModeInlinesAllJoinsWithoutDerivedTable(t *testing.T)
 		"LEFT JOIN role r_user",
 		"LEFT JOIN role r_key",
 		"LEFT JOIN account a",
+		"a.created_at AS account_created_at",
+		"a.updated_at AS account_updated_at",
 		"LEFT JOIN idempotency_key ik",
 	}
 	for _, r := range required {

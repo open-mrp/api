@@ -90,9 +90,9 @@ func (r *requestLogRepoImpl) Create(ctx context.Context, rl *domain.RequestLog) 
 func (r *requestLogRepoImpl) FindByID(ctx context.Context, id, targetAccountID string, includes []string) (*domain.RequestLogRead, *apierror.APIError) {
 	ctx, span := requestLogRepoTracer.Start(ctx, "repository.request_log.find_by_id")
 	defer span.End()
-	includeQueryJSON := includeJSONFieldParam(includes, "query_json")
-	includeRequestBody := includeJSONFieldParam(includes, "request_body_json")
-	includeResponseBody := includeJSONFieldParam(includes, "response_body_json")
+	includeQueryJSON := includeJSONFieldParam(includes, "query_params")
+	includeRequestBody := includeJSONFieldParam(includes, "request_body")
+	includeResponseBody := includeJSONFieldParam(includes, "response_body")
 
 	if needsEnrichedFindByID(includes) {
 		row, err := r.db.FindRequestLogByID(ctx, sqlc.FindRequestLogByIDParams{
@@ -139,9 +139,9 @@ func (r *requestLogRepoImpl) List(ctx context.Context, targetAccountID string, f
 
 	mode := pickQueryMode(includes, filter)
 
-	includeQueryJSON := anyIncludeRequested(includes, "query_json")
-	includeRequestBody := anyIncludeRequested(includes, "request_body_json")
-	includeResponseBody := anyIncludeRequested(includes, "response_body_json")
+	includeQueryJSON := anyIncludeRequested(includes, "query_params")
+	includeRequestBody := anyIncludeRequested(includes, "request_body")
+	includeResponseBody := anyIncludeRequested(includes, "response_body")
 
 	var cur *pagination.StringCursor
 	var cursorDir *pagination.Direction
@@ -214,13 +214,13 @@ func applyRequestedJSONIncludes(rl *domain.RequestLogRead, includes []string) {
 	if rl == nil {
 		return
 	}
-	if !anyIncludeRequested(includes, "query_json") {
+	if !anyIncludeRequested(includes, "query_params") {
 		rl.QueryJSON = nil
 	}
-	if !anyIncludeRequested(includes, "request_body_json") {
+	if !anyIncludeRequested(includes, "request_body") {
 		rl.BodyJSON = nil
 	}
-	if !anyIncludeRequested(includes, "response_body_json") {
+	if !anyIncludeRequested(includes, "response_body") {
 		rl.ResponseJSON = nil
 	}
 }
@@ -333,6 +333,15 @@ func mapRowToRequestLogRead(row *sqlc.FindRequestLogByIDRow) *domain.RequestLogR
 		IdempotencyKey:  db.StringFromNullString(row.IdempotencyKey),
 	}
 
+	if row.AccountCreatedAt.Valid {
+		t := row.AccountCreatedAt.Time
+		rl.AccountCreatedAt = &t
+	}
+	if row.AccountUpdatedAt.Valid {
+		t := row.AccountUpdatedAt.Time
+		rl.AccountUpdatedAt = &t
+	}
+
 	rl.QueryJSON = anyToStringPtr(row.QueryJson)
 	rl.BodyJSON = anyToStringPtr(row.RequestBodyJson)
 	rl.ResponseJSON = anyToStringPtr(row.ResponseBodyJson)
@@ -343,13 +352,13 @@ func mapRowToRequestLogRead(row *sqlc.FindRequestLogByIDRow) *domain.RequestLogR
 		switch *identType {
 		case "user":
 			rl.Actor = &domain.RequestLogActor{
-				ID:           actorID,
-				ActorType:    constants.ActorTypeUser,
-				Name:         db.StringFromNullString(row.UserName),
-				Email:        db.StringFromNullString(row.UserEmail),
-				RoleID:       db.StringFromNullString(row.UserRoleID),
-				RoleName:     db.StringFromNullString(row.UserRoleName),
-				RoleTypeCode: db.StringFromNullString(row.UserRoleTypeCode),
+				ID:        actorID,
+				ActorType: constants.ActorTypeUser,
+				Name:      db.StringFromNullString(row.UserName),
+				Email:     db.StringFromNullString(row.UserEmail),
+				RoleID:    db.StringFromNullString(row.UserRoleID),
+				RoleName:  db.StringFromNullString(row.UserRoleName),
+				RoleType:  db.StringFromNullString(row.UserRoleTypeCode),
 			}
 		case "api_key":
 			id := actorID
@@ -363,7 +372,7 @@ func mapRowToRequestLogRead(row *sqlc.FindRequestLogByIDRow) *domain.RequestLogR
 				RedactedValue: db.StringFromNullString(row.ApiKeyRedactedValue),
 				RoleID:        db.StringFromNullString(row.ApiKeyRoleID),
 				RoleName:      db.StringFromNullString(row.ApiKeyRoleName),
-				RoleTypeCode:  db.StringFromNullString(row.ApiKeyRoleTypeCode),
+				RoleType:      db.StringFromNullString(row.ApiKeyRoleTypeCode),
 			}
 		}
 	}

@@ -42,6 +42,21 @@ type ItemCategory struct {
 	Name                 string
 	ItemCategoryTypeCode string
 	UnitGroupID          string
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+
+	// Joined from unit_group when loading items/materials/products/parts.
+	UnitGroupName       string
+	UnitGroupTypeCode   string
+	UnitGroupBaseUnitID string
+	UnitGroupCreatedAt  time.Time
+	UnitGroupUpdatedAt  time.Time
+	Properties          []ItemCategoryProperty
+
+	// Populated when category.unit_group.base_unit is included.
+	UnitGroupBaseUnit *LightUnit
+	// Populated when category.unit_group.associated_units is included.
+	UnitGroupAssociatedUnits []*UnitGroupUnit
 }
 
 // ItemAttribute represents an attribute on an item (joined via _item_attributes).
@@ -51,22 +66,36 @@ type ItemAttribute struct {
 	ColorCode  *string
 	Order      int32
 	PropertyID string
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
 }
 
 // Rate represents a rate value (unit_value, unit_cost, or burn_rate).
 type Rate struct {
-	ID                          string
-	Value                       string `audit:"value"`
-	NumeratorUnitID             string `audit:"numerator_unit_id"`
-	NumeratorUnitName           string `audit:"numerator_unit_name"`
-	NumeratorUnitAbbreviation   string `audit:"numerator_unit_abbreviation"`
-	NumeratorUnitType           string `audit:"numerator_unit_type"`
-	DenominatorUnitID           string `audit:"denominator_unit_id"`
-	DenominatorUnitName         string `audit:"denominator_unit_name"`
-	DenominatorUnitAbbreviation string `audit:"denominator_unit_abbreviation"`
-	DenominatorUnitType         string `audit:"denominator_unit_type"`
-	CreatedAt                   time.Time
-	UpdatedAt                   time.Time
+	ID                               string
+	Value                            string `audit:"value"`
+	NumeratorUnitID                  string `audit:"numerator_unit_id"`
+	NumeratorUnitName                string `audit:"numerator_unit_name"`
+	NumeratorUnitAbbreviation        string `audit:"numerator_unit_abbreviation"`
+	NumeratorUnitType                string `audit:"numerator_unit_type"`
+	NumeratorUnitRatioNumerator      string
+	NumeratorUnitRatioDenominator    string
+	NumeratorUnitOffsetNumerator     string
+	NumeratorUnitOffsetDenominator   string
+	NumeratorUnitCreatedAt           time.Time
+	NumeratorUnitUpdatedAt           time.Time
+	DenominatorUnitID                string `audit:"denominator_unit_id"`
+	DenominatorUnitName              string `audit:"denominator_unit_name"`
+	DenominatorUnitAbbreviation      string `audit:"denominator_unit_abbreviation"`
+	DenominatorUnitType              string `audit:"denominator_unit_type"`
+	DenominatorUnitRatioNumerator    string
+	DenominatorUnitRatioDenominator  string
+	DenominatorUnitOffsetNumerator   string
+	DenominatorUnitOffsetDenominator string
+	DenominatorUnitCreatedAt         time.Time
+	DenominatorUnitUpdatedAt         time.Time
+	CreatedAt                        time.Time
+	UpdatedAt                        time.Time
 }
 
 type ListItemsParams struct {
@@ -82,6 +111,9 @@ type ListItemsParams struct {
 	EndDate                  *time.Time
 	IsExactMatch             bool
 	OnlyInitialSubassemblies bool
+	Includes                 []string
+	ProductLineIDs           []string
+	CustomerIDs              []string
 }
 
 type ListItemsResult struct {
@@ -92,6 +124,7 @@ type ListItemsResult struct {
 type GetItemParams struct {
 	AccountID string
 	ItemID    string
+	Includes  []string
 }
 
 // ItemInventory represents inventory quantities for an item.
@@ -104,6 +137,8 @@ type ItemInventory struct {
 	ATPUnitID          string
 	Short              string
 	ShortUnitID        string
+	UnitAbbreviation   string
+	UnitType           string
 }
 
 // ItemCosts represents cost breakdown for an item.

@@ -15,11 +15,11 @@ import (
 type CreateProductLineRequest struct {
 	// Display name.
 	Name string `json:"name" validate:"required,max=255"`
-	// Unit group ID.
-	UnitGroupID string `json:"unit_group_id" validate:"required,max=191"`
-	// Commission policy.
+	// Unit group ID associated with this product line. This unit group dictates the units that products in this product line may be purchased in.
+	UnitGroupID string `json:"unit_group_id" validate:"required"`
+	// Commission policy of products in this product line.
 	CommissionPolicy constants.CommissionPolicy `json:"commission_policy" validate:"required"`
-	// Freight policy.
+	// Freight policy for all items in this product line.
 	FreightPolicy constants.FreightPolicy `json:"freight_policy" validate:"required"`
 }
 

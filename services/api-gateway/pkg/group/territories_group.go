@@ -40,7 +40,7 @@ func (*TerritoriesEndpointGroup) Materialize(config *TerritoriesEndpointGroupCon
 	}
 
 	listTerritoriesEndpoint := (&territoryep.ListTerritoriesEndpoint{}).Materialize().WithService(inner, territorySvc)
-	getTerritoryEndpoint := (&territoryep.GetTerritoryEndpoint{}).Materialize().WithService(inner, territorySvc)
+	getTerritoryEndpoint := (&territoryep.RetrieveTerritoryEndpoint{}).Materialize().WithService(inner, territorySvc)
 	createTerritoryEndpoint := (&territoryep.CreateTerritoryEndpoint{}).Materialize().WithService(inner, territorySvc)
 	updateTerritoryEndpoint := (&territoryep.UpdateTerritoryEndpoint{}).Materialize().WithService(inner, territorySvc)
 	deleteTerritoryEndpoint := (&territoryep.DeleteTerritoryEndpoint{}).Materialize().WithService(inner, territorySvc)

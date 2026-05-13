@@ -65,7 +65,7 @@ func (q *Queries) DeleteMaterialByID(ctx context.Context, arg DeleteMaterialByID
 	return q.db.ExecContext(ctx, deleteMaterialByID, arg.ID, arg.AccountID)
 }
 
-const getMaterialByID = `-- name: GetMaterialByID :one
+const getMaterialByIDBase = `-- name: GetMaterialByIDBase :one
 SELECT
     m.id,
     m.item_id,
@@ -88,6 +88,8 @@ SELECT
     ic.name AS category_name,
     ic.item_category_type_code,
     ic.unit_group_id AS category_unit_group_id,
+    ic.created_at AS category_created_at,
+    ic.updated_at AS category_updated_at,
     op.value AS order_point_value,
     op.unit_id AS order_point_unit_id,
     op_u.abbreviation AS order_point_unit_abbreviation,
@@ -95,25 +97,7 @@ SELECT
     lt.value AS lead_time_value,
     lt.unit_id AS lead_time_unit_id,
     lt_u.abbreviation AS lead_time_unit_abbreviation,
-    lt_u.unit_dimension_code AS lead_time_unit_type,
-    rv.id AS unit_value_rate_id,
-    rv.value AS unit_value_rate_value,
-    rv.numerator_unit_id AS unit_value_numerator_unit_id,
-    rv.denominator_unit_id AS unit_value_denominator_unit_id,
-    rv.created_at AS unit_value_created_at,
-    rv.updated_at AS unit_value_updated_at,
-    rc.id AS unit_cost_rate_id,
-    rc.value AS unit_cost_rate_value,
-    rc.numerator_unit_id AS unit_cost_numerator_unit_id,
-    rc.denominator_unit_id AS unit_cost_denominator_unit_id,
-    rc.created_at AS unit_cost_created_at,
-    rc.updated_at AS unit_cost_updated_at,
-    rb.id AS burn_rate_id_joined,
-    rb.value AS burn_rate_value,
-    rb.numerator_unit_id AS burn_rate_numerator_unit_id,
-    rb.denominator_unit_id AS burn_rate_denominator_unit_id,
-    rb.created_at AS burn_rate_created_at,
-    rb.updated_at AS burn_rate_updated_at
+    lt_u.unit_dimension_code AS lead_time_unit_type
 FROM material m
 JOIN item i ON i.id = m.item_id
 JOIN item_category ic ON ic.id = i.item_category_id
@@ -121,20 +105,17 @@ JOIN quantity op ON op.id = m.order_point_id
 JOIN unit op_u ON op_u.id = op.unit_id
 JOIN quantity lt ON lt.id = m.lead_time_id
 JOIN unit lt_u ON lt_u.id = lt.unit_id
-JOIN rate rv ON rv.id = i.unit_value_id
-JOIN rate rc ON rc.id = i.unit_cost_id
-JOIN rate rb ON rb.id = i.burn_rate_id
 WHERE m.id = ?
 AND i.account_id = ?
 AND i.deleted_at IS NULL
 `
 
-type GetMaterialByIDParams struct {
+type GetMaterialByIDBaseParams struct {
 	ID        string
 	AccountID string
 }
 
-type GetMaterialByIDRow struct {
+type GetMaterialByIDBaseRow struct {
 	ID                         string
 	ItemID                     string
 	OrderPointID               string
@@ -156,6 +137,8 @@ type GetMaterialByIDRow struct {
 	CategoryName               string
 	ItemCategoryTypeCode       string
 	CategoryUnitGroupID        string
+	CategoryCreatedAt          time.Time
+	CategoryUpdatedAt          time.Time
 	OrderPointValue            string
 	OrderPointUnitID           string
 	OrderPointUnitAbbreviation string
@@ -164,29 +147,11 @@ type GetMaterialByIDRow struct {
 	LeadTimeUnitID             string
 	LeadTimeUnitAbbreviation   string
 	LeadTimeUnitType           string
-	UnitValueRateID            string
-	UnitValueRateValue         string
-	UnitValueNumeratorUnitID   string
-	UnitValueDenominatorUnitID string
-	UnitValueCreatedAt         time.Time
-	UnitValueUpdatedAt         time.Time
-	UnitCostRateID             string
-	UnitCostRateValue          string
-	UnitCostNumeratorUnitID    string
-	UnitCostDenominatorUnitID  string
-	UnitCostCreatedAt          time.Time
-	UnitCostUpdatedAt          time.Time
-	BurnRateIDJoined           string
-	BurnRateValue              string
-	BurnRateNumeratorUnitID    string
-	BurnRateDenominatorUnitID  string
-	BurnRateCreatedAt          time.Time
-	BurnRateUpdatedAt          time.Time
 }
 
-func (q *Queries) GetMaterialByID(ctx context.Context, arg GetMaterialByIDParams) (GetMaterialByIDRow, error) {
-	row := q.db.QueryRowContext(ctx, getMaterialByID, arg.ID, arg.AccountID)
-	var i GetMaterialByIDRow
+func (q *Queries) GetMaterialByIDBase(ctx context.Context, arg GetMaterialByIDBaseParams) (GetMaterialByIDBaseRow, error) {
+	row := q.db.QueryRowContext(ctx, getMaterialByIDBase, arg.ID, arg.AccountID)
+	var i GetMaterialByIDBaseRow
 	err := row.Scan(
 		&i.ID,
 		&i.ItemID,
@@ -209,6 +174,8 @@ func (q *Queries) GetMaterialByID(ctx context.Context, arg GetMaterialByIDParams
 		&i.CategoryName,
 		&i.ItemCategoryTypeCode,
 		&i.CategoryUnitGroupID,
+		&i.CategoryCreatedAt,
+		&i.CategoryUpdatedAt,
 		&i.OrderPointValue,
 		&i.OrderPointUnitID,
 		&i.OrderPointUnitAbbreviation,
@@ -217,24 +184,6 @@ func (q *Queries) GetMaterialByID(ctx context.Context, arg GetMaterialByIDParams
 		&i.LeadTimeUnitID,
 		&i.LeadTimeUnitAbbreviation,
 		&i.LeadTimeUnitType,
-		&i.UnitValueRateID,
-		&i.UnitValueRateValue,
-		&i.UnitValueNumeratorUnitID,
-		&i.UnitValueDenominatorUnitID,
-		&i.UnitValueCreatedAt,
-		&i.UnitValueUpdatedAt,
-		&i.UnitCostRateID,
-		&i.UnitCostRateValue,
-		&i.UnitCostNumeratorUnitID,
-		&i.UnitCostDenominatorUnitID,
-		&i.UnitCostCreatedAt,
-		&i.UnitCostUpdatedAt,
-		&i.BurnRateIDJoined,
-		&i.BurnRateValue,
-		&i.BurnRateNumeratorUnitID,
-		&i.BurnRateDenominatorUnitID,
-		&i.BurnRateCreatedAt,
-		&i.BurnRateUpdatedAt,
 	)
 	return i, err
 }
@@ -262,6 +211,10 @@ SELECT
     ic.name AS category_name,
     ic.item_category_type_code,
     ic.unit_group_id AS category_unit_group_id,
+    cat_ug.name AS category_unit_group_name,
+    cat_ug.unit_type_code AS category_unit_group_type,
+    cat_ug.created_at AS category_unit_group_created_at,
+    cat_ug.updated_at AS category_unit_group_updated_at,
     op.value AS order_point_value,
     op.unit_id AS order_point_unit_id,
     op_u.abbreviation AS order_point_unit_abbreviation,
@@ -291,6 +244,7 @@ SELECT
 FROM material m
 JOIN item i ON i.id = m.item_id
 JOIN item_category ic ON ic.id = i.item_category_id
+JOIN unit_group cat_ug ON cat_ug.id = ic.unit_group_id
 JOIN quantity op ON op.id = m.order_point_id
 JOIN unit op_u ON op_u.id = op.unit_id
 JOIN quantity lt ON lt.id = m.lead_time_id
@@ -330,6 +284,10 @@ type GetMaterialByItemIDRow struct {
 	CategoryName               string
 	ItemCategoryTypeCode       string
 	CategoryUnitGroupID        string
+	CategoryUnitGroupName      string
+	CategoryUnitGroupType      string
+	CategoryUnitGroupCreatedAt time.Time
+	CategoryUnitGroupUpdatedAt time.Time
 	OrderPointValue            string
 	OrderPointUnitID           string
 	OrderPointUnitAbbreviation string
@@ -383,6 +341,10 @@ func (q *Queries) GetMaterialByItemID(ctx context.Context, arg GetMaterialByItem
 		&i.CategoryName,
 		&i.ItemCategoryTypeCode,
 		&i.CategoryUnitGroupID,
+		&i.CategoryUnitGroupName,
+		&i.CategoryUnitGroupType,
+		&i.CategoryUnitGroupCreatedAt,
+		&i.CategoryUnitGroupUpdatedAt,
 		&i.OrderPointValue,
 		&i.OrderPointUnitID,
 		&i.OrderPointUnitAbbreviation,
@@ -413,7 +375,7 @@ func (q *Queries) GetMaterialByItemID(ctx context.Context, arg GetMaterialByItem
 	return i, err
 }
 
-const listMaterialsBackward = `-- name: ListMaterialsBackward :many
+const listMaterialsBackwardBase = `-- name: ListMaterialsBackwardBase :many
 SELECT
     m.id,
     m.item_id,
@@ -436,6 +398,8 @@ SELECT
     ic.name AS category_name,
     ic.item_category_type_code,
     ic.unit_group_id AS category_unit_group_id,
+    ic.created_at AS category_created_at,
+    ic.updated_at AS category_updated_at,
     op.value AS order_point_value,
     op.unit_id AS order_point_unit_id,
     op_u.abbreviation AS order_point_unit_abbreviation,
@@ -443,25 +407,7 @@ SELECT
     lt.value AS lead_time_value,
     lt.unit_id AS lead_time_unit_id,
     lt_u.abbreviation AS lead_time_unit_abbreviation,
-    lt_u.unit_dimension_code AS lead_time_unit_type,
-    rv.id AS unit_value_rate_id,
-    rv.value AS unit_value_rate_value,
-    rv.numerator_unit_id AS unit_value_numerator_unit_id,
-    rv.denominator_unit_id AS unit_value_denominator_unit_id,
-    rv.created_at AS unit_value_created_at,
-    rv.updated_at AS unit_value_updated_at,
-    rc.id AS unit_cost_rate_id,
-    rc.value AS unit_cost_rate_value,
-    rc.numerator_unit_id AS unit_cost_numerator_unit_id,
-    rc.denominator_unit_id AS unit_cost_denominator_unit_id,
-    rc.created_at AS unit_cost_created_at,
-    rc.updated_at AS unit_cost_updated_at,
-    rb.id AS burn_rate_id_joined,
-    rb.value AS burn_rate_value,
-    rb.numerator_unit_id AS burn_rate_numerator_unit_id,
-    rb.denominator_unit_id AS burn_rate_denominator_unit_id,
-    rb.created_at AS burn_rate_created_at,
-    rb.updated_at AS burn_rate_updated_at
+    lt_u.unit_dimension_code AS lead_time_unit_type
 FROM material m
 JOIN item i ON i.id = m.item_id
 JOIN item_category ic ON ic.id = i.item_category_id
@@ -469,9 +415,6 @@ JOIN quantity op ON op.id = m.order_point_id
 JOIN unit op_u ON op_u.id = op.unit_id
 JOIN quantity lt ON lt.id = m.lead_time_id
 JOIN unit lt_u ON lt_u.id = lt.unit_id
-JOIN rate rv ON rv.id = i.unit_value_id
-JOIN rate rc ON rc.id = i.unit_cost_id
-JOIN rate rb ON rb.id = i.burn_rate_id
 WHERE i.account_id = ?
 AND i.deleted_at IS NULL
 AND (
@@ -507,7 +450,7 @@ ORDER BY m.created_at ASC, m.id ASC
 LIMIT ?
 `
 
-type ListMaterialsBackwardParams struct {
+type ListMaterialsBackwardBaseParams struct {
 	AccountID              string
 	SearchQuery            sql.NullString
 	IncludeCategoryFilter  interface{}
@@ -521,7 +464,7 @@ type ListMaterialsBackwardParams struct {
 	Limit                  int32
 }
 
-type ListMaterialsBackwardRow struct {
+type ListMaterialsBackwardBaseRow struct {
 	ID                         string
 	ItemID                     string
 	OrderPointID               string
@@ -543,6 +486,8 @@ type ListMaterialsBackwardRow struct {
 	CategoryName               string
 	ItemCategoryTypeCode       string
 	CategoryUnitGroupID        string
+	CategoryCreatedAt          time.Time
+	CategoryUpdatedAt          time.Time
 	OrderPointValue            string
 	OrderPointUnitID           string
 	OrderPointUnitAbbreviation string
@@ -551,28 +496,10 @@ type ListMaterialsBackwardRow struct {
 	LeadTimeUnitID             string
 	LeadTimeUnitAbbreviation   string
 	LeadTimeUnitType           string
-	UnitValueRateID            string
-	UnitValueRateValue         string
-	UnitValueNumeratorUnitID   string
-	UnitValueDenominatorUnitID string
-	UnitValueCreatedAt         time.Time
-	UnitValueUpdatedAt         time.Time
-	UnitCostRateID             string
-	UnitCostRateValue          string
-	UnitCostNumeratorUnitID    string
-	UnitCostDenominatorUnitID  string
-	UnitCostCreatedAt          time.Time
-	UnitCostUpdatedAt          time.Time
-	BurnRateIDJoined           string
-	BurnRateValue              string
-	BurnRateNumeratorUnitID    string
-	BurnRateDenominatorUnitID  string
-	BurnRateCreatedAt          time.Time
-	BurnRateUpdatedAt          time.Time
 }
 
-func (q *Queries) ListMaterialsBackward(ctx context.Context, arg ListMaterialsBackwardParams) ([]ListMaterialsBackwardRow, error) {
-	query := listMaterialsBackward
+func (q *Queries) ListMaterialsBackwardBase(ctx context.Context, arg ListMaterialsBackwardBaseParams) ([]ListMaterialsBackwardBaseRow, error) {
+	query := listMaterialsBackwardBase
 	var queryParams []interface{}
 	queryParams = append(queryParams, arg.AccountID)
 	queryParams = append(queryParams, arg.SearchQuery)
@@ -609,9 +536,9 @@ func (q *Queries) ListMaterialsBackward(ctx context.Context, arg ListMaterialsBa
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListMaterialsBackwardRow
+	var items []ListMaterialsBackwardBaseRow
 	for rows.Next() {
-		var i ListMaterialsBackwardRow
+		var i ListMaterialsBackwardBaseRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.ItemID,
@@ -634,6 +561,8 @@ func (q *Queries) ListMaterialsBackward(ctx context.Context, arg ListMaterialsBa
 			&i.CategoryName,
 			&i.ItemCategoryTypeCode,
 			&i.CategoryUnitGroupID,
+			&i.CategoryCreatedAt,
+			&i.CategoryUpdatedAt,
 			&i.OrderPointValue,
 			&i.OrderPointUnitID,
 			&i.OrderPointUnitAbbreviation,
@@ -642,24 +571,6 @@ func (q *Queries) ListMaterialsBackward(ctx context.Context, arg ListMaterialsBa
 			&i.LeadTimeUnitID,
 			&i.LeadTimeUnitAbbreviation,
 			&i.LeadTimeUnitType,
-			&i.UnitValueRateID,
-			&i.UnitValueRateValue,
-			&i.UnitValueNumeratorUnitID,
-			&i.UnitValueDenominatorUnitID,
-			&i.UnitValueCreatedAt,
-			&i.UnitValueUpdatedAt,
-			&i.UnitCostRateID,
-			&i.UnitCostRateValue,
-			&i.UnitCostNumeratorUnitID,
-			&i.UnitCostDenominatorUnitID,
-			&i.UnitCostCreatedAt,
-			&i.UnitCostUpdatedAt,
-			&i.BurnRateIDJoined,
-			&i.BurnRateValue,
-			&i.BurnRateNumeratorUnitID,
-			&i.BurnRateDenominatorUnitID,
-			&i.BurnRateCreatedAt,
-			&i.BurnRateUpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -674,7 +585,7 @@ func (q *Queries) ListMaterialsBackward(ctx context.Context, arg ListMaterialsBa
 	return items, nil
 }
 
-const listMaterialsForward = `-- name: ListMaterialsForward :many
+const listMaterialsForwardBase = `-- name: ListMaterialsForwardBase :many
 SELECT
     m.id,
     m.item_id,
@@ -697,6 +608,8 @@ SELECT
     ic.name AS category_name,
     ic.item_category_type_code,
     ic.unit_group_id AS category_unit_group_id,
+    ic.created_at AS category_created_at,
+    ic.updated_at AS category_updated_at,
     op.value AS order_point_value,
     op.unit_id AS order_point_unit_id,
     op_u.abbreviation AS order_point_unit_abbreviation,
@@ -704,25 +617,7 @@ SELECT
     lt.value AS lead_time_value,
     lt.unit_id AS lead_time_unit_id,
     lt_u.abbreviation AS lead_time_unit_abbreviation,
-    lt_u.unit_dimension_code AS lead_time_unit_type,
-    rv.id AS unit_value_rate_id,
-    rv.value AS unit_value_rate_value,
-    rv.numerator_unit_id AS unit_value_numerator_unit_id,
-    rv.denominator_unit_id AS unit_value_denominator_unit_id,
-    rv.created_at AS unit_value_created_at,
-    rv.updated_at AS unit_value_updated_at,
-    rc.id AS unit_cost_rate_id,
-    rc.value AS unit_cost_rate_value,
-    rc.numerator_unit_id AS unit_cost_numerator_unit_id,
-    rc.denominator_unit_id AS unit_cost_denominator_unit_id,
-    rc.created_at AS unit_cost_created_at,
-    rc.updated_at AS unit_cost_updated_at,
-    rb.id AS burn_rate_id_joined,
-    rb.value AS burn_rate_value,
-    rb.numerator_unit_id AS burn_rate_numerator_unit_id,
-    rb.denominator_unit_id AS burn_rate_denominator_unit_id,
-    rb.created_at AS burn_rate_created_at,
-    rb.updated_at AS burn_rate_updated_at
+    lt_u.unit_dimension_code AS lead_time_unit_type
 FROM material m
 JOIN item i ON i.id = m.item_id
 JOIN item_category ic ON ic.id = i.item_category_id
@@ -730,9 +625,6 @@ JOIN quantity op ON op.id = m.order_point_id
 JOIN unit op_u ON op_u.id = op.unit_id
 JOIN quantity lt ON lt.id = m.lead_time_id
 JOIN unit lt_u ON lt_u.id = lt.unit_id
-JOIN rate rv ON rv.id = i.unit_value_id
-JOIN rate rc ON rc.id = i.unit_cost_id
-JOIN rate rb ON rb.id = i.burn_rate_id
 WHERE i.account_id = ?
 AND i.deleted_at IS NULL
 AND (
@@ -769,7 +661,7 @@ ORDER BY m.created_at DESC, m.id DESC
 LIMIT ?
 `
 
-type ListMaterialsForwardParams struct {
+type ListMaterialsForwardBaseParams struct {
 	AccountID              string
 	SearchQuery            sql.NullString
 	IncludeCategoryFilter  interface{}
@@ -783,7 +675,7 @@ type ListMaterialsForwardParams struct {
 	Limit                  int32
 }
 
-type ListMaterialsForwardRow struct {
+type ListMaterialsForwardBaseRow struct {
 	ID                         string
 	ItemID                     string
 	OrderPointID               string
@@ -805,6 +697,8 @@ type ListMaterialsForwardRow struct {
 	CategoryName               string
 	ItemCategoryTypeCode       string
 	CategoryUnitGroupID        string
+	CategoryCreatedAt          time.Time
+	CategoryUpdatedAt          time.Time
 	OrderPointValue            string
 	OrderPointUnitID           string
 	OrderPointUnitAbbreviation string
@@ -813,28 +707,10 @@ type ListMaterialsForwardRow struct {
 	LeadTimeUnitID             string
 	LeadTimeUnitAbbreviation   string
 	LeadTimeUnitType           string
-	UnitValueRateID            string
-	UnitValueRateValue         string
-	UnitValueNumeratorUnitID   string
-	UnitValueDenominatorUnitID string
-	UnitValueCreatedAt         time.Time
-	UnitValueUpdatedAt         time.Time
-	UnitCostRateID             string
-	UnitCostRateValue          string
-	UnitCostNumeratorUnitID    string
-	UnitCostDenominatorUnitID  string
-	UnitCostCreatedAt          time.Time
-	UnitCostUpdatedAt          time.Time
-	BurnRateIDJoined           string
-	BurnRateValue              string
-	BurnRateNumeratorUnitID    string
-	BurnRateDenominatorUnitID  string
-	BurnRateCreatedAt          time.Time
-	BurnRateUpdatedAt          time.Time
 }
 
-func (q *Queries) ListMaterialsForward(ctx context.Context, arg ListMaterialsForwardParams) ([]ListMaterialsForwardRow, error) {
-	query := listMaterialsForward
+func (q *Queries) ListMaterialsForwardBase(ctx context.Context, arg ListMaterialsForwardBaseParams) ([]ListMaterialsForwardBaseRow, error) {
+	query := listMaterialsForwardBase
 	var queryParams []interface{}
 	queryParams = append(queryParams, arg.AccountID)
 	queryParams = append(queryParams, arg.SearchQuery)
@@ -872,9 +748,9 @@ func (q *Queries) ListMaterialsForward(ctx context.Context, arg ListMaterialsFor
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListMaterialsForwardRow
+	var items []ListMaterialsForwardBaseRow
 	for rows.Next() {
-		var i ListMaterialsForwardRow
+		var i ListMaterialsForwardBaseRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.ItemID,
@@ -897,6 +773,8 @@ func (q *Queries) ListMaterialsForward(ctx context.Context, arg ListMaterialsFor
 			&i.CategoryName,
 			&i.ItemCategoryTypeCode,
 			&i.CategoryUnitGroupID,
+			&i.CategoryCreatedAt,
+			&i.CategoryUpdatedAt,
 			&i.OrderPointValue,
 			&i.OrderPointUnitID,
 			&i.OrderPointUnitAbbreviation,
@@ -905,24 +783,6 @@ func (q *Queries) ListMaterialsForward(ctx context.Context, arg ListMaterialsFor
 			&i.LeadTimeUnitID,
 			&i.LeadTimeUnitAbbreviation,
 			&i.LeadTimeUnitType,
-			&i.UnitValueRateID,
-			&i.UnitValueRateValue,
-			&i.UnitValueNumeratorUnitID,
-			&i.UnitValueDenominatorUnitID,
-			&i.UnitValueCreatedAt,
-			&i.UnitValueUpdatedAt,
-			&i.UnitCostRateID,
-			&i.UnitCostRateValue,
-			&i.UnitCostNumeratorUnitID,
-			&i.UnitCostDenominatorUnitID,
-			&i.UnitCostCreatedAt,
-			&i.UnitCostUpdatedAt,
-			&i.BurnRateIDJoined,
-			&i.BurnRateValue,
-			&i.BurnRateNumeratorUnitID,
-			&i.BurnRateDenominatorUnitID,
-			&i.BurnRateCreatedAt,
-			&i.BurnRateUpdatedAt,
 		); err != nil {
 			return nil, err
 		}

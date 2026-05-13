@@ -15,7 +15,7 @@ type UpdateDCLocationRequest struct {
 	// DC location ID.
 	DCLocationID string `path:"id" validate:"required"`
 	// Customer account ID.
-	CustomerID *string `json:"customer_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
+	CustomerID *string `json:"customer_id,omitempty" nullable:"false" validate:"omitempty"`
 	// Location description.
 	Location *string `json:"location,omitempty" nullable:"false" validate:"omitempty,max=255"`
 }

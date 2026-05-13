@@ -13,19 +13,20 @@ import (
 
 // Request to create an account user.
 type CreateAccountUserRequest struct {
-	// Display name.
+	// User display name.
 	Name *string `json:"name" validate:"omitempty,max=255"`
-	// Email address.
+	// User email address.
 	Email *string `json:"email" validate:"omitnil,custom_email,max=255"`
-	// Username.
-	Username *string `json:"username" validate:"omitempty,max=255"`
-	// Password (only valid for scanner-role users backing a scanning station).
-	Password *string `json:"password"` // #nosec G117 -- API request field for user password input
-	// Role ID. Expandable.
-	RoleID *string `json:"role_id,omitempty" validate:"omitempty,max=191"`
-	// Department ID. Expandable.
-	DepartmentID *string `json:"department_id,omitempty" validate:"omitempty,max=191"`
-	// Notification preferences to create for the new user (external targets only).
+	// Unique username (3–255 chars; letters, numbers, underscores, hyphens).
+	Username *string `json:"username" validate:"omitempty,username"`
+	// Password. Only used for scanner-role users (scanning stations).
+	// Must be 8–72 chars and include upper, lower, number, and special character.
+	Password *string `json:"password" validate:"omitempty,password"` // #nosec G117 -- API request field for user password input
+	// Role assigned to the user.
+	RoleID *string `json:"role_id,omitempty" validate:"omitempty"`
+	// Department assigned to the user.
+	DepartmentID *string `json:"department_id,omitempty" validate:"omitempty"`
+	// Notification preferences for the user (external targets only).
 	Preferences []NotificationPreferenceItem `json:"preferences,omitempty"`
 }
 
@@ -54,7 +55,7 @@ type CreateAccountUserEndpoint struct{}
 func (e *CreateAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAccountUserRequest, *apiresource.AccountUser] {
 	return &apiendpoint.APIEndpoint[*CreateAccountUserRequest, *apiresource.AccountUser]{
 		Title:             "Create Account User",
-		Description:       "Creates an account user and invites them to the account.",
+		Description:       "Creates a new account user and invites them to the target account.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/account-users",

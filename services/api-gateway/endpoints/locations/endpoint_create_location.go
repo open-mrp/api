@@ -18,7 +18,7 @@ type CreateLocationRequest struct {
 	// Location type code.
 	TypeCode constants.LocationTypeCode `json:"type" validate:"required"`
 	// Parent location ID. Null for top-level locations.
-	ParentID *string `json:"parent_id,omitempty" validate:"omitempty,max=191"`
+	ParentID *string `json:"parent_id,omitempty" validate:"omitempty"`
 	// IDs of child locations to attach.
 	ChildIDs *[]string `json:"child_ids,omitempty"`
 }

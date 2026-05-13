@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -114,6 +115,22 @@ func LoggingMiddleware(logger *log.Logger, next http.HandlerFunc, saver saver, r
 			OccurredAt:     start,
 			APIVersion:     apiVersion,
 			PublicEndpoint: publicEndpoint,
+		}
+
+		if r.URL.RawQuery != "" {
+			queryParams := r.URL.Query()
+			queryMap := make(map[string]any, len(queryParams))
+			for k, v := range queryParams {
+				if len(v) == 1 {
+					queryMap[k] = v[0]
+				} else {
+					queryMap[k] = v
+				}
+			}
+			if b, err := json.Marshal(queryMap); err == nil {
+				s := string(b)
+				requestLog.QueryJSON = &s
+			}
 		}
 
 		span := trace.SpanFromContext(r.Context())

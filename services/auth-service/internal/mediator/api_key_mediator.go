@@ -272,17 +272,17 @@ func (s *apiKeyMedImpl) GetKeyAccountAccess(ctx context.Context, input domain.AP
 		roleID = nil
 	}
 
-	roleTypeCode := &apiKeyModel.RoleTypeCode
-	if apiKeyModel.RoleTypeCode == "" {
+	roleTypeCode := &apiKeyModel.RoleType
+	if apiKeyModel.RoleType == "" {
 		roleTypeCode = nil
 	}
 
 	return &domain.APIKeyAccountAccess{
-		APIKeyID:     apiKeyModel.TypeID,
-		AccountID:    input.TargetAccountID,
-		RoleID:       roleID,
-		RoleTypeCode: roleTypeCode,
-		Permissions:  permissions,
+		APIKeyID:    apiKeyModel.TypeID,
+		AccountID:   input.TargetAccountID,
+		RoleID:      roleID,
+		RoleType:    roleTypeCode,
+		Permissions: permissions,
 	}, nil
 }
 

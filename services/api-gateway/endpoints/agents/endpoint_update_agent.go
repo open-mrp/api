@@ -30,7 +30,7 @@ type UpdateAgentRequest struct {
 	// Tools to attach. Replaces the existing tool set when provided.
 	Tools *[]ToolInput `json:"tools,omitempty" nullable:"false"`
 	// Role ID defining agent permissions.
-	RoleID *string `json:"role_id,omitempty" nullable:"true" validate:"omitempty,max=191"`
+	RoleID *string `json:"role_id,omitempty" nullable:"true" validate:"omitempty"`
 }
 
 var sampleUpdateAgentRequest = &UpdateAgentRequest{

@@ -62,6 +62,7 @@ message UpdateItemRequest {
   bool update_description = 4;
   optional string notes = 5;
   bool update_notes = 6;
+  repeated string includes = 7;
 }
 message UpdateItemResponse {
   ItemInfo item = 1;
@@ -69,6 +70,7 @@ message UpdateItemResponse {
 message AddItemAttributeRequest {
   string item_id = 1;
   string attribute_id = 2;
+  repeated string includes = 3;
 }
 message AddItemAttributeResponse {
   ItemInfo item = 1;
@@ -76,6 +78,7 @@ message AddItemAttributeResponse {
 message RemoveItemAttributeRequest {
   string item_id = 1;
   string attribute_id = 2;
+  repeated string includes = 3;
 }
 message RemoveItemAttributeResponse {
   ItemInfo item = 1;
@@ -83,6 +86,7 @@ message RemoveItemAttributeResponse {
 message ChangeItemCategoryRequest {
   string item_id = 1;
   string category_id = 2;
+  repeated string includes = 3;
 }
 message ChangeItemCategoryResponse {
   ItemInfo item = 1;
@@ -203,6 +207,9 @@ message BatchLotInfo {
 message LightMachineInfo {
   string id = 1;
   string name = 2;
+  string serial_number = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp updated_at = 5;
 }
 message BatchFlowNodeInfo {
   BatchInfo batch = 1;
@@ -337,6 +344,7 @@ message ListItemCategoriesRequest {
   int32 limit = 2;
   optional string query = 3;
   optional string type = 4;
+  repeated string includes = 5;
 }
 message ListItemCategoriesResponse {
   repeated ItemCategoryInfo item_categories = 1;
@@ -344,6 +352,7 @@ message ListItemCategoriesResponse {
 }
 message GetItemCategoryRequest {
   string id = 1;
+  repeated string includes = 2;
 }
 message GetItemCategoryResponse {
   ItemCategoryInfo item_category = 1;
@@ -352,6 +361,7 @@ message CreateItemCategoryRequest {
   string name = 1;
   string type = 2;
   string unit_group_id = 3;
+  repeated string includes = 4;
 }
 message CreateItemCategoryResponse {
   ItemCategoryInfo item_category = 1;
@@ -360,6 +370,7 @@ message UpdateItemCategoryRequest {
   string id = 1;
   optional string name = 2;
   optional string notes = 3;
+  repeated string includes = 4;
 }
 message UpdateItemCategoryResponse {
   ItemCategoryInfo item_category = 1;
@@ -394,6 +405,7 @@ message ConsumptionInfo {
 message GetConsumptionRequest {
   string production_step_id = 1;
   string id = 2;
+  repeated string includes = 3;
 }
 message GetConsumptionResponse {
   ConsumptionInfo consumption = 1;

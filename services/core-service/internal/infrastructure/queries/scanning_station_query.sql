@@ -9,6 +9,8 @@ SELECT
     ss.material_check_required,
     ss.department_id,
     d.name AS department_name,
+    d.created_at AS department_created_at,
+    d.updated_at AS department_updated_at,
     ss.account_id,
     ss.created_at,
     ss.updated_at
@@ -18,7 +20,7 @@ WHERE ss.id = sqlc.arg('id')
 AND ss.account_id = sqlc.arg('account_id');
 
 -- name: ListProductionStepsByScanningStationID :many
-SELECT id, name
+SELECT id, name, leveling_factor, allowances, created_at, updated_at
 FROM production_step
 WHERE scanning_station_id = sqlc.arg('scanning_station_id')
 AND account_id = sqlc.arg('account_id')
@@ -35,6 +37,8 @@ SELECT
     ss.material_check_required,
     ss.department_id,
     d.name AS department_name,
+    d.created_at AS department_created_at,
+    d.updated_at AS department_updated_at,
     ss.account_id,
     ss.created_at,
     ss.updated_at
@@ -44,7 +48,6 @@ WHERE ss.account_id = sqlc.arg('account_id')
 AND (
     sqlc.narg('search_query') IS NULL
     OR ss.name LIKE sqlc.narg('search_query')
-    OR d.name LIKE sqlc.narg('search_query')
 )
 AND (
     sqlc.narg('cursor_created_at') IS NULL
@@ -65,6 +68,8 @@ SELECT
     ss.material_check_required,
     ss.department_id,
     d.name AS department_name,
+    d.created_at AS department_created_at,
+    d.updated_at AS department_updated_at,
     ss.account_id,
     ss.created_at,
     ss.updated_at
@@ -74,7 +79,6 @@ WHERE ss.account_id = sqlc.arg('account_id')
 AND (
     sqlc.narg('search_query') IS NULL
     OR ss.name LIKE sqlc.narg('search_query')
-    OR d.name LIKE sqlc.narg('search_query')
 )
 AND (
     ss.created_at > sqlc.arg('cursor_created_at')

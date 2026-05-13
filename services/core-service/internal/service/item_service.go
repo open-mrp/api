@@ -82,19 +82,11 @@ func (s *itemSvcImpl) ListItems(ctx context.Context, params domain.ListItemsPara
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	// Load attributes for each item
-	repo := s.repos.NewItemRepo()
-	for _, item := range result.Items {
-		if apiErr := loadItemAttributes(ctx, repo, item); apiErr != nil {
-			return nil, tracing.Trace(span, apiErr)
-		}
-	}
-
 	return result, nil
 }
 
 // GetItem returns a single item by ID within the caller's account.
-func (s *itemSvcImpl) GetItem(ctx context.Context, itemID string) (*domain.Item, *apierror.APIError) {
+func (s *itemSvcImpl) GetItem(ctx context.Context, itemID string, includes []string) (*domain.Item, *apierror.APIError) {
 	ctx, span := itemSvcTracer.Start(ctx, "service.item.get")
 	defer span.End()
 
@@ -113,6 +105,7 @@ func (s *itemSvcImpl) GetItem(ctx context.Context, itemID string) (*domain.Item,
 	return s.repos.NewItemRepo().Get(ctx, domain.GetItemParams{
 		AccountID: identity.Target.AccountID,
 		ItemID:    itemID,
+		Includes:  includes,
 	})
 }
 
@@ -469,25 +462,6 @@ func (s *itemSvcImpl) ExportItems(ctx context.Context) (*domain.ExportItemsResul
 	return s.repos.NewItemRepo().ExportWithInventory(ctx, identity.Target.AccountID)
 }
 
-// loadItemAttributes is a helper to load attributes for an item from a repo instance.
-func loadItemAttributes(ctx context.Context, repo domain.ItemRepo, item *domain.Item) *apierror.APIError {
-	if item == nil {
-		return nil
-	}
-
-	enriched, apiErr := repo.Get(ctx, domain.GetItemParams{
-		AccountID: item.AccountID,
-		ItemID:    item.ID,
-	})
-	if apiErr != nil {
-		return apiErr
-	}
-	if enriched != nil {
-		item.Attributes = enriched.Attributes
-	}
-	return nil
-}
-
 func (s *itemSvcImpl) mediators() domain.Mediators {
 	return s.mediatorFactory.Build(s.repos)
 }
@@ -605,7 +579,7 @@ func (s *itemSvcImpl) UpdateItem(ctx context.Context, params domain.UpdateItemPa
 }
 
 // AddItemAttribute adds an attribute to an item.
-func (s *itemSvcImpl) AddItemAttribute(ctx context.Context, itemID, attributeID string) (*domain.Item, *apierror.APIError) {
+func (s *itemSvcImpl) AddItemAttribute(ctx context.Context, itemID, attributeID string, includes []string) (*domain.Item, *apierror.APIError) {
 	ctx, span := itemSvcTracer.Start(ctx, "service.item.add_attribute")
 	defer span.End()
 
@@ -654,6 +628,7 @@ func (s *itemSvcImpl) AddItemAttribute(ctx context.Context, itemID, attributeID 
 			item, apiErr := txRepo.Get(txCtx, domain.GetItemParams{
 				AccountID: accountID,
 				ItemID:    itemID,
+				Includes:  includes,
 			})
 			if apiErr != nil {
 				return apiErr
@@ -675,7 +650,7 @@ func (s *itemSvcImpl) AddItemAttribute(ctx context.Context, itemID, attributeID 
 }
 
 // RemoveItemAttribute removes an attribute from an item.
-func (s *itemSvcImpl) RemoveItemAttribute(ctx context.Context, itemID, attributeID string) (*domain.Item, *apierror.APIError) {
+func (s *itemSvcImpl) RemoveItemAttribute(ctx context.Context, itemID, attributeID string, includes []string) (*domain.Item, *apierror.APIError) {
 	ctx, span := itemSvcTracer.Start(ctx, "service.item.remove_attribute")
 	defer span.End()
 
@@ -724,6 +699,7 @@ func (s *itemSvcImpl) RemoveItemAttribute(ctx context.Context, itemID, attribute
 			item, apiErr := txRepo.Get(txCtx, domain.GetItemParams{
 				AccountID: accountID,
 				ItemID:    itemID,
+				Includes:  includes,
 			})
 			if apiErr != nil {
 				return apiErr
@@ -744,8 +720,29 @@ func (s *itemSvcImpl) RemoveItemAttribute(ctx context.Context, itemID, attribute
 	}
 }
 
+func categoryTypeMatchesItem(itemTypeCode, categoryTypeCode string) bool {
+	switch constants.ItemTypeCode(itemTypeCode) {
+	case constants.ItemTypeCodeMaterial:
+		return categoryTypeCode == string(constants.ItemCategoryTypeMaterial)
+	case constants.ItemTypeCodeProduct, constants.ItemTypeCodePart:
+		return categoryTypeCode == string(constants.ItemCategoryTypeProduct)
+	default:
+		return false
+	}
+}
+
+func validateChangeItemCategoryTypes(item *domain.Item, category *domain.ItemCategoryFull) *apierror.APIError {
+	if item == nil || category == nil {
+		return apierror.NewInvariantViolationError("Item and category are required for category change validation.")
+	}
+	if !categoryTypeMatchesItem(item.ItemTypeCode, category.ItemCategoryTypeCode) {
+		return apierror.NewValidationErrorWithParam("This category type cannot be assigned to this item type.", "category_id")
+	}
+	return nil
+}
+
 // ChangeItemCategory changes the category of an item and updates rate units.
-func (s *itemSvcImpl) ChangeItemCategory(ctx context.Context, itemID, categoryID string) (*domain.Item, *apierror.APIError) {
+func (s *itemSvcImpl) ChangeItemCategory(ctx context.Context, itemID, categoryID string, includes []string) (*domain.Item, *apierror.APIError) {
 	ctx, span := itemSvcTracer.Start(ctx, "service.item.change_category")
 	defer span.End()
 
@@ -783,6 +780,24 @@ func (s *itemSvcImpl) ChangeItemCategory(ctx context.Context, itemID, categoryID
 		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *itemSvcImpl) *apierror.APIError {
 			txRepo := txSvc.repos.NewItemRepo()
 
+			itemForValidation, apiErr := txRepo.Get(txCtx, domain.GetItemParams{
+				AccountID: accountID,
+				ItemID:    itemID,
+			})
+			if apiErr != nil {
+				return apiErr
+			}
+			category, apiErr := txSvc.repos.NewItemCategoryRepo().Get(txCtx, domain.GetItemCategoryParams{
+				AccountID:      accountID,
+				ItemCategoryID: categoryID,
+			})
+			if apiErr != nil {
+				return apiErr
+			}
+			if apiErr := validateChangeItemCategoryTypes(itemForValidation, category); apiErr != nil {
+				return apiErr
+			}
+
 			// Get the base unit of the new category
 			baseUnitID, apiErr := txRepo.GetCategoryBaseUnitID(txCtx, categoryID)
 			if apiErr != nil {
@@ -816,6 +831,7 @@ func (s *itemSvcImpl) ChangeItemCategory(ctx context.Context, itemID, categoryID
 			item, apiErr := txRepo.Get(txCtx, domain.GetItemParams{
 				AccountID: accountID,
 				ItemID:    itemID,
+				Includes:  includes,
 			})
 			if apiErr != nil {
 				return apiErr
@@ -1208,6 +1224,23 @@ func (s *itemSvcImpl) bulkUpsertExistingItem(ctx context.Context, accountID, ite
 		// Move the item between categories when the input supplies a new category,
 		// keeping rate units consistent with the new category's base unit.
 		if input.ItemCategoryID != "" {
+			item, apiErr := txItemRepo.Get(txCtx, domain.GetItemParams{
+				AccountID: accountID,
+				ItemID:    itemID,
+			})
+			if apiErr != nil {
+				return apiErr
+			}
+			category, apiErr := txSvc.repos.NewItemCategoryRepo().Get(txCtx, domain.GetItemCategoryParams{
+				AccountID:      accountID,
+				ItemCategoryID: input.ItemCategoryID,
+			})
+			if apiErr != nil {
+				return apiErr
+			}
+			if apiErr := validateChangeItemCategoryTypes(item, category); apiErr != nil {
+				return apiErr
+			}
 			if apiErr := txItemRepo.ChangeCategory(txCtx, domain.ChangeItemCategoryParams{
 				AccountID:  accountID,
 				ItemID:     itemID,

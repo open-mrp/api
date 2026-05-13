@@ -71,9 +71,16 @@ func ValidatedAddressPresenter(resp *pb.ValidateAddressResponse) *apiresource.Va
 
 	return &apiresource.ValidatedAddress{
 		Object:             constants.ObjectTypeValidatedAddress,
-		IsValid:            resp.IsValid,
+		Status:             addressValidationStatus(resp.IsValid),
 		FormattedAddress:   resp.FormattedAddress,
 		Components:         AddressComponentsPresenter(resp.Components),
 		ValidationMessages: validationMessages,
 	}
+}
+
+func addressValidationStatus(isValid bool) constants.AddressValidationStatus {
+	if isValid {
+		return constants.AddressValidationStatusValid
+	}
+	return constants.AddressValidationStatusInvalid
 }

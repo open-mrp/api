@@ -8,6 +8,7 @@ import (
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	ownerutil "github.com/augno/api/services/api-gateway/internal/owner"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
@@ -18,7 +19,7 @@ import (
 
 type CarrierSvc interface {
 	ListCarriers(ctx context.Context, req *ListCarriersRequest) (*apiresource.List[apiresource.Carrier], *apierror.APIError)
-	GetCarrier(ctx context.Context, req *GetCarrierRequest) (*apiresource.Carrier, *apierror.APIError)
+	GetCarrier(ctx context.Context, req *RetrieveCarrierRequest) (*apiresource.Carrier, *apierror.APIError)
 	CreateCarrier(ctx context.Context, req *CreateCarrierRequest) (*apiresource.Carrier, *apierror.APIError)
 	UpdateCarrier(ctx context.Context, req *UpdateCarrierRequest) (*apiresource.Carrier, *apierror.APIError)
 	DeleteCarrier(ctx context.Context, req *DeleteCarrierRequest) (*apiresource.EmptyResource, *apierror.APIError)
@@ -56,9 +57,10 @@ func NewCarrierSvc(config *CarrierSvcConfig) CarrierSvc {
 
 func (m *carrierSvcImpl) ListCarriers(ctx context.Context, req *ListCarriersRequest) (*apiresource.List[apiresource.Carrier], *apierror.APIError) {
 	pbReq := &pb.ListCarriersRequest{
-		Cursor: req.Cursor,
-		Limit:  req.Limit,
-		Query:  req.Query,
+		Cursor:   req.Cursor,
+		Limit:    req.Limit,
+		Query:    req.Query,
+		Includes: appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, carrierSvcTracer, "service.carriers.list", domain.ServiceName,
@@ -81,9 +83,10 @@ func (m *carrierSvcImpl) ListCarriers(ctx context.Context, req *ListCarriersRequ
 	return CarrierListPresenter(resp, ownerAccount), nil
 }
 
-func (m *carrierSvcImpl) GetCarrier(ctx context.Context, req *GetCarrierRequest) (*apiresource.Carrier, *apierror.APIError) {
+func (m *carrierSvcImpl) GetCarrier(ctx context.Context, req *RetrieveCarrierRequest) (*apiresource.Carrier, *apierror.APIError) {
 	pbReq := &pb.GetCarrierRequest{
-		Id: req.CarrierID,
+		Id:       req.CarrierID,
+		Includes: appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, carrierSvcTracer, "service.carriers.get", domain.ServiceName,
@@ -117,6 +120,7 @@ func (m *carrierSvcImpl) CreateCarrier(ctx context.Context, req *CreateCarrierRe
 		Code:            code,
 		AccountNumber:   req.AccountNumber,
 		IsPortalEnabled: isPortalEnabled,
+		Includes:        appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, carrierSvcTracer, "service.carriers.create", domain.ServiceName,
@@ -144,6 +148,7 @@ func (m *carrierSvcImpl) UpdateCarrier(ctx context.Context, req *UpdateCarrierRe
 		Id:              req.CarrierID,
 		Name:            req.Name,
 		IsPortalEnabled: isPortalEnabled,
+		Includes:        appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, carrierSvcTracer, "service.carriers.update", domain.ServiceName,

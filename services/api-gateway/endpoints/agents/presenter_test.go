@@ -42,10 +42,10 @@ func TestAgentDefinitionPresenter(t *testing.T) {
 		UpdatedAt: now,
 	}
 
-	role := &resolvedRole{
-		Name:         "Admin",
-		RoleTypeCode: "admin",
-		Permissions:  map[string]bool{"customer:read": true},
+	role := &ResolvedRole{
+		Name:        "Admin",
+		RoleType:    "admin",
+		Permissions: map[string]bool{"customer:read": true},
 	}
 
 	result := AgentDefinitionPresenter(def, role)

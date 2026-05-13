@@ -22,8 +22,8 @@ type SupplierMaterial struct {
 	SupplierPartNumber string `json:"supplier_part_number" validate:"required"`
 	// Supplier description for this material.
 	SupplierDescription *string `json:"supplier_description"`
-	// Active status.
-	IsActive bool `json:"is_active"`
+	// Whether this supplier material link is active.
+	Status constants.SupplierMaterialStatus `json:"status" validate:"required"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last updated timestamp.
@@ -37,7 +37,7 @@ var SampleSupplierMaterial = &SupplierMaterial{
 	Object:             constants.ObjectTypeSupplierMaterial,
 	Material:           SampleMaterial,
 	SupplierPartNumber: sampleSupplierPartNumber,
-	IsActive:           true,
+	Status:             constants.SupplierMaterialStatusActive,
 	CreatedAt:          timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:          timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }

@@ -17,7 +17,7 @@ func TestAPIKey_JSONExcludesSensitiveFields(t *testing.T) {
 		OwnerAccountID: "acct_123",
 		RoleID:         "rl_123",
 		RoleName:       "Admin",
-		RoleTypeCode:   "admin",
+		RoleType:       "admin",
 		RedactedValue:  "aug_sk_prod_****kuIb",
 		CreatedAt:      time.Now(),
 		UpdatedAt:      time.Now(),

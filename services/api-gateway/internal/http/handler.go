@@ -121,7 +121,7 @@ func extractUnknownJSONFieldName(err error) (string, bool) {
 // It considers json tags; if absent, it falls back to the exported field name.
 func collectJSONFieldNames(dst any) []string {
 	t := reflect.TypeOf(dst)
-	for t.Kind() == reflect.Ptr {
+	for t.Kind() == reflect.Pointer {
 		t = t.Elem()
 	}
 	if t.Kind() != reflect.Struct {
@@ -142,7 +142,7 @@ func collectJSONFieldNames(dst any) []string {
 			// Handle anonymous embedded structs (inline in JSON)
 			if sf.Anonymous {
 				ft := sf.Type
-				for ft.Kind() == reflect.Ptr {
+				for ft.Kind() == reflect.Pointer {
 					ft = ft.Elem()
 				}
 				if ft.Kind() == reflect.Struct {
@@ -303,7 +303,7 @@ const maxRawBodySize = 1 << 20 // 1MB limit for raw body
 
 func BindRawBody(r *http.Request, dst any) error {
 	rv := reflect.ValueOf(dst)
-	if rv.Kind() != reflect.Ptr || rv.IsNil() {
+	if rv.Kind() != reflect.Pointer || rv.IsNil() {
 		return errors.New("destination must be a non-nil pointer")
 	}
 	rv = rv.Elem()
@@ -347,6 +347,44 @@ func BindRawBody(r *http.Request, dst any) error {
 		fv.SetBytes(bodyData)
 	}
 
+	return nil
+}
+
+func collectAllowedQueryKeys(dst any) map[string]struct{} {
+	allowed := make(map[string]struct{})
+	_ = walkStruct(dst, func(f fieldInfo) error {
+		key := f.tag.Get("query")
+		if key == "" {
+			return nil
+		}
+		allowed[key] = struct{}{}
+		if f.value.Kind() == reflect.Slice {
+			allowed[key+"[]"] = struct{}{}
+		}
+		return nil
+	})
+	return allowed
+}
+
+// RejectUnknownQueryParams returns an error when the URL contains query keys that
+// are not declared on the request struct (via `query` tags). Slice parameters
+// accept either ?key= or ?key[]= shapes; both key forms are treated as allowed.
+// When allowInclude is true, include and include[] are permitted (validated
+// separately by the endpoint).
+func RejectUnknownQueryParams(u *url.URL, dst any, allowInclude bool) *apierror.APIError {
+	allowed := collectAllowedQueryKeys(dst)
+	if allowInclude {
+		allowed["include"] = struct{}{}
+		allowed["include[]"] = struct{}{}
+	}
+	for key := range u.Query() {
+		if _, ok := allowed[key]; !ok {
+			return apierror.NewParameterUnknownError(
+				fmt.Sprintf("Unknown query parameter '%s'.", key),
+				key,
+			)
+		}
+	}
 	return nil
 }
 
@@ -408,7 +446,7 @@ type fieldInfo struct {
 
 func walkStruct(dst any, fn func(fieldInfo) error) error {
 	rv := reflect.ValueOf(dst)
-	if rv.Kind() != reflect.Ptr || rv.IsNil() {
+	if rv.Kind() != reflect.Pointer || rv.IsNil() {
 		return errors.New("destination must be a non-nil pointer")
 	}
 	rv = rv.Elem()
@@ -430,7 +468,7 @@ func walkStruct(dst any, fn func(fieldInfo) error) error {
 			}
 			continue
 		}
-		if sf.Type.Kind() == reflect.Ptr && sf.Type.Elem().Kind() == reflect.Struct {
+		if sf.Type.Kind() == reflect.Pointer && sf.Type.Elem().Kind() == reflect.Struct {
 			// If the field carries a binding tag it is a scalar value type
 			// (e.g. *time.Time) that fn knows how to allocate and parse. Pass
 			// it directly to fn instead of trying to recurse into it (which
@@ -458,7 +496,7 @@ func setFromString(v reflect.Value, s string, tag reflect.StructTag) error {
 	if !v.CanSet() {
 		return nil
 	}
-	if v.Kind() == reflect.Ptr {
+	if v.Kind() == reflect.Pointer {
 		if v.IsNil() {
 			v.Set(reflect.New(v.Type().Elem()))
 		}
@@ -534,7 +572,7 @@ func setFromString(v reflect.Value, s string, tag reflect.StructTag) error {
 
 func AllocIfPtr[T any](x T) T {
 	rv := reflect.ValueOf(&x).Elem()
-	if rv.Kind() == reflect.Ptr && rv.IsNil() {
+	if rv.Kind() == reflect.Pointer && rv.IsNil() {
 		rv.Set(reflect.New(rv.Type().Elem()))
 	}
 	return x
@@ -569,7 +607,7 @@ func tryContextPathMap(ctx context.Context) map[string]string {
 
 func ValidateEnumFields(dst any) *apierror.APIError {
 	rv := reflect.ValueOf(dst)
-	if rv.Kind() == reflect.Ptr {
+	if rv.Kind() == reflect.Pointer {
 		rv = rv.Elem()
 	}
 	if rv.Kind() != reflect.Struct {
@@ -585,7 +623,7 @@ func ValidateEnumFields(dst any) *apierror.APIError {
 
 		fv := rv.Field(i)
 		ft := sf.Type
-		if ft.Kind() == reflect.Ptr {
+		if ft.Kind() == reflect.Pointer {
 			if fv.IsNil() {
 				continue
 			}

@@ -242,8 +242,15 @@ SELECT
     t.customer_account_id,
     ba.name AS customer_name,
     ar.external_number AS customer_number,
+    ar.account_status_code AS customer_status,
+    ar.commission_status_code AS customer_commission_policy,
+    ar.created_at AS customer_created_at,
+    ar.updated_at AS customer_updated_at,
     t.responsible_user_id,
     COALESCE(usr.name, '') AS responsible_user_name,
+    au.status_code AS responsible_user_status,
+    au.created_at AS responsible_user_created_at,
+    au.updated_at AS responsible_user_updated_at,
     t.note,
     tt.id AS transaction_type_id,
     tt.code AS transaction_type_code,
@@ -289,8 +296,15 @@ type FindTransactionByIDRow struct {
 	CustomerAccountID                   string
 	CustomerName                        string
 	CustomerNumber                      string
+	CustomerStatus                      sql.NullString
+	CustomerCommissionPolicy            sql.NullString
+	CustomerCreatedAt                   time.Time
+	CustomerUpdatedAt                   time.Time
 	ResponsibleUserID                   sql.NullString
 	ResponsibleUserName                 string
+	ResponsibleUserStatus               sql.NullString
+	ResponsibleUserCreatedAt            sql.NullTime
+	ResponsibleUserUpdatedAt            sql.NullTime
 	Note                                sql.NullString
 	TransactionTypeID                   string
 	TransactionTypeCode                 string
@@ -322,8 +336,15 @@ func (q *Queries) FindTransactionByID(ctx context.Context, arg FindTransactionBy
 		&i.CustomerAccountID,
 		&i.CustomerName,
 		&i.CustomerNumber,
+		&i.CustomerStatus,
+		&i.CustomerCommissionPolicy,
+		&i.CustomerCreatedAt,
+		&i.CustomerUpdatedAt,
 		&i.ResponsibleUserID,
 		&i.ResponsibleUserName,
+		&i.ResponsibleUserStatus,
+		&i.ResponsibleUserCreatedAt,
+		&i.ResponsibleUserUpdatedAt,
 		&i.Note,
 		&i.TransactionTypeID,
 		&i.TransactionTypeCode,
@@ -568,8 +589,15 @@ SELECT
     t.customer_account_id,
     ba.name AS customer_name,
     ar.external_number AS customer_number,
+    ar.account_status_code AS customer_status,
+    ar.commission_status_code AS customer_commission_policy,
+    ar.created_at AS customer_created_at,
+    ar.updated_at AS customer_updated_at,
     t.responsible_user_id,
     COALESCE(usr.name, '') AS responsible_user_name,
+    au.status_code AS responsible_user_status,
+    au.created_at AS responsible_user_created_at,
+    au.updated_at AS responsible_user_updated_at,
     t.note,
     tt.id AS transaction_type_id,
     tt.code AS transaction_type_code,
@@ -594,7 +622,8 @@ JOIN account ba ON ba.id = t.customer_account_id
 JOIN account_relation ar ON ar.owner_account_id = t.account_id AND ar.counterparty_account_id = t.customer_account_id
 LEFT JOIN transaction_method tm ON tm.code = t.transaction_method_code
 LEFT JOIN adjustment_type at2 ON at2.code = t.adjustment_type_code
-LEFT JOIN user usr ON usr.id = t.responsible_user_id
+LEFT JOIN account_user au ON au.id = t.responsible_user_id
+LEFT JOIN user usr ON usr.id = au.user_id
 WHERE t.account_id = ?
 AND (
     t.customer_account_id = ?
@@ -639,8 +668,15 @@ type ListAccountTransactionsBackwardRow struct {
 	CustomerAccountID                   string
 	CustomerName                        string
 	CustomerNumber                      string
+	CustomerStatus                      sql.NullString
+	CustomerCommissionPolicy            sql.NullString
+	CustomerCreatedAt                   time.Time
+	CustomerUpdatedAt                   time.Time
 	ResponsibleUserID                   sql.NullString
 	ResponsibleUserName                 string
+	ResponsibleUserStatus               sql.NullString
+	ResponsibleUserCreatedAt            sql.NullTime
+	ResponsibleUserUpdatedAt            sql.NullTime
 	Note                                sql.NullString
 	TransactionTypeID                   string
 	TransactionTypeCode                 string
@@ -692,8 +728,15 @@ func (q *Queries) ListAccountTransactionsBackward(ctx context.Context, arg ListA
 			&i.CustomerAccountID,
 			&i.CustomerName,
 			&i.CustomerNumber,
+			&i.CustomerStatus,
+			&i.CustomerCommissionPolicy,
+			&i.CustomerCreatedAt,
+			&i.CustomerUpdatedAt,
 			&i.ResponsibleUserID,
 			&i.ResponsibleUserName,
+			&i.ResponsibleUserStatus,
+			&i.ResponsibleUserCreatedAt,
+			&i.ResponsibleUserUpdatedAt,
 			&i.Note,
 			&i.TransactionTypeID,
 			&i.TransactionTypeCode,
@@ -735,8 +778,15 @@ SELECT
     t.customer_account_id,
     ba.name AS customer_name,
     ar.external_number AS customer_number,
+    ar.account_status_code AS customer_status,
+    ar.commission_status_code AS customer_commission_policy,
+    ar.created_at AS customer_created_at,
+    ar.updated_at AS customer_updated_at,
     t.responsible_user_id,
     COALESCE(usr.name, '') AS responsible_user_name,
+    au.status_code AS responsible_user_status,
+    au.created_at AS responsible_user_created_at,
+    au.updated_at AS responsible_user_updated_at,
     t.note,
     tt.id AS transaction_type_id,
     tt.code AS transaction_type_code,
@@ -761,7 +811,8 @@ JOIN account ba ON ba.id = t.customer_account_id
 JOIN account_relation ar ON ar.owner_account_id = t.account_id AND ar.counterparty_account_id = t.customer_account_id
 LEFT JOIN transaction_method tm ON tm.code = t.transaction_method_code
 LEFT JOIN adjustment_type at2 ON at2.code = t.adjustment_type_code
-LEFT JOIN user usr ON usr.id = t.responsible_user_id
+LEFT JOIN account_user au ON au.id = t.responsible_user_id
+LEFT JOIN user usr ON usr.id = au.user_id
 WHERE t.account_id = ?
 AND (
     t.customer_account_id = ?
@@ -806,8 +857,15 @@ type ListAccountTransactionsForwardRow struct {
 	CustomerAccountID                   string
 	CustomerName                        string
 	CustomerNumber                      string
+	CustomerStatus                      sql.NullString
+	CustomerCommissionPolicy            sql.NullString
+	CustomerCreatedAt                   time.Time
+	CustomerUpdatedAt                   time.Time
 	ResponsibleUserID                   sql.NullString
 	ResponsibleUserName                 string
+	ResponsibleUserStatus               sql.NullString
+	ResponsibleUserCreatedAt            sql.NullTime
+	ResponsibleUserUpdatedAt            sql.NullTime
 	Note                                sql.NullString
 	TransactionTypeID                   string
 	TransactionTypeCode                 string
@@ -860,8 +918,15 @@ func (q *Queries) ListAccountTransactionsForward(ctx context.Context, arg ListAc
 			&i.CustomerAccountID,
 			&i.CustomerName,
 			&i.CustomerNumber,
+			&i.CustomerStatus,
+			&i.CustomerCommissionPolicy,
+			&i.CustomerCreatedAt,
+			&i.CustomerUpdatedAt,
 			&i.ResponsibleUserID,
 			&i.ResponsibleUserName,
+			&i.ResponsibleUserStatus,
+			&i.ResponsibleUserCreatedAt,
+			&i.ResponsibleUserUpdatedAt,
 			&i.Note,
 			&i.TransactionTypeID,
 			&i.TransactionTypeCode,
@@ -903,6 +968,10 @@ SELECT
     t.customer_account_id,
     ba.name AS customer_name,
     ar.external_number AS customer_number,
+    ar.account_status_code AS customer_status,
+    ar.commission_status_code AS customer_commission_policy,
+    ar.created_at AS customer_created_at,
+    ar.updated_at AS customer_updated_at,
     tt.id AS transaction_type_id,
     tt.code AS transaction_type_code,
     tt.name AS transaction_type_name,
@@ -988,6 +1057,10 @@ type ListTransactionsBackwardRow struct {
 	CustomerAccountID                   string
 	CustomerName                        string
 	CustomerNumber                      string
+	CustomerStatus                      sql.NullString
+	CustomerCommissionPolicy            sql.NullString
+	CustomerCreatedAt                   time.Time
+	CustomerUpdatedAt                   time.Time
 	TransactionTypeID                   string
 	TransactionTypeCode                 string
 	TransactionTypeName                 string
@@ -1082,6 +1155,10 @@ func (q *Queries) ListTransactionsBackward(ctx context.Context, arg ListTransact
 			&i.CustomerAccountID,
 			&i.CustomerName,
 			&i.CustomerNumber,
+			&i.CustomerStatus,
+			&i.CustomerCommissionPolicy,
+			&i.CustomerCreatedAt,
+			&i.CustomerUpdatedAt,
 			&i.TransactionTypeID,
 			&i.TransactionTypeCode,
 			&i.TransactionTypeName,
@@ -1121,6 +1198,10 @@ SELECT
     t.customer_account_id,
     ba.name AS customer_name,
     ar.external_number AS customer_number,
+    ar.account_status_code AS customer_status,
+    ar.commission_status_code AS customer_commission_policy,
+    ar.created_at AS customer_created_at,
+    ar.updated_at AS customer_updated_at,
     tt.id AS transaction_type_id,
     tt.code AS transaction_type_code,
     tt.name AS transaction_type_name,
@@ -1206,6 +1287,10 @@ type ListTransactionsForwardRow struct {
 	CustomerAccountID                   string
 	CustomerName                        string
 	CustomerNumber                      string
+	CustomerStatus                      sql.NullString
+	CustomerCommissionPolicy            sql.NullString
+	CustomerCreatedAt                   time.Time
+	CustomerUpdatedAt                   time.Time
 	TransactionTypeID                   string
 	TransactionTypeCode                 string
 	TransactionTypeName                 string
@@ -1301,6 +1386,10 @@ func (q *Queries) ListTransactionsForward(ctx context.Context, arg ListTransacti
 			&i.CustomerAccountID,
 			&i.CustomerName,
 			&i.CustomerNumber,
+			&i.CustomerStatus,
+			&i.CustomerCommissionPolicy,
+			&i.CustomerCreatedAt,
+			&i.CustomerUpdatedAt,
 			&i.TransactionTypeID,
 			&i.TransactionTypeCode,
 			&i.TransactionTypeName,

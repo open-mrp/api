@@ -37,6 +37,12 @@ func ShipmentPresenter(s *pb.ShipmentInfo) apiresource.ShipmentDetail {
 			Number:     s.SalesOrderNumber,
 			CustomerPO: s.CustomerPoNumber,
 		}
+		if s.SalesOrderCreatedAt != nil {
+			result.SalesOrder.CreatedAt = s.SalesOrderCreatedAt.AsTime()
+		}
+		if s.SalesOrderUpdatedAt != nil {
+			result.SalesOrder.UpdatedAt = s.SalesOrderUpdatedAt.AsTime()
+		}
 	}
 
 	if s.PickId != nil && *s.PickId != "" {
@@ -46,6 +52,12 @@ func ShipmentPresenter(s *pb.ShipmentInfo) apiresource.ShipmentDetail {
 		}
 		if s.PickNumber != nil {
 			result.Pick.Number = *s.PickNumber
+		}
+		if s.PickCreatedAt != nil {
+			result.Pick.CreatedAt = s.PickCreatedAt.AsTime()
+		}
+		if s.PickUpdatedAt != nil {
+			result.Pick.UpdatedAt = s.PickUpdatedAt.AsTime()
 		}
 	}
 
@@ -60,16 +72,24 @@ func ShipmentPresenter(s *pb.ShipmentInfo) apiresource.ShipmentDetail {
 
 	if s.CustomerId != "" {
 		result.Customer = &apiresource.Customer{
-			ID:     s.CustomerId,
-			Object: constants.ObjectTypeCustomer,
-			Name:   s.CustomerName,
-			Number: s.CustomerNumber,
+			ID:               s.CustomerId,
+			Object:           constants.ObjectTypeCustomer,
+			Name:             s.CustomerName,
+			Number:           s.CustomerNumber,
+			EDIStatus:        constants.EDIStatusDisabled,
+			RelationshipType: constants.CustomerRelationshipTypeStandalone,
 		}
 		if s.CustomerStatusCode != nil {
 			result.Customer.Status = constants.AccountStatusCode(*s.CustomerStatusCode)
 		}
 		if s.CustomerCommissionPolicy != nil {
 			result.Customer.CommissionPolicy = constants.CommissionPolicy(*s.CustomerCommissionPolicy)
+		}
+		if s.CustomerCreatedAt != nil {
+			result.Customer.CreatedAt = s.CustomerCreatedAt.AsTime()
+		}
+		if s.CustomerUpdatedAt != nil {
+			result.Customer.UpdatedAt = s.CustomerUpdatedAt.AsTime()
 		}
 	}
 
@@ -83,6 +103,12 @@ func ShipmentPresenter(s *pb.ShipmentInfo) apiresource.ShipmentDetail {
 			result.Carrier.CustomerPortalVisibility = constants.CustomerPortalVisibilityVisible
 		} else {
 			result.Carrier.CustomerPortalVisibility = constants.CustomerPortalVisibilityHidden
+		}
+		if s.CarrierCreatedAt != nil {
+			result.Carrier.CreatedAt = s.CarrierCreatedAt.AsTime()
+		}
+		if s.CarrierUpdatedAt != nil {
+			result.Carrier.UpdatedAt = s.CarrierUpdatedAt.AsTime()
 		}
 	}
 
@@ -100,6 +126,12 @@ func ShipmentPresenter(s *pb.ShipmentInfo) apiresource.ShipmentDetail {
 		if s.ServiceLevelToken != nil {
 			result.ServiceLevel.ServiceLevelToken = constants.ServiceLevelCode(*s.ServiceLevelToken)
 		}
+		if s.ServiceLevelCreatedAt != nil {
+			result.ServiceLevel.CreatedAt = s.ServiceLevelCreatedAt.AsTime()
+		}
+		if s.ServiceLevelUpdatedAt != nil {
+			result.ServiceLevel.UpdatedAt = s.ServiceLevelUpdatedAt.AsTime()
+		}
 	}
 
 	if s.ShippingAddressId != "" {
@@ -107,6 +139,13 @@ func ShipmentPresenter(s *pb.ShipmentInfo) apiresource.ShipmentDetail {
 			ID:     s.ShippingAddressId,
 			Object: constants.ObjectTypeAddress,
 			Name:   derefStr(s.ShippingAddressName),
+			Type:   constants.AddressTypeStandard,
+		}
+		if s.ShippingAddressCreatedAt != nil {
+			result.ShippingAddress.CreatedAt = s.ShippingAddressCreatedAt.AsTime()
+		}
+		if s.ShippingAddressUpdatedAt != nil {
+			result.ShippingAddress.UpdatedAt = s.ShippingAddressUpdatedAt.AsTime()
 		}
 	}
 
@@ -116,6 +155,15 @@ func ShipmentPresenter(s *pb.ShipmentInfo) apiresource.ShipmentDetail {
 			Object: constants.ObjectTypeAccountUser,
 			Name:   s.ShippedByName,
 		}
+		if s.ShippedByStatus != nil {
+			result.ShippedBy.Status = constants.AccountUserStatus(*s.ShippedByStatus)
+		}
+		if s.ShippedByCreatedAt != nil {
+			result.ShippedBy.CreatedAt = s.ShippedByCreatedAt.AsTime()
+		}
+		if s.ShippedByUpdatedAt != nil {
+			result.ShippedBy.UpdatedAt = s.ShippedByUpdatedAt.AsTime()
+		}
 	}
 
 	if s.InvoiceId != nil && *s.InvoiceId != "" {
@@ -123,6 +171,12 @@ func ShipmentPresenter(s *pb.ShipmentInfo) apiresource.ShipmentDetail {
 			ID:     *s.InvoiceId,
 			Object: constants.ObjectTypeInvoice,
 			Number: derefStr(s.InvoiceNumber),
+		}
+		if s.InvoiceCreatedAt != nil {
+			result.Invoice.CreatedAt = s.InvoiceCreatedAt.AsTime()
+		}
+		if s.InvoiceUpdatedAt != nil {
+			result.Invoice.UpdatedAt = s.InvoiceUpdatedAt.AsTime()
 		}
 	}
 
@@ -168,18 +222,24 @@ func ShipmentSummaryPresenter(s *pb.ShipmentSummaryInfo) apiresource.ShipmentSum
 
 	if s.SalesOrderId != "" {
 		result.SalesOrder = &apiresource.SalesOrderDetail{
-			ID:     s.SalesOrderId,
-			Object: constants.ObjectTypeSalesOrder,
-			Number: s.SalesOrderNumber,
+			ID:        s.SalesOrderId,
+			Object:    constants.ObjectTypeSalesOrder,
+			Number:    s.SalesOrderNumber,
+			CreatedAt: grpcutil.TimestampToTime(s.SalesOrderCreatedAt),
+			UpdatedAt: grpcutil.TimestampToTime(s.SalesOrderUpdatedAt),
 		}
 	}
 
 	if s.CustomerId != "" {
 		result.Customer = &apiresource.Customer{
-			ID:     s.CustomerId,
-			Object: constants.ObjectTypeCustomer,
-			Name:   s.CustomerName,
-			Number: s.CustomerNumber,
+			ID:               s.CustomerId,
+			Object:           constants.ObjectTypeCustomer,
+			Name:             s.CustomerName,
+			Number:           s.CustomerNumber,
+			EDIStatus:        constants.EDIStatusDisabled,
+			RelationshipType: constants.CustomerRelationshipTypeStandalone,
+			CreatedAt:        grpcutil.TimestampToTime(s.CustomerCreatedAt),
+			UpdatedAt:        grpcutil.TimestampToTime(s.CustomerUpdatedAt),
 		}
 		if s.CustomerStatusCode != nil {
 			result.Customer.Status = constants.AccountStatusCode(*s.CustomerStatusCode)
@@ -341,6 +401,12 @@ func ShippingCaseDetailPresenter(c *pb.ShippingCaseDetailInfo) apiresource.Shipp
 			result.Carrier.CustomerPortalVisibility = constants.CustomerPortalVisibilityVisible
 		} else {
 			result.Carrier.CustomerPortalVisibility = constants.CustomerPortalVisibilityHidden
+		}
+		if c.CarrierCreatedAt != nil {
+			result.Carrier.CreatedAt = c.CarrierCreatedAt.AsTime()
+		}
+		if c.CarrierUpdatedAt != nil {
+			result.Carrier.UpdatedAt = c.CarrierUpdatedAt.AsTime()
 		}
 	}
 

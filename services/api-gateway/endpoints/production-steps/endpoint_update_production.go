@@ -17,11 +17,11 @@ type UpdateProductionRequest struct {
 	// Production ID.
 	ProductionID string `path:"id" validate:"required"`
 	// Item ID.
-	ItemID *string `json:"item_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
+	ItemID *string `json:"item_id,omitempty" nullable:"false" validate:"omitempty"`
 	// Quantity value as a decimal string.
 	QuantityValue *string `json:"quantity_value,omitempty" nullable:"false"`
 	// Quantity unit ID.
-	QuantityUnitID *string `json:"quantity_unit_id,omitempty" nullable:"false" validate:"omitempty,max=191"`
+	QuantityUnitID *string `json:"quantity_unit_id,omitempty" nullable:"false" validate:"omitempty"`
 }
 
 var sampleUpdateProductionItemID = apiresource.SampleItemID

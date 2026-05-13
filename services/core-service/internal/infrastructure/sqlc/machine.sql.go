@@ -60,6 +60,8 @@ SELECT
     m.notes,
     m.department_id,
     d.name AS department_name,
+    d.created_at AS department_created_at,
+    d.updated_at AS department_updated_at,
     m.production_step_id,
     m.created_at,
     m.updated_at
@@ -75,15 +77,17 @@ type GetMachineParams struct {
 }
 
 type GetMachineRow struct {
-	ID               string
-	Name             string
-	SerialNumber     string
-	Notes            sql.NullString
-	DepartmentID     string
-	DepartmentName   string
-	ProductionStepID sql.NullString
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
+	ID                  string
+	Name                string
+	SerialNumber        string
+	Notes               sql.NullString
+	DepartmentID        string
+	DepartmentName      string
+	DepartmentCreatedAt time.Time
+	DepartmentUpdatedAt time.Time
+	ProductionStepID    sql.NullString
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
 }
 
 func (q *Queries) GetMachine(ctx context.Context, arg GetMachineParams) (GetMachineRow, error) {
@@ -96,6 +100,8 @@ func (q *Queries) GetMachine(ctx context.Context, arg GetMachineParams) (GetMach
 		&i.Notes,
 		&i.DepartmentID,
 		&i.DepartmentName,
+		&i.DepartmentCreatedAt,
+		&i.DepartmentUpdatedAt,
 		&i.ProductionStepID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -152,6 +158,8 @@ SELECT
     m.notes,
     m.department_id,
     d.name AS department_name,
+    d.created_at AS department_created_at,
+    d.updated_at AS department_updated_at,
     m.production_step_id,
     m.created_at,
     m.updated_at
@@ -179,15 +187,17 @@ type ListMachinesBackwardParams struct {
 }
 
 type ListMachinesBackwardRow struct {
-	ID               string
-	Name             string
-	SerialNumber     string
-	Notes            sql.NullString
-	DepartmentID     string
-	DepartmentName   string
-	ProductionStepID sql.NullString
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
+	ID                  string
+	Name                string
+	SerialNumber        string
+	Notes               sql.NullString
+	DepartmentID        string
+	DepartmentName      string
+	DepartmentCreatedAt time.Time
+	DepartmentUpdatedAt time.Time
+	ProductionStepID    sql.NullString
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
 }
 
 func (q *Queries) ListMachinesBackward(ctx context.Context, arg ListMachinesBackwardParams) ([]ListMachinesBackwardRow, error) {
@@ -214,6 +224,8 @@ func (q *Queries) ListMachinesBackward(ctx context.Context, arg ListMachinesBack
 			&i.Notes,
 			&i.DepartmentID,
 			&i.DepartmentName,
+			&i.DepartmentCreatedAt,
+			&i.DepartmentUpdatedAt,
 			&i.ProductionStepID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -239,6 +251,8 @@ SELECT
     m.notes,
     m.department_id,
     d.name AS department_name,
+    d.created_at AS department_created_at,
+    d.updated_at AS department_updated_at,
     m.production_step_id,
     m.created_at,
     m.updated_at
@@ -267,15 +281,17 @@ type ListMachinesForwardParams struct {
 }
 
 type ListMachinesForwardRow struct {
-	ID               string
-	Name             string
-	SerialNumber     string
-	Notes            sql.NullString
-	DepartmentID     string
-	DepartmentName   string
-	ProductionStepID sql.NullString
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
+	ID                  string
+	Name                string
+	SerialNumber        string
+	Notes               sql.NullString
+	DepartmentID        string
+	DepartmentName      string
+	DepartmentCreatedAt time.Time
+	DepartmentUpdatedAt time.Time
+	ProductionStepID    sql.NullString
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
 }
 
 func (q *Queries) ListMachinesForward(ctx context.Context, arg ListMachinesForwardParams) ([]ListMachinesForwardRow, error) {
@@ -303,6 +319,8 @@ func (q *Queries) ListMachinesForward(ctx context.Context, arg ListMachinesForwa
 			&i.Notes,
 			&i.DepartmentID,
 			&i.DepartmentName,
+			&i.DepartmentCreatedAt,
+			&i.DepartmentUpdatedAt,
 			&i.ProductionStepID,
 			&i.CreatedAt,
 			&i.UpdatedAt,

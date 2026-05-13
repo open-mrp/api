@@ -2,6 +2,7 @@ package apirequest
 
 import (
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
+	"github.com/augno/api/shared/constants"
 )
 
 // Request to create an address.
@@ -12,8 +13,8 @@ type AddressInput struct {
 	Phone *string `json:"phone,omitempty" validate:"omitempty,max=255"`
 	// Email address associated with the address.
 	Email *string `json:"email,omitempty" validate:"omitnil,custom_email,max=255"`
-	// Whether the address is a drop ship location.
-	IsDropShip bool `json:"is_drop_ship"`
+	// Address type.
+	Type *constants.AddressType `json:"type,omitempty" default:"standard" nullable:"false"`
 	// First line of the street address.
 	StreetLine1 *string `json:"street_line_1,omitempty" validate:"omitempty,max=255"`
 	// Second line of the street address.

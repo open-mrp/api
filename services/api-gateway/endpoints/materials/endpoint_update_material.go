@@ -6,7 +6,9 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
+	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -24,6 +26,8 @@ type UpdateMaterialRequest struct {
 	OrderPoint *QuantityInputRequest `json:"order_point,omitempty" nullable:"false"`
 	// Lead time quantity.
 	LeadTime *QuantityInputRequest `json:"lead_time,omitempty" nullable:"false"`
+	// Updated unit cost. Same currency rule as on create.
+	UnitCost *apirequest.RateInput `json:"unit_cost,omitempty"`
 }
 
 var sampleUpdateMaterialSKU = "MAT-001-UPDATED"
@@ -43,14 +47,18 @@ func (e *UpdateMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateM
 		Description:       "Partially updates a material.",
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
-		Route:             "/v1/operations/materials/{id}",
+		Route:             "/v1/catalog/materials/{id}",
 		Request:           &UpdateMaterialRequest{},
 		Response:          &apiresource.Material{},
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateMaterialRequest) (*apiresource.Material, *apierror.APIError) {
 			return svc.(MaterialSvc).UpdateMaterial
 		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeMaterial,
+			Fields:     []string{"item", "item.category", "item.category.properties", "item.category.unit_group", "item.unit_value", "item.unit_cost", "item.burn_rate", "item.attributes"},
+		}),
 	}
 }

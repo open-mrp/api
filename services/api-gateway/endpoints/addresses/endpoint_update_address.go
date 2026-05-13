@@ -7,6 +7,7 @@ import (
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/augno/api/services/api-gateway/pkg/example"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -20,8 +21,8 @@ type UpdateAddressRequest struct {
 	Phone *string `json:"phone,omitempty" nullable:"true" validate:"omitempty,max=255"`
 	// Email address associated with the address.
 	Email *string `json:"email,omitempty" nullable:"true" validate:"omitempty,max=255"`
-	// Whether the address is a drop ship location.
-	IsDropShip *bool `json:"is_drop_ship,omitempty" nullable:"false"`
+	// Address type.
+	Type *constants.AddressType `json:"type,omitempty" nullable:"false"`
 	// First line of the street address.
 	StreetLine1 *string `json:"street_line_1,omitempty" nullable:"false" validate:"omitempty,max=255"`
 	// Second line of the street address.

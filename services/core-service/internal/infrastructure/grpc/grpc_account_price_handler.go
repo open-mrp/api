@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/augno/api/services/core-service/internal/domain"
+	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/contracts"
 	pb "github.com/augno/api/shared/proto/core"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -14,43 +15,74 @@ func accountPriceToProto(ap *domain.AccountPrice) *pb.AccountPriceInfo {
 	cats := make([]*pb.AccountPriceCategoryInfo, len(ap.Categories))
 	for i, c := range ap.Categories {
 		cats[i] = &pb.AccountPriceCategoryInfo{
-			Id:   c.ID,
-			Name: c.Name,
+			Id:        c.ID,
+			Name:      c.Name,
+			Type:      c.Type,
+			CreatedAt: timestamppb.New(c.CreatedAt),
+			UpdatedAt: timestamppb.New(c.UpdatedAt),
 		}
 	}
 
 	attrs := make([]*pb.AccountPriceAttributeInfo, len(ap.Attributes))
 	for i, a := range ap.Attributes {
 		attrs[i] = &pb.AccountPriceAttributeInfo{
-			Id:    a.ID,
-			Value: a.Value,
+			Id:        a.ID,
+			Value:     a.Value,
+			ColorCode: a.ColorCode,
+			CreatedAt: timestamppb.New(a.CreatedAt),
+			UpdatedAt: timestamppb.New(a.UpdatedAt),
 		}
 	}
 
 	return &pb.AccountPriceInfo{
 		Id: ap.ID,
 		RecipientAccount: &pb.AccountPriceRecipientInfo{
-			Id:   ap.RecipientAccountID,
-			Name: ap.RecipientAccountName,
+			Id:               ap.RecipientAccountID,
+			Name:             ap.RecipientAccountName,
+			Number:           ap.RecipientAccountNumber,
+			Status:           ap.RecipientAccountStatus,
+			IsEdiEnabled:     ap.RecipientAccountIsEdiEnabled,
+			CommissionPolicy: ap.RecipientAccountCommissionPolicy,
+			RelationshipType: ap.RecipientAccountRelationshipType,
+			CreatedAt:        timestamppb.New(ap.RecipientAccountCreatedAt),
+			UpdatedAt:        timestamppb.New(ap.RecipientAccountUpdatedAt),
 		},
 		ProductLine: &pb.AccountPriceProductLineInfo{
-			Id:   ap.ProductLineID,
-			Name: ap.ProductLineName,
+			Id:               ap.ProductLineID,
+			Name:             ap.ProductLineName,
+			CommissionPolicy: string(constants.CommissionPolicyFromBool(ap.ProductLineIsCommissionExempt)),
+			FreightPolicy:    string(constants.FreightPolicyFromBool(ap.ProductLineIsFreightExempt)),
+			CreatedAt:        timestamppb.New(ap.ProductLineCreatedAt),
+			UpdatedAt:        timestamppb.New(ap.ProductLineUpdatedAt),
 		},
 		Rate: &pb.AccountPriceRateInfo{
-			Id:    ap.RateID,
-			Value: ap.RateValue,
+			Id:        ap.RateID,
+			Value:     ap.RateValue,
+			CreatedAt: timestamppb.New(ap.RateCreatedAt),
+			UpdatedAt: timestamppb.New(ap.RateUpdatedAt),
 			NumeratorUnit: &pb.AccountPriceUnitInfo{
-				Id:           ap.NumeratorUnitID,
-				Name:         ap.NumeratorUnitName,
-				Abbreviation: ap.NumeratorUnitAbbr,
-				Type:         ap.NumeratorUnitType,
+				Id:                ap.NumeratorUnitID,
+				Name:              ap.NumeratorUnitName,
+				Abbreviation:      ap.NumeratorUnitAbbr,
+				Type:              ap.NumeratorUnitType,
+				RatioNumerator:    ap.NumeratorUnitRatioNumerator,
+				RatioDenominator:  ap.NumeratorUnitRatioDenominator,
+				OffsetNumerator:   ap.NumeratorUnitOffsetNumerator,
+				OffsetDenominator: ap.NumeratorUnitOffsetDenominator,
+				CreatedAt:         timestamppb.New(ap.NumeratorUnitCreatedAt),
+				UpdatedAt:         timestamppb.New(ap.NumeratorUnitUpdatedAt),
 			},
 			DenominatorUnit: &pb.AccountPriceUnitInfo{
-				Id:           ap.DenominatorUnitID,
-				Name:         ap.DenominatorUnitName,
-				Abbreviation: ap.DenominatorUnitAbbr,
-				Type:         ap.DenominatorUnitType,
+				Id:                ap.DenominatorUnitID,
+				Name:              ap.DenominatorUnitName,
+				Abbreviation:      ap.DenominatorUnitAbbr,
+				Type:              ap.DenominatorUnitType,
+				RatioNumerator:    ap.DenominatorUnitRatioNumerator,
+				RatioDenominator:  ap.DenominatorUnitRatioDenominator,
+				OffsetNumerator:   ap.DenominatorUnitOffsetNumerator,
+				OffsetDenominator: ap.DenominatorUnitOffsetDenominator,
+				CreatedAt:         timestamppb.New(ap.DenominatorUnitCreatedAt),
+				UpdatedAt:         timestamppb.New(ap.DenominatorUnitUpdatedAt),
 			},
 		},
 		Categories: cats,

@@ -16,6 +16,7 @@ message CreateConsumptionRequest {
   string waste_quantity_value = 5;
   string waste_quantity_unit_id = 6;
   optional string instructions = 7;
+  repeated string includes = 8;
 }
 message CreateConsumptionResponse {
   ConsumptionInfo consumption = 1;
@@ -29,6 +30,7 @@ message UpdateConsumptionRequest {
   optional string waste_quantity_value = 6;
   optional string waste_quantity_unit_id = 7;
   optional string instructions = 8;
+  repeated string includes = 9;
 }
 message UpdateConsumptionResponse {
   ConsumptionInfo consumption = 1;
@@ -109,10 +111,17 @@ message DeliveryLineInfo {
 message LightScanningStationInfo {
   string id = 1;
   string name = 2;
+  string type = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp updated_at = 5;
 }
 message LightProductionStepInfo {
   string id = 1;
   string name = 2;
+  optional string leveling_factor = 3;
+  optional string allowances = 4;
+  optional google.protobuf.Timestamp created_at = 5;
+  optional google.protobuf.Timestamp updated_at = 6;
 }
 message ScanningStationInfo {
   string id = 1;
@@ -121,9 +130,11 @@ message ScanningStationInfo {
   string type = 4;
   optional string label_size_code = 5;
   optional string label_type_code = 6;
-  bool material_check_required = 7;
+  string operator_requirement = 7;
   string department_id = 8;
   string department_name = 9;
+  optional google.protobuf.Timestamp department_created_at = 13;
+  optional google.protobuf.Timestamp department_updated_at = 14;
   repeated LightProductionStepInfo production_steps = 10;
   google.protobuf.Timestamp created_at = 11;
   google.protobuf.Timestamp updated_at = 12;
@@ -132,6 +143,7 @@ message ListScanningStationsRequest {
   optional string cursor = 1;
   int32 limit = 2;
   optional string query = 3;
+  repeated string includes = 4;
 }
 message ListScanningStationsResponse {
   repeated ScanningStationInfo scanning_stations = 1;
@@ -139,6 +151,7 @@ message ListScanningStationsResponse {
 }
 message GetScanningStationRequest {
   string id = 1;
+  repeated string includes = 2;
 }
 message GetScanningStationResponse {
   ScanningStationInfo scanning_station = 1;
@@ -147,10 +160,11 @@ message CreateScanningStationRequest {
   string name = 1;
   optional string notes = 2;
   string type = 3;
-  bool material_check_required = 4;
+  string operator_requirement = 4;
   string department_id = 5;
   optional string label_size_code = 6;
   optional string label_type_code = 7;
+  repeated string includes = 8;
 }
 message CreateScanningStationResponse {
   ScanningStationInfo scanning_station = 1;
@@ -161,7 +175,8 @@ message UpdateScanningStationRequest {
   optional string notes = 3;
   optional string label_size_code = 4;
   optional string label_type_code = 5;
-  optional bool material_check_required = 6;
+  optional string operator_requirement = 6;
+  repeated string includes = 7;
 }
 message UpdateScanningStationResponse {
   ScanningStationInfo scanning_station = 1;
@@ -201,6 +216,7 @@ message ListLocationsRequest {
   optional string cursor = 1;
   int32 limit = 2;
   optional string query = 3;
+  repeated string includes = 4;
 }
 message ListLocationsResponse {
   repeated LocationInfo locations = 1;
@@ -208,6 +224,7 @@ message ListLocationsResponse {
 }
 message GetLocationRequest {
   string id = 1;
+  repeated string includes = 2;
 }
 message GetLocationResponse {
   LocationInfo location = 1;
@@ -217,6 +234,7 @@ message CreateLocationRequest {
   string type_code = 2;
   optional string parent_id = 3;
   repeated string child_ids = 4;
+  repeated string includes = 5;
 }
 message CreateLocationResponse {
   LocationInfo location = 1;
@@ -228,6 +246,7 @@ message UpdateLocationRequest {
   optional string parent_id = 4;
   repeated string child_ids = 6;
   bool update_children = 7;
+  repeated string includes = 8;
 }
 message UpdateLocationResponse {
   LocationInfo location = 1;
@@ -287,6 +306,7 @@ message ListSuppliersRequest {
   optional google.protobuf.Timestamp start_date = 4;
   optional google.protobuf.Timestamp end_date = 5;
   repeated string item_ids = 6;
+  repeated string includes = 7;
 }
 message ListSuppliersResponse {
   repeated SupplierSummaryProto suppliers = 1;
@@ -294,6 +314,7 @@ message ListSuppliersResponse {
 }
 message GetSupplierRequest {
   string id = 1;
+  repeated string includes = 2;
 }
 message GetSupplierResponse {
   SupplierProto supplier = 1;
@@ -304,6 +325,7 @@ message CreateSupplierRequest {
   optional string note = 3;
   optional CreateSupplierAddressInput bill_to_address = 4;
   optional CreateSupplierAddressInput ship_to_address = 5;
+  repeated string includes = 6;
 }
 message CreateSupplierResponse {
   SupplierProto supplier = 1;
@@ -316,6 +338,7 @@ message UpdateSupplierRequest {
   bool update_note = 5;
   optional string bill_to_address_id = 6;
   optional string ship_to_address_id = 7;
+  repeated string includes = 8;
 }
 message UpdateSupplierResponse {
   SupplierProto supplier = 1;

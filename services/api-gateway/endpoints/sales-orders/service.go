@@ -7,6 +7,7 @@ import (
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/appctx"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
@@ -37,7 +38,7 @@ func toSalesOrderEmailContactList(inputs *[]SalesOrderEmailContactInput) *pb.Sal
 
 type SalesOrderSvc interface {
 	ListSalesOrders(ctx context.Context, req *ListSalesOrdersRequest) (*apiresource.List[apiresource.SalesOrderSummary], *apierror.APIError)
-	GetSalesOrder(ctx context.Context, req *GetSalesOrderRequest) (*apiresource.SalesOrderDetail, *apierror.APIError)
+	GetSalesOrder(ctx context.Context, req *RetrieveSalesOrderRequest) (*apiresource.SalesOrderDetail, *apierror.APIError)
 	CreateSalesOrder(ctx context.Context, req *CreateSalesOrderRequest) (*apiresource.SalesOrderDetail, *apierror.APIError)
 	UpdateSalesOrder(ctx context.Context, req *UpdateSalesOrderRequest) (*apiresource.SalesOrderDetail, *apierror.APIError)
 	DeleteSalesOrder(ctx context.Context, req *DeleteSalesOrderRequest) (*apiresource.EmptyResource, *apierror.APIError)
@@ -105,7 +106,7 @@ func (m *salesOrderSvcImpl) ListSalesOrders(ctx context.Context, req *ListSalesO
 	return SalesOrderListPresenter(resp), nil
 }
 
-func (m *salesOrderSvcImpl) GetSalesOrder(ctx context.Context, req *GetSalesOrderRequest) (*apiresource.SalesOrderDetail, *apierror.APIError) {
+func (m *salesOrderSvcImpl) GetSalesOrder(ctx context.Context, req *RetrieveSalesOrderRequest) (*apiresource.SalesOrderDetail, *apierror.APIError) {
 	pbReq := &pb.GetSalesOrderRequest{
 		Id:       req.SalesOrderID,
 		Includes: req.Includes,
@@ -175,6 +176,7 @@ func (m *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, req *CreateSal
 		Lines:                        lines,
 		AcknowledgementEmailContacts: toSalesOrderEmailContactInputs(req.AcknowledgementEmailContacts),
 		InvoiceEmailContacts:         toSalesOrderEmailContactInputs(req.InvoiceEmailContacts),
+		Includes:                     appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, salesOrderEpSvcTracer, "service.sales_orders.create", domain.ServiceName,
@@ -219,6 +221,7 @@ func (m *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, req *UpdateSal
 		ShipToCountry:                req.ShipToCountry,
 		AcknowledgementEmailContacts: toSalesOrderEmailContactList(req.AcknowledgementEmailContacts),
 		InvoiceEmailContacts:         toSalesOrderEmailContactList(req.InvoiceEmailContacts),
+		Includes:                     appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, salesOrderEpSvcTracer, "service.sales_orders.update", domain.ServiceName,
@@ -266,6 +269,7 @@ func (m *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, req *Cha
 		Id:           req.SalesOrderID,
 		StatusChange: req.StatusChange,
 		SendEmail:    req.SendEmail,
+		Includes:     appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, salesOrderEpSvcTracer, "service.sales_orders.change_status", domain.ServiceName,

@@ -18,7 +18,7 @@ import (
 
 type SandboxSvc interface {
 	ListSandboxes(ctx context.Context, req *apiresource.PaginationRequest) (*apiresource.List[apiresource.Sandbox], *apierror.APIError)
-	GetSandbox(ctx context.Context, req *GetSandboxRequest) (*apiresource.Sandbox, *apierror.APIError)
+	GetSandbox(ctx context.Context, req *RetrieveSandboxRequest) (*apiresource.Sandbox, *apierror.APIError)
 	CreateSandbox(ctx context.Context, req *CreateSandboxRequest) (*apiresource.Sandbox, *apierror.APIError)
 	DeleteSandbox(ctx context.Context, req *DeleteSandboxRequest) (*apiresource.EmptyResource, *apierror.APIError)
 }
@@ -97,7 +97,7 @@ func (m *sandboxSvcImpl) CreateSandbox(ctx context.Context, req *CreateSandboxRe
 	return &result, nil
 }
 
-func (m *sandboxSvcImpl) GetSandbox(ctx context.Context, req *GetSandboxRequest) (*apiresource.Sandbox, *apierror.APIError) {
+func (m *sandboxSvcImpl) GetSandbox(ctx context.Context, req *RetrieveSandboxRequest) (*apiresource.Sandbox, *apierror.APIError) {
 	pbReq := &pb.GetSandboxRequest{
 		Id:       req.SandboxID,
 		Includes: appctx.GetRequestedIncludeKeys(ctx),

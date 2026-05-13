@@ -51,7 +51,7 @@ func TestRoles_ListResponseShape(t *testing.T) {
 
 func TestRoles_ListFilterByRoleType(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(rolesPath, url.Values{"role_types": {"admin"}})
+	list, _, err := apiClient.GetList(rolesPath, url.Values{"types": {"admin"}})
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(list.Data), 1, "Should have at least 1 admin role")
 
@@ -481,6 +481,70 @@ func TestRoles_DeleteAlreadyDeletedFails(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, status2 == 404 || status2 == 410,
 		"Deleting an already-deleted role should return 404 or 410, got %d", status2)
+}
+
+func TestRoles_DeleteBlockedWhenUsersAssigned(t *testing.T) {
+	t.Parallel()
+
+	roleName := uniqueName("e2e-role-assigned")
+	createRoleStatus, createRoleBody, err := apiClient.Post(rolesPath, map[string]any{"name": roleName}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, createRoleStatus, createRoleBody)
+	roleID := jsonField(parseJSON(createRoleBody), "id")
+
+	userName := uniqueName("e2e-role-assigned-user")
+	userEmail := userName + "@e2e-test.augno.com"
+	createUserStatus, createUserBody, err := apiClient.Post(accountUsersPath, map[string]any{
+		"name":    userName,
+		"email":   userEmail,
+		"role_id": roleID,
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, createUserStatus, createUserBody)
+	accountUserID := jsonField(parseJSON(createUserBody), "id")
+	defer removeAccountUser(accountUserID)
+
+	deleteStatus, deleteBody, err := apiClient.Delete(rolesPath + "/" + roleID)
+	require.NoError(t, err)
+	requireStatus(t, 409, deleteStatus, deleteBody)
+	requireErrorResponse(t, deleteBody, "resource_conflict", "invalid_request_error")
+
+	removeAccountUser(accountUserID)
+	delStatus, delBody, err := apiClient.Delete(rolesPath + "/" + roleID)
+	require.NoError(t, err)
+	requireStatus(t, 200, delStatus, delBody)
+}
+
+func TestRoles_DeleteSucceedsAfterUsersUnassigned(t *testing.T) {
+	t.Parallel()
+
+	roleName := uniqueName("e2e-role-unassign")
+	createRoleStatus, createRoleBody, err := apiClient.Post(rolesPath, map[string]any{"name": roleName}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, createRoleStatus, createRoleBody)
+	roleID := jsonField(parseJSON(createRoleBody), "id")
+
+	userName := uniqueName("e2e-role-unassign-user")
+	userEmail := userName + "@e2e-test.augno.com"
+	createUserStatus, createUserBody, err := apiClient.Post(accountUsersPath, map[string]any{
+		"name":    userName,
+		"email":   userEmail,
+		"role_id": roleID,
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, createUserStatus, createUserBody)
+	accountUserID := jsonField(parseJSON(createUserBody), "id")
+	defer removeAccountUser(accountUserID)
+
+	patchStatus, patchBody, err := apiClient.Patch(accountUsersPath+"/"+accountUserID, map[string]any{
+		"role_id": nil,
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, patchStatus, patchBody)
+
+	deleteStatus, deleteBody, err := apiClient.Delete(rolesPath + "/" + roleID)
+	require.NoError(t, err)
+	requireStatus(t, 200, deleteStatus, deleteBody)
 }
 
 func TestRoles_CreateAndUpdateAllFields(t *testing.T) {

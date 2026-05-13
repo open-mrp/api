@@ -40,7 +40,7 @@ func (*CustomersEndpointGroup) Materialize(config *CustomersEndpointGroupConfig)
 	}
 
 	listEndpoint := (&customerep.ListCustomersEndpoint{}).Materialize().WithService(inner, customerSvc)
-	getEndpoint := (&customerep.GetCustomerEndpoint{}).Materialize().WithService(inner, customerSvc)
+	retrieveEndpoint := (&customerep.RetrieveCustomerEndpoint{}).Materialize().WithService(inner, customerSvc)
 	createEndpoint := (&customerep.CreateCustomerEndpoint{}).Materialize().WithService(inner, customerSvc)
 	deleteEndpoint := (&customerep.DeleteCustomerEndpoint{}).Materialize().WithService(inner, customerSvc)
 	bulkDeleteEndpoint := (&customerep.BulkDeleteCustomersEndpoint{}).Materialize().WithService(inner, customerSvc)
@@ -50,7 +50,7 @@ func (*CustomersEndpointGroup) Materialize(config *CustomersEndpointGroupConfig)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listEndpoint,
-		getEndpoint,
+		retrieveEndpoint,
 		createEndpoint,
 		updateEndpoint,
 		deleteEndpoint,

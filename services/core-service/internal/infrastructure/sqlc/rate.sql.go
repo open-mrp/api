@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"strings"
 	"time"
 )
 
@@ -64,6 +65,123 @@ func (q *Queries) GetRateWithUnits(ctx context.Context, id string) (GetRateWithU
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const getRatesByIDs = `-- name: GetRatesByIDs :many
+SELECT
+    r.id,
+    r.value,
+    r.numerator_unit_id,
+    nu.name AS numerator_unit_name,
+    nu.abbreviation AS numerator_unit_abbreviation,
+    nu.unit_dimension_code AS numerator_unit_type,
+    nu.ratio_numerator AS numerator_unit_ratio_numerator,
+    nu.ratio_denominator AS numerator_unit_ratio_denominator,
+    nu.offset_numerator AS numerator_unit_offset_numerator,
+    nu.offset_denominator AS numerator_unit_offset_denominator,
+    nu.created_at AS numerator_unit_created_at,
+    nu.updated_at AS numerator_unit_updated_at,
+    r.denominator_unit_id,
+    du.name AS denominator_unit_name,
+    du.abbreviation AS denominator_unit_abbreviation,
+    du.unit_dimension_code AS denominator_unit_type,
+    du.ratio_numerator AS denominator_unit_ratio_numerator,
+    du.ratio_denominator AS denominator_unit_ratio_denominator,
+    du.offset_numerator AS denominator_unit_offset_numerator,
+    du.offset_denominator AS denominator_unit_offset_denominator,
+    du.created_at AS denominator_unit_created_at,
+    du.updated_at AS denominator_unit_updated_at,
+    r.created_at,
+    r.updated_at
+FROM rate r
+JOIN unit nu ON nu.id = r.numerator_unit_id
+JOIN unit du ON du.id = r.denominator_unit_id
+WHERE r.id IN (/*SLICE:ids*/?)
+`
+
+type GetRatesByIDsRow struct {
+	ID                               string
+	Value                            string
+	NumeratorUnitID                  string
+	NumeratorUnitName                string
+	NumeratorUnitAbbreviation        string
+	NumeratorUnitType                string
+	NumeratorUnitRatioNumerator      string
+	NumeratorUnitRatioDenominator    string
+	NumeratorUnitOffsetNumerator     string
+	NumeratorUnitOffsetDenominator   string
+	NumeratorUnitCreatedAt           time.Time
+	NumeratorUnitUpdatedAt           time.Time
+	DenominatorUnitID                string
+	DenominatorUnitName              string
+	DenominatorUnitAbbreviation      string
+	DenominatorUnitType              string
+	DenominatorUnitRatioNumerator    string
+	DenominatorUnitRatioDenominator  string
+	DenominatorUnitOffsetNumerator   string
+	DenominatorUnitOffsetDenominator string
+	DenominatorUnitCreatedAt         time.Time
+	DenominatorUnitUpdatedAt         time.Time
+	CreatedAt                        time.Time
+	UpdatedAt                        time.Time
+}
+
+func (q *Queries) GetRatesByIDs(ctx context.Context, ids []string) ([]GetRatesByIDsRow, error) {
+	query := getRatesByIDs
+	var queryParams []interface{}
+	if len(ids) > 0 {
+		for _, v := range ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetRatesByIDsRow
+	for rows.Next() {
+		var i GetRatesByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Value,
+			&i.NumeratorUnitID,
+			&i.NumeratorUnitName,
+			&i.NumeratorUnitAbbreviation,
+			&i.NumeratorUnitType,
+			&i.NumeratorUnitRatioNumerator,
+			&i.NumeratorUnitRatioDenominator,
+			&i.NumeratorUnitOffsetNumerator,
+			&i.NumeratorUnitOffsetDenominator,
+			&i.NumeratorUnitCreatedAt,
+			&i.NumeratorUnitUpdatedAt,
+			&i.DenominatorUnitID,
+			&i.DenominatorUnitName,
+			&i.DenominatorUnitAbbreviation,
+			&i.DenominatorUnitType,
+			&i.DenominatorUnitRatioNumerator,
+			&i.DenominatorUnitRatioDenominator,
+			&i.DenominatorUnitOffsetNumerator,
+			&i.DenominatorUnitOffsetDenominator,
+			&i.DenominatorUnitCreatedAt,
+			&i.DenominatorUnitUpdatedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const updateRateByID = `-- name: UpdateRateByID :execresult

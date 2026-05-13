@@ -8,6 +8,7 @@ import (
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apirequest "github.com/augno/api/services/api-gateway/pkg/request"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
@@ -19,7 +20,7 @@ import (
 
 type SupplierSvc interface {
 	ListSuppliers(ctx context.Context, req *ListSuppliersRequest) (*apiresource.List[apiresource.SupplierSummary], *apierror.APIError)
-	GetSupplier(ctx context.Context, req *GetSupplierRequest) (*apiresource.SupplierDetail, *apierror.APIError)
+	GetSupplier(ctx context.Context, req *RetrieveSupplierRequest) (*apiresource.SupplierDetail, *apierror.APIError)
 	CreateSupplier(ctx context.Context, req *CreateSupplierRequest) (*apiresource.SupplierDetail, *apierror.APIError)
 	UpdateSupplier(ctx context.Context, req *UpdateSupplierRequest) (*apiresource.SupplierDetail, *apierror.APIError)
 	DeleteSupplier(ctx context.Context, req *DeleteSupplierRequest) (*apiresource.SupplierDetail, *apierror.APIError)
@@ -77,9 +78,10 @@ func (s *supplierSvcImpl) ListSuppliers(ctx context.Context, req *ListSuppliersR
 	return SupplierListPresenter(resp), nil
 }
 
-func (s *supplierSvcImpl) GetSupplier(ctx context.Context, req *GetSupplierRequest) (*apiresource.SupplierDetail, *apierror.APIError) {
+func (s *supplierSvcImpl) GetSupplier(ctx context.Context, req *RetrieveSupplierRequest) (*apiresource.SupplierDetail, *apierror.APIError) {
 	pbReq := &pb.GetSupplierRequest{
-		Id: req.SupplierID,
+		Id:       req.SupplierID,
+		Includes: appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, supplierSvcTracer, "service.suppliers.get", domain.ServiceName,
@@ -97,9 +99,10 @@ func (s *supplierSvcImpl) GetSupplier(ctx context.Context, req *GetSupplierReque
 
 func (s *supplierSvcImpl) CreateSupplier(ctx context.Context, req *CreateSupplierRequest) (*apiresource.SupplierDetail, *apierror.APIError) {
 	pbReq := &pb.CreateSupplierRequest{
-		Name:   req.Name,
-		Number: req.Number,
-		Note:   req.Note,
+		Name:     req.Name,
+		Number:   req.Number,
+		Note:     req.Note,
+		Includes: appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	if req.BillToAddress != nil {
@@ -131,6 +134,7 @@ func (s *supplierSvcImpl) UpdateSupplier(ctx context.Context, req *UpdateSupplie
 		UpdateNote:      req.UpdateNote,
 		BillToAddressId: req.BillToAddressID,
 		ShipToAddressId: req.ShipToAddressID,
+		Includes:        appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, supplierSvcTracer, "service.suppliers.update", domain.ServiceName,
@@ -189,7 +193,7 @@ func createAddressRequestToProto(a *apirequest.AddressInput) *pb.CreateSupplierA
 		Name:         a.Name,
 		Phone:        a.Phone,
 		Email:        a.Email,
-		IsDropShip:   a.IsDropShip,
+		IsDropShip:   addressTypeToDropShip(a.Type),
 		StreetLine_1: a.StreetLine1,
 		StreetLine_2: a.StreetLine2,
 		Locality:     a.Locality,
@@ -284,9 +288,20 @@ func addressProtoToResource(a *pb.CustomerAddressProto) *apiresource.Address {
 		Name:        a.Name,
 		Phone:       a.Phone,
 		Email:       a.Email,
-		IsDropShip:  a.IsDropShip,
+		Type:        addressTypeFromDropShip(a.IsDropShip),
 		Geolocation: geolocation,
 		CreatedAt:   grpcutil.TimestampToTime(a.CreatedAt),
 		UpdatedAt:   grpcutil.TimestampToTime(a.UpdatedAt),
 	}
+}
+
+func addressTypeToDropShip(t *constants.AddressType) bool {
+	return t != nil && *t == constants.AddressTypeDropShip
+}
+
+func addressTypeFromDropShip(isDropShip bool) constants.AddressType {
+	if isDropShip {
+		return constants.AddressTypeDropShip
+	}
+	return constants.AddressTypeStandard
 }

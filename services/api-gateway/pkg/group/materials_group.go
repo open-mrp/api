@@ -40,7 +40,7 @@ func (*MaterialsEndpointGroup) Materialize(config *MaterialsEndpointGroupConfig)
 	}
 
 	listMaterialsEndpoint := (&materialep.ListMaterialsEndpoint{}).Materialize().WithService(inner, materialSvc)
-	getMaterialEndpoint := (&materialep.GetMaterialEndpoint{}).Materialize().WithService(inner, materialSvc)
+	getMaterialEndpoint := (&materialep.RetrieveMaterialEndpoint{}).Materialize().WithService(inner, materialSvc)
 	createMaterialEndpoint := (&materialep.CreateMaterialEndpoint{}).Materialize().WithService(inner, materialSvc)
 	updateMaterialEndpoint := (&materialep.UpdateMaterialEndpoint{}).Materialize().WithService(inner, materialSvc)
 	deleteMaterialEndpoint := (&materialep.DeleteMaterialEndpoint{}).Materialize().WithService(inner, materialSvc)

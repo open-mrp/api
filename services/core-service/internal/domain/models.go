@@ -16,14 +16,16 @@ const (
 )
 
 type SandboxAccount struct {
-	ID               int64
-	TypeID           string
-	OwnerAccountID   string
-	AccountID        string
-	Name             string `audit:"name"`
-	OwnerAccountName *string
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
+	ID                    int64
+	TypeID                string
+	OwnerAccountID        string
+	AccountID             string
+	Name                  string `audit:"name"`
+	OwnerAccountName      *string
+	OwnerAccountCreatedAt *time.Time
+	OwnerAccountUpdatedAt *time.Time
+	CreatedAt             time.Time
+	UpdatedAt             time.Time
 }
 
 type ListSandboxAccountsResult struct {
@@ -46,7 +48,7 @@ type AccountUser struct {
 	UserID       string
 	DepartmentID *string
 	RoleID       *string
-	RoleTypeCode *string
+	RoleType     *string
 	AccountID    string
 	LastUsedAt   *time.Time
 	CreatedAt    time.Time
@@ -57,7 +59,7 @@ type AccountUserAccess struct {
 	AccountUserID string
 	AccountID     string
 	RoleID        *string
-	RoleTypeCode  *string
+	RoleType      *string
 	Permissions   map[string]bool
 	LastUsedAt    *time.Time
 }
@@ -72,18 +74,18 @@ type AccountRelation struct {
 }
 
 type AccountAffiliation struct {
-	AccountID    string
-	AccountName  string
-	RoleID       string
-	RoleName     string
-	RoleTypeCode string
-	LastUsedAt   *time.Time
+	AccountID   string
+	AccountName string
+	RoleID      string
+	RoleName    string
+	RoleType    string
+	LastUsedAt  *time.Time
 }
 
 type RoleInfo struct {
-	ID           string
-	Name         string
-	RoleTypeCode string
+	ID       string
+	Name     string
+	RoleType string
 }
 
 type ProductInfo struct {

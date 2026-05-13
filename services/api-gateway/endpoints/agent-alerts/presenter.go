@@ -31,14 +31,25 @@ func AgentAlertPresenter(a *pb.AgentAlertInfo) apiresource.AgentAlert {
 	// requested.
 	if a.AgentRunId != "" {
 		alert.Run = &apiresource.AgentRun{
-			ID:     a.AgentRunId,
-			Object: constants.ObjectTypeAgentRun,
+			ID:          a.AgentRunId,
+			Object:      constants.ObjectTypeAgentRun,
+			Status:      constants.AgentRunStatus(a.GetRunStatusCode()),
+			TriggerType: constants.AgentTriggerType(a.GetRunTriggerType()),
+			CreatedAt:   timeutil.TimestampToTime(a.GetRunCreatedAt()),
+			UpdatedAt:   timeutil.TimestampToTime(a.GetRunUpdatedAt()),
 		}
 	}
 	if a.AgentActionId != "" {
 		alert.Action = &apiresource.AgentAction{
-			ID:     a.AgentActionId,
-			Object: constants.ObjectTypeAgentAction,
+			ID:        a.AgentActionId,
+			Object:    constants.ObjectTypeAgentAction,
+			ToolSlug:  constants.ToolSlug(a.GetActionToolSlug()),
+			Status:    constants.AgentActionStatus(a.GetActionStatusCode()),
+			CreatedAt: timeutil.TimestampToTime(a.GetActionCreatedAt()),
+			UpdatedAt: timeutil.TimestampToTime(a.GetActionUpdatedAt()),
+		}
+		if a.AgentRunId != "" {
+			alert.Action.Run = alert.Run
 		}
 	}
 

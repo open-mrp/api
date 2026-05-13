@@ -22,9 +22,9 @@ type CreateTerritoryRequest struct {
 	// End of ZIP code range (501-99999).
 	EndZipcode *int32 `json:"end_zipcode,omitempty"`
 	// Sales rep (account user) ID.
-	SalesRepID string `json:"sales_rep_id" validate:"required,max=191"`
+	SalesRepID string `json:"sales_rep_id" validate:"required"`
 	// Product line ID.
-	ProductLineID *string `json:"product_line_id,omitempty" validate:"omitempty,max=191"`
+	ProductLineID *string `json:"product_line_id,omitempty" validate:"omitempty"`
 }
 
 var sampleCreateStartZipcode int32 = 10001

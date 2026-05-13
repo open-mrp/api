@@ -19,7 +19,7 @@ type UpdateSettlementRequest struct {
 	// Note for this settlement.
 	Note *string `json:"note" nullable:"false"`
 	// Responsible user ID.
-	ResponsibleUserID *string `json:"responsible_user_id" nullable:"false" validate:"omitempty,max=191"`
+	ResponsibleUserID *string `json:"responsible_user_id" nullable:"false" validate:"omitempty"`
 }
 
 var sampleUpdateSettlementNote = "Partial payment applied"

@@ -42,6 +42,7 @@ type PurchaseOrder struct {
 
 	// Joined address details (same as sales order)
 	BillToName        *string
+	BillToIsDropShip  *bool
 	BillToStreetLine1 *string
 	BillToStreetLine2 *string
 	BillToLocality    *string
@@ -50,7 +51,10 @@ type PurchaseOrder struct {
 	BillToCountry     *string
 	BillToPhone       *string
 	BillToEmail       *string
+	BillToCreatedAt   *time.Time
+	BillToUpdatedAt   *time.Time
 	ShipToName        *string
+	ShipToIsDropShip  *bool
 	ShipToStreetLine1 *string
 	ShipToStreetLine2 *string
 	ShipToLocality    *string
@@ -59,20 +63,30 @@ type PurchaseOrder struct {
 	ShipToCountry     *string
 	ShipToPhone       *string
 	ShipToEmail       *string
+	ShipToCreatedAt   *time.Time
+	ShipToUpdatedAt   *time.Time
 
 	// Joined carrier details
 	CarrierName                 *string
 	CarrierIsPortalEnabled      *bool
+	CarrierCreatedAt            *time.Time
+	CarrierUpdatedAt            *time.Time
 	ServiceLevelName            *string
 	ServiceLevelToken           *string
 	ServiceLevelIsPortalEnabled *bool
+	ServiceLevelCreatedAt       *time.Time
+	ServiceLevelUpdatedAt       *time.Time
 
 	// Joined payment/shipping term
 	PaymentTermName             *string
 	PaymentTermIsActive         *bool
+	PaymentTermCreatedAt        *time.Time
+	PaymentTermUpdatedAt        *time.Time
 	ShippingTermName            *string
 	ShippingTermIsFreightExempt *bool
 	ShippingTermIsCarrierRate   *bool
+	ShippingTermCreatedAt       *time.Time
+	ShippingTermUpdatedAt       *time.Time
 
 	// Joined priority
 	PriorityID *string
@@ -85,6 +99,9 @@ type PurchaseOrder struct {
 
 	// Contacts (populated when fetched)
 	Contacts []*PurchaseOrderEmailContact
+
+	// ReceivingOrder (populated when included)
+	ReceivingOrder *ReceivingOrder
 }
 
 // PurchaseOrderSummary represents a purchase order for list views.
@@ -187,6 +204,7 @@ type GetPurchaseOrderParams struct {
 type CreatePurchaseOrderParams struct {
 	AccountID             string
 	SupplierAccountID     string
+	Includes              []string
 	Number                string
 	SalesOrderStatusCode  string
 	BillingAddressID      string
@@ -238,6 +256,7 @@ type CreatePurchaseOrderLineInput struct {
 type UpdatePurchaseOrderParams struct {
 	PurchaseOrderID       string
 	AccountID             string
+	Includes              []string
 	Note                  *string
 	Number                *string
 	PriorityCode          *string
@@ -265,6 +284,7 @@ type ChangePurchaseOrderStatusParams struct {
 	AccountID       string
 	StatusChange    string
 	SendEmail       bool
+	Includes        []string
 }
 
 // CreatePurchaseOrderLineParams holds the parameters for creating a purchase order line.

@@ -8,25 +8,37 @@ import (
 
 // InventoryChangeLog represents a single inventory change log entry.
 type InventoryChangeLog struct {
-	ID                       string
-	ItemID                   string
-	ItemSKU                  string
-	QuantityID               string
-	QuantityValue            string
-	QuantityUnitID           string
-	QuantityUnitName         string
-	QuantityUnitAbbreviation string
-	QuantityUnitType         string
-	ActionTypeCode           string
-	ScanningStationID        *string
-	ScanningStationName      *string
-	ItemTypeCode             *string
-	ScanningStationType      *string
-	ResponsibleUserID        *string
-	ResponsibleUserName      *string
-	AccountID                string
-	CreatedAt                time.Time
-	UpdatedAt                time.Time
+	ID                            string
+	ItemID                        string
+	ItemSKU                       string
+	ItemCreatedAt                 time.Time
+	ItemUpdatedAt                 time.Time
+	QuantityID                    string
+	QuantityValue                 string
+	QuantityUnitID                string
+	QuantityUnitName              string
+	QuantityUnitAbbreviation      string
+	QuantityUnitType              string
+	QuantityUnitRatioNumerator    string
+	QuantityUnitRatioDenominator  string
+	QuantityUnitOffsetNumerator   string
+	QuantityUnitOffsetDenominator string
+	QuantityUnitCreatedAt         time.Time
+	QuantityUnitUpdatedAt         time.Time
+	ActionTypeCode                string
+	ScanningStationID             *string
+	ScanningStationName           *string
+	ScanningStationType           *string
+	ScanningStationCreatedAt      *time.Time
+	ScanningStationUpdatedAt      *time.Time
+	ItemTypeCode                  *string
+	ResponsibleUserID             *string
+	ResponsibleUserName           *string
+	ResponsibleUserCreatedAt      *time.Time
+	ResponsibleUserUpdatedAt      *time.Time
+	AccountID                     string
+	CreatedAt                     time.Time
+	UpdatedAt                     time.Time
 }
 
 // ListInventoryChangeLogsParams contains the parameters for listing inventory change logs.

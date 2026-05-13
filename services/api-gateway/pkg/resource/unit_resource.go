@@ -26,11 +26,11 @@ type Unit struct {
 	Type constants.UnitType `json:"type" validate:"required"`
 	// Conversion ratio numerator relative to the base unit in the same dimension.
 	RatioNumerator string `json:"ratio_numerator" validate:"required" format:"decimal"`
-	// Conversion ratio denominator relative to the base unit in the same dimension.
+	// Conversion ratio denominator relative to the base unit in the same dimension. Cannot be zero.
 	RatioDenominator string `json:"ratio_denominator" validate:"required" format:"decimal"`
 	// Conversion offset numerator, used for temperature-like conversions. Zero for most unit types.
 	OffsetNumerator string `json:"offset_numerator" validate:"required" format:"decimal"`
-	// Conversion offset denominator. Typically 1.
+	// Conversion offset denominator. Typically 1. Cannot be zero.
 	OffsetDenominator string `json:"offset_denominator" validate:"required" format:"decimal"`
 	// Whether this is the base unit for its dimension. Conversion ratios are relative to this unit.
 	IsBaseUnit bool `json:"is_base_unit"`

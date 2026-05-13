@@ -32,18 +32,18 @@ func (e *ListPartsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPartsReq
 		Description:       "Returns a paginated list of parts for the current account.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
-		Route:             "/v1/operations/parts",
+		Route:             "/v1/catalog/parts",
 		Request:           &ListPartsRequest{},
 		Response:          &apiresource.List[apiresource.Part]{},
 		SuccessStatusCode: http.StatusOK,
-		Public:            false,
+		Public:            true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListPartsRequest) (*apiresource.List[apiresource.Part], *apierror.APIError) {
 			return svc.(PartSvc).ListParts
 		},
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypePart,
-			Fields:     []string{"item", "item.category", "item.unit_value", "item.unit_cost", "item.burn_rate", "item.attributes"},
+			Fields:     []string{"item", "item.category", "item.category.properties", "item.category.unit_group", "item.unit_value", "item.unit_cost", "item.burn_rate", "item.attributes"},
 		}),
 	}
 }

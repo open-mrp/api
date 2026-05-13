@@ -13,7 +13,7 @@ import (
 // ListUnitGroupsRequest is a request to list unit groups.
 type ListUnitGroupsRequest struct {
 	apiresource.PaginationRequest
-	// Unit type filter (e.g. "mass", "quantity").
+	// Filter by the unit type.
 	Type *constants.UnitType `query:"type"`
 }
 

@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"strings"
 	"time"
 )
 
@@ -176,7 +177,9 @@ SELECT
     ug.id,
     ug.name,
     ug.base_unit_id,
-    ug.unit_type_code
+    ug.unit_type_code,
+    ug.created_at,
+    ug.updated_at
 FROM unit_group ug
 WHERE ug.id = ?
 `
@@ -186,6 +189,8 @@ type GetUnitGroupForCategoryRow struct {
 	Name         string
 	BaseUnitID   string
 	UnitTypeCode string
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
 }
 
 func (q *Queries) GetUnitGroupForCategory(ctx context.Context, id string) (GetUnitGroupForCategoryRow, error) {
@@ -196,6 +201,8 @@ func (q *Queries) GetUnitGroupForCategory(ctx context.Context, id string) (GetUn
 		&i.Name,
 		&i.BaseUnitID,
 		&i.UnitTypeCode,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -433,15 +440,19 @@ func (q *Queries) ListItemCategoriesForward(ctx context.Context, arg ListItemCat
 const listItemCategoryProperties = `-- name: ListItemCategoryProperties :many
 SELECT
     p.id,
-    p.name
+    p.name,
+    p.created_at,
+    p.updated_at
 FROM property p
 INNER JOIN _item_categories_properties icp ON icp.B = p.id
 WHERE icp.A = ?
 `
 
 type ListItemCategoryPropertiesRow struct {
-	ID   string
-	Name string
+	ID        string
+	Name      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 func (q *Queries) ListItemCategoryProperties(ctx context.Context, itemCategoryID string) ([]ListItemCategoryPropertiesRow, error) {
@@ -453,7 +464,72 @@ func (q *Queries) ListItemCategoryProperties(ctx context.Context, itemCategoryID
 	var items []ListItemCategoryPropertiesRow
 	for rows.Next() {
 		var i ListItemCategoryPropertiesRow
-		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listItemCategoryPropertiesForCategories = `-- name: ListItemCategoryPropertiesForCategories :many
+SELECT
+    icp.A AS item_category_id,
+    p.id AS property_id,
+    p.name AS property_name,
+    p.created_at AS property_created_at,
+    p.updated_at AS property_updated_at
+FROM property p
+INNER JOIN _item_categories_properties icp ON icp.B = p.id
+WHERE icp.A IN (/*SLICE:item_category_ids*/?)
+ORDER BY icp.A, p.name
+`
+
+type ListItemCategoryPropertiesForCategoriesRow struct {
+	ItemCategoryID    string
+	PropertyID        string
+	PropertyName      string
+	PropertyCreatedAt time.Time
+	PropertyUpdatedAt time.Time
+}
+
+func (q *Queries) ListItemCategoryPropertiesForCategories(ctx context.Context, itemCategoryIds []string) ([]ListItemCategoryPropertiesForCategoriesRow, error) {
+	query := listItemCategoryPropertiesForCategories
+	var queryParams []interface{}
+	if len(itemCategoryIds) > 0 {
+		for _, v := range itemCategoryIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:item_category_ids*/?", strings.Repeat(",?", len(itemCategoryIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:item_category_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListItemCategoryPropertiesForCategoriesRow
+	for rows.Next() {
+		var i ListItemCategoryPropertiesForCategoriesRow
+		if err := rows.Scan(
+			&i.ItemCategoryID,
+			&i.PropertyID,
+			&i.PropertyName,
+			&i.PropertyCreatedAt,
+			&i.PropertyUpdatedAt,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

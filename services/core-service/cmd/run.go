@@ -575,7 +575,7 @@ func Run(
 
 	inboxRepo := repository.NewInboxRepo(queries)
 	inboxPurgerRepo := repository.NewInboxPurgerRepo(queries)
-	inboxPurger, err := messaging.NewInboxPurger(&messaging.InboxPurgerConfig{ServiceName: domain.ServiceName}, inboxPurgerRepo, leaseSvc)
+	inboxPurger, err := messaging.NewInboxPurger(&messaging.InboxPurgerConfig{ServiceName: domain.ServiceName, PlatformMode: cfg.PlatformMode}, inboxPurgerRepo, leaseSvc)
 	if err != nil {
 		return err
 	}

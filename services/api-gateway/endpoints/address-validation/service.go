@@ -15,7 +15,7 @@ import (
 
 type AddressValidationSvc interface {
 	AutocompleteAddress(ctx context.Context, req *AutocompleteAddressRequest) (*apiresource.List[apiresource.AddressSuggestion], *apierror.APIError)
-	GetAddressDetails(ctx context.Context, req *GetAddressDetailsRequest) (*apiresource.AddressDetailsResult, *apierror.APIError)
+	GetAddressDetails(ctx context.Context, req *RetrieveAddressDetailsRequest) (*apiresource.AddressDetailsResult, *apierror.APIError)
 	ValidateAddress(ctx context.Context, req *ValidateAddressRequest) (*apiresource.ValidatedAddress, *apierror.APIError)
 }
 
@@ -64,7 +64,7 @@ func (m *addressValidationSvcImpl) AutocompleteAddress(ctx context.Context, req 
 	return SuggestionListPresenter(resp), nil
 }
 
-func (m *addressValidationSvcImpl) GetAddressDetails(ctx context.Context, req *GetAddressDetailsRequest) (*apiresource.AddressDetailsResult, *apierror.APIError) {
+func (m *addressValidationSvcImpl) GetAddressDetails(ctx context.Context, req *RetrieveAddressDetailsRequest) (*apiresource.AddressDetailsResult, *apierror.APIError) {
 	pbReq := &pb.GetAddressDetailsRequest{
 		PlaceId:      req.PlaceID,
 		SessionToken: req.SessionToken,

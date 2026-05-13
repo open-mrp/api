@@ -162,9 +162,9 @@ INSERT IGNORE INTO shipment_line (id, shipment_id, sales_order_line_id, quantity
 -- CARRIER OPTIONS (2 rows for carrier 'delivery')
 -- ============================================================
 
-INSERT IGNORE INTO carrier_option (id, code, name, carrier_id, account_id, created_at, updated_at) VALUES
-    ('crop_01seedground000000', 'ground', 'Ground Shipping', 'delivery', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW()),
-    ('crop_01seedexpress00000', 'express', 'Express Shipping', 'delivery', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
+INSERT IGNORE INTO carrier_option (id, code, name, service_level_token, carrier_id, account_id, created_at, updated_at) VALUES
+    ('crop_01seedground000000', 'ground', 'Ground Shipping', 'fedex_ground', 'delivery', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW()),
+    ('crop_01seedexpress00000', 'express', 'Express Shipping', 'fedex_express', 'delivery', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
 
 -- System-owned (account_id = NULL) carrier + service level for write-guard e2e coverage.
 INSERT IGNORE INTO carrier (id, code, name, account_id, created_at, updated_at) VALUES
@@ -172,23 +172,6 @@ INSERT IGNORE INTO carrier (id, code, name, account_id, created_at, updated_at) 
 
 INSERT IGNORE INTO carrier_option (id, code, name, carrier_id, account_id, created_at, updated_at) VALUES
     ('crop_01seedsysground000', 'ground', 'System Ground', 'syscar_01seedsysdefault', NULL, NOW(), NOW());
-
--- ============================================================
--- RECEIVING ORDERS (2 rows for pagination)
--- ============================================================
-
-INSERT IGNORE INTO receiving_order (id, number, order_id, account_id, created_at, updated_at) VALUES
-    ('rcor_01seedrecvorder1_0', 'RCV-001', 'or_01k0a8bs2ye3f9p8sj0m4dfmwe', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW()),
-    ('rcor_01seedrecvorder2_0', 'RCV-002', 'or_01k0a8bs2yf909wjkd7ecd6x4z', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
-
--- Receiving order lines
-INSERT IGNORE INTO quantity (id, value, unit_id, created_at, updated_at) VALUES
-    ('qu_01seedrcln1_qty00000', 20, 'un_01seedpair000000000', NOW(), NOW()),
-    ('qu_01seedrcln2_qty00000', 15, 'un_01seedpair000000000', NOW(), NOW());
-
-INSERT IGNORE INTO receiving_order_line (id, receiving_order_id, quantity_id, sales_order_line_id, created_at, updated_at) VALUES
-    ('rcln_01seedrecvln1_0000', 'rcor_01seedrecvorder1_0', 'qu_01seedrcln1_qty00000', 'orln_01seedpck_ln1_0000', NOW(), NOW()),
-    ('rcln_01seedrecvln2_0000', 'rcor_01seedrecvorder1_0', 'qu_01seedrcln2_qty00000', 'orln_01seedpck_ln2_0000', NOW(), NOW());
 
 -- ============================================================
 -- DELIVERIES (2 rows for pagination)
@@ -235,7 +218,7 @@ INSERT IGNORE INTO target (id, start_date, end_date, sales_rep_id, account_id, a
 -- ============================================================
 
 INSERT IGNORE INTO production_run (id, responsible_user_id, number, account_id, created_at, updated_at) VALUES
-    ('pnrn_01seedprod_run0001', 'us_1wjfmmbwg8l7', 'E2E-SEED-PR-002', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
+    ('pnrn_01seedprod_run0001', 'acus_s83fjhyfmqen', 'E2E-SEED-PR-002', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
 
 -- ============================================================
 -- SECOND DC LOCATION (for pagination)
@@ -335,7 +318,7 @@ INSERT IGNORE INTO email_recipient (id, email, email_log_id, created_at, updated
     ('emrp_01seedemailrcpt2_0', 'warehouse@example.com', 'emlog_01seedemaillog2_0', NOW(), NOW());
 
 -- ============================================================
--- REQUEST LOGS (4 rows — 3 for pagination, 1 with an error_code for filter tests)
+-- REQUEST LOGS (5 rows — 3 for pagination, 1 with an error_code, 1 with query_json for include tests)
 -- ============================================================
 
 INSERT IGNORE INTO request_log (id, method, host, path, normalized_route, status_code, latency_us, public_endpoint, account_id, target_account_id, actor_id, actor_type, identity_type, occurred_at, created_at) VALUES
@@ -345,6 +328,14 @@ INSERT IGNORE INTO request_log (id, method, host, path, normalized_route, status
 
 INSERT IGNORE INTO request_log (id, method, host, path, normalized_route, status_code, latency_us, public_endpoint, account_id, target_account_id, actor_id, actor_type, identity_type, error_code, error_message, occurred_at, created_at) VALUES
     ('rqlog_01seedreqlog4_000', 'POST', 'api.augno.com', '/v1/catalog/units', '/v1/catalog/units', 422, 9000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', 'validation_failed', 'Name is required.', DATE_SUB(NOW(), INTERVAL 2 HOUR), NOW());
+
+INSERT IGNORE INTO request_log (id, method, host, path, normalized_route, query_json, status_code, latency_us, public_endpoint, account_id, target_account_id, actor_id, actor_type, identity_type, occurred_at, created_at) VALUES
+    ('rqlog_01seedreqlog5_000', 'GET', 'api.augno.com', '/v1/catalog/items', '/v1/catalog/items', '{"limit":10,"status_codes":["200"]}', 200, 8000, 1, 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', 'user', 'user', DATE_SUB(NOW(), INTERVAL 3 HOUR), NOW());
+
+INSERT IGNORE INTO idempotency_key (type_id, idempotency_key, identity_type, request_method, normalized_route, request_body_hash, scope_hash, recovery_point, target_account_id, actor_id, created_at, updated_at) VALUES
+    ('idk_01seedreqlogik001', 'e2e-seed-idempotency-key-01', 'user', 'POST', '/v1/catalog/units', 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', 'finished', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'us_1wjfmmbwg8l7', NOW(3), NOW(3));
+
+UPDATE request_log SET idempotency_key_id = 'idk_01seedreqlogik001' WHERE id = 'rqlog_01seedreqlog2_000';
 
 -- ============================================================
 -- ADDRESSES linked to OWNER ACCOUNT (for /v1/sales/addresses pagination)
@@ -425,21 +416,67 @@ INSERT IGNORE INTO account_relation (id, owner_account_id, counterparty_account_
 -- PURCHASE ORDERS (e2e include coverage)
 -- ============================================================
 -- A purchase_order is a sales_order row with sales_order_type_code = 'purchase_order',
--- where seller_account_id is the supplier account. The seeded supplier relation is
--- acre_01seedsupplier0000 (owner=ac_01k0a5smf9ekb8rqg12555zjqa, counterparty=ac_01seedsupplier_acct0).
+-- where seller_account_id is the supplier account. Seeded supplier relations:
+--   acre_01seedsupplier0000 → ac_01seedsupplier_acct0, acre_01seedsupplier0001 → ac_01seedsupplier_acct1.
 
 INSERT IGNORE INTO sales_order (id, number, sales_order_status_code, sales_order_type_code, priority_code, carrier_id, billing_address_id, shipping_address_id, buyer_account_id, seller_account_id, owner_account_id, payment_term_id, shipping_term_id, issued_at, created_at, updated_at) VALUES
     ('or_01seedpurchord1_000', 'PO-001', 'issued', 'purchase_order', 'normal', 'delivery', 'ad_01k09wnac0e1ar211e0sy0ba4g', 'ad_01k09wnpvrea0awz7vem2j8j7g', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01seedsupplier_acct0', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'pytm_01seednet3000000', 'prepaid_billed', DATE_SUB(NOW(), INTERVAL 2 DAY), NOW(), NOW());
 
 INSERT IGNORE INTO quantity (id, value, unit_id, created_at, updated_at) VALUES
-    ('qu_01seedpoln1_qty00000', 50, 'un_01seedpair000000000', NOW(), NOW());
+    ('qu_01seedpoln1_qty00000', 50, 'un_01seedpound00000000', NOW(), NOW());
 
 INSERT IGNORE INTO rate (id, value, numerator_unit_id, denominator_unit_id, created_at, updated_at) VALUES
-    ('rt_01seedpoln1_price000', '5.00', 'dollar', 'un_01seedpair000000000', NOW(), NOW()),
-    ('rt_01seedpoln1_cost0000', '4.00', 'dollar', 'un_01seedpair000000000', NOW(), NOW());
+    ('rt_01seedpoln1_price000', '5.00', 'dollar', 'un_01seedpound00000000', NOW(), NOW()),
+    ('rt_01seedpoln1_cost0000', '4.00', 'dollar', 'un_01seedpound00000000', NOW(), NOW());
 
 INSERT IGNORE INTO sales_order_line (id, product_sku, product_description, product_id, item_id, sales_order_id, quantity_id, unit_price_id, unit_cost_id, created_at, updated_at) VALUES
     ('orln_01seedpoln1_000000', 'YRN-001', 'Small white yarn for PO', NULL, 'it_01seedyrn1item00000', 'or_01seedpurchord1_000', 'qu_01seedpoln1_qty00000', 'rt_01seedpoln1_price000', 'rt_01seedpoln1_cost0000', NOW(), NOW());
+
+INSERT IGNORE INTO sales_order (id, number, sales_order_status_code, sales_order_type_code, priority_code, carrier_id, billing_address_id, shipping_address_id, buyer_account_id, seller_account_id, owner_account_id, payment_term_id, shipping_term_id, issued_at, created_at, updated_at) VALUES
+    ('or_01seedpurchord2_000', 'PO-002', 'issued', 'purchase_order', 'normal', 'delivery', 'ad_01k09wnac0e1ar211e0sy0ba4g', 'ad_01k09wnpvrea0awz7vem2j8j7g', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01seedsupplier_acct1', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'pytm_01seednet3000000', 'prepaid_billed', DATE_SUB(NOW(), INTERVAL 1 DAY), NOW(), NOW());
+
+INSERT IGNORE INTO quantity (id, value, unit_id, created_at, updated_at) VALUES
+    ('qu_01seedpoln2_qty00000', 30, 'un_01seedpound00000000', NOW(), NOW());
+
+INSERT IGNORE INTO rate (id, value, numerator_unit_id, denominator_unit_id, created_at, updated_at) VALUES
+    ('rt_01seedpoln2_price000', '5.50', 'dollar', 'un_01seedpound00000000', NOW(), NOW()),
+    ('rt_01seedpoln2_cost0000', '4.25', 'dollar', 'un_01seedpound00000000', NOW(), NOW());
+
+INSERT IGNORE INTO sales_order_line (id, product_sku, product_description, product_id, item_id, sales_order_id, quantity_id, unit_price_id, unit_cost_id, created_at, updated_at) VALUES
+    ('orln_01seedpoln2_000000', 'YRN-002', 'Yarn type 2 for PO', NULL, 'it_01seedyrn2item00000', 'or_01seedpurchord1_000', 'qu_01seedpoln2_qty00000', 'rt_01seedpoln2_price000', 'rt_01seedpoln2_cost0000', NOW(), NOW());
+
+-- ============================================================
+-- RECEIVING ORDERS (2 rows for pagination)
+-- ============================================================
+-- Receiving summaries resolve the supplier via purchase_order.seller_account_id and
+-- account_relation (owner → counterparty, role supplier). Sales orders use the seed
+-- account as seller, so they must not be linked here.
+
+INSERT IGNORE INTO receiving_order (id, number, order_id, account_id, created_at, updated_at) VALUES
+    ('rcor_01seedrecvorder1_0', 'RCV-001', 'or_01seedpurchord1_000', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW()),
+    ('rcor_01seedrecvorder2_0', 'RCV-002', 'or_01seedpurchord2_000', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
+
+INSERT IGNORE INTO quantity (id, value, unit_id, created_at, updated_at) VALUES
+    ('qu_01seedrcln1_qty00000', 20, 'un_01seedpound00000000', NOW(), NOW()),
+    ('qu_01seedrcln2_qty00000', 15, 'un_01seedpound00000000', NOW(), NOW());
+
+INSERT IGNORE INTO receiving_order_line (id, receiving_order_id, quantity_id, sales_order_line_id, created_at, updated_at) VALUES
+    ('rcln_01seedrecvln1_0000', 'rcor_01seedrecvorder1_0', 'qu_01seedrcln1_qty00000', 'orln_01seedpoln1_000000', NOW(), NOW()),
+    ('rcln_01seedrecvln2_0000', 'rcor_01seedrecvorder1_0', 'qu_01seedrcln2_qty00000', 'orln_01seedpoln2_000000', NOW(), NOW());
+
+UPDATE receiving_order SET order_id = 'or_01seedpurchord1_000' WHERE id = 'rcor_01seedrecvorder1_0' AND order_id = 'or_01k0a8bs2ye3f9p8sj0m4dfmwe';
+UPDATE receiving_order SET order_id = 'or_01seedpurchord2_000' WHERE id = 'rcor_01seedrecvorder2_0' AND order_id = 'or_01k0a8bs2yf909wjkd7ecd6x4z';
+UPDATE receiving_order_line SET sales_order_line_id = 'orln_01seedpoln1_000000' WHERE id = 'rcln_01seedrecvln1_0000' AND sales_order_line_id = 'orln_01seedpck_ln1_0000';
+UPDATE receiving_order_line SET sales_order_line_id = 'orln_01seedpoln2_000000' WHERE id = 'rcln_01seedrecvln2_0000' AND sales_order_line_id = 'orln_01seedpck_ln2_0000';
+
+-- Yarn PO/receiving lines must use pound (item category unit group) so client stocking
+-- validation can sum allocations with the same dimension as unitGroup.baseUnit.
+UPDATE quantity SET unit_id = 'un_01seedpound00000000'
+ WHERE id IN ('qu_01seedpoln1_qty00000', 'qu_01seedpoln2_qty00000', 'qu_01seedrcln1_qty00000', 'qu_01seedrcln2_qty00000')
+   AND unit_id = 'un_01seedpair000000000';
+UPDATE rate SET denominator_unit_id = 'un_01seedpound00000000'
+ WHERE id IN ('rt_01seedpoln1_price000', 'rt_01seedpoln1_cost0000', 'rt_01seedpoln2_price000', 'rt_01seedpoln2_cost0000')
+   AND denominator_unit_id = 'un_01seedpair000000000';
 
 -- ============================================================
 -- CUSTOMER RICH LINKS (seed-gap fill for `?include=` coverage)
@@ -456,8 +493,7 @@ INSERT IGNORE INTO quantity (id, value, unit_id, created_at, updated_at) VALUES
 UPDATE account_relation
    SET default_carrier_option_id = 'crop_01seedground000000',
        credit_limit_id            = 'qu_01seedcustcredit000',
-       parent_account_relation_id = 'acre_01seedhouseacct0000',
-       default_sales_rep_id       = 'acus_ubdx4zebgl6p'
+       parent_account_relation_id = 'acre_01seedhouseacct0000'
  WHERE id = 'acre_01seedcustomer00000';
 
 -- Price-group assignment (reuses the seeded DME account_group).
@@ -557,12 +593,15 @@ INSERT IGNORE INTO account_group_quantity_discount (id, account_group_id, quanti
 -- `?include=responsible_scanning_station` resolve for at least one list item.
 
 UPDATE inventory_change_log
-   SET responsible_user_id = 'us_1wjfmmbwg8l7'
- WHERE id = 'ivcl_01seedwss000000000'
-   AND responsible_user_id IS NULL;
+   SET responsible_user_id = 'us_1wjfmmbwg8l7',
+       scanning_station_id = 'sgsn_01k0a8201zegarjfsjaw5n7yfv',
+       created_at = '2099-12-31 23:59:59.000',
+       updated_at = '2099-12-31 23:59:59.000'
+ WHERE id = 'ivcl_01seedwss000000000';
 
 UPDATE inventory_change_log
-   SET scanning_station_id = 'sgsn_01k0a8201zegarjfsjaw5n7yfv'
- WHERE id IN ('ivcl_01seedwss000000000', 'ivcl_01seedwls000000000')
-   AND scanning_station_id IS NULL;
+   SET scanning_station_id = 'sgsn_01k0a8201zegarjfsjaw5n7yfv',
+       created_at = '2099-12-31 23:59:58.000',
+       updated_at = '2099-12-31 23:59:58.000'
+ WHERE id = 'ivcl_01seedwls000000000';
 

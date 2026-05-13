@@ -341,7 +341,7 @@ func (h *gRPCHandler) GetUserAccountAccess(ctx context.Context, req *pb.GetUserA
 			AccountUserId: access.AccountUserID,
 			AccountId:     access.AccountID,
 			RoleId:        access.RoleID,
-			RoleTypeCode:  access.RoleTypeCode,
+			RoleTypeCode:  access.RoleType,
 			Permissions:   access.Permissions,
 			LastUsedAt:    lastUsedAt,
 		},
@@ -376,7 +376,7 @@ func (h *gRPCHandler) GetRoleInfo(ctx context.Context, req *pb.GetRoleInfoReques
 	return &pb.GetRoleInfoResponse{
 		RoleId:       role.ID,
 		Name:         role.Name,
-		RoleTypeCode: role.RoleTypeCode,
+		RoleTypeCode: role.RoleType,
 	}, nil
 }
 
@@ -454,7 +454,7 @@ func (h *gRPCHandler) ListUserAccountAffiliations(ctx context.Context, req *pb.L
 			AccountName:  aff.AccountName,
 			RoleId:       aff.RoleID,
 			RoleName:     aff.RoleName,
-			RoleTypeCode: aff.RoleTypeCode,
+			RoleTypeCode: aff.RoleType,
 			LastUsedAt:   lastUsedAt,
 		}
 	}
@@ -582,6 +582,12 @@ func sandboxToProto(s *domain.SandboxAccount) *pb.SandboxInfo {
 		ownID := s.OwnerAccountID
 		info.OwnerAccountId = &ownID
 		info.OwnerAccountName = s.OwnerAccountName
+	}
+	if s.OwnerAccountCreatedAt != nil {
+		info.OwnerAccountCreatedAt = timestamppb.New(*s.OwnerAccountCreatedAt)
+	}
+	if s.OwnerAccountUpdatedAt != nil {
+		info.OwnerAccountUpdatedAt = timestamppb.New(*s.OwnerAccountUpdatedAt)
 	}
 	return info
 }
@@ -1065,26 +1071,40 @@ func quantityToProto(q *domain.Quantity) *pb.QuantityInfo {
 	if q == nil {
 		return nil
 	}
-	return &pb.QuantityInfo{
+	info := &pb.QuantityInfo{
 		Id:               q.ID,
 		Value:            q.Value,
 		UnitId:           q.UnitID,
 		UnitAbbreviation: q.UnitAbbreviation,
 		UnitType:         q.UnitType,
+		UnitName:         q.UnitName,
+		CreatedAt:        timestamppb.New(q.CreatedAt),
+		UpdatedAt:        timestamppb.New(q.UpdatedAt),
 	}
+	if q.EmbeddedUnit != nil {
+		info.UnitDetail = unitToProto(q.EmbeddedUnit)
+	}
+	return info
 }
 
 func shippingTermToProto(st *domain.ShippingTerm) *pb.ShippingTermInfo {
+	var pbLevels []*pb.ServiceLevelInfo
+	if len(st.FreeShippingServiceLevels) > 0 {
+		pbLevels = make([]*pb.ServiceLevelInfo, len(st.FreeShippingServiceLevels))
+		for i, sl := range st.FreeShippingServiceLevels {
+			pbLevels[i] = serviceLevelToProto(sl)
+		}
+	}
 	return &pb.ShippingTermInfo{
-		Id:                          st.ID,
-		Name:                        st.Name,
-		Type:                        string(st.Type),
-		FlatRate:                    quantityToProto(st.FlatRate),
-		MinimumOrderValue:           quantityToProto(st.MinimumOrderValue),
-		FreeShippingServiceLevelIds: st.FreeShippingServiceLevelIDs,
-		CreatedAt:                   timestamppb.New(st.CreatedAt),
-		UpdatedAt:                   timestamppb.New(st.UpdatedAt),
-		AccountId:                   st.AccountID,
+		Id:                        st.ID,
+		Name:                      st.Name,
+		Type:                      string(st.Type),
+		FlatRate:                  quantityToProto(st.FlatRate),
+		MinimumOrderValue:         quantityToProto(st.MinimumOrderValue),
+		FreeShippingServiceLevels: pbLevels,
+		CreatedAt:                 timestamppb.New(st.CreatedAt),
+		UpdatedAt:                 timestamppb.New(st.UpdatedAt),
+		AccountId:                 st.AccountID,
 	}
 }
 
@@ -1094,9 +1114,10 @@ func (h *gRPCHandler) ListShippingTerms(ctx context.Context, req *pb.ListShippin
 	}
 
 	params := domain.ListShippingTermsParams{
-		Cursor: req.Cursor,
-		Limit:  req.Limit,
-		Query:  req.Query,
+		Cursor:   req.Cursor,
+		Limit:    req.Limit,
+		Query:    req.Query,
+		Includes: req.Includes,
 	}
 
 	result, apiErr := h.shippingTermSvc.ListShippingTerms(ctx, params)
@@ -1125,7 +1146,10 @@ func (h *gRPCHandler) GetShippingTerm(ctx context.Context, req *pb.GetShippingTe
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	shippingTerm, apiErr := h.shippingTermSvc.GetShippingTerm(ctx, req.Id)
+	shippingTerm, apiErr := h.shippingTermSvc.GetShippingTerm(ctx, domain.GetShippingTermParams{
+		ShippingTermID: req.Id,
+		Includes:       req.Includes,
+	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
@@ -1159,6 +1183,7 @@ func (h *gRPCHandler) CreateShippingTerm(ctx context.Context, req *pb.CreateShip
 		FlatRate:                    protoQuantityInputToDomain(req.FlatRate),
 		MinimumOrderValue:           protoQuantityInputToDomain(req.MinimumOrderValue),
 		FreeShippingServiceLevelIDs: req.FreeShippingServiceLevelIds,
+		Includes:                    req.Includes,
 	}
 
 	shippingTerm, apiErr := h.shippingTermSvc.CreateShippingTerm(ctx, params)
@@ -1188,6 +1213,7 @@ func (h *gRPCHandler) UpdateShippingTerm(ctx context.Context, req *pb.UpdateShip
 		HasFreeShippingServiceLevelIDs: req.HasFreeShippingServiceLevelIds,
 		HasFlatRate:                    req.HasFlatRate,
 		HasMinimumOrderValue:           req.HasMinimumOrderValue,
+		Includes:                       req.Includes,
 	}
 	if req.Type != nil {
 		t := constants.ShippingTermType(*req.Type)

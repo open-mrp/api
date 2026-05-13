@@ -7,8 +7,6 @@ import (
 	"github.com/augno/api/services/notification-service/internal/domain"
 	"github.com/augno/api/services/notification-service/internal/email"
 	"github.com/augno/api/services/notification-service/internal/infrastructure/aws"
-	"github.com/augno/api/services/notification-service/internal/infrastructure/repository"
-	"github.com/augno/api/services/notification-service/internal/infrastructure/sqlc"
 	"github.com/augno/api/services/notification-service/internal/infrastructure/stub"
 	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
@@ -56,7 +54,7 @@ func NewNotificationSvc(config *NotificationSvcConfig) domain.NotificationSvc {
 	}
 }
 
-func (c *NotificationSvcConfig) WithDefaults(queries *sqlc.Queries, platformMode constants.PlatformMode, awsRegion string, templateRenderer email.TemplateRenderer) (*NotificationSvcConfig, *apierror.APIError) {
+func (c *NotificationSvcConfig) WithDefaults(repoFactory domain.RepoFactory, platformMode constants.PlatformMode, awsRegion string, templateRenderer email.TemplateRenderer) (*NotificationSvcConfig, *apierror.APIError) {
 	if c == nil {
 		c = &NotificationSvcConfig{}
 	}
@@ -73,7 +71,7 @@ func (c *NotificationSvcConfig) WithDefaults(queries *sqlc.Queries, platformMode
 	}
 
 	return &NotificationSvcConfig{
-		EmailLogRepo:     repository.NewEmailLogRepo(queries),
+		EmailLogRepo:     repoFactory.NewEmailLogRepo(),
 		EmailSender:      emailSender,
 		TemplateRenderer: templateRenderer,
 	}, nil

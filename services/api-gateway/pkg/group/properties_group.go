@@ -40,12 +40,12 @@ func (*PropertiesEndpointGroup) Materialize(config *PropertiesEndpointGroupConfi
 	}
 
 	listPropertiesEndpoint := (&propertyep.ListPropertiesEndpoint{}).Materialize().WithService(inner, propertySvc)
-	getPropertyEndpoint := (&propertyep.GetPropertyEndpoint{}).Materialize().WithService(inner, propertySvc)
+	getPropertyEndpoint := (&propertyep.RetrievePropertyEndpoint{}).Materialize().WithService(inner, propertySvc)
 	createPropertyEndpoint := (&propertyep.CreatePropertyEndpoint{}).Materialize().WithService(inner, propertySvc)
 	updatePropertyEndpoint := (&propertyep.UpdatePropertyEndpoint{}).Materialize().WithService(inner, propertySvc)
 	deletePropertyEndpoint := (&propertyep.DeletePropertyEndpoint{}).Materialize().WithService(inner, propertySvc)
 	listAttributesEndpoint := (&propertyep.ListAttributesEndpoint{}).Materialize().WithService(inner, propertySvc)
-	getAttributeEndpoint := (&propertyep.GetAttributeEndpoint{}).Materialize().WithService(inner, propertySvc)
+	getAttributeEndpoint := (&propertyep.RetrieveAttributeEndpoint{}).Materialize().WithService(inner, propertySvc)
 	createAttributeEndpoint := (&propertyep.CreateAttributeEndpoint{}).Materialize().WithService(inner, propertySvc)
 	updateAttributeEndpoint := (&propertyep.UpdateAttributeEndpoint{}).Materialize().WithService(inner, propertySvc)
 	deleteAttributeEndpoint := (&propertyep.DeleteAttributeEndpoint{}).Materialize().WithService(inner, propertySvc)

@@ -40,7 +40,7 @@ func RolePresenter(r *pb.RoleDetail, ownerAccount *apiresource.Account) apiresou
 		ID:        r.Id,
 		Object:    constants.ObjectTypeRole,
 		Name:      r.Name,
-		TypeCode:  constants.RoleTypeCode(r.RoleTypeCode),
+		TypeCode:  constants.RoleType(r.RoleTypeCode),
 		Owner:     apiresource.NewOwnerWithAccount(stringPtrIfNotEmpty(r.AccountId), ownerAccount),
 		CreatedAt: grpcutil.TimestampToTime(r.CreatedAt),
 		UpdatedAt: grpcutil.TimestampToTime(r.UpdatedAt),

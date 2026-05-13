@@ -29,17 +29,19 @@ const (
 
 // MachineInfo represents a machine resource returned by the core-service.
 type MachineInfo struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name           string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	SerialNumber   string                 `protobuf:"bytes,3,opt,name=serial_number,json=serialNumber,proto3" json:"serial_number,omitempty"`
-	Notes          *string                `protobuf:"bytes,4,opt,name=notes,proto3,oneof" json:"notes,omitempty"`
-	DepartmentId   *string                `protobuf:"bytes,5,opt,name=department_id,json=departmentId,proto3,oneof" json:"department_id,omitempty"`
-	DepartmentName *string                `protobuf:"bytes,6,opt,name=department_name,json=departmentName,proto3,oneof" json:"department_name,omitempty"`
-	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt      *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	Id                  string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name                string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	SerialNumber        string                 `protobuf:"bytes,3,opt,name=serial_number,json=serialNumber,proto3" json:"serial_number,omitempty"`
+	Notes               *string                `protobuf:"bytes,4,opt,name=notes,proto3,oneof" json:"notes,omitempty"`
+	DepartmentId        *string                `protobuf:"bytes,5,opt,name=department_id,json=departmentId,proto3,oneof" json:"department_id,omitempty"`
+	DepartmentName      *string                `protobuf:"bytes,6,opt,name=department_name,json=departmentName,proto3,oneof" json:"department_name,omitempty"`
+	CreatedAt           *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt           *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	DepartmentCreatedAt *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=department_created_at,json=departmentCreatedAt,proto3,oneof" json:"department_created_at,omitempty"`
+	DepartmentUpdatedAt *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=department_updated_at,json=departmentUpdatedAt,proto3,oneof" json:"department_updated_at,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *MachineInfo) Reset() {
@@ -128,11 +130,26 @@ func (x *MachineInfo) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *MachineInfo) GetDepartmentCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.DepartmentCreatedAt
+	}
+	return nil
+}
+
+func (x *MachineInfo) GetDepartmentUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.DepartmentUpdatedAt
+	}
+	return nil
+}
+
 type ListMachinesRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Cursor        *string                `protobuf:"bytes,1,opt,name=cursor,proto3,oneof" json:"cursor,omitempty"`
 	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
 	Query         *string                `protobuf:"bytes,3,opt,name=query,proto3,oneof" json:"query,omitempty"`
+	Includes      []string               `protobuf:"bytes,4,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -186,6 +203,13 @@ func (x *ListMachinesRequest) GetQuery() string {
 		return *x.Query
 	}
 	return ""
+}
+
+func (x *ListMachinesRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
 }
 
 type ListMachinesResponse struct {
@@ -243,6 +267,7 @@ func (x *ListMachinesResponse) GetPageInfo() *PageInfo {
 type GetMachineRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Includes      []string               `protobuf:"bytes,2,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -282,6 +307,13 @@ func (x *GetMachineRequest) GetId() string {
 		return x.Id
 	}
 	return ""
+}
+
+func (x *GetMachineRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
 }
 
 type GetMachineResponse struct {
@@ -334,6 +366,7 @@ type CreateMachineRequest struct {
 	SerialNumber  string                 `protobuf:"bytes,2,opt,name=serial_number,json=serialNumber,proto3" json:"serial_number,omitempty"`
 	Notes         *string                `protobuf:"bytes,3,opt,name=notes,proto3,oneof" json:"notes,omitempty"`
 	DepartmentId  string                 `protobuf:"bytes,4,opt,name=department_id,json=departmentId,proto3" json:"department_id,omitempty"`
+	Includes      []string               `protobuf:"bytes,5,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -396,6 +429,13 @@ func (x *CreateMachineRequest) GetDepartmentId() string {
 	return ""
 }
 
+func (x *CreateMachineRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
+}
+
 type CreateMachineResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Machine       *MachineInfo           `protobuf:"bytes,1,opt,name=machine,proto3" json:"machine,omitempty"`
@@ -446,6 +486,7 @@ type UpdateMachineRequest struct {
 	Name          *string                `protobuf:"bytes,2,opt,name=name,proto3,oneof" json:"name,omitempty"`
 	SerialNumber  *string                `protobuf:"bytes,3,opt,name=serial_number,json=serialNumber,proto3,oneof" json:"serial_number,omitempty"`
 	Notes         *string                `protobuf:"bytes,4,opt,name=notes,proto3,oneof" json:"notes,omitempty"`
+	Includes      []string               `protobuf:"bytes,5,rep,name=includes,proto3" json:"includes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -506,6 +547,13 @@ func (x *UpdateMachineRequest) GetNotes() string {
 		return *x.Notes
 	}
 	return ""
+}
+
+func (x *UpdateMachineRequest) GetIncludes() []string {
+	if x != nil {
+		return x.Includes
+	}
+	return nil
 }
 
 type UpdateMachineResponse struct {
@@ -600,7 +648,7 @@ var File_core_core_fulfillment_proto protoreflect.FileDescriptor
 
 const file_core_core_fulfillment_proto_rawDesc = "" +
 	"\n" +
-	"\x1bcore/core_fulfillment.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x0fcore/core.proto\"\xef\x02\n" +
+	"\x1bcore/core_fulfillment.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x0fcore/core.proto\"\xcd\x04\n" +
 	"\vMachineInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12#\n" +
@@ -611,36 +659,45 @@ const file_core_core_fulfillment_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\b\n" +
+	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12S\n" +
+	"\x15department_created_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampH\x03R\x13departmentCreatedAt\x88\x01\x01\x12S\n" +
+	"\x15department_updated_at\x18\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampH\x04R\x13departmentUpdatedAt\x88\x01\x01B\b\n" +
 	"\x06_notesB\x10\n" +
 	"\x0e_department_idB\x12\n" +
-	"\x10_department_name\"x\n" +
+	"\x10_department_nameB\x18\n" +
+	"\x16_department_created_atB\x18\n" +
+	"\x16_department_updated_at\"\x94\x01\n" +
 	"\x13ListMachinesRequest\x12\x1b\n" +
 	"\x06cursor\x18\x01 \x01(\tH\x00R\x06cursor\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x19\n" +
-	"\x05query\x18\x03 \x01(\tH\x01R\x05query\x88\x01\x01B\t\n" +
+	"\x05query\x18\x03 \x01(\tH\x01R\x05query\x88\x01\x01\x12\x1a\n" +
+	"\bincludes\x18\x04 \x03(\tR\bincludesB\t\n" +
 	"\a_cursorB\b\n" +
 	"\x06_query\"r\n" +
 	"\x14ListMachinesResponse\x12-\n" +
 	"\bmachines\x18\x01 \x03(\v2\x11.core.MachineInfoR\bmachines\x12+\n" +
-	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"#\n" +
+	"\tpage_info\x18\x02 \x01(\v2\x0e.core.PageInfoR\bpageInfo\"?\n" +
 	"\x11GetMachineRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"A\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
+	"\bincludes\x18\x02 \x03(\tR\bincludes\"A\n" +
 	"\x12GetMachineResponse\x12+\n" +
-	"\amachine\x18\x01 \x01(\v2\x11.core.MachineInfoR\amachine\"\x99\x01\n" +
+	"\amachine\x18\x01 \x01(\v2\x11.core.MachineInfoR\amachine\"\xb5\x01\n" +
 	"\x14CreateMachineRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12#\n" +
 	"\rserial_number\x18\x02 \x01(\tR\fserialNumber\x12\x19\n" +
 	"\x05notes\x18\x03 \x01(\tH\x00R\x05notes\x88\x01\x01\x12#\n" +
-	"\rdepartment_id\x18\x04 \x01(\tR\fdepartmentIdB\b\n" +
+	"\rdepartment_id\x18\x04 \x01(\tR\fdepartmentId\x12\x1a\n" +
+	"\bincludes\x18\x05 \x03(\tR\bincludesB\b\n" +
 	"\x06_notes\"D\n" +
 	"\x15CreateMachineResponse\x12+\n" +
-	"\amachine\x18\x01 \x01(\v2\x11.core.MachineInfoR\amachine\"\xa9\x01\n" +
+	"\amachine\x18\x01 \x01(\v2\x11.core.MachineInfoR\amachine\"\xc5\x01\n" +
 	"\x14UpdateMachineRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12(\n" +
 	"\rserial_number\x18\x03 \x01(\tH\x01R\fserialNumber\x88\x01\x01\x12\x19\n" +
-	"\x05notes\x18\x04 \x01(\tH\x02R\x05notes\x88\x01\x01B\a\n" +
+	"\x05notes\x18\x04 \x01(\tH\x02R\x05notes\x88\x01\x01\x12\x1a\n" +
+	"\bincludes\x18\x05 \x03(\tR\bincludesB\a\n" +
 	"\x05_nameB\x10\n" +
 	"\x0e_serial_numberB\b\n" +
 	"\x06_notes\"D\n" +
@@ -687,26 +744,28 @@ var file_core_core_fulfillment_proto_goTypes = []any{
 var file_core_core_fulfillment_proto_depIdxs = []int32{
 	10, // 0: core.MachineInfo.created_at:type_name -> google.protobuf.Timestamp
 	10, // 1: core.MachineInfo.updated_at:type_name -> google.protobuf.Timestamp
-	0,  // 2: core.ListMachinesResponse.machines:type_name -> core.MachineInfo
-	11, // 3: core.ListMachinesResponse.page_info:type_name -> core.PageInfo
-	0,  // 4: core.GetMachineResponse.machine:type_name -> core.MachineInfo
-	0,  // 5: core.CreateMachineResponse.machine:type_name -> core.MachineInfo
-	0,  // 6: core.UpdateMachineResponse.machine:type_name -> core.MachineInfo
-	1,  // 7: core.CoreFulfillmentService.ListMachines:input_type -> core.ListMachinesRequest
-	3,  // 8: core.CoreFulfillmentService.GetMachine:input_type -> core.GetMachineRequest
-	5,  // 9: core.CoreFulfillmentService.CreateMachine:input_type -> core.CreateMachineRequest
-	7,  // 10: core.CoreFulfillmentService.UpdateMachine:input_type -> core.UpdateMachineRequest
-	9,  // 11: core.CoreFulfillmentService.DeleteMachine:input_type -> core.DeleteMachineRequest
-	2,  // 12: core.CoreFulfillmentService.ListMachines:output_type -> core.ListMachinesResponse
-	4,  // 13: core.CoreFulfillmentService.GetMachine:output_type -> core.GetMachineResponse
-	6,  // 14: core.CoreFulfillmentService.CreateMachine:output_type -> core.CreateMachineResponse
-	8,  // 15: core.CoreFulfillmentService.UpdateMachine:output_type -> core.UpdateMachineResponse
-	12, // 16: core.CoreFulfillmentService.DeleteMachine:output_type -> google.protobuf.Empty
-	12, // [12:17] is the sub-list for method output_type
-	7,  // [7:12] is the sub-list for method input_type
-	7,  // [7:7] is the sub-list for extension type_name
-	7,  // [7:7] is the sub-list for extension extendee
-	0,  // [0:7] is the sub-list for field type_name
+	10, // 2: core.MachineInfo.department_created_at:type_name -> google.protobuf.Timestamp
+	10, // 3: core.MachineInfo.department_updated_at:type_name -> google.protobuf.Timestamp
+	0,  // 4: core.ListMachinesResponse.machines:type_name -> core.MachineInfo
+	11, // 5: core.ListMachinesResponse.page_info:type_name -> core.PageInfo
+	0,  // 6: core.GetMachineResponse.machine:type_name -> core.MachineInfo
+	0,  // 7: core.CreateMachineResponse.machine:type_name -> core.MachineInfo
+	0,  // 8: core.UpdateMachineResponse.machine:type_name -> core.MachineInfo
+	1,  // 9: core.CoreFulfillmentService.ListMachines:input_type -> core.ListMachinesRequest
+	3,  // 10: core.CoreFulfillmentService.GetMachine:input_type -> core.GetMachineRequest
+	5,  // 11: core.CoreFulfillmentService.CreateMachine:input_type -> core.CreateMachineRequest
+	7,  // 12: core.CoreFulfillmentService.UpdateMachine:input_type -> core.UpdateMachineRequest
+	9,  // 13: core.CoreFulfillmentService.DeleteMachine:input_type -> core.DeleteMachineRequest
+	2,  // 14: core.CoreFulfillmentService.ListMachines:output_type -> core.ListMachinesResponse
+	4,  // 15: core.CoreFulfillmentService.GetMachine:output_type -> core.GetMachineResponse
+	6,  // 16: core.CoreFulfillmentService.CreateMachine:output_type -> core.CreateMachineResponse
+	8,  // 17: core.CoreFulfillmentService.UpdateMachine:output_type -> core.UpdateMachineResponse
+	12, // 18: core.CoreFulfillmentService.DeleteMachine:output_type -> google.protobuf.Empty
+	14, // [14:19] is the sub-list for method output_type
+	9,  // [9:14] is the sub-list for method input_type
+	9,  // [9:9] is the sub-list for extension type_name
+	9,  // [9:9] is the sub-list for extension extendee
+	0,  // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_core_core_fulfillment_proto_init() }

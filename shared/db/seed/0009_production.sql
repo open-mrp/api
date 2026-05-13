@@ -169,7 +169,7 @@ UPDATE production_step SET scanning_station_id = 'sgsn_01k0a8201zfter9hb618v43j9
 -- PRODUCTION RUN (seeded for e2e / OpenAPI list path resolution)
 -- ============================================================
 INSERT IGNORE INTO production_run (id, responsible_user_id, number, account_id, created_at, updated_at) VALUES
-    ('pnrn_01seedprod_run0000', 'us_1wjfmmbwg8l7', 'E2E-SEED-PR-001', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
+    ('pnrn_01seedprod_run0000', 'acus_s83fjhyfmqen', 'E2E-SEED-PR-001', 'ac_01k0a5smf9ekb8rqg12555zjqa', NOW(), NOW());
 
 -- ============================================================
 -- PRODUCTIONS (what each step produces)
@@ -471,40 +471,40 @@ INSERT IGNORE INTO consumption (id, item_id, quantity_id, waste_quantity_id, pro
 
 INSERT IGNORE INTO _parent_child_production_steps (A, B) VALUES
     -- Knit Large Sock → Sew Large Sock
-    ('prs_01k0a56yc1e8wag6wexn4pp8t9', 'prs_01k0a51qxceydax5036pegvzzy'),
+    ('prs_01k0a51qxceydax5036pegvzzy', 'prs_01k0a56yc1e8wag6wexn4pp8t9'),
     -- Sew Large Sock → Wash Large Sock
-    ('prs_01k0a57qbefecte8erp0mp6vqb', 'prs_01k0a56yc1e8wag6wexn4pp8t9'),
+    ('prs_01k0a56yc1e8wag6wexn4pp8t9', 'prs_01k0a57qbefecte8erp0mp6vqb'),
     -- Sew Large Sock → Dye Large Sock Beige
-    ('prs_01k0a5a2ezen9rbvh3aa97m64f', 'prs_01k0a56yc1e8wag6wexn4pp8t9'),
+    ('prs_01k0a56yc1e8wag6wexn4pp8t9', 'prs_01k0a5a2ezen9rbvh3aa97m64f'),
     -- Sew Large Sock → Dye Large Sock Black
-    ('prs_01k0a5a92wf7qrrgq893dq79pp', 'prs_01k0a56yc1e8wag6wexn4pp8t9'),
+    ('prs_01k0a56yc1e8wag6wexn4pp8t9', 'prs_01k0a5a92wf7qrrgq893dq79pp'),
     -- Knit Small Sock → Wash Small Sock
-    ('prs_01k0a57f3dfsmtzc8txbq43eth', 'prs_01k0a575j3fqr97khk36v114nj'),
+    ('prs_01k0a575j3fqr97khk36v114nj', 'prs_01k0a57f3dfsmtzc8txbq43eth'),
     -- Knit Small Sock → Dye Small Sock Beige
-    ('prs_01k0a5kr3jf9w83bqnt3y70vjy', 'prs_01k0a575j3fqr97khk36v114nj'),
+    ('prs_01k0a575j3fqr97khk36v114nj', 'prs_01k0a5kr3jf9w83bqnt3y70vjy'),
     -- Knit Small Sock → Dye Small Sock Black
-    ('prs_01k0a5m0yjfk19kf3n52bkbve6', 'prs_01k0a575j3fqr97khk36v114nj'),
+    ('prs_01k0a575j3fqr97khk36v114nj', 'prs_01k0a5m0yjfk19kf3n52bkbve6'),
     -- Wash Large Sock → Board Large White Sock
-    ('prs_01k0a5k18seysr468ykrd8fpnj', 'prs_01k0a57qbefecte8erp0mp6vqb'),
+    ('prs_01k0a57qbefecte8erp0mp6vqb', 'prs_01k0a5k18seysr468ykrd8fpnj'),
     -- Wash Small Sock → Board Small White Sock
-    ('prs_01k0a5kfpnf0gs570fjamctsca', 'prs_01k0a57f3dfsmtzc8txbq43eth'),
+    ('prs_01k0a57f3dfsmtzc8txbq43eth', 'prs_01k0a5kfpnf0gs570fjamctsca'),
     -- Dye Large Sock Beige → Board Large Beige Sock
-    ('prs_01k0a587pdene9ysk0xktc7zc7', 'prs_01k0a5a2ezen9rbvh3aa97m64f'),
+    ('prs_01k0a5a2ezen9rbvh3aa97m64f', 'prs_01k0a587pdene9ysk0xktc7zc7'),
     -- Dye Large Sock Black → Board Large Black Sock
-    ('prs_01k0a5m985fhzbasqkt6sx22a0', 'prs_01k0a5a92wf7qrrgq893dq79pp'),
+    ('prs_01k0a5a92wf7qrrgq893dq79pp', 'prs_01k0a5m985fhzbasqkt6sx22a0'),
     -- Dye Small Sock Beige → Board Small Beige Sock
-    ('prs_01k0a5mgq1fq5a9cvgev5zsf57', 'prs_01k0a5kr3jf9w83bqnt3y70vjy'),
+    ('prs_01k0a5kr3jf9w83bqnt3y70vjy', 'prs_01k0a5mgq1fq5a9cvgev5zsf57'),
     -- Dye Small Sock Black → Board Small Black Sock
-    ('prs_01k0a5ncadf1tbcb91kae06tvq', 'prs_01k0a5m0yjfk19kf3n52bkbve6'),
+    ('prs_01k0a5m0yjfk19kf3n52bkbve6', 'prs_01k0a5ncadf1tbcb91kae06tvq'),
     -- Board Large White Sock → Pack Large White Sock
-    ('prs_01k0a5nzd2f3a9cffpw38qken6', 'prs_01k0a5k18seysr468ykrd8fpnj'),
+    ('prs_01k0a5k18seysr468ykrd8fpnj', 'prs_01k0a5nzd2f3a9cffpw38qken6'),
     -- Board Large Beige Sock → Pack Large Beige Sock
-    ('prs_01k0a5nzd2fxnv34tm431kr7vv', 'prs_01k0a587pdene9ysk0xktc7zc7'),
+    ('prs_01k0a587pdene9ysk0xktc7zc7', 'prs_01k0a5nzd2fxnv34tm431kr7vv'),
     -- Board Large Black Sock → Pack Large Black Sock
-    ('prs_01k0a5nzd2e55rw1bwmt8sdwye', 'prs_01k0a5m985fhzbasqkt6sx22a0'),
+    ('prs_01k0a5m985fhzbasqkt6sx22a0', 'prs_01k0a5nzd2e55rw1bwmt8sdwye'),
     -- Board Small White Sock → Pack Small White Sock
-    ('prs_01k0a5nzd2e5fs4d3yvf8ehk41', 'prs_01k0a5kfpnf0gs570fjamctsca'),
+    ('prs_01k0a5kfpnf0gs570fjamctsca', 'prs_01k0a5nzd2e5fs4d3yvf8ehk41'),
     -- Board Small Beige Sock → Pack Small Beige Sock
-    ('prs_01k0a5nzd2ek69mct9w40w3h6c', 'prs_01k0a5mgq1fq5a9cvgev5zsf57'),
+    ('prs_01k0a5mgq1fq5a9cvgev5zsf57', 'prs_01k0a5nzd2ek69mct9w40w3h6c'),
     -- Board Small Black Sock → Pack Small Black Sock
-    ('prs_01k0a5nzd2fdw8hvff2sh4bvb3', 'prs_01k0a5ncadf1tbcb91kae06tvq');
+    ('prs_01k0a5ncadf1tbcb91kae06tvq', 'prs_01k0a5nzd2fdw8hvff2sh4bvb3');

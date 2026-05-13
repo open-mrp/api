@@ -1,3 +1,66 @@
+-- name: ListUnitGroupsForwardBase :many
+SELECT
+    ug.id,
+    ug.name,
+    ug.notes,
+    ug.unit_type_code,
+    ug.base_unit_id,
+    ug.account_id,
+    ug.created_at,
+    ug.updated_at
+FROM unit_group ug
+WHERE (ug.account_id = sqlc.arg('account_id') OR ug.account_id IS NULL)
+AND (sqlc.narg('unit_type_code') IS NULL OR ug.unit_type_code = sqlc.narg('unit_type_code'))
+AND (
+    sqlc.narg('search_query') IS NULL
+    OR ug.name LIKE sqlc.narg('search_query')
+)
+AND (
+    sqlc.narg('cursor_created_at') IS NULL
+    OR ug.created_at < sqlc.narg('cursor_created_at')
+    OR (ug.created_at = sqlc.narg('cursor_created_at') AND ug.id < sqlc.narg('cursor_id'))
+)
+ORDER BY ug.created_at DESC, ug.id DESC
+LIMIT ?;
+
+-- name: ListUnitGroupsBackwardBase :many
+SELECT
+    ug.id,
+    ug.name,
+    ug.notes,
+    ug.unit_type_code,
+    ug.base_unit_id,
+    ug.account_id,
+    ug.created_at,
+    ug.updated_at
+FROM unit_group ug
+WHERE (ug.account_id = sqlc.arg('account_id') OR ug.account_id IS NULL)
+AND (sqlc.narg('unit_type_code') IS NULL OR ug.unit_type_code = sqlc.narg('unit_type_code'))
+AND (
+    sqlc.narg('search_query') IS NULL
+    OR ug.name LIKE sqlc.narg('search_query')
+)
+AND (
+    ug.created_at > sqlc.arg('cursor_created_at')
+    OR (ug.created_at = sqlc.arg('cursor_created_at') AND ug.id > sqlc.arg('cursor_id'))
+)
+ORDER BY ug.created_at ASC, ug.id ASC
+LIMIT ?;
+
+-- name: GetUnitGroupBase :one
+SELECT
+    ug.id,
+    ug.name,
+    ug.notes,
+    ug.unit_type_code,
+    ug.base_unit_id,
+    ug.account_id,
+    ug.created_at,
+    ug.updated_at
+FROM unit_group ug
+WHERE ug.id = sqlc.arg('id')
+AND (ug.account_id = sqlc.arg('account_id') OR ug.account_id IS NULL);
+
 -- name: ListUnitGroupsForward :many
 SELECT
     ug.id,
@@ -97,6 +160,42 @@ JOIN unit u ON ug.base_unit_id = u.id
 WHERE ug.id = sqlc.arg('id')
 AND (ug.account_id = sqlc.arg('account_id') OR ug.account_id IS NULL);
 
+-- name: GetUnitGroupsByIDs :many
+SELECT
+    ug.id,
+    ug.name,
+    ug.unit_type_code,
+    ug.base_unit_id,
+    ug.created_at,
+    ug.updated_at
+FROM unit_group ug
+WHERE ug.id IN (sqlc.slice('ids'));
+
+-- name: ListUnitGroupUnitsByUnitGroupIDs :many
+SELECT
+    ugu.id,
+    ugu.unit_id,
+    ugu.unit_group_id,
+    ugu.discount_percentage,
+    ugu.discount_fixed,
+    ugu.is_visible,
+    ugu.created_at,
+    ugu.updated_at,
+    u.name AS unit_name,
+    u.abbreviation AS unit_abbreviation,
+    u.unit_dimension_code AS unit_type,
+    u.ratio_numerator AS unit_ratio_numerator,
+    u.ratio_denominator AS unit_ratio_denominator,
+    u.offset_numerator AS unit_offset_numerator,
+    u.offset_denominator AS unit_offset_denominator,
+    u.is_base_unit AS unit_is_base_unit,
+    u.created_at AS unit_created_at,
+    u.updated_at AS unit_updated_at,
+    u.account_id AS unit_account_id
+FROM unit_group_unit ugu
+JOIN unit u ON ugu.unit_id = u.id
+WHERE ugu.unit_group_id IN (sqlc.slice('unit_group_ids'));
+
 -- name: InsertUnitGroup :exec
 INSERT INTO unit_group (
     id,
@@ -136,6 +235,19 @@ AND account_id = sqlc.arg('account_id');
 SELECT COUNT(*) FROM unit_group
 WHERE name = ? AND (account_id = ? OR account_id IS NULL)
 AND (sqlc.narg('exclude_id') IS NULL OR id != sqlc.narg('exclude_id'));
+
+-- name: ListUnitGroupUnitsBase :many
+SELECT
+    ugu.id,
+    ugu.unit_id,
+    ugu.unit_group_id,
+    ugu.discount_percentage,
+    ugu.discount_fixed,
+    ugu.is_visible,
+    ugu.created_at,
+    ugu.updated_at
+FROM unit_group_unit ugu
+WHERE ugu.unit_group_id = sqlc.arg('unit_group_id');
 
 -- name: ListUnitGroupUnits :many
 SELECT
@@ -186,6 +298,20 @@ INSERT INTO unit_group_unit (
     discount_fixed = VALUES(discount_fixed),
     is_visible = VALUES(is_visible),
     updated_at = NOW(3);
+
+-- name: GetUnitGroupUnitBase :one
+SELECT
+    ugu.id,
+    ugu.unit_id,
+    ugu.unit_group_id,
+    ugu.discount_percentage,
+    ugu.discount_fixed,
+    ugu.is_visible,
+    ugu.created_at,
+    ugu.updated_at
+FROM unit_group_unit ugu
+WHERE ugu.id = sqlc.arg('id')
+AND ugu.unit_group_id = sqlc.arg('unit_group_id');
 
 -- name: GetUnitGroupUnit :one
 SELECT

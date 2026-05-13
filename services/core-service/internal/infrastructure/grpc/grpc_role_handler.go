@@ -16,7 +16,8 @@ func (h *gRPCHandler) ListRoles(ctx context.Context, req *pb.ListRolesRequest) (
 	}
 
 	params := domain.ListRolesParams{
-		Limit: req.Limit,
+		Limit:    req.Limit,
+		Includes: req.Includes,
 	}
 	if req.Cursor != "" {
 		params.Cursor = &req.Cursor
@@ -25,7 +26,7 @@ func (h *gRPCHandler) ListRoles(ctx context.Context, req *pb.ListRolesRequest) (
 		params.Query = &req.Query
 	}
 	if len(req.RoleTypeCodes) > 0 {
-		params.RoleTypeCodes = req.RoleTypeCodes
+		params.RoleTypes = req.RoleTypeCodes
 	}
 
 	result, apiErr := h.roleSvc.ListRoles(ctx, params)
@@ -54,7 +55,7 @@ func (h *gRPCHandler) GetRole(ctx context.Context, req *pb.GetRoleRequest) (*pb.
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	result, apiErr := h.roleSvc.GetRole(ctx, req.Id)
+	result, apiErr := h.roleSvc.GetRole(ctx, req.Id, req.Includes)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
@@ -178,7 +179,7 @@ func roleToProto(r *domain.Role, permissions []*pb.RolePermissionDetail) *pb.Rol
 	return &pb.RoleDetail{
 		Id:           r.ID,
 		Name:         r.Name,
-		RoleTypeCode: r.RoleTypeCode,
+		RoleTypeCode: r.RoleType,
 		AccountId:    accountID,
 		CreatedAt:    timestamppb.New(r.CreatedAt),
 		UpdatedAt:    timestamppb.New(r.UpdatedAt),

@@ -31,7 +31,7 @@ func APIKeyPresenter(key *pb.APIKeyInfo, permissions map[string]bool) apiresourc
 			ID:       *key.RoleId,
 			Object:   constants.ObjectTypeRole,
 			Name:     *key.RoleName,
-			TypeCode: constants.RoleTypeCode(*key.RoleTypeCode),
+			TypeCode: constants.RoleType(*key.RoleTypeCode),
 			Owner:    apiresource.SystemOwner(),
 		}
 		if permissions != nil {
@@ -53,6 +53,7 @@ func APIKeyCreatedPresenter(resp *pb.CreateAPIKeyResponse, permissions map[strin
 	}
 
 	return apiresource.CreatedAPIKey{
+		Object:       constants.ObjectTypeCreatedAPIKey,
 		APIKeySecret: resp.ApiKeySecret,
 		APIKeyInfo:   APIKeyPresenter(resp.ApiKey, permissions),
 	}
@@ -64,6 +65,7 @@ func APIKeyRotatedPresenter(resp *pb.RotateAPIKeyResponse, permissions map[strin
 	}
 
 	return apiresource.CreatedAPIKey{
+		Object:       constants.ObjectTypeCreatedAPIKey,
 		APIKeySecret: resp.ApiKeySecret,
 		APIKeyInfo:   APIKeyPresenter(resp.ApiKey, permissions),
 	}
@@ -75,6 +77,7 @@ func APIKeyDocPresenter(resp *pb.GetOrCreateDocAPIKeyResponse, permissions map[s
 	}
 
 	return apiresource.CreatedAPIKey{
+		Object:       constants.ObjectTypeCreatedAPIKey,
 		APIKeySecret: resp.ApiKeySecret,
 		APIKeyInfo:   APIKeyPresenter(resp.ApiKey, permissions),
 	}

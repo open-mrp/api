@@ -9,6 +9,8 @@ import (
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	ownerutil "github.com/augno/api/services/api-gateway/internal/owner"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/appctx"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
@@ -18,7 +20,7 @@ import (
 
 type RoleSvc interface {
 	ListRoles(ctx context.Context, req *ListRolesRequest) (*apiresource.List[apiresource.Role], *apierror.APIError)
-	GetRole(ctx context.Context, req *GetRoleRequest) (*apiresource.Role, *apierror.APIError)
+	GetRole(ctx context.Context, req *RetrieveRoleRequest) (*apiresource.Role, *apierror.APIError)
 	CreateRole(ctx context.Context, req *CreateRoleRequest) (*apiresource.Role, *apierror.APIError)
 	UpdateRole(ctx context.Context, req *UpdateRoleRequest) (*apiresource.Role, *apierror.APIError)
 	DeleteRole(ctx context.Context, req *DeleteRoleRequest) (*apiresource.EmptyResource, *apierror.APIError)
@@ -33,6 +35,14 @@ type roleSvcImpl struct {
 }
 
 var roleSvcTracer = tracing.GetTracer("api-gateway.endpoints.roles.service")
+
+func roleTypeCodesToStrings(codes []constants.RoleType) []string {
+	out := make([]string, len(codes))
+	for i, c := range codes {
+		out[i] = string(c)
+	}
+	return out
+}
 
 func (c *RoleSvcConfig) validate() error {
 	if c.CoreClient == nil {
@@ -65,7 +75,8 @@ func (m *roleSvcImpl) ListRoles(ctx context.Context, req *ListRolesRequest) (*ap
 		Cursor:        cursor,
 		Limit:         req.Limit,
 		Query:         query,
-		RoleTypeCodes: req.RoleType,
+		RoleTypeCodes: roleTypeCodesToStrings(req.RoleType),
+		Includes:      appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, roleSvcTracer, "service.roles.list", domain.ServiceName,
@@ -88,9 +99,10 @@ func (m *roleSvcImpl) ListRoles(ctx context.Context, req *ListRolesRequest) (*ap
 	return RoleListPresenter(resp, ownerAccount), nil
 }
 
-func (m *roleSvcImpl) GetRole(ctx context.Context, req *GetRoleRequest) (*apiresource.Role, *apierror.APIError) {
+func (m *roleSvcImpl) GetRole(ctx context.Context, req *RetrieveRoleRequest) (*apiresource.Role, *apierror.APIError) {
 	pbReq := &pb.GetRoleRequest{
-		Id: req.RoleID,
+		Id:       req.RoleID,
+		Includes: appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, roleSvcTracer, "service.roles.get", domain.ServiceName,
@@ -116,6 +128,7 @@ func (m *roleSvcImpl) CreateRole(ctx context.Context, req *CreateRoleRequest) (*
 	pbReq := &pb.CreateRoleRequest{
 		Name:        req.Name,
 		Permissions: pbPerms,
+		Includes:    appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, roleSvcTracer, "service.roles.create", domain.ServiceName,
@@ -139,8 +152,9 @@ func (m *roleSvcImpl) UpdateRole(ctx context.Context, req *UpdateRoleRequest) (*
 	}
 
 	pbReq := &pb.UpdateRoleRequest{
-		Id:   req.RoleID,
-		Name: name,
+		Id:       req.RoleID,
+		Name:     name,
+		Includes: appctx.GetRequestedIncludeKeys(ctx),
 	}
 
 	if req.Permissions != nil {

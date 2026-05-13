@@ -40,7 +40,7 @@ func (*SettlementsEndpointGroup) Materialize(config *SettlementsEndpointGroupCon
 	}
 
 	listSettlementsEndpoint := (&settlementep.ListSettlementsEndpoint{}).Materialize().WithService(inner, settlementSvc)
-	getSettlementEndpoint := (&settlementep.GetSettlementEndpoint{}).Materialize().WithService(inner, settlementSvc)
+	getSettlementEndpoint := (&settlementep.RetrieveSettlementEndpoint{}).Materialize().WithService(inner, settlementSvc)
 	createSettlementEndpoint := (&settlementep.CreateSettlementEndpoint{}).Materialize().WithService(inner, settlementSvc)
 	updateSettlementEndpoint := (&settlementep.UpdateSettlementEndpoint{}).Materialize().WithService(inner, settlementSvc)
 	deleteSettlementEndpoint := (&settlementep.DeleteSettlementEndpoint{}).Materialize().WithService(inner, settlementSvc)

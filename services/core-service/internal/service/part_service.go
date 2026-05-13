@@ -106,7 +106,7 @@ func (s *partSvcImpl) ListParts(ctx context.Context, params domain.ListPartsPara
 	return s.repos.NewPartRepo().List(ctx, params)
 }
 
-func (s *partSvcImpl) GetPart(ctx context.Context, partID string) (*domain.Part, *apierror.APIError) {
+func (s *partSvcImpl) GetPart(ctx context.Context, params domain.GetPartParams) (*domain.Part, *apierror.APIError) {
 	ctx, span := partSvcTracer.Start(ctx, "service.part.get")
 	defer span.End()
 
@@ -135,7 +135,8 @@ func (s *partSvcImpl) GetPart(ctx context.Context, partID string) (*domain.Part,
 
 	return s.repos.NewPartRepo().Get(ctx, domain.GetPartParams{
 		AccountID: identity.Target.AccountID,
-		PartID:    partID,
+		PartID:    params.PartID,
+		Includes:  params.Includes,
 	})
 }
 
@@ -280,7 +281,6 @@ func (s *partSvcImpl) CreatePart(ctx context.Context, params domain.CreatePartPa
 			if apiErr != nil {
 				return apiErr
 			}
-			result = created
 
 			// Link caller-supplied attributes to the new item (matches Dashboard behavior).
 			for _, attrID := range params.AttributeIDs {
@@ -296,12 +296,17 @@ func (s *partSvcImpl) CreatePart(ctx context.Context, params domain.CreatePartPa
 				}
 			}
 
-			changes := audit.ComputeChanges(nil, created.Item)
+			result, apiErr = txPartRepo.Get(txCtx, domain.GetPartParams{AccountID: params.AccountID, PartID: created.ID, Includes: params.Includes})
+			if apiErr != nil {
+				return apiErr
+			}
+
+			changes := audit.ComputeChanges(nil, result.Item)
 			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
 				ServiceName:  domain.ServiceName,
 				Action:       constants.AuditActionCreate,
 				ResourceType: constants.ObjectTypePart,
-				ResourceID:   created.ID,
+				ResourceID:   result.ID,
 				Changes:      changes,
 			}); apiErr != nil {
 				return apiErr
@@ -431,7 +436,7 @@ func (s *partSvcImpl) UpdatePart(ctx context.Context, params domain.UpdatePartPa
 			}
 
 			// Fetch fresh part for response.
-			updated, apiErr := txPartRepo.Get(txCtx, domain.GetPartParams{AccountID: params.AccountID, PartID: params.PartID})
+			updated, apiErr := txPartRepo.Get(txCtx, domain.GetPartParams{AccountID: params.AccountID, PartID: params.PartID, Includes: params.Includes})
 			if apiErr != nil {
 				return apiErr
 			}

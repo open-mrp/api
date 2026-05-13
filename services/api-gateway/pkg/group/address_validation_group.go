@@ -40,7 +40,7 @@ func (*AddressValidationEndpointGroup) Materialize(config *AddressValidationEndp
 	}
 
 	autocompleteEndpoint := (&addressvalidationep.AutocompleteAddressEndpoint{}).Materialize().WithService(inner, addressValidationSvc)
-	detailsEndpoint := (&addressvalidationep.GetAddressDetailsEndpoint{}).Materialize().WithService(inner, addressValidationSvc)
+	detailsEndpoint := (&addressvalidationep.RetrieveAddressDetailsEndpoint{}).Materialize().WithService(inner, addressValidationSvc)
 	validateEndpoint := (&addressvalidationep.ValidateAddressEndpoint{}).Materialize().WithService(inner, addressValidationSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{

@@ -134,6 +134,7 @@ message UpdatePickRequest {
   string id = 1;
   optional string number = 2;
   optional string finished_at = 3;
+  repeated string includes = 4;
 }
 
 message UpdatePickResponse {

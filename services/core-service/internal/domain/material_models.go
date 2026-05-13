@@ -26,6 +26,13 @@ type ListMaterialsParams struct {
 	AttributeIDs []string
 	StartDate    *time.Time
 	EndDate      *time.Time
+	Includes     []string
+}
+
+type GetMaterialParams struct {
+	AccountID  string
+	MaterialID string
+	Includes   []string
 }
 
 type ListMaterialsResult struct {
@@ -51,6 +58,7 @@ type CreateMaterialParams struct {
 	UnitCost        *CreateRateParams
 	BurnRate        *CreateRateParams
 	AttributeIDs    []string
+	Includes        []string
 }
 
 type UpdateMaterialParams struct {
@@ -63,6 +71,8 @@ type UpdateMaterialParams struct {
 	UpdateNotes       bool
 	OrderPoint        *QuantityInput
 	LeadTime          *QuantityInput
+	UnitCost          *CreateRateParams
+	Includes          []string
 }
 
 type DeleteMaterialParams struct {

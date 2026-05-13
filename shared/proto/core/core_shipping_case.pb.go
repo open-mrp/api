@@ -27,33 +27,53 @@ const (
 
 // ShippingCaseInfo represents a shipping case resource.
 type ShippingCaseInfo struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Number         string                 `protobuf:"bytes,2,opt,name=number,proto3" json:"number,omitempty"`
-	Sscc           *string                `protobuf:"bytes,3,opt,name=sscc,proto3,oneof" json:"sscc,omitempty"`
-	TrackingNumber *string                `protobuf:"bytes,4,opt,name=tracking_number,json=trackingNumber,proto3,oneof" json:"tracking_number,omitempty"`
-	ShippedAt      *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=shipped_at,json=shippedAt,proto3,oneof" json:"shipped_at,omitempty"`
-	ShipmentId     string                 `protobuf:"bytes,6,opt,name=shipment_id,json=shipmentId,proto3" json:"shipment_id,omitempty"`
-	CarrierId      string                 `protobuf:"bytes,7,opt,name=carrier_id,json=carrierId,proto3" json:"carrier_id,omitempty"`
-	CarrierName    string                 `protobuf:"bytes,8,opt,name=carrier_name,json=carrierName,proto3" json:"carrier_name,omitempty"`
-	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt      *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	state                  protoimpl.MessageState `protogen:"open.v1"`
+	Id                     string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Number                 string                 `protobuf:"bytes,2,opt,name=number,proto3" json:"number,omitempty"`
+	Sscc                   *string                `protobuf:"bytes,3,opt,name=sscc,proto3,oneof" json:"sscc,omitempty"`
+	TrackingNumber         *string                `protobuf:"bytes,4,opt,name=tracking_number,json=trackingNumber,proto3,oneof" json:"tracking_number,omitempty"`
+	ShippedAt              *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=shipped_at,json=shippedAt,proto3,oneof" json:"shipped_at,omitempty"`
+	ShipmentId             string                 `protobuf:"bytes,6,opt,name=shipment_id,json=shipmentId,proto3" json:"shipment_id,omitempty"`
+	ShipmentNumber         *string                `protobuf:"bytes,38,opt,name=shipment_number,json=shipmentNumber,proto3,oneof" json:"shipment_number,omitempty"`
+	ShipmentStatusCode     *string                `protobuf:"bytes,39,opt,name=shipment_status_code,json=shipmentStatusCode,proto3,oneof" json:"shipment_status_code,omitempty"`
+	ShipmentStatusName     *string                `protobuf:"bytes,40,opt,name=shipment_status_name,json=shipmentStatusName,proto3,oneof" json:"shipment_status_name,omitempty"`
+	ShipmentCreatedAt      *timestamppb.Timestamp `protobuf:"bytes,41,opt,name=shipment_created_at,json=shipmentCreatedAt,proto3,oneof" json:"shipment_created_at,omitempty"`
+	ShipmentUpdatedAt      *timestamppb.Timestamp `protobuf:"bytes,42,opt,name=shipment_updated_at,json=shipmentUpdatedAt,proto3,oneof" json:"shipment_updated_at,omitempty"`
+	CarrierId              string                 `protobuf:"bytes,7,opt,name=carrier_id,json=carrierId,proto3" json:"carrier_id,omitempty"`
+	CarrierName            string                 `protobuf:"bytes,8,opt,name=carrier_name,json=carrierName,proto3" json:"carrier_name,omitempty"`
+	CarrierIsPortalEnabled *bool                  `protobuf:"varint,23,opt,name=carrier_is_portal_enabled,json=carrierIsPortalEnabled,proto3,oneof" json:"carrier_is_portal_enabled,omitempty"`
+	CarrierCreatedAt       *timestamppb.Timestamp `protobuf:"bytes,24,opt,name=carrier_created_at,json=carrierCreatedAt,proto3,oneof" json:"carrier_created_at,omitempty"`
+	CarrierUpdatedAt       *timestamppb.Timestamp `protobuf:"bytes,25,opt,name=carrier_updated_at,json=carrierUpdatedAt,proto3,oneof" json:"carrier_updated_at,omitempty"`
+	CreatedAt              *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt              *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	// Freight amount quantity fields
-	FreightAmountId               string `protobuf:"bytes,11,opt,name=freight_amount_id,json=freightAmountId,proto3" json:"freight_amount_id,omitempty"`
-	FreightAmountValue            string `protobuf:"bytes,12,opt,name=freight_amount_value,json=freightAmountValue,proto3" json:"freight_amount_value,omitempty"`
-	FreightAmountUnitId           string `protobuf:"bytes,13,opt,name=freight_amount_unit_id,json=freightAmountUnitId,proto3" json:"freight_amount_unit_id,omitempty"`
-	FreightAmountUnitName         string `protobuf:"bytes,14,opt,name=freight_amount_unit_name,json=freightAmountUnitName,proto3" json:"freight_amount_unit_name,omitempty"`
-	FreightAmountUnitAbbreviation string `protobuf:"bytes,15,opt,name=freight_amount_unit_abbreviation,json=freightAmountUnitAbbreviation,proto3" json:"freight_amount_unit_abbreviation,omitempty"`
-	FreightAmountUnitType         string `protobuf:"bytes,16,opt,name=freight_amount_unit_type,json=freightAmountUnitType,proto3" json:"freight_amount_unit_type,omitempty"`
+	FreightAmountId                    string                 `protobuf:"bytes,11,opt,name=freight_amount_id,json=freightAmountId,proto3" json:"freight_amount_id,omitempty"`
+	FreightAmountValue                 string                 `protobuf:"bytes,12,opt,name=freight_amount_value,json=freightAmountValue,proto3" json:"freight_amount_value,omitempty"`
+	FreightAmountUnitId                string                 `protobuf:"bytes,13,opt,name=freight_amount_unit_id,json=freightAmountUnitId,proto3" json:"freight_amount_unit_id,omitempty"`
+	FreightAmountUnitName              string                 `protobuf:"bytes,14,opt,name=freight_amount_unit_name,json=freightAmountUnitName,proto3" json:"freight_amount_unit_name,omitempty"`
+	FreightAmountUnitAbbreviation      string                 `protobuf:"bytes,15,opt,name=freight_amount_unit_abbreviation,json=freightAmountUnitAbbreviation,proto3" json:"freight_amount_unit_abbreviation,omitempty"`
+	FreightAmountUnitType              string                 `protobuf:"bytes,16,opt,name=freight_amount_unit_type,json=freightAmountUnitType,proto3" json:"freight_amount_unit_type,omitempty"`
+	FreightAmountUnitRatioNumerator    string                 `protobuf:"bytes,26,opt,name=freight_amount_unit_ratio_numerator,json=freightAmountUnitRatioNumerator,proto3" json:"freight_amount_unit_ratio_numerator,omitempty"`
+	FreightAmountUnitRatioDenominator  string                 `protobuf:"bytes,27,opt,name=freight_amount_unit_ratio_denominator,json=freightAmountUnitRatioDenominator,proto3" json:"freight_amount_unit_ratio_denominator,omitempty"`
+	FreightAmountUnitOffsetNumerator   string                 `protobuf:"bytes,28,opt,name=freight_amount_unit_offset_numerator,json=freightAmountUnitOffsetNumerator,proto3" json:"freight_amount_unit_offset_numerator,omitempty"`
+	FreightAmountUnitOffsetDenominator string                 `protobuf:"bytes,29,opt,name=freight_amount_unit_offset_denominator,json=freightAmountUnitOffsetDenominator,proto3" json:"freight_amount_unit_offset_denominator,omitempty"`
+	FreightAmountUnitCreatedAt         *timestamppb.Timestamp `protobuf:"bytes,30,opt,name=freight_amount_unit_created_at,json=freightAmountUnitCreatedAt,proto3" json:"freight_amount_unit_created_at,omitempty"`
+	FreightAmountUnitUpdatedAt         *timestamppb.Timestamp `protobuf:"bytes,31,opt,name=freight_amount_unit_updated_at,json=freightAmountUnitUpdatedAt,proto3" json:"freight_amount_unit_updated_at,omitempty"`
 	// Freight weight quantity fields
-	FreightWeightId               string `protobuf:"bytes,17,opt,name=freight_weight_id,json=freightWeightId,proto3" json:"freight_weight_id,omitempty"`
-	FreightWeightValue            string `protobuf:"bytes,18,opt,name=freight_weight_value,json=freightWeightValue,proto3" json:"freight_weight_value,omitempty"`
-	FreightWeightUnitId           string `protobuf:"bytes,19,opt,name=freight_weight_unit_id,json=freightWeightUnitId,proto3" json:"freight_weight_unit_id,omitempty"`
-	FreightWeightUnitName         string `protobuf:"bytes,20,opt,name=freight_weight_unit_name,json=freightWeightUnitName,proto3" json:"freight_weight_unit_name,omitempty"`
-	FreightWeightUnitAbbreviation string `protobuf:"bytes,21,opt,name=freight_weight_unit_abbreviation,json=freightWeightUnitAbbreviation,proto3" json:"freight_weight_unit_abbreviation,omitempty"`
-	FreightWeightUnitType         string `protobuf:"bytes,22,opt,name=freight_weight_unit_type,json=freightWeightUnitType,proto3" json:"freight_weight_unit_type,omitempty"`
-	unknownFields                 protoimpl.UnknownFields
-	sizeCache                     protoimpl.SizeCache
+	FreightWeightId                    string                 `protobuf:"bytes,17,opt,name=freight_weight_id,json=freightWeightId,proto3" json:"freight_weight_id,omitempty"`
+	FreightWeightValue                 string                 `protobuf:"bytes,18,opt,name=freight_weight_value,json=freightWeightValue,proto3" json:"freight_weight_value,omitempty"`
+	FreightWeightUnitId                string                 `protobuf:"bytes,19,opt,name=freight_weight_unit_id,json=freightWeightUnitId,proto3" json:"freight_weight_unit_id,omitempty"`
+	FreightWeightUnitName              string                 `protobuf:"bytes,20,opt,name=freight_weight_unit_name,json=freightWeightUnitName,proto3" json:"freight_weight_unit_name,omitempty"`
+	FreightWeightUnitAbbreviation      string                 `protobuf:"bytes,21,opt,name=freight_weight_unit_abbreviation,json=freightWeightUnitAbbreviation,proto3" json:"freight_weight_unit_abbreviation,omitempty"`
+	FreightWeightUnitType              string                 `protobuf:"bytes,22,opt,name=freight_weight_unit_type,json=freightWeightUnitType,proto3" json:"freight_weight_unit_type,omitempty"`
+	FreightWeightUnitRatioNumerator    string                 `protobuf:"bytes,32,opt,name=freight_weight_unit_ratio_numerator,json=freightWeightUnitRatioNumerator,proto3" json:"freight_weight_unit_ratio_numerator,omitempty"`
+	FreightWeightUnitRatioDenominator  string                 `protobuf:"bytes,33,opt,name=freight_weight_unit_ratio_denominator,json=freightWeightUnitRatioDenominator,proto3" json:"freight_weight_unit_ratio_denominator,omitempty"`
+	FreightWeightUnitOffsetNumerator   string                 `protobuf:"bytes,34,opt,name=freight_weight_unit_offset_numerator,json=freightWeightUnitOffsetNumerator,proto3" json:"freight_weight_unit_offset_numerator,omitempty"`
+	FreightWeightUnitOffsetDenominator string                 `protobuf:"bytes,35,opt,name=freight_weight_unit_offset_denominator,json=freightWeightUnitOffsetDenominator,proto3" json:"freight_weight_unit_offset_denominator,omitempty"`
+	FreightWeightUnitCreatedAt         *timestamppb.Timestamp `protobuf:"bytes,36,opt,name=freight_weight_unit_created_at,json=freightWeightUnitCreatedAt,proto3" json:"freight_weight_unit_created_at,omitempty"`
+	FreightWeightUnitUpdatedAt         *timestamppb.Timestamp `protobuf:"bytes,37,opt,name=freight_weight_unit_updated_at,json=freightWeightUnitUpdatedAt,proto3" json:"freight_weight_unit_updated_at,omitempty"`
+	unknownFields                      protoimpl.UnknownFields
+	sizeCache                          protoimpl.SizeCache
 }
 
 func (x *ShippingCaseInfo) Reset() {
@@ -128,6 +148,41 @@ func (x *ShippingCaseInfo) GetShipmentId() string {
 	return ""
 }
 
+func (x *ShippingCaseInfo) GetShipmentNumber() string {
+	if x != nil && x.ShipmentNumber != nil {
+		return *x.ShipmentNumber
+	}
+	return ""
+}
+
+func (x *ShippingCaseInfo) GetShipmentStatusCode() string {
+	if x != nil && x.ShipmentStatusCode != nil {
+		return *x.ShipmentStatusCode
+	}
+	return ""
+}
+
+func (x *ShippingCaseInfo) GetShipmentStatusName() string {
+	if x != nil && x.ShipmentStatusName != nil {
+		return *x.ShipmentStatusName
+	}
+	return ""
+}
+
+func (x *ShippingCaseInfo) GetShipmentCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ShipmentCreatedAt
+	}
+	return nil
+}
+
+func (x *ShippingCaseInfo) GetShipmentUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ShipmentUpdatedAt
+	}
+	return nil
+}
+
 func (x *ShippingCaseInfo) GetCarrierId() string {
 	if x != nil {
 		return x.CarrierId
@@ -140,6 +195,27 @@ func (x *ShippingCaseInfo) GetCarrierName() string {
 		return x.CarrierName
 	}
 	return ""
+}
+
+func (x *ShippingCaseInfo) GetCarrierIsPortalEnabled() bool {
+	if x != nil && x.CarrierIsPortalEnabled != nil {
+		return *x.CarrierIsPortalEnabled
+	}
+	return false
+}
+
+func (x *ShippingCaseInfo) GetCarrierCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CarrierCreatedAt
+	}
+	return nil
+}
+
+func (x *ShippingCaseInfo) GetCarrierUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CarrierUpdatedAt
+	}
+	return nil
 }
 
 func (x *ShippingCaseInfo) GetCreatedAt() *timestamppb.Timestamp {
@@ -198,6 +274,48 @@ func (x *ShippingCaseInfo) GetFreightAmountUnitType() string {
 	return ""
 }
 
+func (x *ShippingCaseInfo) GetFreightAmountUnitRatioNumerator() string {
+	if x != nil {
+		return x.FreightAmountUnitRatioNumerator
+	}
+	return ""
+}
+
+func (x *ShippingCaseInfo) GetFreightAmountUnitRatioDenominator() string {
+	if x != nil {
+		return x.FreightAmountUnitRatioDenominator
+	}
+	return ""
+}
+
+func (x *ShippingCaseInfo) GetFreightAmountUnitOffsetNumerator() string {
+	if x != nil {
+		return x.FreightAmountUnitOffsetNumerator
+	}
+	return ""
+}
+
+func (x *ShippingCaseInfo) GetFreightAmountUnitOffsetDenominator() string {
+	if x != nil {
+		return x.FreightAmountUnitOffsetDenominator
+	}
+	return ""
+}
+
+func (x *ShippingCaseInfo) GetFreightAmountUnitCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.FreightAmountUnitCreatedAt
+	}
+	return nil
+}
+
+func (x *ShippingCaseInfo) GetFreightAmountUnitUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.FreightAmountUnitUpdatedAt
+	}
+	return nil
+}
+
 func (x *ShippingCaseInfo) GetFreightWeightId() string {
 	if x != nil {
 		return x.FreightWeightId
@@ -238,6 +356,48 @@ func (x *ShippingCaseInfo) GetFreightWeightUnitType() string {
 		return x.FreightWeightUnitType
 	}
 	return ""
+}
+
+func (x *ShippingCaseInfo) GetFreightWeightUnitRatioNumerator() string {
+	if x != nil {
+		return x.FreightWeightUnitRatioNumerator
+	}
+	return ""
+}
+
+func (x *ShippingCaseInfo) GetFreightWeightUnitRatioDenominator() string {
+	if x != nil {
+		return x.FreightWeightUnitRatioDenominator
+	}
+	return ""
+}
+
+func (x *ShippingCaseInfo) GetFreightWeightUnitOffsetNumerator() string {
+	if x != nil {
+		return x.FreightWeightUnitOffsetNumerator
+	}
+	return ""
+}
+
+func (x *ShippingCaseInfo) GetFreightWeightUnitOffsetDenominator() string {
+	if x != nil {
+		return x.FreightWeightUnitOffsetDenominator
+	}
+	return ""
+}
+
+func (x *ShippingCaseInfo) GetFreightWeightUnitCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.FreightWeightUnitCreatedAt
+	}
+	return nil
+}
+
+func (x *ShippingCaseInfo) GetFreightWeightUnitUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.FreightWeightUnitUpdatedAt
+	}
+	return nil
 }
 
 // Get shipping case
@@ -632,7 +792,7 @@ var File_core_core_shipping_case_proto protoreflect.FileDescriptor
 
 const file_core_core_shipping_case_proto_rawDesc = "" +
 	"\n" +
-	"\x1dcore/core_shipping_case.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\"\xe2\b\n" +
+	"\x1dcore/core_shipping_case.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\"\xc8\x16\n" +
 	"\x10ShippingCaseInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06number\x18\x02 \x01(\tR\x06number\x12\x17\n" +
@@ -641,10 +801,19 @@ const file_core_core_shipping_case_proto_rawDesc = "" +
 	"\n" +
 	"shipped_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampH\x02R\tshippedAt\x88\x01\x01\x12\x1f\n" +
 	"\vshipment_id\x18\x06 \x01(\tR\n" +
-	"shipmentId\x12\x1d\n" +
+	"shipmentId\x12,\n" +
+	"\x0fshipment_number\x18& \x01(\tH\x03R\x0eshipmentNumber\x88\x01\x01\x125\n" +
+	"\x14shipment_status_code\x18' \x01(\tH\x04R\x12shipmentStatusCode\x88\x01\x01\x125\n" +
+	"\x14shipment_status_name\x18( \x01(\tH\x05R\x12shipmentStatusName\x88\x01\x01\x12O\n" +
+	"\x13shipment_created_at\x18) \x01(\v2\x1a.google.protobuf.TimestampH\x06R\x11shipmentCreatedAt\x88\x01\x01\x12O\n" +
+	"\x13shipment_updated_at\x18* \x01(\v2\x1a.google.protobuf.TimestampH\aR\x11shipmentUpdatedAt\x88\x01\x01\x12\x1d\n" +
 	"\n" +
 	"carrier_id\x18\a \x01(\tR\tcarrierId\x12!\n" +
-	"\fcarrier_name\x18\b \x01(\tR\vcarrierName\x129\n" +
+	"\fcarrier_name\x18\b \x01(\tR\vcarrierName\x12>\n" +
+	"\x19carrier_is_portal_enabled\x18\x17 \x01(\bH\bR\x16carrierIsPortalEnabled\x88\x01\x01\x12M\n" +
+	"\x12carrier_created_at\x18\x18 \x01(\v2\x1a.google.protobuf.TimestampH\tR\x10carrierCreatedAt\x88\x01\x01\x12M\n" +
+	"\x12carrier_updated_at\x18\x19 \x01(\v2\x1a.google.protobuf.TimestampH\n" +
+	"R\x10carrierUpdatedAt\x88\x01\x01\x129\n" +
 	"\n" +
 	"created_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
@@ -655,16 +824,36 @@ const file_core_core_shipping_case_proto_rawDesc = "" +
 	"\x16freight_amount_unit_id\x18\r \x01(\tR\x13freightAmountUnitId\x127\n" +
 	"\x18freight_amount_unit_name\x18\x0e \x01(\tR\x15freightAmountUnitName\x12G\n" +
 	" freight_amount_unit_abbreviation\x18\x0f \x01(\tR\x1dfreightAmountUnitAbbreviation\x127\n" +
-	"\x18freight_amount_unit_type\x18\x10 \x01(\tR\x15freightAmountUnitType\x12*\n" +
+	"\x18freight_amount_unit_type\x18\x10 \x01(\tR\x15freightAmountUnitType\x12L\n" +
+	"#freight_amount_unit_ratio_numerator\x18\x1a \x01(\tR\x1ffreightAmountUnitRatioNumerator\x12P\n" +
+	"%freight_amount_unit_ratio_denominator\x18\x1b \x01(\tR!freightAmountUnitRatioDenominator\x12N\n" +
+	"$freight_amount_unit_offset_numerator\x18\x1c \x01(\tR freightAmountUnitOffsetNumerator\x12R\n" +
+	"&freight_amount_unit_offset_denominator\x18\x1d \x01(\tR\"freightAmountUnitOffsetDenominator\x12^\n" +
+	"\x1efreight_amount_unit_created_at\x18\x1e \x01(\v2\x1a.google.protobuf.TimestampR\x1afreightAmountUnitCreatedAt\x12^\n" +
+	"\x1efreight_amount_unit_updated_at\x18\x1f \x01(\v2\x1a.google.protobuf.TimestampR\x1afreightAmountUnitUpdatedAt\x12*\n" +
 	"\x11freight_weight_id\x18\x11 \x01(\tR\x0ffreightWeightId\x120\n" +
 	"\x14freight_weight_value\x18\x12 \x01(\tR\x12freightWeightValue\x123\n" +
 	"\x16freight_weight_unit_id\x18\x13 \x01(\tR\x13freightWeightUnitId\x127\n" +
 	"\x18freight_weight_unit_name\x18\x14 \x01(\tR\x15freightWeightUnitName\x12G\n" +
 	" freight_weight_unit_abbreviation\x18\x15 \x01(\tR\x1dfreightWeightUnitAbbreviation\x127\n" +
-	"\x18freight_weight_unit_type\x18\x16 \x01(\tR\x15freightWeightUnitTypeB\a\n" +
+	"\x18freight_weight_unit_type\x18\x16 \x01(\tR\x15freightWeightUnitType\x12L\n" +
+	"#freight_weight_unit_ratio_numerator\x18  \x01(\tR\x1ffreightWeightUnitRatioNumerator\x12P\n" +
+	"%freight_weight_unit_ratio_denominator\x18! \x01(\tR!freightWeightUnitRatioDenominator\x12N\n" +
+	"$freight_weight_unit_offset_numerator\x18\" \x01(\tR freightWeightUnitOffsetNumerator\x12R\n" +
+	"&freight_weight_unit_offset_denominator\x18# \x01(\tR\"freightWeightUnitOffsetDenominator\x12^\n" +
+	"\x1efreight_weight_unit_created_at\x18$ \x01(\v2\x1a.google.protobuf.TimestampR\x1afreightWeightUnitCreatedAt\x12^\n" +
+	"\x1efreight_weight_unit_updated_at\x18% \x01(\v2\x1a.google.protobuf.TimestampR\x1afreightWeightUnitUpdatedAtB\a\n" +
 	"\x05_ssccB\x12\n" +
 	"\x10_tracking_numberB\r\n" +
-	"\v_shipped_at\"(\n" +
+	"\v_shipped_atB\x12\n" +
+	"\x10_shipment_numberB\x17\n" +
+	"\x15_shipment_status_codeB\x17\n" +
+	"\x15_shipment_status_nameB\x16\n" +
+	"\x14_shipment_created_atB\x16\n" +
+	"\x14_shipment_updated_atB\x1c\n" +
+	"\x1a_carrier_is_portal_enabledB\x15\n" +
+	"\x13_carrier_created_atB\x15\n" +
+	"\x13_carrier_updated_at\"(\n" +
 	"\x16GetShippingCaseRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"V\n" +
 	"\x17GetShippingCaseResponse\x12;\n" +
@@ -723,24 +912,32 @@ var file_core_core_shipping_case_proto_goTypes = []any{
 	(*timestamppb.Timestamp)(nil),        // 9: google.protobuf.Timestamp
 }
 var file_core_core_shipping_case_proto_depIdxs = []int32{
-	9, // 0: core.ShippingCaseInfo.shipped_at:type_name -> google.protobuf.Timestamp
-	9, // 1: core.ShippingCaseInfo.created_at:type_name -> google.protobuf.Timestamp
-	9, // 2: core.ShippingCaseInfo.updated_at:type_name -> google.protobuf.Timestamp
-	0, // 3: core.GetShippingCaseResponse.shipping_case:type_name -> core.ShippingCaseInfo
-	0, // 4: core.UpdateShippingCaseResponse.shipping_case:type_name -> core.ShippingCaseInfo
-	1, // 5: core.CoreShippingCaseService.GetShippingCase:input_type -> core.GetShippingCaseRequest
-	3, // 6: core.CoreShippingCaseService.UpdateShippingCase:input_type -> core.UpdateShippingCaseRequest
-	5, // 7: core.CoreShippingCaseService.DeleteShippingCase:input_type -> core.DeleteShippingCaseRequest
-	7, // 8: core.CoreShippingCaseService.GetShippingCaseLabel:input_type -> core.GetShippingCaseLabelRequest
-	2, // 9: core.CoreShippingCaseService.GetShippingCase:output_type -> core.GetShippingCaseResponse
-	4, // 10: core.CoreShippingCaseService.UpdateShippingCase:output_type -> core.UpdateShippingCaseResponse
-	6, // 11: core.CoreShippingCaseService.DeleteShippingCase:output_type -> core.DeleteShippingCaseResponse
-	8, // 12: core.CoreShippingCaseService.GetShippingCaseLabel:output_type -> core.GetShippingCaseLabelResponse
-	9, // [9:13] is the sub-list for method output_type
-	5, // [5:9] is the sub-list for method input_type
-	5, // [5:5] is the sub-list for extension type_name
-	5, // [5:5] is the sub-list for extension extendee
-	0, // [0:5] is the sub-list for field type_name
+	9,  // 0: core.ShippingCaseInfo.shipped_at:type_name -> google.protobuf.Timestamp
+	9,  // 1: core.ShippingCaseInfo.shipment_created_at:type_name -> google.protobuf.Timestamp
+	9,  // 2: core.ShippingCaseInfo.shipment_updated_at:type_name -> google.protobuf.Timestamp
+	9,  // 3: core.ShippingCaseInfo.carrier_created_at:type_name -> google.protobuf.Timestamp
+	9,  // 4: core.ShippingCaseInfo.carrier_updated_at:type_name -> google.protobuf.Timestamp
+	9,  // 5: core.ShippingCaseInfo.created_at:type_name -> google.protobuf.Timestamp
+	9,  // 6: core.ShippingCaseInfo.updated_at:type_name -> google.protobuf.Timestamp
+	9,  // 7: core.ShippingCaseInfo.freight_amount_unit_created_at:type_name -> google.protobuf.Timestamp
+	9,  // 8: core.ShippingCaseInfo.freight_amount_unit_updated_at:type_name -> google.protobuf.Timestamp
+	9,  // 9: core.ShippingCaseInfo.freight_weight_unit_created_at:type_name -> google.protobuf.Timestamp
+	9,  // 10: core.ShippingCaseInfo.freight_weight_unit_updated_at:type_name -> google.protobuf.Timestamp
+	0,  // 11: core.GetShippingCaseResponse.shipping_case:type_name -> core.ShippingCaseInfo
+	0,  // 12: core.UpdateShippingCaseResponse.shipping_case:type_name -> core.ShippingCaseInfo
+	1,  // 13: core.CoreShippingCaseService.GetShippingCase:input_type -> core.GetShippingCaseRequest
+	3,  // 14: core.CoreShippingCaseService.UpdateShippingCase:input_type -> core.UpdateShippingCaseRequest
+	5,  // 15: core.CoreShippingCaseService.DeleteShippingCase:input_type -> core.DeleteShippingCaseRequest
+	7,  // 16: core.CoreShippingCaseService.GetShippingCaseLabel:input_type -> core.GetShippingCaseLabelRequest
+	2,  // 17: core.CoreShippingCaseService.GetShippingCase:output_type -> core.GetShippingCaseResponse
+	4,  // 18: core.CoreShippingCaseService.UpdateShippingCase:output_type -> core.UpdateShippingCaseResponse
+	6,  // 19: core.CoreShippingCaseService.DeleteShippingCase:output_type -> core.DeleteShippingCaseResponse
+	8,  // 20: core.CoreShippingCaseService.GetShippingCaseLabel:output_type -> core.GetShippingCaseLabelResponse
+	17, // [17:21] is the sub-list for method output_type
+	13, // [13:17] is the sub-list for method input_type
+	13, // [13:13] is the sub-list for extension type_name
+	13, // [13:13] is the sub-list for extension extendee
+	0,  // [0:13] is the sub-list for field type_name
 }
 
 func init() { file_core_core_shipping_case_proto_init() }

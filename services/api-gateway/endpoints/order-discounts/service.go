@@ -15,7 +15,7 @@ import (
 
 type OrderDiscountSvc interface {
 	ListOrderDiscounts(ctx context.Context, req *ListOrderDiscountsRequest) (*apiresource.List[apiresource.OrderDiscount], *apierror.APIError)
-	GetOrderDiscount(ctx context.Context, req *GetOrderDiscountRequest) (*apiresource.OrderDiscount, *apierror.APIError)
+	GetOrderDiscount(ctx context.Context, req *RetrieveOrderDiscountRequest) (*apiresource.OrderDiscount, *apierror.APIError)
 	CreateOrderDiscount(ctx context.Context, req *CreateOrderDiscountRequest) (*apiresource.OrderDiscount, *apierror.APIError)
 	UpdateOrderDiscount(ctx context.Context, req *UpdateOrderDiscountRequest) (*apiresource.OrderDiscount, *apierror.APIError)
 	DeleteOrderDiscount(ctx context.Context, req *DeleteOrderDiscountRequest) (*apiresource.OrderDiscount, *apierror.APIError)
@@ -68,7 +68,7 @@ func (m *orderDiscountSvcImpl) ListOrderDiscounts(ctx context.Context, req *List
 	return OrderDiscountListPresenter(resp), nil
 }
 
-func (m *orderDiscountSvcImpl) GetOrderDiscount(ctx context.Context, req *GetOrderDiscountRequest) (*apiresource.OrderDiscount, *apierror.APIError) {
+func (m *orderDiscountSvcImpl) GetOrderDiscount(ctx context.Context, req *RetrieveOrderDiscountRequest) (*apiresource.OrderDiscount, *apierror.APIError) {
 	pbReq := &pb.GetOrderDiscountRequest{
 		Id: req.OrderDiscountID,
 	}

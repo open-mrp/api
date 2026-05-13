@@ -47,7 +47,7 @@ func (*RegistrationSessionsEndpointGroup) Materialize(config *RegistrationSessio
 	createSessionEndpoint := (&regsessionep.CreateSessionEndpoint{}).Materialize().WithMiddleware(authMw).WithService(inner, svc)
 	resendEmailEndpoint := (&regsessionep.ResendEmailEndpoint{}).Materialize().WithMiddleware(authMw).WithService(inner, svc)
 	verifyTokenEndpoint := (&regsessionep.VerifyTokenEndpoint{}).Materialize().WithMiddleware(authMw).WithService(inner, svc)
-	getSessionEndpoint := (&regsessionep.GetSessionEndpoint{}).Materialize().WithMiddleware(authMw).WithService(inner, svc)
+	getSessionEndpoint := (&regsessionep.RetrieveSessionEndpoint{}).Materialize().WithMiddleware(authMw).WithService(inner, svc)
 	createUserEndpoint := (&regsessionep.CreateUserEndpoint{}).Materialize().WithMiddleware(authMw).WithService(inner, svc)
 	updateSessionEndpoint := (&regsessionep.UpdateSessionEndpoint{}).Materialize().WithMiddleware(authMw).WithService(inner, svc)
 	listSessionsEndpoint := (&regsessionep.ListSessionsEndpoint{}).Materialize().WithMiddleware(authMw).WithService(inner, svc)

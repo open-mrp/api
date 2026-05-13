@@ -158,6 +158,7 @@ message ListRolesRequest {
   int32 limit = 2;
   string query = 3;
   repeated string role_type_codes = 4;
+  repeated string includes = 5;
 }
 message ListRolesResponse {
   repeated RoleDetail roles = 1;
@@ -165,6 +166,7 @@ message ListRolesResponse {
 }
 message GetRoleRequest {
   string id = 1;
+  repeated string includes = 2;
 }
 message GetRoleResponse {
   RoleDetail role = 1;
@@ -179,6 +181,7 @@ message CreateRolePermissionInput {
 message CreateRoleRequest {
   string name = 1;
   repeated CreateRolePermissionInput permissions = 2;
+  repeated string includes = 3;
 }
 message CreateRoleResponse {
   RoleDetail role = 1;
@@ -190,6 +193,7 @@ message UpdateRoleRequest {
   bool has_permissions = 3;
   // Only applied when has_permissions is true.
   repeated CreateRolePermissionInput permissions = 4;
+  repeated string includes = 5;
 }
 message UpdateRoleResponse {
   RoleDetail role = 1;
@@ -243,6 +247,8 @@ message SandboxInfo {
   google.protobuf.Timestamp updated_at = 4;
   optional string owner_account_id = 5;
   optional string owner_account_name = 6;
+  optional google.protobuf.Timestamp owner_account_created_at = 7;
+  optional google.protobuf.Timestamp owner_account_updated_at = 8;
 }
 message UpdateAccountSubscriptionRequest {
   string account_id = 1;
@@ -412,20 +418,30 @@ message CustomerCarrierProto {
   string id = 1;
   string name = 2;
   bool is_portal_enabled = 3;
+  optional google.protobuf.Timestamp created_at = 4;
+  optional google.protobuf.Timestamp updated_at = 5;
 }
 message CustomerServiceLevelProto {
   string id = 1;
   string name = 2;
+  optional string service_level_token = 3;
+  optional bool is_portal_enabled = 4;
+  optional google.protobuf.Timestamp created_at = 5;
+  optional google.protobuf.Timestamp updated_at = 6;
 }
 message CustomerPaymentTermProto {
   string id = 1;
   string name = 2;
   bool is_active = 3;
+  optional google.protobuf.Timestamp created_at = 4;
+  optional google.protobuf.Timestamp updated_at = 5;
 }
 message CustomerShippingTermProto {
   string id = 1;
   string name = 2;
   string type = 3;
+  optional google.protobuf.Timestamp created_at = 4;
+  optional google.protobuf.Timestamp updated_at = 5;
 }
 message CustomerPriorityProto {
   string id = 1;
@@ -438,10 +454,15 @@ message CustomerAccountGroupProto {
   string commission_policy = 3;
   string freight_policy = 4;
   string type = 5;
+  optional google.protobuf.Timestamp created_at = 6;
+  optional google.protobuf.Timestamp updated_at = 7;
 }
 message CustomerUserProto {
   string id = 1;
   optional string name = 2;
+  optional string status = 3;
+  optional google.protobuf.Timestamp created_at = 4;
+  optional google.protobuf.Timestamp updated_at = 5;
 }
 message CustomerAddressProto {
   string id = 1;
@@ -466,6 +487,8 @@ message CustomerLightCustomerProto {
   string id = 1;
   string name = 2;
   string number = 3;
+  optional google.protobuf.Timestamp created_at = 4;
+  optional google.protobuf.Timestamp updated_at = 5;
 }
 message CustomerCreditLimitProto {
   string id = 1;
@@ -536,7 +559,7 @@ message CreateCustomerRequest {
   optional string default_payment_term_id = 13;
   optional string default_shipping_term_id = 14;
   optional string default_priority_code = 15;
-  optional string default_sales_rep_user_id = 16;
+  optional string default_sales_rep_id = 16;
   optional string bill_to_address_id = 17;
   optional string ship_to_address_id = 18;
   repeated string customer_price_group_ids = 19;
@@ -547,6 +570,7 @@ message CreateCustomerRequest {
   optional CreateCustomerAddressInput ship_to_address = 24;
   optional string credit_limit_value = 25;
   optional string credit_limit_unit_id = 26;
+  repeated string includes = 27;
 }
 message CreateCustomerResponse {
   CustomerProto customer = 1;
@@ -568,7 +592,7 @@ message UpdateCustomerRequest {
   optional string default_payment_term_id = 14;
   optional string default_shipping_term_id = 15;
   optional string default_priority_code = 16;
-  optional string default_sales_rep_user_id = 17;
+  optional string default_sales_rep_id = 17;
   optional string bill_to_address_id = 18;
   optional string ship_to_address_id = 19;
   repeated string customer_price_group_ids = 20;
@@ -578,6 +602,7 @@ message UpdateCustomerRequest {
   bool has_customer_price_group_ids = 24;
   optional string credit_limit_value = 25;
   optional string credit_limit_unit_id = 26;
+  repeated string includes = 27;
 }
 message UpdateCustomerResponse {
   CustomerProto customer = 1;
@@ -604,6 +629,7 @@ message GetFrequentlyOrderedProductsResponse {
 message MergeCustomersRequest {
   string target_customer_id = 1;
   repeated string source_customer_ids = 2;
+  repeated string includes = 3;
 }
 message MergeCustomersResponse {
   CustomerProto customer = 1;

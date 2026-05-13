@@ -20,8 +20,8 @@ INSERT IGNORE INTO account_group (id, owner_account_id, name, account_group_type
     ('acgp_01k0a413mjeth8pe1g70t0thax', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'DME', 'type_group', 'commission_applied', 'billed_freight', NOW(), NOW());
 
 -- Account relation (customer relationship)
-INSERT IGNORE INTO account_relation (id, owner_account_id, counterparty_account_id, account_relation_role_code, external_number, is_edi_enabled, priority_code, account_status_code, commission_status_code, freight_status_code, shipping_term_id, payment_term_id, account_group_id, default_billing_address_id, default_shipping_address_id, default_carrier_id, created_at, updated_at) VALUES
-    ('acre_01seedcustomer00000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k09wm2fgevdsc344gpbcj30f', 'customer', '45678', 0, 'normal', 'normal', 'commission_applied', 'billed_freight', 'prepaid_billed', 'pytm_01seednet3000000', 'acgp_01k0a413mjeth8pe1g70t0thax', 'ad_01k09wnac0e1ar211e0sy0ba4g', 'ad_01k09wnpvrea0awz7vem2j8j7g', 'delivery', NOW(), NOW());
+INSERT IGNORE INTO account_relation (id, owner_account_id, counterparty_account_id, account_relation_role_code, external_number, is_edi_enabled, priority_code, account_status_code, commission_status_code, freight_status_code, shipping_term_id, payment_term_id, account_group_id, default_billing_address_id, default_shipping_address_id, default_carrier_id, default_sales_rep_id, created_at, updated_at) VALUES
+    ('acre_01seedcustomer00000', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'ac_01k09wm2fgevdsc344gpbcj30f', 'customer', '45678', 0, 'normal', 'normal', 'commission_applied', 'billed_freight', 'prepaid_billed', 'pytm_01seednet3000000', 'acgp_01k0a413mjeth8pe1g70t0thax', 'ad_01k09wnac0e1ar211e0sy0ba4g', 'ad_01k09wnpvrea0awz7vem2j8j7g', 'delivery', 'acus_s83fjhyfmqen', NOW(), NOW());
 
 -- Account-address associations (link addresses to customer account)
 INSERT IGNORE INTO account_address (id, account_id, address_id, created_at, updated_at) VALUES

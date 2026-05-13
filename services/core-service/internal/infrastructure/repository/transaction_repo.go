@@ -363,6 +363,16 @@ func mapForwardTransactionRow(row sqlc.ListTransactionsForwardRow) *domain.Trans
 	if row.CustomerNumber != "" {
 		s.CustomerNumber = &row.CustomerNumber
 	}
+	if row.CustomerStatus.Valid {
+		s.CustomerStatusCode = &row.CustomerStatus.String
+	}
+	if row.CustomerCommissionPolicy.Valid {
+		s.CustomerCommissionPolicy = &row.CustomerCommissionPolicy.String
+	}
+	customerCreatedAt := row.CustomerCreatedAt
+	s.CustomerCreatedAt = &customerCreatedAt
+	customerUpdatedAt := row.CustomerUpdatedAt
+	s.CustomerUpdatedAt = &customerUpdatedAt
 
 	if row.TransactionMethodID.Valid {
 		s.TransactionMethodID = &row.TransactionMethodID.String
@@ -409,6 +419,16 @@ func mapBackwardTransactionRow(row sqlc.ListTransactionsBackwardRow) *domain.Tra
 	if row.CustomerNumber != "" {
 		s.CustomerNumber = &row.CustomerNumber
 	}
+	if row.CustomerStatus.Valid {
+		s.CustomerStatusCode = &row.CustomerStatus.String
+	}
+	if row.CustomerCommissionPolicy.Valid {
+		s.CustomerCommissionPolicy = &row.CustomerCommissionPolicy.String
+	}
+	customerCreatedAt := row.CustomerCreatedAt
+	s.CustomerCreatedAt = &customerCreatedAt
+	customerUpdatedAt := row.CustomerUpdatedAt
+	s.CustomerUpdatedAt = &customerUpdatedAt
 
 	if row.TransactionMethodID.Valid {
 		s.TransactionMethodID = &row.TransactionMethodID.String
@@ -470,6 +490,16 @@ func mapTransactionRow(row sqlc.FindTransactionByIDRow) *domain.Transaction {
 	if row.CustomerNumber != "" {
 		t.CustomerNumber = &row.CustomerNumber
 	}
+	if row.CustomerStatus.Valid {
+		t.CustomerStatusCode = &row.CustomerStatus.String
+	}
+	if row.CustomerCommissionPolicy.Valid {
+		t.CustomerCommissionPolicy = &row.CustomerCommissionPolicy.String
+	}
+	customerCreatedAt := row.CustomerCreatedAt
+	t.CustomerCreatedAt = &customerCreatedAt
+	customerUpdatedAt := row.CustomerUpdatedAt
+	t.CustomerUpdatedAt = &customerUpdatedAt
 
 	if row.ResponsibleUserID.Valid {
 		t.ResponsibleUserID = &row.ResponsibleUserID.String
@@ -478,6 +508,16 @@ func mapTransactionRow(row sqlc.FindTransactionByIDRow) *domain.Transaction {
 	if name != "" {
 		t.ResponsibleUserName = &name
 	}
+	if row.ResponsibleUserStatus.Valid {
+		t.ResponsibleUserStatusCode = &row.ResponsibleUserStatus.String
+	}
+	if row.ResponsibleUserCreatedAt.Valid {
+		t.ResponsibleUserCreatedAt = &row.ResponsibleUserCreatedAt.Time
+	}
+	if row.ResponsibleUserUpdatedAt.Valid {
+		t.ResponsibleUserUpdatedAt = &row.ResponsibleUserUpdatedAt.Time
+	}
+
 	if row.Note.Valid {
 		t.Note = &row.Note.String
 	}
@@ -732,6 +772,17 @@ func mapAccountTransactionForwardRow(row sqlc.ListAccountTransactionsForwardRow)
 	if row.CustomerNumber != "" {
 		t.CustomerNumber = &row.CustomerNumber
 	}
+	if row.CustomerStatus.Valid {
+		t.CustomerStatusCode = &row.CustomerStatus.String
+	}
+	if row.CustomerCommissionPolicy.Valid {
+		t.CustomerCommissionPolicy = &row.CustomerCommissionPolicy.String
+	}
+	customerCreatedAt := row.CustomerCreatedAt
+	t.CustomerCreatedAt = &customerCreatedAt
+	customerUpdatedAt := row.CustomerUpdatedAt
+	t.CustomerUpdatedAt = &customerUpdatedAt
+
 	if row.ResponsibleUserID.Valid {
 		t.ResponsibleUserID = &row.ResponsibleUserID.String
 	}
@@ -739,6 +790,16 @@ func mapAccountTransactionForwardRow(row sqlc.ListAccountTransactionsForwardRow)
 	if name != "" {
 		t.ResponsibleUserName = &name
 	}
+	if row.ResponsibleUserStatus.Valid {
+		t.ResponsibleUserStatusCode = &row.ResponsibleUserStatus.String
+	}
+	if row.ResponsibleUserCreatedAt.Valid {
+		t.ResponsibleUserCreatedAt = &row.ResponsibleUserCreatedAt.Time
+	}
+	if row.ResponsibleUserUpdatedAt.Valid {
+		t.ResponsibleUserUpdatedAt = &row.ResponsibleUserUpdatedAt.Time
+	}
+
 	if row.Note.Valid {
 		t.Note = &row.Note.String
 	}
@@ -790,6 +851,17 @@ func mapAccountTransactionBackwardRow(row sqlc.ListAccountTransactionsBackwardRo
 	if row.CustomerNumber != "" {
 		t.CustomerNumber = &row.CustomerNumber
 	}
+	if row.CustomerStatus.Valid {
+		t.CustomerStatusCode = &row.CustomerStatus.String
+	}
+	if row.CustomerCommissionPolicy.Valid {
+		t.CustomerCommissionPolicy = &row.CustomerCommissionPolicy.String
+	}
+	customerCreatedAt := row.CustomerCreatedAt
+	t.CustomerCreatedAt = &customerCreatedAt
+	customerUpdatedAt := row.CustomerUpdatedAt
+	t.CustomerUpdatedAt = &customerUpdatedAt
+
 	if row.ResponsibleUserID.Valid {
 		t.ResponsibleUserID = &row.ResponsibleUserID.String
 	}
@@ -797,6 +869,16 @@ func mapAccountTransactionBackwardRow(row sqlc.ListAccountTransactionsBackwardRo
 	if name != "" {
 		t.ResponsibleUserName = &name
 	}
+	if row.ResponsibleUserStatus.Valid {
+		t.ResponsibleUserStatusCode = &row.ResponsibleUserStatus.String
+	}
+	if row.ResponsibleUserCreatedAt.Valid {
+		t.ResponsibleUserCreatedAt = &row.ResponsibleUserCreatedAt.Time
+	}
+	if row.ResponsibleUserUpdatedAt.Valid {
+		t.ResponsibleUserUpdatedAt = &row.ResponsibleUserUpdatedAt.Time
+	}
+
 	if row.Note.Valid {
 		t.Note = &row.Note.String
 	}

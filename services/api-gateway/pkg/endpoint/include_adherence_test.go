@@ -71,7 +71,7 @@ func TestIncludeRegistry_AllExpandableFieldsRegistered(t *testing.T) {
 	t.Parallel()
 	for objectType, resource := range resourceRegistry {
 		rt := reflect.TypeOf(resource)
-		if rt.Kind() == reflect.Ptr {
+		if rt.Kind() == reflect.Pointer {
 			rt = rt.Elem()
 		}
 

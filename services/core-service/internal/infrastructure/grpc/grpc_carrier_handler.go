@@ -44,9 +44,10 @@ func (h *gRPCHandler) ListCarriers(ctx context.Context, req *pb.ListCarriersRequ
 	}
 
 	params := domain.ListCarriersParams{
-		Cursor: req.Cursor,
-		Limit:  req.Limit,
-		Query:  req.Query,
+		Cursor:   req.Cursor,
+		Limit:    req.Limit,
+		Query:    req.Query,
+		Includes: req.Includes,
 	}
 
 	result, apiErr := h.carrierSvc.ListCarriers(ctx, params)
@@ -75,7 +76,10 @@ func (h *gRPCHandler) GetCarrier(ctx context.Context, req *pb.GetCarrierRequest)
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
-	carrier, apiErr := h.carrierSvc.GetCarrier(ctx, req.Id)
+	carrier, apiErr := h.carrierSvc.GetCarrier(ctx, domain.GetCarrierParams{
+		CarrierID: req.Id,
+		Includes:  req.Includes,
+	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
@@ -98,6 +102,7 @@ func (h *gRPCHandler) CreateCarrier(ctx context.Context, req *pb.CreateCarrierRe
 		Code:            req.Code,
 		AccountNumber:   req.AccountNumber,
 		IsPortalEnabled: req.IsPortalEnabled,
+		Includes:        req.Includes,
 	}
 
 	carrier, apiErr := h.carrierSvc.CreateCarrier(ctx, params)
@@ -122,6 +127,7 @@ func (h *gRPCHandler) UpdateCarrier(ctx context.Context, req *pb.UpdateCarrierRe
 		CarrierID:       req.Id,
 		Name:            req.Name,
 		IsPortalEnabled: req.IsPortalEnabled,
+		Includes:        req.Includes,
 	}
 
 	carrier, apiErr := h.carrierSvc.UpdateCarrier(ctx, params)

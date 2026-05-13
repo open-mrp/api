@@ -15,15 +15,15 @@ import (
 // Request to create a sales order.
 type CreateSalesOrderRequest struct {
 	// Buyer account ID.
-	BuyerAccountID string `json:"buyer_account_id" validate:"required,max=191"`
+	BuyerAccountID string `json:"buyer_account_id" validate:"required"`
 	// Customer purchase order number.
 	CustomerPONumber *string `json:"customer_po_number,omitempty" validate:"omitempty,max=255"`
 	// Order note.
 	Note *string `json:"note,omitempty"`
 	// Carrier ID.
-	CarrierID *string `json:"carrier_id,omitempty" validate:"omitempty,max=191"`
+	CarrierID *string `json:"carrier_id,omitempty" validate:"omitempty"`
 	// Service level ID.
-	ServiceLevelID *string `json:"service_level_id,omitempty" validate:"omitempty,max=191"`
+	ServiceLevelID *string `json:"service_level_id,omitempty" validate:"omitempty"`
 	// Carrier billing type.
 	CarrierBillingType *string `json:"carrier_billing_type,omitempty" validate:"omitempty,max=255"`
 	// Carrier billing account number.
@@ -31,15 +31,15 @@ type CreateSalesOrderRequest struct {
 	// Priority code.
 	PriorityCode string `json:"priority_code" validate:"required,max=255"`
 	// Sales rep ID.
-	SalesRepID *string `json:"sales_rep_id,omitempty" validate:"omitempty,max=191"`
+	SalesRepID *string `json:"sales_rep_id,omitempty" validate:"omitempty"`
 	// Shipping term ID.
-	ShippingTermID *string `json:"shipping_term_id,omitempty" validate:"omitempty,max=191"`
+	ShippingTermID *string `json:"shipping_term_id,omitempty" validate:"omitempty"`
 	// Sales order type code.
 	SalesOrderTypeCode string `json:"sales_order_type_code" validate:"required,max=255"`
 	// Payment term ID.
-	PaymentTermID *string `json:"payment_term_id,omitempty" validate:"omitempty,max=191"`
+	PaymentTermID *string `json:"payment_term_id,omitempty" validate:"omitempty"`
 	// Order discount ID.
-	OrderDiscountID *string `json:"order_discount_id,omitempty" validate:"omitempty,max=191"`
+	OrderDiscountID *string `json:"order_discount_id,omitempty" validate:"omitempty"`
 	// Bill-to address name.
 	BillToName *string `json:"bill_to_name,omitempty" validate:"omitempty,max=255"`
 	// Bill-to street line 1.
@@ -80,13 +80,13 @@ type CreateSalesOrderRequest struct {
 type CreateSalesOrderLineInput struct {
 	apirequest.OrderLineInput
 	// EDI line item ID.
-	EdiLineItemID *string `json:"edi_line_item_id,omitempty" validate:"omitempty,max=191"`
+	EdiLineItemID *string `json:"edi_line_item_id,omitempty" validate:"omitempty"`
 }
 
 // SalesOrderEmailContactInput represents an account user subscribed to a sales-order email notification type.
 type SalesOrderEmailContactInput struct {
 	// Account user ID to receive the notification.
-	AccountUserID string `json:"account_user_id" validate:"required,max=191"`
+	AccountUserID string `json:"account_user_id" validate:"required"`
 }
 
 var sampleCreateSONote = "Rush order for trade show"

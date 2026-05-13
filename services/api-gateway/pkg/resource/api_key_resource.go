@@ -27,7 +27,7 @@ type APIKey struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=api_key"`
 	// Human-readable name for the API key.
 	Name string `json:"name" validate:"required"`
-	// Redacted key value.
+	// Redacted key value safe for display.
 	RedactedValue string `json:"redacted_value" validate:"required"`
 	// Assigned role.
 	Role *Role `json:"role" expandable:"true"`
@@ -45,6 +45,8 @@ type APIKey struct {
 
 // Result of creating an API key, with the full secret value.
 type CreatedAPIKey struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=created_api_key"`
 	// Full secret value. Returned once and cannot be retrieved later.
 	APIKeySecret string `json:"api_key_secret" validate:"required"`
 	// API key metadata.
@@ -65,6 +67,7 @@ var SampleAPIKey = &APIKey{
 }
 
 var SampleCreatedAPIKey = &CreatedAPIKey{
+	Object:       constants.ObjectTypeCreatedAPIKey,
 	APIKeySecret: SampleProdAPIKeyValue,
 	APIKeyInfo:   *SampleAPIKey,
 }

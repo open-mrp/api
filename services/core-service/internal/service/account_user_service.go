@@ -163,7 +163,7 @@ func (s *accountUserSvcImpl) ListAccountUsers(ctx context.Context, params domain
 }
 
 // GetAccountUser returns a single account user by account_user ID.
-func (s *accountUserSvcImpl) GetAccountUser(ctx context.Context, accountUserID string) (*domain.AccountUserDetail, *apierror.APIError) {
+func (s *accountUserSvcImpl) GetAccountUser(ctx context.Context, accountUserID string, includes []string) (*domain.AccountUserDetail, *apierror.APIError) {
 	ctx, span := accountUserSvcTracer.Start(ctx, "service.account_user.get")
 	defer span.End()
 
@@ -190,7 +190,7 @@ func (s *accountUserSvcImpl) GetAccountUser(ctx context.Context, accountUserID s
 		}
 	}
 
-	detail, apiErr := s.repos.NewAccountUserRepo().GetDetailByAccountAndID(ctx, identity.Target.AccountID, accountUserID)
+	detail, apiErr := s.repos.NewAccountUserRepo().GetDetailByAccountAndID(ctx, identity.Target.AccountID, accountUserID, includes)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -289,7 +289,7 @@ func (s *accountUserSvcImpl) CreateAccountUser(ctx context.Context, params domai
 
 			// Scanning station users must always use the scanner role, regardless of what was provided.
 			if isScanningStation {
-				scannerRole, apiErr := txRoleRepo.FindByTypeCode(txCtx, string(constants.RoleTypeCodeScanner), params.AccountID)
+				scannerRole, apiErr := txRoleRepo.FindByTypeCode(txCtx, string(constants.RoleTypeScanner), params.AccountID)
 				if apiErr != nil {
 					return apiErr
 				}
@@ -304,8 +304,8 @@ func (s *accountUserSvcImpl) CreateAccountUser(ctx context.Context, params domai
 				if apiErr != nil {
 					return apiErr
 				}
-				if providedRole.RoleTypeCode == string(constants.RoleTypeCodeSalesRep) {
-					salesRepRole, apiErr := txRoleRepo.FindByTypeCode(txCtx, string(constants.RoleTypeCodeSalesRep), params.AccountID)
+				if providedRole.RoleType == string(constants.RoleTypeSalesRep) {
+					salesRepRole, apiErr := txRoleRepo.FindByTypeCode(txCtx, string(constants.RoleTypeSalesRep), params.AccountID)
 					if apiErr != nil {
 						return apiErr
 					}
@@ -470,7 +470,7 @@ func (s *accountUserSvcImpl) CreateAccountUser(ctx context.Context, params domai
 			}
 
 			// Fetch the created detail for response.
-			detail, apiErr := txAccountUserRepo.GetDetailByAccountAndID(txCtx, params.AccountID, accountUserID)
+			detail, apiErr := txAccountUserRepo.GetDetailByAccountAndID(txCtx, params.AccountID, accountUserID, nil)
 			if apiErr != nil {
 				return apiErr
 			}
@@ -505,7 +505,7 @@ func (s *accountUserSvcImpl) CreateAccountUser(ctx context.Context, params domai
 }
 
 // UpdateAccountUser partially updates an account user with idempotency support.
-func (s *accountUserSvcImpl) UpdateAccountUser(ctx context.Context, params domain.UpdateAccountUserParams) (*domain.AccountUserDetail, *apierror.APIError) {
+func (s *accountUserSvcImpl) UpdateAccountUser(ctx context.Context, params domain.UpdateAccountUserParams, includes []string) (*domain.AccountUserDetail, *apierror.APIError) {
 	ctx, span := accountUserSvcTracer.Start(ctx, "service.account_user.update")
 	defer span.End()
 
@@ -520,8 +520,8 @@ func (s *accountUserSvcImpl) UpdateAccountUser(ctx context.Context, params domai
 
 	params.AccountID = identity.Target.AccountID
 
-	// Resolve the account user to check self-edit and get the user ID.
-	accountUserDetail, apiErr := s.repos.NewAccountUserRepo().GetDetailByAccountAndID(ctx, params.AccountID, params.AccountUserID)
+	// Resolve the account user to check self-edit and get the user ID (no includes needed for validation).
+	accountUserDetail, apiErr := s.repos.NewAccountUserRepo().GetDetailByAccountAndID(ctx, params.AccountID, params.AccountUserID, nil)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -578,7 +578,7 @@ func (s *accountUserSvcImpl) UpdateAccountUser(ctx context.Context, params domai
 			txUserRepo := txSvc.repos.NewUserRepo()
 
 			// Fetch old state for audit diff.
-			old, apiErr := txAccountUserRepo.GetDetailByAccountAndID(txCtx, params.AccountID, params.AccountUserID)
+			old, apiErr := txAccountUserRepo.GetDetailByAccountAndID(txCtx, params.AccountID, params.AccountUserID, nil)
 			if apiErr != nil {
 				return apiErr
 			}
@@ -616,10 +616,11 @@ func (s *accountUserSvcImpl) UpdateAccountUser(ctx context.Context, params domai
 			// Backfill unchanged nullable fields with existing values.
 			// Since the SQL uses direct assignment (no COALESCE) for these fields,
 			// we must provide the existing value when the field was not sent.
-			if params.RoleID == nil {
+			// ClearRoleID=true means the client explicitly set role_id to null.
+			if !params.ClearRoleID && params.RoleID == nil {
 				params.RoleID = old.RoleID
 			}
-			if params.DepartmentID == nil {
+			if !params.ClearDepartmentID && params.DepartmentID == nil {
 				params.DepartmentID = old.DepartmentID
 			}
 
@@ -660,7 +661,7 @@ func (s *accountUserSvcImpl) UpdateAccountUser(ctx context.Context, params domai
 				}
 			}
 
-			detail, apiErr := txAccountUserRepo.GetDetailByAccountAndID(txCtx, params.AccountID, params.AccountUserID)
+			detail, apiErr := txAccountUserRepo.GetDetailByAccountAndID(txCtx, params.AccountID, params.AccountUserID, includes)
 			if apiErr != nil {
 				return apiErr
 			}
@@ -738,7 +739,7 @@ func (s *accountUserSvcImpl) UpdateAccountUserStatus(ctx context.Context, accoun
 
 	// Caller must not be disabled when performing status transitions.
 	if identity.IsUser() {
-		callerDetail, apiErr := s.repos.NewAccountUserRepo().GetDetail(ctx, accountID, identity.Actor.ID)
+		callerDetail, apiErr := s.repos.NewAccountUserRepo().GetDetail(ctx, accountID, identity.Actor.ID, nil)
 		if apiErr != nil {
 			return tracing.Trace(span, apiErr)
 		}
@@ -748,7 +749,7 @@ func (s *accountUserSvcImpl) UpdateAccountUserStatus(ctx context.Context, accoun
 	}
 
 	// Resolve current state. Handle "already removed" like the old delete handler did.
-	accountUser, apiErr := s.repos.NewAccountUserRepo().GetDetailByAccountAndID(ctx, accountID, accountUserID)
+	accountUser, apiErr := s.repos.NewAccountUserRepo().GetDetailByAccountAndID(ctx, accountID, accountUserID, nil)
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {
 			wasDeleted, deletedCheckErr := s.repos.NewDeletedRecordRepo().Exists(ctx, constants.DeletedRecordResourceTypeAccountUser, accountUserID)
@@ -776,7 +777,7 @@ func (s *accountUserSvcImpl) UpdateAccountUserStatus(ctx context.Context, accoun
 		if identity.IsUser() && identity.Actor != nil && identity.Actor.ID == accountUser.UserID {
 			return tracing.Trace(span, apierror.NewValidationError("You cannot lock your own account."))
 		}
-		if accountUser.RoleTypeCode != nil && *accountUser.RoleTypeCode == string(constants.RoleTypeCodeAdmin) {
+		if accountUser.RoleType != nil && *accountUser.RoleType == string(constants.RoleTypeAdmin) {
 			return tracing.Trace(span, apierror.NewValidationError("Admin users cannot be locked."))
 		}
 	case constants.AccountUserStatusActive:
@@ -818,7 +819,7 @@ func (s *accountUserSvcImpl) UpdateAccountUserStatus(ctx context.Context, accoun
 			auditAction = constants.AuditActionDelete
 			updated = nil
 		} else {
-			next, apiErr := txAccountUserRepo.GetDetailByAccountAndID(txCtx, accountID, accountUserID)
+			next, apiErr := txAccountUserRepo.GetDetailByAccountAndID(txCtx, accountID, accountUserID, nil)
 			if apiErr != nil {
 				return apiErr
 			}
@@ -891,13 +892,13 @@ func (s *accountUserSvcImpl) UpdateAccountUserPassword(ctx context.Context, acco
 	}
 
 	// Verify that the target account user belongs to the requester's account.
-	targetAccountUser, apiErr := s.repos.NewAccountUserRepo().GetDetailByAccountAndID(ctx, identity.Target.AccountID, accountUserID)
+	targetAccountUser, apiErr := s.repos.NewAccountUserRepo().GetDetailByAccountAndID(ctx, identity.Target.AccountID, accountUserID, nil)
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
 
 	// Passwords may only be rotated for scanner-role (scanning station) users.
-	if targetAccountUser.RoleTypeCode == nil || *targetAccountUser.RoleTypeCode != string(constants.RoleTypeCodeScanner) {
+	if targetAccountUser.RoleType == nil || *targetAccountUser.RoleType != string(constants.RoleTypeScanner) {
 		return tracing.Trace(span, apierror.NewValidationError("Password updates are only supported for scanner-role users."))
 	}
 

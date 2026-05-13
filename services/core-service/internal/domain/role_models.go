@@ -8,12 +8,12 @@ import (
 
 // Role represents a role record from the database.
 type Role struct {
-	ID           string
-	Name         string `audit:"name"`
-	RoleTypeCode string `audit:"role_type_code"`
-	AccountID    *string
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID        string
+	Name      string `audit:"name"`
+	RoleType  string `audit:"role_type_code"`
+	AccountID *string
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 // RolePermission represents a structured role_permission record.
@@ -37,11 +37,12 @@ type RoleWithPermissions struct {
 
 // ListRolesParams are the parameters for listing roles.
 type ListRolesParams struct {
-	AccountID     string
-	Cursor        *string
-	Limit         int32
-	Query         *string
-	RoleTypeCodes []string
+	AccountID string
+	Cursor    *string
+	Limit     int32
+	Query     *string
+	RoleTypes []string
+	Includes  []string
 }
 
 // ListRolesPage is the paginated result from the role repository.

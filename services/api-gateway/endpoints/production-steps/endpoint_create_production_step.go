@@ -21,9 +21,9 @@ type CreateProductionStepRequest struct {
 	// Allowances as a decimal string.
 	Allowances string `json:"allowances" validate:"required"`
 	// Scanning station ID.
-	ScanningStationID *string `json:"scanning_station_id,omitempty" validate:"omitempty,max=191"`
+	ScanningStationID *string `json:"scanning_station_id,omitempty" validate:"omitempty"`
 	// Department ID.
-	DepartmentID *string `json:"department_id,omitempty" validate:"omitempty,max=191"`
+	DepartmentID *string `json:"department_id,omitempty" validate:"omitempty"`
 	// Labor rate configuration.
 	LaborRate CreateRateInput `json:"labor_rate" validate:"required"`
 	// Labor time configuration.
@@ -41,33 +41,33 @@ type CreateRateInput struct {
 	// Value as a decimal string.
 	Value string `json:"value" validate:"required"`
 	// Numerator unit ID.
-	NumeratorUnitID string `json:"numerator_unit_id" validate:"required,max=191"`
+	NumeratorUnitID string `json:"numerator_unit_id" validate:"required"`
 	// Denominator unit ID.
-	DenominatorUnitID string `json:"denominator_unit_id" validate:"required,max=191"`
+	DenominatorUnitID string `json:"denominator_unit_id" validate:"required"`
 }
 
 // Production output input.
 type CreateProductionInput struct {
 	// Item ID.
-	ItemID string `json:"item_id" validate:"required,max=191"`
+	ItemID string `json:"item_id" validate:"required"`
 	// Quantity value as a decimal string.
 	QuantityValue string `json:"quantity_value" validate:"required"`
 	// Quantity unit ID.
-	QuantityUnitID string `json:"quantity_unit_id" validate:"required,max=191"`
+	QuantityUnitID string `json:"quantity_unit_id" validate:"required"`
 }
 
 // Consumption input for a production step.
 type CreateConsumptionInput struct {
 	// Item ID.
-	ItemID string `json:"item_id" validate:"required,max=191"`
+	ItemID string `json:"item_id" validate:"required"`
 	// Quantity value as a decimal string.
 	QuantityValue string `json:"quantity_value" validate:"required"`
 	// Quantity unit ID.
-	QuantityUnitID string `json:"quantity_unit_id" validate:"required,max=191"`
+	QuantityUnitID string `json:"quantity_unit_id" validate:"required"`
 	// Waste quantity value as a decimal string.
 	WasteQuantityValue string `json:"waste_quantity_value" validate:"required"`
 	// Waste quantity unit ID.
-	WasteQuantityUnitID string `json:"waste_quantity_unit_id" validate:"required,max=191"`
+	WasteQuantityUnitID string `json:"waste_quantity_unit_id" validate:"required"`
 	// Instructions for how this material is consumed.
 	Instructions *string `json:"instructions,omitempty"`
 }

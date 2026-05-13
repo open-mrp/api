@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	gosql "database/sql"
+	"slices"
 	"time"
 
 	"github.com/augno/api/services/core-service/internal/domain"
@@ -50,10 +51,10 @@ func mapVolumeDiscountBase(id, name, accountID string, createdAt, updatedAt time
 	}
 }
 
-func (r *volumeDiscountRepoImpl) enrichSingle(ctx context.Context, d *domain.VolumeDiscount) *apierror.APIError {
+func (r *volumeDiscountRepoImpl) enrichSingle(ctx context.Context, d *domain.VolumeDiscount, incs []string) *apierror.APIError {
 	discountID := d.ID
 
-	// Tiers
+	// Tiers are always fetched (not expandable).
 	tierRows, err := r.queries.GetVolumeDiscountTiers(ctx, gosql.NullString{String: discountID, Valid: true})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return apiErr
@@ -75,77 +76,104 @@ func (r *volumeDiscountRepoImpl) enrichSingle(ctx context.Context, d *domain.Vol
 		}
 	}
 
-	// Customer groups
-	cgRows, err := r.queries.GetVolumeDiscountCustomerGroups(ctx, discountID)
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return apiErr
-	}
-	d.CustomerGroups = make([]*domain.VolumeDiscountCustomerGroup, len(cgRows))
-	for i, cg := range cgRows {
-		d.CustomerGroups[i] = &domain.VolumeDiscountCustomerGroup{
-			ID:             cg.ID,
-			AccountGroupID: cg.AccountGroupID,
-			Name:           cg.Name,
+	if slices.Contains(incs, "customer_groups") {
+		cgRows, err := r.queries.GetVolumeDiscountCustomerGroups(ctx, discountID)
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return apiErr
+		}
+		d.CustomerGroups = make([]*domain.VolumeDiscountCustomerGroup, len(cgRows))
+		for i, cg := range cgRows {
+			d.CustomerGroups[i] = &domain.VolumeDiscountCustomerGroup{
+				ID:               cg.ID,
+				AccountGroupID:   cg.AccountGroupID,
+				Name:             cg.Name,
+				CommissionPolicy: cg.CommissionStatusCode,
+				FreightPolicy:    cg.FreightStatusCode,
+				Type:             cg.AccountGroupTypeCode,
+				CreatedAt:        cg.CreatedAt,
+				UpdatedAt:        cg.UpdatedAt,
+			}
 		}
 	}
 
-	// Product lines
-	plRows, err := r.queries.GetVolumeDiscountProductLines(ctx, discountID)
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return apiErr
-	}
-	d.ProductLines = make([]*domain.VolumeDiscountProductLine, len(plRows))
-	for i, pl := range plRows {
-		d.ProductLines[i] = &domain.VolumeDiscountProductLine{
-			ID:   pl.ID,
-			Name: pl.Name,
+	if slices.Contains(incs, "product_lines") {
+		plRows, err := r.queries.GetVolumeDiscountProductLines(ctx, discountID)
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return apiErr
+		}
+		d.ProductLines = make([]*domain.VolumeDiscountProductLine, len(plRows))
+		for i, pl := range plRows {
+			d.ProductLines[i] = &domain.VolumeDiscountProductLine{
+				ID:                 pl.ID,
+				Name:               pl.Name,
+				IsCommissionExempt: pl.IsCommissionExempt,
+				IsFreightExempt:    pl.IsFreightExempt,
+				CreatedAt:          pl.CreatedAt,
+				UpdatedAt:          pl.UpdatedAt,
+			}
 		}
 	}
 
-	// Categories
-	catRows, err := r.queries.GetVolumeDiscountCategories(ctx, discountID)
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return apiErr
-	}
-	d.Categories = make([]*domain.VolumeDiscountCategory, len(catRows))
-	for i, cat := range catRows {
-		d.Categories[i] = &domain.VolumeDiscountCategory{
-			ID:   cat.ID,
-			Name: cat.Name,
+	if slices.Contains(incs, "categories") {
+		catRows, err := r.queries.GetVolumeDiscountCategories(ctx, discountID)
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return apiErr
+		}
+		d.Categories = make([]*domain.VolumeDiscountCategory, len(catRows))
+		for i, cat := range catRows {
+			d.Categories[i] = &domain.VolumeDiscountCategory{
+				ID:        cat.ID,
+				Name:      cat.Name,
+				Type:      cat.ItemCategoryTypeCode,
+				CreatedAt: cat.CreatedAt,
+				UpdatedAt: cat.UpdatedAt,
+			}
 		}
 	}
 
-	// Attributes
-	attrRows, err := r.queries.GetVolumeDiscountAttributes(ctx, discountID)
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return apiErr
-	}
-	d.Attributes = make([]*domain.VolumeDiscountAttribute, len(attrRows))
-	for i, attr := range attrRows {
-		d.Attributes[i] = &domain.VolumeDiscountAttribute{
-			ID:   attr.ID,
-			Name: attr.Name,
+	if slices.Contains(incs, "attributes") {
+		attrRows, err := r.queries.GetVolumeDiscountAttributes(ctx, discountID)
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return apiErr
+		}
+		d.Attributes = make([]*domain.VolumeDiscountAttribute, len(attrRows))
+		for i, attr := range attrRows {
+			d.Attributes[i] = &domain.VolumeDiscountAttribute{
+				ID:        attr.ID,
+				Name:      attr.Name,
+				ColorCode: attr.ColorCode,
+				CreatedAt: attr.CreatedAt,
+				UpdatedAt: attr.UpdatedAt,
+			}
 		}
 	}
 
-	// Units
-	unitRows, err := r.queries.GetVolumeDiscountUnits(ctx, discountID)
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return apiErr
-	}
-	d.AcceptableUnits = make([]*domain.VolumeDiscountUnit, len(unitRows))
-	for i, u := range unitRows {
-		d.AcceptableUnits[i] = &domain.VolumeDiscountUnit{
-			ID:           u.ID,
-			Name:         u.Name,
-			Abbreviation: u.Abbreviation,
+	if slices.Contains(incs, "acceptable_units") {
+		unitRows, err := r.queries.GetVolumeDiscountUnits(ctx, discountID)
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return apiErr
+		}
+		d.AcceptableUnits = make([]*domain.VolumeDiscountUnit, len(unitRows))
+		for i, u := range unitRows {
+			d.AcceptableUnits[i] = &domain.VolumeDiscountUnit{
+				ID:                u.ID,
+				Name:              u.Name,
+				Abbreviation:      u.Abbreviation,
+				Type:              u.Type,
+				RatioNumerator:    u.RatioNumerator,
+				RatioDenominator:  u.RatioDenominator,
+				OffsetNumerator:   u.OffsetNumerator,
+				OffsetDenominator: u.OffsetDenominator,
+				CreatedAt:         u.CreatedAt,
+				UpdatedAt:         u.UpdatedAt,
+			}
 		}
 	}
 
 	return nil
 }
 
-func (r *volumeDiscountRepoImpl) enrichBatch(ctx context.Context, discounts []*domain.VolumeDiscount) *apierror.APIError {
+func (r *volumeDiscountRepoImpl) enrichBatch(ctx context.Context, discounts []*domain.VolumeDiscount, incs []string) *apierror.APIError {
 	if len(discounts) == 0 {
 		return nil
 	}
@@ -183,71 +211,98 @@ func (r *volumeDiscountRepoImpl) enrichBatch(ctx context.Context, discounts []*d
 		})
 	}
 
-	// Customer groups
-	cgRows, err := r.queries.GetVolumeDiscountCustomerGroupsByDiscountIDs(ctx, ids)
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return apiErr
-	}
 	cgMap := make(map[string][]*domain.VolumeDiscountCustomerGroup)
-	for _, cg := range cgRows {
-		cgMap[cg.QuantityDiscountID] = append(cgMap[cg.QuantityDiscountID], &domain.VolumeDiscountCustomerGroup{
-			ID:             cg.ID,
-			AccountGroupID: cg.AccountGroupID,
-			Name:           cg.Name,
-		})
+	if slices.Contains(incs, "customer_groups") {
+		cgRows, err := r.queries.GetVolumeDiscountCustomerGroupsByDiscountIDs(ctx, ids)
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return apiErr
+		}
+		for _, cg := range cgRows {
+			cgMap[cg.QuantityDiscountID] = append(cgMap[cg.QuantityDiscountID], &domain.VolumeDiscountCustomerGroup{
+				ID:               cg.ID,
+				AccountGroupID:   cg.AccountGroupID,
+				Name:             cg.Name,
+				CommissionPolicy: cg.CommissionStatusCode,
+				FreightPolicy:    cg.FreightStatusCode,
+				Type:             cg.AccountGroupTypeCode,
+				CreatedAt:        cg.CreatedAt,
+				UpdatedAt:        cg.UpdatedAt,
+			})
+		}
 	}
 
-	// Product lines
-	plRows, err := r.queries.GetVolumeDiscountProductLinesByDiscountIDs(ctx, ids)
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return apiErr
-	}
 	plMap := make(map[string][]*domain.VolumeDiscountProductLine)
-	for _, pl := range plRows {
-		plMap[pl.QuantityDiscountID] = append(plMap[pl.QuantityDiscountID], &domain.VolumeDiscountProductLine{
-			ID:   pl.ID,
-			Name: pl.Name,
-		})
+	if slices.Contains(incs, "product_lines") {
+		plRows, err := r.queries.GetVolumeDiscountProductLinesByDiscountIDs(ctx, ids)
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return apiErr
+		}
+		for _, pl := range plRows {
+			plMap[pl.QuantityDiscountID] = append(plMap[pl.QuantityDiscountID], &domain.VolumeDiscountProductLine{
+				ID:                 pl.ID,
+				Name:               pl.Name,
+				IsCommissionExempt: pl.IsCommissionExempt,
+				IsFreightExempt:    pl.IsFreightExempt,
+				CreatedAt:          pl.CreatedAt,
+				UpdatedAt:          pl.UpdatedAt,
+			})
+		}
 	}
 
-	// Categories
-	catRows, err := r.queries.GetVolumeDiscountCategoriesByDiscountIDs(ctx, ids)
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return apiErr
-	}
 	catMap := make(map[string][]*domain.VolumeDiscountCategory)
-	for _, cat := range catRows {
-		catMap[cat.QuantityDiscountID] = append(catMap[cat.QuantityDiscountID], &domain.VolumeDiscountCategory{
-			ID:   cat.ID,
-			Name: cat.Name,
-		})
+	if slices.Contains(incs, "categories") {
+		catRows, err := r.queries.GetVolumeDiscountCategoriesByDiscountIDs(ctx, ids)
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return apiErr
+		}
+		for _, cat := range catRows {
+			catMap[cat.QuantityDiscountID] = append(catMap[cat.QuantityDiscountID], &domain.VolumeDiscountCategory{
+				ID:        cat.ID,
+				Name:      cat.Name,
+				Type:      cat.ItemCategoryTypeCode,
+				CreatedAt: cat.CreatedAt,
+				UpdatedAt: cat.UpdatedAt,
+			})
+		}
 	}
 
-	// Attributes
-	attrRows, err := r.queries.GetVolumeDiscountAttributesByDiscountIDs(ctx, ids)
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return apiErr
-	}
 	attrMap := make(map[string][]*domain.VolumeDiscountAttribute)
-	for _, attr := range attrRows {
-		attrMap[attr.QuantityDiscountID] = append(attrMap[attr.QuantityDiscountID], &domain.VolumeDiscountAttribute{
-			ID:   attr.ID,
-			Name: attr.Name,
-		})
+	if slices.Contains(incs, "attributes") {
+		attrRows, err := r.queries.GetVolumeDiscountAttributesByDiscountIDs(ctx, ids)
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return apiErr
+		}
+		for _, attr := range attrRows {
+			attrMap[attr.QuantityDiscountID] = append(attrMap[attr.QuantityDiscountID], &domain.VolumeDiscountAttribute{
+				ID:        attr.ID,
+				Name:      attr.Name,
+				ColorCode: attr.ColorCode,
+				CreatedAt: attr.CreatedAt,
+				UpdatedAt: attr.UpdatedAt,
+			})
+		}
 	}
 
-	// Units
-	unitRows, err := r.queries.GetVolumeDiscountUnitsByDiscountIDs(ctx, ids)
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return apiErr
-	}
 	unitMap := make(map[string][]*domain.VolumeDiscountUnit)
-	for _, u := range unitRows {
-		unitMap[u.QuantityDiscountID] = append(unitMap[u.QuantityDiscountID], &domain.VolumeDiscountUnit{
-			ID:           u.ID,
-			Name:         u.Name,
-			Abbreviation: u.Abbreviation,
-		})
+	if slices.Contains(incs, "acceptable_units") {
+		unitRows, err := r.queries.GetVolumeDiscountUnitsByDiscountIDs(ctx, ids)
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return apiErr
+		}
+		for _, u := range unitRows {
+			unitMap[u.QuantityDiscountID] = append(unitMap[u.QuantityDiscountID], &domain.VolumeDiscountUnit{
+				ID:                u.ID,
+				Name:              u.Name,
+				Abbreviation:      u.Abbreviation,
+				Type:              u.Type,
+				RatioNumerator:    u.RatioNumerator,
+				RatioDenominator:  u.RatioDenominator,
+				OffsetNumerator:   u.OffsetNumerator,
+				OffsetDenominator: u.OffsetDenominator,
+				CreatedAt:         u.CreatedAt,
+				UpdatedAt:         u.UpdatedAt,
+			})
+		}
 	}
 
 	for _, d := range discounts {
@@ -255,25 +310,20 @@ func (r *volumeDiscountRepoImpl) enrichBatch(ctx context.Context, discounts []*d
 		if d.Tiers == nil {
 			d.Tiers = []*domain.VolumeDiscountTier{}
 		}
-		d.CustomerGroups = cgMap[d.ID]
-		if d.CustomerGroups == nil {
-			d.CustomerGroups = []*domain.VolumeDiscountCustomerGroup{}
+		if slices.Contains(incs, "customer_groups") {
+			d.CustomerGroups = cgMap[d.ID]
 		}
-		d.ProductLines = plMap[d.ID]
-		if d.ProductLines == nil {
-			d.ProductLines = []*domain.VolumeDiscountProductLine{}
+		if slices.Contains(incs, "product_lines") {
+			d.ProductLines = plMap[d.ID]
 		}
-		d.Categories = catMap[d.ID]
-		if d.Categories == nil {
-			d.Categories = []*domain.VolumeDiscountCategory{}
+		if slices.Contains(incs, "categories") {
+			d.Categories = catMap[d.ID]
 		}
-		d.Attributes = attrMap[d.ID]
-		if d.Attributes == nil {
-			d.Attributes = []*domain.VolumeDiscountAttribute{}
+		if slices.Contains(incs, "attributes") {
+			d.Attributes = attrMap[d.ID]
 		}
-		d.AcceptableUnits = unitMap[d.ID]
-		if d.AcceptableUnits == nil {
-			d.AcceptableUnits = []*domain.VolumeDiscountUnit{}
+		if slices.Contains(incs, "acceptable_units") {
+			d.AcceptableUnits = unitMap[d.ID]
 		}
 	}
 
@@ -332,7 +382,7 @@ func (r *volumeDiscountRepoImpl) List(ctx context.Context, params domain.ListVol
 			}
 
 			result, pageInfo := pagination.BuildPageString(discounts, params.Limit, cursorDir, volumeDiscountCreatedAt, volumeDiscountID)
-			if apiErr := r.enrichBatch(ctx, result); apiErr != nil {
+			if apiErr := r.enrichBatch(ctx, result, params.Includes); apiErr != nil {
 				return nil, tracing.Trace(span, apiErr)
 			}
 			return &domain.ListVolumeDiscountsResult{VolumeDiscounts: result, PageInfo: pageInfo}, nil
@@ -374,7 +424,7 @@ func (r *volumeDiscountRepoImpl) List(ctx context.Context, params domain.ListVol
 		}
 
 		result, pageInfo := pagination.BuildPageString(discounts, params.Limit, cursorDir, volumeDiscountCreatedAt, volumeDiscountID)
-		if apiErr := r.enrichBatch(ctx, result); apiErr != nil {
+		if apiErr := r.enrichBatch(ctx, result, params.Includes); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
 		return &domain.ListVolumeDiscountsResult{VolumeDiscounts: result, PageInfo: pageInfo}, nil
@@ -412,7 +462,7 @@ func (r *volumeDiscountRepoImpl) List(ctx context.Context, params domain.ListVol
 	}
 
 	result, pageInfo := pagination.BuildPageString(discounts, params.Limit, cursorDir, volumeDiscountCreatedAt, volumeDiscountID)
-	if apiErr := r.enrichBatch(ctx, result); apiErr != nil {
+	if apiErr := r.enrichBatch(ctx, result, params.Includes); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 	return &domain.ListVolumeDiscountsResult{VolumeDiscounts: result, PageInfo: pageInfo}, nil
@@ -431,7 +481,7 @@ func (r *volumeDiscountRepoImpl) Get(ctx context.Context, params domain.GetVolum
 	}
 
 	d := mapVolumeDiscountBase(row.ID, row.Name, row.AccountID, row.CreatedAt, row.UpdatedAt)
-	if apiErr := r.enrichSingle(ctx, d); apiErr != nil {
+	if apiErr := r.enrichSingle(ctx, d, params.Includes); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
@@ -523,7 +573,7 @@ func (r *volumeDiscountRepoImpl) Create(ctx context.Context, id string, params d
 		}
 	}
 
-	return r.Get(ctx, domain.GetVolumeDiscountParams{AccountID: params.AccountID, VolumeDiscountID: id})
+	return r.Get(ctx, domain.GetVolumeDiscountParams{AccountID: params.AccountID, VolumeDiscountID: id, Includes: params.Includes})
 }
 
 func (r *volumeDiscountRepoImpl) Update(ctx context.Context, params domain.UpdateVolumeDiscountParams) (*domain.VolumeDiscount, *apierror.APIError) {
@@ -694,7 +744,7 @@ func (r *volumeDiscountRepoImpl) Update(ctx context.Context, params domain.Updat
 		}
 	}
 
-	return r.Get(ctx, domain.GetVolumeDiscountParams{AccountID: params.AccountID, VolumeDiscountID: params.VolumeDiscountID})
+	return r.Get(ctx, domain.GetVolumeDiscountParams{AccountID: params.AccountID, VolumeDiscountID: params.VolumeDiscountID, Includes: params.Includes})
 }
 
 func (r *volumeDiscountRepoImpl) Delete(ctx context.Context, params domain.DeleteVolumeDiscountParams) *apierror.APIError {

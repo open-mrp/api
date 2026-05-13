@@ -74,6 +74,28 @@ func (s *partSvcImpl) withTx(ctx context.Context, fn func(context.Context, *part
 	})
 }
 
+func (s *partSvcImpl) ExportParts(ctx context.Context, params domain.ExportPartsParams) ([]*domain.Part, *apierror.APIError) {
+	ctx, span := partSvcTracer.Start(ctx, "service.part.export")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsAssignedActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := checkPartReadPermission(identity); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if !identity.IsTargetAccountSet() {
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+	}
+
+	params.AccountID = identity.Target.AccountID
+	return s.repos.NewPartRepo().Export(ctx, params)
+}
+
 func (s *partSvcImpl) ListParts(ctx context.Context, params domain.ListPartsParams) (*domain.ListPartsResult, *apierror.APIError) {
 	ctx, span := partSvcTracer.Start(ctx, "service.part.list")
 	defer span.End()

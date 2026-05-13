@@ -35,6 +35,16 @@ type GetMaterialParams struct {
 	Includes   []string
 }
 
+// ExportMaterialsParams holds filter parameters for a full (unpaginated) material export.
+type ExportMaterialsParams struct {
+	AccountID    string
+	Query        *string
+	CategoryIDs  []string
+	AttributeIDs []string
+	StartDate    *time.Time
+	EndDate      *time.Time
+}
+
 type ListMaterialsResult struct {
 	Materials []*Material
 	PageInfo  pagination.PageInfo

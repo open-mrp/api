@@ -405,6 +405,9 @@ type ProductSvc interface {
 	// ListProductsFull returns a paginated list of products for the caller's account.
 	ListProductsFull(ctx context.Context, params ListProductsFullParams) (*ListProductsFullResult, *apierror.APIError)
 
+	// ExportProducts returns all matching products (no pagination) for export.
+	ExportProducts(ctx context.Context, params ExportProductsParams) ([]*ProductFull, *apierror.APIError)
+
 	// GetProduct returns a single product by item ID.
 	GetProduct(ctx context.Context, params GetProductFullParams) (*ProductFull, *apierror.APIError)
 
@@ -979,6 +982,9 @@ type PartSvc interface {
 	// ListParts returns a paginated list of parts for the caller's account.
 	ListParts(ctx context.Context, params ListPartsParams) (*ListPartsResult, *apierror.APIError)
 
+	// ExportParts returns all matching parts (no pagination) for export.
+	ExportParts(ctx context.Context, params ExportPartsParams) ([]*Part, *apierror.APIError)
+
 	// UpdatePart partially updates a part's item fields.
 	UpdatePart(ctx context.Context, params UpdatePartParams) (*Part, *apierror.APIError)
 
@@ -989,6 +995,9 @@ type PartSvc interface {
 type MaterialSvc interface {
 	// ListMaterials returns a paginated list of materials for the caller's account.
 	ListMaterials(ctx context.Context, params ListMaterialsParams) (*ListMaterialsResult, *apierror.APIError)
+
+	// ExportMaterials returns all matching materials (no pagination) for export.
+	ExportMaterials(ctx context.Context, params ExportMaterialsParams) ([]*Material, *apierror.APIError)
 
 	// GetMaterial returns a single material by ID.
 	GetMaterial(ctx context.Context, params GetMaterialParams) (*Material, *apierror.APIError)

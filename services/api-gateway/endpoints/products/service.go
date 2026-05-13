@@ -264,24 +264,12 @@ func (m *productSvcImpl) ValidateProducts(ctx context.Context, req *ValidateProd
 }
 
 func (m *productSvcImpl) ExportProducts(ctx context.Context, req *ExportProductsRequest) (*httptransport.FileDownload, *apierror.APIError) {
-	const pageSize = int32(500)
-
-	pbReq := &pb.ListProductsFullRequest{
-		Limit:          pageSize,
+	pbReq := &pb.ExportProductsRequest{
 		Query:          req.Query,
 		CustomerIds:    req.CustomerIDs,
 		ProductLineIds: req.ProductLineIDs,
 		CategoryIds:    req.CategoryIDs,
 		AttributeIds:   req.AttributeIDs,
-		Includes: []string{
-			"product_line",
-			"item",
-			"item.category",
-			"item.category.properties",
-			"item.unit_value",
-			"item.unit_cost",
-			"item.attributes",
-		},
 	}
 	if req.StartDate != nil {
 		pbReq.StartDate = timestamppb.New(*req.StartDate)
@@ -290,25 +278,20 @@ func (m *productSvcImpl) ExportProducts(ctx context.Context, req *ExportProducts
 		pbReq.EndDate = timestamppb.New(*req.EndDate)
 	}
 
-	var allProducts []apiresource.Product
-	for {
-		resp, apiErr := grpcutil.CallRPC(ctx, productSvcTracer, "service.products.export.page", domain.ServiceName,
-			func(ctx context.Context, opts ...grpc.CallOption) (*pb.ListProductsFullResponse, error) {
-				return m.coreClient.ListProductsFull(ctx, pbReq, opts...)
-			})
-		if apiErr != nil {
-			return nil, apiErr
-		}
-		for _, p := range resp.Products {
-			allProducts = append(allProducts, ProductPresenter(p))
-		}
-		if !resp.PageInfo.HasNextPage {
-			break
-		}
-		pbReq.Cursor = resp.PageInfo.NextCursor
+	resp, apiErr := grpcutil.CallRPC(ctx, productSvcTracer, "service.products.export", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ExportProductsResponse, error) {
+			return m.coreClient.ExportProducts(ctx, pbReq, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
 	}
 
-	body, err := export.ProductsToExcel(allProducts)
+	products := make([]apiresource.Product, len(resp.Products))
+	for i, p := range resp.Products {
+		products[i] = ProductPresenter(p)
+	}
+
+	body, err := export.ProductsToExcel(products)
 	if err != nil {
 		return nil, apierror.NewInternalError(err, "Failed to build export file.")
 	}

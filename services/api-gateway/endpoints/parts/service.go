@@ -188,21 +188,10 @@ func (m *partSvcImpl) DeletePart(ctx context.Context, req *DeletePartRequest) (*
 }
 
 func (m *partSvcImpl) ExportParts(ctx context.Context, req *ExportPartsRequest) (*httptransport.FileDownload, *apierror.APIError) {
-	const pageSize = int32(500)
-
-	pbReq := &pb.ListPartsRequest{
-		Limit:        pageSize,
+	pbReq := &pb.ExportPartsRequest{
 		Query:        req.Query,
 		CategoryIds:  req.CategoryIDs,
 		AttributeIds: req.AttributeIDs,
-		Includes: []string{
-			"item",
-			"item.category",
-			"item.category.properties",
-			"item.unit_value",
-			"item.unit_cost",
-			"item.attributes",
-		},
 	}
 	if req.StartDate != nil {
 		pbReq.StartDate = timestamppb.New(*req.StartDate)
@@ -211,25 +200,20 @@ func (m *partSvcImpl) ExportParts(ctx context.Context, req *ExportPartsRequest) 
 		pbReq.EndDate = timestamppb.New(*req.EndDate)
 	}
 
-	var allParts []apiresource.Part
-	for {
-		resp, apiErr := grpcutil.CallRPC(ctx, partSvcTracer, "service.parts.export.page", domain.ServiceName,
-			func(ctx context.Context, opts ...grpc.CallOption) (*pb.ListPartsResponse, error) {
-				return m.coreClient.ListParts(ctx, pbReq, opts...)
-			})
-		if apiErr != nil {
-			return nil, apiErr
-		}
-		for _, p := range resp.Parts {
-			allParts = append(allParts, PartPresenter(p))
-		}
-		if !resp.PageInfo.HasNextPage {
-			break
-		}
-		pbReq.Cursor = resp.PageInfo.NextCursor
+	resp, apiErr := grpcutil.CallRPC(ctx, partSvcTracer, "service.parts.export", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ExportPartsResponse, error) {
+			return m.coreClient.ExportParts(ctx, pbReq, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
 	}
 
-	body, err := export.PartsToExcel(allParts)
+	parts := make([]apiresource.Part, len(resp.Parts))
+	for i, p := range resp.Parts {
+		parts[i] = PartPresenter(p)
+	}
+
+	body, err := export.PartsToExcel(parts)
 	if err != nil {
 		return nil, apierror.NewInternalError(err, "Failed to build export file.")
 	}

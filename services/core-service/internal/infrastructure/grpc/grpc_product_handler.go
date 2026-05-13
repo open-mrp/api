@@ -86,6 +86,40 @@ func (h *gRPCHandler) ListProductsFull(ctx context.Context, req *pb.ListProducts
 	}, nil
 }
 
+func (h *gRPCHandler) ExportProducts(ctx context.Context, req *pb.ExportProductsRequest) (*pb.ExportProductsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	params := domain.ExportProductsParams{
+		Query:          req.Query,
+		CustomerIDs:    req.CustomerIds,
+		ProductLineIDs: req.ProductLineIds,
+		CategoryIDs:    req.CategoryIds,
+		AttributeIDs:   req.AttributeIds,
+	}
+	if req.StartDate != nil {
+		t := req.StartDate.AsTime()
+		params.StartDate = &t
+	}
+	if req.EndDate != nil {
+		t := req.EndDate.AsTime()
+		params.EndDate = &t
+	}
+
+	products, apiErr := h.productSvc.ExportProducts(ctx, params)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	pbProducts := make([]*pb.ProductFullInfo, len(products))
+	for i, p := range products {
+		pbProducts[i] = productFullToProto(p)
+	}
+
+	return &pb.ExportProductsResponse{Products: pbProducts}, nil
+}
+
 func (h *gRPCHandler) GetProduct(ctx context.Context, req *pb.GetProductRequest) (*pb.GetProductResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()

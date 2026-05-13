@@ -115,6 +115,38 @@ func (h *gRPCHandler) ListParts(ctx context.Context, req *pb.ListPartsRequest) (
 	}, nil
 }
 
+func (h *gRPCHandler) ExportParts(ctx context.Context, req *pb.ExportPartsRequest) (*pb.ExportPartsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	params := domain.ExportPartsParams{
+		Query:        req.Query,
+		CategoryIDs:  req.CategoryIds,
+		AttributeIDs: req.AttributeIds,
+	}
+	if req.StartDate != nil {
+		t := req.StartDate.AsTime()
+		params.StartDate = &t
+	}
+	if req.EndDate != nil {
+		t := req.EndDate.AsTime()
+		params.EndDate = &t
+	}
+
+	parts, apiErr := h.partSvc.ExportParts(ctx, params)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	pbParts := make([]*pb.PartInfo, len(parts))
+	for i, part := range parts {
+		pbParts[i] = partToProto(part)
+	}
+
+	return &pb.ExportPartsResponse{Parts: pbParts}, nil
+}
+
 func (h *gRPCHandler) UpdatePart(ctx context.Context, req *pb.UpdatePartRequest) (*pb.UpdatePartResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()

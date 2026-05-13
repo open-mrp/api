@@ -112,6 +112,38 @@ func (h *gRPCHandler) ListMaterials(ctx context.Context, req *pb.ListMaterialsRe
 	}, nil
 }
 
+func (h *gRPCHandler) ExportMaterials(ctx context.Context, req *pb.ExportMaterialsRequest) (*pb.ExportMaterialsResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	params := domain.ExportMaterialsParams{
+		Query:        req.Query,
+		CategoryIDs:  req.CategoryIds,
+		AttributeIDs: req.AttributeIds,
+	}
+	if req.StartDate != nil {
+		t := req.StartDate.AsTime()
+		params.StartDate = &t
+	}
+	if req.EndDate != nil {
+		t := req.EndDate.AsTime()
+		params.EndDate = &t
+	}
+
+	materials, apiErr := h.materialSvc.ExportMaterials(ctx, params)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	pbMaterials := make([]*pb.MaterialInfo, len(materials))
+	for i, m := range materials {
+		pbMaterials[i] = materialToProto(m)
+	}
+
+	return &pb.ExportMaterialsResponse{Materials: pbMaterials}, nil
+}
+
 func (h *gRPCHandler) GetMaterial(ctx context.Context, req *pb.GetMaterialRequest) (*pb.GetMaterialResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()

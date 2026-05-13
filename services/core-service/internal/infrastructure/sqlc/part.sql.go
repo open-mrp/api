@@ -35,6 +35,170 @@ func (q *Queries) CheckPartSKUExists(ctx context.Context, arg CheckPartSKUExists
 	return sku_exists, err
 }
 
+const exportPartsWithFilters = `-- name: ExportPartsWithFilters :many
+SELECT
+    p.id AS part_id,
+    p.created_at AS part_created_at,
+    p.updated_at AS part_updated_at,
+    i.id,
+    i.sku,
+    i.description,
+    i.notes,
+    i.item_type_code,
+    i.item_category_id,
+    i.unit_value_id,
+    i.unit_cost_id,
+    i.burn_rate_id,
+    i.account_id,
+    i.is_dirty,
+    i.created_at,
+    i.updated_at,
+    ic.name AS category_name,
+    ic.item_category_type_code,
+    ic.unit_group_id AS category_unit_group_id,
+    ic.created_at AS category_created_at,
+    ic.updated_at AS category_updated_at
+FROM part p
+JOIN item i ON i.id = p.item_id
+JOIN item_category ic ON ic.id = i.item_category_id
+WHERE i.account_id = ?
+AND i.deleted_at IS NULL
+AND (
+    ? = false
+    OR i.item_category_id IN (/*SLICE:category_ids*/?)
+)
+AND (
+    ? = false
+    OR EXISTS (
+        SELECT 1 FROM _item_attributes ia
+        WHERE ia.B = i.id
+        AND ia.A IN (/*SLICE:attribute_ids*/?)
+    )
+)
+AND (
+    ? IS NULL
+    OR i.created_at >= ?
+)
+AND (
+    ? IS NULL
+    OR i.created_at <= ?
+)
+AND (
+    ? IS NULL
+    OR i.sku LIKE ?
+    OR i.description LIKE ?
+)
+ORDER BY i.created_at DESC, i.id DESC
+`
+
+type ExportPartsWithFiltersParams struct {
+	AccountID              string
+	IncludeCategoryFilter  interface{}
+	CategoryIds            []string
+	IncludeAttributeFilter interface{}
+	AttributeIds           []string
+	StartDate              sql.NullTime
+	EndDate                sql.NullTime
+	SearchQuery            sql.NullString
+}
+
+type ExportPartsWithFiltersRow struct {
+	PartID               string
+	PartCreatedAt        time.Time
+	PartUpdatedAt        time.Time
+	ID                   string
+	Sku                  string
+	Description          sql.NullString
+	Notes                sql.NullString
+	ItemTypeCode         string
+	ItemCategoryID       string
+	UnitValueID          string
+	UnitCostID           string
+	BurnRateID           string
+	AccountID            string
+	IsDirty              bool
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+	CategoryName         string
+	ItemCategoryTypeCode string
+	CategoryUnitGroupID  string
+	CategoryCreatedAt    time.Time
+	CategoryUpdatedAt    time.Time
+}
+
+func (q *Queries) ExportPartsWithFilters(ctx context.Context, arg ExportPartsWithFiltersParams) ([]ExportPartsWithFiltersRow, error) {
+	query := exportPartsWithFilters
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.IncludeCategoryFilter)
+	if len(arg.CategoryIds) > 0 {
+		for _, v := range arg.CategoryIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:category_ids*/?", strings.Repeat(",?", len(arg.CategoryIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:category_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.IncludeAttributeFilter)
+	if len(arg.AttributeIds) > 0 {
+		for _, v := range arg.AttributeIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:attribute_ids*/?", strings.Repeat(",?", len(arg.AttributeIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:attribute_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.StartDate)
+	queryParams = append(queryParams, arg.StartDate)
+	queryParams = append(queryParams, arg.EndDate)
+	queryParams = append(queryParams, arg.EndDate)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.SearchQuery)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ExportPartsWithFiltersRow
+	for rows.Next() {
+		var i ExportPartsWithFiltersRow
+		if err := rows.Scan(
+			&i.PartID,
+			&i.PartCreatedAt,
+			&i.PartUpdatedAt,
+			&i.ID,
+			&i.Sku,
+			&i.Description,
+			&i.Notes,
+			&i.ItemTypeCode,
+			&i.ItemCategoryID,
+			&i.UnitValueID,
+			&i.UnitCostID,
+			&i.BurnRateID,
+			&i.AccountID,
+			&i.IsDirty,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.CategoryName,
+			&i.ItemCategoryTypeCode,
+			&i.CategoryUnitGroupID,
+			&i.CategoryCreatedAt,
+			&i.CategoryUpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getPartAttributes = `-- name: GetPartAttributes :many
 SELECT
     a.id,

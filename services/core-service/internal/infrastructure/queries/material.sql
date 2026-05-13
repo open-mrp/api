@@ -368,3 +368,72 @@ UPDATE item SET
 WHERE id = sqlc.arg('id')
 AND account_id = sqlc.arg('account_id')
 AND deleted_at IS NULL;
+
+-- name: ExportMaterialsWithFilters :many
+SELECT
+    m.id,
+    m.item_id,
+    m.order_point_id,
+    m.lead_time_id,
+    m.created_at,
+    m.updated_at,
+    i.sku,
+    i.description AS item_description,
+    i.notes AS item_notes,
+    i.item_type_code,
+    i.item_category_id,
+    i.unit_value_id,
+    i.unit_cost_id,
+    i.burn_rate_id,
+    i.account_id,
+    i.is_dirty,
+    i.created_at AS item_created_at,
+    i.updated_at AS item_updated_at,
+    ic.name AS category_name,
+    ic.item_category_type_code,
+    ic.unit_group_id AS category_unit_group_id,
+    ic.created_at AS category_created_at,
+    ic.updated_at AS category_updated_at,
+    op.value AS order_point_value,
+    op.unit_id AS order_point_unit_id,
+    op_u.abbreviation AS order_point_unit_abbreviation,
+    op_u.unit_dimension_code AS order_point_unit_type,
+    lt.value AS lead_time_value,
+    lt.unit_id AS lead_time_unit_id,
+    lt_u.abbreviation AS lead_time_unit_abbreviation,
+    lt_u.unit_dimension_code AS lead_time_unit_type
+FROM material m
+JOIN item i ON i.id = m.item_id
+JOIN item_category ic ON ic.id = i.item_category_id
+JOIN quantity op ON op.id = m.order_point_id
+JOIN unit op_u ON op_u.id = op.unit_id
+JOIN quantity lt ON lt.id = m.lead_time_id
+JOIN unit lt_u ON lt_u.id = lt.unit_id
+WHERE i.account_id = sqlc.arg('account_id')
+AND i.deleted_at IS NULL
+AND (
+    sqlc.narg('search_query') IS NULL
+    OR i.sku LIKE sqlc.narg('search_query')
+    OR i.description LIKE sqlc.narg('search_query')
+)
+AND (
+    sqlc.arg('include_category_filter') = false
+    OR i.item_category_id IN (sqlc.slice('category_ids'))
+)
+AND (
+    sqlc.arg('include_attribute_filter') = false
+    OR EXISTS (
+        SELECT 1 FROM _item_attributes ia
+        WHERE ia.B = i.id
+        AND ia.A IN (sqlc.slice('attribute_ids'))
+    )
+)
+AND (
+    sqlc.narg('start_date') IS NULL
+    OR i.created_at >= sqlc.narg('start_date')
+)
+AND (
+    sqlc.narg('end_date') IS NULL
+    OR i.created_at <= sqlc.narg('end_date')
+)
+ORDER BY m.created_at DESC, m.id DESC;

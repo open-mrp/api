@@ -44,6 +44,18 @@ type ListProductsFullResult struct {
 	PageInfo pagination.PageInfo
 }
 
+// ExportProductsParams holds filter parameters for a full (unpaginated) product export.
+type ExportProductsParams struct {
+	AccountID      string
+	Query          *string
+	CustomerIDs    []string
+	ProductLineIDs []string
+	CategoryIDs    []string
+	AttributeIDs   []string
+	StartDate      *time.Time
+	EndDate        *time.Time
+}
+
 // GetProductFullParams holds parameters for retrieving a single product.
 type GetProductFullParams struct {
 	AccountID string

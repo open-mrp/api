@@ -2174,6 +2174,21 @@ func (mr *MockProductSvcMockRecorder) DeleteProduct(ctx, params any) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteProduct", reflect.TypeOf((*MockProductSvc)(nil).DeleteProduct), ctx, params)
 }
 
+// ExportProducts mocks base method.
+func (m *MockProductSvc) ExportProducts(ctx context.Context, params domain.ExportProductsParams) ([]*domain.ProductFull, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExportProducts", ctx, params)
+	ret0, _ := ret[0].([]*domain.ProductFull)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ExportProducts indicates an expected call of ExportProducts.
+func (mr *MockProductSvcMockRecorder) ExportProducts(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExportProducts", reflect.TypeOf((*MockProductSvc)(nil).ExportProducts), ctx, params)
+}
+
 // GetCustomerByEmail mocks base method.
 func (m *MockProductSvc) GetCustomerByEmail(ctx context.Context, ownerAccountID, email string) (*domain.CustomerByEmail, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -5433,6 +5448,21 @@ func (mr *MockPartSvcMockRecorder) DeletePart(ctx, itemID any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePart", reflect.TypeOf((*MockPartSvc)(nil).DeletePart), ctx, itemID)
 }
 
+// ExportParts mocks base method.
+func (m *MockPartSvc) ExportParts(ctx context.Context, params domain.ExportPartsParams) ([]*domain.Part, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExportParts", ctx, params)
+	ret0, _ := ret[0].([]*domain.Part)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ExportParts indicates an expected call of ExportParts.
+func (mr *MockPartSvcMockRecorder) ExportParts(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExportParts", reflect.TypeOf((*MockPartSvc)(nil).ExportParts), ctx, params)
+}
+
 // GetPart mocks base method.
 func (m *MockPartSvc) GetPart(ctx context.Context, params domain.GetPartParams) (*domain.Part, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -5530,6 +5560,21 @@ func (m *MockMaterialSvc) DeleteMaterial(ctx context.Context, itemID string) (*d
 func (mr *MockMaterialSvcMockRecorder) DeleteMaterial(ctx, itemID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteMaterial", reflect.TypeOf((*MockMaterialSvc)(nil).DeleteMaterial), ctx, itemID)
+}
+
+// ExportMaterials mocks base method.
+func (m *MockMaterialSvc) ExportMaterials(ctx context.Context, params domain.ExportMaterialsParams) ([]*domain.Material, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExportMaterials", ctx, params)
+	ret0, _ := ret[0].([]*domain.Material)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ExportMaterials indicates an expected call of ExportMaterials.
+func (mr *MockMaterialSvcMockRecorder) ExportMaterials(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExportMaterials", reflect.TypeOf((*MockMaterialSvc)(nil).ExportMaterials), ctx, params)
 }
 
 // GetMaterial mocks base method.

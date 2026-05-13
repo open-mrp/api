@@ -1591,6 +1591,7 @@ type Transaction struct {
 	AdjustmentTypeCode    sql.NullString
 	StripePaymentID       sql.NullString
 	Number                string
+	FundsReceivedAt       sql.NullTime
 }
 
 type TransactionAllocation struct {

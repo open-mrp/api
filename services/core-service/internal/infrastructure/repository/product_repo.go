@@ -792,6 +792,87 @@ func (r *productRepoImpl) InsertRate(ctx context.Context, id, value, numeratorUn
 	return nil
 }
 
+func mapProductExportRow(row sqlc.ExportProductsWithFiltersRow) *domain.ProductFull {
+	var productLineID *string
+	if row.ProductLineID.Valid {
+		productLineID = &row.ProductLineID.String
+	}
+	return &domain.ProductFull{
+		ID:              row.ID,
+		ProductTypeCode: row.ProductTypeCode,
+		IsPortalReady:   row.IsPortalReady,
+		ProductLineID:   productLineID,
+		ItemID:          row.ItemID,
+		CreatedAt:       row.CreatedAt,
+		UpdatedAt:       row.UpdatedAt,
+		Item:            mapProductBaseItem(row.ItemID, row.Sku, row.ItemDescription, row.ItemNotes, row.ItemTypeCode, row.ItemCategoryID, row.CategoryName, row.ItemCategoryTypeCode, row.CategoryUnitGroupID, row.UnitValueID, row.UnitCostID, row.BurnRateID, row.AccountID, row.IsDirty, row.ItemCreatedAt, row.ItemUpdatedAt, row.CategoryCreatedAt, row.CategoryUpdatedAt),
+		ProductType:     mapProductBaseProductType(row.ProductTypeID, row.ProductTypeName, row.ProductTypeCodeJoined, row.ProductTypeCreatedAt, row.ProductTypeUpdatedAt),
+	}
+}
+
+func (r *productRepoImpl) Export(ctx context.Context, params domain.ExportProductsParams) ([]*domain.ProductFull, *apierror.APIError) {
+	ctx, span := productRepoTracer.Start(ctx, "repository.product.export")
+	defer span.End()
+
+	searchQuery := buildProductSearchParams(params.Query)
+	includeProductLineFilter := len(params.ProductLineIDs) > 0
+	includeCategoryFilter := len(params.CategoryIDs) > 0
+	includeAttributeFilter := len(params.AttributeIDs) > 0
+	includeCustomerFilter := len(params.CustomerIDs) > 0
+
+	productLineIDs := toNullStringSlice(params.ProductLineIDs)
+	categoryIDs := params.CategoryIDs
+	if categoryIDs == nil {
+		categoryIDs = []string{}
+	}
+	attributeIDs := params.AttributeIDs
+	if attributeIDs == nil {
+		attributeIDs = []string{}
+	}
+	customerIDs := params.CustomerIDs
+	if customerIDs == nil {
+		customerIDs = []string{}
+	}
+
+	var startDate, endDate gosql.NullTime
+	if params.StartDate != nil {
+		startDate = gosql.NullTime{Time: *params.StartDate, Valid: true}
+	}
+	if params.EndDate != nil {
+		endDate = gosql.NullTime{Time: *params.EndDate, Valid: true}
+	}
+
+	rows, err := r.queries.ExportProductsWithFilters(ctx, sqlc.ExportProductsWithFiltersParams{
+		AccountID:                params.AccountID,
+		SearchQuery:              searchQuery,
+		IncludeProductLineFilter: includeProductLineFilter,
+		IncludeCustomerFilter:    includeCustomerFilter,
+		ProductLineIds:           productLineIDs,
+		CustomerIds:              customerIDs,
+		IncludeCategoryFilter:    includeCategoryFilter,
+		CategoryIds:              categoryIDs,
+		IncludeAttributeFilter:   includeAttributeFilter,
+		AttributeIds:             attributeIDs,
+		StartDate:                startDate,
+		EndDate:                  endDate,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	products := make([]*domain.ProductFull, len(rows))
+	for i, row := range rows {
+		products[i] = mapProductExportRow(row)
+	}
+
+	exportIncludes := []string{"product_line", "item", "item.category", "item.category.properties", "item.unit_value", "item.unit_cost", "item.attributes"}
+	if apiErr := applyProductStitches(ctx, r.queries, products, exportIncludes); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	return products, nil
+}
+
 func (r *productRepoImpl) InsertItem(ctx context.Context, itemID string, params domain.CreateProductParams) *apierror.APIError {
 	ctx, span := productRepoTracer.Start(ctx, "repository.product.insert_item")
 	defer span.End()

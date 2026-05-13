@@ -174,21 +174,10 @@ func (m *materialSvcImpl) DeleteMaterial(ctx context.Context, req *DeleteMateria
 }
 
 func (m *materialSvcImpl) ExportMaterials(ctx context.Context, req *ExportMaterialsRequest) (*httptransport.FileDownload, *apierror.APIError) {
-	const pageSize = int32(500)
-
-	pbReq := &pb.ListMaterialsRequest{
-		Limit:        pageSize,
+	pbReq := &pb.ExportMaterialsRequest{
 		Query:        req.Query,
 		CategoryIds:  req.CategoryIDs,
 		AttributeIds: req.AttributeIDs,
-		Includes: []string{
-			"item",
-			"item.category",
-			"item.category.properties",
-			"item.unit_value",
-			"item.unit_cost",
-			"item.attributes",
-		},
 	}
 	if req.StartDate != nil {
 		pbReq.StartDate = timestamppb.New(*req.StartDate)
@@ -197,25 +186,20 @@ func (m *materialSvcImpl) ExportMaterials(ctx context.Context, req *ExportMateri
 		pbReq.EndDate = timestamppb.New(*req.EndDate)
 	}
 
-	var allMaterials []apiresource.Material
-	for {
-		resp, apiErr := grpcutil.CallRPC(ctx, materialSvcTracer, "service.materials.export.page", domain.ServiceName,
-			func(ctx context.Context, opts ...grpc.CallOption) (*pb.ListMaterialsResponse, error) {
-				return m.coreClient.ListMaterials(ctx, pbReq, opts...)
-			})
-		if apiErr != nil {
-			return nil, apiErr
-		}
-		for _, mat := range resp.Materials {
-			allMaterials = append(allMaterials, MaterialPresenter(mat))
-		}
-		if !resp.PageInfo.HasNextPage {
-			break
-		}
-		pbReq.Cursor = resp.PageInfo.NextCursor
+	resp, apiErr := grpcutil.CallRPC(ctx, materialSvcTracer, "service.materials.export", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.ExportMaterialsResponse, error) {
+			return m.coreClient.ExportMaterials(ctx, pbReq, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
 	}
 
-	body, err := export.MaterialsToExcel(allMaterials)
+	materials := make([]apiresource.Material, len(resp.Materials))
+	for i, mat := range resp.Materials {
+		materials[i] = MaterialPresenter(mat)
+	}
+
+	body, err := export.MaterialsToExcel(materials)
 	if err != nil {
 		return nil, apierror.NewInternalError(err, "Failed to build export file.")
 	}

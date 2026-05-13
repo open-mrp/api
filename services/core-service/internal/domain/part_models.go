@@ -62,6 +62,16 @@ type ListPartsParams struct {
 	Includes     []string
 }
 
+// ExportPartsParams holds filter parameters for a full (unpaginated) part export.
+type ExportPartsParams struct {
+	AccountID    string
+	Query        *string
+	CategoryIDs  []string
+	AttributeIDs []string
+	StartDate    *time.Time
+	EndDate      *time.Time
+}
+
 type ListPartsResult struct {
 	Parts    []*Part
 	PageInfo pagination.PageInfo

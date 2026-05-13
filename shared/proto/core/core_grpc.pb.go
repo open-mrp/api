@@ -177,6 +177,7 @@ const (
 	CoreService_RemoveItemCategoryProperty_FullMethodName              = "/core.CoreService/RemoveItemCategoryProperty"
 	CoreService_ChangeItemCategoryUnitGroup_FullMethodName             = "/core.CoreService/ChangeItemCategoryUnitGroup"
 	CoreService_ListProductsFull_FullMethodName                        = "/core.CoreService/ListProductsFull"
+	CoreService_ExportProducts_FullMethodName                          = "/core.CoreService/ExportProducts"
 	CoreService_GetProduct_FullMethodName                              = "/core.CoreService/GetProduct"
 	CoreService_CreateProduct_FullMethodName                           = "/core.CoreService/CreateProduct"
 	CoreService_UpdateProduct_FullMethodName                           = "/core.CoreService/UpdateProduct"
@@ -231,6 +232,7 @@ const (
 	CoreService_UpdateInvoice_FullMethodName                           = "/core.CoreService/UpdateInvoice"
 	CoreService_ListCustomerInvoices_FullMethodName                    = "/core.CoreService/ListCustomerInvoices"
 	CoreService_ListMaterials_FullMethodName                           = "/core.CoreService/ListMaterials"
+	CoreService_ExportMaterials_FullMethodName                         = "/core.CoreService/ExportMaterials"
 	CoreService_GetMaterial_FullMethodName                             = "/core.CoreService/GetMaterial"
 	CoreService_CreateMaterial_FullMethodName                          = "/core.CoreService/CreateMaterial"
 	CoreService_UpdateMaterial_FullMethodName                          = "/core.CoreService/UpdateMaterial"
@@ -243,6 +245,7 @@ const (
 	CoreService_CreatePart_FullMethodName                              = "/core.CoreService/CreatePart"
 	CoreService_GetPart_FullMethodName                                 = "/core.CoreService/GetPart"
 	CoreService_ListParts_FullMethodName                               = "/core.CoreService/ListParts"
+	CoreService_ExportParts_FullMethodName                             = "/core.CoreService/ExportParts"
 	CoreService_UpdatePart_FullMethodName                              = "/core.CoreService/UpdatePart"
 	CoreService_DeletePart_FullMethodName                              = "/core.CoreService/DeletePart"
 	CoreService_ListPermissionGroups_FullMethodName                    = "/core.CoreService/ListPermissionGroups"
@@ -646,6 +649,8 @@ type CoreServiceClient interface {
 	ChangeItemCategoryUnitGroup(ctx context.Context, in *ChangeItemCategoryUnitGroupRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Returns products with full item data.
 	ListProductsFull(ctx context.Context, in *ListProductsFullRequest, opts ...grpc.CallOption) (*ListProductsFullResponse, error)
+	// Returns all matching products (no pagination) for export.
+	ExportProducts(ctx context.Context, in *ExportProductsRequest, opts ...grpc.CallOption) (*ExportProductsResponse, error)
 	GetProduct(ctx context.Context, in *GetProductRequest, opts ...grpc.CallOption) (*GetProductResponse, error)
 	CreateProduct(ctx context.Context, in *CreateProductRequest, opts ...grpc.CallOption) (*CreateProductResponse, error)
 	UpdateProduct(ctx context.Context, in *UpdateProductRequest, opts ...grpc.CallOption) (*UpdateProductResponse, error)
@@ -712,6 +717,8 @@ type CoreServiceClient interface {
 	ListCustomerInvoices(ctx context.Context, in *ListCustomerInvoicesRequest, opts ...grpc.CallOption) (*ListCustomerInvoicesResponse, error)
 	// Materials
 	ListMaterials(ctx context.Context, in *ListMaterialsRequest, opts ...grpc.CallOption) (*ListMaterialsResponse, error)
+	// Returns all matching materials (no pagination) for export.
+	ExportMaterials(ctx context.Context, in *ExportMaterialsRequest, opts ...grpc.CallOption) (*ExportMaterialsResponse, error)
 	GetMaterial(ctx context.Context, in *GetMaterialRequest, opts ...grpc.CallOption) (*GetMaterialResponse, error)
 	CreateMaterial(ctx context.Context, in *CreateMaterialRequest, opts ...grpc.CallOption) (*CreateMaterialResponse, error)
 	UpdateMaterial(ctx context.Context, in *UpdateMaterialRequest, opts ...grpc.CallOption) (*UpdateMaterialResponse, error)
@@ -726,6 +733,8 @@ type CoreServiceClient interface {
 	CreatePart(ctx context.Context, in *CreatePartRequest, opts ...grpc.CallOption) (*CreatePartResponse, error)
 	GetPart(ctx context.Context, in *GetPartRequest, opts ...grpc.CallOption) (*GetPartResponse, error)
 	ListParts(ctx context.Context, in *ListPartsRequest, opts ...grpc.CallOption) (*ListPartsResponse, error)
+	// Returns all matching parts (no pagination) for export.
+	ExportParts(ctx context.Context, in *ExportPartsRequest, opts ...grpc.CallOption) (*ExportPartsResponse, error)
 	UpdatePart(ctx context.Context, in *UpdatePartRequest, opts ...grpc.CallOption) (*UpdatePartResponse, error)
 	DeletePart(ctx context.Context, in *DeletePartRequest, opts ...grpc.CallOption) (*DeletePartResponse, error)
 	// Permission Groups
@@ -2366,6 +2375,16 @@ func (c *coreServiceClient) ListProductsFull(ctx context.Context, in *ListProduc
 	return out, nil
 }
 
+func (c *coreServiceClient) ExportProducts(ctx context.Context, in *ExportProductsRequest, opts ...grpc.CallOption) (*ExportProductsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ExportProductsResponse)
+	err := c.cc.Invoke(ctx, CoreService_ExportProducts_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *coreServiceClient) GetProduct(ctx context.Context, in *GetProductRequest, opts ...grpc.CallOption) (*GetProductResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetProductResponse)
@@ -2906,6 +2925,16 @@ func (c *coreServiceClient) ListMaterials(ctx context.Context, in *ListMaterials
 	return out, nil
 }
 
+func (c *coreServiceClient) ExportMaterials(ctx context.Context, in *ExportMaterialsRequest, opts ...grpc.CallOption) (*ExportMaterialsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ExportMaterialsResponse)
+	err := c.cc.Invoke(ctx, CoreService_ExportMaterials_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *coreServiceClient) GetMaterial(ctx context.Context, in *GetMaterialRequest, opts ...grpc.CallOption) (*GetMaterialResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetMaterialResponse)
@@ -3020,6 +3049,16 @@ func (c *coreServiceClient) ListParts(ctx context.Context, in *ListPartsRequest,
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListPartsResponse)
 	err := c.cc.Invoke(ctx, CoreService_ListParts_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreServiceClient) ExportParts(ctx context.Context, in *ExportPartsRequest, opts ...grpc.CallOption) (*ExportPartsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ExportPartsResponse)
+	err := c.cc.Invoke(ctx, CoreService_ExportParts_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -4363,6 +4402,8 @@ type CoreServiceServer interface {
 	ChangeItemCategoryUnitGroup(context.Context, *ChangeItemCategoryUnitGroupRequest) (*emptypb.Empty, error)
 	// Returns products with full item data.
 	ListProductsFull(context.Context, *ListProductsFullRequest) (*ListProductsFullResponse, error)
+	// Returns all matching products (no pagination) for export.
+	ExportProducts(context.Context, *ExportProductsRequest) (*ExportProductsResponse, error)
 	GetProduct(context.Context, *GetProductRequest) (*GetProductResponse, error)
 	CreateProduct(context.Context, *CreateProductRequest) (*CreateProductResponse, error)
 	UpdateProduct(context.Context, *UpdateProductRequest) (*UpdateProductResponse, error)
@@ -4429,6 +4470,8 @@ type CoreServiceServer interface {
 	ListCustomerInvoices(context.Context, *ListCustomerInvoicesRequest) (*ListCustomerInvoicesResponse, error)
 	// Materials
 	ListMaterials(context.Context, *ListMaterialsRequest) (*ListMaterialsResponse, error)
+	// Returns all matching materials (no pagination) for export.
+	ExportMaterials(context.Context, *ExportMaterialsRequest) (*ExportMaterialsResponse, error)
 	GetMaterial(context.Context, *GetMaterialRequest) (*GetMaterialResponse, error)
 	CreateMaterial(context.Context, *CreateMaterialRequest) (*CreateMaterialResponse, error)
 	UpdateMaterial(context.Context, *UpdateMaterialRequest) (*UpdateMaterialResponse, error)
@@ -4443,6 +4486,8 @@ type CoreServiceServer interface {
 	CreatePart(context.Context, *CreatePartRequest) (*CreatePartResponse, error)
 	GetPart(context.Context, *GetPartRequest) (*GetPartResponse, error)
 	ListParts(context.Context, *ListPartsRequest) (*ListPartsResponse, error)
+	// Returns all matching parts (no pagination) for export.
+	ExportParts(context.Context, *ExportPartsRequest) (*ExportPartsResponse, error)
 	UpdatePart(context.Context, *UpdatePartRequest) (*UpdatePartResponse, error)
 	DeletePart(context.Context, *DeletePartRequest) (*DeletePartResponse, error)
 	// Permission Groups
@@ -5033,6 +5078,9 @@ func (UnimplementedCoreServiceServer) ChangeItemCategoryUnitGroup(context.Contex
 func (UnimplementedCoreServiceServer) ListProductsFull(context.Context, *ListProductsFullRequest) (*ListProductsFullResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListProductsFull not implemented")
 }
+func (UnimplementedCoreServiceServer) ExportProducts(context.Context, *ExportProductsRequest) (*ExportProductsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ExportProducts not implemented")
+}
 func (UnimplementedCoreServiceServer) GetProduct(context.Context, *GetProductRequest) (*GetProductResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetProduct not implemented")
 }
@@ -5195,6 +5243,9 @@ func (UnimplementedCoreServiceServer) ListCustomerInvoices(context.Context, *Lis
 func (UnimplementedCoreServiceServer) ListMaterials(context.Context, *ListMaterialsRequest) (*ListMaterialsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListMaterials not implemented")
 }
+func (UnimplementedCoreServiceServer) ExportMaterials(context.Context, *ExportMaterialsRequest) (*ExportMaterialsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ExportMaterials not implemented")
+}
 func (UnimplementedCoreServiceServer) GetMaterial(context.Context, *GetMaterialRequest) (*GetMaterialResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetMaterial not implemented")
 }
@@ -5230,6 +5281,9 @@ func (UnimplementedCoreServiceServer) GetPart(context.Context, *GetPartRequest) 
 }
 func (UnimplementedCoreServiceServer) ListParts(context.Context, *ListPartsRequest) (*ListPartsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListParts not implemented")
+}
+func (UnimplementedCoreServiceServer) ExportParts(context.Context, *ExportPartsRequest) (*ExportPartsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ExportParts not implemented")
 }
 func (UnimplementedCoreServiceServer) UpdatePart(context.Context, *UpdatePartRequest) (*UpdatePartResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdatePart not implemented")
@@ -8264,6 +8318,24 @@ func _CoreService_ListProductsFull_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CoreService_ExportProducts_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ExportProductsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).ExportProducts(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_ExportProducts_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).ExportProducts(ctx, req.(*ExportProductsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _CoreService_GetProduct_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetProductRequest)
 	if err := dec(in); err != nil {
@@ -9236,6 +9308,24 @@ func _CoreService_ListMaterials_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CoreService_ExportMaterials_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ExportMaterialsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).ExportMaterials(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_ExportMaterials_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).ExportMaterials(ctx, req.(*ExportMaterialsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _CoreService_GetMaterial_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetMaterialRequest)
 	if err := dec(in); err != nil {
@@ -9448,6 +9538,24 @@ func _CoreService_ListParts_Handler(srv interface{}, ctx context.Context, dec fu
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(CoreServiceServer).ListParts(ctx, req.(*ListPartsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreService_ExportParts_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ExportPartsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).ExportParts(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_ExportParts_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).ExportParts(ctx, req.(*ExportPartsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -11932,6 +12040,10 @@ var CoreService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _CoreService_ListProductsFull_Handler,
 		},
 		{
+			MethodName: "ExportProducts",
+			Handler:    _CoreService_ExportProducts_Handler,
+		},
+		{
 			MethodName: "GetProduct",
 			Handler:    _CoreService_GetProduct_Handler,
 		},
@@ -12148,6 +12260,10 @@ var CoreService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _CoreService_ListMaterials_Handler,
 		},
 		{
+			MethodName: "ExportMaterials",
+			Handler:    _CoreService_ExportMaterials_Handler,
+		},
+		{
 			MethodName: "GetMaterial",
 			Handler:    _CoreService_GetMaterial_Handler,
 		},
@@ -12194,6 +12310,10 @@ var CoreService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListParts",
 			Handler:    _CoreService_ListParts_Handler,
+		},
+		{
+			MethodName: "ExportParts",
+			Handler:    _CoreService_ExportParts_Handler,
 		},
 		{
 			MethodName: "UpdatePart",

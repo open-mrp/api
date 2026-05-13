@@ -64,6 +64,267 @@ func (q *Queries) CheckProductSKUExists(ctx context.Context, arg CheckProductSKU
 	return cnt, err
 }
 
+const exportProductsWithFilters = `-- name: ExportProductsWithFilters :many
+SELECT
+    p.id,
+    p.product_type_code,
+    p.is_portal_ready,
+    p.product_line_id,
+    p.item_id,
+    p.created_at,
+    p.updated_at,
+    i.sku,
+    i.description AS item_description,
+    i.notes AS item_notes,
+    i.item_type_code,
+    i.item_category_id,
+    i.unit_value_id,
+    i.unit_cost_id,
+    i.burn_rate_id,
+    i.account_id,
+    i.is_dirty,
+    i.created_at AS item_created_at,
+    i.updated_at AS item_updated_at,
+    ic.name AS category_name,
+    ic.item_category_type_code,
+    ic.unit_group_id AS category_unit_group_id,
+    ic.created_at AS category_created_at,
+    ic.updated_at AS category_updated_at,
+    pt.id AS product_type_id,
+    pt.name AS product_type_name,
+    pt.code AS product_type_code_joined,
+    pt.created_at AS product_type_created_at,
+    pt.updated_at AS product_type_updated_at
+FROM product p
+JOIN item i ON i.id = p.item_id
+JOIN item_category ic ON ic.id = i.item_category_id
+JOIN product_type pt ON pt.code = p.product_type_code
+WHERE i.account_id = ?
+AND i.deleted_at IS NULL
+AND (
+    ? IS NULL
+    OR i.sku LIKE ?
+    OR i.description LIKE ?
+)
+AND (
+    (? = false AND ? = false)
+    OR (? = true AND p.product_line_id IN (/*SLICE:product_line_ids*/?))
+    OR (? = true AND (
+        p.product_line_id IN (
+            SELECT arpl.product_line_id
+            FROM account_relation_product_line arpl
+            JOIN account_relation ar ON ar.id = arpl.account_relation_id
+            WHERE ar.owner_account_id = i.account_id
+            AND ar.counterparty_account_id IN (/*SLICE:customer_ids*/?)
+            AND ar.account_relation_role_code = 'customer'
+        )
+        OR p.product_line_id IN (
+            SELECT agpl.product_line_id
+            FROM account_group_product_line agpl
+            JOIN account_relation ar ON ar.account_group_id = agpl.account_group_id
+            WHERE ar.owner_account_id = i.account_id
+            AND ar.counterparty_account_id IN (/*SLICE:customer_ids*/?)
+            AND ar.account_relation_role_code = 'customer'
+        )
+        OR p.product_line_id IN (
+            SELECT agpl.product_line_id
+            FROM account_group_product_line agpl
+            JOIN account_relation_price_group arpg ON arpg.account_group_id = agpl.account_group_id
+            JOIN account_relation ar ON ar.id = arpg.account_relation_id
+            WHERE ar.owner_account_id = i.account_id
+            AND ar.counterparty_account_id IN (/*SLICE:customer_ids*/?)
+            AND ar.account_relation_role_code = 'customer'
+        )
+    ))
+)
+AND (
+    ? = false
+    OR i.item_category_id IN (/*SLICE:category_ids*/?)
+)
+AND (
+    ? = false
+    OR EXISTS (
+        SELECT 1 FROM _item_attributes ia
+        WHERE ia.B = i.id
+        AND ia.A IN (/*SLICE:attribute_ids*/?)
+    )
+)
+AND p.product_type_code = 'sale'
+AND (
+    ? IS NULL
+    OR i.created_at >= ?
+)
+AND (
+    ? IS NULL
+    OR i.created_at <= ?
+)
+ORDER BY p.created_at DESC, p.id DESC
+`
+
+type ExportProductsWithFiltersParams struct {
+	AccountID                string
+	SearchQuery              sql.NullString
+	IncludeProductLineFilter interface{}
+	IncludeCustomerFilter    interface{}
+	ProductLineIds           []sql.NullString
+	CustomerIds              []string
+	IncludeCategoryFilter    interface{}
+	CategoryIds              []string
+	IncludeAttributeFilter   interface{}
+	AttributeIds             []string
+	StartDate                sql.NullTime
+	EndDate                  sql.NullTime
+}
+
+type ExportProductsWithFiltersRow struct {
+	ID                    string
+	ProductTypeCode       string
+	IsPortalReady         bool
+	ProductLineID         sql.NullString
+	ItemID                string
+	CreatedAt             time.Time
+	UpdatedAt             time.Time
+	Sku                   string
+	ItemDescription       sql.NullString
+	ItemNotes             sql.NullString
+	ItemTypeCode          string
+	ItemCategoryID        string
+	UnitValueID           string
+	UnitCostID            string
+	BurnRateID            string
+	AccountID             string
+	IsDirty               bool
+	ItemCreatedAt         time.Time
+	ItemUpdatedAt         time.Time
+	CategoryName          string
+	ItemCategoryTypeCode  string
+	CategoryUnitGroupID   string
+	CategoryCreatedAt     time.Time
+	CategoryUpdatedAt     time.Time
+	ProductTypeID         string
+	ProductTypeName       string
+	ProductTypeCodeJoined string
+	ProductTypeCreatedAt  time.Time
+	ProductTypeUpdatedAt  time.Time
+}
+
+func (q *Queries) ExportProductsWithFilters(ctx context.Context, arg ExportProductsWithFiltersParams) ([]ExportProductsWithFiltersRow, error) {
+	query := exportProductsWithFilters
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.IncludeProductLineFilter)
+	queryParams = append(queryParams, arg.IncludeCustomerFilter)
+	queryParams = append(queryParams, arg.IncludeProductLineFilter)
+	if len(arg.ProductLineIds) > 0 {
+		for _, v := range arg.ProductLineIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:product_line_ids*/?", strings.Repeat(",?", len(arg.ProductLineIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:product_line_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.IncludeCustomerFilter)
+	if len(arg.CustomerIds) > 0 {
+		for _, v := range arg.CustomerIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:customer_ids*/?", strings.Repeat(",?", len(arg.CustomerIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:customer_ids*/?", "NULL", 1)
+	}
+	if len(arg.CustomerIds) > 0 {
+		for _, v := range arg.CustomerIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:customer_ids*/?", strings.Repeat(",?", len(arg.CustomerIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:customer_ids*/?", "NULL", 1)
+	}
+	if len(arg.CustomerIds) > 0 {
+		for _, v := range arg.CustomerIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:customer_ids*/?", strings.Repeat(",?", len(arg.CustomerIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:customer_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.IncludeCategoryFilter)
+	if len(arg.CategoryIds) > 0 {
+		for _, v := range arg.CategoryIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:category_ids*/?", strings.Repeat(",?", len(arg.CategoryIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:category_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.IncludeAttributeFilter)
+	if len(arg.AttributeIds) > 0 {
+		for _, v := range arg.AttributeIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:attribute_ids*/?", strings.Repeat(",?", len(arg.AttributeIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:attribute_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.StartDate)
+	queryParams = append(queryParams, arg.StartDate)
+	queryParams = append(queryParams, arg.EndDate)
+	queryParams = append(queryParams, arg.EndDate)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ExportProductsWithFiltersRow
+	for rows.Next() {
+		var i ExportProductsWithFiltersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProductTypeCode,
+			&i.IsPortalReady,
+			&i.ProductLineID,
+			&i.ItemID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Sku,
+			&i.ItemDescription,
+			&i.ItemNotes,
+			&i.ItemTypeCode,
+			&i.ItemCategoryID,
+			&i.UnitValueID,
+			&i.UnitCostID,
+			&i.BurnRateID,
+			&i.AccountID,
+			&i.IsDirty,
+			&i.ItemCreatedAt,
+			&i.ItemUpdatedAt,
+			&i.CategoryName,
+			&i.ItemCategoryTypeCode,
+			&i.CategoryUnitGroupID,
+			&i.CategoryCreatedAt,
+			&i.CategoryUpdatedAt,
+			&i.ProductTypeID,
+			&i.ProductTypeName,
+			&i.ProductTypeCodeJoined,
+			&i.ProductTypeCreatedAt,
+			&i.ProductTypeUpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const findProductsBySKUs = `-- name: FindProductsBySKUs :many
 SELECT
     p.id,

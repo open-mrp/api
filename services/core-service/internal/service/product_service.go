@@ -153,6 +153,43 @@ func (s *productSvcImpl) ListProductsFull(ctx context.Context, params domain.Lis
 	return result, nil
 }
 
+// ExportProducts returns all matching products for export (no pagination).
+func (s *productSvcImpl) ExportProducts(ctx context.Context, params domain.ExportProductsParams) ([]*domain.ProductFull, *apierror.APIError) {
+	ctx, span := productSvcTracer.Start(ctx, "service.product.export")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsAssignedActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := checkProductReadPermission(identity); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if !identity.IsTargetAccountSet() {
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+	}
+	if identity.IsExternalTarget() {
+		meds := s.mediators()
+		if apiErr := meds.ReadAccess.CheckReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+	}
+
+	if identity.IsCustomerUser() {
+		actorAccountID := identity.ActorAccountID()
+		if actorAccountID != nil {
+			params.CustomerIDs = []string{*actorAccountID}
+		}
+	}
+
+	params.AccountID = identity.Target.AccountID
+
+	return s.repos.NewProductRepo().Export(ctx, params)
+}
+
 // GetProduct returns a single product by item ID.
 func (s *productSvcImpl) GetProduct(ctx context.Context, params domain.GetProductFullParams) (*domain.ProductFull, *apierror.APIError) {
 	ctx, span := productSvcTracer.Start(ctx, "service.product.get")

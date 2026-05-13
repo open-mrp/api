@@ -126,6 +126,7 @@ type ProductRepo interface {
 	GetSystemProduct(ctx context.Context, accountID, productTypeCode string) (*SystemProductInfo, *apierror.APIError)
 
 	List(ctx context.Context, params ListProductsFullParams) (*ListProductsFullResult, *apierror.APIError)
+	Export(ctx context.Context, params ExportProductsParams) ([]*ProductFull, *apierror.APIError)
 	Get(ctx context.Context, params GetProductFullParams) (*ProductFull, *apierror.APIError)
 	Create(ctx context.Context, productID, itemID string, params CreateProductParams) (*ProductFull, *apierror.APIError)
 	Update(ctx context.Context, params UpdateProductParams) (*ProductFull, *apierror.APIError)
@@ -777,6 +778,7 @@ type VolumeDiscountRepo interface {
 
 type MaterialRepo interface {
 	List(ctx context.Context, params ListMaterialsParams) (*ListMaterialsResult, *apierror.APIError)
+	Export(ctx context.Context, params ExportMaterialsParams) ([]*Material, *apierror.APIError)
 	GetByID(ctx context.Context, params GetMaterialParams) (*Material, *apierror.APIError)
 	GetByItemID(ctx context.Context, accountID, itemID string) (*Material, *apierror.APIError)
 	Create(ctx context.Context, id string, params CreateMaterialParams) *apierror.APIError
@@ -925,6 +927,7 @@ type PartRepo interface {
 	Create(ctx context.Context, partID, itemID string, params CreatePartParams) (*Part, *apierror.APIError)
 	Get(ctx context.Context, params GetPartParams) (*Part, *apierror.APIError)
 	List(ctx context.Context, params ListPartsParams) (*ListPartsResult, *apierror.APIError)
+	Export(ctx context.Context, params ExportPartsParams) ([]*Part, *apierror.APIError)
 	Delete(ctx context.Context, params DeletePartParams) *apierror.APIError
 	ExistsBySKU(ctx context.Context, accountID, sku string, excludeItemID *string) (bool, *apierror.APIError)
 	InsertRate(ctx context.Context, id, value, numeratorUnitID, denominatorUnitID string) *apierror.APIError

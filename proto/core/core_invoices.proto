@@ -77,6 +77,16 @@ message ListMaterialsResponse {
   repeated MaterialInfo materials = 1;
   PageInfo page_info = 2;
 }
+message ExportMaterialsRequest {
+  optional string query = 1;
+  repeated string category_ids = 2;
+  repeated string attribute_ids = 3;
+  optional google.protobuf.Timestamp start_date = 4;
+  optional google.protobuf.Timestamp end_date = 5;
+}
+message ExportMaterialsResponse {
+  repeated MaterialInfo materials = 1;
+}
 message GetMaterialRequest {
   string id = 1;
   repeated string includes = 2;
@@ -206,6 +216,16 @@ message ListPartsResponse {
   repeated PartInfo parts = 1;
   PageInfo page_info = 2;
 }
+message ExportPartsRequest {
+  optional string query = 1;
+  repeated string category_ids = 2;
+  repeated string attribute_ids = 3;
+  optional google.protobuf.Timestamp start_date = 4;
+  optional google.protobuf.Timestamp end_date = 5;
+}
+message ExportPartsResponse {
+  repeated PartInfo parts = 1;
+}
 message GetPartRequest {
   string id = 1;
   repeated string includes = 2;
@@ -328,6 +348,18 @@ message ListProductsFullRequest {
 message ListProductsFullResponse {
   repeated ProductFullInfo products = 1;
   PageInfo page_info = 2;
+}
+message ExportProductsRequest {
+  optional string query = 1;
+  repeated string customer_ids = 2;
+  repeated string product_line_ids = 3;
+  repeated string category_ids = 4;
+  repeated string attribute_ids = 5;
+  optional google.protobuf.Timestamp start_date = 6;
+  optional google.protobuf.Timestamp end_date = 7;
+}
+message ExportProductsResponse {
+  repeated ProductFullInfo products = 1;
 }
 message GetProductRequest {
   string id = 1;

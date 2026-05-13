@@ -434,6 +434,8 @@ service CoreService {
 
   // Returns products with full item data.
   rpc ListProductsFull(ListProductsFullRequest) returns (ListProductsFullResponse);
+  // Returns all matching products (no pagination) for export.
+  rpc ExportProducts(ExportProductsRequest) returns (ExportProductsResponse);
   rpc GetProduct(GetProductRequest) returns (GetProductResponse);
   rpc CreateProduct(CreateProductRequest) returns (CreateProductResponse);
   rpc UpdateProduct(UpdateProductRequest) returns (UpdateProductResponse);
@@ -513,6 +515,8 @@ service CoreService {
 
   // Materials
   rpc ListMaterials(ListMaterialsRequest) returns (ListMaterialsResponse);
+  // Returns all matching materials (no pagination) for export.
+  rpc ExportMaterials(ExportMaterialsRequest) returns (ExportMaterialsResponse);
   rpc GetMaterial(GetMaterialRequest) returns (GetMaterialResponse);
   rpc CreateMaterial(CreateMaterialRequest) returns (CreateMaterialResponse);
   rpc UpdateMaterial(UpdateMaterialRequest) returns (UpdateMaterialResponse);
@@ -529,6 +533,8 @@ service CoreService {
   rpc CreatePart(CreatePartRequest) returns (CreatePartResponse);
   rpc GetPart(GetPartRequest) returns (GetPartResponse);
   rpc ListParts(ListPartsRequest) returns (ListPartsResponse);
+  // Returns all matching parts (no pagination) for export.
+  rpc ExportParts(ExportPartsRequest) returns (ExportPartsResponse);
   rpc UpdatePart(UpdatePartRequest) returns (UpdatePartResponse);
   rpc DeletePart(DeletePartRequest) returns (DeletePartResponse);
 

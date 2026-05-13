@@ -65,6 +65,204 @@ func (q *Queries) DeleteMaterialByID(ctx context.Context, arg DeleteMaterialByID
 	return q.db.ExecContext(ctx, deleteMaterialByID, arg.ID, arg.AccountID)
 }
 
+const exportMaterialsWithFilters = `-- name: ExportMaterialsWithFilters :many
+SELECT
+    m.id,
+    m.item_id,
+    m.order_point_id,
+    m.lead_time_id,
+    m.created_at,
+    m.updated_at,
+    i.sku,
+    i.description AS item_description,
+    i.notes AS item_notes,
+    i.item_type_code,
+    i.item_category_id,
+    i.unit_value_id,
+    i.unit_cost_id,
+    i.burn_rate_id,
+    i.account_id,
+    i.is_dirty,
+    i.created_at AS item_created_at,
+    i.updated_at AS item_updated_at,
+    ic.name AS category_name,
+    ic.item_category_type_code,
+    ic.unit_group_id AS category_unit_group_id,
+    ic.created_at AS category_created_at,
+    ic.updated_at AS category_updated_at,
+    op.value AS order_point_value,
+    op.unit_id AS order_point_unit_id,
+    op_u.abbreviation AS order_point_unit_abbreviation,
+    op_u.unit_dimension_code AS order_point_unit_type,
+    lt.value AS lead_time_value,
+    lt.unit_id AS lead_time_unit_id,
+    lt_u.abbreviation AS lead_time_unit_abbreviation,
+    lt_u.unit_dimension_code AS lead_time_unit_type
+FROM material m
+JOIN item i ON i.id = m.item_id
+JOIN item_category ic ON ic.id = i.item_category_id
+JOIN quantity op ON op.id = m.order_point_id
+JOIN unit op_u ON op_u.id = op.unit_id
+JOIN quantity lt ON lt.id = m.lead_time_id
+JOIN unit lt_u ON lt_u.id = lt.unit_id
+WHERE i.account_id = ?
+AND i.deleted_at IS NULL
+AND (
+    ? IS NULL
+    OR i.sku LIKE ?
+    OR i.description LIKE ?
+)
+AND (
+    ? = false
+    OR i.item_category_id IN (/*SLICE:category_ids*/?)
+)
+AND (
+    ? = false
+    OR EXISTS (
+        SELECT 1 FROM _item_attributes ia
+        WHERE ia.B = i.id
+        AND ia.A IN (/*SLICE:attribute_ids*/?)
+    )
+)
+AND (
+    ? IS NULL
+    OR i.created_at >= ?
+)
+AND (
+    ? IS NULL
+    OR i.created_at <= ?
+)
+ORDER BY m.created_at DESC, m.id DESC
+`
+
+type ExportMaterialsWithFiltersParams struct {
+	AccountID              string
+	SearchQuery            sql.NullString
+	IncludeCategoryFilter  interface{}
+	CategoryIds            []string
+	IncludeAttributeFilter interface{}
+	AttributeIds           []string
+	StartDate              sql.NullTime
+	EndDate                sql.NullTime
+}
+
+type ExportMaterialsWithFiltersRow struct {
+	ID                         string
+	ItemID                     string
+	OrderPointID               string
+	LeadTimeID                 string
+	CreatedAt                  time.Time
+	UpdatedAt                  time.Time
+	Sku                        string
+	ItemDescription            sql.NullString
+	ItemNotes                  sql.NullString
+	ItemTypeCode               string
+	ItemCategoryID             string
+	UnitValueID                string
+	UnitCostID                 string
+	BurnRateID                 string
+	AccountID                  string
+	IsDirty                    bool
+	ItemCreatedAt              time.Time
+	ItemUpdatedAt              time.Time
+	CategoryName               string
+	ItemCategoryTypeCode       string
+	CategoryUnitGroupID        string
+	CategoryCreatedAt          time.Time
+	CategoryUpdatedAt          time.Time
+	OrderPointValue            string
+	OrderPointUnitID           string
+	OrderPointUnitAbbreviation string
+	OrderPointUnitType         string
+	LeadTimeValue              string
+	LeadTimeUnitID             string
+	LeadTimeUnitAbbreviation   string
+	LeadTimeUnitType           string
+}
+
+func (q *Queries) ExportMaterialsWithFilters(ctx context.Context, arg ExportMaterialsWithFiltersParams) ([]ExportMaterialsWithFiltersRow, error) {
+	query := exportMaterialsWithFilters
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.AccountID)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.SearchQuery)
+	queryParams = append(queryParams, arg.IncludeCategoryFilter)
+	if len(arg.CategoryIds) > 0 {
+		for _, v := range arg.CategoryIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:category_ids*/?", strings.Repeat(",?", len(arg.CategoryIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:category_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.IncludeAttributeFilter)
+	if len(arg.AttributeIds) > 0 {
+		for _, v := range arg.AttributeIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:attribute_ids*/?", strings.Repeat(",?", len(arg.AttributeIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:attribute_ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.StartDate)
+	queryParams = append(queryParams, arg.StartDate)
+	queryParams = append(queryParams, arg.EndDate)
+	queryParams = append(queryParams, arg.EndDate)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ExportMaterialsWithFiltersRow
+	for rows.Next() {
+		var i ExportMaterialsWithFiltersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ItemID,
+			&i.OrderPointID,
+			&i.LeadTimeID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Sku,
+			&i.ItemDescription,
+			&i.ItemNotes,
+			&i.ItemTypeCode,
+			&i.ItemCategoryID,
+			&i.UnitValueID,
+			&i.UnitCostID,
+			&i.BurnRateID,
+			&i.AccountID,
+			&i.IsDirty,
+			&i.ItemCreatedAt,
+			&i.ItemUpdatedAt,
+			&i.CategoryName,
+			&i.ItemCategoryTypeCode,
+			&i.CategoryUnitGroupID,
+			&i.CategoryCreatedAt,
+			&i.CategoryUpdatedAt,
+			&i.OrderPointValue,
+			&i.OrderPointUnitID,
+			&i.OrderPointUnitAbbreviation,
+			&i.OrderPointUnitType,
+			&i.LeadTimeValue,
+			&i.LeadTimeUnitID,
+			&i.LeadTimeUnitAbbreviation,
+			&i.LeadTimeUnitType,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getMaterialByIDBase = `-- name: GetMaterialByIDBase :one
 SELECT
     m.id,

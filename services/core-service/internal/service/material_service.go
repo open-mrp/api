@@ -80,6 +80,34 @@ func (s *materialSvcImpl) withTx(ctx context.Context, fn func(context.Context, *
 // 1. Extract and validate the caller's identity, actor type, and items:read permission.
 // 2. Require the Augno-Account header to scope the query.
 // 3. Query the material repository with the account ID and pagination params.
+func (s *materialSvcImpl) ExportMaterials(ctx context.Context, params domain.ExportMaterialsParams) ([]*domain.Material, *apierror.APIError) {
+	ctx, span := materialSvcTracer.Start(ctx, "service.material.export")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsAssignedActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := checkMaterialReadPermission(identity); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if !identity.IsTargetAccountSet() {
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account-ID header is required."))
+	}
+	if identity.IsExternalTarget() {
+		meds := s.mediators()
+		if apiErr := meds.ReadAccess.CheckReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+	}
+
+	params.AccountID = identity.Target.AccountID
+	return s.repos.NewMaterialRepo().Export(ctx, params)
+}
+
 func (s *materialSvcImpl) ListMaterials(ctx context.Context, params domain.ListMaterialsParams) (*domain.ListMaterialsResult, *apierror.APIError) {
 	ctx, span := materialSvcTracer.Start(ctx, "service.material.list")
 	defer span.End()

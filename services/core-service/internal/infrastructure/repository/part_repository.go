@@ -370,6 +370,71 @@ func (r *partRepoImpl) TouchUpdatedAt(ctx context.Context, partID string) *apier
 	return nil
 }
 
+func mapPartExportRow(row sqlc.ExportPartsWithFiltersRow) *domain.Part {
+	return &domain.Part{
+		ID:        row.PartID,
+		ItemID:    row.ID,
+		CreatedAt: row.PartCreatedAt,
+		UpdatedAt: row.PartUpdatedAt,
+		Item:      mapPartBaseItem(row.ID, row.Sku, row.Description, row.Notes, row.ItemTypeCode, row.ItemCategoryID, row.CategoryName, row.ItemCategoryTypeCode, row.CategoryUnitGroupID, row.UnitValueID, row.UnitCostID, row.BurnRateID, row.AccountID, row.IsDirty, row.CreatedAt, row.UpdatedAt, row.CategoryCreatedAt, row.CategoryUpdatedAt),
+	}
+}
+
+func (r *partRepoImpl) Export(ctx context.Context, params domain.ExportPartsParams) ([]*domain.Part, *apierror.APIError) {
+	ctx, span := partRepoTracer.Start(ctx, "repository.part.export")
+	defer span.End()
+
+	searchQuery := gosql.NullString{}
+	if params.Query != nil && *params.Query != "" {
+		searchQuery = gosql.NullString{String: "%" + *params.Query + "%", Valid: true}
+	}
+	includeCategoryFilter := len(params.CategoryIDs) > 0
+	includeAttributeFilter := len(params.AttributeIDs) > 0
+
+	categoryIDs := params.CategoryIDs
+	if categoryIDs == nil {
+		categoryIDs = []string{}
+	}
+	attributeIDs := params.AttributeIDs
+	if attributeIDs == nil {
+		attributeIDs = []string{}
+	}
+
+	var startDate, endDate gosql.NullTime
+	if params.StartDate != nil {
+		startDate = gosql.NullTime{Time: *params.StartDate, Valid: true}
+	}
+	if params.EndDate != nil {
+		endDate = gosql.NullTime{Time: *params.EndDate, Valid: true}
+	}
+
+	rows, err := r.queries.ExportPartsWithFilters(ctx, sqlc.ExportPartsWithFiltersParams{
+		AccountID:              params.AccountID,
+		SearchQuery:            searchQuery,
+		IncludeCategoryFilter:  includeCategoryFilter,
+		CategoryIds:            categoryIDs,
+		IncludeAttributeFilter: includeAttributeFilter,
+		AttributeIds:           attributeIDs,
+		StartDate:              startDate,
+		EndDate:                endDate,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	parts := make([]*domain.Part, len(rows))
+	for i, row := range rows {
+		parts[i] = mapPartExportRow(row)
+	}
+
+	exportIncludes := []string{"item", "item.category", "item.category.properties", "item.unit_value", "item.unit_cost", "item.attributes"}
+	if apiErr := applyPartStitches(ctx, r.queries, parts, exportIncludes); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	return parts, nil
+}
+
 func (r *partRepoImpl) InsertItem(ctx context.Context, itemID string, params domain.CreatePartParams, unitValueID, burnRateID, unitCostID string) *apierror.APIError {
 	ctx, span := partRepoTracer.Start(ctx, "repository.part.insert_item")
 	defer span.End()

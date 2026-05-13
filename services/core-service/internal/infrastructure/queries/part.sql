@@ -213,3 +213,58 @@ SELECT EXISTS(
   AND id != sqlc.arg('exclude_id')
   AND deleted_at IS NULL
 ) AS sku_exists;
+
+-- name: ExportPartsWithFilters :many
+SELECT
+    p.id AS part_id,
+    p.created_at AS part_created_at,
+    p.updated_at AS part_updated_at,
+    i.id,
+    i.sku,
+    i.description,
+    i.notes,
+    i.item_type_code,
+    i.item_category_id,
+    i.unit_value_id,
+    i.unit_cost_id,
+    i.burn_rate_id,
+    i.account_id,
+    i.is_dirty,
+    i.created_at,
+    i.updated_at,
+    ic.name AS category_name,
+    ic.item_category_type_code,
+    ic.unit_group_id AS category_unit_group_id,
+    ic.created_at AS category_created_at,
+    ic.updated_at AS category_updated_at
+FROM part p
+JOIN item i ON i.id = p.item_id
+JOIN item_category ic ON ic.id = i.item_category_id
+WHERE i.account_id = sqlc.arg('account_id')
+AND i.deleted_at IS NULL
+AND (
+    sqlc.arg('include_category_filter') = false
+    OR i.item_category_id IN (sqlc.slice('category_ids'))
+)
+AND (
+    sqlc.arg('include_attribute_filter') = false
+    OR EXISTS (
+        SELECT 1 FROM _item_attributes ia
+        WHERE ia.B = i.id
+        AND ia.A IN (sqlc.slice('attribute_ids'))
+    )
+)
+AND (
+    sqlc.narg('start_date') IS NULL
+    OR i.created_at >= sqlc.narg('start_date')
+)
+AND (
+    sqlc.narg('end_date') IS NULL
+    OR i.created_at <= sqlc.narg('end_date')
+)
+AND (
+    sqlc.narg('search_query') IS NULL
+    OR i.sku LIKE sqlc.narg('search_query')
+    OR i.description LIKE sqlc.narg('search_query')
+)
+ORDER BY i.created_at DESC, i.id DESC;

@@ -1400,6 +1400,21 @@ func (mr *MockProductRepoMockRecorder) ExistsBySKU(ctx, accountID, sku, excludeI
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExistsBySKU", reflect.TypeOf((*MockProductRepo)(nil).ExistsBySKU), ctx, accountID, sku, excludeItemID)
 }
 
+// Export mocks base method.
+func (m *MockProductRepo) Export(ctx context.Context, params domain.ExportProductsParams) ([]*domain.ProductFull, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Export", ctx, params)
+	ret0, _ := ret[0].([]*domain.ProductFull)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Export indicates an expected call of Export.
+func (mr *MockProductRepoMockRecorder) Export(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Export", reflect.TypeOf((*MockProductRepo)(nil).Export), ctx, params)
+}
+
 // Get mocks base method.
 func (m *MockProductRepo) Get(ctx context.Context, params domain.GetProductFullParams) (*domain.ProductFull, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -8900,6 +8915,21 @@ func (mr *MockMaterialRepoMockRecorder) DeleteByItemID(ctx, accountID, itemID an
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteByItemID", reflect.TypeOf((*MockMaterialRepo)(nil).DeleteByItemID), ctx, accountID, itemID)
 }
 
+// Export mocks base method.
+func (m *MockMaterialRepo) Export(ctx context.Context, params domain.ExportMaterialsParams) ([]*domain.Material, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Export", ctx, params)
+	ret0, _ := ret[0].([]*domain.Material)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Export indicates an expected call of Export.
+func (mr *MockMaterialRepoMockRecorder) Export(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Export", reflect.TypeOf((*MockMaterialRepo)(nil).Export), ctx, params)
+}
+
 // GetByID mocks base method.
 func (m *MockMaterialRepo) GetByID(ctx context.Context, params domain.GetMaterialParams) (*domain.Material, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -10839,6 +10869,21 @@ func (m *MockPartRepo) ExistsBySKU(ctx context.Context, accountID, sku string, e
 func (mr *MockPartRepoMockRecorder) ExistsBySKU(ctx, accountID, sku, excludeItemID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExistsBySKU", reflect.TypeOf((*MockPartRepo)(nil).ExistsBySKU), ctx, accountID, sku, excludeItemID)
+}
+
+// Export mocks base method.
+func (m *MockPartRepo) Export(ctx context.Context, params domain.ExportPartsParams) ([]*domain.Part, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Export", ctx, params)
+	ret0, _ := ret[0].([]*domain.Part)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Export indicates an expected call of Export.
+func (mr *MockPartRepoMockRecorder) Export(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Export", reflect.TypeOf((*MockPartRepo)(nil).Export), ctx, params)
 }
 
 // Get mocks base method.

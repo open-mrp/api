@@ -527,6 +527,82 @@ func (r *materialRepoImpl) InsertItem(ctx context.Context, id string, params dom
 	return nil
 }
 
+func mapMaterialExportRow(row sqlc.ExportMaterialsWithFiltersRow) *domain.Material {
+	return &domain.Material{
+		ID:     row.ID,
+		ItemID: row.ItemID,
+		Item:   mapMaterialBaseItem(row.ItemID, row.Sku, row.ItemDescription, row.ItemNotes, row.ItemTypeCode, row.ItemCategoryID, row.CategoryName, row.ItemCategoryTypeCode, row.CategoryUnitGroupID, row.UnitValueID, row.UnitCostID, row.BurnRateID, row.AccountID, row.IsDirty, row.ItemCreatedAt, row.ItemUpdatedAt, row.CategoryCreatedAt, row.CategoryUpdatedAt),
+		OrderPoint: &domain.Quantity{
+			ID:               row.OrderPointID,
+			Value:            row.OrderPointValue,
+			UnitID:           row.OrderPointUnitID,
+			UnitAbbreviation: row.OrderPointUnitAbbreviation,
+			UnitType:         row.OrderPointUnitType,
+		},
+		LeadTime: &domain.Quantity{
+			ID:               row.LeadTimeID,
+			Value:            row.LeadTimeValue,
+			UnitID:           row.LeadTimeUnitID,
+			UnitAbbreviation: row.LeadTimeUnitAbbreviation,
+			UnitType:         row.LeadTimeUnitType,
+		},
+		CreatedAt: row.CreatedAt,
+		UpdatedAt: row.UpdatedAt,
+	}
+}
+
+func (r *materialRepoImpl) Export(ctx context.Context, params domain.ExportMaterialsParams) ([]*domain.Material, *apierror.APIError) {
+	ctx, span := materialRepoTracer.Start(ctx, "repository.material.export")
+	defer span.End()
+
+	searchQuery := db.NullStringLikePtr(params.Query)
+	includeCategoryFilter := len(params.CategoryIDs) > 0
+	includeAttributeFilter := len(params.AttributeIDs) > 0
+
+	categoryIDs := params.CategoryIDs
+	if categoryIDs == nil {
+		categoryIDs = []string{}
+	}
+	attributeIDs := params.AttributeIDs
+	if attributeIDs == nil {
+		attributeIDs = []string{}
+	}
+
+	var startDate, endDate gosql.NullTime
+	if params.StartDate != nil {
+		startDate = gosql.NullTime{Time: *params.StartDate, Valid: true}
+	}
+	if params.EndDate != nil {
+		endDate = gosql.NullTime{Time: *params.EndDate, Valid: true}
+	}
+
+	rows, err := r.queries.ExportMaterialsWithFilters(ctx, sqlc.ExportMaterialsWithFiltersParams{
+		AccountID:              params.AccountID,
+		SearchQuery:            searchQuery,
+		IncludeCategoryFilter:  includeCategoryFilter,
+		CategoryIds:            categoryIDs,
+		IncludeAttributeFilter: includeAttributeFilter,
+		AttributeIds:           attributeIDs,
+		StartDate:              startDate,
+		EndDate:                endDate,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	materials := make([]*domain.Material, len(rows))
+	for i, row := range rows {
+		materials[i] = mapMaterialExportRow(row)
+	}
+
+	exportIncludes := []string{"item", "item.category", "item.category.properties", "item.unit_value", "item.unit_cost", "item.attributes"}
+	if apiErr := applyMaterialStitches(ctx, r.queries, materials, exportIncludes); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	return materials, nil
+}
+
 func (r *materialRepoImpl) UpdateItem(ctx context.Context, params domain.UpdateMaterialParams) *apierror.APIError {
 	ctx, span := materialRepoTracer.Start(ctx, "repository.material.update_item")
 	defer span.End()

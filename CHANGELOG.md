@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.1](https://github.com/Augno/api/compare/v0.17.0...v0.17.1) (2026-05-13)
+
+
+### Bug Fixes
+
+* issue with performance of exports ([#235](https://github.com/Augno/api/issues/235)) ([75bf6e4](https://github.com/Augno/api/commit/75bf6e44c2f8bf2550e56d48c92e8c6a6102dc20))
+
 ## [0.17.0](https://github.com/Augno/api/compare/v0.16.0...v0.17.0) (2026-05-13)
 
 

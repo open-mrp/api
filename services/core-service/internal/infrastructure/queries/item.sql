@@ -793,6 +793,20 @@ FROM _item_attributes ia
 JOIN attribute a ON a.id = ia.A
 WHERE ia.B = sqlc.arg('item_id');
 
+-- name: GetItemAttributesByItemIDs :many
+SELECT
+    ia.B AS item_id,
+    a.id,
+    a.text,
+    a.color_code,
+    a.property_id,
+    a.`order`,
+    a.created_at,
+    a.updated_at
+FROM _item_attributes ia
+JOIN attribute a ON a.id = ia.A
+WHERE ia.B IN (sqlc.slice('item_ids'));
+
 -- name: GetItemInventory :one
 SELECT
     COALESCE(receipt_totals.on_hand, 0) AS on_hand,

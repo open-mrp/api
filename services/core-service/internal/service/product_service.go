@@ -145,7 +145,7 @@ func (s *productSvcImpl) ListProductsFull(ctx context.Context, params domain.Lis
 	}
 
 	for _, p := range result.Products {
-		if apiErr := s.attachProductIncludes(ctx, p, identity.Target.AccountID); apiErr != nil {
+		if apiErr := s.attachProductIncludes(ctx, p, identity.Target.AccountID, params.Includes); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
 	}
@@ -225,7 +225,7 @@ func (s *productSvcImpl) GetProduct(ctx context.Context, params domain.GetProduc
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	if apiErr := s.attachProductIncludes(ctx, product, identity.Target.AccountID); apiErr != nil {
+	if apiErr := s.attachProductIncludes(ctx, product, identity.Target.AccountID, params.Includes); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
@@ -235,7 +235,7 @@ func (s *productSvcImpl) GetProduct(ctx context.Context, params domain.GetProduc
 // attachProductIncludes populates expandable sub-resources on a product that
 // the product queries don't join. Specifically: item.attributes (loaded via
 // item repo) and product_line.unit_group (loaded via product_line repo).
-func (s *productSvcImpl) attachProductIncludes(ctx context.Context, product *domain.ProductFull, accountID string) *apierror.APIError {
+func (s *productSvcImpl) attachProductIncludes(ctx context.Context, product *domain.ProductFull, accountID string, includes []string) *apierror.APIError {
 	if product == nil {
 		return nil
 	}
@@ -268,7 +268,7 @@ func (s *productSvcImpl) attachProductIncludes(ctx context.Context, product *dom
 	}
 
 	if product.ProductLine != nil && product.ProductLine.UnitGroupID != "" {
-		unitGroup, apiErr := s.repos.NewProductLineRepo().GetUnitGroup(ctx, product.ProductLine.UnitGroupID)
+		unitGroup, apiErr := s.repos.NewProductLineRepo().GetUnitGroup(ctx, product.ProductLine.UnitGroupID, includes)
 		if apiErr != nil {
 			return apiErr
 		}

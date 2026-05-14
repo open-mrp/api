@@ -110,7 +110,7 @@ func (s *productLineSvcImpl) ListProductLines(ctx context.Context, params domain
 
 	if slices.Contains(params.Includes, "unit_group") {
 		for _, pl := range result.ProductLines {
-			unitGroup, apiErr := repo.GetUnitGroup(ctx, pl.UnitGroupID)
+			unitGroup, apiErr := repo.GetUnitGroup(ctx, pl.UnitGroupID, params.Includes)
 			if apiErr != nil {
 				return nil, tracing.Trace(span, apiErr)
 			}
@@ -156,7 +156,7 @@ func (s *productLineSvcImpl) GetProductLine(ctx context.Context, params domain.G
 	}
 
 	if slices.Contains(params.Includes, "unit_group") {
-		unitGroup, apiErr := repo.GetUnitGroup(ctx, productLine.UnitGroupID)
+		unitGroup, apiErr := repo.GetUnitGroup(ctx, productLine.UnitGroupID, params.Includes)
 		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
@@ -223,7 +223,7 @@ func (s *productLineSvcImpl) CreateProductLine(ctx context.Context, params domai
 			}
 
 			if slices.Contains(params.Includes, "unit_group") {
-				unitGroup, apiErr := txRepo.GetUnitGroup(txCtx, created.UnitGroupID)
+				unitGroup, apiErr := txRepo.GetUnitGroup(txCtx, created.UnitGroupID, params.Includes)
 				if apiErr != nil {
 					return apiErr
 				}
@@ -324,7 +324,7 @@ func (s *productLineSvcImpl) UpdateProductLine(ctx context.Context, params domai
 			}
 
 			if slices.Contains(params.Includes, "unit_group") {
-				unitGroup, apiErr := txRepo.GetUnitGroup(txCtx, updated.UnitGroupID)
+				unitGroup, apiErr := txRepo.GetUnitGroup(txCtx, updated.UnitGroupID, params.Includes)
 				if apiErr != nil {
 					return apiErr
 				}

@@ -71,8 +71,8 @@ func IncludesFor(p IncludesParams) *IncludeConfig {
 
 	// Build the full set of resolvable includes by walking the registry graph.
 	resolvable := map[string]IncludeField{}
-	visited := map[constants.ObjectType]bool{p.ObjectType: true}
-	walkFields("", "", oi.Fields, resolvable, visited)
+	expanding := map[constants.ObjectType]bool{}
+	walkFields("", "", oi.Fields, resolvable, expanding)
 
 	// Filter to only the whitelisted keys.
 	var fields []IncludeField
@@ -94,9 +94,11 @@ func IncludesFor(p IncludesParams) *IncludeConfig {
 }
 
 // walkFields recursively builds the full set of resolvable include fields.
-// visited tracks ObjectTypes already expanded to prevent infinite recursion
-// (e.g., AgentDefinition.config → AgentDefinition).
-func walkFields(keyPrefix, pathPrefix string, defs []IncludeFieldDef, out map[string]IncludeField, visited map[constants.ObjectType]bool) {
+// expanding marks ObjectTypes currently being expanded along this branch so the
+// same type can appear on different paths (e.g. product_line.unit_group and
+// item.category.unit_group) while still breaking cycles (e.g.
+// AgentDefinition.config → AgentDefinition).
+func walkFields(keyPrefix, pathPrefix string, defs []IncludeFieldDef, out map[string]IncludeField, expanding map[constants.ObjectType]bool) {
 	for _, def := range defs {
 		key := def.Key
 		if keyPrefix != "" {
@@ -119,17 +121,24 @@ func walkFields(keyPrefix, pathPrefix string, defs []IncludeFieldDef, out map[st
 
 		// Resolve children: use inline Children if provided, otherwise look up registry.
 		var children []IncludeFieldDef
+		fromRegistry := false
 		if def.Children != nil {
 			children = def.Children
-		} else if !visited[def.ObjectType] {
-			if childOI := registry[def.ObjectType]; childOI != nil {
-				visited[def.ObjectType] = true
+		} else if childOI := registry[def.ObjectType]; childOI != nil {
+			if expanding[def.ObjectType] {
+				children = nil
+			} else {
+				expanding[def.ObjectType] = true
+				fromRegistry = true
 				children = childOI.Fields
 			}
 		}
 
 		if len(children) > 0 {
-			walkFields(key, jsonPath, children, out, visited)
+			walkFields(key, jsonPath, children, out, expanding)
+		}
+		if fromRegistry {
+			expanding[def.ObjectType] = false
 		}
 	}
 }

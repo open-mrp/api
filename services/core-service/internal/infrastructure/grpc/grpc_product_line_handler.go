@@ -40,7 +40,7 @@ func productLineFullToProto(pl *domain.ProductLineFull) *pb.ProductLineInfo {
 	}
 
 	if pl.UnitGroup != nil {
-		info.UnitGroup = &pb.ItemCategoryUnitGroupInfo{
+		ugInfo := &pb.ItemCategoryUnitGroupInfo{
 			Id:         pl.UnitGroup.ID,
 			Name:       pl.UnitGroup.Name,
 			BaseUnitId: pl.UnitGroup.BaseUnitID,
@@ -48,6 +48,16 @@ func productLineFullToProto(pl *domain.ProductLineFull) *pb.ProductLineInfo {
 			CreatedAt:  timestamppb.New(pl.UnitGroup.CreatedAt),
 			UpdatedAt:  timestamppb.New(pl.UnitGroup.UpdatedAt),
 		}
+		if pl.UnitGroup.BaseUnit != nil {
+			ugInfo.BaseUnit = lightUnitToProto(pl.UnitGroup.BaseUnit)
+		}
+		if len(pl.UnitGroup.AssociatedUnits) > 0 {
+			ugInfo.AssociatedUnits = make([]*pb.ItemCategoryUnitGroupUnitInfo, len(pl.UnitGroup.AssociatedUnits))
+			for i, u := range pl.UnitGroup.AssociatedUnits {
+				ugInfo.AssociatedUnits[i] = itemCategoryUnitGroupUnitToProto(u)
+			}
+		}
+		info.UnitGroup = ugInfo
 	}
 
 	return info

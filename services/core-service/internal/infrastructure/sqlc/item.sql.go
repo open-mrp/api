@@ -703,6 +703,74 @@ func (q *Queries) GetItemAttributes(ctx context.Context, itemID string) ([]GetIt
 	return items, nil
 }
 
+const getItemAttributesByItemIDs = `-- name: GetItemAttributesByItemIDs :many
+SELECT
+    ia.B AS item_id,
+    a.id,
+    a.text,
+    a.color_code,
+    a.property_id,
+    a.` + "`" + `order` + "`" + `,
+    a.created_at,
+    a.updated_at
+FROM _item_attributes ia
+JOIN attribute a ON a.id = ia.A
+WHERE ia.B IN (/*SLICE:item_ids*/?)
+`
+
+type GetItemAttributesByItemIDsRow struct {
+	ItemID     string
+	ID         string
+	Text       string
+	ColorCode  string
+	PropertyID string
+	Order      int32
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+}
+
+func (q *Queries) GetItemAttributesByItemIDs(ctx context.Context, itemIds []string) ([]GetItemAttributesByItemIDsRow, error) {
+	query := getItemAttributesByItemIDs
+	var queryParams []interface{}
+	if len(itemIds) > 0 {
+		for _, v := range itemIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:item_ids*/?", strings.Repeat(",?", len(itemIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:item_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetItemAttributesByItemIDsRow
+	for rows.Next() {
+		var i GetItemAttributesByItemIDsRow
+		if err := rows.Scan(
+			&i.ItemID,
+			&i.ID,
+			&i.Text,
+			&i.ColorCode,
+			&i.PropertyID,
+			&i.Order,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getItemBase = `-- name: GetItemBase :one
 SELECT
     i.id,

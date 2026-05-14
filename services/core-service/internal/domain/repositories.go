@@ -511,7 +511,7 @@ type ProductLineRepo interface {
 	Update(ctx context.Context, params UpdateProductLineParams) (*ProductLineFull, *apierror.APIError)
 	Delete(ctx context.Context, params DeleteProductLineParams) *apierror.APIError
 	ExistsByName(ctx context.Context, accountID, name string, excludeID *string) (bool, *apierror.APIError)
-	GetUnitGroup(ctx context.Context, unitGroupID string) (*ProductLineUnitGroup, *apierror.APIError)
+	GetUnitGroup(ctx context.Context, unitGroupID string, includes []string) (*ProductLineUnitGroup, *apierror.APIError)
 }
 
 type ItemCategoryRepo interface {

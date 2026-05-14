@@ -5780,18 +5780,18 @@ func (mr *MockProductLineRepoMockRecorder) Get(ctx, params any) *gomock.Call {
 }
 
 // GetUnitGroup mocks base method.
-func (m *MockProductLineRepo) GetUnitGroup(ctx context.Context, unitGroupID string) (*domain.ProductLineUnitGroup, *apierror.APIError) {
+func (m *MockProductLineRepo) GetUnitGroup(ctx context.Context, unitGroupID string, includes []string) (*domain.ProductLineUnitGroup, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetUnitGroup", ctx, unitGroupID)
+	ret := m.ctrl.Call(m, "GetUnitGroup", ctx, unitGroupID, includes)
 	ret0, _ := ret[0].(*domain.ProductLineUnitGroup)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // GetUnitGroup indicates an expected call of GetUnitGroup.
-func (mr *MockProductLineRepoMockRecorder) GetUnitGroup(ctx, unitGroupID any) *gomock.Call {
+func (mr *MockProductLineRepoMockRecorder) GetUnitGroup(ctx, unitGroupID, includes any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUnitGroup", reflect.TypeOf((*MockProductLineRepo)(nil).GetUnitGroup), ctx, unitGroupID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUnitGroup", reflect.TypeOf((*MockProductLineRepo)(nil).GetUnitGroup), ctx, unitGroupID, includes)
 }
 
 // List mocks base method.

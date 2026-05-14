@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	gosql "database/sql"
+	"slices"
 	"time"
 
 	"github.com/augno/api/services/core-service/internal/domain"
@@ -298,7 +299,7 @@ func (r *productLineRepoImpl) ExistsByName(ctx context.Context, accountID, name 
 	return count > 0, nil
 }
 
-func (r *productLineRepoImpl) GetUnitGroup(ctx context.Context, unitGroupID string) (*domain.ProductLineUnitGroup, *apierror.APIError) {
+func (r *productLineRepoImpl) GetUnitGroup(ctx context.Context, unitGroupID string, includes []string) (*domain.ProductLineUnitGroup, *apierror.APIError) {
 	ctx, span := productLineRepoTracer.Start(ctx, "repository.product_line.get_unit_group")
 	defer span.End()
 
@@ -307,12 +308,39 @@ func (r *productLineRepoImpl) GetUnitGroup(ctx context.Context, unitGroupID stri
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	return &domain.ProductLineUnitGroup{
+	ug := &domain.ProductLineUnitGroup{
 		ID:         row.ID,
 		Name:       row.Name,
 		BaseUnitID: row.BaseUnitID,
 		Type:       row.UnitTypeCode,
 		CreatedAt:  row.CreatedAt,
 		UpdatedAt:  row.UpdatedAt,
-	}, nil
+	}
+
+	wantsBaseUnit := slices.Contains(includes, "product_line.unit_group.base_unit") || slices.Contains(includes, "unit_group.base_unit")
+	if wantsBaseUnit && ug.BaseUnitID != "" {
+		unitRows, err := r.queries.GetUnitsByIDs(ctx, []string{ug.BaseUnitID})
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		if len(unitRows) > 0 {
+			lu := mapGetUnitsByIDsRowToLightUnit(unitRows[0])
+			ug.BaseUnit = &lu
+		}
+	}
+
+	wantsAssociatedUnits := slices.Contains(includes, "product_line.unit_group.associated_units") || slices.Contains(includes, "unit_group.associated_units")
+	if wantsAssociatedUnits {
+		ugUnitRows, err := r.queries.ListUnitGroupUnitsByUnitGroupIDs(ctx, []string{ug.ID})
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		units := make([]*domain.UnitGroupUnit, len(ugUnitRows))
+		for i, ugRow := range ugUnitRows {
+			units[i] = mapUnitGroupUnitsByUnitGroupIDsRow(ugRow)
+		}
+		ug.AssociatedUnits = units
+	}
+
+	return ug, nil
 }

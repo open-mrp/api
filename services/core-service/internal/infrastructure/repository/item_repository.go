@@ -412,15 +412,52 @@ func loadItemAttributes(ctx context.Context, queries *sqlc.Queries, item *domain
 	return nil
 }
 
-// stitchItemAttributes loads attributes for each item when the caller has
-// requested the attributes include.
+// stitchItemAttributes batch-loads attributes for all items in a single query
+// when the caller has requested the attributes include.
 func stitchItemAttributes(ctx context.Context, queries *sqlc.Queries, items []*domain.Item, incs []string) *apierror.APIError {
 	if !slices.Contains(incs, "attributes") {
 		return nil
 	}
+
+	seen := make(map[string]struct{})
+	var itemIDs []string
 	for _, item := range items {
-		if apiErr := loadItemAttributes(ctx, queries, item); apiErr != nil {
-			return apiErr
+		if _, ok := seen[item.ID]; !ok {
+			seen[item.ID] = struct{}{}
+			itemIDs = append(itemIDs, item.ID)
+		}
+	}
+	if len(itemIDs) == 0 {
+		return nil
+	}
+
+	rows, err := queries.GetItemAttributesByItemIDs(ctx, itemIDs)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return apiErr
+	}
+
+	byItemID := make(map[string][]*domain.ItemAttribute, len(items))
+	for _, row := range rows {
+		var colorCode *string
+		if row.ColorCode != "" {
+			colorCode = &row.ColorCode
+		}
+		byItemID[row.ItemID] = append(byItemID[row.ItemID], &domain.ItemAttribute{
+			ID:         row.ID,
+			Value:      row.Text,
+			ColorCode:  colorCode,
+			Order:      row.Order,
+			PropertyID: row.PropertyID,
+			CreatedAt:  row.CreatedAt,
+			UpdatedAt:  row.UpdatedAt,
+		})
+	}
+
+	for _, item := range items {
+		if attrs, ok := byItemID[item.ID]; ok {
+			item.Attributes = attrs
+		} else {
+			item.Attributes = []*domain.ItemAttribute{}
 		}
 	}
 	return nil

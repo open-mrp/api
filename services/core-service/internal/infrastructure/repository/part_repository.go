@@ -96,31 +96,53 @@ func stitchPartAttributes(ctx context.Context, queries *sqlc.Queries, parts []*d
 	if !slices.Contains(incs, "attributes") {
 		return nil
 	}
+
+	seen := make(map[string]struct{})
+	var itemIDs []string
 	for _, part := range parts {
 		if part.Item == nil {
 			continue
 		}
-		rows, err := queries.GetPartAttributes(ctx, part.ItemID)
-		if apiErr := db.MapSQLError(err); apiErr != nil {
-			return apiErr
+		if _, ok := seen[part.ItemID]; !ok {
+			seen[part.ItemID] = struct{}{}
+			itemIDs = append(itemIDs, part.ItemID)
 		}
-		attrs := make([]*domain.ItemAttribute, len(rows))
-		for i, row := range rows {
-			var colorCode *string
-			if row.ColorCode != "" {
-				colorCode = &row.ColorCode
-			}
-			attrs[i] = &domain.ItemAttribute{
-				ID:         row.ID,
-				Value:      row.Text,
-				ColorCode:  colorCode,
-				Order:      row.Order,
-				PropertyID: row.PropertyID,
-				CreatedAt:  row.CreatedAt,
-				UpdatedAt:  row.UpdatedAt,
-			}
+	}
+	if len(itemIDs) == 0 {
+		return nil
+	}
+
+	rows, err := queries.GetItemAttributesByItemIDs(ctx, itemIDs)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return apiErr
+	}
+
+	byItemID := make(map[string][]*domain.ItemAttribute, len(parts))
+	for _, row := range rows {
+		var colorCode *string
+		if row.ColorCode != "" {
+			colorCode = &row.ColorCode
 		}
-		part.Item.Attributes = attrs
+		byItemID[row.ItemID] = append(byItemID[row.ItemID], &domain.ItemAttribute{
+			ID:         row.ID,
+			Value:      row.Text,
+			ColorCode:  colorCode,
+			Order:      row.Order,
+			PropertyID: row.PropertyID,
+			CreatedAt:  row.CreatedAt,
+			UpdatedAt:  row.UpdatedAt,
+		})
+	}
+
+	for _, part := range parts {
+		if part.Item == nil {
+			continue
+		}
+		if attrs, ok := byItemID[part.ItemID]; ok {
+			part.Item.Attributes = attrs
+		} else {
+			part.Item.Attributes = []*domain.ItemAttribute{}
+		}
 	}
 	return nil
 }

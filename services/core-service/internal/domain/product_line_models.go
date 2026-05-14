@@ -50,6 +50,11 @@ type ProductLineUnitGroup struct {
 	Type       string
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
+
+	// Populated when product_line.unit_group.base_unit is included.
+	BaseUnit *LightUnit
+	// Populated when product_line.unit_group.associated_units is included.
+	AssociatedUnits []*UnitGroupUnit
 }
 
 type ListProductLinesParams struct {

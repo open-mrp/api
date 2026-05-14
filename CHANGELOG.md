@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.2](https://github.com/Augno/api/compare/v0.17.1...v0.17.2) (2026-05-14)
+
+
+### Bug Fixes
+
+* queries for bulk updates ([#237](https://github.com/Augno/api/issues/237)) ([ec3e1dd](https://github.com/Augno/api/commit/ec3e1dd6141591bc53ea285889100f19060811b1))
+
 ## [0.17.1](https://github.com/Augno/api/compare/v0.17.0...v0.17.1) (2026-05-13)
 
 

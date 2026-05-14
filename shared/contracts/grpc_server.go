@@ -29,6 +29,10 @@ const (
 	defaultServerKeepaliveTimeout      = 5 * time.Second
 	defaultServerMinPingTime           = 10 * time.Second
 	defaultGracefulStopTimeout         = 5 * time.Second
+	// defaultMaxRecvMsgSize is the maximum message size the server can receive (100 MB)
+	defaultMaxRecvMsgSize = 100 * 1024 * 1024
+	// defaultMaxSendMsgSize is the maximum message size the server can send (100 MB)
+	defaultMaxSendMsgSize = 100 * 1024 * 1024
 )
 
 // GRPCServerConfig holds settings for a gRPC server.
@@ -121,6 +125,8 @@ func NewGRPCServer(serverName string, logger *slog.Logger, config *GRPCServerCon
 		grpc.KeepaliveParams(config.KeepaliveParams),
 		grpc.KeepaliveEnforcementPolicy(config.EnforcementPolicy),
 		grpc.ChainUnaryInterceptor(config.UnaryInterceptors...),
+		grpc.MaxRecvMsgSize(defaultMaxRecvMsgSize),
+		grpc.MaxSendMsgSize(defaultMaxSendMsgSize),
 	)
 
 	srv := grpc.NewServer(serverOpts...)

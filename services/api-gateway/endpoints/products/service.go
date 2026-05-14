@@ -3,6 +3,7 @@ package productep
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/augno/api/services/api-gateway/internal/domain"
 	"github.com/augno/api/services/api-gateway/internal/export"
@@ -296,9 +297,13 @@ func (m *productSvcImpl) ExportProducts(ctx context.Context, req *ExportProducts
 		return nil, apierror.NewInternalError(err, "Failed to build export file.")
 	}
 
+	// Generate filename with current date (e.g. products_2026-05-14.xlsx)
+	dateStr := time.Now().Format("2006-01-02")
+	filename := fmt.Sprintf("products_%s.xlsx", dateStr)
+
 	return &httptransport.FileDownload{
 		ContentType: export.ExcelContentType,
-		Filename:    "products.xlsx",
+		Filename:    filename,
 		Body:        body,
 	}, nil
 }

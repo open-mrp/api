@@ -26,6 +26,10 @@ const (
 	defaultKeepaliveTimeout             = 5 * time.Second
 	defaultKeepalivePermitWithoutStream = false
 	defaultWaitForReadyInterval         = 100 * time.Millisecond
+	// defaultMaxCallRecvMsgSize is the maximum message size the client can receive (100 MB)
+	defaultMaxCallRecvMsgSize = 100 * 1024 * 1024
+	// defaultMaxCallSendMsgSize is the maximum message size the client can send (100 MB)
+	defaultMaxCallSendMsgSize = 100 * 1024 * 1024
 )
 
 // GRPCClientConn is an active connection to a gRPC server.
@@ -115,6 +119,10 @@ func NewGRPCClientConn(target GRPCConnTarget, config *GRPCClientConfig) (*GRPCCl
 		tracing.DialOptionsWithTracing(),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithKeepaliveParams(config.KeepaliveParams),
+		grpc.WithDefaultCallOptions(
+			grpc.MaxCallRecvMsgSize(defaultMaxCallRecvMsgSize),
+			grpc.MaxCallSendMsgSize(defaultMaxCallSendMsgSize),
+		),
 	)
 
 	if len(config.UnaryInterceptors) > 0 {

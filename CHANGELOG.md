@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.4](https://github.com/Augno/api/compare/v0.17.3...v0.17.4) (2026-05-14)
+
+
+### Bug Fixes
+
+* _parent_child_production_steps column used in initial subassembly check ([#241](https://github.com/Augno/api/issues/241)) ([05540d6](https://github.com/Augno/api/commit/05540d67a9b91efcdaba06c385c4d5b60dd134ce))
+
 ## [0.17.3](https://github.com/Augno/api/compare/v0.17.2...v0.17.3) (2026-05-14)
 
 

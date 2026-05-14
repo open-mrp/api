@@ -1158,7 +1158,7 @@ AND (
         AND prd.production_step_id IS NOT NULL
         AND NOT EXISTS (
             SELECT 1 FROM _parent_child_production_steps pcps
-            WHERE pcps.B = prd.production_step_id
+            WHERE pcps.A = prd.production_step_id
         )
     )
 )
@@ -1538,7 +1538,7 @@ AND (
         AND prd.production_step_id IS NOT NULL
         AND NOT EXISTS (
             SELECT 1 FROM _parent_child_production_steps pcps
-            WHERE pcps.B = prd.production_step_id
+            WHERE pcps.A = prd.production_step_id
         )
     )
 )
@@ -1920,7 +1920,7 @@ AND (
         AND prd.production_step_id IS NOT NULL
         AND NOT EXISTS (
             SELECT 1 FROM _parent_child_production_steps pcps
-            WHERE pcps.B = prd.production_step_id
+            WHERE pcps.A = prd.production_step_id
         )
     )
 )
@@ -2302,7 +2302,7 @@ AND (
         AND prd.production_step_id IS NOT NULL
         AND NOT EXISTS (
             SELECT 1 FROM _parent_child_production_steps pcps
-            WHERE pcps.B = prd.production_step_id
+            WHERE pcps.A = prd.production_step_id
         )
     )
 )

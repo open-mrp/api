@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.5](https://github.com/Augno/api/compare/v0.17.4...v0.17.5) (2026-05-15)
+
+
+### Bug Fixes
+
+* ci process ([#244](https://github.com/Augno/api/issues/244)) ([ed5feac](https://github.com/Augno/api/commit/ed5feac98b7d75e59adb1ef2dd0ccc4b3489dc66))
+
 ## [0.17.4](https://github.com/Augno/api/compare/v0.17.3...v0.17.4) (2026-05-14)
 
 

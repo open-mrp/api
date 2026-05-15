@@ -13,11 +13,11 @@ type Tenancy struct {
 	// Current account the user is operating in.
 	CurrentAccount *TenancyCurrentAccount `json:"current_account"`
 	// Sandbox accounts available to the user.
-	Sandboxes []TenancySandboxAccount `json:"sandboxes" validate:"required"`
+	Sandboxes *List[TenancySandboxAccount] `json:"sandboxes" validate:"required"`
 	// Owner account for the user's tenancy.
 	OwnerAccount *TenancyOwnerAccount `json:"owner_account"`
 	// Other accounts the user has access to.
-	OtherAccounts []TenancyOtherAccount `json:"other_accounts" validate:"required"`
+	OtherAccounts *List[TenancyOtherAccount] `json:"other_accounts" validate:"required"`
 	// In-progress registration session, if one exists.
 	PendingRegistration *TenancyPendingRegistration `json:"pending_registration"`
 }

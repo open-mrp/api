@@ -222,7 +222,7 @@ func entityPresenter(entityType, entityID string) *apiresource.Entity {
 	if entityType == "" || entityID == "" {
 		return nil
 	}
-	return apiresource.NewEntity(entityID, constants.ObjectType(entityType))
+	return apiresource.NewEntity(entityID, constants.ObjectType(entityType), nil, nil)
 }
 
 func reviewedByPresenter(a *pb.AgentActionInfo) *apiresource.Actor {

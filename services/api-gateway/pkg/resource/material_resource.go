@@ -19,9 +19,9 @@ type Material struct {
 	// Item this material extends.
 	Item *Item `json:"item" expandable:"true"`
 	// Order point quantity.
-	OrderPoint *QuantityInfo `json:"order_point"`
+	OrderPoint *Quantity `json:"order_point"`
 	// Lead time quantity.
-	LeadTime *QuantityInfo `json:"lead_time"`
+	LeadTime *Quantity `json:"lead_time"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last updated timestamp.
@@ -32,8 +32,8 @@ var SampleMaterial = &Material{
 	ID:         SampleMaterialID,
 	Object:     constants.ObjectTypeMaterial,
 	Item:       SampleItem,
-	OrderPoint: SampleQuantityInfo,
-	LeadTime:   SampleQuantityInfo,
+	OrderPoint: SampleQuantity,
+	LeadTime:   SampleQuantity,
 	CreatedAt:  timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:  timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }

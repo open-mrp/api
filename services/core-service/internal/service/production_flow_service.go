@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/services/core-service/internal/domain"
@@ -73,12 +74,14 @@ func (s *productionFlowSvcImpl) withTx(ctx context.Context, fn func(context.Cont
 
 // GetProductionFlow returns the production flow graph for a given item.
 //
-// 1. Extract and validate the caller's identity, actor type, and production_steps:read permission.
-// 2. Find the production step(s) that produce the given item.
-// 3. Load the full edge graph for the account.
-// 4. BFS backward from the initial step through parent edges, collecting relevant step IDs.
-// 5. For each step, fetch full data including consumptions.
-// 6. Compute in/out step IDs from the edge data.
+//  1. Extract and validate the caller's identity, actor type, and production_steps:read permission.
+//  2. Find the production step(s) that produce the given item.
+//  3. Load the full edge graph for the account.
+//  4. BFS backward from the initial step through parent edges, collecting relevant step IDs.
+//  5. For each step, fetch full data including consumptions.
+//  6. Compute in/out step IDs from the edge data.
+//  7. Order steps with the item's producer(s) first, then by inbound edge count so
+//     list responses are not dominated by source-only rows when parents exist.
 func (s *productionFlowSvcImpl) GetProductionFlow(ctx context.Context, itemID string) ([]*domain.ProductionFlowStep, *apierror.APIError) {
 	ctx, span := productionFlowSvcTracer.Start(ctx, "service.production_flow.get")
 	defer span.End()
@@ -143,11 +146,64 @@ func (s *productionFlowSvcImpl) GetProductionFlow(ctx context.Context, itemID st
 		}
 	}
 
+	// Include downstream steps so out_step_ids are not filtered to empty when
+	// the flow extends past the item's immediate producer(s).
+	fwdQueue := make([]string, 0, len(relevantStepIDs))
+	for id := range relevantStepIDs {
+		fwdQueue = append(fwdQueue, id)
+	}
+	for len(fwdQueue) > 0 {
+		stepID := fwdQueue[0]
+		fwdQueue = fwdQueue[1:]
+		for _, childID := range childMap[stepID] {
+			if !relevantStepIDs[childID] {
+				relevantStepIDs[childID] = true
+				fwdQueue = append(fwdQueue, childID)
+			}
+		}
+	}
+
+	stepIDs := make([]string, 0, len(relevantStepIDs))
+	for id := range relevantStepIDs {
+		stepIDs = append(stepIDs, id)
+	}
+
+	initialSet := make(map[string]bool, len(initialStepIDs))
+	for _, id := range initialStepIDs {
+		initialSet[id] = true
+	}
+
+	inboundCount := func(stepID string) int {
+		n := 0
+		for _, parentID := range parentMap[stepID] {
+			if relevantStepIDs[parentID] {
+				n++
+			}
+		}
+		return n
+	}
+
+	// Order steps so the item's producer(s) appear first, then by inbound edge
+	// count (descending) so the first row is not always a graph source with empty
+	// in_steps when downstream steps exist.
+	sort.Slice(stepIDs, func(i, j int) bool {
+		a, b := stepIDs[i], stepIDs[j]
+		aInit, bInit := initialSet[a], initialSet[b]
+		if aInit != bInit {
+			return aInit
+		}
+		ca, cb := inboundCount(a), inboundCount(b)
+		if ca != cb {
+			return ca > cb
+		}
+		return a < b
+	})
+
 	// Fetch each relevant step's full data.
 	stepQueryRepo := s.repos.NewProductionStepQueryRepo()
 	steps := make([]*domain.ProductionFlowStep, 0, len(relevantStepIDs))
 
-	for stepID := range relevantStepIDs {
+	for _, stepID := range stepIDs {
 		step, apiErr := flowRepo.GetFlowStep(ctx, accountID, stepID)
 		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)

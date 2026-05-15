@@ -43,9 +43,9 @@ func RegistrationFlowPresenter(rf *pb.RegistrationFlowInfo) apiresource.Registra
 		ID:                   rf.Id,
 		Object:               constants.ObjectTypeRegistrationFlow,
 		Name:                 rf.Name,
-		CustomerGroupOptions: customerGroupOptions,
-		PaymentTermOptions:   paymentTermOptions,
-		ShippingTermOptions:  shippingTermOptions,
+		CustomerGroupOptions: apiresource.NewList(customerGroupOptions, apiresource.PageInfo{}),
+		PaymentTermOptions:   apiresource.NewList(paymentTermOptions, apiresource.PageInfo{}),
+		ShippingTermOptions:  apiresource.NewList(shippingTermOptions, apiresource.PageInfo{}),
 		CreatedAt:            grpcutil.TimestampToTime(rf.CreatedAt),
 		UpdatedAt:            grpcutil.TimestampToTime(rf.UpdatedAt),
 	}

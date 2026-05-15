@@ -7,6 +7,7 @@ import (
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	"github.com/augno/api/shared/db"
+	"github.com/augno/api/shared/id"
 	pb "github.com/augno/api/shared/proto/core"
 )
 
@@ -231,29 +232,40 @@ func ItemListPresenter(resp *pb.ListItemsResponse) *apiresource.List[apiresource
 	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(resp.PageInfo))
 }
 
-func quantityInfoPresenter(q *pb.QuantityInfo) *apiresource.QuantityInfo {
-	if q == nil {
-		return nil
-	}
-	return &apiresource.QuantityInfo{
-		Value: apiresource.NormalizeQuantityValue(q.Value, q.UnitType),
-		Unit: &apiresource.Unit{
-			ID:     q.UnitId,
-			Object: constants.ObjectTypeUnit,
-		},
-	}
-}
-
 func ItemInventoryPresenter(resp *pb.GetItemInventoryResponse) *apiresource.ItemInventory {
 	if resp == nil {
 		return nil
 	}
 	return &apiresource.ItemInventory{
-		Object:             constants.ObjectTypeItem,
-		OnHand:             quantityInfoPresenter(resp.OnHand),
-		Reserved:           quantityInfoPresenter(resp.Reserved),
-		AvailableToPromise: quantityInfoPresenter(resp.AvailableToPromise),
-		Short:              quantityInfoPresenter(resp.Short),
+		Object:             constants.ObjectTypeItemInventory,
+		OnHand:             inventoryQuantityFromProto(resp.OnHand),
+		Reserved:           inventoryQuantityFromProto(resp.Reserved),
+		AvailableToPromise: inventoryQuantityFromProto(resp.AvailableToPromise),
+		Short:              inventoryQuantityFromProto(resp.Short),
+	}
+}
+
+func inventoryQuantityFromProto(q *pb.QuantityInfo) *apiresource.Quantity {
+	if q == nil {
+		return nil
+	}
+	qid, _ := id.GenID(id.QuantityIDPrefix, nil)
+	return &apiresource.Quantity{
+		ID:     qid,
+		Object: constants.ObjectTypeQuantity,
+		Value:  apiresource.NormalizeQuantityValue(q.Value, q.UnitType),
+		DisplayValue: apiresource.FormatDisplayValue(
+			q.Value,
+			q.UnitAbbreviation,
+			q.UnitType,
+		),
+		Unit: &apiresource.Unit{
+			ID:           q.UnitId,
+			Object:       constants.ObjectTypeUnit,
+			Name:         q.UnitAbbreviation,
+			Abbreviation: q.UnitAbbreviation,
+			Type:         constants.UnitType(q.UnitType),
+		},
 	}
 }
 
@@ -329,7 +341,10 @@ func ExportItemsPresenter(resp *pb.ExportItemsResponse) *apiresource.ExportItems
 func BulkReconcileItemsPresenter(resp *pb.BulkReconcileItemsResponse) *apiresource.BulkReconcileItemsResponse {
 	if resp == nil {
 		return &apiresource.BulkReconcileItemsResponse{
-			Object: constants.ObjectTypeBulkReconcileItemsResponse,
+			Object:          constants.ObjectTypeBulkReconcileItemsResponse,
+			ReconciledItems: apiresource.NewList([]apiresource.ReconciledItemResult{}, apiresource.PageInfo{}),
+			SkippedItems:    apiresource.NewList([]apiresource.SkippedItemResult{}, apiresource.PageInfo{}),
+			Errors:          apiresource.NewList([]apiresource.ReconcileErrorResult{}, apiresource.PageInfo{}),
 		}
 	}
 
@@ -353,8 +368,8 @@ func BulkReconcileItemsPresenter(resp *pb.BulkReconcileItemsResponse) *apiresour
 
 	return &apiresource.BulkReconcileItemsResponse{
 		Object:          constants.ObjectTypeBulkReconcileItemsResponse,
-		ReconciledItems: reconciled,
-		SkippedItems:    skipped,
-		Errors:          errors,
+		ReconciledItems: apiresource.NewList(reconciled, apiresource.PageInfo{}),
+		SkippedItems:    apiresource.NewList(skipped, apiresource.PageInfo{}),
+		Errors:          apiresource.NewList(errors, apiresource.PageInfo{}),
 	}
 }

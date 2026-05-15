@@ -16,7 +16,7 @@ func ReceivingOrderSummaryPresenter(info *pb.ReceivingOrderSummaryInfo) apiresou
 		ID:     info.Id,
 		Object: constants.ObjectTypeReceivingOrder,
 		Number: info.Number,
-		PurchaseOrder: &apiresource.SalesOrder{
+		PurchaseOrder: &apiresource.SalesOrderDetail{
 			ID:     info.PurchaseOrderId,
 			Object: constants.ObjectTypeSalesOrder,
 			Number: info.PurchaseOrderNumber,
@@ -51,7 +51,7 @@ func ReceivingOrderPresenter(info *pb.ReceivingOrderInfo) apiresource.ReceivingO
 		ID:     info.Id,
 		Object: constants.ObjectTypeReceivingOrder,
 		Number: info.Number,
-		PurchaseOrder: &apiresource.SalesOrder{
+		PurchaseOrder: &apiresource.SalesOrderDetail{
 			ID:     info.PurchaseOrderId,
 			Object: constants.ObjectTypeSalesOrder,
 			Number: info.PurchaseOrderNumber,

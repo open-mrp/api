@@ -528,6 +528,12 @@ func (suite *SalesOrderLineSvcTestSuite) TestDeleteSalesOrderLine_Success() {
 		Return(false, nil).
 		Times(1)
 
+	// No shipped shipments — no admin gate needed.
+	suite.orderRepo.EXPECT().
+		HasShippedShipment(gomock.Any(), "or_test").
+		Return(false, nil).
+		Times(1)
+
 	suite.lineRepo.EXPECT().
 		Get(gomock.Any(), "orl_test").
 		Return(&domain.SalesOrderLine{ID: "orl_test"}, nil).
@@ -548,6 +554,55 @@ func (suite *SalesOrderLineSvcTestSuite) TestDeleteSalesOrderLine_Success() {
 		SalesOrderID:     "or_test",
 	})
 	suite.Nil(apiErr)
+}
+
+func (suite *SalesOrderLineSvcTestSuite) TestDeleteSalesOrderLine_BlockedWhenHasShippedShipment_NonAdmin() {
+	accountID := "ac_test"
+	operatorRole := string(constants.RoleTypeCustom)
+	ctx := appctx.WithIdentity(context.Background(), &types.Identity{
+		Type:   types.IdentityActorTypeUser,
+		Target: &types.IdentityTarget{AccountID: accountID},
+		Actor: &types.IdentityActor{
+			RelationType: types.IdentityRelationTypeInternal,
+			ID:           "usr_test123",
+			AccountID:    &accountID,
+			RoleType:     &operatorRole,
+			Permissions: map[string]bool{
+				"sales_orders:read":   true,
+				"sales_orders:create": true,
+				"sales_orders:update": true,
+				"sales_orders:delete": true,
+			},
+		},
+	})
+
+	suite.lineRepo.EXPECT().
+		IsInOrder(gomock.Any(), "orl_test", "or_test", "ac_test").
+		Return(true, nil).
+		Times(1)
+
+	suite.orderRepo.EXPECT().
+		Get(gomock.Any(), "ac_test", "or_test").
+		Return(&domain.SalesOrder{ID: "or_test", SalesOrderStatusCode: string(constants.SalesOrderStatusCodeIssued)}, nil).
+		Times(1)
+
+	suite.lineRepo.EXPECT().
+		HasShippedAgainstOrderLine(gomock.Any(), "orl_test").
+		Return(false, nil).
+		Times(1)
+
+	// There is a shipped shipment — admin check will fire and fail for a non-admin.
+	suite.orderRepo.EXPECT().
+		HasShippedShipment(gomock.Any(), "or_test").
+		Return(true, nil).
+		Times(1)
+
+	apiErr := suite.svc.DeleteSalesOrderLine(ctx, domain.DeleteSalesOrderLineParams{
+		SalesOrderLineID: "orl_test",
+		SalesOrderID:     "or_test",
+	})
+	suite.NotNil(apiErr)
+	suite.Equal(apierror.ErrorCodeInsufficientPerms, apiErr.Code)
 }
 
 func (suite *SalesOrderLineSvcTestSuite) TestDeleteSalesOrderLine_BlockedWhenOrderFulfilled() {
@@ -629,6 +684,12 @@ func (suite *SalesOrderLineSvcTestSuite) TestDeleteSalesOrderLine_AlreadyDeleted
 
 	suite.lineRepo.EXPECT().
 		HasShippedAgainstOrderLine(gomock.Any(), "orl_test").
+		Return(false, nil).
+		Times(1)
+
+	// No shipped shipments — no admin gate needed.
+	suite.orderRepo.EXPECT().
+		HasShippedShipment(gomock.Any(), "or_test").
 		Return(false, nil).
 		Times(1)
 

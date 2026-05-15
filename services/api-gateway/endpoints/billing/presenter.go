@@ -12,14 +12,14 @@ func PricingPlanPresenter(p *pb.PricingPlan) apiresource.PricingPlan {
 		return apiresource.PricingPlan{}
 	}
 
-	limits := make([]apiresource.PlanLimit, len(p.Limits))
+	limitSlice := make([]apiresource.PlanLimit, len(p.Limits))
 	for i, l := range p.Limits {
 		var value *int
 		if l.Value != nil {
 			v := int(*l.Value)
 			value = &v
 		}
-		limits[i] = apiresource.PlanLimit{
+		limitSlice[i] = apiresource.PlanLimit{
 			Object: constants.ObjectTypePlanLimit,
 			Key:    l.Key,
 			Value:  value,
@@ -50,7 +50,7 @@ func PricingPlanPresenter(p *pb.PricingPlan) apiresource.PricingPlan {
 		PricePerSeat:         p.PricePerSeat,
 		PricePerMonth:        pricePerMonth,
 		SeatMinimum:          seatMinimum,
-		Limits:               limits,
+		Limits:               apiresource.NewList(limitSlice, apiresource.PageInfo{}),
 		DisplayFeatures:      p.DisplayFeatures,
 		DisplayOrder:         int(p.DisplayOrder),
 		IsHighlighted:        p.IsHighlighted,

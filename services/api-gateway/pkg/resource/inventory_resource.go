@@ -4,10 +4,12 @@ import "github.com/augno/api/shared/constants"
 
 // Item with on-hand inventory quantity.
 type InventoryItem struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=inventory_item"`
 	// Item details.
 	Item Item `json:"item" validate:"required"`
 	// On-hand quantity.
-	Quantity BaseQuantity `json:"quantity" validate:"required"`
+	Quantity *Quantity `json:"quantity" validate:"required"`
 }
 
 // Paginated list of inventory items.

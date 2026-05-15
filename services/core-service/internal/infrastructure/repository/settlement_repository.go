@@ -81,7 +81,6 @@ func (r *settlementRepoImpl) List(ctx context.Context, params domain.ListSettlem
 			rows, err := r.queries.ListSettlementsBackward(ctx, sqlc.ListSettlementsBackwardParams{
 				AccountID:                params.AccountID,
 				SearchQuery:              searchQuery,
-				SearchQuery_2:            searchQuery,
 				IncludeTransactionFilter: includeTransactionFilter,
 				TransactionIds:           transactionIDs,
 				IncludeInvoiceFilter:     includeInvoiceFilter,
@@ -106,7 +105,6 @@ func (r *settlementRepoImpl) List(ctx context.Context, params domain.ListSettlem
 		rows, err := r.queries.ListSettlementsForward(ctx, sqlc.ListSettlementsForwardParams{
 			AccountID:                params.AccountID,
 			SearchQuery:              searchQuery,
-			SearchQuery_2:            searchQuery,
 			IncludeTransactionFilter: includeTransactionFilter,
 			TransactionIds:           transactionIDs,
 			IncludeInvoiceFilter:     includeInvoiceFilter,
@@ -132,7 +130,6 @@ func (r *settlementRepoImpl) List(ctx context.Context, params domain.ListSettlem
 	rows, err := r.queries.ListSettlementsForward(ctx, sqlc.ListSettlementsForwardParams{
 		AccountID:                params.AccountID,
 		SearchQuery:              searchQuery,
-		SearchQuery_2:            searchQuery,
 		IncludeTransactionFilter: includeTransactionFilter,
 		TransactionIds:           transactionIDs,
 		IncludeInvoiceFilter:     includeInvoiceFilter,

@@ -53,6 +53,7 @@ message PickSummaryInfo {
   google.protobuf.Timestamp finished_at = 9;
   google.protobuf.Timestamp created_at = 10;
   google.protobuf.Timestamp updated_at = 11;
+  string sales_order_number = 12;
 }
 
 // PickInfo represents a full pick resource.
@@ -70,6 +71,7 @@ message PickInfo {
   google.protobuf.Timestamp updated_at = 11;
   repeated PickLineInfo lines = 12;
   repeated PickDepartmentInfo departments = 13;
+  string sales_order_number = 14;
 }
 
 // PickLineInfo represents a pick line resource.
@@ -92,6 +94,14 @@ message PickLineInfo {
   string ordered_quantity_unit_id = 16;
   string ordered_quantity_unit_name = 17;
   string ordered_quantity_unit_abbreviation = 18;
+  // Unit price on the sales order line
+  string unit_price_id = 19;
+  string unit_price_value = 20;
+  string unit_price_numerator_unit_id = 21;
+  string unit_price_numerator_unit_abbreviation = 22;
+  string unit_price_denominator_unit_id = 23;
+  string unit_price_denominator_unit_abbreviation = 24;
+  string ordered_quantity_id = 25;
 }
 
 // PickDepartmentInfo represents a department associated with a pick.

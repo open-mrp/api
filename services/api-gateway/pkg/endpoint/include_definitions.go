@@ -163,6 +163,23 @@ func init() {
 	})
 
 	RegisterIncludes(&ObjectIncludes{
+		ObjectType: constants.ObjectTypeInventoryItem,
+		Fields: []IncludeFieldDef{
+			{Key: "quantity", ObjectType: constants.ObjectTypeQuantity},
+		},
+	})
+
+	RegisterIncludes(&ObjectIncludes{
+		ObjectType: constants.ObjectTypeItemInventory,
+		Fields: []IncludeFieldDef{
+			{Key: "on_hand", ObjectType: constants.ObjectTypeQuantity},
+			{Key: "reserved", ObjectType: constants.ObjectTypeQuantity},
+			{Key: "available_to_promise", ObjectType: constants.ObjectTypeQuantity},
+			{Key: "short", ObjectType: constants.ObjectTypeQuantity},
+		},
+	})
+
+	RegisterIncludes(&ObjectIncludes{
 		ObjectType: constants.ObjectTypeShippingTerm,
 		Fields: []IncludeFieldDef{
 			{Key: "owner", ObjectType: constants.ObjectTypeOwner},
@@ -277,6 +294,13 @@ func init() {
 	})
 
 	RegisterIncludes(&ObjectIncludes{
+		ObjectType: constants.ObjectTypeSalesOrderLine,
+		Fields: []IncludeFieldDef{
+			{Key: "item", ObjectType: constants.ObjectTypeItem},
+		},
+	})
+
+	RegisterIncludes(&ObjectIncludes{
 		ObjectType: constants.ObjectTypeInvoice,
 		Fields: []IncludeFieldDef{
 			{Key: "order", ObjectType: constants.ObjectTypeSalesOrder},
@@ -284,6 +308,52 @@ func init() {
 			{Key: "shipment", ObjectType: constants.ObjectTypeShipment},
 			{Key: "lines", ObjectType: constants.ObjectTypeInvoiceLine},
 			{Key: "allocations", ObjectType: constants.ObjectTypeInvoiceAllocation},
+		},
+	})
+
+	RegisterIncludes(&ObjectIncludes{
+		ObjectType: constants.ObjectTypeInvoiceSummary,
+		Fields: []IncludeFieldDef{
+			{Key: "customer", ObjectType: constants.ObjectTypeCustomer},
+			{Key: "order", ObjectType: constants.ObjectTypeSalesOrder},
+			{Key: "shipment", ObjectType: constants.ObjectTypeShipment},
+			{Key: "billing_address", ObjectType: constants.ObjectTypeAddress},
+			{Key: "payment_term", ObjectType: constants.ObjectTypePaymentTerm},
+		},
+	})
+
+	RegisterIncludes(&ObjectIncludes{
+		ObjectType: constants.ObjectTypeInvoiceLine,
+		Fields: []IncludeFieldDef{
+			{Key: "order_line", ObjectType: constants.ObjectTypeSalesOrderLine},
+		},
+	})
+
+	RegisterIncludes(&ObjectIncludes{
+		ObjectType: constants.ObjectTypeInvoiceAllocation,
+		Fields: []IncludeFieldDef{
+			{Key: "transaction", ObjectType: constants.ObjectTypeTransaction},
+		},
+	})
+
+	RegisterIncludes(&ObjectIncludes{
+		ObjectType: constants.ObjectTypeTransactionAllocation,
+		Fields: []IncludeFieldDef{
+			{Key: "transaction", ObjectType: constants.ObjectTypeTransaction},
+		},
+	})
+
+	RegisterIncludes(&ObjectIncludes{
+		ObjectType: constants.ObjectTypeDelivery,
+		Fields: []IncludeFieldDef{
+			{Key: "purchase_order", ObjectType: constants.ObjectTypeSalesOrder},
+		},
+	})
+
+	RegisterIncludes(&ObjectIncludes{
+		ObjectType: constants.ObjectTypeReceivingOrder,
+		Fields: []IncludeFieldDef{
+			{Key: "purchase_order", ObjectType: constants.ObjectTypeSalesOrder},
 		},
 	})
 
@@ -307,8 +377,16 @@ func init() {
 	RegisterIncludes(&ObjectIncludes{
 		ObjectType: constants.ObjectTypePick,
 		Fields: []IncludeFieldDef{
-			{Key: "lines", ObjectType: constants.ObjectTypePickLine},
+			{Key: "sales_order", ObjectType: constants.ObjectTypeSalesOrder},
 			{Key: "departments", ObjectType: constants.ObjectTypeDepartment},
+			{Key: "lines", ObjectType: constants.ObjectTypePickLine},
+		},
+	})
+
+	RegisterIncludes(&ObjectIncludes{
+		ObjectType: constants.ObjectTypePickLine,
+		Fields: []IncludeFieldDef{
+			{Key: "sales_order_line", ObjectType: constants.ObjectTypeSalesOrderLine},
 		},
 	})
 
@@ -531,6 +609,33 @@ func init() {
 		ObjectType: constants.ObjectTypePermissionGroup,
 		Fields: []IncludeFieldDef{
 			{Key: "owner", ObjectType: constants.ObjectTypeOwner},
+		},
+	})
+
+	RegisterIncludes(&ObjectIncludes{
+		ObjectType: constants.ObjectTypeProduction,
+		Fields: []IncludeFieldDef{
+			{Key: "produced_item", ObjectType: constants.ObjectTypeItem},
+		},
+	})
+
+	RegisterIncludes(&ObjectIncludes{
+		ObjectType: constants.ObjectTypeProductionStep,
+		Fields: []IncludeFieldDef{
+			{Key: "production", ObjectType: constants.ObjectTypeProduction},
+			{Key: "consumptions", ObjectType: constants.ObjectTypeConsumption},
+			{Key: "machines", ObjectType: constants.ObjectTypeMachine},
+			{Key: "scanning_station", ObjectType: constants.ObjectTypeScanningStation},
+			{Key: "department", ObjectType: constants.ObjectTypeDepartment},
+			{Key: "in_steps", ObjectType: constants.ObjectTypeProductionStep},
+			{Key: "out_steps", ObjectType: constants.ObjectTypeProductionStep},
+		},
+	})
+
+	RegisterIncludes(&ObjectIncludes{
+		ObjectType: constants.ObjectTypeProductionFlow,
+		Fields: []IncludeFieldDef{
+			{Key: "steps", ObjectType: constants.ObjectTypeProductionStep},
 		},
 	})
 }

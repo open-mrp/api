@@ -1,6 +1,8 @@
 package productionflowep
 
 import (
+	"time"
+
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	pb "github.com/augno/api/shared/proto/core"
@@ -44,19 +46,19 @@ func flowProductionPresenter(p *pb.ProductionFlowProductionInfo) *apiresource.Pr
 	if p == nil {
 		return nil
 	}
-	var item *apiresource.ProductionFlowItemRef
+	var item *apiresource.Item
 	if p.ItemId != "" {
-		item = &apiresource.ProductionFlowItemRef{
+		item = &apiresource.Item{
 			ID:     p.ItemId,
 			Object: constants.ObjectTypeItem,
 			SKU:    p.ItemSku,
 		}
 	}
 	return &apiresource.ProductionFlowProduction{
-		ID:       p.Id,
-		Object:   constants.ObjectTypeProduction,
-		Item:     item,
-		Quantity: flowQuantityPresenter(p.Quantity),
+		ID:           p.Id,
+		Object:       constants.ObjectTypeProduction,
+		ProducedItem: item,
+		Quantity:     flowQuantityPresenter(p.Quantity),
 	}
 }
 
@@ -64,9 +66,9 @@ func flowConsumptionPresenter(c *pb.ProductionFlowConsumptionInfo) apiresource.P
 	if c == nil {
 		return apiresource.ProductionFlowConsumption{}
 	}
-	var item *apiresource.ProductionFlowItemRef
+	var consumedItem *apiresource.Item
 	if c.ItemId != "" {
-		item = &apiresource.ProductionFlowItemRef{
+		consumedItem = &apiresource.Item{
 			ID:     c.ItemId,
 			Object: constants.ObjectTypeItem,
 			SKU:    c.ItemSku,
@@ -79,7 +81,7 @@ func flowConsumptionPresenter(c *pb.ProductionFlowConsumptionInfo) apiresource.P
 	return apiresource.ProductionFlowConsumption{
 		ID:            c.Id,
 		Object:        constants.ObjectTypeConsumption,
-		Item:          item,
+		ConsumedItem:  consumedItem,
 		Quantity:      flowQuantityPresenter(c.Quantity),
 		WasteQuantity: flowQuantityPresenter(c.WasteQuantity),
 		Instructions:  instructions,
@@ -91,30 +93,65 @@ func ProductionFlowStepPresenter(s *pb.ProductionFlowStepInfo) apiresource.Produ
 		return apiresource.ProductionFlowStep{}
 	}
 
+	stubTS := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
+
 	consumptions := make([]apiresource.ProductionFlowConsumption, 0, len(s.Consumptions))
 	for _, c := range s.Consumptions {
 		consumptions = append(consumptions, flowConsumptionPresenter(c))
 	}
 
-	inSteps := make([]apiresource.ProductionFlowStepRef, 0, len(s.InStepIds))
-	for _, id := range s.InStepIds {
-		inSteps = append(inSteps, apiresource.ProductionFlowStepRef{
-			ID:     id,
-			Object: constants.ObjectTypeProductionStep,
+	inSteps := make([]apiresource.ProductionStep, 0, len(s.InStepIds))
+	for _, stepID := range s.InStepIds {
+		inSteps = append(inSteps, apiresource.ProductionStep{
+			ID:             stepID,
+			Object:         constants.ObjectTypeProductionStep,
+			Name:           "Production Step",
+			LevelingFactor: "0",
+			Allowances:     "0",
+			CreatedAt:      stubTS,
+			UpdatedAt:      stubTS,
 		})
 	}
 
-	outSteps := make([]apiresource.ProductionFlowStepRef, 0, len(s.OutStepIds))
-	for _, id := range s.OutStepIds {
-		outSteps = append(outSteps, apiresource.ProductionFlowStepRef{
-			ID:     id,
-			Object: constants.ObjectTypeProductionStep,
+	outSteps := make([]apiresource.ProductionStep, 0, len(s.OutStepIds))
+	for _, stepID := range s.OutStepIds {
+		outSteps = append(outSteps, apiresource.ProductionStep{
+			ID:             stepID,
+			Object:         constants.ObjectTypeProductionStep,
+			Name:           "Production Step",
+			LevelingFactor: "0",
+			Allowances:     "0",
+			CreatedAt:      stubTS,
+			UpdatedAt:      stubTS,
 		})
 	}
 
-	var scanningStation *apiresource.ProductionFlowStepRef
+	machines := make([]apiresource.Machine, 0, len(s.MachineIds))
+	for _, id := range s.MachineIds {
+		machines = append(machines, apiresource.Machine{
+			ID:           id,
+			Object:       constants.ObjectTypeMachine,
+			Name:         "Machine",
+			SerialNumber: "—",
+			CreatedAt:    stubTS,
+			UpdatedAt:    stubTS,
+		})
+	}
+
+	var department *apiresource.Department
+	if s.DepartmentId != nil && *s.DepartmentId != "" {
+		department = &apiresource.Department{
+			ID:        *s.DepartmentId,
+			Object:    constants.ObjectTypeDepartment,
+			Name:      "Department",
+			CreatedAt: stubTS,
+			UpdatedAt: stubTS,
+		}
+	}
+
+	var scanningStation *apiresource.ScanningStation
 	if s.ScanningStationId != nil {
-		scanningStation = &apiresource.ProductionFlowStepRef{
+		scanningStation = &apiresource.ScanningStation{
 			ID:     *s.ScanningStationId,
 			Object: constants.ObjectTypeScanningStation,
 		}
@@ -125,9 +162,11 @@ func ProductionFlowStepPresenter(s *pb.ProductionFlowStepInfo) apiresource.Produ
 		Object:          constants.ObjectTypeProductionStep,
 		Name:            s.Name,
 		Production:      flowProductionPresenter(s.Production),
-		Consumptions:    consumptions,
-		InSteps:         inSteps,
-		OutSteps:        outSteps,
+		Consumptions:    apiresource.NewList(consumptions, apiresource.PageInfo{}),
+		InSteps:         apiresource.NewList(inSteps, apiresource.PageInfo{}),
+		OutSteps:        apiresource.NewList(outSteps, apiresource.PageInfo{}),
+		Machines:        apiresource.NewList(machines, apiresource.PageInfo{}),
+		Department:      department,
 		ScanningStation: scanningStation,
 		LevelingFactor:  s.LevelingFactor,
 		Allowances:      s.Allowances,
@@ -144,6 +183,6 @@ func ProductionFlowPresenter(steps []*pb.ProductionFlowStepInfo) *apiresource.Pr
 	}
 	return &apiresource.ProductionFlow{
 		Object: constants.ObjectTypeProductionFlow,
-		Steps:  flowSteps,
+		Steps:  apiresource.NewList(flowSteps, apiresource.PageInfo{}),
 	}
 }

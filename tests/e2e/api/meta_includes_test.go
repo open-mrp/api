@@ -86,8 +86,9 @@ var includesOptOut = map[string]string{}
 // the include key and asserts that the value is present and non-empty.
 // List responses (object == "list") are handled by walking each item in data[]
 // and requiring that at least one item has the include populated with a valid
-// stub (id + object non-empty). Single-object responses require the include
-// itself to be populated.
+// stub (id + object non-empty). Single-object responses use the same "at least
+// one row" rule for each list envelope along the path (e.g. production flow
+// steps) so heterogeneous nested rows are covered.
 func assertIncludePopulated(t *testing.T, resp map[string]any, include string) {
 	t.Helper()
 
@@ -137,36 +138,64 @@ func assertIncludePopulatedOnObject(t *testing.T, obj map[string]any, include, p
 // the populated-stub contract.
 func checkIncludePopulated(obj map[string]any, include string) error {
 	parts := strings.Split(include, ".")
-	cur := any(obj)
-	for i, part := range parts {
-		curMap, ok := cur.(map[string]any)
-		if !ok {
-			return fmt.Errorf("navigating %q: parent at segment %d is not an object", include, i)
-		}
-		// Transparently step into the first data item of a list wrapper encountered
-		// mid-path, so dot-paths like "associated_units.unit" can traverse through
-		// list-typed intermediate fields.
-		if objType, _ := curMap["object"].(string); objType == "list" {
-			data, _ := curMap["data"].([]any)
-			if len(data) == 0 {
-				return fmt.Errorf("include %q: list at segment %d has no items to navigate through", include, i)
-			}
-			firstItem, ok := data[0].(map[string]any)
-			if !ok {
-				return fmt.Errorf("include %q: first list item at segment %d is not an object", include, i)
-			}
-			curMap = firstItem
-		}
-		v, present := curMap[part]
-		if !present {
-			return fmt.Errorf("include %q: key %q missing from response", include, part)
-		}
-		if v == nil {
-			return fmt.Errorf("include %q: %q is null (backend did not attach data)", include, part)
-		}
-		cur = v
+	if len(parts) == 0 || (len(parts) == 1 && parts[0] == "") {
+		return nil
 	}
-	return validateIncludeValue(include, cur)
+	return includePath(obj, parts, 0, include)
+}
+
+// includePath walks `parts` starting at index `i`. When the current value is a
+// list envelope, each element of data[] is tried so at least one row can
+// complete the remaining path (mirrors assertIncludePopulatedOnList semantics).
+func includePath(cur any, parts []string, i int, fullInclude string) error {
+	if i >= len(parts) {
+		return validateIncludeValue(fullInclude, cur)
+	}
+	part := parts[i]
+	curMap, ok := cur.(map[string]any)
+	if !ok {
+		return fmt.Errorf("navigating %q: parent at segment %d is not an object", fullInclude, i)
+	}
+	if objType, _ := curMap["object"].(string); objType == "list" {
+		data, _ := curMap["data"].([]any)
+		if len(data) == 0 {
+			return fmt.Errorf("include %q: list at segment %d has no items to navigate through", fullInclude, i)
+		}
+		var errs []string
+		for idx, raw := range data {
+			item, ok := raw.(map[string]any)
+			if !ok {
+				errs = append(errs, fmt.Sprintf("data[%d]: not an object", idx))
+				continue
+			}
+			v, present := item[part]
+			if !present {
+				errs = append(errs, fmt.Sprintf("data[%d]: missing key %q", idx, part))
+				continue
+			}
+			if v == nil {
+				errs = append(errs, fmt.Sprintf("data[%d]: key %q is null", idx, part))
+				continue
+			}
+			if err := includePath(v, parts, i+1, fullInclude); err != nil {
+				errs = append(errs, fmt.Sprintf("data[%d]: %v", idx, err))
+				continue
+			}
+			return nil
+		}
+		if len(errs) > 0 {
+			return fmt.Errorf("include %q: no list item completed path at segment %d (%s)", fullInclude, i, strings.Join(errs, "; "))
+		}
+		return fmt.Errorf("include %q: list at segment %d had no traversable items", fullInclude, i)
+	}
+	v, present := curMap[part]
+	if !present {
+		return fmt.Errorf("include %q: key %q missing from response", fullInclude, part)
+	}
+	if v == nil {
+		return fmt.Errorf("include %q: %q is null (backend did not attach data)", fullInclude, part)
+	}
+	return includePath(v, parts, i+1, fullInclude)
 }
 
 // validateIncludeValue enforces that the backend populated the include with

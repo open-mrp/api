@@ -1,11 +1,15 @@
 package productionstepep
 
 import (
+	"time"
+
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	pb "github.com/augno/api/shared/proto/core"
 )
+
+var embeddedRateTimestamp = time.Unix(1, 0).UTC()
 
 func ratePresenter(r *pb.ProductionStepRateInfo) *apiresource.Rate {
 	if r == nil {
@@ -15,19 +19,23 @@ func ratePresenter(r *pb.ProductionStepRateInfo) *apiresource.Rate {
 		ID:     r.Id,
 		Object: constants.ObjectTypeRate,
 		Value:  r.Value,
-		NumeratorUnit: &apiresource.Unit{
-			ID:           r.NumeratorUnitId,
-			Object:       constants.ObjectTypeUnit,
-			Abbreviation: r.NumeratorUnitAbbreviation,
-			Type:         constants.UnitType(r.NumeratorUnitType),
-		},
-		DenominatorUnit: &apiresource.Unit{
-			ID:           r.DenominatorUnitId,
-			Object:       constants.ObjectTypeUnit,
-			Abbreviation: r.DenominatorUnitAbbreviation,
-			Type:         constants.UnitType(r.DenominatorUnitType),
-		},
+		NumeratorUnit: apiresource.ExpandableUnitStub(
+			r.NumeratorUnitId,
+			r.NumeratorUnitAbbreviation,
+			r.NumeratorUnitAbbreviation,
+			r.NumeratorUnitType,
+			embeddedRateTimestamp,
+		),
+		DenominatorUnit: apiresource.ExpandableUnitStub(
+			r.DenominatorUnitId,
+			r.DenominatorUnitAbbreviation,
+			r.DenominatorUnitAbbreviation,
+			r.DenominatorUnitType,
+			embeddedRateTimestamp,
+		),
 		DisplayValue: apiresource.FormatRateDisplayValue(r.Value, r.NumeratorUnitAbbreviation, r.NumeratorUnitType, r.DenominatorUnitAbbreviation),
+		CreatedAt:    embeddedRateTimestamp,
+		UpdatedAt:    embeddedRateTimestamp,
 	}
 }
 
@@ -50,14 +58,17 @@ func productionOutputPresenter(p *pb.ProductionInfo) *apiresource.ProductionOutp
 		return nil
 	}
 
-	var producedItem *apiresource.ConsumptionItem
+	var producedItem *apiresource.Item
 	if p.ItemId != "" {
-		producedItem = &apiresource.ConsumptionItem{
+		itemTS := grpcutil.TimestampToTime(p.CreatedAt)
+		producedItem = &apiresource.Item{
 			ID:           p.ItemId,
 			Object:       constants.ObjectTypeItem,
 			SKU:          p.ItemSku,
 			Description:  p.ItemDescription,
 			ItemTypeCode: constants.ItemTypeCode(p.ItemTypeCode),
+			CreatedAt:    itemTS,
+			UpdatedAt:    itemTS,
 		}
 	}
 
@@ -71,10 +82,40 @@ func productionOutputPresenter(p *pb.ProductionInfo) *apiresource.ProductionOutp
 	}
 }
 
+func lightProductionStepToStub(st *pb.LightProductionStepInfo, fallback time.Time) apiresource.ProductionStep {
+	lf := st.GetLevelingFactor()
+	if lf == "" {
+		lf = "1"
+	}
+	al := st.GetAllowances()
+	if al == "" {
+		al = "0"
+	}
+	ca := fallback
+	if st.CreatedAt != nil {
+		ca = grpcutil.TimestampToTime(st.CreatedAt)
+	}
+	ua := fallback
+	if st.UpdatedAt != nil {
+		ua = grpcutil.TimestampToTime(st.UpdatedAt)
+	}
+	return apiresource.ProductionStep{
+		ID:             st.Id,
+		Object:         constants.ObjectTypeProductionStep,
+		Name:           st.Name,
+		LevelingFactor: lf,
+		Allowances:     al,
+		CreatedAt:      ca,
+		UpdatedAt:      ua,
+	}
+}
+
 func ProductionStepPresenter(s *pb.ProductionStepInfo) apiresource.ProductionStep {
 	if s == nil {
 		return apiresource.ProductionStep{}
 	}
+
+	stepTS := grpcutil.TimestampToTime(s.CreatedAt)
 
 	// Consumptions
 	consumptions := make([]apiresource.Consumption, len(s.Consumptions))
@@ -83,50 +124,77 @@ func ProductionStepPresenter(s *pb.ProductionStepInfo) apiresource.ProductionSte
 	}
 
 	// Machines
-	machines := make([]apiresource.ProductionStepMachine, len(s.Machines))
+	machines := make([]apiresource.Machine, len(s.Machines))
 	for i, m := range s.Machines {
-		machines[i] = apiresource.ProductionStepMachine{
-			ID:     m.Id,
-			Object: constants.ObjectTypeMachine,
-			Name:   m.Name,
+		sn := m.GetSerialNumber()
+		if sn == "" {
+			sn = "—"
+		}
+		mCreated := stepTS
+		if m.CreatedAt != nil {
+			mCreated = grpcutil.TimestampToTime(m.CreatedAt)
+		}
+		mUpdated := stepTS
+		if m.UpdatedAt != nil {
+			mUpdated = grpcutil.TimestampToTime(m.UpdatedAt)
+		}
+		machines[i] = apiresource.Machine{
+			ID:           m.Id,
+			Object:       constants.ObjectTypeMachine,
+			Name:         m.Name,
+			SerialNumber: sn,
+			CreatedAt:    mCreated,
+			UpdatedAt:    mUpdated,
 		}
 	}
 
 	// Scanning station
-	var scanStation *apiresource.ProductionStepScanStation
+	var scanStation *apiresource.ScanningStation
 	if s.ScanningStation != nil {
-		scanStation = &apiresource.ProductionStepScanStation{
-			ID:     s.ScanningStation.Id,
-			Object: constants.ObjectTypeScanningStation,
-			Name:   s.ScanningStation.Name,
+		ss := s.ScanningStation
+		ssType := constants.ScanningStationType(ss.Type)
+		if !ssType.IsValid() {
+			ssType = constants.ScanningStationTypeInitBatch
+		}
+		ssCreated := stepTS
+		if ss.CreatedAt != nil {
+			ssCreated = grpcutil.TimestampToTime(ss.CreatedAt)
+		}
+		ssUpdated := stepTS
+		if ss.UpdatedAt != nil {
+			ssUpdated = grpcutil.TimestampToTime(ss.UpdatedAt)
+		}
+		scanStation = &apiresource.ScanningStation{
+			ID:                  ss.Id,
+			Object:              constants.ObjectTypeScanningStation,
+			Name:                ss.Name,
+			Type:                ssType,
+			OperatorRequirement: constants.OperatorRequirementNone,
+			CreatedAt:           ssCreated,
+			UpdatedAt:           ssUpdated,
 		}
 	}
 
 	// In/Out steps
-	inSteps := make([]apiresource.ProductionStepRef, len(s.InSteps))
+	inSteps := make([]apiresource.ProductionStep, len(s.InSteps))
 	for i, st := range s.InSteps {
-		inSteps[i] = apiresource.ProductionStepRef{
-			ID:     st.Id,
-			Object: constants.ObjectTypeProductionStep,
-			Name:   st.Name,
-		}
+		inSteps[i] = lightProductionStepToStub(st, stepTS)
 	}
 
-	outSteps := make([]apiresource.ProductionStepRef, len(s.OutSteps))
+	outSteps := make([]apiresource.ProductionStep, len(s.OutSteps))
 	for i, st := range s.OutSteps {
-		outSteps[i] = apiresource.ProductionStepRef{
-			ID:     st.Id,
-			Object: constants.ObjectTypeProductionStep,
-			Name:   st.Name,
-		}
+		outSteps[i] = lightProductionStepToStub(st, stepTS)
 	}
 
 	// Department
-	var department *apiresource.ProductionStepDepartment
+	var department *apiresource.Department
 	if s.DepartmentId != nil && *s.DepartmentId != "" {
-		department = &apiresource.ProductionStepDepartment{
-			ID:     *s.DepartmentId,
-			Object: constants.ObjectTypeDepartment,
+		department = &apiresource.Department{
+			ID:        *s.DepartmentId,
+			Object:    constants.ObjectTypeDepartment,
+			Name:      "Department",
+			CreatedAt: stepTS,
+			UpdatedAt: stepTS,
 		}
 	}
 
@@ -141,13 +209,13 @@ func ProductionStepPresenter(s *pb.ProductionStepInfo) apiresource.ProductionSte
 		LaborTime:       ratePresenter(s.LaborTime),
 		OverheadRate:    ratePresenter(s.OverheadRate),
 		Production:      productionOutputPresenter(s.Production),
-		Consumptions:    consumptions,
-		Machines:        machines,
+		Consumptions:    apiresource.NewList(consumptions, apiresource.PageInfo{}),
+		Machines:        apiresource.NewList(machines, apiresource.PageInfo{}),
 		ScanningStation: scanStation,
-		InSteps:         inSteps,
-		OutSteps:        outSteps,
+		InSteps:         apiresource.NewList(inSteps, apiresource.PageInfo{}),
+		OutSteps:        apiresource.NewList(outSteps, apiresource.PageInfo{}),
 		Department:      department,
-		CreatedAt:       grpcutil.TimestampToTime(s.CreatedAt),
+		CreatedAt:       stepTS,
 		UpdatedAt:       grpcutil.TimestampToTime(s.UpdatedAt),
 	}
 }
@@ -157,14 +225,17 @@ func consumptionPresenter(c *pb.ConsumptionInfo) apiresource.Consumption {
 		return apiresource.Consumption{}
 	}
 
-	var consumedItem *apiresource.ConsumptionItem
+	itemTS := grpcutil.TimestampToTime(c.CreatedAt)
+	var consumedItem *apiresource.Item
 	if c.ItemId != "" {
-		consumedItem = &apiresource.ConsumptionItem{
+		consumedItem = &apiresource.Item{
 			ID:           c.ItemId,
 			Object:       constants.ObjectTypeItem,
 			SKU:          c.ItemSku,
 			Description:  c.ItemDescription,
 			ItemTypeCode: constants.ItemTypeCode(c.ItemTypeCode),
+			CreatedAt:    itemTS,
+			UpdatedAt:    itemTS,
 		}
 	}
 
@@ -175,7 +246,7 @@ func consumptionPresenter(c *pb.ConsumptionInfo) apiresource.Consumption {
 		WasteQuantity: quantityPresenter(c.WasteQuantity),
 		ConsumedItem:  consumedItem,
 		Instructions:  c.Instructions,
-		CreatedAt:     grpcutil.TimestampToTime(c.CreatedAt),
+		CreatedAt:     itemTS,
 		UpdatedAt:     grpcutil.TimestampToTime(c.UpdatedAt),
 	}
 }

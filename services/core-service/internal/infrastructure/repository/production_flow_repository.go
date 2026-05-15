@@ -232,6 +232,20 @@ func (r *productionFlowRepoImpl) GetFlowStep(ctx context.Context, accountID, ste
 		step.ScanningStationID = &row.ScanningStationID.String
 	}
 
+	if row.DepartmentID.Valid {
+		dept := row.DepartmentID.String
+		step.DepartmentID = &dept
+	}
+
+	machineIDs, err := r.queries.ListMachineIDsByProductionStep(ctx, sqlc.ListMachineIDsByProductionStepParams{
+		ProductionStepID: sql.NullString{String: row.ID, Valid: true},
+		AccountID:        accountID,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	step.MachineIDs = machineIDs
+
 	if row.LaborRateID.Valid {
 		step.LaborRate = &domain.FlowRate{
 			ID:                row.LaborRateID.String,

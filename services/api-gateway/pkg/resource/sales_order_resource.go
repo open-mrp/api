@@ -48,7 +48,7 @@ type Pick struct {
 	// Pick ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
-	Object string `json:"object" validate:"required"`
+	Object constants.ObjectType `json:"object" validate:"required,enum=pick"`
 }
 
 // Full sales order resource.
@@ -99,6 +99,8 @@ type SalesOrderDetail struct {
 	Pick *Pick `json:"pick"`
 	// Order lines.
 	Lines *List[SalesOrderLineDetail] `json:"lines" expandable:"true"`
+	// Count of order lines. Always populated in list responses.
+	LineCount int32 `json:"line_count"`
 	// Issued timestamp.
 	IssuedAt *time.Time `json:"issued_at"`
 	// Completed timestamp.

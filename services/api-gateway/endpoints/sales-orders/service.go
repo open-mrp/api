@@ -8,6 +8,7 @@ import (
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/appctx"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 	pb "github.com/augno/api/shared/proto/core"
 	"github.com/augno/api/shared/tracing"
@@ -37,7 +38,7 @@ func toSalesOrderEmailContactList(inputs *[]SalesOrderEmailContactInput) *pb.Sal
 }
 
 type SalesOrderSvc interface {
-	ListSalesOrders(ctx context.Context, req *ListSalesOrdersRequest) (*apiresource.List[apiresource.SalesOrderSummary], *apierror.APIError)
+	ListSalesOrders(ctx context.Context, req *ListSalesOrdersRequest) (*apiresource.List[apiresource.SalesOrderDetail], *apierror.APIError)
 	GetSalesOrder(ctx context.Context, req *RetrieveSalesOrderRequest) (*apiresource.SalesOrderDetail, *apierror.APIError)
 	CreateSalesOrder(ctx context.Context, req *CreateSalesOrderRequest) (*apiresource.SalesOrderDetail, *apierror.APIError)
 	UpdateSalesOrder(ctx context.Context, req *UpdateSalesOrderRequest) (*apiresource.SalesOrderDetail, *apierror.APIError)
@@ -78,7 +79,7 @@ func NewSalesOrderSvc(config *SalesOrderSvcConfig) SalesOrderSvc {
 	}
 }
 
-func (m *salesOrderSvcImpl) ListSalesOrders(ctx context.Context, req *ListSalesOrdersRequest) (*apiresource.List[apiresource.SalesOrderSummary], *apierror.APIError) {
+func (m *salesOrderSvcImpl) ListSalesOrders(ctx context.Context, req *ListSalesOrdersRequest) (*apiresource.List[apiresource.SalesOrderDetail], *apierror.APIError) {
 	pbReq := &pb.ListSalesOrdersRequest{
 		Cursor:                req.Cursor,
 		Limit:                 req.Limit,
@@ -315,7 +316,10 @@ func (m *salesOrderSvcImpl) CreateSalesOrderProductionRun(ctx context.Context, r
 	}
 
 	return &CreateProductionRunResponse{
-		ProductionRun: CreateProductionRunResponseRef{ID: resp.ProductionRunId},
+		ProductionRun: CreateProductionRunResponseRef{
+			ID:     resp.ProductionRunId,
+			Object: constants.ObjectTypeProductionRun,
+		},
 	}, nil
 }
 

@@ -84,9 +84,10 @@ func TestSalesOrders_IncludeOrderDiscount(t *testing.T) {
 	requireStatus(t, 200, status, body)
 
 	got := parseJSON(body)
-	_, ok := got["order_discount"]
-	assert.True(t, ok, "order_discount key should be present with ?include=order_discount")
-	// order_discount may legitimately be null if no discount applied
+	discount := jsonObject(got, "order_discount")
+	require.NotNil(t, discount, "order_discount should be populated with ?include=order_discount (seed sets order_discount_id on ORD-001)")
+	assert.Equal(t, "order_discount", jsonField(discount, "object"))
+	assert.NotEmpty(t, jsonField(discount, "id"))
 }
 
 func TestSalesOrders_IncludeLines(t *testing.T) {

@@ -1227,11 +1227,10 @@ func (r *analyticsRepoImpl) GetWeeksOfSales(ctx context.Context, params domain.A
 	for _, plInfo := range plInfoRows {
 		// Get order quantity for this product line in the period.
 		orderRow, err := r.queries.GetOrderQuantityByProductLine(ctx, sqlc.GetOrderQuantityByProductLineParams{
-			TargetProductLineID:   plInfo.ID,
-			OwnerAccountID:        params.AccountID,
-			TargetProductLineID_3: plInfo.ID,
-			StartDate:             sql.NullTime{Time: startDate, Valid: true},
-			EndDate:               sql.NullTime{Time: endDate, Valid: true},
+			TargetProductLineID: plInfo.ID,
+			OwnerAccountID:      params.AccountID,
+			StartDate:           sql.NullTime{Time: startDate, Valid: true},
+			EndDate:             sql.NullTime{Time: endDate, Valid: true},
 		})
 		if apiErr := db.MapSQLError(err); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)

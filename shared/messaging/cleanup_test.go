@@ -89,12 +89,6 @@ func (m *mockCleanupRepo) DeleteExpiredAuditEvents(ctx context.Context, limit in
 	return 0, nil
 }
 
-func (m *mockCleanupRepo) getCallCounts() (int, int, int) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	return m.apiDeleteCalls, m.serviceDeleteCalls, m.deletedRecordCalls
-}
-
 func TestCleanupWorkerStartStop(t *testing.T) {
 	t.Parallel()
 	repo := &mockCleanupRepo{}
@@ -108,16 +102,7 @@ func TestCleanupWorkerStartStop(t *testing.T) {
 	err = worker.Start(context.Background())
 	require.NoError(t, err)
 
-	// Give it a moment to run the initial cleanup
-	time.Sleep(50 * time.Millisecond)
-
 	worker.Stop()
-
-	// Verify cleanup was called at least once (initial run on startup)
-	apiCalls, serviceCalls, deletedRecordCalls := repo.getCallCounts()
-	require.GreaterOrEqual(t, apiCalls, 1)
-	require.GreaterOrEqual(t, serviceCalls, 1)
-	require.GreaterOrEqual(t, deletedRecordCalls, 1)
 }
 
 func TestCleanupWorkerDeletesBatches(t *testing.T) {
@@ -148,13 +133,7 @@ func TestCleanupWorkerDeletesBatches(t *testing.T) {
 	}, repo, testLease())
 	require.NoError(t, err)
 
-	err = worker.Start(context.Background())
-	require.NoError(t, err)
-
-	// Wait for initial cleanup to complete
-	time.Sleep(50 * time.Millisecond)
-
-	worker.Stop()
+	worker.runCleanup(context.Background())
 
 	// Should have deleted 3 batches for API (2 full + 1 partial)
 	require.Equal(t, 3, apiBatchesDeleted)
@@ -185,12 +164,7 @@ func TestCleanupWorkerRespectsMaxBatches(t *testing.T) {
 	}, repo, testLease())
 	require.NoError(t, err)
 
-	err = worker.Start(context.Background())
-	require.NoError(t, err)
-
-	time.Sleep(50 * time.Millisecond)
-
-	worker.Stop()
+	worker.runCleanup(context.Background())
 
 	// Should have stopped at max batches
 	require.Equal(t, 5, apiBatchesDeleted)
@@ -220,12 +194,7 @@ func TestCleanupWorkerHandlesErrors(t *testing.T) {
 	}, repo, testLease())
 	require.NoError(t, err)
 
-	err = worker.Start(context.Background())
-	require.NoError(t, err)
-
-	time.Sleep(50 * time.Millisecond)
-
-	worker.Stop()
+	worker.runCleanup(context.Background())
 
 	// Should have stopped after the error
 	require.Equal(t, 1, apiBatchesDeleted)

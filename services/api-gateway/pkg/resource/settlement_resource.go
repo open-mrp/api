@@ -101,8 +101,8 @@ type TransactionAllocation struct {
 	Amount *Quantity `json:"amount" validate:"required"`
 	// Note.
 	Note *string `json:"note"`
-	// Associated transaction.
-	Transaction *Transaction `json:"transaction" validate:"required"`
+	// Associated transaction. Expandable via include[]=allocations.transaction.
+	Transaction *TransactionDetail `json:"transaction" expandable:"true"`
 	// Associated invoice.
 	Invoice *InvoiceSummary `json:"invoice"`
 	// Creation timestamp.
@@ -127,7 +127,7 @@ var SampleTransactionAllocation2 = &TransactionAllocation{
 			Type:         constants.UnitTypeCurrency,
 		},
 	},
-	Transaction: SampleTransaction,
+	Transaction: SampleTransactionDetail,
 	CreatedAt:   timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:   timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }

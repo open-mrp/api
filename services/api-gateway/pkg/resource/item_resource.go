@@ -66,36 +66,23 @@ func (*Item) SchemaExample() any {
 // ItemInventory contains inventory quantities for an item.
 type ItemInventory struct {
 	// Resource type identifier.
-	Object constants.ObjectType `json:"object" validate:"required,enum=item"`
-	// On-hand quantity and unit.
-	OnHand *QuantityInfo `json:"on_hand" validate:"required"`
-	// Reserved quantity and unit.
-	Reserved *QuantityInfo `json:"reserved" validate:"required"`
-	// Available-to-promise quantity and unit.
-	AvailableToPromise *QuantityInfo `json:"available_to_promise" validate:"required"`
-	// Short quantity and unit.
-	Short *QuantityInfo `json:"short" validate:"required"`
-}
-
-// QuantityInfo is a quantity with its associated unit.
-type QuantityInfo struct {
-	// Decimal quantity value.
-	Value string `json:"value" validate:"required" format:"decimal"`
-	// Unit.
-	Unit *Unit `json:"unit"`
-}
-
-var SampleQuantityInfo = &QuantityInfo{
-	Value: "100.000000000000000000000000000000",
-	Unit:  SampleUnit,
+	Object constants.ObjectType `json:"object" validate:"required,enum=item_inventory"`
+	// On-hand quantity. Expandable via include[]=on_hand.
+	OnHand *Quantity `json:"on_hand" expandable:"true"`
+	// Reserved quantity. Expandable via include[]=reserved.
+	Reserved *Quantity `json:"reserved" expandable:"true"`
+	// Available-to-promise quantity. Expandable via include[]=available_to_promise.
+	AvailableToPromise *Quantity `json:"available_to_promise" expandable:"true"`
+	// Short quantity. Expandable via include[]=short.
+	Short *Quantity `json:"short" expandable:"true"`
 }
 
 var SampleItemInventory = &ItemInventory{
-	Object:             constants.ObjectTypeItem,
-	OnHand:             SampleQuantityInfo,
-	Reserved:           SampleQuantityInfo,
-	AvailableToPromise: SampleQuantityInfo,
-	Short:              SampleQuantityInfo,
+	Object:             constants.ObjectTypeItemInventory,
+	OnHand:             SampleQuantity,
+	Reserved:           SampleQuantity,
+	AvailableToPromise: SampleQuantity,
+	Short:              SampleQuantity,
 }
 
 func (*ItemInventory) SchemaExample() any {
@@ -234,11 +221,11 @@ type BulkReconcileItemsResponse struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=bulk_reconcile_items_response"`
 	// Successfully reconciled items.
-	ReconciledItems []ReconciledItemResult `json:"reconciled_items" validate:"required"`
+	ReconciledItems *List[ReconciledItemResult] `json:"reconciled_items" validate:"required"`
 	// Skipped items.
-	SkippedItems []SkippedItemResult `json:"skipped_items" validate:"required"`
+	SkippedItems *List[SkippedItemResult] `json:"skipped_items" validate:"required"`
 	// Reconciliation errors.
-	Errors []ReconcileErrorResult `json:"errors" validate:"required"`
+	Errors *List[ReconcileErrorResult] `json:"errors" validate:"required"`
 }
 
 // ReconciledItemResult is a successfully reconciled item.

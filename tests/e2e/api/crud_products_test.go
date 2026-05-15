@@ -405,7 +405,7 @@ func TestProducts_OmittedFields(t *testing.T) {
 
 	t.Run("CreateWithOnlyRequiredFields", func(t *testing.T) {
 		sku := uniqueName("e2e-prod-omit")
-		status, body, err := apiClient.Post(productsPath, validProductBody(sku), newIdempotencyKey())
+		status, body, err := apiClient.Post(productsPath+"?include=item", validProductBody(sku), newIdempotencyKey())
 		require.NoError(t, err)
 		requireStatus(t, 201, status, body)
 

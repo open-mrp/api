@@ -10,24 +10,7 @@ import (
 
 const SampleDeliveryID = "dlv_01jm4r6700f8nwq3v5hx2d9ktp"
 const SampleDeliveryLineID = "dlvl_01jm4r6700f8nwq3v5hx2d9ktp"
-const SampleSalesOrderID = "so_01jm4r6700f8nwq3v5hx2d9ktp"
 const SampleLotID = "lot_01jm4r6700f8nwq3v5hx2d9ktp"
-
-// Sales order sub-resource.
-type SalesOrder struct {
-	// Sales order ID.
-	ID string `json:"id" validate:"required"`
-	// Resource type identifier.
-	Object constants.ObjectType `json:"object" validate:"required,enum=sales_order"`
-	// Sales order number.
-	Number string `json:"number" validate:"required"`
-}
-
-var SampleSalesOrder = &SalesOrder{
-	ID:     SampleSalesOrderID,
-	Object: constants.ObjectTypeSalesOrder,
-	Number: "PO-001",
-}
 
 // Lot sub-resource.
 type Lot struct {
@@ -53,8 +36,8 @@ type DeliverySummary struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=delivery"`
 	// Delivery number.
 	Number string `json:"number" validate:"required"`
-	// Associated purchase order.
-	PurchaseOrder *SalesOrder `json:"purchase_order" validate:"required"`
+	// Associated purchase order. Expandable via include[]=purchase_order.
+	PurchaseOrder *SalesOrderDetail `json:"purchase_order" expandable:"true"`
 	// Delivery status (accepted or rejected).
 	Status constants.DeliveryStatus `json:"status" validate:"required"`
 	// Number of delivery lines.
@@ -70,14 +53,18 @@ type DeliverySummary struct {
 }
 
 var SampleDeliverySummary = &DeliverySummary{
-	ID:            SampleDeliveryID,
-	Object:        constants.ObjectTypeDelivery,
-	Number:        "DLV-001",
-	PurchaseOrder: SampleSalesOrder,
-	Status:        constants.DeliveryStatusAccepted,
-	LineCount:     2,
-	CreatedAt:     timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt:     timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	ID:     SampleDeliveryID,
+	Object: constants.ObjectTypeDelivery,
+	Number: "DLV-001",
+	PurchaseOrder: &SalesOrderDetail{
+		ID:     SampleSalesOrderDetailID,
+		Object: constants.ObjectTypeSalesOrder,
+		Number: SampleSalesOrderNumber,
+	},
+	Status:    constants.DeliveryStatusAccepted,
+	LineCount: 2,
+	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*DeliverySummary) SchemaExample() any {
@@ -92,8 +79,8 @@ type Delivery struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=delivery"`
 	// Delivery number.
 	Number string `json:"number" validate:"required"`
-	// Associated purchase order.
-	PurchaseOrder *SalesOrder `json:"purchase_order" validate:"required"`
+	// Associated purchase order. Expandable via include[]=purchase_order.
+	PurchaseOrder *SalesOrderDetail `json:"purchase_order" expandable:"true"`
 	// Delivery status (accepted or rejected).
 	Status constants.DeliveryStatus `json:"status" validate:"required"`
 	// Delivery line items.
@@ -109,14 +96,18 @@ type Delivery struct {
 }
 
 var SampleDelivery = &Delivery{
-	ID:            SampleDeliveryID,
-	Object:        constants.ObjectTypeDelivery,
-	Number:        "DLV-001",
-	PurchaseOrder: SampleSalesOrder,
-	Status:        constants.DeliveryStatusAccepted,
-	Lines:         NewList([]DeliveryLine{*SampleDeliveryLine}, PageInfo{}),
-	CreatedAt:     timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt:     timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	ID:     SampleDeliveryID,
+	Object: constants.ObjectTypeDelivery,
+	Number: "DLV-001",
+	PurchaseOrder: &SalesOrderDetail{
+		ID:     SampleSalesOrderDetailID,
+		Object: constants.ObjectTypeSalesOrder,
+		Number: SampleSalesOrderNumber,
+	},
+	Status:    constants.DeliveryStatusAccepted,
+	Lines:     NewList([]DeliveryLine{*SampleDeliveryLine}, PageInfo{}),
+	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*Delivery) SchemaExample() any {

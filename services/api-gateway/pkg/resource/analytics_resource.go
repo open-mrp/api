@@ -124,9 +124,9 @@ type AnalyzeProductionCostsResponse struct {
 // ProductionCostItem represents an aggregated production cost entry.
 type ProductionCostItem struct {
 	// The department information.
-	Department *BasicInfo `json:"department"`
+	Department *Entity `json:"department"`
 	// The category information.
-	Category BasicInfo `json:"category" validate:"required"`
+	Category *Entity `json:"category" validate:"required"`
 	// The total costs.
 	TotalCosts CostBreakdown `json:"total_costs" validate:"required"`
 	// The productive costs.
@@ -137,46 +137,20 @@ type ProductionCostItem struct {
 	SecondsCosts CostBreakdown `json:"seconds_costs" validate:"required"`
 }
 
-// BasicInfo represents a simple ID and name pair.
-type BasicInfo struct {
-	// The unique identifier.
-	ID string `json:"id" validate:"required"`
-	// The display name.
-	Name string `json:"name" validate:"required"`
-}
-
 // CostBreakdown represents a detailed cost breakdown with sub-quantities.
 type CostBreakdown struct {
 	// The total amount.
-	Total BaseQuantity `json:"total" validate:"required"`
+	Total *Quantity `json:"total" validate:"required"`
 	// The labor amount.
-	Labor BaseQuantity `json:"labor" validate:"required"`
+	Labor *Quantity `json:"labor" validate:"required"`
 	// The materials amount.
-	Materials BaseQuantity `json:"materials" validate:"required"`
+	Materials *Quantity `json:"materials" validate:"required"`
 	// The overhead amount.
-	Overhead BaseQuantity `json:"overhead" validate:"required"`
+	Overhead *Quantity `json:"overhead" validate:"required"`
 	// The time amount.
-	Time BaseQuantity `json:"time" validate:"required"`
+	Time *Quantity `json:"time" validate:"required"`
 	// The quantity amount.
-	Quantity BaseQuantity `json:"quantity" validate:"required"`
-}
-
-// BaseQuantity represents a quantity with its unit of measure.
-type BaseQuantity struct {
-	// The measured value.
-	Measure float64 `json:"measure" validate:"required"`
-	// The unit information.
-	Unit BaseQuantityUnit `json:"unit" validate:"required"`
-}
-
-// BaseQuantityUnit represents the unit of a base quantity.
-type BaseQuantityUnit struct {
-	// The unit name.
-	Name string `json:"name" validate:"required"`
-	// The unit abbreviation.
-	Abbreviation string `json:"abbreviation" validate:"required"`
-	// The unit type.
-	Type string `json:"type" validate:"required"`
+	Quantity *Quantity `json:"quantity" validate:"required"`
 }
 
 // AnalyzeDeliveriesResponse represents the response from the analyze deliveries endpoint.
@@ -408,13 +382,13 @@ type MaterialAnalyticsEntry struct {
 	// The description.
 	Description *string `json:"description"`
 	// The quantity in inventory.
-	QuantityInInventory BaseQuantity `json:"quantity_in_inventory" validate:"required"`
+	QuantityInInventory *Quantity `json:"quantity_in_inventory" validate:"required"`
 	// The order point quantity.
-	OrderPoint *BaseQuantity `json:"order_point"`
+	OrderPoint *Quantity `json:"order_point"`
 	// The lead time.
-	LeadTime *BaseQuantity `json:"lead_time"`
+	LeadTime *Quantity `json:"lead_time"`
 	// The quantity in demand.
-	QuantityInDemand BaseQuantity `json:"quantity_in_demand" validate:"required"`
+	QuantityInDemand *Quantity `json:"quantity_in_demand" validate:"required"`
 	// The unit group.
 	UnitGroup AnalyticsUnitGroup `json:"unit_group" validate:"required"`
 	// The supplier names.
@@ -460,19 +434,19 @@ type InventoryReceiptSummaryEntry struct {
 	// The item information.
 	Item AnalyticsItem `json:"item" validate:"required"`
 	// The location information.
-	Location *BasicInfo `json:"location"`
+	Location *Entity `json:"location"`
 	// The lot information.
 	Lot *AnalyticsLot `json:"lot"`
 	// The owner account.
-	OwnerAccount BasicInfo `json:"owner_account" validate:"required"`
+	OwnerAccount *Entity `json:"owner_account" validate:"required"`
 	// The holder account.
-	HolderAccount BasicInfo `json:"holder_account" validate:"required"`
+	HolderAccount *Entity `json:"holder_account" validate:"required"`
 	// The remaining quantity.
-	RemainingQuantity BaseQuantity `json:"remaining_quantity" validate:"required"`
+	RemainingQuantity *Quantity `json:"remaining_quantity" validate:"required"`
 	// The weighted average unit cost.
 	WeightedAverageUnitCost AnalyticsRate `json:"weighted_average_unit_cost" validate:"required"`
 	// The inventory value.
-	InventoryValue *BaseQuantity `json:"inventory_value"`
+	InventoryValue *Quantity `json:"inventory_value"`
 	// The date of the oldest receipt.
 	OldestReceiptAt *time.Time `json:"oldest_receipt_at"`
 	// The date of the newest receipt.
@@ -483,6 +457,8 @@ type InventoryReceiptSummaryEntry struct {
 type AnalyticsItem struct {
 	// The item ID.
 	ID string `json:"id" validate:"required"`
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=item"`
 	// The item SKU.
 	Sku string `json:"sku" validate:"required"`
 	// The item description.
@@ -493,6 +469,8 @@ type AnalyticsItem struct {
 type AnalyticsLot struct {
 	// The lot ID.
 	ID string `json:"id" validate:"required"`
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=lot"`
 	// The lot number.
 	Number string `json:"number" validate:"required"`
 }
@@ -500,9 +478,9 @@ type AnalyticsLot struct {
 // AnalyticsRate represents a rate with numerator and denominator quantities.
 type AnalyticsRate struct {
 	// The numerator quantity.
-	Numerator BaseQuantity `json:"numerator" validate:"required"`
+	Numerator *Quantity `json:"numerator" validate:"required"`
 	// The denominator quantity.
-	Denominator BaseQuantity `json:"denominator" validate:"required"`
+	Denominator *Quantity `json:"denominator" validate:"required"`
 }
 
 // AnalyzeNewCustomersResponse represents the response from the analyze new customers endpoint.
@@ -638,11 +616,11 @@ type AnalyzeWeeksOfSalesResponse struct {
 // WeeksOfSalesItem represents a single product line's weeks-of-sales metrics.
 type WeeksOfSalesItem struct {
 	// The product line.
-	ProductLine BasicInfo `json:"product_line" validate:"required"`
+	ProductLine *Entity `json:"product_line" validate:"required"`
 	// The on-hand quantity.
-	QuantityOnHand BaseQuantity `json:"quantity_on_hand" validate:"required"`
+	QuantityOnHand *Quantity `json:"quantity_on_hand" validate:"required"`
 	// The average weekly sales quantity.
-	AverageSalesQuantity BaseQuantity `json:"average_sales_quantity" validate:"required"`
+	AverageSalesQuantity *Quantity `json:"average_sales_quantity" validate:"required"`
 	// The number of weeks of inventory on hand.
 	WeeksOfSales float64 `json:"weeks_of_sales" validate:"required"`
 }

@@ -769,3 +769,10 @@ JOIN inventory_issue ii ON ii.id = ia.inventory_issue_id
 WHERE ii.order_id = sqlc.arg('sales_order_id')
 AND ii.account_id = sqlc.arg('account_id')
 AND ii.status_code = 'reserved';
+
+-- name: HasShippedShipmentForSalesOrder :one
+SELECT EXISTS(
+    SELECT 1 FROM shipment s
+    WHERE s.sales_order_id = sqlc.arg('sales_order_id')
+    AND s.shipment_status_code = 'shipped'
+) AS has_shipped_shipment;

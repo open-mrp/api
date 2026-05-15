@@ -36,7 +36,7 @@ type PricingPlan struct {
 	// Minimum seats required for this plan.
 	SeatMinimum *int `json:"seat_minimum"`
 	// Resource limits for this plan.
-	Limits []PlanLimit `json:"limits" validate:"required"`
+	Limits *List[PlanLimit] `json:"limits" validate:"required"`
 	// Features to display on the pricing page.
 	DisplayFeatures []string `json:"display_features" validate:"required"`
 	// Display order for sorting on the pricing page.
@@ -78,12 +78,12 @@ var SamplePricingPlanFree = &PricingPlan{
 		return &v
 	}(),
 	SeatMinimum: new(1),
-	Limits: []PlanLimit{
+	Limits: NewList([]PlanLimit{
 		{Object: constants.ObjectTypePlanLimit, Key: "sandboxes_maximum", Value: new(1)},
 		{Object: constants.ObjectTypePlanLimit, Key: "seats_maximum", Value: new(1)},
 		{Object: constants.ObjectTypePlanLimit, Key: "invoices_maximum", Value: new(100)},
 		{Object: constants.ObjectTypePlanLimit, Key: "batches_maximum", Value: new(10000)},
-	},
+	}, PageInfo{}),
 	DisplayFeatures: []string{
 		"1 sandbox environment",
 		"Up to 100 invoices per month",
@@ -109,12 +109,12 @@ var SamplePricingPlanStarter = &PricingPlan{
 		return &v
 	}(),
 	SeatMinimum: new(1),
-	Limits: []PlanLimit{
+	Limits: NewList([]PlanLimit{
 		{Object: constants.ObjectTypePlanLimit, Key: "sandboxes_maximum", Value: new(3)},
 		{Object: constants.ObjectTypePlanLimit, Key: "seats_maximum", Value: new(5)},
 		{Object: constants.ObjectTypePlanLimit, Key: "invoices_maximum", Value: new(10000)},
 		{Object: constants.ObjectTypePlanLimit, Key: "batches_maximum", Value: new(10000)},
-	},
+	}, PageInfo{}),
 	DisplayFeatures: []string{
 		"3 sandbox environments",
 		"Up to 5 team seats",
@@ -141,12 +141,12 @@ var SamplePricingPlanPro = &PricingPlan{
 		return &v
 	}(),
 	SeatMinimum: new(3),
-	Limits: []PlanLimit{
+	Limits: NewList([]PlanLimit{
 		{Object: constants.ObjectTypePlanLimit, Key: "sandboxes_maximum", Value: new(999)},
 		{Object: constants.ObjectTypePlanLimit, Key: "seats_maximum", Value: new(999)},
 		{Object: constants.ObjectTypePlanLimit, Key: "invoices_maximum", Value: new(999)},
 		{Object: constants.ObjectTypePlanLimit, Key: "batches_maximum", Value: new(10000)},
-	},
+	}, PageInfo{}),
 	DisplayFeatures: []string{
 		"Unlimited sandbox environments",
 		"Unlimited team seats",

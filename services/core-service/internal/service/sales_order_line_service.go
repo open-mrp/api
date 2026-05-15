@@ -414,6 +414,18 @@ func (s *salesOrderLineSvcImpl) DeleteSalesOrderLine(ctx context.Context, params
 		return tracing.Trace(span, apierror.NewResourceConflictError("Cannot delete a line item that has been shipped against."))
 	}
 
+	// Matches Dashboard's OrderUtils.isEditable gate: if the order has any shipped
+	// shipments (but isn't yet fulfilled/completed), only admins may delete lines.
+	hasShippedShipment, apiErr := orderRepo.HasShippedShipment(ctx, params.SalesOrderID)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	if hasShippedShipment {
+		if apiErr := identity.CheckIsAdmin(); apiErr != nil {
+			return tracing.Trace(span, apiErr)
+		}
+	}
+
 	salesOrderLine, apiErr := lineRepo.Get(ctx, params.SalesOrderLineID)
 	if apiErr != nil {
 		if apierror.IsNotFound(apiErr) {

@@ -16,6 +16,8 @@ type ProductionFlowStep struct {
 	InStepIDs         []string
 	OutStepIDs        []string
 	ScanningStationID *string
+	DepartmentID      *string
+	MachineIDs        []string
 	LevelingFactor    string
 	Allowances        string
 	LaborRate         *FlowRate

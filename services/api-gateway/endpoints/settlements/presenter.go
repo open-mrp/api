@@ -80,7 +80,7 @@ func TransactionAllocationPresenter(a *pb.TransactionAllocationInfo) apiresource
 			},
 		},
 		Note: a.Note,
-		Transaction: &apiresource.Transaction{
+		Transaction: &apiresource.TransactionDetail{
 			ID:     a.TransactionId,
 			Object: constants.ObjectTypeTransaction,
 		},

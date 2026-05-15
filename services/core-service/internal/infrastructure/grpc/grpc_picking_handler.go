@@ -24,16 +24,17 @@ func pickSummaryToProto(p *domain.PickSummary) *pb.PickSummaryInfo {
 	}
 
 	info := &pb.PickSummaryInfo{
-		Id:             p.ID,
-		Number:         p.Number,
-		SalesOrderId:   p.SalesOrderID,
-		CustomerId:     p.CustomerID,
-		CustomerName:   p.CustomerName,
-		CustomerNumber: p.CustomerNumber,
-		PriorityCode:   string(p.PriorityCode),
-		PriorityName:   p.PriorityName,
-		CreatedAt:      timestamppb.New(p.CreatedAt),
-		UpdatedAt:      timestamppb.New(p.UpdatedAt),
+		Id:               p.ID,
+		Number:           p.Number,
+		SalesOrderId:     p.SalesOrderID,
+		SalesOrderNumber: p.SalesOrderNumber,
+		CustomerId:       p.CustomerID,
+		CustomerName:     p.CustomerName,
+		CustomerNumber:   p.CustomerNumber,
+		PriorityCode:     string(p.PriorityCode),
+		PriorityName:     p.PriorityName,
+		CreatedAt:        timestamppb.New(p.CreatedAt),
+		UpdatedAt:        timestamppb.New(p.UpdatedAt),
 	}
 
 	if p.FinishedAt != nil {
@@ -49,16 +50,17 @@ func pickToProto(p *domain.Pick) *pb.PickInfo {
 	}
 
 	info := &pb.PickInfo{
-		Id:             p.ID,
-		Number:         p.Number,
-		SalesOrderId:   p.SalesOrderID,
-		CustomerId:     p.CustomerID,
-		CustomerName:   p.CustomerName,
-		CustomerNumber: p.CustomerNumber,
-		PriorityCode:   string(p.PriorityCode),
-		PriorityName:   p.PriorityName,
-		CreatedAt:      timestamppb.New(p.CreatedAt),
-		UpdatedAt:      timestamppb.New(p.UpdatedAt),
+		Id:               p.ID,
+		Number:           p.Number,
+		SalesOrderId:     p.SalesOrderID,
+		SalesOrderNumber: p.SalesOrderNumber,
+		CustomerId:       p.CustomerID,
+		CustomerName:     p.CustomerName,
+		CustomerNumber:   p.CustomerNumber,
+		PriorityCode:     string(p.PriorityCode),
+		PriorityName:     p.PriorityName,
+		CreatedAt:        timestamppb.New(p.CreatedAt),
+		UpdatedAt:        timestamppb.New(p.UpdatedAt),
 	}
 
 	if p.FinishedAt != nil {
@@ -90,22 +92,29 @@ func pickLineToProto(l *domain.PickLine) *pb.PickLineInfo {
 	}
 
 	info := &pb.PickLineInfo{
-		Id:                              l.ID,
-		PickId:                          l.PickID,
-		SalesOrderLineId:                l.SalesOrderLineID,
-		QuantityId:                      l.QuantityID,
-		QuantityValue:                   l.QuantityValue,
-		QuantityUnitId:                  l.QuantityUnitID,
-		QuantityUnitName:                l.QuantityUnitName,
-		QuantityUnitAbbreviation:        l.QuantityUnitAbbreviation,
-		CreatedAt:                       timestamppb.New(l.CreatedAt),
-		UpdatedAt:                       timestamppb.New(l.UpdatedAt),
-		OrderLineItemNumber:             l.OrderLineItemNumber,
-		OrderLineSku:                    l.OrderLineSKU,
-		OrderedQuantityValue:            l.OrderedQuantityValue,
-		OrderedQuantityUnitId:           l.OrderedQuantityUnitID,
-		OrderedQuantityUnitName:         l.OrderedQuantityUnitName,
-		OrderedQuantityUnitAbbreviation: l.OrderedQuantityUnitAbbrev,
+		Id:                                   l.ID,
+		PickId:                               l.PickID,
+		SalesOrderLineId:                     l.SalesOrderLineID,
+		QuantityId:                           l.QuantityID,
+		QuantityValue:                        l.QuantityValue,
+		QuantityUnitId:                       l.QuantityUnitID,
+		QuantityUnitName:                     l.QuantityUnitName,
+		QuantityUnitAbbreviation:             l.QuantityUnitAbbreviation,
+		CreatedAt:                            timestamppb.New(l.CreatedAt),
+		UpdatedAt:                            timestamppb.New(l.UpdatedAt),
+		OrderLineItemNumber:                  l.OrderLineItemNumber,
+		OrderLineSku:                         l.OrderLineSKU,
+		OrderedQuantityId:                    l.OrderedQuantityID,
+		OrderedQuantityValue:                 l.OrderedQuantityValue,
+		OrderedQuantityUnitId:                l.OrderedQuantityUnitID,
+		OrderedQuantityUnitName:              l.OrderedQuantityUnitName,
+		OrderedQuantityUnitAbbreviation:      l.OrderedQuantityUnitAbbrev,
+		UnitPriceId:                          l.UnitPriceID,
+		UnitPriceValue:                       l.UnitPriceValue,
+		UnitPriceNumeratorUnitId:             l.UnitPriceNumeratorUnitID,
+		UnitPriceNumeratorUnitAbbreviation:   l.UnitPriceNumeratorUnitAbbreviation,
+		UnitPriceDenominatorUnitId:           l.UnitPriceDenominatorUnitID,
+		UnitPriceDenominatorUnitAbbreviation: l.UnitPriceDenominatorUnitAbbreviation,
 	}
 
 	if l.PackedAt != nil {

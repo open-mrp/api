@@ -1,3 +1,11 @@
+-- name: ListMachineIDsByProductionStep :many
+SELECT m.id
+FROM machine m
+JOIN department d ON d.id = m.department_id
+WHERE m.production_step_id = sqlc.arg('production_step_id')
+AND d.account_id = sqlc.arg('account_id')
+ORDER BY m.id;
+
 -- name: ListMachinesForward :many
 SELECT
     m.id,

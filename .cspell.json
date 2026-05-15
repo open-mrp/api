@@ -157,6 +157,7 @@
         "imds",
         "indirected",
         "internalstripe",
+        "inventoryep",
         "Inventoryissuestatus",
         "isgomock",
         "isqlc",

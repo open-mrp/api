@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -32,5 +33,22 @@ func (e *GetProductionFlowEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetP
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetProductionFlowRequest) (*apiresource.ProductionFlow, *apierror.APIError) {
 			return svc.(ProductionFlowSvc).GetProductionFlow
 		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeProductionFlow,
+			Fields: []string{
+				"steps",
+				"steps.production",
+				"steps.production.produced_item",
+				"steps.consumptions",
+				"steps.consumptions.consumed_item",
+				"steps.consumptions.quantity",
+				"steps.consumptions.waste_quantity",
+				"steps.machines",
+				"steps.scanning_station",
+				"steps.department",
+				"steps.in_steps",
+				"steps.out_steps",
+			},
+		}),
 	}
 }

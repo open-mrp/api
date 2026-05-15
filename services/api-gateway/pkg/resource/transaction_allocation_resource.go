@@ -74,7 +74,7 @@ var SampleAllocationEntry = &AllocationEntry{
 		Name: "Acme Corp",
 	},
 	Transaction: &AllocationTransaction{
-		ID:     SampleTransactionID,
+		ID:     SampleTransactionDetailID,
 		Object: constants.ObjectTypeTransaction,
 		Type:   "payment",
 	},

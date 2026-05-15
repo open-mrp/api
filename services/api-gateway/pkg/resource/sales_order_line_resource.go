@@ -22,8 +22,8 @@ type SalesOrderLineDetail struct {
 	ProductSKU string `json:"product_sku" validate:"required"`
 	// Product description.
 	ProductDescription *string `json:"product_description"`
-	// Associated item.
-	Item *Item `json:"item"`
+	// Associated item. Expandable.
+	Item *Item `json:"item" expandable:"true"`
 	// Quantity ordered.
 	QuantityOrdered *Quantity `json:"quantity_ordered" validate:"required"`
 	// Quantity picked.

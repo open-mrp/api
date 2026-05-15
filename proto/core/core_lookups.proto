@@ -57,6 +57,8 @@ message ProductionFlowStepInfo {
   optional RateInfo labor_rate = 10;
   optional RateInfo labor_time = 11;
   optional RateInfo overhead_rate = 12;
+  optional string department_id = 13;
+  repeated string machine_ids = 14;
 }
 message ProductionFlowProductionInfo {
   string id = 1;

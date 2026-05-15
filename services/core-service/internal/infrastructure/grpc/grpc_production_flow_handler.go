@@ -22,10 +22,14 @@ func productionFlowStepToProto(step *domain.ProductionFlowStep) *pb.ProductionFl
 		OutStepIds:     step.OutStepIDs,
 		LevelingFactor: step.LevelingFactor,
 		Allowances:     step.Allowances,
+		MachineIds:     step.MachineIDs,
 	}
 
 	if step.ScanningStationID != nil {
 		info.ScanningStationId = step.ScanningStationID
+	}
+	if step.DepartmentID != nil {
+		info.DepartmentId = step.DepartmentID
 	}
 
 	// Production info

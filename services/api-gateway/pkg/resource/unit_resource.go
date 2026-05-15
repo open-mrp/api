@@ -42,6 +42,40 @@ type Unit struct {
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
+// ExpandableUnitStub returns a Unit that satisfies ValidateExpandableFields when a nested
+// include requests `*.unit` but the upstream row only carries display-oriented fields.
+func ExpandableUnitStub(id, name, abbreviation, unitType string, ts time.Time) *Unit {
+	if id == "" {
+		id = "un_unknown"
+	}
+	displayName := name
+	if displayName == "" {
+		displayName = abbreviation
+	}
+	if displayName == "" {
+		displayName = "Unit"
+	}
+	if abbreviation == "" {
+		abbreviation = "—"
+	}
+	if ts.IsZero() {
+		ts = time.Unix(0, 0).UTC()
+	}
+	return &Unit{
+		ID:                id,
+		Object:            constants.ObjectTypeUnit,
+		Name:              displayName,
+		Abbreviation:      abbreviation,
+		Type:              constants.UnitType(unitType),
+		RatioNumerator:    "1",
+		RatioDenominator:  "1",
+		OffsetNumerator:   "0",
+		OffsetDenominator: "1",
+		CreatedAt:         ts,
+		UpdatedAt:         ts,
+	}
+}
+
 var SampleUnit = &Unit{
 	ID:                SampleUnitID,
 	Object:            constants.ObjectTypeUnit,

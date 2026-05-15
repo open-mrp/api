@@ -7,7 +7,13 @@
 <body style="font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f5f5f5;">
     <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 30px; border-radius: 8px;">
         <h2 style="color: #333333; margin-top: 0;">Sales Order {{.order_number}}</h2>
-        <p style="color: #666666; line-height: 1.6;">{{.body}}</p>
+        <p style="color: #666666; line-height: 1.6;">
+            Thank you for your order. We have received your sales order <strong>{{.order_number}}</strong>
+            and it is being processed.
+        </p>
+        <p style="color: #666666; line-height: 1.6;">
+            If you have any questions about your order, please contact us.
+        </p>
         <hr style="border: none; border-top: 1px solid #eeeeee; margin: 20px 0;">
         <p style="color: #999999; font-size: 12px;">Sent by {{.account_name}}</p>
     </div>

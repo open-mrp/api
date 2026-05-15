@@ -8,7 +8,7 @@ import (
 	pb "github.com/augno/api/shared/proto/core"
 )
 
-func materialQuantityInfoPresenter(q *pb.QuantityInfo) *apiresource.QuantityInfo {
+func materialQuantityPresenter(q *pb.QuantityInfo) *apiresource.Quantity {
 	if q == nil {
 		return nil
 	}
@@ -20,8 +20,11 @@ func materialQuantityInfoPresenter(q *pb.QuantityInfo) *apiresource.QuantityInfo
 	if normalized == "0" {
 		return nil
 	}
-	return &apiresource.QuantityInfo{
-		Value: normalized,
+	return &apiresource.Quantity{
+		ID:           q.Id,
+		Object:       constants.ObjectTypeQuantity,
+		Value:        normalized,
+		DisplayValue: apiresource.FormatDisplayValue(normalized, q.UnitAbbreviation, q.UnitType),
 		Unit: &apiresource.Unit{
 			ID:     q.UnitId,
 			Object: constants.ObjectTypeUnit,
@@ -42,8 +45,8 @@ func MaterialPresenter(m *pb.MaterialInfo) apiresource.Material {
 		ID:         m.Id,
 		Object:     constants.ObjectTypeMaterial,
 		Item:       item,
-		OrderPoint: materialQuantityInfoPresenter(m.OrderPoint),
-		LeadTime:   materialQuantityInfoPresenter(m.LeadTime),
+		OrderPoint: materialQuantityPresenter(m.OrderPoint),
+		LeadTime:   materialQuantityPresenter(m.LeadTime),
 		CreatedAt:  grpcutil.TimestampToTime(m.CreatedAt),
 		UpdatedAt:  grpcutil.TimestampToTime(m.UpdatedAt),
 	}

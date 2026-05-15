@@ -16,8 +16,8 @@ type ProductionOutput struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=production"`
-	// Produced item.
-	ProducedItem *ConsumptionItem `json:"produced_item"`
+	// Produced item. Expandable via include[]=produced_item.
+	ProducedItem *Item `json:"produced_item" expandable:"true"`
 	// Quantity produced.
 	Quantity *Quantity `json:"quantity"`
 	// Creation timestamp.
@@ -27,17 +27,12 @@ type ProductionOutput struct {
 }
 
 var SampleProductionOutput = &ProductionOutput{
-	ID:     SampleProductionID,
-	Object: constants.ObjectTypeProduction,
-	ProducedItem: &ConsumptionItem{
-		ID:           SampleItemID,
-		Object:       constants.ObjectTypeItem,
-		SKU:          SampleItemSKU,
-		ItemTypeCode: constants.ItemTypeCodeProduct,
-	},
-	Quantity:  SampleQuantity,
-	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	ID:           SampleProductionID,
+	Object:       constants.ObjectTypeProduction,
+	ProducedItem: SampleItem,
+	Quantity:     SampleQuantity,
+	CreatedAt:    timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:    timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*ProductionOutput) SchemaExample() any {

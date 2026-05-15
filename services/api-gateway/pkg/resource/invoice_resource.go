@@ -11,54 +11,6 @@ import (
 const SampleInvoiceID = "iv_01jm4r6700f8nwq3v5hx2d9ktp"
 const SampleInvoiceLineID = "ivln_01jm4r6700f8nwq3v5hx2d9ktp"
 const SampleInvoiceAllocationID = "txal_01jm4r6700f8nwq3v5hx2d9ktp"
-const SampleShipmentID = "sh_01jm4r6700f8nwq3v5hx2d9ktp"
-const SampleTransactionID = "tx_01jm4r6700f8nwq3v5hx2d9ktp"
-const SampleOrderLineID = "soln_01jm4r6700f8nwq3v5hx2d9ktp"
-
-// Minimal shipment sub-resource.
-type Shipment struct {
-	// Shipment ID.
-	ID string `json:"id" validate:"required"`
-	// Resource type identifier.
-	Object constants.ObjectType `json:"object" validate:"required,enum=shipment"`
-	// Shipment number.
-	Number string `json:"number" validate:"required"`
-}
-
-var SampleShipment = &Shipment{
-	ID:     SampleShipmentID,
-	Object: constants.ObjectTypeShipment,
-	Number: "SH-001",
-}
-
-// Minimal transaction sub-resource.
-type Transaction struct {
-	// Transaction ID.
-	ID string `json:"id" validate:"required"`
-	// Resource type identifier.
-	Object constants.ObjectType `json:"object" validate:"required,enum=transaction"`
-}
-
-var SampleTransaction = &Transaction{
-	ID:     SampleTransactionID,
-	Object: constants.ObjectTypeTransaction,
-}
-
-// Minimal sales order line sub-resource.
-type SalesOrderLine struct {
-	// Sales order line ID.
-	ID string `json:"id" validate:"required"`
-	// Resource type identifier.
-	Object constants.ObjectType `json:"object" validate:"required,enum=sales_order"`
-	// Item associated with this order line.
-	Item *Item `json:"item"`
-}
-
-var SampleSalesOrderLine = &SalesOrderLine{
-	ID:     SampleOrderLineID,
-	Object: constants.ObjectTypeSalesOrder,
-	Item:   SampleItem,
-}
 
 // Lightweight invoice for list views.
 type InvoiceSummary struct {
@@ -72,10 +24,10 @@ type InvoiceSummary struct {
 	Note *string `json:"note"`
 	// Customer associated with this invoice.
 	Customer *Customer `json:"customer" expandable:"true"`
-	// Sales order associated with this invoice.
-	Order *SalesOrder `json:"order" expandable:"true"`
-	// Shipment associated with this invoice.
-	Shipment *Shipment `json:"shipment" expandable:"true"`
+	// Sales order associated with this invoice. Expandable via include[]=order.
+	Order *SalesOrderDetail `json:"order" expandable:"true"`
+	// Shipment associated with this invoice. Expandable via include[]=shipment.
+	Shipment *ShipmentDetail `json:"shipment" expandable:"true"`
 	// Number of line items.
 	LineCount int32 `json:"line_count"`
 	// Billing address.
@@ -112,10 +64,10 @@ var SampleInvoiceSummary = &InvoiceSummary{
 		Name:   SampleCustomerName,
 		Number: SampleCustomerNumber,
 	},
-	Order: &SalesOrder{
-		ID:     SampleSalesOrderID,
+	Order: &SalesOrderDetail{
+		ID:     SampleSalesOrderDetailID,
 		Object: constants.ObjectTypeSalesOrder,
-		Number: "PO-001",
+		Number: SampleSalesOrderNumber,
 	},
 	LineCount:      3,
 	BillingAddress: SampleAddress,
@@ -145,12 +97,12 @@ type Invoice struct {
 	Number string `json:"number" validate:"required"`
 	// Note attached to the invoice.
 	Note *string `json:"note"`
-	// Sales order associated with this invoice.
-	Order *SalesOrder `json:"order" expandable:"true"`
+	// Sales order associated with this invoice. Expandable via include[]=order.
+	Order *SalesOrderDetail `json:"order" expandable:"true"`
 	// Billing address.
 	BillingAddress *Address `json:"billing_address" expandable:"true"`
-	// Shipment associated with this invoice.
-	Shipment *Shipment `json:"shipment" expandable:"true"`
+	// Shipment associated with this invoice. Expandable via include[]=shipment.
+	Shipment *ShipmentDetail `json:"shipment" expandable:"true"`
 	// Whether the invoice has been paid in full.
 	IsPaidInFull bool `json:"is_paid_in_full"`
 	// Whether the invoice has been overpaid.
@@ -175,10 +127,10 @@ var SampleInvoice = &Invoice{
 	ID:     SampleInvoiceID,
 	Object: constants.ObjectTypeInvoice,
 	Number: "INV-001",
-	Order: &SalesOrder{
-		ID:     SampleSalesOrderID,
+	Order: &SalesOrderDetail{
+		ID:     SampleSalesOrderDetailID,
 		Object: constants.ObjectTypeSalesOrder,
-		Number: "PO-001",
+		Number: SampleSalesOrderNumber,
 	},
 	BillingAddress: SampleAddress,
 	Lines:          NewList([]InvoiceLine{*SampleInvoiceLine}, PageInfo{}),
@@ -201,8 +153,8 @@ type InvoiceLine struct {
 	Quantity *Quantity `json:"quantity" validate:"required"`
 	// Unit price for this line.
 	UnitPrice *Rate `json:"unit_price" validate:"required"`
-	// Sales order line associated with this invoice line.
-	OrderLine *SalesOrderLine `json:"order_line" validate:"required"`
+	// Sales order line associated with this invoice line. Expandable via include[]=lines.order_line.
+	OrderLine *SalesOrderLineDetail `json:"order_line" expandable:"true"`
 	// Timestamp when the line was created.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Timestamp when the line was last updated.
@@ -226,7 +178,7 @@ var SampleInvoiceLine = &InvoiceLine{
 		},
 	},
 	UnitPrice: SampleRate,
-	OrderLine: SampleSalesOrderLine,
+	OrderLine: SampleSalesOrderLineDetail,
 	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
@@ -241,8 +193,8 @@ type InvoiceAllocation struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=invoice_allocation"`
-	// Transaction associated with this allocation.
-	Transaction *Transaction `json:"transaction" validate:"required"`
+	// Transaction associated with this allocation. Expandable via include[]=allocations.transaction.
+	Transaction *TransactionDetail `json:"transaction" expandable:"true"`
 	// Allocated amount.
 	Amount *Quantity `json:"amount" validate:"required"`
 	// Note about this allocation.
@@ -256,7 +208,7 @@ type InvoiceAllocation struct {
 var SampleInvoiceAllocation = &InvoiceAllocation{
 	ID:          SampleInvoiceAllocationID,
 	Object:      constants.ObjectTypeInvoiceAllocation,
-	Transaction: SampleTransaction,
+	Transaction: SampleTransactionDetail,
 	Amount: &Quantity{
 		ID:           SampleQuantityID,
 		Object:       constants.ObjectTypeQuantity,

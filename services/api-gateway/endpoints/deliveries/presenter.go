@@ -16,7 +16,7 @@ func DeliverySummaryPresenter(d *pb.DeliverySummaryInfo) apiresource.DeliverySum
 		ID:     d.Id,
 		Object: constants.ObjectTypeDelivery,
 		Number: d.Number,
-		PurchaseOrder: &apiresource.SalesOrder{
+		PurchaseOrder: &apiresource.SalesOrderDetail{
 			ID:     d.PurchaseOrderId,
 			Object: constants.ObjectTypeSalesOrder,
 			Number: d.PurchaseOrderNumber,
@@ -44,7 +44,7 @@ func DeliveryPresenter(d *pb.DeliveryInfo) apiresource.Delivery {
 		ID:     d.Id,
 		Object: constants.ObjectTypeDelivery,
 		Number: d.Number,
-		PurchaseOrder: &apiresource.SalesOrder{
+		PurchaseOrder: &apiresource.SalesOrderDetail{
 			ID:     d.PurchaseOrderId,
 			Object: constants.ObjectTypeSalesOrder,
 			Number: d.PurchaseOrderNumber,

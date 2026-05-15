@@ -9603,6 +9603,21 @@ func (mr *MockSalesOrderRepoMockRecorder) MarkUnfulfilled(ctx, accountID, salesO
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkUnfulfilled", reflect.TypeOf((*MockSalesOrderRepo)(nil).MarkUnfulfilled), ctx, accountID, salesOrderID)
 }
 
+// HasShippedShipment mocks base method.
+func (m *MockSalesOrderRepo) HasShippedShipment(ctx context.Context, salesOrderID string) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HasShippedShipment", ctx, salesOrderID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// HasShippedShipment indicates an expected call of HasShippedShipment.
+func (mr *MockSalesOrderRepoMockRecorder) HasShippedShipment(ctx, salesOrderID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasShippedShipment", reflect.TypeOf((*MockSalesOrderRepo)(nil).HasShippedShipment), ctx, salesOrderID)
+}
+
 // NoteFirstShipAt mocks base method.
 func (m *MockSalesOrderRepo) NoteFirstShipAt(ctx context.Context, accountID, salesOrderID string) *apierror.APIError {
 	m.ctrl.T.Helper()

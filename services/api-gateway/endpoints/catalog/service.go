@@ -107,7 +107,7 @@ func (m *catalogSvcImpl) ListCatalogProducts(ctx context.Context, req *ListCatal
 					SKU:    p.Sku,
 				},
 				Description: p.Description,
-				Attributes:  attrs,
+				Attributes:  apiresource.NewList(attrs, apiresource.PageInfo{}),
 			}
 		}
 
@@ -124,8 +124,8 @@ func (m *catalogSvcImpl) ListCatalogProducts(ctx context.Context, req *ListCatal
 			ID:         cat.Id,
 			Object:     constants.ObjectTypeCatalogCategory,
 			Name:       cat.Name,
-			Properties: properties,
-			Products:   products,
+			Properties: apiresource.NewList(properties, apiresource.PageInfo{}),
+			Products:   apiresource.NewList(products, apiresource.PageInfo{}),
 		}
 	}
 

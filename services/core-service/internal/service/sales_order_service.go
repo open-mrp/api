@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -102,8 +101,17 @@ func (s *salesOrderSvcImpl) ListSalesOrders(ctx context.Context, params domain.L
 	if apiErr := identity.CheckIsAssignedActor(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if identity.IsInternalUser() {
-		if apiErr := identity.CheckHasPermission(types.PermissionDomainSalesOrders, types.ActionRead); apiErr != nil {
+	if apiErr := checkSalesOrderReadPermission(identity); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	if !identity.IsTargetAccountSet() {
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account header is required."))
+	}
+
+	if identity.IsExternalTarget() {
+		meds := s.mediators()
+		if apiErr := meds.ReadAccess.CheckReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
 	}
@@ -131,8 +139,17 @@ func (s *salesOrderSvcImpl) GetSalesOrder(ctx context.Context, params domain.Get
 	if apiErr := identity.CheckIsAssignedActor(); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
-	if identity.IsInternalUser() {
-		if apiErr := identity.CheckHasPermission(types.PermissionDomainSalesOrders, types.ActionRead); apiErr != nil {
+	if apiErr := checkSalesOrderReadPermission(identity); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	if !identity.IsTargetAccountSet() {
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The Augno-Account header is required."))
+	}
+
+	if identity.IsExternalTarget() {
+		meds := s.mediators()
+		if apiErr := meds.ReadAccess.CheckReadAccess(ctx, *identity.ActorAccountID(), identity.Target.AccountID); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
 	}
@@ -155,15 +172,12 @@ func (s *salesOrderSvcImpl) GetSalesOrder(ctx context.Context, params domain.Get
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	// Conditionally fetch lines based on includes
-	for _, include := range params.Includes {
-		if include == "lines" {
-			lines, apiErr := repo.GetLines(ctx, params.SalesOrderID)
-			if apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
-			}
-			order.Lines = lines
+	if includesSalesOrderLines(params.Includes) {
+		lines, apiErr := repo.GetLines(ctx, params.SalesOrderID)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
 		}
+		order.Lines = lines
 	}
 
 	return order, nil
@@ -419,7 +433,7 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 				return apiErr
 			}
 
-			if slices.Contains(params.Includes, "lines") {
+			if includesSalesOrderLines(params.Includes) {
 				lines, apiErr := txOrderRepo.GetLines(txCtx, orderID)
 				if apiErr != nil {
 					return apiErr
@@ -622,7 +636,7 @@ func (s *salesOrderSvcImpl) UpdateSalesOrder(ctx context.Context, params domain.
 				}
 			}
 
-			if slices.Contains(params.Includes, "lines") {
+			if includesSalesOrderLines(params.Includes) {
 				lines, apiErr := txRepo.GetLines(txCtx, params.SalesOrderID)
 				if apiErr != nil {
 					return apiErr
@@ -739,37 +753,63 @@ func (s *salesOrderSvcImpl) BulkDeleteSalesOrders(ctx context.Context, params do
 
 	params.AccountID = identity.Target.AccountID
 
-	return s.withTx(ctx, func(txCtx context.Context, txSvc *salesOrderSvcImpl) *apierror.APIError {
-		txRepo := txSvc.repos.NewSalesOrderRepo()
-		for _, orderID := range params.SalesOrderIDs {
-			order, apiErr := txRepo.Get(txCtx, params.AccountID, orderID)
-			if apiErr != nil {
-				return apiErr
-			}
-			if order.CompletedAt != nil || order.SalesOrderStatusCode == string(constants.SalesOrderStatusCodeFulfilled) {
-				return apierror.NewValidationError("Cannot delete a fulfilled sales order: " + orderID)
-			}
-			if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeSalesOrder, order.ID, order); apiErr != nil {
-				return apiErr
-			}
-			if apiErr := txRepo.DeleteCascade(txCtx, params.AccountID, orderID); apiErr != nil {
-				return apiErr
-			}
+	meds := s.mediators()
 
-			changes := audit.ComputeChanges(order, (*domain.SalesOrder)(nil))
+	idempotencyKey, apiErr := meds.Idempotency.UpsertIdempotencyKey(ctx, identity)
+	if apiErr != nil {
+		return apiErr
+	}
 
-			if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
-				ServiceName:  domain.ServiceName,
-				Action:       constants.AuditActionDelete,
-				ResourceType: constants.ObjectTypeSalesOrder,
-				ResourceID:   order.ID,
-				Changes:      changes,
-			}); apiErr != nil {
-				return apiErr
-			}
+	switch domain.RecoveryPoint(idempotencyKey.RecoveryPoint) {
+	case domain.RecoveryPointFinished:
+		cached, err := idempotency.UnmarshalCachedResponse[struct{}](ctx, idempotencyKey.ResponseCode, idempotencyKey.ResponseBody)
+		if err != nil {
+			return tracing.Trace(span, apierror.NewInternalError(err, "Issue unmarshalling cached response."))
 		}
+		return cached.Error
+
+	case domain.RecoveryPointStarted:
+		apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *salesOrderSvcImpl) *apierror.APIError {
+			txRepo := txSvc.repos.NewSalesOrderRepo()
+			for _, orderID := range params.SalesOrderIDs {
+				order, apiErr := txRepo.Get(txCtx, params.AccountID, orderID)
+				if apiErr != nil {
+					return apiErr
+				}
+				if order.CompletedAt != nil || order.SalesOrderStatusCode == string(constants.SalesOrderStatusCodeFulfilled) {
+					return apierror.NewValidationError("Cannot delete a fulfilled sales order: " + orderID)
+				}
+				if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeSalesOrder, order.ID, order); apiErr != nil {
+					return apiErr
+				}
+				if apiErr := txRepo.DeleteCascade(txCtx, params.AccountID, orderID); apiErr != nil {
+					return apiErr
+				}
+
+				changes := audit.ComputeChanges(order, (*domain.SalesOrder)(nil))
+
+				if apiErr := audit.NewPublisher().Publish(txCtx, txSvc.repos.NewOutboxRepo(), audit.EventData{
+					ServiceName:  domain.ServiceName,
+					Action:       constants.AuditActionDelete,
+					ResourceType: constants.ObjectTypeSalesOrder,
+					ResourceID:   order.ID,
+					Changes:      changes,
+				}); apiErr != nil {
+					return apiErr
+				}
+			}
+			return txSvc.mediators().Idempotency.CacheSuccessResponse(txCtx, idempotencyKey.TypeID, (*struct{})(nil))
+		})
+
+		if apiErr != nil {
+			return meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID, apiErr)
+		}
+
 		return nil
-	})
+
+	default:
+		return tracing.Trace(span, apierror.NewInvariantViolationError("Unexpected recovery point: "+idempotencyKey.RecoveryPoint))
+	}
 }
 
 func (s *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, params domain.ChangeSalesOrderStatusParams) (*domain.SalesOrder, *apierror.APIError) {
@@ -1050,7 +1090,7 @@ func (s *salesOrderSvcImpl) ChangeSalesOrderStatus(ctx context.Context, params d
 		return nil, tracing.Trace(span, apiErr)
 	}
 
-	if slices.Contains(params.Includes, "lines") {
+	if includesSalesOrderLines(params.Includes) {
 		lines, apiErr := repo.GetLines(ctx, params.SalesOrderID)
 		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
@@ -1358,6 +1398,22 @@ func replaceOrderEmailContacts(ctx context.Context, repo domain.SalesOrderRepo, 
 		return apiErr
 	}
 	return createOrderEmailContacts(ctx, repo, salesOrderID, contacts, notificationTypeCode)
+}
+
+// checkSalesOrderReadPermission checks the appropriate read permission based on the target context.
+// Non-internal actors are gated by access checks rather than permissions.
+// Internal actors targeting a customer or supplier account use the relationship domain.
+func checkSalesOrderReadPermission(identity *types.Identity) *apierror.APIError {
+	if !identity.IsInternalActor() {
+		return nil
+	}
+	if identity.IsTargetCustomerAccount() {
+		return identity.CheckHasPermission(types.PermissionDomainCustomers, types.ActionRead)
+	}
+	if identity.IsTargetSupplierAccount() {
+		return identity.CheckHasPermission(types.PermissionDomainSuppliers, types.ActionRead)
+	}
+	return identity.CheckHasPermission(types.PermissionDomainSalesOrders, types.ActionRead)
 }
 
 func (s *salesOrderSvcImpl) CheckoutSalesOrder(ctx context.Context, params domain.CheckoutSalesOrderParams) (*domain.CheckoutSalesOrderResult, *apierror.APIError) {
@@ -1859,4 +1915,13 @@ func (s *salesOrderSvcImpl) CreateSalesOrderProductionRun(ctx context.Context, p
 	default:
 		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Unexpected recovery point: "+idempotencyKey.RecoveryPoint))
 	}
+}
+
+func includesSalesOrderLines(includes []string) bool {
+	for _, inc := range includes {
+		if inc == "lines" || strings.HasPrefix(inc, "lines.") {
+			return true
+		}
+	}
+	return false
 }

@@ -834,6 +834,7 @@ type SalesOrderRepo interface {
 	DeleteEmailContactsByOrderAndType(ctx context.Context, salesOrderID, notificationTypeCode string) *apierror.APIError
 	NoteFirstShipAt(ctx context.Context, accountID, salesOrderID string) *apierror.APIError
 	MarkUnfulfilled(ctx context.Context, accountID, salesOrderID string) *apierror.APIError
+	HasShippedShipment(ctx context.Context, salesOrderID string) (bool, *apierror.APIError)
 }
 
 type SalesOrderLineRepo interface {

@@ -141,6 +141,11 @@ INSERT IGNORE INTO pick_line (id, pick_id, quantity_id, sales_order_line_id, cre
 UPDATE pick_line SET packed_at = DATE_SUB(NOW(), INTERVAL 2 DAY) WHERE id IN ('pkln_01seedpck_ln1_0000', 'pkln_01seedpck_ln2_0000') AND packed_at IS NULL;
 UPDATE pick_line SET packed_at = DATE_SUB(NOW(), INTERVAL 4 DAY) WHERE id IN ('pkln_01seedful_ln1_0000', 'pkln_01seedful_ln2_0000') AND packed_at IS NULL;
 
+INSERT IGNORE INTO `_departments_picks` (`A`, `B`) VALUES
+    ('dp_01k0a5r01yfx3sj1vy9qgv3dc0', 'pk_01k0a5tsn7f7psgagr1732fxqa'),
+    ('dp_01k0a5r01yfx3sj1vy9qgv3dc0', 'pk_01k0a5tsn7ejfrwg5dnshzfwsx'),
+    ('dp_01k0a5r01yfx3sj1vy9qgv3dc0', 'pk_01k0a5tsn7eeht162chb2jcknc');
+
 -- ============================================================
 -- SHIPMENTS
 -- ============================================================

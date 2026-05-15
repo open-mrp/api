@@ -185,9 +185,6 @@ func (r *territoryRepoImpl) List(ctx context.Context, params domain.ListTerritor
 				AccountID:       params.AccountID,
 				SearchQuery:     searchQuery,
 				ZipcodeQuery:    zipcodeQuery,
-				ZipcodeQuery_2:  zipcodeQuery,
-				ZipcodeQuery_3:  zipcodeQuery,
-				ZipcodeQuery_4:  zipcodeQuery,
 				CursorCreatedAt: cur.OccurredAt,
 				CursorID:        cur.ID,
 				Limit:           params.Limit + 1,
@@ -208,9 +205,6 @@ func (r *territoryRepoImpl) List(ctx context.Context, params domain.ListTerritor
 			AccountID:       params.AccountID,
 			SearchQuery:     searchQuery,
 			ZipcodeQuery:    zipcodeQuery,
-			ZipcodeQuery_2:  zipcodeQuery,
-			ZipcodeQuery_3:  zipcodeQuery,
-			ZipcodeQuery_4:  zipcodeQuery,
 			CursorCreatedAt: gosql.NullTime{Time: cur.OccurredAt, Valid: true},
 			CursorID:        gosql.NullString{String: cur.ID, Valid: true},
 			Limit:           params.Limit + 1,
@@ -228,13 +222,10 @@ func (r *territoryRepoImpl) List(ctx context.Context, params domain.ListTerritor
 
 	// No cursor — first page
 	rows, err := r.queries.ListTerritoriesForward(ctx, sqlc.ListTerritoriesForwardParams{
-		AccountID:      params.AccountID,
-		SearchQuery:    searchQuery,
-		ZipcodeQuery:   zipcodeQuery,
-		ZipcodeQuery_2: zipcodeQuery,
-		ZipcodeQuery_3: zipcodeQuery,
-		ZipcodeQuery_4: zipcodeQuery,
-		Limit:          params.Limit + 1,
+		AccountID:    params.AccountID,
+		SearchQuery:  searchQuery,
+		ZipcodeQuery: zipcodeQuery,
+		Limit:        params.Limit + 1,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)

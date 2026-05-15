@@ -251,13 +251,23 @@ SELECT
     sol_q.value AS ordered_quantity_value,
     sol_u.id AS ordered_quantity_unit_id,
     sol_u.name AS ordered_quantity_unit_name,
-    sol_u.abbreviation AS ordered_quantity_unit_abbreviation
+    sol_u.abbreviation AS ordered_quantity_unit_abbreviation,
+    -- Unit price (sales order line)
+    up.id AS unit_price_id,
+    up.value AS unit_price_value,
+    up_nu.id AS unit_price_numerator_unit_id,
+    up_nu.abbreviation AS unit_price_numerator_unit_abbreviation,
+    up_du.id AS unit_price_denominator_unit_id,
+    up_du.abbreviation AS unit_price_denominator_unit_abbreviation
 FROM pick_line pl
 JOIN quantity q ON q.id = pl.quantity_id
 JOIN unit u ON u.id = q.unit_id
 JOIN sales_order_line sol ON sol.id = pl.sales_order_line_id
 JOIN quantity sol_q ON sol_q.id = sol.quantity_id
 JOIN unit sol_u ON sol_u.id = sol_q.unit_id
+JOIN rate up ON up.id = sol.unit_price_id
+JOIN unit up_nu ON up_nu.id = up.numerator_unit_id
+JOIN unit up_du ON up_du.id = up.denominator_unit_id
 WHERE pl.pick_id = sqlc.arg('pick_id')
 ORDER BY sol.line_item_number ASC;
 

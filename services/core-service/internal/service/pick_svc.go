@@ -3,8 +3,8 @@ package service
 import (
 	"context"
 	"fmt"
-	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/augno/api/services/auth-service/pkg/types"
 	"github.com/augno/api/services/core-service/internal/domain"
@@ -135,15 +135,12 @@ func (s *pickSvcImpl) GetPick(ctx context.Context, pickID string, includes []str
 	}
 	pick.Departments = departments
 
-	for _, include := range includes {
-		switch include {
-		case "lines":
-			lines, apiErr := repo.GetLines(ctx, pickID)
-			if apiErr != nil {
-				return nil, tracing.Trace(span, apiErr)
-			}
-			pick.Lines = lines
+	if includesPickLines(includes) {
+		lines, apiErr := repo.GetLines(ctx, pickID)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
 		}
+		pick.Lines = lines
 	}
 
 	return pick, nil
@@ -216,7 +213,7 @@ func (s *pickSvcImpl) UpdatePick(ctx context.Context, params domain.UpdatePickPa
 			}
 			result = pick
 
-			if slices.Contains(params.Includes, "lines") {
+			if includesPickLines(params.Includes) {
 				lines, apiErr := txRepo.GetLines(txCtx, params.PickID)
 				if apiErr != nil {
 					return apiErr
@@ -680,4 +677,13 @@ func (s *pickSvcImpl) GetPickShipments(ctx context.Context, params domain.GetPic
 	params.AccountID = identity.Target.AccountID
 
 	return s.repos.NewPickRepo().GetShipmentNumbers(ctx, params)
+}
+
+func includesPickLines(includes []string) bool {
+	for _, inc := range includes {
+		if inc == "lines" || strings.HasPrefix(inc, "lines.") {
+			return true
+		}
+	}
+	return false
 }

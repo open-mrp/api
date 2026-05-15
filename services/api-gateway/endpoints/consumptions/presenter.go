@@ -26,14 +26,20 @@ func ConsumptionPresenter(c *pb.ConsumptionInfo) apiresource.Consumption {
 		return apiresource.Consumption{}
 	}
 
-	var consumedItem *apiresource.ConsumptionItem
+	var consumedItem *apiresource.Item
 	if c.ItemId != "" {
-		consumedItem = &apiresource.ConsumptionItem{
+		itemType := constants.ItemTypeCode(c.ItemTypeCode)
+		if !itemType.IsValid() {
+			itemType = constants.ItemTypeCodeProduct
+		}
+		consumedItem = &apiresource.Item{
 			ID:           c.ItemId,
 			Object:       constants.ObjectTypeItem,
 			SKU:          c.ItemSku,
 			Description:  c.ItemDescription,
-			ItemTypeCode: constants.ItemTypeCode(c.ItemTypeCode),
+			ItemTypeCode: itemType,
+			CreatedAt:    grpcutil.TimestampToTime(c.CreatedAt),
+			UpdatedAt:    grpcutil.TimestampToTime(c.UpdatedAt),
 		}
 	}
 

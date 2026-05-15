@@ -345,7 +345,6 @@ func (r *productionStepRepoImpl) List(ctx context.Context, params domain.ListPro
 			rows, err := r.queries.ListProductionStepsBackward(ctx, sqlc.ListProductionStepsBackwardParams{
 				AccountID:                    params.AccountID,
 				SearchQuery:                  searchQuery,
-				SearchQuery_2:                searchQuery,
 				IncludeItemFilter:            includeItemFilter,
 				ItemIds:                      itemIDs,
 				IncludeMachineFilter:         includeMachineFilter,
@@ -379,7 +378,6 @@ func (r *productionStepRepoImpl) List(ctx context.Context, params domain.ListPro
 		rows, err := r.queries.ListProductionStepsForward(ctx, sqlc.ListProductionStepsForwardParams{
 			AccountID:                    params.AccountID,
 			SearchQuery:                  searchQuery,
-			SearchQuery_2:                searchQuery,
 			IncludeItemFilter:            includeItemFilter,
 			ItemIds:                      itemIDs,
 			IncludeMachineFilter:         includeMachineFilter,
@@ -414,7 +412,6 @@ func (r *productionStepRepoImpl) List(ctx context.Context, params domain.ListPro
 	rows, err := r.queries.ListProductionStepsForward(ctx, sqlc.ListProductionStepsForwardParams{
 		AccountID:                    params.AccountID,
 		SearchQuery:                  searchQuery,
-		SearchQuery_2:                searchQuery,
 		IncludeItemFilter:            includeItemFilter,
 		ItemIds:                      itemIDs,
 		IncludeMachineFilter:         includeMachineFilter,

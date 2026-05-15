@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -32,23 +33,26 @@ type ListSalesOrdersRequest struct {
 	ExcludeInternalOrders bool `query:"exclude_internal_orders"`
 }
 
-// TODO: stop returning SalesOrderSummary; return the full SalesOrder apiresource and use proper includes values to control expansion.
 type ListSalesOrdersEndpoint struct{}
 
-func (e *ListSalesOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSalesOrdersRequest, *apiresource.List[apiresource.SalesOrderSummary]] {
-	return &apiendpoint.APIEndpoint[*ListSalesOrdersRequest, *apiresource.List[apiresource.SalesOrderSummary]]{
+func (e *ListSalesOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSalesOrdersRequest, *apiresource.List[apiresource.SalesOrderDetail]] {
+	return &apiendpoint.APIEndpoint[*ListSalesOrdersRequest, *apiresource.List[apiresource.SalesOrderDetail]]{
 		Title:             "List Sales Orders",
 		Description:       "Returns a paginated list of sales orders for the current account.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/sales-orders",
 		Request:           &ListSalesOrdersRequest{},
-		Response:          &apiresource.List[apiresource.SalesOrderSummary]{},
+		Response:          &apiresource.List[apiresource.SalesOrderDetail]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
-		ServiceHandler: func(svc any) func(ctx context.Context, req *ListSalesOrdersRequest) (*apiresource.List[apiresource.SalesOrderSummary], *apierror.APIError) {
+		ServiceHandler: func(svc any) func(ctx context.Context, req *ListSalesOrdersRequest) (*apiresource.List[apiresource.SalesOrderDetail], *apierror.APIError) {
 			return svc.(SalesOrderSvc).ListSalesOrders
 		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeSalesOrder,
+			Fields:     []string{"customer"},
+		}),
 	}
 }

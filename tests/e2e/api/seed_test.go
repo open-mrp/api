@@ -56,12 +56,15 @@ const (
 	// Operations
 	SeedProductionRunID  = "pnrn_01seedprod_run0000"
 	SeedProductionStepID = "prs_01k0a51qxceydax5036pegvzzy"
-	SeedMaterialID       = "ml_01seedyrn1mat000000"
-	SeedMaterialItemID   = "it_01seedyrn1item00000"
+	// Sew Large Sock — has inbound graph edge (Knit) and a seeded machine; used for GET/PATCH /production-steps/{id}.
+	SeedSewLargeProductionStepID = "prs_01k0a56yc1e8wag6wexn4pp8t9"
+	SeedMaterialID               = "ml_01seedyrn1mat000000"
+	SeedMaterialItemID           = "it_01seedyrn1item00000"
 	// item_category_id on SeedMaterialItemID (yarn materials in 0007_items.sql), not SeedItemCategoryID (socks).
 	SeedMaterialCategoryID = "itcg_01seedyarn0000000"
 	SeedPartID             = "pt_01seedlknpart000000"
 	SeedPartItemID         = "it_01seedlknitem000000"
+	SeedLsnItemID          = "it_01seedlsnitem000000"
 	SeedLknItemSKU         = "LKN" // Large Knitted Sock — initial subassembly (root step: Knit Large Sock)
 	SeedSknItemID          = "it_01seedsknitem000000"
 	SeedSknItemSKU         = "SKN" // Small Knitted Sock — initial subassembly (root step: Knit Small Sock)
@@ -187,6 +190,7 @@ var pathParamSeeds = map[string]string{
 	"location_id":        SeedLocationID,
 	"account_id":         SeedCustomerAccountID,
 	"carrier_id":         SeedCarrierID,
+	"item_id":            SeedLsnItemID,
 	"production_step_id": SeedProductionStepID,
 	"supplier_id":        SeedSupplierAccountID,
 	"vendor_account_id":  SeedAccountID, // selling company's account for customer tenancy
@@ -237,6 +241,7 @@ var pathSpecificIDSeeds = map[string]string{
 	"/v1/operations/picks/":                                              SeedPickID,
 	"/v1/operations/production-steps/{production_step_id}/consumptions/": SeedConsumptionID,
 	"/v1/operations/production-steps/{production_step_id}/productions/":  SeedProductionID,
+	"/v1/operations/production-steps/{id}":                               SeedSewLargeProductionStepID,
 	"/v1/operations/production-steps/":                                   SeedProductionStepID,
 	"/v1/operations/quantities/":                                         SeedQuantityID,
 	"/v1/operations/rates/":                                              SeedRateID,
@@ -288,11 +293,15 @@ var nullableFieldSeeds = map[string]string{
 	"customer_type_group_id":   SeedCustomerGroupID,
 
 	// Common reference IDs used across multiple endpoints
-	"carrier_id":          SeedCarrierID,
-	"payment_term_id":     SeedPaymentTermID,
-	"shipping_term_id":    SeedShippingTermID,
-	"sales_rep_id":        SeedAccountUserID,
-	"order_discount_id":   SeedOrderDiscountID,
+	"carrier_id":        SeedCarrierID,
+	"payment_term_id":   SeedPaymentTermID,
+	"shipping_term_id":  SeedShippingTermID,
+	"sales_rep_id":      SeedAccountUserID,
+	// order_discount_id is intentionally excluded: the generic nullable-clear
+	// test clears it on the shared seed sales order (SeedSalesOrderID), which
+	// races with TestIncludes_PopulateNestedResources/retrieve-sales-order/order_discount
+	// running in parallel and reading that same order. The include test is the
+	// primary coverage for order_discount being populated on a sales order.
 	"role_id":             SeedAdminRoleID,
 	"department_id":       SeedDepartmentID,
 	"scanning_station_id": SeedScanningStationID,

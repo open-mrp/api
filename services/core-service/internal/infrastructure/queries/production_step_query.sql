@@ -372,16 +372,16 @@ WHERE ps.id = sqlc.arg('id')
 AND ps.account_id = sqlc.arg('account_id');
 
 -- name: GetProductionStepInputSteps :many
-SELECT pcps.B AS id, ps.name
-FROM _parent_child_production_steps pcps
-JOIN production_step ps ON ps.id = pcps.B
-WHERE pcps.A = sqlc.arg('step_id');
-
--- name: GetProductionStepOutputSteps :many
 SELECT pcps.A AS id, ps.name
 FROM _parent_child_production_steps pcps
 JOIN production_step ps ON ps.id = pcps.A
 WHERE pcps.B = sqlc.arg('step_id');
+
+-- name: GetProductionStepOutputSteps :many
+SELECT pcps.B AS id, ps.name
+FROM _parent_child_production_steps pcps
+JOIN production_step ps ON ps.id = pcps.B
+WHERE pcps.A = sqlc.arg('step_id');
 
 -- name: GetProductionStepMachines :many
 SELECT m.id, m.name FROM machine m
@@ -502,7 +502,7 @@ AND account_id = sqlc.arg('account_id');
 -- name: GetProductionFlowStep :one
 -- Fetches a production step with all fields needed for flow display.
 SELECT
-    ps.id, ps.name, ps.scanning_station_id,
+    ps.id, ps.name, ps.scanning_station_id, ps.department_id,
     ps.allowances, ps.leveling_factor,
     p.id AS production_id, pi.id AS produced_item_id, pi.sku AS produced_item_sku,
     pq.id AS produced_quantity_id, pq.value AS produced_quantity_value,

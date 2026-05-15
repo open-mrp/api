@@ -1,9 +1,12 @@
 package analyticsep
 
 import (
+	"strconv"
+
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
+	"github.com/augno/api/shared/id"
 	pb "github.com/augno/api/shared/proto/core"
 )
 
@@ -123,20 +126,14 @@ func AnalyzeProductionCostsPresenter(resp *pb.AnalyzeProductionCostsResponse) *a
 
 	items := make([]apiresource.ProductionCostItem, len(resp.Items))
 	for i, item := range resp.Items {
-		var dept *apiresource.BasicInfo
+		var dept *apiresource.Entity
 		if item.Department != nil {
-			dept = &apiresource.BasicInfo{
-				ID:   item.Department.Id,
-				Name: item.Department.Name,
-			}
+			dept = apiresource.NewEntity(item.Department.Id, constants.ObjectTypeDepartment, &item.Department.Name, nil)
 		}
 
 		items[i] = apiresource.ProductionCostItem{
-			Department: dept,
-			Category: apiresource.BasicInfo{
-				ID:   item.Category.Id,
-				Name: item.Category.Name,
-			},
+			Department:      dept,
+			Category:        apiresource.NewEntity(item.Category.Id, constants.ObjectTypeItemCategory, &item.Category.Name, nil),
 			TotalCosts:      costBreakdownFromProto(item.TotalCosts),
 			ProductiveCosts: costBreakdownFromProto(item.ProductiveCosts),
 			WasteCosts:      costBreakdownFromProto(item.WasteCosts),
@@ -156,32 +153,41 @@ func costBreakdownFromProto(c *pb.CostBreakdown) apiresource.CostBreakdown {
 	}
 
 	return apiresource.CostBreakdown{
-		Total:     baseQuantityFromProto(c.Total),
-		Labor:     baseQuantityFromProto(c.Labor),
-		Materials: baseQuantityFromProto(c.Materials),
-		Overhead:  baseQuantityFromProto(c.Overhead),
-		Time:      baseQuantityFromProto(c.Time),
-		Quantity:  baseQuantityFromProto(c.Quantity),
+		Total:     quantityFromProto(c.Total),
+		Labor:     quantityFromProto(c.Labor),
+		Materials: quantityFromProto(c.Materials),
+		Overhead:  quantityFromProto(c.Overhead),
+		Time:      quantityFromProto(c.Time),
+		Quantity:  quantityFromProto(c.Quantity),
 	}
 }
 
-func baseQuantityFromProto(q *pb.BaseQuantity) apiresource.BaseQuantity {
+func quantityFromProto(q *pb.BaseQuantity) *apiresource.Quantity {
 	if q == nil {
-		return apiresource.BaseQuantity{}
+		return nil
 	}
 
-	var unit apiresource.BaseQuantityUnit
+	var unitAbbreviation, unitType string
+	var unit *apiresource.Unit
 	if q.Unit != nil {
-		unit = apiresource.BaseQuantityUnit{
+		unitAbbreviation = q.Unit.Abbreviation
+		unitType = q.Unit.Type
+		unit = &apiresource.Unit{
+			Object:       constants.ObjectTypeUnit,
 			Name:         q.Unit.Name,
-			Abbreviation: q.Unit.Abbreviation,
-			Type:         q.Unit.Type,
+			Abbreviation: unitAbbreviation,
+			Type:         constants.UnitType(unitType),
 		}
 	}
 
-	return apiresource.BaseQuantity{
-		Measure: q.Measure,
-		Unit:    unit,
+	valueStr := strconv.FormatFloat(q.Measure, 'f', -1, 64)
+	qid, _ := id.GenID(id.QuantityIDPrefix, nil)
+	return &apiresource.Quantity{
+		ID:           qid,
+		Object:       constants.ObjectTypeQuantity,
+		Value:        apiresource.NormalizeQuantityValue(valueStr, unitType),
+		DisplayValue: apiresource.FormatDisplayValue(valueStr, unitAbbreviation, unitType),
+		Unit:         unit,
 	}
 }
 
@@ -392,19 +398,17 @@ func AnalyzeMaterialsPresenter(resp *pb.AnalyzeMaterialsResponse) *apiresource.A
 			ItemID:              e.ItemId,
 			Sku:                 e.Sku,
 			Description:         ptrStringOrNil(e.Description),
-			QuantityInInventory: baseQuantityFromProto(e.QuantityInInventory),
-			QuantityInDemand:    baseQuantityFromProto(e.QuantityInDemand),
+			QuantityInInventory: quantityFromProto(e.QuantityInInventory),
+			QuantityInDemand:    quantityFromProto(e.QuantityInDemand),
 			SupplierNames:       e.SupplierNames,
 			SupplierPartNumbers: e.SupplierPartNumbers,
 		}
 
 		if e.OrderPoint != nil {
-			op := baseQuantityFromProto(e.OrderPoint)
-			entry.OrderPoint = &op
+			entry.OrderPoint = quantityFromProto(e.OrderPoint)
 		}
 		if e.LeadTime != nil {
-			lt := baseQuantityFromProto(e.LeadTime)
-			entry.LeadTime = &lt
+			entry.LeadTime = quantityFromProto(e.LeadTime)
 		}
 		if e.UnitGroup != nil {
 			entry.UnitGroup = unitGroupFromProto(e.UnitGroup)
@@ -455,41 +459,33 @@ func AnalyzeInventoryReceiptsPresenter(resp *pb.AnalyzeInventoryReceiptsResponse
 		entry := apiresource.InventoryReceiptSummaryEntry{
 			Item: apiresource.AnalyticsItem{
 				ID:          e.Item.Id,
+				Object:      constants.ObjectTypeItem,
 				Sku:         e.Item.Sku,
 				Description: ptrStringOrNil(e.Item.Description),
 			},
-			OwnerAccount: apiresource.BasicInfo{
-				ID:   e.OwnerAccount.Id,
-				Name: e.OwnerAccount.Name,
-			},
-			HolderAccount: apiresource.BasicInfo{
-				ID:   e.HolderAccount.Id,
-				Name: e.HolderAccount.Name,
-			},
-			RemainingQuantity: baseQuantityFromProto(e.RemainingQuantity),
+			OwnerAccount:      apiresource.NewEntity(e.OwnerAccount.Id, constants.ObjectTypeAccount, &e.OwnerAccount.Name, nil),
+			HolderAccount:     apiresource.NewEntity(e.HolderAccount.Id, constants.ObjectTypeAccount, &e.HolderAccount.Name, nil),
+			RemainingQuantity: quantityFromProto(e.RemainingQuantity),
 			WeightedAverageUnitCost: apiresource.AnalyticsRate{
-				Numerator:   baseQuantityFromProto(e.WeightedAverageUnitCost.Numerator),
-				Denominator: baseQuantityFromProto(e.WeightedAverageUnitCost.Denominator),
+				Numerator:   quantityFromProto(e.WeightedAverageUnitCost.Numerator),
+				Denominator: quantityFromProto(e.WeightedAverageUnitCost.Denominator),
 			},
 			OldestReceiptAt: grpcutil.TimestampToTimePtr(e.OldestReceiptAt),
 			NewestReceiptAt: grpcutil.TimestampToTimePtr(e.NewestReceiptAt),
 		}
 
 		if e.Location != nil {
-			entry.Location = &apiresource.BasicInfo{
-				ID:   e.Location.Id,
-				Name: e.Location.Name,
-			}
+			entry.Location = apiresource.NewEntity(e.Location.Id, constants.ObjectTypeLocation, &e.Location.Name, nil)
 		}
 		if e.Lot != nil {
 			entry.Lot = &apiresource.AnalyticsLot{
 				ID:     e.Lot.Id,
+				Object: constants.ObjectTypeLot,
 				Number: e.Lot.Number,
 			}
 		}
 		if e.InventoryValue != nil {
-			iv := baseQuantityFromProto(e.InventoryValue)
-			entry.InventoryValue = &iv
+			entry.InventoryValue = quantityFromProto(e.InventoryValue)
 		}
 
 		entries[i] = entry
@@ -637,25 +633,44 @@ func AnalyzeWeeksOfSalesPresenter(resp *pb.AnalyzeWeeksOfSalesResponse) *apireso
 
 	items := make([]apiresource.WeeksOfSalesItem, len(resp.Items))
 	for i, item := range resp.Items {
+		onHandValueStr := strconv.FormatFloat(item.QuantityOnHand, 'f', -1, 64)
+		avgSalesValueStr := strconv.FormatFloat(item.AverageSalesQuantity, 'f', -1, 64)
+
+		onHandID, _ := id.GenID(id.QuantityIDPrefix, nil)
+		avgSalesID, _ := id.GenID(id.QuantityIDPrefix, nil)
+
 		items[i] = apiresource.WeeksOfSalesItem{
-			ProductLine: apiresource.BasicInfo{
-				ID:   item.ProductLineId,
-				Name: item.ProductLineName,
-			},
-			QuantityOnHand: apiresource.BaseQuantity{
-				Measure: item.QuantityOnHand,
-				Unit: apiresource.BaseQuantityUnit{
+			ProductLine: apiresource.NewEntity(item.ProductLineId, constants.ObjectTypeProductLine, &item.ProductLineName, nil),
+			QuantityOnHand: &apiresource.Quantity{
+				ID:     onHandID,
+				Object: constants.ObjectTypeQuantity,
+				Value:  apiresource.NormalizeQuantityValue(onHandValueStr, item.QuantityOnHandUnitType),
+				DisplayValue: apiresource.FormatDisplayValue(
+					onHandValueStr,
+					item.QuantityOnHandUnitAbbreviation,
+					item.QuantityOnHandUnitType,
+				),
+				Unit: &apiresource.Unit{
+					Object:       constants.ObjectTypeUnit,
 					Name:         item.QuantityOnHandUnitAbbreviation,
 					Abbreviation: item.QuantityOnHandUnitAbbreviation,
-					Type:         item.QuantityOnHandUnitType,
+					Type:         constants.UnitType(item.QuantityOnHandUnitType),
 				},
 			},
-			AverageSalesQuantity: apiresource.BaseQuantity{
-				Measure: item.AverageSalesQuantity,
-				Unit: apiresource.BaseQuantityUnit{
+			AverageSalesQuantity: &apiresource.Quantity{
+				ID:     avgSalesID,
+				Object: constants.ObjectTypeQuantity,
+				Value:  apiresource.NormalizeQuantityValue(avgSalesValueStr, item.AverageSalesQuantityUnitType),
+				DisplayValue: apiresource.FormatDisplayValue(
+					avgSalesValueStr,
+					item.AverageSalesQuantityUnitAbbreviation,
+					item.AverageSalesQuantityUnitType,
+				),
+				Unit: &apiresource.Unit{
+					Object:       constants.ObjectTypeUnit,
 					Name:         item.AverageSalesQuantityUnitAbbreviation,
 					Abbreviation: item.AverageSalesQuantityUnitAbbreviation,
-					Type:         item.AverageSalesQuantityUnitType,
+					Type:         constants.UnitType(item.AverageSalesQuantityUnitType),
 				},
 			},
 			WeeksOfSales: item.WeeksOfSales,

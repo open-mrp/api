@@ -23,7 +23,7 @@ SELECT
             FROM transaction_allocation ta
             JOIN quantity aq ON aq.id = ta.amount_id
             WHERE ta.invoice_id = inv.id
-            AND (sqlc.narg('allocation_cutoff_date') IS NULL OR ta.created_at < CAST(sqlc.narg('allocation_cutoff_date') AS DATETIME))
+            AND ta.created_at < sqlc.narg('allocation_cutoff_date')
         ), 0),
     2) AS remaining_balance
 FROM invoice inv
@@ -73,7 +73,7 @@ SELECT
             FROM transaction_allocation ta
             JOIN quantity aq ON aq.id = ta.amount_id
             WHERE ta.invoice_id = inv.id
-            AND (sqlc.narg('allocation_cutoff_date') IS NULL OR ta.created_at < CAST(sqlc.narg('allocation_cutoff_date') AS DATETIME))
+            AND ta.created_at < sqlc.narg('allocation_cutoff_date')
         ), 0),
     2) AS remaining_balance
 FROM invoice inv
@@ -122,7 +122,7 @@ SELECT
             FROM transaction_allocation ta
             JOIN quantity aq ON aq.id = ta.amount_id
             WHERE ta.invoice_id = inv.id
-            AND (sqlc.narg('allocation_cutoff_date') IS NULL OR ta.created_at < CAST(sqlc.narg('allocation_cutoff_date') AS DATETIME))
+            AND ta.created_at < sqlc.narg('allocation_cutoff_date')
         ), 0),
     2) AS remaining_balance
 FROM invoice inv
@@ -173,7 +173,7 @@ SELECT
             FROM transaction_allocation ta
             JOIN quantity aq ON aq.id = ta.amount_id
             WHERE ta.invoice_id = inv.id
-            AND (sqlc.narg('allocation_cutoff_date') IS NULL OR ta.created_at < CAST(sqlc.narg('allocation_cutoff_date') AS DATETIME))
+            AND ta.created_at < sqlc.narg('allocation_cutoff_date')
         ), 0),
     2) AS remaining_balance
 FROM invoice inv

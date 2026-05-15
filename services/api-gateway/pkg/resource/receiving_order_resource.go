@@ -19,8 +19,8 @@ type ReceivingOrderSummary struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=receiving_order"`
 	// Receiving order number.
 	Number string `json:"number" validate:"required"`
-	// Purchase order associated with this receiving order.
-	PurchaseOrder *SalesOrder `json:"purchase_order" validate:"required"`
+	// Purchase order associated with this receiving order. Expandable via include[]=purchase_order.
+	PurchaseOrder *SalesOrderDetail `json:"purchase_order" expandable:"true"`
 	// Supplier associated with this receiving order.
 	Supplier *Account `json:"supplier"`
 	// Number of lines in this receiving order.
@@ -36,10 +36,14 @@ type ReceivingOrderSummary struct {
 }
 
 var SampleReceivingOrderSummary = &ReceivingOrderSummary{
-	ID:                   SampleReceivingOrderID,
-	Object:               constants.ObjectTypeReceivingOrder,
-	Number:               "RO-001",
-	PurchaseOrder:        SampleSalesOrder,
+	ID:     SampleReceivingOrderID,
+	Object: constants.ObjectTypeReceivingOrder,
+	Number: "RO-001",
+	PurchaseOrder: &SalesOrderDetail{
+		ID:     SampleSalesOrderDetailID,
+		Object: constants.ObjectTypeSalesOrder,
+		Number: SampleSalesOrderNumber,
+	},
 	LineCount:            2,
 	CompletionPercentage: 50.0,
 	CreatedAt:            timeutil.TimestampToTime(sampleCreatedAtTimestamp),
@@ -58,8 +62,8 @@ type ReceivingOrder struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=receiving_order"`
 	// Receiving order number.
 	Number string `json:"number" validate:"required"`
-	// Purchase order associated with this receiving order.
-	PurchaseOrder *SalesOrder `json:"purchase_order" validate:"required"`
+	// Purchase order associated with this receiving order. Expandable via include[]=purchase_order.
+	PurchaseOrder *SalesOrderDetail `json:"purchase_order" expandable:"true"`
 	// Supplier associated with this receiving order.
 	Supplier *Account `json:"supplier"`
 	// Note on the receiving order.
@@ -75,13 +79,17 @@ type ReceivingOrder struct {
 }
 
 var SampleReceivingOrder = &ReceivingOrder{
-	ID:            SampleReceivingOrderID,
-	Object:        constants.ObjectTypeReceivingOrder,
-	Number:        "RO-001",
-	PurchaseOrder: SampleSalesOrder,
-	Lines:         NewList([]ReceivingOrderLine{*SampleReceivingOrderLine}, PageInfo{}),
-	CreatedAt:     timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt:     timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	ID:     SampleReceivingOrderID,
+	Object: constants.ObjectTypeReceivingOrder,
+	Number: "RO-001",
+	PurchaseOrder: &SalesOrderDetail{
+		ID:     SampleSalesOrderDetailID,
+		Object: constants.ObjectTypeSalesOrder,
+		Number: SampleSalesOrderNumber,
+	},
+	Lines:     NewList([]ReceivingOrderLine{*SampleReceivingOrderLine}, PageInfo{}),
+	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*ReceivingOrder) SchemaExample() any {

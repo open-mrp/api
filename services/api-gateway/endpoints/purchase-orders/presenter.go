@@ -223,7 +223,7 @@ func PurchaseOrderDetailPresenter(info *pb.PurchaseOrderInfo) apiresource.Purcha
 				t := grpcutil.TimestampToTime(ro.CompletedAt)
 				d.ReceivingOrder.CompletedAt = &t
 			}
-			d.ReceivingOrder.PurchaseOrder = &apiresource.SalesOrder{
+			d.ReceivingOrder.PurchaseOrder = &apiresource.SalesOrderDetail{
 				ID:     ro.PurchaseOrderId,
 				Object: constants.ObjectTypeSalesOrder,
 				Number: ro.PurchaseOrderNumber,

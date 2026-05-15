@@ -9,13 +9,14 @@ import (
 
 // Pick represents a pick domain model with joined fields for reads.
 type Pick struct {
-	ID           string
-	Number       string `audit:"number"`
-	SalesOrderID string
-	AccountID    string
-	FinishedAt   *time.Time `audit:"finished_at"`
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID               string
+	Number           string `audit:"number"`
+	SalesOrderID     string
+	SalesOrderNumber string
+	AccountID        string
+	FinishedAt       *time.Time `audit:"finished_at"`
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
 
 	// Joined fields for reads
 	CustomerID     string
@@ -31,17 +32,18 @@ type Pick struct {
 
 // PickSummary represents a pick for list views.
 type PickSummary struct {
-	ID             string
-	Number         string
-	SalesOrderID   string
-	CustomerID     string
-	CustomerName   string
-	CustomerNumber string
-	PriorityCode   constants.PriorityCode
-	PriorityName   string
-	FinishedAt     *time.Time
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	ID               string
+	Number           string
+	SalesOrderID     string
+	SalesOrderNumber string
+	CustomerID       string
+	CustomerName     string
+	CustomerNumber   string
+	PriorityCode     constants.PriorityCode
+	PriorityName     string
+	FinishedAt       *time.Time
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
 }
 
 // PickDepartment represents a department associated with a pick.
@@ -68,10 +70,18 @@ type PickLine struct {
 	OrderLineItemNumber       int32
 	OrderLineSKU              string
 	OrderLineDescription      *string
+	OrderedQuantityID         string
 	OrderedQuantityValue      string
 	OrderedQuantityUnitID     string
 	OrderedQuantityUnitName   string
 	OrderedQuantityUnitAbbrev string
+
+	UnitPriceID                          string
+	UnitPriceValue                       string
+	UnitPriceNumeratorUnitID             string
+	UnitPriceNumeratorUnitAbbreviation   string
+	UnitPriceDenominatorUnitID           string
+	UnitPriceDenominatorUnitAbbreviation string
 }
 
 // ListPicksParams holds the parameters for listing picks.

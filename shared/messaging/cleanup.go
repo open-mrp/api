@@ -18,14 +18,16 @@ const (
 	defaultCleanupMaxBatchesPerRun = 100
 	defaultCleanupLeaseName        = "idempotency-cleanup"
 	defaultCleanupLeaseTTL         = 5 * time.Minute
+	defaultCleanupScheduleTZ       = "America/New_York"
 )
 
 // CleanupConfig holds the configuration for the cleanup worker.
 // The worker deletes expired rows from idempotency key tables and old
 // deleted_record entries.
 type CleanupConfig struct {
-	// Interval (optional; default: 24h) is how often the cleanup loop fires. Each tick
-	// triggers a full run that processes up to MaxBatchesPerRun batches for each table.
+	// Interval (optional; default: 24h) is how often the cleanup loop fires after the
+	// first run. Each tick triggers a full run that processes up to MaxBatchesPerRun
+	// batches for each table.
 	Interval time.Duration
 
 	// BatchSize (optional; default: 1000) is the maximum number of expired rows deleted
@@ -46,6 +48,12 @@ type CleanupConfig struct {
 	// full cleanup run typically completes within a few seconds; the TTL is only a
 	// safety net for a crashed holder.
 	LeaseTTL time.Duration
+
+	// ScheduleLocation (optional; default: America/New_York) is the timezone used to
+	// determine when "midnight" falls for the first scheduled run. The worker waits until
+	// the next midnight in this location before running for the first time, then repeats
+	// every Interval thereafter.
+	ScheduleLocation *time.Location
 }
 
 // WithDefaults returns a new CleanupConfig with zero-value fields replaced by production defaults.
@@ -54,12 +62,23 @@ func (c *CleanupConfig) WithDefaults() *CleanupConfig {
 		c = &CleanupConfig{}
 	}
 
+	loc := c.ScheduleLocation
+	if loc == nil {
+		var err error
+		loc, err = time.LoadLocation(defaultCleanupScheduleTZ)
+		if err != nil {
+			slog.Warn("Cleanup worker: could not load schedule timezone, falling back to UTC", "tz", defaultCleanupScheduleTZ, "error", err)
+			loc = time.UTC
+		}
+	}
+
 	return &CleanupConfig{
 		Interval:         cmp.Or(c.Interval, defaultCleanupInterval),
 		BatchSize:        cmp.Or(c.BatchSize, defaultCleanupBatchSize),
 		MaxBatchesPerRun: cmp.Or(c.MaxBatchesPerRun, defaultCleanupMaxBatchesPerRun),
 		LeaseName:        cmp.Or(c.LeaseName, defaultCleanupLeaseName),
 		LeaseTTL:         cmp.Or(c.LeaseTTL, defaultCleanupLeaseTTL),
+		ScheduleLocation: loc,
 	}
 }
 
@@ -73,6 +92,9 @@ func (c *CleanupConfig) validate() error {
 	}
 	if c.MaxBatchesPerRun <= 0 {
 		return fmt.Errorf("cleanup: max batches per run must be positive")
+	}
+	if c.ScheduleLocation == nil {
+		return fmt.Errorf("cleanup: schedule location must not be nil")
 	}
 	return nil
 }
@@ -109,8 +131,8 @@ type CleanupRepo interface {
 
 // CleanupWorker runs a single background goroutine that periodically purges
 // expired idempotency keys and old deleted records.
-// It fires immediately on Start (so a fresh deployment doesn't wait a full
-// Interval before its first cleanup) and then repeats at CleanupConfig.Interval.
+// It waits until the next midnight in the configured ScheduleLocation before its
+// first run, then repeats every CleanupConfig.Interval.
 //
 // The worker uses appctx.WithNoTrace to suppress trace spans for its background
 // operations, and respects context cancellation — calling Stop blocks until the
@@ -156,10 +178,13 @@ func (w *CleanupWorker) Start(ctx context.Context) error {
 	w.wg.Add(1)
 	go w.cleanupLoop()
 
+	nextRun := nextMidnight(w.config.ScheduleLocation)
 	slog.Info("Cleanup worker started",
 		"interval", w.config.Interval,
 		"batch_size", w.config.BatchSize,
 		"max_batches_per_run", w.config.MaxBatchesPerRun,
+		"schedule_tz", w.config.ScheduleLocation.String(),
+		"next_run_at", nextRun,
 	)
 
 	return nil
@@ -175,12 +200,31 @@ func (w *CleanupWorker) Stop() {
 	slog.Info("Cleanup worker stopped")
 }
 
-// cleanupLoop runs cleanup immediately on startup and then on every Interval tick.
-// Each run is wrapped in a distributed lease so only one pod across the cluster
-// executes the DELETEs; other pods skip the tick without error.
-// It exits when the worker's context is cancelled.
+// nextMidnight returns the next midnight (00:00:00) in loc, always in the future.
+func nextMidnight(loc *time.Location) time.Time {
+	now := time.Now().In(loc)
+	midnight := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
+	if !midnight.After(now) {
+		midnight = midnight.AddDate(0, 0, 1)
+	}
+	return midnight
+}
+
+// cleanupLoop waits until the next midnight in the configured timezone before the
+// first run, then repeats every Interval. Each run is wrapped in a distributed
+// lease so only one pod across the cluster executes the DELETEs; other pods skip
+// the tick without error. It exits when the worker's context is cancelled.
 func (w *CleanupWorker) cleanupLoop() {
 	defer w.wg.Done()
+
+	initialTimer := time.NewTimer(time.Until(nextMidnight(w.config.ScheduleLocation)))
+	defer initialTimer.Stop()
+
+	select {
+	case <-w.ctx.Done():
+		return
+	case <-initialTimer.C:
+	}
 
 	w.runUnderLease()
 

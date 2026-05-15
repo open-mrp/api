@@ -60,15 +60,13 @@ func TenancyPresenter(resp *pb.GetTenancyResponse) *apiresource.Tenancy {
 	if resp == nil {
 		return &apiresource.Tenancy{
 			Object:        constants.ObjectTypeTenancy,
-			Sandboxes:     []apiresource.TenancySandboxAccount{},
-			OtherAccounts: []apiresource.TenancyOtherAccount{},
+			Sandboxes:     apiresource.NewList([]apiresource.TenancySandboxAccount{}, apiresource.PageInfo{}),
+			OtherAccounts: apiresource.NewList([]apiresource.TenancyOtherAccount{}, apiresource.PageInfo{}),
 		}
 	}
 
 	result := &apiresource.Tenancy{
 		Object:              constants.ObjectTypeTenancy,
-		Sandboxes:           make([]apiresource.TenancySandboxAccount, 0, len(resp.Sandboxes)),
-		OtherAccounts:       make([]apiresource.TenancyOtherAccount, 0, len(resp.OtherAccounts)),
 		PendingRegistration: tenancyPendingRegistrationPresenter(resp.PendingRegistration),
 	}
 
@@ -103,13 +101,15 @@ func TenancyPresenter(resp *pb.GetTenancyResponse) *apiresource.Tenancy {
 		result.CurrentAccount = ca
 	}
 
+	sandboxes := make([]apiresource.TenancySandboxAccount, 0, len(resp.Sandboxes))
 	for _, s := range resp.Sandboxes {
-		result.Sandboxes = append(result.Sandboxes, apiresource.TenancySandboxAccount{
+		sandboxes = append(sandboxes, apiresource.TenancySandboxAccount{
 			ID:     s.Id,
 			Object: constants.ObjectTypeAccount,
 			Name:   s.Name,
 		})
 	}
+	result.Sandboxes = apiresource.NewList(sandboxes, apiresource.PageInfo{})
 
 	if resp.OwnerAccount != nil {
 		result.OwnerAccount = &apiresource.TenancyOwnerAccount{
@@ -119,14 +119,16 @@ func TenancyPresenter(resp *pb.GetTenancyResponse) *apiresource.Tenancy {
 		}
 	}
 
+	otherAccounts := make([]apiresource.TenancyOtherAccount, 0, len(resp.OtherAccounts))
 	for _, o := range resp.OtherAccounts {
-		result.OtherAccounts = append(result.OtherAccounts, apiresource.TenancyOtherAccount{
+		otherAccounts = append(otherAccounts, apiresource.TenancyOtherAccount{
 			ID:     o.Id,
 			Object: constants.ObjectTypeAccount,
 			Name:   o.Name,
 			Type:   o.Type,
 		})
 	}
+	result.OtherAccounts = apiresource.NewList(otherAccounts, apiresource.PageInfo{})
 
 	return result
 }

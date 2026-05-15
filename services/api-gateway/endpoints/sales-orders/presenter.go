@@ -52,6 +52,8 @@ func SalesOrderSummaryPresenter(info *pb.SalesOrderSummaryInfo) apiresource.Sale
 		UpdatedAt:            grpcutil.TimestampToTime(info.UpdatedAt),
 	}
 
+	finalizeCustomerStubForInclude(customer, s.CreatedAt, s.UpdatedAt)
+
 	if info.PriorityId != nil {
 		s.Priority.ID = *info.PriorityId
 	}
@@ -122,6 +124,7 @@ func SalesOrderDetailPresenter(info *pb.SalesOrderInfo) apiresource.SalesOrderDe
 	if info.CustomerUpdatedAt != nil {
 		d.Customer.UpdatedAt = info.CustomerUpdatedAt.AsTime()
 	}
+	finalizeCustomerStubForInclude(d.Customer, d.CreatedAt, d.UpdatedAt)
 
 	// Bill-to address
 	if info.BillingAddressId != "" {
@@ -288,7 +291,7 @@ func SalesOrderDetailPresenter(info *pb.SalesOrderInfo) apiresource.SalesOrderDe
 	if info.PickId != nil {
 		d.Pick = &apiresource.Pick{
 			ID:     *info.PickId,
-			Object: "pick",
+			Object: constants.ObjectTypePick,
 		}
 	}
 
@@ -341,11 +344,16 @@ func SalesOrderLineDetailPresenter(info *pb.SalesOrderLineInfo) apiresource.Sale
 	// Item
 	if info.ItemId != nil {
 		item := &apiresource.Item{
-			ID:     *info.ItemId,
-			Object: constants.ObjectTypeItem,
+			ID:           *info.ItemId,
+			Object:       constants.ObjectTypeItem,
+			ItemTypeCode: constants.ItemTypeCodeProduct,
+			CreatedAt:    grpcutil.TimestampToTime(info.CreatedAt),
+			UpdatedAt:    grpcutil.TimestampToTime(info.UpdatedAt),
 		}
-		if info.ItemSku != nil {
+		if info.ItemSku != nil && *info.ItemSku != "" {
 			item.SKU = *info.ItemSku
+		} else {
+			item.SKU = info.ProductSku
 		}
 		l.Item = item
 	}
@@ -451,10 +459,73 @@ func SalesOrderLineDetailPresenter(info *pb.SalesOrderLineInfo) apiresource.Sale
 	return l
 }
 
-func SalesOrderListPresenter(resp *pb.ListSalesOrdersResponse) *apiresource.List[apiresource.SalesOrderSummary] {
-	orders := make([]apiresource.SalesOrderSummary, len(resp.SalesOrders))
+// salesOrderSummaryToDetail maps a list-view SalesOrderSummaryInfo to SalesOrderDetail.
+// Expandable sub-resources (addresses, carrier, service level, etc.) are left nil
+// since the list gRPC response does not carry those fields.
+func salesOrderSummaryToDetail(info *pb.SalesOrderSummaryInfo) apiresource.SalesOrderDetail {
+	customer := &apiresource.Customer{
+		ID:               info.CustomerId,
+		Object:           constants.ObjectTypeCustomer,
+		Name:             info.CustomerName,
+		Number:           info.CustomerNumber,
+		EDIStatus:        constants.EDIStatusDisabled,
+		RelationshipType: constants.CustomerRelationshipTypeStandalone,
+	}
+	if info.CustomerStatusCode != nil {
+		customer.Status = constants.AccountStatusCode(*info.CustomerStatusCode)
+	}
+	if info.CustomerCommissionPolicy != nil {
+		customer.CommissionPolicy = constants.CommissionPolicy(*info.CustomerCommissionPolicy)
+	}
+
+	d := apiresource.SalesOrderDetail{
+		ID:                   info.Id,
+		Object:               constants.ObjectTypeSalesOrder,
+		Number:               info.Number,
+		CustomerPO:           info.CustomerPoNumber,
+		IsAcknowledgmentSent: info.IsAcknowledgmentSent,
+		Customer:             customer,
+		Status: &apiresource.SalesOrderStatusDetail{
+			Code:   info.StatusCode,
+			Object: constants.ObjectTypeSalesOrderStatus,
+			Name:   info.StatusName,
+		},
+		Type: &apiresource.SalesOrderType{
+			Code:   info.TypeCode,
+			Object: constants.ObjectTypeSalesOrderType,
+			Name:   info.TypeName,
+		},
+		Priority: &apiresource.Priority{
+			Code:   constants.PriorityCode(info.PriorityCode),
+			Object: constants.ObjectTypePriority,
+			Name:   info.PriorityName,
+		},
+		LineCount: info.LineCount,
+		CreatedAt: grpcutil.TimestampToTime(info.CreatedAt),
+		UpdatedAt: grpcutil.TimestampToTime(info.UpdatedAt),
+	}
+
+	if info.PriorityId != nil {
+		d.Priority.ID = *info.PriorityId
+	}
+	if info.IssuedAt != nil {
+		t := grpcutil.TimestampToTime(info.IssuedAt)
+		d.IssuedAt = &t
+	}
+	if info.CompletedAt != nil {
+		t := grpcutil.TimestampToTime(info.CompletedAt)
+		d.CompletedAt = &t
+	}
+
+	finalizeCustomerStubForInclude(customer, d.CreatedAt, d.UpdatedAt)
+
+	return d
+}
+
+func SalesOrderListPresenter(resp *pb.ListSalesOrdersResponse) *apiresource.List[apiresource.SalesOrderDetail] {
+	orders := make([]apiresource.SalesOrderDetail, len(resp.SalesOrders))
 	for i, o := range resp.SalesOrders {
-		orders[i] = SalesOrderSummaryPresenter(o)
+		orders[i] = salesOrderSummaryToDetail(o)
 	}
 
 	return apiresource.NewList(orders, apiresource.PageInfo{
@@ -463,6 +534,24 @@ func SalesOrderListPresenter(resp *pb.ListSalesOrdersResponse) *apiresource.List
 		HasNextPage: resp.PageInfo.HasNextPage,
 		HasPrevPage: resp.PageInfo.HasPrevPage,
 	})
+}
+
+func finalizeCustomerStubForInclude(c *apiresource.Customer, fallbackCreated, fallbackUpdated time.Time) {
+	if c == nil {
+		return
+	}
+	if c.Status == "" {
+		c.Status = constants.AccountStatusCodeNormal
+	}
+	if c.CommissionPolicy == "" {
+		c.CommissionPolicy = constants.CommissionPolicyApplied
+	}
+	if c.CreatedAt.IsZero() {
+		c.CreatedAt = fallbackCreated
+	}
+	if c.UpdatedAt.IsZero() {
+		c.UpdatedAt = fallbackUpdated
+	}
 }
 
 func buildAddressFromProto(

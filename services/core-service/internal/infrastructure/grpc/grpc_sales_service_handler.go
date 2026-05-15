@@ -728,6 +728,9 @@ func (h *salesGRPCHandler) BulkDeleteSalesOrders(ctx context.Context, req *pb.Bu
 		return nil, contracts.NewMissingGRPCRequestDataError()
 	}
 
+	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
+	defer finalizeIdempotency()
+
 	apiErr := h.salesOrderSvc.BulkDeleteSalesOrders(ctx, domain.BulkDeleteSalesOrdersParams{
 		SalesOrderIDs: req.Ids,
 	})

@@ -1,10 +1,14 @@
 package inventoryep
 
 import (
+	"strconv"
+	"time"
+
 	itemep "github.com/augno/api/services/api-gateway/endpoints/items"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
+	"github.com/augno/api/shared/id"
 	pb "github.com/augno/api/shared/proto/core"
 )
 
@@ -19,15 +23,28 @@ func ListInventoriesPresenter(resp *pb.ListInventoriesResponse) *apiresource.Lis
 
 	items := make([]apiresource.InventoryItem, len(resp.Items))
 	for i, item := range resp.Items {
+		valueStr := strconv.FormatFloat(item.OnHandQuantity, 'f', -1, 64)
+		qid, _ := id.GenID(id.QuantityIDPrefix, nil)
+		unitTS := time.Unix(0, 0).UTC()
 		items[i] = apiresource.InventoryItem{
-			Item: itemep.ItemPresenter(item.Item),
-			Quantity: apiresource.BaseQuantity{
-				Measure: item.OnHandQuantity,
-				Unit: apiresource.BaseQuantityUnit{
-					Name:         item.OnHandUnitAbbreviation,
-					Abbreviation: item.OnHandUnitAbbreviation,
-					Type:         item.OnHandUnitType,
-				},
+			Object: constants.ObjectTypeInventoryItem,
+			Item:   itemep.ItemPresenter(item.Item),
+			Quantity: &apiresource.Quantity{
+				ID:     qid,
+				Object: constants.ObjectTypeQuantity,
+				Value:  apiresource.NormalizeQuantityValue(valueStr, item.OnHandUnitType),
+				DisplayValue: apiresource.FormatDisplayValue(
+					valueStr,
+					item.OnHandUnitAbbreviation,
+					item.OnHandUnitType,
+				),
+				Unit: apiresource.ExpandableUnitStub(
+					item.OnHandUnitId,
+					item.OnHandUnitAbbreviation,
+					item.OnHandUnitAbbreviation,
+					item.OnHandUnitType,
+					unitTS,
+				),
 			},
 		}
 	}

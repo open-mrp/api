@@ -33,7 +33,7 @@ func InvoiceSummaryPresenter(d *pb.InvoiceSummaryInfo) apiresource.InvoiceSummar
 		Number:   d.Number,
 		Note:     d.Note,
 		Customer: customer,
-		Order: &apiresource.SalesOrder{
+		Order: &apiresource.SalesOrderDetail{
 			ID:     d.OrderId,
 			Object: constants.ObjectTypeSalesOrder,
 			Number: d.OrderNumber,
@@ -52,7 +52,7 @@ func InvoiceSummaryPresenter(d *pb.InvoiceSummaryInfo) apiresource.InvoiceSummar
 	}
 
 	if d.ShipmentId != nil {
-		summary.Shipment = &apiresource.Shipment{
+		summary.Shipment = &apiresource.ShipmentDetail{
 			ID:     *d.ShipmentId,
 			Object: constants.ObjectTypeShipment,
 		}
@@ -97,7 +97,7 @@ func InvoicePresenter(d *pb.InvoiceInfo) apiresource.Invoice {
 		Object: constants.ObjectTypeInvoice,
 		Number: d.Number,
 		Note:   d.Note,
-		Order: &apiresource.SalesOrder{
+		Order: &apiresource.SalesOrderDetail{
 			ID:     d.OrderId,
 			Object: constants.ObjectTypeSalesOrder,
 			Number: d.OrderNumber,
@@ -115,7 +115,7 @@ func InvoicePresenter(d *pb.InvoiceInfo) apiresource.Invoice {
 	}
 
 	if d.ShipmentId != nil {
-		shipment := &apiresource.Shipment{
+		shipment := &apiresource.ShipmentDetail{
 			ID:     *d.ShipmentId,
 			Object: constants.ObjectTypeShipment,
 		}
@@ -160,9 +160,9 @@ func InvoiceLinePresenter(l *pb.InvoiceLineInfo) apiresource.InvoiceLine {
 			},
 			DisplayValue: "",
 		},
-		OrderLine: &apiresource.SalesOrderLine{
+		OrderLine: &apiresource.SalesOrderLineDetail{
 			ID:     l.OrderLineId,
-			Object: constants.ObjectTypeSalesOrder,
+			Object: constants.ObjectTypeSalesOrderLine,
 		},
 		CreatedAt: grpcutil.TimestampToTime(l.CreatedAt),
 		UpdatedAt: grpcutil.TimestampToTime(l.UpdatedAt),
@@ -176,7 +176,9 @@ func InvoiceLinePresenter(l *pb.InvoiceLineInfo) apiresource.InvoiceLine {
 		if l.OrderLineItemSku != nil {
 			item.SKU = *l.OrderLineItemSku
 		}
-		line.OrderLine.Item = item
+		if line.OrderLine != nil {
+			line.OrderLine.Item = item
+		}
 	}
 
 	return line
@@ -190,7 +192,7 @@ func InvoiceAllocationPresenter(a *pb.InvoiceAllocationInfo) apiresource.Invoice
 	return apiresource.InvoiceAllocation{
 		ID:     a.Id,
 		Object: constants.ObjectTypeInvoiceAllocation,
-		Transaction: &apiresource.Transaction{
+		Transaction: &apiresource.TransactionDetail{
 			ID:     a.TransactionId,
 			Object: constants.ObjectTypeTransaction,
 		},

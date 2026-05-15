@@ -11,24 +11,6 @@ import (
 const SamplePickDetailID = "pk_01jm4r6700f8nwq3v5hx2d9ktp"
 const SamplePickNumber = "PK-001"
 
-// PickSalesOrder is a sales order sub-resource for picks.
-type PickSalesOrder struct {
-	// Sales order ID.
-	ID string `json:"id" validate:"required"`
-	// Resource type identifier.
-	Object constants.ObjectType `json:"object" validate:"required,enum=sales_order"`
-}
-
-// PickDepartment is a department sub-resource for picks.
-type PickDepartment struct {
-	// Department ID.
-	ID string `json:"id" validate:"required"`
-	// Resource type identifier.
-	Object constants.ObjectType `json:"object" validate:"required,enum=department"`
-	// Display name.
-	Name string `json:"name" validate:"required"`
-}
-
 // PickDetail is a full pick resource.
 type PickDetail struct {
 	// Pick ID.
@@ -37,16 +19,16 @@ type PickDetail struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=pick"`
 	// Pick number.
 	Number string `json:"number" validate:"required"`
-	// Associated sales order.
-	SalesOrder *PickSalesOrder `json:"sales_order"`
+	// Associated sales order. Expandable via include[]=sales_order.
+	SalesOrder *SalesOrderDetail `json:"sales_order" expandable:"true"`
 	// Associated customer.
 	Customer *Customer `json:"customer"`
 	// Pick priority.
 	Priority *Priority `json:"priority"`
 	// Pick lines.
 	Lines *List[PickLineDetail] `json:"lines" expandable:"true"`
-	// Associated departments.
-	Departments []PickDepartment `json:"departments"`
+	// Associated departments. Expandable via include[]=departments.
+	Departments *List[Department] `json:"departments" expandable:"true"`
 	// Timestamp when the pick was finished.
 	FinishedAt *time.Time `json:"finished_at"`
 	// Creation timestamp.
@@ -55,22 +37,15 @@ type PickDetail struct {
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
-var SamplePickSalesOrder = &PickSalesOrder{
-	ID:     SampleSalesOrderDetailID,
-	Object: constants.ObjectTypeSalesOrder,
-}
-
-var SamplePickDepartment = PickDepartment{
-	ID:     SampleDepartmentID,
-	Object: constants.ObjectTypeDepartment,
-	Name:   SampleDepartmentName,
-}
-
 var SamplePickDetail = &PickDetail{
-	ID:         SamplePickDetailID,
-	Object:     constants.ObjectTypePick,
-	Number:     SamplePickNumber,
-	SalesOrder: SamplePickSalesOrder,
+	ID:     SamplePickDetailID,
+	Object: constants.ObjectTypePick,
+	Number: SamplePickNumber,
+	SalesOrder: &SalesOrderDetail{
+		ID:     SampleSalesOrderDetailID,
+		Object: constants.ObjectTypeSalesOrder,
+		Number: SampleSalesOrderNumber,
+	},
 	Customer: &Customer{
 		ID:     SampleCustomerID,
 		Object: constants.ObjectTypeCustomer,
@@ -79,7 +54,7 @@ var SamplePickDetail = &PickDetail{
 	},
 	Priority:    SamplePriority,
 	Lines:       NewList([]PickLineDetail{*SamplePickLineDetail}, PageInfo{}),
-	Departments: []PickDepartment{SamplePickDepartment},
+	Departments: NewList([]Department{*SampleDepartment}, PageInfo{}),
 	CreatedAt:   timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:   timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
@@ -96,8 +71,8 @@ type PickSummary struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=pick"`
 	// Pick number.
 	Number string `json:"number" validate:"required"`
-	// Associated sales order.
-	SalesOrder *PickSalesOrder `json:"sales_order"`
+	// Associated sales order. Expandable via include[]=sales_order.
+	SalesOrder *SalesOrderDetail `json:"sales_order" expandable:"true"`
 	// Associated customer.
 	Customer *Customer `json:"customer"`
 	// Pick priority.
@@ -111,10 +86,14 @@ type PickSummary struct {
 }
 
 var SamplePickSummary = &PickSummary{
-	ID:         SamplePickDetailID,
-	Object:     constants.ObjectTypePick,
-	Number:     SamplePickNumber,
-	SalesOrder: SamplePickSalesOrder,
+	ID:     SamplePickDetailID,
+	Object: constants.ObjectTypePick,
+	Number: SamplePickNumber,
+	SalesOrder: &SalesOrderDetail{
+		ID:     SampleSalesOrderDetailID,
+		Object: constants.ObjectTypeSalesOrder,
+		Number: SampleSalesOrderNumber,
+	},
 	Customer: &Customer{
 		ID:     SampleCustomerID,
 		Object: constants.ObjectTypeCustomer,

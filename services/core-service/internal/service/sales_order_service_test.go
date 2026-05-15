@@ -61,6 +61,7 @@ type SalesOrderSvcTestSuite struct {
 	repoFactory     *factorymock.MockRepoFactory
 	mediatorFactory *factorymock.MockMediatorFactory
 	idempotencyMed  *mediatormock.MockIdempotencyMed
+	readAccessMed   *mediatormock.MockReadAccessMed
 
 	ctrl          *gomock.Controller
 	encryptionKey []byte
@@ -114,9 +115,11 @@ func (suite *SalesOrderSvcTestSuite) SetupTest() {
 	suite.repoFactory.EXPECT().NewOutboxRepo().Return(&stubOutboxRepo{}).AnyTimes()
 
 	suite.idempotencyMed = mediatormock.NewMockIdempotencyMed(suite.ctrl)
+	suite.readAccessMed = mediatormock.NewMockReadAccessMed(suite.ctrl)
 	suite.mediatorFactory = factorymock.NewMockMediatorFactory(suite.ctrl)
 	suite.mediatorFactory.EXPECT().Build(gomock.Any()).Return(domain.Mediators{
 		Idempotency: suite.idempotencyMed,
+		ReadAccess:  suite.readAccessMed,
 	}).AnyTimes()
 
 	// Deterministic 32-byte key so the Checkout test can round-trip encrypted creds.
@@ -214,6 +217,14 @@ func (suite *SalesOrderSvcTestSuite) expectCacheError() {
 		Times(1)
 }
 
+// expectReadAccessAllowed stubs ReadAccessMed.CheckReadAccess to allow access.
+func (suite *SalesOrderSvcTestSuite) expectReadAccessAllowed(actorAccountID, targetAccountID string) {
+	suite.readAccessMed.EXPECT().
+		CheckReadAccess(gomock.Any(), actorAccountID, targetAccountID).
+		Return(nil).
+		Times(1)
+}
+
 // expectPlanLimitAllows stubs the account-plan invoice-limit guard to let the
 // order through (either sandbox or no configured limit).
 func (suite *SalesOrderSvcTestSuite) expectPlanLimitAllows() {
@@ -247,6 +258,8 @@ func (suite *SalesOrderSvcTestSuite) TestListSalesOrders_CustomerActorScopedToOw
 	// Customer actor: the service must force BuyerAccountID = actor's account ID so
 	// a customer can only see their own orders regardless of what they request.
 	ctx := salesOrderCustomerCtx("ac_target", "ac_customer")
+
+	suite.expectReadAccessAllowed("ac_customer", "ac_target")
 
 	suite.orderRepo.EXPECT().
 		List(gomock.Any(), gomock.Any()).
@@ -298,6 +311,8 @@ func (suite *SalesOrderSvcTestSuite) TestGetSalesOrder_InternalActor() {
 
 func (suite *SalesOrderSvcTestSuite) TestGetSalesOrder_CustomerActorUsesGetForCustomer() {
 	ctx := salesOrderCustomerCtx("ac_target", "ac_customer")
+
+	suite.expectReadAccessAllowed("ac_customer", "ac_target")
 
 	// Customer paths route through GetForCustomer (enforces ownership at the query level).
 	suite.orderRepo.EXPECT().
@@ -675,7 +690,10 @@ func (suite *SalesOrderSvcTestSuite) TestDeleteSalesOrder_AlreadyDeletedReturnsS
 func (suite *SalesOrderSvcTestSuite) TestBulkDeleteSalesOrders_RejectsIfAnyFulfilled() {
 	// Bulk delete is atomic: a single fulfilled order must abort the whole batch
 	// (no partial deletes).
-	ctx := salesOrderInternalCtx("ac_test")
+	ctx := salesOrderIdempotencyCtx(salesOrderInternalCtx("ac_test"), "BulkDeleteSalesOrders")
+
+	suite.expectIdempotencyStarted()
+	suite.expectCacheError()
 
 	suite.orderRepo.EXPECT().Get(gomock.Any(), "ac_test", "or_ok").
 		Return(&domain.SalesOrder{ID: "or_ok"}, nil).Times(1)

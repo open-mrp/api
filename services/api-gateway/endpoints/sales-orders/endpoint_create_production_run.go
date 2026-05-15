@@ -6,6 +6,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -19,6 +20,8 @@ type CreateProductionRunRequest struct {
 type CreateProductionRunResponseRef struct {
 	// Production run ID.
 	ID string `json:"id" validate:"required"`
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=production_run"`
 }
 
 // Result of creating a production run.
@@ -28,7 +31,7 @@ type CreateProductionRunResponse struct {
 }
 
 func (*CreateProductionRunResponse) SchemaExample() any {
-	return map[string]any{"production_run": map[string]any{"id": apiresource.SampleProductionRunID}}
+	return map[string]any{"production_run": map[string]any{"id": apiresource.SampleProductionRunID, "object": string(constants.ObjectTypeProductionRun)}}
 }
 
 type CreateProductionRunEndpoint struct{}

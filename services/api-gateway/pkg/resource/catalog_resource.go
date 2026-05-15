@@ -24,9 +24,9 @@ type CatalogCategory struct {
 	// Name.
 	Name string `json:"name" validate:"required"`
 	// Properties associated with this item category.
-	Properties []CatalogProperty `json:"properties" validate:"required"`
+	Properties *List[CatalogProperty] `json:"properties" validate:"required"`
 	// Products in this category.
-	Products []CatalogProduct `json:"products" validate:"required"`
+	Products *List[CatalogProduct] `json:"products" validate:"required"`
 }
 
 // Property associated with an item category.
@@ -48,7 +48,7 @@ type CatalogProduct struct {
 	// Description.
 	Description string `json:"description" validate:"required"`
 	// Attributes.
-	Attributes []CatalogAttribute `json:"attributes" validate:"required"`
+	Attributes *List[CatalogAttribute] `json:"attributes" validate:"required"`
 }
 
 // Attribute of a product in the catalog.
@@ -88,7 +88,7 @@ var SampleCatalogProduct = &CatalogProduct{
 		SKU:    "WDG-001",
 	},
 	Description: "Hex Bolt M10x30 Zinc",
-	Attributes:  []CatalogAttribute{*SampleCatalogAttribute},
+	Attributes:  NewList([]CatalogAttribute{*SampleCatalogAttribute}, PageInfo{}),
 }
 
 var SampleCatalogProperty = &CatalogProperty{
@@ -101,8 +101,8 @@ var SampleCatalogCategory = &CatalogCategory{
 	ID:         "ic_01jm4r6700e3kxb9w2nqh7g5fp",
 	Object:     constants.ObjectTypeCatalogCategory,
 	Name:       "Finished Goods",
-	Properties: []CatalogProperty{*SampleCatalogProperty},
-	Products:   []CatalogProduct{*SampleCatalogProduct},
+	Properties: NewList([]CatalogProperty{*SampleCatalogProperty}, PageInfo{}),
+	Products:   NewList([]CatalogProduct{*SampleCatalogProduct}, PageInfo{}),
 }
 
 func (*CatalogProductLine) SchemaExample() any {

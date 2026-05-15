@@ -28,115 +28,46 @@ type ProductionStep struct {
 	LaborTime *Rate `json:"labor_time"`
 	// Overhead rate.
 	OverheadRate *Rate `json:"overhead_rate"`
-	// Production output.
-	Production *ProductionOutput `json:"production"`
-	// Consumptions.
-	Consumptions []Consumption `json:"consumptions"`
-	// Machines assigned to this step.
-	Machines []ProductionStepMachine `json:"machines"`
-	// Scanning station.
-	ScanningStation *ProductionStepScanStation `json:"scanning_station"`
-	// Input steps feeding into this step.
-	InSteps []ProductionStepRef `json:"in_steps"`
-	// Output steps this step feeds into.
-	OutSteps []ProductionStepRef `json:"out_steps"`
-	// Department.
-	Department *ProductionStepDepartment `json:"department"`
+	// Production output. Expandable via include[]=production.
+	Production *ProductionOutput `json:"production" expandable:"true"`
+	// Consumptions. Expandable via include[]=consumptions.
+	Consumptions *List[Consumption] `json:"consumptions" expandable:"true"`
+	// Machines assigned to this step. Expandable via include[]=machines.
+	Machines *List[Machine] `json:"machines" expandable:"true"`
+	// Scanning station. Expandable via include[]=scanning_station.
+	ScanningStation *ScanningStation `json:"scanning_station" expandable:"true"`
+	// Input steps feeding into this step. Expandable via include[]=in_steps.
+	InSteps *List[ProductionStep] `json:"in_steps" expandable:"true"`
+	// Output steps this step feeds into. Expandable via include[]=out_steps.
+	OutSteps *List[ProductionStep] `json:"out_steps" expandable:"true"`
+	// Department. Expandable via include[]=department.
+	Department *Department `json:"department" expandable:"true"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last updated timestamp.
 	UpdatedAt time.Time `json:"updated_at" validate:"required"`
 }
 
-// Minimal production step reference.
-type ProductionStepRef struct {
-	// Production step ID.
-	ID string `json:"id" validate:"required"`
-	// Resource type identifier.
-	Object constants.ObjectType `json:"object" validate:"required,enum=production_step"`
-	// Display name.
-	Name string `json:"name" validate:"required"`
-}
-
-// Scanning station reference on a production step.
-type ProductionStepScanStation struct {
-	// Scanning station ID.
-	ID string `json:"id" validate:"required"`
-	// Resource type identifier.
-	Object constants.ObjectType `json:"object" validate:"required,enum=scanning_station"`
-	// Display name.
-	Name string `json:"name" validate:"required"`
-}
-
-// Department reference on a production step.
-type ProductionStepDepartment struct {
-	// Department ID.
-	ID string `json:"id" validate:"required"`
-	// Resource type identifier.
-	Object constants.ObjectType `json:"object" validate:"required,enum=department"`
-}
-
-// Machine reference on a production step.
-type ProductionStepMachine struct {
-	// Machine ID.
-	ID string `json:"id" validate:"required"`
-	// Resource type identifier.
-	Object constants.ObjectType `json:"object" validate:"required,enum=machine"`
-	// Display name.
-	Name string `json:"name" validate:"required"`
-}
-
 var SampleProductionStep = &ProductionStep{
-	ID:             SampleProductionStepID,
-	Object:         constants.ObjectTypeProductionStep,
-	Name:           "Final Assembly",
-	LevelingFactor: "1.000000000000000000000000000000",
-	Allowances:     "0.000000000000000000000000000000",
-	LaborRate:      SampleRate,
-	LaborTime:      SampleRate,
-	OverheadRate:   SampleRate,
-	Production:     SampleProductionOutput,
-	Consumptions:   []Consumption{*SampleConsumption},
-	Machines:       []ProductionStepMachine{},
-	InSteps:        []ProductionStepRef{},
-	OutSteps:       []ProductionStepRef{},
-	CreatedAt:      timeutil.TimestampToTime(sampleCreatedAtTimestamp),
-	UpdatedAt:      timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
+	ID:              SampleProductionStepID,
+	Object:          constants.ObjectTypeProductionStep,
+	Name:            "Final Assembly",
+	LevelingFactor:  "1.000000000000000000000000000000",
+	Allowances:      "0.000000000000000000000000000000",
+	LaborRate:       SampleRate,
+	LaborTime:       SampleRate,
+	OverheadRate:    SampleRate,
+	Production:      SampleProductionOutput,
+	Consumptions:    NewList([]Consumption{*SampleConsumption}, PageInfo{}),
+	Machines:        NewList([]Machine{*SampleMachine}, PageInfo{}),
+	ScanningStation: SampleScanningStation,
+	Department:      SampleDepartment,
+	InSteps:         NewList([]ProductionStep{}, PageInfo{}),
+	OutSteps:        NewList([]ProductionStep{}, PageInfo{}),
+	CreatedAt:       timeutil.TimestampToTime(sampleCreatedAtTimestamp),
+	UpdatedAt:       timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }
 
 func (*ProductionStep) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleProductionStep)
-}
-
-var SampleProductionStepRef = &ProductionStepRef{
-	ID:     SampleProductionStepID,
-	Object: constants.ObjectTypeProductionStep,
-	Name:   "Final Assembly",
-}
-
-func (*ProductionStepRef) SchemaExample() any {
-	return apiexample.ValidateAndMarshalToMap(SampleProductionStepRef)
-}
-
-func (*ProductionStepScanStation) SchemaExample() any {
-	return apiexample.ValidateAndMarshalToMap(&ProductionStepScanStation{
-		ID:     SampleScanningStationID,
-		Object: constants.ObjectTypeScanningStation,
-		Name:   SampleScanningStationName,
-	})
-}
-
-func (*ProductionStepDepartment) SchemaExample() any {
-	return apiexample.ValidateAndMarshalToMap(&ProductionStepDepartment{
-		ID:     SampleDepartmentID,
-		Object: constants.ObjectTypeDepartment,
-	})
-}
-
-func (*ProductionStepMachine) SchemaExample() any {
-	return apiexample.ValidateAndMarshalToMap(&ProductionStepMachine{
-		ID:     SampleMachineID,
-		Object: constants.ObjectTypeMachine,
-		Name:   "CNC Router",
-	})
 }

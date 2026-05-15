@@ -3,6 +3,7 @@
 package api_test
 
 import (
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -25,12 +26,14 @@ func assertQuantityInfoShape(t *testing.T, qi map[string]any, label string) {
 
 func TestItemInventory_Get_ResponseShape(t *testing.T) {
 	t.Parallel()
-	status, body, err := apiClient.GetListRaw(itemsPath+"/"+SeedItemID+"/inventory", nil)
+	status, body, err := apiClient.GetListRaw(itemsPath+"/"+SeedItemID+"/inventory", url.Values{
+		"include": {"on_hand", "reserved", "available_to_promise", "short"},
+	})
 	require.NoError(t, err)
 	requireStatus(t, 200, status, body)
 
 	got := parseJSON(body)
-	assertObjectField(t, got, "item")
+	assertObjectField(t, got, "item_inventory")
 	assertQuantityInfoShape(t, jsonObject(got, "on_hand"), "on_hand")
 	assertQuantityInfoShape(t, jsonObject(got, "reserved"), "reserved")
 	assertQuantityInfoShape(t, jsonObject(got, "available_to_promise"), "available_to_promise")

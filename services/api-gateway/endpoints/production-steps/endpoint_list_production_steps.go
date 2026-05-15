@@ -7,6 +7,7 @@ import (
 
 	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
+	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
 )
 
@@ -46,5 +47,21 @@ func (e *ListProductionStepsEndpoint) Materialize() *apiendpoint.APIEndpoint[*Li
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListProductionStepsRequest) (*apiresource.List[apiresource.ProductionStep], *apierror.APIError) {
 			return svc.(ProductionStepSvc).ListProductionSteps
 		},
+		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
+			ObjectType: constants.ObjectTypeProductionStep,
+			Fields: []string{
+				"production",
+				"production.produced_item",
+				"consumptions",
+				"consumptions.consumed_item",
+				"consumptions.quantity",
+				"consumptions.waste_quantity",
+				"machines",
+				"scanning_station",
+				"department",
+				"in_steps",
+				"out_steps",
+			},
+		}),
 	}
 }

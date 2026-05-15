@@ -10,7 +10,7 @@ type ProductionFlow struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=production_flow"`
 	// Steps in the production flow graph.
-	Steps []ProductionFlowStep `json:"steps" validate:"required"`
+	Steps *List[ProductionFlowStep] `json:"steps" validate:"required"`
 }
 
 // ProductionFlowStep is a step in the production flow.
@@ -21,16 +21,20 @@ type ProductionFlowStep struct {
 	Object constants.ObjectType `json:"object" validate:"required,enum=production_step"`
 	// Production step name.
 	Name string `json:"name" validate:"required"`
-	// Production output for this step.
-	Production *ProductionFlowProduction `json:"production" validate:"required"`
-	// Consumptions (inputs) for this step.
-	Consumptions []ProductionFlowConsumption `json:"consumptions" validate:"required"`
-	// Steps that feed into this step.
-	InSteps []ProductionFlowStepRef `json:"in_steps" validate:"required"`
-	// Steps that this step feeds into.
-	OutSteps []ProductionFlowStepRef `json:"out_steps" validate:"required"`
-	// Scanning station, if assigned.
-	ScanningStation *ProductionFlowStepRef `json:"scanning_station"`
+	// Production output for this step. Expandable via include[]=steps.production.
+	Production *ProductionFlowProduction `json:"production" expandable:"true"`
+	// Consumptions (inputs) for this step. Expandable via include[]=steps.consumptions.
+	Consumptions *List[ProductionFlowConsumption] `json:"consumptions" expandable:"true"`
+	// Steps that feed into this step. Expandable via include[]=steps.in_steps.
+	InSteps *List[ProductionStep] `json:"in_steps" expandable:"true"`
+	// Steps that this step feeds into. Expandable via include[]=steps.out_steps.
+	OutSteps *List[ProductionStep] `json:"out_steps" expandable:"true"`
+	// Machines assigned to this step. Expandable via include[]=steps.machines.
+	Machines *List[Machine] `json:"machines" expandable:"true"`
+	// Department for this step. Expandable via include[]=steps.department.
+	Department *Department `json:"department" expandable:"true"`
+	// Scanning station, if assigned. Expandable via include[]=steps.scanning_station.
+	ScanningStation *ScanningStation `json:"scanning_station" expandable:"true"`
 	// Leveling factor as a decimal string.
 	LevelingFactor string `json:"leveling_factor" validate:"required" format:"decimal"`
 	// Allowances as a decimal string.
@@ -49,8 +53,8 @@ type ProductionFlowProduction struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=production"`
-	// Produced item.
-	Item *ProductionFlowItemRef `json:"item" validate:"required"`
+	// Produced item. Expandable via include[]=produced_item.
+	ProducedItem *Item `json:"produced_item" expandable:"true"`
 	// Produced quantity.
 	Quantity *Quantity `json:"quantity" validate:"required"`
 }
@@ -61,8 +65,8 @@ type ProductionFlowConsumption struct {
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=consumption"`
-	// Consumed item.
-	Item *ProductionFlowItemRef `json:"item" validate:"required"`
+	// Consumed item. Expandable via include[]=consumed_item.
+	ConsumedItem *Item `json:"consumed_item" expandable:"true"`
 	// Consumed quantity.
 	Quantity *Quantity `json:"quantity" validate:"required"`
 	// Waste quantity.
@@ -71,50 +75,21 @@ type ProductionFlowConsumption struct {
 	Instructions *string `json:"instructions"`
 }
 
-// ProductionFlowStepRef is a lightweight reference to a production step.
-type ProductionFlowStepRef struct {
-	// ID.
-	ID string `json:"id" validate:"required"`
-	// Resource type identifier.
-	Object constants.ObjectType `json:"object" validate:"required"`
-}
-
-// ProductionFlowItemRef is a lightweight reference to an item.
-type ProductionFlowItemRef struct {
-	// Item ID.
-	ID string `json:"id" validate:"required"`
-	// Resource type identifier.
-	Object constants.ObjectType `json:"object" validate:"required,enum=item"`
-	// Item SKU.
-	SKU string `json:"sku" validate:"required"`
-}
-
 // --- Sample data ---
 
 var sampleFlowInstructions = "Mix with water before adding"
 
-var SampleProductionFlowStepRef = &ProductionFlowStepRef{
-	ID:     SampleProductionStepID,
-	Object: constants.ObjectTypeProductionStep,
-}
-
-var SampleProductionFlowItemRef = &ProductionFlowItemRef{
-	ID:     SampleItemID,
-	Object: constants.ObjectTypeItem,
-	SKU:    SampleItemSKU,
-}
-
 var SampleProductionFlowProduction = &ProductionFlowProduction{
-	ID:       "pn_01jm4r6700f8nwq3v5hx2d9ktp",
-	Object:   constants.ObjectTypeProduction,
-	Item:     SampleProductionFlowItemRef,
-	Quantity: SampleQuantity,
+	ID:           "pn_01jm4r6700f8nwq3v5hx2d9ktp",
+	Object:       constants.ObjectTypeProduction,
+	ProducedItem: SampleItem,
+	Quantity:     SampleQuantity,
 }
 
 var SampleProductionFlowConsumption = ProductionFlowConsumption{
 	ID:            SampleConsumptionID,
 	Object:        constants.ObjectTypeConsumption,
-	Item:          SampleProductionFlowItemRef,
+	ConsumedItem:  SampleItem,
 	Quantity:      SampleQuantity,
 	WasteQuantity: SampleQuantity,
 	Instructions:  &sampleFlowInstructions,
@@ -125,9 +100,11 @@ var SampleProductionFlowStep = ProductionFlowStep{
 	Object:         constants.ObjectTypeProductionStep,
 	Name:           "Final Assembly",
 	Production:     SampleProductionFlowProduction,
-	Consumptions:   []ProductionFlowConsumption{SampleProductionFlowConsumption},
-	InSteps:        []ProductionFlowStepRef{*SampleProductionFlowStepRef},
-	OutSteps:       []ProductionFlowStepRef{},
+	Consumptions:   NewList([]ProductionFlowConsumption{SampleProductionFlowConsumption}, PageInfo{}),
+	InSteps:        NewList([]ProductionStep{}, PageInfo{}),
+	OutSteps:       NewList([]ProductionStep{}, PageInfo{}),
+	Machines:       NewList([]Machine{*SampleMachine}, PageInfo{}),
+	Department:     SampleDepartment,
 	LevelingFactor: "1.000000000000000000000000000000",
 	Allowances:     "0.000000000000000000000000000000",
 	LaborRate:      SampleRate,
@@ -137,7 +114,7 @@ var SampleProductionFlowStep = ProductionFlowStep{
 
 var SampleProductionFlow = &ProductionFlow{
 	Object: constants.ObjectTypeProductionFlow,
-	Steps:  []ProductionFlowStep{SampleProductionFlowStep},
+	Steps:  NewList([]ProductionFlowStep{SampleProductionFlowStep}, PageInfo{}),
 }
 
 func (*ProductionFlow) SchemaExample() any {
@@ -154,12 +131,4 @@ func (*ProductionFlowProduction) SchemaExample() any {
 
 func (*ProductionFlowConsumption) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(&SampleProductionFlowConsumption)
-}
-
-func (*ProductionFlowStepRef) SchemaExample() any {
-	return apiexample.ValidateAndMarshalToMap(SampleProductionFlowStepRef)
-}
-
-func (*ProductionFlowItemRef) SchemaExample() any {
-	return apiexample.ValidateAndMarshalToMap(SampleProductionFlowItemRef)
 }

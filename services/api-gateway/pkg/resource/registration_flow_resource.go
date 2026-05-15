@@ -32,11 +32,11 @@ type RegistrationFlow struct {
 	// Display name.
 	Name string `json:"name" validate:"required"`
 	// Customer group options available in this flow.
-	CustomerGroupOptions []RegistrationFlowOption `json:"customer_group_options" validate:"required"`
+	CustomerGroupOptions *List[RegistrationFlowOption] `json:"customer_group_options" validate:"required"`
 	// Payment term options available in this flow.
-	PaymentTermOptions []RegistrationFlowOption `json:"payment_term_options" validate:"required"`
+	PaymentTermOptions *List[RegistrationFlowOption] `json:"payment_term_options" validate:"required"`
 	// Shipping term options available in this flow.
-	ShippingTermOptions []RegistrationFlowOption `json:"shipping_term_options" validate:"required"`
+	ShippingTermOptions *List[RegistrationFlowOption] `json:"shipping_term_options" validate:"required"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last updated timestamp.
@@ -53,9 +53,9 @@ var SampleRegistrationFlow = &RegistrationFlow{
 	ID:                   SampleRegistrationFlowID,
 	Object:               constants.ObjectTypeRegistrationFlow,
 	Name:                 SampleRegistrationFlowName,
-	CustomerGroupOptions: []RegistrationFlowOption{SampleRegistrationFlowOption},
-	PaymentTermOptions:   []RegistrationFlowOption{SampleRegistrationFlowOption},
-	ShippingTermOptions:  []RegistrationFlowOption{SampleRegistrationFlowOption},
+	CustomerGroupOptions: NewList([]RegistrationFlowOption{SampleRegistrationFlowOption}, PageInfo{}),
+	PaymentTermOptions:   NewList([]RegistrationFlowOption{SampleRegistrationFlowOption}, PageInfo{}),
+	ShippingTermOptions:  NewList([]RegistrationFlowOption{SampleRegistrationFlowOption}, PageInfo{}),
 	CreatedAt:            timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt:            timeutil.TimestampToTime(sampleUpdatedAtTimestamp),
 }

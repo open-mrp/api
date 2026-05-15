@@ -1189,3 +1189,14 @@ func (r *salesOrderRepoImpl) MarkUnfulfilled(ctx context.Context, accountID, sal
 
 	return nil
 }
+
+func (r *salesOrderRepoImpl) HasShippedShipment(ctx context.Context, salesOrderID string) (bool, *apierror.APIError) {
+	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.has_shipped_shipment")
+	defer span.End()
+
+	result, err := r.queries.HasShippedShipmentForSalesOrder(ctx, salesOrderID)
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return false, tracing.Trace(span, apiErr)
+	}
+	return result, nil
+}

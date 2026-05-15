@@ -195,7 +195,11 @@ fmt: ## Format Go source code and Terraform
 		goimports -w .; \
 	fi
 	@echo "Formatting Terraform..."
-	@terraform -chdir=infra/production/terraform fmt
+	@if command -v terraform >/dev/null 2>&1; then \
+		terraform -chdir=infra/production/terraform fmt; \
+	else \
+		echo "Terraform not found, skipping Terraform formatting"; \
+	fi
 
 stripe-webhook: ## Run the Stripe webhook listener
 	@stripe listen --forward-to localhost:8081/v1/webhooks/stripe

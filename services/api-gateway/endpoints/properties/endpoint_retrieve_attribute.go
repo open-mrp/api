@@ -17,12 +17,12 @@ type RetrieveAttributeRequest struct {
 	AttributeID string `path:"id" validate:"required"`
 }
 
+// Returns an attribute by ID within a property.
 type RetrieveAttributeEndpoint struct{}
 
 func (e *RetrieveAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveAttributeRequest, *apiresource.Attribute] {
-	return &apiendpoint.APIEndpoint[*RetrieveAttributeRequest, *apiresource.Attribute]{
+	return (&apiendpoint.APIEndpoint[*RetrieveAttributeRequest, *apiresource.Attribute]{
 		Title:             "Retrieve Attribute",
-		Description:       "Returns an attribute by ID within a property.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/properties/{property_id}/attributes/{id}",
@@ -34,5 +34,5 @@ func (e *RetrieveAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retr
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveAttributeRequest) (*apiresource.Attribute, *apierror.APIError) {
 			return svc.(PropertySvc).GetAttribute
 		},
-	}
+	}).WithDocSource(e)
 }

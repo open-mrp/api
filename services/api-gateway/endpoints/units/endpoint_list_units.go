@@ -19,12 +19,12 @@ type ListUnitsRequest struct {
 	UnitGroupIDs []string `query:"unit_group_ids"`
 }
 
+// Returns a paginated list of units for the current account, including both account-owned and global system units.
 type ListUnitsEndpoint struct{}
 
 func (e *ListUnitsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListUnitsRequest, *apiresource.List[apiresource.Unit]] {
-	return &apiendpoint.APIEndpoint[*ListUnitsRequest, *apiresource.List[apiresource.Unit]]{
+	return (&apiendpoint.APIEndpoint[*ListUnitsRequest, *apiresource.List[apiresource.Unit]]{
 		Title:             "List Units",
-		Description:       "Returns a paginated list of units for the current account, including both account-owned and global system units.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/units",
@@ -40,5 +40,5 @@ func (e *ListUnitsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListUnitsReq
 			ObjectType: constants.ObjectTypeUnit,
 			Fields:     []string{"owner", "owner.account"},
 		}),
-	}
+	}).WithDocSource(e)
 }

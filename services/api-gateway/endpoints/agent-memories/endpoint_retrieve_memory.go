@@ -15,12 +15,12 @@ type RetrieveMemoryRequest struct {
 	ID string `path:"id" validate:"required"`
 }
 
+// Returns an agent memory by ID.
 type RetrieveMemoryEndpoint struct{}
 
 func (e *RetrieveMemoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveMemoryRequest, *apiresource.AgentMemory] {
-	return &apiendpoint.APIEndpoint[*RetrieveMemoryRequest, *apiresource.AgentMemory]{
+	return (&apiendpoint.APIEndpoint[*RetrieveMemoryRequest, *apiresource.AgentMemory]{
 		Title:             "Retrieve Agent Memory",
-		Description:       "Returns an agent memory by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/ai/memories/{id}",
@@ -32,5 +32,5 @@ func (e *RetrieveMemoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retriev
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveMemoryRequest) (*apiresource.AgentMemory, *apierror.APIError) {
 			return svc.(AgentMemorySvc).GetMemory
 		},
-	}
+	}).WithDocSource(e)
 }

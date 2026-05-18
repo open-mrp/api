@@ -60,12 +60,12 @@ func (*RegisterCustomerRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleRegisterCustomerRequest)
 }
 
+// Registers a customer through a registration flow.
 type RegisterCustomerEndpoint struct{}
 
 func (e *RegisterCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*RegisterCustomerRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*RegisterCustomerRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*RegisterCustomerRequest, *apiresource.EmptyResource]{
 		Title:             "Register Customer",
-		Description:       "Registers a customer through a registration flow.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/customers/registration",
@@ -77,5 +77,5 @@ func (e *RegisterCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*Regis
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RegisterCustomerRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(RegistrationFlowSvc).RegisterCustomer
 		},
-	}
+	}).WithDocSource(e)
 }

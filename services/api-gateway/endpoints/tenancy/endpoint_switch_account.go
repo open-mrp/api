@@ -24,12 +24,12 @@ func (*SwitchAccountRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleSwitchAccountRequest)
 }
 
+// Switches the authenticated user's active account and returns the updated tenancy context.
 type SwitchAccountEndpoint struct{}
 
 func (e *SwitchAccountEndpoint) Materialize() *apiendpoint.APIEndpoint[*SwitchAccountRequest, *apiresource.Tenancy] {
-	return &apiendpoint.APIEndpoint[*SwitchAccountRequest, *apiresource.Tenancy]{
+	return (&apiendpoint.APIEndpoint[*SwitchAccountRequest, *apiresource.Tenancy]{
 		Title:             "Switch Account",
-		Description:       "Switches the authenticated user's active account and returns the updated tenancy context.",
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/me/tenancy",
@@ -44,5 +44,5 @@ func (e *SwitchAccountEndpoint) Materialize() *apiendpoint.APIEndpoint[*SwitchAc
 		Extras: apiendpoint.APIEndpointExtras{
 			SkipRequestLogging: true,
 		},
-	}
+	}).WithDocSource(e)
 }

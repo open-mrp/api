@@ -17,12 +17,12 @@ type ListReceivablesRequest struct {
 	CutoffDate *time.Time `query:"cutoff_date"`
 }
 
+// Returns a paginated list of receivable entries for the current account.
 type ListReceivablesEndpoint struct{}
 
 func (e *ListReceivablesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListReceivablesRequest, *apiresource.List[apiresource.ReceivableEntry]] {
-	return &apiendpoint.APIEndpoint[*ListReceivablesRequest, *apiresource.List[apiresource.ReceivableEntry]]{
+	return (&apiendpoint.APIEndpoint[*ListReceivablesRequest, *apiresource.List[apiresource.ReceivableEntry]]{
 		Title:             "List Receivables",
-		Description:       "Returns a paginated list of receivable entries for the current account.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/finance/receivables",
@@ -34,5 +34,5 @@ func (e *ListReceivablesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListRe
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListReceivablesRequest) (*apiresource.List[apiresource.ReceivableEntry], *apierror.APIError) {
 			return svc.(ReceivableSvc).ListReceivables
 		},
-	}
+	}).WithDocSource(e)
 }

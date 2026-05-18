@@ -35,12 +35,12 @@ func (*CreateServiceLevelRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateServiceLevelRequest)
 }
 
+// Creates a service level for a carrier.
 type CreateServiceLevelEndpoint struct{}
 
 func (e *CreateServiceLevelEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateServiceLevelRequest, *apiresource.ServiceLevel] {
-	return &apiendpoint.APIEndpoint[*CreateServiceLevelRequest, *apiresource.ServiceLevel]{
+	return (&apiendpoint.APIEndpoint[*CreateServiceLevelRequest, *apiresource.ServiceLevel]{
 		Title:             "Create Service Level",
-		Description:       "Creates a service level for a carrier.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/carriers/{carrier_id}/service-levels",
@@ -56,5 +56,5 @@ func (e *CreateServiceLevelEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cre
 			ObjectType: constants.ObjectTypeServiceLevel,
 			Fields:     []string{"owner", "owner.account"},
 		}),
-	}
+	}).WithDocSource(e)
 }

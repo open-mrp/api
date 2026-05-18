@@ -34,12 +34,12 @@ func (*CreateDepartmentRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateDepartmentRequest)
 }
 
+// Creates a department.
 type CreateDepartmentEndpoint struct{}
 
 func (e *CreateDepartmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateDepartmentRequest, *apiresource.Department] {
-	return &apiendpoint.APIEndpoint[*CreateDepartmentRequest, *apiresource.Department]{
+	return (&apiendpoint.APIEndpoint[*CreateDepartmentRequest, *apiresource.Department]{
 		Title:             "Create Department",
-		Description:       "Creates a department.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/departments",
@@ -54,5 +54,5 @@ func (e *CreateDepartmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*Creat
 		LocationFunc: func(resp *apiresource.Department) string {
 			return "/v1/operations/departments/" + resp.ID
 		},
-	}
+	}).WithDocSource(e)
 }

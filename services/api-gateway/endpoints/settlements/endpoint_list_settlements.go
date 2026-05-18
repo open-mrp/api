@@ -23,12 +23,13 @@ type ListSettlementsRequest struct {
 }
 
 // TODO: stop returning SettlementSummary; return the full Settlement apiresource and use proper includes values to control expansion.
+
+// Returns a paginated list of settlements for the current account.
 type ListSettlementsEndpoint struct{}
 
 func (e *ListSettlementsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSettlementsRequest, *apiresource.List[apiresource.SettlementSummary]] {
-	return &apiendpoint.APIEndpoint[*ListSettlementsRequest, *apiresource.List[apiresource.SettlementSummary]]{
+	return (&apiendpoint.APIEndpoint[*ListSettlementsRequest, *apiresource.List[apiresource.SettlementSummary]]{
 		Title:             "List Settlements",
-		Description:       "Returns a paginated list of settlements for the current account.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/finance/settlements",
@@ -40,5 +41,5 @@ func (e *ListSettlementsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSe
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListSettlementsRequest) (*apiresource.List[apiresource.SettlementSummary], *apierror.APIError) {
 			return svc.(SettlementSvc).ListSettlements
 		},
-	}
+	}).WithDocSource(e)
 }

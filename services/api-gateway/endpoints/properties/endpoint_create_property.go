@@ -25,12 +25,12 @@ func (*CreatePropertyRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreatePropertyRequest)
 }
 
+// Creates a property.
 type CreatePropertyEndpoint struct{}
 
 func (e *CreatePropertyEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreatePropertyRequest, *apiresource.Property] {
-	return &apiendpoint.APIEndpoint[*CreatePropertyRequest, *apiresource.Property]{
+	return (&apiendpoint.APIEndpoint[*CreatePropertyRequest, *apiresource.Property]{
 		Title:             "Create Property",
-		Description:       "Creates a property.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/properties",
@@ -49,5 +49,5 @@ func (e *CreatePropertyEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateP
 		LocationFunc: func(resp *apiresource.Property) string {
 			return "/v1/catalog/properties/" + resp.ID
 		},
-	}
+	}).WithDocSource(e)
 }

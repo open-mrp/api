@@ -15,12 +15,12 @@ type RevokeAPIKeyRequest struct {
 	APIKeyID string `path:"id" validate:"required"`
 }
 
+// Revokes an API key, preventing it from being used to authenticate requests.
 type RevokeAPIKeyEndpoint struct{}
 
 func (e *RevokeAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*RevokeAPIKeyRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*RevokeAPIKeyRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*RevokeAPIKeyRequest, *apiresource.EmptyResource]{
 		Title:             "Revoke API Key",
-		Description:       "Revokes an API key, preventing it from being used to authenticate requests.",
 		Method:            http.MethodDelete,
 		Route:             "/v1/auth/api-keys/{id}",
 		ContentType:       "application/json",
@@ -32,5 +32,5 @@ func (e *RevokeAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*RevokeAPI
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RevokeAPIKeyRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(APIKeySvc).RevokeAPIKey
 		},
-	}
+	}).WithDocSource(e)
 }

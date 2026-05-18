@@ -18,12 +18,12 @@ type RetrieveSettlementRequest struct {
 	Includes []string `include:"true"`
 }
 
+// Returns a settlement by ID.
 type RetrieveSettlementEndpoint struct{}
 
 func (e *RetrieveSettlementEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveSettlementRequest, *apiresource.Settlement] {
-	return &apiendpoint.APIEndpoint[*RetrieveSettlementRequest, *apiresource.Settlement]{
+	return (&apiendpoint.APIEndpoint[*RetrieveSettlementRequest, *apiresource.Settlement]{
 		Title:             "Retrieve Settlement",
-		Description:       "Returns a settlement by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/finance/settlements/{id}",
@@ -39,5 +39,5 @@ func (e *RetrieveSettlementEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ret
 			ObjectType: constants.ObjectTypeSettlement,
 			Fields:     []string{"allocations"},
 		}),
-	}
+	}).WithDocSource(e)
 }

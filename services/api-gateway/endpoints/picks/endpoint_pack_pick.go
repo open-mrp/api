@@ -26,12 +26,12 @@ func (*PackPickRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(samplePackPickRequest)
 }
 
+// Packs a pick and creates a shipment from the picked lines.
 type PackPickEndpoint struct{}
 
 func (e *PackPickEndpoint) Materialize() *apiendpoint.APIEndpoint[*PackPickRequest, *apiresource.PackPickResponse] {
-	return &apiendpoint.APIEndpoint[*PackPickRequest, *apiresource.PackPickResponse]{
+	return (&apiendpoint.APIEndpoint[*PackPickRequest, *apiresource.PackPickResponse]{
 		Title:             "Pack Pick",
-		Description:       "Packs a pick and creates a shipment from the picked lines.",
 		Method:            http.MethodPost,
 		Route:             "/v1/operations/picks/{id}/actions/pack",
 		ContentType:       "application/json",
@@ -43,5 +43,5 @@ func (e *PackPickEndpoint) Materialize() *apiendpoint.APIEndpoint[*PackPickReque
 		ServiceHandler: func(svc any) func(ctx context.Context, req *PackPickRequest) (*apiresource.PackPickResponse, *apierror.APIError) {
 			return svc.(PickSvc).PackPick
 		},
-	}
+	}).WithDocSource(e)
 }

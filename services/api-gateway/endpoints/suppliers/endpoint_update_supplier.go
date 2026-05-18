@@ -40,12 +40,12 @@ func (*UpdateSupplierRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateSupplierRequest)
 }
 
+// Partially updates a supplier. Set update_note to true to update the note field, including clearing it.
 type UpdateSupplierEndpoint struct{}
 
 func (e *UpdateSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateSupplierRequest, *apiresource.SupplierDetail] {
-	return &apiendpoint.APIEndpoint[*UpdateSupplierRequest, *apiresource.SupplierDetail]{
+	return (&apiendpoint.APIEndpoint[*UpdateSupplierRequest, *apiresource.SupplierDetail]{
 		Title:             "Update Supplier",
-		Description:       "Partially updates a supplier. Set update_note to true to update the note field, including clearing it.",
 		Method:            http.MethodPatch,
 		Route:             "/v1/operations/suppliers/{id}",
 		ContentType:       "application/json",
@@ -57,5 +57,5 @@ func (e *UpdateSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateS
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateSupplierRequest) (*apiresource.SupplierDetail, *apierror.APIError) {
 			return svc.(SupplierSvc).UpdateSupplier
 		},
-	}
+	}).WithDocSource(e)
 }

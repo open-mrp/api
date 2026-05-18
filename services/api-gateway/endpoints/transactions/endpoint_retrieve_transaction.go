@@ -18,12 +18,12 @@ type RetrieveTransactionRequest struct {
 	Includes []string `include:"true"`
 }
 
+// Returns a transaction by ID.
 type RetrieveTransactionEndpoint struct{}
 
 func (e *RetrieveTransactionEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveTransactionRequest, *apiresource.TransactionDetail] {
-	return &apiendpoint.APIEndpoint[*RetrieveTransactionRequest, *apiresource.TransactionDetail]{
+	return (&apiendpoint.APIEndpoint[*RetrieveTransactionRequest, *apiresource.TransactionDetail]{
 		Title:             "Retrieve Transaction",
-		Description:       "Returns a transaction by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/finance/transactions/{id}",
@@ -39,5 +39,5 @@ func (e *RetrieveTransactionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Re
 			ObjectType: constants.ObjectTypeTransaction,
 			Fields:     []string{"allocations", "customer", "responsible_user"},
 		}),
-	}
+	}).WithDocSource(e)
 }

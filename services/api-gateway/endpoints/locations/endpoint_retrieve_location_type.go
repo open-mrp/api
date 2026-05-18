@@ -15,12 +15,12 @@ type RetrieveLocationTypeRequest struct {
 	Identifier string `path:"id" validate:"required"`
 }
 
+// Returns a location type by ID or code.
 type RetrieveLocationTypeEndpoint struct{}
 
 func (e *RetrieveLocationTypeEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveLocationTypeRequest, *apiresource.LocationType] {
-	return &apiendpoint.APIEndpoint[*RetrieveLocationTypeRequest, *apiresource.LocationType]{
+	return (&apiendpoint.APIEndpoint[*RetrieveLocationTypeRequest, *apiresource.LocationType]{
 		Title:             "Retrieve Location Type",
-		Description:       "Returns a location type by ID or code.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/location-types/{id}",
@@ -32,5 +32,5 @@ func (e *RetrieveLocationTypeEndpoint) Materialize() *apiendpoint.APIEndpoint[*R
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveLocationTypeRequest) (*apiresource.LocationType, *apierror.APIError) {
 			return svc.(LocationSvc).GetLocationType
 		},
-	}
+	}).WithDocSource(e)
 }

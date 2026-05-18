@@ -39,12 +39,12 @@ func (*UpdateShippingTermRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateShippingTermRequest)
 }
 
+// Partially updates an account-owned shipping term. Default shipping terms cannot be updated.
 type UpdateShippingTermEndpoint struct{}
 
 func (e *UpdateShippingTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateShippingTermRequest, *apiresource.ShippingTerm] {
-	return &apiendpoint.APIEndpoint[*UpdateShippingTermRequest, *apiresource.ShippingTerm]{
+	return (&apiendpoint.APIEndpoint[*UpdateShippingTermRequest, *apiresource.ShippingTerm]{
 		Title:             "Update Shipping Term",
-		Description:       "Partially updates an account-owned shipping term. Default shipping terms cannot be updated.",
 		Method:            http.MethodPatch,
 		Route:             "/v1/operations/shipping-terms/{id}",
 		ContentType:       "application/json",
@@ -60,5 +60,5 @@ func (e *UpdateShippingTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upd
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateShippingTermRequest) (*apiresource.ShippingTerm, *apierror.APIError) {
 			return svc.(ShippingTermSvc).UpdateShippingTerm
 		},
-	}
+	}).WithDocSource(e)
 }

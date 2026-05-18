@@ -15,12 +15,12 @@ type RemoveChildAccountRequest struct {
 	ChildAccountID string `path:"child_account_id" validate:"required"`
 }
 
+// Removes a child account from the target account.
 type RemoveChildAccountEndpoint struct{}
 
 func (e *RemoveChildAccountEndpoint) Materialize() *apiendpoint.APIEndpoint[*RemoveChildAccountRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*RemoveChildAccountRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*RemoveChildAccountRequest, *apiresource.EmptyResource]{
 		Title:             "Remove Child Account",
-		Description:       "Removes a child account from the target account.",
 		Method:            http.MethodDelete,
 		Route:             "/v1/identity/child-accounts/{child_account_id}",
 		ContentType:       "application/json",
@@ -32,5 +32,5 @@ func (e *RemoveChildAccountEndpoint) Materialize() *apiendpoint.APIEndpoint[*Rem
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RemoveChildAccountRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(ChildAccountSvc).RemoveChildAccount
 		},
-	}
+	}).WithDocSource(e)
 }

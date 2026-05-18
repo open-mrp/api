@@ -87,12 +87,12 @@ func (*EstimateRateRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleEstimateRateRequest)
 }
 
+// Estimates a shipping rate for a given carrier, carrier option, addresses, and parcels.
 type EstimateRateEndpoint struct{}
 
 func (e *EstimateRateEndpoint) Materialize() *apiendpoint.APIEndpoint[*EstimateRateRequest, *apiresource.EstimateRateResult] {
-	return &apiendpoint.APIEndpoint[*EstimateRateRequest, *apiresource.EstimateRateResult]{
+	return (&apiendpoint.APIEndpoint[*EstimateRateRequest, *apiresource.EstimateRateResult]{
 		Title:             "Estimate Rate",
-		Description:       "Estimates a shipping rate for a given carrier, carrier option, addresses, and parcels.",
 		Method:            http.MethodPost,
 		Route:             "/v1/operations/shipments/actions/estimate-rate",
 		ContentType:       "application/json",
@@ -104,5 +104,5 @@ func (e *EstimateRateEndpoint) Materialize() *apiendpoint.APIEndpoint[*EstimateR
 		ServiceHandler: func(svc any) func(ctx context.Context, req *EstimateRateRequest) (*apiresource.EstimateRateResult, *apierror.APIError) {
 			return svc.(ShipmentSvc).EstimateRate
 		},
-	}
+	}).WithDocSource(e)
 }

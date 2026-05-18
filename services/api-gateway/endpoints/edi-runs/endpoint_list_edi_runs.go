@@ -16,12 +16,12 @@ type ListEDIRunsRequest struct {
 	HasSucceeded *bool `query:"has_succeeded"`
 }
 
+// Returns a paginated list of EDI runs for the target account.
 type ListEDIRunsEndpoint struct{}
 
 func (e *ListEDIRunsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListEDIRunsRequest, *apiresource.List[apiresource.EDIRun]] {
-	return &apiendpoint.APIEndpoint[*ListEDIRunsRequest, *apiresource.List[apiresource.EDIRun]]{
+	return (&apiendpoint.APIEndpoint[*ListEDIRunsRequest, *apiresource.List[apiresource.EDIRun]]{
 		Title:             "List EDI Runs",
-		Description:       "Returns a paginated list of EDI runs for the target account.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/edi-runs",
@@ -33,5 +33,5 @@ func (e *ListEDIRunsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListEDIRun
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListEDIRunsRequest) (*apiresource.List[apiresource.EDIRun], *apierror.APIError) {
 			return svc.(EDIRunSvc).ListEDIRuns
 		},
-	}
+	}).WithDocSource(e)
 }

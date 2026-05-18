@@ -36,12 +36,12 @@ func (*UpdateLocationRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateLocationRequest)
 }
 
+// Partially updates a location.
 type UpdateLocationEndpoint struct{}
 
 func (e *UpdateLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateLocationRequest, *apiresource.Location] {
-	return &apiendpoint.APIEndpoint[*UpdateLocationRequest, *apiresource.Location]{
+	return (&apiendpoint.APIEndpoint[*UpdateLocationRequest, *apiresource.Location]{
 		Title:             "Update Location",
-		Description:       "Partially updates a location.",
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/locations/{id}",
@@ -57,5 +57,5 @@ func (e *UpdateLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateL
 			ObjectType: constants.ObjectTypeLocation,
 			Fields:     []string{"parent", "children"},
 		}),
-	}
+	}).WithDocSource(e)
 }

@@ -30,12 +30,12 @@ type AnalyzeDeliveriesRequest struct {
 	OverridePromisedDates *bool `json:"override_promised_dates,omitempty"`
 }
 
+// Returns delivery performance statistics over a date range, including on-time rates, average delivery times, and time-to-first-shipment metrics.
 type AnalyzeDeliveriesEndpoint struct{}
 
 func (e *AnalyzeDeliveriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeDeliveriesRequest, *apiresource.AnalyzeDeliveriesResponse] {
-	return &apiendpoint.APIEndpoint[*AnalyzeDeliveriesRequest, *apiresource.AnalyzeDeliveriesResponse]{
+	return (&apiendpoint.APIEndpoint[*AnalyzeDeliveriesRequest, *apiresource.AnalyzeDeliveriesResponse]{
 		Title:             "Analyze Deliveries",
-		Description:       "Returns delivery performance statistics over a date range, including on-time rates, average delivery times, and time-to-first-shipment metrics.",
 		Method:            http.MethodPut,
 		Route:             "/v1/core/analytics/deliveries",
 		ContentType:       "application/json",
@@ -47,5 +47,5 @@ func (e *AnalyzeDeliveriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*Anal
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeDeliveriesRequest) (*apiresource.AnalyzeDeliveriesResponse, *apierror.APIError) {
 			return svc.(AnalyticsSvc).AnalyzeDeliveries
 		},
-	}
+	}).WithDocSource(e)
 }

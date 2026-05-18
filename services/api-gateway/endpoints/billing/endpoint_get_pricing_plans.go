@@ -9,12 +9,12 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
+// Returns a paginated list of available pricing plans with their limits and features.
 type GetPricingPlansEndpoint struct{}
 
 func (e *GetPricingPlansEndpoint) Materialize() *apiendpoint.APIEndpoint[*apiresource.PaginationRequest, *apiresource.List[apiresource.PricingPlan]] {
-	return &apiendpoint.APIEndpoint[*apiresource.PaginationRequest, *apiresource.List[apiresource.PricingPlan]]{
+	return (&apiendpoint.APIEndpoint[*apiresource.PaginationRequest, *apiresource.List[apiresource.PricingPlan]]{
 		Title:             "List Pricing Plans",
-		Description:       "Returns a paginated list of available pricing plans with their limits and features.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/billing/plans",
@@ -26,5 +26,5 @@ func (e *GetPricingPlansEndpoint) Materialize() *apiendpoint.APIEndpoint[*apires
 		ServiceHandler: func(svc any) func(ctx context.Context, req *apiresource.PaginationRequest) (*apiresource.List[apiresource.PricingPlan], *apierror.APIError) {
 			return svc.(BillingSvc).GetPricingPlans
 		},
-	}
+	}).WithDocSource(e)
 }

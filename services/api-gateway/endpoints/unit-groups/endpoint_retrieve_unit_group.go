@@ -16,12 +16,12 @@ type RetrieveUnitGroupRequest struct {
 	UnitGroupID string `path:"id" validate:"required"`
 }
 
+// Returns a unit group by ID.
 type RetrieveUnitGroupEndpoint struct{}
 
 func (e *RetrieveUnitGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveUnitGroupRequest, *apiresource.UnitGroup] {
-	return &apiendpoint.APIEndpoint[*RetrieveUnitGroupRequest, *apiresource.UnitGroup]{
+	return (&apiendpoint.APIEndpoint[*RetrieveUnitGroupRequest, *apiresource.UnitGroup]{
 		Title:             "Retrieve Unit Group",
-		Description:       "Returns a unit group by ID.",
 		Method:            http.MethodGet,
 		Route:             "/v1/catalog/unit-groups/{id}",
 		ContentType:       "application/json",
@@ -37,5 +37,5 @@ func (e *RetrieveUnitGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retr
 			ObjectType: constants.ObjectTypeUnitGroup,
 			Fields:     []string{"owner", "owner.account", "base_unit", "associated_units"},
 		}),
-	}
+	}).WithDocSource(e)
 }

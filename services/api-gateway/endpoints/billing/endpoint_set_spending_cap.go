@@ -26,12 +26,12 @@ func (*SetSpendingCapRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleSetSpendingCapRequest)
 }
 
+// Sets or removes the monthly agent spending cap for the account.
 type SetSpendingCapEndpoint struct{}
 
 func (e *SetSpendingCapEndpoint) Materialize() *apiendpoint.APIEndpoint[*SetSpendingCapRequest, *apiresource.SpendingCapResponse] {
-	return &apiendpoint.APIEndpoint[*SetSpendingCapRequest, *apiresource.SpendingCapResponse]{
+	return (&apiendpoint.APIEndpoint[*SetSpendingCapRequest, *apiresource.SpendingCapResponse]{
 		Title:             "Set Spending Cap",
-		Description:       "Sets or removes the monthly agent spending cap for the account.",
 		Method:            http.MethodPut,
 		Route:             "/v1/billing/spending-cap",
 		ContentType:       "application/json",
@@ -43,5 +43,5 @@ func (e *SetSpendingCapEndpoint) Materialize() *apiendpoint.APIEndpoint[*SetSpen
 		ServiceHandler: func(svc any) func(ctx context.Context, req *SetSpendingCapRequest) (*apiresource.SpendingCapResponse, *apierror.APIError) {
 			return svc.(BillingSvc).SetSpendingCap
 		},
-	}
+	}).WithDocSource(e)
 }

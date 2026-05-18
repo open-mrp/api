@@ -24,12 +24,12 @@ func (*BulkDeletePurchaseOrdersRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleBulkDeletePurchaseOrdersRequest)
 }
 
+// Deletes multiple purchase orders.
 type BulkDeletePurchaseOrdersEndpoint struct{}
 
 func (e *BulkDeletePurchaseOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkDeletePurchaseOrdersRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*BulkDeletePurchaseOrdersRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*BulkDeletePurchaseOrdersRequest, *apiresource.EmptyResource]{
 		Title:             "Bulk Delete Purchase Orders",
-		Description:       "Deletes multiple purchase orders.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/purchase-orders/actions/bulk-delete",
@@ -41,5 +41,5 @@ func (e *BulkDeletePurchaseOrdersEndpoint) Materialize() *apiendpoint.APIEndpoin
 		ServiceHandler: func(svc any) func(ctx context.Context, req *BulkDeletePurchaseOrdersRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(PurchaseOrderSvc).BulkDeletePurchaseOrders
 		},
-	}
+	}).WithDocSource(e)
 }

@@ -30,12 +30,12 @@ func (*MoveBatchesRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleMoveBatchesRequest)
 }
 
+// Moves batches to a production step at the specified scanning station.
 type MoveBatchesEndpoint struct{}
 
 func (e *MoveBatchesEndpoint) Materialize() *apiendpoint.APIEndpoint[*MoveBatchesRequest, *apiresource.Batch] {
-	return &apiendpoint.APIEndpoint[*MoveBatchesRequest, *apiresource.Batch]{
+	return (&apiendpoint.APIEndpoint[*MoveBatchesRequest, *apiresource.Batch]{
 		Title:             "Move Batches",
-		Description:       "Moves batches to a production step at the specified scanning station.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/batches/actions/move",
@@ -47,5 +47,5 @@ func (e *MoveBatchesEndpoint) Materialize() *apiendpoint.APIEndpoint[*MoveBatche
 		ServiceHandler: func(svc any) func(ctx context.Context, req *MoveBatchesRequest) (*apiresource.Batch, *apierror.APIError) {
 			return svc.(BatchSvc).MoveBatches
 		},
-	}
+	}).WithDocSource(e)
 }

@@ -33,12 +33,12 @@ type ListSalesOrdersRequest struct {
 	ExcludeInternalOrders bool `query:"exclude_internal_orders"`
 }
 
+// Returns a paginated list of sales orders for the current account.
 type ListSalesOrdersEndpoint struct{}
 
 func (e *ListSalesOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSalesOrdersRequest, *apiresource.List[apiresource.SalesOrderDetail]] {
-	return &apiendpoint.APIEndpoint[*ListSalesOrdersRequest, *apiresource.List[apiresource.SalesOrderDetail]]{
+	return (&apiendpoint.APIEndpoint[*ListSalesOrdersRequest, *apiresource.List[apiresource.SalesOrderDetail]]{
 		Title:             "List Sales Orders",
-		Description:       "Returns a paginated list of sales orders for the current account.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/sales-orders",
@@ -54,5 +54,5 @@ func (e *ListSalesOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSa
 			ObjectType: constants.ObjectTypeSalesOrder,
 			Fields:     []string{"customer"},
 		}),
-	}
+	}).WithDocSource(e)
 }

@@ -9,12 +9,12 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
+// Returns resource usage for the account, including seats, invoices, batches, sandboxes, and subscription details.
 type GetAccountUsageEndpoint struct{}
 
 func (e *GetAccountUsageEndpoint) Materialize() *apiendpoint.APIEndpoint[*apiresource.EmptyResource, *apiresource.AccountUsageResponse] {
-	return &apiendpoint.APIEndpoint[*apiresource.EmptyResource, *apiresource.AccountUsageResponse]{
+	return (&apiendpoint.APIEndpoint[*apiresource.EmptyResource, *apiresource.AccountUsageResponse]{
 		Title:             "Get Account Usage",
-		Description:       "Returns resource usage for the account, including seats, invoices, batches, sandboxes, and subscription details.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/billing/accounts/usage",
@@ -26,5 +26,5 @@ func (e *GetAccountUsageEndpoint) Materialize() *apiendpoint.APIEndpoint[*apires
 		ServiceHandler: func(svc any) func(ctx context.Context, req *apiresource.EmptyResource) (*apiresource.AccountUsageResponse, *apierror.APIError) {
 			return svc.(BillingSvc).GetAccountUsage
 		},
-	}
+	}).WithDocSource(e)
 }

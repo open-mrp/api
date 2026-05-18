@@ -25,12 +25,13 @@ type ListReceivingOrdersRequest struct {
 }
 
 // TODO: stop returning ReceivingOrderSummary; return the full ReceivingOrder apiresource and use proper includes values to control expansion.
+
+// Returns a paginated list of receiving orders for the current account.
 type ListReceivingOrdersEndpoint struct{}
 
 func (e *ListReceivingOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListReceivingOrdersRequest, *apiresource.List[apiresource.ReceivingOrderSummary]] {
-	return &apiendpoint.APIEndpoint[*ListReceivingOrdersRequest, *apiresource.List[apiresource.ReceivingOrderSummary]]{
+	return (&apiendpoint.APIEndpoint[*ListReceivingOrdersRequest, *apiresource.List[apiresource.ReceivingOrderSummary]]{
 		Title:             "List Receiving Orders",
-		Description:       "Returns a paginated list of receiving orders for the current account.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/receiving-orders",
@@ -42,5 +43,5 @@ func (e *ListReceivingOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*Li
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListReceivingOrdersRequest) (*apiresource.List[apiresource.ReceivingOrderSummary], *apierror.APIError) {
 			return svc.(ReceivingOrderSvc).ListReceivingOrders
 		},
-	}
+	}).WithDocSource(e)
 }

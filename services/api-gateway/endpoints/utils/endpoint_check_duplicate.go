@@ -28,12 +28,12 @@ func (*CheckDuplicateRequest) SchemaExample() any {
 	return exampleCheckDuplicateRequest
 }
 
+// Checks whether a record number already exists for the given type (invoice number, order number, or customer PO number).
 type CheckDuplicateEndpoint struct{}
 
 func (e *CheckDuplicateEndpoint) Materialize() *apiendpoint.APIEndpoint[*CheckDuplicateRequest, *apiresource.CheckDuplicateResult] {
-	return &apiendpoint.APIEndpoint[*CheckDuplicateRequest, *apiresource.CheckDuplicateResult]{
+	return (&apiendpoint.APIEndpoint[*CheckDuplicateRequest, *apiresource.CheckDuplicateResult]{
 		Title:             "Check Duplicate",
-		Description:       "Checks whether a record number already exists for the given type (invoice number, order number, or customer PO number).",
 		Method:            http.MethodPut,
 		Route:             "/v1/core/actions/check-duplicates",
 		ContentType:       "application/json",
@@ -45,5 +45,5 @@ func (e *CheckDuplicateEndpoint) Materialize() *apiendpoint.APIEndpoint[*CheckDu
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CheckDuplicateRequest) (*apiresource.CheckDuplicateResult, *apierror.APIError) {
 			return svc.(UtilsSvc).CheckDuplicate
 		},
-	}
+	}).WithDocSource(e)
 }

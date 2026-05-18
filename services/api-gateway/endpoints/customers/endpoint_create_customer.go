@@ -96,12 +96,12 @@ func (*CreateCustomerRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateCustomerRequest)
 }
 
+// Creates a customer account. Auto-generates a customer number if one is not provided.
 type CreateCustomerEndpoint struct{}
 
 func (e *CreateCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateCustomerRequest, *apiresource.Customer] {
-	return &apiendpoint.APIEndpoint[*CreateCustomerRequest, *apiresource.Customer]{
+	return (&apiendpoint.APIEndpoint[*CreateCustomerRequest, *apiresource.Customer]{
 		Title:             "Create Customer",
-		Description:       "Creates a customer account. Auto-generates a customer number if one is not provided.",
 		Method:            http.MethodPost,
 		Route:             "/v1/sales/customers",
 		ContentType:       "application/json",
@@ -138,5 +138,5 @@ func (e *CreateCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateC
 				"credit_limit",
 			},
 		}),
-	}
+	}).WithDocSource(e)
 }

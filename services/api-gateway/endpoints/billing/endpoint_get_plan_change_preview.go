@@ -15,12 +15,12 @@ type GetPlanProrationRequest struct {
 	PlanID string `path:"id" validate:"required"`
 }
 
+// Returns a proration preview for switching the account to a different pricing plan.
 type GetPlanChangePreviewEndpoint struct{}
 
 func (e *GetPlanChangePreviewEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetPlanProrationRequest, *apiresource.PlanChangeProration] {
-	return &apiendpoint.APIEndpoint[*GetPlanProrationRequest, *apiresource.PlanChangeProration]{
+	return (&apiendpoint.APIEndpoint[*GetPlanProrationRequest, *apiresource.PlanChangeProration]{
 		Title:             "Preview Plan Change",
-		Description:       "Returns a proration preview for switching the account to a different pricing plan.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/billing/plans/{id}/proration",
@@ -32,5 +32,5 @@ func (e *GetPlanChangePreviewEndpoint) Materialize() *apiendpoint.APIEndpoint[*G
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetPlanProrationRequest) (*apiresource.PlanChangeProration, *apierror.APIError) {
 			return svc.(BillingSvc).GetPlanChangePreview
 		},
-	}
+	}).WithDocSource(e)
 }

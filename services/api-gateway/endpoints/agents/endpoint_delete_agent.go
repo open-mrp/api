@@ -15,12 +15,12 @@ type DeleteAgentRequest struct {
 	AgentDefinitionID string `path:"id" validate:"required"`
 }
 
+// Soft-deletes a custom agent definition. System agents cannot be deleted.
 type DeleteAgentEndpoint struct{}
 
 func (e *DeleteAgentEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteAgentRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*DeleteAgentRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*DeleteAgentRequest, *apiresource.EmptyResource]{
 		Title:             "Delete Agent",
-		Description:       "Soft-deletes a custom agent definition. System agents cannot be deleted.",
 		Method:            http.MethodDelete,
 		Route:             "/v1/ai/agents/{id}",
 		ContentType:       "application/json",
@@ -32,5 +32,5 @@ func (e *DeleteAgentEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteAgen
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteAgentRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(AgentSvc).DeleteAgent
 		},
-	}
+	}).WithDocSource(e)
 }

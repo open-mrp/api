@@ -29,12 +29,12 @@ func (*CreateUserRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateUserRequest)
 }
 
+// Creates or associates a user with a registration session. If the session email matches an existing user, that user is associated; otherwise a new user is created.
 type CreateUserEndpoint struct{}
 
 func (e *CreateUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateUserRequest, *apiresource.CreateUserResponse] {
-	return &apiendpoint.APIEndpoint[*CreateUserRequest, *apiresource.CreateUserResponse]{
+	return (&apiendpoint.APIEndpoint[*CreateUserRequest, *apiresource.CreateUserResponse]{
 		Title:             "Create User for Registration",
-		Description:       "Creates or associates a user with a registration session. If the session email matches an existing user, that user is associated; otherwise a new user is created.",
 		Method:            http.MethodPost,
 		Route:             "/v1/auth/registration-sessions/{session_id}/users",
 		ContentType:       "application/json",
@@ -49,5 +49,5 @@ func (e *CreateUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateUserR
 		Extras: apiendpoint.APIEndpointExtras{
 			ShieldRequestBody: true,
 		},
-	}
+	}).WithDocSource(e)
 }

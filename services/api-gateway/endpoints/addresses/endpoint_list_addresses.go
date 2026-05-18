@@ -17,12 +17,12 @@ type ListAddressesRequest struct {
 	Type *constants.AddressType `query:"type"`
 }
 
+// Returns a paginated list of addresses.
 type ListAddressesEndpoint struct{}
 
 func (e *ListAddressesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAddressesRequest, *apiresource.List[apiresource.Address]] {
-	return &apiendpoint.APIEndpoint[*ListAddressesRequest, *apiresource.List[apiresource.Address]]{
+	return (&apiendpoint.APIEndpoint[*ListAddressesRequest, *apiresource.List[apiresource.Address]]{
 		Title:             "List Addresses",
-		Description:       "Returns a paginated list of addresses.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/addresses",
@@ -34,5 +34,5 @@ func (e *ListAddressesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAddr
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListAddressesRequest) (*apiresource.List[apiresource.Address], *apierror.APIError) {
 			return svc.(AddressSvc).ListAddresses
 		},
-	}
+	}).WithDocSource(e)
 }

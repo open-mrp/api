@@ -17,12 +17,12 @@ type RemoveItemCategoryPropertyRequest struct {
 	PropertyID string `path:"property_id" validate:"required"`
 }
 
+// Removes a property from an item category. Default system categories cannot be modified.
 type RemoveItemCategoryPropertyEndpoint struct{}
 
 func (e *RemoveItemCategoryPropertyEndpoint) Materialize() *apiendpoint.APIEndpoint[*RemoveItemCategoryPropertyRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*RemoveItemCategoryPropertyRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*RemoveItemCategoryPropertyRequest, *apiresource.EmptyResource]{
 		Title:             "Remove Item Category Property",
-		Description:       "Removes a property from an item category. Default system categories cannot be modified.",
 		Method:            http.MethodDelete,
 		Route:             "/v1/catalog/item-categories/{id}/properties/{property_id}",
 		ContentType:       "application/json",
@@ -34,5 +34,5 @@ func (e *RemoveItemCategoryPropertyEndpoint) Materialize() *apiendpoint.APIEndpo
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RemoveItemCategoryPropertyRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(ItemCategorySvc).RemoveItemCategoryProperty
 		},
-	}
+	}).WithDocSource(e)
 }

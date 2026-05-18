@@ -15,12 +15,12 @@ type RetrieveProductTypeRequest struct {
 	ProductTypeID string `path:"id" validate:"required"`
 }
 
+// Returns a product type by ID or code.
 type RetrieveProductTypeEndpoint struct{}
 
 func (e *RetrieveProductTypeEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveProductTypeRequest, *apiresource.ProductType] {
-	return &apiendpoint.APIEndpoint[*RetrieveProductTypeRequest, *apiresource.ProductType]{
+	return (&apiendpoint.APIEndpoint[*RetrieveProductTypeRequest, *apiresource.ProductType]{
 		Title:             "Retrieve Product Type",
-		Description:       "Returns a product type by ID or code.",
 		Method:            http.MethodGet,
 		Route:             "/v1/catalog/product-types/{id}",
 		ContentType:       "application/json",
@@ -32,5 +32,5 @@ func (e *RetrieveProductTypeEndpoint) Materialize() *apiendpoint.APIEndpoint[*Re
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveProductTypeRequest) (*apiresource.ProductType, *apierror.APIError) {
 			return svc.(ProductTypeSvc).GetProductType
 		},
-	}
+	}).WithDocSource(e)
 }

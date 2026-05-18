@@ -31,12 +31,12 @@ func (*UpdateMachineRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateMachineRequest)
 }
 
+// Partially updates a machine.
 type UpdateMachineEndpoint struct{}
 
 func (e *UpdateMachineEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateMachineRequest, *apiresource.Machine] {
-	return &apiendpoint.APIEndpoint[*UpdateMachineRequest, *apiresource.Machine]{
+	return (&apiendpoint.APIEndpoint[*UpdateMachineRequest, *apiresource.Machine]{
 		Title:             "Update Machine",
-		Description:       "Partially updates a machine.",
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/machines/{id}",
@@ -48,5 +48,5 @@ func (e *UpdateMachineEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateMa
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateMachineRequest) (*apiresource.Machine, *apierror.APIError) {
 			return svc.(MachineSvc).UpdateMachine
 		},
-	}
+	}).WithDocSource(e)
 }

@@ -40,12 +40,12 @@ type ListRequestLogsRequest struct {
 	IdempotencyKey *string `query:"idempotency_key"`
 }
 
+// Returns a paginated list of request logs.
 type ListRequestLogsEndpoint struct{}
 
 func (e *ListRequestLogsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListRequestLogsRequest, *apiresource.List[apiresource.RequestLog]] {
-	return &apiendpoint.APIEndpoint[*ListRequestLogsRequest, *apiresource.List[apiresource.RequestLog]]{
+	return (&apiendpoint.APIEndpoint[*ListRequestLogsRequest, *apiresource.List[apiresource.RequestLog]]{
 		Title:             "List Request Logs",
-		Description:       "Returns a paginated list of request logs.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/core/request-logs",
@@ -64,5 +64,5 @@ func (e *ListRequestLogsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListRe
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListRequestLogsRequest) (*apiresource.List[apiresource.RequestLog], *apierror.APIError) {
 			return svc.(RequestLogSvc).ListRequestLogs
 		},
-	}
+	}).WithDocSource(e)
 }

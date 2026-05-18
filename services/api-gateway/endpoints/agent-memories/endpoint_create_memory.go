@@ -40,12 +40,12 @@ func (*CreateMemoryRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateMemoryRequest)
 }
 
+// Creates an agent memory.
 type CreateMemoryEndpoint struct{}
 
 func (e *CreateMemoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateMemoryRequest, *apiresource.AgentMemory] {
-	return &apiendpoint.APIEndpoint[*CreateMemoryRequest, *apiresource.AgentMemory]{
+	return (&apiendpoint.APIEndpoint[*CreateMemoryRequest, *apiresource.AgentMemory]{
 		Title:             "Create Agent Memory",
-		Description:       "Creates an agent memory.",
 		Method:            http.MethodPost,
 		Route:             "/v1/ai/memories",
 		ContentType:       "application/json",
@@ -60,5 +60,5 @@ func (e *CreateMemoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateMem
 		LocationFunc: func(resp *apiresource.AgentMemory) string {
 			return "/v1/ai/memories/" + resp.ID
 		},
-	}
+	}).WithDocSource(e)
 }

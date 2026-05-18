@@ -33,12 +33,12 @@ func (*CreateRegistrationFlowRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateRegistrationFlowRequest)
 }
 
+// Creates a registration flow.
 type CreateRegistrationFlowEndpoint struct{}
 
 func (e *CreateRegistrationFlowEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateRegistrationFlowRequest, *apiresource.RegistrationFlow] {
-	return &apiendpoint.APIEndpoint[*CreateRegistrationFlowRequest, *apiresource.RegistrationFlow]{
+	return (&apiendpoint.APIEndpoint[*CreateRegistrationFlowRequest, *apiresource.RegistrationFlow]{
 		Title:             "Create Registration Flow",
-		Description:       "Creates a registration flow.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/registration-flows",
@@ -53,5 +53,5 @@ func (e *CreateRegistrationFlowEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		LocationFunc: func(resp *apiresource.RegistrationFlow) string {
 			return "/v1/sales/registration-flows/" + resp.ID
 		},
-	}
+	}).WithDocSource(e)
 }

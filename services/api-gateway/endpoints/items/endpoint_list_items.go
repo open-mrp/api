@@ -36,12 +36,12 @@ type ListItemsRequest struct {
 	CustomerIDs []string `query:"customer_ids"`
 }
 
+// Returns a paginated list of items.
 type ListItemsEndpoint struct{}
 
 func (e *ListItemsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListItemsRequest, *apiresource.List[apiresource.Item]] {
-	return &apiendpoint.APIEndpoint[*ListItemsRequest, *apiresource.List[apiresource.Item]]{
+	return (&apiendpoint.APIEndpoint[*ListItemsRequest, *apiresource.List[apiresource.Item]]{
 		Title:             "List Items",
-		Description:       "Returns a paginated list of items.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/items",
@@ -57,5 +57,5 @@ func (e *ListItemsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListItemsReq
 			ObjectType: constants.ObjectTypeItem,
 			Fields:     []string{"category", "unit_value", "unit_cost", "burn_rate", "attributes", "category.unit_group", "category.properties", "category.unit_group.base_unit", "category.unit_group.associated_units", "category.unit_group.associated_units.unit"},
 		}),
-	}
+	}).WithDocSource(e)
 }

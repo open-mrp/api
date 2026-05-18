@@ -15,12 +15,12 @@ type ListPropertiesRequest struct {
 	apiresource.PaginationRequest
 }
 
+// Returns a paginated list of properties for the target account.
 type ListPropertiesEndpoint struct{}
 
 func (e *ListPropertiesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPropertiesRequest, *apiresource.List[apiresource.Property]] {
-	return &apiendpoint.APIEndpoint[*ListPropertiesRequest, *apiresource.List[apiresource.Property]]{
+	return (&apiendpoint.APIEndpoint[*ListPropertiesRequest, *apiresource.List[apiresource.Property]]{
 		Title:             "List Properties",
-		Description:       "Returns a paginated list of properties for the target account.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/properties",
@@ -36,5 +36,5 @@ func (e *ListPropertiesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPro
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListPropertiesRequest) (*apiresource.List[apiresource.Property], *apierror.APIError) {
 			return svc.(PropertySvc).ListProperties
 		},
-	}
+	}).WithDocSource(e)
 }

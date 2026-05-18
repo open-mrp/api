@@ -27,12 +27,12 @@ func (*CreateAccountGroupProductLineAccessRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateAccountGroupProductLineAccessRequest)
 }
 
+// Creates product line access for an account group.
 type CreateAccountGroupProductLineAccessEndpoint struct{}
 
 func (e *CreateAccountGroupProductLineAccessEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAccountGroupProductLineAccessRequest, *apiresource.AccountGroupProductLineAccess] {
-	return &apiendpoint.APIEndpoint[*CreateAccountGroupProductLineAccessRequest, *apiresource.AccountGroupProductLineAccess]{
+	return (&apiendpoint.APIEndpoint[*CreateAccountGroupProductLineAccessRequest, *apiresource.AccountGroupProductLineAccess]{
 		Title:             "Create Account Group Product Line Access",
-		Description:       "Creates product line access for an account group.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/product-line-access/account-groups",
@@ -47,5 +47,5 @@ func (e *CreateAccountGroupProductLineAccessEndpoint) Materialize() *apiendpoint
 		LocationFunc: func(resp *apiresource.AccountGroupProductLineAccess) string {
 			return "/v1/sales/product-line-access/account-groups/" + resp.AccountGroup.ID
 		},
-	}
+	}).WithDocSource(e)
 }

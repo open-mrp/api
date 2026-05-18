@@ -19,12 +19,12 @@ type ListUsageRequest struct {
 	Cursor *string `query:"cursor"`
 }
 
+// Returns a paginated list of daily agent token usage records for the current account.
 type ListUsageEndpoint struct{}
 
 func (e *ListUsageEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListUsageRequest, *apiresource.List[apiresource.AgentTokenUsage]] {
-	return &apiendpoint.APIEndpoint[*ListUsageRequest, *apiresource.List[apiresource.AgentTokenUsage]]{
+	return (&apiendpoint.APIEndpoint[*ListUsageRequest, *apiresource.List[apiresource.AgentTokenUsage]]{
 		Title:             "List Agent Usage",
-		Description:       "Returns a paginated list of daily agent token usage records for the current account.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/ai/usage",
@@ -36,5 +36,5 @@ func (e *ListUsageEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListUsageReq
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListUsageRequest) (*apiresource.List[apiresource.AgentTokenUsage], *apierror.APIError) {
 			return svc.(AgentSvc).ListUsage
 		},
-	}
+	}).WithDocSource(e)
 }

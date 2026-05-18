@@ -54,12 +54,12 @@ func (*CreateMaterialRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateMaterialRequest)
 }
 
+// Creates a material.
 type CreateMaterialEndpoint struct{}
 
 func (e *CreateMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateMaterialRequest, *apiresource.Material] {
-	return &apiendpoint.APIEndpoint[*CreateMaterialRequest, *apiresource.Material]{
+	return (&apiendpoint.APIEndpoint[*CreateMaterialRequest, *apiresource.Material]{
 		Title:             "Create Material",
-		Description:       "Creates a material.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/materials",
@@ -78,5 +78,5 @@ func (e *CreateMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateM
 			ObjectType: constants.ObjectTypeMaterial,
 			Fields:     []string{"item", "item.category", "item.category.properties", "item.category.unit_group", "item.unit_value", "item.unit_cost", "item.burn_rate", "item.attributes"},
 		}),
-	}
+	}).WithDocSource(e)
 }

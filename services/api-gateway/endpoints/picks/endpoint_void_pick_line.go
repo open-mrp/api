@@ -17,12 +17,12 @@ type VoidPickLineRequest struct {
 	PickLineID string `path:"id" validate:"required"`
 }
 
+// Voids a pick line.
 type VoidPickLineEndpoint struct{}
 
 func (e *VoidPickLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*VoidPickLineRequest, *apiresource.PickLineDetail] {
-	return &apiendpoint.APIEndpoint[*VoidPickLineRequest, *apiresource.PickLineDetail]{
+	return (&apiendpoint.APIEndpoint[*VoidPickLineRequest, *apiresource.PickLineDetail]{
 		Title:             "Void Pick Line",
-		Description:       "Voids a pick line.",
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/picks/{pick_id}/lines/{id}/actions/void",
@@ -34,5 +34,5 @@ func (e *VoidPickLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*VoidPickL
 		ServiceHandler: func(svc any) func(ctx context.Context, req *VoidPickLineRequest) (*apiresource.PickLineDetail, *apierror.APIError) {
 			return svc.(PickSvc).VoidPickLine
 		},
-	}
+	}).WithDocSource(e)
 }

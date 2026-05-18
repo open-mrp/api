@@ -16,12 +16,12 @@ type RetrieveRunRequest struct {
 	AgentRunID string `path:"id" validate:"required"`
 }
 
+// Returns an agent run by ID.
 type RetrieveRunEndpoint struct{}
 
 func (e *RetrieveRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveRunRequest, *apiresource.AgentRun] {
-	return &apiendpoint.APIEndpoint[*RetrieveRunRequest, *apiresource.AgentRun]{
+	return (&apiendpoint.APIEndpoint[*RetrieveRunRequest, *apiresource.AgentRun]{
 		Title:             "Retrieve Run",
-		Description:       "Returns an agent run by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/ai/runs/{id}",
@@ -37,5 +37,5 @@ func (e *RetrieveRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveRu
 			ObjectType: constants.ObjectTypeAgentRun,
 			Fields:     []string{"actions", "definition", "steps", "definition.config", "definition.tools", "definition.role"},
 		}),
-	}
+	}).WithDocSource(e)
 }

@@ -15,12 +15,12 @@ type DeleteProductionRunRequest struct {
 	ProductionRunID string `path:"id" validate:"required"`
 }
 
+// Deletes a production run and its associated batches and order links.
 type DeleteProductionRunEndpoint struct{}
 
 func (e *DeleteProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteProductionRunRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*DeleteProductionRunRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*DeleteProductionRunRequest, *apiresource.EmptyResource]{
 		Title:             "Delete Production Run",
-		Description:       "Deletes a production run and its associated batches and order links.",
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/production-runs/{id}",
@@ -32,5 +32,5 @@ func (e *DeleteProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*De
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteProductionRunRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(ProductionRunSvc).DeleteProductionRun
 		},
-	}
+	}).WithDocSource(e)
 }

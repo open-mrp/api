@@ -24,12 +24,12 @@ type ListPartsRequest struct {
 	EndDate *time.Time `query:"end_date"`
 }
 
+// Returns a paginated list of parts for the current account.
 type ListPartsEndpoint struct{}
 
 func (e *ListPartsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPartsRequest, *apiresource.List[apiresource.Part]] {
-	return &apiendpoint.APIEndpoint[*ListPartsRequest, *apiresource.List[apiresource.Part]]{
+	return (&apiendpoint.APIEndpoint[*ListPartsRequest, *apiresource.List[apiresource.Part]]{
 		Title:             "List Parts",
-		Description:       "Returns a paginated list of parts for the current account.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/parts",
@@ -45,5 +45,5 @@ func (e *ListPartsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPartsReq
 			ObjectType: constants.ObjectTypePart,
 			Fields:     []string{"item", "item.category", "item.category.properties", "item.category.unit_group", "item.unit_value", "item.unit_cost", "item.burn_rate", "item.attributes"},
 		}),
-	}
+	}).WithDocSource(e)
 }

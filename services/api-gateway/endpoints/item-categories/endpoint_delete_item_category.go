@@ -15,12 +15,12 @@ type DeleteItemCategoryRequest struct {
 	ItemCategoryID string `path:"id" validate:"required"`
 }
 
+// Deletes an account-owned item category. Default system categories cannot be deleted.
 type DeleteItemCategoryEndpoint struct{}
 
 func (e *DeleteItemCategoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteItemCategoryRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*DeleteItemCategoryRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*DeleteItemCategoryRequest, *apiresource.EmptyResource]{
 		Title:             "Delete Item Category",
-		Description:       "Deletes an account-owned item category. Default system categories cannot be deleted.",
 		Method:            http.MethodDelete,
 		Route:             "/v1/catalog/item-categories/{id}",
 		ContentType:       "application/json",
@@ -32,5 +32,5 @@ func (e *DeleteItemCategoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Del
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteItemCategoryRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(ItemCategorySvc).DeleteItemCategory
 		},
-	}
+	}).WithDocSource(e)
 }

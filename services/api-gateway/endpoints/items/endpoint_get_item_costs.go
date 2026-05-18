@@ -15,12 +15,12 @@ type GetItemCostsRequest struct {
 	ItemID string `path:"id" validate:"required"`
 }
 
+// Returns the production cost breakdown for an item, including direct material, direct labor, overhead, and total costs.
 type GetItemCostsEndpoint struct{}
 
 func (e *GetItemCostsEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetItemCostsRequest, *apiresource.ItemCosts] {
-	return &apiendpoint.APIEndpoint[*GetItemCostsRequest, *apiresource.ItemCosts]{
+	return (&apiendpoint.APIEndpoint[*GetItemCostsRequest, *apiresource.ItemCosts]{
 		Title:             "Get Item Costs",
-		Description:       "Returns the production cost breakdown for an item, including direct material, direct labor, overhead, and total costs.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/items/{id}/costs",
@@ -32,5 +32,5 @@ func (e *GetItemCostsEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetItemCo
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetItemCostsRequest) (*apiresource.ItemCosts, *apierror.APIError) {
 			return svc.(ItemSvc).GetItemCosts
 		},
-	}
+	}).WithDocSource(e)
 }

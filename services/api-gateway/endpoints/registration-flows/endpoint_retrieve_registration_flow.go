@@ -15,12 +15,12 @@ type RetrieveRegistrationFlowRequest struct {
 	RegistrationFlowID string `path:"id" validate:"required"`
 }
 
+// Returns a registration flow by ID.
 type RetrieveRegistrationFlowEndpoint struct{}
 
 func (e *RetrieveRegistrationFlowEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveRegistrationFlowRequest, *apiresource.RegistrationFlow] {
-	return &apiendpoint.APIEndpoint[*RetrieveRegistrationFlowRequest, *apiresource.RegistrationFlow]{
+	return (&apiendpoint.APIEndpoint[*RetrieveRegistrationFlowRequest, *apiresource.RegistrationFlow]{
 		Title:             "Retrieve Registration Flow",
-		Description:       "Returns a registration flow by ID.",
 		Method:            http.MethodGet,
 		Route:             "/v1/sales/registration-flows/{id}",
 		ContentType:       "application/json",
@@ -32,5 +32,5 @@ func (e *RetrieveRegistrationFlowEndpoint) Materialize() *apiendpoint.APIEndpoin
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveRegistrationFlowRequest) (*apiresource.RegistrationFlow, *apierror.APIError) {
 			return svc.(RegistrationFlowSvc).GetRegistrationFlow
 		},
-	}
+	}).WithDocSource(e)
 }

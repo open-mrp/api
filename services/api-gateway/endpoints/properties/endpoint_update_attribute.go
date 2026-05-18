@@ -33,12 +33,12 @@ func (*UpdateAttributeRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateAttributeRequest)
 }
 
+// Partially updates an attribute.
 type UpdateAttributeEndpoint struct{}
 
 func (e *UpdateAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAttributeRequest, *apiresource.Attribute] {
-	return &apiendpoint.APIEndpoint[*UpdateAttributeRequest, *apiresource.Attribute]{
+	return (&apiendpoint.APIEndpoint[*UpdateAttributeRequest, *apiresource.Attribute]{
 		Title:             "Update Attribute",
-		Description:       "Partially updates an attribute.",
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/properties/{property_id}/attributes/{id}",
@@ -50,5 +50,5 @@ func (e *UpdateAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*Update
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateAttributeRequest) (*apiresource.Attribute, *apierror.APIError) {
 			return svc.(PropertySvc).UpdateAttribute
 		},
-	}
+	}).WithDocSource(e)
 }

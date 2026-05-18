@@ -16,12 +16,12 @@ type RetrieveAlertRequest struct {
 	AlertID string `path:"id" validate:"required"`
 }
 
+// Returns an agent alert by ID.
 type RetrieveAlertEndpoint struct{}
 
 func (e *RetrieveAlertEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveAlertRequest, *apiresource.AgentAlert] {
-	return &apiendpoint.APIEndpoint[*RetrieveAlertRequest, *apiresource.AgentAlert]{
+	return (&apiendpoint.APIEndpoint[*RetrieveAlertRequest, *apiresource.AgentAlert]{
 		Title:             "Retrieve Agent Alert",
-		Description:       "Returns an agent alert by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/ai/alerts/{id}",
@@ -37,5 +37,5 @@ func (e *RetrieveAlertEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retrieve
 			ObjectType: constants.ObjectTypeAgentAlert,
 			Fields:     []string{"run", "action"},
 		}),
-	}
+	}).WithDocSource(e)
 }

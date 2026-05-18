@@ -15,12 +15,12 @@ type DeleteMaterialRequest struct {
 	ItemID string `path:"id" validate:"required"`
 }
 
+// Deletes a material by ID.
 type DeleteMaterialEndpoint struct{}
 
 func (e *DeleteMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteMaterialRequest, *apiresource.Material] {
-	return &apiendpoint.APIEndpoint[*DeleteMaterialRequest, *apiresource.Material]{
+	return (&apiendpoint.APIEndpoint[*DeleteMaterialRequest, *apiresource.Material]{
 		Title:             "Delete Material",
-		Description:       "Deletes a material by ID.",
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/materials/{id}",
@@ -32,5 +32,5 @@ func (e *DeleteMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteM
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteMaterialRequest) (*apiresource.Material, *apierror.APIError) {
 			return svc.(MaterialSvc).DeleteMaterial
 		},
-	}
+	}).WithDocSource(e)
 }

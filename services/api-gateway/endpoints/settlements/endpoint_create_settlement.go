@@ -45,12 +45,12 @@ func (*CreateSettlementRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateSettlementRequest)
 }
 
+// Creates a settlement with transaction allocations. A settlement number is automatically generated.
 type CreateSettlementEndpoint struct{}
 
 func (e *CreateSettlementEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateSettlementRequest, *apiresource.Settlement] {
-	return &apiendpoint.APIEndpoint[*CreateSettlementRequest, *apiresource.Settlement]{
+	return (&apiendpoint.APIEndpoint[*CreateSettlementRequest, *apiresource.Settlement]{
 		Title:             "Create Settlement",
-		Description:       "Creates a settlement with transaction allocations. A settlement number is automatically generated.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/finance/settlements",
@@ -65,5 +65,5 @@ func (e *CreateSettlementEndpoint) Materialize() *apiendpoint.APIEndpoint[*Creat
 		LocationFunc: func(resp *apiresource.Settlement) string {
 			return "/v1/finance/settlements/" + resp.ID
 		},
-	}
+	}).WithDocSource(e)
 }

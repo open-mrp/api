@@ -16,12 +16,12 @@ type RetrieveScanningStationRequest struct {
 	ScanningStationID string `path:"id" validate:"required"`
 }
 
+// Returns a scanning station by ID.
 type RetrieveScanningStationEndpoint struct{}
 
 func (e *RetrieveScanningStationEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveScanningStationRequest, *apiresource.ScanningStation] {
-	return &apiendpoint.APIEndpoint[*RetrieveScanningStationRequest, *apiresource.ScanningStation]{
+	return (&apiendpoint.APIEndpoint[*RetrieveScanningStationRequest, *apiresource.ScanningStation]{
 		Title:             "Retrieve Scanning Station",
-		Description:       "Returns a scanning station by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/scanning-stations/{id}",
@@ -37,5 +37,5 @@ func (e *RetrieveScanningStationEndpoint) Materialize() *apiendpoint.APIEndpoint
 			ObjectType: constants.ObjectTypeScanningStation,
 			Fields:     []string{"department", "production_steps"},
 		}),
-	}
+	}).WithDocSource(e)
 }

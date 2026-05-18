@@ -15,12 +15,12 @@ type RetrieveAccountGroupRequest struct {
 	AccountGroupID string `path:"id" validate:"required"`
 }
 
+// Returns an account group by ID.
 type RetrieveAccountGroupEndpoint struct{}
 
 func (e *RetrieveAccountGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveAccountGroupRequest, *apiresource.AccountGroup] {
-	return &apiendpoint.APIEndpoint[*RetrieveAccountGroupRequest, *apiresource.AccountGroup]{
+	return (&apiendpoint.APIEndpoint[*RetrieveAccountGroupRequest, *apiresource.AccountGroup]{
 		Title:             "Retrieve Account Group",
-		Description:       "Returns an account group by ID.",
 		Method:            http.MethodGet,
 		Route:             "/v1/sales/account-groups/{id}",
 		ContentType:       "application/json",
@@ -32,5 +32,5 @@ func (e *RetrieveAccountGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*R
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveAccountGroupRequest) (*apiresource.AccountGroup, *apierror.APIError) {
 			return svc.(AccountGroupSvc).GetAccountGroup
 		},
-	}
+	}).WithDocSource(e)
 }

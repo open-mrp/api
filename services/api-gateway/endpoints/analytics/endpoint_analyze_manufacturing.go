@@ -20,12 +20,12 @@ type AnalyzeManufacturingRequest struct {
 	Type string `json:"type" validate:"required"`
 }
 
+// Returns a single manufacturing analytics metric for a specified date range and type.
 type AnalyzeManufacturingEndpoint struct{}
 
 func (e *AnalyzeManufacturingEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeManufacturingRequest, *apiresource.AnalyzeManufacturingResponse] {
-	return &apiendpoint.APIEndpoint[*AnalyzeManufacturingRequest, *apiresource.AnalyzeManufacturingResponse]{
+	return (&apiendpoint.APIEndpoint[*AnalyzeManufacturingRequest, *apiresource.AnalyzeManufacturingResponse]{
 		Title:             "Analyze Manufacturing",
-		Description:       "Returns a single manufacturing analytics metric for a specified date range and type.",
 		Method:            http.MethodPut,
 		Route:             "/v1/core/analytics/manufacturing",
 		ContentType:       "application/json",
@@ -37,5 +37,5 @@ func (e *AnalyzeManufacturingEndpoint) Materialize() *apiendpoint.APIEndpoint[*A
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeManufacturingRequest) (*apiresource.AnalyzeManufacturingResponse, *apierror.APIError) {
 			return svc.(AnalyticsSvc).AnalyzeManufacturing
 		},
-	}
+	}).WithDocSource(e)
 }

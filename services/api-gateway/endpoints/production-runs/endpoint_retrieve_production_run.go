@@ -18,12 +18,12 @@ type RetrieveProductionRunRequest struct {
 	Includes []string `query:"include"`
 }
 
+// Returns a production run by ID.
 type RetrieveProductionRunEndpoint struct{}
 
 func (e *RetrieveProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveProductionRunRequest, *apiresource.ProductionRunDetail] {
-	return &apiendpoint.APIEndpoint[*RetrieveProductionRunRequest, *apiresource.ProductionRunDetail]{
+	return (&apiendpoint.APIEndpoint[*RetrieveProductionRunRequest, *apiresource.ProductionRunDetail]{
 		Title:             "Retrieve Production Run",
-		Description:       "Returns a production run by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/production-runs/{id}",
@@ -39,5 +39,5 @@ func (e *RetrieveProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 			ObjectType: constants.ObjectTypeProductionRun,
 			Fields:     []string{"responsible_user"},
 		}),
-	}
+	}).WithDocSource(e)
 }

@@ -19,12 +19,12 @@ type ListRunsRequest struct {
 	AgentDefinitionID *string `query:"agent_definition_id"`
 }
 
+// Returns a paginated list of agent runs for the current account.
 type ListRunsEndpoint struct{}
 
 func (e *ListRunsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListRunsRequest, *apiresource.List[apiresource.AgentRun]] {
-	return &apiendpoint.APIEndpoint[*ListRunsRequest, *apiresource.List[apiresource.AgentRun]]{
+	return (&apiendpoint.APIEndpoint[*ListRunsRequest, *apiresource.List[apiresource.AgentRun]]{
 		Title:             "List Runs",
-		Description:       "Returns a paginated list of agent runs for the current account.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/ai/runs",
@@ -40,5 +40,5 @@ func (e *ListRunsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListRunsReque
 			ObjectType: constants.ObjectTypeAgentRun,
 			Fields:     []string{"definition", "actions", "definition.config", "definition.tools", "definition.role"},
 		}),
-	}
+	}).WithDocSource(e)
 }

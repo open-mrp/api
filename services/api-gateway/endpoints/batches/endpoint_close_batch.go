@@ -24,12 +24,12 @@ func (*CloseBatchRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCloseBatchRequest)
 }
 
+// Closes a batch, marking it as completed.
 type CloseBatchEndpoint struct{}
 
 func (e *CloseBatchEndpoint) Materialize() *apiendpoint.APIEndpoint[*CloseBatchRequest, *apiresource.Batch] {
-	return &apiendpoint.APIEndpoint[*CloseBatchRequest, *apiresource.Batch]{
+	return (&apiendpoint.APIEndpoint[*CloseBatchRequest, *apiresource.Batch]{
 		Title:             "Close Batch",
-		Description:       "Closes a batch, marking it as completed.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/batches/actions/close",
@@ -41,5 +41,5 @@ func (e *CloseBatchEndpoint) Materialize() *apiendpoint.APIEndpoint[*CloseBatchR
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CloseBatchRequest) (*apiresource.Batch, *apierror.APIError) {
 			return svc.(BatchSvc).CloseBatch
 		},
-	}
+	}).WithDocSource(e)
 }

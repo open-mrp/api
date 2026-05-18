@@ -18,12 +18,12 @@ type RetrieveTerritoryRequest struct {
 	TerritoryID string `path:"id" validate:"required"`
 }
 
+// Returns a territory by ID.
 type RetrieveTerritoryEndpoint struct{}
 
 func (e *RetrieveTerritoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveTerritoryRequest, *apiresource.Territory] {
-	return &apiendpoint.APIEndpoint[*RetrieveTerritoryRequest, *apiresource.Territory]{
+	return (&apiendpoint.APIEndpoint[*RetrieveTerritoryRequest, *apiresource.Territory]{
 		Title:             "Retrieve Territory",
-		Description:       "Returns a territory by ID.",
 		Method:            http.MethodGet,
 		Route:             "/v1/sales/accounts/{account_id}/territories/{id}",
 		ContentType:       "application/json",
@@ -39,5 +39,5 @@ func (e *RetrieveTerritoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retr
 			ObjectType: constants.ObjectTypeTerritory,
 			Fields:     []string{"sales_rep", "product_line"},
 		}),
-	}
+	}).WithDocSource(e)
 }

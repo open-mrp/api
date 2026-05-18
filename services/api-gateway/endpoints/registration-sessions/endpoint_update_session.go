@@ -53,12 +53,12 @@ type UpdateSessionDataRequest struct {
 	BillingAddressCountry *string `json:"billing_address_country,omitempty" nullable:"false" validate:"omitempty,max=2"`
 }
 
+// Partially updates a registration session's step and form data; omitted fields are left unchanged.
 type UpdateSessionEndpoint struct{}
 
 func (e *UpdateSessionEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateSessionRequest, *apiresource.RegistrationSession] {
-	return &apiendpoint.APIEndpoint[*UpdateSessionRequest, *apiresource.RegistrationSession]{
+	return (&apiendpoint.APIEndpoint[*UpdateSessionRequest, *apiresource.RegistrationSession]{
 		Title:             "Update Registration Session",
-		Description:       "Partially updates a registration session's step and form data; omitted fields are left unchanged.",
 		Method:            http.MethodPatch,
 		Route:             "/v1/auth/registration-sessions/{session_id}",
 		ContentType:       "application/json",
@@ -70,5 +70,5 @@ func (e *UpdateSessionEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateSe
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateSessionRequest) (*apiresource.RegistrationSession, *apierror.APIError) {
 			return svc.(RegistrationSessionSvc).UpdateSession
 		},
-	}
+	}).WithDocSource(e)
 }

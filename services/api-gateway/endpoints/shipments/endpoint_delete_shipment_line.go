@@ -17,12 +17,12 @@ type DeleteShipmentLineRequest struct {
 	ShipmentLineID string `path:"id" validate:"required"`
 }
 
+// Deletes a line from a shipment.
 type DeleteShipmentLineEndpoint struct{}
 
 func (e *DeleteShipmentLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteShipmentLineRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*DeleteShipmentLineRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*DeleteShipmentLineRequest, *apiresource.EmptyResource]{
 		Title:             "Delete Shipment Line",
-		Description:       "Deletes a line from a shipment.",
 		Method:            http.MethodDelete,
 		Route:             "/v1/operations/shipments/{shipment_id}/lines/{id}",
 		ContentType:       "application/json",
@@ -34,5 +34,5 @@ func (e *DeleteShipmentLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*Del
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteShipmentLineRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(ShipmentSvc).DeleteShipmentLine
 		},
-	}
+	}).WithDocSource(e)
 }

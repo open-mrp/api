@@ -15,12 +15,12 @@ type DeleteAccountGroupProductLineAccessRequest struct {
 	AccountGroupID string `path:"account_group_id" validate:"required"`
 }
 
+// Removes all product line access for an account group.
 type DeleteAccountGroupProductLineAccessEndpoint struct{}
 
 func (e *DeleteAccountGroupProductLineAccessEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteAccountGroupProductLineAccessRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*DeleteAccountGroupProductLineAccessRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*DeleteAccountGroupProductLineAccessRequest, *apiresource.EmptyResource]{
 		Title:             "Delete Account Group Product Line Access",
-		Description:       "Removes all product line access for an account group.",
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/product-line-access/account-groups/{account_group_id}",
@@ -32,5 +32,5 @@ func (e *DeleteAccountGroupProductLineAccessEndpoint) Materialize() *apiendpoint
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteAccountGroupProductLineAccessRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(AccountGroupProductLineAccessSvc).DeleteAccountGroupProductLineAccess
 		},
-	}
+	}).WithDocSource(e)
 }

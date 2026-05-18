@@ -15,12 +15,12 @@ type DeleteTransactionAllocationRequest struct {
 	AllocationID string `path:"id" validate:"required"`
 }
 
+// Deletes a transaction allocation.
 type DeleteTransactionAllocationEndpoint struct{}
 
 func (e *DeleteTransactionAllocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteTransactionAllocationRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*DeleteTransactionAllocationRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*DeleteTransactionAllocationRequest, *apiresource.EmptyResource]{
 		Title:             "Delete Transaction Allocation",
-		Description:       "Deletes a transaction allocation.",
 		Method:            http.MethodDelete,
 		Route:             "/v1/finance/transaction-allocations/{id}",
 		ContentType:       "application/json",
@@ -32,5 +32,5 @@ func (e *DeleteTransactionAllocationEndpoint) Materialize() *apiendpoint.APIEndp
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteTransactionAllocationRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(TransactionAllocationSvc).DeleteTransactionAllocation
 		},
-	}
+	}).WithDocSource(e)
 }

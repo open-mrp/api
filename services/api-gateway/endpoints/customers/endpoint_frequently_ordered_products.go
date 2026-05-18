@@ -15,12 +15,12 @@ type GetFrequentlyOrderedProductsRequest struct {
 	CustomerID string `path:"id" validate:"required"`
 }
 
+// Returns the most frequently ordered products for a customer based on historical sales order data.
 type GetFrequentlyOrderedProductsEndpoint struct{}
 
 func (e *GetFrequentlyOrderedProductsEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetFrequentlyOrderedProductsRequest, *apiresource.List[apiresource.FrequentlyOrderedProduct]] {
-	return &apiendpoint.APIEndpoint[*GetFrequentlyOrderedProductsRequest, *apiresource.List[apiresource.FrequentlyOrderedProduct]]{
+	return (&apiendpoint.APIEndpoint[*GetFrequentlyOrderedProductsRequest, *apiresource.List[apiresource.FrequentlyOrderedProduct]]{
 		Title:             "Get Frequently Ordered Products",
-		Description:       "Returns the most frequently ordered products for a customer based on historical sales order data.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/customers/{id}/frequently-ordered-products",
@@ -32,5 +32,5 @@ func (e *GetFrequentlyOrderedProductsEndpoint) Materialize() *apiendpoint.APIEnd
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetFrequentlyOrderedProductsRequest) (*apiresource.List[apiresource.FrequentlyOrderedProduct], *apierror.APIError) {
 			return svc.(CustomerSvc).GetFrequentlyOrderedProducts
 		},
-	}
+	}).WithDocSource(e)
 }

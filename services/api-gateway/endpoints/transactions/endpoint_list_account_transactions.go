@@ -22,12 +22,12 @@ type ListAccountTransactionsRequest struct {
 	IncludeChildAccounts *bool `query:"include_child_accounts"`
 }
 
+// Returns a paginated list of transactions for a customer account, optionally including child account transactions.
 type ListAccountTransactionsEndpoint struct{}
 
 func (e *ListAccountTransactionsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAccountTransactionsRequest, *apiresource.List[apiresource.TransactionDetail]] {
-	return &apiendpoint.APIEndpoint[*ListAccountTransactionsRequest, *apiresource.List[apiresource.TransactionDetail]]{
+	return (&apiendpoint.APIEndpoint[*ListAccountTransactionsRequest, *apiresource.List[apiresource.TransactionDetail]]{
 		Title:             "List Account Transactions",
-		Description:       "Returns a paginated list of transactions for a customer account, optionally including child account transactions.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/finance/accounts/{account_id}/transactions",
@@ -39,5 +39,5 @@ func (e *ListAccountTransactionsEndpoint) Materialize() *apiendpoint.APIEndpoint
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListAccountTransactionsRequest) (*apiresource.List[apiresource.TransactionDetail], *apierror.APIError) {
 			return svc.(TransactionSvc).ListAccountTransactions
 		},
-	}
+	}).WithDocSource(e)
 }

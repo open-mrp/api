@@ -15,12 +15,12 @@ type DeleteTransactionRequest struct {
 	TransactionID string `path:"id" validate:"required"`
 }
 
+// Deletes a transaction and cascades deletion to allocations.
 type DeleteTransactionEndpoint struct{}
 
 func (e *DeleteTransactionEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteTransactionRequest, *apiresource.TransactionDetail] {
-	return &apiendpoint.APIEndpoint[*DeleteTransactionRequest, *apiresource.TransactionDetail]{
+	return (&apiendpoint.APIEndpoint[*DeleteTransactionRequest, *apiresource.TransactionDetail]{
 		Title:             "Delete Transaction",
-		Description:       "Deletes a transaction and cascades deletion to allocations.",
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
 		Route:             "/v1/finance/transactions/{id}",
@@ -32,5 +32,5 @@ func (e *DeleteTransactionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Dele
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteTransactionRequest) (*apiresource.TransactionDetail, *apierror.APIError) {
 			return svc.(TransactionSvc).DeleteTransaction
 		},
-	}
+	}).WithDocSource(e)
 }

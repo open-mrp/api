@@ -15,12 +15,12 @@ type DeleteSettlementRequest struct {
 	SettlementID string `path:"id" validate:"required"`
 }
 
+// Deletes a settlement, removing allocations and reverting payment statuses on affected invoices and transactions.
 type DeleteSettlementEndpoint struct{}
 
 func (e *DeleteSettlementEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteSettlementRequest, *apiresource.Settlement] {
-	return &apiendpoint.APIEndpoint[*DeleteSettlementRequest, *apiresource.Settlement]{
+	return (&apiendpoint.APIEndpoint[*DeleteSettlementRequest, *apiresource.Settlement]{
 		Title:             "Delete Settlement",
-		Description:       "Deletes a settlement, removing allocations and reverting payment statuses on affected invoices and transactions.",
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
 		Route:             "/v1/finance/settlements/{id}",
@@ -32,5 +32,5 @@ func (e *DeleteSettlementEndpoint) Materialize() *apiendpoint.APIEndpoint[*Delet
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteSettlementRequest) (*apiresource.Settlement, *apierror.APIError) {
 			return svc.(SettlementSvc).DeleteSettlement
 		},
-	}
+	}).WithDocSource(e)
 }

@@ -15,12 +15,12 @@ type DeleteScanningStationRequest struct {
 	ScanningStationID string `path:"id" validate:"required"`
 }
 
+// Deletes a scanning station.
 type DeleteScanningStationEndpoint struct{}
 
 func (e *DeleteScanningStationEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteScanningStationRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*DeleteScanningStationRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*DeleteScanningStationRequest, *apiresource.EmptyResource]{
 		Title:             "Delete Scanning Station",
-		Description:       "Deletes a scanning station.",
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/scanning-stations/{id}",
@@ -32,5 +32,5 @@ func (e *DeleteScanningStationEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteScanningStationRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(ScanningStationSvc).DeleteScanningStation
 		},
-	}
+	}).WithDocSource(e)
 }

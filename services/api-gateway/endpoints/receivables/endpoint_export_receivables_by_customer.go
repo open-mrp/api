@@ -18,12 +18,12 @@ type ExportReceivablesByCustomerRequest struct {
 	CutoffDate *time.Time `query:"cutoff_date"`
 }
 
+// Exports all receivable entries for a specific customer account as a CSV file.
 type ExportReceivablesByCustomerEndpoint struct{}
 
 func (e *ExportReceivablesByCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*ExportReceivablesByCustomerRequest, *httptransport.FileDownload] {
-	return &apiendpoint.APIEndpoint[*ExportReceivablesByCustomerRequest, *httptransport.FileDownload]{
+	return (&apiendpoint.APIEndpoint[*ExportReceivablesByCustomerRequest, *httptransport.FileDownload]{
 		Title:             "Export Receivables by Customer",
-		Description:       "Exports all receivable entries for a specific customer account as a CSV file.",
 		Method:            http.MethodGet,
 		ContentType:       "text/csv",
 		Route:             "/v1/finance/receivables/accounts/{account_id}/actions/export",
@@ -35,5 +35,5 @@ func (e *ExportReceivablesByCustomerEndpoint) Materialize() *apiendpoint.APIEndp
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ExportReceivablesByCustomerRequest) (*httptransport.FileDownload, *apierror.APIError) {
 			return svc.(ReceivableSvc).ExportReceivablesByCustomer
 		},
-	}
+	}).WithDocSource(e)
 }

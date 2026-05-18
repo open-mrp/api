@@ -48,12 +48,12 @@ type ListCustomersRequest struct {
 	EndDate *time.Time `query:"end_date"`
 }
 
+// Returns a paginated list of customers for the current account.
 type ListCustomersEndpoint struct{}
 
 func (e *ListCustomersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListCustomersRequest, *apiresource.List[apiresource.Customer]] {
-	return &apiendpoint.APIEndpoint[*ListCustomersRequest, *apiresource.List[apiresource.Customer]]{
+	return (&apiendpoint.APIEndpoint[*ListCustomersRequest, *apiresource.List[apiresource.Customer]]{
 		Title:             "List Customers",
-		Description:       "Returns a paginated list of customers for the current account.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/customers",
@@ -87,5 +87,5 @@ func (e *ListCustomersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListCust
 				"credit_limit",
 			},
 		}),
-	}
+	}).WithDocSource(e)
 }

@@ -34,12 +34,12 @@ func (*CreateAccountGroupRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateAccountGroupRequest)
 }
 
+// Creates an account group.
 type CreateAccountGroupEndpoint struct{}
 
 func (e *CreateAccountGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAccountGroupRequest, *apiresource.AccountGroup] {
-	return &apiendpoint.APIEndpoint[*CreateAccountGroupRequest, *apiresource.AccountGroup]{
+	return (&apiendpoint.APIEndpoint[*CreateAccountGroupRequest, *apiresource.AccountGroup]{
 		Title:             "Create Account Group",
-		Description:       "Creates an account group.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/account-groups",
@@ -54,5 +54,5 @@ func (e *CreateAccountGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cre
 		LocationFunc: func(resp *apiresource.AccountGroup) string {
 			return "/v1/sales/account-groups/" + resp.ID
 		},
-	}
+	}).WithDocSource(e)
 }

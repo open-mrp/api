@@ -15,12 +15,12 @@ type DeleteAddressRequest struct {
 	AddressID string `path:"id" validate:"required"`
 }
 
+// Deletes an address. Fails if the address is in use as a billing or shipping address on a sales order, invoice, or shipment, or as a default account address.
 type DeleteAddressEndpoint struct{}
 
 func (e *DeleteAddressEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteAddressRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*DeleteAddressRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*DeleteAddressRequest, *apiresource.EmptyResource]{
 		Title:             "Delete Address",
-		Description:       "Deletes an address. Fails if the address is in use as a billing or shipping address on a sales order, invoice, or shipment, or as a default account address.",
 		Method:            http.MethodDelete,
 		Route:             "/v1/sales/addresses/{id}",
 		ContentType:       "application/json",
@@ -32,5 +32,5 @@ func (e *DeleteAddressEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteAd
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteAddressRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(AddressSvc).DeleteAddress
 		},
-	}
+	}).WithDocSource(e)
 }

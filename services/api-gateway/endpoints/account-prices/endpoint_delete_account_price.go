@@ -15,12 +15,12 @@ type DeleteAccountPriceRequest struct {
 	AccountPriceID string `path:"id" validate:"required"`
 }
 
+// Deletes an account price. Associated category constraints, attribute constraints, and the rate record are also removed.
 type DeleteAccountPriceEndpoint struct{}
 
 func (e *DeleteAccountPriceEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteAccountPriceRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*DeleteAccountPriceRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*DeleteAccountPriceRequest, *apiresource.EmptyResource]{
 		Title:             "Delete Account Price",
-		Description:       "Deletes an account price. Associated category constraints, attribute constraints, and the rate record are also removed.",
 		Method:            http.MethodDelete,
 		Route:             "/v1/sales/account-prices/{id}",
 		ContentType:       "application/json",
@@ -32,5 +32,5 @@ func (e *DeleteAccountPriceEndpoint) Materialize() *apiendpoint.APIEndpoint[*Del
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteAccountPriceRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(AccountPriceSvc).DeleteAccountPrice
 		},
-	}
+	}).WithDocSource(e)
 }

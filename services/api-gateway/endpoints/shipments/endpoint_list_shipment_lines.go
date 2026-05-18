@@ -16,12 +16,12 @@ type ListShipmentLinesRequest struct {
 	apiresource.PaginationRequest
 }
 
+// Returns a paginated list of lines for the specified shipment.
 type ListShipmentLinesEndpoint struct{}
 
 func (e *ListShipmentLinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListShipmentLinesRequest, *apiresource.List[apiresource.ShipmentLine]] {
-	return &apiendpoint.APIEndpoint[*ListShipmentLinesRequest, *apiresource.List[apiresource.ShipmentLine]]{
+	return (&apiendpoint.APIEndpoint[*ListShipmentLinesRequest, *apiresource.List[apiresource.ShipmentLine]]{
 		Title:             "List Shipment Lines",
-		Description:       "Returns a paginated list of lines for the specified shipment.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/shipments/{shipment_id}/lines",
@@ -33,5 +33,5 @@ func (e *ListShipmentLinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*List
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListShipmentLinesRequest) (*apiresource.List[apiresource.ShipmentLine], *apierror.APIError) {
 			return svc.(ShipmentSvc).ListShipmentLines
 		},
-	}
+	}).WithDocSource(e)
 }

@@ -31,12 +31,12 @@ func (*CreateAccountIntegrationRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateAccountIntegrationRequest)
 }
 
+// Creates an account integration, or updates an existing one with the same integration code. Credentials are encrypted at rest and never returned in API responses.
 type CreateAccountIntegrationEndpoint struct{}
 
 func (e *CreateAccountIntegrationEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAccountIntegrationRequest, *apiresource.AccountIntegration] {
-	return &apiendpoint.APIEndpoint[*CreateAccountIntegrationRequest, *apiresource.AccountIntegration]{
+	return (&apiendpoint.APIEndpoint[*CreateAccountIntegrationRequest, *apiresource.AccountIntegration]{
 		Title:             "Create Account Integration",
-		Description:       "Creates an account integration, or updates an existing one with the same integration code. Credentials are encrypted at rest and never returned in API responses.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/integrations",
@@ -54,5 +54,5 @@ func (e *CreateAccountIntegrationEndpoint) Materialize() *apiendpoint.APIEndpoin
 		LocationFunc: func(resp *apiresource.AccountIntegration) string {
 			return "/v1/identity/integrations/" + resp.ID
 		},
-	}
+	}).WithDocSource(e)
 }

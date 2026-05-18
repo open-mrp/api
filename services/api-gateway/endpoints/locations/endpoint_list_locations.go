@@ -15,12 +15,12 @@ type ListLocationsRequest struct {
 	apiresource.PaginationRequest
 }
 
+// Returns a paginated list of locations for the caller's account.
 type ListLocationsEndpoint struct{}
 
 func (e *ListLocationsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListLocationsRequest, *apiresource.List[apiresource.Location]] {
-	return &apiendpoint.APIEndpoint[*ListLocationsRequest, *apiresource.List[apiresource.Location]]{
+	return (&apiendpoint.APIEndpoint[*ListLocationsRequest, *apiresource.List[apiresource.Location]]{
 		Title:             "List Locations",
-		Description:       "Returns a paginated list of locations for the caller's account.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/locations",
@@ -36,5 +36,5 @@ func (e *ListLocationsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListLoca
 			ObjectType: constants.ObjectTypeLocation,
 			Fields:     []string{"parent", "children"},
 		}),
-	}
+	}).WithDocSource(e)
 }

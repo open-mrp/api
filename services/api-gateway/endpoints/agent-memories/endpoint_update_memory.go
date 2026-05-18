@@ -40,12 +40,12 @@ func (*UpdateMemoryRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateMemoryRequest)
 }
 
+// Partially updates an agent memory.
 type UpdateMemoryEndpoint struct{}
 
 func (e *UpdateMemoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateMemoryRequest, *apiresource.AgentMemory] {
-	return &apiendpoint.APIEndpoint[*UpdateMemoryRequest, *apiresource.AgentMemory]{
+	return (&apiendpoint.APIEndpoint[*UpdateMemoryRequest, *apiresource.AgentMemory]{
 		Title:             "Update Agent Memory",
-		Description:       "Partially updates an agent memory.",
 		Method:            http.MethodPatch,
 		Route:             "/v1/ai/memories/{id}",
 		ContentType:       "application/json",
@@ -57,5 +57,5 @@ func (e *UpdateMemoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateMem
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateMemoryRequest) (*apiresource.AgentMemory, *apierror.APIError) {
 			return svc.(AgentMemorySvc).UpdateMemory
 		},
-	}
+	}).WithDocSource(e)
 }

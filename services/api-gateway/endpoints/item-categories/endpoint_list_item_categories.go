@@ -17,12 +17,12 @@ type ListItemCategoriesRequest struct {
 	Type *constants.ItemCategoryType `query:"type"`
 }
 
+// Returns a paginated list of item categories for the current account, including account-specific and global system categories.
 type ListItemCategoriesEndpoint struct{}
 
 func (e *ListItemCategoriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListItemCategoriesRequest, *apiresource.List[apiresource.ItemCategory]] {
-	return &apiendpoint.APIEndpoint[*ListItemCategoriesRequest, *apiresource.List[apiresource.ItemCategory]]{
+	return (&apiendpoint.APIEndpoint[*ListItemCategoriesRequest, *apiresource.List[apiresource.ItemCategory]]{
 		Title:             "List Item Categories",
-		Description:       "Returns a paginated list of item categories for the current account, including account-specific and global system categories.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/item-categories",
@@ -38,5 +38,5 @@ func (e *ListItemCategoriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*Lis
 			ObjectType: constants.ObjectTypeItemCategory,
 			Fields:     []string{"owner", "owner.account", "properties", "unit_group", "unit_group.base_unit", "unit_group.associated_units", "unit_group.associated_units.unit"},
 		}),
-	}
+	}).WithDocSource(e)
 }

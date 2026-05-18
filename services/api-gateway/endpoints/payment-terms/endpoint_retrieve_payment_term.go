@@ -16,12 +16,12 @@ type RetrievePaymentTermRequest struct {
 	PaymentTermID string `path:"id" validate:"required"`
 }
 
+// Returns a payment term by ID.
 type RetrievePaymentTermEndpoint struct{}
 
 func (e *RetrievePaymentTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrievePaymentTermRequest, *apiresource.PaymentTerm] {
-	return &apiendpoint.APIEndpoint[*RetrievePaymentTermRequest, *apiresource.PaymentTerm]{
+	return (&apiendpoint.APIEndpoint[*RetrievePaymentTermRequest, *apiresource.PaymentTerm]{
 		Title:             "Retrieve Payment Term",
-		Description:       "Returns a payment term by ID.",
 		Method:            http.MethodGet,
 		Route:             "/v1/finance/payment-terms/{id}",
 		ContentType:       "application/json",
@@ -37,5 +37,5 @@ func (e *RetrievePaymentTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*Re
 			ObjectType: constants.ObjectTypePaymentTerm,
 			Fields:     []string{"owner", "owner.account"},
 		}),
-	}
+	}).WithDocSource(e)
 }

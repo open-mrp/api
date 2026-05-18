@@ -27,12 +27,12 @@ func (*CreateProductTypeRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateProductTypeRequest)
 }
 
+// Creates a product type.
 type CreateProductTypeEndpoint struct{}
 
 func (e *CreateProductTypeEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateProductTypeRequest, *apiresource.ProductType] {
-	return &apiendpoint.APIEndpoint[*CreateProductTypeRequest, *apiresource.ProductType]{
+	return (&apiendpoint.APIEndpoint[*CreateProductTypeRequest, *apiresource.ProductType]{
 		Title:             "Create Product Type",
-		Description:       "Creates a product type.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/product-types",
@@ -47,5 +47,5 @@ func (e *CreateProductTypeEndpoint) Materialize() *apiendpoint.APIEndpoint[*Crea
 		LocationFunc: func(resp *apiresource.ProductType) string {
 			return "/v1/catalog/product-types/" + resp.ID
 		},
-	}
+	}).WithDocSource(e)
 }

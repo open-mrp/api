@@ -20,12 +20,12 @@ type ListAllocationEntriesRequest struct {
 	EndDate *string `query:"end_date"`
 }
 
+// Returns a paginated list of transaction allocation entries for the current account.
 type ListAllocationEntriesEndpoint struct{}
 
 func (e *ListAllocationEntriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAllocationEntriesRequest, *apiresource.List[apiresource.AllocationEntry]] {
-	return &apiendpoint.APIEndpoint[*ListAllocationEntriesRequest, *apiresource.List[apiresource.AllocationEntry]]{
+	return (&apiendpoint.APIEndpoint[*ListAllocationEntriesRequest, *apiresource.List[apiresource.AllocationEntry]]{
 		Title:             "List Allocation Entries",
-		Description:       "Returns a paginated list of transaction allocation entries for the current account.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/finance/transaction-allocations",
@@ -37,5 +37,5 @@ func (e *ListAllocationEntriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListAllocationEntriesRequest) (*apiresource.List[apiresource.AllocationEntry], *apierror.APIError) {
 			return svc.(TransactionAllocationSvc).ListAllocationEntries
 		},
-	}
+	}).WithDocSource(e)
 }

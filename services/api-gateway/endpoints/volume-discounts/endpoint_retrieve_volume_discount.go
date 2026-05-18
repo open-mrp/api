@@ -16,12 +16,12 @@ type RetrieveVolumeDiscountRequest struct {
 	VolumeDiscountID string `path:"id" validate:"required"`
 }
 
+// Returns a volume discount by ID.
 type RetrieveVolumeDiscountEndpoint struct{}
 
 func (e *RetrieveVolumeDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveVolumeDiscountRequest, *apiresource.VolumeDiscount] {
-	return &apiendpoint.APIEndpoint[*RetrieveVolumeDiscountRequest, *apiresource.VolumeDiscount]{
+	return (&apiendpoint.APIEndpoint[*RetrieveVolumeDiscountRequest, *apiresource.VolumeDiscount]{
 		Title:             "Retrieve Volume Discount",
-		Description:       "Returns a volume discount by ID.",
 		Method:            http.MethodGet,
 		Route:             "/v1/sales/volume-discounts/{id}",
 		ContentType:       "application/json",
@@ -37,5 +37,5 @@ func (e *RetrieveVolumeDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[
 			ObjectType: constants.ObjectTypeVolumeDiscount,
 			Fields:     []string{"customer_groups", "product_lines", "categories", "attributes", "acceptable_units"},
 		}),
-	}
+	}).WithDocSource(e)
 }

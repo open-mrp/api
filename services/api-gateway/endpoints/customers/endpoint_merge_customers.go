@@ -27,12 +27,12 @@ func (*MergeCustomersRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleMergeCustomersRequest)
 }
 
+// Merges one or more source customers into a target customer, reassigning all associated records and deleting the source accounts.
 type MergeCustomersEndpoint struct{}
 
 func (e *MergeCustomersEndpoint) Materialize() *apiendpoint.APIEndpoint[*MergeCustomersRequest, *apiresource.Customer] {
-	return &apiendpoint.APIEndpoint[*MergeCustomersRequest, *apiresource.Customer]{
+	return (&apiendpoint.APIEndpoint[*MergeCustomersRequest, *apiresource.Customer]{
 		Title:             "Merge Customers",
-		Description:       "Merges one or more source customers into a target customer, reassigning all associated records and deleting the source accounts.",
 		Method:            http.MethodPost,
 		Route:             "/v1/sales/customers/{id}/actions/merge",
 		ContentType:       "application/json",
@@ -66,5 +66,5 @@ func (e *MergeCustomersEndpoint) Materialize() *apiendpoint.APIEndpoint[*MergeCu
 				"credit_limit",
 			},
 		}),
-	}
+	}).WithDocSource(e)
 }

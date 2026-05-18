@@ -15,12 +15,12 @@ type DeleteRoleRequest struct {
 	RoleID string `path:"id" validate:"required"`
 }
 
+// Deletes a role and its associated permissions. Global roles cannot be deleted.
 type DeleteRoleEndpoint struct{}
 
 func (e *DeleteRoleEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteRoleRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*DeleteRoleRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*DeleteRoleRequest, *apiresource.EmptyResource]{
 		Title:             "Delete Role",
-		Description:       "Deletes a role and its associated permissions. Global roles cannot be deleted.",
 		Method:            http.MethodDelete,
 		Route:             "/v1/identity/roles/{id}",
 		ContentType:       "application/json",
@@ -32,5 +32,5 @@ func (e *DeleteRoleEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteRoleR
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteRoleRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(RoleSvc).DeleteRole
 		},
-	}
+	}).WithDocSource(e)
 }

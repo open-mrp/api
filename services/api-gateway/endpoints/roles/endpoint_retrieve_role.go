@@ -16,12 +16,12 @@ type RetrieveRoleRequest struct {
 	RoleID string `path:"id" validate:"required"`
 }
 
+// Returns a role by ID, including its structured permissions.
 type RetrieveRoleEndpoint struct{}
 
 func (e *RetrieveRoleEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveRoleRequest, *apiresource.Role] {
-	return &apiendpoint.APIEndpoint[*RetrieveRoleRequest, *apiresource.Role]{
+	return (&apiendpoint.APIEndpoint[*RetrieveRoleRequest, *apiresource.Role]{
 		Title:             "Retrieve Role",
-		Description:       "Returns a role by ID, including its structured permissions.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/roles/{id}",
@@ -37,5 +37,5 @@ func (e *RetrieveRoleEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveR
 			ObjectType: constants.ObjectTypeRole,
 			Fields:     []string{"owner", "owner.account", "permissions"},
 		}),
-	}
+	}).WithDocSource(e)
 }

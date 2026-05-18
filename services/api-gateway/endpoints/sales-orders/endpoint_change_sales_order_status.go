@@ -30,12 +30,12 @@ func (*ChangeSalesOrderStatusRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleChangeSalesOrderStatusRequest)
 }
 
+// Changes the status of a sales order. Supported actions: issue, unissue, close, and open.
 type ChangeSalesOrderStatusEndpoint struct{}
 
 func (e *ChangeSalesOrderStatusEndpoint) Materialize() *apiendpoint.APIEndpoint[*ChangeSalesOrderStatusRequest, *apiresource.SalesOrderDetail] {
-	return &apiendpoint.APIEndpoint[*ChangeSalesOrderStatusRequest, *apiresource.SalesOrderDetail]{
+	return (&apiendpoint.APIEndpoint[*ChangeSalesOrderStatusRequest, *apiresource.SalesOrderDetail]{
 		Title:             "Change Sales Order Status",
-		Description:       "Changes the status of a sales order. Supported actions: issue, unissue, close, and open.",
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/sales-orders/{id}/actions/change-status",
@@ -51,5 +51,5 @@ func (e *ChangeSalesOrderStatusEndpoint) Materialize() *apiendpoint.APIEndpoint[
 			ObjectType: constants.ObjectTypeSalesOrder,
 			Fields:     []string{"customer", "bill_to_address", "ship_to_address", "carrier", "service_level", "payment_term", "shipping_term", "order_discount", "lines", "lines.item"},
 		}),
-	}
+	}).WithDocSource(e)
 }

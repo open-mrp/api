@@ -10,12 +10,12 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
+// Returns a paginated list of sandboxes.
 type ListSandboxesEndpoint struct{}
 
 func (e *ListSandboxesEndpoint) Materialize() *apiendpoint.APIEndpoint[*apiresource.PaginationRequest, *apiresource.List[apiresource.Sandbox]] {
-	return &apiendpoint.APIEndpoint[*apiresource.PaginationRequest, *apiresource.List[apiresource.Sandbox]]{
+	return (&apiendpoint.APIEndpoint[*apiresource.PaginationRequest, *apiresource.List[apiresource.Sandbox]]{
 		Title:             "List Sandboxes",
-		Description:       "Returns a paginated list of sandboxes.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/core/sandboxes",
@@ -31,5 +31,5 @@ func (e *ListSandboxesEndpoint) Materialize() *apiendpoint.APIEndpoint[*apiresou
 		ServiceHandler: func(svc any) func(ctx context.Context, req *apiresource.PaginationRequest) (*apiresource.List[apiresource.Sandbox], *apierror.APIError) {
 			return svc.(SandboxSvc).ListSandboxes
 		},
-	}
+	}).WithDocSource(e)
 }

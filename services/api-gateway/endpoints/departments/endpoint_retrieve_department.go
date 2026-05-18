@@ -16,12 +16,12 @@ type RetrieveDepartmentRequest struct {
 	DepartmentID string `path:"id" validate:"required"`
 }
 
+// Returns a department by ID.
 type RetrieveDepartmentEndpoint struct{}
 
 func (e *RetrieveDepartmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveDepartmentRequest, *apiresource.Department] {
-	return &apiendpoint.APIEndpoint[*RetrieveDepartmentRequest, *apiresource.Department]{
+	return (&apiendpoint.APIEndpoint[*RetrieveDepartmentRequest, *apiresource.Department]{
 		Title:             "Retrieve Department",
-		Description:       "Returns a department by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/departments/{id}",
@@ -37,5 +37,5 @@ func (e *RetrieveDepartmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ret
 			ObjectType: constants.ObjectTypeDepartment,
 			Fields:     []string{"location", "scanning_stations", "machines"},
 		}),
-	}
+	}).WithDocSource(e)
 }

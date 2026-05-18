@@ -38,12 +38,12 @@ func (*UpdateRateRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateRateRequest)
 }
 
+// Partially updates a rate.
 type UpdateRateEndpoint struct{}
 
 func (e *UpdateRateEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateRateRequest, *apiresource.Rate] {
-	return &apiendpoint.APIEndpoint[*UpdateRateRequest, *apiresource.Rate]{
+	return (&apiendpoint.APIEndpoint[*UpdateRateRequest, *apiresource.Rate]{
 		Title:             "Update Rate",
-		Description:       "Partially updates a rate.",
 		Method:            http.MethodPatch,
 		Route:             "/v1/operations/rates/{id}",
 		ContentType:       "application/json",
@@ -59,5 +59,5 @@ func (e *UpdateRateEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateRateR
 			ObjectType: constants.ObjectTypeRate,
 			Fields:     []string{"numerator_unit", "denominator_unit"},
 		}),
-	}
+	}).WithDocSource(e)
 }

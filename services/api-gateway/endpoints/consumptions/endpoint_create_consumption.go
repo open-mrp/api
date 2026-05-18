@@ -42,12 +42,12 @@ func (*CreateConsumptionRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateConsumptionRequest)
 }
 
+// Creates a consumption within a production step.
 type CreateConsumptionEndpoint struct{}
 
 func (e *CreateConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateConsumptionRequest, *apiresource.Consumption] {
-	return &apiendpoint.APIEndpoint[*CreateConsumptionRequest, *apiresource.Consumption]{
+	return (&apiendpoint.APIEndpoint[*CreateConsumptionRequest, *apiresource.Consumption]{
 		Title:             "Create Consumption",
-		Description:       "Creates a consumption within a production step.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/production-steps/{production_step_id}/consumptions",
@@ -63,5 +63,5 @@ func (e *CreateConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Crea
 			ObjectType: constants.ObjectTypeConsumption,
 			Fields:     []string{"consumed_item"},
 		}),
-	}
+	}).WithDocSource(e)
 }

@@ -17,12 +17,12 @@ type DeleteAttributeRequest struct {
 	AttributeID string `path:"id" validate:"required"`
 }
 
+// Deletes an attribute from a property.
 type DeleteAttributeEndpoint struct{}
 
 func (e *DeleteAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteAttributeRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*DeleteAttributeRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*DeleteAttributeRequest, *apiresource.EmptyResource]{
 		Title:             "Delete Attribute",
-		Description:       "Deletes an attribute from a property.",
 		Method:            http.MethodDelete,
 		Route:             "/v1/catalog/properties/{property_id}/attributes/{id}",
 		ContentType:       "application/json",
@@ -34,5 +34,5 @@ func (e *DeleteAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*Delete
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteAttributeRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(PropertySvc).DeleteAttribute
 		},
-	}
+	}).WithDocSource(e)
 }

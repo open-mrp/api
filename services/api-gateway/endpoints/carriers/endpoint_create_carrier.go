@@ -37,12 +37,12 @@ func (*CreateCarrierRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateCarrierRequest)
 }
 
+// Creates a carrier. If a Shippo-supported carrier code is provided, the carrier will be registered with Shippo and service levels will be auto-synced as options.
 type CreateCarrierEndpoint struct{}
 
 func (e *CreateCarrierEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateCarrierRequest, *apiresource.Carrier] {
-	return &apiendpoint.APIEndpoint[*CreateCarrierRequest, *apiresource.Carrier]{
+	return (&apiendpoint.APIEndpoint[*CreateCarrierRequest, *apiresource.Carrier]{
 		Title:             "Create Carrier",
-		Description:       "Creates a carrier. If a Shippo-supported carrier code is provided, the carrier will be registered with Shippo and service levels will be auto-synced as options.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/carriers",
@@ -61,5 +61,5 @@ func (e *CreateCarrierEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateCa
 			ObjectType: constants.ObjectTypeCarrier,
 			Fields:     []string{"owner", "owner.account", "service_levels"},
 		}),
-	}
+	}).WithDocSource(e)
 }

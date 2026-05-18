@@ -9,12 +9,12 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
+// Ensures a Stripe billing customer exists for the account.
 type EnsureBillingCustomerEndpoint struct{}
 
 func (e *EnsureBillingCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*apiresource.EmptyResource, *apiresource.EnsureBillingCustomerResponse] {
-	return &apiendpoint.APIEndpoint[*apiresource.EmptyResource, *apiresource.EnsureBillingCustomerResponse]{
+	return (&apiendpoint.APIEndpoint[*apiresource.EmptyResource, *apiresource.EnsureBillingCustomerResponse]{
 		Title:             "Ensure Billing Customer",
-		Description:       "Ensures a Stripe billing customer exists for the account.",
 		Method:            http.MethodPut,
 		Route:             "/v1/billing/accounts",
 		ContentType:       "application/json",
@@ -26,5 +26,5 @@ func (e *EnsureBillingCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		ServiceHandler: func(svc any) func(ctx context.Context, req *apiresource.EmptyResource) (*apiresource.EnsureBillingCustomerResponse, *apierror.APIError) {
 			return svc.(BillingSvc).EnsureBillingCustomer
 		},
-	}
+	}).WithDocSource(e)
 }

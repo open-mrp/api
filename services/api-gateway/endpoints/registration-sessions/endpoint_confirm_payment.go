@@ -26,12 +26,12 @@ func (*ConfirmPaymentRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleConfirmPaymentRequest)
 }
 
+// Verifies that a Stripe Setup Intent succeeded and marks the registration session's payment as completed.
 type ConfirmPaymentEndpoint struct{}
 
 func (e *ConfirmPaymentEndpoint) Materialize() *apiendpoint.APIEndpoint[*ConfirmPaymentRequest, *apiresource.ConfirmPaymentResponse] {
-	return &apiendpoint.APIEndpoint[*ConfirmPaymentRequest, *apiresource.ConfirmPaymentResponse]{
+	return (&apiendpoint.APIEndpoint[*ConfirmPaymentRequest, *apiresource.ConfirmPaymentResponse]{
 		Title:             "Confirm Registration Payment",
-		Description:       "Verifies that a Stripe Setup Intent succeeded and marks the registration session's payment as completed.",
 		Method:            http.MethodPost,
 		Route:             "/v1/auth/registration-sessions/{session_id}/actions/confirm-payment",
 		ContentType:       "application/json",
@@ -43,5 +43,5 @@ func (e *ConfirmPaymentEndpoint) Materialize() *apiendpoint.APIEndpoint[*Confirm
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ConfirmPaymentRequest) (*apiresource.ConfirmPaymentResponse, *apierror.APIError) {
 			return svc.(RegistrationSessionSvc).ConfirmPayment
 		},
-	}
+	}).WithDocSource(e)
 }

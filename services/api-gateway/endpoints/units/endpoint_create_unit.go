@@ -43,12 +43,12 @@ func (*CreateUnitRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateUnitRequest)
 }
 
+// Creates an account-owned unit.
 type CreateUnitEndpoint struct{}
 
 func (e *CreateUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateUnitRequest, *apiresource.Unit] {
-	return &apiendpoint.APIEndpoint[*CreateUnitRequest, *apiresource.Unit]{
+	return (&apiendpoint.APIEndpoint[*CreateUnitRequest, *apiresource.Unit]{
 		Title:             "Create Unit",
-		Description:       "Creates an account-owned unit.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/units",
@@ -67,5 +67,5 @@ func (e *CreateUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateUnitR
 			ObjectType: constants.ObjectTypeUnit,
 			Fields:     []string{"owner", "owner.account"},
 		}),
-	}
+	}).WithDocSource(e)
 }

@@ -17,12 +17,12 @@ type RetrieveShipmentLineRequest struct {
 	ShipmentLineID string `path:"id" validate:"required"`
 }
 
+// Returns a shipment line by ID.
 type RetrieveShipmentLineEndpoint struct{}
 
 func (e *RetrieveShipmentLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveShipmentLineRequest, *apiresource.ShipmentLine] {
-	return &apiendpoint.APIEndpoint[*RetrieveShipmentLineRequest, *apiresource.ShipmentLine]{
+	return (&apiendpoint.APIEndpoint[*RetrieveShipmentLineRequest, *apiresource.ShipmentLine]{
 		Title:             "Retrieve Shipment Line",
-		Description:       "Returns a shipment line by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/shipments/{shipment_id}/lines/{id}",
@@ -34,5 +34,5 @@ func (e *RetrieveShipmentLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*R
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveShipmentLineRequest) (*apiresource.ShipmentLine, *apierror.APIError) {
 			return svc.(ShipmentSvc).GetShipmentLine
 		},
-	}
+	}).WithDocSource(e)
 }

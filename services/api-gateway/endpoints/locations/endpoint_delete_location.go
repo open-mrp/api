@@ -15,12 +15,12 @@ type DeleteLocationRequest struct {
 	LocationID string `path:"id" validate:"required"`
 }
 
+// Deletes a location. Fails if the location has child locations.
 type DeleteLocationEndpoint struct{}
 
 func (e *DeleteLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteLocationRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*DeleteLocationRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*DeleteLocationRequest, *apiresource.EmptyResource]{
 		Title:             "Delete Location",
-		Description:       "Deletes a location. Fails if the location has child locations.",
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/locations/{id}",
@@ -32,5 +32,5 @@ func (e *DeleteLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteL
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteLocationRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(LocationSvc).DeleteLocation
 		},
-	}
+	}).WithDocSource(e)
 }

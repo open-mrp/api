@@ -16,12 +16,12 @@ type RetrieveAuditEventRequest struct {
 	ID string `path:"id" validate:"required"`
 }
 
+// Returns an audit event by ID.
 type RetrieveAuditEventEndpoint struct{}
 
 func (e *RetrieveAuditEventEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveAuditEventRequest, *apiresource.AuditEvent] {
-	return &apiendpoint.APIEndpoint[*RetrieveAuditEventRequest, *apiresource.AuditEvent]{
+	return (&apiendpoint.APIEndpoint[*RetrieveAuditEventRequest, *apiresource.AuditEvent]{
 		Title:             "Retrieve Audit Event",
-		Description:       "Returns an audit event by ID.",
 		Method:            http.MethodGet,
 		Route:             "/v1/core/audit-events/{id}",
 		ContentType:       "application/json",
@@ -40,5 +40,5 @@ func (e *RetrieveAuditEventEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ret
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveAuditEventRequest) (*apiresource.AuditEvent, *apierror.APIError) {
 			return svc.(AuditEventSvc).GetAuditEvent
 		},
-	}
+	}).WithDocSource(e)
 }

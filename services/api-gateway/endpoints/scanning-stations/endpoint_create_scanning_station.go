@@ -45,12 +45,12 @@ func (*CreateScanningStationRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateScanningStationRequest)
 }
 
+// Creates a scanning station associated with a department.
 type CreateScanningStationEndpoint struct{}
 
 func (e *CreateScanningStationEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateScanningStationRequest, *apiresource.ScanningStation] {
-	return &apiendpoint.APIEndpoint[*CreateScanningStationRequest, *apiresource.ScanningStation]{
+	return (&apiendpoint.APIEndpoint[*CreateScanningStationRequest, *apiresource.ScanningStation]{
 		Title:             "Create Scanning Station",
-		Description:       "Creates a scanning station associated with a department.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/scanning-stations",
@@ -69,5 +69,5 @@ func (e *CreateScanningStationEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 			ObjectType: constants.ObjectTypeScanningStation,
 			Fields:     []string{"department", "production_steps"},
 		}),
-	}
+	}).WithDocSource(e)
 }

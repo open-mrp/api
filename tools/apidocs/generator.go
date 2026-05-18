@@ -62,7 +62,11 @@ func generate(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOn
 
 			groupHasEndpoints = true
 			title := specField.FieldByName("Title").String()
-			description := specField.FieldByName("Description").String()
+			var description string
+			if epTypeVal := specField.FieldByName("EndpointType"); epTypeVal.IsValid() && !epTypeVal.IsNil() {
+				epType := epTypeVal.Interface().(reflect.Type)
+				description = docReader.GetTypeDoc(epType).Doc
+			}
 			method := strings.ToUpper(strings.TrimSpace(specField.FieldByName("Method").String()))
 			route := strings.TrimSpace(specField.FieldByName("Route").String())
 

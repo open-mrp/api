@@ -36,12 +36,12 @@ func (*GetScanningStationConsumptionRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleGetScanningStationConsumptionRequest)
 }
 
+// Returns material consumption data for the specified batches at a scanning station, optionally scoped to a production step and split quantity.
 type GetScanningStationConsumptionEndpoint struct{}
 
 func (e *GetScanningStationConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetScanningStationConsumptionRequest, *apiresource.List[apiresource.ScanningConsumption]] {
-	return &apiendpoint.APIEndpoint[*GetScanningStationConsumptionRequest, *apiresource.List[apiresource.ScanningConsumption]]{
+	return (&apiendpoint.APIEndpoint[*GetScanningStationConsumptionRequest, *apiresource.List[apiresource.ScanningConsumption]]{
 		Title:             "Get Scanning Station Consumption",
-		Description:       "Returns material consumption data for the specified batches at a scanning station, optionally scoped to a production step and split quantity.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/scanning-stations/{id}/consumptions",
@@ -53,5 +53,5 @@ func (e *GetScanningStationConsumptionEndpoint) Materialize() *apiendpoint.APIEn
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetScanningStationConsumptionRequest) (*apiresource.List[apiresource.ScanningConsumption], *apierror.APIError) {
 			return svc.(BatchSvc).GetScanningStationConsumption
 		},
-	}
+	}).WithDocSource(e)
 }

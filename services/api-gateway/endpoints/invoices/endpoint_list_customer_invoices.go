@@ -18,12 +18,12 @@ type ListCustomerInvoicesRequest struct {
 	IncludeChildAccounts bool `query:"include_child_accounts"`
 }
 
+// Returns a paginated list of invoices for a specific customer account, optionally including child account invoices.
 type ListCustomerInvoicesEndpoint struct{}
 
 func (e *ListCustomerInvoicesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListCustomerInvoicesRequest, *apiresource.List[apiresource.InvoiceForPayment]] {
-	return &apiendpoint.APIEndpoint[*ListCustomerInvoicesRequest, *apiresource.List[apiresource.InvoiceForPayment]]{
+	return (&apiendpoint.APIEndpoint[*ListCustomerInvoicesRequest, *apiresource.List[apiresource.InvoiceForPayment]]{
 		Title:             "List Customer Invoices",
-		Description:       "Returns a paginated list of invoices for a specific customer account, optionally including child account invoices.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/finance/accounts/{account_id}/invoices",
@@ -35,5 +35,5 @@ func (e *ListCustomerInvoicesEndpoint) Materialize() *apiendpoint.APIEndpoint[*L
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListCustomerInvoicesRequest) (*apiresource.List[apiresource.InvoiceForPayment], *apierror.APIError) {
 			return svc.(InvoiceSvc).ListCustomerInvoices
 		},
-	}
+	}).WithDocSource(e)
 }

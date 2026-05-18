@@ -17,12 +17,12 @@ type AnalyzeOpenBatchesRequest struct {
 	ProductLineIDs []string `json:"product_line_ids,omitempty"`
 }
 
+// Returns open batch summaries grouped by scanning station.
 type AnalyzeOpenBatchesEndpoint struct{}
 
 func (e *AnalyzeOpenBatchesEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeOpenBatchesRequest, *apiresource.AnalyzeOpenBatchesResponse] {
-	return &apiendpoint.APIEndpoint[*AnalyzeOpenBatchesRequest, *apiresource.AnalyzeOpenBatchesResponse]{
+	return (&apiendpoint.APIEndpoint[*AnalyzeOpenBatchesRequest, *apiresource.AnalyzeOpenBatchesResponse]{
 		Title:             "Analyze Open Batches",
-		Description:       "Returns open batch summaries grouped by scanning station.",
 		Method:            http.MethodPut,
 		Route:             "/v1/core/analytics/open-batches",
 		ContentType:       "application/json",
@@ -34,5 +34,5 @@ func (e *AnalyzeOpenBatchesEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ana
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeOpenBatchesRequest) (*apiresource.AnalyzeOpenBatchesResponse, *apierror.APIError) {
 			return svc.(AnalyticsSvc).AnalyzeOpenBatches
 		},
-	}
+	}).WithDocSource(e)
 }

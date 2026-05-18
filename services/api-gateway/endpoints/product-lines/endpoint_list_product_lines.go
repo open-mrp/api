@@ -15,12 +15,12 @@ type ListProductLinesRequest struct {
 	apiresource.PaginationRequest
 }
 
+// Returns a paginated list of product lines, including account-owned and system product lines.
 type ListProductLinesEndpoint struct{}
 
 func (e *ListProductLinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListProductLinesRequest, *apiresource.List[apiresource.ProductLine]] {
-	return &apiendpoint.APIEndpoint[*ListProductLinesRequest, *apiresource.List[apiresource.ProductLine]]{
+	return (&apiendpoint.APIEndpoint[*ListProductLinesRequest, *apiresource.List[apiresource.ProductLine]]{
 		Title:             "List Product Lines",
-		Description:       "Returns a paginated list of product lines, including account-owned and system product lines.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/product-lines",
@@ -36,5 +36,5 @@ func (e *ListProductLinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListP
 			ObjectType: constants.ObjectTypeProductLine,
 			Fields:     []string{"owner", "owner.account", "unit_group"},
 		}),
-	}
+	}).WithDocSource(e)
 }

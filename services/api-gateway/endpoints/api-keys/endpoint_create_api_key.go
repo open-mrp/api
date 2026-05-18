@@ -31,12 +31,12 @@ func (*CreateAPIKeyRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateAPIKeyRequest)
 }
 
+// Creates an API key. The secret key is returned once and cannot be retrieved later.
 type CreateAPIKeyEndpoint struct{}
 
 func (e *CreateAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAPIKeyRequest, *apiresource.CreatedAPIKey] {
-	return &apiendpoint.APIEndpoint[*CreateAPIKeyRequest, *apiresource.CreatedAPIKey]{
+	return (&apiendpoint.APIEndpoint[*CreateAPIKeyRequest, *apiresource.CreatedAPIKey]{
 		Title:             "Create API Key",
-		Description:       "Creates an API key. The secret key is returned once and cannot be retrieved later.",
 		Method:            http.MethodPost,
 		Route:             "/v1/auth/api-keys",
 		ContentType:       "application/json",
@@ -59,5 +59,5 @@ func (e *CreateAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAPI
 		Extras: apiendpoint.APIEndpointExtras{
 			ShieldResponseBody: true,
 		},
-	}
+	}).WithDocSource(e)
 }

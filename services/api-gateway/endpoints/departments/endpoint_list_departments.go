@@ -14,12 +14,12 @@ type ListDepartmentsRequest struct {
 	apiresource.PaginationRequest
 }
 
+// Returns a paginated list of departments.
 type ListDepartmentsEndpoint struct{}
 
 func (e *ListDepartmentsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListDepartmentsRequest, *apiresource.List[apiresource.Department]] {
-	return &apiendpoint.APIEndpoint[*ListDepartmentsRequest, *apiresource.List[apiresource.Department]]{
+	return (&apiendpoint.APIEndpoint[*ListDepartmentsRequest, *apiresource.List[apiresource.Department]]{
 		Title:             "List Departments",
-		Description:       "Returns a paginated list of departments.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/departments",
@@ -31,5 +31,5 @@ func (e *ListDepartmentsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListDe
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListDepartmentsRequest) (*apiresource.List[apiresource.Department], *apierror.APIError) {
 			return svc.(DepartmentSvc).ListDepartments
 		},
-	}
+	}).WithDocSource(e)
 }

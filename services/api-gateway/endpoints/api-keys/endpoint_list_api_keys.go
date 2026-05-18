@@ -17,12 +17,12 @@ type ListAPIKeysRequest struct {
 	Statuses []constants.APIKeyStatus `query:"statuses" default:"active,expired,revoked"`
 }
 
+// Returns a paginated list of API keys.
 type ListAPIKeysEndpoint struct{}
 
 func (e *ListAPIKeysEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAPIKeysRequest, *apiresource.List[apiresource.APIKey]] {
-	return &apiendpoint.APIEndpoint[*ListAPIKeysRequest, *apiresource.List[apiresource.APIKey]]{
+	return (&apiendpoint.APIEndpoint[*ListAPIKeysRequest, *apiresource.List[apiresource.APIKey]]{
 		Title:             "List API Keys",
-		Description:       "Returns a paginated list of API keys.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/auth/api-keys",
@@ -38,5 +38,5 @@ func (e *ListAPIKeysEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAPIKey
 			ObjectType: constants.ObjectTypeAPIKey,
 			Fields:     []string{"role", "role.permissions"},
 		}),
-	}
+	}).WithDocSource(e)
 }

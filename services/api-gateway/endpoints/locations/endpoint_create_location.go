@@ -32,12 +32,12 @@ func (*CreateLocationRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateLocationRequest)
 }
 
+// Creates a location for the caller's account.
 type CreateLocationEndpoint struct{}
 
 func (e *CreateLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateLocationRequest, *apiresource.Location] {
-	return &apiendpoint.APIEndpoint[*CreateLocationRequest, *apiresource.Location]{
+	return (&apiendpoint.APIEndpoint[*CreateLocationRequest, *apiresource.Location]{
 		Title:             "Create Location",
-		Description:       "Creates a location for the caller's account.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/locations",
@@ -56,5 +56,5 @@ func (e *CreateLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateL
 			ObjectType: constants.ObjectTypeLocation,
 			Fields:     []string{"parent", "children"},
 		}),
-	}
+	}).WithDocSource(e)
 }

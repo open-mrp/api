@@ -36,12 +36,12 @@ func (*CheckoutSessionResponse) SchemaExample() any {
 	}
 }
 
+// Creates an embedded Stripe checkout session for a customer actor and returns a client secret for use with Stripe.js.
 type CreateCheckoutSessionEndpoint struct{}
 
 func (e *CreateCheckoutSessionEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateCheckoutSessionRequest, *CheckoutSessionResponse] {
-	return &apiendpoint.APIEndpoint[*CreateCheckoutSessionRequest, *CheckoutSessionResponse]{
+	return (&apiendpoint.APIEndpoint[*CreateCheckoutSessionRequest, *CheckoutSessionResponse]{
 		Title:             "Create Customer Checkout Session",
-		Description:       "Creates an embedded Stripe checkout session for a customer actor and returns a client secret for use with Stripe.js.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/checkout-sessions",
@@ -53,5 +53,5 @@ func (e *CreateCheckoutSessionEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateCheckoutSessionRequest) (*CheckoutSessionResponse, *apierror.APIError) {
 			return svc.(CheckoutSessionSvc).CreateCheckoutSession
 		},
-	}
+	}).WithDocSource(e)
 }

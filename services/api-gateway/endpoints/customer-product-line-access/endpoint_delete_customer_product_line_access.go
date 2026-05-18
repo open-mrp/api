@@ -15,12 +15,12 @@ type DeleteCustomerProductLineAccessRequest struct {
 	CustomerID string `path:"customer_id" validate:"required"`
 }
 
+// Removes all product line access for a customer.
 type DeleteCustomerProductLineAccessEndpoint struct{}
 
 func (e *DeleteCustomerProductLineAccessEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteCustomerProductLineAccessRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*DeleteCustomerProductLineAccessRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*DeleteCustomerProductLineAccessRequest, *apiresource.EmptyResource]{
 		Title:             "Delete Customer Product Line Access",
-		Description:       "Removes all product line access for a customer.",
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/product-line-access/customers/{customer_id}",
@@ -32,5 +32,5 @@ func (e *DeleteCustomerProductLineAccessEndpoint) Materialize() *apiendpoint.API
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteCustomerProductLineAccessRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(CustomerProductLineAccessSvc).DeleteCustomerProductLineAccess
 		},
-	}
+	}).WithDocSource(e)
 }

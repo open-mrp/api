@@ -21,12 +21,12 @@ type ListAgentsRequest struct {
 	TriggerType []constants.AgentTriggerType `query:"trigger_types"`
 }
 
+// Returns a paginated list of agent definitions for the current account.
 type ListAgentsEndpoint struct{}
 
 func (e *ListAgentsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAgentsRequest, *apiresource.List[apiresource.AgentDefinition]] {
-	return &apiendpoint.APIEndpoint[*ListAgentsRequest, *apiresource.List[apiresource.AgentDefinition]]{
+	return (&apiendpoint.APIEndpoint[*ListAgentsRequest, *apiresource.List[apiresource.AgentDefinition]]{
 		Title:             "List Agents",
-		Description:       "Returns a paginated list of agent definitions for the current account.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/ai/agents",
@@ -42,5 +42,5 @@ func (e *ListAgentsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAgentsR
 			ObjectType: constants.ObjectTypeAgentDefinition,
 			Fields:     []string{"config", "tools", "role", "role.permissions"},
 		}),
-	}
+	}).WithDocSource(e)
 }

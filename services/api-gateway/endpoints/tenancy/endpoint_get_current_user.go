@@ -12,12 +12,12 @@ import (
 // Request to retrieve the authenticated user's profile.
 type GetCurrentUserRequest struct{}
 
+// Returns the authenticated user's profile information.
 type GetCurrentUserEndpoint struct{}
 
 func (e *GetCurrentUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetCurrentUserRequest, *apiresource.User] {
-	return &apiendpoint.APIEndpoint[*GetCurrentUserRequest, *apiresource.User]{
+	return (&apiendpoint.APIEndpoint[*GetCurrentUserRequest, *apiresource.User]{
 		Title:             "Get Current User",
-		Description:       "Returns the authenticated user's profile information.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/me",
@@ -32,5 +32,5 @@ func (e *GetCurrentUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetCurr
 		Extras: apiendpoint.APIEndpointExtras{
 			SkipRequestLogging: true,
 		},
-	}
+	}).WithDocSource(e)
 }

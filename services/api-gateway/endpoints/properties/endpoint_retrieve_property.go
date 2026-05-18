@@ -16,12 +16,12 @@ type RetrievePropertyRequest struct {
 	PropertyID string `path:"id" validate:"required"`
 }
 
+// Returns a property by ID.
 type RetrievePropertyEndpoint struct{}
 
 func (e *RetrievePropertyEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrievePropertyRequest, *apiresource.Property] {
-	return &apiendpoint.APIEndpoint[*RetrievePropertyRequest, *apiresource.Property]{
+	return (&apiendpoint.APIEndpoint[*RetrievePropertyRequest, *apiresource.Property]{
 		Title:             "Retrieve Property",
-		Description:       "Returns a property by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/properties/{id}",
@@ -37,5 +37,5 @@ func (e *RetrievePropertyEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retri
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrievePropertyRequest) (*apiresource.Property, *apierror.APIError) {
 			return svc.(PropertySvc).GetProperty
 		},
-	}
+	}).WithDocSource(e)
 }

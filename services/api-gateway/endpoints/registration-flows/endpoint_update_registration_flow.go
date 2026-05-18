@@ -40,12 +40,12 @@ func (*UpdateRegistrationFlowRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateRegistrationFlowRequest)
 }
 
+// Partially updates a registration flow.
 type UpdateRegistrationFlowEndpoint struct{}
 
 func (e *UpdateRegistrationFlowEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateRegistrationFlowRequest, *apiresource.RegistrationFlow] {
-	return &apiendpoint.APIEndpoint[*UpdateRegistrationFlowRequest, *apiresource.RegistrationFlow]{
+	return (&apiendpoint.APIEndpoint[*UpdateRegistrationFlowRequest, *apiresource.RegistrationFlow]{
 		Title:             "Update Registration Flow",
-		Description:       "Partially updates a registration flow.",
 		Method:            http.MethodPatch,
 		Route:             "/v1/sales/registration-flows/{id}",
 		ContentType:       "application/json",
@@ -57,5 +57,5 @@ func (e *UpdateRegistrationFlowEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateRegistrationFlowRequest) (*apiresource.RegistrationFlow, *apierror.APIError) {
 			return svc.(RegistrationFlowSvc).UpdateRegistrationFlow
 		},
-	}
+	}).WithDocSource(e)
 }

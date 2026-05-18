@@ -15,12 +15,12 @@ type DeletePartRequest struct {
 	ItemID string `path:"id" validate:"required"`
 }
 
+// Deletes a part. Sets the deleted_at timestamp rather than removing the record.
 type DeletePartEndpoint struct{}
 
 func (e *DeletePartEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeletePartRequest, *apiresource.Part] {
-	return &apiendpoint.APIEndpoint[*DeletePartRequest, *apiresource.Part]{
+	return (&apiendpoint.APIEndpoint[*DeletePartRequest, *apiresource.Part]{
 		Title:             "Delete Part",
-		Description:       "Deletes a part. Sets the deleted_at timestamp rather than removing the record.",
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/parts/{id}",
@@ -32,5 +32,5 @@ func (e *DeletePartEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeletePartR
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeletePartRequest) (*apiresource.Part, *apierror.APIError) {
 			return svc.(PartSvc).DeletePart
 		},
-	}
+	}).WithDocSource(e)
 }

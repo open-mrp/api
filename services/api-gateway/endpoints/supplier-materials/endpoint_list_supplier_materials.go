@@ -17,12 +17,12 @@ type ListSupplierMaterialsRequest struct {
 	SupplierID string `path:"supplier_id" validate:"required"`
 }
 
+// Returns a paginated list of supplier materials.
 type ListSupplierMaterialsEndpoint struct{}
 
 func (e *ListSupplierMaterialsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSupplierMaterialsRequest, *apiresource.List[apiresource.SupplierMaterial]] {
-	return &apiendpoint.APIEndpoint[*ListSupplierMaterialsRequest, *apiresource.List[apiresource.SupplierMaterial]]{
+	return (&apiendpoint.APIEndpoint[*ListSupplierMaterialsRequest, *apiresource.List[apiresource.SupplierMaterial]]{
 		Title:             "List Supplier Materials",
-		Description:       "Returns a paginated list of supplier materials.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/suppliers/{supplier_id}/materials",
@@ -38,5 +38,5 @@ func (e *ListSupplierMaterialsEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 			ObjectType: constants.ObjectTypeSupplierMaterial,
 			Fields:     []string{"material", "material.item"},
 		}),
-	}
+	}).WithDocSource(e)
 }

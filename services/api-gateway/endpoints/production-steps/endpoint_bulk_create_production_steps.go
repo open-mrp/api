@@ -85,12 +85,12 @@ func (*BulkCreateProductionStepsRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleBulkCreateProductionStepsRequest)
 }
 
+// Creates multiple production steps in a single request.
 type BulkCreateProductionStepsEndpoint struct{}
 
 func (e *BulkCreateProductionStepsEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkCreateProductionStepsRequest, *apiresource.BulkCreateProductionStepsResponse] {
-	return &apiendpoint.APIEndpoint[*BulkCreateProductionStepsRequest, *apiresource.BulkCreateProductionStepsResponse]{
+	return (&apiendpoint.APIEndpoint[*BulkCreateProductionStepsRequest, *apiresource.BulkCreateProductionStepsResponse]{
 		Title:             "Bulk Create Production Steps",
-		Description:       "Creates multiple production steps in a single request.",
 		Method:            http.MethodPost,
 		Route:             "/v1/operations/production-steps/actions/bulk-create",
 		ContentType:       "application/json",
@@ -102,5 +102,5 @@ func (e *BulkCreateProductionStepsEndpoint) Materialize() *apiendpoint.APIEndpoi
 		ServiceHandler: func(svc any) func(ctx context.Context, req *BulkCreateProductionStepsRequest) (*apiresource.BulkCreateProductionStepsResponse, *apierror.APIError) {
 			return svc.(ProductionStepSvc).BulkCreateProductionSteps
 		},
-	}
+	}).WithDocSource(e)
 }

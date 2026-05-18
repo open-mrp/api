@@ -34,12 +34,12 @@ func (*UpdateUserRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateUserRequest)
 }
 
+// Partially updates a user's profile.
 type UpdateUserEndpoint struct{}
 
 func (e *UpdateUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateUserRequest, *apiresource.User] {
-	return &apiendpoint.APIEndpoint[*UpdateUserRequest, *apiresource.User]{
+	return (&apiendpoint.APIEndpoint[*UpdateUserRequest, *apiresource.User]{
 		Title:             "Update User",
-		Description:       "Partially updates a user's profile.",
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/users/{id}",
@@ -51,5 +51,5 @@ func (e *UpdateUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateUserR
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateUserRequest) (*apiresource.User, *apierror.APIError) {
 			return svc.(UserSvc).UpdateUser
 		},
-	}
+	}).WithDocSource(e)
 }

@@ -15,12 +15,12 @@ type AddChildAccountRequest struct {
 	ChildAccountID string `path:"child_account_id" validate:"required"`
 }
 
+// Adds a child account relationship to the target account.
 type AddChildAccountEndpoint struct{}
 
 func (e *AddChildAccountEndpoint) Materialize() *apiendpoint.APIEndpoint[*AddChildAccountRequest, *apiresource.ChildAccount] {
-	return &apiendpoint.APIEndpoint[*AddChildAccountRequest, *apiresource.ChildAccount]{
+	return (&apiendpoint.APIEndpoint[*AddChildAccountRequest, *apiresource.ChildAccount]{
 		Title:             "Add Child Account",
-		Description:       "Adds a child account relationship to the target account.",
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/child-accounts/{child_account_id}",
@@ -32,5 +32,5 @@ func (e *AddChildAccountEndpoint) Materialize() *apiendpoint.APIEndpoint[*AddChi
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AddChildAccountRequest) (*apiresource.ChildAccount, *apierror.APIError) {
 			return svc.(ChildAccountSvc).AddChildAccount
 		},
-	}
+	}).WithDocSource(e)
 }

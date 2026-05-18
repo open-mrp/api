@@ -16,12 +16,12 @@ type RetrieveAgentRequest struct {
 	AgentDefinitionID string `path:"id" validate:"required"`
 }
 
+// Returns an agent definition by ID.
 type RetrieveAgentEndpoint struct{}
 
 func (e *RetrieveAgentEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveAgentRequest, *apiresource.AgentDefinition] {
-	return &apiendpoint.APIEndpoint[*RetrieveAgentRequest, *apiresource.AgentDefinition]{
+	return (&apiendpoint.APIEndpoint[*RetrieveAgentRequest, *apiresource.AgentDefinition]{
 		Title:             "Retrieve Agent",
-		Description:       "Returns an agent definition by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/ai/agents/{id}",
@@ -37,5 +37,5 @@ func (e *RetrieveAgentEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retrieve
 			ObjectType: constants.ObjectTypeAgentDefinition,
 			Fields:     []string{"config", "tools", "role", "role.permissions"},
 		}),
-	}
+	}).WithDocSource(e)
 }

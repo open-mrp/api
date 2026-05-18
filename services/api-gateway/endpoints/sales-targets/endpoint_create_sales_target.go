@@ -36,12 +36,12 @@ func (*CreateSalesTargetRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateSalesTargetRequest)
 }
 
+// Creates a sales target for an account user.
 type CreateSalesTargetEndpoint struct{}
 
 func (e *CreateSalesTargetEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateSalesTargetRequest, *apiresource.SalesTarget] {
-	return &apiendpoint.APIEndpoint[*CreateSalesTargetRequest, *apiresource.SalesTarget]{
+	return (&apiendpoint.APIEndpoint[*CreateSalesTargetRequest, *apiresource.SalesTarget]{
 		Title:             "Create Sales Target",
-		Description:       "Creates a sales target for an account user.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/account-users/{id}/sales-targets",
@@ -53,5 +53,5 @@ func (e *CreateSalesTargetEndpoint) Materialize() *apiendpoint.APIEndpoint[*Crea
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateSalesTargetRequest) (*apiresource.SalesTarget, *apierror.APIError) {
 			return svc.(SalesTargetSvc).CreateSalesTarget
 		},
-	}
+	}).WithDocSource(e)
 }

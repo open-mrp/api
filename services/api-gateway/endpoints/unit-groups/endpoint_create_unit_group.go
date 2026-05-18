@@ -58,12 +58,12 @@ func (*CreateUnitGroupRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateUnitGroupRequest)
 }
 
+// Creates a unit group with optional associated units.
 type CreateUnitGroupEndpoint struct{}
 
 func (e *CreateUnitGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateUnitGroupRequest, *apiresource.UnitGroup] {
-	return &apiendpoint.APIEndpoint[*CreateUnitGroupRequest, *apiresource.UnitGroup]{
+	return (&apiendpoint.APIEndpoint[*CreateUnitGroupRequest, *apiresource.UnitGroup]{
 		Title:             "Create Unit Group",
-		Description:       "Creates a unit group with optional associated units.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/unit-groups",
@@ -82,5 +82,5 @@ func (e *CreateUnitGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*Create
 			ObjectType: constants.ObjectTypeUnitGroup,
 			Fields:     []string{"owner", "owner.account", "base_unit", "associated_units"},
 		}),
-	}
+	}).WithDocSource(e)
 }

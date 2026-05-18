@@ -21,12 +21,12 @@ type AnalyzeDemandForecastRequest struct {
 	ForecastMonths *int64 `json:"forecast_months,omitempty"`
 }
 
+// Returns demand forecasts for items, including historical data and projected demand with confidence bounds.
 type AnalyzeDemandForecastEndpoint struct{}
 
 func (e *AnalyzeDemandForecastEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeDemandForecastRequest, *apiresource.AnalyzeDemandForecastResponse] {
-	return &apiendpoint.APIEndpoint[*AnalyzeDemandForecastRequest, *apiresource.AnalyzeDemandForecastResponse]{
+	return (&apiendpoint.APIEndpoint[*AnalyzeDemandForecastRequest, *apiresource.AnalyzeDemandForecastResponse]{
 		Title:             "Analyze Demand Forecast",
-		Description:       "Returns demand forecasts for items, including historical data and projected demand with confidence bounds.",
 		Method:            http.MethodPut,
 		Route:             "/v1/core/analytics/demand-forecast",
 		ContentType:       "application/json",
@@ -38,5 +38,5 @@ func (e *AnalyzeDemandForecastEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeDemandForecastRequest) (*apiresource.AnalyzeDemandForecastResponse, *apierror.APIError) {
 			return svc.(AnalyticsSvc).AnalyzeDemandForecast
 		},
-	}
+	}).WithDocSource(e)
 }

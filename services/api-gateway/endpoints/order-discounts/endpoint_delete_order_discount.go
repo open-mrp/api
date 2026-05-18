@@ -15,12 +15,12 @@ type DeleteOrderDiscountRequest struct {
 	OrderDiscountID string `path:"id" validate:"required"`
 }
 
+// Deletes an order discount by ID.
 type DeleteOrderDiscountEndpoint struct{}
 
 func (e *DeleteOrderDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteOrderDiscountRequest, *apiresource.OrderDiscount] {
-	return &apiendpoint.APIEndpoint[*DeleteOrderDiscountRequest, *apiresource.OrderDiscount]{
+	return (&apiendpoint.APIEndpoint[*DeleteOrderDiscountRequest, *apiresource.OrderDiscount]{
 		Title:             "Delete Order Discount",
-		Description:       "Deletes an order discount by ID.",
 		Method:            http.MethodDelete,
 		Route:             "/v1/sales/order-discounts/{id}",
 		ContentType:       "application/json",
@@ -32,5 +32,5 @@ func (e *DeleteOrderDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*De
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteOrderDiscountRequest) (*apiresource.OrderDiscount, *apierror.APIError) {
 			return svc.(OrderDiscountSvc).DeleteOrderDiscount
 		},
-	}
+	}).WithDocSource(e)
 }

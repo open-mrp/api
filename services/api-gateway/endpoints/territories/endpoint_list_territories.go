@@ -17,12 +17,12 @@ type ListTerritoriesRequest struct {
 	apiresource.PaginationRequest
 }
 
+// Returns a paginated list of territories.
 type ListTerritoriesEndpoint struct{}
 
 func (e *ListTerritoriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListTerritoriesRequest, *apiresource.List[apiresource.Territory]] {
-	return &apiendpoint.APIEndpoint[*ListTerritoriesRequest, *apiresource.List[apiresource.Territory]]{
+	return (&apiendpoint.APIEndpoint[*ListTerritoriesRequest, *apiresource.List[apiresource.Territory]]{
 		Title:             "List Territories",
-		Description:       "Returns a paginated list of territories.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/accounts/{account_id}/territories",
@@ -38,5 +38,5 @@ func (e *ListTerritoriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListTe
 			ObjectType: constants.ObjectTypeTerritory,
 			Fields:     []string{"sales_rep", "product_line"},
 		}),
-	}
+	}).WithDocSource(e)
 }

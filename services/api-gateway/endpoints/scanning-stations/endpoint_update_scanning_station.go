@@ -36,12 +36,12 @@ func (*UpdateScanningStationRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateScanningStationRequest)
 }
 
+// Partially updates a scanning station.
 type UpdateScanningStationEndpoint struct{}
 
 func (e *UpdateScanningStationEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateScanningStationRequest, *apiresource.ScanningStation] {
-	return &apiendpoint.APIEndpoint[*UpdateScanningStationRequest, *apiresource.ScanningStation]{
+	return (&apiendpoint.APIEndpoint[*UpdateScanningStationRequest, *apiresource.ScanningStation]{
 		Title:             "Update Scanning Station",
-		Description:       "Partially updates a scanning station.",
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/scanning-stations/{id}",
@@ -57,5 +57,5 @@ func (e *UpdateScanningStationEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 			ObjectType: constants.ObjectTypeScanningStation,
 			Fields:     []string{"department", "production_steps"},
 		}),
-	}
+	}).WithDocSource(e)
 }

@@ -19,12 +19,12 @@ type ListAccountUsersRequest struct {
 	RemovedScope *constants.RemovedResourceScope `query:"removed_scope"`
 }
 
+// Returns a paginated list of account users for the current account.
 type ListAccountUsersEndpoint struct{}
 
 func (e *ListAccountUsersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAccountUsersRequest, *apiresource.List[apiresource.AccountUser]] {
-	return &apiendpoint.APIEndpoint[*ListAccountUsersRequest, *apiresource.List[apiresource.AccountUser]]{
+	return (&apiendpoint.APIEndpoint[*ListAccountUsersRequest, *apiresource.List[apiresource.AccountUser]]{
 		Title:             "List Account Users",
-		Description:       "Returns a paginated list of account users for the current account.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/account-users",
@@ -40,5 +40,5 @@ func (e *ListAccountUsersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListA
 			ObjectType: constants.ObjectTypeAccountUser,
 			Fields:     []string{"role", "department"},
 		}),
-	}
+	}).WithDocSource(e)
 }

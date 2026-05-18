@@ -25,12 +25,13 @@ type ListPurchaseOrdersRequest struct {
 }
 
 // TODO: stop returning PurchaseOrderSummary; return the full PurchaseOrder apiresource and use proper includes values to control expansion.
+
+// Returns a paginated list of purchase orders for the current account.
 type ListPurchaseOrdersEndpoint struct{}
 
 func (e *ListPurchaseOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPurchaseOrdersRequest, *apiresource.List[apiresource.PurchaseOrderSummary]] {
-	return &apiendpoint.APIEndpoint[*ListPurchaseOrdersRequest, *apiresource.List[apiresource.PurchaseOrderSummary]]{
+	return (&apiendpoint.APIEndpoint[*ListPurchaseOrdersRequest, *apiresource.List[apiresource.PurchaseOrderSummary]]{
 		Title:             "List Purchase Orders",
-		Description:       "Returns a paginated list of purchase orders for the current account.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/purchase-orders",
@@ -42,5 +43,5 @@ func (e *ListPurchaseOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*Lis
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListPurchaseOrdersRequest) (*apiresource.List[apiresource.PurchaseOrderSummary], *apierror.APIError) {
 			return svc.(PurchaseOrderSvc).ListPurchaseOrders
 		},
-	}
+	}).WithDocSource(e)
 }

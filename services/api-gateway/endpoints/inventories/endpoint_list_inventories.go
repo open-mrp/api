@@ -15,12 +15,12 @@ type ListInventoriesRequest struct {
 	apiresource.PaginationRequest
 }
 
+// Returns a paginated list of items with on-hand inventory quantities for the account.
 type ListInventoriesEndpoint struct{}
 
 func (e *ListInventoriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListInventoriesRequest, *apiresource.ListInventoriesResponse] {
-	return &apiendpoint.APIEndpoint[*ListInventoriesRequest, *apiresource.ListInventoriesResponse]{
+	return (&apiendpoint.APIEndpoint[*ListInventoriesRequest, *apiresource.ListInventoriesResponse]{
 		Title:             "List Inventories",
-		Description:       "Returns a paginated list of items with on-hand inventory quantities for the account.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/inventories",
@@ -36,5 +36,5 @@ func (e *ListInventoriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListIn
 			ObjectType: constants.ObjectTypeInventoryItem,
 			Fields:     []string{"quantity.unit"},
 		}),
-	}
+	}).WithDocSource(e)
 }

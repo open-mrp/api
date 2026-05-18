@@ -26,12 +26,12 @@ func (*GetPossibleNextStepsRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleGetPossibleNextStepsRequest)
 }
 
+// Returns possible next production steps for a batch at a given scanning station.
 type GetPossibleNextStepsEndpoint struct{}
 
 func (e *GetPossibleNextStepsEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetPossibleNextStepsRequest, *apiresource.List[apiresource.ScanningProductionStepInfo]] {
-	return &apiendpoint.APIEndpoint[*GetPossibleNextStepsRequest, *apiresource.List[apiresource.ScanningProductionStepInfo]]{
+	return (&apiendpoint.APIEndpoint[*GetPossibleNextStepsRequest, *apiresource.List[apiresource.ScanningProductionStepInfo]]{
 		Title:             "Get Possible Next Steps",
-		Description:       "Returns possible next production steps for a batch at a given scanning station.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/batches/{id}/next-steps",
@@ -43,5 +43,5 @@ func (e *GetPossibleNextStepsEndpoint) Materialize() *apiendpoint.APIEndpoint[*G
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetPossibleNextStepsRequest) (*apiresource.List[apiresource.ScanningProductionStepInfo], *apierror.APIError) {
 			return svc.(BatchSvc).GetPossibleNextSteps
 		},
-	}
+	}).WithDocSource(e)
 }

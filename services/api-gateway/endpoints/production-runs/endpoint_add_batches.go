@@ -56,12 +56,12 @@ func (*AddBatchesToProductionRunRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleAddBatchesToProductionRunRequest)
 }
 
+// Adds batches to a production run. Fails if the run is completed.
 type AddBatchesToProductionRunEndpoint struct{}
 
 func (e *AddBatchesToProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*AddBatchesToProductionRunRequest, *apiresource.List[apiresource.Batch]] {
-	return &apiendpoint.APIEndpoint[*AddBatchesToProductionRunRequest, *apiresource.List[apiresource.Batch]]{
+	return (&apiendpoint.APIEndpoint[*AddBatchesToProductionRunRequest, *apiresource.List[apiresource.Batch]]{
 		Title:             "Add Batches to Production Run",
-		Description:       "Adds batches to a production run. Fails if the run is completed.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/production-runs/{id}/batches",
@@ -73,5 +73,5 @@ func (e *AddBatchesToProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoi
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AddBatchesToProductionRunRequest) (*apiresource.List[apiresource.Batch], *apierror.APIError) {
 			return svc.(ProductionRunSvc).AddBatchesToProductionRun
 		},
-	}
+	}).WithDocSource(e)
 }

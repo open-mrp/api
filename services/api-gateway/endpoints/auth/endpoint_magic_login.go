@@ -24,12 +24,12 @@ func (*MagicLoginRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleMagicLoginRequest)
 }
 
+// Exchanges a magic login token for a session, setting access and refresh tokens in cookies.
 type MagicLoginEndpoint struct{}
 
 func (e *MagicLoginEndpoint) Materialize() *apiendpoint.APIEndpoint[*MagicLoginRequest, *apiresource.User] {
-	return &apiendpoint.APIEndpoint[*MagicLoginRequest, *apiresource.User]{
+	return (&apiendpoint.APIEndpoint[*MagicLoginRequest, *apiresource.User]{
 		Title:             "Magic Login",
-		Description:       "Exchanges a magic login token for a session, setting access and refresh tokens in cookies.",
 		Method:            http.MethodPost,
 		Route:             "/v1/auth/actions/magic-login",
 		ContentType:       "application/json",
@@ -40,5 +40,5 @@ func (e *MagicLoginEndpoint) Materialize() *apiendpoint.APIEndpoint[*MagicLoginR
 		ServiceHandler: func(svc any) func(ctx context.Context, req *MagicLoginRequest) (*apiresource.User, *apierror.APIError) {
 			return svc.(AuthSvc).MagicLogin
 		},
-	}
+	}).WithDocSource(e)
 }

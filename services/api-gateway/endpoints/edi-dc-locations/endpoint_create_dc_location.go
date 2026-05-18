@@ -27,12 +27,12 @@ func (*CreateDCLocationRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateDCLocationRequest)
 }
 
+// Creates a DC location.
 type CreateDCLocationEndpoint struct{}
 
 func (e *CreateDCLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateDCLocationRequest, *apiresource.DCLocation] {
-	return &apiendpoint.APIEndpoint[*CreateDCLocationRequest, *apiresource.DCLocation]{
+	return (&apiendpoint.APIEndpoint[*CreateDCLocationRequest, *apiresource.DCLocation]{
 		Title:             "Create DC Location",
-		Description:       "Creates a DC location.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/dc-locations",
@@ -47,5 +47,5 @@ func (e *CreateDCLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*Creat
 		LocationFunc: func(resp *apiresource.DCLocation) string {
 			return "/v1/operations/dc-locations/" + resp.ID
 		},
-	}
+	}).WithDocSource(e)
 }

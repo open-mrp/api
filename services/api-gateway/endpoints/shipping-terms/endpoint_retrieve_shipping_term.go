@@ -16,12 +16,12 @@ type RetrieveShippingTermRequest struct {
 	ShippingTermID string `path:"id" validate:"required"`
 }
 
+// Returns a shipping term by ID.
 type RetrieveShippingTermEndpoint struct{}
 
 func (e *RetrieveShippingTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveShippingTermRequest, *apiresource.ShippingTerm] {
-	return &apiendpoint.APIEndpoint[*RetrieveShippingTermRequest, *apiresource.ShippingTerm]{
+	return (&apiendpoint.APIEndpoint[*RetrieveShippingTermRequest, *apiresource.ShippingTerm]{
 		Title:             "Retrieve Shipping Term",
-		Description:       "Returns a shipping term by ID.",
 		Method:            http.MethodGet,
 		Route:             "/v1/operations/shipping-terms/{id}",
 		ContentType:       "application/json",
@@ -37,5 +37,5 @@ func (e *RetrieveShippingTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*R
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveShippingTermRequest) (*apiresource.ShippingTerm, *apierror.APIError) {
 			return svc.(ShippingTermSvc).GetShippingTerm
 		},
-	}
+	}).WithDocSource(e)
 }

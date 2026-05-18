@@ -39,12 +39,12 @@ func (*UpdateAccountPriceRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateAccountPriceRequest)
 }
 
+// Partially updates an account price. If category_ids or attribute_ids are provided, they replace the existing set entirely.
 type UpdateAccountPriceEndpoint struct{}
 
 func (e *UpdateAccountPriceEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAccountPriceRequest, *apiresource.AccountPrice] {
-	return &apiendpoint.APIEndpoint[*UpdateAccountPriceRequest, *apiresource.AccountPrice]{
+	return (&apiendpoint.APIEndpoint[*UpdateAccountPriceRequest, *apiresource.AccountPrice]{
 		Title:             "Update Account Price",
-		Description:       "Partially updates an account price. If category_ids or attribute_ids are provided, they replace the existing set entirely.",
 		Method:            http.MethodPatch,
 		Route:             "/v1/sales/account-prices/{id}",
 		ContentType:       "application/json",
@@ -60,5 +60,5 @@ func (e *UpdateAccountPriceEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upd
 			ObjectType: constants.ObjectTypeAccountPrice,
 			Fields:     []string{"recipient_account", "product_line", "categories", "attributes"},
 		}),
-	}
+	}).WithDocSource(e)
 }

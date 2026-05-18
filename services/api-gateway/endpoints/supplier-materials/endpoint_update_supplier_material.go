@@ -33,12 +33,12 @@ func (*UpdateSupplierMaterialRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateSupplierMaterialRequest)
 }
 
+// Partially updates a supplier material.
 type UpdateSupplierMaterialEndpoint struct{}
 
 func (e *UpdateSupplierMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateSupplierMaterialRequest, *apiresource.SupplierMaterial] {
-	return &apiendpoint.APIEndpoint[*UpdateSupplierMaterialRequest, *apiresource.SupplierMaterial]{
+	return (&apiendpoint.APIEndpoint[*UpdateSupplierMaterialRequest, *apiresource.SupplierMaterial]{
 		Title:             "Update Supplier Material",
-		Description:       "Partially updates a supplier material.",
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/suppliers/{supplier_id}/materials/{id}",
@@ -50,5 +50,5 @@ func (e *UpdateSupplierMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateSupplierMaterialRequest) (*apiresource.SupplierMaterial, *apierror.APIError) {
 			return svc.(SupplierMaterialSvc).UpdateSupplierMaterial
 		},
-	}
+	}).WithDocSource(e)
 }

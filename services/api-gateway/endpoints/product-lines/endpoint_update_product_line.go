@@ -35,12 +35,12 @@ func (*UpdateProductLineRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateProductLineRequest)
 }
 
+// Partially updates an account-owned product line. Default system product lines cannot be updated.
 type UpdateProductLineEndpoint struct{}
 
 func (e *UpdateProductLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateProductLineRequest, *apiresource.ProductLine] {
-	return &apiendpoint.APIEndpoint[*UpdateProductLineRequest, *apiresource.ProductLine]{
+	return (&apiendpoint.APIEndpoint[*UpdateProductLineRequest, *apiresource.ProductLine]{
 		Title:             "Update Product Line",
-		Description:       "Partially updates an account-owned product line. Default system product lines cannot be updated.",
 		Method:            http.MethodPatch,
 		Route:             "/v1/catalog/product-lines/{id}",
 		ContentType:       "application/json",
@@ -56,5 +56,5 @@ func (e *UpdateProductLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upda
 			ObjectType: constants.ObjectTypeProductLine,
 			Fields:     []string{"owner", "owner.account", "unit_group"},
 		}),
-	}
+	}).WithDocSource(e)
 }

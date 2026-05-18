@@ -16,12 +16,12 @@ type RetrieveCarrierRequest struct {
 	CarrierID string `path:"id" validate:"required"`
 }
 
+// Returns a carrier by ID.
 type RetrieveCarrierEndpoint struct{}
 
 func (e *RetrieveCarrierEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveCarrierRequest, *apiresource.Carrier] {
-	return &apiendpoint.APIEndpoint[*RetrieveCarrierRequest, *apiresource.Carrier]{
+	return (&apiendpoint.APIEndpoint[*RetrieveCarrierRequest, *apiresource.Carrier]{
 		Title:             "Retrieve Carrier",
-		Description:       "Returns a carrier by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/carriers/{id}",
@@ -37,5 +37,5 @@ func (e *RetrieveCarrierEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retrie
 			ObjectType: constants.ObjectTypeCarrier,
 			Fields:     []string{"owner", "owner.account", "service_levels"},
 		}),
-	}
+	}).WithDocSource(e)
 }

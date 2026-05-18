@@ -48,12 +48,12 @@ func (*CreateSupplierRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateSupplierRequest)
 }
 
+// Creates a supplier, optionally with inline bill-to and ship-to addresses.
 type CreateSupplierEndpoint struct{}
 
 func (e *CreateSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateSupplierRequest, *apiresource.SupplierDetail] {
-	return &apiendpoint.APIEndpoint[*CreateSupplierRequest, *apiresource.SupplierDetail]{
+	return (&apiendpoint.APIEndpoint[*CreateSupplierRequest, *apiresource.SupplierDetail]{
 		Title:             "Create Supplier",
-		Description:       "Creates a supplier, optionally with inline bill-to and ship-to addresses.",
 		Method:            http.MethodPost,
 		Route:             "/v1/operations/suppliers",
 		ContentType:       "application/json",
@@ -68,5 +68,5 @@ func (e *CreateSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateS
 		LocationFunc: func(resp *apiresource.SupplierDetail) string {
 			return "/v1/operations/suppliers/" + resp.ID
 		},
-	}
+	}).WithDocSource(e)
 }

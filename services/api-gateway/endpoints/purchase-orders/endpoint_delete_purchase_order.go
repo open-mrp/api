@@ -15,12 +15,12 @@ type DeletePurchaseOrderRequest struct {
 	PurchaseOrderID string `path:"id" validate:"required"`
 }
 
+// Deletes a purchase order and all its related records.
 type DeletePurchaseOrderEndpoint struct{}
 
 func (e *DeletePurchaseOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeletePurchaseOrderRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*DeletePurchaseOrderRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*DeletePurchaseOrderRequest, *apiresource.EmptyResource]{
 		Title:             "Delete Purchase Order",
-		Description:       "Deletes a purchase order and all its related records.",
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/purchase-orders/{id}",
@@ -32,5 +32,5 @@ func (e *DeletePurchaseOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*De
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeletePurchaseOrderRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(PurchaseOrderSvc).DeletePurchaseOrder
 		},
-	}
+	}).WithDocSource(e)
 }

@@ -38,12 +38,12 @@ func (*CreateAttributeRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateAttributeRequest)
 }
 
+// Creates an attribute under a property.
 type CreateAttributeEndpoint struct{}
 
 func (e *CreateAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAttributeRequest, *apiresource.Attribute] {
-	return &apiendpoint.APIEndpoint[*CreateAttributeRequest, *apiresource.Attribute]{
+	return (&apiendpoint.APIEndpoint[*CreateAttributeRequest, *apiresource.Attribute]{
 		Title:             "Create Attribute",
-		Description:       "Creates an attribute under a property.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/properties/{property_id}/attributes",
@@ -55,5 +55,5 @@ func (e *CreateAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*Create
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateAttributeRequest) (*apiresource.Attribute, *apierror.APIError) {
 			return svc.(PropertySvc).CreateAttribute
 		},
-	}
+	}).WithDocSource(e)
 }

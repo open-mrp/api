@@ -26,12 +26,12 @@ func (*EmailRecordRequest) SchemaExample() any {
 	return exampleEmailRecordRequest
 }
 
+// Emails a record (invoice, sales order, or purchase order) to the configured recipients as a PDF attachment.
 type EmailRecordEndpoint struct{}
 
 func (e *EmailRecordEndpoint) Materialize() *apiendpoint.APIEndpoint[*EmailRecordRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*EmailRecordRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*EmailRecordRequest, *apiresource.EmptyResource]{
 		Title:             "Email Record",
-		Description:       "Emails a record (invoice, sales order, or purchase order) to the configured recipients as a PDF attachment.",
 		Method:            http.MethodPost,
 		Route:             "/v1/core/actions/email-record",
 		ContentType:       "application/json",
@@ -43,5 +43,5 @@ func (e *EmailRecordEndpoint) Materialize() *apiendpoint.APIEndpoint[*EmailRecor
 		ServiceHandler: func(svc any) func(ctx context.Context, req *EmailRecordRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(UtilsSvc).EmailRecord
 		},
-	}
+	}).WithDocSource(e)
 }

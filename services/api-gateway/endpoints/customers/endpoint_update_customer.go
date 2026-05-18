@@ -79,12 +79,12 @@ func (*UpdateCustomerRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateCustomerRequest)
 }
 
+// Partially updates a customer account. When a Stripe integration is active, customer changes are synced to Stripe.
 type UpdateCustomerEndpoint struct{}
 
 func (e *UpdateCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateCustomerRequest, *apiresource.Customer] {
-	return &apiendpoint.APIEndpoint[*UpdateCustomerRequest, *apiresource.Customer]{
+	return (&apiendpoint.APIEndpoint[*UpdateCustomerRequest, *apiresource.Customer]{
 		Title:             "Update Customer",
-		Description:       "Partially updates a customer account. When a Stripe integration is active, customer changes are synced to Stripe.",
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/customers/{id}",
@@ -118,5 +118,5 @@ func (e *UpdateCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateC
 				"credit_limit",
 			},
 		}),
-	}
+	}).WithDocSource(e)
 }

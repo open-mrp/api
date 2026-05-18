@@ -15,12 +15,12 @@ type ListScanningStationsRequest struct {
 	apiresource.PaginationRequest
 }
 
+// Returns a paginated list of scanning stations for the current account.
 type ListScanningStationsEndpoint struct{}
 
 func (e *ListScanningStationsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListScanningStationsRequest, *apiresource.List[apiresource.ScanningStation]] {
-	return &apiendpoint.APIEndpoint[*ListScanningStationsRequest, *apiresource.List[apiresource.ScanningStation]]{
+	return (&apiendpoint.APIEndpoint[*ListScanningStationsRequest, *apiresource.List[apiresource.ScanningStation]]{
 		Title:             "List Scanning Stations",
-		Description:       "Returns a paginated list of scanning stations for the current account.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/scanning-stations",
@@ -36,5 +36,5 @@ func (e *ListScanningStationsEndpoint) Materialize() *apiendpoint.APIEndpoint[*L
 			ObjectType: constants.ObjectTypeScanningStation,
 			Fields:     []string{"department", "production_steps"},
 		}),
-	}
+	}).WithDocSource(e)
 }

@@ -16,12 +16,12 @@ type RetrieveUnitRequest struct {
 	UnitID string `path:"id" validate:"required"`
 }
 
+// Returns a unit by ID, including both account-owned and global system units.
 type RetrieveUnitEndpoint struct{}
 
 func (e *RetrieveUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveUnitRequest, *apiresource.Unit] {
-	return &apiendpoint.APIEndpoint[*RetrieveUnitRequest, *apiresource.Unit]{
+	return (&apiendpoint.APIEndpoint[*RetrieveUnitRequest, *apiresource.Unit]{
 		Title:             "Retrieve Unit",
-		Description:       "Returns a unit by ID, including both account-owned and global system units.",
 		Method:            http.MethodGet,
 		Route:             "/v1/catalog/units/{id}",
 		ContentType:       "application/json",
@@ -37,5 +37,5 @@ func (e *RetrieveUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveU
 			ObjectType: constants.ObjectTypeUnit,
 			Fields:     []string{"owner", "owner.account"},
 		}),
-	}
+	}).WithDocSource(e)
 }

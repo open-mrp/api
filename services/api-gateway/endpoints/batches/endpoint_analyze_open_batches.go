@@ -27,12 +27,12 @@ func (*AnalyzeOpenBatchesRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleAnalyzeOpenBatchesRequest)
 }
 
+// Returns aggregated summaries of open batches, optionally filtered by item IDs or product line IDs.
 type AnalyzeOpenBatchesEndpoint struct{}
 
 func (e *AnalyzeOpenBatchesEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeOpenBatchesRequest, *apiresource.List[apiresource.OpenBatchSummary]] {
-	return &apiendpoint.APIEndpoint[*AnalyzeOpenBatchesRequest, *apiresource.List[apiresource.OpenBatchSummary]]{
+	return (&apiendpoint.APIEndpoint[*AnalyzeOpenBatchesRequest, *apiresource.List[apiresource.OpenBatchSummary]]{
 		Title:             "Get Open Batch Summaries",
-		Description:       "Returns aggregated summaries of open batches, optionally filtered by item IDs or product line IDs.",
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/analytics/open-batches",
@@ -44,5 +44,5 @@ func (e *AnalyzeOpenBatchesEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ana
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeOpenBatchesRequest) (*apiresource.List[apiresource.OpenBatchSummary], *apierror.APIError) {
 			return svc.(BatchSvc).AnalyzeOpenBatches
 		},
-	}
+	}).WithDocSource(e)
 }

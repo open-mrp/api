@@ -20,12 +20,12 @@ type AnalyzeOeeRequest struct {
 	DepartmentIDs []string `json:"department_ids,omitempty"`
 }
 
+// Returns Overall Equipment Effectiveness (OEE) metrics by department, including good units, waste units, and estimated runtime hours.
 type AnalyzeOeeEndpoint struct{}
 
 func (e *AnalyzeOeeEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeOeeRequest, *apiresource.AnalyzeOeeResponse] {
-	return &apiendpoint.APIEndpoint[*AnalyzeOeeRequest, *apiresource.AnalyzeOeeResponse]{
+	return (&apiendpoint.APIEndpoint[*AnalyzeOeeRequest, *apiresource.AnalyzeOeeResponse]{
 		Title:             "Analyze OEE",
-		Description:       "Returns Overall Equipment Effectiveness (OEE) metrics by department, including good units, waste units, and estimated runtime hours.",
 		Method:            http.MethodPut,
 		Route:             "/v1/core/analytics/oee",
 		ContentType:       "application/json",
@@ -37,5 +37,5 @@ func (e *AnalyzeOeeEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeOeeR
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeOeeRequest) (*apiresource.AnalyzeOeeResponse, *apierror.APIError) {
 			return svc.(AnalyticsSvc).AnalyzeOee
 		},
-	}
+	}).WithDocSource(e)
 }

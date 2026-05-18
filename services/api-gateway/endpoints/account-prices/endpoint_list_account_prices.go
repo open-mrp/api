@@ -16,12 +16,12 @@ type ListAccountPricesRequest struct {
 	RecipientAccountID *string `query:"recipient_account_id"`
 }
 
+// Returns a paginated list of account prices for the current account.
 type ListAccountPricesEndpoint struct{}
 
 func (e *ListAccountPricesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAccountPricesRequest, *apiresource.List[apiresource.AccountPrice]] {
-	return &apiendpoint.APIEndpoint[*ListAccountPricesRequest, *apiresource.List[apiresource.AccountPrice]]{
+	return (&apiendpoint.APIEndpoint[*ListAccountPricesRequest, *apiresource.List[apiresource.AccountPrice]]{
 		Title:             "List Account Prices",
-		Description:       "Returns a paginated list of account prices for the current account.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/account-prices",
@@ -33,5 +33,5 @@ func (e *ListAccountPricesEndpoint) Materialize() *apiendpoint.APIEndpoint[*List
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListAccountPricesRequest) (*apiresource.List[apiresource.AccountPrice], *apierror.APIError) {
 			return svc.(AccountPriceSvc).ListAccountPrices
 		},
-	}
+	}).WithDocSource(e)
 }

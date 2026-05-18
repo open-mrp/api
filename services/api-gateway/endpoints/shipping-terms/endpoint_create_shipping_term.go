@@ -36,12 +36,12 @@ func (*CreateShippingTermRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateShippingTermRequest)
 }
 
+// Creates an account-owned shipping term.
 type CreateShippingTermEndpoint struct{}
 
 func (e *CreateShippingTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateShippingTermRequest, *apiresource.ShippingTerm] {
-	return &apiendpoint.APIEndpoint[*CreateShippingTermRequest, *apiresource.ShippingTerm]{
+	return (&apiendpoint.APIEndpoint[*CreateShippingTermRequest, *apiresource.ShippingTerm]{
 		Title:             "Create Shipping Term",
-		Description:       "Creates an account-owned shipping term.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/shipping-terms",
@@ -60,5 +60,5 @@ func (e *CreateShippingTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cre
 		LocationFunc: func(resp *apiresource.ShippingTerm) string {
 			return "/v1/operations/shipping-terms/" + resp.ID
 		},
-	}
+	}).WithDocSource(e)
 }

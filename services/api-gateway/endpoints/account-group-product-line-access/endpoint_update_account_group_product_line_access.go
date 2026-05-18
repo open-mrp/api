@@ -26,12 +26,12 @@ func (*UpdateAccountGroupProductLineAccessRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateAccountGroupProductLineAccessRequest)
 }
 
+// Replaces all product line access for an account group.
 type UpdateAccountGroupProductLineAccessEndpoint struct{}
 
 func (e *UpdateAccountGroupProductLineAccessEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAccountGroupProductLineAccessRequest, *apiresource.AccountGroupProductLineAccess] {
-	return &apiendpoint.APIEndpoint[*UpdateAccountGroupProductLineAccessRequest, *apiresource.AccountGroupProductLineAccess]{
+	return (&apiendpoint.APIEndpoint[*UpdateAccountGroupProductLineAccessRequest, *apiresource.AccountGroupProductLineAccess]{
 		Title:             "Update Account Group Product Line Access",
-		Description:       "Replaces all product line access for an account group.",
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/product-line-access/account-groups/{account_group_id}",
@@ -43,5 +43,5 @@ func (e *UpdateAccountGroupProductLineAccessEndpoint) Materialize() *apiendpoint
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateAccountGroupProductLineAccessRequest) (*apiresource.AccountGroupProductLineAccess, *apierror.APIError) {
 			return svc.(AccountGroupProductLineAccessSvc).UpdateAccountGroupProductLineAccess
 		},
-	}
+	}).WithDocSource(e)
 }

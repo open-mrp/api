@@ -24,12 +24,12 @@ func (*ValidateUnitsRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleValidateUnitsRequest)
 }
 
+// Validates unit abbreviations and returns matching units keyed by the original map keys.
 type ValidateUnitsEndpoint struct{}
 
 func (e *ValidateUnitsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ValidateUnitsRequest, *apiresource.ValidateUnitsResponse] {
-	return &apiendpoint.APIEndpoint[*ValidateUnitsRequest, *apiresource.ValidateUnitsResponse]{
+	return (&apiendpoint.APIEndpoint[*ValidateUnitsRequest, *apiresource.ValidateUnitsResponse]{
 		Title:             "Validate Units",
-		Description:       "Validates unit abbreviations and returns matching units keyed by the original map keys.",
 		Method:            http.MethodPut,
 		Route:             "/v1/catalog/units/actions/validate",
 		ContentType:       "application/json",
@@ -41,5 +41,5 @@ func (e *ValidateUnitsEndpoint) Materialize() *apiendpoint.APIEndpoint[*Validate
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ValidateUnitsRequest) (*apiresource.ValidateUnitsResponse, *apierror.APIError) {
 			return svc.(UnitSvc).ValidateUnits
 		},
-	}
+	}).WithDocSource(e)
 }

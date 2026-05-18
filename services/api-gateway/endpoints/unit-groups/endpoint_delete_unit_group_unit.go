@@ -17,12 +17,12 @@ type DeleteUnitGroupUnitRequest struct {
 	AssociatedUnitID string `path:"id" validate:"required"`
 }
 
+// Deletes an associated unit from a unit group.
 type DeleteUnitGroupUnitEndpoint struct{}
 
 func (e *DeleteUnitGroupUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteUnitGroupUnitRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*DeleteUnitGroupUnitRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*DeleteUnitGroupUnitRequest, *apiresource.EmptyResource]{
 		Title:             "Delete Unit Group Associated Unit",
-		Description:       "Deletes an associated unit from a unit group.",
 		Method:            http.MethodDelete,
 		Route:             "/v1/catalog/unit-groups/{unit_group_id}/units/{id}",
 		ContentType:       "application/json",
@@ -34,5 +34,5 @@ func (e *DeleteUnitGroupUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*De
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteUnitGroupUnitRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(UnitGroupSvc).DeleteUnitGroupUnit
 		},
-	}
+	}).WithDocSource(e)
 }

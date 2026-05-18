@@ -27,12 +27,12 @@ func (*LoginRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleLoginRequest)
 }
 
+// Authenticates a user and returns the user object, setting access and refresh tokens in cookies.
 type LoginEndpoint struct{}
 
 func (e *LoginEndpoint) Materialize() *apiendpoint.APIEndpoint[*LoginRequest, *apiresource.User] {
-	return &apiendpoint.APIEndpoint[*LoginRequest, *apiresource.User]{
+	return (&apiendpoint.APIEndpoint[*LoginRequest, *apiresource.User]{
 		Title:             "Login User",
-		Description:       "Authenticates a user and returns the user object, setting access and refresh tokens in cookies.",
 		Method:            http.MethodPost,
 		Route:             "/v1/auth/actions/login",
 		ContentType:       "application/json",
@@ -46,5 +46,5 @@ func (e *LoginEndpoint) Materialize() *apiendpoint.APIEndpoint[*LoginRequest, *a
 		Extras: apiendpoint.APIEndpointExtras{
 			ShieldRequestBody: true,
 		},
-	}
+	}).WithDocSource(e)
 }

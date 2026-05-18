@@ -30,12 +30,12 @@ func (*ChangePurchaseOrderStatusRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleChangePurchaseOrderStatusRequest)
 }
 
+// Changes the status of a purchase order. Supported actions: issue (draft to issued), unissue (issued to draft), close (issued to closed), open (closed to issued).
 type ChangePurchaseOrderStatusEndpoint struct{}
 
 func (e *ChangePurchaseOrderStatusEndpoint) Materialize() *apiendpoint.APIEndpoint[*ChangePurchaseOrderStatusRequest, *apiresource.PurchaseOrderDetail] {
-	return &apiendpoint.APIEndpoint[*ChangePurchaseOrderStatusRequest, *apiresource.PurchaseOrderDetail]{
+	return (&apiendpoint.APIEndpoint[*ChangePurchaseOrderStatusRequest, *apiresource.PurchaseOrderDetail]{
 		Title:             "Change Purchase Order Status",
-		Description:       "Changes the status of a purchase order. Supported actions: issue (draft to issued), unissue (issued to draft), close (issued to closed), open (closed to issued).",
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/purchase-orders/{id}/actions/change-status",
@@ -51,5 +51,5 @@ func (e *ChangePurchaseOrderStatusEndpoint) Materialize() *apiendpoint.APIEndpoi
 			ObjectType: constants.ObjectTypePurchaseOrder,
 			Fields:     []string{"supplier", "bill_to_address", "ship_to_address", "carrier", "service_level", "payment_term", "shipping_term", "receiving_order", "lines", "contacts"},
 		}),
-	}
+	}).WithDocSource(e)
 }

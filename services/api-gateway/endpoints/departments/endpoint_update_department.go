@@ -35,12 +35,12 @@ func (*UpdateDepartmentRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateDepartmentRequest)
 }
 
+// Partially updates a department. Adding scanning stations or machines is additive and does not remove existing ones.
 type UpdateDepartmentEndpoint struct{}
 
 func (e *UpdateDepartmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateDepartmentRequest, *apiresource.Department] {
-	return &apiendpoint.APIEndpoint[*UpdateDepartmentRequest, *apiresource.Department]{
+	return (&apiendpoint.APIEndpoint[*UpdateDepartmentRequest, *apiresource.Department]{
 		Title:             "Update Department",
-		Description:       "Partially updates a department. Adding scanning stations or machines is additive and does not remove existing ones.",
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/departments/{id}",
@@ -52,5 +52,5 @@ func (e *UpdateDepartmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*Updat
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateDepartmentRequest) (*apiresource.Department, *apierror.APIError) {
 			return svc.(DepartmentSvc).UpdateDepartment
 		},
-	}
+	}).WithDocSource(e)
 }

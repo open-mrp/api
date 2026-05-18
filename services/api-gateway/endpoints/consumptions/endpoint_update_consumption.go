@@ -40,12 +40,12 @@ func (*UpdateConsumptionRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateConsumptionRequest)
 }
 
+// Partially updates a consumption within a production step.
 type UpdateConsumptionEndpoint struct{}
 
 func (e *UpdateConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateConsumptionRequest, *apiresource.Consumption] {
-	return &apiendpoint.APIEndpoint[*UpdateConsumptionRequest, *apiresource.Consumption]{
+	return (&apiendpoint.APIEndpoint[*UpdateConsumptionRequest, *apiresource.Consumption]{
 		Title:             "Update Consumption",
-		Description:       "Partially updates a consumption within a production step.",
 		Method:            http.MethodPatch,
 		Route:             "/v1/operations/production-steps/{production_step_id}/consumptions/{id}",
 		ContentType:       "application/json",
@@ -61,5 +61,5 @@ func (e *UpdateConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upda
 			ObjectType: constants.ObjectTypeConsumption,
 			Fields:     []string{"consumed_item"},
 		}),
-	}
+	}).WithDocSource(e)
 }

@@ -30,12 +30,12 @@ func (*CreateSandboxRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateSandboxRequest)
 }
 
+// Creates a sandbox account.
 type CreateSandboxEndpoint struct{}
 
 func (e *CreateSandboxEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateSandboxRequest, *apiresource.Sandbox] {
-	return &apiendpoint.APIEndpoint[*CreateSandboxRequest, *apiresource.Sandbox]{
+	return (&apiendpoint.APIEndpoint[*CreateSandboxRequest, *apiresource.Sandbox]{
 		Title:             "Create Sandbox",
-		Description:       "Creates a sandbox account.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/core/sandboxes",
@@ -54,5 +54,5 @@ func (e *CreateSandboxEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateSa
 		LocationFunc: func(resp *apiresource.Sandbox) string {
 			return "/v1/core/sandboxes/" + resp.ID
 		},
-	}
+	}).WithDocSource(e)
 }

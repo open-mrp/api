@@ -36,12 +36,12 @@ func (*CreateSupplierMaterialRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateSupplierMaterialRequest)
 }
 
+// Creates a supplier material association.
 type CreateSupplierMaterialEndpoint struct{}
 
 func (e *CreateSupplierMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateSupplierMaterialRequest, *apiresource.SupplierMaterial] {
-	return &apiendpoint.APIEndpoint[*CreateSupplierMaterialRequest, *apiresource.SupplierMaterial]{
+	return (&apiendpoint.APIEndpoint[*CreateSupplierMaterialRequest, *apiresource.SupplierMaterial]{
 		Title:             "Create Supplier Material",
-		Description:       "Creates a supplier material association.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/suppliers/{supplier_id}/materials",
@@ -53,5 +53,5 @@ func (e *CreateSupplierMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateSupplierMaterialRequest) (*apiresource.SupplierMaterial, *apierror.APIError) {
 			return svc.(SupplierMaterialSvc).CreateSupplierMaterial
 		},
-	}
+	}).WithDocSource(e)
 }

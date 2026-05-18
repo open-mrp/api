@@ -46,12 +46,12 @@ func (*BulkCreateItemsRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleBulkCreateItemsRequest)
 }
 
+// Creates multiple items in a single operation, returning per-item results indicating success or failure.
 type BulkCreateItemsEndpoint struct{}
 
 func (e *BulkCreateItemsEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkCreateItemsRequest, *apiresource.BulkCreateItemsResponse] {
-	return &apiendpoint.APIEndpoint[*BulkCreateItemsRequest, *apiresource.BulkCreateItemsResponse]{
+	return (&apiendpoint.APIEndpoint[*BulkCreateItemsRequest, *apiresource.BulkCreateItemsResponse]{
 		Title:             "Bulk Create Items",
-		Description:       "Creates multiple items in a single operation, returning per-item results indicating success or failure.",
 		Method:            http.MethodPost,
 		Route:             "/v1/catalog/items/actions/bulk-create",
 		ContentType:       "application/json",
@@ -63,5 +63,5 @@ func (e *BulkCreateItemsEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkCr
 		ServiceHandler: func(svc any) func(ctx context.Context, req *BulkCreateItemsRequest) (*apiresource.BulkCreateItemsResponse, *apierror.APIError) {
 			return svc.(ItemSvc).BulkCreateItems
 		},
-	}
+	}).WithDocSource(e)
 }

@@ -27,12 +27,12 @@ func (*CreateCustomerProductLineAccessRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateCustomerProductLineAccessRequest)
 }
 
+// Creates product line access for a customer.
 type CreateCustomerProductLineAccessEndpoint struct{}
 
 func (e *CreateCustomerProductLineAccessEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateCustomerProductLineAccessRequest, *apiresource.CustomerProductLineAccess] {
-	return &apiendpoint.APIEndpoint[*CreateCustomerProductLineAccessRequest, *apiresource.CustomerProductLineAccess]{
+	return (&apiendpoint.APIEndpoint[*CreateCustomerProductLineAccessRequest, *apiresource.CustomerProductLineAccess]{
 		Title:             "Create Customer Product Line Access",
-		Description:       "Creates product line access for a customer.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/product-line-access/customers",
@@ -47,5 +47,5 @@ func (e *CreateCustomerProductLineAccessEndpoint) Materialize() *apiendpoint.API
 		LocationFunc: func(resp *apiresource.CustomerProductLineAccess) string {
 			return "/v1/sales/product-line-access/customers/" + resp.Customer.ID
 		},
-	}
+	}).WithDocSource(e)
 }

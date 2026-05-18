@@ -15,12 +15,12 @@ type DeleteCarrierRequest struct {
 	CarrierID string `path:"id" validate:"required"`
 }
 
+// Deletes a carrier and cascades to remove all options. If the carrier is managed by Shippo, the Shippo account is deactivated.
 type DeleteCarrierEndpoint struct{}
 
 func (e *DeleteCarrierEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteCarrierRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*DeleteCarrierRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*DeleteCarrierRequest, *apiresource.EmptyResource]{
 		Title:             "Delete Carrier",
-		Description:       "Deletes a carrier and cascades to remove all options. If the carrier is managed by Shippo, the Shippo account is deactivated.",
 		Method:            http.MethodDelete,
 		Route:             "/v1/operations/carriers/{id}",
 		ContentType:       "application/json",
@@ -32,5 +32,5 @@ func (e *DeleteCarrierEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteCa
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteCarrierRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(CarrierSvc).DeleteCarrier
 		},
-	}
+	}).WithDocSource(e)
 }

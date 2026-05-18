@@ -38,12 +38,12 @@ func (*ValidateAddressRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleValidateAddressRequest)
 }
 
+// Validates an address and returns whether it is valid, a formatted version, and any validation messages.
 type ValidateAddressEndpoint struct{}
 
 func (e *ValidateAddressEndpoint) Materialize() *apiendpoint.APIEndpoint[*ValidateAddressRequest, *apiresource.ValidatedAddress] {
-	return &apiendpoint.APIEndpoint[*ValidateAddressRequest, *apiresource.ValidatedAddress]{
+	return (&apiendpoint.APIEndpoint[*ValidateAddressRequest, *apiresource.ValidatedAddress]{
 		Title:             "Validate Address",
-		Description:       "Validates an address and returns whether it is valid, a formatted version, and any validation messages.",
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
 		Route:             "/v1/core/addresses/actions/validate",
@@ -55,5 +55,5 @@ func (e *ValidateAddressEndpoint) Materialize() *apiendpoint.APIEndpoint[*Valida
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ValidateAddressRequest) (*apiresource.ValidatedAddress, *apierror.APIError) {
 			return svc.(AddressValidationSvc).ValidateAddress
 		},
-	}
+	}).WithDocSource(e)
 }

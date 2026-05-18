@@ -33,12 +33,12 @@ func (*UpdateSettlementRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateSettlementRequest)
 }
 
+// Partially updates a settlement's number, note, or responsible user.
 type UpdateSettlementEndpoint struct{}
 
 func (e *UpdateSettlementEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateSettlementRequest, *apiresource.Settlement] {
-	return &apiendpoint.APIEndpoint[*UpdateSettlementRequest, *apiresource.Settlement]{
+	return (&apiendpoint.APIEndpoint[*UpdateSettlementRequest, *apiresource.Settlement]{
 		Title:             "Update Settlement",
-		Description:       "Partially updates a settlement's number, note, or responsible user.",
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
 		Route:             "/v1/finance/settlements/{id}",
@@ -50,5 +50,5 @@ func (e *UpdateSettlementEndpoint) Materialize() *apiendpoint.APIEndpoint[*Updat
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateSettlementRequest) (*apiresource.Settlement, *apierror.APIError) {
 			return svc.(SettlementSvc).UpdateSettlement
 		},
-	}
+	}).WithDocSource(e)
 }

@@ -14,12 +14,12 @@ type ListSysPropertiesRequest struct {
 	apiresource.PaginationRequest
 }
 
+// Returns a paginated list of system properties for the current account.
 type ListSysPropertiesEndpoint struct{}
 
 func (e *ListSysPropertiesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSysPropertiesRequest, *apiresource.List[apiresource.SysProperty]] {
-	return &apiendpoint.APIEndpoint[*ListSysPropertiesRequest, *apiresource.List[apiresource.SysProperty]]{
+	return (&apiendpoint.APIEndpoint[*ListSysPropertiesRequest, *apiresource.List[apiresource.SysProperty]]{
 		Title:             "List System Properties",
-		Description:       "Returns a paginated list of system properties for the current account.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/core/sys-properties",
@@ -31,5 +31,5 @@ func (e *ListSysPropertiesEndpoint) Materialize() *apiendpoint.APIEndpoint[*List
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListSysPropertiesRequest) (*apiresource.List[apiresource.SysProperty], *apierror.APIError) {
 			return svc.(SysPropertySvc).ListSysProperties
 		},
-	}
+	}).WithDocSource(e)
 }

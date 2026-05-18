@@ -27,12 +27,12 @@ func (*UpdateSysPropertyRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateSysPropertyRequest)
 }
 
+// Partially updates the value of a system property.
 type UpdateSysPropertyEndpoint struct{}
 
 func (e *UpdateSysPropertyEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateSysPropertyRequest, *apiresource.SysProperty] {
-	return &apiendpoint.APIEndpoint[*UpdateSysPropertyRequest, *apiresource.SysProperty]{
+	return (&apiendpoint.APIEndpoint[*UpdateSysPropertyRequest, *apiresource.SysProperty]{
 		Title:             "Update System Property",
-		Description:       "Partially updates the value of a system property.",
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
 		Route:             "/v1/core/sys-properties/{id}",
@@ -44,5 +44,5 @@ func (e *UpdateSysPropertyEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upda
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateSysPropertyRequest) (*apiresource.SysProperty, *apierror.APIError) {
 			return svc.(SysPropertySvc).UpdateSysProperty
 		},
-	}
+	}).WithDocSource(e)
 }

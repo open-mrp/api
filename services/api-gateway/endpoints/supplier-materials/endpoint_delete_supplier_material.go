@@ -17,12 +17,12 @@ type DeleteSupplierMaterialRequest struct {
 	MaterialID string `path:"id" validate:"required"`
 }
 
+// Deletes a supplier material association.
 type DeleteSupplierMaterialEndpoint struct{}
 
 func (e *DeleteSupplierMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteSupplierMaterialRequest, *apiresource.SupplierMaterial] {
-	return &apiendpoint.APIEndpoint[*DeleteSupplierMaterialRequest, *apiresource.SupplierMaterial]{
+	return (&apiendpoint.APIEndpoint[*DeleteSupplierMaterialRequest, *apiresource.SupplierMaterial]{
 		Title:             "Delete Supplier Material",
-		Description:       "Deletes a supplier material association.",
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/suppliers/{supplier_id}/materials/{id}",
@@ -34,5 +34,5 @@ func (e *DeleteSupplierMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteSupplierMaterialRequest) (*apiresource.SupplierMaterial, *apierror.APIError) {
 			return svc.(SupplierMaterialSvc).DeleteSupplierMaterial
 		},
-	}
+	}).WithDocSource(e)
 }

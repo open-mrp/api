@@ -27,12 +27,12 @@ func (*ResetPasswordRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleResetPasswordRequest)
 }
 
+// Resets a user's password using a password reset token, revoking previous tokens and setting new ones in cookies.
 type ResetPasswordEndpoint struct{}
 
 func (e *ResetPasswordEndpoint) Materialize() *apiendpoint.APIEndpoint[*ResetPasswordRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*ResetPasswordRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*ResetPasswordRequest, *apiresource.EmptyResource]{
 		Title:             "Reset Password",
-		Description:       "Resets a user's password using a password reset token, revoking previous tokens and setting new ones in cookies.",
 		Method:            http.MethodPost,
 		Route:             "/v1/auth/passwords/actions/reset",
 		ContentType:       "application/json",
@@ -46,5 +46,5 @@ func (e *ResetPasswordEndpoint) Materialize() *apiendpoint.APIEndpoint[*ResetPas
 		Extras: apiendpoint.APIEndpointExtras{
 			ShieldRequestBody: true,
 		},
-	}
+	}).WithDocSource(e)
 }

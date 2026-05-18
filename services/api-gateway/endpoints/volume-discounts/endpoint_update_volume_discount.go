@@ -74,12 +74,12 @@ func (*UpdateVolumeDiscountRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateVolumeDiscountRequest)
 }
 
+// Partially updates a volume discount. Tiers use upsert semantics and relations are replaced when the corresponding has_* flag is true.
 type UpdateVolumeDiscountEndpoint struct{}
 
 func (e *UpdateVolumeDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateVolumeDiscountRequest, *apiresource.VolumeDiscount] {
-	return &apiendpoint.APIEndpoint[*UpdateVolumeDiscountRequest, *apiresource.VolumeDiscount]{
+	return (&apiendpoint.APIEndpoint[*UpdateVolumeDiscountRequest, *apiresource.VolumeDiscount]{
 		Title:             "Update Volume Discount",
-		Description:       "Partially updates a volume discount. Tiers use upsert semantics and relations are replaced when the corresponding has_* flag is true.",
 		Method:            http.MethodPatch,
 		Route:             "/v1/sales/volume-discounts/{id}",
 		ContentType:       "application/json",
@@ -91,5 +91,5 @@ func (e *UpdateVolumeDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*U
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateVolumeDiscountRequest) (*apiresource.VolumeDiscount, *apierror.APIError) {
 			return svc.(VolumeDiscountSvc).UpdateVolumeDiscount
 		},
-	}
+	}).WithDocSource(e)
 }

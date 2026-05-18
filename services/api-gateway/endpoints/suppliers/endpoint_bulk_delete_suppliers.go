@@ -24,12 +24,12 @@ func (*BulkDeleteSuppliersRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleBulkDeleteSuppliersRequest)
 }
 
+// Deletes multiple suppliers and their associated account relations, addresses, and account users.
 type BulkDeleteSuppliersEndpoint struct{}
 
 func (e *BulkDeleteSuppliersEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkDeleteSuppliersRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*BulkDeleteSuppliersRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*BulkDeleteSuppliersRequest, *apiresource.EmptyResource]{
 		Title:             "Bulk Delete Suppliers",
-		Description:       "Deletes multiple suppliers and their associated account relations, addresses, and account users.",
 		Method:            http.MethodPost,
 		Route:             "/v1/operations/suppliers/actions/bulk-delete",
 		ContentType:       "application/json",
@@ -41,5 +41,5 @@ func (e *BulkDeleteSuppliersEndpoint) Materialize() *apiendpoint.APIEndpoint[*Bu
 		ServiceHandler: func(svc any) func(ctx context.Context, req *BulkDeleteSuppliersRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(SupplierSvc).BulkDeleteSuppliers
 		},
-	}
+	}).WithDocSource(e)
 }

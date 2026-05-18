@@ -15,12 +15,12 @@ type DeleteProductTypeRequest struct {
 	ProductTypeID string `path:"id" validate:"required"`
 }
 
+// Deletes a product type.
 type DeleteProductTypeEndpoint struct{}
 
 func (e *DeleteProductTypeEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteProductTypeRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*DeleteProductTypeRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*DeleteProductTypeRequest, *apiresource.EmptyResource]{
 		Title:             "Delete Product Type",
-		Description:       "Deletes a product type.",
 		Method:            http.MethodDelete,
 		Route:             "/v1/catalog/product-types/{id}",
 		ContentType:       "application/json",
@@ -32,5 +32,5 @@ func (e *DeleteProductTypeEndpoint) Materialize() *apiendpoint.APIEndpoint[*Dele
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteProductTypeRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(ProductTypeSvc).DeleteProductType
 		},
-	}
+	}).WithDocSource(e)
 }

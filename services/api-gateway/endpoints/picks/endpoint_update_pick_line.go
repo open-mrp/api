@@ -29,12 +29,12 @@ func (*UpdatePickLineRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdatePickLineRequest)
 }
 
+// Partially updates a pick line's quantity value.
 type UpdatePickLineEndpoint struct{}
 
 func (e *UpdatePickLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdatePickLineRequest, *apiresource.PickLineDetail] {
-	return &apiendpoint.APIEndpoint[*UpdatePickLineRequest, *apiresource.PickLineDetail]{
+	return (&apiendpoint.APIEndpoint[*UpdatePickLineRequest, *apiresource.PickLineDetail]{
 		Title:             "Update Pick Line",
-		Description:       "Partially updates a pick line's quantity value.",
 		Method:            http.MethodPatch,
 		Route:             "/v1/operations/picks/{pick_id}/lines/{id}",
 		ContentType:       "application/json",
@@ -46,5 +46,5 @@ func (e *UpdatePickLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateP
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdatePickLineRequest) (*apiresource.PickLineDetail, *apierror.APIError) {
 			return svc.(PickSvc).UpdatePickLine
 		},
-	}
+	}).WithDocSource(e)
 }

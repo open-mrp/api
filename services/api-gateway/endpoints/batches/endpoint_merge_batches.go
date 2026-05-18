@@ -30,12 +30,12 @@ func (*MergeBatchesRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleMergeBatchesRequest)
 }
 
+// Merges multiple batches into one at the specified production step and scanning station.
 type MergeBatchesEndpoint struct{}
 
 func (e *MergeBatchesEndpoint) Materialize() *apiendpoint.APIEndpoint[*MergeBatchesRequest, *apiresource.Batch] {
-	return &apiendpoint.APIEndpoint[*MergeBatchesRequest, *apiresource.Batch]{
+	return (&apiendpoint.APIEndpoint[*MergeBatchesRequest, *apiresource.Batch]{
 		Title:             "Merge Batches",
-		Description:       "Merges multiple batches into one at the specified production step and scanning station.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/batches/actions/merge",
@@ -47,5 +47,5 @@ func (e *MergeBatchesEndpoint) Materialize() *apiendpoint.APIEndpoint[*MergeBatc
 		ServiceHandler: func(svc any) func(ctx context.Context, req *MergeBatchesRequest) (*apiresource.Batch, *apierror.APIError) {
 			return svc.(BatchSvc).MergeBatches
 		},
-	}
+	}).WithDocSource(e)
 }

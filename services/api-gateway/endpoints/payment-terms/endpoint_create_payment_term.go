@@ -25,12 +25,12 @@ func (*CreatePaymentTermRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreatePaymentTermRequest)
 }
 
+// Creates a payment term.
 type CreatePaymentTermEndpoint struct{}
 
 func (e *CreatePaymentTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreatePaymentTermRequest, *apiresource.PaymentTerm] {
-	return &apiendpoint.APIEndpoint[*CreatePaymentTermRequest, *apiresource.PaymentTerm]{
+	return (&apiendpoint.APIEndpoint[*CreatePaymentTermRequest, *apiresource.PaymentTerm]{
 		Title:             "Create Payment Term",
-		Description:       "Creates a payment term.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/finance/payment-terms",
@@ -49,5 +49,5 @@ func (e *CreatePaymentTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*Crea
 			ObjectType: constants.ObjectTypePaymentTerm,
 			Fields:     []string{"owner", "owner.account"},
 		}),
-	}
+	}).WithDocSource(e)
 }

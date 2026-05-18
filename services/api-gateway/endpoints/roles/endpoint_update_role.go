@@ -32,12 +32,12 @@ func (*UpdateRoleRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateRoleRequest)
 }
 
+// Partially updates a custom role's name or permissions. Provided permissions replace all existing ones; global roles cannot be modified.
 type UpdateRoleEndpoint struct{}
 
 func (e *UpdateRoleEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateRoleRequest, *apiresource.Role] {
-	return &apiendpoint.APIEndpoint[*UpdateRoleRequest, *apiresource.Role]{
+	return (&apiendpoint.APIEndpoint[*UpdateRoleRequest, *apiresource.Role]{
 		Title:             "Update Role",
-		Description:       "Partially updates a custom role's name or permissions. Provided permissions replace all existing ones; global roles cannot be modified.",
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/roles/{id}",
@@ -53,5 +53,5 @@ func (e *UpdateRoleEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateRoleR
 			ObjectType: constants.ObjectTypeRole,
 			Fields:     []string{"owner", "owner.account", "permissions"},
 		}),
-	}
+	}).WithDocSource(e)
 }

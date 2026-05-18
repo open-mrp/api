@@ -18,12 +18,12 @@ type DeleteConsumptionRequest struct {
 	ConsumptionID string `path:"id" validate:"required"`
 }
 
+// Deletes a consumption from a production step.
 type DeleteConsumptionEndpoint struct{}
 
 func (e *DeleteConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteConsumptionRequest, *apiresource.Consumption] {
-	return &apiendpoint.APIEndpoint[*DeleteConsumptionRequest, *apiresource.Consumption]{
+	return (&apiendpoint.APIEndpoint[*DeleteConsumptionRequest, *apiresource.Consumption]{
 		Title:             "Delete Consumption",
-		Description:       "Deletes a consumption from a production step.",
 		Method:            http.MethodDelete,
 		Route:             "/v1/operations/production-steps/{production_step_id}/consumptions/{id}",
 		ContentType:       "application/json",
@@ -39,5 +39,5 @@ func (e *DeleteConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Dele
 			ObjectType: constants.ObjectTypeConsumption,
 			Fields:     []string{"consumed_item"},
 		}),
-	}
+	}).WithDocSource(e)
 }

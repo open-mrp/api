@@ -15,12 +15,12 @@ type DeleteDCLocationRequest struct {
 	DCLocationID string `path:"id" validate:"required"`
 }
 
+// Deletes a DC location.
 type DeleteDCLocationEndpoint struct{}
 
 func (e *DeleteDCLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteDCLocationRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*DeleteDCLocationRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*DeleteDCLocationRequest, *apiresource.EmptyResource]{
 		Title:             "Delete DC Location",
-		Description:       "Deletes a DC location.",
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/dc-locations/{id}",
@@ -32,5 +32,5 @@ func (e *DeleteDCLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*Delet
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteDCLocationRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(EDIDCLocationSvc).DeleteDCLocation
 		},
-	}
+	}).WithDocSource(e)
 }

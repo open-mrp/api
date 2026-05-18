@@ -15,12 +15,12 @@ type ListEmailLogsRequest struct {
 	apiresource.PaginationRequest
 }
 
+// Returns a paginated list of email logs for the current account.
 type ListEmailLogsEndpoint struct{}
 
 func (e *ListEmailLogsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListEmailLogsRequest, *apiresource.List[apiresource.EmailLog]] {
-	return &apiendpoint.APIEndpoint[*ListEmailLogsRequest, *apiresource.List[apiresource.EmailLog]]{
+	return (&apiendpoint.APIEndpoint[*ListEmailLogsRequest, *apiresource.List[apiresource.EmailLog]]{
 		Title:             "List Email Logs",
-		Description:       "Returns a paginated list of email logs for the current account.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/core/email-logs",
@@ -36,5 +36,5 @@ func (e *ListEmailLogsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListEmai
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListEmailLogsRequest) (*apiresource.List[apiresource.EmailLog], *apierror.APIError) {
 			return svc.(EmailLogSvc).ListEmailLogs
 		},
-	}
+	}).WithDocSource(e)
 }

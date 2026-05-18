@@ -15,12 +15,12 @@ type ListAccountStatusesRequest struct {
 	apiresource.PaginationRequest
 }
 
+// Returns a paginated list of account statuses. Global lookup values for setting account relationship statuses.
 type ListAccountStatusesEndpoint struct{}
 
 func (e *ListAccountStatusesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAccountStatusesRequest, *apiresource.List[apiresource.AccountStatus]] {
-	return &apiendpoint.APIEndpoint[*ListAccountStatusesRequest, *apiresource.List[apiresource.AccountStatus]]{
+	return (&apiendpoint.APIEndpoint[*ListAccountStatusesRequest, *apiresource.List[apiresource.AccountStatus]]{
 		Title:             "List Account Statuses",
-		Description:       "Returns a paginated list of account statuses. Global lookup values for setting account relationship statuses.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/account-statuses",
@@ -36,5 +36,5 @@ func (e *ListAccountStatusesEndpoint) Materialize() *apiendpoint.APIEndpoint[*Li
 			ObjectType: constants.ObjectTypeAccountStatus,
 			Fields:     []string{"owner"},
 		}),
-	}
+	}).WithDocSource(e)
 }

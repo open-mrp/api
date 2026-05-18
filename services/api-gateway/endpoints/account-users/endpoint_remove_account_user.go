@@ -15,12 +15,12 @@ type RemoveAccountUserRequest struct {
 	AccountUserID string `path:"id" validate:"required"`
 }
 
+// Removes a user from the target account.
 type RemoveAccountUserEndpoint struct{}
 
 func (e *RemoveAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*RemoveAccountUserRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*RemoveAccountUserRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*RemoveAccountUserRequest, *apiresource.EmptyResource]{
 		Title:             "Remove Account User",
-		Description:       "Removes a user from the target account.",
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/account-users/{id}/actions/remove",
@@ -32,5 +32,5 @@ func (e *RemoveAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*Remo
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RemoveAccountUserRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(AccountUserSvc).RemoveAccountUser
 		},
-	}
+	}).WithDocSource(e)
 }

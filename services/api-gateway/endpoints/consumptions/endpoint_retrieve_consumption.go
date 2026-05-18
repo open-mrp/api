@@ -18,12 +18,12 @@ type RetrieveConsumptionRequest struct {
 	ConsumptionID string `path:"id" validate:"required"`
 }
 
+// Returns a consumption by ID within a production step.
 type RetrieveConsumptionEndpoint struct{}
 
 func (e *RetrieveConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveConsumptionRequest, *apiresource.Consumption] {
-	return &apiendpoint.APIEndpoint[*RetrieveConsumptionRequest, *apiresource.Consumption]{
+	return (&apiendpoint.APIEndpoint[*RetrieveConsumptionRequest, *apiresource.Consumption]{
 		Title:             "Retrieve Consumption",
-		Description:       "Returns a consumption by ID within a production step.",
 		Method:            http.MethodGet,
 		Route:             "/v1/operations/production-steps/{production_step_id}/consumptions/{id}",
 		ContentType:       "application/json",
@@ -39,5 +39,5 @@ func (e *RetrieveConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Re
 			ObjectType: constants.ObjectTypeConsumption,
 			Fields:     []string{"consumed_item"},
 		}),
-	}
+	}).WithDocSource(e)
 }

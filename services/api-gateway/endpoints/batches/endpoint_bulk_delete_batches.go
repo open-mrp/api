@@ -24,12 +24,12 @@ func (*DeleteManyBatchesRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleDeleteManyBatchesRequest)
 }
 
+// Deletes multiple batches.
 type BulkDeleteBatchesEndpoint struct{}
 
 func (e *BulkDeleteBatchesEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteManyBatchesRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*DeleteManyBatchesRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*DeleteManyBatchesRequest, *apiresource.EmptyResource]{
 		Title:             "Bulk Delete Batches",
-		Description:       "Deletes multiple batches.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/batches/actions/bulk-delete",
@@ -41,5 +41,5 @@ func (e *BulkDeleteBatchesEndpoint) Materialize() *apiendpoint.APIEndpoint[*Dele
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteManyBatchesRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(BatchSvc).DeleteManyBatches
 		},
-	}
+	}).WithDocSource(e)
 }

@@ -15,12 +15,12 @@ type DeleteVolumeDiscountRequest struct {
 	VolumeDiscountID string `path:"id" validate:"required"`
 }
 
+// Deletes a volume discount and all associated tiers and relations.
 type DeleteVolumeDiscountEndpoint struct{}
 
 func (e *DeleteVolumeDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteVolumeDiscountRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*DeleteVolumeDiscountRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*DeleteVolumeDiscountRequest, *apiresource.EmptyResource]{
 		Title:             "Delete Volume Discount",
-		Description:       "Deletes a volume discount and all associated tiers and relations.",
 		Method:            http.MethodDelete,
 		Route:             "/v1/sales/volume-discounts/{id}",
 		ContentType:       "application/json",
@@ -32,5 +32,5 @@ func (e *DeleteVolumeDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*D
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteVolumeDiscountRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(VolumeDiscountSvc).DeleteVolumeDiscount
 		},
-	}
+	}).WithDocSource(e)
 }

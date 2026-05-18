@@ -25,12 +25,12 @@ func (*ValidateProductsRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleValidateProductsRequest)
 }
 
+// Validates SKUs and returns matching products keyed by the original map keys.
 type ValidateProductsEndpoint struct{}
 
 func (e *ValidateProductsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ValidateProductsRequest, *apiresource.ValidateProductsResponse] {
-	return &apiendpoint.APIEndpoint[*ValidateProductsRequest, *apiresource.ValidateProductsResponse]{
+	return (&apiendpoint.APIEndpoint[*ValidateProductsRequest, *apiresource.ValidateProductsResponse]{
 		Title:             "Validate Products",
-		Description:       "Validates SKUs and returns matching products keyed by the original map keys.",
 		Method:            http.MethodPut,
 		Route:             "/v1/catalog/products/actions/validate",
 		ContentType:       "application/json",
@@ -46,5 +46,5 @@ func (e *ValidateProductsEndpoint) Materialize() *apiendpoint.APIEndpoint[*Valid
 			ObjectType: constants.ObjectTypeProduct,
 			Fields:     []string{"product_line", "product_line.unit_group", "product_line.unit_group.base_unit", "product_line.unit_group.associated_units", "product_line.unit_group.associated_units.unit", "item", "item.category", "item.category.properties", "item.category.unit_group", "item.category.unit_group.base_unit", "item.category.unit_group.associated_units", "item.category.unit_group.associated_units.unit", "item.unit_value", "item.unit_cost", "item.burn_rate", "item.attributes"},
 		}),
-	}
+	}).WithDocSource(e)
 }

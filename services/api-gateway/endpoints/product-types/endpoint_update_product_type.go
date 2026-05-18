@@ -29,12 +29,12 @@ func (*UpdateProductTypeRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateProductTypeRequest)
 }
 
+// Partially updates a product type.
 type UpdateProductTypeEndpoint struct{}
 
 func (e *UpdateProductTypeEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateProductTypeRequest, *apiresource.ProductType] {
-	return &apiendpoint.APIEndpoint[*UpdateProductTypeRequest, *apiresource.ProductType]{
+	return (&apiendpoint.APIEndpoint[*UpdateProductTypeRequest, *apiresource.ProductType]{
 		Title:             "Update Product Type",
-		Description:       "Partially updates a product type.",
 		Method:            http.MethodPatch,
 		Route:             "/v1/catalog/product-types/{id}",
 		ContentType:       "application/json",
@@ -46,5 +46,5 @@ func (e *UpdateProductTypeEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upda
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateProductTypeRequest) (*apiresource.ProductType, *apierror.APIError) {
 			return svc.(ProductTypeSvc).UpdateProductType
 		},
-	}
+	}).WithDocSource(e)
 }

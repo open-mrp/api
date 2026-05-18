@@ -30,12 +30,12 @@ type ListProductionStepsRequest struct {
 	EndDate *time.Time `query:"end_date"`
 }
 
+// Returns a paginated list of production steps for the current account.
 type ListProductionStepsEndpoint struct{}
 
 func (e *ListProductionStepsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListProductionStepsRequest, *apiresource.List[apiresource.ProductionStep]] {
-	return &apiendpoint.APIEndpoint[*ListProductionStepsRequest, *apiresource.List[apiresource.ProductionStep]]{
+	return (&apiendpoint.APIEndpoint[*ListProductionStepsRequest, *apiresource.List[apiresource.ProductionStep]]{
 		Title:             "List Production Steps",
-		Description:       "Returns a paginated list of production steps for the current account.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/production-steps",
@@ -63,5 +63,5 @@ func (e *ListProductionStepsEndpoint) Materialize() *apiendpoint.APIEndpoint[*Li
 				"out_steps",
 			},
 		}),
-	}
+	}).WithDocSource(e)
 }

@@ -26,12 +26,12 @@ type AnalyzeProductionCostsRequest struct {
 	CategoryIDs []string `json:"category_ids,omitempty"`
 }
 
+// Returns aggregated production cost breakdowns by department and category.
 type AnalyzeProductionCostsEndpoint struct{}
 
 func (e *AnalyzeProductionCostsEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeProductionCostsRequest, *apiresource.AnalyzeProductionCostsResponse] {
-	return &apiendpoint.APIEndpoint[*AnalyzeProductionCostsRequest, *apiresource.AnalyzeProductionCostsResponse]{
+	return (&apiendpoint.APIEndpoint[*AnalyzeProductionCostsRequest, *apiresource.AnalyzeProductionCostsResponse]{
 		Title:             "Analyze Production Costs",
-		Description:       "Returns aggregated production cost breakdowns by department and category.",
 		Method:            http.MethodPut,
 		Route:             "/v1/core/analytics/production-costs",
 		ContentType:       "application/json",
@@ -43,5 +43,5 @@ func (e *AnalyzeProductionCostsEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeProductionCostsRequest) (*apiresource.AnalyzeProductionCostsResponse, *apierror.APIError) {
 			return svc.(AnalyticsSvc).AnalyzeProductionCosts
 		},
-	}
+	}).WithDocSource(e)
 }

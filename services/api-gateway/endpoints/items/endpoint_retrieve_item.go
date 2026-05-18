@@ -16,12 +16,12 @@ type RetrieveItemRequest struct {
 	ItemID string `path:"id" validate:"required"`
 }
 
+// Returns an item by ID.
 type RetrieveItemEndpoint struct{}
 
 func (e *RetrieveItemEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveItemRequest, *apiresource.Item] {
-	return &apiendpoint.APIEndpoint[*RetrieveItemRequest, *apiresource.Item]{
+	return (&apiendpoint.APIEndpoint[*RetrieveItemRequest, *apiresource.Item]{
 		Title:             "Retrieve Item",
-		Description:       "Returns an item by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/items/{id}",
@@ -37,5 +37,5 @@ func (e *RetrieveItemEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveI
 			ObjectType: constants.ObjectTypeItem,
 			Fields:     []string{"category", "unit_value", "unit_cost", "burn_rate", "attributes", "category.unit_group", "category.properties", "category.unit_group.base_unit", "category.unit_group.associated_units", "category.unit_group.associated_units.unit"},
 		}),
-	}
+	}).WithDocSource(e)
 }

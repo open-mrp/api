@@ -37,12 +37,12 @@ func (*UpdateProductionStepRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateProductionStepRequest)
 }
 
+// Partially updates a production step.
 type UpdateProductionStepEndpoint struct{}
 
 func (e *UpdateProductionStepEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateProductionStepRequest, *apiresource.ProductionStep] {
-	return &apiendpoint.APIEndpoint[*UpdateProductionStepRequest, *apiresource.ProductionStep]{
+	return (&apiendpoint.APIEndpoint[*UpdateProductionStepRequest, *apiresource.ProductionStep]{
 		Title:             "Update Production Step",
-		Description:       "Partially updates a production step.",
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/production-steps/{id}",
@@ -54,5 +54,5 @@ func (e *UpdateProductionStepEndpoint) Materialize() *apiendpoint.APIEndpoint[*U
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateProductionStepRequest) (*apiresource.ProductionStep, *apierror.APIError) {
 			return svc.(ProductionStepSvc).UpdateProductionStep
 		},
-	}
+	}).WithDocSource(e)
 }

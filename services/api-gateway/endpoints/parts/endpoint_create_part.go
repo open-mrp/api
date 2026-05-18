@@ -44,12 +44,12 @@ func (*CreatePartRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreatePartRequest)
 }
 
+// Creates a part with the specified SKU and category.
 type CreatePartEndpoint struct{}
 
 func (e *CreatePartEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreatePartRequest, *apiresource.Part] {
-	return &apiendpoint.APIEndpoint[*CreatePartRequest, *apiresource.Part]{
+	return (&apiendpoint.APIEndpoint[*CreatePartRequest, *apiresource.Part]{
 		Title:             "Create Part",
-		Description:       "Creates a part with the specified SKU and category.",
 		Method:            http.MethodPost,
 		Route:             "/v1/catalog/parts",
 		ContentType:       "application/json",
@@ -68,5 +68,5 @@ func (e *CreatePartEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreatePartR
 			ObjectType: constants.ObjectTypePart,
 			Fields:     []string{"item", "item.category", "item.unit_value", "item.unit_cost", "item.burn_rate", "item.attributes"},
 		}),
-	}
+	}).WithDocSource(e)
 }

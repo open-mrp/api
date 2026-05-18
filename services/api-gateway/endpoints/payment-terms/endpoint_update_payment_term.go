@@ -27,12 +27,12 @@ func (*UpdatePaymentTermRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdatePaymentTermRequest)
 }
 
+// Partially updates a payment term. Default payment terms cannot be updated.
 type UpdatePaymentTermEndpoint struct{}
 
 func (e *UpdatePaymentTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdatePaymentTermRequest, *apiresource.PaymentTerm] {
-	return &apiendpoint.APIEndpoint[*UpdatePaymentTermRequest, *apiresource.PaymentTerm]{
+	return (&apiendpoint.APIEndpoint[*UpdatePaymentTermRequest, *apiresource.PaymentTerm]{
 		Title:             "Update Payment Term",
-		Description:       "Partially updates a payment term. Default payment terms cannot be updated.",
 		Method:            http.MethodPatch,
 		Route:             "/v1/finance/payment-terms/{id}",
 		ContentType:       "application/json",
@@ -48,5 +48,5 @@ func (e *UpdatePaymentTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upda
 			ObjectType: constants.ObjectTypePaymentTerm,
 			Fields:     []string{"owner", "owner.account"},
 		}),
-	}
+	}).WithDocSource(e)
 }

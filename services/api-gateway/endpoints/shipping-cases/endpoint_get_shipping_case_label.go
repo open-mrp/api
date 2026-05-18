@@ -15,12 +15,12 @@ type GetShippingCaseLabelRequest struct {
 	ShippingCaseID string `path:"id" validate:"required"`
 }
 
+// Returns a presigned URL for the shipping case's label image.
 type GetShippingCaseLabelEndpoint struct{}
 
 func (e *GetShippingCaseLabelEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetShippingCaseLabelRequest, *apiresource.ShippingCaseLabelURL] {
-	return &apiendpoint.APIEndpoint[*GetShippingCaseLabelRequest, *apiresource.ShippingCaseLabelURL]{
+	return (&apiendpoint.APIEndpoint[*GetShippingCaseLabelRequest, *apiresource.ShippingCaseLabelURL]{
 		Title:             "Get Shipping Case Label",
-		Description:       "Returns a presigned URL for the shipping case's label image.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/shipping-cases/{id}/label",
@@ -32,5 +32,5 @@ func (e *GetShippingCaseLabelEndpoint) Materialize() *apiendpoint.APIEndpoint[*G
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetShippingCaseLabelRequest) (*apiresource.ShippingCaseLabelURL, *apierror.APIError) {
 			return svc.(ShippingCaseSvc).GetShippingCaseLabel
 		},
-	}
+	}).WithDocSource(e)
 }

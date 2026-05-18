@@ -12,12 +12,12 @@ import (
 // Request to retrieve the Stripe publishable key.
 type GetStripePublishableKeyRequest struct{}
 
+// Returns the Stripe publishable key for the target account.
 type GetStripePublishableKeyEndpoint struct{}
 
 func (e *GetStripePublishableKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetStripePublishableKeyRequest, *apiresource.StripePublishableKey] {
-	return &apiendpoint.APIEndpoint[*GetStripePublishableKeyRequest, *apiresource.StripePublishableKey]{
+	return (&apiendpoint.APIEndpoint[*GetStripePublishableKeyRequest, *apiresource.StripePublishableKey]{
 		Title:             "Get Stripe Publishable Key",
-		Description:       "Returns the Stripe publishable key for the target account.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/integrations/stripe/publishable-key",
@@ -29,5 +29,5 @@ func (e *GetStripePublishableKeyEndpoint) Materialize() *apiendpoint.APIEndpoint
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetStripePublishableKeyRequest) (*apiresource.StripePublishableKey, *apierror.APIError) {
 			return svc.(AccountIntegrationSvc).GetStripePublishableKey
 		},
-	}
+	}).WithDocSource(e)
 }

@@ -30,12 +30,12 @@ func (*CheckoutSalesOrderResponse) SchemaExample() any {
 	return map[string]any{"checkout_url": "https://checkout.stripe.com/pay/cs_test_example"}
 }
 
+// Creates a checkout session for a sales order.
 type CheckoutSalesOrderEndpoint struct{}
 
 func (e *CheckoutSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*CheckoutSalesOrderRequest, *CheckoutSalesOrderResponse] {
-	return &apiendpoint.APIEndpoint[*CheckoutSalesOrderRequest, *CheckoutSalesOrderResponse]{
+	return (&apiendpoint.APIEndpoint[*CheckoutSalesOrderRequest, *CheckoutSalesOrderResponse]{
 		Title:             "Checkout Sales Order",
-		Description:       "Creates a checkout session for a sales order.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/sales-orders/{id}/checkout",
@@ -47,5 +47,5 @@ func (e *CheckoutSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*Che
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CheckoutSalesOrderRequest) (*CheckoutSalesOrderResponse, *apierror.APIError) {
 			return svc.(SalesOrderSvc).CheckoutSalesOrder
 		},
-	}
+	}).WithDocSource(e)
 }

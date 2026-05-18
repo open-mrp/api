@@ -41,12 +41,12 @@ func (*UpdateAgentRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateAgentRequest)
 }
 
+// Partially updates a custom agent definition. System agents cannot be modified.
 type UpdateAgentEndpoint struct{}
 
 func (e *UpdateAgentEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAgentRequest, *apiresource.AgentDefinition] {
-	return &apiendpoint.APIEndpoint[*UpdateAgentRequest, *apiresource.AgentDefinition]{
+	return (&apiendpoint.APIEndpoint[*UpdateAgentRequest, *apiresource.AgentDefinition]{
 		Title:             "Update Agent",
-		Description:       "Partially updates a custom agent definition. System agents cannot be modified.",
 		Method:            http.MethodPatch,
 		Route:             "/v1/ai/agents/{id}",
 		ContentType:       "application/json",
@@ -62,5 +62,5 @@ func (e *UpdateAgentEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAgen
 			ObjectType: constants.ObjectTypeAgentDefinition,
 			Fields:     []string{"config", "tools", "role", "role.permissions"},
 		}),
-	}
+	}).WithDocSource(e)
 }

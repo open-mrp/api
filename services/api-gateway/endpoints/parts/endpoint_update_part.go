@@ -34,12 +34,12 @@ func (*UpdatePartRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdatePartRequest)
 }
 
+// Partially updates a part. Fields not provided retain their current values.
 type UpdatePartEndpoint struct{}
 
 func (e *UpdatePartEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdatePartRequest, *apiresource.Part] {
-	return &apiendpoint.APIEndpoint[*UpdatePartRequest, *apiresource.Part]{
+	return (&apiendpoint.APIEndpoint[*UpdatePartRequest, *apiresource.Part]{
 		Title:             "Update Part",
-		Description:       "Partially updates a part. Fields not provided retain their current values.",
 		Method:            http.MethodPatch,
 		Route:             "/v1/catalog/parts/{id}",
 		ContentType:       "application/json",
@@ -55,5 +55,5 @@ func (e *UpdatePartEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdatePartR
 			ObjectType: constants.ObjectTypePart,
 			Fields:     []string{"item", "item.category", "item.unit_value", "item.unit_cost", "item.burn_rate", "item.attributes"},
 		}),
-	}
+	}).WithDocSource(e)
 }

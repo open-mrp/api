@@ -14,12 +14,12 @@ type ListChildAccountsRequest struct {
 	apiresource.PaginationRequest
 }
 
+// Returns a paginated list of child accounts for the target account.
 type ListChildAccountsEndpoint struct{}
 
 func (e *ListChildAccountsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListChildAccountsRequest, *apiresource.List[apiresource.ChildAccount]] {
-	return &apiendpoint.APIEndpoint[*ListChildAccountsRequest, *apiresource.List[apiresource.ChildAccount]]{
+	return (&apiendpoint.APIEndpoint[*ListChildAccountsRequest, *apiresource.List[apiresource.ChildAccount]]{
 		Title:             "List Child Accounts",
-		Description:       "Returns a paginated list of child accounts for the target account.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/child-accounts",
@@ -31,5 +31,5 @@ func (e *ListChildAccountsEndpoint) Materialize() *apiendpoint.APIEndpoint[*List
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListChildAccountsRequest) (*apiresource.List[apiresource.ChildAccount], *apierror.APIError) {
 			return svc.(ChildAccountSvc).ListChildAccounts
 		},
-	}
+	}).WithDocSource(e)
 }

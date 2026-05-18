@@ -34,12 +34,12 @@ func (*CreateProductLineRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateProductLineRequest)
 }
 
+// Creates an account-owned product line.
 type CreateProductLineEndpoint struct{}
 
 func (e *CreateProductLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateProductLineRequest, *apiresource.ProductLine] {
-	return &apiendpoint.APIEndpoint[*CreateProductLineRequest, *apiresource.ProductLine]{
+	return (&apiendpoint.APIEndpoint[*CreateProductLineRequest, *apiresource.ProductLine]{
 		Title:             "Create Product Line",
-		Description:       "Creates an account-owned product line.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/product-lines",
@@ -58,5 +58,5 @@ func (e *CreateProductLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*Crea
 			ObjectType: constants.ObjectTypeProductLine,
 			Fields:     []string{"owner", "owner.account", "unit_group"},
 		}),
-	}
+	}).WithDocSource(e)
 }

@@ -47,12 +47,12 @@ func (*UpdateAddressRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateAddressRequest)
 }
 
+// Partially updates an address.
 type UpdateAddressEndpoint struct{}
 
 func (e *UpdateAddressEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAddressRequest, *apiresource.Address] {
-	return &apiendpoint.APIEndpoint[*UpdateAddressRequest, *apiresource.Address]{
+	return (&apiendpoint.APIEndpoint[*UpdateAddressRequest, *apiresource.Address]{
 		Title:             "Update Address",
-		Description:       "Partially updates an address.",
 		Method:            http.MethodPatch,
 		Route:             "/v1/sales/addresses/{id}",
 		ContentType:       "application/json",
@@ -64,5 +64,5 @@ func (e *UpdateAddressEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAd
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateAddressRequest) (*apiresource.Address, *apierror.APIError) {
 			return svc.(AddressSvc).UpdateAddress
 		},
-	}
+	}).WithDocSource(e)
 }

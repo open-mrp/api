@@ -33,12 +33,12 @@ func (*RequestDemoRequest) SchemaExample() any {
 	return exampleRequestDemoRequest
 }
 
+// Submits a demo request from a prospective customer.
 type RequestDemoEndpoint struct{}
 
 func (e *RequestDemoEndpoint) Materialize() *apiendpoint.APIEndpoint[*RequestDemoRequest, *apiresource.MessageResource] {
-	return &apiendpoint.APIEndpoint[*RequestDemoRequest, *apiresource.MessageResource]{
+	return (&apiendpoint.APIEndpoint[*RequestDemoRequest, *apiresource.MessageResource]{
 		Title:             "Request Demo",
-		Description:       "Submits a demo request from a prospective customer.",
 		Method:            http.MethodPost,
 		Route:             "/v1/core/actions/request-demo",
 		ContentType:       "application/json",
@@ -50,5 +50,5 @@ func (e *RequestDemoEndpoint) Materialize() *apiendpoint.APIEndpoint[*RequestDem
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RequestDemoRequest) (*apiresource.MessageResource, *apierror.APIError) {
 			return svc.(UtilsSvc).RequestDemo
 		},
-	}
+	}).WithDocSource(e)
 }

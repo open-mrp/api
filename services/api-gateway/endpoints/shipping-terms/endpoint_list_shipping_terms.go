@@ -15,12 +15,12 @@ type ListShippingTermsRequest struct {
 	apiresource.PaginationRequest
 }
 
+// Returns a paginated list of shipping terms for the account, including default system shipping terms.
 type ListShippingTermsEndpoint struct{}
 
 func (e *ListShippingTermsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListShippingTermsRequest, *apiresource.List[apiresource.ShippingTerm]] {
-	return &apiendpoint.APIEndpoint[*ListShippingTermsRequest, *apiresource.List[apiresource.ShippingTerm]]{
+	return (&apiendpoint.APIEndpoint[*ListShippingTermsRequest, *apiresource.List[apiresource.ShippingTerm]]{
 		Title:             "List Shipping Terms",
-		Description:       "Returns a paginated list of shipping terms for the account, including default system shipping terms.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/shipping-terms",
@@ -36,5 +36,5 @@ func (e *ListShippingTermsEndpoint) Materialize() *apiendpoint.APIEndpoint[*List
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListShippingTermsRequest) (*apiresource.List[apiresource.ShippingTerm], *apierror.APIError) {
 			return svc.(ShippingTermSvc).ListShippingTerms
 		},
-	}
+	}).WithDocSource(e)
 }

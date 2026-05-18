@@ -17,12 +17,12 @@ type DeletePurchaseOrderLineRequest struct {
 	PurchaseOrderLineID string `path:"line_id" validate:"required"`
 }
 
+// Deletes a purchase order line item and its related records.
 type DeletePurchaseOrderLineEndpoint struct{}
 
 func (e *DeletePurchaseOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeletePurchaseOrderLineRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*DeletePurchaseOrderLineRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*DeletePurchaseOrderLineRequest, *apiresource.EmptyResource]{
 		Title:             "Delete Purchase Order Line",
-		Description:       "Deletes a purchase order line item and its related records.",
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/purchase-orders/{id}/lines/{line_id}",
@@ -34,5 +34,5 @@ func (e *DeletePurchaseOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeletePurchaseOrderLineRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(PurchaseOrderSvc).DeletePurchaseOrderLine
 		},
-	}
+	}).WithDocSource(e)
 }

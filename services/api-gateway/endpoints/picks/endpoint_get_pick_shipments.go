@@ -20,12 +20,12 @@ type GetPickShipmentsRequest struct {
 	Offset *int32 `query:"offset"`
 }
 
+// Returns the shipment numbers associated with a pick.
 type GetPickShipmentsEndpoint struct{}
 
 func (e *GetPickShipmentsEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetPickShipmentsRequest, *apiresource.PickShipmentsResponse] {
-	return &apiendpoint.APIEndpoint[*GetPickShipmentsRequest, *apiresource.PickShipmentsResponse]{
+	return (&apiendpoint.APIEndpoint[*GetPickShipmentsRequest, *apiresource.PickShipmentsResponse]{
 		Title:             "Get Pick Shipments",
-		Description:       "Returns the shipment numbers associated with a pick.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/picks/{id}/shipments",
@@ -37,5 +37,5 @@ func (e *GetPickShipmentsEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetPi
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetPickShipmentsRequest) (*apiresource.PickShipmentsResponse, *apierror.APIError) {
 			return svc.(PickSvc).GetPickShipments
 		},
-	}
+	}).WithDocSource(e)
 }

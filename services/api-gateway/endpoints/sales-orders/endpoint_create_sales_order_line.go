@@ -38,12 +38,12 @@ func (*CreateSalesOrderLineRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateSalesOrderLineRequest)
 }
 
+// Creates a line item on a sales order.
 type CreateSalesOrderLineEndpoint struct{}
 
 func (e *CreateSalesOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateSalesOrderLineRequest, *apiresource.SalesOrderLineDetail] {
-	return &apiendpoint.APIEndpoint[*CreateSalesOrderLineRequest, *apiresource.SalesOrderLineDetail]{
+	return (&apiendpoint.APIEndpoint[*CreateSalesOrderLineRequest, *apiresource.SalesOrderLineDetail]{
 		Title:             "Create Sales Order Line",
-		Description:       "Creates a line item on a sales order.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/sales-orders/{id}/lines",
@@ -55,5 +55,5 @@ func (e *CreateSalesOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*C
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateSalesOrderLineRequest) (*apiresource.SalesOrderLineDetail, *apierror.APIError) {
 			return svc.(SalesOrderSvc).CreateSalesOrderLine
 		},
-	}
+	}).WithDocSource(e)
 }

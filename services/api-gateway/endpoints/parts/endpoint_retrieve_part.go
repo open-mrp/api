@@ -16,12 +16,12 @@ type RetrievePartRequest struct {
 	ItemID string `path:"id" validate:"required"`
 }
 
+// Returns a part by ID.
 type RetrievePartEndpoint struct{}
 
 func (e *RetrievePartEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrievePartRequest, *apiresource.Part] {
-	return &apiendpoint.APIEndpoint[*RetrievePartRequest, *apiresource.Part]{
+	return (&apiendpoint.APIEndpoint[*RetrievePartRequest, *apiresource.Part]{
 		Title:             "Retrieve Part",
-		Description:       "Returns a part by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/parts/{id}",
@@ -37,5 +37,5 @@ func (e *RetrievePartEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveP
 			ObjectType: constants.ObjectTypePart,
 			Fields:     []string{"item", "item.category", "item.category.properties", "item.category.unit_group", "item.unit_value", "item.unit_cost", "item.burn_rate", "item.attributes"},
 		}),
-	}
+	}).WithDocSource(e)
 }

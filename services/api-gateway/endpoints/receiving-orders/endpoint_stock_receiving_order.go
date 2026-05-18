@@ -57,12 +57,12 @@ func (*StockReceivingOrderRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleStockReceivingOrderRequest)
 }
 
+// Stocks a receiving order by allocating line items to storage locations.
 type StockReceivingOrderEndpoint struct{}
 
 func (e *StockReceivingOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*StockReceivingOrderRequest, *apiresource.ReceivingOrder] {
-	return &apiendpoint.APIEndpoint[*StockReceivingOrderRequest, *apiresource.ReceivingOrder]{
+	return (&apiendpoint.APIEndpoint[*StockReceivingOrderRequest, *apiresource.ReceivingOrder]{
 		Title:             "Stock Receiving Order",
-		Description:       "Stocks a receiving order by allocating line items to storage locations.",
 		Method:            http.MethodPost,
 		Route:             "/v1/operations/receiving-orders/{id}/actions/stock",
 		ContentType:       "application/json",
@@ -74,5 +74,5 @@ func (e *StockReceivingOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*St
 		ServiceHandler: func(svc any) func(ctx context.Context, req *StockReceivingOrderRequest) (*apiresource.ReceivingOrder, *apierror.APIError) {
 			return svc.(ReceivingOrderSvc).StockReceivingOrder
 		},
-	}
+	}).WithDocSource(e)
 }

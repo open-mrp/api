@@ -17,12 +17,12 @@ type ListUnitGroupsRequest struct {
 	Type *constants.UnitType `query:"type"`
 }
 
+// Returns a paginated list of unit groups, including system unit groups.
 type ListUnitGroupsEndpoint struct{}
 
 func (e *ListUnitGroupsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListUnitGroupsRequest, *apiresource.List[apiresource.UnitGroup]] {
-	return &apiendpoint.APIEndpoint[*ListUnitGroupsRequest, *apiresource.List[apiresource.UnitGroup]]{
+	return (&apiendpoint.APIEndpoint[*ListUnitGroupsRequest, *apiresource.List[apiresource.UnitGroup]]{
 		Title:             "List Unit Groups",
-		Description:       "Returns a paginated list of unit groups, including system unit groups.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/unit-groups",
@@ -38,5 +38,5 @@ func (e *ListUnitGroupsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListUni
 			ObjectType: constants.ObjectTypeUnitGroup,
 			Fields:     []string{"owner", "owner.account", "base_unit", "associated_units"},
 		}),
-	}
+	}).WithDocSource(e)
 }

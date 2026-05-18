@@ -24,12 +24,12 @@ type ListMaterialsRequest struct {
 	EndDate *time.Time `query:"end_date"`
 }
 
+// Returns a paginated list of materials.
 type ListMaterialsEndpoint struct{}
 
 func (e *ListMaterialsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListMaterialsRequest, *apiresource.List[apiresource.Material]] {
-	return &apiendpoint.APIEndpoint[*ListMaterialsRequest, *apiresource.List[apiresource.Material]]{
+	return (&apiendpoint.APIEndpoint[*ListMaterialsRequest, *apiresource.List[apiresource.Material]]{
 		Title:             "List Materials",
-		Description:       "Returns a paginated list of materials.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/materials",
@@ -45,5 +45,5 @@ func (e *ListMaterialsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListMate
 			ObjectType: constants.ObjectTypeMaterial,
 			Fields:     []string{"item", "item.category", "item.category.properties", "item.category.unit_group", "item.unit_value", "item.unit_cost", "item.burn_rate", "item.attributes"},
 		}),
-	}
+	}).WithDocSource(e)
 }

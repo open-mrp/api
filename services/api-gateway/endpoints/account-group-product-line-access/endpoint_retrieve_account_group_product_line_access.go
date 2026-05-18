@@ -15,12 +15,12 @@ type RetrieveAccountGroupProductLineAccessRequest struct {
 	AccountGroupID string `path:"account_group_id" validate:"required"`
 }
 
+// Returns product line access for an account group.
 type RetrieveAccountGroupProductLineAccessEndpoint struct{}
 
 func (e *RetrieveAccountGroupProductLineAccessEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveAccountGroupProductLineAccessRequest, *apiresource.AccountGroupProductLineAccess] {
-	return &apiendpoint.APIEndpoint[*RetrieveAccountGroupProductLineAccessRequest, *apiresource.AccountGroupProductLineAccess]{
+	return (&apiendpoint.APIEndpoint[*RetrieveAccountGroupProductLineAccessRequest, *apiresource.AccountGroupProductLineAccess]{
 		Title:             "Retrieve Account Group Product Line Access",
-		Description:       "Returns product line access for an account group.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/product-line-access/account-groups/{account_group_id}",
@@ -32,5 +32,5 @@ func (e *RetrieveAccountGroupProductLineAccessEndpoint) Materialize() *apiendpoi
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveAccountGroupProductLineAccessRequest) (*apiresource.AccountGroupProductLineAccess, *apierror.APIError) {
 			return svc.(AccountGroupProductLineAccessSvc).GetAccountGroupProductLineAccess
 		},
-	}
+	}).WithDocSource(e)
 }

@@ -28,12 +28,12 @@ func (*TriggerRunRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleTriggerRunRequest)
 }
 
+// Triggers an agent run for the specified agent definition.
 type TriggerRunEndpoint struct{}
 
 func (e *TriggerRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*TriggerRunRequest, *apiresource.AgentRun] {
-	return &apiendpoint.APIEndpoint[*TriggerRunRequest, *apiresource.AgentRun]{
+	return (&apiendpoint.APIEndpoint[*TriggerRunRequest, *apiresource.AgentRun]{
 		Title:             "Trigger Run",
-		Description:       "Triggers an agent run for the specified agent definition.",
 		Method:            http.MethodPost,
 		Route:             "/v1/ai/runs",
 		ContentType:       "application/json",
@@ -52,5 +52,5 @@ func (e *TriggerRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*TriggerRunR
 			ObjectType: constants.ObjectTypeAgentRun,
 			Fields:     []string{"actions", "definition", "definition.config", "definition.tools", "definition.role"},
 		}),
-	}
+	}).WithDocSource(e)
 }

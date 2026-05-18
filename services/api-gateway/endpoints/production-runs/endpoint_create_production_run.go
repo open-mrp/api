@@ -25,12 +25,12 @@ func (*CreateProductionRunRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateProductionRunRequest)
 }
 
+// Creates a production run.
 type CreateProductionRunEndpoint struct{}
 
 func (e *CreateProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateProductionRunRequest, *apiresource.ProductionRunDetail] {
-	return &apiendpoint.APIEndpoint[*CreateProductionRunRequest, *apiresource.ProductionRunDetail]{
+	return (&apiendpoint.APIEndpoint[*CreateProductionRunRequest, *apiresource.ProductionRunDetail]{
 		Title:             "Create Production Run",
-		Description:       "Creates a production run.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/production-runs",
@@ -49,5 +49,5 @@ func (e *CreateProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cr
 			ObjectType: constants.ObjectTypeProductionRun,
 			Fields:     []string{"responsible_user"},
 		}),
-	}
+	}).WithDocSource(e)
 }

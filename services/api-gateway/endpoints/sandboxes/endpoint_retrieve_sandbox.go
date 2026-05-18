@@ -16,12 +16,12 @@ type RetrieveSandboxRequest struct {
 	SandboxID string `path:"id" validate:"required"`
 }
 
+// Returns a sandbox by ID.
 type RetrieveSandboxEndpoint struct{}
 
 func (e *RetrieveSandboxEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveSandboxRequest, *apiresource.Sandbox] {
-	return &apiendpoint.APIEndpoint[*RetrieveSandboxRequest, *apiresource.Sandbox]{
+	return (&apiendpoint.APIEndpoint[*RetrieveSandboxRequest, *apiresource.Sandbox]{
 		Title:             "Retrieve Sandbox",
-		Description:       "Returns a sandbox by ID.",
 		Method:            http.MethodGet,
 		Route:             "/v1/core/sandboxes/{id}",
 		ContentType:       "application/json",
@@ -37,5 +37,5 @@ func (e *RetrieveSandboxEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retrie
 			ObjectType: constants.ObjectTypeSandbox,
 			Fields:     []string{"owner_account"},
 		}),
-	}
+	}).WithDocSource(e)
 }

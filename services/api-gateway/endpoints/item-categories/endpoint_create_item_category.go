@@ -31,12 +31,12 @@ func (*CreateItemCategoryRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateItemCategoryRequest)
 }
 
+// Creates an account-owned item category.
 type CreateItemCategoryEndpoint struct{}
 
 func (e *CreateItemCategoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateItemCategoryRequest, *apiresource.ItemCategory] {
-	return &apiendpoint.APIEndpoint[*CreateItemCategoryRequest, *apiresource.ItemCategory]{
+	return (&apiendpoint.APIEndpoint[*CreateItemCategoryRequest, *apiresource.ItemCategory]{
 		Title:             "Create Item Category",
-		Description:       "Creates an account-owned item category.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/item-categories",
@@ -55,5 +55,5 @@ func (e *CreateItemCategoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cre
 			ObjectType: constants.ObjectTypeItemCategory,
 			Fields:     []string{"owner", "owner.account", "properties", "unit_group", "unit_group.base_unit", "unit_group.associated_units", "unit_group.associated_units.unit"},
 		}),
-	}
+	}).WithDocSource(e)
 }

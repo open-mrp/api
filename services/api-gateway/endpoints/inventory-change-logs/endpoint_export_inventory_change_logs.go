@@ -24,12 +24,12 @@ type ExportInventoryChangeLogsRequest struct {
 	EndDate *time.Time `query:"end_date"`
 }
 
+// Exports inventory change logs matching the provided filters as an Excel file.
 type ExportInventoryChangeLogsEndpoint struct{}
 
 func (e *ExportInventoryChangeLogsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ExportInventoryChangeLogsRequest, *httptransport.FileDownload] {
-	return &apiendpoint.APIEndpoint[*ExportInventoryChangeLogsRequest, *httptransport.FileDownload]{
+	return (&apiendpoint.APIEndpoint[*ExportInventoryChangeLogsRequest, *httptransport.FileDownload]{
 		Title:             "Export Inventory Change Logs",
-		Description:       "Exports inventory change logs matching the provided filters as an Excel file.",
 		Method:            http.MethodGet,
 		ContentType:       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 		Route:             "/v1/operations/inventory-change-logs/actions/export",
@@ -41,5 +41,5 @@ func (e *ExportInventoryChangeLogsEndpoint) Materialize() *apiendpoint.APIEndpoi
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ExportInventoryChangeLogsRequest) (*httptransport.FileDownload, *apierror.APIError) {
 			return svc.(InventoryChangeLogSvc).ExportInventoryChangeLogs
 		},
-	}
+	}).WithDocSource(e)
 }

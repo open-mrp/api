@@ -16,12 +16,12 @@ type RetrieveItemInventoryRequest struct {
 	ItemID string `path:"id" validate:"required"`
 }
 
+// Returns inventory quantities for an item, including on-hand, reserved, available-to-promise, and short amounts.
 type RetrieveItemInventoryEndpoint struct{}
 
 func (e *RetrieveItemInventoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveItemInventoryRequest, *apiresource.ItemInventory] {
-	return &apiendpoint.APIEndpoint[*RetrieveItemInventoryRequest, *apiresource.ItemInventory]{
+	return (&apiendpoint.APIEndpoint[*RetrieveItemInventoryRequest, *apiresource.ItemInventory]{
 		Title:             "Retrieve Item Inventory",
-		Description:       "Returns inventory quantities for an item, including on-hand, reserved, available-to-promise, and short amounts.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/items/{id}/inventory",
@@ -37,5 +37,5 @@ func (e *RetrieveItemInventoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 			ObjectType: constants.ObjectTypeItemInventory,
 			Fields:     []string{"on_hand", "reserved", "available_to_promise", "short"},
 		}),
-	}
+	}).WithDocSource(e)
 }

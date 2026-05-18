@@ -46,12 +46,12 @@ func (*UpdatePurchaseOrderRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdatePurchaseOrderRequest)
 }
 
+// Partially updates a purchase order.
 type UpdatePurchaseOrderEndpoint struct{}
 
 func (e *UpdatePurchaseOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdatePurchaseOrderRequest, *apiresource.PurchaseOrderDetail] {
-	return &apiendpoint.APIEndpoint[*UpdatePurchaseOrderRequest, *apiresource.PurchaseOrderDetail]{
+	return (&apiendpoint.APIEndpoint[*UpdatePurchaseOrderRequest, *apiresource.PurchaseOrderDetail]{
 		Title:             "Update Purchase Order",
-		Description:       "Partially updates a purchase order.",
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/purchase-orders/{id}",
@@ -67,5 +67,5 @@ func (e *UpdatePurchaseOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*Up
 			ObjectType: constants.ObjectTypePurchaseOrder,
 			Fields:     []string{"supplier", "bill_to_address", "ship_to_address", "carrier", "service_level", "payment_term", "shipping_term", "receiving_order", "lines", "contacts"},
 		}),
-	}
+	}).WithDocSource(e)
 }

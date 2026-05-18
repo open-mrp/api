@@ -16,12 +16,12 @@ type RetrieveAccountStatusRequest struct {
 	AccountStatusID string `path:"id" validate:"required"`
 }
 
+// Returns an account status by ID or code.
 type RetrieveAccountStatusEndpoint struct{}
 
 func (e *RetrieveAccountStatusEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveAccountStatusRequest, *apiresource.AccountStatus] {
-	return &apiendpoint.APIEndpoint[*RetrieveAccountStatusRequest, *apiresource.AccountStatus]{
+	return (&apiendpoint.APIEndpoint[*RetrieveAccountStatusRequest, *apiresource.AccountStatus]{
 		Title:             "Retrieve Account Status",
-		Description:       "Returns an account status by ID or code.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/account-statuses/{id}",
@@ -37,5 +37,5 @@ func (e *RetrieveAccountStatusEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 			ObjectType: constants.ObjectTypeAccountStatus,
 			Fields:     []string{"owner"},
 		}),
-	}
+	}).WithDocSource(e)
 }

@@ -24,12 +24,12 @@ func (*RefreshTokenRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleRefreshTokenRequest)
 }
 
+// Refreshes an access token using a refresh token, setting a new access token in a cookie.
 type RefreshTokenEndpoint struct{}
 
 func (e *RefreshTokenEndpoint) Materialize() *apiendpoint.APIEndpoint[*RefreshTokenRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*RefreshTokenRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*RefreshTokenRequest, *apiresource.EmptyResource]{
 		Title:             "Refresh Token",
-		Description:       "Refreshes an access token using a refresh token, setting a new access token in a cookie.",
 		Method:            http.MethodPut,
 		Route:             "/v1/auth/access-tokens",
 		ContentType:       "application/json",
@@ -43,5 +43,5 @@ func (e *RefreshTokenEndpoint) Materialize() *apiendpoint.APIEndpoint[*RefreshTo
 		Extras: apiendpoint.APIEndpointExtras{
 			SkipRequestLogging: true,
 		},
-	}
+	}).WithDocSource(e)
 }

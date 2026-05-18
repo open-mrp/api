@@ -31,12 +31,12 @@ func (*CreateRoleRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateRoleRequest)
 }
 
+// Creates a new role with the specified permissions.
 type CreateRoleEndpoint struct{}
 
 func (e *CreateRoleEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateRoleRequest, *apiresource.Role] {
-	return &apiendpoint.APIEndpoint[*CreateRoleRequest, *apiresource.Role]{
+	return (&apiendpoint.APIEndpoint[*CreateRoleRequest, *apiresource.Role]{
 		Title:             "Create Role",
-		Description:       "Creates a new role with the specified permissions.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/roles",
@@ -55,5 +55,5 @@ func (e *CreateRoleEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateRoleR
 			ObjectType: constants.ObjectTypeRole,
 			Fields:     []string{"owner", "owner.account", "permissions"},
 		}),
-	}
+	}).WithDocSource(e)
 }

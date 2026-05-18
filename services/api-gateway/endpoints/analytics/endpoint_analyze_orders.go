@@ -21,12 +21,12 @@ type AnalyzeOrdersRequest struct {
 	CustomerGroupIDs []string `json:"customer_group_ids,omitempty"`
 }
 
+// Returns detailed order entry records.
 type AnalyzeOrdersEndpoint struct{}
 
 func (e *AnalyzeOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeOrdersRequest, *apiresource.AnalyzeOrdersResponse] {
-	return &apiendpoint.APIEndpoint[*AnalyzeOrdersRequest, *apiresource.AnalyzeOrdersResponse]{
+	return (&apiendpoint.APIEndpoint[*AnalyzeOrdersRequest, *apiresource.AnalyzeOrdersResponse]{
 		Title:             "Analyze Orders",
-		Description:       "Returns detailed order entry records.",
 		Method:            http.MethodPut,
 		Route:             "/v1/core/analytics/orders",
 		ContentType:       "application/json",
@@ -38,5 +38,5 @@ func (e *AnalyzeOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeO
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeOrdersRequest) (*apiresource.AnalyzeOrdersResponse, *apierror.APIError) {
 			return svc.(AnalyticsSvc).AnalyzeOrders
 		},
-	}
+	}).WithDocSource(e)
 }

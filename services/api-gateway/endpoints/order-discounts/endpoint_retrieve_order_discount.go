@@ -15,12 +15,12 @@ type RetrieveOrderDiscountRequest struct {
 	OrderDiscountID string `path:"id" validate:"required"`
 }
 
+// Returns an order discount by ID.
 type RetrieveOrderDiscountEndpoint struct{}
 
 func (e *RetrieveOrderDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveOrderDiscountRequest, *apiresource.OrderDiscount] {
-	return &apiendpoint.APIEndpoint[*RetrieveOrderDiscountRequest, *apiresource.OrderDiscount]{
+	return (&apiendpoint.APIEndpoint[*RetrieveOrderDiscountRequest, *apiresource.OrderDiscount]{
 		Title:             "Retrieve Order Discount",
-		Description:       "Returns an order discount by ID.",
 		Method:            http.MethodGet,
 		Route:             "/v1/sales/order-discounts/{id}",
 		ContentType:       "application/json",
@@ -32,5 +32,5 @@ func (e *RetrieveOrderDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveOrderDiscountRequest) (*apiresource.OrderDiscount, *apierror.APIError) {
 			return svc.(OrderDiscountSvc).GetOrderDiscount
 		},
-	}
+	}).WithDocSource(e)
 }

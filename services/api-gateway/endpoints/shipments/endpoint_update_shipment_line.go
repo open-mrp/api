@@ -33,12 +33,12 @@ func (*UpdateShipmentLineRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateShipmentLineRequest)
 }
 
+// Partially updates a shipment line.
 type UpdateShipmentLineEndpoint struct{}
 
 func (e *UpdateShipmentLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateShipmentLineRequest, *apiresource.ShipmentLine] {
-	return &apiendpoint.APIEndpoint[*UpdateShipmentLineRequest, *apiresource.ShipmentLine]{
+	return (&apiendpoint.APIEndpoint[*UpdateShipmentLineRequest, *apiresource.ShipmentLine]{
 		Title:             "Update Shipment Line",
-		Description:       "Partially updates a shipment line.",
 		Method:            http.MethodPatch,
 		Route:             "/v1/operations/shipments/{shipment_id}/lines/{id}",
 		ContentType:       "application/json",
@@ -50,5 +50,5 @@ func (e *UpdateShipmentLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upd
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateShipmentLineRequest) (*apiresource.ShipmentLine, *apierror.APIError) {
 			return svc.(ShipmentSvc).UpdateShipmentLine
 		},
-	}
+	}).WithDocSource(e)
 }

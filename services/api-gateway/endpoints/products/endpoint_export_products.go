@@ -28,12 +28,12 @@ type ExportProductsRequest struct {
 	EndDate *time.Time `query:"end_date"`
 }
 
+// Exports all matching products as an Excel file.
 type ExportProductsEndpoint struct{}
 
 func (e *ExportProductsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ExportProductsRequest, *httptransport.FileDownload] {
-	return &apiendpoint.APIEndpoint[*ExportProductsRequest, *httptransport.FileDownload]{
+	return (&apiendpoint.APIEndpoint[*ExportProductsRequest, *httptransport.FileDownload]{
 		Title:             "Export Products",
-		Description:       "Exports all matching products as an Excel file.",
 		Method:            http.MethodGet,
 		ContentType:       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 		Route:             "/v1/catalog/products/actions/export",
@@ -45,5 +45,5 @@ func (e *ExportProductsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ExportP
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ExportProductsRequest) (*httptransport.FileDownload, *apierror.APIError) {
 			return svc.(ProductSvc).ExportProducts
 		},
-	}
+	}).WithDocSource(e)
 }

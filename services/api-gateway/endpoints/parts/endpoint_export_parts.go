@@ -24,12 +24,12 @@ type ExportPartsRequest struct {
 	EndDate *time.Time `query:"end_date"`
 }
 
+// Exports all matching parts as an Excel file.
 type ExportPartsEndpoint struct{}
 
 func (e *ExportPartsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ExportPartsRequest, *httptransport.FileDownload] {
-	return &apiendpoint.APIEndpoint[*ExportPartsRequest, *httptransport.FileDownload]{
+	return (&apiendpoint.APIEndpoint[*ExportPartsRequest, *httptransport.FileDownload]{
 		Title:             "Export Parts",
-		Description:       "Exports all matching parts as an Excel file.",
 		Method:            http.MethodGet,
 		ContentType:       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 		Route:             "/v1/catalog/parts/actions/export",
@@ -41,5 +41,5 @@ func (e *ExportPartsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ExportPart
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ExportPartsRequest) (*httptransport.FileDownload, *apierror.APIError) {
 			return svc.(PartSvc).ExportParts
 		},
-	}
+	}).WithDocSource(e)
 }

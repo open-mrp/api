@@ -18,12 +18,12 @@ type RetrieveProductionRequest struct {
 	ProductionID string `path:"id" validate:"required"`
 }
 
+// Returns a production output by ID within a production step.
 type RetrieveProductionEndpoint struct{}
 
 func (e *RetrieveProductionEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveProductionRequest, *apiresource.ProductionOutput] {
-	return &apiendpoint.APIEndpoint[*RetrieveProductionRequest, *apiresource.ProductionOutput]{
+	return (&apiendpoint.APIEndpoint[*RetrieveProductionRequest, *apiresource.ProductionOutput]{
 		Title:             "Retrieve Production",
-		Description:       "Returns a production output by ID within a production step.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/production-steps/{production_step_id}/productions/{id}",
@@ -39,5 +39,5 @@ func (e *RetrieveProductionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ret
 			ObjectType: constants.ObjectTypeProduction,
 			Fields:     []string{"produced_item"},
 		}),
-	}
+	}).WithDocSource(e)
 }

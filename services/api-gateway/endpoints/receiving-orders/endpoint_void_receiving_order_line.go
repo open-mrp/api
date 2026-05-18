@@ -17,12 +17,12 @@ type VoidReceivingOrderLineRequest struct {
 	LineID string `path:"id" validate:"required"`
 }
 
+// Voids a receiving order line.
 type VoidReceivingOrderLineEndpoint struct{}
 
 func (e *VoidReceivingOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*VoidReceivingOrderLineRequest, *apiresource.ReceivingOrderLine] {
-	return &apiendpoint.APIEndpoint[*VoidReceivingOrderLineRequest, *apiresource.ReceivingOrderLine]{
+	return (&apiendpoint.APIEndpoint[*VoidReceivingOrderLineRequest, *apiresource.ReceivingOrderLine]{
 		Title:             "Void Receiving Order Line",
-		Description:       "Voids a receiving order line.",
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/receiving-orders/{receiving_order_id}/lines/{id}/actions/void",
@@ -34,5 +34,5 @@ func (e *VoidReceivingOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		ServiceHandler: func(svc any) func(ctx context.Context, req *VoidReceivingOrderLineRequest) (*apiresource.ReceivingOrderLine, *apierror.APIError) {
 			return svc.(ReceivingOrderSvc).VoidReceivingOrderLine
 		},
-	}
+	}).WithDocSource(e)
 }

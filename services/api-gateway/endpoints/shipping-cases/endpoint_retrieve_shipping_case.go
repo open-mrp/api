@@ -16,12 +16,12 @@ type RetrieveShippingCaseRequest struct {
 	ShippingCaseID string `path:"id" validate:"required"`
 }
 
+// Returns a shipping case by ID.
 type RetrieveShippingCaseEndpoint struct{}
 
 func (e *RetrieveShippingCaseEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveShippingCaseRequest, *apiresource.ShippingCase] {
-	return &apiendpoint.APIEndpoint[*RetrieveShippingCaseRequest, *apiresource.ShippingCase]{
+	return (&apiendpoint.APIEndpoint[*RetrieveShippingCaseRequest, *apiresource.ShippingCase]{
 		Title:             "Retrieve Shipping Case",
-		Description:       "Returns a shipping case by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/shipping-cases/{id}",
@@ -37,5 +37,5 @@ func (e *RetrieveShippingCaseEndpoint) Materialize() *apiendpoint.APIEndpoint[*R
 			ObjectType: constants.ObjectTypeShippingCase,
 			Fields:     []string{"carrier", "shipment", "freight_amount.unit", "freight_weight.unit"},
 		}),
-	}
+	}).WithDocSource(e)
 }

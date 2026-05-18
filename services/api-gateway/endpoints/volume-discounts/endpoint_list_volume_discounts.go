@@ -14,12 +14,12 @@ type ListVolumeDiscountsRequest struct {
 	apiresource.PaginationRequest
 }
 
+// Returns a paginated list of volume discounts for the target account.
 type ListVolumeDiscountsEndpoint struct{}
 
 func (e *ListVolumeDiscountsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListVolumeDiscountsRequest, *apiresource.List[apiresource.VolumeDiscount]] {
-	return &apiendpoint.APIEndpoint[*ListVolumeDiscountsRequest, *apiresource.List[apiresource.VolumeDiscount]]{
+	return (&apiendpoint.APIEndpoint[*ListVolumeDiscountsRequest, *apiresource.List[apiresource.VolumeDiscount]]{
 		Title:             "List Volume Discounts",
-		Description:       "Returns a paginated list of volume discounts for the target account.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/volume-discounts",
@@ -31,5 +31,5 @@ func (e *ListVolumeDiscountsEndpoint) Materialize() *apiendpoint.APIEndpoint[*Li
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListVolumeDiscountsRequest) (*apiresource.List[apiresource.VolumeDiscount], *apierror.APIError) {
 			return svc.(VolumeDiscountSvc).ListVolumeDiscounts
 		},
-	}
+	}).WithDocSource(e)
 }

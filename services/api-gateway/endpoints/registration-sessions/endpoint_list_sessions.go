@@ -9,12 +9,12 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
+// Returns a paginated list of open registration sessions for the authenticated user.
 type ListSessionsEndpoint struct{}
 
 func (e *ListSessionsEndpoint) Materialize() *apiendpoint.APIEndpoint[*apiresource.PaginationRequest, *apiresource.List[apiresource.RegistrationSession]] {
-	return &apiendpoint.APIEndpoint[*apiresource.PaginationRequest, *apiresource.List[apiresource.RegistrationSession]]{
+	return (&apiendpoint.APIEndpoint[*apiresource.PaginationRequest, *apiresource.List[apiresource.RegistrationSession]]{
 		Title:             "List Registration Sessions",
-		Description:       "Returns a paginated list of open registration sessions for the authenticated user.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/auth/registration-sessions",
@@ -26,5 +26,5 @@ func (e *ListSessionsEndpoint) Materialize() *apiendpoint.APIEndpoint[*apiresour
 		ServiceHandler: func(svc any) func(ctx context.Context, req *apiresource.PaginationRequest) (*apiresource.List[apiresource.RegistrationSession], *apierror.APIError) {
 			return svc.(RegistrationSessionSvc).ListSessions
 		},
-	}
+	}).WithDocSource(e)
 }

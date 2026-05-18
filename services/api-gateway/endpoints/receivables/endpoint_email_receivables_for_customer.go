@@ -26,12 +26,12 @@ func (*EmailReceivablesForCustomerRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleEmailReceivablesForCustomerRequest)
 }
 
+// Sends a receivables report for a specific customer account to the provided email addresses.
 type EmailReceivablesForCustomerEndpoint struct{}
 
 func (e *EmailReceivablesForCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*EmailReceivablesForCustomerRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*EmailReceivablesForCustomerRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*EmailReceivablesForCustomerRequest, *apiresource.EmptyResource]{
 		Title:             "Email Receivables for Customer",
-		Description:       "Sends a receivables report for a specific customer account to the provided email addresses.",
 		Method:            http.MethodPost,
 		Route:             "/v1/finance/accounts/{account_id}/actions/email-receivables",
 		ContentType:       "application/json",
@@ -43,5 +43,5 @@ func (e *EmailReceivablesForCustomerEndpoint) Materialize() *apiendpoint.APIEndp
 		ServiceHandler: func(svc any) func(ctx context.Context, req *EmailReceivablesForCustomerRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(ReceivableSvc).EmailReceivablesForCustomer
 		},
-	}
+	}).WithDocSource(e)
 }

@@ -16,12 +16,12 @@ type RetrieveProductLineRequest struct {
 	ProductLineID string `path:"id" validate:"required"`
 }
 
+// Returns a product line by ID, including system-owned product lines accessible to the account.
 type RetrieveProductLineEndpoint struct{}
 
 func (e *RetrieveProductLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveProductLineRequest, *apiresource.ProductLine] {
-	return &apiendpoint.APIEndpoint[*RetrieveProductLineRequest, *apiresource.ProductLine]{
+	return (&apiendpoint.APIEndpoint[*RetrieveProductLineRequest, *apiresource.ProductLine]{
 		Title:             "Retrieve Product Line",
-		Description:       "Returns a product line by ID, including system-owned product lines accessible to the account.",
 		Method:            http.MethodGet,
 		Route:             "/v1/catalog/product-lines/{id}",
 		ContentType:       "application/json",
@@ -37,5 +37,5 @@ func (e *RetrieveProductLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*Re
 			ObjectType: constants.ObjectTypeProductLine,
 			Fields:     []string{"owner", "owner.account", "unit_group"},
 		}),
-	}
+	}).WithDocSource(e)
 }

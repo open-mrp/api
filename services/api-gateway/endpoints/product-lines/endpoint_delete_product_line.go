@@ -15,12 +15,12 @@ type DeleteProductLineRequest struct {
 	ProductLineID string `path:"id" validate:"required"`
 }
 
+// Deletes an account-owned product line. Default system product lines cannot be deleted.
 type DeleteProductLineEndpoint struct{}
 
 func (e *DeleteProductLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteProductLineRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*DeleteProductLineRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*DeleteProductLineRequest, *apiresource.EmptyResource]{
 		Title:             "Delete Product Line",
-		Description:       "Deletes an account-owned product line. Default system product lines cannot be deleted.",
 		Method:            http.MethodDelete,
 		Route:             "/v1/catalog/product-lines/{id}",
 		ContentType:       "application/json",
@@ -32,5 +32,5 @@ func (e *DeleteProductLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*Dele
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteProductLineRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(ProductLineSvc).DeleteProductLine
 		},
-	}
+	}).WithDocSource(e)
 }

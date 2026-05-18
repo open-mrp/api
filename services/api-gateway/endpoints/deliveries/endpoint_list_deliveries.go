@@ -25,12 +25,13 @@ type ListDeliveriesRequest struct {
 }
 
 // TODO: stop returning DeliverySummary; return the full Delivery apiresource and use proper includes values to control expansion.
+
+// Returns a paginated list of deliveries for the caller's account.
 type ListDeliveriesEndpoint struct{}
 
 func (e *ListDeliveriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListDeliveriesRequest, *apiresource.List[apiresource.DeliverySummary]] {
-	return &apiendpoint.APIEndpoint[*ListDeliveriesRequest, *apiresource.List[apiresource.DeliverySummary]]{
+	return (&apiendpoint.APIEndpoint[*ListDeliveriesRequest, *apiresource.List[apiresource.DeliverySummary]]{
 		Title:             "List Deliveries",
-		Description:       "Returns a paginated list of deliveries for the caller's account.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/deliveries",
@@ -42,5 +43,5 @@ func (e *ListDeliveriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListDel
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListDeliveriesRequest) (*apiresource.List[apiresource.DeliverySummary], *apierror.APIError) {
 			return svc.(DeliverySvc).ListDeliveries
 		},
-	}
+	}).WithDocSource(e)
 }

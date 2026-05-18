@@ -27,12 +27,12 @@ func (*ShipShipmentRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleShipShipmentRequest)
 }
 
+// Marks a shipment as shipped and optionally sends a shipping notification email to the customer.
 type ShipShipmentEndpoint struct{}
 
 func (e *ShipShipmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*ShipShipmentRequest, *apiresource.ShipmentDetail] {
-	return &apiendpoint.APIEndpoint[*ShipShipmentRequest, *apiresource.ShipmentDetail]{
+	return (&apiendpoint.APIEndpoint[*ShipShipmentRequest, *apiresource.ShipmentDetail]{
 		Title:             "Ship Shipment",
-		Description:       "Marks a shipment as shipped and optionally sends a shipping notification email to the customer.",
 		Method:            http.MethodPost,
 		Route:             "/v1/operations/shipments/{id}/actions/ship",
 		ContentType:       "application/json",
@@ -48,5 +48,5 @@ func (e *ShipShipmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*ShipShipm
 			ObjectType: constants.ObjectTypeShipment,
 			Fields:     []string{"lines", "shipping_cases", "sales_order", "customer", "carrier", "service_level", "shipping_address", "shipped_by", "invoice", "pick"},
 		}),
-	}
+	}).WithDocSource(e)
 }

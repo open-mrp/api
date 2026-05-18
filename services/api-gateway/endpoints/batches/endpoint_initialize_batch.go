@@ -27,12 +27,12 @@ func (*InitializeBatchRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleInitializeBatchRequest)
 }
 
+// Initializes a batch at the specified scanning station.
 type InitializeBatchEndpoint struct{}
 
 func (e *InitializeBatchEndpoint) Materialize() *apiendpoint.APIEndpoint[*InitializeBatchRequest, *apiresource.Batch] {
-	return &apiendpoint.APIEndpoint[*InitializeBatchRequest, *apiresource.Batch]{
+	return (&apiendpoint.APIEndpoint[*InitializeBatchRequest, *apiresource.Batch]{
 		Title:             "Initialize Batch",
-		Description:       "Initializes a batch at the specified scanning station.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/batches/actions/initialize",
@@ -44,5 +44,5 @@ func (e *InitializeBatchEndpoint) Materialize() *apiendpoint.APIEndpoint[*Initia
 		ServiceHandler: func(svc any) func(ctx context.Context, req *InitializeBatchRequest) (*apiresource.Batch, *apierror.APIError) {
 			return svc.(BatchSvc).InitializeBatch
 		},
-	}
+	}).WithDocSource(e)
 }

@@ -14,12 +14,12 @@ type ListOrderDiscountsRequest struct {
 	apiresource.PaginationRequest
 }
 
+// Returns a paginated list of order discounts for the current account.
 type ListOrderDiscountsEndpoint struct{}
 
 func (e *ListOrderDiscountsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListOrderDiscountsRequest, *apiresource.List[apiresource.OrderDiscount]] {
-	return &apiendpoint.APIEndpoint[*ListOrderDiscountsRequest, *apiresource.List[apiresource.OrderDiscount]]{
+	return (&apiendpoint.APIEndpoint[*ListOrderDiscountsRequest, *apiresource.List[apiresource.OrderDiscount]]{
 		Title:             "List Order Discounts",
-		Description:       "Returns a paginated list of order discounts for the current account.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/order-discounts",
@@ -31,5 +31,5 @@ func (e *ListOrderDiscountsEndpoint) Materialize() *apiendpoint.APIEndpoint[*Lis
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListOrderDiscountsRequest) (*apiresource.List[apiresource.OrderDiscount], *apierror.APIError) {
 			return svc.(OrderDiscountSvc).ListOrderDiscounts
 		},
-	}
+	}).WithDocSource(e)
 }

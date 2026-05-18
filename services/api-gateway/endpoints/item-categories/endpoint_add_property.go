@@ -17,12 +17,12 @@ type AddItemCategoryPropertyRequest struct {
 	PropertyID string `path:"property_id" validate:"required"`
 }
 
+// Adds a property to an item category. Default system categories cannot be modified.
 type AddItemCategoryPropertyEndpoint struct{}
 
 func (e *AddItemCategoryPropertyEndpoint) Materialize() *apiendpoint.APIEndpoint[*AddItemCategoryPropertyRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*AddItemCategoryPropertyRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*AddItemCategoryPropertyRequest, *apiresource.EmptyResource]{
 		Title:             "Add Item Category Property",
-		Description:       "Adds a property to an item category. Default system categories cannot be modified.",
 		Method:            http.MethodPut,
 		Route:             "/v1/catalog/item-categories/{id}/properties/{property_id}",
 		ContentType:       "application/json",
@@ -34,5 +34,5 @@ func (e *AddItemCategoryPropertyEndpoint) Materialize() *apiendpoint.APIEndpoint
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AddItemCategoryPropertyRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(ItemCategorySvc).AddItemCategoryProperty
 		},
-	}
+	}).WithDocSource(e)
 }

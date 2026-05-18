@@ -17,12 +17,12 @@ type ListAccountGroupsRequest struct {
 	Type *constants.AccountGroupType `query:"type"`
 }
 
+// Returns a paginated list of account groups.
 type ListAccountGroupsEndpoint struct{}
 
 func (e *ListAccountGroupsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAccountGroupsRequest, *apiresource.List[apiresource.AccountGroup]] {
-	return &apiendpoint.APIEndpoint[*ListAccountGroupsRequest, *apiresource.List[apiresource.AccountGroup]]{
+	return (&apiendpoint.APIEndpoint[*ListAccountGroupsRequest, *apiresource.List[apiresource.AccountGroup]]{
 		Title:             "List Account Groups",
-		Description:       "Returns a paginated list of account groups.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/account-groups",
@@ -34,5 +34,5 @@ func (e *ListAccountGroupsEndpoint) Materialize() *apiendpoint.APIEndpoint[*List
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListAccountGroupsRequest) (*apiresource.List[apiresource.AccountGroup], *apierror.APIError) {
 			return svc.(AccountGroupSvc).ListAccountGroups
 		},
-	}
+	}).WithDocSource(e)
 }

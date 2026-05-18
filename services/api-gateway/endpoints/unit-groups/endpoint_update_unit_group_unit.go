@@ -38,12 +38,12 @@ func (*UpdateUnitGroupUnitRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateUnitGroupUnitRequest)
 }
 
+// Partially updates an associated unit within a unit group.
 type UpdateUnitGroupUnitEndpoint struct{}
 
 func (e *UpdateUnitGroupUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateUnitGroupUnitRequest, *apiresource.UnitGroupUnit] {
-	return &apiendpoint.APIEndpoint[*UpdateUnitGroupUnitRequest, *apiresource.UnitGroupUnit]{
+	return (&apiendpoint.APIEndpoint[*UpdateUnitGroupUnitRequest, *apiresource.UnitGroupUnit]{
 		Title:             "Update Unit Group Associated Unit",
-		Description:       "Partially updates an associated unit within a unit group.",
 		Method:            http.MethodPatch,
 		Route:             "/v1/catalog/unit-groups/{unit_group_id}/units/{id}",
 		ContentType:       "application/json",
@@ -59,5 +59,5 @@ func (e *UpdateUnitGroupUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*Up
 			ObjectType: constants.ObjectTypeUnitGroupUnit,
 			Fields:     []string{"unit"},
 		}),
-	}
+	}).WithDocSource(e)
 }

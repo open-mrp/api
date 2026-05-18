@@ -20,12 +20,12 @@ type ListOpenCreditsRequest struct {
 	CustomerIDs []string `query:"customer_ids"`
 }
 
+// Returns a paginated list of open credit transactions for the current account.
 type ListOpenCreditsEndpoint struct{}
 
 func (e *ListOpenCreditsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListOpenCreditsRequest, *apiresource.List[apiresource.OpenCreditEntry]] {
-	return &apiendpoint.APIEndpoint[*ListOpenCreditsRequest, *apiresource.List[apiresource.OpenCreditEntry]]{
+	return (&apiendpoint.APIEndpoint[*ListOpenCreditsRequest, *apiresource.List[apiresource.OpenCreditEntry]]{
 		Title:             "List Open Credits",
-		Description:       "Returns a paginated list of open credit transactions for the current account.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/finance/open-credits",
@@ -37,5 +37,5 @@ func (e *ListOpenCreditsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListOp
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListOpenCreditsRequest) (*apiresource.List[apiresource.OpenCreditEntry], *apierror.APIError) {
 			return svc.(TransactionAllocationSvc).ListOpenCredits
 		},
-	}
+	}).WithDocSource(e)
 }

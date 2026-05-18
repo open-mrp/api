@@ -16,12 +16,12 @@ type RetrieveMachineRequest struct {
 	MachineID string `path:"id" validate:"required"`
 }
 
+// Returns a machine by ID.
 type RetrieveMachineEndpoint struct{}
 
 func (e *RetrieveMachineEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveMachineRequest, *apiresource.Machine] {
-	return &apiendpoint.APIEndpoint[*RetrieveMachineRequest, *apiresource.Machine]{
+	return (&apiendpoint.APIEndpoint[*RetrieveMachineRequest, *apiresource.Machine]{
 		Title:             "Retrieve Machine",
-		Description:       "Returns a machine by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/machines/{id}",
@@ -37,5 +37,5 @@ func (e *RetrieveMachineEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retrie
 			ObjectType: constants.ObjectTypeMachine,
 			Fields:     []string{"department"},
 		}),
-	}
+	}).WithDocSource(e)
 }

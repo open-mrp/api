@@ -18,12 +18,12 @@ type AddItemAttributeRequest struct {
 	AttributeID string `path:"attribute_id" validate:"required"`
 }
 
+// Adds an attribute to an item. If the attribute is already associated with the item, this is a no-op.
 type AddItemAttributeEndpoint struct{}
 
 func (e *AddItemAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*AddItemAttributeRequest, *apiresource.Item] {
-	return &apiendpoint.APIEndpoint[*AddItemAttributeRequest, *apiresource.Item]{
+	return (&apiendpoint.APIEndpoint[*AddItemAttributeRequest, *apiresource.Item]{
 		Title:             "Add Item Attribute",
-		Description:       "Adds an attribute to an item. If the attribute is already associated with the item, this is a no-op.",
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/items/{id}/attributes/{attribute_id}",
@@ -39,5 +39,5 @@ func (e *AddItemAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*AddIt
 			ObjectType: constants.ObjectTypeItem,
 			Fields:     []string{"category", "unit_value", "unit_cost", "burn_rate", "attributes", "category.unit_group", "category.properties", "category.unit_group.base_unit", "category.unit_group.associated_units", "category.unit_group.associated_units.unit"},
 		}),
-	}
+	}).WithDocSource(e)
 }

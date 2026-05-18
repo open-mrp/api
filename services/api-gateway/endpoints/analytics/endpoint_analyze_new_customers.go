@@ -22,12 +22,12 @@ type AnalyzeNewCustomersRequest struct {
 	SalesRepIDs []string `json:"sales_rep_ids,omitempty"`
 }
 
+// Returns time series data of new customer acquisitions over a specified date range.
 type AnalyzeNewCustomersEndpoint struct{}
 
 func (e *AnalyzeNewCustomersEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeNewCustomersRequest, *apiresource.AnalyzeNewCustomersResponse] {
-	return &apiendpoint.APIEndpoint[*AnalyzeNewCustomersRequest, *apiresource.AnalyzeNewCustomersResponse]{
+	return (&apiendpoint.APIEndpoint[*AnalyzeNewCustomersRequest, *apiresource.AnalyzeNewCustomersResponse]{
 		Title:             "Analyze New Customers",
-		Description:       "Returns time series data of new customer acquisitions over a specified date range.",
 		Method:            http.MethodPut,
 		Route:             "/v1/core/analytics/new-customers",
 		ContentType:       "application/json",
@@ -39,5 +39,5 @@ func (e *AnalyzeNewCustomersEndpoint) Materialize() *apiendpoint.APIEndpoint[*An
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeNewCustomersRequest) (*apiresource.AnalyzeNewCustomersResponse, *apierror.APIError) {
 			return svc.(AnalyticsSvc).AnalyzeNewCustomers
 		},
-	}
+	}).WithDocSource(e)
 }

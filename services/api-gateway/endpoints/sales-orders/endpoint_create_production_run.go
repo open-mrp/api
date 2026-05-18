@@ -34,12 +34,12 @@ func (*CreateProductionRunResponse) SchemaExample() any {
 	return map[string]any{"production_run": map[string]any{"id": apiresource.SampleProductionRunID, "object": string(constants.ObjectTypeProductionRun)}}
 }
 
+// Creates a production run from a sales order.
 type CreateProductionRunEndpoint struct{}
 
 func (e *CreateProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateProductionRunRequest, *CreateProductionRunResponse] {
-	return &apiendpoint.APIEndpoint[*CreateProductionRunRequest, *CreateProductionRunResponse]{
+	return (&apiendpoint.APIEndpoint[*CreateProductionRunRequest, *CreateProductionRunResponse]{
 		Title:             "Create Production Run from Sales Order",
-		Description:       "Creates a production run from a sales order.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/sales-orders/{id}/actions/create-production-run",
@@ -51,5 +51,5 @@ func (e *CreateProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cr
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateProductionRunRequest) (*CreateProductionRunResponse, *apierror.APIError) {
 			return svc.(SalesOrderSvc).CreateSalesOrderProductionRun
 		},
-	}
+	}).WithDocSource(e)
 }

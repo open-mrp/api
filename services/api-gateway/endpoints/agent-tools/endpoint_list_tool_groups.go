@@ -14,12 +14,12 @@ type ListToolGroupsRequest struct {
 	apiresource.PaginationRequest
 }
 
+// Returns a paginated list of tool groups.
 type ListToolGroupsEndpoint struct{}
 
 func (e *ListToolGroupsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListToolGroupsRequest, *apiresource.List[apiresource.ToolGroup]] {
-	return &apiendpoint.APIEndpoint[*ListToolGroupsRequest, *apiresource.List[apiresource.ToolGroup]]{
+	return (&apiendpoint.APIEndpoint[*ListToolGroupsRequest, *apiresource.List[apiresource.ToolGroup]]{
 		Title:             "List Tool Groups",
-		Description:       "Returns a paginated list of tool groups.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/ai/tool-groups",
@@ -35,5 +35,5 @@ func (e *ListToolGroupsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListToo
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListToolGroupsRequest) (*apiresource.List[apiresource.ToolGroup], *apierror.APIError) {
 			return svc.(AgentToolSvc).ListToolGroups
 		},
-	}
+	}).WithDocSource(e)
 }

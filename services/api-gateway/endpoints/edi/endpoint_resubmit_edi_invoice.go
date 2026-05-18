@@ -23,12 +23,12 @@ func (*ResubmitEDIInvoiceRequest) SchemaExample() any {
 	return exampleResubmitEDIInvoiceRequest
 }
 
+// Resubmits an invoice via EDI. Fails if the invoice does not exist or EDI is not enabled on the account.
 type ResubmitEDIInvoiceEndpoint struct{}
 
 func (e *ResubmitEDIInvoiceEndpoint) Materialize() *apiendpoint.APIEndpoint[*ResubmitEDIInvoiceRequest, *apiresource.MessageResource] {
-	return &apiendpoint.APIEndpoint[*ResubmitEDIInvoiceRequest, *apiresource.MessageResource]{
+	return (&apiendpoint.APIEndpoint[*ResubmitEDIInvoiceRequest, *apiresource.MessageResource]{
 		Title:             "Resubmit EDI Invoice",
-		Description:       "Resubmits an invoice via EDI. Fails if the invoice does not exist or EDI is not enabled on the account.",
 		Method:            http.MethodPost,
 		Route:             "/v1/operations/edi/actions/resubmit-invoice",
 		ContentType:       "application/json",
@@ -40,5 +40,5 @@ func (e *ResubmitEDIInvoiceEndpoint) Materialize() *apiendpoint.APIEndpoint[*Res
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ResubmitEDIInvoiceRequest) (*apiresource.MessageResource, *apierror.APIError) {
 			return svc.(EDISvc).ResubmitInvoice
 		},
-	}
+	}).WithDocSource(e)
 }

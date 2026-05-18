@@ -17,12 +17,13 @@ type ListCustomerAccountsRequest struct {
 }
 
 // TODO: stop returning CustomerAccountSummary; return the full CustomerAccount apiresource and use proper includes values to control expansion.
+
+// Returns a paginated list of customer accounts accessible to the authenticated user under the specified vendor account.
 type ListCustomerAccountsEndpoint struct{}
 
 func (e *ListCustomerAccountsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListCustomerAccountsRequest, *apiresource.List[apiresource.CustomerAccountSummary]] {
-	return &apiendpoint.APIEndpoint[*ListCustomerAccountsRequest, *apiresource.List[apiresource.CustomerAccountSummary]]{
+	return (&apiendpoint.APIEndpoint[*ListCustomerAccountsRequest, *apiresource.List[apiresource.CustomerAccountSummary]]{
 		Title:             "List Customer Accounts",
-		Description:       "Returns a paginated list of customer accounts accessible to the authenticated user under the specified vendor account.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/me/tenancy/customer-accounts/{vendor_account_id}",
@@ -37,5 +38,5 @@ func (e *ListCustomerAccountsEndpoint) Materialize() *apiendpoint.APIEndpoint[*L
 		Extras: apiendpoint.APIEndpointExtras{
 			SkipRequestLogging: true,
 		},
-	}
+	}).WithDocSource(e)
 }

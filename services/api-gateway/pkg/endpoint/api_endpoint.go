@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"reflect"
 	"strings"
 	"sync"
 
@@ -39,7 +40,6 @@ Consequently, consider this public data.
 */
 type APIEndpoint[TReq, TResp any] struct {
 	Title             string                                                                        `json:"title" yaml:"title"`
-	Description       string                                                                        `json:"description" yaml:"description"`
 	Method            string                                                                        `json:"method" yaml:"method"`
 	Route             string                                                                        `json:"route" yaml:"route"`
 	ContentType       string                                                                        `json:"content_type" yaml:"content_type"`
@@ -66,6 +66,10 @@ type APIEndpoint[TReq, TResp any] struct {
 	bindOnce            sync.Once
 	httpHandler         http.HandlerFunc
 	boundServiceHandler func(ctx context.Context, req TReq) (TResp, *apierror.APIError)
+	// EndpointType is the reflect.Type of the concrete *XxxEndpoint struct that
+	// produced this APIEndpoint. It is used by the OpenAPI generator to resolve
+	// the operation description from the Go doc comment on that struct.
+	EndpointType reflect.Type
 }
 
 func (e *APIEndpoint[TReq, TResp]) Materialize() APIEndpointer {
@@ -92,6 +96,20 @@ func (e *APIEndpoint[TReq, TResp]) WithService(g *APIEndpointGroup, svc any) *AP
 
 func (e *APIEndpoint[TReq, TResp]) WithMiddleware(mw func(http.HandlerFunc) http.HandlerFunc) *APIEndpoint[TReq, TResp] {
 	e.middleware = mw
+	return e
+}
+
+// WithDocSource records the concrete endpoint struct type so the OpenAPI
+// generator can resolve the operation description from its Go doc comment.
+// Pass the receiver of Materialize() (e.g. `.WithDocSource(e)`).
+func (e *APIEndpoint[TReq, TResp]) WithDocSource(source any) *APIEndpoint[TReq, TResp] {
+	if source != nil {
+		t := reflect.TypeOf(source)
+		if t.Kind() == reflect.Ptr {
+			t = t.Elem()
+		}
+		e.EndpointType = t
+	}
 	return e
 }
 

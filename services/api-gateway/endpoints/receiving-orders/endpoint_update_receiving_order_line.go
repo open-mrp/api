@@ -29,12 +29,12 @@ func (*UpdateReceivingOrderLineRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateReceivingOrderLineRequest)
 }
 
+// Partially updates a receiving order line's quantity value.
 type UpdateReceivingOrderLineEndpoint struct{}
 
 func (e *UpdateReceivingOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateReceivingOrderLineRequest, *apiresource.ReceivingOrderLine] {
-	return &apiendpoint.APIEndpoint[*UpdateReceivingOrderLineRequest, *apiresource.ReceivingOrderLine]{
+	return (&apiendpoint.APIEndpoint[*UpdateReceivingOrderLineRequest, *apiresource.ReceivingOrderLine]{
 		Title:             "Update Receiving Order Line",
-		Description:       "Partially updates a receiving order line's quantity value.",
 		Method:            http.MethodPatch,
 		Route:             "/v1/operations/receiving-orders/{receiving_order_id}/lines/{id}",
 		ContentType:       "application/json",
@@ -46,5 +46,5 @@ func (e *UpdateReceivingOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoin
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateReceivingOrderLineRequest) (*apiresource.ReceivingOrderLine, *apierror.APIError) {
 			return svc.(ReceivingOrderSvc).UpdateReceivingOrderLine
 		},
-	}
+	}).WithDocSource(e)
 }

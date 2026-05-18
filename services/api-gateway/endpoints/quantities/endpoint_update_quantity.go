@@ -36,12 +36,12 @@ func (*UpdateQuantityRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateQuantityRequest)
 }
 
+// Partially updates a quantity.
 type UpdateQuantityEndpoint struct{}
 
 func (e *UpdateQuantityEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateQuantityRequest, *apiresource.Quantity] {
-	return &apiendpoint.APIEndpoint[*UpdateQuantityRequest, *apiresource.Quantity]{
+	return (&apiendpoint.APIEndpoint[*UpdateQuantityRequest, *apiresource.Quantity]{
 		Title:             "Update Quantity",
-		Description:       "Partially updates a quantity.",
 		Method:            http.MethodPatch,
 		Route:             "/v1/operations/quantities/{id}",
 		ContentType:       "application/json",
@@ -57,5 +57,5 @@ func (e *UpdateQuantityEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateQ
 			ObjectType: constants.ObjectTypeQuantity,
 			Fields:     []string{"unit"},
 		}),
-	}
+	}).WithDocSource(e)
 }

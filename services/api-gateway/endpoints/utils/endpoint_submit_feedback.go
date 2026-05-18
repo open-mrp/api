@@ -28,12 +28,12 @@ func (*SubmitFeedbackRequest) SchemaExample() any {
 	return exampleSubmitFeedbackRequest
 }
 
+// Submits user feedback for a given question and page.
 type SubmitFeedbackEndpoint struct{}
 
 func (e *SubmitFeedbackEndpoint) Materialize() *apiendpoint.APIEndpoint[*SubmitFeedbackRequest, *apiresource.MessageResource] {
-	return &apiendpoint.APIEndpoint[*SubmitFeedbackRequest, *apiresource.MessageResource]{
+	return (&apiendpoint.APIEndpoint[*SubmitFeedbackRequest, *apiresource.MessageResource]{
 		Title:             "Submit Feedback",
-		Description:       "Submits user feedback for a given question and page.",
 		Method:            http.MethodPost,
 		Route:             "/v1/core/actions/submit-feedback",
 		ContentType:       "application/json",
@@ -48,5 +48,5 @@ func (e *SubmitFeedbackEndpoint) Materialize() *apiendpoint.APIEndpoint[*SubmitF
 		ServiceHandler: func(svc any) func(ctx context.Context, req *SubmitFeedbackRequest) (*apiresource.MessageResource, *apierror.APIError) {
 			return svc.(UtilsSvc).SubmitFeedback
 		},
-	}
+	}).WithDocSource(e)
 }

@@ -32,12 +32,12 @@ func (*CreateShipmentLineRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateShipmentLineRequest)
 }
 
+// Creates a line on a shipment.
 type CreateShipmentLineEndpoint struct{}
 
 func (e *CreateShipmentLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateShipmentLineRequest, *apiresource.ShipmentLine] {
-	return &apiendpoint.APIEndpoint[*CreateShipmentLineRequest, *apiresource.ShipmentLine]{
+	return (&apiendpoint.APIEndpoint[*CreateShipmentLineRequest, *apiresource.ShipmentLine]{
 		Title:             "Create Shipment Line",
-		Description:       "Creates a line on a shipment.",
 		Method:            http.MethodPost,
 		Route:             "/v1/operations/shipments/{shipment_id}/lines",
 		ContentType:       "application/json",
@@ -49,5 +49,5 @@ func (e *CreateShipmentLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cre
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateShipmentLineRequest) (*apiresource.ShipmentLine, *apierror.APIError) {
 			return svc.(ShipmentSvc).CreateShipmentLine
 		},
-	}
+	}).WithDocSource(e)
 }

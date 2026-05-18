@@ -15,12 +15,12 @@ type RetrieveSysPropertyRequest struct {
 	SysPropertyID string `path:"id" validate:"required"`
 }
 
+// Returns a system property by ID.
 type RetrieveSysPropertyEndpoint struct{}
 
 func (e *RetrieveSysPropertyEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveSysPropertyRequest, *apiresource.SysProperty] {
-	return &apiendpoint.APIEndpoint[*RetrieveSysPropertyRequest, *apiresource.SysProperty]{
+	return (&apiendpoint.APIEndpoint[*RetrieveSysPropertyRequest, *apiresource.SysProperty]{
 		Title:             "Retrieve System Property",
-		Description:       "Returns a system property by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/core/sys-properties/{id}",
@@ -32,5 +32,5 @@ func (e *RetrieveSysPropertyEndpoint) Materialize() *apiendpoint.APIEndpoint[*Re
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveSysPropertyRequest) (*apiresource.SysProperty, *apierror.APIError) {
 			return svc.(SysPropertySvc).GetSysProperty
 		},
-	}
+	}).WithDocSource(e)
 }

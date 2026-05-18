@@ -28,12 +28,12 @@ func (*CreateRegistrationSessionRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateRegistrationSessionRequest)
 }
 
+// Creates a registration session. Returns the existing session ID if an active session already exists for that email.
 type CreateSessionEndpoint struct{}
 
 func (e *CreateSessionEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateRegistrationSessionRequest, *apiresource.CreateSessionResponse] {
-	return &apiendpoint.APIEndpoint[*CreateRegistrationSessionRequest, *apiresource.CreateSessionResponse]{
+	return (&apiendpoint.APIEndpoint[*CreateRegistrationSessionRequest, *apiresource.CreateSessionResponse]{
 		Title:             "Create Registration Session",
-		Description:       "Creates a registration session. Returns the existing session ID if an active session already exists for that email.",
 		Method:            http.MethodPost,
 		Route:             "/v1/auth/registration-sessions",
 		ContentType:       "application/json",
@@ -45,5 +45,5 @@ func (e *CreateSessionEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateRe
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateRegistrationSessionRequest) (*apiresource.CreateSessionResponse, *apierror.APIError) {
 			return svc.(RegistrationSessionSvc).CreateSession
 		},
-	}
+	}).WithDocSource(e)
 }

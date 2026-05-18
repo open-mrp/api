@@ -14,12 +14,12 @@ type ListTransactionTypesRequest struct {
 	apiresource.PaginationRequest
 }
 
+// Returns a paginated list of transaction types.
 type ListTransactionTypesEndpoint struct{}
 
 func (e *ListTransactionTypesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListTransactionTypesRequest, *apiresource.List[apiresource.TransactionType]] {
-	return &apiendpoint.APIEndpoint[*ListTransactionTypesRequest, *apiresource.List[apiresource.TransactionType]]{
+	return (&apiendpoint.APIEndpoint[*ListTransactionTypesRequest, *apiresource.List[apiresource.TransactionType]]{
 		Title:             "List Transaction Types",
-		Description:       "Returns a paginated list of transaction types.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/finance/transaction-types",
@@ -31,5 +31,5 @@ func (e *ListTransactionTypesEndpoint) Materialize() *apiendpoint.APIEndpoint[*L
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListTransactionTypesRequest) (*apiresource.List[apiresource.TransactionType], *apierror.APIError) {
 			return svc.(TransactionSvc).ListTransactionTypes
 		},
-	}
+	}).WithDocSource(e)
 }

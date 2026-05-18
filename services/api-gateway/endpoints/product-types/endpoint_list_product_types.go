@@ -14,12 +14,12 @@ type ListProductTypesRequest struct {
 	apiresource.PaginationRequest
 }
 
+// Returns a paginated list of product types. Product types are global and not scoped to a specific account.
 type ListProductTypesEndpoint struct{}
 
 func (e *ListProductTypesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListProductTypesRequest, *apiresource.List[apiresource.ProductType]] {
-	return &apiendpoint.APIEndpoint[*ListProductTypesRequest, *apiresource.List[apiresource.ProductType]]{
+	return (&apiendpoint.APIEndpoint[*ListProductTypesRequest, *apiresource.List[apiresource.ProductType]]{
 		Title:             "List Product Types",
-		Description:       "Returns a paginated list of product types. Product types are global and not scoped to a specific account.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/product-types",
@@ -31,5 +31,5 @@ func (e *ListProductTypesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListP
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListProductTypesRequest) (*apiresource.List[apiresource.ProductType], *apierror.APIError) {
 			return svc.(ProductTypeSvc).ListProductTypes
 		},
-	}
+	}).WithDocSource(e)
 }

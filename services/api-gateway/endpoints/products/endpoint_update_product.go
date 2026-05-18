@@ -38,12 +38,12 @@ func (*UpdateProductRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateProductRequest)
 }
 
+// Partially updates a product.
 type UpdateProductEndpoint struct{}
 
 func (e *UpdateProductEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateProductRequest, *apiresource.Product] {
-	return &apiendpoint.APIEndpoint[*UpdateProductRequest, *apiresource.Product]{
+	return (&apiendpoint.APIEndpoint[*UpdateProductRequest, *apiresource.Product]{
 		Title:             "Update Product",
-		Description:       "Partially updates a product.",
 		Method:            http.MethodPatch,
 		Route:             "/v1/catalog/products/{id}",
 		ContentType:       "application/json",
@@ -59,5 +59,5 @@ func (e *UpdateProductEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdatePr
 			ObjectType: constants.ObjectTypeProduct,
 			Fields:     []string{"product_line", "product_line.unit_group", "product_line.unit_group.base_unit", "product_line.unit_group.associated_units", "product_line.unit_group.associated_units.unit", "item", "item.category", "item.category.properties", "item.category.unit_group", "item.category.unit_group.base_unit", "item.category.unit_group.associated_units", "item.category.unit_group.associated_units.unit", "item.unit_value", "item.unit_cost", "item.burn_rate", "item.attributes"},
 		}),
-	}
+	}).WithDocSource(e)
 }

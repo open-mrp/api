@@ -27,12 +27,12 @@ func (*GetRemainingQuantityToSplitRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleGetRemainingQuantityToSplitRequest)
 }
 
+// Returns the remaining quantity available to split from the specified batches at a given production step.
 type GetRemainingQuantityToSplitEndpoint struct{}
 
 func (e *GetRemainingQuantityToSplitEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetRemainingQuantityToSplitRequest, *apiresource.Quantity] {
-	return &apiendpoint.APIEndpoint[*GetRemainingQuantityToSplitRequest, *apiresource.Quantity]{
+	return (&apiendpoint.APIEndpoint[*GetRemainingQuantityToSplitRequest, *apiresource.Quantity]{
 		Title:             "Get Remaining Quantity to Split",
-		Description:       "Returns the remaining quantity available to split from the specified batches at a given production step.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/batches/remaining-quantities",
@@ -44,5 +44,5 @@ func (e *GetRemainingQuantityToSplitEndpoint) Materialize() *apiendpoint.APIEndp
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetRemainingQuantityToSplitRequest) (*apiresource.Quantity, *apierror.APIError) {
 			return svc.(BatchSvc).GetRemainingQuantityToSplit
 		},
-	}
+	}).WithDocSource(e)
 }

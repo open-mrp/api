@@ -24,12 +24,12 @@ func (*BulkDeleteSalesOrdersRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleBulkDeleteSalesOrdersRequest)
 }
 
+// Deletes multiple sales orders in a single operation.
 type BulkDeleteSalesOrdersEndpoint struct{}
 
 func (e *BulkDeleteSalesOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkDeleteSalesOrdersRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*BulkDeleteSalesOrdersRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*BulkDeleteSalesOrdersRequest, *apiresource.EmptyResource]{
 		Title:             "Bulk Delete Sales Orders",
-		Description:       "Deletes multiple sales orders in a single operation.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/sales-orders/actions/bulk-delete",
@@ -41,5 +41,5 @@ func (e *BulkDeleteSalesOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		ServiceHandler: func(svc any) func(ctx context.Context, req *BulkDeleteSalesOrdersRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(SalesOrderSvc).BulkDeleteSalesOrders
 		},
-	}
+	}).WithDocSource(e)
 }

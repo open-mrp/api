@@ -15,12 +15,12 @@ type ListPrioritiesRequest struct {
 	apiresource.PaginationRequest
 }
 
+// Returns a paginated list of priorities.
 type ListPrioritiesEndpoint struct{}
 
 func (e *ListPrioritiesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPrioritiesRequest, *apiresource.List[apiresource.Priority]] {
-	return &apiendpoint.APIEndpoint[*ListPrioritiesRequest, *apiresource.List[apiresource.Priority]]{
+	return (&apiendpoint.APIEndpoint[*ListPrioritiesRequest, *apiresource.List[apiresource.Priority]]{
 		Title:             "List Priorities",
-		Description:       "Returns a paginated list of priorities.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/priorities",
@@ -36,5 +36,5 @@ func (e *ListPrioritiesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPri
 			ObjectType: constants.ObjectTypePriority,
 			Fields:     []string{"owner"},
 		}),
-	}
+	}).WithDocSource(e)
 }

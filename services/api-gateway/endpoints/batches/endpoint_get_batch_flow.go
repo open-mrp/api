@@ -15,12 +15,12 @@ type GetBatchFlowRequest struct {
 	BatchID string `path:"id" validate:"required"`
 }
 
+// Returns the production flow graph for a batch, including all input and output batch relationships.
 type GetBatchFlowEndpoint struct{}
 
 func (e *GetBatchFlowEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetBatchFlowRequest, *apiresource.List[apiresource.BatchFlowNode]] {
-	return &apiendpoint.APIEndpoint[*GetBatchFlowRequest, *apiresource.List[apiresource.BatchFlowNode]]{
+	return (&apiendpoint.APIEndpoint[*GetBatchFlowRequest, *apiresource.List[apiresource.BatchFlowNode]]{
 		Title:             "Get Batch Flow",
-		Description:       "Returns the production flow graph for a batch, including all input and output batch relationships.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/batches/{id}/flow",
@@ -32,5 +32,5 @@ func (e *GetBatchFlowEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetBatchF
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetBatchFlowRequest) (*apiresource.List[apiresource.BatchFlowNode], *apierror.APIError) {
 			return svc.(BatchSvc).GetBatchFlow
 		},
-	}
+	}).WithDocSource(e)
 }

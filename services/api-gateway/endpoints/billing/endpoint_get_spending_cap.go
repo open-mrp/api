@@ -9,12 +9,12 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
+// Returns the monthly agent spending cap for the account. Null cap_cents means no cap.
 type GetSpendingCapEndpoint struct{}
 
 func (e *GetSpendingCapEndpoint) Materialize() *apiendpoint.APIEndpoint[*apiresource.EmptyResource, *apiresource.SpendingCapResponse] {
-	return &apiendpoint.APIEndpoint[*apiresource.EmptyResource, *apiresource.SpendingCapResponse]{
+	return (&apiendpoint.APIEndpoint[*apiresource.EmptyResource, *apiresource.SpendingCapResponse]{
 		Title:             "Get Spending Cap",
-		Description:       "Returns the monthly agent spending cap for the account. Null cap_cents means no cap.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/billing/spending-cap",
@@ -26,5 +26,5 @@ func (e *GetSpendingCapEndpoint) Materialize() *apiendpoint.APIEndpoint[*apireso
 		ServiceHandler: func(svc any) func(ctx context.Context, req *apiresource.EmptyResource) (*apiresource.SpendingCapResponse, *apierror.APIError) {
 			return svc.(BillingSvc).GetSpendingCap
 		},
-	}
+	}).WithDocSource(e)
 }

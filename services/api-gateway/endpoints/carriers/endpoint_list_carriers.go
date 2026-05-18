@@ -15,12 +15,12 @@ type ListCarriersRequest struct {
 	apiresource.PaginationRequest
 }
 
+// Returns a paginated list of carriers for the current account.
 type ListCarriersEndpoint struct{}
 
 func (e *ListCarriersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListCarriersRequest, *apiresource.List[apiresource.Carrier]] {
-	return &apiendpoint.APIEndpoint[*ListCarriersRequest, *apiresource.List[apiresource.Carrier]]{
+	return (&apiendpoint.APIEndpoint[*ListCarriersRequest, *apiresource.List[apiresource.Carrier]]{
 		Title:             "List Carriers",
-		Description:       "Returns a paginated list of carriers for the current account.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/carriers",
@@ -36,5 +36,5 @@ func (e *ListCarriersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListCarri
 			ObjectType: constants.ObjectTypeCarrier,
 			Fields:     []string{"owner", "owner.account", "service_levels"},
 		}),
-	}
+	}).WithDocSource(e)
 }

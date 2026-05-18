@@ -50,12 +50,12 @@ func (*CreateAccountUserRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateAccountUserRequest)
 }
 
+// Creates a new account user and invites them to the target account.
 type CreateAccountUserEndpoint struct{}
 
 func (e *CreateAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAccountUserRequest, *apiresource.AccountUser] {
-	return &apiendpoint.APIEndpoint[*CreateAccountUserRequest, *apiresource.AccountUser]{
+	return (&apiendpoint.APIEndpoint[*CreateAccountUserRequest, *apiresource.AccountUser]{
 		Title:             "Create Account User",
-		Description:       "Creates a new account user and invites them to the target account.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/account-users",
@@ -77,5 +77,5 @@ func (e *CreateAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*Crea
 			ObjectType: constants.ObjectTypeAccountUser,
 			Fields:     []string{"role", "department"},
 		}),
-	}
+	}).WithDocSource(e)
 }

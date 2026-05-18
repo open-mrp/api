@@ -15,12 +15,12 @@ type RetrievePickRequest struct {
 	Includes []string `query:"include"`
 }
 
+// Returns a pick by ID.
 type RetrievePickEndpoint struct{}
 
 func (e *RetrievePickEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrievePickRequest, *apiresource.PickDetail] {
-	return &apiendpoint.APIEndpoint[*RetrievePickRequest, *apiresource.PickDetail]{
+	return (&apiendpoint.APIEndpoint[*RetrievePickRequest, *apiresource.PickDetail]{
 		Title:             "Retrieve Pick",
-		Description:       "Returns a pick by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/picks/{id}",
@@ -41,5 +41,5 @@ func (e *RetrievePickEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveP
 				"lines.sales_order_line",
 			},
 		}),
-	}
+	}).WithDocSource(e)
 }

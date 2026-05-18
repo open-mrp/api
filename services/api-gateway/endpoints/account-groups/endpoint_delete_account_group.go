@@ -15,12 +15,12 @@ type DeleteAccountGroupRequest struct {
 	AccountGroupID string `path:"id" validate:"required"`
 }
 
+// Deletes an account group. Fails if the account group is actively used in production.
 type DeleteAccountGroupEndpoint struct{}
 
 func (e *DeleteAccountGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteAccountGroupRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*DeleteAccountGroupRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*DeleteAccountGroupRequest, *apiresource.EmptyResource]{
 		Title:             "Delete Account Group",
-		Description:       "Deletes an account group. Fails if the account group is actively used in production.",
 		Method:            http.MethodDelete,
 		Route:             "/v1/sales/account-groups/{id}",
 		ContentType:       "application/json",
@@ -32,5 +32,5 @@ func (e *DeleteAccountGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*Del
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteAccountGroupRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(AccountGroupSvc).DeleteAccountGroup
 		},
-	}
+	}).WithDocSource(e)
 }

@@ -22,12 +22,13 @@ type ListPicksRequest struct {
 }
 
 // TODO: stop returning PickSummary; return the full Pick apiresource and use proper includes values to control expansion.
+
+// Returns a paginated list of picks.
 type ListPicksEndpoint struct{}
 
 func (e *ListPicksEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPicksRequest, *apiresource.List[apiresource.PickSummary]] {
-	return &apiendpoint.APIEndpoint[*ListPicksRequest, *apiresource.List[apiresource.PickSummary]]{
+	return (&apiendpoint.APIEndpoint[*ListPicksRequest, *apiresource.List[apiresource.PickSummary]]{
 		Title:             "List Picks",
-		Description:       "Returns a paginated list of picks.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/picks",
@@ -43,5 +44,5 @@ func (e *ListPicksEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPicksReq
 			ObjectType: constants.ObjectTypePick,
 			Fields:     []string{"sales_order"},
 		}),
-	}
+	}).WithDocSource(e)
 }

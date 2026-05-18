@@ -16,12 +16,12 @@ type RetrieveLocationRequest struct {
 	LocationID string `path:"id" validate:"required"`
 }
 
+// Returns a location by ID.
 type RetrieveLocationEndpoint struct{}
 
 func (e *RetrieveLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveLocationRequest, *apiresource.Location] {
-	return &apiendpoint.APIEndpoint[*RetrieveLocationRequest, *apiresource.Location]{
+	return (&apiendpoint.APIEndpoint[*RetrieveLocationRequest, *apiresource.Location]{
 		Title:             "Retrieve Location",
-		Description:       "Returns a location by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/locations/{id}",
@@ -37,5 +37,5 @@ func (e *RetrieveLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retri
 			ObjectType: constants.ObjectTypeLocation,
 			Fields:     []string{"parent", "children"},
 		}),
-	}
+	}).WithDocSource(e)
 }

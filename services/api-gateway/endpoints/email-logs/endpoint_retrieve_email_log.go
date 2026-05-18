@@ -16,12 +16,12 @@ type RetrieveEmailLogRequest struct {
 	EmailLogID string `path:"id" validate:"required"`
 }
 
+// Returns an email log by ID.
 type RetrieveEmailLogEndpoint struct{}
 
 func (e *RetrieveEmailLogEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveEmailLogRequest, *apiresource.EmailLog] {
-	return &apiendpoint.APIEndpoint[*RetrieveEmailLogRequest, *apiresource.EmailLog]{
+	return (&apiendpoint.APIEndpoint[*RetrieveEmailLogRequest, *apiresource.EmailLog]{
 		Title:             "Retrieve Email Log",
-		Description:       "Returns an email log by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/core/email-logs/{id}",
@@ -37,5 +37,5 @@ func (e *RetrieveEmailLogEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retri
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveEmailLogRequest) (*apiresource.EmailLog, *apierror.APIError) {
 			return svc.(EmailLogSvc).GetEmailLog
 		},
-	}
+	}).WithDocSource(e)
 }

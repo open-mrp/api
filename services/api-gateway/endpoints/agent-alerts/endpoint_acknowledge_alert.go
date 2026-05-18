@@ -16,12 +16,12 @@ type AcknowledgeAlertRequest struct {
 	AlertID string `path:"id" validate:"required"`
 }
 
+// Marks an agent alert as acknowledged.
 type AcknowledgeAlertEndpoint struct{}
 
 func (e *AcknowledgeAlertEndpoint) Materialize() *apiendpoint.APIEndpoint[*AcknowledgeAlertRequest, *apiresource.AgentAlert] {
-	return &apiendpoint.APIEndpoint[*AcknowledgeAlertRequest, *apiresource.AgentAlert]{
+	return (&apiendpoint.APIEndpoint[*AcknowledgeAlertRequest, *apiresource.AgentAlert]{
 		Title:             "Acknowledge Agent Alert",
-		Description:       "Marks an agent alert as acknowledged.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/ai/alerts/{id}/actions/acknowledge",
@@ -37,5 +37,5 @@ func (e *AcknowledgeAlertEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ackno
 			ObjectType: constants.ObjectTypeAgentAlert,
 			Fields:     []string{"run", "action"},
 		}),
-	}
+	}).WithDocSource(e)
 }

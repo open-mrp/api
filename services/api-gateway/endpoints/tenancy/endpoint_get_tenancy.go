@@ -12,12 +12,12 @@ import (
 // Request to retrieve the authenticated user's tenancy context.
 type GetTenancyRequest struct{}
 
+// Returns the authenticated user's tenancy context.
 type GetTenancyEndpoint struct{}
 
 func (e *GetTenancyEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetTenancyRequest, *apiresource.Tenancy] {
-	return &apiendpoint.APIEndpoint[*GetTenancyRequest, *apiresource.Tenancy]{
+	return (&apiendpoint.APIEndpoint[*GetTenancyRequest, *apiresource.Tenancy]{
 		Title:             "Get Tenancy",
-		Description:       "Returns the authenticated user's tenancy context.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/me/tenancy",
@@ -32,5 +32,5 @@ func (e *GetTenancyEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetTenancyR
 		Extras: apiendpoint.APIEndpointExtras{
 			SkipRequestLogging: true,
 		},
-	}
+	}).WithDocSource(e)
 }

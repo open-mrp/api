@@ -17,12 +17,12 @@ type PickPickLineRequest struct {
 	PickLineID string `path:"id" validate:"required"`
 }
 
+// Marks a pick line as picked.
 type PickPickLineEndpoint struct{}
 
 func (e *PickPickLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*PickPickLineRequest, *apiresource.PickLineDetail] {
-	return &apiendpoint.APIEndpoint[*PickPickLineRequest, *apiresource.PickLineDetail]{
+	return (&apiendpoint.APIEndpoint[*PickPickLineRequest, *apiresource.PickLineDetail]{
 		Title:             "Pick Pick Line",
-		Description:       "Marks a pick line as picked.",
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/picks/{pick_id}/lines/{id}/actions/pick",
@@ -34,5 +34,5 @@ func (e *PickPickLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*PickPickL
 		ServiceHandler: func(svc any) func(ctx context.Context, req *PickPickLineRequest) (*apiresource.PickLineDetail, *apierror.APIError) {
 			return svc.(PickSvc).PickPickLine
 		},
-	}
+	}).WithDocSource(e)
 }

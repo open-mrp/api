@@ -15,12 +15,12 @@ type RetrieveEDIRunRequest struct {
 	EDIRunID string `path:"id" validate:"required"`
 }
 
+// Returns an EDI run by ID.
 type RetrieveEDIRunEndpoint struct{}
 
 func (e *RetrieveEDIRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveEDIRunRequest, *apiresource.EDIRun] {
-	return &apiendpoint.APIEndpoint[*RetrieveEDIRunRequest, *apiresource.EDIRun]{
+	return (&apiendpoint.APIEndpoint[*RetrieveEDIRunRequest, *apiresource.EDIRun]{
 		Title:             "Retrieve EDI Run",
-		Description:       "Returns an EDI run by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/edi-runs/{id}",
@@ -32,5 +32,5 @@ func (e *RetrieveEDIRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retriev
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveEDIRunRequest) (*apiresource.EDIRun, *apierror.APIError) {
 			return svc.(EDIRunSvc).GetEDIRun
 		},
-	}
+	}).WithDocSource(e)
 }

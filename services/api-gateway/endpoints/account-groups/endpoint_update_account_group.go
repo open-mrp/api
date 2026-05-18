@@ -33,12 +33,12 @@ func (*UpdateAccountGroupRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateAccountGroupRequest)
 }
 
+// Partially updates an account group.
 type UpdateAccountGroupEndpoint struct{}
 
 func (e *UpdateAccountGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAccountGroupRequest, *apiresource.AccountGroup] {
-	return &apiendpoint.APIEndpoint[*UpdateAccountGroupRequest, *apiresource.AccountGroup]{
+	return (&apiendpoint.APIEndpoint[*UpdateAccountGroupRequest, *apiresource.AccountGroup]{
 		Title:             "Update Account Group",
-		Description:       "Partially updates an account group.",
 		Method:            http.MethodPatch,
 		Route:             "/v1/sales/account-groups/{id}",
 		ContentType:       "application/json",
@@ -50,5 +50,5 @@ func (e *UpdateAccountGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upd
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateAccountGroupRequest) (*apiresource.AccountGroup, *apierror.APIError) {
 			return svc.(AccountGroupSvc).UpdateAccountGroup
 		},
-	}
+	}).WithDocSource(e)
 }

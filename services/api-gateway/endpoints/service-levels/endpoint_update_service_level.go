@@ -36,12 +36,12 @@ func (*UpdateServiceLevelRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateServiceLevelRequest)
 }
 
+// Partially updates a service level.
 type UpdateServiceLevelEndpoint struct{}
 
 func (e *UpdateServiceLevelEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateServiceLevelRequest, *apiresource.ServiceLevel] {
-	return &apiendpoint.APIEndpoint[*UpdateServiceLevelRequest, *apiresource.ServiceLevel]{
+	return (&apiendpoint.APIEndpoint[*UpdateServiceLevelRequest, *apiresource.ServiceLevel]{
 		Title:             "Update Service Level",
-		Description:       "Partially updates a service level.",
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/carriers/{carrier_id}/service-levels/{id}",
@@ -57,5 +57,5 @@ func (e *UpdateServiceLevelEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upd
 			ObjectType: constants.ObjectTypeServiceLevel,
 			Fields:     []string{"owner", "owner.account"},
 		}),
-	}
+	}).WithDocSource(e)
 }

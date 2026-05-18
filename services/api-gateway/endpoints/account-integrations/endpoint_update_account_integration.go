@@ -30,12 +30,12 @@ func (*UpdateAccountIntegrationRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateAccountIntegrationRequest)
 }
 
+// Updates an account integration's name and active status.
 type UpdateAccountIntegrationEndpoint struct{}
 
 func (e *UpdateAccountIntegrationEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAccountIntegrationRequest, *apiresource.AccountIntegration] {
-	return &apiendpoint.APIEndpoint[*UpdateAccountIntegrationRequest, *apiresource.AccountIntegration]{
+	return (&apiendpoint.APIEndpoint[*UpdateAccountIntegrationRequest, *apiresource.AccountIntegration]{
 		Title:             "Update Account Integration",
-		Description:       "Updates an account integration's name and active status.",
 		Method:            http.MethodPut,
 		Route:             "/v1/identity/integrations/{id}",
 		ContentType:       "application/json",
@@ -47,5 +47,5 @@ func (e *UpdateAccountIntegrationEndpoint) Materialize() *apiendpoint.APIEndpoin
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateAccountIntegrationRequest) (*apiresource.AccountIntegration, *apierror.APIError) {
 			return svc.(AccountIntegrationSvc).UpdateAccountIntegration
 		},
-	}
+	}).WithDocSource(e)
 }

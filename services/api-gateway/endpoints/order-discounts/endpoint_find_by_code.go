@@ -28,12 +28,12 @@ func (*FindOrderDiscountByCodeRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleFindOrderDiscountByCodeRequest)
 }
 
+// Finds an order discount by code, optionally scoped to a buyer account or sales order.
 type FindOrderDiscountByCodeEndpoint struct{}
 
 func (e *FindOrderDiscountByCodeEndpoint) Materialize() *apiendpoint.APIEndpoint[*FindOrderDiscountByCodeRequest, *apiresource.OrderDiscount] {
-	return &apiendpoint.APIEndpoint[*FindOrderDiscountByCodeRequest, *apiresource.OrderDiscount]{
+	return (&apiendpoint.APIEndpoint[*FindOrderDiscountByCodeRequest, *apiresource.OrderDiscount]{
 		Title:             "Find Order Discount by Code",
-		Description:       "Finds an order discount by code, optionally scoped to a buyer account or sales order.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/order-discounts/actions/find-by-code",
@@ -45,5 +45,5 @@ func (e *FindOrderDiscountByCodeEndpoint) Materialize() *apiendpoint.APIEndpoint
 		ServiceHandler: func(svc any) func(ctx context.Context, req *FindOrderDiscountByCodeRequest) (*apiresource.OrderDiscount, *apierror.APIError) {
 			return svc.(OrderDiscountSvc).FindOrderDiscountByCode
 		},
-	}
+	}).WithDocSource(e)
 }

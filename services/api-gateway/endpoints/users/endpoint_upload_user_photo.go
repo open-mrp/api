@@ -19,12 +19,12 @@ type UploadUserPhotoRequest struct {
 	ContentType string `header:"Content-Type"`
 }
 
+// Uploads a profile photo for a user.
 type UploadUserPhotoEndpoint struct{}
 
 func (e *UploadUserPhotoEndpoint) Materialize() *apiendpoint.APIEndpoint[*UploadUserPhotoRequest, *apiresource.UserPhotoUploadResult] {
-	return &apiendpoint.APIEndpoint[*UploadUserPhotoRequest, *apiresource.UserPhotoUploadResult]{
+	return (&apiendpoint.APIEndpoint[*UploadUserPhotoRequest, *apiresource.UserPhotoUploadResult]{
 		Title:             "Upload User Photo",
-		Description:       "Uploads a profile photo for a user.",
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/users/{id}/photo",
@@ -39,5 +39,5 @@ func (e *UploadUserPhotoEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upload
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UploadUserPhotoRequest) (*apiresource.UserPhotoUploadResult, *apierror.APIError) {
 			return svc.(UserSvc).UploadUserPhoto
 		},
-	}
+	}).WithDocSource(e)
 }

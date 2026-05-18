@@ -39,12 +39,12 @@ func (*CreateUnitGroupUnitRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateUnitGroupUnitRequest)
 }
 
+// Creates an associated unit within a unit group.
 type CreateUnitGroupUnitEndpoint struct{}
 
 func (e *CreateUnitGroupUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateUnitGroupUnitRequest, *apiresource.UnitGroupUnit] {
-	return &apiendpoint.APIEndpoint[*CreateUnitGroupUnitRequest, *apiresource.UnitGroupUnit]{
+	return (&apiendpoint.APIEndpoint[*CreateUnitGroupUnitRequest, *apiresource.UnitGroupUnit]{
 		Title:             "Create Unit Group Associated Unit",
-		Description:       "Creates an associated unit within a unit group.",
 		Method:            http.MethodPost,
 		Route:             "/v1/catalog/unit-groups/{unit_group_id}/units",
 		ContentType:       "application/json",
@@ -60,5 +60,5 @@ func (e *CreateUnitGroupUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cr
 			ObjectType: constants.ObjectTypeUnitGroupUnit,
 			Fields:     []string{"unit"},
 		}),
-	}
+	}).WithDocSource(e)
 }

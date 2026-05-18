@@ -28,12 +28,12 @@ func (*InitiateOAuthRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleInitiateOAuthRequest)
 }
 
+// Initiates the OAuth flow for a Shippo-managed carrier and returns an OAuth URL. Not available in sandbox mode.
 type InitiateOAuthEndpoint struct{}
 
 func (e *InitiateOAuthEndpoint) Materialize() *apiendpoint.APIEndpoint[*InitiateOAuthRequest, *apiresource.OAuthResponse] {
-	return &apiendpoint.APIEndpoint[*InitiateOAuthRequest, *apiresource.OAuthResponse]{
+	return (&apiendpoint.APIEndpoint[*InitiateOAuthRequest, *apiresource.OAuthResponse]{
 		Title:             "Initiate Carrier OAuth",
-		Description:       "Initiates the OAuth flow for a Shippo-managed carrier and returns an OAuth URL. Not available in sandbox mode.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/carriers/{id}/actions/initiate-oauth",
@@ -45,5 +45,5 @@ func (e *InitiateOAuthEndpoint) Materialize() *apiendpoint.APIEndpoint[*Initiate
 		ServiceHandler: func(svc any) func(ctx context.Context, req *InitiateOAuthRequest) (*apiresource.OAuthResponse, *apierror.APIError) {
 			return svc.(CarrierSvc).InitiateOAuth
 		},
-	}
+	}).WithDocSource(e)
 }

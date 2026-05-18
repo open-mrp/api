@@ -17,12 +17,12 @@ type CreatePurchaseOrderLineRequest struct {
 	apirequest.OrderLineInput
 }
 
+// Creates a line item on a purchase order.
 type CreatePurchaseOrderLineEndpoint struct{}
 
 func (e *CreatePurchaseOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreatePurchaseOrderLineRequest, *apiresource.PurchaseOrderLineDetail] {
-	return &apiendpoint.APIEndpoint[*CreatePurchaseOrderLineRequest, *apiresource.PurchaseOrderLineDetail]{
+	return (&apiendpoint.APIEndpoint[*CreatePurchaseOrderLineRequest, *apiresource.PurchaseOrderLineDetail]{
 		Title:             "Create Purchase Order Line",
-		Description:       "Creates a line item on a purchase order.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/purchase-orders/{id}/lines",
@@ -34,5 +34,5 @@ func (e *CreatePurchaseOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreatePurchaseOrderLineRequest) (*apiresource.PurchaseOrderLineDetail, *apierror.APIError) {
 			return svc.(PurchaseOrderSvc).CreatePurchaseOrderLine
 		},
-	}
+	}).WithDocSource(e)
 }

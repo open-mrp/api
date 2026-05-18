@@ -15,12 +15,12 @@ type DeleteProductionStepRequest struct {
 	ProductionStepID string `path:"id" validate:"required"`
 }
 
+// Deletes a production step and its associated data.
 type DeleteProductionStepEndpoint struct{}
 
 func (e *DeleteProductionStepEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteProductionStepRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*DeleteProductionStepRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*DeleteProductionStepRequest, *apiresource.EmptyResource]{
 		Title:             "Delete Production Step",
-		Description:       "Deletes a production step and its associated data.",
 		Method:            http.MethodDelete,
 		Route:             "/v1/operations/production-steps/{id}",
 		ContentType:       "application/json",
@@ -32,5 +32,5 @@ func (e *DeleteProductionStepEndpoint) Materialize() *apiendpoint.APIEndpoint[*D
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteProductionStepRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(ProductionStepSvc).DeleteProductionStep
 		},
-	}
+	}).WithDocSource(e)
 }

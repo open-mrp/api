@@ -16,12 +16,12 @@ type RetrievePriorityRequest struct {
 	PriorityID string `path:"id" validate:"required"`
 }
 
+// Returns a priority by ID or code.
 type RetrievePriorityEndpoint struct{}
 
 func (e *RetrievePriorityEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrievePriorityRequest, *apiresource.Priority] {
-	return &apiendpoint.APIEndpoint[*RetrievePriorityRequest, *apiresource.Priority]{
+	return (&apiendpoint.APIEndpoint[*RetrievePriorityRequest, *apiresource.Priority]{
 		Title:             "Retrieve Priority",
-		Description:       "Returns a priority by ID or code.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/priorities/{id}",
@@ -37,5 +37,5 @@ func (e *RetrievePriorityEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retri
 			ObjectType: constants.ObjectTypePriority,
 			Fields:     []string{"owner"},
 		}),
-	}
+	}).WithDocSource(e)
 }

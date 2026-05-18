@@ -17,12 +17,12 @@ type DeleteServiceLevelRequest struct {
 	ServiceLevelID string `path:"id" validate:"required"`
 }
 
+// Permanently deletes a service level. Fails if the service level is a default (system-synced) level.
 type DeleteServiceLevelEndpoint struct{}
 
 func (e *DeleteServiceLevelEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteServiceLevelRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*DeleteServiceLevelRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*DeleteServiceLevelRequest, *apiresource.EmptyResource]{
 		Title:             "Delete Service Level",
-		Description:       "Permanently deletes a service level. Fails if the service level is a default (system-synced) level.",
 		Method:            http.MethodDelete,
 		Route:             "/v1/operations/carriers/{carrier_id}/service-levels/{id}",
 		ContentType:       "application/json",
@@ -34,5 +34,5 @@ func (e *DeleteServiceLevelEndpoint) Materialize() *apiendpoint.APIEndpoint[*Del
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteServiceLevelRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(ServiceLevelSvc).DeleteServiceLevel
 		},
-	}
+	}).WithDocSource(e)
 }

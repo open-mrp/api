@@ -30,12 +30,12 @@ func (*UpdateCarrierRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateCarrierRequest)
 }
 
+// Partially updates a carrier's name and portal visibility.
 type UpdateCarrierEndpoint struct{}
 
 func (e *UpdateCarrierEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateCarrierRequest, *apiresource.Carrier] {
-	return &apiendpoint.APIEndpoint[*UpdateCarrierRequest, *apiresource.Carrier]{
+	return (&apiendpoint.APIEndpoint[*UpdateCarrierRequest, *apiresource.Carrier]{
 		Title:             "Update Carrier",
-		Description:       "Partially updates a carrier's name and portal visibility.",
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/carriers/{id}",
@@ -51,5 +51,5 @@ func (e *UpdateCarrierEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateCa
 			ObjectType: constants.ObjectTypeCarrier,
 			Fields:     []string{"owner", "owner.account", "service_levels"},
 		}),
-	}
+	}).WithDocSource(e)
 }

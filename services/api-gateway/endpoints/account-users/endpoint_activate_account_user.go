@@ -15,12 +15,12 @@ type ActivateAccountUserRequest struct {
 	AccountUserID string `path:"id" validate:"required"`
 }
 
+// Activates a disabled or removed account user.
 type ActivateAccountUserEndpoint struct{}
 
 func (e *ActivateAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*ActivateAccountUserRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*ActivateAccountUserRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*ActivateAccountUserRequest, *apiresource.EmptyResource]{
 		Title:             "Activate Account User",
-		Description:       "Activates a disabled or removed account user.",
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/account-users/{id}/actions/activate",
@@ -32,5 +32,5 @@ func (e *ActivateAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ac
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ActivateAccountUserRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(AccountUserSvc).ActivateAccountUser
 		},
-	}
+	}).WithDocSource(e)
 }

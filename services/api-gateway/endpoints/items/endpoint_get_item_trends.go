@@ -17,12 +17,12 @@ type GetItemTrendsRequest struct {
 	TrendType string `query:"trend_type" validate:"required"`
 }
 
+// Returns historical trend data for an item for the specified metric.
 type GetItemTrendsEndpoint struct{}
 
 func (e *GetItemTrendsEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetItemTrendsRequest, *apiresource.ItemTrends] {
-	return &apiendpoint.APIEndpoint[*GetItemTrendsRequest, *apiresource.ItemTrends]{
+	return (&apiendpoint.APIEndpoint[*GetItemTrendsRequest, *apiresource.ItemTrends]{
 		Title:             "Get Item Trends",
-		Description:       "Returns historical trend data for an item for the specified metric.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/items/{id}/trends",
@@ -34,5 +34,5 @@ func (e *GetItemTrendsEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetItemT
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetItemTrendsRequest) (*apiresource.ItemTrends, *apierror.APIError) {
 			return svc.(ItemSvc).GetItemTrends
 		},
-	}
+	}).WithDocSource(e)
 }

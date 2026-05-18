@@ -14,12 +14,12 @@ type ListAccountIntegrationsRequest struct {
 	apiresource.PaginationRequest
 }
 
+// Returns a paginated list of account integrations for the target account.
 type ListAccountIntegrationsEndpoint struct{}
 
 func (e *ListAccountIntegrationsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAccountIntegrationsRequest, *apiresource.List[apiresource.AccountIntegration]] {
-	return &apiendpoint.APIEndpoint[*ListAccountIntegrationsRequest, *apiresource.List[apiresource.AccountIntegration]]{
+	return (&apiendpoint.APIEndpoint[*ListAccountIntegrationsRequest, *apiresource.List[apiresource.AccountIntegration]]{
 		Title:             "List Account Integrations",
-		Description:       "Returns a paginated list of account integrations for the target account.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/integrations",
@@ -31,5 +31,5 @@ func (e *ListAccountIntegrationsEndpoint) Materialize() *apiendpoint.APIEndpoint
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListAccountIntegrationsRequest) (*apiresource.List[apiresource.AccountIntegration], *apierror.APIError) {
 			return svc.(AccountIntegrationSvc).ListAccountIntegrations
 		},
-	}
+	}).WithDocSource(e)
 }

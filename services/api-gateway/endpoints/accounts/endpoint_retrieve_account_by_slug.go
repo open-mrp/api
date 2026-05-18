@@ -15,12 +15,12 @@ type RetrieveAccountBySlugRequest struct {
 	Slug string `path:"slug" validate:"required"`
 }
 
+// Returns a public account by portal slug. Unauthenticated.
 type RetrieveAccountBySlugEndpoint struct{}
 
 func (e *RetrieveAccountBySlugEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveAccountBySlugRequest, *apiresource.PublicAccount] {
-	return &apiendpoint.APIEndpoint[*RetrieveAccountBySlugRequest, *apiresource.PublicAccount]{
+	return (&apiendpoint.APIEndpoint[*RetrieveAccountBySlugRequest, *apiresource.PublicAccount]{
 		Title:             "Retrieve Account by Slug",
-		Description:       "Returns a public account by portal slug. Unauthenticated.",
 		Method:            http.MethodGet,
 		Route:             "/v1/identity/portal-branding/{slug}",
 		ContentType:       "application/json",
@@ -32,5 +32,5 @@ func (e *RetrieveAccountBySlugEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveAccountBySlugRequest) (*apiresource.PublicAccount, *apierror.APIError) {
 			return svc.(AccountSvc).GetAccountBySlug
 		},
-	}
+	}).WithDocSource(e)
 }

@@ -43,12 +43,12 @@ func (*BulkReconcileItemsRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleBulkReconcileItemsRequest)
 }
 
+// Reconciles inventory for multiple items by SKU, either adding to or forcing the exact quantity depending on reconcile_type.
 type BulkReconcileItemsEndpoint struct{}
 
 func (e *BulkReconcileItemsEndpoint) Materialize() *apiendpoint.APIEndpoint[*BulkReconcileItemsRequest, *apiresource.BulkReconcileItemsResponse] {
-	return &apiendpoint.APIEndpoint[*BulkReconcileItemsRequest, *apiresource.BulkReconcileItemsResponse]{
+	return (&apiendpoint.APIEndpoint[*BulkReconcileItemsRequest, *apiresource.BulkReconcileItemsResponse]{
 		Title:             "Bulk Reconcile Items",
-		Description:       "Reconciles inventory for multiple items by SKU, either adding to or forcing the exact quantity depending on reconcile_type.",
 		Method:            http.MethodPost,
 		Route:             "/v1/catalog/items/actions/bulk-reconcile",
 		ContentType:       "application/json",
@@ -60,5 +60,5 @@ func (e *BulkReconcileItemsEndpoint) Materialize() *apiendpoint.APIEndpoint[*Bul
 		ServiceHandler: func(svc any) func(ctx context.Context, req *BulkReconcileItemsRequest) (*apiresource.BulkReconcileItemsResponse, *apierror.APIError) {
 			return svc.(ItemSvc).BulkReconcileItems
 		},
-	}
+	}).WithDocSource(e)
 }

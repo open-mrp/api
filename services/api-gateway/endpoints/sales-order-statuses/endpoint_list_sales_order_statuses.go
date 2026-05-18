@@ -15,12 +15,12 @@ type ListSalesOrderStatusesRequest struct {
 	apiresource.PaginationRequest
 }
 
+// Returns a paginated list of sales order statuses.
 type ListSalesOrderStatusesEndpoint struct{}
 
 func (e *ListSalesOrderStatusesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSalesOrderStatusesRequest, *apiresource.List[apiresource.SalesOrderStatus]] {
-	return &apiendpoint.APIEndpoint[*ListSalesOrderStatusesRequest, *apiresource.List[apiresource.SalesOrderStatus]]{
+	return (&apiendpoint.APIEndpoint[*ListSalesOrderStatusesRequest, *apiresource.List[apiresource.SalesOrderStatus]]{
 		Title:             "List Sales Order Statuses",
-		Description:       "Returns a paginated list of sales order statuses.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/sales-orders/statuses",
@@ -36,5 +36,5 @@ func (e *ListSalesOrderStatusesEndpoint) Materialize() *apiendpoint.APIEndpoint[
 			ObjectType: constants.ObjectTypeSalesOrderStatus,
 			Fields:     []string{"owner"},
 		}),
-	}
+	}).WithDocSource(e)
 }

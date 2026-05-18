@@ -15,12 +15,12 @@ type DeleteCustomerRequest struct {
 	CustomerID string `path:"id" validate:"required"`
 }
 
+// Deletes a customer and associated account relations, addresses, and account users.
 type DeleteCustomerEndpoint struct{}
 
 func (e *DeleteCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteCustomerRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*DeleteCustomerRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*DeleteCustomerRequest, *apiresource.EmptyResource]{
 		Title:             "Delete Customer",
-		Description:       "Deletes a customer and associated account relations, addresses, and account users.",
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/customers/{id}",
@@ -32,5 +32,5 @@ func (e *DeleteCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteC
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteCustomerRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(CustomerSvc).DeleteCustomer
 		},
-	}
+	}).WithDocSource(e)
 }

@@ -27,12 +27,12 @@ func (*ConnectStepsRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleConnectStepsRequest)
 }
 
+// Connects two production steps in the production flow DAG. The source step becomes an upstream dependency of the target step.
 type ConnectStepsEndpoint struct{}
 
 func (e *ConnectStepsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ConnectStepsRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*ConnectStepsRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*ConnectStepsRequest, *apiresource.EmptyResource]{
 		Title:             "Connect Production Steps",
-		Description:       "Connects two production steps in the production flow DAG. The source step becomes an upstream dependency of the target step.",
 		Method:            http.MethodPost,
 		Route:             "/v1/operations/production-flows/actions/connect-steps",
 		ContentType:       "application/json",
@@ -44,5 +44,5 @@ func (e *ConnectStepsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ConnectSt
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ConnectStepsRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(ProductionFlowSvc).ConnectSteps
 		},
-	}
+	}).WithDocSource(e)
 }

@@ -16,12 +16,12 @@ type RetrieveAccountPriceRequest struct {
 	AccountPriceID string `path:"id" validate:"required"`
 }
 
+// Returns an account price by ID.
 type RetrieveAccountPriceEndpoint struct{}
 
 func (e *RetrieveAccountPriceEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveAccountPriceRequest, *apiresource.AccountPrice] {
-	return &apiendpoint.APIEndpoint[*RetrieveAccountPriceRequest, *apiresource.AccountPrice]{
+	return (&apiendpoint.APIEndpoint[*RetrieveAccountPriceRequest, *apiresource.AccountPrice]{
 		Title:             "Retrieve Account Price",
-		Description:       "Returns an account price by ID.",
 		Method:            http.MethodGet,
 		Route:             "/v1/sales/account-prices/{id}",
 		ContentType:       "application/json",
@@ -37,5 +37,5 @@ func (e *RetrieveAccountPriceEndpoint) Materialize() *apiendpoint.APIEndpoint[*R
 			ObjectType: constants.ObjectTypeAccountPrice,
 			Fields:     []string{"recipient_account", "product_line", "categories", "attributes"},
 		}),
-	}
+	}).WithDocSource(e)
 }

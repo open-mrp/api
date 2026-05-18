@@ -18,12 +18,12 @@ type RetrieveServiceLevelRequest struct {
 	ServiceLevelID string `path:"id" validate:"required"`
 }
 
+// Returns a service level by ID.
 type RetrieveServiceLevelEndpoint struct{}
 
 func (e *RetrieveServiceLevelEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveServiceLevelRequest, *apiresource.ServiceLevel] {
-	return &apiendpoint.APIEndpoint[*RetrieveServiceLevelRequest, *apiresource.ServiceLevel]{
+	return (&apiendpoint.APIEndpoint[*RetrieveServiceLevelRequest, *apiresource.ServiceLevel]{
 		Title:             "Retrieve Service Level",
-		Description:       "Returns a service level by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/carriers/{carrier_id}/service-levels/{id}",
@@ -39,5 +39,5 @@ func (e *RetrieveServiceLevelEndpoint) Materialize() *apiendpoint.APIEndpoint[*R
 			ObjectType: constants.ObjectTypeServiceLevel,
 			Fields:     []string{"owner", "owner.account"},
 		}),
-	}
+	}).WithDocSource(e)
 }

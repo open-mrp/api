@@ -16,12 +16,12 @@ type RetrieveSupplierRequest struct {
 	SupplierID string `path:"id" validate:"required"`
 }
 
+// Returns a supplier by ID.
 type RetrieveSupplierEndpoint struct{}
 
 func (e *RetrieveSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveSupplierRequest, *apiresource.SupplierDetail] {
-	return &apiendpoint.APIEndpoint[*RetrieveSupplierRequest, *apiresource.SupplierDetail]{
+	return (&apiendpoint.APIEndpoint[*RetrieveSupplierRequest, *apiresource.SupplierDetail]{
 		Title:             "Retrieve Supplier",
-		Description:       "Returns a supplier by ID.",
 		Method:            http.MethodGet,
 		Route:             "/v1/operations/suppliers/{id}",
 		ContentType:       "application/json",
@@ -37,5 +37,5 @@ func (e *RetrieveSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retri
 			ObjectType: constants.ObjectTypeSupplier,
 			Fields:     []string{"bill_to_address", "ship_to_address"},
 		}),
-	}
+	}).WithDocSource(e)
 }

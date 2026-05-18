@@ -15,12 +15,12 @@ type DeleteSupplierRequest struct {
 	SupplierID string `path:"id" validate:"required"`
 }
 
+// Deletes a supplier and its associated account relations, addresses, and account users.
 type DeleteSupplierEndpoint struct{}
 
 func (e *DeleteSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteSupplierRequest, *apiresource.SupplierDetail] {
-	return &apiendpoint.APIEndpoint[*DeleteSupplierRequest, *apiresource.SupplierDetail]{
+	return (&apiendpoint.APIEndpoint[*DeleteSupplierRequest, *apiresource.SupplierDetail]{
 		Title:             "Delete Supplier",
-		Description:       "Deletes a supplier and its associated account relations, addresses, and account users.",
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/suppliers/{id}",
@@ -32,5 +32,5 @@ func (e *DeleteSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteS
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteSupplierRequest) (*apiresource.SupplierDetail, *apierror.APIError) {
 			return svc.(SupplierSvc).DeleteSupplier
 		},
-	}
+	}).WithDocSource(e)
 }

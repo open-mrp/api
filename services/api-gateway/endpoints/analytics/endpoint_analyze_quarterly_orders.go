@@ -23,12 +23,12 @@ type AnalyzeQuarterlyOrdersRequest struct {
 	CustomerGroupIDs []string `json:"customer_group_ids,omitempty"`
 }
 
+// Returns yearly order totals broken down by quarter.
 type AnalyzeQuarterlyOrdersEndpoint struct{}
 
 func (e *AnalyzeQuarterlyOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeQuarterlyOrdersRequest, *apiresource.AnalyzeQuarterlyOrdersResponse] {
-	return &apiendpoint.APIEndpoint[*AnalyzeQuarterlyOrdersRequest, *apiresource.AnalyzeQuarterlyOrdersResponse]{
+	return (&apiendpoint.APIEndpoint[*AnalyzeQuarterlyOrdersRequest, *apiresource.AnalyzeQuarterlyOrdersResponse]{
 		Title:             "Analyze Quarterly Orders",
-		Description:       "Returns yearly order totals broken down by quarter.",
 		Method:            http.MethodPut,
 		Route:             "/v1/core/analytics/quarterly-orders",
 		ContentType:       "application/json",
@@ -40,5 +40,5 @@ func (e *AnalyzeQuarterlyOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeQuarterlyOrdersRequest) (*apiresource.AnalyzeQuarterlyOrdersResponse, *apierror.APIError) {
 			return svc.(AnalyticsSvc).AnalyzeQuarterlyOrders
 		},
-	}
+	}).WithDocSource(e)
 }

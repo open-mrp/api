@@ -15,12 +15,12 @@ type DeleteShippingCaseRequest struct {
 	ShippingCaseID string `path:"id" validate:"required"`
 }
 
+// Permanently deletes a shipping case.
 type DeleteShippingCaseEndpoint struct{}
 
 func (e *DeleteShippingCaseEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteShippingCaseRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*DeleteShippingCaseRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*DeleteShippingCaseRequest, *apiresource.EmptyResource]{
 		Title:             "Delete Shipping Case",
-		Description:       "Permanently deletes a shipping case.",
 		Method:            http.MethodDelete,
 		Route:             "/v1/operations/shipping-cases/{id}",
 		ContentType:       "application/json",
@@ -32,5 +32,5 @@ func (e *DeleteShippingCaseEndpoint) Materialize() *apiendpoint.APIEndpoint[*Del
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteShippingCaseRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(ShippingCaseSvc).DeleteShippingCase
 		},
-	}
+	}).WithDocSource(e)
 }

@@ -15,12 +15,12 @@ type ReceiveReceivingOrderRequest struct {
 	ReceivingOrderID string `path:"id" validate:"required"`
 }
 
+// Marks all unstocked lines on a receiving order as received.
 type ReceiveReceivingOrderEndpoint struct{}
 
 func (e *ReceiveReceivingOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*ReceiveReceivingOrderRequest, *apiresource.ReceivingOrder] {
-	return &apiendpoint.APIEndpoint[*ReceiveReceivingOrderRequest, *apiresource.ReceivingOrder]{
+	return (&apiendpoint.APIEndpoint[*ReceiveReceivingOrderRequest, *apiresource.ReceivingOrder]{
 		Title:             "Receive Receiving Order",
-		Description:       "Marks all unstocked lines on a receiving order as received.",
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/receiving-orders/{id}/actions/receive",
@@ -32,5 +32,5 @@ func (e *ReceiveReceivingOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ReceiveReceivingOrderRequest) (*apiresource.ReceivingOrder, *apierror.APIError) {
 			return svc.(ReceivingOrderSvc).ReceiveReceivingOrder
 		},
-	}
+	}).WithDocSource(e)
 }

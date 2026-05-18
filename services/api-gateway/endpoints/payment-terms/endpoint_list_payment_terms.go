@@ -15,12 +15,12 @@ type ListPaymentTermsRequest struct {
 	apiresource.PaginationRequest
 }
 
+// Returns a paginated list of payment terms. Includes both account-specific and system default payment terms.
 type ListPaymentTermsEndpoint struct{}
 
 func (e *ListPaymentTermsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPaymentTermsRequest, *apiresource.List[apiresource.PaymentTerm]] {
-	return &apiendpoint.APIEndpoint[*ListPaymentTermsRequest, *apiresource.List[apiresource.PaymentTerm]]{
+	return (&apiendpoint.APIEndpoint[*ListPaymentTermsRequest, *apiresource.List[apiresource.PaymentTerm]]{
 		Title:             "List Payment Terms",
-		Description:       "Returns a paginated list of payment terms. Includes both account-specific and system default payment terms.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/finance/payment-terms",
@@ -36,5 +36,5 @@ func (e *ListPaymentTermsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListP
 			ObjectType: constants.ObjectTypePaymentTerm,
 			Fields:     []string{"owner", "owner.account"},
 		}),
-	}
+	}).WithDocSource(e)
 }

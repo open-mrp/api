@@ -45,12 +45,12 @@ func (*UpdateTerritoryRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateTerritoryRequest)
 }
 
+// Partially updates a territory.
 type UpdateTerritoryEndpoint struct{}
 
 func (e *UpdateTerritoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateTerritoryRequest, *apiresource.Territory] {
-	return &apiendpoint.APIEndpoint[*UpdateTerritoryRequest, *apiresource.Territory]{
+	return (&apiendpoint.APIEndpoint[*UpdateTerritoryRequest, *apiresource.Territory]{
 		Title:             "Update Territory",
-		Description:       "Partially updates a territory.",
 		Method:            http.MethodPatch,
 		Route:             "/v1/sales/accounts/{account_id}/territories/{id}",
 		ContentType:       "application/json",
@@ -66,5 +66,5 @@ func (e *UpdateTerritoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Update
 			ObjectType: constants.ObjectTypeTerritory,
 			Fields:     []string{"sales_rep", "product_line"},
 		}),
-	}
+	}).WithDocSource(e)
 }

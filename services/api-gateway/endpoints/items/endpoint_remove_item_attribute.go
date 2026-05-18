@@ -18,12 +18,12 @@ type RemoveItemAttributeRequest struct {
 	AttributeID string `path:"attribute_id" validate:"required"`
 }
 
+// Removes an attribute from an item.
 type RemoveItemAttributeEndpoint struct{}
 
 func (e *RemoveItemAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*RemoveItemAttributeRequest, *apiresource.Item] {
-	return &apiendpoint.APIEndpoint[*RemoveItemAttributeRequest, *apiresource.Item]{
+	return (&apiendpoint.APIEndpoint[*RemoveItemAttributeRequest, *apiresource.Item]{
 		Title:             "Remove Item Attribute",
-		Description:       "Removes an attribute from an item.",
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/items/{id}/attributes/{attribute_id}",
@@ -39,5 +39,5 @@ func (e *RemoveItemAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*Re
 			ObjectType: constants.ObjectTypeItem,
 			Fields:     []string{"category", "unit_value", "unit_cost", "burn_rate", "attributes", "category.unit_group", "category.properties", "category.unit_group.base_unit", "category.unit_group.associated_units", "category.unit_group.associated_units.unit"},
 		}),
-	}
+	}).WithDocSource(e)
 }

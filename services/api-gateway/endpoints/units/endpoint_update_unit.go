@@ -38,12 +38,12 @@ func (*UpdateUnitRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateUnitRequest)
 }
 
+// Partially updates an account-owned unit; system units cannot be updated.
 type UpdateUnitEndpoint struct{}
 
 func (e *UpdateUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateUnitRequest, *apiresource.Unit] {
-	return &apiendpoint.APIEndpoint[*UpdateUnitRequest, *apiresource.Unit]{
+	return (&apiendpoint.APIEndpoint[*UpdateUnitRequest, *apiresource.Unit]{
 		Title:             "Update Unit",
-		Description:       "Partially updates an account-owned unit; system units cannot be updated.",
 		Method:            http.MethodPatch,
 		Route:             "/v1/catalog/units/{id}",
 		ContentType:       "application/json",
@@ -59,5 +59,5 @@ func (e *UpdateUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateUnitR
 			ObjectType: constants.ObjectTypeUnit,
 			Fields:     []string{"owner", "owner.account"},
 		}),
-	}
+	}).WithDocSource(e)
 }

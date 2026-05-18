@@ -16,12 +16,12 @@ type RetrieveMaterialRequest struct {
 	ItemID string `path:"id" validate:"required"`
 }
 
+// Returns a material by ID.
 type RetrieveMaterialEndpoint struct{}
 
 func (e *RetrieveMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveMaterialRequest, *apiresource.Material] {
-	return &apiendpoint.APIEndpoint[*RetrieveMaterialRequest, *apiresource.Material]{
+	return (&apiendpoint.APIEndpoint[*RetrieveMaterialRequest, *apiresource.Material]{
 		Title:             "Retrieve Material",
-		Description:       "Returns a material by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/materials/{id}",
@@ -37,5 +37,5 @@ func (e *RetrieveMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retri
 			ObjectType: constants.ObjectTypeMaterial,
 			Fields:     []string{"item", "item.category", "item.category.properties", "item.category.unit_group", "item.unit_value", "item.unit_cost", "item.burn_rate", "item.attributes"},
 		}),
-	}
+	}).WithDocSource(e)
 }

@@ -15,12 +15,12 @@ type GetUserPhotoURLRequest struct {
 	UserID string `path:"id" validate:"required"`
 }
 
+// Returns a presigned URL for the user's profile photo. Expires after one hour.
 type GetUserPhotoURLEndpoint struct{}
 
 func (e *GetUserPhotoURLEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetUserPhotoURLRequest, *apiresource.UserPhotoURL] {
-	return &apiendpoint.APIEndpoint[*GetUserPhotoURLRequest, *apiresource.UserPhotoURL]{
+	return (&apiendpoint.APIEndpoint[*GetUserPhotoURLRequest, *apiresource.UserPhotoURL]{
 		Title:             "Get User Photo URL",
-		Description:       "Returns a presigned URL for the user's profile photo. Expires after one hour.",
 		Method:            http.MethodGet,
 		Route:             "/v1/identity/users/{id}/photo",
 		ContentType:       "application/json",
@@ -32,5 +32,5 @@ func (e *GetUserPhotoURLEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetUse
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetUserPhotoURLRequest) (*apiresource.UserPhotoURL, *apierror.APIError) {
 			return svc.(UserSvc).GetUserPhotoURL
 		},
-	}
+	}).WithDocSource(e)
 }

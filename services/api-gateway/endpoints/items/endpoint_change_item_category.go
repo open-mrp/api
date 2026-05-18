@@ -18,12 +18,12 @@ type ChangeItemCategoryRequest struct {
 	CategoryID string `path:"category_id" validate:"required"`
 }
 
+// Changes the category of an item. When the category changes, the item's rate units are updated to the new category's base unit.
 type ChangeItemCategoryEndpoint struct{}
 
 func (e *ChangeItemCategoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*ChangeItemCategoryRequest, *apiresource.Item] {
-	return &apiendpoint.APIEndpoint[*ChangeItemCategoryRequest, *apiresource.Item]{
+	return (&apiendpoint.APIEndpoint[*ChangeItemCategoryRequest, *apiresource.Item]{
 		Title:             "Change Item Category",
-		Description:       "Changes the category of an item. When the category changes, the item's rate units are updated to the new category's base unit.",
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/items/{id}/category/{category_id}",
@@ -39,5 +39,5 @@ func (e *ChangeItemCategoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cha
 			ObjectType: constants.ObjectTypeItem,
 			Fields:     []string{"category", "unit_value", "unit_cost", "burn_rate", "attributes", "category.unit_group", "category.properties", "category.unit_group.base_unit", "category.unit_group.associated_units", "category.unit_group.associated_units.unit"},
 		}),
-	}
+	}).WithDocSource(e)
 }

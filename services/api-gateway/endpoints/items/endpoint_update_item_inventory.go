@@ -41,12 +41,12 @@ func (*UpdateItemInventoryRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateItemInventoryRequest)
 }
 
+// Adjusts or reconciles inventory for an item. When operation is reconcile, inventory is set to the exact value; when operation is adjust, the quantity change is added to the current inventory.
 type UpdateItemInventoryEndpoint struct{}
 
 func (e *UpdateItemInventoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateItemInventoryRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*UpdateItemInventoryRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*UpdateItemInventoryRequest, *apiresource.EmptyResource]{
 		Title:             "Update Item Inventory",
-		Description:       "Adjusts or reconciles inventory for an item. When operation is reconcile, inventory is set to the exact value; when operation is adjust, the quantity change is added to the current inventory.",
 		Method:            http.MethodPatch,
 		Route:             "/v1/catalog/items/{id}/inventory",
 		ContentType:       "application/json",
@@ -58,5 +58,5 @@ func (e *UpdateItemInventoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Up
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateItemInventoryRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(ItemSvc).UpdateItemInventory
 		},
-	}
+	}).WithDocSource(e)
 }

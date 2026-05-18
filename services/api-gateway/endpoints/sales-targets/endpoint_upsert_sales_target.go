@@ -38,12 +38,12 @@ func (*UpsertSalesTargetRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpsertSalesTargetRequest)
 }
 
+// Creates or updates a sales target by ID.
 type UpsertSalesTargetEndpoint struct{}
 
 func (e *UpsertSalesTargetEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpsertSalesTargetRequest, *apiresource.SalesTarget] {
-	return &apiendpoint.APIEndpoint[*UpsertSalesTargetRequest, *apiresource.SalesTarget]{
+	return (&apiendpoint.APIEndpoint[*UpsertSalesTargetRequest, *apiresource.SalesTarget]{
 		Title:             "Upsert Sales Target",
-		Description:       "Creates or updates a sales target by ID.",
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/account-users/{id}/sales-targets/{target_id}",
@@ -55,5 +55,5 @@ func (e *UpsertSalesTargetEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upse
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpsertSalesTargetRequest) (*apiresource.SalesTarget, *apierror.APIError) {
 			return svc.(SalesTargetSvc).UpsertSalesTarget
 		},
-	}
+	}).WithDocSource(e)
 }

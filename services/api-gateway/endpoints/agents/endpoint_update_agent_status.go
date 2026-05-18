@@ -27,12 +27,12 @@ func (*UpdateAgentStatusRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateAgentStatusRequest)
 }
 
+// Upserts the per-account status for an agent definition.
 type UpdateAgentStatusEndpoint struct{}
 
 func (e *UpdateAgentStatusEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAgentStatusRequest, *apiresource.AgentDefinition] {
-	return &apiendpoint.APIEndpoint[*UpdateAgentStatusRequest, *apiresource.AgentDefinition]{
+	return (&apiendpoint.APIEndpoint[*UpdateAgentStatusRequest, *apiresource.AgentDefinition]{
 		Title:             "Update Agent Status",
-		Description:       "Upserts the per-account status for an agent definition.",
 		Method:            http.MethodPut,
 		Route:             "/v1/ai/agents/{id}/status",
 		ContentType:       "application/json",
@@ -48,5 +48,5 @@ func (e *UpdateAgentStatusEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upda
 			ObjectType: constants.ObjectTypeAgentDefinition,
 			Fields:     []string{"config", "tools", "role", "role.permissions"},
 		}),
-	}
+	}).WithDocSource(e)
 }

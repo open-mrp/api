@@ -24,12 +24,12 @@ func (*RevokeRefreshTokenRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleRevokeRefreshTokenRequest)
 }
 
+// Revokes a refresh token.
 type RevokeRefreshTokenEndpoint struct{}
 
 func (e *RevokeRefreshTokenEndpoint) Materialize() *apiendpoint.APIEndpoint[*RevokeRefreshTokenRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*RevokeRefreshTokenRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*RevokeRefreshTokenRequest, *apiresource.EmptyResource]{
 		Title:             "Revoke Refresh Token",
-		Description:       "Revokes a refresh token.",
 		Method:            http.MethodDelete,
 		Route:             "/v1/auth/refresh-tokens",
 		ContentType:       "application/json",
@@ -43,5 +43,5 @@ func (e *RevokeRefreshTokenEndpoint) Materialize() *apiendpoint.APIEndpoint[*Rev
 		Extras: apiendpoint.APIEndpointExtras{
 			SkipRequestLogging: true,
 		},
-	}
+	}).WithDocSource(e)
 }

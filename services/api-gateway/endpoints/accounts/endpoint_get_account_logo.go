@@ -15,12 +15,12 @@ type GetAccountLogoURLRequest struct {
 	AccountID string `path:"id" validate:"required"`
 }
 
+// Returns a presigned URL for the account's logo. Expires after one hour.
 type GetAccountLogoURLEndpoint struct{}
 
 func (e *GetAccountLogoURLEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetAccountLogoURLRequest, *apiresource.AccountLogoURL] {
-	return &apiendpoint.APIEndpoint[*GetAccountLogoURLRequest, *apiresource.AccountLogoURL]{
+	return (&apiendpoint.APIEndpoint[*GetAccountLogoURLRequest, *apiresource.AccountLogoURL]{
 		Title:             "Get Account Logo URL",
-		Description:       "Returns a presigned URL for the account's logo. Expires after one hour.",
 		Method:            http.MethodGet,
 		Route:             "/v1/identity/accounts/{id}/logo",
 		ContentType:       "application/json",
@@ -32,5 +32,5 @@ func (e *GetAccountLogoURLEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetA
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetAccountLogoURLRequest) (*apiresource.AccountLogoURL, *apierror.APIError) {
 			return svc.(AccountSvc).GetAccountLogoURL
 		},
-	}
+	}).WithDocSource(e)
 }

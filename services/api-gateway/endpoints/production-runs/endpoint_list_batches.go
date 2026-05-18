@@ -16,12 +16,12 @@ type ListBatchesByProductionRunRequest struct {
 	apiresource.PaginationRequest
 }
 
+// Returns a paginated list of batches associated with a production run.
 type ListBatchesByProductionRunEndpoint struct{}
 
 func (e *ListBatchesByProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListBatchesByProductionRunRequest, *apiresource.List[apiresource.Batch]] {
-	return &apiendpoint.APIEndpoint[*ListBatchesByProductionRunRequest, *apiresource.List[apiresource.Batch]]{
+	return (&apiendpoint.APIEndpoint[*ListBatchesByProductionRunRequest, *apiresource.List[apiresource.Batch]]{
 		Title:             "List Batches by Production Run",
-		Description:       "Returns a paginated list of batches associated with a production run.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/production-runs/{id}/batches",
@@ -33,5 +33,5 @@ func (e *ListBatchesByProductionRunEndpoint) Materialize() *apiendpoint.APIEndpo
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListBatchesByProductionRunRequest) (*apiresource.List[apiresource.Batch], *apierror.APIError) {
 			return svc.(ProductionRunSvc).ListBatchesByProductionRun
 		},
-	}
+	}).WithDocSource(e)
 }

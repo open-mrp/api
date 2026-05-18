@@ -16,12 +16,12 @@ type RetrieveAPIKeyRequest struct {
 	APIKeyID string `path:"id" validate:"required"`
 }
 
+// Returns API key metadata by ID.
 type RetrieveAPIKeyEndpoint struct{}
 
 func (e *RetrieveAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveAPIKeyRequest, *apiresource.APIKey] {
-	return &apiendpoint.APIEndpoint[*RetrieveAPIKeyRequest, *apiresource.APIKey]{
+	return (&apiendpoint.APIEndpoint[*RetrieveAPIKeyRequest, *apiresource.APIKey]{
 		Title:             "Retrieve API Key",
-		Description:       "Returns API key metadata by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/auth/api-keys/{id}",
@@ -37,5 +37,5 @@ func (e *RetrieveAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retriev
 			ObjectType: constants.ObjectTypeAPIKey,
 			Fields:     []string{"role", "role.permissions"},
 		}),
-	}
+	}).WithDocSource(e)
 }

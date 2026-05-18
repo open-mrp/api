@@ -17,12 +17,12 @@ type DeleteTerritoryRequest struct {
 	TerritoryID string `path:"id" validate:"required"`
 }
 
+// Deletes a territory.
 type DeleteTerritoryEndpoint struct{}
 
 func (e *DeleteTerritoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteTerritoryRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*DeleteTerritoryRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*DeleteTerritoryRequest, *apiresource.EmptyResource]{
 		Title:             "Delete Territory",
-		Description:       "Deletes a territory.",
 		Method:            http.MethodDelete,
 		Route:             "/v1/sales/accounts/{account_id}/territories/{id}",
 		ContentType:       "application/json",
@@ -34,5 +34,5 @@ func (e *DeleteTerritoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Delete
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteTerritoryRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(TerritorySvc).DeleteTerritory
 		},
-	}
+	}).WithDocSource(e)
 }

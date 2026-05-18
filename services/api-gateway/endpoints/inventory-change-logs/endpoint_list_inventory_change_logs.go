@@ -26,12 +26,12 @@ type ListInventoryChangeLogsRequest struct {
 	EndDate *time.Time `query:"end_date"`
 }
 
+// Returns a paginated list of inventory change logs for the target account.
 type ListInventoryChangeLogsEndpoint struct{}
 
 func (e *ListInventoryChangeLogsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListInventoryChangeLogsRequest, *apiresource.List[apiresource.InventoryChangeLog]] {
-	return &apiendpoint.APIEndpoint[*ListInventoryChangeLogsRequest, *apiresource.List[apiresource.InventoryChangeLog]]{
+	return (&apiendpoint.APIEndpoint[*ListInventoryChangeLogsRequest, *apiresource.List[apiresource.InventoryChangeLog]]{
 		Title:             "List Inventory Change Logs",
-		Description:       "Returns a paginated list of inventory change logs for the target account.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/inventory-change-logs",
@@ -47,5 +47,5 @@ func (e *ListInventoryChangeLogsEndpoint) Materialize() *apiendpoint.APIEndpoint
 			ObjectType: constants.ObjectTypeInventoryChangeLog,
 			Fields:     []string{"item", "quantity", "quantity.unit", "responsible_user", "responsible_scanning_station"},
 		}),
-	}
+	}).WithDocSource(e)
 }

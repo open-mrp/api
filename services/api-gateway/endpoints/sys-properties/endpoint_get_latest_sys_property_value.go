@@ -15,12 +15,12 @@ type GetLatestSysPropertyValueRequest struct {
 	TypeCode string `path:"type_code" validate:"required"`
 }
 
+// Returns the next available counter value for a system property type, initializing it if it does not exist for the account.
 type GetLatestSysPropertyValueEndpoint struct{}
 
 func (e *GetLatestSysPropertyValueEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetLatestSysPropertyValueRequest, *apiresource.SysPropertyValue] {
-	return &apiendpoint.APIEndpoint[*GetLatestSysPropertyValueRequest, *apiresource.SysPropertyValue]{
+	return (&apiendpoint.APIEndpoint[*GetLatestSysPropertyValueRequest, *apiresource.SysPropertyValue]{
 		Title:             "Get Latest System Property Value",
-		Description:       "Returns the next available counter value for a system property type, initializing it if it does not exist for the account.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/core/sys-properties/{type_code}/latest-value",
@@ -32,5 +32,5 @@ func (e *GetLatestSysPropertyValueEndpoint) Materialize() *apiendpoint.APIEndpoi
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetLatestSysPropertyValueRequest) (*apiresource.SysPropertyValue, *apierror.APIError) {
 			return svc.(SysPropertySvc).GetLatestSysPropertyValue
 		},
-	}
+	}).WithDocSource(e)
 }

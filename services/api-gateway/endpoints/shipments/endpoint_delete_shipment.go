@@ -15,12 +15,12 @@ type DeleteShipmentRequest struct {
 	ShipmentID string `path:"id" validate:"required"`
 }
 
+// Deletes a shipment. Fails if already shipped.
 type DeleteShipmentEndpoint struct{}
 
 func (e *DeleteShipmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteShipmentRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*DeleteShipmentRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*DeleteShipmentRequest, *apiresource.EmptyResource]{
 		Title:             "Delete Shipment",
-		Description:       "Deletes a shipment. Fails if already shipped.",
 		Method:            http.MethodDelete,
 		Route:             "/v1/operations/shipments/{id}",
 		ContentType:       "application/json",
@@ -32,5 +32,5 @@ func (e *DeleteShipmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteS
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteShipmentRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(ShipmentSvc).DeleteShipment
 		},
-	}
+	}).WithDocSource(e)
 }

@@ -28,12 +28,12 @@ type AnalyzeSalesRequest struct {
 	Query *string `json:"query,omitempty"`
 }
 
+// Returns detailed sales entry records over a specified date range.
 type AnalyzeSalesEndpoint struct{}
 
 func (e *AnalyzeSalesEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeSalesRequest, *apiresource.AnalyzeSalesResponse] {
-	return &apiendpoint.APIEndpoint[*AnalyzeSalesRequest, *apiresource.AnalyzeSalesResponse]{
+	return (&apiendpoint.APIEndpoint[*AnalyzeSalesRequest, *apiresource.AnalyzeSalesResponse]{
 		Title:             "Analyze Sales",
-		Description:       "Returns detailed sales entry records over a specified date range.",
 		Method:            http.MethodPut,
 		Route:             "/v1/core/analytics/sales",
 		ContentType:       "application/json",
@@ -45,5 +45,5 @@ func (e *AnalyzeSalesEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeSa
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeSalesRequest) (*apiresource.AnalyzeSalesResponse, *apierror.APIError) {
 			return svc.(AnalyticsSvc).AnalyzeSales
 		},
-	}
+	}).WithDocSource(e)
 }

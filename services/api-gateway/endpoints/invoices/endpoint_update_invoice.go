@@ -35,12 +35,12 @@ func (*UpdateInvoiceRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateInvoiceRequest)
 }
 
+// Partially updates an invoice.
 type UpdateInvoiceEndpoint struct{}
 
 func (e *UpdateInvoiceEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateInvoiceRequest, *apiresource.InvoiceSummary] {
-	return &apiendpoint.APIEndpoint[*UpdateInvoiceRequest, *apiresource.InvoiceSummary]{
+	return (&apiendpoint.APIEndpoint[*UpdateInvoiceRequest, *apiresource.InvoiceSummary]{
 		Title:             "Update Invoice",
-		Description:       "Partially updates an invoice.",
 		Method:            http.MethodPatch,
 		Route:             "/v1/finance/invoices/{id}",
 		ContentType:       "application/json",
@@ -52,5 +52,5 @@ func (e *UpdateInvoiceEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateIn
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateInvoiceRequest) (*apiresource.InvoiceSummary, *apierror.APIError) {
 			return svc.(InvoiceSvc).UpdateInvoice
 		},
-	}
+	}).WithDocSource(e)
 }

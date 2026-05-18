@@ -45,12 +45,12 @@ func (*UpdateAccountRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateAccountRequest)
 }
 
+// Partially updates an account's name, branding, and portal settings.
 type UpdateAccountEndpoint struct{}
 
 func (e *UpdateAccountEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAccountRequest, *apiresource.Account] {
-	return &apiendpoint.APIEndpoint[*UpdateAccountRequest, *apiresource.Account]{
+	return (&apiendpoint.APIEndpoint[*UpdateAccountRequest, *apiresource.Account]{
 		Title:             "Update Account",
-		Description:       "Partially updates an account's name, branding, and portal settings.",
 		Method:            http.MethodPatch,
 		Route:             "/v1/identity/accounts/{id}",
 		ContentType:       "application/json",
@@ -66,5 +66,5 @@ func (e *UpdateAccountEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAc
 			ObjectType: constants.ObjectTypeAccount,
 			Fields:     []string{"branding", "portal"},
 		}),
-	}
+	}).WithDocSource(e)
 }

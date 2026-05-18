@@ -36,12 +36,12 @@ func (*UpdateUnitGroupRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateUnitGroupRequest)
 }
 
+// Partially updates a unit group. System unit groups cannot be updated.
 type UpdateUnitGroupEndpoint struct{}
 
 func (e *UpdateUnitGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateUnitGroupRequest, *apiresource.UnitGroup] {
-	return &apiendpoint.APIEndpoint[*UpdateUnitGroupRequest, *apiresource.UnitGroup]{
+	return (&apiendpoint.APIEndpoint[*UpdateUnitGroupRequest, *apiresource.UnitGroup]{
 		Title:             "Update Unit Group",
-		Description:       "Partially updates a unit group. System unit groups cannot be updated.",
 		Method:            http.MethodPatch,
 		Route:             "/v1/catalog/unit-groups/{id}",
 		ContentType:       "application/json",
@@ -57,5 +57,5 @@ func (e *UpdateUnitGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*Update
 			ObjectType: constants.ObjectTypeUnitGroup,
 			Fields:     []string{"owner", "owner.account", "base_unit", "associated_units"},
 		}),
-	}
+	}).WithDocSource(e)
 }

@@ -16,12 +16,12 @@ type ListSalesTargetsRequest struct {
 	apiresource.PaginationRequest
 }
 
+// Returns a paginated list of sales targets for an account user.
 type ListSalesTargetsEndpoint struct{}
 
 func (e *ListSalesTargetsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSalesTargetsRequest, *apiresource.List[apiresource.SalesTarget]] {
-	return &apiendpoint.APIEndpoint[*ListSalesTargetsRequest, *apiresource.List[apiresource.SalesTarget]]{
+	return (&apiendpoint.APIEndpoint[*ListSalesTargetsRequest, *apiresource.List[apiresource.SalesTarget]]{
 		Title:             "List Sales Targets",
-		Description:       "Returns a paginated list of sales targets for an account user.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/account-users/{id}/sales-targets",
@@ -33,5 +33,5 @@ func (e *ListSalesTargetsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListS
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListSalesTargetsRequest) (*apiresource.List[apiresource.SalesTarget], *apierror.APIError) {
 			return svc.(SalesTargetSvc).ListSalesTargets
 		},
-	}
+	}).WithDocSource(e)
 }

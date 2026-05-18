@@ -15,12 +15,12 @@ type ListAdjustmentTypesRequest struct {
 	apiresource.PaginationRequest
 }
 
+// Returns a paginated list of adjustment types.
 type ListAdjustmentTypesEndpoint struct{}
 
 func (e *ListAdjustmentTypesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAdjustmentTypesRequest, *apiresource.List[apiresource.AdjustmentType]] {
-	return &apiendpoint.APIEndpoint[*ListAdjustmentTypesRequest, *apiresource.List[apiresource.AdjustmentType]]{
+	return (&apiendpoint.APIEndpoint[*ListAdjustmentTypesRequest, *apiresource.List[apiresource.AdjustmentType]]{
 		Title:             "List Adjustment Types",
-		Description:       "Returns a paginated list of adjustment types.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/finance/adjustment-types",
@@ -36,5 +36,5 @@ func (e *ListAdjustmentTypesEndpoint) Materialize() *apiendpoint.APIEndpoint[*Li
 			ObjectType: constants.ObjectTypeAdjustmentType,
 			Fields:     []string{"owner"},
 		}),
-	}
+	}).WithDocSource(e)
 }

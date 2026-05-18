@@ -18,12 +18,12 @@ type ListMemoriesRequest struct {
 	EntityType *string `query:"entity_type"`
 }
 
+// Returns a paginated list of agent memories.
 type ListMemoriesEndpoint struct{}
 
 func (e *ListMemoriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListMemoriesRequest, *apiresource.List[apiresource.AgentMemory]] {
-	return &apiendpoint.APIEndpoint[*ListMemoriesRequest, *apiresource.List[apiresource.AgentMemory]]{
+	return (&apiendpoint.APIEndpoint[*ListMemoriesRequest, *apiresource.List[apiresource.AgentMemory]]{
 		Title:             "List Agent Memories",
-		Description:       "Returns a paginated list of agent memories.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/ai/memories",
@@ -35,5 +35,5 @@ func (e *ListMemoriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListMemor
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListMemoriesRequest) (*apiresource.List[apiresource.AgentMemory], *apierror.APIError) {
 			return svc.(AgentMemorySvc).ListMemories
 		},
-	}
+	}).WithDocSource(e)
 }

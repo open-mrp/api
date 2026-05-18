@@ -35,12 +35,12 @@ func (*CreateOrderDiscountRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateOrderDiscountRequest)
 }
 
+// Creates an order discount.
 type CreateOrderDiscountEndpoint struct{}
 
 func (e *CreateOrderDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateOrderDiscountRequest, *apiresource.OrderDiscount] {
-	return &apiendpoint.APIEndpoint[*CreateOrderDiscountRequest, *apiresource.OrderDiscount]{
+	return (&apiendpoint.APIEndpoint[*CreateOrderDiscountRequest, *apiresource.OrderDiscount]{
 		Title:             "Create Order Discount",
-		Description:       "Creates an order discount.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/order-discounts",
@@ -55,5 +55,5 @@ func (e *CreateOrderDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cr
 		LocationFunc: func(resp *apiresource.OrderDiscount) string {
 			return "/v1/sales/order-discounts/" + resp.ID
 		},
-	}
+	}).WithDocSource(e)
 }

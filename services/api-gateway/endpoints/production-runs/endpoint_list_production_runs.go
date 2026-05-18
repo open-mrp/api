@@ -25,12 +25,13 @@ type ListProductionRunsRequest struct {
 }
 
 // TODO: stop returning ProductionRunSummary; return the full ProductionRun apiresource and use proper includes values to control expansion.
+
+// Returns a paginated list of production runs.
 type ListProductionRunsEndpoint struct{}
 
 func (e *ListProductionRunsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListProductionRunsRequest, *apiresource.List[apiresource.ProductionRunSummary]] {
-	return &apiendpoint.APIEndpoint[*ListProductionRunsRequest, *apiresource.List[apiresource.ProductionRunSummary]]{
+	return (&apiendpoint.APIEndpoint[*ListProductionRunsRequest, *apiresource.List[apiresource.ProductionRunSummary]]{
 		Title:             "List Production Runs",
-		Description:       "Returns a paginated list of production runs.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/production-runs",
@@ -42,5 +43,5 @@ func (e *ListProductionRunsEndpoint) Materialize() *apiendpoint.APIEndpoint[*Lis
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListProductionRunsRequest) (*apiresource.List[apiresource.ProductionRunSummary], *apierror.APIError) {
 			return svc.(ProductionRunSvc).ListProductionRuns
 		},
-	}
+	}).WithDocSource(e)
 }

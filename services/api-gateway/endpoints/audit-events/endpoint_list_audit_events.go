@@ -28,12 +28,12 @@ type ListAuditEventsRequest struct {
 	Actions []constants.AuditAction `query:"actions"`
 }
 
+// Returns a paginated list of audit events for the current account.
 type ListAuditEventsEndpoint struct{}
 
 func (e *ListAuditEventsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAuditEventsRequest, *apiresource.List[apiresource.AuditEvent]] {
-	return &apiendpoint.APIEndpoint[*ListAuditEventsRequest, *apiresource.List[apiresource.AuditEvent]]{
+	return (&apiendpoint.APIEndpoint[*ListAuditEventsRequest, *apiresource.List[apiresource.AuditEvent]]{
 		Title:             "List Audit Events",
-		Description:       "Returns a paginated list of audit events for the current account.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/core/audit-events",
@@ -52,5 +52,5 @@ func (e *ListAuditEventsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAu
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListAuditEventsRequest) (*apiresource.List[apiresource.AuditEvent], *apierror.APIError) {
 			return svc.(AuditEventSvc).ListAuditEvents
 		},
-	}
+	}).WithDocSource(e)
 }

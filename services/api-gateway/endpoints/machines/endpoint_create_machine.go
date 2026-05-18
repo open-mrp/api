@@ -32,12 +32,12 @@ func (*CreateMachineRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateMachineRequest)
 }
 
+// Creates a machine and associates it with a department.
 type CreateMachineEndpoint struct{}
 
 func (e *CreateMachineEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateMachineRequest, *apiresource.Machine] {
-	return &apiendpoint.APIEndpoint[*CreateMachineRequest, *apiresource.Machine]{
+	return (&apiendpoint.APIEndpoint[*CreateMachineRequest, *apiresource.Machine]{
 		Title:             "Create Machine",
-		Description:       "Creates a machine and associates it with a department.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/machines",
@@ -52,5 +52,5 @@ func (e *CreateMachineEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateMa
 		LocationFunc: func(resp *apiresource.Machine) string {
 			return "/v1/operations/machines/" + resp.ID
 		},
-	}
+	}).WithDocSource(e)
 }

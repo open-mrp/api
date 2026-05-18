@@ -55,12 +55,12 @@ func (*CreateVolumeDiscountRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateVolumeDiscountRequest)
 }
 
+// Creates a volume discount for the target account.
 type CreateVolumeDiscountEndpoint struct{}
 
 func (e *CreateVolumeDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateVolumeDiscountRequest, *apiresource.VolumeDiscount] {
-	return &apiendpoint.APIEndpoint[*CreateVolumeDiscountRequest, *apiresource.VolumeDiscount]{
+	return (&apiendpoint.APIEndpoint[*CreateVolumeDiscountRequest, *apiresource.VolumeDiscount]{
 		Title:             "Create Volume Discount",
-		Description:       "Creates a volume discount for the target account.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/volume-discounts",
@@ -75,5 +75,5 @@ func (e *CreateVolumeDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*C
 		LocationFunc: func(resp *apiresource.VolumeDiscount) string {
 			return "/v1/sales/volume-discounts/" + resp.ID
 		},
-	}
+	}).WithDocSource(e)
 }

@@ -22,12 +22,13 @@ type ListSuppliersRequest struct {
 }
 
 // TODO: stop returning SupplierSummary; return the full Supplier apiresource and use proper includes values to control expansion.
+
+// Returns a paginated list of suppliers for the current account.
 type ListSuppliersEndpoint struct{}
 
 func (e *ListSuppliersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSuppliersRequest, *apiresource.List[apiresource.SupplierSummary]] {
-	return &apiendpoint.APIEndpoint[*ListSuppliersRequest, *apiresource.List[apiresource.SupplierSummary]]{
+	return (&apiendpoint.APIEndpoint[*ListSuppliersRequest, *apiresource.List[apiresource.SupplierSummary]]{
 		Title:             "List Suppliers",
-		Description:       "Returns a paginated list of suppliers for the current account.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/suppliers",
@@ -39,5 +40,5 @@ func (e *ListSuppliersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSupp
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListSuppliersRequest) (*apiresource.List[apiresource.SupplierSummary], *apierror.APIError) {
 			return svc.(SupplierSvc).ListSuppliers
 		},
-	}
+	}).WithDocSource(e)
 }

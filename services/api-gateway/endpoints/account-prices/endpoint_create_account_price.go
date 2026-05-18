@@ -43,12 +43,12 @@ func (*CreateAccountPriceRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateAccountPriceRequest)
 }
 
+// Creates an account price for a recipient customer account. Account prices override all other pricing rules.
 type CreateAccountPriceEndpoint struct{}
 
 func (e *CreateAccountPriceEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAccountPriceRequest, *apiresource.AccountPrice] {
-	return &apiendpoint.APIEndpoint[*CreateAccountPriceRequest, *apiresource.AccountPrice]{
+	return (&apiendpoint.APIEndpoint[*CreateAccountPriceRequest, *apiresource.AccountPrice]{
 		Title:             "Create Account Price",
-		Description:       "Creates an account price for a recipient customer account. Account prices override all other pricing rules.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/account-prices",
@@ -67,5 +67,5 @@ func (e *CreateAccountPriceEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cre
 			ObjectType: constants.ObjectTypeAccountPrice,
 			Fields:     []string{"recipient_account", "product_line", "categories", "attributes"},
 		}),
-	}
+	}).WithDocSource(e)
 }

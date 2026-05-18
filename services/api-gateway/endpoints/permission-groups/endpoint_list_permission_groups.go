@@ -15,12 +15,12 @@ type ListPermissionGroupsRequest struct {
 	apiresource.PaginationRequest
 }
 
+// Returns a paginated list of permission groups with their nested permissions.
 type ListPermissionGroupsEndpoint struct{}
 
 func (e *ListPermissionGroupsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPermissionGroupsRequest, *apiresource.List[apiresource.PermissionGroup]] {
-	return &apiendpoint.APIEndpoint[*ListPermissionGroupsRequest, *apiresource.List[apiresource.PermissionGroup]]{
+	return (&apiendpoint.APIEndpoint[*ListPermissionGroupsRequest, *apiresource.List[apiresource.PermissionGroup]]{
 		Title:             "List Permission Groups",
-		Description:       "Returns a paginated list of permission groups with their nested permissions.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/permission-groups",
@@ -36,5 +36,5 @@ func (e *ListPermissionGroupsEndpoint) Materialize() *apiendpoint.APIEndpoint[*L
 			ObjectType: constants.ObjectTypePermissionGroup,
 			Fields:     []string{"owner"},
 		}),
-	}
+	}).WithDocSource(e)
 }

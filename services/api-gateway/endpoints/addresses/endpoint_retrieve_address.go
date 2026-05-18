@@ -15,12 +15,12 @@ type RetrieveAddressRequest struct {
 	AddressID string `path:"id" validate:"required"`
 }
 
+// Retrieves an address by ID.
 type RetrieveAddressEndpoint struct{}
 
 func (e *RetrieveAddressEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveAddressRequest, *apiresource.Address] {
-	return &apiendpoint.APIEndpoint[*RetrieveAddressRequest, *apiresource.Address]{
+	return (&apiendpoint.APIEndpoint[*RetrieveAddressRequest, *apiresource.Address]{
 		Title:             "Retrieve Address",
-		Description:       "Retrieves an address by ID.",
 		Method:            http.MethodGet,
 		Route:             "/v1/sales/addresses/{id}",
 		ContentType:       "application/json",
@@ -32,5 +32,5 @@ func (e *RetrieveAddressEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retrie
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveAddressRequest) (*apiresource.Address, *apierror.APIError) {
 			return svc.(AddressSvc).GetAddress
 		},
-	}
+	}).WithDocSource(e)
 }

@@ -9,12 +9,12 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
+// Creates a Stripe billing portal session and returns a redirect URL for managing subscriptions.
 type CreateBillingPortalSessionEndpoint struct{}
 
 func (e *CreateBillingPortalSessionEndpoint) Materialize() *apiendpoint.APIEndpoint[*apiresource.EmptyResource, *apiresource.BillingPortalSessionResponse] {
-	return &apiendpoint.APIEndpoint[*apiresource.EmptyResource, *apiresource.BillingPortalSessionResponse]{
+	return (&apiendpoint.APIEndpoint[*apiresource.EmptyResource, *apiresource.BillingPortalSessionResponse]{
 		Title:             "Create Billing Portal Session",
-		Description:       "Creates a Stripe billing portal session and returns a redirect URL for managing subscriptions.",
 		Method:            http.MethodPost,
 		Route:             "/v1/billing/portal-sessions",
 		ContentType:       "application/json",
@@ -26,5 +26,5 @@ func (e *CreateBillingPortalSessionEndpoint) Materialize() *apiendpoint.APIEndpo
 		ServiceHandler: func(svc any) func(ctx context.Context, req *apiresource.EmptyResource) (*apiresource.BillingPortalSessionResponse, *apierror.APIError) {
 			return svc.(BillingSvc).CreateBillingPortalSession
 		},
-	}
+	}).WithDocSource(e)
 }

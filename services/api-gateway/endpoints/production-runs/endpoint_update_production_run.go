@@ -32,12 +32,12 @@ func (*UpdateProductionRunRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateProductionRunRequest)
 }
 
+// Partially updates a production run. Fails if the run is completed.
 type UpdateProductionRunEndpoint struct{}
 
 func (e *UpdateProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateProductionRunRequest, *apiresource.ProductionRunDetail] {
-	return &apiendpoint.APIEndpoint[*UpdateProductionRunRequest, *apiresource.ProductionRunDetail]{
+	return (&apiendpoint.APIEndpoint[*UpdateProductionRunRequest, *apiresource.ProductionRunDetail]{
 		Title:             "Update Production Run",
-		Description:       "Partially updates a production run. Fails if the run is completed.",
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/production-runs/{id}",
@@ -53,5 +53,5 @@ func (e *UpdateProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*Up
 			ObjectType: constants.ObjectTypeProductionRun,
 			Fields:     []string{"responsible_user"},
 		}),
-	}
+	}).WithDocSource(e)
 }

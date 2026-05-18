@@ -12,12 +12,12 @@ import (
 // ExportItemsRequest is the request to export items with inventory.
 type ExportItemsRequest struct{}
 
+// Exports all items with on-hand inventory as an Excel file.
 type ExportItemsEndpoint struct{}
 
 func (e *ExportItemsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ExportItemsRequest, *httptransport.FileDownload] {
-	return &apiendpoint.APIEndpoint[*ExportItemsRequest, *httptransport.FileDownload]{
+	return (&apiendpoint.APIEndpoint[*ExportItemsRequest, *httptransport.FileDownload]{
 		Title:             "Export Items",
-		Description:       "Exports all items with on-hand inventory as an Excel file.",
 		Method:            http.MethodGet,
 		ContentType:       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 		Route:             "/v1/catalog/items/actions/export",
@@ -29,5 +29,5 @@ func (e *ExportItemsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ExportItem
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ExportItemsRequest) (*httptransport.FileDownload, *apierror.APIError) {
 			return svc.(ItemSvc).ExportItems
 		},
-	}
+	}).WithDocSource(e)
 }

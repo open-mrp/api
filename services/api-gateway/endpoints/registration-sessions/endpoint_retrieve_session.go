@@ -15,12 +15,12 @@ type RetrieveSessionRequest struct {
 	SessionID string `json:"-" path:"session_id" validate:"required"`
 }
 
+// Returns a registration session by ID, including its current step and associated user and account details.
 type RetrieveSessionEndpoint struct{}
 
 func (e *RetrieveSessionEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveSessionRequest, *apiresource.RegistrationSession] {
-	return &apiendpoint.APIEndpoint[*RetrieveSessionRequest, *apiresource.RegistrationSession]{
+	return (&apiendpoint.APIEndpoint[*RetrieveSessionRequest, *apiresource.RegistrationSession]{
 		Title:             "Retrieve Registration Session",
-		Description:       "Returns a registration session by ID, including its current step and associated user and account details.",
 		Method:            http.MethodGet,
 		Route:             "/v1/auth/registration-sessions/{session_id}",
 		ContentType:       "application/json",
@@ -32,5 +32,5 @@ func (e *RetrieveSessionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retrie
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveSessionRequest) (*apiresource.RegistrationSession, *apierror.APIError) {
 			return svc.(RegistrationSessionSvc).GetSession
 		},
-	}
+	}).WithDocSource(e)
 }

@@ -14,12 +14,12 @@ type ListDCLocationsRequest struct {
 	apiresource.PaginationRequest
 }
 
+// Returns a paginated list of DC locations for the current account.
 type ListDCLocationsEndpoint struct{}
 
 func (e *ListDCLocationsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListDCLocationsRequest, *apiresource.List[apiresource.DCLocation]] {
-	return &apiendpoint.APIEndpoint[*ListDCLocationsRequest, *apiresource.List[apiresource.DCLocation]]{
+	return (&apiendpoint.APIEndpoint[*ListDCLocationsRequest, *apiresource.List[apiresource.DCLocation]]{
 		Title:             "List DC Locations",
-		Description:       "Returns a paginated list of DC locations for the current account.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/dc-locations",
@@ -31,5 +31,5 @@ func (e *ListDCLocationsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListDC
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListDCLocationsRequest) (*apiresource.List[apiresource.DCLocation], *apierror.APIError) {
 			return svc.(EDIDCLocationSvc).ListDCLocations
 		},
-	}
+	}).WithDocSource(e)
 }

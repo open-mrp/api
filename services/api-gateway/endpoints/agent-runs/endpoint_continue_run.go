@@ -31,12 +31,12 @@ func (*ContinueRunRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleContinueRunRequest)
 }
 
+// Continues an agent run awaiting input with a user message.
 type ContinueRunEndpoint struct{}
 
 func (e *ContinueRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*ContinueRunRequest, *apiresource.AgentRun] {
-	return &apiendpoint.APIEndpoint[*ContinueRunRequest, *apiresource.AgentRun]{
+	return (&apiendpoint.APIEndpoint[*ContinueRunRequest, *apiresource.AgentRun]{
 		Title:             "Continue Run",
-		Description:       "Continues an agent run awaiting input with a user message.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/ai/runs/{id}/actions/continue",
@@ -52,5 +52,5 @@ func (e *ContinueRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*ContinueRu
 			ObjectType: constants.ObjectTypeAgentRun,
 			Fields:     []string{"actions", "definition", "definition.config", "definition.tools", "definition.role"},
 		}),
-	}
+	}).WithDocSource(e)
 }

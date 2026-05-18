@@ -17,12 +17,12 @@ type ListRolesRequest struct {
 	RoleType []constants.RoleType `query:"types"`
 }
 
+// Returns a paginated list of roles for the target account, including global roles.
 type ListRolesEndpoint struct{}
 
 func (e *ListRolesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListRolesRequest, *apiresource.List[apiresource.Role]] {
-	return &apiendpoint.APIEndpoint[*ListRolesRequest, *apiresource.List[apiresource.Role]]{
+	return (&apiendpoint.APIEndpoint[*ListRolesRequest, *apiresource.List[apiresource.Role]]{
 		Title:             "List Roles",
-		Description:       "Returns a paginated list of roles for the target account, including global roles.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/roles",
@@ -38,5 +38,5 @@ func (e *ListRolesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListRolesReq
 			ObjectType: constants.ObjectTypeRole,
 			Fields:     []string{"owner", "owner.account", "permissions"},
 		}),
-	}
+	}).WithDocSource(e)
 }

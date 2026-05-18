@@ -113,12 +113,12 @@ func (*CreatePurchaseOrderRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreatePurchaseOrderRequest)
 }
 
+// Creates a purchase order.
 type CreatePurchaseOrderEndpoint struct{}
 
 func (e *CreatePurchaseOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreatePurchaseOrderRequest, *apiresource.PurchaseOrderDetail] {
-	return &apiendpoint.APIEndpoint[*CreatePurchaseOrderRequest, *apiresource.PurchaseOrderDetail]{
+	return (&apiendpoint.APIEndpoint[*CreatePurchaseOrderRequest, *apiresource.PurchaseOrderDetail]{
 		Title:             "Create Purchase Order",
-		Description:       "Creates a purchase order.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/purchase-orders",
@@ -137,5 +137,5 @@ func (e *CreatePurchaseOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cr
 			ObjectType: constants.ObjectTypePurchaseOrder,
 			Fields:     []string{"supplier", "bill_to_address", "ship_to_address", "carrier", "service_level", "payment_term", "shipping_term", "receiving_order", "lines", "contacts"},
 		}),
-	}
+	}).WithDocSource(e)
 }

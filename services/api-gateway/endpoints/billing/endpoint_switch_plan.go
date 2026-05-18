@@ -15,12 +15,12 @@ type SwitchPlanRequest struct {
 	PlanID string `path:"id" validate:"required"`
 }
 
+// Switches the account to a different pricing plan, handling free-to-paid, paid-to-free, and paid-to-paid scenarios.
 type SwitchPlanEndpoint struct{}
 
 func (e *SwitchPlanEndpoint) Materialize() *apiendpoint.APIEndpoint[*SwitchPlanRequest, *apiresource.SwitchPlanResponse] {
-	return &apiendpoint.APIEndpoint[*SwitchPlanRequest, *apiresource.SwitchPlanResponse]{
+	return (&apiendpoint.APIEndpoint[*SwitchPlanRequest, *apiresource.SwitchPlanResponse]{
 		Title:             "Switch Plan",
-		Description:       "Switches the account to a different pricing plan, handling free-to-paid, paid-to-free, and paid-to-paid scenarios.",
 		Method:            http.MethodPost,
 		Route:             "/v1/billing/plans/{id}/switch",
 		ContentType:       "application/json",
@@ -32,5 +32,5 @@ func (e *SwitchPlanEndpoint) Materialize() *apiendpoint.APIEndpoint[*SwitchPlanR
 		ServiceHandler: func(svc any) func(ctx context.Context, req *SwitchPlanRequest) (*apiresource.SwitchPlanResponse, *apierror.APIError) {
 			return svc.(BillingSvc).SwitchPlan
 		},
-	}
+	}).WithDocSource(e)
 }

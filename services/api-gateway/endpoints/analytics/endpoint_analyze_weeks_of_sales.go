@@ -15,12 +15,12 @@ type AnalyzeWeeksOfSalesRequest struct {
 	PeriodInWeeks *int32 `query:"period_in_weeks"`
 }
 
+// Returns weeks-of-sales metrics per product line, including on-hand quantity, average weekly sales, and weeks of inventory remaining.
 type AnalyzeWeeksOfSalesEndpoint struct{}
 
 func (e *AnalyzeWeeksOfSalesEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeWeeksOfSalesRequest, *apiresource.AnalyzeWeeksOfSalesResponse] {
-	return &apiendpoint.APIEndpoint[*AnalyzeWeeksOfSalesRequest, *apiresource.AnalyzeWeeksOfSalesResponse]{
+	return (&apiendpoint.APIEndpoint[*AnalyzeWeeksOfSalesRequest, *apiresource.AnalyzeWeeksOfSalesResponse]{
 		Title:             "Analyze Weeks of Sales",
-		Description:       "Returns weeks-of-sales metrics per product line, including on-hand quantity, average weekly sales, and weeks of inventory remaining.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/core/analytics/weeks-of-sales",
@@ -32,5 +32,5 @@ func (e *AnalyzeWeeksOfSalesEndpoint) Materialize() *apiendpoint.APIEndpoint[*An
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeWeeksOfSalesRequest) (*apiresource.AnalyzeWeeksOfSalesResponse, *apierror.APIError) {
 			return svc.(AnalyticsSvc).AnalyzeWeeksOfSales
 		},
-	}
+	}).WithDocSource(e)
 }

@@ -16,12 +16,12 @@ type ListBatchesByScanningStationRequest struct {
 	apiresource.PaginationRequest
 }
 
+// Returns a paginated list of batches for a given scanning station.
 type ListBatchesByScanningStationEndpoint struct{}
 
 func (e *ListBatchesByScanningStationEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListBatchesByScanningStationRequest, *apiresource.List[apiresource.Batch]] {
-	return &apiendpoint.APIEndpoint[*ListBatchesByScanningStationRequest, *apiresource.List[apiresource.Batch]]{
+	return (&apiendpoint.APIEndpoint[*ListBatchesByScanningStationRequest, *apiresource.List[apiresource.Batch]]{
 		Title:             "List Batches by Scanning Station",
-		Description:       "Returns a paginated list of batches for a given scanning station.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/scanning-stations/{id}/batches",
@@ -33,5 +33,5 @@ func (e *ListBatchesByScanningStationEndpoint) Materialize() *apiendpoint.APIEnd
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListBatchesByScanningStationRequest) (*apiresource.List[apiresource.Batch], *apierror.APIError) {
 			return svc.(BatchSvc).ListBatchesByScanningStation
 		},
-	}
+	}).WithDocSource(e)
 }

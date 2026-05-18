@@ -15,12 +15,12 @@ type DeleteBatchRequest struct {
 	BatchID string `path:"id" validate:"required"`
 }
 
+// Deletes a batch by ID.
 type DeleteBatchEndpoint struct{}
 
 func (e *DeleteBatchEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteBatchRequest, *apiresource.Batch] {
-	return &apiendpoint.APIEndpoint[*DeleteBatchRequest, *apiresource.Batch]{
+	return (&apiendpoint.APIEndpoint[*DeleteBatchRequest, *apiresource.Batch]{
 		Title:             "Delete Batch",
-		Description:       "Deletes a batch by ID.",
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/batches/{id}",
@@ -32,5 +32,5 @@ func (e *DeleteBatchEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteBatc
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteBatchRequest) (*apiresource.Batch, *apierror.APIError) {
 			return svc.(BatchSvc).DeleteBatch
 		},
-	}
+	}).WithDocSource(e)
 }

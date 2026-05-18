@@ -26,12 +26,12 @@ func (*UpdateCustomerProductLineAccessRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateCustomerProductLineAccessRequest)
 }
 
+// Replaces all product line access for a customer.
 type UpdateCustomerProductLineAccessEndpoint struct{}
 
 func (e *UpdateCustomerProductLineAccessEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateCustomerProductLineAccessRequest, *apiresource.CustomerProductLineAccess] {
-	return &apiendpoint.APIEndpoint[*UpdateCustomerProductLineAccessRequest, *apiresource.CustomerProductLineAccess]{
+	return (&apiendpoint.APIEndpoint[*UpdateCustomerProductLineAccessRequest, *apiresource.CustomerProductLineAccess]{
 		Title:             "Update Customer Product Line Access",
-		Description:       "Replaces all product line access for a customer.",
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/product-line-access/customers/{customer_id}",
@@ -43,5 +43,5 @@ func (e *UpdateCustomerProductLineAccessEndpoint) Materialize() *apiendpoint.API
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateCustomerProductLineAccessRequest) (*apiresource.CustomerProductLineAccess, *apierror.APIError) {
 			return svc.(CustomerProductLineAccessSvc).UpdateCustomerProductLineAccess
 		},
-	}
+	}).WithDocSource(e)
 }

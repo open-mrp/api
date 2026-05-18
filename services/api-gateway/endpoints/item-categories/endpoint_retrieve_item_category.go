@@ -16,12 +16,12 @@ type RetrieveItemCategoryRequest struct {
 	ItemCategoryID string `path:"id" validate:"required"`
 }
 
+// Returns an item category by ID. Includes account-specific and global system categories.
 type RetrieveItemCategoryEndpoint struct{}
 
 func (e *RetrieveItemCategoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveItemCategoryRequest, *apiresource.ItemCategory] {
-	return &apiendpoint.APIEndpoint[*RetrieveItemCategoryRequest, *apiresource.ItemCategory]{
+	return (&apiendpoint.APIEndpoint[*RetrieveItemCategoryRequest, *apiresource.ItemCategory]{
 		Title:             "Retrieve Item Category",
-		Description:       "Returns an item category by ID. Includes account-specific and global system categories.",
 		Method:            http.MethodGet,
 		Route:             "/v1/catalog/item-categories/{id}",
 		ContentType:       "application/json",
@@ -37,5 +37,5 @@ func (e *RetrieveItemCategoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*R
 			ObjectType: constants.ObjectTypeItemCategory,
 			Fields:     []string{"owner", "owner.account", "properties", "unit_group", "unit_group.base_unit", "unit_group.associated_units", "unit_group.associated_units.unit"},
 		}),
-	}
+	}).WithDocSource(e)
 }

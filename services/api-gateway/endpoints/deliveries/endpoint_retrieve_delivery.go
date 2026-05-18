@@ -15,12 +15,12 @@ type RetrieveDeliveryRequest struct {
 	DeliveryID string `path:"id" validate:"required"`
 }
 
+// Returns a delivery by ID, including all delivery lines.
 type RetrieveDeliveryEndpoint struct{}
 
 func (e *RetrieveDeliveryEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveDeliveryRequest, *apiresource.Delivery] {
-	return &apiendpoint.APIEndpoint[*RetrieveDeliveryRequest, *apiresource.Delivery]{
+	return (&apiendpoint.APIEndpoint[*RetrieveDeliveryRequest, *apiresource.Delivery]{
 		Title:             "Retrieve Delivery",
-		Description:       "Returns a delivery by ID, including all delivery lines.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/deliveries/{id}",
@@ -32,5 +32,5 @@ func (e *RetrieveDeliveryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retri
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveDeliveryRequest) (*apiresource.Delivery, *apierror.APIError) {
 			return svc.(DeliverySvc).GetDelivery
 		},
-	}
+	}).WithDocSource(e)
 }

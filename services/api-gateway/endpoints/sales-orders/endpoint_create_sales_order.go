@@ -130,12 +130,12 @@ func (*CreateSalesOrderRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateSalesOrderRequest)
 }
 
+// Creates a sales order.
 type CreateSalesOrderEndpoint struct{}
 
 func (e *CreateSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateSalesOrderRequest, *apiresource.SalesOrderDetail] {
-	return &apiendpoint.APIEndpoint[*CreateSalesOrderRequest, *apiresource.SalesOrderDetail]{
+	return (&apiendpoint.APIEndpoint[*CreateSalesOrderRequest, *apiresource.SalesOrderDetail]{
 		Title:             "Create Sales Order",
-		Description:       "Creates a sales order.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/sales-orders",
@@ -154,5 +154,5 @@ func (e *CreateSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*Creat
 			ObjectType: constants.ObjectTypeSalesOrder,
 			Fields:     []string{"customer", "bill_to_address", "ship_to_address", "carrier", "service_level", "payment_term", "shipping_term", "order_discount", "lines", "lines.item"},
 		}),
-	}
+	}).WithDocSource(e)
 }

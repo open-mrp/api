@@ -15,12 +15,12 @@ type GetOAuthStatusRequest struct {
 	CarrierID string `path:"id" validate:"required"`
 }
 
+// Returns the OAuth connection status for a carrier. Sandbox accounts always return disconnected.
 type GetOAuthStatusEndpoint struct{}
 
 func (e *GetOAuthStatusEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetOAuthStatusRequest, *apiresource.OAuthStatusResponse] {
-	return &apiendpoint.APIEndpoint[*GetOAuthStatusRequest, *apiresource.OAuthStatusResponse]{
+	return (&apiendpoint.APIEndpoint[*GetOAuthStatusRequest, *apiresource.OAuthStatusResponse]{
 		Title:             "Get Carrier OAuth Status",
-		Description:       "Returns the OAuth connection status for a carrier. Sandbox accounts always return disconnected.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/carriers/{id}/oauth-status",
@@ -32,5 +32,5 @@ func (e *GetOAuthStatusEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetOAut
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetOAuthStatusRequest) (*apiresource.OAuthStatusResponse, *apierror.APIError) {
 			return svc.(CarrierSvc).GetOAuthStatus
 		},
-	}
+	}).WithDocSource(e)
 }

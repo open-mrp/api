@@ -19,12 +19,12 @@ type UploadAccountPhotoRequest struct {
 	ContentType string `header:"Content-Type"`
 }
 
+// Uploads an account logo. Send as raw binary body.
 type UploadAccountPhotoEndpoint struct{}
 
 func (e *UploadAccountPhotoEndpoint) Materialize() *apiendpoint.APIEndpoint[*UploadAccountPhotoRequest, *apiresource.AccountPhotoUploadResult] {
-	return &apiendpoint.APIEndpoint[*UploadAccountPhotoRequest, *apiresource.AccountPhotoUploadResult]{
+	return (&apiendpoint.APIEndpoint[*UploadAccountPhotoRequest, *apiresource.AccountPhotoUploadResult]{
 		Title:             "Upload Account Photo",
-		Description:       "Uploads an account logo. Send as raw binary body.",
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/accounts/{id}/photo",
@@ -39,5 +39,5 @@ func (e *UploadAccountPhotoEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upl
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UploadAccountPhotoRequest) (*apiresource.AccountPhotoUploadResult, *apierror.APIError) {
 			return svc.(AccountSvc).UploadAccountPhoto
 		},
-	}
+	}).WithDocSource(e)
 }

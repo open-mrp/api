@@ -16,12 +16,12 @@ type ListAttributesRequest struct {
 	PropertyID string `path:"property_id" validate:"required"`
 }
 
+// Returns a paginated list of attributes for a property.
 type ListAttributesEndpoint struct{}
 
 func (e *ListAttributesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAttributesRequest, *apiresource.List[apiresource.Attribute]] {
-	return &apiendpoint.APIEndpoint[*ListAttributesRequest, *apiresource.List[apiresource.Attribute]]{
+	return (&apiendpoint.APIEndpoint[*ListAttributesRequest, *apiresource.List[apiresource.Attribute]]{
 		Title:             "List Attributes",
-		Description:       "Returns a paginated list of attributes for a property.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/properties/{property_id}/attributes",
@@ -33,5 +33,5 @@ func (e *ListAttributesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAtt
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListAttributesRequest) (*apiresource.List[apiresource.Attribute], *apierror.APIError) {
 			return svc.(PropertySvc).ListAttributes
 		},
-	}
+	}).WithDocSource(e)
 }

@@ -18,12 +18,12 @@ type RetrieveShipmentRequest struct {
 	Includes []string `query:"include"`
 }
 
+// Returns a shipment by ID.
 type RetrieveShipmentEndpoint struct{}
 
 func (e *RetrieveShipmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveShipmentRequest, *apiresource.ShipmentDetail] {
-	return &apiendpoint.APIEndpoint[*RetrieveShipmentRequest, *apiresource.ShipmentDetail]{
+	return (&apiendpoint.APIEndpoint[*RetrieveShipmentRequest, *apiresource.ShipmentDetail]{
 		Title:             "Retrieve Shipment",
-		Description:       "Returns a shipment by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/shipments/{id}",
@@ -39,5 +39,5 @@ func (e *RetrieveShipmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retri
 			ObjectType: constants.ObjectTypeShipment,
 			Fields:     []string{"lines", "shipping_cases", "sales_order", "customer", "carrier", "service_level", "shipping_address", "shipped_by", "invoice", "pick"},
 		}),
-	}
+	}).WithDocSource(e)
 }

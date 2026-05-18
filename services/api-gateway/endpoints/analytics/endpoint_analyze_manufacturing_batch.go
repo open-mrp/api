@@ -30,12 +30,12 @@ type AnalyzeManufacturingBatchRequest struct {
 	ItemIDs []string `json:"item_ids,omitempty"`
 }
 
+// Returns manufacturing metrics for a current period compared against a comparison period, including production, costs per unit, margin, quality, and labor efficiency.
 type AnalyzeManufacturingBatchEndpoint struct{}
 
 func (e *AnalyzeManufacturingBatchEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeManufacturingBatchRequest, *apiresource.AnalyzeManufacturingBatchResponse] {
-	return &apiendpoint.APIEndpoint[*AnalyzeManufacturingBatchRequest, *apiresource.AnalyzeManufacturingBatchResponse]{
+	return (&apiendpoint.APIEndpoint[*AnalyzeManufacturingBatchRequest, *apiresource.AnalyzeManufacturingBatchResponse]{
 		Title:             "Analyze Manufacturing Batch",
-		Description:       "Returns manufacturing metrics for a current period compared against a comparison period, including production, costs per unit, margin, quality, and labor efficiency.",
 		Method:            http.MethodPut,
 		Route:             "/v1/core/analytics/manufacturing-batch",
 		ContentType:       "application/json",
@@ -47,5 +47,5 @@ func (e *AnalyzeManufacturingBatchEndpoint) Materialize() *apiendpoint.APIEndpoi
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeManufacturingBatchRequest) (*apiresource.AnalyzeManufacturingBatchResponse, *apierror.APIError) {
 			return svc.(AnalyticsSvc).AnalyzeManufacturingBatch
 		},
-	}
+	}).WithDocSource(e)
 }

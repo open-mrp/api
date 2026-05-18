@@ -16,12 +16,12 @@ type RetrieveAccountRequest struct {
 	AccountID string `path:"id" validate:"required"`
 }
 
+// Returns an account by ID.
 type RetrieveAccountEndpoint struct{}
 
 func (e *RetrieveAccountEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveAccountRequest, *apiresource.Account] {
-	return &apiendpoint.APIEndpoint[*RetrieveAccountRequest, *apiresource.Account]{
+	return (&apiendpoint.APIEndpoint[*RetrieveAccountRequest, *apiresource.Account]{
 		Title:             "Retrieve Account",
-		Description:       "Returns an account by ID.",
 		Method:            http.MethodGet,
 		Route:             "/v1/identity/accounts/{id}",
 		ContentType:       "application/json",
@@ -37,5 +37,5 @@ func (e *RetrieveAccountEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retrie
 			ObjectType: constants.ObjectTypeAccount,
 			Fields:     []string{"branding", "portal"},
 		}),
-	}
+	}).WithDocSource(e)
 }

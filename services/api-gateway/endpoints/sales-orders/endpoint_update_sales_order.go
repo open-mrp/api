@@ -99,12 +99,12 @@ func (*UpdateSalesOrderRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateSalesOrderRequest)
 }
 
+// Partially updates a sales order.
 type UpdateSalesOrderEndpoint struct{}
 
 func (e *UpdateSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateSalesOrderRequest, *apiresource.SalesOrderDetail] {
-	return &apiendpoint.APIEndpoint[*UpdateSalesOrderRequest, *apiresource.SalesOrderDetail]{
+	return (&apiendpoint.APIEndpoint[*UpdateSalesOrderRequest, *apiresource.SalesOrderDetail]{
 		Title:             "Update Sales Order",
-		Description:       "Partially updates a sales order.",
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/sales-orders/{id}",
@@ -120,5 +120,5 @@ func (e *UpdateSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*Updat
 			ObjectType: constants.ObjectTypeSalesOrder,
 			Fields:     []string{"customer", "bill_to_address", "ship_to_address", "carrier", "service_level", "payment_term", "shipping_term", "order_discount", "lines", "lines.item"},
 		}),
-	}
+	}).WithDocSource(e)
 }

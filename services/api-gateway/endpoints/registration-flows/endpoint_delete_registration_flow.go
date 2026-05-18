@@ -15,12 +15,12 @@ type DeleteRegistrationFlowRequest struct {
 	RegistrationFlowID string `path:"id" validate:"required"`
 }
 
+// Deletes a registration flow.
 type DeleteRegistrationFlowEndpoint struct{}
 
 func (e *DeleteRegistrationFlowEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteRegistrationFlowRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*DeleteRegistrationFlowRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*DeleteRegistrationFlowRequest, *apiresource.EmptyResource]{
 		Title:             "Delete Registration Flow",
-		Description:       "Deletes a registration flow.",
 		Method:            http.MethodDelete,
 		Route:             "/v1/sales/registration-flows/{id}",
 		ContentType:       "application/json",
@@ -32,5 +32,5 @@ func (e *DeleteRegistrationFlowEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteRegistrationFlowRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(RegistrationFlowSvc).DeleteRegistrationFlow
 		},
-	}
+	}).WithDocSource(e)
 }

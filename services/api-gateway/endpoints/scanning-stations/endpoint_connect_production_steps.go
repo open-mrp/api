@@ -26,12 +26,12 @@ func (*ConnectProductionStepsRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleConnectProductionStepsRequest)
 }
 
+// Connects production steps matching the provided name to a scanning station.
 type ConnectProductionStepsEndpoint struct{}
 
 func (e *ConnectProductionStepsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ConnectProductionStepsRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*ConnectProductionStepsRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*ConnectProductionStepsRequest, *apiresource.EmptyResource]{
 		Title:             "Connect Production Steps to Scanning Station",
-		Description:       "Connects production steps matching the provided name to a scanning station.",
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/scanning-stations/{id}/production-steps",
@@ -43,5 +43,5 @@ func (e *ConnectProductionStepsEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ConnectProductionStepsRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(ScanningStationSvc).ConnectProductionSteps
 		},
-	}
+	}).WithDocSource(e)
 }

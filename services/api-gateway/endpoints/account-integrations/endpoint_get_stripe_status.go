@@ -12,12 +12,12 @@ import (
 // Request to check Stripe integration status.
 type GetStripeStatusRequest struct{}
 
+// Returns whether the target account has a Stripe integration configured.
 type GetStripeStatusEndpoint struct{}
 
 func (e *GetStripeStatusEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetStripeStatusRequest, *apiresource.StripeStatus] {
-	return &apiendpoint.APIEndpoint[*GetStripeStatusRequest, *apiresource.StripeStatus]{
+	return (&apiendpoint.APIEndpoint[*GetStripeStatusRequest, *apiresource.StripeStatus]{
 		Title:             "Get Stripe Status",
-		Description:       "Returns whether the target account has a Stripe integration configured.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/integrations/stripe/status",
@@ -29,5 +29,5 @@ func (e *GetStripeStatusEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetStr
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetStripeStatusRequest) (*apiresource.StripeStatus, *apierror.APIError) {
 			return svc.(AccountIntegrationSvc).GetStripeStatus
 		},
-	}
+	}).WithDocSource(e)
 }

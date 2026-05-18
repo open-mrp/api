@@ -30,12 +30,12 @@ func (*UpdatePickRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdatePickRequest)
 }
 
+// Partially updates a pick's metadata.
 type UpdatePickEndpoint struct{}
 
 func (e *UpdatePickEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdatePickRequest, *apiresource.PickDetail] {
-	return &apiendpoint.APIEndpoint[*UpdatePickRequest, *apiresource.PickDetail]{
+	return (&apiendpoint.APIEndpoint[*UpdatePickRequest, *apiresource.PickDetail]{
 		Title:             "Update Pick",
-		Description:       "Partially updates a pick's metadata.",
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/picks/{id}",
@@ -51,5 +51,5 @@ func (e *UpdatePickEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdatePickR
 			ObjectType: constants.ObjectTypePick,
 			Fields:     []string{"lines"},
 		}),
-	}
+	}).WithDocSource(e)
 }

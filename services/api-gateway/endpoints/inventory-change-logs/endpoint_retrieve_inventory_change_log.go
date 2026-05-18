@@ -16,12 +16,12 @@ type RetrieveInventoryChangeLogRequest struct {
 	InventoryChangeLogID string `path:"id" validate:"required"`
 }
 
+// Returns an inventory change log by ID.
 type RetrieveInventoryChangeLogEndpoint struct{}
 
 func (e *RetrieveInventoryChangeLogEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveInventoryChangeLogRequest, *apiresource.InventoryChangeLog] {
-	return &apiendpoint.APIEndpoint[*RetrieveInventoryChangeLogRequest, *apiresource.InventoryChangeLog]{
+	return (&apiendpoint.APIEndpoint[*RetrieveInventoryChangeLogRequest, *apiresource.InventoryChangeLog]{
 		Title:             "Retrieve Inventory Change Log",
-		Description:       "Returns an inventory change log by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/inventory-change-logs/{id}",
@@ -37,5 +37,5 @@ func (e *RetrieveInventoryChangeLogEndpoint) Materialize() *apiendpoint.APIEndpo
 			ObjectType: constants.ObjectTypeInventoryChangeLog,
 			Fields:     []string{"item", "quantity", "quantity.unit", "responsible_user", "responsible_scanning_station"},
 		}),
-	}
+	}).WithDocSource(e)
 }

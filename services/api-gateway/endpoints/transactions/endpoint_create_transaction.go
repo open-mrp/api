@@ -42,12 +42,12 @@ func (*CreateTransactionRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateTransactionRequest)
 }
 
+// Creates a transaction with an automatically generated transaction number.
 type CreateTransactionEndpoint struct{}
 
 func (e *CreateTransactionEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateTransactionRequest, *apiresource.TransactionDetail] {
-	return &apiendpoint.APIEndpoint[*CreateTransactionRequest, *apiresource.TransactionDetail]{
+	return (&apiendpoint.APIEndpoint[*CreateTransactionRequest, *apiresource.TransactionDetail]{
 		Title:             "Create Transaction",
-		Description:       "Creates a transaction with an automatically generated transaction number.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/finance/transactions",
@@ -62,5 +62,5 @@ func (e *CreateTransactionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Crea
 		LocationFunc: func(resp *apiresource.TransactionDetail) string {
 			return "/v1/finance/transactions/" + resp.ID
 		},
-	}
+	}).WithDocSource(e)
 }

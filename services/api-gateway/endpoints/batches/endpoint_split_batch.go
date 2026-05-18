@@ -54,12 +54,12 @@ func (*SplitBatchRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleSplitBatchRequest)
 }
 
+// Splits one or more batches into multiple parts with specified quantities, optionally tracking waste and closing the originals.
 type SplitBatchEndpoint struct{}
 
 func (e *SplitBatchEndpoint) Materialize() *apiendpoint.APIEndpoint[*SplitBatchRequest, *apiresource.Batch] {
-	return &apiendpoint.APIEndpoint[*SplitBatchRequest, *apiresource.Batch]{
+	return (&apiendpoint.APIEndpoint[*SplitBatchRequest, *apiresource.Batch]{
 		Title:             "Split Batch",
-		Description:       "Splits one or more batches into multiple parts with specified quantities, optionally tracking waste and closing the originals.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/batches/actions/split",
@@ -71,5 +71,5 @@ func (e *SplitBatchEndpoint) Materialize() *apiendpoint.APIEndpoint[*SplitBatchR
 		ServiceHandler: func(svc any) func(ctx context.Context, req *SplitBatchRequest) (*apiresource.Batch, *apierror.APIError) {
 			return svc.(BatchSvc).SplitBatch
 		},
-	}
+	}).WithDocSource(e)
 }

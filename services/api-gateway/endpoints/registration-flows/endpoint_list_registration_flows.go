@@ -14,12 +14,12 @@ type ListRegistrationFlowsRequest struct {
 	apiresource.PaginationRequest
 }
 
+// Returns a paginated list of registration flows for the current account.
 type ListRegistrationFlowsEndpoint struct{}
 
 func (e *ListRegistrationFlowsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListRegistrationFlowsRequest, *apiresource.List[apiresource.RegistrationFlow]] {
-	return &apiendpoint.APIEndpoint[*ListRegistrationFlowsRequest, *apiresource.List[apiresource.RegistrationFlow]]{
+	return (&apiendpoint.APIEndpoint[*ListRegistrationFlowsRequest, *apiresource.List[apiresource.RegistrationFlow]]{
 		Title:             "List Registration Flows",
-		Description:       "Returns a paginated list of registration flows for the current account.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/registration-flows",
@@ -31,5 +31,5 @@ func (e *ListRegistrationFlowsEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListRegistrationFlowsRequest) (*apiresource.List[apiresource.RegistrationFlow], *apierror.APIError) {
 			return svc.(RegistrationFlowSvc).ListRegistrationFlows
 		},
-	}
+	}).WithDocSource(e)
 }

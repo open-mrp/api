@@ -31,12 +31,13 @@ type ListTransactionsRequest struct {
 }
 
 // TODO: stop returning TransactionSummary; return the full Transaction apiresource and use proper includes values to control expansion.
+
+// Returns a paginated list of transactions for the current account.
 type ListTransactionsEndpoint struct{}
 
 func (e *ListTransactionsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListTransactionsRequest, *apiresource.List[apiresource.TransactionSummary]] {
-	return &apiendpoint.APIEndpoint[*ListTransactionsRequest, *apiresource.List[apiresource.TransactionSummary]]{
+	return (&apiendpoint.APIEndpoint[*ListTransactionsRequest, *apiresource.List[apiresource.TransactionSummary]]{
 		Title:             "List Transactions",
-		Description:       "Returns a paginated list of transactions for the current account.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/finance/transactions",
@@ -48,5 +49,5 @@ func (e *ListTransactionsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListT
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListTransactionsRequest) (*apiresource.List[apiresource.TransactionSummary], *apierror.APIError) {
 			return svc.(TransactionSvc).ListTransactions
 		},
-	}
+	}).WithDocSource(e)
 }

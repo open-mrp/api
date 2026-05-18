@@ -113,12 +113,12 @@ func (*CreateProductionStepRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateProductionStepRequest)
 }
 
+// Creates a production step with production output, rates, and consumptions.
 type CreateProductionStepEndpoint struct{}
 
 func (e *CreateProductionStepEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateProductionStepRequest, *apiresource.ProductionStep] {
-	return &apiendpoint.APIEndpoint[*CreateProductionStepRequest, *apiresource.ProductionStep]{
+	return (&apiendpoint.APIEndpoint[*CreateProductionStepRequest, *apiresource.ProductionStep]{
 		Title:             "Create Production Step",
-		Description:       "Creates a production step with production output, rates, and consumptions.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/production-steps",
@@ -133,5 +133,5 @@ func (e *CreateProductionStepEndpoint) Materialize() *apiendpoint.APIEndpoint[*C
 		LocationFunc: func(resp *apiresource.ProductionStep) string {
 			return "/v1/operations/production-steps/" + resp.ID
 		},
-	}
+	}).WithDocSource(e)
 }

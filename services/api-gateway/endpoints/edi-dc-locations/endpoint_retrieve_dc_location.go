@@ -16,12 +16,12 @@ type RetrieveDCLocationRequest struct {
 	DCLocationID string `path:"id" validate:"required"`
 }
 
+// Returns a DC location by ID.
 type RetrieveDCLocationEndpoint struct{}
 
 func (e *RetrieveDCLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveDCLocationRequest, *apiresource.DCLocation] {
-	return &apiendpoint.APIEndpoint[*RetrieveDCLocationRequest, *apiresource.DCLocation]{
+	return (&apiendpoint.APIEndpoint[*RetrieveDCLocationRequest, *apiresource.DCLocation]{
 		Title:             "Retrieve DC Location",
-		Description:       "Returns a DC location by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/dc-locations/{id}",
@@ -37,5 +37,5 @@ func (e *RetrieveDCLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ret
 			ObjectType: constants.ObjectTypeDCLocation,
 			Fields:     []string{"customer"},
 		}),
-	}
+	}).WithDocSource(e)
 }

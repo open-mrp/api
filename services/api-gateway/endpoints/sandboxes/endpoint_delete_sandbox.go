@@ -15,12 +15,12 @@ type DeleteSandboxRequest struct {
 	SandboxID string `path:"id" validate:"required"`
 }
 
+// Deletes a sandbox account. At least one sandbox must remain per production account.
 type DeleteSandboxEndpoint struct{}
 
 func (e *DeleteSandboxEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteSandboxRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*DeleteSandboxRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*DeleteSandboxRequest, *apiresource.EmptyResource]{
 		Title:             "Delete Sandbox",
-		Description:       "Deletes a sandbox account. At least one sandbox must remain per production account.",
 		Method:            http.MethodDelete,
 		Route:             "/v1/core/sandboxes/{id}",
 		ContentType:       "application/json",
@@ -32,5 +32,5 @@ func (e *DeleteSandboxEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteSa
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteSandboxRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(SandboxSvc).DeleteSandbox
 		},
-	}
+	}).WithDocSource(e)
 }

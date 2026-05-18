@@ -18,12 +18,12 @@ type RetrieveSalesOrderRequest struct {
 	Includes []string `query:"include"`
 }
 
+// Returns a sales order by ID.
 type RetrieveSalesOrderEndpoint struct{}
 
 func (e *RetrieveSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveSalesOrderRequest, *apiresource.SalesOrderDetail] {
-	return &apiendpoint.APIEndpoint[*RetrieveSalesOrderRequest, *apiresource.SalesOrderDetail]{
+	return (&apiendpoint.APIEndpoint[*RetrieveSalesOrderRequest, *apiresource.SalesOrderDetail]{
 		Title:             "Retrieve Sales Order",
-		Description:       "Returns a sales order by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/sales-orders/{id}",
@@ -39,5 +39,5 @@ func (e *RetrieveSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ret
 			ObjectType: constants.ObjectTypeSalesOrder,
 			Fields:     []string{"customer", "bill_to_address", "ship_to_address", "carrier", "service_level", "payment_term", "shipping_term", "order_discount", "lines", "lines.item"},
 		}),
-	}
+	}).WithDocSource(e)
 }

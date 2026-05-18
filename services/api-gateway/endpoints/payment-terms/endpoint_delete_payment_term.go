@@ -15,12 +15,12 @@ type DeletePaymentTermRequest struct {
 	PaymentTermID string `path:"id" validate:"required"`
 }
 
+// Deletes a payment term. Default payment terms cannot be deleted.
 type DeletePaymentTermEndpoint struct{}
 
 func (e *DeletePaymentTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeletePaymentTermRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*DeletePaymentTermRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*DeletePaymentTermRequest, *apiresource.EmptyResource]{
 		Title:             "Delete Payment Term",
-		Description:       "Deletes a payment term. Default payment terms cannot be deleted.",
 		Method:            http.MethodDelete,
 		Route:             "/v1/finance/payment-terms/{id}",
 		ContentType:       "application/json",
@@ -32,5 +32,5 @@ func (e *DeletePaymentTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*Dele
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeletePaymentTermRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(PaymentTermSvc).DeletePaymentTerm
 		},
-	}
+	}).WithDocSource(e)
 }

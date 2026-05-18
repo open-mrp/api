@@ -15,12 +15,12 @@ type SetupBillingRequest struct {
 	SessionID string `json:"-" path:"session_id" validate:"required"`
 }
 
+// Creates a Stripe customer and billing profile for a registration session.
 type SetupBillingEndpoint struct{}
 
 func (e *SetupBillingEndpoint) Materialize() *apiendpoint.APIEndpoint[*SetupBillingRequest, *apiresource.SetupBillingResponse] {
-	return &apiendpoint.APIEndpoint[*SetupBillingRequest, *apiresource.SetupBillingResponse]{
+	return (&apiendpoint.APIEndpoint[*SetupBillingRequest, *apiresource.SetupBillingResponse]{
 		Title:             "Setup Registration Billing",
-		Description:       "Creates a Stripe customer and billing profile for a registration session.",
 		Method:            http.MethodPost,
 		Route:             "/v1/auth/registration-sessions/{session_id}/actions/setup-billing",
 		ContentType:       "application/json",
@@ -32,5 +32,5 @@ func (e *SetupBillingEndpoint) Materialize() *apiendpoint.APIEndpoint[*SetupBill
 		ServiceHandler: func(svc any) func(ctx context.Context, req *SetupBillingRequest) (*apiresource.SetupBillingResponse, *apierror.APIError) {
 			return svc.(RegistrationSessionSvc).SetupBilling
 		},
-	}
+	}).WithDocSource(e)
 }

@@ -19,12 +19,12 @@ type AnalyzeInventoryReceiptsRequest struct {
 	LotIDs []string `json:"lot_ids,omitempty"`
 }
 
+// Returns inventory receipt summaries including remaining quantities, costs, and values.
 type AnalyzeInventoryReceiptsEndpoint struct{}
 
 func (e *AnalyzeInventoryReceiptsEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeInventoryReceiptsRequest, *apiresource.AnalyzeInventoryReceiptsResponse] {
-	return &apiendpoint.APIEndpoint[*AnalyzeInventoryReceiptsRequest, *apiresource.AnalyzeInventoryReceiptsResponse]{
+	return (&apiendpoint.APIEndpoint[*AnalyzeInventoryReceiptsRequest, *apiresource.AnalyzeInventoryReceiptsResponse]{
 		Title:             "Analyze Inventory Receipts",
-		Description:       "Returns inventory receipt summaries including remaining quantities, costs, and values.",
 		Method:            http.MethodPut,
 		Route:             "/v1/core/analytics/inventory-receipts",
 		ContentType:       "application/json",
@@ -36,5 +36,5 @@ func (e *AnalyzeInventoryReceiptsEndpoint) Materialize() *apiendpoint.APIEndpoin
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeInventoryReceiptsRequest) (*apiresource.AnalyzeInventoryReceiptsResponse, *apierror.APIError) {
 			return svc.(AnalyticsSvc).AnalyzeInventoryReceipts
 		},
-	}
+	}).WithDocSource(e)
 }

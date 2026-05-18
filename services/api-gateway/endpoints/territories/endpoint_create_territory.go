@@ -41,12 +41,12 @@ func (*CreateTerritoryRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateTerritoryRequest)
 }
 
+// Creates a territory.
 type CreateTerritoryEndpoint struct{}
 
 func (e *CreateTerritoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateTerritoryRequest, *apiresource.Territory] {
-	return &apiendpoint.APIEndpoint[*CreateTerritoryRequest, *apiresource.Territory]{
+	return (&apiendpoint.APIEndpoint[*CreateTerritoryRequest, *apiresource.Territory]{
 		Title:             "Create Territory",
-		Description:       "Creates a territory.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/accounts/{account_id}/territories",
@@ -62,5 +62,5 @@ func (e *CreateTerritoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Create
 			ObjectType: constants.ObjectTypeTerritory,
 			Fields:     []string{"sales_rep", "product_line"},
 		}),
-	}
+	}).WithDocSource(e)
 }

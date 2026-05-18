@@ -124,12 +124,12 @@ func (*CreateAgentRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateAgentRequest)
 }
 
+// Creates a custom agent definition with optional tool configuration.
 type CreateAgentEndpoint struct{}
 
 func (e *CreateAgentEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAgentRequest, *apiresource.AgentDefinition] {
-	return &apiendpoint.APIEndpoint[*CreateAgentRequest, *apiresource.AgentDefinition]{
+	return (&apiendpoint.APIEndpoint[*CreateAgentRequest, *apiresource.AgentDefinition]{
 		Title:             "Create Agent",
-		Description:       "Creates a custom agent definition with optional tool configuration.",
 		Method:            http.MethodPost,
 		Route:             "/v1/ai/agents",
 		ContentType:       "application/json",
@@ -148,5 +148,5 @@ func (e *CreateAgentEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAgen
 			ObjectType: constants.ObjectTypeAgentDefinition,
 			Fields:     []string{"config", "tools", "role", "role.permissions"},
 		}),
-	}
+	}).WithDocSource(e)
 }

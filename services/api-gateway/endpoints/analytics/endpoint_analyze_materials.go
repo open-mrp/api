@@ -17,12 +17,12 @@ type AnalyzeMaterialsRequest struct {
 	SupplierIDs []string `json:"supplier_ids,omitempty"`
 }
 
+// Returns material inventory and demand analytics per material, including quantities, unit groups, and supplier information.
 type AnalyzeMaterialsEndpoint struct{}
 
 func (e *AnalyzeMaterialsEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeMaterialsRequest, *apiresource.AnalyzeMaterialsResponse] {
-	return &apiendpoint.APIEndpoint[*AnalyzeMaterialsRequest, *apiresource.AnalyzeMaterialsResponse]{
+	return (&apiendpoint.APIEndpoint[*AnalyzeMaterialsRequest, *apiresource.AnalyzeMaterialsResponse]{
 		Title:             "Analyze Materials",
-		Description:       "Returns material inventory and demand analytics per material, including quantities, unit groups, and supplier information.",
 		Method:            http.MethodPut,
 		Route:             "/v1/core/analytics/materials",
 		ContentType:       "application/json",
@@ -34,5 +34,5 @@ func (e *AnalyzeMaterialsEndpoint) Materialize() *apiendpoint.APIEndpoint[*Analy
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeMaterialsRequest) (*apiresource.AnalyzeMaterialsResponse, *apierror.APIError) {
 			return svc.(AnalyticsSvc).AnalyzeMaterials
 		},
-	}
+	}).WithDocSource(e)
 }

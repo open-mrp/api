@@ -17,12 +17,12 @@ type RetrieveAddressDetailsRequest struct {
 	SessionToken *string `query:"session_token"` // #nosec G117 -- not a secret, Google Maps session correlation token
 }
 
+// Returns parsed address components for a Google Places ID.
 type RetrieveAddressDetailsEndpoint struct{}
 
 func (e *RetrieveAddressDetailsEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveAddressDetailsRequest, *apiresource.AddressDetailsResult] {
-	return &apiendpoint.APIEndpoint[*RetrieveAddressDetailsRequest, *apiresource.AddressDetailsResult]{
+	return (&apiendpoint.APIEndpoint[*RetrieveAddressDetailsRequest, *apiresource.AddressDetailsResult]{
 		Title:             "Retrieve Address Details",
-		Description:       "Returns parsed address components for a Google Places ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/core/addresses/details/{id}",
@@ -34,5 +34,5 @@ func (e *RetrieveAddressDetailsEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveAddressDetailsRequest) (*apiresource.AddressDetailsResult, *apierror.APIError) {
 			return svc.(AddressValidationSvc).GetAddressDetails
 		},
-	}
+	}).WithDocSource(e)
 }

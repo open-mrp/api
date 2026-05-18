@@ -30,12 +30,12 @@ func (*UpdateScannerPasswordRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateScannerPasswordRequest)
 }
 
+// Rotates the password for a scanner-role account user backing a scanning station. Requires the caller's current password for verification.
 type UpdateScannerPasswordEndpoint struct{}
 
 func (e *UpdateScannerPasswordEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateScannerPasswordRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*UpdateScannerPasswordRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*UpdateScannerPasswordRequest, *apiresource.EmptyResource]{
 		Title:             "Update Scanner Password",
-		Description:       "Rotates the password for a scanner-role account user backing a scanning station. Requires the caller's current password for verification.",
 		Method:            http.MethodPost,
 		Route:             "/v1/auth/scanner-passwords",
 		ContentType:       "application/json",
@@ -50,5 +50,5 @@ func (e *UpdateScannerPasswordEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateScannerPasswordRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(AuthSvc).UpdateScannerPassword
 		},
-	}
+	}).WithDocSource(e)
 }

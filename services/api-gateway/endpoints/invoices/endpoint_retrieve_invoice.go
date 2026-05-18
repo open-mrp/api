@@ -18,12 +18,12 @@ type RetrieveInvoiceRequest struct {
 	Includes []string `include:"true"`
 }
 
+// Returns an invoice by ID.
 type RetrieveInvoiceEndpoint struct{}
 
 func (e *RetrieveInvoiceEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveInvoiceRequest, *apiresource.Invoice] {
-	return &apiendpoint.APIEndpoint[*RetrieveInvoiceRequest, *apiresource.Invoice]{
+	return (&apiendpoint.APIEndpoint[*RetrieveInvoiceRequest, *apiresource.Invoice]{
 		Title:             "Retrieve Invoice",
-		Description:       "Returns an invoice by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/finance/invoices/{id}",
@@ -39,5 +39,5 @@ func (e *RetrieveInvoiceEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retrie
 			ObjectType: constants.ObjectTypeInvoice,
 			Fields:     []string{"lines", "allocations"},
 		}),
-	}
+	}).WithDocSource(e)
 }

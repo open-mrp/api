@@ -69,12 +69,12 @@ func (*RateShopRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleRateShopRequest)
 }
 
+// Compares shipping rates across all available carriers and options for the given addresses and parcels.
 type RateShopEndpoint struct{}
 
 func (e *RateShopEndpoint) Materialize() *apiendpoint.APIEndpoint[*RateShopRequest, *apiresource.RateShopResult] {
-	return &apiendpoint.APIEndpoint[*RateShopRequest, *apiresource.RateShopResult]{
+	return (&apiendpoint.APIEndpoint[*RateShopRequest, *apiresource.RateShopResult]{
 		Title:             "Rate Shop",
-		Description:       "Compares shipping rates across all available carriers and options for the given addresses and parcels.",
 		Method:            http.MethodPost,
 		Route:             "/v1/operations/shipments/actions/rate-shop",
 		ContentType:       "application/json",
@@ -86,5 +86,5 @@ func (e *RateShopEndpoint) Materialize() *apiendpoint.APIEndpoint[*RateShopReque
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RateShopRequest) (*apiresource.RateShopResult, *apierror.APIError) {
 			return svc.(ShipmentSvc).RateShop
 		},
-	}
+	}).WithDocSource(e)
 }

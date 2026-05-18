@@ -15,12 +15,12 @@ type DeleteMemoryRequest struct {
 	ID string `path:"id" validate:"required"`
 }
 
+// Deletes an agent memory.
 type DeleteMemoryEndpoint struct{}
 
 func (e *DeleteMemoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteMemoryRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*DeleteMemoryRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*DeleteMemoryRequest, *apiresource.EmptyResource]{
 		Title:             "Delete Agent Memory",
-		Description:       "Deletes an agent memory.",
 		Method:            http.MethodDelete,
 		Route:             "/v1/ai/memories/{id}",
 		ContentType:       "application/json",
@@ -32,5 +32,5 @@ func (e *DeleteMemoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteMem
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteMemoryRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(AgentMemorySvc).DeleteMemory
 		},
-	}
+	}).WithDocSource(e)
 }

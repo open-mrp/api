@@ -15,12 +15,12 @@ type RetrieveReceivingOrderRequest struct {
 	ReceivingOrderID string `path:"id" validate:"required"`
 }
 
+// Returns a receiving order by ID.
 type RetrieveReceivingOrderEndpoint struct{}
 
 func (e *RetrieveReceivingOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveReceivingOrderRequest, *apiresource.ReceivingOrder] {
-	return &apiendpoint.APIEndpoint[*RetrieveReceivingOrderRequest, *apiresource.ReceivingOrder]{
+	return (&apiendpoint.APIEndpoint[*RetrieveReceivingOrderRequest, *apiresource.ReceivingOrder]{
 		Title:             "Retrieve Receiving Order",
-		Description:       "Returns a receiving order by ID.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/receiving-orders/{id}",
@@ -32,5 +32,5 @@ func (e *RetrieveReceivingOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveReceivingOrderRequest) (*apiresource.ReceivingOrder, *apierror.APIError) {
 			return svc.(ReceivingOrderSvc).GetReceivingOrder
 		},
-	}
+	}).WithDocSource(e)
 }

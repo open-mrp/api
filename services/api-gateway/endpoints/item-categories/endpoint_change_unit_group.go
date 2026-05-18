@@ -17,12 +17,12 @@ type ChangeItemCategoryUnitGroupRequest struct {
 	UnitGroupID string `path:"unit_group_id" validate:"required"`
 }
 
+// Changes the unit group associated with an item category. All items in the category are updated to use the new base unit asynchronously.
 type ChangeItemCategoryUnitGroupEndpoint struct{}
 
 func (e *ChangeItemCategoryUnitGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*ChangeItemCategoryUnitGroupRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*ChangeItemCategoryUnitGroupRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*ChangeItemCategoryUnitGroupRequest, *apiresource.EmptyResource]{
 		Title:             "Change Item Category Unit Group",
-		Description:       "Changes the unit group associated with an item category. All items in the category are updated to use the new base unit asynchronously.",
 		Method:            http.MethodPut,
 		Route:             "/v1/catalog/item-categories/{id}/unit-groups/{unit_group_id}",
 		ContentType:       "application/json",
@@ -34,5 +34,5 @@ func (e *ChangeItemCategoryUnitGroupEndpoint) Materialize() *apiendpoint.APIEndp
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ChangeItemCategoryUnitGroupRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(ItemCategorySvc).ChangeItemCategoryUnitGroup
 		},
-	}
+	}).WithDocSource(e)
 }

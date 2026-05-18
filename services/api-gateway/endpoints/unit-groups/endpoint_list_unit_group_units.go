@@ -16,12 +16,12 @@ type ListUnitGroupUnitsRequest struct {
 	UnitGroupID string `path:"unit_group_id" validate:"required"`
 }
 
+// Returns a list of associated units within a unit group.
 type ListUnitGroupUnitsEndpoint struct{}
 
 func (e *ListUnitGroupUnitsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListUnitGroupUnitsRequest, *apiresource.List[apiresource.UnitGroupUnit]] {
-	return &apiendpoint.APIEndpoint[*ListUnitGroupUnitsRequest, *apiresource.List[apiresource.UnitGroupUnit]]{
+	return (&apiendpoint.APIEndpoint[*ListUnitGroupUnitsRequest, *apiresource.List[apiresource.UnitGroupUnit]]{
 		Title:             "List Unit Group Units",
-		Description:       "Returns a list of associated units within a unit group.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/unit-groups/{unit_group_id}/units",
@@ -37,5 +37,5 @@ func (e *ListUnitGroupUnitsEndpoint) Materialize() *apiendpoint.APIEndpoint[*Lis
 			ObjectType: constants.ObjectTypeUnitGroupUnit,
 			Fields:     []string{"unit"},
 		}),
-	}
+	}).WithDocSource(e)
 }

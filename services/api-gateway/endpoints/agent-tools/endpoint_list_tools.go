@@ -13,12 +13,12 @@ type ListToolsRequest struct {
 	apiresource.PaginationRequest
 }
 
+// Returns a paginated list of tools that can be assigned to agents.
 type ListToolsEndpoint struct{}
 
 func (e *ListToolsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListToolsRequest, *apiresource.List[apiresource.AvailableTool]] {
-	return &apiendpoint.APIEndpoint[*ListToolsRequest, *apiresource.List[apiresource.AvailableTool]]{
+	return (&apiendpoint.APIEndpoint[*ListToolsRequest, *apiresource.List[apiresource.AvailableTool]]{
 		Title:             "List Tools",
-		Description:       "Returns a paginated list of tools that can be assigned to agents.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/ai/tools",
@@ -30,5 +30,5 @@ func (e *ListToolsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListToolsReq
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListToolsRequest) (*apiresource.List[apiresource.AvailableTool], *apierror.APIError) {
 			return svc.(AgentToolSvc).ListTools
 		},
-	}
+	}).WithDocSource(e)
 }

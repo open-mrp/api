@@ -16,12 +16,12 @@ type RetrieveCustomerRequest struct {
 	CustomerID string `path:"id" validate:"required"`
 }
 
+// Returns a customer by ID.
 type RetrieveCustomerEndpoint struct{}
 
 func (e *RetrieveCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveCustomerRequest, *apiresource.Customer] {
-	return &apiendpoint.APIEndpoint[*RetrieveCustomerRequest, *apiresource.Customer]{
+	return (&apiendpoint.APIEndpoint[*RetrieveCustomerRequest, *apiresource.Customer]{
 		Title:             "Retrieve Customer",
-		Description:       "Returns a customer by ID.",
 		Method:            http.MethodGet,
 		Route:             "/v1/sales/customers/{id}",
 		ContentType:       "application/json",
@@ -55,5 +55,5 @@ func (e *RetrieveCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retri
 				"credit_limit",
 			},
 		}),
-	}
+	}).WithDocSource(e)
 }

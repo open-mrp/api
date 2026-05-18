@@ -16,12 +16,12 @@ type GetProductionFlowRequest struct {
 	ItemID string `path:"item_id" validate:"required"`
 }
 
+// Returns the production flow graph for the given item, including all production steps, their consumptions, and connections.
 type GetProductionFlowEndpoint struct{}
 
 func (e *GetProductionFlowEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetProductionFlowRequest, *apiresource.ProductionFlow] {
-	return &apiendpoint.APIEndpoint[*GetProductionFlowRequest, *apiresource.ProductionFlow]{
+	return (&apiendpoint.APIEndpoint[*GetProductionFlowRequest, *apiresource.ProductionFlow]{
 		Title:             "Get Production Flow",
-		Description:       "Returns the production flow graph for the given item, including all production steps, their consumptions, and connections.",
 		Method:            http.MethodGet,
 		Route:             "/v1/operations/production-flows/by-item/{item_id}",
 		ContentType:       "application/json",
@@ -50,5 +50,5 @@ func (e *GetProductionFlowEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetP
 				"steps.out_steps",
 			},
 		}),
-	}
+	}).WithDocSource(e)
 }

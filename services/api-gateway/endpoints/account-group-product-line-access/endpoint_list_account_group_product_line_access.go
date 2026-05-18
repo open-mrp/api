@@ -14,12 +14,12 @@ type ListAccountGroupProductLineAccessRequest struct {
 	apiresource.PaginationRequest
 }
 
+// Returns a paginated list of product line access records grouped by account group.
 type ListAccountGroupProductLineAccessEndpoint struct{}
 
 func (e *ListAccountGroupProductLineAccessEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAccountGroupProductLineAccessRequest, *apiresource.List[apiresource.AccountGroupProductLineAccess]] {
-	return &apiendpoint.APIEndpoint[*ListAccountGroupProductLineAccessRequest, *apiresource.List[apiresource.AccountGroupProductLineAccess]]{
+	return (&apiendpoint.APIEndpoint[*ListAccountGroupProductLineAccessRequest, *apiresource.List[apiresource.AccountGroupProductLineAccess]]{
 		Title:             "List Account Group Product Line Access",
-		Description:       "Returns a paginated list of product line access records grouped by account group.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/product-line-access/account-groups",
@@ -31,5 +31,5 @@ func (e *ListAccountGroupProductLineAccessEndpoint) Materialize() *apiendpoint.A
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListAccountGroupProductLineAccessRequest) (*apiresource.List[apiresource.AccountGroupProductLineAccess], *apierror.APIError) {
 			return svc.(AccountGroupProductLineAccessSvc).ListAccountGroupProductLineAccess
 		},
-	}
+	}).WithDocSource(e)
 }

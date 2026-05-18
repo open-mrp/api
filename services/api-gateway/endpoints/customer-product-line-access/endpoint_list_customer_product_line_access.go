@@ -14,12 +14,12 @@ type ListCustomerProductLineAccessRequest struct {
 	apiresource.PaginationRequest
 }
 
+// Returns a paginated list of product line access records grouped by customer.
 type ListCustomerProductLineAccessEndpoint struct{}
 
 func (e *ListCustomerProductLineAccessEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListCustomerProductLineAccessRequest, *apiresource.List[apiresource.CustomerProductLineAccess]] {
-	return &apiendpoint.APIEndpoint[*ListCustomerProductLineAccessRequest, *apiresource.List[apiresource.CustomerProductLineAccess]]{
+	return (&apiendpoint.APIEndpoint[*ListCustomerProductLineAccessRequest, *apiresource.List[apiresource.CustomerProductLineAccess]]{
 		Title:             "List Customer Product Line Access",
-		Description:       "Returns a paginated list of product line access records grouped by customer.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/product-line-access/customers",
@@ -31,5 +31,5 @@ func (e *ListCustomerProductLineAccessEndpoint) Materialize() *apiendpoint.APIEn
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListCustomerProductLineAccessRequest) (*apiresource.List[apiresource.CustomerProductLineAccess], *apierror.APIError) {
 			return svc.(CustomerProductLineAccessSvc).ListCustomerProductLineAccess
 		},
-	}
+	}).WithDocSource(e)
 }

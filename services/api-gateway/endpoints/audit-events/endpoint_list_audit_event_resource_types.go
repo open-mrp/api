@@ -13,12 +13,12 @@ import (
 // Request to list the valid audit event resource types.
 type ListAuditEventResourceTypesRequest struct{}
 
+// Returns the full set of resource types that may appear on audit events.
 type ListAuditEventResourceTypesEndpoint struct{}
 
 func (e *ListAuditEventResourceTypesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAuditEventResourceTypesRequest, *apiresource.List[constants.ObjectType]] {
-	return &apiendpoint.APIEndpoint[*ListAuditEventResourceTypesRequest, *apiresource.List[constants.ObjectType]]{
+	return (&apiendpoint.APIEndpoint[*ListAuditEventResourceTypesRequest, *apiresource.List[constants.ObjectType]]{
 		Title:             "List Audit Event Resource Types",
-		Description:       "Returns the full set of resource types that may appear on audit events.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/core/audit-events/resource-types",
@@ -33,5 +33,5 @@ func (e *ListAuditEventResourceTypesEndpoint) Materialize() *apiendpoint.APIEndp
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListAuditEventResourceTypesRequest) (*apiresource.List[constants.ObjectType], *apierror.APIError) {
 			return svc.(AuditEventSvc).ListAuditEventResourceTypes
 		},
-	}
+	}).WithDocSource(e)
 }

@@ -15,12 +15,12 @@ type DeleteUnitRequest struct {
 	UnitID string `path:"id" validate:"required"`
 }
 
+// Deletes an account-owned unit. Associated unit group memberships are also removed, and system units cannot be deleted.
 type DeleteUnitEndpoint struct{}
 
 func (e *DeleteUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteUnitRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*DeleteUnitRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*DeleteUnitRequest, *apiresource.EmptyResource]{
 		Title:             "Delete Unit",
-		Description:       "Deletes an account-owned unit. Associated unit group memberships are also removed, and system units cannot be deleted.",
 		Method:            http.MethodDelete,
 		Route:             "/v1/catalog/units/{id}",
 		ContentType:       "application/json",
@@ -32,5 +32,5 @@ func (e *DeleteUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteUnitR
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteUnitRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(UnitSvc).DeleteUnit
 		},
-	}
+	}).WithDocSource(e)
 }

@@ -14,12 +14,12 @@ type ListMachinesRequest struct {
 	apiresource.PaginationRequest
 }
 
+// Returns a paginated list of machines for the target account.
 type ListMachinesEndpoint struct{}
 
 func (e *ListMachinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListMachinesRequest, *apiresource.List[apiresource.Machine]] {
-	return &apiendpoint.APIEndpoint[*ListMachinesRequest, *apiresource.List[apiresource.Machine]]{
+	return (&apiendpoint.APIEndpoint[*ListMachinesRequest, *apiresource.List[apiresource.Machine]]{
 		Title:             "List Machines",
-		Description:       "Returns a paginated list of machines for the target account.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/machines",
@@ -31,5 +31,5 @@ func (e *ListMachinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListMachi
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListMachinesRequest) (*apiresource.List[apiresource.Machine], *apierror.APIError) {
 			return svc.(MachineSvc).ListMachines
 		},
-	}
+	}).WithDocSource(e)
 }

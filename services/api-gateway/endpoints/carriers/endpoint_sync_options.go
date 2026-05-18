@@ -15,12 +15,12 @@ type SyncOptionsRequest struct {
 	CarrierID string `path:"id" validate:"required"`
 }
 
+// Syncs carrier options from Shippo service levels, adding new and removing stale ones. Not available in sandbox mode.
 type SyncOptionsEndpoint struct{}
 
 func (e *SyncOptionsEndpoint) Materialize() *apiendpoint.APIEndpoint[*SyncOptionsRequest, *apiresource.Carrier] {
-	return &apiendpoint.APIEndpoint[*SyncOptionsRequest, *apiresource.Carrier]{
+	return (&apiendpoint.APIEndpoint[*SyncOptionsRequest, *apiresource.Carrier]{
 		Title:             "Sync Carrier Options",
-		Description:       "Syncs carrier options from Shippo service levels, adding new and removing stale ones. Not available in sandbox mode.",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/carriers/{id}/actions/sync-options",
@@ -32,5 +32,5 @@ func (e *SyncOptionsEndpoint) Materialize() *apiendpoint.APIEndpoint[*SyncOption
 		ServiceHandler: func(svc any) func(ctx context.Context, req *SyncOptionsRequest) (*apiresource.Carrier, *apierror.APIError) {
 			return svc.(CarrierSvc).SyncOptions
 		},
-	}
+	}).WithDocSource(e)
 }

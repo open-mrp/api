@@ -31,12 +31,13 @@ type ListInvoicesRequest struct {
 }
 
 // TODO: stop returning InvoiceSummary; return the full Invoice apiresource and use proper includes values to control expansion.
+
+// Returns a paginated list of invoices for the current account.
 type ListInvoicesEndpoint struct{}
 
 func (e *ListInvoicesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListInvoicesRequest, *apiresource.List[apiresource.InvoiceSummary]] {
-	return &apiendpoint.APIEndpoint[*ListInvoicesRequest, *apiresource.List[apiresource.InvoiceSummary]]{
+	return (&apiendpoint.APIEndpoint[*ListInvoicesRequest, *apiresource.List[apiresource.InvoiceSummary]]{
 		Title:             "List Invoices",
-		Description:       "Returns a paginated list of invoices for the current account.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/finance/invoices",
@@ -48,5 +49,5 @@ func (e *ListInvoicesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListInvoi
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListInvoicesRequest) (*apiresource.List[apiresource.InvoiceSummary], *apierror.APIError) {
 			return svc.(InvoiceSvc).ListInvoices
 		},
-	}
+	}).WithDocSource(e)
 }

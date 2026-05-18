@@ -19,12 +19,12 @@ type ListAlertsRequest struct {
 	Status *constants.AgentAlertStatus `query:"status"`
 }
 
+// Returns a paginated list of agent alerts for the current account.
 type ListAlertsEndpoint struct{}
 
 func (e *ListAlertsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAlertsRequest, *apiresource.List[apiresource.AgentAlert]] {
-	return &apiendpoint.APIEndpoint[*ListAlertsRequest, *apiresource.List[apiresource.AgentAlert]]{
+	return (&apiendpoint.APIEndpoint[*ListAlertsRequest, *apiresource.List[apiresource.AgentAlert]]{
 		Title:             "List Agent Alerts",
-		Description:       "Returns a paginated list of agent alerts for the current account.",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/ai/alerts",
@@ -40,5 +40,5 @@ func (e *ListAlertsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAlertsR
 			ObjectType: constants.ObjectTypeAgentAlert,
 			Fields:     []string{"run", "action"},
 		}),
-	}
+	}).WithDocSource(e)
 }

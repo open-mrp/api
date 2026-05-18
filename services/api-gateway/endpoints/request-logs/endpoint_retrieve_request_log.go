@@ -16,12 +16,12 @@ type RetrieveRequestLogRequest struct {
 	ID string `path:"id" validate:"required"`
 }
 
+// Returns a request log by ID.
 type RetrieveRequestLogEndpoint struct{}
 
 func (e *RetrieveRequestLogEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveRequestLogRequest, *apiresource.RequestLog] {
-	return &apiendpoint.APIEndpoint[*RetrieveRequestLogRequest, *apiresource.RequestLog]{
+	return (&apiendpoint.APIEndpoint[*RetrieveRequestLogRequest, *apiresource.RequestLog]{
 		Title:             "Retrieve Request Log",
-		Description:       "Returns a request log by ID.",
 		Method:            http.MethodGet,
 		Route:             "/v1/core/request-logs/{id}",
 		ContentType:       "application/json",
@@ -40,5 +40,5 @@ func (e *RetrieveRequestLogEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ret
 		Extras: apiendpoint.APIEndpointExtras{
 			SkipRequestLogging: true,
 		},
-	}
+	}).WithDocSource(e)
 }

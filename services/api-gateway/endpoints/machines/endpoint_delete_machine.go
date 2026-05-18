@@ -15,12 +15,12 @@ type DeleteMachineRequest struct {
 	MachineID string `path:"id" validate:"required"`
 }
 
+// Deletes a machine.
 type DeleteMachineEndpoint struct{}
 
 func (e *DeleteMachineEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteMachineRequest, *apiresource.EmptyResource] {
-	return &apiendpoint.APIEndpoint[*DeleteMachineRequest, *apiresource.EmptyResource]{
+	return (&apiendpoint.APIEndpoint[*DeleteMachineRequest, *apiresource.EmptyResource]{
 		Title:             "Delete Machine",
-		Description:       "Deletes a machine.",
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/machines/{id}",
@@ -32,5 +32,5 @@ func (e *DeleteMachineEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteMa
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteMachineRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(MachineSvc).DeleteMachine
 		},
-	}
+	}).WithDocSource(e)
 }

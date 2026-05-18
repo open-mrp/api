@@ -1,6 +1,7 @@
 package unitgroupep
 
 import (
+	"context"
 	"strconv"
 
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
@@ -103,7 +104,7 @@ func UnitGroupUnitPresenter(u *pb.UnitGroupUnitInfo) apiresource.UnitGroupUnit {
 	}
 }
 
-func UnitGroupUnitListPresenter(resp *pb.ListUnitGroupUnitsResponse) *apiresource.List[apiresource.UnitGroupUnit] {
+func UnitGroupUnitListPresenter(ctx context.Context, resp *pb.ListUnitGroupUnitsResponse) *apiresource.List[apiresource.UnitGroupUnit] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.UnitGroupUnit](nil, apiresource.PageInfo{})
 	}
@@ -116,7 +117,7 @@ func UnitGroupUnitListPresenter(resp *pb.ListUnitGroupUnitsResponse) *apiresourc
 	return apiresource.NewList(units, apiresource.PageInfo{})
 }
 
-func UnitGroupListPresenter(resp *pb.ListUnitGroupsResponse, ownerAccount *apiresource.Account) *apiresource.List[apiresource.UnitGroup] {
+func UnitGroupListPresenter(ctx context.Context, resp *pb.ListUnitGroupsResponse, ownerAccount *apiresource.Account) *apiresource.List[apiresource.UnitGroup] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.UnitGroup](nil, apiresource.PageInfo{})
 	}
@@ -126,5 +127,5 @@ func UnitGroupListPresenter(resp *pb.ListUnitGroupsResponse, ownerAccount *apire
 		unitGroups[i] = UnitGroupPresenter(ug, ownerAccount)
 	}
 
-	return apiresource.NewList(unitGroups, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(unitGroups, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }

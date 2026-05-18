@@ -24,13 +24,11 @@ func (e *GetLatestSysPropertyValueEndpoint) Materialize() *apiendpoint.APIEndpoi
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/core/sys-properties/{type_code}/latest-value",
-		Request:           &GetLatestSysPropertyValueRequest{},
-		Response:          &apiresource.SysPropertyValue{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetLatestSysPropertyValueRequest) (*apiresource.SysPropertyValue, *apierror.APIError) {
 			return svc.(SysPropertySvc).GetLatestSysPropertyValue
 		},
-	}).WithDocSource(e)
+	})
 }

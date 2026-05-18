@@ -223,6 +223,10 @@ func (s *salesOrderSvcImpl) CreateSalesOrder(ctx context.Context, params domain.
 		return cached.Data, cached.Error
 
 	case domain.RecoveryPointStarted:
+		if params.SalesOrderStatusCode == "" {
+			params.SalesOrderStatusCode = string(constants.SalesOrderStatusCodeEstimate)
+		}
+
 		orderID, apiErr := id.GenID(id.OrderIDPrefix, nil)
 		if apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)

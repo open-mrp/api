@@ -24,15 +24,13 @@ func (e *DeleteAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*Delete
 	return (&apiendpoint.APIEndpoint[*DeleteAttributeRequest, *apiresource.EmptyResource]{
 		Title:             "Delete Attribute",
 		Method:            http.MethodDelete,
-		Route:             "/v1/catalog/properties/{property_id}/attributes/{id}",
+		Route:             CatalogPropertyAttributeRoute,
 		ContentType:       "application/json",
-		Request:           &DeleteAttributeRequest{},
-		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteAttributeRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(PropertySvc).DeleteAttribute
 		},
-	}).WithDocSource(e)
+	})
 }

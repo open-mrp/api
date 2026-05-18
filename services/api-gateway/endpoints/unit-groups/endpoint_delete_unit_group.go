@@ -24,13 +24,11 @@ func (e *DeleteUnitGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*Delete
 		Method:            http.MethodDelete,
 		Route:             "/v1/catalog/unit-groups/{id}",
 		ContentType:       "application/json",
-		Request:           &DeleteUnitGroupRequest{},
-		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteUnitGroupRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(UnitGroupSvc).DeleteUnitGroup
 		},
-	}).WithDocSource(e)
+	})
 }

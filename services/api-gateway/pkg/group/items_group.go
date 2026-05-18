@@ -39,18 +39,18 @@ func (*ItemsEndpointGroup) Materialize(config *ItemsEndpointGroupConfig) *ItemsE
 		ResourceType: &apiresource.Item{},
 	}
 
-	listItemsEndpoint := (&itemep.ListItemsEndpoint{}).Materialize().WithService(inner, itemSvc)
-	getItemEndpoint := (&itemep.RetrieveItemEndpoint{}).Materialize().WithService(inner, itemSvc)
-	getItemInventoryEndpoint := (&itemep.RetrieveItemInventoryEndpoint{}).Materialize().WithService(inner, itemSvc)
-	getItemCostsEndpoint := (&itemep.GetItemCostsEndpoint{}).Materialize().WithService(inner, itemSvc)
-	getItemTrendsEndpoint := (&itemep.GetItemTrendsEndpoint{}).Materialize().WithService(inner, itemSvc)
-	exportItemsEndpoint := (&itemep.ExportItemsEndpoint{}).Materialize().WithService(inner, itemSvc)
-	addItemAttributeEndpoint := (&itemep.AddItemAttributeEndpoint{}).Materialize().WithService(inner, itemSvc)
-	removeItemAttributeEndpoint := (&itemep.RemoveItemAttributeEndpoint{}).Materialize().WithService(inner, itemSvc)
-	changeItemCategoryEndpoint := (&itemep.ChangeItemCategoryEndpoint{}).Materialize().WithService(inner, itemSvc)
-	updateItemInventoryEndpoint := (&itemep.UpdateItemInventoryEndpoint{}).Materialize().WithService(inner, itemSvc)
-	bulkCreateItemsEndpoint := (&itemep.BulkCreateItemsEndpoint{}).Materialize().WithService(inner, itemSvc)
-	bulkReconcileItemsEndpoint := (&itemep.BulkReconcileItemsEndpoint{}).Materialize().WithService(inner, itemSvc)
+	listItemsEndpoint := apiendpoint.From(&itemep.ListItemsEndpoint{}).WithService(inner, itemSvc)
+	getItemEndpoint := apiendpoint.From(&itemep.RetrieveItemEndpoint{}).WithService(inner, itemSvc)
+	getItemInventoryEndpoint := apiendpoint.From(&itemep.RetrieveItemInventoryEndpoint{}).WithService(inner, itemSvc)
+	getItemCostsEndpoint := apiendpoint.From(&itemep.GetItemCostsEndpoint{}).WithService(inner, itemSvc)
+	getItemTrendsEndpoint := apiendpoint.From(&itemep.GetItemTrendsEndpoint{}).WithService(inner, itemSvc)
+	exportItemsEndpoint := apiendpoint.From(&itemep.ExportItemsEndpoint{}).WithService(inner, itemSvc)
+	addItemAttributeEndpoint := apiendpoint.From(&itemep.AddItemAttributeEndpoint{}).WithService(inner, itemSvc)
+	removeItemAttributeEndpoint := apiendpoint.From(&itemep.RemoveItemAttributeEndpoint{}).WithService(inner, itemSvc)
+	changeItemCategoryEndpoint := apiendpoint.From(&itemep.ChangeItemCategoryEndpoint{}).WithService(inner, itemSvc)
+	updateItemInventoryEndpoint := apiendpoint.From(&itemep.UpdateItemInventoryEndpoint{}).WithService(inner, itemSvc)
+	bulkCreateItemsEndpoint := apiendpoint.From(&itemep.BulkCreateItemsEndpoint{}).WithService(inner, itemSvc)
+	bulkReconcileItemsEndpoint := apiendpoint.From(&itemep.BulkReconcileItemsEndpoint{}).WithService(inner, itemSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listItemsEndpoint,

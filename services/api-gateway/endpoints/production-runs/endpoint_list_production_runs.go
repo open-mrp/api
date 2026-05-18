@@ -35,13 +35,11 @@ func (e *ListProductionRunsEndpoint) Materialize() *apiendpoint.APIEndpoint[*Lis
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/production-runs",
-		Request:           &ListProductionRunsRequest{},
-		Response:          &apiresource.List[apiresource.ProductionRunSummary]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListProductionRunsRequest) (*apiresource.List[apiresource.ProductionRunSummary], *apierror.APIError) {
 			return svc.(ProductionRunSvc).ListProductionRuns
 		},
-	}).WithDocSource(e)
+	})
 }

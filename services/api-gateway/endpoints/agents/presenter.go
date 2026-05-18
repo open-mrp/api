@@ -1,6 +1,7 @@
 package agentep
 
 import (
+	"context"
 	"encoding/json"
 	"sort"
 
@@ -93,7 +94,7 @@ func AgentDefinitionPresenter(a *pb.AgentDefinitionInfo, roleInfo *ResolvedRole)
 	}
 }
 
-func AgentDefinitionListPresenter(resp *pb.ListAgentDefinitionsResponse, roleResolver func(roleID string) *ResolvedRole) *apiresource.List[apiresource.AgentDefinition] {
+func AgentDefinitionListPresenter(ctx context.Context, resp *pb.ListAgentDefinitionsResponse, roleResolver func(roleID string) *ResolvedRole) *apiresource.List[apiresource.AgentDefinition] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.AgentDefinition](nil, apiresource.PageInfo{})
 	}
@@ -107,7 +108,7 @@ func AgentDefinitionListPresenter(resp *pb.ListAgentDefinitionsResponse, roleRes
 		agents[i] = AgentDefinitionPresenter(a, roleInfo)
 	}
 
-	return apiresource.NewList(agents, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(agents, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }
 
 func AgentTokenUsagePresenter(u *pb.AgentTokenUsageInfo) apiresource.AgentTokenUsage {
@@ -128,7 +129,7 @@ func AgentTokenUsagePresenter(u *pb.AgentTokenUsageInfo) apiresource.AgentTokenU
 	}
 }
 
-func AgentTokenUsageListPresenter(resp *pb.ListTokenUsageResponse) *apiresource.List[apiresource.AgentTokenUsage] {
+func AgentTokenUsageListPresenter(ctx context.Context, resp *pb.ListTokenUsageResponse) *apiresource.List[apiresource.AgentTokenUsage] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.AgentTokenUsage](nil, apiresource.PageInfo{})
 	}
@@ -140,12 +141,7 @@ func AgentTokenUsageListPresenter(resp *pb.ListTokenUsageResponse) *apiresource.
 
 	pageInfo := apiresource.PageInfo{}
 	if resp.PageInfo != nil {
-		pageInfo = apiresource.PageInfo{
-			NextCursor:  resp.PageInfo.NextCursor,
-			PrevCursor:  resp.PageInfo.PrevCursor,
-			HasNextPage: resp.PageInfo.HasNextPage,
-			HasPrevPage: resp.PageInfo.HasPrevPage,
-		}
+		pageInfo = grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)
 	}
 
 	return apiresource.NewList(usage, pageInfo)

@@ -25,8 +25,6 @@ func (e *RetrievePartEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveP
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/parts/{id}",
-		Request:           &RetrievePartRequest{},
-		Response:          &apiresource.Part{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -37,5 +35,5 @@ func (e *RetrievePartEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveP
 			ObjectType: constants.ObjectTypePart,
 			Fields:     []string{"item", "item.category", "item.category.properties", "item.category.unit_group", "item.unit_value", "item.unit_cost", "item.burn_rate", "item.attributes"},
 		}),
-	}).WithDocSource(e)
+	})
 }

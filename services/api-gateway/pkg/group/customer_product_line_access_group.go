@@ -39,11 +39,11 @@ func (*CustomerProductLineAccessEndpointGroup) Materialize(config *CustomerProdu
 		ResourceType: &apiresource.CustomerProductLineAccess{},
 	}
 
-	listEndpoint := (&customerproductlineaccessep.ListCustomerProductLineAccessEndpoint{}).Materialize().WithService(inner, svc)
-	retrieveEndpoint := (&customerproductlineaccessep.RetrieveCustomerProductLineAccessEndpoint{}).Materialize().WithService(inner, svc)
-	createEndpoint := (&customerproductlineaccessep.CreateCustomerProductLineAccessEndpoint{}).Materialize().WithService(inner, svc)
-	updateEndpoint := (&customerproductlineaccessep.UpdateCustomerProductLineAccessEndpoint{}).Materialize().WithService(inner, svc)
-	deleteEndpoint := (&customerproductlineaccessep.DeleteCustomerProductLineAccessEndpoint{}).Materialize().WithService(inner, svc)
+	listEndpoint := apiendpoint.From(&customerproductlineaccessep.ListCustomerProductLineAccessEndpoint{}).WithService(inner, svc)
+	retrieveEndpoint := apiendpoint.From(&customerproductlineaccessep.RetrieveCustomerProductLineAccessEndpoint{}).WithService(inner, svc)
+	createEndpoint := apiendpoint.From(&customerproductlineaccessep.CreateCustomerProductLineAccessEndpoint{}).WithService(inner, svc)
+	updateEndpoint := apiendpoint.From(&customerproductlineaccessep.UpdateCustomerProductLineAccessEndpoint{}).WithService(inner, svc)
+	deleteEndpoint := apiendpoint.From(&customerproductlineaccessep.DeleteCustomerProductLineAccessEndpoint{}).WithService(inner, svc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listEndpoint,

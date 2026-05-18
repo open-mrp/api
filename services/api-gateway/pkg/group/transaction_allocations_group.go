@@ -39,10 +39,10 @@ func (*TransactionAllocationsEndpointGroup) Materialize(config *TransactionAlloc
 		ResourceType: &apiresource.AllocationEntry{},
 	}
 
-	listAllocationEntriesEndpoint := (&transactionallocationep.ListAllocationEntriesEndpoint{}).Materialize().WithService(inner, svc)
-	updateTransactionAllocationEndpoint := (&transactionallocationep.UpdateTransactionAllocationEndpoint{}).Materialize().WithService(inner, svc)
-	deleteTransactionAllocationEndpoint := (&transactionallocationep.DeleteTransactionAllocationEndpoint{}).Materialize().WithService(inner, svc)
-	listOpenCreditsEndpoint := (&transactionallocationep.ListOpenCreditsEndpoint{}).Materialize().WithService(inner, svc)
+	listAllocationEntriesEndpoint := apiendpoint.From(&transactionallocationep.ListAllocationEntriesEndpoint{}).WithService(inner, svc)
+	updateTransactionAllocationEndpoint := apiendpoint.From(&transactionallocationep.UpdateTransactionAllocationEndpoint{}).WithService(inner, svc)
+	deleteTransactionAllocationEndpoint := apiendpoint.From(&transactionallocationep.DeleteTransactionAllocationEndpoint{}).WithService(inner, svc)
+	listOpenCreditsEndpoint := apiendpoint.From(&transactionallocationep.ListOpenCreditsEndpoint{}).WithService(inner, svc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listAllocationEntriesEndpoint,

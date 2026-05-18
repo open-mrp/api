@@ -44,15 +44,15 @@ func (*BillingEndpointGroup) Materialize(config *BillingEndpointGroupConfig) *Bi
 		ResourceType: &apiresource.PricingPlan{},
 	}
 
-	getPricingPlansEndpoint := (&billingep.GetPricingPlansEndpoint{}).Materialize().WithService(inner, billingSvc)
-	getAccountUsageEndpoint := (&billingep.GetAccountUsageEndpoint{}).Materialize().WithService(inner, billingSvc)
-	createBillingPortalSessionEndpoint := (&billingep.CreateBillingPortalSessionEndpoint{}).Materialize().WithService(inner, billingSvc)
-	getPlanChangePreviewEndpoint := (&billingep.GetPlanChangePreviewEndpoint{}).Materialize().WithService(inner, billingSvc)
-	createEnterpriseInquiryEndpoint := (&billingep.CreateEnterpriseInquiryEndpoint{}).Materialize().WithService(inner, billingSvc)
-	ensureBillingCustomerEndpoint := (&billingep.EnsureBillingCustomerEndpoint{}).Materialize().WithService(inner, billingSvc)
-	switchPlanEndpoint := (&billingep.SwitchPlanEndpoint{}).Materialize().WithService(inner, billingSvc)
-	getSpendingCapEndpoint := (&billingep.GetSpendingCapEndpoint{}).Materialize().WithService(inner, billingSvc)
-	setSpendingCapEndpoint := (&billingep.SetSpendingCapEndpoint{}).Materialize().WithService(inner, billingSvc)
+	getPricingPlansEndpoint := apiendpoint.From(&billingep.GetPricingPlansEndpoint{}).WithService(inner, billingSvc)
+	getAccountUsageEndpoint := apiendpoint.From(&billingep.GetAccountUsageEndpoint{}).WithService(inner, billingSvc)
+	createBillingPortalSessionEndpoint := apiendpoint.From(&billingep.CreateBillingPortalSessionEndpoint{}).WithService(inner, billingSvc)
+	getPlanChangePreviewEndpoint := apiendpoint.From(&billingep.GetPlanChangePreviewEndpoint{}).WithService(inner, billingSvc)
+	createEnterpriseInquiryEndpoint := apiendpoint.From(&billingep.CreateEnterpriseInquiryEndpoint{}).WithService(inner, billingSvc)
+	ensureBillingCustomerEndpoint := apiendpoint.From(&billingep.EnsureBillingCustomerEndpoint{}).WithService(inner, billingSvc)
+	switchPlanEndpoint := apiendpoint.From(&billingep.SwitchPlanEndpoint{}).WithService(inner, billingSvc)
+	getSpendingCapEndpoint := apiendpoint.From(&billingep.GetSpendingCapEndpoint{}).WithService(inner, billingSvc)
+	setSpendingCapEndpoint := apiendpoint.From(&billingep.SetSpendingCapEndpoint{}).WithService(inner, billingSvc)
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		getPricingPlansEndpoint,
 		getAccountUsageEndpoint,

@@ -1707,10 +1707,7 @@ func (s *itemSvcImpl) BulkReconcileItems(ctx context.Context, params domain.Bulk
 		// Process in batches of 50
 		batchSize := 50
 		for batchStart := 0; batchStart < len(validItems); batchStart += batchSize {
-			batchEnd := batchStart + batchSize
-			if batchEnd > len(validItems) {
-				batchEnd = len(validItems)
-			}
+			batchEnd := min(batchStart+batchSize, len(validItems))
 			batch := validItems[batchStart:batchEnd]
 
 			apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *itemSvcImpl) *apierror.APIError {

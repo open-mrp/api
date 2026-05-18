@@ -27,8 +27,6 @@ func (e *RetrieveInvoiceEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retrie
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/finance/invoices/{id}",
-		Request:           &RetrieveInvoiceRequest{},
-		Response:          &apiresource.Invoice{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -39,5 +37,5 @@ func (e *RetrieveInvoiceEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retrie
 			ObjectType: constants.ObjectTypeInvoice,
 			Fields:     []string{"lines", "allocations"},
 		}),
-	}).WithDocSource(e)
+	})
 }

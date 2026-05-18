@@ -35,13 +35,11 @@ func (e *ListDeliveriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListDel
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/deliveries",
-		Request:           &ListDeliveriesRequest{},
-		Response:          &apiresource.List[apiresource.DeliverySummary]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListDeliveriesRequest) (*apiresource.List[apiresource.DeliverySummary], *apierror.APIError) {
 			return svc.(DeliverySvc).ListDeliveries
 		},
-	}).WithDocSource(e)
+	})
 }

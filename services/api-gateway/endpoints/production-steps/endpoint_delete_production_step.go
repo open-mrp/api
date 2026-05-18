@@ -24,13 +24,11 @@ func (e *DeleteProductionStepEndpoint) Materialize() *apiendpoint.APIEndpoint[*D
 		Method:            http.MethodDelete,
 		Route:             "/v1/operations/production-steps/{id}",
 		ContentType:       "application/json",
-		Request:           &DeleteProductionStepRequest{},
-		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteProductionStepRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(ProductionStepSvc).DeleteProductionStep
 		},
-	}).WithDocSource(e)
+	})
 }

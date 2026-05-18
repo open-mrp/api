@@ -45,8 +45,6 @@ func (e *ListItemsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListItemsReq
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/items",
-		Request:           &ListItemsRequest{},
-		Response:          &apiresource.List[apiresource.Item]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -57,5 +55,5 @@ func (e *ListItemsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListItemsReq
 			ObjectType: constants.ObjectTypeItem,
 			Fields:     []string{"category", "unit_value", "unit_cost", "burn_rate", "attributes", "category.unit_group", "category.properties", "category.unit_group.base_unit", "category.unit_group.associated_units", "category.unit_group.associated_units.unit"},
 		}),
-	}).WithDocSource(e)
+	})
 }

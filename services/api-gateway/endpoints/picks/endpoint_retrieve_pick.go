@@ -24,8 +24,6 @@ func (e *RetrievePickEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveP
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/picks/{id}",
-		Request:           &RetrievePickRequest{},
-		Response:          &apiresource.PickDetail{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -41,5 +39,5 @@ func (e *RetrievePickEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveP
 				"lines.sales_order_line",
 			},
 		}),
-	}).WithDocSource(e)
+	})
 }

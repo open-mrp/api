@@ -72,7 +72,7 @@ func (m *productionRunSvcImpl) ListProductionRuns(ctx context.Context, req *List
 		return nil, apiErr
 	}
 
-	return ProductionRunListPresenter(resp), nil
+	return ProductionRunListPresenter(ctx, resp), nil
 }
 
 func (m *productionRunSvcImpl) GetProductionRun(ctx context.Context, req *RetrieveProductionRunRequest) (*apiresource.ProductionRunDetail, *apierror.APIError) {
@@ -195,5 +195,5 @@ func (m *productionRunSvcImpl) ListBatchesByProductionRun(ctx context.Context, r
 		return nil, apiErr
 	}
 
-	return ListBatchesPresenter(resp), nil
+	return ListBatchesPresenter(ctx, resp), nil
 }

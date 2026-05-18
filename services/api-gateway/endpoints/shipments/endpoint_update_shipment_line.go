@@ -42,13 +42,11 @@ func (e *UpdateShipmentLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upd
 		Method:            http.MethodPatch,
 		Route:             "/v1/operations/shipments/{shipment_id}/lines/{id}",
 		ContentType:       "application/json",
-		Request:           &UpdateShipmentLineRequest{},
-		Response:          &apiresource.ShipmentLine{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateShipmentLineRequest) (*apiresource.ShipmentLine, *apierror.APIError) {
 			return svc.(ShipmentSvc).UpdateShipmentLine
 		},
-	}).WithDocSource(e)
+	})
 }

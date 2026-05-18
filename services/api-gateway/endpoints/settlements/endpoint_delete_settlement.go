@@ -24,13 +24,11 @@ func (e *DeleteSettlementEndpoint) Materialize() *apiendpoint.APIEndpoint[*Delet
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
 		Route:             "/v1/finance/settlements/{id}",
-		Request:           &DeleteSettlementRequest{},
-		Response:          &apiresource.Settlement{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteSettlementRequest) (*apiresource.Settlement, *apierror.APIError) {
 			return svc.(SettlementSvc).DeleteSettlement
 		},
-	}).WithDocSource(e)
+	})
 }

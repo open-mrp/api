@@ -283,7 +283,7 @@ func (suite *SalesOrderSvcTestSuite) TestListSalesOrders_InternalActorRequiresRe
 		Actor: &types.IdentityActor{
 			RelationType: types.IdentityRelationTypeInternal,
 			ID:           "usr",
-			AccountID:    ptr("ac_test"),
+			AccountID:    new("ac_test"),
 			RoleType:     &customCode,
 			Permissions:  map[string]bool{},
 		},
@@ -355,13 +355,13 @@ func baseCreateOrderParams() domain.CreateSalesOrderParams {
 		BuyerAccountID:       "ac_buyer",
 		SalesOrderStatusCode: string(constants.SalesOrderStatusCodeEstimate),
 		PriorityCode:         "normal",
-		SalesOrderTypeCode:   "standard",
-		BillToName:           ptr("Acme Inc"),
-		BillToCountry:        ptr("US"),
-		ShipToName:           ptr("Acme Warehouse"),
-		ShipToCountry:        ptr("US"),
-		ShipToState:          ptr("CA"),
-		ShipToPostalCode:     ptr("90001"),
+		SalesOrderTypeCode:   "sales_order",
+		BillToName:           new("Acme Inc"),
+		BillToCountry:        new("US"),
+		ShipToName:           new("Acme Warehouse"),
+		ShipToCountry:        new("US"),
+		ShipToState:          new("CA"),
+		ShipToPostalCode:     new("90001"),
 		Lines: []domain.CreateSalesOrderLineInput{
 			{
 				ProductID:                  "prod_1",
@@ -586,7 +586,7 @@ func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_PreservesNullableField
 
 	_, apiErr := suite.svc.UpdateSalesOrder(ctx, domain.UpdateSalesOrderParams{
 		SalesOrderID: "or_1",
-		Note:         ptr("updated note"),
+		Note:         new("updated note"),
 	})
 	suite.Nil(apiErr)
 }
@@ -600,7 +600,7 @@ func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_DuplicateOrderNumberRe
 		Get(gomock.Any(), "ac_test", "or_1").
 		Return(&domain.SalesOrder{ID: "or_1", Number: "1000", BuyerAccountID: "ac_buyer"}, nil).Times(1)
 	suite.orderRepo.EXPECT().
-		IsDuplicateOrderNumber(gomock.Any(), "ac_test", "1001", ptr("or_1")).
+		IsDuplicateOrderNumber(gomock.Any(), "ac_test", "1001", new("or_1")).
 		Return(true, nil).Times(1)
 
 	suite.expectCacheError()
@@ -638,7 +638,7 @@ func (suite *SalesOrderSvcTestSuite) TestUpdateSalesOrder_ShipToChangeTriggersAd
 
 	_, apiErr := suite.svc.UpdateSalesOrder(ctx, domain.UpdateSalesOrderParams{
 		SalesOrderID:     "or_1",
-		ShipToPostalCode: ptr("94105"),
+		ShipToPostalCode: new("94105"),
 	})
 	suite.Nil(apiErr)
 }

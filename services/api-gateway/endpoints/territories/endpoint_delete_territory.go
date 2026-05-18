@@ -26,13 +26,11 @@ func (e *DeleteTerritoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Delete
 		Method:            http.MethodDelete,
 		Route:             "/v1/sales/accounts/{account_id}/territories/{id}",
 		ContentType:       "application/json",
-		Request:           &DeleteTerritoryRequest{},
-		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteTerritoryRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(TerritorySvc).DeleteTerritory
 		},
-	}).WithDocSource(e)
+	})
 }

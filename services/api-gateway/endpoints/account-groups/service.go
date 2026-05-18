@@ -67,7 +67,7 @@ func (m *accountGroupSvcImpl) ListAccountGroups(ctx context.Context, req *ListAc
 		return nil, apiErr
 	}
 
-	return AccountGroupListPresenter(resp), nil
+	return AccountGroupListPresenter(ctx, resp), nil
 }
 
 func (m *accountGroupSvcImpl) GetAccountGroup(ctx context.Context, req *RetrieveAccountGroupRequest) (*apiresource.AccountGroup, *apierror.APIError) {

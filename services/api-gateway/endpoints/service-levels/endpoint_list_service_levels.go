@@ -26,8 +26,6 @@ func (e *ListServiceLevelsEndpoint) Materialize() *apiendpoint.APIEndpoint[*List
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/carriers/{carrier_id}/service-levels",
-		Request:           &ListServiceLevelsRequest{},
-		Response:          &apiresource.List[apiresource.ServiceLevel]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -38,5 +36,5 @@ func (e *ListServiceLevelsEndpoint) Materialize() *apiendpoint.APIEndpoint[*List
 			ObjectType: constants.ObjectTypeServiceLevel,
 			Fields:     []string{"owner", "owner.account"},
 		}),
-	}).WithDocSource(e)
+	})
 }

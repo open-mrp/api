@@ -65,7 +65,7 @@ func (m *ediDCLocationSvcImpl) ListDCLocations(ctx context.Context, req *ListDCL
 		return nil, apiErr
 	}
 
-	return DCLocationListPresenter(resp), nil
+	return DCLocationListPresenter(ctx, resp), nil
 }
 
 func (m *ediDCLocationSvcImpl) GetDCLocation(ctx context.Context, req *RetrieveDCLocationRequest) (*apiresource.DCLocation, *apierror.APIError) {

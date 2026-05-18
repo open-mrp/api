@@ -45,13 +45,13 @@ func (*AgentsEndpointGroup) Materialize(config *AgentsEndpointGroupConfig) *Agen
 	}
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
-		(&agentep.CreateAgentEndpoint{}).Materialize().WithService(inner, agentSvc),
-		(&agentep.ListAgentsEndpoint{}).Materialize().WithService(inner, agentSvc),
-		(&agentep.RetrieveAgentEndpoint{}).Materialize().WithService(inner, agentSvc),
-		(&agentep.UpdateAgentEndpoint{}).Materialize().WithService(inner, agentSvc),
-		(&agentep.DeleteAgentEndpoint{}).Materialize().WithService(inner, agentSvc),
-		(&agentep.UpdateAgentStatusEndpoint{}).Materialize().WithService(inner, agentSvc),
-		(&agentep.ListUsageEndpoint{}).Materialize().WithService(inner, agentSvc),
+		apiendpoint.From(&agentep.CreateAgentEndpoint{}).WithService(inner, agentSvc),
+		apiendpoint.From(&agentep.ListAgentsEndpoint{}).WithService(inner, agentSvc),
+		apiendpoint.From(&agentep.RetrieveAgentEndpoint{}).WithService(inner, agentSvc),
+		apiendpoint.From(&agentep.UpdateAgentEndpoint{}).WithService(inner, agentSvc),
+		apiendpoint.From(&agentep.DeleteAgentEndpoint{}).WithService(inner, agentSvc),
+		apiendpoint.From(&agentep.UpdateAgentStatusEndpoint{}).WithService(inner, agentSvc),
+		apiendpoint.From(&agentep.ListUsageEndpoint{}).WithService(inner, agentSvc),
 	}
 
 	return &AgentsEndpointGroup{inner}

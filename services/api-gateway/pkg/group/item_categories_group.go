@@ -39,14 +39,14 @@ func (*ItemCategoriesEndpointGroup) Materialize(config *ItemCategoriesEndpointGr
 		ResourceType: &apiresource.ItemCategory{},
 	}
 
-	listEndpoint := (&itemcategoryep.ListItemCategoriesEndpoint{}).Materialize().WithService(inner, itemCategorySvc)
-	retrieveEndpoint := (&itemcategoryep.RetrieveItemCategoryEndpoint{}).Materialize().WithService(inner, itemCategorySvc)
-	createEndpoint := (&itemcategoryep.CreateItemCategoryEndpoint{}).Materialize().WithService(inner, itemCategorySvc)
-	updateEndpoint := (&itemcategoryep.UpdateItemCategoryEndpoint{}).Materialize().WithService(inner, itemCategorySvc)
-	deleteEndpoint := (&itemcategoryep.DeleteItemCategoryEndpoint{}).Materialize().WithService(inner, itemCategorySvc)
-	addPropertyEndpoint := (&itemcategoryep.AddItemCategoryPropertyEndpoint{}).Materialize().WithService(inner, itemCategorySvc)
-	removePropertyEndpoint := (&itemcategoryep.RemoveItemCategoryPropertyEndpoint{}).Materialize().WithService(inner, itemCategorySvc)
-	changeUnitGroupEndpoint := (&itemcategoryep.ChangeItemCategoryUnitGroupEndpoint{}).Materialize().WithService(inner, itemCategorySvc)
+	listEndpoint := apiendpoint.From(&itemcategoryep.ListItemCategoriesEndpoint{}).WithService(inner, itemCategorySvc)
+	retrieveEndpoint := apiendpoint.From(&itemcategoryep.RetrieveItemCategoryEndpoint{}).WithService(inner, itemCategorySvc)
+	createEndpoint := apiendpoint.From(&itemcategoryep.CreateItemCategoryEndpoint{}).WithService(inner, itemCategorySvc)
+	updateEndpoint := apiendpoint.From(&itemcategoryep.UpdateItemCategoryEndpoint{}).WithService(inner, itemCategorySvc)
+	deleteEndpoint := apiendpoint.From(&itemcategoryep.DeleteItemCategoryEndpoint{}).WithService(inner, itemCategorySvc)
+	addPropertyEndpoint := apiendpoint.From(&itemcategoryep.AddItemCategoryPropertyEndpoint{}).WithService(inner, itemCategorySvc)
+	removePropertyEndpoint := apiendpoint.From(&itemcategoryep.RemoveItemCategoryPropertyEndpoint{}).WithService(inner, itemCategorySvc)
+	changeUnitGroupEndpoint := apiendpoint.From(&itemcategoryep.ChangeItemCategoryUnitGroupEndpoint{}).WithService(inner, itemCategorySvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listEndpoint,

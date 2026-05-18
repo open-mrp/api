@@ -1,6 +1,8 @@
 package departmentep
 
 import (
+	"context"
+
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -71,7 +73,7 @@ func DepartmentPresenter(d *pb.DepartmentInfo) apiresource.Department {
 	return dept
 }
 
-func DepartmentListPresenter(resp *pb.ListDepartmentsResponse) *apiresource.List[apiresource.Department] {
+func DepartmentListPresenter(ctx context.Context, resp *pb.ListDepartmentsResponse) *apiresource.List[apiresource.Department] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.Department](nil, apiresource.PageInfo{})
 	}
@@ -81,5 +83,5 @@ func DepartmentListPresenter(resp *pb.ListDepartmentsResponse) *apiresource.List
 		depts[i] = DepartmentPresenter(d)
 	}
 
-	return apiresource.NewList(depts, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(depts, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }

@@ -18,13 +18,11 @@ func (e *CreateBillingPortalSessionEndpoint) Materialize() *apiendpoint.APIEndpo
 		Method:            http.MethodPost,
 		Route:             "/v1/billing/portal-sessions",
 		ContentType:       "application/json",
-		Request:           &apiresource.EmptyResource{},
-		Response:          &apiresource.BillingPortalSessionResponse{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *apiresource.EmptyResource) (*apiresource.BillingPortalSessionResponse, *apierror.APIError) {
 			return svc.(BillingSvc).CreateBillingPortalSession
 		},
-	}).WithDocSource(e)
+	})
 }

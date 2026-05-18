@@ -36,8 +36,6 @@ func (e *CreateAccountGroupProductLineAccessEndpoint) Materialize() *apiendpoint
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/product-line-access/account-groups",
-		Request:           &CreateAccountGroupProductLineAccessRequest{},
-		Response:          &apiresource.AccountGroupProductLineAccess{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
@@ -47,5 +45,5 @@ func (e *CreateAccountGroupProductLineAccessEndpoint) Materialize() *apiendpoint
 		LocationFunc: func(resp *apiresource.AccountGroupProductLineAccess) string {
 			return "/v1/sales/product-line-access/account-groups/" + resp.AccountGroup.ID
 		},
-	}).WithDocSource(e)
+	})
 }

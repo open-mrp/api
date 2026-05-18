@@ -33,7 +33,7 @@ func TestSalesOrderSummaryPresenter(t *testing.T) {
 		PriorityId:               &priorityID,
 		LineCount:                1,
 		IsAcknowledgmentSent:     true,
-		CustomerPoNumber:         strPtr("PO-123"),
+		CustomerPoNumber:         new("PO-123"),
 		CreatedAt:                now,
 		UpdatedAt:                now,
 	}
@@ -103,5 +103,3 @@ func TestSalesOrderDetailPresenter(t *testing.T) {
 	result := SalesOrderDetailPresenter(info)
 	resourcetest.ValidateExpandableStubs(t, "SalesOrderDetail", result)
 }
-
-func strPtr(s string) *string { return &s }

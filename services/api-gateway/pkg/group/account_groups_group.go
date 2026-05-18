@@ -39,11 +39,11 @@ func (*AccountGroupsEndpointGroup) Materialize(config *AccountGroupsEndpointGrou
 		ResourceType: &apiresource.AccountGroup{},
 	}
 
-	listEndpoint := (&accountgroupep.ListAccountGroupsEndpoint{}).Materialize().WithService(inner, accountGroupSvc)
-	retrieveEndpoint := (&accountgroupep.RetrieveAccountGroupEndpoint{}).Materialize().WithService(inner, accountGroupSvc)
-	createEndpoint := (&accountgroupep.CreateAccountGroupEndpoint{}).Materialize().WithService(inner, accountGroupSvc)
-	updateEndpoint := (&accountgroupep.UpdateAccountGroupEndpoint{}).Materialize().WithService(inner, accountGroupSvc)
-	deleteEndpoint := (&accountgroupep.DeleteAccountGroupEndpoint{}).Materialize().WithService(inner, accountGroupSvc)
+	listEndpoint := apiendpoint.From(&accountgroupep.ListAccountGroupsEndpoint{}).WithService(inner, accountGroupSvc)
+	retrieveEndpoint := apiendpoint.From(&accountgroupep.RetrieveAccountGroupEndpoint{}).WithService(inner, accountGroupSvc)
+	createEndpoint := apiendpoint.From(&accountgroupep.CreateAccountGroupEndpoint{}).WithService(inner, accountGroupSvc)
+	updateEndpoint := apiendpoint.From(&accountgroupep.UpdateAccountGroupEndpoint{}).WithService(inner, accountGroupSvc)
+	deleteEndpoint := apiendpoint.From(&accountgroupep.DeleteAccountGroupEndpoint{}).WithService(inner, accountGroupSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listEndpoint,

@@ -39,13 +39,13 @@ func (*LocationsEndpointGroup) Materialize(config *LocationsEndpointGroupConfig)
 		ResourceType: &apiresource.Location{},
 	}
 
-	listLocationsEndpoint := (&locationep.ListLocationsEndpoint{}).Materialize().WithService(inner, locationSvc)
-	getLocationEndpoint := (&locationep.RetrieveLocationEndpoint{}).Materialize().WithService(inner, locationSvc)
-	createLocationEndpoint := (&locationep.CreateLocationEndpoint{}).Materialize().WithService(inner, locationSvc)
-	updateLocationEndpoint := (&locationep.UpdateLocationEndpoint{}).Materialize().WithService(inner, locationSvc)
-	deleteLocationEndpoint := (&locationep.DeleteLocationEndpoint{}).Materialize().WithService(inner, locationSvc)
-	listLocationTypesEndpoint := (&locationep.ListLocationTypesEndpoint{}).Materialize().WithService(inner, locationSvc)
-	getLocationTypeEndpoint := (&locationep.RetrieveLocationTypeEndpoint{}).Materialize().WithService(inner, locationSvc)
+	listLocationsEndpoint := apiendpoint.From(&locationep.ListLocationsEndpoint{}).WithService(inner, locationSvc)
+	getLocationEndpoint := apiendpoint.From(&locationep.RetrieveLocationEndpoint{}).WithService(inner, locationSvc)
+	createLocationEndpoint := apiendpoint.From(&locationep.CreateLocationEndpoint{}).WithService(inner, locationSvc)
+	updateLocationEndpoint := apiendpoint.From(&locationep.UpdateLocationEndpoint{}).WithService(inner, locationSvc)
+	deleteLocationEndpoint := apiendpoint.From(&locationep.DeleteLocationEndpoint{}).WithService(inner, locationSvc)
+	listLocationTypesEndpoint := apiendpoint.From(&locationep.ListLocationTypesEndpoint{}).WithService(inner, locationSvc)
+	getLocationTypeEndpoint := apiendpoint.From(&locationep.RetrieveLocationTypeEndpoint{}).WithService(inner, locationSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listLocationsEndpoint,

@@ -24,8 +24,6 @@ func (e *ListEmailLogsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListEmai
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/core/email-logs",
-		Request:           &ListEmailLogsRequest{},
-		Response:          &apiresource.List[apiresource.EmailLog]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -36,5 +34,5 @@ func (e *ListEmailLogsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListEmai
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListEmailLogsRequest) (*apiresource.List[apiresource.EmailLog], *apierror.APIError) {
 			return svc.(EmailLogSvc).ListEmailLogs
 		},
-	}).WithDocSource(e)
+	})
 }

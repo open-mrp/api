@@ -57,18 +57,16 @@ type UpdateVolumeDiscountRequest struct {
 }
 
 var sampleUpdateVolumeDiscountRequest = &UpdateVolumeDiscountRequest{
-	Name:     ptrString("Updated Bulk Discount"),
+	Name:     new("Updated Bulk Discount"),
 	HasTiers: true,
 	Tiers: []UpdateVolumeDiscountTierInput{
 		{
-			Name:               ptrString("50+ Units"),
-			DiscountPercentage: ptrString("10.000000000000000000000000000000"),
-			Threshold:          ptrString("50.000000000000000000000000000000"),
+			Name:               new("50+ Units"),
+			DiscountPercentage: new("10.000000000000000000000000000000"),
+			Threshold:          new("50.000000000000000000000000000000"),
 		},
 	},
 }
-
-func ptrString(s string) *string { return &s }
 
 func (*UpdateVolumeDiscountRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateVolumeDiscountRequest)
@@ -83,13 +81,11 @@ func (e *UpdateVolumeDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*U
 		Method:            http.MethodPatch,
 		Route:             "/v1/sales/volume-discounts/{id}",
 		ContentType:       "application/json",
-		Request:           &UpdateVolumeDiscountRequest{},
-		Response:          &apiresource.VolumeDiscount{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateVolumeDiscountRequest) (*apiresource.VolumeDiscount, *apierror.APIError) {
 			return svc.(VolumeDiscountSvc).UpdateVolumeDiscount
 		},
-	}).WithDocSource(e)
+	})
 }

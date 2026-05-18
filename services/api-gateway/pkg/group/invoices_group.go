@@ -39,10 +39,10 @@ func (*InvoicesEndpointGroup) Materialize(config *InvoicesEndpointGroupConfig) *
 		ResourceType: &apiresource.Invoice{},
 	}
 
-	listInvoicesEndpoint := (&invoiceep.ListInvoicesEndpoint{}).Materialize().WithService(inner, invoiceSvc)
-	getInvoiceEndpoint := (&invoiceep.RetrieveInvoiceEndpoint{}).Materialize().WithService(inner, invoiceSvc)
-	updateInvoiceEndpoint := (&invoiceep.UpdateInvoiceEndpoint{}).Materialize().WithService(inner, invoiceSvc)
-	listCustomerInvoicesEndpoint := (&invoiceep.ListCustomerInvoicesEndpoint{}).Materialize().WithService(inner, invoiceSvc)
+	listInvoicesEndpoint := apiendpoint.From(&invoiceep.ListInvoicesEndpoint{}).WithService(inner, invoiceSvc)
+	getInvoiceEndpoint := apiendpoint.From(&invoiceep.RetrieveInvoiceEndpoint{}).WithService(inner, invoiceSvc)
+	updateInvoiceEndpoint := apiendpoint.From(&invoiceep.UpdateInvoiceEndpoint{}).WithService(inner, invoiceSvc)
+	listCustomerInvoicesEndpoint := apiendpoint.From(&invoiceep.ListCustomerInvoicesEndpoint{}).WithService(inner, invoiceSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listInvoicesEndpoint,

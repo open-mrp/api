@@ -24,13 +24,11 @@ func (e *DeletePartEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeletePartR
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/parts/{id}",
-		Request:           &DeletePartRequest{},
-		Response:          &apiresource.Part{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeletePartRequest) (*apiresource.Part, *apierror.APIError) {
 			return svc.(PartSvc).DeletePart
 		},
-	}).WithDocSource(e)
+	})
 }

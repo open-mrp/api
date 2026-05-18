@@ -25,8 +25,6 @@ func (e *RetrieveUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveU
 		Method:            http.MethodGet,
 		Route:             "/v1/catalog/units/{id}",
 		ContentType:       "application/json",
-		Request:           &RetrieveUnitRequest{},
-		Response:          &apiresource.Unit{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -37,5 +35,5 @@ func (e *RetrieveUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveU
 			ObjectType: constants.ObjectTypeUnit,
 			Fields:     []string{"owner", "owner.account"},
 		}),
-	}).WithDocSource(e)
+	})
 }

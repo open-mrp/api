@@ -39,16 +39,16 @@ func (*PicksEndpointGroup) Materialize(config *PicksEndpointGroupConfig) *PicksE
 		ResourceType: &apiresource.PickDetail{},
 	}
 
-	listEndpoint := (&pickep.ListPicksEndpoint{}).Materialize().WithService(inner, svc)
-	retrieveEndpoint := (&pickep.RetrievePickEndpoint{}).Materialize().WithService(inner, svc)
-	updateEndpoint := (&pickep.UpdatePickEndpoint{}).Materialize().WithService(inner, svc)
-	pickAllLinesEndpoint := (&pickep.PickAllLinesEndpoint{}).Materialize().WithService(inner, svc)
-	voidEndpoint := (&pickep.VoidPickEndpoint{}).Materialize().WithService(inner, svc)
-	packEndpoint := (&pickep.PackPickEndpoint{}).Materialize().WithService(inner, svc)
-	getShipmentsEndpoint := (&pickep.GetPickShipmentsEndpoint{}).Materialize().WithService(inner, svc)
-	updateLineEndpoint := (&pickep.UpdatePickLineEndpoint{}).Materialize().WithService(inner, svc)
-	pickLineEndpoint := (&pickep.PickPickLineEndpoint{}).Materialize().WithService(inner, svc)
-	voidLineEndpoint := (&pickep.VoidPickLineEndpoint{}).Materialize().WithService(inner, svc)
+	listEndpoint := apiendpoint.From(&pickep.ListPicksEndpoint{}).WithService(inner, svc)
+	retrieveEndpoint := apiendpoint.From(&pickep.RetrievePickEndpoint{}).WithService(inner, svc)
+	updateEndpoint := apiendpoint.From(&pickep.UpdatePickEndpoint{}).WithService(inner, svc)
+	pickAllLinesEndpoint := apiendpoint.From(&pickep.PickAllLinesEndpoint{}).WithService(inner, svc)
+	voidEndpoint := apiendpoint.From(&pickep.VoidPickEndpoint{}).WithService(inner, svc)
+	packEndpoint := apiendpoint.From(&pickep.PackPickEndpoint{}).WithService(inner, svc)
+	getShipmentsEndpoint := apiendpoint.From(&pickep.GetPickShipmentsEndpoint{}).WithService(inner, svc)
+	updateLineEndpoint := apiendpoint.From(&pickep.UpdatePickLineEndpoint{}).WithService(inner, svc)
+	pickLineEndpoint := apiendpoint.From(&pickep.PickPickLineEndpoint{}).WithService(inner, svc)
+	voidLineEndpoint := apiendpoint.From(&pickep.VoidPickLineEndpoint{}).WithService(inner, svc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listEndpoint,

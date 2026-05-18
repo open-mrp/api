@@ -39,15 +39,15 @@ func (*TransactionsEndpointGroup) Materialize(config *TransactionsEndpointGroupC
 		ResourceType: &apiresource.TransactionDetail{},
 	}
 
-	listTransactionsEndpoint := (&transactionep.ListTransactionsEndpoint{}).Materialize().WithService(inner, transactionSvc)
-	getTransactionEndpoint := (&transactionep.RetrieveTransactionEndpoint{}).Materialize().WithService(inner, transactionSvc)
-	createTransactionEndpoint := (&transactionep.CreateTransactionEndpoint{}).Materialize().WithService(inner, transactionSvc)
-	updateTransactionEndpoint := (&transactionep.UpdateTransactionEndpoint{}).Materialize().WithService(inner, transactionSvc)
-	deleteTransactionEndpoint := (&transactionep.DeleteTransactionEndpoint{}).Materialize().WithService(inner, transactionSvc)
-	listAccountTransactionsEndpoint := (&transactionep.ListAccountTransactionsEndpoint{}).Materialize().WithService(inner, transactionSvc)
-	listTransactionTypesEndpoint := (&transactionep.ListTransactionTypesEndpoint{}).Materialize().WithService(inner, transactionSvc)
-	listTransactionMethodsEndpoint := (&transactionep.ListTransactionMethodsEndpoint{}).Materialize().WithService(inner, transactionSvc)
-	listAdjustmentTypesEndpoint := (&transactionep.ListAdjustmentTypesEndpoint{}).Materialize().WithService(inner, transactionSvc)
+	listTransactionsEndpoint := apiendpoint.From(&transactionep.ListTransactionsEndpoint{}).WithService(inner, transactionSvc)
+	getTransactionEndpoint := apiendpoint.From(&transactionep.RetrieveTransactionEndpoint{}).WithService(inner, transactionSvc)
+	createTransactionEndpoint := apiendpoint.From(&transactionep.CreateTransactionEndpoint{}).WithService(inner, transactionSvc)
+	updateTransactionEndpoint := apiendpoint.From(&transactionep.UpdateTransactionEndpoint{}).WithService(inner, transactionSvc)
+	deleteTransactionEndpoint := apiendpoint.From(&transactionep.DeleteTransactionEndpoint{}).WithService(inner, transactionSvc)
+	listAccountTransactionsEndpoint := apiendpoint.From(&transactionep.ListAccountTransactionsEndpoint{}).WithService(inner, transactionSvc)
+	listTransactionTypesEndpoint := apiendpoint.From(&transactionep.ListTransactionTypesEndpoint{}).WithService(inner, transactionSvc)
+	listTransactionMethodsEndpoint := apiendpoint.From(&transactionep.ListTransactionMethodsEndpoint{}).WithService(inner, transactionSvc)
+	listAdjustmentTypesEndpoint := apiendpoint.From(&transactionep.ListAdjustmentTypesEndpoint{}).WithService(inner, transactionSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listTransactionsEndpoint,

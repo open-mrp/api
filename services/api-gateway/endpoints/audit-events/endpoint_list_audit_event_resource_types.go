@@ -22,8 +22,6 @@ func (e *ListAuditEventResourceTypesEndpoint) Materialize() *apiendpoint.APIEndp
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/core/audit-events/resource-types",
-		Request:           &ListAuditEventResourceTypesRequest{},
-		Response:          &apiresource.List[constants.ObjectType]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -33,5 +31,5 @@ func (e *ListAuditEventResourceTypesEndpoint) Materialize() *apiendpoint.APIEndp
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListAuditEventResourceTypesRequest) (*apiresource.List[constants.ObjectType], *apierror.APIError) {
 			return svc.(AuditEventSvc).ListAuditEventResourceTypes
 		},
-	}).WithDocSource(e)
+	})
 }

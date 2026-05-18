@@ -70,7 +70,7 @@ func (m *agentMemorySvcImpl) ListMemories(ctx context.Context, req *ListMemories
 		return nil, rpcErr
 	}
 
-	return AgentMemoryListPresenter(resp), nil
+	return AgentMemoryListPresenter(ctx, resp), nil
 }
 
 func (m *agentMemorySvcImpl) GetMemory(ctx context.Context, req *RetrieveMemoryRequest) (*apiresource.AgentMemory, *apierror.APIError) {

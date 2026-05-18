@@ -60,5 +60,5 @@ func (m *inventorySvcImpl) ListInventories(ctx context.Context, req *ListInvento
 		return nil, apiErr
 	}
 
-	return ListInventoriesPresenter(resp), nil
+	return ListInventoriesPresenter(ctx, resp), nil
 }

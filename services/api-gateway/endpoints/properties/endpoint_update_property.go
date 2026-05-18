@@ -35,9 +35,7 @@ func (e *UpdatePropertyEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateP
 		Title:             "Update Property",
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
-		Route:             "/v1/catalog/properties/{id}",
-		Request:           &UpdatePropertyRequest{},
-		Response:          &apiresource.Property{},
+		Route:             CatalogPropertyRoute,
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -48,5 +46,5 @@ func (e *UpdatePropertyEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateP
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdatePropertyRequest) (*apiresource.Property, *apierror.APIError) {
 			return svc.(PropertySvc).UpdateProperty
 		},
-	}).WithDocSource(e)
+	})
 }

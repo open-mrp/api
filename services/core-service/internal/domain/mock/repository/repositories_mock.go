@@ -9212,6 +9212,21 @@ func (mr *MockSalesOrderRepoMockRecorder) CheckPaymentStatus(ctx, salesOrderID a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckPaymentStatus", reflect.TypeOf((*MockSalesOrderRepo)(nil).CheckPaymentStatus), ctx, salesOrderID)
 }
 
+// CountSalesOrdersForBuyerAccounts mocks base method.
+func (m *MockSalesOrderRepo) CountSalesOrdersForBuyerAccounts(ctx context.Context, ownerAccountID string, buyerAccountIDs []string) (int64, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CountSalesOrdersForBuyerAccounts", ctx, ownerAccountID, buyerAccountIDs)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CountSalesOrdersForBuyerAccounts indicates an expected call of CountSalesOrdersForBuyerAccounts.
+func (mr *MockSalesOrderRepoMockRecorder) CountSalesOrdersForBuyerAccounts(ctx, ownerAccountID, buyerAccountIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountSalesOrdersForBuyerAccounts", reflect.TypeOf((*MockSalesOrderRepo)(nil).CountSalesOrdersForBuyerAccounts), ctx, ownerAccountID, buyerAccountIDs)
+}
+
 // Create mocks base method.
 func (m *MockSalesOrderRepo) Create(ctx context.Context, id string, params domain.CreateSalesOrderParams) (*domain.SalesOrder, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -9515,6 +9530,21 @@ func (mr *MockSalesOrderRepoMockRecorder) GetSaleLinesForIssue(ctx, salesOrderID
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSaleLinesForIssue", reflect.TypeOf((*MockSalesOrderRepo)(nil).GetSaleLinesForIssue), ctx, salesOrderID)
 }
 
+// HasShippedShipment mocks base method.
+func (m *MockSalesOrderRepo) HasShippedShipment(ctx context.Context, salesOrderID string) (bool, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HasShippedShipment", ctx, salesOrderID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// HasShippedShipment indicates an expected call of HasShippedShipment.
+func (mr *MockSalesOrderRepoMockRecorder) HasShippedShipment(ctx, salesOrderID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasShippedShipment", reflect.TypeOf((*MockSalesOrderRepo)(nil).HasShippedShipment), ctx, salesOrderID)
+}
+
 // IsDuplicateCustomerPO mocks base method.
 func (m *MockSalesOrderRepo) IsDuplicateCustomerPO(ctx context.Context, accountID, buyerAccountID, customerPO string, excludeID *string) (bool, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -9601,21 +9631,6 @@ func (m *MockSalesOrderRepo) MarkUnfulfilled(ctx context.Context, accountID, sal
 func (mr *MockSalesOrderRepoMockRecorder) MarkUnfulfilled(ctx, accountID, salesOrderID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkUnfulfilled", reflect.TypeOf((*MockSalesOrderRepo)(nil).MarkUnfulfilled), ctx, accountID, salesOrderID)
-}
-
-// HasShippedShipment mocks base method.
-func (m *MockSalesOrderRepo) HasShippedShipment(ctx context.Context, salesOrderID string) (bool, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HasShippedShipment", ctx, salesOrderID)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// HasShippedShipment indicates an expected call of HasShippedShipment.
-func (mr *MockSalesOrderRepoMockRecorder) HasShippedShipment(ctx, salesOrderID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasShippedShipment", reflect.TypeOf((*MockSalesOrderRepo)(nil).HasShippedShipment), ctx, salesOrderID)
 }
 
 // NoteFirstShipAt mocks base method.

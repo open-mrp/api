@@ -26,8 +26,6 @@ func (e *ListItemCategoriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*Lis
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/item-categories",
-		Request:           &ListItemCategoriesRequest{},
-		Response:          &apiresource.List[apiresource.ItemCategory]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -38,5 +36,5 @@ func (e *ListItemCategoriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*Lis
 			ObjectType: constants.ObjectTypeItemCategory,
 			Fields:     []string{"owner", "owner.account", "properties", "unit_group", "unit_group.base_unit", "unit_group.associated_units", "unit_group.associated_units.unit"},
 		}),
-	}).WithDocSource(e)
+	})
 }

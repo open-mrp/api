@@ -419,11 +419,11 @@ func (c *stripeClientImpl) CreatePaymentIntent(ctx context.Context, amountCents 
 	}
 
 	params := &stripe.PaymentIntentParams{
-		Amount:        stripe.Int64(amountCents),
+		Amount:        new(amountCents),
 		Currency:      stripe.String(currency),
 		Customer:      stripe.String(customerID),
 		PaymentMethod: stripe.String(paymentMethodID),
-		Confirm:       stripe.Bool(true),
+		Confirm:       new(true),
 		ReturnURL:     stripe.String(returnURL),
 	}
 
@@ -540,11 +540,11 @@ func parseBillingIntentConflict(err error) (string, bool) {
 	}
 	msg := err.Error()
 	const marker = "reserved by billing intent "
-	idx := strings.Index(msg, marker)
-	if idx < 0 {
+	_, after, ok := strings.Cut(msg, marker)
+	if !ok {
 		return "", false
 	}
-	rest := msg[idx+len(marker):]
+	rest := after
 	// The intent ID ends at the first character that isn't alphanumeric or underscore.
 	end := strings.IndexFunc(rest, func(r rune) bool {
 		return !unicode.IsLetter(r) && !unicode.IsDigit(r) && r != '_'

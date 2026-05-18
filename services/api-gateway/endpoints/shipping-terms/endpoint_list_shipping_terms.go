@@ -24,8 +24,6 @@ func (e *ListShippingTermsEndpoint) Materialize() *apiendpoint.APIEndpoint[*List
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/shipping-terms",
-		Request:           &ListShippingTermsRequest{},
-		Response:          &apiresource.List[apiresource.ShippingTerm]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -36,5 +34,5 @@ func (e *ListShippingTermsEndpoint) Materialize() *apiendpoint.APIEndpoint[*List
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListShippingTermsRequest) (*apiresource.List[apiresource.ShippingTerm], *apierror.APIError) {
 			return svc.(ShippingTermSvc).ListShippingTerms
 		},
-	}).WithDocSource(e)
+	})
 }

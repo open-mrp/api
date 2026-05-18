@@ -1,6 +1,8 @@
 package edirunep
 
 import (
+	"context"
+
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -22,7 +24,7 @@ func EDIRunPresenter(e *pb.EDIRunProto) apiresource.EDIRun {
 	}
 }
 
-func EDIRunListPresenter(resp *pb.ListEDIRunsResponse) *apiresource.List[apiresource.EDIRun] {
+func EDIRunListPresenter(ctx context.Context, resp *pb.ListEDIRunsResponse) *apiresource.List[apiresource.EDIRun] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.EDIRun](nil, apiresource.PageInfo{})
 	}
@@ -32,5 +34,5 @@ func EDIRunListPresenter(resp *pb.ListEDIRunsResponse) *apiresource.List[apireso
 		runs[i] = EDIRunPresenter(e)
 	}
 
-	return apiresource.NewList(runs, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(runs, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }

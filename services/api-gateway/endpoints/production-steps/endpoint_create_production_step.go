@@ -122,8 +122,6 @@ func (e *CreateProductionStepEndpoint) Materialize() *apiendpoint.APIEndpoint[*C
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/production-steps",
-		Request:           &CreateProductionStepRequest{},
-		Response:          &apiresource.ProductionStep{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
@@ -133,5 +131,5 @@ func (e *CreateProductionStepEndpoint) Materialize() *apiendpoint.APIEndpoint[*C
 		LocationFunc: func(resp *apiresource.ProductionStep) string {
 			return "/v1/operations/production-steps/" + resp.ID
 		},
-	}).WithDocSource(e)
+	})
 }

@@ -41,8 +41,6 @@ func (e *CreateMachineEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateMa
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/machines",
-		Request:           &CreateMachineRequest{},
-		Response:          &apiresource.Machine{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
@@ -52,5 +50,5 @@ func (e *CreateMachineEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateMa
 		LocationFunc: func(resp *apiresource.Machine) string {
 			return "/v1/operations/machines/" + resp.ID
 		},
-	}).WithDocSource(e)
+	})
 }

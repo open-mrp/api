@@ -43,9 +43,9 @@ func (c *checkoutClientImpl) CreateOneTimeCheckoutSession(ctx context.Context, p
 					Name:        gostripe.String(item.Name),
 					Description: gostripe.String(item.Description),
 				},
-				UnitAmount: gostripe.Int64(item.AmountCents),
+				UnitAmount: new(item.AmountCents),
 			},
-			Quantity: gostripe.Int64(item.Quantity),
+			Quantity: new(item.Quantity),
 		}
 	}
 
@@ -91,8 +91,6 @@ func (c *checkoutClientImpl) CreateEmbeddedCheckoutSession(ctx context.Context, 
 	_, span := checkoutClientTracer.Start(ctx, "stripe_checkout_client.create_embedded_session")
 	defer span.End()
 
-	amountCents := params.OrderTotalCents
-
 	lineItemName := fmt.Sprintf("SO #%s", params.OrderNumber)
 	lineItem := &gostripe.CheckoutSessionLineItemParams{
 		PriceData: &gostripe.CheckoutSessionLineItemPriceDataParams{
@@ -100,7 +98,7 @@ func (c *checkoutClientImpl) CreateEmbeddedCheckoutSession(ctx context.Context, 
 			ProductData: &gostripe.CheckoutSessionLineItemPriceDataProductDataParams{
 				Name: gostripe.String(lineItemName),
 			},
-			UnitAmount: gostripe.Int64(amountCents),
+			UnitAmount: new(params.OrderTotalCents),
 		},
 		Quantity: gostripe.Int64(1),
 	}

@@ -36,8 +36,6 @@ func (e *CreateCustomerProductLineAccessEndpoint) Materialize() *apiendpoint.API
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/product-line-access/customers",
-		Request:           &CreateCustomerProductLineAccessRequest{},
-		Response:          &apiresource.CustomerProductLineAccess{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
@@ -47,5 +45,5 @@ func (e *CreateCustomerProductLineAccessEndpoint) Materialize() *apiendpoint.API
 		LocationFunc: func(resp *apiresource.CustomerProductLineAccess) string {
 			return "/v1/sales/product-line-access/customers/" + resp.Customer.ID
 		},
-	}).WithDocSource(e)
+	})
 }

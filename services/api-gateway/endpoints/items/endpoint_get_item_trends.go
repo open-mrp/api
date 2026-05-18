@@ -26,13 +26,11 @@ func (e *GetItemTrendsEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetItemT
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/items/{id}/trends",
-		Request:           &GetItemTrendsRequest{},
-		Response:          &apiresource.ItemTrends{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetItemTrendsRequest) (*apiresource.ItemTrends, *apierror.APIError) {
 			return svc.(ItemSvc).GetItemTrends
 		},
-	}).WithDocSource(e)
+	})
 }

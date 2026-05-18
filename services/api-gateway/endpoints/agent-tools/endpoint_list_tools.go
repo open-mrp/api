@@ -22,13 +22,11 @@ func (e *ListToolsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListToolsReq
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/ai/tools",
-		Request:           &ListToolsRequest{},
-		Response:          &apiresource.List[apiresource.AvailableTool]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListToolsRequest) (*apiresource.List[apiresource.AvailableTool], *apierror.APIError) {
 			return svc.(AgentToolSvc).ListTools
 		},
-	}).WithDocSource(e)
+	})
 }

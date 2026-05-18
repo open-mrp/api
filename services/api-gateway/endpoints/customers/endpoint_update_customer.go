@@ -61,7 +61,7 @@ type UpdateCustomerRequest struct {
 	// Carrier billing account number.
 	CarrierBillingAccount *string `json:"carrier_billing_account,omitempty" nullable:"true" validate:"omitempty,max=255"`
 	// Credit limit. Send null to clear.
-	CreditLimit apirequest.NullableInput[apirequest.QuantityInput] `json:"credit_limit,omitempty"`
+	CreditLimit apirequest.NullableInput[apirequest.QuantityInput] `json:"credit_limit"`
 }
 
 var sampleUpdateCustomerName = "Acme Corp Updated"
@@ -88,8 +88,6 @@ func (e *UpdateCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateC
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/customers/{id}",
-		Request:           &UpdateCustomerRequest{},
-		Response:          &apiresource.Customer{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -118,5 +116,5 @@ func (e *UpdateCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateC
 				"credit_limit",
 			},
 		}),
-	}).WithDocSource(e)
+	})
 }

@@ -49,13 +49,11 @@ func (e *UpdateMemoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateMem
 		Method:            http.MethodPatch,
 		Route:             "/v1/ai/memories/{id}",
 		ContentType:       "application/json",
-		Request:           &UpdateMemoryRequest{},
-		Response:          &apiresource.AgentMemory{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateMemoryRequest) (*apiresource.AgentMemory, *apierror.APIError) {
 			return svc.(AgentMemorySvc).UpdateMemory
 		},
-	}).WithDocSource(e)
+	})
 }

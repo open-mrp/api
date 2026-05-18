@@ -1,6 +1,8 @@
 package unitep
 
 import (
+	"context"
+
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -30,7 +32,7 @@ func UnitPresenter(u *pb.UnitInfo, ownerAccount *apiresource.Account) apiresourc
 	}
 }
 
-func UnitListPresenter(resp *pb.ListUnitsResponse, ownerAccount *apiresource.Account) *apiresource.List[apiresource.Unit] {
+func UnitListPresenter(ctx context.Context, resp *pb.ListUnitsResponse, ownerAccount *apiresource.Account) *apiresource.List[apiresource.Unit] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.Unit](nil, apiresource.PageInfo{})
 	}
@@ -40,7 +42,7 @@ func UnitListPresenter(resp *pb.ListUnitsResponse, ownerAccount *apiresource.Acc
 		units[i] = UnitPresenter(u, ownerAccount)
 	}
 
-	return apiresource.NewList(units, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(units, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }
 
 func ValidateUnitsPresenter(resp *pb.ValidateUnitsResponse) *apiresource.ValidateUnitsResponse {

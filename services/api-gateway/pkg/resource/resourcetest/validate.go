@@ -133,8 +133,8 @@ func ValidateResourceStruct(t *testing.T, name string, resource any) {
 }
 
 func hasValidateTags(t reflect.Type) bool {
-	for i := 0; i < t.NumField(); i++ {
-		if t.Field(i).Tag.Get("validate") != "" {
+	for field := range t.Fields() {
+		if field.Tag.Get("validate") != "" {
 			return true
 		}
 	}
@@ -142,8 +142,8 @@ func hasValidateTags(t reflect.Type) bool {
 }
 
 func hasJSONTags(t reflect.Type) bool {
-	for i := 0; i < t.NumField(); i++ {
-		if t.Field(i).Tag.Get("json") != "" {
+	for field := range t.Fields() {
+		if field.Tag.Get("json") != "" {
 			return true
 		}
 	}
@@ -164,8 +164,8 @@ func collectExpandableNamespaces(resource any) map[string]bool {
 	}
 	rt := rv.Type()
 	ns := make(map[string]bool)
-	for i := 0; i < rt.NumField(); i++ {
-		ft := rt.Field(i)
+	for ft := range rt.Fields() {
+		ft := ft
 		if ft.Tag.Get("expandable") == "true" {
 			prefix := rt.Name() + "." + ft.Name
 			// For pointer fields the namespace is "Type.Field.SubField".
@@ -244,7 +244,7 @@ func ValidateExpandableStubs(t *testing.T, name string, resource any) {
 func validateStubFields(t *testing.T, path string, rv reflect.Value) {
 	t.Helper()
 	rt := rv.Type()
-	timeType := reflect.TypeOf((*time.Time)(nil)).Elem()
+	timeType := reflect.TypeFor[time.Time]()
 	for i := 0; i < rv.NumField(); i++ {
 		fv := rv.Field(i)
 		ft := rt.Field(i)
@@ -274,8 +274,8 @@ func validateStubFields(t *testing.T, path string, rv reflect.Value) {
 
 // resolveJSONNameFromType resolves the JSON tag name for a field by type.
 func resolveJSONNameFromType(rt reflect.Type, fieldName string) string {
-	for i := 0; i < rt.NumField(); i++ {
-		f := rt.Field(i)
+	for f := range rt.Fields() {
+		f := f
 		if f.Name == fieldName {
 			tag := f.Tag.Get("json")
 			if tag != "" {
@@ -292,8 +292,8 @@ func resolveJSONName(resource any, fieldName string) string {
 		rv = rv.Elem()
 	}
 	rt := rv.Type()
-	for i := 0; i < rt.NumField(); i++ {
-		f := rt.Field(i)
+	for f := range rt.Fields() {
+		f := f
 		if f.Name == fieldName {
 			tag := f.Tag.Get("json")
 			if tag != "" {

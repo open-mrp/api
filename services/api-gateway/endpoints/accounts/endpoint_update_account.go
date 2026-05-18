@@ -54,8 +54,6 @@ func (e *UpdateAccountEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAc
 		Method:            http.MethodPatch,
 		Route:             "/v1/identity/accounts/{id}",
 		ContentType:       "application/json",
-		Request:           &UpdateAccountRequest{},
-		Response:          &apiresource.Account{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -66,5 +64,5 @@ func (e *UpdateAccountEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAc
 			ObjectType: constants.ObjectTypeAccount,
 			Fields:     []string{"branding", "portal"},
 		}),
-	}).WithDocSource(e)
+	})
 }

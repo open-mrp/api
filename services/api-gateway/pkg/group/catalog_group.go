@@ -39,8 +39,8 @@ func (*CatalogEndpointGroup) Materialize(config *CatalogEndpointGroupConfig) *Ca
 		ResourceType: &apiresource.CatalogProductLine{},
 	}
 
-	listProductLinesEndpoint := (&catalogep.ListCatalogProductLinesEndpoint{}).Materialize().WithService(inner, catalogSvc)
-	listProductsEndpoint := (&catalogep.ListCatalogProductsEndpoint{}).Materialize().WithService(inner, catalogSvc)
+	listProductLinesEndpoint := apiendpoint.From(&catalogep.ListCatalogProductLinesEndpoint{}).WithService(inner, catalogSvc)
+	listProductsEndpoint := apiendpoint.From(&catalogep.ListCatalogProductsEndpoint{}).WithService(inner, catalogSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listProductLinesEndpoint,

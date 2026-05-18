@@ -1,6 +1,7 @@
 package itemcategoryep
 
 import (
+	"context"
 	"strconv"
 
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
@@ -116,7 +117,7 @@ func ItemCategoryPresenter(ic *pb.ItemCategoryInfo, ownerAccount *apiresource.Ac
 	return result
 }
 
-func ItemCategoryListPresenter(resp *pb.ListItemCategoriesResponse, ownerAccount *apiresource.Account) *apiresource.List[apiresource.ItemCategory] {
+func ItemCategoryListPresenter(ctx context.Context, resp *pb.ListItemCategoriesResponse, ownerAccount *apiresource.Account) *apiresource.List[apiresource.ItemCategory] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.ItemCategory](nil, apiresource.PageInfo{})
 	}
@@ -126,5 +127,5 @@ func ItemCategoryListPresenter(resp *pb.ListItemCategoriesResponse, ownerAccount
 		categories[i] = ItemCategoryPresenter(ic, ownerAccount)
 	}
 
-	return apiresource.NewList(categories, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(categories, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }

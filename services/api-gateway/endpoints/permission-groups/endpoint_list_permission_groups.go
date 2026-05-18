@@ -24,8 +24,6 @@ func (e *ListPermissionGroupsEndpoint) Materialize() *apiendpoint.APIEndpoint[*L
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/permission-groups",
-		Request:           &ListPermissionGroupsRequest{},
-		Response:          &apiresource.List[apiresource.PermissionGroup]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -36,5 +34,5 @@ func (e *ListPermissionGroupsEndpoint) Materialize() *apiendpoint.APIEndpoint[*L
 			ObjectType: constants.ObjectTypePermissionGroup,
 			Fields:     []string{"owner"},
 		}),
-	}).WithDocSource(e)
+	})
 }

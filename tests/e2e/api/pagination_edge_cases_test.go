@@ -52,17 +52,16 @@ func TestPaginationEdge_StaleCursorHandled(t *testing.T) {
 	var page1 ListResponse
 	require.NoError(t, json.Unmarshal(page1Body, &page1))
 
-	if page1.PageInfo.NextCursor == nil {
-		t.Skip("No next cursor available for stale cursor test")
+	if page1.PageInfo.NextPageURL == nil {
+		t.Skip("No next page URL available for stale cursor test")
 	}
+	path, q, ok := ListURLPathQuery(page1.PageInfo.NextPageURL)
+	if !ok || q.Get("cursor") == "" {
+		t.Skip("next_page_url missing cursor query param")
+	}
+	q.Set("cursor", q.Get("cursor")+"_stale")
 
-	// Manipulate the cursor to make it stale/invalid.
-	staleCursor := *page1.PageInfo.NextCursor + "_stale"
-
-	statusCode, body, err := apiClient.GetListRaw(customersPath, url.Values{
-		"limit":  {"1"},
-		"cursor": {staleCursor},
-	})
+	statusCode, body, err := apiClient.GetListRaw(path, q)
 	require.NoError(t, err)
 	// Should be 400 (invalid cursor) or 200 (silently reset) — never 500.
 	assert.NotEqual(t, 500, statusCode,
@@ -100,16 +99,17 @@ func TestPaginationEdge_FullTraversal(t *testing.T) {
 	t.Parallel()
 
 	var allIDs []string
-	var cursor *string
+	var nextPageURL *string
 	maxPages := 20 // safety limit
 
 	for page := 0; page < maxPages; page++ {
-		params := url.Values{"limit": {"5"}}
-		if cursor != nil {
-			params.Set("cursor", *cursor)
+		var list *ListResponse
+		var err error
+		if nextPageURL == nil {
+			list, _, err = apiClient.GetList(customersPath, url.Values{"limit": {"5"}})
+		} else {
+			list, _, err = apiClient.GetListFromPageURL(nextPageURL)
 		}
-
-		list, _, err := apiClient.GetList(customersPath, params)
 		require.NoError(t, err)
 
 		for _, item := range list.Data {
@@ -120,8 +120,8 @@ func TestPaginationEdge_FullTraversal(t *testing.T) {
 		if !list.PageInfo.HasNextPage {
 			break
 		}
-		cursor = list.PageInfo.NextCursor
-		require.NotNil(t, cursor, "next_cursor should be set when has_next_page is true (page %d)", page)
+		require.NotNil(t, list.PageInfo.NextPageURL, "next_page_url should be set when has_next_page is true (page %d)", page)
+		nextPageURL = list.PageInfo.NextPageURL
 	}
 
 	// Verify no duplicate IDs across pages.
@@ -181,16 +181,15 @@ func TestPaginationEdge_PrevCursorNavigation(t *testing.T) {
 	page1, _, err := apiClient.GetList(customersPath, params)
 	require.NoError(t, err)
 	require.True(t, page1.PageInfo.HasNextPage, "Need at least 2 items for prev cursor test")
+	require.NotNil(t, page1.PageInfo.NextPageURL)
 
-	// Get page 2.
-	params.Set("cursor", *page1.PageInfo.NextCursor)
-	page2, _, err := apiClient.GetList(customersPath, params)
+	// Get page 2 via next_page_url (HATEOAS).
+	page2, _, err := apiClient.GetListFromPageURL(page1.PageInfo.NextPageURL)
 	require.NoError(t, err)
-	require.NotNil(t, page2.PageInfo.PrevCursor, "Page 2 should have prev_cursor")
+	require.NotNil(t, page2.PageInfo.PreviousPageURL, "Page 2 should have previous_page_url")
 
-	// Navigate back using prev cursor — should return data without errors.
-	params.Set("cursor", *page2.PageInfo.PrevCursor)
-	backToPage1, _, err := apiClient.GetList(customersPath, params)
+	// Navigate back using previous_page_url.
+	backToPage1, _, err := apiClient.GetListFromPageURL(page2.PageInfo.PreviousPageURL)
 	require.NoError(t, err)
-	assert.NotEmpty(t, backToPage1.Data, "Navigating back with prev_cursor should return data")
+	assert.NotEmpty(t, backToPage1.Data, "Navigating back with previous_page_url should return data")
 }

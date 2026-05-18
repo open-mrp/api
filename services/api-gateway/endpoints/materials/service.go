@@ -85,7 +85,7 @@ func (m *materialSvcImpl) ListMaterials(ctx context.Context, req *ListMaterialsR
 	if apiErr != nil {
 		return nil, apiErr
 	}
-	return MaterialListPresenter(resp), nil
+	return MaterialListPresenter(ctx, resp), nil
 }
 
 func (m *materialSvcImpl) GetMaterial(ctx context.Context, req *RetrieveMaterialRequest) (*apiresource.Material, *apierror.APIError) {

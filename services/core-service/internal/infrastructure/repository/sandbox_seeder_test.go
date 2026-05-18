@@ -91,9 +91,9 @@ func TestParseUserVarSet_IgnoresSetNames(t *testing.T) {
 
 func TestVitessCompat_NoRawUserVarStatementsReachDB(t *testing.T) {
 	t.Parallel()
-	stmts := strings.Split(queries.SandboxSeedSQL, ";")
+	stmts := strings.SplitSeq(queries.SandboxSeedSQL, ";")
 
-	for _, stmt := range stmts {
+	for stmt := range stmts {
 		stmt = strings.TrimSpace(stmt)
 		if stmt == "" {
 			continue

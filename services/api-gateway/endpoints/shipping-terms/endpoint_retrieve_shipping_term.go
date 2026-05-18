@@ -25,8 +25,6 @@ func (e *RetrieveShippingTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*R
 		Method:            http.MethodGet,
 		Route:             "/v1/operations/shipping-terms/{id}",
 		ContentType:       "application/json",
-		Request:           &RetrieveShippingTermRequest{},
-		Response:          &apiresource.ShippingTerm{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -37,5 +35,5 @@ func (e *RetrieveShippingTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*R
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveShippingTermRequest) (*apiresource.ShippingTerm, *apierror.APIError) {
 			return svc.(ShippingTermSvc).GetShippingTerm
 		},
-	}).WithDocSource(e)
+	})
 }

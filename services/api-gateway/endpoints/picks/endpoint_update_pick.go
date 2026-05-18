@@ -39,8 +39,6 @@ func (e *UpdatePickEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdatePickR
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/picks/{id}",
-		Request:           &UpdatePickRequest{},
-		Response:          &apiresource.PickDetail{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -51,5 +49,5 @@ func (e *UpdatePickEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdatePickR
 			ObjectType: constants.ObjectTypePick,
 			Fields:     []string{"lines"},
 		}),
-	}).WithDocSource(e)
+	})
 }

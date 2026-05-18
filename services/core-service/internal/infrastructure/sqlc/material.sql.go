@@ -132,7 +132,15 @@ AND (
     ? IS NULL
     OR i.created_at <= ?
 )
-ORDER BY m.created_at DESC, m.id DESC
+ORDER BY
+    CASE
+        WHEN ? IS NULL THEN 0
+        WHEN i.sku = ? THEN 0
+        WHEN ? IS NOT NULL AND i.sku LIKE ? THEN 1
+        ELSE 2
+    END ASC,
+    m.created_at DESC,
+    m.id DESC
 `
 
 type ExportMaterialsWithFiltersParams struct {
@@ -144,6 +152,8 @@ type ExportMaterialsWithFiltersParams struct {
 	AttributeIds           []string
 	StartDate              sql.NullTime
 	EndDate                sql.NullTime
+	SearchExact            sql.NullString
+	SearchPrefix           sql.NullString
 }
 
 type ExportMaterialsWithFiltersRow struct {
@@ -209,6 +219,10 @@ func (q *Queries) ExportMaterialsWithFilters(ctx context.Context, arg ExportMate
 	queryParams = append(queryParams, arg.StartDate)
 	queryParams = append(queryParams, arg.EndDate)
 	queryParams = append(queryParams, arg.EndDate)
+	queryParams = append(queryParams, arg.SearchExact)
+	queryParams = append(queryParams, arg.SearchExact)
+	queryParams = append(queryParams, arg.SearchPrefix)
+	queryParams = append(queryParams, arg.SearchPrefix)
 	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
@@ -641,10 +655,40 @@ AND (
     OR i.created_at <= ?
 )
 AND (
-    m.created_at > ?
-    OR (m.created_at = ? AND m.id > ?)
+    (? IS NULL AND (
+        m.created_at > ?
+        OR (m.created_at = ? AND m.id > ?)
+    ))
+    OR (? IS NOT NULL AND (
+        (CASE
+            WHEN ? IS NULL THEN 0
+            WHEN i.sku = ? THEN 0
+            WHEN ? IS NOT NULL AND i.sku LIKE ? THEN 1
+            ELSE 2
+        END) < CAST(? AS SIGNED)
+        OR (
+            (CASE
+                WHEN ? IS NULL THEN 0
+                WHEN i.sku = ? THEN 0
+                WHEN ? IS NOT NULL AND i.sku LIKE ? THEN 1
+                ELSE 2
+            END) = CAST(? AS SIGNED)
+            AND (
+                m.created_at > ?
+                OR (m.created_at = ? AND m.id > ?)
+            )
+        )
+    ))
 )
-ORDER BY m.created_at ASC, m.id ASC
+ORDER BY
+    CASE
+        WHEN ? IS NULL THEN 0
+        WHEN i.sku = ? THEN 0
+        WHEN ? IS NOT NULL AND i.sku LIKE ? THEN 1
+        ELSE 2
+    END DESC,
+    m.created_at ASC,
+    m.id ASC
 LIMIT ?
 `
 
@@ -657,8 +701,11 @@ type ListMaterialsBackwardBaseParams struct {
 	AttributeIds           []string
 	StartDate              sql.NullTime
 	EndDate                sql.NullTime
+	CursorMatchTier        sql.NullInt64
 	CursorCreatedAt        time.Time
 	CursorID               string
+	SearchExact            sql.NullString
+	SearchPrefix           sql.NullString
 	Limit                  int32
 }
 
@@ -725,9 +772,28 @@ func (q *Queries) ListMaterialsBackwardBase(ctx context.Context, arg ListMateria
 	queryParams = append(queryParams, arg.StartDate)
 	queryParams = append(queryParams, arg.EndDate)
 	queryParams = append(queryParams, arg.EndDate)
+	queryParams = append(queryParams, arg.CursorMatchTier)
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorID)
+	queryParams = append(queryParams, arg.CursorMatchTier)
+	queryParams = append(queryParams, arg.SearchExact)
+	queryParams = append(queryParams, arg.SearchExact)
+	queryParams = append(queryParams, arg.SearchPrefix)
+	queryParams = append(queryParams, arg.SearchPrefix)
+	queryParams = append(queryParams, arg.CursorMatchTier)
+	queryParams = append(queryParams, arg.SearchExact)
+	queryParams = append(queryParams, arg.SearchExact)
+	queryParams = append(queryParams, arg.SearchPrefix)
+	queryParams = append(queryParams, arg.SearchPrefix)
+	queryParams = append(queryParams, arg.CursorMatchTier)
+	queryParams = append(queryParams, arg.CursorCreatedAt)
+	queryParams = append(queryParams, arg.CursorCreatedAt)
+	queryParams = append(queryParams, arg.CursorID)
+	queryParams = append(queryParams, arg.SearchExact)
+	queryParams = append(queryParams, arg.SearchExact)
+	queryParams = append(queryParams, arg.SearchPrefix)
+	queryParams = append(queryParams, arg.SearchPrefix)
 	queryParams = append(queryParams, arg.Limit)
 	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
@@ -852,10 +918,42 @@ AND (
 )
 AND (
     ? IS NULL
-    OR m.created_at < ?
-    OR (m.created_at = ? AND m.id < ?)
+    OR (
+        (? IS NULL AND (
+            m.created_at < ?
+            OR (m.created_at = ? AND m.id < ?)
+        ))
+        OR (? IS NOT NULL AND (
+            (CASE
+                WHEN ? IS NULL THEN 0
+                WHEN i.sku = ? THEN 0
+                WHEN ? IS NOT NULL AND i.sku LIKE ? THEN 1
+                ELSE 2
+            END) > CAST(? AS SIGNED)
+            OR (
+                (CASE
+                    WHEN ? IS NULL THEN 0
+                    WHEN i.sku = ? THEN 0
+                    WHEN ? IS NOT NULL AND i.sku LIKE ? THEN 1
+                    ELSE 2
+                END) = CAST(? AS SIGNED)
+                AND (
+                    m.created_at < ?
+                    OR (m.created_at = ? AND m.id < ?)
+                )
+            )
+        ))
+    )
 )
-ORDER BY m.created_at DESC, m.id DESC
+ORDER BY
+    CASE
+        WHEN ? IS NULL THEN 0
+        WHEN i.sku = ? THEN 0
+        WHEN ? IS NOT NULL AND i.sku LIKE ? THEN 1
+        ELSE 2
+    END ASC,
+    m.created_at DESC,
+    m.id DESC
 LIMIT ?
 `
 
@@ -869,7 +967,10 @@ type ListMaterialsForwardBaseParams struct {
 	StartDate              sql.NullTime
 	EndDate                sql.NullTime
 	CursorCreatedAt        sql.NullTime
+	CursorMatchTier        sql.NullInt64
 	CursorID               sql.NullString
+	SearchExact            sql.NullString
+	SearchPrefix           sql.NullString
 	Limit                  int32
 }
 
@@ -937,9 +1038,28 @@ func (q *Queries) ListMaterialsForwardBase(ctx context.Context, arg ListMaterial
 	queryParams = append(queryParams, arg.EndDate)
 	queryParams = append(queryParams, arg.EndDate)
 	queryParams = append(queryParams, arg.CursorCreatedAt)
+	queryParams = append(queryParams, arg.CursorMatchTier)
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorCreatedAt)
 	queryParams = append(queryParams, arg.CursorID)
+	queryParams = append(queryParams, arg.CursorMatchTier)
+	queryParams = append(queryParams, arg.SearchExact)
+	queryParams = append(queryParams, arg.SearchExact)
+	queryParams = append(queryParams, arg.SearchPrefix)
+	queryParams = append(queryParams, arg.SearchPrefix)
+	queryParams = append(queryParams, arg.CursorMatchTier)
+	queryParams = append(queryParams, arg.SearchExact)
+	queryParams = append(queryParams, arg.SearchExact)
+	queryParams = append(queryParams, arg.SearchPrefix)
+	queryParams = append(queryParams, arg.SearchPrefix)
+	queryParams = append(queryParams, arg.CursorMatchTier)
+	queryParams = append(queryParams, arg.CursorCreatedAt)
+	queryParams = append(queryParams, arg.CursorCreatedAt)
+	queryParams = append(queryParams, arg.CursorID)
+	queryParams = append(queryParams, arg.SearchExact)
+	queryParams = append(queryParams, arg.SearchExact)
+	queryParams = append(queryParams, arg.SearchPrefix)
+	queryParams = append(queryParams, arg.SearchPrefix)
 	queryParams = append(queryParams, arg.Limit)
 	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {

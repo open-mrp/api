@@ -25,8 +25,6 @@ func (e *RetrieveAccountPriceEndpoint) Materialize() *apiendpoint.APIEndpoint[*R
 		Method:            http.MethodGet,
 		Route:             "/v1/sales/account-prices/{id}",
 		ContentType:       "application/json",
-		Request:           &RetrieveAccountPriceRequest{},
-		Response:          &apiresource.AccountPrice{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -37,5 +35,5 @@ func (e *RetrieveAccountPriceEndpoint) Materialize() *apiendpoint.APIEndpoint[*R
 			ObjectType: constants.ObjectTypeAccountPrice,
 			Fields:     []string{"recipient_account", "product_line", "categories", "attributes"},
 		}),
-	}).WithDocSource(e)
+	})
 }

@@ -25,8 +25,6 @@ func (e *RetrieveRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveRu
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/ai/runs/{id}",
-		Request:           &RetrieveRunRequest{},
-		Response:          &apiresource.AgentRun{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -37,5 +35,5 @@ func (e *RetrieveRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveRu
 			ObjectType: constants.ObjectTypeAgentRun,
 			Fields:     []string{"actions", "definition", "steps", "definition.config", "definition.tools", "definition.role"},
 		}),
-	}).WithDocSource(e)
+	})
 }

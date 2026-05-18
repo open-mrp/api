@@ -110,14 +110,11 @@ func TestRequestLogs_ListPagination(t *testing.T) {
 		t.Skip("Not enough request logs for pagination test")
 		return
 	}
-	require.NotNil(t, list.PageInfo.NextCursor)
+	require.NotNil(t, list.PageInfo.NextPageURL)
 
 	page1ID := DataItemField(list.Data[0], "id")
 
-	page2, _, err := apiClient.GetList(requestLogsPath, url.Values{
-		"limit":  {"1"},
-		"cursor": {*list.PageInfo.NextCursor},
-	})
+	page2, _, err := apiClient.GetListFromPageURL(list.PageInfo.NextPageURL)
 	require.NoError(t, err)
 	require.Len(t, page2.Data, 1)
 
@@ -720,35 +717,55 @@ func TestRequestLogs_ListIncludeAccount(t *testing.T) {
 
 func TestRequestLogs_ListFilterByErrorCodeExcludesNonMatching(t *testing.T) {
 	t.Parallel()
-	list, _, err := apiClient.GetList(requestLogsPath, url.Values{"limit": {"50"}})
-	if err != nil || len(list.Data) == 0 {
-		t.Skip("No request logs available to discover error codes")
-		return
-	}
-	var errorCode string
-	for _, item := range list.Data {
-		m := parseJSON(item)
-		if ec := jsonField(m, "error_code"); ec != "" {
-			errorCode = ec
-			break
-		}
-	}
-	if errorCode == "" {
-		t.Skip("No request logs with an error_code available")
+	const wantErrorCode = "resource_not_found"
+
+	probe, _, err := apiClient.GetList(requestLogsPath, url.Values{"limit": {"1"}})
+	if err != nil || len(probe.Data) == 0 {
+		t.Skip("No request logs available")
 		return
 	}
 
+	notFoundPath := headersTestCustomerPath + "/ac_000000000000000000000000"
+	resp, err := apiClient.GetFull(notFoundPath, nil)
+	require.NoError(t, err)
+	require.Equal(t, 404, resp.StatusCode,
+		"GET non-existent customer should 404 so the gateway records error_code=%s on the request log", wantErrorCode)
+
+	eventually(t, e2eAsyncWaitTimeout, e2eAsyncPollInterval, func() error {
+		list, _, err := apiClient.GetList(requestLogsPath, url.Values{
+			"error_codes":  {wantErrorCode},
+			"methods":      {"GET"},
+			"status_codes": {"404"},
+			"limit":        {"50"},
+		})
+		if err != nil {
+			return err
+		}
+		for _, item := range list.Data {
+			m := parseJSON(item)
+			if jsonField(m, "path") == notFoundPath && jsonField(m, "error_code") == wantErrorCode {
+				return nil
+			}
+		}
+		return fmt.Errorf("no request log yet for %s %s with error_code %s", "GET", notFoundPath, wantErrorCode)
+	})
+
 	filtered, _, err := apiClient.GetList(requestLogsPath, url.Values{
-		"error_codes": {errorCode},
+		"error_codes": {wantErrorCode},
 		"limit":       {"200"},
 	})
 	require.NoError(t, err)
-	require.NotEmpty(t, filtered.Data, "Filtering by a known error_code should return at least one log")
+	require.NotEmpty(t, filtered.Data, "Filtering by error_code=%s should return at least one log", wantErrorCode)
 
+	var sawSeeded bool
 	for _, item := range filtered.Data {
 		m := parseJSON(item)
-		assert.Equal(t, errorCode, jsonField(m, "error_code"), "All results should match the filtered error_code")
+		assert.Equal(t, wantErrorCode, jsonField(m, "error_code"), "All results should match the filtered error_code")
+		if jsonField(m, "path") == notFoundPath {
+			sawSeeded = true
+		}
 	}
+	assert.True(t, sawSeeded, "filtered results should include the seeded 404 request")
 }
 
 func TestRequestLogs_ListFilterByMinLatencyVerifiesThreshold(t *testing.T) {

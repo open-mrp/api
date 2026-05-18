@@ -121,7 +121,7 @@ func (m *billingSvcImpl) GetPricingPlans(ctx context.Context, req *apiresource.P
 		return nil, apiErr
 	}
 
-	return PricingPlansListPresenter(resp), nil
+	return PricingPlansListPresenter(ctx, resp), nil
 }
 
 func (m *billingSvcImpl) GetPlanChangePreview(ctx context.Context, req *GetPlanProrationRequest) (*apiresource.PlanChangeProration, *apierror.APIError) {

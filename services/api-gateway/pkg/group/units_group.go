@@ -39,12 +39,12 @@ func (*UnitsEndpointGroup) Materialize(config *UnitsEndpointGroupConfig) *UnitsE
 		ResourceType: &apiresource.Unit{},
 	}
 
-	listUnitsEndpoint := (&unitep.ListUnitsEndpoint{}).Materialize().WithService(inner, unitSvc)
-	getUnitEndpoint := (&unitep.RetrieveUnitEndpoint{}).Materialize().WithService(inner, unitSvc)
-	createUnitEndpoint := (&unitep.CreateUnitEndpoint{}).Materialize().WithService(inner, unitSvc)
-	updateUnitEndpoint := (&unitep.UpdateUnitEndpoint{}).Materialize().WithService(inner, unitSvc)
-	deleteUnitEndpoint := (&unitep.DeleteUnitEndpoint{}).Materialize().WithService(inner, unitSvc)
-	validateUnitsEndpoint := (&unitep.ValidateUnitsEndpoint{}).Materialize().WithService(inner, unitSvc)
+	listUnitsEndpoint := apiendpoint.From(&unitep.ListUnitsEndpoint{}).WithService(inner, unitSvc)
+	getUnitEndpoint := apiendpoint.From(&unitep.RetrieveUnitEndpoint{}).WithService(inner, unitSvc)
+	createUnitEndpoint := apiendpoint.From(&unitep.CreateUnitEndpoint{}).WithService(inner, unitSvc)
+	updateUnitEndpoint := apiendpoint.From(&unitep.UpdateUnitEndpoint{}).WithService(inner, unitSvc)
+	deleteUnitEndpoint := apiendpoint.From(&unitep.DeleteUnitEndpoint{}).WithService(inner, unitSvc)
+	validateUnitsEndpoint := apiendpoint.From(&unitep.ValidateUnitsEndpoint{}).WithService(inner, unitSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listUnitsEndpoint,

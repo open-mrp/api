@@ -39,8 +39,8 @@ func (*EDIRunsEndpointGroup) Materialize(config *EDIRunsEndpointGroupConfig) *ED
 		ResourceType: &apiresource.EDIRun{},
 	}
 
-	listEndpoint := (&edirunep.ListEDIRunsEndpoint{}).Materialize().WithService(inner, svc)
-	retrieveEndpoint := (&edirunep.RetrieveEDIRunEndpoint{}).Materialize().WithService(inner, svc)
+	listEndpoint := apiendpoint.From(&edirunep.ListEDIRunsEndpoint{}).WithService(inner, svc)
+	retrieveEndpoint := apiendpoint.From(&edirunep.RetrieveEDIRunEndpoint{}).WithService(inner, svc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listEndpoint,

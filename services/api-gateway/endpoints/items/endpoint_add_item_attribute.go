@@ -27,8 +27,6 @@ func (e *AddItemAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*AddIt
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/items/{id}/attributes/{attribute_id}",
-		Request:           &AddItemAttributeRequest{},
-		Response:          &apiresource.Item{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -39,5 +37,5 @@ func (e *AddItemAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*AddIt
 			ObjectType: constants.ObjectTypeItem,
 			Fields:     []string{"category", "unit_value", "unit_cost", "burn_rate", "attributes", "category.unit_group", "category.properties", "category.unit_group.base_unit", "category.unit_group.associated_units", "category.unit_group.associated_units.unit"},
 		}),
-	}).WithDocSource(e)
+	})
 }

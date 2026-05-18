@@ -29,13 +29,6 @@ func NewProductRepo(queries *sqlc.Queries) domain.ProductRepo {
 func productFullCreatedAt(p *domain.ProductFull) time.Time { return p.CreatedAt }
 func productFullID(p *domain.ProductFull) string           { return p.ID }
 
-func buildProductSearchParams(query *string) gosql.NullString {
-	if query == nil || *query == "" {
-		return gosql.NullString{}
-	}
-	return gosql.NullString{String: "%" + db.EscapeLike(*query) + "%", Valid: true}
-}
-
 func mapProductFullFindRow(row sqlc.FindProductsBySKUsRow) *domain.ProductFull {
 	var description *string
 	if row.ItemDescription.Valid {
@@ -463,7 +456,12 @@ func (r *productRepoImpl) List(ctx context.Context, params domain.ListProductsFu
 	ctx, span := productRepoTracer.Start(ctx, "repository.product.list")
 	defer span.End()
 
-	searchQuery := buildProductSearchParams(params.Query)
+	catSearch := db.NewCatalogSearch(params.Query)
+	searchQuery := catSearch.Contains
+	searchRankEnabled := catSearch.Contains.Valid
+	productSearchRank := func(p *domain.ProductFull) int32 {
+		return db.CatalogSearchRank(p.Item.SKU, catSearch)
+	}
 	includeProductLineFilter := len(params.ProductLineIDs) > 0
 	includeCategoryFilter := len(params.CategoryIDs) > 0
 	includeAttributeFilter := len(params.AttributeIDs) > 0
@@ -510,6 +508,8 @@ func (r *productRepoImpl) List(ctx context.Context, params domain.ListProductsFu
 			rows, err := r.queries.ListProductsFullBackwardBase(ctx, sqlc.ListProductsFullBackwardBaseParams{
 				AccountID:                params.AccountID,
 				SearchQuery:              searchQuery,
+				SearchExact:              catSearch.Exact,
+				SearchPrefix:             catSearch.Prefix,
 				IncludeProductLineFilter: includeProductLineFilter,
 				ProductLineIds:           productLineIDs,
 				IncludeCategoryFilter:    includeCategoryFilter,
@@ -521,6 +521,7 @@ func (r *productRepoImpl) List(ctx context.Context, params domain.ListProductsFu
 				IsPortalReady:            isPortalReady,
 				StartDate:                startDate,
 				EndDate:                  endDate,
+				CursorMatchTier:          db.NullTierInt64Param(cur.MatchTier),
 				CursorCreatedAt:          cur.OccurredAt,
 				CursorID:                 cur.ID,
 				Limit:                    params.Limit + 1,
@@ -532,7 +533,7 @@ func (r *productRepoImpl) List(ctx context.Context, params domain.ListProductsFu
 			for i, row := range rows {
 				items[i] = mapProductBackwardBaseRow(row)
 			}
-			result, pageInfo := pagination.BuildPageString(items, params.Limit, cursorDir, productFullCreatedAt, productFullID)
+			result, pageInfo := pagination.BuildPageStringWithSearchRank(items, params.Limit, cursorDir, searchRankEnabled, productFullCreatedAt, productFullID, productSearchRank)
 			if apiErr := applyProductStitches(ctx, r.queries, result, params.Includes); apiErr != nil {
 				return nil, tracing.Trace(span, apiErr)
 			}
@@ -543,6 +544,8 @@ func (r *productRepoImpl) List(ctx context.Context, params domain.ListProductsFu
 		rows, err := r.queries.ListProductsFullForwardBase(ctx, sqlc.ListProductsFullForwardBaseParams{
 			AccountID:                params.AccountID,
 			SearchQuery:              searchQuery,
+			SearchExact:              catSearch.Exact,
+			SearchPrefix:             catSearch.Prefix,
 			IncludeProductLineFilter: includeProductLineFilter,
 			ProductLineIds:           productLineIDs,
 			IncludeCategoryFilter:    includeCategoryFilter,
@@ -555,6 +558,7 @@ func (r *productRepoImpl) List(ctx context.Context, params domain.ListProductsFu
 			StartDate:                startDate,
 			EndDate:                  endDate,
 			CursorCreatedAt:          gosql.NullTime{Time: cur.OccurredAt, Valid: true},
+			CursorMatchTier:          db.NullTierInt64Param(cur.MatchTier),
 			CursorID:                 gosql.NullString{String: cur.ID, Valid: true},
 			Limit:                    params.Limit + 1,
 		})
@@ -565,7 +569,7 @@ func (r *productRepoImpl) List(ctx context.Context, params domain.ListProductsFu
 		for i, row := range rows {
 			items[i] = mapProductForwardBaseRow(row)
 		}
-		result, pageInfo := pagination.BuildPageString(items, params.Limit, cursorDir, productFullCreatedAt, productFullID)
+		result, pageInfo := pagination.BuildPageStringWithSearchRank(items, params.Limit, cursorDir, searchRankEnabled, productFullCreatedAt, productFullID, productSearchRank)
 		if apiErr := applyProductStitches(ctx, r.queries, result, params.Includes); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
@@ -576,6 +580,8 @@ func (r *productRepoImpl) List(ctx context.Context, params domain.ListProductsFu
 	rows, err := r.queries.ListProductsFullForwardBase(ctx, sqlc.ListProductsFullForwardBaseParams{
 		AccountID:                params.AccountID,
 		SearchQuery:              searchQuery,
+		SearchExact:              catSearch.Exact,
+		SearchPrefix:             catSearch.Prefix,
 		IncludeProductLineFilter: includeProductLineFilter,
 		ProductLineIds:           productLineIDs,
 		IncludeCategoryFilter:    includeCategoryFilter,
@@ -597,7 +603,7 @@ func (r *productRepoImpl) List(ctx context.Context, params domain.ListProductsFu
 	for i, row := range rows {
 		items[i] = mapProductForwardBaseRow(row)
 	}
-	result, pageInfo := pagination.BuildPageString(items, params.Limit, cursorDir, productFullCreatedAt, productFullID)
+	result, pageInfo := pagination.BuildPageStringWithSearchRank(items, params.Limit, cursorDir, searchRankEnabled, productFullCreatedAt, productFullID, productSearchRank)
 	if apiErr := applyProductStitches(ctx, r.queries, result, params.Includes); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -814,7 +820,8 @@ func (r *productRepoImpl) Export(ctx context.Context, params domain.ExportProduc
 	ctx, span := productRepoTracer.Start(ctx, "repository.product.export")
 	defer span.End()
 
-	searchQuery := buildProductSearchParams(params.Query)
+	catSearch := db.NewCatalogSearch(params.Query)
+	searchQuery := catSearch.Contains
 	includeProductLineFilter := len(params.ProductLineIDs) > 0
 	includeCategoryFilter := len(params.CategoryIDs) > 0
 	includeAttributeFilter := len(params.AttributeIDs) > 0
@@ -845,6 +852,8 @@ func (r *productRepoImpl) Export(ctx context.Context, params domain.ExportProduc
 	rows, err := r.queries.ExportProductsWithFilters(ctx, sqlc.ExportProductsWithFiltersParams{
 		AccountID:                params.AccountID,
 		SearchQuery:              searchQuery,
+		SearchExact:              catSearch.Exact,
+		SearchPrefix:             catSearch.Prefix,
 		IncludeProductLineFilter: includeProductLineFilter,
 		IncludeCustomerFilter:    includeCustomerFilter,
 		ProductLineIds:           productLineIDs,

@@ -66,7 +66,7 @@ func (m *accountPriceSvcImpl) ListAccountPrices(ctx context.Context, req *ListAc
 		return nil, apiErr
 	}
 
-	return AccountPriceListPresenter(resp), nil
+	return AccountPriceListPresenter(ctx, resp), nil
 }
 
 func (m *accountPriceSvcImpl) GetAccountPrice(ctx context.Context, req *RetrieveAccountPriceRequest) (*apiresource.AccountPrice, *apierror.APIError) {

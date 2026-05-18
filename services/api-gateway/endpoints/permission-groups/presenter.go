@@ -1,6 +1,8 @@
 package permissiongroupep
 
 import (
+	"context"
+
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -47,7 +49,7 @@ func PermissionGroupPresenter(pg *pb.PermissionGroupInfo) apiresource.Permission
 	}
 }
 
-func PermissionGroupListPresenter(resp *pb.ListPermissionGroupsResponse) *apiresource.List[apiresource.PermissionGroup] {
+func PermissionGroupListPresenter(ctx context.Context, resp *pb.ListPermissionGroupsResponse) *apiresource.List[apiresource.PermissionGroup] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.PermissionGroup](nil, apiresource.PageInfo{})
 	}
@@ -57,5 +59,5 @@ func PermissionGroupListPresenter(resp *pb.ListPermissionGroupsResponse) *apires
 		groups[i] = PermissionGroupPresenter(pg)
 	}
 
-	return apiresource.NewList(groups, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(groups, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }

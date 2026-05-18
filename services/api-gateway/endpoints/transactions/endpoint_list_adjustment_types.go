@@ -24,8 +24,6 @@ func (e *ListAdjustmentTypesEndpoint) Materialize() *apiendpoint.APIEndpoint[*Li
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/finance/adjustment-types",
-		Request:           &ListAdjustmentTypesRequest{},
-		Response:          &apiresource.List[apiresource.AdjustmentType]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -36,5 +34,5 @@ func (e *ListAdjustmentTypesEndpoint) Materialize() *apiendpoint.APIEndpoint[*Li
 			ObjectType: constants.ObjectTypeAdjustmentType,
 			Fields:     []string{"owner"},
 		}),
-	}).WithDocSource(e)
+	})
 }

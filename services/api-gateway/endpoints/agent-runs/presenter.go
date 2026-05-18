@@ -1,7 +1,10 @@
 package agentrunep
 
 import (
+	"context"
 	"encoding/json"
+
+	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 
 	agentep "github.com/augno/api/services/api-gateway/endpoints/agents"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
@@ -150,7 +153,7 @@ func AgentActionPresenter(a *pb.AgentActionInfo, agentRunID string) apiresource.
 	return action
 }
 
-func AgentRunListPresenter(resp *pb.ListRunsResponse) *apiresource.List[apiresource.AgentRun] {
+func AgentRunListPresenter(ctx context.Context, resp *pb.ListRunsResponse) *apiresource.List[apiresource.AgentRun] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.AgentRun](nil, apiresource.PageInfo{})
 	}
@@ -160,15 +163,7 @@ func AgentRunListPresenter(resp *pb.ListRunsResponse) *apiresource.List[apiresou
 		runs[i] = AgentRunPresenter(r)
 	}
 
-	pageInfo := apiresource.PageInfo{}
-	if resp.PageInfo != nil {
-		pageInfo = apiresource.PageInfo{
-			NextCursor:  resp.PageInfo.NextCursor,
-			PrevCursor:  resp.PageInfo.PrevCursor,
-			HasNextPage: resp.PageInfo.HasNextPage,
-			HasPrevPage: resp.PageInfo.HasPrevPage,
-		}
-	}
+	pageInfo := grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)
 
 	return apiresource.NewList(runs, pageInfo)
 }

@@ -1,6 +1,8 @@
 package salesorderstatusep
 
 import (
+	"context"
+
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -23,7 +25,7 @@ func SalesOrderStatusPresenter(s *pb.SalesOrderStatusInfo) apiresource.SalesOrde
 	}
 }
 
-func SalesOrderStatusListPresenter(resp *pb.ListSalesOrderStatusesResponse) *apiresource.List[apiresource.SalesOrderStatus] {
+func SalesOrderStatusListPresenter(ctx context.Context, resp *pb.ListSalesOrderStatusesResponse) *apiresource.List[apiresource.SalesOrderStatus] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.SalesOrderStatus](nil, apiresource.PageInfo{})
 	}
@@ -33,5 +35,5 @@ func SalesOrderStatusListPresenter(resp *pb.ListSalesOrderStatusesResponse) *api
 		statuses[i] = SalesOrderStatusPresenter(s)
 	}
 
-	return apiresource.NewList(statuses, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(statuses, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }

@@ -53,8 +53,6 @@ func (e *CreatePartEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreatePartR
 		Method:            http.MethodPost,
 		Route:             "/v1/catalog/parts",
 		ContentType:       "application/json",
-		Request:           &CreatePartRequest{},
-		Response:          &apiresource.Part{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
 		Preview:           true,
@@ -68,5 +66,5 @@ func (e *CreatePartEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreatePartR
 			ObjectType: constants.ObjectTypePart,
 			Fields:     []string{"item", "item.category", "item.unit_value", "item.unit_cost", "item.burn_rate", "item.attributes"},
 		}),
-	}).WithDocSource(e)
+	})
 }

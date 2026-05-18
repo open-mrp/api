@@ -40,8 +40,6 @@ func (e *ContinueRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*ContinueRu
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/ai/runs/{id}/actions/continue",
-		Request:           &ContinueRunRequest{},
-		Response:          &apiresource.AgentRun{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -52,5 +50,5 @@ func (e *ContinueRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*ContinueRu
 			ObjectType: constants.ObjectTypeAgentRun,
 			Fields:     []string{"actions", "definition", "definition.config", "definition.tools", "definition.role"},
 		}),
-	}).WithDocSource(e)
+	})
 }

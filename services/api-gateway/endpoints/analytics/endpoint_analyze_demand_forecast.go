@@ -30,13 +30,11 @@ func (e *AnalyzeDemandForecastEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		Method:            http.MethodPut,
 		Route:             "/v1/core/analytics/demand-forecast",
 		ContentType:       "application/json",
-		Request:           &AnalyzeDemandForecastRequest{},
-		Response:          &apiresource.AnalyzeDemandForecastResponse{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeDemandForecastRequest) (*apiresource.AnalyzeDemandForecastResponse, *apierror.APIError) {
 			return svc.(AnalyticsSvc).AnalyzeDemandForecast
 		},
-	}).WithDocSource(e)
+	})
 }

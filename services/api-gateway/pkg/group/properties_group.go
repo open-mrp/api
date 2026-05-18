@@ -39,16 +39,16 @@ func (*PropertiesEndpointGroup) Materialize(config *PropertiesEndpointGroupConfi
 		ResourceType: &apiresource.Property{},
 	}
 
-	listPropertiesEndpoint := (&propertyep.ListPropertiesEndpoint{}).Materialize().WithService(inner, propertySvc)
-	getPropertyEndpoint := (&propertyep.RetrievePropertyEndpoint{}).Materialize().WithService(inner, propertySvc)
-	createPropertyEndpoint := (&propertyep.CreatePropertyEndpoint{}).Materialize().WithService(inner, propertySvc)
-	updatePropertyEndpoint := (&propertyep.UpdatePropertyEndpoint{}).Materialize().WithService(inner, propertySvc)
-	deletePropertyEndpoint := (&propertyep.DeletePropertyEndpoint{}).Materialize().WithService(inner, propertySvc)
-	listAttributesEndpoint := (&propertyep.ListAttributesEndpoint{}).Materialize().WithService(inner, propertySvc)
-	getAttributeEndpoint := (&propertyep.RetrieveAttributeEndpoint{}).Materialize().WithService(inner, propertySvc)
-	createAttributeEndpoint := (&propertyep.CreateAttributeEndpoint{}).Materialize().WithService(inner, propertySvc)
-	updateAttributeEndpoint := (&propertyep.UpdateAttributeEndpoint{}).Materialize().WithService(inner, propertySvc)
-	deleteAttributeEndpoint := (&propertyep.DeleteAttributeEndpoint{}).Materialize().WithService(inner, propertySvc)
+	listPropertiesEndpoint := apiendpoint.From(&propertyep.ListPropertiesEndpoint{}).WithService(inner, propertySvc)
+	getPropertyEndpoint := apiendpoint.From(&propertyep.RetrievePropertyEndpoint{}).WithService(inner, propertySvc)
+	createPropertyEndpoint := apiendpoint.From(&propertyep.CreatePropertyEndpoint{}).WithService(inner, propertySvc)
+	updatePropertyEndpoint := apiendpoint.From(&propertyep.UpdatePropertyEndpoint{}).WithService(inner, propertySvc)
+	deletePropertyEndpoint := apiendpoint.From(&propertyep.DeletePropertyEndpoint{}).WithService(inner, propertySvc)
+	listAttributesEndpoint := apiendpoint.From(&propertyep.ListAttributesEndpoint{}).WithService(inner, propertySvc)
+	getAttributeEndpoint := apiendpoint.From(&propertyep.RetrieveAttributeEndpoint{}).WithService(inner, propertySvc)
+	createAttributeEndpoint := apiendpoint.From(&propertyep.CreateAttributeEndpoint{}).WithService(inner, propertySvc)
+	updateAttributeEndpoint := apiendpoint.From(&propertyep.UpdateAttributeEndpoint{}).WithService(inner, propertySvc)
+	deleteAttributeEndpoint := apiendpoint.From(&propertyep.DeleteAttributeEndpoint{}).WithService(inner, propertySvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listPropertiesEndpoint,

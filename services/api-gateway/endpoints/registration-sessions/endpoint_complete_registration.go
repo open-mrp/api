@@ -24,13 +24,11 @@ func (e *CompleteRegistrationEndpoint) Materialize() *apiendpoint.APIEndpoint[*C
 		Method:            http.MethodPost,
 		Route:             "/v1/auth/registration-sessions/{session_id}/accounts",
 		ContentType:       "application/json",
-		Request:           &CompleteRegistrationRequest{},
-		Response:          &apiresource.CompleteRegistrationResponse{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CompleteRegistrationRequest) (*apiresource.CompleteRegistrationResponse, *apierror.APIError) {
 			return svc.(RegistrationSessionSvc).CompleteRegistration
 		},
-	}).WithDocSource(e)
+	})
 }

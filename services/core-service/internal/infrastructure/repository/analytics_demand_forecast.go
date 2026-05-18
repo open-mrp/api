@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"math"
+	"slices"
 	"time"
 
 	"github.com/augno/api/services/core-service/internal/domain"
@@ -29,16 +30,10 @@ func (r *analyticsRepoImpl) getDemandForecastImpl(ctx context.Context, params do
 	safeHistoryMonths := 24
 	safeForecastMonths := 4
 	if params.HistoryMonths != nil && *params.HistoryMonths > 0 {
-		safeHistoryMonths = int(*params.HistoryMonths)
-		if safeHistoryMonths > maxHistoryMonths {
-			safeHistoryMonths = maxHistoryMonths
-		}
+		safeHistoryMonths = min(int(*params.HistoryMonths), maxHistoryMonths)
 	}
 	if params.ForecastMonths != nil && *params.ForecastMonths > 0 {
-		safeForecastMonths = int(*params.ForecastMonths)
-		if safeForecastMonths > maxForecastMonths {
-			safeForecastMonths = maxForecastMonths
-		}
+		safeForecastMonths = min(int(*params.ForecastMonths), maxForecastMonths)
 	}
 
 	now := time.Now().UTC()
@@ -118,25 +113,13 @@ func (r *analyticsRepoImpl) getDemandForecastImpl(ctx context.Context, params do
 			if !row.ProductLineID.Valid {
 				continue
 			}
-			found := false
-			for _, plID := range params.ProductLineIDs {
-				if row.ProductLineID.String == plID {
-					found = true
-					break
-				}
-			}
+			found := slices.Contains(params.ProductLineIDs, row.ProductLineID.String)
 			if !found {
 				continue
 			}
 		}
 		if len(params.ItemIDs) > 0 {
-			found := false
-			for _, iID := range params.ItemIDs {
-				if row.ItemID == iID {
-					found = true
-					break
-				}
-			}
+			found := slices.Contains(params.ItemIDs, row.ItemID)
 			if !found {
 				continue
 			}
@@ -397,14 +380,11 @@ func seasonalEMAForecast(
 	}
 
 	// 3. EMA.
-	smoothingPeriod := observations
-	if smoothingPeriod > 12 {
-		smoothingPeriod = 12
-	}
+	smoothingPeriod := min(observations, 12)
 	emaAlpha := 2.0 / (float64(smoothingPeriod) + 1.0)
 	emaLevel := deseasonalized[0]
 	residuals := make([]float64, observations)
-	for i := 0; i < observations; i++ {
+	for i := range observations {
 		prediction := emaLevel
 		if i == 0 {
 			prediction = deseasonalized[0]
@@ -432,7 +412,7 @@ func seasonalEMAForecast(
 
 	// 5. Generate forecast points.
 	forecast := make([]domain.DemandForecastPoint, numForecastMonths)
-	for idx := 0; idx < numForecastMonths; idx++ {
+	for idx := range numForecastMonths {
 		fMonth := time.Date(baseForecastStart.Year(), baseForecastStart.Month()+time.Month(idx+1), 1, 0, 0, 0, 0, time.UTC)
 		displayDate := time.Date(fMonth.Year(), fMonth.Month()+1, 1, 0, 0, 0, 0, time.UTC)
 		season := fMonth.Month()

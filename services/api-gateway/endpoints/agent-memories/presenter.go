@@ -1,7 +1,10 @@
 package agentmemoryep
 
 import (
+	"context"
 	"encoding/json"
+
+	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -33,7 +36,7 @@ func AgentMemoryPresenter(m *pb.AgentMemoryInfo) apiresource.AgentMemory {
 	return memory
 }
 
-func AgentMemoryListPresenter(resp *pb.ListAgentMemoriesResponse) *apiresource.List[apiresource.AgentMemory] {
+func AgentMemoryListPresenter(ctx context.Context, resp *pb.ListAgentMemoriesResponse) *apiresource.List[apiresource.AgentMemory] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.AgentMemory](nil, apiresource.PageInfo{})
 	}
@@ -45,12 +48,7 @@ func AgentMemoryListPresenter(resp *pb.ListAgentMemoriesResponse) *apiresource.L
 
 	pageInfo := apiresource.PageInfo{}
 	if resp.PageInfo != nil {
-		pageInfo = apiresource.PageInfo{
-			NextCursor:  resp.PageInfo.NextCursor,
-			PrevCursor:  resp.PageInfo.PrevCursor,
-			HasNextPage: resp.PageInfo.HasNextPage,
-			HasPrevPage: resp.PageInfo.HasPrevPage,
-		}
+		pageInfo = grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)
 	}
 
 	return apiresource.NewList(memories, pageInfo)

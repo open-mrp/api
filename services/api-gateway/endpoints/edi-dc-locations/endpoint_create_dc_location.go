@@ -36,8 +36,6 @@ func (e *CreateDCLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*Creat
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/dc-locations",
-		Request:           &CreateDCLocationRequest{},
-		Response:          &apiresource.DCLocation{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
@@ -47,5 +45,5 @@ func (e *CreateDCLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*Creat
 		LocationFunc: func(resp *apiresource.DCLocation) string {
 			return "/v1/operations/dc-locations/" + resp.ID
 		},
-	}).WithDocSource(e)
+	})
 }

@@ -133,8 +133,6 @@ func (e *CreateAgentEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAgen
 		Method:            http.MethodPost,
 		Route:             "/v1/ai/agents",
 		ContentType:       "application/json",
-		Request:           &CreateAgentRequest{},
-		Response:          &apiresource.AgentDefinition{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
@@ -148,5 +146,5 @@ func (e *CreateAgentEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAgen
 			ObjectType: constants.ObjectTypeAgentDefinition,
 			Fields:     []string{"config", "tools", "role", "role.permissions"},
 		}),
-	}).WithDocSource(e)
+	})
 }

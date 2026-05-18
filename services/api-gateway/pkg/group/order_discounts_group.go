@@ -39,12 +39,12 @@ func (*OrderDiscountsEndpointGroup) Materialize(config *OrderDiscountsEndpointGr
 		ResourceType: &apiresource.OrderDiscount{},
 	}
 
-	listEndpoint := (&orderdiscountep.ListOrderDiscountsEndpoint{}).Materialize().WithService(inner, svc)
-	retrieveEndpoint := (&orderdiscountep.RetrieveOrderDiscountEndpoint{}).Materialize().WithService(inner, svc)
-	createEndpoint := (&orderdiscountep.CreateOrderDiscountEndpoint{}).Materialize().WithService(inner, svc)
-	updateEndpoint := (&orderdiscountep.UpdateOrderDiscountEndpoint{}).Materialize().WithService(inner, svc)
-	deleteEndpoint := (&orderdiscountep.DeleteOrderDiscountEndpoint{}).Materialize().WithService(inner, svc)
-	findByCodeEndpoint := (&orderdiscountep.FindOrderDiscountByCodeEndpoint{}).Materialize().WithService(inner, svc)
+	listEndpoint := apiendpoint.From(&orderdiscountep.ListOrderDiscountsEndpoint{}).WithService(inner, svc)
+	retrieveEndpoint := apiendpoint.From(&orderdiscountep.RetrieveOrderDiscountEndpoint{}).WithService(inner, svc)
+	createEndpoint := apiendpoint.From(&orderdiscountep.CreateOrderDiscountEndpoint{}).WithService(inner, svc)
+	updateEndpoint := apiendpoint.From(&orderdiscountep.UpdateOrderDiscountEndpoint{}).WithService(inner, svc)
+	deleteEndpoint := apiendpoint.From(&orderdiscountep.DeleteOrderDiscountEndpoint{}).WithService(inner, svc)
+	findByCodeEndpoint := apiendpoint.From(&orderdiscountep.FindOrderDiscountByCodeEndpoint{}).WithService(inner, svc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listEndpoint,

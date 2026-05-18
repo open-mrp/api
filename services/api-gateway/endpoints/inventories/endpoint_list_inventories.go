@@ -24,8 +24,6 @@ func (e *ListInventoriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListIn
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/inventories",
-		Request:           &ListInventoriesRequest{},
-		Response:          &apiresource.ListInventoriesResponse{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -36,5 +34,5 @@ func (e *ListInventoriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListIn
 			ObjectType: constants.ObjectTypeInventoryItem,
 			Fields:     []string{"quantity.unit"},
 		}),
-	}).WithDocSource(e)
+	})
 }

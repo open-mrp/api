@@ -50,8 +50,6 @@ func (e *CreateTerritoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Create
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/accounts/{account_id}/territories",
-		Request:           &CreateTerritoryRequest{},
-		Response:          &apiresource.Territory{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
@@ -62,5 +60,5 @@ func (e *CreateTerritoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Create
 			ObjectType: constants.ObjectTypeTerritory,
 			Fields:     []string{"sales_rep", "product_line"},
 		}),
-	}).WithDocSource(e)
+	})
 }

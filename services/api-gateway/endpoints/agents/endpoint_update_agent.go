@@ -50,8 +50,6 @@ func (e *UpdateAgentEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAgen
 		Method:            http.MethodPatch,
 		Route:             "/v1/ai/agents/{id}",
 		ContentType:       "application/json",
-		Request:           &UpdateAgentRequest{},
-		Response:          &apiresource.AgentDefinition{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -62,5 +60,5 @@ func (e *UpdateAgentEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAgen
 			ObjectType: constants.ObjectTypeAgentDefinition,
 			Fields:     []string{"config", "tools", "role", "role.permissions"},
 		}),
-	}).WithDocSource(e)
+	})
 }

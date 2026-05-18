@@ -49,8 +49,6 @@ func (e *CreateMemoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateMem
 		Method:            http.MethodPost,
 		Route:             "/v1/ai/memories",
 		ContentType:       "application/json",
-		Request:           &CreateMemoryRequest{},
-		Response:          &apiresource.AgentMemory{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
@@ -60,5 +58,5 @@ func (e *CreateMemoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateMem
 		LocationFunc: func(resp *apiresource.AgentMemory) string {
 			return "/v1/ai/memories/" + resp.ID
 		},
-	}).WithDocSource(e)
+	})
 }

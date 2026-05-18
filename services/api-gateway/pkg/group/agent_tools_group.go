@@ -40,8 +40,8 @@ func (*AgentToolsEndpointGroup) Materialize(config *AgentToolsEndpointGroupConfi
 	}
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
-		(&agenttoolep.ListToolsEndpoint{}).Materialize().WithService(inner, toolSvc),
-		(&agenttoolep.ListToolGroupsEndpoint{}).Materialize().WithService(inner, toolSvc),
+		apiendpoint.From(&agenttoolep.ListToolsEndpoint{}).WithService(inner, toolSvc),
+		apiendpoint.From(&agenttoolep.ListToolGroupsEndpoint{}).WithService(inner, toolSvc),
 	}
 
 	return &AgentToolsEndpointGroup{inner}

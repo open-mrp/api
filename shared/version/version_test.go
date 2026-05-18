@@ -1,6 +1,7 @@
 package version
 
 import (
+	"slices"
 	"testing"
 )
 
@@ -281,13 +282,7 @@ func TestSupportedVersionStrings(t *testing.T) {
 		t.Error("Expected at least one supported version")
 	}
 
-	found := false
-	for _, s := range strings {
-		if s == "1.0.forge-preview.1" {
-			found = true
-			break
-		}
-	}
+	found := slices.Contains(strings, "1.0.forge-preview.1")
 
 	if !found {
 		t.Error("Expected 1.0.forge-preview.1 in supported versions")

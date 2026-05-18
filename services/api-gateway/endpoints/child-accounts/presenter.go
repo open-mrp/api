@@ -1,6 +1,8 @@
 package childaccountep
 
 import (
+	"context"
+
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -27,7 +29,7 @@ func ChildAccountPresenter(ca *pb.ChildAccountProto) apiresource.ChildAccount {
 	}
 }
 
-func ChildAccountListPresenter(resp *pb.ListChildAccountsResponse) *apiresource.List[apiresource.ChildAccount] {
+func ChildAccountListPresenter(ctx context.Context, resp *pb.ListChildAccountsResponse) *apiresource.List[apiresource.ChildAccount] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.ChildAccount](nil, apiresource.PageInfo{})
 	}
@@ -37,7 +39,7 @@ func ChildAccountListPresenter(resp *pb.ListChildAccountsResponse) *apiresource.
 		items[i] = ChildAccountPresenter(ca)
 	}
 
-	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }
 
 func nonEmptyStringPtr(s string) *string {

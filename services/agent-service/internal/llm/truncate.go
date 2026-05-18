@@ -247,10 +247,7 @@ func dropOldNonUserMessages(messages []Message, budget int) []Message {
 	}
 
 	// We always keep the first message and the last 4 messages.
-	keepTail := 4
-	if keepTail > len(messages)-1 {
-		keepTail = len(messages) - 1
-	}
+	keepTail := min(4, len(messages)-1)
 	protected := len(messages) - keepTail
 
 	// Mark non-user messages in the middle for removal, oldest first.

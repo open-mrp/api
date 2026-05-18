@@ -36,13 +36,11 @@ func (e *AnalyzeOpenBatchesEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ana
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/analytics/open-batches",
-		Request:           &AnalyzeOpenBatchesRequest{},
-		Response:          &apiresource.List[apiresource.OpenBatchSummary]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeOpenBatchesRequest) (*apiresource.List[apiresource.OpenBatchSummary], *apierror.APIError) {
 			return svc.(BatchSvc).AnalyzeOpenBatches
 		},
-	}).WithDocSource(e)
+	})
 }

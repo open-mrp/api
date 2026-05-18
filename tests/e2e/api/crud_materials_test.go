@@ -284,12 +284,9 @@ func TestMaterials_ListPagination(t *testing.T) {
 		t.Skip("not enough materials for pagination test")
 		return
 	}
-	require.NotNil(t, page1.PageInfo.NextCursor)
+	require.NotNil(t, page1.PageInfo.NextPageURL)
 
-	page2, _, err := apiClient.GetList(materialsPath, url.Values{
-		"limit":  {"1"},
-		"cursor": {*page1.PageInfo.NextCursor},
-	})
+	page2, _, err := apiClient.GetListFromPageURL(page1.PageInfo.NextPageURL)
 	require.NoError(t, err)
 	require.Len(t, page2.Data, 1)
 
@@ -321,6 +318,35 @@ func TestMaterials_ListSearch(t *testing.T) {
 		}
 	}
 	assert.True(t, found, "created material id %s should appear in search results", id)
+}
+
+func TestMaterials_ListSearchRanksExactSKUBeforeSubstring(t *testing.T) {
+	t.Parallel()
+	exactSKU := uniqueName("e2e-rank-mat-ex")
+	longSKU := "Z" + exactSKU + "Z"
+
+	respLong, err := apiClient.PostFull(materialsPath, validMaterialBody(longSKU), newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, respLong.StatusCode, respLong.Body)
+	longID := jsonField(parseJSON(respLong.Body), "id")
+	require.NotEmpty(t, longID)
+	t.Cleanup(func() { apiClient.Delete(materialsPath + "/" + longID) })
+
+	respExact, err := apiClient.PostFull(materialsPath, validMaterialBody(exactSKU), newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, respExact.StatusCode, respExact.Body)
+	exactID := jsonField(parseJSON(respExact.Body), "id")
+	require.NotEmpty(t, exactID)
+	t.Cleanup(func() { apiClient.Delete(materialsPath + "/" + exactID) })
+
+	list, _, err := apiClient.GetList(materialsPath, url.Values{"q": {exactSKU}, "include": {"item"}, "limit": {"10"}})
+	require.NoError(t, err)
+	require.NotEmpty(t, list.Data, "search should return both materials")
+
+	first := parseJSON(list.Data[0])
+	itemObj := jsonObject(first, "item")
+	require.NotNil(t, itemObj)
+	assert.Equal(t, exactSKU, jsonField(itemObj, "sku"), "exact SKU match should sort before substring-only match")
 }
 
 func TestMaterials_ListSearchNoResults(t *testing.T) {

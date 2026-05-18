@@ -27,8 +27,6 @@ func (e *RetrieveProductionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ret
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/production-steps/{production_step_id}/productions/{id}",
-		Request:           &RetrieveProductionRequest{},
-		Response:          &apiresource.ProductionOutput{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -39,5 +37,5 @@ func (e *RetrieveProductionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ret
 			ObjectType: constants.ObjectTypeProduction,
 			Fields:     []string{"produced_item"},
 		}),
-	}).WithDocSource(e)
+	})
 }

@@ -39,11 +39,11 @@ func (*PaymentTermsEndpointGroup) Materialize(config *PaymentTermsEndpointGroupC
 		ResourceType: &apiresource.PaymentTerm{},
 	}
 
-	listPaymentTermsEndpoint := (&paymenttermep.ListPaymentTermsEndpoint{}).Materialize().WithService(inner, paymentTermSvc)
-	getPaymentTermEndpoint := (&paymenttermep.RetrievePaymentTermEndpoint{}).Materialize().WithService(inner, paymentTermSvc)
-	createPaymentTermEndpoint := (&paymenttermep.CreatePaymentTermEndpoint{}).Materialize().WithService(inner, paymentTermSvc)
-	updatePaymentTermEndpoint := (&paymenttermep.UpdatePaymentTermEndpoint{}).Materialize().WithService(inner, paymentTermSvc)
-	deletePaymentTermEndpoint := (&paymenttermep.DeletePaymentTermEndpoint{}).Materialize().WithService(inner, paymentTermSvc)
+	listPaymentTermsEndpoint := apiendpoint.From(&paymenttermep.ListPaymentTermsEndpoint{}).WithService(inner, paymentTermSvc)
+	getPaymentTermEndpoint := apiendpoint.From(&paymenttermep.RetrievePaymentTermEndpoint{}).WithService(inner, paymentTermSvc)
+	createPaymentTermEndpoint := apiendpoint.From(&paymenttermep.CreatePaymentTermEndpoint{}).WithService(inner, paymentTermSvc)
+	updatePaymentTermEndpoint := apiendpoint.From(&paymenttermep.UpdatePaymentTermEndpoint{}).WithService(inner, paymentTermSvc)
+	deletePaymentTermEndpoint := apiendpoint.From(&paymenttermep.DeletePaymentTermEndpoint{}).WithService(inner, paymentTermSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listPaymentTermsEndpoint,

@@ -122,8 +122,6 @@ func (e *CreatePurchaseOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cr
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/purchase-orders",
-		Request:           &CreatePurchaseOrderRequest{},
-		Response:          &apiresource.PurchaseOrderDetail{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
@@ -137,5 +135,5 @@ func (e *CreatePurchaseOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cr
 			ObjectType: constants.ObjectTypePurchaseOrder,
 			Fields:     []string{"supplier", "bill_to_address", "ship_to_address", "carrier", "service_level", "payment_term", "shipping_term", "receiving_order", "lines", "contacts"},
 		}),
-	}).WithDocSource(e)
+	})
 }

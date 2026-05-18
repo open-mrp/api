@@ -39,7 +39,7 @@ func (*RatesEndpointGroup) Materialize(config *RatesEndpointGroupConfig) *RatesE
 		ResourceType: &apiresource.Rate{},
 	}
 
-	updateRateEndpoint := (&rateep.UpdateRateEndpoint{}).Materialize().WithService(inner, rateSvc)
+	updateRateEndpoint := apiendpoint.From(&rateep.UpdateRateEndpoint{}).WithService(inner, rateSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		updateRateEndpoint,

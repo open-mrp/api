@@ -70,7 +70,7 @@ func (m *receivableSvcImpl) ListReceivables(ctx context.Context, req *ListReceiv
 		return nil, apiErr
 	}
 
-	return ReceivableEntryListPresenter(resp), nil
+	return ReceivableEntryListPresenter(ctx, resp), nil
 }
 
 func (m *receivableSvcImpl) ListReceivablesByCustomer(ctx context.Context, req *ListReceivablesByCustomerRequest) (*apiresource.List[apiresource.ReceivableEntry], *apierror.APIError) {
@@ -94,7 +94,7 @@ func (m *receivableSvcImpl) ListReceivablesByCustomer(ctx context.Context, req *
 		return nil, apiErr
 	}
 
-	return ReceivableEntryListPresenter(resp), nil
+	return ReceivableEntryListPresenter(ctx, resp), nil
 }
 
 func (m *receivableSvcImpl) ExportReceivablesByCustomer(ctx context.Context, req *ExportReceivablesByCustomerRequest) (*httptransport.FileDownload, *apierror.APIError) {

@@ -419,8 +419,8 @@ func getFieldMetadata(fieldErr validator.FieldError, structValue any) fieldMetad
 
 	rt := rv.Type()
 
-	for i := 0; i < rt.NumField(); i++ {
-		field := rt.Field(i)
+	for field := range rt.Fields() {
+		field := field
 		if field.Name == fieldName {
 			if jsonTag := field.Tag.Get("json"); jsonTag != "" {
 				jsonName := strings.Split(jsonTag, ",")[0]

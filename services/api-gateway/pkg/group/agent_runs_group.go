@@ -45,11 +45,11 @@ func (*AgentRunsEndpointGroup) Materialize(config *AgentRunsEndpointGroupConfig)
 	}
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
-		(&agentrunep.ListRunsEndpoint{}).Materialize().WithService(inner, runSvc),
-		(&agentrunep.RetrieveRunEndpoint{}).Materialize().WithService(inner, runSvc),
-		(&agentrunep.TriggerRunEndpoint{}).Materialize().WithService(inner, runSvc),
-		(&agentrunep.CancelRunEndpoint{}).Materialize().WithService(inner, runSvc),
-		(&agentrunep.ContinueRunEndpoint{}).Materialize().WithService(inner, runSvc),
+		apiendpoint.From(&agentrunep.ListRunsEndpoint{}).WithService(inner, runSvc),
+		apiendpoint.From(&agentrunep.RetrieveRunEndpoint{}).WithService(inner, runSvc),
+		apiendpoint.From(&agentrunep.TriggerRunEndpoint{}).WithService(inner, runSvc),
+		apiendpoint.From(&agentrunep.CancelRunEndpoint{}).WithService(inner, runSvc),
+		apiendpoint.From(&agentrunep.ContinueRunEndpoint{}).WithService(inner, runSvc),
 	}
 
 	return &AgentRunsEndpointGroup{inner}

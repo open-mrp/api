@@ -17,7 +17,7 @@ type ListAPIKeysRequest struct {
 	Statuses []constants.APIKeyStatus `query:"statuses" default:"active,expired,revoked"`
 }
 
-// Returns a paginated list of API keys.
+// Returns a paginated list of [API keys](https://docs.augno.com/api/api-keys).
 type ListAPIKeysEndpoint struct{}
 
 func (e *ListAPIKeysEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAPIKeysRequest, *apiresource.List[apiresource.APIKey]] {
@@ -26,8 +26,6 @@ func (e *ListAPIKeysEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAPIKey
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/auth/api-keys",
-		Request:           &ListAPIKeysRequest{},
-		Response:          &apiresource.List[apiresource.APIKey]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -38,5 +36,5 @@ func (e *ListAPIKeysEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAPIKey
 			ObjectType: constants.ObjectTypeAPIKey,
 			Fields:     []string{"role", "role.permissions"},
 		}),
-	}).WithDocSource(e)
+	})
 }

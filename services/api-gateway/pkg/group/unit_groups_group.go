@@ -39,16 +39,16 @@ func (*UnitGroupsEndpointGroup) Materialize(config *UnitGroupsEndpointGroupConfi
 		ResourceType: &apiresource.UnitGroup{},
 	}
 
-	listEndpoint := (&unitgroupep.ListUnitGroupsEndpoint{}).Materialize().WithService(inner, unitGroupSvc)
-	retrieveEndpoint := (&unitgroupep.RetrieveUnitGroupEndpoint{}).Materialize().WithService(inner, unitGroupSvc)
-	createEndpoint := (&unitgroupep.CreateUnitGroupEndpoint{}).Materialize().WithService(inner, unitGroupSvc)
-	updateEndpoint := (&unitgroupep.UpdateUnitGroupEndpoint{}).Materialize().WithService(inner, unitGroupSvc)
-	deleteEndpoint := (&unitgroupep.DeleteUnitGroupEndpoint{}).Materialize().WithService(inner, unitGroupSvc)
-	createUnitEndpoint := (&unitgroupep.CreateUnitGroupUnitEndpoint{}).Materialize().WithService(inner, unitGroupSvc)
-	updateUnitEndpoint := (&unitgroupep.UpdateUnitGroupUnitEndpoint{}).Materialize().WithService(inner, unitGroupSvc)
-	deleteUnitEndpoint := (&unitgroupep.DeleteUnitGroupUnitEndpoint{}).Materialize().WithService(inner, unitGroupSvc)
-	listUnitEndpoint := (&unitgroupep.ListUnitGroupUnitsEndpoint{}).Materialize().WithService(inner, unitGroupSvc)
-	getUnitEndpoint := (&unitgroupep.RetrieveUnitGroupUnitEndpoint{}).Materialize().WithService(inner, unitGroupSvc)
+	listEndpoint := apiendpoint.From(&unitgroupep.ListUnitGroupsEndpoint{}).WithService(inner, unitGroupSvc)
+	retrieveEndpoint := apiendpoint.From(&unitgroupep.RetrieveUnitGroupEndpoint{}).WithService(inner, unitGroupSvc)
+	createEndpoint := apiendpoint.From(&unitgroupep.CreateUnitGroupEndpoint{}).WithService(inner, unitGroupSvc)
+	updateEndpoint := apiendpoint.From(&unitgroupep.UpdateUnitGroupEndpoint{}).WithService(inner, unitGroupSvc)
+	deleteEndpoint := apiendpoint.From(&unitgroupep.DeleteUnitGroupEndpoint{}).WithService(inner, unitGroupSvc)
+	createUnitEndpoint := apiendpoint.From(&unitgroupep.CreateUnitGroupUnitEndpoint{}).WithService(inner, unitGroupSvc)
+	updateUnitEndpoint := apiendpoint.From(&unitgroupep.UpdateUnitGroupUnitEndpoint{}).WithService(inner, unitGroupSvc)
+	deleteUnitEndpoint := apiendpoint.From(&unitgroupep.DeleteUnitGroupUnitEndpoint{}).WithService(inner, unitGroupSvc)
+	listUnitEndpoint := apiendpoint.From(&unitgroupep.ListUnitGroupUnitsEndpoint{}).WithService(inner, unitGroupSvc)
+	getUnitEndpoint := apiendpoint.From(&unitgroupep.RetrieveUnitGroupUnitEndpoint{}).WithService(inner, unitGroupSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listEndpoint,

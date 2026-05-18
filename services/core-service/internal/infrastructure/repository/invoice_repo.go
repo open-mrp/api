@@ -50,7 +50,7 @@ func toNullStringSlice(ids []string) []gosql.NullString {
 	return result
 }
 
-func decimalToString(v interface{}) string {
+func decimalToString(v any) string {
 	if v == nil {
 		return "0"
 	}

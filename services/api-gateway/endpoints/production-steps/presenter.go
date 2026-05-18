@@ -1,6 +1,7 @@
 package productionstepep
 
 import (
+	"context"
 	"time"
 
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
@@ -251,10 +252,10 @@ func consumptionPresenter(c *pb.ConsumptionInfo) apiresource.Consumption {
 	}
 }
 
-func ProductionStepListPresenter(resp *pb.ListProductionStepsResponse) *apiresource.List[apiresource.ProductionStep] {
+func ProductionStepListPresenter(ctx context.Context, resp *pb.ListProductionStepsResponse) *apiresource.List[apiresource.ProductionStep] {
 	steps := make([]apiresource.ProductionStep, len(resp.ProductionSteps))
 	for i, s := range resp.ProductionSteps {
 		steps[i] = ProductionStepPresenter(s)
 	}
-	return apiresource.NewList(steps, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(steps, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }

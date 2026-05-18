@@ -24,8 +24,6 @@ func (e *ListPaymentTermsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListP
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/finance/payment-terms",
-		Request:           &ListPaymentTermsRequest{},
-		Response:          &apiresource.List[apiresource.PaymentTerm]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -36,5 +34,5 @@ func (e *ListPaymentTermsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListP
 			ObjectType: constants.ObjectTypePaymentTerm,
 			Fields:     []string{"owner", "owner.account"},
 		}),
-	}).WithDocSource(e)
+	})
 }

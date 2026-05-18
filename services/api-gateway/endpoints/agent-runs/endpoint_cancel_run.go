@@ -25,8 +25,6 @@ func (e *CancelRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*CancelRunReq
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/ai/runs/{id}/actions/cancel",
-		Request:           &CancelRunRequest{},
-		Response:          &apiresource.AgentRun{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -37,5 +35,5 @@ func (e *CancelRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*CancelRunReq
 			ObjectType: constants.ObjectTypeAgentRun,
 			Fields:     []string{"actions", "definition", "definition.config", "definition.tools", "definition.role"},
 		}),
-	}).WithDocSource(e)
+	})
 }

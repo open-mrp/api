@@ -32,13 +32,11 @@ func (e *ResubmitEDIInvoiceEndpoint) Materialize() *apiendpoint.APIEndpoint[*Res
 		Method:            http.MethodPost,
 		Route:             "/v1/operations/edi/actions/resubmit-invoice",
 		ContentType:       "application/json",
-		Request:           &ResubmitEDIInvoiceRequest{},
-		Response:          &apiresource.MessageResource{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ResubmitEDIInvoiceRequest) (*apiresource.MessageResource, *apierror.APIError) {
 			return svc.(EDISvc).ResubmitInvoice
 		},
-	}).WithDocSource(e)
+	})
 }

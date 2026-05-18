@@ -24,13 +24,11 @@ func (e *GetFrequentlyOrderedProductsEndpoint) Materialize() *apiendpoint.APIEnd
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/customers/{id}/frequently-ordered-products",
-		Request:           &GetFrequentlyOrderedProductsRequest{},
-		Response:          &apiresource.List[apiresource.FrequentlyOrderedProduct]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetFrequentlyOrderedProductsRequest) (*apiresource.List[apiresource.FrequentlyOrderedProduct], *apierror.APIError) {
 			return svc.(CustomerSvc).GetFrequentlyOrderedProducts
 		},
-	}).WithDocSource(e)
+	})
 }

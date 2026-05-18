@@ -33,8 +33,6 @@ func (e *RefreshTokenEndpoint) Materialize() *apiendpoint.APIEndpoint[*RefreshTo
 		Method:            http.MethodPut,
 		Route:             "/v1/auth/access-tokens",
 		ContentType:       "application/json",
-		Request:           &RefreshTokenRequest{},
-		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RefreshTokenRequest) (*apiresource.EmptyResource, *apierror.APIError) {
@@ -43,5 +41,5 @@ func (e *RefreshTokenEndpoint) Materialize() *apiendpoint.APIEndpoint[*RefreshTo
 		Extras: apiendpoint.APIEndpointExtras{
 			SkipRequestLogging: true,
 		},
-	}).WithDocSource(e)
+	})
 }

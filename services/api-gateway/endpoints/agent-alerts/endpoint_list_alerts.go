@@ -28,8 +28,6 @@ func (e *ListAlertsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAlertsR
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/ai/alerts",
-		Request:           &ListAlertsRequest{},
-		Response:          &apiresource.List[apiresource.AgentAlert]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -40,5 +38,5 @@ func (e *ListAlertsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAlertsR
 			ObjectType: constants.ObjectTypeAgentAlert,
 			Fields:     []string{"run", "action"},
 		}),
-	}).WithDocSource(e)
+	})
 }

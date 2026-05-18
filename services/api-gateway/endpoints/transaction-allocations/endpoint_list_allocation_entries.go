@@ -29,13 +29,11 @@ func (e *ListAllocationEntriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/finance/transaction-allocations",
-		Request:           &ListAllocationEntriesRequest{},
-		Response:          &apiresource.List[apiresource.AllocationEntry]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListAllocationEntriesRequest) (*apiresource.List[apiresource.AllocationEntry], *apierror.APIError) {
 			return svc.(TransactionAllocationSvc).ListAllocationEntries
 		},
-	}).WithDocSource(e)
+	})
 }

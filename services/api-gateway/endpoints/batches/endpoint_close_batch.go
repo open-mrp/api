@@ -33,13 +33,11 @@ func (e *CloseBatchEndpoint) Materialize() *apiendpoint.APIEndpoint[*CloseBatchR
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/batches/actions/close",
-		Request:           &CloseBatchRequest{},
-		Response:          &apiresource.Batch{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CloseBatchRequest) (*apiresource.Batch, *apierror.APIError) {
 			return svc.(BatchSvc).CloseBatch
 		},
-	}).WithDocSource(e)
+	})
 }

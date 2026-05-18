@@ -39,10 +39,10 @@ func (*ReceivablesEndpointGroup) Materialize(config *ReceivablesEndpointGroupCon
 		ResourceType: &apiresource.ReceivableEntry{},
 	}
 
-	listReceivablesEndpoint := (&receivableep.ListReceivablesEndpoint{}).Materialize().WithService(inner, receivableSvc)
-	listReceivablesByCustomerEndpoint := (&receivableep.ListReceivablesByCustomerEndpoint{}).Materialize().WithService(inner, receivableSvc)
-	exportReceivablesByCustomerEndpoint := (&receivableep.ExportReceivablesByCustomerEndpoint{}).Materialize().WithService(inner, receivableSvc)
-	emailReceivablesForCustomerEndpoint := (&receivableep.EmailReceivablesForCustomerEndpoint{}).Materialize().WithService(inner, receivableSvc)
+	listReceivablesEndpoint := apiendpoint.From(&receivableep.ListReceivablesEndpoint{}).WithService(inner, receivableSvc)
+	listReceivablesByCustomerEndpoint := apiendpoint.From(&receivableep.ListReceivablesByCustomerEndpoint{}).WithService(inner, receivableSvc)
+	exportReceivablesByCustomerEndpoint := apiendpoint.From(&receivableep.ExportReceivablesByCustomerEndpoint{}).WithService(inner, receivableSvc)
+	emailReceivablesForCustomerEndpoint := apiendpoint.From(&receivableep.EmailReceivablesForCustomerEndpoint{}).WithService(inner, receivableSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listReceivablesEndpoint,

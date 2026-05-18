@@ -69,7 +69,7 @@ func (m *locationSvcImpl) ListLocations(ctx context.Context, req *ListLocationsR
 		return nil, apiErr
 	}
 
-	return LocationListPresenter(resp), nil
+	return LocationListPresenter(ctx, resp), nil
 }
 
 func (m *locationSvcImpl) GetLocation(ctx context.Context, req *RetrieveLocationRequest) (*apiresource.Location, *apierror.APIError) {
@@ -176,7 +176,7 @@ func (m *locationSvcImpl) ListLocationTypes(ctx context.Context, req *ListLocati
 		return nil, apiErr
 	}
 
-	return LocationTypeListPresenter(resp), nil
+	return LocationTypeListPresenter(ctx, resp), nil
 }
 
 func (m *locationSvcImpl) GetLocationType(ctx context.Context, req *RetrieveLocationTypeRequest) (*apiresource.LocationType, *apierror.APIError) {

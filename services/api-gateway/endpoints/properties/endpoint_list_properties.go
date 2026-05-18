@@ -23,9 +23,7 @@ func (e *ListPropertiesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPro
 		Title:             "List Properties",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
-		Route:             "/v1/catalog/properties",
-		Request:           &ListPropertiesRequest{},
-		Response:          &apiresource.List[apiresource.Property]{},
+		Route:             CatalogPropertiesRoute,
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -36,5 +34,5 @@ func (e *ListPropertiesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPro
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListPropertiesRequest) (*apiresource.List[apiresource.Property], *apierror.APIError) {
 			return svc.(PropertySvc).ListProperties
 		},
-	}).WithDocSource(e)
+	})
 }

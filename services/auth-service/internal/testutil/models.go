@@ -83,7 +83,7 @@ type APIKeySvcTestModels struct {
 	BadSecretModel *apikey.APIKey
 }
 
-func NewAPIKeySvcTestModels(apiKeyUtils interface{}) *APIKeySvcTestModels {
+func NewAPIKeySvcTestModels(apiKeyUtils any) *APIKeySvcTestModels {
 	return &APIKeySvcTestModels{}
 }
 

@@ -1,6 +1,8 @@
 package deliveryep
 
 import (
+	"context"
+
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -133,7 +135,7 @@ func DeliveryLinePresenter(l *pb.DeliveryLineInfo) apiresource.DeliveryLine {
 	return line
 }
 
-func DeliveryListPresenter(resp *pb.ListDeliveriesResponse) *apiresource.List[apiresource.DeliverySummary] {
+func DeliveryListPresenter(ctx context.Context, resp *pb.ListDeliveriesResponse) *apiresource.List[apiresource.DeliverySummary] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.DeliverySummary](nil, apiresource.PageInfo{})
 	}
@@ -143,5 +145,5 @@ func DeliveryListPresenter(resp *pb.ListDeliveriesResponse) *apiresource.List[ap
 		deliveries[i] = DeliverySummaryPresenter(d)
 	}
 
-	return apiresource.NewList(deliveries, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(deliveries, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }

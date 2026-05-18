@@ -1,6 +1,8 @@
 package sandboxep
 
 import (
+	"context"
+
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -33,7 +35,7 @@ func SandboxPresenter(s *pb.SandboxInfo) apiresource.Sandbox {
 	return result
 }
 
-func SandboxListPresenter(resp *pb.ListSandboxAccountsResponse) *apiresource.List[apiresource.Sandbox] {
+func SandboxListPresenter(ctx context.Context, resp *pb.ListSandboxAccountsResponse) *apiresource.List[apiresource.Sandbox] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.Sandbox](nil, apiresource.PageInfo{})
 	}
@@ -43,5 +45,5 @@ func SandboxListPresenter(resp *pb.ListSandboxAccountsResponse) *apiresource.Lis
 		sandboxes[i] = SandboxPresenter(s)
 	}
 
-	return apiresource.NewList(sandboxes, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(sandboxes, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }

@@ -30,10 +30,8 @@ type UpdateRegistrationFlowRequest struct {
 	HasShippingTermIDs bool `json:"has_shipping_term_ids,omitempty"`
 }
 
-func updateStrPtr(s string) *string { return &s }
-
 var sampleUpdateRegistrationFlowRequest = &UpdateRegistrationFlowRequest{
-	Name: updateStrPtr("Wholesale Registration Updated"),
+	Name: new("Wholesale Registration Updated"),
 }
 
 func (*UpdateRegistrationFlowRequest) SchemaExample() any {
@@ -49,13 +47,11 @@ func (e *UpdateRegistrationFlowEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		Method:            http.MethodPatch,
 		Route:             "/v1/sales/registration-flows/{id}",
 		ContentType:       "application/json",
-		Request:           &UpdateRegistrationFlowRequest{},
-		Response:          &apiresource.RegistrationFlow{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateRegistrationFlowRequest) (*apiresource.RegistrationFlow, *apierror.APIError) {
 			return svc.(RegistrationFlowSvc).UpdateRegistrationFlow
 		},
-	}).WithDocSource(e)
+	})
 }

@@ -1,6 +1,8 @@
 package accountstatusep
 
 import (
+	"context"
+
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -23,7 +25,7 @@ func AccountStatusPresenter(as *pb.AccountStatusInfo) apiresource.AccountStatus 
 	}
 }
 
-func AccountStatusListPresenter(resp *pb.ListAccountStatusesResponse) *apiresource.List[apiresource.AccountStatus] {
+func AccountStatusListPresenter(ctx context.Context, resp *pb.ListAccountStatusesResponse) *apiresource.List[apiresource.AccountStatus] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.AccountStatus](nil, apiresource.PageInfo{})
 	}
@@ -33,5 +35,5 @@ func AccountStatusListPresenter(resp *pb.ListAccountStatusesResponse) *apiresour
 		statuses[i] = AccountStatusPresenter(as)
 	}
 
-	return apiresource.NewList(statuses, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(statuses, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }

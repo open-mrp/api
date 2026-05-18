@@ -44,8 +44,6 @@ func (e *CreateServiceLevelEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cre
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/carriers/{carrier_id}/service-levels",
-		Request:           &CreateServiceLevelRequest{},
-		Response:          &apiresource.ServiceLevel{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
 		Preview:           true,
@@ -56,5 +54,5 @@ func (e *CreateServiceLevelEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cre
 			ObjectType: constants.ObjectTypeServiceLevel,
 			Fields:     []string{"owner", "owner.account"},
 		}),
-	}).WithDocSource(e)
+	})
 }

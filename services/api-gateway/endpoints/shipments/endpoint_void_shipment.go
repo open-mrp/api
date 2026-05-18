@@ -24,13 +24,11 @@ func (e *VoidShipmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*VoidShipm
 		Method:            http.MethodPost,
 		Route:             "/v1/operations/shipments/{id}/actions/void",
 		ContentType:       "application/json",
-		Request:           &VoidShipmentRequest{},
-		Response:          &apiresource.ShipmentDetail{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *VoidShipmentRequest) (*apiresource.ShipmentDetail, *apierror.APIError) {
 			return svc.(ShipmentSvc).VoidShipment
 		},
-	}).WithDocSource(e)
+	})
 }

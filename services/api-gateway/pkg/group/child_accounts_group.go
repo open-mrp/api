@@ -39,9 +39,9 @@ func (*ChildAccountsEndpointGroup) Materialize(config *ChildAccountsEndpointGrou
 		ResourceType: &apiresource.ChildAccount{},
 	}
 
-	listEndpoint := (&childaccountep.ListChildAccountsEndpoint{}).Materialize().WithService(inner, childAccountSvc)
-	addEndpoint := (&childaccountep.AddChildAccountEndpoint{}).Materialize().WithService(inner, childAccountSvc)
-	removeEndpoint := (&childaccountep.RemoveChildAccountEndpoint{}).Materialize().WithService(inner, childAccountSvc)
+	listEndpoint := apiendpoint.From(&childaccountep.ListChildAccountsEndpoint{}).WithService(inner, childAccountSvc)
+	addEndpoint := apiendpoint.From(&childaccountep.AddChildAccountEndpoint{}).WithService(inner, childAccountSvc)
+	removeEndpoint := apiendpoint.From(&childaccountep.RemoveChildAccountEndpoint{}).WithService(inner, childAccountSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listEndpoint,

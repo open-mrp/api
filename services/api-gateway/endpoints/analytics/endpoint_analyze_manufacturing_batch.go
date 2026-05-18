@@ -39,13 +39,11 @@ func (e *AnalyzeManufacturingBatchEndpoint) Materialize() *apiendpoint.APIEndpoi
 		Method:            http.MethodPut,
 		Route:             "/v1/core/analytics/manufacturing-batch",
 		ContentType:       "application/json",
-		Request:           &AnalyzeManufacturingBatchRequest{},
-		Response:          &apiresource.AnalyzeManufacturingBatchResponse{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeManufacturingBatchRequest) (*apiresource.AnalyzeManufacturingBatchResponse, *apierror.APIError) {
 			return svc.(AnalyticsSvc).AnalyzeManufacturingBatch
 		},
-	}).WithDocSource(e)
+	})
 }

@@ -200,7 +200,7 @@ func (m *registrationSessionSvcImpl) ListSessions(ctx context.Context, req *apir
 		sessions[i] = *mapProtoToRegistrationSession(s)
 	}
 
-	return apiresource.NewList(sessions, grpcutil.MapProtoPageInfo(resp.PageInfo)), nil
+	return apiresource.NewList(sessions, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
 }
 
 func (m *registrationSessionSvcImpl) SetupBilling(ctx context.Context, req *SetupBillingRequest) (*apiresource.SetupBillingResponse, *apierror.APIError) {

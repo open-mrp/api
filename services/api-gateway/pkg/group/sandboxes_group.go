@@ -39,10 +39,10 @@ func (*SandboxesEndpointGroup) Materialize(config *SandboxesEndpointGroupConfig)
 		ResourceType: &apiresource.Sandbox{},
 	}
 
-	listSandboxesEndpoint := (&sandboxep.ListSandboxesEndpoint{}).Materialize().WithService(inner, sandboxSvc)
-	getSandboxEndpoint := (&sandboxep.RetrieveSandboxEndpoint{}).Materialize().WithService(inner, sandboxSvc)
-	createSandboxEndpoint := (&sandboxep.CreateSandboxEndpoint{}).Materialize().WithService(inner, sandboxSvc)
-	deleteSandboxEndpoint := (&sandboxep.DeleteSandboxEndpoint{}).Materialize().WithService(inner, sandboxSvc)
+	listSandboxesEndpoint := apiendpoint.From(&sandboxep.ListSandboxesEndpoint{}).WithService(inner, sandboxSvc)
+	getSandboxEndpoint := apiendpoint.From(&sandboxep.RetrieveSandboxEndpoint{}).WithService(inner, sandboxSvc)
+	createSandboxEndpoint := apiendpoint.From(&sandboxep.CreateSandboxEndpoint{}).WithService(inner, sandboxSvc)
+	deleteSandboxEndpoint := apiendpoint.From(&sandboxep.DeleteSandboxEndpoint{}).WithService(inner, sandboxSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listSandboxesEndpoint,

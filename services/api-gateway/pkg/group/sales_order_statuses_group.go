@@ -39,7 +39,7 @@ func (*SalesOrderStatusesEndpointGroup) Materialize(config *SalesOrderStatusesEn
 		ResourceType: &apiresource.SalesOrderStatus{},
 	}
 
-	listEndpoint := (&salesorderstatusep.ListSalesOrderStatusesEndpoint{}).Materialize().WithService(inner, svc)
+	listEndpoint := apiendpoint.From(&salesorderstatusep.ListSalesOrderStatusesEndpoint{}).WithService(inner, svc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listEndpoint,

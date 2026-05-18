@@ -10,13 +10,9 @@ type CheckDuplicateResult struct {
 
 var exampleCheckDuplicateResult = &CheckDuplicateResult{
 	IsDuplicate: true,
-	Message:     ptrString("This invoice number INV-001 already exists"),
+	Message:     new("This invoice number INV-001 already exists"),
 }
 
 func (*CheckDuplicateResult) SchemaExample() any {
 	return exampleCheckDuplicateResult
-}
-
-func ptrString(s string) *string {
-	return &s
 }

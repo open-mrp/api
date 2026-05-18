@@ -225,7 +225,7 @@ func buildRequests(group apiendpoint.APIEndpointGroup) []HTTPieRequest {
 		url := buildURL(route)
 		headers := buildHeaders(group.Title, method)
 		queryParams := buildQueryParams(specField)
-		body := buildBody(method, specField)
+		body := buildBody(method, e.GetRequestType())
 
 		requests = append(requests, HTTPieRequest{
 			Name:        title,
@@ -356,7 +356,7 @@ func buildQueryParams(specField reflect.Value) []HTTPieParam {
 	return params
 }
 
-func buildBody(method string, specField reflect.Value) HTTPieBody {
+func buildBody(method string, reqType reflect.Type) HTTPieBody {
 	emptyBody := HTTPieBody{
 		Type:    "none",
 		File:    HTTPieFile{Name: ""},
@@ -370,10 +370,10 @@ func buildBody(method string, specField reflect.Value) HTTPieBody {
 	}
 
 	// Try to get example body from SchemaExample
-	bodyJSON := getExampleBody(specField)
+	bodyJSON := getExampleBody(reqType)
 	if bodyJSON == "" {
 		// Try reflection-based body generation
-		bodyJSON = getReflectionBody(specField)
+		bodyJSON = getReflectionBody(reqType)
 	}
 
 	if bodyJSON == "" {
@@ -392,9 +392,7 @@ func buildBody(method string, specField reflect.Value) HTTPieBody {
 	}
 }
 
-func getExampleBody(specField reflect.Value) string {
-	reqVal := specField.FieldByName("Request")
-	reqType := reqVal.Type()
+func getExampleBody(reqType reflect.Type) string {
 	if reqType.Kind() == reflect.Pointer {
 		reqType = reqType.Elem()
 	}
@@ -469,9 +467,7 @@ func filterToJSONFields(reqType reflect.Type, data []byte) string {
 	return string(result)
 }
 
-func getReflectionBody(specField reflect.Value) string {
-	reqVal := specField.FieldByName("Request")
-	reqType := reqVal.Type()
+func getReflectionBody(reqType reflect.Type) string {
 	if reqType.Kind() == reflect.Pointer {
 		reqType = reqType.Elem()
 	}

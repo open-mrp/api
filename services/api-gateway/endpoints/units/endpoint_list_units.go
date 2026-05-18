@@ -28,8 +28,6 @@ func (e *ListUnitsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListUnitsReq
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/units",
-		Request:           &ListUnitsRequest{},
-		Response:          &apiresource.List[apiresource.Unit]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -40,5 +38,5 @@ func (e *ListUnitsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListUnitsReq
 			ObjectType: constants.ObjectTypeUnit,
 			Fields:     []string{"owner", "owner.account"},
 		}),
-	}).WithDocSource(e)
+	})
 }

@@ -28,13 +28,11 @@ func (e *ListReceivablesByCustomerEndpoint) Materialize() *apiendpoint.APIEndpoi
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/finance/receivables/accounts/{account_id}",
-		Request:           &ListReceivablesByCustomerRequest{},
-		Response:          &apiresource.List[apiresource.ReceivableEntry]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListReceivablesByCustomerRequest) (*apiresource.List[apiresource.ReceivableEntry], *apierror.APIError) {
 			return svc.(ReceivableSvc).ListReceivablesByCustomer
 		},
-	}).WithDocSource(e)
+	})
 }

@@ -52,8 +52,6 @@ func (e *CreateUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateUnitR
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/units",
-		Request:           &CreateUnitRequest{},
-		Response:          &apiresource.Unit{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
 		Preview:           true,
@@ -67,5 +65,5 @@ func (e *CreateUnitEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateUnitR
 			ObjectType: constants.ObjectTypeUnit,
 			Fields:     []string{"owner", "owner.account"},
 		}),
-	}).WithDocSource(e)
+	})
 }

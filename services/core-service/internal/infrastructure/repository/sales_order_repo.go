@@ -450,6 +450,25 @@ func (r *salesOrderRepoImpl) IsDuplicateCustomerPO(ctx context.Context, accountI
 	return cnt > 0, nil
 }
 
+func (r *salesOrderRepoImpl) CountSalesOrdersForBuyerAccounts(ctx context.Context, ownerAccountID string, buyerAccountIDs []string) (int64, *apierror.APIError) {
+	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.count_for_buyer_accounts")
+	defer span.End()
+
+	if len(buyerAccountIDs) == 0 {
+		return 0, nil
+	}
+
+	cnt, err := r.queries.CountSalesOrdersForBuyerAccounts(ctx, sqlc.CountSalesOrdersForBuyerAccountsParams{
+		OwnerAccountID:  ownerAccountID,
+		BuyerAccountIds: buyerAccountIDs,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return 0, tracing.Trace(span, apiErr)
+	}
+
+	return cnt, nil
+}
+
 func (r *salesOrderRepoImpl) GetNextOrderNumber(ctx context.Context, accountID string) (string, *apierror.APIError) {
 	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.get_next_order_number")
 	defer span.End()

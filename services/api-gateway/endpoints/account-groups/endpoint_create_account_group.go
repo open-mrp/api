@@ -43,8 +43,6 @@ func (e *CreateAccountGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cre
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/account-groups",
-		Request:           &CreateAccountGroupRequest{},
-		Response:          &apiresource.AccountGroup{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
 		Preview:           true,
@@ -54,5 +52,5 @@ func (e *CreateAccountGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cre
 		LocationFunc: func(resp *apiresource.AccountGroup) string {
 			return "/v1/sales/account-groups/" + resp.ID
 		},
-	}).WithDocSource(e)
+	})
 }

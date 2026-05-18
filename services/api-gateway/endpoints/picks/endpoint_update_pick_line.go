@@ -38,13 +38,11 @@ func (e *UpdatePickLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateP
 		Method:            http.MethodPatch,
 		Route:             "/v1/operations/picks/{pick_id}/lines/{id}",
 		ContentType:       "application/json",
-		Request:           &UpdatePickLineRequest{},
-		Response:          &apiresource.PickLineDetail{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdatePickLineRequest) (*apiresource.PickLineDetail, *apierror.APIError) {
 			return svc.(PickSvc).UpdatePickLine
 		},
-	}).WithDocSource(e)
+	})
 }

@@ -24,13 +24,11 @@ func (e *GetAccountLogoURLEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetA
 		Method:            http.MethodGet,
 		Route:             "/v1/identity/accounts/{id}/logo",
 		ContentType:       "application/json",
-		Request:           &GetAccountLogoURLRequest{},
-		Response:          &apiresource.AccountLogoURL{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetAccountLogoURLRequest) (*apiresource.AccountLogoURL, *apierror.APIError) {
 			return svc.(AccountSvc).GetAccountLogoURL
 		},
-	}).WithDocSource(e)
+	})
 }

@@ -83,7 +83,7 @@ func (m *unitSvcImpl) ListUnits(ctx context.Context, req *ListUnitsRequest) (*ap
 		}
 	}
 
-	return UnitListPresenter(resp, ownerAccount), nil
+	return UnitListPresenter(ctx, resp, ownerAccount), nil
 }
 
 func (m *unitSvcImpl) GetUnit(ctx context.Context, req *RetrieveUnitRequest) (*apiresource.Unit, *apierror.APIError) {

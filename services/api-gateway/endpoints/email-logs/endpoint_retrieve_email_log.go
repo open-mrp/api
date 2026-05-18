@@ -25,8 +25,6 @@ func (e *RetrieveEmailLogEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retri
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/core/email-logs/{id}",
-		Request:           &RetrieveEmailLogRequest{},
-		Response:          &apiresource.EmailLog{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -37,5 +35,5 @@ func (e *RetrieveEmailLogEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retri
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveEmailLogRequest) (*apiresource.EmailLog, *apierror.APIError) {
 			return svc.(EmailLogSvc).GetEmailLog
 		},
-	}).WithDocSource(e)
+	})
 }

@@ -24,9 +24,7 @@ func (e *RetrievePropertyEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retri
 		Title:             "Retrieve Property",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
-		Route:             "/v1/catalog/properties/{id}",
-		Request:           &RetrievePropertyRequest{},
-		Response:          &apiresource.Property{},
+		Route:             CatalogPropertyRoute,
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -37,5 +35,5 @@ func (e *RetrievePropertyEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retri
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrievePropertyRequest) (*apiresource.Property, *apierror.APIError) {
 			return svc.(PropertySvc).GetProperty
 		},
-	}).WithDocSource(e)
+	})
 }

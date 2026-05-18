@@ -24,8 +24,6 @@ func (e *ListLocationsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListLoca
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/locations",
-		Request:           &ListLocationsRequest{},
-		Response:          &apiresource.List[apiresource.Location]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -36,5 +34,5 @@ func (e *ListLocationsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListLoca
 			ObjectType: constants.ObjectTypeLocation,
 			Fields:     []string{"parent", "children"},
 		}),
-	}).WithDocSource(e)
+	})
 }

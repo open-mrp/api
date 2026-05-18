@@ -333,7 +333,7 @@ func (suite *SalesOrderLineSvcTestSuite) TestCreateSalesOrderLine_InsufficientPe
 		Actor: &types.IdentityActor{
 			RelationType: types.IdentityRelationTypeInternal,
 			ID:           "usr_ro",
-			AccountID:    ptr("ac_test"),
+			AccountID:    new("ac_test"),
 			RoleType:     &customCode,
 			Permissions:  map[string]bool{"sales_orders:read": true},
 		},
@@ -714,6 +714,3 @@ func (suite *SalesOrderLineSvcTestSuite) TestDeleteSalesOrderLine_AlreadyDeleted
 	// which the endpoint layer relies on to render the 409 response.
 	suite.Contains(apiErr.PublicMessage, "already been deleted")
 }
-
-// ptr is a tiny helper so tests can inline pointer literals for nullable params.
-func ptr[T any](v T) *T { return &v }

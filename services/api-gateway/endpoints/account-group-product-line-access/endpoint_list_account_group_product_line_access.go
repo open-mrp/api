@@ -23,13 +23,11 @@ func (e *ListAccountGroupProductLineAccessEndpoint) Materialize() *apiendpoint.A
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/product-line-access/account-groups",
-		Request:           &ListAccountGroupProductLineAccessRequest{},
-		Response:          &apiresource.List[apiresource.AccountGroupProductLineAccess]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListAccountGroupProductLineAccessRequest) (*apiresource.List[apiresource.AccountGroupProductLineAccess], *apierror.APIError) {
 			return svc.(AccountGroupProductLineAccessSvc).ListAccountGroupProductLineAccess
 		},
-	}).WithDocSource(e)
+	})
 }

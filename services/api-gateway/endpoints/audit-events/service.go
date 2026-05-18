@@ -24,11 +24,13 @@ type AuditEventSvc interface {
 }
 
 type AuditEventSvcConfig struct {
-	AuditClient pb.AuditServiceClient
+	AuditClient   pb.AuditServiceClient
+	LoggingClient pb.LoggingServiceClient
 }
 
 type auditEventSvcImpl struct {
-	auditClient pb.AuditServiceClient
+	auditClient   pb.AuditServiceClient
+	loggingClient pb.LoggingServiceClient
 }
 
 var auditEventSvcTracer = tracing.GetTracer("api-gateway.endpoints.audit_events.service")
@@ -36,6 +38,9 @@ var auditEventSvcTracer = tracing.GetTracer("api-gateway.endpoints.audit_events.
 func (c *AuditEventSvcConfig) validate() error {
 	if c.AuditClient == nil {
 		return fmt.Errorf("audit events endpoint service: audit client is required")
+	}
+	if c.LoggingClient == nil {
+		return fmt.Errorf("audit events endpoint service: logging client is required")
 	}
 	return nil
 }
@@ -46,8 +51,25 @@ func NewAuditEventSvc(config *AuditEventSvcConfig) AuditEventSvc {
 	}
 
 	return &auditEventSvcImpl{
-		auditClient: config.AuditClient,
+		auditClient:   config.AuditClient,
+		loggingClient: config.LoggingClient,
 	}
+}
+
+func (m *auditEventSvcImpl) resolveRequest(ctx context.Context, requestID *string) *pb.RequestLogInfo {
+	if requestID == nil || *requestID == "" || !appctx.IsIncludeRequested(ctx, "request") {
+		return nil
+	}
+	resp, apiErr := grpcutil.CallRPC(ctx, auditEventSvcTracer, "service.audit_events.resolve_request", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetRequestLogResponse, error) {
+			return m.loggingClient.GetRequestLog(ctx, &pb.GetRequestLogRequest{
+				Id: *requestID,
+			}, opts...)
+		})
+	if apiErr != nil || resp == nil {
+		return nil
+	}
+	return resp.RequestLog
 }
 
 func requireInternalAdmin(ctx context.Context) *apierror.APIError {
@@ -92,7 +114,9 @@ func (m *auditEventSvcImpl) ListAuditEvents(ctx context.Context, req *ListAuditE
 		return nil, apiErr
 	}
 
-	return AuditEventListPresenter(resp), nil
+	return AuditEventListPresenter(ctx, resp, func(requestID *string) *pb.RequestLogInfo {
+		return m.resolveRequest(ctx, requestID)
+	}), nil
 }
 
 func (m *auditEventSvcImpl) ListAuditEventResourceTypes(ctx context.Context, _ *ListAuditEventResourceTypesRequest) (*apiresource.List[constants.ObjectType], *apierror.APIError) {
@@ -126,7 +150,8 @@ func (m *auditEventSvcImpl) GetAuditEvent(ctx context.Context, req *RetrieveAudi
 		return nil, apiErr
 	}
 
-	return AuditEventPresenter(resp.AuditEvent), nil
+	requestLog := m.resolveRequest(ctx, resp.AuditEvent.RequestId)
+	return AuditEventPresenter(resp.AuditEvent, requestLog), nil
 }
 
 func stringsFromObjectTypes(ots []constants.ObjectType) []string {

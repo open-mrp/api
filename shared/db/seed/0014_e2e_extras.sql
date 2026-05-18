@@ -301,9 +301,12 @@ INSERT IGNORE INTO account_integration (id, account_id, integration_code, name, 
 -- top of list-audit-events ordering (events are sorted by occurred_at DESC
 -- and other e2e runs generate hundreds of newer events that would otherwise
 -- push this one off the default page).
-INSERT IGNORE INTO audit_event (type_id, actor_id, actor_type, identity_type, account_id, action, resource_type, resource_id, changes, metadata, service_name, occurred_at, created_at) VALUES
-    ('adev_01seedauditevent01', 'us_1wjfmmbwg8l7', 'user', 'internal', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'create', 'unit', 'un_01seedpair000000000', '[{"field":"name","old_value":null,"new_value":"Pair"}]', NULL, 'core-service', DATE_SUB(NOW(), INTERVAL 1 HOUR), NOW()),
-    ('adev_01seedauditevent02', 'us_1wjfmmbwg8l7', 'user', 'internal', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'update', 'property', 'pp_01k0a7ntn1ez6aw8x850femxeh', '[{"field":"name","old_value":"Colour","new_value":"Color"}]', '{"seed":true,"note":"manual e2e seed"}', 'core-service', DATE_ADD(NOW(), INTERVAL 10 YEAR), DATE_ADD(NOW(), INTERVAL 10 YEAR));
+INSERT IGNORE INTO audit_event (type_id, actor_id, actor_type, identity_type, account_id, action, resource_type, resource_id, changes, metadata, service_name, request_id, occurred_at, created_at) VALUES
+    ('adev_01seedauditevent01', 'us_1wjfmmbwg8l7', 'user', 'internal', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'create', 'unit', 'un_01seedpair000000000', '[{"field":"name","old_value":null,"new_value":"Pair"}]', NULL, 'core-service', NULL, DATE_SUB(NOW(), INTERVAL 1 HOUR), NOW()),
+    ('adev_01seedauditevent02', 'us_1wjfmmbwg8l7', 'user', 'internal', 'ac_01k0a5smf9ekb8rqg12555zjqa', 'update', 'property', 'pp_01k0a7ntn1ez6aw8x850femxeh', '[{"field":"name","old_value":"Colour","new_value":"Color"}]', '{"seed":true,"note":"manual e2e seed"}', 'core-service', 'rqlog_01seedreqlog1_000', DATE_ADD(NOW(), INTERVAL 10 YEAR), DATE_ADD(NOW(), INTERVAL 10 YEAR));
+
+-- Backfill request_id on re-seed when INSERT IGNORE skips existing rows.
+UPDATE audit_event SET request_id = 'rqlog_01seedreqlog1_000' WHERE type_id = 'adev_01seedauditevent02' AND (request_id IS NULL OR request_id = '');
 
 -- ============================================================
 -- EMAIL LOGS (2 rows for pagination)

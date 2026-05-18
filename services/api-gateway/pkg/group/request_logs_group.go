@@ -44,8 +44,8 @@ func (*RequestLogsEndpointGroup) Materialize(config *RequestLogsEndpointGroupCon
 		ResourceType: &apiresource.RequestLog{},
 	}
 
-	listEndpoint := (&requestlogep.ListRequestLogsEndpoint{}).Materialize().WithService(inner, requestLogSvc)
-	retrieveEndpoint := (&requestlogep.RetrieveRequestLogEndpoint{}).Materialize().WithService(inner, requestLogSvc)
+	listEndpoint := apiendpoint.From(&requestlogep.ListRequestLogsEndpoint{}).WithService(inner, requestLogSvc)
+	retrieveEndpoint := apiendpoint.From(&requestlogep.RetrieveRequestLogEndpoint{}).WithService(inner, requestLogSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listEndpoint,

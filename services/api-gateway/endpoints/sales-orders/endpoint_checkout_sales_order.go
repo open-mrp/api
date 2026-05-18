@@ -39,13 +39,11 @@ func (e *CheckoutSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*Che
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/sales-orders/{id}/checkout",
-		Request:           &CheckoutSalesOrderRequest{},
-		Response:          &CheckoutSalesOrderResponse{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CheckoutSalesOrderRequest) (*CheckoutSalesOrderResponse, *apierror.APIError) {
 			return svc.(SalesOrderSvc).CheckoutSalesOrder
 		},
-	}).WithDocSource(e)
+	})
 }

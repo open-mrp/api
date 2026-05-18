@@ -1,6 +1,8 @@
 package receivingorderep
 
 import (
+	"context"
+
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -163,7 +165,7 @@ func ReceivingOrderLinePresenter(info *pb.ReceivingOrderLineInfo) apiresource.Re
 	return line
 }
 
-func ReceivingOrderListPresenter(resp *pb.ListReceivingOrdersResponse) *apiresource.List[apiresource.ReceivingOrderSummary] {
+func ReceivingOrderListPresenter(ctx context.Context, resp *pb.ListReceivingOrdersResponse) *apiresource.List[apiresource.ReceivingOrderSummary] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.ReceivingOrderSummary](nil, apiresource.PageInfo{})
 	}
@@ -173,5 +175,5 @@ func ReceivingOrderListPresenter(resp *pb.ListReceivingOrdersResponse) *apiresou
 		orders[i] = ReceivingOrderSummaryPresenter(o)
 	}
 
-	return apiresource.NewList(orders, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(orders, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }

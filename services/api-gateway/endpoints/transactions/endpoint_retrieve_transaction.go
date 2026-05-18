@@ -27,8 +27,6 @@ func (e *RetrieveTransactionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Re
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/finance/transactions/{id}",
-		Request:           &RetrieveTransactionRequest{},
-		Response:          &apiresource.TransactionDetail{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -39,5 +37,5 @@ func (e *RetrieveTransactionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Re
 			ObjectType: constants.ObjectTypeTransaction,
 			Fields:     []string{"allocations", "customer", "responsible_user"},
 		}),
-	}).WithDocSource(e)
+	})
 }

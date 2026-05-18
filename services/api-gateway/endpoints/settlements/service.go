@@ -81,7 +81,7 @@ func (m *settlementSvcImpl) ListSettlements(ctx context.Context, req *ListSettle
 		return nil, apiErr
 	}
 
-	return SettlementListPresenter(resp), nil
+	return SettlementListPresenter(ctx, resp), nil
 }
 
 func (m *settlementSvcImpl) GetSettlement(ctx context.Context, req *RetrieveSettlementRequest) (*apiresource.Settlement, *apierror.APIError) {

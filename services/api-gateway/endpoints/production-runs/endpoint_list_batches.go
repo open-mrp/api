@@ -25,13 +25,11 @@ func (e *ListBatchesByProductionRunEndpoint) Materialize() *apiendpoint.APIEndpo
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/production-runs/{id}/batches",
-		Request:           &ListBatchesByProductionRunRequest{},
-		Response:          &apiresource.List[apiresource.Batch]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListBatchesByProductionRunRequest) (*apiresource.List[apiresource.Batch], *apierror.APIError) {
 			return svc.(ProductionRunSvc).ListBatchesByProductionRun
 		},
-	}).WithDocSource(e)
+	})
 }

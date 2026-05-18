@@ -788,12 +788,7 @@ func (r *customerRepoImpl) Get(ctx context.Context, ownerAccountID, customerAcco
 
 // wantsInclude returns true if the include key is present in the include list.
 func wantsInclude(incs []string, key string) bool {
-	for _, inc := range incs {
-		if inc == key {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(incs, key)
 }
 
 // fetchChildAccountsByRelationIDs batches a single SQL query to fetch direct

@@ -30,7 +30,8 @@ func (*AuditEventsEndpointGroup) Materialize(config *AuditEventsEndpointGroupCon
 	}
 
 	auditEventSvc := auditeventep.NewAuditEventSvc(&auditeventep.AuditEventSvcConfig{
-		AuditClient: config.PlatformClient.AuditClient,
+		AuditClient:   config.PlatformClient.AuditClient,
+		LoggingClient: config.PlatformClient.LoggingClient,
 	})
 
 	inner := &apiendpoint.APIEndpointGroup{
@@ -39,9 +40,9 @@ func (*AuditEventsEndpointGroup) Materialize(config *AuditEventsEndpointGroupCon
 		ResourceType: &apiresource.AuditEvent{},
 	}
 
-	listEndpoint := (&auditeventep.ListAuditEventsEndpoint{}).Materialize().WithService(inner, auditEventSvc)
-	listResourceTypesEndpoint := (&auditeventep.ListAuditEventResourceTypesEndpoint{}).Materialize().WithService(inner, auditEventSvc)
-	retrieveEndpoint := (&auditeventep.RetrieveAuditEventEndpoint{}).Materialize().WithService(inner, auditEventSvc)
+	listEndpoint := apiendpoint.From(&auditeventep.ListAuditEventsEndpoint{}).WithService(inner, auditEventSvc)
+	listResourceTypesEndpoint := apiendpoint.From(&auditeventep.ListAuditEventResourceTypesEndpoint{}).WithService(inner, auditEventSvc)
+	retrieveEndpoint := apiendpoint.From(&auditeventep.RetrieveAuditEventEndpoint{}).WithService(inner, auditEventSvc)
 
 	// Order matters: the router's catch-all picks the LAST matching route, so
 	// the static /resource-types path must be registered after the /{id} wildcard.

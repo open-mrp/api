@@ -292,7 +292,7 @@ func ediBoolToNullBool(b *bool) gosql.NullBool {
 // EDI Run repository methods
 // ---------------------------------------------------------------------------
 
-func optionalEDISearch(q *string) interface{} {
+func optionalEDISearch(q *string) any {
 	if q == nil || *q == "" {
 		return nil
 	}

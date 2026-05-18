@@ -25,8 +25,6 @@ func (e *RetrieveShippingCaseEndpoint) Materialize() *apiendpoint.APIEndpoint[*R
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/shipping-cases/{id}",
-		Request:           &RetrieveShippingCaseRequest{},
-		Response:          &apiresource.ShippingCase{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -37,5 +35,5 @@ func (e *RetrieveShippingCaseEndpoint) Materialize() *apiendpoint.APIEndpoint[*R
 			ObjectType: constants.ObjectTypeShippingCase,
 			Fields:     []string{"carrier", "shipment", "freight_amount.unit", "freight_weight.unit"},
 		}),
-	}).WithDocSource(e)
+	})
 }

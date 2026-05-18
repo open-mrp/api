@@ -27,8 +27,6 @@ func (e *RetrieveServiceLevelEndpoint) Materialize() *apiendpoint.APIEndpoint[*R
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/carriers/{carrier_id}/service-levels/{id}",
-		Request:           &RetrieveServiceLevelRequest{},
-		Response:          &apiresource.ServiceLevel{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -39,5 +37,5 @@ func (e *RetrieveServiceLevelEndpoint) Materialize() *apiendpoint.APIEndpoint[*R
 			ObjectType: constants.ObjectTypeServiceLevel,
 			Fields:     []string{"owner", "owner.account"},
 		}),
-	}).WithDocSource(e)
+	})
 }

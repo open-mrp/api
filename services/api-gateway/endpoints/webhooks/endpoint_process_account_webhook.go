@@ -28,8 +28,6 @@ func (e *ProcessAccountWebhookEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/webhooks/stripe/{account_id}",
-		Request:           &AccountStripeWebhookRequest{},
-		Response:          &apiresource.WebhookResponse{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -40,5 +38,5 @@ func (e *ProcessAccountWebhookEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AccountStripeWebhookRequest) (*apiresource.WebhookResponse, *apierror.APIError) {
 			return svc.(WebhookSvc).ProcessAccountWebhook
 		},
-	}).WithDocSource(e)
+	})
 }

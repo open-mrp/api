@@ -76,7 +76,7 @@ func (m *serviceLevelSvcImpl) ListServiceLevels(ctx context.Context, req *ListSe
 		}
 	}
 
-	return ServiceLevelListPresenter(resp, ownerAccount), nil
+	return ServiceLevelListPresenter(ctx, resp, ownerAccount), nil
 }
 
 func (m *serviceLevelSvcImpl) GetServiceLevel(ctx context.Context, req *RetrieveServiceLevelRequest) (*apiresource.ServiceLevel, *apierror.APIError) {

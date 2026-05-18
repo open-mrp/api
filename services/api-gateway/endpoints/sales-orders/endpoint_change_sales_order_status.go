@@ -39,8 +39,6 @@ func (e *ChangeSalesOrderStatusEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/sales-orders/{id}/actions/change-status",
-		Request:           &ChangeSalesOrderStatusRequest{},
-		Response:          &apiresource.SalesOrderDetail{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -51,5 +49,5 @@ func (e *ChangeSalesOrderStatusEndpoint) Materialize() *apiendpoint.APIEndpoint[
 			ObjectType: constants.ObjectTypeSalesOrder,
 			Fields:     []string{"customer", "bill_to_address", "ship_to_address", "carrier", "service_level", "payment_term", "shipping_term", "order_discount", "lines", "lines.item"},
 		}),
-	}).WithDocSource(e)
+	})
 }

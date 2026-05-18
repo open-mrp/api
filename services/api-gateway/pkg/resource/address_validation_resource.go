@@ -7,11 +7,11 @@ import (
 
 // Autocomplete address suggestion.
 type AddressSuggestion struct {
-	// Google Places ID.
+	// Address suggestion ID.
 	ID string `json:"id" validate:"required"`
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=address_suggestion"`
-	// Full description.
+	// Full description of the address.
 	Description string `json:"description" validate:"required"`
 	// Main text (typically the street address).
 	MainText string `json:"main_text" validate:"required"`
@@ -39,7 +39,7 @@ type AddressComponents struct {
 	AddressLine1 string `json:"address_line_1" validate:"required"`
 	// Second line of the street address.
 	AddressLine2 *string `json:"address_line_2"`
-	// City.
+	// City or locality.
 	City string `json:"city" validate:"required"`
 	// State or administrative area.
 	State string `json:"state" validate:"required"`

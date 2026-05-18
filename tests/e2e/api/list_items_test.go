@@ -35,6 +35,36 @@ func TestListItems_SearchBySKU(t *testing.T) {
 	assert.True(t, found, "Seeded item with SKU %q not found in search results", SeedItemSKU)
 }
 
+func TestListItems_SearchRanksExactSKUBeforeSubstring_Parts(t *testing.T) {
+	t.Parallel()
+	exactSKU := uniqueName("e2e-rank-it-ex")
+	longSKU := "Z" + exactSKU + "Z"
+
+	respLong, err := apiClient.PostFull(partsPath, validPartBody(longSKU), newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, respLong.StatusCode, respLong.Body)
+	longPartID := jsonField(parseJSON(respLong.Body), "id")
+	require.NotEmpty(t, longPartID)
+	t.Cleanup(func() { apiClient.Delete(partsPath + "/" + longPartID) })
+
+	respExact, err := apiClient.PostFull(partsPath, validPartBody(exactSKU), newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, respExact.StatusCode, respExact.Body)
+	exactPartID := jsonField(parseJSON(respExact.Body), "id")
+	require.NotEmpty(t, exactPartID)
+	t.Cleanup(func() { apiClient.Delete(partsPath + "/" + exactPartID) })
+
+	list, _, err := apiClient.GetList(itemsPath, url.Values{
+		"q":     {exactSKU},
+		"types": {"part"},
+		"limit": {"10"},
+	})
+	require.NoError(t, err)
+	require.NotEmpty(t, list.Data, "search should return both part items")
+
+	assert.Equal(t, exactSKU, DataItemField(list.Data[0], "sku"), "exact SKU match should sort before substring-only match")
+}
+
 func TestListItems_SearchByDescription(t *testing.T) {
 	t.Parallel()
 	list, _, err := apiClient.GetList(itemsPath, url.Values{"q": {"sock"}})
@@ -105,12 +135,9 @@ func TestListItems_Pagination(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, page1.Data, 1)
 	require.True(t, page1.PageInfo.HasNextPage, "seeded catalog should have more than one item for pagination")
-	require.NotNil(t, page1.PageInfo.NextCursor)
+	require.NotNil(t, page1.PageInfo.NextPageURL)
 
-	page2, _, err := apiClient.GetList(itemsPath, url.Values{
-		"limit":  {"1"},
-		"cursor": {*page1.PageInfo.NextCursor},
-	})
+	page2, _, err := apiClient.GetListFromPageURL(page1.PageInfo.NextPageURL)
 	require.NoError(t, err)
 	require.Len(t, page2.Data, 1)
 
@@ -166,17 +193,13 @@ func TestListItems_FilterByCategoryWithPagination(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, page1.Data, 1, "First page with category filter should have exactly 1 item")
 
-	if !page1.PageInfo.HasNextPage || page1.PageInfo.NextCursor == nil {
+	if !page1.PageInfo.HasNextPage || page1.PageInfo.NextPageURL == nil {
 		// Only one item in the category — still confirms the filter worked.
 		return
 	}
 
-	// Page 2: same category filter with cursor — verifies filters persist across pages.
-	page2, _, err := apiClient.GetList(itemsPath, url.Values{
-		"category_ids": {SeedItemCategoryID},
-		"limit":        {"1"},
-		"cursor":       {*page1.PageInfo.NextCursor},
-	})
+	// Page 2: follows next_page_url — verifies filters persist across pages.
+	page2, _, err := apiClient.GetListFromPageURL(page1.PageInfo.NextPageURL)
 	require.NoError(t, err)
 	require.Len(t, page2.Data, 1, "Second page with category filter should have exactly 1 item")
 
@@ -190,25 +213,27 @@ func TestListItems_SubassemblyFilterInitialOnly_ReturnsInitialPartsOnly(t *testi
 
 	// Collect every item returned by the filter across all cursor pages.
 	skus := map[string]struct{}{}
-	cursor := ""
+	var nextPageURL *string
 	for {
-		params := url.Values{
-			"types[]":            {"part"},
-			"subassembly_filter": {"initial_only"},
-			"limit":              {"500"},
+		var list *ListResponse
+		var err error
+		if nextPageURL == nil {
+			list, _, err = apiClient.GetList(itemsPath, url.Values{
+				"types[]":            {"part"},
+				"subassembly_filter": {"initial_only"},
+				"limit":              {"500"},
+			})
+		} else {
+			list, _, err = apiClient.GetListFromPageURL(nextPageURL)
 		}
-		if cursor != "" {
-			params.Set("cursor", cursor)
-		}
-		list, _, err := apiClient.GetList(itemsPath, params)
 		require.NoError(t, err)
 		for _, item := range list.Data {
 			skus[DataItemField(item, "sku")] = struct{}{}
 		}
-		if !list.PageInfo.HasNextPage || list.PageInfo.NextCursor == nil {
+		if !list.PageInfo.HasNextPage || list.PageInfo.NextPageURL == nil {
 			break
 		}
-		cursor = *list.PageInfo.NextCursor
+		nextPageURL = list.PageInfo.NextPageURL
 	}
 
 	// LKN and SKN are root-step items (Knit Large / Knit Small are at the start of their BOM chains).

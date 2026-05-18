@@ -41,8 +41,6 @@ func (e *UpdateProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*Up
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/production-runs/{id}",
-		Request:           &UpdateProductionRunRequest{},
-		Response:          &apiresource.ProductionRunDetail{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -53,5 +51,5 @@ func (e *UpdateProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*Up
 			ObjectType: constants.ObjectTypeProductionRun,
 			Fields:     []string{"responsible_user"},
 		}),
-	}).WithDocSource(e)
+	})
 }

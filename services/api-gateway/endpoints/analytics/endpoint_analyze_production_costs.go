@@ -35,13 +35,11 @@ func (e *AnalyzeProductionCostsEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		Method:            http.MethodPut,
 		Route:             "/v1/core/analytics/production-costs",
 		ContentType:       "application/json",
-		Request:           &AnalyzeProductionCostsRequest{},
-		Response:          &apiresource.AnalyzeProductionCostsResponse{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeProductionCostsRequest) (*apiresource.AnalyzeProductionCostsResponse, *apierror.APIError) {
 			return svc.(AnalyticsSvc).AnalyzeProductionCosts
 		},
-	}).WithDocSource(e)
+	})
 }

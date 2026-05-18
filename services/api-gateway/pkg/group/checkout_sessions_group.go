@@ -38,7 +38,7 @@ func (*CheckoutSessionsEndpointGroup) Materialize(config *CheckoutSessionsEndpoi
 		ResourceType: &checkoutsessionep.CheckoutSessionResponse{},
 	}
 
-	createEndpoint := (&checkoutsessionep.CreateCheckoutSessionEndpoint{}).Materialize().WithService(inner, svc)
+	createEndpoint := apiendpoint.From(&checkoutsessionep.CreateCheckoutSessionEndpoint{}).WithService(inner, svc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		createEndpoint,

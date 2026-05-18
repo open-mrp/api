@@ -78,7 +78,7 @@ func (m *productLineSvcImpl) ListProductLines(ctx context.Context, req *ListProd
 		}
 	}
 
-	return ProductLineListPresenter(resp, ownerAccount), nil
+	return ProductLineListPresenter(ctx, resp, ownerAccount), nil
 }
 
 func (m *productLineSvcImpl) GetProductLine(ctx context.Context, req *RetrieveProductLineRequest) (*apiresource.ProductLine, *apierror.APIError) {

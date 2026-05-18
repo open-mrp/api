@@ -27,13 +27,11 @@ func (e *PullEDIOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*PullEDIO
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/edi/actions/pull-orders",
-		Request:           &PullEDIOrdersRequest{},
-		Response:          &apiresource.MessageResource{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *PullEDIOrdersRequest) (*apiresource.MessageResource, *apierror.APIError) {
 			return svc.(EDISvc).PullOrders
 		},
-	}).WithDocSource(e)
+	})
 }

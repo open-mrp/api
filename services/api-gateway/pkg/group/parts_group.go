@@ -39,12 +39,12 @@ func (*PartsEndpointGroup) Materialize(config *PartsEndpointGroupConfig) *PartsE
 		ResourceType: &apiresource.Part{},
 	}
 
-	createPartEndpoint := (&partep.CreatePartEndpoint{}).Materialize().WithService(inner, partSvc)
-	getPartEndpoint := (&partep.RetrievePartEndpoint{}).Materialize().WithService(inner, partSvc)
-	listPartsEndpoint := (&partep.ListPartsEndpoint{}).Materialize().WithService(inner, partSvc)
-	updatePartEndpoint := (&partep.UpdatePartEndpoint{}).Materialize().WithService(inner, partSvc)
-	deletePartEndpoint := (&partep.DeletePartEndpoint{}).Materialize().WithService(inner, partSvc)
-	exportPartsEndpoint := (&partep.ExportPartsEndpoint{}).Materialize().WithService(inner, partSvc)
+	createPartEndpoint := apiendpoint.From(&partep.CreatePartEndpoint{}).WithService(inner, partSvc)
+	getPartEndpoint := apiendpoint.From(&partep.RetrievePartEndpoint{}).WithService(inner, partSvc)
+	listPartsEndpoint := apiendpoint.From(&partep.ListPartsEndpoint{}).WithService(inner, partSvc)
+	updatePartEndpoint := apiendpoint.From(&partep.UpdatePartEndpoint{}).WithService(inner, partSvc)
+	deletePartEndpoint := apiendpoint.From(&partep.DeletePartEndpoint{}).WithService(inner, partSvc)
+	exportPartsEndpoint := apiendpoint.From(&partep.ExportPartsEndpoint{}).WithService(inner, partSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listPartsEndpoint,

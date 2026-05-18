@@ -1,6 +1,8 @@
 package productionrunep
 
 import (
+	"context"
+
 	batchep "github.com/augno/api/services/api-gateway/endpoints/batches"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
@@ -62,18 +64,13 @@ func ProductionRunDetailPresenter(info *pb.ProductionRunInfo) apiresource.Produc
 	return d
 }
 
-func ProductionRunListPresenter(resp *pb.ListProductionRunsResponse) *apiresource.List[apiresource.ProductionRunSummary] {
+func ProductionRunListPresenter(ctx context.Context, resp *pb.ListProductionRunsResponse) *apiresource.List[apiresource.ProductionRunSummary] {
 	runs := make([]apiresource.ProductionRunSummary, len(resp.ProductionRuns))
 	for i, pr := range resp.ProductionRuns {
 		runs[i] = ProductionRunSummaryPresenter(pr)
 	}
 
-	return apiresource.NewList(runs, apiresource.PageInfo{
-		NextCursor:  resp.PageInfo.NextCursor,
-		PrevCursor:  resp.PageInfo.PrevCursor,
-		HasNextPage: resp.PageInfo.HasNextPage,
-		HasPrevPage: resp.PageInfo.HasPrevPage,
-	})
+	return apiresource.NewList(runs, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }
 
 func AddBatchesPresenter(resp *pb.AddBatchesToProductionRunResponse) *apiresource.List[apiresource.Batch] {
@@ -85,7 +82,7 @@ func AddBatchesPresenter(resp *pb.AddBatchesToProductionRunResponse) *apiresourc
 	return apiresource.NewList(batches, apiresource.PageInfo{})
 }
 
-func ListBatchesPresenter(resp *pb.ListBatchesByProductionRunResponse) *apiresource.List[apiresource.Batch] {
+func ListBatchesPresenter(ctx context.Context, resp *pb.ListBatchesByProductionRunResponse) *apiresource.List[apiresource.Batch] {
 	batches := make([]apiresource.Batch, len(resp.Batches))
 	for i, b := range resp.Batches {
 		batches[i] = batchep.BatchPresenter(b)
@@ -93,7 +90,7 @@ func ListBatchesPresenter(resp *pb.ListBatchesByProductionRunResponse) *apiresou
 
 	var pi apiresource.PageInfo
 	if resp.PageInfo != nil {
-		pi = grpcutil.MapProtoPageInfo(resp.PageInfo)
+		pi = grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)
 	}
 
 	return apiresource.NewList(batches, pi)

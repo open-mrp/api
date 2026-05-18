@@ -1,6 +1,7 @@
 package roleep
 
 import (
+	"context"
 	"fmt"
 
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
@@ -59,7 +60,7 @@ func RolePresenter(r *pb.RoleDetail, ownerAccount *apiresource.Account) apiresou
 	return role
 }
 
-func RoleListPresenter(resp *pb.ListRolesResponse, ownerAccount *apiresource.Account) *apiresource.List[apiresource.Role] {
+func RoleListPresenter(ctx context.Context, resp *pb.ListRolesResponse, ownerAccount *apiresource.Account) *apiresource.List[apiresource.Role] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.Role](nil, apiresource.PageInfo{})
 	}
@@ -69,7 +70,7 @@ func RoleListPresenter(resp *pb.ListRolesResponse, ownerAccount *apiresource.Acc
 		roles[i] = RolePresenter(r, ownerAccount)
 	}
 
-	return apiresource.NewList(roles, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(roles, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }
 
 func stringPtrIfNotEmpty(s string) *string {

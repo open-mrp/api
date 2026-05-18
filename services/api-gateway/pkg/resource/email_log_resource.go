@@ -24,8 +24,6 @@ type EmailLog struct {
 	Subject *string `json:"subject"`
 	// Filename of any attachment.
 	Filename *string `json:"filename"`
-	// SES message ID returned by AWS.
-	SESMessageID *string `json:"ses_message_id"`
 	// Actor who sent the email. Null when the email was sent by the system.
 	SentBy *Actor `json:"sent_by" expandable:"true"`
 	// Creation timestamp.

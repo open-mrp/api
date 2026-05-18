@@ -84,7 +84,7 @@ func (m *invoiceSvcImpl) ListInvoices(ctx context.Context, req *ListInvoicesRequ
 		return nil, apiErr
 	}
 
-	return InvoiceListPresenter(resp), nil
+	return InvoiceListPresenter(ctx, resp), nil
 }
 
 func (m *invoiceSvcImpl) GetInvoice(ctx context.Context, req *RetrieveInvoiceRequest) (*apiresource.Invoice, *apierror.APIError) {
@@ -146,5 +146,5 @@ func (m *invoiceSvcImpl) ListCustomerInvoices(ctx context.Context, req *ListCust
 		return nil, apiErr
 	}
 
-	return CustomerInvoiceListPresenter(resp), nil
+	return CustomerInvoiceListPresenter(ctx, resp), nil
 }

@@ -51,8 +51,6 @@ func (e *CreateTransactionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Crea
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/finance/transactions",
-		Request:           &CreateTransactionRequest{},
-		Response:          &apiresource.TransactionDetail{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
@@ -62,5 +60,5 @@ func (e *CreateTransactionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Crea
 		LocationFunc: func(resp *apiresource.TransactionDetail) string {
 			return "/v1/finance/transactions/" + resp.ID
 		},
-	}).WithDocSource(e)
+	})
 }

@@ -1,6 +1,8 @@
 package partep
 
 import (
+	"context"
+
 	itemep "github.com/augno/api/services/api-gateway/endpoints/items"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
@@ -25,7 +27,7 @@ func PartPresenter(p *pb.PartInfo) apiresource.Part {
 	return part
 }
 
-func PartListPresenter(resp *pb.ListPartsResponse) *apiresource.List[apiresource.Part] {
+func PartListPresenter(ctx context.Context, resp *pb.ListPartsResponse) *apiresource.List[apiresource.Part] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.Part](nil, apiresource.PageInfo{})
 	}
@@ -35,5 +37,5 @@ func PartListPresenter(resp *pb.ListPartsResponse) *apiresource.List[apiresource
 		parts[i] = PartPresenter(part)
 	}
 
-	return apiresource.NewList(parts, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(parts, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }

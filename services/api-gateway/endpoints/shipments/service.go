@@ -84,7 +84,7 @@ func (m *shipmentSvcImpl) ListShipments(ctx context.Context, req *ListShipmentsR
 		return nil, apiErr
 	}
 
-	return ShipmentListPresenter(resp), nil
+	return ShipmentListPresenter(ctx, resp), nil
 }
 
 func (m *shipmentSvcImpl) GetShipment(ctx context.Context, req *RetrieveShipmentRequest) (*apiresource.ShipmentDetail, *apierror.APIError) {
@@ -270,7 +270,7 @@ func (m *shipmentSvcImpl) ListShipmentLines(ctx context.Context, req *ListShipme
 		return nil, apiErr
 	}
 
-	return ShipmentLineListPresenter(resp), nil
+	return ShipmentLineListPresenter(ctx, resp), nil
 }
 
 func (m *shipmentSvcImpl) GetShipmentLine(ctx context.Context, req *RetrieveShipmentLineRequest) (*apiresource.ShipmentLine, *apierror.APIError) {

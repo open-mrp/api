@@ -29,13 +29,11 @@ func (e *AnalyzeManufacturingEndpoint) Materialize() *apiendpoint.APIEndpoint[*A
 		Method:            http.MethodPut,
 		Route:             "/v1/core/analytics/manufacturing",
 		ContentType:       "application/json",
-		Request:           &AnalyzeManufacturingRequest{},
-		Response:          &apiresource.AnalyzeManufacturingResponse{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeManufacturingRequest) (*apiresource.AnalyzeManufacturingResponse, *apierror.APIError) {
 			return svc.(AnalyticsSvc).AnalyzeManufacturing
 		},
-	}).WithDocSource(e)
+	})
 }

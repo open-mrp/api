@@ -105,7 +105,7 @@ func (m *productSvcImpl) ListProducts(ctx context.Context, req *ListProductsRequ
 		return nil, apiErr
 	}
 
-	return ProductListPresenter(resp), nil
+	return ProductListPresenter(ctx, resp), nil
 }
 
 func (m *productSvcImpl) GetProduct(ctx context.Context, req *RetrieveProductRequest) (*apiresource.Product, *apierror.APIError) {

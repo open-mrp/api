@@ -24,13 +24,11 @@ func (e *ResendEmailEndpoint) Materialize() *apiendpoint.APIEndpoint[*ResendEmai
 		Method:            http.MethodPost,
 		Route:             "/v1/auth/registration-sessions/{session_id}/actions/resend-verification-email",
 		ContentType:       "application/json",
-		Request:           &ResendEmailRequest{},
-		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusAccepted,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ResendEmailRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(RegistrationSessionSvc).ResendVerificationEmail
 		},
-	}).WithDocSource(e)
+	})
 }

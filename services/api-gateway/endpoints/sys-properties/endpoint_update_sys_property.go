@@ -36,13 +36,11 @@ func (e *UpdateSysPropertyEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upda
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
 		Route:             "/v1/core/sys-properties/{id}",
-		Request:           &UpdateSysPropertyRequest{},
-		Response:          &apiresource.SysProperty{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateSysPropertyRequest) (*apiresource.SysProperty, *apierror.APIError) {
 			return svc.(SysPropertySvc).UpdateSysProperty
 		},
-	}).WithDocSource(e)
+	})
 }

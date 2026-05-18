@@ -24,13 +24,11 @@ func (e *DeleteLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteL
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/locations/{id}",
-		Request:           &DeleteLocationRequest{},
-		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteLocationRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(LocationSvc).DeleteLocation
 		},
-	}).WithDocSource(e)
+	})
 }

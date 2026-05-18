@@ -24,13 +24,11 @@ func (e *GetOAuthStatusEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetOAut
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/carriers/{id}/oauth-status",
-		Request:           &GetOAuthStatusRequest{},
-		Response:          &apiresource.OAuthStatusResponse{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetOAuthStatusRequest) (*apiresource.OAuthStatusResponse, *apierror.APIError) {
 			return svc.(CarrierSvc).GetOAuthStatus
 		},
-	}).WithDocSource(e)
+	})
 }

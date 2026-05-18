@@ -24,13 +24,11 @@ func (e *DeleteMemoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteMem
 		Method:            http.MethodDelete,
 		Route:             "/v1/ai/memories/{id}",
 		ContentType:       "application/json",
-		Request:           &DeleteMemoryRequest{},
-		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteMemoryRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(AgentMemorySvc).DeleteMemory
 		},
-	}).WithDocSource(e)
+	})
 }

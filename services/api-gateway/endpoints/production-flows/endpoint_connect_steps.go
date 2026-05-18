@@ -36,13 +36,11 @@ func (e *ConnectStepsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ConnectSt
 		Method:            http.MethodPost,
 		Route:             "/v1/operations/production-flows/actions/connect-steps",
 		ContentType:       "application/json",
-		Request:           &ConnectStepsRequest{},
-		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ConnectStepsRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(ProductionFlowSvc).ConnectSteps
 		},
-	}).WithDocSource(e)
+	})
 }

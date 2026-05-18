@@ -24,13 +24,11 @@ func (e *DeleteAccountIntegrationEndpoint) Materialize() *apiendpoint.APIEndpoin
 		Method:            http.MethodDelete,
 		Route:             "/v1/identity/integrations/{id}",
 		ContentType:       "application/json",
-		Request:           &DeleteAccountIntegrationRequest{},
-		Response:          &apiresource.AccountIntegration{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteAccountIntegrationRequest) (*apiresource.AccountIntegration, *apierror.APIError) {
 			return svc.(AccountIntegrationSvc).DeleteAccountIntegration
 		},
-	}).WithDocSource(e)
+	})
 }

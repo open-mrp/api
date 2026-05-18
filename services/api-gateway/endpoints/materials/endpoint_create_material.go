@@ -63,8 +63,6 @@ func (e *CreateMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateM
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/materials",
-		Request:           &CreateMaterialRequest{},
-		Response:          &apiresource.Material{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
 		Preview:           true,
@@ -78,5 +76,5 @@ func (e *CreateMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateM
 			ObjectType: constants.ObjectTypeMaterial,
 			Fields:     []string{"item", "item.category", "item.category.properties", "item.category.unit_group", "item.unit_value", "item.unit_cost", "item.burn_rate", "item.attributes"},
 		}),
-	}).WithDocSource(e)
+	})
 }

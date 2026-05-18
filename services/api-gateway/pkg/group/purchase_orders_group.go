@@ -40,17 +40,17 @@ func (*PurchaseOrdersEndpointGroup) Materialize(config *PurchaseOrdersEndpointGr
 		ResourceType: &apiresource.PurchaseOrderDetail{},
 	}
 
-	listEndpoint := (&purchaseorderep.ListPurchaseOrdersEndpoint{}).Materialize().WithService(inner, svc)
-	retrieveEndpoint := (&purchaseorderep.RetrievePurchaseOrderEndpoint{}).Materialize().WithService(inner, svc)
-	createEndpoint := (&purchaseorderep.CreatePurchaseOrderEndpoint{}).Materialize().WithService(inner, svc)
-	updateEndpoint := (&purchaseorderep.UpdatePurchaseOrderEndpoint{}).Materialize().WithService(inner, svc)
-	deleteEndpoint := (&purchaseorderep.DeletePurchaseOrderEndpoint{}).Materialize().WithService(inner, svc)
-	bulkDeleteEndpoint := (&purchaseorderep.BulkDeletePurchaseOrdersEndpoint{}).Materialize().WithService(inner, svc)
-	changeStatusEndpoint := (&purchaseorderep.ChangePurchaseOrderStatusEndpoint{}).Materialize().WithService(inner, svc)
-	createLineEndpoint := (&purchaseorderep.CreatePurchaseOrderLineEndpoint{}).Materialize().WithService(inner, svc)
-	updateLineEndpoint := (&purchaseorderep.UpdatePurchaseOrderLineEndpoint{}).Materialize().WithService(inner, svc)
-	deleteLineEndpoint := (&purchaseorderep.DeletePurchaseOrderLineEndpoint{}).Materialize().WithService(inner, svc)
-	listStatusesEndpoint := (&purchaseorderep.ListPurchaseOrderStatusesEndpoint{}).Materialize().WithService(inner, svc)
+	listEndpoint := apiendpoint.From(&purchaseorderep.ListPurchaseOrdersEndpoint{}).WithService(inner, svc)
+	retrieveEndpoint := apiendpoint.From(&purchaseorderep.RetrievePurchaseOrderEndpoint{}).WithService(inner, svc)
+	createEndpoint := apiendpoint.From(&purchaseorderep.CreatePurchaseOrderEndpoint{}).WithService(inner, svc)
+	updateEndpoint := apiendpoint.From(&purchaseorderep.UpdatePurchaseOrderEndpoint{}).WithService(inner, svc)
+	deleteEndpoint := apiendpoint.From(&purchaseorderep.DeletePurchaseOrderEndpoint{}).WithService(inner, svc)
+	bulkDeleteEndpoint := apiendpoint.From(&purchaseorderep.BulkDeletePurchaseOrdersEndpoint{}).WithService(inner, svc)
+	changeStatusEndpoint := apiendpoint.From(&purchaseorderep.ChangePurchaseOrderStatusEndpoint{}).WithService(inner, svc)
+	createLineEndpoint := apiendpoint.From(&purchaseorderep.CreatePurchaseOrderLineEndpoint{}).WithService(inner, svc)
+	updateLineEndpoint := apiendpoint.From(&purchaseorderep.UpdatePurchaseOrderLineEndpoint{}).WithService(inner, svc)
+	deleteLineEndpoint := apiendpoint.From(&purchaseorderep.DeletePurchaseOrderLineEndpoint{}).WithService(inner, svc)
+	listStatusesEndpoint := apiendpoint.From(&purchaseorderep.ListPurchaseOrderStatusesEndpoint{}).WithService(inner, svc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listEndpoint,

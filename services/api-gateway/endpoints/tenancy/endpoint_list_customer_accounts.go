@@ -27,8 +27,6 @@ func (e *ListCustomerAccountsEndpoint) Materialize() *apiendpoint.APIEndpoint[*L
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/me/tenancy/customer-accounts/{vendor_account_id}",
-		Request:           &ListCustomerAccountsRequest{},
-		Response:          &apiresource.List[apiresource.CustomerAccountSummary]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -38,5 +36,5 @@ func (e *ListCustomerAccountsEndpoint) Materialize() *apiendpoint.APIEndpoint[*L
 		Extras: apiendpoint.APIEndpointExtras{
 			SkipRequestLogging: true,
 		},
-	}).WithDocSource(e)
+	})
 }

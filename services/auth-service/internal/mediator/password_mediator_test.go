@@ -131,9 +131,9 @@ func (suite *PasswordMedTestSuite) TestUpdatePassword_WithEmailNotification_Succ
 
 	user := &types.User{
 		ID:             userID,
-		Email:          stringPtr(notifyEmail),
-		Name:           stringPtr(userName),
-		HashedPassword: stringPtr("hashed"),
+		Email:          new(notifyEmail),
+		Name:           new(userName),
+		HashedPassword: new("hashed"),
 		CreatedAt:      time.Now(),
 		UpdatedAt:      time.Now(),
 	}
@@ -177,9 +177,9 @@ func (suite *PasswordMedTestSuite) TestUpdatePassword_WithEmailNotification_User
 
 	user := &types.User{
 		ID:             userID,
-		Email:          stringPtr(notifyEmail),
+		Email:          new(notifyEmail),
 		Name:           nil,
-		HashedPassword: stringPtr("hashed"),
+		HashedPassword: new("hashed"),
 		CreatedAt:      time.Now(),
 		UpdatedAt:      time.Now(),
 	}
@@ -224,7 +224,7 @@ func (suite *PasswordMedTestSuite) TestValidatePasswordResetToken_Success() {
 
 	user := &types.User{
 		ID:             userID,
-		Email:          stringPtr("reset@example.com"),
+		Email:          new("reset@example.com"),
 		HashedPassword: &hashedPassword,
 		CreatedAt:      time.Now(),
 		UpdatedAt:      time.Now(),
@@ -288,7 +288,7 @@ func (suite *PasswordMedTestSuite) TestValidate_Success() {
 	identifier := "user@example.com"
 	user := &types.User{
 		ID:             userID,
-		Email:          stringPtr(identifier),
+		Email:          new(identifier),
 		HashedPassword: &hashedPassword,
 		CreatedAt:      time.Now(),
 		UpdatedAt:      time.Now(),
@@ -329,7 +329,7 @@ func (suite *PasswordMedTestSuite) TestValidate_NoHashedPassword_WithEmail_Sends
 
 	user := &types.User{
 		ID:             userID,
-		Email:          stringPtr(identifier),
+		Email:          new(identifier),
 		HashedPassword: nil,
 		CreatedAt:      time.Now(),
 		UpdatedAt:      time.Now(),
@@ -400,7 +400,7 @@ func (suite *PasswordMedTestSuite) TestValidate_PasswordMismatch() {
 	identifier := "user@example.com"
 	user := &types.User{
 		ID:             userID,
-		Email:          stringPtr(identifier),
+		Email:          new(identifier),
 		HashedPassword: &hashedPassword,
 		CreatedAt:      time.Now(),
 		UpdatedAt:      time.Now(),
@@ -416,9 +416,4 @@ func (suite *PasswordMedTestSuite) TestValidate_PasswordMismatch() {
 	suite.Nil(result)
 	suite.NotNil(apiErr)
 	suite.Equal(apierror.ErrorCodeInvalidCredentials, apiErr.Code)
-}
-
-// Helper function
-func stringPtr(s string) *string {
-	return &s
 }

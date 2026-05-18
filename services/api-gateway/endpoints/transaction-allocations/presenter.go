@@ -1,6 +1,8 @@
 package transactionallocationep
 
 import (
+	"context"
+
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -38,7 +40,7 @@ func AllocationEntryPresenter(d *pb.AllocationEntryInfo) apiresource.AllocationE
 	}
 }
 
-func AllocationEntryListPresenter(resp *pb.ListAllocationEntriesResponse) *apiresource.List[apiresource.AllocationEntry] {
+func AllocationEntryListPresenter(ctx context.Context, resp *pb.ListAllocationEntriesResponse) *apiresource.List[apiresource.AllocationEntry] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.AllocationEntry](nil, apiresource.PageInfo{})
 	}
@@ -48,7 +50,7 @@ func AllocationEntryListPresenter(resp *pb.ListAllocationEntriesResponse) *apire
 		entries[i] = AllocationEntryPresenter(d)
 	}
 
-	return apiresource.NewList(entries, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(entries, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }
 
 func TransactionAllocationPresenter(a *pb.TransactionAllocationInfo) apiresource.TransactionAllocation {
@@ -128,7 +130,7 @@ func OpenCreditEntryPresenter(d *pb.OpenCreditEntryInfo) apiresource.OpenCreditE
 	}
 }
 
-func OpenCreditListPresenter(resp *pb.ListOpenCreditsResponse) *apiresource.List[apiresource.OpenCreditEntry] {
+func OpenCreditListPresenter(ctx context.Context, resp *pb.ListOpenCreditsResponse) *apiresource.List[apiresource.OpenCreditEntry] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.OpenCreditEntry](nil, apiresource.PageInfo{})
 	}
@@ -140,7 +142,7 @@ func OpenCreditListPresenter(resp *pb.ListOpenCreditsResponse) *apiresource.List
 
 	var pi apiresource.PageInfo
 	if resp.PageInfo != nil {
-		pi = grpcutil.MapProtoPageInfo(resp.PageInfo)
+		pi = grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)
 	}
 
 	return apiresource.NewList(entries, pi)

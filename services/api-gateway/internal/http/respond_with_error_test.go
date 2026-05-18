@@ -158,7 +158,6 @@ func TestRespondWithAPIError_WithRequestLog_InternalError(t *testing.T) {
 }
 
 func TestRespondWithAPIError_RequestLogURL_WithFrontendURL(t *testing.T) {
-	t.Parallel()
 	old := frontendURL
 	frontendURL = "https://app.augno.com"
 	defer func() { frontendURL = old }()
@@ -191,7 +190,6 @@ func TestRespondWithAPIError_RequestLogURL_WithFrontendURL(t *testing.T) {
 }
 
 func TestRespondWithAPIError_RequestLogURL_WithoutFrontendURL(t *testing.T) {
-	t.Parallel()
 	old := frontendURL
 	frontendURL = ""
 	defer func() { frontendURL = old }()
@@ -219,7 +217,6 @@ func TestRespondWithAPIError_RequestLogURL_WithoutFrontendURL(t *testing.T) {
 }
 
 func TestRespondWithAPIError_RequestLogURL_NoRequestLog(t *testing.T) {
-	t.Parallel()
 	old := frontendURL
 	frontendURL = "https://app.augno.com"
 	defer func() { frontendURL = old }()

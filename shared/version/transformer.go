@@ -1,6 +1,10 @@
 package version
 
-import "github.com/augno/api/shared/constants"
+import (
+	"slices"
+
+	"github.com/augno/api/shared/constants"
+)
 
 // Transformer defines an interface for transforming requests and responses between API versions.
 // Each transformer handles the conversion between two adjacent versions:
@@ -94,12 +98,7 @@ func (r *TransformerRegistry) TransformRequest(from, to APIVersion, objectType c
 
 // handlesObjectType checks if the transformer handles the given object type.
 func (r *TransformerRegistry) handlesObjectType(t Transformer, objectType constants.ObjectType) bool {
-	for _, ot := range t.ObjectTypes() {
-		if ot == objectType {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(t.ObjectTypes(), objectType)
 }
 
 // DefaultRegistry is the global transformer registry.

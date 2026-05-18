@@ -60,5 +60,5 @@ func (m *permissionGroupSvcImpl) ListPermissionGroups(ctx context.Context, req *
 		return nil, apiErr
 	}
 
-	return PermissionGroupListPresenter(resp), nil
+	return PermissionGroupListPresenter(ctx, resp), nil
 }

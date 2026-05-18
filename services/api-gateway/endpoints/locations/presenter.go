@@ -1,6 +1,8 @@
 package locationep
 
 import (
+	"context"
+
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -54,7 +56,7 @@ func LocationPresenter(sl *pb.LocationInfo) apiresource.Location {
 	return result
 }
 
-func LocationListPresenter(resp *pb.ListLocationsResponse) *apiresource.List[apiresource.Location] {
+func LocationListPresenter(ctx context.Context, resp *pb.ListLocationsResponse) *apiresource.List[apiresource.Location] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.Location](nil, apiresource.PageInfo{})
 	}
@@ -64,7 +66,7 @@ func LocationListPresenter(resp *pb.ListLocationsResponse) *apiresource.List[api
 		locations[i] = LocationPresenter(sl)
 	}
 
-	return apiresource.NewList(locations, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(locations, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }
 
 func LocationTypePresenter(slt *pb.LocationTypeInfo) apiresource.LocationType {
@@ -82,7 +84,7 @@ func LocationTypePresenter(slt *pb.LocationTypeInfo) apiresource.LocationType {
 	}
 }
 
-func LocationTypeListPresenter(resp *pb.ListLocationTypesResponse) *apiresource.List[apiresource.LocationType] {
+func LocationTypeListPresenter(ctx context.Context, resp *pb.ListLocationTypesResponse) *apiresource.List[apiresource.LocationType] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.LocationType](nil, apiresource.PageInfo{})
 	}
@@ -92,5 +94,5 @@ func LocationTypeListPresenter(resp *pb.ListLocationTypesResponse) *apiresource.
 		types[i] = LocationTypePresenter(slt)
 	}
 
-	return apiresource.NewList(types, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(types, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }

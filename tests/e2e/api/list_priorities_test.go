@@ -77,16 +77,13 @@ func TestListPriorities_PaginationCursor(t *testing.T) {
 	page1, _, err := apiClient.GetList(prioritiesPath, url.Values{"limit": {"1"}})
 	require.NoError(t, err)
 	require.Len(t, page1.Data, 1)
-	require.NotNil(t, page1.PageInfo.NextCursor, "Page 1 should have next_cursor")
+	require.NotNil(t, page1.PageInfo.NextPageURL, "Page 1 should have next_page_url")
 
 	page1ID := DataItemField(page1.Data[0], "id")
 	assert.NotEmpty(t, page1ID)
 
 	// Page 2
-	page2, _, err := apiClient.GetList(prioritiesPath, url.Values{
-		"limit":  {"1"},
-		"cursor": {*page1.PageInfo.NextCursor},
-	})
+	page2, _, err := apiClient.GetListFromPageURL(page1.PageInfo.NextPageURL)
 	require.NoError(t, err)
 	require.Len(t, page2.Data, 1)
 
@@ -95,37 +92,31 @@ func TestListPriorities_PaginationCursor(t *testing.T) {
 	assert.NotEqual(t, page1ID, page2ID, "Page 2 should have a different item than page 1")
 }
 
-func TestListPriorities_PrevCursor(t *testing.T) {
+func TestListPriorities_PrevPageURL(t *testing.T) {
 	t.Parallel()
 
 	// Get page 1 with limit=1
 	page1, _, err := apiClient.GetList(prioritiesPath, url.Values{"limit": {"1"}})
 	require.NoError(t, err)
 	require.Len(t, page1.Data, 1)
-	require.NotNil(t, page1.PageInfo.NextCursor)
+	require.NotNil(t, page1.PageInfo.NextPageURL)
 
 	page1ID := DataItemField(page1.Data[0], "id")
 
 	// Get page 2
-	page2, _, err := apiClient.GetList(prioritiesPath, url.Values{
-		"limit":  {"1"},
-		"cursor": {*page1.PageInfo.NextCursor},
-	})
+	page2, _, err := apiClient.GetListFromPageURL(page1.PageInfo.NextPageURL)
 	require.NoError(t, err)
 	require.Len(t, page2.Data, 1)
 	assert.True(t, page2.PageInfo.HasPrevPage, "Page 2 should have has_prev_page=true")
-	require.NotNil(t, page2.PageInfo.PrevCursor, "Page 2 should have prev_cursor")
+	require.NotNil(t, page2.PageInfo.PreviousPageURL, "Page 2 should have previous_page_url")
 
 	// Navigate back to page 1
-	backToPage1, _, err := apiClient.GetList(prioritiesPath, url.Values{
-		"limit":  {"1"},
-		"cursor": {*page2.PageInfo.PrevCursor},
-	})
+	backToPage1, _, err := apiClient.GetListFromPageURL(page2.PageInfo.PreviousPageURL)
 	require.NoError(t, err)
 	require.Len(t, backToPage1.Data, 1)
 
 	backID := DataItemField(backToPage1.Data[0], "id")
-	assert.Equal(t, page1ID, backID, "Navigating back via prev_cursor should return the first page item")
+	assert.Equal(t, page1ID, backID, "Navigating back via previous_page_url should return the first page item")
 }
 
 // --- List endpoint: search ---

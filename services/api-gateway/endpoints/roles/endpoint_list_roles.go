@@ -26,8 +26,6 @@ func (e *ListRolesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListRolesReq
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/roles",
-		Request:           &ListRolesRequest{},
-		Response:          &apiresource.List[apiresource.Role]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -38,5 +36,5 @@ func (e *ListRolesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListRolesReq
 			ObjectType: constants.ObjectTypeRole,
 			Fields:     []string{"owner", "owner.account", "permissions"},
 		}),
-	}).WithDocSource(e)
+	})
 }

@@ -39,8 +39,8 @@ func (*EmailLogsEndpointGroup) Materialize(config *EmailLogsEndpointGroupConfig)
 		ResourceType: &apiresource.EmailLog{},
 	}
 
-	listEmailLogsEndpoint := (&emaillogep.ListEmailLogsEndpoint{}).Materialize().WithService(inner, emailLogSvc)
-	getEmailLogEndpoint := (&emaillogep.RetrieveEmailLogEndpoint{}).Materialize().WithService(inner, emailLogSvc)
+	listEmailLogsEndpoint := apiendpoint.From(&emaillogep.ListEmailLogsEndpoint{}).WithService(inner, emailLogSvc)
+	getEmailLogEndpoint := apiendpoint.From(&emaillogep.RetrieveEmailLogEndpoint{}).WithService(inner, emailLogSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listEmailLogsEndpoint,

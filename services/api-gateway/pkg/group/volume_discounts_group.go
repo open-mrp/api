@@ -39,11 +39,11 @@ func (*VolumeDiscountsEndpointGroup) Materialize(config *VolumeDiscountsEndpoint
 		ResourceType: &apiresource.VolumeDiscount{},
 	}
 
-	listEndpoint := (&volumediscountep.ListVolumeDiscountsEndpoint{}).Materialize().WithService(inner, svc)
-	retrieveEndpoint := (&volumediscountep.RetrieveVolumeDiscountEndpoint{}).Materialize().WithService(inner, svc)
-	createEndpoint := (&volumediscountep.CreateVolumeDiscountEndpoint{}).Materialize().WithService(inner, svc)
-	updateEndpoint := (&volumediscountep.UpdateVolumeDiscountEndpoint{}).Materialize().WithService(inner, svc)
-	deleteEndpoint := (&volumediscountep.DeleteVolumeDiscountEndpoint{}).Materialize().WithService(inner, svc)
+	listEndpoint := apiendpoint.From(&volumediscountep.ListVolumeDiscountsEndpoint{}).WithService(inner, svc)
+	retrieveEndpoint := apiendpoint.From(&volumediscountep.RetrieveVolumeDiscountEndpoint{}).WithService(inner, svc)
+	createEndpoint := apiendpoint.From(&volumediscountep.CreateVolumeDiscountEndpoint{}).WithService(inner, svc)
+	updateEndpoint := apiendpoint.From(&volumediscountep.UpdateVolumeDiscountEndpoint{}).WithService(inner, svc)
+	deleteEndpoint := apiendpoint.From(&volumediscountep.DeleteVolumeDiscountEndpoint{}).WithService(inner, svc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listEndpoint,

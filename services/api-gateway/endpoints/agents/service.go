@@ -171,7 +171,7 @@ func (m *agentSvcImpl) ListAgents(ctx context.Context, req *ListAgentsRequest) (
 		return nil, rpcErr
 	}
 
-	return AgentDefinitionListPresenter(resp, func(roleID string) *ResolvedRole {
+	return AgentDefinitionListPresenter(ctx, resp, func(roleID string) *ResolvedRole {
 		return m.resolveRole(ctx, roleID)
 	}), nil
 }
@@ -292,5 +292,5 @@ func (m *agentSvcImpl) ListUsage(ctx context.Context, req *ListUsageRequest) (*a
 		return nil, rpcErr
 	}
 
-	return AgentTokenUsageListPresenter(resp), nil
+	return AgentTokenUsageListPresenter(ctx, resp), nil
 }

@@ -57,8 +57,6 @@ func (e *ListCustomersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListCust
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/customers",
-		Request:           &ListCustomersRequest{},
-		Response:          &apiresource.List[apiresource.Customer]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -87,5 +85,5 @@ func (e *ListCustomersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListCust
 				"credit_limit",
 			},
 		}),
-	}).WithDocSource(e)
+	})
 }

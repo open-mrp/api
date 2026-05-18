@@ -55,8 +55,6 @@ func (e *UpdatePurchaseOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*Up
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/purchase-orders/{id}",
-		Request:           &UpdatePurchaseOrderRequest{},
-		Response:          &apiresource.PurchaseOrderDetail{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -67,5 +65,5 @@ func (e *UpdatePurchaseOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*Up
 			ObjectType: constants.ObjectTypePurchaseOrder,
 			Fields:     []string{"supplier", "bill_to_address", "ship_to_address", "carrier", "service_level", "payment_term", "shipping_term", "receiving_order", "lines", "contacts"},
 		}),
-	}).WithDocSource(e)
+	})
 }

@@ -104,7 +104,7 @@ var sampleCreateSalesOrderRequest = &CreateSalesOrderRequest{
 	CarrierID:          &sampleCreateSOCarrierID,
 	ServiceLevelID:     &sampleCreateSOServiceLevelID,
 	PriorityCode:       string(constants.PriorityCodeNormal),
-	SalesOrderTypeCode: "standard",
+	SalesOrderTypeCode: "sales_order",
 	ShipToName:         &sampleCreateSOShipToName,
 	ShipToStreetLine1:  &sampleCreateSOShipToStreetLine1,
 	ShipToLocality:     &sampleCreateSOShipToLocality,
@@ -139,8 +139,6 @@ func (e *CreateSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*Creat
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/sales-orders",
-		Request:           &CreateSalesOrderRequest{},
-		Response:          &apiresource.SalesOrderDetail{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
@@ -154,5 +152,5 @@ func (e *CreateSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*Creat
 			ObjectType: constants.ObjectTypeSalesOrder,
 			Fields:     []string{"customer", "bill_to_address", "ship_to_address", "carrier", "service_level", "payment_term", "shipping_term", "order_discount", "lines", "lines.item"},
 		}),
-	}).WithDocSource(e)
+	})
 }

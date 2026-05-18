@@ -1,6 +1,8 @@
 package edidclocationep
 
 import (
+	"context"
+
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -31,7 +33,7 @@ func DCLocationPresenter(d *pb.DCLocationProto) apiresource.DCLocation {
 	return loc
 }
 
-func DCLocationListPresenter(resp *pb.ListDCLocationsResponse) *apiresource.List[apiresource.DCLocation] {
+func DCLocationListPresenter(ctx context.Context, resp *pb.ListDCLocationsResponse) *apiresource.List[apiresource.DCLocation] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.DCLocation](nil, apiresource.PageInfo{})
 	}
@@ -41,5 +43,5 @@ func DCLocationListPresenter(resp *pb.ListDCLocationsResponse) *apiresource.List
 		locs[i] = DCLocationPresenter(d)
 	}
 
-	return apiresource.NewList(locs, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(locs, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }

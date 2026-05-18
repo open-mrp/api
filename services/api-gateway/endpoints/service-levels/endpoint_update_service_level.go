@@ -45,8 +45,6 @@ func (e *UpdateServiceLevelEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upd
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/carriers/{carrier_id}/service-levels/{id}",
-		Request:           &UpdateServiceLevelRequest{},
-		Response:          &apiresource.ServiceLevel{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -57,5 +55,5 @@ func (e *UpdateServiceLevelEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upd
 			ObjectType: constants.ObjectTypeServiceLevel,
 			Fields:     []string{"owner", "owner.account"},
 		}),
-	}).WithDocSource(e)
+	})
 }

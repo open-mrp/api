@@ -39,8 +39,8 @@ func (*ProductionFlowsEndpointGroup) Materialize(config *ProductionFlowsEndpoint
 		ResourceType: &apiresource.ProductionFlow{},
 	}
 
-	getProductionFlowEndpoint := (&productionflowep.GetProductionFlowEndpoint{}).Materialize().WithService(inner, productionFlowSvc)
-	connectStepsEndpoint := (&productionflowep.ConnectStepsEndpoint{}).Materialize().WithService(inner, productionFlowSvc)
+	getProductionFlowEndpoint := apiendpoint.From(&productionflowep.GetProductionFlowEndpoint{}).WithService(inner, productionFlowSvc)
+	connectStepsEndpoint := apiendpoint.From(&productionflowep.ConnectStepsEndpoint{}).WithService(inner, productionFlowSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		getProductionFlowEndpoint,

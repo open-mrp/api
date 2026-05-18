@@ -21,10 +21,8 @@ type UpdateAccountIntegrationRequest struct {
 }
 
 var sampleUpdateAccountIntegrationRequest = &UpdateAccountIntegrationRequest{
-	Name: ptrString("Updated Stripe Integration"),
+	Name: new("Updated Stripe Integration"),
 }
-
-func ptrString(s string) *string { return &s }
 
 func (*UpdateAccountIntegrationRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleUpdateAccountIntegrationRequest)
@@ -39,13 +37,11 @@ func (e *UpdateAccountIntegrationEndpoint) Materialize() *apiendpoint.APIEndpoin
 		Method:            http.MethodPut,
 		Route:             "/v1/identity/integrations/{id}",
 		ContentType:       "application/json",
-		Request:           &UpdateAccountIntegrationRequest{},
-		Response:          &apiresource.AccountIntegration{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateAccountIntegrationRequest) (*apiresource.AccountIntegration, *apierror.APIError) {
 			return svc.(AccountIntegrationSvc).UpdateAccountIntegration
 		},
-	}).WithDocSource(e)
+	})
 }

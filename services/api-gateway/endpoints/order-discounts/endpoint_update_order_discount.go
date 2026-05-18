@@ -44,13 +44,11 @@ func (e *UpdateOrderDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*Up
 		Method:            http.MethodPatch,
 		Route:             "/v1/sales/order-discounts/{id}",
 		ContentType:       "application/json",
-		Request:           &UpdateOrderDiscountRequest{},
-		Response:          &apiresource.OrderDiscount{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateOrderDiscountRequest) (*apiresource.OrderDiscount, *apierror.APIError) {
 			return svc.(OrderDiscountSvc).UpdateOrderDiscount
 		},
-	}).WithDocSource(e)
+	})
 }

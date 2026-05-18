@@ -39,10 +39,10 @@ func (*UtilsEndpointGroup) Materialize(config *UtilsEndpointGroupConfig) *UtilsE
 		ResourceType: &apiresource.CheckDuplicateResult{},
 	}
 
-	checkDuplicateEndpoint := (&utilsep.CheckDuplicateEndpoint{}).Materialize().WithService(inner, utilsSvc)
-	emailRecordEndpoint := (&utilsep.EmailRecordEndpoint{}).Materialize().WithService(inner, utilsSvc)
-	requestDemoEndpoint := (&utilsep.RequestDemoEndpoint{}).Materialize().WithService(inner, utilsSvc)
-	submitFeedbackEndpoint := (&utilsep.SubmitFeedbackEndpoint{}).Materialize().WithService(inner, utilsSvc)
+	checkDuplicateEndpoint := apiendpoint.From(&utilsep.CheckDuplicateEndpoint{}).WithService(inner, utilsSvc)
+	emailRecordEndpoint := apiendpoint.From(&utilsep.EmailRecordEndpoint{}).WithService(inner, utilsSvc)
+	requestDemoEndpoint := apiendpoint.From(&utilsep.RequestDemoEndpoint{}).WithService(inner, utilsSvc)
+	submitFeedbackEndpoint := apiendpoint.From(&utilsep.SubmitFeedbackEndpoint{}).WithService(inner, utilsSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		checkDuplicateEndpoint,

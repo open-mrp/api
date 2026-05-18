@@ -1,6 +1,8 @@
 package orderdiscountep
 
 import (
+	"context"
+
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -26,7 +28,7 @@ func OrderDiscountPresenter(d *pb.OrderDiscountInfo) apiresource.OrderDiscount {
 	}
 }
 
-func OrderDiscountListPresenter(resp *pb.ListOrderDiscountsResponse) *apiresource.List[apiresource.OrderDiscount] {
+func OrderDiscountListPresenter(ctx context.Context, resp *pb.ListOrderDiscountsResponse) *apiresource.List[apiresource.OrderDiscount] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.OrderDiscount](nil, apiresource.PageInfo{})
 	}
@@ -36,5 +38,5 @@ func OrderDiscountListPresenter(resp *pb.ListOrderDiscountsResponse) *apiresourc
 		discounts[i] = OrderDiscountPresenter(d)
 	}
 
-	return apiresource.NewList(discounts, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(discounts, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }

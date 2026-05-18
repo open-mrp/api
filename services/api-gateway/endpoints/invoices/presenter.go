@@ -1,6 +1,8 @@
 package invoiceep
 
 import (
+	"context"
+
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -266,7 +268,7 @@ func InvoiceForPaymentPresenter(d *pb.InvoiceForPaymentInfo) apiresource.Invoice
 	return inv
 }
 
-func InvoiceListPresenter(resp *pb.ListInvoicesResponse) *apiresource.List[apiresource.InvoiceSummary] {
+func InvoiceListPresenter(ctx context.Context, resp *pb.ListInvoicesResponse) *apiresource.List[apiresource.InvoiceSummary] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.InvoiceSummary](nil, apiresource.PageInfo{})
 	}
@@ -276,10 +278,10 @@ func InvoiceListPresenter(resp *pb.ListInvoicesResponse) *apiresource.List[apire
 		invoices[i] = InvoiceSummaryPresenter(d)
 	}
 
-	return apiresource.NewList(invoices, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(invoices, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }
 
-func CustomerInvoiceListPresenter(resp *pb.ListCustomerInvoicesResponse) *apiresource.List[apiresource.InvoiceForPayment] {
+func CustomerInvoiceListPresenter(ctx context.Context, resp *pb.ListCustomerInvoicesResponse) *apiresource.List[apiresource.InvoiceForPayment] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.InvoiceForPayment](nil, apiresource.PageInfo{})
 	}
@@ -289,7 +291,7 @@ func CustomerInvoiceListPresenter(resp *pb.ListCustomerInvoicesResponse) *apires
 		invoices[i] = InvoiceForPaymentPresenter(d)
 	}
 
-	return apiresource.NewList(invoices, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(invoices, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }
 
 func invoiceBillingAddressPresenter(id string, name, line1, line2, city, state, zip *string, country string) *apiresource.Address {

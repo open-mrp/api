@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -106,11 +107,11 @@ func extractUnknownJSONFieldName(err error) (string, bool) {
 	}
 	start := idx + len(marker)
 	rest := msg[start:]
-	end := strings.Index(rest, "\"")
-	if end == -1 {
+	before, _, ok := strings.Cut(rest, "\"")
+	if !ok {
 		return "", false
 	}
-	field := rest[:end]
+	field := before
 	if field == "" {
 		return "", false
 	}
@@ -134,8 +135,8 @@ func collectJSONFieldNames(dst any) []string {
 		if rt.Kind() != reflect.Struct {
 			return
 		}
-		for i := 0; i < rt.NumField(); i++ {
-			sf := rt.Field(i)
+		for sf := range rt.Fields() {
+			sf := sf
 			if sf.PkgPath != "" { // unexported
 				continue
 			}
@@ -157,9 +158,9 @@ func collectJSONFieldNames(dst any) []string {
 			}
 			name := ""
 			if tag != "" {
-				comma := strings.IndexByte(tag, ',')
-				if comma >= 0 {
-					name = tag[:comma]
+				before, _, ok := strings.Cut(tag, ",")
+				if ok {
+					name = before
 				} else {
 					name = tag
 				}
@@ -184,119 +185,256 @@ func collectJSONFieldNames(dst any) []string {
 	return names
 }
 
-func BindFromHeaders(r *http.Request, dst any) error {
-	return walkStruct(dst, func(f fieldInfo) error {
-		h := f.tag.Get("header")
-		cookieName := f.tag.Get("cookie")
+// bindHeadersInto binds r's headers (and optionally cookies) into fv using struct tags.
+func bindHeadersInto(r *http.Request, fv reflect.Value, tag reflect.StructTag) error {
+	h := tag.Get("header")
+	cookieName := tag.Get("cookie")
 
-		// Skip fields that have no header or cookie tag
-		if h == "" && cookieName == "" {
-			return nil
+	var val string
+	var fromHeader bool
+	if h != "" {
+		val = r.Header.Get(h)
+		fromHeader = val != ""
+	}
+
+	if h == "Authorization" && fromHeader {
+		scheme := tag.Get("scheme")
+		authResult, err := header.ValidateAndExtractAuthHeader(val)
+		if err != nil {
+			if cookieName != "" {
+				if cookie, cookieErr := r.Cookie(cookieName); cookieErr == nil && cookie != nil && cookie.Value != "" {
+					return setFromString(fv, cookie.Value, tag)
+				}
+			}
+			return err.WithParam(h)
 		}
 
-		// Try header first
-		var val string
-		var fromHeader bool
-		if h != "" {
-			val = r.Header.Get(h)
-			fromHeader = val != ""
-		}
-
-		// Handle Authorization header with flexible schemes (Bearer or Basic)
-		// If Authorization header is present, try to validate it
-		if h == "Authorization" && fromHeader {
-			scheme := f.tag.Get("scheme")
-			// If scheme is not specified, allow both Bearer and Basic
-			authResult, err := header.ValidateAndExtractAuthHeader(val)
-			if err != nil {
-				// If validation fails and cookie fallback is available, try cookie
+		if scheme != "" {
+			expectedScheme := strings.ToLower(scheme)
+			actualScheme := strings.ToLower(string(authResult.Scheme))
+			if expectedScheme != actualScheme {
 				if cookieName != "" {
 					if cookie, cookieErr := r.Cookie(cookieName); cookieErr == nil && cookie != nil && cookie.Value != "" {
-						return setFromString(f.value, cookie.Value, f.tag)
+						return setFromString(fv, cookie.Value, tag)
 					}
 				}
-				// No cookie fallback or cookie also failed, return the auth header error
-				return err.WithParam(h)
-			}
-
-			// If scheme is specified, verify it matches
-			if scheme != "" {
-				expectedScheme := strings.ToLower(scheme)
-				actualScheme := strings.ToLower(string(authResult.Scheme))
-				if expectedScheme != actualScheme {
-					// Try cookie fallback if scheme doesn't match
-					if cookieName != "" {
-						if cookie, cookieErr := r.Cookie(cookieName); cookieErr == nil && cookie != nil && cookie.Value != "" {
-							return setFromString(f.value, cookie.Value, f.tag)
-						}
-					}
-					return apierror.NewParameterInvalidError(fmt.Sprintf("Invalid %s header scheme: expected %s, got %s", h, expectedScheme, actualScheme), h)
-				}
-			}
-			return setFromString(f.value, authResult.TokenString, f.tag)
-		}
-
-		// If header not found and cookie tag exists, try cookie
-		if !fromHeader && cookieName != "" {
-			if cookie, err := r.Cookie(cookieName); err == nil && cookie != nil && cookie.Value != "" {
-				val = cookie.Value
-				fromHeader = false
+				return apierror.NewParameterInvalidError(fmt.Sprintf("Invalid %s header scheme: expected %s, got %s", h, expectedScheme, actualScheme), h)
 			}
 		}
+		return setFromString(fv, authResult.TokenString, tag)
+	}
 
-		// If still no value, check for default
-		if val == "" {
-			if d, ok := f.tag.Lookup("default"); ok {
-				val = d
+	if !fromHeader && cookieName != "" {
+		if cookie, err := r.Cookie(cookieName); err == nil && cookie != nil && cookie.Value != "" {
+			val = cookie.Value
+			fromHeader = false
+		}
+	}
+
+	if val == "" {
+		if d, ok := tag.Lookup("default"); ok {
+			val = d
+		} else {
+			return nil
+		}
+	}
+
+	if scheme := tag.Get("scheme"); scheme != "" && fromHeader {
+		prefix := scheme + " "
+		if !strings.HasPrefix(val, prefix) {
+			return apierror.NewParameterInvalidError(fmt.Sprintf("Invalid %s header scheme", h), h)
+		}
+		val = strings.TrimPrefix(val, prefix)
+	}
+	if err := setFromString(fv, val, tag); err != nil {
+		param := h
+		source := "header"
+		if param == "" {
+			param = cookieName
+			source = "cookie"
+		}
+		if param == "" {
+			return apierror.NewParameterInvalidError(fmt.Sprintf("Invalid value: %v", err), "")
+		}
+		return apierror.NewParameterInvalidError(fmt.Sprintf("Invalid value for %s '%s': %v", source, param, err), param)
+	}
+	return nil
+}
+
+func bindPathInto(get func(string) string, fv reflect.Value, tag reflect.StructTag) error {
+	key := tag.Get("path")
+	if key == "" {
+		return nil
+	}
+	val := get(key)
+	if val == "" {
+		if d, ok := tag.Lookup("default"); ok {
+			val = d
+		} else {
+			return nil
+		}
+	}
+	if err := setFromString(fv, val, tag); err != nil {
+		return apierror.NewParameterInvalidError(fmt.Sprintf("Invalid value for path parameter '%s': %v", key, err), key)
+	}
+	return nil
+}
+
+func bindQueryInto(q url.Values, fv reflect.Value, f bindField) error {
+	tag := f.tag
+	key := tag.Get("query")
+	if key == "" {
+		return nil
+	}
+	if f.isSlice {
+		values := append([]string{}, q[key]...)
+		values = append(values, q[key+"[]"]...)
+		if len(values) == 0 {
+			if d, ok := tag.Lookup("default"); ok && d != "" {
+				values = strings.Split(d, ",")
 			} else {
 				return nil
 			}
+		} else if len(values) == 1 && strings.Contains(values[0], ",") {
+			values = strings.Split(values[0], ",")
+		}
+		elemType := f.fieldTyp.Elem()
+		slice := reflect.MakeSlice(f.fieldTyp, len(values), len(values))
+		for i, v := range values {
+			if elemType.Kind() == reflect.String {
+				slice.Index(i).Set(reflect.ValueOf(v).Convert(elemType))
+				continue
+			}
+			if err := setFromString(slice.Index(i), v, tag); err != nil {
+				return apierror.NewParameterInvalidError(fmt.Sprintf("Invalid value for query parameter '%s': %v", key, err), key)
+			}
+		}
+		fv.Set(slice)
+		return nil
+	}
+	val := q.Get(key)
+	if val == "" {
+		if d, ok := tag.Lookup("default"); ok {
+			val = d
+		} else {
+			return nil
+		}
+	}
+	if err := setFromString(fv, val, tag); err != nil {
+		return apierror.NewParameterInvalidError(fmt.Sprintf("Invalid value for query parameter '%s': %v", key, err), key)
+	}
+	return nil
+}
+
+func rejectUnknownAgainstPlan(plan *bindPlan, u *url.URL, allowInclude bool) *apierror.APIError {
+	allowed := plan.allowedQuery
+	if allowInclude {
+		allowed = maps.Clone(allowed)
+		allowed["include"] = struct{}{}
+		allowed["include[]"] = struct{}{}
+	}
+	for key := range u.Query() {
+		if _, ok := allowed[key]; !ok {
+			return apierror.NewParameterUnknownError(
+				fmt.Sprintf("Unknown query parameter '%s'.", key),
+				key,
+			)
+		}
+	}
+	return nil
+}
+
+// BindIncomingRequest binds header, path, and query parameters with one traversal of the cached
+// bind plan. For each field that declares binding tags it applies headers/cookies first, path second,
+// and query third, matching BindFromHeaders + BindFromPath + BindFromQuery on the same destination.
+func BindIncomingRequest(r *http.Request, dst any, allowIncludeQueryKeys bool) error {
+	plan, err := planFor(dst)
+	if err != nil {
+		return err
+	}
+	get := PathExtractor(r)
+	q := r.URL.Query()
+	root := reflect.ValueOf(dst).Elem()
+	for _, f := range plan.fields {
+		tag := f.tag
+		wantsHeader := tag.Get("header") != "" || tag.Get("cookie") != ""
+		wantsPath := tag.Get("path") != ""
+		wantsQuery := tag.Get("query") != ""
+		if !wantsHeader && !wantsPath && !wantsQuery {
+			continue
 		}
 
-		// Handle specific scheme for non-Authorization headers
-		if scheme := f.tag.Get("scheme"); scheme != "" && fromHeader {
-			prefix := scheme + " "
-			if !strings.HasPrefix(val, prefix) {
-				return apierror.NewParameterInvalidError(fmt.Sprintf("Invalid %s header scheme", h), h)
-			}
-			val = strings.TrimPrefix(val, prefix)
+		fv, ok := navigateBindField(root, f)
+		if !ok || !fv.CanSet() {
+			continue
 		}
-		if err := setFromString(f.value, val, f.tag); err != nil {
-			param := h
-			source := "header"
-			if param == "" {
-				param = cookieName
-				source = "cookie"
+
+		if wantsHeader {
+			if err := bindHeadersInto(r, fv, tag); err != nil {
+				return err
 			}
-			if param == "" {
-				return apierror.NewParameterInvalidError(fmt.Sprintf("Invalid value: %v", err), "")
-			}
-			return apierror.NewParameterInvalidError(fmt.Sprintf("Invalid value for %s '%s': %v", source, param, err), param)
 		}
-		return nil
-	})
+		if wantsPath {
+			if err := bindPathInto(get, fv, tag); err != nil {
+				return err
+			}
+		}
+		if wantsQuery {
+			if err := bindQueryInto(q, fv, f); err != nil {
+				return err
+			}
+		}
+	}
+
+	if apiErr := rejectUnknownAgainstPlan(plan, r.URL, allowIncludeQueryKeys); apiErr != nil {
+		return apiErr
+	}
+	return nil
+}
+
+func BindFromHeaders(r *http.Request, dst any) error {
+	plan, err := planFor(dst)
+	if err != nil {
+		return err
+	}
+	root := reflect.ValueOf(dst).Elem()
+	for _, f := range plan.fields {
+		tag := f.tag
+		if tag.Get("header") == "" && tag.Get("cookie") == "" {
+			continue
+		}
+		fv, ok := navigateBindField(root, f)
+		if !ok || !fv.CanSet() {
+			continue
+		}
+		if err := bindHeadersInto(r, fv, tag); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func BindFromPath(r *http.Request, dst any) error {
+	plan, err := planFor(dst)
+	if err != nil {
+		return err
+	}
 	get := PathExtractor(r)
-	return walkStruct(dst, func(f fieldInfo) error {
-		key := f.tag.Get("path")
-		if key == "" {
-			return nil
+	root := reflect.ValueOf(dst).Elem()
+	for _, f := range plan.fields {
+		tag := f.tag
+		if tag.Get("path") == "" {
+			continue
 		}
-		val := get(key)
-		if val == "" {
-			if d, ok := f.tag.Lookup("default"); ok {
-				val = d
-			} else {
-				return nil
-			}
+		fv, ok := navigateBindField(root, f)
+		if !ok || !fv.CanSet() {
+			continue
 		}
-		if err := setFromString(f.value, val, f.tag); err != nil {
-			return apierror.NewParameterInvalidError(fmt.Sprintf("Invalid value for path parameter '%s': %v", key, err), key)
+		if err := bindPathInto(get, fv, tag); err != nil {
+			return err
 		}
-		return nil
-	})
+	}
+	return nil
 }
 
 const maxRawBodySize = 1 << 20 // 1MB limit for raw body
@@ -331,7 +469,7 @@ func BindRawBody(r *http.Request, dst any) error {
 			continue
 		}
 
-		if fv.Type() != reflect.TypeOf([]byte(nil)) {
+		if fv.Type() != reflect.TypeFor[[]byte]() {
 			return fmt.Errorf("rawbody tag can only be used on []byte fields, got %s", fv.Type().String())
 		}
 
@@ -350,142 +488,36 @@ func BindRawBody(r *http.Request, dst any) error {
 	return nil
 }
 
-func collectAllowedQueryKeys(dst any) map[string]struct{} {
-	allowed := make(map[string]struct{})
-	_ = walkStruct(dst, func(f fieldInfo) error {
-		key := f.tag.Get("query")
-		if key == "" {
-			return nil
-		}
-		allowed[key] = struct{}{}
-		if f.value.Kind() == reflect.Slice {
-			allowed[key+"[]"] = struct{}{}
-		}
-		return nil
-	})
-	return allowed
-}
-
 // RejectUnknownQueryParams returns an error when the URL contains query keys that
 // are not declared on the request struct (via `query` tags). Slice parameters
 // accept either ?key= or ?key[]= shapes; both key forms are treated as allowed.
 // When allowInclude is true, include and include[] are permitted (validated
 // separately by the endpoint).
 func RejectUnknownQueryParams(u *url.URL, dst any, allowInclude bool) *apierror.APIError {
-	allowed := collectAllowedQueryKeys(dst)
-	if allowInclude {
-		allowed["include"] = struct{}{}
-		allowed["include[]"] = struct{}{}
+	plan, err := planFor(dst)
+	if err != nil {
+		return apierror.NewInvariantViolationError(err.Error())
 	}
-	for key := range u.Query() {
-		if _, ok := allowed[key]; !ok {
-			return apierror.NewParameterUnknownError(
-				fmt.Sprintf("Unknown query parameter '%s'.", key),
-				key,
-			)
-		}
-	}
-	return nil
+	return rejectUnknownAgainstPlan(plan, u, allowInclude)
 }
 
 func BindFromQuery(u *url.URL, dst any) error {
+	plan, err := planFor(dst)
+	if err != nil {
+		return err
+	}
 	q := u.Query()
-	return walkStruct(dst, func(f fieldInfo) error {
-		key := f.tag.Get("query")
-		if key == "" {
-			return nil
-		}
-		// Slice fields accept both ?key=a&key=b and ?key[]=a&key[]=b. The OpenAPI
-		// generator emits the bracketed form for array params, so SDK clients send
-		// that shape even when the Go tag is the bare key.
-		if f.value.Kind() == reflect.Slice {
-			values := append([]string{}, q[key]...)
-			values = append(values, q[key+"[]"]...)
-			if len(values) == 0 {
-				if d, ok := f.tag.Lookup("default"); ok && d != "" {
-					values = strings.Split(d, ",")
-				} else {
-					return nil
-				}
-			} else if len(values) == 1 && strings.Contains(values[0], ",") {
-				values = strings.Split(values[0], ",")
-			}
-			elemType := f.value.Type().Elem()
-			slice := reflect.MakeSlice(f.value.Type(), len(values), len(values))
-			for i, v := range values {
-				if elemType.Kind() == reflect.String {
-					slice.Index(i).Set(reflect.ValueOf(v).Convert(elemType))
-					continue
-				}
-				if err := setFromString(slice.Index(i), v, f.tag); err != nil {
-					return apierror.NewParameterInvalidError(fmt.Sprintf("Invalid value for query parameter '%s': %v", key, err), key)
-				}
-			}
-			f.value.Set(slice)
-			return nil
-		}
-		val := q.Get(key)
-		if val == "" {
-			if d, ok := f.tag.Lookup("default"); ok {
-				val = d
-			} else {
-				return nil
-			}
-		}
-		if err := setFromString(f.value, val, f.tag); err != nil {
-			return apierror.NewParameterInvalidError(fmt.Sprintf("Invalid value for query parameter '%s': %v", key, err), key)
-		}
-		return nil
-	})
-}
-
-type fieldInfo struct {
-	value reflect.Value
-	tag   reflect.StructTag
-}
-
-func walkStruct(dst any, fn func(fieldInfo) error) error {
-	rv := reflect.ValueOf(dst)
-	if rv.Kind() != reflect.Pointer || rv.IsNil() {
-		return errors.New("destination must be a non-nil pointer")
-	}
-	rv = rv.Elem()
-	rt := rv.Type()
-	if rt.Kind() != reflect.Struct {
-		return errors.New("destination must point to a struct")
-	}
-
-	for i := 0; i < rt.NumField(); i++ {
-		sf := rt.Field(i)
-		if sf.PkgPath != "" {
+	root := reflect.ValueOf(dst).Elem()
+	for _, f := range plan.fields {
+		tag := f.tag
+		if tag.Get("query") == "" {
 			continue
 		}
-		fv := rv.Field(i)
-
-		if sf.Anonymous || (sf.Type.Kind() == reflect.Struct && fv.CanAddr()) {
-			if err := walkStruct(fv.Addr().Interface(), fn); err != nil {
-				return err
-			}
+		fv, ok := navigateBindField(root, f)
+		if !ok || !fv.CanSet() {
 			continue
 		}
-		if sf.Type.Kind() == reflect.Pointer && sf.Type.Elem().Kind() == reflect.Struct {
-			// If the field carries a binding tag it is a scalar value type
-			// (e.g. *time.Time) that fn knows how to allocate and parse. Pass
-			// it directly to fn instead of trying to recurse into it (which
-			// would silently skip nil pointers and drop the filter value).
-			hasBindingTag := sf.Tag.Get("query") != "" || sf.Tag.Get("path") != "" || sf.Tag.Get("header") != ""
-			if !hasBindingTag {
-				if fv.IsNil() {
-					continue
-				}
-				if err := walkStruct(fv.Interface(), fn); err != nil {
-					return err
-				}
-				continue
-			}
-		}
-
-		if err := fn(fieldInfo{value: fv, tag: sf.Tag}); err != nil {
+		if err := bindQueryInto(q, fv, f); err != nil {
 			return err
 		}
 	}

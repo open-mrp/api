@@ -24,13 +24,11 @@ func (e *AddChildAccountEndpoint) Materialize() *apiendpoint.APIEndpoint[*AddChi
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/child-accounts/{child_account_id}",
-		Request:           &AddChildAccountRequest{},
-		Response:          &apiresource.ChildAccount{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AddChildAccountRequest) (*apiresource.ChildAccount, *apierror.APIError) {
 			return svc.(ChildAccountSvc).AddChildAccount
 		},
-	}).WithDocSource(e)
+	})
 }

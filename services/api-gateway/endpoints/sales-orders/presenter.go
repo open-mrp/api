@@ -1,6 +1,7 @@
 package salesorderep
 
 import (
+	"context"
 	"time"
 
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
@@ -522,18 +523,13 @@ func salesOrderSummaryToDetail(info *pb.SalesOrderSummaryInfo) apiresource.Sales
 	return d
 }
 
-func SalesOrderListPresenter(resp *pb.ListSalesOrdersResponse) *apiresource.List[apiresource.SalesOrderDetail] {
+func SalesOrderListPresenter(ctx context.Context, resp *pb.ListSalesOrdersResponse) *apiresource.List[apiresource.SalesOrderDetail] {
 	orders := make([]apiresource.SalesOrderDetail, len(resp.SalesOrders))
 	for i, o := range resp.SalesOrders {
 		orders[i] = salesOrderSummaryToDetail(o)
 	}
 
-	return apiresource.NewList(orders, apiresource.PageInfo{
-		NextCursor:  resp.PageInfo.NextCursor,
-		PrevCursor:  resp.PageInfo.PrevCursor,
-		HasNextPage: resp.PageInfo.HasNextPage,
-		HasPrevPage: resp.PageInfo.HasPrevPage,
-	})
+	return apiresource.NewList(orders, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }
 
 func finalizeCustomerStubForInclude(c *apiresource.Customer, fallbackCreated, fallbackUpdated time.Time) {

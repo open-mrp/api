@@ -1,6 +1,8 @@
 package accountuserep
 
 import (
+	"context"
+
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -53,7 +55,7 @@ func AccountUserPresenter(au *pb.AccountUserDetail) apiresource.AccountUser {
 	return result
 }
 
-func AccountUserListPresenter(resp *pb.ListAccountUsersResponse) *apiresource.List[apiresource.AccountUser] {
+func AccountUserListPresenter(ctx context.Context, resp *pb.ListAccountUsersResponse) *apiresource.List[apiresource.AccountUser] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.AccountUser](nil, apiresource.PageInfo{})
 	}
@@ -65,12 +67,7 @@ func AccountUserListPresenter(resp *pb.ListAccountUsersResponse) *apiresource.Li
 
 	var pi apiresource.PageInfo
 	if resp.PageInfo != nil {
-		pi = apiresource.PageInfo{
-			NextCursor:  resp.PageInfo.NextCursor,
-			PrevCursor:  resp.PageInfo.PrevCursor,
-			HasNextPage: resp.PageInfo.HasNextPage,
-			HasPrevPage: resp.PageInfo.HasPrevPage,
-		}
+		pi = grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)
 	}
 
 	return apiresource.NewList(users, pi)

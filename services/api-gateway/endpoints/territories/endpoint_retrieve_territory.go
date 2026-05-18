@@ -27,8 +27,6 @@ func (e *RetrieveTerritoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retr
 		Method:            http.MethodGet,
 		Route:             "/v1/sales/accounts/{account_id}/territories/{id}",
 		ContentType:       "application/json",
-		Request:           &RetrieveTerritoryRequest{},
-		Response:          &apiresource.Territory{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -39,5 +37,5 @@ func (e *RetrieveTerritoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retr
 			ObjectType: constants.ObjectTypeTerritory,
 			Fields:     []string{"sales_rep", "product_line"},
 		}),
-	}).WithDocSource(e)
+	})
 }

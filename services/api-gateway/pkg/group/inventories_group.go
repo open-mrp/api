@@ -39,7 +39,7 @@ func (*InventoriesEndpointGroup) Materialize(config *InventoriesEndpointGroupCon
 		ResourceType: &apiresource.ListInventoriesResponse{},
 	}
 
-	listInventoriesEndpoint := (&inventoryep.ListInventoriesEndpoint{}).Materialize().WithService(inner, inventorySvc)
+	listInventoriesEndpoint := apiendpoint.From(&inventoryep.ListInventoriesEndpoint{}).WithService(inner, inventorySvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listInventoriesEndpoint,

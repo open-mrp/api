@@ -43,8 +43,6 @@ func (e *CreateDepartmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*Creat
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/departments",
-		Request:           &CreateDepartmentRequest{},
-		Response:          &apiresource.Department{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
@@ -54,5 +52,5 @@ func (e *CreateDepartmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*Creat
 		LocationFunc: func(resp *apiresource.Department) string {
 			return "/v1/operations/departments/" + resp.ID
 		},
-	}).WithDocSource(e)
+	})
 }

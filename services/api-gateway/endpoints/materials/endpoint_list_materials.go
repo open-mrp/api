@@ -33,8 +33,6 @@ func (e *ListMaterialsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListMate
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/materials",
-		Request:           &ListMaterialsRequest{},
-		Response:          &apiresource.List[apiresource.Material]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -45,5 +43,5 @@ func (e *ListMaterialsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListMate
 			ObjectType: constants.ObjectTypeMaterial,
 			Fields:     []string{"item", "item.category", "item.category.properties", "item.category.unit_group", "item.unit_value", "item.unit_cost", "item.burn_rate", "item.attributes"},
 		}),
-	}).WithDocSource(e)
+	})
 }

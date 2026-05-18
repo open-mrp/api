@@ -457,10 +457,7 @@ func (r *pickRepoImpl) GetShipmentNumbers(ctx context.Context, params domain.Get
 		limit = 100
 	}
 
-	offset := params.Offset
-	if offset < 0 {
-		offset = 0
-	}
+	offset := max(params.Offset, 0)
 
 	numbers, err := r.queries.GetPickShipmentNumbers(ctx, sqlc.GetPickShipmentNumbersParams{
 		PickID:      params.PickID,

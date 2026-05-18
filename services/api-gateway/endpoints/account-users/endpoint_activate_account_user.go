@@ -24,13 +24,11 @@ func (e *ActivateAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ac
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/account-users/{id}/actions/activate",
-		Request:           &ActivateAccountUserRequest{},
-		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ActivateAccountUserRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(AccountUserSvc).ActivateAccountUser
 		},
-	}).WithDocSource(e)
+	})
 }

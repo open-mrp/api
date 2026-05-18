@@ -35,13 +35,11 @@ func (e *ConfirmPaymentEndpoint) Materialize() *apiendpoint.APIEndpoint[*Confirm
 		Method:            http.MethodPost,
 		Route:             "/v1/auth/registration-sessions/{session_id}/actions/confirm-payment",
 		ContentType:       "application/json",
-		Request:           &ConfirmPaymentRequest{},
-		Response:          &apiresource.ConfirmPaymentResponse{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ConfirmPaymentRequest) (*apiresource.ConfirmPaymentResponse, *apierror.APIError) {
 			return svc.(RegistrationSessionSvc).ConfirmPayment
 		},
-	}).WithDocSource(e)
+	})
 }

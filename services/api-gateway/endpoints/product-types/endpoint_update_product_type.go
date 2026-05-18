@@ -38,13 +38,11 @@ func (e *UpdateProductTypeEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upda
 		Method:            http.MethodPatch,
 		Route:             "/v1/catalog/product-types/{id}",
 		ContentType:       "application/json",
-		Request:           &UpdateProductTypeRequest{},
-		Response:          &apiresource.ProductType{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateProductTypeRequest) (*apiresource.ProductType, *apierror.APIError) {
 			return svc.(ProductTypeSvc).UpdateProductType
 		},
-	}).WithDocSource(e)
+	})
 }

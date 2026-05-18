@@ -65,7 +65,7 @@ func (m *customerProductLineAccessSvcImpl) ListCustomerProductLineAccess(ctx con
 		return nil, apiErr
 	}
 
-	return CustomerProductLineAccessListPresenter(resp), nil
+	return CustomerProductLineAccessListPresenter(ctx, resp), nil
 }
 
 func (m *customerProductLineAccessSvcImpl) GetCustomerProductLineAccess(ctx context.Context, req *RetrieveCustomerProductLineAccessRequest) (*apiresource.CustomerProductLineAccess, *apierror.APIError) {

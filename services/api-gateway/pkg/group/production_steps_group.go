@@ -39,14 +39,14 @@ func (*ProductionStepsEndpointGroup) Materialize(config *ProductionStepsEndpoint
 		ResourceType: &apiresource.ProductionStep{},
 	}
 
-	listEndpoint := (&productionstepep.ListProductionStepsEndpoint{}).Materialize().WithService(inner, productionStepSvc)
-	retrieveEndpoint := (&productionstepep.RetrieveProductionStepEndpoint{}).Materialize().WithService(inner, productionStepSvc)
-	createEndpoint := (&productionstepep.CreateProductionStepEndpoint{}).Materialize().WithService(inner, productionStepSvc)
-	updateEndpoint := (&productionstepep.UpdateProductionStepEndpoint{}).Materialize().WithService(inner, productionStepSvc)
-	deleteEndpoint := (&productionstepep.DeleteProductionStepEndpoint{}).Materialize().WithService(inner, productionStepSvc)
-	getProductionEndpoint := (&productionstepep.RetrieveProductionEndpoint{}).Materialize().WithService(inner, productionStepSvc)
-	updateProductionEndpoint := (&productionstepep.UpdateProductionEndpoint{}).Materialize().WithService(inner, productionStepSvc)
-	bulkCreateEndpoint := (&productionstepep.BulkCreateProductionStepsEndpoint{}).Materialize().WithService(inner, productionStepSvc)
+	listEndpoint := apiendpoint.From(&productionstepep.ListProductionStepsEndpoint{}).WithService(inner, productionStepSvc)
+	retrieveEndpoint := apiendpoint.From(&productionstepep.RetrieveProductionStepEndpoint{}).WithService(inner, productionStepSvc)
+	createEndpoint := apiendpoint.From(&productionstepep.CreateProductionStepEndpoint{}).WithService(inner, productionStepSvc)
+	updateEndpoint := apiendpoint.From(&productionstepep.UpdateProductionStepEndpoint{}).WithService(inner, productionStepSvc)
+	deleteEndpoint := apiendpoint.From(&productionstepep.DeleteProductionStepEndpoint{}).WithService(inner, productionStepSvc)
+	getProductionEndpoint := apiendpoint.From(&productionstepep.RetrieveProductionEndpoint{}).WithService(inner, productionStepSvc)
+	updateProductionEndpoint := apiendpoint.From(&productionstepep.UpdateProductionEndpoint{}).WithService(inner, productionStepSvc)
+	bulkCreateEndpoint := apiendpoint.From(&productionstepep.BulkCreateProductionStepsEndpoint{}).WithService(inner, productionStepSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listEndpoint,

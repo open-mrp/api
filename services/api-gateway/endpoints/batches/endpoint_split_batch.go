@@ -63,13 +63,11 @@ func (e *SplitBatchEndpoint) Materialize() *apiendpoint.APIEndpoint[*SplitBatchR
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/batches/actions/split",
-		Request:           &SplitBatchRequest{},
-		Response:          &apiresource.Batch{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *SplitBatchRequest) (*apiresource.Batch, *apierror.APIError) {
 			return svc.(BatchSvc).SplitBatch
 		},
-	}).WithDocSource(e)
+	})
 }

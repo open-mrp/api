@@ -25,8 +25,6 @@ func (e *RetrieveInventoryChangeLogEndpoint) Materialize() *apiendpoint.APIEndpo
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/inventory-change-logs/{id}",
-		Request:           &RetrieveInventoryChangeLogRequest{},
-		Response:          &apiresource.InventoryChangeLog{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -37,5 +35,5 @@ func (e *RetrieveInventoryChangeLogEndpoint) Materialize() *apiendpoint.APIEndpo
 			ObjectType: constants.ObjectTypeInventoryChangeLog,
 			Fields:     []string{"item", "quantity", "quantity.unit", "responsible_user", "responsible_scanning_station"},
 		}),
-	}).WithDocSource(e)
+	})
 }

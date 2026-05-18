@@ -200,6 +200,112 @@ func BuildPageString[T any](
 	return items, pi
 }
 
+// BuildPageStringWithSearchRank is like BuildPageString but embeds MatchTier in cursors
+// when searchRankEnabled is true (catalog search relevance pagination).
+func BuildPageStringWithSearchRank[T any](
+	items []T,
+	limit int32,
+	cursorDir *Direction,
+	searchRankEnabled bool,
+	getOccurredAt func(T) time.Time,
+	getID func(T) string,
+	getMatchTier func(T) int32,
+) ([]T, PageInfo) {
+	if len(items) == 0 {
+		return items, PageInfo{}
+	}
+
+	hasExtra := len(items) > int(limit)
+
+	if hasExtra {
+		items = items[:limit]
+	}
+
+	nextStringCursor := func(last T, dir Direction) StringCursor {
+		c := StringCursor{
+			OccurredAt: getOccurredAt(last),
+			ID:         getID(last),
+			Direction:  dir,
+		}
+		if searchRankEnabled {
+			t := int(getMatchTier(last))
+			c.MatchTier = &t
+		}
+		return c
+	}
+
+	if cursorDir == nil {
+		var pi PageInfo
+		pi.HasNextPage = hasExtra
+
+		if pi.HasNextPage && len(items) > 0 {
+			last := items[len(items)-1]
+			nc := EncodeStringCursor(nextStringCursor(last, DirectionForward))
+			pi.NextCursor = &nc
+		}
+
+		return items, pi
+	}
+
+	if *cursorDir == DirectionForward {
+		var pi PageInfo
+		pi.HasNextPage = hasExtra
+		pi.HasPrevPage = true
+
+		if pi.HasNextPage && len(items) > 0 {
+			last := items[len(items)-1]
+			nc := EncodeStringCursor(nextStringCursor(last, DirectionForward))
+			pi.NextCursor = &nc
+		}
+
+		if len(items) > 0 {
+			first := items[0]
+			pc := StringCursor{
+				OccurredAt: getOccurredAt(first),
+				ID:         getID(first),
+				Direction:  DirectionBackward,
+			}
+			if searchRankEnabled {
+				t := int(getMatchTier(first))
+				pc.MatchTier = &t
+			}
+			enc := EncodeStringCursor(pc)
+			pi.PrevCursor = &enc
+		}
+
+		return items, pi
+	}
+
+	reverse(items)
+
+	var pi PageInfo
+	pi.HasNextPage = true
+	pi.HasPrevPage = hasExtra
+
+	if len(items) > 0 {
+		last := items[len(items)-1]
+		nc := EncodeStringCursor(nextStringCursor(last, DirectionForward))
+		pi.NextCursor = &nc
+	}
+
+	if pi.HasPrevPage && len(items) > 0 {
+		first := items[0]
+		pc := StringCursor{
+			OccurredAt: getOccurredAt(first),
+			ID:         getID(first),
+			Direction:  DirectionBackward,
+		}
+		if searchRankEnabled {
+			t := int(getMatchTier(first))
+			pc.MatchTier = &t
+		}
+		enc := EncodeStringCursor(pc)
+		pi.PrevCursor = &enc
+	}
+
+	return items, pi
+}
+
 func reverse[T any](s []T) {
 	for i, j := 0, len(s)-1; i < j; i, j = i+1, j-1 {
 		s[i], s[j] = s[j], s[i]

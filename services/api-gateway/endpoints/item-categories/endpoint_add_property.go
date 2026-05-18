@@ -26,13 +26,11 @@ func (e *AddItemCategoryPropertyEndpoint) Materialize() *apiendpoint.APIEndpoint
 		Method:            http.MethodPut,
 		Route:             "/v1/catalog/item-categories/{id}/properties/{property_id}",
 		ContentType:       "application/json",
-		Request:           &AddItemCategoryPropertyRequest{},
-		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AddItemCategoryPropertyRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(ItemCategorySvc).AddItemCategoryProperty
 		},
-	}).WithDocSource(e)
+	})
 }

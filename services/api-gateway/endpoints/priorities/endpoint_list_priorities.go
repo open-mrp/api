@@ -24,8 +24,6 @@ func (e *ListPrioritiesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPri
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/priorities",
-		Request:           &ListPrioritiesRequest{},
-		Response:          &apiresource.List[apiresource.Priority]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -36,5 +34,5 @@ func (e *ListPrioritiesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPri
 			ObjectType: constants.ObjectTypePriority,
 			Fields:     []string{"owner"},
 		}),
-	}).WithDocSource(e)
+	})
 }

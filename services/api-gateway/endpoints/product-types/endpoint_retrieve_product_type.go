@@ -24,13 +24,11 @@ func (e *RetrieveProductTypeEndpoint) Materialize() *apiendpoint.APIEndpoint[*Re
 		Method:            http.MethodGet,
 		Route:             "/v1/catalog/product-types/{id}",
 		ContentType:       "application/json",
-		Request:           &RetrieveProductTypeRequest{},
-		Response:          &apiresource.ProductType{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveProductTypeRequest) (*apiresource.ProductType, *apierror.APIError) {
 			return svc.(ProductTypeSvc).GetProductType
 		},
-	}).WithDocSource(e)
+	})
 }

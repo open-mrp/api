@@ -1,7 +1,10 @@
 package agentalertep
 
 import (
+	"context"
 	"encoding/json"
+
+	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -72,7 +75,7 @@ func AgentAlertPresenter(a *pb.AgentAlertInfo) apiresource.AgentAlert {
 	return alert
 }
 
-func AgentAlertListPresenter(resp *pb.ListAgentAlertsResponse) *apiresource.List[apiresource.AgentAlert] {
+func AgentAlertListPresenter(ctx context.Context, resp *pb.ListAgentAlertsResponse) *apiresource.List[apiresource.AgentAlert] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.AgentAlert](nil, apiresource.PageInfo{})
 	}
@@ -84,12 +87,7 @@ func AgentAlertListPresenter(resp *pb.ListAgentAlertsResponse) *apiresource.List
 
 	pageInfo := apiresource.PageInfo{}
 	if resp.PageInfo != nil {
-		pageInfo = apiresource.PageInfo{
-			NextCursor:  resp.PageInfo.NextCursor,
-			PrevCursor:  resp.PageInfo.PrevCursor,
-			HasNextPage: resp.PageInfo.HasNextPage,
-			HasPrevPage: resp.PageInfo.HasPrevPage,
-		}
+		pageInfo = grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)
 	}
 
 	return apiresource.NewList(alerts, pageInfo)

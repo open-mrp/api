@@ -35,13 +35,11 @@ func (e *ConnectProductionStepsEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/scanning-stations/{id}/production-steps",
-		Request:           &ConnectProductionStepsRequest{},
-		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ConnectProductionStepsRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(ScanningStationSvc).ConnectProductionSteps
 		},
-	}).WithDocSource(e)
+	})
 }

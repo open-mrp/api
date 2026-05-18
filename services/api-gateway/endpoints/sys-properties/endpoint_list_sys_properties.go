@@ -23,13 +23,11 @@ func (e *ListSysPropertiesEndpoint) Materialize() *apiendpoint.APIEndpoint[*List
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/core/sys-properties",
-		Request:           &ListSysPropertiesRequest{},
-		Response:          &apiresource.List[apiresource.SysProperty]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListSysPropertiesRequest) (*apiresource.List[apiresource.SysProperty], *apierror.APIError) {
 			return svc.(SysPropertySvc).ListSysProperties
 		},
-	}).WithDocSource(e)
+	})
 }

@@ -28,8 +28,6 @@ func (e *ListAccountUsersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListA
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/account-users",
-		Request:           &ListAccountUsersRequest{},
-		Response:          &apiresource.List[apiresource.AccountUser]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -40,5 +38,5 @@ func (e *ListAccountUsersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListA
 			ObjectType: constants.ObjectTypeAccountUser,
 			Fields:     []string{"role", "department"},
 		}),
-	}).WithDocSource(e)
+	})
 }

@@ -39,11 +39,11 @@ func (*ProductTypesEndpointGroup) Materialize(config *ProductTypesEndpointGroupC
 		ResourceType: &apiresource.ProductType{},
 	}
 
-	listProductTypesEndpoint := (&producttypeep.ListProductTypesEndpoint{}).Materialize().WithService(inner, productTypeSvc)
-	getProductTypeEndpoint := (&producttypeep.RetrieveProductTypeEndpoint{}).Materialize().WithService(inner, productTypeSvc)
-	createProductTypeEndpoint := (&producttypeep.CreateProductTypeEndpoint{}).Materialize().WithService(inner, productTypeSvc)
-	updateProductTypeEndpoint := (&producttypeep.UpdateProductTypeEndpoint{}).Materialize().WithService(inner, productTypeSvc)
-	deleteProductTypeEndpoint := (&producttypeep.DeleteProductTypeEndpoint{}).Materialize().WithService(inner, productTypeSvc)
+	listProductTypesEndpoint := apiendpoint.From(&producttypeep.ListProductTypesEndpoint{}).WithService(inner, productTypeSvc)
+	getProductTypeEndpoint := apiendpoint.From(&producttypeep.RetrieveProductTypeEndpoint{}).WithService(inner, productTypeSvc)
+	createProductTypeEndpoint := apiendpoint.From(&producttypeep.CreateProductTypeEndpoint{}).WithService(inner, productTypeSvc)
+	updateProductTypeEndpoint := apiendpoint.From(&producttypeep.UpdateProductTypeEndpoint{}).WithService(inner, productTypeSvc)
+	deleteProductTypeEndpoint := apiendpoint.From(&producttypeep.DeleteProductTypeEndpoint{}).WithService(inner, productTypeSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listProductTypesEndpoint,

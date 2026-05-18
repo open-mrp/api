@@ -39,10 +39,10 @@ func (*UsersEndpointGroup) Materialize(config *UsersEndpointGroupConfig) *UsersE
 		ResourceType: &apiresource.User{},
 	}
 
-	retrieveEndpoint := (&userep.RetrieveUserEndpoint{}).Materialize().WithService(inner, svc)
-	updateEndpoint := (&userep.UpdateUserEndpoint{}).Materialize().WithService(inner, svc)
-	uploadPhotoEndpoint := (&userep.UploadUserPhotoEndpoint{}).Materialize().WithService(inner, svc)
-	getPhotoEndpoint := (&userep.GetUserPhotoURLEndpoint{}).Materialize().WithService(inner, svc)
+	retrieveEndpoint := apiendpoint.From(&userep.RetrieveUserEndpoint{}).WithService(inner, svc)
+	updateEndpoint := apiendpoint.From(&userep.UpdateUserEndpoint{}).WithService(inner, svc)
+	uploadPhotoEndpoint := apiendpoint.From(&userep.UploadUserPhotoEndpoint{}).WithService(inner, svc)
+	getPhotoEndpoint := apiendpoint.From(&userep.GetUserPhotoURLEndpoint{}).WithService(inner, svc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		retrieveEndpoint,

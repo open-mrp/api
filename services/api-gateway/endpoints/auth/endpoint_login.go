@@ -15,7 +15,7 @@ type LoginRequest struct {
 	// Username or email for authentication.
 	Identifier string `json:"identifier" validate:"required,identifier"`
 	// User password.
-	Password string `json:"password" validate:"required,max=72"` // #nosec G117 - Struct field, not a hardcoded credential
+	Password string `json:"password" validate:"required,max=72" sensitive:"true"` // #nosec G117 - Struct field, not a hardcoded credential
 }
 
 var sampleLoginRequest = &LoginRequest{
@@ -36,15 +36,10 @@ func (e *LoginEndpoint) Materialize() *apiendpoint.APIEndpoint[*LoginRequest, *a
 		Method:            http.MethodPost,
 		Route:             "/v1/auth/actions/login",
 		ContentType:       "application/json",
-		Request:           &LoginRequest{},
-		Response:          &apiresource.User{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *LoginRequest) (*apiresource.User, *apierror.APIError) {
 			return svc.(AuthSvc).Login
 		},
-		Extras: apiendpoint.APIEndpointExtras{
-			ShieldRequestBody: true,
-		},
-	}).WithDocSource(e)
+	})
 }

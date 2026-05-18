@@ -132,6 +132,62 @@ func TestLoggingMiddleware_RequestLogInContext(t *testing.T) {
 	}
 }
 
+func TestLoggingMiddleware_RedactsSensitiveResponseFields(t *testing.T) {
+	t.Parallel()
+	logger := log.New(io.Discard, "", 0)
+	saver := &stubSaver{}
+
+	handler := LoggingMiddleware(logger, func(w http.ResponseWriter, r *http.Request) {
+		rl, ok := appctx.GetRequestLog(r.Context())
+		if !ok {
+			t.Fatal("missing request log")
+		}
+		rl.SensitiveResponseFields = map[string]bool{"api_key_secret": true}
+		w.WriteHeader(http.StatusCreated)
+		_, _ = w.Write([]byte(`{"api_key_secret":"aug_sk_prod_secret","object":"created_api_key","api_key_info":{"id":"apke_123","object":"api_key"}}`))
+	}, saver, nil)
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/test", nil)
+	rr := httptest.NewRecorder()
+
+	handler.ServeHTTP(rr, req)
+
+	if saver.savedRL == nil || saver.savedRL.ResponseJSON == nil {
+		t.Fatal("expected response json in saved log")
+	}
+	if want := `{"api_key_info":{"id":"apke_123","object":"api_key"},"api_key_secret":"****","object":"created_api_key"}`; *saver.savedRL.ResponseJSON != want {
+		t.Fatalf("response json = %q want %q", *saver.savedRL.ResponseJSON, want)
+	}
+}
+
+func TestLoggingMiddleware_RedactFailure_omitsResponseJSON(t *testing.T) {
+	t.Parallel()
+	logger := log.New(io.Discard, "", 0)
+	saver := &stubSaver{}
+
+	handler := LoggingMiddleware(logger, func(w http.ResponseWriter, r *http.Request) {
+		rl, ok := appctx.GetRequestLog(r.Context())
+		if !ok {
+			t.Fatal("missing request log")
+		}
+		rl.SensitiveResponseFields = map[string]bool{"x": true}
+		w.WriteHeader(http.StatusOK)
+		// Not valid JSON as a single top-level value → RedactJSON returns nil → omit stored response.
+		_, _ = w.Write([]byte(`not-json`))
+	}, saver, nil)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+
+	if saver.savedRL == nil {
+		t.Fatal("expected saved log")
+	}
+	if saver.savedRL.ResponseJSON != nil {
+		t.Fatalf("expected nil ResponseJSON on redact failure, got %q", *saver.savedRL.ResponseJSON)
+	}
+}
+
 // stubRouteMatcher implements RouteMatcher for testing public endpoint detection.
 type stubRouteMatcher struct {
 	routes []any

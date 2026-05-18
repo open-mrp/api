@@ -23,13 +23,11 @@ func (e *ListMachinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListMachi
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/machines",
-		Request:           &ListMachinesRequest{},
-		Response:          &apiresource.List[apiresource.Machine]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListMachinesRequest) (*apiresource.List[apiresource.Machine], *apierror.APIError) {
 			return svc.(MachineSvc).ListMachines
 		},
-	}).WithDocSource(e)
+	})
 }

@@ -23,13 +23,11 @@ func (e *ListLocationTypesEndpoint) Materialize() *apiendpoint.APIEndpoint[*List
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/location-types",
-		Request:           &ListLocationTypesRequest{},
-		Response:          &apiresource.List[apiresource.LocationType]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListLocationTypesRequest) (*apiresource.List[apiresource.LocationType], *apierror.APIError) {
 			return svc.(LocationSvc).ListLocationTypes
 		},
-	}).WithDocSource(e)
+	})
 }

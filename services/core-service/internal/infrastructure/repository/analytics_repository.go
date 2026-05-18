@@ -381,7 +381,7 @@ func computeDeliveryChartData(entries []domain.DeliveryEntry, startDate, endDate
 
 	var onTimeData, avgDeliveryData, avgFirstShipData []domain.ChartDataPoint
 
-	for i := 0; i < numberOfPoints; i++ {
+	for i := range numberOfPoints {
 		intervalStart := startDate.Add(time.Duration(float64(i)*intervalMs) * time.Millisecond)
 		intervalEnd := startDate.Add(time.Duration(float64(i+1)*intervalMs) * time.Millisecond)
 		xValue := float64(intervalStart.UnixMilli())
@@ -1273,7 +1273,7 @@ func (r *analyticsRepoImpl) GetWeeksOfSales(ctx context.Context, params domain.A
 }
 
 // decimalToFloat64 converts a decimal string (from CAST AS DECIMAL) to float64.
-func decimalToFloat64(v interface{}) float64 {
+func decimalToFloat64(v any) float64 {
 	switch val := v.(type) {
 	case string:
 		f := 0.0
@@ -1311,7 +1311,7 @@ func decimalToFloat64(v interface{}) float64 {
 	}
 }
 
-func interfaceToTimePtr(v interface{}) *time.Time {
+func interfaceToTimePtr(v any) *time.Time {
 	switch val := v.(type) {
 	case time.Time:
 		return &val

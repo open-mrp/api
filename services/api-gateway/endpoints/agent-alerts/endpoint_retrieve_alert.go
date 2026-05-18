@@ -25,8 +25,6 @@ func (e *RetrieveAlertEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retrieve
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/ai/alerts/{id}",
-		Request:           &RetrieveAlertRequest{},
-		Response:          &apiresource.AgentAlert{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -37,5 +35,5 @@ func (e *RetrieveAlertEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retrieve
 			ObjectType: constants.ObjectTypeAgentAlert,
 			Fields:     []string{"run", "action"},
 		}),
-	}).WithDocSource(e)
+	})
 }

@@ -96,7 +96,7 @@ func (m *itemSvcImpl) ListItems(ctx context.Context, req *ListItemsRequest) (*ap
 		return nil, apiErr
 	}
 
-	return ItemListPresenter(resp), nil
+	return ItemListPresenter(ctx, resp), nil
 }
 
 func (m *itemSvcImpl) GetItem(ctx context.Context, req *RetrieveItemRequest) (*apiresource.Item, *apierror.APIError) {

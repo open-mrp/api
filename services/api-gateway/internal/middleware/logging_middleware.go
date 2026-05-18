@@ -11,6 +11,7 @@ import (
 	"github.com/augno/api/services/api-gateway/internal/header"
 	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/id"
+	"github.com/augno/api/shared/redact"
 	"github.com/augno/api/shared/tracing"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -154,10 +155,21 @@ func LoggingMiddleware(logger *log.Logger, next http.HandlerFunc, saver saver, r
 			requestLog.StatusCode = lrw.statusCode
 			requestLog.LatencyUs = latency
 
-			if !requestLog.ShieldResponseBody && len(lrw.body) > 0 {
+			if len(lrw.body) > 0 {
 				if lrw.bodyFull {
-					s := string(lrw.body)
-					requestLog.ResponseJSON = &s
+					respBytes := lrw.body
+					if len(requestLog.SensitiveResponseFields) > 0 {
+						rb := redact.RedactJSON(lrw.body, requestLog.SensitiveResponseFields)
+						if rb == nil {
+							respBytes = nil
+						} else {
+							respBytes = rb
+						}
+					}
+					if len(respBytes) > 0 {
+						s := string(respBytes)
+						requestLog.ResponseJSON = &s
+					}
 				} else {
 					s := fmt.Sprintf(`{"_truncated":true,"_original_size_exceeded":%d}`, maxResponseLogSize)
 					requestLog.ResponseJSON = &s

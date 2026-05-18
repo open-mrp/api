@@ -46,8 +46,6 @@ func (e *CreateCarrierEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateCa
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/carriers",
-		Request:           &CreateCarrierRequest{},
-		Response:          &apiresource.Carrier{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
 		Preview:           true,
@@ -61,5 +59,5 @@ func (e *CreateCarrierEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateCa
 			ObjectType: constants.ObjectTypeCarrier,
 			Fields:     []string{"owner", "owner.account", "service_levels"},
 		}),
-	}).WithDocSource(e)
+	})
 }

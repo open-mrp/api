@@ -25,8 +25,6 @@ func (e *RetrieveProductLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*Re
 		Method:            http.MethodGet,
 		Route:             "/v1/catalog/product-lines/{id}",
 		ContentType:       "application/json",
-		Request:           &RetrieveProductLineRequest{},
-		Response:          &apiresource.ProductLine{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -37,5 +35,5 @@ func (e *RetrieveProductLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*Re
 			ObjectType: constants.ObjectTypeProductLine,
 			Fields:     []string{"owner", "owner.account", "unit_group"},
 		}),
-	}).WithDocSource(e)
+	})
 }

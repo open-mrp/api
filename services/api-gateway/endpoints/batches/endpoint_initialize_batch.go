@@ -36,13 +36,11 @@ func (e *InitializeBatchEndpoint) Materialize() *apiendpoint.APIEndpoint[*Initia
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/batches/actions/initialize",
-		Request:           &InitializeBatchRequest{},
-		Response:          &apiresource.Batch{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *InitializeBatchRequest) (*apiresource.Batch, *apierror.APIError) {
 			return svc.(BatchSvc).InitializeBatch
 		},
-	}).WithDocSource(e)
+	})
 }

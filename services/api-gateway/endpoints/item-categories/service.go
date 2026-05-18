@@ -80,7 +80,7 @@ func (m *itemCategorySvcImpl) ListItemCategories(ctx context.Context, req *ListI
 		}
 	}
 
-	return ItemCategoryListPresenter(resp, ownerAccount), nil
+	return ItemCategoryListPresenter(ctx, resp, ownerAccount), nil
 }
 
 func (m *itemCategorySvcImpl) GetItemCategory(ctx context.Context, req *RetrieveItemCategoryRequest) (*apiresource.ItemCategory, *apierror.APIError) {

@@ -37,7 +37,7 @@ func buildReceivingOrderSearchParams(query *string) gosql.NullString {
 	return gosql.NullString{String: "%" + db.EscapeLike(*query) + "%", Valid: true}
 }
 
-func receivingOrderInterfaceToString(v interface{}) string {
+func receivingOrderInterfaceToString(v any) string {
 	if v == nil {
 		return "0"
 	}
@@ -51,7 +51,7 @@ func receivingOrderInterfaceToString(v interface{}) string {
 	}
 }
 
-func receivingOrderInterfaceToFloat64(v interface{}) float64 {
+func receivingOrderInterfaceToFloat64(v any) float64 {
 	s := receivingOrderInterfaceToString(v)
 	d, err := decimal.NewFromString(s)
 	if err != nil {
@@ -180,7 +180,7 @@ func (r *receivingOrderRepoImpl) List(ctx context.Context, params domain.ListRec
 
 	searchQuery := buildReceivingOrderSearchParams(params.Query)
 
-	var status interface{}
+	var status any
 	if params.Status != nil && *params.Status != "" && *params.Status != "all" {
 		status = *params.Status
 	}

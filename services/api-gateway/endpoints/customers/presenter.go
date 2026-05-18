@@ -1,6 +1,8 @@
 package customerep
 
 import (
+	"context"
+
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -359,7 +361,7 @@ func addressTypeFromDropShip(isDropShip bool) constants.AddressType {
 	return constants.AddressTypeStandard
 }
 
-func CustomerListPresenter(resp *pb.ListCustomersResponse) *apiresource.List[apiresource.Customer] {
+func CustomerListPresenter(ctx context.Context, resp *pb.ListCustomersResponse) *apiresource.List[apiresource.Customer] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.Customer](nil, apiresource.PageInfo{})
 	}
@@ -369,5 +371,5 @@ func CustomerListPresenter(resp *pb.ListCustomersResponse) *apiresource.List[api
 		items[i] = CustomerPresenter(c)
 	}
 
-	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }

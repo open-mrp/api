@@ -47,8 +47,6 @@ func (e *UpdateRateEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateRateR
 		Method:            http.MethodPatch,
 		Route:             "/v1/operations/rates/{id}",
 		ContentType:       "application/json",
-		Request:           &UpdateRateRequest{},
-		Response:          &apiresource.Rate{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -59,5 +57,5 @@ func (e *UpdateRateEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateRateR
 			ObjectType: constants.ObjectTypeRate,
 			Fields:     []string{"numerator_unit", "denominator_unit"},
 		}),
-	}).WithDocSource(e)
+	})
 }

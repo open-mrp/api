@@ -1,6 +1,8 @@
 package producttypeep
 
 import (
+	"context"
+
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -22,7 +24,7 @@ func ProductTypePresenter(pt *pb.ProductTypeInfo) apiresource.ProductType {
 	}
 }
 
-func ProductTypeListPresenter(resp *pb.ListProductTypesResponse) *apiresource.List[apiresource.ProductType] {
+func ProductTypeListPresenter(ctx context.Context, resp *pb.ListProductTypesResponse) *apiresource.List[apiresource.ProductType] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.ProductType](nil, apiresource.PageInfo{})
 	}
@@ -32,5 +34,5 @@ func ProductTypeListPresenter(resp *pb.ListProductTypesResponse) *apiresource.Li
 		productTypes[i] = ProductTypePresenter(pt)
 	}
 
-	return apiresource.NewList(productTypes, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(productTypes, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }

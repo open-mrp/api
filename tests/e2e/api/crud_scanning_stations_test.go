@@ -156,12 +156,9 @@ func TestScanningStations_ListPagination(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, page1.Data, 1)
 	require.True(t, page1.PageInfo.HasNextPage, "should have a next page")
-	require.NotNil(t, page1.PageInfo.NextCursor)
+	require.NotNil(t, page1.PageInfo.NextPageURL)
 
-	page2, _, err := apiClient.GetList(scanningStationsPath, url.Values{
-		"limit":  {"1"},
-		"cursor": {*page1.PageInfo.NextCursor},
-	})
+	page2, _, err := apiClient.GetListFromPageURL(page1.PageInfo.NextPageURL)
 	require.NoError(t, err)
 	require.Len(t, page2.Data, 1)
 

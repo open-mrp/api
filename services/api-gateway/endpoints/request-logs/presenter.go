@@ -1,6 +1,7 @@
 package requestlogep
 
 import (
+	"context"
 	"encoding/json"
 	"slices"
 
@@ -95,7 +96,7 @@ func rolePermissionsFromMap(permissions map[string]bool) []string {
 	return result
 }
 
-func RequestLogListPresenter(resp *pb.ListRequestLogsResponse, permResolver func(roleID *string) map[string]bool) *apiresource.List[apiresource.RequestLog] {
+func RequestLogListPresenter(ctx context.Context, resp *pb.ListRequestLogsResponse, permResolver func(roleID *string) map[string]bool) *apiresource.List[apiresource.RequestLog] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.RequestLog](nil, apiresource.PageInfo{})
 	}
@@ -113,7 +114,7 @@ func RequestLogListPresenter(resp *pb.ListRequestLogsResponse, permResolver func
 		logs[i] = log
 	}
 
-	return apiresource.NewList(logs, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(logs, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }
 
 func rawMessageFromOptionalString(s *string) json.RawMessage {

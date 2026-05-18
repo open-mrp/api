@@ -64,8 +64,6 @@ func (e *CreateVolumeDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*C
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/volume-discounts",
-		Request:           &CreateVolumeDiscountRequest{},
-		Response:          &apiresource.VolumeDiscount{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
@@ -75,5 +73,5 @@ func (e *CreateVolumeDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*C
 		LocationFunc: func(resp *apiresource.VolumeDiscount) string {
 			return "/v1/sales/volume-discounts/" + resp.ID
 		},
-	}).WithDocSource(e)
+	})
 }

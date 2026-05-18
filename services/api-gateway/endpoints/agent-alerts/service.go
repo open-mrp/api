@@ -68,7 +68,7 @@ func (m *agentAlertSvcImpl) ListAlerts(ctx context.Context, req *ListAlertsReque
 		return nil, rpcErr
 	}
 
-	return AgentAlertListPresenter(resp), nil
+	return AgentAlertListPresenter(ctx, resp), nil
 }
 
 func (m *agentAlertSvcImpl) GetAlert(ctx context.Context, req *RetrieveAlertRequest) (*apiresource.AgentAlert, *apierror.APIError) {

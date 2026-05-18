@@ -37,13 +37,11 @@ func (e *InitiateOAuthEndpoint) Materialize() *apiendpoint.APIEndpoint[*Initiate
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/carriers/{id}/actions/initiate-oauth",
-		Request:           &InitiateOAuthRequest{},
-		Response:          &apiresource.OAuthResponse{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *InitiateOAuthRequest) (*apiresource.OAuthResponse, *apierror.APIError) {
 			return svc.(CarrierSvc).InitiateOAuth
 		},
-	}).WithDocSource(e)
+	})
 }

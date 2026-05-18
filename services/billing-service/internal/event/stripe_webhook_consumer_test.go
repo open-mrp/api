@@ -91,11 +91,11 @@ func (s *stubStripeClient) FetchObject(ctx context.Context, objectURL string) ([
 }
 
 func buildDelivery(eventID, eventType, objectID string) amqp.Delivery {
-	eventData := map[string]interface{}{
+	eventData := map[string]any{
 		"id":   eventID,
 		"type": eventType,
-		"data": map[string]interface{}{
-			"object": map[string]interface{}{
+		"data": map[string]any{
+			"object": map[string]any{
 				"id":       objectID,
 				"customer": "cus_test",
 			},
@@ -108,10 +108,10 @@ func buildDelivery(eventID, eventType, objectID string) amqp.Delivery {
 }
 
 func buildV2Delivery(eventID, eventType, relatedObjectID, relatedURL string) amqp.Delivery {
-	eventData := map[string]interface{}{
+	eventData := map[string]any{
 		"id":   eventID,
 		"type": eventType,
-		"related_object": map[string]interface{}{
+		"related_object": map[string]any{
 			"id":   relatedObjectID,
 			"type": "pricing_plan_subscription",
 			"url":  relatedURL,

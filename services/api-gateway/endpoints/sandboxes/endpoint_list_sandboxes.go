@@ -19,8 +19,6 @@ func (e *ListSandboxesEndpoint) Materialize() *apiendpoint.APIEndpoint[*apiresou
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/core/sandboxes",
-		Request:           &apiresource.PaginationRequest{},
-		Response:          &apiresource.List[apiresource.Sandbox]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -31,5 +29,5 @@ func (e *ListSandboxesEndpoint) Materialize() *apiendpoint.APIEndpoint[*apiresou
 		ServiceHandler: func(svc any) func(ctx context.Context, req *apiresource.PaginationRequest) (*apiresource.List[apiresource.Sandbox], *apierror.APIError) {
 			return svc.(SandboxSvc).ListSandboxes
 		},
-	}).WithDocSource(e)
+	})
 }

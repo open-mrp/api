@@ -144,11 +144,11 @@ func extractKeyName(message string) string {
 		return ""
 	}
 	rest := message[idx+len(marker):]
-	end := strings.IndexByte(rest, '\'')
-	if end == -1 {
+	before, _, ok := strings.Cut(rest, "'")
+	if !ok {
 		return ""
 	}
-	keyName := rest[:end]
+	keyName := before
 	// Strip table prefix: "unit.unit_account_id_name_key" → "unit_account_id_name_key"
 	if dot := strings.LastIndexByte(keyName, '.'); dot != -1 {
 		keyName = keyName[dot+1:]

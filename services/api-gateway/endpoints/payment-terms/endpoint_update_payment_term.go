@@ -36,8 +36,6 @@ func (e *UpdatePaymentTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upda
 		Method:            http.MethodPatch,
 		Route:             "/v1/finance/payment-terms/{id}",
 		ContentType:       "application/json",
-		Request:           &UpdatePaymentTermRequest{},
-		Response:          &apiresource.PaymentTerm{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -48,5 +46,5 @@ func (e *UpdatePaymentTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upda
 			ObjectType: constants.ObjectTypePaymentTerm,
 			Fields:     []string{"owner", "owner.account"},
 		}),
-	}).WithDocSource(e)
+	})
 }

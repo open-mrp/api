@@ -1,6 +1,8 @@
 package paymenttermep
 
 import (
+	"context"
+
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -23,7 +25,7 @@ func PaymentTermPresenter(pt *pb.PaymentTermInfo, ownerAccount *apiresource.Acco
 	}
 }
 
-func PaymentTermListPresenter(resp *pb.ListPaymentTermsResponse, ownerAccount *apiresource.Account) *apiresource.List[apiresource.PaymentTerm] {
+func PaymentTermListPresenter(ctx context.Context, resp *pb.ListPaymentTermsResponse, ownerAccount *apiresource.Account) *apiresource.List[apiresource.PaymentTerm] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.PaymentTerm](nil, apiresource.PageInfo{})
 	}
@@ -33,5 +35,5 @@ func PaymentTermListPresenter(resp *pb.ListPaymentTermsResponse, ownerAccount *a
 		paymentTerms[i] = PaymentTermPresenter(pt, ownerAccount)
 	}
 
-	return apiresource.NewList(paymentTerms, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(paymentTerms, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }

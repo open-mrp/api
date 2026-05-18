@@ -260,7 +260,7 @@ func TestCalculateDelay_JitterWithinBounds(t *testing.T) {
 		JitterFraction: 0.1,
 	}
 
-	for attempt := 0; attempt < 4; attempt++ {
+	for attempt := range 4 {
 		baseDelay := float64(cfg.InitialWait) * math.Pow(cfg.Multiplier, float64(attempt))
 		if baseDelay > float64(cfg.MaxWait) {
 			baseDelay = float64(cfg.MaxWait)

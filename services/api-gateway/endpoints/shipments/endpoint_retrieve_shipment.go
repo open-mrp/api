@@ -27,8 +27,6 @@ func (e *RetrieveShipmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retri
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/shipments/{id}",
-		Request:           &RetrieveShipmentRequest{},
-		Response:          &apiresource.ShipmentDetail{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -39,5 +37,5 @@ func (e *RetrieveShipmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retri
 			ObjectType: constants.ObjectTypeShipment,
 			Fields:     []string{"lines", "shipping_cases", "sales_order", "customer", "carrier", "service_level", "shipping_address", "shipped_by", "invoice", "pick"},
 		}),
-	}).WithDocSource(e)
+	})
 }

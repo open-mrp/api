@@ -27,13 +27,11 @@ func (e *ListCustomerInvoicesEndpoint) Materialize() *apiendpoint.APIEndpoint[*L
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/finance/accounts/{account_id}/invoices",
-		Request:           &ListCustomerInvoicesRequest{},
-		Response:          &apiresource.List[apiresource.InvoiceForPayment]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListCustomerInvoicesRequest) (*apiresource.List[apiresource.InvoiceForPayment], *apierror.APIError) {
 			return svc.(InvoiceSvc).ListCustomerInvoices
 		},
-	}).WithDocSource(e)
+	})
 }

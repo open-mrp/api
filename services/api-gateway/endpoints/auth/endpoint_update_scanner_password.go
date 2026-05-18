@@ -15,9 +15,9 @@ type UpdateScannerPasswordRequest struct {
 	// Target scanner account user ID.
 	AccountUserID string `json:"account_user_id" validate:"required"`
 	// Requester's current password (the caller's own password, for verification).
-	RequesterPassword string `json:"requester_password" validate:"required,password,max=255"`
+	RequesterPassword string `json:"requester_password" validate:"required,password,max=255" sensitive:"true"`
 	// New password to set for the scanner user.
-	NewPassword string `json:"new_password" validate:"required,password,max=255"`
+	NewPassword string `json:"new_password" validate:"required,password,max=255" sensitive:"true"`
 }
 
 var sampleUpdateScannerPasswordRequest = &UpdateScannerPasswordRequest{
@@ -39,16 +39,11 @@ func (e *UpdateScannerPasswordEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		Method:            http.MethodPost,
 		Route:             "/v1/auth/scanner-passwords",
 		ContentType:       "application/json",
-		Request:           &UpdateScannerPasswordRequest{},
-		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
-		Extras: apiendpoint.APIEndpointExtras{
-			ShieldRequestBody: true,
-		},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateScannerPasswordRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(AuthSvc).UpdateScannerPassword
 		},
-	}).WithDocSource(e)
+	})
 }

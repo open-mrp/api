@@ -96,7 +96,7 @@ func (m *batchSvcImpl) ListBatchesByScanningStation(ctx context.Context, req *Li
 		return nil, apiErr
 	}
 
-	return BatchListPresenter(resp), nil
+	return BatchListPresenter(ctx, resp), nil
 }
 
 func (m *batchSvcImpl) GetPossibleNextSteps(ctx context.Context, req *GetPossibleNextStepsRequest) (*apiresource.List[apiresource.ScanningProductionStepInfo], *apierror.APIError) {

@@ -33,13 +33,11 @@ func (e *ListSettlementsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSe
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/finance/settlements",
-		Request:           &ListSettlementsRequest{},
-		Response:          &apiresource.List[apiresource.SettlementSummary]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListSettlementsRequest) (*apiresource.List[apiresource.SettlementSummary], *apierror.APIError) {
 			return svc.(SettlementSvc).ListSettlements
 		},
-	}).WithDocSource(e)
+	})
 }

@@ -44,8 +44,6 @@ func (e *UpdateProductLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upda
 		Method:            http.MethodPatch,
 		Route:             "/v1/catalog/product-lines/{id}",
 		ContentType:       "application/json",
-		Request:           &UpdateProductLineRequest{},
-		Response:          &apiresource.ProductLine{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -56,5 +54,5 @@ func (e *UpdateProductLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upda
 			ObjectType: constants.ObjectTypeProductLine,
 			Fields:     []string{"owner", "owner.account", "unit_group"},
 		}),
-	}).WithDocSource(e)
+	})
 }

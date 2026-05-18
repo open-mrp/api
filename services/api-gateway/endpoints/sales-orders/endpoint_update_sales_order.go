@@ -108,8 +108,6 @@ func (e *UpdateSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*Updat
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/sales-orders/{id}",
-		Request:           &UpdateSalesOrderRequest{},
-		Response:          &apiresource.SalesOrderDetail{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -120,5 +118,5 @@ func (e *UpdateSalesOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*Updat
 			ObjectType: constants.ObjectTypeSalesOrder,
 			Fields:     []string{"customer", "bill_to_address", "ship_to_address", "carrier", "service_level", "payment_term", "shipping_term", "order_discount", "lines", "lines.item"},
 		}),
-	}).WithDocSource(e)
+	})
 }

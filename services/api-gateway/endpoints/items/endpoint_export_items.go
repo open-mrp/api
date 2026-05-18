@@ -21,13 +21,11 @@ func (e *ExportItemsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ExportItem
 		Method:            http.MethodGet,
 		ContentType:       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 		Route:             "/v1/catalog/items/actions/export",
-		Request:           &ExportItemsRequest{},
-		Response:          &httptransport.FileDownload{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ExportItemsRequest) (*httptransport.FileDownload, *apierror.APIError) {
 			return svc.(ItemSvc).ExportItems
 		},
-	}).WithDocSource(e)
+	})
 }

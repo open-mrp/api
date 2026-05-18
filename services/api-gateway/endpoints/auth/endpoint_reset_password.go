@@ -15,7 +15,7 @@ type ResetPasswordRequest struct {
 	// Password reset token.
 	Token string `json:"token" validate:"required"`
 	// New password.
-	Password string `json:"password" validate:"required,password"` // #nosec G117 - Struct field, not a hardcoded credential
+	Password string `json:"password" validate:"required,password" sensitive:"true"` // #nosec G117 - Struct field, not a hardcoded credential
 }
 
 var sampleResetPasswordRequest = &ResetPasswordRequest{
@@ -36,15 +36,10 @@ func (e *ResetPasswordEndpoint) Materialize() *apiendpoint.APIEndpoint[*ResetPas
 		Method:            http.MethodPost,
 		Route:             "/v1/auth/passwords/actions/reset",
 		ContentType:       "application/json",
-		Request:           &ResetPasswordRequest{},
-		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ResetPasswordRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(AuthSvc).ResetPassword
 		},
-		Extras: apiendpoint.APIEndpointExtras{
-			ShieldRequestBody: true,
-		},
-	}).WithDocSource(e)
+	})
 }

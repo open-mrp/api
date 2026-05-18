@@ -69,13 +69,11 @@ func (e *RegisterCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*Regis
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/customers/registration",
-		Request:           &RegisterCustomerRequest{},
-		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RegisterCustomerRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(RegistrationFlowSvc).RegisterCustomer
 		},
-	}).WithDocSource(e)
+	})
 }

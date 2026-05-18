@@ -36,8 +36,6 @@ func (e *CreateProductTypeEndpoint) Materialize() *apiendpoint.APIEndpoint[*Crea
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/product-types",
-		Request:           &CreateProductTypeRequest{},
-		Response:          &apiresource.ProductType{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
@@ -47,5 +45,5 @@ func (e *CreateProductTypeEndpoint) Materialize() *apiendpoint.APIEndpoint[*Crea
 		LocationFunc: func(resp *apiresource.ProductType) string {
 			return "/v1/catalog/product-types/" + resp.ID
 		},
-	}).WithDocSource(e)
+	})
 }

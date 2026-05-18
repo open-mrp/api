@@ -1,6 +1,8 @@
 package receivableep
 
 import (
+	"context"
+
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -36,7 +38,7 @@ func ReceivableEntryPresenter(e *pb.ReceivableEntryProto) apiresource.Receivable
 	return entry
 }
 
-func ReceivableEntryListPresenter(resp interface {
+func ReceivableEntryListPresenter(ctx context.Context, resp interface {
 	GetReceivables() []*pb.ReceivableEntryProto
 	GetPageInfo() *pb.PageInfo
 }) *apiresource.List[apiresource.ReceivableEntry] {
@@ -50,5 +52,5 @@ func ReceivableEntryListPresenter(resp interface {
 		items[i] = ReceivableEntryPresenter(e)
 	}
 
-	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(resp.GetPageInfo()))
+	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(ctx, resp.GetPageInfo()))
 }

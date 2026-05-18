@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -193,10 +194,5 @@ func mustContain(t *testing.T, haystack, needle string) {
 }
 
 func containsArg(args []any, target any) bool {
-	for _, a := range args {
-		if a == target {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(args, target)
 }

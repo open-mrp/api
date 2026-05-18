@@ -65,15 +65,12 @@ func TestProductLines_ListCursorPagination(t *testing.T) {
 		t.Skip("Not enough product lines for pagination test")
 		return
 	}
-	require.NotNil(t, page1.PageInfo.NextCursor, "next_cursor should be set when has_next_page is true")
+	require.NotNil(t, page1.PageInfo.NextPageURL, "next_page_url should be set when has_next_page is true")
 
 	page1ID := DataItemField(page1.Data[0], "id")
 	assert.NotEmpty(t, page1ID)
 
-	page2, _, err := apiClient.GetList(productLinesPath, url.Values{
-		"limit":  {"1"},
-		"cursor": {*page1.PageInfo.NextCursor},
-	})
+	page2, _, err := apiClient.GetListFromPageURL(page1.PageInfo.NextPageURL)
 	require.NoError(t, err)
 	require.Len(t, page2.Data, 1)
 

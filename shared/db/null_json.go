@@ -7,7 +7,7 @@ import (
 
 type NullableRawMessage []byte
 
-func (n *NullableRawMessage) Scan(value interface{}) error {
+func (n *NullableRawMessage) Scan(value any) error {
 	if value == nil {
 		*n = nil
 		return nil

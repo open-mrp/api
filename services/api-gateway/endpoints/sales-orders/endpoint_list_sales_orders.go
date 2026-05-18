@@ -42,8 +42,6 @@ func (e *ListSalesOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSa
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/sales-orders",
-		Request:           &ListSalesOrdersRequest{},
-		Response:          &apiresource.List[apiresource.SalesOrderDetail]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -54,5 +52,5 @@ func (e *ListSalesOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSa
 			ObjectType: constants.ObjectTypeSalesOrder,
 			Fields:     []string{"customer"},
 		}),
-	}).WithDocSource(e)
+	})
 }

@@ -134,7 +134,7 @@ func (m *requestLogSvcImpl) ListRequestLogs(ctx context.Context, req *ListReques
 		return nil, apiErr
 	}
 
-	return RequestLogListPresenter(resp, func(roleID *string) map[string]bool {
+	return RequestLogListPresenter(ctx, resp, func(roleID *string) map[string]bool {
 		return m.resolveRolePermissions(ctx, roleID)
 	}), nil
 }

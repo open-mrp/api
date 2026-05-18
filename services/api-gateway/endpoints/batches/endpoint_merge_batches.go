@@ -39,13 +39,11 @@ func (e *MergeBatchesEndpoint) Materialize() *apiendpoint.APIEndpoint[*MergeBatc
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/batches/actions/merge",
-		Request:           &MergeBatchesRequest{},
-		Response:          &apiresource.Batch{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *MergeBatchesRequest) (*apiresource.Batch, *apierror.APIError) {
 			return svc.(BatchSvc).MergeBatches
 		},
-	}).WithDocSource(e)
+	})
 }

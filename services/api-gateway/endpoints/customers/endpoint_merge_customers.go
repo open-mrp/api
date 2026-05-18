@@ -36,8 +36,6 @@ func (e *MergeCustomersEndpoint) Materialize() *apiendpoint.APIEndpoint[*MergeCu
 		Method:            http.MethodPost,
 		Route:             "/v1/sales/customers/{id}/actions/merge",
 		ContentType:       "application/json",
-		Request:           &MergeCustomersRequest{},
-		Response:          &apiresource.Customer{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -66,5 +64,5 @@ func (e *MergeCustomersEndpoint) Materialize() *apiendpoint.APIEndpoint[*MergeCu
 				"credit_limit",
 			},
 		}),
-	}).WithDocSource(e)
+	})
 }

@@ -25,13 +25,11 @@ func (e *ListBatchesByScanningStationEndpoint) Materialize() *apiendpoint.APIEnd
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/scanning-stations/{id}/batches",
-		Request:           &ListBatchesByScanningStationRequest{},
-		Response:          &apiresource.List[apiresource.Batch]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListBatchesByScanningStationRequest) (*apiresource.List[apiresource.Batch], *apierror.APIError) {
 			return svc.(BatchSvc).ListBatchesByScanningStation
 		},
-	}).WithDocSource(e)
+	})
 }

@@ -1,6 +1,8 @@
 package billingep
 
 import (
+	"context"
+
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -59,7 +61,7 @@ func PricingPlanPresenter(p *pb.PricingPlan) apiresource.PricingPlan {
 	}
 }
 
-func PricingPlansListPresenter(resp *pb.ListPricingPlansResponse) *apiresource.List[apiresource.PricingPlan] {
+func PricingPlansListPresenter(ctx context.Context, resp *pb.ListPricingPlansResponse) *apiresource.List[apiresource.PricingPlan] {
 	if resp == nil {
 		return apiresource.NewList([]apiresource.PricingPlan{}, apiresource.PageInfo{})
 	}
@@ -69,7 +71,7 @@ func PricingPlansListPresenter(resp *pb.ListPricingPlansResponse) *apiresource.L
 		plans[i] = PricingPlanPresenter(p)
 	}
 
-	return apiresource.NewList(plans, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(plans, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }
 
 func usageItemPresenter(item *pb.UsageItem) apiresource.UsageItem {

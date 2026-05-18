@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	gosql "database/sql"
+	"slices"
 	"time"
 
 	"github.com/augno/api/services/core-service/internal/domain"
@@ -31,12 +32,7 @@ func includesContains(includes []string, key string) bool {
 	if includes == nil {
 		return false
 	}
-	for _, k := range includes {
-		if k == key {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(includes, key)
 }
 
 func mapSandboxForwardRow(row sqlc.ListSandboxAccountsForwardRow) *domain.SandboxAccount {

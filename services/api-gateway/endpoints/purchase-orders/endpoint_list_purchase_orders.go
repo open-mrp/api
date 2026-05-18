@@ -35,13 +35,11 @@ func (e *ListPurchaseOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[*Lis
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/purchase-orders",
-		Request:           &ListPurchaseOrdersRequest{},
-		Response:          &apiresource.List[apiresource.PurchaseOrderSummary]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListPurchaseOrdersRequest) (*apiresource.List[apiresource.PurchaseOrderSummary], *apierror.APIError) {
 			return svc.(PurchaseOrderSvc).ListPurchaseOrders
 		},
-	}).WithDocSource(e)
+	})
 }

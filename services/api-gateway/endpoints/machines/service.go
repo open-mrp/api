@@ -67,7 +67,7 @@ func (m *machineSvcImpl) ListMachines(ctx context.Context, req *ListMachinesRequ
 		return nil, apiErr
 	}
 
-	return MachineListPresenter(resp), nil
+	return MachineListPresenter(ctx, resp), nil
 }
 
 func (m *machineSvcImpl) GetMachine(ctx context.Context, req *RetrieveMachineRequest) (*apiresource.Machine, *apierror.APIError) {

@@ -39,11 +39,11 @@ func (*ShippingTermsEndpointGroup) Materialize(config *ShippingTermsEndpointGrou
 		ResourceType: &apiresource.ShippingTerm{},
 	}
 
-	listShippingTermsEndpoint := (&shippingtermep.ListShippingTermsEndpoint{}).Materialize().WithService(inner, shippingTermSvc)
-	getShippingTermEndpoint := (&shippingtermep.RetrieveShippingTermEndpoint{}).Materialize().WithService(inner, shippingTermSvc)
-	createShippingTermEndpoint := (&shippingtermep.CreateShippingTermEndpoint{}).Materialize().WithService(inner, shippingTermSvc)
-	updateShippingTermEndpoint := (&shippingtermep.UpdateShippingTermEndpoint{}).Materialize().WithService(inner, shippingTermSvc)
-	deleteShippingTermEndpoint := (&shippingtermep.DeleteShippingTermEndpoint{}).Materialize().WithService(inner, shippingTermSvc)
+	listShippingTermsEndpoint := apiendpoint.From(&shippingtermep.ListShippingTermsEndpoint{}).WithService(inner, shippingTermSvc)
+	getShippingTermEndpoint := apiendpoint.From(&shippingtermep.RetrieveShippingTermEndpoint{}).WithService(inner, shippingTermSvc)
+	createShippingTermEndpoint := apiendpoint.From(&shippingtermep.CreateShippingTermEndpoint{}).WithService(inner, shippingTermSvc)
+	updateShippingTermEndpoint := apiendpoint.From(&shippingtermep.UpdateShippingTermEndpoint{}).WithService(inner, shippingTermSvc)
+	deleteShippingTermEndpoint := apiendpoint.From(&shippingtermep.DeleteShippingTermEndpoint{}).WithService(inner, shippingTermSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listShippingTermsEndpoint,

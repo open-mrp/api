@@ -23,13 +23,11 @@ func (e *ListTransactionMethodsEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/finance/transaction-methods",
-		Request:           &ListTransactionMethodsRequest{},
-		Response:          &apiresource.List[apiresource.TransactionMethod]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListTransactionMethodsRequest) (*apiresource.List[apiresource.TransactionMethod], *apierror.APIError) {
 			return svc.(TransactionSvc).ListTransactionMethods
 		},
-	}).WithDocSource(e)
+	})
 }

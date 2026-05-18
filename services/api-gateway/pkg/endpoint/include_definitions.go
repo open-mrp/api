@@ -70,6 +70,7 @@ func init() {
 			{Key: "actor", ObjectType: constants.ObjectTypeActor},
 			{Key: "changes", ObjectType: constants.ObjectTypeAuditEvent},
 			{Key: "metadata", ObjectType: constants.ObjectTypeAuditEvent},
+			{Key: "request", ObjectType: constants.ObjectTypeRequestLog},
 		},
 	})
 

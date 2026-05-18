@@ -39,8 +39,8 @@ func (*EDIEndpointGroup) Materialize(config *EDIEndpointGroupConfig) *EDIEndpoin
 		ResourceType: &apiresource.MessageResource{},
 	}
 
-	pullOrdersEndpoint := (&ediep.PullEDIOrdersEndpoint{}).Materialize().WithService(inner, ediSvc)
-	resubmitInvoiceEndpoint := (&ediep.ResubmitEDIInvoiceEndpoint{}).Materialize().WithService(inner, ediSvc)
+	pullOrdersEndpoint := apiendpoint.From(&ediep.PullEDIOrdersEndpoint{}).WithService(inner, ediSvc)
+	resubmitInvoiceEndpoint := apiendpoint.From(&ediep.ResubmitEDIInvoiceEndpoint{}).WithService(inner, ediSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		pullOrdersEndpoint,

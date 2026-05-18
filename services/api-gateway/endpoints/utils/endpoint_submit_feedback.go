@@ -37,8 +37,6 @@ func (e *SubmitFeedbackEndpoint) Materialize() *apiendpoint.APIEndpoint[*SubmitF
 		Method:            http.MethodPost,
 		Route:             "/v1/core/actions/submit-feedback",
 		ContentType:       "application/json",
-		Request:           &SubmitFeedbackRequest{},
-		Response:          &apiresource.MessageResource{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -48,5 +46,5 @@ func (e *SubmitFeedbackEndpoint) Materialize() *apiendpoint.APIEndpoint[*SubmitF
 		ServiceHandler: func(svc any) func(ctx context.Context, req *SubmitFeedbackRequest) (*apiresource.MessageResource, *apierror.APIError) {
 			return svc.(UtilsSvc).SubmitFeedback
 		},
-	}).WithDocSource(e)
+	})
 }

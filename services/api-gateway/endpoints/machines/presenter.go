@@ -1,6 +1,8 @@
 package machineep
 
 import (
+	"context"
+
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -44,7 +46,7 @@ func MachinePresenter(m *pb.MachineInfo) apiresource.Machine {
 	return machine
 }
 
-func MachineListPresenter(resp *pb.ListMachinesResponse) *apiresource.List[apiresource.Machine] {
+func MachineListPresenter(ctx context.Context, resp *pb.ListMachinesResponse) *apiresource.List[apiresource.Machine] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.Machine](nil, apiresource.PageInfo{})
 	}
@@ -54,5 +56,5 @@ func MachineListPresenter(resp *pb.ListMachinesResponse) *apiresource.List[apire
 		machines[i] = MachinePresenter(m)
 	}
 
-	return apiresource.NewList(machines, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(machines, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }

@@ -15,7 +15,6 @@ const SampleAuditEventAction = constants.AuditActionUpdate
 const SampleAuditEventResourceType = constants.ObjectTypeUser
 const SampleAuditEventResourceID = SampleUserID
 
-const SampleAuditEventRequestID = "req_01gq7s3f2m0y9h2t7z1w7q3v9k"
 const SampleAuditEventSourceIP = "198.51.100.8"
 
 const SampleAuditEventMetadataReason = `{"reason":"operator override"}`
@@ -48,8 +47,8 @@ type AuditEvent struct {
 	Changes *List[AuditFieldChange] `json:"changes" expandable:"true"`
 	// Arbitrary JSON metadata for the mutation (e.g. reason, source, tags).
 	Metadata json.RawMessage `json:"metadata"`
-	// Originating HTTP request ID.
-	RequestID *string `json:"request_id"`
+	// Originating HTTP request. Expandable.
+	Request *RequestLog `json:"request" expandable:"true"`
 	// Idempotency key of the originating request.
 	IdempotencyKey *string `json:"idempotency_key"`
 	// Originating client IP address.
@@ -74,8 +73,11 @@ var SampleAuditEvent = &AuditEvent{
 			NewValue: json.RawMessage(`"new@example.com"`),
 		},
 	}, PageInfo{}),
-	Metadata:   json.RawMessage(SampleAuditEventMetadataReason),
-	RequestID:  new(SampleAuditEventRequestID),
+	Metadata: json.RawMessage(SampleAuditEventMetadataReason),
+	Request: &RequestLog{
+		ID:     SampleRequestLogID,
+		Object: constants.ObjectTypeRequestLog,
+	},
 	SourceIP:   new(SampleAuditEventSourceIP),
 	OccurredAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	CreatedAt:  timeutil.TimestampToTime(sampleCreatedAtTimestamp),

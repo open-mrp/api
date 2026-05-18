@@ -76,7 +76,7 @@ func (m *shippingTermSvcImpl) ListShippingTerms(ctx context.Context, req *ListSh
 		}
 	}
 
-	return ShippingTermListPresenter(resp, ownerAccount), nil
+	return ShippingTermListPresenter(ctx, resp, ownerAccount), nil
 }
 
 func (m *shippingTermSvcImpl) GetShippingTerm(ctx context.Context, req *RetrieveShippingTermRequest) (*apiresource.ShippingTerm, *apierror.APIError) {

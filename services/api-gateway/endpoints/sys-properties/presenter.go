@@ -1,6 +1,8 @@
 package syspropertyep
 
 import (
+	"context"
+
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -27,7 +29,7 @@ func SysPropertyPresenter(sp *pb.SysPropertyInfo) apiresource.SysProperty {
 	}
 }
 
-func SysPropertyListPresenter(resp *pb.ListSysPropertiesResponse) *apiresource.List[apiresource.SysProperty] {
+func SysPropertyListPresenter(ctx context.Context, resp *pb.ListSysPropertiesResponse) *apiresource.List[apiresource.SysProperty] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.SysProperty](nil, apiresource.PageInfo{})
 	}
@@ -37,5 +39,5 @@ func SysPropertyListPresenter(resp *pb.ListSysPropertiesResponse) *apiresource.L
 		items[i] = SysPropertyPresenter(sp)
 	}
 
-	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }

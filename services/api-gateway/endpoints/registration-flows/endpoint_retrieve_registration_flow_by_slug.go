@@ -24,13 +24,11 @@ func (e *RetrieveRegistrationFlowBySlugEndpoint) Materialize() *apiendpoint.APIE
 		Method:            http.MethodGet,
 		Route:             "/v1/sales/registration-flows/by-slug/{slug}",
 		ContentType:       "application/json",
-		Request:           &RetrieveRegistrationFlowBySlugRequest{},
-		Response:          &apiresource.RegistrationFlow{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveRegistrationFlowBySlugRequest) (*apiresource.RegistrationFlow, *apierror.APIError) {
 			return svc.(RegistrationFlowSvc).GetRegistrationFlowBySlug
 		},
-	}).WithDocSource(e)
+	})
 }

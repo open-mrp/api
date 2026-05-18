@@ -1,6 +1,8 @@
 package transactionep
 
 import (
+	"context"
+
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -254,7 +256,7 @@ func TransactionAllocationPresenter(a *pb.TransactionAllocationInfo) apiresource
 	return alloc
 }
 
-func TransactionListPresenter(resp *pb.ListTransactionsResponse) *apiresource.List[apiresource.TransactionSummary] {
+func TransactionListPresenter(ctx context.Context, resp *pb.ListTransactionsResponse) *apiresource.List[apiresource.TransactionSummary] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.TransactionSummary](nil, apiresource.PageInfo{})
 	}
@@ -264,10 +266,10 @@ func TransactionListPresenter(resp *pb.ListTransactionsResponse) *apiresource.Li
 		transactions[i] = TransactionSummaryPresenter(d)
 	}
 
-	return apiresource.NewList(transactions, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(transactions, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }
 
-func AccountTransactionListPresenter(resp *pb.ListAccountTransactionsResponse) *apiresource.List[apiresource.TransactionDetail] {
+func AccountTransactionListPresenter(ctx context.Context, resp *pb.ListAccountTransactionsResponse) *apiresource.List[apiresource.TransactionDetail] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.TransactionDetail](nil, apiresource.PageInfo{})
 	}
@@ -277,7 +279,7 @@ func AccountTransactionListPresenter(resp *pb.ListAccountTransactionsResponse) *
 		transactions[i] = TransactionDetailPresenter(d)
 	}
 
-	return apiresource.NewList(transactions, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(transactions, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }
 
 func AdjustmentTypePresenter(at *pb.AdjustmentTypeInfo) apiresource.AdjustmentType {
@@ -296,7 +298,7 @@ func AdjustmentTypePresenter(at *pb.AdjustmentTypeInfo) apiresource.AdjustmentTy
 	}
 }
 
-func AdjustmentTypeListPresenter(resp *pb.ListAdjustmentTypesResponse) *apiresource.List[apiresource.AdjustmentType] {
+func AdjustmentTypeListPresenter(ctx context.Context, resp *pb.ListAdjustmentTypesResponse) *apiresource.List[apiresource.AdjustmentType] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.AdjustmentType](nil, apiresource.PageInfo{})
 	}
@@ -306,5 +308,5 @@ func AdjustmentTypeListPresenter(resp *pb.ListAdjustmentTypesResponse) *apiresou
 		adjustmentTypes[i] = AdjustmentTypePresenter(at)
 	}
 
-	return apiresource.NewList(adjustmentTypes, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(adjustmentTypes, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }

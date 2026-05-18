@@ -24,8 +24,6 @@ func (e *ListScanningStationsEndpoint) Materialize() *apiendpoint.APIEndpoint[*L
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/scanning-stations",
-		Request:           &ListScanningStationsRequest{},
-		Response:          &apiresource.List[apiresource.ScanningStation]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -36,5 +34,5 @@ func (e *ListScanningStationsEndpoint) Materialize() *apiendpoint.APIEndpoint[*L
 			ObjectType: constants.ObjectTypeScanningStation,
 			Fields:     []string{"department", "production_steps"},
 		}),
-	}).WithDocSource(e)
+	})
 }

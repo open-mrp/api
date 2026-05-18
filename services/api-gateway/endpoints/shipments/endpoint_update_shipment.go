@@ -46,8 +46,6 @@ func (e *UpdateShipmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateS
 		Method:            http.MethodPatch,
 		Route:             "/v1/operations/shipments/{id}",
 		ContentType:       "application/json",
-		Request:           &UpdateShipmentRequest{},
-		Response:          &apiresource.ShipmentDetail{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -58,5 +56,5 @@ func (e *UpdateShipmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateS
 			ObjectType: constants.ObjectTypeShipment,
 			Fields:     []string{"lines", "shipping_cases", "sales_order", "customer", "carrier", "service_level", "shipping_address", "shipped_by", "invoice", "pick"},
 		}),
-	}).WithDocSource(e)
+	})
 }

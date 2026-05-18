@@ -501,15 +501,9 @@ func TestPatchRequest_JSONDecodePreservesNilStructPointers(t *testing.T) {
 
 		dst := &patchRequest{}
 
-		// Simulate the api_endpoint.go flow: headers → path → query → JSON decode
-		if err := BindFromHeaders(httpReq, dst); err != nil {
-			t.Fatalf("BindFromHeaders: %v", err)
-		}
-		if err := BindFromPath(httpReq, dst); err != nil {
-			t.Fatalf("BindFromPath: %v", err)
-		}
-		if err := BindFromQuery(httpReq.URL, dst); err != nil {
-			t.Fatalf("BindFromQuery: %v", err)
+		// Simulate the api_endpoint.go flow: single incoming bind + JSON decode
+		if err := BindIncomingRequest(httpReq, dst, false); err != nil {
+			t.Fatalf("BindIncomingRequest: %v", err)
 		}
 		if err := DecodeJSONInto(dst, httpReq, false); err != nil {
 			t.Fatalf("DecodeJSONInto: %v", err)
@@ -535,14 +529,8 @@ func TestPatchRequest_JSONDecodePreservesNilStructPointers(t *testing.T) {
 
 		dst := &patchRequest{}
 
-		if err := BindFromHeaders(httpReq, dst); err != nil {
-			t.Fatalf("BindFromHeaders: %v", err)
-		}
-		if err := BindFromPath(httpReq, dst); err != nil {
-			t.Fatalf("BindFromPath: %v", err)
-		}
-		if err := BindFromQuery(httpReq.URL, dst); err != nil {
-			t.Fatalf("BindFromQuery: %v", err)
+		if err := BindIncomingRequest(httpReq, dst, false); err != nil {
+			t.Fatalf("BindIncomingRequest: %v", err)
 		}
 		if err := DecodeJSONInto(dst, httpReq, false); err != nil {
 			t.Fatalf("DecodeJSONInto: %v", err)
@@ -567,7 +555,9 @@ func TestPatchRequest_JSONDecodePreservesNilStructPointers(t *testing.T) {
 		httpReq := newRequestWithPathParams(http.MethodPatch, "/agents/123", bytes.NewBufferString(body), map[string]string{"id": "123"})
 
 		dst := &patchRequest{}
-		_ = BindFromPath(httpReq, dst)
+		if err := BindIncomingRequest(httpReq, dst, false); err != nil {
+			t.Fatalf("BindIncomingRequest: %v", err)
+		}
 		_ = DecodeJSONInto(dst, httpReq, false)
 
 		if dst.Config == nil {

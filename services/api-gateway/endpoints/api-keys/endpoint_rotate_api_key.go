@@ -25,7 +25,9 @@ func (*RotateAPIKeyRequest) SchemaExample() any {
 	}
 }
 
-// Rotates an API key by revoking the existing key and issuing a replacement with the same name, role, and expiration. The new secret is returned once.
+// Rotates an [API key](https://docs.augno.com/api/api-keys) by revoking the existing key and issuing a replacement with the same name, role, and expiration (unless overridden).
+//
+// The secret key is returned once and cannot be retrieved later, so you should store it securely. We provide some [recommendations](https://docs.augno.com/api/managing-api-keys) on how you can manage your API keys.
 type RotateAPIKeyEndpoint struct{}
 
 func (e *RotateAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*RotateAPIKeyRequest, *apiresource.CreatedAPIKey] {
@@ -34,8 +36,6 @@ func (e *RotateAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*RotateAPI
 		Method:            http.MethodPost,
 		Route:             "/v1/auth/api-keys/{id}/actions/rotate",
 		ContentType:       "application/json",
-		Request:           &RotateAPIKeyRequest{},
-		Response:          &apiresource.CreatedAPIKey{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
 		Preview:           true,
@@ -50,8 +50,5 @@ func (e *RotateAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*RotateAPI
 			Fields:     []string{"role", "role.permissions"},
 			PathPrefix: "api_key_info",
 		}),
-		Extras: apiendpoint.APIEndpointExtras{
-			ShieldResponseBody: true,
-		},
-	}).WithDocSource(e)
+	})
 }

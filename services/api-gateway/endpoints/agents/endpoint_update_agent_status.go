@@ -36,8 +36,6 @@ func (e *UpdateAgentStatusEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upda
 		Method:            http.MethodPut,
 		Route:             "/v1/ai/agents/{id}/status",
 		ContentType:       "application/json",
-		Request:           &UpdateAgentStatusRequest{},
-		Response:          &apiresource.AgentDefinition{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -48,5 +46,5 @@ func (e *UpdateAgentStatusEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upda
 			ObjectType: constants.ObjectTypeAgentDefinition,
 			Fields:     []string{"config", "tools", "role", "role.permissions"},
 		}),
-	}).WithDocSource(e)
+	})
 }

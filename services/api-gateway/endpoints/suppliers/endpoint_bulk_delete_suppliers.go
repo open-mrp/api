@@ -33,13 +33,11 @@ func (e *BulkDeleteSuppliersEndpoint) Materialize() *apiendpoint.APIEndpoint[*Bu
 		Method:            http.MethodPost,
 		Route:             "/v1/operations/suppliers/actions/bulk-delete",
 		ContentType:       "application/json",
-		Request:           &BulkDeleteSuppliersRequest{},
-		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *BulkDeleteSuppliersRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(SupplierSvc).BulkDeleteSuppliers
 		},
-	}).WithDocSource(e)
+	})
 }

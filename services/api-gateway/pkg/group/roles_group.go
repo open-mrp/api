@@ -39,11 +39,11 @@ func (*RolesEndpointGroup) Materialize(config *RolesEndpointGroupConfig) *RolesE
 		ResourceType: &apiresource.Role{},
 	}
 
-	listRolesEndpoint := (&roleep.ListRolesEndpoint{}).Materialize().WithService(inner, roleSvc)
-	getRoleEndpoint := (&roleep.RetrieveRoleEndpoint{}).Materialize().WithService(inner, roleSvc)
-	createRoleEndpoint := (&roleep.CreateRoleEndpoint{}).Materialize().WithService(inner, roleSvc)
-	updateRoleEndpoint := (&roleep.UpdateRoleEndpoint{}).Materialize().WithService(inner, roleSvc)
-	deleteRoleEndpoint := (&roleep.DeleteRoleEndpoint{}).Materialize().WithService(inner, roleSvc)
+	listRolesEndpoint := apiendpoint.From(&roleep.ListRolesEndpoint{}).WithService(inner, roleSvc)
+	getRoleEndpoint := apiendpoint.From(&roleep.RetrieveRoleEndpoint{}).WithService(inner, roleSvc)
+	createRoleEndpoint := apiendpoint.From(&roleep.CreateRoleEndpoint{}).WithService(inner, roleSvc)
+	updateRoleEndpoint := apiendpoint.From(&roleep.UpdateRoleEndpoint{}).WithService(inner, roleSvc)
+	deleteRoleEndpoint := apiendpoint.From(&roleep.DeleteRoleEndpoint{}).WithService(inner, roleSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listRolesEndpoint,

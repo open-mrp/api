@@ -45,8 +45,6 @@ func (e *CreateShippingTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cre
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/shipping-terms",
-		Request:           &CreateShippingTermRequest{},
-		Response:          &apiresource.ShippingTerm{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
 		Preview:           true,
@@ -60,5 +58,5 @@ func (e *CreateShippingTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cre
 		LocationFunc: func(resp *apiresource.ShippingTerm) string {
 			return "/v1/operations/shipping-terms/" + resp.ID
 		},
-	}).WithDocSource(e)
+	})
 }

@@ -105,8 +105,6 @@ func (e *CreateCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateC
 		Method:            http.MethodPost,
 		Route:             "/v1/sales/customers",
 		ContentType:       "application/json",
-		Request:           &CreateCustomerRequest{},
-		Response:          &apiresource.Customer{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
 		Preview:           true,
@@ -138,5 +136,5 @@ func (e *CreateCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateC
 				"credit_limit",
 			},
 		}),
-	}).WithDocSource(e)
+	})
 }

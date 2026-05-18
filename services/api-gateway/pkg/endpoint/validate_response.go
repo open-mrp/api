@@ -76,8 +76,8 @@ func jsonFieldName(ft reflect.StructField) string {
 func pathsNestedUnderPrefix(includedPaths map[string]bool, prefix string) map[string]bool {
 	out := make(map[string]bool)
 	for p := range includedPaths {
-		if strings.HasPrefix(p, prefix) {
-			suffix := strings.TrimPrefix(p, prefix)
+		if after, ok := strings.CutPrefix(p, prefix); ok {
+			suffix := after
 			if suffix != "" {
 				out[suffix] = true
 			}
@@ -214,7 +214,7 @@ func validateExpandableOnStruct(rv reflect.Value, includedPaths map[string]bool)
 	return nil
 }
 
-var timeType = reflect.TypeOf((*time.Time)(nil)).Elem()
+var timeType = reflect.TypeFor[time.Time]()
 
 // validateIncludedExpandableStub enforces validate:"required" on exported
 // string-kind and time.Time fields (aligned with resourcetest.validateStubFields).

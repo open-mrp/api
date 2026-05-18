@@ -25,8 +25,6 @@ func (e *RetrieveDepartmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ret
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/departments/{id}",
-		Request:           &RetrieveDepartmentRequest{},
-		Response:          &apiresource.Department{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -37,5 +35,5 @@ func (e *RetrieveDepartmentEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ret
 			ObjectType: constants.ObjectTypeDepartment,
 			Fields:     []string{"location", "scanning_stations", "machines"},
 		}),
-	}).WithDocSource(e)
+	})
 }

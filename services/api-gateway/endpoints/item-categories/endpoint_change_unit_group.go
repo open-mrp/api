@@ -26,13 +26,11 @@ func (e *ChangeItemCategoryUnitGroupEndpoint) Materialize() *apiendpoint.APIEndp
 		Method:            http.MethodPut,
 		Route:             "/v1/catalog/item-categories/{id}/unit-groups/{unit_group_id}",
 		ContentType:       "application/json",
-		Request:           &ChangeItemCategoryUnitGroupRequest{},
-		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ChangeItemCategoryUnitGroupRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(ItemCategorySvc).ChangeItemCategoryUnitGroup
 		},
-	}).WithDocSource(e)
+	})
 }

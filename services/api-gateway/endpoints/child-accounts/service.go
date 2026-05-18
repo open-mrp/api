@@ -63,7 +63,7 @@ func (m *childAccountSvcImpl) ListChildAccounts(ctx context.Context, req *ListCh
 		return nil, apiErr
 	}
 
-	return ChildAccountListPresenter(resp), nil
+	return ChildAccountListPresenter(ctx, resp), nil
 }
 
 func (m *childAccountSvcImpl) AddChildAccount(ctx context.Context, req *AddChildAccountRequest) (*apiresource.ChildAccount, *apierror.APIError) {

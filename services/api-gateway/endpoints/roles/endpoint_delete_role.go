@@ -24,13 +24,11 @@ func (e *DeleteRoleEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteRoleR
 		Method:            http.MethodDelete,
 		Route:             "/v1/identity/roles/{id}",
 		ContentType:       "application/json",
-		Request:           &DeleteRoleRequest{},
-		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteRoleRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(RoleSvc).DeleteRole
 		},
-	}).WithDocSource(e)
+	})
 }

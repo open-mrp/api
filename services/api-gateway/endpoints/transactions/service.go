@@ -91,7 +91,7 @@ func (m *transactionSvcImpl) ListTransactions(ctx context.Context, req *ListTran
 		return nil, apiErr
 	}
 
-	return TransactionListPresenter(resp), nil
+	return TransactionListPresenter(ctx, resp), nil
 }
 
 func (m *transactionSvcImpl) GetTransaction(ctx context.Context, req *RetrieveTransactionRequest) (*apiresource.TransactionDetail, *apierror.APIError) {
@@ -205,7 +205,7 @@ func (m *transactionSvcImpl) ListAccountTransactions(ctx context.Context, req *L
 		return nil, apiErr
 	}
 
-	return AccountTransactionListPresenter(resp), nil
+	return AccountTransactionListPresenter(ctx, resp), nil
 }
 
 // staticTransactionTypes is the hardcoded list of transaction types.
@@ -330,5 +330,5 @@ func (m *transactionSvcImpl) ListAdjustmentTypes(ctx context.Context, req *ListA
 		return nil, apiErr
 	}
 
-	return AdjustmentTypeListPresenter(resp), nil
+	return AdjustmentTypeListPresenter(ctx, resp), nil
 }

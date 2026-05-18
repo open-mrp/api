@@ -1,6 +1,8 @@
 package addressep
 
 import (
+	"context"
+
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -48,7 +50,7 @@ func addressTypeFromDropShip(isDropShip bool) constants.AddressType {
 	return constants.AddressTypeStandard
 }
 
-func AddressListPresenter(resp *pb.ListAddressesResponse) *apiresource.List[apiresource.Address] {
+func AddressListPresenter(ctx context.Context, resp *pb.ListAddressesResponse) *apiresource.List[apiresource.Address] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.Address](nil, apiresource.PageInfo{})
 	}
@@ -58,5 +60,5 @@ func AddressListPresenter(resp *pb.ListAddressesResponse) *apiresource.List[apir
 		addresses[i] = AddressPresenter(a)
 	}
 
-	return apiresource.NewList(addresses, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(addresses, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }

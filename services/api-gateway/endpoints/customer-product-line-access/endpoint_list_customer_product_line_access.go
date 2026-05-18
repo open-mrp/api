@@ -23,13 +23,11 @@ func (e *ListCustomerProductLineAccessEndpoint) Materialize() *apiendpoint.APIEn
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/product-line-access/customers",
-		Request:           &ListCustomerProductLineAccessRequest{},
-		Response:          &apiresource.List[apiresource.CustomerProductLineAccess]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListCustomerProductLineAccessRequest) (*apiresource.List[apiresource.CustomerProductLineAccess], *apierror.APIError) {
 			return svc.(CustomerProductLineAccessSvc).ListCustomerProductLineAccess
 		},
-	}).WithDocSource(e)
+	})
 }

@@ -17,6 +17,10 @@ type Role struct {
 	// Display name.
 	Name string `json:"name" validate:"required"`
 	// Role type code.
+	//
+	// The role's type is sometimes used to gate special behaviors in the frontend
+	// and to restrict some actions to only certain types of roles. For example,
+	// only roles with the type `admin` can create and manage API keys.
 	TypeCode constants.RoleType `json:"type" validate:"required"`
 	// Owner of this resource.
 	Owner *Owner `json:"owner" expandable:"true"`

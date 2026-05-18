@@ -36,13 +36,11 @@ func (e *UpdateTransactionAllocationEndpoint) Materialize() *apiendpoint.APIEndp
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
 		Route:             "/v1/finance/transaction-allocations/{id}",
-		Request:           &UpdateTransactionAllocationRequest{},
-		Response:          &apiresource.TransactionAllocation{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateTransactionAllocationRequest) (*apiresource.TransactionAllocation, *apierror.APIError) {
 			return svc.(TransactionAllocationSvc).UpdateTransactionAllocation
 		},
-	}).WithDocSource(e)
+	})
 }

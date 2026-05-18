@@ -42,13 +42,11 @@ func (e *UpdateAccountGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upd
 		Method:            http.MethodPatch,
 		Route:             "/v1/sales/account-groups/{id}",
 		ContentType:       "application/json",
-		Request:           &UpdateAccountGroupRequest{},
-		Response:          &apiresource.AccountGroup{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateAccountGroupRequest) (*apiresource.AccountGroup, *apierror.APIError) {
 			return svc.(AccountGroupSvc).UpdateAccountGroup
 		},
-	}).WithDocSource(e)
+	})
 }

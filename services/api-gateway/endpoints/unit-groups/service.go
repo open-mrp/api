@@ -84,7 +84,7 @@ func (m *unitGroupSvcImpl) ListUnitGroups(ctx context.Context, req *ListUnitGrou
 		}
 	}
 
-	return UnitGroupListPresenter(resp, ownerAccount), nil
+	return UnitGroupListPresenter(ctx, resp, ownerAccount), nil
 }
 
 func (m *unitGroupSvcImpl) GetUnitGroup(ctx context.Context, req *RetrieveUnitGroupRequest) (*apiresource.UnitGroup, *apierror.APIError) {
@@ -325,7 +325,7 @@ func (m *unitGroupSvcImpl) ListUnitGroupUnits(ctx context.Context, req *ListUnit
 		return nil, apiErr
 	}
 
-	return UnitGroupUnitListPresenter(resp), nil
+	return UnitGroupUnitListPresenter(ctx, resp), nil
 }
 
 func (m *unitGroupSvcImpl) GetUnitGroupUnit(ctx context.Context, req *RetrieveUnitGroupUnitRequest) (*apiresource.UnitGroupUnit, *apierror.APIError) {

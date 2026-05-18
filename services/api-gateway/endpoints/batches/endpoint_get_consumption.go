@@ -45,13 +45,11 @@ func (e *GetScanningStationConsumptionEndpoint) Materialize() *apiendpoint.APIEn
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/scanning-stations/{id}/consumptions",
-		Request:           &GetScanningStationConsumptionRequest{},
-		Response:          &apiresource.List[apiresource.ScanningConsumption]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetScanningStationConsumptionRequest) (*apiresource.List[apiresource.ScanningConsumption], *apierror.APIError) {
 			return svc.(BatchSvc).GetScanningStationConsumption
 		},
-	}).WithDocSource(e)
+	})
 }

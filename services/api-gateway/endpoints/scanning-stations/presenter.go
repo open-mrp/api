@@ -1,6 +1,8 @@
 package scanningstationep
 
 import (
+	"context"
+
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -73,7 +75,7 @@ func ScanningStationPresenter(ss *pb.ScanningStationInfo) apiresource.ScanningSt
 	return station
 }
 
-func ScanningStationListPresenter(resp *pb.ListScanningStationsResponse) *apiresource.List[apiresource.ScanningStation] {
+func ScanningStationListPresenter(ctx context.Context, resp *pb.ListScanningStationsResponse) *apiresource.List[apiresource.ScanningStation] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.ScanningStation](nil, apiresource.PageInfo{})
 	}
@@ -83,5 +85,5 @@ func ScanningStationListPresenter(resp *pb.ListScanningStationsResponse) *apires
 		stations[i] = ScanningStationPresenter(ss)
 	}
 
-	return apiresource.NewList(stations, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(stations, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }

@@ -296,7 +296,7 @@ func (r *accountUserRepoImpl) List(ctx context.Context, params domain.ListAccoun
 	}, nil
 }
 
-func accountUserQueryLike(query *string) interface{} {
+func accountUserQueryLike(query *string) any {
 	if query == nil {
 		return nil
 	}

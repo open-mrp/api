@@ -24,13 +24,11 @@ func (e *DeleteSandboxEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteSa
 		Method:            http.MethodDelete,
 		Route:             "/v1/core/sandboxes/{id}",
 		ContentType:       "application/json",
-		Request:           &DeleteSandboxRequest{},
-		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusAccepted,
 		Public:            true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteSandboxRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(SandboxSvc).DeleteSandbox
 		},
-	}).WithDocSource(e)
+	})
 }

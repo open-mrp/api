@@ -67,7 +67,7 @@ func (m *sandboxSvcImpl) ListSandboxes(ctx context.Context, req *apiresource.Pag
 		return nil, apiErr
 	}
 
-	return SandboxListPresenter(resp), nil
+	return SandboxListPresenter(ctx, resp), nil
 }
 
 func (m *sandboxSvcImpl) CreateSandbox(ctx context.Context, req *CreateSandboxRequest) (*apiresource.Sandbox, *apierror.APIError) {

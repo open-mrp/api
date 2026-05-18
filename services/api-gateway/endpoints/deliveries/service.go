@@ -78,7 +78,7 @@ func (m *deliverySvcImpl) ListDeliveries(ctx context.Context, req *ListDeliverie
 		return nil, apiErr
 	}
 
-	return DeliveryListPresenter(resp), nil
+	return DeliveryListPresenter(ctx, resp), nil
 }
 
 func (m *deliverySvcImpl) GetDelivery(ctx context.Context, req *RetrieveDeliveryRequest) (*apiresource.Delivery, *apierror.APIError) {

@@ -1,6 +1,7 @@
 package shipmentep
 
 import (
+	"context"
 	"fmt"
 
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
@@ -281,7 +282,7 @@ func ShipmentSummaryPresenter(s *pb.ShipmentSummaryInfo) apiresource.ShipmentSum
 	return result
 }
 
-func ShipmentListPresenter(resp *pb.ListShipmentsResponse) *apiresource.List[apiresource.ShipmentSummary] {
+func ShipmentListPresenter(ctx context.Context, resp *pb.ListShipmentsResponse) *apiresource.List[apiresource.ShipmentSummary] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.ShipmentSummary](nil, apiresource.PageInfo{})
 	}
@@ -291,7 +292,7 @@ func ShipmentListPresenter(resp *pb.ListShipmentsResponse) *apiresource.List[api
 		summaries[i] = ShipmentSummaryPresenter(s)
 	}
 
-	return apiresource.NewList(summaries, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(summaries, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }
 
 func ShipmentLinePresenter(l *pb.ShipmentLineInfo) apiresource.ShipmentLine {
@@ -330,7 +331,7 @@ func ShipmentLinePresenter(l *pb.ShipmentLineInfo) apiresource.ShipmentLine {
 	return result
 }
 
-func ShipmentLineListPresenter(resp *pb.ListShipmentLinesResponse) *apiresource.List[apiresource.ShipmentLine] {
+func ShipmentLineListPresenter(ctx context.Context, resp *pb.ListShipmentLinesResponse) *apiresource.List[apiresource.ShipmentLine] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.ShipmentLine](nil, apiresource.PageInfo{})
 	}
@@ -340,7 +341,7 @@ func ShipmentLineListPresenter(resp *pb.ListShipmentLinesResponse) *apiresource.
 		lines[i] = ShipmentLinePresenter(l)
 	}
 
-	return apiresource.NewList(lines, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(lines, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }
 
 func ShippingCaseDetailPresenter(c *pb.ShippingCaseDetailInfo) apiresource.ShippingCaseDetail {

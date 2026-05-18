@@ -28,13 +28,11 @@ func (e *ListUsageEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListUsageReq
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/ai/usage",
-		Request:           &ListUsageRequest{},
-		Response:          &apiresource.List[apiresource.AgentTokenUsage]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListUsageRequest) (*apiresource.List[apiresource.AgentTokenUsage], *apierror.APIError) {
 			return svc.(AgentSvc).ListUsage
 		},
-	}).WithDocSource(e)
+	})
 }

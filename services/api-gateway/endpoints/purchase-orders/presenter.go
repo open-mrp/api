@@ -1,6 +1,8 @@
 package purchaseorderep
 
 import (
+	"context"
+
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -377,7 +379,7 @@ func PurchaseOrderLineDetailPresenter(info *pb.PurchaseOrderLineInfo) apiresourc
 	return l
 }
 
-func PurchaseOrderStatusListPresenter(resp *pb.ListSalesOrderStatusesResponse) *apiresource.List[apiresource.SalesOrderStatus] {
+func PurchaseOrderStatusListPresenter(ctx context.Context, resp *pb.ListSalesOrderStatusesResponse) *apiresource.List[apiresource.SalesOrderStatus] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.SalesOrderStatus](nil, apiresource.PageInfo{})
 	}
@@ -394,21 +396,16 @@ func PurchaseOrderStatusListPresenter(resp *pb.ListSalesOrderStatusesResponse) *
 		}
 	}
 
-	return apiresource.NewList(statuses, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(statuses, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }
 
-func PurchaseOrderListPresenter(resp *pb.ListPurchaseOrdersResponse) *apiresource.List[apiresource.PurchaseOrderSummary] {
+func PurchaseOrderListPresenter(ctx context.Context, resp *pb.ListPurchaseOrdersResponse) *apiresource.List[apiresource.PurchaseOrderSummary] {
 	orders := make([]apiresource.PurchaseOrderSummary, len(resp.PurchaseOrders))
 	for i, o := range resp.PurchaseOrders {
 		orders[i] = PurchaseOrderSummaryPresenter(o)
 	}
 
-	return apiresource.NewList(orders, apiresource.PageInfo{
-		NextCursor:  resp.PageInfo.NextCursor,
-		PrevCursor:  resp.PageInfo.PrevCursor,
-		HasNextPage: resp.PageInfo.HasNextPage,
-		HasPrevPage: resp.PageInfo.HasPrevPage,
-	})
+	return apiresource.NewList(orders, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }
 
 func buildAddressFromProto(

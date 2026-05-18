@@ -25,8 +25,6 @@ func (e *RetrieveAgentEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retrieve
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/ai/agents/{id}",
-		Request:           &RetrieveAgentRequest{},
-		Response:          &apiresource.AgentDefinition{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -37,5 +35,5 @@ func (e *RetrieveAgentEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retrieve
 			ObjectType: constants.ObjectTypeAgentDefinition,
 			Fields:     []string{"config", "tools", "role", "role.permissions"},
 		}),
-	}).WithDocSource(e)
+	})
 }

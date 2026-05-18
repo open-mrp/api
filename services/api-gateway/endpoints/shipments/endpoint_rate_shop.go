@@ -78,13 +78,11 @@ func (e *RateShopEndpoint) Materialize() *apiendpoint.APIEndpoint[*RateShopReque
 		Method:            http.MethodPost,
 		Route:             "/v1/operations/shipments/actions/rate-shop",
 		ContentType:       "application/json",
-		Request:           &RateShopRequest{},
-		Response:          &apiresource.RateShopResult{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RateShopRequest) (*apiresource.RateShopResult, *apierror.APIError) {
 			return svc.(ShipmentSvc).RateShop
 		},
-	}).WithDocSource(e)
+	})
 }

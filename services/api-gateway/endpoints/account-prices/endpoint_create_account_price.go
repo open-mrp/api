@@ -52,8 +52,6 @@ func (e *CreateAccountPriceEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cre
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/account-prices",
-		Request:           &CreateAccountPriceRequest{},
-		Response:          &apiresource.AccountPrice{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
@@ -67,5 +65,5 @@ func (e *CreateAccountPriceEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cre
 			ObjectType: constants.ObjectTypeAccountPrice,
 			Fields:     []string{"recipient_account", "product_line", "categories", "attributes"},
 		}),
-	}).WithDocSource(e)
+	})
 }

@@ -25,8 +25,6 @@ func (e *RetrieveDCLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ret
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/dc-locations/{id}",
-		Request:           &RetrieveDCLocationRequest{},
-		Response:          &apiresource.DCLocation{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -37,5 +35,5 @@ func (e *RetrieveDCLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ret
 			ObjectType: constants.ObjectTypeDCLocation,
 			Fields:     []string{"customer"},
 		}),
-	}).WithDocSource(e)
+	})
 }

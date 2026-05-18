@@ -29,13 +29,11 @@ func (e *AnalyzeOeeEndpoint) Materialize() *apiendpoint.APIEndpoint[*AnalyzeOeeR
 		Method:            http.MethodPut,
 		Route:             "/v1/core/analytics/oee",
 		ContentType:       "application/json",
-		Request:           &AnalyzeOeeRequest{},
-		Response:          &apiresource.AnalyzeOeeResponse{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeOeeRequest) (*apiresource.AnalyzeOeeResponse, *apierror.APIError) {
 			return svc.(AnalyticsSvc).AnalyzeOee
 		},
-	}).WithDocSource(e)
+	})
 }

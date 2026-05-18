@@ -39,7 +39,7 @@ func (*QuantitiesEndpointGroup) Materialize(config *QuantitiesEndpointGroupConfi
 		ResourceType: &apiresource.Quantity{},
 	}
 
-	updateQuantityEndpoint := (&quantityep.UpdateQuantityEndpoint{}).Materialize().WithService(inner, quantitySvc)
+	updateQuantityEndpoint := apiendpoint.From(&quantityep.UpdateQuantityEndpoint{}).WithService(inner, quantitySvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		updateQuantityEndpoint,

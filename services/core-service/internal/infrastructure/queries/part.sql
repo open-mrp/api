@@ -127,10 +127,42 @@ AND (
 )
 AND (
     sqlc.narg('cursor_created_at') IS NULL
-    OR i.created_at < sqlc.narg('cursor_created_at')
-    OR (i.created_at = sqlc.narg('cursor_created_at') AND i.id < sqlc.narg('cursor_id'))
+    OR (
+        (sqlc.narg('cursor_match_tier') IS NULL AND (
+            i.created_at < sqlc.narg('cursor_created_at')
+            OR (i.created_at = sqlc.narg('cursor_created_at') AND i.id < sqlc.narg('cursor_id'))
+        ))
+        OR (sqlc.narg('cursor_match_tier') IS NOT NULL AND (
+            (CASE
+                WHEN sqlc.narg('search_exact') IS NULL THEN 0
+                WHEN i.sku = sqlc.narg('search_exact') THEN 0
+                WHEN sqlc.narg('search_prefix') IS NOT NULL AND i.sku LIKE sqlc.narg('search_prefix') THEN 1
+                ELSE 2
+            END) > CAST(sqlc.narg('cursor_match_tier') AS SIGNED)
+            OR (
+                (CASE
+                    WHEN sqlc.narg('search_exact') IS NULL THEN 0
+                    WHEN i.sku = sqlc.narg('search_exact') THEN 0
+                    WHEN sqlc.narg('search_prefix') IS NOT NULL AND i.sku LIKE sqlc.narg('search_prefix') THEN 1
+                    ELSE 2
+                END) = CAST(sqlc.narg('cursor_match_tier') AS SIGNED)
+                AND (
+                    i.created_at < sqlc.narg('cursor_created_at')
+                    OR (i.created_at = sqlc.narg('cursor_created_at') AND i.id < sqlc.narg('cursor_id'))
+                )
+            )
+        ))
+    )
 )
-ORDER BY i.created_at DESC, i.id DESC
+ORDER BY
+    CASE
+        WHEN sqlc.narg('search_exact') IS NULL THEN 0
+        WHEN i.sku = sqlc.narg('search_exact') THEN 0
+        WHEN sqlc.narg('search_prefix') IS NOT NULL AND i.sku LIKE sqlc.narg('search_prefix') THEN 1
+        ELSE 2
+    END ASC,
+    i.created_at DESC,
+    i.id DESC
 LIMIT ?;
 
 -- name: ListPartsBackwardBase :many
@@ -187,10 +219,40 @@ AND (
     OR i.description LIKE sqlc.narg('search_query')
 )
 AND (
-    i.created_at > sqlc.arg('cursor_created_at')
-    OR (i.created_at = sqlc.arg('cursor_created_at') AND i.id > sqlc.arg('cursor_id'))
+    (sqlc.narg('cursor_match_tier') IS NULL AND (
+        i.created_at > sqlc.arg('cursor_created_at')
+        OR (i.created_at = sqlc.arg('cursor_created_at') AND i.id > sqlc.arg('cursor_id'))
+    ))
+    OR (sqlc.narg('cursor_match_tier') IS NOT NULL AND (
+        (CASE
+            WHEN sqlc.narg('search_exact') IS NULL THEN 0
+            WHEN i.sku = sqlc.narg('search_exact') THEN 0
+            WHEN sqlc.narg('search_prefix') IS NOT NULL AND i.sku LIKE sqlc.narg('search_prefix') THEN 1
+            ELSE 2
+        END) < CAST(sqlc.narg('cursor_match_tier') AS SIGNED)
+        OR (
+            (CASE
+                WHEN sqlc.narg('search_exact') IS NULL THEN 0
+                WHEN i.sku = sqlc.narg('search_exact') THEN 0
+                WHEN sqlc.narg('search_prefix') IS NOT NULL AND i.sku LIKE sqlc.narg('search_prefix') THEN 1
+                ELSE 2
+            END) = CAST(sqlc.narg('cursor_match_tier') AS SIGNED)
+            AND (
+                i.created_at > sqlc.arg('cursor_created_at')
+                OR (i.created_at = sqlc.arg('cursor_created_at') AND i.id > sqlc.arg('cursor_id'))
+            )
+        )
+    ))
 )
-ORDER BY i.created_at ASC, i.id ASC
+ORDER BY
+    CASE
+        WHEN sqlc.narg('search_exact') IS NULL THEN 0
+        WHEN i.sku = sqlc.narg('search_exact') THEN 0
+        WHEN sqlc.narg('search_prefix') IS NOT NULL AND i.sku LIKE sqlc.narg('search_prefix') THEN 1
+        ELSE 2
+    END DESC,
+    i.created_at ASC,
+    i.id ASC
 LIMIT ?;
 
 -- name: SoftDeletePart :exec
@@ -267,4 +329,12 @@ AND (
     OR i.sku LIKE sqlc.narg('search_query')
     OR i.description LIKE sqlc.narg('search_query')
 )
-ORDER BY i.created_at DESC, i.id DESC;
+ORDER BY
+    CASE
+        WHEN sqlc.narg('search_exact') IS NULL THEN 0
+        WHEN i.sku = sqlc.narg('search_exact') THEN 0
+        WHEN sqlc.narg('search_prefix') IS NOT NULL AND i.sku LIKE sqlc.narg('search_prefix') THEN 1
+        ELSE 2
+    END ASC,
+    i.created_at DESC,
+    i.id DESC;

@@ -1,6 +1,8 @@
 package accountpriceep
 
 import (
+	"context"
+
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -132,7 +134,7 @@ func AccountPricePresenter(ap *pb.AccountPriceInfo) apiresource.AccountPrice {
 	}
 }
 
-func AccountPriceListPresenter(resp *pb.ListAccountPricesResponse) *apiresource.List[apiresource.AccountPrice] {
+func AccountPriceListPresenter(ctx context.Context, resp *pb.ListAccountPricesResponse) *apiresource.List[apiresource.AccountPrice] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.AccountPrice](nil, apiresource.PageInfo{})
 	}
@@ -142,5 +144,5 @@ func AccountPriceListPresenter(resp *pb.ListAccountPricesResponse) *apiresource.
 		prices[i] = AccountPricePresenter(ap)
 	}
 
-	return apiresource.NewList(prices, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(prices, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }

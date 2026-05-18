@@ -47,13 +47,11 @@ func (e *UpsertSalesTargetEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upse
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/account-users/{id}/sales-targets/{target_id}",
-		Request:           &UpsertSalesTargetRequest{},
-		Response:          &apiresource.SalesTarget{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpsertSalesTargetRequest) (*apiresource.SalesTarget, *apierror.APIError) {
 			return svc.(SalesTargetSvc).UpsertSalesTarget
 		},
-	}).WithDocSource(e)
+	})
 }

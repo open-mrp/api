@@ -78,7 +78,7 @@ func (m *transactionAllocationSvcImpl) ListAllocationEntries(ctx context.Context
 		return nil, apiErr
 	}
 
-	return AllocationEntryListPresenter(resp), nil
+	return AllocationEntryListPresenter(ctx, resp), nil
 }
 
 func (m *transactionAllocationSvcImpl) UpdateTransactionAllocation(ctx context.Context, req *UpdateTransactionAllocationRequest) (*apiresource.TransactionAllocation, *apierror.APIError) {
@@ -151,5 +151,5 @@ func (m *transactionAllocationSvcImpl) ListOpenCredits(ctx context.Context, req 
 		return nil, apiErr
 	}
 
-	return OpenCreditListPresenter(resp), nil
+	return OpenCreditListPresenter(ctx, resp), nil
 }

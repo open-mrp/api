@@ -31,13 +31,11 @@ func (e *ListAccountTransactionsEndpoint) Materialize() *apiendpoint.APIEndpoint
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/finance/accounts/{account_id}/transactions",
-		Request:           &ListAccountTransactionsRequest{},
-		Response:          &apiresource.List[apiresource.TransactionDetail]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListAccountTransactionsRequest) (*apiresource.List[apiresource.TransactionDetail], *apierror.APIError) {
 			return svc.(TransactionSvc).ListAccountTransactions
 		},
-	}).WithDocSource(e)
+	})
 }

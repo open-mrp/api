@@ -57,8 +57,6 @@ func (e *CreateSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateS
 		Method:            http.MethodPost,
 		Route:             "/v1/operations/suppliers",
 		ContentType:       "application/json",
-		Request:           &CreateSupplierRequest{},
-		Response:          &apiresource.SupplierDetail{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
@@ -68,5 +66,5 @@ func (e *CreateSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateS
 		LocationFunc: func(resp *apiresource.SupplierDetail) string {
 			return "/v1/operations/suppliers/" + resp.ID
 		},
-	}).WithDocSource(e)
+	})
 }

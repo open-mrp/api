@@ -24,13 +24,11 @@ func (e *DeleteAgentEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteAgen
 		Method:            http.MethodDelete,
 		Route:             "/v1/ai/agents/{id}",
 		ContentType:       "application/json",
-		Request:           &DeleteAgentRequest{},
-		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteAgentRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(AgentSvc).DeleteAgent
 		},
-	}).WithDocSource(e)
+	})
 }

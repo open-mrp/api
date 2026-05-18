@@ -24,13 +24,11 @@ func (e *DeleteCustomerProductLineAccessEndpoint) Materialize() *apiendpoint.API
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/product-line-access/customers/{customer_id}",
-		Request:           &DeleteCustomerProductLineAccessRequest{},
-		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteCustomerProductLineAccessRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(CustomerProductLineAccessSvc).DeleteCustomerProductLineAccess
 		},
-	}).WithDocSource(e)
+	})
 }

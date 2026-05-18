@@ -18,8 +18,6 @@ func (e *ProcessWebhookEndpoint) Materialize() *apiendpoint.APIEndpoint[*apireso
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/webhooks/stripe",
-		Request:           &apiresource.StripeWebhookRequest{},
-		Response:          &apiresource.WebhookResponse{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -30,5 +28,5 @@ func (e *ProcessWebhookEndpoint) Materialize() *apiendpoint.APIEndpoint[*apireso
 		ServiceHandler: func(svc any) func(ctx context.Context, req *apiresource.StripeWebhookRequest) (*apiresource.WebhookResponse, *apierror.APIError) {
 			return svc.(WebhookSvc).ProcessWebhook
 		},
-	}).WithDocSource(e)
+	})
 }

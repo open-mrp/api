@@ -1,9 +1,11 @@
 package auditeventsep
 
 import (
+	"context"
 	"encoding/json"
 	"time"
 
+	requestlogep "github.com/augno/api/services/api-gateway/endpoints/request-logs"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -11,7 +13,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func AuditEventPresenter(ev *pb.AuditEventInfo) *apiresource.AuditEvent {
+func AuditEventPresenter(ev *pb.AuditEventInfo, requestLog *pb.RequestLogInfo) *apiresource.AuditEvent {
 	if ev == nil {
 		return &apiresource.AuditEvent{}
 	}
@@ -43,27 +45,35 @@ func AuditEventPresenter(ev *pb.AuditEventInfo) *apiresource.AuditEvent {
 
 	result.Changes = AuditFieldChangesPresenter(ev.Changes)
 
-	result.RequestID = stringPtrFromOptional(ev.RequestId)
+	if requestLog != nil {
+		rl := requestlogep.RequestLogPresenter(requestLog, nil)
+		result.Request = &rl
+	} else if ev.RequestId != nil && *ev.RequestId != "" {
+		result.Request = &apiresource.RequestLog{
+			ID:     *ev.RequestId,
+			Object: constants.ObjectTypeRequestLog,
+		}
+	}
 	result.IdempotencyKey = stringPtrFromOptional(ev.IdempotencyKey)
 	result.SourceIP = stringPtrFromOptional(ev.SourceIp)
 
 	return result
 }
 
-func AuditEventListPresenter(resp *pb.ListAuditEventsResponse) *apiresource.List[apiresource.AuditEvent] {
+func AuditEventListPresenter(ctx context.Context, resp *pb.ListAuditEventsResponse, requestResolver func(*string) *pb.RequestLogInfo) *apiresource.List[apiresource.AuditEvent] {
 	if resp == nil {
-		return apiresource.NewList[apiresource.AuditEvent](nil, grpcutil.MapProtoPageInfo(nil))
+		return apiresource.NewList[apiresource.AuditEvent](nil, grpcutil.MapProtoPageInfo(ctx, nil))
 	}
 
 	events := make([]apiresource.AuditEvent, len(resp.AuditEvents))
 	for i, ev := range resp.AuditEvents {
-		presented := AuditEventPresenter(ev)
+		presented := AuditEventPresenter(ev, requestResolver(ev.RequestId))
 		if presented != nil {
 			events[i] = *presented
 		}
 	}
 
-	return apiresource.NewList(events, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(events, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }
 
 func AuditFieldChangesPresenter(changes []*pb.AuditFieldChange) *apiresource.List[apiresource.AuditFieldChange] {

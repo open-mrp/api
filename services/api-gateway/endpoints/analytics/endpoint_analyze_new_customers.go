@@ -31,13 +31,11 @@ func (e *AnalyzeNewCustomersEndpoint) Materialize() *apiendpoint.APIEndpoint[*An
 		Method:            http.MethodPut,
 		Route:             "/v1/core/analytics/new-customers",
 		ContentType:       "application/json",
-		Request:           &AnalyzeNewCustomersRequest{},
-		Response:          &apiresource.AnalyzeNewCustomersResponse{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeNewCustomersRequest) (*apiresource.AnalyzeNewCustomersResponse, *apierror.APIError) {
 			return svc.(AnalyticsSvc).AnalyzeNewCustomers
 		},
-	}).WithDocSource(e)
+	})
 }

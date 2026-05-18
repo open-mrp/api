@@ -25,8 +25,6 @@ func (e *RetrieveLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retri
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/locations/{id}",
-		Request:           &RetrieveLocationRequest{},
-		Response:          &apiresource.Location{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -37,5 +35,5 @@ func (e *RetrieveLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retri
 			ObjectType: constants.ObjectTypeLocation,
 			Fields:     []string{"parent", "children"},
 		}),
-	}).WithDocSource(e)
+	})
 }

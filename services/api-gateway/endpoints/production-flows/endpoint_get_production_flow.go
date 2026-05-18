@@ -25,8 +25,6 @@ func (e *GetProductionFlowEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetP
 		Method:            http.MethodGet,
 		Route:             "/v1/operations/production-flows/by-item/{item_id}",
 		ContentType:       "application/json",
-		Request:           &GetProductionFlowRequest{},
-		Response:          &apiresource.ProductionFlow{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -50,5 +48,5 @@ func (e *GetProductionFlowEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetP
 				"steps.out_steps",
 			},
 		}),
-	}).WithDocSource(e)
+	})
 }

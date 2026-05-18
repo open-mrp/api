@@ -60,5 +60,5 @@ func (m *salesOrderStatusSvcImpl) ListSalesOrderStatuses(ctx context.Context, re
 		return nil, apiErr
 	}
 
-	return SalesOrderStatusListPresenter(resp), nil
+	return SalesOrderStatusListPresenter(ctx, resp), nil
 }

@@ -43,13 +43,11 @@ func (e *UpdateUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateUserR
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/users/{id}",
-		Request:           &UpdateUserRequest{},
-		Response:          &apiresource.User{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateUserRequest) (*apiresource.User, *apierror.APIError) {
 			return svc.(UserSvc).UpdateUser
 		},
-	}).WithDocSource(e)
+	})
 }

@@ -604,6 +604,13 @@ AND buyer_account_id = sqlc.arg('buyer_account_id')
 AND customer_po_number = sqlc.arg('customer_po_number')
 AND (sqlc.narg('exclude_id') IS NULL OR id != sqlc.narg('exclude_id'));
 
+-- name: CountSalesOrdersForBuyerAccounts :one
+SELECT COUNT(*) AS cnt FROM sales_order
+WHERE sales_order_type_code = 'sales_order'
+AND owner_account_id = sqlc.arg('owner_account_id')
+AND seller_account_id = sqlc.arg('owner_account_id')
+AND buyer_account_id IN (sqlc.slice('buyer_account_ids'));
+
 -- name: GetNextOrderNumber :one
 SELECT COALESCE(
     (SELECT MAX(CAST(sp.value AS UNSIGNED)) + 1

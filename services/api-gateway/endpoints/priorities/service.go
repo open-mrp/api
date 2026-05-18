@@ -61,7 +61,7 @@ func (m *prioritySvcImpl) ListPriorities(ctx context.Context, req *ListPrioritie
 		return nil, apiErr
 	}
 
-	return PriorityListPresenter(resp), nil
+	return PriorityListPresenter(ctx, resp), nil
 }
 
 func (m *prioritySvcImpl) GetPriority(ctx context.Context, req *RetrievePriorityRequest) (*apiresource.Priority, *apierror.APIError) {

@@ -31,7 +31,9 @@ func (*CreateAPIKeyRequest) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(sampleCreateAPIKeyRequest)
 }
 
-// Creates an API key. The secret key is returned once and cannot be retrieved later.
+// Creates an [API key](https://docs.augno.com/api/api-keys) to authenticate API requests.
+//
+// The secret key is returned once and cannot be retrieved later, so you should store it securely. We provide some [recommendations](https://docs.augno.com/api/managing-api-keys) on how you can manage your API keys.
 type CreateAPIKeyEndpoint struct{}
 
 func (e *CreateAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAPIKeyRequest, *apiresource.CreatedAPIKey] {
@@ -40,8 +42,6 @@ func (e *CreateAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAPI
 		Method:            http.MethodPost,
 		Route:             "/v1/auth/api-keys",
 		ContentType:       "application/json",
-		Request:           &CreateAPIKeyRequest{},
-		Response:          &apiresource.CreatedAPIKey{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
 		Preview:           true,
@@ -56,8 +56,5 @@ func (e *CreateAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateAPI
 			Fields:     []string{"role", "role.permissions"},
 			PathPrefix: "api_key_info",
 		}),
-		Extras: apiendpoint.APIEndpointExtras{
-			ShieldResponseBody: true,
-		},
-	}).WithDocSource(e)
+	})
 }

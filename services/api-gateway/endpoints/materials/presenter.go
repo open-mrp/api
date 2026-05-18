@@ -1,6 +1,8 @@
 package materialep
 
 import (
+	"context"
+
 	itemep "github.com/augno/api/services/api-gateway/endpoints/items"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
@@ -52,7 +54,7 @@ func MaterialPresenter(m *pb.MaterialInfo) apiresource.Material {
 	}
 }
 
-func MaterialListPresenter(resp *pb.ListMaterialsResponse) *apiresource.List[apiresource.Material] {
+func MaterialListPresenter(ctx context.Context, resp *pb.ListMaterialsResponse) *apiresource.List[apiresource.Material] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.Material](nil, apiresource.PageInfo{})
 	}
@@ -60,7 +62,7 @@ func MaterialListPresenter(resp *pb.ListMaterialsResponse) *apiresource.List[api
 	for i, m := range resp.Materials {
 		materials[i] = MaterialPresenter(m)
 	}
-	return apiresource.NewList(materials, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(materials, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }
 
 func SupplierMaterialPresenter(sm *pb.SupplierMaterialInfo) apiresource.SupplierMaterial {
@@ -91,7 +93,7 @@ func SupplierMaterialPresenter(sm *pb.SupplierMaterialInfo) apiresource.Supplier
 	}
 }
 
-func SupplierMaterialListPresenter(resp *pb.ListSupplierMaterialsResponse) *apiresource.List[apiresource.SupplierMaterial] {
+func SupplierMaterialListPresenter(ctx context.Context, resp *pb.ListSupplierMaterialsResponse) *apiresource.List[apiresource.SupplierMaterial] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.SupplierMaterial](nil, apiresource.PageInfo{})
 	}
@@ -99,5 +101,5 @@ func SupplierMaterialListPresenter(resp *pb.ListSupplierMaterialsResponse) *apir
 	for i, sm := range resp.SupplierMaterials {
 		items[i] = SupplierMaterialPresenter(sm)
 	}
-	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }

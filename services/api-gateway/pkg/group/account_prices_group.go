@@ -39,11 +39,11 @@ func (*AccountPricesEndpointGroup) Materialize(config *AccountPricesEndpointGrou
 		ResourceType: &apiresource.AccountPrice{},
 	}
 
-	listAccountPricesEndpoint := (&accountpriceep.ListAccountPricesEndpoint{}).Materialize().WithService(inner, accountPriceSvc)
-	getAccountPriceEndpoint := (&accountpriceep.RetrieveAccountPriceEndpoint{}).Materialize().WithService(inner, accountPriceSvc)
-	createAccountPriceEndpoint := (&accountpriceep.CreateAccountPriceEndpoint{}).Materialize().WithService(inner, accountPriceSvc)
-	updateAccountPriceEndpoint := (&accountpriceep.UpdateAccountPriceEndpoint{}).Materialize().WithService(inner, accountPriceSvc)
-	deleteAccountPriceEndpoint := (&accountpriceep.DeleteAccountPriceEndpoint{}).Materialize().WithService(inner, accountPriceSvc)
+	listAccountPricesEndpoint := apiendpoint.From(&accountpriceep.ListAccountPricesEndpoint{}).WithService(inner, accountPriceSvc)
+	getAccountPriceEndpoint := apiendpoint.From(&accountpriceep.RetrieveAccountPriceEndpoint{}).WithService(inner, accountPriceSvc)
+	createAccountPriceEndpoint := apiendpoint.From(&accountpriceep.CreateAccountPriceEndpoint{}).WithService(inner, accountPriceSvc)
+	updateAccountPriceEndpoint := apiendpoint.From(&accountpriceep.UpdateAccountPriceEndpoint{}).WithService(inner, accountPriceSvc)
+	deleteAccountPriceEndpoint := apiendpoint.From(&accountpriceep.DeleteAccountPriceEndpoint{}).WithService(inner, accountPriceSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listAccountPricesEndpoint,

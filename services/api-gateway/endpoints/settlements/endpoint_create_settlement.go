@@ -54,8 +54,6 @@ func (e *CreateSettlementEndpoint) Materialize() *apiendpoint.APIEndpoint[*Creat
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/finance/settlements",
-		Request:           &CreateSettlementRequest{},
-		Response:          &apiresource.Settlement{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
@@ -65,5 +63,5 @@ func (e *CreateSettlementEndpoint) Materialize() *apiendpoint.APIEndpoint[*Creat
 		LocationFunc: func(resp *apiresource.Settlement) string {
 			return "/v1/finance/settlements/" + resp.ID
 		},
-	}).WithDocSource(e)
+	})
 }

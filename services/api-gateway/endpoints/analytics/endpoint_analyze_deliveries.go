@@ -39,13 +39,11 @@ func (e *AnalyzeDeliveriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*Anal
 		Method:            http.MethodPut,
 		Route:             "/v1/core/analytics/deliveries",
 		ContentType:       "application/json",
-		Request:           &AnalyzeDeliveriesRequest{},
-		Response:          &apiresource.AnalyzeDeliveriesResponse{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeDeliveriesRequest) (*apiresource.AnalyzeDeliveriesResponse, *apierror.APIError) {
 			return svc.(AnalyticsSvc).AnalyzeDeliveries
 		},
-	}).WithDocSource(e)
+	})
 }

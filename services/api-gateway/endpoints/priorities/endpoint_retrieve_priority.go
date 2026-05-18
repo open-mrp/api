@@ -25,8 +25,6 @@ func (e *RetrievePriorityEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retri
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/priorities/{id}",
-		Request:           &RetrievePriorityRequest{},
-		Response:          &apiresource.Priority{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -37,5 +35,5 @@ func (e *RetrievePriorityEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retri
 			ObjectType: constants.ObjectTypePriority,
 			Fields:     []string{"owner"},
 		}),
-	}).WithDocSource(e)
+	})
 }

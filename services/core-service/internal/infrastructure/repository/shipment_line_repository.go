@@ -26,7 +26,7 @@ func NewShipmentLineRepo(queries *sqlc.Queries) domain.ShipmentLineRepo {
 var shipmentLineCreatedAt = func(d *domain.ShipmentLine) time.Time { return d.CreatedAt }
 var shipmentLineID = func(d *domain.ShipmentLine) string { return d.ID }
 
-func optionalShipmentLineSearch(q *string) interface{} {
+func optionalShipmentLineSearch(q *string) any {
 	if q == nil || *q == "" {
 		return nil
 	}

@@ -35,13 +35,11 @@ func (e *EmailReceivablesForCustomerEndpoint) Materialize() *apiendpoint.APIEndp
 		Method:            http.MethodPost,
 		Route:             "/v1/finance/accounts/{account_id}/actions/email-receivables",
 		ContentType:       "application/json",
-		Request:           &EmailReceivablesForCustomerRequest{},
-		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusAccepted,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *EmailReceivablesForCustomerRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(ReceivableSvc).EmailReceivablesForCustomer
 		},
-	}).WithDocSource(e)
+	})
 }

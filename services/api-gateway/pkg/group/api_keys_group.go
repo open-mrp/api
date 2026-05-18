@@ -49,12 +49,12 @@ func (*APIKeysEndpointGroup) Materialize(config *APIKeysEndpointGroupConfig) *AP
 		ResourceType: &apiresource.APIKey{},
 	}
 
-	getAPIKeyEndpoint := (&apikeyep.RetrieveAPIKeyEndpoint{}).Materialize().WithMiddleware(authMw).WithService(inner, apiKeySvc)
-	listAPIKeysEndpoint := (&apikeyep.ListAPIKeysEndpoint{}).Materialize().WithMiddleware(authMw).WithService(inner, apiKeySvc)
-	createAPIKeyEndpoint := (&apikeyep.CreateAPIKeyEndpoint{}).Materialize().WithMiddleware(authMw).WithService(inner, apiKeySvc)
-	rotateAPIKeyEndpoint := (&apikeyep.RotateAPIKeyEndpoint{}).Materialize().WithMiddleware(authMw).WithService(inner, apiKeySvc)
-	revokeAPIKeyEndpoint := (&apikeyep.RevokeAPIKeyEndpoint{}).Materialize().WithMiddleware(authMw).WithService(inner, apiKeySvc)
-	getDocAPIKeyEndpoint := (&apikeyep.GetDocAPIKeyEndpoint{}).Materialize().WithMiddleware(authMw).WithService(inner, apiKeySvc)
+	getAPIKeyEndpoint := apiendpoint.From(&apikeyep.RetrieveAPIKeyEndpoint{}).WithMiddleware(authMw).WithService(inner, apiKeySvc)
+	listAPIKeysEndpoint := apiendpoint.From(&apikeyep.ListAPIKeysEndpoint{}).WithMiddleware(authMw).WithService(inner, apiKeySvc)
+	createAPIKeyEndpoint := apiendpoint.From(&apikeyep.CreateAPIKeyEndpoint{}).WithMiddleware(authMw).WithService(inner, apiKeySvc)
+	rotateAPIKeyEndpoint := apiendpoint.From(&apikeyep.RotateAPIKeyEndpoint{}).WithMiddleware(authMw).WithService(inner, apiKeySvc)
+	revokeAPIKeyEndpoint := apiendpoint.From(&apikeyep.RevokeAPIKeyEndpoint{}).WithMiddleware(authMw).WithService(inner, apiKeySvc)
+	getDocAPIKeyEndpoint := apiendpoint.From(&apikeyep.GetDocAPIKeyEndpoint{}).WithMiddleware(authMw).WithService(inner, apiKeySvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		getAPIKeyEndpoint,

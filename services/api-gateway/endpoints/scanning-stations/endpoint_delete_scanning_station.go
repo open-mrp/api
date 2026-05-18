@@ -24,13 +24,11 @@ func (e *DeleteScanningStationEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/scanning-stations/{id}",
-		Request:           &DeleteScanningStationRequest{},
-		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteScanningStationRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(ScanningStationSvc).DeleteScanningStation
 		},
-	}).WithDocSource(e)
+	})
 }

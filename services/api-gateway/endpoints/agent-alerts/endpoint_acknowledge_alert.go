@@ -25,8 +25,6 @@ func (e *AcknowledgeAlertEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ackno
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/ai/alerts/{id}/actions/acknowledge",
-		Request:           &AcknowledgeAlertRequest{},
-		Response:          &apiresource.AgentAlert{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -37,5 +35,5 @@ func (e *AcknowledgeAlertEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ackno
 			ObjectType: constants.ObjectTypeAgentAlert,
 			Fields:     []string{"run", "action"},
 		}),
-	}).WithDocSource(e)
+	})
 }

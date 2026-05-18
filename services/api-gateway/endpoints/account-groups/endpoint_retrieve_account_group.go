@@ -24,13 +24,11 @@ func (e *RetrieveAccountGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*R
 		Method:            http.MethodGet,
 		Route:             "/v1/sales/account-groups/{id}",
 		ContentType:       "application/json",
-		Request:           &RetrieveAccountGroupRequest{},
-		Response:          &apiresource.AccountGroup{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveAccountGroupRequest) (*apiresource.AccountGroup, *apierror.APIError) {
 			return svc.(AccountGroupSvc).GetAccountGroup
 		},
-	}).WithDocSource(e)
+	})
 }

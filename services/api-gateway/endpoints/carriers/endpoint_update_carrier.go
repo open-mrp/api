@@ -39,8 +39,6 @@ func (e *UpdateCarrierEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateCa
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/carriers/{id}",
-		Request:           &UpdateCarrierRequest{},
-		Response:          &apiresource.Carrier{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -51,5 +49,5 @@ func (e *UpdateCarrierEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateCa
 			ObjectType: constants.ObjectTypeCarrier,
 			Fields:     []string{"owner", "owner.account", "service_levels"},
 		}),
-	}).WithDocSource(e)
+	})
 }

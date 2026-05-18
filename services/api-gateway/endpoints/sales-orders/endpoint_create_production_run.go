@@ -43,13 +43,11 @@ func (e *CreateProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cr
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/sales-orders/{id}/actions/create-production-run",
-		Request:           &CreateProductionRunRequest{},
-		Response:          &CreateProductionRunResponse{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateProductionRunRequest) (*CreateProductionRunResponse, *apierror.APIError) {
 			return svc.(SalesOrderSvc).CreateSalesOrderProductionRun
 		},
-	}).WithDocSource(e)
+	})
 }

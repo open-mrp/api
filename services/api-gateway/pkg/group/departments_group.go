@@ -39,11 +39,11 @@ func (*DepartmentsEndpointGroup) Materialize(config *DepartmentsEndpointGroupCon
 		ResourceType: &apiresource.Department{},
 	}
 
-	listDepartmentsEndpoint := (&departmentep.ListDepartmentsEndpoint{}).Materialize().WithService(inner, departmentSvc)
-	getDepartmentEndpoint := (&departmentep.RetrieveDepartmentEndpoint{}).Materialize().WithService(inner, departmentSvc)
-	createDepartmentEndpoint := (&departmentep.CreateDepartmentEndpoint{}).Materialize().WithService(inner, departmentSvc)
-	updateDepartmentEndpoint := (&departmentep.UpdateDepartmentEndpoint{}).Materialize().WithService(inner, departmentSvc)
-	deleteDepartmentEndpoint := (&departmentep.DeleteDepartmentEndpoint{}).Materialize().WithService(inner, departmentSvc)
+	listDepartmentsEndpoint := apiendpoint.From(&departmentep.ListDepartmentsEndpoint{}).WithService(inner, departmentSvc)
+	getDepartmentEndpoint := apiendpoint.From(&departmentep.RetrieveDepartmentEndpoint{}).WithService(inner, departmentSvc)
+	createDepartmentEndpoint := apiendpoint.From(&departmentep.CreateDepartmentEndpoint{}).WithService(inner, departmentSvc)
+	updateDepartmentEndpoint := apiendpoint.From(&departmentep.UpdateDepartmentEndpoint{}).WithService(inner, departmentSvc)
+	deleteDepartmentEndpoint := apiendpoint.From(&departmentep.DeleteDepartmentEndpoint{}).WithService(inner, departmentSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listDepartmentsEndpoint,

@@ -75,7 +75,7 @@ func (m *propertySvcImpl) ListProperties(ctx context.Context, req *ListPropertie
 	}
 
 	includes := appctx.GetRequestedIncludeKeys(ctx)
-	return PropertyListPresenter(resp, includes), nil
+	return PropertyListPresenter(ctx, resp, includes), nil
 }
 
 func (m *propertySvcImpl) GetProperty(ctx context.Context, req *RetrievePropertyRequest) (*apiresource.Property, *apierror.APIError) {
@@ -182,7 +182,7 @@ func (m *propertySvcImpl) ListAttributes(ctx context.Context, req *ListAttribute
 		return nil, apiErr
 	}
 
-	return AttributeListPresenter(resp), nil
+	return AttributeListPresenter(ctx, resp), nil
 }
 
 func (m *propertySvcImpl) GetAttribute(ctx context.Context, req *RetrieveAttributeRequest) (*apiresource.Attribute, *apierror.APIError) {

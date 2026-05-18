@@ -59,7 +59,7 @@ func GenerateStatementOfAccount(receivables []domain.ReceivableEntry, openCredit
 
 	// Create currency style for columns D-I (columns 4-9).
 	currencyStyle, err := f.NewStyle(&excelize.Style{
-		CustomNumFmt: ptrString(currencyNumberFormat),
+		CustomNumFmt: new(currencyNumberFormat),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create currency style: %w", err)
@@ -157,7 +157,7 @@ func GenerateStatementOfAccount(receivables []domain.ReceivableEntry, openCredit
 			Pattern: 1,
 			Color:   []string{"DDDDDD"},
 		},
-		CustomNumFmt: ptrString(currencyNumberFormat),
+		CustomNumFmt: new(currencyNumberFormat),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create totals style: %w", err)
@@ -268,8 +268,4 @@ func writeStatementRow(f *excelize.File, row int, invoiceNumber, poNumber string
 		return err
 	}
 	return nil
-}
-
-func ptrString(s string) *string {
-	return &s
 }

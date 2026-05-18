@@ -45,13 +45,11 @@ func (e *CreateCheckoutSessionEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/checkout-sessions",
-		Request:           &CreateCheckoutSessionRequest{},
-		Response:          &CheckoutSessionResponse{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateCheckoutSessionRequest) (*CheckoutSessionResponse, *apierror.APIError) {
 			return svc.(CheckoutSessionSvc).CreateCheckoutSession
 		},
-	}).WithDocSource(e)
+	})
 }

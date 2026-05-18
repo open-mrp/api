@@ -49,8 +49,6 @@ func (e *ListRequestLogsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListRe
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/core/request-logs",
-		Request:           &ListRequestLogsRequest{},
-		Response:          &apiresource.List[apiresource.RequestLog]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -64,5 +62,5 @@ func (e *ListRequestLogsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListRe
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListRequestLogsRequest) (*apiresource.List[apiresource.RequestLog], *apierror.APIError) {
 			return svc.(RequestLogSvc).ListRequestLogs
 		},
-	}).WithDocSource(e)
+	})
 }

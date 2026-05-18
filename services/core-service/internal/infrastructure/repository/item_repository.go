@@ -132,8 +132,8 @@ func extractItemIncludes(incs []string) []string {
 	const prefix = "item."
 	out := make([]string, 0, len(incs))
 	for _, inc := range incs {
-		if strings.HasPrefix(inc, prefix) {
-			out = append(out, strings.TrimPrefix(inc, prefix))
+		if after, ok := strings.CutPrefix(inc, prefix); ok {
+			out = append(out, after)
 		}
 	}
 	return out
@@ -482,18 +482,17 @@ func applyItemStitches(ctx context.Context, queries *sqlc.Queries, items []*doma
 	return nil
 }
 
-func buildItemSearchParams(query *string) (gosql.NullString, gosql.NullString) {
-	if query == nil || *query == "" {
-		return gosql.NullString{}, gosql.NullString{}
-	}
-	return gosql.NullString{String: "%" + db.EscapeLike(*query) + "%", Valid: true}, gosql.NullString{String: *query, Valid: true}
-}
-
 func (r *itemRepoImpl) List(ctx context.Context, params domain.ListItemsParams) (*domain.ListItemsResult, *apierror.APIError) {
 	ctx, span := itemRepoTracer.Start(ctx, "repository.item.list")
 	defer span.End()
 
-	searchQuery, searchExact := buildItemSearchParams(params.Query)
+	catSearch := db.NewCatalogSearch(params.Query)
+	searchQuery := catSearch.Contains
+	searchExact := catSearch.Exact
+	searchRankEnabled := catSearch.Contains.Valid
+	itemSearchRank := func(it *domain.Item) int32 {
+		return db.CatalogSearchRank(it.SKU, catSearch)
+	}
 	includeTypeFilter := len(params.Types) > 0
 	includeCategoryFilter := len(params.CategoryIDs) > 0
 	includeAttributeFilter := len(params.AttributeIDs) > 0
@@ -559,12 +558,14 @@ func (r *itemRepoImpl) List(ctx context.Context, params domain.ListItemsParams) 
 				EndDate:                  endDate,
 				SearchQuery:              searchQuery,
 				SearchExact:              searchExact,
+				SearchPrefix:             catSearch.Prefix,
 				IsExactMatch:             params.IsExactMatch,
 				OnlyInitialSubassemblies: params.OnlyInitialSubassemblies,
 				IncludeProductLineFilter: includeProductLineFilter,
 				ProductLineIds:           productLineIDs,
 				IncludeCustomerFilter:    includeCustomerFilter,
 				CustomerIds:              customerIDs,
+				CursorMatchTier:          db.NullTierInt64Param(cur.MatchTier),
 				CursorCreatedAt:          cur.OccurredAt,
 				CursorID:                 cur.ID,
 				Limit:                    params.Limit + 1,
@@ -591,6 +592,7 @@ func (r *itemRepoImpl) List(ctx context.Context, params domain.ListItemsParams) 
 				EndDate:                  endDate,
 				SearchQuery:              searchQuery,
 				SearchExact:              searchExact,
+				SearchPrefix:             catSearch.Prefix,
 				IsExactMatch:             params.IsExactMatch,
 				OnlyInitialSubassemblies: params.OnlyInitialSubassemblies,
 				IncludeProductLineFilter: includeProductLineFilter,
@@ -598,6 +600,7 @@ func (r *itemRepoImpl) List(ctx context.Context, params domain.ListItemsParams) 
 				IncludeCustomerFilter:    includeCustomerFilter,
 				CustomerIds:              customerIDs,
 				CursorCreatedAt:          gosql.NullTime{Time: cur.OccurredAt, Valid: true},
+				CursorMatchTier:          db.NullTierInt64Param(cur.MatchTier),
 				CursorID:                 gosql.NullString{String: cur.ID, Valid: true},
 				Limit:                    params.Limit + 1,
 			})
@@ -624,6 +627,7 @@ func (r *itemRepoImpl) List(ctx context.Context, params domain.ListItemsParams) 
 			EndDate:                  endDate,
 			SearchQuery:              searchQuery,
 			SearchExact:              searchExact,
+			SearchPrefix:             catSearch.Prefix,
 			IsExactMatch:             params.IsExactMatch,
 			OnlyInitialSubassemblies: params.OnlyInitialSubassemblies,
 			IncludeProductLineFilter: includeProductLineFilter,
@@ -641,7 +645,7 @@ func (r *itemRepoImpl) List(ctx context.Context, params domain.ListItemsParams) 
 		}
 	}
 
-	result, pageInfo := pagination.BuildPageString(items, params.Limit, cursorDir, itemCreatedAt, itemID)
+	result, pageInfo := pagination.BuildPageStringWithSearchRank(items, params.Limit, cursorDir, searchRankEnabled, itemCreatedAt, itemID, itemSearchRank)
 
 	if apiErr := applyItemStitches(ctx, r.queries, result, params.Includes); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -1148,7 +1152,7 @@ func (r *itemRepoImpl) FetchItemsBySKU(ctx context.Context, accountID string, sk
 	return result, nil
 }
 
-func formatDecimal(v interface{}) string {
+func formatDecimal(v any) string {
 	switch val := v.(type) {
 	case string:
 		return val

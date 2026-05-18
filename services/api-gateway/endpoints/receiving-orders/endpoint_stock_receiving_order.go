@@ -66,13 +66,11 @@ func (e *StockReceivingOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*St
 		Method:            http.MethodPost,
 		Route:             "/v1/operations/receiving-orders/{id}/actions/stock",
 		ContentType:       "application/json",
-		Request:           &StockReceivingOrderRequest{},
-		Response:          &apiresource.ReceivingOrder{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *StockReceivingOrderRequest) (*apiresource.ReceivingOrder, *apierror.APIError) {
 			return svc.(ReceivingOrderSvc).StockReceivingOrder
 		},
-	}).WithDocSource(e)
+	})
 }

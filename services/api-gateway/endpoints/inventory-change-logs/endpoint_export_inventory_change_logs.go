@@ -33,13 +33,11 @@ func (e *ExportInventoryChangeLogsEndpoint) Materialize() *apiendpoint.APIEndpoi
 		Method:            http.MethodGet,
 		ContentType:       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 		Route:             "/v1/operations/inventory-change-logs/actions/export",
-		Request:           &ExportInventoryChangeLogsRequest{},
-		Response:          &httptransport.FileDownload{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ExportInventoryChangeLogsRequest) (*httptransport.FileDownload, *apierror.APIError) {
 			return svc.(InventoryChangeLogSvc).ExportInventoryChangeLogs
 		},
-	}).WithDocSource(e)
+	})
 }

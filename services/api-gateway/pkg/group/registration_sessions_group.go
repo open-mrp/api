@@ -44,16 +44,16 @@ func (*RegistrationSessionsEndpointGroup) Materialize(config *RegistrationSessio
 		ResourceType: &apiresource.CreateSessionResponse{},
 	}
 
-	createSessionEndpoint := (&regsessionep.CreateSessionEndpoint{}).Materialize().WithMiddleware(authMw).WithService(inner, svc)
-	resendEmailEndpoint := (&regsessionep.ResendEmailEndpoint{}).Materialize().WithMiddleware(authMw).WithService(inner, svc)
-	verifyTokenEndpoint := (&regsessionep.VerifyTokenEndpoint{}).Materialize().WithMiddleware(authMw).WithService(inner, svc)
-	getSessionEndpoint := (&regsessionep.RetrieveSessionEndpoint{}).Materialize().WithMiddleware(authMw).WithService(inner, svc)
-	createUserEndpoint := (&regsessionep.CreateUserEndpoint{}).Materialize().WithMiddleware(authMw).WithService(inner, svc)
-	updateSessionEndpoint := (&regsessionep.UpdateSessionEndpoint{}).Materialize().WithMiddleware(authMw).WithService(inner, svc)
-	listSessionsEndpoint := (&regsessionep.ListSessionsEndpoint{}).Materialize().WithMiddleware(authMw).WithService(inner, svc)
-	setupBillingEndpoint := (&regsessionep.SetupBillingEndpoint{}).Materialize().WithMiddleware(authMw).WithService(inner, svc)
-	confirmPaymentEndpoint := (&regsessionep.ConfirmPaymentEndpoint{}).Materialize().WithMiddleware(authMw).WithService(inner, svc)
-	completeRegistrationEndpoint := (&regsessionep.CompleteRegistrationEndpoint{}).Materialize().WithMiddleware(authMw).WithService(inner, svc)
+	createSessionEndpoint := apiendpoint.From(&regsessionep.CreateSessionEndpoint{}).WithMiddleware(authMw).WithService(inner, svc)
+	resendEmailEndpoint := apiendpoint.From(&regsessionep.ResendEmailEndpoint{}).WithMiddleware(authMw).WithService(inner, svc)
+	verifyTokenEndpoint := apiendpoint.From(&regsessionep.VerifyTokenEndpoint{}).WithMiddleware(authMw).WithService(inner, svc)
+	getSessionEndpoint := apiendpoint.From(&regsessionep.RetrieveSessionEndpoint{}).WithMiddleware(authMw).WithService(inner, svc)
+	createUserEndpoint := apiendpoint.From(&regsessionep.CreateUserEndpoint{}).WithMiddleware(authMw).WithService(inner, svc)
+	updateSessionEndpoint := apiendpoint.From(&regsessionep.UpdateSessionEndpoint{}).WithMiddleware(authMw).WithService(inner, svc)
+	listSessionsEndpoint := apiendpoint.From(&regsessionep.ListSessionsEndpoint{}).WithMiddleware(authMw).WithService(inner, svc)
+	setupBillingEndpoint := apiendpoint.From(&regsessionep.SetupBillingEndpoint{}).WithMiddleware(authMw).WithService(inner, svc)
+	confirmPaymentEndpoint := apiendpoint.From(&regsessionep.ConfirmPaymentEndpoint{}).WithMiddleware(authMw).WithService(inner, svc)
+	completeRegistrationEndpoint := apiendpoint.From(&regsessionep.CompleteRegistrationEndpoint{}).WithMiddleware(authMw).WithService(inner, svc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		createSessionEndpoint,

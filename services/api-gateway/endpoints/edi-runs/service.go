@@ -64,7 +64,7 @@ func (m *ediRunSvcImpl) ListEDIRuns(ctx context.Context, req *ListEDIRunsRequest
 		return nil, apiErr
 	}
 
-	return EDIRunListPresenter(resp), nil
+	return EDIRunListPresenter(ctx, resp), nil
 }
 
 func (m *ediRunSvcImpl) GetEDIRun(ctx context.Context, req *RetrieveEDIRunRequest) (*apiresource.EDIRun, *apierror.APIError) {

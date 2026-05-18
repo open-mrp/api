@@ -1,6 +1,8 @@
 package accountgroupep
 
 import (
+	"context"
+
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -25,7 +27,7 @@ func AccountGroupPresenter(ag *pb.AccountGroupInfo) apiresource.AccountGroup {
 	}
 }
 
-func AccountGroupListPresenter(resp *pb.ListAccountGroupsResponse) *apiresource.List[apiresource.AccountGroup] {
+func AccountGroupListPresenter(ctx context.Context, resp *pb.ListAccountGroupsResponse) *apiresource.List[apiresource.AccountGroup] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.AccountGroup](nil, apiresource.PageInfo{})
 	}
@@ -35,5 +37,5 @@ func AccountGroupListPresenter(resp *pb.ListAccountGroupsResponse) *apiresource.
 		groups[i] = AccountGroupPresenter(ag)
 	}
 
-	return apiresource.NewList(groups, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(groups, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }

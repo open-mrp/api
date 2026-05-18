@@ -58,13 +58,11 @@ func (e *UpdateTransactionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upda
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
 		Route:             "/v1/finance/transactions/{id}",
-		Request:           &UpdateTransactionRequest{},
-		Response:          &apiresource.TransactionDetail{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateTransactionRequest) (*apiresource.TransactionDetail, *apierror.APIError) {
 			return svc.(TransactionSvc).UpdateTransaction
 		},
-	}).WithDocSource(e)
+	})
 }

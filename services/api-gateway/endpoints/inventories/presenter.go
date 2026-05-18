@@ -1,6 +1,7 @@
 package inventoryep
 
 import (
+	"context"
 	"strconv"
 	"time"
 
@@ -12,7 +13,7 @@ import (
 	pb "github.com/augno/api/shared/proto/core"
 )
 
-func ListInventoriesPresenter(resp *pb.ListInventoriesResponse) *apiresource.ListInventoriesResponse {
+func ListInventoriesPresenter(ctx context.Context, resp *pb.ListInventoriesResponse) *apiresource.ListInventoriesResponse {
 	if resp == nil {
 		return &apiresource.ListInventoriesResponse{
 			Object: constants.ObjectTypeList,
@@ -51,7 +52,7 @@ func ListInventoriesPresenter(resp *pb.ListInventoriesResponse) *apiresource.Lis
 
 	return &apiresource.ListInventoriesResponse{
 		Object:   constants.ObjectTypeList,
-		PageInfo: grpcutil.MapProtoPageInfo(resp.PageInfo),
+		PageInfo: grpcutil.MapProtoPageInfo(ctx, resp.PageInfo),
 		Data:     items,
 		Count:    resp.Count,
 	}

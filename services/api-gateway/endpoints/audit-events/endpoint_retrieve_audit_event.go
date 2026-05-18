@@ -25,14 +25,12 @@ func (e *RetrieveAuditEventEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ret
 		Method:            http.MethodGet,
 		Route:             "/v1/core/audit-events/{id}",
 		ContentType:       "application/json",
-		Request:           &RetrieveAuditEventRequest{},
-		Response:          &apiresource.AuditEvent{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeAuditEvent,
-			Fields:     []string{"actor", "changes", "metadata"},
+			Fields:     []string{"actor", "changes", "metadata", "request"},
 		}),
 		Extras: apiendpoint.APIEndpointExtras{
 			SkipRequestLogging: true,
@@ -40,5 +38,5 @@ func (e *RetrieveAuditEventEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ret
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveAuditEventRequest) (*apiresource.AuditEvent, *apierror.APIError) {
 			return svc.(AuditEventSvc).GetAuditEvent
 		},
-	}).WithDocSource(e)
+	})
 }

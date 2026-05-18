@@ -68,7 +68,7 @@ func (m *scanningStationSvcImpl) ListScanningStations(ctx context.Context, req *
 		return nil, apiErr
 	}
 
-	return ScanningStationListPresenter(resp), nil
+	return ScanningStationListPresenter(ctx, resp), nil
 }
 
 func (m *scanningStationSvcImpl) GetScanningStation(ctx context.Context, req *RetrieveScanningStationRequest) (*apiresource.ScanningStation, *apierror.APIError) {

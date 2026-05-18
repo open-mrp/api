@@ -1467,8 +1467,8 @@ func nestedIncludes(includes []string, parent string) []string {
 	prefix := parent + "."
 	var out []string
 	for _, inc := range includes {
-		if strings.HasPrefix(inc, prefix) {
-			out = append(out, strings.TrimPrefix(inc, prefix))
+		if after, ok := strings.CutPrefix(inc, prefix); ok {
+			out = append(out, after)
 		}
 	}
 	return out

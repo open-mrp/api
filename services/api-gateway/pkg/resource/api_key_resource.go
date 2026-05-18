@@ -47,8 +47,8 @@ type APIKey struct {
 type CreatedAPIKey struct {
 	// Resource type identifier.
 	Object constants.ObjectType `json:"object" validate:"required,enum=created_api_key"`
-	// Full secret value. Returned once and cannot be retrieved later.
-	APIKeySecret string `json:"api_key_secret" validate:"required"`
+	// Full secret value. Returned once and cannot be retrieved later. Learn more about [managing your API keys](https://docs.augno.com/api/managing-api-keys).
+	APIKeySecret string `json:"api_key_secret" validate:"required" sensitive:"true"`
 	// API key metadata.
 	APIKeyInfo APIKey `json:"api_key_info" validate:"required"`
 }

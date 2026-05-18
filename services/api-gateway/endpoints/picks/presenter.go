@@ -1,6 +1,7 @@
 package pickep
 
 import (
+	"context"
 	"time"
 
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
@@ -313,15 +314,10 @@ func PickLineDetailPresenter(info *pb.PickLineInfo) apiresource.PickLineDetail {
 	return d
 }
 
-func PickListPresenter(resp *pb.ListPicksResponse) *apiresource.List[apiresource.PickSummary] {
+func PickListPresenter(ctx context.Context, resp *pb.ListPicksResponse) *apiresource.List[apiresource.PickSummary] {
 	picks := make([]apiresource.PickSummary, len(resp.Picks))
 	for i, p := range resp.Picks {
 		picks[i] = PickSummaryPresenter(p)
 	}
-	return apiresource.NewList(picks, apiresource.PageInfo{
-		NextCursor:  resp.PageInfo.NextCursor,
-		PrevCursor:  resp.PageInfo.PrevCursor,
-		HasNextPage: resp.PageInfo.HasNextPage,
-		HasPrevPage: resp.PageInfo.HasPrevPage,
-	})
+	return apiresource.NewList(picks, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }

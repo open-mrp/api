@@ -39,11 +39,11 @@ func (*SettlementsEndpointGroup) Materialize(config *SettlementsEndpointGroupCon
 		ResourceType: &apiresource.Settlement{},
 	}
 
-	listSettlementsEndpoint := (&settlementep.ListSettlementsEndpoint{}).Materialize().WithService(inner, settlementSvc)
-	getSettlementEndpoint := (&settlementep.RetrieveSettlementEndpoint{}).Materialize().WithService(inner, settlementSvc)
-	createSettlementEndpoint := (&settlementep.CreateSettlementEndpoint{}).Materialize().WithService(inner, settlementSvc)
-	updateSettlementEndpoint := (&settlementep.UpdateSettlementEndpoint{}).Materialize().WithService(inner, settlementSvc)
-	deleteSettlementEndpoint := (&settlementep.DeleteSettlementEndpoint{}).Materialize().WithService(inner, settlementSvc)
+	listSettlementsEndpoint := apiendpoint.From(&settlementep.ListSettlementsEndpoint{}).WithService(inner, settlementSvc)
+	getSettlementEndpoint := apiendpoint.From(&settlementep.RetrieveSettlementEndpoint{}).WithService(inner, settlementSvc)
+	createSettlementEndpoint := apiendpoint.From(&settlementep.CreateSettlementEndpoint{}).WithService(inner, settlementSvc)
+	updateSettlementEndpoint := apiendpoint.From(&settlementep.UpdateSettlementEndpoint{}).WithService(inner, settlementSvc)
+	deleteSettlementEndpoint := apiendpoint.From(&settlementep.DeleteSettlementEndpoint{}).WithService(inner, settlementSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listSettlementsEndpoint,

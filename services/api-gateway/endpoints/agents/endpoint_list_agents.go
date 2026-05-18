@@ -30,8 +30,6 @@ func (e *ListAgentsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAgentsR
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/ai/agents",
-		Request:           &ListAgentsRequest{},
-		Response:          &apiresource.List[apiresource.AgentDefinition]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -42,5 +40,5 @@ func (e *ListAgentsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAgentsR
 			ObjectType: constants.ObjectTypeAgentDefinition,
 			Fields:     []string{"config", "tools", "role", "role.permissions"},
 		}),
-	}).WithDocSource(e)
+	})
 }

@@ -26,13 +26,11 @@ func (e *RetrieveAddressDetailsEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/core/addresses/details/{id}",
-		Request:           &RetrieveAddressDetailsRequest{},
-		Response:          &apiresource.AddressDetailsResult{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveAddressDetailsRequest) (*apiresource.AddressDetailsResult, *apierror.APIError) {
 			return svc.(AddressValidationSvc).GetAddressDetails
 		},
-	}).WithDocSource(e)
+	})
 }

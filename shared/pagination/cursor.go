@@ -37,6 +37,8 @@ type StringCursor struct {
 	OccurredAt time.Time `json:"c"`
 	ID         string    `json:"s"`
 	Direction  Direction `json:"d"`
+	// MatchTier is set for ranked catalog search pagination (exact/prefix/substring SKU tiers).
+	MatchTier *int `json:"t,omitempty"`
 }
 
 func encodeCursorPayload(v any) string {

@@ -26,13 +26,11 @@ func (e *ReceiveReceivingOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoi
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/receiving-orders/{receiving_order_id}/lines/{id}/actions/receive",
-		Request:           &ReceiveReceivingOrderLineRequest{},
-		Response:          &apiresource.ReceivingOrderLine{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ReceiveReceivingOrderLineRequest) (*apiresource.ReceivingOrderLine, *apierror.APIError) {
 			return svc.(ReceivingOrderSvc).ReceiveReceivingOrderLine
 		},
-	}).WithDocSource(e)
+	})
 }

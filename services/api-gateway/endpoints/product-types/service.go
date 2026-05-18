@@ -65,7 +65,7 @@ func (m *productTypeSvcImpl) ListProductTypes(ctx context.Context, req *ListProd
 		return nil, apiErr
 	}
 
-	return ProductTypeListPresenter(resp), nil
+	return ProductTypeListPresenter(ctx, resp), nil
 }
 
 func (m *productTypeSvcImpl) GetProductType(ctx context.Context, req *RetrieveProductTypeRequest) (*apiresource.ProductType, *apierror.APIError) {

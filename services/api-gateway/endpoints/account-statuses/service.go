@@ -61,7 +61,7 @@ func (m *accountStatusSvcImpl) ListAccountStatuses(ctx context.Context, req *Lis
 		return nil, apiErr
 	}
 
-	return AccountStatusListPresenter(resp), nil
+	return AccountStatusListPresenter(ctx, resp), nil
 }
 
 func (m *accountStatusSvcImpl) GetAccountStatus(ctx context.Context, req *RetrieveAccountStatusRequest) (*apiresource.AccountStatus, *apierror.APIError) {

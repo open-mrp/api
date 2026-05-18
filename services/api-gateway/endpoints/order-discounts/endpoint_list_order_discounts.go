@@ -23,13 +23,11 @@ func (e *ListOrderDiscountsEndpoint) Materialize() *apiendpoint.APIEndpoint[*Lis
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/order-discounts",
-		Request:           &ListOrderDiscountsRequest{},
-		Response:          &apiresource.List[apiresource.OrderDiscount]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListOrderDiscountsRequest) (*apiresource.List[apiresource.OrderDiscount], *apierror.APIError) {
 			return svc.(OrderDiscountSvc).ListOrderDiscounts
 		},
-	}).WithDocSource(e)
+	})
 }

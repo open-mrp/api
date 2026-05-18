@@ -24,13 +24,11 @@ func (e *GetPlanChangePreviewEndpoint) Materialize() *apiendpoint.APIEndpoint[*G
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/billing/plans/{id}/proration",
-		Request:           &GetPlanProrationRequest{},
-		Response:          &apiresource.PlanChangeProration{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetPlanProrationRequest) (*apiresource.PlanChangeProration, *apierror.APIError) {
 			return svc.(BillingSvc).GetPlanChangePreview
 		},
-	}).WithDocSource(e)
+	})
 }

@@ -96,7 +96,7 @@ func (m *roleSvcImpl) ListRoles(ctx context.Context, req *ListRolesRequest) (*ap
 		}
 	}
 
-	return RoleListPresenter(resp, ownerAccount), nil
+	return RoleListPresenter(ctx, resp, ownerAccount), nil
 }
 
 func (m *roleSvcImpl) GetRole(ctx context.Context, req *RetrieveRoleRequest) (*apiresource.Role, *apierror.APIError) {

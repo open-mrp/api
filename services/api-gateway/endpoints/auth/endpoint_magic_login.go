@@ -33,12 +33,10 @@ func (e *MagicLoginEndpoint) Materialize() *apiendpoint.APIEndpoint[*MagicLoginR
 		Method:            http.MethodPost,
 		Route:             "/v1/auth/actions/magic-login",
 		ContentType:       "application/json",
-		Request:           &MagicLoginRequest{},
-		Response:          &apiresource.User{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *MagicLoginRequest) (*apiresource.User, *apierror.APIError) {
 			return svc.(AuthSvc).MagicLogin
 		},
-	}).WithDocSource(e)
+	})
 }

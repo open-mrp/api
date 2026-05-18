@@ -23,13 +23,11 @@ func (e *ListDCLocationsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListDC
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/dc-locations",
-		Request:           &ListDCLocationsRequest{},
-		Response:          &apiresource.List[apiresource.DCLocation]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListDCLocationsRequest) (*apiresource.List[apiresource.DCLocation], *apierror.APIError) {
 			return svc.(EDIDCLocationSvc).ListDCLocations
 		},
-	}).WithDocSource(e)
+	})
 }

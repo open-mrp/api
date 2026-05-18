@@ -33,13 +33,11 @@ func (e *BulkDeleteBatchesEndpoint) Materialize() *apiendpoint.APIEndpoint[*Dele
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/batches/actions/bulk-delete",
-		Request:           &DeleteManyBatchesRequest{},
-		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteManyBatchesRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(BatchSvc).DeleteManyBatches
 		},
-	}).WithDocSource(e)
+	})
 }

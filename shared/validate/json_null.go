@@ -194,8 +194,8 @@ func ApplySlicePresenceFlags(body []byte, v any) {
 		return
 	}
 	rt := rv.Type()
-	for i := 0; i < rt.NumField(); i++ {
-		sf := rt.Field(i)
+	for sf := range rt.Fields() {
+		sf := sf
 		if sf.PkgPath != "" || sf.Type.Kind() != reflect.Slice {
 			continue
 		}

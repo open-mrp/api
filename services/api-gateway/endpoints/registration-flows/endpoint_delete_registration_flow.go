@@ -24,13 +24,11 @@ func (e *DeleteRegistrationFlowEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		Method:            http.MethodDelete,
 		Route:             "/v1/sales/registration-flows/{id}",
 		ContentType:       "application/json",
-		Request:           &DeleteRegistrationFlowRequest{},
-		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteRegistrationFlowRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(RegistrationFlowSvc).DeleteRegistrationFlow
 		},
-	}).WithDocSource(e)
+	})
 }

@@ -227,6 +227,9 @@ func assertNilField(t *testing.T, m map[string]any, field string) {
 	assert.Nil(t, m[field], "%s should be null", field)
 }
 
+// e2eCurrencyUnitID is the global currency base unit from shared/db/seed/0005_measures.sql.
+const e2eCurrencyUnitID = "dollar"
+
 // validCustomerBody returns a map with all required fields for creating a customer.
 // Tests can override individual fields by writing to the returned map before posting.
 func validCustomerBody(name string) map[string]any {
@@ -244,6 +247,37 @@ func validCustomerBody(name string) map[string]any {
 		"ship_to_address": map[string]any{
 			"name":    name + " Shipping",
 			"country": "US",
+		},
+	}
+}
+
+// minimalSalesOrderCreateBody returns a minimal payload for POST /v1/sales/sales-orders (internal e2e).
+// The buyer must have product line access for the product's line (grant via POST .../product-line-access/customers first).
+func minimalSalesOrderCreateBody(buyerAccountID string) map[string]any {
+	return map[string]any{
+		"buyer_account_id":      buyerAccountID,
+		"carrier_id":            SeedCarrierID,
+		"service_level_id":      SeedServiceLevelID,
+		"priority_code":         "normal",
+		"sales_order_type_code": "sales_order",
+		"payment_term_id":       SeedPaymentTermID,
+		"shipping_term_id":      SeedShippingTermID,
+		"ship_to_name":          "E2E Ship-To",
+		"ship_to_street_line_1": "123 Test St",
+		"ship_to_locality":      "Los Angeles",
+		"ship_to_state":         "CA",
+		"ship_to_postal_code":   "90001",
+		"ship_to_country":       "US",
+		"lines": []map[string]any{
+			{
+				"product_id":                     SeedProductID,
+				"product_sku":                    SeedItemSKU,
+				"quantity_value":                 "1",
+				"quantity_unit_id":               SeedUnitID,
+				"unit_price_value":               "10.00",
+				"unit_price_numerator_unit_id":   e2eCurrencyUnitID,
+				"unit_price_denominator_unit_id": SeedUnitID,
+			},
 		},
 	}
 }

@@ -32,13 +32,11 @@ func (e *ListSuppliersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListSupp
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/suppliers",
-		Request:           &ListSuppliersRequest{},
-		Response:          &apiresource.List[apiresource.SupplierSummary]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListSuppliersRequest) (*apiresource.List[apiresource.SupplierSummary], *apierror.APIError) {
 			return svc.(SupplierSvc).ListSuppliers
 		},
-	}).WithDocSource(e)
+	})
 }

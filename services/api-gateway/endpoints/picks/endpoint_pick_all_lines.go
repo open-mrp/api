@@ -24,13 +24,11 @@ func (e *PickAllLinesEndpoint) Materialize() *apiendpoint.APIEndpoint[*PickAllLi
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/picks/{id}/actions/pick",
-		Request:           &PickAllLinesRequest{},
-		Response:          &apiresource.PickDetail{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *PickAllLinesRequest) (*apiresource.PickDetail, *apierror.APIError) {
 			return svc.(PickSvc).PickAllLines
 		},
-	}).WithDocSource(e)
+	})
 }

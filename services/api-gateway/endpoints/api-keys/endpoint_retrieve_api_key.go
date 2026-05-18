@@ -16,7 +16,7 @@ type RetrieveAPIKeyRequest struct {
 	APIKeyID string `path:"id" validate:"required"`
 }
 
-// Returns API key metadata by ID.
+// Returns [API key](https://docs.augno.com/api/api-keys) metadata by ID.
 type RetrieveAPIKeyEndpoint struct{}
 
 func (e *RetrieveAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveAPIKeyRequest, *apiresource.APIKey] {
@@ -25,8 +25,6 @@ func (e *RetrieveAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retriev
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/auth/api-keys/{id}",
-		Request:           &RetrieveAPIKeyRequest{},
-		Response:          &apiresource.APIKey{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -37,5 +35,5 @@ func (e *RetrieveAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retriev
 			ObjectType: constants.ObjectTypeAPIKey,
 			Fields:     []string{"role", "role.permissions"},
 		}),
-	}).WithDocSource(e)
+	})
 }

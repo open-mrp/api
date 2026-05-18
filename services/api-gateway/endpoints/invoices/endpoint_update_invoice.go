@@ -44,13 +44,11 @@ func (e *UpdateInvoiceEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateIn
 		Method:            http.MethodPatch,
 		Route:             "/v1/finance/invoices/{id}",
 		ContentType:       "application/json",
-		Request:           &UpdateInvoiceRequest{},
-		Response:          &apiresource.InvoiceSummary{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateInvoiceRequest) (*apiresource.InvoiceSummary, *apierror.APIError) {
 			return svc.(InvoiceSvc).UpdateInvoice
 		},
-	}).WithDocSource(e)
+	})
 }

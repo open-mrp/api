@@ -1,6 +1,8 @@
 package priorityep
 
 import (
+	"context"
+
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -23,7 +25,7 @@ func PriorityPresenter(p *pb.PriorityInfo) apiresource.Priority {
 	}
 }
 
-func PriorityListPresenter(resp *pb.ListPrioritiesResponse) *apiresource.List[apiresource.Priority] {
+func PriorityListPresenter(ctx context.Context, resp *pb.ListPrioritiesResponse) *apiresource.List[apiresource.Priority] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.Priority](nil, apiresource.PageInfo{})
 	}
@@ -33,5 +35,5 @@ func PriorityListPresenter(resp *pb.ListPrioritiesResponse) *apiresource.List[ap
 		priorities[i] = PriorityPresenter(p)
 	}
 
-	return apiresource.NewList(priorities, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(priorities, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }

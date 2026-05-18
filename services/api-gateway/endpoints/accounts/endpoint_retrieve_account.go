@@ -25,8 +25,6 @@ func (e *RetrieveAccountEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retrie
 		Method:            http.MethodGet,
 		Route:             "/v1/identity/accounts/{id}",
 		ContentType:       "application/json",
-		Request:           &RetrieveAccountRequest{},
-		Response:          &apiresource.Account{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -37,5 +35,5 @@ func (e *RetrieveAccountEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retrie
 			ObjectType: constants.ObjectTypeAccount,
 			Fields:     []string{"branding", "portal"},
 		}),
-	}).WithDocSource(e)
+	})
 }

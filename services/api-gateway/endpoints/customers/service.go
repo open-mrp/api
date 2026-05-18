@@ -185,7 +185,7 @@ func (m *customerSvcImpl) ListCustomers(ctx context.Context, req *ListCustomersR
 		return nil, apiErr
 	}
 
-	return CustomerListPresenter(resp), nil
+	return CustomerListPresenter(ctx, resp), nil
 }
 
 func (m *customerSvcImpl) GetCustomer(ctx context.Context, req *RetrieveCustomerRequest) (*apiresource.Customer, *apierror.APIError) {

@@ -37,13 +37,11 @@ func (e *FindOrderDiscountByCodeEndpoint) Materialize() *apiendpoint.APIEndpoint
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/order-discounts/actions/find-by-code",
-		Request:           &FindOrderDiscountByCodeRequest{},
-		Response:          &apiresource.OrderDiscount{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *FindOrderDiscountByCodeRequest) (*apiresource.OrderDiscount, *apierror.APIError) {
 			return svc.(OrderDiscountSvc).FindOrderDiscountByCode
 		},
-	}).WithDocSource(e)
+	})
 }

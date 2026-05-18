@@ -24,13 +24,11 @@ func (e *DeletePaymentTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*Dele
 		Method:            http.MethodDelete,
 		Route:             "/v1/finance/payment-terms/{id}",
 		ContentType:       "application/json",
-		Request:           &DeletePaymentTermRequest{},
-		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeletePaymentTermRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(PaymentTermSvc).DeletePaymentTerm
 		},
-	}).WithDocSource(e)
+	})
 }

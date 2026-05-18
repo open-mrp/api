@@ -24,13 +24,11 @@ func (e *DeleteVolumeDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*D
 		Method:            http.MethodDelete,
 		Route:             "/v1/sales/volume-discounts/{id}",
 		ContentType:       "application/json",
-		Request:           &DeleteVolumeDiscountRequest{},
-		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteVolumeDiscountRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(VolumeDiscountSvc).DeleteVolumeDiscount
 		},
-	}).WithDocSource(e)
+	})
 }

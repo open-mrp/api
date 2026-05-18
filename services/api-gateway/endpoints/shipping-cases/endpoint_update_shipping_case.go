@@ -45,8 +45,6 @@ func (e *UpdateShippingCaseEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upd
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/shipping-cases/{id}",
-		Request:           &UpdateShippingCaseRequest{},
-		Response:          &apiresource.ShippingCase{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -57,5 +55,5 @@ func (e *UpdateShippingCaseEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upd
 			ObjectType: constants.ObjectTypeShippingCase,
 			Fields:     []string{"carrier", "shipment", "freight_amount.unit", "freight_weight.unit"},
 		}),
-	}).WithDocSource(e)
+	})
 }

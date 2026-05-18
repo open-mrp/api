@@ -39,13 +39,13 @@ func (*AccountUsersEndpointGroup) Materialize(config *AccountUsersEndpointGroupC
 		ResourceType: &apiresource.AccountUser{},
 	}
 
-	listEndpoint := (&accountuserep.ListAccountUsersEndpoint{}).Materialize().WithService(inner, svc)
-	retrieveEndpoint := (&accountuserep.RetrieveAccountUserEndpoint{}).Materialize().WithService(inner, svc)
-	createEndpoint := (&accountuserep.CreateAccountUserEndpoint{}).Materialize().WithService(inner, svc)
-	updateEndpoint := (&accountuserep.UpdateAccountUserEndpoint{}).Materialize().WithService(inner, svc)
-	activateEndpoint := (&accountuserep.ActivateAccountUserEndpoint{}).Materialize().WithService(inner, svc)
-	disableEndpoint := (&accountuserep.DisableAccountUserEndpoint{}).Materialize().WithService(inner, svc)
-	removeEndpoint := (&accountuserep.RemoveAccountUserEndpoint{}).Materialize().WithService(inner, svc)
+	listEndpoint := apiendpoint.From(&accountuserep.ListAccountUsersEndpoint{}).WithService(inner, svc)
+	retrieveEndpoint := apiendpoint.From(&accountuserep.RetrieveAccountUserEndpoint{}).WithService(inner, svc)
+	createEndpoint := apiendpoint.From(&accountuserep.CreateAccountUserEndpoint{}).WithService(inner, svc)
+	updateEndpoint := apiendpoint.From(&accountuserep.UpdateAccountUserEndpoint{}).WithService(inner, svc)
+	activateEndpoint := apiendpoint.From(&accountuserep.ActivateAccountUserEndpoint{}).WithService(inner, svc)
+	disableEndpoint := apiendpoint.From(&accountuserep.DisableAccountUserEndpoint{}).WithService(inner, svc)
+	removeEndpoint := apiendpoint.From(&accountuserep.RemoveAccountUserEndpoint{}).WithService(inner, svc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listEndpoint,

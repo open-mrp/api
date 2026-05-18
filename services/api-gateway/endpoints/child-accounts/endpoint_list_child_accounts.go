@@ -23,13 +23,11 @@ func (e *ListChildAccountsEndpoint) Materialize() *apiendpoint.APIEndpoint[*List
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/child-accounts",
-		Request:           &ListChildAccountsRequest{},
-		Response:          &apiresource.List[apiresource.ChildAccount]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListChildAccountsRequest) (*apiresource.List[apiresource.ChildAccount], *apierror.APIError) {
 			return svc.(ChildAccountSvc).ListChildAccounts
 		},
-	}).WithDocSource(e)
+	})
 }

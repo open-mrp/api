@@ -21,13 +21,11 @@ func (e *GetStripePublishableKeyEndpoint) Materialize() *apiendpoint.APIEndpoint
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/integrations/stripe/publishable-key",
-		Request:           &GetStripePublishableKeyRequest{},
-		Response:          &apiresource.StripePublishableKey{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetStripePublishableKeyRequest) (*apiresource.StripePublishableKey, *apierror.APIError) {
 			return svc.(AccountIntegrationSvc).GetStripePublishableKey
 		},
-	}).WithDocSource(e)
+	})
 }

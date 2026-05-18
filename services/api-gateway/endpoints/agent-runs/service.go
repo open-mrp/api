@@ -104,7 +104,7 @@ func (m *agentRunSvcImpl) ListRuns(ctx context.Context, req *ListRunsRequest) (*
 		}
 		runs[i] = AgentRunPresenterWithRole(r, roleInfo)
 	}
-	return apiresource.NewList(runs, grpcutil.MapProtoPageInfo(resp.PageInfo)), nil
+	return apiresource.NewList(runs, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
 }
 
 func (m *agentRunSvcImpl) GetRun(ctx context.Context, req *RetrieveRunRequest) (*apiresource.AgentRun, *apierror.APIError) {

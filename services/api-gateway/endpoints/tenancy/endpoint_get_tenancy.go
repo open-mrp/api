@@ -21,8 +21,6 @@ func (e *GetTenancyEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetTenancyR
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/me/tenancy",
-		Request:           &GetTenancyRequest{},
-		Response:          &apiresource.Tenancy{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -32,5 +30,5 @@ func (e *GetTenancyEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetTenancyR
 		Extras: apiendpoint.APIEndpointExtras{
 			SkipRequestLogging: true,
 		},
-	}).WithDocSource(e)
+	})
 }

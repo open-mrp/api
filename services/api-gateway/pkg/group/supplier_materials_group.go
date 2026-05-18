@@ -39,11 +39,11 @@ func (*SupplierMaterialsEndpointGroup) Materialize(config *SupplierMaterialsEndp
 		ResourceType: &apiresource.SupplierMaterial{},
 	}
 
-	listEndpoint := (&suppliermaterialep.ListSupplierMaterialsEndpoint{}).Materialize().WithService(inner, supplierMaterialSvc)
-	retrieveEndpoint := (&suppliermaterialep.RetrieveSupplierMaterialEndpoint{}).Materialize().WithService(inner, supplierMaterialSvc)
-	createEndpoint := (&suppliermaterialep.CreateSupplierMaterialEndpoint{}).Materialize().WithService(inner, supplierMaterialSvc)
-	updateEndpoint := (&suppliermaterialep.UpdateSupplierMaterialEndpoint{}).Materialize().WithService(inner, supplierMaterialSvc)
-	deleteEndpoint := (&suppliermaterialep.DeleteSupplierMaterialEndpoint{}).Materialize().WithService(inner, supplierMaterialSvc)
+	listEndpoint := apiendpoint.From(&suppliermaterialep.ListSupplierMaterialsEndpoint{}).WithService(inner, supplierMaterialSvc)
+	retrieveEndpoint := apiendpoint.From(&suppliermaterialep.RetrieveSupplierMaterialEndpoint{}).WithService(inner, supplierMaterialSvc)
+	createEndpoint := apiendpoint.From(&suppliermaterialep.CreateSupplierMaterialEndpoint{}).WithService(inner, supplierMaterialSvc)
+	updateEndpoint := apiendpoint.From(&suppliermaterialep.UpdateSupplierMaterialEndpoint{}).WithService(inner, supplierMaterialSvc)
+	deleteEndpoint := apiendpoint.From(&suppliermaterialep.DeleteSupplierMaterialEndpoint{}).WithService(inner, supplierMaterialSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listEndpoint,

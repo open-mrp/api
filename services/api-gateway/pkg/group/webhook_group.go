@@ -39,7 +39,7 @@ func (*WebhooksEndpointGroup) Materialize(config *WebhooksEndpointGroupConfig) *
 		ResourceType: &apiresource.WebhookResponse{},
 	}
 
-	processWebhookEndpoint := (&webhooksep.ProcessWebhookEndpoint{}).Materialize().WithService(inner, webhookSvc)
+	processWebhookEndpoint := apiendpoint.From(&webhooksep.ProcessWebhookEndpoint{}).WithService(inner, webhookSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		processWebhookEndpoint,

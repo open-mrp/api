@@ -46,14 +46,12 @@ func (e *CreateAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*Create
 		Title:             "Create Attribute",
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
-		Route:             "/v1/catalog/properties/{property_id}/attributes",
-		Request:           &CreateAttributeRequest{},
-		Response:          &apiresource.Attribute{},
+		Route:             CatalogPropertyAttributesRoute,
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateAttributeRequest) (*apiresource.Attribute, *apierror.APIError) {
 			return svc.(PropertySvc).CreateAttribute
 		},
-	}).WithDocSource(e)
+	})
 }

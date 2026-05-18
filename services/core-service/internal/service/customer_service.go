@@ -614,6 +614,17 @@ func (s *customerSvcImpl) DeleteCustomer(ctx context.Context, params domain.Dele
 		return tracing.Trace(span, apiErr)
 	}
 
+	salesOrderRepo := s.repos.NewSalesOrderRepo()
+	orderCount, apiErr := salesOrderRepo.CountSalesOrdersForBuyerAccounts(ctx, params.OwnerAccountID, []string{params.CustomerAccountID})
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	if orderCount > 0 {
+		return tracing.Trace(span, apierror.NewResourceConflictError(
+			"Cannot delete this customer while sales orders still reference them. Delete or reassign those orders, or merge customers first.",
+		))
+	}
+
 	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *customerSvcImpl) *apierror.APIError {
 		if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeCustomer, customer.ID, customer); apiErr != nil {
 			return apiErr
@@ -675,7 +686,18 @@ func (s *customerSvcImpl) BulkDeleteCustomers(ctx context.Context, params domain
 		customers = append(customers, customer)
 	}
 
-	apiErr := s.withTx(ctx, func(txCtx context.Context, txSvc *customerSvcImpl) *apierror.APIError {
+	salesOrderRepo := s.repos.NewSalesOrderRepo()
+	orderCount, apiErr := salesOrderRepo.CountSalesOrdersForBuyerAccounts(ctx, params.OwnerAccountID, params.CustomerIDs)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	if orderCount > 0 {
+		return tracing.Trace(span, apierror.NewResourceConflictError(
+			"Cannot delete customers while sales orders still reference them. Delete or reassign those orders, or merge customers first.",
+		))
+	}
+
+	apiErr = s.withTx(ctx, func(txCtx context.Context, txSvc *customerSvcImpl) *apierror.APIError {
 		for _, customer := range customers {
 			if apiErr := txSvc.repos.NewDeletedRecordRepo().Create(txCtx, constants.DeletedRecordResourceTypeCustomer, customer.ID, customer); apiErr != nil {
 				return apiErr
@@ -787,10 +809,8 @@ func (s *customerSvcImpl) MergeCustomers(ctx context.Context, params domain.Merg
 	params.OwnerAccountID = identity.Target.AccountID
 
 	// Validate target is not in source list.
-	for _, sourceID := range params.SourceCustomerIDs {
-		if sourceID == params.TargetCustomerID {
-			return nil, tracing.Trace(span, apierror.NewValidationError("Target customer cannot be in the source customer list."))
-		}
+	if slices.Contains(params.SourceCustomerIDs, params.TargetCustomerID) {
+		return nil, tracing.Trace(span, apierror.NewValidationError("Target customer cannot be in the source customer list."))
 	}
 
 	// Reject duplicate source IDs.

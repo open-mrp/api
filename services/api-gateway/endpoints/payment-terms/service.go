@@ -74,7 +74,7 @@ func (m *paymentTermSvcImpl) ListPaymentTerms(ctx context.Context, req *ListPaym
 		}
 	}
 
-	return PaymentTermListPresenter(resp, ownerAccount), nil
+	return PaymentTermListPresenter(ctx, resp, ownerAccount), nil
 }
 
 func (m *paymentTermSvcImpl) GetPaymentTerm(ctx context.Context, req *RetrievePaymentTermRequest) (*apiresource.PaymentTerm, *apierror.APIError) {

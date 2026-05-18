@@ -43,8 +43,6 @@ func (e *UpdatePartEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdatePartR
 		Method:            http.MethodPatch,
 		Route:             "/v1/catalog/parts/{id}",
 		ContentType:       "application/json",
-		Request:           &UpdatePartRequest{},
-		Response:          &apiresource.Part{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -55,5 +53,5 @@ func (e *UpdatePartEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdatePartR
 			ObjectType: constants.ObjectTypePart,
 			Fields:     []string{"item", "item.category", "item.unit_value", "item.unit_cost", "item.burn_rate", "item.attributes"},
 		}),
-	}).WithDocSource(e)
+	})
 }

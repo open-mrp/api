@@ -52,13 +52,11 @@ func (e *BulkReconcileItemsEndpoint) Materialize() *apiendpoint.APIEndpoint[*Bul
 		Method:            http.MethodPost,
 		Route:             "/v1/catalog/items/actions/bulk-reconcile",
 		ContentType:       "application/json",
-		Request:           &BulkReconcileItemsRequest{},
-		Response:          &apiresource.BulkReconcileItemsResponse{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *BulkReconcileItemsRequest) (*apiresource.BulkReconcileItemsResponse, *apierror.APIError) {
 			return svc.(ItemSvc).BulkReconcileItems
 		},
-	}).WithDocSource(e)
+	})
 }

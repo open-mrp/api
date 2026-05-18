@@ -1,6 +1,8 @@
 package emaillogep
 
 import (
+	"context"
+
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -13,15 +15,14 @@ func EmailLogPresenter(el *pb.EmailLogInfo) apiresource.EmailLog {
 	}
 
 	result := apiresource.EmailLog{
-		ID:           el.Id,
-		Object:       constants.ObjectTypeEmailLog,
-		SendStatus:   emailSendStatus(el.HasSent),
-		Recipients:   el.Recipients,
-		Subject:      el.Subject,
-		Filename:     el.Filename,
-		SESMessageID: el.SesMessageId,
-		CreatedAt:    grpcutil.TimestampToTime(el.CreatedAt),
-		UpdatedAt:    grpcutil.TimestampToTime(el.UpdatedAt),
+		ID:         el.Id,
+		Object:     constants.ObjectTypeEmailLog,
+		SendStatus: emailSendStatus(el.HasSent),
+		Recipients: el.Recipients,
+		Subject:    el.Subject,
+		Filename:   el.Filename,
+		CreatedAt:  grpcutil.TimestampToTime(el.CreatedAt),
+		UpdatedAt:  grpcutil.TimestampToTime(el.UpdatedAt),
 	}
 
 	if result.Recipients == nil {
@@ -47,7 +48,7 @@ func emailSendStatus(hasSent bool) constants.EmailSendStatus {
 	return constants.EmailSendStatusPending
 }
 
-func EmailLogListPresenter(resp *pb.ListEmailLogsResponse) *apiresource.List[apiresource.EmailLog] {
+func EmailLogListPresenter(ctx context.Context, resp *pb.ListEmailLogsResponse) *apiresource.List[apiresource.EmailLog] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.EmailLog](nil, apiresource.PageInfo{})
 	}
@@ -57,5 +58,5 @@ func EmailLogListPresenter(resp *pb.ListEmailLogsResponse) *apiresource.List[api
 		emailLogs[i] = EmailLogPresenter(el)
 	}
 
-	return apiresource.NewList(emailLogs, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(emailLogs, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }

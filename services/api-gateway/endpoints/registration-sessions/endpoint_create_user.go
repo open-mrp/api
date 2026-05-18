@@ -17,7 +17,7 @@ type CreateUserRequest struct {
 	// Display name.
 	Name string `json:"name" validate:"required,max=255"`
 	// Password.
-	Password string `json:"password" validate:"required,password"` // #nosec G117 - Struct field, not a hardcoded credential
+	Password string `json:"password" validate:"required,password" sensitive:"true"` // #nosec G117 - Struct field, not a hardcoded credential
 }
 
 var sampleCreateUserRequest = &CreateUserRequest{
@@ -38,16 +38,11 @@ func (e *CreateUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateUserR
 		Method:            http.MethodPost,
 		Route:             "/v1/auth/registration-sessions/{session_id}/users",
 		ContentType:       "application/json",
-		Request:           &CreateUserRequest{},
-		Response:          &apiresource.CreateUserResponse{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateUserRequest) (*apiresource.CreateUserResponse, *apierror.APIError) {
 			return svc.(RegistrationSessionSvc).CreateUser
 		},
-		Extras: apiendpoint.APIEndpointExtras{
-			ShieldRequestBody: true,
-		},
-	}).WithDocSource(e)
+	})
 }

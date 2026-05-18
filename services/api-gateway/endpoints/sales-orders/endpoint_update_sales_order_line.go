@@ -68,13 +68,11 @@ func (e *UpdateSalesOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*U
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/sales-orders/{id}/lines/{line_id}",
-		Request:           &UpdateSalesOrderLineRequest{},
-		Response:          &apiresource.SalesOrderLineDetail{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateSalesOrderLineRequest) (*apiresource.SalesOrderLineDetail, *apierror.APIError) {
 			return svc.(SalesOrderSvc).UpdateSalesOrderLine
 		},
-	}).WithDocSource(e)
+	})
 }

@@ -67,7 +67,7 @@ func (m *registrationFlowSvcImpl) ListRegistrationFlows(ctx context.Context, req
 		return nil, apiErr
 	}
 
-	return RegistrationFlowListPresenter(resp), nil
+	return RegistrationFlowListPresenter(ctx, resp), nil
 }
 
 func (m *registrationFlowSvcImpl) GetRegistrationFlow(ctx context.Context, req *RetrieveRegistrationFlowRequest) (*apiresource.RegistrationFlow, *apierror.APIError) {

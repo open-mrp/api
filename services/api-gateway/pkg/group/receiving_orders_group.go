@@ -39,14 +39,14 @@ func (*ReceivingOrdersEndpointGroup) Materialize(config *ReceivingOrdersEndpoint
 		ResourceType: &apiresource.ReceivingOrder{},
 	}
 
-	listEndpoint := (&receivingorderep.ListReceivingOrdersEndpoint{}).Materialize().WithService(inner, svc)
-	retrieveEndpoint := (&receivingorderep.RetrieveReceivingOrderEndpoint{}).Materialize().WithService(inner, svc)
-	stockEndpoint := (&receivingorderep.StockReceivingOrderEndpoint{}).Materialize().WithService(inner, svc)
-	receiveEndpoint := (&receivingorderep.ReceiveReceivingOrderEndpoint{}).Materialize().WithService(inner, svc)
-	voidEndpoint := (&receivingorderep.VoidReceivingOrderEndpoint{}).Materialize().WithService(inner, svc)
-	updateLineEndpoint := (&receivingorderep.UpdateReceivingOrderLineEndpoint{}).Materialize().WithService(inner, svc)
-	voidLineEndpoint := (&receivingorderep.VoidReceivingOrderLineEndpoint{}).Materialize().WithService(inner, svc)
-	receiveLineEndpoint := (&receivingorderep.ReceiveReceivingOrderLineEndpoint{}).Materialize().WithService(inner, svc)
+	listEndpoint := apiendpoint.From(&receivingorderep.ListReceivingOrdersEndpoint{}).WithService(inner, svc)
+	retrieveEndpoint := apiendpoint.From(&receivingorderep.RetrieveReceivingOrderEndpoint{}).WithService(inner, svc)
+	stockEndpoint := apiendpoint.From(&receivingorderep.StockReceivingOrderEndpoint{}).WithService(inner, svc)
+	receiveEndpoint := apiendpoint.From(&receivingorderep.ReceiveReceivingOrderEndpoint{}).WithService(inner, svc)
+	voidEndpoint := apiendpoint.From(&receivingorderep.VoidReceivingOrderEndpoint{}).WithService(inner, svc)
+	updateLineEndpoint := apiendpoint.From(&receivingorderep.UpdateReceivingOrderLineEndpoint{}).WithService(inner, svc)
+	voidLineEndpoint := apiendpoint.From(&receivingorderep.VoidReceivingOrderLineEndpoint{}).WithService(inner, svc)
+	receiveLineEndpoint := apiendpoint.From(&receivingorderep.ReceiveReceivingOrderLineEndpoint{}).WithService(inner, svc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listEndpoint,

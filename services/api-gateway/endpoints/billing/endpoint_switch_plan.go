@@ -24,13 +24,11 @@ func (e *SwitchPlanEndpoint) Materialize() *apiendpoint.APIEndpoint[*SwitchPlanR
 		Method:            http.MethodPost,
 		Route:             "/v1/billing/plans/{id}/switch",
 		ContentType:       "application/json",
-		Request:           &SwitchPlanRequest{},
-		Response:          &apiresource.SwitchPlanResponse{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *SwitchPlanRequest) (*apiresource.SwitchPlanResponse, *apierror.APIError) {
 			return svc.(BillingSvc).SwitchPlan
 		},
-	}).WithDocSource(e)
+	})
 }

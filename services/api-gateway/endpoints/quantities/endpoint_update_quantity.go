@@ -45,8 +45,6 @@ func (e *UpdateQuantityEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateQ
 		Method:            http.MethodPatch,
 		Route:             "/v1/operations/quantities/{id}",
 		ContentType:       "application/json",
-		Request:           &UpdateQuantityRequest{},
-		Response:          &apiresource.Quantity{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -57,5 +55,5 @@ func (e *UpdateQuantityEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateQ
 			ObjectType: constants.ObjectTypeQuantity,
 			Fields:     []string{"unit"},
 		}),
-	}).WithDocSource(e)
+	})
 }

@@ -65,7 +65,7 @@ func (m *accountGroupProductLineAccessSvcImpl) ListAccountGroupProductLineAccess
 		return nil, apiErr
 	}
 
-	return AccountGroupProductLineAccessListPresenter(resp), nil
+	return AccountGroupProductLineAccessListPresenter(ctx, resp), nil
 }
 
 func (m *accountGroupProductLineAccessSvcImpl) GetAccountGroupProductLineAccess(ctx context.Context, req *RetrieveAccountGroupProductLineAccessRequest) (*apiresource.AccountGroupProductLineAccess, *apierror.APIError) {

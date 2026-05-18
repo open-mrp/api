@@ -21,13 +21,11 @@ func (e *GetStripeStatusEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetStr
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/integrations/stripe/status",
-		Request:           &GetStripeStatusRequest{},
-		Response:          &apiresource.StripeStatus{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetStripeStatusRequest) (*apiresource.StripeStatus, *apierror.APIError) {
 			return svc.(AccountIntegrationSvc).GetStripeStatus
 		},
-	}).WithDocSource(e)
+	})
 }

@@ -22,7 +22,9 @@ type ListAuditEventsRequest struct {
 	ResourceTypes []constants.ObjectType `query:"resource_types"`
 	// Filter by the audited resource IDs.
 	ResourceIDs []string `query:"resource_ids"`
-	// Filter by the actor identifier. `account_user.id` when `identity_type`=`user`, or an `api_key.id` when `identity_type`=`api_key`.
+	// Filter by the actor identifier.
+	//
+	// Will be `account_user.id` when `identity_type`=`user` or an `api_key.id` when `identity_type`=`api_key`.
 	ActorIDs []string `query:"actor_ids"`
 	// Filter by the audit actions.
 	Actions []constants.AuditAction `query:"actions"`
@@ -37,14 +39,12 @@ func (e *ListAuditEventsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAu
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/core/audit-events",
-		Request:           &ListAuditEventsRequest{},
-		Response:          &apiresource.List[apiresource.AuditEvent]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
 		IncludeConfig: apiendpoint.IncludesFor(apiendpoint.IncludesParams{
 			ObjectType: constants.ObjectTypeAuditEvent,
-			Fields:     []string{"actor", "changes", "metadata"},
+			Fields:     []string{"actor", "changes", "metadata", "request"},
 		}),
 		Extras: apiendpoint.APIEndpointExtras{
 			SkipRequestLogging: true,
@@ -52,5 +52,5 @@ func (e *ListAuditEventsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAu
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListAuditEventsRequest) (*apiresource.List[apiresource.AuditEvent], *apierror.APIError) {
 			return svc.(AuditEventSvc).ListAuditEvents
 		},
-	}).WithDocSource(e)
+	})
 }

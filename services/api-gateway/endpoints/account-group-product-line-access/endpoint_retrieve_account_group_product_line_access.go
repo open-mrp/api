@@ -24,13 +24,11 @@ func (e *RetrieveAccountGroupProductLineAccessEndpoint) Materialize() *apiendpoi
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/product-line-access/account-groups/{account_group_id}",
-		Request:           &RetrieveAccountGroupProductLineAccessRequest{},
-		Response:          &apiresource.AccountGroupProductLineAccess{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveAccountGroupProductLineAccessRequest) (*apiresource.AccountGroupProductLineAccess, *apierror.APIError) {
 			return svc.(AccountGroupProductLineAccessSvc).GetAccountGroupProductLineAccess
 		},
-	}).WithDocSource(e)
+	})
 }

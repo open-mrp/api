@@ -39,9 +39,9 @@ func (*SalesTargetsEndpointGroup) Materialize(config *SalesTargetsEndpointGroupC
 		ResourceType: &apiresource.SalesTarget{},
 	}
 
-	listEndpoint := (&salestargetep.ListSalesTargetsEndpoint{}).Materialize().WithService(inner, svc)
-	createEndpoint := (&salestargetep.CreateSalesTargetEndpoint{}).Materialize().WithService(inner, svc)
-	upsertEndpoint := (&salestargetep.UpsertSalesTargetEndpoint{}).Materialize().WithService(inner, svc)
+	listEndpoint := apiendpoint.From(&salestargetep.ListSalesTargetsEndpoint{}).WithService(inner, svc)
+	createEndpoint := apiendpoint.From(&salestargetep.CreateSalesTargetEndpoint{}).WithService(inner, svc)
+	upsertEndpoint := apiendpoint.From(&salestargetep.UpsertSalesTargetEndpoint{}).WithService(inner, svc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listEndpoint,

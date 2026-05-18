@@ -26,13 +26,11 @@ func (e *CreatePurchaseOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/purchase-orders/{id}/lines",
-		Request:           &CreatePurchaseOrderLineRequest{},
-		Response:          &apiresource.PurchaseOrderLineDetail{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreatePurchaseOrderLineRequest) (*apiresource.PurchaseOrderLineDetail, *apierror.APIError) {
 			return svc.(PurchaseOrderSvc).CreatePurchaseOrderLine
 		},
-	}).WithDocSource(e)
+	})
 }

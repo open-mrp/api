@@ -55,7 +55,7 @@ func (r *SandboxSeeder) Seed(ctx context.Context, accountID string) error {
 
 	vars := map[string]string{}
 
-	for _, stmt := range strings.Split(query, ";") {
+	for stmt := range strings.SplitSeq(query, ";") {
 		stmt = strings.TrimSpace(stmt)
 		if stmt == "" {
 			continue

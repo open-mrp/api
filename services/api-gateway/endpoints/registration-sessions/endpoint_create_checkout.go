@@ -24,13 +24,11 @@ func (e *SetupBillingEndpoint) Materialize() *apiendpoint.APIEndpoint[*SetupBill
 		Method:            http.MethodPost,
 		Route:             "/v1/auth/registration-sessions/{session_id}/actions/setup-billing",
 		ContentType:       "application/json",
-		Request:           &SetupBillingRequest{},
-		Response:          &apiresource.SetupBillingResponse{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *SetupBillingRequest) (*apiresource.SetupBillingResponse, *apierror.APIError) {
 			return svc.(RegistrationSessionSvc).SetupBilling
 		},
-	}).WithDocSource(e)
+	})
 }

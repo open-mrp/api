@@ -18,13 +18,11 @@ func (e *ListSessionsEndpoint) Materialize() *apiendpoint.APIEndpoint[*apiresour
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/auth/registration-sessions",
-		Request:           &apiresource.PaginationRequest{},
-		Response:          &apiresource.List[apiresource.RegistrationSession]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *apiresource.PaginationRequest) (*apiresource.List[apiresource.RegistrationSession], *apierror.APIError) {
 			return svc.(RegistrationSessionSvc).ListSessions
 		},
-	}).WithDocSource(e)
+	})
 }

@@ -15,7 +15,7 @@ type RegisterRequest struct {
 	// Email address.
 	Email string `json:"email" validate:"required,custom_email"`
 	// User password.
-	Password string `json:"password" validate:"required,password"` // #nosec G117 - Struct field, not a hardcoded credential
+	Password string `json:"password" validate:"required,password" sensitive:"true"` // #nosec G117 - Struct field, not a hardcoded credential
 	// Full name.
 	Name string `json:"name" validate:"required"`
 	// When registering from a customer portal, scopes the magic-login link in the "already registered" email.
@@ -41,15 +41,10 @@ func (e *RegisterEndpoint) Materialize() *apiendpoint.APIEndpoint[*RegisterReque
 		Method:            http.MethodPost,
 		Route:             "/v1/auth/users",
 		ContentType:       "application/json",
-		Request:           &RegisterRequest{},
-		Response:          &apiresource.User{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RegisterRequest) (*apiresource.User, *apierror.APIError) {
 			return svc.(AuthSvc).Register
 		},
-		Extras: apiendpoint.APIEndpointExtras{
-			ShieldRequestBody: true,
-		},
-	}).WithDocSource(e)
+	})
 }

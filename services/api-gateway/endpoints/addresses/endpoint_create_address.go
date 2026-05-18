@@ -19,8 +19,6 @@ func (e *CreateAddressEndpoint) Materialize() *apiendpoint.APIEndpoint[*apireque
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/addresses",
-		Request:           &apirequest.AddressInput{},
-		Response:          &apiresource.Address{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
 		Preview:           true,
@@ -30,5 +28,5 @@ func (e *CreateAddressEndpoint) Materialize() *apiendpoint.APIEndpoint[*apireque
 		LocationFunc: func(resp *apiresource.Address) string {
 			return "/v1/sales/addresses/" + resp.ID
 		},
-	}).WithDocSource(e)
+	})
 }

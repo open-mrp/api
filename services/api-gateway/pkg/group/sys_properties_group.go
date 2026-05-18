@@ -39,10 +39,10 @@ func (*SysPropertiesEndpointGroup) Materialize(config *SysPropertiesEndpointGrou
 		ResourceType: &apiresource.SysProperty{},
 	}
 
-	listEndpoint := (&syspropertyep.ListSysPropertiesEndpoint{}).Materialize().WithService(inner, svc)
-	retrieveEndpoint := (&syspropertyep.RetrieveSysPropertyEndpoint{}).Materialize().WithService(inner, svc)
-	updateEndpoint := (&syspropertyep.UpdateSysPropertyEndpoint{}).Materialize().WithService(inner, svc)
-	getLatestValueEndpoint := (&syspropertyep.GetLatestSysPropertyValueEndpoint{}).Materialize().WithService(inner, svc)
+	listEndpoint := apiendpoint.From(&syspropertyep.ListSysPropertiesEndpoint{}).WithService(inner, svc)
+	retrieveEndpoint := apiendpoint.From(&syspropertyep.RetrieveSysPropertyEndpoint{}).WithService(inner, svc)
+	updateEndpoint := apiendpoint.From(&syspropertyep.UpdateSysPropertyEndpoint{}).WithService(inner, svc)
+	getLatestValueEndpoint := apiendpoint.From(&syspropertyep.GetLatestSysPropertyValueEndpoint{}).WithService(inner, svc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listEndpoint,

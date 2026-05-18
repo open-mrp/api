@@ -40,8 +40,6 @@ func (e *CreateRoleEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateRoleR
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/roles",
-		Request:           &CreateRoleRequest{},
-		Response:          &apiresource.Role{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
 		Preview:           true,
@@ -55,5 +53,5 @@ func (e *CreateRoleEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateRoleR
 			ObjectType: constants.ObjectTypeRole,
 			Fields:     []string{"owner", "owner.account", "permissions"},
 		}),
-	}).WithDocSource(e)
+	})
 }

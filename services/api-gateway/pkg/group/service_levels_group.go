@@ -39,11 +39,11 @@ func (*ServiceLevelsEndpointGroup) Materialize(config *ServiceLevelsEndpointGrou
 		ResourceType: &apiresource.ServiceLevel{},
 	}
 
-	listServiceLevelsEndpoint := (&servicelevelep.ListServiceLevelsEndpoint{}).Materialize().WithService(inner, serviceLevelSvc)
-	getServiceLevelEndpoint := (&servicelevelep.RetrieveServiceLevelEndpoint{}).Materialize().WithService(inner, serviceLevelSvc)
-	createServiceLevelEndpoint := (&servicelevelep.CreateServiceLevelEndpoint{}).Materialize().WithService(inner, serviceLevelSvc)
-	updateServiceLevelEndpoint := (&servicelevelep.UpdateServiceLevelEndpoint{}).Materialize().WithService(inner, serviceLevelSvc)
-	deleteServiceLevelEndpoint := (&servicelevelep.DeleteServiceLevelEndpoint{}).Materialize().WithService(inner, serviceLevelSvc)
+	listServiceLevelsEndpoint := apiendpoint.From(&servicelevelep.ListServiceLevelsEndpoint{}).WithService(inner, serviceLevelSvc)
+	getServiceLevelEndpoint := apiendpoint.From(&servicelevelep.RetrieveServiceLevelEndpoint{}).WithService(inner, serviceLevelSvc)
+	createServiceLevelEndpoint := apiendpoint.From(&servicelevelep.CreateServiceLevelEndpoint{}).WithService(inner, serviceLevelSvc)
+	updateServiceLevelEndpoint := apiendpoint.From(&servicelevelep.UpdateServiceLevelEndpoint{}).WithService(inner, serviceLevelSvc)
+	deleteServiceLevelEndpoint := apiendpoint.From(&servicelevelep.DeleteServiceLevelEndpoint{}).WithService(inner, serviceLevelSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listServiceLevelsEndpoint,

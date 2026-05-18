@@ -24,13 +24,11 @@ func (e *DeleteTransactionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Dele
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
 		Route:             "/v1/finance/transactions/{id}",
-		Request:           &DeleteTransactionRequest{},
-		Response:          &apiresource.TransactionDetail{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteTransactionRequest) (*apiresource.TransactionDetail, *apierror.APIError) {
 			return svc.(TransactionSvc).DeleteTransaction
 		},
-	}).WithDocSource(e)
+	})
 }

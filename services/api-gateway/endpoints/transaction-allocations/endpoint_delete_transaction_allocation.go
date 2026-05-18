@@ -24,13 +24,11 @@ func (e *DeleteTransactionAllocationEndpoint) Materialize() *apiendpoint.APIEndp
 		Method:            http.MethodDelete,
 		Route:             "/v1/finance/transaction-allocations/{id}",
 		ContentType:       "application/json",
-		Request:           &DeleteTransactionAllocationRequest{},
-		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteTransactionAllocationRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(TransactionAllocationSvc).DeleteTransactionAllocation
 		},
-	}).WithDocSource(e)
+	})
 }

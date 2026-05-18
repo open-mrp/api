@@ -283,7 +283,7 @@ func (r *transactionAllocationRepoImpl) ListOpenCredits(ctx context.Context, par
 		lim = 1000
 	}
 
-	var search interface{}
+	var search any
 	if params.SearchQuery != nil && *params.SearchQuery != "" {
 		search = *params.SearchQuery
 	}

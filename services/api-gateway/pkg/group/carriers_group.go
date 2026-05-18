@@ -39,14 +39,14 @@ func (*CarriersEndpointGroup) Materialize(config *CarriersEndpointGroupConfig) *
 		ResourceType: &apiresource.Carrier{},
 	}
 
-	listCarriersEndpoint := (&carrierep.ListCarriersEndpoint{}).Materialize().WithService(inner, carrierSvc)
-	getCarrierEndpoint := (&carrierep.RetrieveCarrierEndpoint{}).Materialize().WithService(inner, carrierSvc)
-	createCarrierEndpoint := (&carrierep.CreateCarrierEndpoint{}).Materialize().WithService(inner, carrierSvc)
-	updateCarrierEndpoint := (&carrierep.UpdateCarrierEndpoint{}).Materialize().WithService(inner, carrierSvc)
-	deleteCarrierEndpoint := (&carrierep.DeleteCarrierEndpoint{}).Materialize().WithService(inner, carrierSvc)
-	initiateOAuthEndpoint := (&carrierep.InitiateOAuthEndpoint{}).Materialize().WithService(inner, carrierSvc)
-	getOAuthStatusEndpoint := (&carrierep.GetOAuthStatusEndpoint{}).Materialize().WithService(inner, carrierSvc)
-	syncOptionsEndpoint := (&carrierep.SyncOptionsEndpoint{}).Materialize().WithService(inner, carrierSvc)
+	listCarriersEndpoint := apiendpoint.From(&carrierep.ListCarriersEndpoint{}).WithService(inner, carrierSvc)
+	getCarrierEndpoint := apiendpoint.From(&carrierep.RetrieveCarrierEndpoint{}).WithService(inner, carrierSvc)
+	createCarrierEndpoint := apiendpoint.From(&carrierep.CreateCarrierEndpoint{}).WithService(inner, carrierSvc)
+	updateCarrierEndpoint := apiendpoint.From(&carrierep.UpdateCarrierEndpoint{}).WithService(inner, carrierSvc)
+	deleteCarrierEndpoint := apiendpoint.From(&carrierep.DeleteCarrierEndpoint{}).WithService(inner, carrierSvc)
+	initiateOAuthEndpoint := apiendpoint.From(&carrierep.InitiateOAuthEndpoint{}).WithService(inner, carrierSvc)
+	getOAuthStatusEndpoint := apiendpoint.From(&carrierep.GetOAuthStatusEndpoint{}).WithService(inner, carrierSvc)
+	syncOptionsEndpoint := apiendpoint.From(&carrierep.SyncOptionsEndpoint{}).WithService(inner, carrierSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listCarriersEndpoint,

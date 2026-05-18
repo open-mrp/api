@@ -1,6 +1,8 @@
 package accountintegrationep
 
 import (
+	"context"
+
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -23,7 +25,7 @@ func AccountIntegrationPresenter(ai *pb.AccountIntegrationInfo) apiresource.Acco
 	}
 }
 
-func AccountIntegrationListPresenter(resp *pb.ListAccountIntegrationsResponse) *apiresource.List[apiresource.AccountIntegration] {
+func AccountIntegrationListPresenter(ctx context.Context, resp *pb.ListAccountIntegrationsResponse) *apiresource.List[apiresource.AccountIntegration] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.AccountIntegration](nil, apiresource.PageInfo{})
 	}
@@ -33,5 +35,5 @@ func AccountIntegrationListPresenter(resp *pb.ListAccountIntegrationsResponse) *
 		integrations[i] = AccountIntegrationPresenter(ai)
 	}
 
-	return apiresource.NewList(integrations, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(integrations, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }

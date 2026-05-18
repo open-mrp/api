@@ -39,12 +39,12 @@ func (*SuppliersEndpointGroup) Materialize(config *SuppliersEndpointGroupConfig)
 		ResourceType: &apiresource.SupplierDetail{},
 	}
 
-	listEndpoint := (&supplierep.ListSuppliersEndpoint{}).Materialize().WithService(inner, supplierSvc)
-	retrieveEndpoint := (&supplierep.RetrieveSupplierEndpoint{}).Materialize().WithService(inner, supplierSvc)
-	createEndpoint := (&supplierep.CreateSupplierEndpoint{}).Materialize().WithService(inner, supplierSvc)
-	updateEndpoint := (&supplierep.UpdateSupplierEndpoint{}).Materialize().WithService(inner, supplierSvc)
-	deleteEndpoint := (&supplierep.DeleteSupplierEndpoint{}).Materialize().WithService(inner, supplierSvc)
-	bulkDeleteEndpoint := (&supplierep.BulkDeleteSuppliersEndpoint{}).Materialize().WithService(inner, supplierSvc)
+	listEndpoint := apiendpoint.From(&supplierep.ListSuppliersEndpoint{}).WithService(inner, supplierSvc)
+	retrieveEndpoint := apiendpoint.From(&supplierep.RetrieveSupplierEndpoint{}).WithService(inner, supplierSvc)
+	createEndpoint := apiendpoint.From(&supplierep.CreateSupplierEndpoint{}).WithService(inner, supplierSvc)
+	updateEndpoint := apiendpoint.From(&supplierep.UpdateSupplierEndpoint{}).WithService(inner, supplierSvc)
+	deleteEndpoint := apiendpoint.From(&supplierep.DeleteSupplierEndpoint{}).WithService(inner, supplierSvc)
+	bulkDeleteEndpoint := apiendpoint.From(&supplierep.BulkDeleteSuppliersEndpoint{}).WithService(inner, supplierSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listEndpoint,

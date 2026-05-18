@@ -41,8 +41,6 @@ func (e *CreateLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateL
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/locations",
-		Request:           &CreateLocationRequest{},
-		Response:          &apiresource.Location{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
 		Preview:           true,
@@ -56,5 +54,5 @@ func (e *CreateLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateL
 			ObjectType: constants.ObjectTypeLocation,
 			Fields:     []string{"parent", "children"},
 		}),
-	}).WithDocSource(e)
+	})
 }

@@ -45,8 +45,6 @@ func (e *UpdateUnitGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*Update
 		Method:            http.MethodPatch,
 		Route:             "/v1/catalog/unit-groups/{id}",
 		ContentType:       "application/json",
-		Request:           &UpdateUnitGroupRequest{},
-		Response:          &apiresource.UnitGroup{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -57,5 +55,5 @@ func (e *UpdateUnitGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*Update
 			ObjectType: constants.ObjectTypeUnitGroup,
 			Fields:     []string{"owner", "owner.account", "base_unit", "associated_units"},
 		}),
-	}).WithDocSource(e)
+	})
 }

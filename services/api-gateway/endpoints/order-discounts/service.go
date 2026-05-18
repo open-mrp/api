@@ -65,7 +65,7 @@ func (m *orderDiscountSvcImpl) ListOrderDiscounts(ctx context.Context, req *List
 		return nil, apiErr
 	}
 
-	return OrderDiscountListPresenter(resp), nil
+	return OrderDiscountListPresenter(ctx, resp), nil
 }
 
 func (m *orderDiscountSvcImpl) GetOrderDiscount(ctx context.Context, req *RetrieveOrderDiscountRequest) (*apiresource.OrderDiscount, *apierror.APIError) {

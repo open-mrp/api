@@ -27,8 +27,6 @@ func (e *RetrieveConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Re
 		Method:            http.MethodGet,
 		Route:             "/v1/operations/production-steps/{production_step_id}/consumptions/{id}",
 		ContentType:       "application/json",
-		Request:           &RetrieveConsumptionRequest{},
-		Response:          &apiresource.Consumption{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -39,5 +37,5 @@ func (e *RetrieveConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Re
 			ObjectType: constants.ObjectTypeConsumption,
 			Fields:     []string{"consumed_item"},
 		}),
-	}).WithDocSource(e)
+	})
 }

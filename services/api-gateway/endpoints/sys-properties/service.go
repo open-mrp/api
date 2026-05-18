@@ -62,7 +62,7 @@ func (m *sysPropertySvcImpl) ListSysProperties(ctx context.Context, req *ListSys
 		return nil, apiErr
 	}
 
-	return SysPropertyListPresenter(resp), nil
+	return SysPropertyListPresenter(ctx, resp), nil
 }
 
 func (m *sysPropertySvcImpl) GetSysProperty(ctx context.Context, req *RetrieveSysPropertyRequest) (*apiresource.SysProperty, *apierror.APIError) {

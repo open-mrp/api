@@ -79,7 +79,7 @@ func (m *productionStepSvcImpl) ListProductionSteps(ctx context.Context, req *Li
 		return nil, apiErr
 	}
 
-	return ProductionStepListPresenter(resp), nil
+	return ProductionStepListPresenter(ctx, resp), nil
 }
 
 func (m *productionStepSvcImpl) GetProductionStep(ctx context.Context, req *RetrieveProductionStepRequest) (*apiresource.ProductionStep, *apierror.APIError) {

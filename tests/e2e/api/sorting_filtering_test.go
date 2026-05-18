@@ -116,15 +116,11 @@ func TestSortingFiltering_FilteredPaginationConsistency(t *testing.T) {
 	var page1 ListResponse
 	require.NoError(t, json.Unmarshal(page1Body, &page1))
 
-	if !page1.PageInfo.HasNextPage || page1.PageInfo.NextCursor == nil {
+	if !page1.PageInfo.HasNextPage || page1.PageInfo.NextPageURL == nil {
 		t.Skip("Not enough data to test filtered pagination")
 	}
 
-	// Get page 2.
-	page2Status, page2Body, err := apiClient.GetListRaw(customersPath, url.Values{
-		"limit":  {"1"},
-		"cursor": {*page1.PageInfo.NextCursor},
-	})
+	page2Status, page2Body, err := apiClient.GetListRawFromPageURL(page1.PageInfo.NextPageURL)
 	require.NoError(t, err)
 	requireStatus(t, 200, page2Status, page2Body)
 

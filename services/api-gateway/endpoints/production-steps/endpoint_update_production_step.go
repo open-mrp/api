@@ -46,13 +46,11 @@ func (e *UpdateProductionStepEndpoint) Materialize() *apiendpoint.APIEndpoint[*U
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/production-steps/{id}",
-		Request:           &UpdateProductionStepRequest{},
-		Response:          &apiresource.ProductionStep{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateProductionStepRequest) (*apiresource.ProductionStep, *apierror.APIError) {
 			return svc.(ProductionStepSvc).UpdateProductionStep
 		},
-	}).WithDocSource(e)
+	})
 }

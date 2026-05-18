@@ -24,13 +24,11 @@ func (e *RetrieveUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*RetrieveU
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/users/{id}",
-		Request:           &RetrieveUserRequest{},
-		Response:          &apiresource.User{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveUserRequest) (*apiresource.User, *apierror.APIError) {
 			return svc.(UserSvc).GetUser
 		},
-	}).WithDocSource(e)
+	})
 }

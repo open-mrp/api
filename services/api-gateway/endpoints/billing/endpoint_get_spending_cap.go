@@ -18,13 +18,11 @@ func (e *GetSpendingCapEndpoint) Materialize() *apiendpoint.APIEndpoint[*apireso
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/billing/spending-cap",
-		Request:           &apiresource.EmptyResource{},
-		Response:          &apiresource.SpendingCapResponse{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *apiresource.EmptyResource) (*apiresource.SpendingCapResponse, *apierror.APIError) {
 			return svc.(BillingSvc).GetSpendingCap
 		},
-	}).WithDocSource(e)
+	})
 }

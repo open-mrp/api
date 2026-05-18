@@ -67,7 +67,7 @@ func (m *volumeDiscountSvcImpl) ListVolumeDiscounts(ctx context.Context, req *Li
 		return nil, apiErr
 	}
 
-	return VolumeDiscountListPresenter(resp), nil
+	return VolumeDiscountListPresenter(ctx, resp), nil
 }
 
 func (m *volumeDiscountSvcImpl) GetVolumeDiscount(ctx context.Context, req *RetrieveVolumeDiscountRequest) (*apiresource.VolumeDiscount, *apierror.APIError) {

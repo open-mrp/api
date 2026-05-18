@@ -2,14 +2,18 @@ package apiendpoint
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/augno/api/services/api-gateway/internal/header"
+	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/redact"
 )
 
 type stubRequest struct {
@@ -130,6 +134,124 @@ func TestExecute_RejectsUnknownQueryParameter(t *testing.T) {
 
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("expected status %d, got %d", http.StatusBadRequest, w.Code)
+	}
+}
+
+func TestExecute_redactsSensitiveRequestBodyIntoRequestLog(t *testing.T) {
+	t.Parallel()
+	type reqSens struct {
+		Name   string `json:"name"`
+		Secret string `json:"secret" sensitive:"true"` // #nosec G101 — test fixture
+	}
+	ep := &APIEndpoint[*reqSens, *stubResponse]{
+		Method:            http.MethodPost,
+		Route:             "/v1/things",
+		ContentType:       "application/json",
+		SuccessStatusCode: http.StatusOK,
+		ServiceHandler: func(svc any) func(context.Context, *reqSens) (*stubResponse, *apierror.APIError) {
+			return func(ctx context.Context, r *reqSens) (*stubResponse, *apierror.APIError) {
+				return &stubResponse{ID: "th_1", Name: r.Name}, nil
+			}
+		},
+	}
+	ep.boundServiceHandler = ep.ServiceHandler(nil)
+	ep.sensitiveReqPaths = redact.SensitiveFields(reflect.TypeFor[*reqSens]())
+
+	rl := &appctx.RequestLog{ID: "rq_test123"}
+	ctx := appctx.WithRequestLog(context.Background(), rl)
+	body := strings.NewReader(`{"name":"alice","secret":"topsecret"}`)
+	r := httptest.NewRequest(http.MethodPost, "/v1/things", body)
+	r.Header.Set("Content-Type", "application/json")
+	r = r.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	ep.Execute(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	if rl.BodyJSON == nil {
+		t.Fatal("expected BodyJSON on request log")
+	}
+	var got map[string]any
+	if err := json.Unmarshal([]byte(*rl.BodyJSON), &got); err != nil {
+		t.Fatalf("BodyJSON: %v", err)
+	}
+	if got["name"] != "alice" || got["secret"] != "****" {
+		t.Fatalf("BodyJSON %v", got)
+	}
+}
+
+func TestExecute_malformedJSONWithSensitivePaths_omitsBodyJSON(t *testing.T) {
+	t.Parallel()
+	type reqSens struct {
+		Secret string `json:"secret" sensitive:"true"` // #nosec G101 — test fixture
+	}
+	ep := &APIEndpoint[*reqSens, *stubResponse]{
+		Method:            http.MethodPost,
+		Route:             "/v1/things",
+		ContentType:       "application/json",
+		SuccessStatusCode: http.StatusOK,
+		ServiceHandler: func(svc any) func(context.Context, *reqSens) (*stubResponse, *apierror.APIError) {
+			return func(context.Context, *reqSens) (*stubResponse, *apierror.APIError) {
+				return &stubResponse{ID: "th_1"}, nil
+			}
+		},
+	}
+	ep.boundServiceHandler = ep.ServiceHandler(nil)
+	ep.sensitiveReqPaths = redact.SensitiveFields(reflect.TypeFor[*reqSens]())
+
+	rl := &appctx.RequestLog{ID: "rq_ab"}
+	ctx := appctx.WithRequestLog(context.Background(), rl)
+	body := strings.NewReader(`{"secret":"x"`) // truncated JSON
+	r := httptest.NewRequest(http.MethodPost, "/v1/things", body)
+	r.Header.Set("Content-Type", "application/json")
+	r = r.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	ep.Execute(w, r)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected validation error status, got %d", w.Code)
+	}
+	if rl.BodyJSON != nil {
+		t.Fatalf("malformed payload must not populate BodyJSON when redaction fails; got %q", *rl.BodyJSON)
+	}
+}
+
+type stubResponseWithSecret struct {
+	Name   string `json:"name"`
+	Secret string `json:"secret" sensitive:"true"` // #nosec G101 — test fixture
+}
+
+func TestExecute_populatesSensitiveResponseFieldsOnRequestLog(t *testing.T) {
+	t.Parallel()
+	ep := &APIEndpoint[*stubRequest, *stubResponseWithSecret]{
+		Method:            http.MethodGet,
+		Route:             "/v1/things",
+		SuccessStatusCode: http.StatusOK,
+		ServiceHandler: func(svc any) func(context.Context, *stubRequest) (*stubResponseWithSecret, *apierror.APIError) {
+			return func(context.Context, *stubRequest) (*stubResponseWithSecret, *apierror.APIError) {
+				return &stubResponseWithSecret{Name: "ok", Secret: "raw"}, nil
+			}
+		},
+	}
+	ep.boundServiceHandler = ep.ServiceHandler(nil)
+	ep.sensitiveRespPaths = redact.SensitiveFields(reflect.TypeFor[*stubResponseWithSecret]())
+
+	rl := &appctx.RequestLog{ID: "rq_z"}
+	ctx := appctx.WithRequestLog(context.Background(), rl)
+	r := httptest.NewRequest(http.MethodGet, "/v1/things", nil)
+	r = r.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	ep.Execute(w, r)
+
+	if !rl.SensitiveResponseFields["secret"] || len(rl.SensitiveResponseFields) != 1 {
+		t.Fatalf("SensitiveResponseFields = %#v", rl.SensitiveResponseFields)
+	}
+	if w.Code != http.StatusOK {
+		t.Fatalf("got %d", w.Code)
 	}
 }
 

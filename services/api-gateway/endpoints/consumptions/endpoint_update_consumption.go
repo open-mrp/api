@@ -49,8 +49,6 @@ func (e *UpdateConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upda
 		Method:            http.MethodPatch,
 		Route:             "/v1/operations/production-steps/{production_step_id}/consumptions/{id}",
 		ContentType:       "application/json",
-		Request:           &UpdateConsumptionRequest{},
-		Response:          &apiresource.Consumption{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -61,5 +59,5 @@ func (e *UpdateConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upda
 			ObjectType: constants.ObjectTypeConsumption,
 			Fields:     []string{"consumed_item"},
 		}),
-	}).WithDocSource(e)
+	})
 }

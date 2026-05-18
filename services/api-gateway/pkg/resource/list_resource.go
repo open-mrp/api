@@ -2,12 +2,12 @@ package apiresource
 
 import "github.com/augno/api/shared/constants"
 
-// PageInfo contains cursor-based pagination metadata.
+// PageInfo contains URL-based pagination metadata.
 type PageInfo struct {
-	// Cursor to fetch the next page, `null` if no more pages.
-	NextCursor *string `json:"next_cursor"`
-	// Cursor to fetch the previous page, `null` if on the first page.
-	PrevCursor *string `json:"prev_cursor"`
+	// URL to fetch the next page, `null` if no more pages.
+	NextPageURL *string `json:"next_page_url"`
+	// URL to fetch the previous page, `null` if on the first page.
+	PreviousPageURL *string `json:"previous_page_url"`
 	// Whether more results exist after this page.
 	HasNextPage bool `json:"has_next_page"`
 	// Whether results exist before this page.

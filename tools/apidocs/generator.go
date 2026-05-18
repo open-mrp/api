@@ -90,13 +90,12 @@ func generate(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOn
 			}
 
 			// Handle Parameters and Request Body
-			reqVal := specField.FieldByName("Request")
-			reqType := reqVal.Type()
-			if reqType.Kind() != reflect.Interface {
-				origReqType := reqType
-				if reqType.Kind() == reflect.Pointer {
-					reqType = reqType.Elem()
-				}
+			origReqType := e.GetRequestType()
+			reqType := origReqType
+			if reqType.Kind() == reflect.Pointer {
+				reqType = reqType.Elem()
+			}
+			{
 
 				hasJSONFields := false
 				if reqType.Kind() == reflect.Struct {
@@ -239,8 +238,7 @@ func generate(groups []apiendpoint.APIEndpointGroup, outputPath string, publicOn
 			successStatusCodeStr := fmt.Sprintf("%d", successStatusCode)
 
 			// Handle Response
-			respVal := specField.FieldByName("Response")
-			respType := respVal.Type()
+			respType := e.GetResponseType()
 			schemaName := getCleanTypeName(respType)
 			if schemaName != "" && schemaName != "EmptyResource" {
 				if _, ok := spec.Components.Schemas[schemaName]; !ok {
@@ -500,10 +498,10 @@ func generateSchema(t reflect.Type, components *Components, docReader *DocReader
 		example = map[string]any{
 			"object": "list",
 			"page_info": map[string]any{
-				"next_cursor":   nextCursor,
-				"prev_cursor":   nil,
-				"has_next_page": true,
-				"has_prev_page": false,
+				"next_page_url":     nextCursor,
+				"previous_page_url": nil,
+				"has_next_page":     true,
+				"has_prev_page":     false,
 			},
 			"data": dataArray,
 		}

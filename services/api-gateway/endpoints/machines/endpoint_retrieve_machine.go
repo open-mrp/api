@@ -25,8 +25,6 @@ func (e *RetrieveMachineEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retrie
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/machines/{id}",
-		Request:           &RetrieveMachineRequest{},
-		Response:          &apiresource.Machine{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -37,5 +35,5 @@ func (e *RetrieveMachineEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retrie
 			ObjectType: constants.ObjectTypeMachine,
 			Fields:     []string{"department"},
 		}),
-	}).WithDocSource(e)
+	})
 }

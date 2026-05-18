@@ -67,8 +67,6 @@ func (e *CreateUnitGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*Create
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/unit-groups",
-		Request:           &CreateUnitGroupRequest{},
-		Response:          &apiresource.UnitGroup{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
 		Preview:           true,
@@ -82,5 +80,5 @@ func (e *CreateUnitGroupEndpoint) Materialize() *apiendpoint.APIEndpoint[*Create
 			ObjectType: constants.ObjectTypeUnitGroup,
 			Fields:     []string{"owner", "owner.account", "base_unit", "associated_units"},
 		}),
-	}).WithDocSource(e)
+	})
 }

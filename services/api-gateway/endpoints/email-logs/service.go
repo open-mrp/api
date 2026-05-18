@@ -63,7 +63,7 @@ func (m *emailLogSvcImpl) ListEmailLogs(ctx context.Context, req *ListEmailLogsR
 		return nil, apiErr
 	}
 
-	return EmailLogListPresenter(resp), nil
+	return EmailLogListPresenter(ctx, resp), nil
 }
 
 func (m *emailLogSvcImpl) GetEmailLog(ctx context.Context, req *RetrieveEmailLogRequest) (*apiresource.EmailLog, *apierror.APIError) {

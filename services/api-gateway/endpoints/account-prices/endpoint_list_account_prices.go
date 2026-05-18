@@ -25,13 +25,11 @@ func (e *ListAccountPricesEndpoint) Materialize() *apiendpoint.APIEndpoint[*List
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/account-prices",
-		Request:           &ListAccountPricesRequest{},
-		Response:          &apiresource.List[apiresource.AccountPrice]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListAccountPricesRequest) (*apiresource.List[apiresource.AccountPrice], *apierror.APIError) {
 			return svc.(AccountPriceSvc).ListAccountPrices
 		},
-	}).WithDocSource(e)
+	})
 }

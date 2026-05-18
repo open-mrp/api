@@ -164,10 +164,9 @@ func TestCarriers_ListPagination(t *testing.T) {
 		return
 	}
 
-	list2, _, err := apiClient.GetList(carriersPath, url.Values{
-		"limit":  {"1"},
-		"cursor": {*list1.PageInfo.NextCursor},
-	})
+	require.NotNil(t, list1.PageInfo.NextPageURL)
+
+	list2, _, err := apiClient.GetListFromPageURL(list1.PageInfo.NextPageURL)
 	require.NoError(t, err)
 	assert.Len(t, list2.Data, 1)
 

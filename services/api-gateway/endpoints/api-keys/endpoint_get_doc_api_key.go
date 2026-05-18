@@ -19,8 +19,6 @@ func (e *GetDocAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*apiresour
 		Method:            http.MethodPost,
 		Route:             "/v1/auth/api-keys/actions/fetch-doc-api-key",
 		ContentType:       "application/json",
-		Request:           &apiresource.EmptyResource{},
-		Response:          &apiresource.CreatedAPIKey{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *apiresource.EmptyResource) (*apiresource.CreatedAPIKey, *apierror.APIError) {
@@ -33,8 +31,5 @@ func (e *GetDocAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*apiresour
 			Fields:     []string{"role", "role.permissions"},
 			PathPrefix: "api_key_info",
 		}),
-		Extras: apiendpoint.APIEndpointExtras{
-			ShieldResponseBody: true,
-		},
-	}).WithDocSource(e)
+	})
 }

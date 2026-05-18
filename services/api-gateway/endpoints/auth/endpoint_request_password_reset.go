@@ -35,12 +35,10 @@ func (e *RequestPasswordResetEndpoint) Materialize() *apiendpoint.APIEndpoint[*R
 		Method:            http.MethodPost,
 		Route:             "/v1/auth/passwords/actions/request-reset",
 		ContentType:       "application/json",
-		Request:           &RequestPasswordResetRequest{},
-		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusAccepted,
 		Public:            false,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RequestPasswordResetRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(AuthSvc).RequestPasswordReset
 		},
-	}).WithDocSource(e)
+	})
 }

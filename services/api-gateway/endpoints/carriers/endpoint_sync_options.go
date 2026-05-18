@@ -24,13 +24,11 @@ func (e *SyncOptionsEndpoint) Materialize() *apiendpoint.APIEndpoint[*SyncOption
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/carriers/{id}/actions/sync-options",
-		Request:           &SyncOptionsRequest{},
-		Response:          &apiresource.Carrier{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *SyncOptionsRequest) (*apiresource.Carrier, *apierror.APIError) {
 			return svc.(CarrierSvc).SyncOptions
 		},
-	}).WithDocSource(e)
+	})
 }

@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"maps"
 
 	"github.com/augno/api/services/core-service/internal/domain"
 	"github.com/augno/api/shared/contracts"
@@ -39,9 +40,7 @@ func tenancyAccountPlanToProto(p *domain.TenancyAccountPlan) *pb.TenancyAccountP
 	}
 
 	features := make(map[string]bool, len(p.Features))
-	for key, enabled := range p.Features {
-		features[key] = enabled
-	}
+	maps.Copy(features, p.Features)
 
 	proto := &pb.TenancyAccountPlanProto{
 		TypeId:       p.TypeID,

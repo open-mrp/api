@@ -50,13 +50,11 @@ func (e *UpdateItemInventoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Up
 		Method:            http.MethodPatch,
 		Route:             "/v1/catalog/items/{id}/inventory",
 		ContentType:       "application/json",
-		Request:           &UpdateItemInventoryRequest{},
-		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateItemInventoryRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(ItemSvc).UpdateItemInventory
 		},
-	}).WithDocSource(e)
+	})
 }

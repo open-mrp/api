@@ -25,13 +25,11 @@ func (e *ListSalesTargetsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListS
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/account-users/{id}/sales-targets",
-		Request:           &ListSalesTargetsRequest{},
-		Response:          &apiresource.List[apiresource.SalesTarget]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListSalesTargetsRequest) (*apiresource.List[apiresource.SalesTarget], *apierror.APIError) {
 			return svc.(SalesTargetSvc).ListSalesTargets
 		},
-	}).WithDocSource(e)
+	})
 }

@@ -211,9 +211,11 @@ func (r *partRepoImpl) List(ctx context.Context, params domain.ListPartsParams) 
 	ctx, span := partRepoTracer.Start(ctx, "repository.part.list")
 	defer span.End()
 
-	searchQuery := gosql.NullString{}
-	if params.Query != nil && *params.Query != "" {
-		searchQuery = gosql.NullString{String: "%" + *params.Query + "%", Valid: true}
+	catSearch := db.NewCatalogSearch(params.Query)
+	searchQuery := catSearch.Contains
+	searchRankEnabled := catSearch.Contains.Valid
+	partSearchRank := func(p *domain.Part) int32 {
+		return db.CatalogSearchRank(p.Item.SKU, catSearch)
 	}
 
 	includeCategoryFilter := len(params.CategoryIDs) > 0
@@ -255,6 +257,9 @@ func (r *partRepoImpl) List(ctx context.Context, params domain.ListPartsParams) 
 				StartDate:              startDate,
 				EndDate:                endDate,
 				SearchQuery:            searchQuery,
+				SearchExact:            catSearch.Exact,
+				SearchPrefix:           catSearch.Prefix,
+				CursorMatchTier:        db.NullTierInt64Param(cur.MatchTier),
 				CursorCreatedAt:        cur.OccurredAt,
 				CursorID:               cur.ID,
 				Limit:                  params.Limit + 1,
@@ -266,7 +271,7 @@ func (r *partRepoImpl) List(ctx context.Context, params domain.ListPartsParams) 
 			for i, row := range rows {
 				parts[i] = mapPartBackwardBaseRow(row)
 			}
-			result, pageInfo := pagination.BuildPageString(parts, params.Limit, cursorDir, partItemCreatedAt, partItemID)
+			result, pageInfo := pagination.BuildPageStringWithSearchRank(parts, params.Limit, cursorDir, searchRankEnabled, partItemCreatedAt, partItemID, partSearchRank)
 			if apiErr := applyPartStitches(ctx, r.queries, result, params.Includes); apiErr != nil {
 				return nil, tracing.Trace(span, apiErr)
 			}
@@ -283,7 +288,10 @@ func (r *partRepoImpl) List(ctx context.Context, params domain.ListPartsParams) 
 			StartDate:              startDate,
 			EndDate:                endDate,
 			SearchQuery:            searchQuery,
+			SearchExact:            catSearch.Exact,
+			SearchPrefix:           catSearch.Prefix,
 			CursorCreatedAt:        gosql.NullTime{Time: cur.OccurredAt, Valid: true},
+			CursorMatchTier:        db.NullTierInt64Param(cur.MatchTier),
 			CursorID:               gosql.NullString{String: cur.ID, Valid: true},
 			Limit:                  params.Limit + 1,
 		})
@@ -294,7 +302,7 @@ func (r *partRepoImpl) List(ctx context.Context, params domain.ListPartsParams) 
 		for i, row := range rows {
 			parts[i] = mapPartForwardBaseRow(row)
 		}
-		result, pageInfo := pagination.BuildPageString(parts, params.Limit, cursorDir, partItemCreatedAt, partItemID)
+		result, pageInfo := pagination.BuildPageStringWithSearchRank(parts, params.Limit, cursorDir, searchRankEnabled, partItemCreatedAt, partItemID, partSearchRank)
 		if apiErr := applyPartStitches(ctx, r.queries, result, params.Includes); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
@@ -311,6 +319,8 @@ func (r *partRepoImpl) List(ctx context.Context, params domain.ListPartsParams) 
 		StartDate:              startDate,
 		EndDate:                endDate,
 		SearchQuery:            searchQuery,
+		SearchExact:            catSearch.Exact,
+		SearchPrefix:           catSearch.Prefix,
 		Limit:                  params.Limit + 1,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
@@ -320,7 +330,7 @@ func (r *partRepoImpl) List(ctx context.Context, params domain.ListPartsParams) 
 	for i, row := range rows {
 		parts[i] = mapPartForwardBaseRow(row)
 	}
-	result, pageInfo := pagination.BuildPageString(parts, params.Limit, cursorDir, partItemCreatedAt, partItemID)
+	result, pageInfo := pagination.BuildPageStringWithSearchRank(parts, params.Limit, cursorDir, searchRankEnabled, partItemCreatedAt, partItemID, partSearchRank)
 	if apiErr := applyPartStitches(ctx, r.queries, result, params.Includes); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -406,10 +416,9 @@ func (r *partRepoImpl) Export(ctx context.Context, params domain.ExportPartsPara
 	ctx, span := partRepoTracer.Start(ctx, "repository.part.export")
 	defer span.End()
 
-	searchQuery := gosql.NullString{}
-	if params.Query != nil && *params.Query != "" {
-		searchQuery = gosql.NullString{String: "%" + *params.Query + "%", Valid: true}
-	}
+	catSearch := db.NewCatalogSearch(params.Query)
+	searchQuery := catSearch.Contains
+
 	includeCategoryFilter := len(params.CategoryIDs) > 0
 	includeAttributeFilter := len(params.AttributeIDs) > 0
 
@@ -433,6 +442,8 @@ func (r *partRepoImpl) Export(ctx context.Context, params domain.ExportPartsPara
 	rows, err := r.queries.ExportPartsWithFilters(ctx, sqlc.ExportPartsWithFiltersParams{
 		AccountID:              params.AccountID,
 		SearchQuery:            searchQuery,
+		SearchExact:            catSearch.Exact,
+		SearchPrefix:           catSearch.Prefix,
 		IncludeCategoryFilter:  includeCategoryFilter,
 		CategoryIds:            categoryIDs,
 		IncludeAttributeFilter: includeAttributeFilter,

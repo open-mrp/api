@@ -1,6 +1,7 @@
 package apikeyep
 
 import (
+	"context"
 	"sort"
 
 	"github.com/augno/api/services/api-gateway/internal/grpc"
@@ -83,7 +84,7 @@ func APIKeyDocPresenter(resp *pb.GetOrCreateDocAPIKeyResponse, permissions map[s
 	}
 }
 
-func APIKeyListPresenter(resp *pb.ListAPIKeysResponse, permResolver func(roleID *string) map[string]bool) *apiresource.List[apiresource.APIKey] {
+func APIKeyListPresenter(ctx context.Context, resp *pb.ListAPIKeysResponse, permResolver func(roleID *string) map[string]bool) *apiresource.List[apiresource.APIKey] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.APIKey](nil, apiresource.PageInfo{})
 	}
@@ -93,5 +94,5 @@ func APIKeyListPresenter(resp *pb.ListAPIKeysResponse, permResolver func(roleID 
 		keys[i] = APIKeyPresenter(pbKey, permResolver(pbKey.RoleId))
 	}
 
-	return apiresource.NewList(keys, grpc.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(keys, grpc.MapProtoPageInfo(ctx, resp.PageInfo))
 }

@@ -55,8 +55,8 @@ func collectBodyFieldNames(rt reflect.Type) map[string]bool {
 }
 
 func collectBodyFieldNamesFromType(rt reflect.Type, names map[string]bool) {
-	for i := 0; i < rt.NumField(); i++ {
-		sf := rt.Field(i)
+	for sf := range rt.Fields() {
+		sf := sf
 		if sf.PkgPath != "" {
 			continue
 		}

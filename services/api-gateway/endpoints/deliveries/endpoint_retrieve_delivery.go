@@ -24,13 +24,11 @@ func (e *RetrieveDeliveryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retri
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/deliveries/{id}",
-		Request:           &RetrieveDeliveryRequest{},
-		Response:          &apiresource.Delivery{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveDeliveryRequest) (*apiresource.Delivery, *apierror.APIError) {
 			return svc.(DeliverySvc).GetDelivery
 		},
-	}).WithDocSource(e)
+	})
 }

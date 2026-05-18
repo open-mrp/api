@@ -40,13 +40,11 @@ func (e *UpdateMachineEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateMa
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/machines/{id}",
-		Request:           &UpdateMachineRequest{},
-		Response:          &apiresource.Machine{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateMachineRequest) (*apiresource.Machine, *apierror.APIError) {
 			return svc.(MachineSvc).UpdateMachine
 		},
-	}).WithDocSource(e)
+	})
 }

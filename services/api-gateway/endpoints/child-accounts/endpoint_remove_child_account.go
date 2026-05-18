@@ -24,13 +24,11 @@ func (e *RemoveChildAccountEndpoint) Materialize() *apiendpoint.APIEndpoint[*Rem
 		Method:            http.MethodDelete,
 		Route:             "/v1/identity/child-accounts/{child_account_id}",
 		ContentType:       "application/json",
-		Request:           &RemoveChildAccountRequest{},
-		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RemoveChildAccountRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(ChildAccountSvc).RemoveChildAccount
 		},
-	}).WithDocSource(e)
+	})
 }

@@ -65,7 +65,7 @@ func (m *departmentSvcImpl) ListDepartments(ctx context.Context, req *ListDepart
 		return nil, apiErr
 	}
 
-	return DepartmentListPresenter(resp), nil
+	return DepartmentListPresenter(ctx, resp), nil
 }
 
 func (m *departmentSvcImpl) GetDepartment(ctx context.Context, req *RetrieveDepartmentRequest) (*apiresource.Department, *apierror.APIError) {

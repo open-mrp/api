@@ -124,6 +124,8 @@ teardown-all-stripe: ## Cancel all subscriptions and delete all customers in Str
 test: ## Run tests
 	@echo "Running tests..."
 	@time go test ./...
+	@echo "Running tools tests..."
+	@cd tools && go test ./...
 
 test-e2e: ## Run E2E tests against a running stack (requires e2e-up)
 	@echo "Running E2E tests..."
@@ -142,6 +144,8 @@ test-sql-prepare-smoke: ## Run sqlc Prepare smoke tests for MySQL services (requ
 test-verbose: ## Run tests with verbose output
 	@echo "Running tests with verbose output..."
 	@time go test -v ./...
+	@echo "Running tools tests (verbose)..."
+	@cd tools && go test -v ./...
 
 install-tools: ## Install required development tools
 	@go install github.com/bufbuild/buf/cmd/buf@$(call tool-version,github.com/bufbuild/buf/cmd/buf)

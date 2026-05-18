@@ -1,6 +1,8 @@
 package volumediscountep
 
 import (
+	"context"
+
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -122,7 +124,7 @@ func VolumeDiscountPresenter(d *pb.VolumeDiscountInfo) apiresource.VolumeDiscoun
 	}
 }
 
-func VolumeDiscountListPresenter(resp *pb.ListVolumeDiscountsResponse) *apiresource.List[apiresource.VolumeDiscount] {
+func VolumeDiscountListPresenter(ctx context.Context, resp *pb.ListVolumeDiscountsResponse) *apiresource.List[apiresource.VolumeDiscount] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.VolumeDiscount](nil, apiresource.PageInfo{})
 	}
@@ -132,5 +134,5 @@ func VolumeDiscountListPresenter(resp *pb.ListVolumeDiscountsResponse) *apiresou
 		discounts[i] = VolumeDiscountPresenter(d)
 	}
 
-	return apiresource.NewList(discounts, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(discounts, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }

@@ -33,8 +33,6 @@ func (e *RevokeRefreshTokenEndpoint) Materialize() *apiendpoint.APIEndpoint[*Rev
 		Method:            http.MethodDelete,
 		Route:             "/v1/auth/refresh-tokens",
 		ContentType:       "application/json",
-		Request:           &RevokeRefreshTokenRequest{},
-		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RevokeRefreshTokenRequest) (*apiresource.EmptyResource, *apierror.APIError) {
@@ -43,5 +41,5 @@ func (e *RevokeRefreshTokenEndpoint) Materialize() *apiendpoint.APIEndpoint[*Rev
 		Extras: apiendpoint.APIEndpointExtras{
 			SkipRequestLogging: true,
 		},
-	}).WithDocSource(e)
+	})
 }

@@ -75,7 +75,7 @@ func (s *supplierSvcImpl) ListSuppliers(ctx context.Context, req *ListSuppliersR
 		return nil, apiErr
 	}
 
-	return SupplierListPresenter(resp), nil
+	return SupplierListPresenter(ctx, resp), nil
 }
 
 func (s *supplierSvcImpl) GetSupplier(ctx context.Context, req *RetrieveSupplierRequest) (*apiresource.SupplierDetail, *apierror.APIError) {
@@ -250,7 +250,7 @@ func SupplierSummaryPresenter(s *pb.SupplierSummaryProto) apiresource.SupplierSu
 }
 
 // SupplierListPresenter converts a ListSuppliersResponse to a list of SupplierSummary API resources.
-func SupplierListPresenter(resp *pb.ListSuppliersResponse) *apiresource.List[apiresource.SupplierSummary] {
+func SupplierListPresenter(ctx context.Context, resp *pb.ListSuppliersResponse) *apiresource.List[apiresource.SupplierSummary] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.SupplierSummary](nil, apiresource.PageInfo{})
 	}
@@ -260,7 +260,7 @@ func SupplierListPresenter(resp *pb.ListSuppliersResponse) *apiresource.List[api
 		items[i] = SupplierSummaryPresenter(s)
 	}
 
-	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }
 
 func addressProtoToResource(a *pb.CustomerAddressProto) *apiresource.Address {

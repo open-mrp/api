@@ -25,8 +25,6 @@ func (e *RetrieveVolumeDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		Method:            http.MethodGet,
 		Route:             "/v1/sales/volume-discounts/{id}",
 		ContentType:       "application/json",
-		Request:           &RetrieveVolumeDiscountRequest{},
-		Response:          &apiresource.VolumeDiscount{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -37,5 +35,5 @@ func (e *RetrieveVolumeDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[
 			ObjectType: constants.ObjectTypeVolumeDiscount,
 			Fields:     []string{"customer_groups", "product_lines", "categories", "attributes", "acceptable_units"},
 		}),
-	}).WithDocSource(e)
+	})
 }

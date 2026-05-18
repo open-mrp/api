@@ -24,13 +24,11 @@ func (e *DisableAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*Dis
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/account-users/{id}/actions/disable",
-		Request:           &DisableAccountUserRequest{},
-		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DisableAccountUserRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(AccountUserSvc).DisableAccountUser
 		},
-	}).WithDocSource(e)
+	})
 }

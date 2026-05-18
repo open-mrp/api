@@ -39,19 +39,19 @@ func (*ShipmentsEndpointGroup) Materialize(config *ShipmentsEndpointGroupConfig)
 		ResourceType: &apiresource.ShipmentDetail{},
 	}
 
-	listShipmentsEndpoint := (&shipmentep.ListShipmentsEndpoint{}).Materialize().WithService(inner, shipmentSvc)
-	getShipmentEndpoint := (&shipmentep.RetrieveShipmentEndpoint{}).Materialize().WithService(inner, shipmentSvc)
-	updateShipmentEndpoint := (&shipmentep.UpdateShipmentEndpoint{}).Materialize().WithService(inner, shipmentSvc)
-	deleteShipmentEndpoint := (&shipmentep.DeleteShipmentEndpoint{}).Materialize().WithService(inner, shipmentSvc)
-	shipShipmentEndpoint := (&shipmentep.ShipShipmentEndpoint{}).Materialize().WithService(inner, shipmentSvc)
-	voidShipmentEndpoint := (&shipmentep.VoidShipmentEndpoint{}).Materialize().WithService(inner, shipmentSvc)
-	estimateRateEndpoint := (&shipmentep.EstimateRateEndpoint{}).Materialize().WithService(inner, shipmentSvc)
-	rateShopEndpoint := (&shipmentep.RateShopEndpoint{}).Materialize().WithService(inner, shipmentSvc)
-	listShipmentLinesEndpoint := (&shipmentep.ListShipmentLinesEndpoint{}).Materialize().WithService(inner, shipmentSvc)
-	getShipmentLineEndpoint := (&shipmentep.RetrieveShipmentLineEndpoint{}).Materialize().WithService(inner, shipmentSvc)
-	createShipmentLineEndpoint := (&shipmentep.CreateShipmentLineEndpoint{}).Materialize().WithService(inner, shipmentSvc)
-	updateShipmentLineEndpoint := (&shipmentep.UpdateShipmentLineEndpoint{}).Materialize().WithService(inner, shipmentSvc)
-	deleteShipmentLineEndpoint := (&shipmentep.DeleteShipmentLineEndpoint{}).Materialize().WithService(inner, shipmentSvc)
+	listShipmentsEndpoint := apiendpoint.From(&shipmentep.ListShipmentsEndpoint{}).WithService(inner, shipmentSvc)
+	getShipmentEndpoint := apiendpoint.From(&shipmentep.RetrieveShipmentEndpoint{}).WithService(inner, shipmentSvc)
+	updateShipmentEndpoint := apiendpoint.From(&shipmentep.UpdateShipmentEndpoint{}).WithService(inner, shipmentSvc)
+	deleteShipmentEndpoint := apiendpoint.From(&shipmentep.DeleteShipmentEndpoint{}).WithService(inner, shipmentSvc)
+	shipShipmentEndpoint := apiendpoint.From(&shipmentep.ShipShipmentEndpoint{}).WithService(inner, shipmentSvc)
+	voidShipmentEndpoint := apiendpoint.From(&shipmentep.VoidShipmentEndpoint{}).WithService(inner, shipmentSvc)
+	estimateRateEndpoint := apiendpoint.From(&shipmentep.EstimateRateEndpoint{}).WithService(inner, shipmentSvc)
+	rateShopEndpoint := apiendpoint.From(&shipmentep.RateShopEndpoint{}).WithService(inner, shipmentSvc)
+	listShipmentLinesEndpoint := apiendpoint.From(&shipmentep.ListShipmentLinesEndpoint{}).WithService(inner, shipmentSvc)
+	getShipmentLineEndpoint := apiendpoint.From(&shipmentep.RetrieveShipmentLineEndpoint{}).WithService(inner, shipmentSvc)
+	createShipmentLineEndpoint := apiendpoint.From(&shipmentep.CreateShipmentLineEndpoint{}).WithService(inner, shipmentSvc)
+	updateShipmentLineEndpoint := apiendpoint.From(&shipmentep.UpdateShipmentLineEndpoint{}).WithService(inner, shipmentSvc)
+	deleteShipmentLineEndpoint := apiendpoint.From(&shipmentep.DeleteShipmentLineEndpoint{}).WithService(inner, shipmentSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listShipmentsEndpoint,

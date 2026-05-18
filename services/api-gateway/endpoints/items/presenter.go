@@ -1,6 +1,7 @@
 package itemep
 
 import (
+	"context"
 	"strconv"
 
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
@@ -219,7 +220,7 @@ func ItemPresenter(i *pb.ItemInfo) apiresource.Item {
 	return item
 }
 
-func ItemListPresenter(resp *pb.ListItemsResponse) *apiresource.List[apiresource.Item] {
+func ItemListPresenter(ctx context.Context, resp *pb.ListItemsResponse) *apiresource.List[apiresource.Item] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.Item](nil, apiresource.PageInfo{})
 	}
@@ -229,7 +230,7 @@ func ItemListPresenter(resp *pb.ListItemsResponse) *apiresource.List[apiresource
 		items[i] = ItemPresenter(item)
 	}
 
-	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }
 
 func ItemInventoryPresenter(resp *pb.GetItemInventoryResponse) *apiresource.ItemInventory {

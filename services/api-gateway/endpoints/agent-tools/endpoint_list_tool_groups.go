@@ -23,8 +23,6 @@ func (e *ListToolGroupsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListToo
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/ai/tool-groups",
-		Request:           &ListToolGroupsRequest{},
-		Response:          apiresource.NewList[apiresource.ToolGroup](nil, apiresource.PageInfo{}),
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -35,5 +33,5 @@ func (e *ListToolGroupsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListToo
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListToolGroupsRequest) (*apiresource.List[apiresource.ToolGroup], *apierror.APIError) {
 			return svc.(AgentToolSvc).ListToolGroups
 		},
-	}).WithDocSource(e)
+	})
 }

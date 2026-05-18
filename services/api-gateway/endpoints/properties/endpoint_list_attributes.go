@@ -24,14 +24,12 @@ func (e *ListAttributesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListAtt
 		Title:             "List Attributes",
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
-		Route:             "/v1/catalog/properties/{property_id}/attributes",
-		Request:           &ListAttributesRequest{},
-		Response:          &apiresource.List[apiresource.Attribute]{},
+		Route:             CatalogPropertyAttributesRoute,
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListAttributesRequest) (*apiresource.List[apiresource.Attribute], *apierror.APIError) {
 			return svc.(PropertySvc).ListAttributes
 		},
-	}).WithDocSource(e)
+	})
 }

@@ -45,13 +45,11 @@ func (e *CreateSalesTargetEndpoint) Materialize() *apiendpoint.APIEndpoint[*Crea
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/account-users/{id}/sales-targets",
-		Request:           &CreateSalesTargetRequest{},
-		Response:          &apiresource.SalesTarget{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateSalesTargetRequest) (*apiresource.SalesTarget, *apierror.APIError) {
 			return svc.(SalesTargetSvc).CreateSalesTarget
 		},
-	}).WithDocSource(e)
+	})
 }

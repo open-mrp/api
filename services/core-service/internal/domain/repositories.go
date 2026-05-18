@@ -813,6 +813,7 @@ type SalesOrderRepo interface {
 	IsOrderForCustomer(ctx context.Context, salesOrderID, buyerAccountID string) (bool, *apierror.APIError)
 	IsDuplicateOrderNumber(ctx context.Context, accountID, number string, excludeID *string) (bool, *apierror.APIError)
 	IsDuplicateCustomerPO(ctx context.Context, accountID, buyerAccountID, customerPO string, excludeID *string) (bool, *apierror.APIError)
+	CountSalesOrdersForBuyerAccounts(ctx context.Context, ownerAccountID string, buyerAccountIDs []string) (int64, *apierror.APIError)
 	GetNextOrderNumber(ctx context.Context, accountID string) (string, *apierror.APIError)
 	GetPickID(ctx context.Context, salesOrderID string) (*string, *apierror.APIError)
 	DeleteCascade(ctx context.Context, accountID, salesOrderID string) *apierror.APIError

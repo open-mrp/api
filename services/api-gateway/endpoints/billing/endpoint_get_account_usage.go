@@ -18,13 +18,11 @@ func (e *GetAccountUsageEndpoint) Materialize() *apiendpoint.APIEndpoint[*apires
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/billing/accounts/usage",
-		Request:           &apiresource.EmptyResource{},
-		Response:          &apiresource.AccountUsageResponse{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *apiresource.EmptyResource) (*apiresource.AccountUsageResponse, *apierror.APIError) {
 			return svc.(BillingSvc).GetAccountUsage
 		},
-	}).WithDocSource(e)
+	})
 }

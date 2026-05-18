@@ -160,13 +160,10 @@ func TestListEndpoints_PaginationCursor(t *testing.T) {
 				return
 			}
 
-			require.NotNil(t, page1.PageInfo.NextCursor, "next_cursor should be set when has_next_page is true")
+			require.NotNil(t, page1.PageInfo.NextPageURL, "next_page_url should be set when has_next_page is true")
 
-			page2, _, err := apiClient.GetList(path, url.Values{
-				"limit":  {"1"},
-				"cursor": {*page1.PageInfo.NextCursor},
-			})
-			require.NoError(t, err, "GET %s?limit=1&cursor=... (page 2) failed", path)
+			page2, _, err := apiClient.GetListFromPageURL(page1.PageInfo.NextPageURL)
+			require.NoError(t, err, "GET page 2 via next_page_url failed for %s", path)
 			assert.NotEmpty(t, page2.Data, "Page 2 should have data")
 
 			if len(page1.Data) > 0 && len(page2.Data) > 0 {

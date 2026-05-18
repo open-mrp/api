@@ -39,11 +39,11 @@ func (*AccountsEndpointGroup) Materialize(config *AccountsEndpointGroupConfig) *
 		ResourceType: &apiresource.Account{},
 	}
 
-	getAccountEndpoint := (&accountep.RetrieveAccountEndpoint{}).Materialize().WithService(inner, accountSvc)
-	getAccountBySlugEndpoint := (&accountep.RetrieveAccountBySlugEndpoint{}).Materialize().WithService(inner, accountSvc)
-	updateAccountEndpoint := (&accountep.UpdateAccountEndpoint{}).Materialize().WithService(inner, accountSvc)
-	uploadAccountPhotoEndpoint := (&accountep.UploadAccountPhotoEndpoint{}).Materialize().WithService(inner, accountSvc)
-	getAccountLogoURLEndpoint := (&accountep.GetAccountLogoURLEndpoint{}).Materialize().WithService(inner, accountSvc)
+	getAccountEndpoint := apiendpoint.From(&accountep.RetrieveAccountEndpoint{}).WithService(inner, accountSvc)
+	getAccountBySlugEndpoint := apiendpoint.From(&accountep.RetrieveAccountBySlugEndpoint{}).WithService(inner, accountSvc)
+	updateAccountEndpoint := apiendpoint.From(&accountep.UpdateAccountEndpoint{}).WithService(inner, accountSvc)
+	uploadAccountPhotoEndpoint := apiendpoint.From(&accountep.UploadAccountPhotoEndpoint{}).WithService(inner, accountSvc)
+	getAccountLogoURLEndpoint := apiendpoint.From(&accountep.GetAccountLogoURLEndpoint{}).WithService(inner, accountSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		getAccountEndpoint,

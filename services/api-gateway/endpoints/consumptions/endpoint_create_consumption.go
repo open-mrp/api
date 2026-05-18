@@ -51,8 +51,6 @@ func (e *CreateConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Crea
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/production-steps/{production_step_id}/consumptions",
-		Request:           &CreateConsumptionRequest{},
-		Response:          &apiresource.Consumption{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
@@ -63,5 +61,5 @@ func (e *CreateConsumptionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Crea
 			ObjectType: constants.ObjectTypeConsumption,
 			Fields:     []string{"consumed_item"},
 		}),
-	}).WithDocSource(e)
+	})
 }

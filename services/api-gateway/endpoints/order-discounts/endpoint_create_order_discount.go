@@ -44,8 +44,6 @@ func (e *CreateOrderDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cr
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/order-discounts",
-		Request:           &CreateOrderDiscountRequest{},
-		Response:          &apiresource.OrderDiscount{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
@@ -55,5 +53,5 @@ func (e *CreateOrderDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cr
 		LocationFunc: func(resp *apiresource.OrderDiscount) string {
 			return "/v1/sales/order-discounts/" + resp.ID
 		},
-	}).WithDocSource(e)
+	})
 }

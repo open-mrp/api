@@ -47,13 +47,11 @@ func (e *CreateSalesOrderLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*C
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/sales-orders/{id}/lines",
-		Request:           &CreateSalesOrderLineRequest{},
-		Response:          &apiresource.SalesOrderLineDetail{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateSalesOrderLineRequest) (*apiresource.SalesOrderLineDetail, *apierror.APIError) {
 			return svc.(SalesOrderSvc).CreateSalesOrderLine
 		},
-	}).WithDocSource(e)
+	})
 }

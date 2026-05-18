@@ -25,8 +25,6 @@ func (e *RetrieveMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retri
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/materials/{id}",
-		Request:           &RetrieveMaterialRequest{},
-		Response:          &apiresource.Material{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -37,5 +35,5 @@ func (e *RetrieveMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retri
 			ObjectType: constants.ObjectTypeMaterial,
 			Fields:     []string{"item", "item.category", "item.category.properties", "item.category.unit_group", "item.unit_value", "item.unit_cost", "item.burn_rate", "item.attributes"},
 		}),
-	}).WithDocSource(e)
+	})
 }

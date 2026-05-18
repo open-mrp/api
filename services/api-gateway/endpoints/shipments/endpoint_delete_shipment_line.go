@@ -26,13 +26,11 @@ func (e *DeleteShipmentLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*Del
 		Method:            http.MethodDelete,
 		Route:             "/v1/operations/shipments/{shipment_id}/lines/{id}",
 		ContentType:       "application/json",
-		Request:           &DeleteShipmentLineRequest{},
-		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteShipmentLineRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(ShipmentSvc).DeleteShipmentLine
 		},
-	}).WithDocSource(e)
+	})
 }

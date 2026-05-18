@@ -1,6 +1,8 @@
 package customerproductlineaccessep
 
 import (
+	"context"
+
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -35,7 +37,7 @@ func CustomerProductLineAccessPresenter(item *pb.CustomerProductLineAccessInfo) 
 	}
 }
 
-func CustomerProductLineAccessListPresenter(resp *pb.ListCustomerProductLineAccessResponse) *apiresource.List[apiresource.CustomerProductLineAccess] {
+func CustomerProductLineAccessListPresenter(ctx context.Context, resp *pb.ListCustomerProductLineAccessResponse) *apiresource.List[apiresource.CustomerProductLineAccess] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.CustomerProductLineAccess](nil, apiresource.PageInfo{})
 	}
@@ -45,5 +47,5 @@ func CustomerProductLineAccessListPresenter(resp *pb.ListCustomerProductLineAcce
 		items[i] = CustomerProductLineAccessPresenter(item)
 	}
 
-	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }

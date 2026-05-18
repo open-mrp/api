@@ -25,8 +25,6 @@ func (e *RetrieveSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retri
 		Method:            http.MethodGet,
 		Route:             "/v1/operations/suppliers/{id}",
 		ContentType:       "application/json",
-		Request:           &RetrieveSupplierRequest{},
-		Response:          &apiresource.SupplierDetail{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -37,5 +35,5 @@ func (e *RetrieveSupplierEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retri
 			ObjectType: constants.ObjectTypeSupplier,
 			Fields:     []string{"bill_to_address", "ship_to_address"},
 		}),
-	}).WithDocSource(e)
+	})
 }

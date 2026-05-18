@@ -24,13 +24,11 @@ func (e *RetrieveSessionEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retrie
 		Method:            http.MethodGet,
 		Route:             "/v1/auth/registration-sessions/{session_id}",
 		ContentType:       "application/json",
-		Request:           &RetrieveSessionRequest{},
-		Response:          &apiresource.RegistrationSession{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveSessionRequest) (*apiresource.RegistrationSession, *apierror.APIError) {
 			return svc.(RegistrationSessionSvc).GetSession
 		},
-	}).WithDocSource(e)
+	})
 }

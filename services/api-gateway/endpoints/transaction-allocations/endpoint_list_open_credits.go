@@ -29,13 +29,11 @@ func (e *ListOpenCreditsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListOp
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/finance/open-credits",
-		Request:           &ListOpenCreditsRequest{},
-		Response:          &apiresource.List[apiresource.OpenCreditEntry]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListOpenCreditsRequest) (*apiresource.List[apiresource.OpenCreditEntry], *apierror.APIError) {
 			return svc.(TransactionAllocationSvc).ListOpenCredits
 		},
-	}).WithDocSource(e)
+	})
 }

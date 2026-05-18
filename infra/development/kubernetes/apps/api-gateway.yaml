@@ -17,17 +17,21 @@ spec:
           image: augno-api/api-gateway
           ports:
             - containerPort: 8081
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: 8081
+            periodSeconds: 5
+            failureThreshold: 30
           readinessProbe:
             httpGet:
               path: /healthz
               port: 8081
-            initialDelaySeconds: 5
             periodSeconds: 5
           livenessProbe:
             httpGet:
               path: /healthz
               port: 8081
-            initialDelaySeconds: 15
             periodSeconds: 20
           resources:
             requests:

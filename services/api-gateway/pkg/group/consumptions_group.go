@@ -39,10 +39,10 @@ func (*ConsumptionsEndpointGroup) Materialize(config *ConsumptionsEndpointGroupC
 		ResourceType: &apiresource.Consumption{},
 	}
 
-	retrieveConsumptionEndpoint := (&consumptionep.RetrieveConsumptionEndpoint{}).Materialize().WithService(inner, consumptionSvc)
-	createConsumptionEndpoint := (&consumptionep.CreateConsumptionEndpoint{}).Materialize().WithService(inner, consumptionSvc)
-	updateConsumptionEndpoint := (&consumptionep.UpdateConsumptionEndpoint{}).Materialize().WithService(inner, consumptionSvc)
-	deleteConsumptionEndpoint := (&consumptionep.DeleteConsumptionEndpoint{}).Materialize().WithService(inner, consumptionSvc)
+	retrieveConsumptionEndpoint := apiendpoint.From(&consumptionep.RetrieveConsumptionEndpoint{}).WithService(inner, consumptionSvc)
+	createConsumptionEndpoint := apiendpoint.From(&consumptionep.CreateConsumptionEndpoint{}).WithService(inner, consumptionSvc)
+	updateConsumptionEndpoint := apiendpoint.From(&consumptionep.UpdateConsumptionEndpoint{}).WithService(inner, consumptionSvc)
+	deleteConsumptionEndpoint := apiendpoint.From(&consumptionep.DeleteConsumptionEndpoint{}).WithService(inner, consumptionSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		retrieveConsumptionEndpoint,

@@ -39,10 +39,10 @@ func (*TenancyEndpointGroup) Materialize(config *TenancyEndpointGroupConfig) *Te
 		ResourceType: &apiresource.Tenancy{},
 	}
 
-	getTenancyEndpoint := (&tenancyep.GetTenancyEndpoint{}).Materialize().WithService(inner, svc)
-	switchAccountEndpoint := (&tenancyep.SwitchAccountEndpoint{}).Materialize().WithService(inner, svc)
-	getCurrentUserEndpoint := (&tenancyep.GetCurrentUserEndpoint{}).Materialize().WithService(inner, svc)
-	listCustomerAccountsEndpoint := (&tenancyep.ListCustomerAccountsEndpoint{}).Materialize().WithService(inner, svc)
+	getTenancyEndpoint := apiendpoint.From(&tenancyep.GetTenancyEndpoint{}).WithService(inner, svc)
+	switchAccountEndpoint := apiendpoint.From(&tenancyep.SwitchAccountEndpoint{}).WithService(inner, svc)
+	getCurrentUserEndpoint := apiendpoint.From(&tenancyep.GetCurrentUserEndpoint{}).WithService(inner, svc)
+	listCustomerAccountsEndpoint := apiendpoint.From(&tenancyep.ListCustomerAccountsEndpoint{}).WithService(inner, svc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		getTenancyEndpoint,

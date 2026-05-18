@@ -39,12 +39,12 @@ func (*AccountIntegrationsEndpointGroup) Materialize(config *AccountIntegrations
 		ResourceType: &apiresource.AccountIntegration{},
 	}
 
-	listEndpoint := (&accountintegrationep.ListAccountIntegrationsEndpoint{}).Materialize().WithService(inner, accountIntegrationSvc)
-	createEndpoint := (&accountintegrationep.CreateAccountIntegrationEndpoint{}).Materialize().WithService(inner, accountIntegrationSvc)
-	updateEndpoint := (&accountintegrationep.UpdateAccountIntegrationEndpoint{}).Materialize().WithService(inner, accountIntegrationSvc)
-	deleteEndpoint := (&accountintegrationep.DeleteAccountIntegrationEndpoint{}).Materialize().WithService(inner, accountIntegrationSvc)
-	getStripePublishableKeyEndpoint := (&accountintegrationep.GetStripePublishableKeyEndpoint{}).Materialize().WithService(inner, accountIntegrationSvc)
-	getStripeStatusEndpoint := (&accountintegrationep.GetStripeStatusEndpoint{}).Materialize().WithService(inner, accountIntegrationSvc)
+	listEndpoint := apiendpoint.From(&accountintegrationep.ListAccountIntegrationsEndpoint{}).WithService(inner, accountIntegrationSvc)
+	createEndpoint := apiendpoint.From(&accountintegrationep.CreateAccountIntegrationEndpoint{}).WithService(inner, accountIntegrationSvc)
+	updateEndpoint := apiendpoint.From(&accountintegrationep.UpdateAccountIntegrationEndpoint{}).WithService(inner, accountIntegrationSvc)
+	deleteEndpoint := apiendpoint.From(&accountintegrationep.DeleteAccountIntegrationEndpoint{}).WithService(inner, accountIntegrationSvc)
+	getStripePublishableKeyEndpoint := apiendpoint.From(&accountintegrationep.GetStripePublishableKeyEndpoint{}).WithService(inner, accountIntegrationSvc)
+	getStripeStatusEndpoint := apiendpoint.From(&accountintegrationep.GetStripeStatusEndpoint{}).WithService(inner, accountIntegrationSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listEndpoint,

@@ -24,13 +24,11 @@ func (e *RetrieveEDIRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retriev
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/edi-runs/{id}",
-		Request:           &RetrieveEDIRunRequest{},
-		Response:          &apiresource.EDIRun{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveEDIRunRequest) (*apiresource.EDIRun, *apierror.APIError) {
 			return svc.(EDIRunSvc).GetEDIRun
 		},
-	}).WithDocSource(e)
+	})
 }

@@ -94,6 +94,31 @@ func TestDecodeCursor_InvalidJSON(t *testing.T) {
 	}
 }
 
+func TestEncodeDecode_StringCursor_MatchTierRoundTrip(t *testing.T) {
+	t.Parallel()
+	now := time.Date(2025, 3, 1, 12, 0, 0, 0, time.UTC)
+	tier := 1
+	original := StringCursor{OccurredAt: now, ID: "it_abc", Direction: DirectionForward, MatchTier: &tier}
+
+	encoded := EncodeStringCursor(original)
+	decoded, err := DecodeStringCursor(encoded)
+	if err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if !decoded.OccurredAt.Equal(original.OccurredAt) {
+		t.Errorf("OccurredAt %v vs %v", decoded.OccurredAt, original.OccurredAt)
+	}
+	if decoded.ID != original.ID {
+		t.Errorf("ID %q vs %q", decoded.ID, original.ID)
+	}
+	if decoded.Direction != original.Direction {
+		t.Errorf("Direction %q vs %q", decoded.Direction, original.Direction)
+	}
+	if decoded.MatchTier == nil || *decoded.MatchTier != tier {
+		t.Errorf("MatchTier got %#v want %d", decoded.MatchTier, tier)
+	}
+}
+
 func TestDecodeCursor_InvalidDirection(t *testing.T) {
 	t.Parallel()
 	c := Cursor{CreatedAt: time.Now(), ID: 1, Direction: "x"}

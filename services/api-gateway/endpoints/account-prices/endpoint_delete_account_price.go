@@ -24,13 +24,11 @@ func (e *DeleteAccountPriceEndpoint) Materialize() *apiendpoint.APIEndpoint[*Del
 		Method:            http.MethodDelete,
 		Route:             "/v1/sales/account-prices/{id}",
 		ContentType:       "application/json",
-		Request:           &DeleteAccountPriceRequest{},
-		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteAccountPriceRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(AccountPriceSvc).DeleteAccountPrice
 		},
-	}).WithDocSource(e)
+	})
 }

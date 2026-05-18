@@ -23,7 +23,7 @@ type UpdateLocationRequest struct {
 	// Parent location ID. Send null to clear.
 	ParentID *string `json:"parent_id,omitempty" nullable:"true" validate:"omitempty"`
 	// Child location IDs. Replaces all current children when provided. Send null to clear.
-	ChildIDs apirequest.NullableInput[[]string] `json:"child_ids,omitempty"`
+	ChildIDs apirequest.NullableInput[[]string] `json:"child_ids"`
 }
 
 var sampleUpdateName = "Warehouse B"
@@ -45,8 +45,6 @@ func (e *UpdateLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateL
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/locations/{id}",
-		Request:           &UpdateLocationRequest{},
-		Response:          &apiresource.Location{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -57,5 +55,5 @@ func (e *UpdateLocationEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateL
 			ObjectType: constants.ObjectTypeLocation,
 			Fields:     []string{"parent", "children"},
 		}),
-	}).WithDocSource(e)
+	})
 }

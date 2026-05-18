@@ -175,7 +175,7 @@ func (m *apiKeySvcImpl) ListAPIKeys(ctx context.Context, req *ListAPIKeysRequest
 		return nil, apiErr
 	}
 
-	return APIKeyListPresenter(resp, func(roleID *string) map[string]bool {
+	return APIKeyListPresenter(ctx, resp, func(roleID *string) map[string]bool {
 		return m.resolveRolePermissions(ctx, roleID)
 	}), nil
 }

@@ -18,13 +18,11 @@ func (e *GetPricingPlansEndpoint) Materialize() *apiendpoint.APIEndpoint[*apires
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/billing/plans",
-		Request:           &apiresource.PaginationRequest{},
-		Response:          &apiresource.List[apiresource.PricingPlan]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *apiresource.PaginationRequest) (*apiresource.List[apiresource.PricingPlan], *apierror.APIError) {
 			return svc.(BillingSvc).GetPricingPlans
 		},
-	}).WithDocSource(e)
+	})
 }

@@ -25,8 +25,6 @@ func (e *RetrieveSandboxEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retrie
 		Method:            http.MethodGet,
 		Route:             "/v1/core/sandboxes/{id}",
 		ContentType:       "application/json",
-		Request:           &RetrieveSandboxRequest{},
-		Response:          &apiresource.Sandbox{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -37,5 +35,5 @@ func (e *RetrieveSandboxEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retrie
 			ObjectType: constants.ObjectTypeSandbox,
 			Fields:     []string{"owner_account"},
 		}),
-	}).WithDocSource(e)
+	})
 }

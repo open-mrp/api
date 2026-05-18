@@ -39,8 +39,6 @@ func (e *CreateSandboxEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateSa
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/core/sandboxes",
-		Request:           &CreateSandboxRequest{},
-		Response:          &apiresource.Sandbox{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
 		Preview:           true,
@@ -54,5 +52,5 @@ func (e *CreateSandboxEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateSa
 		LocationFunc: func(resp *apiresource.Sandbox) string {
 			return "/v1/core/sandboxes/" + resp.ID
 		},
-	}).WithDocSource(e)
+	})
 }

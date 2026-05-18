@@ -35,13 +35,11 @@ func (e *UpdateAccountGroupProductLineAccessEndpoint) Materialize() *apiendpoint
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/product-line-access/account-groups/{account_group_id}",
-		Request:           &UpdateAccountGroupProductLineAccessRequest{},
-		Response:          &apiresource.AccountGroupProductLineAccess{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateAccountGroupProductLineAccessRequest) (*apiresource.AccountGroupProductLineAccess, *apierror.APIError) {
 			return svc.(AccountGroupProductLineAccessSvc).UpdateAccountGroupProductLineAccess
 		},
-	}).WithDocSource(e)
+	})
 }

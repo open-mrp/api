@@ -41,13 +41,11 @@ func (e *CreateShipmentLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*Cre
 		Method:            http.MethodPost,
 		Route:             "/v1/operations/shipments/{shipment_id}/lines",
 		ContentType:       "application/json",
-		Request:           &CreateShipmentLineRequest{},
-		Response:          &apiresource.ShipmentLine{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateShipmentLineRequest) (*apiresource.ShipmentLine, *apierror.APIError) {
 			return svc.(ShipmentSvc).CreateShipmentLine
 		},
-	}).WithDocSource(e)
+	})
 }

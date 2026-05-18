@@ -45,13 +45,11 @@ func (e *CreateSupplierMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/suppliers/{supplier_id}/materials",
-		Request:           &CreateSupplierMaterialRequest{},
-		Response:          &apiresource.SupplierMaterial{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateSupplierMaterialRequest) (*apiresource.SupplierMaterial, *apierror.APIError) {
 			return svc.(SupplierMaterialSvc).CreateSupplierMaterial
 		},
-	}).WithDocSource(e)
+	})
 }

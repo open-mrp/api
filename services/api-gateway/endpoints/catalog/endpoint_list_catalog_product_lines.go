@@ -23,13 +23,11 @@ func (e *ListCatalogProductLinesEndpoint) Materialize() *apiendpoint.APIEndpoint
 		Method:            http.MethodGet,
 		Route:             "/v1/catalog/catalog/product-lines",
 		ContentType:       "application/json",
-		Request:           &ListCatalogProductLinesRequest{},
-		Response:          &apiresource.List[apiresource.CatalogProductLine]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListCatalogProductLinesRequest) (*apiresource.List[apiresource.CatalogProductLine], *apierror.APIError) {
 			return svc.(CatalogSvc).ListCatalogProductLines
 		},
-	}).WithDocSource(e)
+	})
 }

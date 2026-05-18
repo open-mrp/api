@@ -33,8 +33,6 @@ func (e *SwitchAccountEndpoint) Materialize() *apiendpoint.APIEndpoint[*SwitchAc
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/me/tenancy",
-		Request:           &SwitchAccountRequest{},
-		Response:          &apiresource.Tenancy{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -44,5 +42,5 @@ func (e *SwitchAccountEndpoint) Materialize() *apiendpoint.APIEndpoint[*SwitchAc
 		Extras: apiendpoint.APIEndpointExtras{
 			SkipRequestLogging: true,
 		},
-	}).WithDocSource(e)
+	})
 }

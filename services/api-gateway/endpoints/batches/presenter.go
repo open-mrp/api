@@ -1,6 +1,8 @@
 package batchep
 
 import (
+	"context"
+
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -304,7 +306,7 @@ func ScanningProductionStepInfoPresenter(s *pb.ScanningProductionStepInfoProto) 
 }
 
 // BatchListPresenter converts a proto ListBatchesByScanningStationResponse to a paginated list.
-func BatchListPresenter(resp *pb.ListBatchesByScanningStationResponse) *apiresource.List[apiresource.Batch] {
+func BatchListPresenter(ctx context.Context, resp *pb.ListBatchesByScanningStationResponse) *apiresource.List[apiresource.Batch] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.Batch](nil, apiresource.PageInfo{})
 	}
@@ -314,5 +316,5 @@ func BatchListPresenter(resp *pb.ListBatchesByScanningStationResponse) *apiresou
 		batches[i] = BatchPresenter(b)
 	}
 
-	return apiresource.NewList(batches, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(batches, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }

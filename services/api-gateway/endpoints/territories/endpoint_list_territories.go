@@ -26,8 +26,6 @@ func (e *ListTerritoriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListTe
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/accounts/{account_id}/territories",
-		Request:           &ListTerritoriesRequest{},
-		Response:          &apiresource.List[apiresource.Territory]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -38,5 +36,5 @@ func (e *ListTerritoriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListTe
 			ObjectType: constants.ObjectTypeTerritory,
 			Fields:     []string{"sales_rep", "product_line"},
 		}),
-	}).WithDocSource(e)
+	})
 }

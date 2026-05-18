@@ -26,8 +26,6 @@ func (e *ListUnitGroupsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListUni
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/unit-groups",
-		Request:           &ListUnitGroupsRequest{},
-		Response:          &apiresource.List[apiresource.UnitGroup]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -38,5 +36,5 @@ func (e *ListUnitGroupsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListUni
 			ObjectType: constants.ObjectTypeUnitGroup,
 			Fields:     []string{"owner", "owner.account", "base_unit", "associated_units"},
 		}),
-	}).WithDocSource(e)
+	})
 }

@@ -294,10 +294,7 @@ func (e *Enqueuer) processBatch() {
 	for _, msg := range messages {
 		if err := e.publishMessage(msg); err != nil {
 			delay := retry.CalculateDelay(e.config.RetryBackoff, msg.Attempts)
-			delaySecs := int(delay.Seconds())
-			if delaySecs < 1 {
-				delaySecs = 1
-			}
+			delaySecs := max(int(delay.Seconds()), 1)
 			slog.Error("Failed to publish outbox message",
 				"message_id", msg.MessageID,
 				"message_type", msg.MessageType,

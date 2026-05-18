@@ -42,8 +42,6 @@ func (e *CreateRegistrationFlowEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/registration-flows",
-		Request:           &CreateRegistrationFlowRequest{},
-		Response:          &apiresource.RegistrationFlow{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
@@ -53,5 +51,5 @@ func (e *CreateRegistrationFlowEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		LocationFunc: func(resp *apiresource.RegistrationFlow) string {
 			return "/v1/sales/registration-flows/" + resp.ID
 		},
-	}).WithDocSource(e)
+	})
 }

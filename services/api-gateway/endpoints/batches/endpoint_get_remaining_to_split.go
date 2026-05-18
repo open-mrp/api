@@ -36,13 +36,11 @@ func (e *GetRemainingQuantityToSplitEndpoint) Materialize() *apiendpoint.APIEndp
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/batches/remaining-quantities",
-		Request:           &GetRemainingQuantityToSplitRequest{},
-		Response:          &apiresource.Quantity{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetRemainingQuantityToSplitRequest) (*apiresource.Quantity, *apierror.APIError) {
 			return svc.(BatchSvc).GetRemainingQuantityToSplit
 		},
-	}).WithDocSource(e)
+	})
 }

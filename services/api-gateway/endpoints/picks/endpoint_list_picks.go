@@ -32,8 +32,6 @@ func (e *ListPicksEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPicksReq
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/picks",
-		Request:           &ListPicksRequest{},
-		Response:          &apiresource.List[apiresource.PickSummary]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -44,5 +42,5 @@ func (e *ListPicksEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPicksReq
 			ObjectType: constants.ObjectTypePick,
 			Fields:     []string{"sales_order"},
 		}),
-	}).WithDocSource(e)
+	})
 }

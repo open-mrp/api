@@ -24,13 +24,11 @@ func (e *DeleteOrderDiscountEndpoint) Materialize() *apiendpoint.APIEndpoint[*De
 		Method:            http.MethodDelete,
 		Route:             "/v1/sales/order-discounts/{id}",
 		ContentType:       "application/json",
-		Request:           &DeleteOrderDiscountRequest{},
-		Response:          &apiresource.OrderDiscount{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteOrderDiscountRequest) (*apiresource.OrderDiscount, *apierror.APIError) {
 			return svc.(OrderDiscountSvc).DeleteOrderDiscount
 		},
-	}).WithDocSource(e)
+	})
 }

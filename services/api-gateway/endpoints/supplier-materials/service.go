@@ -60,7 +60,7 @@ func (s *supplierMaterialSvcImpl) ListSupplierMaterials(ctx context.Context, req
 	if apiErr != nil {
 		return nil, apiErr
 	}
-	return materialep.SupplierMaterialListPresenter(resp), nil
+	return materialep.SupplierMaterialListPresenter(ctx, resp), nil
 }
 
 func (s *supplierMaterialSvcImpl) GetSupplierMaterial(ctx context.Context, req *RetrieveSupplierMaterialRequest) (*apiresource.SupplierMaterial, *apierror.APIError) {

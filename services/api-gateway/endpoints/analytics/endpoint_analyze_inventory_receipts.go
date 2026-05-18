@@ -28,13 +28,11 @@ func (e *AnalyzeInventoryReceiptsEndpoint) Materialize() *apiendpoint.APIEndpoin
 		Method:            http.MethodPut,
 		Route:             "/v1/core/analytics/inventory-receipts",
 		ContentType:       "application/json",
-		Request:           &AnalyzeInventoryReceiptsRequest{},
-		Response:          &apiresource.AnalyzeInventoryReceiptsResponse{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeInventoryReceiptsRequest) (*apiresource.AnalyzeInventoryReceiptsResponse, *apierror.APIError) {
 			return svc.(AnalyticsSvc).AnalyzeInventoryReceipts
 		},
-	}).WithDocSource(e)
+	})
 }

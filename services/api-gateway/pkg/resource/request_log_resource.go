@@ -16,7 +16,7 @@ const SampleRequestLogQueryJSON = `{"limit":10}`
 const SampleRequestLogAPIVersion = "2026-01-01"
 const SampleRequestLogClientIP = "198.51.100.7"
 const SampleRequestLogUserAgent = "Mozilla/5.0"
-const SampleRequestLogResponseBody = `{"object":"list","page_info":{"next_cursor":null,"prev_cursor":null,"has_next_page":false,"has_prev_page":false},"data":[]}`
+const SampleRequestLogResponseBody = `{"object":"list","page_info":{"next_page_url":null,"previous_page_url":null,"has_next_page":false,"has_prev_page":false},"data":[]}`
 
 // RequestLog is an API request log entry.
 type RequestLog struct {

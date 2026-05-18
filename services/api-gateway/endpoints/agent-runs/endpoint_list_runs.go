@@ -28,8 +28,6 @@ func (e *ListRunsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListRunsReque
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/ai/runs",
-		Request:           &ListRunsRequest{},
-		Response:          &apiresource.List[apiresource.AgentRun]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -40,5 +38,5 @@ func (e *ListRunsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListRunsReque
 			ObjectType: constants.ObjectTypeAgentRun,
 			Fields:     []string{"definition", "actions", "definition.config", "definition.tools", "definition.role"},
 		}),
-	}).WithDocSource(e)
+	})
 }

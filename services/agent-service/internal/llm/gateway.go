@@ -193,7 +193,7 @@ type gatewayToolCallDelta struct {
 	Index    int                      `json:"index"`
 	ID       string                   `json:"id,omitempty"`
 	Type     string                   `json:"type,omitempty"`
-	Function gatewayFunctionCallDelta `json:"function,omitempty"`
+	Function gatewayFunctionCallDelta `json:"function"`
 }
 
 type gatewayFunctionCallDelta struct {

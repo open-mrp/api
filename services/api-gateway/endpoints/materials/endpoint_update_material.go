@@ -48,8 +48,6 @@ func (e *UpdateMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateM
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/materials/{id}",
-		Request:           &UpdateMaterialRequest{},
-		Response:          &apiresource.Material{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -60,5 +58,5 @@ func (e *UpdateMaterialEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateM
 			ObjectType: constants.ObjectTypeMaterial,
 			Fields:     []string{"item", "item.category", "item.category.properties", "item.category.unit_group", "item.unit_value", "item.unit_cost", "item.burn_rate", "item.attributes"},
 		}),
-	}).WithDocSource(e)
+	})
 }

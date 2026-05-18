@@ -41,14 +41,12 @@ func (e *UpdateAttributeEndpoint) Materialize() *apiendpoint.APIEndpoint[*Update
 		Title:             "Update Attribute",
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
-		Route:             "/v1/catalog/properties/{property_id}/attributes/{id}",
-		Request:           &UpdateAttributeRequest{},
-		Response:          &apiresource.Attribute{},
+		Route:             CatalogPropertyAttributeRoute,
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateAttributeRequest) (*apiresource.Attribute, *apierror.APIError) {
 			return svc.(PropertySvc).UpdateAttribute
 		},
-	}).WithDocSource(e)
+	})
 }

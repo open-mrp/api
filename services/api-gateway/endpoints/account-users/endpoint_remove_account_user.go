@@ -24,13 +24,11 @@ func (e *RemoveAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*Remo
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/account-users/{id}/actions/remove",
-		Request:           &RemoveAccountUserRequest{},
-		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RemoveAccountUserRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(AccountUserSvc).RemoveAccountUser
 		},
-	}).WithDocSource(e)
+	})
 }

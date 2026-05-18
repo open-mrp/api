@@ -316,7 +316,7 @@ rather than:
 ```
 
 8. New endpoints should be added to the openapi spec generator.
-9. Sensitive response or requests should be sanitized using the ShieldRequestBody or ShieldResponseBody APIEndpointExtras.
+9. Sensitive HTTP request or response fields that must not appear verbatim in persisted request logs should be tagged `sensitive:"true"` on the corresponding struct field (`shared/redact` redacts logged JSON at the gateway). Omit entire request-log rows via `Extras.SkipRequestLogging` when logging the request is unacceptable.
 
 ## Detailed Reference Docs
 

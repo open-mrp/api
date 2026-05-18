@@ -1,6 +1,8 @@
 package shippingtermep
 
 import (
+	"context"
+
 	servicelevelep "github.com/augno/api/services/api-gateway/endpoints/service-levels"
 	unitep "github.com/augno/api/services/api-gateway/endpoints/units"
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
@@ -61,7 +63,7 @@ func ShippingTermPresenter(st *pb.ShippingTermInfo, ownerAccount *apiresource.Ac
 	}
 }
 
-func ShippingTermListPresenter(resp *pb.ListShippingTermsResponse, ownerAccount *apiresource.Account) *apiresource.List[apiresource.ShippingTerm] {
+func ShippingTermListPresenter(ctx context.Context, resp *pb.ListShippingTermsResponse, ownerAccount *apiresource.Account) *apiresource.List[apiresource.ShippingTerm] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.ShippingTerm](nil, apiresource.PageInfo{})
 	}
@@ -71,5 +73,5 @@ func ShippingTermListPresenter(resp *pb.ListShippingTermsResponse, ownerAccount 
 		shippingTerms[i] = ShippingTermPresenter(st, ownerAccount)
 	}
 
-	return apiresource.NewList(shippingTerms, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(shippingTerms, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }

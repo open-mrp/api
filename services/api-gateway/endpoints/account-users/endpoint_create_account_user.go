@@ -21,7 +21,7 @@ type CreateAccountUserRequest struct {
 	Username *string `json:"username" validate:"omitempty,username"`
 	// Password. Only used for scanner-role users (scanning stations).
 	// Must be 8–72 chars and include upper, lower, number, and special character.
-	Password *string `json:"password" validate:"omitempty,password"` // #nosec G117 -- API request field for user password input
+	Password *string `json:"password" validate:"omitempty,password" sensitive:"true"` // #nosec G117 -- API request field for user password input
 	// Role assigned to the user.
 	RoleID *string `json:"role_id,omitempty" validate:"omitempty"`
 	// Department assigned to the user.
@@ -59,14 +59,9 @@ func (e *CreateAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*Crea
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/account-users",
-		Request:           &CreateAccountUserRequest{},
-		Response:          &apiresource.AccountUser{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
 		Preview:           true,
-		Extras: apiendpoint.APIEndpointExtras{
-			ShieldRequestBody: true,
-		},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateAccountUserRequest) (*apiresource.AccountUser, *apierror.APIError) {
 			return svc.(AccountUserSvc).CreateAccountUser
 		},
@@ -77,5 +72,5 @@ func (e *CreateAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*Crea
 			ObjectType: constants.ObjectTypeAccountUser,
 			Fields:     []string{"role", "department"},
 		}),
-	}).WithDocSource(e)
+	})
 }

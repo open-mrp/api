@@ -1,7 +1,10 @@
 package propertyep
 
 import (
+	"context"
+
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
+	apiendpoint "github.com/augno/api/services/api-gateway/pkg/endpoint"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
 	pb "github.com/augno/api/shared/proto/core"
@@ -25,13 +28,18 @@ func PropertyPresenter(p *pb.PropertyInfo, includes map[string]bool) apiresource
 		for i, a := range p.Attributes {
 			attrs[i] = AttributePresenter(a)
 		}
-		prop.Attributes = apiresource.NewList(attrs, apiresource.PageInfo{})
+		// When the PropertyInfo proto gains an AttributesPageInfo field, replace nil
+		// with p.AttributesPageInfo to generate correct cursor-based URLs.
+		attributesPath := apiendpoint.ExpandRoute(CatalogPropertyAttributesRoute, map[string]string{
+			"property_id": p.Id,
+		})
+		prop.Attributes = apiresource.NewList(attrs, grpcutil.MapProtoPageInfoForPath(attributesPath, nil))
 	}
 
 	return prop
 }
 
-func PropertyListPresenter(resp *pb.ListPropertiesResponse, includeKeys []string) *apiresource.List[apiresource.Property] {
+func PropertyListPresenter(ctx context.Context, resp *pb.ListPropertiesResponse, includeKeys []string) *apiresource.List[apiresource.Property] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.Property](nil, apiresource.PageInfo{})
 	}
@@ -46,7 +54,7 @@ func PropertyListPresenter(resp *pb.ListPropertiesResponse, includeKeys []string
 		properties[i] = PropertyPresenter(p, includes)
 	}
 
-	return apiresource.NewList(properties, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(properties, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }
 
 func AttributePresenter(a *pb.AttributeInfo) apiresource.Attribute {
@@ -65,7 +73,7 @@ func AttributePresenter(a *pb.AttributeInfo) apiresource.Attribute {
 	}
 }
 
-func AttributeListPresenter(resp *pb.ListAttributesResponse) *apiresource.List[apiresource.Attribute] {
+func AttributeListPresenter(ctx context.Context, resp *pb.ListAttributesResponse) *apiresource.List[apiresource.Attribute] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.Attribute](nil, apiresource.PageInfo{})
 	}
@@ -75,5 +83,5 @@ func AttributeListPresenter(resp *pb.ListAttributesResponse) *apiresource.List[a
 		attributes[i] = AttributePresenter(a)
 	}
 
-	return apiresource.NewList(attributes, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(attributes, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }

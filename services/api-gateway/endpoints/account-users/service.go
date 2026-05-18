@@ -72,7 +72,7 @@ func (m *accountUserSvcImpl) ListAccountUsers(ctx context.Context, req *ListAcco
 		return nil, apiErr
 	}
 
-	return AccountUserListPresenter(resp), nil
+	return AccountUserListPresenter(ctx, resp), nil
 }
 
 func (m *accountUserSvcImpl) GetAccountUser(ctx context.Context, req *RetrieveAccountUserRequest) (*apiresource.AccountUser, *apierror.APIError) {

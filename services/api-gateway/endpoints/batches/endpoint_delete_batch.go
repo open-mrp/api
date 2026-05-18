@@ -24,13 +24,11 @@ func (e *DeleteBatchEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteBatc
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/batches/{id}",
-		Request:           &DeleteBatchRequest{},
-		Response:          &apiresource.Batch{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteBatchRequest) (*apiresource.Batch, *apierror.APIError) {
 			return svc.(BatchSvc).DeleteBatch
 		},
-	}).WithDocSource(e)
+	})
 }

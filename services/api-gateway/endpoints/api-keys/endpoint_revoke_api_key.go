@@ -15,7 +15,9 @@ type RevokeAPIKeyRequest struct {
 	APIKeyID string `path:"id" validate:"required"`
 }
 
-// Revokes an API key, preventing it from being used to authenticate requests.
+// Revokes an [API key](https://docs.augno.com/api/api-keys).
+//
+// Revoked API keys will be unable to be used to authenticate requests.
 type RevokeAPIKeyEndpoint struct{}
 
 func (e *RevokeAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*RevokeAPIKeyRequest, *apiresource.EmptyResource] {
@@ -24,13 +26,11 @@ func (e *RevokeAPIKeyEndpoint) Materialize() *apiendpoint.APIEndpoint[*RevokeAPI
 		Method:            http.MethodDelete,
 		Route:             "/v1/auth/api-keys/{id}",
 		ContentType:       "application/json",
-		Request:           &RevokeAPIKeyRequest{},
-		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RevokeAPIKeyRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(APIKeySvc).RevokeAPIKey
 		},
-	}).WithDocSource(e)
+	})
 }

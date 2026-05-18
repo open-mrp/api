@@ -35,13 +35,11 @@ func (e *EmailRecordEndpoint) Materialize() *apiendpoint.APIEndpoint[*EmailRecor
 		Method:            http.MethodPost,
 		Route:             "/v1/core/actions/email-record",
 		ContentType:       "application/json",
-		Request:           &EmailRecordRequest{},
-		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusAccepted,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *EmailRecordRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(UtilsSvc).EmailRecord
 		},
-	}).WithDocSource(e)
+	})
 }

@@ -39,14 +39,14 @@ func (*ProductsEndpointGroup) Materialize(config *ProductsEndpointGroupConfig) *
 		ResourceType: &apiresource.Product{},
 	}
 
-	listEndpoint := (&productep.ListProductsEndpoint{}).Materialize().WithService(inner, productSvc)
-	retrieveEndpoint := (&productep.RetrieveProductEndpoint{}).Materialize().WithService(inner, productSvc)
-	createEndpoint := (&productep.CreateProductEndpoint{}).Materialize().WithService(inner, productSvc)
-	updateEndpoint := (&productep.UpdateProductEndpoint{}).Materialize().WithService(inner, productSvc)
-	deleteEndpoint := (&productep.DeleteProductEndpoint{}).Materialize().WithService(inner, productSvc)
-	changeProductLineEndpoint := (&productep.ChangeProductProductLineEndpoint{}).Materialize().WithService(inner, productSvc)
-	validateEndpoint := (&productep.ValidateProductsEndpoint{}).Materialize().WithService(inner, productSvc)
-	exportEndpoint := (&productep.ExportProductsEndpoint{}).Materialize().WithService(inner, productSvc)
+	listEndpoint := apiendpoint.From(&productep.ListProductsEndpoint{}).WithService(inner, productSvc)
+	retrieveEndpoint := apiendpoint.From(&productep.RetrieveProductEndpoint{}).WithService(inner, productSvc)
+	createEndpoint := apiendpoint.From(&productep.CreateProductEndpoint{}).WithService(inner, productSvc)
+	updateEndpoint := apiendpoint.From(&productep.UpdateProductEndpoint{}).WithService(inner, productSvc)
+	deleteEndpoint := apiendpoint.From(&productep.DeleteProductEndpoint{}).WithService(inner, productSvc)
+	changeProductLineEndpoint := apiendpoint.From(&productep.ChangeProductProductLineEndpoint{}).WithService(inner, productSvc)
+	validateEndpoint := apiendpoint.From(&productep.ValidateProductsEndpoint{}).WithService(inner, productSvc)
+	exportEndpoint := apiendpoint.From(&productep.ExportProductsEndpoint{}).WithService(inner, productSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listEndpoint,

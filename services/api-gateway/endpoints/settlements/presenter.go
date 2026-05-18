@@ -1,6 +1,8 @@
 package settlementep
 
 import (
+	"context"
+
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -107,7 +109,7 @@ func TransactionAllocationPresenter(a *pb.TransactionAllocationInfo) apiresource
 	return alloc
 }
 
-func SettlementListPresenter(resp *pb.ListSettlementsResponse) *apiresource.List[apiresource.SettlementSummary] {
+func SettlementListPresenter(ctx context.Context, resp *pb.ListSettlementsResponse) *apiresource.List[apiresource.SettlementSummary] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.SettlementSummary](nil, apiresource.PageInfo{})
 	}
@@ -117,5 +119,5 @@ func SettlementListPresenter(resp *pb.ListSettlementsResponse) *apiresource.List
 		settlements[i] = SettlementSummaryPresenter(d)
 	}
 
-	return apiresource.NewList(settlements, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(settlements, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }

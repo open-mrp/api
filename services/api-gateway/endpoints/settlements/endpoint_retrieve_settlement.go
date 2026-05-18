@@ -27,8 +27,6 @@ func (e *RetrieveSettlementEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ret
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/finance/settlements/{id}",
-		Request:           &RetrieveSettlementRequest{},
-		Response:          &apiresource.Settlement{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -39,5 +37,5 @@ func (e *RetrieveSettlementEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ret
 			ObjectType: constants.ObjectTypeSettlement,
 			Fields:     []string{"allocations"},
 		}),
-	}).WithDocSource(e)
+	})
 }

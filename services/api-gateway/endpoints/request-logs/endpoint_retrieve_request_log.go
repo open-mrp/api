@@ -25,8 +25,6 @@ func (e *RetrieveRequestLogEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ret
 		Method:            http.MethodGet,
 		Route:             "/v1/core/request-logs/{id}",
 		ContentType:       "application/json",
-		Request:           &RetrieveRequestLogRequest{},
-		Response:          &apiresource.RequestLog{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -40,5 +38,5 @@ func (e *RetrieveRequestLogEndpoint) Materialize() *apiendpoint.APIEndpoint[*Ret
 		Extras: apiendpoint.APIEndpointExtras{
 			SkipRequestLogging: true,
 		},
-	}).WithDocSource(e)
+	})
 }

@@ -27,13 +27,11 @@ func (e *ListMemoriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListMemor
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/ai/memories",
-		Request:           &ListMemoriesRequest{},
-		Response:          &apiresource.List[apiresource.AgentMemory]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListMemoriesRequest) (*apiresource.List[apiresource.AgentMemory], *apierror.APIError) {
 			return svc.(AgentMemorySvc).ListMemories
 		},
-	}).WithDocSource(e)
+	})
 }

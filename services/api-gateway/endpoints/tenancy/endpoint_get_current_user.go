@@ -21,8 +21,6 @@ func (e *GetCurrentUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetCurr
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/me",
-		Request:           &GetCurrentUserRequest{},
-		Response:          &apiresource.User{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -32,5 +30,5 @@ func (e *GetCurrentUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetCurr
 		Extras: apiendpoint.APIEndpointExtras{
 			SkipRequestLogging: true,
 		},
-	}).WithDocSource(e)
+	})
 }

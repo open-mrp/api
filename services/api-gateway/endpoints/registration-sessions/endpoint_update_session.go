@@ -62,13 +62,11 @@ func (e *UpdateSessionEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateSe
 		Method:            http.MethodPatch,
 		Route:             "/v1/auth/registration-sessions/{session_id}",
 		ContentType:       "application/json",
-		Request:           &UpdateSessionRequest{},
-		Response:          &apiresource.RegistrationSession{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateSessionRequest) (*apiresource.RegistrationSession, *apierror.APIError) {
 			return svc.(RegistrationSessionSvc).UpdateSession
 		},
-	}).WithDocSource(e)
+	})
 }

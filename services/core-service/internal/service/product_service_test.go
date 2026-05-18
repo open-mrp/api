@@ -213,8 +213,6 @@ func (s *ProductSvcTestSuite) expectCacheError() {
 		Times(1)
 }
 
-func strPtr(s string) *string { return &s }
-
 // =============================================================================
 // CreateProduct
 // =============================================================================
@@ -647,7 +645,7 @@ func (s *ProductSvcTestSuite) TestUpdateProduct_SKUChange_ChecksUniquenessExclud
 
 	result, err := s.productSvc.UpdateProduct(ctx, domain.UpdateProductParams{
 		ProductID: "it_1",
-		SKU:       strPtr("NEW-SKU"),
+		SKU:       new("NEW-SKU"),
 	})
 
 	s.Nil(err)
@@ -671,7 +669,7 @@ func (s *ProductSvcTestSuite) TestUpdateProduct_DuplicateSKU_Conflict() {
 
 	result, err := s.productSvc.UpdateProduct(ctx, domain.UpdateProductParams{
 		ProductID: "it_1",
-		SKU:       strPtr("TAKEN"),
+		SKU:       new("TAKEN"),
 	})
 
 	s.Nil(result)
@@ -752,7 +750,7 @@ func (s *ProductSvcTestSuite) TestUpdateProduct_NotFound() {
 
 	result, err := s.productSvc.UpdateProduct(ctx, domain.UpdateProductParams{
 		ProductID: "it_missing",
-		SKU:       strPtr("X"),
+		SKU:       new("X"),
 	})
 
 	s.Nil(result)
@@ -768,7 +766,7 @@ func (s *ProductSvcTestSuite) TestUpdateProduct_IdempotencyReplay_ReturnsCached(
 
 	result, err := s.productSvc.UpdateProduct(ctx, domain.UpdateProductParams{
 		ProductID: "it_cached",
-		SKU:       strPtr("NEVER"),
+		SKU:       new("NEVER"),
 	})
 
 	s.Nil(err)

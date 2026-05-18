@@ -25,8 +25,6 @@ func (e *RetrieveItemInventoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/items/{id}/inventory",
-		Request:           &RetrieveItemInventoryRequest{},
-		Response:          &apiresource.ItemInventory{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -37,5 +35,5 @@ func (e *RetrieveItemInventoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 			ObjectType: constants.ObjectTypeItemInventory,
 			Fields:     []string{"on_hand", "reserved", "available_to_promise", "short"},
 		}),
-	}).WithDocSource(e)
+	})
 }

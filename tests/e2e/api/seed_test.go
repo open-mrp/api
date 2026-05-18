@@ -101,6 +101,7 @@ const (
 	SeedAccountStatusName = "Normal"
 
 	// Request logs (0014_e2e_extras.sql)
+	SeedRequestLogID             = "rqlog_01seedreqlog1_000" // linked from SeedAuditEventID for include=request tests
 	SeedRequestLogIdempotencyKey = "e2e-seed-idempotency-key-01"
 
 	// Sandboxes
@@ -293,10 +294,10 @@ var nullableFieldSeeds = map[string]string{
 	"customer_type_group_id":   SeedCustomerGroupID,
 
 	// Common reference IDs used across multiple endpoints
-	"carrier_id":        SeedCarrierID,
-	"payment_term_id":   SeedPaymentTermID,
-	"shipping_term_id":  SeedShippingTermID,
-	"sales_rep_id":      SeedAccountUserID,
+	"carrier_id":       SeedCarrierID,
+	"payment_term_id":  SeedPaymentTermID,
+	"shipping_term_id": SeedShippingTermID,
+	"sales_rep_id":     SeedAccountUserID,
 	// order_discount_id is intentionally excluded: the generic nullable-clear
 	// test clears it on the shared seed sales order (SeedSalesOrderID), which
 	// races with TestIncludes_PopulateNestedResources/retrieve-sales-order/order_discount

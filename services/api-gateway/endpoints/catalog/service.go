@@ -62,7 +62,7 @@ func (m *catalogSvcImpl) ListCatalogProductLines(ctx context.Context, req *ListC
 		return nil, apiErr
 	}
 
-	return CatalogProductLineListPresenter(resp), nil
+	return CatalogProductLineListPresenter(ctx, resp), nil
 }
 
 func (m *catalogSvcImpl) ListCatalogProducts(ctx context.Context, req *ListCatalogProductsRequest) (*apiresource.List[apiresource.CatalogCategory], *apierror.APIError) {
@@ -129,5 +129,5 @@ func (m *catalogSvcImpl) ListCatalogProducts(ctx context.Context, req *ListCatal
 		}
 	}
 
-	return apiresource.NewList(categories, grpcutil.MapProtoPageInfo(resp.PageInfo)), nil
+	return apiresource.NewList(categories, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo)), nil
 }

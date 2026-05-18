@@ -51,8 +51,6 @@ func (e *UpdateAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upda
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/account-users/{id}",
-		Request:           &UpdateAccountUserRequest{},
-		Response:          &apiresource.AccountUser{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -63,5 +61,5 @@ func (e *UpdateAccountUserEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upda
 			ObjectType: constants.ObjectTypeAccountUser,
 			Fields:     []string{"role", "department"},
 		}),
-	}).WithDocSource(e)
+	})
 }

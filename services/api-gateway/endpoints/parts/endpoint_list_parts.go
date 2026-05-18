@@ -33,8 +33,6 @@ func (e *ListPartsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPartsReq
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/parts",
-		Request:           &ListPartsRequest{},
-		Response:          &apiresource.List[apiresource.Part]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -45,5 +43,5 @@ func (e *ListPartsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListPartsReq
 			ObjectType: constants.ObjectTypePart,
 			Fields:     []string{"item", "item.category", "item.category.properties", "item.category.unit_group", "item.unit_value", "item.unit_cost", "item.burn_rate", "item.attributes"},
 		}),
-	}).WithDocSource(e)
+	})
 }

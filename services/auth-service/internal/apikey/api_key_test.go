@@ -67,7 +67,7 @@ func TestGenParsedAPIKey(t *testing.T) {
 func TestGenParsedAPIKey_Uniqueness(t *testing.T) {
 	t.Parallel()
 	keys := make(map[string]bool)
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		key, err := GenParsedAPIKey(constants.AccountModeProduction, nil)
 		if err != nil {
 			t.Fatalf("GenParsedAPIKey() unexpected error = %v", err)

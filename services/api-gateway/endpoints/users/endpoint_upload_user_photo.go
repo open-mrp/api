@@ -28,8 +28,6 @@ func (e *UploadUserPhotoEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upload
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/users/{id}/photo",
-		Request:           &UploadUserPhotoRequest{},
-		Response:          &apiresource.UserPhotoUploadResult{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -39,5 +37,5 @@ func (e *UploadUserPhotoEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upload
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UploadUserPhotoRequest) (*apiresource.UserPhotoUploadResult, *apierror.APIError) {
 			return svc.(UserSvc).UploadUserPhoto
 		},
-	}).WithDocSource(e)
+	})
 }

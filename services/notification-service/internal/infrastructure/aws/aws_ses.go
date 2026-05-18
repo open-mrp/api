@@ -167,10 +167,7 @@ func splitString(s string, chunkSize int) string {
 		return ""
 	}
 	for i := 0; i < len(runes); i += chunkSize {
-		end := i + chunkSize
-		if end > len(runes) {
-			end = len(runes)
-		}
+		end := min(i+chunkSize, len(runes))
 		chunks = append(chunks, string(runes[i:end]))
 	}
 	return strings.Join(chunks, "\r\n")

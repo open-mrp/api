@@ -39,13 +39,11 @@ func (e *MoveBatchesEndpoint) Materialize() *apiendpoint.APIEndpoint[*MoveBatche
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/batches/actions/move",
-		Request:           &MoveBatchesRequest{},
-		Response:          &apiresource.Batch{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *MoveBatchesRequest) (*apiresource.Batch, *apierror.APIError) {
 			return svc.(BatchSvc).MoveBatches
 		},
-	}).WithDocSource(e)
+	})
 }

@@ -37,13 +37,11 @@ func (e *CheckDuplicateEndpoint) Materialize() *apiendpoint.APIEndpoint[*CheckDu
 		Method:            http.MethodPut,
 		Route:             "/v1/core/actions/check-duplicates",
 		ContentType:       "application/json",
-		Request:           &CheckDuplicateRequest{},
-		Response:          &apiresource.CheckDuplicateResult{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CheckDuplicateRequest) (*apiresource.CheckDuplicateResult, *apierror.APIError) {
 			return svc.(UtilsSvc).CheckDuplicate
 		},
-	}).WithDocSource(e)
+	})
 }

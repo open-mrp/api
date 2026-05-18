@@ -18,13 +18,11 @@ func (e *EnsureBillingCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		Method:            http.MethodPut,
 		Route:             "/v1/billing/accounts",
 		ContentType:       "application/json",
-		Request:           &apiresource.EmptyResource{},
-		Response:          &apiresource.EnsureBillingCustomerResponse{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *apiresource.EmptyResource) (*apiresource.EnsureBillingCustomerResponse, *apierror.APIError) {
 			return svc.(BillingSvc).EnsureBillingCustomer
 		},
-	}).WithDocSource(e)
+	})
 }

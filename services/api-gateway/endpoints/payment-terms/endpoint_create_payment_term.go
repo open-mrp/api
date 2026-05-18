@@ -34,8 +34,6 @@ func (e *CreatePaymentTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*Crea
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/finance/payment-terms",
-		Request:           &CreatePaymentTermRequest{},
-		Response:          &apiresource.PaymentTerm{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            true,
 		Preview:           true,
@@ -49,5 +47,5 @@ func (e *CreatePaymentTermEndpoint) Materialize() *apiendpoint.APIEndpoint[*Crea
 			ObjectType: constants.ObjectTypePaymentTerm,
 			Fields:     []string{"owner", "owner.account"},
 		}),
-	}).WithDocSource(e)
+	})
 }

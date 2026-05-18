@@ -21,7 +21,7 @@ func (*HealthEndpointGroup) Materialize(config HealthEndpointGroupConfig) *Healt
 	}
 
 	healthController := healthep.NewHealthSvc()
-	healthEndpoint := (&healthep.HealthEndpoint{}).Materialize().WithService(inner, healthController)
+	healthEndpoint := apiendpoint.From(&healthep.HealthEndpoint{}).WithService(inner, healthController)
 	inner.Endpoints = []apiendpoint.APIEndpointer{healthEndpoint}
 
 	return &HealthEndpointGroup{inner}

@@ -24,8 +24,6 @@ func (e *ListCarriersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListCarri
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/carriers",
-		Request:           &ListCarriersRequest{},
-		Response:          &apiresource.List[apiresource.Carrier]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -36,5 +34,5 @@ func (e *ListCarriersEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListCarri
 			ObjectType: constants.ObjectTypeCarrier,
 			Fields:     []string{"owner", "owner.account", "service_levels"},
 		}),
-	}).WithDocSource(e)
+	})
 }

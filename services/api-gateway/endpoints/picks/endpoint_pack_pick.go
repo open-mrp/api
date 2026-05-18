@@ -35,13 +35,11 @@ func (e *PackPickEndpoint) Materialize() *apiendpoint.APIEndpoint[*PackPickReque
 		Method:            http.MethodPost,
 		Route:             "/v1/operations/picks/{id}/actions/pack",
 		ContentType:       "application/json",
-		Request:           &PackPickRequest{},
-		Response:          &apiresource.PackPickResponse{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *PackPickRequest) (*apiresource.PackPickResponse, *apierror.APIError) {
 			return svc.(PickSvc).PackPick
 		},
-	}).WithDocSource(e)
+	})
 }

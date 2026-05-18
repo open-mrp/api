@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -114,12 +115,79 @@ type ListResponse struct {
 	Data     []json.RawMessage `json:"data"`
 }
 
-// PageInfo contains cursor-based pagination metadata.
+// PageInfo contains URL-based pagination metadata.
 type PageInfo struct {
-	NextCursor  *string `json:"next_cursor"`
-	PrevCursor  *string `json:"prev_cursor"`
-	HasNextPage bool    `json:"has_next_page"`
-	HasPrevPage bool    `json:"has_prev_page"`
+	NextPageURL     *string `json:"next_page_url"`
+	PreviousPageURL *string `json:"previous_page_url"`
+	HasNextPage     bool    `json:"has_next_page"`
+	HasPrevPage     bool    `json:"has_prev_page"`
+}
+
+// NextCursor extracts the cursor query parameter from NextPageURL.
+func (p PageInfo) NextCursor() *string {
+	return extractCursorFromPageURL(p.NextPageURL)
+}
+
+// PrevCursor extracts the cursor query parameter from PreviousPageURL.
+func (p PageInfo) PrevCursor() *string {
+	return extractCursorFromPageURL(p.PreviousPageURL)
+}
+
+// extractCursorFromPageURL parses a pagination URL and returns the cursor query param value.
+func extractCursorFromPageURL(pageURL *string) *string {
+	if pageURL == nil {
+		return nil
+	}
+	// URLs are relative like "/v1/path?cursor=xxx&limit=10"
+	idx := strings.Index(*pageURL, "?")
+	if idx < 0 {
+		return nil
+	}
+	params, err := url.ParseQuery((*pageURL)[idx+1:])
+	if err != nil {
+		return nil
+	}
+	cursor := params.Get("cursor")
+	if cursor == "" {
+		return nil
+	}
+	return &cursor
+}
+
+// ListURLPathQuery parses a relative list pagination URL (e.g. from page_info
+// next_page_url / previous_page_url) into a path and query values for use with
+// Get, GetList, or GetListRaw.
+func ListURLPathQuery(relativeURL *string) (path string, values url.Values, ok bool) {
+	if relativeURL == nil {
+		return "", nil, false
+	}
+	raw := strings.TrimSpace(*relativeURL)
+	if raw == "" || raw[0] != '/' {
+		return "", nil, false
+	}
+	u, err := url.Parse(raw)
+	if err != nil || u.Path == "" {
+		return "", nil, false
+	}
+	return u.Path, u.Query(), true
+}
+
+// GetListFromPageURL performs GET using a relative URL from page_info (next or previous).
+func (c *Client) GetListFromPageURL(relativePageURL *string) (*ListResponse, int, error) {
+	path, params, ok := ListURLPathQuery(relativePageURL)
+	if !ok {
+		return nil, 0, fmt.Errorf("invalid list page URL")
+	}
+	return c.GetList(path, params)
+}
+
+// GetListRawFromPageURL is like GetListFromPageURL but returns status and raw body.
+func (c *Client) GetListRawFromPageURL(relativePageURL *string) (int, []byte, error) {
+	path, params, ok := ListURLPathQuery(relativePageURL)
+	if !ok {
+		return 0, nil, fmt.Errorf("invalid list page URL")
+	}
+	return c.GetListRaw(path, params)
 }
 
 // GetList performs an authenticated GET and parses the response as a ListResponse.

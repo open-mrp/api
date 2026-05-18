@@ -27,8 +27,6 @@ func (e *RetrieveSupplierMaterialEndpoint) Materialize() *apiendpoint.APIEndpoin
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/suppliers/{supplier_id}/materials/{id}",
-		Request:           &RetrieveSupplierMaterialRequest{},
-		Response:          &apiresource.SupplierMaterial{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -39,5 +37,5 @@ func (e *RetrieveSupplierMaterialEndpoint) Materialize() *apiendpoint.APIEndpoin
 			ObjectType: constants.ObjectTypeSupplierMaterial,
 			Fields:     []string{"material", "material.item"},
 		}),
-	}).WithDocSource(e)
+	})
 }

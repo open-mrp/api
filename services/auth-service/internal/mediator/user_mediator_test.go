@@ -37,7 +37,7 @@ func TestValidateCredential_EmptyToken(t *testing.T) {
 		coreClient: coreClient,
 	}
 
-	identity, err := med.ValidateCredential(context.Background(), "", ptrString("acct-123"), nil)
+	identity, err := med.ValidateCredential(context.Background(), "", new("acct-123"), nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -102,7 +102,7 @@ func TestValidateCredential_APIKeyOwnedAccount(t *testing.T) {
 		jwtSecret:  testutil.JWTSecret,
 	}
 
-	identity, err := med.ValidateCredential(context.Background(), "aug_sk_token", ptrString("acct-1"), nil)
+	identity, err := med.ValidateCredential(context.Background(), "aug_sk_token", new("acct-1"), nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -176,7 +176,7 @@ func TestValidateCredential_APIKeyRelationMissing(t *testing.T) {
 		jwtSecret:  testutil.JWTSecret,
 	}
 
-	identity, err := med.ValidateCredential(context.Background(), "aug_sk_missing", ptrString("acct-target"), nil)
+	identity, err := med.ValidateCredential(context.Background(), "aug_sk_missing", new("acct-target"), nil)
 	select {
 	case <-touchDone:
 	case <-time.After(100 * time.Millisecond):
@@ -225,8 +225,8 @@ func TestValidateCredential_UserAccountUserPath(t *testing.T) {
 	coreClient.EXPECT().GetUserAccountAccess(gomock.Any(), userID, targetAccountID).Return(&domain.AccountUserAccess{
 		AccountUserID: "acu-1",
 		AccountID:     targetAccountID,
-		RoleID:        ptrString("role-99"),
-		RoleType:      ptrString("manager"),
+		RoleID:        new("role-99"),
+		RoleType:      new("manager"),
 		Permissions:   map[string]bool{"perm:edit": true},
 	}, true, nil)
 	coreClient.EXPECT().MarkAccountUserUsed(gomock.Any(), "acu-1").Return(nil).AnyTimes()
@@ -282,7 +282,7 @@ func TestValidateCredential_UserExpiredToken(t *testing.T) {
 		jwtSecret:  testutil.JWTSecret,
 	}
 
-	identity, err := med.ValidateCredential(context.Background(), expiredToken, ptrString("acct-1"), nil)
+	identity, err := med.ValidateCredential(context.Background(), expiredToken, new("acct-1"), nil)
 	if err == nil {
 		t.Fatal("expected error for expired token, got nil")
 	}
@@ -314,7 +314,7 @@ func TestValidateCredential_EmptyToken_AccountNotFound(t *testing.T) {
 		coreClient: coreClient,
 	}
 
-	identity, err := med.ValidateCredential(context.Background(), "", ptrString("acct-nonexistent"), nil)
+	identity, err := med.ValidateCredential(context.Background(), "", new("acct-nonexistent"), nil)
 	if err == nil {
 		t.Fatal("expected error for nonexistent account, got nil")
 	}
@@ -362,7 +362,7 @@ func TestValidateCredential_UserToken_AccountNotFound(t *testing.T) {
 		jwtSecret:  testutil.JWTSecret,
 	}
 
-	identity, err := med.ValidateCredential(context.Background(), validToken, ptrString("acct-nonexistent"), nil)
+	identity, err := med.ValidateCredential(context.Background(), validToken, new("acct-nonexistent"), nil)
 	if err == nil {
 		t.Fatal("expected error for nonexistent account, got nil")
 	}
@@ -482,8 +482,4 @@ func TestValidateCredential_UserToken_ActorAccountHeader_RequiresAccountUser(t *
 	if err.PublicMessage != ErrActorAccountRequiresMember {
 		t.Fatalf("expected actor account requires member message, got %s", err.PublicMessage)
 	}
-}
-
-func ptrString(v string) *string {
-	return &v
 }

@@ -26,8 +26,6 @@ func (e *ListSupplierMaterialsEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/suppliers/{supplier_id}/materials",
-		Request:           &ListSupplierMaterialsRequest{},
-		Response:          &apiresource.List[apiresource.SupplierMaterial]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -38,5 +36,5 @@ func (e *ListSupplierMaterialsEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 			ObjectType: constants.ObjectTypeSupplierMaterial,
 			Fields:     []string{"material", "material.item"},
 		}),
-	}).WithDocSource(e)
+	})
 }

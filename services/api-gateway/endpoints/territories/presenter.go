@@ -1,6 +1,8 @@
 package territoryep
 
 import (
+	"context"
+
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -65,7 +67,7 @@ func TerritoryPresenter(t *pb.TerritoryInfo) apiresource.Territory {
 	}
 }
 
-func TerritoryListPresenter(resp *pb.ListTerritoriesResponse) *apiresource.List[apiresource.Territory] {
+func TerritoryListPresenter(ctx context.Context, resp *pb.ListTerritoriesResponse) *apiresource.List[apiresource.Territory] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.Territory](nil, apiresource.PageInfo{})
 	}
@@ -75,5 +77,5 @@ func TerritoryListPresenter(resp *pb.ListTerritoriesResponse) *apiresource.List[
 		territories[i] = TerritoryPresenter(t)
 	}
 
-	return apiresource.NewList(territories, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(territories, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }

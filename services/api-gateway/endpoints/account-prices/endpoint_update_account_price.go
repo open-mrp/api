@@ -48,8 +48,6 @@ func (e *UpdateAccountPriceEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upd
 		Method:            http.MethodPatch,
 		Route:             "/v1/sales/account-prices/{id}",
 		ContentType:       "application/json",
-		Request:           &UpdateAccountPriceRequest{},
-		Response:          &apiresource.AccountPrice{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -60,5 +58,5 @@ func (e *UpdateAccountPriceEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upd
 			ObjectType: constants.ObjectTypeAccountPrice,
 			Fields:     []string{"recipient_account", "product_line", "categories", "attributes"},
 		}),
-	}).WithDocSource(e)
+	})
 }

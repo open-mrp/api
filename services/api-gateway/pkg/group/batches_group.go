@@ -39,19 +39,19 @@ func (*BatchesEndpointGroup) Materialize(config *BatchesEndpointGroupConfig) *Ba
 		ResourceType: &apiresource.Batch{},
 	}
 
-	getBatchFlowEndpoint := (&batchep.GetBatchFlowEndpoint{}).Materialize().WithService(inner, batchSvc)
-	listByScanningStationEndpoint := (&batchep.ListBatchesByScanningStationEndpoint{}).Materialize().WithService(inner, batchSvc)
-	getPossibleNextStepsEndpoint := (&batchep.GetPossibleNextStepsEndpoint{}).Materialize().WithService(inner, batchSvc)
-	analyzeOpenBatchesEndpoint := (&batchep.AnalyzeOpenBatchesEndpoint{}).Materialize().WithService(inner, batchSvc)
-	initializeBatchEndpoint := (&batchep.InitializeBatchEndpoint{}).Materialize().WithService(inner, batchSvc)
-	moveBatchesEndpoint := (&batchep.MoveBatchesEndpoint{}).Materialize().WithService(inner, batchSvc)
-	mergeBatchesEndpoint := (&batchep.MergeBatchesEndpoint{}).Materialize().WithService(inner, batchSvc)
-	splitBatchEndpoint := (&batchep.SplitBatchEndpoint{}).Materialize().WithService(inner, batchSvc)
-	getRemainingToSplitEndpoint := (&batchep.GetRemainingQuantityToSplitEndpoint{}).Materialize().WithService(inner, batchSvc)
-	getConsumptionEndpoint := (&batchep.GetScanningStationConsumptionEndpoint{}).Materialize().WithService(inner, batchSvc)
-	closeBatchEndpoint := (&batchep.CloseBatchEndpoint{}).Materialize().WithService(inner, batchSvc)
-	deleteBatchEndpoint := (&batchep.DeleteBatchEndpoint{}).Materialize().WithService(inner, batchSvc)
-	bulkDeleteBatchesEndpoint := (&batchep.BulkDeleteBatchesEndpoint{}).Materialize().WithService(inner, batchSvc)
+	getBatchFlowEndpoint := apiendpoint.From(&batchep.GetBatchFlowEndpoint{}).WithService(inner, batchSvc)
+	listByScanningStationEndpoint := apiendpoint.From(&batchep.ListBatchesByScanningStationEndpoint{}).WithService(inner, batchSvc)
+	getPossibleNextStepsEndpoint := apiendpoint.From(&batchep.GetPossibleNextStepsEndpoint{}).WithService(inner, batchSvc)
+	analyzeOpenBatchesEndpoint := apiendpoint.From(&batchep.AnalyzeOpenBatchesEndpoint{}).WithService(inner, batchSvc)
+	initializeBatchEndpoint := apiendpoint.From(&batchep.InitializeBatchEndpoint{}).WithService(inner, batchSvc)
+	moveBatchesEndpoint := apiendpoint.From(&batchep.MoveBatchesEndpoint{}).WithService(inner, batchSvc)
+	mergeBatchesEndpoint := apiendpoint.From(&batchep.MergeBatchesEndpoint{}).WithService(inner, batchSvc)
+	splitBatchEndpoint := apiendpoint.From(&batchep.SplitBatchEndpoint{}).WithService(inner, batchSvc)
+	getRemainingToSplitEndpoint := apiendpoint.From(&batchep.GetRemainingQuantityToSplitEndpoint{}).WithService(inner, batchSvc)
+	getConsumptionEndpoint := apiendpoint.From(&batchep.GetScanningStationConsumptionEndpoint{}).WithService(inner, batchSvc)
+	closeBatchEndpoint := apiendpoint.From(&batchep.CloseBatchEndpoint{}).WithService(inner, batchSvc)
+	deleteBatchEndpoint := apiendpoint.From(&batchep.DeleteBatchEndpoint{}).WithService(inner, batchSvc)
+	bulkDeleteBatchesEndpoint := apiendpoint.From(&batchep.BulkDeleteBatchesEndpoint{}).WithService(inner, batchSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		getBatchFlowEndpoint,

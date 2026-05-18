@@ -56,13 +56,11 @@ func (e *UpdateAddressEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateAd
 		Method:            http.MethodPatch,
 		Route:             "/v1/sales/addresses/{id}",
 		ContentType:       "application/json",
-		Request:           &UpdateAddressRequest{},
-		Response:          &apiresource.Address{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateAddressRequest) (*apiresource.Address, *apierror.APIError) {
 			return svc.(AddressSvc).UpdateAddress
 		},
-	}).WithDocSource(e)
+	})
 }

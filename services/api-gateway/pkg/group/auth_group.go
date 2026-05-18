@@ -47,15 +47,15 @@ func (*AuthEndpointGroup) Materialize(config *AuthEndpointGroupConfig) *AuthEndp
 		Description: "User authentication and token lifecycle operations, including login, registration, password management, and token refresh.",
 	}
 
-	loginEndpoint := (&authep.LoginEndpoint{}).Materialize().WithService(inner, authController)
-	registerEndpoint := (&authep.RegisterEndpoint{}).Materialize().WithService(inner, authController)
-	magicLoginEndpoint := (&authep.MagicLoginEndpoint{}).Materialize().WithService(inner, authController)
-	refreshTokenEndpoint := (&authep.RefreshTokenEndpoint{}).Materialize().WithService(inner, authController)
-	requestPasswordResetEndpoint := (&authep.RequestPasswordResetEndpoint{}).Materialize().WithService(inner, authController)
-	resetPasswordEndpoint := (&authep.ResetPasswordEndpoint{}).Materialize().WithService(inner, authController)
-	revokeRefreshTokenEndpoint := (&authep.RevokeRefreshTokenEndpoint{}).Materialize().WithMiddleware(authMw).WithService(inner, authController)
-	updatePasswordEndpoint := (&authep.UpdatePasswordEndpoint{}).Materialize().WithMiddleware(authMw).WithService(inner, authController)
-	updateScannerPasswordEndpoint := (&authep.UpdateScannerPasswordEndpoint{}).Materialize().WithMiddleware(authMw).WithService(inner, authController)
+	loginEndpoint := apiendpoint.From(&authep.LoginEndpoint{}).WithService(inner, authController)
+	registerEndpoint := apiendpoint.From(&authep.RegisterEndpoint{}).WithService(inner, authController)
+	magicLoginEndpoint := apiendpoint.From(&authep.MagicLoginEndpoint{}).WithService(inner, authController)
+	refreshTokenEndpoint := apiendpoint.From(&authep.RefreshTokenEndpoint{}).WithService(inner, authController)
+	requestPasswordResetEndpoint := apiendpoint.From(&authep.RequestPasswordResetEndpoint{}).WithService(inner, authController)
+	resetPasswordEndpoint := apiendpoint.From(&authep.ResetPasswordEndpoint{}).WithService(inner, authController)
+	revokeRefreshTokenEndpoint := apiendpoint.From(&authep.RevokeRefreshTokenEndpoint{}).WithMiddleware(authMw).WithService(inner, authController)
+	updatePasswordEndpoint := apiendpoint.From(&authep.UpdatePasswordEndpoint{}).WithMiddleware(authMw).WithService(inner, authController)
+	updateScannerPasswordEndpoint := apiendpoint.From(&authep.UpdateScannerPasswordEndpoint{}).WithMiddleware(authMw).WithService(inner, authController)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		loginEndpoint,

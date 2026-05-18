@@ -26,13 +26,11 @@ func (e *RetrieveShipmentLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*R
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/shipments/{shipment_id}/lines/{id}",
-		Request:           &RetrieveShipmentLineRequest{},
-		Response:          &apiresource.ShipmentLine{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveShipmentLineRequest) (*apiresource.ShipmentLine, *apierror.APIError) {
 			return svc.(ShipmentSvc).GetShipmentLine
 		},
-	}).WithDocSource(e)
+	})
 }

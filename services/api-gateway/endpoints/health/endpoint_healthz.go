@@ -18,8 +18,6 @@ func (e *HealthEndpoint) Materialize() *apiendpoint.APIEndpoint[*apiresource.Emp
 		Method:            http.MethodGet,
 		Route:             "/healthz",
 		ContentType:       "application/json",
-		Request:           &apiresource.EmptyResource{},
-		Response:          &apiresource.Healthcheck{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *apiresource.EmptyResource) (*apiresource.Healthcheck, *apierror.APIError) {
@@ -28,5 +26,5 @@ func (e *HealthEndpoint) Materialize() *apiendpoint.APIEndpoint[*apiresource.Emp
 		Extras: apiendpoint.APIEndpointExtras{
 			SkipRequestLogging: true,
 		},
-	}).WithDocSource(e)
+	})
 }

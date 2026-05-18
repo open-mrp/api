@@ -24,13 +24,11 @@ func (e *RetrieveMemoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retriev
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/ai/memories/{id}",
-		Request:           &RetrieveMemoryRequest{},
-		Response:          &apiresource.AgentMemory{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveMemoryRequest) (*apiresource.AgentMemory, *apierror.APIError) {
 			return svc.(AgentMemorySvc).GetMemory
 		},
-	}).WithDocSource(e)
+	})
 }

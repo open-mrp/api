@@ -39,13 +39,13 @@ func (*RegistrationFlowsEndpointGroup) Materialize(config *RegistrationFlowsEndp
 		ResourceType: &apiresource.RegistrationFlow{},
 	}
 
-	listRegistrationFlowsEndpoint := (&registrationflowep.ListRegistrationFlowsEndpoint{}).Materialize().WithService(inner, registrationFlowSvc)
-	getRegistrationFlowEndpoint := (&registrationflowep.RetrieveRegistrationFlowEndpoint{}).Materialize().WithService(inner, registrationFlowSvc)
-	createRegistrationFlowEndpoint := (&registrationflowep.CreateRegistrationFlowEndpoint{}).Materialize().WithService(inner, registrationFlowSvc)
-	updateRegistrationFlowEndpoint := (&registrationflowep.UpdateRegistrationFlowEndpoint{}).Materialize().WithService(inner, registrationFlowSvc)
-	deleteRegistrationFlowEndpoint := (&registrationflowep.DeleteRegistrationFlowEndpoint{}).Materialize().WithService(inner, registrationFlowSvc)
-	getRegistrationFlowBySlugEndpoint := (&registrationflowep.RetrieveRegistrationFlowBySlugEndpoint{}).Materialize().WithService(inner, registrationFlowSvc)
-	registerCustomerEndpoint := (&registrationflowep.RegisterCustomerEndpoint{}).Materialize().WithService(inner, registrationFlowSvc)
+	listRegistrationFlowsEndpoint := apiendpoint.From(&registrationflowep.ListRegistrationFlowsEndpoint{}).WithService(inner, registrationFlowSvc)
+	getRegistrationFlowEndpoint := apiendpoint.From(&registrationflowep.RetrieveRegistrationFlowEndpoint{}).WithService(inner, registrationFlowSvc)
+	createRegistrationFlowEndpoint := apiendpoint.From(&registrationflowep.CreateRegistrationFlowEndpoint{}).WithService(inner, registrationFlowSvc)
+	updateRegistrationFlowEndpoint := apiendpoint.From(&registrationflowep.UpdateRegistrationFlowEndpoint{}).WithService(inner, registrationFlowSvc)
+	deleteRegistrationFlowEndpoint := apiendpoint.From(&registrationflowep.DeleteRegistrationFlowEndpoint{}).WithService(inner, registrationFlowSvc)
+	getRegistrationFlowBySlugEndpoint := apiendpoint.From(&registrationflowep.RetrieveRegistrationFlowBySlugEndpoint{}).WithService(inner, registrationFlowSvc)
+	registerCustomerEndpoint := apiendpoint.From(&registrationflowep.RegisterCustomerEndpoint{}).WithService(inner, registrationFlowSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listRegistrationFlowsEndpoint,

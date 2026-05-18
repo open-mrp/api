@@ -39,11 +39,11 @@ func (*MachinesEndpointGroup) Materialize(config *MachinesEndpointGroupConfig) *
 		ResourceType: &apiresource.Machine{},
 	}
 
-	listMachinesEndpoint := (&machineep.ListMachinesEndpoint{}).Materialize().WithService(inner, machineSvc)
-	getMachineEndpoint := (&machineep.RetrieveMachineEndpoint{}).Materialize().WithService(inner, machineSvc)
-	createMachineEndpoint := (&machineep.CreateMachineEndpoint{}).Materialize().WithService(inner, machineSvc)
-	updateMachineEndpoint := (&machineep.UpdateMachineEndpoint{}).Materialize().WithService(inner, machineSvc)
-	deleteMachineEndpoint := (&machineep.DeleteMachineEndpoint{}).Materialize().WithService(inner, machineSvc)
+	listMachinesEndpoint := apiendpoint.From(&machineep.ListMachinesEndpoint{}).WithService(inner, machineSvc)
+	getMachineEndpoint := apiendpoint.From(&machineep.RetrieveMachineEndpoint{}).WithService(inner, machineSvc)
+	createMachineEndpoint := apiendpoint.From(&machineep.CreateMachineEndpoint{}).WithService(inner, machineSvc)
+	updateMachineEndpoint := apiendpoint.From(&machineep.UpdateMachineEndpoint{}).WithService(inner, machineSvc)
+	deleteMachineEndpoint := apiendpoint.From(&machineep.DeleteMachineEndpoint{}).WithService(inner, machineSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listMachinesEndpoint,

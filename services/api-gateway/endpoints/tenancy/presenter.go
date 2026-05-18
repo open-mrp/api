@@ -1,6 +1,8 @@
 package tenancyep
 
 import (
+	"maps"
+
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -26,9 +28,7 @@ func tenancyAccountPlanPresenter(p *pb.TenancyAccountPlanProto) *apiresource.Ten
 	}
 
 	features := make(map[string]bool, len(p.Features))
-	for key, enabled := range p.Features {
-		features[key] = enabled
-	}
+	maps.Copy(features, p.Features)
 
 	return &apiresource.TenancyAccountPlan{
 		TypeID:        p.TypeId,

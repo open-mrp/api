@@ -25,8 +25,6 @@ func (e *RetrieveCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retri
 		Method:            http.MethodGet,
 		Route:             "/v1/sales/customers/{id}",
 		ContentType:       "application/json",
-		Request:           &RetrieveCustomerRequest{},
-		Response:          &apiresource.Customer{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -55,5 +53,5 @@ func (e *RetrieveCustomerEndpoint) Materialize() *apiendpoint.APIEndpoint[*Retri
 				"credit_limit",
 			},
 		}),
-	}).WithDocSource(e)
+	})
 }

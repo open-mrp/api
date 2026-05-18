@@ -13,6 +13,11 @@ import (
 	"github.com/augno/api/shared/constants"
 )
 
+func TestMain(m *testing.M) {
+	quietOutput = true
+	os.Exit(m.Run())
+}
+
 type NestedStruct struct {
 	// NestedField doc
 	NestedField string `json:"nested_field"`
@@ -265,10 +270,6 @@ type TestResponse struct {
 
 type MockEndpoint struct {
 	apiendpoint.APIEndpoint[TestRequest, TestResponse]
-}
-
-func (e *MockEndpoint) Materialize() apiendpoint.APIEndpointer {
-	return e
 }
 
 func (e *MockEndpoint) GetHandler() http.HandlerFunc {
@@ -538,14 +539,14 @@ func TestGenerateSchema_ListAndPageInfoUseDocComments(t *testing.T) {
 	if !ok {
 		t.Fatal("expected PageInfo in components.Schemas")
 	}
-	if want := "PageInfo contains cursor-based pagination metadata."; pageInfoSchema.Description != want {
+	if want := "PageInfo contains URL-based pagination metadata."; pageInfoSchema.Description != want {
 		t.Errorf("PageInfo schema description = %q; want %q", pageInfoSchema.Description, want)
 	}
-	if got := pageInfoSchema.Properties["next_cursor"].Description; got != "Cursor to fetch the next page, `null` if no more pages." {
-		t.Errorf("next_cursor description = %q", got)
+	if got := pageInfoSchema.Properties["next_page_url"].Description; got != "URL to fetch the next page, `null` if no more pages." {
+		t.Errorf("next_page_url description = %q", got)
 	}
-	if got := pageInfoSchema.Properties["prev_cursor"].Description; got != "Cursor to fetch the previous page, `null` if on the first page." {
-		t.Errorf("prev_cursor description = %q", got)
+	if got := pageInfoSchema.Properties["previous_page_url"].Description; got != "URL to fetch the previous page, `null` if on the first page." {
+		t.Errorf("previous_page_url description = %q", got)
 	}
 	if got := pageInfoSchema.Properties["has_next_page"].Description; got != "Whether more results exist after this page." {
 		t.Errorf("has_next_page description = %q", got)

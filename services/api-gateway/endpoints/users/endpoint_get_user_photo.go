@@ -24,13 +24,11 @@ func (e *GetUserPhotoURLEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetUse
 		Method:            http.MethodGet,
 		Route:             "/v1/identity/users/{id}/photo",
 		ContentType:       "application/json",
-		Request:           &GetUserPhotoURLRequest{},
-		Response:          &apiresource.UserPhotoURL{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetUserPhotoURLRequest) (*apiresource.UserPhotoURL, *apierror.APIError) {
 			return svc.(UserSvc).GetUserPhotoURL
 		},
-	}).WithDocSource(e)
+	})
 }

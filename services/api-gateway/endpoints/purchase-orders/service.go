@@ -83,7 +83,7 @@ func (m *purchaseOrderSvcImpl) ListPurchaseOrders(ctx context.Context, req *List
 		return nil, apiErr
 	}
 
-	return PurchaseOrderListPresenter(resp), nil
+	return PurchaseOrderListPresenter(ctx, resp), nil
 }
 
 func (m *purchaseOrderSvcImpl) GetPurchaseOrder(ctx context.Context, req *RetrievePurchaseOrderRequest) (*apiresource.PurchaseOrderDetail, *apierror.APIError) {
@@ -331,5 +331,5 @@ func (m *purchaseOrderSvcImpl) ListPurchaseOrderStatuses(ctx context.Context, re
 		return nil, apiErr
 	}
 
-	return PurchaseOrderStatusListPresenter(resp), nil
+	return PurchaseOrderStatusListPresenter(ctx, resp), nil
 }

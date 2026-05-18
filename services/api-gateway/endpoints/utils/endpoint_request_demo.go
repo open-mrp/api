@@ -42,13 +42,11 @@ func (e *RequestDemoEndpoint) Materialize() *apiendpoint.APIEndpoint[*RequestDem
 		Method:            http.MethodPost,
 		Route:             "/v1/core/actions/request-demo",
 		ContentType:       "application/json",
-		Request:           &RequestDemoRequest{},
-		Response:          &apiresource.MessageResource{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RequestDemoRequest) (*apiresource.MessageResource, *apierror.APIError) {
 			return svc.(UtilsSvc).RequestDemo
 		},
-	}).WithDocSource(e)
+	})
 }

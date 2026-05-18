@@ -1,6 +1,8 @@
 package inventorychangelogep
 
 import (
+	"context"
+
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -94,7 +96,7 @@ func InventoryChangeLogPresenter(icl *pb.InventoryChangeLogInfo) apiresource.Inv
 	return result
 }
 
-func InventoryChangeLogListPresenter(resp *pb.ListInventoryChangeLogsResponse) *apiresource.List[apiresource.InventoryChangeLog] {
+func InventoryChangeLogListPresenter(ctx context.Context, resp *pb.ListInventoryChangeLogsResponse) *apiresource.List[apiresource.InventoryChangeLog] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.InventoryChangeLog](nil, apiresource.PageInfo{})
 	}
@@ -104,7 +106,7 @@ func InventoryChangeLogListPresenter(resp *pb.ListInventoryChangeLogsResponse) *
 		items[i] = InventoryChangeLogPresenter(icl)
 	}
 
-	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(items, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }
 
 func ExportInventoryChangeLogsPresenter(resp *pb.ExportInventoryChangeLogsResponse) *apiresource.ExportInventoryChangeLogsResponse {

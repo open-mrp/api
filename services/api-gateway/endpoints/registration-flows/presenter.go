@@ -1,6 +1,8 @@
 package registrationflowep
 
 import (
+	"context"
+
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -51,7 +53,7 @@ func RegistrationFlowPresenter(rf *pb.RegistrationFlowInfo) apiresource.Registra
 	}
 }
 
-func RegistrationFlowListPresenter(resp *pb.ListRegistrationFlowsResponse) *apiresource.List[apiresource.RegistrationFlow] {
+func RegistrationFlowListPresenter(ctx context.Context, resp *pb.ListRegistrationFlowsResponse) *apiresource.List[apiresource.RegistrationFlow] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.RegistrationFlow](nil, apiresource.PageInfo{})
 	}
@@ -61,5 +63,5 @@ func RegistrationFlowListPresenter(resp *pb.ListRegistrationFlowsResponse) *apir
 		registrationFlows[i] = RegistrationFlowPresenter(rf)
 	}
 
-	return apiresource.NewList(registrationFlows, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(registrationFlows, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }

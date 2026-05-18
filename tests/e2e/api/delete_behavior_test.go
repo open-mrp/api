@@ -81,6 +81,47 @@ func TestDeleteBehavior_DoubleDeleteAPIKey(t *testing.T) {
 		"Double-revoke of API key should return 200, 404, or 410, got %d: %s", del2Status, string(del2Body))
 }
 
+func TestDeleteBehavior_CustomerDeleteConflictWhenSalesOrdersExist(t *testing.T) {
+	t.Parallel()
+
+	const productLineAccessPath = "/v1/sales/product-line-access/customers"
+
+	name := uniqueName("e2e-cust-so-guard")
+	status, body, err := apiClient.Post(customersPath, validCustomerBody(name), newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, status, body)
+	customerID := jsonField(parseJSON(body), "id")
+
+	plStatus, plBody, err := apiClient.Post(productLineAccessPath, map[string]any{
+		"customer_id":      customerID,
+		"product_line_ids": []string{SeedProductLineID},
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, plStatus, plBody)
+
+	orderPayload := minimalSalesOrderCreateBody(customerID)
+	orderStatus, orderBody, err := apiClient.Post(salesOrdersPath, orderPayload, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, orderStatus, orderBody)
+	orderID := jsonField(parseJSON(orderBody), "id")
+
+	conflictStatus, conflictBody, err := apiClient.Delete(customersPath + "/" + customerID)
+	require.NoError(t, err)
+	requireStatus(t, 409, conflictStatus, conflictBody)
+
+	delOrderStatus, delOrderBody, err := apiClient.Delete(salesOrdersPath + "/" + orderID)
+	require.NoError(t, err)
+	requireStatus(t, 200, delOrderStatus, delOrderBody)
+
+	delPLStatus, delPLBody, err := apiClient.Delete(productLineAccessPath + "/" + customerID)
+	require.NoError(t, err)
+	requireStatus(t, 200, delPLStatus, delPLBody)
+
+	delCustStatus, delCustBody, err := apiClient.Delete(customersPath + "/" + customerID)
+	require.NoError(t, err)
+	requireStatus(t, 200, delCustStatus, delCustBody)
+}
+
 // ──────────────────────────────────────────────
 // Soft-delete list exclusion
 // ──────────────────────────────────────────────

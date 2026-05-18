@@ -80,7 +80,7 @@ func (m *addressSvcImpl) ListAddresses(ctx context.Context, req *ListAddressesRe
 		return nil, apiErr
 	}
 
-	return AddressListPresenter(resp), nil
+	return AddressListPresenter(ctx, resp), nil
 }
 
 func (m *addressSvcImpl) GetAddress(ctx context.Context, req *RetrieveAddressRequest) (*apiresource.Address, *apierror.APIError) {

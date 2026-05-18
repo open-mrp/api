@@ -39,11 +39,11 @@ func (*TerritoriesEndpointGroup) Materialize(config *TerritoriesEndpointGroupCon
 		ResourceType: &apiresource.Territory{},
 	}
 
-	listTerritoriesEndpoint := (&territoryep.ListTerritoriesEndpoint{}).Materialize().WithService(inner, territorySvc)
-	getTerritoryEndpoint := (&territoryep.RetrieveTerritoryEndpoint{}).Materialize().WithService(inner, territorySvc)
-	createTerritoryEndpoint := (&territoryep.CreateTerritoryEndpoint{}).Materialize().WithService(inner, territorySvc)
-	updateTerritoryEndpoint := (&territoryep.UpdateTerritoryEndpoint{}).Materialize().WithService(inner, territorySvc)
-	deleteTerritoryEndpoint := (&territoryep.DeleteTerritoryEndpoint{}).Materialize().WithService(inner, territorySvc)
+	listTerritoriesEndpoint := apiendpoint.From(&territoryep.ListTerritoriesEndpoint{}).WithService(inner, territorySvc)
+	getTerritoryEndpoint := apiendpoint.From(&territoryep.RetrieveTerritoryEndpoint{}).WithService(inner, territorySvc)
+	createTerritoryEndpoint := apiendpoint.From(&territoryep.CreateTerritoryEndpoint{}).WithService(inner, territorySvc)
+	updateTerritoryEndpoint := apiendpoint.From(&territoryep.UpdateTerritoryEndpoint{}).WithService(inner, territorySvc)
+	deleteTerritoryEndpoint := apiendpoint.From(&territoryep.DeleteTerritoryEndpoint{}).WithService(inner, territorySvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listTerritoriesEndpoint,

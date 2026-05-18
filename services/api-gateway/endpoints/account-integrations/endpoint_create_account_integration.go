@@ -18,7 +18,7 @@ type CreateAccountIntegrationRequest struct {
 	// Integration provider code (e.g. "stripe", "shippo").
 	IntegrationCode constants.IntegrationCode `json:"integration_code" validate:"required"`
 	// Credentials JSON string containing provider-specific keys.
-	Credentials string `json:"credentials" validate:"required"`
+	Credentials string `json:"credentials" validate:"required" sensitive:"true"`
 }
 
 var sampleCreateAccountIntegrationRequest = &CreateAccountIntegrationRequest{
@@ -40,19 +40,14 @@ func (e *CreateAccountIntegrationEndpoint) Materialize() *apiendpoint.APIEndpoin
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/integrations",
-		Request:           &CreateAccountIntegrationRequest{},
-		Response:          &apiresource.AccountIntegration{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
-		Extras: apiendpoint.APIEndpointExtras{
-			ShieldRequestBody: true,
-		},
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateAccountIntegrationRequest) (*apiresource.AccountIntegration, *apierror.APIError) {
 			return svc.(AccountIntegrationSvc).CreateAccountIntegration
 		},
 		LocationFunc: func(resp *apiresource.AccountIntegration) string {
 			return "/v1/identity/integrations/" + resp.ID
 		},
-	}).WithDocSource(e)
+	})
 }

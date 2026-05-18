@@ -39,12 +39,12 @@ func (*ScanningStationsEndpointGroup) Materialize(config *ScanningStationsEndpoi
 		ResourceType: &apiresource.ScanningStation{},
 	}
 
-	listEndpoint := (&scanningstationep.ListScanningStationsEndpoint{}).Materialize().WithService(inner, scanningStationSvc)
-	retrieveEndpoint := (&scanningstationep.RetrieveScanningStationEndpoint{}).Materialize().WithService(inner, scanningStationSvc)
-	createEndpoint := (&scanningstationep.CreateScanningStationEndpoint{}).Materialize().WithService(inner, scanningStationSvc)
-	updateEndpoint := (&scanningstationep.UpdateScanningStationEndpoint{}).Materialize().WithService(inner, scanningStationSvc)
-	deleteEndpoint := (&scanningstationep.DeleteScanningStationEndpoint{}).Materialize().WithService(inner, scanningStationSvc)
-	connectStepsEndpoint := (&scanningstationep.ConnectProductionStepsEndpoint{}).Materialize().WithService(inner, scanningStationSvc)
+	listEndpoint := apiendpoint.From(&scanningstationep.ListScanningStationsEndpoint{}).WithService(inner, scanningStationSvc)
+	retrieveEndpoint := apiendpoint.From(&scanningstationep.RetrieveScanningStationEndpoint{}).WithService(inner, scanningStationSvc)
+	createEndpoint := apiendpoint.From(&scanningstationep.CreateScanningStationEndpoint{}).WithService(inner, scanningStationSvc)
+	updateEndpoint := apiendpoint.From(&scanningstationep.UpdateScanningStationEndpoint{}).WithService(inner, scanningStationSvc)
+	deleteEndpoint := apiendpoint.From(&scanningstationep.DeleteScanningStationEndpoint{}).WithService(inner, scanningStationSvc)
+	connectStepsEndpoint := apiendpoint.From(&scanningstationep.ConnectProductionStepsEndpoint{}).WithService(inner, scanningStationSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listEndpoint,

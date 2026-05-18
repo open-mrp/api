@@ -13,9 +13,9 @@ import (
 // Request to update a user's password.
 type UpdatePasswordRequest struct {
 	// Current password.
-	OldPassword string `json:"old_password" validate:"required,password,max=255"`
+	OldPassword string `json:"old_password" validate:"required,password,max=255" sensitive:"true"`
 	// New password.
-	NewPassword string `json:"new_password" validate:"required,password,max=255"`
+	NewPassword string `json:"new_password" validate:"required,password,max=255" sensitive:"true"`
 }
 
 var sampleUpdatePasswordRequest = &UpdatePasswordRequest{
@@ -36,15 +36,10 @@ func (e *UpdatePasswordEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateP
 		Method:            http.MethodPost,
 		Route:             "/v1/auth/passwords",
 		ContentType:       "application/json",
-		Request:           &UpdatePasswordRequest{},
-		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdatePasswordRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(AuthSvc).UpdatePassword
 		},
-		Extras: apiendpoint.APIEndpointExtras{
-			ShieldRequestBody: true,
-		},
-	}).WithDocSource(e)
+	})
 }

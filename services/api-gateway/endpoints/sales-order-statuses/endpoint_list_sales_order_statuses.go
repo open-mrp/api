@@ -24,8 +24,6 @@ func (e *ListSalesOrderStatusesEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/sales-orders/statuses",
-		Request:           &ListSalesOrderStatusesRequest{},
-		Response:          &apiresource.List[apiresource.SalesOrderStatus]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -36,5 +34,5 @@ func (e *ListSalesOrderStatusesEndpoint) Materialize() *apiendpoint.APIEndpoint[
 			ObjectType: constants.ObjectTypeSalesOrderStatus,
 			Fields:     []string{"owner"},
 		}),
-	}).WithDocSource(e)
+	})
 }

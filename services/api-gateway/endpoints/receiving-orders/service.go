@@ -80,7 +80,7 @@ func (m *receivingOrderSvcImpl) ListReceivingOrders(ctx context.Context, req *Li
 		return nil, apiErr
 	}
 
-	return ReceivingOrderListPresenter(resp), nil
+	return ReceivingOrderListPresenter(ctx, resp), nil
 }
 
 func (m *receivingOrderSvcImpl) GetReceivingOrder(ctx context.Context, req *RetrieveReceivingOrderRequest) (*apiresource.ReceivingOrder, *apierror.APIError) {

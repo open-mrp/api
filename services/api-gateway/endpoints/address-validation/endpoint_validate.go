@@ -16,7 +16,7 @@ type ValidateAddressRequest struct {
 	AddressLine1 string `json:"address_line_1" validate:"required"`
 	// Second line of the street address.
 	AddressLine2 *string `json:"address_line_2,omitempty" nullable:"false"`
-	// City.
+	// City or locality.
 	City string `json:"city" validate:"required"`
 	// State or administrative area.
 	State string `json:"state" validate:"required"`
@@ -47,13 +47,11 @@ func (e *ValidateAddressEndpoint) Materialize() *apiendpoint.APIEndpoint[*Valida
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
 		Route:             "/v1/core/addresses/actions/validate",
-		Request:           &ValidateAddressRequest{},
-		Response:          &apiresource.ValidatedAddress{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ValidateAddressRequest) (*apiresource.ValidatedAddress, *apierror.APIError) {
 			return svc.(AddressValidationSvc).ValidateAddress
 		},
-	}).WithDocSource(e)
+	})
 }

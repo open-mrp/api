@@ -54,8 +54,6 @@ func (e *UpdateTerritoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Update
 		Method:            http.MethodPatch,
 		Route:             "/v1/sales/accounts/{account_id}/territories/{id}",
 		ContentType:       "application/json",
-		Request:           &UpdateTerritoryRequest{},
-		Response:          &apiresource.Territory{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -66,5 +64,5 @@ func (e *UpdateTerritoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Update
 			ObjectType: constants.ObjectTypeTerritory,
 			Fields:     []string{"sales_rep", "product_line"},
 		}),
-	}).WithDocSource(e)
+	})
 }

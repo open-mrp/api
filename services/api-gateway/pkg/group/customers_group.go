@@ -39,14 +39,14 @@ func (*CustomersEndpointGroup) Materialize(config *CustomersEndpointGroupConfig)
 		ResourceType: &apiresource.Customer{},
 	}
 
-	listEndpoint := (&customerep.ListCustomersEndpoint{}).Materialize().WithService(inner, customerSvc)
-	retrieveEndpoint := (&customerep.RetrieveCustomerEndpoint{}).Materialize().WithService(inner, customerSvc)
-	createEndpoint := (&customerep.CreateCustomerEndpoint{}).Materialize().WithService(inner, customerSvc)
-	deleteEndpoint := (&customerep.DeleteCustomerEndpoint{}).Materialize().WithService(inner, customerSvc)
-	bulkDeleteEndpoint := (&customerep.BulkDeleteCustomersEndpoint{}).Materialize().WithService(inner, customerSvc)
-	frequentlyOrderedEndpoint := (&customerep.GetFrequentlyOrderedProductsEndpoint{}).Materialize().WithService(inner, customerSvc)
-	mergeEndpoint := (&customerep.MergeCustomersEndpoint{}).Materialize().WithService(inner, customerSvc)
-	updateEndpoint := (&customerep.UpdateCustomerEndpoint{}).Materialize().WithService(inner, customerSvc)
+	listEndpoint := apiendpoint.From(&customerep.ListCustomersEndpoint{}).WithService(inner, customerSvc)
+	retrieveEndpoint := apiendpoint.From(&customerep.RetrieveCustomerEndpoint{}).WithService(inner, customerSvc)
+	createEndpoint := apiendpoint.From(&customerep.CreateCustomerEndpoint{}).WithService(inner, customerSvc)
+	deleteEndpoint := apiendpoint.From(&customerep.DeleteCustomerEndpoint{}).WithService(inner, customerSvc)
+	bulkDeleteEndpoint := apiendpoint.From(&customerep.BulkDeleteCustomersEndpoint{}).WithService(inner, customerSvc)
+	frequentlyOrderedEndpoint := apiendpoint.From(&customerep.GetFrequentlyOrderedProductsEndpoint{}).WithService(inner, customerSvc)
+	mergeEndpoint := apiendpoint.From(&customerep.MergeCustomersEndpoint{}).WithService(inner, customerSvc)
+	updateEndpoint := apiendpoint.From(&customerep.UpdateCustomerEndpoint{}).WithService(inner, customerSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listEndpoint,

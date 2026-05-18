@@ -75,7 +75,7 @@ func (m *inventoryChangeLogSvcImpl) ListInventoryChangeLogs(ctx context.Context,
 		return nil, apiErr
 	}
 
-	return InventoryChangeLogListPresenter(resp), nil
+	return InventoryChangeLogListPresenter(ctx, resp), nil
 }
 
 func (m *inventoryChangeLogSvcImpl) GetInventoryChangeLog(ctx context.Context, req *RetrieveInventoryChangeLogRequest) (*apiresource.InventoryChangeLog, *apierror.APIError) {

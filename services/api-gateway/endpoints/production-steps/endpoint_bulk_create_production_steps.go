@@ -94,13 +94,11 @@ func (e *BulkCreateProductionStepsEndpoint) Materialize() *apiendpoint.APIEndpoi
 		Method:            http.MethodPost,
 		Route:             "/v1/operations/production-steps/actions/bulk-create",
 		ContentType:       "application/json",
-		Request:           &BulkCreateProductionStepsRequest{},
-		Response:          &apiresource.BulkCreateProductionStepsResponse{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *BulkCreateProductionStepsRequest) (*apiresource.BulkCreateProductionStepsResponse, *apierror.APIError) {
 			return svc.(ProductionStepSvc).BulkCreateProductionSteps
 		},
-	}).WithDocSource(e)
+	})
 }

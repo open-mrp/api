@@ -67,10 +67,42 @@ AND (
 )
 AND (
     sqlc.narg('cursor_created_at') IS NULL
-    OR m.created_at < sqlc.narg('cursor_created_at')
-    OR (m.created_at = sqlc.narg('cursor_created_at') AND m.id < sqlc.narg('cursor_id'))
+    OR (
+        (sqlc.narg('cursor_match_tier') IS NULL AND (
+            m.created_at < sqlc.narg('cursor_created_at')
+            OR (m.created_at = sqlc.narg('cursor_created_at') AND m.id < sqlc.narg('cursor_id'))
+        ))
+        OR (sqlc.narg('cursor_match_tier') IS NOT NULL AND (
+            (CASE
+                WHEN sqlc.narg('search_exact') IS NULL THEN 0
+                WHEN i.sku = sqlc.narg('search_exact') THEN 0
+                WHEN sqlc.narg('search_prefix') IS NOT NULL AND i.sku LIKE sqlc.narg('search_prefix') THEN 1
+                ELSE 2
+            END) > CAST(sqlc.narg('cursor_match_tier') AS SIGNED)
+            OR (
+                (CASE
+                    WHEN sqlc.narg('search_exact') IS NULL THEN 0
+                    WHEN i.sku = sqlc.narg('search_exact') THEN 0
+                    WHEN sqlc.narg('search_prefix') IS NOT NULL AND i.sku LIKE sqlc.narg('search_prefix') THEN 1
+                    ELSE 2
+                END) = CAST(sqlc.narg('cursor_match_tier') AS SIGNED)
+                AND (
+                    m.created_at < sqlc.narg('cursor_created_at')
+                    OR (m.created_at = sqlc.narg('cursor_created_at') AND m.id < sqlc.narg('cursor_id'))
+                )
+            )
+        ))
+    )
 )
-ORDER BY m.created_at DESC, m.id DESC
+ORDER BY
+    CASE
+        WHEN sqlc.narg('search_exact') IS NULL THEN 0
+        WHEN i.sku = sqlc.narg('search_exact') THEN 0
+        WHEN sqlc.narg('search_prefix') IS NOT NULL AND i.sku LIKE sqlc.narg('search_prefix') THEN 1
+        ELSE 2
+    END ASC,
+    m.created_at DESC,
+    m.id DESC
 LIMIT ?;
 
 -- name: ListMaterialsBackwardBase :many
@@ -141,10 +173,40 @@ AND (
     OR i.created_at <= sqlc.narg('end_date')
 )
 AND (
-    m.created_at > sqlc.arg('cursor_created_at')
-    OR (m.created_at = sqlc.arg('cursor_created_at') AND m.id > sqlc.arg('cursor_id'))
+    (sqlc.narg('cursor_match_tier') IS NULL AND (
+        m.created_at > sqlc.arg('cursor_created_at')
+        OR (m.created_at = sqlc.arg('cursor_created_at') AND m.id > sqlc.arg('cursor_id'))
+    ))
+    OR (sqlc.narg('cursor_match_tier') IS NOT NULL AND (
+        (CASE
+            WHEN sqlc.narg('search_exact') IS NULL THEN 0
+            WHEN i.sku = sqlc.narg('search_exact') THEN 0
+            WHEN sqlc.narg('search_prefix') IS NOT NULL AND i.sku LIKE sqlc.narg('search_prefix') THEN 1
+            ELSE 2
+        END) < CAST(sqlc.narg('cursor_match_tier') AS SIGNED)
+        OR (
+            (CASE
+                WHEN sqlc.narg('search_exact') IS NULL THEN 0
+                WHEN i.sku = sqlc.narg('search_exact') THEN 0
+                WHEN sqlc.narg('search_prefix') IS NOT NULL AND i.sku LIKE sqlc.narg('search_prefix') THEN 1
+                ELSE 2
+            END) = CAST(sqlc.narg('cursor_match_tier') AS SIGNED)
+            AND (
+                m.created_at > sqlc.arg('cursor_created_at')
+                OR (m.created_at = sqlc.arg('cursor_created_at') AND m.id > sqlc.arg('cursor_id'))
+            )
+        )
+    ))
 )
-ORDER BY m.created_at ASC, m.id ASC
+ORDER BY
+    CASE
+        WHEN sqlc.narg('search_exact') IS NULL THEN 0
+        WHEN i.sku = sqlc.narg('search_exact') THEN 0
+        WHEN sqlc.narg('search_prefix') IS NOT NULL AND i.sku LIKE sqlc.narg('search_prefix') THEN 1
+        ELSE 2
+    END DESC,
+    m.created_at ASC,
+    m.id ASC
 LIMIT ?;
 
 -- name: GetMaterialByIDBase :one
@@ -436,4 +498,12 @@ AND (
     sqlc.narg('end_date') IS NULL
     OR i.created_at <= sqlc.narg('end_date')
 )
-ORDER BY m.created_at DESC, m.id DESC;
+ORDER BY
+    CASE
+        WHEN sqlc.narg('search_exact') IS NULL THEN 0
+        WHEN i.sku = sqlc.narg('search_exact') THEN 0
+        WHEN sqlc.narg('search_prefix') IS NOT NULL AND i.sku LIKE sqlc.narg('search_prefix') THEN 1
+        ELSE 2
+    END ASC,
+    m.created_at DESC,
+    m.id DESC;

@@ -24,7 +24,7 @@ func (r *salesTargetRepoImpl) List(ctx context.Context, params domain.ListSalesT
 	ctx, span := salesTargetRepoTracer.Start(ctx, "repository.sales_target.list")
 	defer span.End()
 
-	var search interface{}
+	var search any
 	if params.Query != nil && *params.Query != "" {
 		search = *params.Query
 	}

@@ -24,13 +24,11 @@ func (e *GetShippingCaseLabelEndpoint) Materialize() *apiendpoint.APIEndpoint[*G
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/shipping-cases/{id}/label",
-		Request:           &GetShippingCaseLabelRequest{},
-		Response:          &apiresource.ShippingCaseLabelURL{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetShippingCaseLabelRequest) (*apiresource.ShippingCaseLabelURL, *apierror.APIError) {
 			return svc.(ShippingCaseSvc).GetShippingCaseLabel
 		},
-	}).WithDocSource(e)
+	})
 }

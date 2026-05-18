@@ -68,7 +68,7 @@ func (m *territorySvcImpl) ListTerritories(ctx context.Context, req *ListTerrito
 		return nil, apiErr
 	}
 
-	return TerritoryListPresenter(resp), nil
+	return TerritoryListPresenter(ctx, resp), nil
 }
 
 func (m *territorySvcImpl) GetTerritory(ctx context.Context, req *RetrieveTerritoryRequest) (*apiresource.Territory, *apierror.APIError) {

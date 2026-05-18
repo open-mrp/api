@@ -25,13 +25,11 @@ func (e *VerifyTokenEndpoint) Materialize() *apiendpoint.APIEndpoint[*VerifyToke
 		Method:            http.MethodPut,
 		Route:             "/v1/auth/registration-sessions/{token}/actions/verify-token",
 		ContentType:       "application/json",
-		Request:           &VerifyTokenRequest{},
-		Response:          &apiresource.RegistrationSession{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *VerifyTokenRequest) (*apiresource.RegistrationSession, *apierror.APIError) {
 			return svc.(RegistrationSessionSvc).VerifyToken
 		},
-	}).WithDocSource(e)
+	})
 }

@@ -24,13 +24,11 @@ func (e *RetrieveAccountBySlugEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		Method:            http.MethodGet,
 		Route:             "/v1/identity/portal-branding/{slug}",
 		ContentType:       "application/json",
-		Request:           &RetrieveAccountBySlugRequest{},
-		Response:          &apiresource.PublicAccount{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RetrieveAccountBySlugRequest) (*apiresource.PublicAccount, *apierror.APIError) {
 			return svc.(AccountSvc).GetAccountBySlug
 		},
-	}).WithDocSource(e)
+	})
 }

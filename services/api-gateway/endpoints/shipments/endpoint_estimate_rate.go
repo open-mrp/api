@@ -96,13 +96,11 @@ func (e *EstimateRateEndpoint) Materialize() *apiendpoint.APIEndpoint[*EstimateR
 		Method:            http.MethodPost,
 		Route:             "/v1/operations/shipments/actions/estimate-rate",
 		ContentType:       "application/json",
-		Request:           &EstimateRateRequest{},
-		Response:          &apiresource.EstimateRateResult{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *EstimateRateRequest) (*apiresource.EstimateRateResult, *apierror.APIError) {
 			return svc.(ShipmentSvc).EstimateRate
 		},
-	}).WithDocSource(e)
+	})
 }

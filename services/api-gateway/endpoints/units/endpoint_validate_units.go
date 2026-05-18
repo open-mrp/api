@@ -33,13 +33,11 @@ func (e *ValidateUnitsEndpoint) Materialize() *apiendpoint.APIEndpoint[*Validate
 		Method:            http.MethodPut,
 		Route:             "/v1/catalog/units/actions/validate",
 		ContentType:       "application/json",
-		Request:           &ValidateUnitsRequest{},
-		Response:          &apiresource.ValidateUnitsResponse{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ValidateUnitsRequest) (*apiresource.ValidateUnitsResponse, *apierror.APIError) {
 			return svc.(UnitSvc).ValidateUnits
 		},
-	}).WithDocSource(e)
+	})
 }

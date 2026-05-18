@@ -25,13 +25,11 @@ func (e *ListEDIRunsEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListEDIRun
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/edi-runs",
-		Request:           &ListEDIRunsRequest{},
-		Response:          &apiresource.List[apiresource.EDIRun]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ListEDIRunsRequest) (*apiresource.List[apiresource.EDIRun], *apierror.APIError) {
 			return svc.(EDIRunSvc).ListEDIRuns
 		},
-	}).WithDocSource(e)
+	})
 }

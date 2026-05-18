@@ -92,7 +92,7 @@ func (m *pickSvcImpl) ListPicks(ctx context.Context, req *ListPicksRequest) (*ap
 		return nil, apiErr
 	}
 
-	return PickListPresenter(resp), nil
+	return PickListPresenter(ctx, resp), nil
 }
 
 func (m *pickSvcImpl) GetPick(ctx context.Context, req *RetrievePickRequest) (*apiresource.PickDetail, *apierror.APIError) {

@@ -104,7 +104,7 @@ func (m *salesOrderSvcImpl) ListSalesOrders(ctx context.Context, req *ListSalesO
 		return nil, apiErr
 	}
 
-	return SalesOrderListPresenter(resp), nil
+	return SalesOrderListPresenter(ctx, resp), nil
 }
 
 func (m *salesOrderSvcImpl) GetSalesOrder(ctx context.Context, req *RetrieveSalesOrderRequest) (*apiresource.SalesOrderDetail, *apierror.APIError) {

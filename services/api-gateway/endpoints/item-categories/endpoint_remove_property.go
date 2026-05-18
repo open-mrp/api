@@ -26,13 +26,11 @@ func (e *RemoveItemCategoryPropertyEndpoint) Materialize() *apiendpoint.APIEndpo
 		Method:            http.MethodDelete,
 		Route:             "/v1/catalog/item-categories/{id}/properties/{property_id}",
 		ContentType:       "application/json",
-		Request:           &RemoveItemCategoryPropertyRequest{},
-		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *RemoveItemCategoryPropertyRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(ItemCategorySvc).RemoveItemCategoryProperty
 		},
-	}).WithDocSource(e)
+	})
 }

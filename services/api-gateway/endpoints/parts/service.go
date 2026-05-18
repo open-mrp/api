@@ -91,7 +91,7 @@ func (m *partSvcImpl) ListParts(ctx context.Context, req *ListPartsRequest) (*ap
 		return nil, apiErr
 	}
 
-	return PartListPresenter(resp), nil
+	return PartListPresenter(ctx, resp), nil
 }
 
 func (m *partSvcImpl) GetPart(ctx context.Context, req *RetrievePartRequest) (*apiresource.Part, *apierror.APIError) {

@@ -38,8 +38,6 @@ func (e *UpdateItemCategoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upd
 		Method:            http.MethodPatch,
 		Route:             "/v1/catalog/item-categories/{id}",
 		ContentType:       "application/json",
-		Request:           &UpdateItemCategoryRequest{},
-		Response:          &apiresource.ItemCategory{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -50,5 +48,5 @@ func (e *UpdateItemCategoryEndpoint) Materialize() *apiendpoint.APIEndpoint[*Upd
 			ObjectType: constants.ObjectTypeItemCategory,
 			Fields:     []string{"owner", "owner.account", "properties", "unit_group", "unit_group.base_unit", "unit_group.associated_units", "unit_group.associated_units.unit"},
 		}),
-	}).WithDocSource(e)
+	})
 }

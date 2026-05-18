@@ -37,13 +37,11 @@ func (e *CreateSessionEndpoint) Materialize() *apiendpoint.APIEndpoint[*CreateRe
 		Method:            http.MethodPost,
 		Route:             "/v1/auth/registration-sessions",
 		ContentType:       "application/json",
-		Request:           &CreateRegistrationSessionRequest{},
-		Response:          &apiresource.CreateSessionResponse{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *CreateRegistrationSessionRequest) (*apiresource.CreateSessionResponse, *apierror.APIError) {
 			return svc.(RegistrationSessionSvc).CreateSession
 		},
-	}).WithDocSource(e)
+	})
 }

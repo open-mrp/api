@@ -27,13 +27,11 @@ func (e *ExportReceivablesByCustomerEndpoint) Materialize() *apiendpoint.APIEndp
 		Method:            http.MethodGet,
 		ContentType:       "text/csv",
 		Route:             "/v1/finance/receivables/accounts/{account_id}/actions/export",
-		Request:           &ExportReceivablesByCustomerRequest{},
-		Response:          &httptransport.FileDownload{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *ExportReceivablesByCustomerRequest) (*httptransport.FileDownload, *apierror.APIError) {
 			return svc.(ReceivableSvc).ExportReceivablesByCustomer
 		},
-	}).WithDocSource(e)
+	})
 }

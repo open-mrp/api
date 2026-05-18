@@ -53,6 +53,38 @@ func (q *Queries) CheckSalesOrderPaymentStatus(ctx context.Context, arg CheckSal
 	return has_payment_intent, err
 }
 
+const countSalesOrdersForBuyerAccounts = `-- name: CountSalesOrdersForBuyerAccounts :one
+SELECT COUNT(*) AS cnt FROM sales_order
+WHERE sales_order_type_code = 'sales_order'
+AND owner_account_id = ?
+AND seller_account_id = ?
+AND buyer_account_id IN (/*SLICE:buyer_account_ids*/?)
+`
+
+type CountSalesOrdersForBuyerAccountsParams struct {
+	OwnerAccountID  string
+	BuyerAccountIds []string
+}
+
+func (q *Queries) CountSalesOrdersForBuyerAccounts(ctx context.Context, arg CountSalesOrdersForBuyerAccountsParams) (int64, error) {
+	query := countSalesOrdersForBuyerAccounts
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.OwnerAccountID)
+	queryParams = append(queryParams, arg.OwnerAccountID)
+	if len(arg.BuyerAccountIds) > 0 {
+		for _, v := range arg.BuyerAccountIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:buyer_account_ids*/?", strings.Repeat(",?", len(arg.BuyerAccountIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:buyer_account_ids*/?", "NULL", 1)
+	}
+	row := q.db.QueryRowContext(ctx, query, queryParams...)
+	var cnt int64
+	err := row.Scan(&cnt)
+	return cnt, err
+}
+
 const createPick = `-- name: CreatePick :exec
 INSERT INTO pick (id, number, sales_order_id, account_id, created_at, updated_at)
 VALUES (?, ?, ?, ?, NOW(3), NOW(3))

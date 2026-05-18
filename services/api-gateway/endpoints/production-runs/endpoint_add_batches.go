@@ -65,13 +65,11 @@ func (e *AddBatchesToProductionRunEndpoint) Materialize() *apiendpoint.APIEndpoi
 		Method:            http.MethodPost,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/production-runs/{id}/batches",
-		Request:           &AddBatchesToProductionRunRequest{},
-		Response:          &apiresource.List[apiresource.Batch]{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AddBatchesToProductionRunRequest) (*apiresource.List[apiresource.Batch], *apierror.APIError) {
 			return svc.(ProductionRunSvc).AddBatchesToProductionRun
 		},
-	}).WithDocSource(e)
+	})
 }

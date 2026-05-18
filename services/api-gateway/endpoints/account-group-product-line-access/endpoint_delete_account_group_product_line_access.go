@@ -24,13 +24,11 @@ func (e *DeleteAccountGroupProductLineAccessEndpoint) Materialize() *apiendpoint
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/product-line-access/account-groups/{account_group_id}",
-		Request:           &DeleteAccountGroupProductLineAccessRequest{},
-		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteAccountGroupProductLineAccessRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(AccountGroupProductLineAccessSvc).DeleteAccountGroupProductLineAccess
 		},
-	}).WithDocSource(e)
+	})
 }

@@ -89,8 +89,8 @@ func TestIncludeRegistry_AllExpandableFieldsRegistered(t *testing.T) {
 			registeredKeys[field.Key] = true
 		}
 
-		for i := 0; i < rt.NumField(); i++ {
-			field := rt.Field(i)
+		for field := range rt.Fields() {
+			field := field
 			if field.Tag.Get("expandable") != "true" {
 				continue
 			}
@@ -114,8 +114,8 @@ func TestIncludeRegistry_AllExpandableFieldsRegistered(t *testing.T) {
 // collectExpandableJSONNames returns the JSON names of all expandable fields.
 func collectExpandableJSONNames(rt reflect.Type) []string {
 	var names []string
-	for i := 0; i < rt.NumField(); i++ {
-		field := rt.Field(i)
+	for field := range rt.Fields() {
+		field := field
 		if field.Tag.Get("expandable") != "true" {
 			continue
 		}

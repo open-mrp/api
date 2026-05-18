@@ -42,13 +42,11 @@ func (e *UpdateSettlementEndpoint) Materialize() *apiendpoint.APIEndpoint[*Updat
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
 		Route:             "/v1/finance/settlements/{id}",
-		Request:           &UpdateSettlementRequest{},
-		Response:          &apiresource.Settlement{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *UpdateSettlementRequest) (*apiresource.Settlement, *apierror.APIError) {
 			return svc.(SettlementSvc).UpdateSettlement
 		},
-	}).WithDocSource(e)
+	})
 }

@@ -257,8 +257,8 @@ func mapAuditEventBaseRow(
 	action string,
 	resourceType string,
 	resourceID string,
-	changes interface{},
-	metadata interface{},
+	changes any,
+	metadata any,
 	serviceName string,
 	requestID sql.NullString,
 	idempotencyKeyID sql.NullString,
@@ -328,7 +328,7 @@ func ensureStringSlice(vals []string) []string {
 	return vals
 }
 
-func interfaceToBytes(v interface{}) []byte {
+func interfaceToBytes(v any) []byte {
 	switch x := v.(type) {
 	case nil:
 		return nil

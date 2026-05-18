@@ -1,6 +1,7 @@
 package requestlogep
 
 import (
+	"context"
 	"testing"
 
 	"github.com/augno/api/services/api-gateway/pkg/resource/resourcetest"
@@ -142,7 +143,7 @@ func TestRequestLogListPresenter_NullsJSONPayloadFields(t *testing.T) {
 		RequestLogs: []*pb.RequestLogInfo{newFullRequestLogInfo()},
 	}
 
-	result := RequestLogListPresenter(resp, func(roleID *string) map[string]bool {
+	result := RequestLogListPresenter(context.Background(), resp, func(roleID *string) map[string]bool {
 		return nil
 	})
 

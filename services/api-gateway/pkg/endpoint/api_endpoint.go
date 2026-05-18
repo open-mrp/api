@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"reflect"
 	"strings"
@@ -17,6 +18,7 @@ import (
 	"github.com/augno/api/shared/appctx"
 	"github.com/augno/api/shared/constants"
 	apierror "github.com/augno/api/shared/errors"
+	"github.com/augno/api/shared/redact"
 	"github.com/augno/api/shared/tracing"
 	"github.com/augno/api/shared/validate"
 	"github.com/augno/api/shared/version"
@@ -27,30 +29,26 @@ import (
 
 type APIEndpointExtras struct {
 	SkipRequestBodyParsing bool `json:"skip_request_body_parsing" yaml:"skip_request_body_parsing"`
-	ShieldRequestBody      bool `json:"shield_request_body" yaml:"shield_request_body"`
-	ShieldResponseBody     bool `json:"shield_response_body" yaml:"shield_response_body"`
 	SkipRequestLogging     bool `json:"skip_request_logging" yaml:"skip_request_logging"`
 }
 
-type ServiceHandler[TReq, TResp any] func(ctx context.Context, req TReq) (TResp, *apierror.APIError)
+type ServiceHandler[TReq, TResp any] = func(ctx context.Context, req TReq) (TResp, *apierror.APIError)
 
 /*
 Defines the details of a specific API operation. This will be used to generate the OpenAPI spec.
 Consequently, consider this public data.
 */
 type APIEndpoint[TReq, TResp any] struct {
-	Title             string                                                                        `json:"title" yaml:"title"`
-	Method            string                                                                        `json:"method" yaml:"method"`
-	Route             string                                                                        `json:"route" yaml:"route"`
-	ContentType       string                                                                        `json:"content_type" yaml:"content_type"`
-	Request           TReq                                                                          `json:"-" yaml:"-"`
-	Response          TResp                                                                         `json:"-" yaml:"-"`
-	SuccessStatusCode int                                                                           `json:"success_status_code" yaml:"success_status_code"`
-	Public            bool                                                                          `json:"-" yaml:"-"`
-	Preview           bool                                                                          `json:"-" yaml:"-"`
-	ServiceHandler    func(svc any) func(ctx context.Context, req TReq) (TResp, *apierror.APIError) `json:"-" yaml:"-"`
-	Extras            APIEndpointExtras                                                             `json:"-" yaml:"-"`
-	MinVersion        *version.APIVersion                                                           `json:"-" yaml:"-"`
+	Title             string                                    `json:"title" yaml:"title"`
+	Method            string                                    `json:"method" yaml:"method"`
+	Route             string                                    `json:"route" yaml:"route"`
+	ContentType       string                                    `json:"content_type" yaml:"content_type"`
+	SuccessStatusCode int                                       `json:"success_status_code" yaml:"success_status_code"`
+	Public            bool                                      `json:"-" yaml:"-"`
+	Preview           bool                                      `json:"-" yaml:"-"`
+	ServiceHandler    func(svc any) ServiceHandler[TReq, TResp] `json:"-" yaml:"-"`
+	Extras            APIEndpointExtras                         `json:"-" yaml:"-"`
+	MinVersion        *version.APIVersion                       `json:"-" yaml:"-"`
 	// ObjectType identifies the API resource type this endpoint operates on.
 	// Used for version transformations. Only endpoints with an ObjectType get transformations applied.
 	ObjectType constants.ObjectType `json:"-" yaml:"-"`
@@ -64,16 +62,39 @@ type APIEndpoint[TReq, TResp any] struct {
 	service             any
 	middleware          func(http.HandlerFunc) http.HandlerFunc
 	bindOnce            sync.Once
+	sensitiveOnce       sync.Once
 	httpHandler         http.HandlerFunc
-	boundServiceHandler func(ctx context.Context, req TReq) (TResp, *apierror.APIError)
+	boundServiceHandler ServiceHandler[TReq, TResp]
 	// EndpointType is the reflect.Type of the concrete *XxxEndpoint struct that
 	// produced this APIEndpoint. It is used by the OpenAPI generator to resolve
 	// the operation description from the Go doc comment on that struct.
 	EndpointType reflect.Type
+
+	sensitiveReqPaths  map[string]bool
+	sensitiveRespPaths map[string]bool
 }
 
-func (e *APIEndpoint[TReq, TResp]) Materialize() APIEndpointer {
-	return e
+func coercePlainExecuteError(err error) *apierror.APIError {
+	if apiErr, ok := errors.AsType[*apierror.APIError](err); ok {
+		return apiErr
+	}
+	return apierror.NewValidationError(err.Error())
+}
+
+func recordAndRespondAPIError(ctx context.Context, w http.ResponseWriter, span trace.Span, errTypeAttr string, apiErr *apierror.APIError) {
+	tracing.RecordControllerError(span, apiErr)
+	if span.IsRecording() {
+		span.SetAttributes(attribute.String(httptransport.AttrErrorType, errTypeAttr))
+	}
+	httptransport.RespondWithAPIError(ctx, w, apiErr)
+}
+
+func (e *APIEndpoint[TReq, TResp]) GetRequestType() reflect.Type {
+	return reflect.TypeFor[TReq]()
+}
+
+func (e *APIEndpoint[TReq, TResp]) GetResponseType() reflect.Type {
+	return reflect.TypeFor[TResp]()
 }
 
 func (e *APIEndpoint[TReq, TResp]) GetMethod() string {
@@ -94,23 +115,27 @@ func (e *APIEndpoint[TReq, TResp]) WithService(g *APIEndpointGroup, svc any) *AP
 	return e
 }
 
+func (e *APIEndpoint[TReq, TResp]) IsServiceBound() bool {
+	return e.service != nil
+}
+
 func (e *APIEndpoint[TReq, TResp]) WithMiddleware(mw func(http.HandlerFunc) http.HandlerFunc) *APIEndpoint[TReq, TResp] {
 	e.middleware = mw
 	return e
 }
 
-// WithDocSource records the concrete endpoint struct type so the OpenAPI
-// generator can resolve the operation description from its Go doc comment.
-// Pass the receiver of Materialize() (e.g. `.WithDocSource(e)`).
-func (e *APIEndpoint[TReq, TResp]) WithDocSource(source any) *APIEndpoint[TReq, TResp] {
-	if source != nil {
-		t := reflect.TypeOf(source)
-		if t.Kind() == reflect.Ptr {
-			t = t.Elem()
-		}
-		e.EndpointType = t
+// From calls source.Materialize() and sets EndpointType so the OpenAPI generator can attach
+// the wrapper type's Go doc to the route.
+func From[TReq, TResp any, T interface {
+	Materialize() *APIEndpoint[TReq, TResp]
+}](source T) *APIEndpoint[TReq, TResp] {
+	ep := source.Materialize()
+	t := reflect.TypeOf(source)
+	if t.Kind() == reflect.Pointer {
+		t = t.Elem()
 	}
-	return e
+	ep.EndpointType = t
+	return ep
 }
 
 func (e *APIEndpoint[TReq, TResp]) GetHandler() http.HandlerFunc {
@@ -124,8 +149,16 @@ func (e *APIEndpoint[TReq, TResp]) GetHandler() http.HandlerFunc {
 	return e.httpHandler
 }
 
+func (e *APIEndpoint[TReq, TResp]) ensureSensitivePaths() {
+	e.sensitiveOnce.Do(func() {
+		e.sensitiveReqPaths = redact.SensitiveFields(reflect.TypeFor[TReq]())
+		e.sensitiveRespPaths = redact.SensitiveFields(reflect.TypeFor[TResp]())
+	})
+}
+
 func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	e.ensureSensitivePaths()
 
 	// Check minimum version requirement
 	if e.MinVersion != nil {
@@ -142,8 +175,8 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 		if e.Extras.SkipRequestLogging {
 			rl.SkipSave = true
 		}
-		if e.Extras.ShieldResponseBody {
-			rl.ShieldResponseBody = true
+		if len(e.sensitiveRespPaths) > 0 {
+			rl.SensitiveResponseFields = maps.Clone(e.sensitiveRespPaths)
 		}
 	}
 
@@ -158,60 +191,15 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 	var req TReq
 	req = httptransport.AllocIfPtr(req)
 
-	if err := httptransport.BindFromHeaders(r, any(req)); err != nil {
-		apiErr, ok := err.(*apierror.APIError)
-		if !ok {
-			apiErr = apierror.NewValidationError(err.Error())
-		}
-		tracing.RecordControllerError(span, apiErr)
-		if span.IsRecording() {
-			span.SetAttributes(attribute.String(httptransport.AttrErrorType, "header_binding"))
-		}
-		httptransport.RespondWithAPIError(ctx, w, apiErr)
-		return
-	}
-	if err := httptransport.BindFromPath(r, any(req)); err != nil {
-		apiErr, ok := err.(*apierror.APIError)
-		if !ok {
-			apiErr = apierror.NewValidationError(err.Error())
-		}
-		tracing.RecordControllerError(span, apiErr)
-		if span.IsRecording() {
-			span.SetAttributes(attribute.String(httptransport.AttrErrorType, "path_binding"))
-		}
-		httptransport.RespondWithAPIError(ctx, w, apiErr)
-		return
-	}
-	if err := httptransport.BindFromQuery(r.URL, any(req)); err != nil {
-		apiErr, ok := err.(*apierror.APIError)
-		if !ok {
-			apiErr = apierror.NewValidationError(err.Error())
-		}
-		tracing.RecordControllerError(span, apiErr)
-		if span.IsRecording() {
-			span.SetAttributes(attribute.String(httptransport.AttrErrorType, "query_binding"))
-		}
-		httptransport.RespondWithAPIError(ctx, w, apiErr)
-		return
-	}
-
-	if apiErr := httptransport.RejectUnknownQueryParams(r.URL, any(req), e.IncludeConfig != nil); apiErr != nil {
-		tracing.RecordControllerError(span, apiErr)
-		if span.IsRecording() {
-			span.SetAttributes(attribute.String(httptransport.AttrErrorType, "unknown_query_parameter"))
-		}
-		httptransport.RespondWithAPIError(ctx, w, apiErr)
+	if err := httptransport.BindIncomingRequest(r, any(req), e.IncludeConfig != nil); err != nil {
+		recordAndRespondAPIError(ctx, w, span, "incoming_request_binding", coercePlainExecuteError(err))
 		return
 	}
 
 	// Parse and validate include parameters
 	requestedIncludes, apiErr := e.parseIncludeParams(r)
 	if apiErr != nil {
-		tracing.RecordControllerError(span, apiErr)
-		if span.IsRecording() {
-			span.SetAttributes(attribute.String(httptransport.AttrErrorType, "include_validation"))
-		}
-		httptransport.RespondWithAPIError(ctx, w, apiErr)
+		recordAndRespondAPIError(ctx, w, span, "include_validation", apiErr)
 		return
 	}
 
@@ -222,25 +210,24 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 		bodyBytes, err := io.ReadAll(io.LimitReader(r.Body, maxJSONBodyBytes))
 		_ = r.Body.Close()
 		if err != nil {
-			apiErr := apierror.NewValidationError(fmt.Sprintf("Failed to read request body: %v", err))
-			tracing.RecordControllerError(span, apiErr)
-			if span.IsRecording() {
-				span.SetAttributes(attribute.String(httptransport.AttrErrorType, "body_read"))
-			}
-			httptransport.RespondWithAPIError(ctx, w, apiErr)
+			recordAndRespondAPIError(ctx, w, span, "body_read", apierror.NewValidationError(fmt.Sprintf("Failed to read request body: %v", err)))
 			return
 		}
 		jsonBodyBytes = bodyBytes
-		if !e.Extras.ShieldRequestBody {
-			if rl, ok := appctx.GetRequestLog(ctx); ok && len(bodyBytes) > 0 {
-				const maxBodyLogSize = 256 << 10 // 256 KB
-				if len(bodyBytes) > maxBodyLogSize {
-					s := fmt.Sprintf(`{"_truncated":true,"_original_size":%d}`, len(bodyBytes))
-					rl.BodyJSON = &s
-				} else {
-					s := string(bodyBytes)
+		if rl, ok := appctx.GetRequestLog(ctx); ok && len(bodyBytes) > 0 {
+			const maxBodyLogSize = 256 << 10 // 256 KB
+			if len(bodyBytes) > maxBodyLogSize {
+				s := fmt.Sprintf(`{"_truncated":true,"_original_size":%d}`, len(bodyBytes))
+				rl.BodyJSON = &s
+			} else if len(e.sensitiveReqPaths) > 0 {
+				rb := redact.RedactJSON(bodyBytes, e.sensitiveReqPaths)
+				if rb != nil {
+					s := string(rb)
 					rl.BodyJSON = &s
 				}
+			} else {
+				s := string(bodyBytes)
+				rl.BodyJSON = &s
 			}
 		}
 		r.Body = io.NopCloser(bytes.NewReader(bodyBytes))
@@ -248,15 +235,7 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 
 	if e.Extras.SkipRequestBodyParsing {
 		if err := httptransport.BindRawBody(r, any(req)); err != nil {
-			apiErr, ok := err.(*apierror.APIError)
-			if !ok {
-				apiErr = apierror.NewValidationError(err.Error())
-			}
-			tracing.RecordControllerError(span, apiErr)
-			if span.IsRecording() {
-				span.SetAttributes(attribute.String(httptransport.AttrErrorType, "raw_body_binding"))
-			}
-			httptransport.RespondWithAPIError(ctx, w, apiErr)
+			recordAndRespondAPIError(ctx, w, span, "raw_body_binding", coercePlainExecuteError(err))
 			return
 		}
 	} else if httptransport.ShouldDecodeBody(r) {
@@ -269,23 +248,13 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 					var err error
 					r, err = e.transformRequestBody(r, requestVersion, version.Latest)
 					if err != nil {
-						apiErr := apierror.NewValidationError(err.Error())
-						tracing.RecordControllerError(span, apiErr)
-						if span.IsRecording() {
-							span.SetAttributes(attribute.String(httptransport.AttrErrorType, "version_transform"))
-						}
-						httptransport.RespondWithAPIError(ctx, w, apiErr)
+						recordAndRespondAPIError(ctx, w, span, "version_transform", apierror.NewValidationError(err.Error()))
 						return
 					}
 					tb, err := io.ReadAll(r.Body)
 					_ = r.Body.Close()
 					if err != nil {
-						apiErr := apierror.NewValidationError(fmt.Sprintf("Failed to read request body: %v", err))
-						tracing.RecordControllerError(span, apiErr)
-						if span.IsRecording() {
-							span.SetAttributes(attribute.String(httptransport.AttrErrorType, "body_read"))
-						}
-						httptransport.RespondWithAPIError(ctx, w, apiErr)
+						recordAndRespondAPIError(ctx, w, span, "body_read", apierror.NewValidationError(fmt.Sprintf("Failed to read request body: %v", err)))
 						return
 					}
 					bytesForNull = tb
@@ -295,15 +264,7 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 		}
 
 		if err := httptransport.DecodeJSONInto(any(req), r, true); err != nil {
-			var apiErr *apierror.APIError
-			if !errors.As(err, &apiErr) {
-				apiErr = apierror.NewValidationError(err.Error())
-			}
-			tracing.RecordControllerError(span, apiErr)
-			if span.IsRecording() {
-				span.SetAttributes(attribute.String(httptransport.AttrErrorType, "json_decode"))
-			}
-			httptransport.RespondWithAPIError(ctx, w, apiErr)
+			recordAndRespondAPIError(ctx, w, span, "json_decode", coercePlainExecuteError(err))
 			return
 		}
 
@@ -311,41 +272,25 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 		validate.ApplySlicePresenceFlags(bytesForNull, any(req))
 
 		if apiErr := validate.RejectExplicitJSONNulls(bytesForNull, any(req)); apiErr != nil {
-			tracing.RecordControllerError(span, apiErr)
-			if span.IsRecording() {
-				span.SetAttributes(attribute.String(httptransport.AttrErrorType, "json_null_validation"))
-			}
-			httptransport.RespondWithAPIError(ctx, w, apiErr)
+			recordAndRespondAPIError(ctx, w, span, "json_null_validation", apiErr)
 			return
 		}
 	}
 
 	if r.Method == http.MethodPatch && len(jsonBodyBytes) > 0 {
 		if apiErr := validate.RejectEmptyPatchBody(jsonBodyBytes, any(req)); apiErr != nil {
-			tracing.RecordControllerError(span, apiErr)
-			if span.IsRecording() {
-				span.SetAttributes(attribute.String(httptransport.AttrErrorType, "empty_patch_validation"))
-			}
-			httptransport.RespondWithAPIError(ctx, w, apiErr)
+			recordAndRespondAPIError(ctx, w, span, "empty_patch_validation", apiErr)
 			return
 		}
 	}
 
 	if apiErr := httptransport.ValidateEnumFields(any(req)); apiErr != nil {
-		tracing.RecordControllerError(span, apiErr)
-		if span.IsRecording() {
-			span.SetAttributes(attribute.String(httptransport.AttrErrorType, "enum_validation"))
-		}
-		httptransport.RespondWithAPIError(ctx, w, apiErr)
+		recordAndRespondAPIError(ctx, w, span, "enum_validation", apiErr)
 		return
 	}
 
 	if apiErr := validate.Validate(any(req)); apiErr != nil {
-		tracing.RecordControllerError(span, apiErr)
-		if span.IsRecording() {
-			span.SetAttributes(attribute.String(httptransport.AttrErrorType, "validation"))
-		}
-		httptransport.RespondWithAPIError(ctx, w, apiErr)
+		recordAndRespondAPIError(ctx, w, span, "validation", apiErr)
 		return
 	}
 
@@ -354,6 +299,7 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 	}
 
 	ctx, responseMeta := appctx.WithHTTPResponseMetadata(ctx)
+	ctx = appctx.WithRequestURL(ctx, r.URL)
 
 	resp, err := e.boundServiceHandler(ctx, req)
 
@@ -363,21 +309,12 @@ func (e *APIEndpoint[TReq, TResp]) Execute(w http.ResponseWriter, r *http.Reques
 	// response body — the client is gone — but we still write the status so the
 	// logging middleware records the correct code.
 	if r.Context().Err() == context.Canceled {
-		apiErr := apierror.NewClientClosedRequestError("Client closed the connection.")
-		tracing.RecordControllerError(span, apiErr)
-		if span.IsRecording() {
-			span.SetAttributes(attribute.String(httptransport.AttrErrorType, "client_closed"))
-		}
-		httptransport.RespondWithAPIError(ctx, w, apiErr)
+		recordAndRespondAPIError(ctx, w, span, "client_closed", apierror.NewClientClosedRequestError("Client closed the connection."))
 		return
 	}
 
 	if err != nil {
-		tracing.RecordControllerError(span, err)
-		if span.IsRecording() {
-			span.SetAttributes(attribute.String(httptransport.AttrErrorType, "handler"))
-		}
-		httptransport.RespondWithAPIError(ctx, w, err)
+		recordAndRespondAPIError(ctx, w, span, "handler", err)
 		return
 	}
 
@@ -542,9 +479,11 @@ func (e *APIEndpoint[TReq, TResp]) respondWithIncludeTransform(ctx context.Conte
 }
 
 type APIEndpointer interface {
-	Materialize() APIEndpointer
 	GetMethod() string
 	GetRoute() string
 	IsPublic() bool
 	GetHandler() http.HandlerFunc
+	IsServiceBound() bool
+	GetRequestType() reflect.Type
+	GetResponseType() reflect.Type
 }

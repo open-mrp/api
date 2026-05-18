@@ -27,8 +27,6 @@ func (e *RetrievePurchaseOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/purchase-orders/{id}",
-		Request:           &RetrievePurchaseOrderRequest{},
-		Response:          &apiresource.PurchaseOrderDetail{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
@@ -39,5 +37,5 @@ func (e *RetrievePurchaseOrderEndpoint) Materialize() *apiendpoint.APIEndpoint[*
 			ObjectType: constants.ObjectTypePurchaseOrder,
 			Fields:     []string{"supplier", "bill_to_address", "ship_to_address", "carrier", "service_level", "payment_term", "shipping_term", "receiving_order", "lines", "contacts"},
 		}),
-	}).WithDocSource(e)
+	})
 }

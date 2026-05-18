@@ -24,13 +24,11 @@ func (e *DeleteMachineEndpoint) Materialize() *apiendpoint.APIEndpoint[*DeleteMa
 		Method:            http.MethodDelete,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/machines/{id}",
-		Request:           &DeleteMachineRequest{},
-		Response:          &apiresource.EmptyResource{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *DeleteMachineRequest) (*apiresource.EmptyResource, *apierror.APIError) {
 			return svc.(MachineSvc).DeleteMachine
 		},
-	}).WithDocSource(e)
+	})
 }

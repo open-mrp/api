@@ -39,11 +39,11 @@ func (*AddressesEndpointGroup) Materialize(config *AddressesEndpointGroupConfig)
 		ResourceType: &apiresource.Address{},
 	}
 
-	listAddressesEndpoint := (&addressep.ListAddressesEndpoint{}).Materialize().WithService(inner, addressSvc)
-	getAddressEndpoint := (&addressep.RetrieveAddressEndpoint{}).Materialize().WithService(inner, addressSvc)
-	createAddressEndpoint := (&addressep.CreateAddressEndpoint{}).Materialize().WithService(inner, addressSvc)
-	updateAddressEndpoint := (&addressep.UpdateAddressEndpoint{}).Materialize().WithService(inner, addressSvc)
-	deleteAddressEndpoint := (&addressep.DeleteAddressEndpoint{}).Materialize().WithService(inner, addressSvc)
+	listAddressesEndpoint := apiendpoint.From(&addressep.ListAddressesEndpoint{}).WithService(inner, addressSvc)
+	getAddressEndpoint := apiendpoint.From(&addressep.RetrieveAddressEndpoint{}).WithService(inner, addressSvc)
+	createAddressEndpoint := apiendpoint.From(&addressep.CreateAddressEndpoint{}).WithService(inner, addressSvc)
+	updateAddressEndpoint := apiendpoint.From(&addressep.UpdateAddressEndpoint{}).WithService(inner, addressSvc)
+	deleteAddressEndpoint := apiendpoint.From(&addressep.DeleteAddressEndpoint{}).WithService(inner, addressSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listAddressesEndpoint,

@@ -39,7 +39,7 @@ func (*PermissionGroupsEndpointGroup) Materialize(config *PermissionGroupsEndpoi
 		ResourceType: &apiresource.PermissionGroup{},
 	}
 
-	listPermissionGroupsEndpoint := (&permissiongroupep.ListPermissionGroupsEndpoint{}).Materialize().WithService(inner, permissionGroupSvc)
+	listPermissionGroupsEndpoint := apiendpoint.From(&permissiongroupep.ListPermissionGroupsEndpoint{}).WithService(inner, permissionGroupSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listPermissionGroupsEndpoint,

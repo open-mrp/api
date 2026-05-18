@@ -37,8 +37,6 @@ func (e *TriggerRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*TriggerRunR
 		Method:            http.MethodPost,
 		Route:             "/v1/ai/runs",
 		ContentType:       "application/json",
-		Request:           &TriggerRunRequest{},
-		Response:          &apiresource.AgentRun{},
 		SuccessStatusCode: http.StatusCreated,
 		Public:            false,
 		Preview:           true,
@@ -52,5 +50,5 @@ func (e *TriggerRunEndpoint) Materialize() *apiendpoint.APIEndpoint[*TriggerRunR
 			ObjectType: constants.ObjectTypeAgentRun,
 			Fields:     []string{"actions", "definition", "definition.config", "definition.tools", "definition.role"},
 		}),
-	}).WithDocSource(e)
+	})
 }

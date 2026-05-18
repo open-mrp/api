@@ -26,13 +26,11 @@ func (e *VoidPickLineEndpoint) Materialize() *apiendpoint.APIEndpoint[*VoidPickL
 		Method:            http.MethodPut,
 		ContentType:       "application/json",
 		Route:             "/v1/operations/picks/{pick_id}/lines/{id}/actions/void",
-		Request:           &VoidPickLineRequest{},
-		Response:          &apiresource.PickLineDetail{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *VoidPickLineRequest) (*apiresource.PickLineDetail, *apierror.APIError) {
 			return svc.(PickSvc).VoidPickLine
 		},
-	}).WithDocSource(e)
+	})
 }

@@ -66,7 +66,7 @@ func (m *accountIntegrationSvcImpl) ListAccountIntegrations(ctx context.Context,
 		return nil, apiErr
 	}
 
-	return AccountIntegrationListPresenter(resp), nil
+	return AccountIntegrationListPresenter(ctx, resp), nil
 }
 
 func (m *accountIntegrationSvcImpl) CreateAccountIntegration(ctx context.Context, req *CreateAccountIntegrationRequest) (*apiresource.AccountIntegration, *apierror.APIError) {

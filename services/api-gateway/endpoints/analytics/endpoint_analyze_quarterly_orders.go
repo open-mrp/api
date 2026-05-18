@@ -32,13 +32,11 @@ func (e *AnalyzeQuarterlyOrdersEndpoint) Materialize() *apiendpoint.APIEndpoint[
 		Method:            http.MethodPut,
 		Route:             "/v1/core/analytics/quarterly-orders",
 		ContentType:       "application/json",
-		Request:           &AnalyzeQuarterlyOrdersRequest{},
-		Response:          &apiresource.AnalyzeQuarterlyOrdersResponse{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *AnalyzeQuarterlyOrdersRequest) (*apiresource.AnalyzeQuarterlyOrdersResponse, *apierror.APIError) {
 			return svc.(AnalyticsSvc).AnalyzeQuarterlyOrders
 		},
-	}).WithDocSource(e)
+	})
 }

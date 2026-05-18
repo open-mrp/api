@@ -24,8 +24,6 @@ func (e *ListAccountStatusesEndpoint) Materialize() *apiendpoint.APIEndpoint[*Li
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/sales/account-statuses",
-		Request:           &ListAccountStatusesRequest{},
-		Response:          &apiresource.List[apiresource.AccountStatus]{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -36,5 +34,5 @@ func (e *ListAccountStatusesEndpoint) Materialize() *apiendpoint.APIEndpoint[*Li
 			ObjectType: constants.ObjectTypeAccountStatus,
 			Fields:     []string{"owner"},
 		}),
-	}).WithDocSource(e)
+	})
 }

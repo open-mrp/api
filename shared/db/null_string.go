@@ -118,7 +118,7 @@ func StringFromNullString(ns sql.NullString) *string {
 // StringFromInterface extracts a string from an interface{} value.
 // MySQL CASE expressions are typed as interface{} by sqlc and may arrive
 // as []byte or string depending on the driver. Returns "" for nil.
-func StringFromInterface(v interface{}) string {
+func StringFromInterface(v any) string {
 	if v == nil {
 		return ""
 	}

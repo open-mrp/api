@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"maps"
 
 	"github.com/shopspring/decimal"
 
@@ -117,9 +118,7 @@ func (r *materialDemandRepo) explode(
 
 		// Recurse to see if this consumed item is itself produced
 		subVisited := make(map[string]bool)
-		for k, v := range visited {
-			subVisited[k] = v
-		}
+		maps.Copy(subVisited, visited)
 		subDemands := make(map[string]*domain.MaterialDemandItem)
 		if apiErr := r.explode(ctx, accountID, c.ConsumedItemID, scaledMeasure, c.ConsumptionUnitID, subVisited, subDemands); apiErr != nil {
 			return apiErr

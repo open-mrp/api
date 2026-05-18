@@ -240,7 +240,12 @@ func (r *materialRepoImpl) List(ctx context.Context, params domain.ListMaterials
 	ctx, span := materialRepoTracer.Start(ctx, "repository.material.list")
 	defer span.End()
 
-	searchQuery := db.NullStringLikePtr(params.Query)
+	catSearch := db.NewCatalogSearch(params.Query)
+	searchQuery := catSearch.Contains
+	searchRankEnabled := catSearch.Contains.Valid
+	materialSearchRank := func(m *domain.Material) int32 {
+		return db.CatalogSearchRank(m.Item.SKU, catSearch)
+	}
 	includeCategoryFilter := len(params.CategoryIDs) > 0
 	includeAttributeFilter := len(params.AttributeIDs) > 0
 
@@ -274,12 +279,15 @@ func (r *materialRepoImpl) List(ctx context.Context, params domain.ListMaterials
 			rows, err := r.queries.ListMaterialsBackwardBase(ctx, sqlc.ListMaterialsBackwardBaseParams{
 				AccountID:              params.AccountID,
 				SearchQuery:            searchQuery,
+				SearchExact:            catSearch.Exact,
+				SearchPrefix:           catSearch.Prefix,
 				IncludeCategoryFilter:  includeCategoryFilter,
 				CategoryIds:            categoryIDs,
 				IncludeAttributeFilter: includeAttributeFilter,
 				AttributeIds:           attributeIDs,
 				StartDate:              startDate,
 				EndDate:                endDate,
+				CursorMatchTier:        db.NullTierInt64Param(cur.MatchTier),
 				CursorCreatedAt:        cur.OccurredAt,
 				CursorID:               cur.ID,
 				Limit:                  params.Limit + 1,
@@ -291,7 +299,7 @@ func (r *materialRepoImpl) List(ctx context.Context, params domain.ListMaterials
 			for i, row := range rows {
 				materials[i] = mapMaterialBackwardBaseRow(row)
 			}
-			result, pageInfo := pagination.BuildPageString(materials, params.Limit, cursorDir, materialCreatedAt, materialID)
+			result, pageInfo := pagination.BuildPageStringWithSearchRank(materials, params.Limit, cursorDir, searchRankEnabled, materialCreatedAt, materialID, materialSearchRank)
 			if apiErr := applyMaterialStitches(ctx, r.queries, result, params.Includes); apiErr != nil {
 				return nil, tracing.Trace(span, apiErr)
 			}
@@ -302,6 +310,8 @@ func (r *materialRepoImpl) List(ctx context.Context, params domain.ListMaterials
 		rows, err := r.queries.ListMaterialsForwardBase(ctx, sqlc.ListMaterialsForwardBaseParams{
 			AccountID:              params.AccountID,
 			SearchQuery:            searchQuery,
+			SearchExact:            catSearch.Exact,
+			SearchPrefix:           catSearch.Prefix,
 			IncludeCategoryFilter:  includeCategoryFilter,
 			CategoryIds:            categoryIDs,
 			IncludeAttributeFilter: includeAttributeFilter,
@@ -309,6 +319,7 @@ func (r *materialRepoImpl) List(ctx context.Context, params domain.ListMaterials
 			StartDate:              startDate,
 			EndDate:                endDate,
 			CursorCreatedAt:        gosql.NullTime{Time: cur.OccurredAt, Valid: true},
+			CursorMatchTier:        db.NullTierInt64Param(cur.MatchTier),
 			CursorID:               gosql.NullString{String: cur.ID, Valid: true},
 			Limit:                  params.Limit + 1,
 		})
@@ -319,7 +330,7 @@ func (r *materialRepoImpl) List(ctx context.Context, params domain.ListMaterials
 		for i, row := range rows {
 			materials[i] = mapMaterialForwardBaseRow(row)
 		}
-		result, pageInfo := pagination.BuildPageString(materials, params.Limit, cursorDir, materialCreatedAt, materialID)
+		result, pageInfo := pagination.BuildPageStringWithSearchRank(materials, params.Limit, cursorDir, searchRankEnabled, materialCreatedAt, materialID, materialSearchRank)
 		if apiErr := applyMaterialStitches(ctx, r.queries, result, params.Includes); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)
 		}
@@ -330,6 +341,8 @@ func (r *materialRepoImpl) List(ctx context.Context, params domain.ListMaterials
 	rows, err := r.queries.ListMaterialsForwardBase(ctx, sqlc.ListMaterialsForwardBaseParams{
 		AccountID:              params.AccountID,
 		SearchQuery:            searchQuery,
+		SearchExact:            catSearch.Exact,
+		SearchPrefix:           catSearch.Prefix,
 		IncludeCategoryFilter:  includeCategoryFilter,
 		CategoryIds:            categoryIDs,
 		IncludeAttributeFilter: includeAttributeFilter,
@@ -346,7 +359,7 @@ func (r *materialRepoImpl) List(ctx context.Context, params domain.ListMaterials
 	for i, row := range rows {
 		materials[i] = mapMaterialForwardBaseRow(row)
 	}
-	result, pageInfo := pagination.BuildPageString(materials, params.Limit, cursorDir, materialCreatedAt, materialID)
+	result, pageInfo := pagination.BuildPageStringWithSearchRank(materials, params.Limit, cursorDir, searchRankEnabled, materialCreatedAt, materialID, materialSearchRank)
 	if apiErr := applyMaterialStitches(ctx, r.queries, result, params.Includes); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -555,7 +568,9 @@ func (r *materialRepoImpl) Export(ctx context.Context, params domain.ExportMater
 	ctx, span := materialRepoTracer.Start(ctx, "repository.material.export")
 	defer span.End()
 
-	searchQuery := db.NullStringLikePtr(params.Query)
+	catSearch := db.NewCatalogSearch(params.Query)
+	searchQuery := catSearch.Contains
+
 	includeCategoryFilter := len(params.CategoryIDs) > 0
 	includeAttributeFilter := len(params.AttributeIDs) > 0
 
@@ -579,6 +594,8 @@ func (r *materialRepoImpl) Export(ctx context.Context, params domain.ExportMater
 	rows, err := r.queries.ExportMaterialsWithFilters(ctx, sqlc.ExportMaterialsWithFiltersParams{
 		AccountID:              params.AccountID,
 		SearchQuery:            searchQuery,
+		SearchExact:            catSearch.Exact,
+		SearchPrefix:           catSearch.Prefix,
 		IncludeCategoryFilter:  includeCategoryFilter,
 		CategoryIds:            categoryIDs,
 		IncludeAttributeFilter: includeAttributeFilter,

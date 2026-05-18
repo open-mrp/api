@@ -41,8 +41,6 @@ func (e *UpdateRoleEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateRoleR
 		Method:            http.MethodPatch,
 		ContentType:       "application/json",
 		Route:             "/v1/identity/roles/{id}",
-		Request:           &UpdateRoleRequest{},
-		Response:          &apiresource.Role{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            true,
 		Preview:           true,
@@ -53,5 +51,5 @@ func (e *UpdateRoleEndpoint) Materialize() *apiendpoint.APIEndpoint[*UpdateRoleR
 			ObjectType: constants.ObjectTypeRole,
 			Fields:     []string{"owner", "owner.account", "permissions"},
 		}),
-	}).WithDocSource(e)
+	})
 }

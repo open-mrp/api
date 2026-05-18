@@ -10,7 +10,8 @@ import (
 	apierror "github.com/augno/api/shared/errors"
 )
 
-func ptr[T any](v T) *T { return &v }
+//go:fix inline
+func ptr[T any](v T) *T { return new(v) }
 
 // --- Success responses ---
 
@@ -207,7 +208,7 @@ func TestUnmarshalCachedResponse_NoMetadataInContext(t *testing.T) {
 func TestUnmarshalCachedResponse_StatusCode399IsSuccess(t *testing.T) {
 	t.Parallel()
 	body := json.RawMessage(`{"ok":true}`)
-	result, err := UnmarshalCachedResponse[map[string]bool](context.Background(), ptr(399), body)
+	result, err := UnmarshalCachedResponse[map[string]bool](context.Background(), new(399), body)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -224,7 +225,7 @@ func TestUnmarshalCachedResponse_StatusCode400IsError(t *testing.T) {
 	apiErr := apierror.NewValidationError("bad request")
 	errJSON, _ := apiErr.ToJSON()
 
-	result, err := UnmarshalCachedResponse[any](context.Background(), ptr(400), json.RawMessage(errJSON))
+	result, err := UnmarshalCachedResponse[any](context.Background(), new(400), json.RawMessage(errJSON))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

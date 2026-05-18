@@ -1,6 +1,8 @@
 package servicelevelep
 
 import (
+	"context"
+
 	grpcutil "github.com/augno/api/services/api-gateway/internal/grpc"
 	apiresource "github.com/augno/api/services/api-gateway/pkg/resource"
 	"github.com/augno/api/shared/constants"
@@ -30,7 +32,7 @@ func ServiceLevelPresenter(o *pb.ServiceLevelInfo, ownerAccount *apiresource.Acc
 	}
 }
 
-func ServiceLevelListPresenter(resp *pb.ListServiceLevelsResponse, ownerAccount *apiresource.Account) *apiresource.List[apiresource.ServiceLevel] {
+func ServiceLevelListPresenter(ctx context.Context, resp *pb.ListServiceLevelsResponse, ownerAccount *apiresource.Account) *apiresource.List[apiresource.ServiceLevel] {
 	if resp == nil {
 		return apiresource.NewList[apiresource.ServiceLevel](nil, apiresource.PageInfo{})
 	}
@@ -40,5 +42,5 @@ func ServiceLevelListPresenter(resp *pb.ListServiceLevelsResponse, ownerAccount 
 		serviceLevels[i] = ServiceLevelPresenter(o, ownerAccount)
 	}
 
-	return apiresource.NewList(serviceLevels, grpcutil.MapProtoPageInfo(resp.PageInfo))
+	return apiresource.NewList(serviceLevels, grpcutil.MapProtoPageInfo(ctx, resp.PageInfo))
 }

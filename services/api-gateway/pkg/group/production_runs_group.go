@@ -39,13 +39,13 @@ func (*ProductionRunsEndpointGroup) Materialize(config *ProductionRunsEndpointGr
 		ResourceType: &apiresource.ProductionRunDetail{},
 	}
 
-	listEndpoint := (&productionrunep.ListProductionRunsEndpoint{}).Materialize().WithService(inner, svc)
-	retrieveEndpoint := (&productionrunep.RetrieveProductionRunEndpoint{}).Materialize().WithService(inner, svc)
-	createEndpoint := (&productionrunep.CreateProductionRunEndpoint{}).Materialize().WithService(inner, svc)
-	updateEndpoint := (&productionrunep.UpdateProductionRunEndpoint{}).Materialize().WithService(inner, svc)
-	deleteEndpoint := (&productionrunep.DeleteProductionRunEndpoint{}).Materialize().WithService(inner, svc)
-	addBatchesEndpoint := (&productionrunep.AddBatchesToProductionRunEndpoint{}).Materialize().WithService(inner, svc)
-	listBatchesEndpoint := (&productionrunep.ListBatchesByProductionRunEndpoint{}).Materialize().WithService(inner, svc)
+	listEndpoint := apiendpoint.From(&productionrunep.ListProductionRunsEndpoint{}).WithService(inner, svc)
+	retrieveEndpoint := apiendpoint.From(&productionrunep.RetrieveProductionRunEndpoint{}).WithService(inner, svc)
+	createEndpoint := apiendpoint.From(&productionrunep.CreateProductionRunEndpoint{}).WithService(inner, svc)
+	updateEndpoint := apiendpoint.From(&productionrunep.UpdateProductionRunEndpoint{}).WithService(inner, svc)
+	deleteEndpoint := apiendpoint.From(&productionrunep.DeleteProductionRunEndpoint{}).WithService(inner, svc)
+	addBatchesEndpoint := apiendpoint.From(&productionrunep.AddBatchesToProductionRunEndpoint{}).WithService(inner, svc)
+	listBatchesEndpoint := apiendpoint.From(&productionrunep.ListBatchesByProductionRunEndpoint{}).WithService(inner, svc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listEndpoint,

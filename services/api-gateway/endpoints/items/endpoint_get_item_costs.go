@@ -24,13 +24,11 @@ func (e *GetItemCostsEndpoint) Materialize() *apiendpoint.APIEndpoint[*GetItemCo
 		Method:            http.MethodGet,
 		ContentType:       "application/json",
 		Route:             "/v1/catalog/items/{id}/costs",
-		Request:           &GetItemCostsRequest{},
-		Response:          &apiresource.ItemCosts{},
 		SuccessStatusCode: http.StatusOK,
 		Public:            false,
 		Preview:           true,
 		ServiceHandler: func(svc any) func(ctx context.Context, req *GetItemCostsRequest) (*apiresource.ItemCosts, *apierror.APIError) {
 			return svc.(ItemSvc).GetItemCosts
 		},
-	}).WithDocSource(e)
+	})
 }

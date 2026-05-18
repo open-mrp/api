@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.17.6](https://github.com/Augno/api/compare/v0.17.5...v0.17.6) (2026-05-18)
+
+
+### Bug Fixes
+
+* improved documentation ([#248](https://github.com/Augno/api/issues/248)) ([38beac2](https://github.com/Augno/api/commit/38beac277ed552aa049252a4799a50af5018f683))
+
+
+### Documentation
+
+* update api endpoints to use docstrings rather than explicit description fields ([#246](https://github.com/Augno/api/issues/246)) ([f279947](https://github.com/Augno/api/commit/f279947a864b99c0c3fb1cc60c6e8c79fa0ec4e5))
+
 ## [0.17.5](https://github.com/Augno/api/compare/v0.17.4...v0.17.5) (2026-05-15)
 
 
